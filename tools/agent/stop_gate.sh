@@ -83,4 +83,30 @@ fi
 
 [ -s "$AG/NEXT.md" ] || block "Exit contract unmet: scratch/agent/NEXT.md is missing or empty. Write the single next work unit for the following iteration: hypotheses, exact commands, and the discriminating outcomes."
 
+# --- OUTCOME: distinguish progress from ledger churn -------------------------
+# Sessions 51-59 satisfied every other condition here while advancing nothing:
+# the work unit was skipped and documentation was edited instead, which the
+# "touched both ledger files + committed" test cannot tell from real progress.
+outcome="$(tr -d '[:space:]' < "$AG/OUTCOME" 2>/dev/null)"
+case "$outcome" in
+  ADVANCED|SUBSTITUTED|BLOCKED) ;;
+  *) block "Exit contract unmet: scratch/agent/OUTCOME is '${outcome:-missing}'. Write exactly one of ADVANCED (ran the work unit / landed a real change), SUBSTITUTED (could not run it, did something else — also write scratch/agent/SUBSTITUTION.md), or BLOCKED. See the 'Declare your outcome honestly' section of tools/agent/ITERATION.md." ;;
+esac
+
+if [ "$outcome" = "SUBSTITUTED" ] && [ ! -s "$AG/SUBSTITUTION.md" ]; then
+  block "Exit contract unmet: OUTCOME is SUBSTITUTED but scratch/agent/SUBSTITUTION.md is missing or empty. It must state (1) what stopped the planned work unit, (2) the evidence measured THIS iteration that it was stopped — a precedent from earlier sessions is not evidence, and (3) the single experiment that would refute your blocking explanation."
+fi
+
+# ADVANCED is a claim about changing something. Check it against the commits:
+# a modified doc is not advancement; a modified code/tool/patch file, or a
+# NEWLY ADDED document (e.g. a design doc), is.
+if [ "$outcome" = "ADVANCED" ]; then
+  substantive="$(git diff --name-status ${range:-HEAD~1..HEAD} 2>/dev/null \
+    | awk '$1 ~ /^A/ { print "new:" $2; next }
+           $2 != "PORTING-STATE.md" && $2 !~ /^docs\// { print "chg:" $2 }' | head -3)"
+  if [ -z "$substantive" ]; then
+    block "OUTCOME says ADVANCED but this iteration's commits only MODIFY existing documentation (PORTING-STATE.md / docs/). Editing the ledger is how you record progress, not how you make it. Either land the real change (code, instrument, tool, patch, or a new document) now, in this iteration, or set OUTCOME=SUBSTITUTED and write SUBSTITUTION.md explaining why the work unit could not run."
+  fi
+fi
+
 allow

@@ -15,6 +15,7 @@ ITER_CAP="${ITER_CAP:-40}"
 SLEEP_ON_LIMIT="${SLEEP_ON_LIMIT:-1800}"
 MAX_LIMIT_WAITS="${MAX_LIMIT_WAITS:-12}"
 MAX_NO_CONTRACT="${MAX_NO_CONTRACT:-2}"
+MAX_SUBSTITUTED="${MAX_SUBSTITUTED:-2}"
 
 # Choose the model EXPLICITLY. Without this the loop silently inherits whatever
 # `model` sits in ~/.claude/settings.json — which on 2026-07-26 was "fable", the
@@ -36,6 +37,7 @@ log "run starting $(date) — model=$LOOP_MODEL cap=$ITER_CAP"
 n=0
 waits=0
 nocontract=0
+subs=0
 while [ "$n" -lt "$ITER_CAP" ]; do
 
   if [ -f "$AG/BLOCKED.md" ]; then
@@ -52,6 +54,7 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   n=$((n+1))
   log "iteration $n starting $(date)"
   echo WORKING > "$AG/STATUS"
+  rm -f "$AG/OUTCOME" "$AG/SUBSTITUTION.md"
   echo 0 > "$AG/.stop_blocks"
   git rev-parse HEAD > "$AG/ITER_START_HEAD" 2>/dev/null
 
@@ -119,6 +122,30 @@ while [ "$n" -lt "$ITER_CAP" ]; do
     fi
   else
     nocontract=0
+  fi
+
+  # Consecutive substitutions mean the environment is not letting the project
+  # advance, and every extra iteration costs full price to produce ledger churn.
+  # This counter lives in the loop's own memory, not in scratch/ — the agent
+  # being metered must not be able to reset its own meter.
+  outcome="$(tr -d '[:space:]' < "$AG/OUTCOME" 2>/dev/null)"
+  log "iteration $n outcome=${outcome:-unset}"
+  if [ "$outcome" = "SUBSTITUTED" ]; then
+    subs=$((subs+1))
+    log "WARNING: work unit substituted ($subs/$MAX_SUBSTITUTED consecutive)"
+    if [ "$subs" -ge "$MAX_SUBSTITUTED" ]; then
+      { echo "# $subs consecutive iterations could not run their work unit, $(date)"; echo;
+        echo "The loop stopped itself rather than keep paying full price for"
+        echo "documentation housekeeping. The agent's own account of what blocked"
+        echo "it, including the experiment it says would refute that explanation:"; echo;
+        cat "$AG/SUBSTITUTION.md" 2>/dev/null; echo;
+        echo "Decide: remove the blocker, refute it, or re-scope the work unit in"
+        echo "scratch/agent/NEXT.md. Then delete this file and rerun."; } > "$AG/BLOCKED.md"
+      notify_blocked
+      exit 2
+    fi
+  else
+    subs=0
   fi
 done
 log "iteration cap ($ITER_CAP) reached $(date)"
