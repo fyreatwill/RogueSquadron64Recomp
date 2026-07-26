@@ -5,7 +5,8 @@
 # NEXT.md), which is exactly what they were built for. Usage-limit windows
 # become sleeps, not handoffs.
 #
-# Env: ITER_CAP (default 40), SLEEP_ON_LIMIT (default 1800s), MAX_LIMIT_WAITS (12)
+# Env: ITER_CAP (default 40), SLEEP_ON_LIMIT (default 1800s), MAX_LIMIT_WAITS (12),
+#      LOOP_MODEL (default sonnet), MAX_NO_CONTRACT (default 2)
 set -u
 cd "$(dirname "$0")/../.."
 AG=scratch/agent
@@ -13,6 +14,15 @@ mkdir -p "$AG"
 ITER_CAP="${ITER_CAP:-40}"
 SLEEP_ON_LIMIT="${SLEEP_ON_LIMIT:-1800}"
 MAX_LIMIT_WAITS="${MAX_LIMIT_WAITS:-12}"
+MAX_NO_CONTRACT="${MAX_NO_CONTRACT:-2}"
+
+# Choose the model EXPLICITLY. Without this the loop silently inherits whatever
+# `model` sits in ~/.claude/settings.json — which on 2026-07-26 was "fable", the
+# most expensive tier, for all 40 unattended iterations. Most of an iteration is
+# mechanical (grep, instrument, rebuild, capture, reconcile, write the ledger);
+# the investigative discipline lives in ITERATION.md and the Stop gate, not in
+# raw model strength. Override per run: LOOP_MODEL=opus tools/agent/loop.sh
+LOOP_MODEL="${LOOP_MODEL:-sonnet}"
 
 log() { echo "[loop] $*" | tee -a "$AG/loop.log"; }
 
@@ -21,8 +31,11 @@ notify_blocked() {
   log "BLOCKED - fix it, delete $AG/BLOCKED.md, rerun."
 }
 
+log "run starting $(date) — model=$LOOP_MODEL cap=$ITER_CAP"
+
 n=0
 waits=0
+nocontract=0
 while [ "$n" -lt "$ITER_CAP" ]; do
 
   if [ -f "$AG/BLOCKED.md" ]; then
@@ -43,6 +56,7 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   git rev-parse HEAD > "$AG/ITER_START_HEAD" 2>/dev/null
 
   out="$(claude -p "$(cat tools/agent/ITERATION.md)" \
+         --model "$LOOP_MODEL" \
          --permission-mode acceptEdits \
          --output-format json 2>&1)"
   rc=$?
@@ -69,6 +83,27 @@ while [ "$n" -lt "$ITER_CAP" ]; do
     [ -s "$AG/BLOCKED.md" ] || echo "# Agent set STATUS=BLOCKED without writing this file, $(date)" > "$AG/BLOCKED.md"
     notify_blocked
     exit 2
+  fi
+
+  # An iteration that ends still WORKING never met the exit contract: the Stop
+  # gate released it at its block cap, or the CLI died mid-turn. It committed
+  # nothing. The first such iteration (2026-07-26, 11:37-11:55) burned 18
+  # minutes silently because the loop just started the next one. Never again.
+  if [ "$status" != "DONE" ]; then
+    nocontract=$((nocontract+1))
+    log "WARNING: iteration $n ended STATUS=${status:-unset} — exit contract NOT met, nothing committed ($nocontract/$MAX_NO_CONTRACT)"
+    if [ "$nocontract" -ge "$MAX_NO_CONTRACT" ]; then
+      { echo "# $nocontract consecutive iterations ended without meeting the exit contract, $(date)"; echo;
+        echo "STATUS was '${status:-unset}', not DONE, and no commit landed. The agent is"
+        echo "either running out of turns before it can finish a work unit, or the unit at"
+        echo "the top of docs/CURRENT-TRUTH.md 'Next steps' is too large for one iteration."
+        echo "Look at scratch/agent/NEXT.md and split it, then delete this file and rerun."; echo;
+        echo "Last claude output:"; printf '%s\n' "$out" | tail -30; } > "$AG/BLOCKED.md"
+      notify_blocked
+      exit 2
+    fi
+  else
+    nocontract=0
   fi
 done
 log "iteration cap ($ITER_CAP) reached $(date)"
