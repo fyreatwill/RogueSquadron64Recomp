@@ -4035,3 +4035,65 @@ extract the window region's translation, rename labels `CLIP_*`, splice via fixu
 clip code's `jal 0x1828` resolves to the existing resident label. C-side clipping in the fixup was
 rejected: marshalling VU clip state into C is strictly harder than translating the real overlay.
 Then the band test: s41 mark-vertices mode-2 — band rows filling in = clip loss owned the band.
+
+## Session 47 (2026-07-26) — the real clip overlay captured, spliced, and executing: fanjal > 0, census identities exact
+
+**Work unit:** M1 fix, parts (a) capture + (b) splice (NEXT.md allowed (b) on early finish). Two
+driven runs (`scratch/s47_ovlcap`, `scratch/s47_clipverify`), both `PROBE_KEYS="3:start 7:start"`
+from the 1024 phase.
+
+**(a) Capture.** New lib hook (`ROGUESQ_DUMP_IMEM_DMA=1` in `dma_rdram_to_dmem`'s IMEM-skip
+branch, `lib/N64ModernRuntime/.../rsp.hpp`; patches re-exported): records every skipped IMEM DMA
+(mem, dram, len + payload) to `build/imem_dma_dump.bin`, occurrences 1 and 257 per distinct
+triple. Plus fixup 5 (`tools/fixup_factor5_ucode.py`): logs `(debug_line, DMEM 0x153)` for every
+`do_indirect_jump` arrival at `case 0x1DB0`. Results:
+
+- 5 distinct images, all stable across spaced dumps: main text (mem 0x1080, dram 0x24A10, 0xF80)
+  and four window images (mem 0x1DB0): ovl0 dram 0x25748/0xD4, **ovl4 dram 0x25820/0x220 (clip)**,
+  ovl12 0x25A70/0x230, ovl44 0x26768/0x240 (ids = byte offsets into the DMEM 0x7A len/off table;
+  0x76 holds the shared entry 0x1DB0).
+- **Every image is byte-identical to the ROM at `dram + 0xC00`** (main 3968/3968 at 0x25610 — the
+  toml's own text_offset, giving the mapping two-source status; clip **544/544 at 0x26420**). The
+  overlay images exist RAW in the ROM after all — **s46's "no complete clip overlay exists in the
+  ROM" is overturned** (its scan must have keyed on the wrong bytes). The recompiled window region
+  (ROM 0x26340..) is the packed overlay **storage** — init's image starts at window+8 (0x26348),
+  the clip image at static-IMEM ~0x1E90 — which is what s46 read as "init overlay + stale clip
+  tail". The s46 expectation "dump tail == ROM 0x26414" was mis-derived from that misreading; the
+  byte-exact ROM match at the correct offset is a stronger control and passed.
+- **Stray census: there are no strays.** 4221/4221 case-0x1DB0 arrivals come from debug_line 594 —
+  the `jr $3` at L_1298 — with DMEM 0x153 already holding the just-requested overlay id (one
+  `153=0` per task: the initial ovl0 load; the rest the true id 4/12/44). s46's "~40 entries/task
+  via a non-L_1298 jr" were fall-throughs into the label counters, not dispatches. **Case-level
+  routing by 0x153 is safe.**
+
+**(b) Splice.** `tools/make_clip_composite.py` writes `scratch/s47_clip_composite.z64` (window
+0x26340..0x2655F ← clip image from ROM 0x26420); `factor5_rsp_ovl4.toml` translates it
+(`build/factor5_ucode/factor5_ucode_ovl4_recompiled.c`). Two clip-internal register-loaded return
+addresses found and added as extra targets: `ori $ra, 0x1E1C` (x2) and `ori $30, 0x1E54` (consumed
+by resident L_1650). Fixup 6 extracts the window translation (L_1DB0..do_indirect_jump), renames
+CLIP_*, verifies the external-reference set is exactly {L_112C, L_1650, L_1780, L_179C, L_1828},
+splices before do_indirect_jump, routes `case 0x1DB0` + five new window cases (0x1E1C/0x1E34/
+0x1E54/0x1F38/0x1FBC) by `0x153 == 4`, inserts the missing resident label L_1650 (anchor: the
+unique vmadh/lsv pair, position verified against the ovl4 translation), counts fanjal on the clip
+jal (link 0x1E34 vs the stale tail's 0x1F14 that fixup 3 instruments), and gives non-clip ids a
+logged `[clip-stray]` sink preserving the old default-unhandled semantics. Hard-fails if the ovl4
+translation is missing (build/ is gitignored — regen must run RSPRecomp on the ovl4 toml).
+
+**Verify run:** `fanjal > 0` wherever clip fires (e.g. t=908: eval=1228 setup=586 emit=318
+tclip=654 hand=22 fanjal=34 — **identity exact**: 1228−654−22+34=586; emit 586−250−18=318 ✓; late
+tasks t=2613..2616 likewise exact). **0 `[clip-stray]`, 0 UnhandledJumpTarget, 0 defer-drop /
+dmem-race / missing-func.** Same-day `[dpc-wrap]` totals: 17.06M events (pre-fix morning run) →
+9.93M (post-fix) — the s46 init-trample prediction points this way, but the two runs diverged in
+route, so single-source/suggestive only.
+
+**Route divergence + new scene:** the verify run overshot the hangar (no 0x6AB400 VI origin at
+all) into scenes never before documented: a fully-rendered round **briefing room** (origin
+0x656400) and **SELECT LEVEL / "AMBUSH AT MOS EISLEY"** with X-wing hologram (origin 0x696100) —
+rich textured 3D, no visible corruption. Same key schedule reached the hangar in the morning
+pre-fix run, so the clip fix plausibly changed menu timing. Consequence: **the s41 mark-vertices
+band test did NOT run** — the hangar was never on screen. Band verdict open; that is the next
+unit.
+
+Files: `lib/.../rsp.hpp` (+ refreshed `submodule-patches/N64ModernRuntime.patch`),
+`tools/fixup_factor5_ucode.py` (fixups 5+6), `tools/make_clip_composite.py`,
+`factor5_rsp_ovl4.toml`, `scratch/s47_parse_imemdump.py` (offline decoder).

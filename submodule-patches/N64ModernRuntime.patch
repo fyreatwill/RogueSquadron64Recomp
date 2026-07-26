@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..d5fc391 100644
+index b0d6bef..bb3352d 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -44,7 +44,59 @@ index b0d6bef..d5fc391 100644
  static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t rd_len) {
      rd_len += 1; // Read length is inclusive
      dram_addr &= 0xFFFFF8;
-@@ -106,6 +122,47 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -101,11 +117,98 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
+     // When a graphics ucode boot DMAs its own text into IMEM, we already ARE
+     // the recompiled ucode running as C — silently skip so it doesn't corrupt
+     // DMEM at the masked offset.
+-    if (dmem_addr & 0x1000) return;
++    if (dmem_addr & 0x1000) {
++        // Diag (ROGUESQ_DUMP_IMEM_DMA=1): the skip above is also what breaks
++        // the Factor 5 overlay window swap (s46) — the overlay images only
++        // exist materialized in RDRAM, so capture them here for offline
++        // recompilation. Per distinct (mem, dram, len): dump occurrences 1
++        // and 257 (spaced, to check the image is stable) to
++        // imem_dma_dump.bin as [magic 'IMDM', mem, dram, len]u32 + payload.
++        static int s_dump = -1;
++        if (s_dump < 0) {
++            const char* e = getenv("ROGUESQ_DUMP_IMEM_DMA");
++            s_dump = (e && *e && *e != '0') ? 1 : 0;
++        }
++        if (s_dump && dram_addr + rd_len <= 0x800000) {
++            struct Rec { uint32_t mem, dram, len, seen, dumped; };
++            static Rec recs[32];
++            static uint32_t nrecs = 0;
++            Rec* r = nullptr;
++            for (uint32_t i = 0; i < nrecs; i++) {
++                if (recs[i].mem == dmem_addr && recs[i].dram == dram_addr &&
++                    recs[i].len == rd_len) { r = &recs[i]; break; }
++            }
++            if (!r && nrecs < 32) {
++                r = &recs[nrecs++];
++                *r = Rec{dmem_addr, dram_addr, rd_len, 0, 0};
++            }
++            if (r) {
++                r->seen++;
++                if ((r->seen == 1 || r->seen == 257) && r->dumped < 2) {
++                    static FILE* s_f = nullptr;
++                    if (!s_f) s_f = fopen("imem_dma_dump.bin", "ab");
++                    if (s_f) {
++                        r->dumped++;
++                        uint32_t hdr[4] = {0x494D444D, dmem_addr, dram_addr, rd_len};
++                        fwrite(hdr, sizeof(uint32_t), 4, s_f);
++                        for (uint32_t i = 0; i < rd_len; i++) {
++                            uint8_t b = (uint8_t)MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000));
++                            fwrite(&b, 1, 1, s_f);
++                        }
++                        fflush(s_f);
++                        fprintf(stderr, "[imemdma] mem=0x%04X dram=0x%06X len=0x%X seen=%u dump=%u\n",
++                                dmem_addr, dram_addr, rd_len, r->seen, r->dumped);
++                    }
++                }
++            }
++        }
++        return;
++    }
+     dmem_addr &= 0xFFF;
      if (dmem_addr + rd_len > 0x1000) rd_len = 0x1000 - dmem_addr;
      if (dram_addr >= 0x800000) return;
      if (dram_addr + rd_len > 0x800000) rd_len = 0x800000 - dram_addr;

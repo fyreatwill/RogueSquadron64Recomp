@@ -377,6 +377,194 @@ struct Rs64OvlTrace {
             1, f"{lbl} counter")
 
 # ---------------------------------------------------------------------------
+# Fixup 5: stray 0x1DB0-entry source trace (ROGUESQ_UCODE_CULLSTATS=2)
+# ---------------------------------------------------------------------------
+# s46: ~40 do_indirect_jump arrivals per task at case 0x1DB0 do NOT come via
+# the L_1298 dispatch jr (jrc sum 247 vs 287 label hits). Before the clip
+# splice can route `case 0x1DB0:` by resident id (DMEM 0x153), we need to
+# know where those strays come from (debug_line) and what 0x153 holds at
+# that moment: 0x153==0 at every stray site → case-level routing is safe;
+# otherwise routing must live only at L_1298. Records first 8 distinct
+# (debug_line, 0x153) pairs per task, with counts.
+STRAY_MARKER = "/* fixup: straytrace */"
+if is_main_ucode and STRAY_MARKER not in text:
+    stray_helper = r'''
+/* fixup: straytrace */
+/* Stray 0x1DB0-entry source trace, ROGUESQ_UCODE_CULLSTATS=2. See fixup 5
+   comments in tools/fixup_factor5_ucode.py. */
+struct Rs64StrayTrace {
+    unsigned n = 0, total = 0, over = 0;
+    unsigned line[8], s153[8], cnt[8];
+    void rec(unsigned ln, unsigned sv) {
+        total++;
+        for (unsigned i = 0; i < n; i++)
+            if (line[i] == ln && s153[i] == sv) { cnt[i]++; return; }
+        if (n < 8) { line[n] = ln; s153[n] = sv; cnt[n] = 1; n++; } else over++;
+    }
+    ~Rs64StrayTrace() {
+        if (!Rs64OvlTrace::on() || !total) return;
+        fprintf(stderr, "[stray1db0 t=%u total=%u over=%u", rs64_ot_taskctr, total, over);
+        for (unsigned i = 0; i < n; i++)
+            fprintf(stderr, " ln%u/153=%u x%u", line[i], s153[i], cnt[i]);
+        fprintf(stderr, "]\n");
+        fflush(stderr);
+    }
+};
+'''
+
+    def sub_exactly5(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 5 ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}. "
+                  f"Regen changed the code shape — re-derive the anchors "
+                  f"before trusting any stray1db0 output.", file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    # Helper struct before the function, after fixup 4's helper (fixups 3 and
+    # 4 must already be in `text` — they run earlier in this same script).
+    sub_exactly5(
+        re.compile(r"(RspExitReason factor5_ucode\(uint8_t\* rdram,)"),
+        lambda m: stray_helper + m.group(1),
+        1, "helper block")
+
+    # Instance right after fixup 4's.
+    sub_exactly5(
+        re.compile(r"(\n    Rs64OvlTrace rs64_ot;[^\n]*\n)"),
+        lambda m: m.group(1) + "    Rs64StrayTrace rs64_st;  " + STRAY_MARKER + "\n",
+        1, "rs64_st instance")
+
+    # Recorder immediately before the do_indirect_jump switch: every arrival
+    # whose masked target is 0x1DB0, from whatever source (debug_line).
+    sub_exactly5(
+        re.compile(r"(    switch \(\(jump_target \| 0x1000\) & 0X1FFF\) \{\n)"),
+        lambda m: ("    if (Rs64OvlTrace::on() && ((jump_target | 0x1000) & 0X1FFF) == 0x1DB0)  " + STRAY_MARKER + "\n"
+                   "        rs64_st.rec((unsigned)debug_line, (unsigned)RSP_MEM_BU(0X153, 0));\n") + m.group(1),
+        1, "case-0x1DB0 recorder")
+
+# ---------------------------------------------------------------------------
+# Fixup 6: splice the REAL clip overlay (overlay id 4) into the main ucode
+# ---------------------------------------------------------------------------
+# s46/s47: every overlay dispatch jumps to the shared window entry 0x1DB0,
+# but the window-swap IMEM DMA is skipped by dma_rdram_to_dmem, so clip
+# dispatches ran whatever the static translation holds there — the packed
+# overlay-image STORAGE (init's image starts at window+8), not clip code.
+# The real clip image lives at ROM 0x26420..0x2663F (== RDRAM capture,
+# byte-exact, s47). factor5_rsp_ovl4.toml translates a composite ROM
+# (scratch/s47_clip_composite.z64) whose window region holds that image;
+# this fixup extracts its window-region translation (L_1DB0..), renames the
+# labels CLIP_*, splices the block into the main file, and routes the
+# do_indirect_jump window cases by resident id (DMEM 0x153 == 4 -> CLIP_*).
+# DMEM 0x153 always holds the just-dispatched overlay id at every window
+# entry (s47 stray census: 4221/4221 arrivals via the L_1298 jr, id set
+# first), so case-level routing is safe. Also inserts the L_1650 resident
+# label (the real clip code jumps there; the stale translation had no such
+# branch so RSPRecomp emitted no label) and counts fanjal on the clip path
+# so the fixup-3 identity setup == eval - tclip - hand + fanjal still holds.
+CLIP_MARKER = "/* fixup: clipsplice */"
+if is_main_ucode and CLIP_MARKER not in text:
+    ovl4_path = path.parent / "factor5_ucode_ovl4_recompiled.c"
+    if not ovl4_path.exists():
+        print("fixup_factor5_ucode: FIXUP 6 INPUT MISSING: "
+              f"{ovl4_path} not found. Run RSPRecomp on factor5_rsp_ovl4.toml "
+              "(needs scratch/s47_clip_composite.z64) before fixing up the "
+              "main ucode, or the clip overlay splice is lost.", file=sys.stderr)
+        sys.exit(1)
+    ovl4_text = ovl4_path.read_text(encoding="utf-8")
+
+    def sub_exactly6(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6 ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}. "
+                  f"Regen changed the code shape — re-derive the anchors "
+                  f"before trusting the clip splice.", file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    # Extract the window-region translation: L_1DB0 up to do_indirect_jump.
+    m_start = re.search(r"^L_1DB0:\n", ovl4_text, flags=re.MULTILINE)
+    m_end = re.search(r"^do_indirect_jump:\n", ovl4_text, flags=re.MULTILINE)
+    if not m_start or not m_end or m_end.start() <= m_start.start():
+        print("fixup_factor5_ucode: FIXUP 6 EXTRACTION FAILED: could not "
+              "bound L_1DB0..do_indirect_jump in the ovl4 file.", file=sys.stderr)
+        sys.exit(1)
+    region = ovl4_text[m_start.start():m_end.start()]
+
+    # Labels defined in the region get the CLIP_ prefix; references to labels
+    # defined outside it (the resident helpers) stay L_*.
+    region_labels = set(re.findall(r"^(L_[0-9A-F]{4}):", region, flags=re.MULTILINE))
+    expected_resident = {"L_112C", "L_1650", "L_1780", "L_179C", "L_1828"}
+    referenced = set(re.findall(r"goto (L_[0-9A-F]{4});", region))
+    external = referenced - region_labels
+    if external != expected_resident:
+        print(f"fixup_factor5_ucode: FIXUP 6 SANITY FAILED: region's external "
+              f"references {sorted(external)} != expected resident helpers "
+              f"{sorted(expected_resident)}. The clip image or its translation "
+              f"changed — re-derive before splicing.", file=sys.stderr)
+        sys.exit(1)
+    for lbl in region_labels:
+        region = re.sub(r"\b" + lbl + r"\b", "CLIP_" + lbl[2:], region)
+
+    # fanjal on the clip path (link register 0x1E34 here, vs the stale tail's
+    # 0x1F14 that fixup 3 instruments).
+    region, n_fj = re.subn(
+        r"(    // jal         0x1828\n)(    r31 = 0x1E34;)",
+        r"\1    rs64_cs.fanjal++;  " + CLIP_MARKER + "\n" + r"\2",
+        region)
+    if n_fj != 1:
+        print(f"fixup_factor5_ucode: FIXUP 6 ANCHOR FAILED (clip fanjal): "
+              f"expected 1 jal-0x1828 site in the region, found {n_fj}.",
+              file=sys.stderr)
+        sys.exit(1)
+
+    # Stray sink for window-range dispatch targets arriving with a non-clip
+    # resident id: previously these hit the switch default (unhandled); keep
+    # that semantic but log the id so a new overlay's arrival is visible.
+    region += (
+        "rs64_clip_stray:  " + CLIP_MARKER + "\n"
+        "    fprintf(stderr, \"[clip-stray] tgt=0x%04X 153=0x%02X line=%d\\n\",\n"
+        "            jump_target, (unsigned)RSP_MEM_BU(0X153, 0), debug_line);\n"
+        "    return RspExitReason::UnhandledJumpTarget;\n")
+
+    # Splice the block right before do_indirect_jump (preceded by an
+    # unconditional return, so no fall-through into CLIP_1DB0).
+    sub_exactly6(
+        re.compile(r"(^do_indirect_jump:\n)", flags=re.MULTILINE),
+        lambda m: CLIP_MARKER + "\n" + region + m.group(1),
+        1, "splice point")
+
+    # Route the shared window entry by resident id.
+    sub_exactly6(
+        re.compile(r"(        case 0x1DB0: goto L_1DB0;\n)"),
+        lambda m: ("        case 0x1DB0:  " + CLIP_MARKER + "\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x4) goto CLIP_1DB0;\n"
+                   "            goto L_1DB0;\n"),
+        1, "case 0x1DB0 routing")
+
+    # New window-range cases (the clip code's jal-return and register-loaded
+    # return addresses; absent from the stale translation's switch, so they
+    # previously fell to default).
+    new_cases = "".join(
+        f"        case 0x{a:04X}: if (RSP_MEM_BU(0X153, 0) == 0x4) "
+        f"goto CLIP_{a:04X}; goto rs64_clip_stray;  {CLIP_MARKER}\n"
+        for a in (0x1E1C, 0x1E34, 0x1E54, 0x1F38, 0x1FBC))
+    sub_exactly6(
+        re.compile(r"(        case 0x1DB0:  /\* fixup: clipsplice \*/\n)"),
+        lambda m: new_cases + m.group(1),
+        1, "new window cases")
+
+    # Insert the L_1650 resident label (verified against the ovl4 translation,
+    # where the identical resident bytes DO carry the label).
+    sub_exactly6(
+        re.compile(r"(    rsp\.VMADH<9>\(rsp\.vpu\.r\[29\], rsp\.vpu\.r\[11\], rsp\.vpu\.r\[30\]\);\n)(    // lsv         \$v21\[0\], 0x6\(\$zero\)\n)"),
+        lambda m: m.group(1) + "L_1650:  " + CLIP_MARKER + "\n" + m.group(2),
+        1, "L_1650 label")
+
+# ---------------------------------------------------------------------------
 
 if text == original:
     sys.exit(0)
@@ -393,6 +581,10 @@ if CULL_MARKER in text and CULL_MARKER not in original:
     notes.append("injected cullstats census (ROGUESQ_UCODE_CULLSTATS)")
 if OVL_MARKER in text and OVL_MARKER not in original:
     notes.append("injected overlay dispatch trace (ROGUESQ_UCODE_CULLSTATS=2)")
+if STRAY_MARKER in text and STRAY_MARKER not in original:
+    notes.append("injected stray-0x1DB0 source trace (ROGUESQ_UCODE_CULLSTATS=2)")
+if CLIP_MARKER in text and CLIP_MARKER not in original:
+    notes.append("spliced real clip overlay (CLIP_* labels, id-4 routing)")
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:
