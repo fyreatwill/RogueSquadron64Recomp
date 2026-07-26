@@ -197,17 +197,18 @@ cost three sessions before the recursive mutex.
    processes stalls permanently in the 640-wide phase (`[fbpair-cap]` hit at 8192, `fs=0` stuck)
    before ever reaching phase 1024, regardless of attach method (2× lldb, 1× `sample`, 1× no attach
    at all). s54 hit the same load band again (1.93→3.52 across the iteration, 33 `claude`
-   processes); s55 hit it a 5th time (3.42/3.26/3.17, 33 `claude` processes); **s56 hit it a 6th
-   time (2.75/3.09/3.13, 33 `claude` processes)** and again correctly skipped both this repro and
-   the M4 runtime check below rather than trust either result. **Do not attempt this repro again
+   processes); s55 hit it a 5th time (3.42/3.26/3.17, 33 `claude` processes); s56 hit it a 6th
+   time (2.75/3.09/3.13, 33 `claude` processes); **s57 hit it a 7th time (2.56/2.59/2.86, 33
+   `claude` processes)** and again correctly skipped both this repro and the M4 runtime check below
+   rather than trust either result. **Do not attempt this repro again
    until `uptime` load average is comfortably under ~1.5 AND few/no other `claude` processes are
    running** — treat this as near-certain, not merely well-corroborated. If load is high when this
    iteration starts, skip to step 2 (the M4 runtime check is also blocked by the same confound —
    s54 found it's not driven-input-specific — but the build/implementation half is done and
    load-insensitive); if load is high and step 2 is also inapplicable (already done, or itself
-   blocked), use the iteration for step 4 (doc housekeeping) rather than idling — see s55, s56. Do
-   not attempt an `fs`-freeze fix until the mechanism is clear. Full detail: PORTING-STATE s50,
-   s51, s52, s53, s54, s55, s56.
+   blocked), use the iteration for step 4 (doc housekeeping) rather than idling — see s55, s56, s57.
+   Do not attempt an `fs`-freeze fix until the mechanism is clear. Full detail: PORTING-STATE s50,
+   s51, s52, s53, s54, s55, s56, s57.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
@@ -221,18 +222,20 @@ cost three sessions before the recursive mutex.
    launch. Expect further new failure classes (mission overlay DMA → missing-func /
    UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice recipe). Each
    new failure is its own work unit.
-4. **Doc housekeeping — `CURRENT-TRUTH.md` still over the ~35 KB CLAUDE.md guideline (40,285 bytes
-   as of s56, down from 43,143 at s55's start).** s55 migrated the M1/M2 mechanism paragraphs to
+4. **Doc housekeeping — `CURRENT-TRUTH.md` still over the ~35 KB CLAUDE.md guideline (39,660 bytes
+   as of s57, down from 43,143 at s55's start).** s55 migrated the M1/M2 mechanism paragraphs to
    `docs/PROJECT-OVERVIEW.md` §3 and fixed two stale/wrong statements there. s56 did the entry-by-
-   entry compression of the "Overturned conclusions" section that s55 deferred: the s5–s31 entries
-   (oldest, hangar-band-specific, all closed under M1) are compressed with `PROJECT-OVERVIEW.md`
-   §4.x pointers added where a pattern is already documented there; the s44–s48 entries (clip-
-   dispatch mechanism, war-room scene identity) were deliberately left intact — still relevant to
-   ongoing M4 overlay/symbol-file work. Remaining size is now concentrated in those s44–s48 entries
-   plus the untouched "Method traps" and "Dead ends" sections. Further reduction means either
-   revisiting the conservative call on s44–s48 (not recommended while M4 is open) or a fresh
-   editorial pass on Method traps/Dead ends — its own judgment call, not yet attempted. Good
-   fallback work when load blocks steps 1–2.
+   entry compression of the "Overturned conclusions" section: the s5–s31 entries (oldest, hangar-
+   band-specific, all closed under M1) are compressed with `PROJECT-OVERVIEW.md` §4.x pointers added
+   where a pattern is already documented there; the s44–s48 entries (clip-dispatch mechanism,
+   war-room scene identity) were deliberately left intact — still relevant to ongoing M4 overlay/
+   symbol-file work. s57 compressed "Method traps" the same way (9 of 14 entries were exact §4.x
+   instances, now pointer lines; 5 with no existing §4 class kept in full) and reviewed "Dead ends"
+   (already tight one-liners, added one §4.5 cross-reference, no further trim found). Remaining size
+   is now concentrated in the s44–s48 Overturned-conclusions entries — the only section left
+   deliberately untouched. Further reduction means revisiting that conservative call (not
+   recommended while M4 is open) — otherwise this housekeeping thread is close to done; good
+   fallback work when load blocks steps 1–2 is now scarcer than before.
 5. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
    is its own git repo and carries uncommitted changes to 4 symbol files —
    `cinematic_overlay.txt`, `main_overlay.txt`, `menu_overlay.txt` (pre-existing, unknown origin)
@@ -454,9 +457,9 @@ any s2–s4 conclusion without checking that section.
 - `dmem[0x153]=0xFF` to force a segment reload (s2b): made failures worse (6 exit=3 vs 2–4).
 - Bulk moves of unmapped symbols out of `symbol_files/main_overlay.txt` (s9): each inserted symbol
   **splits** the enclosing function in that section — the duplicate-address truncation bug in reverse
-  — producing a SIGBUS in `allocAndInitGridCellArray`. Use `tools/overlay_symbol_probe.py <0xADDR>
-  [mission|menu|cinematic]` first (the reliable signal is the `addiu $sp, $sp, -N` prologue at +0),
-  one validated batch at a time.
+  (general class: PROJECT-OVERVIEW §4.5) — producing a SIGBUS in `allocAndInitGridCellArray`. Use
+  `tools/overlay_symbol_probe.py <0xADDR> [mission|menu|cinematic]` first (the reliable signal is the
+  `addiu $sp, $sp, -N` prologue at +0), one validated batch at a time.
 - Present-side snap-down and `findMostRecentContaining` fallbacks (s9):
   `present.screenVI.fbAddress()` already returns the framebuffer base and neither fallback ever fired.
 - `ROGUESQ_VIEW_RDRAM=1` (s9): the game window never appears; the mode is broken in this fork.
@@ -467,37 +470,28 @@ any s2–s4 conclusion without checking that section.
 
 ## Method traps
 
-- `fbPair.projections` is a reused vector; only `projectionCount` entries are live. Counting its
-  size reported "292-468 draw calls" where the true figure was 2-10 — use `fbPair.gameCallCount`
-  (s32).
-- Sampled diagnostic lines lie about totals: `[loadblock]` prints the first 60 then every 500th, so
-  counting its lines said "43 RGBA32 loads" where an exhaustive census said zero (s18, restated s19).
-- TMEM, `lastLoadOpByTMEM` and any load census read at draw-record time are stale under RT64, which
-  defers LOADBLOCKs to `fullSyncFramebufferPairTiles`; measure at upload (s19).
+Mechanism already generalized in PROJECT-OVERVIEW.md §4 → pointer only here, session tag is the
+specific instance in PORTING-STATE:
+- §4.1 instruments-that-lie: `fbPair.projections` over-count (s32), `[loadblock]` sampled-log
+  miscount (s18/s19), stale TMEM at draw-record time (s19), capture harness outliving the process,
+  `window_burst.sh` 60/60 false-positive (s9).
+- §4.2 attribution errors: colour match ≠ attribution, fog #C8C0A0 (s18); plausible decoded image ≠
+  phase ID (s17).
+- §4.3 cross-run comparison: knob effects/nulls manufactured by camera drift, "7.30%" constant
+  misread as an effect (s18); phase timing varies tens of seconds run-to-run, gate on
+  `PROBE_PHASE_WIDTH`/`PROBE_KEYS_FROM_PHASE=1` not a stopwatch (s17 → s18/s23).
+- §4.6 missing protocol events: pair/buffer/wrap counters measured instead of FULL_SYNC arrivals
+  (s11).
+
+Not yet generalized in PROJECT-OVERVIEW — specific to this codebase's instruments:
 - Sparse one-shot screenshots land on genuine inter-screen transitions and read as a regression;
   always burst-sample (28 frames at 0.15 s: 27/28 with content, where 4 one-shots showed black) (s9).
-- Cross-run A/B is not a method for an animating scene — the camera differs, so knob effects and nulls
-  are both manufactured; "7.30 % other pixels" identical to three significant figures across three
-  configurations is a constant, not an effect. Compare forced-colour pixel **fractions** within a
-  phase-matched run, or toggle within a single run (s18).
-- Validate a suppression instrument before believing a null result: `ROGUESQ_SUPPRESS_SHIFT=1` re-runs
-  any suppression mode as a +80 px displacement so you can see it reach the screen (s18).
-- A capture harness that keeps shooting after the process dies photographs the window underneath and
-  reports it as content — `window_burst.sh` read 60/60 that way; counts taken before the liveness
-  check was added are suspect (s9).
+- Validate a suppression instrument before believing a null result: `ROGUESQ_SUPPRESS_SHIFT=1`
+  re-runs any suppression mode as a +80 px displacement so you can see it reach the screen (s18).
 - The `[seq]` and `[full-hist]` walkers in `dpc_bridge` advance a fixed 8 bytes per command, so
   triangles (32–48 bytes) desync them into thousands of bogus SETCIMG addresses (`LOG_SEQ` also caps
   at 6000). Once geometry flows use `ROGUESQ_LOG_RDPHIST`, which uses RT64's own command lengths
   (s9/s11/s19).
-- Run-to-run phase timing varies by tens of seconds (Factor 5 logo at 18 s in one run, 44 s in
-  another), so fixed capture windows miss phases. Gate on the VI-width transition
-  (`PROBE_PHASE_WIDTH`, `PROBE_KEYS_FROM_PHASE=1`), never on a stopwatch (s17 → s18/s23).
-- When a downstream resource explodes, first count the event that is *supposed* to bound it. Sessions
-  6–10 measured pair counts, buffer bytes and wrap counters ever more precisely and never counted
-  FULL_SYNC arrivals — the one number that named the cause (s11).
-- A colour match is not attribution: fog #C8C0A0 matching the on-screen #c5be9d was coincidence (s18).
-- A plausible decoded image does not identify a phase — confirm the phase from the VI width, not from
-  what the picture looks like (s17).
 - Histogram-drain timing misleads: the runner histogram showed 0 RDP bytes for a task the dispatch
   tracer proved had processed its full DL (s2b).
 - Five frames per run does not average out camera motion, so even aggregate `pixel_stats.py` metrics

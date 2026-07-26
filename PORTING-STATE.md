@@ -4675,3 +4675,47 @@ sections, which is untouched territory and its own judgment call.
 
 Files: `docs/CURRENT-TRUTH.md` (Overturned-conclusions section: 15 entries compressed, s44–s48 and
 the S=0-triangle entry left intact).
+
+## Session 57 (2026-07-26) — load confound confirmed a 7th time; Method-traps section compressed with §4 pointers
+
+### Precondition check
+`uptime`: 2.56 2.59 2.86. `ps aux | grep -c '[c]laude'`: 33. Both thresholds breached (load
+comfortably-under-1.5 target, few/no `claude` processes target) — 7th consecutive session (s51 ×2,
+s52, s53, s54, s55, s56, now s57) landing in the confirmed load-stall band. Skipped both game-run
+work units (M3 LEVEL DESCRIPTION repro, M4 missing-func runtime check) per NEXT.md's explicit
+instruction rather than risk a stalled-run false result. Did NEXT.md work unit C: doc housekeeping.
+
+### What ran
+Continued the `docs/CURRENT-TRUTH.md` size reduction s55/s56 started, this time on the "Method
+traps" section (s56 had deferred it in favour of Overturned-conclusions). Compared each Method-traps
+entry against `docs/PROJECT-OVERVIEW.md` §4's already-documented hurdle classes:
+- 9 of the 14 entries were exact instances of an existing §4.x class (§4.1 instruments-that-lie: 4;
+  §4.2 attribution errors: 2; §4.3 cross-run comparison: 2; §4.6 missing protocol events: 1) —
+  compressed to one pointer line per §4.x class, session tags preserved as the instance list.
+- 5 entries had no existing §4 class (dpc_bridge walker desync, suppression-instrument validation,
+  sparse-screenshot sampling, histogram-drain timing, 5-frame averaging) — left intact, unabridged,
+  under a new "not yet generalized" subheading.
+- Also added a one-clause pointer to PROJECT-OVERVIEW §4.5 in the existing Dead-ends entry about
+  bulk symbol moves (s9) — that entry is already a specific instance of the duplicate-symbol/
+  function-split class §4.5 documents, but had no cross-reference. Reviewed every other Dead-ends
+  entry: each is already a single terse sentence with a unique flag/number/address and no restated
+  general-pattern prose to trim — left unchanged as already at target density.
+- Verified via `grep`/re-read that every specific number, flag name, and address from the original
+  Method-traps entries survives in the compressed version (either in the pointer line or in the
+  untouched "not yet generalized" list) — nothing made unrecoverable.
+
+### Verdict
+No new evidence on M3 or M4 (7th confirmation of the load-stall confound, not a new finding — the
+load/process-count signature is now essentially routine at this point in the day). Doc housekeeping:
+real, verified progress — `docs/CURRENT-TRUTH.md` dropped from 40,630 to 39,660 bytes (970 bytes /
+~2.4% saved) via `wc -c` before/after. Single-source (no second reviewer), fully reversible via git.
+This was a full pass over Method traps and a review pass over Dead ends, per NEXT.md's work-unit-C
+priority order (option 1 before option 2). The file remains above the 35 KB guideline — remaining
+size is concentrated in the s44–s48 Overturned-conclusions entries (still flagged higher-risk to
+touch while M4 is open) and in the now-reviewed-and-already-tight Dead-ends section. Per NEXT.md's
+own instruction ("stop once under ~35 KB or once you've made a full pass, whichever comes first —
+don't chase the number past confident, careful edits"), stopping here rather than opening the
+s44–s48 entries this session.
+
+Files: `docs/CURRENT-TRUTH.md` (Method-traps section rewritten with §4.x pointers; one Dead-ends
+entry gained a §4.5 cross-reference).
