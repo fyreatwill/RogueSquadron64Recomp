@@ -167,8 +167,14 @@ covers the mission.
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause (currently masked, not fixed); the S=0 triangles in the 640 attribution phase; the I4
 `sample=64x128` anomaly if M1 didn't consume it; the 3 `[missing-func]` addresses stubbed in the
-undriven outdoor-512 stretch (0x800C7120, 0x800FBD48, 0x800FB190, s49) — identify what they are and
-whether the stub is behaviorally silent or masking something.
+undriven outdoor-512 stretch (0x800C7120, 0x800FBD48, 0x800FB190, s49) — **identified, s53**:
+`getConfigFloatPair` / `clearMissionObjectiveFlagsAndEnterPhaseSix` / `requestMissionTransitionMode`
+respectively, all real mission-overlay functions (2/3 confirmed prologue, 1/3 a plausible frameless
+leaf) present only in `symbol_files/main_overlay.txt`, not `mission_overlay.txt` — the exact
+"symbol assigned to a non-overlay file" failure `overlays.cpp:388` describes. Not behaviorally
+silent by name (mission-phase-transition and objective-flag logic). Fix is the same
+already-used-60-times pattern (duplicate the symbol line into `mission_overlay.txt`) but not yet
+applied — see PORTING-STATE s53 for the exact 3-line diff and regen steps.
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -177,35 +183,45 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s52)
+## Next steps, in order of expected value (s53)
 
 1. **M3 — LEVEL DESCRIPTION black-screen/crash: trace the `fs` freeze. In-process crash handler is
-   now in place (s52); retry the repro ONLY when system load is genuinely low.** Confirmed on 2
+   in place (s52); retry the repro ONLY when system load is genuinely low.** Confirmed on 2
    independent runs (s50, s51). s51 ruled the `fmt=7` native-copy no-op down to "probably downstream
    symptom, not cause" (event ordering: `fs` freezes before the `fmt=7` warning; static read: the
    guard is pre-existing and its null result is checked by every caller). The leading hypothesis is
    still the `fs` freeze itself — some DL task around the AVAILABLE CRAFT → LEVEL DESCRIPTION
-   transition never reaches FULL_SYNC. `src/main/main.cpp` now installs a POSIX `sigaction` handler
+   transition never reaches FULL_SYNC. `src/main/main.cpp` installs a POSIX `sigaction` handler
    for SIGSEGV/SIGBUS/SIGABRT (mirrors the existing Windows-only one) that backtraces to stderr with
-   no external attach needed — use this instead of lldb/`sample` for the next H3 attempt. **s52
-   tried to exercise it and could not**: `uptime`/`ps aux | grep -c claude` showed load 2.4–3.7
-   with 33 concurrent Claude processes (at/above the s51 confound threshold), and the run stalled
-   permanently in the 640-wide phase (`[fbpair-cap]` hit at 8192, `fs=0` stuck) before ever reaching
-   phase 1024 — the *third* independent occurrence of this exact stall signature under load (s51 had
-   two, with different attach methods each time; s52 had none at all). **Do not attempt this repro
-   again until `uptime` load average is comfortably under ~1.5 AND few/no other `claude` processes
-   are running** — three same-signature stalls across two sessions is strong enough now that a 4th
-   attempt under similar load should not be attempted; wait or ask the user instead of burning
-   another cycle. Do not attempt a fix until the mechanism is clear. Full detail: PORTING-STATE s50,
-   s51, s52.
+   no external attach needed — use this instead of lldb/`sample` for the next H3 attempt, once a run
+   actually reaches the death screen (it hasn't yet). **Load confound now confirmed 4 times** (s51
+   ×2, s52 ×1, s53 ×1): every attempt with `uptime` load ≥ ~2.4 and ~33 concurrent `claude`
+   processes stalls permanently in the 640-wide phase (`[fbpair-cap]` hit at 8192, `fs=0` stuck)
+   before ever reaching phase 1024, regardless of attach method (2× lldb, 1× `sample`, 1× no attach
+   at all). **Do not attempt this repro again until `uptime` load average is comfortably under ~1.5
+   AND few/no other `claude` processes are running** — treat this as near-certain, not merely
+   well-corroborated; a 5th attempt under similar load is not worth the cycle. If load is high when
+   this iteration starts, skip straight to step 3 (the M4 missing-func fix below is fully
+   load-insensitive: it's a build-only change, no game run needed to implement, only to verify). Do
+   not attempt an `fs`-freeze fix until the mechanism is clear. Full detail: PORTING-STATE s50, s51,
+   s52, s53.
 2. Once the black screen is understood/fixed, continue past AVAILABLE CRAFT toward mission 1
    launch. Expect further new failure classes (mission overlay DMA → missing-func /
    UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice recipe). Each
    new failure is its own work unit.
-3. **M4 parked items**, cheapest first: identify the 3 `[missing-func]` addresses stubbed in the
-   s49 undriven outdoor-512 run (0x800C7120, 0x800FBD48, 0x800FB190) — symbol lookup, then decide
-   if the stub is silent or needs real implementation. Then outdoor zero-shade root cause, the S=0
-   640-phase triangles, and the I4 sample=64x128 anomaly.
+3. **M4 — apply the identified missing-func fix (s53).** `getConfigFloatPair` (0x800C7120),
+   `clearMissionObjectiveFlagsAndEnterPhaseSix` (0x800FBD48), `requestMissionTransitionMode`
+   (0x800FB190) are real mission-overlay functions present only in
+   `~/Documents/Tools/rogue_squadron64/symbol_files/main_overlay.txt`, not `mission_overlay.txt` —
+   add the 3 matching lines to `mission_overlay.txt` (exact text in PORTING-STATE s53; this
+   duplicate-listing pattern is already used for 60 other addresses, so it's not a novel move),
+   then regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`, all
+   build-only, no game run) and confirm the build succeeds. Runtime confirmation (the 3
+   `[missing-func]` lines disappear from a soaked outdoor-512 run) needs an actual game run — do
+   that part only when load is low enough to trust a null result. **Not yet applied** — s53 did the
+   identification but left the edit itself for review since it touches files outside this repo's
+   working tree. Then move to the other M4 items: outdoor zero-shade root cause, the S=0 640-phase
+   triangles, and the I4 sample=64x128 anomaly.
 4. **Band-row coverage history** (settled chain, for reference): s41 `MARK_VTX` proved a coverage
    hole; s42 `LOG_YHIST` proved submission through band rows; s43 `LOG_ZSTATE` proved raster-clean
    draws; s27–s31 eliminated texture decode; s45–s47 pinned and fixed the clip-dispatch loss; s48

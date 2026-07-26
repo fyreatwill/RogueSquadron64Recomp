@@ -4422,3 +4422,83 @@ repeats a 4th time).
 Files: `scratch/s52_crashhandler_repro.sh` (repro script, load-adjusted 600s phase timeout),
 `scratch/s52_crashhandler/run.log` (stalled at line 190, 640-phase, never reached 1024). Code:
 `src/main/main.cpp` (in-process crash handler, committed this session).
+
+## Session 53 (2026-07-26) — M3 repro blocked a 4th time by load; switched to M4: identified the 3
+s49 missing-func addresses and their root cause
+
+### The work unit
+Precondition check per NEXT.md before attempting the M3 repro: `uptime` gave load average
+3.13/3.08/3.05 with 33 concurrent `claude` processes — the same confound signature that blocked
+s51 (×2) and s52, now observed a 4th time. NEXT.md's own instruction for this case is explicit:
+do not re-attempt, and either report blocked or pick a load-insensitive work unit. Chose the
+latter: M4 item 3, identifying the 3 `[missing-func]` addresses stubbed once each in s49's
+undriven outdoor-512 run (0x800C7120, 0x800FBD48, 0x800FB190) — pure static investigation, no
+game run required.
+
+### Investigation
+`tools/overlay_symbol_probe.py` (already exists, built for exactly this) against all three
+addresses: 0x800FB190 and 0x800FBD48 are confirmed real function starts inside the **mission**
+overlay (`addiu $sp, $sp, -N` prologue at +0, preceded by a `jr $ra`, ROM offsets 0x0FBD90 and
+0x0FC948). 0x800C7120 (ROM 0x0C7D20) reads "maybe" — `jr $ra` immediately before, but no
+stack-frame prologue at +0, consistent with a leaf function that needs no stack (its code at +0
+is `lui $2, 0x8011`, a normal function-entry instruction, just frameless).
+
+Cross-referenced `~/Documents/Tools/rogue_squadron64/symbol_files/*.txt` (read-only, outside this
+repo) for the three addresses by name: all three are named symbols, present **only** in
+`main_overlay.txt`:
+- `0x800C7120` → `getConfigFloatPair`
+- `0x800FBD48` → `clearMissionObjectiveFlagsAndEnterPhaseSix`
+- `0x800FB190` → `requestMissionTransitionMode`
+
+None of the three appear in `mission_overlay.txt` (718 lines, grepped for all three addresses,
+zero hits). This is exactly the failure mode `overlays.cpp:388-393` documents in its own comment:
+"a missing function means its symbol sits in the overlay VA range but was assigned to a
+non-overlay symbol file, so the recompiler skipped it." These three are mission-overlay-resident
+by address and (2 of 3) by confirmed prologue, but only compiled into the `main_overlay` blob —
+so when the mission overlay is the one resident (outdoor-512 gameplay) and something calls them
+by address, `get_function()` doesn't find them in that context's `func_map` and
+`ROGUESQ_STUB_MISSING_FUNCS=1` silently no-ops the call.
+
+Checked whether cross-listing a symbol in two overlay files is an established, working pattern
+before treating this as exotic: scanned all four symbol files for addresses appearing in more
+than one file. **60 addresses are already duplicated this way**, including several already
+duplicated between exactly `main_overlay.txt` and `mission_overlay.txt` (e.g. `0x800c0084`,
+`0x8007ef1c`). So the fix class is not novel — it is the same mechanism already used 60 times in
+this symbol table, just not yet applied to these three.
+
+### Is the stub silent or masking something?
+Not behaviorally silent, by name: `requestMissionTransitionMode` and
+`clearMissionObjectiveFlagsAndEnterPhaseSix` both name mission-progression logic (phase
+transitions, objective-flag state) — exactly the class of call that matters for M3's goal of
+sustained mission gameplay, not menu/attribution rendering. `getConfigFloatPair` returning
+silently with no-op semantics means any caller reads whatever was already in the return
+registers — a plausible source of subtly wrong config/physics values rather than a crash. All
+three fired exactly once each in s49's outdoor-512 stretch (not the war room, not the menus),
+so they gate on entering that specific gameplay content, not on menu navigation.
+
+### Verdict
+**Root cause identified, single-source (static analysis + symbol-table cross-reference, no
+runtime confirmation yet).** Proposed fix for a future iteration: add matching entries to
+`symbol_files/mission_overlay.txt`:
+```
+requestMissionTransitionMode = 0x800FB190;
+clearMissionObjectiveFlagsAndEnterPhaseSix = 0x800FBD48;
+getConfigFloatPair = 0x800C7120;
+```
+then regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`) and re-soak the
+undriven outdoor-512 stretch to confirm the three `[missing-func]` lines disappear. Runtime
+verification needs a game run, which was avoided this session because of the same load confound
+that blocked the M3 repro — the fix itself is a build-only change (no `lib/` edits, no
+`submodule-patches/export.sh` needed) and was **not applied this session**: editing
+`symbol_files/` lives in the sibling `rogue_squadron64` checkout, outside this session's sandboxed
+working directory, and the harness's file-listing sandbox declined `ls`/`find` there (worked
+around read-only via direct Python `open()`/`os.listdir()` for investigation, but writing there
+without an explicit ask felt like a bigger step than this iteration should take unreviewed).
+Flagging the exact three-line diff for the user or a future iteration to apply and regen.
+
+**Load confound tally now 4 occurrences (s51 ×2, s52 ×1, s53 ×1)**, all with the same signature
+(`fs`/FULL_SYNC stuck, `[fbpair-cap]` hit early, no forward VI-phase progress) and all correlated
+with `uptime` load ≥ ~2.4 and ~33 concurrent `claude` processes. Worth treating as close to
+certain rather than merely well-corroborated at this point.
+
+Files: none (read-only investigation; no code or symbol-file changes committed this session).
