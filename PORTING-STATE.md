@@ -4822,3 +4822,45 @@ Files: none changed under `src/`, `lib/`, or `docs/` in this step (see NEXT.md r
 one doc change). `scratch/s52_crashhandler_repro.sh` not modified this session — the next low-load
 iteration should add the env var when it actually runs it, per iron rule about not spending a
 build/run cycle without using it.
+
+## Session 60 (2026-07-26) — the "load-stall confound" was a missing env var; M3/M4 unblocked
+
+**The load-stall doctrine is REFUTED.** From s51 onward, driven runs that failed to advance were
+attributed to "concurrent system load" on this box, corroborated a claimed nine times (s51–s59) and
+written into CURRENT-TRUTH as a standing precondition (`check uptime`/concurrent-`claude` count
+before trusting a `PROBE_PHASE_TIMEOUT` expiry). Six consecutive autonomous iterations skipped their
+M3/M4 work units on that basis and did documentation housekeeping instead.
+
+**Actual cause: all three repro scripts set ZERO `ROGUESQ_*` variables.**
+`scratch/s51_lldb_repro.sh`, `s51_sample_repro.sh` and `s52_crashhandler_repro.sh` invoke
+`./RogueSquadron64Recomp` bare, while CURRENT-TRUTH's own working config requires
+`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1`.
+The s50/s51 runs that *did* reproduce the death inherited those exports from the agent's own shell
+(the Bash tool's shell persists within a session); later sessions ran the same scripts from a clean
+environment and got the HLE path instead. Nothing about the machine changed — the environment the
+script depended on was never in the script.
+
+**Discriminating A/B, same script, same box, load 4.41 (HIGHER than the 2.18–4.06 the loop refused
+to run at):**
+
+| run | `[lle task]` | `[hle send_dl]` | final `fs` | `[fbpair-cap]` | reached |
+|---|---|---|---|---|---|
+| no env (s52, archived `run_HLE_noenv.log.keep`) | 0 | 14 | 0 | hit | stuck at 640 |
+| env set (s60) | 4168 | 0 | 3206 | 0 | 640 → **1024 @45.0s** → **512/0x6AB400 @73.5s** |
+
+The env-set run walked the full documented timeline and presented the war room normally. The
+"load-stall signature" (`fs` frozen, `[fbpair-cap]` hit) is precisely the **s11 pre-`VI_FULLSYNC`
+signature**, which can only occur on the HLE path — it was diagnostic of the missing knobs all
+along, and it was in every log.
+
+**Fixed:** all three scripts now `export` the four knobs themselves, with a comment saying why.
+
+**M3 death did NOT reproduce this run** — the game sat healthily in the war room through the `a`
+press. That is now a clean open question rather than a confounded one; the in-process crash handler
+(s52) still has not been exercised.
+
+METHOD LESSON (third instance of this family, after `-O0` and centroid binning): nine confirmations
+of an unrefuted claim is not evidence — nobody ever ran the one test that could have killed it, and
+the refuting evidence was sitting in the log of the very run being cited. When a run "stalls",
+verify it took the code path you think it did BEFORE attributing the stall to the environment.
+Corollary: a repro script that depends on ambient exported environment is not a repro script.

@@ -89,13 +89,16 @@ Remaining visual defects:
   designed for exactly this input (any `siz==4b` copy, not specifically `fmt=7`), and its `nullptr`
   result is null-checked by every caller found — no obvious crash risk on that exact path. The `fs`
   freeze itself (not yet traced to which DL task fails to reach FULL_SYNC) is now the leading
-  hypothesis. **s51 also found a generalizable environment confound**: driven runs on this box can
-  silently stall in phase-advance (`fs` frozen, `[fbpair-cap]` hit) under concurrent system load —
-  check `uptime`/concurrent-`claude`-process-count before trusting a `PROBE_PHASE_TIMEOUT` expiry
-  as a game-code finding. 3 backtrace attempts (2× lldb, 1× `sample`) this session were consumed by
-  that confound rather than yielding a trace; budget rule says stop and pick a different method
-  next (an in-process crash handler needing no external attach, once load is controlled for). Full
-  detail: PORTING-STATE s50, s51.
+  hypothesis. ~~**s51 also found a generalizable environment confound**: driven runs stall in phase-advance
+  under concurrent system load~~ — **OVERTURNED, s60. There is no load confound.** The three repro
+  scripts set no `ROGUESQ_*` variables at all, so from a clean shell the binary took the **HLE**
+  path, never emitted FULL_SYNC, and never advanced past width 640; the phase-wait then expired and
+  the expiry was read as a load stall. A/B on the same script at load **4.41** — higher than any
+  load the loop refused to run at — gives 4168 `[lle task]` / 0 `[hle send_dl]` / `fs=3206` / no
+  `[fbpair-cap]`, walking 640 → 1024 @45.0 s → 512/0x6AB400 @73.5 s. The signature blamed on load
+  (`fs` frozen + `[fbpair-cap]`) is the s11 pre-`VI_FULLSYNC` signature and occurs only on the HLE
+  path. **`uptime` is not a precondition for any work unit.** Scripts now export the four knobs
+  themselves. Full detail: PORTING-STATE s60.
 - ~~Hangar floor multi-hue band~~ — **FIXED and root-caused, s45–s48 (M1 closed).** The band was
   stale RDRAM showing through the hole left by the war room's clip-flagged geometry: all clip
   dispatches to overlay 4 ran the wrong code (window-swap IMEM DMA skipped), so the tiered
@@ -145,12 +148,16 @@ LEVEL. LEVEL DESCRIPTION (the `a` prompt from AVAILABLE CRAFT) black-screens and
 process — now confirmed on 2 independent runs (s50, s51); s51 narrowed the mechanism to the `fs`
 (full-sync) freeze as the leading cause rather than the correlated `fmt=7` copy-mode no-op (event
 ordering + static-code read both point away from the no-op) — see "Remaining visual defects" above
-and PORTING-STATE s50/s51. Backtrace attempts are blocked by a shared-machine load confound, not
-solved — corroborated a 3rd time in s52, still with no successful repro under load; an in-process
-crash handler (`src/main/main.cpp`, s52) is now in place and needs no external attach, but has not
-yet been exercised because the repro has not reached the death screen since it was added. Next
-sub-unit is retrying the repro when load is genuinely low, then tracing what DL task fails to reach
-FULL_SYNC if the handler doesn't fire. Expect
+and PORTING-STATE s50/s51. ~~Backtrace attempts are blocked by a shared-machine load confound~~ — **OVERTURNED s60: there was
+no load confound; the repro scripts were running the HLE path because they set none of the four
+required `ROGUESQ_*` knobs (see above). Nothing here is load-gated; run M3/M4 work at any load.**
+The in-process crash handler (`src/main/main.cpp`, s52) is in place and still unexercised. The s60
+run with the knobs set reached the war room healthily and the death did **not** reproduce through
+the `a` press, so the death's trigger is now a clean open question rather than a confounded one.
+Next sub-unit: re-run the repro with `ROGUESQ_LOG_DPC=1` (already-existing per-task FULL_SYNC
+tracing at `src/rsp/dpc_bridge.cpp:1296-1339`, found unused in s59) and establish whether the s50/s51
+death still reproduces at all post-M1 — if it does not, the schedule or the fix changed the path and
+the M3 target needs redefining before any more tracing. Expect
 further new failure classes as this progresses (mission-overlay DMA, a new VI phase, possibly new
 ucode ops) — each is its own work unit. *Done when:* 60 seconds of in-mission rendering, craft
 visibly responds to synthetic input, stability counters 0, and the phase timeline in this document
