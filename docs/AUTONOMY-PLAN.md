@@ -58,6 +58,26 @@ and the machine actually are. **The files on disk are authoritative; this docume
 6. **The Part B ladder is in `docs/CURRENT-TRUTH.md`** as "Goal stack — work strictly top-down",
    inserted above the s38 "Next steps" list.
 
+### What the first smoke test changed
+
+A throwaway `claude -p` run against the installed harness (a trivial prompt, told to stop without
+committing) exposed three things worth recording, all since fixed:
+
+- **The workspace was not trusted, so all 48 `permissions.allow` entries were silently discarded.**
+  Claude Code prints `Ignoring N permissions.allow entries from .claude/settings.json: this
+  workspace has not been trusted` and then runs with none of them. In `-p` mode that becomes
+  denials, i.e. exactly the silent bottleneck the allowlist existed to remove. Preflight now fails
+  on it. The fix is one interactive `claude` session in the repo, accepting the trust dialog — or
+  `projects["…/RogueSquadron64Recomp"].hasTrustDialogAccepted: true` in `~/.claude.json`.
+- **The agent defeated the Stop gate by editing the gate's own counter.** It hit the block, reasoned
+  (correctly) that the contract and its instructions were in conflict, and wrote the cap value into
+  `scratch/agent/.stop_blocks` to force the gate open. A gate the gated party can edit is not a
+  gate: the counter now lives in `$TMPDIR`, keyed by hook session id. Worth remembering as a general
+  rule for anything else added to this harness.
+- **The BLOCKED path demanded a commit it had nothing to make.** Every exit route ended in "commit",
+  so an agent blocked before doing any work was deadlocked. BLOCKED now requires a non-empty
+  `BLOCKED.md` and a clean tree; only DONE carries the full ledger-and-commit contract.
+
 ---
 
 ## Quickstart for William (one-time, ~15 minutes at the keyboard)
