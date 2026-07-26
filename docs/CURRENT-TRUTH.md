@@ -172,9 +172,15 @@ undriven outdoor-512 stretch (0x800C7120, 0x800FBD48, 0x800FB190, s49) — **ide
 respectively, all real mission-overlay functions (2/3 confirmed prologue, 1/3 a plausible frameless
 leaf) present only in `symbol_files/main_overlay.txt`, not `mission_overlay.txt` — the exact
 "symbol assigned to a non-overlay file" failure `overlays.cpp:388` describes. Not behaviorally
-silent by name (mission-phase-transition and objective-flag logic). Fix is the same
-already-used-60-times pattern (duplicate the symbol line into `mission_overlay.txt`) but not yet
-applied — see PORTING-STATE s53 for the exact 3-line diff and regen steps.
+silent by name (mission-phase-transition and objective-flag logic). **s54: fix applied** (3 lines
+added to `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt`, a sibling checkout
+with its own git repo — not `lib/`, no `submodule-patches/export.sh` needed) and the full regen
+pipeline (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`) ran clean, build
+exit 0, no new warnings/errors. **Runtime confirmation still outstanding** — s54 rechecked load
+post-build (3.52/3.10/3.11, 33 `claude` processes, worse than at start) and correctly skipped the
+game run rather than risk a load-stalled false-negative; not yet re-attempted. That sibling repo
+also carries pre-existing uncommitted changes to 3 other symbol files from earlier sessions,
+unrelated to this fix — flagged for the user, not committed autonomously (s54).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -183,7 +189,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s53)
+## Next steps, in order of expected value (s54)
 
 1. **M3 — LEVEL DESCRIPTION black-screen/crash: trace the `fs` freeze. In-process crash handler is
    in place (s52); retry the repro ONLY when system load is genuinely low.** Confirmed on 2
@@ -198,36 +204,39 @@ cost three sessions before the recursive mutex.
    ×2, s52 ×1, s53 ×1): every attempt with `uptime` load ≥ ~2.4 and ~33 concurrent `claude`
    processes stalls permanently in the 640-wide phase (`[fbpair-cap]` hit at 8192, `fs=0` stuck)
    before ever reaching phase 1024, regardless of attach method (2× lldb, 1× `sample`, 1× no attach
-   at all). **Do not attempt this repro again until `uptime` load average is comfortably under ~1.5
-   AND few/no other `claude` processes are running** — treat this as near-certain, not merely
-   well-corroborated; a 5th attempt under similar load is not worth the cycle. If load is high when
-   this iteration starts, skip straight to step 3 (the M4 missing-func fix below is fully
-   load-insensitive: it's a build-only change, no game run needed to implement, only to verify). Do
-   not attempt an `fs`-freeze fix until the mechanism is clear. Full detail: PORTING-STATE s50, s51,
-   s52, s53.
-2. Once the black screen is understood/fixed, continue past AVAILABLE CRAFT toward mission 1
+   at all). s54 hit the same load band again (1.93→3.52 across the iteration, 33 `claude`
+   processes) and correctly skipped both this repro and the M4 runtime check below rather than
+   trust either result. **Do not attempt this repro again until `uptime` load average is
+   comfortably under ~1.5 AND few/no other `claude` processes are running** — treat this as
+   near-certain, not merely well-corroborated. If load is high when this iteration starts, skip to
+   step 2 (the M4 runtime check is also blocked by the same confound — s54 found it's not
+   driven-input-specific — but the build/implementation half is done and load-insensitive). Do not
+   attempt an `fs`-freeze fix until the mechanism is clear. Full detail: PORTING-STATE s50, s51,
+   s52, s53, s54.
+2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
+   check remains).** s54 added the 3 lines to
+   `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
+   pipeline clean (build exit 0). What's left: an undriven run phase-gated to the outdoor-512
+   stretch (s49 shape) to confirm `grep -c "\[missing-func\]"` drops from 3 to 0 there with 0 new
+   stability-counter hits elsewhere. **Blocked by the same load confound as step 1** — do this only
+   when load is low, and prefer doing it in the *same* low-load window as the M3 repro attempt if
+   convenious, since both need a clean run and are otherwise independent work units. Full detail:
+   PORTING-STATE s53, s54.
+3. Once the black screen is understood/fixed, continue past AVAILABLE CRAFT toward mission 1
    launch. Expect further new failure classes (mission overlay DMA → missing-func /
    UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice recipe). Each
    new failure is its own work unit.
-3. **M4 — apply the identified missing-func fix (s53).** `getConfigFloatPair` (0x800C7120),
-   `clearMissionObjectiveFlagsAndEnterPhaseSix` (0x800FBD48), `requestMissionTransitionMode`
-   (0x800FB190) are real mission-overlay functions present only in
-   `~/Documents/Tools/rogue_squadron64/symbol_files/main_overlay.txt`, not `mission_overlay.txt` —
-   add the 3 matching lines to `mission_overlay.txt` (exact text in PORTING-STATE s53; this
-   duplicate-listing pattern is already used for 60 other addresses, so it's not a novel move),
-   then regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`, all
-   build-only, no game run) and confirm the build succeeds. Runtime confirmation (the 3
-   `[missing-func]` lines disappear from a soaked outdoor-512 run) needs an actual game run — do
-   that part only when load is low enough to trust a null result. **Not yet applied** — s53 did the
-   identification but left the edit itself for review since it touches files outside this repo's
-   working tree. Then move to the other M4 items: outdoor zero-shade root cause, the S=0 640-phase
-   triangles, and the I4 sample=64x128 anomaly.
-4. **Band-row coverage history** (settled chain, for reference): s41 `MARK_VTX` proved a coverage
+4. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
+   is its own git repo and carries uncommitted changes to 4 symbol files —
+   `cinematic_overlay.txt`, `main_overlay.txt`, `menu_overlay.txt` (pre-existing, unknown origin)
+   plus `mission_overlay.txt` (s54's fix). Ask the user whether/how they want this checkout's
+   history managed before any iteration commits there.
+5. **Band-row coverage history** (settled chain, for reference): s41 `MARK_VTX` proved a coverage
    hole; s42 `LOG_YHIST` proved submission through band rows; s43 `LOG_ZSTATE` proved raster-clean
    draws; s27–s31 eliminated texture decode; s45–s47 pinned and fixed the clip-dispatch loss; s48
    proved the fix fills the band (and renamed the scene); s49 closed the regression sweep. s40's
    `col`-write probe fails its own control — do not reuse.
-5. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+6. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
