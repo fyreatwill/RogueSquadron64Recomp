@@ -70,7 +70,14 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   # MAX_LIMIT_WAITS * SLEEP_ON_LIMIT (6 hours by default) retrying something
   # that cannot succeed until a human raises the cap. Distinguish it from the
   # transient limits, which really are just windows.
-  if printf '%s' "$out" | grep -qiE 'monthly spend limit|spend limit|credit balance|insufficient quota|upgrade your plan'; then
+  #
+  # ORDER MATTERS. With extra usage OFF, the normal subscription-limit message
+  # is what the loop is SUPPOSED to sleep through, and it often carries upsell
+  # wording ("upgrade your plan") that would otherwise read as a hard cap. A
+  # stated reset time means the window reopens by itself: always transient.
+  if printf '%s' "$out" | grep -qiE 'resets? at|resets? in|try again (later|at)|limit will reset'; then
+    : # falls through to the transient handler below - sleep, do not stop
+  elif printf '%s' "$out" | grep -qiE 'monthly spend limit|spend limit|credit balance|insufficient quota'; then
     { echo "# Hard spend/quota cap reached, $(date)"; echo;
       echo "This is NOT a transient rate limit and sleeping will not clear it."
       echo "Raise or reset the cap (claude.ai/settings/usage), then delete this"
