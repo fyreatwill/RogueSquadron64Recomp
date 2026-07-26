@@ -4719,3 +4719,52 @@ s44–s48 entries this session.
 
 Files: `docs/CURRENT-TRUTH.md` (Method-traps section rewritten with §4.x pointers; one Dead-ends
 entry gained a §4.5 cross-reference).
+
+## Session 58 (2026-07-26) — load confound confirmed an 8th time; reviewed the s44–s48 Overturned-conclusions entries, one safe cut found, three left intact
+
+### Precondition check
+`uptime`: 2.18 2.72 2.86. `ps aux | grep -c '[c]laude'`: 33. Same signature as the last 7 sessions
+(s51 ×2, s52–s57) — load and process count both over the "comfortably under 1.5, few/no `claude`"
+bar. Skipped both game-run work units (M3 LEVEL DESCRIPTION repro, M4 missing-func runtime check)
+per NEXT.md's explicit instruction. Did NEXT.md work unit C, option 1: the s44–s48 Overturned-
+conclusions review that s55/s56/s57 had all deliberately deferred.
+
+### What ran
+Re-read PORTING-STATE s46/s47/s48 in full alongside the 4 s44–s48 entries in `docs/
+CURRENT-TRUTH.md`'s Overturned-conclusions section, checking each against (a) whether its mechanism
+is already stated elsewhere in the doc (redundant → safe to pointer-compress) and (b) whether it's
+an exact instance of an existing PROJECT-OVERVIEW §4.x hurdle class (the same test s56/s57 used for
+the rest of the file):
+- **Entry 3 (s12–s47 "main-menu hangar" scene misidentification, overturned s48): compressed.**
+  Its restated mechanism (war room, dropped clip-flagged tiered rings/holotable, "landing pad" /
+  parked-X-wing misreading, stale-RDRAM band) is a near-verbatim duplicate of the "s48 scene-
+  identity correction" paragraph already earlier in the same file (`CURRENT-TRUTH.md` line ~68).
+  Replaced the restated mechanism with a pointer to that paragraph, keeping the parts unique to the
+  overturned-conclusions entry: the proof (wall-structure identity between s41 control frames and
+  s48 render, 0.2 s arrival-time match) and the "why believable" reasoning (SELECT GAME's
+  photographic hangar backdrop, 36 sessions of a coherent-looking partial render). 8 lines → 6.
+- **Entries 1, 2, 4 (s46 clip-overlay-not-in-ROM claim; s46 non-L_1298-jr routing-safety claim;
+  s47 wrong scene-origin attributions): left intact.** None restates content found elsewhere in the
+  file (checked against PROJECT-OVERVIEW §3's "Fixing the hangar band" paragraph and the menu-
+  state-machine paragraph in CURRENT-TRUTH — neither carries the "why believable" reasoning or the
+  proof specifics these entries hold). None is an exact instance of an existing §4.x class either:
+  entry 1's "window region holds init code and clip-fan fragments at shifted offsets, so a scan for
+  the expected layout finds nothing" and entry 2's "two counters believed to measure the same
+  population differ by exactly the fall-through paths" are each one-off enough that forcing a
+  pointer would either lose the specific mechanism or manufacture a false generalization — the same
+  standard s57 applied to the 5 ungeneralized Method-traps entries. Entry 4 is a correction of s47's
+  own prior (wrong) record, with no restatement anywhere else.
+
+### Verdict
+No new evidence on M3 or M4 (8th confirmation of the load-stall confound). Doc housekeeping: one
+genuine, non-lossy cut made (39,962 → 39,784 bytes, confirmed via `wc -c` before/after); the other 3
+candidate entries in this section were reviewed against the same criteria used successfully
+elsewhere in the file and found to have no safe compression available without losing a unique
+mechanism detail or manufacturing a false §4.x generalization — this is a considered "leave alone",
+not a skipped review. This closes out the s55-opened doc-housekeeping thread's remaining open
+question (whether the s44–s48 section could be touched) with a documented negative answer;
+`docs/CURRENT-TRUTH.md` remains slightly over the 35 KB guideline (39,784 bytes) with no further
+safe lever identified in this section. Single-source, fully reversible via git.
+
+Files: `docs/CURRENT-TRUTH.md` (one Overturned-conclusions entry compressed with a cross-reference;
+three reviewed and left unchanged).

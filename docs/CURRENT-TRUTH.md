@@ -181,7 +181,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s56)
+## Next steps, in order of expected value (s58)
 
 1. **M3 — LEVEL DESCRIPTION black-screen/crash: trace the `fs` freeze. In-process crash handler is
    in place (s52); retry the repro ONLY when system load is genuinely low.** Confirmed on 2
@@ -198,17 +198,19 @@ cost three sessions before the recursive mutex.
    before ever reaching phase 1024, regardless of attach method (2× lldb, 1× `sample`, 1× no attach
    at all). s54 hit the same load band again (1.93→3.52 across the iteration, 33 `claude`
    processes); s55 hit it a 5th time (3.42/3.26/3.17, 33 `claude` processes); s56 hit it a 6th
-   time (2.75/3.09/3.13, 33 `claude` processes); **s57 hit it a 7th time (2.56/2.59/2.86, 33
-   `claude` processes)** and again correctly skipped both this repro and the M4 runtime check below
-   rather than trust either result. **Do not attempt this repro again
+   time (2.75/3.09/3.13, 33 `claude` processes); s57 hit it a 7th time (2.56/2.59/2.86, 33 `claude`
+   processes); **s58 hit it an 8th time (2.18/2.72/2.86, 33 `claude` processes)** and again
+   correctly skipped both this repro and the M4 runtime check below rather than trust either
+   result. **Do not attempt this repro again
    until `uptime` load average is comfortably under ~1.5 AND few/no other `claude` processes are
    running** — treat this as near-certain, not merely well-corroborated. If load is high when this
    iteration starts, skip to step 2 (the M4 runtime check is also blocked by the same confound —
    s54 found it's not driven-input-specific — but the build/implementation half is done and
    load-insensitive); if load is high and step 2 is also inapplicable (already done, or itself
-   blocked), use the iteration for step 4 (doc housekeeping) rather than idling — see s55, s56, s57.
+   blocked), use the iteration for step 4 (doc housekeeping — now largely exhausted, s58) or step 5
+   (sibling-repo question) rather than idling — see s55, s56, s57, s58.
    Do not attempt an `fs`-freeze fix until the mechanism is clear. Full detail: PORTING-STATE s50,
-   s51, s52, s53, s54, s55, s56, s57.
+   s51, s52, s53, s54, s55, s56, s57, s58.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
@@ -222,20 +224,22 @@ cost three sessions before the recursive mutex.
    launch. Expect further new failure classes (mission overlay DMA → missing-func /
    UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice recipe). Each
    new failure is its own work unit.
-4. **Doc housekeeping — `CURRENT-TRUTH.md` still over the ~35 KB CLAUDE.md guideline (39,660 bytes
-   as of s57, down from 43,143 at s55's start).** s55 migrated the M1/M2 mechanism paragraphs to
-   `docs/PROJECT-OVERVIEW.md` §3 and fixed two stale/wrong statements there. s56 did the entry-by-
-   entry compression of the "Overturned conclusions" section: the s5–s31 entries (oldest, hangar-
-   band-specific, all closed under M1) are compressed with `PROJECT-OVERVIEW.md` §4.x pointers added
-   where a pattern is already documented there; the s44–s48 entries (clip-dispatch mechanism,
-   war-room scene identity) were deliberately left intact — still relevant to ongoing M4 overlay/
-   symbol-file work. s57 compressed "Method traps" the same way (9 of 14 entries were exact §4.x
-   instances, now pointer lines; 5 with no existing §4 class kept in full) and reviewed "Dead ends"
-   (already tight one-liners, added one §4.5 cross-reference, no further trim found). Remaining size
-   is now concentrated in the s44–s48 Overturned-conclusions entries — the only section left
-   deliberately untouched. Further reduction means revisiting that conservative call (not
-   recommended while M4 is open) — otherwise this housekeeping thread is close to done; good
-   fallback work when load blocks steps 1–2 is now scarcer than before.
+4. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
+   (39,784 bytes as of s58, down from 43,143 at s55's start) — this thread is now effectively
+   exhausted.** s55 migrated the M1/M2 mechanism paragraphs to `docs/PROJECT-OVERVIEW.md` §3. s56
+   compressed the s5–s31 Overturned-conclusions entries with §4.x pointers. s57 compressed "Method
+   traps" the same way and reviewed "Dead ends" (no further trim found). **s58 opened the one
+   section every prior session had deliberately left alone — the s44–s48 Overturned-conclusions
+   entries (clip-dispatch mechanism, war-room scene identity) — and found exactly one safe cut**:
+   the s12–s47 "main-menu hangar" entry restated a mechanism already given in full in the "s48
+   scene-identity correction" paragraph earlier in this file, so it's now a pointer plus its unique
+   proof/why-believable content. **The other 3 entries (s46 clip-overlay-in-ROM, s46 non-L_1298-jr
+   routing safety, s47 wrong scene-origin attributions) were reviewed against the same two tests
+   used successfully elsewhere in the file (restated elsewhere? exact §4.x instance?) and both came
+   back negative for all three — they are a considered "leave alone," not a skipped review.** No
+   further lever is identified in this section. Fallback work when load blocks steps 1–2 has now
+   run out; prefer step 5 (surface the sibling-repo question) over re-opening this section without a
+   new angle. Full detail: PORTING-STATE s58.
 5. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
    is its own git repo and carries uncommitted changes to 4 symbol files —
    `cinematic_overlay.txt`, `main_overlay.txt`, `menu_overlay.txt` (pre-existing, unknown origin)
@@ -425,13 +429,12 @@ any s2–s4 conclusion without checking that section.
   **Why believable:** the two counters were believed to measure the same population; they differ
   by exactly the fall-through paths.
 - **Claim (s12–s47):** the 512-wide origin-0x6AB400 scene is the "main-menu hangar" — landing
-  pad, parked X-wing, hangar walls. **Overturned by s48:** it is the **level-select war room**,
-  rendered pre-fix without every clip-flagged triangle (tiered console rings, holotable), which
-  made the central platform read as a pad and the Mos Eisley preview hologram as a parked X-wing.
-  Proven by wall-structure identity between the s41 control frames and the s48 full render, same
-  origin, same input path, arrival times matching to 0.2 s. **Why believable:** the partial
-  render was a coherent-looking scene for 36 sessions, and SELECT GAME's photographic hangar
-  backdrop reinforced the "hangar" frame; nothing looked missing until the missing half rendered.
+  pad, parked X-wing, hangar walls. **Overturned by s48** — mechanism at "scene-identity
+  correction" above. Proven by wall-structure identity between the s41 control frames and the s48
+  full render, same origin, same input path, arrival times matching to 0.2 s. **Why believable:**
+  the partial render was a coherent-looking scene for 36 sessions, and SELECT GAME's photographic
+  hangar backdrop reinforced the "hangar" frame; nothing looked missing until the missing half
+  rendered.
 - **Claim (s47):** the briefing room presents from origin 0x656400, SELECT LEVEL from 0x696100,
   the clip fix changed menu timing, and the verify run overshot the hangar. **Overturned by
   s48:** all four wrong. The war room / SELECT LEVEL presents from **0x6AB400** (three runs); the
