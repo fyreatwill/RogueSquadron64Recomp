@@ -54,7 +54,9 @@ if [ -n "$head_start" ] && [ "$head_now" = "$head_start" ]; then
   block "Exit contract unmet: no commit landed this iteration (HEAD is unchanged at ${head_now:0:8}). Run: git add -A && git commit -m 'iter: <one-line finding>'."
 fi
 
-dirty="$(git status --porcelain -- . ':(exclude)scratch' ':(exclude)build' 2>/dev/null | head -5)"
+# --ignore-submodules=dirty: lib/ is permanently dirty by design (the patches
+# live in the working tree); submodule content is tracked via submodule-patches/.
+dirty="$(git status --porcelain --ignore-submodules=dirty -- . ':(exclude)scratch' ':(exclude)build' 2>/dev/null | head -5)"
 if [ -n "$dirty" ]; then
   block "Exit contract unmet: uncommitted changes remain outside scratch/ and build/:
 $dirty
