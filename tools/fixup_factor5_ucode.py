@@ -253,6 +253,130 @@ struct Rs64CullStats {
         1, "clip-fan jal")
 
 # ---------------------------------------------------------------------------
+# Fixup 4: overlay dispatch trace (ROGUESQ_UCODE_CULLSTATS=2), main ucode
+# ---------------------------------------------------------------------------
+# s45: clip-flagged triangles jump to L_1268 with r5=4 and never produce
+# output (fanjal=0). The 0x76-table halfword read before the `jr $3` at
+# L_1298 is BOTH the overlay DMA's IMEM destination and the jump target, and
+# dma_rdram_to_dmem silently skips IMEM-destined writes — so the jr lands in
+# whatever code the captured image held at that address. This trace records,
+# per task: dispatch arrivals at L_1268 by overlay id (r5), jr dispatches at
+# L_1298 by resident id (DMEM 0x153), the distinct (id, entry) pairs, the
+# 0x76..0x84 table at first dispatch, and an execution profile of the
+# 0x1D38..0x1F98 label region where the clip fan (jal 0x1828, r31=0x1F14)
+# sits in the captured image. Level 2 implies the level-1 census (its
+# enabled() treats any nonzero env as on), so `hand>0` in the same run is
+# the positive control for this trace.
+OVL_MARKER = "/* fixup: ovltrace */"
+OVL_REGION_LABELS = ["L_1D38", "L_1DB0", "L_1E48", "L_1E5C", "L_1E6C",
+                     "L_1E70", "L_1E80", "L_1EB8", "L_1ED8", "L_1EFC",
+                     "L_1F14", "L_1F28", "L_1F48", "L_1F5C", "L_1F70",
+                     "L_1F98"]
+if is_main_ucode and OVL_MARKER not in text:
+    ovl_helper = r'''
+/* fixup: ovltrace */
+/* Overlay dispatch trace, ROGUESQ_UCODE_CULLSTATS=2. See fixup 4 comments
+   in tools/fixup_factor5_ucode.py. lbl[] order matches OVL_REGION_LABELS. */
+static unsigned rs64_ot_taskctr = 0;
+struct Rs64OvlTrace {
+    unsigned idx;
+    unsigned disp[8] = {0,0,0,0,0,0,0,0};   /* L_1268 arrivals by r5 */
+    unsigned jrc[8]  = {0,0,0,0,0,0,0,0};   /* L_1298 jr by DMEM 0x153 */
+    unsigned res4 = 0, load4 = 0, r4v4 = 0; /* ovl4 resident/fresh, 0x7A hw */
+    unsigned tbl[8] = {0,0,0,0,0,0,0,0};    /* DMEM 0x76..0x84 at first jr */
+    int tblset = 0;
+    unsigned nrec = 0, recovl[8], recent[8]; /* distinct (id, entry) pairs */
+    unsigned lbl[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    static bool on() {
+        static int v = -1;
+        if (v < 0) { const char *e = std::getenv("ROGUESQ_UCODE_CULLSTATS"); v = e ? std::atoi(e) : 0; }
+        return v >= 2;
+    }
+    Rs64OvlTrace() { idx = ++rs64_ot_taskctr; }
+    void rec(unsigned ov, unsigned en) {
+        for (unsigned i = 0; i < nrec; i++) if (recovl[i] == ov && recent[i] == en) return;
+        if (nrec < 8) { recovl[nrec] = ov; recent[nrec] = en; nrec++; }
+    }
+    ~Rs64OvlTrace() {
+        if (!on()) return;
+        unsigned any = 0;
+        for (int i = 0; i < 8; i++) any += disp[i] + jrc[i];
+        for (int i = 0; i < 16; i++) any += lbl[i];
+        if (!any) return;
+        fprintf(stderr,
+            "[ovltrace t=%u disp=%u/%u/%u/%u/%u/%u/%u/%u jr=%u/%u/%u/%u/%u/%u/%u/%u"
+            " res4=%u load4=%u r4v4=0x%04X tbl76=%04X,%04X,%04X,%04X,%04X,%04X,%04X,%04X recs=",
+            idx, disp[0], disp[1], disp[2], disp[3], disp[4], disp[5], disp[6], disp[7],
+            jrc[0], jrc[1], jrc[2], jrc[3], jrc[4], jrc[5], jrc[6], jrc[7],
+            res4, load4, r4v4,
+            tbl[0], tbl[1], tbl[2], tbl[3], tbl[4], tbl[5], tbl[6], tbl[7]);
+        for (unsigned i = 0; i < nrec; i++) fprintf(stderr, "%s%u:0x%04X", i ? " " : "", recovl[i], recent[i]);
+        fprintf(stderr, "]\n[ovllbl t=%u 1D38=%u 1DB0=%u 1E48=%u 1E5C=%u 1E6C=%u 1E70=%u 1E80=%u 1EB8=%u"
+            " 1ED8=%u 1EFC=%u 1F14=%u 1F28=%u 1F48=%u 1F5C=%u 1F70=%u 1F98=%u]\n",
+            idx, lbl[0], lbl[1], lbl[2], lbl[3], lbl[4], lbl[5], lbl[6], lbl[7],
+            lbl[8], lbl[9], lbl[10], lbl[11], lbl[12], lbl[13], lbl[14], lbl[15]);
+        fflush(stderr);
+    }
+};
+'''
+
+    def sub_exactly4(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 4 ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}. "
+                  f"Regen changed the code shape — re-derive the anchors "
+                  f"before trusting any ovltrace output.", file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    # Helper struct before the function (after fixup 3's helper).
+    sub_exactly4(
+        re.compile(r"(RspExitReason factor5_ucode\(uint8_t\* rdram,)"),
+        lambda m: ovl_helper + m.group(1),
+        1, "helper block")
+
+    # Instance right after fixup 3's (fixup 3 must run first on a fresh regen).
+    sub_exactly4(
+        re.compile(r"(\n    Rs64CullStats rs64_cs;[^\n]*\n)"),
+        lambda m: m.group(1) + "    Rs64OvlTrace rs64_ot;  " + OVL_MARKER + "\n",
+        1, "rs64_ot instance")
+
+    # L_1268 dispatch: r5=overlay id, r2=DMEM 0x153, r4=0x7A halfword (live
+    # just before the resident-check beq).
+    sub_exactly4(
+        re.compile(r"(    // beq\s+\$5, \$2, L_1294\n)"),
+        lambda m: ("    if (Rs64OvlTrace::on()) {  " + OVL_MARKER + "\n"
+                   "        rs64_ot.disp[r5 & 7]++;\n"
+                   "        if (r5 == 4) { rs64_ot.r4v4 = (unsigned)(r4 & 0xFFFF);"
+                   " if (r5 == r2) rs64_ot.res4++; else rs64_ot.load4++; }\n"
+                   "    }\n") + m.group(1),
+        1, "L_1268 dispatch trace")
+
+    # L_1298 jr: r3 = 0x76-table entry (both flows), DMEM 0x153 = overlay id.
+    sub_exactly4(
+        re.compile(r"(L_1298:\n)"),
+        lambda m: m.group(1) + (
+            "    if (Rs64OvlTrace::on()) {  " + OVL_MARKER + "\n"
+            "        unsigned rs64_ov = (unsigned)RSP_MEM_BU(0X153, 0);\n"
+            "        rs64_ot.jrc[rs64_ov & 7]++;\n"
+            "        rs64_ot.rec(rs64_ov, (unsigned)(r3 & 0xFFFF));\n"
+            "        if (!rs64_ot.tblset) {\n"
+            "            rs64_ot.tblset = 1;\n"
+            "            for (unsigned i = 0; i < 8; i++) rs64_ot.tbl[i] = (unsigned)RSP_MEM_HU_LOAD(0X76 + 2*i, 0);\n"
+            "        }\n"
+            "    }\n"),
+        1, "L_1298 jr trace")
+
+    # Execution-profile counters across the suspected overlay window.
+    for i, lbl in enumerate(OVL_REGION_LABELS):
+        sub_exactly4(
+            re.compile(r"(" + lbl + r":\n)"),
+            lambda m, i=i: m.group(1) + f"    if (Rs64OvlTrace::on()) rs64_ot.lbl[{i}]++;  " + OVL_MARKER + "\n",
+            1, f"{lbl} counter")
+
+# ---------------------------------------------------------------------------
 
 if text == original:
     sys.exit(0)
@@ -267,6 +391,8 @@ if SILENCE_MARKER in text and SILENCE_MARKER not in original:
     notes.append("silenced boot->main JR printf")
 if CULL_MARKER in text and CULL_MARKER not in original:
     notes.append("injected cullstats census (ROGUESQ_UCODE_CULLSTATS)")
+if OVL_MARKER in text and OVL_MARKER not in original:
+    notes.append("injected overlay dispatch trace (ROGUESQ_UCODE_CULLSTATS=2)")
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:

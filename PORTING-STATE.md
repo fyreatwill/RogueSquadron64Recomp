@@ -3981,3 +3981,57 @@ superseded: the GUI session was present; the raise itself silently fails when co
 ### Analysis tooling
 `scratch/agent/cullstats_sum.py` — aggregates `[cullstats]` lines per VI-phase segment, checks both
 identities per task, sums the reject/row matrix, and cross-references `[yhist]` RDP-side totals.
+
+## Session 46 (2026-07-26) — overlay-4 dispatch traced: clip triangles run the INIT overlay; clip code is never entered
+
+**Work unit:** trace the overlay-4 (clip) dispatch end-to-end (NEXT.md seeded s45). One diagnostic
+build (fixup 4 in `tools/fixup_factor5_ucode.py`, `ROGUESQ_UCODE_CULLSTATS=2` — level 2 implies the
+level-1 census, so `hand>0` doubles as the positive control), one driven run
+(`scratch/s46_ovl4`: title 1024 at 45.0 s, hangar 512/0x6AB400 at 54.8 s, 53 frames, all stability
+counters 0).
+
+**Instrument.** `Rs64OvlTrace`, per task: dispatch arrivals at L_1268 by overlay id (r5), `jr`
+dispatches at L_1298 by resident id (DMEM 0x153), distinct (id, entry) pairs, the DMEM 0x76..0x84
+table at first dispatch, and per-label execution counters across the 0x1D38..0x1F98 window region.
+
+**Result — H1 (wrong-code landing) CONFIRMED; H2 (never dispatched) and H3 (clip present but
+bails early) killed.**
+- The DMEM table decodes as: overlay record at `0x7A+id` = `(entryIdx<<12 | dmaLen)`, DRAM offset
+  at `0x7C+id`, entry table at `0x76`. Every task in the run carries the same bytes:
+  `tbl76=1DB0,12A0,00D3,0D38,021F,0E10,002B,1030` → ovl0 = (entry 0x1DB0, len 0xD4, dram+0x0D38),
+  ovl4 = (entry 0x1DB0, len 0x220, dram+0x0E10), ovl8 = (entry 0x1DB0, len 0x2C, dram+0x1030).
+  **All overlays share entry 0x1DB0 — the IMEM window base.** On hardware the preceding DMA swaps
+  the window contents; in the recomp `dma_rdram_to_dmem` silently skips IMEM-destined writes
+  (`if (dmem_addr & 0x1000) return;`), so the `jr` always lands in the code the captured ROM image
+  holds there: the **init overlay** (0xD4 bytes, L_1DB0..~L_1E83 — sets SP_STATUS, re-inits the
+  DMEM 0x100 task block, reads DPC regs). The clip-fan code visible at L_1E84..L_1FCF is the stale
+  **tail** of the 0x220-byte clip overlay beyond init's end.
+- Runtime, hangar tasks (example, steady frame): eval=8610 setup=emit=4551 tclip=3813 hand=246,
+  disp[4]=246=hand (control passes), jr[4]=246, recs `4:0x1DB0`, window labels
+  1DB0/1E48/1E5C=287 each, **1E80..1F98 all zero, fanjal=0**. 1521 tasks after hangar entry have
+  clip dispatches; **zero** resolved anywhere but 0x1DB0; the 0x76 table never changed all run.
+- `res4=0 load4=hand` every task: init's first store `sb $zero, 0x53($18)` (r18=0x100) writes DMEM
+  **0x153**, resetting the resident-overlay id — so every clip triangle takes the full dispatch
+  path, and **task-init code re-runs mid-DL once per clip-flagged triangle** (246x/task in the
+  sample), each time re-zeroing the DMEM 0x100 block (0x134, 0x152, 0x10C, 0x110, 0x168...).
+  Plausible (single-source, not yet tested) shared root cause for the s45 RDP-record collapse
+  (50k RDP-side records vs 6.64M ucode emissions) — the other parked band candidate.
+- ROM scan: the init head bytes exist in the ROM **only** at the window position (0x26340 =
+  text 0x25610 + 0xD30) and the clip tail only at window+0xD4. No complete clip overlay is stored
+  raw anywhere in the ROM — Factor 5 materializes overlay images in DRAM at runtime (consistent
+  with their compressed-asset pipeline). So the fix must **capture the overlay image from RDRAM at
+  runtime** (hook the skipped IMEM DMA), not extract it from ROM.
+- Loose end (matters for fix routing): per task, 1DB0 entries = jr entries + 40. `jrc[0]=1`, one
+  static goto only (the switch case) → ~40 entries/task reach 0x1DB0 through some OTHER `jr` site
+  (opcode-table handler? sub-DL boundary?). Their source and what DMEM 0x153 holds at those moments
+  decide whether resident-id routing is safe. s47 logs (debug_line, 0x153) at `case 0x1DB0:`.
+
+**Fix decision (this unit's deliverable): recompile the clip overlay and splice it in, routed by
+resident id.** Plan: (1) dump hook in `dma_rdram_to_dmem`'s IMEM-skip branch writes the would-be
+DMA source bytes (lib edit → export.sh); one run captures the 0x220-byte clip image destined for
+IMEM 0x1DB0. (2) Composite ROM copy with the window bytes replaced → RSPRecomp variant toml →
+extract the window region's translation, rename labels `CLIP_*`, splice via fixup 5. (3) Route:
+`case 0x1DB0:` → `if (DMEM[0x153]==4) goto CLIP_1DB0;` (pending the 40-entry answer). The spliced
+clip code's `jal 0x1828` resolves to the existing resident label. C-side clipping in the fixup was
+rejected: marshalling VU clip state into C is strictly harder than translating the real overlay.
+Then the band test: s41 mark-vertices mode-2 — band rows filling in = clip loss owned the band.

@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 45)
+## Current truth (as of session 46)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -75,9 +75,10 @@ Remaining visual defects:
   single frame's census can attribute a pixel; `TARGET_CLEAR=2` was a dead instrument (only pair 1
   carries colour); parked anomaly: 39 of 55 I4 uploads sample 64x128 past `masks=6/6`.
   **s45 did the clip/cull census** (`ROGUESQ_UCODE_CULLSTATS=1`): degenerate=0, backface lives in
-  the pad rows — and clip-flagged triangles (328k/phase) are handed to overlay 4 and never return
-  (see M1 above). The clip loss and the `[dpc-wrap]` ring drops are the two surviving band
-  candidates.
+  the pad rows — and clip-flagged triangles (328k/phase) are handed to overlay 4 and never return.
+  **s46 traced the dispatch**: they run the init overlay instead of clip code (see M1) — mechanism
+  confirmed, fix decided; the `[dpc-wrap]` ring drops are plausibly the same defect's second
+  symptom.
 - ~~Hangar dimmer than the s11 peak~~ — **largely fixed, s25** by `SHADE_WRAP` (vertex
   then s26 per-pixel).
 - Outdoor 512 zero-shade is masked, not fixed: `ROGUESQ_FIX_ZERO_SHADE` + wrap both map
@@ -95,20 +96,25 @@ A milestone is done only when its definition-of-done is met **and documented her
 autonomous loop (`tools/agent/loop.sh`, contract in `tools/agent/ITERATION.md`) always draws its
 work unit from the top open milestone, so this ladder is what keeps it from idling.
 
-**M1 — hangar band root cause and fix** *(current; s45 state: the ucode clip/cull census ran —
-`ROGUESQ_UCODE_CULLSTATS=1`, fixup 3 in `tools/fixup_factor5_ucode.py`, analysis
-`scratch/agent/cullstats_sum.py`).* s45 result: degenerate rejects are zero in the hangar and
-backface rejects live in the pad rows, but **328,205 hangar triangles per phase are flagged
-"needs clipping", handed to clip overlay 4 (`r5=4 → L_1268`), and none ever returns** — the
-resident clip-fan re-entry ran 0 times in 3 runs while the census identities held exactly. On
-hardware a clip-crossing triangle becomes a fan of clipped triangles; here it is silently dropped.
-The static recomp cannot load overlay code by DMA, so the `jr` at L_1298 lands on a valid label
-(0 UnhandledJumpTarget) that is not the clip fan — structural sketch, needs the s46 trace. A second
-loss also surfaced: RDP-side triangle records are 5–133x below ucode-side emissions (hangar 50k vs
-6.64M), sitting at the `[dpc-wrap]` drops (event #27.9M by run end). Both candidates survive for
-the band; the clip loss is a confirmed defect regardless.
-*Done when:* mechanism traced input → code path → pixels, fix applied, and the s41 mark-vertices
-mode-2 probe shows band rows receiving geometry, with other phases unchanged.
+**M1 — hangar band root cause and fix** *(current; s46 state: dispatch traced, mechanism
+CONFIRMED, fix decided).* s45 found clip-flagged triangles (328k/phase in the hangar) handed to
+overlay 4 (`r5=4 → L_1268`) and never returning (fanjal=0). **s46 traced it end-to-end** (fixup 4,
+`ROGUESQ_UCODE_CULLSTATS=2`): all overlays share entry **0x1DB0** — the IMEM window base, per the
+DMEM `0x76/0x7A/0x7C` tables — and the window-swap DMA is silently skipped by `dma_rdram_to_dmem`
+(`if (dmem_addr & 0x1000) return;`), so every clip dispatch runs the **init overlay** the captured
+image holds there (0xD4 bytes; the clip-fan code at L_1E84+ is the stale tail of the 0x220-byte
+clip overlay and never executes — window labels 1E80..1F98 identically 0 across 1521 clip-active
+tasks, entry always 0x1DB0). Worse, init re-runs **mid-DL once per clip triangle** (init's
+`sb $zero,0x53($18)` resets DMEM 0x153, so every dispatch re-fires the full path), re-zeroing the
+DMEM 0x100 task block each time — plausible (single-source) shared cause of the s45 RDP-record
+collapse (RDP-side records 5–133x below ucode emissions, hangar 50k vs 6.64M, at the `[dpc-wrap]`
+drops). No complete clip overlay exists raw in the ROM (whole-ROM byte scan) — the game
+materializes overlay images in DRAM at runtime, so the fix: capture the image from RDRAM at the
+skipped IMEM DMA, recompile via RSPRecomp on a composite ROM copy, splice as `CLIP_*` labels,
+route `case 0x1DB0:` by resident id (open: ~40 init entries/task arrive via a non-L_1298 `jr`;
+their source + 0x153 state at that moment decide routing safety — s47 logs both).
+*Done when:* fix applied, fanjal > 0, and the s41 mark-vertices mode-2 probe shows band rows
+receiving geometry, with other phases unchanged.
 
 **M2 — post-`-O2` regression sweep and soak.** Phase-gated `regress.sh` across all six known scenes
 against the s23 baselines, plus three 10-minute driven hangar soaks. *Done when:* per-phase metrics
@@ -132,42 +138,30 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s45)
+## Next steps, in order of expected value (s46)
 
-1. **Trace the overlay-4 (clip) dispatch end-to-end** — one diagnostic build+run: at L_1268/L_1298
-   log the overlay id, the entry address read from the DMEM 0x76 table, and the label the indirect
-   jump resolves to; establish what code actually runs when a triangle needs clipping, then decide
-   the fix (recompile the clip overlay image via RSPRecomp vs a C-side clip in the fixup). The
-   discriminating follow-up for the band: once clipped triangles produce output, re-run the s41
-   mark-vertices mode-2 probe — band rows filling in confirms the clip loss owned the band; band
-   unchanged pivots to the ring-drop candidate (s45: RDP records 50k of 6.64M hangar emissions,
-   `[dpc-wrap]` #27.9M). Caveat for any row attribution: the +0x1A screen y of out-of-volume
-   vertices is unusable in the hangar (hand-class buckets read 0/0/0 there, s45).
-2. **Identify what should cover the band rows.** s39 re-measured coverage on the fast build:
-   band-overlapping draws rose 1 600 → 7 600 while the band stayed identical, and `TARGET_CLEAR=1`
-   (median 728 distinct vs 52 550 control) shows **no workload ever draws band content** — the
-   hangar image is accumulated across hundreds of 1–14-call workloads into a never-cleared target.
-   The band is a **CONFIRMED coverage hole (s41)**, established with `ROGUESQ_MARK_VTX` in
-   `rt64_gbi_rdp.cpp` (writes `colorWorkBuffer`; `=1` marks every vertex — control passes at 886 488
-   magenta px/frame — `=2` marks only band-row vertices). Under mode 1 the band crop is 62.5 %
-   magenta, 13.3 % black and **3.6 % still warm**, against 4.35 % warm unmarked: forcing every draw
-   magenta leaves the orange untouched, so **those pixels receive no geometry at all**. Walls above
-   and pad below are drawn; the mid-ground strip is not. (s40's earlier probe wrote through `col` in
-   `RDP::drawTris` and failed its own control — that path never reaches output; do not reuse it.)
-   **s42 answered that**: `ROGUESQ_LOG_YHIST=1` bins triangles by full ymin..ymax **span** (not
-   vertex or centroid) and shows **no gap** — the band rows (game y ≈141–201, derived from the s41
-   mode-2 image: capture = 2.33·game + 151) carry 2 072 / 1 806 / 792 / 723 triangles per 20px bin,
-   a trough between the wall rows (~2 000) and pad rows (4 000–5 300) but not an absence. **The
-   geometry is submitted, so the hole is downstream of submission** — z-rejection, alpha/coverage,
-   scissor, or column mismatch. **s43 did that census** (`ROGUESQ_LOG_ZSTATE=1`, windows walls 60–140 / band 141–201 / pad
-   220–320): the band draws are **indistinguishable from the wall draws** — same dominant signature
-   0x52 (textured, zCmp=0, zUpd=1, alphaCvgSel=1), 2 409 vs 2 609. No z, alpha, coverage or scissor
-   difference. So the band pixels are **gaps between triangles**, not rejected draws: some polygons
-   that should fill those rows are never emitted while their neighbours are. Texture decode
-   (s27–s31), submission gap (s42) and raster-state rejection (s43) are all now eliminated.
-   **s45 did that census** (`ROGUESQ_UCODE_CULLSTATS=1`): degenerate=0, backface lives in the pad
-   rows — and clip-flagged triangles (328k/phase) are handed to overlay 4 and never return (see M1
-   above). The clip loss and the `[dpc-wrap]` ring drops are the two surviving band candidates.
+1. **Capture the clip overlay image and splice it in** (fix unit, likely two iterations). (a) Dump
+   hook in `dma_rdram_to_dmem`'s IMEM-skip branch (lib edit → `export.sh` + commit): write the
+   would-be DMA source bytes + dram addr to a file; same run, log `(debug_line, DMEM 0x153)` at
+   `case 0x1DB0:` to source the ~40 non-dispatch init entries/task. One driven hangar run captures
+   the 0x220-byte clip image destined for IMEM 0x1DB0. (b) Composite ROM copy with window bytes
+   replaced → RSPRecomp variant toml → extract the window region translation, rename to `CLIP_*`,
+   splice via fixup 5, route `case 0x1DB0:` on resident id (0x153==4 → CLIP entry). The spliced
+   `jal 0x1828` resolves to the existing resident label. Verify: cullstats run with fanjal > 0 and
+   the census identities still exact. The band test after that: s41 mark-vertices mode-2 — band
+   rows filling in confirms the clip loss owned the band; band unchanged pivots to the ring-drop
+   candidate — but note s46 made that candidate plausibly the SAME defect (mid-DL init re-runs
+   zero the DMEM 0x100 block; they stop once clip code is real). Caveat for any row attribution:
+   the +0x1A screen y of out-of-volume vertices is unusable in the hangar (s45).
+2. **Band-row coverage history** (settled chain, kept for instruments): s41 `ROGUESQ_MARK_VTX` in
+   `rt64_gbi_rdp.cpp` proved the band a coverage hole (`=1` marks every vertex, control 886 488
+   magenta px/frame; `=2` band-rows only; band crop stays 3.6 % warm under mode 1 → those pixels
+   get no geometry). Do NOT reuse s40's `col`-write probe in `RDP::drawTris` — it fails its own
+   control. s42 `LOG_YHIST` (ymin..ymax span bins; band = game y 141–201, capture = 2.33·game+151):
+   geometry IS submitted through band rows (723–2 072 tris/bin, a trough not an absence). s43
+   `LOG_ZSTATE`: band draws raster-state-identical to walls (sig 0x52), so the hole is triangles
+   never emitted, not draws rejected. Texture decode (s27–s31), submission gap (s42), raster
+   rejection (s43) all eliminated; s45/s46 pinned the loss at the clip dispatch (M1).
 3. **Visual regression check on the other phases after `-O2`**, plus a stability soak.
 4. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
