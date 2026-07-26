@@ -4097,3 +4097,64 @@ unit.
 Files: `lib/.../rsp.hpp` (+ refreshed `submodule-patches/N64ModernRuntime.patch`),
 `tools/fixup_factor5_ucode.py` (fixups 5+6), `tools/make_clip_composite.py`,
 `factor5_rsp_ovl4.toml`, `scratch/s47_parse_imemdump.py` (offline decoder).
+
+## Session 48 (2026-07-26) — M1 CLOSED: the band was the war room's clipped geometry, and there was never a "hangar"
+
+### The band test, and why two runs "missed" the scene
+Three driven runs with the s47 clip fix active (`ROGUESQ_MARK_VTX=2` + `UCODE_CULLSTATS`, then a
+clean no-marker control):
+- Run 1 `"3:start 7:start"` (`scratch/s48_bandtest`): 512 phase at 54.5 s, origin **0x6AB400** —
+  visually the round briefing room, then SELECT LEVEL. Read at first as "overshot the hangar again".
+- Run 2 `"3:start 25:start"` (`scratch/s48_bandtest2`): sat on SELECT GAME (1024, save "AAA
+  -TRAINEE-") for 20 s, then the single 25 s press dropped straight into the round room at 72.8 s.
+  So the menu path is title → SELECT GAME → war room / SELECT LEVEL, **one press per step, no
+  hangar state in between**.
+- Run 3, same schedule, no marker (`scratch/s48_clean`): same route, clean captures.
+
+### The discovery — scene identity
+Comparing the s41 pre-fix mode-1 control frame (`scratch/s41_ctl/f_028_017.6.png`) with s48
+post-fix frames: **the same room** — identical wall panels, doors, red-trimmed upper console ring,
+twin arched doorways. The scene the ledger has called the "main-menu hangar" since s12 (512-wide,
+origin 0x6AB400) **is the level-select war room**. Pre-fix it rendered *without every triangle
+that needed the clip overlay*: the tiered console rings and holotable were dropped wholesale
+(camera inside a curved room → clip-heavy), leaving (a) the central platform reading as a "landing
+pad", (b) the black + multi-hue stale-RDRAM band exactly where the rings should be, and (c) the
+Mos Eisley preview X-wing hologram reading as a parked X-wing. The "X-wing hangar preview"
+impression came from SELECT GAME's photographic background (visible clean in run 2 f_015).
+Arrival times match to 0.2 s (54.5 s run 1 vs 54.7 s s23, same input) — same state, not a new one.
+
+### Band verdict (M1 definition-of-done)
+- **Mode-2 marker**: band-crop magenta 15–22 % across 27 war-room frames in two runs (s41 pre-fix
+  mode-2 on the same crop: ~11 % from pad/wall edges only, mid-strip empty); marker fired ~2.6 M
+  (run 1) / ~3 M (run 2) vertices. Band rows receive and rasterize geometry.
+- **Clean control**: 19 war-room frames, **no streak band anywhere** — the formerly-stale rows are
+  covered by coherent console-ring/holotable geometry (`scratch/s48_clean/f_028_030.5.png`).
+- **Clip path live in-scene**: run 2 512-phase 672 tasks, fanjal 5 599, census identities exact
+  672/672; clean run 696 tasks, fanjal 5 837. 0 clip-stray, 0 UnhandledJumpTarget, 0 defer-drop /
+  dmem-race / missing-func in all three runs.
+- `[dpc-wrap]` ≈ 9.91 M in both instrumented runs — reproduces s47's post-fix 9.93 M (17.06 M
+  pre-fix), now on same-route runs; the drop is fix-attributable.
+
+**M1 done: the clip-dispatch loss owned the band** — not as a paint defect but as the missing
+mid-scene geometry of the war room.
+
+### Overturned (recorded in CURRENT-TRUTH)
+1. "512/0x6AB400 = main-menu hangar" (s12–s47) → it is the level-select war room, partially
+   rendered pre-fix.
+2. s47's origin attributions: briefing room presents from **0x6AB400** (not 0x656400); the
+   0x696100 lines sit in the 640-wide pre-title phase (run 1 log lines 1070–5219, all width=640),
+   not SELECT LEVEL; and the s47/s48 runs never overshot anything — the target scene was on screen
+   the whole time, rendering correctly for the first time.
+3. "Key on VI origin to identify the scene" — origin cannot discriminate these menu scenes; the
+   war room presents from the same 0x6AB400 the "hangar" always used. Identify menu scenes
+   visually.
+
+### Instrument notes
+- cullstats band=a/b/c/d buckets (reject classes by +0x1A screen y) stayed 0 in class 1 (clip
+  handoff) all run — expected, s45: out-of-volume vertices carry unusable +0x1A; do not read those
+  buckets for clip triangles.
+- `scratch/s48_band_stats.py`: per-frame magenta/warm fractions in the s41 band crop (capture
+  y 480–620); validated against the s41 mode-2 frames before use.
+
+Files: `scratch/s48_bandtest{,2}`, `scratch/s48_clean` (each with run.log),
+`scratch/s48_band_stats.py`. No code changes this session.

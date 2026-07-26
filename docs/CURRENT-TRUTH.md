@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 47)
+## Current truth (as of session 48)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -49,39 +49,41 @@ Unattended timeline (VI width, ±1 s over 9 runs, s18; content counts s9/s20/s22
 scene that shares VI origin **0x6AB400** — origin alone no longer identifies the hangar. Use
 `"3:start 7:start"`. The phase timeline below is unchanged (transitions are not render-rate bound).
 
-Driven from the title with `PROBE_KEYS_FROM_PHASE=1` (s23):
+Driven from the title with `PROBE_KEYS_FROM_PHASE=1` (s23, scene names corrected s48):
 
 | t | VI | scene |
 |---|---|---|
 | 46.7 s | 1024 | clean title |
-| ~50 s | 1024 | **SELECT GAME** (X-wing hangar preview, AAA rating, ERASE GAME) |
-| 54.7 s | 512, origin 0x6AB400, colour 0x656000/0x6AB000 | **main-menu hangar**, textured 3D, animating, 5.4k–7.6k colours/frame |
-| ~66 s | 512 | camera pans; one frame of RGB static on a wall screen |
-| later | 512 | starfield / open bay (mission-intro-ish) |
-| ~93 s | 640 | transition — **process dies here** |
+| ~50 s | 1024 | **SELECT GAME** (photographic hangar backdrop, AAA save, ERASE GAME) — waits for input indefinitely |
+| +1 press | 512, origin 0x6AB400, colour 0x656000/0x6AB000 | **level-select war room → SELECT LEVEL — "AMBUSH AT MOS EISLEY"** with X-wing hologram (the scene s12–s47 called the "main-menu hangar"; see s48 below) |
+| ~93 s | 640 | transition — **process dies here** (undriven-era observation) |
 
-s47 (clip fix active) the same schedule overshot the hangar entirely: 512-wide **briefing room**
-(round war-room, origin 0x656400) then **SELECT LEVEL — "AMBUSH AT MOS EISLEY"** with X-wing
-hologram (origin 0x696100), both first-ever renders, rich and uncorrupted. Menu timing is
-fix-sensitive — key on VI origin, not schedule reuse.
+Menu state machine (s48, three driven runs): title —start→ SELECT GAME —start→ war room /
+SELECT LEVEL. One press per step, no other menu state between; the next press from SELECT LEVEL
+presumably launches mission 1 (untested — that is M3's door).
+
+**s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
+scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
+triangle dropped (camera inside a curved room), so the tiered console rings and holotable were
+missing: the central platform read as a "landing pad", the Mos Eisley preview hologram as a parked
+X-wing, and the stale-RDRAM band filled the rows the rings should cover. Post-fix the room renders
+complete. VI origin **cannot** discriminate menu scenes (the war room presents from the same
+0x6AB400); identify menu scenes visually from captures.
 
 512-wide covers two different scenes; tell them apart by VI origin (0x690400 outdoor, 0x6AB400
-hangar), never by width alone (s18/s23).
+war room) — but see s48: origin distinguishes *phases*, not which menu scene is on screen.
 
 Remaining visual defects:
-- **Hangar floor multi-hue band** (horizontal scramble): stale content showing through a coverage
-  hole — pixels no triangle covers, in a target the game never clears (s41 mark-vertices: 3.6 % of
-  the band stays warm with every draw forced magenta). Eliminated in order: stale RDRAM, I4 decode
-  (s27–s31), under-rendering (`-O0` perf, s38), submission gap (s42), raster rejection (s43) —
-  full chain in Next steps item 3. Durable structure: the hangar image accumulates across dozens
-  of 2–10-call workloads, so no single frame's census can attribute a pixel; `TARGET_CLEAR=2` is a
-  dead instrument (only pair 1 carries colour); parked anomaly: 39 of 55 I4 uploads sample 64x128
-  past `masks=6/6`.
-  **s45–s47 found and fixed the biggest known loss**: clip-flagged triangles (328k/phase) were
-  handed to overlay 4 and ran the wrong code (window-swap IMEM DMA skipped); s47 spliced the real
-  clip overlay in (see M1) — clip code now executes (fanjal > 0, census identities exact). Whether
-  this closes the band is untested: the verify run overshot the hangar. The `[dpc-wrap]` drops
-  fell 17.06M → 9.93M same-day (route-confounded, suggestive).
+- ~~Hangar floor multi-hue band~~ — **FIXED and root-caused, s45–s48 (M1 closed).** The band was
+  stale RDRAM showing through the hole left by the war room's clip-flagged geometry: all clip
+  dispatches to overlay 4 ran the wrong code (window-swap IMEM DMA skipped), so the tiered
+  console rings / holotable never drew. s47 spliced the real clip overlay in; s48 verified in the
+  scene itself: mode-2 mark-vertices shows band rows rasterizing geometry (band-crop magenta
+  15–22 % vs ~11 % pre-fix edge-only), a clean run shows zero streak band with the rings rendered,
+  fanjal 5.6–5.8k per 512-phase with census identities exact, and `[dpc-wrap]` reproducibly
+  halved (17.06M → 9.91M). Parked anomaly still open (M4): 39 of 55 I4 uploads sample 64x128 past
+  `masks=6/6`. Overlays 12/44 still take the old broken dispatch path by design — same splice
+  recipe applies if a phase ever needs them.
 - ~~Hangar dimmer than the s11 peak~~ — **largely fixed, s25** by `SHADE_WRAP` (vertex
   then s26 per-pixel).
 - Outdoor 512 zero-shade is masked, not fixed: `ROGUESQ_FIX_ZERO_SHADE` + wrap both map
@@ -99,26 +101,23 @@ A milestone is done only when its definition-of-done is met **and documented her
 autonomous loop (`tools/agent/loop.sh`, contract in `tools/agent/ITERATION.md`) always draws its
 work unit from the top open milestone, so this ladder is what keeps it from idling.
 
-**M1 — hangar band root cause and fix** *(s47 state: FIX IN AND EXECUTING; band verdict pending
-one hangar run).* Mechanism (s45/s46): all overlay dispatches share entry **0x1DB0** (IMEM window
-base, DMEM `0x76/0x7A` tables) and the window-swap DMA is skipped by `dma_rdram_to_dmem`, so clip
-dispatches ran whatever the static translation holds there — the packed overlay-image **storage**
-(init's image at window+8), not clip code. **s47 fixed it**: the overlay images live raw in ROM at
-`RDRAM_addr + 0xC00` (clip = ovl id 4: ROM 0x26420, 0x220 bytes, byte-identical to the runtime
-RDRAM capture — two-source). `tools/make_clip_composite.py` + `factor5_rsp_ovl4.toml` +
-**fixup 6** splice its translation as `CLIP_*` labels, routed at `case 0x1DB0` + five window-range
-return cases by `DMEM 0x153 == 4` (safe: s47 stray census, 4221/4221 arrivals via the L_1298 jr
-with 0x153 = requested id). Verify run: **fanjal > 0, census identities exact**
-(setup = eval−tclip−hand+fanjal, emit = setup−bface−degen), 0 clip-stray, 0 UnhandledJumpTarget,
-stability counters 0. Overlays 12/44 still take the old broken path by design — same recipe
-applies if they ever matter.
-*Done when:* the s41 mark-vertices mode-2 probe shows band rows receiving geometry in the hangar,
-with other phases unchanged (the one remaining step — the verify run overshot the hangar).
+**M1 — hangar band root cause and fix: DONE (s48).** Mechanism (s45/s46): all overlay dispatches
+share entry **0x1DB0** and the window-swap IMEM DMA is skipped, so clip dispatches ran the packed
+overlay-image *storage* instead of clip code — every clip-flagged triangle vanished. s47 spliced
+the real clip overlay (raw in ROM at `RDRAM_addr + 0xC00`; `tools/make_clip_composite.py` +
+`factor5_rsp_ovl4.toml` + fixup 6, routed by `DMEM 0x153 == 4`). s48 closed the definition-of-done
+in the scene itself: band rows rasterize geometry (mode-2 marker), clean captures show the war
+room complete with zero streak band, census identities exact across 672+696 tasks, all stability
+counters 0. Full detail: PORTING-STATE s45–s48. Overlays 12/44 still take the old broken path by
+design — same splice recipe applies if they ever matter.
 
-**M2 — post-`-O2` regression sweep and soak.** Phase-gated `regress.sh` across all six known scenes
-against the s23 baselines, plus three 10-minute driven hangar soaks. *Done when:* per-phase metrics
-within baseline bands and all stability counters (UnhandledJumpTarget, defer-drop, dmem-race,
-missing-func, asserts) at 0.
+**M2 — post-`-O2` + post-clip-fix regression sweep and soak.** Phase-gated `regress.sh` across the
+known scenes against the s23 baselines, plus driven war-room soaks. **Caveat: the 512/0x6AB400
+phase baselines are obsolete by design** — the scene now renders far more geometry (the s23
+"hangar" numbers describe the partial render). Expect that phase to deviate; re-baseline it and
+verify the *other* phases are unchanged. *Done when:* non-512 phases within baseline bands, a new
+512-phase baseline recorded, and all stability counters (UnhandledJumpTarget, defer-drop,
+dmem-race, missing-func, asserts) at 0 across the sweep + soaks.
 
 **M3 — first gameplay.** Extend the driven key schedule past SELECT GAME into mission 1. Expect new
 failure classes: mission-overlay DMA (watch missing-func / UnhandledJumpTarget), a new VI phase to
@@ -137,26 +136,23 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s47)
+## Next steps, in order of expected value (s48)
 
-1. **The hangar band test** (one driven run + one analysis pass). Land in the hangar (VI origin
-   0x6AB400) with the clip fix active and run s41 `ROGUESQ_MARK_VTX=2` (band-rows-only vertex
-   marking; mode 1 first frames = positive control, 886 488 magenta px/frame baseline). Band rows
-   filling in ⇒ the clip loss owned the band, M1 done. Band unchanged ⇒ pivot to the `[dpc-wrap]`
-   ring-drop candidate — s47 already cut its event total 17.06M → 9.93M same-day (route-confounded).
-   **Scheduling caveat:** the fix changed menu timing — `"3:start 7:start"` overshot the hangar
-   into the briefing room / SELECT LEVEL (first time these scenes rendered; origins
-   0x656400/0x696100). Watch VI origins live; adjust the second press (try 6 s or 8 s) until
-   0x6AB400 appears. Caveat: +0x1A screen y of out-of-volume vertices is unusable in the hangar
-   (s45); the mark-vertices probe, not row attribution, is the decider.
-2. **Post-fix regression + soak (M2)**: phase-gated `regress.sh` across the six known scenes vs
-   the s23 baselines + driven hangar soaks — now doubly needed to prove the clip splice changed
-   nothing outside the hangar.
-3. **Band-row coverage history** (settled chain, instruments): s41 `MARK_VTX` proved the band a
-   coverage hole; s42 `LOG_YHIST` proved submission through band rows (723–2 072 tris/bin); s43
-   `LOG_ZSTATE` proved band draws raster-identical to walls; texture decode (s27–s31) eliminated;
-   s45–s47 pinned and fixed the clip-dispatch loss. s40's `col`-write probe fails its own control —
-   do not reuse.
+1. **Post-fix regression + re-baseline (M2)**: phase-gated `regress.sh` across the known scenes vs
+   the s23 baselines + driven war-room soaks. The 512/0x6AB400 phase WILL deviate (it now renders
+   the full war room — that is the fix working); record a fresh baseline for it and prove the
+   other phases unchanged. Driven schedule that works post-fix: `PROBE_PHASE_WIDTH=1024
+   PROBE_KEYS_FROM_PHASE=1 PROBE_KEYS="3:start 25:start"` (s48: SELECT GAME waits indefinitely,
+   so the second press timing is uncritical).
+2. **M3 — first gameplay** is one press away: from SELECT LEVEL, one more start (e.g.
+   `"3:start 25:start 35:start"`) should launch AMBUSH AT MOS EISLEY. Expect new failure classes
+   (mission overlay DMA → missing-func / UnhandledJumpTarget, new VI phase, possibly overlays
+   12/44 needing the s47 splice recipe). Each new failure is its own work unit.
+3. **Band-row coverage history** (settled chain, for reference): s41 `MARK_VTX` proved a coverage
+   hole; s42 `LOG_YHIST` proved submission through band rows; s43 `LOG_ZSTATE` proved raster-clean
+   draws; s27–s31 eliminated texture decode; s45–s47 pinned and fixed the clip-dispatch loss; s48
+   proved the fix fills the band (and renamed the scene). s40's `col`-write probe fails its own
+   control — do not reuse.
 4. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
 Done, do not redo:
@@ -236,19 +232,11 @@ Standing warnings:
 `## LLE stabilization session 2 (2026-07-12)` sits out of order in the log, between s7 and s8: its
 conclusions are among the oldest in the file, not the newest.
 
-The s2–s5 stabilization-era claims are compressed here (full detail: PORTING-STATE, and the saga
-narrative in PROJECT-OVERVIEW §3). Every one was eventually explained by the shared-`dmem[]` race
-(one global 4 KB array, audio tasks staging over gfx state; fixed by the recursive mutex, s5):
-- **s2:** "LLE stall is LoadTile/LoadBlock coordinate underflow" — real fix was `rsp_dpc_macros.h`
-  never resetting `DPC_CURRENT` on a `DPC_START` write.
-- **s2b:** "residual exit=3 is zeroed DL-chunk bytes at DMEM 0x228" — chunk fetch was faithful; the
-  dispatch-table trample was real and came from the audio task.
-- **s3:** "0xF80 image from 0xA4E00 is the RDP ring / a trig load" → it is MusyX audio `ucode_data`;
-  "op 0xBA flush-cursor overflow trampled DMEM" → no overflow existed, it was `run_task` DMA'ing
-  audio data over `dmem[0..0xF7F]`; "trig table generated in-ucode" → nothing is generated in-ucode
-  (s4 static sweep: everything arrives by DMA).
-- **s4:** "two F5 gfx ucodes; dispatch ucode B separately" → 0x80099FE0 is the MusyX AUDIO ucode;
-  gfx routes only via `send_dl`. Dispatching B "helped" only by keeping gfx code off audio staging.
+The s2–s5 stabilization-era claims (LoadTile underflow, zeroed DL-chunk bytes, RDP-ring/trig-load
+misreads of the audio `ucode_data`, "two gfx ucodes") are compressed to one line: **every one was
+eventually explained by the shared-`dmem[]` race** (audio tasks staging over gfx state; fixed by
+the recursive mutex, s5). Full detail: PORTING-STATE and PROJECT-OVERVIEW §3. Do not re-litigate
+any s2–s4 conclusion without checking that section.
 - **Claim (s5–s7):** 0x76A000 and 0x7DD000 are colour buffers cleared to white. **Overturned by s8:**
   they are **Z-buffers** — `SETZIMG` (op 0x3E) names exactly those addresses and 0xFFFCFFFC is the
   standard z-clear. Colour buffers are 0x5D4000/0x66A000 (640-wide) and 0x6BA000/0x6DD000 (320-wide).
@@ -264,14 +252,10 @@ narrative in PROJECT-OVERVIEW §3). Every one was eventually explained by the sh
   to `s_submit_dl_base`/`s_submit_last_end`: 65/65 tasks commit, 4575 TEXRECT in 14 s vs 399 in 45 s.
   **Why believable:** the count was exactly zero, and RT64's HLE leaves the same three ops stubbed —
   two independent-looking paths agreeing on "no geometry".
-- **Claim (s9, sixth pass):** 0x790000 is that phase's z-buffer (second colour buffer + 0x100000, the
-  pattern every other phase follows) and the VI never scans it. **Overturned by s10**
-  (`[osViSwapBuffer #1472] fb=0x80790000`), **s18** (drawTarget 0x690000 vs VI origin 0x690400 —
-  colour, double-buffered) **and s21** (`set-cimg-full addr=0x790000 w=512`, presented, 11/11 content
-  frames). **Why believable:** the +0x100000 z-buffer pattern does hold everywhere else.
-- **Claim (s9, sixth pass):** `[dpc-behind]` counts 17867 ring-wrap drops in 60 s. **Overturned by
-  s10:** the real figure is **9,056,256 wrap events in 70 s**, each a distinct range — three orders of
-  magnitude out. **Why believable:** the counter was real; it was just reading a sampled path.
+- **Claims (s9, sixth pass), compressed:** "0x790000 is a z-buffer the VI never scans" (s10/s18/
+  s21: it is a presented, double-buffered colour buffer — the +0x100000 z-pattern just holds
+  everywhere else) and "`[dpc-behind]` counts 17 867 wrap drops in 60 s" (s10: real figure
+  9 056 256 in 70 s — the counter read a sampled path).
 - **Claim (s9/s10):** `ROGUESQ_DPC_WRAP=1` is what gives continuous rendering, and the Metal
   exhaustion it triggers must be contained with `ROGUESQ_MAX_FBPAIRS`. **Overturned by s11:** with
   the `VI_FULLSYNC` fix, wrap **off** gives more content (57/63 frames vs 32/62), 3 framebuffer pairs
@@ -294,23 +278,15 @@ narrative in PROJECT-OVERVIEW §3). Every one was eventually explained by the sh
   overlay-symbol moves must be reverted. **Overturned within s9:** sampling artefact — a 28-frame
   burst at 0.15 s showed 27/28 frames full of content; the moves were fine and were re-applied.
   **Why believable:** four one-shot captures at 4/8/14/20 s all showed black.
-- **Claim (s12/s13):** the hangar floor/wall assets are the I4/CI4 textures at 0x60xxxx (dumped via
-  `ROGUESQ_DUMP_HANGAR_TEX`). **Overturned by s16:** wrong assets. The real CI sources are 0x741B80
-  (words=114, 48×38), 0x741460 (words=228, 64×57) and 0x4Fxxxx / 0x6Axxxx (words=256, 64×64). **Why
-  believable:** the 0x60xxxx dumps decode offline as plausible structured grayscale.
-- **Claim (s12–s16):** the 0x65xxxx RGBA16 loads and their `[fb-miss]` lines are hangar wall/floor
-  assets. **Overturned by s17:** they fire while the VI is at **width=1024 origin=0x790400** — the
-  title screen, not the 512 hangar (confirmed by line-number interleave of `[loadblock a=0x65…]`
-  against `[vi] update_screen`). That is why five sessions of knob-tuning never moved the hangar band.
-  **Why believable:** they fire 160,000+ times per run and decode into a Rebel pilot beside an X-wing,
-  equally plausible as cinematic or hangar content.
-- **Claim (s14):** `ROGUESQ_FIX_LINE_MASK` — for 4-bit tiles with masks ∈ [4,7], force
-  `line = 2^(masks-4)` so decode stride matches the wrap period. **Overturned by s15:** wrong
-  direction — `line=3 / lrs=188` CI4 pal15 is a real 48×38 tile (LOADBLOCK words=114 = 912 B =
-  48*38*0.5), and forcing line→4 with sample 64 scrambled it further. Replaced by
-  `ROGUESQ_FIX_SAMPLE_BOUNDS` (keep the emitted line, shrink sampleWidth/Height to min(mask,
-  line-implied, lrs/lrt span)). **Why believable:** mask and line disagreeing usually does mean one is
-  wrong.
+- **Claims (s12–s16), compressed:** "the 0x60xxxx I4/CI4 dumps are the hangar floor/wall assets"
+  (s16: wrong assets — real CI sources 0x741B80/0x741460/0x4Fxxxx/0x6Axxxx) and "the 0x65xxxx
+  RGBA16 loads are hangar assets" (s17: they fire during the 1024 title phase — why five sessions
+  of knob-tuning never moved the band). **Why believable:** both decode into plausible imagery;
+  a plausible decoded image does not identify a phase.
+- **Claim (s14):** `ROGUESQ_FIX_LINE_MASK` (force `line = 2^(masks-4)` on 4-bit tiles).
+  **Overturned by s15:** wrong direction — the mask/line "disagreement" tiles are real; replaced
+  by `ROGUESQ_FIX_SAMPLE_BOUNDS`. **Why believable:** mask and line disagreeing usually does mean
+  one is wrong.
 - **Claim (s14):** palette-bank-15 stomping is the root of the rainbow floor band — later LOADTLUTs
   from 0x62Bxxx replace the red hangar palette. **Overturned by s15:** the first 40 CI4 pal15 uploads
   all use the red palettes 0x751FA0 / 0x751FC0, with **zero** multi-colour 0x62Bxxx; band pixels are
@@ -386,6 +362,23 @@ narrative in PROJECT-OVERVIEW §3). Every one was eventually explained by the sh
   fall-throughs from code above L_1DB0, which the label counters count but the dispatch does not.
   **Why believable:** the two counters were believed to measure the same population; they differ
   by exactly the fall-through paths.
+- **Claim (s12–s47):** the 512-wide origin-0x6AB400 scene is the "main-menu hangar" — landing
+  pad, parked X-wing, hangar walls. **Overturned by s48:** it is the **level-select war room**,
+  rendered pre-fix without every clip-flagged triangle (tiered console rings, holotable), which
+  made the central platform read as a pad and the Mos Eisley preview hologram as a parked X-wing.
+  Proven by wall-structure identity between the s41 control frames and the s48 full render, same
+  origin, same input path, arrival times matching to 0.2 s. **Why believable:** the partial
+  render was a coherent-looking scene for 36 sessions, and SELECT GAME's photographic hangar
+  backdrop reinforced the "hangar" frame; nothing looked missing until the missing half rendered.
+- **Claim (s47):** the briefing room presents from origin 0x656400, SELECT LEVEL from 0x696100,
+  the clip fix changed menu timing, and the verify run overshot the hangar. **Overturned by
+  s48:** all four wrong. The war room / SELECT LEVEL presents from **0x6AB400** (three runs); the
+  0x696100 `[vi]` lines sit in the 640-wide pre-title phase; menu routing and timing are
+  unchanged (title → SELECT GAME → war room, one press each, war room at 54.5 s vs s23's 54.7 s);
+  and nothing was overshot — the band scene was on screen the whole time, rendering complete for
+  the first time. **Why believable:** the completed render looked like a brand-new scene, so
+  nearby unfamiliar origins in the log read as its identity, and "we missed the hangar" was the
+  only story consistent with the hangar still existing.
 
 ### Dead ends — labelled as such in the log, do not retry
 
