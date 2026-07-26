@@ -16,6 +16,18 @@ fail() { echo "[preflight] FAIL: $1"; exit 1; }
 [ "$(build/winctl trusted 2>/dev/null)" = "yes" ] \
   || fail "Accessibility not granted to this terminal context (build/winctl trusted said no)"
 
+# An untrusted workspace silently discards every permissions.allow entry in
+# .claude/settings.json, which turns the whole loop into permission denials.
+python3 - "$PWD" <<'PY' || fail "workspace not trusted - .claude/settings.json permissions are being IGNORED. Run 'claude' interactively once in this directory and accept the trust dialog."
+import json, os, sys
+p = os.path.expanduser("~/.claude.json")
+try:
+    e = json.load(open(p)).get("projects", {}).get(sys.argv[1], {})
+except Exception:
+    sys.exit(0)   # can't tell; don't block on it
+sys.exit(0 if e.get("hasTrustDialogAccepted") else 1)
+PY
+
 t="$(mktemp -d)/pf.png"
 screencapture -x "$t" 2>/dev/null
 [ -s "$t" ] || fail "screencapture wrote nothing - Screen Recording permission or locked screen"
