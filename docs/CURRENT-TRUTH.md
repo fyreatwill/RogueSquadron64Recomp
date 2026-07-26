@@ -130,22 +130,14 @@ A milestone is done only when its definition-of-done is met **and documented her
 autonomous loop (`tools/agent/loop.sh`, contract in `tools/agent/ITERATION.md`) always draws its
 work unit from the top open milestone, so this ladder is what keeps it from idling.
 
-**M1 — hangar band root cause and fix: DONE (s48).** Mechanism (s45/s46): all overlay dispatches
-share entry **0x1DB0** and the window-swap IMEM DMA is skipped, so clip dispatches ran the packed
-overlay-image *storage* instead of clip code — every clip-flagged triangle vanished. s47 spliced
-the real clip overlay (raw in ROM at `RDRAM_addr + 0xC00`; `tools/make_clip_composite.py` +
-`factor5_rsp_ovl4.toml` + fixup 6, routed by `DMEM 0x153 == 4`). s48 closed the definition-of-done
-in the scene itself: band rows rasterize geometry (mode-2 marker), clean captures show the war
-room complete with zero streak band, census identities exact across 672+696 tasks, all stability
-counters 0. Full detail: PORTING-STATE s45–s48. Overlays 12/44 still take the old broken path by
-design — same splice recipe applies if they ever matter.
+**M1 — hangar band root cause and fix: DONE (s48).** Mechanism and fix recipe:
+`docs/PROJECT-OVERVIEW.md` §3 ("Fixing the hangar band"). Full detail: PORTING-STATE s45–s48.
 
-**M2 — post-clip-fix regression sweep: DONE (s49).** Undriven full-timeline run + driven war-room
-run, both cullstats-instrumented. Non-512 phases matched the documented timeline within normal
-variance, 0 cull-census-identity violations anywhere. War room rendered complete on two frames 32s
-apart — new baseline: 1138 tasks, fanjal=9448, 0 violations (scales with capture window vs s48's
-5.6–5.8k, not a fixed constant). Stability 0 except 3 gracefully-stubbed `[missing-func]` addresses
-in the undriven outdoor stretch, never soaked before — parked as M4. Full detail: PORTING-STATE s49.
+**M2 — post-clip-fix regression sweep: DONE (s49).** New stability baseline: 1138 tasks,
+fanjal=9448, 0 cull-census-identity violations (scales with capture window, not a fixed constant).
+Stability 0 except 3 gracefully-stubbed `[missing-func]` addresses in the undriven outdoor stretch,
+never soaked before — parked as M4 (identified s53, fixed s54, runtime check outstanding — see
+step 2 below). Full detail: PORTING-STATE s49.
 
 **M3 — first gameplay: OPENED (s50), LEVEL DESCRIPTION death confirmed + partially traced (s51).**
 AVAILABLE CRAFT (craft-select) confirmed reachable and renders correctly, one press past SELECT
@@ -189,7 +181,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s54)
+## Next steps, in order of expected value (s55)
 
 1. **M3 — LEVEL DESCRIPTION black-screen/crash: trace the `fs` freeze. In-process crash handler is
    in place (s52); retry the repro ONLY when system load is genuinely low.** Confirmed on 2
@@ -205,14 +197,16 @@ cost three sessions before the recursive mutex.
    processes stalls permanently in the 640-wide phase (`[fbpair-cap]` hit at 8192, `fs=0` stuck)
    before ever reaching phase 1024, regardless of attach method (2× lldb, 1× `sample`, 1× no attach
    at all). s54 hit the same load band again (1.93→3.52 across the iteration, 33 `claude`
-   processes) and correctly skipped both this repro and the M4 runtime check below rather than
-   trust either result. **Do not attempt this repro again until `uptime` load average is
+   processes); **s55 hit it a 5th time, at the highest 1-minute average yet (3.42/3.26/3.17, 33
+   `claude` processes)** and again correctly skipped both this repro and the M4 runtime check below
+   rather than trust either result. **Do not attempt this repro again until `uptime` load average is
    comfortably under ~1.5 AND few/no other `claude` processes are running** — treat this as
    near-certain, not merely well-corroborated. If load is high when this iteration starts, skip to
    step 2 (the M4 runtime check is also blocked by the same confound — s54 found it's not
-   driven-input-specific — but the build/implementation half is done and load-insensitive). Do not
-   attempt an `fs`-freeze fix until the mechanism is clear. Full detail: PORTING-STATE s50, s51,
-   s52, s53, s54.
+   driven-input-specific — but the build/implementation half is done and load-insensitive); if load
+   is high and step 2 is also inapplicable (already done, or itself blocked), use the iteration for
+   step 4 (doc housekeeping) rather than idling — see s55. Do not attempt an `fs`-freeze fix until
+   the mechanism is clear. Full detail: PORTING-STATE s50, s51, s52, s53, s54, s55.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
@@ -226,17 +220,26 @@ cost three sessions before the recursive mutex.
    launch. Expect further new failure classes (mission overlay DMA → missing-func /
    UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice recipe). Each
    new failure is its own work unit.
-4. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
+4. **Doc housekeeping — `CURRENT-TRUTH.md` still over the ~35 KB CLAUDE.md guideline (42,038 bytes
+   as of s55, down from 42,859).** s55 migrated the M1/M2 mechanism paragraphs to
+   `docs/PROJECT-OVERVIEW.md` §3 and fixed two stale/wrong statements there (a superseded
+   "gaps-between-triangles" conclusion in the s12–s43 arc paragraph, and §1's "main-menu hangar" /
+   "one visual defect remains" status). Remaining size is dominated by the ~150-line "Overturned
+   conclusions" section (s5–s48) — deliberately not touched by s55; compressing it safely needs a
+   per-entry judgment call (which flag names/numbers still need exact-reference detail vs. which are
+   now fully subsumed by PROJECT-OVERVIEW.md §4's hurdle-class summaries), not a bulk edit. Good
+   fallback work when load blocks steps 1–2.
+5. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
    is its own git repo and carries uncommitted changes to 4 symbol files —
    `cinematic_overlay.txt`, `main_overlay.txt`, `menu_overlay.txt` (pre-existing, unknown origin)
    plus `mission_overlay.txt` (s54's fix). Ask the user whether/how they want this checkout's
    history managed before any iteration commits there.
-5. **Band-row coverage history** (settled chain, for reference): s41 `MARK_VTX` proved a coverage
+6. **Band-row coverage history** (settled chain, for reference): s41 `MARK_VTX` proved a coverage
    hole; s42 `LOG_YHIST` proved submission through band rows; s43 `LOG_ZSTATE` proved raster-clean
    draws; s27–s31 eliminated texture decode; s45–s47 pinned and fixed the clip-dispatch loss; s48
    proved the fix fills the band (and renamed the scene); s49 closed the regression sweep. s40's
    `col`-write probe fails its own control — do not reuse.
-6. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+7. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work

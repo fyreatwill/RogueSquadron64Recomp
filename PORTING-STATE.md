@@ -4571,3 +4571,54 @@ iteration. Flagging explicitly rather than silently committing or leaving undocu
 Files: `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` (+3 lines, uncommitted
 — sibling repo, see above). This repo (`RogueSquadron64Recomp`): none — `build/` is gitignored, so
 the regenerated ELF/recompiled sources/binary leave no diff here to commit.
+
+## Session 55 (2026-07-26) — load confound confirmed a 5th time; doc housekeeping (M3/M4 blocked)
+
+### What ran
+Load precondition check at iteration start: `uptime` 3.42/3.26/3.17, 33 concurrent `claude`
+processes — well above the ~2.4-or-~30-processes threshold s51–s54 established, and the highest
+1-minute load average recorded across the 5 sessions that have hit this confound (s51 ×2, s52,
+s53, s54, now s55). Per `NEXT.md`, both game-run work units (M3 repro, M4 runtime check) were
+skipped without attempting a run — no new evidence gathered on either, correctly avoiding another
+load-stalled false result.
+
+Used the iteration for work unit C (doc housekeeping), since `docs/CURRENT-TRUTH.md` has been over
+the ~35 KB CLAUDE.md guideline since at least s53 and no prior session has acted on it:
+
+1. **Migrated the M1/M2 mechanism paragraphs** out of `CURRENT-TRUTH.md`'s goal stack into
+   `docs/PROJECT-OVERVIEW.md` §3, as a new "Fixing the hangar band (s44–s49)" arc paragraph. The
+   goal-stack entries for M1/M2 are now short DONE summaries pointing at PROJECT-OVERVIEW +
+   PORTING-STATE for detail.
+2. **Corrected a stale/wrong conclusion baked into `PROJECT-OVERVIEW.md`'s narrative arc**: the old
+   "Chasing the hangar band (s12–s43)" paragraph asserted as fact that the band was "gaps between
+   triangles in a target the game never clears" — that was the s41–s43-era working hypothesis, since
+   superseded by the real s44–s48 root cause (overlay-dispatch/window-swap-DMA clip-code loss, not a
+   missing clear). Reworded s12–s43 to describe it as evidence gathered en route, not a conclusion,
+   and let the new s44–s49 paragraph carry the actual mechanism.
+3. **Refreshed `PROJECT-OVERVIEW.md` §1** ("Where it stands" / "What is not done"), which still said
+   "main-menu hangar" and "one visual defect remains" — both wrong since s48 (scene renamed to level-
+   select war room, band fixed) and s50 (game reaches AVAILABLE CRAFT, new LEVEL DESCRIPTION
+   black-screen defect). Now states the menu chain reached, the band-fix status, and the current
+   open defect, consistent with `CURRENT-TRUTH.md`.
+
+Net effect on `CURRENT-TRUTH.md` size: 42,859 → 42,038 bytes (~800 bytes saved) — real but small;
+the M1/M2 paragraphs were not the dominant contributor. The bulk of the file's size is the
+~150-line "Overturned conclusions" section (s5–s48), which was deliberately **not** touched this
+session: compressing it safely requires judging, entry by entry, which specific flag names/numbers
+still need to stay exact-referenceable versus which are now fully subsumed by
+`PROJECT-OVERVIEW.md` §4's hurdle-class summaries — a higher-risk editorial call than the
+straightforward migration done here, and not one to rush through under an autonomous iteration
+with no human review before commit. Left as an explicit next housekeeping sub-unit rather than
+attempted partially.
+
+### Verdict
+No new evidence on M3 or M4 (both correctly skipped under confirmed high load — this is the 5th
+confirmation of the load-stall confound, not a new finding). Doc housekeeping: real, verified
+progress (2 correctness fixes + partial size reduction), single-source (no second reviewer), fully
+reversible via git and git-tracked. `docs/CURRENT-TRUTH.md` remains over the 35 KB guideline
+(42,038 bytes) — flagged for a further, more careful compression pass of the "Overturned
+conclusions" section as future housekeeping, not urgent.
+
+Files: `docs/CURRENT-TRUTH.md` (M1/M2 goal-stack entries condensed), `docs/PROJECT-OVERVIEW.md`
+(new "Fixing the hangar band" arc paragraph; §1 and the s12–s43 arc paragraph corrected for
+accuracy).

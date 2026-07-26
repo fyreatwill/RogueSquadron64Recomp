@@ -19,13 +19,17 @@ A static recompilation of *Star Wars: Rogue Squadron* (N64, US 1.0) into a nativ
 built on `MikeSemicolonD/RogueSquadron64Recomp` with local forks of N64Recomp, N64ModernRuntime and
 RT64. The goal was to get the game building and rendering correctly on Apple Silicon.
 
-**Where it stands:** the game boots and renders. Attribution screen, N64 logo, intro cinematic, star
-flare, Factor 5 logo, title screen, the SELECT GAME menu, the main-menu hangar in textured 3D, and
-an outdoor scene all render, with working synthetic input to drive the menus. Runs are stable —
-no `UnhandledJumpTarget`, no dropped tasks, no missing overlay symbols, no renderer asserts.
+**Where it stands:** the game boots and renders through the full menu chain — attribution screen,
+N64 logo, intro cinematic, star flare, Factor 5 logo, title screen, SELECT GAME, the level-select
+war room, and AVAILABLE CRAFT (craft select) — plus a separate outdoor scene, all rendering
+correctly with working synthetic input to drive the menus. The war-room floor band defect (s12–s48,
+formerly described as a "main-menu hangar") is fixed and root-caused. Runs are stable — no
+`UnhandledJumpTarget`, no dropped tasks, no missing overlay symbols, no renderer asserts — across
+every phase soaked to date.
 
-**What is not done:** one visual defect remains (a horizontal strip of stale content across the
-hangar floor mid-ground), audio is stubbed entirely, and gameplay past the menus is unverified.
+**What is not done:** the LEVEL DESCRIPTION prompt, one press past AVAILABLE CRAFT, black-screens
+and silently kills the process — under active investigation, see `CURRENT-TRUTH.md`. Audio is
+stubbed entirely, and gameplay past the menus is unverified.
 
 ## 2. How the pipeline fits together
 
@@ -65,11 +69,24 @@ function-local statics so most tasks' output was silently discarded; and this en
 RDP FULL_SYNC** in the menu/mission phases, so RT64's workload never advanced. Synthesising the frame
 boundary from the VI swap (`ROGUESQ_VI_FULLSYNC`) made the game render.
 
-**Chasing the hangar band (s12–s43).** Thirty sessions on one horizontal strip of wrong pixels. The
-attribution moved through texture assets, palettes, dxt, sample bounds, vertex shade, framebuffer
-choice, RDRAM staleness, workload boundaries and ucode performance before arriving at: those pixels
-are **gaps between triangles** in a target the game never clears. Along the way it produced a real
-win — the ucode was being compiled `-O0`, and fixing that made it **41× faster**.
+**Chasing the hangar band (s12–s43).** Thirty sessions on one horizontal strip of wrong pixels,
+ruling out texture assets, palettes, dxt, sample bounds, vertex shade, framebuffer choice, RDRAM
+staleness and ucode performance in turn, arriving by s41–s43 at submission-level evidence: geometry
+rasterises cleanly through the band rows, so the gap sat upstream of drawing rather than in it.
+Along the way it produced a real win — the ucode was being compiled `-O0`, and fixing that made it
+**41× faster**.
+
+**Fixing the hangar band (s44–s49).** Root cause: all overlay dispatches share entry **0x1DB0**,
+and the window-swap IMEM DMA that should route clip-flagged draws to the real clip overlay is
+skipped, so those draws instead ran the packed overlay-image *storage* as if it were code — every
+clip-flagged triangle vanished. The fix splices the real clip overlay back in: it sits raw in ROM at
+`RDRAM_addr + 0xC00`, translated via a dedicated RSPRecomp pass (`tools/make_clip_composite.py` +
+`factor5_rsp_ovl4.toml`) and spliced in by fixup 6, routed by `DMEM 0x153 == 4`. Verified in the
+scene itself (band rows rasterise geometry under a mode-2 marker, census identities exact) and
+confirmed on a post-fix regression sweep (undriven full timeline + driven war-room run, 0
+cull-census-identity violations). Overlays 12/44 still take the old broken path by design — the same
+splice recipe applies if they ever matter. Full detail: PORTING-STATE s44–s49; day-to-day state in
+`CURRENT-TRUTH.md` M1/M2.
 
 ## 4. The recurring hurdles
 
