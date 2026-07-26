@@ -129,6 +129,130 @@ if is_main_ucode and ITER_MARKER not in text:
         text = l1090_pattern.sub(lambda m: replacement, text, count=1)
 
 # ---------------------------------------------------------------------------
+# Fixup 3: per-task clip/cull census (ROGUESQ_UCODE_CULLSTATS=1), main ucode
+# ---------------------------------------------------------------------------
+# The band (hangar floor, game y 141-201) is pixels no triangle covers; s42
+# proved geometry is submitted through those rows and s43 proved the drawn
+# triangles carry wall-identical raster state. This census counts, per task,
+# triangles entering the pipeline (L_17F0), reaching setup (L_1828), emitted
+# (L_1930), and each reject branch: trivial clip reject (all 3 clip codes
+# share a +/-w plane bit, mask 0x7070), clip-needed handoff to overlay 4
+# (mask 0x4343 -> j L_1268 r5=4), backface (sign of 2D cross & cull-enable),
+# degenerate (cross == 0). Every reject buckets the triangle's screen-y span
+# (vertex +0x1A, 11.2 fixed) against the s43 windows wall/band/pad.
+# Identities the run must satisfy (instrument control):
+#   setup == eval - tclip - hand + fanjal
+#   emit  == setup - bface - degen
+CULL_MARKER = "/* fixup: cullstats */"
+if is_main_ucode and CULL_MARKER not in text:
+    helper_block = r'''
+/* fixup: cullstats */
+/* Per-task clip/cull census, ROGUESQ_UCODE_CULLSTATS=1. Windows in game-y
+   pixels match the s43 ZSTATE census: wall 60-140, band 141-201, pad 220-320.
+   Vertex screen y is 11.2 fixed at record +0x1A; game y = >>2. Classes:
+   0=tclip 1=hand(clip overlay) 2=bface 3=degen. */
+#include <cstdlib>
+#include <cstdio>
+static unsigned rs64_cs_taskctr = 0;
+struct Rs64CullStats {
+    unsigned idx;
+    unsigned eval = 0, setup = 0, emit = 0, tclip = 0, hand = 0,
+             bface = 0, degen = 0, fanjal = 0;
+    unsigned band[4] = {0,0,0,0}, wall[4] = {0,0,0,0}, pad[4] = {0,0,0,0};
+    static bool enabled() {
+        static int v = -1;
+        if (v < 0) { const char *e = std::getenv("ROGUESQ_UCODE_CULLSTATS"); v = (e && *e && *e != '0') ? 1 : 0; }
+        return v == 1;
+    }
+    Rs64CullStats() { idx = ++rs64_cs_taskctr; }
+    ~Rs64CullStats() {
+        if (!enabled() || eval == 0) return;
+        fprintf(stderr,
+            "[cullstats t=%u eval=%u setup=%u emit=%u tclip=%u hand=%u bface=%u degen=%u fanjal=%u"
+            " band=%u/%u/%u/%u wall=%u/%u/%u/%u pad=%u/%u/%u/%u]\n",
+            idx, eval, setup, emit, tclip, hand, bface, degen, fanjal,
+            band[0], band[1], band[2], band[3],
+            wall[0], wall[1], wall[2], wall[3],
+            pad[0], pad[1], pad[2], pad[3]);
+        fflush(stderr);
+    }
+    void bucket(int cls, int y1, int y2, int y3) {
+        int mn = y1 < y2 ? y1 : y2; if (y3 < mn) mn = y3;
+        int mx = y1 > y2 ? y1 : y2; if (y3 > mx) mx = y3;
+        mn >>= 2; mx >>= 2;   /* 11.2 fixed -> game pixels */
+        if (mn <= 140 && mx >= 60)  wall[cls]++;
+        if (mn <= 201 && mx >= 141) band[cls]++;
+        if (mn <= 320 && mx >= 220) pad[cls]++;
+    }
+};
+'''
+    # RSP_MEM_HU_LOAD(off, base) zero-extends; cast down for the signed 11.2 y.
+    y3args = ("(int)(int16_t)(uint16_t)RSP_MEM_HU_LOAD(0X1A, r11), "
+              "(int)(int16_t)(uint16_t)RSP_MEM_HU_LOAD(0X1A, r12), "
+              "(int)(int16_t)(uint16_t)RSP_MEM_HU_LOAD(0X1A, r13)")
+
+    def sub_exactly(pattern, replacement, n, what):
+        global text
+        new_text, count = re.subn(pattern, replacement, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 3 ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}. "
+                  f"Regen changed the code shape — re-derive the anchors "
+                  f"before trusting any cullstats output.", file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    # Helper struct before the function.
+    sub_exactly(
+        re.compile(r"(RspExitReason factor5_ucode\(uint8_t\* rdram,)"),
+        helper_block.replace("\\", "\\\\") + r"\1",
+        1, "helper block")
+
+    # Instance right after the RSP object (same anchor as fixup 2, distinct marker).
+    sub_exactly(
+        re.compile(r"(\n    RSP rsp\{\};\n)"),
+        r"\1    Rs64CullStats rs64_cs;  " + CULL_MARKER + "\n",
+        1, "rs64_cs instance")
+
+    # Stage counters at the three pipeline labels.
+    for label, field in (("L_17F0", "eval"), ("L_1828", "setup"), ("L_1930", "emit")):
+        sub_exactly(
+            re.compile(r"(" + label + r":\n)"),
+            r"\1    rs64_cs." + field + "++;  " + CULL_MARKER + "\n",
+            1, f"{label} {field} counter")
+
+    # Reject (a): trivial clip reject -> L_1DA8 (unique goto).
+    sub_exactly(
+        re.compile(r"(        goto L_1DA8;\n)"),
+        "        rs64_cs.tclip++; rs64_cs.bucket(0, " + y3args + ");  " + CULL_MARKER + "\n" + r"\1",
+        1, "trivial-clip reject")
+
+    # Reject (b): clip-needed handoff to overlay 4 (j L_1268 with r5=4).
+    sub_exactly(
+        re.compile(r"(    // j           L_1268\n    // ori         \$5, \$zero, 0x4\n)(    r5 = 0 \| 0X4;\n    goto L_1268;)"),
+        r"\1" + "    rs64_cs.hand++; rs64_cs.bucket(1, " + y3args + ");  " + CULL_MARKER + "\n" + r"\2",
+        1, "clip-overlay handoff")
+
+    # Reject (c): backface cull (bltz $3, L_1DA4).
+    sub_exactly(
+        re.compile(r"(    // bltz        \$3, L_1DA4\n    if \(RSP_SIGNED\(r3\) < 0\) \{\n        // sh          \$13, 0x284\(\$zero\)\n        RSP_MEM_H_STORE\(0X284, 0, r13\);\n)(        goto L_1DA4;)"),
+        r"\1" + "        rs64_cs.bface++; rs64_cs.bucket(2, " + y3args + ");  " + CULL_MARKER + "\n" + r"\2",
+        1, "backface reject")
+
+    # Reject (d): degenerate (beq $4, $zero, L_1DA4 at L_18F0). r11/r12/r13
+    # were re-loaded permuted from the DMEM 0x280 mirrors — min/max unaffected.
+    sub_exactly(
+        re.compile(r"(    // beq         \$4, \$zero, L_1DA4\n    if \(r4 == 0\) \{\n        // vsub        \$v4, \$v15, \$v14\n        rsp\.VSUB<0>\(rsp\.vpu\.r\[4\], rsp\.vpu\.r\[15\], rsp\.vpu\.r\[14\]\);\n)(        goto L_1DA4;)"),
+        r"\1" + "        rs64_cs.degen++; rs64_cs.bucket(3, " + y3args + ");  " + CULL_MARKER + "\n" + r"\2",
+        1, "degenerate reject")
+
+    # Clip-fan re-entry calls (jal 0x1828 inside the resident fan loop).
+    sub_exactly(
+        re.compile(r"(    // jal         0x1828\n)(    r31 = 0x1F14;)"),
+        r"\1" + "    rs64_cs.fanjal++;  " + CULL_MARKER + "\n" + r"\2",
+        1, "clip-fan jal")
+
+# ---------------------------------------------------------------------------
 
 if text == original:
     sys.exit(0)
@@ -141,6 +265,8 @@ if ITER_MARKER in text and ITER_MARKER not in original:
     notes.append("injected iter cap at L_1090")
 if SILENCE_MARKER in text and SILENCE_MARKER not in original:
     notes.append("silenced boot->main JR printf")
+if CULL_MARKER in text and CULL_MARKER not in original:
+    notes.append("injected cullstats census (ROGUESQ_UCODE_CULLSTATS)")
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:

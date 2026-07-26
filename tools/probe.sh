@@ -67,7 +67,18 @@ if [[ -z "$WID" ]]; then
     exit 1
 fi
 print "window $WID"
-"$WINCTL" activate "$PID" >/dev/null 2>&1
+
+# winctl activate uses activateWithOptions:, which modern macOS treats as a
+# cooperative request and ignores while another app holds focus — measured in
+# session 45: frontmost stayed the other app after activate and both driven
+# runs' keys were dropped (the undriven-route failure regress.sh warns about).
+# System Events' `set frontmost` goes through the Accessibility API and does
+# raise the window, so keys posted right after it actually land.
+raise_game() {
+    "$WINCTL" activate "$PID" >/dev/null 2>&1
+    /usr/bin/osascript -e "tell application \"System Events\" to set frontmost of first application process whose unix id is $PID to true" >/dev/null 2>&1
+}
+raise_game
 
 # Key presses run on their own clock so captures are never blocked by them.
 #
@@ -120,7 +131,7 @@ start_keys() {
             sleep "$d"
             prev=$t
             kill -0 "$PID" 2>/dev/null || exit 0
-            "$WINCTL" activate "$PID" >/dev/null 2>&1
+            raise_game
             "$WINCTL" key "$PID" "$(keycode_for $name)" >/dev/null 2>&1
             print "  [keys] $name at ${t}s ($label)"
         done

@@ -3900,3 +3900,84 @@ title screen (logo / pilot / X-wing / R2-D2 / START / OPTIONS). Phase timeline u
 ### Ruled out / consequences
 The knob retirement changes no rendering path (all four were opt-in and off). M1 state is
 untouched; the next unit is the clip/cull census written into scratch/agent/NEXT.md.
+
+## Session 45 (2026-07-26) — clip/cull census: clipped triangles are handed to overlay 4 and never come back
+
+The M1 work unit from NEXT.md: per-task clip/cull census inside the recompiled F5 gfx ucode
+(`ROGUESQ_UCODE_CULLSTATS=1`, injected by `tools/fixup_factor5_ucode.py` fixup 3), counting
+triangles at the pipeline stages (L_17F0 eval, L_1828 setup, L_1930 emit) and each reject branch:
+trivial clip reject (clip codes & 0x7070), clip-needed handoff to overlay 4 (codes & 0x4343 ->
+`r5=4; j L_1268`), backface (`bltz $3` on the cross-product sign & cull-enable), degenerate
+(`beq $4, 0`). Rejects bucket the vertex screen-y span (record +0x1A, 11.2 fixed) against the s43
+windows wall 60-140 / band 141-201 / pad 220-320. Two accounting identities per task act as the
+instrument control: `setup == eval - tclip - hand + fanjal`, `emit == setup - bface - degen`.
+
+### Instrument validation (positive controls, same runs)
+- Identities exact on **every task in all three runs** — 3,360 tasks with triangles, 0 violations.
+- Every reject class fires somewhere in-run: tclip 247k..3.7M, hand 8k..328k, bface 335k (640
+  phase), degen 9k (640 phase). A dead counter would read as a false null; none is dead.
+- RDP-side reconciliation: `ROGUESQ_LOG_YHIST=1` ran in the same (third) run. Hangar trough
+  reproduced: bins 140:9998 160:9732 180:2290 **200:723** vs pad 220+:18979-24029 — the 200-bin is
+  **exactly 723 in s42 and s45**, so the RDP-side picture is deterministic and reconciles.
+
+### Runs
+Runs 1-2 (11:57, 12:04) lost their key presses and followed the undriven route (640 boot -> title
+-> 640 -> 512-outdoor 0x690400). Diagnosed live (see harness note below), fixed, and run 3 took the
+driven route: title 44.8 s, start at +3/+7, **hangar 512/0x6AB400 at 54.6 s** (s23 baseline 54.7 s),
+53 frames, band visibly present (`scratch/s45_cullstats_run3/f_035_038.7.png`), stability clean
+(0 UnhandledJumpTarget / defer-drop / dmem-race / missing-func / SIGTRAP).
+
+### Hangar census (run 3, 1,517 tasks over ~50 s)
+
+    eval=10,749,430  setup=6,658,442  emit=6,641,274
+    tclip=3,762,783  hand=328,205  bface=17,168  degen=0  fanjal=0
+    bface by rows: band=754  wall=1,566  pad=15,428
+
+- **H2 (degenerate collapse): eliminated.** degen=0 in the entire hangar phase.
+- **H3 (backface): eliminated as the band cause.** 17k backface rejects are 90% in the pad rows
+  (the animating pad geometry); 754 touch band rows vs 9,998-9,732 drawn through neighbouring wall
+  rows. Backface culling is also a legitimate reject class, present on hardware.
+- **H1 (clip path): the survivor, and sharper than hypothesised.** 328,205 triangles per hangar
+  phase are flagged "needs clipping" and handed to the clip overlay (`r5=4 -> L_1268`) — and the
+  resident clip-fan re-entry (`jal 0x1828`, the only path by which clipped output can re-enter
+  triangle setup) executed **zero times in three runs, any phase** (fanjal=0 with identity 1 exact,
+  which proves the counter is not just misplaced). On hardware a clip-crossing triangle is replaced
+  by a fan of clipped triangles; here it produces nothing. **Every triangle that crosses a clip
+  plane is silently dropped.**
+- Mechanism sketch (static-recomp structural, single-source, needs the s46 trace): `L_1268` loads
+  the overlay table at DMEM 0x7A+ovl, DMAs overlay code into IMEM, and `jr`s to its entry
+  (`L_1294/L_1298`). A static recompilation cannot change its compiled code by DMA — the indirect
+  jump lands on whatever the *captured image* had at that address. It lands on a valid label
+  (0 UnhandledJumpTarget) that is evidently not the clip fan.
+
+### Bucket caveat (do not build on it)
+The hand-class y-buckets read 0/0/0 (band/wall/pad) in the hangar — all 328k outside every window —
+while the same buckets were populated in the 640 phase (3,589 band). The +0x1A screen y of
+out-of-volume vertices is evidently not usable in this phase, so **row attribution of the lost
+clip-class triangles is NOT established**; "the band's missing triangles are exactly the clipped
+ones" is plausible (the band is the mid-ground floor strip between drawn walls and drawn pad, where
+grazing-angle plane crossings concentrate) but unproven.
+
+### Second candidate exposed by the same run: ring-scale loss between emit and RDP record
+Ucode-side emit vs RDP-side yhist tris, same run: 640 boot 581,745 vs ~114,000 (5.1x); outdoor
+288,527 vs ~14,000 (20x); hangar 6,641,274 vs ~50,000 (133x). `[dpc-wrap]` reached event
+#27,922,432 by run end — the drops CURRENT-TRUTH already lists as genuine content. Some of the
+ucode-side inflation may be task re-runs rather than unique triangles (not yet separated). Either
+way, the DL tail that wraps is dropped deterministically, so systematic loss of the same geometry
+every workload is possible ring-side too. **Both candidates (clip loss, ring drop) survive for the
+band; the clip loss is a confirmed real defect regardless of which owns the band pixels.**
+
+### Harness: driven runs were silently undriven (winctl activate broken on this macOS)
+Runs 1-2 posted keys ("[keys] start at 3s" logged) and the game followed the undriven timeline.
+`winctl trusted` = yes. Measured directly: after `winctl activate <pid>` the frontmost app was
+still the desktop app in focus — `activateWithOptions:NSApplicationActivateIgnoringOtherApps` is a
+cooperative request modern macOS ignores while another app holds focus. System Events
+`set frontmost of (process whose unix id = pid) to true` (Accessibility API) does raise the window
+— verified frontmost, and run 3 reached the hangar on the first try. Both `tools/probe.sh` and
+`tools/regress.sh` now use a `raise_game()` helper (winctl activate + osascript raise). The
+regress.sh comment blaming "absence of a usable GUI session" for session-25's identical failures is
+superseded: the GUI session was present; the raise itself silently fails when contested.
+
+### Analysis tooling
+`scratch/agent/cullstats_sum.py` — aggregates `[cullstats]` lines per VI-phase segment, checks both
+identities per task, sums the reject/row matrix, and cross-references `[yhist]` RDP-side totals.

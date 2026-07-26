@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 44)
+## Current truth (as of session 45)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -62,42 +62,22 @@ Driven from the title with `PROBE_KEYS_FROM_PHASE=1` (s23):
 hangar), never by width alone (s18/s23).
 
 Remaining visual defects:
-- **Hangar floor multi-hue band** (horizontal scramble): **it is triangles drawn within the frame,
-  and it is NOT the I4 floor texture (s32).** Established: floor draws log **`tlut=0x0`**, and an
-  unpalettised intensity tile times white shade cannot be multi-hue however scrambled the stride is,
-  so the whole s27–s31 I4 decode line is dead. `ROGUESQ_RAM_PATTERN=1` (magenta-fills every colour
-  pixel sourced from RDRAM; validated, `diff=149504` = the full 512x292 buffer) puts **zero magenta**
-  on screen, so it is not stale RDRAM. `ROGUESQ_TARGET_CLEAR=2` (clear the colour target at the
-  first framebuffer pair of each frame) leaves the band **untouched** — not carried over from
-  earlier frames — while `=1` (clear every pair) removes it along with everything but the last
-  pair, showing a hangar frame is composed across many pairs. `DROP_ALL_TRIS=1` removes it entirely.
-  **Open: which triangles.** Two candidate explanations are now ruled out. Coverage attribution
-  (`ROGUESQ_LOG_BBOX=1`, y-range overlap rather than centroid) finds the **same** population the
-  centroid censuses did — all I4, `tlut=0`, no CI or RGBA. Load/render format mismatch is also out:
-  `ROGUESQ_LOG_UPLOAD=1` at the upload site shows hangar uploads are 55x fmt4/siz0 tlut=0 plus 5x
-  fmt2/siz0 tlut=32768, so the loads agree with the render tiles. One measured anomaly remains: 39
-  of the 55 I4 uploads have `sample=64x128` against `masks=6/6`, i.e. sampling past the loaded data.
-  **Structure, corrected:** `ROGUESQ_LOG_PAIRS=1` shows a workload has 2 framebuffer pairs and only
-  pair 1 carries a colour framebuffer, so `TARGET_CLEAR=2` (clears at `f==0`) **never ran** — that
-  null was a dead instrument. `TARGET_CLEAR=1` therefore *is* the per-frame clear, and with it on a
-  frame contains only three door panels, the pad and a ceiling sliver: **the whole hangar image is
-  accumulated across workloads** in a target RT64 never clears, and the band is old content in it.
-  **s36/s37 said the band IS under-rendering — OVERTURNED by s38.** The under-rendering was real
-  (hangar gfx tasks cost 186.6 ms of ucode each) and is now **fixed**: the ucode was being compiled
-  **`-O0`** (`CMAKE_BUILD_TYPE=Debug`, whose flags are just `-g`), and adding `-O2` to the three
-  ucode translation units made hangar tasks **41x faster (186.6 → 4.5 ms)**, 0 of 466 over 100 ms,
-  CPU 110 % → ~50 %. The hangar renders visibly more — and **the band is unchanged**. So they are two
-  separate defects that shared a phase; the band's cause is **open again**. What still stands: it is
-  GPU-target content (survives `RAM_PATTERN`, wiped by `TARGET_CLEAR=1`), it is not the I4 floor
-  texture (`tlut=0` cannot be multi-hue), and its region goes un-redrawn even with 6.5x more
-  geometry arriving — pointing at a coverage hole in a target the game never clears. The s27–s31
-  texture-decode line stays closed.
-  Superseded framings (s32 tiny-workload accumulation, s35 RDP-stream collapse, s36
-  under-rendering) live in PORTING-STATE — all three described the `-O0` perf defect, fixed at s38.
-  Still-durable structural facts from that era: hangar workloads carry 2-10 draw calls each (640
-  boot phase: 275-277), so the image is accumulated across dozens of workloads and no single frame's
-  draw census can attribute a pixel; `[budget]` shows no `maxGameCall` truncation; over-frequent
-  workload boundary suspect: `ROGUESQ_VI_FULLSYNC` (s11).
+- **Hangar floor multi-hue band** (horizontal scramble): stale content showing through a coverage
+  hole — pixels no triangle covers, in a target the game never clears, so old bytes shine through
+  (s41 mark-vertices: 3.6 % of the band stays warm with every draw forced magenta). Established, in
+  order: not stale RDRAM (`RAM_PATTERN` puts zero magenta on screen); not the I4 floor texture
+  (`tlut=0` cannot be multi-hue — the whole s27–s31 decode line is dead); not under-rendering (that
+  was the separate `-O0` ucode-perf defect, 41x fixed at s38 — 186.6 → 4.5 ms/task — with the band
+  unchanged); not a submission gap (s42 y-span histogram: rows 141–201 carry 723–2 072 tris/bin, a
+  trough not an absence); not raster-state rejection (s43: band draws are wall-identical, sig 0x52).
+  Durable structure: the hangar image accumulates across dozens of 2–10-call workloads
+  (`TARGET_CLEAR=1` shows a single frame holds only door panels + pad + ceiling sliver), so no
+  single frame's census can attribute a pixel; `TARGET_CLEAR=2` was a dead instrument (only pair 1
+  carries colour); parked anomaly: 39 of 55 I4 uploads sample 64x128 past `masks=6/6`.
+  **s45 did the clip/cull census** (`ROGUESQ_UCODE_CULLSTATS=1`): degenerate=0, backface lives in
+  the pad rows — and clip-flagged triangles (328k/phase) are handed to overlay 4 and never return
+  (see M1 above). The clip loss and the `[dpc-wrap]` ring drops are the two surviving band
+  candidates.
 - ~~Hangar dimmer than the s11 peak~~ — **largely fixed, s25** by `SHADE_WRAP` (vertex
   then s26 per-pixel).
 - Outdoor 512 zero-shade is masked, not fixed: `ROGUESQ_FIX_ZERO_SHADE` + wrap both map
@@ -115,16 +95,18 @@ A milestone is done only when its definition-of-done is met **and documented her
 autonomous loop (`tools/agent/loop.sh`, contract in `tools/agent/ITERATION.md`) always draws its
 work unit from the top open milestone, so this ladder is what keeps it from idling.
 
-**M1 — hangar band root cause and fix** *(current; s43 state: texture decode, submission gap, and
-raster-state rejection all eliminated — the band pixels are gaps between triangles).* Next
-experiment per s43: instrument the LLE ucode's clip/cull path — per gfx task, count triangles
-evaluated / culled / clipped / emitted, and bucket the *discarded* ones by projected y-span overlap
-with the band rows (game y ≈ 141–201). Add the counters via `tools/fixup_factor5_ucode.py` so they
-survive regen. Positive control: totals must reconcile with s42's y-histogram (~7,000 triangles per
-capture). Discriminator: a discard population overlapping the band rows names the clip/cull
-mechanism (then identify which plane/precision path); a null — with its control passed — pushes the
-question upstream into the DL the game builds, where the parked s32 anomaly (39 of 55 I4 uploads
-sampling 64×128 past `masks=6/6`) becomes the next lead.
+**M1 — hangar band root cause and fix** *(current; s45 state: the ucode clip/cull census ran —
+`ROGUESQ_UCODE_CULLSTATS=1`, fixup 3 in `tools/fixup_factor5_ucode.py`, analysis
+`scratch/agent/cullstats_sum.py`).* s45 result: degenerate rejects are zero in the hangar and
+backface rejects live in the pad rows, but **328,205 hangar triangles per phase are flagged
+"needs clipping", handed to clip overlay 4 (`r5=4 → L_1268`), and none ever returns** — the
+resident clip-fan re-entry ran 0 times in 3 runs while the census identities held exactly. On
+hardware a clip-crossing triangle becomes a fan of clipped triangles; here it is silently dropped.
+The static recomp cannot load overlay code by DMA, so the `jr` at L_1298 lands on a valid label
+(0 UnhandledJumpTarget) that is not the clip fan — structural sketch, needs the s46 trace. A second
+loss also surfaced: RDP-side triangle records are 5–133x below ucode-side emissions (hangar 50k vs
+6.64M), sitting at the `[dpc-wrap]` drops (event #27.9M by run end). Both candidates survive for
+the band; the clip loss is a confirmed defect regardless.
 *Done when:* mechanism traced input → code path → pixels, fix applied, and the s41 mark-vertices
 mode-2 probe shows band rows receiving geometry, with other phases unchanged.
 
@@ -150,9 +132,18 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s38)
+## Next steps, in order of expected value (s45)
 
-1. **Identify what should cover the band rows.** s39 re-measured coverage on the fast build:
+1. **Trace the overlay-4 (clip) dispatch end-to-end** — one diagnostic build+run: at L_1268/L_1298
+   log the overlay id, the entry address read from the DMEM 0x76 table, and the label the indirect
+   jump resolves to; establish what code actually runs when a triangle needs clipping, then decide
+   the fix (recompile the clip overlay image via RSPRecomp vs a C-side clip in the fixup). The
+   discriminating follow-up for the band: once clipped triangles produce output, re-run the s41
+   mark-vertices mode-2 probe — band rows filling in confirms the clip loss owned the band; band
+   unchanged pivots to the ring-drop candidate (s45: RDP records 50k of 6.64M hangar emissions,
+   `[dpc-wrap]` #27.9M). Caveat for any row attribution: the +0x1A screen y of out-of-volume
+   vertices is unusable in the hangar (hand-class buckets read 0/0/0 there, s45).
+2. **Identify what should cover the band rows.** s39 re-measured coverage on the fast build:
    band-overlapping draws rose 1 600 → 7 600 while the band stayed identical, and `TARGET_CLEAR=1`
    (median 728 distinct vs 52 550 control) shows **no workload ever draws band content** — the
    hangar image is accumulated across hundreds of 1–14-call workloads into a never-cleared target.
@@ -174,10 +165,11 @@ cost three sessions before the recursive mutex.
    difference. So the band pixels are **gaps between triangles**, not rejected draws: some polygons
    that should fill those rows are never emitted while their neighbours are. Texture decode
    (s27–s31), submission gap (s42) and raster-state rejection (s43) are all now eliminated.
-   Next: instrument the LLE ucode's clip/cull decisions (discarded vs emitted per task) — the
-   histogram trough at exactly those rows fits a clip-plane or precision effect at a grazing angle.
-2. **Visual regression check on the other phases after `-O2`**, plus a stability soak.
-3. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+   **s45 did that census** (`ROGUESQ_UCODE_CULLSTATS=1`): degenerate=0, backface lives in the pad
+   rows — and clip-flagged triangles (328k/phase) are handed to overlay 4 and never return (see M1
+   above). The clip loss and the `[dpc-wrap]` ring drops are the two surviving band candidates.
+3. **Visual regression check on the other phases after `-O2`**, plus a stability soak.
+4. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
@@ -241,6 +233,11 @@ Standing warnings:
   window` means the **window id is wrong**, not that permission is missing — check the id before
   blaming TCC (`winctl find <pid>`; `winctl list` is not a subcommand and prints nothing).
   `winctl trusted` reports Accessibility state directly.
+- `winctl activate` (activateWithOptions:) is a cooperative request modern macOS **ignores while
+  another app holds focus** — keys then get dropped with `trusted`=yes and the run silently follows
+  the undriven route (s45; also the real cause of the session-25 failures regress.sh blamed on "no
+  GUI session"). probe.sh/regress.sh now raise via System Events `set frontmost` (`raise_game()`);
+  keep using them rather than winctl directly for driven runs.
 
 ## Overturned conclusions — do not act on these
 

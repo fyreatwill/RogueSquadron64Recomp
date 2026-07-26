@@ -181,7 +181,15 @@ if [[ -z "$WID" ]]; then
     exit 3
 fi
 print "window $WID"
-"$WINCTL" activate "$PID" >/dev/null 2>&1
+
+# Same fix as probe.sh (session 45): winctl activate's activateWithOptions: is
+# ignored under cooperative activation while another app holds focus; System
+# Events' `set frontmost` (Accessibility API) actually raises the window.
+raise_game() {
+    "$WINCTL" activate "$PID" >/dev/null 2>&1
+    /usr/bin/osascript -e "tell application \"System Events\" to set frontmost of first application process whose unix id is $PID to true" >/dev/null 2>&1
+}
+raise_game
 
 # Keycodes: same map as probe.sh, matching the keyboard fallback in
 # src/main/main.cpp.
@@ -223,7 +231,7 @@ fire_keys() {
             sleep "$(print "$t - $prev" | bc -l)"
             prev=$t
             kill -0 "$PID" 2>/dev/null || exit 0
-            "$WINCTL" activate "$PID" >/dev/null 2>&1
+            raise_game
             "$WINCTL" key "$PID" "$(keycode_for $name)" >/dev/null 2>&1
             print "  [keys] w=$w $name at +${t}s"
         done
