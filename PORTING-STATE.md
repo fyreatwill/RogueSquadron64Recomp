@@ -4200,3 +4200,81 @@ visual capture (two frames 32 s apart, both complete). **M2 done.**
 
 Files: `scratch/s49_undriven`, `scratch/s49_warroom` (each with run.log, verdict.json where
 applicable). No code changes this session.
+
+## Session 50 (2026-07-26) — M3 opened: AVAILABLE CRAFT screen confirmed; new black-screen/crash
+class found on LEVEL DESCRIPTION
+
+### The work unit
+Per NEXT.md: one more `start` press from SELECT LEVEL/war room, per CURRENT-TRUTH's menu state
+machine (title→SELECT GAME→war room, one press each) — testing H1 (mission launches), H2 (press
+does something else first, e.g. level description), H3 (new failure class), H4 (press dropped).
+
+### Run 1 — `scratch/s50_mission1`, `PROBE_KEYS="3:start 25:start 45:start"`, 90 s capture
+Third press landed at the very end of the capture window (phase-relative 45s ≈ wall 89.9s, capture
+ended at 89.9s) — no frames after it. Log continued a little past the screenshot cutoff (game
+wasn't killed until after capture) and showed the war-room origin alternating between the known
+0x6AB400 and a second origin 0x00656400, both width=512. Read the CURRENT-TRUTH note in isolation
+this looked like a new phase; it is not (see run 2).
+
+### Run 2 — `scratch/s50_mission1b`, `PROBE_KEYS="3:start 25:start 40:start 60:a"`, 150 s capture
+**0x00656400 is not a new scene** — it starts alternating with 0x6AB400 within 37 `update_screen`
+calls (~0.6s) of *entering* the war room, well before the 3rd press fires. It is the war room's
+own double-buffer partner; it was never flagged before because prior sessions never grepped
+consecutive `[vi]` lines this finely. No CURRENT-TRUTH change needed beyond this note — origin
+`0x656400` in a width=512 stretch is the war room, same as `0x6AB400`, not the s47 "briefing room"
+misattribution (already overturned, s48).
+
+**H1 confirmed for one more step, not the finish line:** the 3rd press (`start`, phase-relative
+40s) moved SELECT LEVEL → a new, previously-unseen menu screen, **AVAILABLE CRAFT**
+(`f_038_041.9.png` on): "AVAILABLE CRAFT" header, X-wing hologram (green wireframe), "PRIMARY
+WEAPON: BLASTERS" / "DEFENSE: SHIELD", two red wireframe alternate-craft thumbnails, footer still
+reads "AMBUSH AT MOS EISLEY / PRESS [A-button icon] FOR LEVEL DESCRIPTION". Renders correctly,
+stable for the ~20s observed (`f_038` through `f_050`, 41.9s–55.6s) — war-room geometry (rings,
+holotable) intact throughout, textures and hologram colours clean. This is real M3 progress and the
+next line in the menu state machine: title→SELECT GAME→war room/SELECT LEVEL→**AVAILABLE CRAFT**.
+
+**New failure class found — H3, not a null result:** the footer's "PRESS [A] FOR LEVEL DESCRIPTION"
+prompt is real; sending `a` (phase-relative 60s) does not show a description card. Sequence,
+timestamped from the `a` press:
+- `f_055_061.3.png` (+1.3s): still AVAILABLE CRAFT, unchanged.
+- `f_056_062.4.png` (+2.4s): **solid black**, a few stray coloured pixels in the rightmost column
+  (looks like a transition/loading artefact, not random corruption).
+- Screen stays black through `f_061_068.0.png` (last frame captured, +8.0s).
+- Process reported gone by `probe.sh` at +10.2s (`kill -0` failed) — **no crash message of any
+  kind** in `run.log` (grepped for `missing-func`/`UnhandledJumpTarget`/`dmem-race`/`assert`/
+  `violat` across the whole 16.8k-line log: 0 hits everywhere, including this run). Whatever killed
+  the process did not go through any of the instrumented abort paths, or the message was lost
+  because stdio was never flushed before the process died (signal, not a `printf`+`exit`).
+
+Correlated instrument evidence, all landing in the log's last ~25 lines (right before the black
+frame/death):
+1. `[rt64] loadDrawState: copy-mode draw with undefined tile {2,3,4,6,7}, marking invalid` × 12.
+2. `[rt64] copyFromRAM: skipping unimplemented readback fmt=7 siz=0 (4069x434)` and the matching
+   `copyToNative: skipping unimplemented writeback fmt=7 siz=0 (rows 203..434)` — **each fires
+   exactly once**, gated by a `static bool s_warned` in `rt64_native_target.cpp` (`copyFromRAM`
+   line 84, `copyToNative` line 264). `isNativeCopySupported()` (same file, line 65) already
+   treats `siz==4b` as categorically unsupported and returns 0 changes rather than asserting — this
+   guard is pre-existing (comment: "the Factor 5 LLE RDP stream can transiently configure invalid
+   or unimplemented color-image formats"), not new code from this session. fmt=7 doesn't correspond
+   to any real N64 image format (0–4 are the valid range) — this is a garbage/transient format
+   value on a copy-mode draw, exactly the case the guard was written for. **This is a plausible
+   correlate, not a proven cause** — the guard is designed to no-op cleanly; whether the *caller*
+   (game code expecting real pixel data back, e.g. a level-description thumbnail render-to-texture)
+   hangs waiting on a completion that a silent no-op never signals is unconfirmed.
+3. `fs` (full-sync count) in `[vi]` lines increments by 32 every line for the whole run, then
+   **freezes at 3162** for the last 5 `[vi]` lines before death — the RDP pipeline stopped
+   advancing at the same point the black frame appeared. This is the same symptom class as the
+   s19–s21 "present starvation" bug (`State::updateScreen` early-return), but a different screen
+   and, per the log, a different immediate trigger (no `PresentEarly`-related log line fires here).
+
+### Verdict
+Single-run observation (not yet reproduced), but three independent signals inside the one run agree
+on timing: log message → fs-counter freeze → visual black frame, all within ~2.4s of the `a` press,
+process death ~8s after that. **Do not fix yet** — the mechanism (why does the native-copy no-op
+lead to a stall, and what actually terminates the process) is not established, only correlated.
+Next work unit: reproduce this exact sequence once for a second independent run, then trace the DL
+task that issues the fmt=7 copy-mode draw (what asks for the readback, what it does with a
+"0 changes" result) before touching any code.
+
+Files: `scratch/s50_mission1`, `scratch/s50_mission1b` (each with run.log + captured frames). No
+code changes this session.

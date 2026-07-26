@@ -58,9 +58,12 @@ Driven from the title with `PROBE_KEYS_FROM_PHASE=1` (s23, scene names corrected
 | +1 press | 512, origin 0x6AB400, colour 0x656000/0x6AB000 | **level-select war room → SELECT LEVEL — "AMBUSH AT MOS EISLEY"** with X-wing hologram (the scene s12–s47 called the "main-menu hangar"; see s48 below) |
 | ~93 s | 640 | transition — **process dies here** (undriven-era observation) |
 
-Menu state machine (s48, three driven runs): title —start→ SELECT GAME —start→ war room /
-SELECT LEVEL. One press per step, no other menu state between; the next press from SELECT LEVEL
-presumably launches mission 1 (untested — that is M3's door).
+Menu state machine (s48, three driven runs; extended s50): title —start→ SELECT GAME —start→ war
+room / SELECT LEVEL —start→ **AVAILABLE CRAFT** (craft-select screen: X-wing hologram, "PRIMARY
+WEAPON: BLASTERS" / "DEFENSE: SHIELD", two alternate-craft thumbnails; footer keeps "AMBUSH AT MOS
+EISLEY / PRESS [A] FOR LEVEL DESCRIPTION"). Renders correctly, stable for 20s observed (s50). The
+LEVEL DESCRIPTION prompt (`a` from AVAILABLE CRAFT) does **not** show a description card — see the
+black-screen/crash entry below; mission launch itself is still untested.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -74,6 +77,17 @@ complete. VI origin **cannot** discriminate menu scenes (the war room presents f
 war room) — but see s48: origin distinguishes *phases*, not which menu scene is on screen.
 
 Remaining visual defects:
+- **New (s50, single-run, unreproduced): AVAILABLE CRAFT → LEVEL DESCRIPTION black screen + silent
+  process death.** Pressing `a` on the AVAILABLE CRAFT screen (footer: "PRESS [A] FOR LEVEL
+  DESCRIPTION") goes solid black within 2.4s and the process is gone (`kill -0` fails) ~10s after
+  the press, with **zero** `missing-func`/`UnhandledJumpTarget`/`dmem-race`/`assert` lines anywhere
+  in the log — whatever kills it bypasses every instrumented abort path, or stdio was never
+  flushed. Correlated (not proven) with a copy-mode draw carrying an invalid image format
+  (`fmt=7`, out of the valid 0–4 range) that `NativeTarget::copyFromRAM`/`copyToNative`
+  (`lib/rt64/src/render/rt64_native_target.cpp:65,84,264`) already no-op via a pre-existing guard,
+  plus the RDP `fs` (full-sync) counter freezing at the same instant. Needs reproduction, then a
+  trace of the DL task issuing the fmt=7 copy before any fix is attempted. Full detail:
+  PORTING-STATE s50.
 - ~~Hangar floor multi-hue band~~ — **FIXED and root-caused, s45–s48 (M1 closed).** The band was
   stale RDRAM showing through the hole left by the war room's clip-flagged geometry: all clip
   dispatches to overlay 4 ran the wrong code (window-swap IMEM DMA skipped), so the tiered
@@ -97,7 +111,10 @@ Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regress
 0 `[dmem-race]`, 0 asserts. `[missing-func]` clean in every soaked phase to date, **except**: s49's
 undriven outdoor-512 stretch stubbed 3 distinct addresses once each (0x800C7120, 0x800FBD48,
 0x800FB190) with 0 aborts — never itemized before because prior soaks targeted hangar/war-room, not
-outdoor. Parked as an M4 curiosity, not a blocker.
+outdoor. Parked as an M4 curiosity, not a blocker. **s50, new menu territory only:** AVAILABLE
+CRAFT's LEVEL DESCRIPTION prompt kills the process with **none** of these four counters firing —
+see "Remaining visual defects" above. Single-run, not yet reproduced; does not touch the s27–s49
+stability record for hangar/war-room/outdoor, which stands unchanged.
 
 ## Goal stack — work strictly top-down
 
@@ -122,11 +139,15 @@ apart — new baseline: 1138 tasks, fanjal=9448, 0 violations (scales with captu
 5.6–5.8k, not a fixed constant). Stability 0 except 3 gracefully-stubbed `[missing-func]` addresses
 in the undriven outdoor stretch, never soaked before — parked as M4. Full detail: PORTING-STATE s49.
 
-**M3 — first gameplay.** Extend the driven key schedule past SELECT GAME into mission 1. Expect new
-failure classes: mission-overlay DMA (watch missing-func / UnhandledJumpTarget), a new VI phase to
-add to the timeline, possibly new ucode ops. Each new failure is its own work unit — return to the
-M1-style method. *Done when:* 60 seconds of in-mission rendering, craft visibly responds to
-synthetic input, stability counters 0, and the phase timeline in this document covers the mission.
+**M3 — first gameplay: OPENED (s50).** AVAILABLE CRAFT (craft-select) confirmed reachable and
+renders correctly, one press past SELECT LEVEL. Found the first new failure class one step later:
+LEVEL DESCRIPTION (the `a` prompt from AVAILABLE CRAFT) black-screens and silently kills the
+process — see "Remaining visual defects" above and PORTING-STATE s50. This is the current M3
+sub-unit; root-cause it the M1 way (trace the DL task issuing the fmt=7 copy-mode draw) before
+attempting a fix, then continue toward mission 1. Expect further new failure classes as this
+progresses (mission-overlay DMA, a new VI phase, possibly new ucode ops) — each is its own work
+unit. *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
+stability counters 0, and the phase timeline in this document covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause (currently masked, not fixed); the S=0 triangles in the 640 attribution phase; the I4
@@ -141,22 +162,30 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s49)
+## Next steps, in order of expected value (s50)
 
-1. **M3 — first gameplay** is one press away: from SELECT LEVEL, one more start (e.g.
-   `"3:start 25:start 35:start"`) should launch AMBUSH AT MOS EISLEY. Expect new failure classes
-   (mission overlay DMA → missing-func / UnhandledJumpTarget, new VI phase, possibly overlays
-   12/44 needing the s47 splice recipe). Each new failure is its own work unit.
-2. **M4 parked items**, cheapest first: identify the 3 `[missing-func]` addresses stubbed in the
+1. **M3 — LEVEL DESCRIPTION black-screen/crash.** Single-run, unreproduced (s50): reproduce first
+   (same key schedule, `PROBE_KEYS="3:start 25:start 40:start 60:a"` from phase 1024, 150s+
+   capture) to get a second independent confirmation. Then trace the DL task that issues the
+   invalid-format (`fmt=7`) copy-mode draw around the AVAILABLE CRAFT → LEVEL DESCRIPTION
+   transition — what asks for the readback, what happens to the "0 changes" result
+   `copyFromRAM` returns, and what actually terminates the process (no instrumented abort path
+   fires, so this needs a debugger attach or added tracing, not just log-grepping). Do not attempt
+   a fix until the mechanism is clear. Full detail: PORTING-STATE s50.
+2. Once the black screen is understood/fixed, continue past AVAILABLE CRAFT toward mission 1
+   launch. Expect further new failure classes (mission overlay DMA → missing-func /
+   UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice recipe). Each
+   new failure is its own work unit.
+3. **M4 parked items**, cheapest first: identify the 3 `[missing-func]` addresses stubbed in the
    s49 undriven outdoor-512 run (0x800C7120, 0x800FBD48, 0x800FB190) — symbol lookup, then decide
    if the stub is silent or needs real implementation. Then outdoor zero-shade root cause, the S=0
    640-phase triangles, and the I4 sample=64x128 anomaly.
-3. **Band-row coverage history** (settled chain, for reference): s41 `MARK_VTX` proved a coverage
+4. **Band-row coverage history** (settled chain, for reference): s41 `MARK_VTX` proved a coverage
    hole; s42 `LOG_YHIST` proved submission through band rows; s43 `LOG_ZSTATE` proved raster-clean
    draws; s27–s31 eliminated texture decode; s45–s47 pinned and fixed the clip-dispatch loss; s48
    proved the fix fills the band (and renamed the scene); s49 closed the regression sweep. s40's
    `col`-write probe fails its own control — do not reuse.
-4. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+5. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
