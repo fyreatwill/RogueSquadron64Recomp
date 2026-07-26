@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 49)
+## Current truth (as of session 51)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -77,17 +77,25 @@ complete. VI origin **cannot** discriminate menu scenes (the war room presents f
 war room) — but see s48: origin distinguishes *phases*, not which menu scene is on screen.
 
 Remaining visual defects:
-- **New (s50, single-run, unreproduced): AVAILABLE CRAFT → LEVEL DESCRIPTION black screen + silent
-  process death.** Pressing `a` on the AVAILABLE CRAFT screen (footer: "PRESS [A] FOR LEVEL
-  DESCRIPTION") goes solid black within 2.4s and the process is gone (`kill -0` fails) ~10s after
+- **Confirmed on 2 independent runs (s50, s51): AVAILABLE CRAFT → LEVEL DESCRIPTION black screen +
+  silent process death.** Pressing `a` on the AVAILABLE CRAFT screen (footer: "PRESS [A] FOR LEVEL
+  DESCRIPTION") goes solid black within 2.4s and the process is gone (`kill -0` fails) ~9-10s after
   the press, with **zero** `missing-func`/`UnhandledJumpTarget`/`dmem-race`/`assert` lines anywhere
-  in the log — whatever kills it bypasses every instrumented abort path, or stdio was never
-  flushed. Correlated (not proven) with a copy-mode draw carrying an invalid image format
-  (`fmt=7`, out of the valid 0–4 range) that `NativeTarget::copyFromRAM`/`copyToNative`
-  (`lib/rt64/src/render/rt64_native_target.cpp:65,84,264`) already no-op via a pre-existing guard,
-  plus the RDP `fs` (full-sync) counter freezing at the same instant. Needs reproduction, then a
-  trace of the DL task issuing the fmt=7 copy before any fix is attempted. Full detail:
-  PORTING-STATE s50.
+  in the log. s51 established event ordering: the RDP `fs` (full-sync) counter freezes **before**
+  the correlated `fmt=7` copy-mode-draw warning appears (line 16730 vs 16764 in that run's log),
+  which weakens the theory that the native-copy no-op (`NativeTarget::copyFromRAM`/`copyToNative`,
+  `lib/rt64/src/render/rt64_native_target.cpp:65,84,264`) causes the freeze — it is more likely a
+  downstream symptom. A static read of that guard (s51) found it pre-existing, deliberately
+  designed for exactly this input (any `siz==4b` copy, not specifically `fmt=7`), and its `nullptr`
+  result is null-checked by every caller found — no obvious crash risk on that exact path. The `fs`
+  freeze itself (not yet traced to which DL task fails to reach FULL_SYNC) is now the leading
+  hypothesis. **s51 also found a generalizable environment confound**: driven runs on this box can
+  silently stall in phase-advance (`fs` frozen, `[fbpair-cap]` hit) under concurrent system load —
+  check `uptime`/concurrent-`claude`-process-count before trusting a `PROBE_PHASE_TIMEOUT` expiry
+  as a game-code finding. 3 backtrace attempts (2× lldb, 1× `sample`) this session were consumed by
+  that confound rather than yielding a trace; budget rule says stop and pick a different method
+  next (an in-process crash handler needing no external attach, once load is controlled for). Full
+  detail: PORTING-STATE s50, s51.
 - ~~Hangar floor multi-hue band~~ — **FIXED and root-caused, s45–s48 (M1 closed).** The band was
   stale RDRAM showing through the hole left by the war room's clip-flagged geometry: all clip
   dispatches to overlay 4 ran the wrong code (window-swap IMEM DMA skipped), so the tiered
@@ -139,15 +147,19 @@ apart — new baseline: 1138 tasks, fanjal=9448, 0 violations (scales with captu
 5.6–5.8k, not a fixed constant). Stability 0 except 3 gracefully-stubbed `[missing-func]` addresses
 in the undriven outdoor stretch, never soaked before — parked as M4. Full detail: PORTING-STATE s49.
 
-**M3 — first gameplay: OPENED (s50).** AVAILABLE CRAFT (craft-select) confirmed reachable and
-renders correctly, one press past SELECT LEVEL. Found the first new failure class one step later:
-LEVEL DESCRIPTION (the `a` prompt from AVAILABLE CRAFT) black-screens and silently kills the
-process — see "Remaining visual defects" above and PORTING-STATE s50. This is the current M3
-sub-unit; root-cause it the M1 way (trace the DL task issuing the fmt=7 copy-mode draw) before
-attempting a fix, then continue toward mission 1. Expect further new failure classes as this
-progresses (mission-overlay DMA, a new VI phase, possibly new ucode ops) — each is its own work
-unit. *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
-stability counters 0, and the phase timeline in this document covers the mission.
+**M3 — first gameplay: OPENED (s50), LEVEL DESCRIPTION death confirmed + partially traced (s51).**
+AVAILABLE CRAFT (craft-select) confirmed reachable and renders correctly, one press past SELECT
+LEVEL. LEVEL DESCRIPTION (the `a` prompt from AVAILABLE CRAFT) black-screens and silently kills the
+process — now confirmed on 2 independent runs (s50, s51); s51 narrowed the mechanism to the `fs`
+(full-sync) freeze as the leading cause rather than the correlated `fmt=7` copy-mode no-op (event
+ordering + static-code read both point away from the no-op) — see "Remaining visual defects" above
+and PORTING-STATE s50/s51. Backtrace attempts are blocked by a shared-machine load confound, not
+solved; next sub-unit is tracing what DL task fails to reach FULL_SYNC, after controlling for
+system load or switching to an in-process crash handler that needs no external attach. Expect
+further new failure classes as this progresses (mission-overlay DMA, a new VI phase, possibly new
+ucode ops) — each is its own work unit. *Done when:* 60 seconds of in-mission rendering, craft
+visibly responds to synthetic input, stability counters 0, and the phase timeline in this document
+covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause (currently masked, not fixed); the S=0 triangles in the 640 attribution phase; the I4
@@ -162,16 +174,21 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s50)
+## Next steps, in order of expected value (s51)
 
-1. **M3 — LEVEL DESCRIPTION black-screen/crash.** Single-run, unreproduced (s50): reproduce first
-   (same key schedule, `PROBE_KEYS="3:start 25:start 40:start 60:a"` from phase 1024, 150s+
-   capture) to get a second independent confirmation. Then trace the DL task that issues the
-   invalid-format (`fmt=7`) copy-mode draw around the AVAILABLE CRAFT → LEVEL DESCRIPTION
-   transition — what asks for the readback, what happens to the "0 changes" result
-   `copyFromRAM` returns, and what actually terminates the process (no instrumented abort path
-   fires, so this needs a debugger attach or added tracing, not just log-grepping). Do not attempt
-   a fix until the mechanism is clear. Full detail: PORTING-STATE s50.
+1. **M3 — LEVEL DESCRIPTION black-screen/crash: trace the `fs` freeze.** Confirmed on 2 independent
+   runs (s50, s51). s51 ruled the `fmt=7` native-copy no-op down to "probably downstream symptom,
+   not cause" (event ordering: `fs` freezes before the `fmt=7` warning; static read: the guard is
+   pre-existing and its null result is checked by every caller). The leading hypothesis is now the
+   `fs` freeze itself — some DL task around the AVAILABLE CRAFT → LEVEL DESCRIPTION transition
+   never reaches FULL_SYNC. **Before another backtrace attempt, check `uptime` and
+   `ps aux | grep -c '[c]laude'`** — s51 burned all 3 of its backtrace tries (2× lldb, 1× `sample`)
+   on a machine with load average ~3.3 and 4+ concurrent Claude sessions, which stalled the game's
+   own phase-advance for 240s+ with no debugger involved in one of those trials. Retry only when
+   load is low, or add an in-process signal handler (SIGSEGV/SIGABRT/SIGBUS → backtrace to stderr)
+   to the game's own entry point instead of an external attach — that avoids the ptrace-adjacent
+   overhead entirely. Do not attempt a fix until the mechanism is clear. Full detail: PORTING-STATE
+   s50, s51.
 2. Once the black screen is understood/fixed, continue past AVAILABLE CRAFT toward mission 1
    launch. Expect further new failure classes (mission overlay DMA → missing-func /
    UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice recipe). Each

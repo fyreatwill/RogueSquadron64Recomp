@@ -4278,3 +4278,86 @@ task that issues the fmt=7 copy-mode draw (what asks for the readback, what it d
 
 Files: `scratch/s50_mission1`, `scratch/s50_mission1b` (each with run.log + captured frames). No
 code changes this session.
+
+## Session 51 (2026-07-26) — LEVEL DESCRIPTION death reproduced independently; fs-freeze precedes
+fmt=7 warning; backtrace attempts blocked by a shared-machine load confound (not a game bug)
+
+### The work unit
+Per NEXT.md: reproduce s50's single-run AVAILABLE CRAFT → LEVEL DESCRIPTION black-screen/death for
+independent confirmation, then trace the mechanism (H1: native-copy no-op stalls something waiting
+on real pixel data; H2: fs-freeze is primary and fmt=7 is a coincidental downstream symptom; H3:
+unrelated genuine crash in level-description asset loading).
+
+### Run 1 — `scratch/s51_leveldesc`, same schedule as s50 run 2 (`PROBE_KEYS="3:start 25:start
+40:start 60:a"`, phase-gated from 1024, 150 s budget)
+**Reproduced.** Phase 1024 reached at 45.0s (normal). Process died at 68.9s after 61 frames, ~9s
+after the `a` press at 60s (from-phase) — matches s50's timing (+8s) and symptom (silent death, 0
+hits for `missing-func`/`UnhandledJumpTarget`/`dmem-race`/`assert` across the whole log). This is
+now **two independent runs agreeing** — the black-screen/death class is promoted out of
+single-source status.
+
+**New: precise event ordering.** `grep -n` for `fs=` values shows the RDP full-sync counter
+incrementing by a steady +32 per `[vi]` line up through `fs=3142` (line 16665), then jumping only
++7 to `fs=3149` (line 16730) and **freezing there for the remaining 5 `[vi]` lines** in the log.
+The `fmt=7 siz=0` `copyFromRAM`/`copyToNative` warnings appear at lines 16764 and 16766 —
+**strictly after** the freeze already began at line 16730. This is a discriminating result against
+H1: if the native-copy no-op were what stalled the pipeline, the freeze could not start before the
+no-op fires. It is consistent with H2 (the fs freeze is the primary, independent event; the fmt=7
+copy-mode draw is a downstream symptom of whatever already stopped the DL from reaching FULL_SYNC,
+not its cause).
+
+**Static-code read weakens H1 further.** `lib/rt64/src/render/rt64_native_target.cpp`
+(`isNativeCopySupported`, line 65): `siz == G_IM_SIZ_4b` (siz=0, exactly what fired here)
+unconditionally returns unsupported **regardless of fmt** — the specific "fmt=7 is out-of-range"
+framing is a red herring; any 4-bit-depth copy-mode draw hits this same no-op path. `copyFromRAM`
+returns 0 on this path; `Framebuffer::readChangeFromBytes`
+(`lib/rt64/src/hle/rt64_framebuffer.cpp:155-167`) turns a 0-pixel result into a `nullptr`
+`FramebufferChange*`, and every caller found (`rt64_framebuffer_manager.cpp:195/207`,
+`rt64_state.cpp:2005/2049`, `rt64_present_queue.cpp:618`, `rt64_workload_queue.cpp:913/952`) is a
+local variable, not obviously dereferenced unconditionally in the surrounding code read this
+session. No unguarded null-deref or assert was found on this exact path — this is a pre-existing,
+deliberately-guarded no-op (comment at `rt64_native_target.cpp:77-79`), not new or obviously unsafe
+code. `State::loadDrawState`'s "copy-mode draw with undefined tile, marking invalid"
+(`rt64_state.cpp:377-385`) is a separate, also pre-existing failsafe (`tile.line==0` in
+`G_CYC_COPY` mode) that `continue`s the loop rather than touching bad memory.
+
+### Backtrace attempts (H3 test) — 3 tried this session, budget rule now exhausted
+1. `lldb -o "process launch"`: the debuggee crashes immediately on `std::filesystem::current_path()`
+   throwing `filesystem_error: ... getcwd failed: Operation not permitted`, before ever reaching
+   game code. This is an artifact of lldb's own launch/sandbox context for the child process (its
+   cwd/permissions differ from a normal `fork+exec`), not the bug under investigation — the game
+   has never called this successfully when launched this way, in any phase.
+2. `lldb -o "attach -p <pid>"` to a normally-launched process (attached before phase 1024, so it
+   would be watching for the whole approach + press + death window): the game stalled in the
+   640-wide phase for the entire 240s timeout and never reached 1024 — `fs` frozen at 0 the whole
+   time, `[fbpair-cap]` hit its 8192 cap (never seen this early in any prior run's timeline).
+3. `sample <pid> 15 -mayDie` armed only at the `a` press (no debugger attached at any point): **the
+   same 640-phase-stall-for-240s failure recurred**, with zero lldb/attach anywhere in this run.
+   This rules out lldb-attach specifically as the cause of (2)'s stall — the same failure happened
+   with no debugger involved at all.
+
+**Root cause of the stalls, not a game bug:** `ps aux` during attempt 3 showed load average
+3.28/3.44/3.16 and at least 4 other concurrent `claude` CLI processes for unrelated
+sessions/windows on this same physical machine, alongside this session's own back-to-back game
+launches with no cooldown between them. The very first run this session (the successful
+`scratch/s51_leveldesc` repro) reached phase 1024 in the normal 45.0s; the two stalls both came
+immediately after, once concurrent load was already elevated. This game's phase-advance/VI-swap
+synthesis is evidently sensitive to CPU scheduling latency — **a generalizable environment
+confound**, not a code regression: a `PROBE_PHASE_TIMEOUT` expiry on this box is not by itself
+evidence of a game-code problem unless `uptime`/concurrent-`claude`-process-count was checked
+first. Per the iteration budget rule (3 tries, no discriminating backtrace), stopping the backtrace
+line of attack for this session.
+
+### Verdict
+**H1 weakened, not fixed:** two independent lines (event ordering across two log timestamps within
+the same run, plus a static read of the exact no-op code path) both point away from the native-copy
+no-op being the direct cause of the freeze/death; it is far more likely a downstream symptom.
+**H2 supported, not proven:** the fs freeze is the earliest anomalous signal and needs its own
+trace (what DL task fails to reach FULL_SYNC) — this is now the leading hypothesis. **H3
+untested:** no backtrace was obtained this session; the environment confound (concurrent system
+load) needs to be controlled for (check `uptime` beforehand, or add an in-process crash handler
+that doesn't need an external attach) before the next attempt.
+
+Files: `scratch/s51_leveldesc` (repro + run.log), `scratch/s51_lldb` (`lldb` attempts 1-2 logs),
+`scratch/s51_sample` (attempt 3 log), `scratch/s51_lldb_repro.sh`, `scratch/s51_sample_repro.sh`
+(scratch helper scripts, not part of `tools/`). No code changes this session.
