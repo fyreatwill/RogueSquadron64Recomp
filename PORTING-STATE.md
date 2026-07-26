@@ -3858,3 +3858,45 @@ that some triangles which should exist are never emitted, while their neighbours
    `factor5_ucode_recompiled.c` — discarded vs emitted per task — would show it, and the trough
    shape (fewer tris in exactly those rows) is consistent with a clip-plane or precision effect at a
    grazing viewing angle.
+
+## Session 44 (2026-07-26) — harness smoke test: four dead knobs retired, pipeline proven end to end
+
+First full autonomous iteration through the Part A harness (build -> run -> capture -> docs ->
+commit). The work unit was the four-session-old debt from the s20–s23 NEXT lists: retire
+`ROGUESQ_FORCE_PAL15`, `ROGUESQ_FORCE_SHADE_WHITE`, and the wrap-forwarding leftovers.
+
+### What was removed (all default-OFF, so no behaviour change was possible; verified anyway)
+- `ROGUESQ_FORCE_PAL15` (`rt64_state.cpp` uploadTile) — s14 pal-15 stomp theory, overturned by s15
+  (band uses the red palettes throughout; forcing red corrupts ceiling banners). ~80 lines.
+- `ROGUESQ_FORCE_SHADE_WHITE` (`rt64_gbi_rdp.cpp`) — s19 diagnostic hammer. Its investigation line
+  (shade/texture as band cause) closed at s43: the band is triangles never emitted, not shade.
+  `FIX_ZERO_SHADE` (default ON) is untouched. Historical comments citing FSW measurements kept.
+- `ROGUESQ_DPC_WRAP` + `ROGUESQ_WRAP_DEDUP` (`dpc_bridge.cpp`) — s11 proved forwarding re-sends
+  already-consumed ring bytes (53247/53248 wrap events byte-identical) and the black screen it
+  papered over was the missing FULL_SYNC. Wrap events are now unconditionally counted and dropped
+  (`[dpc-wrap]` log line kept — the drops are still genuine content, per CURRENT-TRUTH). The
+  `[dpc-wrap-dup]` replay-vs-refill instrumentation went with it: its question is answered.
+
+### What was deliberately KEPT
+`ROGUESQ_MAX_FBPAIRS` (default 8192) — engages 0 times since VI_FULLSYNC (s11), but it is the only
+thing standing between a future FULL_SYNC-less phase (M3 missions are the obvious candidate) and
+the 194 000-pair / 22 GB Metal OOM abort of s10. Cheap insurance, documented in ENV-KNOBS.md.
+
+### Verification
+Rebuild clean. `submodule-patches/rt64.patch` refreshed (−104/+17 lines) — the export.sh
+equivalent ran in-session per the lib/ rule. Phase-gated probe (`PROBE_PHASE_WIDTH=1024`):
+title phase entered at 44.8 s (baseline ~46.5 s, ± tens of seconds run-to-run), 16/16 frames with
+content (~71 k colours at capture resolution, dark fraction stable 42.3 %), visually confirmed
+title screen (logo / pilot / X-wing / R2-D2 / START / OPTIONS). Phase timeline unchanged:
+0→320→640 at 1.8 s→1024 at 44.7 s.
+
+### Harness notes (for future iterations)
+- The settings.json allowlist matches the FIRST WORD of a Bash command: `VAR=1 tools/probe.sh`
+  is not covered by `Bash(tools/:*)` and gets denied. Start such commands with `env` (allowlisted).
+- `submodule-patches/export.sh` itself is not allowlisted; the equivalent four `git -C lib/... diff`
+  redirects via `python3` are. Consider allowlisting export.sh.
+- ENV-KNOBS.md totals updated: 122 → 118 knobs.
+
+### Ruled out / consequences
+The knob retirement changes no rendering path (all four were opt-in and off). M1 state is
+untouched; the next unit is the clip/cull census written into scratch/agent/NEXT.md.

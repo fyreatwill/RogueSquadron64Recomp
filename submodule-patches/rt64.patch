@@ -29,7 +29,7 @@ diff --git a/src/contrib/plume b/src/contrib/plume
 -Subproject commit 51b1ad443b9f202c5cfc930ae25345d3f2ba7716
 +Subproject commit 51b1ad443b9f202c5cfc930ae25345d3f2ba7716-dirty
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..27da582 100644
+index 6255872..ed69a87 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
 @@ -4,10 +4,18 @@
@@ -245,7 +245,7 @@ index 6255872..27da582 100644
                      colorWorkBuffer[workBufferIndex + 0] = v1Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 1] = v2Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 2] = v3Color * (1/255.0f);
-@@ -477,6 +658,378 @@ namespace RT64 {
+@@ -477,6 +658,366 @@ namespace RT64 {
                      colorWorkBuffer[workBufferIndex + 2] = interop::float4(0.0f, 0.0f, 0.0f, 0.0f);
                  }
  
@@ -551,10 +551,7 @@ index 6255872..27da582 100644
 +                    }
 +                }
 +
-+                // ROGUESQ_FORCE_SHADE_WHITE=1 — diagnostic: replace EVERY vertex
-+                // colour with opaque white (session 19 proof).
-+                //
-+                // ROGUESQ_FIX_ZERO_SHADE (default ON) — surgical version: only
++                // ROGUESQ_FIX_ZERO_SHADE (default ON) — only
 +                // when the combiner is (T0)*SHADE (the Factor 5 outdoor /
 +                // sky path) and every vertex's RGB is near black after decode.
 +                // Session 20: the RDP stream really carries shade ≈ 0 (often
@@ -566,21 +563,12 @@ index 6255872..27da582 100644
 +                // NOT touch draws that already have real lighting (hangar /
 +                // cinematic with v1norm ~0.3–0.5). Opt out: =0.
 +                {
-+                    static const bool s_force = []{
-+                        const char *e = std::getenv("ROGUESQ_FORCE_SHADE_WHITE");
-+                        return e && *e && *e != '0';
-+                    }();
 +                    static const bool s_fix = []{
 +                        const char *e = std::getenv("ROGUESQ_FIX_ZERO_SHADE");
 +                        if (!e) return true; // default ON
 +                        return e[0] && e[0] != '0';
 +                    }();
-+                    if (s_force) {
-+                        colorWorkBuffer[workBufferIndex + 0] = interop::float4(1.0f, 1.0f, 1.0f, 1.0f);
-+                        colorWorkBuffer[workBufferIndex + 1] = interop::float4(1.0f, 1.0f, 1.0f, 1.0f);
-+                        colorWorkBuffer[workBufferIndex + 2] = interop::float4(1.0f, 1.0f, 1.0f, 1.0f);
-+                    }
-+                    else if (s_fix && textured) {
++                    if (s_fix && textured) {
 +                        const auto &cc = state->rdp->colorCombinerStack[
 +                            state->rdp->colorCombinerStackSize - 1];
 +                        const bool cyc2 = state->rdp->otherMode.cycleType() == G_CYC_2CYCLE;
@@ -624,7 +612,7 @@ index 6255872..27da582 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -537,6 +1090,66 @@ namespace RT64 {
+@@ -537,6 +1078,66 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -3085,7 +3073,7 @@ index d1a9f4e..7025af8 100644
          // with the GPU-side stage 2.5 counter, this shows how many texrects
          // enter the pipeline vs how many reach the for-loop.
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..c64e50a 100644
+index 10f98af..f1fb4a8 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,16 @@
@@ -3564,89 +3552,14 @@ index 10f98af..c64e50a 100644
  
          const int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
-@@ -640,6 +1036,188 @@ namespace RT64 {
+@@ -640,6 +1036,113 @@ namespace RT64 {
              }
  
              if (!callTile.tileCopyUsed) {
-+                // ROGUESQ_FORCE_PAL15=1 — hangar CI4 pal=15 draws often sample
-+                // TMEM[0xF80] after a later LOADTLUT has stomped bank 15 with
-+                // an unrelated multi-colour palette (0x62Bxxx), baking rainbow
-+                // stripe garbage into the GPU texture. Re-install the hangar
-+                // red palette (RDRAM 0x751FA0, or fallback) into the 16×8-byte
-+                // TLUT slots before hashing/uploading.
-+                // DEFAULT OFF: forcing red also corrupts ceiling banners that
-+                // legitimately share pal=15 with a multi-colour LOADTLUT.
-+                // Use as an A/B diagnostic, not a permanent fix.
-+                {
-+                    static const bool s_force = []{
-+                        const char *e = std::getenv("ROGUESQ_FORCE_PAL15");
-+                        return e && *e && *e != '0';
-+                    }();
-+                    if (s_force && callTile.loadTile.fmt == G_IM_FMT_CI &&
-+                        callTile.loadTile.siz == G_IM_SIZ_4b &&
-+                        callTile.loadTile.palette == 15 && callTile.tlut > 0) {
-+                        uint8_t *TMEM8 = reinterpret_cast<uint8_t *>(rdp->TMEM);
-+                        auto pack = [](int r8, int g8, int b8) -> uint16_t {
-+                            return uint16_t(((r8 >> 3) << 11) | ((g8 >> 3) << 6) |
-+                                            ((b8 >> 3) << 1) | 1);
-+                        };
-+                        static const uint16_t kFallback[16] = {
-+                            pack(0xe8,0x68,0x60), pack(0x98,0x90,0x78),
-+                            pack(0x78,0x68,0x58), pack(0xe0,0x50,0x48),
-+                            pack(0xd0,0x10,0x10), pack(0xa0,0x28,0x28),
-+                            pack(0xc0,0x08,0x08), pack(0xd8,0x00,0x00),
-+                            pack(0x50,0x38,0x28), pack(0xd0,0x00,0x00),
-+                            pack(0xb8,0x00,0x00), pack(0xc8,0x00,0x00),
-+                            pack(0xa0,0x00,0x00), pack(0xb0,0x00,0x00),
-+                            pack(0x40,0x00,0x00), pack(0x78,0x00,0x00)
-+                        };
-+                        // Prefer live RDRAM at 0x751FA0 using the same ^3
-+                        // addressing LOADTLUT uses, so TMEM matches hardware.
-+                        uint16_t colors[16];
-+                        bool fromRdram = false;
-+                        if (RDRAM != nullptr) {
-+                            const uint32_t base = 0x751FA0;
-+                            // Sanity: first colour should be a warm red-ish
-+                            // after LE assemble of ^3 bytes (session 14 dump).
-+                            uint8_t b0 = RDRAM[(base + 0) ^ 3];
-+                            uint8_t b1 = RDRAM[(base + 1) ^ 3];
-+                            uint16_t c0 = uint16_t((b0 << 8) | b1);
-+                            int r0 = (c0 >> 11) & 0x1F;
-+                            int g0 = (c0 >> 6) & 0x1F;
-+                            if (r0 >= 10 && r0 >= g0) {
-+                                fromRdram = true;
-+                                for (int c = 0; c < 16; c++) {
-+                                    uint32_t off = base + c * 2;
-+                                    uint8_t hi = RDRAM[(off + 0) ^ 3];
-+                                    uint8_t lo = RDRAM[(off + 1) ^ 3];
-+                                    colors[c] = uint16_t((hi << 8) | lo);
-+                                }
-+                            }
-+                        }
-+                        if (!fromRdram) {
-+                            for (int c = 0; c < 16; c++) colors[c] = kFallback[c];
-+                        }
-+                        // Hardware LOADTLUT replicates each RGBA16 across the
-+                        // 8-byte TMEM slot (byte0,byte1)×4.
-+                        for (int c = 0; c < 16; c++) {
-+                            uint32_t addr = 0xF80 + c * 8;
-+                            uint8_t hi = uint8_t(colors[c] >> 8);
-+                            uint8_t lo = uint8_t(colors[c] & 0xFF);
-+                            for (int k = 0; k < 8; k += 2) {
-+                                TMEM8[addr + k + 0] = hi;
-+                                TMEM8[addr + k + 1] = lo;
-+                            }
-+                        }
-+                        static int n = 0;
-+                        if (++n <= 6) {
-+                            fprintf(stderr,
-+                                "[force-pal15] injected %s red palette before "
-+                                "CI4 pal15 upload (#%d)\n",
-+                                fromRdram ? "RDRAM" : "fallback", n);
-+                            fflush(stderr);
-+                        }
-+                    }
-+                }
++                // ROGUESQ_FORCE_PAL15 (session 14 pal-15 stomp theory) was
++                // retired 2026-07-26: session 15 showed the hangar band uses
++                // the red palettes throughout, and forcing red corrupts
++                // ceiling banners that legitimately share pal=15.
 +                // ROGUESQ_LOG_PAL15=1 — log TMEM palette bank 15 colours and
 +                // the last LOADTLUT source for every CI4 pal=15 upload.
 +                // ROGUESQ_DUMP_CI4=1 — also write a CPU-decoded PNG of the
@@ -3753,7 +3666,7 @@ index 10f98af..c64e50a 100644
                  if (callTile.tmemHashOrID != 0) {
                      textureManager.uploadEmpty(this, ext.textureCache, workload.submissionFrame, callTile.sampleWidth, callTile.sampleHeight, callTile.tmemHashOrID);
                  }
-@@ -649,6 +1227,118 @@ namespace RT64 {
+@@ -649,6 +1152,118 @@ namespace RT64 {
                  else {
                      callTile.tmemHashOrID = textureManager.uploadTexture(this, callTile.loadTile, ext.textureCache, workload.submissionFrame, callTile.sampleWidth, callTile.sampleHeight, callTile.tlut);
                  }
@@ -3872,7 +3785,7 @@ index 10f98af..c64e50a 100644
              }
              else if (callTile.reinterpretTile) {
                  struct ReinterpretHashData {
-@@ -765,6 +1455,35 @@ namespace RT64 {
+@@ -765,6 +1380,35 @@ namespace RT64 {
          flush();
          submitFramebufferPair(FramebufferPair::FlushReason::ProcessDisplayListsEnd);
  
@@ -3908,7 +3821,7 @@ index 10f98af..c64e50a 100644
          // Append any framebuffer operations to the end of the last framebuffer pair.
          int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
-@@ -1899,6 +2618,50 @@ namespace RT64 {
+@@ -1899,6 +2543,50 @@ namespace RT64 {
              }
          }
          
@@ -3959,7 +3872,7 @@ index 10f98af..c64e50a 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1959,8 +2722,20 @@ namespace RT64 {
+@@ -1959,8 +2647,20 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -3982,7 +3895,7 @@ index 10f98af..c64e50a 100644
                  return;
              }
          }
-@@ -1972,7 +2747,11 @@ namespace RT64 {
+@@ -1972,7 +2672,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -3995,7 +3908,7 @@ index 10f98af..c64e50a 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +2812,51 @@ namespace RT64 {
+@@ -2033,26 +2737,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");

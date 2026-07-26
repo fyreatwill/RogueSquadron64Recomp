@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 32)
+## Current truth (as of session 44)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -23,10 +23,14 @@ Metal shader rebuilds need full Xcode on PATH:
   `ROGUESQ_NO_DPC_MERGE=1`, s10).
 - Default-OFF, keep them off: `ROGUESQ_FIX_DXT` (s22/s23), `ROGUESQ_FIX_DXT_I` (s27, null on
   hangar band), `ROGUESQ_FLATTEN_I4` / `FLATTEN_RGBA16` / `FLATTEN_CI4` (attribution probes),
-  `ROGUESQ_DPC_WRAP` (s11), `ROGUESQ_FORCE_PAL15` (s14), `ROGUESQ_FORCE_SHADE_WHITE` (s19),
   `ROGUESQ_SHADE_ONLY_MONO` (s30; pad-only, not a band fix), `ROGUESQ_SHADE_WRAP=3` (s31 shared
-  wrap experiment), `ROGUESQ_SHADOW2`, `ROGUESQ_RING_RESYNC`, `ROGUESQ_WRAP_DEDUP`.
-  `ROGUESQ_MAX_FBPAIRS` (default 8192) is dead insurance — engages 0 times (s11).
+  wrap experiment), `ROGUESQ_SHADOW2`, `ROGUESQ_RING_RESYNC`.
+- Deleted from the code (s44, title-screen probe unchanged): `ROGUESQ_DPC_WRAP` /
+  `ROGUESQ_WRAP_DEDUP` (s11 — wrap bytes are now always counted and dropped), `ROGUESQ_FORCE_PAL15`
+  (s14, dead per s15), `ROGUESQ_FORCE_SHADE_WHITE` (s19, its shade line closed at s43).
+  `ROGUESQ_MAX_FBPAIRS` (default 8192) engages 0 times since s11 but is KEPT deliberately — OOM
+  insurance for future FULL_SYNC-less phases (M3 missions), turns a 22 GB Metal abort into a capped
+  workload (s44).
 
 Unattended timeline (VI width, ±1 s over 9 runs, s18; content counts s9/s20/s22/s23):
 
@@ -88,24 +92,12 @@ Remaining visual defects:
   texture (`tlut=0` cannot be multi-hue), and its region goes un-redrawn even with 6.5x more
   geometry arriving — pointing at a coverage hole in a target the game never clears. The s27–s31
   texture-decode line stays closed.
-  **Earlier framing (s36):** the band is **under-rendering**. The hangar's DLs are vector-heavy, the
-  recompiled RSP ucode saturates the Gfx Thread (82 % of samples in `factor5_ucode`), gfx tasks fall
-  from ~29/s to ~2.9/s, so only ~150–250 triangles/s reach the RDP and the never-cleared target
-  shows accumulated history with stale regions. Not a texture, shade, or decode defect.
-  **Supporting measurement (s35):** the **RDP command stream itself**
-  collapses in the hangar — TRI goes from +13 000–19 000 per 2 s to +37…+489, TEXRECT to +0, total
-  commands ~120 000 → ~700 — while RT64's own draw counters track the stream in the same run. RT64
-  draws what it is given; the game/LLE side stops submitting DL work. The band is stale content in a
-  never-cleared target that only a trickle of draws updates.
-  **Earlier framing (s32):** in the hangar each workload's colour pair carries only **2-10 draw
-  calls**, while the correctly-rendering 640 boot phase carries **275-277** — the hangar scene is
-  assembled across dozens of tiny workloads into a target RT64 never clears. So the image is
-  accumulated, no single frame's draw census can attribute any pixel, and the band is a region whose
-  draws landed in an old workload and were never redrawn. (An earlier "292-468 calls, chopping
-  refuted" note was a stale-vector bug: `fbPair.projections` is reused and only `projectionCount`
-  entries are live — use `fbPair.gameCallCount`.) `[budget]` shows no `maxGameCall` truncation, so
-  calls are not dropped; there are simply only 2-3 per workload. Prime suspect for the over-frequent
-  workload boundary: `ROGUESQ_VI_FULLSYNC` (s11).
+  Superseded framings (s32 tiny-workload accumulation, s35 RDP-stream collapse, s36
+  under-rendering) live in PORTING-STATE — all three described the `-O0` perf defect, fixed at s38.
+  Still-durable structural facts from that era: hangar workloads carry 2-10 draw calls each (640
+  boot phase: 275-277), so the image is accumulated across dozens of workloads and no single frame's
+  draw census can attribute a pixel; `[budget]` shows no `maxGameCall` truncation; over-frequent
+  workload boundary suspect: `ROGUESQ_VI_FULLSYNC` (s11).
 - ~~Hangar dimmer than the s11 peak~~ — **largely fixed, s25** by `SHADE_WRAP` (vertex
   then s26 per-pixel).
 - Outdoor 512 zero-shade is masked, not fixed: `ROGUESQ_FIX_ZERO_SHADE` + wrap both map
@@ -234,6 +226,8 @@ Standing warnings:
 - Hand-edited diagnostics in `build/factor5_ucode/*.c` survive a cmake build but **not** an RSPRecomp
   regen — add them to `tools/fixup_factor5_ucode.py` to keep them. Diagnostics in `RecompiledFuncs`
   are wiped by regen entirely.
+- The settings.json Bash allowlist matches the FIRST WORD of the command: `VAR=1 tools/probe.sh …`
+  is denied despite `Bash(tools/:*)` — prefix such commands with `env` (allowlisted) instead (s44).
 - Harness: `clang -O1 -fobjc-arc -framework Cocoa -framework CoreGraphics -o build/winctl tools/winctl.m`;
   capture with `tools/probe.sh` / `tools/regress.sh`. Kill runs with SIGKILL, not SIGTERM — the TERM
   path aborts in SDL_QUIT cleanup and leaves a crash dialog over the next run's capture (s9).
@@ -253,37 +247,19 @@ Standing warnings:
 `## LLE stabilization session 2 (2026-07-12)` sits out of order in the log, between s7 and s8: its
 conclusions are among the oldest in the file, not the newest.
 
-- **Claim (s2):** the LLE stall is RDP `LoadTile`/`LoadBlock` coordinate underflow pinning the Gfx
-  thread; cap `wordsPerRow`/`rowCount` at 2048. **Overturned by s2 (later, via `sample`):** the cap
-  alone changed nothing — `rsp_dpc_macros.h` modelled `DPC_CURRENT_READ` as `g_rsp_dpc_end` and never
-  reset CURRENT on a `DPC_START` write. **Why believable:** unsigned 12-bit coords really can
-  underflow to ~4G and the thread really was pinned in `loadToTMEMCommon`.
-- **Claim (s2b):** residual exit=3 is zeroed DL-chunk bytes (op 0x00 at DMEM 0x228), and the
-  trig-over-dispatch-table theory is in doubt. **Overturned by s3** (the chunk fetch is byte-for-byte
-  faithful to RDRAM; op 0x00 is a legitimate opcode other tasks dispatch fine) **and s5** (the table
-  trample was real, and came from the audio task). **Why believable:** forcing `dmem[0x153]=0xFF`
-  made failures worse, which reads as evidence against a segment-residency problem.
-- **Claim (s3):** the 0xF80 image from RDRAM 0xA4E00 is the RDP command ring / a segment-8 trig load.
-  **Overturned by s3 (later)** — the ring is `OSTask.output_buff` at 0x777800 — **and by s5**:
-  0xA4E00 is the MusyX audio `ucode_data`, whose sine/wavetables are the "trig" data. **Why
-  believable:** it contained plausibly-flushed data and arrived through the ucode's own DMA helper.
-- **Claim (s3):** mechanism fully decoded — op 0xBA falls into flush routine L_112C, earlier flushes
-  were skipped, the staging cursor overflowed to ~0x16E0 and trampled DMEM[0..0xF80]. **Overturned by
-  s5:** no flush overflow existed. `librecomp` `rsp::run_task` memcpy'd the audio OSTask to
-  `dmem[0xFC0]` and DMA'd 0xF80 bytes of audio `ucode_data` over `dmem[0..0xF7F]`; `dmem[]` is one
-  shared 4 KB global and was unserialized. **Why believable:** the byte counts line up exactly and
-  every fingerprint (seg153=0xC8, ra16A=0x2F0D, trig-as-DL) fits.
-- **Claim (s3):** the trig table is generated in-ucode by VU/scalar store loops, gated by a marker
-  our per-task memset/restore perturbs. **Overturned by s4** (static sweep of all 59 store sites plus
-  the full 185-line boot file: no generation loop exists; everything arrives by DMA) **and finally by
-  s5** (the shared-DMEM race). **Why believable:** RSP sine-table generation is a classic idiom and
-  every tagged DMA site had been cleared.
-- **Claim (s4):** the game uses two different F5 gfx ucodes; ucode B (0x80099FE0, ROM 0x9ABE0) was
-  recompiled and dispatched separately and B tasks produced zero `UnhandledJumpTarget`. **Overturned
-  by s5:** 0x80099FE0 is the **MusyX AUDIO ucode** — gfx tasks route only via `send_dl`. The B
-  dispatch was removed; serializing `dmem[]` gave 300 s with 0 exit=3. **Why believable:**
-  `DMEM[0xFD0]` really did alternate per task, B's text really is 992 different words, and
-  dispatching B really did suppress failures — because it stopped running gfx code on audio staging.
+The s2–s5 stabilization-era claims are compressed here (full detail: PORTING-STATE, and the saga
+narrative in PROJECT-OVERVIEW §3). Every one was eventually explained by the shared-`dmem[]` race
+(one global 4 KB array, audio tasks staging over gfx state; fixed by the recursive mutex, s5):
+- **s2:** "LLE stall is LoadTile/LoadBlock coordinate underflow" — real fix was `rsp_dpc_macros.h`
+  never resetting `DPC_CURRENT` on a `DPC_START` write.
+- **s2b:** "residual exit=3 is zeroed DL-chunk bytes at DMEM 0x228" — chunk fetch was faithful; the
+  dispatch-table trample was real and came from the audio task.
+- **s3:** "0xF80 image from 0xA4E00 is the RDP ring / a trig load" → it is MusyX audio `ucode_data`;
+  "op 0xBA flush-cursor overflow trampled DMEM" → no overflow existed, it was `run_task` DMA'ing
+  audio data over `dmem[0..0xF7F]`; "trig table generated in-ucode" → nothing is generated in-ucode
+  (s4 static sweep: everything arrives by DMA).
+- **s4:** "two F5 gfx ucodes; dispatch ucode B separately" → 0x80099FE0 is the MusyX AUDIO ucode;
+  gfx routes only via `send_dl`. Dispatching B "helped" only by keeping gfx code off audio staging.
 - **Claim (s5–s7):** 0x76A000 and 0x7DD000 are colour buffers cleared to white. **Overturned by s8:**
   they are **Z-buffers** — `SETZIMG` (op 0x3E) names exactly those addresses and 0xFFFCFFFC is the
   standard z-clear. Colour buffers are 0x5D4000/0x66A000 (640-wide) and 0x6BA000/0x6DD000 (320-wide).
@@ -435,6 +411,9 @@ conclusions are among the oldest in the file, not the newest.
 
 ## Method traps
 
+- `fbPair.projections` is a reused vector; only `projectionCount` entries are live. Counting its
+  size reported "292-468 draw calls" where the true figure was 2-10 — use `fbPair.gameCallCount`
+  (s32).
 - Sampled diagnostic lines lie about totals: `[loadblock]` prints the first 60 then every 500th, so
   counting its lines said "43 RGBA32 loads" where an exhaustive census said zero (s18, restated s19).
 - TMEM, `lastLoadOpByTMEM` and any load census read at draw-record time are stale under RT64, which

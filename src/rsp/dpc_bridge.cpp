@@ -278,119 +278,21 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
             // Exactly where we left off: nothing new to forward.
             return;
         }
-        // END moved BACKWARDS. That is the ucode wrapping its RDP ring back to
-        // the base and filling it again, not a duplicate submission — the
-        // high-water mark only guards against re-sending bytes as END creeps
-        // forward. Treating a wrap as a duplicate silently drops ~94000
-        // submissions per 90 s in the post-logo phase: everything the tiled
-        // hi-res renderer emits, which is why the screen goes black there.
-        //
-        // ROGUESQ_DPC_WRAP=1 forwards them. MEASURED TRADE-OFF (2026-07-25):
-        // with it on, rendering is continuous instead of going black at ~44 s
-        // (27/27 burst frames had content) — but the ~10x larger command
-        // stream slows the game down and exhausts Metal shared memory
-        // (IOGPUMetalDeviceShmem assert) at ~42 s, before it even reaches the
-        // Factor 5 logo. Default OFF until that resource growth is found.
-        static const bool s_wrap_enabled = []{
-            const char *e = std::getenv("ROGUESQ_DPC_WRAP");
-            return e && *e && *e != '0';
-        }();
+        // END moved BACKWARDS: the ucode wrapping its RDP ring back to the
+        // base. These bytes are genuine dropped content, but forwarding them
+        // is NOT the answer: the forwarding path (ROGUESQ_DPC_WRAP, retired
+        // 2026-07-26) re-sent already-consumed ring bytes — 53247 of 53248
+        // wrap events in an 80 s run carried byte-identical content — and the
+        // black screen it appeared to fix was really the missing FULL_SYNC,
+        // solved by VI_FULLSYNC (session 11). Count and drop.
         static std::atomic<int> s_wrapped{0};
         int n = ++s_wrapped;
         if (n <= 4 || (n % 4096) == 0) {
-            fprintf(stderr, "[dpc-wrap #%d] end=0x%06X < seen=0x%06X start=0x%06X (%s)\n",
-                    n, end_phys, s_last_end, start_phys,
-                    s_wrap_enabled ? "forwarding" : "dropped, set ROGUESQ_DPC_WRAP=1");
+            fprintf(stderr, "[dpc-wrap #%d] end=0x%06X < seen=0x%06X start=0x%06X (dropped)\n",
+                    n, end_phys, s_last_end, start_phys);
             fflush(stderr);
         }
-        // Is a wrap new content, or the same ring being replayed? If the
-        // forwarded range repeats identically over and over, forwarding it is
-        // duplication, not recovery. Counted so the two can be told apart.
-        {
-            static uint32_t s_prev_start = 0, s_prev_end = 0;
-            static uint64_t s_repeat = 0, s_distinct = 0;
-            if (start_phys == s_prev_start && end_phys == s_prev_end) {
-                s_repeat++;
-            } else {
-                s_distinct++;
-                s_prev_start = start_phys;
-                s_prev_end = end_phys;
-            }
-
-            // The range repeating is expected for a ring restart. What decides
-            // replay-vs-refill is whether the CONTENT at that range repeats.
-            static uint64_t s_prev_content = 0;
-            static uint64_t s_same_content = 0, s_new_content = 0;
-            if (end_phys > start_phys && end_phys <= 0x800000) {
-                uint64_t content = 0;
-                const int64_t mp = (int64_t)(int32_t)(start_phys + 0x80000000);
-                for (int b = 0; b < 8; b++) {
-                    content = (content << 8) | (uint8_t)MEM_B(b, mp);
-                }
-
-                if (content == s_prev_content) {
-                    s_same_content++;
-                } else {
-                    s_new_content++;
-                    s_prev_content = content;
-                }
-            }
-
-            if ((n % 4096) == 0) {
-                fprintf(stderr, "[dpc-wrap-dup] identical-to-previous=%llu distinct=%llu | content same=%llu new=%llu\n",
-                        (unsigned long long)s_repeat, (unsigned long long)s_distinct,
-                        (unsigned long long)s_same_content, (unsigned long long)s_new_content);
-                fflush(stderr);
-            }
-        }
-        if (!s_wrap_enabled) {
-            return;
-        }
-
-        // A wrap whose ring CONTENT is unchanged is not a refill, it is the
-        // same command being re-announced. Measured 2026-07-25: 53247 of 53248
-        // wrap events in an 80 s run carried byte-identical content.
-        // ROGUESQ_WRAP_DEDUP=1 suppresses those replays. MEASURED: it removes
-        // ~33000 redundant submissions per run but does NOT stop the framebuffer
-        // pair explosion (193715 pairs and the Metal assert still happened with
-        // it on and ROGUESQ_MAX_FBPAIRS=0), so the replays are not the source of
-        // that. Default OFF — it is an unverified content-level drop, and the
-        // configuration that survives 120 s is the pair cap, not this.
-        static const bool dedup_enabled = []{
-            const char *e = std::getenv("ROGUESQ_WRAP_DEDUP");
-            return e && *e && *e != '0';
-        }();
-
-        if (dedup_enabled && end_phys > start_phys && end_phys <= 0x800000) {
-            uint64_t hash = 0xCBF29CE484222325ull;
-            const uint32_t hashEnd = std::min(end_phys, start_phys + 4096);
-            for (uint32_t p = start_phys; p < hashEnd; p++) {
-                const int64_t mp = (int64_t)(int32_t)(p + 0x80000000);
-                hash = (hash ^ (uint8_t)MEM_B(0, mp)) * 0x100000001B3ull;
-            }
-
-            static uint32_t s_dedup_start = 0, s_dedup_end = 0;
-            static uint64_t s_dedup_hash = 0;
-            static bool s_dedup_valid = false;
-            static std::atomic<uint64_t> s_suppressed{0};
-            if (s_dedup_valid && start_phys == s_dedup_start && end_phys == s_dedup_end && hash == s_dedup_hash) {
-                const uint64_t sup = ++s_suppressed;
-                if ((sup % 16384) == 1) {
-                    fprintf(stderr, "[dpc-wrap-dedup] suppressed %llu identical-content wrap replays\n",
-                            (unsigned long long)sup);
-                    fflush(stderr);
-                }
-
-                return;
-            }
-
-            s_dedup_start = start_phys;
-            s_dedup_end = end_phys;
-            s_dedup_hash = hash;
-            s_dedup_valid = true;
-        }
-
-        s_last_end = start_phys;
+        return;
     }
 
     uint32_t submit_lo = s_last_end;
