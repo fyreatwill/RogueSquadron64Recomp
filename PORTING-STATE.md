@@ -4361,3 +4361,64 @@ that doesn't need an external attach) before the next attempt.
 Files: `scratch/s51_leveldesc` (repro + run.log), `scratch/s51_lldb` (`lldb` attempts 1-2 logs),
 `scratch/s51_sample` (attempt 3 log), `scratch/s51_lldb_repro.sh`, `scratch/s51_sample_repro.sh`
 (scratch helper scripts, not part of `tools/`). No code changes this session.
+
+## Session 52 (2026-07-26) — in-process crash handler added; repro attempt blocked a 3rd time by
+the same load confound (no new evidence on the LEVEL DESCRIPTION death itself)
+
+### The work unit
+Per NEXT.md option 1: add a lightweight in-process signal handler (no external attach) so an H3
+backtrace attempt cannot be confounded by ptrace-adjacent overhead, then re-run the s50/s51 repro
+schedule to see whether it fires.
+
+### Code change
+`src/main/main.cpp`: added a POSIX `sigaction`-based handler for SIGSEGV/SIGBUS/SIGABRT, mirroring
+the existing (Windows-only, `#ifdef _WIN32`) crash handler in the same function. On any of those
+three signals it prints `[CRASH] caught signal N (name), dumping stack:` to stderr, dumps
+`backtrace()`/`backtrace_symbols_fd()` (from `<execinfo.h>`), flushes, then `raise()`s the signal
+again so the default handler still runs (core dump / normal termination semantics unchanged).
+Installed in the `#else` branch of the existing `#ifdef _WIN32` block at the end of `main()`,
+right before `rs64_register_overlays()` — no conflicting signal handlers exist anywhere else in
+`src/` (grepped; the only other `signal()` call in the repo is the Windows-only one in the same
+function). Builds clean (only pre-existing unrelated warnings from `lib/rt64`'s bundled
+`json.hpp` and an SDL2 dylib-version linker warning). Does not touch `lib/`, so no
+`submodule-patches/export.sh` needed.
+
+### Repro attempt — blocked before reaching phase 1024, load confound reproduced a 3rd time
+Checked `uptime` first per NEXT.md's precondition: load average 2.7–3.7 across the session, 33
+concurrent `claude` processes — at or above the ~3.3-load/4-process condition that stalled s51.
+Ran anyway (budgeting `PROBE_PHASE_TIMEOUT=600` instead of the usual 240, per NEXT.md's explicit
+"wait, or budget a much longer timeout and treat a timeout as inconclusive" guidance), reusing the
+exact s50/s51 schedule (`PROBE_KEYS="3:start 25:start 40:start 60:a"`, `PROBE_KEYS_FROM_PHASE=1`,
+`PROBE_LEAVE_OK=1`) so the run would still be comparable if it got there.
+
+**It didn't get there.** The run.log stalled permanently at line 190, mid-way through the 640-wide
+phase, with `[fbpair-cap] workload hit 8192 framebuffer pairs; reusing the last one` — the *exact*
+signature s51 flagged as never seen this early except during its load-confounded stalls. The log
+did not grow for the entire remaining wait (multiple minutes, well past the point a healthy run
+reaches phase 1024 in ~45s); killed with SIGKILL after confirming no forward progress. `grep -c
+"CRASH\]"` on the resulting log: 0 — expected, since this was an external SIGKILL, not a signal the
+new handler would catch, and the process never got anywhere near the LEVEL DESCRIPTION screen.
+
+This is now **the third time** (s51 attempts 2 and 3, plus this session) this box has produced the
+identical stall signature (`fs=0` stuck, early `[fbpair-cap]` hit, no forward VI-phase progress)
+under elevated concurrent load, and the third time it happened with a different attach method (lldb
+attach, no attach/`sample`, and now no attach at all with a freshly-rebuilt binary). **This further
+corroborates s51's "generalizable environment confound" conclusion rather than adding anything new
+about the LEVEL DESCRIPTION death** — the crash handler itself was never exercised because the run
+never reached the screen that triggers the death. No conclusion about H1/H2/H3 changes this
+session; the confound is now corroborated by a 3rd independent occurrence, which is worth folding
+into CURRENT-TRUTH as a stronger warning, not just s51's.
+
+### Verdict
+**Real progress:** the in-process crash handler exists, builds clean, and needs no external
+attach — it should still be immune to the confound once a run actually reaches the death screen.
+**No progress on H1/H2/H3** this session: the repro never got far enough to test the handler. The
+work unit for next iteration is unchanged in substance from s51/this session's NEXT.md — retry the
+exact same schedule, but only when `uptime` load average is comfortably low (this session never
+saw it below ~2.4 across ~15 minutes of observation, suggesting this box may be persistently busy
+at the time of day these iterations run, not just transiently spiking — worth noting if the pattern
+repeats a 4th time).
+
+Files: `scratch/s52_crashhandler_repro.sh` (repro script, load-adjusted 600s phase timeout),
+`scratch/s52_crashhandler/run.log` (stalled at line 190, 640-phase, never reached 1024). Code:
+`src/main/main.cpp` (in-process crash handler, committed this session).

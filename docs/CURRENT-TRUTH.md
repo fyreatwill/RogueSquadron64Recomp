@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 51)
+## Current truth (as of session 52)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -154,8 +154,11 @@ process — now confirmed on 2 independent runs (s50, s51); s51 narrowed the mec
 (full-sync) freeze as the leading cause rather than the correlated `fmt=7` copy-mode no-op (event
 ordering + static-code read both point away from the no-op) — see "Remaining visual defects" above
 and PORTING-STATE s50/s51. Backtrace attempts are blocked by a shared-machine load confound, not
-solved; next sub-unit is tracing what DL task fails to reach FULL_SYNC, after controlling for
-system load or switching to an in-process crash handler that needs no external attach. Expect
+solved — corroborated a 3rd time in s52, still with no successful repro under load; an in-process
+crash handler (`src/main/main.cpp`, s52) is now in place and needs no external attach, but has not
+yet been exercised because the repro has not reached the death screen since it was added. Next
+sub-unit is retrying the repro when load is genuinely low, then tracing what DL task fails to reach
+FULL_SYNC if the handler doesn't fire. Expect
 further new failure classes as this progresses (mission-overlay DMA, a new VI phase, possibly new
 ucode ops) — each is its own work unit. *Done when:* 60 seconds of in-mission rendering, craft
 visibly responds to synthetic input, stability counters 0, and the phase timeline in this document
@@ -174,21 +177,27 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s51)
+## Next steps, in order of expected value (s52)
 
-1. **M3 — LEVEL DESCRIPTION black-screen/crash: trace the `fs` freeze.** Confirmed on 2 independent
-   runs (s50, s51). s51 ruled the `fmt=7` native-copy no-op down to "probably downstream symptom,
-   not cause" (event ordering: `fs` freezes before the `fmt=7` warning; static read: the guard is
-   pre-existing and its null result is checked by every caller). The leading hypothesis is now the
-   `fs` freeze itself — some DL task around the AVAILABLE CRAFT → LEVEL DESCRIPTION transition
-   never reaches FULL_SYNC. **Before another backtrace attempt, check `uptime` and
-   `ps aux | grep -c '[c]laude'`** — s51 burned all 3 of its backtrace tries (2× lldb, 1× `sample`)
-   on a machine with load average ~3.3 and 4+ concurrent Claude sessions, which stalled the game's
-   own phase-advance for 240s+ with no debugger involved in one of those trials. Retry only when
-   load is low, or add an in-process signal handler (SIGSEGV/SIGABRT/SIGBUS → backtrace to stderr)
-   to the game's own entry point instead of an external attach — that avoids the ptrace-adjacent
-   overhead entirely. Do not attempt a fix until the mechanism is clear. Full detail: PORTING-STATE
-   s50, s51.
+1. **M3 — LEVEL DESCRIPTION black-screen/crash: trace the `fs` freeze. In-process crash handler is
+   now in place (s52); retry the repro ONLY when system load is genuinely low.** Confirmed on 2
+   independent runs (s50, s51). s51 ruled the `fmt=7` native-copy no-op down to "probably downstream
+   symptom, not cause" (event ordering: `fs` freezes before the `fmt=7` warning; static read: the
+   guard is pre-existing and its null result is checked by every caller). The leading hypothesis is
+   still the `fs` freeze itself — some DL task around the AVAILABLE CRAFT → LEVEL DESCRIPTION
+   transition never reaches FULL_SYNC. `src/main/main.cpp` now installs a POSIX `sigaction` handler
+   for SIGSEGV/SIGBUS/SIGABRT (mirrors the existing Windows-only one) that backtraces to stderr with
+   no external attach needed — use this instead of lldb/`sample` for the next H3 attempt. **s52
+   tried to exercise it and could not**: `uptime`/`ps aux | grep -c claude` showed load 2.4–3.7
+   with 33 concurrent Claude processes (at/above the s51 confound threshold), and the run stalled
+   permanently in the 640-wide phase (`[fbpair-cap]` hit at 8192, `fs=0` stuck) before ever reaching
+   phase 1024 — the *third* independent occurrence of this exact stall signature under load (s51 had
+   two, with different attach methods each time; s52 had none at all). **Do not attempt this repro
+   again until `uptime` load average is comfortably under ~1.5 AND few/no other `claude` processes
+   are running** — three same-signature stalls across two sessions is strong enough now that a 4th
+   attempt under similar load should not be attempted; wait or ask the user instead of burning
+   another cycle. Do not attempt a fix until the mechanism is clear. Full detail: PORTING-STATE s50,
+   s51, s52.
 2. Once the black screen is understood/fixed, continue past AVAILABLE CRAFT toward mission 1
    launch. Expect further new failure classes (mission overlay DMA → missing-func /
    UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice recipe). Each

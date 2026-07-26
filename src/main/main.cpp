@@ -31,6 +31,8 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
 #include "win_compat.h"
+#include <execinfo.h>
+#include <unistd.h>
 #endif
 
 // N64 button bitmasks (from libultra PR/controller.h)
@@ -1634,6 +1636,24 @@ int main(int argc, char* argv[]) {
         fflush(stderr);
         _Exit(4);
     });
+#else
+    {
+        struct sigaction sa {};
+        sa.sa_flags = SA_SIGINFO | SA_RESETHAND;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_sigaction = [](int sig, siginfo_t*, void*) {
+            fprintf(stderr, "[CRASH] caught signal %d (%s), dumping stack:\n",
+                sig, strsignal(sig));
+            void* frames[64];
+            int count = backtrace(frames, 64);
+            backtrace_symbols_fd(frames, count, STDERR_FILENO);
+            fflush(stderr);
+            raise(sig);
+        };
+        sigaction(SIGSEGV, &sa, nullptr);
+        sigaction(SIGBUS, &sa, nullptr);
+        sigaction(SIGABRT, &sa, nullptr);
+    }
 #endif
 
     rs64_register_overlays();
