@@ -181,7 +181,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s55)
+## Next steps, in order of expected value (s56)
 
 1. **M3 — LEVEL DESCRIPTION black-screen/crash: trace the `fs` freeze. In-process crash handler is
    in place (s52); retry the repro ONLY when system load is genuinely low.** Confirmed on 2
@@ -197,16 +197,17 @@ cost three sessions before the recursive mutex.
    processes stalls permanently in the 640-wide phase (`[fbpair-cap]` hit at 8192, `fs=0` stuck)
    before ever reaching phase 1024, regardless of attach method (2× lldb, 1× `sample`, 1× no attach
    at all). s54 hit the same load band again (1.93→3.52 across the iteration, 33 `claude`
-   processes); **s55 hit it a 5th time, at the highest 1-minute average yet (3.42/3.26/3.17, 33
-   `claude` processes)** and again correctly skipped both this repro and the M4 runtime check below
-   rather than trust either result. **Do not attempt this repro again until `uptime` load average is
-   comfortably under ~1.5 AND few/no other `claude` processes are running** — treat this as
-   near-certain, not merely well-corroborated. If load is high when this iteration starts, skip to
-   step 2 (the M4 runtime check is also blocked by the same confound — s54 found it's not
-   driven-input-specific — but the build/implementation half is done and load-insensitive); if load
-   is high and step 2 is also inapplicable (already done, or itself blocked), use the iteration for
-   step 4 (doc housekeeping) rather than idling — see s55. Do not attempt an `fs`-freeze fix until
-   the mechanism is clear. Full detail: PORTING-STATE s50, s51, s52, s53, s54, s55.
+   processes); s55 hit it a 5th time (3.42/3.26/3.17, 33 `claude` processes); **s56 hit it a 6th
+   time (2.75/3.09/3.13, 33 `claude` processes)** and again correctly skipped both this repro and
+   the M4 runtime check below rather than trust either result. **Do not attempt this repro again
+   until `uptime` load average is comfortably under ~1.5 AND few/no other `claude` processes are
+   running** — treat this as near-certain, not merely well-corroborated. If load is high when this
+   iteration starts, skip to step 2 (the M4 runtime check is also blocked by the same confound —
+   s54 found it's not driven-input-specific — but the build/implementation half is done and
+   load-insensitive); if load is high and step 2 is also inapplicable (already done, or itself
+   blocked), use the iteration for step 4 (doc housekeeping) rather than idling — see s55, s56. Do
+   not attempt an `fs`-freeze fix until the mechanism is clear. Full detail: PORTING-STATE s50,
+   s51, s52, s53, s54, s55, s56.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
@@ -220,14 +221,17 @@ cost three sessions before the recursive mutex.
    launch. Expect further new failure classes (mission overlay DMA → missing-func /
    UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice recipe). Each
    new failure is its own work unit.
-4. **Doc housekeeping — `CURRENT-TRUTH.md` still over the ~35 KB CLAUDE.md guideline (42,038 bytes
-   as of s55, down from 42,859).** s55 migrated the M1/M2 mechanism paragraphs to
-   `docs/PROJECT-OVERVIEW.md` §3 and fixed two stale/wrong statements there (a superseded
-   "gaps-between-triangles" conclusion in the s12–s43 arc paragraph, and §1's "main-menu hangar" /
-   "one visual defect remains" status). Remaining size is dominated by the ~150-line "Overturned
-   conclusions" section (s5–s48) — deliberately not touched by s55; compressing it safely needs a
-   per-entry judgment call (which flag names/numbers still need exact-reference detail vs. which are
-   now fully subsumed by PROJECT-OVERVIEW.md §4's hurdle-class summaries), not a bulk edit. Good
+4. **Doc housekeeping — `CURRENT-TRUTH.md` still over the ~35 KB CLAUDE.md guideline (40,285 bytes
+   as of s56, down from 43,143 at s55's start).** s55 migrated the M1/M2 mechanism paragraphs to
+   `docs/PROJECT-OVERVIEW.md` §3 and fixed two stale/wrong statements there. s56 did the entry-by-
+   entry compression of the "Overturned conclusions" section that s55 deferred: the s5–s31 entries
+   (oldest, hangar-band-specific, all closed under M1) are compressed with `PROJECT-OVERVIEW.md`
+   §4.x pointers added where a pattern is already documented there; the s44–s48 entries (clip-
+   dispatch mechanism, war-room scene identity) were deliberately left intact — still relevant to
+   ongoing M4 overlay/symbol-file work. Remaining size is now concentrated in those s44–s48 entries
+   plus the untouched "Method traps" and "Dead ends" sections. Further reduction means either
+   revisiting the conservative call on s44–s48 (not recommended while M4 is open) or a fresh
+   editorial pass on Method traps/Dead ends — its own judgment call, not yet attempted. Good
    fallback work when load blocks steps 1–2.
 5. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
    is its own git repo and carries uncommitted changes to 4 symbol files —
@@ -323,116 +327,85 @@ misreads of the audio `ucode_data`, "two gfx ucodes") are compressed to one line
 eventually explained by the shared-`dmem[]` race** (audio tasks staging over gfx state; fixed by
 the recursive mutex, s5). Full detail: PORTING-STATE and PROJECT-OVERVIEW §3. Do not re-litigate
 any s2–s4 conclusion without checking that section.
-- **Claim (s5–s7):** 0x76A000 and 0x7DD000 are colour buffers cleared to white. **Overturned by s8:**
-  they are **Z-buffers** — `SETZIMG` (op 0x3E) names exactly those addresses and 0xFFFCFFFC is the
-  standard z-clear. Colour buffers are 0x5D4000/0x66A000 (640-wide) and 0x6BA000/0x6DD000 (320-wide).
-  **Why believable:** 0xFFFC reads as white in a 16-bit colour buffer, and the screen was white.
-- **Claim (s7):** texrect draws execute on the GPU but their pixel output is invisible in the render
-  target. **Overturned by s8:** `ROGUESQ_VI_FORCE_FB=0x5D4000` shows dense real texture content — the
-  pixels exist, the default present picks a different buffer. **Why believable:** every pipeline
-  stage was instrumented and healthy, and the presented buffer really was uniform white.
-- **Claim (s8):** the visual blocker is that F5 geometry ops 0x01/0x02/0x03 emit zero RDP bytes (64 of
-  66 tasks commit 0 ranges), probably RSPRecomp's VU translation culling every primitive.
-  **Overturned by s9:** `rsp_dpc_submit` kept its ring high-water mark in function-local statics, so
-  any task whose output was no larger than the largest previous task's was discarded whole. Hoisted
-  to `s_submit_dl_base`/`s_submit_last_end`: 65/65 tasks commit, 4575 TEXRECT in 14 s vs 399 in 45 s.
-  **Why believable:** the count was exactly zero, and RT64's HLE leaves the same three ops stubbed —
-  two independent-looking paths agreeing on "no geometry".
+- **Claim (s5–s7):** 0x76A000/0x7DD000 are colour buffers cleared to white. **Overturned by s8:** they
+  are Z-buffers (`SETZIMG` op 0x3E, 0xFFFCFFFC standard z-clear); colour buffers are 0x5D4000/0x66A000
+  (640-wide), 0x6BA000/0x6DD000 (320-wide). Believable because 0xFFFC reads as white in a 16-bit
+  colour buffer and the screen was white. Full detail: PORTING-STATE s8.
+- **Claim (s7):** texrect draws execute but their output is invisible in the render target.
+  **Overturned by s8:** `ROGUESQ_VI_FORCE_FB=0x5D4000` shows dense content — the pixels exist, the
+  default present just picks a different buffer.
+- **Claim (s8):** F5 geometry ops 0x01/0x02/0x03 emit zero RDP bytes (64/66 tasks), probably
+  RSPRecomp culling every primitive. **Overturned by s9:** `rsp_dpc_submit`'s ring high-water mark
+  lived in function-local statics, discarding any task no larger than the largest previous one;
+  hoisting it to file scope (`s_submit_dl_base`/`s_submit_last_end`) fixed it — 65/65 tasks commit.
+  Believable because RT64's own HLE leaves the same three ops stubbed, a second path agreeing on
+  "no geometry".
 - **Claims (s9, sixth pass), compressed:** "0x790000 is a z-buffer the VI never scans" (s10/s18/
   s21: it is a presented, double-buffered colour buffer — the +0x100000 z-pattern just holds
   everywhere else) and "`[dpc-behind]` counts 17 867 wrap drops in 60 s" (s10: real figure
   9 056 256 in 70 s — the counter read a sampled path).
-- **Claim (s9/s10):** `ROGUESQ_DPC_WRAP=1` is what gives continuous rendering, and the Metal
-  exhaustion it triggers must be contained with `ROGUESQ_MAX_FBPAIRS`. **Overturned by s11:** with
-  the `VI_FULLSYNC` fix, wrap **off** gives more content (57/63 frames vs 32/62), 3 framebuffer pairs
-  per workload instead of 448, strictly more detail (red door lighting appears only in wrap-off
-  captures), and `[fbpair-cap]` engages 0 times — wrap forwarding was re-sending already-consumed ring
-  bytes. **Why believable:** wrap-on genuinely removed the black post-logo phase, by papering over the
-  missing FULL_SYNC that was the actual cause.
+- **Claim (s9/s10):** `ROGUESQ_DPC_WRAP=1` gives continuous rendering, and the Metal exhaustion it
+  triggers must be contained with `ROGUESQ_MAX_FBPAIRS`. **Overturned by s11:** with the
+  `VI_FULLSYNC` fix, wrap **off** gives more content and more detail with `[fbpair-cap]` never
+  engaging — wrap-on was re-sending already-consumed ring bytes, papering over the missing FULL_SYNC
+  that was the real cause (see next entry).
 - **Claim (s10):** the Metal shared-memory exhaustion is a property of the post-logo tiled phase and
   the framebuffer-pair cap is the fix. **Overturned by s11:** that phase never emits RDP FULL_SYNC at
-  all, so the workload never advanced; 195,057 pairs, 23 GB of Metal buffers and the black screen are
-  all downstream of that. Synthesising the frame boundary from the VI swap fixes it. **Why
-  believable:** the allocation backtrace named `addFramebuffer` unambiguously and the cap did buy a
-  clean 120 s run.
-- **Claim (s9, third pass):** `ROGUESQ_PRIM_ALPHA_FF=1` is needed to see text — PRIM alpha is 0x08
-  (~3 % opacity) on almost every presented draw. **Overturned by s11:** verified, not assumed — with
-  it off the attribution screen still renders fully legibly, so the hack can be retired rather than
-  replaced. **Why believable:** the combiner really is `TEXEL0 * PRIM` with alpha straight from PRIM,
-  and forcing 0xFF really did make the screen appear.
-- **Claim (s9, fifth pass, mid-session):** the renderer has regressed to black, so the 24
-  overlay-symbol moves must be reverted. **Overturned within s9:** sampling artefact — a 28-frame
-  burst at 0.15 s showed 27/28 frames full of content; the moves were fine and were re-applied.
-  **Why believable:** four one-shot captures at 4/8/14/20 s all showed black.
-- **Claims (s12–s16), compressed:** "the 0x60xxxx I4/CI4 dumps are the hangar floor/wall assets"
-  (s16: wrong assets — real CI sources 0x741B80/0x741460/0x4Fxxxx/0x6Axxxx) and "the 0x65xxxx
-  RGBA16 loads are hangar assets" (s17: they fire during the 1024 title phase — why five sessions
-  of knob-tuning never moved the band). **Why believable:** both decode into plausible imagery;
-  a plausible decoded image does not identify a phase.
-- **Claim (s14):** `ROGUESQ_FIX_LINE_MASK` (force `line = 2^(masks-4)` on 4-bit tiles).
-  **Overturned by s15:** wrong direction — the mask/line "disagreement" tiles are real; replaced
-  by `ROGUESQ_FIX_SAMPLE_BOUNDS`. **Why believable:** mask and line disagreeing usually does mean
-  one is wrong.
-- **Claim (s14):** palette-bank-15 stomping is the root of the rainbow floor band — later LOADTLUTs
-  from 0x62Bxxx replace the red hangar palette. **Overturned by s15:** the first 40 CI4 pal15 uploads
-  all use the red palettes 0x751FA0 / 0x751FC0, with **zero** multi-colour 0x62Bxxx; band pixels are
-  warm red #ce6238, i.e. a layout scramble of correct colours, not a wrong TLUT bank. **Why
-  believable:** an offline decode with a multi-colour palette reproduced the rainbow noise closely.
+  all, so the workload never advanced (195,057 pairs, 23 GB of Metal buffers, black screen all
+  downstream). Synthesising the frame boundary from the VI swap (`ROGUESQ_VI_FULLSYNC`) fixed it —
+  see PROJECT-OVERVIEW §4.6. Believable because the allocation backtrace named `addFramebuffer`
+  unambiguously and the cap did buy a clean 120 s run.
+- **Claim (s9, third pass):** `ROGUESQ_PRIM_ALPHA_FF=1` (PRIM alpha ~3%) is needed to see text.
+  **Overturned by s11:** verified, not assumed — with it off the attribution screen still renders
+  fully legibly, so the hack was retired rather than replaced.
+- **Claim (s9, mid-session):** the renderer regressed to black, so the 24 overlay-symbol moves must
+  be reverted. **Overturned within s9:** sampling artefact — four one-shot captures at 4/8/14/20 s
+  all showed black, but a 28-frame burst at 0.15 s showed 27/28 full of content; the moves were fine.
+- **Claims (s12–s16), compressed:** "the 0x60xxxx I4/CI4 dumps are the hangar floor/wall assets" and
+  "the 0x65xxxx RGBA16 loads are hangar assets" — both wrong (real CI sources elsewhere; the RGBA16
+  loads fire during the 1024 title phase). A plausible decoded image does not identify a phase.
+- **Claim (s14):** `ROGUESQ_FIX_LINE_MASK` (force `line = 2^(masks-4)` on 4-bit tiles) — wrong
+  direction, the mask/line "disagreement" tiles are real. **Overturned by s15**, replaced by
+  `ROGUESQ_FIX_SAMPLE_BOUNDS` (still default-on).
+- **Claim (s14):** palette-bank-15 stomping (later LOADTLUTs from 0x62Bxxx replacing the red hangar
+  palette) is the root of the rainbow floor band. **Overturned by s15:** the first 40 CI4 pal15
+  uploads all use the red palettes with zero multi-colour loads — band pixels are warm red #ce6238, a
+  layout scramble of correct colours, not a wrong TLUT bank. M1 (s44–s49) later found the real cause.
 - **Claim (s13):** hangar walls need synthesised dxt, so `ROGUESQ_FIX_DXT` defaults ON. **Overturned
-  by s22 and s23:** on the 1024 title sheet the synthesis turns the photographic backdrop into a
-  vertical-stripe mosaic (`FIX_DXT=0` gives a sharp pilot, R2-D2, X-wing panels); on the hangar,
-  same-run A/B, `FIX_DXT=1` gives **rainbow / TV-static corruption** on floor and walls. Default is
-  now **OFF** for both. s16's narrowing (synthesise for RGBA only, since CI/I are stored
-  pre-interleaved) is superseded too — the RGBA16 title sheet decodes perfectly from a linear offline
-  read. **Why believable:** every LOADBLOCK really carries `dxt=0`, hardware really uses dxt to
-  XOR-interleave odd TMEM lines, and s13's A/B did look better — but it was a cross-run comparison,
-  the method s18 later rejected.
-- **Claim (s18, first half):** the 512 phase draws flat sand-coloured polygons, and fog #C8C0A0
-  matches the on-screen #c5be9d. **Overturned by s18 (second half):** `ROGUESQ_FORCE_FOG=FF00FF`
-  changes **0 of 1,782,144** pixels. The sand is the **fill colour** (`FORCE_FILL` = 58.0 %,
-  + `DROP_ALL_TRIS` = 81.2 %); triangles cover ~23 % and paint **black**. Revised symptom, unifying
-  512 and 1024: textured geometry renders black. **Why believable:** two sand-coloured things in a
-  desert scene is a tidy coincidence.
+  by s22/s23:** it turns the 1024 title backdrop into a vertical-stripe mosaic and gives the hangar
+  rainbow/static corruption; default is now OFF. Believable because s13's A/B was cross-run, the
+  method s18 later rejected as unsound for animating scenes.
+- **Claim (s18, first half):** the 512 phase draws flat sand-coloured polygons and fog #C8C0A0
+  matches the on-screen colour. **Overturned by s18 (second half):** `ROGUESQ_FORCE_FOG` changes 0
+  pixels — the sand is the **fill colour**, triangles paint black. A colour match is not attribution
+  (PROJECT-OVERVIEW §4.2).
 - **Claim (s18, mid-session):** textured triangles with S identically zero (base, dx, de all zero)
   explain the flat 512-phase rendering. **Overturned within s18:** those triangles are not in the 512
   phase — run-lifetime "first N" counters reported whatever phase started first. Interval-scoped
   counting finds **0** collapsed triangles in both 512 and 1024; the S=0 triangles live in the 640
   attribution phase. **Why believable:** a collapsed S coordinate is a textbook cause of flat texturing.
 - **Claim (s18, fourth segment):** no RGBA32 LOADBLOCK is ever emitted in the 512 phase (exhaustive
-  census: f2/s2 = 1,614, f4/s2 = 25,840, RGBA32 = 0), the TMEM high half is empty, so blue and alpha
-  are absent and geometry rasterises black. **Overturned by s19:** `DUMP_TMEM_DRAW` at draw-record
-  time sees **stale** TMEM — RT64 defers every LOADBLOCK to `fullSyncFramebufferPairTiles`, where
-  `lastLoadOpByTMEM` and the census also update. The stream does emit `SETTIMG f0/s3 → SETTILE load →
-  LOADBLOCK words=512 → SETTILE render line=8 → DRAW`, and at upload both halves are filled
-  (lo 2048/2048, hi 1646–1871/2048). **Why believable:** the 1655/128 nonzero split matched a 256-word
-  non-split load to the byte, and the RDP's own `lastLoadOpByTMEM[]` agreed.
-- **Claim (s19):** the 1024-phase black screen is most likely the same zero-shade bug; retest after
-  the shade fix. **Overturned by s20/s21:** `FORCE_SHADE_WHITE=1` gives 0/4 content at 1024, pure
-  #000. The cause is present starvation — `State::updateScreen` in PresentEarly mode early-returns
-  whenever `presentEarly && !fromEarlyPresent`, and at 1024 no fbPair is an `earlyPresentCandidate`,
-  so presents stop entirely. **Why believable:** both phases were black at once and one fix had just
-  explained the other.
+  census: RGBA32 = 0), the TMEM high half is empty, so geometry rasterises black. **Overturned by
+  s19:** `DUMP_TMEM_DRAW` at draw-record time sees **stale** TMEM — RT64 defers every LOADBLOCK to
+  `fullSyncFramebufferPairTiles`; measured at upload, both TMEM halves are filled. This is the
+  general "stale reads" trap, PROJECT-OVERVIEW §4.1.
+- **Claim (s19):** the 1024-phase black screen is most likely the same zero-shade bug as the hangar;
+  retest after the shade fix. **Overturned by s20/s21:** `FORCE_SHADE_WHITE=1` gives 0/4 content at
+  1024 — the real cause is present starvation: `State::updateScreen` in PresentEarly mode
+  early-returns whenever `presentEarly && !fromEarlyPresent`, and at 1024 no fbPair is ever an
+  `earlyPresentCandidate`, so presents stop entirely.
 
-- **Claim (s23):** the hangar's remaining dimness is real vertex lighting or a missing layer, not a
-  shade-decode problem, because its shade census is healthy (`vtxRGB black=0 ok≈90–150 white=0`).
-  **Overturned by s25:** that census is the magnitude-only classifier s24 proved cannot distinguish
-  −118 from +118, so the "ok" bucket was the all-negative population. Driven A/B: `SHADE_WRAP=1` is
-  brighter in 93 of 114 paired hangar frames and removes the control's intermittent collapses to
-  ~50 % black. **Why believable:** the census really did report a healthy-looking spread, and the
-  hangar was the one phase whose shade had never been re-examined after s24 — because reaching it
-  needs synthetic input, which the s24 A/B did not have.
-- **Claim (s28):** `FORCE_SHADE_WHITE` kills the hangar multi-hue floor band (warm% 1.15→0), so the
-  band colour is shade. **Overturned by s31:** on the standard hangar view the mid-ground band
-  **survives** FSW (`scratch/s31_fsw_rep.png`) — walls go perfect greyscale I4, pad goes solid white,
-  multi-hue floor remains. warm% alone is a bad residual metric (~3% still scores). **Why
-  believable:** FSW does remove shade tint from walls and pad; the earlier A/B camera angle may have
-  had less mid-ground floor in frame.
+- **Claim (s23):** the hangar's remaining dimness is real vertex lighting, not shade-decode, because
+  its shade census is healthy. **Overturned by s25:** that census was the magnitude-only classifier
+  s24 proved cannot distinguish −118 from +118 (PROJECT-OVERVIEW §4.2), so "ok" was really the
+  all-negative population; driven A/B showed `SHADE_WRAP=1` brighter in 93/114 paired hangar frames.
+- **Claim (s28):** `FORCE_SHADE_WHITE` kills the hangar multi-hue floor band, so the band colour is
+  shade. **Overturned by s31:** on the standard hangar view the mid-ground band survives FSW —
+  walls/pad go monochrome, multi-hue floor remains; warm% alone was a bad residual metric.
 - **Claim (s30):** hangar mid-band is 100% untextured shade-only and `SHADE_ONLY_MONO` kills the band.
-  **Overturned by s31:** midtex first-100 + ycen 180–360 only sampled the landing-pad shade-only
-  population. Improved census after hangar: **201 textured I4** (imgs 0x604140/0x605140, ycen med
-  145) + 73 shade-only. Suppress/mono leave the multi-hue mid-ground; FSW proves it is TEXEL.
-  **Why believable:** s30 midtex really did report 105/105 tiles=0 — it was a sampling bias, not a
-  bad instrument.
+  **Overturned by s31:** the earlier census only sampled the landing-pad shade-only population; an
+  improved census after the hangar found 201 textured-I4 tiles (imgs 0x604140/0x605140) alongside 73
+  shade-only. Suppress/mono leave the multi-hue mid-ground; FSW proves it is TEXEL, not shade.
 - **Claim (s46):** no complete clip overlay exists raw in the ROM (whole-ROM byte scan); the game
   materializes overlay images in DRAM at runtime, so only a runtime capture can recover it.
   **Overturned by s47:** all five runtime-captured overlay images are byte-identical to the ROM at

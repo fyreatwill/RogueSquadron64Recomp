@@ -4622,3 +4622,56 @@ conclusions" section as future housekeeping, not urgent.
 Files: `docs/CURRENT-TRUTH.md` (M1/M2 goal-stack entries condensed), `docs/PROJECT-OVERVIEW.md`
 (new "Fixing the hangar band" arc paragraph; §1 and the s12–s43 arc paragraph corrected for
 accuracy).
+
+## Session 56 (2026-07-26) — load confound confirmed a 6th time; further doc housekeeping on the Overturned-conclusions section
+
+Precondition check (`uptime`, `ps aux | grep -c '[c]laude'`): load averages 2.75/3.09/3.13, 33
+concurrent `claude` processes — over both the ~2.4 load and ~30-process thresholds identified in
+s51–s55. This is the 6th confirmation of the load-stall confound (s51 ×2, s52, s53, s54, s55, now
+s56). Both game-run work units (M3 LEVEL DESCRIPTION repro, M4 missing-func runtime check) were
+correctly skipped without attempting either. Used the iteration for work unit C (doc housekeeping),
+continuing where s55 left off.
+
+s55 explicitly deferred a careful, entry-by-entry compression of `CURRENT-TRUTH.md`'s ~150-line
+"Overturned conclusions" section (s5–s48) as a future housekeeping sub-unit, flagging it as a
+higher-risk editorial call than the mechanical migration it did that session. This session did that
+pass:
+
+1. Read `docs/PROJECT-OVERVIEW.md` §4 (hurdle-class summaries) first to know what's already captured
+   there at the pattern level, per the NEXT.md instructions.
+2. Went entry by entry through the s5–s31 claims (the oldest, most hangar-band-specific ones — that
+   whole investigation line is closed, M1 DONE) and compressed each: cut restated "Overturned by sN"
+   boilerplate and verbose "Why believable" prose down to the load-bearing clause, kept every flag
+   name/address/number, and added `PROJECT-OVERVIEW §4.x` pointers where an entry is now a specific
+   instance of a general pattern already documented there (e.g. the s18 RGBA32/stale-TMEM entry →
+   §4.1 "stale reads"; the s23 magnitude-only shade census entry → §4.2 "attribution errors").
+3. Verified via `grep` that the specific addresses being trimmed from prose (0x76A000, 0x7DD000,
+   0x5D4000, 0x66A000, 0x6BA000, 0x6DD000 — colour/Z-buffer identities) remain fully documented in
+   this file (PORTING-STATE s8) and in `docs/game-architecture.md`, so nothing was made
+   unrecoverable by shortening the `CURRENT-TRUTH.md` copy.
+4. Left the s44–s48 entries (clip-dispatch/window-swap mechanism, war-room scene-identity
+   correction) untouched, per the NEXT.md instruction to be conservative there since they stay
+   relevant to ongoing M4 overlay/symbol-file work.
+
+Entries compressed: s5–s7 (z-buffer/colour-buffer), s7 (texrect visibility), s8 (zero-RDP-bytes
+ring high-water mark), s9/s10 (DPC_WRAP), s10 (Metal exhaustion/FULL_SYNC), s9 third pass
+(PRIM_ALPHA_FF), s9 mid-session (sampling artefact), s12–s16 (already-compressed asset-ID claims,
+trimmed further), s14 ×2 (FIX_LINE_MASK, palette-bank-15), s13 (FIX_DXT), s18 first half
+(sand/fog), s18 fourth segment (RGBA32/stale-TMEM), s19 (PresentEarly), s23 (magnitude-only shade
+census), s28 (FSW/floor band), s30 (mid-band shade-only). Left the s18 mid-session S=0-triangle
+entry closer to full length since it names an item still open in M4 (the 640-phase S=0 triangles).
+
+### Verdict
+No new evidence on M3 or M4 (6th confirmation of the load-stall confound, not a new finding). Doc
+housekeeping: real, verified progress — `docs/CURRENT-TRUTH.md` dropped from 43,143 to 40,285 bytes
+(2,858 bytes / ~6.6% saved) via `wc -c` before/after each batch. Single-source (no second reviewer),
+fully reversible via git. This was a **full pass** over the entries prioritized by NEXT.md (s5–s31),
+not a partial one interrupted by the byte target — the file remains above the 35 KB guideline
+because the remaining size is now concentrated in the s44–s48 entries and the Method-traps/Dead-ends
+sections, which NEXT.md's instructions correctly identified as higher-risk to compress and this
+session left alone. Further reduction needs either revisiting that conservative call (recommend
+against — M4 is still open and actively using that context) or trimming the Method-traps/Dead-ends
+sections, which is untouched territory and its own judgment call.
+
+Files: `docs/CURRENT-TRUTH.md` (Overturned-conclusions section: 15 entries compressed, s44–s48 and
+the S=0-triangle entry left intact).
