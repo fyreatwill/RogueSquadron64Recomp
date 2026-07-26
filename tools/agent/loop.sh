@@ -55,6 +55,7 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   log "iteration $n starting $(date)"
   echo WORKING > "$AG/STATUS"
   rm -f "$AG/OUTCOME" "$AG/SUBSTITUTION.md"
+  touch "$AG/ITER_START_MARK"   # the gate dates run artifacts against this
   echo 0 > "$AG/.stop_blocks"
   git rev-parse HEAD > "$AG/ITER_START_HEAD" 2>/dev/null
 
