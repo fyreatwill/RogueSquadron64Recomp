@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 48)
+## Current truth (as of session 49)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -92,8 +92,12 @@ Remaining visual defects:
 - `[dpc-behind]` ring-wrap drops remain genuine dropped content with `DPC_WRAP` off; they are simply
   not the cause of any known black screen (s11).
 
-Stability: clean through s27 driven hangar soaks. 0 `UnhandledJumpTarget`, 0 `[defer-drop]`,
-0 `[dmem-race]`, 0 `[missing-func]`, 0 asserts.
+Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regression sweep
+(undriven full timeline + driven war room). 0 `UnhandledJumpTarget`, 0 `[defer-drop]`,
+0 `[dmem-race]`, 0 asserts. `[missing-func]` clean in every soaked phase to date, **except**: s49's
+undriven outdoor-512 stretch stubbed 3 distinct addresses once each (0x800C7120, 0x800FBD48,
+0x800FB190) with 0 aborts — never itemized before because prior soaks targeted hangar/war-room, not
+outdoor. Parked as an M4 curiosity, not a blocker.
 
 ## Goal stack — work strictly top-down
 
@@ -111,13 +115,12 @@ room complete with zero streak band, census identities exact across 672+696 task
 counters 0. Full detail: PORTING-STATE s45–s48. Overlays 12/44 still take the old broken path by
 design — same splice recipe applies if they ever matter.
 
-**M2 — post-`-O2` + post-clip-fix regression sweep and soak.** Phase-gated `regress.sh` across the
-known scenes against the s23 baselines, plus driven war-room soaks. **Caveat: the 512/0x6AB400
-phase baselines are obsolete by design** — the scene now renders far more geometry (the s23
-"hangar" numbers describe the partial render). Expect that phase to deviate; re-baseline it and
-verify the *other* phases are unchanged. *Done when:* non-512 phases within baseline bands, a new
-512-phase baseline recorded, and all stability counters (UnhandledJumpTarget, defer-drop,
-dmem-race, missing-func, asserts) at 0 across the sweep + soaks.
+**M2 — post-clip-fix regression sweep: DONE (s49).** Undriven full-timeline run + driven war-room
+run, both cullstats-instrumented. Non-512 phases matched the documented timeline within normal
+variance, 0 cull-census-identity violations anywhere. War room rendered complete on two frames 32s
+apart — new baseline: 1138 tasks, fanjal=9448, 0 violations (scales with capture window vs s48's
+5.6–5.8k, not a fixed constant). Stability 0 except 3 gracefully-stubbed `[missing-func]` addresses
+in the undriven outdoor stretch, never soaked before — parked as M4. Full detail: PORTING-STATE s49.
 
 **M3 — first gameplay.** Extend the driven key schedule past SELECT GAME into mission 1. Expect new
 failure classes: mission-overlay DMA (watch missing-func / UnhandledJumpTarget), a new VI phase to
@@ -127,7 +130,9 @@ synthetic input, stability counters 0, and the phase timeline in this document c
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause (currently masked, not fixed); the S=0 triangles in the 640 attribution phase; the I4
-`sample=64x128` anomaly if M1 didn't consume it.
+`sample=64x128` anomaly if M1 didn't consume it; the 3 `[missing-func]` addresses stubbed in the
+undriven outdoor-512 stretch (0x800C7120, 0x800FBD48, 0x800FB190, s49) — identify what they are and
+whether the stub is behaviorally silent or masking something.
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -136,23 +141,21 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s48)
+## Next steps, in order of expected value (s49)
 
-1. **Post-fix regression + re-baseline (M2)**: phase-gated `regress.sh` across the known scenes vs
-   the s23 baselines + driven war-room soaks. The 512/0x6AB400 phase WILL deviate (it now renders
-   the full war room — that is the fix working); record a fresh baseline for it and prove the
-   other phases unchanged. Driven schedule that works post-fix: `PROBE_PHASE_WIDTH=1024
-   PROBE_KEYS_FROM_PHASE=1 PROBE_KEYS="3:start 25:start"` (s48: SELECT GAME waits indefinitely,
-   so the second press timing is uncritical).
-2. **M3 — first gameplay** is one press away: from SELECT LEVEL, one more start (e.g.
+1. **M3 — first gameplay** is one press away: from SELECT LEVEL, one more start (e.g.
    `"3:start 25:start 35:start"`) should launch AMBUSH AT MOS EISLEY. Expect new failure classes
    (mission overlay DMA → missing-func / UnhandledJumpTarget, new VI phase, possibly overlays
    12/44 needing the s47 splice recipe). Each new failure is its own work unit.
+2. **M4 parked items**, cheapest first: identify the 3 `[missing-func]` addresses stubbed in the
+   s49 undriven outdoor-512 run (0x800C7120, 0x800FBD48, 0x800FB190) — symbol lookup, then decide
+   if the stub is silent or needs real implementation. Then outdoor zero-shade root cause, the S=0
+   640-phase triangles, and the I4 sample=64x128 anomaly.
 3. **Band-row coverage history** (settled chain, for reference): s41 `MARK_VTX` proved a coverage
    hole; s42 `LOG_YHIST` proved submission through band rows; s43 `LOG_ZSTATE` proved raster-clean
    draws; s27–s31 eliminated texture decode; s45–s47 pinned and fixed the clip-dispatch loss; s48
-   proved the fix fills the band (and renamed the scene). s40's `col`-write probe fails its own
-   control — do not reuse.
+   proved the fix fills the band (and renamed the scene); s49 closed the regression sweep. s40's
+   `col`-write probe fails its own control — do not reuse.
 4. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
 Done, do not redo:

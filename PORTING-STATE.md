@@ -4158,3 +4158,45 @@ mid-scene geometry of the war room.
 
 Files: `scratch/s48_bandtest{,2}`, `scratch/s48_clean` (each with run.log),
 `scratch/s48_band_stats.py`. No code changes this session.
+
+## Session 49 (2026-07-26) — M2 CLOSED: post-clip-fix regression sweep, no leak, new war-room baseline
+
+### The work unit
+One undriven full-timeline run + one driven war-room run, both instrumented with
+`ROGUESQ_UCODE_CULLSTATS=1`, to test whether the s47 clip splice changed anything outside the
+scene it fixed (H1: phase-neutral vs H2: leaks into other phases vs H3: harness drift).
+
+### Run 1 — undriven full timeline (`scratch/s49_undriven`, 130 s budget)
+`tools/regress.sh` verdict: **PASS**. Phase transitions: 0.0s→w320, 1.8s→w640 (doc: 1.7s),
+44.7s→w1024 title (doc: ~46.5s), 70.3s→w640 (doc: ~72s), 88.3s→w512 origin 0x690400 outdoor
+(doc: ~90s) — every phase inside normal run-to-run variance, nothing missing. Content ratios
+healthy: title 33/35, outdoor 56/57. `cullstats_sum.py` census identities (setup==eval−tclip−hand+
+fanjal; emit==setup−bface−degen) hold with **0 violations** in all four phases (640 attribution,
+1024 title, 640 post-title, 512 outdoor) — the splice does not perturb non-war-room cull math.
+Stability: defer-drop 0, defer-commit 0, aborts none, 0 UnhandledJumpTarget/dmem-race/asserts.
+**New, not previously itemized:** 3 distinct `[missing-func]` addresses stubbed once each
+(0x800C7120, 0x800FBD48, 0x800FB190), all in the outdoor-512 stretch — `STUB_MISSING_FUNCS`
+absorbed them with 0 aborts. Not a regression (the s27 "clean through driven hangar soaks" stability
+claim was scoped to hangar/war-room soaks, not this outdoor stretch); parked as an M4 curiosity, not
+a blocker — see Next steps.
+
+### Run 2 — driven war room (`scratch/s49_warroom`, `PROBE_KEYS="3:start 25:start"`, 65 s budget from
+title, `PROBE_LEAVE_OK=1`)
+Title→SELECT GAME→war room in one press each, matching the s48 state machine (war room reached at
+72.5 s process time here vs 54.5–72.8 s in s48's three runs — schedule-dependent, not a regression).
+Visual: `f_030_032.8.png` and `f_058_064.6.png` (32 s apart) both show the war room **complete** —
+tiered console rings, holotable, X-wing/Mos-Eisley-preview hologram, "SELECT LEVEL — AMBUSH AT MOS
+EISLEY" — no streak band, consistent across the whole captured span. `cullstats_sum.py` on the
+512/0x6AB400 segment: 1138 tasks, fanjal=9448, **0 census-identity violations**. This is a new
+baseline (bigger than s48's 5.6–5.8k because this run captured ~30 s more of the phase — task count
+scales with capture window, not a fixed per-phase constant; use tasks_with_tris alongside fanjal
+when comparing runs). Stability: 0 across the board, no stubbed missing-funcs this run.
+
+### Verdict
+**H1 confirmed, H2 and H3 ruled out.** Non-512 phases match the documented timeline and have zero
+cull-identity violations; the previously-fixed war-room phase still renders complete on a fresh,
+differently-timed driven run. Two independent evidence lines: VI-timeline-vs-doc agreement (log) +
+visual capture (two frames 32 s apart, both complete). **M2 done.**
+
+Files: `scratch/s49_undriven`, `scratch/s49_warroom` (each with run.log, verdict.json where
+applicable). No code changes this session.
