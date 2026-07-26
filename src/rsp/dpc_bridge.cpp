@@ -12,6 +12,12 @@
 #include <atomic>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
+#include <utility>
+
+// Per-task RDP range deferral (see rs64_dpc_defer_begin/_end below).
+static bool g_defer_active = false;
+static std::vector<std::pair<uint32_t, uint32_t>> g_deferred_ranges;
 #include "librecomp/rsp.hpp"
 #include "ultramodern/events.hpp"
 
@@ -27,6 +33,55 @@ namespace ultramodern {
 
 uint32_t g_rsp_dpc_start = 0;
 uint32_t g_rsp_dpc_end   = 0;
+uint32_t g_rsp_dpc_current = 0;
+
+// DPC_CURRENT read with a bounded-poll escape. Our RDP consumes instantly,
+// so any ucode wait of the form "spin until CURRENT != X" must terminate.
+// When the attribution ring wraps exactly onto the previous END, CURRENT ==
+// new head forever and the ucode's L_115C overwrite-safety wait deadlocks
+// (task #4 hang). After 64 identical polls with no intervening DPC write,
+// report one 8-byte step of "consumption progress" for that poll only.
+static uint32_t s_dpc_poll_last = 0xFFFFFFFFu;
+static int s_dpc_poll_repeats = 0;
+
+// Ring high-water mark used by rsp_dpc_submit to avoid re-forwarding bytes the
+// RDP has already seen as the ucode bumps DPC_END command by command. This is a
+// WITHIN-TASK guard only: every task restarts its ring writes from its own
+// DPC_START, so the mark must be cleared per task (rs64_dpc_reset). Leaving it
+// set across tasks silently swallowed every task whose output was no larger
+// than the largest previous task's — 64 of 66 tasks emitted "0 bytes" that way.
+static uint32_t s_submit_dl_base = 0;
+static uint32_t s_submit_last_end = 0;
+
+// Reset all cross-task DPC emulation state. The ucode's boot/entry takes
+// resume-vs-fresh branches based on DPC registers; state leaking from the
+// previous task steers ~1/5 tasks into a resume path that loads the trig
+// segment over the DL staging area (2026-07-13 canary bisect).
+extern "C" void rs64_dpc_reset() {
+    g_rsp_dpc_start = 0;
+    g_rsp_dpc_end = 0;
+    g_rsp_dpc_current = 0;
+    s_dpc_poll_last = 0xFFFFFFFFu;
+    s_dpc_poll_repeats = 0;
+    s_submit_dl_base = 0;
+    s_submit_last_end = 0;
+}
+
+uint32_t rs64_dpc_current_read() {
+    uint32_t& s_last = s_dpc_poll_last;
+    int& s_repeats = s_dpc_poll_repeats;
+    uint32_t v = g_rsp_dpc_current;
+    if (v == s_last) {
+        if (++s_repeats >= 64) {
+            s_repeats = 0;
+            return v + 8;
+        }
+    } else {
+        s_last = v;
+        s_repeats = 0;
+    }
+    return v;
+}
 
 // Set when an RDP FULL_SYNC (op 0x29) is observed in a submission. The
 // factor5_ucode dispatch loop polls this and force-returns Broke so
@@ -210,8 +265,8 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     // On real hardware, RDP processes [DPC_CURRENT..DPC_END) once and advances
     // CURRENT. We mirror that: only forward bytes the RT64 RDP hasn't seen yet.
     // Reset on a new DPC_START (KSEG0 base address change).
-    static uint32_t s_dl_base = 0;
-    static uint32_t s_last_end = 0;
+    uint32_t &s_dl_base = s_submit_dl_base;
+    uint32_t &s_last_end = s_submit_last_end;
 
     if (start_phys != s_dl_base) {
         s_dl_base = start_phys;
@@ -219,12 +274,152 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     }
 
     if (end_phys <= s_last_end) {
-        return;
+        if (end_phys == s_last_end) {
+            // Exactly where we left off: nothing new to forward.
+            return;
+        }
+        // END moved BACKWARDS. That is the ucode wrapping its RDP ring back to
+        // the base and filling it again, not a duplicate submission — the
+        // high-water mark only guards against re-sending bytes as END creeps
+        // forward. Treating a wrap as a duplicate silently drops ~94000
+        // submissions per 90 s in the post-logo phase: everything the tiled
+        // hi-res renderer emits, which is why the screen goes black there.
+        //
+        // ROGUESQ_DPC_WRAP=1 forwards them. MEASURED TRADE-OFF (2026-07-25):
+        // with it on, rendering is continuous instead of going black at ~44 s
+        // (27/27 burst frames had content) — but the ~10x larger command
+        // stream slows the game down and exhausts Metal shared memory
+        // (IOGPUMetalDeviceShmem assert) at ~42 s, before it even reaches the
+        // Factor 5 logo. Default OFF until that resource growth is found.
+        static const bool s_wrap_enabled = []{
+            const char *e = std::getenv("ROGUESQ_DPC_WRAP");
+            return e && *e && *e != '0';
+        }();
+        static std::atomic<int> s_wrapped{0};
+        int n = ++s_wrapped;
+        if (n <= 4 || (n % 4096) == 0) {
+            fprintf(stderr, "[dpc-wrap #%d] end=0x%06X < seen=0x%06X start=0x%06X (%s)\n",
+                    n, end_phys, s_last_end, start_phys,
+                    s_wrap_enabled ? "forwarding" : "dropped, set ROGUESQ_DPC_WRAP=1");
+            fflush(stderr);
+        }
+        // Is a wrap new content, or the same ring being replayed? If the
+        // forwarded range repeats identically over and over, forwarding it is
+        // duplication, not recovery. Counted so the two can be told apart.
+        {
+            static uint32_t s_prev_start = 0, s_prev_end = 0;
+            static uint64_t s_repeat = 0, s_distinct = 0;
+            if (start_phys == s_prev_start && end_phys == s_prev_end) {
+                s_repeat++;
+            } else {
+                s_distinct++;
+                s_prev_start = start_phys;
+                s_prev_end = end_phys;
+            }
+
+            // The range repeating is expected for a ring restart. What decides
+            // replay-vs-refill is whether the CONTENT at that range repeats.
+            static uint64_t s_prev_content = 0;
+            static uint64_t s_same_content = 0, s_new_content = 0;
+            if (end_phys > start_phys && end_phys <= 0x800000) {
+                uint64_t content = 0;
+                const int64_t mp = (int64_t)(int32_t)(start_phys + 0x80000000);
+                for (int b = 0; b < 8; b++) {
+                    content = (content << 8) | (uint8_t)MEM_B(b, mp);
+                }
+
+                if (content == s_prev_content) {
+                    s_same_content++;
+                } else {
+                    s_new_content++;
+                    s_prev_content = content;
+                }
+            }
+
+            if ((n % 4096) == 0) {
+                fprintf(stderr, "[dpc-wrap-dup] identical-to-previous=%llu distinct=%llu | content same=%llu new=%llu\n",
+                        (unsigned long long)s_repeat, (unsigned long long)s_distinct,
+                        (unsigned long long)s_same_content, (unsigned long long)s_new_content);
+                fflush(stderr);
+            }
+        }
+        if (!s_wrap_enabled) {
+            return;
+        }
+
+        // A wrap whose ring CONTENT is unchanged is not a refill, it is the
+        // same command being re-announced. Measured 2026-07-25: 53247 of 53248
+        // wrap events in an 80 s run carried byte-identical content.
+        // ROGUESQ_WRAP_DEDUP=1 suppresses those replays. MEASURED: it removes
+        // ~33000 redundant submissions per run but does NOT stop the framebuffer
+        // pair explosion (193715 pairs and the Metal assert still happened with
+        // it on and ROGUESQ_MAX_FBPAIRS=0), so the replays are not the source of
+        // that. Default OFF — it is an unverified content-level drop, and the
+        // configuration that survives 120 s is the pair cap, not this.
+        static const bool dedup_enabled = []{
+            const char *e = std::getenv("ROGUESQ_WRAP_DEDUP");
+            return e && *e && *e != '0';
+        }();
+
+        if (dedup_enabled && end_phys > start_phys && end_phys <= 0x800000) {
+            uint64_t hash = 0xCBF29CE484222325ull;
+            const uint32_t hashEnd = std::min(end_phys, start_phys + 4096);
+            for (uint32_t p = start_phys; p < hashEnd; p++) {
+                const int64_t mp = (int64_t)(int32_t)(p + 0x80000000);
+                hash = (hash ^ (uint8_t)MEM_B(0, mp)) * 0x100000001B3ull;
+            }
+
+            static uint32_t s_dedup_start = 0, s_dedup_end = 0;
+            static uint64_t s_dedup_hash = 0;
+            static bool s_dedup_valid = false;
+            static std::atomic<uint64_t> s_suppressed{0};
+            if (s_dedup_valid && start_phys == s_dedup_start && end_phys == s_dedup_end && hash == s_dedup_hash) {
+                const uint64_t sup = ++s_suppressed;
+                if ((sup % 16384) == 1) {
+                    fprintf(stderr, "[dpc-wrap-dedup] suppressed %llu identical-content wrap replays\n",
+                            (unsigned long long)sup);
+                    fflush(stderr);
+                }
+
+                return;
+            }
+
+            s_dedup_start = start_phys;
+            s_dedup_end = end_phys;
+            s_dedup_hash = hash;
+            s_dedup_valid = true;
+        }
+
+        s_last_end = start_phys;
     }
 
     uint32_t submit_lo = s_last_end;
     uint32_t submit_hi = end_phys;
     s_last_end = end_phys;
+
+    {
+        static std::atomic<uint64_t> s_fwd_bytes{0};
+        static std::atomic<uint64_t> s_fwd_submits{0};
+        const uint64_t bytes = s_fwd_bytes.fetch_add(submit_hi - submit_lo) + (submit_hi - submit_lo);
+        const uint64_t submits = s_fwd_submits.fetch_add(1) + 1;
+        if ((submits % 16384) == 0) {
+            fprintf(stderr, "[dpc-fwd] submits=%llu bytes=%llu (%.1f MB)\n",
+                    (unsigned long long)submits, (unsigned long long)bytes, bytes / 1048576.0);
+            fflush(stderr);
+        }
+    }
+
+    // Garbage tasks (trig data executed as DL) write junk DPC pointers; any
+    // range outside 8MB RDRAM would make the diagnostics below (and RT64)
+    // read OOB host memory. Drop it before the first dereference.
+    if (submit_lo >= 0x800000 || submit_hi > 0x800000 || submit_hi <= submit_lo) {
+        static int s_n = 0;
+        if (++s_n <= 16 || (s_n & 255) == 0) {
+            fprintf(stderr, "[dpc-oob-range #%d] dropping submit range 0x%08X..0x%08X\n",
+                    s_n, submit_lo, submit_hi);
+        }
+        return;
+    }
 
     g_task_rdp_bytes.fetch_add(submit_hi - submit_lo, std::memory_order_relaxed);
     g_task_rdp_cmds.fetch_add(1, std::memory_order_relaxed);
@@ -233,6 +428,128 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
         uint8_t op = (uint8_t)MEM_B(0, mips_first) & 0x3F;
         g_task_op_count[op]++;
         g_cumulative_op_count[op].fetch_add(1, std::memory_order_relaxed);
+        // Full-range walk (ROGUESQ_LOG_DPC=1): the first-command histogram
+        // above misses commands bundled after the head of a multi-command
+        // submit. TEXRECT/TEXRECTFLIP are 16 bytes, everything else 8.
+        if (log_dpc()) {
+            static std::atomic<uint32_t> s_full_hist[64];
+            static std::atomic<uint64_t> s_walk_dumps{0};
+            static uint32_t s_last_timg = 0;
+            static std::atomic<int> s_tex_dumps{0};
+            for (uint32_t p = submit_lo; p + 8 <= submit_hi; ) {
+                int64_t mp = (int64_t)(int32_t)(p + 0x80000000);
+                uint8_t wop = (uint8_t)MEM_B(0, mp) & 0x3F;
+                s_full_hist[wop].fetch_add(1, std::memory_order_relaxed);
+                if (wop == 0x3D) { // SETTIMG: remember source addr
+                    s_last_timg = (((uint32_t)(uint8_t)MEM_B(4, mp) << 24) |
+                                   ((uint32_t)(uint8_t)MEM_B(5, mp) << 16) |
+                                   ((uint32_t)(uint8_t)MEM_B(6, mp) <<  8) |
+                                   ((uint32_t)(uint8_t)MEM_B(7, mp))) & 0x7FFFFF;
+                } else if (wop == 0x33 && s_last_timg) { // LOADBLOCK: dump source pixels
+                    int n2 = ++s_tex_dumps;
+                    if (n2 <= 6 || n2 == 100 || n2 == 400) {
+                        fprintf(stderr, "[tex-src #%d] timg=0x%06X:", n2, s_last_timg);
+                        for (int i = 0; i < 32; ++i)
+                            fprintf(stderr, " %02X", (unsigned)rdram[s_last_timg + i]);
+                        fprintf(stderr, "\n");
+                        fflush(stderr);
+                    }
+                }
+                p += (wop == 0x24 || wop == 0x25) ? 16 : 8;
+            }
+            uint64_t n = ++s_walk_dumps;
+            if ((n & 1023) == 0) {
+                fprintf(stderr, "[full-hist @%llu]", (unsigned long long)n);
+                for (int i = 0; i < 64; ++i) {
+                    uint32_t c = s_full_hist[i].load(std::memory_order_relaxed);
+                    if (c) fprintf(stderr, " op%02X=%u", i, c);
+                }
+                fprintf(stderr, "\n");
+                fflush(stderr);
+            }
+        }
+        // ORDERED command-sequence trace (ROGUESQ_LOG_SEQ=1). The [full-hist]
+        // walker above counts opcodes but loses their ORDER, and order is what
+        // decides whether the texrects we know reach the GPU are subsequently
+        // painted over. Prints every command in submit order with the geometry
+        // of the ops that can cover the screen (FILLRECT, TEXRECT) and the
+        // render target they land in (SETCIMG). Capped so a soak stays usable.
+        if ([]{
+                static const bool v = []{
+                    const char *e = std::getenv("ROGUESQ_LOG_SEQ");
+                    return e && *e && *e != '0';
+                }();
+                return v;
+            }()) {
+            static std::atomic<int> s_seq_lines{0};
+            static const int s_seq_max = []{
+                const char *e = std::getenv("ROGUESQ_LOG_SEQ_MAX");
+                int v = e ? atoi(e) : 0;
+                return v > 0 ? v : 6000;
+            }();
+            static uint32_t s_seq_fillcolor = 0;
+            for (uint32_t p = submit_lo; p + 8 <= submit_hi; ) {
+                int64_t mp = (int64_t)(int32_t)(p + 0x80000000);
+                uint32_t w0 = ((uint32_t)(uint8_t)MEM_B(0, mp) << 24) |
+                              ((uint32_t)(uint8_t)MEM_B(1, mp) << 16) |
+                              ((uint32_t)(uint8_t)MEM_B(2, mp) <<  8) |
+                              ((uint32_t)(uint8_t)MEM_B(3, mp));
+                uint32_t w1 = ((uint32_t)(uint8_t)MEM_B(4, mp) << 24) |
+                              ((uint32_t)(uint8_t)MEM_B(5, mp) << 16) |
+                              ((uint32_t)(uint8_t)MEM_B(6, mp) <<  8) |
+                              ((uint32_t)(uint8_t)MEM_B(7, mp));
+                uint8_t wop = (uint8_t)(w0 >> 24) & 0x3F;
+                if (wop == 0x37) s_seq_fillcolor = w1;
+                int line = ++s_seq_lines;
+                if (line <= s_seq_max) {
+                    // 10.2 fixed-point rect corners, shared by FILLRECT/TEXRECT.
+                    const unsigned xl = (w0 >> 12) & 0xFFF, yl = w0 & 0xFFF;
+                    const unsigned xh = (w1 >> 12) & 0xFFF, yh = w1 & 0xFFF;
+                    switch (wop) {
+                    case 0x3F:
+                        fprintf(stderr, "[seq %d] SETCIMG addr=0x%06X fmt=%u siz=%u w=%u\n",
+                                line, w1 & 0x7FFFFF, (w0 >> 21) & 7, (w0 >> 19) & 3,
+                                (w0 & 0xFFF) + 1);
+                        break;
+                    case 0x36:
+                        fprintf(stderr, "[seq %d] FILLRECT (%u,%u)-(%u,%u) fill=0x%08X\n",
+                                line, xh >> 2, yh >> 2, xl >> 2, yl >> 2, s_seq_fillcolor);
+                        break;
+                    case 0x24: case 0x25:
+                        fprintf(stderr, "[seq %d] TEXRECT%s (%u,%u)-(%u,%u) tile=%u\n",
+                                line, wop == 0x25 ? "FLIP" : "",
+                                xh >> 2, yh >> 2, xl >> 2, yl >> 2, (w1 >> 24) & 7);
+                        break;
+                    case 0x37:
+                        fprintf(stderr, "[seq %d] SETFILLCOLOR 0x%08X\n", line, w1);
+                        break;
+                    case 0x2D:
+                        fprintf(stderr, "[seq %d] SETSCISSOR (%u,%u)-(%u,%u)\n",
+                                line, xl >> 2, yl >> 2, xh >> 2, yh >> 2);
+                        break;
+                    case 0x2F:
+                        fprintf(stderr, "[seq %d] SETOTHERMODE 0x%08X 0x%08X\n", line, w0, w1);
+                        break;
+                    case 0x3C:
+                        fprintf(stderr, "[seq %d] SETCOMBINE 0x%08X 0x%08X\n", line, w0, w1);
+                        break;
+                    case 0x29:
+                        fprintf(stderr, "[seq %d] FULLSYNC\n", line);
+                        break;
+                    default:
+                        fprintf(stderr, "[seq %d] op%02X 0x%08X 0x%08X\n", line, wop, w0, w1);
+                        break;
+                    }
+                    if (line == s_seq_max) {
+                        fprintf(stderr, "[seq] cap %d reached, further commands suppressed\n",
+                                s_seq_max);
+                    }
+                    fflush(stderr);
+                }
+                p += (wop == 0x24 || wop == 0x25) ? 16 : 8;
+            }
+        }
+
         // Track all SET_COLOR_IMAGE addresses (op 0x3F = G_SETCIMG mask) so
         // we can compare them against VI_ORIGIN to diagnose visual gaps.
         if (op == 0x3F) {
@@ -481,6 +798,31 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
                     w1);
                 fflush(stderr);
             }
+            // ROGUESQ_PRIM_ALPHA_FF=1 — diagnostic: force PRIM alpha to 0xFF.
+            // The attribution text's combiner is TEXEL0*PRIM with alpha taken
+            // straight from PRIM, and PRIM alpha is observed at only two values
+            // (0x08 and 0xFE) — so for most frames the text is drawn at ~3%
+            // opacity over a black clear and is effectively invisible. This
+            // tells apart "the fade value is wrong/stuck" from "the text is
+            // not being drawn".
+            if (op6 == 0x3A) {
+                static const bool alpha_full = []() {
+                    const char *e = std::getenv("ROGUESQ_PRIM_ALPHA_FF");
+                    return e && *e && *e != '0';
+                }();
+                if (alpha_full) {
+                    // `mips` is this command's KSEG0 address; the alpha byte is
+                    // w1's low byte, i.e. offset 7. (Note the pre-existing
+                    // ROGUESQ_PRIM_FF block below pokes `submit_lo + n`, the
+                    // base of the whole submit range rather than this command —
+                    // that looks wrong, but it is off by default and untouched.)
+                    const uint32_t off = (uint32_t)mips & 0x7FFFFF;
+                    if (off + 8 <= 0x800000) {
+                        rdram[(off + 7) ^ 3] = 0xFF;
+                    }
+                }
+            }
+
             // ROGUESQ_PRIM_FF: experimental override — force PRIM_COLOR to
             // (FF,FF,FF, original_alpha). Tests whether the (EB,E1,D7) warm
             // off-white tint we observed accounts for the residual "less
@@ -951,7 +1293,98 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
         }
     }
 
+    // Defer layer: while a task is running, hold ranges instead of feeding
+    // RT64 live. The runner commits them on clean ucode exit and drops them
+    // on UnhandledJumpTarget, so garbage streams (trig data executed as DL)
+    // never reach RT64's deferred state. Gfx-thread only, no locking needed.
+    if (g_defer_active) {
+        g_deferred_ranges.emplace_back(submit_lo, submit_hi);
+        return;
+    }
+
     ultramodern::submit_rdp_range(submit_lo, submit_hi);
+}
+
+extern "C" void rs64_dpc_defer_begin() {
+    g_defer_active = true;
+    g_deferred_ranges.clear();
+}
+
+extern "C" void rs64_dpc_defer_end(int commit) {
+    g_defer_active = false;
+    if (commit) {
+        // The ucode bumps DPC_END one 8-byte command at a time, so a task's
+        // deferred list is mostly runs of contiguous ranges. Submitting each
+        // one separately costs a full RT64 processDisplayLists entry per
+        // command — millions per run in the tiled hi-res phase. Merging runs
+        // is byte-for-byte identical in content and order, just far fewer
+        // calls. ROGUESQ_NO_DPC_MERGE=1 restores the old one-call-per-range
+        // behavior for comparison.
+        static const bool merge_enabled = []{
+            const char *e = std::getenv("ROGUESQ_NO_DPC_MERGE");
+            return !(e && *e && *e != '0');
+        }();
+
+        uint32_t bytes = 0;
+        size_t calls = 0;
+        if (merge_enabled && !g_deferred_ranges.empty()) {
+            uint32_t lo = g_deferred_ranges[0].first;
+            uint32_t hi = g_deferred_ranges[0].second;
+            for (size_t i = 1; i < g_deferred_ranges.size(); i++) {
+                const auto &r = g_deferred_ranges[i];
+                if (r.first == hi) {
+                    hi = r.second;
+                    continue;
+                }
+
+                bytes += hi - lo;
+                calls++;
+                ultramodern::submit_rdp_range(lo, hi);
+                lo = r.first;
+                hi = r.second;
+            }
+
+            bytes += hi - lo;
+            calls++;
+            ultramodern::submit_rdp_range(lo, hi);
+        }
+        else {
+            for (const auto& r : g_deferred_ranges) {
+                bytes += r.second - r.first;
+                calls++;
+                ultramodern::submit_rdp_range(r.first, r.second);
+            }
+        }
+
+        static std::atomic<uint64_t> s_ranges_in{0};
+        static std::atomic<uint64_t> s_calls_out{0};
+        const uint64_t in = s_ranges_in.fetch_add(g_deferred_ranges.size()) + g_deferred_ranges.size();
+        const uint64_t out = s_calls_out.fetch_add(calls) + calls;
+        static std::atomic<uint64_t> s_tasks{0};
+        if ((++s_tasks % 64) == 0) {
+            fprintf(stderr, "[dpc-merge] ranges=%llu submits=%llu (%.1fx fewer)\n",
+                    (unsigned long long)in, (unsigned long long)out,
+                    out ? double(in) / double(out) : 0.0);
+            fflush(stderr);
+        }
+        // Diag: per-task committed RDP volume (correlate with [ucode-b] lines
+        // to confirm B tasks emit real work). Same gating as defer-drop.
+        static int s_c = 0;
+        if (getenv("ROGUESQ_TRACE_DISPATCH") && (++s_c <= 64 || (s_c & 63) == 0)) {
+            fprintf(stderr, "[defer-commit #%d] %zu ranges, %u bytes\n",
+                    s_c, g_deferred_ranges.size(), bytes);
+        }
+    } else if (!g_deferred_ranges.empty()) {
+        uint32_t bytes = 0;
+        for (const auto& r : g_deferred_ranges) bytes += r.second - r.first;
+        static int s_n = 0;
+        if (++s_n <= 32 || (s_n & 63) == 0) {
+            fprintf(stderr, "[defer-drop #%d] discarded %zu RDP ranges (%u bytes) from failed task\n",
+                    s_n, g_deferred_ranges.size(), bytes);
+            fflush(stderr);
+        }
+    }
+    g_deferred_ranges.clear();
 }
 
 // Called from the factor5_ucode synthetic-halt site. Logs per-task RDP byte

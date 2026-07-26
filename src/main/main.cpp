@@ -3,6 +3,7 @@
 #include <cstring>
 #include <csignal>
 #include <vector>
+#include <mutex>
 #include <cinttypes>
 #include <filesystem>
 #include <thread>
@@ -29,6 +30,7 @@
 #else
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
+#include "win_compat.h"
 #endif
 
 // N64 button bitmasks (from libultra PR/controller.h)
@@ -68,6 +70,11 @@ gpr get_entrypoint_address();
 // RSP microcode dispatch
 // ---------------------------------------------------------------------------
 extern RspExitReason factor5_ucode(uint8_t* rdram, uint32_t ucode_addr);
+extern "C" uint32_t rs64_phase_ord(void);
+extern RspExitReason factor5_ucode_b(uint8_t* rdram, uint32_t ucode_addr);
+extern "C" void rs64_dpc_defer_begin();
+extern "C" void rs64_dpc_reset();
+extern "C" void rs64_dpc_defer_end(int commit);
 extern RspExitReason factor5_boot (uint8_t* rdram, uint32_t ucode_addr);
 extern uint8_t dmem[];
 extern "C" void rs64_dpc_drain_histogram(uint32_t out[64]);
@@ -96,6 +103,17 @@ static RspExitReason unknown_task_stub(uint8_t* /*rdram*/, uint32_t /*ucode_addr
     return RspExitReason::Broke;
 }
 
+// Optional diagnostic DMA shadow for the ucode CODE image (declared in
+// librecomp/rsp.hpp). The former ucode-data snapshot/shadow was removed after
+// the DMEM serialization fix: audio-task staging, not mutable ucode data, was
+// the source of the apparent corruption.
+const uint8_t* g_rsp_dma_shadow2_data = nullptr;
+uint32_t g_rsp_dma_shadow2_addr = 0;
+uint32_t g_rsp_dma_shadow2_size = 0;
+uint32_t g_rsp_last_chunk_dram = 0;
+uint32_t g_rsp_last_chunk_dmem = 0;
+uint32_t g_rsp_last_chunk_len = 0;
+
 // Factor 5 GFX ucode runner (LLE side of the hybrid pipeline).
 //
 // Runs the boot ucode to set up DMEM + DMA the data section, emulates
@@ -105,7 +123,58 @@ static RspExitReason unknown_task_stub(uint8_t* /*rdram*/, uint32_t /*ucode_addr
 // processes DL commands and, for vertex-pipeline ops, emits raw RDP triangle
 // bytes via mtc0 DPC_END writes that flow through src/rsp/dpc_bridge.cpp into
 // RT64 (isHLE=false).
+
+// One-shot dump of each distinct ucode image so the second F5 ucode (embedded
+// base 0x80099FE0 — arrives via ucode_data DMA'd over DMEM[0xFD0], the outer
+// OSTask always says 0x80024A10) can be recompiled offline. Written into the
+// build dir (cwd).
+static void rs64_dump_ucode(uint8_t* rdram, uint32_t phys) {
+    static std::vector<uint32_t> s_dumped;
+    const uint32_t up = phys & 0x00FFFFF8;
+    if (up == 0 || up >= 0x800000) return;
+    for (uint32_t d : s_dumped) if (d == up) return;
+    s_dumped.push_back(up);
+    char name[64];
+    snprintf(name, sizeof(name), "ucode_%06X.bin", up);
+    if (FILE* f = fopen(name, "wb")) {
+        uint32_t n = 0x80000;
+        if (up + n > 0x800000) n = 0x800000 - up;
+        for (uint32_t k = 0; k < n; k++) {
+            uint8_t b = (uint8_t)MEM_B(0, (int64_t)(int32_t)(up + k + 0x80000000));
+            fwrite(&b, 1, 1, f);
+        }
+        fclose(f);
+        fprintf(stderr, "[ucode-dump] wrote %s (0x%X bytes)\n", name, n);
+    }
+}
+
+// Diag: canary snapshot of DMEM[0x130] word + dispatch-table hash (0x60..0xE0).
+static void rs64_canary(const char* tag, int task_n) {
+    uint32_t c130 = ((uint32_t)dmem[0x130 ^ 3] << 24) | ((uint32_t)dmem[0x131 ^ 3] << 16) |
+                    ((uint32_t)dmem[0x132 ^ 3] << 8) | (uint32_t)dmem[0x133 ^ 3];
+    uint32_t h = 0;
+    for (uint32_t a = 0x60; a < 0xE0; ++a) h = h * 31 + dmem[a ^ 3];
+    fprintf(stderr, "[rcanary t%d %s] 0x130=0x%08X tblhash=0x%08X\n", task_n, tag, c130, h);
+}
+
+// Serializes every LLE gfx task (OSTask pokes + boot + main ucode) against
+// the single shared global dmem[]. The old "tasks are serialized (single
+// virtual RSP)" assumption was FALSE: send_dl invokes the runner from more
+// than one thread, and 2026-07-13 DMA traces caught runner-step #4's boot
+// interleaved with task #3's pre-ucode — a concurrent B task's ucode_data DMA
+// (0xA4E00, len 0xF80) trampling DMEM mid-run is the mechanism behind the
+// "clean pre-ucode canary, trig at first dispatch" residual exit=3 class.
+// Recursive: rs64_run_lle_gfx locks around its OSTask pokes + runner call,
+// and the runner locks itself for the get_rsp_microcode-driven path.
+static std::recursive_mutex g_lle_task_mutex;
+
+// Hooks called by librecomp's run_task (SP task thread, audio tasks) so its
+// DMEM staging serializes against the gfx LLE runner. See rsp.cpp.
+extern "C" void rs64_dmem_lock()   { g_lle_task_mutex.lock(); }
+extern "C" void rs64_dmem_unlock() { g_lle_task_mutex.unlock(); }
+
 static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
+    std::lock_guard<std::recursive_mutex> lle_lock(g_lle_task_mutex);
     uint32_t dl_ptr           = s_pending_task_data_ptr;
     uint32_t ucode_data_addr  = s_pending_task_ucode_data;
     uint32_t ucode_data_size  = s_pending_task_ucode_data_size;
@@ -114,29 +183,64 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     // populate DMEM[0..ucode_data_size]. Leave DMEM[0xFC0..0x1000] alone —
     // that's the OSTask region the boot ucode reads.
     //
-    // Snapshot/restore: the first task to use a given ucode_data address gets
-    // a fresh DMA from RDRAM. Subsequent tasks restore from the cached
-    // snapshot taken AT THAT FIRST DMA. RDRAM at ucode_data is modified
-    // mid-flight by some part of the engine (gfx CPU code or background DMA),
-    // which is why task #N>1 was producing garbage DMEM[0..0x10] from the
-    // same source addr and hitting UnhandledJumpTarget 0xFF7E. Replaying
-    // from the snapshot bypasses the corruption.
-    static thread_local std::vector<uint8_t> s_udata_snap;
-    static thread_local uint32_t s_udata_snap_addr = 0;
-    static thread_local uint32_t s_udata_snap_size = 0;
     std::memset(dmem, 0, 0xFC0);
+    // Always load each task's ucode data from live RDRAM. Before shared-DMEM
+    // serialization, a concurrent audio task could overwrite this area while
+    // GFX was running; a first-task snapshot only hid that race and could make
+    // later phase changes stale. g_lle_task_mutex now models the single RSP.
     if (ucode_data_addr != 0 && ucode_data_size != 0 && ucode_data_size <= 0xFC0) {
-        const bool snap_match = (s_udata_snap_addr == ucode_data_addr &&
-                                  s_udata_snap_size == ucode_data_size &&
-                                  s_udata_snap.size() == ucode_data_size);
-        if (snap_match) {
-            std::memcpy(dmem, s_udata_snap.data(), ucode_data_size);
-        } else {
-            dma_rdram_to_dmem(rdram, /*dmem*/0, /*dram*/ucode_data_addr & 0x00FFFFFF,
-                              /*rd_len*/ucode_data_size - 1);
-            s_udata_snap_addr = ucode_data_addr;
-            s_udata_snap_size = ucode_data_size;
-            s_udata_snap.assign(dmem, dmem + ucode_data_size);
+        dma_rdram_to_dmem(rdram, 0, ucode_data_addr & 0x00FFFFFF, ucode_data_size - 1);
+    }
+    // Second shadow: the ucode CODE image. The overlay loader (L_1278) and
+    // bootstrap DMA segments from OSTask.ucode + table offsets (observed up to
+    // +0x803F0, len 0xF80), and that RDRAM is also engine-corrupted mid-flight
+    // — the source of trig-as-dispatch-table at first dispatch on failing
+    // tasks. Capture once on first task, serve all reads in range from the
+    // clean copy. Disable with ROGUESQ_NO_SHADOW2=1 for A/B soaks.
+    {
+        static int s_sh2 = -1;
+        if (s_sh2 < 0) {
+            // Default OFF: a 300s soak with the full-image shadow was WORSE
+            // (109 unhandled, 35 send_dl vs 256 baseline) — the region holds
+            // legit dynamic data (mailbox-like spots at +0x12DEA/+0x7CD5C)
+            // and serving it stale breaks real work. Kept for the LIVE DIFF
+            // diagnostic; enable serving with ROGUESQ_SHADOW2=1.
+            const char* e = std::getenv("ROGUESQ_SHADOW2");
+            s_sh2 = (e && *e && *e != '0') ? 1 : 0;
+        }
+        if (s_sh2 && ucode_addr != 0) {
+            static std::vector<uint8_t> s_sh2_buf; // shared, tasks serialized
+            const uint32_t sh2_phys = ucode_addr & 0x00FFFFF8;
+            uint32_t sh2_size = 0x82000; // covers observed +0x803F0 + 0xF80
+            if (sh2_phys + sh2_size > 0x800000) sh2_size = 0x800000 - sh2_phys;
+            if (s_sh2_buf.empty()) {
+                s_sh2_buf.resize(sh2_size);
+                for (uint32_t k = 0; k < sh2_size; k++) {
+                    s_sh2_buf[k] = MEM_B(0, (int64_t)(int32_t)(sh2_phys + k + 0x80000000));
+                }
+                fprintf(stderr, "[shadow2] captured ucode image 0x%06X..0x%06X\n",
+                        sh2_phys, sh2_phys + sh2_size);
+                g_rsp_dma_shadow2_addr = sh2_phys;
+                g_rsp_dma_shadow2_size = sh2_size;
+            }
+            g_rsp_dma_shadow2_data = s_sh2_buf.data();
+            // Two-source evidence: does the engine actually rewrite this RDRAM?
+            // Compare live RDRAM vs the clean capture each task (cheap scan).
+            static int s_diff_logs = 0;
+            if (s_diff_logs < 24) {
+                uint32_t ndiff = 0, first = 0;
+                for (uint32_t k = 0; k < sh2_size; k++) {
+                    if ((uint8_t)MEM_B(0, (int64_t)(int32_t)(sh2_phys + k + 0x80000000)) != s_sh2_buf[k]) {
+                        if (ndiff == 0) first = k;
+                        ndiff++;
+                    }
+                }
+                if (ndiff != 0) {
+                    ++s_diff_logs;
+                    fprintf(stderr, "[shadow2] LIVE DIFF: %u bytes, first at ucode+0x%X (dram 0x%06X)\n",
+                            ndiff, first, sh2_phys + first);
+                }
+            }
         }
     }
     // Diagnostic: log re-DMA params + DMEM[0..0x10] after the copy.
@@ -171,7 +275,30 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                 s_runner_step_log, ucode_addr);
         fflush(stderr);
     }
+    rs64_dpc_reset();
+    if (log_step) rs64_canary("pre-boot", s_runner_step_log);
     RspExitReason boot_r = factor5_boot(rdram, ucode_addr);
+    if (log_step) rs64_canary("post-boot", s_runner_step_log);
+    rs64_dump_ucode(rdram, ucode_addr & 0x00FFFFFF);
+    // Canary: DMEM[0xFD0] (OSTask.ucode slot) must still hold the poked gfx
+    // ucode after boot. A mismatch previously meant librecomp's run_task
+    // (audio tasks, SP task thread) had memcpy'd the MusyX OSTask
+    // (ucode=0x80099FE0, ucode_data=0xA4E00 — its wavetables were the "trig"
+    // trample) over our staging mid-run. That race is closed by
+    // rs64_dmem_lock in run_task; if this ever fires again, a new unlocked
+    // DMEM writer exists. (An earlier theory recompiled 0x99FE0 as a "second
+    // gfx ucode" factor5_ucode_b — wrong: it's the audio ucode. The recompile
+    // is kept in-tree but must never run for gfx tasks.)
+    uint32_t embedded_ucode = ((uint32_t)dmem[0xFD0 ^ 3] << 24) | ((uint32_t)dmem[0xFD1 ^ 3] << 16) |
+                              ((uint32_t)dmem[0xFD2 ^ 3] << 8) | (uint32_t)dmem[0xFD3 ^ 3];
+    if ((embedded_ucode & 0x00FFFFF8) != (ucode_addr & 0x00FFFFF8) &&
+        (embedded_ucode & 0x00FFFFF8) != 0) {
+        static int s_bn = 0;
+        if (++s_bn <= 16 || (s_bn & 63) == 0) {
+            fprintf(stderr, "[dmem-race] DMEM[0xFD0]=0x%08X != task ucode 0x%08X (#%d) — "
+                    "unlocked DMEM writer!\n", embedded_ucode, ucode_addr, s_bn);
+        }
+    }
     if (log_step) {
         fprintf(stderr, "[runner-step #%d] factor5_boot returned %d\n",
                 s_runner_step_log, (int)boot_r);
@@ -204,6 +331,25 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         poke_be32(0xFF0, dl_ptr);
         poke_be32(0x101C, dl_ptr);
         poke_be32(0x654,  0x178);
+        // RDP flush ring state (L_112C): DMEM[0x100]=ring base, [0x104]=limit,
+        // [0x108]=write pos. The snapshot restore rewrites these with task
+        // #1's values while rs64_dpc_reset() zeroes the bridge side — the
+        // stale write pos makes the ucode skip flushes until the staging
+        // cursor (r16, base 0xD60) overflows to ~0x16E0 and the oversized
+        // flush DMA tramples DMEM[0..0xF80] with ring bytes (the trig-as-
+        // dispatch-table symptom). Re-sync write pos to ring base per task.
+        // Tested 2026-07-13: no measurable change (41 vs 51 unhandled/120s,
+        // inside the noise band) — gated off pending a better slot decode.
+        static int s_ring = -1;
+        if (s_ring < 0) {
+            const char* e = std::getenv("ROGUESQ_RING_RESYNC");
+            s_ring = (e && *e && *e != '0') ? 1 : 0;
+        }
+        if (s_ring) {
+            uint32_t ring_base = ((uint32_t)dmem[0x100 ^ 3] << 24) | ((uint32_t)dmem[0x101 ^ 3] << 16) |
+                                 ((uint32_t)dmem[0x102 ^ 3] << 8) | (uint32_t)dmem[0x103 ^ 3];
+            poke_be32(0x108, ring_base);
+        }
         // Reset the DL-stack-pointer byte. The ucode runs with $18 = 0x100
         // (set by L_1DB0's bootstrap), so $18+0x52 = DMEM[0x152]. Op_0F's
         // L_12C4 handler decrements this by 8 each call and exits the
@@ -211,7 +357,10 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         // byte is left negative; subsequent tasks would exit immediately with
         // 0 RDP work emitted. Reset to 0x18 (3 stack entries) at task start.
         dmem[0x152 ^ 3] = 0x18;
-        dmem[0x153 ^ 3] = 0;     // L_1DB0 also clears 0x53($18)
+        // Resident-segment cache byte (L_1DB0 clears it). Forcing an invalid
+        // id (0xFF) to make the loader always reload was tried 2026-07-12 and
+        // INCREASED failures — the entry path apparently relies on 0 here.
+        dmem[0x153 ^ 3] = 0;
 
         // Diagnostic: dump first 16 DMEM bytes at the dispatch start so we
         // can see what opcode the first iter is dispatching on per task.
@@ -240,7 +389,48 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         fprintf(stderr, "[runner-step #%d] entering factor5_ucode\n", s_runner_step_log);
         fflush(stderr);
     }
+    { static int tn2 = 0; if (++tn2 <= 16) rs64_canary("pre-ucode", tn2); }
+    rs64_dpc_defer_begin();
+    // ROGUESQ_LOG_TASKMS=1 (session 37) — wall time of the ucode call per task,
+    // phase-scoped. s36 put 82% of Gfx Thread samples inside factor5_ucode but
+    // sampling cannot distinguish "computing" from "spinning in the DPC ring
+    // wait", and it cannot give a per-task cost. This does both: mean/max ms per
+    // phase, plus a count of tasks over 100ms.
+    static const bool s_taskms = []{
+        const char *e = std::getenv("ROGUESQ_LOG_TASKMS");
+        return e && *e && *e != '0';
+    }();
+    const auto t_start = s_taskms ? std::chrono::steady_clock::now()
+                                  : std::chrono::steady_clock::time_point{};
     RspExitReason r = factor5_ucode(rdram, ucode_addr);
+    if (s_taskms) {
+        const double ms = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - t_start).count();
+        static std::mutex mu_tm;
+        static uint32_t ph_tm = 0xFFFFFFFFu;
+        static int n_tm = 0, slow_tm = 0;
+        static double sum_tm = 0.0, max_tm = 0.0;
+        const uint32_t phase = rs64_phase_ord();
+        bool report = false;
+        int n = 0, slow = 0; double mean = 0, mx = 0;
+        {
+            std::lock_guard<std::mutex> lk(mu_tm);
+            if (phase != ph_tm) { ph_tm = phase; n_tm = slow_tm = 0; sum_tm = max_tm = 0.0; }
+            n_tm++; sum_tm += ms; if (ms > max_tm) max_tm = ms;
+            if (ms > 100.0) slow_tm++;
+            if ((n_tm % 10) == 0) {
+                report = true; n = n_tm; slow = slow_tm; mean = sum_tm / n_tm; mx = max_tm;
+            }
+        }
+        if (report) {
+            fprintf(stderr, "[taskms ph%u] n=%d mean=%.1fms max=%.1fms over100ms=%d\n",
+                    phase, n, mean, mx, slow);
+            fflush(stderr);
+        }
+    }
+    // Drop the task's RDP output if the ucode wandered into garbage (trig
+    // data executed as DL) — RT64 must never see those streams.
+    rs64_dpc_defer_end(r != RspExitReason::UnhandledJumpTarget);
     if (log_step) {
         fprintf(stderr, "[runner-step #%d] factor5_ucode returned %d\n",
                 s_runner_step_log, (int)r);
@@ -282,6 +472,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
 // (real SP_BOOT does this DMA-style; the runner mimics SP_BOOT but skips
 // this step), then invokes the LLE runner.
 extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
+    std::lock_guard<std::recursive_mutex> lle_lock(g_lle_task_mutex);
     s_pending_task_data_ptr        = (uint32_t)task->t.data_ptr;
     s_pending_task_ucode_data      = (uint32_t)task->t.ucode_data;
     s_pending_task_ucode_data_size = (uint32_t)task->t.ucode_data_size;
@@ -313,6 +504,49 @@ extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
     poke(0xFC0 + 0x34, (uint32_t)task->t.data_size);
     poke(0xFC0 + 0x38, (uint32_t)task->t.yield_data_ptr);
     poke(0xFC0 + 0x3C, (uint32_t)task->t.yield_data_size);
+    fprintf(stderr, "[lle task] flags=0x%X yield_ptr=0x%08X yield_size=0x%X data=0x%08X dsize=0x%X out=0x%08X\n",
+            (uint32_t)task->t.flags, (uint32_t)task->t.yield_data_ptr,
+            (uint32_t)task->t.yield_data_size, (uint32_t)task->t.data_ptr,
+            (uint32_t)task->t.data_size, (uint32_t)task->t.output_buff);
+
+    // ROGUESQ_LOG_SEQ: dump the head of the task's display list. Most gfx
+    // tasks emit ZERO RDP bytes; this says whether the game handed us an
+    // empty/short DL (game-side pacing) or a real one the ucode ignored.
+    if ([]{
+            static const bool v = []{
+                const char *e = std::getenv("ROGUESQ_LOG_SEQ");
+                return e && *e && *e != '0';
+            }();
+            return v;
+        }()) {
+        auto dump = [&](const char *tag, uint32_t addr, int bytes) {
+            const uint32_t a = addr & 0x7FFFFF;
+            if (!a || a + bytes > 0x800000) return;
+            fprintf(stderr, "[%s] 0x%08X:", tag, addr);
+            for (int i = 0; i < bytes; ++i) {
+                fprintf(stderr, "%s%02X", (i % 8) == 0 ? " " : "",
+                        (unsigned)rdram[(a + i) ^ 3]);
+            }
+            fprintf(stderr, "\n");
+        };
+        // The per-task DL is a fixed 5-command stub whose op-0x06 entries chase
+        // sub-DLs; the frame's real content lives there. Dump both so an
+        // empty-output task can be told apart from an empty sub-DL.
+        dump("dl-head", (uint32_t)task->t.data_ptr, 64);
+        const uint32_t dl = (uint32_t)task->t.data_ptr & 0x7FFFFF;
+        if (dl && dl + 24 <= 0x800000) {
+            auto word = [&](uint32_t off) {
+                return ((uint32_t)rdram[(off + 0) ^ 3] << 24) |
+                       ((uint32_t)rdram[(off + 1) ^ 3] << 16) |
+                       ((uint32_t)rdram[(off + 2) ^ 3] <<  8) |
+                       ((uint32_t)rdram[(off + 3) ^ 3]);
+            };
+            dump("dl-sub0", word(dl + 4), 96);
+            dump("dl-sub1", word(dl + 12), 64);
+            dump("dl-sub2", word(dl + 20), 96);
+        }
+        fflush(stderr);
+    }
 
     return (int)factor5_gfx_runner(rdram, (uint32_t)task->t.ucode);
 }
@@ -385,12 +619,14 @@ static size_t get_frames_remaining() {
     return queued / 4;
 }
 
+#ifdef _WIN32
 // Forward declaration so the F12 hotkey in poll_input() can write a dump.
 static void write_minidump_safe(EXCEPTION_POINTERS* ep);
 // Forward declaration so the hwbp VEH (defined before print_stack_with_symbols)
 // can render the offending thread's stack with symbols. Non-static so RT64's
 // d3d12 allocator-failure tracer can extern-declare and call it.
 void print_stack_with_symbols(void** frames, USHORT count);
+#endif
 
 // (Periodic mqdiag watchdog removed — mqdiag_dump lived in the librecomp
 //  fork and isn't in upstream. Hangs are rare enough now that on-demand
@@ -408,6 +644,7 @@ void print_stack_with_symbols(void** frames, USHORT count);
 // race.
 extern "C" volatile uint8_t* volatile g_recomp_rdram_for_wp_raw = nullptr;
 
+#ifdef _WIN32
 static volatile uintptr_t g_wp_addr = 0;     // address being watched (in our VA)
 static volatile LONG      g_wp_hit_count = 0; // limit logging — race may fire fast
 
@@ -506,6 +743,7 @@ static void arm_hwbp_all_threads(uintptr_t addr) {
     // SDL message pump and produce a "Not Responding" window. Hits are still
     // reported by memwp_veh; that's the only signal we care about.
 }
+#endif // _WIN32
 
 // Helper: read a 4-byte BE word from RDRAM at the given RDRAM-relative offset.
 // (RDRAM is host-LE-stored; XOR-3 byte order for BE).
@@ -857,6 +1095,10 @@ static void start_phase_poller() {
 }
 
 static void start_memwp_watchdog() {
+#ifndef _WIN32
+    // Hardware-breakpoint watchdog is Win32-only (DR0 debug registers).
+    fprintf(stderr, "[hwbp] not supported on this platform\n");
+#else
     static std::thread wp_thread{[]{
         uint8_t* rdram = nullptr;
         while (!(rdram = (uint8_t*)g_recomp_rdram_for_wp_raw)) {
@@ -885,16 +1127,19 @@ static void start_memwp_watchdog() {
         }
     }};
     wp_thread.detach();
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// Input (SDL2 gamepad — one controller)
+// Input (SDL2 gamepad plus keyboard fallback — one logical controller)
 // ---------------------------------------------------------------------------
 static SDL_GameController* controller = nullptr;
 
 static void poll_input() {
     SDL_Event e;
-    while (SDL_PollEvent(&e)) {
+    // On macOS only the main thread may pump Cocoa events (update_gfx does);
+    // here we must only dequeue already-pumped events.
+    while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT) > 0) {
         if (e.type == SDL_QUIT) {
             fprintf(stderr, "[main] SDL_QUIT received, exiting\n");
             fflush(stderr);
@@ -912,11 +1157,13 @@ static void poll_input() {
                 controller = nullptr;
             }
         }
+#ifdef _WIN32
         if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_F12) {
             fprintf(stderr, "[F12] manual minidump requested\n");
             fflush(stderr);
             write_minidump_safe(nullptr);
         }
+#endif
         // Diagnostic: log F1-F4 to confirm the keys are reaching the SDL
         // queue at all. If we see these logs, SDL is delivering keypresses
         // to our process — RT64's filter (which runs before SDL_PollEvent)
@@ -933,14 +1180,17 @@ static void poll_input() {
 }
 
 static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float* y) {
-    if (controller_num != 0 || !controller) {
+    if (controller_num != 0) {
         *buttons = 0; *x = 0.0f; *y = 0.0f;
         return false;
     }
 
     uint16_t btn = 0;
-    auto b = [&](uint16_t mask, SDL_GameControllerButton sdl) {
-        if (SDL_GameControllerGetButton(controller, sdl)) btn |= mask;
+    float stick_x = 0.0f;
+    float stick_y = 0.0f;
+
+    auto gamepad_button = [&](uint16_t mask, SDL_GameControllerButton sdl) {
+        if (controller && SDL_GameControllerGetButton(controller, sdl)) btn |= mask;
     };
 
     // Rogue Squadron N64 → modern gamepad mapping:
@@ -955,26 +1205,63 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     //   C-Right         → right stick right (axis) — d-right as fallback
     //   D-Pad           → d-pad
     //   Start           → start
-    b(N64_A_BUTTON,     SDL_CONTROLLER_BUTTON_A);
-    b(N64_B_BUTTON,     SDL_CONTROLLER_BUTTON_X);
-    b(N64_START_BUTTON, SDL_CONTROLLER_BUTTON_START);
-    b(N64_U_JPAD,       SDL_CONTROLLER_BUTTON_DPAD_UP);
-    b(N64_D_JPAD,       SDL_CONTROLLER_BUTTON_DPAD_DOWN);
-    b(N64_L_JPAD,       SDL_CONTROLLER_BUTTON_DPAD_LEFT);
-    b(N64_R_JPAD,       SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
-    b(N64_L_TRIG,       SDL_CONTROLLER_BUTTON_LEFTSHOULDER);   // targeting computer
-    b(N64_R_TRIG,       SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);  // boost/accelerate
-    b(N64_U_CBUTTONS,   SDL_CONTROLLER_BUTTON_Y);
-    b(N64_D_CBUTTONS,   SDL_CONTROLLER_BUTTON_B);
-    b(N64_L_CBUTTONS,   SDL_CONTROLLER_BUTTON_BACK);
-    b(N64_R_CBUTTONS,   SDL_CONTROLLER_BUTTON_GUIDE);
+    gamepad_button(N64_A_BUTTON,     SDL_CONTROLLER_BUTTON_A);
+    gamepad_button(N64_B_BUTTON,     SDL_CONTROLLER_BUTTON_X);
+    gamepad_button(N64_START_BUTTON, SDL_CONTROLLER_BUTTON_START);
+    gamepad_button(N64_U_JPAD,       SDL_CONTROLLER_BUTTON_DPAD_UP);
+    gamepad_button(N64_D_JPAD,       SDL_CONTROLLER_BUTTON_DPAD_DOWN);
+    gamepad_button(N64_L_JPAD,       SDL_CONTROLLER_BUTTON_DPAD_LEFT);
+    gamepad_button(N64_R_JPAD,       SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
+    gamepad_button(N64_L_TRIG,       SDL_CONTROLLER_BUTTON_LEFTSHOULDER);   // targeting computer
+    gamepad_button(N64_R_TRIG,       SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);  // boost/accelerate
+    gamepad_button(N64_U_CBUTTONS,   SDL_CONTROLLER_BUTTON_Y);
+    gamepad_button(N64_D_CBUTTONS,   SDL_CONTROLLER_BUTTON_B);
+    gamepad_button(N64_L_CBUTTONS,   SDL_CONTROLLER_BUTTON_BACK);
+    gamepad_button(N64_R_CBUTTONS,   SDL_CONTROLLER_BUTTON_GUIDE);
     // Z trigger (brake) from left analog trigger axis
-    if (SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT) > 16000) btn |= N64_Z_TRIG;
+    if (controller && SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT) > 16000) {
+        btn |= N64_Z_TRIG;
+    }
 
-    int16_t ax = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTX);
-    int16_t ay = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTY);
-    *x = ax / 32767.0f;
-    *y = -(ay / 32767.0f); // N64 Y is inverted vs SDL
+    if (controller) {
+        const int16_t ax = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTX);
+        const int16_t ay = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTY);
+        stick_x = ax / 32767.0f;
+        stick_y = -(ay / 32767.0f); // N64 Y is inverted vs SDL
+    }
+
+    // Keyboard fallback. SDL scancodes use physical keys, so these bindings
+    // are stable across keyboard layouts. Keyboard and gamepad combine, with
+    // keyboard WASD taking precedence for a non-zero analog-stick direction.
+    const Uint8* keys = SDL_GetKeyboardState(nullptr);
+    auto key = [&](SDL_Scancode scancode) { return keys && keys[scancode]; };
+    if (key(SDL_SCANCODE_Z))      btn |= N64_A_BUTTON;
+    if (key(SDL_SCANCODE_X))      btn |= N64_B_BUTTON;
+    if (key(SDL_SCANCODE_C))      btn |= N64_Z_TRIG;
+    if (key(SDL_SCANCODE_RETURN)) btn |= N64_START_BUTTON;
+    if (key(SDL_SCANCODE_UP))     btn |= N64_U_JPAD;
+    if (key(SDL_SCANCODE_DOWN))   btn |= N64_D_JPAD;
+    if (key(SDL_SCANCODE_LEFT))   btn |= N64_L_JPAD;
+    if (key(SDL_SCANCODE_RIGHT))  btn |= N64_R_JPAD;
+    if (key(SDL_SCANCODE_Q))      btn |= N64_L_TRIG;
+    if (key(SDL_SCANCODE_E))      btn |= N64_R_TRIG;
+    if (key(SDL_SCANCODE_I))      btn |= N64_U_CBUTTONS;
+    if (key(SDL_SCANCODE_K))      btn |= N64_D_CBUTTONS;
+    if (key(SDL_SCANCODE_J))      btn |= N64_L_CBUTTONS;
+    if (key(SDL_SCANCODE_L))      btn |= N64_R_CBUTTONS;
+
+    const float keyboard_x = (key(SDL_SCANCODE_D) ? 1.0f : 0.0f) -
+                             (key(SDL_SCANCODE_A) ? 1.0f : 0.0f);
+    const float keyboard_y = (key(SDL_SCANCODE_W) ? 1.0f : 0.0f) -
+                             (key(SDL_SCANCODE_S) ? 1.0f : 0.0f);
+    if (keyboard_x != 0.0f || keyboard_y != 0.0f) {
+        constexpr float diagonal = 0.70710678f;
+        stick_x = keyboard_x * (keyboard_y != 0.0f ? diagonal : 1.0f);
+        stick_y = keyboard_y * (keyboard_x != 0.0f ? diagonal : 1.0f);
+    }
+
+    *x = stick_x;
+    *y = stick_y;
     *buttons = btn;
     return true;
 }
@@ -982,7 +1269,7 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
 static void set_rumble(int, bool) {}
 
 static ultramodern::input::connected_device_info_t get_connected_device_info(int controller_num) {
-    if (controller_num == 0 && controller) {
+    if (controller_num == 0) {
         return { ultramodern::input::Device::Controller, ultramodern::input::Pak::None };
     }
     return { ultramodern::input::Device::None, ultramodern::input::Pak::None };
@@ -1023,6 +1310,12 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
     SDL_VERSION(&wm.version);
     SDL_GetWindowWMInfo(sdl_window, &wm);
     return { wm.info.win.window };
+#elif defined(__APPLE__)
+    SDL_SysWMinfo wm{};
+    SDL_VERSION(&wm.version);
+    SDL_GetWindowWMInfo(sdl_window, &wm);
+    SDL_MetalView view = SDL_Metal_CreateView(sdl_window);
+    return ultramodern::renderer::WindowHandle{ wm.info.cocoa.window, SDL_Metal_GetLayer(view) };
 #else
     return sdl_window;
 #endif
@@ -1080,6 +1373,28 @@ std::vector<recomp::GameEntry> supported_games = {
 // ---------------------------------------------------------------------------
 // main()
 // ---------------------------------------------------------------------------
+#ifndef _WIN32
+// POSIX fallback for the Win32 symbolized stack printer.
+void print_stack_with_symbols(void** frames, USHORT count) {
+    char** syms = backtrace_symbols(frames, count);
+    for (USHORT i = 0; i < count; i++) {
+        fprintf(stderr, "  [%2u] %s\n", (unsigned)i, syms ? syms[i] : "?");
+    }
+    free(syms);
+}
+#endif
+
+// The recompiled output contains syscall instructions only inside data
+// misclassified as code (each preceded by INVALID-word traps); if one is ever
+// reached something is deeply wrong, so just abort loudly.
+extern "C" void recomp_syscall_handler(uint8_t* rdram, recomp_context* ctx, int32_t instruction_vram) {
+    (void)rdram; (void)ctx;
+    fprintf(stderr, "[FATAL] syscall reached at vram 0x%08X\n", (uint32_t)instruction_vram);
+    fflush(stderr);
+    abort();
+}
+
+#ifdef _WIN32
 // One-shot init of DbgHelp symbol resolution — done lazily on first crash.
 static void ensure_dbghelp_init() {
     static bool init = false;
@@ -1197,6 +1512,7 @@ static LONG WINAPI crash_handler(EXCEPTION_POINTERS* ep) {
     fflush(stderr);
     return EXCEPTION_CONTINUE_SEARCH;
 }
+#endif // _WIN32
 
 int main(int argc, char* argv[]) {
     (void)argc; (void)argv;
@@ -1219,7 +1535,12 @@ int main(int argc, char* argv[]) {
     // fullSync), and the per-call fflush starves the SDL message pump → game
     // window goes "Not Responding". Send writes to NUL instead — same effect
     // as the fork's `if(false) fprintf` cruft, but stays in our repo.
-    if (FILE *nul = fopen("NUL", "w")) {
+#ifdef _WIN32
+    const char* null_dev = "NUL";
+#else
+    const char* null_dev = "/dev/null";
+#endif
+    if (FILE *nul = fopen(null_dev, "w")) {
         RT64::GlobalLogFile = nul;
     } else {
         RT64::GlobalLogFile = stderr;  // last-resort fallback

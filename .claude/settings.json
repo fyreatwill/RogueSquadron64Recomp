@@ -1,0 +1,79 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/**)",
+      "Edit(//Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/**)",
+      "Write(//Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/**)",
+      "Bash(cmake:*)",
+      "Bash(make:*)",
+      "Bash(ninja:*)",
+      "Bash(python3:*)",
+      "Bash(scratch/venv/bin/python:*)",
+      "Bash(tools/:*)",
+      "Bash(./tools/:*)",
+      "Bash(build/:*)",
+      "Bash(./build/:*)",
+      "Bash(submodule-patches/apply.sh:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git status:*)",
+      "Bash(git show:*)",
+      "Bash(git apply:*)",
+      "Bash(git stash list:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(awk:*)",
+      "Bash(sed:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(rm scratch/:*)",
+      "Bash(kill:*)",
+      "Bash(pkill:*)",
+      "Bash(screencapture:*)",
+      "Bash(clang:*)",
+      "Bash(clang++:*)",
+      "Bash(timeout:*)",
+      "Bash(caffeinate:*)",
+      "Bash(sleep:*)",
+      "Bash(env:*)",
+      "Bash(open:*)",
+      "Bash(osascript:*)"
+    ],
+    "deny": [
+      "Bash(git submodule update:*)",
+      "Bash(git submodule foreach:*)",
+      "Bash(git submodule deinit:*)",
+      "Bash(git checkout -- lib/:*)",
+      "Bash(git checkout lib/:*)",
+      "Bash(git restore lib/:*)",
+      "Bash(git clean:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git push:*)",
+      "Bash(rm -rf lib/:*)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/tools/agent/stop_gate.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

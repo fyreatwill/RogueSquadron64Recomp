@@ -73,7 +73,11 @@ RSPRecomp
 
 # Misc
 *.lnk
-/.claude
+/.claude/*
+!/.claude/settings.json
+
+# Agent scratch space (captures, venv, per-iteration state)
+/scratch/
 
 # Debug captures and logs (developer-local)
 *_log.txt
@@ -104,3 +108,7 @@ dumps/
 mqdiag_*.txt
 /.agents
 skills-lock.json
+
+# Python caches
+__pycache__/
+*.pyc

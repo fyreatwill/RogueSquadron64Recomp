@@ -20,6 +20,8 @@
 #include <timeapi.h>
 #pragma comment(lib, "dbghelp.lib")
 #pragma comment(lib, "winmm.lib")
+#else
+#include "win_compat.h"
 #endif
 
 #include <atomic>

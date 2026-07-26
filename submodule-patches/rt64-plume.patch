@@ -1,0 +1,151 @@
+diff --git a/plume_metal.cpp b/plume_metal.cpp
+index a5f30a3..6029f37 100644
+--- a/plume_metal.cpp
++++ b/plume_metal.cpp
+@@ -14,12 +14,76 @@
+ #include <QuartzCore/QuartzCore.hpp>
+ #include <CoreFoundation/CoreFoundation.h>
+ 
++#include <execinfo.h>
++
+ #include <algorithm>
++#include <atomic>
++#include <chrono>
+ #include <mutex>
+ 
+ #include "plume_metal.h"
+ 
+ namespace plume {
++    // MARK: - RS64 allocation census (ROGUESQ_LOG_ALLOC=1)
++    //
++    // The Metal shared-memory exhaustion under ROGUESQ_DPC_WRAP=1 is not any of
++    // RT64's own caches (framebuffers, render targets, texture cache and frame
++    // size were all measured flat). These counters sit at the only three places
++    // that hand memory to the driver, so whatever grows shows up here.
++    namespace rs64_alloc {
++        static std::atomic<int64_t> bufferCount{0};
++        static std::atomic<int64_t> bufferBytes{0};
++        static std::atomic<int64_t> textureCount{0};
++        static std::atomic<int64_t> textureBytes{0};
++        static std::atomic<int64_t> descSetCount{0};
++        static std::atomic<int64_t> descSetBytes{0};
++        static std::atomic<int64_t> bufferMade{0};
++        static std::atomic<int64_t> textureMade{0};
++        static std::atomic<int64_t> descSetMade{0};
++
++        static bool enabled() {
++            static const bool on = getenv("ROGUESQ_LOG_ALLOC") != nullptr;
++            return on;
++        }
++
++        // Attribution: the counters say WHAT grows, this says WHO allocates it.
++        // Sampled rather than continuous so the cost stays negligible.
++        static void sampleStack(const char *tag, uint64_t size) {
++            void *frames[16];
++            const int count = backtrace(frames, 16);
++            char **symbols = backtrace_symbols(frames, count);
++            fprintf(stderr, "[alloc-stack %s] size=%llu\n", tag, (unsigned long long)size);
++            for (int i = 1; i < count; i++) {
++                fprintf(stderr, "    %s\n", symbols != nullptr ? symbols[i] : "?");
++            }
++
++            free(symbols);
++            fflush(stderr);
++        }
++
++        static void report(const char *tag) {
++            if (!enabled()) {
++                return;
++            }
++
++            static std::mutex mutex;
++            static std::chrono::steady_clock::time_point last;
++            std::lock_guard lock(mutex);
++            const auto now = std::chrono::steady_clock::now();
++            if (last.time_since_epoch().count() != 0 && (now - last) < std::chrono::seconds(2)) {
++                return;
++            }
++
++            last = now;
++            fprintf(stderr, "[alloc %s] buffers live=%lld (%.1f MB) made=%lld | textures live=%lld (%.1f MB) made=%lld | descsets live=%lld (%.2f MB) made=%lld\n",
++                tag,
++                (long long)bufferCount.load(), bufferBytes.load() / 1048576.0, (long long)bufferMade.load(),
++                (long long)textureCount.load(), textureBytes.load() / 1048576.0, (long long)textureMade.load(),
++                (long long)descSetCount.load(), descSetBytes.load() / 1048576.0, (long long)descSetMade.load());
++            fflush(stderr);
++        }
++    }
++
+     // MARK: - Constants
+ 
+     static constexpr size_t MAX_DRAWABLES = 3;
+@@ -1117,6 +1181,15 @@ namespace plume {
+ 
+         this->mtl = device->mtl->newBuffer(desc.size, mapResourceOption(desc.heapType));
+ 
++        rs64_alloc::bufferCount.fetch_add(1);
++        rs64_alloc::bufferBytes.fetch_add(int64_t(desc.size));
++        const int64_t bufferOrdinal = rs64_alloc::bufferMade.fetch_add(1) + 1;
++        if (rs64_alloc::enabled() && (bufferOrdinal % 20000) == 0) {
++            rs64_alloc::sampleStack("buf", desc.size);
++        }
++
++        rs64_alloc::report("buf");
++
+         if (desc.flags & RenderBufferFlag::DEVICE_ADDRESSABLE) {
+             // If the buffer may be used by device address, we need to make sure it will be resident.
+             std::lock_guard lock(device->gpuAddressableResourcesMutex);
+@@ -1130,6 +1203,9 @@ namespace plume {
+     }
+ 
+     MetalBuffer::~MetalBuffer() {
++        rs64_alloc::bufferCount.fetch_sub(1);
++        rs64_alloc::bufferBytes.fetch_sub(int64_t(desc.size));
++
+         if (desc.flags & RenderBufferFlag::DEVICE_ADDRESSABLE) {
+             std::lock_guard lock(device->gpuAddressableResourcesMutex);
+             if (device->gpuAddressableResidencySet != nullptr) {
+@@ -1234,11 +1310,19 @@ namespace plume {
+ 
+         this->mtl = device->mtl->newTexture(descriptor);
+ 
++        rs64_alloc::textureCount.fetch_add(1);
++        rs64_alloc::textureBytes.fetch_add(int64_t(mtl->allocatedSize()));
++        rs64_alloc::textureMade.fetch_add(1);
++        rs64_alloc::report("tex");
++
+         // Release resources
+         descriptor->release();
+     }
+ 
+     MetalTexture::~MetalTexture() {
++        rs64_alloc::textureCount.fetch_sub(1);
++        rs64_alloc::textureBytes.fetch_sub(int64_t(mtl->allocatedSize()));
++
+         mtl->release();
+     }
+ 
+@@ -1667,6 +1751,11 @@ namespace plume {
+             .offset = 0,
+         };
+ 
++        rs64_alloc::descSetCount.fetch_add(1);
++        rs64_alloc::descSetBytes.fetch_add(int64_t(requiredSize));
++        rs64_alloc::descSetMade.fetch_add(1);
++        rs64_alloc::report("set");
++
+         if (!device->useArgumentBuffersTier2) {
+             argumentBuffer.argumentEncoder->setArgumentBuffer(argumentBuffer.mtl, argumentBuffer.offset);
+         }
+@@ -1676,6 +1765,11 @@ namespace plume {
+     }
+ 
+     MetalDescriptorSet::~MetalDescriptorSet() {
++        rs64_alloc::descSetCount.fetch_sub(1);
++        if (argumentBuffer.mtl != nullptr) {
++            rs64_alloc::descSetBytes.fetch_sub(int64_t(argumentBuffer.mtl->length()));
++        }
++
+         if (residencySet != nullptr) {
+             residencySet->endResidency();
+             residencySet->release();

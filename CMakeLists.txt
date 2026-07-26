@@ -85,6 +85,7 @@ else()
         -fno-strict-aliasing
         -Wno-unused-variable
         -Wno-implicit-function-declaration
+        -include ${CMAKE_SOURCE_DIR}/include/rsp_dpc_macros.h
     )
 endif()
 
@@ -196,6 +197,9 @@ endif()
 # original "GBI-level plan is closed" conclusion) but is multi-day work.
 # Keeping LLE for now lets us ship visuals while migrating ops one at a time.
 set(FACTOR5_UCODE_C ${CMAKE_SOURCE_DIR}/build/factor5_ucode/factor5_ucode_recompiled.c)
+# Second F5 gfx ucode (RDRAM 0x80099FE0, ROM 0x9ABE0) — the game alternates
+# per task; ptr arrives embedded in ucode_data (see factor5b_rsp.toml).
+set(FACTOR5_UCODE_B_C ${CMAKE_SOURCE_DIR}/build/factor5_ucode/factor5_ucode_b_recompiled.c)
 set(FACTOR5_BOOT_C  ${CMAKE_SOURCE_DIR}/build/factor5_ucode/factor5_boot_recompiled.c)
 # Post-process: RSPRecomp emits a goto to a non-existent label for one
 # never-taken branch near end-of-IMEM (perspective-divide reciprocal block).
@@ -213,15 +217,37 @@ endif()
 # this fixup, every task triggers a 4-line printf register dump. The runner
 # already treats UnhandledJumpTarget from boot as expected, so the printf is
 # pure spam (and at ~3 tasks/sec it can starve the console pump).
+if (Python3_Interpreter_FOUND AND EXISTS ${FACTOR5_UCODE_B_C})
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/fixup_factor5_ucode.py ${FACTOR5_UCODE_B_C}
+        RESULT_VARIABLE FACTOR5_B_FIXUP_RESULT
+    )
+endif()
 if (Python3_Interpreter_FOUND AND EXISTS ${FACTOR5_BOOT_C})
     execute_process(
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/fixup_factor5_ucode.py ${FACTOR5_BOOT_C}
         RESULT_VARIABLE FACTOR5_BOOT_FIXUP_RESULT
     )
 endif()
-set_source_files_properties(${FACTOR5_UCODE_C} ${FACTOR5_BOOT_C} PROPERTIES
+if (MSVC)
+    set(RS64_UCODE_FLAGS "-msse4.1;/FI${CMAKE_SOURCE_DIR}/include/rsp_dpc_macros.h")
+elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+    set(RS64_UCODE_FLAGS "-include;${CMAKE_SOURCE_DIR}/include/rsp_dpc_macros.h")
+else()
+    set(RS64_UCODE_FLAGS "-msse4.1;-include;${CMAKE_SOURCE_DIR}/include/rsp_dpc_macros.h")
+endif()
+# Session 38: this project is configured CMAKE_BUILD_TYPE=Debug, whose flags are
+# just "-g" — i.e. -O0. The recompiled ucode is one call per emulated RSP
+# instruction, so unoptimised it dominates the frame (s37: 186.6 ms per hangar
+# gfx task). Optimise these three translation units regardless of build type;
+# set ROGUESQ_UCODE_NO_OPT=ON to restore the old behaviour for debugging.
+option(ROGUESQ_UCODE_NO_OPT "Compile the recompiled RSP ucode unoptimised" OFF)
+if (NOT ROGUESQ_UCODE_NO_OPT AND NOT MSVC)
+    list(APPEND RS64_UCODE_FLAGS "-O2")
+endif()
+set_source_files_properties(${FACTOR5_UCODE_C} ${FACTOR5_UCODE_B_C} ${FACTOR5_BOOT_C} PROPERTIES
     LANGUAGE CXX
-    COMPILE_OPTIONS "-msse4.1;/FI${CMAKE_SOURCE_DIR}/include/rsp_dpc_macros.h")
+    COMPILE_OPTIONS "${RS64_UCODE_FLAGS}")
 
 add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/main/main.cpp
@@ -232,6 +258,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/rsp/dpc_bridge.cpp
     ${FACTOR5_BOOT_C}
     ${FACTOR5_UCODE_C}
+    ${FACTOR5_UCODE_B_C}
     $<$<PLATFORM_ID:Windows>:${CMAKE_SOURCE_DIR}/src/main/app.rc>
 )
 

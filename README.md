@@ -230,7 +230,7 @@ prebuilt MIPS GCC for Windows. See [patches/README.md](patches/README.md) for:
 | Cinematic | Not reached in a useful state — depends on N64 logo phase completing visibly |
 | Main menu | Not reached |
 | Video pipeline (host side) | RT64 + custom F3DFACTOR5 GBI module dispatching cleanly. SDL window, swapchain, ImGui inspector (F1), VI presentation timing all working. The pixels-from-RDRAM-to-screen path is intact — verified via `ROGUESQ_LOG_VI_FB_CONTENT=1` which shows whatever the game writes to RDRAM does reach the swapchain |
-| Input | Working (SDL2 gamepad). Keyboard support not implemented |
+| Input | SDL2 gamepad plus keyboard fallback: WASD stick, arrows D-pad, Z/X/C = A/B/Z, Enter = Start, Q/E = L/R, I/J/K/L = C-up/left/down/right |
 | Save data | EEPROM 4K via librecomp |
 | Audio | Stubbed — silent. Per [rerogue](https://github.com/jrra/rerogue) the codec is **MORT**, not MusyX as previously assumed; needs a separate RSPRecomp pass for either codec |
 | Memory pak | Stubbed — returns no-pak |

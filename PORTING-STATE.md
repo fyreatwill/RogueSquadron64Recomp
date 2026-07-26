@@ -1,0 +1,3860 @@
+# Rogue Squadron 64 Recomp — build/fix state (2026-07-09)
+
+Goal: build MikeSemicolonD/RogueSquadron64Recomp on macOS and fix the documented
+overlay-dispatch bug (black attribution screen). Aerofighters Assault: impossible, no decomp exists.
+
+## Repos
+- ~/Documents/Tools/RogueSquadron64Recomp (main repo, branch main; submodules N64ModernRuntime@second-attempt, rt64@HLE-F5-Attempt)
+- ~/Documents/Tools/rogue_squadron64 (decomp; ROM copied in as rogue_squadron.z64, sha1 verified ed42eed1...)
+- ~/Documents/Tools/N64Recomp (upstream tool; MODIFIED locally, see below)
+
+## Done
+1. RecompiledFuncs generated at ~/Documents/Tools/N64Recomp/RecompiledFuncs (funcs_0..27, funcs.h, lookup.cpp, recomp_overlays.inl with section_4_ovl_mission/5_menu/6_cinematic tables).
+   - ELF via `python3 tools/make_elf.py` in decomp repo (no splat needed).
+   - toml reconstructed: ~/Documents/Tools/N64Recomp/rogue_squadron.toml + rogue_squadron_relocatable.txt (.ovl.mission/.ovl.menu/.ovl.cinematic).
+   - N64Recomp local patches (src/recompilation.cpp, src/analysis.cpp, src/main.cpp):
+     cache→no-op; INVALID→trap; unhandled instr/cop0/non-ra-jalr→trap; NoMatch jal→runtime lookup;
+     unaligned/negative sp offsets in analysis→skip tracking; sanitize '.' in section identifiers.
+   - RSPRecomp patches: DPC reg mfc0/mtc0 → RSP_DPC_* macros (matches include/rsp_dpc_macros.h contract); cfc2/ctc2 → rsp.CFC2/CTC2.
+2. Overlay fix applied in lib/N64ModernRuntime (uncommitted working-tree edits!):
+   - librecomp/src/pi.cpp: do_dma ROM-read branch calls load_overlays(physical_addr - rom_base, rdram_address, size) (from commit e532b90).
+   - librecomp/src/overlays.cpp: loop `it != upper` → `it < upper` (inverted-bounds guard).
+   Do NOT `git submodule update --force` — loses these.
+3. factor5 ucode C generated: build/factor5_ucode/*.c via patched RSPRecomp + tools/fixup_factor5_ucode.py.
+4. cmake configured (Debug, patches build disabled — no MIPS gcc paths set; optional).
+
+## Build: DONE — binary at build/RogueSquadron64Recomp, runs stably.
+macOS fixes applied: hlslpp scalar.h +stdlib.h (rt64 submodule); include/win_compat.h
+(GetTickCount64/GetCurrentThreadId/RtlCaptureStackBackTrace/USHORT shims); #ifdef _WIN32
+guards around hwbp/minidump/crash-handler in src/main/main.cpp; POSIX print_stack_with_symbols
++ recomp_syscall_handler abort stub in main.cpp; CMakeLists: -include (not /FI) for
+rsp_dpc_macros.h, no -msse4.1 on arm64 (sse2neon); create_window returns cocoa+Metal-layer
+WindowHandle; poll_input uses SDL_PeepEvents (SDL_PollEvent pumps Cocoa off-main-thread → NSException);
+librecomp weak-attribute on 10 os*_recomp fns shadowed by upstream_compat.cpp (Apple ld lacks /FORCE:MULTIPLE).
+
+## Bug fixes beyond the author's plan
+- menuOverlayInit = 0x800C58A0 moved from main_overlay.txt to menu_overlay.txt in decomp
+  (was one of 831 "unmapped skipped" symbols; game crashed calling it). 854 main_overlay.txt
+  symbols sit in overlay VA range 0x800A5130..0x8010B6D0 and are ALL skipped — more may
+  need the same treatment (crash tells you: "Failed to find function at 0x...").
+- NEW ROOT-CAUSE FINDING: game DMAs overlays in 0x4000-byte chunks, so load_overlays'
+  full-containment bounds search NEVER matched. Added load_overlays_by_start() in
+  librecomp/src/overlays.cpp (registers section when its ROM start is inside the DMA range
+  AND lands at its linked VA); pi.cpp do_dma calls it. This is likely why the author's
+  e532b90 fix still showed black.
+
+## SCHEDULER WEDGE: SOLVED (2026-07-09)
+- Token holder found via `sample`: [Game] MAIN in mainGameLoop→menuOverlayInit→
+  runVideoFrameTick→musyxNoopStub→waitForMusyXAudioTaskDone, spinning in recompiled code
+  (funcs_24.c ~0x80091ED0) on countdown halfword 0x8014998A (writes 0x10, spins until <=0).
+  Decrementer is the stubbed MusyX audio-frame processor → never runs. Spin never yields,
+  so cooperative scheduler starves forever. Also the real cause of the 104% CPU.
+- Fix: spin sites (waitForMusyXAudioTaskDone, shutdownAudioEngine) are gated by
+  audio-engine-active byte 0x800A0F50. Patched the 3 stores that set it (funcs_23.c
+  lines 10848/11066/11285, in initMusyXEngine/setDisplayMode/reapplyDisplayMode) to
+  store 0 — marker comment "PATCH: force audio-engine-disabled". NOTE: hand-edit of
+  generated RecompiledFuncs — must be re-applied if funcs are regenerated.
+- Result: wedge gone. 64+ VI swaps, 64+ send_dl (type=1 gfx tasks), double-buffered
+  640-wide hi-res fbs (0x805D4000/0x8066A000). fb content still all 0x0001 (black) but
+  DL stream is now continuously feeding RT64.
+- NEXT CRASH after ~64 frames: "Failed to find function at 0x00000000" — SOLVED too.
+  lldb bt: MAIN → menuOverlayInit → setupCameraMatrices → traverseSceneGraphRecursive →
+  convertMat3x4ToN64Mtx (0x80018D80, funcs_4.c). That function is Factor 5 hand-asm:
+  prologue `addu $t9,$ra`, returns via `jr $t9` (ra reused for inner jal). N64Recomp
+  only treats `jr $ra` as return → emitted LOOKUP_FUNC(ctx->r25); translated jal never
+  writes ctx->r31, so it looked up 0. Patched funcs_4.c: replaced the LOOKUP_FUNC with
+  plain return (marker "PATCH: jr $t9"). Only ONE `jr $t9` site exists in all funcs
+  (checked; the 223 `jr $v0` are jump tables, fine). Hand-edit — re-apply after regen,
+  or teach N64Recomp the t9=ra return idiom.
+
+## Regen pipeline now scripted (2026-07-09)
+- Decomp symbol move: cinematicLoopBody 0x800A5D80 main_overlay.txt → cinematic_overlay.txt
+  (was unmapped; crashed attribution with "Failed to find function at 0x800A5D80").
+- Regen steps: (1) decomp: python3 tools/make_elf.py  (2) N64Recomp: ./build/N64Recomp
+  rogue_squadron.toml  (3) **python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py** —
+  REQUIRED post-pass, re-applies all generated-code patches idempotently:
+  * writes to $zero ("0 = expr;") → commented out (~2700 sites; recompiler emits invalid C)
+  * fake_func_* gap fillers with gotos to nonexistent labels → __builtin_trap() bodies
+  * real functions with cross-function branches (shared asm tails: lvj_checkComplexObjectives,
+    audioCompandS16, applyVoiceDelayFilter, __OSGlobalIntMask etc.) → each bad goto becomes
+    __builtin_trap(); rest of function works. SIGTRAP at runtime = one of these was taken.
+  * audio-engine gate stores → 0 (funcs_23) and jr-$t9 return (funcs_4), see above.
+  (4) rebuild game: cd build && cmake --build . -j8
+
+## Current status (2026-07-09 end of session): INTRO CINEMATIC RUNS, real fb content
+- 320+ send_dl, 352+ VI swaps, fb no longer uniform: nz_px=32593/71680, values 0x0002 etc.
+  — the game is drawing real content. No wedge over 2 min.
+- NEXT CRASH (deterministic, ~2min in): SIGBUS EXC_BAD_ACCESS addr 0x380000019 (= rdram
+  null-page) in slotDispatcherIter (funcs_8.c, 0x8003E9D0 `lbu 0x1A($s1)`) with s1=0.
+  Call chain: cinematicLoopBody → static_6_800A89B0 → static_6_800AAC88 → spawnDebris1Npc
+  → spawnNpcOfType (funcs_9.c:2892, jal 0x8003E8DC at 0x80040110, a0 = lhu 0x16($s0) slot id)
+  → slotDispatcherIter converts id→ptr via table MEM[0x80130BB0] and gets NULL.
+  At crash: s0(r16)=0x25, s5(r21)=0x80130000, s2(r18)=0.
+- 2026-07-10 SOLVED. Chain: NOT a missing table init. slotDispatcherIter guards NULL
+  entries fine (beq a0,zero at 0x8003E93C). Diag instrumentation around the jalr handler
+  call (funcs_8.c, marker "PATCH: diag") proved handler npcDebris1Update (0x8006F6A0,
+  funcs_18.c:349) RETURNS with s1/s2 zeroed (s1 0x80208D7C->0, s2 0x130->0) — its epilogue
+  restores from sp+0x60..0x6C, so its stack frame was zeroed or sp shifted by a callee.
+  Its own prologue/epilogue are balanced; no traps inside. All 18 jal sites in
+  npcDebris1Update now wrapped with s1/s2/sp guards ("[dbg] callee X clobbered") to name
+  the corrupting callee. Culprit: spawnDestructionDebris (0x8006F4B0) returned with sp
+  shifted DOWN 0xC8 — its generated body was ONE instruction (the sp-=0xC8 prologue op)
+  because main_overlay.txt had DUPLICATE symbols at the same address
+  (spawnDestructionDebris + func_8006F4B0 alias → one gets size≈0; the full body lived
+  under func_8006F4B0 but jal resolved to the stub). Every call leaked 0xC8 stack, so
+  npcDebris1Update restored s1/s2/ra from garbage → s1=0 → SIGBUS in slotDispatcherIter.
+  FIX: deleted all 7 func_* duplicate-address alias lines from decomp
+  symbol_files/main_overlay.txt (randomBurstNpcHandlerVariant/0x800403EC,
+  applyPlayerVehicleStateUpdate/0x8004CD00, trackResourceListWithMappingTables/0x800538B0,
+  tickWrappingTimerAccumulatorList/0x80054650, buildPositionAndCallTransformHelper/0x80065A60,
+  spawnDestructionDebris/0x8006F4B0, heavyMechSubEffectNpcHandler/0x80079280 — the other 6
+  were the same latent bug). Data-symbol dups (0x800CDA5C, 0x8013A990) left alone (no code).
+  Full regen pipeline rerun (make_elf → N64Recomp → fixup_game_funcs.py → cmake build);
+  fixup patches confirmed re-applied; spawnDestructionDebris now full 344-line body.
+  LESSON: symbol truncated to 1 instruction = duplicate address in symbol files. Diag
+  instrumentation (s-reg-clobber guards in funcs_8/funcs_18) was wiped by regen — re-add
+  if needed: wrap call with save of ctx->r17/r18/r29 before, fprintf-compare after.
+- Verified fix: soak got past old crash point (384+ send_dl vs 320), old signature gone.
+  NEXT CRASH (further in): tickTextureMaterialExpiry (funcs_6.c ~0x80022094, lhu 0x8($s0))
+  walking bucket table MEM[0x80128F00], node next-ptr (+0x0) garbage ~0xFB98FC6F.
+  Called from frameStartReset ← cinematicLoopBody. Suspected corrupter found immediately:
+  SECOND same-file duplicate — mission_overlay.txt had handleRayShieldedNpcDestroy AND
+  func_800E4070 both at 0x800E4070 → 1-instruction `sp-=0x40` stack-leak stub, same class
+  as spawnDestructionDebris. Removed line, regenerated (full body confirmed), rebuilt.
+  VERIFIED 2026-07-10: 7-min soak, NO crash. Intro cinematic completes; mission overlay
+  (section 4) registers at 0x800A5130; osViSetMode switches (0x305E→0x324E); 700+ VI
+  updates / 384+ send_dl, still running when watchdog killed it. tickTextureMaterialExpiry
+  crash was collateral of the handleRayShieldedNpcDestroy stack leak — gone.
+  One benign macOS log: AudioQueueInternalStop_Sync error -66671 (audio is stubbed).
+## First visual output (2026-07-10, same session)
+- Ran interactively, screenshotted window (screencapture -R436,204,640,512 after
+  osascript frontmost; computer-use MCP can't target non-bundled executables).
+- SCREEN: mostly WHITE with fragments of yellow Star-Wars-font text bottom-right
+  ("C N  LLE" — partial glyphs, likely attribution/title text). Stable across 18s.
+- Log: ZERO renderer warnings, and every [opcode-hist total=0] — the F5 HLE opcode
+  interpreter processes NO opcodes; send_dl entries all size=0. So visible pixels are
+  NOT coming from the HLE DL interpreter — likely VI scanout of fb content written by
+  the game/RSP itself. Missing glyphs ⇒ the F5 gfx task pipeline (type=1, ucode
+  0x80024A10) is essentially not translated yet — next major workstream is the RT64
+  HLE-F5 path (submodule branch HLE-F5-Attempt) or LLE via the recompiled factor5 ucode
+  (build/factor5_ucode/*.c — generated but is it wired in?).
+- OTHER NEXT ITEMS: input wiring; 830 still-unmapped overlay symbols.
+
+## Rendering workstream findings (2026-07-10)
+- HLE status (RT64 GBI_F3DFACTOR5, lib/rt64 src/gbi/rt64_gbi_f3dfactor5.cpp): ucode
+  detected by XXH3 hash (rt64_gbi.cpp:400, hashes at :166/:264). RDP-side ops (texrect
+  E4/E5, fills, tiles, combine) implemented; but Factor 5 CUSTOM GEOMETRY ops are stubs:
+  op 0x02 (matrix+glyph-triangle emit) deliberately emits nothing (:270-275, :344-357),
+  op 0x01/0x03 experimental/no-op. That's why title screen = white fill + few texrect
+  glyph fragments. Implementing op 0x01/0x02/0x03 vertex pipeline = the HLE road.
+- Opcode evidence (ROGUESQ_LOG_OPCODE_HIST=1): title DLs dominated by F5 customs
+  00/01/02/03/04/05/06/07/0C/10/4E/7C/80/BD/BE plus standard RDP ops. First-DL dump in
+  scratchpad run6 log (structure: 0x80 chunk hdr → E7/E6/E8 → 01 matrix → 03 → 02 02 →
+  BC segs → F8/ED/B9/BA → FE/FF cimg → F7/F6 fill).
+- LLE road exists: ROGUESQ_LLE_FORCE=1 routes type=1 tasks through recompiled factor5
+  boot+gfx ucode (src/main/main.cpp factor5_gfx_runner :109, dpc_bridge.cpp collects RDP
+  stream). Tried it: runner executes (boot ret 3, ucode ret 3/1, [lle send_dl gate=attr]),
+  osViSetMode advances, but process died ~1-2 min in. Crash report (.ips, thread "Gfx
+  Thread"): RT64 loadTLUTOperation→loadWord read OOB host addr — LLE RDP stream carries
+  unsanitized texture addresses. FIXED: rdramMask 0x7FFFFF on all RDRAM reads in loadWord
+  (lib/rt64 src/hle/rt64_rdp.cpp:372, uncommitted submodule edit — hardware wraps RDRAM
+  so masking is accurate). Guarded build: LLE no longer crashes BUT the game STALLS in
+  LLE mode — only 6 tasks / 4 VI updates in 150s, fb stays black. The factor5_gfx_runner
+  task-completion signaling (exit=1 vs exit=3 at [lle send_dl gate=attr]) doesn't satisfy
+  the game's scheduler, so it stops submitting. LLE needs task-lifecycle work before it's
+  usable; HLE mode remains the stable default (white + partial glyphs).
+## LLE road chosen (2026-07-10/11) — task-lifecycle investigation
+- Exit codes: 1=Broke (normal), 3=UnhandledJumpTarget. LLE solo run: task #1 works
+  (2 fillrects+1 fullsync+2 cimg), task #2 Broke-but-empty, tasks #3+ exit 3 at
+  jump target 0xFF7E (dispatch `lhu $2,table[op*2]; jr $2` site, recompiled.c:451)
+  with ALL regs zeroed (r19=0 ⇒ dispatching opcode 0x00, r17=0 DL cursor). One
+  0xFEDB failure from :79. Per-task DMEM staging identical (snapshot works), so
+  divergence comes from RDRAM DL content / cross-task bridge state.
+- sp_complete/dp_complete ARE signaled per task (events.cpp:371/389 around send_dl),
+  so completion signaling is NOT the stall. VI updates freeze too (4 in 150s) ⇒ the
+  Gfx Thread action loop is wedged — ScreenUpdateAction and SpTaskAction share the
+  same queue (events.cpp gfx_thread_func).
+- HANG ROOT CAUSE (mechanism, high confidence, unverified): RDP LoadTile/LoadBlock
+  coords are unsigned 12-bit; garbage commands with lr<ul underflow rowCount/word
+  count to ~4G and loadToTMEMCommon pins the Gfx thread forever (my rdramMask turned
+  the old SIGBUS into this hang). FIX STAGED (uncommitted, lib/rt64
+  src/hle/rt64_rdp.cpp loadToTMEMCommon): cap wordsPerRow/rowCount at 2048.
+- Dispatch tracer STAGED: factor5_ucode_recompiled.c do_indirect_jump now logs
+  first 400 indirect jumps when ROGUESQ_TRACE_DISPATCH=1 (added #include <cstdlib>).
+  NOTE: hand-edits on build/factor5_ucode/*.c survive cmake builds but NOT an
+  RSPRecomp regen; add to tools/fixup_factor5_ucode.py if kept.
+- TMEM loop cap alone did NOT fix the stall (VI still froze at #4). `sample` of the
+  stalled process nailed it: Gfx Thread 100% inside factor5_ucode_recompiled.c:209-223
+  — the ucode's RDP RING-BUFFER WAIT LOOP (L_116C): mtc0 DPC_START then spin reading
+  DPC_CURRENT until it leaves the write window (r8, r8+r10].
+- TRUE ROOT CAUSE of LLE stall: rsp_dpc_macros.h modeled DPC_CURRENT_READ as
+  g_rsp_dpc_end, and DPC_START write did NOT reset CURRENT. Hardware loads CURRENT
+  when START is written. So after task #1 left END inside a later task's window, the
+  wait loop span forever (task #1 only worked because initial END=0 was outside).
+  FIX APPLIED: include/rsp_dpc_macros.h — added g_rsp_dpc_current (defined in
+  dpc_bridge.cpp:30); DPC_START write sets current=start; DPC_END write sets
+  current=end (instant consumption); CURRENT_READ returns it. This also explains the
+  exit=3 garbage dispatch: tasks that escaped the window check with a stale CURRENT
+  computed a garbage ring write position, then read back unwritten/wrong DL bytes.
+- DPC_CURRENT FIX VERIFIED 2026-07-11: LLE solo run alive at 75s, VI ticking past #64
+  (nonzero=1 fs=1), 32+ tasks flowing (mostly exit=1), and FIRST VISIBLE LLE OUTPUT:
+  a green vertical rect on black (raw-RDP fillrect from task #1's stream). The wedge
+  class is closed.
+- 0xFF7E GARBAGE DISPATCH: SOLVED. Trace showed tasks fail at their FIRST indirect
+  jump: entry → overlay loader → `lhu $3, 0x76($3); jr $3` (L_1298) reads the
+  overlay entry-point halfword at DMEM[0x76]; good tasks get 0x1DB0 (bootstrap),
+  bad get 0xFF7E. Cause: runner stages the clean ucode_data snapshot BEFORE
+  factor5_boot, but boot re-DMAs ucode_data from (engine-corrupted) RDRAM over it.
+  FIX: re-apply snapshot AFTER factor5_boot in factor5_gfx_runner (main.cpp).
+  Verified: exit=3 count 0.
+- NEW HANG at task #4 (deterministic): sample → factor5_ucode_recompiled.c:198,
+  L_115C `spin while DPC_CURRENT == r8` (ring-overwrite safety wait). Attribution
+  ring wraps exactly onto previous END at task #4 → CURRENT==r8 forever. FIX
+  STAGED: rs64_dpc_current_read() in dpc_bridge.cpp — bounded-poll escape (after
+  64 identical polls, report v+8 once); CURRENT_READ macro now calls it.
+  NOT YET BUILT/VERIFIED (harness sandbox outage again). Verify via
+  scratchpad/lle_verify2.sh — expect tasks >4 flowing, VI advancing, screenshot
+  lle6.png showing attribution content.
+- Also: 2 runs got spurious [main] SDL_QUIT → abort during exit cleanup at ~40s
+  (crash in poll_input exit path, not the pipeline); third run clean. Watch it.
+- AFTER poll-escape fix: task-4 hang gone, tasks run further, BUT mid-task
+  UnhandledJumpTargets returned (exit=3 ~alternating tasks): the MAIN OPCODE
+  DISPATCH (lhu table[op*2]; jr — recompiled.c:80/:93) returns garbage for ops
+  that dispatched fine moments earlier (0xBA→0xFF0F, 0xB6→0xFEF5, also 0x2F0D
+  from :298, 0xFEBD from :2373). ⇒ the DMEM dispatch table (0x64..0xE0) is being
+  CORRUPTED MID-TASK. Garbage values have 0xFE/0xFF high bytes — smell like
+  signed vertex data; hypothesis: a vertex/data DMA lands on the table region,
+  possibly an addressing input perturbed by the poll-escape (+8 drift) or the
+  frame-varying DL content. Task #5 emitted real work (2 fillrects+sync) before
+  dying — pipeline is closer.
+  RESOLVED (mostly) 2026-07-11 late: DMEM dump revealed DMEM[0x60..0xE0] holds a
+  TRIG TABLE (constant across all failures — resident data, not corruption); the
+  dispatch table is a SWAPPABLE SEGMENT the bootstrap re-DMAs from
+  ucode_data+0xD60 (r16=0xD60 at failure). Two fixes landed:
+  (1) DMA SHADOW: librecomp rsp.hpp dma_rdram_to_dmem now serves reads inside
+      [ucode_data, +0x1800) from a clean first-task RDRAM capture
+      (g_rsp_dma_shadow_* globals, defined+wired in main.cpp factor5_gfx_runner).
+      The engine corrupts that RDRAM range mid-flight; 0x800 (OSTask size) was
+      NOT enough — the segment really extends past +0xD60, hence 0x1800.
+      This killed the alternating-task failures: 32+ tasks/run, exit=3 rare.
+  (2) Combined with post-boot snapshot restore + DPC_CURRENT semantics +
+      bounded-poll escape (all above), the LLE pipeline now runs sustained.
+  REMAINING (1 per ~32 tasks, deterministic-ish at task #8): dispatch of op 0x00
+  from ZEROED DL bytes at DMEM 0x228 (staged chunk range) → reads op-0 slot
+  DMEM[0xD6] which still holds trig data (segment swap for the dispatch table
+  didn't precede it) → jr 0xFEDB → exit 3; process dies shortly after (probably
+  RT64 partial-stream assert — check next). Task #8 did real work first
+  (fillrect+cimg+depth). Open questions: why DL bytes at +0xB8 into the staged
+  chunk are zero (game still writing? chunk-continuation misfetch?) and whether
+  op 0x00 should ever dispatch (may be padding real ucode never reaches — check
+  whether an earlier conditional/branch was perturbed by the poll escape).
+  NOTE: shadow assumes ucode_data content is STATIC per game phase; if the game
+  legitimately updates it between phases (cinematic vs attribution ucode_data
+  differ — snapshot keyed by addr+size in runner, shadow only re-captured when
+  buffer size changes — BUG RISK: phase change with same addr/size won't
+  re-capture; revisit when leaving attribution).
+
+## LLE session 3 (2026-07-13) — exit=3 discriminated, do_break solved
+- NEW DIAG (survives cmake, not regen): rsp.hpp dma_rdram_to_dmem records last DMA
+  touching DMEM 0x170..0x280 (g_rsp_last_chunk_* globals, defined main.cpp:104); the
+  UnhandledJumpTarget exit in factor5_ucode_recompiled.c dumps [chunk] DMA metadata,
+  DMEM[0x170..0x280], AND live RDRAM at the recorded source. tools/lle_soak.sh added
+  (macOS has no `timeout`; watchdog-kill runner, args: seconds logfile).
+- exit=3 STEP-1 ANSWER: chunk fetch is FAITHFUL — DMEM == RDRAM byte-for-byte at the
+  recorded source (e.g. 0x169F10 len 0x110). Both prior hypotheses DEAD: the game DID
+  write the DL (it's a sparse pointer-block: zeros + embedded ptrs like 0x80171EB0 at
+  +0x08, 0x80169150 at +0x54) and the fetch address is correct. op 0x00 is a LEGIT
+  opcode: other tasks dispatch op 0 at the same r17=0x178 to L_1088 successfully and
+  continue with real ops (0x06, 0xB6, 0xB7, 0xBC...) — looks like a call/continue-DL
+  op that chases the embedded pointer.
+- REAL exit=3 MECHANISM (narrowed, not closed): garbage jump targets (0x2F0D, 0xFEDB,
+  0xFEF5, 0xFEF42B50-as-DL-word) are all TRIG-TABLE halfwords. They surface at the
+  overlay entry vector reads (DMEM[0x76+seg] table / saved $ra at DMEM[0x16A]; overlay
+  loader L_1268/L_1278 caches segment id at DMEM[0x153], stores $ra at 0x16A). Failing
+  tasks show a full-DMEM segment image (0xF80 bytes from RDRAM 0x0A4E00 =
+  ucode_data+0x6C100 — outside the 0x1800 DMA shadow, served live) loaded over
+  DMEM[0..0xF80], replacing tables with trig data. Failure = segment-residency desync:
+  the wrong segment is resident when the entry vector is read. Suspect the post-boot
+  snapshot restore rewriting DMEM[0..size] incl. the 0x153 marker desyncs marker vs
+  actual tables. NEXT: log all DMAs + DMEM[0x153] transitions for one failing task.
+- do_break 0x80090CEC SOLVED: compiler `break 7` div-by-zero guard in musyxKeyOnVoice
+  (funcs_24.c) — MusyX stubbed → voice data uninitialized → divisor 0. All 8 break 6/7
+  traps in that function converted to early `return` via fixup_game_funcs.py (keyed on
+  exact do_break constants 2148076780..2148077008). Verified: no do_break in 180s soak,
+  run reached 1133 dispatches (vs ~250).
+- RT64 guard chain extended (all uncommitted rt64 submodule edits, same class as
+  session-2 guards; each verified against its own abort):
+  * rt64_state.cpp:262 loadDrawState: copy-mode draw with undefined tile
+    (tile.line==0) → log + mark invalid instead of assert.
+  * rt64_common.cpp FixedRect::fullyInside: null rect(s) → return false instead
+    of assert.
+  * rt64_state.cpp:600 checkRDRAM: pending drawFbOperations/drawFbDiscards from
+    draws that never materialized → log + clear instead of assert.
+- DEAD END (do not retry): RDP_ADDRESS_MASK 0xFFFFFF→0x7FFFFF (rt64_rdp.h) to stop
+  a garbage set-cimg SIGBUS (phys 0xAD0C39 from trig-as-DL) made things WORSE —
+  crash moved earlier (task #4). Addresses in 0x800000..0xFFFFFF are legitimate
+  RT64 extended-RDRAM handles; masking aliases them onto low memory. REVERTED.
+  The garbage-cimg SIGBUS itself stopped reproducing after the checkRDRAM guard
+  (lldb showed the actual abort was the checkRDRAM assert, not a raw deref).
+- RESULT 2026-07-13: 300s LLE solo soak SURVIVES (watchdog kill, not crash):
+  256 send_dl / osViSwapBuffer, 960 VI updates, real RDP emission throughout,
+  residual exit=3 tasks tolerated (~1 per ~16, e.g. task #16). do_break gone.
+  Previous best was 40-60s. NEXT: exit=3 segment-residency root cause (see step-1
+  answer above — log DMAs + DMEM[0x153] transitions), then ROGUESQ_LLE_UNGATED=1
+  (cinematic via LLE) and visual comparison vs HLE; screenshot the attribution
+  screen in LLE mode.
+
+## LLE session 3 continuation (2026-07-13 later) — mechanism confirmed, defer/drop shield
+- exit=3 MECHANISM CONFIRMED via [dma]/[disp] interleave (ROGUESQ_TRACE_DMA=1, new
+  env-gated DMA trace in librecomp rsp.hpp; disp trace now also logs DMEM[0x153] and
+  DMEM[0x16A]): the ucode has only TWO generic DMA helpers (recompiled.c L_11B0 ~line
+  293 chunk refetch, L_122C ~line 390 segment loader). The 0xF80 image from RDRAM
+  0xA4E00 = SEGMENT 8 (trig) loading from ucode_phys+0x803F0 to DMEM 0 — LEGIT segment
+  swap that covers BOTH the dispatch tables (0x64..0xE0) and the DL staging window
+  (0x170..0x280). Failures happen when DL processing continues after a trig swap
+  without the ucode re-staging the chunk/dispatch segment. Failing tasks show
+  seg153 flip 0x00→0xC8 mid-DL (during op 0x2F / op 0x06 handling), then trig
+  halfwords read as DL words / entry vectors.
+- HYPOTHESIS KILLED: OS yield/resume — task flags always 0x0, yield_ptr=0x80162DF0
+  (≠0xA4E00), yield never used. ([lle task] log added in rs64_run_lle_gfx.)
+- DEAD END (reverted): chunk-replay hack in dma_rdram_to_dmem (re-copy last chunk
+  fetch over 0x170..0x280 after big image loads) — made it WORSE (29 vs ~5 unhandled):
+  the ucode legitimately reads trig values from the window right after the swap, and
+  the replay corrupts its state machine so even real ops (0xBA) mis-dispatch. The true
+  fix needs the ucode's own re-staging choreography understood (or the spurious-reload
+  trigger — post-boot snapshot restore resetting 0x153 — addressed without desyncing
+  tables). Parked.
+- MITIGATION SHIPPED instead (verified 2 clean 300s soaks, VI #704 endpoint = watchdog):
+  1. Per-task RDP DEFER/DROP: dpc_bridge.cpp rs64_dpc_defer_begin/_end buffer all
+     submit ranges during a task; runner (main.cpp around factor5_ucode call) commits
+     on clean exit, discards on UnhandledJumpTarget ([defer-drop] log). RT64 never
+     sees garbage streams.
+  2. DPC OOB-RANGE guard (dpc_bridge.cpp rsp_dpc_submit): ranges outside 8MB RDRAM
+     dropped before any dereference ([dpc-oob-range], fired 62x/run — was SIGBUSing
+     the bridge's own diagnostics).
+  3. rt64_native_target.cpp copyToRAM: writeBufferHistoryIndex bounds + null-buffer
+     check (was SIGBUS at fault addr ~0x100001c with garbage 1982-wide siz=0 readback).
+- Residual: exit=3 rate is HIGHLY variable run-to-run (9..80 per 300s) but all are
+  absorbed; frames from failed tasks are dropped (visual stutter expected). Exit-path
+  SDL_QUIT abort on watchdog SIGTERM still unexplained (signals 134/138 at kill time),
+  cosmetic for soaks.
+- INTERLEAVE DIFF DONE (good task 1 vs failing task 2, lldb_sigbus2.log): both run
+  identically through op 0x06 → chunk fetch from ucode_data-0x16A8 (0x37658); good
+  task's next fetched op is real DL (0xB6...), failing task instead immediately
+  issues the 0xF80 trig-image load. So the CONTENT of the 0x37658 chunk differs
+  between tasks and steers the divergence.
+- DEAD END #2 (tested, reverted): widening the DMA shadow to [ucode_data-0x1800,
+  +0x1800) to cover 0x37658 did NOT reduce failures (64 unhandled/300s, within the
+  9-80 variance band) — the 0x37658 content difference is legit dynamic data, not
+  shadowable corruption. Reverted to the 0x1800-above-base shadow.
+- MECHANISM FULLY DECODED (2026-07-13 later, op-fetch trace + static decode). Chain
+  of corrections: (1) 0x37658 prolog chunk content is IDENTICAL in good and bad
+  tasks (peek diag proved it — content theory dead). (2) The 0xF80 DMA is NOT a
+  segment load: L_11A8 (seg-8 load) is only reachable via `SP_STATUS & 0x80`, which
+  recomp hardcodes to 0. (3) TRUE STORY: op 0xBA 0x001701 (othermode-merge, handler
+  L_12FC) appends 8 bytes to the RDP STAGING BUFFER (DMEM 0xD60.., write cursor r16)
+  and falls into the FLUSH routine L_112C. Flush layout: DMEM[0x100]=ring base
+  (=RDRAM 0xA4E00 — the "mystery image" is just the RDP command ring, containing
+  previously flushed data), DMEM[0x104]=ring limit, DMEM[0x108]=ring write pos;
+  staged count = r16-0xD60. The fatal DMA (dram=0xA4E00 dmem=0 len=0xF7F) is a
+  flush gone wrong with staged count 0xF80 → the staging cursor had overflowed to
+  ~0x16E0 because EARLIER FLUSHES WERE SKIPPED. Overwriting DMEM[0..0xF80] with
+  ring content (which contains trig-looking data) is the DMEM trample that produces
+  trig-as-DL, seg153=0xC8, ra16A=0x2F0D and every downstream symptom.
+- CORRECTIONS from tagged-helper run ([hWR]/[hRD1]/[hRD2] tags on the ucode's only
+  THREE DMA sites, recompiled.c ~303/360/402 — hand-edit diag):
+  * The flush direction is CORRECT: L_11FC is the WRITE helper (mem=0xD60 staging →
+    dram=ring) and healthy tasks flush 8-byte increments to **ring = 0x777800 =
+    OSTask output_buff** (NOT 0xA4E00 — earlier "ring at 0xA4E00" note is WRONG;
+    0xA4E00 is still unexplained: not yield_ptr (0x162DF0), not data_ptr, not
+    output_buff. It appeared as an hRD-class read dram in earlier runs only).
+  * hRD2 with mem=0x1DB0 (IMEM, skipped by our DMA impl — code is recompiled) is
+    the bootstrap's overlay code load from 0x25748 each task: normal.
+  * The failure signature MOVED in this run (nondeterminism again): task #3 booted
+    with DMEM ALREADY trampled (seg153=0xC8, ra16A=0x2F0D from its first dispatch;
+    first real op 0xB6 → table gave 0xFEF5) — i.e. a PREVIOUS task's trample
+    persisted across boot + snapshot restore. Task #4 started with seg153=0x00
+    (clean marker) but ra16A flipped 0x1088→0x2F0D DURING BOOTSTRAP (a `sh $ra,
+    0x16A` store with garbage ra — register-level, not DMA), and its 0x64 table
+    lookup for the next word returned trig-like 0x50C7. So: the trample persists
+    in DMEM regions/state the per-task restore doesn't cover (snapshot covers only
+    0..0x800; trample extends to 0xF80), AND at least one corruption path is a
+    plain store with a garbage register, not a DMA.
+- ADDITIONAL FINDING (same run): runner ALREADY re-initializes the ucode state
+  block per task (factor5_gfx_runner pokes after post-boot restore: DMEM[0x130]=
+  dl_ptr, 0xFF0, 0x101C, 0x654=0x178, 0x152=0x18, 0x153=0) — yet failing task #4
+  fetched its first chunk from 0x169F10 instead of its poked dl_ptr 0x720318
+  (L_11B0 read of DMEM[0x130] returned 0x169F10, ra=0x1088, DURING bootstrap).
+  Something between the poke and the bootstrap's 0x130 read rewrites it (or the
+  bootstrap reads a different slot that aliases to a stale pointer). The trample
+  fingerprints (seg153=0xC8, ra16A=0x2F0D, tables→trig) also appear WITHOUT any
+  logged DMA — so at least part of the "trample" is the bootstrap legitimately
+  loading the trig segment when its (stale/desynced) state tells it to.
+- CANARY BISECT DONE (2026-07-13 late; [canary] in-ucode at each dispatch +
+  [rcanary] runner-side at pre-boot/post-boot/pre-ucode):
+  * pre-boot: ALWAYS clean (0x130=0xC, tblhash 0xD36718B2) — memset+snapshot fine.
+  * post-boot: USUALLY clean, but ~1/5 tasks factor5_boot itself emerges with
+    trig-loaded DMEM (t5: 0x130=0xFEAB3C85 tbl=0xF85E15D5).
+  * pre-ucode: ALWAYS clean (post-boot restore + pokes fix it).
+  * Yet in-ucode canary shows trig AT THE FIRST DISPATCH of failing tasks — the
+    corruption re-enters between the clean pre-ucode state and factor5_ucode's
+    first indirect jump, with only two DMAs in between (IMEM code load, skipped;
+    and the 0x170 chunk fetch, which can't touch tables/0x130).
+  * NEGATIVE RESULTS (all kept, none harmful): snapshot/shadow thread_local →
+    shared (no change, 83/300s); per-task rs64_dpc_reset() clearing
+    g_rsp_dpc_start/end/current + poll-escape state (no change, 94/300s).
+- REFRAME for next session (best remaining theory): since every DMA site is tagged
+  and none writes the table region, the trig table must be GENERATED by VU/scalar
+  store loops in the boot/entry code (classic RSP sine-table generation), gated by
+  a "trig resident" marker somewhere in DMEM state. Our per-task memset + restore
+  + pokes perturb that marker so entry regenerates trig over 0x60..0x280 (incl.
+  the staged DL window and 0x130) at the wrong moment. NEXT: grep the entry path
+  (function start → first do_indirect_jump, and the L_1DB0 bootstrap) for
+  RSP_MEM_*_STORE / SQV-class writes with computed addresses hitting 0x60..0x280;
+  find the gating load; make the runner set that marker to "resident" (its
+  snapshot content is the already-generated table, so skipping regen is correct).
+- Soak status: stable to watchdog every run since defer/drop (vi #704); exit=3
+  band now 9-94/300s, all absorbed as dropped frames.
+- DIAG NOTE: [op] fetch trace at L_1090, [hWR/hRD1/hRD2] helper tags, [dma] chunk
+  content peek (rsp.hpp) — all ROGUESQ_TRACE_DISPATCH/TRACE_DMA-gated hand-edits;
+  survive cmake, not regen (add to fixup_factor5_ucode.py if kept).
+
+## LLE session 4 (2026-07-13 cont.) — trig-regeneration theory KILLED, shadow2
+- Static sweep of ALL 59 store sites in factor5_ucode_recompiled.c + full read of
+  factor5_boot_recompiled.c (185 lines): NO table-generation loop exists anywhere.
+  The entry path (L_125C→L_1278→L_122C) writes only DMEM[0x16A] (saved ra) and
+  DMEM[0x153] (segment marker) — everything else arrives BY DMA. Regen theory dead.
+- ENTRY PATH DECODED: every task's first act is an UNCONDITIONAL segment-0 load:
+  L_125C reads DMEM[0x7A], L_1278 stores 0x153=seg, computes source =
+  **DMEM[0xFD0] (OSTask.ucode, task+0x10 — the ucode CODE ptr, NOT ucode_data)**
+  + lhu DMEM[0x7C+seg], dest = lhu DMEM[0x76+r3] (also the post-load jump target,
+  L_1298 `jr $3`). So dispatch/entry tables are segment content DMA'd from the
+  ucode CODE image in RDRAM — which the 0x1800 ucode_data shadow never covered.
+  This also finally explains 0xA4E00 = ucode_phys+0x803F0 (segment source).
+- Boot decode: factor5_boot only (a) DMAs ucode_data[0..size-1] → DMEM 0 (known),
+  (b) DMAs ucode code → IMEM 0x1080 (skipped by our impl), (c) syncs/breaks. The
+  ~1/5 "post-boot trig" canary = corrupted RDRAM ucode_data image at (a).
+- FIX ATTEMPT (this session): second DMA shadow over the ucode CODE image.
+  * librecomp rsp.hpp: g_rsp_dma_shadow2_* globals + second range check in
+    dma_rdram_to_dmem (same serving rule as shadow 1).
+  * main.cpp factor5_gfx_runner: captures [OSTask.ucode & 0xFFFFF8, +0x82000)
+    clean on first task ([shadow2] log), serves all ucode-image DMA reads from
+    it; per-task live-RDRAM-vs-capture diff logged ([shadow2] LIVE DIFF, first
+    24) as two-source evidence the engine really rewrites that region.
+    Env kill-switch: ROGUESQ_NO_SHADOW2=1.
+  * Soak result: shadow2 made it WORSE (109 unhandled, 35 send_dl vs 256
+    baseline; ROGUESQ_NO_SHADOW2=1 kill-switch works). LIVE DIFF fired every
+    task: engine rewrites two small fixed spots (ucode+0x12DEA=dram 0x377FA,
+    ucode+0x7CD5C=dram 0xA176C, 8-13 bytes, slowly growing) — those look like
+    legit dynamic CPU↔RSP data, and serving them stale breaks real work
+    (same class as DEAD END #2). Blanket ucode-image shadow is a DEAD END.
+- **BREAKTHROUGH — exit=3 correlates with IMEM overlay source.** The per-task
+  hRD2 `mem=0x1DB0` load is an IMEM CODE overlay (skipped by our DMA impl since
+  code is statically recompiled) and alternates between TWO sources:
+  dram 0x25748 (ucode+0xD38) and dram 0x9AD18 (ucode+0x76308). Attribution of
+  each Unhandled to the preceding 1DB0 load: **0x25748-tasks fail 91/95 (96%),
+  0x9AD18-tasks 16/126 (13%)**. Overlay B (0x9AD18) disassembles as a
+  completely different bootstrap (vector-math heavy, ldv/vmadn, jal into
+  resident helpers) vs overlay A (state-init bootstrap that matches recompiled
+  L_1DB0 modulo an 8-byte slip: recompiled L_1DB0 = nop,nop,then A's code).
+  The static translation contains only ONE overlay at 0x1DB0 — tasks needing
+  the other run wrong code. Candidate TRUE ROOT CAUSE of residual exit=3.
+- PUZZLE RESOLVED — **THE GAME USES TWO DIFFERENT F5 GFX UCODES.** hRD2 diag
+  (prints DMEM[0xFD0]) showed the base alternates per task: 0x80024A10
+  (ucode A) vs 0x80099FE0 (ucode B). The outer OSTask ALWAYS says ucode A;
+  boot's ucode_data DMA covers the OSTask region in DMEM and rewrites
+  DMEM[0xFD0] with the embedded real ptr. B's text found in ROM at 0x9ABE0
+  (all 992 words differ from A — a genuinely different ucode; its bootstrap
+  is vector-math heavy). Runtime dumps: build/ucode_024A10.bin /
+  ucode_099FE0.bin (0x80000 each, via rs64_dump_ucode in main.cpp).
+- **UCODE B RECOMPILED AND INTEGRATED** (all committed to working tree):
+  * factor5b_rsp.toml (ROM 0x9ABE0, text_address 0x04001080, no extra
+    indirect targets yet) → build/factor5_ucode/factor5_ucode_b_recompiled.c
+    via ~/Documents/Tools/N64Recomp/build/RSPRecomp; fixup applied (mostly
+    no-op: B has no L_1090, so no iter cap — add if B ever wedges).
+  * CMakeLists: FACTOR5_UCODE_B_C added to fixup pass, source list, ucode
+    compile flags.
+  * main.cpp runner: after factor5_boot, reads embedded ucode ptr from
+    DMEM[0xFD0]; if it differs from OSTask.ucode → factor5_ucode_b, run RAW
+    (skips A's snapshot restore + DMEM pokes — they encode A's layout), with
+    its own defer/drop bracket.
+  * RESULT: B tasks produce ZERO UnhandledJumpTarget. A-task failures remain
+    (~40-50/120-300s, same trig fingerprints) — a third mechanism.
+- Post-B experiments (all env-gated, defaults chosen by measurement):
+  * ROGUESQ_SHADOW2=1 (ucode-image DMA shadow): default OFF — WORSE when on.
+    LIVE DIFF diag confirmed engine writes 2 small fixed spots in the image
+    (+0x12DEA, +0x7CD5C) — legit dynamic data, do not shadow.
+  * ROGUESQ_RING_RESYNC=1 (poke DMEM[0x108]=ring base per task, targeting the
+    flush-overflow trample): default OFF — no measurable change (41 vs 51).
+  * ROGUESQ_LIVE_UDATA=1 (bypass ALL snapshot/restore/shadow, fresh DMA per
+    task): statistically IDENTICAL to snapshot path (39 vs 45 unhandled/300s)
+    now that B is dispatched separately ⇒ the original "engine-corrupted
+    ucode_data" was very likely the A/B mixup all along; snapshot machinery
+    is now dead weight (candidate for deletion after more soaks).
+- 300s baseline w/ ucode-B dispatch: 45 unhandled, 279 tasks, stable to
+  watchdog. NEXT: (1) root-cause remaining A-task failures — corrupted A tasks
+  sometimes DON'T exit (churn trig-as-DL, absorbed by oob guards, seg153=0xC8
+  ra16A=0x2F0D mid-task); trace where DMEM goes bad now that B is out of the
+  picture (canary said between pre-ucode and first dispatch). (2) B tasks:
+  verify they do real RDP work (exit=1 mix suggests yes, but senddl gating in
+  logs changed — compare visuals). (3) Consider deleting snapshot machinery
+  (LIVE_UDATA equal). (4) Then ROGUESQ_LLE_UNGATED=1 + visual compare vs HLE.
+
+## LLE session 5 (2026-07-13 latest) — TRUE ROOT CAUSE: unserialized shared DMEM
+- **CORRECTION: the "two F5 gfx ucodes" theory (session 4) is WRONG.**
+  0x80099FE0 is the **MusyX AUDIO ucode** (ucode_data 0xA4E00 — its sine/
+  wavetables ARE the "trig" data). GFX tasks route ONLY via send_dl
+  (submit_rsp_task sends M_GFXTASK to the gfx thread); librecomp's
+  rsp::run_task on the SP-task thread handles AUDIO tasks — and before calling
+  the (stubbed) handler it memcpy's the audio OSTask to dmem[0xFC0] and DMAs
+  0xF80 bytes of audio ucode_data over dmem[0..0xF7F] (librecomp rsp.cpp:46).
+  dmem[] is ONE shared 4KB global. Unserialized, audio staging trampled gfx
+  tasks mid-run: every historical symptom — trig-as-dispatch-table,
+  seg153=0xC8, ra16A=0x2F0D, DMEM[0xFD0]=0x99FE0, "clean pre-ucode canary yet
+  trig at first dispatch", 9-94/300s nondeterminism, the 0xA4E00 mystery reads
+  — was this race. Caught red-handed in a TRACE_DMA run: [runner-step #4]
+  boot interleaved with [rcanary t3 pre-ucode].
+- FIX (verified): serialize ALL DMEM users with one recursive mutex.
+  * main.cpp: g_lle_task_mutex; locked in factor5_gfx_runner AND
+    rs64_run_lle_gfx (covers OSTask pokes).
+  * librecomp rsp.cpp run_task: weak-linked rs64_dmem_lock/unlock hooks
+    (defined in main.cpp) guard its OSTask memcpy + ucode_data DMA + ucode
+    call. (Submodule working-tree edit — do not lose.)
+- **RESULT: 300s soak, 0 UnhandledJumpTarget, 0 defer-drops, 253 tasks, 66
+  RDP commits. The exit=3 class that consumed sessions 2-4 is CLOSED.**
+- The factor5_ucode_b dispatch was removed (running the audio ucode on gfx
+  tasks is never right); replaced with a [dmem-race] canary that logs if
+  DMEM[0xFD0] ever mismatches again. factor5_ucode_b_recompiled.c stays in
+  the build as an artifact (harmless, never called); factor5b_rsp.toml kept
+  for reference — it documents the audio ucode's ROM location 0x9ABE0.
+- Retrospective: most of the snapshot/restore/shadow machinery (sessions 1-3)
+  was treating symptoms of this race. LIVE_UDATA (bypass everything) should
+  be retested now — likely all of it can be deleted. The defer/drop shield
+  and DPC fixes remain genuinely needed (DPC semantics were real bugs).
+- NEXT: (1) re-test ROGUESQ_LIVE_UDATA + consider deleting snapshot/shadow;
+  (2) confirm gfx CORRECTNESS visually (screenshot attribution in LLE mode);
+  (3) ROGUESQ_LLE_UNGATED=1 cinematic soak; (4) input wiring / 830 unmapped
+  overlay symbols (game-side, unrelated to RSP).
+
+## LLE session 6 (2026-07-13) — live ucode-data path made default
+- Follow-up to the shared-DMEM race fix: removed the obsolete first-task
+  `ucode_data` snapshot/restore and its 0x1800 DMA shadow. The serialization
+  hooks in `rsp.cpp` now prevent the audio-task DMEM overwrite that the
+  snapshot had been masking; each gfx task consequently stages its own live
+  `ucode_data` before boot, matching `ROGUESQ_LIVE_UDATA=1` without an env
+  toggle. Removed the corresponding shadow globals and DMA serving branch
+  from `librecomp/rsp.hpp`. The code-image `shadow2` diagnostic remains
+  available and default-off.
+- Verification: full `cmake --build build -j8` completed successfully after
+  the cleanup; `git diff --check` is clean. A direct LLE runtime soak could
+  not run in this noninteractive macOS session because SDL reported “The video
+  driver did not add any displays” during `SDL_Init`; this is host-display
+  isolation, not a game failure.
+- NEXT: run a 300s `ROGUESQ_LLE_FORCE=1` soak on a logged-in desktop and
+  compare task count, `UnhandledJumpTarget`, `[defer-drop]`, and
+  `[dmem-race]` markers with the prior 253-task/0-drop result; then capture
+  the attribution screen and proceed to `ROGUESQ_LLE_UNGATED=1` cinematic
+  soak if it remains clean.
+
+## LLE soak harness follow-up (2026-07-13)
+- Updated `tools/lle_soak.sh` for the current acceptance test. It now defaults
+  to 300 seconds, preserves extra `ROGUESQ_*` environment toggles (including
+  `ROGUESQ_LLE_UNGATED=1`), emits a single summary with task, RDP-commit,
+  unhandled-jump, defer-drop, and DMEM-race counters, and returns a distinct
+  exit code 3 when SDL cannot acquire a display. An early abnormal game exit
+  still propagates its original status; the watchdog TERM is accepted.
+- Verified with `zsh -n`, a one-second invocation in this no-display sandbox
+  (correctly produced the explicit no-display status rather than a false
+  passing soak), plus `cmake --build build -j8` and `git diff --check`.
+- NEXT unchanged: on a logged-in desktop run
+  `tools/lle_soak.sh 300 /tmp/lle_live.log`; acceptance is 0 unhandled, 0
+  defer-drops, and 0 DMEM-race markers with task/RDP-commit counts comparable
+  to the pre-cleanup 253-task/66-commit soak. Then capture attribution output
+  and run the ungated cinematic soak.
+
+## Input follow-up (2026-07-13)
+- Added a keyboard fallback for player one in `src/main/main.cpp`; it remains
+  usable without an SDL gamepad and combines with gamepad input when one is
+  connected. Bindings: WASD = analog stick, arrows = D-pad, Z/X/C = A/B/Z,
+  Enter = Start, Q/E = L/R, and I/J/K/L = C-up/left/down/right. The logical
+  player-one controller is now reported as connected even with no gamepad.
+  README input documentation updated accordingly.
+- Verified compilation with `cmake --build build -j8` and `git diff --check`.
+  Physical key testing still requires the logged-in desktop session that is
+  also needed for the LLE soak.
+
+## LLE session 7 (2026-07-14, desktop) — post-cleanup soak PASSED, ungated started
+- Gated 300s soak (tools/lle_soak.sh, live-ucode_data build): **253 tasks, 66
+  defer-commits, 0 unhandled, 0 defer-drops, 0 dmem-races** — identical to the
+  pre-cleanup baseline. Snapshot/shadow deletion (session 6) fully vindicated.
+  app_exit=134 is the known cosmetic exit-path SDL_QUIT abort at watchdog kill.
+- lle_soak.sh fix: rdp_commits grep pattern didn't match the actual
+  `[defer-commit` marker (reported 0); corrected. NOTE: `[defer-commit]` logging
+  is gated by ROGUESQ_TRACE_DISPATCH=1 — runs without it legitimately show 0.
+- Attribution screenshot (LLE gated, scratchpad lle_attr*.png): WHITE screen
+  with letterbox, no text glyphs, stable 8-23s. All attribution tasks exit=1.
+  Same silhouette as HLE ⇒ LLE draws the white fill but the attribution TEXT
+  is still missing — glyph rendering (texrect path through real RDP) is the
+  next visual-correctness question.
+- Ungated (ROGUESQ_LLE_UNGATED=1) first attempt: SIGABRT after 77 tasks /
+  64 commits (0 unhandled/drops/races) — RT64 assert
+  rt64_framebuffer_manager.cpp:248 reinterpretTileSetup: srcId missing from
+  tileCopies. Guarded both assert sites (setup falls into existing
+  null-texture→ignore path; record returns early) — same class as the
+  session-2/3 guard chain; uncommitted rt64 submodule edit. Rebuilt, re-soaked.
+- **Ungated 300s soak PASSED with the guard: 410 tasks, 69 defer-commits, 0
+  unhandled, 0 defer-drops, 0 dmem-races**, ran to watchdog (exit 134 = the
+  known SDL_QUIT terminate on TERM, cosmetic). The reinterpretTile assert did
+  not recur this run (nondeterministic — guard is insurance either way).
+- Ungated cinematic screenshots (scratchpad lle_cine1-3.png, 30/60/90s): plain
+  WHITE with letterbox, identical across all three. LLE STABILITY IS DONE;
+  VISUAL CORRECTNESS IS NOT — fillrects reach the screen but no geometry/text
+  does, in both attribution and cinematic.
+## LLE visual-correctness investigation (2026-07-14, same session)
+Traced the texrect path END-TO-END; every link up to GPU execution is HEALTHY:
+1. RDP stream is COMPLETE. New full-range walker in dpc_bridge rsp_dpc_submit
+   (gated ROGUESQ_LOG_DPC, prints [full-hist] every 1024 submits — the old
+   first-byte-only histogram MISSED bundled commands and falsely suggested no
+   loads): op33 LOADBLOCK=199, op32 SETTILESIZE=198, op3D SETTIMG=199,
+   op35 SETTILE, op24 TEXRECT=360, plus syncs/othermode/combine/fill. One
+   SETTIMG+LOADBLOCK per texrect.
+2. Texture SOURCE data in RDRAM is real ([tex-src] dump at LOADBLOCK time,
+   also new in the walker): varied glyph-like bytes, not zeros/FF.
+3. Texrect geometry sane ([dpc-cine]): 16-texrect 4x4 grid, 48x37 cells,
+   screen-center, fb=0x62B800 (= the VI-scanned fb - 0x500 line offset),
+   fmt=2 siz=2 (CI16 -> RT64 decodes as I16 quirk, TextureDecoder.hlsli
+   handles it).
+4. RT64 pipeline tracer (pre-existing ROGUESQ_LOG_PIPELINE stages):
+   stage 1 drawTexRect called 53k+; stages 2.5/2.6: instances reach the
+   renderer loop as type=4 RegularRect (~6/frame, 106k total), colorTarget
+   non-null, scissor non-empty, NO [skip-null-rt], NO scissorSkip, no
+   copy-mode-undefined-tile guard fires. The GPU drawInstanced EXECUTES.
+5. Present: [pq] shows attribution presents fb 0x6DD000 (320-wide, 3x scale
+   960x672, colorTarget non-empty). ROGUESQ_VI_FORCE_FB=0x62B800 presented
+   the texrect target directly: STILL uniform white. Follow-draw modes 1/2
+   don't change it (mode 2 shows a cream-white other fb). Pixel histogram of
+   screenshots: pure uniform color, no faint glyphs => NOT white-on-white.
+CONCLUSION: texrect draws execute on the GPU but their pixel OUTPUT is
+invisible in the render target. Remaining suspects (ranked):
+  (a) pixel/combiner output — sampled texture resolves white/transparent
+      (TMEM upload to GPU texture cache, CI16 hash path, alpha-compare in
+      copy mode discarding all texels);
+  (b) render-target aliasing — draws land in a different colorTarget than
+      the one presented for the same fb address (fbPairCount=2 during
+      attribution).
+NEXT EXPERIMENTS: (1) Xcode Metal frame capture of one attribution frame —
+definitive, needs interactive GUI session; (2) instrument TextureCache
+upload for the texrect tile (dump decoded texels after TMEM hash/decode);
+(3) log alphaCompare/otherMode at RegularRect draw time; (4) check
+fbPair/colorTarget pointer identity draw-vs-present for 0x62B800.
+One-off: Metal 'bad VATY token' library assertion in the FIRST ungated
+crash only (alongside reinterpretTile assert) — not reproduced since.
+Diag NOTE: full-hist walker + [tex-src] are committed-tree edits in
+dpc_bridge.cpp (env-gated, keep); screenshots in session scratchpad.
+
+- SUPERSEDED next-list (kept for context):
+  1. LLE visual correctness: find where triangle/texrect commands go missing.
+     Two hypotheses to discriminate: (a) the ucode never emits them into the
+     ring (dump/histogram RDP opcodes in committed ranges — extend dpc_bridge
+     to histogram command bytes; real content should show triangle opcodes
+     0x08-0x0F/0xC8-0xCF and texrect 0xE4); (b) RT64 receives but drops them
+     (skipped writebacks / guarded-off paths / copy-mode draws marked invalid).
+     Compare against HLE cinematic which DID produce nz_px≈32k real content.
+  2. exit-path SDL_QUIT terminate (cosmetic, deprioritized).
+  3. Input wiring test on desktop (keyboard fallback built, untested).
+  4. 830 unmapped overlay symbols (game-side).
+
+## LLE stabilization session 2 (2026-07-12) — RT64 assert whack-a-mole + status
+- RT64 native-target guards added (lib/rt64 src/render/rt64_native_target.cpp,
+  uncommitted): isNativeCopySupported(fmt,siz) helper mirrors the unimplemented-
+  combo assert lists; copyFromRAM returns 0 and copyToNative returns early for
+  unsupported combos (corrupt LLE streams produce 4-bit/RGBA8/etc. transients,
+  e.g. "4-bit 3841x64"); copyToRAM tolerates writeBufferHistoryCount==0 (pairs
+  with skipped writebacks). Each guard verified to stop its abort.
+- dmem[0x153]=0xFF experiment (force segment reload) made failures WORSE (6
+  exit=3 vs 2-4) — REVERTED to 0. The trig-table-over-dispatch-table theory for
+  residual exit=3 is therefore in doubt; current best theory: the DL chunk
+  itself contains zeroed bytes (op 0x00 dispatch at DMEM 0x228, r19=0) —
+  frame-content race or chunk-fetch bug, NOT table corruption.
+- CURRENT DEATH (~40-60s): game-CPU `break` (do_break assert recomp.cpp:456) —
+  the game logic chokes on imperfect LLE output (skipped writebacks leave RDRAM
+  fb regions stale, and exit=3 tasks drop frames). One layer below RT64 now.
+- CURRENT STATE: LLE solo runs 30-60s with real RDP emission (fillrects, syncs,
+  cimg on multiple tasks), VI advancing with content; residual exit=3 ~2-4 per
+  32 tasks (nondeterministic).
+- NEXT STEPS (priority order):
+  1. exit=3 root cause: when op 0x00 dispatch fires, dump BOTH the staged DMEM
+     chunk (0x170..0x280) AND live RDRAM at the chunk's source addr — if RDRAM
+     is also zero the game hadn't written the DL (submission/timing bug: maybe
+     LLE tasks complete too fast and the game's double-buffer flips early);
+     if RDRAM is nonzero our chunk-fetch (L_11B0 chain, DMEM[0x130] pokes) is
+     fetching the wrong address.
+  2. do_break: get the crashing VA (lldb bt through do_break) — likely reading
+     fb/flag RDRAM that real RDP writeback would have filled; consider
+     implementing 4-bit/RGBA8 writeback for real (rt64 compute shader) or
+     memset-ing the skipped writeback region instead of leaving stale.
+  3. SDL_QUIT flake during runs (seen twice) — unexplained, low priority.
+  4. Once attribution stable: ROGUESQ_LLE_UNGATED=1 (cinematic via LLE) with
+     all guards; compare vs HLE visuals.
+- Ucode diag tracer (ROGUESQ_TRACE_DISPATCH=1) proved decisive — trace shows
+  task#2 DID process its full DL (E9 fullsync etc.) despite runner histogram
+  showing 0 RDP bytes; histogram-drain timing is misleading, don't trust it as
+  the only signal.
+- DECISION POINT (superseded — LLE chosen) for reference: (a) HLE road — implement F5 ops 0x01/0x02/0x03
+  (matrix + vertex + glyph-triangle emission) in rt64_gbi_f3dfactor5.cpp using the
+  author's experimental handlers as scaffolding; or (b) LLE road — fix task-completion
+  semantics in factor5_gfx_runner (src/main/main.cpp:109) so the scheduler keeps feeding
+  tasks, then let dpc_bridge drive RT64's RDP. (b) is likely more correct long-term
+  (real microcode), (a) has more existing scaffolding. Crash reports for LLE runs live in
+  ~/Library/Logs/DiagnosticReports/RogueSquadron64Recomp-*.ips (macOS DID write minidump
+  equivalents — parse with python json, first line meta, second body). Also audited ALL generated funcs for near-empty bodies (regex over
+  RECOMP_FUNC bodies counting "// 0x" comments): remaining short ones are legit stubs,
+  EXCEPT serviceAudioOutputBuffers (0x8008ED6C, 1 instr, truncated because
+  runAiAudioStreamPlaybackLoop = 0x8008ED70 sits 4 bytes later in main_overlay.txt —
+  probably a mislabeled boundary; harmless unless something jals 0x8008ED6C — audio is
+  stubbed anyway) and static_3_8009D8BC (garbage data-as-code, unreachable).
+  Cross-FILE same-address dups (menu vs mission vs cinematic overlays) are EXPECTED
+  (sections share VA range) — only SAME-section dups truncate.
+
+## Previous status notes (pre-fix)
+- Menu overlay registers, menuOverlayInit executes, no crashes.
+- VI fb uniformly 0x0001 black (ROGUESQ_LOG_VI_FB_CONTENT=1). Only 8 [hle send_dl] at boot,
+  then none. VI swaps continue at ~1.5/sec (log rate-limited past #16 — not stuck).
+- Thread sample (macOS `sample <pid>`): all game threads parked in osRecvMesg — cooperative
+  scheduler alive, not deadlocked.
+- 3-min soak: HARD WEDGE, deterministic — exactly 39 swaps / 8 send_dl, then no further
+  progress ever. Not slow pacing.
+- At wedge: process burns 104% CPU (likely RT64 present-queue busy-wait,
+  rt64_present_queue.cpp:38-46 — known busy-wait, cv rewrite previously regressed) while
+  ALL game threads are parked: viRetraceHandlerThread/spTaskSchedulerThread/
+  dpInterruptHandlerThread/siServiceThread/preNmiResetThread in osRecvMesg;
+  idle_thread_handle stuck in pause_self→check_running_queue→swap_to_thread→wait_for_resumed;
+  thread3_video_handle stuck in osStartThread→swap_to_thread→wait_for_resumed.
+- Since idle_thread is the external-message drainer (pause_self loop) and it's parked in
+  wait_for_resumed, external messages (incl. 60Hz VI events) pile up undrained → nothing
+  frame-paced ever runs again. Question for next session: which thread holds the "run token"
+  (one thread should be resumed but the sample shows all in waits — re-sample and look for
+  the one NOT in wait_for_resumed), and why doesn't it yield/block back into the scheduler.
+  Suspect the author's cooperative-scheduler additions (pause_self/yield_self/
+  check_running_queue in ultramodern/src/scheduling.cpp) lose control flow, or a game thread
+  is spinning in recompiled code waiting on an RDRAM flag that only the stubbed audio ucode
+  would set (MORT audio is entirely stubbed; speech slots D_80154620 stay 0).
+
+## LLE session 8 (2026-07-25) — geometry ops emit NOTHING; white screen is a present pick
+New diagnostics (both env-gated, committed-tree edits):
+- **ROGUESQ_LOG_SEQ=1** (`src/rsp/dpc_bridge.cpp`, in the full-range walker):
+  ORDERED trace of every submitted RDP command — `[seq N]` with decoded
+  geometry for SETCIMG / FILLRECT / TEXRECT / SETSCISSOR / SETFILLCOLOR /
+  SETOTHERMODE / SETCOMBINE / FULLSYNC, raw words otherwise. `[full-hist]`
+  counts opcodes but loses order, and order was the missing evidence.
+  `ROGUESQ_LOG_SEQ_MAX` caps output (default 6000 commands).
+- **`[dl-head]` / `[dl-sub0..2]`** (`src/main/main.cpp` `rs64_run_lle_gfx`, same
+  ROGUESQ_LOG_SEQ gate): hex dump of each gfx task's DL and of the sub-DLs its
+  op-0x06 entries point at. Reads through the `^3` byte swizzle (note: the older
+  `[tex-src]` dump in dpc_bridge does NOT — its bytes are word-swapped).
+- `[pipe-stage 2.6-iter]` now also prints `rt=<colorTarget ptr> rtAddr=`
+  (`lib/rt64 .../rt64_framebuffer_renderer.cpp`) to compare draw target vs
+  `[pq render] colorTarget=` — that was open experiment (4) from session 7.
+- `tools/window_shot.sh`: runs the binary from `build/` (the ROM must sit next to
+  the executable — running from elsewhere silently gets the "place your ROM"
+  path and a dead VI), raises the window via System Events, and captures only
+  the game window rect.
+
+Findings (45s gated attribution soak, 237 tasks, 0 unhandled):
+1. **HYPOTHESIS KILLED — overdraw.** Only 4 FILLRECTs in the entire run, all in
+   the first two tasks. Nothing repaints over the texrects.
+2. **CORRECTION to sessions 5-7:** 0x76A000 and 0x7DD000 are **Z-BUFFERS**, not
+   color buffers — `SETZIMG` (op 0x3E) names exactly those two addresses, and
+   their 0xFFFCFFFC fill is the standard N64 z-clear. Color buffers are
+   0x5D4000/0x66A000 (640-wide) and 0x6BA000/0x6DD000 (320-wide); the z buffer
+   sits at second-color-buffer + 0x100000 in both phases. Earlier notes that
+   read the 0xFFFC fill as a "white color buffer" were wrong.
+3. **TEXRECTS DO REACH THE SCREEN.** `ROGUESQ_VI_FORCE_FB=0x5D4000` presents
+   dense real texture content (`scratch/s8_force_5d4000.png`) — tiled colored
+   texels plus grayscale glyph strips — where the default present shows uniform
+   white (`scratch/s8_default_white.png`). Session 7's conclusion ("draws execute but their pixel
+   output is invisible") is therefore **WRONG**: the pixels exist, the default
+   present picks a different buffer. `ROGUESQ_VI_FOLLOW_DRAW=0` and
+   `ROGUESQ_LLE_UNGATED=1` both still show white, so the picker is not the whole
+   story — WHY the presented buffer is uniform white is the open question.
+4. Texrects **accumulate**: with only 4 clears in 45s the drawn buffer is never
+   re-cleared, so glyph rects pile up over frames into the tiled mess above.
+   Their bbox (x 85..553, y 90..432, max rect 25x22) is exactly the white band.
+5. Texrect RDP state is SANE — 1-cycle, `color = TEXEL0 * PRIM`,
+   `alpha = PRIM alpha` (0x08 or 0xFE), alpha-compare NONE, standard
+   `(CLR_IN*A_IN)+(CLR_MEM*(1-A_IN))` blender, FORCE_BL. Texture is **I4**
+   (SETTIMG fmt=4 siz=2 → SETTILE fmt=4 siz=0 line=2, LOADBLOCK 216 texels
+   dxt=0, tile 32x27). So the remaining texel-correctness question is I4
+   TMEM decode, not combiner/blender state.
+6. **THE REAL VISUAL BLOCKER: geometry ops emit zero RDP bytes.** Of 66 gfx
+   tasks that reached the defer bracket, **64 committed 0 ranges / 0 bytes**;
+   all 3466 commands came from task #1 (176B — scissor/cimg/zimg/clears) and
+   task #41 (17120B — the whole texrect text batch). Zero triangle opcodes
+   (0x08-0x0F / 0xC8-0xCF) in the entire run.
+7. Those silent tasks are NOT being handed empty work. Every task's DL is the
+   same 5-command stub (`op00 ptr`, `op06 0x80037658`, `op06 0x80720000`,
+   `E9 fullsync`, `B8 end`), and the sub-DL at 0x80720000/0x80720210 is real:
+   `E7/E6/E8` syncs, **op 0x01** (matrix, 0x01030040 0x80700000), **op 0x03**,
+   **two op 0x02** (0x028001C0 0x01FF0000), `BC` segment moves, `F8` fogcolor.
+   So the LLE ucode executes the F5 custom geometry ops 0x01/0x02/0x03 and
+   emits nothing — the same three ops RT64's HLE F3DFACTOR5 leaves stubbed.
+   Neither path renders geometry, which is why both look alike.
+   Leading suspicion: RSPRecomp's vector-unit translation in the op-0x02
+   transform/clip path produces degenerate results so every primitive is
+   culled before it can reach the RDP staging buffer.
+- NEXT (priority order): (1) trace inside the op 0x02 handler in
+  `build/factor5_ucode/factor5_ucode_recompiled.c` — find the dispatch entry for
+  op 0x02, log the transformed vertex coords and the cull/clip decision, and
+  compare against a hand-computed transform of the matrix at 0x80700000;
+  (2) once triangles emit, revisit the present-buffer pick (why the default
+  present is uniform white while 0x5D4000 has content); (3) I4 TMEM decode
+  check for the glyph texels; (4) re-clear behaviour (accumulation) will likely
+  resolve itself once full frames are drawn.
+
+## LLE session 9 (2026-07-25) — THE BIG ONE: cross-task DPC submit suppression
+**ROOT CAUSE FOUND AND FIXED.** `rsp_dpc_submit` (src/rsp/dpc_bridge.cpp) kept a
+ring high-water mark (`s_last_end`) in function-local statics so it would not
+re-forward bytes the RDP had already consumed as the ucode bumps DPC_END command
+by command. That guard is correct WITHIN a task, but every gfx task restarts its
+ring writes from its own DPC_START — and since DPC_START is the same address each
+task, the "new DL base" reset never triggered. Any task whose output was no
+larger than the largest previous task's was silently dropped whole.
+- Symptom this explains: 64 of 66 gfx tasks committing `0 ranges, 0 bytes`, only
+  4 SETCIMG / 4 FILLRECT / 399 TEXRECT in 45 seconds, and the session-8
+  conclusion that "the geometry ops emit nothing" — they were emitting; the
+  bridge was throwing the bytes away.
+- FIX: hoisted the mark to file scope (`s_submit_dl_base` / `s_submit_last_end`)
+  and cleared it in `rs64_dpc_reset()`, which the runner already calls per task.
+  A `[dpc-behind]` log now reports any submit that lands at or behind the mark.
+- MEASURED EFFECT (gated attribution): 65/65 tasks commit, 0 zero-byte, 0
+  `[dpc-behind]`. In 14 s: 114 SETCIMG, 114 FILLRECT (57 z-clears + 57 color
+  clears), 4575 TEXRECT — versus 4 / 4 / 399 in 45 s before. The double buffers
+  now alternate correctly (0x6BA000/0x6DD000 at 320-wide, 0x5D4000/0x66A000 at
+  640-wide) and every frame is cleared, so texrects stop accumulating.
+- **FIRST CORRECT SCREEN: the attribution screen renders legibly**
+  (`scratch/s8_attribution_correct.png`) — "STAR WARS®: ROGUE SQUADRON™", the
+  LucasArts/Lucasfilm/Factor 5 copyright block, "Presented in MOsysFX Surround",
+  "Expansion Pak enhanced", correct layout on black. CAVEAT: reproducing it is
+  hit-or-miss. Most captures show the cleared buffer with no text, so the text
+  reaches the display only intermittently — the next visual question.
+- Triangles now reach the RDP: an ungated 16 s run shows op0F (TRI_SHADE_TEX_ZBUFF)
+  = 5654 against a ~500 walker-noise floor. (The `[full-hist]` walker advances 8
+  bytes per command, so triangle commands mis-step it; only counts well above
+  ~600 are meaningful.)
+
+Other findings this session:
+- The cinematic clears its color buffers to **0xFFFFFFFF** (its own command —
+  verified via `[rdp-fill]`), so "white cinematic" is a correct clear with the
+  content missing on top, not a wrong-buffer artifact. Its color buffers are
+  0x62B800/0x695C00 with z at 0x795C00.
+- `ROGUESQ_LLE_SOLO=1` matters: without it the runner runs LLE **and then falls
+  through to HLE for the same task**. `ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1`
+  is the pure-LLE configuration and gets much further (1184 gfx tasks).
+- New RT64 guard (same class as the session-2/3/7 chain): a TileCopy can exist
+  with `texture == nullptr`; `getTextureIndex` asserted on it. It is now treated
+  like a missing tile copy. Verified against its own abort; has not fired since.
+- New env `ROGUESQ_STUB_MISSING_FUNCS=1` (librecomp overlays.cpp `get_function`):
+  turns "Failed to find function at 0x…" from an abort into a one-line
+  `[missing-func]` report plus a no-op stub, so ONE run enumerates every
+  unmapped overlay symbol instead of one per run.
+- New env `ROGUESQ_VIEW_RDRAM=1` (PresentQueue ctor): starts in the developer
+  view-RDRAM mode. NOTE: the game window never appears with it set — the mode
+  looks broken in this fork; do not spend time on it.
+- New env `ROGUESQ_LOG_CIMG=1`: `[rdp-fill]` (RDP-side clear target + fill
+  colour), `[gpu-clear]` (what the GPU is told to clear, in which RenderTarget)
+  and `[rdp-texrect]` (texrect target + texture source).
+- Window-capture helpers now live in tools/: `window_shot.sh` (one capture),
+  `window_series.sh` (several captures in one run), `window_play.sh` (presses
+  Return/Start to skip the intro, then captures). All run the binary from
+  `build/` and capture only the game window. Kill with SIGKILL, not SIGTERM —
+  the TERM path aborts in SDL_QUIT cleanup and leaves a crash dialog on top of
+  the next run's capture.
+
+**DEAD END — do not repeat: moving unmapped overlay symbols in bulk.** Moving 10
+symbols out of decomp `symbol_files/main_overlay.txt` into the per-overlay files
+(the documented cure for "Failed to find function") let the game run much
+further, but each inserted symbol SPLITS the enclosing function in that overlay
+section — the same truncation mechanism as the duplicate-address bug, applied in
+reverse. The result was a new SIGBUS in `allocAndInitGridCellArray` ←
+`loadLevelAssets` ← `setupCutsceneLevel`. All 10 moves were reverted and the
+crash went away. If this is retried, do it one symbol at a time and verify the
+neighbouring function bodies did not lose their tails.
+
+### Session 9 continuation — the display defect is now pinned down exactly
+Measured on a clean 3-second probe (`ROGUESQ_LOG_PIPELINE=1
+ROGUESQ_LOG_PRESENT_EARLY=1`), during the attribution phase:
+- **every** draw goes to the 640-wide pair — 34 instances to 0x5D4000, 22 to
+  0x66A000, zero to anything else;
+- **every** present is of the 320-wide pair — 0x6DD000 and 0x6BA000, which only
+  ever receive the boot clears.
+
+That is precisely the case RT64's `VI_FOLLOW_DRAW` workaround was written for
+(see its comment in rt64_present_queue.cpp). **That workaround is dead in this
+game**: modes 1 and 2 both drive off `colorImageAddressVector`, which is built
+only from fbPairs whose `earlyPresentCandidate()` is true — none of this game's
+are, so the vector is empty and the override never runs. It is also why the
+one-off good attribution capture was luck: nothing selects the drawn buffer.
+
+Also established and worth not re-deriving:
+- `present.screenVI.fbAddress()` already returns the framebuffer BASE. Our own
+  `[vi]` log prints the raw VI_ORIGIN (0x5D4500 etc.), RT64 sees 0x5D4000.
+  There is no scanline offset to compensate — a snap-down fallback and a
+  `findMostRecentContaining` fallback were both written here and neither fired
+  a single time. Removed; don't add them back.
+- **The `[seq]` and `[full-hist]` walkers are only trustworthy when the stream
+  has no triangles.** They advance 8 bytes per command, so triangle commands
+  (32-48 bytes) desynchronise them and they emit thousands of bogus SETCIMG
+  addresses. Now that geometry flows, use `[rdp-fill]` / `[gpu-clear]` /
+  `[pipe-stage 2.6-iter]` for per-frame counts instead.
+- Content IS drawn every frame: `[pipe-stage 2.6-iter] FINAL=` reports 548
+  non-fillrect instances per frame in a 548/548/548/178 repeating pattern. The
+  text is not being drawn rarely; it is being drawn into a buffer nobody shows.
+
+NEW, PARTIAL: `ROGUESQ_VI_FOLLOW_DRAW=3` — present whichever framebuffer last
+received real geometry, tracked in `g_rs64_last_drawn_fb`
+(rt64_framebuffer_renderer.cpp writes it, rt64_present_queue.cpp reads it).
+Independent of `colorImageAddressVector`, so it is the right shape of fix. It
+engages, but only after the VI has already moved to the 640-wide buffers — on
+the early presents `g_rs64_last_drawn_fb` is still 0 or its framebuffer is not
+yet in the manager, so the attribution window is still missed. Finishing this
+is next: seed or defer the override so it covers the first presents.
+
+### Session 9, third pass — THE GAME RENDERS
+Two knobs together turned the black screen into real graphics:
+- `ROGUESQ_VI_FOLLOW_DRAW=3` (new, above) — present the framebuffer that last
+  received geometry. It does NOT engage on the first ~60 presents (nothing has
+  been drawn yet, `g_rs64_last_drawn_fb` is still 0 — `MISS` lines say so), but
+  from ~1 s on it selects the drawn buffer every time. Verified: `[pq A->target]`
+  now prints `presentFb == viFb` at 0x5D4000/0x66A000 instead of the undrawn
+  320-wide pair.
+- `ROGUESQ_PRIM_ALPHA_FF=1` (new, dpc_bridge.cpp) — force PRIM alpha to 0xFF.
+  The text combiner is `TEXEL0 * PRIM` with alpha taken straight from PRIM, and
+  PRIM alpha only ever takes two values in this game, 0x08 and 0xFE. Almost
+  every draw we present uses 0x08, i.e. ~3 % opacity over a black clear, which
+  is why the screen looked empty. NOTE this is a diagnostic hack, not a fix —
+  the real question is why the 0xFE pass is not the one reaching the display.
+
+With `ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1
+ROGUESQ_VI_FOLLOW_DRAW=3 ROGUESQ_PRIM_ALPHA_FF=1 ROGUESQ_STUB_MISSING_FUNCS=1`
+the boot sequence now renders (screenshots in scratch/):
+1. `s9_attribution.png` — the attribution screen, bright and fully legible.
+2. `s9_n64_logo.png` — **the Nintendo 64 boot logo, pixel-correct in full
+   colour** on its white background. (That white clear the cinematic notes kept
+   puzzling over was simply this screen's background.)
+3. `s9_cinematic_geometry.png` — textured 3D geometry from the intro cinematic,
+   correct perspective, real triangles (dark, but unmistakably right).
+4. `s9_intro_flare.png` — the alpha-blended star/lens-flare effect.
+A 70 s run with Start presses survives with no assert and no crash, 95 LLE gfx
+tasks, and reaches the MENU phase — the only `[missing-func]` reported is
+0x800B3650 `tickFormatMessageWorker`, which belongs to the menu overlay and is
+being called, so the menu is running with its text formatting stubbed out.
+
+### Session 9, fourth pass — the overlay-symbol problem has a method now
+The bulk-move dead end above is fully explained, and the fix is mechanical.
+`tools/overlay_symbol_probe.py <0xADDR> [mission|menu|cinematic]` decodes the
+ROM at that address in each overlay image and reports whether it is a genuine
+function start. The reliable signal is the **prologue** at +0
+(`addiu $sp, $sp, -N`); a `jr $ra` in the preceding words corroborates but is
+not required — leaf float helpers have no stack frame, and the previous
+function's tail can fall outside the window. Assigning a symbol to an overlay
+where it is NOT a function start is what truncates the enclosing function.
+
+Re-checking the 10 symbols from the failed bulk move with the probe: **4 had
+been assigned to the wrong overlay and 1 was mid-function everywhere by the
+first heuristic**. That is the whole explanation for the `allocAndInitGridCellArray`
+SIGBUS. Correct assignments (all verified function starts) have now been applied
+one validated batch at a time, 15 symbols in total:
+- menu: `tickFormatMessageWorker` 0x800B3650
+- cinematic: `applyNamedEffectParameterDefaults` 0x800AA850,
+  `getCutsceneRuntimeContext` 0x800AEA18
+- mission: `parseDatEventTriggers` 0x800AA870, `scaleVec3ByScalar` 0x800AA3B4,
+  `buildRotationMatrixFromEulerAngles` 0x800AA424,
+  `buildOrientationFromPosAndAngles` 0x800A9E70,
+  `craftMountedAnimationNpcHandler` 0x800ECC28,
+  `computeAngleToTargetFromTransform` 0x800A9B80,
+  `hangarVehicleDisplayNpcHandler` 0x800C68A0,
+  `clampVec3ToUnitIfLongerThan` 0x800AA350, `addScaledVec3ToVec3` 0x800AA3E0,
+  `applyCraftAnimDetailParamsB` 0x800E8948,
+  `tickCraftWithPhasedDestruction` 0x800E8EDC,
+  `npcWingmanResetState` 0x800D7850
+
+The loop to continue with: run under `ROGUESQ_STUB_MISSING_FUNCS=1`, collect the
+`[missing-func]` addresses, probe each, note which overlay was resident from the
+preceding `[overlay] start-match` when the probe is ambiguous, move the batch,
+regenerate, repeat. Each round surfaces roughly five more as the game gets
+further in. **Stability improved markedly**: 90-95 s runs now complete with no
+assert and no crash, where the `rs_free`/`destroyNpcSlotByIndex` SIGBUS used to
+kill runs at 13-18 s.
+
+Note on driving the game: mashing Start repeatedly pushes it deep into mission
+code whose handlers are still stubbed and the screen goes black. `tools/` has
+`window_play.sh` (8 presses, for reaching mission code) — a gentler 2-press
+variant is better for reaching the menu. After skipping the intro the game
+reaches a 1024-wide VI mode (the hi-res menu mode) and keeps drawing ~100
+instances/frame into 0x5D4000/0x66A000, but the screen is black — so the menu
+phase still has a display or content problem of its own.
+
+### Session 9, fifth pass — missing-symbol pool drained; boot sequence renders
+The loop above was run to completion. Rounds surfaced 5, 5, 3, then 1 more
+symbol, all probed and mapped to `mission` except the ones listed earlier;
+**a full run now reports ZERO `[missing-func]`**. 24 symbols mapped in total.
+
+**METHODOLOGY WARNING — sparse captures lie.** Mid-session I concluded from
+one-shot captures at 4/8/14/20 s that the renderer had regressed to black, and
+reverted all 24 symbol moves chasing it. It was a sampling artifact: a dense
+burst (`tools/window_burst.sh`, 28 frames at 0.15 s) showed 27 of 28 frames full
+of content. The moves were fine and have been re-applied. Always burst-sample
+before concluding anything about what is on screen.
+
+**The whole boot sequence now renders** (60-frame burst at 1.5 s, 0 missing
+functions): content in 24 of 60 frames covering ~2-44 s —
+attribution → Nintendo 64 logo → cinematic geometry → star flare →
+**the Factor 5 logo, chrome lettering and red bolt, correct**
+(`scratch/s9_factor5_logo.png`). The gaps at 26-32 s are genuine inter-screen
+transitions, not dropouts.
+
+**The new frontier is at ~44 s.** After the Factor 5 logo the game loads the
+mission overlay (`section 2`), switches VI to a **512-wide** mode with origin
+0x690400 — and the bulk of all rendering, 4850 instances against 1160 for the
+next-busiest target, goes to framebuffer **0x790000**, which the VI never scans.
+Screen goes black and stays black. `ROGUESQ_VI_FORCE_FB=0x790000` does NOT
+engage (`fbManager.find` returns null for it), so 0x790000 exists as a
+RenderTarget key but not as a Framebuffer — that discrepancy is the thing to
+chase next. Likely it is an offscreen target the game blits into the display
+buffer by a path RT64 isn't reproducing.
+
+### Session 9, sixth pass — the post-logo black screen is a ring-WRAP drop
+0x790000 is not a mystery target: every one of this game's phases puts its
+Z-BUFFER exactly 0x100000 above the second colour buffer (0x66A000/0x76A000,
+0x6DD000/0x7DD000, 0x695C00/0x795C00), and 0x690000/0x790000 fits that pattern.
+The post-logo phase is the tiled hi-res renderer: 64x32 texrect tiles composited
+from source strips at 0x63xxxx-0x6Axxxx.
+
+**Root cause of the post-logo black screen: `rsp_dpc_submit` was dropping ring
+WRAPS.** The high-water mark added earlier correctly suppresses re-sends as
+DPC_END creeps forward, but when the ucode wraps its ring back to the base and
+refills it, END goes BACKWARDS and every one of those submissions was discarded.
+`[dpc-behind]` counted **17867 drops in 60 s** (~94000 per 90 s) — the entire
+output of the tiled renderer.
+
+`ROGUESQ_DPC_WRAP=1` forwards them. **Measured trade-off, default OFF:**
+- ON: rendering is continuous, no black phase — 27 of 27 burst frames had
+  content. But the ~10x larger command stream slows the game markedly and
+  exhausts Metal shared memory (`IOGPUMetalDeviceShmem` assert,
+  IOGPUMetalDeviceShmem.m:43) at ~42 s, before it even reaches the Factor 5
+  logo, so it is a net regression as it stands.
+- OFF (default): the known-good behaviour — 24 of 60 frames over 90 s, boot
+  sequence through the Factor 5 logo, process survives.
+Finding the unbounded GPU resource growth is what makes this a real fix.
+
+**Harness bug fixed — this one invalidated a measurement.** `window_burst.sh`
+kept screencapturing after the game died, grabbing whatever window was
+underneath, which read as "60/60 frames have content". It now checks the process
+is alive before each frame and reports `process gone before frame N`. Any
+content count taken before this fix is suspect.
+
+### Session 9, seventh pass — Metal exhaustion: four hypotheses ruled out
+Chasing what grows without bound with `ROGUESQ_DPC_WRAP=1`. New env-gated
+resource census: `ROGUESQ_LOG_FBLIST=1` (framebuffer list + counts + render
+target count, in the present queue) and `ROGUESQ_LOG_TEXCACHE=1`
+(`TextureMap::add` — live entries, slot count, free list). Measured over 55 s
+with the wrap forwarding ON, right through the Metal assert:
+- **Framebuffers: 3-4, flat.** Not growing.
+- **Render targets: 7, flat** (rises 3→6→7 in the first seconds, then stops).
+- **Texture cache: fewer than 500 adds in 55 s** — the logger's threshold never
+  even tripped. Not growing.
+- **Per-frame draw volume: max 1168 instances / 592 texrects**, ~5 fps, 246
+  frames. No single oversized frame.
+So the failure is NOT a leak in any of the obvious RT64 caches and NOT one
+enormous allocation driven by frame size. The assert is
+`Failed to allocate IOGPUDeviceShmem` from two threads at once. Next step needs
+an allocation-level trace (Metal capture, or instrumenting RT64's buffer pools /
+`createBuffer` call sites with sizes), not more counting at this level.
+
+### Session 10 (2026-07-25) — Metal exhaustion found: unbounded framebuffer pairs
+The allocation-level trace the seventh pass asked for is now in the tree, and it
+named the culprit on the first run.
+
+**Instrumentation** (`ROGUESQ_LOG_ALLOC=1`, all env-gated and default-off):
+- `plume_metal.cpp` — a census at the only three places that hand memory to the
+  Metal driver: `MetalBuffer`, `MetalTexture` and `MetalDescriptorSet`
+  constructors/destructors, reporting live count and live bytes every 2 s, plus
+  a sampled `backtrace()` on every 20000th buffer for attribution.
+- `rt64_state.cpp` `State::fullSync` — logs `fbPairCount` every 64 full syncs.
+- `rt64_framebuffer_renderer.cpp` `addFramebuffer` — logs `framebufferCount`
+  and vector size every 5000 calls.
+
+**Measured with `ROGUESQ_DPC_WRAP=1`, right into the assert:**
+- Textures: 260 live, 139 MB, **flat**. Descriptor sets: 446,070 live, 109 MB.
+  Buffers: **250,717 live, 22,986 MB**, monotonic — 250,879 ever made and only
+  162 ever destroyed.
+- Every sampled backtrace is the same:
+  `MetalDevice::createBuffer` ← `FramebufferRenderer::addFramebuffer` ←
+  `State::fullSync` ← `Interpreter::processRDPLists` ← `rs64_dpc_defer_end`.
+- `addFramebuffer` logs climb to `framebufferCount=193716 fbPairIndex=193715`,
+  all inside a **single** `renderAndSynchronize` loop.
+
+**Root cause.** `Workload::addFramebufferPair` creates a new framebuffer pair
+per SETCIMG, and `FramebufferRenderer::addFramebuffer` allocates one 256-byte
+params buffer plus two descriptor sets per pair, in a vector that only ever
+grows. A workload is advanced **at FULLSYNC** (`State::fullSync` ends with
+`advanceWorkload` + `advanceToNextWorkload`) — not at VI. In the post-logo tiled
+phase one FULLSYNC interval contains ~194,000 colour-image switches between
+0x695C00 and 0x795C00, so one workload demands ~194,000 framebuffer pairs and
+23 GB of Metal buffers. None of the caches the seventh pass measured were ever
+involved.
+
+**Correction to the sixth pass.** `[dpc-behind]` "17867 drops in 60 s" understates
+it by three orders of magnitude. With the wrap forwarding OFF the counter reaches
+**9,056,256 wrap events in 70 s, every one a distinct range** — DPC_END creeps
+upward through a refilled ring (e.g. 0x4B87B0 → 0x4B8AD8 → 0x4B8DF0 against a
+high-water 0x4B8E00) and all of it is discarded. The ring is
+`OSTask.output_buff` at 0x4B7800, 0x1600 bytes.
+
+**Fix 1 — deferred-range coalescing** (`dpc_bridge.cpp` `rs64_dpc_defer_end`).
+The ucode bumps DPC_END one 8-byte command at a time, so each range became its
+own `processDisplayLists` entry: 6.8 M calls per 70 s run. Contiguous ranges are
+now merged before submission — byte-for-byte identical content and order,
+**4.5x fewer calls** (`[dpc-merge]`). `ROGUESQ_NO_DPC_MERGE=1` restores the old
+behaviour. This is a real efficiency win but by itself does NOT stop the
+exhaustion: pair counts and the assert were unchanged.
+
+**Fix 2 — framebuffer-pair cap** (`rt64_workload.cpp`, `ROGUESQ_MAX_FBPAIRS`,
+default 8192, 0 disables). Past the cap the last pair is reused instead of
+appending, so the phase degrades to partial content rather than an
+out-of-memory abort. `[fbpair-cap]` reports when it engages.
+
+**VERIFIED**: with the cap and `ROGUESQ_DPC_WRAP=1`, a run survives the full
+**120 s watchdog with zero asserts** and the cap engaging 300000+ times, where
+every prior wrap-forwarding run died at 42-50 s on the Metal assert. Visual
+confirmation of what the tiled phase now draws was NOT obtained — the
+`osascript` window-raise in `tools/window_shot.sh` / `window_burst.sh` did not
+return in this session's environment, so no capture was taken. That is the
+first thing to redo interactively.
+
+One observation worth chasing while doing that: the run reached
+`[osViSwapBuffer #1472] fb=0x80790000` — the VI *is* swapping to 0x790000, the
+address the sixth pass recorded as "the VI never scans".
+
+**Wrap replays: measured, and ruled out as the cause.** A content hash on the
+wrap range (the `[dpc-wrap-dup]` counter now reports `content same=/new=`)
+showed **53247 of 53248 wrap events in an 80 s run carry byte-identical
+content** — the ucode re-announces the same command rather than refilling the
+ring. `ROGUESQ_WRAP_DEDUP=1` (default OFF) suppresses those replays and removes
+~33000 redundant submissions per run, but with it on and `MAX_FBPAIRS=0` the
+run still reached **193715 pairs / 23.5 GB and the same Metal assert at ~50 s**.
+So the pair explosion comes from the forward-creeping submissions, not the
+wraps. Left default-off because it drops content on an unverified rule and the
+configuration proven to survive 120 s is the pair cap alone.
+
+Where it stands / NEXT (priority order):
+0. The cap bounds the memory but throws away draws past pair 8192. The real fix
+   is to stop one workload from having to hold 194,000 pairs. **The `[fullsync]`
+   log now carries the gap since the previous full sync, and it localises this
+   precisely:**
+
+       [fullsync #64]  fbPairCount=2      gap=17.1ms
+       [fullsync #128] fbPairCount=2      gap=16.4ms
+       [fullsync #192] fbPairCount=2      gap=15.5ms
+       [fullsync #253] fbPairCount=195057 gap=20019.6ms
+
+   Full syncs #1-#252 are a clean ~60 Hz cadence carrying two pairs each. Then
+   the game goes **20 seconds emitting no FULLSYNC at all** while producing
+   195,057 pairs. This is not a gradual spiral and not a slow-renderer feedback
+   loop — it is a discrete transition into a non-syncing state at the post-logo
+   boundary, and everything downstream (pair count, 23 GB of buffers, the Metal
+   assert) follows from it. NEXT: find what changes at full sync #252→#253.
+   Either the tiled renderer loops without completing, or its FULLSYNC commands
+   exist in the ring but never reach RT64 through the forwarding path. Note the
+   gap is suspiciously close to a round 20 s, which would suggest a game-side
+   timeout rather than a render that genuinely takes that long.
+1. DONE (session 10 above): the Metal shared-memory exhaustion was
+   `FramebufferRenderer::addFramebuffer` against a workload holding ~194,000
+   framebuffer pairs. Bounded by `ROGUESQ_MAX_FBPAIRS`; see item 0 for what is
+   still owed.
+2. Replace `ROGUESQ_PRIM_ALPHA_FF` with a real fix: find why the 0xFE (opaque)
+   PRIM pass is not the one being presented while the 0x08 pass is.
+3. Make `VI_FOLLOW_DRAW=3` cover the first ~1 s of presents, then default it on.
+4. The intermittent game-side SIGBUS (`rs_free` ← `reinsertNpcIntoSortedFreeList`
+   ← `destroyNpcSlotByIndex`, fault far below the RDRAM base, so a wild pointer)
+   still kills some runs around 13-18 s. It did not reproduce in the successful
+   70 s run — it is nondeterministic.
+2. Pure-LLE (`UNGATED=1 SOLO=1`) reaches cutscene level setup and then SIGBUSes
+   game-side: `rs_free` ← `reinsertNpcIntoSortedFreeList` ←
+   `destroyNpcSlotByIndex` ← `slotDispatcherIter` ← `cinematicLoopBody`, and
+   `allocAndInitGridCellArray` ← `loadLevelAssets` (null RDRAM pointer,
+   fault at rdram+0x39A). These are newly REACHABLE paths — the game now
+   completes far more frames — not necessarily new bugs.
+3. The unmapped-overlay-symbol problem still blocks the menu; solve it with the
+   truncation-safe method above plus `ROGUESQ_STUB_MISSING_FUNCS=1` to enumerate.
+
+## Session 11 (2026-07-25) — ROOT CAUSE: the game stops emitting FULL_SYNC
+Item 0 above is answered, and it was not a timeout, a loop, or a dropped
+command. **In the mission/menu phase this engine never emits RDP FULL_SYNC at
+all.** RT64 ends a workload only at FULL_SYNC, so the workload never advanced,
+was never presented, and grew without bound. Every symptom sessions 6-10 chased
+— the 20 s FULL_SYNC gaps, the 195,057 framebuffer pairs, the 23 GB of Metal
+buffers, and the post-logo black screen — is downstream of that one fact.
+
+**The evidence that settled it** is a new parser-side opcode census,
+`ROGUESQ_LOG_RDPHIST=1` (`lib/rt64 src/hle/rt64_interpreter.cpp`). It counts
+what `Interpreter::processRDPLists` actually dispatches, using RT64's own
+command lengths, and reports per-interval deltas. This is the tool the earlier
+sessions needed: the `[full-hist]` and `[seq]` walkers in dpc_bridge advance a
+fixed 8 bytes per command, so triangles desynchronise them, and every count they
+produced once geometry started flowing was untrustworthy. Steady state in the
+mission phase, over 100 s:
+
+    [rdphist] 2002ms FULLSYNC=1827(+0) SETCIMG=496677(+5126) TEXRECT=385024(+0)
+              SETTIMG=1385121(+31490) LOADBLOCK=1155181(+31448)
+              SETTILE=2540272(+62941) TRI=567172(+27633)
+
+FULLSYNC **+0**, while triangles climb 20-33k per 2 s and texture loads 30k per
+2 s. The stream is structured, not garbage: SETTIMG ≈ LOADBLOCK ≈ COMBINE,
+SETTILE ≈ 2×LOADBLOCK. The game was rendering the whole time into a workload
+nobody would ever finish. The healthy boot phases show FULLSYNC=+120 per 2 s
+(60 Hz) and TRI=+0; the changeover is exactly where triangles start.
+
+Corroborating, and worth not re-deriving: the `[vi]` line already carried this.
+`fs=` freezes at its final value the moment the 512-wide mode starts and never
+moves again, while `update_screen #` keeps climbing to 9000+.
+
+**FIX (`lib/rt64 src/hle/rt64_state.cpp`, `ROGUESQ_VI_FULLSYNC`, default ON).**
+When the game omits FULL_SYNC, synthesise the frame boundary from the VI buffer
+swap, which is the boundary this engine does expose. `State::updateScreen` calls
+`fullSync()` when no real full sync arrived since the last screen update, the VI
+framebuffer address changed, and the pending workload has pairs. A 100 ms
+elapsed fallback covers a phase that renders to a single buffer, so the display
+cannot freeze even then. `ROGUESQ_VI_FULLSYNC=0` restores FULL_SYNC-only
+advancing.
+- Safe from the VI path because `SpTaskAction` and `ScreenUpdateAction` are
+  dequeued from the same queue on the same Gfx Thread (ultramodern
+  `events.cpp` `gfx_thread_func`) — the interpreter is never concurrent with it.
+- `fullSync()` ends and restarts `dlCpuProfiler` partway through, because on its
+  normal path `Interpreter::processRDPLists` brackets it. Calling it from the VI
+  path therefore needs its own `start()`/`end()` bracket or
+  `ProfilingTimer::end()` asserts. That assert killed the first attempt at 5 s.
+- Gated on `!fromEarlyPresent`: `fullSync()` itself calls
+  `updateScreen(entry.vi, true)`, and without the gate that recurses.
+
+**MEASURED (120 s, `LLE_FORCE/UNGATED/SOLO`, `DPC_WRAP=1`, `VI_FOLLOW_DRAW=3`):**
+- **THE POST-LOGO BLACK SCREEN IS GONE.** From ~74 s the screen carries moving
+  3D terrain geometry that changes every frame (`scratch/runE`, `scratch/runF`).
+- Framebuffer pairs per workload: **64-448**, versus 195,057. `[fbpair-cap]`
+  engages **0 times** where it previously engaged 300,000+; the Metal
+  shared-memory exhaustion cannot occur in this shape any more.
+- 1100+ synthetic syncs per run, essentially all `reason=swap` — the buffer swap
+  is doing the pacing, not the elapsed fallback.
+- No asserts, no aborts, ran to the watchdog.
+- The boot sequence is unchanged: attribution, N64 logo, cinematic and the
+  Factor 5 logo all still render (`scratch/runE/f_028_043.4.png`).
+
+**Not the cause, ruled out this session:** the flat untextured look of the
+first geometry to appear is not `ROGUESQ_PRIM_ALPHA_FF` forcing a fade overlay
+opaque — a run with the hack off draws the same shapes (`scratch/runF`). It
+turned out to be the level-load transition, not a texturing defect: pressing
+Start carries the game through it into fully textured content.
+
+### THE MAIN MENU RENDERS
+Driving the game with Start (`PROBE_KEYS`) from the Factor 5 logo now reaches
+the **main-menu hangar, drawn in full textured 3D and animating**: the circular
+landing pad, the panelled walls, the lit red doorways, the upper gantry
+(`scratch/runI/f_011_016.0.png`, `scratch/runG/f_044_069.3.png`). 5,400-7,600
+distinct colours per frame. Session 9 recorded this same phase as "keeps drawing
+~100 instances/frame but the screen is black".
+
+**Controlled A/B, same key presses, same everything else:**
+
+| configuration                          | frames with content |
+|----------------------------------------|---------------------|
+| `VI_FULLSYNC` on (new default)         | **57 / 63**         |
+| `ROGUESQ_VI_FULLSYNC=0` (old behaviour) | 5 / 63             |
+
+**`ROGUESQ_DPC_WRAP` should stay default OFF — and sessions 6-10's whole
+Metal-exhaustion thread is now moot.** Measured with the VI fix in place:
+
+| configuration              | content   | max fbPairs/workload | `[fbpair-cap]` |
+|----------------------------|-----------|----------------------|----------------|
+| `DPC_WRAP=1`               | 32 / 62   | 448                  | 0              |
+| `DPC_WRAP` off (default)   | **57/63** | **3**                | 0              |
+
+With the wrap forwarding off the workload holds three framebuffer pairs — what a
+normal N64 frame looks like — and the picture carries strictly more detail (the
+red door lighting is present only in the wrap-off captures). So the wrap
+forwarding was duplicating already-consumed ring bytes, which is where the 10x
+command stream, the slowdown and the 23 GB of Metal buffers came from. The
+`ROGUESQ_MAX_FBPAIRS` cap built in session 10 to contain that is now dead
+insurance: it engages 0 times. The ring-wrap drops `[dpc-behind]` counts are
+still real drops, but they were never the cause of the black screen.
+
+**Recommended configuration (all of the above measured together):**
+
+    ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+    ROGUESQ_VI_FOLLOW_DRAW=3 ROGUESQ_STUB_MISSING_FUNCS=1
+
+**`ROGUESQ_PRIM_ALPHA_FF` is no longer needed at all** — verified, not assumed:
+with it off the attribution screen still renders fully legibly
+(`scratch/runJ/f_003_002.2.png`, the complete LucasArts/Lucasfilm/Factor 5
+copyright block, "Presented in MOsysFX Surround", "Expansion Pak enhanced"). So
+whatever made the 0x08-alpha pass the presented one is also gone; that hack can
+be retired rather than replaced. Run health across a 100 s run in this
+configuration: 0 `[fbpair-cap]`, 0 `[missing-func]`, 0 `[defer-drop]`, no
+asserts, ran to the watchdog.
+
+**Remaining visible artifact:** a horizontal band of garbled orange/black
+rectangular tiles across the middle of the hangar, present with and without the
+wrap forwarding. The repeating-tile structure looks like a texture sampled from
+the wrong source or with wrong tile coordinates — this is the next visual defect
+to chase, and it is now a small, localised one.
+
+### Harness rebuilt — the old one could not test the real configuration
+`tools/window_burst.sh` hardcodes `ROGUESQ_LLE_FORCE=1` and drops every other
+toggle, so it could not run the configuration this game actually needs, and it
+drove capture through System Events, which did not return at all in session 10.
+Replaced by:
+- `tools/winctl.m` (built to `build/winctl`) — window id and bounds via
+  `CGWindowListCopyWindowInfo`, activation via `NSRunningApplication`, and key
+  injection via `CGEventPostToPid`, which does not require the window to be
+  frontmost. Build:
+  `clang -O1 -fobjc-arc -framework Cocoa -framework CoreGraphics -o build/winctl tools/winctl.m`
+- `tools/probe.sh <outdir> <seconds> [interval]` — passes the caller's
+  `ROGUESQ_*` environment straight through, captures with
+  `screencapture -l<windowid>` so a failed raise cannot substitute a different
+  window, checks liveness before every frame, and takes `PROBE_KEYS="8 10 12"`
+  (seconds at which to press Start) and `PROBE_START`.
+- `tools/frames.py` — per-frame dominant colour, dominant share and distinct
+  colour count, with a content verdict, so a 130-frame burst is judged without
+  opening the PNGs. Needs Pillow; there is a venv at the session scratchpad.
+
+**Method note worth keeping.** Sessions 6-10 measured the symptom (pair counts,
+buffer bytes, wrap-event counters) increasingly precisely and never once counted
+FULL_SYNC arrivals, which was the one number that named the cause. When a
+downstream resource is exploding, count the event that is *supposed* to bound
+it before instrumenting the explosion.
+
+## Session 12 (2026-07-25) — hangar floor band investigation (picked up from session 11)
+
+### Where session 11 left us
+Boot sequence + hangar main menu render under pure LLE. Recommended config:
+
+    ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+    ROGUESQ_VI_FOLLOW_DRAW=3 ROGUESQ_STUB_MISSING_FUNCS=1
+
+Remaining visual defect: horizontal orange/black garbled band across the hangar
+floor (`scratch/s11_menu_hangar.png`, `scratch/s12_menu_hangar.png`).
+
+### Probe harness notes
+- `PROBE_KEYS` timing matters: Start at 6/8/10/12 skips the intro; Start again
+  around 36–40 s (after the Factor 5 logo) enters the hangar. Keys only during
+  8–16 s leave the game stuck on the logo / 1024-wide post-logo phase.
+- Window is 640×512; Retina captures are 1280×1024.
+- Texture dumps write under `build/` (probe `cd`s there).
+
+### Ruled out
+1. **GPU framebuffer tile-copies are not involved.** With
+   `ROGUESQ_LOG_TILECOPY=1`, a full hangar run logs **zero** `[tilecopy]` lines.
+   `createGPUTiles` never takes the `tileCopyUsed` path for hangar draws.
+   `ROGUESQ_NO_GPU_COPY` was added for A/B but is moot for this defect.
+2. **Source RDRAM is not garbage.** Hangar-phase `SETTIMG` targets at
+   `0x60xxxx` (e.g. `0x604140`, `0x606140`, `0x60AD40`) were dumped
+   (`ROGUESQ_DUMP_HANGAR_TEX=1` → `build/hangar_tex_*.bin`). Offline I4 decode
+   of those dumps produces soft, structured grayscale tiles — valid-looking
+   intensity maps, not random memory. RGBA16 interpretations look like noise
+   (those assets are not RGBA16).
+3. **Those addresses are not colour buffers.** Hangar `SETCIMG` targets are
+   only `0x6AB000` / `0x656400` (VI pair), plus earlier-phase buffers
+   (`0x790000`, `0x62B800`, …). Floor textures live in a separate heap.
+
+### What the hangar tile state looks like
+Hangar-phase **new** `SETTILE` combos (after first `width=512`):
+
+| fmt | siz | line | palette | masks/maskt | notes |
+|-----|-----|------|---------|-------------|-------|
+| 4 (I) | 0 (4b) | 4 | 0 | 6/7, 6/6 | I4 64×wrap |
+| 2 (CI) | 0 (4b) | 4 or 2 | **15** | 6/5, 5/5 | CI4, TLUT bank 15 |
+
+`SETTIMG` is almost always `w=1` (LOADBLOCK idiom). Boot/attribution uses the
+same I4 pattern that already renders correctly (glyphs, logo).
+
+### Code landed this session (diagnostics + small fix)
+- `ROGUESQ_NO_GPU_COPY=1` — force `emulatorConfig.framebuffer.copyWithGPU=false`
+  (`src/main/rt64_render_context.cpp`).
+- `ROGUESQ_LOG_TILECOPY=1` — log successful GPU tile-copy draws
+  (`rt64_framebuffer_renderer.cpp`).
+- `ROGUESQ_LOG_TEXFMT=1` — unique `SETTIMG` / `SETTILE` census
+  (`rt64_rdp.cpp`).
+- `ROGUESQ_DUMP_HANGAR_TEX=1` — one-shot 4 KB RDRAM dumps of new `0x60xxxx`
+  texture sources into `build/hangar_tex_*.bin`.
+- **Fix kept:** `createGPUTiles` previously left `GPUTile` uninitialised when
+  `tileCopyUsed` was true but the copy was missing/null-textured. It now falls
+  through to the regular texture-cache path (and logs
+  `[rt64-guard] … falling back`). Did not fire in hangar runs, but is the
+  correct behaviour.
+
+### Implication for the floor band
+The defect is **not** bad asset data and **not** missing FB-as-texture copies.
+Source bytes look like valid I4/CI4. The remaining suspects (priority order):
+
+1. **TMEM load / dxt / line layout** — RDRAM is fine, but LOADBLOCK into TMEM
+   (or the GPU decode that uses `line<<3` as stride) rearranges rows so the
+   sampler sees horizontal striping. Compare a post-upload decoded GPU texture
+   to the offline I4 decode of the same RDRAM dump.
+2. **CI4 palette 15** — hangar introduces CI4 with `pal=15`. If LOADTLUT for
+   that bank is wrong/missing, multi-colour garbage results (matches the band
+   better than pure I4×PRIM, which would be monochrome orange).
+3. **Combiner / multi-texture** — floor may layer I4 lightmap × CI4 albedo;
+   one layer wrong is enough.
+4. **sampleWidth/sampleHeight / rawTMEM** — large wrap masks (`maskt=7` → 128)
+   can force the raw-TMEM path; verify whether hangar tiles take it.
+
+## Session 13 (2026-07-25) — hangar floor continued; FIX_DXT landed
+
+### dxt=0 on every LOADBLOCK
+Measured with `ROGUESQ_LOG_LOADBLOCK=1`: **220k+ LOADBLOCKs per hangar
+run, every one with dxt=0** (`dxtnz=0`). Zero LOADTILE. Factor 5 LLE never
+emits a real dxt.
+
+Hardware uses dxt to XOR-interleave odd TMEM lines on load; the sampler always
+un-interleaves on read. With dxt=0, multi-row textures scramble.
+
+**FIX (`ROGUESQ_FIX_DXT`, default ON)** in `RDP::loadBlock`: when dxt==0 and
+the block is multi-word, synthesise `CALC_DXT(wordsPerLine)` from SETTIMG
+format (RGBA16→128, I/CI4→512, RGBA32→256). Opt out with `=0`.
+
+**A/B hangar (same keys, 55 s):**
+- OFF: walls soft/flat (`scratch/s13_compare_nodxt.png`)
+- ON:  walls show clear panel lines and more ceiling detail
+  (`scratch/s13_compare_fixdxt.png`); hangar frames ~787 KB vs ~765 KB
+- **Floor band unchanged** — dxt is real but is not the floor defect
+
+### Floor-band evidence gathered (still open)
+| Finding | Detail |
+|---|---|
+| Source RDRAM OK | I4/CI4 at `0x60xxxx` decode offline as soft structured maps |
+| Palette 15 is orange/red | LOADTLUT `0x751FA0` = `#e86860…#d80000…#400000` — matches band colours |
+| Palette dumps | `build/palette_*.bin`, `[palette-dump]` log |
+| 0x65xxxx loads | RGBA16 panel textures (asset heap), **not** FB samples — every one is `[fb-miss]` |
+| SETCIMG hangar | `0x656000` / `0x6AB000` only; no tile copies fire |
+| drawtex hangar | I4 64×64/128 wrap; CI4 pal=15 `tlut=0x8000`; RGBA16 64×32 walls |
+| dual-texture / UV / combiner | not yet instrumented for floor draws |
+
+### Recommended config (updated)
+
+    ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+    ROGUESQ_VI_FOLLOW_DRAW=3 ROGUESQ_STUB_MISSING_FUNCS=1
+    # FIX_DXT + FIX_SAMPLE_BOUNDS are default-on; no env needed
+
+## Session 14 (2026-07-25) — floor census, dxt width, line/mask, palette stomping
+
+### Floor-tri census (`ROGUESQ_LOG_FLOOR=1`)
+Mid-band (screen y 180–360) textured triangles, hangar phase:
+
+| Phase | Count | Format |
+|---|---|---|
+| First ~7k | all | **CI4 pal=15, tlut=0x8000, tiles=1** (single texture, not dual) |
+| Then | grows | I4 line=2 masks=5/5 + RGBA16 walls; CI count freezes |
+
+Unique CI4 draw tiles:
+- `line=4 masks=6/6 sample=64×64 lrs=252` — consistent 64-wide
+- `line=3 masks=6/6 sample=64×64 lrs=188` — **line says 48-wide, mask says 64**
+- later: `line=2 masks=5/5 sample=32×32`, `line=4 masks=6/5 sample=64×32`
+
+No dual-texel floor. PRIM is warm grey early, then black/white with rising alpha
+(I4 light pass).
+
+### FIX_DXT improved for 32-wide I4
+Old heuristic always used wpl=4 (dxt=512) for 4-bit. 32-wide I4 needs wpl=2
+(dxt=1024). Updated side/payload heuristic; also prefers load-tile `line` when
+non-zero. Logs show dxt=1024 for words=64 fmt=4. **Walls remain good; floor
+band still present** — dxt alone is not the floor fix.
+
+### FIX_LINE_MASK (default ON) — `ROGUESQ_FIX_LINE_MASK` / alias `FIX_CI4_LINE`
+For 4-bit tiles with masks∈[4,7], force
+`line = 2^(masks-4)` (masks=6→4, masks=5→2) so decode stride matches the wrap
+period and FIX_DXT’s synthesised dxt.
+
+Fires on hangar CI4 pal15 line 3→4. Helps some angles (clean black near-platform
+floor) but **distant floor band still stripes**.
+
+### Palette bank 15 stomping — root of multi-colour rainbow
+LOADTLUT to `tmem=0xF80` (pal bank 15):
+- Early hangar: `0x751FA0` / `0x751FC0` — **red** hangar palette
+- Later: `0x62Bxxx` — **multi-colour** (blue/yellow/magenta)
+
+Offline: hangar CI4 RDRAM + red pal → structured red texture (~74% orange).
+Same indices + multi-colour pal → noise matching the rainbow floor band.
+
+`ROGUESQ_FORCE_PAL15=1` (improved: live RDRAM 0x751FA0 via ^3, 8-byte TLUT
+slot replication, fallback pack) clears cyan/yellow from the floor and can
+make some views pure black — **but corrupts ceiling banners** that legitimately
+share pal=15 with a multi-colour LOADTLUT. **Default OFF** (diagnostic only).
+
+### Code landed this session
+| Knob | Default | File |
+|---|---|---|
+| `ROGUESQ_FIX_DXT` | ON (improved 32-wide + load-tile line) | `rt64_rdp.cpp` |
+| `ROGUESQ_FIX_LINE_MASK` | **ON** (alias `FIX_CI4_LINE`) | `rt64_state.cpp` |
+| `ROGUESQ_FORCE_PAL15` | OFF (improved inject) | `rt64_state.cpp` |
+| `ROGUESQ_LOG_FLOOR` | OFF | `rt64_rdp.cpp` (mid-band tri census) |
+| `ROGUESQ_NO_TLUT` | OFF | `rt64_state.cpp` |
+| `ROGUESQ_FIX_CI4_LINE` | alias → LINE_MASK | `rt64_state.cpp` |
+
+Artifacts: `scratch/s14_*` (floor, notlut, forcepal, fixall, dxt1024, linemask,
+palfix, defaults, sim/, offline/). Compare:
+- `scratch/s14_floor_garbled_baseline.png` — rainbow band
+- `scratch/s14_floor_clean_palfix.png` — FORCE_PAL15 clean floor / broken ceiling
+
+### Recommended config
+
+    ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+    ROGUESQ_VI_FOLLOW_DRAW=3 ROGUESQ_STUB_MISSING_FUNCS=1
+    # FIX_DXT + FIX_LINE_MASK default-on
+
+### NEXT (priority order)
+1. **Hangar floor band** — still open. Strongest lead: pal-15 bank is shared;
+   upload hashes bake whatever palette is in TMEM[0xF80] at first sight of each
+   texel set. Need either correct LOADTLUT ordering under LLE, or per-texture
+   palette tracking that doesn’t globally force red.
+2. Dump post-TextureDecodeCS RGBA for CI4 pal15 hashes vs offline + live pal.
+3. Ceiling multi-colour ring (visible under FORCE_PAL15) may be a second CI
+   layout bug — investigate after floor.
+4. Drive hangar menu selection / start a mission.
+5. Default `VI_FOLLOW_DRAW=3` on after first-second coverage.
+6. Retire dead knobs; intermittent `rs_free` SIGBUS.
+
+## Session 15 (2026-07-25) — sample bounds, dxt wpl=3, pal15 proof
+
+### FIX_LINE_MASK was wrong direction
+line=3 / lrs=188 CI4 pal15 is a **real 48x38** tile (LOADBLOCK words=114 =
+912 B = 48*38*0.5). Forcing line→4 + sample 64 scrambled it further.
+
+**Replaced with ROGUESQ_FIX_SAMPLE_BOUNDS (default ON):** keep line as emitted;
+shrink sampleWidth/Height to min(mask, line-implied, lrs/lrt span).
+- line=3 → sample **48x38**
+- line=4 → sample **64x57** (lrt=224)
+
+Aliases FIX_LINE_MASK / FIX_CI4_LINE still toggle the same flag.
+
+### FIX_DXT divisor search
+4-bit path now searches wpl candidates {4,2,8,16,3,6,...} for exact
+wordCount % wpl == 0 and near-square aspect:
+- words=114 → **wpl=3 dxt=683** (48x38)
+- words=228 → wpl=4 dxt=512 (64x57)
+- words=256 → wpl=4 dxt=512 (64x64)
+
+### Palette is NOT the floor-band cause (early hangar CI4)
+ROGUESQ_LOG_PAL15=1 on first 40 CI4 pal15 uploads: all use red hangar palettes
+0x751FA0 / 0x751FC0. **Zero multi-colour 0x62Bxxx** at these uploads. Floor
+band pixels are warm red #ce6238 matching that palette — layout scramble of
+correct colours, not wrong TLUT bank.
+
+### Live TMEM CI4 dumps (ROGUESQ_DUMP_CI4=1)
+CPU decode at upload (odd-row swap + pal15) still shows horizontal structure:
+scratch/s15_dump/ci4_pal15_*.png. Offline linear decode of hangar RDRAM is also
+mottled red; live 48x38 dump has higher row-to-row delta (worse scanlines).
+
+### Code defaults now
+| Knob | Default |
+|---|---|
+| ROGUESQ_FIX_DXT | ON (wpl search incl. 3) |
+| ROGUESQ_FIX_SAMPLE_BOUNDS | ON (replaces line→mask expand) |
+| ROGUESQ_FORCE_PAL15 | OFF |
+| ROGUESQ_DUMP_CI4 / LOG_PAL15 | OFF |
+
+### NEXT
+1. TMEM CI4 layout — nibble order, odd-row vs load XOR, RDRAM ^3 on LOADBLOCK.
+2. Which of 48x38 vs 64x57 (or later I4) paints the distant floor band.
+3. Mission start / menu selection; VI_FOLLOW_DRAW=3 default.
+
+
+## Session 16 (2026-07-25) — CI pre-interleaved; FIX_DXT RGBA-only
+
+### Real CI sources found
+Hangar CI4 LOADBLOCKs are **not** at 0x60xxxx (those hangar_tex dumps were
+wrong assets). Real addresses:
+- `0x741B80` words=114 dxt→0 (was 683) — 48×38
+- `0x741460` words=228 — 64×57  
+- `0x4Fxxxx` / `0x6Axxxx` words=256 — 64×64
+
+`ROGUESQ_DUMP_CI_LOAD=1` writes `ci_rdram_*.bin` + `ci_tmem_*.bin`.
+
+### Root cause: double interleave on CI
+RT64 load with synthesised dxt matches dumped TMEM 100% (^3 + dxt XOR).
+
+Offline decode of real CI RDRAM:
+- **dxt=0 load + odd-row un-interleave** → readable art
+  ("NINTENDO 64 MEMORY EXPANSION PAK", clean perforated metal plates,
+  "CAUTION KEEP CLEAR" signs)
+- **synthesised dxt + un-interleave** → horizontal stripe garbage
+
+Conclusion: Factor 5 stores **CI (and I) textures pre-interleaved** in RDRAM
+and emits dxt=0 so the sampler un-interleaves once. FIX_DXT was double-
+interleaving CI → residual stripes after one un-interleave.
+
+RGBA hangar walls are **linear** and still need synthesised dxt.
+
+### FIX (default)
+`ROGUESQ_FIX_DXT` still default ON, but **only synthesises dxt for
+`G_IM_FMT_RGBA`**. CI/I/IA leave dxt=0.
+
+### Results
+- GPU CI4 dumps (`ROGUESQ_DUMP_CI4`) under the fix: correct readable tiles
+  (`scratch/s16_dump2/big_ci4_pal15_*.png`)
+- Hangar A/B: some camera angles show **clean black floor** (e.g.
+  `scratch/s16_cidxt0/f_039_049.0.png`); deeper floor views may still show
+  residual bands (possible I4 / UV wrap / remaining materials)
+- Walls remain detailed (RGBA dxt still on)
+
+### Diagnostics added
+- `ROGUESQ_DUMP_CI_LOAD=1` — RDRAM+TMEM for CI LOADBLOCK sizes 64/114/128/228/256
+
+### NEXT
+1. Clear residual deep-floor band (I4 dxt? sample/mask wrap for 48-wide?)
+2. Mission start / menu
+3. Default VI_FOLLOW_DRAW=3
+
+
+## Session 17 (2026-07-25) — the 0x65xxxx population is a DIFFERENT PHASE; source data proven perfect
+
+### The finding: a known-good reference image now exists
+`ROGUESQ_DUMP_TMEM_LOAD=1` writes `build/rdram_load_*.bin`. Decoding the forty
+contiguous 4 KB blocks at **0x650A10..0x678A10** as 64×32 RGBA16 tiles laid out
+8-across assembles into a **clean photograph — a Rebel pilot in an orange flight
+suit beside an X-wing** (`scratch/s17_proof_source_is_perfect.png`, produced by
+the new `tools/decode_rdram_tiles.py`, which applies the `^3` RDRAM unswizzle).
+
+So for this population the source data is perfect, and so is every parameter:
+
+| stage | value | correct? |
+|---|---|---|
+| LOADBLOCK | `words=512 dxt=128` → 16 words/row → 64 texels | yes |
+| render tile | `line=16` → `lineWidth=64` | yes |
+| sample dims | `64x32`, `rawTMEM=0`, `masks=0/0` | yes |
+| RT64 load | `loadBlockOperation` passes `loadTile.lrt` as `dxtIncrement`; `loadToTMEMCommon` toggles `tmemXorMask` every `0x800/dxt` words | honours dxt |
+
+Decoding the *same* bytes at a linear 512-wide stride instead of as 64×32 tiles
+reproduces an orange/black horizontal streak pattern closely resembling the
+on-screen artifact (`scratch/s17_proof_linear512_matches_artifact.png`). That is
+the signature of a **row-stride error, not bad data, not a palette, not dxt**.
+
+### CORRECTION to sessions 12-16 — wrong phase, wrong population
+The `0x65xxxx` loads and their `[fb-miss]` lines, which sessions 12-16 treated as
+hangar wall/floor assets, occur while the **VI is at width=1024 origin=0x790400**
+— the hi-res tiled phase between the Factor 5 logo and the hangar, not the
+512-wide hangar at all. Checked by line-number interleave of `[loadblock a=0x65…]`
+against `[vi] update_screen` in the same log. These draws fire **160,000+ times
+per run** (`ROGUESQ_FLATTEN_RGBA16=1` counter), so they are a major consumer.
+
+**I made this mistake first and caught it before writing it up**: a pilot beside
+an X-wing is equally plausible as cinematic content, so the phase had to be
+confirmed from the VI width rather than assumed from the picture. Sessions 12-16's
+CI4-pal15 / I4 / palette / dxt work characterised a genuinely different texture
+population; that is why five sessions of knob-tuning never moved the hangar band.
+
+### Attribution probe added (default OFF)
+`ROGUESQ_FLATTEN_RGBA16=1` (`rt64_state.cpp`) collapses sampling to 1×1 for
+exactly the `fmt=RGBA siz=16b line=16 sample=64x32` tiles and counts hits, so a
+draw population can be attributed by sight instead of inferred. It fires 160k+
+times; a clean before/after capture of the 1024-wide phase was **not** obtained,
+because run-to-run timing variance is large (the Factor 5 logo landed at 18 s in
+one run and 44 s in another) and several capture windows missed the phase.
+**Attribution of the 512-wide hangar band to a specific draw is still open.**
+
+### Harness: menu navigation now possible
+`tools/probe.sh` `PROBE_KEYS` accepts `<seconds>[:<key>]`, e.g.
+`PROBE_KEYS="6 8 46:right 70:a"`, with names mapped to the keyboard fallback in
+`src/main/main.cpp` (`start a b z up down left right su/sd/sl/sr cup/cdown/…
+l r`). Previously it could only press Return, which made the menu undriveable.
+
+`build/winctl key` now holds a key **150 ms** (was 40 ms). The game samples
+`SDL_GetKeyboardState` once per frame and this phase runs at ~10 fps, so a 40 ms
+press could land entirely between two polls and never be seen. Rebuild with
+`clang -O1 -fobjc-arc -framework Cocoa -framework CoreGraphics -o build/winctl tools/winctl.m`.
+
+**The menu responds.** Pressing A (Z) in the hangar advances the game to further
+scenes, with **0 `[missing-func]`, 0 asserts, 0 crashes** across every run this
+session. Whether a mission can actually be started is still unverified.
+
+### NEXT (priority order)
+1. Attribute the 512-wide hangar band to a draw population, the way this session
+   should have: capture with `ROGUESQ_FLATTEN_RGBA16=1` vs off **in the same
+   phase**, confirmed by VI width, not by elapsed time. Add a similar flatten
+   filter for the hangar's CI4 pal15 tiles so both populations can be told apart
+   by sight in one pair of runs.
+2. For the 1024-wide phase, the reference image now exists — compare what is on
+   screen against `scratch/s17_proof_source_is_perfect.png` directly. A stride
+   error is the leading hypothesis; instrument the TMEM→GPU decode pitch for
+   these tiles rather than the load side, which is proven correct.
+3. Timing variance defeats fixed capture windows. Gate captures on a phase marker
+   (VI width transition) instead of elapsed seconds.
+4. Mission start; then `VI_FOLLOW_DRAW=3` default-on; then retire dead knobs.
+
+## Session 18 (2026-07-25) — phase-gated capture; 512 phase is a NEW scene, not the hangar
+
+### Capture is now gated on the phase, not the stopwatch (session 17 NEXT #3: done)
+`rt64_render_context.cpp update_screen` prints `[phase] vi_width=N ...` the
+instant VI width changes. `tools/probe.sh` takes `PROBE_PHASE_WIDTH=512`
+(+`PROBE_PHASE_TIMEOUT`): it holds captures until the game reports that width,
+starts the `<seconds>` budget there, and stops the moment the width leaves, so
+every frame in an output directory belongs to one phase and two runs are
+comparable. Distinct exit codes 4 (died waiting) and 5 (phase never reached).
+
+**Phase timeline, reproducible to ±1 s across 9 runs (no key presses needed):**
+
+| phase | VI width | starts | note |
+|---|---|---|---|
+| boot | 0 → 320 | 0.0 s | |
+| attribution / logos | 640 | 1.7 s | text + Factor 5 logo render correctly |
+| hi-res tiled | 1024 | ~46.5 s | **renders pure black** |
+| transition | 640 | ~72 s | |
+| outdoor scene | 512 | ~90 s | flat sand-coloured polygons |
+
+Session 16's run went 1024 → 512 **directly** (512 at update_screen #2368);
+current runs insert a second 640 phase and reach 512 at #5391 with a different
+VI origin (0x690400 vs 0x6AB400). The phase sequence itself has changed.
+
+### The 512 phase is no longer the hangar
+Sessions 12-16 captured a textured hangar interior at width 512
+(`scratch/s16_cidxt0/f_039_049.0.png`). The current build at width 512 shows
+large flat cream (#c5be9d) polygons on black with a panning camera, identical
+with and without key presses (`scratch/s18_sheet_nokeys.png`). Two independent
+lines say this is an **outdoor scene, not a degraded hangar**:
+1. Its dominant textured-draw population is RGBA32 32×32 tiles at
+   0x4B55E0..0x4C55E0 (17 contiguous 4 KB blocks). Decoded offline they are
+   clean **sky-with-sandy-horizon** tiles (`scratch/s18_fmt_rgba32_32x32.png`),
+   and #c5be9d is that horizon colour.
+2. The geometry silhouette bears no resemblance to the hangar's curved walls
+   and circular platform.
+
+So the game now runs *past* where sessions 12-17 were working, unprompted.
+Session 17's open question "can a mission be started" is closer to yes; whether
+this is a mission, a briefing backdrop, or a level intro is **not established**.
+
+### What is proven about the flat rendering, and what is not
+Proven:
+- The display list asks for textured geometry: in-phase, ~1,275 textured
+  triangles and ~1,375 LOADBLOCKs per 2 s; 75 % of triangles are opcode 0x0E
+  (shade+texture). `rdphist` now splits triangles by opcode, which is what
+  showed this — the lumped TRI bucket could not.
+- Source data and claimed format are both correct (the sky tiles above decode
+  coherently as exactly what the stream claims: RGBA32, 32×32).
+- `ROGUESQ_FIX_DXT=0` changes nothing here. **Hypothesis dead.**
+- Not a framebuffer-as-texture miss: sources are asset addresses, zero
+  `[fb-miss]` in phase.
+- **Not a UV collapse.** `ROGUESQ_LOG_UVSCALE` in-phase: ~45 % of textured
+  triangles map at ~1 texel/pixel and `ROGUESQ_LOG_TRITEX` counts
+  **0 collapsed triangles** per interval (444–1270 healthy).
+
+Not explained: why textured triangles with sane mappings and correct textures
+paint as flat colour. Next instrument should be the TMEM→GPU side for the
+RGBA32 32×32 population (decoded texel dump), since load side and mapping side
+are now both cleared.
+
+### CORRECTION to a claim made mid-session
+An earlier reading here found textured triangles whose S coordinate was
+identically zero (base, dx and de all zero, T and W populated) and nearly
+attributed the flat 512-phase rendering to it. Those triangles are **not in the
+512 phase** — run-lifetime "first N" counters had reported whatever phase
+started first. Interval-scoped re-counting shows 0 collapsed triangles in both
+the 512 and 1024 phases. The S=0 triangles are real but live in the 640
+attribution phase; they remain uninvestigated.
+
+### The 1024 phase renders black while doing heavy work
+Gated measurement in-phase: ~11,900 textured triangles per 2 s, **0**
+collapsed, and `uvscale` mean ratio ≈ 33 texels/pixel (9,487 of 9,715 triangles
+minified ≥2:1) on tiny 5×2 px I4 primitives. Geometry and mapping are healthy,
+so black is a render-target/present problem, not a geometry one — the same
+class as LLE session 8's "white screen is a present pick". This is where
+session 17's pilot/X-wing population (0x65xxxx) lives.
+
+### Stability
+Every run this session (10 runs, ~90–150 s each): 0 UnhandledJumpTarget,
+0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts, 0 crashes.
+
+### Tooling added
+- `tools/contact_sheet.py` — labelled grid of a capture burst; one image shows
+  how a scene evolves, which single frames cannot.
+- `tools/decode_block_formats.py` — decode 4 KB `ROGUESQ_DUMP_TMEM_LOAD` dumps
+  under competing format readings (a 4096-byte block is 32×32 RGBA32 *and*
+  64×32 RGBA16; byte count alone never decides).
+- `ROGUESQ_DUMP_ADDR_LO/HI` — the dump window is configurable instead of two
+  hardcoded ranges that silently captured nothing for this session's
+  population. Dump filenames now carry siz and word count.
+- PIL is gone from system python (homebrew 3.14). `scratch/venv` holds it;
+  run `frames.py` / the decoders with `scratch/venv/bin/python`.
+
+### SECOND HALF — the symptom was mis-stated: geometry renders BLACK
+The "flat sand-coloured polygons" framing above is **wrong**, and the error was
+methodological: cross-run frame comparison. The scene animates and every run is
+an independent play-through, so frame *n* of run A and frame *n* of run B have
+the camera in different places — differences read as knob effects and null
+results read as "no effect". Judging those runs by `frames.py` dominant-colour
+statistics made it worse: same colour, same share, completely different shapes.
+
+Forced-colour markers measured as a **pixel fraction over all frames** are
+camera-independent, and they settle it:
+
+| run | magenta pixels |
+|---|---|
+| baseline (control) | 0 of 7,722,624 |
+| `ROGUESQ_FORCE_FOG=FF00FF` | **0 of 1,782,144** |
+| `ROGUESQ_FORCE_FILL=FF00FF` | **58.0 %** |
+| `ROGUESQ_FORCE_FILL` + `ROGUESQ_DROP_ALL_TRIS` | **81.2 %** |
+
+Reading, in order:
+1. **Fog contributes nothing** — not one pixel. Dead.
+2. The sand colour is the **fill colour** — the background, not geometry, not
+   texture, not fog. `#C8C0A0` fog matching `#c5be9d` on screen was coincidence
+   (both fog and the desert art are sand-coloured); the colour match alone
+   would have sent the next session down the wrong path.
+3. Triangles cover ~23 % of the frame (58 → 81 % when dropped) and paint
+   **black** over that background. So the geometry rasterises in the right
+   places with the right silhouettes and comes out black.
+
+**Revised symptom, unifying both phases: textured geometry renders black.** In
+the 512 phase its silhouettes are visible because the background fill is light;
+in the 1024 phase the background is black too, so the whole screen reads black.
+Those are one bug, not two.
+
+Also ruled out for the 512 phase: draw target and presented buffer agree
+(drawTarget 0x620000/0x690000 vs VI origin 0x620400/0x690400 — the standard
+0x400 line offset, double-buffered), so this is **not** a present-pick.
+
+### Instrument validity (read before trusting a suppression run)
+`ROGUESQ_DROP_ALL_TRIS=1` first appeared to change nothing, which would have
+meant the triangle path never reaches the screen. That was the stats artefact
+again. `ROGUESQ_SUPPRESS_SHIFT=1` re-runs any suppression mode as a +80 px X
+displacement instead of a deletion: the picture visibly shifts
+(`scratch/s18_sheet_shift.png`), proving the instrument reaches the screen.
+**Validate with the shift before believing a null suppression result**, and
+measure with forced-colour pixel fractions rather than by eye or by dominant
+colour.
+
+### THIRD SEGMENT — TMEM at draw time: the high half is empty
+`ROGUESQ_DUMP_TMEM_DRAW=1` writes the CPU-side TMEM image (`build/tmem_draw_*.bin`)
+whenever a draw binds an RGBA32 tile — no GPU readback needed, because TMEM sits
+exactly between the RDRAM source (proven good) and the black pixels.
+
+For the 512-phase tile (`line=8 tmem=0x0 masks=5/5`, i.e. 32×32 RGBA32 = 4 KB,
+all of TMEM):
+
+    low  half nonzero: 1655 / 2048
+    high half nonzero:  128 / 2048
+
+**RGBA32 splits across TMEM halves: RG in the low half, BA in the high half.**
+The high half is empty, so blue and *alpha* are absent for every texel of this
+tile — and alpha 0 is a direct mechanism for geometry that rasterises in the
+right places and comes out black. This is the first evidence that names a
+specific broken value rather than a symptom.
+
+Leading hypothesis for *why*, not yet confirmed: ~2 KB written is exactly what a
+**256-word non-split load** produces, and 256-word loads are the CI/16-bit
+population from sessions 14-16. RT64's `loadWord<RGBA32>` writes both halves
+correctly and both call sites select it from `loadTile.siz`/`loadTile.fmt`, so
+the load code looks right; what looks wrong is the pairing. The render tile
+claims 4 KB of RGBA32 at tmem=0 while what was loaded there is a 2 KB 16-bit
+texture — a tile/load mismatch in the LLE stream, not a decoder bug.
+**Next instrument: the RDP already keeps `lastLoadOpByTMEM[]` — log the last
+load op covering tmem=0 at draw time and compare it with the render tile.**
+
+Also cleared: `ROGUESQ_FIX_DXT=0` leaves TMEM byte-identical (1783/4096 either
+way), so dxt synthesis is not responsible for the empty half.
+
+### A false positive, caught — do not re-report it as a win
+Disabling the fix knobs appeared to raise rendered content from 0.52 % to
+7.30 %, with distinct colours 24 → 127. It is an artefact:
+
+| run | magenta% | black% | other% | distinct |
+|---|---|---|---|---|
+| baseline | 58.0 | 41.5 | 0.52 | 24 |
+| `FIX_SAMPLE_BOUNDS=0` | 8.4 | 84.3 | **7.30** | 125 |
+| `FIX_DXT=0` | 26.6 | 66.1 | **7.30** | 126 |
+| both off | 20.5 | 72.2 | **7.30** | 127 |
+
+Identical to three significant figures across three different configurations is
+a constant, not an effect, and the "other" pixels turn out to be near-black and
+grey UI rather than texture. Five frames per run does not average out scene
+variation, so even the aggregate metric is confounded when the runs sample
+different moments. **The knob A/B remains negative.** To A/B rendering changes
+properly, toggle within a single run or capture far more frames.
+
+### FOURTH SEGMENT — ROOT CAUSE: RGBA32 render tiles are never loaded
+The RDP's own `lastLoadOpByTMEM[]` confirms the mismatch at draw time:
+
+| | fmt | siz | detail |
+|---|---|---|---|
+| render tile | 0 (RGBA) | 3 (32b) | 32×32, tmem 0, line 8 |
+| last load at tmem 0 | **2 (CI)** | **2 (16b)** | Block, 256 words, texture 0x4FD590 |
+
+256 words = 2048 bytes = the low half exactly, which is the 1655/128 signature.
+And an **exhaustive** load census by (fmt, siz) over a whole 512-phase run — two
+runs agreeing, 27,454 and 35,124 loads — finds only two formats in the entire
+stream:
+
+    f2/s2 (CI 16b) = 1,614      f4/s2 (I 16b) = 25,840      RGBA32 = 0
+
+**Every texture in this phase loads to tmem 0** (1,438 of 1,439 loadblocks), the
+"load one, draw it, load the next" streaming idiom. So an RGBA32 render tile is
+never backed by an RGBA32 load: it samples whichever CI/I texture happened to be
+streamed in last, reading 4 KB of split-half RGBA32 out of a 2 KB 16-bit load.
+Blue and alpha come from the untouched high half — **alpha 0, hence black
+geometry.** The RGBA32 sky tiles decoded in the first segment are loaded during
+an *earlier* phase (`ROGUESQ_DUMP_TMEM_LOAD` is not phase-gated, which is why
+they appeared in a 512-gated run's dumps and misled me).
+
+That is the mechanism for "textured geometry renders black", end to end:
+DL emits RGBA32 SETTILE → no RGBA32 LOADBLOCK ever follows → TMEM high half
+holds stale CI/I data → sampled alpha 0 → black pixels over the fill background.
+
+**Open: which side is at fault.** Either our recompiled F5 ucode emits RGBA32
+SETTILE descriptors for geometry the real ucode would have set up differently,
+or it emits the SETTILE but drops the matching LOADBLOCK. Both are upstream of
+RT64; nothing in the RT64 load path is wrong (`loadWord<RGBA32>` splits the
+halves correctly and both call sites select it properly).
+
+### A measurement trap worth remembering
+Counting `[loadblock]` diagnostic lines said "43 RGBA32 loads"; the exhaustive
+census says zero. That diagnostic prints a **sample** (first 60, then every
+500th), so counting its lines measures the sampler, not the stream. Any census
+built on the existing sampled logs needs re-deriving exhaustively before it is
+quoted.
+
+### NEXT (priority order)
+1. Decide which side is at fault: trace the DL in stream order around one
+   RGBA32 SETTILE (`ROGUESQ_LOG_SEQ=1`) and see whether a LOADBLOCK for a
+   0x4Bxxxx/0x4Cxxxx sky address is present and being dropped, or was never
+   emitted. That splits "ucode drops the load" from "ucode emits the wrong tile
+   descriptor" and is the last step before a fix can be written.
+2. 1024 phase: same bug as (1) most likely — retest it once (1) moves rather
+   than investigating separately.
+3. Identify what the 512 scene actually is (mission? briefing?) — drive input
+   during the phase; `PROBE_KEYS` fires on the launch clock and the phase is at
+   a stable ~90 s.
+4. The S=0 triangles in the 640 attribution phase.
+5. Retire dead knobs; `VI_FOLLOW_DRAW=3` default-on.
+
+## Diagnostics
+- ROGUESQ_DUMP_TMEM_DRAW=1 — dump the CPU-side TMEM image at draw time for
+  RGBA32 tiles, plus a nonzero-byte count per half. Sits between the RDRAM
+  source and the pixel, and needs no GPU readback (session 18).
+- tools/pixel_stats.py — classify every pixel of a burst as background fill
+  (with ROGUESQ_FORCE_FILL=FF00FF), black, or content. Aggregate over frames.
+  CAVEAT: five frames does not average out camera motion; see the false
+  positive above before trusting a difference (session 18).
+- ROGUESQ_FORCE_FOG=RRGGBB / ROGUESQ_FORCE_FILL=RRGGBB — substitute the fog or
+  fill colour register. Measure the result as a pixel FRACTION over all frames
+  (camera-independent), never by comparing single frames across runs
+  (session 18).
+- ROGUESQ_SKIP_RGBA32 / ONLY_RGBA32 / SKIP_UNTEX / ONLY_UNTEX /
+  DROP_ALL_TRIS=1 — draw-population attribution by suppressing triangles;
+  ROGUESQ_SUPPRESS_SHIFT=1 turns any of them into a +80 px displacement to
+  prove the instrument reaches the screen before a null result is believed
+  (session 18).
+- ROGUESQ_LOG_SHADE=1 — per 2 s: combiner texture usage, fog/prim/env/blend/
+  fill registers, blender inputs, and the current draw target (session 18).
+  Caveat: the prim/env components printed out of range (~4.0) and cvgXAlpha
+  printed garbage — probe artefact or genuine state, unresolved.
+- ROGUESQ_LOG_UVSCALE=1 — texels-per-pixel census for textured triangles;
+  separates "texture is uniform" from "one texel magnified over the polygon"
+  (session 18).
+- ROGUESQ_LOG_TRITEX=1 — raw 8 texture-coefficient words for collapsed vs
+  healthy triangles, counted per 2 s interval (session 18).
+- ROGUESQ_DRAWTEX_HIST=1 — textured draws RANKED BY COUNT per 2 s; [drawtex]
+  only reports first sightings, so it cannot say what a phase mostly draws
+  (session 18).
+- ROGUESQ_DUMP_ADDR_LO/HI (hex) — override the TMEM-dump address window
+  (session 18).
+- ROGUESQ_FLATTEN_CI4=1 — collapse CI4 pal15 sampling to 1×1; companion to
+  FLATTEN_RGBA16 for telling two populations apart by sight (session 18).
+- PROBE_PHASE_WIDTH / PROBE_PHASE_TIMEOUT — phase-gated capture (session 18).
+- ROGUESQ_FLATTEN_RGBA16=1 — collapse 64×32 RGBA16 tile sampling to 1×1 and
+  count hits; draw-population attribution probe (session 17, default OFF).
+- tools/decode_rdram_tiles.py — offline decode of build/rdram_load_*.bin as
+  64×32 RGBA16 tiles or as a linear image, with the ^3 unswizzle (session 17).
+- ROGUESQ_LOG_RDPHIST=1 — parser-side RDP opcode census with per-interval
+  deltas (session 11). Prefer this over [full-hist]/[seq], which mis-step on
+  triangle commands.
+- ROGUESQ_VI_FULLSYNC=0 — disable the VI-driven workload advance (session 11).
+- ROGUESQ_FIX_DXT=0 — disable synthesised LOADBLOCK dxt (session 13, default ON;
+  session 16: only applied to RGBA; CI/I leave dxt=0).
+- ROGUESQ_FIX_SAMPLE_BOUNDS=0 — disable sample shrink to line/lrs (session 15,
+  default ON). Aliases: FIX_LINE_MASK, FIX_CI4_LINE.
+- ROGUESQ_FORCE_PAL15=1 — force hangar red palette into TMEM[0xF80] before CI4
+  pal15 upload (session 14, default OFF; breaks multi-colour pal15 assets).
+- ROGUESQ_NO_TLUT=1 — force tlut=0 on uploads (CI decodes as I).
+- ROGUESQ_LOG_FLOOR=1 — mid-band textured-tri census (fmt/line/pal/UV/combiner).
+- ROGUESQ_LOG_LOADBLOCK=1 — LOADBLOCK/LOADTLUT census + dxt stats (session 13).
+- ROGUESQ_LOG_DRAWTEX=1 — unique textured-draw (fmt/siz/line/tlut/sample) census.
+- ROGUESQ_DUMP_TMEM_LOAD=1 — RDRAM/palette dumps for hangar + FB-range loads.
+- ROGUESQ_LOG_TEXFMT=1 — unique SETTIMG/SETTILE census (session 12).
+- ROGUESQ_LOG_TILECOPY=1 — GPU tile-copy draw log (session 12; hangar = 0).
+- ROGUESQ_NO_GPU_COPY=1 — force copyWithGPU off (session 12).
+- ROGUESQ_LOG_SEQ=1 — ordered RDP command trace + per-task DL/sub-DL dumps
+  (see LLE session 8). ROGUESQ_LOG_SEQ_MAX caps the command trace.
+- ROGUESQ_LOG_DMA=1 (my addition, pi.cpp) logs cart DMAs; [overlay] logs registration.
+- macOS: use `sample <pid>` instead of minidumps. mqdiag watchdog didn't produce files.
+- run: cd build && ./RogueSquadron64Recomp (ROM rogue_squadron.z64 alongside).
+- hangar probe: `PROBE_KEYS="6 8 10 12 36 38 40" tools/probe.sh scratch/out 60 1.2`
+  with the recommended LLE env vars above.
+
+## Session 19 (2026-07-25) — session 18 RGBA32 root cause overturned; black = zero vertex shade
+
+Picked up from Claude's session 18 stopping point: "trace DL around one RGBA32
+SETTILE to decide whether the load is missing or the tile descriptor is wrong."
+
+### Instrumentation added
+- `ROGUESQ_LOG_TEXSEQ` (implied by `DUMP_TMEM_DRAW`) — ring of last 48
+  SETTIMG/SETTILE/SETTILESIZE/LOADBLOCK/DRAW ops in `rt64_rdp.cpp`, dumped on
+  the first few RGBA32 draw-time events.
+- Upload-time TMEM dump in `State::fullSyncFramebufferPairTiles` (same
+  `DUMP_TMEM_DRAW` gate) — dumps **after** deferred loads are applied, with
+  alpha census + `.bin` files under `build/tmem_upload_*.bin`.
+- `[rgba32-load #N]` — logs every applied (non-deferred) RGBA32 TMEM fill.
+- `ROGUESQ_LOG_SHADE` extended with vertex-RGB black/ok/white census + min/max.
+- `ROGUESQ_LOG_SHADE_RAW=1` — raw s16.16 baseFixed and post-scale v1.
+- `ROGUESQ_FORCE_SHADE_WHITE=1` — force opaque white vertex colour after shade
+  decode (`rt64_gbi_rdp.cpp`). Diagnostic, default OFF.
+
+### Session 18 conclusion is WRONG (timing artefact)
+`DUMP_TMEM_DRAW` at draw-record time sees **stale** TMEM. RT64 defers every
+LOADBLOCK until `fullSyncFramebufferPairTiles`; `lastLoadOpByTMEM` and the
+load census only update then. So:
+
+| claim (session 18) | reality (session 19) |
+|---|---|
+| zero RGBA32 loads in stream | stream emits full `SETTIMG f0/s3 → SETTILE load → LOADBLOCK words=512 → SETTILE render line=8 → DRAW` |
+| TMEM high half empty at draw | at **upload** both halves filled (e.g. lo=2048/2048 hi=1646–1871/2048) |
+| lastLoad is CI16 at draw | lastLoad at upload is RGBA32 (f0/s3) |
+
+Offline decode of upload dumps (`scratch/s19_tmem_decode/`): real sand/sky
+colours, mixed alpha (not all zero).
+
+### TRUE root cause of black textured geometry: vertex shade ≈ 0
+`ROGUESQ_LOG_SHADE` in the 512 phase:
+
+    vtxRGB black=all ok=0 white=0 | min≈(-0.002,…) max≈(0,0,0,…)
+
+Raw coeffs (`LOG_SHADE_RAW`) often assemble to `baseFixed=(-32768,…)` =
+0xFFFF8000 → −0.5/255 after the standard s16.16→float→/255 path. Earlier
+boot/cinematic triangles carry real shade (v1norm ≈ 0.3–0.46). The outdoor
+512 phase stream is dominated by near-zero shade.
+
+Combiner uses texture (`usesTex0` high). Multiplying TEXEL0 by shade≈0 paints
+opaque black over the sand fill — exactly the session-18 symptom (and the
+1024-phase pure-black screen when the fill is black too).
+
+### Proof: FORCE_SHADE_WHITE restores the scene
+Same keys, same phase gate, A/B:
+
+| run | frames with content | distinct colours | look |
+|---|---|---|---|
+| baseline | 1/5 | ~100–230 | flat sand / black silhouettes (`scratch/s19_baseline_flat.png`) |
+| `FORCE_SHADE_WHITE=1` | **5/5** | **2400–4000** | **textured sky + desert** (`scratch/s19_white_content.png`) |
+
+The white-forced frame shows a blue sky with clouds, a horizon, and sand ground
+— the outdoor scene the 512 phase always was. So the textures, UVs, present
+path, and LLE RDP stream are fine; shade is the missing multiplier.
+
+### What is still open (priority order)
+1. **Why is shade ~0 in this phase?** Two branches:
+   - (a) the stream really has near-zero shade and the combiner should not
+     multiply by it (CC decode wrong for these draws), or
+   - (b) F5 LLE emits shade coefficients in a layout/scale RT64 mis-reads for
+     this population (boot triangles decode to sensible 0.3–0.5, so the
+     path is not wholly broken). Log the raw 8 shade words next to a known-
+     good boot triangle and a 512-phase zero triangle; compare word order.
+2. Once (1) is fixed, retest 1024 phase (likely the same shade issue on a
+   black fill).
+3. `FORCE_SHADE_WHITE` is a diagnostic only — do not default it on (would
+   kill lighting on correctly-shaded draws).
+4. Mission start / menu drive; default `VI_FOLLOW_DRAW=3`; retire dead knobs.
+
+### Recommended config (unchanged for correctness work; add white only to see content)
+
+    ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+    ROGUESQ_VI_FOLLOW_DRAW=3 ROGUESQ_STUB_MISSING_FUNCS=1
+    # optional visual: ROGUESQ_FORCE_SHADE_WHITE=1
+
+### Method notes
+- Never trust TMEM / lastLoad / load-census at draw-record time under RT64 —
+  always measure at upload after the deferred load pass.
+- Sampled `[loadblock]` lines still lie about totals (session 18 trap);
+  exhaustive counters and the texseq ring do not.
+- `LOG_SEQ` still useless past boot (8-byte step + 6000 cap); use texseq ring
+  or RDPHIST for ordered/modern evidence.
+
+## Session 20 (2026-07-25/26) — FIX_ZERO_SHADE: outdoor sky renders
+
+### Stream-order + combiner answer (session 19 NEXT #1)
+`ROGUESQ_LOG_SHADE_RAW` now dumps the 8 raw shade coefficient words and the
+active combiner for good vs near-zero vertex colours.
+
+**Combiner for both classes is the same:**
+```
+cc cyc1: (T0 - 0) * SHADE + 0    L=0xFC127E24 H=0xFFFFFFFF
+```
+So TEXEL0 is multiplied by vertex shade. With shade ≈ 0 the texture is
+invisible regardless of how perfect TMEM is.
+
+**The RDP stream really carries near-zero shade** for the outdoor population:
+- Dominant pattern: `FFFFFFFF/FFFFFFFF 00000000/… 80008000/80008000 …`
+  → baseFixed = −32768 (−0.5) on every channel after s16.16 decode.
+- Some triangles have a non-zero base (e.g. 18.1) that `base + colorDe*dy`
+  then drives to −0.5; others are black at the base already.
+- Boot / early cinematic triangles with the *same* combiner carry real shade
+  (v1norm ≈ 0.28–0.46) and render correctly — the decoder is not globally
+  broken.
+
+So this is not a missing LOADBLOCK and not a wrong SETTILE. Either LLE F5
+shade emission is wrong for this phase, or game-side lights never land in the
+vertex colours the ucode reads. Real-hardware sky is bright; our stream is not.
+
+### Fix shipped: `ROGUESQ_FIX_ZERO_SHADE` (default ON)
+In `rt64_gbi_rdp.cpp`, after shade decode: if the draw is textured, the
+combiner is exactly `(T0 − 0) * SHADE + 0`, and all three vertices have
+|RGB| < 0.05, replace vertex colour with opaque white. Opt out with `=0`.
+
+Does **not** touch draws that already have lighting (hangar / cinematic with
+v1norm ~0.3+). `ROGUESQ_FORCE_SHADE_WHITE` remains the blunt diagnostic.
+
+### A/B measured (512-phase, same probe)
+
+| config | content frames | distinct colours |
+|---|---|---|
+| `FIX_ZERO_SHADE=0` | 1/6 | ~100–220 |
+| default (fix ON) | **4/5** | **2400–3800** |
+
+Visual: `scratch/s20_fixon_sky.png` — blue sky with clouds, horizon, sand
+ground. `scratch/s20_fixoff_flat.png` — flat sand / black.
+
+Boot (25 s, no phase gate): attribution etc. still contentful; mid-boot white
+frames are logo clears, unchanged. Fix fires during boot too (8 log lines)
+without wrecking early screens.
+
+### 1024 phase still black — different bug
+`FORCE_SHADE_WHITE=1` does **not** help 1024 (0/4 content, pure #000). Shade
+is not the 1024 blocker. Session 18's present-pick hypothesis for 1024 stands;
+chase draw target vs VI origin / `VI_FOLLOW_DRAW` for width=1024 next.
+
+### Recommended config (updated)
+
+    ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+    ROGUESQ_VI_FOLLOW_DRAW=3 ROGUESQ_STUB_MISSING_FUNCS=1
+    # FIX_ZERO_SHADE default ON; FIX_DXT / FIX_SAMPLE_BOUNDS still default ON
+
+### NEXT
+1. 1024-phase black: present/draw-target (not shade) — log drawTarget vs VI
+   origin while width=1024; try `VI_FORCE_FB` on the drawn address.
+2. Root-cause zero shade in LLE (ucode lighting vs game lights) so the fix can
+   be retired.
+3. Mission start / menu; default `VI_FOLLOW_DRAW=3`; retire dead knobs.
+
+## Session 21 (2026-07-26) — 1024 phase is the TITLE SCREEN; present starvation fixed
+
+### What the 1024 phase actually is
+Not a mystery black void. It is the **title screen**: Star Wars Rogue Squadron
+logo, Rebel pilot in orange flight suit, X-wing, "START" / "OPTIONS" menu text.
+That is exactly the photographic backdrop session 17 offline-decoded from the
+0x65xxxx RGBA16 tiles (`scratch/s17_proof_source_is_perfect.png`).
+Artifact: `scratch/s21_1024_content.png` (some vertical stripe noise remains).
+
+### Root cause of pure black (not shade, not missing loads)
+1. **PresentEarly early-return starved the present queue.**
+   `State::updateScreen` with PresentEarly mode returns before the normal
+   present path whenever `presentEarly && !fromEarlyPresent`. During 640-wide
+   cinematic some fbPairs are early-present candidates so presents still flow.
+   At the 1024-wide title screen **no pair is an earlyPresentCandidate**, so
+   PresentEarly stops producing presents *and* the early return blocks the
+   normal path. Measured: `threadPresent` count freezes at the last 640-wide
+   present; `update_screen` keeps logging; GPU still runs 60k+ texrects/frame
+   into 0x790000; the window freezes on a black frame.
+
+2. **Colour image is 512-wide at 0x790000**, while VI reports width=1024
+   origin=0x790400. `set-cimg-full` logged `addr=0x790000 w=512`. The GPU
+   target is keyed `(0x790000, 512, 16b)` at ~1024×894 after scale.
+
+### Fixes shipped
+1. **PresentEarly fallthrough** (`rt64_state.cpp`): do not early-return when
+   last-drawn is 0x790000, VI width ≥ 1024, or `lastScreenFactorCounter > 2`
+   (static VI). Lets forceAdvance run for the title screen.
+2. **forceAdvance default ON** for static VI + last-drawn changes (also
+   `ROGUESQ_PRESENT_EARLY_FORCE` defaults ON for renderGate).
+3. **Mode-3 last-drawn width/siz** (`g_rs64_last_drawn_fb_width/_siz`) and
+   re-register missing Framebuffer entries so present binds the live GPU
+   target instead of the empty RDRAM-upload path.
+4. Diagnostics: `[last-drawn]`, `[present-1024]`, `[pe gate]`, denser
+   `[threadPresent]`.
+
+### Measured
+| phase | before | after |
+|---|---|---|
+| 1024 title | 0/8 content, pure black | **11/11 content, ~21k colours** |
+| 512 outdoor | 4/5 content (session 20) | re-check in progress |
+
+### Recommended config (unchanged externally)
+
+    ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+    ROGUESQ_VI_FOLLOW_DRAW=3 ROGUESQ_STUB_MISSING_FUNCS=1
+    # FIX_ZERO_SHADE + present fallthrough + forceAdvance default ON
+
+### NEXT
+1. Clean up title-screen vertical stripe noise (stride / sample bounds / dxt
+   for the 64×32 RGBA16 tile sheet — session 17's linear-512 decode matched
+   the artifact).
+2. Drive START into hangar / mission; confirm 512 outdoor still clean.
+3. Root-cause zero LLE shade so FIX_ZERO_SHADE can be retired.
+4. Default `VI_FOLLOW_DRAW=3`; retire dead knobs.
+
+## Session 22 (2026-07-25/26) — title-screen stripe noise is FIX_DXT
+
+### Symptom (session 21 leftover)
+Title screen (VI width 1024, colour image 0x790000 w=512) presented but the
+photographic backdrop was a vertical-stripe mosaic. Logo / START / OPTIONS
+were legible enough to identify the screen; pilot face and X-wing were not.
+Offline decode of the 0x65xxxx 64×32 RGBA16 tile sheet is perfect
+(`scratch/s17_proof_source_is_perfect.png`); the reference capture is
+`docs/reference-screenshots/MainMenu.PNG`.
+
+### Attribution
+`ROGUESQ_FLATTEN_RGBA16=1` collapses every `fmt=RGBA siz=16 line=16
+sample=64×32` tile to 1×1. The photo body becomes a solid colour grid; the
+logo, START/OPTIONS text, and a residual face chip stay detailed
+(`scratch/s22_title_flatten.png`). So the bad population is exactly that
+RGBA16 sheet — not a present-scale, not CI, not a second overlay.
+
+### Root cause: `ROGUESQ_FIX_DXT` (default was ON)
+Factor 5 LLE emits `dxt=0` on every LOADBLOCK. Session 13–16 synthesised a
+dxt for RGBA (hangar walls looked better in a cross-run A/B). For the title
+sheet that synthesis is fatal:
+
+| config | look | distinct colours |
+|---|---|---|
+| `FIX_DXT=1` (old default) | vertical-stripe mosaic | ~21k but scrambled |
+| `FIX_DXT=0` | **sharp pilot, R2-D2, X-wing panels** | ~21k clean |
+| default after this session (`FIX_DXT` off) | same as `=0` | 4/5 content frames, ~20.9k colours |
+
+Proofs: `scratch/s22_title_fixdxt0.png` / `s22_title_fixdxt1.png` /
+`s22_title_clean.png` (post-fix default).
+
+The stream really has dxt=0 for these loads (`[fix-dxt]` only fires when the
+knob is on; post-fix title log has 0 synthesis lines). Offline linear RDRAM
+decode of the same tiles is perfect, so the assets are not "pre-interleaved
+CI-style" in a way that needs a synthetic dxt either — leaving the stream's
+dxt alone is the correct behaviour for this population.
+
+Session 13's hangar-wall improvement under FIX_DXT is now suspect (cross-run
+A/B was the method session 18 later rejected). Hangar re-check under the new
+default is open; opt in with `ROGUESQ_FIX_DXT=1` if a specific phase still
+needs it.
+
+### Fix shipped
+`lib/rt64/src/hle/rt64_rdp.cpp` `RDP::loadBlock`: **`ROGUESQ_FIX_DXT`
+defaults OFF**. Comment updated with the session 22 evidence. The synthesis
+code path remains for explicit `=1`.
+
+### Also confirmed this session
+- 512 outdoor phase still contentful under the new default (sky + sand,
+  `scratch/s22_outdoor_default.png`, 6/6 frames, FIX_ZERO_SHADE still on).
+- 0 `[missing-func]`, 0 `[defer-drop]`, 0 asserts across the title + outdoor
+  verification runs.
+- Present path for title remains healthy: `[present-1024] drawn=0x790000
+  w=512 fb=yes rt=yes empty=0 rtSize=1024x894`.
+
+### Recommended config (unchanged; FIX_DXT no longer needs mentioning)
+
+    ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+    ROGUESQ_VI_FOLLOW_DRAW=3 ROGUESQ_STUB_MISSING_FUNCS=1
+    # FIX_ZERO_SHADE default ON; FIX_DXT default OFF; FIX_SAMPLE_BOUNDS still ON
+
+### NEXT
+1. Drive START from the clean title into hangar / mission; re-check hangar
+   wall detail under FIX_DXT default OFF (session 13 claim).
+2. Root-cause zero LLE shade so FIX_ZERO_SHADE can be retired.
+3. Default `VI_FOLLOW_DRAW=3`; retire dead knobs (`FORCE_PAL15`,
+   `FORCE_SHADE_WHITE`, wrap-forwarding leftovers).
+4. Optional: understand *why* dxt=0 + always-uninterleave sampler yields a
+   correct title (load/sample pair may both be effectively linear for this
+   path) — not blocking.
+
+## Session 23 (2026-07-26) — title→hangar works; FIX_DXT off is right for hangar too
+
+### Harness: phase-relative keys + leave-ok
+`tools/probe.sh` now supports:
+- `PROBE_KEYS_FROM_PHASE=1` — key times are relative to the gated VI-width
+  entry (not boot). Fixes the session-22 failure mode where absolute keys at
+  2/4/6 s fired during the cinematic, never on the title.
+- `PROBE_LEAVE_OK=1` — keep capturing after the gated width changes, so a
+  title-gated run can follow into hangar / mission.
+
+### START from the title reaches the hangar
+```
+PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+PROBE_KEYS="2:a 3:start 4:a 5:start 7:a …"
+```
+Measured path (game clock):
+
+| t | VI | scene |
+|---|---|---|
+| 46.7 s | 1024 | clean title (session 22) |
+| ~50 s | 1024 | **SELECT GAME** (X-wing hangar preview, AAA rating, ERASE GAME) |
+| 54.7 s | 512 | **main-menu hangar** (origin 0x6AB400; colour 0x656000/0x6AB000) |
+| ~66 s | 512 | camera pans; one frame of RGB static on a wall screen |
+| later | 512 | starfield / open bay (mission-intro-ish) |
+| ~93 s | 640 | transition; process died this run (no logged assert) |
+
+Contact sheet: `scratch/s23_nav_proof.png`. Hangar still: `scratch/s23_hangar_clean.png`.
+
+### FIX_DXT re-check on hangar — default OFF confirmed
+Same keys, A/B:
+
+| config | hangar look |
+|---|---|
+| default (`FIX_DXT` off) | structure correct: pad, gantry, walls, city lights |
+| `ROGUESQ_FIX_DXT=1` | **rainbow / TV-static corruption** on floor and walls |
+
+Session 13's "walls need dxt" claim is **inverted for the hangar under current
+LLE** — synthesis actively destroys hangar textures. Leaving the default OFF
+is correct for title **and** hangar. Best same-run means: nodxt ≈ dxt for
+brightness when the camera matches; the static only appears with dxt on.
+
+### Hangar quality still below session-11 peak
+`s11_menu_hangar.png` has brighter wall panels and lit red doorways; current
+hangar is darker and the city-floor band still has the horizontal
+orange/black scramble (same class sessions 12–16 chased, never closed). Shade
+census in hangar is **not** the zero-shade outdoor bug:
+
+    vtxRGB black=0 ok≈90–150 white=0 | min≈(0.02,…) max≈(0.12,0.16,0.23)
+
+So wall dimness is real vertex lighting / missing layers, not TEXEL*0. Floor
+band remains the open visual defect inside the hangar.
+
+### `ROGUESQ_VI_FOLLOW_DRAW` default is now 3
+`lib/rt64/src/hle/rt64_present_queue.cpp`: default mode **3** (present
+last-drawn framebuffer). Modes 1/2 never engage for this game (empty
+`colorImageAddressVector`). Verified with **no** `VI_FOLLOW_DRAW` in the
+environment: title still 5/5 content, ~20.9k colours
+(`scratch/s23_default_title/`).
+
+### Recommended config (shorter)
+
+    ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+    ROGUESQ_STUB_MISSING_FUNCS=1
+    # VI_FOLLOW_DRAW=3 and FIX_ZERO_SHADE are default ON; FIX_DXT default OFF
+
+### NEXT
+1. Hangar floor band / missing red-door lighting (visual, hangar phase).
+2. Root-cause zero LLE shade (outdoor) so FIX_ZERO_SHADE can be retired.
+3. Process death ~93 s on hangar→640 transition — capture a crash log.
+4. Drive a mission from the hangar (ship select / launch).
+5. Retire dead knobs (`FORCE_PAL15`, `FORCE_SHADE_WHITE`, wrap leftovers).
+
+## Session 24 (2026-07-25/26) — a THIRD shade population; regression harness
+
+### Harness (new, see docs/REGRESSION-HARNESS.md)
+`tools/regress.sh` + `tools/regress_score.py`: one run through the whole boot
+sequence, continuous capture tagged with the live VI phase, `verdict.json` with
+a baseline diff, exit 1 on FAIL. Phase-relative keys (`1024@2:a`) fix the
+session-22 failure where absolute key times fired during the cinematic.
+Baseline: `scratch/s24_baseline/verdict.json`.
+
+**Environment limit worth knowing:** an agent/automation shell can run the game
+and read its log but CANNOT capture the window (`screencapture -l` →
+"could not create image from window", missing Screen Recording permission) and
+CANNOT deliver synthetic input (winctl's `CGEventPostToPid` returns success and
+silently does nothing without Accessibility). The silent one is the trap: two
+runs whose keys "fired" with exit 0 both took the undriven path. The scorer now
+warns when a key schedule fires and no VI transition follows within 10s.
+Log-derived checks work anywhere; visual scoring needs the user's terminal.
+
+Undriven timeline, measured 3x: 1.7-3.0s→640, 47.0-48.0s→1024, 72.6-73.7s→640,
+90.7-92.2s→512 origin 0x690400, alive at the 120s budget. **Session 23's ~93s
+process death did not reproduce in any of the three runs.**
+
+### THE FINDING: shade has three populations, not two
+The `[shade-raw]` classifier and the `[shade]` census both bucketed by
+MAGNITUDE, so a vertex colour of -118 counted as "good" alongside +118. Decoding
+the saved session-20/23 streams offline (no new run needed) splits it three ways:
+
+| population | example v1 | renders | caught by FIX_ZERO_SHADE |
+|---|---|---|---|
+| all-positive | +99.8 | correctly | n/a |
+| near-zero | -0.5 | black | yes |
+| **all-negative** | **-118** | **black** | **NO** — `fabs()<0.05` excludes it |
+
+Mechanism traced end to end: `colorWorkBuffer` is referenced nowhere outside the
+decode, `RasterPS.hlsl:158` does `shadeColor = vertexColor` with no saturate, so
+negative shade reaches the combiner unclamped, `T0*SHADE` goes negative, and the
+render-target write clamps to black. `RasterPS.hlsl:222` also feeds
+`shadeColor.a` to the blender, so the constant -0.5 shade ALPHA present on every
+triangle in every class is live, not ignored.
+
+### Per-phase census (ROGUESQ_LOG_SHADE_RAW=1, 120s undriven, true counters)
+| VI | origin | scene | tris | zero | NEG | pos |
+|---|---|---|---|---|---|---|
+| 512 | 0x690400 | outdoor | 20000 | 76.5% | **23.4%** | 0.1% |
+| 640 | 0x66A500 | attribution/cinematic | 40000 | 18.7% | **35.7%** | 45.6% |
+| 640 | 0x696100 | post-title transition | 5000 | 87.6% | 12.4% | 0% |
+| 1024 | 0x790400 | title | 5000 | 100% | 0% | 0% |
+
+Two things fall out. The title screen is 100% near-zero shade and renders
+correctly **because** FIX_ZERO_SHADE forces it white — that hack is currently
+load-bearing for the title. And the boot 640 phase, which has always "looked
+right", is losing **35.7%** of its triangles to black.
+
+### Candidate cause: shade emitted as SIGNED 8-bit
+Across 147 sampled components the range is -127.5 .. +118.5 — nothing outside
+[-128, 127], exactly the footprint of an unsigned 0..255 colour emitted signed.
+`ROGUESQ_SHADE_WRAP` (default OFF) implements both readings:
+- `=1` modulo 256 — raw -0.5 → 255.5 (white), positives unchanged.
+- `=2` bias +128 — raw -0.5 → 127.5 (grey), positives shifted up.
+
+**Mode 1 is the better bet on stream evidence alone:** it leaves the positive
+population untouched, so the 45.6%-positive boot phase that already renders
+correctly cannot regress; mode 2 rewrites those and would change a
+known-good phase. Mode 1 is also a strict generalisation of FIX_ZERO_SHADE
+(-0.5 → white is what that hack does by hand) and would additionally recover
+the 23-36% negative population it never touched.
+
+**NOT VISUALLY CONFIRMED — this needs one A/B and the automation shell cannot
+capture pixels.** Falsifiable prediction for mode 1: title and boot positives
+look unchanged; previously-black geometry appears in the cinematic and outdoor
+scenes. If the newly-visible triangles are scene content it is confirmed; if
+they are garbage or overdraw it is killed.
+
+    # A/B, from a terminal with Screen Recording permission
+    tools/regress.sh scratch/s24_wrap_off 120
+    ROGUESQ_SHADE_WRAP=1 tools/regress.sh scratch/s24_wrap1 120 \
+      # then REGRESS_BASELINE=scratch/s24_wrap_off/verdict.json
+
+### Verified this session
+Log-half regression of the census run against the s24 baseline: PASS, no
+differences above threshold — same phase timeline, 0 missing-func,
+0 defer-drop, 0 asserts. The diagnostic and knob changes are behaviour-neutral
+with the knob off.
+
+### Also produced
+`docs/CURRENT-TRUTH.md` (front matter for this file; 24 conclusions in the log
+were later overturned, listed there with the session that killed each) and
+`docs/ENV-KNOBS.md` (122 knobs classified; 10 dead, 7 of them in
+`src/main/debug_logs.h`, a header nothing includes). Latent trap recorded there:
+`ROGUESQ_PRESENT_EARLY_FORCE` has four read sites with two default polarities —
+`rt64_state.cpp:2599`/`:2664` default ON, `:2558` and
+`rt64_present_queue.cpp:193` default OFF.
+
+### Mode 1 vs mode 2 settled from the stream — ALPHA is the discriminator
+No pixels needed. Shade ALPHA across 82 sampled triangles spanning every phase
+and every class takes exactly TWO values: **-0.5 (58x) and +0.5 (23x)** (plus a
+single +6.5 outlier).
+
+| raw alpha | mode 1 (mod 256) | mode 2 (bias +128) |
+|---|---|---|
+| -0.5 | **255.5 — opaque** | 127.5 |
+| +0.5 | **0.5 — transparent** | 128.5 |
+
+Mode 1 maps the two observed values onto the two extremes: a meaningful binary
+opaque/transparent flag. Mode 2 maps them onto two mid-greys one part in 255
+apart — a distinction the game would be emitting for no effect, with *every*
+triangle in the game half-translucent. **Mode 2 is dead.**
+
+The same evidence also kills the "values are garbage / lighting is broken
+upstream" reading: garbage does not take exactly two values 81 times out of 82.
+Structured data means the encoding is being misread, not that the data is bad.
+
+Supporting, all independent:
+- Raw component range across 246 samples is -127.5 .. +118.5 — nothing outside
+  [-128, 127], the exact footprint of an unsigned 0..255 colour emitted signed.
+- Reconstructed under mod-256 the RGB distribution is CONTINUOUS across the 128
+  wrap boundary (bins 112-127 and 128-143 both populated), with a 41% spike at
+  240-255. Unrelated garbage would have no reason to join smoothly at the wrap
+  point, and the spike is the near-zero class landing on fullbright — i.e.
+  "unlit geometry, use the texture as-is".
+- Two existing hand-hacks each do exactly what mode 1 does automatically:
+  FIX_ZERO_SHADE forces white RGB, and its own code forces opaque alpha with the
+  comment "decoded alpha (often ~0)". Under mode 1 that ~0 alpha IS 255.
+
+Confidence in mode 1 is high on stream structure; a visual A/B is still the
+final word, and remains the one step the automation shell cannot take.
+
+**Caveat that must be checked before trusting the A/B:** the wrap is applied to
+the three interpolated VERTEX colours, so a triangle whose vertices straddle the
+wrap point (one bright, one dim) interpolates the long way round instead of
+wrapping, which would show as an artifact and could wrongly falsify mode 1.
+`[shade-census]` now reports a `straddle=` count for exactly this.
+
+### A/B RESULT: mode 1 CONFIRMED VISUALLY, now the default
+Window-capture permission became available mid-session, so the A/B that was
+supposed to be a handoff got run here. Matched-phase aggregate comparison (the
+method session 18 approved — pixel FRACTIONS over many frames within a phase,
+never single frames across runs), 120s per arm, same binary, env-only change:
+
+| phase | control (wrap off) | ROGUESQ_SHADE_WRAP=1 |
+|---|---|---|
+| 512 outdoor | **23 of 41 frames >2% pure black**, median 2.3% | **0 of 37**, median 0.0% |
+| 1024 title | 34/34 content, 20913 distinct | 34/34 content, 20913 distinct |
+| 640 post-title | 24/25 content, 3311 distinct | 24/24 content, 3245 distinct |
+| 640 boot/cinematic | 22 content-rich of 62 | 28 content-rich of 62 |
+
+The control's outdoor frames carry a solid BLACK WEDGE across the horizon
+(`scratch/s24_wrap0_ctrl/f_138_0100.0_p06_w0512.png`); with the knob on it is
+gone and the sky-to-sand transition is clean
+(`scratch/s24_wrap1_check/f_140_0101.6_p06_w0512.png`). That wedge is the
+all-negative shade population rendering black. `[fix-zero-shade]` fires 11x in
+the control and **0x** with the knob on, so mode 1 fully subsumes that hack.
+No phase regressed; no crash, no missing-func, no assert in either arm; phase
+timelines identical.
+
+`ROGUESQ_SHADE_WRAP` now **defaults to 1**. `=0` restores the old behaviour,
+`=2` selects the (dead) bias reading. `ROGUESQ_FIX_ZERO_SHADE` is now
+unreachable in practice and can be retired.
+
+### HARNESS CAVEAT learned from this A/B
+Median distinct-colour count went DOWN 7% in the outdoor phase for a change that
+strictly improved it — removing a black wedge removes its high-contrast edge
+pixels. `tools/regress_score.py` has a FAIL rule for a >50% drop in median
+distinct colours; a large genuine fix could trip it. Treat that rule as a
+prompt to look at frames, not as a verdict, and prefer a black-fraction or
+defect-specific measure when testing a fix that removes geometry artifacts.
+
+### Post-A/B verification, and an honest limit on it
+Re-ran with no `ROGUESQ_SHADE_WRAP` in the environment to confirm the new
+default. Log half: **PASS** against the s24 baseline — timeline
+1.6/46.9/72.9/91.3, 0 missing-func, 0 defer-drop, 0 asserts — and
+`[fix-zero-shade]` fired **0** times, which is the signature that the wrap path
+is active by default. The visual half did NOT run: window capture failed on that
+run and has failed on every attempt since, having worked for the two A/B runs
+minutes earlier with no change on my side. So the default is confirmed
+BEHAVIOURALLY (same code path the captured wrap1 arm exercised) but was not
+re-photographed. The A/B result itself stands on real captured frames.
+
+**Window capture from an automation shell is INTERMITTENT, not simply absent.**
+Plain `screencapture` (no `-l`) succeeds even when window capture fails, so a
+successful full-screen capture is not evidence the permission is present. Check
+`verdict.json` for `visual: ok`.
+
+### straddle measured
+Final `[shade-census]` over 75000 triangles: zero=31786 neg=23051 pos=20163
+**straddle=10890 (14.5%)**. The rate is phase-dependent — it was 25.8% at
+n=30000 and fell as the run progressed. Those are the triangles where
+vertex-level wrapping interpolates the long way round instead of wrapping; the
+exact fix is a per-pixel wrap in the shader. The A/B shows the residual error is
+subtler than the black geometry the fix removes, but it is not zero.
+
+## Session 25 (2026-07-26) — the hangar, measured under SHADE_WRAP for the first time
+
+### Environment: this shell had BOTH capture and input
+`screencapture -l <foreign window id>` succeeded, and the driven route reached
+**VI 512 origin 0x6AB400** (hangar) rather than 0x690400 (outdoor) — so
+synthetic input landed too. Both permissions are intermittent (s24), so check
+them at the start of a session rather than assuming: capture with a throwaway
+`screencapture -l` against any window id from `winctl find`, input by which 512
+origin the driven run reaches. This is the only kind of session in which the
+hangar can be measured at all.
+
+### THE FINDING: hangar dimness was largely the negative-shade bug
+Two driven 140 s runs, identical except `ROGUESQ_SHADE_WRAP`, both PASS, both
+entered the hangar at 55.2 s and held it 84 s (114 captured frames each).
+Paired frame-by-frame over all 114 (same index, same phase entry time):
+
+| measure | wrap0 control | wrap1 default | delta |
+|---|---|---|---|
+| near-black pixels (median) | 24.37 % | 17.45 % | **-5.22 pts mean, paired** |
+| mean luminance (median) | 30.1 | 36.6 | **+5.56 mean, paired** |
+| frames where wrap1 is brighter | — | — | **93 of 114** |
+| warm band pixels | 0.87 % | 0.87 % | +0.07 pts |
+
+The control intermittently collapses to ~50-55 % black at lum ~13 (frames 91,
+161, 175) where wrap1 renders fully lit walls, ceiling structure and wall
+consoles. wrap1 never collapses.
+
+**Why nobody saw this before:** the hangar is reachable only with synthetic
+input, and s24's A/B was undriven — the shade fix was validated on the outdoor,
+title and cinematic phases only. s23's hangar shade census reported
+`vtxRGB black=0 ok≈90-150` and concluded the shade was healthy, but that
+classifier was the MAGNITUDE-only one s24 later proved cannot see sign. The
+"ok≈90-150" population was the negatives.
+
+**Correction to `docs/CURRENT-TRUTH.md`:** the remaining-defect entry "Hangar
+dimmer than the s11 peak ... its shade census is healthy, so this is real vertex
+lighting or a missing layer" is overturned. A large part of the dimness was the
+all-negative shade population, and it is fixed by the s24 default.
+
+### The floor band is NOT a shade defect — cleanly isolated
+Warm-pixel fraction is **0.87 % in both arms** on every frame where the scene
+renders (paired mean delta +0.07 pts). The band survives the shade fix
+unchanged, so the shade workstream and the band workstream are now independent.
+The band is still open, and per s17 its actual source draw has still never been
+attributed — sessions 12-16 chased title-screen assets.
+
+### Method: measure the band directly, not with distinct-colour count
+`tools/defect_stats.py` (new) reports per-phase near-black fraction, warm-band
+fraction and mean luminance, cropping window chrome. Two calibration traps found
+while building it, both of which had silently hidden the band:
+- the band is **thin horizontal streaks**, so a NEAREST downsample to 256 wide
+  lands between them and reported 0.75 % where the defect visibly covers about a
+  tenth of the frame. Use a bilinear resample at 512 wide.
+- the streaks are warm but **dark** (embers on black), so a brightness gate
+  (`r > 60`) excluded them. Gate on hue: `r > 40 && r-b > 25 && r-g > 12`.
+Validated against a frame pair known by eye to have and not have the band:
+1.03 % vs 0.00 %. This is the "prefer a defect-specific measure" the s24 harness
+caveat asked for.
+
+### Stability
+s23's ~93 s process death did not reproduce in either run (nor in s24's three
+undriven runs). 140 s clean both arms: 0 `missing-func`, 0 `defer-drop`,
+0 aborts, VERDICT PASS, and the scorer's baseline diff reports no differences
+above threshold between the arms.
+
+### The floor census has never once described the hangar
+`ROGUESQ_LOG_FLOOR` (s14) is the right instrument for attributing the band — a
+census of textured triangles whose screen centroid lands in the mid-band,
+reporting tile fmt/siz/line/pal and UV span. But it keeps `seen`, `total` and
+its 120-line print budget in **run-lifetime statics**, so the boot 640 phase
+exhausts it before anything else starts. Measured on a 115 s run: all 45
+`[floor-tri]` lines fall between log lines 632 and ~5000, inside the boot phase
+(which ends at line 6898); **zero** lines appear in the 1024 phase or in any 512
+phase. Five sessions of floor-band work were reading a census of the *boot
+screen*. This is the same "first N counters describe whatever started first"
+trap s18 recorded, and it is a second instance of the s17 lesson.
+
+**Fixed (s25):** `src/main/rt64_render_context.cpp` publishes
+`rs64_phase_ord()` / `rs64_bump_phase_ord()`, bumped on every VI-width change;
+`lib/rt64/src/hle/rt64_rdp.cpp` takes it via a **weak** extern (so librt64 still
+links standalone, same pattern as librecomp's `rs64_dmem_lock/unlock`) and
+clears `seen`/`total`/`logged` whenever the phase changes. Each line now carries
+its phase: `[floor-tri ph<N> #<i>]`. Any other RT64-side census with
+run-lifetime statics should adopt the same scoping.
+
+### Harness: preflight, and an honest verdict
+Two defects cost runs this session and are now closed.
+
+1. **A run that could not do what was asked still reported `VERDICT: PASS`.**
+   `check_input_landed` in `tools/regress_score.py` raised only a WARN when a key
+   schedule fired and nothing reacted — but such a run silently followed the
+   undriven route, so every per-phase number describes different screens than
+   the caller asked for. It is now a **FAIL** (verified: the wasted probe
+   re-scores FAIL/exit 1, the good driven runs still PASS/exit 0). This is the
+   same class as `window_burst.sh` reporting a dead window as 60/60.
+
+2. **No preflight**, so a permission-less run burned its full budget before the
+   problem showed up in the verdict. `tools/regress.sh` now probes both
+   capabilities in about a second, records them in `env.txt`, and refuses a
+   driven run it cannot drive. New knobs: `REGRESS_ALLOW_UNDRIVEN=1` to override,
+   `REGRESS_REQUIRE_VISUAL=1` to refuse a log-only pass.
+   `winctl trusted` (new subcommand) answers Accessibility via
+   `AXIsProcessTrusted`.
+
+**And the correction that matters more than either:** `AXIsProcessTrusted` is
+necessary but **not sufficient**. Two driven runs this session failed to reach
+the hangar — both took the undriven 0x690400 route — while `winctl trusted`
+still answered `yes` and windowed capture had failed at the same moment. The
+TCC grant is static and was still held; what was missing was a usable GUI
+session, without which `winctl activate` cannot bring the game forward, SDL
+never has a focused window, and posted keys are dropped even though
+`CGEventPostToPid` returns success. **The windowed-capture probe is the better
+predictor of both capabilities**, and the preflight now refuses a driven run
+whenever it fails. Two observations, no counterexample — revisit if a driven run
+is ever seen to work while capture is denied.
+
+Practical consequence for planning a session: test capture FIRST
+(`screencapture -x -o -l <any window id from winctl find>`); if it fails, the
+hangar is unreachable this session and only log-only work is possible.
+
+**Scoping verified (115 s undriven run, `scratch/s25_floor_scoped`):** the
+census now fires in **four phases — ph3, ph4, ph5, ph6** (38/1/2/5 lines) where
+before the fix all 45 lines sat in the boot phase and nothing else ever
+reported. ph4 (title, 1024) shows `fmt0/siz2/line16` RGBA16 and ph5 shows
+`fmt0/siz3/line8 masks=5/5` RGBA32 — populations that had never appeared in this
+census's output at all. The instrument can now describe the hangar; doing so
+needs a driven run, i.e. a session with a working GUI.
+
+## Session 26 (2026-07-25/26) — hangar floor attributed; per-pixel shade wrap; preflight bug
+
+### GUI was available, then Screen Recording lapsed mid-session
+Early in the session: windowed capture of the game worked, Accessibility
+`winctl trusted=yes`, and a driven hangar run completed. Later the same
+`screencapture -l` against Dock/Finder and the game window returned
+"could not create image from window" with no process change — the s24/s25
+permission lapse again. Driven hangar work after that point is blocked until
+capture returns; log-only undriven runs still work.
+
+### Preflight false-negative fixed (blocks every driven hangar run)
+`tools/regress.sh` wrote its Screen Recording probe to `$OUTDIR/.captest.png`.
+**macOS `screencapture` refuses paths whose final component starts with `.`**,
+reporting "cannot write file to intended destination" with **exit 0** and no
+file. Preflight always reported `visual=denied` even with the permission
+granted, which refused every driven key schedule. Renamed to `captest.png`.
+Verified: `PRE_VISUAL=ok` immediately after the rename.
+
+### Hangar floor band attributed (first real hangar census)
+Driven 140 s run `scratch/s26_hangar_floor` with `ROGUESQ_LOG_FLOOR=1
+ROGUESQ_LOG_LOADBLOCK=1`, keys `1024@2:a 1024@3:start 1024@4:a 1024@5:start
+1024@7:a`, **origin 0x6AB400** (hangar), VERDICT PASS, 117/118 hangar content
+frames. Band visible (`scratch/s26_hangar_floor/f_094_0066.1_p05_w0512.png`).
+
+`[floor-tri ph5]` (hangar, phase ord 5 after 0→320→640→1024→512):
+
+| key | notes |
+|---|---|
+| **I4 `fmt4/siz0/line4/pal0` `masks=6/6` tiles=1** | only textured mid-band unique; UV spans ~15..62 × 0..62 (64-wrap) |
+| I4 `fmt4/siz0/line4/pal0` `masks=0/0` or `6/6` tiles=0 | bulk of mid-band samples; UV=0,0; `usesTexture` false |
+| **CI4 pal=15** | **zero lines in hangar** |
+
+Cross-check: boot 640 (`ph3`) is dominated by **CI4 pal=15 tlut=0x8000**
+(`fmt2/siz0/line4` and `line3`) — exactly the population sessions 12–16
+measured and chased. **The hangar band is not that population.** Sessions
+12–16 were reading boot-phase floor-tri output; s25 scoped the instrument per
+phase but never got a driven hangar capture until now.
+
+Hangar `LOADBLOCK` sample after entry: `a=0x604140 words=512 dxt=0 texFmt=4`
+(I4), dxtnz=0. `FIX_DXT` (default OFF) only synthesises for RGBA, so I4 stays
+dxt=0. Prim on hangar mid-band samples is **black** `(0,0,0,1)`.
+
+Warm-band measure on the driven hangar frames: median 0 % (many black loading
+frames), peak ~1.5 % on scramble-visible frames; band is real and intermittent
+with camera angle, not a shade defect (s25 isolation still stands).
+
+### Enhanced floor census (for the next driven hangar run)
+`ROGUESQ_LOG_FLOOR` now also prints `img=0x……`, `cc=(A-B)*C+D`, and resets the
+running `ci/i/rgba` histogram on phase change (previously the hangar hist
+inherited boot's CI counts). Y band widened to 160–420. **Needs a re-run with
+capture** to attach combiner/img to the hangar I4 draws — Screen Recording had
+lapsed by then. Boot-phase sample of the new format:
+`cc=(T0-0)*SHADE+0 img=0x741460` for CI4 pal15.
+
+### Per-pixel shade wrap shipped (s25 next-step #2)
+Vertex-level wrap (s24 default) is wrong for the **14.5 %** of triangles that
+straddle the wrap point. Mode 1 now:
+
+1. **CPU** (`rt64_gbi_rdp.cpp`): leaves raw signed shade alone for mode 1
+   (mode 2 bias still applied on CPU; mode 0 off).
+2. **GPU** (`RasterPS.hlsl`): after `shadeColor = vertexColor`, if
+   `gConstants.padding.x == 1`, wrap each channel `fmod(v*255, 256)` with
+   negative fix, `/255`.
+3. **Push constant** (`rt64_framebuffer_renderer.cpp`): writes
+   `ROGUESQ_SHADE_WRAP` (default 1) into `RasterParams.padding.x`.
+
+Build note: Metal shader rebuild needs
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (or full Xcode
+selected); bare Command Line Tools have no `metal` and the cmake step fails at
+`.hlsl.ir`.
+
+Log-only smoke with the new binary (`scratch/s26_shade_pixel_smoke`, 95 s
+undriven): VERDICT PASS, 0 missing-func / defer-drop / aborts, outdoor 512
+reached. Visual A/B of the pixel path deferred (capture lapsed).
+`[fix-zero-shade]` fires a handful of times again (raw −0.5 is near-black
+before the shader wrap), which is harmless — same white outcome.
+
+### NEXT (priority order)
+1. **Hangar I4 decode path** — with the band attributed as I4 line=4 wrap-64
+   dxt=0, prim black: re-run enhanced `LOG_FLOOR` on hangar when capture is
+   back (want `cc=` and `img=` on the scramble draws), then compare TMEM /
+   GPU-decoded I4 of `0x604140`-class sources to offline I4 of the same RDRAM.
+   Suspects: wrong `line`/stride on the I4 path, sample bounds, or a
+   combiner that is not the black-PRIM path the mid-band samples showed.
+2. **Visual A/B of per-pixel shade wrap** vs vertex wrap (`SHADE_WRAP=1` is
+   now pixel; need a temporary vertex-only knob or git checkout of the old
+   CPU block if a regression is suspected). Capture required.
+3. **GPU→CPU present PNG** (s25 #3) — remove the `screencapture -l`
+   dependency that lost this session mid-way.
+
+## Session 27 (2026-07-26) — hangar band attributed to I4 line=4 masks=6/6
+
+Capture was available again. Driven hangar runs (origin 0x6AB400) with the
+enhanced floor census and attribution probes.
+
+### Enhanced floor census on hangar (scratch/s27_hangar_i4)
+`[floor-tri ph5]` after entering hangar:
+
+```
+tiles=1 t0=fmt4/siz0/line4/pal0 masks=6/6 img=0x605140 tlut=0x0
+  uv=[14.5..62.5, 0.6..62.5] cc=(T0-0)*SHADE+0 primRGBA=(0.92,0.88,0.84,0.04)
+```
+
+Bulk mid-band is untextured shade (`cc=(0-0)*0+SHADE`) with the same tile state
+still latched. **CI4 pal15: zero in hangar** (boot-only, reconfirmed).
+`[floor-hist]` in hangar steady state: pure I (`ci=0`, `tlut_on=0`).
+
+Offline I4 decode of `build/hangar_tex_605140_f4_s2.bin` (line=4 → 32 B/row,
+64×64) is structured grain, not pure garbage (`scratch/s27_i4_decode/`).
+
+### Attribution A/B (same key schedule, driven hangar)
+
+| config | hangar median warm% | hangar median distinct | hangar black% |
+|---|---|---|---|
+| control (`s27_hangar_i4`) | **1.15 %** | 7490 | 18 % |
+| `ROGUESQ_FLATTEN_RGBA16=1` | 1.15 % | 7510 | 19 % |
+| `ROGUESQ_FLATTEN_I4=1` | **0.00 %** | **1973** | **48 %** |
+| `ROGUESQ_FIX_DXT=1` + `FIX_DXT_I=1` | ~control | 7479 | ~control |
+
+- **FLATTEN_RGBA16 does not touch the hangar band** (fires 40k+ times on the
+  title photo sheet; hangar warm unchanged). Kills the s17 "maybe hangar is
+  the 0x65xxxx RGBA16 sheet" hope for *this* defect (that sheet is the title).
+- **FLATTEN_I4 kills the band** (warm median 0) and also blacks out upper walls
+  and ceiling that share `fmt=I siz=4b line=4 masks=6/6`. Proof frame:
+  `scratch/s27_flatten_i4/f_094_0065.9_p05_w0512.png` (clean black floor, no
+  walls) vs control `scratch/s27_hangar_i4/f_094_0065.8_p05_w0512.png` (band +
+  walls present). Region stats: upper black 23%→70%, mid warm 2.7%→0%.
+- So the hangar floor band is **the I4 line=4 wrap-64 population**, and that
+  same tile shape is also the hangar wall/ceiling detail that *looks correct*.
+  Decode is not uniformly broken for this shape; the floor surfaces scramble
+  while walls do not. Difference is UV span / geometry / source image, not the
+  bare SETTILE combo.
+- **FIX_DXT_I** (new, default off): synthesise dxt for I/IA when
+  `ROGUESQ_FIX_DXT=1` too. Hangar warm/distinct unchanged — pre-interleaved
+  theory for hangar I still holds; dxt is not the band fix.
+
+### Probes added
+- `ROGUESQ_FLATTEN_I4=1` — collapse I4 line=4 masks=6/6 sampling to 1×1
+  (`rt64_state.cpp`). Attribution only.
+- `ROGUESQ_FIX_DXT_I=1` — allow FIX_DXT to cover intensity formats (needs
+  `FIX_DXT=1` as well). Default off; measured null on hangar band.
+
+### Preflight reminder
+`regress.sh` captest must not use a leading-dot filename (s26). Capture can
+still lapse mid-session; driven hangar requires `preflight visual=ok`.
+
+### NEXT
+1. **Why I4 line=4 looks good on walls and bad on the floor** — same SETTILE
+   shape. Instrument per-draw: img address, UV span, prim alpha, shade, and
+   whether rawTMEM path is taken. Floor textured sample uses prim α≈0.04 and
+   UV nearly full 64×64 wrap; walls may differ. Candidate: wrong source for
+   floor-sized draws, UV scale, or a second pass.
+2. GPU→CPU present PNG (s25 #3) still open.
+3. Per-pixel shade wrap visual A/B still open if a regression is suspected
+   (log smoke already PASS).
+
+## Session 28 (2026-07-26) — floor vs wall I4 split; sample-bounds refined; band is shade-tinted
+
+### I4 census (`ROGUESQ_LOG_I4=1`, driven hangar, scratch/s28_i4_split)
+All textured `fmt4/siz0/line4/masks=6/6` draws in hangar (ph5):
+
+| band | n logged | img | UV span max | shadeR | primA |
+|---|---|---|---|---|---|
+| upper (walls) | 57 | **0x605140** | U 62, **V 249** | 0.03–0.23 | **1.00** |
+| mid (floor) | 24 | **0x605140** | U 62, V 62 | 0.09–0.36 | **1.00** |
+
+Same source image for walls and floor. Mid-band prim α≈0.04 from session 27 was a
+**shade-only** draw (tiles=0), not the textured I4 path. Hangar drawtex after
+entry: `sample=64x64 raw=0 masks=6/6 lrs=lrt=252` — already full mask size.
+
+### FIX_SAMPLE_BOUNDS wrap refinement (kept)
+Old code shrunk sample **height** from lrt even under wrap (e.g. 64→38). That is
+wrong for wrap axes: the mask period is the address space. New behaviour:
+
+- always shrink **width** to `line`-implied texels (CI4 line=3 → 48 still fixed)
+- shrink from lrs/lrt **only when that axis is clamped**
+
+Measured: hangar I4 was already 64×64 (lrt=252), so this does **not** move the
+hangar warm% (still 1.15%). Boot CI4 still logs `64x64 → 48x64`. Title undriven
+run: 1024 phase 20880 distinct, outdoor 14/14 content — no regression. Correct
+regardless; leave default ON.
+
+### FORCE_SHADE_WHITE A/B (decisive)
+Driven hangar with `ROGUESQ_FORCE_SHADE_WHITE=1`:
+
+| | control | shade white |
+|---|---|---|
+| hangar warm% | 1.15 | **0.00** |
+| hangar distinct | ~7500 | **348** |
+| hangar lum | 36 | **117** |
+
+Visual (`scratch/s28_shade_white_hangar.png`): **walls and ceiling are sharp
+greyscale panel detail** — I4 decode is correct. Landing pad solid white. The
+orange/black horizontal scramble is **gone**. Control
+(`scratch/s28_control_band.png`) still has the full band.
+
+So:
+
+1. Hangar I4 sampling/decode for this tile shape is **good enough for walls**.
+2. The band's **orange colour is shade**, not a CI palette (confirms greyscale I4
+   × coloured shade).
+3. The band's **horizontal structure** under normal shade is still not explained
+   — with white shade the former band region is mostly void/black rather than
+   greyscale grain, so either floor I4 is near-black intensity, floor draws are
+   shade-dominated, or another pass paints the multi-colour noise when shade is
+   real.
+
+### Still open
+- Why floor shade produces orange/black horizontal noise while walls using the
+  same img look fine with normal shade.
+- Candidate next instruments: per-vertex shade dump for mid vs upper I4 draws;
+  suppress I4 draws with ycen in mid only; check blender/FORCE_BL on floor.
+
+### Probes added
+- `ROGUESQ_LOG_I4=1` — full-screen textured I4 line=4 masks=6/6 with upper/mid/lower
+  band tag, UV span, shade range, prim, cms/cmt, tmem.
+
+### NEXT
+1. Floor-specific shade path (why mid-band I4×shade looks scrambled).
+2. GPU→CPU present PNG (s25 #3).
+3. Per-pixel shade wrap visual A/B if needed.
+
+## Session 29 (2026-07-26) — floor shade path; multi-hue is not plain I4×chroma
+
+### Goal
+Explain why hangar floor I4×shade looks multi-colour horizontal while walls with
+the same img look fine (s28 left this open).
+
+### A/B matrix (driven hangar, origin 0x6AB400)
+
+| config | hangar warm% | hangar distinct | hangar black% | notes |
+|---|---|---|---|---|
+| control | 1.15 | ~7500 | 19 | band present |
+| `FORCE_SHADE_WHITE` (s28) | **0.00** | 348 | 46 | walls sharp greyscale; band gone |
+| `SHADE_WRAP=0` | **0.00** | 1071 | 50 | dark hangar (neg shade clamps); not a fix |
+| `I4_SHADE_MONO=1` (broad) | 0.87 | 4965 | 19 | 30k+ applications; warm2 med **unchanged** ~6.7% |
+| `FLATTEN_CI4=1` | (died 66s) | — | — | incomplete; not decisive |
+
+### I4_SHADE_MONO findings
+Probe collapses each vertex shade to luma (R=G=B) for I/IA tiles with wrap
+masks ≥4. After fixing tile selection to use the triangle's tile index (not
+stale `drawCall.textureTile`), it fires **30k+/run**.
+
+- Sample shades before mono often already chromatic e.g. `(0.32,0.12,0.11)`,
+  `(0.11,0.13,0.18)` on line=4 masks=6/7.
+- Hangar **warm% barely moves** (1.15→0.87); mid-floor warm2 median stays ~6.7%.
+- Some frames look clean greyscale (`scratch/s29_mono_clean_angle.png`) but the
+  high-warm loading/angle frames still show multi-colour noise identical to
+  control samples `(93,66,42)`.
+
+**Conclusion:** the multi-hue floor band is **not** explained by I4 × chromatic
+shade alone. If it were, mono shade would kill warm pixels on the I4 surfaces.
+FORCE_SHADE_WHITE still kills the band (s28) — so shade *magnitude/presence*
+matters, but desaturating I4 shade is not sufficient. Remaining hypotheses:
+
+1. Band draws are a **different format** (CI/RGBA) co-located with I4; FLATTEN_I4
+   only *appeared* to attribute them because it blacks out large I4 coverage.
+2. Band is I4 with a **non-shade colour source** in the blender (PRIM/ENV/FB).
+3. Channel-straddle after **per-pixel wrap** creates chroma even when vertex
+   shades look mild in the drawTris census (LOG_I4 sees post-/255 values).
+
+Strict line=4/masks=6/6 mono matched only **4 triangles/run** — hangar I4 at
+shade-decode often has masks **6/7** or line **2/3**, so attribution probes must
+not over-narrow the tile match.
+
+### SHADE_WRAP=0
+Hangar goes dark (distinct 1071, black 50%); warm 0 by blackness. Outdoor/title
+path still works. Confirms wrap is load-bearing for hangar lighting; off is not
+a band fix.
+
+### Still landed from s28 (unchanged)
+- FIX_SAMPLE_BOUNDS wrap-safe lrs/lrt (clamp-only height shrink)
+- ROGUESQ_LOG_I4
+
+### Probes added
+- `ROGUESQ_I4_SHADE_MONO=1` — greyscale shade on I/IA wrap tiles (diagnostic;
+  default off; does not fix band).
+
+### NEXT
+1. **Re-attribute the band without FLATTEN_I4 alone** — FLATTEN_CI4 full hangar
+   A/B (retry; last run died at 66s); FLATTEN only mid-ycen; suppress I4 draws
+   vs suppress CI draws by ycen and measure warm.
+2. Blender inputs on mid-band draws (PRIM/ENV/FORCE_BL).
+3. GPU→CPU present PNG (s25 #3).
+
+## Session 30 (2026-07-26) — hangar band re-attributed: untextured multi-hue shade
+
+### Driven hangar midtex census (`ROGUESQ_LOG_MIDTEX=1`, scratch/s30_midtex_hangar)
+105 logged mid-band (ycen 180–360) draws in hangar (ph5):
+
+| property | value |
+|---|---|
+| tiles (usesTexture) | **0 for every line** |
+| cc | shade-only `(0-0)*0+SHADE` |
+| textured I4/CI | **zero** |
+| latched tile state | fmt4 line 4/1 (unused by combiner) |
+
+So the hangar floor *mid-band* is **not textured at all**. Session 27–29's I4
+attribution was of latched tile state + FLATTEN side-effects, not the band's
+draw class. Latched I4 is real for walls (upper ycen), not for mid-band floor.
+
+### A/B (driven hangar)
+
+| config | hangar warm% | warm2 med | hangar distinct | visual |
+|---|---|---|---|---|
+| control | 1.15 | 6.7% | ~7500 | multi-hue band |
+| `FLATTEN_I4` (broad) | 0.00 | 0% | 1021 | walls flat solid; dark; band gone (coverage) |
+| `FLATTEN_CI4` (any CI) | 0.00 | 0% | 1972 | **band still present** on many frames |
+| `SUPPRESS_SHADE_ONLY` | 0.00 | 0% | 1695 | only 4 log hits — inconclusive / flaky |
+| **`SHADE_ONLY_MONO=1`** | **0.00** | **0%** | 1893 | **band gone**, greyscale floor, walls keep I4 detail |
+
+`SHADE_ONLY_MONO` fires 10k+/run; pre-mono shade samples are chromatic
+e.g. `(0.09,0.12,0.16)`. After mono: hangar chroma med 0. Proof:
+`scratch/s30_shade_only_mono_hangar.png` vs `scratch/s30_control_band.png`.
+
+### Undriven with SHADE_ONLY_MONO
+Title 20913 distinct (healthy), outdoor 13/13 content — no gross regression.
+
+### Interpretation
+Hangar multi-hue floor band = **untextured shade with independent R/G/B**
+(likely wrap/straddle or LLE shade-coefficient bug on floor lighting). Walls
+use textured I4 and look fine. White shade (s28) and shade-only mono (s30)
+both kill the band; I4 mono (s29) does not, matching the midtex census.
+
+### Code
+- Broaden `FLATTEN_I4` / `FLATTEN_CI4` matchers (s30).
+- `ROGUESQ_LOG_MIDTEX=1` — mid-band all-format combiner census.
+- `ROGUESQ_SUPPRESS_SHADE_ONLY=1` — zero shade-only verts.
+- **`ROGUESQ_SHADE_ONLY_MONO=1`** — luma shade-only verts (default **off**;
+  strong hangar mitigation, not a root-cause fix of shade emission).
+
+### NEXT
+1. Root-cause multi-hue shade-only coefficients (wrap per-channel? bad LLE
+   colorDe/Dx on floor). Then retire SHADE_ONLY_MONO.
+2. Optionally default SHADE_ONLY_MONO on after more mission/menu soaks.
+3. GPU→CPU present PNG (s25 #3).
+
+## Session 31 (2026-07-26) — multi-hue re-re-attributed: textured I4 floor, not shade-only
+
+### Goal
+Root-cause hangar multi-hue shade-only floor lighting (s30 NEXT #1). Hypotheses:
+per-channel SHADE_WRAP rainbow, bad LLE colorDx/De, or residual shade chroma.
+
+### Tools landed
+- `ROGUESQ_SHADE_WRAP=3` — shared-RGB wrap in `RasterPS.hlsl` (if mean(RGB)<0
+  add 256 to all channels together, floor remaining negatives). Mode 4 restores
+  s24 CPU per-channel vertex wrap. Default remains mode 1.
+- `ROGUESQ_LOG_SHADE_CHROMA=1` — shade-only census: raw/wrap/shared chroma,
+  colorDx/De, spanDelta, raw coefficient words.
+- Midtex sampler widened (y 100..450) and **textured-first log budget** so
+  shade-only pad draws no longer starve the census of the real floor population.
+
+### Wrap hypothesis: KILLED
+Hangar shade-only verts are already chromatic in the stream, e.g. flat
+`v0=(81.5,30.5,28.5)` rawC=53 with **Dx=De=0**. highWrap only ~2.6% early-boot.
+Shared wrap cannot remove that. Mode 3 is kept as an experiment only.
+
+### A/B on standard hangar view (origin 0x6AB400)
+
+| config | bandWarm% | bandChroma | lum | visual |
+|---|---|---|---|---|
+| control | 3.0 | 12.2 | 36 | multi-hue mid-ground floor |
+| `SHADE_ONLY_MONO` | 3.0 | 8.9 | 36 | pad greyer; **band remains** |
+| `SUPPRESS_SHADE_ONLY` | 3.2 | 9.1 | 30 | pad black; **band remains** |
+| `FORCE_SHADE_WHITE` | 3.3 | 5.4 | 168 | walls **perfect greyscale I4**; pad solid white; **band remains** |
+
+Proof shots: `scratch/s31_fsw_rep.png` (white shade, band still multi-hue),
+`scratch/s31_suppress_rep.png` (no shade-only, band remains),
+`scratch/s31_ctrl_rep.png` / `s31_mono_rep.png`.
+
+### Overturns
+- **s30 "hangar mid-band is 100% shade-only"** — true only for the **landing
+  pad** (and for a midtex sample that was starved by first-100 logging + ycen
+  180..360). With FSW the pad goes pure white; suppress zeros it. The
+  multi-hue **mid-ground floor** is not that population.
+- **s28 "FORCE_SHADE_WHITE kills the band"** — walls yes; the mid-ground floor
+  band **survives** white shade, so it is **texture content**, not shade
+  chroma on shade-only draws. warm% alone is a bad metric when residual orange
+  still scores ~3%.
+- **s30 SHADE_ONLY_MONO as band fix** — only greys the pad; does not remove the
+  multi-hue mid-ground. Do not default it on as a band cure.
+
+### True hangar floor population (improved midtex, after 0x6AB400, FSW run)
+tiles: **201 textured + 73 shade-only**
+
+| class | n | shape |
+|---|---|---|
+| tiles=1 I4 fmt4/siz0/line4 masks=6/7 | 134 | `cc=(T0-0)*SHADE+0` img **0x604140** |
+| tiles=1 I4 fmt4/siz0/line4 masks=6/6 | 67 | same, img **0x605140** |
+| tiles=0 (shade-only pad) | 73 | latched I4 state unused |
+
+Textured ycen range **104..345, median 145** — half sat below the old 180 cutoff,
+which is why s30's midtex never saw them.
+
+Under FSW, shade=white ⇒ output = pure TEXEL. Multi-hue remains ⇒ **I4 floor
+texels (or the sample/decode of 0x604140/0x605140) are multi-hue**, while wall
+I4 under the same FSW looks correct greyscale. Same format family, different
+img/masks/UV.
+
+### NEXT
+1. **Decode forensics on img 0x604140 / 0x605140** — dump TMEM / TextureCache
+   decoded RGBA for a floor I4 draw vs a wall I4 draw under FSW. Candidate
+   causes: masks=6/7 sample bounds, line/dxt, treating I as CI, wrong tmem
+   address, odd-row swap.
+2. FLATTEN_I4 A/B restricted to those two img addresses (should kill mid-ground
+   band if attribution is right).
+3. GPU→CPU present PNG still open (s25).
+4. Do not default SHADE_ONLY_MONO; optional pad-only greyscale if desired.
+
+### Code
+- `RasterPS.hlsl` mode 3 shared wrap; `gbi_rdp.cpp` mode 4 vertex wrap + chroma log
+- `rt64_framebuffer_renderer.cpp` modes 2/4 push padding.x=0
+- `rt64_rdp.cpp` midtex y 100..450 + textured-first sampling
+
+## Session 32 (2026-07-25) — the capture/input blocker does not exist
+
+### Claim under test
+s24–s26 recorded Screen Recording permission as "intermittent" (`screencapture -l` failing with
+`could not create image from window`, worked twice mid-session then failed again with no change),
+and s25/s26 escalated that to "if `-l` fails, driven hangar keys are also unreliable — refuse driven
+runs". That warning has gated the top-priority visual work for three sessions.
+
+### Result: both halves work. The warning is retired.
+- **Window capture**: undriven 75 s run, one `screencapture -l` per second — **74/74 exit 0**, 73 of
+  74 with real content (243–190k distinct colours), across every phase (320 → 640 → 1024 → 640).
+- **Window id is stable**: `winctl find <pid>` returned **11894 for every single sample**, bounds
+  436 204 640 512 unchanged through both VI mode switches. The "id changes at a phase boundary"
+  hypothesis (which would have explained the reported intermittency, since `probe.sh` resolves `WID`
+  once at line 58–69 and reuses it for every frame at line 185) is **dead** — no fix needed there.
+- **Synthetic input works**: `winctl trusted` → yes; a driven run gated on the 1024 title with
+  `PROBE_KEYS="3:start 7:start 11:a 15:a 19:a"` reached **512 origin 0x6AB400 at 56.0 s** — the
+  main-menu hangar, the s23 path — and captured 71 frames, 54 in the hangar phase.
+- **Hangar defect reproduces** unchanged: `scratch/s32_input/f_020_012.3.png` shows correct
+  greyscale walls and consoles with the multi-hue orange/black floor band across the mid-ground.
+
+### What the failures actually were
+`could not create image from window` is what `screencapture -l` returns for an **id that does not
+exist**, which is indistinguishable in the message from a TCC denial. `winctl list` is not a
+subcommand (usage is `find|activate|key <pid>` / `trusted`) and prints nothing on stdout, so a probe
+built on it silently passes an empty/garbage id — that is how this session first re-derived
+"denied" before checking. Full-screen `screencapture` succeeding while `-l` fails was read as
+evidence of a partial permission; it is just evidence that the id was bad.
+
+### Method lesson
+The three sessions that recorded this never tested `-l` against a **known-good window id** (e.g. any
+Finder window — one line, no game run). An error string that names a permission-shaped failure is
+still worth one boring-first check of its own arguments; "intermittent, no change on my side" should
+have read as *stale input*, not *flaky OS*.
+
+### Standing config for driven hangar work (verified this session)
+    ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
+    PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+    PROBE_KEYS="3:start 7:start 11:a 15:a 19:a" tools/probe.sh <outdir> 45 0.5
+
+### Then the forensics themselves — s31's attribution is WRONG, and so were s27-s30's
+
+**The hangar band is not a draw at all. It is uncleared framebuffer memory showing through a
+hole in the geometry.** Four independent lines of evidence, all this session:
+
+1. **An I4 tile with no palette cannot be multi-hue.** `LOG_MIDTEX` under `FORCE_SHADE_WHITE`:
+   every floor draw at imgs 0x604140 / 0x605140 logs **`tlut=0x0`**, `fmt4/siz0`,
+   `cc=(T0-0)*SHADE+0`, `shadeR=[1.00..1.00]`. Intensity texels times white shade is grey by
+   construction, whatever the line/dxt/sample-bounds are. A stride scramble of greys stays grey —
+   so no decode error of an I4 tile can produce orange. s31's "it is TEXEL, therefore it is the
+   texture" inference skipped this step.
+2. **Drop every triangle and the band is still there.** `ROGUESQ_DROP_ALL_TRIS=1` in the hangar:
+   most presented frames go uniform, but frames that present the other buffer show the orange/black
+   content **with no geometry at all**, laid out as an **8-across grid of ~64x32 tiles** plus RGB
+   noise above it (`scratch/s32_notris/f_030_018.8.png`). Positive control passes in the same frame:
+   the walls and pad really are gone.
+3. **The game never clears the colour buffer in this phase.** Phase-scoped fill census (see below):
+   in the hangar, **40 of 40 logged fills are `cimg=0x007AB000 fill=0xFFFCFFFC`** — the Z-clear
+   constant into 0x6AB000+0x100000, the z-buffer. **Zero colour-buffer clears, zero texrects.**
+4. **s17 already characterised this exact artifact.** It proved the 4 KB blocks at
+   0x650A10..0x678A10 decode cleanly as 64x32 tiles 8-across, and that reading the same bytes at a
+   **linear 512-wide stride reproduces the orange/black streaks**. The hangar colour buffers
+   (0x656000 / 0x6AB000) sit **inside that RDRAM range**, and the hangar VI is 512 wide.
+
+So the content is stale texture data left in RDRAM, scanned out as 512-wide 16-bit colour. Because
+the game clears Z but not colour, it expects geometry to cover every pixel — which means the band
+is a **hole in what we draw**, not a texture bug. Sessions 27-31 kept re-attributing it among draw
+populations because triangles cover most of the screen and every suppression knob changes coverage.
+
+### Diagnostic fixed along the way
+`[rdp-fill]` and `[rdp-texrect]` (`ROGUESQ_LOG_CIMG=1`, `rt64_rdp.cpp`) budgeted their output over
+the **run lifetime** (first 40 / first 20 plus every Nth), and boot consumed all of it — the hangar
+produced **zero lines**, which reads as "no fills happen here". Both are now **phase-scoped**, using
+the same `rs64_phase_ord` reset the `[i4-tri]`/`[midtex]` censuses already used, and tagged `ph<N>`.
+This is the sampled-lines-lie trap from the method list, in a diagnostic that had been trusted since
+s9.
+
+### Same session, later — my own point 4 is REFUTED, and point 2 is unresolved
+
+New probe `ROGUESQ_RAM_PATTERN=1` (`rt64_framebuffer.cpp` `copyRAMToNativeAndChanges`, the single
+choke point where RDRAM becomes framebuffer content): replace every **colour** pixel RT64 sources
+from RDRAM with magenta, leave depth alone. Anything the game draws is untouched, so surviving
+magenta is RAM-sourced content reaching the screen.
+
+- Instrument **validated**, not assumed: in the hangar it fires on exactly the right buffers —
+  `addr=0x00656000 w=512 rows=0+292 diff=149504 invTargets=1` and the same for 0x006AB000.
+  `diff` = 512x292 = **every pixel differs**, so the change is full and non-empty; a null result
+  therefore means something.
+- **Zero magenta pixels in 40 captured hangar frames.**
+
+So **the visible hangar content is not sourced from RDRAM**, and with it the s17 stride connection
+(evidence point 4 above) is dead as an explanation of the band. It was the weakest link and it broke.
+
+Evidence point 2 (`DROP_ALL_TRIS` showing the junk with no geometry) is **not confirmed either**:
+the junk appears in only ~2 of 30 hangar frames, and a repeat run with `DROP_ALL_TRIS=1
+RAM_PATTERN=1` — the run that would have discriminated stale-GPU-target from RAM-sourced — produced
+23 uniform frames and never reproduced the junk at all. A checked confound: `VI_FOLLOW_DRAW=3` could
+have been presenting a stale pre-hangar buffer once geometry stopped, but the swap log shows the
+presented buffers after hangar entry are 0x6AB000 / 0x656000, the hangar's own.
+
+**What still stands:** the s27-s31 I4 attribution is dead (`tlut=0x0`; intensity times white shade
+cannot be multi-hue), and the hangar emits only z-clears — no colour clear, no texrects. **What is
+open:** what actually paints those pixels. The surviving candidate is content resident in the GPU
+render target across phases, which the RAM probe by construction cannot touch; testing it needs a
+target-side clear or readback, not a RAM-side one.
+
+### Resolution: the band IS drawn geometry, produced within the frame
+
+New knob `ROGUESQ_TARGET_CLEAR` (`rt64_workload_queue.cpp`, in the fb-pair loop): `=1` clears the
+colour target at **every** framebuffer pair, `=2` clears only at the **first pair of each workload**.
+
+| config | hangar distinct | band warm px | what it shows |
+|---|---|---|---|
+| control | ~57 500 | ~13 000 | full hangar, band present |
+| `TARGET_CLEAR=1` (every pair) | 772–3 828 | **0** | only the last pair survives: three door panels, the pad, a ceiling sliver |
+| `TARGET_CLEAR=2` (frame start) | 58 485 | **14 183** | band survives, numbers match control |
+| `DROP_ALL_TRIS=1` | 246–268 | **0** | nothing at all |
+
+`=1` proves a hangar frame is **composed across many framebuffer pairs** — everything but the final
+pair is contributed earlier. `=2` is the discriminating one: clearing at frame start leaves the band
+untouched, so it is **not carried over from previous frames**. With `RAM_PATTERN` already excluding
+RDRAM as the source, and `DROP_ALL_TRIS` removing it entirely, the band is **triangles rendered in
+this frame**, in a pair after the first.
+
+### So why did FORCE_SHADE_WHITE not make it grey?
+
+Because the census that identified "the band draws" bins triangles by **centroid** (`ycen`), and a
+large floor polygon spanning the view has its centroid well outside the band rows it covers. The
+201-textured-I4 + 73-shade-only population that s31 measured at `ycen` 100..450 is not necessarily
+the population painting those pixels. This is the same failure mode as s30's ycen cutoff and s18's
+run-lifetime counters, one level up: **attribution by centroid instead of by coverage.**
+
+### Two hypotheses tested and killed (same session)
+
+**Centroid binning — NOT the flaw.** New `ROGUESQ_LOG_BBOX=1` (`rt64_rdp.cpp`, with
+`ROGUESQ_BAND_Y0`/`_Y1`, default 180..360) censuses every draw whose screen-space **y-range
+overlaps** the band rows, regardless of centroid. Hangar result, by signature:
+
+| n | draw |
+|---|---|
+| 91 | tiles=0 (shade-only) fmt4/siz0/line4 masks=6/6 img=0x605140 tlut=0 |
+| 40 | tiles=1 fmt4/siz0/line4 masks=6/6 img=0x605140 tlut=0 |
+| 22 | tiles=0 fmt4/siz0/line4 masks=0/0 img=0x61EF40 tlut=0 |
+| 1 | tiles=1 fmt4/siz0/line4 masks=6/7 img=0x604140 tlut=0 |
+
+Coverage attribution finds **the same population** the centroid censuses did — all I4, all
+`tlut=0`, no CI, no RGBA. So the s31 population really is what covers those rows.
+
+**Load/render tile format mismatch — NOT the flaw.** RT64 decodes a texture by `callTile.loadTile`,
+not by the render tile the older censuses printed, so a draw whose render tile says I4 could in
+principle sample a texture uploaded as RGBA16 and get real colour. New `ROGUESQ_LOG_UPLOAD=1`
+(`rt64_state.cpp`, at the upload site s19 established as the only non-stale place to measure) says
+no: hangar uploads are **55 x fmt4/siz0 tlut=0** (`sample=64x128` and `64x64`) and **5 x fmt2/siz0
+tlut=32768**. The loads agree with the render tiles. No colour texture is uploaded for these draws.
+
+The contradiction is therefore sharper, not resolved: everything covering the band is I4 with no
+palette, decoded from I4 loads, yet the band is multi-hue under white shade. One detail worth
+following: 39 of the 55 I4 uploads have `sample=64x128` against `masks=6/6` (a 64x64 wrap), so the
+sample window runs past the loaded data into neighbouring TMEM — the s15 `FIX_SAMPLE_BOUNDS`
+territory. That still cannot produce colour from an I4 decode, but it is the one measured anomaly.
+
+Remaining structural candidate: the band arrives through **multi-pair composition**. `TARGET_CLEAR=1`
+(clear every pair) removes it while `=2` (clear at frame start) does not, which means it is
+contributed by a pair *other than the last* — possibly rendered elsewhere and composed in via
+`copyFromTarget`, which no draw census would attribute to the band rows at all.
+
+### CORRECTION: `TARGET_CLEAR=2` never ran, and the frame structure is not what I assumed
+
+`ROGUESQ_LOG_PAIRS=1` (`rt64_workload_queue.cpp`) prints the per-pair structure. Every logged
+hangar pair is **`f=1/2`** — a workload has **two** framebuffer pairs and **only pair 1 has a colour
+framebuffer** (pair 0's `colorFb` is null, which is why it never appears: the log, like the
+`TARGET_CLEAR` block, sits inside `if (colorFb != nullptr)`).
+
+So `TARGET_CLEAR=2`, which clears when `f == 0`, **never executed**. The result I read as "the band
+survives a frame-start clear, therefore it is drawn within the frame" was a null instrument, not a
+null effect. The rule this session already restated — validate a suppression instrument before
+believing its null — and I still spent a run on it.
+
+What this actually means, re-derived:
+
+- There is exactly **one colour pair per workload**, so `TARGET_CLEAR=1` *is* the per-frame clear.
+- With it on, a frame shows only three door panels, the pad and a ceiling sliver — **that is the
+  entire output of one workload's colour pair.** The walls, floor and band are not in it.
+- Therefore the full hangar image is **accumulated across workloads**, in a target RT64 never
+  clears, and the band is part of that accumulation rather than being painted each frame.
+
+This resurrects the GPU-resident hypothesis I wrongly retired: the band is old content held in the
+render target, and the reason no draw census can find its producer is that its producer ran in an
+**earlier workload**.
+
+### Why that is suspicious in this port specifically
+
+A game frame here does not map to one RT64 workload. `ROGUESQ_VI_FULLSYNC` (s11, load-bearing,
+default ON) **synthesises** the frame boundary from the VI swap because this engine stops emitting
+RDP FULL_SYNC in the mission/menu phase. If that synthetic boundary falls mid-scene, one game frame's
+draws are chopped across several workloads — each workload redraws only part of the scene, and any
+region whose draws landed in an earlier chunk keeps whatever it had. That is exactly the observed
+shape: correct, animating walls and pad; one horizontal strip frozen with wrong content.
+
+### Chopping hypothesis: REINSTATED, and now measured (read this, not the section below)
+
+The "refutation" below rested on a number I computed wrong. `[pair]` summed `gameCallCount` over
+**`fbPair.projections`**, the whole vector — but RT64 **reuses** that vector and only
+`projectionCount` entries are live, so stale entries from earlier frames contributed their old
+counts. That is where 292-468 came from. The authoritative figure is `fbPair.gameCallCount`, which
+the renderer itself uses for `maxGameCall`.
+
+Corrected, and the phase contrast is stark:
+
+| phase | calls per colour pair |
+|---|---|
+| ph3, 640 boot (renders correctly) | **275-277** in most workloads — a whole scene at once |
+| ph5, hangar | **2, 3, 4, 10** — never more |
+
+So in the hangar the scene arrives as **dozens of tiny workloads**, each drawing a handful of
+objects into a target RT64 never clears, while the boot phase delivers whole scenes per workload.
+That single fact explains everything that has been confusing about this defect:
+
+- the image is **accumulated across workloads**, so no single frame's draw census can attribute any
+  pixel (five sessions of population analysis were looking inside one workload);
+- `TARGET_CLEAR=1` leaving three door panels and a pad is exactly right — that *is* one workload;
+- walls and pad look correct because they are redrawn often; the band is a region whose draws
+  landed in an old workload and were never redrawn, so it holds stale content;
+- and it is phase-correlated with exactly the phase where the defect lives.
+
+`[budget]` separately confirms no truncation: `maxGameCall` always equals the pair's own
+`gameCallCount` (`trunc=0`), so calls are not being dropped by the budget — there simply are only
+2-3 of them per workload.
+
+### Boundary rate measured — and it exposes something much bigger
+
+`ROGUESQ_VI_FULLSYNC=0` produces **no hangar colour pairs at all** (the s11 stall: without the
+synthetic FULL_SYNC the workload never advances), so it cannot answer "how big would workloads be".
+Measured on the working config instead, over ~20 s of hangar:
+
+| quantity | ph5 (hangar) |
+|---|---|
+| VI updates | ~576 (`update_screen` #3392 → #3968) |
+| real RDP FULL_SYNCs | **0** — `fs=842` identical at both ends, exactly the s11 signature |
+| workload colour pairs | **47** |
+| game calls in those pairs | 2–10 each, **~150 total** |
+
+So the synthetic boundary fires ~47 times, not per VI update — the boundary rate is not the problem.
+**The problem is that only ~150 game calls reach RT64 in 20 seconds of an animating textured 3D
+scene**, against 275 in a *single* boot-phase workload.
+
+And the draws do exist upstream: phase-scoped RDP-level counters in the same phase reach
+**`[i4-tri ph5 #2000]`** (I4 line=4 masks=6/6 draws only) and **`[bbox ph5 #1600]`** (draws
+overlapping the band rows only) — both strict *subsets* of all draws. Thousands of triangle draws
+are seen at the RDP/state layer while ~150 game calls end up in workloads. **Two orders of magnitude
+are lost between `drawTris` and the workload.** (Cross-run comparison, and `drawTris` invocations
+are not guaranteed 1:1 with game calls — worth confirming in one run before building on it.)
+
+That is a far better candidate for the real defect than anything in the texture path: if the
+overwhelming majority of the scene's draws never reach a workload, the picture we see is mostly
+accumulated history, only a trickle updates each frame, and a region whose trickle stopped stays
+frozen — the band.
+
+**NEXT: localise the loss in ONE run** with exhaustive per-phase counters for (a) `drawTris`
+invocations, (b) game calls added to pairs, (c) workloads submitted, (d) workloads actually
+rendered. The gap will name the stage. Prime suspects: workloads dropped between submission and
+render, or draws recorded into pairs that are discarded when the synthetic FULL_SYNC cuts.
+
+**Superseded: find what ends a workload in the hangar.** The prime suspect remains `ROGUESQ_VI_FULLSYNC`
+(s11), which synthesises the frame boundary from the VI swap because this engine stops emitting RDP
+FULL_SYNC — if it fires per VI update while the game spreads its draws over many RSP tasks, every
+boundary cuts after 2-3 calls. Count FULL_SYNC arrivals and workload ends against draw calls in the
+hangar (`ROGUESQ_LOG_RDPHIST` is the existing parser-side census), then test deferring the synthetic
+boundary until a scene's worth of calls has accumulated.
+
+### Superseded: "chopping hypothesis REFUTED" (the 292-468 figure was a stale-vector bug)
+
+`[pair]` now also sums `gameCallCount` across the pair's projections. Hangar colour pairs carry
+**292–468 draw calls each** (`projs=3`), against 275–277 for the 640 boot phase. That is a **full
+scene per workload**, not a slice — so a game frame's draws are *not* being chopped across
+workloads by the synthetic FULL_SYNC. Dead.
+
+Which leaves the `TARGET_CLEAR=1` result itself unexplained, and it is now the anomaly worth
+chasing: a pair carrying ~300 draw calls, cleared immediately before those calls are recorded,
+should not render as three door panels and a pad. Sequence check done — the clear sits in the
+"Record all framebuffer pairs" loop (`rt64_workload_queue.cpp` ~745), which is the loop that issues
+the drawing, and `recordFramebuffer` for the same iteration is at ~861, so the clear does precede
+the pair's own draws. But it also precedes the pair's `readChangeFromStorage` /`copyFromChanges`
+(RAM→target) at ~750, which `RAM_PATTERN` separately showed never reaches the screen. Two
+observations that should not both be true.
+
+### NEXT
+1. **Reconcile the `TARGET_CLEAR=1` anomaly.** Either most of a hangar pair's ~300 calls do not
+   render where the census says they do, or the clear is not landing on the target the pair
+   actually draws into (multiple `RenderTarget`s for one address — key includes width/siz/type).
+   Log the target pointer/key at the clear and at `recordFramebuffer` and compare.
+2. ~~Test the chopping hypothesis~~ — refuted above.: count draws per workload in the hangar and check
+   whether the scene's draw stream is split across consecutive workloads (a single game frame's
+   worth of geometry arriving as N partial workloads), and where `VI_FULLSYNC` inserts its boundary
+   relative to those draws.
+3. Fix `TARGET_CLEAR=2` to mean "first colour pair of each workload" if a per-frame clear is still
+   wanted; as written it is dead code.
+4. ~~Bisect by pair index~~ — moot: there is only one colour pair per workload. Extend `ROGUESQ_TARGET_CLEAR` to clear at a chosen pair index and walk
+   it: the pair whose clear kills the band is the one that introduces it. The infrastructure is
+   already in `rt64_workload_queue.cpp`.
+5. ~~Attribute by coverage, not centroid~~ — done, and it was not the flaw. Log each draw's screen-space **bounding box** and census
+   triangles whose bbox *overlaps* the band rows; or paint each draw a unique flat colour for one
+   frame and read off which index owns the band pixels. Every attribution from s27 on used centroid.
+2. Then re-check format: whatever owns those pixels, confirm what it can physically emit before
+   tuning any decode.
+3. The `DROP_ALL_TRIS` junk frames (~2 in 30, 8-across photo tiles) remain unexplained but are a
+   separate, intermittent phenomenon — not the band. The band is a coverage hole: identify what should paint the
+   hangar mid-ground (a floor/backdrop mesh we drop or cull) rather than what the floor texels
+   decode to. Compare drawn coverage against the region the stale content shows through.
+2. **Prove it end to end** by writing a known pattern into the colour buffer before the phase's
+   first draw; every pixel of the pattern that survives to screen is a coverage hole, and the band
+   should light up exactly.
+3. Retire the s27-s31 I4-decode line of investigation (`FIX_DXT_I`, `I4_SHADE_MONO`,
+   `SHADE_ONLY_MONO`, restricted `FLATTEN_I4`) — all of it was aimed at a texture that is not
+   painting those pixels.
+4. GPU→CPU present PNG (s25 #3) is a convenience, not a blocker.
+
+## Session 33 (2026-07-26) — the loss is localised: drawTris → addGameCall
+
+### Instrument
+`ROGUESQ_LOG_STAGES=1` — exhaustive, phase-scoped counters at four pipeline stages, each printing a
+running total (so the printed maximum is exact, not sampled): `drawtris` (RDP triangle draws, every
+500), `gamecall` (`FramebufferPair::addGameCall`, every 500), `workload` (workload processed, every
+20), `recorded-pair` (`recordFramebuffer`, every 20). Shared helper `rs64_stage_count` in
+`rt64_rdp.cpp`, `rt64_framebuffer_pair.cpp`, `rt64_workload_queue.cpp`.
+
+**Instrument validated by its own positive control**: the 640 boot phase, which renders correctly,
+lights up every counter.
+
+| stage | ph3 (640 boot, correct) | ph5 (hangar) |
+|---|---|---|
+| drawtris | 47 000 | **≥1 500** |
+| gamecall | 74 500 | **<500** (never reached its first 500 tick) |
+| workload | 1 180 | ≥40 |
+| recorded-pair | 2 500 | ≥80 |
+
+### Result
+In the boot phase `gamecall` **exceeds** `drawtris` (74 500 vs 47 000, ~1.6x — game calls include
+rects and texrects, not only triangles). In the hangar the ratio inverts: ≥1 500 triangle draws
+produce **fewer than 500** game calls, where the boot ratio predicts ~2 400.
+
+**The draws are lost between `drawTris` and `FramebufferPair::addGameCall`.** Not in the RSP/LLE
+pipeline (the triangles arrive), not at the workload boundary (s32 showed the boundary rate is
+fine), not in the `maxGameCall` budget (s32 `[budget]` showed no truncation), and not in the texture
+path at all. Everything the s27–s31 sessions examined sits *downstream* of the stage that is
+actually dropping the scene.
+
+This is consistent with every s32 observation: only a trickle of the scene reaches a workload, the
+target is never cleared, so the image is accumulated history and any region whose trickle stopped
+stays frozen — the band.
+
+### NEXT
+1. **Find the rejection point** between `drawTris` and `addGameCall` in the hangar: instrument the
+   early-out paths on that path in `rt64_state.cpp` (scissor/zero-area rejection, invalid or
+   undefined tile, framebuffer-pair validity gating) with the same phase-scoped counter, and see
+   which one accounts for the missing ~2 000.
+2. Re-run `gamecall` with a finer tick (every 50) to get an exact hangar figure rather than "<500".
+
+## Session 34 (2026-07-26) — s33 OVERTURNED: no loss at drawTris → addGameCall
+
+### The flaw in s33
+`State::flush()` (`rt64_state.cpp`) is the only route to `addGameCall`, and its sole early-out is
+`drawCall.triangleCount == 0`. So **a game call is a BATCH of triangles**, and s33 compared triangle
+draws against call counts — different units — across two phases with very different geometry/rect
+mixes. The "ratio inversion" was batching, not loss.
+
+### Same-unit measurement (`rs64_stage_add`, accumulates triangles on both sides)
+
+| counter | ph3 (640 boot) | ph5 (hangar) |
+|---|---|---|
+| `tris-rdp` (triangles seen at the RDP draw hook) | 44 000 | 1 000 |
+| `tris-call` (triangles entering game calls) | **159 001** | **2 009** |
+| `flush-entry` | 103 500 | ≥1 |
+| `flush-zerotri` (the early-out) | 39 500 | ≥1 |
+| `gamecall` | 63 750 | **150** |
+
+In **both** phases more triangles reach game calls than the RDP hook sees (3.6x in boot, 2.0x in the
+hangar — the hook covers one triangle path, `drawCall.triangleCount` covers all). **Nothing is being
+dropped between `drawTris` and `addGameCall` in either phase.** s33's "two orders of magnitude lost
+at this stage" is withdrawn.
+
+### What survives, and it is still the anomaly
+The phases differ in **volume**, not in loss rate: the hangar receives ~2 000 triangles and 150 game
+calls in ~20 s (≈7 calls/s, ≈13 triangles per call — normal batching), against 159 000 triangles and
+63 750 calls in the boot phase. For an animating textured 3D scene, ~100 triangles per second is
+implausibly low, and it matches every s32 observation (accumulated image, frozen band).
+
+So the shortfall is **upstream of RT64's draw path** — fewer triangles are ever submitted — not in
+the state/call machinery and not in the texture path.
+
+### NEXT
+1. **Census the RDP command stream itself in the hangar**: `ROGUESQ_LOG_RDPHIST=1` (s11,
+   parser-side, uses RT64's own command lengths — the `[seq]`/`[full-hist]` walkers desync on
+   triangles and must not be used). Compare TRI opcode counts per phase against `tris-rdp`.
+   If the stream carries few triangles, the loss is in the LLE ucode/task path; if it carries many,
+   they are being dropped in command parsing.
+2. Check per-task RDP commit volume in the hangar (`[defer-commit]`, needs
+   `ROGUESQ_TRACE_DISPATCH=1`) — historically 0 drops, worth re-confirming in this phase.
+
+## Session 35 (2026-07-26) — the RDP stream itself is nearly empty in the hangar
+
+### Measurement (one run, `ROGUESQ_LOG_RDPHIST=1` + `ROGUESQ_LOG_STAGES=1` together)
+Running both censuses in the same run removes the cross-run confound that has bitten this
+investigation repeatedly. `[rdphist]` reports per-2s deltas on a wall clock.
+
+| per 2 s window | before hangar (title/transition) | in hangar |
+|---|---|---|
+| TRI | **+13 163, +19 765** | **+37, +489, +311, +348, +311** |
+| TEXRECT | +13 076, +13 348 | **+0** |
+| SETTIMG | +15 461, +12 510 | +18 … +36 |
+| COMBINE | +15 194, +12 404 | +27 … +41 |
+| FULLSYNC | +95, +68 | **+0** (the s11 signature, unchanged) |
+| total commands | ~120 000 | ~700–1 000 |
+
+RT64's own draw hooks in the **same run**: ph5 `tris-rdp` = 1 000, `tris-call` = 1 001, against a
+stream carrying roughly 1 500–2 000 triangles over that window.
+
+### Result: RT64 draws what it is given; the shortfall is upstream
+The command stream collapses by ~50x in triangles and ~150x in total commands the moment the hangar
+starts, and RT64's draw counters track the stream closely. So nothing is being dropped inside RT64 —
+not in command parsing, not in the state machinery, not in the draw path. **The game/LLE side stops
+submitting display-list work.**
+
+That is now the whole defect: the hangar renders from a trickle of ~150–250 triangles per second
+into a target that is never cleared, so the visible image is accumulated history and any region whose
+trickle stopped keeps stale content — the "floor band". Every session from s27 to s31 was analysing
+texture and shade properties of the few draws that still arrive.
+
+Note the whole stream collapses together, not just geometry: TEXRECT goes to exactly zero while
+FILLRECT continues at +9–10 per 2 s. This looks like the game's render loop running rarely rather
+than a geometry-specific failure.
+
+### NEXT
+1. **Count gfx task submissions per second in the hangar** (`send_dl` / `[lle task]`) and the DL size
+   per task. Two outcomes discriminate: many tasks with tiny DLs ⇒ the LLE ucode terminates early
+   per task; few tasks ⇒ the game's own render loop is running rarely.
+2. If it is the latter, `sample <pid>` during the hangar phase — the technique that named the s1
+   scheduler wedge (`waitForMusyXAudioTaskDone`) in one shot. A partial wedge on a stubbed subsystem
+   would produce exactly this signature: VI ticking at ~29 Hz while the game submits work rarely.
+
+## Session 36 (2026-07-26) — the hangar is UNDER-RENDERING: the recompiled ucode is the bottleneck
+
+### Task rate (from the existing unconditional `[lle task]` log — no new instrument needed)
+| window | gfx tasks | rate |
+|---|---|---|
+| before the hangar (~57 s) | 1 681 | **~29 tasks/s** (≈ one per VI at 29 Hz — normal) |
+| hangar (~25 s) | 72 | **~2.9 tasks/s** |
+
+A 10x collapse in *task* rate, not in DL size (`dsize` is 0x0 for every gfx task in both windows — that
+field is unused here, the DL travels via `data_ptr`). So the earlier "many tiny tasks vs few tasks"
+question resolves to **few tasks**.
+
+### `sample` during the hangar phase (5 s, `scratch/s36_tasks/sample.txt`)
+**Gfx Thread: 2 542 of 3 081 samples (82 %) inside
+`RT64Context::send_dl` → `factor5_ucode`** (`rt64_render_context.cpp:307`), with the leaves spread
+across `factor5_ucode_recompiled.c` ~1087–1330 and ~2081. Those lines are dense **vector-unit**
+code — `VMADH`/`VMADN`/`VMUDL`/`VMADM`/`LQV`/`VXOR` — i.e. the RSP transform/lighting pipeline,
+emulated instruction by instruction in scalar C.
+
+### Mechanism
+The hangar's display lists exercise the F5 geometry path (vector-heavy). The recompiled scalar
+emulation of that path is slow enough to saturate the Gfx Thread, so only ~3 tasks/s complete;
+the RDP stream therefore carries ~150–250 triangles/s (s35), and the never-cleared target shows an
+accumulated image in which any region that stopped being redrawn keeps stale content.
+
+**The "hangar floor band" is under-rendering, not a texture defect.** The boot and title phases are
+texrect-heavy and cheap, which is why they look correct and why the same ucode sustains 29 tasks/s
+there — the ucode is not inherently slow, the hangar's DLs are simply vector-heavy.
+
+### Confidence
+The task-rate collapse and the 82 % figure are direct measurements. The inference that the thread is
+**CPU-bound** (rather than blocked inside that call) is one step beyond what `sample` alone proves,
+and is the next thing to confirm.
+
+### NEXT
+1. **Turn 82 % of samples into milliseconds**: time the `factor5_ucode` call per task, phase-scoped,
+   and report mean/max ms per task in hangar vs title. Saturation is confirmed if hangar tasks cost
+   ~300 ms each.
+2. Sanity-check process CPU during the hangar (`ps -o %cpu`) as an independent second source.
+3. If confirmed, this is an optimisation problem in the recompiled ucode's vector path — a different
+   class of work from everything s27–s35 pursued, and the first candidate is the RSPRecomp vector
+   translation (per-instruction `rsp.VMADH<>()` calls) rather than any RT64 change.
+
+## Session 37 (2026-07-26) — CONFIRMED: hangar tasks cost ~186 ms of ucode each
+
+### Instrument
+`ROGUESQ_LOG_TASKMS=1` (`src/main/main.cpp`, around the `factor5_ucode` call in
+`factor5_gfx_runner`) — phase-scoped wall time per gfx task, reporting mean/max and a count of tasks
+over 100 ms every 10 tasks. Sampling could not distinguish "computing" from "spinning in the DPC ring
+wait", nor give a per-task cost; this does both.
+
+### Result
+
+| phase | tasks | mean ms/task | max | over 100 ms |
+|---|---|---|---|---|
+| ph3, 640 boot | 1 180 | **12.0** | 334.8 | 27 |
+| ph4, 1024 title | 470 | **3.1** | 16.6 | **0** |
+| ph5, hangar | 70 | **186.6** | 285.7 | **70 of 70** |
+
+**Every single hangar task exceeds 100 ms**, averaging 186.6 ms — 60x the title phase and 15x boot.
+At 186 ms/task the ceiling is ~5.4 tasks/s, which brackets the ~2.9/s measured in s36.
+
+### Independent second source: process CPU
+`ps -o %cpu` on the same run: **78.9 % during the title phase, 110.1 / 110.1 / 109.1 / 110.1 %
+across four samples in the hangar**. CPU *rises* and stays above one core's worth. The process is
+**CPU-bound, not blocked** — a thread waiting on something would show CPU falling, not climbing.
+
+### Verdict
+s36's inference is confirmed by two independent measurements. **The hangar floor band is
+under-rendering caused by the recompiled RSP ucode being too slow on vector-heavy display lists.**
+The chain, end to end: hangar DLs exercise the F5 transform/lighting path → RSPRecomp's scalar
+per-instruction vector emulation costs ~186 ms per task → the Gfx Thread sustains only ~3 tasks/s →
+~150–250 triangles/s reach the RDP (s35) → the never-cleared target accumulates, and regions that
+stop being redrawn keep stale content.
+
+One residual: CPU-bound is proven, but whether *all* that CPU is productive work rather than partly
+the DPC bounded-poll escape is not fully settled. The `sample` leaf distribution — spread thinly
+across dozens of distinct `VMADH`/`VMADN`/`VMUDL` lines rather than concentrated in 2–3 lines — is
+inconsistent with a tight spin, which is why this is a residual rather than an open question.
+
+### This closes the s27–s31 line for good
+Sessions 27–31 tuned texture decode, sample bounds, dxt, palettes and shade on draws that were merely
+the survivors of a 60x under-render. No texture-path change could have fixed it.
+
+### NEXT (a different class of work — optimisation, not correctness)
+1. Profile *within* `factor5_ucode` to find which routine dominates the 186 ms (the s36 sample
+   already points at the vector transform block, `factor5_ucode_recompiled.c` ~1087–1330 / ~2081).
+2. Candidate directions: SIMD-ify the `rsp.VMADH<>()`-class helpers (NEON on arm64), or have
+   RSPRecomp emit vectorised code for contiguous VU runs instead of one call per instruction.
+3. Re-measure `[taskms ph5]` after any change — mean ms/task is now the project's headline metric,
+   and content-based visual metrics are downstream of it.
+
+## Session 38 (2026-07-26) — the ucode was compiled -O0. 41x speedup. Band survives it.
+
+### The boring cause I walked past
+`CMAKE_BUILD_TYPE=Debug`, and this project's debug flags are literally `-g` — **no `-O` flag at all**,
+so clang defaults to **`-O0`**. The recompiled ucode is one function call per emulated RSP
+instruction; unoptimised, that dominates everything. s36/s37 measured the symptom precisely and I
+went straight to "SIMD-ify the vector helpers" without checking the optimisation level first — the
+exact boring-first check the method notes in this file call for.
+
+### Fix
+`CMakeLists.txt`: append `-O2` to `RS64_UCODE_FLAGS` for the three ucode translation units
+regardless of build type, with `-DROGUESQ_UCODE_NO_OPT=ON` to restore `-O0` for debugging. Verified
+in `flags.make` and by a rebuilt object, not assumed.
+
+### Result — same instrument, same phase gate, same key schedule
+
+| measure | `-O0` (s37) | `-O2` (s38) | change |
+|---|---|---|---|
+| ph3 boot, ms/task | 12.0 | **1.5** | 8x faster |
+| ph4 title, ms/task | 3.1 | **0.4** | 7.8x faster |
+| **ph5 hangar, ms/task** | **186.6** | **4.5** | **41x faster** |
+| ph5 tasks over 100 ms | 70 of 70 | **0** | gone |
+| ph5 gfx tasks in the window | 72 | **466** | 6.5x more |
+| ph5 process CPU | 110 % | **~50 %** | saturated → headroom |
+
+The hangar now runs with CPU headroom instead of pinned above a core, and passes 6.5x more gfx tasks
+in the same wall-clock window.
+
+### Visual: better, but the band is still there
+`scratch/s37_taskms/f_020_012.5.png` — the hangar renders markedly more: crisper walls, teal doorway
+arches, red trim on the landing pad, proper shading on the pillars. **The orange/black mid-ground
+band is unchanged** (median band-warm 4 002 px, peak 12 805 — the same order as before).
+
+### CORRECTION to s36 and s37
+Those sessions concluded "the hangar floor band **is** under-rendering". That is **overturned**: the
+under-rendering was real, is now largely fixed, and **the band survives it**. Under-rendering and the
+band are two separate defects that shared a phase. What still stands from s36/s37 is the measurement
+chain (task rate, ms/task, CPU) and the conclusion that the s27–s31 texture-decode line was aimed at
+the wrong thing — but the band's own cause is **open again**.
+
+What that leaves for the band, from earlier sessions: it is GPU-target content (survives
+`RAM_PATTERN`, wiped by `TARGET_CLEAR=1`), it is not the I4 floor texture (`tlut=0` cannot be
+multi-hue), and the region is not being redrawn even now that 6.5x more geometry arrives — which
+points back at a genuine coverage hole in a target the game never clears.
+
+### NEXT
+1. Re-run the s32 coverage instruments **now that the pipeline is 41x faster** — `TARGET_CLEAR=1`
+   and the bbox census will describe a different, much fuller scene, and the band region's owner
+   (or its absence) should be far clearer.
+2. Check the other phases visually for regressions from `-O2` (none expected; boot and title got
+   faster too) and re-run a stability soak.
+3. The SIMD/RSPRecomp vector work is now **unnecessary** at this scale — 4.5 ms/task is not a
+   bottleneck. Do not pursue it without a new measurement justifying it.
+
+## Session 39 (2026-07-26) — coverage re-measured on the fast build; band is a coverage hole
+
+Re-ran the s32 coverage instruments now that the pipeline is 41x faster (s38).
+
+### Phase-matched, same-key A/B (hangar, `PROBE_KEYS="3:start 7:start"`)
+
+| run | median distinct | median band-warm px |
+|---|---|---|
+| control | **52 550** | **7 797** (peak 14 286) |
+| `TARGET_CLEAR=1` (clear at every colour pair) | **728** | **0 in every frame** |
+
+Even at ~19 gfx tasks/s, a single workload's colour pair still draws almost nothing, and **no
+workload ever draws band content**. `[budget]`/`[pair]` confirm the shape is unchanged by the
+speedup: **1–14 game calls per pair** (typically 2–3). So the hangar image is accumulated across
+**hundreds** of tiny workloads into a target RT64 never clears — the engine streams a frame as many
+small tasks, and with FULL_SYNC never emitted (s11) the synthetic VI boundary is all that separates
+them.
+
+### More geometry does not touch the band
+Band-overlapping draws (`LOG_BBOX`, ph5) rose from **1 600 → 7 600** with the speedup, while the band
+is visually unchanged. ~466 workloads x ~3 calls x ~5 triangles ≈ 7 000 triangles, matching the bbox
+count — no unit mismatch this time.
+
+**So the band is a region where no draw has landed for a long time: a genuine coverage hole in a
+never-cleared target.** That is the s32 reading, now re-established on a pipeline with 6.5x the
+throughput, and it is consistent with every surviving fact (GPU-target content, not RAM-sourced, not
+the I4 texture, wiped by a per-pair clear).
+
+### Harness note — the speedup changed what the old key schedule reaches
+With `-O2` the game progresses further per unit time: the previous `PROBE_KEYS="3:start 7:start 11:a
+15:a 19:a"` schedule now advances **past** the hangar into a later exterior scene (starfield + deck)
+that shares VI origin **0x6AB400**, so origin alone no longer identifies the hangar. Use
+`"3:start 7:start"` for hangar captures. The phase timeline itself is unchanged (640 at ~2 s, 1024 at
+~45 s, 512 at ~55 s) — those transitions are not render-rate bound.
+
+### NEXT
+1. **Identify what should cover the band rows.** Thousands of draws overlap them yet none paints
+   them: check whether those draws are z-rejected, alpha-rejected, scissored out, or writing to a
+   different target. A per-pixel "last written" or a scissor/z census on band-overlapping draws is
+   the next discriminator.
+2. Re-run a stability soak and a visual check of boot/title on the `-O2` build.
+
+## Session 40 (2026-07-26) — coverage test attempted; INSTRUMENT FAILED ITS CONTROL, no conclusion
+
+### What I tried
+`ROGUESQ_MARK_BAND=1` (`rt64_rdp.cpp`, in the bbox block): paint every band-overlapping draw magenta.
+If the band turns magenta those 7 600 draws really cover it and something hides them; if it stays
+orange, the region is a true coverage hole.
+
+Result: **0 magenta pixels anywhere**, band unchanged (band-warm median 8 676). The `[bbox]` counter
+reached 7 600, proving the branch executed.
+
+### The control says the instrument is broken
+`ROGUESQ_MARK_BAND=2` marks **every** draw. The screen should have gone entirely magenta.
+It did not: **0 magenta pixels, 65 083 distinct colours — indistinguishable from the control run's
+65 076.** So writing through `col` in `RDP::drawTris` does not reach the output at all; the vertex
+colours are consumed elsewhere. **The `=1` null is therefore meaningless** and no coverage conclusion
+follows from this session.
+
+Note the branch counter was not sufficient validation: it proved the code ran, not that its *effect*
+reached the screen. That distinction is what the control caught.
+
+### Where the working hook is
+`ROGUESQ_FORCE_SHADE_WHITE` (`rt64_gbi_rdp.cpp` ~line 865) writes `colorWorkBuffer[...]` per vertex
+and demonstrably does change the screen (s31 proof shots). Any future shade-marking probe belongs
+there. It is per-vertex, so a band test would gate on the vertex's screen y rather than a per-draw
+bbox — acceptable for a coverage test, with the caveat that a triangle straddling the boundary tints
+by interpolation.
+
+### NEXT
+1. Re-implement the coverage probe at the `colorWorkBuffer` site, **with the mark-everything control
+   run first** so the write path is proven before any restricted variant is believed.
+2. Then answer the standing question: do the band-overlapping draws cover those pixels (something
+   hides them) or not (true coverage hole)?
+
+## Session 41 (2026-07-26) — coverage hole CONFIRMED with a validated instrument
+
+### Instrument, rebuilt at the hook that works
+`ROGUESQ_MARK_VTX` in `rt64_gbi_rdp.cpp`, writing `colorWorkBuffer` (where `FORCE_SHADE_WHITE`
+operates) rather than `col` in `RDP::drawTris` (s40's broken path):
+- `=1` — mark **every** vertex magenta (the positive control)
+- `=2` — mark only vertices whose **screen y** falls in `ROGUESQ_BAND_Y0..._Y1` (default 180..360)
+
+**Control passes this time:** mode 1 gives a median **886 488 magenta pixels** per frame, the scene
+overwhelmingly magenta. The write path is proven before any restricted variant is believed.
+
+### Result — band crop composition under mode 1 (every draw magenta)
+
+| | median |
+|---|---|
+| magenta (covered by geometry this frame) | **62.5 %** |
+| black | 13.3 % |
+| warm/orange (the band) | **3.6 %** |
+
+The unmarked control run's band-warm is 4.35 % of the same crop. So forcing **every** draw in the
+scene to magenta leaves the orange essentially untouched (4.35 % → 3.6 %): **those pixels receive no
+geometry at all.** Mode 2 agrees — the pad and lower walls turn magenta while the mid-ground strip
+does not (`scratch/s41_band/f_024_015.1.png`).
+
+**The band is a confirmed coverage hole**: geometry above it (walls) and below it (landing pad) is
+drawn, the strip between them is not, and what shows through is old content in a target the game
+never clears. This is the s32 reading, now established with an instrument that passed its own
+control — the standard the s40 attempt failed.
+
+### NEXT
+1. **Identify the missing surface.** The hole sits between the wall bases and the landing pad — the
+   hangar floor mid-ground. Candidates: a mesh whose draws never reach the RDP (game-side, e.g. an
+   overlay function still stubbed), or geometry culled/clipped in the LLE ucode transform path.
+2. Cheap first check: with `MARK_VTX=1`, dump the screen-y histogram of *all* drawn vertices in the
+   hangar. A gap in the histogram at the band rows says the geometry is never submitted; a
+   populated histogram says it is submitted and lost later.
+
+## Session 42 (2026-07-26) — the geometry IS submitted; the hole is downstream
+
+### Instrument
+`ROGUESQ_LOG_YHIST=1` (`rt64_gbi_rdp.cpp`) — 20px screen-row bins, incremented across each
+triangle's **full ymin..ymax span** rather than by vertex or centroid, so a large triangle counts in
+every row it crosses. Phase-scoped; reports every 2 000 triangles (20 000 was too coarse — the
+hangar only draws ~7 000 per capture, so the first attempt produced no ph5 line at all).
+
+### Hangar span histogram (ph5)
+
+| y | 0 | 20 | 40 | 60 | 80 | 100 | 120 | 140 | 160 | **180** | **200** | 220 | 240 | 260 | 280 | 300 | 320 | 340 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| tris | 1378 | 1046 | 394 | 750 | 1472 | 2099 | 2132 | 2072 | 1806 | **792** | **723** | 4221 | 5267 | 5176 | 4467 | 3584 | 2800 | 1791 |
+
+**No gap.** Every row has geometry crossing it. There is a pronounced *trough* at y=180–220 (792,
+723) between the wall rows (~2 000) and the pad rows (4 000–5 300), but a trough is not an absence.
+
+Screen-y mapping, derived from the s41 mode-2 image rather than guessed (game y 180..360 renders at
+capture y ~570..990, so capture = 2.33·game + 151): the band crop y 480–620 corresponds to **game y
+≈ 141–201** — bins 140 (2 072), 160 (1 806), 180 (792), 200 (723). Substantial geometry crosses
+exactly those rows.
+
+### Conclusion
+**The missing surface is submitted, so the hole is downstream of submission.** That rules out the
+game-side explanations (a stubbed overlay function never emitting the mesh) and points at the raster
+stage: z-rejection, alpha/coverage rejection, scissoring, or draws landing in different columns than
+the band occupies.
+
+### NEXT
+1. Discriminate among the downstream candidates on band-row draws: log `zCmp`/`zUpd`, the scissor
+   rect, and alpha-compare state for triangles crossing y 140–200, and compare against the wall
+   draws that *do* paint (same census, rows 100–160).
+2. Z is the first suspect worth a direct test — the hangar clears z every frame
+   (40/40 fills, s32) while colour is never cleared, so a stale-depth interaction is not possible,
+   but a wrong z *sign or range* on those specific draws is.
+
+## Session 43 (2026-07-26) — raster state is NOT the differentiator
+
+### Instrument
+`ROGUESQ_LOG_ZSTATE=1` (`rt64_rdp.cpp`) — raster-state census split by screen-row window, in game-y
+(walls 60–140, band 141–201, pad 220–320; a triangle counts in every window its ymin..ymax span
+touches). Signature bits: `zCmp | zUpd<<1 | zMode<<2 | alphaCvgSel<<4 | cvgXAlpha<<5 | textured<<6`.
+
+### Hangar result (ph5, n=12 000 draws)
+
+| window | sig 0x52 (textured, zCmp=0, zUpd=1, alphaCvgSel=1) | sig 0x12 (same but untextured) | sig 0x53 (as 0x52 + zCmp=1) |
+|---|---|---|---|
+| wall | **2 609** | – | 37 |
+| band | **2 409** | 353 | 86 |
+| pad | 168 | **7 083** | – |
+
+**The band draws are indistinguishable from the wall draws** — same dominant signature, comparable
+counts (2 409 vs 2 609). No z-compare difference, no alpha/coverage difference, no scissor-driven
+difference. (The pad is a different population, mostly untextured — expected, it is the shade-only
+landing pad from s31.)
+
+### What that means
+Combined with s42 (geometry *is* submitted through those rows, at a trough of 792/723 vs ~2 000) and
+s41 (the orange pixels receive no geometry: forcing every draw magenta leaves ~83 % of them warm,
+and a painted pixel cannot read warm because magenta has r≈b), the picture is:
+
+**The band pixels are gaps between triangles, not rejected draws.** The surrounding floor is drawn
+with ordinary state; the specific polygons that would fill those rows are absent, so stale content in
+the never-cleared target shows through the gaps.
+
+Worth stating plainly: three successive candidate explanations — submission gap (s42), raster-state
+rejection (s43), and before them texture decode (s27–s31) — are now all eliminated. What is left is
+that some triangles which should exist are never emitted, while their neighbours are.
+
+### NEXT
+1. **Compare against a reference.** The cleanest discriminator left is what the same scene looks like
+   with different geometry handling: RT64's HLE F3DFACTOR5 path stubs these ops (s7), so the
+   comparison has to be against real-hardware/emulator reference imagery of the hangar, or against
+   the LLE ucode's own clip/cull decisions.
+2. **Instrument the ucode's clipping.** If triangles are being discarded in the F5 transform path
+   (clip codes, backface, or a degenerate-after-transform test), a counter at the emit point in
+   `factor5_ucode_recompiled.c` — discarded vs emitted per task — would show it, and the trough
+   shape (fewer tris in exactly those rows) is consistent with a clip-plane or precision effect at a
+   grazing viewing angle.

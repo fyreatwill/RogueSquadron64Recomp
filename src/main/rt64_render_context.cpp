@@ -1,5 +1,6 @@
 #include <memory>
 #include <atomic>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <string_view>
@@ -15,6 +16,26 @@
 // The bridge needs to forward Factor 5 raw RDP byte ranges via
 // processDisplayLists(isHLE=false). Set on construction, cleared on shutdown.
 static std::atomic<RT64::Application*> g_rt64_app{nullptr};
+
+// Interval-scoped diagnostics (session 25).
+//
+// The RT64-side censuses (ROGUESQ_LOG_FLOOR and friends) keep their `seen` set
+// and print budget in run-lifetime statics, so whichever phase runs first
+// consumes the whole budget and every later phase reports nothing. That is the
+// same trap session 18 hit with "first N" counters, and it is why the hangar
+// floor band has never actually been attributed: the census fires during boot
+// and the title screen and is exhausted long before the hangar starts at ~55s.
+//
+// Publishing a counter that ticks on every VI-width change lets those censuses
+// reset per phase, and lets each line say which phase it belongs to instead of
+// relying on log-line interleave after the fact.
+static std::atomic<uint32_t> g_rs64_phase_ord{0};
+extern "C" void rs64_bump_phase_ord(void) {
+    g_rs64_phase_ord.fetch_add(1, std::memory_order_relaxed);
+}
+extern "C" uint32_t rs64_phase_ord(void) {
+    return g_rs64_phase_ord.load(std::memory_order_relaxed);
+}
 
 extern "C" void rs64_dpc_get_cumulative_histogram(uint32_t out[64]);
 extern "C" uint32_t rs64_dpc_get_cumulative_fullsyncs();
@@ -182,10 +203,22 @@ public:
             // before these are read, so without this call the changes stay
             // dormant.
             app->updateEnhancementConfig();
-            fprintf(stderr, "[RT64] enhancementConfig: presentMode=%d forceBranch=%d textureLOD.scale=%d\n",
+            // ROGUESQ_NO_GPU_COPY=1 — force framebuffer.copyWithGPU off so
+            // texture loads that overlap a tracked color image fall back to
+            // RDRAM instead of a GPU tile-copy. Hangar-floor A/B: the
+            // remaining orange/black band looks like a mis-mapped FB sample.
+            if (const char *v = std::getenv("ROGUESQ_NO_GPU_COPY")) {
+                if (v[0] && v[0] != '0') {
+                    app->emulatorConfig.framebuffer.copyWithGPU = false;
+                    app->updateEmulatorConfig();
+                    fprintf(stderr, "[RT64] framebuffer.copyWithGPU forced OFF via ROGUESQ_NO_GPU_COPY\n");
+                }
+            }
+            fprintf(stderr, "[RT64] enhancementConfig: presentMode=%d forceBranch=%d textureLOD.scale=%d copyWithGPU=%d\n",
                     (int)app->enhancementConfig.presentation.mode,
                     (int)app->enhancementConfig.f3dex.forceBranch,
-                    (int)app->enhancementConfig.textureLOD.scale);
+                    (int)app->enhancementConfig.textureLOD.scale,
+                    (int)app->emulatorConfig.framebuffer.copyWithGPU);
             fflush(stderr);
         }
         if (app && app->appWindow) {
@@ -769,6 +802,34 @@ public:
                 fflush(stderr);
                 s_filter_logged = true;
             }
+            // Phase marker. The game's phases are distinguishable by VI width
+            // (512 = hangar, 1024 = the hi-res tiled phase before it), and
+            // session 17 wasted several captures because run-to-run timing
+            // varies by tens of seconds — the Factor 5 logo landed at 18s in
+            // one run and 44s in another, so fixed capture windows kept
+            // missing the phase they were aimed at. This fires the instant the
+            // width changes, so a capture harness can gate on the phase itself
+            // rather than on elapsed time.
+            {
+                static uint32_t s_last_width = 0xFFFFFFFF;
+                ultramodern::renderer::ViRegs* pvi = ultramodern::renderer::get_vi_regs();
+                const uint32_t w = pvi->VI_WIDTH_REG;
+                if (w != s_last_width) {
+                    static const auto s_t0 = std::chrono::steady_clock::now();
+                    const double el = std::chrono::duration<double>(
+                        std::chrono::steady_clock::now() - s_t0).count();
+                    fprintf(stderr,
+                        "[phase] vi_width=%u (was %u) origin=0x%08X at %.1fs update_screen #%d\n",
+                        w, s_last_width == 0xFFFFFFFF ? 0u : s_last_width,
+                        pvi->VI_ORIGIN_REG, el, s_n);
+                    fflush(stderr);
+                    s_last_width = w;
+                    // Publish the phase change so RT64-side censuses can scope
+                    // themselves to one phase (see rs64_phase_ord below).
+                    rs64_bump_phase_ord();
+                }
+            }
+
             if (s_n <= 4 || (s_n & 63) == 0) {
                 ultramodern::renderer::ViRegs* vi = ultramodern::renderer::get_vi_regs();
                 // Sample 16 bytes at VI_ORIGIN to see if there's actual pixel

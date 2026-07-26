@@ -1,0 +1,14 @@
+rom_file_path = "rogue_squadron.z64"
+text_offset = 0x09ABE0
+text_size = 0xF80
+text_address = 0x04001080  # same IMEM layout as ucode A (boot loads to 0x1080)
+output_file_path = "build/factor5_ucode/factor5_ucode_b_recompiled.c"
+output_function_name = "factor5_ucode_b"
+
+# Second Factor 5 gfx ucode (RDRAM base 0x80099FE0). The game embeds its
+# pointer inside ucode_data (boot DMAs it over the OSTask region DMEM[0xFD0]);
+# the outer OSTask always names ucode A (0x80024A10). Discovered 2026-07-13.
+# Indirect-jump targets: start empty, add as runtime UnhandledJumpTarget
+# reports name them.
+extra_indirect_branch_targets = [
+]
