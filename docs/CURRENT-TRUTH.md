@@ -201,7 +201,9 @@ cost three sessions before the recursive mutex.
    time (2.75/3.09/3.13, 33 `claude` processes); s57 hit it a 7th time (2.56/2.59/2.86, 33 `claude`
    processes); **s58 hit it an 8th time (2.18/2.72/2.86, 33 `claude` processes)** and again
    correctly skipped both this repro and the M4 runtime check below rather than trust either
-   result. **Do not attempt this repro again
+   result. **s59 hit it a 9th time (4.06/3.15/2.98, 33 `claude` processes)**, again correctly
+   skipped both, and used the iteration for read-only prep instead (see next paragraph). **Do not
+   attempt this repro again
    until `uptime` load average is comfortably under ~1.5 AND few/no other `claude` processes are
    running** — treat this as near-certain, not merely well-corroborated. If load is high when this
    iteration starts, skip to step 2 (the M4 runtime check is also blocked by the same confound —
@@ -209,8 +211,16 @@ cost three sessions before the recursive mutex.
    load-insensitive); if load is high and step 2 is also inapplicable (already done, or itself
    blocked), use the iteration for step 4 (doc housekeeping — now largely exhausted, s58) or step 5
    (sibling-repo question) rather than idling — see s55, s56, s57, s58.
-   Do not attempt an `fs`-freeze fix until the mechanism is clear. Full detail: PORTING-STATE s50,
-   s51, s52, s53, s54, s55, s56, s57, s58.
+   Do not attempt an `fs`-freeze fix until the mechanism is clear. **s59: the DL-task-level `fs`
+   tracing this step's own discriminator calls for already exists and needs no new code** —
+   `rsp_task_log_and_reset` (`src/rsp/dpc_bridge.cpp:1296-1339`) already exchanges a per-task
+   `g_task_rdp_fullsyncs` counter into `fs`, already has a `capped_no_fs` detector, and already logs
+   an unconditional `[task-brief] #n ... fs=%u` line per task — all gated behind the pre-existing
+   `ROGUESQ_LOG_DPC=1` env var (`log_dpc()`, dpc_bridge.cpp:243-251), not currently set by
+   `scratch/s52_crashhandler_repro.sh`. Next repro attempt: add `ROGUESQ_LOG_DPC=1` to that script's
+   environment (no rebuild needed) and, if the death reproduces, read the log tail for `fs=0`
+   task-briefs / `CAPPED-NO-FS` hits before writing anything new. Full detail: PORTING-STATE s50,
+   s51, s52, s53, s54, s55, s56, s57, s58, s59.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen

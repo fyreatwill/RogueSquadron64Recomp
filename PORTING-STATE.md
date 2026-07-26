@@ -4768,3 +4768,57 @@ safe lever identified in this section. Single-source, fully reversible via git.
 
 Files: `docs/CURRENT-TRUTH.md` (one Overturned-conclusions entry compressed with a cross-reference;
 three reviewed and left unchanged).
+
+---
+
+## Session 59 (2026-07-26) — load confound confirmed a 9th time; found the fs-freeze tracing instrumentation already exists, unused
+
+### Precondition check
+`uptime`: 4.06/3.15/2.98. `ps aux | grep -c '[c]laude'`: 33. Both above the "safe" threshold
+(<1.5 load, few/no concurrent `claude` processes) and squarely in the confirmed load-stall band
+(≥2.4 has stalled every prior attempt, 8 times: s51 ×2, s52–s58). Work unit A (M3 repro) and work
+unit B (M4 runtime check) both correctly skipped without attempting either — a 9th confirmation of
+the same confound, budget rule (iron rule #8, now 9 consecutive iterations past the 3-strike
+threshold) says stop attempting the repro under these conditions rather than keep re-confirming it.
+
+### What ran
+Work unit C (doc housekeeping) is marked exhausted as of s58 with no new angle available, and
+re-opening it on the same two tests was explicitly disallowed by s58's own NEXT.md. Rather than
+just re-surfacing work unit D (sibling-repo question, already flagged 5 times since s54 with no
+user response) for a 6th time with nothing new, this session did read-only code investigation
+(no build, no game run — both safe under any load) toward the next step of work unit A's own
+discriminating plan: "if the death reproduces with 0 `CRASH]` hits, move to tracing which DL task
+fails FULL_SYNC... add a scoped counter/log for the DL task index at the moment `fs` stops
+incrementing."
+
+Dispatched an Explore agent to locate the FULL_SYNC opcode handler and any existing per-task `fs`
+tracking, expecting to have to design a new counter from scratch. Verified its findings directly by
+reading the cited code:
+- `src/rsp/dpc_bridge.cpp:1296-1339` (`rsp_task_log_and_reset`, called from the factor5_ucode
+  synthetic-halt site) **already tracks and logs per-task FULL_SYNC counts.** `g_task_rdp_fullsyncs`
+  is exchanged into a local `fs` every task (line 1300); a monotonic per-task index `n` already
+  exists (line 1301-1302); an existing detector `capped_no_fs = (iters > 16000 && fs == 0)` (line
+  1303) already flags "this task's DL never contained a FULL_SYNC"; and an unconditional per-task
+  `[task-brief] #%llu tri=%u texrect=%u fs=%u iters=%u` log (line 1327-1329) already fires on every
+  single task when `log_dpc()` is true.
+- `log_dpc()` (dpc_bridge.cpp:243-251) is gated by `ROGUESQ_LOG_DPC=1` (or `ROGUESQ_LOG_ALL=1`),
+  read once at startup via a static-init lambda — a plain, pre-existing env var, no rebuild needed.
+- Checked `scratch/s52_crashhandler_repro.sh` (the working repro script referenced by NEXT.md work
+  unit A): it does **not** set `ROGUESQ_LOG_DPC`, so none of the 8 prior repro attempts (s51-s58,
+  all of which stalled on load before reaching the death screen anyway) would have captured this
+  data even if one had reached the death screen.
+
+### Verdict
+The instrumentation NEXT.md work unit A's second bullet describes adding does not need to be built —
+it already exists and is a one-line env var away. Next low-load repro attempt should add
+`ROGUESQ_LOG_DPC=1` to the environment and, if the death reproduces, grep `run.log` for the tail of
+`[task-brief]` lines (watch for `fs=0` on the last few tasks before death) and any `CAPPED-NO-FS`
+hits, before writing any new code. This is a genuine new angle distinct from the exhausted C-thread
+and does not require a game run, so it was safe to do at this load level. Single-source (one
+Explore-agent pass, verified by direct reads of the cited lines) but the claim is a direct code
+read, not an inference — low risk of being wrong. No code was changed; no build was run.
+
+Files: none changed under `src/`, `lib/`, or `docs/` in this step (see NEXT.md rewrite below for the
+one doc change). `scratch/s52_crashhandler_repro.sh` not modified this session — the next low-load
+iteration should add the env var when it actually runs it, per iron rule about not spending a
+build/run cycle without using it.
