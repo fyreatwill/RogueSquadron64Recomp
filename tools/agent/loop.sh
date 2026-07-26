@@ -62,6 +62,21 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   rc=$?
   printf '%s\n' "$out" >> "$AG/loop.log"
 
+  # A spend/quota CAP is not a window that reopens. Sleeping on it wastes
+  # MAX_LIMIT_WAITS * SLEEP_ON_LIMIT (6 hours by default) retrying something
+  # that cannot succeed until a human raises the cap. Distinguish it from the
+  # transient limits, which really are just windows.
+  if printf '%s' "$out" | grep -qiE 'monthly spend limit|spend limit|credit balance|insufficient quota|upgrade your plan'; then
+    { echo "# Hard spend/quota cap reached, $(date)"; echo;
+      echo "This is NOT a transient rate limit and sleeping will not clear it."
+      echo "Raise or reset the cap (claude.ai/settings/usage), then delete this"
+      echo "file and rerun the loop."; echo;
+      echo "Last claude output:"; printf '%s\n' "$out" | tail -20; } > "$AG/BLOCKED.md"
+    log "HARD CAP reached - not retryable, stopping"
+    notify_blocked
+    exit 2
+  fi
+
   if [ $rc -ne 0 ] || printf '%s' "$out" | grep -qiE 'usage limit|rate.?limit|overloaded|resets at'; then
     waits=$((waits+1))
     if [ "$waits" -gt "$MAX_LIMIT_WAITS" ]; then
