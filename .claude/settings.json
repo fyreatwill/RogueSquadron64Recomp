@@ -1,6 +1,12 @@
 {
   "permissions": {
+    "additionalDirectories": [
+      "/Users/williambuckley/Documents/Tools/N64Recomp",
+      "/Users/williambuckley/Documents/Tools/rogue_squadron64"
+    ],
     "allow": [
+      "Read(//Users/williambuckley/Documents/Tools/N64Recomp/**)",
+      "Read(//Users/williambuckley/Documents/Tools/rogue_squadron64/**)",
       "Read(//Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/**)",
       "Edit(//Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/**)",
       "Write(//Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/**)",
@@ -46,6 +52,10 @@
       "Bash(timeout:*)",
       "Bash(caffeinate:*)",
       "Bash(sleep:*)",
+      "Bash(cd:*)",
+      "Bash(chmod:*)",
+      "Bash(ps:*)",
+      "Bash(xxd:*)",
       "Bash(env:*)",
       "Bash(open:*)",
       "Bash(osascript:*)"

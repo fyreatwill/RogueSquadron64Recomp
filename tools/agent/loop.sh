@@ -125,8 +125,22 @@ while [ "$n" -lt "$ITER_CAP" ]; do
       echo "The exit contract is NOT met. Do ONLY what is needed to satisfy it:"
       echo
       printf '%s\n' "$verdict"
+      echo
+      echo "## Checkpoint close-out is ACCEPTABLE here"
+      echo "You are in a retry: the primary session likely died mid-work-unit"
+      echo "(usage limit or turn cap). Do NOT re-run the experiment or try to"
+      echo "finish a large work unit now — that is exactly what keeps failing."
+      echo "Instead: write what IS known so far (including partial/failed runs)"
+      echo "to PORTING-STATE.md, update docs/CURRENT-TRUTH.md only if a"
+      echo "conclusion actually changed, rewrite scratch/agent/NEXT.md as a"
+      echo "RESUME instruction (what ran, what artifacts exist, exact next"
+      echo "command), commit, and write DONE to scratch/agent/STATUS with"
+      echo "OUTCOME=ADVANCED if any artifact/knowledge landed, else SUBSTITUTED."
     } > "$AG/RETRY_PROMPT.md"
-    out="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$AG/RETRY_PROMPT.md")"
+    # Retries always use the claude runner: grok runs the Stop hook and aborts
+    # the whole turn on a block (observed as stopReason=Cancelled after ~3
+    # calls), so a grok retry can never satisfy the contract it was sent to fix.
+    out="$(RUNNER=claude LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$AG/RETRY_PROMPT.md")"
     printf '%s\n' "$out" >> "$AG/loop.log"
     # A retry that itself hits a limit is not a contract failure - stop retrying.
     if printf '%s' "$out" | grep -qiE 'usage limit|rate.?limit|spend limit|overloaded'; then
