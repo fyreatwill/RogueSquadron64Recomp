@@ -756,7 +756,7 @@ index 873883d..a210afa 100644
      }
  
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
-index 7d385fa..433328e 100644
+index 7d385fa..4c145fd 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
 +++ b/src/hle/rt64_framebuffer_manager.cpp
 @@ -6,6 +6,9 @@
@@ -787,7 +787,60 @@ index 7d385fa..433328e 100644
      static void fixSizeToMultiple(uint32_t &width, uint32_t &height) {
          const uint32_t SizeMultiple = 32;
          width = ((width + SizeMultiple - 1) / SizeMultiple) * SizeMultiple;
-@@ -107,8 +121,35 @@ namespace RT64 {
+@@ -31,6 +45,52 @@ namespace RT64 {
+     FramebufferManager::~FramebufferManager() {}
+ 
+     Framebuffer &FramebufferManager::get(uint32_t address, uint8_t siz, uint32_t width, uint32_t height) {
++        // s78: same 1280 / 8MB caps as s72 writeback. Garbage CIMG widths
++        // (e.g. 4030) and out-of-RDRAM addresses (e.g. 0xFB0000 w=5) must not
++        // become framebuffers[] entries — tile-copy / present then treat them
++        // as real FBs, and RAM-read paths SIGSEGV past 8MB. Dummy is not in
++        // the map; find/tilecopy miss → ignore.
++        // Two TLS dummies: fullSync get()s color then depth; a single TLS object
++        // aliases both pointers and corrupts height for copyRenderTargetToNative.
++        static constexpr uint32_t kMaxSaneFbWidth = 1280u;
++        static constexpr uint32_t kRdramBytes = 0x800000u;
++        const uint32_t rowBytes = (width != 0 && siz <= 3)
++            ? (uint32_t)((uint64_t)width << siz >> 1) : 0u;
++        const uint64_t rangeEnd = (rowBytes != 0 && height != 0)
++            ? (uint64_t)address + (uint64_t)rowBytes * (uint64_t)height : (uint64_t)address;
++        const bool wildWidth = (width == 0 || width > kMaxSaneFbWidth);
++        const bool oobAddr = (address >= kRdramBytes) || (rangeEnd > kRdramBytes);
++        if (wildWidth || oobAddr) {
++            static std::atomic<int> s_refuse{0};
++            const int n = ++s_refuse;
++            if (n <= 40 || (n % 200) == 0) {
++                std::fprintf(stderr,
++                    "[fb-get] REFUSE #%d addr=0x%08X w=%u h=%u siz=%u oob=%d map=%zu\n",
++                    n, address, width, height, (unsigned)siz, (int)oobAddr, framebuffers.size());
++                std::fflush(stderr);
++            }
++            // Never return an existing map entry for a wild request — that would
++            // let wild row ranges hit a sane FB's height and assert in
++            // copyRenderTargetToNative (s78 first soak).
++            static thread_local Framebuffer refuseA;
++            static thread_local Framebuffer refuseB;
++            static thread_local int refuseFlip = 0;
++            Framebuffer &refuseFb = (refuseFlip++ & 1) ? refuseB : refuseA;
++            refuseFb.addressStart = address;
++            refuseFb.addressEnd = address;
++            refuseFb.siz = siz;
++            refuseFb.width = width;
++            refuseFb.height = height;
++            refuseFb.maxHeight = height;
++            refuseFb.readHeight = 0;
++            refuseFb.widthChanged = true;
++            refuseFb.sizChanged = true;
++            refuseFb.rdramChanged = false;
++            refuseFb.lastWriteType = Framebuffer::Type::None;
++            refuseFb.lastWriteRect = FixedRect();
++            return refuseFb;
++        }
++
+         auto &fb = framebuffers[address];
+         fb.widthChanged = (fb.width != width);
+         fb.sizChanged = (fb.siz != siz);
+@@ -107,8 +167,35 @@ namespace RT64 {
          auto fbIt = framebuffers.find(op.createTileCopy.address);
          if (fbIt == framebuffers.end()) {
              tileCopy.ignore = true;
@@ -823,7 +876,7 @@ index 7d385fa..433328e 100644
  
          const FramebufferTile &fbTile = op.createTileCopy.fbTile;
          const uint32_t tileWidth = std::clamp<long>(lround((fbTile.right - fbTile.left) * resolutionScale.x), 1L, RenderTarget::MaxDimension);
-@@ -183,10 +224,48 @@ namespace RT64 {
+@@ -183,10 +270,48 @@ namespace RT64 {
          // Texture for tile copy must exist.
          TileCopy &tileCopy = tileCopies[op.createTileCopy.id];
          if (tileCopy.ignore) {
@@ -872,7 +925,7 @@ index 7d385fa..433328e 100644
          assert(fbIt != framebuffers.end());
          RenderTargetKey colorTargetKey(fbIt->second.addressStart, fbIt->second.width, fbIt->second.siz, Framebuffer::Type::Color);
          RenderTarget &colorTarget = targetManager.get(colorTargetKey);
-@@ -245,7 +324,11 @@ namespace RT64 {
+@@ -245,7 +370,11 @@ namespace RT64 {
      }
  
      void FramebufferManager::reinterpretTileSetup(RenderWorker *renderWorker, const FramebufferOperation &op, hlslpp::float2 resolutionScale, bool usesHDR) {
@@ -885,7 +938,7 @@ index 7d385fa..433328e 100644
  
          // Source tile must exist.
          TileCopy &srcTile = tileCopies[op.reinterpretTile.srcId];
-@@ -310,7 +393,9 @@ namespace RT64 {
+@@ -310,7 +439,9 @@ namespace RT64 {
      void FramebufferManager::reinterpretTileRecord(RenderWorker *renderWorker, const FramebufferOperation &op, TextureCache &textureCache, hlslpp::float2 resolutionScale,
          uint64_t submissionFrame, bool usesHDR, CommandListReinterpretations &cmdListReinterpretations, CommandListDiscards &cmdListDiscards)
      {
@@ -1107,7 +1160,7 @@ index dccaa87..71d6c74 100644
                  dummy = dl;
                  extendedFunction(state, &dl);
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index f17db9b..8a43ad1 100644
+index f17db9b..e211f39 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -4,11 +4,13 @@
@@ -1275,7 +1328,7 @@ index f17db9b..8a43ad1 100644
                      if (forceFb != nullptr) {
                          viFb = forceFb;
                          overrideUsed = true;
-@@ -216,7 +313,78 @@ namespace RT64 {
+@@ -216,7 +313,80 @@ namespace RT64 {
                          }
                      }
                  }
@@ -1295,7 +1348,9 @@ index f17db9b..8a43ad1 100644
 +                        // RDRAM-upload branch — which is black because the
 +                        // content only lives on the GPU. Re-register with the
 +                        // drawn width so targetManager.get hits the live RT.
-+                        if (drawnFb == nullptr && drawnW != 0) {
++                        // s78: do not re-register last-drawn with garbage width
++                        // (same 1280 cap as FramebufferManager::get / s72).
++                        if (drawnFb == nullptr && drawnW != 0 && drawnW <= 1280u) {
 +                            const hlslpp::uint2 viSize = present.screenVI.fbSize();
 +                            const uint32_t h = std::max(uint32_t(viSize.y), 480u);
 +                            const uint8_t siz = drawnSiz ? uint8_t(drawnSiz) : G_IM_SIZ_16b;
@@ -1355,7 +1410,7 @@ index f17db9b..8a43ad1 100644
                      !ext.sharedResources->colorImageAddressVector.empty())
                  {
                      const auto &vec = ext.sharedResources->colorImageAddressVector;
-@@ -308,6 +476,47 @@ namespace RT64 {
+@@ -308,6 +478,47 @@ namespace RT64 {
                  }
              }
              
@@ -1403,7 +1458,7 @@ index f17db9b..8a43ad1 100644
              if ((presentFb != nullptr) && (viFb != nullptr)) {
                  for (uint32_t colorAddress : ext.sharedResources->colorImageAddressVector) {
                      Framebuffer *colorFb = fbManager.find(colorAddress);
-@@ -353,11 +562,12 @@ namespace RT64 {
+@@ -353,11 +564,12 @@ namespace RT64 {
                  if (s_pq_log) {
                      static int s_n2 = 0;
                      int n = ++s_n2;
@@ -3186,7 +3241,7 @@ index d1a9f4e..7025af8 100644
          // with the GPU-side stage 2.5 counter, this shows how many texrects
          // enter the pipeline vs how many reach the for-loop.
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..c9b6376 100644
+index 10f98af..5bbeedb 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -3814,7 +3869,28 @@ index 10f98af..c9b6376 100644
  
          // Assign some parameters to the draw call.
          const int workloadCursor = ext.workloadQueue->writeCursor;
-@@ -593,8 +1149,15 @@ namespace RT64 {
+@@ -522,6 +1078,12 @@ namespace RT64 {
+         if (!fbPair.drawColorRect.isEmpty()) {
+             auto &colorImg = fbPair.colorImage;
+             auto &depthImg = fbPair.depthImage;
++            // s78: do not bookkeep wild/OOB CIMG pairs into lastWrite* state.
++            if (colorImg.width == 0 || colorImg.width > kMaxSaneFbWidth ||
++                colorImg.address >= kRdramBytes) {
++                // Fall through to the common flush bookkeeping below without
++                // touching FramebufferManager for this garbage CIMG.
++            } else {
+             uint32_t colorHeight = fbPair.drawColorRect.bottom(true);
+             uint32_t colorWriteWidth = (colorHeight > 1) ? colorImg.width : std::min(fbPair.drawColorRect.right(true), int32_t(colorImg.width));
+             uint32_t depthWriteWidth = 0;
+@@ -574,6 +1136,7 @@ namespace RT64 {
+                 depthFb->lastWriteTimestamp = writeTimestamp;
+                 framebufferManager.changeRAM(depthFb, depthFb->addressStart, depthFb->addressStart + depthFbBytes);
+             }
++            } // else: sane CIMG bookkeeping
+         }
+ 
+         // Store the process Id this framebuffer pair was submitted under.
+@@ -593,8 +1156,15 @@ namespace RT64 {
              return;
          }
          
@@ -3832,7 +3908,7 @@ index 10f98af..c9b6376 100644
  
          const int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
-@@ -640,6 +1203,113 @@ namespace RT64 {
+@@ -640,6 +1210,113 @@ namespace RT64 {
              }
  
              if (!callTile.tileCopyUsed) {
@@ -3946,7 +4022,7 @@ index 10f98af..c9b6376 100644
                  if (callTile.tmemHashOrID != 0) {
                      textureManager.uploadEmpty(this, ext.textureCache, workload.submissionFrame, callTile.sampleWidth, callTile.sampleHeight, callTile.tmemHashOrID);
                  }
-@@ -649,6 +1319,118 @@ namespace RT64 {
+@@ -649,6 +1326,118 @@ namespace RT64 {
                  else {
                      callTile.tmemHashOrID = textureManager.uploadTexture(this, callTile.loadTile, ext.textureCache, workload.submissionFrame, callTile.sampleWidth, callTile.sampleHeight, callTile.tlut);
                  }
@@ -4065,7 +4141,7 @@ index 10f98af..c9b6376 100644
              }
              else if (callTile.reinterpretTile) {
                  struct ReinterpretHashData {
-@@ -765,6 +1547,35 @@ namespace RT64 {
+@@ -765,6 +1554,35 @@ namespace RT64 {
          flush();
          submitFramebufferPair(FramebufferPair::FlushReason::ProcessDisplayListsEnd);
  
@@ -4101,7 +4177,47 @@ index 10f98af..c9b6376 100644
          // Append any framebuffer operations to the end of the last framebuffer pair.
          int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
-@@ -1462,11 +2273,41 @@ namespace RT64 {
+@@ -1149,6 +1967,13 @@ namespace RT64 {
+                 if (!fbPair.drawColorRect.isEmpty()) {
+                     const auto &colorImg = fbPair.colorImage;
+                     const auto &depthImg = fbPair.depthImage;
++                    // s78: wild/OOB CIMGs are refused by FramebufferManager::get
++                    // (not mapped). Skip the whole pair here so fullSync never
++                    // calls copyRenderTargetToNative on a refuse dummy.
++                    if (colorImg.width == 0 || colorImg.width > kMaxSaneFbWidth ||
++                        colorImg.address >= kRdramBytes) {
++                        return false;
++                    }
+                     colorHeight = fbPair.drawColorRect.bottom(true);
+                     colorWriteWidth = (colorHeight > 1) ? colorImg.width : std::min(fbPair.drawColorRect.right(true), int32_t(colorImg.width));
+                     depthWriteWidth = 0;
+@@ -1426,11 +2251,21 @@ namespace RT64 {
+                             depthFb->lastWriteType = Framebuffer::Type::Depth;
+                         }
+ 
+-                        // Copy results from render targets back to RAM.
+-                        colorFb->copyRenderTargetToNative(ext.framebufferGraphicsWorker, colorTarget, colorWriteWidth, colorRowStart, colorRowEnd, colorImg.fmt, ditherRandomSeed++, ext.shaderLibrary);
++                        // Copy results from render targets back to native.
++                        // Clamp rows to fb height (matches copyNativeToRAM path);
++                        // skip wild widths that get() refused (s78).
++                        if (colorWriteWidth > 0 && colorWriteWidth <= kMaxSaneFbWidth &&
++                            colorFb->width > 0 && colorFb->width <= kMaxSaneFbWidth &&
++                            colorRowStart < colorFb->height) {
++                            const uint32_t cEnd = std::min(colorRowEnd, colorFb->height);
++                            colorFb->copyRenderTargetToNative(ext.framebufferGraphicsWorker, colorTarget, colorWriteWidth, colorRowStart, cEnd, colorImg.fmt, ditherRandomSeed++, ext.shaderLibrary);
++                        }
+ 
+-                        if (depthWriteWidth > 0) {
+-                            depthFb->copyRenderTargetToNative(ext.framebufferGraphicsWorker, depthTarget, depthWriteWidth, depthRowStart, depthRowEnd, G_IM_FMT_DEPTH, ditherRandomSeed++, ext.shaderLibrary);
++                        if (depthWriteWidth > 0 && depthWriteWidth <= kMaxSaneFbWidth &&
++                            depthFb != nullptr && depthFb->width > 0 && depthFb->width <= kMaxSaneFbWidth &&
++                            depthRowStart < depthFb->height) {
++                            const uint32_t dEnd = std::min(depthRowEnd, depthFb->height);
++                            depthFb->copyRenderTargetToNative(ext.framebufferGraphicsWorker, depthTarget, depthWriteWidth, depthRowStart, dEnd, G_IM_FMT_DEPTH, ditherRandomSeed++, ext.shaderLibrary);
+                         }
+                     }
+ 
+@@ -1462,11 +2297,41 @@ namespace RT64 {
                          // 1MB gate is safe (real N64 framebuffers are always
                          // at >=0x80100000) and unblocks Factor 5 boot.
                          if (colorFb->addressStart >= 0x100000) {
@@ -4145,7 +4261,7 @@ index 10f98af..c9b6376 100644
                          }
                      }
  
-@@ -1899,6 +2740,50 @@ namespace RT64 {
+@@ -1899,6 +2764,50 @@ namespace RT64 {
              }
          }
          
@@ -4196,7 +4312,7 @@ index 10f98af..c9b6376 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1959,8 +2844,20 @@ namespace RT64 {
+@@ -1959,8 +2868,20 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -4219,7 +4335,7 @@ index 10f98af..c9b6376 100644
                  return;
              }
          }
-@@ -1972,7 +2869,11 @@ namespace RT64 {
+@@ -1972,7 +2893,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -4232,7 +4348,7 @@ index 10f98af..c9b6376 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +2934,51 @@ namespace RT64 {
+@@ -2033,26 +2958,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -4338,7 +4454,7 @@ index b4c85f5..880611b 100644
              adjustVector(fbPairs, fbPairCount);
              addedPair = true;
 diff --git a/src/hle/rt64_workload_queue.cpp b/src/hle/rt64_workload_queue.cpp
-index 5a331aa..4029dae 100644
+index 5a331aa..71db1f5 100644
 --- a/src/hle/rt64_workload_queue.cpp
 +++ b/src/hle/rt64_workload_queue.cpp
 @@ -10,6 +10,74 @@
@@ -4416,7 +4532,24 @@ index 5a331aa..4029dae 100644
  namespace RT64 {
      // WorkloadQueue
  
-@@ -585,6 +653,7 @@ namespace RT64 {
+@@ -425,6 +493,16 @@ namespace RT64 {
+                     nativeColorWidth = colorImg.width;
+                     nativeColorHeight = fbPair.drawColorRect.bottom(true);
+ 
++                    // s78: same 1280 / 8MB caps as FramebufferManager::get / s72.
++                    // Wild or OOB CIMG pairs must not reach RenderTarget /
++                    // RAM-read paths (fbgate2 SIGSEGV on addr≥8MB w=5).
++                    static constexpr uint32_t kMaxSaneFbWidth = 1280u;
++                    static constexpr uint32_t kRdramBytes = 0x800000u;
++                    if (nativeColorWidth == 0 || nativeColorWidth > kMaxSaneFbWidth ||
++                        colorImg.address >= kRdramBytes) {
++                        return false;
++                    }
++
+                     // When the target is much bigger than the reference height, we reduce the resolution scaling (but clamped to 1.0).
+                     const uint32_t heightThreshold = (workload.viFbSize[1] > 0) ? ((workload.viFbSize[1] * 3) / 2) : 360;
+                     uint32_t downsampleMultiplier = workloadConfig.downsampleMultiplier;
+@@ -585,6 +663,7 @@ namespace RT64 {
                  renderFramebufferManager->destroyAllWithRenderTarget(renderTarget);
              }
  
@@ -4424,7 +4557,7 @@ index 5a331aa..4029dae 100644
              uint32_t gameCallCursor = 0;
              const uint32_t gameCallCountMax = (debuggerRenderer.globalDrawCallIndex >= 0) ? (debuggerRenderer.globalDrawCallIndex + 1) : workload.gameCallCount;
              thread_local std::vector<BufferUploader *> bufferUploaders;
-@@ -639,6 +708,38 @@ namespace RT64 {
+@@ -639,6 +718,38 @@ namespace RT64 {
                      drawParams.postBlendNoise = workloadConfig.postBlendNoise;
                      drawParams.postBlendNoiseNegative = workloadConfig.postBlendNoiseNegative;
                      drawParams.maxGameCall = std::min(gameCallCountMax - gameCallCursor, fbPair.gameCallCount);
@@ -4463,7 +4596,7 @@ index 5a331aa..4029dae 100644
                      framebufferRenderer->addFramebuffer(drawParams);
                  }
                  
-@@ -717,6 +818,53 @@ namespace RT64 {
+@@ -717,6 +828,53 @@ namespace RT64 {
                      const auto &depthImg = fbPair.depthImage;
                      bool colorFormatUpdated = false;
                      if (colorFb != nullptr) {
@@ -4517,7 +4650,7 @@ index 5a331aa..4029dae 100644
                          if (colorImg.formatChanged) {
                              colorFb->discardLastWrite();
                          }
-@@ -736,6 +884,30 @@ namespace RT64 {
+@@ -736,6 +894,30 @@ namespace RT64 {
                              colorFb->readHeight = 0;
                          }
  
@@ -4548,7 +4681,7 @@ index 5a331aa..4029dae 100644
                          if (colorFb->height > colorFb->readHeight) {
                              uint32_t readRowCount = colorFb->height - colorFb->readHeight;
                              FramebufferChange *colorFbChange = colorFb->readChangeFromStorage(ext.workloadGraphicsWorker, workload.fbStorage, scratchFbChangePool,
-@@ -789,6 +961,7 @@ namespace RT64 {
+@@ -789,6 +971,7 @@ namespace RT64 {
                          }
                      }
                      

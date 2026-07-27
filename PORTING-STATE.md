@@ -6042,3 +6042,52 @@ setup+record found/missing, one start_only HOLD_S=20 soak with `ROGUESQ_LOG_TILE
 ### Next
 Refuse `FramebufferManager::get` (or pair creation) for width > 1280; count refusals
 post-leave with found=1 control on legitimate FBs; test whether fs advances past ~3360.
+
+## Session 78 (2026-07-27) — wild FB refuse gate live; G1 refuted (fs freeze remains)
+
+### Work unit
+Implement `FramebufferManager::get` refuse for wild-width / OOB FBs (s77 next
+step), instrument `[fb-get] REFUSE`, soak start_only HOLD_S=20 with
+`ROGUESQ_LOG_TILECOPY_FB=1`.
+
+### Gate (always-on, `lib/rt64`)
+- `get()`: no map insert when `width==0 || width>1280` OR `addr≥8MB` OR
+  `addr+rowBytes*height > 8MB`. Two TLS refuse dummies (color/depth).
+- Present mode-3 re-register requires `drawnW ≤ 1280`.
+- fullSync + workload_queue skip wild/OOB pairs (fbgate/fbgate2 crash paths).
+- Submodule patch exported (`submodule-patches/rt64.patch`).
+
+### Intermediate failures (fixed same iteration)
+| run | death |
+|-----|--------|
+| fbgate | Abort `copyRenderTargetToNative` — dummy alias + wild pair writeback |
+| fbgate2 | SIGSEGV `copyRAMToNativeAndChanges` — OOB addr `0xFB0000 w=5` still mapped |
+
+### Discriminating run: fbgate3
+| check | value |
+|-------|------:|
+| REFUSE logged | 40 (rate-limit; all sampled `oob=1`) |
+| setup/record found=1 | ≥6000, **fbW=640 only** |
+| found=0 | **0** |
+| wild found=1 | **0** |
+| thr-resume bad | **0** |
+| exit=2 | **0** |
+| fs max / stuck | **3297** / 30 lines |
+| first high-tri syncs=0 | **#4252** (after #4251 syncs=1) |
+| UnhandledJump | 898 (exit=3; new vs s77 0) |
+| CRASH | SIGSEGV `do_rom_read` ~hold_11 |
+| hold snaps | pixel-identical craft_stable→hold_10 (present frozen) |
+
+### Hypotheses
+| ID | Outcome |
+|----|---------|
+| G1 gate unfreezes present | **REFUTED** — refuse + control, fs still freezes |
+| G2 registration red herring / D3 | **SUPPORTED** |
+| G3 found=0 after gate | not exercised |
+| G4 gate hits 512/640 | **REFUTED** this run |
+
+### Rules out / keep
+- Wild FB map pollution is real and now gated; **not** the hangar-flight present root.
+- Keep gate default-on as safety (map ~7, no wild tilecopy).
+- Do not convert createTileCopy assert→skip (still no found=0 log).
+- Next: high-tri `syncs=0` / FULL_SYNC starvation post-leave (D3).

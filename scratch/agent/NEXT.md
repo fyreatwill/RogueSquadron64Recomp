@@ -1,51 +1,49 @@
-# NEXT work unit — M3: refuse wild-width FB registration
+# NEXT work unit — M3: high-tri syncs=0 / FULL_SYNC starvation (D3)
 
-s77: createTileCopy **found=0 never** through hangar-flight freeze; **found=1 ≥8000**
-(control). Wild FB **registers**: `addr=0x530000 fbW=4030` found=1. fs freezes ~3361;
-trailing high-tri `syncs=0` from #4326. s76 createTileCopy assert is intermittent.
-Detail: `scratch/s73_post_a_scene/TILECOPY_ANALYSIS.md`.
+s78: wild-FB refuse gate live; G1 refuted. `fs` freezes ~3297 with trailing
+tasks `syncs=0` from #4252 (s77: #4326). Gate stays as safety. Detail:
+`scratch/s73_post_a_scene/FBGATE_ANALYSIS.md`.
 
 ## Competing hypotheses
 
 | ID | Claim | If true, we will see… |
 |----|--------|------------------------|
-| G1 | Wild-width FBs in the map poison present/fullSync → freeze | after refuse gate: refuse count >0 post-leave; fs keeps rising past ~3360; black window shrinks/stops |
-| G2 | Registration is a red herring; freeze is only SYNC_FULL starvation (D3) | refuse>0 but fs still plateaus ~3360 and black continues |
-| G3 | Gate causes new createTileCopy found=0 on addresses that still appear in ops | record/setup found=0 >0 after gate (setup should ignore; process must not Abort) |
-| G4 | Legitimate widths >1280 exist in this game | refuse fires on 512/640-era good content frames (control failure — abort the gate) |
+| S1 | Trailing hangar-flight tasks emit 0 SYNC_FULL in the post-translation hist → VI_FULLSYNC is the only frame boundary and it stops matching | `ROGUESQ_LOG_RUNNER_ALL=1`: tasks after leave have tris>0 and syncs=0; VI_FULLSYNC / present early lines stop or stall when fs plateaus |
+| S2 | Tasks still emit SYNC_FULL but fullSync is skipped/failing (pair/path gate over-filter) | runner hist shows syncs≥1 on trailing high-tri tasks, yet fs still plateaus; gate-skip counters rise in same window |
+| S3 | RSP UnhandledJump (0x0231, s78) aborts tasks before SYNC_FULL | UnhandledJump count correlates 1:1 with syncs=0 onset task#; fixing/skipping that jump restores syncs≥1 |
+| S4 | Present follows a dead last-drawn while geometry still lands in a live FB | last-drawn stays wild/NO-FB while a sane FB (0x6AB000/0x656000) still receives draws; force-present of that addr shows content during "freeze" |
 
-## Discriminating measurement (one build, one soak)
+## Discriminating measurement (one build if new counters, one soak)
 
-In `FramebufferManager::get` (and keep `ROGUESQ_LOG_TILECOPY_FB`):
-
-1. If `width > 1280` (or height absurd — optional): **do not insert/update** a real FB;
-   log `[fb-get] REFUSE addr=… w=…` every time (or first N + every K). Prefer return
-   a no-op path that callers tolerate, or skip the get at the colorImg pair site —
-   match s72 threshold.
-2. Keep tilecopy-fb logs (found=1 control must still fire on 512/640).
-3. Soak: start_only HOLD_S=20 (death/freeze window).
+Phase-gate: start_only HOLD_S=20, `ROGUESQ_LOG_RUNNER_ALL=1` (already in
+`run_mission_keys.sh`), keep tilecopy optional off to reduce noise.
 
 ```bash
-# after instrument + export.sh + cmake --build build -j8:
-env PROBE_MODE=start_only HOLD_S=20 ROGUESQ_LOG_TILECOPY_FB=1 \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh fbgate 0 12
-# offline:
-#   grep -c '\[fb-get\] REFUSE'          — must be >0 (gate active)
-#   grep '\[tilecopy-fb\].*found=1'      — control still fires, fbW<=1280
-#   grep -c '\[tilecopy-fb\].*found=0'   — G3
-#   fs max / plateau; CRASH; black snap sizes hold_06–20
+env PROBE_MODE=start_only HOLD_S=20 \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh syncs0 0 12
+# offline (never cat whole log):
+#   first task with tris>100 and syncs=0 after the last syncs≥1 high-tri
+#   UnhandledJump count before/after that task#
+#   fs max + how many consecutive update_screen share that fs
+#   last-drawn / vi-follow NO-FB in the freeze window
+#   pixel stats craft_stable vs hold_02 vs hold_10
 ```
+
+If S2 needs a gate-skip counter, add one build of
+`[fb-pair] SKIP wild/oob` at the workload/fullSync early-outs (batch with any
+other counters).
 
 ### Outcomes
 
-- **G1:** keep gate default-on; re-soak HOLD_S=60 + stick for craft response.
-- **G2:** revert or leave gate as safety; next unit = SYNC_FULL / runner hist post-leave.
-- **G3:** ensure setup ignore path handles missing (already does); assert must not fire.
-- **G4:** raise threshold or whitelist; do not ship a broken gate.
+- **S1:** next unit = why hangar-flight DLs lose FULL_SYNC (ucode/DL walk), or
+  strengthen VI_FULLSYNC during that phase.
+- **S2:** relax/fix pair skip so legitimate post-leave pairs still fullSync.
+- **S3:** map jump 0x0231 (overlay/ucode) — separate unit.
+- **S4:** present-follow fix for hangar-flight FB, not runner.
 
 ## Do not
 
-- Convert createTileCopy assert→skip without a found=0 log in-run.
-- Re-open s72 OSThread writeback unless thr-resume bad=1.
+- Re-open wild-FB registration (s78 closed G1).
+- Convert createTileCopy assert→skip without found=0.
 - Cross-run A/B on animating hangar-flight without phase gate.
-- Claim gate fixed present without same-run refuse>0 + found=1 control.
+- Sampled `ROGUESQ_LOG_RUNNER` (1-in-32) for single-task questions — use `_ALL`.

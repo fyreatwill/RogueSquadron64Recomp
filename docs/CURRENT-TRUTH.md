@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 77)
+## Current truth (as of session 78)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -20,7 +20,8 @@ Metal shader rebuilds need full Xcode on PATH:
   **per-pixel** (s24 vertex → s26 shader), `ROGUESQ_FIX_ZERO_SHADE` (s20, largely subsumed by
   wrap), `ROGUESQ_FIX_SAMPLE_BOUNDS` (s15), `ROGUESQ_VI_FULLSYNC` (s11), PresentEarly fallthrough +
   forceAdvance + `ROGUESQ_PRESENT_EARLY_FORCE` (s21), deferred-range coalescing (opt out with
-  `ROGUESQ_NO_DPC_MERGE=1`, s10).
+  `ROGUESQ_NO_DPC_MERGE=1`, s10), **s78 wild/OOB FB refuse** in `FramebufferManager::get`
+  (width>1280 or past 8MB — same family as s72 writeback; does **not** unfreeze present).
 - Default-OFF, keep them off: `ROGUESQ_FIX_DXT` (s22/s23), `ROGUESQ_FIX_DXT_I` (s27, null on
   hangar band), `ROGUESQ_FLATTEN_I4` / `FLATTEN_RGBA16` / `FLATTEN_CI4` (attribution probes),
   `ROGUESQ_SHADE_ONLY_MONO` (s30; pad-only, not a band fix), `ROGUESQ_SHADE_WRAP=3` (s31 shared
@@ -75,14 +76,13 @@ floor garbage; camera orbits). From SELECT YOUR CRAFT: **`a` no-ops** (s74); **s
 is enough** to leave into hangar-flight (s75/s76: title-yellow ~13k → 0 by +2–4s; airborne
 X-wing). VI stays on the 0x6AB400/0x656400 pair — origin cannot name these scenes (s48).
 **s76 hold:** content through ~+7–9s post-leave then black + **`fs` freeze ~3364**;
-process Abort in `createTileCopyRecord` (~12s). **s77:** same start_only leave + 20s
-hold with `ROGUESQ_LOG_TILECOPY_FB`: createTileCopy **found=1 control ≥8000**; **found=0
-= 0**; process **alive** (CRASH=0); `fs` still freezes **~3361**; wild last-drawn 133/1332;
-wild-width FB **registered and found** (`addr=0x530000 fbW=4030`); trailing high-tri
-`syncs=0` from task #4326. Stick at hold_10 fired on black. **s76 assert is intermittent;
-steady residual is present freeze + wild FB registration, not missing-fb.** keys2 was
-MetalFramebuffer SIGSEGV ~10s (same residual family). **M3 blocker is hangar-flight
-present/RT64 residual, not the leave key.**
+process Abort in `createTileCopyRecord` (~12s). **s77:** createTileCopy **found=0 never**;
+wild FB **registered** (`fbW=4030`); `fs` freeze **~3361**; high-tri `syncs=0` from
+#4326. **s78:** always-on refuse gate on `FramebufferManager::get` (width>1280 or
+OOB past 8MB) — **REFUSE fires**, tilecopy found=1 control on 640 only, **no wild
+map hits**; **`fs` still freezes ~3297** (G1 refuted / G2). Trailing high-tri
+`syncs=0` from #4252. Gate kept as safety. **M3 blocker is hangar-flight present
+/ FULL_SYNC residual (D3), not leave key and not FB-map pollution alone.**
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -161,12 +161,14 @@ never soaked before — parked as M4 (identified s53, fixed s54, runtime check o
 step 2 below). Full detail: PORTING-STATE s49.
 
 **M3 — first gameplay: OPENED (s50); ImemOverrun FIXED (s69); OSThread SIGBUS FIXED (s72);
-post-`a` scene ID (s73); Start path isolated (s74/s75); hold/assert triage (s76/s77).**
-AVAILABLE CRAFT reachable. thr-resume bad=0 holds through s77. **s75:** single Start →
-hangar-flight by +2–4s. **s76:** intermittent Abort in `createTileCopyRecord`. **s77:**
-instrument control passes; found=0 never; process can soak 20s; **fs freeze ~3361 + wild
-FB registration (fbW=4030 found=1) + trailing syncs=0** are the steady residual. Leave
-key closed. Origin still cannot name scenes. Full detail PORTING-STATE s68–s77.
+post-`a` scene ID (s73); Start path isolated (s74/s75); hold/assert triage (s76/s77);
+wild-FB refuse gate (s78, G1 refuted).**
+AVAILABLE CRAFT reachable. thr-resume bad=0 holds through s78. **s75:** single Start →
+hangar-flight by +2–4s. **s76/s77:** intermittent createTileCopy assert; steady residual
+was fs freeze + wild FB registration + trailing syncs=0. **s78:** refuse gate removes
+wild map pollution (control found=1 on 640); **fs still freezes ~3297** — residual is
+**high-tri `syncs=0` / present FULL_SYNC starvation (D3)**. Leave key closed. Origin
+still cannot name scenes. Full detail PORTING-STATE s68–s78.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -195,32 +197,33 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s77)
+## Next steps, in order of expected value (s78)
 
-1. **M3 — refuse wild-width FB registration (s77).** s77 proved garbage FBs enter
-   `FramebufferManager::get` (`fbW=4030` found=1) while createTileCopy **missing-fb never
-   fires** through freeze. Gate `get()` (and/or pair creation) at **width > 1280** — same
-   threshold as s72 writeback — so wild CIMGs do not become `framebuffers` entries.
-   Instrument: count refused gets (must be >0 post-leave) + same-run found=1 on legitimate
-   512/640 (control). Discriminate: does `fs` keep advancing past ~3360 and black stop?
-   Do not convert createTileCopy assert→skip until a run actually logs found=0.
-2. **M3 — if gate alone is insufficient:** why high-tri tasks go `syncs=0` after ~#4325
-   (D3); phase-gate counters on first post-leave hangar-flight content, not stopwatch.
-3. **M3 — after present holds ≥60s:** re-run hold+stick (`HOLD_S=60`, marks 10/25/40) for
+1. **M3 — high-tri `syncs=0` / FULL_SYNC starvation post-leave (D3, s77/s78).** Gate
+   refused wild FBs; `fs` still plateaus ~3297 with trailing tasks `syncs=0` from
+   ~#4252 (s78) / ~#4326 (s77). Instrument post-leave (phase-gate on first hangar-flight
+   content, not stopwatch): per-task SYNC_FULL count, whether VI_FULLSYNC synthetic path
+   still fires, RDP hist for trailing tasks (use `ROGUESQ_LOG_RUNNER_ALL`, not sampled).
+   Discriminate: are tasks still submitting geometry with zero FULL_SYNC, or is present
+   starved for another reason?
+2. **M3 — after present holds ≥60s:** re-run hold+stick (`HOLD_S=60`, marks 10/25/40) for
    craft response; document phase timeline.
-4. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
+3. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` 3→0.
    Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
-5. Past the first sustained mission hold: expect further new failure classes (mission overlay
+4. Past the first sustained mission hold: expect further new failure classes (mission overlay
    DMA → missing-func / UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture
-   corruption). Each new failure is its own work unit.
-6. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
+   corruption). Each new failure is its own work unit. s78 already saw UnhandledJump 0x0231
+   + `do_rom_read` SIGSEGV on hold — park until present holds.
+5. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
    — thread exhausted (s55–s58).** Prefer M3 mission-content work over reopening this section.
-7. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
+6. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
    carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user
    before committing there.
-8. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
-9. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+7. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
+8. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+
+Done this session: ~~refuse wild-width FB registration~~ (s78) — gate kept; does not unfreeze present.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
@@ -463,6 +466,11 @@ any s2–s4 conclusion without checking that section.
   **Why believable:** s74 overwrote first-Start snaps with the second Start's names, so the
   only post-first-Start sample was `pre_probe_a` at +3s; short window + possible key drop
   looked like a hard double-Start rule.
+- **Claim (s77 implied next):** refusing wild-width FB registration will unfreeze hangar-
+  flight present (`fs` past ~3360). **Overturned by s78:** refuse fires, tilecopy control
+  on 640 holds, map stays clean — **`fs` still plateaus ~3297** with high-tri `syncs=0`
+  from #4252. **Why believable:** s77 showed wild FBs in the map at freeze time, so map
+  pollution looked causal; same-run refuse + freeze splits registration from present.
 
 ### Dead ends — labelled as such in the log, do not retry
 
