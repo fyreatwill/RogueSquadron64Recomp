@@ -5406,3 +5406,71 @@ pattern in `ROGUESQ_LOG_RUNNER_ALL` output before concluding the fix changed any
 
 Files: no changes under `src/`/`lib/`/`build/` this session (static ROM/disassembly analysis only, no
 build or game run). `docs/CURRENT-TRUTH.md` and `scratch/agent/NEXT.md` updated.
+
+## Session 67 (2026-07-26) — L_0000 self-restart implemented; refuted as the freeze mechanism
+
+### Work unit
+Implement the s66 self-restart model for `bgez $2, L_0000` at the end-of-IMEM perspective-divide
+block, regenerate via `tools/fixup_factor5_ucode.py`, and re-run the death-repro to see whether `fs`
+keeps climbing.
+
+### What was implemented (durable, in `tools/fixup_factor5_ucode.py` fixup 1a)
+- Carve-out: `goto L_0000` (fresh) / prior fixup-1 ImemOverrun form → `goto RS64_UCODE_ENTRY` with a
+  rate-limited `[ucode-restart] #N` log, not a hard `ImemOverrun` exit.
+- Entry label `RS64_UCODE_ENTRY` injected **after** `rs64_iter = 0` / `r18 = 0x100` so a restart does
+  not reset the iteration-cap safety valve.
+- Same treatment for the **not-taken fallthrough** after the bgez (two more VMULs then PC walks off
+  end of IMEM → hardware wraps into boot). RSPRecomp emitted a bare `return ImemOverrun` there that
+  fixup 1 never saw.
+- File-scope `static volatile int rs64_restart_count` + `asm volatile("" ::: "memory")` barrier
+  after an early cut of the instrument was entirely DCE'd under the ucode's forced `-O2`.
+- L_1650 clip-splice site left as hard ImemOverrun (unchanged).
+
+### Measurement 1 — default `-O2` ucode build (production flags)
+- Death-repro (`scratch/s67_self_restart/run1/`): freeze still happens (`fs` plateaus at 2165).
+- `[ucode-restart]` count = **0**.
+- Binary lacks the string `ucode-restart` entirely. Assembly comparison: present at `-O0`, **absent
+  at `-O1` and `-O2`**. The whole end-of-IMEM perspective-divide region is DCE'd under optimised
+  builds — so the first run was not a valid test of the restart (positive control failed for the
+  boring reason: the instrument was not in the binary).
+
+### Measurement 2 — `ROGUESQ_UCODE_NO_OPT=ON` (`-O0` ucode), positive control satisfied
+- Binary contains `[ucode-restart]` and `(fallthrough)` strings.
+- Death-repro (`scratch/s67_self_restart/run2_O0/`, `ROGUESQ_LOG_RUNNER=1` + `LOG_RUNNER_ALL=1`):
+  - `[ucode-restart]` count = **0** for the whole run (code live, never entered).
+  - Runner histogram: 3049 tasks `exit=1` (Broke), 4651 tasks `exit=2` (ImemOverrun).
+  - Last clean task: **#3215** `exit=1 syncs=1`. From **#3216** onward every task is
+    `exit=2 syncs=0` with real triangle content (`tris=37` at the boundary → later `tris=12`).
+  - `fs` plateaus at **2263**; present loop alive on frozen origin `0x6AB400`.
+- Remaining source-level `return ImemOverrun` sites after the L_0000 rewrite: (1) the clip-splice
+  `j L_1650` site (`CLIP_1FBC` → L_1650), (2) a bare epilogue return after that block. L_0000 is no
+  longer one of them.
+
+### Conclusion (two independent lines: O0 live-instrument zero-hits + permanent exit=2 from #3216)
+**The L_0000 end-of-IMEM perspective-divide branch is not the freeze mechanism.** s64 correctly
+identified that freeze-phase tasks exit `ImemOverrun` with real triangle content and no FULL_SYNC;
+s66 correctly identified what L_0000 would do on hardware. The inference that *this* ImemOverrun
+site is the one tasks actually take is wrong: with both L_0000 outcomes rewritten to self-restart
+and the code actually present in the binary, the restart counter never ticks and freeze-phase tasks
+still exit ImemOverrun — so they are hitting a different site. Prime suspect: **L_1650** (clip
+overlay `j L_1650` → fixup-1 hard exit), deprioritized in s66 as "expected resident helper" but now
+the only load-bearing unresolved branch left in the freeze path.
+
+### Why s64/s66 were believable
+The source-level perspective-divide block literally returns ImemOverrun on both bgez outcomes; the
+freeze starts exactly when triangle-heavy mission tasks appear; and static disassembly of L_0000 is
+clean and multi-source. The missing check was a same-run positive control that the *instrumented*
+path was entered (counter/log), not merely that ImemOverrun existed in the source near the right
+phase.
+
+### Side finding
+Default ucode `-O2` (CMakeLists `ROGUESQ_UCODE_NO_OPT=OFF`) DCE's this entire end-of-IMEM region.
+Any future probe of this block must either use `ROGUESQ_UCODE_NO_OPT=ON` or force the path live
+with something stronger than volatile/asm barriers (those do not survive unreachability DCE).
+
+### Build state left
+`ROGUESQ_UCODE_NO_OPT=OFF` restored (production `-O2`). Fixup 1a remains in tree — still the right
+model if that path is ever taken under a non-DCE build; it is not the freeze fix.
+
+Files: `tools/fixup_factor5_ucode.py`, regenerated `build/factor5_ucode/factor5_ucode_recompiled.c` (gitignored),
+`scratch/s67_self_restart/run{1,2_O0}/`.

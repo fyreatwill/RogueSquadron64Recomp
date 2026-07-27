@@ -1,13 +1,22 @@
 """Post-process RSPRecomp output for the Factor 5 graphics ucode.
 
-Three fixups, all idempotent. Pass either the main ucode file or the boot
-file — fixups self-gate by detecting which file is being processed.
+Fixups are idempotent. Pass either the main ucode file or the boot file —
+fixups self-gate by detecting which file is being processed.
 
 1. Replace `goto L_XXXX;` referring to undefined labels with a clean exit.
    RSPRecomp emits these for relative branches whose targets fall outside
-   the recompiled function's PC range. Factor 5's main ucode has one such
-   case: a `bgez $2, +0xC` near end-of-IMEM in a perspective-divide block
-   whose target wraps past 0x04002000.
+   the recompiled function's PC range.
+
+1a. Carve-out for `goto L_0000;` in the main ucode (s66/s67). That branch is
+    a `bgez $2, +0xC` near end-of-IMEM in a perspective-divide block. Its
+    target wraps RSP's 12-bit IMEM PC into the boot-resident ucode-self-reload
+    trampoline (DMA the same ucode back into IMEM, `jr` to entry 0x1080).
+    Modelling it as `return ImemOverrun` (the generic fixup-1 rule, written
+    s1/s2 under "never taken in practice") is what freezes mission geometry
+    from task ~#3141 on (s64). Instead: `goto RS64_UCODE_ENTRY` — skip the
+    redundant DMA (content is already resident and identical) and re-enter
+    this function's first real instruction. The L_1650 clip-splice site stays
+    under the generic hard-exit rule (different target, already explained).
 
 1b. Silence the boot ucode's expected `jr $7=0x1080` printf (boot file only).
     factor5_boot ends by DMA'ing the main ucode to IMEM[0x1080] then doing
@@ -26,6 +35,8 @@ file — fixups self-gate by detecting which file is being processed.
    unknown jump-target and returns UnhandledJumpTarget. The 16384-iter
    cap is high enough to handle any real DL chunk we've observed (cinematic
    tasks ~6/sec process << 16k commands each) and bounds the runaway case.
+   The self-restart label (fixup 1a) sits AFTER `rs64_iter = 0` so a restart
+   does not reset the counter — a restart loop still hits the cap.
 
 Usage: python fixup_factor5_ucode.py <recompiled_c_file>
 """
@@ -41,6 +52,118 @@ path = Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
 original = text
 
+is_main_ucode = "factor5_ucode(" in text and "factor5_boot(" not in text
+
+# ---------------------------------------------------------------------------
+# Fixup 1a: L_0000 → self-restart (main ucode only). Must run before the
+# generic undefined-goto pass so L_0000 is not hard-exited.
+# ---------------------------------------------------------------------------
+# s66: real hardware wraps the branch target into the boot-resident self-reload
+# trampoline and re-enters this ucode at 0x1080. Cheap model: goto the entry
+# label. rs64_dpc_defer_begin/end in main.cpp bracket the whole factor5_ucode()
+# call and correctly do NOT re-fire (real hardware's jr also never returns to
+# a caller). Iteration cap (fixup 2) keeps counting across the goto.
+SELF_RESTART_MARKER = "/* fixup: L_0000 self-restart */"
+ENTRY_LABEL = "RS64_UCODE_ENTRY"
+self_restart_applied = False
+if is_main_ucode and SELF_RESTART_MARKER not in text:
+    # Fresh RSPRecomp output still has `goto L_0000;`.
+    # Use [ \t]* not \s* so the indent group cannot swallow a preceding
+    # newline (which would double-space every emitted line).
+    fresh = re.compile(r"([ \t]*)goto\s+L_0000;")
+    # Already-fixed form from a prior fixup-1 run. Allow an optional blank
+    # line between the comment and the return (observed in the live tree).
+    prior = re.compile(
+        r"([ \t]*)// goto L_0000 — out-of-IMEM target, never taken in practice;\n"
+        r"[ \t]*\n?"
+        r"[ \t]*return RspExitReason::ImemOverrun;"
+    )
+    # Use a callable replacement so backslashes in the fprintf format string
+    # are not re-interpreted by re.sub (`\n` in a string replacement becomes a
+    # real newline; see the broken first cut of this fixup).
+    #
+    # The restart body is deliberately optimiszation-hostile: a file-scope
+    # volatile counter + unconditional fprintf + a compiler barrier. s67 found
+    # that under the ucode's forced -O2, a plain `static int` + rate-limited
+    # fprintf + `goto RS64_UCODE_ENTRY` was entirely DCE'd (string absent from
+    # the binary, freeze unrepaired) while the same code survived -O0. The
+    # barrier keeps the path live so the runtime experiment is meaningful.
+    def restart_repl(m: re.Match) -> str:
+        ind = m.group(1)
+        return (
+            f"{ind}{SELF_RESTART_MARKER}\n"
+            f"{ind}++rs64_restart_count;\n"
+            f'{ind}if (rs64_restart_count <= 20 || (rs64_restart_count % 200) == 0) {{\n'
+            f'{ind}    fprintf(stderr, "[ucode-restart] #%d\\n", (int)rs64_restart_count);\n'
+            f"{ind}    fflush(stderr);\n"
+            f"{ind}}}\n"
+            f'{ind}asm volatile("" ::: "memory");\n'
+            f"{ind}goto {ENTRY_LABEL};"
+        )
+    text, n_fresh = fresh.subn(restart_repl, text, count=1)
+    text, n_prior = prior.subn(restart_repl, text, count=1)
+    if n_fresh + n_prior != 1:
+        print(
+            f"fixup_factor5_ucode: FIXUP 1a ANCHOR FAILED (L_0000): "
+            f"expected 1 L_0000 site, found fresh={n_fresh} prior={n_prior}.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    self_restart_applied = True
+
+    # Same IMEM-wrap self-restart for the fallthrough after the not-taken
+    # bgez path: two more VMUL ops, then PC walks off end of IMEM and wraps
+    # into boot on hardware. RSPRecomp emits a bare ImemOverrun return there
+    # (not a goto, so fixup 1 never sees it). Without this, only the taken
+    # path is fixed and the freeze can survive on the not-taken population.
+    fallthrough = re.compile(
+        r"(    // bgez        \$2, L_0000\n"
+        r"    if \(RSP_SIGNED\(r2\) >= 0\) \{\n"
+        r".*?"
+        r"    goto " + re.escape(ENTRY_LABEL) + r";\n"
+        r"    \}\n"
+        r"    // vmadh       \$v7, \$v7, \$v30\[2\]\n"
+        r"    rsp\.VMADH<10>\(rsp\.vpu\.r\[7\], rsp\.vpu\.r\[7\], rsp\.vpu\.r\[30\]\);\n"
+        r"    // vmudn       \$v3, \$v3, \$v30\[3\]\n"
+        r"    rsp\.VMUDN<11>\(rsp\.vpu\.r\[3\], rsp\.vpu\.r\[3\], rsp\.vpu\.r\[30\]\);\n"
+        r"    // vmadh       \$v7, \$v7, \$v30\[3\]\n"
+        r"    rsp\.VMADH<11>\(rsp\.vpu\.r\[7\], rsp\.vpu\.r\[7\], rsp\.vpu\.r\[30\]\);\n"
+        r")    return RspExitReason::ImemOverrun;",
+        flags=re.DOTALL,
+    )
+    def fall_repl(m: re.Match) -> str:
+        return (
+            m.group(1)
+            + "    /* fixup: L_0000 self-restart fallthrough */\n"
+            + "    ++rs64_restart_count;\n"
+            + "    if (rs64_restart_count <= 20 || (rs64_restart_count % 200) == 0) {\n"
+            + '        fprintf(stderr, "[ucode-restart] #%d (fallthrough)\\n", (int)rs64_restart_count);\n'
+            + "        fflush(stderr);\n"
+            + "    }\n"
+            + '    asm volatile("" ::: "memory");\n'
+            + "    goto " + ENTRY_LABEL + ";"
+        )
+    text, n_fall = fallthrough.subn(fall_repl, text, count=1)
+    if n_fall != 1:
+        print(
+            f"fixup_factor5_ucode: FIXUP 1a ANCHOR FAILED (fallthrough): "
+            f"expected 1 not-taken ImemOverrun after L_0000 bgez, found {n_fall}.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # File-scope volatile counter — lives across restarts, not DCE-able as a
+    # block-local static under -O2 (s67). Check for the declaration itself
+    # (not the name, which already appears in the goto bodies above).
+    decl = "static volatile int rs64_restart_count = 0;"
+    if decl not in text:
+        text = text.replace(
+            "RspExitReason factor5_ucode(",
+            decl + "  " + SELF_RESTART_MARKER + "\n"
+            "RspExitReason factor5_ucode(",
+            1,
+        )
+
 # ---------------------------------------------------------------------------
 # Fixup 1: undefined goto targets → clean exit
 # ---------------------------------------------------------------------------
@@ -50,9 +173,12 @@ original = text
 # "undefined" on any second run of this script and mangling live goto
 # statements (goto rs64_clip_stray / goto L_1650) into dead ImemOverrun
 # returns. This regex intentionally does not require end-of-line.
+# L_0000 is handled by fixup 1a (self-restart); never hard-exit it here.
 defined_labels = set(re.findall(r"^([A-Za-z_][A-Za-z_0-9]*):", text, flags=re.MULTILINE))
 goto_targets = set(re.findall(r"goto\s+([A-Za-z_][A-Za-z_0-9]*);", text))
 undefined = sorted(goto_targets - defined_labels)
+if is_main_ucode:
+    undefined = [lab for lab in undefined if lab not in (ENTRY_LABEL, "L_0000")]
 
 for label in undefined:
     pattern = re.compile(r"(\s*)goto\s+" + re.escape(label) + r";")
@@ -96,7 +222,6 @@ if "factor5_boot(" in text and SILENCE_MARKER not in text:
 # ---------------------------------------------------------------------------
 ITER_MARKER = "/* fixup: iter cap */"
 R18_MARKER  = "/* fixup: r18 = 0x100 (ucode-state base in DMEM) */"
-is_main_ucode = "factor5_ucode(" in text and "factor5_boot(" not in text
 if is_main_ucode and ITER_MARKER not in text:
     # Insert a counter + r18 init at function entry (right after the local
     # var decls). Pattern: locals block ends with `RSP rsp{};`. Insert after.
@@ -114,6 +239,47 @@ if is_main_ucode and ITER_MARKER not in text:
             r"\1    int rs64_iter = 0;  " + ITER_MARKER + "\n"
             r"    r18 = 0x100;  " + R18_MARKER + "\n",
             text, count=1)
+
+# ---------------------------------------------------------------------------
+# Fixup 1a (label injection): RS64_UCODE_ENTRY sits AFTER rs64_iter = 0 / r18
+# init so a self-restart does not zero the iteration cap or re-run r18 setup.
+# Injected here (after fixup 2) so the anchors exist on both fresh and
+# already-fixed input. Idempotent via SELF_RESTART_MARKER on the goto site;
+# the label itself is detected by name.
+# ---------------------------------------------------------------------------
+if is_main_ucode and self_restart_applied and (ENTRY_LABEL + ":") not in text:
+    # Prefer the post-fixup-2 form (r18 init present). Fall back to bare
+    # `RSP rsp{};` only if fixup 2 somehow didn't run (shouldn't happen on
+    # main ucode).
+    entry_label_patterns = [
+        # After r18 init (normal path once fixup 2 has run, or already present).
+        (
+            re.compile(
+                r"(    r18 = 0x100;  " + re.escape(R18_MARKER) + r"\n)"
+            ),
+            r"\1" + ENTRY_LABEL + ":  " + SELF_RESTART_MARKER + "\n",
+        ),
+        # After rs64_iter alone (r18 marker shape drifted).
+        (
+            re.compile(
+                r"(    int rs64_iter = 0;  " + re.escape(ITER_MARKER) + r"\n)"
+            ),
+            r"\1" + ENTRY_LABEL + ":  " + SELF_RESTART_MARKER + "\n",
+        ),
+    ]
+    injected = False
+    for pat, repl in entry_label_patterns:
+        text, n = pat.subn(repl, text, count=1)
+        if n == 1:
+            injected = True
+            break
+    if not injected:
+        print(
+            "fixup_factor5_ucode: FIXUP 1a ANCHOR FAILED (entry label): "
+            "could not find rs64_iter/r18 init to place RS64_UCODE_ENTRY after.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     # Insert the cap check right after the L_1090 label line.
     # Format: `L_1090:` followed by a comment then the actual instruction.
@@ -615,6 +781,8 @@ path.write_text(text, encoding="utf-8")
 notes = []
 if undefined:
     notes.append(f"replaced {len(undefined)} undefined goto target(s): {', '.join(undefined)}")
+if SELF_RESTART_MARKER in text and SELF_RESTART_MARKER not in original:
+    notes.append("L_0000 → RS64_UCODE_ENTRY self-restart (s67)")
 if ITER_MARKER in text and ITER_MARKER not in original:
     notes.append("injected iter cap at L_1090")
 if SILENCE_MARKER in text and SILENCE_MARKER not in original:

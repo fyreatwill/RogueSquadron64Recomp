@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 62)
+## Current truth (as of session 67)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -176,34 +176,22 @@ Stability 0 except 3 gracefully-stubbed `[missing-func]` addresses in the undriv
 never soaked before — parked as M4 (identified s53, fixed s54, runtime check outstanding — see
 step 2 below). Full detail: PORTING-STATE s49.
 
-**M3 — first gameplay: OPENED (s50), root cause of the render-once-then-freeze bug found (s64).**
-AVAILABLE CRAFT (craft-select) confirmed reachable; the `a` press loads and renders **one frame of
-the mission itself** (X-wing near a capital ship, "AMBUSH AT MOS EISLEY", texture corruption on the
-hull) and then the RDP `fs` (FULL_SYNC) counter freezes for good — reproduced 5/5 (s61 ×2, s62 ×1,
-s64 ×1 via run5, s65 ×1). **s64 root-caused it**: `ROGUESQ_LOG_RUNNER_ALL` (unsampled per-task RDP
-histogram, replacing a sampled version whose 1-in-32 throttle had silently misattributed counts)
-shows every task exits clean with `syncs=1` until task #3141, where 100% of the remaining ~2755
-tasks (real, growing triangle content — this is actual mission geometry, not a stub) exit
-`RspExitReason::ImemOverrun` with `syncs=0`. Traced to `factor5_ucode_recompiled.c:2666`: a
-`bgez $2, L_0000` branch inside a VRCPH/VRCPL perspective-divide (1/w) sequence, whose target
-RSPRecomp couldn't statically resolve (IMEM wraparound math) and which `tools/fixup_factor5_ucode.py`
-fixup 1b (s1/s2) stubbed to a synthetic `ImemOverrun` halt on the documented assumption that real
-content would never take it — mission triangle vertices are the first content in this project to
-falsify that assumption. This overturns s62/s63's "CPU-side, RSP task submission stays healthy"
-framing — see Overturned conclusions. Not load-gated (reconfirmed s61/s62/s65).
-**s66 found the real target by static ROM disassembly (three independent sources agree bit-for-bit
-on the instruction):** the branch, taken on real hardware, wraps RSP's 12-bit IMEM PC and lands on
-the boot-resident code's ucode-self-reload trampoline (`factor5_boot_rsp.toml` virtual `0x1004`) —
-every DMA operand in that landed-on sequence (length, dest, source-table address) matches this exact
-ucode's own load parameters (`text_size`, `text_address`, and `main.cpp`'s already-tracked "OSTask.ucode
-slot" at DMEM `0xFD0`). This is a real self-restart-the-ucode routine, not dead/unreachable code and
-not a jump into unrelated logic — it directly explains why treating it as a hard exit (current fixup 1)
-could produce the s64 freeze: the RSP-side restart never happens in emulation, so whatever state the
-restart resets never resets. Not yet tested at runtime. Full detail PORTING-STATE s66.
-*Next sub-unit:* implement the self-restart as a `goto` back to `factor5_ucode`'s own entry label in
-`tools/fixup_factor5_ucode.py` (this one branch site only), regenerate, and re-run the death-repro
-script phase-gated to the mission `a`-press to see if `fs` (FULL_SYNC count) keeps climbing past the
-current freeze point. Full detail PORTING-STATE s66, next-steps entry below.
+**M3 — first gameplay: OPENED (s50), freeze is ImemOverrun on post-mission-load tasks (s64), L_0000
+self-restart implemented and **refuted** as the site tasks actually hit (s67).**
+AVAILABLE CRAFT confirmed reachable; the `a` press loads and renders one frame of the mission
+(X-wing near a capital ship, "AMBUSH AT MOS EISLEY") then `fs` freezes — reproduced 6/6 including
+s67. Unsampled runner histogram (s64, reconfirmed s67 O0): clean `exit=1 syncs=1` until a hard
+boundary (s64: #3141; s67 O0: #3215), then 100% of remaining tasks are `exit=2` (ImemOverrun)
+`syncs=0` with real triangle content. Not load-gated.
+**s67:** `tools/fixup_factor5_ucode.py` fixup 1a rewrites **both** L_0000 outcomes (taken bgez and
+not-taken fallthrough) to `goto RS64_UCODE_ENTRY` with a `[ucode-restart]` counter. Under
+`ROGUESQ_UCODE_NO_OPT=ON` (only build where that code survives — default `-O2` DCE's the whole
+end-of-IMEM block) the counter fired **0** times across a full death-repro while freeze-phase tasks
+still exited ImemOverrun from #3216 on. So L_0000 is not the path freeze tasks take. s66's static
+read of what L_0000 *would* do on hardware still stands; it is simply not the freeze site.
+Remaining source-level ImemOverrun returns: the clip-splice `j L_1650` site and a bare epilogue
+after it. **Next:** determine the real target of `j L_1650` / whether freeze tasks hit it, and
+model that path. Full detail PORTING-STATE s67.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -232,32 +220,19 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s58)
+## Next steps, in order of expected value (s67)
 
-1. **M3 — implement and test the ucode self-restart fix for the unresolved RSP branch that eats
-   every post-freeze task's SYNC_FULL (root cause found s64, real branch target found s66).**
-   `factor5_ucode_recompiled.c:2666`: `bgez $2, L_0000` inside a VRCPH/VRCPL perspective-divide
-   sequence. s66's static disassembly (three independent sources agreeing bit-for-bit — raw ROM bytes,
-   RSPRecomp's own comment, and the fixup script's docstring) found the real target: RSP's 12-bit IMEM
-   PC wraps and lands on the boot-resident ucode-self-reload trampoline (`factor5_boot_rsp.toml`
-   virtual `0x1004`), whose DMA operands (length/dest/source-table) all match this exact ucode's own
-   load parameters — a real self-restart, not dead code. Current fixup 1 (`tools/fixup_factor5_ucode.py`,
-   s1/s2) instead stubs it to a hard `ImemOverrun` exit, plausibly explaining the freeze (the real
-   restart never happens, so whatever state it resets never resets). **Next step:** implement the
-   self-restart as a `goto` back to `factor5_ucode`'s own entry label for this one branch site only,
-   regenerate (`RSPRecomp` → `fixup_factor5_ucode.py` → full cmake build), then re-run the s61
-   death-repro script phase-gated to the mission `a`-press and check whether `fs` keeps climbing past
-   the current freeze point. Watch for side effects the `goto` might skip (`rs64_dpc_defer_begin/end`
-   bracketing per `factor5_ucode` call in `main.cpp`, the fixup-2 iteration cap at `L_1090`) — full
-   risk list PORTING-STATE s66. A second, less-likely unresolved-branch site exists at
-   `factor5_ucode_recompiled.c:3009-3028` (`j L_1650`, inside the M1 clip-splice block) but its target
-   is a declared "expected resident" helper reachable via a different, already-working path — a poor
-   match for a mission-only defect, deprioritize unless the primary site doesn't pan out. Full detail:
-   PORTING-STATE s50–s66. **Process note (s65):** if `docs/CURRENT-TRUTH.md`/`scratch/agent/NEXT.md`
-   are ever left stale after a PORTING-STATE.md session entry (e.g. the entry rides inside a commit
-   titled for unrelated work), the next session will silently redo already-superseded work — grep
-   PORTING-STATE.md's last `## Session N` header as a cheap staleness check before trusting this
-   file's front matter.
+1. **M3 — identify and fix the ImemOverrun site freeze tasks actually take (L_0000 refuted s67;
+   L_1650 is the prime remaining candidate).** s67 left only two `return ImemOverrun` sites in
+   `factor5_ucode_recompiled.c`: the clip-splice `j L_1650` at `CLIP_1FBC` (fixup-1 hard exit) and a
+   bare epilogue return after it. Next work unit: (a) instrument both remaining sites with distinct
+   log tags that survive `-O2` (external noinline host stub in `dpc_bridge.cpp`, not a ucode-local
+   static — s67 showed even `volatile`+`asm memory` die when O2 proves a block unreachable),
+   (b) one death-repro under default `-O2` with `ROGUESQ_LOG_RUNNER=1` + `LOG_RUNNER_ALL=1`,
+   (c) read which tag fires at the permanent exit=2 boundary (~task #3200). If L_1650: static-resolve
+   its real target the way s66 did for L_0000 (ROM bytes + IMEM wrap) and implement the matching
+   model in fixup. Full detail: PORTING-STATE s67. **Do not re-litigate L_0000** unless a new
+   measurement shows `[ucode-restart]` firing under `ROGUESQ_UCODE_NO_OPT=ON`.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
@@ -458,6 +433,15 @@ any s2–s4 conclusion without checking that section.
   an RSP ucode branch RSPRecomp couldn't resolve. **Why believable:** the throttled log had correctly
   shown `Broke` on every task it ever sampled, so "the RSP side is healthy" looked like a repeatedly-
   confirmed fact rather than a fact about only the 96.9% of tasks the sample could ever land on.
+- **Claim (s64/s66):** the freeze-phase ImemOverrun is the end-of-IMEM `bgez $2, L_0000`
+  perspective-divide branch (fixup-1 hard exit); implementing a self-restart for it should un-freeze
+  mission tasks. **Overturned by s67:** with both L_0000 outcomes rewritten to self-restart and the
+  instrument live under `ROGUESQ_UCODE_NO_OPT=ON`, `[ucode-restart]` fired **0** times while tasks
+  from #3216 on still exited ImemOverrun with `syncs=0`. Default `-O2` also DCE's the whole block
+  (so an O2-only "null" would have been invalid). L_0000's static self-restart reading (s66) still
+  stands as hardware truth; it is not the path freeze tasks take. **Why believable:** the source
+  block literally returns ImemOverrun on both bgez outcomes, freeze onset coincides with
+  triangle-heavy tasks, and the static disassembly of L_0000 is multi-source clean.
 - **Claim (s23):** the hangar's remaining dimness is real vertex lighting, not shade-decode, because
   its shade census is healthy. **Overturned by s25:** that census was the magnitude-only classifier
   s24 proved cannot distinguish −118 from +118 (PROJECT-OVERVIEW §4.2), so "ok" was really the
