@@ -102,6 +102,20 @@ Remaining visual defects:
   a **CPU-side stall** (game logic never submits the next real mission-content DL) rather than an
   RSP ucode infinite loop or missing FULL_SYNC opcode — redirect investigation to whatever CPU code
   should be submitting fresh mission geometry per frame. Full detail: PORTING-STATE s61, s62.
+  **s63 (log re-analysis only, no new run) sharpens this**: s62's "RSP submission keeps running
+  healthily through the freeze" undersold what's in its own logs. Task-submission rate (`[lle task]`)
+  collapses ~100x at the exact `fs` plateau line in all 3 existing captures, and in the two captures
+  long enough to show it (run1, run2), submission then **stops completely** after exactly 5–6 more
+  calls. Those final calls' `dl` pointers are **bit-for-bit identical across run1 and run2, in the
+  same order** (`0x807513E0, 0x8074ADC8, 0x807550B8, 0x8072C918, 0x80754458`) — independent
+  processes, independent wall-clock timing, identical terminal content sequence. This rules out a
+  race/timing-sensitive hang and points to a deterministic fixed sequence the CPU walks through once
+  before going silent. Two false leads were caught and killed with a second data source before being
+  recorded: an ImemOverrun exit-code streak in run3 that looked causal but is absent in run1/run2
+  (run-specific artifact, not the mechanism), and a long stretch of reused fixed `dl` addresses in all
+  3 runs that looked like stale-content resubmission but has `fs` climbing normally through it (this
+  phase reuses a fixed staging buffer by design — not evidence of a stall). Full detail: PORTING-STATE
+  s63.
   ~~**s51 also found a generalizable environment confound**: driven runs stall in phase-advance
   under concurrent system load~~ — **OVERTURNED, s60. There is no load confound.** The three repro
   scripts set no `ROGUESQ_*` variables at all, so from a clean shell the binary took the **HLE**
@@ -212,15 +226,18 @@ cost three sessions before the recursive mutex.
    cap-hit is at log line 16557 of 81236, nothing after it through the entire frozen tail. RSP task
    submission (`[lle task]`), command processing (`[dpc-pak]`), and presentation
    (`[present-1024]`/`[last-drawn]`) all keep running normally and healthily right through the
-   freeze — the RSP side is not stuck. Next sub-unit: this is a CPU-side stall, not an RSP one —
-   find what game code (likely in the mission-overlay or main-overlay symbol set) is responsible for
-   submitting each frame's mission-content display list and instrument/inspect why it only runs
-   once. Candidates to check first: whatever calls `rs64_run_lle_gfx` per frame (grep
-   `src/main/main.cpp` for its call site and what gates it), and any mission-phase state machine
-   that might be waiting on a flag/semaphore that never gets set (this project's history — M1, the
-   audio gate byte — has two prior examples of exactly this failure shape). Re-run
-   `scratch/s61_death_repro_capture.sh run4` after any change; positive control first (iron rule 1).
-   Full detail: PORTING-STATE s50–s62.
+   freeze — the RSP side is not stuck. **s63 (re-analysis of the existing run1/run2/run3 logs, no new
+   run) sharpened this further**: task-submission rate collapses ~100x at the exact `fs` plateau point
+   and then, in the two long-enough captures (run1, run2), stops completely after exactly 5–6 more
+   calls whose `dl` pointers are bit-for-bit identical across both independent runs
+   (`0x807513E0, 0x8074ADC8, 0x807550B8, 0x8072C918, 0x80754458`) — a deterministic terminal sequence,
+   not a race. Next sub-unit (concrete, no new instrumentation needed): re-run
+   `scratch/s61_death_repro_capture.sh run4` with `ROGUESQ_LOG_SEQ=1` added (already-existing DL-dump
+   flag, `main.cpp:517`, never combined with a death-repro run before) and check whether the DLs at
+   those 5 addresses contain an RDP SYNC_FULL opcode (0x29) at all, or are categorically different from
+   healthy pre-freeze task content (e.g. an idle/retry/error-path DL). That answers whether the CPU
+   is still asking for real frames it just can't complete, or has switched to a different, non-mission
+   code path. Positive control first (iron rule 1). Full detail: PORTING-STATE s50–s63.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen

@@ -5015,3 +5015,95 @@ ruled out before writing this up) without ever being handed new mission geometry
 Files: `tools/fixup_factor5_ucode.py` (fixup 2b added; fixup 1's label regex fixed).
 `build/factor5_ucode/factor5_ucode_recompiled.c` regenerated via the fixed script (gitignored, not
 committed). `scratch/s61_death_repro/run3/` (log + 28 screenshots).
+
+## Session 63 (2026-07-26) — re-analysing the 3 existing death-repro logs: submission rate collapses at the freeze and the post-freeze tail is bit-for-bit deterministic across runs
+
+### What ran
+No new build, no new game run — per CLAUDE.md "capture once, analyze many," this iteration mined the
+three captures already on disk (`scratch/s61_death_repro/run1/run.log`, `run2/run.log`, s62's
+`run3/run.log`) for a signal s62 didn't look at: the throttled `[lle send_dl #N] ... exit=%d ... dl=0x%08X`
+line (`src/main/rt64_render_context.cpp:309`, prints for task 1–8 then every 32nd) and the unthrottled
+`[lle task] ... data=0x%08X` line (`src/main/main.cpp:509`, prints every task) were never cross-referenced
+against the `fs` (FULL_SYNC) plateau line number before. Doing that for all three logs found a much
+tighter, two-source-confirmed characterization of the freeze than s62's "RSP looks healthy throughout."
+
+### What the re-analysis found
+**`RspExitReason` values, for context** (`lib/N64ModernRuntime/librecomp/include/librecomp/rsp.hpp:13`):
+0=Invalid, 1=Broke (clean SP_BREAK exit), 2=ImemOverrun, 3=UnhandledJumpTarget, 4=Unsupported,
+5=SwapOverlay, 6=UnhandledResumeTarget. `rs64_dpc_defer_end(r != UnhandledJumpTarget)` (main.cpp:435)
+commits a task's RDP output for *any* exit reason except UnhandledJumpTarget — so ImemOverrun output
+still reaches RT64.
+
+**False lead, caught before it went into this document:** run3 shows every sampled task from #3200
+onward exiting `ImemOverrun` instead of `Broke`, right around where `fs` stops climbing — looked at
+first like a smoking gun (RSP running off the end of IMEM). **Refuted by run1 and run2**: both show
+`exit=1` (clean `Broke`) on *every* sampled task for the entire run, right through their own `fs`
+plateaus (3355, 3341) — so ImemOverrun is a run-specific quirk (likely stale-memory-state dependent),
+not the freeze mechanism. Two-source check killed a one-source hypothesis before it was written down
+as fact — exactly what iron rule 4 is for.
+
+**Also a false lead:** in all three runs, the submitted `dl` pointer goes through a stretch of hundreds
+of consecutive tasks reusing one or two fixed addresses (run1: `0x807366E0` then `0x80735450` for
+~1000 tasks; run2: `0x80756768` then `0x807327F8`; run3: `0x807366E0` then `0x807327F8` — note
+`0x807366E0` and `0x807327F8` recur *across* runs, i.e. these are fixed staging-buffer addresses, not
+per-frame allocations). Initially read as "CPU stuck resubmitting stale content." **Refuted by checking
+`fs` at the same log lines**: `fs` keeps climbing in lockstep with task count all the way through this
+stretch (run1: fs 2264→3355 while the address repeats) — a fixed staging address is apparently just how
+this phase stages its DL each frame (rewritten in place, not double-buffered), and is not itself
+evidence of a stall. Recorded here so a future session doesn't re-chase it.
+
+**The real, corroborated finding.** Comparing `[lle task]` line-density before and after each run's `fs`
+plateau:
+- **run1** (386,745 log lines total, 4317 `[lle task]` calls, final `fs=3355`): before the plateau,
+  consecutive `[lle task]` lines run ~90–150 log lines apart (steady per-frame cadence). After the exact
+  line where `fs` stops climbing, only **5 more `[lle task]` calls occur, each ~3000–3400 lines apart**
+  (line 370266, 373685, 377131, 380145, 383367), then submission stops completely — the remaining 3378
+  lines to end-of-capture (386745) are pure `[vi]`/`[threadPresent]`/`[pe gate]` present-loop spin, 0
+  more tasks.
+- **run2** (389,859 lines, 4304 `[lle task]` calls, final `fs=3341`): identical shape — 6 trailing calls
+  at lines 369959, 373379, 376799, 380247, 383259, 386483, each ~3000–3400 lines apart, then a hard stop
+  at line 386483 with 3376 more spin-only lines to end-of-capture (389859).
+- **The trailing `dl` addresses are bit-for-bit identical across the two runs, in the same order**:
+  run1's last 5 are `0x807513E0, 0x8074ADC8, 0x807550B8, 0x8072C918, 0x80754458`; run2's last 5
+  (its 6th-from-last, `0x8072A3F8`, falls just outside run1's tail-5 window) are the exact same
+  `0x807513E0, 0x8074ADC8, 0x807550B8, 0x8072C918, 0x80754458`. Two independent runs — different real
+  wall-clock timing, independent process instances — hitting the identical final task-content sequence
+  before going silent is strong evidence the post-freeze behavior is a **deterministic fixed sequence**,
+  not a race or a timing-sensitive hang.
+- **run3 does not show the hard stop**: its capture is much shorter (81,236 lines / 5066 `[lle task]`
+  calls — more tasks in fewer lines than run1/run2, i.e. less non-task logging per task, not more
+  game-time) and its last 6 `[lle task]` lines are packed ~11 lines apart, still going at the moment the
+  capture window ends (line 81226 of 81236). Read as: run3's capture ended before or without reaching
+  the same "hard stop" state run1/run2 reached — not a contradiction, an earlier snapshot of the same
+  decay. Flagged, not resolved: needs a longer run3-style capture to confirm the same 5-address tail
+  and hard stop appear given more capture time.
+
+### Revises s62's framing
+s62 wrote "the RSP keeps busily completing whatever small, quick tasks the CPU keeps handing it... RSP
+task submission... keeps running normally and healthily right through the freeze." That undersold what
+was already visible in the same logs: submission rate collapses by roughly two orders of magnitude
+(from ~100 lines/task to ~3000+ lines/task) at the exact `fs` plateau line, and in the two longer
+captures, submission then stops completely after exactly 5–6 more calls whose content is identical
+across independent runs. This is not "healthy" — it's a decaying, then fully-halted, CPU-side call
+pattern, and its determinism is new information s62 didn't have (it only examined run3, which never
+reached the hard-stop phase).
+
+### Ruled out this session
+- RSP ucode looping / ImemOverrun as the freeze mechanism (run3-only artifact, absent in run1/run2).
+- Fixed/reused `dl` staging addresses as evidence of stale content (fs keeps incrementing through the
+  reuse stretch in all 3 runs — this address pattern is normal for this phase).
+
+### Next step (no new instrumentation needed)
+`ROGUESQ_LOG_SEQ=1` (`main.cpp:517`) already dumps every task's DL head + first 3 sub-DL chunks
+unconditionally — it was never combined with a death-repro run. Re-run
+`scratch/s61_death_repro_capture.sh run4` with `ROGUESQ_LOG_SEQ=1` added to the exported env, then check
+the dumped bytes for the 5 known deterministic trailing addresses (`0x807513E0`, `0x8074ADC8`,
+`0x807550B8`, `0x8072C918`, `0x80754458`) against the RDP opcode legend already in this file (0x08–0x0F
+triangle, 0x24/0x25 texrect, 0x29 SYNC_FULL, 0x36 fillrect, 0x3E/0x3F depth/colour image) — do these
+trailing DLs even contain a SYNC_FULL opcode, or is their content categorically different from the
+healthy pre-freeze tasks (e.g. an idle/retry/error-path DL)? That is the discriminating question this
+session didn't answer and next session should.
+
+Files: none changed (log-only analysis). Scratch working files (`exits_scratch.txt` in each run
+directory) were deleted after use — not durable artifacts, the line numbers above are sufficient to
+reproduce the analysis from the existing logs.
