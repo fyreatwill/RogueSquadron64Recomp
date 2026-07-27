@@ -9139,3 +9139,144 @@ untracked in N64Recomp's own git by design — durable record lives here).
 `N64Recomp/RecompiledFuncs/funcs_3.c` (regenerated, all 3 patches applied
 x1).
 `scratch/s73_post_a_scene/s109_dlentry_guard/run.log`.
+
+## Session 110 — 2026-07-27
+
+Picked up NEXT.md's prescribed work unit: source-read and guard the 17th
+hangar-tick crash class, `updateHangarBayScene` (`static_5_800AB658`,
+`N64Recomp/RecompiledFuncs/funcs_40.c:7117-13921`). Confirmed the real name
+via `symbol_files/main_overlay.txt` before touching anything: "hangar bay
+camera/scene update (gated hangarCameraState 0x800CC3E4==2, indexes
+per-bay tables by gHangarCurrentBay 0x800CD6E8); reached via LOOKUP_FUNC
+from func_800AAB70/func_800AAF90; calls playSongIfMusyXActive once."
+
+**Source read (the whole ~6800-line function, by far the largest guarded
+in this family so far) found a materially different shape from every prior
+guard in this family**: there is no single bad pointer. The function
+repeats the exact same "byte-index → scale into a fixed table → load a
+pointer out of the entry (+0xC) → dereference that pointer directly
+(+0x0/+0x4/+0x8, a vec3) with no null/range check" pattern **five separate
+times**, each driven by a different one of four adjacent per-bay/waypoint
+index bytes at `0x800D0000`-relative offsets `-0x2918`
+(`gHangarCurrentBay` itself), `-0x291A`, `-0x291B`, `-0x291C` — read fresh
+via `lbu` at each individual use site rather than cached once in a
+register. Three more `entry+0xC/+0x10/+0x14` reads elsewhere in the
+function copy struct fields directly out of the same kind of table entry
+without a second pointer hop (lower risk, one fewer indirection) — not
+guarded this session; flagged in NEXT.md if a future backtrace lands on
+one of those instead.
+
+**Landed all five double-indirection guard sites** (`site A`-`E`,
+addresses `0x800ABD5C`/`0x800ABDE4`/`0x800ABF70`/`0x800ABFE8`/`0x800ACD80`)
+in `N64Recomp/fixup_game_funcs.py`, sharing one env var
+(`ROGUESQ_LOG_HANGAR_BAY_SCENE_GUARD`) and one new dedicated epilogue
+label (`L_hangarbay_guard_exit`), inserted immediately before the
+function's real, previously-unlabeled restore sequence (falls out of an
+unlabeled `after_103:` at guest `0x800ADB3C`, confirmed by reading to the
+closing brace) — ABI-safe from all five sites since every register that
+sequence restores (`$ra`, `$s0`-`$s7`, `$f20`, `$f22`) is already saved to
+its prologue stack slot by `0x800AB694`, long before any of these five
+sites execute deep in the function body. Same `U32()`-truncated
+`0x80000000`-`0x80800000` RDRAM bound as every prior guard in this family.
+
+**File-scoped every one of the six substitutions to `funcs_40.c` (not just
+belt-and-suspenders)**: grepped each of the five instruction-address
+anchors plus the epilogue anchor across the whole `RecompiledFuncs/` tree
+before trusting them, and found **every single one** also appears
+verbatim in `funcs_27.c` — a different overlay's function reusing the
+same guest address range, the identical hazard s100 hit with
+`composeNpcOrientationMatrix`/`hangarInitialize`, but six collision points
+in one function this time instead of one.
+
+**Hit the known `fixup_game_funcs.py` non-idempotency bug firsthand this
+session** (flagged since s102, still not fixed): ran the script a second
+time, with no ELF regen in between, purely to print its report for
+verification. That second run re-inserted every already-landed patch a
+second time, and the build failed with `redefinition of label
+'L_dlentry_guard_exit'` in `funcs_3.c` — collateral damage from the
+*pre-existing* s109 guard's own non-idempotent anchor, unrelated to this
+session's new code. Recovered via a full ELF regen
+(`make_elf.py` → `N64Recomp` → one single `fixup_game_funcs.py` run →
+`cmake --build`) — confirmed by the fixup report showing every patch
+(mine and every prior session's) applied exactly `x1`. This is now the
+8th session in a row dodging this exact bug via the same full-regen
+workaround; the tooling note's priority should rise given how easy it is
+to trip over even when not editing the script's logic, just re-running it
+to check output. Build clean, exit 0, only pre-existing warning classes.
+
+**Soak** (`s110_hangarbay_guard`, NEXT.md's exact prescribed repro:
+`ROGUESQ_LOG_MUSYX_DMA_CALL=1 ROGUESQ_LOG_FILL_RANGE_ARGS=1
+ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_DLENTRY=1
+ROGUESQ_LOG_DLENTRY_GUARD=1 ROGUESQ_LOG_HANGAR_BAY_SCENE_GUARD=1
+ROGUESQ_LOG_THREAD_RESUME=0 PROBE_MODE=start_only HOLD_S=30`):
+`[hangar-bay-scene-guard]` fired **0/5 sites** — clean negative control
+across every site (no false-positive firing, no regression), but also no
+positive control (none of the five derefs saw a bad pointer this run, so
+the 17th class itself did not recur to test the guard). Every other
+family guard control also held clean: `[dlentry-guard]` 0/0,
+`[compose-npc-orient-guard]` 0/0, `[anim-keyframe-guard]` 0/0,
+`[project-model-bounds-guard]` 0/0; `[hangar-entry]`/`[anim-tex-stream]`/
+`[tmem-zero]` did not even fire, consistent with a genuinely clean pass
+through the family this run rather than a lucky near-miss.
+
+**The real result: for only the 2nd time ever (after s101), the process
+survived the entire hangar-tick-family gauntlet — zero of the 9th-19th
+crash classes fired — and reached the ~140s DMA window alive**
+(`[phase] vi_width=640 ... at 142.2s update_screen #8531`). It then died
+to the **same, already fully-characterized M3 blocker**: `do_rom_read`
+Abort/SIGSEGV via `piDmaWorker`, byte-identical to every prior occurrence
+(`devAddr=0x6C676672 dramAddr=0x80195190 bytes=0x600`) — a **10th
+recurrence** of this exact signature (9th was s104; none of s105-s109
+ever reached the window to test it again). `[fill-range-args]` and
+`[musyx-dma-call]` both fired, showing the same already-known
+corrupted-at-entry values (s102-s104's mechanism) — no new information
+toward finding the still-unlocated `voice+0x34` writer.
+
+**`[musyx-gate1]` (and the whole `tick-audio-channel`/
+`service-voice-pool-frame`/`init-voice-sample` chain, s105-s108's
+instruments) read 0/0 again — but this null is evidentially stronger than
+any prior one on this question.** Every previous null on this chain either
+never reached the ~140s window at all (s108) or came from a full-lifetime/
+early-death soak; this is the first time the null co-occurs with the
+process actually reaching and running through the target window for its
+full duration, ruling out "the soak just didn't run long enough" as an
+explanation. Reinforces (does not merely repeat) s106/s107's conclusion
+that this entire audio-trigger-chain investigative thread — 5 sessions
+(s105-s108, s110), all null — is very likely a dead end for finding
+`voice+0x34`'s writer: the struct-identification that motivated chasing it
+may have been coincidental (s105's own unresolved caveat), since the
+demonstrably-active code path that reads the corrupted value
+(`fillSampleStreamRange` ← `musyxRenderVoiceSamples`) does not go through
+this chain at all.
+
+**New, unexplained side observation, not chased this session**: 385
+lines of `Unhandled jump target 0x1883 in microcode factor5_ucode`
+(`build/factor5_ucode/factor5_ucode_recompiled.c:230`) — the *first* time
+this specific diagnostic has read nonzero in this project's history (every
+prior soak's `UnhandledJump:` summary line, which greps a *different*
+string family, has read 0). This is the RSP MusyX audio-microcode LLE
+path, which M5's notes describe as "recompiles but is a never-called
+artifact" — this run's evidence suggests it may actually be invoked and
+hitting jump targets its recompilation doesn't handle. Flagged for a
+future dedicated investigation; out of scope for this session's work
+unit.
+
+**Assessment**: the 17th class is guarded with a clean negative control,
+same unvalidated-but-safe status as the 11th/12th/14th/16th. More
+importantly, this is the second data point (after s101) that the guard
+program (five classes deep now) is sufficient to reliably clear passage
+to the ~140s DMA window — the two single-occurrence classes that blocked
+s108/s109 (probable-18th, 19th) did not recur this session either. The
+real, unchanged M3 blocker remains the `do_rom_read`/`fillSampleStreamRange`
+corruption chain; the tick-audio-channel investigative thread should be
+retired in favor of a more direct search for `voice+0x34`'s writer (e.g.
+enumerating every static write to that offset across the whole compiled
+tree, rather than more one-hop-at-a-time caller instrumentation).
+
+### Files
+`N64Recomp/fixup_game_funcs.py` (five new `_make_hangarbay_guard_patch`
+sites plus `_hangarbay_epilogue_label_patch`; untracked in N64Recomp's own
+git by design — durable record lives here).
+`N64Recomp/RecompiledFuncs/funcs_40.c` (regenerated, all 6 new patches
+applied x1, verified file-scoped).
+`scratch/s73_post_a_scene/s110_hangarbay_guard/run.log`.

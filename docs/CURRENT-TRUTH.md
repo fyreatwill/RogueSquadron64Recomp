@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 109)
+## Current truth (as of session 110)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -624,7 +624,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s109)
+## Next steps, in order of expected value (s110)
 
 -1. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
@@ -814,6 +814,27 @@ cost three sessions before the recursive mutex.
    `[last-drawn-skip]` wild/OOB rejections immediately preceding it in the
    log (plausibly related, not confirmed). Full detail: PORTING-STATE
    s109.
+   **s110 update:** guarded the 17th hangar-tick class (item 0b) and
+   soaked with `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` (covers `musyx-gate1`
+   plus the whole `tickAudioChannel`/`serviceVoicePoolFrame`/
+   `musyxInitVoiceFromSample` chain) still armed. The process reached the
+   ~140s DMA window alive (2nd time ever, after s101) and ran there for
+   its full duration before dying to the 10th `do_rom_read` recurrence —
+   and **every one of those chain counters still read 0/0**, this time
+   with the process actually alive through the whole window rather than
+   dying early. That rules out "didn't run long enough" for the first
+   time on this specific question, making 5 total sessions (s105-s108,
+   s110) of this chain reading null. **Retiring this investigative
+   thread** — the struct-identification that motivated chasing
+   `tickAudioChannel`'s ancestry was likely coincidental (s105's own
+   unresolved caveat), since the demonstrably-active code path that reads
+   the corrupted value (`fillSampleStreamRange` ← `musyxRenderVoiceSamples`)
+   never goes through it. **Next step: stop chasing callers one hop at a
+   time and instead grep the whole compiled tree for every static write
+   to `voice+0x34`** (base pattern `G_BASE-0x6908 + voiceIdx*0x88`, per
+   s105) to enumerate candidate writers directly — a source-read task, no
+   soak required to get the candidate list. Full detail: PORTING-STATE
+   s110.
 0a. **Tooling: `fixup_game_funcs.py` is not actually idempotent**
    (found s102 while re-running it for the item above) — every patch's
    regex anchor matches text that's left unchanged after insertion, so
@@ -828,32 +849,32 @@ cost three sessions before the recursive mutex.
    yet — cheap fix (exclude matches already followed by the `// PATCH:`
    marker, or always regen from ELF before running fixup) — worth a
    work unit before it compounds further.
-0b. **M3 — land the same guard-not-instrument treatment on the next
-   most-recurring characterized, still-unguarded class: 17th
-   (`updateHangarBayScene` itself, s100 — not yet source-read).** Four
-   guards landed and validated so far, all with the same outcome shape
-   (clean negative control, no positive control yet, `U32()`-truncated
-   bounds check, `goto` to the function's real epilogue — never a bare
-   `return;`): 16th (`activateAnimationKeyframe`, s99), 12th
-   (`composeNpcOrientationMatrix`, s100), 11th
-   (`projectModelBoundsToScreen`, s101), 14th (`reserveAndEmitDLEntry`,
-   s109). **Do not re-soak any of these four** — treat them as closed.
-   **Every guard patch must verify its own `fixup_game_funcs.py`
-   "patched xN" report names only the one expected file** (s100 caught a
-   real cross-overlay regex collision this way — overlays reuse guest
-   address ranges, so an instruction-text-only anchor is not
-   automatically unique). s101's soak (the first to survive the whole
-   hangar-tick gauntlet and reach the ~140s DMA window, see item -1) is
-   one data point suggesting guards may already be enough to reach that
-   window reliably; s109's soak reopens that question slightly — it died
-   before the window again, but to a genuinely new (19th) class outside
-   this guarded family, not a recurrence of an unguarded member, so it
-   does not weigh against the hypothesis. Two new single-occurrence
-   classes now block reliable passage (probable-18th `heapFreeListDequeue`-
-   area and 19th `MetalFramebuffer`/`createTileCopyRecord`) — neither has
-   hit its 2nd-recurrence bar for instrumenting yet, so the next-highest
-   guard candidate is still the 17th (already characterized, s100).
-   Full detail: PORTING-STATE s99-s101, s109.
+0b. **M3 — hangar-tick-family guard program: 5 classes guarded, all with
+   clean negative controls (16th/12th/11th/14th/17th).** All follow the
+   same shape (`U32()`-truncated bounds check, `goto` to the function's
+   real epilogue — never a bare `return;`): 16th
+   (`activateAnimationKeyframe`, s99), 12th (`composeNpcOrientationMatrix`,
+   s100), 11th (`projectModelBoundsToScreen`, s101), 14th
+   (`reserveAndEmitDLEntry`, s109), 17th (`updateHangarBayScene`, s110 —
+   this one needed 5 separate guard sites in one function, not one; see
+   PORTING-STATE s110). **Do not re-soak any of these five** — treat them
+   as closed. **Every guard patch must verify its own
+   `fixup_game_funcs.py` "patched xN" report names only the expected
+   file(s)** (s100 caught a real cross-overlay regex collision this way;
+   s110 found the *same* function collides with `funcs_27.c` at all 6 of
+   its own anchor points — overlays reusing guest address ranges is a
+   recurring, not one-off, hazard). **s101 and s110 are now two
+   independent data points** that this guard program is sufficient to
+   reliably reach the ~140s DMA window: both soaks survived the entire
+   family with zero crashes and reached `vi_width=640` alive. The two
+   single-occurrence classes that blocked s108/s109 (probable-18th
+   `heapFreeListDequeue`-area, 19th `MetalFramebuffer`/
+   `createTileCopyRecord`) did **not** recur in s110 either — still below
+   the 2nd-recurrence bar for instrumenting; watch passively.
+   **No further hangar-tick-family guard work is currently queued** —
+   the next M3 work unit is item -1 below (the actual DMA-corruption root
+   cause), not another class in this family, unless a new class recurs.
+   Full detail: PORTING-STATE s99-s101, s109, s110.
 1. **M3 — find the indirect caller of `submitDmaRequestBatch`: CLOSED
    (s101).** The producer/consumer ring instrument (s94) proved an
    unlocated indirect call existed (producer log fires 10x/soak once
@@ -925,8 +946,12 @@ cost three sessions before the recursive mutex.
    - 17th, fault inside `updateHangarBayScene` itself (`static_5_
      800AB658`, s100) — outer call chain matches the 10th class but the
      backtrace is one frame shallower (no `static_5_800B4048` frame),
-     confirmed a distinct class. 1 occurrence. Not source-read yet;
-     candidate for item 0 if it recurs.
+     confirmed a distinct class. 1 occurrence (never recurred since,
+     across 10 soaks s100-s110). **Guarded s110** — source read found the
+     table-lookup-then-deref shape repeats 5 independent times in this
+     one function (not once); all 5 guarded
+     (`ROGUESQ_LOG_HANGAR_BAY_SCENE_GUARD`), 0/5 clean negative control,
+     no positive control yet (crash itself hasn't recurred to test it).
    - 18th (probable), nearest symbol `heapFreeListDequeue + 12704`
      (s108) via `submitSceneNodeRender` ← `processSceneNode` ←
      `traverseSceneGraphRecursive` ← `setupCameraMatrices` — same outer

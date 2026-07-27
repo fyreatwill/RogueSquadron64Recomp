@@ -1,193 +1,170 @@
-# NEXT work unit — M3: source-read + guard the 17th hangar-tick crash class, `updateHangarBayScene` (s110)
+# NEXT work unit — M3: enumerate static writers of `voice+0x34` (s111)
 
-s109 guarded the 14th class (`reserveAndEmitDLEntry`) — landed clean,
-patched x1, built clean, one soak. The guard read 0/0 (clean negative
-control, no positive control yet — `a0` was never bad this run). The
-process still died at 73.9s, the same 73.5-73.9s window all 3 of s108's
-soaks died in, but this time to a **brand-new 19th class**, not a
-recurrence of anything already known. Read PORTING-STATE.md's Session 109
-entry before doing anything else; this file only has the actionable
-summary.
+s110 guarded the 17th hangar-tick class (`updateHangarBayScene`, 5 separate
+guard sites in one function — source-read found the family's usual single
+bad-pointer shape repeats 5 times here, not once). Landed clean (0/5
+negative control), and the soak reached the ~140s DMA window alive for
+only the 2nd time ever (after s101) — zero hangar-tick-family crashes this
+run. It then died to the 10th recurrence of the same `do_rom_read`
+corruption chain that's blocked M3 since s85. Read PORTING-STATE.md's
+Session 110 entry before doing anything else; this file only has the
+actionable summary.
 
 ## Why this is the next work unit
 
-CURRENT-TRUTH item 0b already named the 17th class (`updateHangarBayScene`
-itself, `static_5_800AB658`, s100) as the next guard candidate once the
-14th was done. It has the strongest existing characterization of any
-remaining unguarded class: a confirmed real backtrace (s100), a
-distinguishing feature already established (outer call chain matches the
-10th class but one frame shallower, no `static_5_800B4048` frame), and — no
-guard has ever needed more than one soak's worth of source-reading to
-write once the crash site itself is opened up. This is strictly cheaper
-than chasing either of the two brand-new single-occurrence classes below,
-which don't meet the project's 2nd-recurrence bar for instrumenting yet.
+The hangar-tick-family guard program (5 classes deep: 16th/12th/11th/14th/
+17th) now has **two independent soaks** (s101, s110) reaching the DMA
+window with zero family crashes — reaching the window is no longer the
+bottleneck it was for s102-s109. The actual, unchanged M3 blocker is the
+`do_rom_read`/`fillSampleStreamRange` corruption chain (10 occurrences
+since s85, always byte-identical: `devAddr=0x6C676672
+dramAddr=0x80195190 bytes=0x600`, confirmed deterministic not a race).
+s110 also **retired the tick-audio-channel investigative thread**
+(5 sessions — s105, s106, s107, s108, s110 — all null on
+`tickAudioChannel`/`serviceVoicePoolFrame`/`musyxInitVoiceFromSample`/
+`musyx-gate1`, and s110's null is the first to co-occur with the process
+actually alive through the whole target window, ruling out "didn't run
+long enough"). Continuing to chase callers one hop at a time down that
+chain is no longer a good bet — pivot to a direct, no-soak-required
+source search.
 
 ## What's confirmed (do not re-derive)
 
-- Two new single-occurrence crash classes now block reliable passage to
-  the ~140s DMA window, alongside the pre-existing family:
-  - **Probable 18th** (s108): SIGBUS, nearest symbol
-    `heapFreeListDequeue + 12704` (`N64Recomp/RecompiledFuncs/funcs_3.c:15176`,
-    same file as `reserveAndEmitDLEntry`, immediately after
-    `reserveAlignedDLSpace`), same outer chain as the 14th class but no
-    `reserveAndEmitDLEntry` frame in the trace.
-  - **19th** (s109): RT64-internal SIGSEGV in `plume::MetalFramebuffer`'s
-    constructor via `RT64::FramebufferManager::createTileCopyRecord` →
-    `RT64::RenderTarget::setupColorFramebuffer`/`clearColorTarget` →
-    `plume::MetalDevice::createFramebuffer` — a render-thread frame, not
-    the guest hangar-tick chain the rest of the family shares. Preceded in
-    the log by several `[last-drawn-skip]` wild/OOB rejections
-    (`addr=0x000BCA20 w=689`, `addr=0x00000000 w=97/193`) — plausibly
-    related, not confirmed.
-  **Neither has recurred once — do not instrument either yet.** Just watch
-  for a 2nd hit of either in any future soak (both are single-occurrence
-  per the project's own convention for when instrumenting is worth a
-  build-run cycle).
-- The 17th class itself (`static_5_800AB658`/`updateHangarBayScene`, s100):
-  fault resolves directly inside the function's own body (confirmed
-  distinct from the 10th class, whose innermost frame `static_5_800B4048`
-  is absent from this backtrace). **Not yet source-read** — that is this
-  session's first step, same as every prior guard (s99-s101, s109) did
-  before writing anything.
-- The reference guard shape (all four landed so far — 16th, 12th, 11th,
-  14th — follow this exactly):
-  1. Sanity-check the suspect pointer register with `U32(ctx->rN)` truncated
-     first (a `gpr`/uint64_t sign-extends on assignment; comparing without
-     truncating made an early guard fire 100% of the time, s99's own
-     lesson — see `_activate_anim_keyframe_guard_patch` in
-     `N64Recomp/fixup_game_funcs.py` for the exact bug and fix).
-  2. Bounds: `< 0x80000000u || >= 0x80800000u` (RDRAM is 8MB, guest-mapped
-     0x80000000-0x80800000).
-  3. On failure: log (capped or gated by an enabled-flag pattern, following
-     whichever family member is most similar), then `goto` a **real**
-     epilogue label — never a bare `return;` (skips register restore,
-     breaks MIPS ABI for the caller). If no existing label is reachable
-     ABI-safely from the guard's insertion point (s109's situation — see
-     below), insert a **new dedicated label** immediately before the real
-     restore sequence via `re.subn`, anchored on that unique restore-
-     sequence text, rather than reusing a label whose block does unrelated
-     cleanup work (s109's own comment in `fixup_game_funcs.py` explains why
-     `L_8000CE58` was unsafe to reuse for the 14th class's guard).
-  4. File-scope the regex (`if p.name == "funcs_N.c"`) even when the anchor
-     text looks unique — s100 found a real cross-overlay collision this
-     way (`composeNpcOrientationMatrix`'s anchor also matched inside
-     `hangarInitialize`, a different function in a different overlay
-     sharing the same guest address range).
-- **Placement subtlety from s109, applies here too**: don't assume the
-  earliest point after the suspect register is assigned is safe to guard
-  from. Check whether the function's own prologue has saved every register
-  the target epilogue restores (`$ra` and any `$sN`) to their stack slots
-  *before* the point you insert the guard — if not, jumping to a
-  restore-from-stack epilogue early will load uninitialized stack bytes
-  into those registers. Trace the actual save order in the disassembly
-  comments (`sw $ra, ...($sp)` etc.) before picking the insertion point,
-  the way s109 had to move its guard past the function's own existing
-  bounds-check branch to land after the real `$ra` save.
+- The corrupted field is `voice+0x34` (a per-voice-slot struct, base
+  pattern `G_BASE-0x6908 + voiceIdx*0x88`, established s105 via three
+  independent offset checks against `musyxRenderVoiceSamples`).
+  `fillSampleStreamRange` computes `entry.devAddr` as a sum of two other
+  fields sourced from a *different* linked list than
+  `acquireSampleStreamBlock` manages (s103); its own arguments are
+  **already corrupted at function entry** (s104, `ROGUESQ_LOG_FILL_RANGE_
+  ARGS=1`, byte-for-byte match to the batch's known corrupted `devAddr`).
+- **Cleared as writers** (do not re-instrument): `acquireSampleStreamBlock`
+  (s103, never entered this scene), `initSampleStreamBlockCache`/node
+  allocator (s104, only ever writes fields `0x0`/`0x4`/`0x14`, and every
+  node-reclaim path recomputes `0x8` fresh before use), `musyxKeyOnVoice`
+  (s105, writes a different global entirely), `musyxInitVoiceFromSample`
+  (s105/106, does a clean verbatim copy, both call sites build their
+  source struct fresh from local data — 0/0 across 2 soaks, one with a
+  positive control on the surrounding system).
+- **Retired, do not resume** (s110): the `tickAudioChannel`/
+  `tickAudioSequencerFrame`/`tickAllAudioChannels`/`serviceVoicePoolFrame`/
+  `musyx-gate1` countdown-divider chain. 5 sessions null, including one
+  (s110) where the process ran the full target window alive. The chain is
+  real and correctly instrumented (per s106/s107's own source reads) — it
+  just never executes in the hangar-bay-selection scene, which is
+  strong evidence the whole "corruption enters via a key-on/trigger event"
+  framing was a coincidental structural match, not the actual mechanism.
+- The hangar-tick-family guard program is not queued for further work
+  unless a class recurs — see CURRENT-TRUTH item 0b. Do not re-soak the
+  five guarded classes in isolation.
+- `fixup_game_funcs.py` is still not idempotent (flagged since s102, hit
+  again firsthand s110 — a bare *second run* to check its own report,
+  no logic change, duplicated every patch and broke the build). Always
+  do a full ELF regen before running it, and run it exactly **once** per
+  regen — do not re-run it "just to check the report."
 
 ## The work unit
 
-1. **Source-read `updateHangarBayScene`** (`static_5_800AB658` — check
-   `symbol_files/main_overlay.txt` first for a real name the way s97 found
-   `composeNpcOrientationMatrix`'s; the recompiler may still emit the
-   `static_5_` fallback name even if a real name is assigned, same
-   "symbol assigned to a non-overlay file" shape as several M4 items).
-   Find: which argument or which fixed-table-derived pointer is
-   dereferenced without a range check, and where relative to function
-   entry; the function's real epilogue (register restore + return),
-   confirmed by reading to the function's closing brace, not assumed from
-   a nearby label.
-2. **Write the guard** in `N64Recomp/fixup_game_funcs.py`, following the
-   reference shape above. Add a fresh env var name
-   (`ROGUESQ_LOG_HANGAR_BAY_SCENE_GUARD` or similar — check it doesn't
-   collide with the existing `ROGUESQ_LOG_HANGAR_ENTRY` from the 10th
-   class's diagnostic, which is a different function).
-3. **Regen order**: `cd ~/Documents/Tools/rogue_squadron64 && python3
-   tools/make_elf.py` → `cd ~/Documents/Tools/N64Recomp && python3 -c
-   "import subprocess; subprocess.run(['./build/N64Recomp',
-   'rogue_squadron.toml'])"` (direct binary invocation is not allowlisted
-   and prompts for approval) → `python3 fixup_game_funcs.py` → `cd
-   ../RogueSquadron64Recomp && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-   cmake --build build -j 8`. **Full ELF regen, not a bare fixup re-run**
-   (idempotency bug still unfixed — see Tooling note). Verify the fixup
-   report shows the new guard patched exactly `x1`, in the one expected
-   file only.
-4. **Soak** (same repro shape, add the new guard's log flag alongside the
-   existing set):
-   `cd scratch/s73_post_a_scene && env ROGUESQ_LOG_MUSYX_DMA_CALL=1 ROGUESQ_LOG_FILL_RANGE_ARGS=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_DLENTRY=1 ROGUESQ_LOG_DLENTRY_GUARD=1 ROGUESQ_LOG_HANGAR_BAY_SCENE_GUARD=1 ROGUESQ_LOG_THREAD_RESUME=0 PROBE_MODE=start_only HOLD_S=30 zsh run_mission_keys.sh s110_hangarbay_guard 30 12`
-   (backgrounds past the 120s foreground timeout — block on the task
-   notification, don't poll).
-5. **Interpret**: if the process now reaches `vi_width=640`/~140s alive (or
-   at least survives past 73.9s where s108/s109's 4 soaks all died), that's
-   a real improvement — re-attempt `musyx-gate1` next (item -1's countdown/
-   period question, still untested against the window). If it dies before
-   the window again to yet another new class, log it as the 20th and keep
-   working down the list — but at that point consider whether a broader
-   fix (e.g. a blanket pointer-validation wrapper at the scene-graph-
-   traversal chokepoint, `submitSceneNodeRender`/`processSceneNode`, shared
-   by the 14th/17th/18th/probable-new classes) would be higher-value than
-   guarding classes one at a time — this has not been tried and multiple
-   sessions now show new classes appearing in the same 2-3 outer functions.
-   If the new guard fires (a real positive control, unlike s109's 14th-class
-   guard), that closes the 17th class with full confidence — note that
-   explicitly, it would be the first guard in this family to get one.
+1. **Grep-enumerate every static write to offset `0x34` off a
+   voice-slot-shaped base pointer**, across all of
+   `N64Recomp/RecompiledFuncs/*.c`. Concretely:
+   - Start broad: `grep -n "0X34)" N64Recomp/RecompiledFuncs/*.c` for any
+     `MEM_W(..., 0X34)` (or `MEM_W(0X34, ...)`, check both call-argument
+     orders used in this codebase) assignment, then narrow by checking
+     each hit's base register traces back to a `G_BASE-0x6908 +
+     voiceIdx*0x88`-shaped computation (the s105-confirmed voice-slot
+     address pattern) rather than an unrelated struct that happens to
+     share offset `0x34`.
+   - `musyxInitVoiceFromSample` is already a confirmed writer (s105,
+     `voice+0x34 = sampleDesc+0x4`) — use its exact base-pointer
+     computation as the template for recognizing the same base elsewhere.
+   - This is a source-read/grep task, not a soak — no build or run
+     required to produce the candidate list.
+2. **For each new candidate**, source-read (not soak) to classify it the
+   same way s105 classified `musyxInitVoiceFromSample`'s two call sites:
+   does it build its written value from a fresh, locally-sourced struct
+   (unlikely to be the bug), or copy/derive it from something that could
+   plausibly be a name/tag/index field misread as a ROM offset (matches
+   the "lg?r"/"wi?g" corruption shape characterized s102)?
+3. **If a plausible candidate emerges**, that becomes next session's
+   instrumentation target (one new `ROGUESQ_LOG_*` diagnostic, one soak).
+   **If the grep turns up nothing beyond the already-cleared writers**,
+   that's a real, useful result too — it would mean the corruption enters
+   through something that is *not* a direct `MEM_W(..., 0x34)` store in
+   the recompiled guest code at all (e.g. an LLE RSP-side write via
+   `MEM_W`/DMA from microcode, or the `-O2` recompiler folding an
+   equivalent store into a different instruction shape that a literal
+   `0x34` offset grep would miss) — write that down explicitly rather than
+   treating "grep found nothing" as inconclusive.
 
-## Also flagged (s109, not this session's job)
+## Also flagged (s110, not this session's job)
 
-- The 14th class's guard (`ROGUESQ_LOG_DLENTRY_GUARD`) still has no
-  positive control. Leave it armed in every soak; if it ever fires, that's
-  a free confirmation, don't design a soak around chasing it specifically.
-- Consider (not yet attempted, raised s109): a single guard at the
-  scene-graph-traversal chokepoint shared by the 14th/17th/18th/19th
-  classes (`submitSceneNodeRender`/`processSceneNode`/
-  `traverseSceneGraphRecursive`) might catch bad pointers before they reach
-  any of the per-function leaves, cheaper than one guard per leaf. Not
-  designed yet — would need to identify what's actually shared (a node
-  pointer? a render-target handle?) across all four call chains first.
+- **New, unexplained observation**: 385 lines of `Unhandled jump target
+  0x1883 in microcode factor5_ucode` fired in the s110 soak — the first
+  time this specific diagnostic (distinct from the guest-side
+  `UnhandledJumpTarget` family metric, always 0 in every prior soak) has
+  ever read nonzero. This is the RSP MusyX audio-microcode LLE path,
+  which M5's notes describe as "recompiles but is never called" — this
+  run suggests it may actually run and hit unimplemented jump targets.
+  Not chased this session; worth a dedicated look eventually (M5-adjacent,
+  gated behind M2 per the goal stack, so likely not immediately next).
+- The two single-occurrence classes that blocked s108/s109 (probable-18th
+  `heapFreeListDequeue`-area, 19th `MetalFramebuffer`/
+  `createTileCopyRecord`) did not recur in s110. Still below the
+  2nd-recurrence bar — watch passively, do not instrument yet.
+- The 14th class's guard (`ROGUESQ_LOG_DLENTRY_GUARD`) and the new 17th
+  class's guard (`ROGUESQ_LOG_HANGAR_BAY_SCENE_GUARD`) still have no
+  positive control. Leave both armed in every soak; a free fire is a
+  bonus, not a reason to design a soak around chasing it.
 
-## Tooling note — still not fixed, still cheap
+## Tooling note — bit us again this session, still cheap to fix
 
-`fixup_game_funcs.py` is **not idempotent** by construction (every patch's
-anchor regex matches text left unchanged after insertion). A full ELF
-regen has now avoided the duplication symptom seven times in a row
-(s103-s109) as a workaround. If a session touches `fixup_game_funcs.py`
-again, consider actually fixing it: make each patch's anchor regex also
-require a negative lookahead that the match is **not** immediately
-followed by `    { // PATCH:`. Test by running the script twice in a row on
-an already-regenerated tree and confirming the 2nd run reports 0/"no
-changes needed" for every already-landed patch.
+`fixup_game_funcs.py` is **not idempotent** by construction (every
+patch's anchor regex matches text left unchanged after insertion). s110
+hit this from a new angle: running the script a *second* time with no
+logic change, purely to print its own report for a sanity check, silently
+duplicated every patch and broke the build (`redefinition of label
+'L_dlentry_guard_exit'` in an unrelated file, `funcs_3.c`). The existing
+workaround (full ELF regen before every fixup run) still works, but this
+is now the 8th session in a row dodging the same bug. If a session
+touches `fixup_game_funcs.py` again, consider actually fixing it: make
+each patch's anchor regex also require a negative lookahead that the
+match is **not** immediately followed by `    { // PATCH:`. Test by
+running the script twice in a row on an already-regenerated tree and
+confirming the 2nd run reports 0/"no changes needed" for every
+already-landed patch.
 
 ## Housekeeping flagged, not this session's job either
 
-`docs/CURRENT-TRUTH.md` is now ~104 KB, roughly 3x the ~35KB target in
-CLAUDE.md/ITERATION.md. This has been growing for many sessions past the
-target — not caused by any single iteration, but worth a dedicated
+`docs/CURRENT-TRUTH.md` is now ~106 KB, roughly 3x the ~35KB target in
+CLAUDE.md/ITERATION.md, and grew again this session. This has been
+flagged for several sessions running without action — worth a dedicated
 compression work unit (migrate durable mechanism/architecture material to
-PROJECT-OVERVIEW.md, prune superseded detail more aggressively) before it
-grows further. Per ITERATION.md, compressing CURRENT-TRUTH does not count
-as an "ADVANCED" work unit on its own — pair it with a real experiment, or
-treat it as an explicit, acknowledged exception.
+PROJECT-OVERVIEW.md, prune superseded detail more aggressively,
+especially the now-closed hangar-tick-family guard narration which could
+collapse to a short table) paired with a real experiment per ITERATION.md
+(compressing docs alone does not count as an ADVANCED work unit).
 
 ## Do not
 
-- Do not re-soak the 4 already-guarded classes (16th, 12th, 11th, 14th) in
-  isolation — treat them as closed pending an eventual positive control
-  that arrives for free from an unrelated soak.
+- Do not re-soak the five already-guarded classes (16th, 12th, 11th,
+  14th, 17th) in isolation — treat them as closed pending an eventual
+  positive control that arrives for free from an unrelated soak.
 - Do not instrument the probable-18th or 19th classes yet — both are
   single-occurrence; wait for a 2nd hit.
-- Do not use a bare `return;` in the new guard — always `goto` a real
-  epilogue label that restores saved registers, per every prior guard.
-- Do not compare a raw `ctx->rN` (`gpr`/uint64_t) value against 32-bit
-  literal bounds without truncating through `U32()` first (s99's lesson).
-- Do not insert a guard's `goto` target before confirming every register
-  the target epilogue restores is already saved to its stack slot at the
-  guard's insertion point (s109's lesson — see Placement subtlety above).
-- Do not trust a `fixup_game_funcs.py` "patched xN" report without
-  checking which file(s) it patched, and do a full ELF regen first if the
-  tree may already carry prior patches.
+- Do not resume the tick-audio-channel/`musyx-gate1` investigative
+  thread — retired s110 after 5 null sessions, one with a full-window-alive
+  null. If a future soak's evidence changes (e.g. one of those counters
+  finally fires), that's new information and can reopen the question —
+  but don't design a soak around chasing it again.
+- Do not run `fixup_game_funcs.py` more than once per ELF regen, even
+  just to view its report — do a fresh `make_elf.py`/`N64Recomp` regen
+  first if you need to re-run it for any reason.
 - Do not cite `ra=0x00000000` as corruption evidence (refuted s92); do not
-  re-open "random/race/stomp" framings for the `devAddr` corruption (7+
-  independent lines of evidence against all three) — unrelated to this
-  session's work but still a live trap in the docs.
+  re-open "random/race/stomp" framings for the `devAddr` corruption (10+
+  independent lines of evidence against all three, now including 2
+  sessions — s101, s110 — where the corruption recurred byte-identical
+  after reaching the window through entirely different guard states).
 - `N64Recomp/fixup_game_funcs.py` is untracked in N64Recomp's own git, by
   design — do not attempt to commit it there; the durable record lives in
   `PORTING-STATE.md`/`CURRENT-TRUTH.md` in this repo.
