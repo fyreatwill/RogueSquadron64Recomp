@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 112)
+## Current truth (as of session 113)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -624,7 +624,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s110)
+## Next steps, in order of expected value (s113)
 
 -1. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
@@ -889,6 +889,53 @@ cost three sessions before the recursive mutex.
    (`MEM_W(0X34, ...)`) could not see by construction (e.g. a copy loop
    indexed by a variable field offset). Not yet searched. Full detail:
    PORTING-STATE s112.
+   **s113 update: hypothesis (b) REFUTED, exhaustively, no build/soak
+   needed — and a 3-session-open sub-question incidentally closed.**
+   Every file referencing the voice-array base (`-0x6908` global,
+   confirmed exactly 3 via `grep -rl -- "-0X6908"`: `funcs_23.c`,
+   `funcs_24.c`, `funcs_32.c`) was read in full for any store whose
+   target address is built from register/loop arithmetic rather than a
+   bare literal. **None exists**: `funcs_24.c`'s 12 voice-touching
+   functions and its one genuine per-voice stride loop
+   (`musyxSynthFrame`) only ever store through one more *compile-time
+   literal* offset on top of the `idx*0x88` stride (0x0/0x1/0x4/0x10/
+   0x14/0x22/0x28/0x2A/0x2C/0x30/0x58/0x60/0x64/0x68/0x6C/0x7C/0x80/
+   0x84/0x85 — never 0x34, never computed); `funcs_32.c`'s two
+   `-0x6908` hits are an unrelated global at a different base
+   (`0x800B`, not `0x8015`) and aren't stores; `funcs_23.c` writes
+   `-0x6908`/`-0x6904` exactly once (`allocateSongChannelArray`,
+   confirming the 0x88 stride) and never reads them back, so no
+   further store chains off it there either. **No computed-offset
+   write to voice+0x34 exists anywhere in guest C** — closes hypothesis
+   (b) the way s112 closed (a).
+   **Unplanned: located the `-0x664C` node allocator s102-s104 flagged
+   "not yet located."** It's `initSampleStreamBlockCache`
+   (`funcs_23.c:12103`, guest `0x8008F858`) — confirmed the only file
+   referencing the exact literal `-0X664C` besides its three
+   already-characterized consumers. Its init loop
+   (`funcs_23.c:12204-12228`) writes only offsets `0x4`/`0x14` per
+   node — **never `0x8` or `0x10`, the exact two fields
+   `fillSampleStreamRange` sums into `devAddr`** (s103). Read
+   `rs_malloc`'s full body (`funcs_0.c:2743`): no `memset`/`bzero`
+   call anywhere in it — allocated memory is never zeroed. Combined
+   with s103's own finding that the node-claim path
+   (`acquireSampleStreamBlock`) also never touches `0x8`/`0x10`/`0x14`,
+   **three independent static facts now agree that offsets `0x8`/`0x10`
+   of every node are never initialized by any guest code at all** —
+   `fillSampleStreamRange` reads and sums whatever `rs_malloc` handed
+   back, i.e. leftover heap contents, not a corrupted write. **New
+   hypothesis, well-supported but not yet runtime-confirmed**: this is
+   why the "corruption" looks structured (s102's tag-like
+   `"lg?r"`/`"wi?g"` bytes are plausible leftover asset-string data) and
+   why it reproduces byte-identically across runs (s91/s93 — not a
+   race, a deterministic function of asset-load heap history).
+   Reframes the whole `do_rom_read` chain (s85-s104, 9 recurrences)
+   from "something writes the wrong value" to "nothing ever writes a
+   value at all." **Next step: one runtime log** — read
+   `node->0x8`/`node->0x10` inside the allocator's own init loop,
+   before any consumer could touch them, to turn "never written per
+   exhaustive static search" into "observed as already-nonzero at
+   allocation time." Full detail: PORTING-STATE s113.
 0a. **Tooling: `fixup_game_funcs.py` is not actually idempotent**
    (found s102 while re-running it for the item above) — every patch's
    regex anchor matches text that's left unchanged after insertion, so

@@ -9457,3 +9457,105 @@ RSP-ucode instrumentation.
 ### Files
 None changed — pure grep/source-read session, no build, no run, no `lib/`
 edits.
+
+## Session 113 — 2026-07-27
+
+Picked up NEXT.md's prescribed work unit: search guest C for a
+runtime-computed (non-literal-offset) store into the MusyX voice struct
+that could land on `voice+0x34` — hypothesis (b), reopened by s112 after
+it closed the RSP-ucode branch. Pure source-read task, **no build or
+run**.
+
+**Method.** Three files reference the voice-array base pointer's global
+slot (`-0x6908`) at all: `funcs_23.c`, `funcs_24.c`, `funcs_32.c`
+(confirmed via `grep -rl -- "-0X6908"` across every `RecompiledFuncs/*.c`
+— exhaustive, not a sample). Delegated one focused read-only audit per
+file (parallel subagents) with an explicit brief: trace every arithmetic
+path from the `-0x6908` load to any store (`MEM_W`/`MEM_H`/`MEM_B`/
+`MEM_HU`/`MEM_BU`/`SD` as an lvalue), flagging any target address built
+from a register/loop-index rather than a bare literal immediate. Verified
+the two highest-value claims myself afterward by reading the exact lines
+before writing them here (not taking agent prose on faith).
+
+**Hypothesis (b) refuted, exhaustively.** `funcs_24.c`: 12 functions
+(`musyxMixActiveVoices`, `isAudioSlotActive`, `musyxInitVoiceFromSample`,
+`musyxStartVoiceRelease`, `musyxStoreVoiceAdsrParams`,
+`musyxTriggerVoiceAttack`, `musyxStopVoice`, `musyxSetVoicePitchBend`,
+`setVoiceModulationParams`, `stopVoiceMarkRetrigger`,
+`beginVoiceFadeRelease`, `deactivateVoice`, `getVoiceUserField`) all
+compute the same `idx*0x88` stride off the voice base, but every single
+store through the result uses one more **compile-time literal** offset
+(0x0/0x1/0x4/0x22/0x28/0x2A/0x2C/0x30/0x58/0x60/0x64/0x68/0x6C/0x7C/0x80/
+0x84/0x85 — never 0x34, never computed). The one genuine per-voice stride
+loop in this file (`musyxSynthFrame`, `L_800913C0`) only stores to fixed
+literals 0x10/0x14. `funcs_32.c`'s two `-0x6908` hits are a **different,
+unrelated** global at a different base address (`0x8015` vs `0x800B`) and
+aren't stores at all — this file has no voice-array reference whatsoever.
+`funcs_23.c` writes the `-0x6908`/`-0x6904` globals exactly once
+(`allocateSongChannelArray`, confirming the 0x88 stride and the
+base-pointer relationship) and never reads them back in this file, so no
+further chained store exists here either — its own init loop only writes
+0x0/0x84/0x85. **No computed-offset write to voice+0x34 exists in guest C,
+full stop** — every arithmetic path from the voice base terminates in a
+literal, non-0x34 store. This closes hypothesis (b) the same way s112
+closed hypothesis (a): decisively, at the source level, no instrument
+needed.
+
+**Unplanned high-value find, same audit: the missing `-0x664C` node
+allocator, located.** s103 characterized `fillSampleStreamRange` as
+computing `entry.devAddr = node->0x8 + node->0x10` off a linked list at
+global `-0x664C`, and confirmed `acquireSampleStreamBlock`'s node-claim
+path never touches offsets `0x8`/`0x10`/`0x14` — but its allocator was
+"not yet located" across three prior sessions (s102-s104). It's
+`initSampleStreamBlockCache` (`funcs_23.c:12103`, guest `0x8008F858`) —
+confirmed the only function anywhere referencing the exact literal
+`-0X664C` besides the three already-characterized consumers (`grep -rl
+-- "-0X664C"` across all of `RecompiledFuncs/*.c` returns only
+`funcs_23.c`). It `rs_malloc`s an array of 0x18-byte nodes and its init
+loop (`L_8008F8FC`, `funcs_23.c:12204-12228`) writes exactly two fields
+per node: `0x4` (next-pointer) and `0x14` (a data-buffer address,
+`base+n*0x600`). **It never writes offsets `0x8` or `0x10` — the exact
+two fields `fillSampleStreamRange` sums into `devAddr`.** Read
+`rs_malloc`'s own full body (`funcs_0.c:2743`, ends `funcs_0.c` ~line
+2950s) end-to-end looking for a zeroing call: **no `memset`/`bzero`/
+`rs_memset` call anywhere in it** — it is a bare heap-carve allocator,
+does not zero returned memory.
+
+**New root-cause hypothesis, well-supported by three independent static
+facts, not yet runtime-confirmed**: offsets `0x8`/`0x10` of every
+`-0x664C` list node are **never initialized by any guest code** —
+neither the allocator (this session) nor the claim path (s103) ever
+writes them, and no other file references this exact global (this
+session's grep). `fillSampleStreamRange` reads them anyway and sums
+whatever `rs_malloc` handed back — leftover contents of previously-used
+heap memory, not a corrupted *write*. This would explain, for the first
+time with a mechanism instead of a label: (1) s102's "structured
+tag-like" byte patterns (`"lg?r"`/`"wi?g"`) — plausible fragments of
+whatever string/tag data last occupied that heap region (asset names are
+the obvious candidate in an audio-asset-heavy allocator); (2) s91/s93's
+byte-identical reproduction across independent runs/rebuilds — not a race
+at all, just a deterministic function of asset-load heap history, which
+is itself deterministic given deterministic boot-time loading order.
+This reframes the entire `do_rom_read` corruption chain (s85 through
+s104, 9 occurrences) from "something writes the wrong value" to "nothing
+ever writes a value, and the field was never actually the field
+`fillSampleStreamRange` thinks it is" — same diagnostic shape as s78's
+uninitialized-field bugs elsewhere in this codebase, not a new mechanism.
+
+**Not yet done, and the reason it isn't in CURRENT-TRUTH as confirmed**:
+this is three *static* facts (no writer in the allocator, no writer in
+the claim path per s103, no other referencing file), not a *runtime*
+observation. The two-independent-lines-of-evidence bar (ITERATION.md rule
+4) is arguably met by the static reads alone, but a single runtime log —
+reading `node->0x8`/`node->0x10` immediately inside the allocator's own
+init loop, before any consumer could possibly have touched them — would
+turn "never written, by exhaustive static search" into "read back as
+already-nonzero garbage at the moment of allocation," which is strictly
+stronger and cheap to get. That's the next work unit (see NEXT.md);
+deliberately not attempted this session per the same discipline s112 used
+(read first, instrument only once the read narrows the target to
+something a single soak can decide).
+
+### Files
+None changed — pure grep/source-read session (3 parallel subagent audits
++ my own verification reads), no build, no run, no `lib/` edits.
