@@ -386,3 +386,223 @@ index 1f3a4cf..b9cc34f 100644
      osViSetMode(rdram, (int32_t)ctx->r4);
  }
  
+diff --git a/ultramodern/src/threads.cpp b/ultramodern/src/threads.cpp
+index 812c556..af342f6 100644
+--- a/ultramodern/src/threads.cpp
++++ b/ultramodern/src/threads.cpp
+@@ -1,7 +1,12 @@
+ #include <cstdio>
++#include <cstdlib>
+ #include <thread>
+ #include <cassert>
+ #include <string>
++#include <mutex>
++#include <unordered_set>
++#include <atomic>
++#include <cstring>
+ 
+ #include "ultramodern/ultra64.h"
+ #include "ultramodern/ultramodern.hpp"
+@@ -9,6 +14,41 @@
+ 
+ #include "ultramodern/threads.hpp"
+ 
++// ROGUESQ_LOG_THREAD_RESUME=1 — resume/create/destroy/cleanup order for SIGBUS triage.
++// Positive control: first healthy resumes (live_ctx=1) must appear before any crash.
++static bool thr_resume_log_enabled() {
++    static int cached = -1;
++    if (cached < 0) {
++        const char* e = std::getenv("ROGUESQ_LOG_THREAD_RESUME");
++        cached = (e && e[0] && e[0] != '0') ? 1 : 0;
++    }
++    return cached != 0;
++}
++
++static std::mutex g_live_ctx_mu;
++static std::unordered_set<UltraThreadContext*> g_live_ctx;
++static std::atomic<uint32_t> g_thr_resume_n{0};
++static std::atomic<uint32_t> g_thr_resume_healthy{0};
++static std::atomic<uint32_t> g_thr_resume_bad{0};
++
++static void thr_live_add(UltraThreadContext* ctx) {
++    if (!ctx) return;
++    std::lock_guard<std::mutex> lock(g_live_ctx_mu);
++    g_live_ctx.insert(ctx);
++}
++
++static void thr_live_remove(UltraThreadContext* ctx) {
++    if (!ctx) return;
++    std::lock_guard<std::mutex> lock(g_live_ctx_mu);
++    g_live_ctx.erase(ctx);
++}
++
++static bool thr_live_contains(UltraThreadContext* ctx) {
++    if (!ctx) return false;
++    std::lock_guard<std::mutex> lock(g_live_ctx_mu);
++    return g_live_ctx.count(ctx) != 0;
++}
++
+ // Native APIs only used to set thread names for easier debugging
+ #ifdef _WIN32
+ #include <Windows.h>
+@@ -155,11 +195,52 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
+     }
+ }
+ 
+-void resume_thread(OSThread* t) {
++static void resume_thread_tagged(OSThread* t, const char* tag) {
+     debug_printf("[Thread] Resuming execution of thread %d\n", t->id);
++    if (!thr_resume_log_enabled()) {
++        t->context->running.signal();
++        return;
++    }
++
++    UltraThreadContext* ctx = t ? t->context : nullptr;
++    const uint32_t n = ++g_thr_resume_n;
++    const bool live = thr_live_contains(ctx);
++    const bool bad = (t == nullptr) || (ctx == nullptr) || !live;
++    if (bad) {
++        ++g_thr_resume_bad;
++    } else {
++        ++g_thr_resume_healthy;
++    }
++
++    // Log every resume (fflush) so the pre-SIGBUS line is never sampling-dropped.
++    // self is the rdram PTR only — resume_thread has no rdram arg for TO_PTR.
++    std::fprintf(stderr,
++        "[thr-resume] n=%u tag=%s id=%d thr=%p state=%u pri=%d ctx=%p live=%d self_rdram=0x%08X bad=%d healthy_total=%u bad_total=%u\n",
++        n, tag ? tag : "?",
++        t ? (int)t->id : -1,
++        (void*)t,
++        t ? (unsigned)t->state : 0u,
++        t ? (int)t->priority : -1,
++        (void*)ctx,
++        live ? 1 : 0,
++        (unsigned)thread_self,
++        bad ? 1 : 0,
++        g_thr_resume_healthy.load(),
++        g_thr_resume_bad.load());
++    std::fflush(stderr);
++
++    if (ctx == nullptr) {
++        std::fprintf(stderr, "[thr-resume] FATAL null context tag=%s thr=%p id=%d\n",
++            tag ? tag : "?", (void*)t, t ? (int)t->id : -1);
++        std::fflush(stderr);
++    }
+     t->context->running.signal();
+ }
+ 
++void resume_thread(OSThread* t) {
++    resume_thread_tagged(t, "resume");
++}
++
+ void run_next_thread(RDRAM_ARG1) {
+     if (ultramodern::thread_queue_empty(PASS_RDRAM ultramodern::running_queue)) {
+         throw std::runtime_error("No threads left to run!\n");
+@@ -167,7 +248,7 @@ void run_next_thread(RDRAM_ARG1) {
+ 
+     OSThread* to_run = TO_PTR(OSThread, ultramodern::thread_queue_pop(PASS_RDRAM ultramodern::running_queue));
+     debug_printf("[Scheduling] Resuming execution of thread %d\n", to_run->id);
+-    to_run->context->running.signal();
++    resume_thread_tagged(to_run, "run_next");
+ }
+ 
+ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
+@@ -178,7 +259,7 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
+ 
+ void ultramodern::resume_thread_and_wait(RDRAM_ARG OSThread *t) {
+     UltraThreadContext* cur_context = TO_PTR(OSThread, thread_self)->context;
+-    resume_thread(t);
++    resume_thread_tagged(t, "swap");
+     wait_for_resumed(PASS_RDRAM cur_context);
+ }
+ 
+@@ -239,7 +320,7 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
+     // Otherwise, immediately start the thread and terminate this one.
+     else {
+         t->state = OSThreadState::QUEUED;
+-        resume_thread(t);
++        resume_thread_tagged(t, "start");
+         //throw ultramodern::thread_terminated{};
+     }
+ }
+@@ -259,6 +340,13 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
+     // Pass the context as an argument to the thread function to ensure that it can't get cleared before the thread captures its value.
+     UltraThreadContext* context = new UltraThreadContext{};
+     t->context = context;
++    thr_live_add(context);
++    if (thr_resume_log_enabled()) {
++        std::fprintf(stderr,
++            "[thr-create] id=%d thr_rdram=0x%08X thr=%p ctx=%p pri=%d entry=0x%08X\n",
++            (int)id, (unsigned)t_, (void*)t, (void*)context, (int)pri, (unsigned)entrypoint);
++        std::fflush(stderr);
++    }
+     context->host_thread = std::thread{_thread_func, PASS_RDRAM t_, entrypoint, arg, t->context};
+ 
+     // Wait until the thread is initialized to indicate that it's ready to be started.
+@@ -286,6 +374,11 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+     OSThread* t = TO_PTR(OSThread, t_);
+     // Check if the thread is destroying itself (arg is null or thread_self)
+     if (t_ == thread_self) {
++        if (thr_resume_log_enabled()) {
++            std::fprintf(stderr, "[thr-destroy] self id=%d thr=%p ctx=%p (throw terminated)\n",
++                t ? (int)t->id : -1, (void*)t, t ? (void*)t->context : nullptr);
++            std::fflush(stderr);
++        }
+         throw ultramodern::thread_terminated{};
+     }
+     // Otherwise if the thread isn't stopped, remove it from its currrent queue., 
+@@ -294,9 +387,22 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+     }
+     // Check if the thread has already been destroyed to prevent destroying it again.
+     UltraThreadContext* cur_context = t->context;
++    if (thr_resume_log_enabled()) {
++        std::fprintf(stderr,
++            "[thr-destroy] id=%d thr_rdram=0x%08X thr=%p state=%u ctx=%p live=%d\n",
++            (int)t->id, (unsigned)t_, (void*)t, (unsigned)t->state,
++            (void*)cur_context, thr_live_contains(cur_context) ? 1 : 0);
++        std::fflush(stderr);
++    }
+     if (cur_context != nullptr) {
+         // Mark the target thread as destroyed and resume it. When it starts it'll check this and terminate itself instead of resuming.
+         t->context = nullptr;
++        // Destroy-path signal is intentional wake-to-exit; log separately from resume_thread.
++        if (thr_resume_log_enabled()) {
++            std::fprintf(stderr, "[thr-destroy-signal] id=%d ctx=%p live=%d\n",
++                (int)t->id, (void*)cur_context, thr_live_contains(cur_context) ? 1 : 0);
++            std::fflush(stderr);
++        }
+         cur_context->running.signal();
+     }
+ }
+@@ -347,8 +453,18 @@ void thread_cleaner_func() {
+         UltraThreadContext* to_delete;
+         if (deleted_threads.wait_dequeue_timed(to_delete, 10ms)) {
+             debug_printf("[Cleanup] Deleting thread context %p\n", to_delete);
++            if (thr_resume_log_enabled()) {
++                std::fprintf(stderr, "[thr-delete-begin] ctx=%p live=%d\n",
++                    (void*)to_delete, thr_live_contains(to_delete) ? 1 : 0);
++                std::fflush(stderr);
++            }
+ 
+             to_delete->host_thread.join();
++            thr_live_remove(to_delete);
++            if (thr_resume_log_enabled()) {
++                std::fprintf(stderr, "[thr-delete] ctx=%p (freed)\n", (void*)to_delete);
++                std::fflush(stderr);
++            }
+             delete to_delete;
+         }
+     }
+@@ -359,6 +475,11 @@ void ultramodern::init_thread_cleanup() {
+ }
+ 
+ void ultramodern::cleanup_thread(UltraThreadContext *cur_context) {
++    if (thr_resume_log_enabled()) {
++        std::fprintf(stderr, "[thr-cleanup-enqueue] ctx=%p live=%d\n",
++            (void*)cur_context, thr_live_contains(cur_context) ? 1 : 0);
++        std::fflush(stderr);
++    }
+     deleted_threads.enqueue(cur_context);
+ }
+ 

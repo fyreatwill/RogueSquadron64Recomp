@@ -5656,3 +5656,73 @@ Triage SIGBUS: which `OSThread_t` is resumed with a dead semaphore (UAF vs corru
 
 ### Files
 - `scratch/s70_mission_soak/run_soak.sh`, `run1/`, `run2/`, console logs
+
+## Session 71 (2026-07-26) — M3 SIGBUS triage: OSThread.context bit-corrupt on audio thread (not UAF)
+
+### Work unit
+Instrument `resume_thread` / create / destroy / cleanup under `ROGUESQ_LOG_THREAD_RESUME=1`
+with a live-`UltraThreadContext*` set; same-run positive control = healthy resumes
+(`live=1`) before `a`. Discriminates H1 UAF vs H2 corrupt ptr vs H3 double-signal vs
+H4 gfx smash. Code: `lib/N64ModernRuntime/ultramodern/src/threads.cpp` (+ export to
+`submodule-patches/N64ModernRuntime.patch`). Harness:
+`scratch/s71_sigbus_triage/run_soak.sh` (schedule of s70, grace=15s).
+
+### Run (`scratch/s71_sigbus_triage/sigbus1/`)
+
+| metric | value |
+|--------|-------|
+| positive control (first 10 thr-resume) | all `live=1 bad=0` |
+| thr-resume total | 103967 |
+| thr-resume `bad=1` | **1** (exactly the crash site) |
+| thr-create / destroy / delete | 18 / 12 / 6 |
+| exit=2 | 0 (ImemOverrun still closed) |
+| process gone | grace-iter 8 (~8s post-`a`) |
+| `[CRASH]` | SIGBUS signal 10 |
+
+Crash-site line (only bad resume of the run):
+```
+[thr-resume] n=103967 tag=swap id=0 thr=0x3001494b0 state=1 pri=120
+  ctx=0x850f45380 live=0 self_rdram=0x8010D218 bad=1
+```
+Immediately prior healthy resume of the **same** OSThread host pointer:
+```
+[thr-resume] n=103965 tag=swap … thr=0x3001494b0 pri=122 ctx=0xa50f75380 live=1
+[thr-resume] n=103966 tag=run_next … thr=0x30010d218 (idle)
+[last-drawn] #1870 0xFB9600 -> 0xE20000 w=4067 siz=0
+[thr-resume] n=103967 … BAD
+[CRASH]
+```
+
+### Thread identity (two independent sources)
+
+1. `[thr-create] thr_rdram=0x801494B0 … entry=0x8008ED70 pri=122 ctx=0xa50f75380`
+2. Companion decomp `symbol_files/main_overlay.txt`:
+   `runAiAudioStreamPlaybackLoop = 0x8008ED70`
+
+Never destroyed this OSThread (no `[thr-destroy]` for 0x801494B0 / ctx 0xa50f75380).
+Good ctx stays in the live set; bad ctx `0x850f45380` appears once and was never created.
+
+Context bit pattern (LE host pointer):
+- good `0xa50f75380` bytes `80 53 f7 50 0a 00 00 00`
+- bad  `0x850f45380` bytes `80 53 f4 50 08 00 00 00`
+- xor `0x200030000` (bytes 2 and 4 only). pri 122→120 (xor 2) on the same struct.
+
+### Hypothesis outcomes
+
+| ID | Result |
+|----|--------|
+| H1 UAF of destroyed UltraThreadContext | **Refuted** — bad ctx never created/deleted; good ctx never destroyed; no destroy of this OSThread |
+| H2 corrupt / never-valid context pointer | **Confirmed** (this run + bit-diff) — in-place corruption of `OSThread.context` in RDRAM between two consecutive scheduler resumes |
+| H3 double-signal race on live semaphore | **Refuted** — only one `bad=1` in 103967 resumes; crash is on first bad signal |
+| H4 gfx/RT64 RDRAM smash as writer | **Plausible, not proven** — `last-drawn #1870` sits between good and bad resume; earlier `fmt=7` at lines ~121577 (hundreds of resumes before crash). Writer of `0x801494B0` not identified |
+
+### Positive control
+Instrument fires on boot resumes with sane live contexts (n=1..10 all `live=1`). Null without control ruled out.
+
+### Next
+Find the writer of RDRAM OSThread at `0x801494B0` (or defend resume when `live=0` only as a temporary soak enabler after root-cause probe). Do not re-litigate thread UAF/lifetime.
+
+### Files
+- `lib/N64ModernRuntime/ultramodern/src/threads.cpp`
+- `submodule-patches/N64ModernRuntime.patch` (exported)
+- `scratch/s71_sigbus_triage/run_soak.sh`, `sigbus1/`
