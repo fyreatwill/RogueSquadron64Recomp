@@ -10411,3 +10411,97 @@ regen may or may not reproduce the same duplication). No `lib/` edits
 this session. `N64Recomp` remains a separate git checkout with its own
 accumulating uncommitted changes (s90-120 now) — same
 flagged-not-actioned posture as every session since s90.
+
+## Session 121 (2026-07-27) — clean regen with zero patch duplication (contradicts s120's implicit "always duplicates" framing), then the corrected voice-active-gate soak overturns s120's own "idx always exceeds voiceCount" conclusion and exposes a cross-thread log-ordering confound in the methodology used to derive it
+
+**Step 1: regen-pipeline audit (NEXT.md, gate before trusting any soak).**
+Ran the full delete-all → `make_elf.py` → `regen_n64recomp.sh` → `fixup_
+game_funcs.py` → `cmake --build` cycle exactly as documented. Result:
+**zero duplication this time** — every patch report line read `x1`
+except the two intentionally-multi-site patches (`funcs_23.c` audio gate
+`x3`, `funcs_24.c` musyxKeyOnVoice div-traps `x8`, both matching known
+multiplicity), and both s120 hand-fixed labels (`L_dlentry_guard_exit`,
+`L_hangarbay_guard_exit`) came out as single declarations from a fresh,
+undoctored regen. Build: exit 0, no `error:`, only the pre-existing
+pointer-sign warning class. **This means the duplication bug s120 found
+is intermittent, not guaranteed on every clean cycle** — s120's
+"reproduced twice in a row" should not be read as "always reproduces";
+treat every future regen as needing its own audit (per NEXT.md step 2),
+not as a foregone conclusion either way.
+
+**Step 2: songlifecycle3 soak — the 3rd and last allowed soak in this
+family (rule 8).** Ran the exact NEXT.md-prescribed command
+(`ROGUESQ_LOG_SONG_ARRAY_LIFECYCLE=1 ROGUESQ_LOG_VOICE_ACTIVE_GATE=1
+PROBE_MODE=start_only HOLD_S=30`, tag `songlifecycle3`). This soak used
+the sign-extension-bug-fixed instrument (confirmed sane: `count=0x0012`
+(18) / `arrayBase=0x801714D0`, both real values — unlike `songlifecycle2`,
+which is now confirmed in this session to be the buggy read:
+`count=0x0029 arrayBase=0x72657375` ("resu" as ASCII), i.e. garbage,
+consistent with s120's own bug report).
+
+Two bursts fired (19 lines total, `scratch/s73_post_a_scene/songlifecycle3/
+run.log`):
+- **Burst 1** (n=68910-68965): `idx=0x10,0x11` (16,17), `count=0x0012`
+  (18), `arrayBase=0x801714D0`. **16 and 17 do not exceed 18** — this
+  directly contradicts s120's own characterization of this exact burst
+  ("idx 16-17 vs voiceCount=15", i.e. exceeding count). Cross-checked
+  against `[song-array-alloc]` log order: at the moment burst 1 fires,
+  the alloc line immediately preceding it (same `ptr=0x801714D0`) reads
+  `voiceCount=15`, and the matching `voiceCount=18` alloc line for that
+  same pointer appears **18 lines later in the file** — i.e. by raw log
+  order, the count register instrument read a value (18) that "hadn't
+  been written yet" relative to the allocator's own log line.
+- **Burst 2** (n=127202+): `idx=0x06,0x10` (6,16), `count=0x0012` (18),
+  `arrayBase=0x801714D0`, firing after *two* consecutive `voiceCount=18`
+  allocs at that same pointer — count now genuinely matches the
+  live allocation, and **idx (6,16) still does not exceed count (18)**.
+
+**Conclusion: in this soak, no corrupted scan index ever exceeded a
+directly-read, sane loop-bound register — refuting s120's central
+"idx always exceeds voiceCount" claim.** That claim was never based on
+a live read of the loop bound (this instrument didn't have the field
+yet when s120 wrote it); it was derived by eyeballing the temporally-
+nearest `[song-array-alloc]` line in the log file. Burst 1 here shows
+exactly why that method is unsound: the audio-tick thread's `[voice-
+active-gate-nz]` print and the allocator's `[song-array-alloc]` print
+have no shared sequence number, so file line order across the two
+independent log call sites is not a valid proxy for real chronological
+order (most likely ordinary stdout-buffering skew between threads, not
+evidence of anything exotic — boring explanation preferred and nothing
+here rules it out). **Generalizable methodology gap**: every s117-120
+conclusion that compared an `idx`/`base` value against a *nearby but
+not sequence-tied* `voiceCount` log line inherits this same risk and
+should be treated as provisional, not just this one instrument.
+
+With `count=`/`arrayBase=` both confirmed sane (not the "BSS/global
+corruption, second corruption region" branch NEXT.md flagged as the
+other possible outcome), the mystery **fully reframes back to content,
+not bounds**: the byte dump at every firing (`bytes:` lines) shows the
+same recognizable ASCII/string-table fragments s118 already
+characterized independently (`expl_tex2`, `x10`/`x11`, `explo_te`,
+"lecfik_e" etc. — texture/asset-name-shaped strings), now at indices
+(6, 16, 17) that are provably *inside* the live allocation's bounds.
+**Two independent lines of evidence now agree**: s118's widened dump
+(different session, different instrument) and this session's bounds-
+checked read both show string-table content sitting at legitimate
+voice-array slots. The open question is unchanged in kind but sharper
+in scope: **what writes/aliases string-table data into `voice+0x0`
+at real, in-bounds array offsets** — not "does the scan run out of
+bounds" (closed, no) and not "is the loop-bound global itself corrupted"
+(closed, no, this run).
+
+Per rule 8, this was the 3rd consecutive `songlifecycle*` soak — but it
+*was* discriminating (overturns s120's framing), so no forced pivot is
+needed on procedural grounds; the substantive next step is naturally a
+different one anyway (find the aliasing/name-table write), not a 4th
+idx-vs-count soak.
+
+Did not re-touch the `shutdownAudioEngine`/alias hypothesis (already
+2/2 refuted, s120) or hypothesis (b) (`musyxInitVoiceFromSample`,
+closed s119) per NEXT.md's do-not list.
+
+### Files
+No new patches landed this session — reused s120's `_voice_active_gate_
+patch` (already fixed) and `_song_array_alloc_patch` as-is. No `lib/`
+edits. `N64Recomp` checkout unchanged from s120 (still carries s90-120's
+accumulated uncommitted history, same flagged-not-actioned posture).

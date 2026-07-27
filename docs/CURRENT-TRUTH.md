@@ -655,11 +655,20 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s120)
+## Next steps, in order of expected value (s121)
 
-0. **Regen-pipeline reliability bug (s120, NEW — highest priority,
-   read before trusting any soak that depends on a freshly-added
-   patch).** The documented regen order (`make_elf.py` → `N64Recomp` →
+0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
+   NOT deterministic, s121).** s121 ran the identical delete-all →
+   `make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py` →
+   `cmake --build` cycle and got a **fully clean result**: every patch
+   report line `x1` (or its documented multiplicity), no duplicate
+   labels, build exit 0. So the bug from s120 (2/2 reproductions) is
+   real but **not guaranteed on every clean cycle** — treat s120's
+   "reproduced twice in a row" as "can happen," not "will happen."
+   Keep doing the mandatory post-fixup audit (step 4 below) every
+   session regardless; do not skip it just because the last cycle was
+   clean. Root cause still not found. The documented regen order
+   (`make_elf.py` → `N64Recomp` →
    `fixup_game_funcs.py` → `cmake`) does **not** reliably produce a
    clean, single-copy-of-every-patch build. Confirmed mechanism, one
    layer deep: `N64Recomp` skips rewriting any `RecompiledFuncs/funcs_*.c`
@@ -814,18 +823,16 @@ cost three sessions before the recursive mutex.
    compiled code. **Directly refuted as the cause here**: 2 soaks
    (`songlifecycle1`/`2`) show `[shutdown-audio-free]` firing 0/2 times
    — `shutdownAudioEngine` never ran in either run, so `-0x6908` was
-   never left dangling by this mechanism. Found a sharper pattern
-   instead, reproduced independently 2/2: every corrupted
-   `[voice-active-gate-nz]` hit's `idx` **exceeds the currently-live
-   allocation's own `voiceCount`** (burst 1: idx 16-17 vs
-   `voiceCount=15`; burst 2: idx 19-31 vs `voiceCount=18`), and in both
-   cases the base address arithmetic (`base − idx*0x88`) solves exactly
-   to that *same, currently valid* allocation's own pointer — not a
-   stale one. The loop's bound comes from a fresh `-0x6900` read every
-   iteration, written by the same `allocateSongChannelArray` call at
-   the same time as `-0x6908` — why the scan is permitted past it is
-   still open. An attempt to capture `-0x6900`/`-0x6908` directly at
-   the corruption instant hit a sign-extension bug in the new
+   never left dangling by this mechanism. Found a pattern that
+   **SUPERSEDED, s121** (see below) — believable at the time because it
+   was reproduced 2/2 and the base-address arithmetic checked out, but
+   derived from comparing `idx` against the temporally-*nearest*
+   `[song-array-alloc]` log line rather than a live register read (that
+   field didn't exist yet): every corrupted `[voice-active-gate-nz]`
+   hit's `idx` "exceeds the currently-live allocation's own `voiceCount`"
+   (burst 1: idx 16-17 vs `voiceCount=15`; burst 2: idx 19-31 vs
+   `voiceCount=18`). An attempt to capture `-0x6900`/`-0x6908` directly
+   at the corruption instant hit a sign-extension bug in the new
    instrument itself (bare 32-bit literal instead of the codebase's
    `S32(...)`-then-assign-to-`gpr` idiom), producing nonsense
    (`count=0x0029 arrayBase=0x72657375`) that looked like a dramatic
@@ -836,14 +843,32 @@ cost three sessions before the recursive mutex.
    SIGSEGV shortly after each corruption burst (2/2 temporal
    co-occurrence, not proof of shared cause — s118 already refuted
    byte-identity). Full detail: PORTING-STATE s120.
-   **Next step, once item 0's audit is done**: re-run the
-   `songlifecycle` soak shape with the now-corrected `count=`/
-   `arrayBase=` fields (`ROGUESQ_LOG_SONG_ARRAY_LIFECYCLE=1
-   ROGUESQ_LOG_VOICE_ACTIVE_GATE=1 PROBE_MODE=start_only HOLD_S=30`) to
-   get the first trustworthy direct read of `-0x6900`/`-0x6908` at the
-   exact corruption instant — this should settle whether the loop bound
-   itself is corrupted (matches neither `count=` nor a sane pointer) or
-   whether s120's inference from the alloc log was subtly wrong.
+   **s121: re-soaked with the corrected instrument (`songlifecycle3`,
+   the 3rd and last allowed soak in this family per rule 8) and this
+   claim did NOT hold up.** With sane, directly-read `count=0x0012`
+   (18) / `arrayBase=0x801714D0` (both real, unlike `songlifecycle2`'s
+   confirmed-garbage read), every observed `idx` (6, 16, 17) was **less
+   than** `count` — no corrupted scan index exceeded the live loop
+   bound in this run. Cross-checking burst 1 against `[song-array-alloc]`
+   log-line order showed the *actual* mechanism behind s120's claim:
+   the two log call sites (`musyxMixActiveVoices` on the audio-tick
+   thread, `allocateSongChannelArray` on the allocator) have no shared
+   sequence number, so file line order between them is not a valid
+   proxy for real time order (most likely ordinary cross-thread stdout-
+   buffering skew) — s120's "idx exceeds voiceCount" was an artifact of
+   eyeballing the nearest-in-the-file alloc line, not a live bounds
+   violation. **Generalizable**: any s117-120 conclusion built the same
+   way (comparing an instrument's value against a non-sequence-tied
+   nearby log line from a different thread) inherits this same risk.
+   With bounds and loop-bound globals both cleared, the byte dump at
+   every firing still shows the same string-table content s118 already
+   found (`expl_tex2`, `x10`/`x11`, `explo_te`, etc.) — **two
+   independent lines of evidence** (s118's dump, s121's bounds-checked
+   read) now agree the corruption is in-bounds *content*, not an
+   out-of-bounds scan or a corrupted loop bound. **Next step**: find
+   what writes/aliases string-table data into `voice+0x0` at real,
+   in-bounds array offsets — a name-table aliasing or heap-reuse
+   question, not a bounds-check bug. Full detail: PORTING-STATE s121.
 
 -2. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
