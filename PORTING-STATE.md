@@ -7306,3 +7306,105 @@ not yet distinguished:
 Not instrumented or soaked this session (source-reading only, no
 rebuild) — the next concrete, cheap, discriminating step is in
 CURRENT-TRUTH next-steps item 1.
+
+## Session 94 (2026-07-27) — landed NEXT.md's DMA-ring producer/consumer instrument; one soak discriminates cleanly: the producer fires 10x, not once, refuting the s93 "one static call, boot-only" premise, and pins the corruption to the moment of the write, not a later stomp
+
+Executed the exact work unit s93's NEXT.md specified: two new log points
+gated on `ROGUESQ_LOG_DMA_RING=1`, added via
+`N64Recomp/fixup_game_funcs.py` (not `lib/` — recompiled guest code).
+Producer side logs right after the `L_80005768` label inside
+`submitDmaRequestBatch`'s write loop (both branches of the `bgez` at
+`0x8000575C` converge there; `ctx->r3` still holds the just-written
+ring-slot pointer, unclobbered, so the log re-reads the slot's three
+fields straight back out of memory instead of tracking registers).
+Consumer side logs every iteration of `piDmaWorker`'s poll loop right
+after the tag-byte read at `0x80005608`, before the `if (tag != 0)`
+skip branch, so idle polls log too. Full regen pipeline ran clean
+(`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`,
+exit 0, only pre-existing-class warnings); `fixup_game_funcs.py`
+confirmed both patches applied exactly once (`funcs_1.c: DMA ring
+producer diagnostic patched x1` / `... consumer ... x1`).
+
+One soak (`s94_dmaring1`, `ROGUESQ_LOG_THREAD_RESUME=0` to avoid s93's
+confound, all other diagnostic flags armed per NEXT.md's prescribed
+command) reproduced `do_rom_read` again — **5th occurrence**, still
+byte-identical to s85/s91×2/s93 (`phys=0x1C676672 dram=0x80195190
+bytes=0x600`, `mb=0x80111270 pri=1 dir=0`), dying at the same
+`piDmaWorker` → `osPiStartDma_recomp` → `do_dma` → `do_rom_read` SIGSEGV
+backtrace as every prior hit. This alone is now a 5-for-5 deterministic
+reproduction, not a coincidence.
+
+**The new data: the producer log fired 10 times this run, not 1.**
+`n=0` is the known boot-time call (`mainBootstrapWorker`, fixed
+constants `size=0xCE00 devAddr=0xB0101000 dramAddr=0x80100400`,
+consumed correctly by the matching `n=0` consumer log, then one idle
+poll `n=1 tag=1`) — this part matches every prior session exactly and
+is the positive control that the instrument works. Then, ~140s later
+in the same run (line 36802 of `run.log`, immediately preceding the
+crash), the producer log fires **9 more times back-to-back** (`n=1`
+through `n=9`), each with a **different** `devAddr`/`dramAddr` pair:
+
+    n=1 size=0x600 devAddr=0x6C676672 dramAddr=0x80195190   <- this exact entry is what crashes
+    n=2 size=0x600 devAddr=0x77696E67 dramAddr=0x80195790
+    n=3 size=0x300 devAddr=0x6C637265 dramAddr=0x80195D90
+    n=4 size=0x500 devAddr=0x6C676C72 dramAddr=0x80196390
+    n=5 size=0x500 devAddr=0x77697467 dramAddr=0x80196990
+    n=6 size=0x100 devAddr=0x6C677172 dramAddr=0x80196890
+    n=7 size=0x400 devAddr=0x6C677272 dramAddr=0x80196F90
+    n=8 size=0x100 devAddr=0x77697967 dramAddr=0x80196E90
+    n=9 size=0x400 devAddr=0x77697A67 dramAddr=0x80197590
+
+`dramAddr` climbs in plausible, roughly-sequential ~0x600–0x780
+steps (`0x80195190` → `0x80197590`) — this looks like a genuine
+real-subsystem batch (e.g. a streaming/load request for several
+buffers), not noise. But every `devAddr` in the batch decodes as
+readable ASCII when split into big-endian bytes: `0x6C676672`="lgfr",
+`0x77696E67`="wing", `0x6C637265`="lcre", `0x6C676C72`="lglr",
+`0x77697467`="witg", `0x6C677172`="lgqr", `0x6C677272`="lgrr",
+`0x77697967`="wiyg", `0x77697A67`="wizg" — never a plausible ROM
+address (no `0xB0xxxxxx`/kseg1 shape). The very next consumer log
+(`n=2`) reads back exactly the `n=1` entry's fields verbatim
+(`devAddr=0x6C676672 dramAddr=0x80195190`) and forwards it to
+`osPiStartDma_recomp`, which is the crash. The consumer never gets to
+`n=2..9` — the process dies on the first corrupted entry of the batch.
+
+**This directly answers NEXT.md's discriminating question and lands on
+its first branch: "producer fires >1 time: a second producer exists."**
+Re-checked immediately (in case the loop inside `submitDmaRequestBatch`
+itself just iterates `count>1` in its one known call): grepped fresh
+for `submitDmaRequestBatch(rdram` (the direct-call idiom the
+recompiler emits) across all 45 `funcs_*.c` — **still exactly 1 hit**
+(`funcs_0.c`, the boot call). Combined with the 140-second gap between
+`n=0` and `n=1` (a single straight-line loop with no yield points
+inside it, confirmed by re-reading the loop body, cannot pause
+mid-execution for two minutes), this rules out "the boot call's own
+loop has more than one iteration" — the 9 extra firings must come
+through a call this literal-name grep cannot see: an **indirect call**
+(`LOOKUP_FUNC(...)` / `jalr` through a function pointer) to
+`submitDmaRequestBatch`'s address (`0x8000569C`) from somewhere else
+in the game, not yet located.
+
+**Reframing of the root-cause hypothesis (supersedes s85's "shared
+corruption race" as the leading explanation, though it doesn't fully
+retire it — see below):** the corrupted value is present at the
+moment the producer *writes* it, not stomped afterward by an unrelated
+race. Whatever this second, indirect caller is, it is populating the
+request struct's `devAddr` field with bytes that look like they came
+from a name/string table (short lowercase-letter runs, all in the
+`0x60`-`0x7A` ASCII range) rather than a real physical address — most
+consistent with an **off-by-a-field / wrong-offset read** in that
+caller (reading a name or label field where a ROM address field
+belongs), not a cross-thread memory stomp. This is now a narrower,
+more source-findable bug class than "something elsewhere in RDRAM
+stomps this 20-byte window." The s85 shared-race framing is not fully
+dead — it's still possible the *indirect caller itself* is reading
+from a corrupted/reused struct — but the immediate next step is to
+identify that caller, not to instrument a wider memory-stomp watch.
+
+Controls/other instruments this run: `thr-resume bad_total=0` (with
+`ROGUESQ_LOG_THREAD_RESUME=0` so the gate itself has no log, consistent
+with s93's confound finding, not a regression); `anim-recurse`,
+`anim-tex-stream`, `hangar-entry`, TMEM-zero all present in the binary
+but did not need to be read for this soak's discriminating result (the
+crash pattern is identical to prior sessions, `do_rom_read` wins the
+race as expected with the confound off).
