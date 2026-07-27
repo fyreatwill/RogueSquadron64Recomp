@@ -4927,3 +4927,91 @@ RDP pipeline stalls," which is strictly more information (a frame drew) but the 
 cause (a FULL_SYNC that never arrives). Whether this is the M1 clip fix changing the failure's shape,
 or a difference between s50/s51's environment and this one, is not established — only the current
 behavior is.
+
+## Session 62 (2026-07-26) — rsp_task_log_and_reset wired up; the freeze is CPU-side, not an RSP task looping
+
+### What ran
+Work unit: wire `rsp_task_log_and_reset()` (s61 found it defined but never called) into its real
+call site, then re-run the s61 death-repro schedule with tracing live.
+
+**Call site.** `rsp_task_log_and_reset`'s own comment says it runs "from the factor5_ucode
+synthetic-halt site." `tools/fixup_factor5_ucode.py`'s fixup-2 comment independently identifies that
+site: the L_1090 iteration cap (16384), because the natural halt at L_10E8 is unreachable (`mfc0
+$2, SP_STATUS` is stubbed to literal 0, so the real halt-bit check can never fire). Added fixup 2b to
+the script: an `extern "C"` forward declaration before `factor5_ucode(...)`, and a call to
+`rsp_task_log_and_reset(rs64_iter, g_rsp_last_chunk_len, r17, r19, r20)` right before the cap's
+`return RspExitReason::Broke;`. `data_size` uses `g_rsp_last_chunk_len` — a global already threaded
+through `librecomp/rsp.hpp`'s DMA-read hook and already used for the same purpose in the existing
+UnhandledJumpTarget diagnostic dump (length of the most recent DMA-in chunk; OSTask's real
+`data_size` field lives at a different DMEM base — `0xFC0+0x34`, per `rs64_run_lle_gfx` in
+`src/main/main.cpp` — and wasn't worth plumbing through for this diagnostic).
+
+### Self-inflicted bug, caught and fixed before it did lasting damage
+First attempt at applying the new fixup ran the **whole script** a second time against a file that
+already had all prior fixups (1–7) applied, to test the new addition. This is not how the script is
+meant to run (CLAUDE.md: RSPRecomp → fixup once), and fixup 1 (undefined-goto → clean-exit) is not
+safe against its own prior output: its `defined_labels` regex `^([A-Za-z_][A-Za-z_0-9]*):\s*$`
+requires the label to be alone on its line, but fixup 6 (clip splice, s47) emits labels with a
+trailing comment (`rs64_clip_stray:  /* fixup: clipsplice */`). Those don't match, so fixup 1
+misclassified the label as undefined and mangled 5 live `goto rs64_clip_stray;` statements (the
+clip-splice window-range dispatch cases 0x1E1C/0x1E34/0x1E54/0x1F38/0x1FBC) into unconditional
+`return RspExitReason::ImemOverrun;` — silently dropping the `[clip-stray] tgt=... 153=...` diagnostic
+and (more importantly) changing what those 5 dispatch cases do on non-clip-overlay arrival, right in
+the M1 fix's own code path. Caught by inspecting the tool's own change-summary line before trusting
+it, diffed the exact broken text against what `fixup_factor5_ucode.py`'s clip-splice generator
+(`new_cases` in fixup 6) produces, and hand-restored the 5 lines to that exact text. Also caught,
+separately: the first attempt at fixup 2b's `extern "C"` insertion used a Python raw string with `\"`
+inside double-quote delimiters, which Python's raw-string rules keep as a literal backslash+quote
+pair — the generated declaration read `extern \"C\" void ...` (invalid C++). Fixed by switching that
+one replacement string to single-quote delimiters so `"` doesn't need escaping.
+
+**Root cause of the mangling, fixed at the source (not just patched around):** changed fixup 1's
+`defined_labels` regex to `^([A-Za-z_][A-Za-z_0-9]*):` (dropped the `\s*$` end-of-line requirement),
+so trailing-comment labels count as defined. Verified idempotent: ran the full script a second time
+against the now-correct file — 0 bytes changed, diff clean. This was a real latent bug independent of
+today's mistake (any future rerun of "idempotent" fixup 1 after fixup 6 has run would hit the same
+mangling); worth having fixed regardless of how it was found.
+
+Rebuilt clean (`cmake --build build -j8`, `DEVELOPER_DIR` set for Metal): 0 errors, only pre-existing
+unrelated warnings (sse2neon, a shift-precedence note in `rsp_vu_impl.hpp`), link OK.
+
+### Re-ran the s61 death-repro schedule (run3) with the tracing now live
+`env zsh scratch/s61_death_repro_capture.sh run3`. Positive control satisfied: 5066 `[lle task]`, 0
+`[hle send_dl]`, 0 `[fbpair-cap]`. Stability clean: 0 `missing-func`, 0 `UnhandledJumpTarget`, 0
+`dmem-race`.
+
+**The freeze reproduced a 3rd time** (s61 run1, run2, now s62 run3 — 3/3): `pre_060_a.png` shows the
+war room / AVAILABLE CRAFT area cleanly on schedule; the screen goes black, then one frame of the
+mission renders (X-wing-scale craft over a wide grey structure with a starfield horizon), then
+`grace_08.png` through `grace_20.png` are pixel-identical — frozen. `[vi] update_screen` confirms:
+`fs` plateaus at 2179 for the last 60 of however many `update_screen` lines follow, `origin` frozen at
+`0x00656400`, `width=512` — same signature family as s61's `fs=3355`/`fs=3341` plateaus.
+
+**The tracing is live and produces real per-task data — and it disproves the leading hypothesis.**
+`[task-brief]` fired 823 times out of 5066 total `[lle task]` calls (16%) — most calls to
+`factor5_ucode()` return via some path other than the iteration cap, in fewer than 16384 iterations
+(the `rsp_task_log_and_reset` doc comment's assumption "in practice every task ends here" was wrong;
+corrected in the fixup script). Of the 823 tasks that DID hit the cap: **every single one**, from
+task #1 (line 7429, in the pre-title/attribution phase) through task #823 (line 16557), shows
+`tri=0 texrect=0` — this is a constant, phase-independent background pattern present from the very
+start of the run, not something that appears at or near the freeze. **After task #823 / log line
+16557, `[task-brief]` never fires again for the rest of the run (81236 lines total, ~65,000 more lines
+after the last task-brief) — including through the entire AVAILABLE CRAFT hold, the `a` press, the
+one-frame mission render, and the whole ~60-line `fs=2179` frozen tail.** No task loops to the
+iteration cap during or after the freeze.
+
+**Conclusion: the stuck task, whatever it is, is not looping inside the RSP ucode dispatch (L_1090)
+for 16384+ iterations.** Combined with continuous, healthy-looking `[lle task]` submission, normal
+`[dpc-pak]` command sequences, and steady `[present-1024]`/`[last-drawn]` framebuffer-swap logging
+all the way to the end of the frozen tail, the RSP side of the pipeline looks alive and unremarkable
+throughout the freeze. This points toward **NEXT.md's third discriminating outcome from s61**: the
+freeze is upstream of RSP task dispatch — a CPU-side stall in whatever game logic would normally
+submit the next real (FULL_SYNC-bearing) mission-content DL, not an RSP-side infinite loop or a
+missing ucode opcode. The RSP keeps busily completing whatever small, quick tasks the CPU keeps
+handing it (all `dsize=0x0` in the OSTask header, but that field is `0x0` for every one of the 5066
+tasks in the run, including the healthy early phases — not a freeze-specific signal, checked and
+ruled out before writing this up) without ever being handed new mission geometry again.
+
+Files: `tools/fixup_factor5_ucode.py` (fixup 2b added; fixup 1's label regex fixed).
+`build/factor5_ucode/factor5_ucode_recompiled.c` regenerated via the fixed script (gitignored, not
+committed). `scratch/s61_death_repro/run3/` (log + 28 screenshots).

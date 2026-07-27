@@ -44,7 +44,13 @@ original = text
 # ---------------------------------------------------------------------------
 # Fixup 1: undefined goto targets → clean exit
 # ---------------------------------------------------------------------------
-defined_labels = set(re.findall(r"^([A-Za-z_][A-Za-z_0-9]*):\s*$", text, flags=re.MULTILINE))
+# Trailing-comment labels (e.g. "L_1650:  /* fixup: clipsplice */") count as
+# defined too — s62 found the old \s*$-anchored form missed these, silently
+# reclassifying real cross-references into fixup-6 clip-splice labels as
+# "undefined" on any second run of this script and mangling live goto
+# statements (goto rs64_clip_stray / goto L_1650) into dead ImemOverrun
+# returns. This regex intentionally does not require end-of-line.
+defined_labels = set(re.findall(r"^([A-Za-z_][A-Za-z_0-9]*):", text, flags=re.MULTILINE))
 goto_targets = set(re.findall(r"goto\s+([A-Za-z_][A-Za-z_0-9]*);", text))
 undefined = sorted(goto_targets - defined_labels)
 
@@ -127,6 +133,42 @@ if is_main_ucode and ITER_MARKER not in text:
             "    }\n"
         )
         text = l1090_pattern.sub(lambda m: replacement, text, count=1)
+
+# ---------------------------------------------------------------------------
+# Fixup 2b: wire up rsp_task_log_and_reset() at the iter-cap synthetic-halt
+# ---------------------------------------------------------------------------
+# rsp_task_log_and_reset() (src/rsp/dpc_bridge.cpp) reads/resets the per-task
+# RDP byte/cmd/FULL_SYNC counters and logs them under ROGUESQ_LOG_DPC=1, but
+# as of s61 it was never called from anywhere — its own comment claims it
+# runs "from the factor5_ucode synthetic-halt site", which per fixup 2 above
+# IS the L_1090 iter cap (the natural halt at L_10E8 is unreachable — mfc0
+# SP_STATUS is stubbed to always 0). Call it right before the cap's `return
+# Broke` so each task that actually hits the cap gets one [task-brief]/[task]
+# log line. **s62 measured this is a MINORITY of tasks** (823/5066 in one
+# run) — most factor5_ucode() calls return via some other path in fewer than
+# 16384 iterations, so this instrument only sees the subset of tasks that
+# loop to the cap; it does not see every task the way the old (wrong, never
+# tested pre-s62) belief assumed. data_size uses g_rsp_last_chunk_len
+# (already extern-declared via librecomp/rsp.hpp, already used for the same
+# purpose in the UnhandledJumpTarget diagnostic dump below) — the length of
+# the most recent DMA-in chunk, the best available proxy for "this task's DL
+# size".
+LOG_MARKER = "/* fixup: task log call */"
+if is_main_ucode and LOG_MARKER not in text:
+    decl_pattern = re.compile(r"(\nRspExitReason factor5_ucode\()")
+    if decl_pattern.search(text):
+        text = decl_pattern.sub(
+            r'\nextern "C" void rsp_task_log_and_reset(uint32_t iters, uint32_t data_size,'
+            r' uint32_t r17, uint32_t cmd_w0, uint32_t cmd_w1);  ' + LOG_MARKER + r"\1",
+            text, count=1)
+    cap_return_pattern = re.compile(
+        r'(fprintf\(stderr, "\[ucode-cap\] fired #%d, last r17=0x%X\\n", rs64_cap_fires, r17\);\n'
+        r"            fflush\(stderr\);\n        \}\n)(        return RspExitReason::Broke;\n    \}\n)")
+    if cap_return_pattern.search(text):
+        text = cap_return_pattern.sub(
+            r"\1        rsp_task_log_and_reset(rs64_iter, g_rsp_last_chunk_len, r17, r19, r20);  "
+            + LOG_MARKER + r"\n\2",
+            text, count=1)
 
 # ---------------------------------------------------------------------------
 # Fixup 3: per-task clip/cull census (ROGUESQ_UCODE_CULLSTATS=1), main ucode

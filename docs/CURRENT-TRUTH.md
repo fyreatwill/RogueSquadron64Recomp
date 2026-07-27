@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 52)
+## Current truth (as of session 62)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -90,11 +90,18 @@ Remaining visual defects:
   never reaches FULL_SYNC" hypothesis, now pinned to a concrete counter value instead of an
   inference. Run2 additionally showed texture corruption on the same ship geometry (not in run1) —
   a second, uninvestigated defect. Zero `missing-func`/`UnhandledJumpTarget`/`dmem-race`/crash-
-  handler output in either run — the process is frozen, not crashed. **`ROGUESQ_LOG_DPC=1` traced
-  nothing**: `rsp_task_log_and_reset` (the function CURRENT-TRUTH previously said only needed the
-  env var) is defined but **never called from anywhere in the codebase** — the s59/s60 belief that
-  the tracing "already exists and needs no new code" was wrong; it needs wiring into its RSP
-  synthetic-halt call site before it can show which task stalls. Full detail: PORTING-STATE s61.
+  handler output in either run — the process is frozen, not crashed.
+  **s62: `rsp_task_log_and_reset` is now wired up** (fixup 2b in `tools/fixup_factor5_ucode.py`,
+  called from the L_1090 iteration-cap synthetic-halt site) and the freeze reproduced a 3rd time
+  (fs plateau 2179, origin frozen 0x00656400). The trace **rules out an RSP task looping**: of 5066
+  `[lle task]` calls only 823 (16%) ever hit the 16384-iteration cap, every one of those 823 shows
+  `tri=0 texrect=0` as a constant background pattern present since task #1 (not freeze-specific),
+  and **zero tasks hit the cap at all during or after the freeze** (last cap-hit is log line 16557
+  of 81236 — nothing in the ~65,000 lines after it, including the whole frozen tail). RSP-side
+  submission and present logging both look continuously healthy through the freeze. This points to
+  a **CPU-side stall** (game logic never submits the next real mission-content DL) rather than an
+  RSP ucode infinite loop or missing FULL_SYNC opcode — redirect investigation to whatever CPU code
+  should be submitting fresh mission geometry per frame. Full detail: PORTING-STATE s61, s62.
   ~~**s51 also found a generalizable environment confound**: driven runs stall in phase-advance
   under concurrent system load~~ — **OVERTURNED, s60. There is no load confound.** The three repro
   scripts set no `ROGUESQ_*` variables at all, so from a clean shell the binary took the **HLE**
@@ -155,17 +162,18 @@ correctly, one press past SELECT LEVEL. The `a` press from AVAILABLE CRAFT no lo
 and kills the process (0/2 in s61, same schedule that reproduced it 2/2 in s50/s51) — instead it now
 loads and renders **one frame of the mission itself** (X-wing near a capital ship, "AMBUSH AT MOS
 EISLEY") and then the RDP `fs` (FULL_SYNC) counter freezes for good, `[vi] update_screen` still
-firing with frozen values, process alive but stalled — reproduced 2/2. See "Remaining visual
-defects" above and PORTING-STATE s61 for the full counter evidence. `ROGUESQ_LOG_DPC=1` traced
-nothing usable: `rsp_task_log_and_reset` is dead code, never called (s61) — wiring it into its real
-RSP synthetic-halt call site in `src/rsp/` is the concrete next step, needed to identify *which* DL
-task fails to reach FULL_SYNC (the `fs`-plateau evidence already proves *when*). The in-process crash
-handler (`src/main/main.cpp`, s52) remains in place and unexercised — nothing has crashed since s51.
-Nothing here is load-gated (reconfirmed s61 at load 3.93/33 `claude` processes). Expect further new
-failure classes as this progresses (mission-overlay DMA, a new VI phase, possibly new ucode ops,
-run2's texture corruption) — each is its own work unit. *Done when:* 60 seconds of in-mission
-rendering, craft visibly responds to synthetic input, stability counters 0, and the phase timeline in
-this document covers the mission.
+firing with frozen values, process alive but stalled — reproduced 3/3 (s61 ×2, s62 ×1). See
+"Remaining visual defects" above and PORTING-STATE s61/s62 for the full counter evidence.
+**s62: `rsp_task_log_and_reset` is wired up and traced the freeze** — it rules out an RSP-side
+infinite loop (0 tasks hit the iteration cap during or after the freeze; the cap-hitting population
+is a constant, phase-independent, always-empty background pattern unrelated to the freeze). Next
+sub-unit is now CPU-side: find what game code submits per-frame mission-content DLs and determine
+why it stops after the one frame renders. The in-process crash handler (`src/main/main.cpp`, s52)
+remains in place and unexercised — nothing has crashed since s51. Nothing here is load-gated
+(reconfirmed s61/s62). Expect further new failure classes as this progresses (mission-overlay DMA,
+a new VI phase, possibly new ucode ops, run2's texture corruption) — each is its own work unit.
+*Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
+stability counters 0, and the phase timeline in this document covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause (currently masked, not fixed); the S=0 triangles in the 640 attribution phase; the I4
@@ -194,24 +202,25 @@ cost three sessions before the recursive mutex.
 
 ## Next steps, in order of expected value (s58)
 
-1. **M3 — wire up `rsp_task_log_and_reset` so `ROGUESQ_LOG_DPC=1` actually traces the `fs` freeze
-   (s61: the function exists but is dead code, called from nowhere).** s61 ran the s50/s51 repro
-   schedule twice at load 3.93 (load is NOT a precondition — reconfirmed, do not gate this step on
-   `uptime`). The original black-screen death did not reproduce (0/2); instead the mission now loads
-   and renders one frame (X-wing near a capital ship, "AMBUSH AT MOS EISLEY") before the RDP `fs`
-   counter permanently stops incrementing (`fs=3355` run1 / `fs=3341` run2, each held for the last 24
-   `[vi] update_screen` lines) — process alive, present loop alive, but no task past that point ever
-   reaches FULL_SYNC. `ROGUESQ_LOG_DPC=1` was exported both times and produced **zero**
-   `[task-brief]`/`[task]` lines: `grep -rn rsp_task_log_and_reset` across the whole repo returns only
-   its own definition (`src/rsp/dpc_bridge.cpp:1296`) — nothing calls it. Next sub-unit: find the real
-   RSP synthetic-halt call site (grep `src/rsp/` for where a task is recognized as complete /
-   `iters`+`data_size`+`r17`+two command words are all available together — those are
-   `rsp_task_log_and_reset`'s parameters) and add the `extern "C"` call there; rebuild; re-run
-   `scratch/s61_death_repro_capture.sh` (exports `ROGUESQ_LOG_DPC=1` already) and read the tail for
-   the last task-brief before the `fs` plateau — that task is the one that never reaches FULL_SYNC.
-   `src/main/main.cpp`'s in-process crash handler (s52) remains in place but has had nothing to catch
-   since s51 — the bug is now a freeze, not a crash. Full detail: PORTING-STATE s50, s51, s52, s53,
-   s54, s55, s56, s57, s58, s59, s60, s61.
+1. **M3 — find the CPU-side code that should submit the next mission-content DL and determine why it
+   stops after one frame (s62: RSP-side infinite loop is ruled out).** `rsp_task_log_and_reset` is
+   now wired up (fixup 2b, `tools/fixup_factor5_ucode.py`, called from the L_1090 iteration-cap
+   site) and traced a 3rd freeze repro (`scratch/s61_death_repro_capture.sh run3`, `fs` plateau
+   2179, origin frozen 0x00656400). Result: **0 tasks hit the iteration cap during or after the
+   freeze** — the 823/5066 tasks that did hit the cap are a constant `tri=0 texrect=0`
+   phase-independent background pattern present since task #1, unrelated to the freeze; the last
+   cap-hit is at log line 16557 of 81236, nothing after it through the entire frozen tail. RSP task
+   submission (`[lle task]`), command processing (`[dpc-pak]`), and presentation
+   (`[present-1024]`/`[last-drawn]`) all keep running normally and healthily right through the
+   freeze — the RSP side is not stuck. Next sub-unit: this is a CPU-side stall, not an RSP one —
+   find what game code (likely in the mission-overlay or main-overlay symbol set) is responsible for
+   submitting each frame's mission-content display list and instrument/inspect why it only runs
+   once. Candidates to check first: whatever calls `rs64_run_lle_gfx` per frame (grep
+   `src/main/main.cpp` for its call site and what gates it), and any mission-phase state machine
+   that might be waiting on a flag/semaphore that never gets set (this project's history — M1, the
+   audio gate byte — has two prior examples of exactly this failure shape). Re-run
+   `scratch/s61_death_repro_capture.sh run4` after any change; positive control first (iron rule 1).
+   Full detail: PORTING-STATE s50–s62.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
