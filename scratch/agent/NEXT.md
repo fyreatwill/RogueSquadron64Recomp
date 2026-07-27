@@ -1,85 +1,87 @@
-# NEXT work unit — M3: characterize the `frameStartReset` SIGBUS (s84, new)
+# NEXT work unit — M3: test the shared-corruption-race hypothesis (s85, new)
 
-s84 landed the thr-resume `bad=1` gate (`lib/N64ModernRuntime/ultramodern/
-src/threads.cpp:198-238`, `[thr-resume-skip]`, exported + committed, build
-clean). The soak that validated the gate build instead surfaced a **new,
-5th** crash class that fires **earlier** than every other crash in the
-s81–s84 arc (hold+~1s — faster than s83's spline1 hold+3s, spline2
-hold+12s, or s82's NaN hold+6s):
+s85 reproduced the s84 `frameStartReset` scenario twice
+(`env PROBE_MODE=start_only HOLD_S=30 zsh scratch/s73_post_a_scene/run_mission_keys.sh <tag> 0 12`,
+same script as s84). `frameStartReset` **never recurred** — both soaks
+instead hit s80's parked `do_rom_read` Abort/SIGSEGV
+(`osPiStartDma_recomp` → `do_dma` → `do_rom_read`, `pi.cpp:65`), with a
+**garbage `physical_addr`** that differed between runs (an odd small value
+→ SIGABRT on the alignment assert; `0x1C676672`, ~208 MB past `rom_base`
+→ SIGSEGV reading unmapped memory). New instrument added this session:
+`[rom-read] phys=... ram=... bytes=...` logged at `do_rom_read` entry,
+gated on `ROGUESQ_LOG_DMA` (`lib/N64ModernRuntime`, exported + committed).
 
-```
-[CRASH] caught signal 10 (Bus error: 10)
-frameStartReset + 532
-  <- static_5_800AAD9C (runHangarSelectionFrame) + 1012
-  <- static_5_800C6854 (runHangarMenuFromOverlay) + 628
-  <- menuOverlayInit + 3512
-  <- mainGameLoop + 2400
-```
+## The hypothesis
 
-`frameStartReset` = 0x8000A6CC ("resets per-frame counters ..., calls
-heapWalker, slot dispatch"). This is the **hangar-selection per-frame poll
-loop itself** (runs while still inside SELECT YOUR CRAFT / during the leave
-transition) — a completely different subsystem from the thread-resume/
-semaphore path s70–s72/s83/s84 target. No overlap, no shared code path.
+`osPiStartDma_recomp` (`lib/N64ModernRuntime/librecomp/src/pi.cpp:339-354`)
+computes `physical_addr` directly from the calling thread's recompiled
+register context: `devAddr = ctx->r7 | recomp::rom_base`. If `ctx` (or the
+guest-stack reads at `MEM_W(0x10/0x14, ctx->r29)` feeding `dramAddr`/`size`)
+belongs to a thread whose register context was corrupted by the **same**
+race behind:
+- s70–s72's OSThread UAF (`runAiAudioStreamPlaybackLoop` context bit-corrupt)
+- s83–s84's thr-resume `bad=1` detector (`threads.cpp:198-238`, gated but
+  never validated — `bad_total=0` across 3 soaks now)
 
-Because it now fires before any of the other 4 crash classes get a chance
-to recur, it blocks validation of **both** the s84 thr-resume gate
-(`bad_total` never leaves 0 — no positive control) **and** the s83 Metal
-SIGSEGV reproducibility check (next-steps item 3). It is the new critical
-path.
+...then a garbage `ctx->r7` would produce exactly this symptom, and would
+also explain s84's `frameStartReset` SIGBUS (a per-frame function
+dereferencing a different corrupted pointer/offset) — i.e. **one shared
+race, not 3+ independent crash classes**, surfacing wherever a corrupted
+read happens to be dereferenced first. That would explain why the
+"dominant blocker" has changed shape every session since s83 started
+peeling back the deterministic NaN assert: spline NaN → Metal SIGSEGV /
+thr-resume UAF → frameStartReset SIGBUS → do_rom_read corruption.
 
-## Competing hypotheses
+**This is not yet proven** — it is a plausible mechanism from reading the
+source, not a measurement. Do not write it into CURRENT-TRUTH as fact
+until the discriminating measurement below runs.
 
-| ID | Claim | If true, we will see… |
-|----|--------|------------------------|
-| F1 | Unaligned load/store inside `frameStartReset` itself (same fault class as s80's parked `do_rom_read` Abort, different call site) | crash address is misaligned for its access width; static disasm of 0x8000A6CC shows a multi-byte load/store off a computed (not fixed) offset |
-| F2 | A caller passes a bad/uninitialized pointer into `frameStartReset` (corruption upstream, not a local bug) | the faulting address itself is wildly out of any valid RDRAM/struct range (not just misaligned) |
-| F3 | Timing-dependent: some other thread mutates state `frameStartReset` reads without synchronization (race), same general family as the s70–s72/s84 UAF work | crash offset/address varies run-to-run even with identical input timing; a rerun with unrelated code changes (e.g. thr-resume gate) shifts *when* it fires but not *whether* |
-| F4 | Rare/nondeterministic — this run's early death was a fluke and it won't reliably reproduce | a second soak with identical env does NOT crash at `frameStartReset`, or does so at a very different hold offset |
+## Discriminating measurement
 
-## Discriminating measurement (start read-only, no code yet)
-
-1. **Reproduce once more**, identical env to the s84 soak, to see if F4 is
-   live:
+1. Add a diagnostic identifying *which thread* is executing
+   `osPiStartDma_recomp` when `[rom-read]` shows garbage — thread id / OSThread
+   pointer / a cheap checksum of the register file (e.g. XOR of r4-r7,
+   ctx pointer identity). Log unconditionally alongside the existing
+   `[rom-read]` line (both gated on `ROGUESQ_LOG_DMA`; add
+   `ROGUESQ_LOG_DMA=1` to the soak invocation — it is not one of
+   `run_mission_keys.sh`'s always-on exports).
+2. `run_mission_keys.sh` already exports `ROGUESQ_LOG_THREAD_RESUME=1` and
+   `ROGUESQ_LOG_OST_WB=1` unconditionally — those logs are already in every
+   soak's `run.log`. After a soak reproduces the corrupted `physical_addr`,
+   grep the same `run.log` for `[thr-resume]`/`[ost-wb]` lines naming the
+   **same thread id / OSThread pointer** in the ~10-50 lines immediately
+   before the `[rom-read]` garbage line (same pattern as s72's "writer is
+   the depth writeback immediately after last-drawn" correlation).
+3. Rebuild + one soak (same script, same env, `ROGUESQ_LOG_DMA=1`):
    ```bash
-   export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-   env PROBE_MODE=start_only HOLD_S=30 \
-     zsh scratch/s73_post_a_scene/run_mission_keys.sh thrgate2 0 12
+   env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ROGUESQ_LOG_DMA=1 \
+     PROBE_MODE=start_only HOLD_S=30 \
+     zsh scratch/s73_post_a_scene/run_mission_keys.sh corrgate1 0 12
    ```
-   Check `grep -a 'CRASH\|frameStartReset' run.log` and the hold-iteration
-   count at death. Same site + similar early offset → F4 refuted, real
-   dominant blocker. Different site, or no crash (holds full 30s) → F4
-   supported, was a fluke; fall through to Next Steps item 2 (thr-resume
-   gate retry) or item 3 (Metal SIGSEGV) instead.
-2. **If it reproduces**, get the exact faulting instruction before writing
-   any fix. `frameStartReset` = 0x8000A6CC; find it in the generated
-   `RecompiledFuncs/*.c` (grep for the function's recompiled name — check
-   `symbol_files/main_overlay.txt` for the exact translated symbol) and
-   read the source around offset +532 (~133 instructions in, if roughly
-   4 bytes/instr — recompiled C won't map 1:1, use the crash backtrace's
-   native offset only as a rough locator, then correlate against the N64
-   disassembly of 0x8000A6CC+0x214 for the real MIPS instruction). Identify:
-   is the access at a fixed struct offset (favors F1 misalignment) or
-   through a pointer chased from an argument/global (favors F2 bad pointer,
-   or F3 race if the same global mutates under threads).
-3. Only after step 2 identifies which of F1/F2/F3 fits, design the actual
-   fix (likely an alignment guard or a null/range check at the load site,
-   same pattern as the s78/s82/s84 gates) as a **separate** iteration —
-   this work unit's job is diagnosis, not a same-iteration patch, since
-   there is no existing detector to extend here (unlike thr-resume, which
-   already had `bad`/`live` computed).
+4. **Discriminate:**
+   - The DMA-issuing thread appears in a `[thr-resume]`/`[ost-wb]` line
+     shortly before the corruption, on this run AND it matches the pattern
+     of a suspicious event (a swap, a writeback overlapping that thread's
+     context range) → **supports** the shared-race hypothesis. Next step:
+     trace that specific writer the way s72 did for the OSThread UAF (find
+     the actual store that corrupts the register/stack memory).
+   - No such correlation, or the DMA-issuing thread was never touched by
+     a resume/writeback event near the corruption → **hypothesis
+     refuted**. Fall back to characterizing `do_rom_read` corruption and
+     `frameStartReset` as independent bugs; next in line is whichever
+     recurs (currently do_rom_read, 2/2 this session vs. frameStartReset's
+     1/3 recent soaks).
 
 ## Do not
-- Don't conflate this with the thr-resume SIGBUS the s84 gate targets —
-  confirmed unrelated call stack, per PORTING-STATE s84.
-- Don't re-run the thr-resume gate soak (next-steps item 2) yet — it will
-  almost certainly die at `frameStartReset` again before generating a
-  `bad_total>0` positive control, wasting a build-run cycle.
-- Don't write a fix before step 2 identifies the actual faulting
-  instruction — a guessed alignment guard on the wrong offset is the kind
-  of "gate that never fires" the s84 soak (0/117218 `bad=1`) just
-  illustrated the cost of.
-- Spend more than 3 consecutive iterations on diagnosis without a
-  discriminating result (ITERATION.md rule 8) — if F1–F4 aren't
-  distinguishable after 2 soaks + 1 disassembly pass, go BLOCKED with the
-  specific ambiguity named.
+- Do not "fix" `do_rom_read` by relaxing the alignment asserts or clamping
+  `physical_addr` into range — that would silently let a ~208 MB-OOB read
+  through as memory corruption instead of a loud, diagnosable crash. The
+  asserts are doing their job; the bug is upstream of them.
+- Do not re-attempt the thr-resume gate soak in isolation (next-steps item
+  2) before item 1 — if the shared-race hypothesis is right, the same soak
+  serves both purposes; if wrong, item 2 is unlikely to get further than
+  the 3 prior attempts (do_rom_read keeps winning the race first).
+- Budget: this is iteration 1 on the shared-race hypothesis. Per
+  ITERATION.md rule 8, if 3 consecutive iterations don't produce a
+  discriminating result, stop and go back to characterizing crash sites
+  independently rather than continuing to chase the unifying theory.

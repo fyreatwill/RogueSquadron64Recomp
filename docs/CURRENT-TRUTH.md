@@ -123,8 +123,20 @@ resumes, **0 `bad=1`** (U3, no positive control yet), no regression. Died
 SIGBUS in `frameStartReset` (called from the hangar-selection per-frame
 poll loop `runHangarSelectionFrame`/`runHangarMenuFromOverlay`, not the
 thread-resume path at all) — masks further gate validation the same way
-NEXT.md's U4 anticipated for the Metal SIGSEGV. Full detail: PORTING-STATE
-s83–s84.
+NEXT.md's U4 anticipated for the Metal SIGSEGV.
+**s85:** `frameStartReset` **did not recur** in 2 repro soaks (F4 supported
+— it was a fluke, not a dominant blocker); both instead reproduced s80's
+parked **`do_rom_read` Abort/SIGSEGV** (`osPiStartDma_recomp` →
+`do_dma` → `do_rom_read`, `pi.cpp:65`), root-caused via source read as a
+deliberate `assert()` on `physical_addr` alignment (not a raw unaligned
+access) — added `[rom-read]` logging (`lib/`, exported+committed) proved
+the value is **garbage that varies run-to-run** (odd-small one run,
+`0x1C676672`/~208 MB-OOB the next). New hypothesis, unproven: `physical_addr`
+comes straight from the calling thread's register context
+(`ctx->r7`), so this may be the **same shared corruption race** as the
+s70–s72 OSThread UAF / s83–s84 thr-resume `bad=1` — not a 6th independent
+bug, one race surfacing wherever a corrupted read is dereferenced first.
+Full detail: PORTING-STATE s83–s85.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -207,7 +219,9 @@ post-`a` scene ID (s73); Start path isolated (s74/s75); hold/assert triage (s76/
 wild-FB refuse gate (s78); D3 S1–S4 (s79); VI_FULLSYNC decision V1–V4 (s80);
 intermittent-black B1–B4 (s81); last-drawn sane-width gate (s82, G1);
 evalCubicSplineAtTime NaN root-caused, 2 new crash classes found (s83);
-thr-resume `bad=1` gated (unvalidated), 5th crash class found (s84).**
+thr-resume `bad=1` gated (unvalidated), 5th crash class found (s84);
+frameStartReset was a fluke, do_rom_read corruption root-caused, unified
+shared-race hypothesis raised (s85).**
 AVAILABLE CRAFT reachable. **s75:** single Start → hangar-flight.
 **s78–s79:** RDP-`fs` plateaus post-leave (S1). **s80:** synthetic FIRE continues.
 **s81:** black = mode-3 presenting wild last-drawn. **s82:** always-on sane-width
@@ -220,9 +234,14 @@ bad=1` UAF SIGBUS (same class as s70–s72, detector exists at
 `threads.cpp:198-238`, never gated). **s84:** gated the SIGBUS site (always-on
 skip, `lib/` patch exported+committed); soak ran clean with 0 `bad=1` (no
 positive control yet) but died **earlier** (hold+~1s) to a **new** SIGBUS in
-`frameStartReset` (hangar-selection per-frame poll loop) — unrelated to the
-gate, now the dominant blocker. Leave key closed. Origin still cannot name
-scenes. Full detail PORTING-STATE s68–s84; `scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
+`frameStartReset` (hangar-selection per-frame poll loop). **s85:** 2 repro
+soaks — `frameStartReset` never recurred (fluke, not dominant); both instead
+hit s80's parked `do_rom_read` Abort/SIGSEGV with a **garbage `physical_addr`**
+(added `[rom-read]` logging, `lib/` exported+committed) that varies run-to-run
+(odd-small vs. ~208 MB-OOB) — raised, not yet proven, that this is the **same**
+shared-corruption race as the OSThread UAF / thr-resume `bad=1` families
+rather than a 6th independent bug. Leave key closed. Origin still cannot name
+scenes. Full detail PORTING-STATE s68–s85; `scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -251,71 +270,70 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s84)
+## Next steps, in order of expected value (s85)
 
-1. **M3 — characterize the `frameStartReset` SIGBUS (s84, new, now the
-   dominant/earliest-firing blocker — died hold+~1s, before every other
-   crash class in the s81–s84 arc got a chance to recur).** Bus error at a
-   fixed offset inside `frameStartReset` (0x8000A6CC), called from the
-   hangar-selection per-frame poll loop (`runHangarSelectionFrame` →
-   `runHangarMenuFromOverlay` → `menuOverlayInit` → `mainGameLoop`) —
-   **not** the thread-resume/semaphore path the s84 gate targets, a
-   different subsystem entirely. Same general fault class as s80's parked
-   unaligned `do_rom_read` Abort (different call site: that one is in the
-   DL/ROM-read path at phase 640 ~150s, this one is in the hangar
-   per-frame reset path at leave-time) — read the two side by side before
-   assuming they're the same bug. First step: reproduce once more and get
-   an exact faulting address / alignment from the crash log (`build/` core
-   or the `[CRASH]` backtrace) before writing any fix; do not guess at a
-   guard the way the earlier gates had a known detector to extend — this
-   one has no existing instrumentation yet.
+1. **M3 — test the shared-corruption-race hypothesis (s85, new, highest
+   value).** Two s85 soaks hit s80's parked `do_rom_read` Abort/SIGSEGV
+   with a **garbage `physical_addr`** that differs run-to-run (odd-small vs.
+   `0x1C676672`/~208 MB-OOB). `osPiStartDma_recomp` reads that value
+   straight from the calling thread's register context (`ctx->r7`,
+   `pi.cpp:339-354`) — if that context was corrupted by the same race
+   behind the s70–s72 OSThread UAF / s83–s84 thr-resume `bad=1`, this would
+   explain why the "dominant crash" keeps changing shape each session
+   (spline NaN → Metal SIGSEGV / thr-resume UAF → frameStartReset SIGBUS →
+   do_rom_read corruption) instead of 5+ independent bugs. Discriminating
+   measurement: log the identity of the thread executing
+   `osPiStartDma_recomp` (thread id / OSThread ptr) at the moment
+   `physical_addr` is garbage, cross-reference against the always-on
+   `[thr-resume]`/`[ost-wb]` logs already in the same run. Correlation on
+   ≥2 soaks → chase the shared race directly (highest leverage: one fix
+   could close 3+ crash classes at once). No correlation → refuted, fall
+   back to characterizing each crash site independently (frameStartReset
+   next, per s84).
 2. **M3 — retry the `thr-resume bad=1` gate soak for a positive control
    (U3 still open).** s84 landed the gate (`lib/N64ModernRuntime/ultramodern/
    src/threads.cpp:198-238`, `[thr-resume-skip]`, exported + committed) but
-   the soak saw `bad_total=0` for all 117218 resumes — gate unexercised,
-   not validated. Only worth re-running once item 1 stops winning the race
-   (it now dies ~10x earlier than the crash the gate targets). Positive
-   control: `bad_total` counter goes nonzero (proves the condition still
-   occurs) while no SIGBUS follows. Discriminate: SIGBUS gone + soak reaches
-   hold_30 → try HOLD_S=60; SIGBUS gone but new death → another new class;
-   SIGBUS persists → gate placed wrong or resume path differs.
+   two soaks since (s84, s85 x2) all saw `bad_total=0` — gate still
+   unexercised. Worth another attempt once item 1's instrumentation is in
+   place anyway (same soak can serve both purposes).
 3. **M3 — check the Metal-shader-compiler SIGSEGV's reproducibility** (s83
    spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no
-   source on our side). One soak isn't enough to know if this is a
-   rebuild-triggered shader-cache-population artifact (retry-fixable) or a
-   recurring hazard. Blocked behind item 1 the same way — it won't get a
-   chance to recur until `frameStartReset` stops firing first.
+   source on our side). Still only one data point.
 4. **M3 — confirm the s83 spline div0 guard actually engages.** 0/2 fires so
-   far; it's a real fix by code inspection (genuine 0/0 IEEE division) but
-   has no same-run positive control yet. If items 1–3 clear and a NaN abort
-   reappears, that's the signal to look harder at when the guard should have
-   fired and didn't.
-5. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once items 1–4 are clear:
+   far (still 0 after s85's 2 more soaks); real fix by code inspection
+   (genuine 0/0 IEEE division) but no same-run positive control yet.
+5. **M3 — characterize `frameStartReset` SIGBUS if it recurs.** Demoted
+   from "dominant blocker" after s85: 0/2 repro soaks. Only worth dedicated
+   attention again if it reappears; do not gate it speculatively without a
+   faulting instruction (no existing detector, unlike thr-resume).
+6. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once items 1–5 are clear:
    `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40; document phase timeline.
-   Gate already keeps black off; residual S1 `fs` freeze (~3769–3784 plateau,
-   s82/s83) may still stall animation — if stick marks show no pose change on
+   Gate already keeps black off; residual S1 `fs` freeze (~3769–3861 plateau,
+   s82/s85) may still stall animation — if stick marks show no pose change on
    a frozen frame, next is S1 FULL_SYNC for hangar-flight tasks (not
    leave-key, not wild-FB).
-6. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
+7. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` 3→0.
    Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
-7. Past the first sustained mission hold: expect further new failure classes (mission overlay
+8. Past the first sustained mission hold: expect further new failure classes (mission overlay
    DMA → missing-func / UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture
-   corruption). Each new failure is its own work unit. s80 unaligned `do_rom_read` Abort
-   at phase 640 ~150s — park until present holds.
-8. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
+   corruption). Each new failure is its own work unit.
+9. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
    — thread exhausted (s55–s58).** Prefer M3 mission-content work over reopening this section.
-9. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
+10. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
    carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user
    before committing there.
-10. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
-11. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+11. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
+12. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
-Done this session: thr-resume `bad=1` UAF SIGBUS gated (s84) — builds/runs
-clean, 0 regressions, but unvalidated (117218 resumes, `bad_total=0`, no
-same-run positive control yet). Surfaced a 5th, earlier-firing crash class
-(`frameStartReset` SIGBUS, hangar-selection poll loop) that now dominates
-and blocks validation of both the s84 gate and the s83 Metal SIGSEGV check.
+Done this session: reproduced `frameStartReset` twice — it never recurred
+(fluke, demoted from "dominant blocker"); both soaks instead hit s80's
+parked `do_rom_read` Abort/SIGSEGV, root-caused via source read as a
+corrupted `physical_addr` argument (not a hardware alignment fault),
+confirmed garbage via new `[rom-read]` logging (`lib/`, exported +
+committed) across two runs with different bad values. Raised a unifying
+hypothesis: this and 2+ other crash classes (OSThread UAF, thr-resume
+`bad=1`) may share one root-cause race rather than being independent bugs.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work

@@ -222,7 +222,7 @@ index 8c8e5d1..7a9085d 100644
          assert(false);
          std::exit(EXIT_FAILURE);
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..dcc09dc 100644
+index 43509ba..dbc0296 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -8,6 +8,7 @@
@@ -233,7 +233,23 @@ index 43509ba..dcc09dc 100644
  #include <ultramodern/ultra64.h>
  #include <ultramodern/ultramodern.hpp>
  
-@@ -274,6 +275,23 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -64,6 +65,15 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
+ void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr, size_t num_bytes) {
+     // TODO use word copies when possible
+ 
++    // ROGUESQ: log args before the alignment asserts below can abort, so a
++    // crashing call still leaves its physical_addr/ram_address/num_bytes in
++    // the log (the existing [dma] log in do_dma fires *after* this call
++    // returns, so it never appears on the abort path).
++    if (std::getenv("ROGUESQ_LOG_DMA")) {
++        fprintf(stderr, "[rom-read] phys=0x%08X ram=0x%08llX bytes=0x%zX\n", physical_addr, (unsigned long long)ram_address, num_bytes);
++        fflush(stderr);
++    }
++
+     // TODO handle misaligned DMA
+     assert((physical_addr & 0x1) == 0 && "Only PI DMA from aligned ROM addresses is currently supported");
+     assert((ram_address & 0x7) == 0 && "Only PI DMA to aligned RDRAM addresses is currently supported");
+@@ -274,6 +284,23 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              // read cart rom
              recomp::do_rom_read(rdram, rdram_address, physical_addr, size);
  

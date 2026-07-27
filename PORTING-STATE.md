@@ -6413,3 +6413,120 @@ is in the hangar per-frame reset path at leave-time).
   recur, and at what call count / offset) before deciding whether to fix or
   park it; only after it stops dominating does another thr-resume-gate soak
   have a real chance at a `bad_total>0` positive control.
+
+## Session 85 (2026-07-27) — frameStartReset was a fluke; do_rom_read corruption root-caused, looks like the SAME family as thr-resume/frameStartReset
+
+### Work unit
+NEXT.md step 1: reproduce the s84 `frameStartReset` SIGBUS once more
+(F1–F4) with identical env
+(`env PROBE_MODE=start_only HOLD_S=30 zsh scratch/s73_post_a_scene/run_mission_keys.sh thrgate2 0 12`,
+same binary as s84, no rebuild).
+
+### Result 1 (thrgate2): frameStartReset did NOT recur
+Held to **hold-iter 17** (~+17s post-leave) — further than s84's ~+1s — then
+died to `[CRASH] signal 6 (Abort trap)` in `do_rom_read` (`piDmaWorker` →
+`osPiStartDma_recomp` → `do_dma` → `do_rom_read`), at phase→640 @148.8s.
+Per NEXT.md's own discriminating criteria ("different site → F4 supported,
+was a fluke"): **F4 supported, F1–F3 not needed.** `thr-resume bad=1` still
+0; `fs` max 3861 (new high vs s84's plateau, another sign frameStartReset
+wasn't a hard wall). This crash is not new: it is s80's parked "unaligned
+`do_rom_read` Abort ... phase 640 ~150s" (PORTING-STATE s80), now
+reproducing live in the post-`a`/hold context because present holds long
+enough (s82 gate) for it to recur — s80 explicitly said "park do_rom_read
+until present holds ≥60s continuous content"; this run's 17s-and-climbing
+hold is the first sign that precondition is starting to be met.
+
+### Root-caused do_rom_read (not a guess — read the source)
+`lib/N64ModernRuntime/librecomp/src/pi.cpp:65-76`:
+```cpp
+assert((physical_addr & 0x1) == 0 && "Only PI DMA from aligned ROM addresses is currently supported");
+assert((ram_address & 0x7) == 0 && "Only PI DMA to aligned RDRAM addresses is currently supported");
+```
+The crash log (assert text survives to stderr before abort) confirms it was
+the **first** assert (`physical_addr & 0x1`) that fired — an explicit,
+upstream-authored `// TODO handle misaligned DMA` guard, not a raw
+unaligned-memory-access SIGBUS the way `frameStartReset`'s bus error is.
+**Correction to s80's framing:** "unaligned do_rom_read Abort" undersold it
+as a hardware alignment fault; it is a deliberate `assert()` catching an
+**odd (or, per result 2, wildly out-of-range) `physical_addr` argument**
+that should never occur for a legitimate PI DMA request.
+
+### Instrument added, exported, committed
+`do_rom_read` had no logging on its abort path — the existing `[dma]` log
+in `do_dma` (`ROGUESQ_LOG_DMA`) fires **after** `do_rom_read` returns, so it
+never appears when `do_rom_read` itself aborts. Added
+`[rom-read] phys=... ram=... bytes=...` at entry, before the asserts, same
+env gate (`ROGUESQ_LOG_DMA`). `lib/N64ModernRuntime`, exported
+(`submodule-patches/N64ModernRuntime.patch`), committed this session.
+
+### Result 2 (romread1, rebuilt with the new log, `ROGUESQ_LOG_DMA=1`)
+Reproduced again at essentially the same phase timing (640 @145.2s, hold
+died at iter 14). This time: `[CRASH] signal 11 (Segmentation fault)`, one
+line above it:
+```
+[rom-read] phys=0x1C676672 ram=0xFFFFFFFF80195190 bytes=0x600
+```
+`physical_addr=0x1C676672` is **even** (passes the first assert) but ~208
+MB past `recomp::rom_base` — the ROM is far smaller than that, so
+`rom.data() + physical_addr - rom_base` reads unmapped memory → SIGSEGV
+instead of SIGABRT. `ram_address=0x80195190` is a plausible kseg0 pointer
+(8-aligned, passes the second assert) — the corruption is isolated to the
+**physical_addr / devAddr** side.
+
+### Two independent same-run-class data points
+| run | signal | site | physical_addr |
+|-----|--------|------|---------------|
+| thrgate2 | 6 (Abort) | assert `physical_addr & 0x1` | not logged (pre-instrument) |
+| romread1 | 11 (SIGSEGV) | OOB read past `rom.data()` | `0x1C676672` (even, ~208 MB past rom_base) |
+
+Two different failure *manifestations* (odd-vs-huge) from the same call
+site in two back-to-back runs — this is not one deterministic bad address,
+it is **garbage entering `physical_addr` at the call site**, varying
+run-to-run. Two soaks agreeing that the value is garbage (not just once)
+is a real two-source result; the *specific* garbage value is single-source
+per run and not itself meaningful.
+
+### New hypothesis — this may be the SAME root cause as thr-resume/frameStartReset, not a 6th independent bug
+`osPiStartDma_recomp` (`pi.cpp:339-354`) computes `physical_addr` straight
+from the calling thread's recompiled register context: `devAddr = ctx->r7
+| recomp::rom_base`. If that `ctx` (or the guest stack `MEM_W(0x10/0x14,
+ctx->r29)` reads feeding `dramAddr`/`size`) belongs to a thread whose
+context was corrupted by the **same** race the s70–s72 OSThread-UAF and
+s83/s84 thr-resume `bad=1` detector were built for, a garbage `ctx->r7`
+would produce exactly this symptom — an odd or wildly-OOB `physical_addr`,
+different each time depending on what garbage landed in the register slot.
+That would also explain `frameStartReset`'s bus error (same family: a
+per-frame function dereferencing a corrupted pointer/offset) and why the
+crash population keeps changing shape each time the fastest-firing one is
+gated (s83 → s84 → s85): **not 3 independent new bugs, but the same
+underlying corruption surfacing wherever a corrupted read happens to be
+dereferenced first**, which is timing-dependent (explains why frameStartReset
+fired in s84 but not either s85 run). **Not yet proven** — needs the
+discriminating measurement below before entering CURRENT-TRUTH as anything
+stronger than a hypothesis.
+
+### Rules out / keep
+- `frameStartReset` SIGBUS: **demoted from "dominant blocker" to "one
+  manifestation of a shared corruption class, timing-dependent, 1/3 recent
+  soaks."** Do not gate it in isolation next; that would be another
+  whack-a-mole point fix on a symptom.
+- do_rom_read Abort/SEGV (s80, now s85): root cause is corrupted
+  `physical_addr` at the `osPiStartDma_recomp` call site, not a hardware
+  alignment limitation. Do **not** "fix" this by relaxing/removing the
+  asserts or handling misaligned DMA — that would silently let a wild
+  208 MB-OOB read through instead of crashing loudly (would trade a clean
+  crash for silent memory corruption).
+- thr-resume `bad=1` gate: still 0/2 soaks with a positive control (U3
+  still open) — both this session's soaks died to do_rom_read before
+  frameStartReset or thr-resume got a chance to recur again.
+- Next (highest value): test the shared-corruption hypothesis directly —
+  log the identity (thread id / OSThread ptr / a checksum of the register
+  file) of the thread executing `osPiStartDma_recomp` at the moment of a
+  garbage `physical_addr`, cross-reference against the always-on
+  `[thr-resume]`/`ost-wb` logs already in the same run to see if that
+  thread was involved in a recent resume/swap/writeback event. If yes on
+  ≥2 independent soaks: strong support for one shared root cause across
+  {do_rom_read corruption, frameStartReset SIGBUS, thr-resume bad=1} and
+  the next work unit becomes finding *that* race, not gating each symptom.
+  If no correlation: the hypothesis is refuted and each crash site goes
+  back to being characterized independently.
