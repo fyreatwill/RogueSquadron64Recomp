@@ -7098,3 +7098,81 @@ timing-dependent data race clobbering one live register.
 - `[anim-recurse]`/`thr-resume bad=1` controls: both held for a 6th
   straight session — U3 (thr-resume gate) and the anim-recursion
   refutation are as solid as this project's evidence gets.
+
+## Session 92 (2026-07-27) — NEXT.md's H1 dump-mb premise refuted at the source level; `ra=0x00000000` shown to be routine, not a corruption signature; do_rom_read did NOT recur; 11th crash class found (`projectModelBoundsToScreen` SIGBUS)
+
+Before running anything, read `osPiStartDma_recomp` itself
+(`lib/N64ModernRuntime/librecomp/src/pi.cpp:347-374`) against NEXT.md's
+step 2 plan (dump the `OSIoMesg` fields at `mb=ctx->r4` to see if
+`devAddr` is already garbage in guest RDRAM). The function never
+dereferences `mb` for anything — `devAddr = ctx->r7 | recomp::rom_base`
+comes straight from the caller's `$a3` register (`ctx->r7`), matching
+real libultra's `osPiStartDma(mb, pri, direction, devAddr, dramAddr,
+size, mq)` signature where `devAddr` is an explicit parameter, not a
+struct field read out of `mb`. **NEXT.md's planned instrument would not
+have tested H1 as worded** — there is no RDRAM read of `devAddr` on
+this path to dump. Confirmed via the decomp source tree
+(`~/Documents/Tools/rogue_squadron64/src/libultra/io/pimgr.c`,
+`pidma.c`) that `osCreatePiManager`/`osPiStartDma` are both
+non-matching `INCLUDE_ASM` stubs in that checkout (no C source to read
+for the actual PI-manager message-dequeue loop that computes
+`devAddr`) — ruled out reading the real caller's source this session;
+would need a fresh asm extraction to go further that way.
+
+Ran one soak (`s92_romread2`) reusing the s91 five flags plus the
+already-existing `ROGUESQ_LOG_THREAD_RESUME=1` (no rebuild — both
+instruments predate this session) specifically to answer NEXT.md step
+3 (is the crash always the Nth resume of thread id=1) directly from
+logs. Result:
+
+- **`do_rom_read` did NOT recur** — first miss after 3/3 identical
+  recurrences (s85, s91×2). All 487 `[pi-start-dma]` calls this run
+  logged sane `raw_r7` (`0xB0xxxxxx` kseg1 shape, no `0x6C67...`
+  outlier).
+- **Correction, not a new corruption fact**: `ra=0x00000000` fired on
+  **487/487** `pi-start-dma` calls this run — not just the corrupted
+  one s91 saw. The exact same universal-zero pattern shows up
+  independently in the unrelated `[anim-recurse]` (6740/6740),
+  `[anim-tex-stream]` (4568/4568), and `[hangar-entry-800B4048]` (2/2)
+  entry logs — every single logged call to any of these four different
+  functions has `ra=0x00000000`, sane or crash-adjacent alike. This
+  **refutes s91's reading of `ra=0x00000000` as a corruption signature**
+  ("both r31 and r7 wrong together, identically" / "context never
+  populated") — it is the routine value for however these particular
+  call sites are reached (most likely a tail-call/dispatch path that
+  never re-populates `ctx->r31`, consistent with `run_thread_function`
+  zero-initializing `recomp_context ctx{}` once at thread start and a
+  message-pump loop that tail-jumps into `osPiStartDma` every
+  iteration without an intervening `jal`). The do_rom_read anomaly
+  narrows to **`raw_r7` alone** — `ra=0` is not independent
+  corroborating evidence for "unpopulated context" and should not be
+  cited as such going forward.
+- **New (11th) crash class**: SIGBUS (signal 10) in
+  `projectModelBoundsToScreen` (confirmed real symbol, `0x80065E98`),
+  called from `static_5_800A9270` (symbol_files names this
+  `loadCutsceneAssetsByIndex` — semantically odd for this call site,
+  flag as an uncertain mapping) ← `static_5_800ADB70` (named
+  `hangarTickCameraOrbit`, a confirmed per-frame hangar camera-orbit
+  lerp) ← `runHangarSelectionFrame` (`0x800AAD9C`) ←
+  `runHangarMenuFromOverlay` (`0x800C6854`) ← `menuOverlayInit` ←
+  `mainGameLoop` ← `mainBootstrapWorker`. Same hangar-selection
+  per-frame-tick family as the 9th/10th classes (unchecked deref
+  reached through the same call chain), not yet root-caused.
+- Controls held: `thr-resume bad_total=0` (120603 healthy resumes, 7th
+  support for U3), `[anim-recurse]` `sp` confined to the same 6 known
+  values (7th session of no-recursion evidence), TMEM-zero 0/6 (still
+  opportunistic-only).
+
+### Confound worth flagging for the next `do_rom_read` attempt
+
+`ROGUESQ_LOG_THREAD_RESUME=1` produces roughly one `fprintf`+`fflush`
+per thread resume — 120603 in this run alone, far more log volume than
+the s91 runs that reproduced `do_rom_read` (which did not have this
+flag armed). That's a real timing perturbation, not just extra output,
+and a plausible reason a *different* bug (the 11th class) won the race
+this time instead of `do_rom_read`. Recommend NOT combining
+`ROGUESQ_LOG_THREAD_RESUME` with future `do_rom_read` repro attempts —
+keep the resume-count question as a separate, lighter-weight probe
+(e.g. count resumes for id=1 specifically from a run that already
+reproduces the crash, rather than arming verbose per-resume logging
+proactively).

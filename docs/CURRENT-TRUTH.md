@@ -233,6 +233,28 @@ Both `r31` and `r7` wrong together, identically, 3 times → points to
 timing race. 9th/10th classes didn't recur; `[anim-recurse]`/
 `thr-resume bad=1` controls held for a 6th straight session. Full
 detail: PORTING-STATE s91.
+**s92:** source-read before instrumenting (per NEXT.md's own step 2)
+found `osPiStartDma_recomp` never dereferences `mb` — `devAddr` is a
+direct register argument (`ctx->r7`/`$a3`), so the planned
+"dump the `OSIoMesg` at `mb`" instrument would not have tested H1 as
+worded. Ran one soak reusing existing instruments (no rebuild):
+`do_rom_read` **did not recur** (0/1, first miss after 3/3); **the
+`ra=0x00000000` s91 read as a corruption signature fired on 487/487
+sane `pi-start-dma` calls this run**, and the same universal-zero
+pattern independently shows up in three unrelated entry logs
+(`anim-recurse` 6740/6740, `anim-tex-stream` 4568/4568,
+`hangar-entry` 2/2) — **refutes** "context never populated" as
+r31-specific evidence; the anomaly narrows to `raw_r7` alone. Found an
+**11th** crash class instead: SIGBUS in `projectModelBoundsToScreen`
+(confirmed real symbol) via `hangarTickCameraOrbit`
+(`static_5_800ADB70`) ← a symbol_files-named-but-suspect
+`loadCutsceneAssetsByIndex` (`static_5_800A9270`) ← the known
+`runHangarSelectionFrame` → `runHangarMenuFromOverlay` →
+`menuOverlayInit` chain. Confound found: `ROGUESQ_LOG_THREAD_RESUME=1`
+(120k+ log lines) likely perturbed timing enough to let this new bug
+win the race instead of `do_rom_read` — don't combine the two in
+future repro attempts. Controls held (bad_total=0, anim-recurse sp
+flat) for a 7th session. Full detail: PORTING-STATE s92.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -329,7 +351,9 @@ assert reproduced with a full backtrace, 9th crash class found (s89);
 10th crash class found, batched entry-log instruments for the 9th and
 10th classes (s90); `do_rom_read` corruption proven deterministic and
 reproducible (3x byte-identical), refuting the s85 "random race"
-framing (s91).**
+framing (s91); `ra=0x00000000` shown to be routine (not corruption
+evidence), `do_rom_read` non-recurrence, 11th crash class found in
+`projectModelBoundsToScreen` (s92).**
 AVAILABLE CRAFT reachable. **s75:** single Start → hangar-flight.
 **s78–s79:** RDP-`fs` plateaus post-leave (S1). **s80:** synthetic FIRE continues.
 **s81:** black = mode-3 presenting wild last-drawn. **s82:** always-on sane-width
@@ -424,35 +448,50 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s91)
+## Next steps, in order of expected value (s92)
 
-1. **M3 — root-cause the deterministic `do_rom_read` corruption (was
-   item 4, now the top-priority lead — s91 turned it from "unproven
-   race hypothesis" into a 3x-reproducible bug).** The crash is a fixed
-   DMA call: `mb≈0x80111270 dram=0x80195190 size=0x600 pri=1 dir=0` on
-   thread id=1 (the PI DMA worker), always right after a `[thr-resume]
-   tag=swap` onto that thread, with `ctx->r7` (devAddr) **and**
-   `ctx->r31` (return address) both reading as unpopulated/garbage
-   together. Next probe: log the OSMesgQueue send side for this specific
-   `mq`/`mb` (find the `osSendMesg`/`osJamMesg` call feeding the PI
-   manager's message queue — `librecomp`'s PI manager thread, search
-   `piDmaWorker`/`osPiMgrGetHandle` context in `lib/N64ModernRuntime/
-   librecomp/src/pi.cpp`) to see whether the *enqueued* `OSIoMesg` at
-   `mb=0x80111270` is itself already garbage (an uninitialized/reused
-   guest struct — points to a guest-side or overlay-load bug) or valid
-   right up until `piDmaWorker` dequeues and reads it (points to a
-   host-side context-restore bug specific to this thread). Also worth a
-   cheap positive check first: dump guest RDRAM at `mb=0x80111270` for
-   the full `OSIoMesg` struct (`hdr`, `devAddr`, `dramAddr`, `size`) at
-   the moment of the bad call — if `devAddr` in RDRAM itself already
-   holds `0x6C676672`-shaped garbage, the bug is upstream of
-   `osPiStartDma_recomp` entirely (whoever built this `OSIoMesg`), not
-   in the register-read path this session instrumented.
-   `ROGUESQ_LOG_DMA=1` already logs `[pi-start-dma]` with `mb`/`ra`/
-   `raw_r7` — reuse the same soak command from s91 (`animcb5`/`animcb6`
-   commands, PORTING-STATE s91) since the bug reproduces on demand at
-   ~hold+11-13s; no new build needed unless adding the OSMesgQueue-side
-   log.
+1. **M3 — root-cause the deterministic `do_rom_read` corruption.**
+   Still the top open lead (3x byte-identical s85/s91, 0/1 in s92 — see
+   item 1a for why). The crash is a fixed DMA call:
+   `mb≈0x80111270 dram=0x80195190 size=0x600 pri=1 dir=0` on thread
+   id=1, always right after a `[thr-resume] tag=swap` onto that thread.
+   **Correction (s92): do NOT plan to "dump the `OSIoMesg` at `mb`"** —
+   read `osPiStartDma_recomp` source (`lib/N64ModernRuntime/librecomp/
+   src/pi.cpp:347-374`) first: it never dereferences `mb`, `devAddr`
+   comes straight from `ctx->r7`/`$a3`, a caller-passed register, so
+   there is nothing to dump there for H1. **Also correction: `ra=0` is
+   NOT evidence of "unpopulated context"** — s92 showed it on 487/487
+   sane `pi-start-dma` calls plus 3 unrelated entry-log instruments
+   (anim-recurse, anim-tex-stream, hangar-entry), all always `ra=0`.
+   The anomaly is `raw_r7` alone. Real next probe: since the actual
+   `OSIoMesg`-dequeue-and-forward logic lives in the guest PI-manager
+   thread's own compiled code (Nintendo SDK, statically linked into the
+   ROM, not `librecomp` runtime code), and the decomp tree
+   (`~/Documents/Tools/rogue_squadron64/src/libultra/io/{pimgr,pidma}.c`)
+   has no C source for it yet (`INCLUDE_ASM` stubs) — either extract/
+   read the raw MIPS asm for `osCreatePiManager`'s thread body
+   (`asm/nonmatchings/libultra/io/pimgr` if it exists in a fuller
+   checkout) to see how it computes/forwards `devAddr`, or add a log at
+   the `osSendMesg`/`osJamMesg` call feeding this PI queue to see if
+   the *enqueued* message is already garbage before `piDmaWorker` ever
+   reads it.
+   1a. **Confound found (s92): don't combine `ROGUESQ_LOG_THREAD_RESUME=1`
+   with the repro.** It adds ~120k `fprintf`+`fflush` calls, enough
+   timing perturbation that a different bug (the new 11th class, item
+   1b) won the race instead of `do_rom_read` in the one soak that used
+   it. Reproduce with just the s91 five flags (`ROGUESQ_LOG_ANIM_CB`,
+   `ROGUESQ_LOG_TMEM_ZERO`, `ROGUESQ_LOG_ANIM_TEX_STREAM`,
+   `ROGUESQ_LOG_HANGAR_ENTRY`, `ROGUESQ_LOG_DMA`) — same soak shape as
+   `animcb5`/`animcb6`/`s92_romread2`, PROBE_MODE=start_only HOLD_S=30.
+   1b. **M3 — characterize the 11th crash class (s92, new): SIGBUS in
+   `projectModelBoundsToScreen`** (confirmed real symbol, `0x80065E98`),
+   via `hangarTickCameraOrbit` (`static_5_800ADB70`) ← a
+   symbol_files-named-but-semantically-suspect `loadCutsceneAssetsByIndex`
+   (`static_5_800A9270`) ← `runHangarSelectionFrame` →
+   `runHangarMenuFromOverlay` → `menuOverlayInit` — same hangar-tick
+   family as the 9th/10th classes. Not yet instrumented; no dedicated
+   soak needed yet, fold into whichever soak runs next and read the
+   crash log for it.
 2. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert.**
    Path confirmed: `fullSyncFramebufferPairTiles` → `uploadTile` lambda
    → `TextureManager::uploadTexture` (`rt64_state.cpp:1329`) →
@@ -506,24 +545,27 @@ cost three sessions before the recursive mutex.
 14. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
 15. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
-Done this session (s91): ran the batched-instrument soak NEXT.md
-prescribed (`animcb5`) with all 5 flags armed including the
-correctly-named `ROGUESQ_LOG_DMA=1` — crashed on `do_rom_read`
-(`phys=0x1C676672 ram=0xFFFFFFFF80195190 bytes=0x600`), **byte-for-byte
-identical** to s85's `romread1` run from 6 sessions earlier. Read
-`osPiStartDma_recomp` source to confirm the exact mechanism
-(`devAddr = ctx->r7 | rom_base`, a live register read), added
-`[pi-start-dma]` logging (return address + raw r7 + DMA args) at that
-call site (`lib/N64ModernRuntime`, exported + committed), rebuilt, and
-ran a 2nd soak (`animcb6`) — **crashed a 3rd time with the identical
-DMA call**, additionally showing `ra=0x00000000` and a `raw_r7` with a
-completely different bit shape from every real call's kseg1 pattern.
-Three independent byte-identical occurrences **refutes** s85/s86's
-"random race, varies run-to-run" framing and **establishes** a
-deterministic, reproducible bug — reclassified as the new top-priority
-lead (next-steps item 1) instead of "shared corruption race." 9th/10th
-crash classes did not recur; `[anim-recurse]`/`thr-resume bad=1`
-controls held for a 6th straight session. TMEM-zero stayed 0/5.
+Done this session (s92): read `osPiStartDma_recomp` source before
+building anything (per NEXT.md's own step-2 plan) and found the
+planned instrument was based on a wrong premise — `devAddr` is a
+direct register argument, never read from the `OSIoMesg` at `mb`, so
+"dump the message struct" would not have tested H1. Also checked the
+decomp source tree for the real PI-manager caller (both
+`osCreatePiManager`/`osPiStartDma` are `INCLUDE_ASM` stubs there, no
+usable C source yet). Ran one soak (`s92_romread2`) reusing existing
+instruments (s91's 5 flags + the pre-existing
+`ROGUESQ_LOG_THREAD_RESUME=1`, no rebuild) to test NEXT.md's step-3
+resume-count question. Results: `do_rom_read` **did not recur** (0/1,
+first miss after 3/3); **`ra=0x00000000` fired on 487/487** sane
+`pi-start-dma` calls this run (plus 3 unrelated entry-log instruments,
+all always `ra=0`), **refuting** s91's reading of it as corruption
+evidence — the anomaly narrows to `raw_r7` alone; found a **new 11th**
+crash class instead (`projectModelBoundsToScreen` SIGBUS via the known
+hangar-tick call family); identified a likely confound
+(`ROGUESQ_LOG_THREAD_RESUME`'s log volume perturbing timing) for why
+this soak diverged from s91's outcome. Controls held (`bad_total=0`,
+anim-recurse `sp` flat) for a 7th straight session; TMEM-zero stayed
+0/6.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
