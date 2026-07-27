@@ -10,7 +10,17 @@ cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}" || exit 0
 
 AG=scratch/agent
 mkdir -p "$AG"
-input="$(cat)"
+
+# Two modes:
+#   (default)  Claude Code Stop hook - reads hook JSON on stdin, emits
+#              {"decision":"block",...} to keep the turn going.
+#   --verify   runner-agnostic post-hoc check - no stdin, prints the unmet
+#              condition on stdout and exits 1. loop.sh uses this so codex,
+#              grok and any other CLI are held to the same exit contract that
+#              the hook enforces for Claude. Hooks are a Claude Code feature;
+#              the contract is not.
+VERIFY=0
+if [ "${1:-}" = "--verify" ]; then VERIFY=1; input=''; else input="$(cat)"; fi
 
 # --- loop guard --------------------------------------------------------------
 # The counter lives OUTSIDE the repo, keyed by session id. A first smoke test
@@ -24,8 +34,12 @@ BLOCK_CAP="${STOP_GATE_BLOCK_CAP:-8}"
 count=$(cat "$CFILE" 2>/dev/null || echo 0)
 case "$count" in ''|*[!0-9]*) count=0 ;; esac
 
-allow() { rm -f "$CFILE"; exit 0; }
+allow() { [ "$VERIFY" = 1 ] || rm -f "$CFILE"; exit 0; }
 block() {
+  if [ "$VERIFY" = 1 ]; then
+    printf '%s\n' "$1"
+    exit 1
+  fi
   echo "$((count + 1))" > "$CFILE"
   python3 - "$1" <<'PY'
 import json, sys
@@ -34,11 +48,12 @@ PY
   exit 0
 }
 
-# Hard release: never trap a turn forever.
-[ "$count" -ge "$BLOCK_CAP" ] && allow
+# Hard release: never trap a turn forever. Verification has no turn to trap,
+# so it always reports the truth.
+[ "$VERIFY" = 0 ] && [ "$count" -ge "$BLOCK_CAP" ] && allow
 
 # Stuck detection: two blocks before the cap, redirect to a clean BLOCKED exit.
-if [ "$count" -ge $((BLOCK_CAP - 2)) ]; then
+if [ "$VERIFY" = 0 ] && [ "$count" -ge $((BLOCK_CAP - 2)) ]; then
   block "You have been blocked from stopping $count times without meeting the exit contract, which means you are stuck. Stop retrying the current approach. Write scratch/agent/BLOCKED.md (what you need, from whom, what you already tried), commit any outstanding changes, write BLOCKED to scratch/agent/STATUS, and then stop."
 fi
 

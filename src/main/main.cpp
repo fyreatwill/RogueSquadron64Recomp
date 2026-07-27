@@ -444,10 +444,21 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             const char* e = std::getenv("ROGUESQ_LOG_RUNNER");
             s_log = (e && *e && *e != '0') ? 1 : 0;
         }
+        // ROGUESQ_LOG_RUNNER_ALL: rs64_dpc_drain_histogram() resets its
+        // counters on every call, but the default 1-in-32 sampling below only
+        // calls it on sampled tasks — so the other 31 tasks' histograms
+        // silently accumulate into whichever task number is sampled next
+        // (misattributed aggregate, not that task's real content). This mode
+        // drains+prints every task so counts are exact.
+        static int s_log_all = -1;
+        if (s_log_all < 0) {
+            const char* e = std::getenv("ROGUESQ_LOG_RUNNER_ALL");
+            s_log_all = (e && *e && *e != '0') ? 1 : 0;
+        }
         if (s_log) {
             static int s_n = 0;
             ++s_n;
-            if (s_n <= 8 || (s_n & 31) == 0) {
+            if (s_log_all || s_n <= 8 || (s_n & 31) == 0) {
                 // Pull the dpc_bridge per-task RDP-opcode histogram (raw 6-bit
                 // RDP opcodes, NOT the F3D DL byte). 0x08-0x0F = triangle
                 // variants; 0x24/0x25 = TEXRECT/TEXRECT_FLIP; 0x29 = SYNC_FULL;

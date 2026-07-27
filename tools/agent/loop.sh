@@ -32,7 +32,7 @@ notify_blocked() {
   log "BLOCKED - fix it, delete $AG/BLOCKED.md, rerun."
 }
 
-log "run starting $(date) — model=$LOOP_MODEL cap=$ITER_CAP"
+log "run starting $(date) — runner=${RUNNER:-claude} model=${RUNNER_MODEL:-$LOOP_MODEL} cap=$ITER_CAP"
 
 n=0
 waits=0
@@ -59,12 +59,34 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   echo 0 > "$AG/.stop_blocks"
   git rev-parse HEAD > "$AG/ITER_START_HEAD" 2>/dev/null
 
-  out="$(claude -p "$(cat tools/agent/ITERATION.md)" \
-         --model "$LOOP_MODEL" \
-         --permission-mode acceptEdits \
-         --output-format json 2>&1)"
+  out="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh tools/agent/ITERATION.md)"
   rc=$?
   printf '%s\n' "$out" >> "$AG/loop.log"
+
+  # Post-hoc contract check, for every runner. Claude's Stop hook already
+  # pushed it to meet this before returning; codex and grok never saw a hook,
+  # so this is where they get held to the same contract. Feed the specific
+  # unmet condition back and let it finish the job.
+  cr=0
+  while [ $rc -eq 0 ] && ! verdict="$(tools/agent/stop_gate.sh --verify)"; do
+    cr=$((cr+1))
+    if [ "$cr" -gt "${MAX_CONTRACT_RETRIES:-2}" ]; then
+      log "contract still unmet after $((cr-1)) retries: $(printf '%s' "$verdict" | head -1)"
+      break
+    fi
+    log "contract unmet (retry $cr): $(printf '%s' "$verdict" | head -1)"
+    printf '%s\n' "$verdict" > "$AG/CONTRACT_FEEDBACK.md"
+    { cat tools/agent/ITERATION.md
+      echo
+      echo "## You already ran this iteration and stopped early"
+      echo "The exit contract is NOT met. Do ONLY what is needed to satisfy it:"
+      echo
+      printf '%s\n' "$verdict"
+    } > "$AG/RETRY_PROMPT.md"
+    out="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$AG/RETRY_PROMPT.md")"
+    rc=$?
+    printf '%s\n' "$out" >> "$AG/loop.log"
+  done
 
   # A spend/quota CAP is not a window that reopens. Sleeping on it wastes
   # MAX_LIMIT_WAITS * SLEEP_ON_LIMIT (6 hours by default) retrying something
