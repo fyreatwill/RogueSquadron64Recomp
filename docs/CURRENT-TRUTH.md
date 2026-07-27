@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s128)
+## Next steps, in order of expected value (s129)
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with
@@ -817,6 +817,23 @@ cost three sessions before the recursive mutex.
    "fluke" in s85 after 0/2 non-recurrence — recurred once more in s116
    (2/4 soaks total across s84/s85/s116); worth revisiting if it keeps
    preempting the target window, not dominant enough yet to gate.)
+   **s129 (Thread A re-audit, item 2/5):** first CLEAN audit in the
+   series — `reserveAndEmitDLEntry` (14th class, `funcs_3.c`)'s only
+   unguarded-external-pointer site is the one s109 already guards; a
+   subagent-flagged repeated pointer-deref pattern past the guard
+   verified (by direct source read) to be the SDK's own sentinel-based
+   free-list allocator idiom operating on internal pool state, not the
+   caller's raw `a0`/`a1` argument — categorically different from every
+   prior hit in this thread (composeNpcOrientationMatrix,
+   updateAnimatedTextureStreaming, static_5_800B4048,
+   projectModelBoundsToScreen all re-derefed the SAME externally-
+   supplied pointer past their guard; this function reloads a fresh
+   internal pointer instead). Running tally: **4 hits, 1 clean, of 5
+   audited.** No code change, no rebuild, no soak this session (verified
+   first that both `lib/` submodules' dirty trees exactly match their
+   already-committed patches — no session's work was sitting
+   unexported). Next: item 3/5, `activateAnimationKeyframe` (16th
+   class, `funcs_14.c`, guard at s99). Full detail: PORTING-STATE s129.
    **s118:** ran the exact discriminating test above (32-byte dump at
    `voice+0x0` nonzero hits, same-run vs. `musyx-dma-call`). The dumps
    are long readable ASCII strings, not raw garbage — e.g. `"explo_

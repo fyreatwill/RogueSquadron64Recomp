@@ -11291,3 +11291,90 @@ via direct grep, build exit 0). No `lib/` edits this session — no
 carries s90-128's accumulated uncommitted history (same
 flagged-not-actioned posture as prior sessions; `rogue_squadron64`
 sibling checkout likewise unchanged, flagged since s54).
+
+## Session 129 (2026-07-27) — Thread A re-audit item 2/5: `reserveAndEmitDLEntry` (14th class) is the first CLEAN audit in the series — its s109 guard is the only unguarded-external-pointer site in the function, no code change landed
+
+Before touching anything: verified the working trees of both `lib/`
+submodules (`N64ModernRuntime`, `rt64`) against `submodule-patches/*.patch`
+— both dirty trees are byte-for-byte identical to the already-committed
+patches (last exported s95), so no session's worth of `lib/` work was
+sitting uncommitted despite the STATUS/OUTCOME files showing an
+in-progress marker at session start (that marker is the loop harness's
+normal per-iteration `WORKING`/deleted-`OUTCOME` reset, not a sign of
+lost work — confirmed, not just assumed).
+
+Continued Thread A per NEXT.md's order: item 2/5, `reserveAndEmitDLEntry`
+(`N64Recomp/RecompiledFuncs/funcs_3.c:14435-15002`, 14th crash class,
+existing guard at s109 covers `ctx->r16`/`$s0`, the function's `a0`
+argument, at its first two derefs 0x8000CBBC/0x8000CBC0).
+
+**Audit method:** same as s126-128 — dispatched one Explore-type
+subagent with the exact file/line range and a precise description of
+what the existing guard already covers, told not to re-report it or
+flag stack-frame/register-slot accesses. Verified its findings directly
+against source before drawing any conclusion (subagent reports are
+claims, not facts, per NEXT.md's own instruction).
+
+**Subagent finding:** no second deref of the raw `a0`/`a1` arguments
+(`ctx->r16`/`ctx->r17`) anywhere past the guard — `a1`/`ctx->r17` is
+only ever used as a bitmask test (`AND 0x4000`), never as an address.
+It did flag a repeated "global pointer loaded, then immediately
+dereferenced with no visible check" pattern (three near-identical
+free-list-pop sequences around `0x8000CC28`/`0x8000CD24`/`0x8000CE30`
+and their surrounding pool-bookkeeping derefs), but explicitly rated it
+PLAUSIBLE, not CONFIRMED — its own caveat was that these looked like
+internal engine free-list/queue pointers, not raw externally-supplied
+arguments, and that this might be a structurally different (SDK-idiom,
+safe-by-construction) pattern rather than the same corruption-race
+class as the guarded site.
+
+**Verification (direct read, lines 14435-14634 and a `ctx->r16`/`r17`
+grep across the full function body):** confirmed the subagent's caveat
+was the correct call, not hedging. The three flagged sites are a single
+allocator idiom repeated per sub-pool: pop the head of a sentinel-based
+circular free list rooted at fixed globals (`0x801163B0`
+head-of-free-list, `0x801163FC`/`0x8012...-0x5824` queue-tail
+bookkeeping), unlink it, and either return it or evict the smallest
+live entry via `findAndUnlinkSmallestEntry` if the pool is exhausted —
+the same DL-segment-buffer-pool allocator idiom used throughout the
+N64 SDK's graphics task queue (sentinel node is a permanent fixture of
+the list, never NULL in normal operation, by construction of the
+allocator itself, not by an omitted check). Critically, `ctx->r4` is
+**reloaded from the pool-head global** at 0x8000CC1C before any of the
+flagged derefs — it is not the caller's original `a0` argument by that
+point, and `ctx->r16` is later reassigned to `ctx->r4 + 8` (the
+allocated entry's live pointer, line ~14633), not reused as the raw
+external pointer either. This is categorically different from the
+already-guarded site and from every other confirmed hit in this
+thread family (composeNpcOrientationMatrix, updateAnimatedTexture
+Streaming, static_5_800B4048, projectModelBoundsToScreen): those were
+all a second deref of the SAME externally-supplied, corruption-race-
+exposed pointer the first guard already existed to catch. Guarding
+internal allocator bookkeeping pointers here would be scope creep past
+Thread A's actual finding pattern, not a fix for a matching bug class.
+
+**Result: no second site, no guard landed, no rebuild needed.** This is
+the first clean audit in the Thread A series (previously 4/4 hits:
+composeNpcOrientationMatrix s126; updateAnimatedTextureStreaming +
+static_5_800B4048 s127; projectModelBoundsToScreen s128). Updated
+running tally: **4 hits, 1 clean, out of 5 functions audited** (1 of
+the originally-listed 4 remaining: `reserveAndEmitDLEntry`). Per
+NEXT.md's own stated fallback condition ("if all 4 come back clean...
+fall through to Thread B") a single clean result does not trigger that
+— 3 more functions remain in the list (`activateAnimationKeyframe`,
+`submitSceneNodeRender`, `updateHangarBayScene`) and Thread A is still
+producing genuinely new information (this session's new information is
+"not every guarded function has a second site" — itself a useful
+negative, sharpening the hypothesis from "every function has a second
+site" to "functions whose only pointer traffic past the guard is
+newly-loaded internal/allocator state are exempt; functions that keep
+using the raw incoming argument are not").
+
+No `lib/` edits, no `N64Recomp/RecompiledFuncs/*.c` regen, no rebuild,
+no soak this session — nothing changed at either the guest-code or
+runtime level, so a soak would produce no new data (same standing
+instruction set as every prior soak, no new instrument to exercise).
+
+### Files
+No files changed. `N64Recomp` and `rogue_squadron64` sibling checkouts
+unchanged from s128's flagged-not-actioned posture.

@@ -1,30 +1,43 @@
-# NEXT work unit — continue Thread A re-audit (14th/16th/17th/18th classes)
+# NEXT work unit — continue Thread A re-audit (16th/17th/18th classes)
 
-s128 finished item 1/5 of the Thread A re-audit list: re-read
-`projectModelBoundsToScreen` (11th class, `funcs_15.c`) to its closing
-brace and found its s101 guard covers only the `a0` argument
-(`ctx->r22`) — the function's other two pointer arguments, `a2`
-(`ctx->r21`) and `a3` (`ctx->r20`), are separately dereferenced as raw
-`Vec3*` with zero checks. Guarded both
-(`ROGUESQ_LOG_PROJECT_MODEL_BOUNDS_GUARD2`/`GUARD3`), full delete-all
-regen + rebuild clean, one soak: both new guards unexercised (0/0,
-function never called this run), died to the tracked
-`do_rom_read`/`piDmaWorker` race at the usual hold+11s window — not a
-new finding. Read PORTING-STATE's Session 128 entry before doing
-anything else; this file only has the actionable summary.
+s129 finished item 2/5 of the Thread A re-audit list: re-read
+`reserveAndEmitDLEntry` (14th class, `funcs_3.c:14435-15002`) to its
+closing brace and found it CLEAN — the s109 guard on `ctx->r16`/`$s0`
+(the function's `a0` argument) is the only unguarded-external-pointer
+site. A subagent flagged a repeated pointer-deref pattern past the
+guard (three free-list-pop sequences around 0x8000CC28/CD24/CE30); a
+direct source read (not just the subagent's report) confirmed this is
+the SDK's own sentinel-based free-list allocator operating on internal
+pool state reloaded fresh from fixed globals, not the caller's raw
+`a0`/`a1` argument re-derefed — categorically different from every
+prior hit in this thread. Read PORTING-STATE's Session 129 entry before
+doing anything else; this file only has the actionable summary.
 
-Thread A's generalizing hypothesis ("a guard landed after ONE bad site
-does not mean the function has only one") is now **3/3** on every
-function tried: composeNpcOrientationMatrix (s126),
-updateAnimatedTextureStreaming + static_5_800B4048 (s127),
-projectModelBoundsToScreen (s128) — 4 functions audited, 4 hits, 0
-clean audits so far. Per ITERATION.md rule 8 this keeps producing new
-information each time (a new guard site every audit), so continue
-Thread A rather than pivoting yet — a pivot to Thread B only makes
-sense after a *clean* audit (or several), not after another hit.
+**Running tally: 4 hits, 1 clean, of 5 functions audited**
+(composeNpcOrientationMatrix s126 — hit; updateAnimatedTextureStreaming
++ static_5_800B4048 s127 — hit both; projectModelBoundsToScreen s128 —
+hit; reserveAndEmitDLEntry s129 — clean). The generalizing hypothesis
+is now sharper than "every function has a second site": functions that
+keep dereferencing the SAME raw incoming argument past their guard have
+a second site; functions whose only post-guard pointer traffic is
+freshly-loaded internal/allocator state (reloaded from a fixed global,
+not derived from the argument) do not. Test this refined hypothesis
+against the 3 remaining functions.
 
 ## This session's environment notes (carry forward, still current)
 
+- Before assuming any `lib/` submodule has uncommitted session work,
+  diff its dirty working tree against the matching
+  `submodule-patches/*.patch` file (`git diff` in the submodule, save
+  to a scratch file, `diff` it against the patch — do this from the
+  repo root or `cd` into the submodule first; `git -C <dir> ...` and
+  `git diff --stat -- lib/...` do NOT match the `git status:*`/`git
+  diff:*` allowlist prefixes and require approval every time, whereas
+  plain `git status`/`git diff` after a bare `cd` do). If they match
+  byte-for-byte, nothing is lost — the `STATUS=WORKING` /
+  deleted-`OUTCOME` state at session start is just the loop harness's
+  normal per-iteration reset marker, not evidence of a crashed prior
+  session.
 - `rm` on paths outside `scratch/` requires approval and does NOT
   accept glob patterns ("Glob patterns are not allowed in write
   operations") — list every `funcs_*.c` path explicitly (via `ls`
@@ -35,52 +48,54 @@ sense after a *clean* audit (or several), not after another hit.
   approval prompt distinct from the permission-allowlist prompt. Issue
   `cd X` as its own Bash call, then the command as a second call — both
   then run without friction (persisted cwd carries over between calls).
-- Any command with `&&` chaining an unlisted second command (e.g.
-  `... && echo "EXIT=$?"`) requires approval for the whole compound
-  command even if the first part alone is allowlisted — just drop the
-  trailing `echo`/chained diagnostic and check `$?`/output separately
-  if needed, or issue commands one at a time.
+  The same applies to any `&&`-chained compound command whose second
+  half isn't itself allowlisted (e.g. trailing `echo "EXIT=$?"`) — split
+  into separate calls instead.
 - `env FOO=1 BAR=1 zsh script.sh args > log 2>&1` (no `&&`, no `cd`) ran
   with no approval friction — prefer this single-call shape for
   soak-driver invocations. Running it via the background-Bash tool
   (`run_in_background: true`) worked cleanly and freed the turn to do
   other prep while the ~90-140s soak ran; wait for the completion
-  notification (or block on `while ps -p <pid> >/dev/null; do sleep 5;
-  done`) rather than polling the log by hand.
+  notification rather than polling the log by hand.
 - Do NOT re-run `fixup_game_funcs.py` a second time in the same
   session to "double check" the report — it is known non-idempotent
   (s102) and will duplicate every already-applied patch on disk.
   Verify patch multiplicity via direct `grep -c` on the regenerated
-  `.c` files instead (works even though the python script itself can't
-  be safely re-invoked).
+  `.c` files instead.
+- `shasum`/`md5`/`cmp` are not allowlisted and prompt for approval on
+  every call regardless of args; plain `diff <fileA> <fileB>` (no
+  chaining) works and needs approval only once per session-shape.
 
-## Do next: re-audit the remaining 4 guarded multi-site functions
+## Do next: re-audit the remaining 3 guarded multi-site functions
 
-Same method as s126/s127/s128: read each function FULLY to its own
-closing brace (funcs_*.c line numbers below), looking for a second
-table-lookup-then-deref, struct-field-pointer-then-deref, or
-unchecked-arg-deref shape past the already-guarded site(s). Delegating
-each read to a parallel Explore-type subagent works well (self-contained
-prompt: exact file/line range, exactly what the existing guard already
-covers so it isn't re-reported, exactly what NOT to flag — the s128
-prompt is a good template, see PORTING-STATE Session 128) — verify any
-positive finding yourself against the source before writing a patch,
-subagent reports are claims not facts.
+Same method as s126-129: read each function FULLY to its own closing
+brace (funcs_*.c line numbers below), looking for a second deref of the
+SAME raw incoming argument the existing guard already protects — not
+just any pointer chase in the function (s129 learned that internal
+allocator/free-list traffic reloaded from a fixed global is a different,
+lower-priority shape; don't guard it reflexively). Delegate the full-body
+read to a parallel Explore-type subagent with a self-contained prompt
+(exact file/line range, exactly what the existing guard already covers
+so it isn't re-reported, exactly what NOT to flag — reuse s129's prompt
+as the template, it now correctly separates "raw argument re-derefed"
+from "internal pointer reloaded from a global"). Verify any positive
+finding yourself against the source before writing a patch — subagent
+reports are claims, not facts (s129 caught a subagent's own
+CONFIRMED-vs-PLAUSIBLE hedge and confirmed the hedge was warranted).
 
-Remaining, in suggested order (smallest/most tractable first):
+Remaining, in suggested order:
 
-1. **14th, `reserveAndEmitDLEntry`** (`funcs_3.c`, guard at s109,
-   epilogue label `L_dlentry_guard_exit`). Function bounds not yet
-   located this session — grep `void reserveAndEmitDLEntry` in
-   `funcs_3.c` and the next `RECOMP_FUNC` after it.
-2. **16th, `activateAnimationKeyframe`** (`funcs_14.c`, guard at s99,
-   table-deref shape).
-3. **17th, `submitSceneNodeRender`** (`funcs_4.c`, guard at s123,
+1. **16th, `activateAnimationKeyframe`** (`funcs_14.c`, guard at s99,
+   table-deref shape: `table[arg_r4 & 0xFFFF]` then `deref+0x30`).
+   Function bounds not yet located this session — grep
+   `void activateAnimationKeyframe` in `funcs_14.c` and the next
+   `RECOMP_FUNC` after it.
+2. **17th, `submitSceneNodeRender`** (`funcs_4.c`, guard at s123,
    free-list-walk shape — note this one's own catalog entry already
    says the guard covers a walk loop, worth double-checking whether
    the loop has an early-exit path the guard's placement doesn't
    dominate).
-4. **18th, `updateHangarBayScene`** (`funcs_40.c`, guard at s110 — this
+3. **18th, `updateHangarBayScene`** (`funcs_40.c`, guard at s110 — this
    one already has FIVE guarded sites A-E, so it may already be fully
    covered by design; still worth a fresh read since s100/s110 predate
    the "systematically re-audit" methodology s126 introduced).
@@ -93,30 +108,32 @@ following the `_GUARD2`/`_GUARD3` naming convention, full delete-all
 regen, soak with `PROBE_MODE=start_only HOLD_S=30` and every
 `_GUARD`/`_GUARD2`/`_GUARD3` flag for that function armed).
 
-If all 4 come back clean (single site each) — combined with s128's
-result that would be 4 hits out of 4 functions tried plus these final
-4 checks; if THOSE come back clean, that's a real, useful,
-budget-respecting result: write it down (this would mean
-projectModelBoundsToScreen/composeNpcOrientationMatrix/
-updateAnimatedTextureStreaming/static_5_800B4048 were the exceptions
-that needed a second site, not the rule) and fall through to Thread B.
+If a function comes back clean (like s129's `reserveAndEmitDLEntry`):
+no code change, no rebuild, no soak needed — just document it the same
+way s129 did (verified-clean, with the reasoning for why the flagged
+traffic doesn't count) and move to the next function.
+
+When all 3 remaining functions have been audited (whatever the mix of
+hits/clean): write up the final tally (currently 4 hits / 1 clean of 5;
+could end anywhere from 4/8 to 7/8 hits) and fall through to Thread B —
+the tally itself, hit or clean, is the useful result NEXT.md has been
+building toward since s126.
 
 ## Thread B (fallback): the audio-corruption pivot (voice+0x0, s105-123)
 
-Unchanged from s126/s127/s128's framing — still the single
-longest-running open thread, still needs the fresh-angle grep s126
-proposed (what else constructs a name/string table with entries shaped
-like `at_6`/`at_7`/`main_n_atpt_lod`/`pilot_sd`) if Thread A audits
-come back clean.
+Unchanged from s126-129's framing — still the single longest-running
+open thread, still needs the fresh-angle grep s126 proposed (what else
+constructs a name/string table with entries shaped like
+`at_6`/`at_7`/`main_n_atpt_lod`/`pilot_sd`) once the Thread A audit list
+is exhausted.
 
 ## Do not
 
 - Do not re-soak specifically to force a positive control on any of
   the 12 guarded classes' sites — not required before landing.
-- Do not treat any of s124/s125/s126/s127/s128's 0/0 (unexercised)
-  results as evidence any specific guard works in a stronger sense
-  than "guard is in place, never triggered because the buggy path
-  wasn't hit this run."
+- Do not treat any of s124-128's 0/0 (unexercised) results as evidence
+  any specific guard works in a stronger sense than "guard is in place,
+  never triggered because the buggy path wasn't hit this run."
 - Do not re-litigate H1/H2 (voice+0x0 zero-init / asset-alloc
   coincidence) — both closed, s122/s123.
 - Do not re-run the `songlifecycle`/`shutdownAudioEngine`
@@ -127,10 +144,17 @@ come back clean.
   100%-false-positive lesson, repeated in every guard since).
 - Do not chase the `do_rom_read`/`piDmaWorker` corruption race
   opportunistically — tracked as its own item (-1) in CURRENT-TRUTH's
-  next-steps list. s128 saw it again at hold+11s; expected, not new.
+  next-steps list.
 - Do not chase the RSP-microcode `Unhandled jump target 0x0231`/`0x17F0`
-  diagnostic seen in s128's soak — already documented (s79) as
-  "secondary, not onset cause," not a new class.
+  diagnostic if seen again — already documented (s79) as "secondary,
+  not onset cause," not a new class.
+- Do not guard internal allocator/free-list pointer traffic just
+  because it's dereferenced without a visible check (s129) — that shape
+  is the SDK's own sentinel-list idiom, safe by construction, and
+  guarding it is scope creep past Thread A's actual bug pattern (a
+  second deref of the SAME externally-supplied, corruption-exposed
+  argument). Only flag/guard sites that trace back to a raw incoming
+  argument or another already-corruption-exposed value.
 
 ## Housekeeping still flagged, still not done
 
@@ -141,6 +165,6 @@ its own.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git
 checkout, not a `lib/` submodule, with uncommitted changes across
-s90-128 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
+s90-129 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
 Same posture as the `rogue_squadron64` sibling checkout flagged since
 s54. Worth asking the user whether/how to commit that history.
