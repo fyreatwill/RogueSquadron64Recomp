@@ -6999,3 +6999,102 @@ cosmetic, not fixed). **Not yet soaked** — next iteration's job.
   per the s89 note, in s89's soaks either). This isn't a null result on
   the hypothesis; it's an unarmed instrument reported as a null result
   for 4 sessions. Next soak must use `ROGUESQ_LOG_DMA=1`.
+
+## Session 91 (2026-07-27) — batched-instrument soak run twice; do_rom_read corruption proven deterministic and reproducible, not a random race (3rd byte-identical occurrence across 3 sessions)
+
+Ran the exact soak NEXT.md prescribed (`animcb5`): all five diagnostic
+flags armed (`ROGUESQ_LOG_ANIM_CB`, `ROGUESQ_LOG_TMEM_ZERO`,
+`ROGUESQ_LOG_ANIM_TEX_STREAM`, `ROGUESQ_LOG_HANGAR_ENTRY`,
+`ROGUESQ_LOG_DMA` — the last now correctly named per s90's finding).
+Crashed at hold+~11s. None of the two newest instruments
+(`[anim-tex-stream]` 6930 fires, `[hangar-entry-800B4048]` 3 fires)
+were on the crashing call stack; `[tmem-zero-upload]` stayed 0/5 (5th
+null in a row, further supporting its "opportunistic only" demotion);
+`[anim-recurse]` held its known 6-value/312-byte `sp` band (6th
+session of no-recursion evidence); `thr-resume bad_total=0` (6th
+support for the s84 U3 gate). The crash was instead **item 4's target
+finally armed correctly**: `do_rom_read` SIGSEGV, same call chain as
+s85/s80 (`osPiStartDma_recomp` → `do_dma` → `do_rom_read`).
+
+### The discriminating result: exact byte-for-byte recurrence
+
+```
+[rom-read] phys=0x1C676672 ram=0xFFFFFFFF80195190 bytes=0x600 thr_id=1 thr=0x300154710 ctx=0xbe3ec8540
+```
+
+This is **not just the same order of magnitude** as s85's `romread1`
+run — it is the identical `phys`/`ram`/`bytes` triple, byte for byte,
+recurring in a soak run 6 sessions and a full rebuild later. s85 had
+concluded (CURRENT-TRUTH, now superseded below) that "the value is
+garbage that varies run-to-run," based on comparing this run's value
+against a *different* crash type (`thrgate2`, an alignment-assert
+Abort with no logged value at all) from the same session — that
+comparison never actually had two comparable data points for the
+*same* crash type. With a real second data point now in hand, the
+value does not vary — it repeats.
+
+`[thr-resume] n=129482 tag=swap id=1 thr=0x300154710 ... ctx=0xbe3ec8540 self_rdram=0x8011CD28 bad=0`
+fires **immediately before** the crash, with the exact same
+`thr`/`ctx` host pointers as the crashing `[rom-read]` line — the
+corrupted read happens on thread id=1 right after it's swapped in.
+
+### Instrument landed and a 3rd confirmation
+
+Before concluding, read `osPiStartDma_recomp` (`lib/N64ModernRuntime/
+librecomp/src/pi.cpp:347-361`) directly: `devAddr = ctx->r7 |
+recomp::rom_base` — confirms s85's unproven hypothesis exactly,
+`physical_addr` really is read live off the calling guest thread's
+`$a3` register, not from any RDRAM-resident DMA descriptor. Added a
+new log at that call site (`[pi-start-dma]`, gated by the same
+`ROGUESQ_LOG_DMA`) capturing `ctx->r31` (guest return address — which
+caller?), the raw pre-OR `r7`, and all the DMA args (`mb`/`pri`/`dir`/
+`dram`/`size`). `lib/N64ModernRuntime`, exported
+(`submodule-patches/N64ModernRuntime.patch`), committed this session.
+Rebuilt clean (exit 0), ran a second soak (`animcb6`, same 5 flags) —
+**crashed again**, 3rd occurrence of the exact same DMA call:
+
+```
+[pi-start-dma] ra=0x00000000 raw_r7=0x6C676672 devAddr=0x7C676672 mb=0x80111270 pri=1 dir=0 dram=0xFFFFFFFF80195190 size=0x600
+[rom-read] phys=0x1C676672 ram=0xFFFFFFFF80195190 bytes=0x600 thr_id=1 thr=0x300154710 ctx=0xadc237600
+```
+
+Same `phys`/`dram`/`size`/`mb`/`pri`/`dir` as before, and two new
+facts: **`ra=0x00000000`** (the guest return address is itself zero —
+not just `r7` is wrong, the whole context looks unpopulated/never
+properly saved) and **`raw_r7=0x6C676672`** is not a plausible
+corrupted-but-real devAddr — every *good* call this run has `raw_r7`
+in the `0xB0FFxxxx` kseg1 pattern (e.g. `0xB0FF6C08`, `0xB0FF7330`,
+`0xB0FF6C10`), while the bad one starts `0x6C67...`, a completely
+different bit pattern, not a bit-flip near a valid value. Also notable:
+the host thread pointer `thr=0x300154710` for id=1 is **byte-identical
+across both animcb5 and animcb6** — different process runs allocating
+the same address for the same early-created thread — consistent with
+deterministic allocation up to this point, not ASLR-randomized
+corruption.
+
+### What this rules out and what it now points to
+
+**Refutes** the literal "shared corruption race, different garbage
+each time" framing from s85/s86 (CURRENT-TRUTH next-steps item 4 as
+previously worded) — a race would not reproduce the exact same
+multi-field value 3 times across process restarts and a rebuild.
+**Supports** (now 3 independent same-run-class data points, clearing
+rule 4's two-source bar) a **deterministic, reproducible bug**: some
+specific code path — reached at a fixed point in the post-`a` soak
+timeline, always on thread id=1 (the PI DMA worker), always for a DMA
+message at/near guest address `mb=0x80111270` — reads a context (both
+`$a3`/`r7` and `$ra`/`r31`) that was never legitimately populated,
+rather than one that was correctly set and then corrupted by a race.
+The "both r31 and r7 simultaneously wrong, together, identically, 3
+times" shape is much more consistent with **reading an uninitialized
+or reused-before-write context/thread-stack slot** than with a
+timing-dependent data race clobbering one live register.
+
+### Rules out / keep
+- 9th/10th crash classes (`updateAnimatedTextureStreaming`,
+  `static_5_800B4048`): did not recur this session; instruments remain
+  armed and ready.
+- TMEM-zero assert: 0/5 now, opportunistic-only status unchanged.
+- `[anim-recurse]`/`thr-resume bad=1` controls: both held for a 6th
+  straight session — U3 (thr-resume gate) and the anim-recursion
+  refutation are as solid as this project's evidence gets.

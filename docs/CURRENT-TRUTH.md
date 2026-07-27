@@ -212,6 +212,27 @@ soak specifically to catch the TMEM-zero assert" from primary plan to
 opportunistic (keep the flag armed everywhere, it's free, but stop
 treating catching it as the goal) after 3 non-discriminating attempts.
 Full detail: PORTING-STATE s90.
+**s91:** ran the batched soak twice (animcb5, animcb6) with the
+now-correctly-named `ROGUESQ_LOG_DMA=1` armed — **the `do_rom_read`
+crash recurred both times, byte-for-byte identical**: `phys=0x1C676672
+ram=0xFFFFFFFF80195190 bytes=0x600`, matching s85's `romread1` run
+exactly (3 independent occurrences now, sessions apart, across
+rebuilds). This **refutes "garbage that varies run-to-run"** (s85/s86
+below, superseded) — a race would not reproduce identically. Added
+`[pi-start-dma]` logging at `osPiStartDma_recomp` (`ctx->r31`/return
+address + raw pre-OR `r7` + all DMA args) confirming the exact
+mechanism (`devAddr = ctx->r7 | rom_base`, straight off the calling
+thread's register context, per s85's hypothesis) — 2nd soak showed
+`ra=0x00000000` (return address also zero) and `raw_r7=0x6C676672`, a
+completely different bit pattern from every real call's `0xB0FFxxxx`
+kseg1 shape, not a plausible near-valid value. Always on thread id=1
+(the PI DMA worker), always immediately after a `[thr-resume]
+tag=swap` onto that thread, always for a DMA near guest `mb=0x80111270`.
+Both `r31` and `r7` wrong together, identically, 3 times → points to
+**reading an uninitialized/reused-before-write context**, not a
+timing race. 9th/10th classes didn't recur; `[anim-recurse]`/
+`thr-resume bad=1` controls held for a 6th straight session. Full
+detail: PORTING-STATE s91.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -306,7 +327,9 @@ anim-recursion hypothesis parked after a 3rd non-recurrence, TMEM-zero
 assert reproduced with a full backtrace, 9th crash class found (s89);
 3rd straight "armed TMEM-zero, a newer crash preempted it" outcome,
 10th crash class found, batched entry-log instruments for the 9th and
-10th classes (s90).**
+10th classes (s90); `do_rom_read` corruption proven deterministic and
+reproducible (3x byte-identical), refuting the s85 "random race"
+framing (s91).**
 AVAILABLE CRAFT reachable. **s75:** single Start → hangar-flight.
 **s78–s79:** RDP-`fs` plateaus post-leave (S1). **s80:** synthetic FIRE continues.
 **s81:** black = mode-3 presenting wild last-drawn. **s82:** always-on sane-width
@@ -401,67 +424,51 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s90)
+## Next steps, in order of expected value (s91)
 
-1. **M3 — run the batched-instrument soak now that it's built (s90 landed
-   both instruments, not yet run).** `N64Recomp/fixup_game_funcs.py` now
-   also patches `ROGUESQ_LOG_ANIM_TEX_STREAM=1` (9th crash class,
-   `updateAnimatedTextureStreaming`, logs `a0` at entry) and
-   `ROGUESQ_LOG_HANGAR_ENTRY=1` (10th class, `static_5_800B4048`, logs
-   `a0`/`a1` at entry) — both built clean into the current binary.
-   Command: `env ROGUESQ_LOG_ANIM_CB=1 ROGUESQ_LOG_TMEM_ZERO=1
-   ROGUESQ_LOG_ANIM_TEX_STREAM=1 ROGUESQ_LOG_HANGAR_ENTRY=1
-   PROBE_MODE=start_only HOLD_S=30 zsh
-   scratch/s73_post_a_scene/run_mission_keys.sh animcb5 0 12` (batch
-   everything live in one soak per ITERATION.md's own instrumentation
-   rule, rather than one flag at a time — the last 3 soaks each armed a
-   different single flag and each time a *different* crash preempted the
-   target, so batching maximizes the odds this soak's crash is one we
-   can already read). Discriminator: whichever of the 4 armed logs fires
-   right before the crash tells you which crash class recurred and
-   whether its argument pointer looks garbage-valued or plausible.
+1. **M3 — root-cause the deterministic `do_rom_read` corruption (was
+   item 4, now the top-priority lead — s91 turned it from "unproven
+   race hypothesis" into a 3x-reproducible bug).** The crash is a fixed
+   DMA call: `mb≈0x80111270 dram=0x80195190 size=0x600 pri=1 dir=0` on
+   thread id=1 (the PI DMA worker), always right after a `[thr-resume]
+   tag=swap` onto that thread, with `ctx->r7` (devAddr) **and**
+   `ctx->r31` (return address) both reading as unpopulated/garbage
+   together. Next probe: log the OSMesgQueue send side for this specific
+   `mq`/`mb` (find the `osSendMesg`/`osJamMesg` call feeding the PI
+   manager's message queue — `librecomp`'s PI manager thread, search
+   `piDmaWorker`/`osPiMgrGetHandle` context in `lib/N64ModernRuntime/
+   librecomp/src/pi.cpp`) to see whether the *enqueued* `OSIoMesg` at
+   `mb=0x80111270` is itself already garbage (an uninitialized/reused
+   guest struct — points to a guest-side or overlay-load bug) or valid
+   right up until `piDmaWorker` dequeues and reads it (points to a
+   host-side context-restore bug specific to this thread). Also worth a
+   cheap positive check first: dump guest RDRAM at `mb=0x80111270` for
+   the full `OSIoMesg` struct (`hdr`, `devAddr`, `dramAddr`, `size`) at
+   the moment of the bad call — if `devAddr` in RDRAM itself already
+   holds `0x6C676672`-shaped garbage, the bug is upstream of
+   `osPiStartDma_recomp` entirely (whoever built this `OSIoMesg`), not
+   in the register-read path this session instrumented.
+   `ROGUESQ_LOG_DMA=1` already logs `[pi-start-dma]` with `mb`/`ra`/
+   `raw_r7` — reuse the same soak command from s91 (`animcb5`/`animcb6`
+   commands, PORTING-STATE s91) since the bug reproduces on demand at
+   ~hold+11-13s; no new build needed unless adding the OSMesgQueue-side
+   log.
 2. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert.**
    Path confirmed: `fullSyncFramebufferPairTiles` → `uploadTile` lambda
    → `TextureManager::uploadTexture` (`rt64_state.cpp:1329`) →
    `queueGPUUploadTMEM` (`rt64_rdp_tmem.cpp:84` →
    `rt64_texture_cache.cpp:1285`). The dormant `ROGUESQ_LOG_TMEM_ZERO=1`
-   log (`rt64_rdp_tmem.cpp:63`) has now gone **0/4** across soaks with
-   the flag armed or not (s87, animcb2 no flag, animcb3, animcb4) — 3
-   consecutive *armed* attempts were each preempted by a different,
-   newer crash before reaching this one. Per rule 8, demoted from
-   "dedicated soak" to "keep it armed opportunistically" (folded into
-   item 1's batch) rather than a standalone experiment.
+   log (`rt64_rdp_tmem.cpp:63`) is now **0/5** across soaks with the
+   flag armed or not (s87, animcb2 no flag, animcb3, animcb4, animcb5) —
+   stays demoted to "keep it armed opportunistically," not a standalone
+   experiment.
 3. **M3 — characterize the 10th crash class, SIGBUS in
-   `static_5_800B4048` (s90).** No confirmed source name (a
-   `main_overlay.txt` comment guesses "updateTextOverlayLookupEntry",
-   unverified — absent from the built `.c`). Called from
-   `updateHangarBayScene` (0x800AB658) → `runHangarSelectionFrame`
-   (0x800AAD9C) → `runHangarMenuFromOverlay` (0x800C6854) →
-   `menuOverlayInit`. Source (`N64Recomp/RecompiledFuncs/funcs_41.c:577-782`)
-   shows it dereferences its `a1` argument 4× via unchecked `MEM_W` at
-   fixed offsets (0x10/0x14) before calling `findLookupEntryByKey`/
-   `setLookupEntryField5ByKey`. Entry-log instrument
-   (`ROGUESQ_LOG_HANGAR_ENTRY=1`) already landed and built — folded into
-   item 1's batched soak.
-4. **M3 — retry the shared-corruption-race test (s85 hypothesis, s86
-   instrumentation already in place).** `[rom-read]` thread-identity
-   fields exist but no soak since s86 has seen `do_rom_read` corrupt
-   again (0/1 in s86, s88, s89, s90 — **s90 found why**: the actual gate
-   is `ROGUESQ_LOG_DMA`, not `ROGUESQ_LOG_ROM_READ` as every prior
-   session assumed — `lib/N64ModernRuntime/librecomp/src/pi.cpp:72` —
-   so animcb2-4 never armed it at all. Use `ROGUESQ_LOG_DMA=1` in the
-   next batched soak). This hypothesis now has **4 candidate dereference
-   sites**
-   (`do_rom_read` physical_addr, s85; `updateAnimatedTextureStreaming`
-   a0, s89; `static_5_800B4048` a1, s90; the OSThread UAF family) all
-   sharing the same "corrupted register → raw unchecked deref" shape —
-   worth stepping back to ask whether the common thread is upstream of
-   any single site (e.g. a shared context-swap path) rather than
-   instrumenting each site individually forever. The crash inventory
-   growing by one nearly every soak (7→8→9→10 across s86-s90) is itself
-   evidence for "one shared, increasingly-early-firing race" over "10
-   independent unrelated bugs," but not yet proven — still single-source
-   per site.
+   `static_5_800B4048` (s90).** Did not recur in s91's two soaks.
+   Instrument (`ROGUESQ_LOG_HANGAR_ENTRY=1`) stays armed and ready; no
+   dedicated soak needed, fold into whatever soak runs next.
+4. **M3 — characterize the 9th crash class, `updateAnimatedTextureStreaming`
+   SIGBUS (s89).** Also did not recur in s91. Instrument
+   (`ROGUESQ_LOG_ANIM_TEX_STREAM=1`) stays armed.
 5. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89).** 3
    consecutive non-recurrences since s88 landed the correct instrument
    (s88, animcb2, animcb3) against 8 total crashing soaks since s83. Do
@@ -499,36 +506,24 @@ cost three sessions before the recursive mutex.
 14. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
 15. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
-Done this session (s90): ran NEXT.md's prescribed soak (`animcb4`,
-`ROGUESQ_LOG_ANIM_CB=1 ROGUESQ_LOG_TMEM_ZERO=1 PROBE_MODE=start_only
-HOLD_S=30`) to try to catch the TMEM-zero assert with the log armed.
-It still didn't fire (0/4 across s87/animcb2/animcb3/animcb4) — a
-**different, newer crash preempted it for the 3rd soak in a row** with
-the flag armed (s87, animcb3, animcb4), a pattern strong enough that
-per rule 8 this specific experiment shape (dedicated soak to catch
-TMEM-zero) is now demoted to "keep the flag armed opportunistically,"
-not a standalone plan. The preempting crash was a **10th, brand-new**
-class: SIGBUS in `static_5_800B4048` (no confirmed source name),
-called from the known `updateHangarBayScene` → `runHangarSelectionFrame`
-→ `runHangarMenuFromOverlay` → `menuOverlayInit` chain — read the
-source (`funcs_41.c:577-782`) down to an unchecked raw `MEM_W` deref
-off its `a1` argument (4 separate dereferences at fixed offsets), the
-same shape as every other crash in this family. `[anim-recurse]` fired
-3610/3610 (control good, `sp` still the same 6 known values);
-`thr-resume bad_total=0` again (3rd/4th support for the U3 gate).
-Rather than run a 4th single-flag soak, spent the rest of the session
-landing **batched** entry-log instruments (per ITERATION.md's own
-"batch instrumentation" rule) for the two most recent uninstrumented
-sites — `ROGUESQ_LOG_ANIM_TEX_STREAM=1` (9th class,
-`updateAnimatedTextureStreaming`, still uninstrumented since s89
-despite being planned) and `ROGUESQ_LOG_HANGAR_ENTRY=1` (10th class,
-today's) — both in `N64Recomp/fixup_game_funcs.py` following the
-`_anim_cb_patch` pattern, verified landed via `grep`, rebuilt clean
-(exit 0). **Not yet soaked** — that's the next iteration's job, with
-all 4+ diagnostic flags armed at once so whichever crash fires next is
-more likely to already have a live instrument reading it. Crash
-inventory grows to 10 sites; still only 2 (spline NaN, thr-resume
-`bad=1`) have an actual code fix.
+Done this session (s91): ran the batched-instrument soak NEXT.md
+prescribed (`animcb5`) with all 5 flags armed including the
+correctly-named `ROGUESQ_LOG_DMA=1` — crashed on `do_rom_read`
+(`phys=0x1C676672 ram=0xFFFFFFFF80195190 bytes=0x600`), **byte-for-byte
+identical** to s85's `romread1` run from 6 sessions earlier. Read
+`osPiStartDma_recomp` source to confirm the exact mechanism
+(`devAddr = ctx->r7 | rom_base`, a live register read), added
+`[pi-start-dma]` logging (return address + raw r7 + DMA args) at that
+call site (`lib/N64ModernRuntime`, exported + committed), rebuilt, and
+ran a 2nd soak (`animcb6`) — **crashed a 3rd time with the identical
+DMA call**, additionally showing `ra=0x00000000` and a `raw_r7` with a
+completely different bit shape from every real call's kseg1 pattern.
+Three independent byte-identical occurrences **refutes** s85/s86's
+"random race, varies run-to-run" framing and **establishes** a
+deterministic, reproducible bug — reclassified as the new top-priority
+lead (next-steps item 1) instead of "shared corruption race." 9th/10th
+crash classes did not recur; `[anim-recurse]`/`thr-resume bad=1`
+controls held for a 6th straight session. TMEM-zero stayed 0/5.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
@@ -845,6 +840,13 @@ any s2–s4 conclusion without checking that section.
   193715 pairs and the same Metal assert.
 - `ROGUESQ_FORCE_PAL15=1` (s14): clears the floor band but corrupts ceiling banners that legitimately
   share pal=15.
+- **Claim (s85):** the `do_rom_read` corrupted `physical_addr` is "garbage that varies run-to-run,"
+  evidence for a nondeterministic shared-corruption race. **Overturned by s91:** the exact same
+  `phys=0x1C676672 ram=0xFFFFFFFF80195190 bytes=0x600` DMA call recurred byte-for-byte 3 times across
+  3 sessions and 2 rebuilds — a race would not reproduce identically. Believable because s85's only
+  comparison was against a *different* crash type (`thrgate2`, an alignment Abort with no logged
+  value) from the same session, not a second instance of the same crash — it never actually had two
+  comparable data points. Reclassified as a deterministic, reproducible bug (top of M3 next-steps).
 
 ## Method traps
 

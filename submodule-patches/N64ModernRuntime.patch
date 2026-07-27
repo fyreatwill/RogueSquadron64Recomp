@@ -222,7 +222,7 @@ index 8c8e5d1..7a9085d 100644
          assert(false);
          std::exit(EXIT_FAILURE);
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..b925521 100644
+index 43509ba..908dae1 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -8,6 +8,7 @@
@@ -281,6 +281,31 @@ index 43509ba..b925521 100644
              // Send a message to the mq to indicate that the transfer completed
              ultramodern::enqueue_external_message_src(mq, 0, false, ultramodern::EventMessageSource::Pi);
          } else if (physical_addr >= recomp::sram_base) {
+@@ -313,12 +348,24 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+     uint32_t mb = ctx->r4;
+     uint32_t pri = ctx->r5;
+     uint32_t direction = ctx->r6;
++    uint32_t raw_r7 = ctx->r7;
+     uint32_t devAddr = ctx->r7 | recomp::rom_base;
+     gpr dramAddr = MEM_W(0x10, ctx->r29);
+     uint32_t size = MEM_W(0x14, ctx->r29);
+     PTR(OSMesgQueue) mq = MEM_W(0x18, ctx->r29);
+     uint32_t physical_addr = k1_to_phys(devAddr);
+ 
++    // ROGUESQ: s90/animcb5 found the s85 do_rom_read corruption is byte-for-byte
++    // reproducible (same phys/ram/bytes across two runs, sessions apart), which
++    // refutes "random garbage varying every time" and points at one specific
++    // caller passing a bad raw_r7. Log the guest return address (ctx->r31) so
++    // the next abort can be traced back to the exact calling function.
++    if (std::getenv("ROGUESQ_LOG_DMA")) {
++        fprintf(stderr, "[pi-start-dma] ra=0x%08X raw_r7=0x%08X devAddr=0x%08X mb=0x%08X pri=%u dir=%u dram=0x%08llX size=0x%X\n",
++            (uint32_t)ctx->r31, raw_r7, devAddr, mb, pri, direction, (unsigned long long)dramAddr, size);
++        fflush(stderr);
++    }
++
+     debug_printf("[pi] DMA from 0x%08X into 0x%08X of size 0x%08X\n", devAddr, dramAddr, size);
+ 
+     do_dma(PASS_RDRAM mq, dramAddr, physical_addr, size, direction);
 diff --git a/librecomp/src/recomp.cpp b/librecomp/src/recomp.cpp
 index 4276b7d..32b2bd7 100644
 --- a/librecomp/src/recomp.cpp
