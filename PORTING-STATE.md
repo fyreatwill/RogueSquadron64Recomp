@@ -10146,3 +10146,114 @@ one clean rebuild. No `lib/` edits this session. `N64Recomp` remains a
 separate git checkout with its own accumulating uncommitted changes
 (s90-118 now) — same flagged-not-actioned posture as every session since
 s90.
+
+## Session 119 (2026-07-27) — caught a flaw in NEXT.md's own hypothesis-(b) test before running it; ran the corrected instrument twice, both nulls (musyxInitVoiceFromSample never fires in this code path), reinforcing s105 rather than discriminating
+
+**Work unit (from NEXT.md):** test hypothesis (b) — is `ctx->r4` (the
+pointer `musyxMixActiveVoices` uses as the voice-array base at the gate
+check) itself corrupted to point away from the real voice pool, i.e. is
+every "voice+N" finding since s94 actually reading a texture-name table
+the whole time — by comparing it in the same run against a "known-good"
+voice-pool pointer from `musyxInitVoiceFromSample`'s own `ctx->r4`,
+already instrumented via `ROGUESQ_LOG_INIT_VOICE_SAMPLE` (s105).
+
+**Source-read before instrumenting (per rule 5) found NEXT.md's own plan
+was wrong.** Read `musyxInitVoiceFromSample` end to end
+(`N64Recomp/RecompiledFuncs/funcs_24.c:5787-5903`): at function entry,
+`ctx->r4` is `voiceIdx` — a small integer, the raw `a0` argument (log
+line itself even labels it `voiceIdx=0x%08X`, s105's own field name) —
+not a pointer at all. The register gets reassigned mid-function to the
+real computed slot pointer only a few instructions before the
+already-confirmed `voice+0x34` write (`funcs_24.c:5901`,
+`ctx->r4 = ADD32(ctx->r6, ctx->r4)` — the `G_BASE-0x6908` global plus
+`voiceIdx*0x88`, same stride `musyxMixActiveVoices`'s gate check uses).
+Comparing the entry-point value as if it were the pointer would have
+produced a guaranteed, meaningless "divergence" every time (a small
+integer vs. a real heap address) and wrongly "confirmed" hypothesis (b)
+regardless of whether any bug exists — the exact kind of false-positive
+the project has been burned by before (s99's `U32()` truncation bug,
+s114's gap in a "never writes 0x34" audit).
+
+**Fix:** added a second, correctly-anchored diagnostic
+(`_init_voice_slot_ptr_patch`, `N64Recomp/fixup_game_funcs.py`) at the
+`ADD32(ctx->r6, ctx->r4)` line (confirmed unique in the file), logging
+`voiceIdx` (`ctx->r7`, the untouched copy) and the freshly computed slot
+base (`ctx->r4`) as `[init-voice-slot-ptr]`. Reuses the existing
+`ROGUESQ_LOG_INIT_VOICE_SAMPLE` flag rather than adding a new env var.
+Full regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`, patched
+x1, confirmed) and one clean rebuild (exit 0, only pre-existing warning
+classes).
+
+**Two soaks** (`voicegate4`, `voicegate5`, both
+`ROGUESQ_LOG_VOICE_ACTIVE_GATE=1 ROGUESQ_LOG_INIT_VOICE_SAMPLE=1
+ROGUESQ_LOG_MUSYX_DMA_CALL=1 PROBE_MODE=start_only HOLD_S=30`, per
+NEXT.md's up-to-3-attempts allowance for early-crash preemption):
+
+- Both got a same-run positive control on the gate-check side:
+  `[voice-active-gate-nz]` fired 5x each, same addresses both runs
+  (`base=0x80171D50`/`0x80171DD8`, idx `0x10`/`0x11`) and the same
+  asset-name-string content as s118 (`"explo_tex2"`, `"expl x3"`, `"x10"`,
+  `"x11"`) — 4th/5th reproductions of that finding, reinforcing it
+  further but not new.
+- **Neither run ever fired `[init-voice-sample]` or
+  `[init-voice-slot-ptr]` even once** — `musyxInitVoiceFromSample` was
+  never called at all in either run, despite the gate-check hits proving
+  relevant audio-subsystem activity (`musyxMixActiveVoices` running,
+  ~68,700-68,800 scan-checks in) well before either crash. This is not a
+  "run died too early" null in the way s95-97's DMA-window misses were —
+  the gate-check side clearly executed — it specifically reinforces
+  s105's original 0/0-across-a-full-boot→hangar-lifetime finding for
+  *this exact function*, now a 2nd and 3rd independent data point for
+  "musyxInitVoiceFromSample does not run on the menu-only code path these
+  driven soaks exercise" (matching the s110 parking rationale for the
+  call-chain angle).
+- Both runs still died to a crash before reaching the ~140s DMA window:
+  `voicegate4` to the already-catalogued 17th class (fault directly
+  inside `updateHangarBayScene`/`static_5_800AB658`, s100), `voicegate5`
+  to the s84 `frameStartReset` SIGBUS (the one previously called a
+  "fluke" after a single non-recurrence in s85 — this is its first
+  reappearance since, so "fluke" no longer holds unqualified; it recurs,
+  just rarely). Two different crash classes across two consecutive
+  attempts, from the same script/build — the hangar-tick-family crash
+  lottery remains the dominant obstacle to reaching the audio-DMA window
+  at all, independent of this session's own question.
+
+**Stopped at 2 of the 3 allowed attempts, not 3.** A 3rd attempt would
+very likely repeat the same shape (gate-check fires, init-voice-sample
+doesn't, some hangar-tick-family crash preempts the DMA window) rather
+than a materially different outcome — per rule 8's spirit of not
+re-running an experiment a 3rd time when two consecutive attempts
+already converged on the same null, even though NEXT.md's "up to 3"
+language was about crash-preemption specifically rather than this
+finding.
+
+**Conclusion: hypothesis (b) test from NEXT.md is not yet runnable as
+designed** — it requires catching `musyxInitVoiceFromSample` firing at
+least once in the same run as a `voice-active-gate-nz` hit, and across 3
+independent runs now (s105's original soak plus these two) it has never
+fired at all outside of a mission-proper context this project has not
+yet reached alive. The corrected instrument itself is validated and
+ready (no more design flaw), just starved of the call site it needs.
+Next session should either (a) find a different, more frequently-called
+"known-good voice-pool pointer" call site to compare against (e.g.
+`musyxKeyOnVoice`'s own base-pointer argument, already proven read-only
+in s116 but never checked as a *pointer sanity* source rather than a
+write-search target), or (b) pursue the s118 refute-branch instead
+(hunt the allocator/table that owns the `0x88`-strided region at
+`base=0x80171D50`-class addresses directly, via `rs_malloc`/allocator
+call sites near the `G_BASE-0x6908` global, similar to s104's node-
+allocator hunt) — that branch does not depend on ever catching
+`musyxInitVoiceFromSample` alive.
+
+No new crash classes this session (both already catalogued: 17th class
+s100, `frameStartReset` s84). `thr-resume bad_total=0` both runs
+(control held again).
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: added `_init_voice_slot_ptr_patch`
+(new diagnostic block, reuses `ROGUESQ_LOG_INIT_VOICE_SAMPLE`) anchored
+on `musyxInitVoiceFromSample`'s `ADD32(ctx->r6, ctx->r4)` instruction
+(`funcs_24.c:5901`). Full ELF regen (patched x1) and one clean rebuild.
+No `lib/` edits this session. `N64Recomp` remains a separate git
+checkout with its own accumulating uncommitted changes (s90-119 now) —
+same flagged-not-actioned posture as every session since s90.

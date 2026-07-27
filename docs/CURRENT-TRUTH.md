@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 113)
+## Current truth (as of session 119)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -736,6 +736,31 @@ cost three sessions before the recursive mutex.
    `musyxInitVoiceFromSample` in the same run. No new crash class (11th+
    `do_rom_read` recurrence, familiar ~140s window). Full detail:
    PORTING-STATE s118.
+   **s119:** source-read before instrumenting found NEXT.md's own
+   comparison plan was flawed — `musyxInitVoiceFromSample`'s entry-point
+   `ctx->r4` is `voiceIdx` (a small integer), not a pointer; the pointer
+   is only computed several instructions later (`funcs_24.c:5901`,
+   confirmed unique anchor). Comparing the entry value as a pointer
+   would have manufactured a guaranteed false "divergence". Added a
+   correctly-anchored second instrument (`[init-voice-slot-ptr]`, reuses
+   the `ROGUESQ_LOG_INIT_VOICE_SAMPLE` flag) and ran 2 soaks (of the 3
+   NEXT.md allowed). Both got a positive control on the gate-check side
+   (`[voice-active-gate-nz]` 5x each, same addresses/strings as s118 —
+   4th/5th reproduction) but **`musyxInitVoiceFromSample` never fired at
+   all in either run** — 2nd and 3rd data points (after s105) that this
+   function does not run on the menu-only path these driven soaks
+   exercise, not a crash-timing artifact (the gate-check side clearly
+   executed first). Stopped at 2 attempts, not 3 — a 3rd would likely
+   repeat the same shape. **Hypothesis (b) as NEXT.md worded it is not
+   testable with current call sites** — needs either a more-frequently-
+   called known-good voice-pool pointer source, or pivot to the
+   refute-branch (find the allocator/table owning the `0x88`-strided
+   region directly, independent of ever catching
+   `musyxInitVoiceFromSample` alive). Two different hangar-tick-family
+   crashes preempted the DMA window across the two attempts (17th class
+   s100; `frameStartReset` s84 — its first recurrence since s85, so
+   "fluke" no longer holds unqualified, just rare). Full detail:
+   PORTING-STATE s119.
 
 -2. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
