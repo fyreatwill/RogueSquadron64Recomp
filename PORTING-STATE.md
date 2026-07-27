@@ -6171,3 +6171,43 @@ after phase→640 @150s. thr-resume bad=0.
 - Do **not** treat RDP-`fs` plateau as synthetic stall.
 - Next: intermittent black despite FIRE + empty=0 (present path / real black
   frames). Park do_rom_read until present holds ≥60s continuous content.
+
+## Session 81 (2026-07-27) — intermittent black is mode-3 present of wild last-drawn
+
+### Work unit
+M3 next-step #1 / NEXT.md B1–B4: offline-first discrimination of intermittent
+black after leave on existing s80 artifact `scratch/s73_post_a_scene/vifs1/`.
+No new build. Analysis: `scratch/s73_post_a_scene/BLACK1_ANALYSIS.md`.
+
+### Positive controls (same run)
+- Capture works: hold_09/15 rich (124k/120k colours); craft_stable content.
+- Pure-black class real: hold_01/08/11/14 + after_p1_start_05 + stable_02 are
+  **byte-identical** (hash `7ff2aeb67038`, meanL=4.5, uniq=194 chrome-only).
+- Instruments live: last-drawn, present-1024, vi-follow-draw, vi-fs-decision.
+
+### Discriminating measurements
+1. **`present-1024 empty=0` is transition-only** (`s_lastLogDrawn` on address
+   change). Not continuous present health — s80 V2 over-read.
+2. **last-drawn flip rate:** craft-stable ~27/s 0x656/0x6AB → black window
+   collapses to ~3.6/s then long gaps; recovery at #2486 →0x656000 w=512
+   co-timed with hold_15 rich.
+3. **Smoking gun (same log):** mode-3 presents wild last-drawn during freeze:
+   `last drawn 0x00020000 w=1`, `w=11`, `w=17`, `w=21`, `w=257`; REGISTER 6/7
+   wild (w=1/1/1/1/48/59). Whole-run vi-follow: 79 sane-width / 13 wild-width.
+4. s78 refuse is `width>1280` only — widths 1..1185 pass and get presented.
+5. last-drawn →0x0 (#2456 w=1169) disables mode-3 override; hold_09 RICH while
+   drawn stuck at 0 is stock-VI fallback, not proof of healthy mode-3.
+
+### B1–B4
+
+| ID | Verdict |
+|----|---------|
+| B1 intentional clear | **WEAKENED** — black is one chrome-only surface; last-drawn goes wild, not steady clear-draws |
+| B2 wrong/stale present | **SUPPORTED** (log + code) |
+| B3 real fade/loading | **PARTIAL** — content returns; black not progressive fade |
+| B4 wild CIMG | **SUPPORTED as B2 feed** (wild last-drawn keys) |
+
+### Rules out / keep
+- Do **not** chase "why empty=0 if black" — empty=0 never claimed continuous black-free presents.
+- Do **not** re-open V1/V3/V4 synthetic FIRE.
+- Next: sane-width gate on last-drawn update and/or mode-3 present; `[last-drawn-skip]` control.

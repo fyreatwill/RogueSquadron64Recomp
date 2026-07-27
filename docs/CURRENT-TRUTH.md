@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 80)
+## Current truth (as of session 81)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -92,6 +92,11 @@ loss (S1), not leave key, not FB-map pollution, not 0x0231 primary.**
 was an **`fs` misread** (`fs` = DPC FULL_SYNC *opcode* count, not synthetic
 `fullSync()`). Present: intermittent black + content (no 0x0231 this run);
 death = unaligned `do_rom_read` Abort.
+**s81 (B1–B4 offline):** intermittent black is **mode-3 present of wild
+last-drawn** (w=1..257; REGISTER 6/7 wild). `present-1024 empty=0` is
+transition-only (not continuous health). Pure-black snaps byte-identical
+(incl. craft-select flash). B2 **supported**; B4 feeds B2; B1 weakened;
+B3 partial. Detail: `scratch/s73_post_a_scene/BLACK1_ANALYSIS.md`.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -171,15 +176,18 @@ step 2 below). Full detail: PORTING-STATE s49.
 
 **M3 — first gameplay: OPENED (s50); ImemOverrun FIXED (s69); OSThread SIGBUS FIXED (s72);
 post-`a` scene ID (s73); Start path isolated (s74/s75); hold/assert triage (s76/s77);
-wild-FB refuse gate (s78, G1 refuted); D3 S1–S4 (s79); VI_FULLSYNC decision V1–V4 (s80).**
+wild-FB refuse gate (s78, G1 refuted); D3 S1–S4 (s79); VI_FULLSYNC decision V1–V4 (s80);
+intermittent-black B1–B4 (s81).**
 AVAILABLE CRAFT reachable. thr-resume bad=0 holds through s80. **s75:** single Start →
 hangar-flight by +2–4s. **s78:** refuse gate keeps map clean; RDP-`fs` still plateaus.
 **s79:** post-leave tasks permanently lose RDP FULL_SYNC (S1); S2/S3-primary refuted.
-**s80:** synthetic VI_FULLSYNC **still FIREs** after S1 (V1/V3/V4 dead; V2 partial —
-intermittent black despite FIRE + `present-1024 empty=0`). RDP-`fs` plateau ≠ synthetic
-stall. UnhandledJump 0x0231 **0** this run (fbgate3 had 898). Death: unaligned
-`do_rom_read`. Leave key closed. Origin still cannot name scenes. Full detail
-PORTING-STATE s68–s80; `scratch/s73_post_a_scene/VIFS1_ANALYSIS.md`.
+**s80:** synthetic VI_FULLSYNC **still FIREs** after S1 (V1/V3/V4 dead). RDP-`fs`
+plateau ≠ synthetic stall. **s81:** intermittent black = **VI_FOLLOW_DRAW=3
+presenting wild last-drawn** (widths 1..257 pass s78's >1280 refuse). B2
+supported; next is last-drawn / mode-3 sane-width gate. UnhandledJump 0x0231
+**0** on vifs1. Death: unaligned `do_rom_read`. Leave key closed. Origin still
+cannot name scenes. Full detail PORTING-STATE s68–s81;
+`scratch/s73_post_a_scene/BLACK1_ANALYSIS.md`.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -208,15 +216,15 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s80)
+## Next steps, in order of expected value (s81)
 
-1. **M3 — intermittent black after leave despite healthy synthetic FIRE (V2 follow-through).**
-   s80: after permanent high-tri `syncs=0`, VI_FULLSYNC still FIRE (pairs 1–3, sane
-   lastCimg 0x656/0x6AB); `present-1024 empty=0` throughout; snaps alternate ~94% black
-   with rich content (hold_09/15). Discriminate: game intentionally clears FB vs present
-   showing stale pair vs capture of real black frames. Prefer one soak with
-   phase-scoped present draw-addr + mean-luma log (or offline snap timeline already
-   enough for a tighter present-queue probe). HOLD_S=30+.
+1. **M3 — gate last-drawn / mode-3 present on sane widths (B2 causal test).**
+   s81: mode-3 presents wild last-drawn (w=1..257); s78 refuse only `width>1280`.
+   One build: refuse last-drawn atomic update (and/or mode-3 override) unless
+   width ∈ {320,512,640,1024} (or `320≤w≤1024`) and addr≠0; log
+   `[last-drawn-skip]` as positive control. Soak start_only HOLD_S=30+.
+   - skip fires + black duty-cycle collapses → B2 causal; proceed to craft stick.
+   - skip fires + black unchanged → need present-luma / RDRAM (B1 residual).
 2. **M3 — after present holds ≥60s continuous content:** re-run hold+stick (`HOLD_S=60`,
    marks 10/25/40) for craft response; document phase timeline. UnhandledJump 0x0231
    was **0** on s80 vifs1 — only chase if it returns and kills content.
@@ -235,8 +243,8 @@ cost three sessions before the recursive mutex.
 7. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
 8. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
-Done this session: ~~V1–V4 VI_FULLSYNC decision~~ (s80) — synthetic path healthy;
-s79 fs-stall reading overturned; next is intermittent-black / present content.
+Done this session: ~~B1–B4 intermittent black offline~~ (s81) — B2 supported
+(mode-3 ← wild last-drawn); next is sane-width gate.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
@@ -499,6 +507,12 @@ any s2–s4 conclusion without checking that section.
   the `[vi] fs=` field was the only advance metric in s78/s79 logs and moved in
   lockstep with healthy present earlier, so its freeze looked like the synthetic
   path stopping.
+- **Claim (s80 V2 residual):** intermittent black is mysterious despite healthy
+  present (`present-1024 empty=0` throughout + synthetic FIRE). **Overturned by
+  s81:** `empty=0` logs only on last-drawn *address transitions*, not every
+  present; mode-3 actively presents wild last-drawn (w=1..257) during black
+  windows (`[vi-follow-draw]`). **Why believable:** empty=0 never flipped to 1 in
+  the whole run, so "present RT always non-empty" looked continuously true.
 
 ### Dead ends — labelled as such in the log, do not retry
 
