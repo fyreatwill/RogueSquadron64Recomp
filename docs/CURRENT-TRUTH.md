@@ -418,7 +418,9 @@ instrument landed and discriminates in one soak — producer fires 10x
 not once (5th `do_rom_read` hit), refuting "one boot-only call" and
 finding an unlocated indirect caller whose batch writes ASCII-looking
 garbage into the `devAddr` field at write-time, not via a later stomp
-(s94).**
+(s94); `get_function`-chokepoint instrument landed to find that caller
+directly, first soak inconclusive (died early to a 12th, recurring
+crash class before reaching the target window) (s95).**
 AVAILABLE CRAFT reachable. **s75:** single Start → hangar-flight.
 **s78–s79:** RDP-`fs` plateaus post-leave (S1). **s80:** synthetic FIRE continues.
 **s81:** black = mode-3 presenting wild last-drawn. **s82:** always-on sane-width
@@ -541,21 +543,40 @@ cost three sessions before the recursive mutex.
    external RDRAM stomp"** — s94 already shows the bad value present
    at write-time inside the *producer's own log*, ruling both of those
    out; the bug is upstream of the ring, in whoever calls
-   `submitDmaRequestBatch` indirectly. **Concrete next instrument**:
-   the recompiler already knows every indirect-call site by construction
-   (`LOOKUP_FUNC(ctx->rN)(rdram, ctx)` idioms) — grep
-   `N64Recomp/RecompiledFuncs/*.c` for `LOOKUP_FUNC` call sites whose
-   surrounding function last loads a register from a table/array around
-   a hangar/scene-load context, or add one log line inside the generic
-   `LOOKUP_FUNC` macro/dispatch (if one exists in `recomp.h` or the
-   runtime) printing the resolved target address whenever it equals
-   `0x8000569C` — that pinpoints the actual caller function directly
-   without guessing. Once found, read that caller's source: the bug is
-   almost certainly a wrong field offset or wrong array stride when it
-   builds the request array it hands to `submitDmaRequestBatch` (a
-   name/label field landing where `devAddr` is expected), which should
-   be fixable at the source level once the caller is identified — this
-   is now closer to a real fix than any prior session's framing.
+   `submitDmaRequestBatch` indirectly.
+   **s95: instrument landed at the `get_function` chokepoint (not a
+   call-site grep); first soak inconclusive, not refuted.** Confirmed
+   via the codegen template (`N64Recomp/src/cgenerator.cpp`) and a
+   fresh count (28388/28389 `LOOKUP_FUNC(` sites) that **every**
+   indirect call in the recompiled program routes through
+   `get_function` (`lib/N64ModernRuntime/librecomp/src/overlays.cpp:397`)
+   immediately before invoking its result, and that the known boot-time
+   call is compiled as a direct (literal-named) call that never touches
+   it — so an instrument there fires only for a genuine unlocated
+   indirect caller, with no extra filtering needed. `ROGUESQ_LOG_DMA_
+   CALLER=1` takes a native `backtrace()` inside `get_function` when the
+   resolved address is `0x8000569C` (get_function's own frame sits
+   directly under the calling generated function, naming the caller
+   without needing `ctx` — deliberately did **not** widen
+   `get_function`'s signature to thread `ctx` through, since that
+   signature is a shared ABI with the mods system and the
+   live-recompiler JIT and changing it would ripple into both). Built
+   clean, `submodule-patches/export.sh` run, committed. **One soak
+   (`s95_dmacaller1`): 0/0 fires** — not a null result on the question;
+   the process died at hold+~5s to an unrelated crash (see 1c below)
+   well before the ~140s mark where the phenomenon occurs in every
+   prior soak that reached it. Do not treat this as evidence against
+   the indirect-caller hypothesis. **Concrete next instrument, still
+   armed and ready**: re-run the same repro with `ROGUESQ_LOG_DMA_
+   CALLER=1` (combine with `ROGUESQ_LOG_DMA_RING=1`/`ROGUESQ_LOG_DMA=1`
+   as a same-run positive control — the boot-call `n=0` producer entry
+   should always fire first). Once the caller is found, read its
+   source: the bug is almost certainly a wrong field offset or wrong
+   array stride when it builds the request array it hands to
+   `submitDmaRequestBatch` (a name/label field landing where `devAddr`
+   is expected), which should be fixable at the source level once the
+   caller is identified — this is now closer to a real fix than any
+   prior session's framing.
    1a. **Confound theory CONFIRMED and CLOSED (s93).** s92's attempt to
    drop `ROGUESQ_LOG_THREAD_RESUME=1` from the repro never actually
    took effect — `scratch/s73_post_a_scene/run_mission_keys.sh` line 8
@@ -575,6 +596,20 @@ cost three sessions before the recursive mutex.
    soak needed yet, fold into whichever soak runs next and read the
    crash log for it. Did not recur in s93 (do_rom_read won the race
    instead, as expected with the confound removed).
+   1c. **M3 — 12th crash class: SIGBUS in `composeNpcOrientationMatrix`**
+   (`static_5_800AB1C8`, confirmed real symbol via `symbol_files/
+   main_overlay.txt`), via `runHangarSelectionFrame` (`static_5_800AAD9C`)
+   ← `runHangarMenuFromOverlay` (`static_5_800C6854`) ← `menuOverlayInit`
+   — same hangar-tick family as the 9th/10th/11th classes. Recurred s95
+   (hold+~5s, killed the run before the DMA-caller instrument's target
+   window). Not actually new to this session — one prior, uncatalogued
+   occurrence exists at s74 (`keys1` run, before the s78/s82/s84
+   stability gates landed), never folded into the numbered list because
+   it didn't recur in the many soaks between s74 and s95. `thr-resume
+   bad_total=0` both times it's been seen — rules out the s72 OSThread-
+   UAF family specifically. Not yet instrumented; no dedicated soak
+   needed yet unless it recurs a 3rd time, in which case give it its own
+   `ROGUESQ_LOG_*` entry-log in the style of classes 9–11.
 2. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert.**
    Path confirmed: `fullSyncFramebufferPairTiles` → `uploadTile` lambda
    → `TextureManager::uploadTexture` (`rt64_state.cpp:1329`) →
@@ -627,6 +662,32 @@ cost three sessions before the recursive mutex.
    before committing there.
 14. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
 15. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+
+Done this session (s95): landed a `get_function`-chokepoint instrument
+(`ROGUESQ_LOG_DMA_CALLER=1`, `lib/N64ModernRuntime/librecomp/src/
+overlays.cpp`) to find `submitDmaRequestBatch`'s indirect caller.
+Before writing it, confirmed (via `N64Recomp/src/cgenerator.cpp`'s
+codegen template and a fresh count — 28388/28389 `LOOKUP_FUNC(` sites
+across all 45 `funcs_*.c`) that every indirect call in the recompiled
+program resolves through this exact function immediately before being
+invoked, and that the known boot-time call bypasses it (compiled as a
+direct, literal-named call) — so an instrument there can only fire for
+the unlocated indirect caller, no filtering needed. Rejected widening
+`get_function`'s signature to thread `ctx` through (it's a shared ABI
+with the mods system and the live-recompiler JIT); used a native
+`backtrace()` instead, since `get_function`'s own call frame sits
+directly under its caller. Built clean, `submodule-patches/export.sh`
+run, committed (this is a `lib/` edit). Ran one soak
+(`s95_dmacaller1`): **0/0 fires**, but not a null result on the
+question — the instrument's same-run positive control
+(`dma-ring-producer n=0`, the boot call) fired exactly as expected,
+proving the instrument works; the process instead died at hold+~5s to
+a different, older crash before reaching the ~140s point where the
+phenomenon has occurred in every prior soak that got that far. That
+crash (`composeNpcOrientationMatrix` SIGBUS, confirmed real name) is
+not new — one prior, uncatalogued occurrence exists at s74 — logged
+here as the 12th crash class. `ROGUESQ_LOG_DMA_CALLER=1` stays armed
+for the next soak, which is a genuine re-attempt, not a 2nd failure.
 
 Done this session (s94): implemented NEXT.md's prescribed instrument
 (`ROGUESQ_LOG_DMA_RING=1`, two log points in

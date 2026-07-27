@@ -7408,3 +7408,136 @@ with s93's confound finding, not a regression); `anim-recurse`,
 but did not need to be read for this soak's discriminating result (the
 crash pattern is identical to prior sessions, `do_rom_read` wins the
 race as expected with the confound off).
+
+## Session 95 (2026-07-27) — landed a global `get_function` chokepoint instrument (`ROGUESQ_LOG_DMA_CALLER=1`) to find `submitDmaRequestBatch`'s indirect caller; one soak ran, but a pre-existing uncatalogued crash (`composeNpcOrientationMatrix`, first seen once at s74) killed the process before the ~140s mark where the target phenomenon occurs — 0/0, inconclusive, not refuted
+
+### Work unit
+
+NEXT.md's step 2 (the concrete-instrument option): find what calls
+`submitDmaRequestBatch` (`0x8000569C`) indirectly. Before writing any
+code, read `recomp.h`'s `LOOKUP_FUNC` macro and its implementation:
+
+```c
+#define LOOKUP_FUNC(val) \
+    get_function((int32_t)(val))
+```
+
+`get_function` (`lib/N64ModernRuntime/librecomp/src/overlays.cpp:397`)
+is the resolver every `LOOKUP_FUNC(...)` call site invokes just before
+calling the result. Checked whether it would be safe to widen
+`get_function`'s signature to also take `ctx` (so the instrument could
+read `ctx->r31`, the return address) — **rejected**: `get_function`'s
+1-arg signature (`recomp_func_t*(*)(int32_t)`) is a shared ABI used by
+the mods system (`mods.hpp:534,568`, `mods.cpp:416` DLL symbol lookup)
+and the live-recompiler JIT (`live_generator.cpp` emits a call with a
+hardcoded single-argument calling convention, `SLJIT_ARGS1(P, 32)`).
+Changing it would mean updating several unrelated subsystems just to
+add one instrument — too invasive for what's needed.
+
+Confirmed the call-site pattern is completely uniform first, so the
+chokepoint approach is sound: grepped the codegen template itself
+(`N64Recomp/src/cgenerator.cpp:410,414`, the sibling tool checkout, not
+the generated output) — it always emits either
+`LOOKUP_FUNC(0x{addr})(rdram, ctx);` or `LOOKUP_FUNC({reg})(rdram,
+ctx);`, i.e. `ctx` is *always* the very next expression evaluated after
+`get_function` returns. Cross-checked against the actual generated
+output: **28388/28389** `LOOKUP_FUNC(` occurrences across all 45
+`N64Recomp/RecompiledFuncs/funcs_*.c` are immediately followed by
+`(rdram, ctx);` on the same line (the one non-match is a comment, not
+code). This also reconfirms s93/s94's finding from a different angle:
+the known boot-time call to `submitDmaRequestBatch` is compiled as a
+**direct** call (`submitDmaRequestBatch_...(rdram, ctx)` by literal
+name, not through `LOOKUP_FUNC`), so it will **never** trigger this
+instrument — only a genuine indirect (`jalr`) caller can, cleanly
+separating the two without needing extra filtering logic.
+
+Landed the instrument without touching `get_function`'s signature:
+since `get_function` is called and returns *before* its result is
+invoked, a native stack backtrace taken from inside `get_function`
+itself has the actual calling generated function as the very next
+frame up — no need for `ctx` at all. Added (in
+`lib/N64ModernRuntime/librecomp/src/overlays.cpp`, gated
+`ROGUESQ_LOG_DMA_CALLER=1`):
+
+```c
+static void rs64_log_dma_ring_caller(int32_t addr) {
+    constexpr int32_t k_submit_dma_request_batch = 0x8000569C;
+    if (addr != k_submit_dma_request_batch) return;
+    // ...env-var gate...
+    void* frames[8];
+    int n = backtrace(frames, 8);
+    fprintf(stderr, "[dma-ring-caller] resolved 0x%08X, native backtrace (%d frames):\n", addr, n);
+    backtrace_symbols_fd(frames, n, fileno(stderr));
+}
+```
+
+called from the top of `get_function`. Rebuilt clean (`cmake --build`,
+exit 0, no new warnings), ran `submodule-patches/export.sh` (this is a
+`lib/` edit), committed the refreshed patch before running anything.
+
+### s95_dmacaller1 — died to an old, uncatalogued crash before the target window
+
+Ran the exact NEXT.md repro command (all existing instruments +
+`ROGUESQ_LOG_DMA_CALLER=1`, `ROGUESQ_LOG_THREAD_RESUME=0`,
+`PROBE_MODE=start_only HOLD_S=30`). Process died **hold+~5s**
+(hold-iter 5 of 30) — noticeably earlier than the ~140s mark where
+s94 saw the 9 extra `dma-ring-producer` firings and the `do_rom_read`
+crash. Results:
+
+- `[dma-ring-caller]`: **0 fires** — never armed. Consistent with the
+  process dying before the point in the run where the phenomenon
+  happens, not with the instrument being broken.
+- `[dma-ring-producer]`: **1 fire** — `n=0 devAddr=0xB0101000
+  dramAddr=0x80100400 size=0xCE00`, exact match to the known boot call
+  (positive control: the instrument reads real fields correctly). The
+  9 unexplained firings from s94 did not happen this run — the process
+  never survived long enough to reach them.
+- `[rom-read]`: 487 calls, **0 corrupted** (no `do_rom_read` crash this
+  run at all — consistent with dying before the ~140s window).
+- `[anim-recurse]`/`[anim-tex-stream]`/`[hangar-entry]`/TMEM-zero: all
+  present and firing normally (controls held), none crashed.
+- **Crash**: SIGBUS (signal 10), stack `composeNpcOrientationMatrix`
+  (`static_5_800AB1C8`) ← `runHangarSelectionFrame`
+  (`static_5_800AAD9C`) ← `runHangarMenuFromOverlay`
+  (`static_5_800C6854`) ← `menuOverlayInit` ← `mainGameLoop`. All four
+  names confirmed real via `symbol_files/main_overlay.txt` (not
+  guessed). `thr-resume bad_total=0` through the whole run — rules out
+  the s72 OSThread-UAF family for this crash specifically.
+
+This exact stack trace is **not new** — grepped `PORTING-STATE.md` and
+found one prior, uncatalogued occurrence: session 74's `keys1` run
+("SIGBUS at stable-iter ~8, died before probes"), well before the s78
+wild-FB gate, s82 sane-width gate, and s84 thr-resume gate landed. It
+was never folded into the s83–s94 "Nth crash class" numbering because
+it didn't recur between s74 and now — every soak in between died to
+something else first. Treating it as the **12th** catalogued crash
+class (first seen s74, recurred s95, still not root-caused): not yet
+instrumented, no dedicated soak needed yet — same "fold into whatever
+soak runs next" treatment as classes 9–11.
+
+### Assessment
+
+The instrument itself is sound and correctly built (positive control
+fired exactly as expected), but this soak is **not a valid test** of
+the indirect-caller question — the process never reached the part of
+the run where the phenomenon occurs, so 0/0 here says nothing about
+whether `ROGUESQ_LOG_DMA_CALLER` will fire when a run *does* reach that
+point. This is 1 of up to 3 allowed non-discriminating attempts (rule
+8) before the hypothesis gets parked — do not treat this as a null
+result on the indirect-caller question.
+
+### Next
+
+Re-run the same repro. If `composeNpcOrientationMatrix` recurs again,
+it becomes the actual next instrumentation target (2nd occurrence
+would justify a dedicated `ROGUESQ_LOG_*` entry-log in the same style
+as classes 9–11). If it doesn't recur (matches the fluke pattern of
+`frameStartReset` at s85), the run should survive past ~140s and
+`ROGUESQ_LOG_DMA_CALLER` gets its real first shot at the indirect-caller
+question.
+
+### Files
+
+`lib/N64ModernRuntime/librecomp/src/overlays.cpp` (instrument, exported
+to `submodule-patches/N64ModernRuntime.patch`, committed);
+`scratch/s73_post_a_scene/s95_dmacaller1/run.log`.
