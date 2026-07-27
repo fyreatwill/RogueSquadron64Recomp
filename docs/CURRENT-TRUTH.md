@@ -191,8 +191,19 @@ fixup 1b (s1/s2) stubbed to a synthetic `ImemOverrun` halt on the documented ass
 content would never take it — mission triangle vertices are the first content in this project to
 falsify that assumption. This overturns s62/s63's "CPU-side, RSP task submission stays healthy"
 framing — see Overturned conclusions. Not load-gated (reconfirmed s61/s62/s65).
-*Next sub-unit:* find the branch's real target from the original Factor 5 ucode disassembly
-(`factor5_rsp.toml` ROM offset) — full detail PORTING-STATE s64, next-steps entry below.
+**s66 found the real target by static ROM disassembly (three independent sources agree bit-for-bit
+on the instruction):** the branch, taken on real hardware, wraps RSP's 12-bit IMEM PC and lands on
+the boot-resident code's ucode-self-reload trampoline (`factor5_boot_rsp.toml` virtual `0x1004`) —
+every DMA operand in that landed-on sequence (length, dest, source-table address) matches this exact
+ucode's own load parameters (`text_size`, `text_address`, and `main.cpp`'s already-tracked "OSTask.ucode
+slot" at DMEM `0xFD0`). This is a real self-restart-the-ucode routine, not dead/unreachable code and
+not a jump into unrelated logic — it directly explains why treating it as a hard exit (current fixup 1)
+could produce the s64 freeze: the RSP-side restart never happens in emulation, so whatever state the
+restart resets never resets. Not yet tested at runtime. Full detail PORTING-STATE s66.
+*Next sub-unit:* implement the self-restart as a `goto` back to `factor5_ucode`'s own entry label in
+`tools/fixup_factor5_ucode.py` (this one branch site only), regenerate, and re-run the death-repro
+script phase-gated to the mission `a`-press to see if `fs` (FULL_SYNC count) keeps climbing past the
+current freeze point. Full detail PORTING-STATE s66, next-steps entry below.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -223,24 +234,30 @@ cost three sessions before the recursive mutex.
 
 ## Next steps, in order of expected value (s58)
 
-1. **M3 — find the real target of the unresolved RSP branch that eats every post-freeze task's
-   SYNC_FULL (root cause found s64).** `factor5_ucode_recompiled.c:2666`: `bgez $2, L_0000` inside a
-   VRCPH/VRCPL perspective-divide sequence, target unresolvable by RSPRecomp (IMEM wraparound),
-   stubbed by `tools/fixup_factor5_ucode.py` fixup 1b (s1/s2) to a synthetic `ImemOverrun` halt on
-   the assumption real content would never take it — mission triangle vertices are the first content
-   to do so. Need the original Factor 5 ucode disassembly around this instruction (`factor5_rsp.toml`
-   ROM offset) to see what real hardware does when this branch is taken: a small clamp/special-case
-   routine RSPRecomp's function-boundary detection excluded (fix: extend the recompiled function's
-   PC range), or a genuinely dead branch (meaning some upstream bug feeds the reciprocal an
-   out-of-range value real N64 code would never produce — a different fix). A second, less-likely
-   unresolved-branch site exists at `factor5_ucode_recompiled.c:3009-3028` (`j L_1650`, inside the M1
-   clip-splice block) but its target is a declared "expected resident" helper reachable via a
-   different, already-working path — a poor match for a mission-only defect, deprioritize unless the
-   primary site doesn't pan out. Full detail: PORTING-STATE s50–s64. **Process note (s65):** if
-   `docs/CURRENT-TRUTH.md`/`scratch/agent/NEXT.md` are ever left stale after a PORTING-STATE.md
-   session entry (e.g. the entry rides inside a commit titled for unrelated work), the next session
-   will silently redo already-superseded work — grep PORTING-STATE.md's last `## Session N` header as
-   a cheap staleness check before trusting this file's front matter.
+1. **M3 — implement and test the ucode self-restart fix for the unresolved RSP branch that eats
+   every post-freeze task's SYNC_FULL (root cause found s64, real branch target found s66).**
+   `factor5_ucode_recompiled.c:2666`: `bgez $2, L_0000` inside a VRCPH/VRCPL perspective-divide
+   sequence. s66's static disassembly (three independent sources agreeing bit-for-bit — raw ROM bytes,
+   RSPRecomp's own comment, and the fixup script's docstring) found the real target: RSP's 12-bit IMEM
+   PC wraps and lands on the boot-resident ucode-self-reload trampoline (`factor5_boot_rsp.toml`
+   virtual `0x1004`), whose DMA operands (length/dest/source-table) all match this exact ucode's own
+   load parameters — a real self-restart, not dead code. Current fixup 1 (`tools/fixup_factor5_ucode.py`,
+   s1/s2) instead stubs it to a hard `ImemOverrun` exit, plausibly explaining the freeze (the real
+   restart never happens, so whatever state it resets never resets). **Next step:** implement the
+   self-restart as a `goto` back to `factor5_ucode`'s own entry label for this one branch site only,
+   regenerate (`RSPRecomp` → `fixup_factor5_ucode.py` → full cmake build), then re-run the s61
+   death-repro script phase-gated to the mission `a`-press and check whether `fs` keeps climbing past
+   the current freeze point. Watch for side effects the `goto` might skip (`rs64_dpc_defer_begin/end`
+   bracketing per `factor5_ucode` call in `main.cpp`, the fixup-2 iteration cap at `L_1090`) — full
+   risk list PORTING-STATE s66. A second, less-likely unresolved-branch site exists at
+   `factor5_ucode_recompiled.c:3009-3028` (`j L_1650`, inside the M1 clip-splice block) but its target
+   is a declared "expected resident" helper reachable via a different, already-working path — a poor
+   match for a mission-only defect, deprioritize unless the primary site doesn't pan out. Full detail:
+   PORTING-STATE s50–s66. **Process note (s65):** if `docs/CURRENT-TRUTH.md`/`scratch/agent/NEXT.md`
+   are ever left stale after a PORTING-STATE.md session entry (e.g. the entry rides inside a commit
+   titled for unrelated work), the next session will silently redo already-superseded work — grep
+   PORTING-STATE.md's last `## Session N` header as a cheap staleness check before trusting this
+   file's front matter.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen

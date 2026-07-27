@@ -5319,3 +5319,90 @@ ROM offset) to see what real hardware does when the IMEM-wrapped branch is taken
 
 Files: no changes under `src/`/`lib/` this session (doc-sync only). `scratch/s61_death_repro/run4/`
 overwritten with a 4th repro capture (gitignored, 106,761-line log + screenshots).
+
+## Session 66 (2026-07-26) — M3 branch target found by static disassembly: real hardware self-reloads the ucode, it is not dead code
+
+### Work unit
+`scratch/agent/NEXT.md`'s M3 sub-unit: find the real target of the unresolved `bgez $2, L_0000`
+branch at `factor5_ucode_recompiled.c:2666` and what real N64 hardware does when it is taken. Static
+ROM analysis only — no game run this session (the question is answerable from the ROM image and the
+existing recompiled-C disassembly comments alone).
+
+### Method: two independent decodes of the same instruction, cross-checked against a third source
+1. **Located the branch's ROM bytes.** `factor5_rsp.toml`: `text_offset=0x025610`,
+   `text_address=0x04001080` (virtual PC base), `text_size=0xF80`. Positive control: the ROM bytes at
+   `0x025610` decode by hand to `jal 0x0400125C` (opcode 6 bits = `000011`=JAL, target field
+   `0x000497<<2 = 0x125C`), which matches `factor5_ucode_recompiled.c`'s own first instruction comment
+   (`// jal 0x125C`) exactly — confirms the ROM-offset↔virtual-PC mapping before trusting anything
+   downstream.
+2. **Counted instructions from the nearest preceding label** (`L_1F98` at line 2620) to the `bgez` at
+   line 2666: 22 four-byte instructions → `bgez` sits at virtual PC `0x1F98 + 0x58 = 0x1FF0`, i.e. ROM
+   offset `0x025610 + (0x1FF0-0x1080) = 0x026580`.
+3. **Read the raw ROM bytes at `0x026580`: `04 41 00 03`.** Manually decoded: opcode `000001`
+   (REGIMM), rs=`00010`=`$2`, rt=`00001`=BGEZ sub-opcode, imm=`0x0003`. This independently reproduces
+   — from raw bytes, with no dependency on RSPRecomp's output — exactly what two other sources already
+   claimed: RSPRecomp's own disassembly comment (`bgez $2, L_0000`) and `tools/fixup_factor5_ucode.py`'s
+   docstring (`` `bgez $2, +0xC` ``, i.e. imm=3 words=0xC bytes). Three independent sources now agree
+   bit-for-bit on the instruction and its immediate.
+4. **Computed the real branch target with RSP hardware's 12-bit (4 KB) IMEM wraparound**, which
+   RSPRecomp's function-range check does not model: virtual target = delay-slot PC + 4 + (3×4) =
+   `0x04001FF4 + 4 + 0xC = 0x04002004` — 4 bytes past this function's declared end (`0x04002000`), which
+   is exactly why RSPRecomp treats it as external/unresolvable. But IMEM itself is only 4 KB and the
+   real RSP PC is 12 bits wide, so on hardware this wraps: physical target = `0x2004 & 0xFFF = 0x004`.
+   That address falls inside the **boot ucode's resident region** (`factor5_boot_rsp.toml`:
+   `text_address=0x04001000`, i.e. physical IMEM `0x000-0x0CF`) — code that survives the main ucode's
+   own load-DMA (which only overwrites IMEM `0x80` and up) and stays resident for the whole run.
+5. **Read `factor5_boot_recompiled.c` at that exact physical offset (virtual `0x1004`)**: it is the
+   delay-slot instruction of the boot's own entry jump — `addi $1, $zero, 0xFC0` (line 12/15 of the
+   generated file) — landed on directly (not via the boot's own `j`), so it falls through sequentially
+   into: `lw $2, 0x10($1)` (loads a DRAM pointer from DMEM `0xFC0+0x10=0xFD0`), `addi $3,$0,0xF7F`
+   (DMA length-1), `addi $7,$0,0x1080` (IMEM dest), then `mtc0`s that trigger a DMA read and `jr $7`.
+
+### Result: this is a real, coherent hardware routine — a ucode self-reload trampoline — not garbage
+Every operand in that landed-on sequence matches this exact ucode's own load parameters, not generic
+boilerplate:
+- DMA length `0xF7F+1 = 0xF80` = this ucode's own `text_size` (`factor5_rsp.toml`), exactly.
+- DMA dest `0x1080` = this ucode's own `text_address` low 16 bits, exactly.
+- DMA source is loaded from DMEM `0xFD0` — which `src/main/main.cpp:285,294` already documents and
+  actively canaries as **"OSTask.ucode slot"** (the `[dmem-race]` check compares this exact address
+  against `ucode_addr` every task, 0 mismatches in the whole stability record).
+So on real hardware, taking this branch means: reload the exact same ucode blob currently running
+(from the same DRAM address the harness already tracks) back into IMEM, then jump to the ucode's own
+entry point (`jr $7`, r7=0x1080) — a **self-restart**, not a crash, not unreachable code, and not a
+jump into unrelated boot logic. `tools/fixup_factor5_ucode.py`'s "never taken in practice" comment
+(fixup 1, written s1/s2 before any content reached this branch) is now known-wrong for the same reason
+s64 already established the branch fires: mission-geometry perspective divides are the first content
+to take it, and real hardware's response is "restart processing," which the current recompiled C
+instead turns into a **hard exit** (`RspExitReason::ImemOverrun`) that s64 showed produces zero further
+`FULL_SYNC`s per task from task #3141 onward — a plausible, now well-evidenced mechanism for the freeze:
+the RSP-side self-restart never happens in emulation, so whatever state that restart was meant to reset
+never resets, and the caller (the C++ task runner) treats every subsequent identically-mis-exited task
+as an immediate no-op rather than retrying real work.
+
+### What this does not yet establish
+- Whether DMEM `0xFD0` is guaranteed unchanged at the moment this specific branch fires deep inside a
+  task (the canary only checks it at task start/end, not mid-task) — if some other code path
+  legitimately mutates it first, the reload could target a *different* ucode, changing the fix.
+- Whether "restart from the top" is safe to model as a plain `goto` back to this function's own entry
+  label in the recompiled C (the cheapest possible fix, since the DMA'd content is provably identical
+  to what's already resident) versus needing to actually replicate side effects of the DMA/`jr` handoff
+  the harness may depend on (e.g. `rs64_dpc_defer_begin/end` bracketing per `factor5_ucode` call in
+  `main.cpp` — a `goto`-based in-function restart never returns to the caller, so those brackets, and
+  the per-call iteration cap fixup 2 injects at `L_1090`, would need to keep working across the
+  simulated restart).
+- No game run this session — this is a static-analysis result. Iron rule 1 (positive control) is
+  satisfied for the *disassembly* (three independent sources agree on the instruction bytes), but the
+  *runtime* claim ("this is the freeze's mechanism") is not yet tested against the actual freeze.
+
+### Next step
+Implement the self-restart as a `goto` back to `factor5_ucode`'s own entry label in
+`tools/fixup_factor5_ucode.py` (replacing the current fixup-1 "return ImemOverrun" for this one
+specific branch site only — leave the `L_1650` clip-splice site's fixup untouched, it's a different,
+already-explained target), regenerate (`RSPRecomp` on `factor5_rsp.toml` → `fixup_factor5_ucode.py` →
+full cmake build), then re-run the s61 death-repro script phase-gated to the mission `a`-press and
+check whether `fs` (FULL_SYNC count) keeps climbing past the current freeze point instead of
+plateauing. Positive control: confirm task #3141+ still shows the same perspective-divide branch
+pattern in `ROGUESQ_LOG_RUNNER_ALL` output before concluding the fix changed anything.
+
+Files: no changes under `src/`/`lib/`/`build/` this session (static ROM/disassembly analysis only, no
+build or game run). `docs/CURRENT-TRUTH.md` and `scratch/agent/NEXT.md` updated.
