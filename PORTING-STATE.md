@@ -7935,3 +7935,98 @@ Code: `N64Recomp/fixup_game_funcs.py` (new `ROGUESQ_LOG_DLENTRY` instrument
 on `reserveAndEmitDLEntry`; N64Recomp is a sibling checkout, untracked in
 its own git per every prior session's note). Logs:
 `scratch/s73_post_a_scene/s98_dlentry1/run.log`.
+
+## Session 99 (2026-07-27) — landed the 16th crash class's guard (`activateAnimationKeyframe`, per s98's own pivot), caught and fixed a real bug in the guard's own bounds check same-session, then a clean corrected soak: guard's negative control holds (0/0) but the process died to a **recurrence of the already-catalogued 15th class** (RT64-internal `loadDrawState` assert, first seen s97), not a new class
+
+Executed the exact work unit s98's NEXT.md specified: guarded
+`activateAnimationKeyframe` (`N64Recomp/RecompiledFuncs/funcs_14.c`, guest
+`0x80061CA4`) at its unchecked `table[arg_r4 & 0xFFFF]` lookup-then-deref
+(`ctx->r17 = MEM_W(ctx->r2, 0)` then `MEM_W(ctx->r17, 0x30)` with no
+range check on `ctx->r17`). Per NEXT.md's own caution, checked the
+function's control flow before writing the guard: `ctx->r17` is used
+pervasively as a base pointer for the rest of the function body (not just
+the one deref), so a partial guard (defaulting only the `+0x30` read)
+would still crash later in the same function on the same bad pointer.
+Also confirmed a bare early `return;` would NOT be ABI-safe: the
+function's prologue spills `s0-s3`/`ra` to the guest stack and decrements
+guest `$sp` by `0x28`; skipping the matching epilogue would leave the
+*caller's* register state corrupted and the guest stack pointer
+permanently drifted by 40 bytes every time the guard fired. Found the
+function's own real exit label, `L_80061F18` (already the `goto` target
+of the existing "lookup came back false" branch two lines below), which
+performs the correct restore-then-return sequence — the guard `goto`s
+there instead of hand-duplicating restore code. Landed in
+`N64Recomp/fixup_game_funcs.py` following the `_dma_ring_producer_patch`
+mid-function-anchor convention (anchored on the unique
+`// 0x80061CA4: lw $s1, 0x0($v0)` comment line, confirmed via grep to
+appear exactly once across all 45 `funcs_*.c`). Bounds: guest RAM range
+`0x80000000`-`0x80800000`, matching the s78 `rt64_framebuffer_manager.cpp`
+gate's convention (RDRAM is 8MB). New always-on flag:
+`ROGUESQ_LOG_ANIM_KEYFRAME_GUARD=1`.
+
+**Self-caught bug, same session, before this reached NEXT.md as a
+conclusion:** the first build's soak (`s99_animkeyframe_guard1`) showed
+`[anim-keyframe-guard]` firing **30333 times** — i.e., on essentially
+every single call, not just a rare bad-pointer case. Root cause: `ctx->r17`
+is `gpr` (`typedef uint64_t gpr`, `recomp.h:84`), and `MEM_W` returns a
+*signed* `int32_t`. Assigning a real guest pointer like `0x8009FC10`
+(top bit set, negative as `int32_t`) to a 64-bit unsigned register
+sign-extends it to `0xFFFFFFFF8009FC10` — exactly the MIPS64 register
+convention the `MEM_W` macro itself encodes (it subtracts
+`0xFFFFFFFF80000000`, not `0x80000000`). The guard's original bounds
+check compared this 64-bit sign-extended value directly against 32-bit
+literals (`0x80000000u`/`0x80800000u`), which is false for every real
+pointer and true for every real pointer under the "invalid" branch — the
+guard was unconditionally short-circuiting the function's entire body,
+not selectively catching one bad case. This is a **generalizable
+lesson for any future guard on a `gpr`-typed register**: truncate through
+`U32()` (recomp.h's existing `(uint32_t)` cast macro) before comparing
+against 32-bit bounds, never compare the raw 64-bit value. Fixed in
+`fixup_game_funcs.py` (`uint32_t r17_lo = U32(ctx->r17);` then compare
+`r17_lo`), full regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`
+→ `cmake --build`, all clean) to get a pristine base for the corrected
+patch to reapply onto (the buggy version was already baked into
+`RecompiledFuncs/funcs_14.c` on disk and no longer matched the fix's
+anchor regex).
+
+Corrected soak (`s99_animkeyframe_guard2`, identical repro/flag set):
+`[anim-keyframe-guard]` **0/0** — a real, working negative control this
+time (contrast with the first build's 30333/30333 false-positive rate),
+confirming the fix. Every other family control held: `[anim-recurse]`
+3352, `[compose-npc-orient]` 573, `[dlentry-reserveAndEmit]` 19542,
+`[anim-tex-stream]` 4494, `[hangar-entry]` 0, `[tmem-zero]` 0 (now 0/10
+soaks armed), `thr-resume bad=1` 0. `ROGUESQ_LOG_DMA_CALLER` 0 (died
+before the ~140s window, as expected); `dma-ring-producer` only the boot
+call. Process reached "SELECT YOUR CRAFT stable" normally (phase-1024 at
+44.7s, full key schedule, craft stable, Start probe) then died at
+**hold-iter 5** (~hold+4-5s) — but this time to `RT64::State::
+loadDrawState`'s abort (signal 6), the same **already-catalogued 15th
+class** first seen at s97 (RT64-internal zero-sample-size assert, no fix
+available on our side), not a new 17th class.
+
+**What this establishes:** the guard is landed and functioning correctly
+(validated by its own negative control), so it stays in place as a
+genuine defensive fix for a real unguarded-pointer bug — but it did not
+get to prove out further survival this run, because a *different*,
+already-known, not-worth-chasing RT64-internal crash class killed the
+process first, at essentially the same hold-offset (+4-5s) as every
+other recent attempt. This matches NEXT.md's own outcome-2 branch
+("guard never fires, a different crash preempts it — move to the
+next-most-recurring characterized class") almost exactly, except the
+preempting crash is a recurrence of 15 rather than a brand-new 17th —
+arguably a *better* outcome than a new class, since 15 is already known
+to need no further characterization. Per rule 8 and NEXT.md's own
+precedent, next up is the same guard-not-instrument treatment for
+`composeNpcOrientationMatrix` (2 occurrences: s74, s95 — the next most
+frequent of the guest-side family), not a repeat soak of this site.
+
+### Files
+
+Code: `N64Recomp/fixup_game_funcs.py` (new `ROGUESQ_LOG_ANIM_KEYFRAME_GUARD`
+guard on `activateAnimationKeyframe`, corrected mid-session for the
+`U32()` truncation bug; N64Recomp is a sibling checkout, untracked in its
+own git per every prior session's note). Logs:
+`scratch/s73_post_a_scene/s99_animkeyframe_guard1/run.log` (buggy build,
+30333/30333 false positive),
+`scratch/s73_post_a_scene/s99_animkeyframe_guard2/run.log` (corrected
+build, clean 0/0 control, died to 15th-class recurrence).

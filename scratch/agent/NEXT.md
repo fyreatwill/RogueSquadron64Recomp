@@ -1,161 +1,148 @@
-# NEXT work unit — M3: guard `activateAnimationKeyframe`'s unchecked table deref (16th crash class)
+# NEXT work unit — M3: guard `composeNpcOrientationMatrix` (12th crash class, s99)
 
-s98 instrumented the 14th crash class (`reserveAndEmitDLEntry`) per s97's
-plan — clean positive control (19428/19428 fires, no crash on that path)
-— but the process died anyway to a brand-new **16th** crash class
-(`activateAnimationKeyframe`). This is the **4th consecutive session**
-(s95, s96, s97, s98 — 6 soaks) where a soak reaches the "SELECT YOUR
-CRAFT stable → hold" window and dies to a *different, previously-unseen*
-crash before reaching the ~140s DMA-caller window. Read PORTING-STATE.md's
-Session 98 entry before doing anything else; this file only has the
-actionable summary.
-
-## The pivot (read this before planning another instrument)
-
-Per rule 8 and s98's own assessment: **stop landing observe-only entry-log
-instruments for new crashes.** Four sessions of that approach have each
-found a different bug, never the same one twice, and never made a soak
-survive meaningfully longer. s98 source-characterized the 16th class's
-crash mechanism (see below) — the productive move now is to **guard the
-site**, not log it. This mirrors the two guards that already worked in
-this codebase: s83's `evalCubicSplineAtTime` 0/0 NaN guard, and s84's
-`resume_thread_tagged` `bad=1` skip-gate.
-
-## What's established (do not re-derive)
-
-- The blind DMA-caller repro is parked (3/3 attempts spent s95-s97).
-  Its instrument (`ROGUESQ_LOG_DMA_CALLER=1`) stays armed in every soak —
-  it's free — but do not plan a soak around it specifically.
-- `get_function` is the confirmed chokepoint for indirect calls (s95).
-  Do not re-derive.
-- Do NOT re-plan "dump the `OSIoMesg` at `mb`" (refuted s92), cite
-  `ra=0x00000000` as corruption evidence (refuted s92, routine on 487+
-  calls, reconfirmed multiple sessions since), or re-open "consumer
-  index-desync"/"external stomp" (s94 rules out both).
-- Do NOT re-grep for `submitDmaRequestBatch(rdram` or `LOOKUP_FUNC(`
-  call-site counts (done, stable, s93/s94/s95).
-- **Do NOT plan "shorten the hold to outrun the crash family and reach
-  the DMA window faster."** s98 checked this against timing data already
-  in PORTING-STATE.md: the DMA-adjacent `do_rom_read` crash consistently
-  lands hold+11-15s (s85, s91, s93, s94), while this crash family's
-  one-offs land hold+3-17s across sessions — **the two windows overlap,
-  they are not sequential.** There is no "past the family, into the DMA
-  window" — they are the same few seconds. (This corrects a literal
-  reading of s97 NEXT.md's own outcome-2 suggestion; s97's actual point —
-  stop instrumenting one-offs — still stands, just not via a shorter hold.)
-- `ROGUESQ_LOG_DLENTRY=1` (14th class, `reserveAndEmitDLEntry`) is landed
-  and confirmed working (19428/19428 fires, s98). Its own crash did NOT
-  recur — 1-for-2 across sessions that reached it (hit s97, clean s98).
-  Not worth a dedicated re-test soak; it stays armed opportunistically.
-
-## The crash-class picture (16 total, all in M3)
-
-Two families:
-- **Hangar-tick / unguarded-lookup-or-arg-deref family** (guest-side,
-  real bugs, fixable): 9th `updateAnimatedTextureStreaming` (1x, s89),
-  10th `static_5_800B4048` (1x, s90), 11th `projectModelBoundsToScreen`
-  (1x, s92), 12th `composeNpcOrientationMatrix` (2x: s74, s95), 14th
-  `reserveAndEmitDLEntry` (1x, s97), **16th `activateAnimationKeyframe`
-  (1x, s98, source-characterized — see below, this session's target)**.
-- **RT64-internal asserts** (no source-level bug on our side): 13th
-  `reinterpretTileRecord` (1x, s96), 15th `loadDrawState` zero-sample-size
-  (1x, s97). Not useful to instrument or guard — no fix available on our
-  side even once characterized; only worth tracking recurrence.
+s99 landed and validated the 16th class's guard (`activateAnimationKeyframe`)
+— clean corrected soak, 0/0 fires (a real, working negative control) — but
+the process died to a **recurrence of the already-catalogued 15th class**
+(RT64-internal `loadDrawState` assert, first seen s97) before the guard
+ever got a chance to matter. Read PORTING-STATE.md's Session 99 entry
+before doing anything else; this file only has the actionable summary.
 
 ## The work unit
 
-Guard the 16th class's crash site. `activateAnimationKeyframe`
-(`N64Recomp/RecompiledFuncs/funcs_14.c:1629`, guest `0x80061C74`) does,
-right at entry (`funcs_14.c:1656-1661`):
+Per s98's own outcome-2 branch (which s99 landed in almost exactly):
+**guard `composeNpcOrientationMatrix`** (12th crash class, 2 occurrences:
+s74, s95 — the next most frequent of the guest-side unguarded-lookup
+family), same guard-not-instrument treatment as s99 gave the 16th class.
 
-```c
-// funcs_14.c:1640-1649 (table base computation)
-ctx->r3 = ADD32(S32(0x800A << 16), -0x3F0);      // table_base = 0x8009FC10
-ctx->r2 = S32((ctx->r4 & 0xFFFF) << 2);           // idx = (arg_r4 & 0xFFFF) * 4
-ctx->r2 = ADD32(ctx->r2, ctx->r3);                // addr = table_base + idx
-// funcs_14.c:1656-1657
-ctx->r17 = MEM_W(ctx->r2, 0X0);                   // s1 = *(addr)   <- table lookup
-// funcs_14.c:1660-1661
-ctx->r3 = MEM_W(ctx->r17, 0X30);                  // deref s1+0x30, NO CHECK on ctx->r17
-```
-
-`ctx->r4` (first arg, an animation/keyframe index) indexes a pointer
-table unchecked; whatever comes out is dereferenced at `+0x30` with no
-null/range check. This is the crash.
-
-1. In `N64Recomp/fixup_game_funcs.py`, add a new patch targeting the
-   `RECOMP_FUNC void activateAnimationKeyframe(...)` prologue (same
-   regex-on-prologue pattern as every other patch in this file — search
-   `_compose_npc_orientation_patch` for the template to copy). Insert the
-   guard **after** the `ctx->r17 = MEM_W(ctx->r2, 0X0);` line (need a
-   second regex anchored on that specific line, since this patch must
-   land mid-function, not at the prologue like the entry-log instruments
-   — check how `_dma_ring_producer_patch` anchors mid-function on
-   `L_80005768:` for the pattern to copy instead).
-2. The guard: if `ctx->r17` is 0, or clearly outside plausible guest RAM
-   (e.g. `< 0x80000000 || >= 0x80800000` — check what range other
-   guest-pointer sanity checks in this codebase already use, e.g. the
-   s78 wild-FB-refuse gate's bounds, for a consistent convention rather
-   than inventing a new one), skip the rest of the function body (an
-   early `return;` is safe here — re-check the function's full control
-   flow first to confirm nothing after this point has side effects
-   other code depends on; if unsure, skip only the crashing deref and
-   substitute a safe default the same way s84's gate does, rather than
-   bailing the whole function) and log once via a new always-on flag
-   (e.g. `ROGUESQ_LOG_ANIM_KEYFRAME_GUARD=1`, following the
-   `s_*_enabled`/`getenv` pattern every other instrument uses).
-3. `cd /Users/williambuckley/Documents/Tools/N64Recomp && python3 fixup_game_funcs.py`
-   — verify `patched x1` for the new guard, not x0.
-4. Rebuild: `cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j 8` — exit clean.
-5. Soak with the full flag set plus the new guard flag:
+1. **Source-read the crash mechanism first — this has NOT been done yet.**
+   s92/s95 only landed an entry-log instrument (`ROGUESQ_LOG_COMPOSE_NPC=1`,
+   logs `arg_r4`/`arg_r5`/`ra` at entry) — nobody has actually read the
+   SIGBUS site itself inside `static_5_800AB1C8`
+   (`N64Recomp/RecompiledFuncs/funcs_40.c`, guest `0x800AB1C8`, real name
+   `composeNpcOrientationMatrix` per `symbol_files/main_overlay.txt`) to
+   confirm it has the same "unguarded pointer from a lookup/arg" shape as
+   the other 5 classes in this family. Do this before writing a guard —
+   if the crash is a different shape (e.g. a bad array index rather than
+   a bad pointer, or an arithmetic issue), the guard has to match that
+   shape, not copy-paste the table-lookup pattern verbatim.
+2. Guard the confirmed crash site in `N64Recomp/fixup_game_funcs.py`,
+   following the `_activate_anim_keyframe_guard_patch` template (search
+   for that function name — it's the freshest, most-annotated example of
+   the mid-function-anchor + ABI-safe-exit pattern). Two things to get
+   right, both learned the hard way at s99:
+   - **ABI safety**: before writing a bare `return;`, check whether the
+     function spills callee-saved registers / adjusts guest `$sp` in its
+     prologue. If it does, find the function's own real exit label (the
+     epilogue that restores everything) and `goto` there instead of
+     hand-duplicating the restore sequence — do not assume `return;` is
+     safe without checking.
+   - **64-bit sign-extension**: guest registers (`ctx->rN`) are `gpr` =
+     `uint64_t` (`recomp.h:84`), and `MEM_W` returns a signed `int32_t`.
+     A real guest pointer with the top bit set (e.g. `0x8009FC10`)
+     sign-extends to `0xFFFFFFFF8009FC10` on assignment to a 64-bit
+     register. **Never compare a raw `ctx->rN` value against 32-bit
+     literal bounds** — truncate through `U32()` first
+     (`uint32_t lo = U32(ctx->rN);` then compare `lo` against
+     `0x80000000u`/`0x80800000u`, matching the s78
+     `rt64_framebuffer_manager.cpp` gate's RDRAM-range convention). s99's
+     first build skipped this and got a guard that fired on 30333/30333
+     calls (100% false positive) before catching and fixing it
+     same-session — verify any new guard's fire rate looks like a rare
+     case (near-zero), not "fires on every call," before trusting a
+     "0 fires and still crashed" result as meaningful.
+3. `zsh -c "cd /Users/williambuckley/Documents/Tools/N64Recomp && python3 fixup_game_funcs.py"`
+   (or equivalent — see note on permissions below) — verify the new patch
+   reports `patched x1`, not `x0`.
+4. Rebuild: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build -j 8` — exit clean. (No full ELF regen needed unless you touched `N64Recomp`'s own analysis/codegen — this is a guest-C-only patch, same as s98/s99's guards, so `fixup_game_funcs.py` alone plus a `cmake --build` suffices **only if `RecompiledFuncs` is still pristine**; if it already carries a stale/buggy patch from a prior attempt in the same session, you must regenerate it fresh first — see note below.)
+5. Soak with the full flag set plus every family instrument (all free,
+   keep them all armed):
    ```
    env ROGUESQ_LOG_ANIM_CB=1 ROGUESQ_LOG_TMEM_ZERO=1 \
        ROGUESQ_LOG_ANIM_TEX_STREAM=1 ROGUESQ_LOG_HANGAR_ENTRY=1 \
        ROGUESQ_LOG_COMPOSE_NPC=1 ROGUESQ_LOG_DLENTRY=1 \
        ROGUESQ_LOG_ANIM_KEYFRAME_GUARD=1 \
+       ROGUESQ_LOG_<NEW_GUARD_FLAG>=1 \
        ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_DMA_RING=1 ROGUESQ_LOG_DMA_CALLER=1 \
        ROGUESQ_LOG_THREAD_RESUME=0 \
        PROBE_MODE=start_only HOLD_S=30 zsh \
-       scratch/s73_post_a_scene/run_mission_keys.sh s99_animkeyframe_guard1 0 12
+       /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/s73_post_a_scene/run_mission_keys.sh s100_composenpc_guard1 0 12
    ```
-   (rename the flag in this command to whatever you actually landed in
-   step 2, and update this doc to match if it changes.)
+   Run this in the **background** (it takes ~2-3 minutes: ~45s to reach
+   VI width 1024, ~60s of scripted key schedule, 12s stable wait, ~6s
+   probe, up to 30s hold) and block on
+   `grep -q -- "--- done ---" .../run.log` rather than polling — or use
+   Monitor. Do not end the turn / declare an outcome before the soak's
+   `run.log` shows `--- done ---`; the Stop hook checks `scratch/agent/
+   STATUS` and will reject a WORKING state.
 
 Outcomes:
 
-1. **Guard fires, process survives further** (later hold-iter, or reaches
-   the ~140s DMA-caller window) — real progress. If it reaches the DMA
-   window, immediately re-check `ROGUESQ_LOG_DMA_CALLER` and
-   `do_rom_read` per M3's original question (CURRENT-TRUTH item 1) — all
-   instruments are already armed in the same soak, no rebuild needed.
-2. **Guard never fires, a DIFFERENT crash (17th class) preempts it** —
-   informative (this site wasn't this run's blocker), do not spend a 2nd
-   soak chasing this exact site. Per this pattern's own precedent, move
-   to the next-most-recurring characterized class
-   (`composeNpcOrientationMatrix`, 2 occurrences: s74, s95) for the same
-   guard-not-instrument treatment.
-3. **Guard fires but the process still dies the same way** — the guard's
-   bounds check is wrong (too permissive) or the skip path itself has a
-   side effect that breaks something downstream; read the crash log's
-   new backtrace, it will tell you which.
+1. **Guard fires (at a plausible, non-universal rate) and the process
+   survives further** (later hold-iter, or reaches the ~140s DMA-caller
+   window) — real progress. If it reaches the DMA window, immediately
+   check `ROGUESQ_LOG_DMA_CALLER` and `do_rom_read`/`pi-start-dma` per
+   M3's original open question (CURRENT-TRUTH item 1) — all instruments
+   are already armed in the same soak, no rebuild needed.
+2. **Guard never fires, a different crash preempts it** — informative
+   (this site wasn't this run's blocker). If it's a **recurrence of an
+   already-catalogued class** (9-16, or the RT64-internal 13th/15th),
+   that's a cleaner signal than a brand-new class — do not spend a 2nd
+   soak on this exact site; move to the next-most-recurring
+   characterized class (11th `projectModelBoundsToScreen` or 14th
+   `reserveAndEmitDLEntry`, 1 occurrence each) for the same treatment.
+   If it's a genuinely new (17th+) class, catalog it the same way s86-s90
+   did, then still move on rather than chasing it — this family has
+   never rewarded a same-site retry.
+3. **Guard fires but the process still dies the same way** — the bounds
+   check is wrong (too permissive, or the `U32()` truncation step was
+   skipped) or the skip path itself has a side effect that breaks
+   something downstream. Read the new backtrace; it will tell you which.
 
 ## Do not
 
-- Do not land another observe-only entry-log instrument for a new crash
-  class as the primary work unit — 4 sessions of that found a different
-  bug every time and never converged. Guard, don't just log.
+- Do not re-soak `activateAnimationKeyframe` — its guard is landed and
+  validated (s99, 0/0 clean control). Leave `ROGUESQ_LOG_ANIM_KEYFRAME_
+  GUARD=1` armed in every soak going forward (it's free) but treat it as
+  closed, not a target.
+- Do not skip the source-read step for `composeNpcOrientationMatrix`'s
+  actual crash line before guarding — s92/s95 never did this, only
+  logged entry args. Confirm the shape matches before copy-pasting the
+  table-lookup guard pattern.
+- Do not compare a raw `ctx->rN` (`gpr`/`uint64_t`) value against 32-bit
+  literal bounds — always truncate through `U32()` first. This is the
+  single most important lesson from s99; re-read that session's entry if
+  tempted to skip it "just this once."
+- Do not assume a bare `return;` is ABI-safe inside a guard without first
+  checking whether the function spills callee-saved registers / adjusts
+  `$sp` in its prologue — find and reuse the function's own real exit
+  label instead when it does.
 - Do not plan around "shorten the hold to reach the DMA window before the
-  crash family" — refuted by s98's timing-data check, the windows overlap.
-- Do not re-run the plain DMA-caller repro as a dedicated work unit.
+  crash family" — refuted s98, the windows overlap (hold+3-17s family vs.
+  hold+11-15s DMA crash).
+- Do not re-run the plain DMA-caller repro as a dedicated work unit (3/3
+  attempts spent s95-s97, parked).
 - Do not re-grep for `submitDmaRequestBatch(rdram`, ring literal
-  constants, or `LOOKUP_FUNC(` call-site counts.
-- Do not cite `ra=0x00000000` as corruption evidence.
-- Do not re-plan "dump the `OSIoMesg` at `mb`".
-- Do not re-open "consumer index-desync" or "external stomp after a
-  clean write".
-- Do not combine `ROGUESQ_LOG_THREAD_RESUME=1` with any of these repros
-  without a specific reason (confirmed confound, s93).
+  constants, or `LOOKUP_FUNC(` call-site counts (done, stable, s93-s95).
+- Do not cite `ra=0x00000000` as corruption evidence (refuted s92,
+  routine on 487+ calls, reconfirmed every session since).
+- Do not re-plan "dump the `OSIoMesg` at `mb`" (refuted s92).
 - Do not spend a soak trying to characterize the 13th or 15th crash
-  classes (RT64-internal asserts, no fix available on our side).
+  classes (RT64-internal asserts, no fix available on our side) — track
+  recurrence only, e.g. s99's 15th-class hit is just a tally mark.
 - Do not grep `run.log` for the script's own `[keys]`/phase-timing lines
-  — they're in the Bash tool's own stdout capture, not `run.log`.
+  — they're in the background task's own stdout capture (the `.output`
+  file the Bash tool reports), not in `run.log` (which only has the game
+  binary's own stdout/stderr).
+- Do not invoke the N64Recomp binary or `make_elf.py` by a bare/relative
+  path from an unapproved cwd — that requires interactive approval this
+  session had to work around. Use `zsh -c "..."` wrapping (matches the
+  `Bash(zsh:*)` allow rule) or `python3 ...` (matches `Bash(python3:*)`)
+  for anything that needs the N64Recomp or rogue_squadron64 sibling
+  checkouts. `cmake --build /abs/path/to/build -j 8` (no leading `cd`)
+  matches `Bash(cmake:*)` and works directly.
+- If you need a full regen (`make_elf.py` → `N64Recomp` → `fixup_game_
+  funcs.py`) because a stale/buggy patch is already baked into
+  `RecompiledFuncs/`, remember `RecompiledFuncs/` is untracked in
+  N64Recomp's own git and gets fully overwritten by each regen — that's
+  expected and fine, it's how `fixup_game_funcs.py`'s patches get
+  reapplied onto a pristine base every time.

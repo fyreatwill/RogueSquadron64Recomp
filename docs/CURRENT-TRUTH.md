@@ -329,6 +329,20 @@ literal reading of s97's outcome-2 branch) is not coherent. **Pivot for
 next session: land a defensive guard at a characterized site (mirroring
 s83/s84's successful gates) instead of another observe-only instrument.**
 Full detail: PORTING-STATE s98.
+**s99:** landed and validated the 16th class's guard
+(`activateAnimationKeyframe`, `goto`s the function's own real exit label
+to stay ABI-correct rather than a bare `return;`). First soak exposed a
+real bug in the guard itself — comparing the 64-bit sign-extended `gpr`
+register directly against 32-bit literal bounds made it fire on
+30333/30333 calls (100% false positive), not just the rare bad case;
+fixed by truncating through `U32()` first, a lesson generalizable to
+every future guard on a `ctx->rN` value. Corrected soak: guard's negative
+control holds clean (0/0), but the process died to a **recurrence of the
+already-catalogued 15th class** (RT64-internal `loadDrawState`, first
+seen s97), not a new 17th — informative, not a new mystery. Per s98's own
+outcome-2 branch, next up is the same guard treatment for
+`composeNpcOrientationMatrix` (12th class, 2 occurrences). Full detail:
+PORTING-STATE s99.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -540,41 +554,49 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s98)
+## Next steps, in order of expected value (s99)
 
-0. **M3 — land a defensive guard on `activateAnimationKeyframe`'s
-   table-lookup deref (the 16th crash class, s98), instead of another
-   observe-only instrument.** Four consecutive sessions (s95-s98, 6
-   soaks) each died to a *different* brand-new crash in the "SELECT
-   YOUR CRAFT stable → hold" window before reaching the DMA-caller
-   window; s98 source-characterized the mechanism at this site
-   (`N64Recomp/RecompiledFuncs/funcs_14.c:1656-1661`, guest
-   `0x80061CA4-0x80061CAC`): `ctx->r17 = table[(arg_r4 & 0xFFFF)]`
-   (table base `0x8009FC10`) then an immediate `MEM_W(ctx->r17, 0x30)`
-   deref with no null/range check on `ctx->r17` — same
-   "unguarded-pointer-off-a-lookup" signature as the rest of this
-   family. Add a guard right before that deref: if `ctx->r17` looks
-   invalid (0, or outside the guest RAM range the runtime maps), skip
-   the crashing path and log via an always-on flag (mirror s84's
-   `resume_thread_tagged`/`bad=1` skip-gate — `lib/N64ModernRuntime`
-   pattern is C++, this is generated guest C, so follow the
-   `fixup_game_funcs.py` patch convention instead, same file as every
-   other instrument in this family). This is a genuine fix attempt,
-   not another catalog entry: **do not** just log-and-continue-without-
-   guarding (that reproduces the crash, it doesn't survive it). Rebuild,
-   re-run the standard repro
-   (`scratch/s73_post_a_scene/run_mission_keys.sh`, `PROBE_MODE=
-   start_only HOLD_S=30`, all `ROGUESQ_LOG_*` flags on including the new
-   guard's flag, `ROGUESQ_LOG_THREAD_RESUME=0`). Outcomes: (a) the guard
-   fires and the process survives further into the hold or reaches the
-   DMA-caller window — real progress, re-open item 1 below immediately;
-   (b) the guard never fires and a *different* crash (17th class) kills
-   the process anyway — informative (this specific site wasn't this
-   run's blocker), do not spend a 2nd soak chasing this one site, pick
-   the next-most-recurring characterized class instead
-   (`composeNpcOrientationMatrix`, 2 occurrences) for the same
-   guard-not-instrument treatment; (c) build/regen failure — debug
-   before soaking, do not soak a broken build.
+0. **M3 — land the same guard-not-instrument treatment on
+   `composeNpcOrientationMatrix` (12th class, 2 occurrences: s74, s95 —
+   the next most frequent of the guest-side unguarded-lookup family),
+   per s99's own outcome.** s99 landed and validated the
+   `activateAnimationKeyframe` guard (16th class) — 0/0 fires in a clean
+   corrected soak, confirmed via its own negative control — but the
+   process died to a **recurrence of the already-catalogued 15th class**
+   (RT64-internal `loadDrawState` assert, no fix on our side) before the
+   guard ever got a chance to matter, at the same hold+4-5s offset as
+   most recent attempts. This is functionally s98 NEXT.md's outcome-2
+   branch (site guarded but a different crash preempts it) — proceed
+   exactly as it specified: **do not** re-soak `activateAnimationKeyframe`
+   again, move to `composeNpcOrientationMatrix`
+   (`N64Recomp/RecompiledFuncs/funcs_40.c`, guest `static_5_800AB1C8`,
+   real name confirmed in `symbol_files/main_overlay.txt`). First
+   source-read its crash mechanism (not yet done — s92/s95 only logged
+   entry args, never read the actual crash line) to confirm it has the
+   same "unguarded pointer from a lookup/arg" shape before writing a
+   guard; if it turns out to be a different shape, characterize first,
+   guard second, exactly as s98 did for the 16th class.
+   **Critical lesson from s99, applies to every future guard in this
+   family**: guest registers (`ctx->rN`) are `gpr` = `uint64_t`
+   (`recomp.h:84`), and `MEM_W` returns a *signed* `int32_t` — assigning
+   a real guest pointer (top bit set) sign-extends it to
+   `0xFFFFFFFF800xxxxx` on the 64-bit register. **Never compare a raw
+   `ctx->rN` value against 32-bit literal bounds** (e.g.
+   `ctx->r17 < 0x80000000u`) — it will spuriously match/fail for every
+   real pointer. Always truncate through `U32()` first
+   (`uint32_t lo = U32(ctx->rN);` then compare `lo`). s99's first build
+   skipped this and got a guard that fired on 30333/30333 calls (100%
+   false-positive rate) before the bug was caught and fixed same-session
+   — verify any new guard's fire rate looks like a rare-case control
+   (near-zero, or proportional to a plausible bad-input rate), not "fires
+   on every call," before trusting a 0-fires-and-still-crashed result.
+   Outcomes: (a) the new guard fires and the process survives further —
+   real progress, re-open item 1 below immediately; (b) the guard never
+   fires and a different crash preempts it — informative, do not spend a
+   2nd soak on this exact site, pick the next-most-recurring class
+   instead (11th `projectModelBoundsToScreen` or 14th
+   `reserveAndEmitDLEntry`, 1 occurrence each) for the same treatment;
+   (c) build/regen failure — debug before soaking.
 1. **M3 — find the indirect caller of `submitDmaRequestBatch`.**
    **Discriminating question CLOSED (s94)**: the producer/consumer ring
    instrument (`ROGUESQ_LOG_DMA_RING=1`, landed in
@@ -683,6 +705,23 @@ cost three sessions before the recursive mutex.
    coherent. **Next session: land a defensive guard at the
    characterized site instead of another one-off instrument** —
    mirrors s83/s84's successful gates. Full detail: PORTING-STATE s98.**
+   **s99: landed and validated the 16th class's guard**
+   (`activateAnimationKeyframe`) — `goto`s the function's real exit
+   label (`L_80061F18`) rather than a bare `return;`, since the function
+   spills callee-saved registers and the guest `$sp` to its own stack
+   frame and a naive early return would corrupt the caller's register
+   state and leak a 40-byte guest-stack drift on every fire. First build
+   had a real self-found bug (guard compared the 64-bit sign-extended
+   `gpr` register against 32-bit literal bounds, so it fired on
+   30333/30333 calls — 100% false positive, effectively disabling the
+   function every call); fixed by truncating through `U32()` first.
+   Corrected soak: guard's own control now reads 0/0 (a real, working
+   negative control), but the process died to a **recurrence of the
+   already-catalogued 15th class** (RT64-internal `loadDrawState`
+   assert, s97) at hold+~5s, not a new 17th class. Per this item's own
+   outcome-2 branch, next is the same guard treatment for
+   `composeNpcOrientationMatrix` (12th class, 2 occurrences: s74, s95).
+   Full detail: PORTING-STATE s99.**
    1a. **Confound theory CONFIRMED and CLOSED (s93).** s92's attempt to
    drop `ROGUESQ_LOG_THREAD_RESUME=1` from the repro never actually
    took effect — `scratch/s73_post_a_scene/run_mission_keys.sh` line 8
