@@ -11927,3 +11927,64 @@ window crashes first more often than not. No code changed this session
 screenshots; not committed, scratch). `PORTING-STATE.md` /
 `docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md` (this write-up). No other
 files touched.
+
+## Session 135 — 2026-07-27
+
+**Re-ran the `emitAllocatedDLCommand` soak, attempt 3/3 (final, per rule 8),
+exactly as NEXT.md prescribed.** Re-enumerated the flag list fresh
+(`grep -oE 'ROGUESQ_LOG_[A-Z_0-9]+' N64Recomp/fixup_game_funcs.py` — 32
+flags this time, same set as s133/s134, no new ones added since), no
+rebuild (s133 binary still current), `zsh run_mission_keys.sh emitdl3 5
+12`. Process reached SELECT YOUR CRAFT stable, entered the 30s hold, and
+died at hold-iter 13 (~15s wall into hold — later than s134's hold-iter 5,
+comparable to s133's hold-iter 8).
+
+**Result: `emit-dl-guard2`/`emit-dl-guard3` fired 0/0 a 3rd consecutive
+time** (`grep -c` on the full 22 MB `run.log`: zero hits for either
+string). **The crash is neither a new `emitAllocatedDLCommand` SIGBUS nor
+the 18th class** (`heapFreeListDequeue`/`submitSceneNodeRender` — both
+strings are entirely absent from this run's log, `grep -c` = 0 each). It
+is instead a byte-identical recurrence of the long-running, separately-
+tracked `do_rom_read`/`piDmaWorker` corruption SIGSEGV (s85 origin,
+12+ prior occurrences per CURRENT-TRUTH's own running tally): `[CRASH]
+signal 11` inside `do_rom_read` ← `do_dma` ← `osPiStartDma_recomp` ←
+`piDmaWorker`, with the immediately-preceding `[dma-ring-consumer]`
+line showing the exact same `devAddr=0x6C676672 dramAddr=0x80195190`
+pair seen in s91/s93/s94/s101-104 and others. This run's `[fill-range-
+args]` log (armed, from s104's instrument) shows the corrupted value
+already present in `fillSampleStreamRange`'s own arguments at entry
+(`a1_dram=0x6C676672`, matching `devAddr` exactly) and the same
+ASCII-shaped tag pattern (`"lg?r"`/`"wi?g"`) s102/s103 already
+characterized — reinforcing s104's "already corrupted at entry, not
+this function's own bug" conclusion with one more data point, not new
+information. Controls held: `thr-resume bad_total=0` (7th+ support for
+U3), `ost-wb SKIP_OOB=20` (existing gate firing as expected),
+`missing-func=0`, `UnhandledJump=0`.
+
+**This is a 3rd distinct, already-known crash class preempting the
+target hypothesis — exhausts NEXT.md's 3-attempt budget for the
+`emitAllocatedDLCommand` question (rule 8).** Final tally across all
+three attempts: s133 → environment-side Apple-Metal shader-compiler
+SIGSEGV; s134 → 18th-class `heapFreeListDequeue` recurrence (guest-side,
+known); s135 → `do_rom_read`/`piDmaWorker` corruption (guest-side, known,
+separately tracked as the M3/Thread-B item). **Parking the
+`emitAllocatedDLCommand` hypothesis per NEXT.md's own outcome-3 branch.**
+Both `emit-dl-guard2`/`3` stay in the code regardless — per standing
+policy since s99, they fix 2 genuinely real unguarded-pointer-chase bugs
+independent of whether either is *the* cause of any specific crash; a
+0/0 guard-fire result across 3 soaks is an uncontrolled null, not a
+refutation, so this is not a claim the guards are wrong or unnecessary.
+
+No code changed this session (no rebuild). No `lib/` files touched
+(verified: `git diff` in both `lib/N64ModernRuntime` and `lib/rt64`
+byte-for-byte matches the already-exported `submodule-patches/*.patch`
+files from session start — nothing new to export or commit).
+
+### Files
+`scratch/s73_post_a_scene/emitdl3/` (soak logs — `run.log` 22MB, 27
+screenshots; not committed, scratch). `scratch/agent/run_emitdl3.sh`
+(new — a small zsh wrapper around NEXT.md's soak command, kept because
+the raw multi-`env`-var one-liner doesn't survive this session's shell
+tooling's static analysis; reusable for any future re-run of this exact
+recipe). `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
+`scratch/agent/NEXT.md` (this write-up). No other files touched.

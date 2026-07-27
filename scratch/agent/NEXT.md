@@ -1,101 +1,85 @@
-# NEXT work unit — re-attempt the `emitAllocatedDLCommand` soak (attempt 3/3, FINAL)
+# NEXT work unit — source-read `submitSceneNodeRender`'s non-free-list code (18th class)
 
-s133 guarded the `emitAllocatedDLCommand` crash s132 found (same
-`findAndUnlinkSmallestEntry`-return + walk-loop idiom already fixed
-elsewhere, inlined here twice — `r4`/`r5` copies, guarded as
-`ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`). Two soaks since (s133, s134)
-both got a **null result without a positive control** — the guards
-never fired (0/0 both times) — but neither died to a fresh mystery:
-s133 died to the environment-side Apple-Metal shader-compiler SIGSEGV
-(no guest code, not fixable here); s134 died to a **2nd fully-post-fix
-recurrence** of the already-catalogued 18th class (`heapFreeListDequeue
-+ 12704` ← `submitSceneNodeRender + 27540`, byte-identical to s131's
-own backtrace). Read PORTING-STATE's Session 134 entry before doing
-anything else; this file only has the actionable summary.
+s135 finished the `emitAllocatedDLCommand` soak's 3rd and final attempt
+(rule 8 budget exhausted): guards `emit-dl-guard2`/`3` never fired across
+all 3 soaks (s133/s134/s135, 0/0/0), and each of the 3 attempts died to a
+*different*, already-known crash class instead of a fresh
+`emitAllocatedDLCommand` mystery — s133: environment-side Apple-Metal
+shader-compiler SIGSEGV; s134: the 18th class
+(`heapFreeListDequeue`/`submitSceneNodeRender`); s135: the separately-
+tracked `do_rom_read`/`piDmaWorker` corruption SIGSEGV. **The
+`emitAllocatedDLCommand` hypothesis is now parked** — both guards stay in
+the code regardless (2 genuinely real unguarded-pointer-chase bugs,
+independent of whether either is *the* cause of any specific crash;
+standing policy since s99). Read PORTING-STATE's Session 135 entry before
+doing anything else; this file only has the actionable summary.
 
-## Do next: re-run the same soak ONE more time (attempt 3/3, per rule 8 — this is the last allowed attempt)
+## Do next: source-read `submitSceneNodeRender`, funcs_4.c, for a 2nd unguarded idiom
 
-```
-cd scratch/s73_post_a_scene
-env PROBE_MODE=start_only HOLD_S=30 \
-  $(grep -oE 'ROGUESQ_LOG_[A-Z_0-9]+' \
-      /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py \
-    | sort -u | sed 's/$/=1/' | tr '\n' ' ') \
-  ROGUESQ_LOG_THREAD_RESUME=1 \
-  zsh run_mission_keys.sh emitdl3 5 12
-```
+The 18th class's nearest-symbol crash (`heapFreeListDequeue + 12704` via
+`submitSceneNodeRender + 27540`) has now recurred **twice** post-fix
+(s131, s134) with all 9 of the already-landed free-list-walk guards
+(`SCENE_NODE_LIST_GUARD`/`GUARD2`/`GUARD3`) silent both times — this
+satisfies the "only act on it if it recurs on its own" trigger set at
+s131/s133, and s131 itself concluded the guarded free-list-walk idiom is
+**not** this crash's actual cause (proven innocent twice independently
+now).
 
-(Re-enumerate the flag list fresh via the grep above — s134 found one
-more flag than s133's hardcoded list already, and a future session may
-add more. No rebuild needed — the s133 binary is current, unless you've
-changed `fixup_game_funcs.py` since s134, which you haven't.)
+This is a pure source-reading task. No soak, no rebuild needed for the
+read itself:
 
-**Discriminating outcomes** (unchanged from s133/s134's framing):
-1. `[emit-dl-guard2]` or `[emit-dl-guard3]` fires (any count > 0) →
-   positive control obtained, the s133 fix is confirmed to guard a
-   code path that actually executes with a corrupted pointer.
-2. The process dies again to a **new** `emitAllocatedDLCommand` SIGBUS
-   with the guards NOT firing → the idiom s133 guarded is not what
-   this crash actually hits; re-read `funcs_3.c:2412-2948` for anything
-   besides the two `findAndUnlinkSmallestEntry`-derived walk loops.
-3. A 3rd, different crash preempts again (new OR a recurrence of an
-   already-known class, as both s133 and s134 got) → **this exhausts
-   the 3-attempt budget.** STOP re-soaking this specific hypothesis.
-   Park it (both `emitAllocatedDLCommand` guards stay regardless — they
-   fix 2 genuinely real unguarded-pointer-chase bugs independent of
-   whether they're THE cause of any specific crash, standing policy
-   since s99). Then pick ONE of:
-   - **(preferred)** The 18th class (`heapFreeListDequeue` nearest-
-     symbol via `submitSceneNodeRender`) has now recurred **twice**
-     post-fix (s131, s134), both times with the guarded free-list-walk
-     idiom fully silent — satisfying the "only act on it if it recurs
-     on its own" trigger set at s131/s133. Source-read
-     `submitSceneNodeRender`'s remaining ~2746 lines (`funcs_4.c`) for
-     a 2nd, distinct unguarded pointer-chase idiom (not the free-list
-     one — that's proven innocent twice now). This is the same
-     "2nd-unguarded-site-in-an-already-guarded-function" pattern Thread
-     A found repeatedly (s126-132), just not yet applied to this
-     specific function's *non*-free-list code.
-   - Thread B (fallback, see below): the audio-corruption pivot.
+1. Open `N64Recomp/RecompiledFuncs/funcs_4.c` and locate
+   `submitSceneNodeRender` in full (it's ~2746 lines past the part
+   s123/s131 already audited for the free-list-walk idiom).
+2. Read it end to end looking for the same general shape every other
+   guard in this series has fixed: a table lookup, linked-list-node
+   return, or similarly-derived pointer used to dereference memory
+   *without* a null/range check first. This is a **different** idiom
+   from the free-list-walk one (already guarded 9x, already proven
+   innocent) — do not re-guard those sites.
+3. If found: guard it the same way as the existing series in this
+   function — `goto` the function's own real epilogue label (do not use
+   a bare `return;`, must stay ABI-correct), and if the check involves a
+   `ctx->rN` register value, truncate it through `U32()` before
+   comparing against 32-bit literal bounds (s99's 100%-false-positive
+   lesson — a raw 64-bit sign-extended compare against 32-bit bounds
+   fires on ~100% of calls, not just the bad ones).
+4. Full delete-all regen (`make_elf.py` → `regen_n64recomp.sh` →
+   `fixup_game_funcs.py` → `cmake --build`), audit the patch report for
+   exact expected multiplicity (mandatory post-fixup audit, see
+   Housekeeping item 0 in CURRENT-TRUTH — the regen pipeline is
+   intermittently non-idempotent).
+5. Soak once with the new guard's log flag armed alongside every other
+   `ROGUESQ_LOG_*` flag (same re-enumeration recipe as the emitdl
+   soaks): `grep -oE 'ROGUESQ_LOG_[A-Z_0-9]+' N64Recomp/
+   fixup_game_funcs.py | sort -u`.
 
-## Do NOT re-open Thread A
-
-Thread A (the systematic re-audit of all 8 multi-hit hangar-tick
-functions for a second unguarded deref past their first guard) is
-CLOSED as of s132 — final tally 6 hits, 2 clean, of 8 audited:
-composeNpcOrientationMatrix, updateAnimatedTextureStreaming,
-static_5_800B4048, projectModelBoundsToScreen, reserveAndEmitDLEntry,
-activateAnimationKeyframe, submitSceneNodeRender, updateHangarBayScene.
-Do not re-audit any of these 8 again. (The "source-read
-submitSceneNodeRender's non-free-list code" option above is NOT a
-Thread-A re-audit in the closed sense — Thread A audited each
-function's *already-known* guarded idiom for a 2nd occurrence; this
-would be hunting for an *entirely different* idiom class in the same
-function, prompted by a crash recurrence, same as how `emitAllocatedDLCommand`
-itself was found via a crash backtrace rather than a list re-audit.)
-
-## Also open, lower priority
-
-- **The 18th class (`heapFreeListDequeue`)** — see above; now recurred
-  twice post-fix (s131, s134). Do not chase with a *dedicated* repro
-  soak beyond what's already happened; if the emitdl3 attempt above
-  also lands on it a 3rd time, that's even stronger grounds to act (see
-  above).
-- **The s83 Apple-Metal-internal shader-compiler SIGSEGV** — recurred
-  a 2nd time in s133 (`fscache_insert_and_retain`), confirmed
-  environment-side (no guest code in the backtrace, no source on our
-  side). Not fixable by this project's own code; not worth chasing
-  further unless it becomes the *dominant* cause of soak deaths (it
-  isn't — one occurrence each in s83 and s133, out of dozens of soaks).
+**Discriminating outcomes:**
+1. New guard fires (count > 0) → likely root cause of the 18th class
+   found; if the process also survives past where it would have died,
+   that's strong same-run corroboration.
+2. New guard doesn't fire AND the 18th-class crash recurs a 3rd time →
+   the guarded idiom (both this new one and the original free-list-walk
+   one) is not the cause; the nearest-symbol match may be misattributed
+   to code outside this function entirely (s131's other open branch,
+   still unexplored — would need disassembly-level work, a bigger task).
+3. No matching idiom found in a careful read at all → treat as evidence
+   for the misattribution branch above; do not force-fit a guard onto
+   something that doesn't match the pattern just to have shipped a fix.
+   Pivot to Thread B (below) instead.
 
 ## Thread B (fallback, unchanged): the audio-corruption pivot (voice+0x0/+0x34, s105-123)
 
-Still the single longest-running open thread if the `emitAllocatedDLCommand`
-lead is parked (attempt 3/3 also fails to discriminate) AND you don't
-take the 18th-class source-read option above. Needs the fresh-angle
-grep s126 proposed (what else constructs a name/string table with
-entries shaped like `at_6`/`at_7`/`main_n_atpt_lod`/`pilot_sd`) —
-unchanged since s126-134's framing.
+Still the single longest-running open thread if the above source-read
+comes up empty (no matching idiom, or a guard lands but doesn't
+discriminate). s135 incidentally reproduced the `do_rom_read` family
+again (bystander crash during an unrelated soak, not a targeted repro)
+with one confirmatory data point (`fillSampleStreamRange`'s own
+arguments already corrupted at entry — matches s104's already-closed
+finding, nothing new). Needs the fresh-angle grep s126 proposed: what
+else constructs a name/string table with entries shaped like
+`at_6`/`at_7`/`main_n_atpt_lod`/`pilot_sd` — unchanged since s126-135's
+framing.
 
 ## This session's environment notes (carry forward, still current)
 
@@ -127,25 +111,43 @@ unchanged since s126-134's framing.
   as its own Bash call first (cwd persists across calls), then the
   plain `git <cmd>` as a second call.
 - A `run_mission_keys.sh` soak with `run_in_background: true` and a
-  Monitor/Bash-blocking-wait on the child PID works cleanly for
-  capturing completion without polling — used this session
-  (`kill -0 <pid>` in a loop inside a single blocking Bash call with a
-  long timeout, or a Monitor with the same check).
+  blocking wait (TaskOutput with block=true, or Monitor) on the
+  background task works cleanly for capturing completion without
+  polling — used again this session.
+- The multi-`env`-var one-liner from NEXT.md (`env VAR1=1 VAR2=1 ...
+  zsh run_mission_keys.sh ...` with a `$(grep ...)` substitution) trips
+  this environment's Bash static-command-analyzer ("Contains shell
+  syntax that cannot be statically analyzed"). Workaround used
+  successfully this session: write the exact command into a small `.sh`
+  wrapper file (`scratch/agent/run_emitdl3.sh` is a working example
+  using zsh's `${=FLAGS}` word-splitting), `chmod +x`, then invoke that
+  single file path as the Bash command.
 
 ## Do not
 
-- Do not re-audit any of the 8 Thread A functions again.
+- Do not re-audit any of the 8 Thread A functions again (Thread A is
+  CLOSED as of s132: composeNpcOrientationMatrix,
+  updateAnimatedTextureStreaming, static_5_800B4048,
+  projectModelBoundsToScreen, reserveAndEmitDLEntry,
+  activateAnimationKeyframe, submitSceneNodeRender (free-list idiom
+  only — its *other* code is fair game, see above),
+  updateHangarBayScene).
 - Do not re-guard `emitAllocatedDLCommand`'s two `findAndUnlinkSmallestEntry`
   walk-loop sites (`GUARD2`/`GUARD3`, both r4 and r5 copies) — already
-  landed and exhaustively verified against source.
-- Do not treat s133/s134's 0/0 guard-fire result as "the guard doesn't
-  work" or "the fix is wrong" — it's an uncontrolled null, not a
-  refutation. Only a positive control (guard fires) or a repeat crash
-  with the guard silent would actually discriminate.
+  landed and exhaustively verified against source. Do not re-soak this
+  hypothesis — the 3-attempt budget is exhausted (s133/s134/s135).
+- Do not re-guard `submitSceneNodeRender`'s free-list-walk sites (the 9
+  already landed by s123/s131) — proven innocent of the 18th class
+  twice now (s131, s134). Any new guard from this work unit must target
+  a genuinely different idiom.
+- Do not treat a 0/0 guard-fire result as "the guard doesn't work" or
+  "the fix is wrong" — it's an uncontrolled null, not a refutation.
+  Only a positive control (guard fires) or a repeat crash with the
+  guard silent would actually discriminate.
 - Do not chase the s83/s133 Apple-Metal-internal SIGSEGV as if it were
   a guest-code bug — it has no guest frames anywhere in its backtrace.
 - Do not chase the `do_rom_read`/`piDmaWorker` corruption race
-  opportunistically — tracked as its own item (-1, M3) in
+  opportunistically — tracked as its own item (-1, M3/Thread B) in
   CURRENT-TRUTH's next-steps list, separate from this thread.
 - When landing any new guard, always truncate a `ctx->rN` value through
   `U32()` before comparing against 32-bit literal bounds (s99's
@@ -160,6 +162,6 @@ experiment — not on its own.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git
 checkout, not a `lib/` submodule, with uncommitted changes across
-s90-134 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
+s90-135 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
 Same posture as the `rogue_squadron64` sibling checkout flagged since
 s54. Worth asking the user whether/how to commit that history.

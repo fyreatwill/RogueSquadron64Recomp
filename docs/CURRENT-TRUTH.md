@@ -655,33 +655,30 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s134)
+## Next steps, in order of expected value (s135)
 
-0a. **Re-attempt the `emitAllocatedDLCommand` soak a 3rd and final time
-    (attempt 3/3 per rule 8 — s133 attempt 1 and s134 attempt 2 both
-    null-without-discriminating).** Same recipe (`emitdl2`'s command,
-    tag `emitdl3`), no rebuild needed. s133 died to the environment-side
-    Apple-Metal SIGSEGV; s134 died to a 2nd fully-post-fix recurrence of
-    the already-catalogued 18th class (`heapFreeListDequeue + 12704` ←
-    `submitSceneNodeRender + 27540`, byte-identical to s131's own
-    backtrace) — both non-discriminating for this hypothesis, neither a
-    fresh mystery. If attempt 3/3 *also* fails to discriminate (guards
-    still 0/0, a 3rd crash — new or known — preempts again): per rule 8,
-    STOP re-soaking this specific hypothesis, park it (both guards stay
-    regardless — they fix real bugs independent of this question), and
-    pivot to either (i) the now-twice-recurred 18th class directly — it
-    has recurred on its own twice post-fix now, satisfying NEXT.md's own
-    "only act on it if it recurs on its own" trigger, so a source read of
-    `submitSceneNodeRender`'s remaining ~2746 lines for a 2nd unguarded
-    pointer-chase idiom (distinct from the free-list-walk one already
-    guarded 9x) is now warranted — or (ii) Thread B (audio-corruption
-    pivot, `voice+0x0`/`+0x34`, s105-123, still the longest-running open
-    thread). Discriminating outcomes for attempt 3/3, same as before: (a)
-    `emit-dl-guard2`/`3` fires → fix confirmed live; (b) a 3rd
-    `emitAllocatedDLCommand` crash with guards silent → idiom guarded
-    isn't the cause, re-derive the real site from source; (c) yet
-    another different crash preempts → exhausts the 3-attempt budget,
-    pivot per above.
+0a. **CLOSED (s135): `emitAllocatedDLCommand` soak hypothesis parked,
+    3-attempt budget exhausted per rule 8.** s133 → environment-side
+    Apple-Metal SIGSEGV; s134 → 18th-class recurrence; s135 → the
+    separately-tracked `do_rom_read`/`piDmaWorker` corruption SIGSEGV.
+    Guards `emit-dl-guard2`/`3` never fired (0/0 all 3 attempts) but
+    both stay in the code (real fixes, independent of this question).
+    **Next work unit: source-read `submitSceneNodeRender`'s remaining
+    ~2746 lines** (`N64Recomp/RecompiledFuncs/funcs_4.c`) for a 2nd,
+    distinct unguarded pointer-chase idiom — not the free-list-walk one
+    already guarded 9x and proven innocent twice (s131, s134). The 18th
+    class (`heapFreeListDequeue` nearest-symbol) has recurred twice
+    post-fix with every known guard silent both times, satisfying the
+    "only act on it if it recurs on its own" trigger set at s131/s133.
+    This is a pure source-reading task — no soak, no rebuild — read the
+    function end to end looking for the same shape as every other guard
+    in this series (a table/array lookup or list-node return used as a
+    pointer without a null/range check before dereference), guard any
+    found the same way as the existing series (truncate `ctx->rN`
+    through `U32()` before comparing, per s99's lesson). If nothing
+    matches, the crash may be a misattributed nearest-symbol match to
+    code outside this function (s131's other open branch) — in that
+    case pivot to Thread B (item -1 below) instead.
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with
@@ -1007,6 +1004,27 @@ cost three sessions before the recursive mutex.
    (not fresh mysteries) suggests the soak recipe's bottleneck is that
    something else in the same window crashes first more often than not.
    Full detail: PORTING-STATE s134.
+   **s135 (re-attempt the `emitAllocatedDLCommand` soak, attempt 3/3,
+   FINAL):** same recipe, no rebuild. `emit-dl-guard2`/`3` 0/0 a 3rd
+   consecutive time — never confirmed. Death is **neither** a new
+   `emitAllocatedDLCommand` crash **nor** the 18th class (both symbol
+   strings entirely absent from this run's log) — it's a byte-identical
+   recurrence of the separately-tracked `do_rom_read`/`piDmaWorker`
+   corruption SIGSEGV (item -1 below, 12+ prior occurrences;
+   `devAddr=0x6C676672 dramAddr=0x80195190`, matching s91/s93/s94/
+   s101-104). **This is a 3rd distinct already-known crash class,
+   exhausting the 3-attempt budget per rule 8.** Final tally: s133 →
+   environment-side Metal SIGSEGV; s134 → 18th class; s135 → `do_rom_read`
+   family. **`emitAllocatedDLCommand` hypothesis now parked** — both
+   guards stay (real fixes, independent of this question, standing
+   policy since s99). Per NEXT.md's own decision tree, next pivot is the
+   18th class source-read (`submitSceneNodeRender`'s remaining ~2746
+   lines, `funcs_4.c`) since that class's 2 post-fix recurrences (s131,
+   s134) already satisfied the re-open trigger and s135 adds no reason to
+   prefer Thread B over it (this run's `do_rom_read` hit was a bystander,
+   not a targeted repro, and only reinforced s104's already-closed
+   "corrupted at entry" finding — no new information for Thread B). Full
+   detail: PORTING-STATE s135.
    **s118:** ran the exact discriminating test above (32-byte dump at
    `voice+0x0` nonzero hits, same-run vs. `musyx-dma-call`). The dumps
    are long readable ASCII strings, not raw garbage — e.g. `"explo_
