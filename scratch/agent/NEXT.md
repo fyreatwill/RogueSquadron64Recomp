@@ -1,87 +1,119 @@
-# NEXT work unit — M3: root-cause the s86 `queueGPUUploadTMEM` zero-size assert
+# NEXT work unit — M3: confirm/refute the s87 `advancePlayerAnimationPhase` self-recursion SIGBUS
 
-s86 ran one soak testing the s85 shared-corruption-race hypothesis
-(`env ROGUESQ_LOG_DMA=1 PROBE_MODE=start_only HOLD_S=30 zsh
-scratch/s73_post_a_scene/run_mission_keys.sh <tag> 0 12`, thread-identity
-fields already added to `[rom-read]`, `lib/N64ModernRuntime/librecomp/src/pi.cpp:65-85`).
-`do_rom_read` never corrupted this run (488/488 calls sane, all `thr_id=2`,
-all in-range/aligned) — the shared-race test is **inconclusive, not
-refuted**: no garbage value existed to correlate. Instead the process died
-earlier than any prior soak (hold+~15s) to a brand-new crash:
+s87 landed `ROGUESQ_LOG_TMEM_ZERO=1` to test s86's `queueGPUUploadTMEM`
+zero-size-assert hypothesis (`env ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_TMEM_ZERO=1
+PROBE_MODE=start_only HOLD_S=30 zsh
+scratch/s73_post_a_scene/run_mission_keys.sh tmemzero1 0 12`). The
+instrument never fired (`[tmem-zero-upload]` 0/0 in the 142K-line log) —
+not because the hypothesis is wrong, but because the process died even
+earlier than s86 (hold+~3s vs. hold+~15s) to a **brand-new, 8th** crash:
 
 ```
-Assertion failed: (!decodeTMEM || ((width > 0) && (height > 0))),
-function queueGPUUploadTMEM, file rt64_texture_cache.cpp, line 1285.
+[CRASH] caught signal 10 (Bus error: 10), dumping stack:
+...
+3   RogueSquadron64Recomp   advancePlayerAnimationPhase + 2572
+4   RogueSquadron64Recomp   advancePlayerAnimationPhase + 2572
+5   RogueSquadron64Recomp   static_5_800AAD9C + 1160
+6   RogueSquadron64Recomp   static_5_800C6854 + 628
+7   RogueSquadron64Recomp   menuOverlayInit + 3512
+8   RogueSquadron64Recomp   mainGameLoop + 2400
 ```
-Stack: `queueGPUUploadTMEM` <- `TextureManager::uploadTexture`
-(`rt64_rdp_tmem.cpp:52-66`) <- `State::fullSyncFramebufferPairTiles`'s
-per-draw-call lambda (`rt64_state.cpp:1329`, `decodeTMEM=true`, i.e. a
-real texture upload, not the raw-TMEM path) <- `State::fullSync` <-
-`GBI_RDP::fullSync` <- RDP list processing <- `gfx_thread_func`.
+
+Frames 3 and 4 are the SAME return address — `advancePlayerAnimationPhase`
+(guest `0x80062B04`, `symbol_files/main_overlay.txt:2998`) calling back
+into itself.
+
+## Source-level finding (already done, do not redo)
+
+`N64Recomp/RecompiledFuncs/funcs_14.c:8130-8153` — the function has
+exactly ONE indirect call in its entire body:
+
+```c
+// 0x80064260: lui         $v0, 0x8014
+ctx->r2 = S32(0X8014 << 16);
+// 0x80064268: lw          $v0, -0x6698($v0)
+ctx->r2 = MEM_W(ctx->r2, -0X6698);        // reads *(0x80139968)
+// 0x8006426C: jalr        $v0
+LOOKUP_FUNC(ctx->r2)(rdram, ctx);          // calls through it
+```
+
+`$v0` is loaded from a **fixed global slot at guest address 0x80139968**
+— a callback-table pointer, not a static call target. If whatever last
+wrote that slot pointed back at `advancePlayerAnimationPhase` itself (or
+`LOOKUP_FUNC`'s resolution of a corrupted/stale value lands there), the
+call recurses with no visible base case on this path, eating stack until
+it hits the guard page — matching SIGBUS (guard-page hit) rather than
+SIGSEGV (wild write).
+
+This is a **hypothesis from source reading only** — one data point, not
+yet confirmed by a live value.
 
 ## Why this is now the highest-value target
 
-Crash inventory since s83 is up to 7 sites (spline NaN → Metal SIGSEGV /
-thr-resume UAF → frameStartReset SIGBUS → do_rom_read corruption →
-**this one**), and each session's "dominant blocker" has just been
-whichever fires soonest. This one now fires **earliest of all seven**
-(hold+~15s vs. do_rom_read's usual longer window), so it is what blocks
-every other item on the list (item 2's shared-race retest, item 3's
-thr-resume gate positive control, HOLD_S=60 stick test) from even getting
-a chance to run further. Fixing/characterizing it is on the critical path
-regardless of which hypothesis about the other six turns out right.
+It fires earliest of all 8 known crash sites (hold+~3s), which means it
+blocks every other item on the M3 list (items 2–4 in CURRENT-TRUTH's
+next-steps, including s87's own still-untested TMEM-zero instrument) from
+getting a chance to run further. Same "whichever fires soonest wins the
+race" pattern as s84→s85→s86→s87.
 
 ## Competing hypotheses
 
-1. **Legitimate degenerate LOADTILE.** The game occasionally issues a
-   LOADTILE/texture-decode call with a genuinely zero-width or zero-height
-   sample tile (e.g. an off-screen or culled tile the RDP still walks
-   through `fullSyncFramebufferPairTiles`). If so, the fix is to skip the
-   upload for that tile (treat like the `width<=0||height<=0` case the
-   `dumpTexture` guard at `rt64_rdp_tmem.cpp:42-46` already treats as
-   invalid) rather than assert.
-2. **Corrupted tile-sample fields — part of the same shared-corruption
-   family as items 1–2 in CURRENT-TRUTH's next-steps.** `callTile.sampleWidth`/
-   `sampleHeight` derive from RDP tile state (line/mask/lrs/lrt/uls/ult) —
-   if that state was smashed by the same race behind the OSThread UAF /
-   thr-resume `bad=1` / do_rom_read corruption, this would be an 8th
-   symptom of one bug, not an 8th independent one.
+1. **Self-recursion via a stale/corrupted callback pointer.** The slot at
+   `0x80139968` was last written with a value that resolves (via
+   `LOOKUP_FUNC`) back to `advancePlayerAnimationPhase`'s own entry point
+   — either because something legitimately re-entered this callback loop,
+   or because the slot itself is garbage (another shared-corruption-race
+   datum, same family as items 2–3 in CURRENT-TRUTH's next-steps).
+2. **Legitimate deep-but-bounded recursion that happens to overflow the
+   host stack.** If the callback chain is supposed to terminate but the
+   host thread's stack size is smaller than what N64 hardware effectively
+   allowed (recompiled C uses much more stack per "frame" than native
+   MIPS), a call chain that was fine on real hardware could genuinely
+   overflow here — no corruption involved, just a stack-budget mismatch
+   from the recompilation approach itself.
 
 ## Discriminating measurement
 
-1. In `rt64_state.cpp` around line 1329 (the `uploadTexture` call site),
-   when `callTile.sampleWidth <= 0 || callTile.sampleHeight <= 0`, log the
-   full `LoadTile` fields (`line`, `mask`, `shift`, `uls`, `ult`, `lrs`,
-   `lrt` — whatever `LoadTile`/`callTile` exposes) plus the RDP tile index,
-   gated on a new env var (e.g. `ROGUESQ_LOG_TMEM_ZERO=1`), **before** the
-   assert can fire (same pattern as s85's `[rom-read]`: log first, so a
-   crashing call still leaves its inputs in the log).
-2. Rebuild, re-run the same `corrgate1`-style soak with the new var set.
-3. **Discriminate:**
-   - Tile fields look sane/plausible for a legitimately degenerate tile
-     (e.g. `lrs<=uls` or `lrt<=ult`, a real "empty rect" pattern) →
-     hypothesis 1 supported. Fix: skip the upload (early return before
-     `queueGPUUploadTMEM`) instead of asserting; do not silently clamp
-     width/height to 1 (that hides a real "why is this tile empty"
-     question — prefer an explicit skip + counter over a silent clamp).
-   - Tile fields are themselves wild/inconsistent with any real N64 tile
-     descriptor (values outside the 10-bit/12-bit ranges those fields
-     should hold) → hypothesis 2 supported; treat as another data point
-     for the shared-corruption-race file (cross-reference against
-     `[thr-resume]`/`[ost-wb]` the same way item 2 below does for
-     do_rom_read).
+1. In `N64Recomp/RecompiledFuncs/funcs_14.c` at line ~8148-8153 (the
+   `jalr`/`LOOKUP_FUNC` call site inside `advancePlayerAnimationPhase`),
+   add a `fprintf(stderr, "[anim-cb] slot=0x80139968 val=0x%08X self=%d\n", ...)`
+   gated on a new env var (e.g. `ROGUESQ_LOG_ANIM_CB=1`), logging
+   `ctx->r2` and whether it equals `0x80062B04` (this function's own
+   entry). **This file is regenerated by the pipeline** — per CLAUDE.md
+   hard rules, do NOT hand-edit `funcs_14.c` directly; add the log via
+   `N64Recomp/fixup_game_funcs.py` (same pattern as the s83 spline guard)
+   so it survives the next regen, then run `make_elf.py` → `N64Recomp` →
+   `fixup_game_funcs.py` → `cmake --build`.
+2. Also log a simple recursion-depth counter (thread-local or a small
+   static counter incremented/decremented around the call) to distinguish
+   "genuinely deep, no repeats" (hypothesis 2) from "repeats at low depth"
+   (hypothesis 1 — the same slot value keeps calling back immediately).
+3. Rebuild, re-run the same soak shape (`PROBE_MODE=start_only HOLD_S=30`,
+   plus the two existing env vars from items 2 to keep collecting their
+   data if this crash is fixed/gated before they can fire).
+4. **Discriminate:**
+   - `val` resolves to `advancePlayerAnimationPhase`'s own address
+     (`0x80062B04`) and recursion depth is low (a handful of frames, not
+     thousands) before the crash → hypothesis 1 (self-recursion via bad
+     pointer) supported. Do NOT silently break the recursion (no
+     min-depth clamp) — find what's *supposed* to be in that slot instead
+     (grep for writes to `0x80139968` / whatever symbol owns it).
+   - `val` is some other, unrelated address and depth is very high
+     (thousands of frames) → hypothesis 2 (genuine stack budget mismatch)
+     supported; the fix is a larger host stack for this thread, not a
+     logic change.
 
 ## Do not
 
-- Do not clamp `width`/`height` to a minimum of 1 to silence the assert —
-  same reasoning as the do_rom_read asserts: an assert catching a real
-  degenerate case should stay loud until root-caused, not be silenced into
-  a wrong-but-alive texture upload.
-- Do not re-attempt the do_rom_read shared-race correlation (CURRENT-TRUTH
-  next-steps item 2) as the primary target this iteration — it cannot even
-  be tested until this earlier-firing crash is out of the way (or at least
-  understood well enough to know it's unrelated).
-- Budget: this is iteration 1 on the TMEM-assert hypothesis. Per
-  ITERATION.md rule 8, stop experimenting after 3 consecutive iterations
-  with no discriminating result and go BLOCKED or fall back to
-  characterizing it as an unexplained one-off.
+- Do not hand-edit `N64Recomp/RecompiledFuncs/funcs_14.c` and expect it to
+  survive — put the log in `fixup_game_funcs.py` per CLAUDE.md hard rules.
+- Do not re-attempt the s86/s87 TMEM-zero-upload soak (CURRENT-TRUTH
+  next-steps item 2) as the primary target this iteration — it is blocked
+  behind this earlier-firing crash exactly the way item 2 was blocked
+  behind this one last time.
+- Do not disassemble the live binary to chase this — the source read
+  already narrows it to the single indirect-call site above.
+- Budget: this is iteration 1 on the animation-callback-recursion
+  hypothesis. Per ITERATION.md rule 8, stop experimenting after 3
+  consecutive iterations with no discriminating result and go BLOCKED or
+  fall back to characterizing it as an unexplained one-off.

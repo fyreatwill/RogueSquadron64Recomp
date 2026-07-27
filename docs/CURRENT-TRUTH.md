@@ -145,7 +145,16 @@ crash: `assert(!decodeTMEM || (width>0 && height>0))` in
 reached from `State::fullSyncFramebufferPairTiles`'s real-texture-decode
 path with `callTile.sampleWidth`/`sampleHeight` (`rt64_state.cpp:1329`)
 zero for a `decodeTMEM=true` load. Not further root-caused (1 data point).
-Full detail: PORTING-STATE s83–s86.
+**s87:** added `[tmem-zero-upload]` LoadTile-field logging at the
+`uploadTexture` call site (`rt64_rdp_tmem.cpp`, gated
+`ROGUESQ_LOG_TMEM_ZERO=1`) to test s86's hypothesis; it never fired (0/0)
+because the soak died even earlier (hold+~3s) to an **8th, new** crash:
+SIGBUS in `advancePlayerAnimationPhase` (guest `0x80062B04`) calling
+back into itself through an indirect call at guest `0x8006426C`
+(`jalr $v0` via `LOOKUP_FUNC`, `$v0` loaded from fixed global slot
+`0x80139968`) — source-read hypothesis (self-recursion via a stale/
+corrupted callback-table pointer), not yet confirmed by logging the
+actual pointer value. Full detail: PORTING-STATE s83–s87.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -232,7 +241,8 @@ thr-resume `bad=1` gated (unvalidated), 5th crash class found (s84);
 frameStartReset was a fluke, do_rom_read corruption root-caused, unified
 shared-race hypothesis raised (s85); shared-race test inconclusive
 (do_rom_read didn't recur), 7th crash class found firing even earlier
-(s86).**
+(s86); TMEM-zero instrument landed but never fired, 8th crash class found
+firing even earlier still (s87).**
 AVAILABLE CRAFT reachable. **s75:** single Start → hangar-flight.
 **s78–s79:** RDP-`fs` plateaus post-leave (S1). **s80:** synthetic FIRE continues.
 **s81:** black = mode-3 presenting wild last-drawn. **s82:** always-on sane-width
@@ -257,8 +267,15 @@ rather than a 6th independent bug. **s86:** added thread-identity fields to
 usual to a **7th** crash, `assert(width>0 && height>0)` in
 `queueGPUUploadTMEM` for a real texture decode with a zero tile-sample
 dimension (`rt64_state.cpp:1329` → `rt64_rdp_tmem.cpp:52` →
-`rt64_texture_cache.cpp:1285`), not yet root-caused. Leave key closed. Origin
-still cannot name scenes. Full detail PORTING-STATE s68–s86;
+`rt64_texture_cache.cpp:1285`), not yet root-caused. **s87:** landed
+`ROGUESQ_LOG_TMEM_ZERO=1` logging at the `uploadTexture` call site to
+test that; it never fired (0/0) because the soak died even earlier
+(hold+~3s) to an **8th** crash: SIGBUS in `advancePlayerAnimationPhase`
+(`0x80062B04`) recursing into itself through an indirect call at
+`0x8006426C` (`jalr` via a function pointer read from fixed global slot
+`0x80139968`) — source-read hypothesis (stale/corrupted callback-table
+pointer), not confirmed by a live value yet. Leave key closed. Origin
+still cannot name scenes. Full detail PORTING-STATE s68–s87;
 `scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
@@ -288,73 +305,93 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s86)
+## Next steps, in order of expected value (s87)
 
-1. **M3 — root-cause the s86 `queueGPUUploadTMEM` zero-size assert (new,
-   highest value: it now fires earliest of all seven crash sites).**
+1. **M3 — root-cause the s87 `advancePlayerAnimationPhase` self-recursion
+   SIGBUS (new, highest value: it now fires earliest of all eight crash
+   sites, hold+~3s).** Source read (`N64Recomp/RecompiledFuncs/funcs_14.c:
+   8130-8153`) found the only indirect call in the function, guest
+   `0x8006426C` (`jalr $v0` via `LOOKUP_FUNC(ctx->r2)`), with `$v0` loaded
+   from a fixed global slot `0x80139968`
+   (`lui 0x8014; lw $v0,-0x6698($v0)`) — a callback-table pointer, not a
+   static call. First step: log `ctx->r2` (the resolved target) and the
+   raw slot value at `0x80139968` immediately before the call, gated on a
+   new env var, to confirm/refute that the slot is pointing back at
+   `advancePlayerAnimationPhase`'s own guest address (`0x80062B04`) —
+   self-recursion via a stale/corrupted callback pointer — vs. some other
+   explanation. One data point so far (s87) — reproduce/confirm before
+   attempting any fix; do not disassemble the live binary to chase this,
+   the source read already narrows it to one call site.
+2. **M3 — root-cause the s86 `queueGPUUploadTMEM` zero-size assert.**
    `rt64_state.cpp:1329` passes `callTile.sampleWidth`/`sampleHeight` into
    `TextureManager::uploadTexture` → `queueGPUUploadTMEM`
    (`rt64_texture_cache.cpp:1285`) uninspected; one of them was 0 for a
-   `decodeTMEM=true` load. First step: log `sampleWidth`/`sampleHeight`
-   alongside the tile's line/mask/lrs/lrt/uls/ult fields whenever either is
-   ≤0, gated on a new env var, to see whether this is a legitimate
-   degenerate LOADTILE (skip the upload, don't assert) or itself a garbage
-   read (feeds back into the shared-race hypothesis below). One data point
-   so far (s86) — reproduce at least once more before concluding either way.
-2. **M3 — retry the shared-corruption-race test (s85 hypothesis, s86
+   `decodeTMEM=true` load. **s87 landed the instrument**
+   (`ROGUESQ_LOG_TMEM_ZERO=1`, `rt64_rdp_tmem.cpp`, logs the tile's
+   line/mask/lrs/lrt/uls/ult fields) but it never fired (0/0) because item
+   1's crash killed the process first — blocked on item 1, not on the
+   instrument. Once item 1 no longer dominates, rerun the same soak; the
+   discriminating logic from s86/NEXT.md still applies unchanged.
+3. **M3 — retry the shared-corruption-race test (s85 hypothesis, s86
    instrumentation already in place).** s86 added `thr_id`/`thr`/`ctx` to
    `[rom-read]` but the soak's `do_rom_read` never fired corrupted (488/488
-   calls sane) because item 1's new crash intervened first — the test is
+   calls sane) because a later-added crash intervened first — the test is
    **inconclusive, not refuted**. Needs a soak where `do_rom_read` actually
    corrupts again (as it did 2/2 in s85) to check whether the logged
    thread id/ctx match a nearby `[thr-resume]`/`[ost-wb]` event. This is
    iteration 2 of the ITERATION.md budget on this hypothesis (1 null so
    far) — one more inconclusive/null result and reassess per rule 8.
-3. **M3 — retry the `thr-resume bad=1` gate soak for a positive control
+   Blocked on items 1–2 the same way they're blocked on each other.
+4. **M3 — retry the `thr-resume bad=1` gate soak for a positive control
    (U3 still open).** s84 landed the gate (`lib/N64ModernRuntime/ultramodern/
    src/threads.cpp:198-238`, `[thr-resume-skip]`, exported + committed) but
-   three soaks since (s84, s85 x2, s86) all saw `bad_total=0` — gate still
-   unexercised. Same soak can serve items 1–3 at once.
-4. **M3 — check the Metal-shader-compiler SIGSEGV's reproducibility** (s83
+   four soaks since (s84, s85 x2, s86, s87) all saw `bad_total=0` — gate
+   still unexercised. Same soak can serve items 1–4 at once.
+5. **M3 — check the Metal-shader-compiler SIGSEGV's reproducibility** (s83
    spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no
    source on our side). Still only one data point.
-5. **M3 — confirm the s83 spline div0 guard actually engages.** 0/3 fires so
-   far (still 0 after s86); real fix by code inspection (genuine 0/0 IEEE
+6. **M3 — confirm the s83 spline div0 guard actually engages.** 0/4 fires so
+   far (still 0 after s87); real fix by code inspection (genuine 0/0 IEEE
    division) but no same-run positive control yet.
-6. **M3 — characterize `frameStartReset` SIGBUS if it recurs.** Demoted
-   from "dominant blocker" after s85: 0/2 repro soaks, 0/1 in s86. Only
-   worth dedicated attention again if it reappears; do not gate it
-   speculatively without a faulting instruction (no existing detector,
+7. **M3 — characterize `frameStartReset` SIGBUS if it recurs.** Demoted
+   from "dominant blocker" after s85: 0/2 repro soaks, 0/1 in s86, 0/1 in
+   s87. Only worth dedicated attention again if it reappears; do not gate
+   it speculatively without a faulting instruction (no existing detector,
    unlike thr-resume).
-7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once items 1–6 are clear:
+8. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once items 1–7 are clear:
    `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40; document phase timeline.
    Gate already keeps black off; residual S1 `fs` freeze (~3769–3861 plateau,
    s82/s85) may still stall animation — if stick marks show no pose change on
    a frozen frame, next is S1 FULL_SYNC for hangar-flight tasks (not
    leave-key, not wild-FB).
-8. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
+9. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` 3→0.
    Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
-9. Past the first sustained mission hold: expect further new failure classes (mission overlay
+10. Past the first sustained mission hold: expect further new failure classes (mission overlay
    DMA → missing-func / UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture
    corruption). Each new failure is its own work unit.
-10. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
+11. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
    — thread exhausted (s55–s58).** Prefer M3 mission-content work over reopening this section.
-11. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
+12. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
    carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user
    before committing there.
-12. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
-13. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+13. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
+14. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
-Done this session: added thread-identity fields (`thr_id`/`thr`/`ctx`) to
-the `[rom-read]` diagnostic to test the s85 shared-corruption-race
-hypothesis (`lib/`, exported + committed); rebuilt clean; ran one soak.
-`do_rom_read` never corrupted this run (488/488 calls sane) so the test is
-inconclusive, not refuted. The process still died — earlier than any
-prior soak (hold+~15s) — to a **7th, new** crash: a zero-width/height
-texture-decode assert in `RT64::TextureCache::queueGPUUploadTMEM`. Crash
-inventory is now 7 sites since s83; only 2 (spline NaN, thr-resume `bad=1`)
-have an actual code fix in place, the rest are characterized-but-open.
+Done this session (s87): added `ROGUESQ_LOG_TMEM_ZERO=1` LoadTile-field
+logging at the `uploadTexture` call site (`lib/rt64/src/hle/
+rt64_rdp_tmem.cpp`, exported + committed) to test s86's
+`queueGPUUploadTMEM` zero-size-assert hypothesis; rebuilt clean; ran one
+soak. `[tmem-zero-upload]` never fired (0/0) because the process died
+even earlier than s86 (hold+~3s) — to an **8th, new** crash: SIGBUS from
+`advancePlayerAnimationPhase` recursing into itself through an indirect
+call (`0x8006426C`) whose target is read from a fixed global callback
+slot (`0x80139968`), source-read hypothesis (stale/corrupted pointer) not
+yet confirmed live. Crash inventory is now 8 sites since s83; only 2
+(spline NaN, thr-resume `bad=1`) have an actual code fix in place, the
+rest — including both of this session's targets — are
+characterized-but-open, each one blocking the next from even being
+tested.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work

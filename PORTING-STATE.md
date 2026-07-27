@@ -6600,3 +6600,78 @@ actual code change in place.
   — same reasoning as the do_rom_read asserts: an assert catching a real
   degenerate case should stay loud until root-caused, not be silenced into
   a wrong-but-alive texture upload.
+
+## Session 87 (2026-07-27) — TMEM-zero-upload instrument landed but never fired; found an 8th, EVEN-EARLIER crash class
+
+Planned work unit (NEXT.md): log `LoadTile` fields at the `uploadTexture`
+call site (`lib/rt64/src/hle/rt64_rdp_tmem.cpp`) whenever
+`width==0 || height==0`, gated on new `ROGUESQ_LOG_TMEM_ZERO=1`, to
+discriminate s86's `queueGPUUploadTMEM` zero-size assert between "real
+degenerate LOADTILE" and "corrupted tile-sample fields (shared-race
+family)". Landed cleanly (`lib/rt64`, exported + committed), rebuild clean
+(`cmake --build . -j8`, exit 0, only pre-existing warnings).
+
+One soak (`tmemzero1`: `env ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_TMEM_ZERO=1
+PROBE_MODE=start_only HOLD_S=30 zsh
+scratch/s73_post_a_scene/run_mission_keys.sh tmemzero1 0 12`). Reached war
+room → AVAILABLE CRAFT → SELECT YOUR CRAFT → left via Start, same as
+s75+. Died at hold-iter 3 (~+3s post-leave, wall=23s from Start) — earlier
+than any prior soak, including s86's own queueGPUUploadTMEM assert
+(hold+~15s).
+
+**Discriminating test result: never ran.** `[tmem-zero-upload]` logged 0
+times (`grep -c` on the full 142K-line run.log) — the process died before
+any `uploadTexture` call ever saw a zero-width/height tile this run. Same
+shape as s86's own do_rom_read retest: the instrument is real and correct,
+but a newer, earlier-firing crash keeps preempting the population it needs
+to observe. Not a null on the TMEM hypothesis (iteration 1 of that budget,
+0/1 fires either way) — the test simply never got a chance to execute.
+
+**New finding: an 8th crash class, firing earliest yet.**
+```
+[CRASH] caught signal 10 (Bus error: 10), dumping stack:
+...
+3   RogueSquadron64Recomp   advancePlayerAnimationPhase + 2572
+4   RogueSquadron64Recomp   advancePlayerAnimationPhase + 2572
+5   RogueSquadron64Recomp   static_5_800AAD9C + 1160
+6   RogueSquadron64Recomp   static_5_800C6854 + 628
+7   RogueSquadron64Recomp   menuOverlayInit + 3512
+8   RogueSquadron64Recomp   mainGameLoop + 2400
+```
+Frames 3 and 4 are the identical host return address —
+`advancePlayerAnimationPhase` (guest `0x80062B04`,
+`symbol_files/main_overlay.txt:2998`) calling back into itself. Source
+read (`N64Recomp/RecompiledFuncs/funcs_14.c:8130-8153`) finds exactly one
+indirect call in the whole function: at guest `0x8006426C`
+(`jalr $v0`), `$v0` is loaded two instructions earlier from a **fixed
+global slot**, `*(uint32_t*)0x80139968` (`lui 0x8014; lw $v0,-0x6698($v0)`
+= `0x80140000 - 0x6698 = 0x80139968`), then dispatched through
+`LOOKUP_FUNC(ctx->r2)(rdram, ctx)`. This is a function-pointer callback
+table slot, not a static call — if whatever last wrote that slot pointed
+back at `advancePlayerAnimationPhase` itself (or `LOOKUP_FUNC` resolved
+the stale/corrupted pointer back to it), the call recurses with no
+visible base case in this path, consuming stack until it hits the guard
+page (SIGBUS, not SIGSEGV — consistent with a guard-page hit rather than
+a wild write). Not yet confirmed by logging the actual pointer value —
+this is a source-read hypothesis, one data point, not yet root-caused.
+
+**Crash inventory is now 8 distinct sites since s83.** Same pattern as
+every session since s84: whichever crash fires soonest wins the race, and
+fixing/gating the current leader only promotes whatever was next in line.
+Only two sites (spline NaN, thr-resume `bad=1`) have an actual code fix
+in place; the rest — including this one — are characterized-but-open.
+
+**Rules out / keep:**
+- The TMEM-zero-upload instrument (`ROGUESQ_LOG_TMEM_ZERO=1`) is real,
+  committed, and still the right way to answer s86's question — it just
+  needs a soak that survives long enough to reach a zero-size tile again.
+  Do not repeat this soak with the same env as the primary target a 3rd
+  time without addressing item 0 below first (ITERATION.md rule 8: this
+  is iteration 1 for the TMEM hypothesis, budget not yet exhausted, but
+  the *instrument* is now known to be gated behind this newer crash).
+- Do not chase this new crash by disassembling the live binary — the
+  source-level read (single indirect call, fixed global slot address)
+  already gives an actionable next step: log `ctx->r2` (the resolved
+  function pointer) and the raw slot value at `0x80139968` immediately
+  before the `jalr`/`LOOKUP_FUNC` call, gated on a new env var, to
+  confirm/refute self-recursion before attempting any fix.

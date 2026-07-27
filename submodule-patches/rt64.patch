@@ -3253,6 +3253,51 @@ index d1a9f4e..7025af8 100644
          // ROGUESQ_LOG_PIPELINE (stage 1) — count drawTexRect input. Combined
          // with the GPU-side stage 2.5 counter, this shows how many texrects
          // enter the pipeline vs how many reach the for-loop.
+diff --git a/src/hle/rt64_rdp_tmem.cpp b/src/hle/rt64_rdp_tmem.cpp
+index 6051f4e..e4a8fc3 100644
+--- a/src/hle/rt64_rdp_tmem.cpp
++++ b/src/hle/rt64_rdp_tmem.cpp
+@@ -6,6 +6,8 @@
+ 
+ #include <cassert>
+ #include <cinttypes>
++#include <cstdio>
++#include <cstdlib>
+ 
+ #include "xxHash/xxh3.h"
+ 
+@@ -50,6 +52,31 @@ namespace RT64 {
+     }
+ 
+     uint64_t TextureManager::uploadTexture(State *state, const LoadTile &loadTile, TextureCache *textureCache, uint64_t creationFrame, uint16_t width, uint16_t height, uint32_t tlut) {
++        // ROGUESQ_LOG_TMEM_ZERO=1 (s87) — s86 found queueGPUUploadTMEM's
++        // assert(!decodeTMEM || (width>0 && height>0)) firing for this
++        // (decodeTMEM=true) path. Log the LoadTile fields BEFORE the queue
++        // call so a crashing call still leaves its inputs in the log (same
++        // pattern as [rom-read], s85). Discriminates: sane-looking tile
++        // fields (e.g. lrs<=uls or lrt<=ult, a real empty-rect load) =>
++        // legitimate degenerate LOADTILE; fields outside any real N64 tile
++        // descriptor's range => corrupted state, another shared-race datum.
++        if ((width == 0 || height == 0) && std::getenv("ROGUESQ_LOG_TMEM_ZERO")) {
++            fprintf(stderr,
++                "[tmem-zero-upload] w=%u h=%u fmt=%u siz=%u line=%u tmem=%u "
++                "pal=%u cms=%u cmt=%u masks=%u maskt=%u shifts=%u shiftt=%u "
++                "uls=%u ult=%u lrs=%u lrt=%u tlut=0x%X\n",
++                (unsigned)width, (unsigned)height,
++                (unsigned)loadTile.fmt, (unsigned)loadTile.siz, (unsigned)loadTile.line,
++                (unsigned)loadTile.tmem, (unsigned)loadTile.palette,
++                (unsigned)loadTile.cms, (unsigned)loadTile.cmt,
++                (unsigned)loadTile.masks, (unsigned)loadTile.maskt,
++                (unsigned)loadTile.shifts, (unsigned)loadTile.shiftt,
++                (unsigned)loadTile.uls, (unsigned)loadTile.ult,
++                (unsigned)loadTile.lrs, (unsigned)loadTile.lrt,
++                (unsigned)tlut);
++            fflush(stderr);
++        }
++
+         const uint8_t *TMEM = reinterpret_cast<const uint8_t *>(state->rdp->TMEM);
+         uint64_t hash = TMEMHasher::hash(TMEM, loadTile, width, height, tlut, TMEMHasher::CurrentHashVersion);
+         if (hashSet.find(hash) == hashSet.end()) {
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
 index 10f98af..8122825 100644
 --- a/src/hle/rt64_state.cpp
