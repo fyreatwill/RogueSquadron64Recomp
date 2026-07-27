@@ -45,6 +45,12 @@ CURRENT-TRUTH "Next steps" (or NEXT.md if present). Before building anything:
    uncommitted patches. If you edit anything under lib/, run
    `./submodule-patches/export.sh` and commit the refreshed patches in the
    same iteration, or the work is lost at the next reset.
+10. Headless permission matching is a PREFIX match on the command string, so
+   a leading env assignment breaks it: `PROBE_MODE=1 zsh run.sh` does not
+   match the `zsh` allow rule and gets DENIED. Write env-prefixed commands
+   as `env PROBE_MODE=1 zsh run.sh` (`env` is allowlisted). Exception:
+   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake ...` is
+   allowlisted verbatim and works either way.
 
 ## Declare your outcome honestly (the Stop hook checks this)
 Write ONE of these words to `scratch/agent/OUTCOME`:
