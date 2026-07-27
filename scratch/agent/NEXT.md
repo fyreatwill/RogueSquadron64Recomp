@@ -1,109 +1,103 @@
-# NEXT work unit — find what writes/aliases string-table data into voice+0x0 at in-bounds indices (s122)
+# NEXT work unit — pin down the 18th crash class's real fault site (s123)
 
-s121 closed both the "scan runs out of bounds" and "loop-bound global
-itself corrupted" branches for the `voice+0x0` mystery (direct,
-sign-extension-fixed reads of `count=`/`arrayBase=` were sane, and every
-observed `idx` was *inside* the live allocation, not past it). Read
-PORTING-STATE.md's Session 121 entry before doing anything else; this
-file only has the actionable summary.
+s122 source-refuted literal H1 for the `voice+0x0` mystery
+(`allocateSongChannelArray` already zero-inits every live voice's byte 0
+right after `rs_malloc`, unconditionally — see PORTING-STATE Session 122)
+and landed `ROGUESQ_LOG_ASSET_ALLOC=1` to test H2's address-coincidence
+question, but got 0/2 same-run corruption positive controls (the
+`[voice-active-gate-nz]` instrument never fired in either soak) — so
+that specific test remains **untested**, not refuted. Read PORTING-STATE's
+Session 122 entry before doing anything else; this file only has the
+actionable summary.
 
-## Where this leaves the M3 voice-corruption thread
+The 2nd `assetalloc` soak died to a **2nd occurrence of the already-
+catalogued 18th crash class** (first seen s108, `docs/CURRENT-TRUTH.md`
+"M3" section, nearest-symbol `heapFreeListDequeue + 12704` via
+`submitSceneNodeRender` ← `processSceneNode` ← `traverseSceneGraphRecursive`
+← `setupCameraMatrices`). Per this codebase's own established convention
+(every other class in the hangar-tick-crash family — 12th, 16th, 17th —
+got source-read + guarded on its 2nd recurrence), this is now the
+highest-information-value next step: a confirmed-recurring, uninstrumented
+crash beats a 3rd blind attempt at a co-occurrence that's been null twice.
 
-Two independent lines of evidence (s118's widened dump, s121's
-bounds-checked read) agree: the byte(s) at `voice+0x0` for real,
-in-bounds voice-array slots contain recognizable ASCII string-table
-fragments (`expl_tex2`, `x10`/`x11`, `explo_te`, `star_`, `atpt_load`,
-`mat_6`, `xenlight`, `xckpit`, etc. — `main_overlay.txt`'s own comments
-confirm these are real asset/texture names, not noise). The open
-question is now squarely: **what other code writes into (or aliases)
-the voice array's memory with string-table content, at legitimate
-per-voice offsets, without ever touching the count/base globals?**
+## Why this beats a 3rd asset-alloc soak
 
-Competing hypotheses to discriminate between:
-- (H1) **Heap reuse, not aliasing** — a texture/asset name-table buffer
-  is allocated, used, and freed, and its memory is later handed back
-  out as (or overlaps) the voice array's allocation from `rs_malloc`,
-  without the voice array itself being zeroed on reuse. This would
-  mean `voice+0x0` isn't being written by anyone *as a voice field* —
-  it's stale leftover content from a completely different, already-
-  freed structure that happened to share the address range.
-- (H2) **Genuine aliasing** — two live pointers (the voice array and
-  some name-table structure) both resolve to overlapping memory at the
-  same time, meaning something is currently writing string data into
-  what the voice code treats as its own array (a real corruption, not
-  just stale reuse).
-- (H3) **Same source as `devAddr`'s corruption** (s94-104's parked
-  thread) — already weakened by s118 (0 literal byte-matches between
-  same-run `devAddr` corruption and the voice-array strings), but not
-  fully closed; keep as a lower-priority fallback, not the lead
-  hypothesis.
+Rule 8 (3 consecutive same-hypothesis attempts with no discriminating
+result → stop and reassess) isn't triggered yet (2/3 used), but the
+asset-alloc/voice-gate co-occurrence soaks aren't just non-discriminating
+— they're not even reaching the condition being tested (0/2
+`[voice-active-gate-nz]` fires at all). A 3rd attempt with the same soak
+shape has no reason to behave differently. The 18th-class crash, by
+contrast, just went from "1 occurrence, not chased" to "2 occurrences,
+same family's own trigger condition met" — a genuinely new, actionable
+data point, not a repeat of the same null.
 
-## The discriminating measurement
+## The work unit
 
-H1 vs H2 splits cleanly on **timing**: if it's H1 (stale reuse), the
-string content at `voice+0x0` should already be present *immediately
-after* `allocateSongChannelArray`'s `rs_malloc` returns — before any
-per-tick voice code runs — because it's inherited straight from
-whatever the allocator handed back. If it's H2 (live aliasing), the
-array should read clean/zeroed immediately after allocation and only
-pick up string content *later*, coincident with some other subsystem's
-write.
+1. **Source-read first** (do not instrument blind). Find
+   `submitSceneNodeRender` in the recompiled tree (`grep -rn
+   "submitSceneNodeRender" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/*.c`
+   — it will show up as a `RECOMP_FUNC` definition in exactly one file
+   and as call-site comments elsewhere) and read the function body.
+   Remember: this family's crash sites have consistently turned out to
+   be an unguarded table-lookup-then-dereference (12th, 16th class) or
+   an unguarded arg-pointer deref (11th, 14th class) — check for that
+   shape first, matching the `_composeNpcOrientationMatrix`/
+   `_activateAnimationKeyframe`/`_projectModelBoundsToScreen` template
+   already in `fixup_game_funcs.py` (search for those names to see the
+   guard pattern: entry diagnostic + `goto` to the function's own real
+   epilogue label, `U32()`-truncated bounds check — s99's own postmortem
+   flags the truncation step as mandatory, a bare 64-bit `ctx->rN`
+   compare against 32-bit bounds is a documented false-positive trap).
+2. **Do not trust "nearest exported symbol" as the actual crash site.**
+   `heapFreeListDequeue + 12704` is known-imprecise for this family
+   (large per-frame offsets are normal here, not a symbolication bug) —
+   the real fault could be many instructions past that export, possibly
+   in a different (static/inlined) function entirely. If `nm`/symbol
+   lookup on the built binary can narrow the offset further, do that
+   before guessing which recompiled C function actually contains
+   guest address implied by the offset.
+3. **If a clear unguarded-deref shape is found**, land a guard following
+   the exact template already used 3 times in this file (entry log +
+   `goto` real-epilogue + `U32()`-safe bounds check), full delete-all
+   regen, audit the patch report for `x1`, rebuild, one soak to check
+   for a clean negative control (this function's own guard doesn't fire
+   0/N is fine, that's expected — positive control on the crash itself
+   recurring is the harder bar, don't require it before landing the
+   guard, precedent: s99-s110 all landed guards without a same-session
+   positive control).
+4. **If no clear deref shape is found** (this class might be genuinely
+   inside `heapFreeListDequeue` itself, i.e. real heap/allocator
+   corruption rather than a guest-code bug), do not force a guard —
+   report it as RT64/allocator-internal (like the 13th/15th/19th classes)
+   and move to the next item below instead.
 
-**Concrete next step**: extend the existing `_song_array_alloc_patch`
-(`funcs_23.c`, `ROGUESQ_LOG_SONG_ARRAY_LIFECYCLE=1`) to dump the first
-N bytes (suggest 0x88*4 = one full stride times a few slots, matching
-`_voice_active_gate_patch`'s own dump width) of the freshly-`rs_malloc`d
-array **immediately after allocation, before any zeroing the function
-itself might do** (check the source around the `rs_malloc` call in
-`allocateSongChannelArray` first — if it already memsets the buffer,
-that changes where to hook). Compare against the `[voice-active-
-gate-nz]` dumps already captured (s118/s121) for the same session's
-addresses.
+## Opportunistic, no extra cost
 
-- **If the string content is already present right after `rs_malloc`
-  returns (before any zeroing, or the code has no zeroing step at
-  all)**: H1 confirmed — this is `rs_malloc` handing back
-  previously-used, non-zeroed memory from a freed name-table
-  allocation, and the "bug" (if any) is that the game code assumes
-  `rs_malloc` zeroes or that voice slots get explicitly zeroed and they
-  don't. Next step would be finding `rs_malloc`'s implementation
-  (recompiled or LLE?) and confirming whether it zeroes memory by
-  contract.
-- **If the array reads clean immediately after allocation and only
-  later shows string content**: H2 confirmed — something else writes
-  after the fact. Next step: grep for name-table-populating functions
-  (`loadExplosionTextures` per `main_overlay.txt`'s comment, or
-  whatever function the string set resolves to) and check whether its
-  buffer's address ever coincides with the voice array's `arrayBase`
-  in the same run (log both pointers, diff).
+Keep `ROGUESQ_LOG_ASSET_ALLOC=1` and `ROGUESQ_LOG_VOICE_ACTIVE_GATE=1`
+armed in whatever soak this work unit runs (both already landed, free to
+leave on) — if `[voice-active-gate-nz]` happens to fire this time, that's
+a 3rd, free data point for the H2 coincidence question without spending
+a dedicated soak on it.
 
 ## Do not
 
-- Do not re-run the idx-vs-count `songlifecycle` soak shape again —
-  closed, 3/3 attempts (`songlifecycle1/2/3`), s121 gave a clean
-  discriminating result overturning s120's own framing. Any 4th
-  attempt on this exact question would violate rule 8.
-- Do not re-test the `shutdownAudioEngine`/`-0x6904`/`-0x6908` alias
-  hypothesis as causal here — refuted 2/2 (`[shutdown-audio-free]`
-  fired 0 times both soaks, s120). Still a real bug worth fixing
-  someday, just not causal to this thread.
+- Do not re-run the `songlifecycle` idx-vs-count soak shape — closed,
+  3/3 attempts, s121 gave a clean discriminating result (PORTING-STATE
+  s121).
+- Do not re-test the `shutdownAudioEngine` alias hypothesis as causal —
+  refuted 2/2 (s120).
 - Do not re-litigate hypothesis (b) (`musyxInitVoiceFromSample`
-  comparison, s117-119) — closed.
-- Do not write any new `MEM_W`/`MEM_HU`/`MEM_BU` call with a bare hex
-  literal for a `lui`-computed base — always go through
-  `(gpr)(int32_t)(0Xnnnn << 16)` or an in-scope `ctx->rN` that already
-  holds a correctly sign-extended value. This exact bug cost s120 most
-  of a session; `_voice_active_gate_patch` is the template to copy.
-- When comparing two independently-logged instruments' values, do
-  **not** infer temporal ordering from raw log-file line order across
-  different call sites/threads unless they share an explicit sequence
-  number — s121 showed this produces false "the value was already X
-  before it was written" artifacts. If cross-instrument timing matters,
-  add a shared monotonic counter or timestamp field to both patches
-  before drawing conclusions from proximity.
+  comparison) — closed s117-119.
+- Do not treat s122's `caller_ra=0x00000000` (all 6 `[asset-alloc]`
+  fires, both soaks) as a corruption signal — s92 already established
+  this is routine (thread-dispatch-context artifact), seen identically
+  in 3 unrelated entry logs.
+- When landing a new guard, always truncate a `ctx->rN` value through
+  `U32()` before comparing against 32-bit literal bounds — s99's own
+  guard had a 100%-false-positive bug from skipping this.
 
-## Regen reminder (delete-first is mandatory; audit every run — s121
-confirmed the duplication bug is intermittent, not fixed)
+## Regen reminder (delete-first is mandatory; audit every run)
 
 1. Delete all existing output first (do NOT skip this):
    ```
@@ -119,13 +113,11 @@ confirmed the duplication bug is intermittent, not fixed)
    `cd .../N64Recomp && ./build/N64Recomp rogue_squadron.toml` as a
    single allowlisted command)
 4. `python3 /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-   — **read the full report, not just grep for your own patch** —
-   confirm every line's `x{n}` matches its expected/intentional
-   multiplicity (audio gate `x3`, musyxKeyOnVoice div-traps `x8`,
-   everything else `x1`).
+   — read the full report, not just grep for your own patch — confirm
+   every line's `x{n}` matches its expected/intentional multiplicity
+   (audio gate `x3`, musyxKeyOnVoice div-traps `x8`, everything else `x1`).
 5. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8`
-   — grep for `error:` explicitly; a clean exit does not guarantee no
-   duplicate-but-non-erroring patches (see item 0 in CURRENT-TRUTH).
+   — grep for `error:` explicitly.
 6. Soak via `env <FLAGS> PROBE_MODE=start_only HOLD_S=30 zsh
    scratch/s73_post_a_scene/run_mission_keys.sh <tag> 5 8`.
 
@@ -137,6 +129,6 @@ superseded detail, paired with a real experiment — not on its own.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git
 checkout, not a `lib/` submodule, with uncommitted changes across
-s90-121 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
+s90-122 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
 Same posture as the `rogue_squadron64` sibling checkout flagged since
 s54. Worth asking the user whether/how to commit that history.

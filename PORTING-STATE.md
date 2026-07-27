@@ -10505,3 +10505,127 @@ No new patches landed this session — reused s120's `_voice_active_gate_
 patch` (already fixed) and `_song_array_alloc_patch` as-is. No `lib/`
 edits. `N64Recomp` checkout unchanged from s120 (still carries s90-120's
 accumulated uncommitted history, same flagged-not-actioned posture).
+
+## Session 122 (2026-07-27) — source-read refutes literal H1 for the voice+0x0 mystery (allocateSongChannelArray explicitly zero-inits every live voice slot's byte 0), pivots to a new address-coincidence instrument for H2, and incidentally catches a 2nd occurrence of the already-catalogued 18th crash class
+
+**Step 1: source read before instrumenting (NEXT.md's own prescribed
+first move).** Read `allocateSongChannelArray` (`funcs_23.c`) in full
+around the single `rs_malloc` call that establishes both `-0x6904` and
+`-0x6908` (the voice-array base, s120). Found a loop (`L_8008F118`,
+guest `0x8008F118`-`0x8008F168`) that runs unconditionally for every
+index `0..voiceCount-1` (from the freshly-read `-0x6900` half-word) and
+writes `MEM_B(0x0, base+idx*0x88) = 0` — i.e. an explicit, per-voice
+zero-init of exactly the byte NEXT.md's H1/H2 split is about, executed
+synchronously inside the allocator function itself, before the pointer
+is stored anywhere else or used by any other subsystem. This closes
+NEXT.md's own contingency ("if it already memsets the buffer, that
+changes where to hook") — it does, functionally, for byte 0 specifically
+(the loop also touches offsets 0x84/0x85, unrelated to this question).
+
+**Consequence:** literal H1 ("stale rs_malloc leftover persisting
+unmodified through use") is refuted at the source level, not just
+weakened — `voice+0x0` is provably `0` for every live index immediately
+after every call to `allocateSongChannelArray`, regardless of what
+`rs_malloc` handed back. Whatever content s118/s121 observed later must
+be written *after* this zero-init completes, by something else. This
+did not require a rebuild or a soak; it is a single-source (code
+reading) but deterministic result — the code either has this loop or it
+doesn't, and it does.
+
+**Step 2: pivoted to NEXT.md's H2 branch** ("grep for name-table-
+populating functions... check whether its buffer's address ever
+coincides with the voice array's `arrayBase`"). `main_overlay.txt`
+names `loadExplosionTextures` (`0x8006108C`) as the likely producer of
+the `explo_tex` strings s118 found; it delegates to the generic asset
+loader `loadAssetAndIterateSubchunks` (`0x80054EF0`, `funcs_11.c`,
+4 known callers per the symbol comment: `allocAndInitParticlePool`,
+`handleHUD`, `loadExplosionTextures`, `loadTopCloudsAsset`), which calls
+the **same** `rs_malloc` allocator as the voice array for its DMA
+target buffer.
+
+Landed `ROGUESQ_LOG_ASSET_ALLOC=1` (`_asset_alloc_patch`, `funcs_11.c`,
+right after the first `rs_malloc(size, align=4)` call in
+`loadAssetAndIterateSubchunks` returns) logging the buffer pointer
+(`ctx->r22`), requested size (`ctx->r20`), and the caller's return
+address read back off the stack slot saved at function entry
+(`MEM_W(0x64, ctx->r29)` — not `ctx->r31`, which is clobbered by this
+function's own internal `jal`s by that point).
+
+Full delete-all → `make_elf.py` → `regen_n64recomp.sh` →
+`fixup_game_funcs.py` → `cmake --build` cycle: clean, every patch report
+line `x1` (or its documented multiplicity: audio gate `x3`, musyxKeyOnVoice
+div-traps `x8`), no duplication this cycle, build exit 0 (new
+`loadAssetAndIterateSubchunks rs_malloc diagnostic patched x1` line
+confirmed the new patch landed exactly once).
+
+**Soak 1 (`assetalloc1`, `ROGUESQ_LOG_SONG_ARRAY_LIFECYCLE=1
+ROGUESQ_LOG_ASSET_ALLOC=1 PROBE_MODE=start_only HOLD_S=30`):**
+`[song-array-alloc]` fired 6x (`ptr` cycling `0x80169460`/`0x801714D0`/
+`0x8018D4A0`, `voiceCount` 15-20). `[asset-alloc]` fired 6x, **all with
+the same `ptr=0x8062B850`** despite very different sizes (76960, 72900,
+4224, 21024, 320, 13616 bytes) — consistent with a reused scratch/temp
+allocation slot (freed and immediately re-granted the same address by
+the allocator), not itself surprising. `caller_ra=0x00000000` on all 6.
+Process died to the familiar `do_rom_read` SIGSEGV (9th+ occurrence,
+byte-identical family signature). **Gap noticed post-hoc**: this soak
+did not arm `ROGUESQ_LOG_VOICE_ACTIVE_GATE`, so it captured no
+corruption-observation data at all — an oversight in the soak design,
+not a result.
+
+**Soak 2 (`assetalloc2`, adds `ROGUESQ_LOG_VOICE_ACTIVE_GATE=1` to fix
+the gap):** Same `[song-array-alloc]` (6x) and `[asset-alloc]` (6x,
+same constant `ptr=0x8062B850`, same sizes, same `caller_ra=0x0`)
+pattern as soak 1 — reproducible. But `[voice-active-gate-nz]` fired
+**zero times** even with the flag armed; the process died much earlier
+than soak 1 (hold-iter 5 vs the full 30s window) to a SIGBUS with
+backtrace `heapFreeListDequeue + 12704` ← `submitSceneNodeRender` ←
+`processSceneNode` ← `traverseSceneGraphRecursive` ← `setupCameraMatrices`
+← `static_5_800AAD9C` ← `static_5_800C6854` ← `menuOverlayInit`.
+
+**Address-coincidence result (H2's specific test): in both soaks, the
+asset-loader's buffer (`0x8062B850`) never overlapped or neighbored any
+voice-array pointer observed in the same run** (`0x8016xxxx`-`0x818Dxxxx`
+range, ~5 MB below `0x8062B850`). This is real data but **not a
+result** by CLAUDE.md's own bar — neither soak captured a same-run
+`[voice-active-gate-nz]` positive control, so there is no confirmed
+corruption event in either run to correlate the address data against.
+2 of the 3 allowed attempts on this exact co-occurrence question are
+now used (rule 8), both null on the corruption side.
+
+**Incidental finding, likely higher value than a 3rd blind attempt:**
+`assetalloc2`'s crash is a **2nd occurrence of the 18th crash class**
+already catalogued in `docs/CURRENT-TRUTH.md` (first seen s108, 1
+occurrence, flagged "not instrumented yet per the 2nd-recurrence
+convention" — the exact convention this soak just satisfied). The
+nearest-exported-symbol attribution (`heapFreeListDequeue + 12704`) is
+documented as imprecise for this family (large per-frame offsets are
+normal, not a symbolication error), so the actual crash site still
+needs a source read before a guard can be written, same as every prior
+class in this family (12th/16th/17th).
+
+**Next steps, in order:** (1) source-read the `submitSceneNodeRender`/
+`processSceneNode` chain to pin the 18th class's actual crash site
+(guard-pattern precedent: s99/s100/s110) — now backed by 2 occurrences,
+a stronger claim than any pending asset-alloc soak. (2) Keep
+`ROGUESQ_LOG_ASSET_ALLOC` armed opportunistically (it's free, already
+landed) in future soaks to accumulate more coincidence-test data points
+without spending a soak specifically on it. (3) If a 3rd asset-alloc
+soak is ever run, consider a longer `HOLD_S` or a different scene-entry
+schedule to actually reach a `[voice-active-gate-nz]` firing before the
+crash family preempts it — 0/2 so far is not yet informative either way.
+
+Did not re-run the `songlifecycle` idx-vs-count soak (closed 3/3, s121)
+or the `shutdownAudioEngine` alias test (closed 2/2, s120) per NEXT.md's
+do-not list. Did not touch hypothesis (b) (`musyxInitVoiceFromSample`
+comparison, closed s117-119).
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: added `_asset_alloc_patch` (new,
+`ROGUESQ_LOG_ASSET_ALLOC` env gate) targeting `loadAssetAndIterateSubchunks`'s
+first `rs_malloc` call site in `funcs_11.c`. Full delete-all regen +
+rebuild ran clean (verified via patch-report audit, per s120/s121's
+mandatory-audit rule). No `lib/` edits this session — no
+`submodule-patches/export.sh` needed. `N64Recomp` checkout still carries
+s90-122's accumulated uncommitted history (same flagged-not-actioned
+posture as prior sessions; `rogue_squadron64` sibling checkout likewise
+unchanged, flagged since s54).

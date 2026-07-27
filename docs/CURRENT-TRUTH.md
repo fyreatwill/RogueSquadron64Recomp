@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s121)
+## Next steps, in order of expected value (s122)
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121).** s121 ran the identical delete-all →
@@ -869,6 +869,51 @@ cost three sessions before the recursive mutex.
    what writes/aliases string-table data into `voice+0x0` at real,
    in-bounds array offsets — a name-table aliasing or heap-reuse
    question, not a bounds-check bug. Full detail: PORTING-STATE s121.
+   **s122:** source-read `allocateSongChannelArray` before instrumenting
+   (per NEXT.md's own contingency) and found it already contains an
+   explicit zero-init loop (`funcs_23.c`, right after the `rs_malloc`
+   call) that writes `0x0` to offset `0x0` of *every* voice slot from
+   index 0 to the live `voiceCount`, unconditionally, before the pointer
+   is used anywhere else. This **refutes literal H1** ("stale rs_malloc
+   leftover persisting unmodified into use") as worded — `voice+0x0` is
+   guaranteed zero for every live index immediately after every call to
+   this function, so any nonzero string content observed later (s118,
+   s121) must come from a write strictly *after* this allocation-time
+   zero-init, not from unzeroed malloc memory; also confirms NEXT.md's
+   own "if it already memsets the buffer, that changes where to hook"
+   branch — the planned dump-right-after-malloc probe would have been a
+   foregone-conclusion null. Pivoted to NEXT.md's H2 branch instead:
+   landed `ROGUESQ_LOG_ASSET_ALLOC=1` on `loadAssetAndIterateSubchunks`
+   (`funcs_11.c:0x80054F48`, the generic asset-DMA loader named as the
+   likely producer of the `explo_tex`/`atpt_load` strings, shares the
+   same `rs_malloc` allocator) to log its buffer's pointer/size/caller
+   for an address-coincidence diff against `[song-array-alloc]`. Ran 2
+   soaks (`assetalloc1`, `assetalloc2`): the asset buffer's address was
+   **constant** (`0x8062B850`) across 6 differently-sized loads within
+   each run (consistent with a reused scratch/temp allocation slot) and
+   **never overlapped or neighbored** either run's voice-array pointers
+   (`0x8016xxxx`-`0x818Dxxxx` range vs `0x8062Bxxx`, ~5 MB apart) — but
+   `[voice-active-gate-nz]` (the corruption-observation instrument,
+   armed explicitly in the 2nd soak) fired **zero times in both runs**,
+   so neither soak captured a same-run corruption event to correlate
+   against. Per the null-result-needs-a-positive-control rule, this is
+   an **untested** result for H2's coincidence question, not a
+   refutation — 2/3 allowed attempts on this exact co-occurrence used,
+   0/2 hits. `caller_ra` read `0x00000000` on all 6 fires both runs,
+   matching s92's already-established "ra=0 is routine" finding
+   (thread-dispatch-context artifact, not diagnostic) — the instrument
+   as landed cannot yet distinguish which of the loader's 4 known
+   callers fired. Incidental finding: `assetalloc2` died to a **2nd
+   occurrence of the already-catalogued 18th crash class**
+   (`heapFreeListDequeue`-area SIGBUS via `submitSceneNodeRender` ←
+   `processSceneNode` ← `traverseSceneGraphRecursive` ←
+   `setupCameraMatrices`, first seen s108 as a 1-off) — per this
+   family's own established convention ("not instrumented yet per the
+   2nd-recurrence convention"), it is now due for the same source-read +
+   guard treatment already applied to the 12th/16th/17th classes,
+   arguably higher expected value right now than a 3rd blind attempt at
+   the rare asset-alloc/voice-gate co-occurrence. Full detail:
+   PORTING-STATE s122.
 
 -2. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
