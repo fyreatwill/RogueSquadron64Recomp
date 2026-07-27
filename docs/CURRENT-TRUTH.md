@@ -889,6 +889,53 @@ cost three sessions before the recursive mutex.
    the numbering is historical, not the same thing — `funcs_40.c`,
    guard at s110, 5 sites A-E already guarded). Full detail:
    PORTING-STATE s131.
+   **s132 (Thread A re-audit, last function, `updateHangarBayScene`):**
+   the **biggest hit in the whole series** — a full-body sweep (all 32
+   occurrences of a `-0x25A4` object-field load, a mechanism entirely
+   separate from the already-guarded A-E `-0x2770`-family table) found
+   **26 distinct unguarded pointer-chase sites** (3 of the 32 are safe —
+   computed address passed only to a callee, never locally
+   dereferenced; 2 more share one dereference through a common merge
+   label and got a single guard). Verified by direct source read at 3
+   sample sites before committing to the fix (a subagent enumerated all
+   32; independent spot-checks matched its table exactly). Guarded all
+   26 (`ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD`, sites G1-G29, same
+   U32()-truncated 0x80000000-0x80800000 bound and shared
+   `L_hangarbay_guard_exit` exit as A-E), full delete-all regen + clean
+   build, patch report audited (26/26 exactly, no duplicates — 3rd
+   clean delete-all cycle in a row, further softening s120's "can
+   happen" finding though not this session's focus). **Final Thread A
+   tally: 6 hits, 2 clean, of 8 functions audited — the audit series
+   opened at s126 is now COMPLETE.**
+   Soak (`hangarbay1`, `PROBE_MODE=start_only HOLD_S=30`, all 26 new
+   sites + the 5 old A-E sites + every other family's guard/diagnostic
+   flag armed): **0/0 fires on both the new and old hangar-bay-scene
+   guard families** — no positive control for either this run. Process
+   died **even earlier than s131's already-earliest death** — essentially
+   immediately after the single Start probe, before hold-iter 1
+   completed (vs. s131's hold+~2s). Crash: SIGBUS with a **clean,
+   unambiguous symbolicated backtrace** (real function names resolved
+   directly, no nearest-symbol ambiguity or ASLR-slide caveat needed
+   this time) inside `emitAllocatedDLCommand` (called from
+   `submitSceneNodeRender + 20872`) ← `processSceneNode` ←
+   `traverseSceneGraphRecursive` (x2 frames) ← `setupCameraMatrices` ←
+   `runHangarSelectionFrame` ← `runHangarMenuFromOverlay` ←
+   `menuOverlayInit` — a genuinely **new, previously uncatalogued** crash
+   site (not the s131 `heapFreeListDequeue` nearest-symbol guess; a
+   different callee of `submitSceneNodeRender` entirely, unrelated to
+   the free-list idiom s123/s131 guarded). Controls: `thr-resume bad=1`
+   0/118457 (U3 stays closed, 6th+ straight session); `anim-recurse`
+   fired 3266/3266 (positive control good); `anim-tex-stream` 4200,
+   `hangar-entry` 2, both no crash; `tmem-zero` 0/0 (8th straight null);
+   every other guarded family (compose-npc, dlentry, projbounds,
+   scene-node-list) 0 fires — none of the by-now-large guarded set is
+   implicated in this run's death. Side note worth carrying forward:
+   this crash's clean symbolication suggests the built-in crash handler
+   *can* resolve real names reliably when it has them, which may mean
+   s131's "nm/ASLR-slide" concern is specific to cases where the
+   handler itself falls back to nearest-symbol, not a blanket problem
+   with every crash log — worth re-examining if a future "nearest-symbol"
+   crash reappears. Full detail: PORTING-STATE s132.
    **s118:** ran the exact discriminating test above (32-byte dump at
    `voice+0x0` nonzero hits, same-run vs. `musyx-dma-call`). The dumps
    are long readable ASCII strings, not raw garbage — e.g. `"explo_

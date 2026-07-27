@@ -11595,3 +11595,163 @@ committed — sibling checkout). This repo: `build/` rebuilt binary
 `scratch/s73_post_a_scene/guard_s131/` (soak logs, not committed —
 scratch), `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
 `scratch/agent/NEXT.md` (this write-up).
+
+## Session 132 (2026-07-27) — Thread A re-audit, last remaining function (`updateHangarBayScene`): full-body sweep found 26 previously-unguarded pointer-chase sites (a distinct `-0x25A4` idiom, not the already-guarded A-E table) — the biggest hit in the whole audit series; Thread A is now COMPLETE (6 hits, 2 clean, of 8); soak with all 26 new guards armed found 0/0 fires but died even earlier than ever to a genuinely new, cleanly-symbolicated crash inside `emitAllocatedDLCommand`
+
+**Starting point:** `scratch/agent/NEXT.md` (as left by s131) named exactly
+one remaining Thread A work unit: audit `updateHangarBayScene`
+(`funcs_40.c`, guard landed at s110, 5 sites A-E already guarded) the
+same way s126-131 audited the other 7 functions — read the function to
+its own closing brace looking for a second, still-unguarded deref of a
+raw incoming argument any existing guard in that function already
+protects.
+
+**What the audit found.** `updateHangarBayScene` (guest `0x800AB658`,
+`static_5_800AB658`) is ~6875 lines, by far the largest function in
+this whole audit series (the next largest, `submitSceneNodeRender`, is
+~2746). Direct source reading (no subagent) confirmed the 5 existing
+A-E guards are all instances of one idiom: an index computed from a
+fixed `0x800D`-lui global table (`...-0x2770`/`-0x27D0`/`-0x27C0`)
+dereferenced at offset `0xC` to yield a second pointer, which is what
+each guard actually range-checks before its own further dereference.
+Two "sibling reload" patterns inside those same clusters (the same
+already-checked address re-read 1-2 more times a few instructions
+later, before any write could have touched it) are safe by
+construction — not new bugs, same reasoning as prior sessions' "same
+address, no write in between" false-lead category.
+
+A separate, completely unrelated idiom was then found: 32 places in
+the function read a fixed struct field at offset `-0x25A4` off some
+register (an array-of-structs base pointer — one occurrence,
+`0x800AC7BC`, proven by direct read to be the exact same fixed
+`0x800D0000` global the A-E table lives near; most others reached
+through per-call registers whose own value traces back to that same
+global via a `lui 0x800D`/copy chain). Dispatched a background Explore
+agent to classify all 32 occurrences (schema: does the loaded value
+get combined with a computed byte-index and then dereferenced locally
+with `MEM_W`/`MEM_BU`, with zero range check anywhere?) — it reported
+29 "yes" (a real unguarded pointer chase) and 3 "no" (computed address
+passed only as a callee argument, never locally dereferenced). Verified
+the subagent's report against 3 independent direct reads (lines
+7395-7414, 12195-12216, and the shared-merge-point region at
+13925-13953) — all three matched exactly, including one subtlety the
+subagent caught that a naive read would miss: two of the 29 "yes" rows
+(the two paths that both jump into label `L_800ADB18`) share a single
+dereference through that merge point, collapsing 29 rows to **26**
+distinct guard-insertion points.
+
+**The fix.** Extracted the exact original 2-line anchor text (asm
+comment + C statement) for all 26 sites via direct `Read`/`python3`
+inspection (not hand-typed), confirmed via `grep -oE` that none of the
+26 hex addresses repeat anywhere else within `funcs_40.c` (so a plain
+per-address regex anchor is unambiguous without needing extra
+disambiguating context, except at the shared-merge-point site where
+the preceding `L_800ADB18:` label was included anyway for clarity).
+Landed a parametrized template + `(site, reg, pattern)` table in
+`fixup_game_funcs.py` (same shape as s131's `GUARD2`/`GUARD3` loops),
+reusing the function's existing `L_hangarbay_guard_exit` epilogue
+label and the same `U32()`-truncated `[0x80000000, 0x80800000)` bound
+as every prior guard in this family, gated on a new env var
+(`ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD`, sites `G1`-`G29` skipping the 3
+removed "safe" rows and merging the shared pair into `G29`). File-
+scoped to `funcs_40.c` only (this address range is known, per s100/
+s131, to be reused verbatim by other overlays' functions, e.g.
+`funcs_27.c` — file-scoping stays load-bearing, not
+belt-and-suspenders).
+
+Full delete-all regen (`make_elf.py` -> `regen_n64recomp.sh` ->
+`fixup_game_funcs.py` -> `cmake --build`): patch report showed **every
+one of the 26 new sites patched exactly x1**, alongside the pre-
+existing A-E sites also at x1 each — no duplicates, 3rd clean
+delete-all cycle in a row (further softening, not resolving, s120's
+"can happen, not will happen" finding — not this session's focus).
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake
+--build .`: exit 0, only the pre-existing DDIV pointer-sign and SDL2
+link-version warnings.
+
+**Final Thread A tally: 6 hits, 2 clean, of 8 functions audited.** The
+audit series opened at s126 (composeNpcOrientationMatrix's second
+table-deref loop) is now COMPLETE — every function named in the
+original Thread A list has been read to its closing brace at least
+once. Hits: composeNpcOrientationMatrix (s126, 12th class),
+updateAnimatedTextureStreaming + static_5_800B4048 (s127, 9th/10th),
+projectModelBoundsToScreen (s128, 11th), submitSceneNodeRender (s131,
+17th), updateHangarBayScene (this session, 18th-guard-family — note
+this label collides historically with the unrelated "18th crash class"
+discussed below, per s131's own flagged caveat). Clean: reserveAndEmitDLEntry
+(s129, 14th), activateAnimationKeyframe (s130, 16th).
+
+**Soak (`hangarbay1`, `PROBE_MODE=start_only HOLD_S=30`, via
+`run_mission_keys.sh hangarbay1 5 12`, every relevant guard/diagnostic
+flag armed: both hangar-bay-scene families (A-E and G1-G29),
+anim-recurse, tmem-zero, anim-tex-stream, hangar-entry, compose-npc
+guard/guard2, dlentry-guard, projbounds guard/guard2/guard3,
+scene-node-list guard/guard2/guard3):** **0 fires on every single one
+of these flags, both the brand-new 26-site family and the original 5**
+— no positive control for any of them this run. The process died
+**earlier than any prior soak in this entire investigation** —
+essentially immediately after the single Start probe fired, before
+even the first hold-iteration snapshot completed (the driver log
+reads "game process gone at hold-iter 1"/"hold done wall=0s"), vs.
+s131's already-unusually-early hold+~2s.
+
+**The crash itself is new and, unusually for this project, cleanly
+symbolicated** — no nearest-symbol ambiguity, no ASLR-slide caveat
+needed, because the backtrace resolved real function names directly:
+
+```
+[CRASH] caught signal 10 (Bus error: 10)
+...
+emitAllocatedDLCommand + 3984
+submitSceneNodeRender + 20872
+processSceneNode + 6668
+traverseSceneGraphRecursive + 1576
+traverseSceneGraphRecursive + 2336
+setupCameraMatrices + 27372
+static_5_800AAD9C (runHangarSelectionFrame) + 5892
+static_5_800C6854 (runHangarMenuFromOverlay) + 628
+menuOverlayInit + 3512
+mainGameLoop + 2400
+```
+
+This is a genuinely new crash site: `emitAllocatedDLCommand`, called
+from a specific offset inside `submitSceneNodeRender` (+20872 bytes —
+not the free-list-walk allocator region s123/s131 already guarded,
+which is a different, unrelated part of that same large function).
+Not the s131 `heapFreeListDequeue + 12704` nearest-symbol signature —
+a different innermost frame entirely, with clean symbol names all the
+way down. Not yet root-caused (one data point, not instrumented this
+session — per rule 8, this is a fresh lead for next session, not a
+3rd repeat of an existing null).
+
+**Controls held:** `thr-resume bad=1` 0/118457 (U3 stays closed, 6th+
+consecutive session); `anim-recurse` fired 3266/3266 (real positive
+control, mechanism still exercised every run); `anim-tex-stream` 4200
+fires, `hangar-entry` 2 fires, neither correlated with this run's
+death; `tmem-zero` 0/0 (8th consecutive null, still demoted to
+opportunistic per s90's rule-8 call); every other guarded family
+(compose-npc, dlentry, projbounds/projbounds2/3, scene-node-list/2/3)
+0 fires. None of the by-now-large set of guarded mechanisms is
+implicated in this run's death — it is genuinely fresh territory.
+
+**Side observation, not this session's focus but worth flagging:**
+this crash's clean symbolication (real names, no nearest-symbol
+guessing) suggests the built-in crash handler *can* resolve names
+reliably when the crashing frame has one — which may mean s131's
+"nm comparison needs the ASLR slide" concern is specific to whatever
+made that particular crash fall back to nearest-symbol resolution,
+not a universal problem with every crash log from this binary. Worth
+re-examining if a future soak reproduces an ambiguous nearest-symbol
+crash again — the discriminating question is why THAT crash's frame
+lacked a resolvable symbol while this one had one.
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: added the `_hangarbay_deref_guard_sites`-
+driven 26-site guard patch (`_make_hangarbay_deref_guard_patch`,
+sites G1-G29). `N64Recomp/RecompiledFuncs/funcs_40.c`: regenerated +
+patched (not committed — sibling checkout, same posture as s54/
+s90-131). `rogue_squadron64/build/roguesquadron.elf`: regenerated (not
+committed — sibling checkout). This repo: `build/` rebuilt binary
+(gitignored), `scratch/s73_post_a_scene/hangarbay1/` (soak logs, not
+committed — scratch), `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
+`scratch/agent/NEXT.md` (this write-up).
