@@ -26,7 +26,13 @@ Metal shader rebuilds need full Xcode on PATH:
   `ROGUESQ_SHADE_ONLY_MONO` (s30; pad-only, not a band fix), `ROGUESQ_SHADE_WRAP=3` (s31 shared
   wrap experiment), `ROGUESQ_SHADOW2`, `ROGUESQ_RING_RESYNC`. Diagnostics: `ROGUESQ_DUMP_IMEM_DMA=1`
   (s47, lib-side) dumps every skipped IMEM DMA to `build/imem_dma_dump.bin`
-  (`scratch/s47_parse_imemdump.py` decodes).
+  (`scratch/s47_parse_imemdump.py` decodes). `ROGUESQ_LOG_RUNNER=1` prints a per-task RDP-opcode
+  histogram (1-in-32 sampled by default — `ROGUESQ_LOG_RUNNER_ALL=1`, s64, prints every task
+  unsampled; the sampled mode silently misattributes 31 tasks' counts onto whichever task is next
+  sampled, a real bug for any single-task question). `ROGUESQ_LOG_SEQ=1` dumps a task's raw
+  pre-translation DL bytes — **not** a valid way to answer "does this task emit SYNC_FULL": that
+  question needs the post-translation histogram above (s64, positive control failed on the raw-byte
+  method).
 - Deleted from the code (s44, title-screen probe unchanged): `ROGUESQ_DPC_WRAP` /
   `ROGUESQ_WRAP_DEDUP` (s11 — wrap bytes are now always counted and dropped), `ROGUESQ_FORCE_PAL15`
   (s14, dead per s15), `ROGUESQ_FORCE_SHADE_WHITE` (s19, its shade line closed at s43).
@@ -170,22 +176,23 @@ Stability 0 except 3 gracefully-stubbed `[missing-func]` addresses in the undriv
 never soaked before — parked as M4 (identified s53, fixed s54, runtime check outstanding — see
 step 2 below). Full detail: PORTING-STATE s49.
 
-**M3 — first gameplay: OPENED (s50), original death does not reproduce post-M1, re-scoped to a
-render-once-then-freeze bug (s61).** AVAILABLE CRAFT (craft-select) confirmed reachable and renders
-correctly, one press past SELECT LEVEL. The `a` press from AVAILABLE CRAFT no longer black-screens
-and kills the process (0/2 in s61, same schedule that reproduced it 2/2 in s50/s51) — instead it now
-loads and renders **one frame of the mission itself** (X-wing near a capital ship, "AMBUSH AT MOS
-EISLEY") and then the RDP `fs` (FULL_SYNC) counter freezes for good, `[vi] update_screen` still
-firing with frozen values, process alive but stalled — reproduced 3/3 (s61 ×2, s62 ×1). See
-"Remaining visual defects" above and PORTING-STATE s61/s62 for the full counter evidence.
-**s62: `rsp_task_log_and_reset` is wired up and traced the freeze** — it rules out an RSP-side
-infinite loop (0 tasks hit the iteration cap during or after the freeze; the cap-hitting population
-is a constant, phase-independent, always-empty background pattern unrelated to the freeze). Next
-sub-unit is now CPU-side: find what game code submits per-frame mission-content DLs and determine
-why it stops after the one frame renders. The in-process crash handler (`src/main/main.cpp`, s52)
-remains in place and unexercised — nothing has crashed since s51. Nothing here is load-gated
-(reconfirmed s61/s62). Expect further new failure classes as this progresses (mission-overlay DMA,
-a new VI phase, possibly new ucode ops, run2's texture corruption) — each is its own work unit.
+**M3 — first gameplay: OPENED (s50), root cause of the render-once-then-freeze bug found (s64).**
+AVAILABLE CRAFT (craft-select) confirmed reachable; the `a` press loads and renders **one frame of
+the mission itself** (X-wing near a capital ship, "AMBUSH AT MOS EISLEY", texture corruption on the
+hull) and then the RDP `fs` (FULL_SYNC) counter freezes for good — reproduced 5/5 (s61 ×2, s62 ×1,
+s64 ×1 via run5, s65 ×1). **s64 root-caused it**: `ROGUESQ_LOG_RUNNER_ALL` (unsampled per-task RDP
+histogram, replacing a sampled version whose 1-in-32 throttle had silently misattributed counts)
+shows every task exits clean with `syncs=1` until task #3141, where 100% of the remaining ~2755
+tasks (real, growing triangle content — this is actual mission geometry, not a stub) exit
+`RspExitReason::ImemOverrun` with `syncs=0`. Traced to `factor5_ucode_recompiled.c:2666`: a
+`bgez $2, L_0000` branch inside a VRCPH/VRCPL perspective-divide (1/w) sequence, whose target
+RSPRecomp couldn't statically resolve (IMEM wraparound math) and which `tools/fixup_factor5_ucode.py`
+fixup 1b (s1/s2) stubbed to a synthetic `ImemOverrun` halt on the documented assumption that real
+content would never take it — mission triangle vertices are the first content in this project to
+falsify that assumption. This overturns s62/s63's "CPU-side, RSP task submission stays healthy"
+framing — see Overturned conclusions. Not load-gated (reconfirmed s61/s62/s65).
+*Next sub-unit:* find the branch's real target from the original Factor 5 ucode disassembly
+(`factor5_rsp.toml` ROM offset) — full detail PORTING-STATE s64, next-steps entry below.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -216,28 +223,24 @@ cost three sessions before the recursive mutex.
 
 ## Next steps, in order of expected value (s58)
 
-1. **M3 — find the CPU-side code that should submit the next mission-content DL and determine why it
-   stops after one frame (s62: RSP-side infinite loop is ruled out).** `rsp_task_log_and_reset` is
-   now wired up (fixup 2b, `tools/fixup_factor5_ucode.py`, called from the L_1090 iteration-cap
-   site) and traced a 3rd freeze repro (`scratch/s61_death_repro_capture.sh run3`, `fs` plateau
-   2179, origin frozen 0x00656400). Result: **0 tasks hit the iteration cap during or after the
-   freeze** — the 823/5066 tasks that did hit the cap are a constant `tri=0 texrect=0`
-   phase-independent background pattern present since task #1, unrelated to the freeze; the last
-   cap-hit is at log line 16557 of 81236, nothing after it through the entire frozen tail. RSP task
-   submission (`[lle task]`), command processing (`[dpc-pak]`), and presentation
-   (`[present-1024]`/`[last-drawn]`) all keep running normally and healthily right through the
-   freeze — the RSP side is not stuck. **s63 (re-analysis of the existing run1/run2/run3 logs, no new
-   run) sharpened this further**: task-submission rate collapses ~100x at the exact `fs` plateau point
-   and then, in the two long-enough captures (run1, run2), stops completely after exactly 5–6 more
-   calls whose `dl` pointers are bit-for-bit identical across both independent runs
-   (`0x807513E0, 0x8074ADC8, 0x807550B8, 0x8072C918, 0x80754458`) — a deterministic terminal sequence,
-   not a race. Next sub-unit (concrete, no new instrumentation needed): re-run
-   `scratch/s61_death_repro_capture.sh run4` with `ROGUESQ_LOG_SEQ=1` added (already-existing DL-dump
-   flag, `main.cpp:517`, never combined with a death-repro run before) and check whether the DLs at
-   those 5 addresses contain an RDP SYNC_FULL opcode (0x29) at all, or are categorically different from
-   healthy pre-freeze task content (e.g. an idle/retry/error-path DL). That answers whether the CPU
-   is still asking for real frames it just can't complete, or has switched to a different, non-mission
-   code path. Positive control first (iron rule 1). Full detail: PORTING-STATE s50–s63.
+1. **M3 — find the real target of the unresolved RSP branch that eats every post-freeze task's
+   SYNC_FULL (root cause found s64).** `factor5_ucode_recompiled.c:2666`: `bgez $2, L_0000` inside a
+   VRCPH/VRCPL perspective-divide sequence, target unresolvable by RSPRecomp (IMEM wraparound),
+   stubbed by `tools/fixup_factor5_ucode.py` fixup 1b (s1/s2) to a synthetic `ImemOverrun` halt on
+   the assumption real content would never take it — mission triangle vertices are the first content
+   to do so. Need the original Factor 5 ucode disassembly around this instruction (`factor5_rsp.toml`
+   ROM offset) to see what real hardware does when this branch is taken: a small clamp/special-case
+   routine RSPRecomp's function-boundary detection excluded (fix: extend the recompiled function's
+   PC range), or a genuinely dead branch (meaning some upstream bug feeds the reciprocal an
+   out-of-range value real N64 code would never produce — a different fix). A second, less-likely
+   unresolved-branch site exists at `factor5_ucode_recompiled.c:3009-3028` (`j L_1650`, inside the M1
+   clip-splice block) but its target is a declared "expected resident" helper reachable via a
+   different, already-working path — a poor match for a mission-only defect, deprioritize unless the
+   primary site doesn't pan out. Full detail: PORTING-STATE s50–s64. **Process note (s65):** if
+   `docs/CURRENT-TRUTH.md`/`scratch/agent/NEXT.md` are ever left stale after a PORTING-STATE.md
+   session entry (e.g. the entry rides inside a commit titled for unrelated work), the next session
+   will silently redo already-superseded work — grep PORTING-STATE.md's last `## Session N` header as
+   a cheap staleness check before trusting this file's front matter.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
@@ -426,6 +429,18 @@ any s2–s4 conclusion without checking that section.
   early-returns whenever `presentEarly && !fromEarlyPresent`, and at 1024 no fbPair is ever an
   `earlyPresentCandidate`, so presents stop entirely.
 
+- **Claim (s62/s63):** the M3 render-once-then-freeze bug is CPU-side — RSP task submission
+  (`[lle task]`), command processing, and presentation all stay healthy through the freeze, so an RSP
+  infinite loop is ruled out. **Overturned by s64:** both supporting observations were sampled-log
+  artifacts. The `[task-brief]` iteration-cap population genuinely is unrelated (that part stands),
+  but the "RSP stays healthy" read came from `[lle send_dl #N]`'s 1-in-32 throttled sampling, which
+  has near-zero odds of ever landing on the run1/run2 trailing 5-6 tasks it needed to inspect — it
+  only ever showed pre-freeze tasks (`Broke`, correctly). An unsampled per-task histogram
+  (`ROGUESQ_LOG_RUNNER_ALL`, added s64) shows the true population: from task #3141 on, 100% of
+  remaining tasks exit `RspExitReason::ImemOverrun` on real (not stub) triangle content, tracing to
+  an RSP ucode branch RSPRecomp couldn't resolve. **Why believable:** the throttled log had correctly
+  shown `Broke` on every task it ever sampled, so "the RSP side is healthy" looked like a repeatedly-
+  confirmed fact rather than a fact about only the 96.9% of tasks the sample could ever land on.
 - **Claim (s23):** the hangar's remaining dimness is real vertex lighting, not shade-decode, because
   its shade census is healthy. **Overturned by s25:** that census was the magnitude-only classifier
   s24 proved cannot distinguish −118 from +118 (PROJECT-OVERVIEW §4.2), so "ok" was really the

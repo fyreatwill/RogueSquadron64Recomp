@@ -5250,3 +5250,72 @@ to include the real handler" or "find what's producing an out-of-range reciproca
 
 Files: `src/main/main.cpp` (`ROGUESQ_LOG_RUNNER_ALL` diagnostic — committed). `scratch/s61_death_repro/run5/`
 (log + 28 screenshots, gitignored). `scratch/agent/run5_stdout.log` (script tail, gitignored).
+
+## Session 65 (2026-07-26) — re-synced CURRENT-TRUTH/NEXT.md to s64's already-committed root-cause
+finding; redundant 4th freeze repro caught before it duplicated further
+
+### Starting state: CURRENT-TRUTH.md and NEXT.md were one full session stale
+This iteration read `docs/CURRENT-TRUTH.md` and `scratch/agent/NEXT.md` per the standard start-of-
+session instructions; both were still frozen at s63 (mtimes 17:32-17:33), directing the next work
+unit to re-run `s61_death_repro_capture.sh run4` with `ROGUESQ_LOG_SEQ=1` added and decode the
+trailing DLs for a SYNC_FULL opcode. Session 64 (committed in `c47779e`, 21:37, bundled inside a
+harness-titled commit about the grok Stop-hook bug) had already done exactly this analysis, found it
+methodologically flawed (raw pre-translation DL bytes are the wrong instrument, positive control
+fails), built the correct per-task histogram (`ROGUESQ_LOG_RUNNER_ALL`), and root-caused the M3
+freeze to an unresolvable RSP ucode branch — but never updated `docs/CURRENT-TRUTH.md` or
+`scratch/agent/NEXT.md` to reflect it, and left `scratch/agent/STATUS` at `WORKING`. Neither of
+those two scratch files is tracked by git (`/scratch/` is gitignored), so the gap was invisible to
+`git log`/`git diff` and only surfaced when this session's own write-up collided with the Session 64
+entry already sitting in this file.
+
+This session ran `scratch/s61_death_repro_capture.sh run4` fresh (per the stale NEXT.md) before
+discovering the above — genuinely redundant with, and methodologically inferior to, s64's own
+already-rejected approach, and it overwrote the original interrupted run4 capture s64 had analyzed
+(no information lost: s64 had already extracted everything it needed from it and moved on to run5).
+Caught before a second redundant run, or a duplicate/contradictory PORTING-STATE.md entry, was
+written.
+
+### What the redundant run4 still confirms (one more data point, not a new mechanism)
+- Freeze reproduced a 4th time: `fs` plateaus at 2167 (update_screen #4544, line 57953), origin
+  frozen at 0x006AB400/width 512, right after the war-room -> AVAILABLE CRAFT -> mission `a`-press
+  sequence. Screenshots (`post_060_a.png`, `grace_20.png`) visually confirm the single mission frame
+  (starfield + capital-ship hull) renders once and stays frozen for the full ~20s grace window, with
+  green/blue texture-corruption patches on the hull — same corruption class as s61 run2's, still an
+  uninvestigated M3 sub-item.
+- Post-freeze task submission (1749 `[lle task]` calls across ~48,800 log lines) continued at a
+  steady, undiminished rate for the whole ~20s capture with no repeating/terminal address cycle (all
+  40 trailing `data=` pointers distinct) — consistent with run5's "keeps going" behavior (s64), not
+  run1/run2's "stops after 5-6 calls" (s63). s64 already flagged these as likely the same underlying
+  state observed at different capture durations, not yet proven; this is a third data point in that
+  direction.
+- Independently reproduces s64's methodological finding: grepping the raw `ROGUESQ_LOG_SEQ`
+  dl-head/dl-sub dumps for the SYNC_FULL byte (`0xE9`, the full RDP command byte including the
+  top-2-bits-set convention) found 41 occurrences pre-freeze (positive control passes with this byte
+  pattern, unlike s64's `29000000` pattern which failed its own control) but zero in ~1749 post-freeze
+  tasks — the same qualitative answer as s64's histogram-based finding, reached by an instrument s64
+  had already labeled unreliable. Treat as corroborating, not as an independent confirmation — the
+  histogram-based method (`ROGUESQ_LOG_RUNNER_ALL`) remains the trustworthy one.
+
+### Ledger-sync performed this session
+- `docs/CURRENT-TRUTH.md`: next-steps item 1 replaced with s64's actual finding and next step;
+  s62/s63's "CPU-side, RSP stays healthy" claim moved to Overturned conclusions with why it was
+  believable (a sampled-log throttle that had near-zero odds of ever landing on the affected trailing
+  tasks); `ROGUESQ_LOG_RUNNER_ALL` added to the diagnostics list; M3 goal-stack entry updated.
+- `scratch/agent/NEXT.md`: rewritten with s64's next step (not committed — gitignored by design).
+
+### Process gap flagged for future sessions
+When a PORTING-STATE.md entry lands inside a commit titled for unrelated work (e.g. a harness fix),
+it's easy for the doc-sync steps (CURRENT-TRUTH.md, NEXT.md, STATUS) to get skipped if the iteration
+runs out of budget partway through its own exit contract. Since `scratch/agent/NEXT.md` and `STATUS`
+are gitignored, `git log`/`git diff` cannot reveal that gap — only reading PORTING-STATE.md's actual
+tail (not just CURRENT-TRUTH.md) catches it. Grepping PORTING-STATE.md's last `## Session N` header
+as a cheap staleness check before trusting CURRENT-TRUTH.md's front matter is now noted there too.
+
+### Next step
+Unchanged from s64: determine the real target of the `bgez $2, L_0000` branch at
+`build/factor5_ucode/factor5_ucode_recompiled.c:2666` (or confirm it is genuinely unreachable on real
+hardware). Needs the original Factor 5 ucode disassembly around this instruction (`factor5_rsp.toml`
+ROM offset) to see what real hardware does when the IMEM-wrapped branch is taken.
+
+Files: no changes under `src/`/`lib/` this session (doc-sync only). `scratch/s61_death_repro/run4/`
+overwritten with a 4th repro capture (gitignored, 106,761-line log + screenshots).
