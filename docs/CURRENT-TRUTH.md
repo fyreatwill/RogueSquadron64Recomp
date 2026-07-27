@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 83)
+## Current truth (as of session 100)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -343,6 +343,24 @@ seen s97), not a new 17th — informative, not a new mystery. Per s98's own
 outcome-2 branch, next up is the same guard treatment for
 `composeNpcOrientationMatrix` (12th class, 2 occurrences). Full detail:
 PORTING-STATE s99.
+**s100:** source-read confirmed `composeNpcOrientationMatrix` (12th
+class) has the same unguarded-table-lookup-then-deref shape (byte from a
+fixed table * 632-byte stride into a fixed global array, dereferenced
+immediately as `v1`); guarded it the same way as s99 (`goto`s the real
+epilogue `L_800AB618`). Caught a regex false positive before it built:
+the guard's anchor text also matched inside `hangarInitialize`, an
+unrelated function in a different overlay sharing the same guest address
+range — fixed by file-scoping the patch to `funcs_40.c`, which needed a
+full regen to clear the corrupted intermediate. Soak: guard 0/544 (clean
+negative control, no positive control — `composeNpcOrientationMatrix`
+itself never crashed this run); every other family control held. Process
+died at hold-iter 1 (earliest yet) to a **new, 17th** crash whose fault
+address resolves directly inside `updateHangarBayScene` itself (not the
+already-catalogued 10th class — that class's signature innermost frame,
+`static_5_800B4048`, is absent from this backtrace). Per NEXT.md's own
+outcome-2 branch, catalogued and not chased; next up is the same guard
+treatment for the 11th (`projectModelBoundsToScreen`) or 14th
+(`reserveAndEmitDLEntry`) class. Full detail: PORTING-STATE s100.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -554,49 +572,67 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s99)
+## Next steps, in order of expected value (s100)
 
-0. **M3 — land the same guard-not-instrument treatment on
-   `composeNpcOrientationMatrix` (12th class, 2 occurrences: s74, s95 —
-   the next most frequent of the guest-side unguarded-lookup family),
-   per s99's own outcome.** s99 landed and validated the
-   `activateAnimationKeyframe` guard (16th class) — 0/0 fires in a clean
-   corrected soak, confirmed via its own negative control — but the
-   process died to a **recurrence of the already-catalogued 15th class**
-   (RT64-internal `loadDrawState` assert, no fix on our side) before the
-   guard ever got a chance to matter, at the same hold+4-5s offset as
-   most recent attempts. This is functionally s98 NEXT.md's outcome-2
-   branch (site guarded but a different crash preempts it) — proceed
-   exactly as it specified: **do not** re-soak `activateAnimationKeyframe`
-   again, move to `composeNpcOrientationMatrix`
-   (`N64Recomp/RecompiledFuncs/funcs_40.c`, guest `static_5_800AB1C8`,
-   real name confirmed in `symbol_files/main_overlay.txt`). First
-   source-read its crash mechanism (not yet done — s92/s95 only logged
-   entry args, never read the actual crash line) to confirm it has the
-   same "unguarded pointer from a lookup/arg" shape before writing a
-   guard; if it turns out to be a different shape, characterize first,
-   guard second, exactly as s98 did for the 16th class.
-   **Critical lesson from s99, applies to every future guard in this
-   family**: guest registers (`ctx->rN`) are `gpr` = `uint64_t`
+0. **M3 — land the same guard-not-instrument treatment on the next
+   most-recurring characterized class: 11th (`projectModelBoundsToScreen`,
+   1 occurrence, s92) or 14th (`reserveAndEmitDLEntry`, 1 occurrence,
+   s98), per s99/s100's own precedent.** s100 landed and validated the
+   `composeNpcOrientationMatrix` guard (12th class) — source-read
+   confirmed the same unguarded-table-lookup-then-deref shape first (a
+   byte from a fixed table scaled by a 632-byte stride into a fixed
+   global array, dereferenced immediately as `v1`/`ctx->r3`), guarded
+   right after `v1` is computed, `goto`s the function's real epilogue
+   `L_800AB618`. Soak: 0/544 fires — a clean negative control, but no
+   positive control (`composeNpcOrientationMatrix` itself never crashed
+   this run). Every other family control held (`anim-recurse` 3294,
+   `dlentry-reserveAndEmit` 18832, `anim-tex-stream` 4292, `hangar-entry`
+   2, `tmem-zero` 0/11 soaks, `anim-keyframe-guard` 0/0, `thr-resume
+   bad_total=0`). Process died at hold-iter 1 (earliest yet) to a **new,
+   17th** crash: fault address resolves directly inside
+   `updateHangarBayScene` itself (`static_5_800AB658`), not the
+   already-catalogued 10th class (whose signature innermost frame,
+   `static_5_800B4048`, is absent from this backtrace — checked
+   carefully because the outer three frames are identical to s90's 10th-
+   class trace, but s90's had 6 frames and this one has 5). Per NEXT.md's
+   own outcome-2 branch, catalogued and not chased this session —
+   `updateHangarBayScene` (`N64Recomp/RecompiledFuncs/funcs_40.c:7117-
+   13921`, ~6800 lines, "indexes per-bay tables by gHangarCurrentBay" per
+   `main_overlay.txt`) is plausibly the same unguarded-lookup family, but
+   **not yet source-read** — that is next session's job if this class
+   recurs, not this one's.
+   **s100 also caught a regex false positive worth generalizing**: the
+   guard's anchor text (matched on raw instruction comments, not
+   function-scoped) also matched inside `hangarInitialize`, an unrelated
+   function in a *different* overlay that happens to share the same
+   guest address range (overlays reuse virtual addresses) — including
+   the same `L_800AB618` label name, so the `goto` would have compiled
+   and silently corrupted a working function. **Any future guard patch
+   in `fixup_game_funcs.py` must check its own `patched xN` report for
+   more than one file matching**; if it does, that's a bug to find before
+   trusting the build, not a bonus. Fixed here by scoping the substitution
+   to the one file the target function is actually defined in
+   (`p.name == "funcs_40.c"`).
+   **Critical lesson from s99, still applies to every future guard in
+   this family**: guest registers (`ctx->rN`) are `gpr` = `uint64_t`
    (`recomp.h:84`), and `MEM_W` returns a *signed* `int32_t` — assigning
    a real guest pointer (top bit set) sign-extends it to
    `0xFFFFFFFF800xxxxx` on the 64-bit register. **Never compare a raw
-   `ctx->rN` value against 32-bit literal bounds** (e.g.
-   `ctx->r17 < 0x80000000u`) — it will spuriously match/fail for every
-   real pointer. Always truncate through `U32()` first
-   (`uint32_t lo = U32(ctx->rN);` then compare `lo`). s99's first build
-   skipped this and got a guard that fired on 30333/30333 calls (100%
-   false-positive rate) before the bug was caught and fixed same-session
-   — verify any new guard's fire rate looks like a rare-case control
-   (near-zero, or proportional to a plausible bad-input rate), not "fires
-   on every call," before trusting a 0-fires-and-still-crashed result.
+   `ctx->rN` value against 32-bit literal bounds** — always truncate
+   through `U32()` first (`uint32_t lo = U32(ctx->rN);` then compare
+   `lo`). Verify any new guard's fire rate looks like a rare-case control
+   (near-zero), not "fires on every call," before trusting a
+   0-fires-and-still-crashed result.
    Outcomes: (a) the new guard fires and the process survives further —
    real progress, re-open item 1 below immediately; (b) the guard never
-   fires and a different crash preempts it — informative, do not spend a
-   2nd soak on this exact site, pick the next-most-recurring class
-   instead (11th `projectModelBoundsToScreen` or 14th
-   `reserveAndEmitDLEntry`, 1 occurrence each) for the same treatment;
-   (c) build/regen failure — debug before soaking.
+   fires and a different crash preempts it — if it's an already-
+   catalogued class (recurrence), do not spend a 2nd soak on this exact
+   site, pick whichever of {11th, 14th} you didn't just try; if it's a
+   genuinely new (18th+) class, catalog it and still move on rather than
+   chasing it; (c) build/regen failure — debug before soaking. **Do not
+   re-soak `composeNpcOrientationMatrix` or `activateAnimationKeyframe`**
+   — both guards are landed and validated (clean negative controls),
+   treat them as closed.
 1. **M3 — find the indirect caller of `submitDmaRequestBatch`.**
    **Discriminating question CLOSED (s94)**: the producer/consumer ring
    instrument (`ROGUESQ_LOG_DMA_RING=1`, landed in

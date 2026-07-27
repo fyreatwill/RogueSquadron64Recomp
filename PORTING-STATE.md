@@ -8030,3 +8030,140 @@ own git per every prior session's note). Logs:
 30333/30333 false positive),
 `scratch/s73_post_a_scene/s99_animkeyframe_guard2/run.log` (corrected
 build, clean 0/0 control, died to 15th-class recurrence).
+
+## Session 100 (2026-07-27) — landed and soaked the 12th crash class's guard (`composeNpcOrientationMatrix`, per s99's own pivot); caught a regex false-positive that would have silently corrupted an unrelated function in a different overlay before it ever built; guard's negative control holds (0/544) but the process died to a **new, 17th** crash inside `updateHangarBayScene` itself — not the previously-catalogued 10th class, whose signature backtrace frame is absent this time
+
+Source-read `composeNpcOrientationMatrix` (`static_5_800AB1C8`,
+`N64Recomp/RecompiledFuncs/funcs_40.c:6280-7102`) before writing anything,
+per NEXT.md's explicit instruction (s92/s95 had only ever logged entry
+args, never read the crash mechanism). Confirmed the same
+unguarded-table-lookup-then-dereference shape as the rest of the family:
+the function's outer loop reads a byte from a fixed lookup table
+(`table1[a0 & 0xFF]`, `0x800AB238: lbu $s0, 0x0($v0)`, arbitrary
+0-255 value, no range check), multiplies it by a fixed 632-byte stride
+(the classic shift/add/sub multiply-by-constant idiom:
+`byte*4+byte=byte*5`, `<<4=byte*80`, `-byte=byte*79`, `<<3=byte*632`),
+and adds that to a **fixed global base pointer** (`MEM_W(ctx->r21,
+-0x25A4)`, always the same value) to produce `v1` (`ctx->r3`,
+`0x800AB25C: addu $v1, $v1, $a1`) — immediately dereferenced
+(`0x800AB260: lw $t1, 0xC($v1)`, plus `+0x10`/`+0x14` two lines later)
+and also stashed into `s3` (`ctx->r19 = v1+0x48`), which becomes a base
+pointer threaded through the rest of the function body
+(`composeRotationMatrixSlot1/2`, `transformVec3ToNpcLocalWithScale`,
+etc.) — so a garbage table byte produces a wild `v1` that corrupts
+everything downstream, not just the first deref, exactly like s99's
+`activateAnimationKeyframe` finding.
+
+Landed the guard immediately after `v1` is computed, before its first
+use, following s99's exact template: `uint32_t r3_lo = U32(ctx->r3);`
+checked against `[0x80000000, 0x80800000)` (guest RDRAM range), and on
+failure `goto`s the function's own real epilogue, `L_800AB618`
+(`N64Recomp/RecompiledFuncs/funcs_40.c:7063` — reloads
+`s0-s7`/`fp`/`ra`/`f20`/`f22`/`f24`/`f26` unconditionally from the stack
+and pops `$sp` by `0x78`, so it's ABI-safe from any point after the
+prologue, not just this one). New always-on flag:
+`ROGUESQ_LOG_COMPOSE_NPC_GUARD=1`.
+
+**Caught a regex false positive before it ever reached a soak.** The
+first `fixup_game_funcs.py` run reported the guard patched **twice** —
+once in `funcs_40.c` (correct) and once in `funcs_27.c` (wrong). Checked
+immediately rather than assuming success: `funcs_27.c`'s match was
+inside `hangarInitialize`, a **completely different function in a
+different overlay** that happens to share the same guest address range
+(`0x800AB1xx`-`0x800ACxxx` — overlays reuse virtual addresses across
+different loaded modules) and coincidentally contains the byte-identical
+two-instruction sequence at the byte-identical address labels
+(`0x800AB25C addu $v1,$v1,$a1` / `0x800AB260 lw $t1,0xC($v1)`), **including
+its own same-named `L_800AB618` label** — so the `goto` would have
+compiled cleanly with zero errors and silently jumped to the wrong place
+inside a working, unrelated function, the first time this script's
+convention of matching on raw instruction text (not function-scoped) has
+actually collided. Fixed by scoping the substitution to `p.name ==
+"funcs_40.c"` only (confirmed via `static_5_800AB1C8`'s definition site
+that the real function lives there and nowhere else). Because the buggy
+version had already been written to `RecompiledFuncs/funcs_27.c` and
+`funcs_40.c` on disk, a full regen (`make_elf.py` → `N64Recomp` →
+`fixup_game_funcs.py`) was required to get a pristine base before
+rebuilding — confirmed via grep that the corrected script now patches
+`funcs_40.c` alone (`x1`) and leaves `funcs_27.c` untouched. **Generalizable
+lesson for every future guard in this family**: the recompiler reuses
+guest address ranges across overlays, so an instruction-text-only regex
+anchor is not guaranteed unique across the whole `RecompiledFuncs/`
+tree — scope-check the match count and, if a patch ever reports being
+applied to more than the one expected file, treat it as a bug to find,
+not a bonus.
+
+Build (`cmake --build ... -j8`) exit 0, only the pre-existing-class
+format/sign warnings already present every session. Ran the soak
+NEXT.md specified (`s100_composenpc_guard1`, `PROBE_MODE=start_only
+HOLD_S=30`, full family instrument set armed): phase-1024 at 44.8s, full
+key schedule, craft stable, Start probe, then died at **hold-iter 1**
+(~hold+1s — the earliest death of any soak on record). `[compose-npc-
+orient-guard]` **0/544** — a clean negative control (no false-positive
+firing, matching s99's corrected-build shape), but also no positive
+control: the guard never had a chance to prove it stops the bug, because
+`composeNpcOrientationMatrix` itself never crashed this run. Every other
+family control held: `[anim-recurse]` 3294/3294, `[dlentry-
+reserveAndEmit]` 18832, `[anim-tex-stream]` 4292, `[hangar-entry]` 2
+(fired, no crash inside that callee this run), `[tmem-zero]` 0 (11th
+soak in a row), `[anim-keyframe-guard]` 0/0 (s99's guard still clean),
+`thr-resume bad_total=0`. `dma-ring-producer` only the boot call;
+`ROGUESQ_LOG_DMA_CALLER` 0 (died long before the ~140s window, as
+expected at this hold offset).
+
+**The crash itself: initially suspected as a recurrence of the
+already-catalogued 10th class, but a closer read of the backtrace rules
+that out — this is a new, 17th class.** Full backtrace:
+
+```
+[CRASH] caught signal 10 (Bus error: 10)
+static_5_800AB658 + 42712   (updateHangarBayScene)
+static_5_800AAD9C + 4000    (runHangarSelectionFrame)
+static_5_800C6854 + 628     (runHangarMenuFromOverlay)
+menuOverlayInit + 3512
+mainGameLoop + 2400
+```
+
+This superficially resembles s90's 10th-class backtrace (same three
+outer frames, `updateHangarBayScene` ← `runHangarSelectionFrame` ←
+`runHangarMenuFromOverlay`), which is why it was checked carefully rather
+than assumed to be the same bug. s90's crash had **six** frames, with an
+innermost `static_5_800B4048 + 2424` frame *below* `updateHangarBayScene`
+— the callee that turned out to be the actual fault site. This run's
+crash has **five** frames: the fault address resolves directly inside
+`updateHangarBayScene` itself, with **no** `static_5_800B4048` frame at
+all. `updateHangarBayScene` (`N64Recomp/RecompiledFuncs/funcs_40.c:7117-
+13921`, confirmed real name per `symbol_files/main_overlay.txt` — "hangar
+bay camera/scene update, gated hangarCameraState 0x800CC3E4==2, indexes
+per-bay tables by gHangarCurrentBay") is genuinely ~6800 lines of
+generated C, large enough that a 42712-byte native offset is plausibly
+still inside its own body rather than a misattributed neighboring
+symbol — confirmed by the `[hangar-entry]` log (armed specifically for
+`static_5_800B4048`) firing exactly 2 times with **no third entry**,
+consistent with both calls completing and returning normally before the
+crash, at a different site entirely. Per NEXT.md's own outcome-2
+instruction ("if it's a genuinely new class, catalog it... then still
+move on rather than chasing it"), **not source-read this session** — the
+per-bay table-indexing description in `main_overlay.txt` makes it
+plausible this is the same unguarded-lookup family, but that is a
+hypothesis for next time, not yet confirmed.
+
+**Assessment:** functionally the same outcome shape as s99 (guard landed
+cleanly, negative control good, a different crash preempted a positive
+control) — except this preempting crash is brand-new rather than a
+recurrence, so per rule 8 and NEXT.md's own guidance, do not re-soak this
+exact site. The composeNpcOrientationMatrix guard stays in place as a
+genuine defensive fix (no evidence it's wrong, just unproven); next up is
+the same guard-not-instrument treatment for the next-most-recurring
+already-characterized class — 11th (`projectModelBoundsToScreen`) or
+14th (`reserveAndEmitDLEntry`), 1 occurrence each — per s99's own
+precedent for this decision.
+
+### Files
+
+Code: `N64Recomp/fixup_game_funcs.py` (new `ROGUESQ_LOG_COMPOSE_NPC_GUARD`
+guard on `composeNpcOrientationMatrix`, file-scoped to `funcs_40.c` after
+the regex-collision fix; N64Recomp sibling checkout, untracked in its own
+git per every prior session's note). Log:
+`scratch/s73_post_a_scene/s100_composenpc_guard1/run.log` (clean 0/544
+negative control, died to new 17th class inside `updateHangarBayScene`).
