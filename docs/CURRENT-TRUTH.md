@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s124)
+## Next steps, in order of expected value (s125)
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121).** s121 ran the identical delete-all →
@@ -980,6 +980,33 @@ cost three sessions before the recursive mutex.
    `do_rom_read` → `do_dma` → `osPiStartDma_recomp` → `piDmaWorker`),
    landing squarely in this family's established hold+11-15s window.
    Not a new class; not re-diagnosed. Full detail: PORTING-STATE s124.
+   **s125: 10th crash class (`static_5_800B4048`) guarded — CLOSED.**
+   Full source read (`funcs_41.c:579-794`) refined the s90 catalog
+   one-liner: the guest pointer of interest is `$a1`/`ctx->r5`, but it is
+   immediately copied to `$t0`/`ctx->r8` at the function's own entry
+   (`0x800B4048: addu $t0, $a1, $zero`) before `$a1` is reused two
+   instructions later for an unrelated `lui` — so the live value at each
+   of the 4 fixed-offset derefs (`0x10`/`0x14` twice each,
+   `0x800B4074`/`0x800B40A4`/`0x800B40D8`/`0x800B4100`) is `ctx->r8`, not
+   `ctx->r5`. All 4 derefs live inside the fallthrough arm of the
+   function's only early branch; guarded right after that arm's `$s0`
+   stack-save (`0x800B406C`), immediately before the first deref, with
+   the same `U32()`-truncated bounds check + `goto`-to-existing-epilogue
+   template as every prior guard (`ROGUESQ_LOG_HANGAR_ENTRY_GUARD`,
+   distinct from s90's entry-diagnostic flag `ROGUESQ_LOG_HANGAR_ENTRY`).
+   Real epilogue is the function's own existing label `L_800B4154`, no
+   new label needed. Full delete-all regen + rebuild ran clean (patch
+   report audited: `static_5_800B4048 arg-pointer guard patched x1`,
+   every other line's multiplicity unchanged). Soak (`s125guard`): guard
+   fired 0/0 **and** the function's own s90 entry diagnostic also fired
+   0/0 — same "untested guard on an unexercised path" shape as s124's
+   9th-class result, landed anyway per this file's own precedent. No
+   regressions in any other family control (`thr-resume bad_total: 0`,
+   `missing-func: 0`). Process reached SELECT YOUR CRAFT stable, single
+   Start succeeded into hangar-flight, and died at hold+~11s to the
+   long-running `do_rom_read`/`piDmaWorker` corruption-race SIGSEGV (same
+   signature and window as s85/s91/s93/s94/s101/s123/s124). Not a new
+   class; not re-diagnosed. Full detail: PORTING-STATE s125.
 
 -2. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
@@ -1305,8 +1332,8 @@ cost three sessions before the recursive mutex.
    yet — cheap fix (exclude matches already followed by the `// PATCH:`
    marker, or always regen from ELF before running fixup) — worth a
    work unit before it compounds further.
-0b. **M3 — hangar-tick-family guard program: 7 classes guarded, all with
-   clean negative controls (16th/12th/11th/14th/17th/18th/9th).** All follow the
+0b. **M3 — hangar-tick-family guard program: 8 classes guarded, all with
+   clean negative controls (16th/12th/11th/14th/17th/18th/9th/10th).** All follow the
    same shape (`U32()`-truncated bounds check, `goto` to the function's
    real epilogue — never a bare `return;`): 16th
    (`activateAnimationKeyframe`, s99), 12th (`composeNpcOrientationMatrix`,
@@ -1315,8 +1342,10 @@ cost three sessions before the recursive mutex.
    this one needed 5 separate guard sites in one function, not one; see
    PORTING-STATE s110), 18th (`submitSceneNodeRender` free-list-walk,
    s123), 9th (`updateAnimatedTextureStreaming`, s124 — guard never
-   exercised this soak, function itself wasn't entered). **Do not re-soak
-   any of these seven** — treat them as closed. **Every guard patch must verify its own
+   exercised this soak, function itself wasn't entered), 10th
+   (`static_5_800B4048`, s125 — guard also never exercised this soak,
+   function itself wasn't entered either). **Do not re-soak
+   any of these eight** — treat them as closed. **Every guard patch must verify its own
    `fixup_game_funcs.py` "patched xN" report names only the expected
    file(s)** (s100 caught a real cross-overlay regex collision this way;
    s110 found the *same* function collides with `funcs_27.c` at all 6 of
@@ -1375,8 +1404,12 @@ cost three sessions before the recursive mutex.
      untested guard on an unexercised path, not a proven-safe executed
      one.
    - 10th, `static_5_800B4048` (unconfirmed name, s90): unguarded
-     `MEM_W` off `a1` (4 fixed-offset derefs). 1 occurrence. Not
-     guarded yet.
+     `MEM_W` off `a1`, saved to `$t0`/`ctx->r8` at entry before `a1` is
+     reused (4 fixed-offset derefs). 1 occurrence. **Guarded s125**
+     (`ROGUESQ_LOG_HANGAR_ENTRY_GUARD`), 0/0 clean negative control —
+     but the function itself was never entered in that soak (its own
+     s90 entry diagnostic also 0/0), same "untested guard on an
+     unexercised path" caveat as the 9th class.
    - 11th, `projectModelBoundsToScreen` (`0x80065E98`, s92): direct
      deref of arg `a0` (no table lookup, different shape from 12th/16th
      — see PORTING-STATE s101). **Guarded s101**
@@ -1455,9 +1488,8 @@ cost three sessions before the recursive mutex.
    experiment. Assert itself recurred a 7th time unarmed in s108
    (`s108_musyx_gate3`), no new diagnostic data.
 3. **M3 — characterize the 10th crash class, SIGBUS in
-   `static_5_800B4048` (s90).** Did not recur in s91's two soaks.
-   Instrument (`ROGUESQ_LOG_HANGAR_ENTRY=1`) stays armed and ready; no
-   dedicated soak needed, fold into whatever soak runs next.
+   `static_5_800B4048` (s90): CLOSED, guarded s125.** See crash catalog
+   and item 0 above.
 4. **M3 — characterize the 9th crash class, `updateAnimatedTextureStreaming`
    SIGBUS (s89): CLOSED, guarded s124.** See crash catalog and item 0b above.
 5. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89).** 3

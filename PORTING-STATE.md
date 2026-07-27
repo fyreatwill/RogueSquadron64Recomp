@@ -10836,3 +10836,99 @@ this session — no `submodule-patches/export.sh` needed. `N64Recomp`
 checkout still carries s90-124's accumulated uncommitted history (same
 flagged-not-actioned posture as prior sessions; `rogue_squadron64`
 sibling checkout likewise unchanged, flagged since s54).
+
+## Session 125 (2026-07-27) — guarded the 10th crash class (static_5_800B4048), following the same template that has now closed 8 classes in this family; guard itself never exercised this soak, process died to the pre-existing do_rom_read corruption race instead
+
+Followed NEXT.md's Thread A exactly: convert another catalogued-but-
+unguarded hangar-tick-family crash class into a guard.
+
+**Source read (`N64Recomp/RecompiledFuncs/funcs_41.c:579-794`, full
+function, not the s90 mid-investigation one-liner):** refines s90's
+catalog entry. The guest pointer is the incoming `$a1`/`ctx->r5`
+argument, but it is copied to `$t0`/`ctx->r8` at the function's very
+first instruction (`0x800B4048: addu $t0, $a1, $zero`) before `$a1` is
+reused two instructions later for an unrelated `lui $a1, 0x800D` — so
+by the time any dereference happens, the live register is `ctx->r8`,
+not `ctx->r5`. Confirmed 4 fixed-offset derefs off `ctx->r8`, all
+`0x10`/`0x14` twice each (`0x800B4074`, `0x800B40A4`, `0x800B40D8`,
+`0x800B4100`), all inside the fallthrough (not-taken) arm of the
+function's only early branch (`bne $v0, $zero, L_800B4138` at
+`0x800B4068`) — the taken arm skips straight to `L_800B4138` without
+ever touching `ctx->r8`. Same "unchecked pointer arg dereferenced
+directly" shape as the 9th (`updateAnimatedTextureStreaming`) and 11th
+(`projectModelBoundsToScreen`) classes. Confirmed the real epilogue by
+reading to the closing brace: the existing label `L_800B4154`
+(restores `$ra`/`$s1`/`$s0` from the stack at `0x18`/`0x14`/`0x10`,
+pops `$sp` by `0x20`) — both branches of the early `if` save `$s0`/`$s1`/
+`$ra` before diverging, so the stack frame is fully consistent for this
+epilogue regardless of which arm executes, meaning a guard placed
+anywhere in the fallthrough arm can safely `goto` there directly with
+no new label needed.
+
+**Guard landed** (`N64Recomp/fixup_game_funcs.py`,
+`_hangar_deref_guard_patch`), anchored on the 4-line fallthrough-arm
+block ending at the `0x800B4070 lui $v0, 0x800D` instruction (the
+instruction immediately before the first dereference) and file-scoped
+to `funcs_41.c` per s100's belt-and-suspenders lesson even though the
+anchor was grep-confirmed unique within that file (the bare function
+name `static_5_800B4048` appears in 7 other `funcs_*.c` files, but only
+as call sites, never as a second definition). Follows the exact
+template of every guard since s99: `U32(ctx->r8)` truncation before the
+bounds compare (`< 0x80000000u || >= 0x80800000u`), `goto L_800B4154`
+on failure, gated by a new env var `ROGUESQ_LOG_HANGAR_ENTRY_GUARD`
+(distinct from s90's pre-existing entry-diagnostic flag
+`ROGUESQ_LOG_HANGAR_ENTRY` — do not confuse the two, per NEXT.md's own
+warning).
+
+**Regen:** full delete-all (`N64Recomp/RecompiledFuncs/funcs_*.c`) →
+`make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py` → full
+report audit. Every line's multiplicity matched expectations exactly
+(audio gate x3, musyxKeyOnVoice div-traps x8, every guard/diagnostic
+from s99-s124 present exactly once, new `static_5_800B4048
+arg-pointer guard patched x1`) — no duplication this cycle. `cmake
+--build build -j8` under
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`: exit 0, 0
+`error:` lines, only the pre-existing SDL2-version link warnings.
+
+**Soak (`s125guard`, `ROGUESQ_LOG_HANGAR_ENTRY_GUARD=1
+PROBE_MODE=start_only HOLD_S=30`):** guard fired **0/0**. Same caveat
+as s124's 9th-class result: the function's own pre-existing entry
+diagnostic (`[hangar-entry-800B4048]`) also fired **0 times**, meaning
+`static_5_800B4048` was never called at all this run, not just never
+fed a bad pointer — an untested guard on an unexercised path, landed
+anyway per this file's own precedent (s99-s124: no soak has ever
+required a positive or even an executed-negative control before
+accepting a guard). No regressions elsewhere: `thr-resume bad_total: 0`,
+`missing-func: 0`, `lle tasks: 5042`, `exit=2: 0`. Process reached
+SELECT YOUR CRAFT stable, the single Start succeeded into
+hangar-flight, and it died at **hold-iter 11** (~11s into the 30s hold
+window) to a **SIGSEGV inside `do_rom_read`** — backtrace `do_rom_read`
+← `do_dma` ← `osPiStartDma_recomp` ← `piDmaWorker`, the identical shape
+to every prior occurrence of this long-running shared-corruption-race
+family (s85/s91/s93/s94/s101/s123/s124). This run didn't arm
+`ROGUESQ_LOG_DMA`/`ROGUESQ_LOG_PI_START_DMA`, so the exact `devAddr`
+value wasn't captured, but the backtrace alone is an exact match and
+the hold+11s timing lands squarely in this family's established
+hold+11-15s window (s98). Not a new class; not re-diagnosed — per rule
+8 and this family's own precedent, chasing `do_rom_read` itself is a
+separate, already-tracked thread (item -1 in CURRENT-TRUTH), not
+something to re-open opportunistically here.
+
+**Consequence:** 8 of the hangar-tick-family's catalogued classes are
+now guarded (16th/12th/11th/14th/17th/18th/9th/10th). Per this family's
+history, the next soak will very likely die to some other still-
+unguarded class, an already-guarded class recurring without a positive
+control yet, or the `do_rom_read` race — expected, not a guard failure.
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: added `_hangar_deref_guard_patch`
+(new, `ROGUESQ_LOG_HANGAR_ENTRY_GUARD` env gate) targeting
+`static_5_800B4048`'s fallthrough-arm block ending at
+`funcs_41.c:616-617` (source anchor), guard checking `ctx->r8` (the
+`$t0` copy of the original `$a1` made at function entry). Full
+delete-all regen + rebuild ran clean (patch-report audit passed,
+mandatory per s120/s121). No `lib/` edits this session — no
+`submodule-patches/export.sh` needed. `N64Recomp` checkout still
+carries s90-125's accumulated uncommitted history (same
+flagged-not-actioned posture as prior sessions; `rogue_squadron64`
+sibling checkout likewise unchanged, flagged since s54).
