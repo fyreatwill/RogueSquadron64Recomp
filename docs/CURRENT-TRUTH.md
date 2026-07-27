@@ -655,35 +655,50 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s114)
+## Next steps, in order of expected value (s115)
 
--1. **M3 — find what writes/corrupts `voice+0x34` (the field
-   `musyxRenderVoiceSamples` reads, that traces all the way through
-   `fillSampleStreamRange`'s node-claim path into the corrupted DMA
-   `devAddr`).** Reopened this session after finding s113's closure of
-   this exact question was based on an audit that missed a real writer.
-   `musyxInitVoiceFromSample` (`funcs_24.c:5881`, guest ~`0x800921E8`)
-   does a literal `voice+0x34 = sampleDesc+0x4` word copy (found s105,
-   independently re-confirmed by direct read s114) — the open question
-   was never "does a writer exist" (it does) but "does it ever run, and
-   is `sampleDesc` already corrupted when it does." Two soaks now show
-   **0/0 fires** for this function (s105: full soak through hangar-flight
-   death, ~140s+hold; s114: fresh cold-boot-through-title soak) — still
-   not a positive control either way, just a wider null. Two candidate
-   next moves, neither tried: (a) re-read the s105-s110 call-chain map
-   (`soundMacroOpPlaySampleKeymap`/`tickAudioChannel` and
-   `startStreamedSampleVoice`/`serviceVoicePoolFrame`, the two known
-   call sites) to find a *third* angle to a positive control before
-   spending another soak blind; (b) skip needing this function to fire
-   at all — source-read one level further up, into whichever of its two
-   call sites' `sampleDesc`-building code (`funcs_22.c`'s fixed global
-   scratch address vs. `funcs_26.c`'s stack buffer from `$s1`-`$s6`) is
-   actually live, looking for where *that* data could pick up a
-   tag/string-shaped value instead of a real sample-rate field. Do not
-   resume the retired tickAudioChannel/voice-trigger entry-counter
-   soaking (s105-s110, 5 null sessions) as a blind repro attempt — reread
-   it for structure, don't rerun it hoping for a different outcome.
-   Full detail: PORTING-STATE s114.
+-1. **M3 — find what writes `voice+0x0` (the active-voice byte) nonzero
+   outside the confirmed-dead `musyxTriggerVoiceAttack` call chain.**
+   s115 **closed** the `voice+0x34`-writer question for good (3rd
+   independent line of evidence: s111 found the only literal writer,
+   s113 found no computed-offset writer, s115 found the array's own
+   allocator `allocateSongChannelArray` — `funcs_23.c:10687` — never
+   initializes offset 0x34 either, only 0x0/0x84/0x85) — `voice+0x34` is
+   uninitialized-by-design heap content whenever a voice is never
+   explicitly key-oned via `musyxInitVoiceFromSample`, fully explaining
+   the ASCII-shaped, run-to-run-identical corruption (deterministic heap
+   layout, not a race — s85's "shared race" framing is closed). **s114's
+   "reopening" of this question was itself a misreading of s113's own
+   text** (s113 never disputed the one known writer exists; it only
+   ruled out a second, computed-offset one) — see PORTING-STATE s115 for
+   the correction.
+   The real open question s115 found instead: `musyxMixActiveVoices`
+   (`funcs_24.c:2477`, called 3x from the always-running `musyxSynthFrame`)
+   only calls `musyxRenderVoiceSamples` (the `voice+0x34` reader) when
+   `voice+0x0 != 0` — an explicit active-flag gate, confirmed zeroed at
+   allocation. The only known writer of `voice+0x0 = 1`,
+   `musyxTriggerVoiceAttack` (`funcs_24.c:6085`), is itself called only
+   from the same two chains already proven dead (s105-s110/s114:
+   `tickAllAudioChannels`, `startStreamedSampleVoice`/
+   `serviceVoicePoolFrame`) — yet `musyxRenderVoiceSamples` demonstrably
+   *does* run every corrupting soak (that's the only path into
+   `fillSampleStreamRange`, active via `musyx-dma-call`/`fill-range-args`
+   every session since s102). Something else must be setting `voice+0x0`
+   nonzero. **Both s111's and s113's "-0x6908 audits" have a structural
+   blind spot**, flagged but not acted on since s111: they only find
+   functions that load the `-0x6908` global fresh; any function that
+   instead *receives* an already-computed voice pointer as an argument
+   (the same category `musyxRenderVoiceSamples`/`musyxKeyOnVoice`
+   themselves are in) is invisible to that grep and was never checked for
+   a `+0x0` write. **Next work unit**: find that writer among
+   argument-receiving voice-pointer functions reachable from
+   `musyxSynthFrame`'s always-running path; if found, check whether it
+   also sets `+0x34` (if not, that call site — not the allocator, not a
+   blind zero-fill of `+0x34` — is the real fix site, since `+0x34`'s
+   true role as a stream/DMA-source address means 0 is not a confirmed-safe
+   default). Do not re-run the `-0x6908` literal-grep audit method again —
+   it has now demonstrably missed real candidates twice. Full detail:
+   PORTING-STATE s115.
 
 -2. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
