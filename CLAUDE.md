@@ -10,6 +10,14 @@ Autonomous-operation contract: `tools/agent/ITERATION.md`. Setup rationale:
 PowerShell, `E:\Projects\...`). It is historical context, not instructions for
 this macOS port — CURRENT-TRUTH wins wherever they disagree.
 
+The loop is runner-agnostic (`tools/agent/runner.sh`): `RUNNER=claude` (default,
+`LOOP_MODEL` picks the model), `RUNNER=grok`, `RUNNER=codex`, or `RUNNER=custom`
+with `RUNNER_CMD`. The Stop-hook gate in `.claude/settings.json` is a Claude
+Code feature — codex and grok never run it, so `loop.sh` also runs
+`tools/agent/stop_gate.sh --verify` after every iteration whatever the runner,
+and re-invokes with the unmet condition. **If you add a contract rule, put it in
+`stop_gate.sh`, not in the hook config, or it will only apply to Claude.**
+
 Hard rules:
 - Regen order: `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake`.
   The fixup step is NOT optional. Hand-edits to generated code go in the fixup
