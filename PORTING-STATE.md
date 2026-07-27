@@ -7176,3 +7176,133 @@ keep the resume-count question as a separate, lighter-weight probe
 (e.g. count resumes for id=1 specifically from a run that already
 reproduces the crash, rather than arming verbose per-resume logging
 proactively).
+
+## Session 93 (2026-07-27) — found the s92 "drop the confound" plan never actually took effect (script bug); with it genuinely removed, `do_rom_read` recurred on the very next attempt — 4th byte-identical occurrence, confound theory CONFIRMED
+
+Before running NEXT.md's Path A (reproduce with only the s91 five flags,
+dropping `ROGUESQ_LOG_THREAD_RESUME`), read the harness script it
+prescribes (`scratch/s73_post_a_scene/run_mission_keys.sh`) and found
+line 8 was `export ROGUESQ_LOG_THREAD_RESUME=1` **unconditionally** —
+not defaulted, hardcoded. Passing `ROGUESQ_LOG_THREAD_RESUME=0` via the
+`env` prefix (as s92's own plan specified) would have been silently
+clobbered back to `1` by the script itself before the binary ever
+launched. This means **s92's stated confound-removal never actually
+happened** — s92's "did not recur" result was never a clean test of
+the confound theory; the flag was on then too. Fixed the script
+(`export ROGUESQ_LOG_THREAD_RESUME=${ROGUESQ_LOG_THREAD_RESUME:-1}`,
+default unchanged for other callers) before running anything, per rule
+5 (check the boring thing first).
+
+Ran the corrected soak once (`s93_romread3`, same command as NEXT.md's
+Path A, now actually honoring `ROGUESQ_LOG_THREAD_RESUME=0`):
+
+- **`do_rom_read` recurred** — SIGSEGV at `do_rom_read` ←
+  `do_dma` ← `osPiStartDma_recomp` ← `piDmaWorker` ← thread id=1,
+  same call chain as every prior occurrence. Death came fast: hold+13s
+  (of a 30s hold window), well inside the window this soak shape
+  usually survives clean when this bug doesn't fire.
+- **Byte-identical to s85/s91's signature**: `phys=0x1C676672
+  ram=0xFFFFFFFF80195190 bytes=0x600`, `mb=0x80111270 pri=1 dir=0`,
+  thread id=1. This is the **4th** independent occurrence of this exact
+  triple, across 3 separate sessions.
+- **New this session**: `raw_r7=0x6C676672` / `devAddr=0x7C676672`
+  matches s91's *second* soak's raw value bit-for-bit — the first time
+  the identical uncorrupted-looking-but-wrong register value has
+  recurred verbatim (previously only the derived `phys`/`dram`/`size`
+  triple had been shown to repeat; s91 itself didn't check whether
+  `raw_r7` repeats across its own two occurrences). Confirms `k1_to_phys`
+  math (`devAddr = raw_r7 | rom_base`, `phys = devAddr & 0x1FFFFFFF`,
+  `rom_base=0x10000000`) is exactly as read from source — nothing new
+  in the mechanism, but the bit-for-bit recurrence of `raw_r7` itself
+  (not just its derived phys address) is new evidence for "reading a
+  fixed stale location," not "run-to-run varying garbage" (that framing
+  was already refuted by s91; this adds a second independent
+  confirmation).
+- **Confound theory CONFIRMED**, not just plausible: this is the first
+  soak that ever actually ran this repro shape with
+  `ROGUESQ_LOG_THREAD_RESUME` genuinely off (s91's two hits had it off
+  by construction — different script/session; s92's attempt to turn it
+  off was silently defeated by the bug above), and `do_rom_read` fired
+  on the very first genuine attempt.
+- Controls: `[anim-recurse]` 7592/7592 (still confined to known `sp`
+  values, not re-checked in detail this session), `[anim-tex-stream]`
+  6062 fires with no crash, `[hangar-entry]` 3 fires with no crash,
+  TMEM-zero still 0/7. `thr-resume bad=1` could not be checked this run
+  (logging was the thing intentionally disabled) — the always-on skip
+  gate itself still applies regardless of logging, this only means we
+  have no visibility into whether it fired.
+
+Net effect: parked the "is this a random race" question definitively
+(4 byte-identical hits, one with a bit-identical register value,
+across sessions and rebuilds is not consistent with a race) and
+confirmed the log-volume confound is real and load-bearing for
+reproduction attempts. Next step is characterizing the *source* of the
+corrupted `raw_r7` value, not further reproduction attempts — see
+CURRENT-TRUTH next-steps.
+
+### Same-session follow-up: located the exact consumer mechanism and its one known producer, both by pure source reading (no rebuild)
+
+With the crash's `mb=0x80111270 pri=1 dir=0` constants in hand, searched
+the recompiled guest C (`~/Documents/Tools/N64Recomp/RecompiledFuncs/
+funcs_1.c`) for the address `0x80111270` and its containing function.
+Found it directly — no decomp asm needed after all; N64Recomp already
+translated this guest code to (ugly but fully readable) C, and s92's
+"no C source available" conclusion only applied to the *hand-decomp*
+tree, not the *recompiled* one, which covers 100% of the ROM.
+
+**`piDmaWorker`** (guest `0x80005570`, symbol_files-confirmed, "cartridge
+PI DMA worker; ring at 0x801112B0 (256×20B)") is a persistent
+consumer-loop thread. Each iteration: reads a producer counter at
+`0x801126B4`, a consumer counter at `0x801126B0`; while they differ,
+computes `ring_slot = 0x801112B0 + (consumer_idx % 256) * 20`, and if
+the byte at `ring_slot+0x10` is 0 (a "DMA request" tag, vs. non-zero
+for some other message-type path at `L_80005660`), calls
+`osPiStartDma_recomp` with **literal constants `mb=0x80111270`
+(a different, hardcoded 32-bit constant — the PI manager's own
+persistent completion-notify queue, distinct from the ring), `pri=1`,
+`dir=0`**, and `devAddr = ring_slot+0x4`, `dramAddr = ring_slot+0x8`,
+`size = ring_slot+0x0` (stack args). **This is an exact, unconditional
+match to all four `do_rom_read` crash log lines' `mb`/`pri`/`dir`** —
+proof (not inference) that every occurrence of this crash is this
+exact consumer loop, reading a corrupted `devAddr` straight out of
+`ring_slot+0x4` in RDRAM.
+
+**`submitDmaRequestBatch`** (guest `0x8000569C`, writes the same
+20-byte slot layout from a caller-supplied array of 12-byte `{size,
+romAddr, dramAddr}` entries, same ring-index arithmetic mirrored on a
+producer counter at the same `0x801126B4`) is the only function in the
+entire recompiled codebase that references the ring base literal
+(`grep -rl "0X12B0\b"` and `grep -rl "0X26B4"` across all 45
+`RecompiledFuncs/funcs_*.c` each return exactly `funcs_1.c` and nothing
+else). Its **only static call site** is inside **`mainBootstrapWorker`**
+(guest `0x80000C68`, immediately after `osStopThread` +
+`loadDebugAssets` — genuinely one-time boot code, not a per-frame or
+per-level worker), with a single request (`count=1`) whose `size`
+(`0xCE00`), `romAddr` (`0xB0101000`), and `dramAddr` (`0x80100400`) are
+**all fixed immediate constants** baked into the instruction stream —
+not data-driven, not dependent on any register input. **This does not
+match the crash's target (`dram=0x80195190`, `size=0x600`)** — the one
+known producer cannot be the source of the corrupted request.
+
+This is a genuine open puzzle, not yet resolved: the ring's only known
+write path fires exactly once, at boot, with sane fixed values, yet
+the crash (which is unambiguously this same ring/worker, by the
+literal-constant match above) fires much later (hold+13s into a driven
+session) with a different, corrupted target. Two live explanations,
+not yet distinguished:
+1. There is a second producer this static search missed — an indirect
+   call to `submitDmaRequestBatch` via a function pointer/`jalr`
+   (invisible to a literal-`jal`-address grep), or a duplicate
+   inlined ring-write using a cached pointer instead of re-deriving
+   the `0x12B0`/`0x26B4` literals each time.
+2. The ring truly is written once, and something unrelated writes
+   stray garbage into the `ring_slot+0x4` (devAddr) field of RDRAM
+   between the boot-time write and whatever much-later read/rewrite
+   the consumer sees — i.e. the "shared corruption race" from s85 is
+   real but its landing zone is now precisely known (a fixed 20-byte
+   window inside `0x801112B0..0x801126B0`), which is a much smaller,
+   more instrumentable target than "somewhere in an OSThread context."
+
+Not instrumented or soaked this session (source-reading only, no
+rebuild) — the next concrete, cheap, discriminating step is in
+CURRENT-TRUTH next-steps item 1.

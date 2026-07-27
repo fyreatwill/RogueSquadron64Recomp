@@ -255,6 +255,43 @@ r31-specific evidence; the anomaly narrows to `raw_r7` alone. Found an
 win the race instead of `do_rom_read` — don't combine the two in
 future repro attempts. Controls held (bad_total=0, anim-recurse sp
 flat) for a 7th session. Full detail: PORTING-STATE s92.
+**s93:** found s92's "drop the confound" plan never actually took
+effect — `scratch/s73_post_a_scene/run_mission_keys.sh` hardcoded
+`export ROGUESQ_LOG_THREAD_RESUME=1` unconditionally, silently
+clobbering the `env ROGUESQ_LOG_THREAD_RESUME=0` prefix s92's own plan
+used, so s92's "did not recur" was never a clean confound test. Fixed
+the script (now defaults, doesn't force) and reran: **`do_rom_read`
+recurred** on the first genuine attempt, byte-identical to s85/s91
+(`phys=0x1C676672 dram=0x80195190 bytes=0x600 mb=0x80111270`, thread
+id=1) — **4th occurrence**, and `raw_r7=0x6C676672` matched s91's 2nd
+soak's raw register value bit-for-bit (new: not just the derived phys
+address repeats, the raw value does too). **Confound theory CONFIRMED**
+(first soak to actually run this repro shape with the flag genuinely
+off — fired immediately). Death was fast (hold+13s). Controls: anim-
+recurse 7592/7592, anim-tex-stream 6062/no-crash, hangar-entry 3/no-
+crash, TMEM-zero 0/7; thr-resume bad=1 unobservable this run (logging
+was the thing disabled, gate itself still active). Same-session
+follow-up (pure source reading, no rebuild): found the exact consumer
+mechanism in the recompiled guest C itself (`N64Recomp/RecompiledFuncs/
+funcs_1.c`, not decomp asm — that tree covers 100% of the ROM,
+unlike the hand-decomp tree s92 correctly found empty). `piDmaWorker`
+(`0x80005570`) is a persistent 256×20B-ring consumer thread whose
+`osPiStartDma` call site has **literal constants `mb=0x80111270
+pri=1 dir=0`** — an exact, unconditional match to every crash log
+line, proving every occurrence is this exact loop reading a corrupted
+`devAddr` from `ring_slot+0x4`. Its only producer,
+`submitDmaRequestBatch` (`0x8000569C`, the only function anywhere
+referencing the ring's base literal), has exactly **one static call
+site** — `mainBootstrapWorker` (`0x80000C68`, genuine one-time boot
+code) — submitting one fixed-constant request (`size=0xCE00
+rom=0xB0101000 dram=0x80100400`) that **does not match** the crash's
+target (`dram=0x80195190 size=0x600`). Open, unresolved: either a
+second producer exists that a literal-address grep can't see
+(indirect call), or the ring is genuinely written once and something
+else stomps `ring_slot+0x4` between that boot-time write and a much
+later read — the "shared corruption race" from s85, now narrowed to a
+20-byte window instead of "somewhere in an OSThread context." Full
+detail: PORTING-STATE s93.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -353,7 +390,9 @@ assert reproduced with a full backtrace, 9th crash class found (s89);
 reproducible (3x byte-identical), refuting the s85 "random race"
 framing (s91); `ra=0x00000000` shown to be routine (not corruption
 evidence), `do_rom_read` non-recurrence, 11th crash class found in
-`projectModelBoundsToScreen` (s92).**
+`projectModelBoundsToScreen` (s92); s92's confound-removal was never
+real (script bug), fixed it, `do_rom_read` recurred immediately (4th
+hit), confound theory confirmed (s93).**
 AVAILABLE CRAFT reachable. **s75:** single Start → hangar-flight.
 **s78–s79:** RDP-`fs` plateaus post-leave (S1). **s80:** synthetic FIRE continues.
 **s81:** black = mode-3 presenting wild last-drawn. **s82:** always-on sane-width
@@ -450,40 +489,54 @@ cost three sessions before the recursive mutex.
 
 ## Next steps, in order of expected value (s92)
 
-1. **M3 — root-cause the deterministic `do_rom_read` corruption.**
-   Still the top open lead (3x byte-identical s85/s91, 0/1 in s92 — see
-   item 1a for why). The crash is a fixed DMA call:
-   `mb≈0x80111270 dram=0x80195190 size=0x600 pri=1 dir=0` on thread
-   id=1, always right after a `[thr-resume] tag=swap` onto that thread.
-   **Correction (s92): do NOT plan to "dump the `OSIoMesg` at `mb`"** —
-   read `osPiStartDma_recomp` source (`lib/N64ModernRuntime/librecomp/
-   src/pi.cpp:347-374`) first: it never dereferences `mb`, `devAddr`
-   comes straight from `ctx->r7`/`$a3`, a caller-passed register, so
-   there is nothing to dump there for H1. **Also correction: `ra=0` is
-   NOT evidence of "unpopulated context"** — s92 showed it on 487/487
-   sane `pi-start-dma` calls plus 3 unrelated entry-log instruments
-   (anim-recurse, anim-tex-stream, hangar-entry), all always `ra=0`.
-   The anomaly is `raw_r7` alone. Real next probe: since the actual
-   `OSIoMesg`-dequeue-and-forward logic lives in the guest PI-manager
-   thread's own compiled code (Nintendo SDK, statically linked into the
-   ROM, not `librecomp` runtime code), and the decomp tree
-   (`~/Documents/Tools/rogue_squadron64/src/libultra/io/{pimgr,pidma}.c`)
-   has no C source for it yet (`INCLUDE_ASM` stubs) — either extract/
-   read the raw MIPS asm for `osCreatePiManager`'s thread body
-   (`asm/nonmatchings/libultra/io/pimgr` if it exists in a fuller
-   checkout) to see how it computes/forwards `devAddr`, or add a log at
-   the `osSendMesg`/`osJamMesg` call feeding this PI queue to see if
-   the *enqueued* message is already garbage before `piDmaWorker` ever
-   reads it.
-   1a. **Confound found (s92): don't combine `ROGUESQ_LOG_THREAD_RESUME=1`
-   with the repro.** It adds ~120k `fprintf`+`fflush` calls, enough
-   timing perturbation that a different bug (the new 11th class, item
-   1b) won the race instead of `do_rom_read` in the one soak that used
-   it. Reproduce with just the s91 five flags (`ROGUESQ_LOG_ANIM_CB`,
-   `ROGUESQ_LOG_TMEM_ZERO`, `ROGUESQ_LOG_ANIM_TEX_STREAM`,
-   `ROGUESQ_LOG_HANGAR_ENTRY`, `ROGUESQ_LOG_DMA`) — same soak shape as
-   `animcb5`/`animcb6`/`s92_romread2`, PROBE_MODE=start_only HOLD_S=30.
-   1b. **M3 — characterize the 11th crash class (s92, new): SIGBUS in
+1. **M3 — determine why `piDmaWorker`'s ring shows a devAddr its only
+   known producer never wrote.** Reproduction is closed (4 byte-
+   identical hits) and the exact consumer mechanism is now known by
+   source (s93 same-session follow-up, PORTING-STATE s93): `piDmaWorker`
+   (`0x80005570`, `N64Recomp/RecompiledFuncs/funcs_1.c`) reads
+   `devAddr` from `ring_slot+0x4` of a 256×20B ring at guest
+   `0x801112B0`, and its literal `mb=0x80111270 pri=1 dir=0` matches
+   every crash exactly. Its only static producer,
+   `submitDmaRequestBatch` (`0x8000569C`), is called exactly once, from
+   boot-only `mainBootstrapWorker`, with fixed constants that don't
+   match the crash's target — **do not re-derive this by source
+   reading again, it's done; the open question is empirical now.**
+   **Do NOT plan to "dump the `OSIoMesg` at `mb`"** (refuted s92,
+   `osPiStartDma_recomp` never dereferences `mb`) and **do NOT cite
+   `ra=0` as corruption evidence** (refuted s92, routine on 487+
+   calls). **Concrete next instrument** (one small `fixup_game_funcs.py`
+   patch, no asm extraction needed — the guest source is already
+   readable): add two log lines gated on a new env var (e.g.
+   `ROGUESQ_LOG_DMA_RING=1`) —
+   (a) inside `submitDmaRequestBatch` at the point it writes
+   `ring_slot+0/4/8` (`funcs_1.c` lines ~6253/6257/6271, guest
+   `0x8000573C`-ish), print producer index + the 3 written fields, to
+   get a same-run positive control confirming it really fires exactly
+   once with the fixed boot values (or refuting that if it fires more);
+   (b) inside `piDmaWorker` right after the `ring_slot+0x10` tag check
+   (`funcs_1.c` line ~6032, guest `0x80005608`), print consumer index +
+   the 3 read fields on *every* iteration, not just DMA ones. Compare
+   producer-fires vs. consumer-reads: if producer fires N>1 times, a
+   second producer exists (go find the indirect call); if producer
+   fires exactly once but consumer reads many times with the same
+   index repeating or growing unboundedly, that's an index-desync bug
+   in the consumer itself (new, more specific than "shared corruption
+   race"); if both show 1:1 sane traffic right up to the corrupted
+   read with no intervening write logged, the stomp truly comes from
+   outside this pair — that's the strongest form of "shared corruption
+   race" evidence yet, and worth widening to a general RDRAM
+   write-range watch on `0x801112B0..0x801126C0` if the runtime has
+   (or can cheaply grow) one.
+   1a. **Confound theory CONFIRMED and CLOSED (s93).** s92's attempt to
+   drop `ROGUESQ_LOG_THREAD_RESUME=1` from the repro never actually
+   took effect — `scratch/s73_post_a_scene/run_mission_keys.sh` line 8
+   hardcoded the export unconditionally, silently overriding the `env
+   ROGUESQ_LOG_THREAD_RESUME=0` prefix. Fixed (now defaults, doesn't
+   force); the very next soak with the flag genuinely off reproduced
+   `do_rom_read` immediately (hold+13s). Do not re-open this question;
+   the script is fixed, use `ROGUESQ_LOG_THREAD_RESUME=0` when the log
+   volume isn't specifically needed.
+   1b. **M3 — characterize the 11th crash class (s92): SIGBUS in
    `projectModelBoundsToScreen`** (confirmed real symbol, `0x80065E98`),
    via `hangarTickCameraOrbit` (`static_5_800ADB70`) ← a
    symbol_files-named-but-semantically-suspect `loadCutsceneAssetsByIndex`
@@ -491,7 +544,8 @@ cost three sessions before the recursive mutex.
    `runHangarMenuFromOverlay` → `menuOverlayInit` — same hangar-tick
    family as the 9th/10th classes. Not yet instrumented; no dedicated
    soak needed yet, fold into whichever soak runs next and read the
-   crash log for it.
+   crash log for it. Did not recur in s93 (do_rom_read won the race
+   instead, as expected with the confound removed).
 2. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert.**
    Path confirmed: `fullSyncFramebufferPairTiles` → `uploadTile` lambda
    → `TextureManager::uploadTexture` (`rt64_state.cpp:1329`) →
@@ -544,6 +598,22 @@ cost three sessions before the recursive mutex.
    before committing there.
 14. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
 15. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+
+Done this session (s93): before running NEXT.md's Path A, read the
+harness script it prescribes and found `ROGUESQ_LOG_THREAD_RESUME=1`
+was hardcoded unconditionally (line 8), meaning s92's own
+confound-removal attempt via `env ROGUESQ_LOG_THREAD_RESUME=0` had been
+silently clobbered and never actually ran — s92's "did not recur" was
+not a clean test. Fixed the script
+(`scratch/s73_post_a_scene/run_mission_keys.sh`, now
+`${ROGUESQ_LOG_THREAD_RESUME:-1}`) and reran the prescribed soak
+(`s93_romread3`): `do_rom_read` recurred on the first genuine attempt
+(hold+13s), byte-identical to s85/s91
+(`phys=0x1C676672 dram=0x80195190 bytes=0x600`), with `raw_r7=0x6C676672`
+matching s91's 2nd soak's raw register value bit-for-bit — the
+confound theory is now confirmed rather than merely proposed. Redirected
+next-steps item 1 from "keep reproducing" to "find the source of the
+corrupted register value," since reproduction is no longer in doubt.
 
 Done this session (s92): read `osPiStartDma_recomp` source before
 building anything (per NEXT.md's own step-2 plan) and found the
