@@ -1,52 +1,49 @@
-# NEXT work unit — M3: sane-width gate on last-drawn / mode-3 (B2 causal)
+# NEXT work unit — M3: contain evalCubicSplineAtTime NaN Abort
 
-s81 offline: intermittent black = `ROGUESQ_VI_FOLLOW_DRAW=3` presenting wild
-`g_rs64_last_drawn_fb` (w=1..257). Detail:
-`scratch/s73_post_a_scene/BLACK1_ANALYSIS.md`.
+s82: sane-width last-drawn gate **kept** (G1). Hangar-flight content returns,
+but process dies ~hold+6s on:
 
-## Competing hypotheses (after gate)
+```
+Assertion failed: (ctx->f28.fl == ctx->f28.fl), function evalCubicSplineAtTime,
+file funcs_4.c, line 25117
+```
+
+via `buildPositionAndCallTransformHelper` → menu overlay path. Blocks HOLD_S=60.
+
+## Competing hypotheses
 
 | ID | Claim | If true, we will see… |
 |----|--------|------------------------|
-| G1 | Wild last-drawn is causal for black | `[last-drawn-skip]` fires; black snaps rare/gone; 0x656/0x6AB flips dominate hold |
-| G2 | Gate correct but too late / present still broken | skip fires; black duty-cycle unchanged; vi-follow still wrong |
-| G3 | Sane width set too strict | skip fires on legitimate content; craft/hangar go black or pad-only |
-| G4 | Black is game clear independent of last-drawn | skip fires; last-drawn stays 0x656/0x6AB; snaps still black |
+| N1 | NaN f28 is rare bad input; soft-return is safe | log fires; process survives hold_30+; hangar content continues |
+| N2 | Soft-return corrupts transform state | survives assert but geometry explodes / new SIGBUS / freeze earlier |
+| N3 | Assert is not on hangar-flight critical path once gated | soft-return; content identical to s82 freeze pattern (S1 only) |
+| N4 | Death is not this assert (race / secondary) | no `[spline-nan]` log before Abort; different stack |
 
 ## Discriminating measurement (ONE build)
 
-Gate in **both** places (batch):
-1. `rt64_framebuffer_renderer.cpp` last-drawn atomic update — reject
-   `addr==0` or width ∉ {320,512,640,1024} (keep previous last-drawn).
-2. `rt64_present_queue.cpp` mode-3 override — same reject; do not REGISTER
-   wild keys.
-
-Log always-on rate-limited:
-```
-[last-drawn-skip] #N addr=0x.. w=.. (why)
-[vi-follow-skip]  #N addr=0x.. w=..
-```
-Positive control: early 640 attribution + title must still show content;
-skip must fire ≥1 during post-leave if G1/G2 path is real.
+Locate `evalCubicSplineAtTime` assert in `RecompiledFuncs/funcs_4.c` (or via
+fixup if regen-safe). Replace assert with rate-limited log + early return
+(preserve prior outputs / skip update). Prefer `tools/fixup_game_funcs.py`
+so regen keeps it.
 
 ```bash
-# after edit under lib/rt64:
-./submodule-patches/export.sh
+# find site
+rg -n 'evalCubicSplineAtTime|f28\.fl == ctx->f28' RecompiledFuncs/funcs_4.c | head
+# after soft-return (+ fixup if needed):
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 cmake --build build -j8
 env PROBE_MODE=start_only HOLD_S=30 \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh ldgate1 0 12
-# offline: black% of hold_*.png; grep -c last-drawn-skip run.log;
-# vi-follow last drawn w= distribution
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh spline1 0 12
+# offline: grep -c spline-nan run.log; process alive hold_30?; black% hold_*;
+# compare hold freeze pattern to ldgate1
 ```
 
 ### Outcomes
-- **G1:** keep gate; HOLD_S=60 craft stick (M3 DoD).
-- **G2:** instrument present path / matcher next.
-- **G3:** widen allowlist carefully (measure which skipped w had content).
-- **G4:** present-luma / RDRAM clear probe.
+- **N1/N3:** proceed HOLD_S=60 craft stick (M3 DoD).
+- **N2:** narrower skip (only when isnan) or quarantine the caller.
+- **N4:** re-capture stack; different site.
 
 ## Do not
-- Re-analyze vifs1 offline for B1–B4 (done s81).
-- Treat empty=0 as continuous present health.
-- Re-open synthetic FIRE / RDP-fs plateau as present root.
+- Re-litigate G1–G4 / rebuild the last-drawn gate.
+- Treat frozen hangar content as M3 DoD (need craft response + 60s).
+- Chase S1 FULL_SYNC until soak can survive past hold_30.

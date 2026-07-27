@@ -6211,3 +6211,46 @@ No new build. Analysis: `scratch/s73_post_a_scene/BLACK1_ANALYSIS.md`.
 - Do **not** chase "why empty=0 if black" — empty=0 never claimed continuous black-free presents.
 - Do **not** re-open V1/V3/V4 synthetic FIRE.
 - Next: sane-width gate on last-drawn update and/or mode-3 present; `[last-drawn-skip]` control.
+
+## Session 82 (2026-07-27) — sane-width last-drawn gate kills intermittent black (G1)
+
+### Work unit
+M3 next-step #1 / NEXT.md: always-on gate on last-drawn store + mode-3 present
+for width ∈ {320,512,640,1024} and addr≠0. Logs `[last-drawn-skip]` /
+`[vi-follow-skip]`. Code: `lib/rt64/src/render/rt64_framebuffer_renderer.cpp`,
+`lib/rt64/src/hle/rt64_present_queue.cpp`. Patch exported. Soak:
+`PROBE_MODE=start_only HOLD_S=30` → `scratch/s73_post_a_scene/ldgate1/`.
+Detail: `scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
+
+### Positive controls (same run)
+- `[last-drawn-skip]` ≥100 (log #100; 27 addr0 + 14 wild-w in rate-limited sample).
+- Early timeline healthy: 320→640@1.7s→1024@44.6s→512@73.7s; craft_stable =
+  SELECT YOUR CRAFT content.
+- Accepted `[last-drawn]` widths: **only** 512×1644 + 640×20.
+- Mode-3 REGISTER=0; vi-follow presents only w=512/640 (no wild w).
+
+### Discriminating measurements
+1. **Hold pure-black duty-cycle: 0/5** (s81 vifs1: hold_01–08 pure-black class).
+   after_p1_01–05 all hangar-flight content with **5 distinct hashes** (motion);
+   hold_01–05 hangar-flight content, freeze to identical frame from hold_02.
+2. last-drawn continues 0x656↔0x6AB through end (#2362).
+3. `[vi-follow-skip]`=0 expected — store gate never lets wild into atomics.
+4. RDP-`fs` advances to **3784** then plateaus (past s78 ~3297) — S1 residual.
+5. Death ~hold+6s: Abort from `evalCubicSplineAtTime` NaN assert
+   (`ctx->f28.fl == ctx->f28.fl` false) in recomp `funcs_4.c` via
+   `buildPositionAndCallTransformHelper` / menu overlay. thr-resume bad=0,
+   UnhandledJump=0, exit=2=0. Not present-gate related.
+
+### G1–G4
+
+| ID | Verdict |
+|----|---------|
+| G1 wild last-drawn causal | **SUPPORTED** (skip + black collapse + hangar content) |
+| G2 gate too late | **REFUTED** |
+| G3 allowlist too strict | **REFUTED** |
+| G4 black independent of last-drawn | **REFUTED** |
+
+### Rules out / keep
+- Keep always-on sane-width gate (store + mode-3).
+- Do **not** treat frozen content as fixed present — S1 FULL_SYNC loss still freezes after ~5s of hangar-flight motion.
+- Next: 60s hold/craft stick once NaN assert death is contained; or soften NaN assert first if soak dies before stick marks.

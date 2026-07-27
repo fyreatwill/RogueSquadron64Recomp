@@ -1160,7 +1160,7 @@ index dccaa87..71d6c74 100644
                  dummy = dl;
                  extendedFunction(state, &dl);
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index f17db9b..e211f39 100644
+index f17db9b..5087cef 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -4,11 +4,13 @@
@@ -1328,18 +1328,32 @@ index f17db9b..e211f39 100644
                      if (forceFb != nullptr) {
                          viFb = forceFb;
                          overrideUsed = true;
-@@ -216,7 +313,80 @@ namespace RT64 {
+@@ -216,7 +313,93 @@ namespace RT64 {
                          }
                      }
                  }
 -                if (!overrideUsed && s_follow_mode > 0 &&
 +                // Mode 3: present whichever framebuffer last received real
 +                // geometry. Independent of colorImageAddressVector.
++                // s82: refuse wild last-drawn widths (same allowlist as last-drawn
++                // store) so we never present / re-register garbage keys.
 +                if (!overrideUsed && s_follow_mode == 3) {
 +                    const uint32_t drawn = g_rs64_last_drawn_fb.load(std::memory_order_relaxed);
 +                    const uint32_t drawnW = g_rs64_last_drawn_fb_width.load(std::memory_order_relaxed);
 +                    const uint32_t drawnSiz = g_rs64_last_drawn_fb_siz.load(std::memory_order_relaxed);
-+                    if (drawn != 0) {
++                    const bool saneW = (drawnW == 320u || drawnW == 512u ||
++                                        drawnW == 640u || drawnW == 1024u);
++                    if (drawn != 0 && !saneW) {
++                        static std::atomic<uint64_t> vfskip{0};
++                        uint64_t sv = ++vfskip;
++                        if (sv <= 40 || (sv % 100) == 0) {
++                            std::fprintf(stderr,
++                                "[vi-follow-skip] #%llu addr=0x%08X w=%u (wild-w)\n",
++                                (unsigned long long)sv, drawn, drawnW);
++                            std::fflush(stderr);
++                        }
++                    }
++                    else if (drawn != 0) {
 +                        Framebuffer *drawnFb = fbManager.find(drawn);
 +                        // Session 21: 1024-phase draws land in a GPU target at
 +                        // 0x790000 (SETCIMG w=512) but performDiscards / the
@@ -1348,9 +1362,8 @@ index f17db9b..e211f39 100644
 +                        // RDRAM-upload branch — which is black because the
 +                        // content only lives on the GPU. Re-register with the
 +                        // drawn width so targetManager.get hits the live RT.
-+                        // s78: do not re-register last-drawn with garbage width
-+                        // (same 1280 cap as FramebufferManager::get / s72).
-+                        if (drawnFb == nullptr && drawnW != 0 && drawnW <= 1280u) {
++                        // s82: only re-register sane-width last-drawn (was ≤1280).
++                        if (drawnFb == nullptr && saneW) {
 +                            const hlslpp::uint2 viSize = present.screenVI.fbSize();
 +                            const uint32_t h = std::max(uint32_t(viSize.y), 480u);
 +                            const uint8_t siz = drawnSiz ? uint8_t(drawnSiz) : G_IM_SIZ_16b;
@@ -1410,7 +1423,7 @@ index f17db9b..e211f39 100644
                      !ext.sharedResources->colorImageAddressVector.empty())
                  {
                      const auto &vec = ext.sharedResources->colorImageAddressVector;
-@@ -308,6 +478,47 @@ namespace RT64 {
+@@ -308,6 +491,47 @@ namespace RT64 {
                  }
              }
              
@@ -1458,7 +1471,7 @@ index f17db9b..e211f39 100644
              if ((presentFb != nullptr) && (viFb != nullptr)) {
                  for (uint32_t colorAddress : ext.sharedResources->colorImageAddressVector) {
                      Framebuffer *colorFb = fbManager.find(colorAddress);
-@@ -353,11 +564,12 @@ namespace RT64 {
+@@ -353,11 +577,12 @@ namespace RT64 {
                  if (s_pq_log) {
                      static int s_n2 = 0;
                      int n = ++s_n2;
@@ -4764,7 +4777,7 @@ index 5a331aa..71db1f5 100644
  
                      // Transition the render targets in case the present queue will show them so it doesn't have to perform transitions.
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index b9cb1f5..82a609a 100644
+index b9cb1f5..77941ed 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
 @@ -238,9 +238,24 @@ namespace RT64 {
@@ -4854,7 +4867,7 @@ index b9cb1f5..82a609a 100644
                          std::fflush(stderr);
                      }
                  }
-@@ -585,6 +638,33 @@ namespace RT64 {
+@@ -585,6 +638,52 @@ namespace RT64 {
              case InstanceDrawCall::Type::IndexedTriangles:
              case InstanceDrawCall::Type::RawTriangles:
              case InstanceDrawCall::Type::RegularRect: {
@@ -4863,32 +4876,51 @@ index b9cb1f5..82a609a 100644
 +                // instead of trusting the VI address — the existing modes 1/2
 +                // rely on colorImageAddressVector, which is empty in this game
 +                // because none of its fbPairs are early-present candidates.
++                // s82: refuse wild widths (1..257 garbage) so mode-3 cannot
++                // present them — keep previous last-drawn instead.
 +                if (fbStorage->colorTarget != nullptr) {
 +                    extern std::atomic<uint32_t> g_rs64_last_drawn_fb;
 +                    extern std::atomic<uint32_t> g_rs64_last_drawn_fb_width;
 +                    extern std::atomic<uint32_t> g_rs64_last_drawn_fb_siz;
 +                    const auto &key = fbStorage->framebufferKey.colorTargetKey;
-+                    const uint32_t prev = g_rs64_last_drawn_fb.exchange(key.address, std::memory_order_relaxed);
-+                    g_rs64_last_drawn_fb_width.store(key.width, std::memory_order_relaxed);
-+                    g_rs64_last_drawn_fb_siz.store(key.siz, std::memory_order_relaxed);
-+                    if (prev != key.address) {
-+                        static std::atomic<int> nchg{0};
-+                        const int c = ++nchg;
-+                        // Always log the 1024-phase address and the first few.
-+                        if (c <= 20 || key.address == 0x790000u || prev == 0x790000u ||
-+                            key.width == 512 || key.width >= 1024) {
++                    const bool saneW = (key.width == 320u || key.width == 512u ||
++                                        key.width == 640u || key.width == 1024u);
++                    if (key.address == 0u || !saneW) {
++                        static std::atomic<uint64_t> nskip{0};
++                        const uint64_t sn = ++nskip;
++                        if (sn <= 40 || (sn % 100) == 0) {
 +                            std::fprintf(stderr,
-+                                "[last-drawn] #%d 0x%06X -> 0x%06X w=%u siz=%u\n",
-+                                c, prev & 0xFFFFFF, key.address & 0xFFFFFF,
-+                                key.width, (unsigned)key.siz);
++                                "[last-drawn-skip] #%llu addr=0x%08X w=%u siz=%u "
++                                "(%s)\n",
++                                (unsigned long long)sn, key.address, key.width,
++                                (unsigned)key.siz,
++                                key.address == 0u ? "addr0" : "wild-w");
 +                            std::fflush(stderr);
++                        }
++                    }
++                    else {
++                        const uint32_t prev = g_rs64_last_drawn_fb.exchange(key.address, std::memory_order_relaxed);
++                        g_rs64_last_drawn_fb_width.store(key.width, std::memory_order_relaxed);
++                        g_rs64_last_drawn_fb_siz.store(key.siz, std::memory_order_relaxed);
++                        if (prev != key.address) {
++                            static std::atomic<int> nchg{0};
++                            const int c = ++nchg;
++                            // Always log the 1024-phase address and the first few.
++                            if (c <= 20 || key.address == 0x790000u || prev == 0x790000u ||
++                                key.width == 512 || key.width >= 1024) {
++                                std::fprintf(stderr,
++                                    "[last-drawn] #%d 0x%06X -> 0x%06X w=%u siz=%u\n",
++                                    c, prev & 0xFFFFFF, key.address & 0xFFFFFF,
++                                    key.width, (unsigned)key.siz);
++                                std::fflush(stderr);
++                            }
 +                        }
 +                    }
 +                }
                  // ROGUESQ: skip draws with null colorTarget instead of
                  // asserting. Some workloads route instances through a
                  // rasterScene whose fbStorage has no allocated colorTarget
-@@ -679,6 +759,22 @@ namespace RT64 {
+@@ -679,6 +778,22 @@ namespace RT64 {
                  }
                  
                  rasterParams.renderIndex = i;
@@ -4911,7 +4943,7 @@ index b9cb1f5..82a609a 100644
                  rasterParams.screenScale = triangles.screenScale;
                  rasterParams.screenOffset = triangles.screenOffset;
                  worker->commandList->setGraphicsPushConstants(0, &rasterParams);
-@@ -735,6 +831,32 @@ namespace RT64 {
+@@ -735,6 +850,32 @@ namespace RT64 {
                      break;
                  }
  
@@ -4944,7 +4976,7 @@ index b9cb1f5..82a609a 100644
                  const RenderRect *clearRects = rectCoversWholeTarget ? nullptr : &clearRect.rect;
                  uint32_t clearRectCount = rectCoversWholeTarget ? 0 : 1;
                  if (fbStorage->colorTarget != nullptr) {
-@@ -1462,6 +1584,15 @@ namespace RT64 {
+@@ -1462,6 +1603,15 @@ namespace RT64 {
          fbParams.horizontalMisalignment = p.horizontalMisalignment;
          framebufferCount++;
  

@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 81)
+## Current truth (as of session 82)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -97,6 +97,13 @@ last-drawn** (w=1..257; REGISTER 6/7 wild). `present-1024 empty=0` is
 transition-only (not continuous health). Pure-black snaps byte-identical
 (incl. craft-select flash). B2 **supported**; B4 feeds B2; B1 weakened;
 B3 partial. Detail: `scratch/s73_post_a_scene/BLACK1_ANALYSIS.md`.
+**s82 (G1–G4 live):** always-on sane-width gate on last-drawn store +
+mode-3 (`w∈{320,512,640,1024}`, addr≠0). `[last-drawn-skip]` ≥100 same-run
+control; accepted last-drawn only 512/640; **hold pure-black 0/5** (s81
+was 8/8 early holds black); hangar-flight content + ~5s motion then freeze
+on last sane frame. **G1 supported / G2–G4 refuted.** Residual: S1 `fs`
+plateau ~3784; Abort ~hold+6s from `evalCubicSplineAtTime` NaN assert.
+Detail: `scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -176,18 +183,15 @@ step 2 below). Full detail: PORTING-STATE s49.
 
 **M3 — first gameplay: OPENED (s50); ImemOverrun FIXED (s69); OSThread SIGBUS FIXED (s72);
 post-`a` scene ID (s73); Start path isolated (s74/s75); hold/assert triage (s76/s77);
-wild-FB refuse gate (s78, G1 refuted); D3 S1–S4 (s79); VI_FULLSYNC decision V1–V4 (s80);
-intermittent-black B1–B4 (s81).**
-AVAILABLE CRAFT reachable. thr-resume bad=0 holds through s80. **s75:** single Start →
-hangar-flight by +2–4s. **s78:** refuse gate keeps map clean; RDP-`fs` still plateaus.
-**s79:** post-leave tasks permanently lose RDP FULL_SYNC (S1); S2/S3-primary refuted.
-**s80:** synthetic VI_FULLSYNC **still FIREs** after S1 (V1/V3/V4 dead). RDP-`fs`
-plateau ≠ synthetic stall. **s81:** intermittent black = **VI_FOLLOW_DRAW=3
-presenting wild last-drawn** (widths 1..257 pass s78's >1280 refuse). B2
-supported; next is last-drawn / mode-3 sane-width gate. UnhandledJump 0x0231
-**0** on vifs1. Death: unaligned `do_rom_read`. Leave key closed. Origin still
-cannot name scenes. Full detail PORTING-STATE s68–s81;
-`scratch/s73_post_a_scene/BLACK1_ANALYSIS.md`.
+wild-FB refuse gate (s78); D3 S1–S4 (s79); VI_FULLSYNC decision V1–V4 (s80);
+intermittent-black B1–B4 (s81); last-drawn sane-width gate (s82, G1).**
+AVAILABLE CRAFT reachable. thr-resume bad=0. **s75:** single Start → hangar-flight.
+**s78–s79:** RDP-`fs` plateaus post-leave (S1). **s80:** synthetic FIRE continues.
+**s81:** black = mode-3 presenting wild last-drawn. **s82:** always-on sane-width
+gate — **black duty-cycle collapses**; hangar-flight visible ~5s then freezes on
+last sane frame (S1 residual). Death now `evalCubicSplineAtTime` NaN Abort
+(~hold+6s). Leave key closed. Origin still cannot name scenes. Full detail
+PORTING-STATE s68–s82; `scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -216,18 +220,19 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s81)
+## Next steps, in order of expected value (s82)
 
-1. **M3 — gate last-drawn / mode-3 present on sane widths (B2 causal test).**
-   s81: mode-3 presents wild last-drawn (w=1..257); s78 refuse only `width>1280`.
-   One build: refuse last-drawn atomic update (and/or mode-3 override) unless
-   width ∈ {320,512,640,1024} (or `320≤w≤1024`) and addr≠0; log
-   `[last-drawn-skip]` as positive control. Soak start_only HOLD_S=30+.
-   - skip fires + black duty-cycle collapses → B2 causal; proceed to craft stick.
-   - skip fires + black unchanged → need present-luma / RDRAM (B1 residual).
-2. **M3 — after present holds ≥60s continuous content:** re-run hold+stick (`HOLD_S=60`,
-   marks 10/25/40) for craft response; document phase timeline. UnhandledJump 0x0231
-   was **0** on s80 vifs1 — only chase if it returns and kills content.
+1. **M3 — contain hangar-flight early death (`evalCubicSplineAtTime` NaN Abort).**
+   s82 dies ~hold+6s on `assert(ctx->f28.fl == ctx->f28.fl)` in recomp
+   `funcs_4.c` / `buildPositionAndCallTransformHelper`. Soften to log+skip (or
+   return) so HOLD_S=60 can run; positive control: assert path fires ≥1 log line
+   and process survives past hold_30. Discriminate: death gone + content holds
+   → unblocks craft stick; death moves → new class.
+2. **M3 — HOLD_S=60 craft stick (M3 DoD body)** after death contained:
+   `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40; document phase timeline.
+   Gate already keeps black off; residual S1 freeze may still stall animation —
+   if stick marks show no pose change on frozen frame, next is S1 FULL_SYNC for
+   hangar-flight tasks (not leave-key, not wild-FB).
 3. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` 3→0.
    Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
@@ -243,8 +248,8 @@ cost three sessions before the recursive mutex.
 7. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
 8. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
-Done this session: ~~B1–B4 intermittent black offline~~ (s81) — B2 supported
-(mode-3 ← wild last-drawn); next is sane-width gate.
+Done this session: ~~sane-width last-drawn/mode-3 gate (G1)~~ (s82) — black collapses;
+gate kept.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
@@ -513,6 +518,10 @@ any s2–s4 conclusion without checking that section.
   present; mode-3 actively presents wild last-drawn (w=1..257) during black
   windows (`[vi-follow-draw]`). **Why believable:** empty=0 never flipped to 1 in
   the whole run, so "present RT always non-empty" looked continuously true.
+- **Claim (s81 residual / G2):** gate may be too late or present still broken
+  even if last-drawn is filtered. **Overturned by s82:** same-run skip control
+  + hold pure-black 0/5 + hangar-flight content. **Why believable:** s81 black
+  and wild last-drawn were co-timed but not yet proven causal by a live gate.
 
 ### Dead ends — labelled as such in the log, do not retry
 
