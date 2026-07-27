@@ -42,10 +42,17 @@ prompt_with_budget() {
 
 case "$RUNNER" in
   claude)
-    exec claude -p "$(cat "$PROMPT_FILE")" \
+    # claude emits single-line JSON; pretty-print it to match grok's output
+    # so loop.log reads uniformly. Non-JSON output (crash text) passes
+    # through untouched, and claude's exit code is preserved either way —
+    # loop.sh classifies limits by rc.
+    out="$(claude -p "$(cat "$PROMPT_FILE")" \
       --model "${RUNNER_MODEL:-${LOOP_MODEL:-sonnet}}" \
       --permission-mode acceptEdits \
-      --output-format json 2>&1
+      --output-format json 2>&1)"
+    rc=$?
+    printf '%s\n' "$out" | python3 -m json.tool 2>/dev/null || printf '%s\n' "$out"
+    exit $rc
     ;;
 
   grok)
