@@ -4864,3 +4864,66 @@ of an unrefuted claim is not evidence — nobody ever ran the one test that coul
 the refuting evidence was sitting in the log of the very run being cited. When a run "stalls",
 verify it took the code path you think it did BEFORE attributing the stall to the environment.
 Corollary: a repro script that depends on ambient exported environment is not a repro script.
+
+## Session 61 (2026-07-26) — s50/s51 death does not reproduce (0/2); mission now loads and renders once, then the RDP `fs` counter freezes for good
+
+Ran at `uptime` load 3.93/3.56/3.65, 33 concurrent `claude` processes — deliberately, per s60's
+overturned load-stall doctrine (`docs/CURRENT-TRUTH.md` "Overturned conclusions"). Confirms again
+that load is not a precondition: both runs took the healthy LLE path (positive control: 4317/4304
+`[lle task]`, 0 `[hle send_dl]`, 0 `[fbpair-cap]` — iron rule 1 satisfied both times).
+
+New script `scratch/s61_death_repro_capture.sh` (copies `s52_crashhandler_repro.sh`'s schedule —
+`3:start 25:start 40:start 60:a` from phase width=1024 — and adds `ROGUESQ_LOG_DPC=1` plus
+screenshots before/after every key and every 1s for 20s after the final `a` press). Two runs
+(`scratch/s61_death_repro/run{1,2}/`).
+
+**H1 (schedule drift) REFUTED:** both runs' `pre_060_a.png` show AVAILABLE CRAFT cleanly, exactly on
+schedule — the `a` press lands where s50/s51/s60 expected.
+
+**The specific s50/s51 failure — solid black + silent process death — did NOT reproduce, 0/2.** Both
+runs: `kill -0` succeeded through the full 20s post-`a` observation window; the script's own "game
+process still alive after schedule + grace; killing" line fired both times, not "process gone."
+
+**But a NEW failure replaces it, reproduced 2/2:** the screen goes black for ~5-8s after `a` (no
+LEVEL DESCRIPTION card ever appears — consistent with the s48-era note that this prompt never showed
+one), then renders **one frame of the mission itself** — an X-wing near a large capital-ship
+structure, the "AMBUSH AT MOS EISLEY" opening — and then **stays frozen on that exact frame** for the
+remaining ~12-15s of observation (`grace_08.png` through `grace_20.png` are pixel-identical in run1;
+same in run2). This is the first time in the project's history that in-mission geometry has rendered
+at all.
+
+The RDP `fs` (FULL_SYNC) counter pins the mechanism precisely: it climbs steadily through the whole
+AVAILABLE CRAFT hold (`fs=2776` → `fs=3352` right before the freeze point) and then **stops
+incrementing entirely** — run1 plateaus at `fs=3355` for the last 24 of 134 `[vi] update_screen`
+lines in the log, run2 at `fs=3341` for the last 24 of 138. `origin=0x00656400`/`drawn=0x006AB000`
+never change again either. `[vi] update_screen` and `[threadPresent]` keep firing (throttled) with
+those identical frozen values right up to when the script kills the process — the VI/present loop is
+alive, but no task after that point ever reaches its FULL_SYNC. This is exactly the "some DL task
+around the AVAILABLE CRAFT → LEVEL DESCRIPTION transition never reaches FULL_SYNC" leading hypothesis
+from s51/s58, now with a concrete counter value pinned to the freeze point instead of an inference.
+
+**Run2 also showed texture corruption** on the same capital-ship geometry (staticky/garbled surface
+vs run1's clean textures) — a second, distinct defect riding along with the freeze. Not yet
+investigated; likely a stale-upload race given the project's history with this class of bug (M1).
+
+**Instrumentation finding:** `ROGUESQ_LOG_DPC=1` produced **zero** `[task-brief]`/`[task]`/
+`CAPPED-NO-FS` lines in either run despite being exported and despite `log_dpc()` correctly gating on
+it. `grep -rn rsp_task_log_and_reset` across the whole repo (source, one match) confirms this function
+is **defined but never called from anywhere** — not wired to any RSP synthetic-halt call site despite
+its own comment claiming it is. s59's "tracing already exists and needs no new code" was wrong: the
+counters it reads (`g_task_rdp_fullsyncs` etc.) are real and the format string is ready, but nothing
+ever invokes the function that would print them. Wiring this in (finding the actual synthetic-halt
+call site in `src/rsp/` and adding the `extern "C"` call) is now the concrete next step for tracing
+which specific DL task stalls — the counter-name evidence above (`fs` plateau) proves WHERE in time
+the freeze happens; task-level tracing would prove WHICH task.
+
+Stability counters clean in both runs: 0 `missing-func`, 0 `UnhandledJumpTarget`, 0 `dmem-race`, 0
+crash-handler output (SIGSEGV/SIGBUS/SIGABRT never fired — consistent with "frozen, not crashed").
+
+**M3 re-scoped:** the original target (explain the black-screen death) is no longer the live bug —
+it did not reproduce twice under the conditions that produced it 2/2 in s50/s51 (same schedule,
+same/later code state). The mechanism has moved from "kills the process" to "renders once then the
+RDP pipeline stalls," which is strictly more information (a frame drew) but the same family of root
+cause (a FULL_SYNC that never arrives). Whether this is the M1 clip fix changing the failure's shape,
+or a difference between s50/s51's environment and this one, is not established — only the current
+behavior is.

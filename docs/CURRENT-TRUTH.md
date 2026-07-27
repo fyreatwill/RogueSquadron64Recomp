@@ -77,19 +77,25 @@ complete. VI origin **cannot** discriminate menu scenes (the war room presents f
 war room) — but see s48: origin distinguishes *phases*, not which menu scene is on screen.
 
 Remaining visual defects:
-- **Confirmed on 2 independent runs (s50, s51): AVAILABLE CRAFT → LEVEL DESCRIPTION black screen +
-  silent process death.** Pressing `a` on the AVAILABLE CRAFT screen (footer: "PRESS [A] FOR LEVEL
-  DESCRIPTION") goes solid black within 2.4s and the process is gone (`kill -0` fails) ~9-10s after
-  the press, with **zero** `missing-func`/`UnhandledJumpTarget`/`dmem-race`/`assert` lines anywhere
-  in the log. s51 established event ordering: the RDP `fs` (full-sync) counter freezes **before**
-  the correlated `fmt=7` copy-mode-draw warning appears (line 16730 vs 16764 in that run's log),
-  which weakens the theory that the native-copy no-op (`NativeTarget::copyFromRAM`/`copyToNative`,
-  `lib/rt64/src/render/rt64_native_target.cpp:65,84,264`) causes the freeze — it is more likely a
-  downstream symptom. A static read of that guard (s51) found it pre-existing, deliberately
-  designed for exactly this input (any `siz==4b` copy, not specifically `fmt=7`), and its `nullptr`
-  result is null-checked by every caller found — no obvious crash risk on that exact path. The `fs`
-  freeze itself (not yet traced to which DL task fails to reach FULL_SYNC) is now the leading
-  hypothesis. ~~**s51 also found a generalizable environment confound**: driven runs stall in phase-advance
+- **s50/s51's AVAILABLE CRAFT → LEVEL DESCRIPTION black-screen + silent process death did NOT
+  reproduce in s61 (0/2, same schedule, positive control satisfied both times).** What replaced it,
+  reproduced 2/2: the screen goes black ~5-8s after the `a` press (no description card ever shows),
+  then renders **one frame of the mission itself** — X-wing near a capital ship, "AMBUSH AT MOS
+  EISLEY" opening, the first in-mission geometry ever seen in this project — and then freezes on
+  that exact frame. The RDP `fs` (FULL_SYNC) counter climbs steadily through the AVAILABLE CRAFT
+  hold and then **stops incrementing for good** (run1 plateaus at `fs=3355`, run2 at `fs=3341`,
+  each for the last 24 `[vi] update_screen` lines in its log); `origin`/`drawn` freeze with it.
+  `[vi] update_screen`/`[threadPresent]` keep firing with the frozen values — the present loop is
+  alive, no task after the freeze point ever reaches FULL_SYNC. This is the s51/s58 "some DL task
+  never reaches FULL_SYNC" hypothesis, now pinned to a concrete counter value instead of an
+  inference. Run2 additionally showed texture corruption on the same ship geometry (not in run1) —
+  a second, uninvestigated defect. Zero `missing-func`/`UnhandledJumpTarget`/`dmem-race`/crash-
+  handler output in either run — the process is frozen, not crashed. **`ROGUESQ_LOG_DPC=1` traced
+  nothing**: `rsp_task_log_and_reset` (the function CURRENT-TRUTH previously said only needed the
+  env var) is defined but **never called from anywhere in the codebase** — the s59/s60 belief that
+  the tracing "already exists and needs no new code" was wrong; it needs wiring into its RSP
+  synthetic-halt call site before it can show which task stalls. Full detail: PORTING-STATE s61.
+  ~~**s51 also found a generalizable environment confound**: driven runs stall in phase-advance
   under concurrent system load~~ — **OVERTURNED, s60. There is no load confound.** The three repro
   scripts set no `ROGUESQ_*` variables at all, so from a clean shell the binary took the **HLE**
   path, never emitted FULL_SYNC, and never advanced past width 640; the phase-wait then expired and
@@ -97,8 +103,9 @@ Remaining visual defects:
   load the loop refused to run at — gives 4168 `[lle task]` / 0 `[hle send_dl]` / `fs=3206` / no
   `[fbpair-cap]`, walking 640 → 1024 @45.0 s → 512/0x6AB400 @73.5 s. The signature blamed on load
   (`fs` frozen + `[fbpair-cap]`) is the s11 pre-`VI_FULLSYNC` signature and occurs only on the HLE
-  path. **`uptime` is not a precondition for any work unit.** Scripts now export the four knobs
-  themselves. Full detail: PORTING-STATE s60.
+  path. **`uptime` is not a precondition for any work unit** — s61 re-confirmed this by running at
+  load 3.93 with 33 concurrent `claude` processes and getting a clean, interpretable result both
+  times. Scripts now export the four knobs themselves. Full detail: PORTING-STATE s60.
 - ~~Hangar floor multi-hue band~~ — **FIXED and root-caused, s45–s48 (M1 closed).** The band was
   stale RDRAM showing through the hole left by the war room's clip-flagged geometry: all clip
   dispatches to overlay 4 ran the wrong code (window-swap IMEM DMA skipped), so the tiered
@@ -142,26 +149,23 @@ Stability 0 except 3 gracefully-stubbed `[missing-func]` addresses in the undriv
 never soaked before — parked as M4 (identified s53, fixed s54, runtime check outstanding — see
 step 2 below). Full detail: PORTING-STATE s49.
 
-**M3 — first gameplay: OPENED (s50), LEVEL DESCRIPTION death confirmed + partially traced (s51).**
-AVAILABLE CRAFT (craft-select) confirmed reachable and renders correctly, one press past SELECT
-LEVEL. LEVEL DESCRIPTION (the `a` prompt from AVAILABLE CRAFT) black-screens and silently kills the
-process — now confirmed on 2 independent runs (s50, s51); s51 narrowed the mechanism to the `fs`
-(full-sync) freeze as the leading cause rather than the correlated `fmt=7` copy-mode no-op (event
-ordering + static-code read both point away from the no-op) — see "Remaining visual defects" above
-and PORTING-STATE s50/s51. ~~Backtrace attempts are blocked by a shared-machine load confound~~ — **OVERTURNED s60: there was
-no load confound; the repro scripts were running the HLE path because they set none of the four
-required `ROGUESQ_*` knobs (see above). Nothing here is load-gated; run M3/M4 work at any load.**
-The in-process crash handler (`src/main/main.cpp`, s52) is in place and still unexercised. The s60
-run with the knobs set reached the war room healthily and the death did **not** reproduce through
-the `a` press, so the death's trigger is now a clean open question rather than a confounded one.
-Next sub-unit: re-run the repro with `ROGUESQ_LOG_DPC=1` (already-existing per-task FULL_SYNC
-tracing at `src/rsp/dpc_bridge.cpp:1296-1339`, found unused in s59) and establish whether the s50/s51
-death still reproduces at all post-M1 — if it does not, the schedule or the fix changed the path and
-the M3 target needs redefining before any more tracing. Expect
-further new failure classes as this progresses (mission-overlay DMA, a new VI phase, possibly new
-ucode ops) — each is its own work unit. *Done when:* 60 seconds of in-mission rendering, craft
-visibly responds to synthetic input, stability counters 0, and the phase timeline in this document
-covers the mission.
+**M3 — first gameplay: OPENED (s50), original death does not reproduce post-M1, re-scoped to a
+render-once-then-freeze bug (s61).** AVAILABLE CRAFT (craft-select) confirmed reachable and renders
+correctly, one press past SELECT LEVEL. The `a` press from AVAILABLE CRAFT no longer black-screens
+and kills the process (0/2 in s61, same schedule that reproduced it 2/2 in s50/s51) — instead it now
+loads and renders **one frame of the mission itself** (X-wing near a capital ship, "AMBUSH AT MOS
+EISLEY") and then the RDP `fs` (FULL_SYNC) counter freezes for good, `[vi] update_screen` still
+firing with frozen values, process alive but stalled — reproduced 2/2. See "Remaining visual
+defects" above and PORTING-STATE s61 for the full counter evidence. `ROGUESQ_LOG_DPC=1` traced
+nothing usable: `rsp_task_log_and_reset` is dead code, never called (s61) — wiring it into its real
+RSP synthetic-halt call site in `src/rsp/` is the concrete next step, needed to identify *which* DL
+task fails to reach FULL_SYNC (the `fs`-plateau evidence already proves *when*). The in-process crash
+handler (`src/main/main.cpp`, s52) remains in place and unexercised — nothing has crashed since s51.
+Nothing here is load-gated (reconfirmed s61 at load 3.93/33 `claude` processes). Expect further new
+failure classes as this progresses (mission-overlay DMA, a new VI phase, possibly new ucode ops,
+run2's texture corruption) — each is its own work unit. *Done when:* 60 seconds of in-mission
+rendering, craft visibly responds to synthetic input, stability counters 0, and the phase timeline in
+this document covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause (currently masked, not fixed); the S=0 triangles in the 640 attribution phase; the I4
@@ -190,57 +194,34 @@ cost three sessions before the recursive mutex.
 
 ## Next steps, in order of expected value (s58)
 
-1. **M3 — LEVEL DESCRIPTION black-screen/crash: trace the `fs` freeze. In-process crash handler is
-   in place (s52); retry the repro ONLY when system load is genuinely low.** Confirmed on 2
-   independent runs (s50, s51). s51 ruled the `fmt=7` native-copy no-op down to "probably downstream
-   symptom, not cause" (event ordering: `fs` freezes before the `fmt=7` warning; static read: the
-   guard is pre-existing and its null result is checked by every caller). The leading hypothesis is
-   still the `fs` freeze itself — some DL task around the AVAILABLE CRAFT → LEVEL DESCRIPTION
-   transition never reaches FULL_SYNC. `src/main/main.cpp` installs a POSIX `sigaction` handler
-   for SIGSEGV/SIGBUS/SIGABRT (mirrors the existing Windows-only one) that backtraces to stderr with
-   no external attach needed — use this instead of lldb/`sample` for the next H3 attempt, once a run
-   actually reaches the death screen (it hasn't yet). **Load confound now confirmed 4 times** (s51
-   ×2, s52 ×1, s53 ×1): every attempt with `uptime` load ≥ ~2.4 and ~33 concurrent `claude`
-   processes stalls permanently in the 640-wide phase (`[fbpair-cap]` hit at 8192, `fs=0` stuck)
-   before ever reaching phase 1024, regardless of attach method (2× lldb, 1× `sample`, 1× no attach
-   at all). s54 hit the same load band again (1.93→3.52 across the iteration, 33 `claude`
-   processes); s55 hit it a 5th time (3.42/3.26/3.17, 33 `claude` processes); s56 hit it a 6th
-   time (2.75/3.09/3.13, 33 `claude` processes); s57 hit it a 7th time (2.56/2.59/2.86, 33 `claude`
-   processes); **s58 hit it an 8th time (2.18/2.72/2.86, 33 `claude` processes)** and again
-   correctly skipped both this repro and the M4 runtime check below rather than trust either
-   result. **s59 hit it a 9th time (4.06/3.15/2.98, 33 `claude` processes)**, again correctly
-   skipped both, and used the iteration for read-only prep instead (see next paragraph). **Do not
-   attempt this repro again
-   until `uptime` load average is comfortably under ~1.5 AND few/no other `claude` processes are
-   running** — treat this as near-certain, not merely well-corroborated. If load is high when this
-   iteration starts, skip to step 2 (the M4 runtime check is also blocked by the same confound —
-   s54 found it's not driven-input-specific — but the build/implementation half is done and
-   load-insensitive); if load is high and step 2 is also inapplicable (already done, or itself
-   blocked), use the iteration for step 4 (doc housekeeping — now largely exhausted, s58) or step 5
-   (sibling-repo question) rather than idling — see s55, s56, s57, s58.
-   Do not attempt an `fs`-freeze fix until the mechanism is clear. **s59: the DL-task-level `fs`
-   tracing this step's own discriminator calls for already exists and needs no new code** —
-   `rsp_task_log_and_reset` (`src/rsp/dpc_bridge.cpp:1296-1339`) already exchanges a per-task
-   `g_task_rdp_fullsyncs` counter into `fs`, already has a `capped_no_fs` detector, and already logs
-   an unconditional `[task-brief] #n ... fs=%u` line per task — all gated behind the pre-existing
-   `ROGUESQ_LOG_DPC=1` env var (`log_dpc()`, dpc_bridge.cpp:243-251), not currently set by
-   `scratch/s52_crashhandler_repro.sh`. Next repro attempt: add `ROGUESQ_LOG_DPC=1` to that script's
-   environment (no rebuild needed) and, if the death reproduces, read the log tail for `fs=0`
-   task-briefs / `CAPPED-NO-FS` hits before writing anything new. Full detail: PORTING-STATE s50,
-   s51, s52, s53, s54, s55, s56, s57, s58, s59.
+1. **M3 — wire up `rsp_task_log_and_reset` so `ROGUESQ_LOG_DPC=1` actually traces the `fs` freeze
+   (s61: the function exists but is dead code, called from nowhere).** s61 ran the s50/s51 repro
+   schedule twice at load 3.93 (load is NOT a precondition — reconfirmed, do not gate this step on
+   `uptime`). The original black-screen death did not reproduce (0/2); instead the mission now loads
+   and renders one frame (X-wing near a capital ship, "AMBUSH AT MOS EISLEY") before the RDP `fs`
+   counter permanently stops incrementing (`fs=3355` run1 / `fs=3341` run2, each held for the last 24
+   `[vi] update_screen` lines) — process alive, present loop alive, but no task past that point ever
+   reaches FULL_SYNC. `ROGUESQ_LOG_DPC=1` was exported both times and produced **zero**
+   `[task-brief]`/`[task]` lines: `grep -rn rsp_task_log_and_reset` across the whole repo returns only
+   its own definition (`src/rsp/dpc_bridge.cpp:1296`) — nothing calls it. Next sub-unit: find the real
+   RSP synthetic-halt call site (grep `src/rsp/` for where a task is recognized as complete /
+   `iters`+`data_size`+`r17`+two command words are all available together — those are
+   `rsp_task_log_and_reset`'s parameters) and add the `extern "C"` call there; rebuild; re-run
+   `scratch/s61_death_repro_capture.sh` (exports `ROGUESQ_LOG_DPC=1` already) and read the tail for
+   the last task-brief before the `fs` plateau — that task is the one that never reaches FULL_SYNC.
+   `src/main/main.cpp`'s in-process crash handler (s52) remains in place but has had nothing to catch
+   since s51 — the bug is now a freeze, not a crash. Full detail: PORTING-STATE s50, s51, s52, s53,
+   s54, s55, s56, s57, s58, s59, s60, s61.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
    pipeline clean (build exit 0). What's left: an undriven run phase-gated to the outdoor-512
    stretch (s49 shape) to confirm `grep -c "\[missing-func\]"` drops from 3 to 0 there with 0 new
-   stability-counter hits elsewhere. **Blocked by the same load confound as step 1** — do this only
-   when load is low, and prefer doing it in the *same* low-load window as the M3 repro attempt if
-   convenious, since both need a clean run and are otherwise independent work units. Full detail:
-   PORTING-STATE s53, s54.
-3. Once the black screen is understood/fixed, continue past AVAILABLE CRAFT toward mission 1
-   launch. Expect further new failure classes (mission overlay DMA → missing-func /
-   UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice recipe). Each
-   new failure is its own work unit.
+   stability-counter hits elsewhere. Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
+3. Once the `fs` freeze is understood/fixed, continue past the mission's first rendered frame toward
+   60s of in-mission rendering. Expect further new failure classes (mission overlay DMA →
+   missing-func / UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice
+   recipe, run2's texture corruption). Each new failure is its own work unit.
 4. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
    (39,784 bytes as of s58, down from 43,143 at s55's start) — this thread is now effectively
    exhausted.** s55 migrated the M1/M2 mechanism paragraphs to `docs/PROJECT-OVERVIEW.md` §3. s56
