@@ -730,6 +730,31 @@ cost three sessions before the recursive mutex.
    positive control (e.g. a soak through title-screen music, where a
    fresh key-on is all but certain) before spending another soak on the
    hangar-scene repro. Full detail: PORTING-STATE s105.
+   **s106 update:** got that positive control — but for the surrounding
+   system, not this specific instrument. Source-read one hop up both
+   of `musyxInitVoiceFromSample`'s call sites: `soundMacroOpPlaySampleKeymap`
+   (called only from `tickAudioChannel`) and `startStreamedSampleVoice`
+   (called only from `serviceVoicePoolFrame`, itself **never referenced
+   anywhere** in `RecompiledFuncs/*.c` — same "indirect-call-invisible-
+   to-grep" shape as `musyxSynthFrame`'s own caller in s95-s101, so an
+   entry counter beats a caller-search here). Landed entry counters on
+   both (`ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1`) and soaked twice: soak 1
+   died early to the already-known 15th crash class before reaching the
+   DMA window (uninformative, discarded); soak 2 reached the familiar
+   ~140s window, crashed on the same 11th `do_rom_read` recurrence, and
+   this time carried a clean positive control on the surrounding system
+   — `fill-range-args` fired 7x, `musyx-dma-call` fired 17x, proving the
+   MusyX per-tick DMA system was genuinely active. Against that
+   backdrop, `tick-audio-channel`/`service-voice-pool-frame`/
+   `init-voice-sample` **all still read 0/0**. Combined with s105's own
+   full-lifetime soak, that's **two independent soaks** showing the
+   entire proposed key-on ancestry never executes — closes "was this
+   just untested" (no, it's a real null now), but does **not** yet split
+   s105's two hypotheses (scene doesn't need a fresh key-on here vs. the
+   whole struct-identification was coincidental) — both still fit. Next:
+   instrument `tickAllAudioChannels` (`funcs_23.c:4050`, the one static
+   caller of `tickAudioChannel`, not yet touched) to find whether the
+   gate is even one hop higher. Full detail: PORTING-STATE s106.
 0a. **Tooling: `fixup_game_funcs.py` is not actually idempotent**
    (found s102 while re-running it for the item above) — every patch's
    regex anchor matches text that's left unchanged after insertion, so

@@ -8787,3 +8787,81 @@ Instruments `ROGUESQ_LOG_MUSYX_DMA_CALL=1`, `ROGUESQ_LOG_STREAM_TAG=1`,
 `ROGUESQ_LOG_FILL_RANGE_ARGS=1`, and the new
 `ROGUESQ_LOG_INIT_VOICE_SAMPLE=1` all stay landed and armed — keep all
 four in every future soak on this bug.
+
+## Session 106 (2026-07-27) — got the positive control s105 asked for;
+`musyxInitVoiceFromSample`'s entire call chain confirmed unreached, not
+just inconclusive
+
+s105 left one open question: was `[init-voice-sample]`'s 0/0 (fired
+across the whole process lifetime) a real refutation, or just an
+untested instrument? Before re-soaking, source-read one hop further up
+both of `musyxInitVoiceFromSample`'s call sites to find their enclosing
+functions: `funcs_22.c:3667` sits inside `soundMacroOpPlaySampleKeymap`
+(one static caller anywhere in `RecompiledFuncs/`: `funcs_23.c:3081`,
+inside `tickAudioChannel`); `funcs_26.c:1418` sits inside
+`startStreamedSampleVoice` (one static caller: `funcs_26.c:11256`,
+inside `serviceVoicePoolFrame`). Both names are strong "this IS the
+key-on trigger" candidates by themselves. Notably,
+`serviceVoicePoolFrame` (`funcs_26.c:10932`, guest `0x8009B5A8`) has
+**zero** static or address-taken references anywhere in
+`RecompiledFuncs/*.c` — the same "invisible to grep, must be an
+indirect call" shape s95-s101 already proved out for `musyxSynthFrame`'s
+own caller, so a caller-search here would not be conclusive; an entry
+counter on the function itself is, regardless of call mechanism.
+
+Landed two new entry counters (`N64Recomp/fixup_game_funcs.py`, shared
+env gate `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1`, capped at the first 20
+fires each): `tickAudioChannel` (funcs_23.c, anchor confirmed globally
+unique — only one definition in the whole tree) and
+`serviceVoicePoolFrame` (funcs_26.c, same). Full regen from ELF
+(`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`,
+all rc 0); fixup report showed each patched exactly `x1` in the
+expected file, no duplication.
+
+**Soak 1** (`s106_voicechain`, same repro shape as s105): died early
+(signal 6, RT64-internal `loadDrawState` abort — the already-catalogued
+15th crash class recurring) at `vi_width=512`/73s, **before** reaching
+the ~140s DMA window. `fill-range-args`/`musyx-dma-call` (the
+established positive controls for "audio DMA system is active") also
+read 0/0 this run — uninformative by construction, not a data point
+either way; discarded per the same "a preempting crash class wins the
+race" pattern documented since s95.
+
+**Soak 2** (`s106_voicechain2`): reached `vi_width=640` at 141.9s (the
+familiar DMA window) and died to the same `do_rom_read` SIGSEGV as
+every prior session — **11th occurrence**, byte-identical corruption
+(`devAddr=0x6C676672`/`0x77696E67`, "lgfr"/"wing"). Positive control
+this time is clean and real: `fill-range-args` fired **7** times,
+`musyx-dma-call` fired **17** times — direct proof the MusyX per-tick
+DMA-batch system was genuinely active across a large span of this
+exact run, right up to the crash. Against that proven-active backdrop,
+**`tick-audio-channel`, `service-voice-pool-frame`, and
+`init-voice-sample` all still read 0/0** — the entire proposed key-on
+ancestry, from two hops up down through the leaf write, never executed
+once in a run where the surrounding audio system indisputably did.
+
+**This closes the "was the instrument just never tested" question from
+s105**: combined with s105's own soak (0/0 across an even longer
+span, boot through crash, positioned to catch title-screen music too),
+we now have **two independent soaks**, one with a clean positive
+control on the surrounding system, both showing zero entries into this
+whole call chain. This is the "real, surprising finding" s105's own
+NEXT.md anticipated as one of two outcomes — and it landed. It does
+**not** yet distinguish s105's two competing hypotheses (H1: this
+scene/song never needs a fresh key-on via this mechanism; H2: the
+`G_BASE-0x6908` offset match was coincidence and this is the wrong
+struct entirely) — both remain consistent with "the whole chain never
+fires." What it does rule out: "the instrument is simply unexercised
+in the hangar phase specifically" as a reason to stop looking one level
+up — `tickAudioChannel` itself, called from exactly one place
+(`tickAllAudioChannels`, `funcs_23.c:4117`, not yet instrumented), never
+fires either, all the way from process start.
+
+**Next step**: instrument `tickAllAudioChannels` (funcs_23.c:4050,
+one more hop up, single known static caller of `tickAudioChannel`) to
+find out whether the gate is even higher (the whole per-channel audio
+tick system unreached) or whether `tickAllAudioChannels` runs but its
+own internal condition for calling `tickAudioChannel` is never true in
+this build. Same instrument batch could also add a counter directly at
+`tickAllAudioChannels`'s own entry to settle this in one soak rather
+than two.
