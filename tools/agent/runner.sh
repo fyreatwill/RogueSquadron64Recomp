@@ -50,6 +50,11 @@ case "$RUNNER" in
 
   grok)
     export RS64_SKIP_STOP_HOOK=1   # grok runs the Stop hook and aborts on a block
+    # dontAsk never prompts and still honours the deny rules protecting lib/,
+    # which is the right posture for an unattended run - acceptEdits still asks
+    # for bash and an unanswerable prompt is a hazard headless. NOTE: this did
+    # NOT fix grok's early-cancel bug (tested s64, still Cancelled at 2 turns).
+    # Do NOT reach for bypassPermissions; it would drop the deny rules too.
     # grok mirrors Claude Code's headless flags closely: -p/--single,
     # --output-format, --permission-mode, --allow/--deny.
     # An explicit turn bound. NOTE: this was NOT the cause of the early
@@ -58,7 +63,7 @@ case "$RUNNER" in
     exec grok --single "$(prompt_with_budget)" \
       ${RUNNER_MODEL:+-m "$RUNNER_MODEL"} \
       --max-turns "${RUNNER_MAX_TURNS:-200}" \
-      --permission-mode acceptEdits \
+      --permission-mode "${RUNNER_PERMISSION_MODE:-dontAsk}" \
       --output-format json 2>&1
     ;;
 
