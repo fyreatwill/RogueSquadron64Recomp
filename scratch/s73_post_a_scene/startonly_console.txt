@@ -1,0 +1,27 @@
+pid 86388 out=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/s73_post_a_scene/startonly stable=12s grace=20s
+window 15065
+waiting for VI width 1024 (timeout 600s)
+phase width=1024 reached after 44.7s
+[keys] start at 3s (from-phase)
+[keys] start at 25s (from-phase)
+[keys] start at 40s (from-phase)
+[keys] a at 60s (from-phase)
+wait 12s for SELECT YOUR CRAFT stable
+[keys] probe p1 start
+grace window 20s @ 1 Hz after probes
+done wall=54s
+game process still alive; killing
+--- summary ---
+lle tasks: 4337
+exit=2: 0
+exit=1: 4480
+missing-func: 0
+UnhandledJump: 0
+thr-resume bad=1: 0
+ost-wb SKIP_WIDTH: 14
+ost-wb SKIP_OOB: 8
+fs max: 3360
+last fs line: [vi] update_screen #9600 origin=0x00656400 width=512 status=0x3246 v_current=0 nonzero=1 fs=3360 pq.wc=1 wq.wc=2
+last phase: [phase] vi_width=512 (was 1024) origin=0x006AB400 at 73.7s update_screen #4424
+CRASH: 0
+--- done ---
