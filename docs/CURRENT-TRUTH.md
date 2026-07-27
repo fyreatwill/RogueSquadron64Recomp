@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 102)
+## Current truth (as of session 103)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -388,6 +388,19 @@ is not actually idempotent — re-running it without a full ELF regen
 duplicates every already-applied patch (confirmed 3 copies of s100's
 guard in `funcs_40.c`). Harmless so far, flagged for a future work unit.
 Full detail: PORTING-STATE s102.
+**s103:** tested s102's leading hypothesis (`acquireSampleStreamBlock`
+copies its cache-key argument verbatim into the DMA batch's `devAddr`)
+with a targeted instrument — **refuted**: 0/0 fires despite the batch's
+own count field proving 9 entries were appended the same tick, so that
+function was never entered. Found the real writer instead:
+`fillSampleStreamRange`, which computes `devAddr` as a sum of two
+struct fields (not a raw copy) off a *different* linked list than the
+one `acquireSampleStreamBlock` manages. New open question: that list's
+node-allocator (not yet located) likely sets the wrong base field at
+creation time. 8th `do_rom_read` recurrence, byte-identical, same
+~140s/hold+11s window. Also fixed s102's flagged patch-duplication
+symptom incidentally via a full ELF regen. Full detail: PORTING-STATE
+s103.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -599,7 +612,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s102)
+## Next steps, in order of expected value (s103)
 
 -1. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
@@ -633,6 +646,33 @@ cost three sessions before the recursive mutex.
    must hold this address (likely near `G_BASE-0x68D8`'s neighborhood —
    check what writes *that* slot, not just what reads it). Full detail:
    PORTING-STATE s102.
+   **s103 update:** `G_BASE-0x68D8` is a fixed global written **once**
+   (a one-time `rs_malloc` in `setupSongRenderBuffers`, MusyX init — not
+   a per-tick writer; the array's *contents*, not its base pointer, get
+   corrupted per-tick). Source-read `acquireSampleStreamBlock`
+   (`funcs_23.c:11871`, guest `0x8008F758`) and found it copies its own
+   opaque cache-key argument verbatim into a new batch entry's `devAddr`
+   with no translation — a strong-looking match to the "wrong field"
+   theory. Landed `ROGUESQ_LOG_STREAM_TAG=1` to test it: **refuted**.
+   0/0 fires this soak despite the batch's own count field proving 9
+   entries were appended the same tick — `acquireSampleStreamBlock` was
+   never entered. **The real writer is `fillSampleStreamRange`**
+   (`funcs_23.c:12473`, guest `0x8008FAAC`, called from
+   `musyxRenderVoiceSamples` *before* `acquireSampleStreamBlock`), which
+   walks a *different* linked list (`-0x664C`, not `-0x6650`/`-0x6654`)
+   and writes `entry.devAddr = node->0x8 + node->0x10` — a computed sum
+   of two struct fields, not a raw tag copy. Confirmed
+   `acquireSampleStreamBlock`'s node-init path never touches offsets
+   `0x8`/`0x10`/`0x14` of anything, so whatever allocates
+   `fillSampleStreamRange`'s own list nodes (not yet located) must be
+   where `node->0x8` first gets its tag-shaped value. **Next step: find
+   that allocator** (grep `funcs_23.c` for other `-0x664C` refs/list-node
+   inits, or for an `rs_malloc` sized to this node's apparent stride).
+   Also: a full ELF regen (rather than re-running `fixup_game_funcs.py`
+   alone) incidentally cleared s102's flagged patch-duplication symptom
+   this session (every patch reapplied x1, confirmed via the fixup
+   script's own report) — the underlying non-idempotency bug in the
+   script is still unfixed. Full detail: PORTING-STATE s103.
 0a. **Tooling: `fixup_game_funcs.py` is not actually idempotent**
    (found s102 while re-running it for the item above) — every patch's
    regex anchor matches text that's left unchanged after insertion, so

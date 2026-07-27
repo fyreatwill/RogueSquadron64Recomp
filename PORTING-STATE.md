@@ -8456,3 +8456,125 @@ in its own git per every prior session's note). Log:
 `scratch/s73_post_a_scene/s102_musyxdma/run.log` (17/17 positive control
 on the new instrument; 7th `do_rom_read` recurrence; entry-array
 corruption proven pre-existing at read time).
+
+## Session 103 (2026-07-27) — found and instrumented the real DMA-batch entry-writer, `fillSampleStreamRange`; refuted the session's own leading hypothesis (`acquireSampleStreamBlock`) with a clean discriminating soak
+
+### What ran
+
+Per NEXT.md's queued work unit (M3 item -1 continued): find what
+populates the MusyX DMA-batch array (`a0=0x80179A60` in s102's soak)
+with the corrupted `devAddr` field, one level upstream of
+`musyxSynthFrame`/`submitDmaRequestBatch` (both cleared s102).
+
+**Step 1 (cheap, no rebuild):** grepped `N64Recomp/RecompiledFuncs/*.c`
+for the global slot the array pointer is loaded from
+(`G_BASE-0x68D8`, confirmed s102 to be a fixed global holding a pointer
+value, not the array's own base). Found it is written exactly **once**,
+in `setupSongRenderBuffers` (`funcs_23.c:11344`, guest `0x8008F478`) —
+a one-time `rs_malloc` at MusyX init, confirmed by reading the whole
+function: it computes a buffer size from a count global, calls
+`rs_malloc`, stores the result into the `-0x68D8` slot, and sets up a
+mesg queue. Not a per-tick writer. The two other read sites
+(`funcs_24.c:5128/5402`) are both `rs_free` calls in a teardown/shutdown
+function's cleanup path — also not writers.
+
+**Source-read of `acquireSampleStreamBlock`** (`funcs_23.c:11871-12057`,
+guest `0x8008F758`), found via a broader `68D8` grep across all
+`funcs_*.c` (the first pass had only checked the 4 refs already
+in-hand; a second pass turned up 4 more, all in `funcs_23.c`). This
+function is a linked-list cache lookup keyed by its sole argument `a0`
+(walks a list rooted at global `-0x6650`, compares each node's `+0xC`
+field against `a0`). On a cache miss it allocates a fresh node from a
+free list (`-0x6654`), sets the new node's tag field (`+0xC`) to `a0`,
+and then — at label `L_8008F800` — appends a new entry to the DMA batch
+array: `entry.size = 0x100` (constant), `entry.devAddr = a2` (== `a0`,
+unchanged since function entry — `addu $a2,$a0,$zero` is the only write
+to `a2` anywhere in the function), `entry.dramAddr = node->0x8`. **This
+looked like a strong candidate**: `devAddr` copied verbatim from a
+cache-key argument with no translation step, and the sole call site
+(`funcs_24.c:531-536`, inside `musyxRenderVoiceSamples`) passes
+`a0 = MEM_W($s1, 0x34)`, a field off a per-stream object — plausibly a
+name/tag rather than a ROM address. The corrupted values s102 captured
+(`"lgfr"`/`"wing"`/`"lcre"`/…) are exactly what a packed 4-character
+sample/stream tag would look like when misread as an address.
+
+**Instrument landed to test this** (`ROGUESQ_LOG_STREAM_TAG=1`,
+`N64Recomp/fixup_game_funcs.py`, anchored on `acquireSampleStreamBlock`'s
+function-entry boilerplate — unique by construction, function name
+appears once): logs `a0` (the tag/candidate-devAddr) and the return
+address at function entry, before anything touches it.
+
+**Full regen from ELF this session** (`make_elf.py` → `N64Recomp
+rogue_squadron.toml` → `fixup_game_funcs.py` → `cmake --build`, all rc
+0) instead of re-running `fixup_game_funcs.py` alone against the
+already-patched tree — this incidentally fixed s102's flagged
+non-idempotency symptom for free: every patch reapplied exactly **x1**
+(confirmed via the fixup script's own report line), including the s100
+`composeNpcOrientationMatrix` guard that had accumulated 3 copies in
+`funcs_40.c`. The underlying non-idempotency bug in the script itself
+is **not** fixed (still no lookahead guard against re-matching an
+already-patched anchor) — only worked around by regenerating clean this
+time. Future sessions get the same accumulation if they run
+`fixup_game_funcs.py` again without a fresh regen first.
+
+Soaked (`scratch/s73_post_a_scene/s103_streamtag/run.log`,
+`PROBE_MODE=start_only HOLD_S=30`, `ROGUESQ_LOG_THREAD_RESUME=0` per
+s93's confound lesson, `ROGUESQ_LOG_MUSYX_DMA_CALL=1` +
+`ROGUESQ_LOG_STREAM_TAG=1`).
+
+### Result — hypothesis REFUTED, real writer found instead
+
+Third soak to reach the ~140s DMA window alive (after s101/s102).
+`[musyx-dma-call]` fired once more, byte-identical to s102: `n=0
+a0=0x80179A60 a1=9`, `entry=0 devAddr=0x6C676672` ("lgfr"), same
+9-entry batch shape. `do_rom_read` recurred an **8th** time, same crash
+signature (`osPiStartDma_recomp` → `do_dma` → `do_rom_read` SIGSEGV via
+`piDmaWorker`), same window (died at hold-iter 11, ~+11s post-leave,
+matching s101/s102's timing). Control held: `thr-resume bad=1` 0.
+
+**`[stream-tag]` fired 0 times.** This is a real discriminating result,
+not an unarmed-control null: the batch's own count field
+(`G_BASE-0x68DC`, read as `a1=9` in the same `[musyx-dma-call]` log)
+proves 9 entries were appended to the array **within this run**, and
+that field is reset to 0 unconditionally at the top of every
+`musyxSynthFrame` tick (`funcs_24.c:3295`) — so something added 9
+entries this same tick, but it provably was not
+`acquireSampleStreamBlock` (0 executions of that C function, any
+calling convention, positive or negative). **This refutes the session's
+own leading hypothesis** — the tag-copy code in
+`acquireSampleStreamBlock` is real and does what the source read says,
+but it is not what ran to build this run's crashing batch.
+
+**Found the actual writer while re-reading the wider `68D8` grep
+results**: `fillSampleStreamRange` (`funcs_23.c:12473-12630`, guest
+`0x8008FAAC`), called from `musyxRenderVoiceSamples` *before*
+`acquireSampleStreamBlock` in program order (`funcs_24.c:452/524`, two
+calls per invocation). It walks a **different** linked list (rooted at
+global `-0x664C`, not `acquireSampleStreamBlock`'s `-0x6650`/`-0x6654`
+block cache) and, on finding a matching range node, appends a batch
+entry at guest `0x8008FB40-0x8008FB90`: `entry.devAddr = node->0x8 +
+node->0x10`, `entry.size` = a locally-computed fill-gap byte count,
+`entry.dramAddr = node->0x14 + node->0x10` — every field a **computed
+sum of two struct fields**, not a raw copy of an opaque argument. This
+looks like legitimate address arithmetic (a running "bytes filled so
+far" cursor added to a base), the opposite shape from the refuted
+hypothesis.
+
+**New open question, not yet answered**: if `fillSampleStreamRange`'s
+arithmetic is sound, the corruption must be upstream of it too — most
+likely `node->0x8` (the base-address field of this *second*,
+still-unidentified struct type) already holds a tag-shaped value when
+the node is created, and `fillSampleStreamRange` faithfully propagates
+it forward by adding a (correct) running offset to a (wrong) base.
+Confirmed by reading `acquireSampleStreamBlock`'s node-init path
+(`L_8008F7A4`-`L_8008F800`) that it does **not** touch offsets `0x8`,
+`0x10`, or `0x14` of anything — those must be set by whatever allocates
+`fillSampleStreamRange`'s `-0x664C` list nodes, a function not yet
+located (a same-file, `funcs_23.c`-only global per a `664C` grep across
+all `funcs_*.c` — every other hit is an unrelated absolute address
+substring-matching "664C", confirmed by inspection). Next work unit:
+find that allocator/initializer.
+
+Instrument `ROGUESQ_LOG_STREAM_TAG=1` stays landed and armed (cheap,
+proved something concrete even at 0 fires) but is no longer the active
+lead — do not re-soak specifically for it.
