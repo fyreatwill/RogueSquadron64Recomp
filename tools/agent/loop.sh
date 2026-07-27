@@ -63,30 +63,12 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   rc=$?
   printf '%s\n' "$out" >> "$AG/loop.log"
 
-  # Post-hoc contract check, for every runner. Claude's Stop hook already
-  # pushed it to meet this before returning; codex and grok never saw a hook,
-  # so this is where they get held to the same contract. Feed the specific
-  # unmet condition back and let it finish the job.
-  cr=0
-  while [ $rc -eq 0 ] && ! verdict="$(tools/agent/stop_gate.sh --verify)"; do
-    cr=$((cr+1))
-    if [ "$cr" -gt "${MAX_CONTRACT_RETRIES:-2}" ]; then
-      log "contract still unmet after $((cr-1)) retries: $(printf '%s' "$verdict" | head -1)"
-      break
-    fi
-    log "contract unmet (retry $cr): $(printf '%s' "$verdict" | head -1)"
-    printf '%s\n' "$verdict" > "$AG/CONTRACT_FEEDBACK.md"
-    { cat tools/agent/ITERATION.md
-      echo
-      echo "## You already ran this iteration and stopped early"
-      echo "The exit contract is NOT met. Do ONLY what is needed to satisfy it:"
-      echo
-      printf '%s\n' "$verdict"
-    } > "$AG/RETRY_PROMPT.md"
-    out="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$AG/RETRY_PROMPT.md")"
-    rc=$?
-    printf '%s\n' "$out" >> "$AG/loop.log"
-  done
+  # NOTE: limits are classified BEFORE the contract check on purpose. `codex`
+  # exits 0 even when it did nothing but print "You've hit your usage limit",
+  # so an rc-based test cannot see that failure — and if the contract check ran
+  # first it would burn MAX_CONTRACT_RETRIES re-invoking a CLI that is out of
+  # quota. Classify the limit, sleep or stop, and only then ask whether the
+  # iteration met its contract.
 
   # A spend/quota CAP is not a window that reopens. Sleeping on it wastes
   # MAX_LIMIT_WAITS * SLEEP_ON_LIMIT (6 hours by default) retrying something
@@ -124,6 +106,34 @@ while [ "$n" -lt "$ITER_CAP" ]; do
     continue
   fi
   waits=0
+
+  # Post-hoc contract check, for EVERY runner. Claude's Stop hook already
+  # pushed it to meet this before returning; codex and grok never saw a hook,
+  # so this is where they get held to the same contract. Feed the specific
+  # unmet condition back and let it finish the job.
+  cr=0
+  while ! verdict="$(tools/agent/stop_gate.sh --verify)"; do
+    cr=$((cr+1))
+    if [ "$cr" -gt "${MAX_CONTRACT_RETRIES:-2}" ]; then
+      log "contract still unmet after $((cr-1)) retries: $(printf '%s' "$verdict" | head -1)"
+      break
+    fi
+    log "contract unmet (retry $cr): $(printf '%s' "$verdict" | head -1)"
+    { cat tools/agent/ITERATION.md
+      echo
+      echo "## You already ran this iteration and stopped early"
+      echo "The exit contract is NOT met. Do ONLY what is needed to satisfy it:"
+      echo
+      printf '%s\n' "$verdict"
+    } > "$AG/RETRY_PROMPT.md"
+    out="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$AG/RETRY_PROMPT.md")"
+    printf '%s\n' "$out" >> "$AG/loop.log"
+    # A retry that itself hits a limit is not a contract failure - stop retrying.
+    if printf '%s' "$out" | grep -qiE 'usage limit|rate.?limit|spend limit|overloaded'; then
+      log "retry $cr hit a provider limit; abandoning contract retries this iteration"
+      break
+    fi
+  done
 
   status="$(tr -d '[:space:]' < "$AG/STATUS" 2>/dev/null)"
   log "iteration $n finished $(date) STATUS=${status:-unset} HEAD=$(git rev-parse --short HEAD 2>/dev/null)"
