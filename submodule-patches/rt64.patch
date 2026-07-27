@@ -756,10 +756,123 @@ index 873883d..a210afa 100644
      }
  
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
-index 7d385fa..79c281e 100644
+index 7d385fa..433328e 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
 +++ b/src/hle/rt64_framebuffer_manager.cpp
-@@ -245,7 +245,11 @@ namespace RT64 {
+@@ -6,6 +6,9 @@
+ 
+ #include <cassert>
+ #include <algorithm>
++#include <atomic>
++#include <cstdio>
++#include <cstdlib>
+ 
+ #include "xxHash/xxh3.h"
+ 
+@@ -16,6 +19,17 @@
+ #include "render/rt64_render_worker.h"
+ 
+ namespace RT64 {
++    extern std::atomic<uint32_t> g_rs64_last_drawn_fb;
++    extern std::atomic<uint32_t> g_rs64_last_drawn_fb_width;
++
++    static bool rs64_log_tilecopy_fb() {
++        static const bool on = [] {
++            const char *e = std::getenv("ROGUESQ_LOG_TILECOPY_FB");
++            return e && *e && *e != '0';
++        }();
++        return on;
++    }
++
+     static void fixSizeToMultiple(uint32_t &width, uint32_t &height) {
+         const uint32_t SizeMultiple = 32;
+         width = ((width + SizeMultiple - 1) / SizeMultiple) * SizeMultiple;
+@@ -107,8 +121,35 @@ namespace RT64 {
+         auto fbIt = framebuffers.find(op.createTileCopy.address);
+         if (fbIt == framebuffers.end()) {
+             tileCopy.ignore = true;
++            if (rs64_log_tilecopy_fb()) {
++                static std::atomic<int> s_miss{0};
++                int n = ++s_miss;
++                // Every miss is discriminating; no rate-limit on found=0.
++                const uint32_t drawn = g_rs64_last_drawn_fb.load(std::memory_order_relaxed);
++                const uint32_t drawnW = g_rs64_last_drawn_fb_width.load(std::memory_order_relaxed);
++                const auto &t = op.createTileCopy.fbTile;
++                std::fprintf(stderr,
++                    "[tilecopy-fb] setup found=0 #%d addr=0x%08X id=0x%llX lineW=%u tile=%u..%ux%u..%u map=%zu drawn=0x%08X drawnW=%u\n",
++                    n, op.createTileCopy.address, (unsigned long long)op.createTileCopy.id,
++                    t.lineWidth, t.left, t.right, t.top, t.bottom,
++                    framebuffers.size(), drawn, drawnW);
++                std::fflush(stderr);
++            }
+             return;
+         }
++        if (rs64_log_tilecopy_fb()) {
++            static std::atomic<int> s_hit{0};
++            int n = ++s_hit;
++            // Positive control: first 40 found + every 2000th must fire same run.
++            if (n <= 40 || (n % 2000) == 0) {
++                const auto &t = op.createTileCopy.fbTile;
++                std::fprintf(stderr,
++                    "[tilecopy-fb] setup found=1 #%d addr=0x%08X id=0x%llX fbW=%u fbH=%u lineW=%u map=%zu\n",
++                    n, op.createTileCopy.address, (unsigned long long)op.createTileCopy.id,
++                    fbIt->second.width, fbIt->second.height, t.lineWidth, framebuffers.size());
++                std::fflush(stderr);
++            }
++        }
+ 
+         const FramebufferTile &fbTile = op.createTileCopy.fbTile;
+         const uint32_t tileWidth = std::clamp<long>(lround((fbTile.right - fbTile.left) * resolutionScale.x), 1L, RenderTarget::MaxDimension);
+@@ -183,10 +224,48 @@ namespace RT64 {
+         // Texture for tile copy must exist.
+         TileCopy &tileCopy = tileCopies[op.createTileCopy.id];
+         if (tileCopy.ignore) {
++            if (rs64_log_tilecopy_fb()) {
++                static std::atomic<int> s_skip{0};
++                int n = ++s_skip;
++                if (n <= 20 || (n % 500) == 0) {
++                    std::fprintf(stderr,
++                        "[tilecopy-fb] record skip-ignore #%d addr=0x%08X id=0x%llX\n",
++                        n, op.createTileCopy.address, (unsigned long long)op.createTileCopy.id);
++                    std::fflush(stderr);
++                }
++            }
+             return;
+         }
+ 
+         auto fbIt = framebuffers.find(op.createTileCopy.address);
++        if (rs64_log_tilecopy_fb()) {
++            const uint32_t drawn = g_rs64_last_drawn_fb.load(std::memory_order_relaxed);
++            const uint32_t drawnW = g_rs64_last_drawn_fb_width.load(std::memory_order_relaxed);
++            const auto &t = op.createTileCopy.fbTile;
++            if (fbIt == framebuffers.end()) {
++                static std::atomic<int> s_miss{0};
++                int n = ++s_miss;
++                // Every missing-fb record is the death-path signal — no rate limit.
++                std::fprintf(stderr,
++                    "[tilecopy-fb] record found=0 #%d addr=0x%08X id=0x%llX ignore=%d lineW=%u tile=%u..%ux%u..%u map=%zu drawn=0x%08X drawnW=%u\n",
++                    n, op.createTileCopy.address, (unsigned long long)op.createTileCopy.id,
++                    (int)tileCopy.ignore, t.lineWidth, t.left, t.right, t.top, t.bottom,
++                    framebuffers.size(), drawn, drawnW);
++                std::fflush(stderr);
++            }
++            else {
++                static std::atomic<int> s_hit{0};
++                int n = ++s_hit;
++                if (n <= 40 || (n % 2000) == 0) {
++                    std::fprintf(stderr,
++                        "[tilecopy-fb] record found=1 #%d addr=0x%08X id=0x%llX fbW=%u fbH=%u lineW=%u map=%zu drawn=0x%08X drawnW=%u\n",
++                        n, op.createTileCopy.address, (unsigned long long)op.createTileCopy.id,
++                        fbIt->second.width, fbIt->second.height, t.lineWidth, framebuffers.size(),
++                        drawn, drawnW);
++                    std::fflush(stderr);
++                }
++            }
++        }
+         assert(fbIt != framebuffers.end());
+         RenderTargetKey colorTargetKey(fbIt->second.addressStart, fbIt->second.width, fbIt->second.siz, Framebuffer::Type::Color);
+         RenderTarget &colorTarget = targetManager.get(colorTargetKey);
+@@ -245,7 +324,11 @@ namespace RT64 {
      }
  
      void FramebufferManager::reinterpretTileSetup(RenderWorker *renderWorker, const FramebufferOperation &op, hlslpp::float2 resolutionScale, bool usesHDR) {
@@ -772,7 +885,7 @@ index 7d385fa..79c281e 100644
  
          // Source tile must exist.
          TileCopy &srcTile = tileCopies[op.reinterpretTile.srcId];
-@@ -310,7 +314,9 @@ namespace RT64 {
+@@ -310,7 +393,9 @@ namespace RT64 {
      void FramebufferManager::reinterpretTileRecord(RenderWorker *renderWorker, const FramebufferOperation &op, TextureCache &textureCache, hlslpp::float2 resolutionScale,
          uint64_t submissionFrame, bool usesHDR, CommandListReinterpretations &cmdListReinterpretations, CommandListDiscards &cmdListDiscards)
      {

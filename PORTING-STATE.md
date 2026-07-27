@@ -6001,3 +6001,44 @@ OSThread writeback (bad=0). Same present/RT64 hangar-flight residual family.
 Diagnose hangar-flight present death: createTileCopyRecord missing-fb + wild last-drawn
 + fs freeze at ~3364; convert assert to skip or filter garbage FBs if that is the writer
 path — only after same-run positive control that the op path fires on good frames too.
+
+## Session 77 (2026-07-27) — createTileCopy found=0 never; wild FBs register; fs freeze without assert
+
+### Work unit
+M3 diagnose hangar-flight `createTileCopyRecord` death (NEXT.md D1–D4): instrument
+setup+record found/missing, one start_only HOLD_S=20 soak with `ROGUESQ_LOG_TILECOPY_FB=1`.
+
+### What ran
+- `lib/rt64/src/hle/rt64_framebuffer_manager.cpp`: env-gated log at
+  `createTileCopySetup` / `createTileCopyRecord` — every found=0; first 40 + every 2000th
+  found=1 (positive control); record skip-ignore samples. Exported via
+  `submodule-patches/export.sh` → `rt64.patch`.
+- Soak: `env PROBE_MODE=start_only HOLD_S=20 ROGUESQ_LOG_TILECOPY_FB=1 zsh
+  scratch/s73_post_a_scene/run_mission_keys.sh tilecopy 0 12`
+  → `scratch/s73_post_a_scene/tilecopy/` + `TILECOPY_ANALYSIS.md`.
+
+### Controls (same run)
+- setup/record found=1 through sample **#8000** (early good: `0x695C00 fbW=640`).
+- thr-resume bad=1: **0**; exit=2: **0**; missing-func/UnhandledJump: **0**.
+- Leave: SELECT title-yellow 828 → hangar-flight content (hold_02) → black (hold_08–17)
+  → content return (hold_18–20). Stick hold_10 fired on black.
+
+### Discriminating results
+| D | Claim | Outcome |
+|---|--------|---------|
+| D1 | Assert only on garbage missing-fb | **Not exercised** — found=0 = **0**; wild ops **found=1** (`0x530000 fbW=4030`) |
+| D2 | FB dropped between setup and record | **No evidence** (no record missing) |
+| D3 | trailing syncs=0 starves fullSync → present desync | **Supported for freeze** — #4326+ high-tri syncs=0; fs plateaus **3361** (24 lines); black; **assert not required** |
+| D4 | shared pre-pattern with keys2 Metal SIGSEGV | wild last-drawn still present (133/1332); neither death this run |
+
+### Rules out / reframe
+- Steady hangar-flight residual is **not** createTileCopy missing-fb (s76 Abort is
+  intermittent; this 20s hold CRASH=0).
+- Garbage widths **register** into `framebuffers` and tile-copy finds them — writeback
+  gate (s72) skips RAM write but does not stop FB map pollution.
+- Do **not** convert assert→skip without a same-run found=0 log (would be ungrounded).
+- Does not re-open s72 OSThread writeback.
+
+### Next
+Refuse `FramebufferManager::get` (or pair creation) for width > 1280; count refusals
+post-leave with found=1 control on legitimate FBs; test whether fs advances past ~3360.
