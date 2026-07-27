@@ -8953,3 +8953,84 @@ sanely and firing is simply *rare*, do not repeat the same ~150s soak
 shape hoping to get lucky — either lengthen the hold window or (cheaper)
 just log every reload of the period value directly to see its magnitude
 without needing to catch a live firing at all.
+
+## Session 108 — 2026-07-27
+
+Picked up NEXT.md's prescribed work unit: instrument the countdown/period
+pair at the first of `musyxSynthFrame`'s 3 gate sites
+(`N64Recomp/RecompiledFuncs/funcs_24.c`, guest `0x80091470`-`0x80091478`,
+the `lui`/`lw` load of `G_BASE-0x68EC` right before the decrement-and-
+compare). Landed `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` logging (same shared
+flag, cap-at-20) that reads the countdown value fresh (before decrement)
+plus the period value at `G_BASE-0x68E8` (also read fresh), unconditionally
+on every entry to the gate region — `N64Recomp/fixup_game_funcs.py`, anchor
+scoped to the unique guest PC addresses so it cannot collide with the other
+2 near-identical gate copies elsewhere in the same file. Full regen from
+ELF (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`,
+all exit 0); fixup report showed the new patch applied exactly `x1` in
+`funcs_24.c`, and every prior patch across all files re-applied cleanly at
+`x1` too (no duplication).
+
+**3 soaks run** (`s108_musyx_gate`, `s108_musyx_gate2`, `s108_musyx_gate3`,
+same repro shape as s105-s107) — **none reached the ~140s DMA window this
+time.** All 3 died at 73.5-73.7s from title (inside the SELECT-YOUR-CRAFT/
+hangar-flight window, well before the familiar `vi_width=640`/~140s point
+s101-s107 reached repeatedly), each to a **different** hangar-tick-family
+crash:
+
+- `s108_musyx_gate`: SIGBUS whose backtrace's nearest symbol is
+  `heapFreeListDequeue + 12704` inside the outer chain
+  `submitSceneNodeRender` ← `processSceneNode` ←
+  `traverseSceneGraphRecursive` ← `setupCameraMatrices` ←
+  `static_5_800AAD9C` ← `static_5_800C6854` ← `menuOverlayInit` — the same
+  outer chain shape as the 14th class (`reserveAndEmitDLEntry`, s97/s98)
+  but with **no `reserveAndEmitDLEntry` frame present**, so a different
+  leaf. Large offsets on every frame are consistent with this whole
+  family's existing entries (nearest-exported-symbol attribution over
+  static recompiled functions), not a symbolication error specific to this
+  crash. Treating as a **probable new (18th) class** — first occurrence,
+  not instrumented yet per the project's 2nd-recurrence convention.
+- `s108_musyx_gate2`: SIGBUS in `frameStartReset` (small, direct offset
+  +532) via the same `static_5_800AAD9C`/`static_5_800C6854`/
+  `menuOverlayInit` chain — this is the **s84 class**, previously demoted
+  at CURRENT-TRUTH item 8 as "0 recurrences in s86-s90 (5 soaks)". It has
+  now **recurred once** (2nd total occurrence, s84 and s108) — still not
+  a dominant blocker, but the "0 recurrences" framing needs updating, not
+  "never recurs."
+- `s108_musyx_gate3`: the already-catalogued `queueGPUUploadTMEM`
+  zero-tile-dimension assert (item 2, 7th occurrence overall). This
+  soak did not have `ROGUESQ_LOG_TMEM_ZERO=1` armed (not part of the
+  prescribed repro flags), so no new diagnostic data — just another raw
+  occurrence count.
+
+All 3 soaks read **0/0 on the new `musyx-gate1` counter**, but also 0/0 on
+`musyx-dma-call`/`fill-range-args` — i.e. **none of the 3 reached the
+target window at all**, so per NEXT.md's own established rule ("do not
+treat a soak that dies before the window as evidence for or against
+anything") this is **not a data point on the countdown/period question**,
+just 3 more instances of the well-documented hangar-tick-family instability
+blocking passage to that window. Per ITERATION.md rule 8 (3rd consecutive
+non-discriminating attempt on the same hypothesis), stopped here rather
+than running a 4th blind soak.
+
+**Assessment**: the `musyx-gate1` instrument is landed, built, and armed
+but genuinely **untested against the target window** — a different null
+category from `tickAudioSequencerFrame`/`tickAllAudioChannels` (s107),
+which DID get their shot at the window and read 0/0 there. This session's
+real finding is reinforcing that the hangar-tick crash family (now 3
+plausible classes wide just from 3 fresh soaks: probable-18th,
+frameStartReset recurrence, TMEM-zero recurrence) is still the dominant
+blocker to reliably reaching ~140s, more so than characterizing the
+MusyX gate itself. CURRENT-TRUTH item 0b (land the next guard on the
+14th or 17th class) is the higher-expected-value next step before
+spending more soaks on `musyx-gate1` specifically — s101's 3-guards
+result was one data point that guards improve survival odds; this
+session's 3/3 death-before-window outcome is a second data point that
+more guarding is still needed, not proof the guards so far are
+insufficient (small sample, different crash each time).
+
+### Files
+`N64Recomp/fixup_game_funcs.py` (new `_musyx_gate1_patch`, untracked in
+N64Recomp's own git by design — durable record lives here).
+`N64Recomp/RecompiledFuncs/funcs_24.c` (regenerated, patch applied x1).
+`scratch/s73_post_a_scene/s108_musyx_gate{,2,3}/run.log`.

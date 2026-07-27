@@ -780,6 +780,22 @@ cost three sessions before the recursive mutex.
    distinguish "counting down normally, just rare" from "stuck at a
    fixed value" from "period reloaded to something huge every cycle."
    Full detail: PORTING-STATE s107.
+   **s108 update:** landed the countdown/period instrument
+   (`musyx-gate1`, `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1`) at the first of
+   the 3 gate sites, built clean (patched x1, verified). Ran the
+   allowed 3 soaks (rule 8) — **none reached the ~140s DMA window**;
+   all 3 died at 73.5-73.7s (well before `vi_width=640`) to 3 different
+   hangar-tick-family crashes (a probable new 18th class, a
+   `frameStartReset` recurrence, a `queueGPUUploadTMEM` recurrence — see
+   crash catalog below). `musyx-gate1` read 0/0 in all 3, but so did
+   `musyx-dma-call`/`fill-range-args` — **the soaks never reached the
+   window at all**, so per this file's own rule this is not evidence on
+   the countdown question, just more hangar-tick instability. Per rule
+   8, stopped after the 3rd non-discriminating attempt. **Reprioritizes
+   item 0b (guard the next hangar-tick class) above another `musyx-gate1`
+   soak** — reaching the window reliably is now the bottleneck for this
+   whole line of inquiry, not the instrument itself. Full detail:
+   PORTING-STATE s108.
 0a. **Tooling: `fixup_game_funcs.py` is not actually idempotent**
    (found s102 while re-running it for the item above) — every patch's
    regex anchor matches text that's left unchanged after insertion, so
@@ -885,6 +901,14 @@ cost three sessions before the recursive mutex.
      backtrace is one frame shallower (no `static_5_800B4048` frame),
      confirmed a distinct class. 1 occurrence. Not source-read yet;
      candidate for item 0 if it recurs.
+   - 18th (probable), nearest symbol `heapFreeListDequeue + 12704`
+     (s108) via `submitSceneNodeRender` ← `processSceneNode` ←
+     `traverseSceneGraphRecursive` ← `setupCameraMatrices` — same outer
+     chain shape as the 14th class but no `reserveAndEmitDLEntry` frame
+     present, so a different leaf (large per-frame offsets are this
+     family's normal nearest-exported-symbol attribution, not a
+     symbolication error). 1 occurrence. Not instrumented yet per the
+     2nd-recurrence convention.
    Also worth remembering: s93's `ROGUESQ_LOG_THREAD_RESUME` confound
    (a repro script was hardcoding the flag on, silently defeating a
    "turn it off" plan) is fixed at the source
@@ -898,9 +922,10 @@ cost three sessions before the recursive mutex.
    `queueGPUUploadTMEM` (`rt64_rdp_tmem.cpp:84` →
    `rt64_texture_cache.cpp:1285`). The dormant `ROGUESQ_LOG_TMEM_ZERO=1`
    log (`rt64_rdp_tmem.cpp:63`) is now **0/5** across soaks with the
-   flag armed or not (s87, animcb2 no flag, animcb3, animcb4, animcb5) —
+   flag armed (s87, animcb2 no flag, animcb3, animcb4, animcb5) —
    stays demoted to "keep it armed opportunistically," not a standalone
-   experiment.
+   experiment. Assert itself recurred a 7th time unarmed in s108
+   (`s108_musyx_gate3`), no new diagnostic data.
 3. **M3 — characterize the 10th crash class, SIGBUS in
    `static_5_800B4048` (s90).** Did not recur in s91's two soaks.
    Instrument (`ROGUESQ_LOG_HANGAR_ENTRY=1`) stays armed and ready; no
@@ -920,9 +945,11 @@ cost three sessions before the recursive mutex.
 7. **M3 — confirm the s83 spline div0 guard actually engages.** 0/5 fires
    so far (still 0 after s88/s89/s90); real fix by code inspection (genuine
    0/0 IEEE division) but no same-run positive control yet.
-8. **M3 — characterize `frameStartReset` SIGBUS if it recurs.** Demoted
-   from "dominant blocker" after s85: 0 recurrences in s86–s90 (5 soaks).
-   Only worth dedicated attention again if it reappears; do not gate it
+8. **M3 — characterize `frameStartReset` SIGBUS if it recurs again.**
+   Demoted from "dominant blocker" after s85 (0 recurrences in s86–s90,
+   5 soaks); **recurred once more, s108** (2nd total occurrence, still
+   not dominant — 1 in ~13 soaks since s84). Only worth dedicated
+   attention if it starts recurring more often; do not gate it
    speculatively without a faulting instruction (no existing detector,
    unlike thr-resume).
 9. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once items 1–4 are clear:

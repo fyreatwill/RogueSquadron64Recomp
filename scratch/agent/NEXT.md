@@ -1,115 +1,149 @@
-# NEXT work unit — M3: instrument the `musyxSynthFrame` countdown/period gate (s108)
+# NEXT work unit — M3: guard the 14th hangar-tick crash class, `reserveAndEmitDLEntry` (s109)
 
-s107 found that the "unlocated indirect caller" framing for `tickAllAudioChannels`
-was wrong — every hop is a real static call, found by source-reading (not
-grepping for `LOOKUP_FUNC`/`jalr`). The whole chain is provably gated by a
-per-tick countdown divider that lives inside `musyxSynthFrame` itself.
-Read PORTING-STATE.md's Session 107 entry before doing anything else; this
-file only has the actionable summary.
+s108 ran the NEXT.md-prescribed `musyx-gate1` countdown/period instrument
+(landed, built, armed) but got **3 consecutive soaks that all died before
+the ~140s DMA window** (73.5-73.7s, well before `vi_width=640`), each to a
+different hangar-tick-family crash. Per rule 8 (3 consecutive
+non-discriminating attempts), that line of inquiry is parked — not
+refuted, just blocked on reliability. Read PORTING-STATE.md's Session 108
+entry before doing anything else; this file only has the actionable
+summary.
+
+## Why this is the next work unit, not another `musyx-gate1` soak
+
+CURRENT-TRUTH item 0b already flagged "land a guard on the 14th or 17th
+class" as the natural next step after s99-s101's 3 guards; s108's 3/3
+death-before-window outcome is a second, independent data point that more
+guarding is still needed before the `musyx-gate1` question can even be
+tested again. Guarding is also strictly cheaper to make progress on right
+now: the 14th class already has a real C-source name, a landed (but
+uncapped) entry diagnostic, and a fully characterized first faulting
+write — no more detective work needed before writing the fix, unlike a
+blind soak that costs a full run-cycle for a coin-flip chance of reaching
+the target window at all.
 
 ## What's confirmed (do not re-derive)
 
-- `tickAllAudioChannels` (`funcs_23.c:4061`) has exactly one static caller:
-  `tickAudioSequencerFrame` (`funcs_23.c:6654`), called unconditionally
-  partway through that function's body.
-- `tickAudioSequencerFrame` has exactly 3 static call sites, all inside
-  `musyxSynthFrame` (`funcs_24.c:3097`, confirmed running every soak via
-  `musyx-dma-call`/`fill-range-args`). Each site has the SAME gate shape:
-  ```
-  countdown = G_BASE-0x68EC (a fixed global, 4 bytes)
-  countdown -= 1
-  store countdown back to G_BASE-0x68EC
-  if (countdown != 0) skip tickAllActiveSongs + tickAudioSequencerFrame
-  else { countdown = G_BASE-0x68E8 (period, reloaded); call tickAllActiveSongs; call tickAudioSequencerFrame; }
-  ```
-  (see funcs_24.c ~3505-3545, ~3635-3680, ~3765-3810 for the 3 near-identical
-  copies — register allocation differs slightly between them, don't assume
-  a single regex anchor covers all 3; s107's patches only touched
-  `tickAudioSequencerFrame`/`tickAllAudioChannels` themselves, not these
-  call sites, so this is still unpatched territory).
-- `tickAudioSequencerFrame` ALSO has its own independent gate at its own
-  entry, before reaching the call to `tickAllAudioChannels`:
-  `if (MEM_W(rdram, 0x80142038) == 0) return;` (funcs_23.c:6681-6685).
-- Landed `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` entry counters (same shared
-  flag, cap-at-20 style) on `tickAudioSequencerFrame` (logs `n` +
-  `gate2038` value) and `tickAllAudioChannels` (logs `n` + channel-count
-  byte at `0x80141AD0`), in `N64Recomp/fixup_game_funcs.py`. Both patched
-  exactly x1 in `funcs_23.c`. Verify this is still true (`grep -c` the
-  anchor comments) if you touch this script again.
-- One soak this session (`scratch/s73_post_a_scene/s107_voicechain/run.log`):
-  reached `vi_width=640` at 151.1s (past the ~140s window), died to the
-  same `do_rom_read` SIGSEGV a 12th time. Positive control clean:
-  `musyx-dma-call`=17, `fill-range-args`=7. Both new counters: **0/0**.
-  `tick-audio-channel`/`service-voice-pool-frame`/`init-voice-sample`
-  (s106's counters, still armed): also 0/0, consistent.
-- This is 1 soak, not 2 — do not yet treat "the countdown gate is the
-  block" as fully closed the way s106's 3-counter null was (that had 2
-  independent soaks). One more soak at the countdown-value instrument
-  described below would bring this to the same 2-soak standard.
+- `reserveAndEmitDLEntry` (`N64Recomp/RecompiledFuncs/funcs_3.c:14435`,
+  guest `0x8000CB88`) is the 14th crash class (SIGBUS, s97/s98, 1
+  occurrence so far), reached via the hangar-tick per-frame chain:
+  `submitSceneNodeRender` ← `processSceneNode` ←
+  `traverseSceneGraphRecursive` ← `setupCameraMatrices` ←
+  `static_5_800AAD9C` (`runHangarSelectionFrame`) ← `static_5_800C6854`
+  (`runHangarMenuFromOverlay`) ← `menuOverlayInit`.
+- It already has an entry diagnostic landed (`N64Recomp/
+  fixup_game_funcs.py`, `_reserve_emit_dl_entry_patch`, ~line 288,
+  `funcs_3.c:14438-14447`) gated on `ROGUESQ_LOG_DLENTRY=1`, logging
+  `arg_r4` (a0), `arg_r5` (a1), `ra` on every call. **It has NO cap** —
+  unlike every other diagnostic in this codebase (`n < 20` style) — and
+  this function is called once per scene-graph node per frame, likely
+  hundreds+ of times/second. **Add a cap (`if (s_dlentry_n < 20)`,
+  matching the rest of the family) before ever arming this flag in a
+  soak**, or the log file will be enormous.
+- Source-read the function body (`funcs_3.c:14435-14985`): `a0` (arg
+  `ctx->r4`) is saved to `ctx->r16` at entry (`funcs_3.c:14456`) and
+  **dereferenced as a write target almost immediately**:
+  `MEM_W(0X0, ctx->r16) = 0xB5000000;` (`funcs_3.c:14478-14479`, guest
+  `0x8000CBBC`-`0x8000CBC0`) then `MEM_W(0X4, ctx->r16) = 0;`
+  (`funcs_3.c:14482-14487`, guest `0x8000CBC4`). **This is the first
+  faulting candidate** — if `a0` is garbage/out-of-range, this write
+  SIGBUSes. (`a1`/`ctx->r17` is saved but not yet dereferenced in the
+  first ~90 lines of the function — lower priority, check only if guarding
+  `a0` alone doesn't clear the class.)
+- The function's real epilogue (register restore + return) is at
+  `funcs_3.c:14971-14980` (guest `0x8000CE7C`-`0x8000CE90`): restores
+  `ctx->r31`/`ctx->r17`/`ctx->r16` from the stack slots saved at entry
+  (`0x18`/`0x14`/`0x10` off `ctx->r29`), undoes the `-0x20` stack
+  adjustment, then `return;`. **This epilogue is NOT a clean jump target
+  as-is** — it's reached by falling through real work at label
+  `L_8000CE58` (`funcs_3.c:14951`, guest `0x8000CE58`) that writes to
+  `a0`/`a1`-derived addresses (a different code path's cleanup, not
+  generic function exit) — `goto L_8000CE58` would execute those writes
+  too, which is wrong for a guard placed at function entry before those
+  registers hold sane values.
 
 ## The work unit
 
-1. **Add a capped entry log inside `musyxSynthFrame` at ONE of the 3 gate
-   sites** (pick the first, ~funcs_24.c:3505-3520) that fires on EVERY
-   entry to that code region (i.e. place it right where the countdown is
-   loaded, before the decrement-and-compare, unconditionally — not inside
-   either branch) — same `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` flag, cap at
-   first 20 fires (this will fire far more often than the other counters,
-   once per `musyxSynthFrame` call, likely 60/sec — the cap matters more
-   here than anywhere else so far). Log: `n`, the countdown value BEFORE
-   decrement, and the period value at `G_BASE-0x68E8` (read fresh, not
-   decremented). This settles in one soak whether: (a) the countdown is
-   sane and just slow (e.g. period=300, fires every 5s — a 150s soak
-   should have seen ~30 firings, so if it's this and still 0/0, the soak
-   is too short or something else is wrong), (b) the countdown is frozen
-   at a nonzero value across many logged entries (never actually
-   decrementing — arithmetic/store bug or a duplicate/shadow global), or
-   (c) the period is enormous/corrupted (matches this investigation's
-   established "structured wrong-value" family).
-2. **Regen order**: `python3 /Users/williambuckley/Documents/Tools/rogue_squadron64/tools/make_elf.py`
-   → N64Recomp (`python3 -c "import subprocess; subprocess.run(['./build/N64Recomp', 'rogue_squadron.toml'], cwd='/Users/williambuckley/Documents/Tools/N64Recomp')"`)
-   → `fixup_game_funcs.py` → `cmake --build`. **Full regen from ELF, not
-   a bare fixup re-run** — idempotency bug still unfixed (see Tooling
-   note below). Verify the fixup report shows each patch applied exactly
-   `x1` in its expected file before rebuilding — funcs_24.c is a large,
-   repetitive file (3 near-identical gate copies), a prime spot for an
-   anchor accidentally matching more than one site.
-3. Rebuild: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build -j 8` — exit clean (only pre-existing format/sign warnings).
-4. Soak (same repro shape, reuse the full flag set):
-   `env ROGUESQ_LOG_MUSYX_DMA_CALL=1 ROGUESQ_LOG_FILL_RANGE_ARGS=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_THREAD_RESUME=0 PROBE_MODE=start_only HOLD_S=30 zsh run_mission_keys.sh s108_musyx_gate 30 12`
+1. **Add a cap to the existing `ROGUESQ_LOG_DLENTRY` diagnostic**
+   (`N64Recomp/fixup_game_funcs.py` `_reserve_emit_dl_entry_patch`) —
+   `if (s_dlentry_n < 20) { fprintf(...); } s_dlentry_n++;`, matching
+   every other diagnostic in the file.
+2. **Add a dedicated epilogue-only label for the guard to jump to.**
+   Do not reuse `L_8000CE58`. Insert a new label immediately before the
+   restore sequence, e.g. right before `// 0x8000CE7C: lw $ra, 0x18($sp)`
+   (`funcs_3.c:14971`) — anchor the regex on that exact restore-sequence
+   text (unique in the file: `lw $ra, 0x18($sp)` immediately followed by
+   the `$s1`/`$s0` restores and `addiu $sp, $sp, 0x20` at these specific
+   guest addresses) and prepend a fresh label (e.g. `L_dlentry_guard_exit:`)
+   directly above it via `re.subn`, same mechanism `fixup_game_funcs.py`
+   already uses elsewhere for label insertion.
+3. **Add the guard immediately after the entry diagnostic block**, before
+   any dereference of `ctx->r16` (i.e. right after `funcs_3.c:14456`'s
+   `ctx->r16 = ADD32(ctx->r4, 0);`, or immediately after the existing
+   diagnostic block, whichever is cleaner to anchor). Shape (following the
+   s99-s101 convention exactly): sanity-check `U32(ctx->r4)` against a
+   plausible RDRAM range (e.g. reject `< 0x80000000` or `>= 0x80800000`,
+   matching whatever bound the 11th/12th/16th guards used — check their
+   patches in `fixup_game_funcs.py` for the exact literal so this guard is
+   consistent with the rest of the family), log a `[dlentry-guard]
+   skipped` line (uncapped is fine here, it's guarded by definition to be
+   rare), and `goto L_dlentry_guard_exit;` (the new label from step 2) —
+   **never a bare `return;`** (skips the register restore, breaks the
+   MIPS ABI for the caller).
+4. **Regen order**: `python3 make_elf.py` (rogue_squadron64 dir) →
+   `./build/N64Recomp rogue_squadron.toml` (N64Recomp dir, via the
+   `python3 -c "import subprocess; ..."` wrapper — direct invocation of
+   the binary is not allowlisted and prompts for approval) →
+   `fixup_game_funcs.py` → `cmake --build`. **Full ELF regen, not a bare
+   fixup re-run** (idempotency bug still unfixed, see Tooling note).
+   Verify the fixup report shows the new guard patched exactly `x1` in
+   `funcs_3.c` only (this file also contains other unrelated functions —
+   confirm no cross-function anchor collision, per s100's lesson).
+5. **Rebuild**: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+   cmake --build build -j 8` — exit clean, only pre-existing warnings.
+6. **Soak** (same repro shape, add the capped `ROGUESQ_LOG_DLENTRY=1` to
+   see the guard's own control):
+   `env ROGUESQ_LOG_MUSYX_DMA_CALL=1 ROGUESQ_LOG_FILL_RANGE_ARGS=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_DLENTRY=1 ROGUESQ_LOG_THREAD_RESUME=0 PROBE_MODE=start_only HOLD_S=30 zsh run_mission_keys.sh s109_dlentry_guard 30 12`
    (run from `scratch/s73_post_a_scene/`; backgrounds past the 120s
-   foreground timeout — wait for the completion notification, or block
-   on `--- done ---` appearing in the output file, rather than polling
-   with short sleeps).
-5. **Interpret** per the (a)/(b)/(c) branches in step 1. If (a) and the
-   period looks small/sane, do NOT re-run the same soak shape hoping for
-   a lucky capture — the countdown-value log itself already answers the
-   question (you'll see it decrementing sanely across ~20 logged
-   entries) without needing to catch tickAudioSequencerFrame actually
-   fire. If (c), this is a 5th instance of the "structured corrupted
-   value" family this investigation keeps finding (devAddr, fill-range
-   args, now potentially this) — worth explicitly noting the parallel in
-   PORTING-STATE, not chasing it as a 6th independent bug without
-   checking whether it's the SAME corrupted source value first (compare
-   the corrupted period value, if any, against the known
-   `0x6C676672`/`0x77696E67` pattern byte-for-byte).
+   foreground timeout — block on the task notification, don't poll).
+7. **Interpret**: if the process now reaches `vi_width=640`/~140s alive
+   (or at least survives past 73.5-77s where s108's 3 soaks all died),
+   that's a real improvement in survival odds — re-attempt `musyx-gate1`
+   next. If it still dies before the window, to a *different* crash, log
+   that as the next class in the catalog and keep working down item 0b's
+   list (17th class, `updateHangarBayScene`, is next in line — not yet
+   source-read). If `[dlentry-guard] skipped` never fires (0/0) — that's
+   informative too: `a0` was never actually bad this run, and the SIGBUS
+   (if it recurs) is elsewhere in the function (check the `a1` dereference
+   next, or the probable-18th `heapFreeListDequeue`-area crash s108 found
+   in the same soak family — see below).
 
-## Housekeeping note — not this session's job, but flag it (still true)
+## Also flagged (s108, not this session's job but worth 1 soak's attention if convenient)
 
-`docs/CURRENT-TRUTH.md` is at ~99 KB, well past the ~35 KB `CLAUDE.md`
-budget. A future session should do a dedicated pruning pass — migrate
-durable mechanism/architecture material to `docs/PROJECT-OVERVIEW.md`,
-keep only current status + next steps in CURRENT-TRUTH. Per ITERATION.md,
-compressing CURRENT-TRUTH does not itself count as "ADVANCED" — pair it
-with a real work unit if attempted, don't spend a whole iteration on it
-alone.
+- **Probable 18th crash class** (s108, `s108_musyx_gate` run): SIGBUS,
+  nearest symbol `heapFreeListDequeue + 12704`
+  (`N64Recomp/RecompiledFuncs/funcs_3.c:15176`, same file as
+  `reserveAndEmitDLEntry`, immediately after `reserveAlignedDLSpace`),
+  same outer chain as the 14th class but **no `reserveAndEmitDLEntry`
+  frame in the trace** — a different leaf, not yet source-read. Given
+  `heapFreeListDequeue` is ~1700 source lines (`funcs_3.c:15176-16877`),
+  the large offset may genuinely be inside this function's own body
+  rather than a nearest-symbol misattribution artifact (unlike some
+  other family members whose offsets clearly cross into unrelated code).
+  **Only 1 occurrence — do not instrument yet** per the project's
+  2nd-recurrence convention; just watch for a 2nd hit in any future soak.
+- `frameStartReset` SIGBUS (s84 class, demoted at CURRENT-TRUTH item 8)
+  recurred once more (s108, 2nd total occurrence). Still not dominant
+  (1 in ~13 soaks). No action needed unless it starts recurring more.
+- `queueGPUUploadTMEM` zero-tile-dimension assert (item 2) recurred a 7th
+  time (s108, unarmed — no new diagnostic data). No action needed.
 
 ## Tooling note — still not fixed, still cheap
 
 `fixup_game_funcs.py` is **not idempotent** by construction (every
 patch's anchor regex matches text left unchanged after insertion). A
-full ELF regen has now avoided the duplication symptom five times in a
-row (s103-s107) as a workaround. If a session touches
+full ELF regen has now avoided the duplication symptom six times in a
+row (s103-s108) as a workaround. If a session touches
 `fixup_game_funcs.py` again, consider actually fixing it: make each
 patch's anchor regex also require a negative lookahead that the match
 is **not** immediately followed by `    { // PATCH:`. Test by running
@@ -119,34 +153,34 @@ patch.
 
 ## Do not
 
+- Do not run another blind `musyx-gate1` soak yet — 3/3 consecutive
+  attempts died before the target window (rule 8). Come back to it once
+  survival odds through the hangar-tick window improve (this session's
+  guard work, or the next one).
 - Do not re-instrument or re-soak `musyxInitVoiceFromSample`,
   `tickAudioChannel`, `serviceVoicePoolFrame`, `tickAudioSequencerFrame`,
-  or `tickAllAudioChannels` in isolation again — all now read a
-  consistent 0/0 (2 independent soaks for the first three, 1 for the
-  last two) against a proven-active surrounding system. The open
-  question is the countdown/period gate INSIDE `musyxSynthFrame`, one
-  hop further up.
-- Do not re-read or re-instrument `musyxKeyOnVoice` for this bug —
-  cleared s105 (writes an unrelated RSP command-list struct).
-- Do not re-instrument `initSampleStreamBlockCache`, `fillSampleStreamRange`'s
-  own arithmetic, or `acquireSampleStreamBlock` — all cleared s103/s104.
-- Do not re-instrument `musyxSynthFrame`'s own DMA-batch call site,
-  `submitDmaRequestBatch`, or `setupSongRenderBuffers` — all cleared
-  s102/s103. The NEW instrument for this session is a DIFFERENT part of
-  `musyxSynthFrame` (the 3 tick-divider gate sites), not these.
-- Do not treat a soak that dies before `vi_width=640`/~140s (with
-  `fill-range-args`/`musyx-dma-call` both reading 0) as evidence for or
-  against anything — it never reached the window under test (s106's
-  soak 1). Retry instead of interpreting it.
-- Do not cite `ra=0x00000000` as corruption evidence (refuted s92).
-- Do not re-open "random/race/stomp" framings for the `devAddr`
-  corruption — 7+ independent lines of evidence against all three.
+  `tickAllAudioChannels`, or the `musyx-gate1` countdown/period site in
+  isolation — all read a consistent null against either a proven-active
+  surrounding system (the first 5) or an unreached window (the last one,
+  s108). The open question there is unchanged: does the countdown ever
+  hit 0, and is the period sane — still untested.
+- Do not re-read or re-instrument `musyxKeyOnVoice`, `initSampleStreamBlockCache`,
+  `fillSampleStreamRange`'s own arithmetic, `acquireSampleStreamBlock`,
+  `musyxSynthFrame`'s DMA-batch call site, `submitDmaRequestBatch`, or
+  `setupSongRenderBuffers` — all cleared s102-s105.
+- Do not use a bare `return;` in the new guard — always `goto` a real
+  epilogue label that restores saved registers, per every prior guard in
+  this family (s99-s101).
 - Do not compare a raw `ctx->rN` (`gpr`/`uint64_t`) value against 32-bit
-  literal bounds in any new guard — always truncate through `U32()`
-  first for comparisons; for pointer *arithmetic*, never truncate.
+  literal bounds without truncating through `U32()` first (s99's own
+  lesson — a sign-extension bug made an early guard fire 100% of the
+  time).
 - Do not trust a `fixup_game_funcs.py` "patched xN" report without
   checking which file(s) it patched, **and do a full ELF regen first**
   if the tree may already carry prior patches.
+- Do not cite `ra=0x00000000` as corruption evidence (refuted s92); do
+  not re-open "random/race/stomp" framings for the `devAddr` corruption
+  (7+ independent lines of evidence against all three).
 - `N64Recomp/fixup_game_funcs.py` is untracked in N64Recomp's own git,
   by design — do not attempt to commit it there; the durable record
   lives in `PORTING-STATE.md`/`CURRENT-TRUTH.md` in this repo.
