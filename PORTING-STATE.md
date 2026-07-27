@@ -5865,3 +5865,52 @@ true mission entry.
 ### Files
 - `scratch/s73_post_a_scene/ANALYSIS.md` + key grace PNGs
 - reuses `scratch/s71_sigbus_triage/writer1_fix/`
+
+## Session 74 (2026-07-27) — Start leaves SELECT YOUR CRAFT; `a` does not
+
+### Work unit
+M3 key path from stable SELECT YOUR CRAFT (NEXT.md K1–K4). Harness:
+`scratch/s73_post_a_scene/run_mission_keys.sh` — schedule to AVAILABLE CRAFT + `a`,
+wait 12s, probe `start` / `a` / `start`, grace 30s.
+
+### keys1 — died before probes
+- SIGBUS (signal 10) at stable-iter ~8 (~8s post-`a`), stack:
+  `composeNpcOrientationMatrix` (`static_5_800AB1C8`) ← `static_5_800AAD9C` ←
+  `static_5_800C6854` ← `menuOverlayInit` ← `mainGameLoop`.
+- thr-resume **bad_total=0** through 104093 resumes — **not** the s72 OSThread
+  context smash. ost-wb SKIP_WIDTH/OOB still fire; OVERLAP=0.
+- Visuals match s73 black gap + g07 flash; died before craft-select probes.
+
+### keys2 — probes completed; Start advances
+Positive control: thr-resume bad=0; exit=2=0; missing-func=0; process reached
+craft_stable with SELECT YOUR CRAFT title (title-yellow crop ≈15.6k px).
+
+| observation | evidence |
+|---|---|
+| First Start alone +3s | `pre_probe_a` still SELECT (yel=15637) |
+| `a` +3s | after_a_01..03 still SELECT; no description card |
+| Second Start | after_start_01 still SELECT; after_start_02 title yel 361; after_start_03 airborne no HUD |
+| Post-leave | grace_01..03,07 hangar-flight (yel=0); multi-hue floor garbage; not craft-select |
+| Death | grace-iter 10 SIGSEGV in `plume::MetalFramebuffer` ctor during `State::fullSync`; fs froze at 3407; wild last-drawn 104 |
+
+### K1–K4
+- **K1 supported (caveat):** Start exits SELECT YOUR CRAFT into hangar-flight.
+  Unresolved whether double-Start, Start-after-`a`, or first key drop is required
+  (first Start +3s did not leave; second did).
+- **K2 refuted (3s):** `a` does not open craft description or launch.
+- **K3 refuted:** keys advance.
+- **K4 not seen:** no return to SELECT in 9s post-leave (crash ends soak).
+
+### Script bug
+Probe snaps named `after_$name` — second Start overwrites first Start snaps.
+Fix before next path-isolation run (unique probe tags).
+
+### Files
+- `scratch/s73_post_a_scene/keys1/`, `keys2/`, `keys*_console.txt`
+- `scratch/s73_post_a_scene/KEYS_ANALYSIS.md`
+- `scratch/s73_post_a_scene/run_mission_keys.sh` (pre-existing; overwrite bug noted)
+
+### Next
+Isolate Start-only vs double-Start vs a→Start with unique snap tags; then 60s
+hangar-flight/mission hold + craft input. Residual transition SIGBUS and
+MetalFramebuffer SIGSEGV are follow-ups once key path is pin-pointed.

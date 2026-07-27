@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 73)
+## Current truth (as of session 74)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -64,14 +64,18 @@ Driven from the title with `PROBE_KEYS_FROM_PHASE=1` (s23, scene names corrected
 | +1 press | 512, origin 0x6AB400, colour 0x656000/0x6AB000 | **level-select war room → SELECT LEVEL — "AMBUSH AT MOS EISLEY"** with X-wing hologram (the scene s12–s47 called the "main-menu hangar"; see s48 below) |
 | ~93 s | 640 | transition — **process dies here** (undriven-era observation) |
 
-Menu state machine (s48, three driven runs; extended s50; post-`a` path s73): title —start→ SELECT
-GAME —start→ war room / SELECT LEVEL —start→ **AVAILABLE CRAFT** (war-room craft holograms;
-footer "PRESS [A] FOR LEVEL DESCRIPTION"). From AVAILABLE CRAFT, `a` does **not** show a level
-description card (s61–s69). With process alive 65s post-`a` (s72/s73): **black ~5s → ~1s
-mission-shaped capital-ship flash (texture garbage) → stable SELECT YOUR CRAFT** (hangar pad +
-full X-wing model, "PRESS [A] FOR CRAFT DESCRIPTION", multi-hue floor garbage; camera orbits).
-VI stays on the 0x6AB400/0x656400 pair the whole way — origin cannot name these menus (s48).
-Mission launch from SELECT YOUR CRAFT + 60s hold still open for M3.
+Menu state machine (s48, three driven runs; extended s50; post-`a` path s73; Start path s74):
+title —start→ SELECT GAME —start→ war room / SELECT LEVEL —start→ **AVAILABLE CRAFT**
+(war-room craft holograms; footer "PRESS [A] FOR LEVEL DESCRIPTION"). From AVAILABLE CRAFT,
+`a` does **not** show a level description card (s61–s69). With process alive 65s post-`a`
+(s72/s73): **black ~5s → ~1s mission-shaped capital-ship flash (texture garbage) → stable
+SELECT YOUR CRAFT** (hangar pad + full X-wing, "PRESS [A] FOR CRAFT DESCRIPTION", multi-hue
+floor garbage; camera orbits). From SELECT YOUR CRAFT (s74 keys2): **`a` still no-ops** (no
+description card in 3s); **Start exits the menu** into hangar-flight (HUD title gone by ~2s
+post-press; X-wing airborne, no SELECT text). First Start alone +3s did not leave (may need
+double-Start, Start-after-`a`, or first key was dropped — isolate next). VI stays on the
+0x6AB400/0x656400 pair through hangar-flight too — origin cannot name these scenes (s48).
+60s in-mission hold + craft input still open for M3.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -149,16 +153,18 @@ Stability 0 except 3 gracefully-stubbed `[missing-func]` addresses in the undriv
 never soaked before — parked as M4 (identified s53, fixed s54, runtime check outstanding — see
 step 2 below). Full detail: PORTING-STATE s49.
 
-**M3 — first gameplay: OPENED (s50); ImemOverrun FIXED (s69); SIGBUS FIXED (s72); post-`a`
-scene ID corrected (s73).** AVAILABLE CRAFT reachable. ImemOverrun closed s64–s69. SIGBUS was
-RT64 depth writeback of garbage `w=4067` ZIMG into OSThread `0x801494B0` (s71 site, s72
-writer+gate). **s72/s73:** 65s post-`a` process alive, 0 bad resumes, fs advancing. **s73:**
-stable destination after black gap is **SELECT YOUR CRAFT** (menu), not in-mission; only g07
-is a ~1s mission-shaped flash with texture garbage. Wild last-drawn (54×) are transition-only;
-present never uses them (T1 refuted for sustained frames). Remaining M3 work: key path from
-SELECT YOUR CRAFT into mission + 60s hold + craft input; re-check g07-class garbage only on a
-true mission entry. Origin `0x656400` is war-room pair partner of `0x6AB400` — use captures.
-Full detail PORTING-STATE s68–s73.
+**M3 — first gameplay: OPENED (s50); ImemOverrun FIXED (s69); OSThread SIGBUS FIXED (s72);
+post-`a` scene ID (s73); Start leaves craft-select (s74).** AVAILABLE CRAFT reachable.
+ImemOverrun closed s64–s69. s72 width/OOB writeback gate stops OSThread-context smash
+(thr-resume bad=0 holds through s74). **s73:** stable post-`a` is **SELECT YOUR CRAFT**, not
+mission; g07 is a ~1s flash. **s74 keys2:** from SELECT YOUR CRAFT, Start exits into
+**hangar-flight** (title-yellow 15.6k → 0; airborne X-wing; multi-hue floor garbage); `a`
+no-ops. First Start alone +3s still SELECT — pin down double-Start vs Start-after-`a` vs key
+drop next. Residual deaths: intermittent transition SIGBUS in `composeNpcOrientationMatrix`
+(keys1, bad=0 ≠ s72 path); post-leave SIGSEGV in MetalFramebuffer during fullSync (keys2
+grace~10s) with wild CIMG spam + fs freeze. Remaining M3: isolate Start path → 60s hold +
+craft input; treat residual crashes as blockers only if they prevent the hold. Origin still
+cannot name scenes. Full detail PORTING-STATE s68–s74.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -187,15 +193,17 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s73)
+## Next steps, in order of expected value (s74)
 
-1. **M3 — launch mission from SELECT YOUR CRAFT.** s73: post-`a` stabilizes on craft-select
-   hangar (not mission). After SELECT YOUR CRAFT is stable (~10s post-`a`), probe Start and/or
-   further `a` presses in one driven soak; capture grace until mission or next menu. Document
-   the real key path. Do **not** re-litigate SIGBUS/writeback unless bad resume returns.
-2. **M3 — 60s in-mission hold + craft input** once a frame is visually mission (not craft-
-   select). Drive stick/buttons; document phase timeline. Revisit g07-class texture garbage
-   only if it appears on that sustained mission path.
+1. **M3 — isolate the Start launch path (double-Start vs Start-after-`a` vs single Start).**
+   s74: second Start left SELECT YOUR CRAFT; first Start alone +3s did not; `a` no-ops. Fix
+   snap tags so probes do not overwrite. One soak with unique names: e.g. Start-only +15s
+   wait, OR A/B within-run (Start; wait; if still SELECT then second Start). Discriminate
+   before 60s hold. Do not re-litigate s72 writeback unless thr-resume bad returns.
+2. **M3 — 60s hangar-flight / mission hold + craft input** once leave-from-Start is
+   reproducible. Drive stick; document phase timeline + texture garbage on sustained path.
+   Residual MetalFramebuffer SIGSEGV / transition SIGBUS become the work unit only if they
+   block the hold.
 3. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
