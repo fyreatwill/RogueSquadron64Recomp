@@ -715,6 +715,27 @@ cost three sessions before the recursive mutex.
    "fluke" in s85 after 0/2 non-recurrence — recurred once more in s116
    (2/4 soaks total across s84/s85/s116); worth revisiting if it keeps
    preempting the target window, not dominant enough yet to gate.)
+   **s118:** ran the exact discriminating test above (32-byte dump at
+   `voice+0x0` nonzero hits, same-run vs. `musyx-dma-call`). The dumps
+   are long readable ASCII strings, not raw garbage — e.g. `"explo_
+   tex2\0" FFFFFFFF "explx3\0"`, and later in the same run at the same
+   addresses, a completely different string set (`"star_"`,
+   `"atpt_load"`, `"mat_6"`, `"xenlight"`, `"xckpit"`). Independently
+   confirmed **not coincidental**: `explo_tex` matches `main_overlay.txt`'s
+   own comment on `loadExplosionTextures` verbatim — this is a real
+   texture/asset-name table, not noise. **But** grepping this run's own
+   3 corrupted `devAddr` values (`"wing"`/`"lgfr"`/`"lcre"`) against the
+   voice-array dumps found **0 literal matches** — not byte-identical,
+   so NEXT.md's strict CONFIRMED bar isn't met. Net result: **same class
+   of bug** (real name-table strings landing in a field expecting a
+   boolean/address), **not proven same instance**. Reframed the open
+   question from "find `voice+0x0`'s writer" to "where does this name
+   table live, and is the voice-array base pointer (`ctx->r4`) itself
+   corrupted to point there" — falsifiable next session by comparing
+   `ctx->r4` against a known-good voice-pool pointer from
+   `musyxInitVoiceFromSample` in the same run. No new crash class (11th+
+   `do_rom_read` recurrence, familiar ~140s window). Full detail:
+   PORTING-STATE s118.
 
 -2. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102

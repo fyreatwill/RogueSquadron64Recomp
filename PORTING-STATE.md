@@ -10043,3 +10043,106 @@ sessions s90-117 in `fixup_game_funcs.py`/`RecompiledFuncs/`; `git`
 operations there require interactive approval this session did not have
 — flagged for the user (same posture as s54's `rogue_squadron64` sibling
 checkout), not committed autonomously.
+
+## Session 118 (2026-07-27) — voice+0x0's corruption is real texture-asset-name string data, not devAddr-identical bytes but source-confirmed as the same class of bug
+
+Ran the exact work unit s117/NEXT.md prescribed: widened the
+`[voice-active-gate-nz]` capture in `musyxMixActiveVoices`
+(`N64Recomp/fixup_game_funcs.py`) from 1 byte to a 32-byte hex dump
+starting at the voice-array base (`ctx->r4`), kept `ROGUESQ_LOG_
+MUSYX_DMA_CALL`/`ROGUESQ_LOG_FILL_RANGE_ARGS` armed in the same soak for
+direct same-run comparison. Full regen (`make_elf.py` → `N64Recomp` →
+`fixup_game_funcs.py`, confirmed "patched x1") → clean rebuild, only
+pre-existing-class warnings. One soak (`voicegate3`, same recipe as
+always) reached hold-iter 11 (~141s wall, the familiar window) before
+dying to the already-catalogued `do_rom_read` SIGSEGV (11th+ recurrence
+of that class, no new crash this session).
+
+**Result: the 32-byte dumps are not raw garbage or boolean-adjacent
+bytes — they are long, readable ASCII strings.** Example
+(`n=68892 idx=0x10 base=0x80171D50`): `65 78 70 6C 6F 5F 74 65 78 32 00
+00 00 00 00 00 FF FF FF FF 65 78 70 6C 78 33 00 00 00 00 00 00` decodes
+to `"explo_tex2\0\0\0\0\0\0" FF FF FF FF "explx3\0\0\0\0\0\0"` — i.e. a
+null-terminated name string, a 4-byte `FFFFFFFF` separator/sentinel, and
+the start of a second name. Neighboring hits in the same run decode to
+`"x10"`, `"explo_te"`, `"x11"`, and later in the run (n=137583+, a
+different scene state) to a completely different string set: `"x7"`,
+`"explh_te"`, `"x8"`, `"expl2_te"`, `"star_"`, `"atpt_load"`, `"mat_6"`,
+`"_main_0"`, `"mat_7"`, `"xenlight"`, `"pilot_sd"`, `"xckpit"`. **The
+same physical addresses (`base=0x80171D50` etc., stride 0x88 confirmed
+correct a 3rd time) hold different real strings at different points in
+the run** — not static noise, live data that changes as the scene
+progresses.
+
+**Independent source confirmation, not just pattern-matching:**
+grepped `explo_tex` (verbatim, from the byte dump) against
+`rogue_squadron64/symbol_files/main_overlay.txt` and got a direct hit —
+`loadExplosionTextures` (`0x8006108C`)'s own comment: *"loads
+explh_tex/explo2hi_IMGS (hi-res) or explo_tex/explo2_IMGS (lo-res)"*.
+This is not a coincidental ASCII-shaped byte pattern; it is the literal,
+named lo-res explosion-texture asset-name prefix from a real, documented
+game subsystem. Combined with the other decoded fragments
+(`atpt_load` = AT-PT walker asset load, `star_` = star/starfield
+texture, `mat_N` = numbered material, `xenlight`/`xckpit` = engine-light/
+cockpit fragments — all plausible Rogue Squadron asset-name
+conventions), this session's data is source-confirmed as a **texture/
+asset name table**, not merely "ASCII-range bytes."
+
+**Discriminating test outcome (the exact one NEXT.md specified) is
+mixed, not a clean CONFIRMED:** grepped this run's own `[voice-active-
+gate-nz]` byte dumps for the literal big-endian byte sequences of this
+run's own corrupted `devAddr` values (`77 69 6E 67` = "wing", `6C 67 66
+72` = "lgfr", `6C 63 72 65` = "lcre") — **0 matches, all three**. The two
+corruption sites do not share the same 4 bytes at the same instant.
+**But** both are now independently confirmed to be the *same class* of
+bug — real, human-readable asset/name-table strings landing in a field
+that's supposed to hold a boolean gate byte (`voice+0x0`) or a ROM
+address (`devAddr`) — which is a stronger, more specific characterization
+than s117's "ASCII-shaped, structured, not noise" could establish alone.
+The DMA batch's `"wing"`/`"lgfr"` 4-byte fragments are entirely
+consistent with being sub-strings of a similar name table (e.g. an
+"X-wing"-family asset name), just not literally the same table entry at
+the same tick as the voice-array reads.
+
+**Reframing for the next session**: the question is no longer "does
+`voice+0x0` have a legitimate writer" (closed, s116-117: no) nor "is this
+literally the same bytes as `devAddr`'s corruption" (this session:
+refuted, not byte-identical) but **"where does this real texture/asset
+name table live in memory, and how is the musyx voice-pool array's base
+pointer ending up there"** — a concrete, source-findable question now
+that the string content itself names the subsystem (explosion textures /
+AT-PT / material tables), unlike the previous "unlocated indirect write"
+framing. Two sub-hypotheses for next time: (a) the voice-pool's backing
+memory is genuinely being reused/aliased by a texture-name-table
+allocation (a heap lifetime bug — the voice pool was freed or never
+truly owned that memory, and a later allocator handed the same address
+range to the texture-name table); (b) the voice-array base pointer
+computation itself (the global slot base+idx*0x88 arithmetic already
+proven correct relative to whatever `ctx->r4` holds) is fed a corrupted
+*base*, i.e. `ctx->r4` itself doesn't point at the voice pool at all by
+this point in the run, and every "voice+N" offset in this multi-session
+hunt has actually been reading the wrong array the whole time. (b) is
+falsifiable cheaply: log `ctx->r4` next to a known-good voice-pool
+pointer value (e.g. from `musyxInitVoiceFromSample`'s own `ctx->r4` at
+entry, already instrumented via `ROGUESQ_LOG_INIT_VOICE_SAMPLE`, s105) in
+the same run and compare — if they diverge, (b) is the answer and every
+prior "voice+0x34"/"voice+0x0" finding needs re-reading through that
+lens; if they match, (a) is more likely and the hunt shifts to "who else
+allocates into this exact 0x88-strided region."
+
+No new crash class this session (`do_rom_read`, already catalogued,
+recurred at the familiar ~140s/hold+11s window — 11th+ occurrence,
+consistent with the timing note in s98). `thr-resume bad=1: 0` (control
+held again); `ost-wb SKIP_OOB: 4` (routine, already-characterized gate,
+not investigated further this session).
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: widened the existing
+`ROGUESQ_LOG_VOICE_ACTIVE_GATE` nonzero-hit block (search
+`s_voice_active_gate_nz_n`) from a 1-byte print to a 32-byte hex dump
+loop (`MEM_BU(ctx->r4, i)`, `i` in `0..0x1F`), same 64-hit output cap,
+heartbeat block unchanged. Full ELF regen (patched x1, confirmed) and
+one clean rebuild. No `lib/` edits this session. `N64Recomp` remains a
+separate git checkout with its own accumulating uncommitted changes
+(s90-118 now) — same flagged-not-actioned posture as every session since
+s90.
