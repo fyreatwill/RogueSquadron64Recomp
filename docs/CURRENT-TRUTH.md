@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 105)
+## Current truth (as of session 107)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -624,7 +624,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s104)
+## Next steps, in order of expected value (s107)
 
 -1. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
@@ -755,6 +755,31 @@ cost three sessions before the recursive mutex.
    instrument `tickAllAudioChannels` (`funcs_23.c:4050`, the one static
    caller of `tickAudioChannel`, not yet touched) to find whether the
    gate is even one hop higher. Full detail: PORTING-STATE s106.
+   **s107 update:** source-read `tickAllAudioChannels` before
+   instrumenting (per its own step 1) and found s106's framing was
+   wrong: it has a real static caller, `tickAudioSequencerFrame`
+   (`funcs_23.c:6654`), not an indirect-call mystery. That function has
+   exactly 3 static call sites, all inside the already-confirmed-running
+   `musyxSynthFrame`, each gated by a per-tick countdown divider
+   (`G_BASE-0x68EC`, reloaded from a period at `G_BASE-0x68E8` when it
+   hits 0) — a completely different mechanism than "unlocated indirect
+   caller." `tickAudioSequencerFrame` also has its own second gate at
+   entry (`if (MEM_W(rdram, 0x80142038) == 0) return;`) before its
+   (unconditional) call into `tickAllAudioChannels`. Landed entry
+   counters at both new rungs and soaked: reached the ~140s window
+   (151.1s) and died to the same `do_rom_read` crash a 12th time, with a
+   clean positive control (`musyx-dma-call`=17, `fill-range-args`=7) —
+   but **both new counters read 0/0**, same as `tickAudioChannel`/
+   `serviceVoicePoolFrame`/`musyxInitVoiceFromSample`. This is a
+   materially stronger result than "one more null" — it localizes the
+   block to the countdown-divider gate inside `musyxSynthFrame` itself
+   (or something upstream of it), not any unlocated caller, since every
+   link in the chain is now a confirmed plain static call. **Next step:
+   instrument the countdown/period pair directly** (log the current
+   countdown value once per `musyxSynthFrame` call, capped) to
+   distinguish "counting down normally, just rare" from "stuck at a
+   fixed value" from "period reloaded to something huge every cycle."
+   Full detail: PORTING-STATE s107.
 0a. **Tooling: `fixup_game_funcs.py` is not actually idempotent**
    (found s102 while re-running it for the item above) — every patch's
    regex anchor matches text that's left unchanged after insertion, so

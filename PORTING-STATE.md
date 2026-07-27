@@ -8865,3 +8865,91 @@ own internal condition for calling `tickAudioChannel` is never true in
 this build. Same instrument batch could also add a counter directly at
 `tickAllAudioChannels`'s own entry to settle this in one soak rather
 than two.
+
+## Session 107
+
+Picked up NEXT.md's prescribed work unit: instrument `tickAllAudioChannels`
+to find whether the key-on-chain gate is one hop higher than s106 reached.
+Source-read `tickAllAudioChannels`'s body (`funcs_23.c:4061`) before
+instrumenting, per the work unit's own step 1, and found the s106/NEXT.md
+framing was wrong in a useful way: `tickAllAudioChannels` has a **real
+static caller**, findable by plain grep — `tickAudioSequencerFrame`
+(`funcs_23.c:6654`), called unconditionally partway through that function's
+body (after an early-return gate, see below), *not* another
+invisible-to-grep indirect call like `serviceVoicePoolFrame`'s own caller.
+
+`tickAudioSequencerFrame` itself has exactly 3 static call sites, all
+inside `musyxSynthFrame` (`funcs_24.c:3097`, the already-confirmed-running
+per-VI-retrace audio tick, s101). Each of the 3 sites is gated by the same
+shape: a per-tick countdown at a fixed global (`G_BASE-0x68EC`) is
+decremented; only when it hits exactly 0 does the code call
+`tickAllActiveSongs` then `tickAudioSequencerFrame`, and reload the
+countdown from a period value at a second fixed global (`G_BASE-0x68E8`).
+This is a classic tick-divider ("run the sequencer once every N ticks"),
+structurally unrelated to the DMA-batch/streaming machinery s101-s106
+already confirmed active. `tickAudioSequencerFrame` also has its own,
+independent second gate at its own entry — `if (MEM_W(rdram, 0x80142038)
+== 0) return;` — before it would ever reach the (unconditional, further
+down) call to `tickAllAudioChannels`. So the real ladder, corrected, is:
+`musyxSynthFrame` → [countdown-divider gate] → `tickAudioSequencerFrame`
+→ [gate2038 early-return] → `tickAllActiveSongs` +
+`tickAllAudioChannels` → [channel-count gate] → per-channel loop →
+[per-channel active-flag gate] → `tickAudioChannel`.
+
+Landed entry counters at the two newly-found rungs (`N64Recomp/
+fixup_game_funcs.py`, same shared `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1`
+gate and cap-at-20 style as s106's two): `tickAudioSequencerFrame`
+(logs `n` + the `gate2038` value read fresh at entry) and
+`tickAllAudioChannels` (logs `n` + the channel-count byte at
+`0x80141AD0`, the value its own `blez` skip-the-whole-loop check reads).
+Full regen from ELF (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`
+→ `cmake --build`, all rc 0); fixup report showed both patched exactly
+`x1` in `funcs_23.c`, no duplication, alongside all prior patches
+re-applying cleanly at `x1` each.
+
+**Soak** (`s107_voicechain`, same repro shape as s105/s106): reached
+`vi_width=640` at 151.1s (past the familiar ~140s DMA window) and died to
+the same `do_rom_read` SIGSEGV as every prior session — **12th
+occurrence** (same crash signature: `piDmaWorker` → `osPiStartDma_recomp`
+→ `do_dma` → `do_rom_read`). Positive control clean and strong:
+`musyx-dma-call` fired **17** times, `fill-range-args` fired **7** times
+— the surrounding MusyX per-tick system was genuinely active across the
+whole run, same as s106 soak 2. Against that backdrop, **both new
+counters read 0/0**: `tickAudioSequencerFrame` never fired once, and
+neither did `tickAllAudioChannels` (unsurprising given the former is its
+only caller, but confirms no other call path exists either).
+`tick-audio-channel`, `service-voice-pool-frame`, and `init-voice-sample`
+all still read 0/0 too, consistent with s106.
+
+**This is a materially stronger result than s106's**, not just one more
+null in the same chain: it proves the block sits at or before the
+countdown-divider gate *inside `musyxSynthFrame` itself* — a completely
+different location than "an unlocated indirect caller" (there is none;
+every link in this chain is a plain static call once you read the
+source instead of grepping for `LOOKUP_FUNC`/`jalr`). Two live
+possibilities, not yet distinguished: (a) the countdown genuinely never
+reaches 0 in this run because its period (`G_BASE-0x68E8`) is very large
+or the countdown itself starts corrupted/frozen — testable directly; or
+(b) some higher-level "is a sequenced song even active" flag this
+tick-divider logic itself depends on (not yet located, could gate the
+whole `musyxSynthFrame` region these 3 call sites live in) is off for
+this scene's music, which would mean the per-tick song-sequencer
+subsystem is simply not exercised by this scene's audio at all — a clean
+fit for s105/s106's H1 (this scene never needs a fresh key-on via this
+path) rather than H2 (wrong struct). Not a 3rd consecutive null on the
+*same* sub-hypothesis (rule 8) — this is the 1st soak testing the
+countdown-divider location specifically, so continuing is still in
+budget, but per "one work unit," parked for next session.
+
+**Next step**: instrument the countdown/period pair directly
+(`G_BASE-0x68EC`/`G_BASE-0x68E8`) at `musyxSynthFrame`'s own entry or at
+one representative call site (e.g. log once per `musyxSynthFrame` call,
+capped, the current countdown value before decrement) — this single
+instrument distinguishes (a) "counting down normally, just needs a
+longer capture or a smaller period to observe a firing" from (b) "stuck
+at a fixed nonzero value" from (c) "period reloaded to something huge/
+corrupted every time it would hit zero." If the countdown is behaving
+sanely and firing is simply *rare*, do not repeat the same ~150s soak
+shape hoping to get lucky — either lengthen the hold window or (cheaper)
+just log every reload of the period value directly to see its magnitude
+without needing to catch a live firing at all.

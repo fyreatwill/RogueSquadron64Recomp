@@ -1,133 +1,115 @@
-# NEXT work unit — M3: instrument `tickAllAudioChannels` to find where the key-on chain gate really is (s107)
+# NEXT work unit — M3: instrument the `musyxSynthFrame` countdown/period gate (s108)
 
-s106 confirmed (2 independent soaks, one with a clean positive control)
-that `musyxInitVoiceFromSample`'s ENTIRE call chain —
-`tickAudioChannel`, `serviceVoicePoolFrame`, and the leaf function
-itself — never executes once, even in a run where the surrounding
-MusyX per-tick DMA system is proven actively running. Read
-PORTING-STATE.md's Session 106 entry before doing anything else; this
+s107 found that the "unlocated indirect caller" framing for `tickAllAudioChannels`
+was wrong — every hop is a real static call, found by source-reading (not
+grepping for `LOOKUP_FUNC`/`jalr`). The whole chain is provably gated by a
+per-tick countdown divider that lives inside `musyxSynthFrame` itself.
+Read PORTING-STATE.md's Session 107 entry before doing anything else; this
 file only has the actionable summary.
 
 ## What's confirmed (do not re-derive)
 
-- `musyxInitVoiceFromSample` (`funcs_24.c:5753`, guest `0x80092128`) is
-  a verbatim-copy writer of `voice+0x34 = sampleDesc+0x4` — confirmed
-  by 3 matching offsets against `musyxRenderVoiceSamples`'s own reads
-  (s105). No arithmetic bug in this function if it's the right one.
-- Its two call sites: `funcs_22.c:3667` inside
-  `soundMacroOpPlaySampleKeymap` (one static caller anywhere in the
-  tree: `funcs_23.c:3081`, inside `tickAudioChannel`); `funcs_26.c:1418`
-  inside `startStreamedSampleVoice` (one static caller:
-  `funcs_26.c:11256`, inside `serviceVoicePoolFrame`).
-- `serviceVoicePoolFrame` (`funcs_26.c:10932`, guest `0x8009B5A8`) has
-  **zero** static or address-taken references anywhere in
-  `RecompiledFuncs/*.c` — same "invisible to grep, must be an indirect
-  call" shape as `musyxSynthFrame`'s own caller (s95-s101). Don't trust
-  a caller-grep here; entry counters are the only reliable test.
-- `tickAudioChannel` DOES have exactly one known static caller:
-  `tickAllAudioChannels` (`funcs_23.c:4050`, guest not yet noted — grep
-  the function's own boilerplate comment to get it). **Not yet
-  instrumented.**
-- Landed `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` (`N64Recomp/
-  fixup_game_funcs.py`) with entry counters (capped at first 20 fires)
-  on `tickAudioChannel` (funcs_23.c) and `serviceVoicePoolFrame`
-  (funcs_26.c). Both patched exactly x1 in the expected file — confirm
-  this is still true after any further edits to the same script (`grep
-  -c` each anchor in its target file post-regen).
-- Two soaks this session
-  (`scratch/s73_post_a_scene/s106_voicechain{,2}/run.log`):
-  - Soak 1: died early (RT64 `loadDrawState` abort, the already-known
-    15th crash class) before reaching the DMA window — controls
-    (`fill-range-args`/`musyx-dma-call`) also read 0/0, so this run is
-    uninformative, not evidence either way. Discard it as a data point.
-  - Soak 2: reached `vi_width=640` @ 141.9s, died to the 11th
-    `do_rom_read` recurrence (byte-identical, `devAddr=0x6C676672`/
-    `0x77696E67`). **Positive control clean this time**:
-    `fill-range-args` fired 7x, `musyx-dma-call` fired 17x. Against
-    that, `tick-audio-channel`=0, `service-voice-pool-frame`=0,
-    `init-voice-sample`=0.
-- Combined with s105's own soak (0/0 for `init-voice-sample` across an
-  even longer span, boot through crash) — **two independent soaks**
-  now agree the whole chain never fires. This is a real null, not an
-  untested instrument, per iron rule 1 (positive control now exists on
-  the *surrounding* system).
-- This does **NOT** yet distinguish s105's two hypotheses:
-  1. This scene/song's active voices were all already playing before
-     capture began; no genuinely *new* key-on occurs during any of the
-     observed run (boot through crash) via this mechanism.
-  2. The `G_BASE-0x6908`/`voiceIdx*0x88` offset match between
-     `musyxInitVoiceFromSample` and `musyxRenderVoiceSamples` was
-     coincidental — wrong struct entirely, true writer still unlocated.
-  Both remain fully consistent with "the whole chain reads 0/0".
+- `tickAllAudioChannels` (`funcs_23.c:4061`) has exactly one static caller:
+  `tickAudioSequencerFrame` (`funcs_23.c:6654`), called unconditionally
+  partway through that function's body.
+- `tickAudioSequencerFrame` has exactly 3 static call sites, all inside
+  `musyxSynthFrame` (`funcs_24.c:3097`, confirmed running every soak via
+  `musyx-dma-call`/`fill-range-args`). Each site has the SAME gate shape:
+  ```
+  countdown = G_BASE-0x68EC (a fixed global, 4 bytes)
+  countdown -= 1
+  store countdown back to G_BASE-0x68EC
+  if (countdown != 0) skip tickAllActiveSongs + tickAudioSequencerFrame
+  else { countdown = G_BASE-0x68E8 (period, reloaded); call tickAllActiveSongs; call tickAudioSequencerFrame; }
+  ```
+  (see funcs_24.c ~3505-3545, ~3635-3680, ~3765-3810 for the 3 near-identical
+  copies — register allocation differs slightly between them, don't assume
+  a single regex anchor covers all 3; s107's patches only touched
+  `tickAudioSequencerFrame`/`tickAllAudioChannels` themselves, not these
+  call sites, so this is still unpatched territory).
+- `tickAudioSequencerFrame` ALSO has its own independent gate at its own
+  entry, before reaching the call to `tickAllAudioChannels`:
+  `if (MEM_W(rdram, 0x80142038) == 0) return;` (funcs_23.c:6681-6685).
+- Landed `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` entry counters (same shared
+  flag, cap-at-20 style) on `tickAudioSequencerFrame` (logs `n` +
+  `gate2038` value) and `tickAllAudioChannels` (logs `n` + channel-count
+  byte at `0x80141AD0`), in `N64Recomp/fixup_game_funcs.py`. Both patched
+  exactly x1 in `funcs_23.c`. Verify this is still true (`grep -c` the
+  anchor comments) if you touch this script again.
+- One soak this session (`scratch/s73_post_a_scene/s107_voicechain/run.log`):
+  reached `vi_width=640` at 151.1s (past the ~140s window), died to the
+  same `do_rom_read` SIGSEGV a 12th time. Positive control clean:
+  `musyx-dma-call`=17, `fill-range-args`=7. Both new counters: **0/0**.
+  `tick-audio-channel`/`service-voice-pool-frame`/`init-voice-sample`
+  (s106's counters, still armed): also 0/0, consistent.
+- This is 1 soak, not 2 — do not yet treat "the countdown gate is the
+  block" as fully closed the way s106's 3-counter null was (that had 2
+  independent soaks). One more soak at the countdown-value instrument
+  described below would bring this to the same 2-soak standard.
 
 ## The work unit
 
-1. **Read `tickAllAudioChannels`'s own body** (`funcs_23.c:4050`) to
-   find: (a) its own caller(s) (grep `RecompiledFuncs/*.c` for a
-   literal call — if that also comes back empty, this may be another
-   indirect-call case, same as `serviceVoicePoolFrame`); (b) what
-   condition (if any) gates whether it calls `tickAudioChannel` for a
-   given channel — a loop over a fixed channel count with an
-   active/inactive flag check is the likely shape.
-2. **Add an entry counter on `tickAllAudioChannels` itself** (same
-   `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` gate, same cap-at-20 style) —
-   this settles, in the SAME soak as the existing two counters, whether
-   the gate is one hop higher (the whole per-channel tick system
-   unreached) or whether `tickAllAudioChannels` runs but its own
-   internal call to `tickAudioChannel` is conditionally skipped. If (1)
-   found a static caller, no separate instrument is needed there yet —
-   the entry counter answers the "does it run" question directly
-   regardless of call mechanism.
-3. **Regen order**: `python3 /Users/williambuckley/Documents/Tools/rogue_squadron64/tools/make_elf.py`
+1. **Add a capped entry log inside `musyxSynthFrame` at ONE of the 3 gate
+   sites** (pick the first, ~funcs_24.c:3505-3520) that fires on EVERY
+   entry to that code region (i.e. place it right where the countdown is
+   loaded, before the decrement-and-compare, unconditionally — not inside
+   either branch) — same `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` flag, cap at
+   first 20 fires (this will fire far more often than the other counters,
+   once per `musyxSynthFrame` call, likely 60/sec — the cap matters more
+   here than anywhere else so far). Log: `n`, the countdown value BEFORE
+   decrement, and the period value at `G_BASE-0x68E8` (read fresh, not
+   decremented). This settles in one soak whether: (a) the countdown is
+   sane and just slow (e.g. period=300, fires every 5s — a 150s soak
+   should have seen ~30 firings, so if it's this and still 0/0, the soak
+   is too short or something else is wrong), (b) the countdown is frozen
+   at a nonzero value across many logged entries (never actually
+   decrementing — arithmetic/store bug or a duplicate/shadow global), or
+   (c) the period is enormous/corrupted (matches this investigation's
+   established "structured wrong-value" family).
+2. **Regen order**: `python3 /Users/williambuckley/Documents/Tools/rogue_squadron64/tools/make_elf.py`
    → N64Recomp (`python3 -c "import subprocess; subprocess.run(['./build/N64Recomp', 'rogue_squadron.toml'], cwd='/Users/williambuckley/Documents/Tools/N64Recomp')"`)
-   → `fixup_game_funcs.py` → `cmake --build`. **Full regen from ELF,
-   not a bare fixup re-run** — idempotency bug still unfixed (see
-   Tooling note below). Verify the fixup report shows each patch
-   applied exactly `x1` in its expected file before rebuilding.
-4. Rebuild: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build -j 8` — exit clean (only pre-existing format/sign warnings).
-5. Soak (same repro shape, reuse the full flag set):
-   `env ROGUESQ_LOG_MUSYX_DMA_CALL=1 ROGUESQ_LOG_FILL_RANGE_ARGS=1 ROGUESQ_LOG_INIT_VOICE_SAMPLE=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_THREAD_RESUME=0 PROBE_MODE=start_only HOLD_S=30 zsh run_mission_keys.sh <tag> 30 12`
+   → `fixup_game_funcs.py` → `cmake --build`. **Full regen from ELF, not
+   a bare fixup re-run** — idempotency bug still unfixed (see Tooling
+   note below). Verify the fixup report shows each patch applied exactly
+   `x1` in its expected file before rebuilding — funcs_24.c is a large,
+   repetitive file (3 near-identical gate copies), a prime spot for an
+   anchor accidentally matching more than one site.
+3. Rebuild: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build -j 8` — exit clean (only pre-existing format/sign warnings).
+4. Soak (same repro shape, reuse the full flag set):
+   `env ROGUESQ_LOG_MUSYX_DMA_CALL=1 ROGUESQ_LOG_FILL_RANGE_ARGS=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_THREAD_RESUME=0 PROBE_MODE=start_only HOLD_S=30 zsh run_mission_keys.sh s108_musyx_gate 30 12`
    (run from `scratch/s73_post_a_scene/`; backgrounds past the 120s
-   foreground timeout — wait for the completion notification rather
-   than polling). **If a run dies before `vi_width=640`/~140s without
-   `fill-range-args`/`musyx-dma-call` firing at least once, that run is
-   uninformative (per this session's soak 1) — retry rather than
-   drawing any conclusion from it.**
-6. **Interpret**: if `tickAllAudioChannels` fires but never reaches
-   `tickAudioChannel`, source-read the gating condition next (likely
-   points to hypothesis 1 — a per-channel "is this channel active"
-   check that's never true here). If `tickAllAudioChannels` itself
-   never fires, the search moves one hop higher still (whoever should
-   call it — likely `musyxSynthFrame`'s own body or a sibling
-   per-VI-retrace function, both already partially read in s101-s102 —
-   re-check those for a call/reference to `tickAllAudioChannels` before
-   assuming a 3rd indirect-call mystery).
-7. **If this eventually confirms hypothesis 1** (voices already active,
-   no new key-on ever needed): the search for `voice+0x34`'s corruption
-   needs to pivot away from "who writes it at init" entirely — since
-   nothing ever (re-)initializes it during the captured window, the bad
-   value must already be present in the voice slot at whatever point it
-   WAS written (likely during an earlier, uncaptured moment, or the
-   struct's memory was never zeroed/initialized before first use —
-   check for an uninitialized-read explanation next, not another writer
-   search).
+   foreground timeout — wait for the completion notification, or block
+   on `--- done ---` appearing in the output file, rather than polling
+   with short sleeps).
+5. **Interpret** per the (a)/(b)/(c) branches in step 1. If (a) and the
+   period looks small/sane, do NOT re-run the same soak shape hoping for
+   a lucky capture — the countdown-value log itself already answers the
+   question (you'll see it decrementing sanely across ~20 logged
+   entries) without needing to catch tickAudioSequencerFrame actually
+   fire. If (c), this is a 5th instance of the "structured corrupted
+   value" family this investigation keeps finding (devAddr, fill-range
+   args, now potentially this) — worth explicitly noting the parallel in
+   PORTING-STATE, not chasing it as a 6th independent bug without
+   checking whether it's the SAME corrupted source value first (compare
+   the corrupted period value, if any, against the known
+   `0x6C676672`/`0x77696E67` pattern byte-for-byte).
 
-## Housekeeping note — not this session's job, but flag it
+## Housekeeping note — not this session's job, but flag it (still true)
 
-`docs/CURRENT-TRUTH.md` is now well past the ~35 KB `CLAUDE.md` budget
-(accumulating since the s85 saga, now s106 on top). A future session
-should do a dedicated pruning pass — migrate durable mechanism/
-architecture material to `docs/PROJECT-OVERVIEW.md`, keep only current
-status + next steps in CURRENT-TRUTH. Per ITERATION.md, compressing
-CURRENT-TRUTH does not itself count as "ADVANCED" — pair it with a
-real work unit if attempted, don't spend a whole iteration on it alone.
+`docs/CURRENT-TRUTH.md` is at ~99 KB, well past the ~35 KB `CLAUDE.md`
+budget. A future session should do a dedicated pruning pass — migrate
+durable mechanism/architecture material to `docs/PROJECT-OVERVIEW.md`,
+keep only current status + next steps in CURRENT-TRUTH. Per ITERATION.md,
+compressing CURRENT-TRUTH does not itself count as "ADVANCED" — pair it
+with a real work unit if attempted, don't spend a whole iteration on it
+alone.
 
 ## Tooling note — still not fixed, still cheap
 
 `fixup_game_funcs.py` is **not idempotent** by construction (every
 patch's anchor regex matches text left unchanged after insertion). A
-full ELF regen has now avoided the duplication symptom four times in a
-row (s103-s106) as a workaround. If a session touches
+full ELF regen has now avoided the duplication symptom five times in a
+row (s103-s107) as a workaround. If a session touches
 `fixup_game_funcs.py` again, consider actually fixing it: make each
 patch's anchor regex also require a negative lookahead that the match
 is **not** immediately followed by `    { // PATCH:`. Test by running
@@ -138,21 +120,24 @@ patch.
 ## Do not
 
 - Do not re-instrument or re-soak `musyxInitVoiceFromSample`,
-  `tickAudioChannel`, or `serviceVoicePoolFrame` in isolation again —
-  their 0/0 is now a confirmed null (2 independent soaks, one with a
-  clean positive control on the surrounding system), not an untested
-  instrument. The open question is one hop higher
-  (`tickAllAudioChannels`), not these three.
+  `tickAudioChannel`, `serviceVoicePoolFrame`, `tickAudioSequencerFrame`,
+  or `tickAllAudioChannels` in isolation again — all now read a
+  consistent 0/0 (2 independent soaks for the first three, 1 for the
+  last two) against a proven-active surrounding system. The open
+  question is the countdown/period gate INSIDE `musyxSynthFrame`, one
+  hop further up.
 - Do not re-read or re-instrument `musyxKeyOnVoice` for this bug —
   cleared s105 (writes an unrelated RSP command-list struct).
 - Do not re-instrument `initSampleStreamBlockCache`, `fillSampleStreamRange`'s
   own arithmetic, or `acquireSampleStreamBlock` — all cleared s103/s104.
-- Do not re-instrument `musyxSynthFrame`, `submitDmaRequestBatch`, or
-  `setupSongRenderBuffers` — all cleared s102/s103.
+- Do not re-instrument `musyxSynthFrame`'s own DMA-batch call site,
+  `submitDmaRequestBatch`, or `setupSongRenderBuffers` — all cleared
+  s102/s103. The NEW instrument for this session is a DIFFERENT part of
+  `musyxSynthFrame` (the 3 tick-divider gate sites), not these.
 - Do not treat a soak that dies before `vi_width=640`/~140s (with
   `fill-range-args`/`musyx-dma-call` both reading 0) as evidence for or
-  against anything — it never reached the window under test (this
-  session's soak 1). Retry instead of interpreting it.
+  against anything — it never reached the window under test (s106's
+  soak 1). Retry instead of interpreting it.
 - Do not cite `ra=0x00000000` as corruption evidence (refuted s92).
 - Do not re-open "random/race/stomp" framings for the `devAddr`
   corruption — 7+ independent lines of evidence against all three.
