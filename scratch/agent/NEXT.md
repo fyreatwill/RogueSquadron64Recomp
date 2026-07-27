@@ -1,117 +1,137 @@
-# NEXT work unit — M3: reproduce the `advancePlayerAnimationPhase` SIGBUS with the s88 instrument live
+# NEXT work unit — M3: pin down the `queueGPUUploadTMEM` zero-size assert (next-steps item 1)
 
-s87 found an 8th crash class (SIGBUS, two identical consecutive frames
-`advancePlayerAnimationPhase + 2572`) and guessed a mechanism (self-
-recursion via a callback slot at guest `0x80139968`). **s88 refuted that
-specific mechanism at the source level**: the call site s87 cited
-(`0x8006426C`) belongs to a *different* function, `invokeMenuOverlayHeaderCallback`,
-never reached from `advancePlayerAnimationPhase`'s own body —
-`advancePlayerAnimationPhase` has zero indirect calls of its own (checked
-by reading its full C body, `N64Recomp/RecompiledFuncs/funcs_14.c:4029-4331`
-after a fresh regen — only two direct `jal`s, both to
-`activateAnimationKeyframe`, whose own callees make no further calls).
+s89 ran the s88 soak shape twice more (`animcb2`, `animcb3`). Neither
+reproduced the s87 `advancePlayerAnimationPhase` SIGBUS — that's 3
+non-recurrences since s88 landed the correct instrument, so per
+ITERATION.md rule 8 that specific hypothesis is now **parked** (see
+CURRENT-TRUTH next-steps item 4). Do not spend this iteration chasing
+it further.
 
-s88 landed a **correctly-targeted** instrument instead:
-`ROGUESQ_LOG_ANIM_CB=1` logs guest `$sp` (`ctx->r29`, a depth proxy) +
-`arg_r4`/`arg_r5`/`ra` at the function's own entry
-(`N64Recomp/fixup_game_funcs.py`, new `_anim_cb_patch` block — **not**
-`lib/`, no `submodule-patches/export.sh` needed). It fired 3296/3296 in
-one soak (positive control confirmed) — but **that soak never crashed at
-all** (first crash-free soak since s83, all 8 known classes, 0 fires).
-So the instrument is proven to work but has never yet been observed
-during an actual crash.
+Instead, both soaks crashed on other things. `animcb2` (signal 6,
+Abort) gave the **first-ever full backtrace** for the s86
+`queueGPUUploadTMEM` zero-size assert:
 
-## Do first, before running anything
+```
+Assertion failed: (!decodeTMEM || ((width > 0) && (height > 0))),
+function queueGPUUploadTMEM, file rt64_texture_cache.cpp, line 1285.
+```
 
-Check whether the last soak's clean run was a fluke or the new normal:
-run the exact same soak shape again. If it stays clean 2/2, that's itself
-an important data point (see "If it stays clean" below) — don't just
-keep re-running hoping for a crash without updating the docs to reflect
-that.
+Call path: `State::fullSyncFramebufferPairTiles` → `uploadTile` lambda
+(`rt64_state.cpp:1208-1330`) → `TextureManager::uploadTexture`
+(`rt64_state.cpp:1329`) → `queueGPUUploadTMEM`
+(`rt64_rdp_tmem.cpp:54-93` → `rt64_texture_cache.cpp:1285`).
 
-## Competing hypotheses (unchanged from s87, now better-instrumented)
+The run also logged 25 `[rt64] loadDrawState: copy-mode draw with
+undefined tile N, marking invalid` lines (`rt64_state.cpp:550`,
+including tile 7 repeatedly, right up to two occurrences immediately
+before the crash) — **confirmed a red herring, not the cause**: that
+code path already sets `callTile.valid = false` for the tile and the
+`uploadTile` lambda returns immediately via `if (!callTile.valid)
+return;` (`rt64_state.cpp:1210`) before `uploadTexture` is ever called.
+Do not re-chase "undefined tile" as the mechanism.
 
-1. **Self-recursion via *some* corrupted pointer/data**, just not the one
-   s87 guessed — e.g. `activateAnimationKeyframe`'s track-walk (its
-   symbol comment: "Recursively walks track at *(a1+0xC)") hitting a
-   corrupted or cyclic pointer chain that eventually calls back through
-   `advancePlayerAnimationPhase` via a route not yet traced. `$sp` would
-   start moving away from its normal ~6-value band in the calls
-   immediately before a crash.
-2. **Not stack-depth recursion at all.** The crash trace's two identical
-   frames could be a **symbolication artifact**: if the true fault is a
-   wild `MEM_W`/`MEM_B` write in inlined code, or if the unwinder's
-   frame-pointer walk got confused by a corrupted/overwritten frame, it
-   can print the same nearest-preceding-symbol twice without real
-   recursion. `$sp` would stay flat (like this run) right up to the
-   crash — consistent with "the bug is a bad memory write somewhere in
-   this function's body or its inlined callees, not unbounded recursion."
+The zero width/height must come from a **valid** callTile passing
+through the *same* call site. `rt64_rdp_tmem.cpp:54` (`TextureManager::
+uploadTexture`) already has a dormant conditional log for exactly this
+case, added s87:
+
+```cpp
+if ((width == 0 || height == 0) && std::getenv("ROGUESQ_LOG_TMEM_ZERO")) {
+    fprintf(stderr, "[tmem-zero-upload] w=%u h=%u fmt=%u siz=%u line=%u "
+        "tmem=%u pal=%u cms=%u cmt=%u masks=%u maskt=%u shifts=%u "
+        "shiftt=%u uls=%u ult=%u lrs=%u lrt=%u tlut=0x%X\n", ...);
+}
+```
+
+It has now gone **0/0 across 3 soaks** regardless of whether the flag
+was armed (s87: armed, didn't fire because the soak died earlier to a
+different crash; `animcb2`: not armed, hit the assert directly;
+`animcb3`: armed, but the soak crashed on the *new* 9th class — see
+below — before hitting this assert again). The assert and the logging
+flag have never yet coincided in the same run.
+
+## Competing hypotheses
+
+1. **Legitimate degenerate LOADTILE.** The game occasionally issues a
+   real, valid (non-corrupted) tile descriptor whose computed sample
+   dimensions are genuinely 0 — e.g. `lrs<=uls` or `lrt<=ult` (an
+   empty-rect load) reaching this path in a way the earlier
+   `sampleWidth`/`sampleHeight` computation in `rt64_state.cpp` (lines
+   ~589-596, `std::min(tileWidth, maskWidth)` with `tileWidth`/`maskWidth`
+   both `std::max(...,1)`-floored) doesn't fully prevent for this
+   particular call path. If so, this is a real (if narrow) engine gap —
+   fix is a defensive `std::max(width,1)`/skip-if-zero at the call site
+   or inside `queueGPUUploadTMEM`, not a corruption story.
+2. **Same shared-corruption-race family as s85's `do_rom_read` and
+   s89's `updateAnimatedTextureStreaming`.** A register/struct field
+   feeding into `callTile.sampleWidth`/`sampleHeight` gets corrupted
+   upstream (same unproven "something corrupts a register or nearby
+   memory intermittently" hypothesis raised s85, now with 3 candidate
+   sites). If so, the logged `LoadTile` fields will look implausible for
+   any real N64 tile descriptor (e.g. wildly out-of-range `uls`/`lrs`),
+   not just "zero-sized."
+
+The `[tmem-zero-upload]` log (once it actually fires) discriminates
+these directly per its own code comment: sane-looking fields (e.g.
+`lrs<=uls`) → hypothesis 1; fields outside any real tile descriptor's
+range → hypothesis 2.
 
 ## Command
 
+Keep `ROGUESQ_LOG_TMEM_ZERO=1` armed (cheap, no-op unless width/height
+is actually 0) on every soak until it coincides with the assert firing:
+
 ```
-env ROGUESQ_LOG_ANIM_CB=1 PROBE_MODE=start_only HOLD_S=30 zsh \
-  scratch/s73_post_a_scene/run_mission_keys.sh animcb2 0 12
+env ROGUESQ_LOG_ANIM_CB=1 ROGUESQ_LOG_TMEM_ZERO=1 PROBE_MODE=start_only HOLD_S=30 zsh \
+  scratch/s73_post_a_scene/run_mission_keys.sh animcb4 0 12
 ```
-(reuses the build from s88 — no regen needed unless you change the
-instrument itself.)
+
+(Reuses the existing build — no regen needed. `ROGUESQ_LOG_ANIM_CB=1`
+is harmless to leave on; if the parked anim-recursion bug happens to
+recur anyway, the data is still worth reading per item 4 below.)
 
 ## Discriminating measurement
 
-1. `grep -c CRASH scratch/s73_post_a_scene/animcb2/run.log` — if 0 again,
-   this is now 2/2 clean vs. 5/5 crashing (s83–s87). That asymmetry is
-   itself worth a documented conclusion: either something changed between
-   s87 and s88/s89 (check: was anything about the build, env, or timing
-   different?), or the crash really is a low-probability race and 30s
-   holds aren't long enough to reliably hit it — in which case, consider
-   a longer `HOLD_S` (e.g. 90) or running back-to-back soaks to build a
-   crash/no-crash ratio before spending another iteration guessing at
-   mechanism from a single crash log.
-2. If it crashes: `grep -n CRASH` for the line number, then look at the
-   ~20 `[anim-recurse]` lines immediately before it.
-   - `sp` flat (same handful of values as the rest of the run) right up
-     to the crash → hypothesis 2 supported (not real recursion; look for
-     a wild-write signature elsewhere — e.g. check `arg_r4`/`arg_r5` at
-     the last entries for garbage-looking pointers, and consider adding
-     a similar entry log to `activateAnimationKeyframe` next).
-   - `sp` drops sharply and repeatedly in the last N entries (genuine
-     nested growth) → hypothesis 1 supported; that's real recursion and
-     worth checking whether `arg_r4` repeats (same slot pointer calling
-     itself) or advances (walking a corrupted/cyclic linked structure).
+1. `grep -n CRASH scratch/s73_post_a_scene/animcb4/run.log` — find the
+   crash (if any) and its signal number.
+2. `grep -n tmem-zero-upload scratch/s73_post_a_scene/animcb4/run.log`
+   — if this fires **and** a `queueGPUUploadTMEM` assert crash follows
+   shortly after, read the logged fields per the hypotheses above.
+3. If this soak crashes on something else entirely (as the last two
+   did), read that crash's backtrace fresh — do not assume it is one of
+   the 9 known classes without checking function names against
+   CURRENT-TRUTH's list.
+4. If `[anim-recurse]` happens to show `sp` in the run leading up to
+   *any* crash this soak, note whether it stays in the known 6-value/
+   312-byte band or moves — purely as a bonus data point for the parked
+   item 4, not the primary target this iteration.
 
 ## Do not
 
-- Do not re-guess a specific call site from a line-number grep without
-  confirming which `RECOMP_FUNC` block the lines belong to — that's
-  exactly the mistake s87 made and s88 spent most of its budget
-  correcting.
-- Do not hand-edit `N64Recomp/RecompiledFuncs/funcs_14.c` — the
-  instrument lives in `N64Recomp/fixup_game_funcs.py` and is idempotent
-  across regens.
-- If using a function `repl` in `re.subn` (as `_anim_cb_patch` does),
-  remember this sidesteps `re.sub`'s replacement-template backslash
-  processing — plain Python string escaping applies as normal. If you
-  instead write a raw-string template (the style used elsewhere in this
-  file), remember `\\` collapses to `\` there and `\'`/`\"` do **not**
-  behave the way they look; read the generated C back before building,
-  not just after a successful compile (the s88 bug compiled fine on
-  the buggy first attempt — nothing caught the mangled quotes until the
-  file was read).
-- Budget: this is iteration 2 of the ITERATION.md rule-8 budget on the
-  anim-recursion hypothesis family (s87: 1 refuted guess; s88: 1
-  correctly-targeted but crash-free run). One more inconclusive result
-  (crash-free again, or a crash whose `[anim-recurse]` data doesn't
-  discriminate) and reassess — either fall back to characterizing this
-  as a rare/unrepducible one-off and move to next-steps item 2 (TMEM-
-  zero assert) or item 3 (shared-race retest), or go BLOCKED with the
-  specific question "does this crash reproduce at all outside s87's one
-  observation."
+- Do not re-litigate whether "undefined tile" logging causes the
+  assert — ruled out at the source level this session (`rt64_state.cpp:
+  1210` already guards it).
+- Do not spend this iteration chasing the `advancePlayerAnimationPhase`
+  SIGBUS (parked, item 4) — 3 non-recurrences is enough per rule 8.
+- If this soak's crash is the TMEM-zero assert again but the log still
+  doesn't fire, double check `std::getenv("ROGUESQ_LOG_TMEM_ZERO")` is
+  actually exported (the `env` prefix workaround, CLAUDE.md rule 10 /
+  ITERATION.md rule 10 — a bare `VAR=1 zsh ...` is silently denied by
+  the settings.json prefix match, not silently unset, so a missing log
+  line could mean "didn't fire" or "command was denied": check the
+  soak actually produced output at all before concluding null).
+- Budget: this is iteration 1 of a fresh ITERATION.md rule-8 count for
+  the TMEM-zero-assert hypothesis family (0 prior soaks had both the
+  assert and the flag co-occur). Up to 3 attempts before reassessing.
 
-## If items 1-style soaks keep coming back clean
+## Secondary work unit if the above doesn't crash this class
 
-Consider whether the s84 thr-resume gate (now validated, U3 closed) or
-some other recent change incidentally reduced how often *any* of the 8
-crash classes fires — worth a quick same-run check of whether `bad_total`
-and `[rom-read]` corruption rates look different across the last few
-soaks (s85/s86/s87/s88) rather than assuming the anim-recursion bug
-specifically got harder to hit.
+Add an entry-log instrument to `updateAnimatedTextureStreaming`
+(`N64Recomp/RecompiledFuncs/funcs_11.c:13665`, patch via
+`N64Recomp/fixup_game_funcs.py` following the exact `_anim_cb_patch`
+pattern already used for `ROGUESQ_LOG_ANIM_CB`) logging `ctx->r4` (a0,
+the streaming-entry pointer) at entry. This targets next-steps item 2 —
+characterizing the 9th crash class (SIGBUS via an unchecked `MEM_W`
+deref off `ctx->r16`/a0, `recomp.h:95`). Read the generated C back
+before building (per the s88 lesson: a mangled patch compiled fine and
+only a source read caught it).

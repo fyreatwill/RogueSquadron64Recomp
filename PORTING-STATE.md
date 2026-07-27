@@ -6798,3 +6798,90 @@ what differs (timing jitter, thread scheduling) between them.
 - Items 2/3 (TMEM-zero-upload assert, do_rom_read shared-race retest)
   are still blocked on a soak that reproduces those specific crashes;
   this soak reproduced neither (it reproduced nothing).
+
+## Session 89 (2026-07-27) — anim-recursion hypothesis parked (3rd non-recurrence); TMEM-zero assert reproduced with full backtrace; found a 9th crash class (`updateAnimatedTextureStreaming` SIGBUS), same shared-corruption-race signature
+
+Ran the exact NEXT.md-prescribed soak twice (`animcb2`, `animcb3`; same
+script/env baseline as s88, `ROGUESQ_LOG_ANIM_CB=1 PROBE_MODE=start_only
+HOLD_S=30`, animcb3 additionally set `ROGUESQ_LOG_TMEM_ZERO=1`). Both
+soaks crashed — but **neither reproduced the s87 `advancePlayerAnimationPhase`
+SIGBUS the instrument was built to catch.** That is now 3 non-recurrences
+in a row for that specific bug (s88, animcb2, animcb3) against 8 total
+soaks since s83 that hit *some* crash. Per ITERATION.md rule 8, parking
+that specific hypothesis test rather than running a 4th soak.
+
+**animcb2 (signal 6, Abort):** first-ever full backtrace for the s86
+`queueGPUUploadTMEM` zero-size assert (`assert(!decodeTMEM ||
+(width>0 && height>0))`, `rt64_texture_cache.cpp:1285`). Backtrace:
+`fullSyncFramebufferPairTiles` → `uploadTile` lambda → `TextureManager::
+uploadTexture` → `queueGPUUploadTMEM` (`rt64_state.cpp:1329` →
+`rt64_rdp_tmem.cpp:84`). The run also logged 25 "`copy-mode draw with
+undefined tile N, marking invalid`" lines (`rt64_state.cpp:550`,
+including tile 7 repeatedly, right up to two occurrences immediately
+before the crash) — **read as a red herring, not the cause**: that path
+already sets `callTile.valid = false` and returns via the `if
+(!callTile.valid) return;` guard at `rt64_state.cpp:1210` before
+`uploadTexture` is ever called, so an invalid-tile draw cannot reach the
+assert. The zero width/height must come from a **valid** tile through
+the same call site — which already has a dormant conditional log for
+exactly this (`ROGUESQ_LOG_TMEM_ZERO`, `rt64_rdp_tmem.cpp:63`, added
+s87) that simply wasn't armed for animcb2.
+
+**animcb3 (added `ROGUESQ_LOG_TMEM_ZERO=1`, piggybacking as NEXT.md
+suggested):** the TMEM-zero log still did not fire (0/0, 3rd soak in a
+row per CURRENT-TRUTH's running count) — this soak crashed on something
+else entirely: **signal 10 (SIGBUS), a 9th distinct crash class**, in
+`updateAnimatedTextureStreaming` (real named function, not a
+`static_N_` stub — `N64Recomp/RecompiledFuncs/funcs_11.c:13665`), called
+via `menuOverlayInit` → `static_5_800C6854` → `static_5_800AAD9C` →
+`static_5_800ADB70` → `updateAnimatedTextureStreaming` (backtrace
+frames 8→3). Crash offset (+92 native bytes into the function) falls
+among the function's first few loads off `ctx->r16` (`= a0`, the
+streaming-entry pointer argument, set from `ctx->r18`/`$s2` at the
+call site, `funcs_11.c:14518`) via `MEM_W`. Read `recomp.h:95`: `MEM_W`
+is an **unchecked raw pointer cast** —
+`*(int32_t*)(rdram + ((reg + offset) - 0x80000000))` — no bounds or
+sanity check on `reg`. If the incoming pointer arrives corrupted, this
+is a direct wild dereference. **Same signature as s85's `do_rom_read`
+`physical_addr` bug** (garbage register value flowing straight into an
+unchecked raw dereference) and the s83/s84 OSThread UAF family — a
+3rd/4th data point for the shared-corruption-race hypothesis, not yet
+proven but now recurring across three structurally different call sites
+(RSP/DMA register read, RT64 texture-tile struct, MIPS-recompiled struct
+pointer arg).
+
+**`[anim-recurse]` in both soaks:** `sp` stayed confined to the same 2
+values seen across the whole run (`0x80165EF8`, `0x80165ED0`, the same
+40-byte-apart pair from s88's 6-value/312-byte population) right up to
+each crash — including animcb3's crash, which isn't even in
+`advancePlayerAnimationPhase`'s call chain. This continues to support
+NEXT.md's hypothesis 2 (not stack-depth recursion) for whenever the
+function *is* on the stack, but says nothing about the target bug since
+it didn't fire either soak.
+
+**Rules out / keep:**
+- s87's `advancePlayerAnimationPhase` SIGBUS: not reproduced in 3
+  attempts since s88 landed the correct instrument (s88, animcb2,
+  animcb3). Reclassify from "actively investigating" to "rare/parked" —
+  do not spend a 4th soak chasing it without new information; revisit
+  only if it recurs on its own during a soak run for a different reason.
+- TMEM-zero assert (item 2): **no longer purely hypothetical** — has a
+  real backtrace and call path now. The "undefined tile" logging is
+  ruled out as attribution for it (already guarded upstream). Still
+  need a soak where `ROGUESQ_LOG_TMEM_ZERO` is armed **and** the assert
+  actually fires in the same run (0/3 soaks so far: s87, animcb2 didn't
+  have the flag, animcb3 had the flag but crashed on the new bug
+  instead) — the two crashes have not yet co-occurred with the right
+  logging armed.
+- New 9th crash class recorded: `updateAnimatedTextureStreaming` SIGBUS,
+  root-cause direction identified (unchecked `MEM_W` deref off a
+  corrupted/invalid `a0`), not yet confirmed by logging the actual
+  pointer value at entry.
+- Crash inventory: 9 distinct classes now on record (evalCubicSplineAtTime
+  NaN — fixed; thr-resume UAF — fixed/gated; frameStartReset — parked,
+  0 recurrences since s85; Metal shader-compiler SIGSEGV — 1 data point;
+  do_rom_read corruption — root-caused, race unconfirmed;
+  queueGPUUploadTMEM zero-size — now has a backtrace; TMEM-zero-upload
+  itself never separately fired; advancePlayerAnimationPhase SIGBUS —
+  parked, unreproduced since s87; updateAnimatedTextureStreaming SIGBUS —
+  new, this session).
