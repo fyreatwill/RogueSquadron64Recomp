@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s127)
+## Next steps, in order of expected value (s128)
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with
@@ -796,6 +796,23 @@ cost three sessions before the recursive mutex.
    functions tried — strong prior the other 5 already-guarded multi-site
    functions (11th, 14th, 16th, 17th, 18th) have the same gap. Full
    detail: PORTING-STATE s127.
+   **s128 (Thread A re-audit, item 1/5):** re-read the 11th class
+   (`projectModelBoundsToScreen`, `funcs_15.c`) to its closing brace —
+   its s101 guard covers only the `a0` argument; the `a2` and `a3`
+   arguments (`ctx->r21`/`ctx->r20`) are separately dereferenced as raw
+   `Vec3*` with no check at all. Guarded both
+   (`ROGUESQ_LOG_PROJECT_MODEL_BOUNDS_GUARD2`/`GUARD3`; GUARD3 matches
+   x2, the function's own delay-slot instruction duplication, confirmed
+   intentional not a bug), full delete-all regen+rebuild clean
+   (multiplicity audited by direct grep, not by re-running the
+   non-idempotent fixup script). Soak: all three guards for this
+   function unexercised (0/0, function never called this run); process
+   died at hold+11s to the tracked `do_rom_read`/`piDmaWorker` race —
+   same window as every other soak in this family since s85, not a new
+   finding. Thread A's generalization now holds **3/3** on every
+   function tried (composeNpcOrientationMatrix s126;
+   updateAnimatedTextureStreaming + static_5_800B4048 s127;
+   projectModelBoundsToScreen s128). Full detail: PORTING-STATE s128.
    (Also flagged, not chased: the s84 `frameStartReset` SIGBUS — called a
    "fluke" in s85 after 0/2 non-recurrence — recurred once more in s116
    (2/4 soaks total across s84/s85/s116); worth revisiting if it keeps

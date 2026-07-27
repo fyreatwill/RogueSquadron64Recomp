@@ -11192,3 +11192,102 @@ audit passed, build exit 0). No `lib/` edits this session — no
 carries s90-127's accumulated uncommitted history (same
 flagged-not-actioned posture as prior sessions; `rogue_squadron64`
 sibling checkout likewise unchanged, flagged since s54).
+
+## Session 128 (2026-07-27) — Thread A re-audit item 1/5: `projectModelBoundsToScreen` (11th class) had TWO more unguarded arg-pointer sites past the s101 guard; guarded both, soak both unexercised (0/0), died to the tracked `do_rom_read`/`piDmaWorker` race at the family's usual hold+11s window
+
+Continued Thread A exactly where NEXT.md left it: full-body re-read of
+the remaining 5 guarded multi-site functions, starting with the
+smallest/most tractable, `projectModelBoundsToScreen` (`funcs_15.c`,
+guard at s101 covers `ctx->r22`/`$s6`, the function's `a0` argument).
+
+**Audit method:** dispatched one Explore-type subagent with the exact
+file/line range (funcs_15.c:4930-5642) and told exactly what the
+existing guard already covers, per s126/s127's now-standard method.
+Verified the positive finding directly against source before writing
+any patch (subagent reports are claims, not facts).
+
+**Finding (verified, funcs_15.c):** the function takes three pointer
+arguments — `a0`/`ctx->r22` (guarded, s101), `a2`/`ctx->r21`
+(`$s5`, entry copy at 0x80065EAC / line 4958), `a3`/`ctx->r20`
+(`$s4`, entry copy at 0x80065EE4 / lines 4988 and 4992 — the same
+instruction appears twice because it's the delay-slot instruction of
+the preceding `jal mat3x4Multiply`, one copy inline before the call
+and one copy after the post-call `goto after_0` target, both are live
+code paths that converge at `after_0:`). Neither `a2` nor `a3` gets
+any check before being dereferenced as a raw `Vec3*` (offsets
+`0x0`/`0x4`/`0x8`) starting at 0x80065F34 (`ctx->r21`) and 0x80065F40
+(`ctx->r20`) — same unguarded-arg-pointer shape as the already-patched
+`a0` site, just for the other two arguments. This is Thread A's
+hypothesis confirmed a **3rd** time (composeNpcOrientationMatrix s126;
+updateAnimatedTextureStreaming + static_5_800B4048 s127; now
+projectModelBoundsToScreen) on the 3rd function tried — every function
+re-audited so far has turned up a real second (or third) site.
+
+Confirmed by source read (not assumed) that jumping to the real
+epilogue `L_80066204` from either new guard site is safe in the same
+sense as the original r22 guard: by the time each new guard can fire,
+that argument's own callee-save spill to the stack (and `$ra`'s spill)
+has already executed earlier in the prologue, so the epilogue restores
+real caller state for those registers — the existing "registers spilled
+*later* in the prologue may come back as stack garbage" caveat from the
+r22 guard is unchanged, not newly introduced by these two sites.
+
+**Guards landed (`N64Recomp/fixup_game_funcs.py`):**
+`_project_model_bounds_guard2_patch` (`ROGUESQ_LOG_PROJECT_MODEL_BOUNDS_GUARD2`,
+checks `ctx->r21`, single site, file-scoped to `funcs_15.c`) and
+`_project_model_bounds_guard3_patch` (`ROGUESQ_LOG_PROJECT_MODEL_BOUNDS_GUARD3`,
+checks `ctx->r20`, matches both delay-slot copies of the same anchor
+text — intentional x2 multiplicity, confirmed by design not a bug).
+Same `U32()`-truncate-then-`[0x80000000,0x80800000)`-bounds template as
+every guard in this family.
+
+**Regen:** full delete-all (`N64Recomp/RecompiledFuncs/funcs_*.c`, all
+45 files) → `make_elf.py` → `env ./build/N64Recomp rogue_squadron.toml`
+→ `env python3 fixup_game_funcs.py` → patch-report audit. Verified via
+direct grep on the regenerated `.c` (not by re-running the fixup
+script, which is known non-idempotent, s102) that each site's
+multiplicity matched expectations exactly: guard1 x1, guard2 x1, guard3
+x2, all pre-existing patches from s99-s127 present at their documented
+multiplicity — no duplication. `DEVELOPER_DIR=/Applications/Xcode.app/
+Contents/Developer cmake --build build -j8`: exit 0, only the
+pre-existing DDIV pointer-sign and SDL2 link-version warnings.
+
+**Soak (`guard_s128`, all three `PROJECT_MODEL_BOUNDS_GUARD`/`GUARD2`/
+`GUARD3` flags armed, `PROBE_MODE=start_only HOLD_S=30`, via
+`scratch/s73_post_a_scene/run_mission_keys.sh guard_s128 5 8`):** all
+three project-model-bounds diagnostics fired **0 times** —
+`projectModelBoundsToScreen` was never called this run, so all three
+guards (old and both new) are unexercised, same standing caveat as
+every guard in this family. Process died at hold-iter 11 (`CRASH: 1`,
+signal 11) to the tracked `do_rom_read`/`piDmaWorker` corruption race
+(`do_rom_read` in the backtrace, called from `piDmaWorker`) — the same
+class that has recurred in the majority of soaks since s85, at its
+usual hold+11-15s window; this is the tracked, out-of-scope item (-1
+in CURRENT-TRUTH's next-steps list), not a new finding.
+`missing-func: 0`, `thr-resume bad=1: 0`. One incidental data point:
+`UnhandledJump: 758` — all from the pre-existing, previously-documented
+"secondary, not onset cause" (s79) RSP-microcode `Unhandled jump target`
+diagnostic (`factor5_ucode`, codes `0x0231` early in the run and
+`0x17F0` in the ~2s immediately before the crash) — not a new class,
+not chased further this session (out of scope for Thread A).
+
+**Consequence:** Thread A's hypothesis is now 3/3 non-null on every
+function tried (composeNpcOrientationMatrix, updateAnimatedTexture
+Streaming, static_5_800B4048, projectModelBoundsToScreen — 4 functions,
+4 hits). Per rule 8 this keeps producing new information (new guard
+sites each time), so continue the audit — next up per NEXT.md's
+existing order: 14th (`reserveAndEmitDLEntry`, `funcs_3.c`), then 16th
+(`activateAnimationKeyframe`), 17th (`submitSceneNodeRender`), 18th
+(`updateHangarBayScene`, already 5 sites, may be exempt).
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: added
+`_project_model_bounds_guard2_patch` and
+`_project_model_bounds_guard3_patch` (new, `ROGUESQ_LOG_
+PROJECT_MODEL_BOUNDS_GUARD2`/`GUARD3` env gates, `funcs_15.c`). Full
+delete-all regen + rebuild ran clean (patch-multiplicity audit passed
+via direct grep, build exit 0). No `lib/` edits this session — no
+`submodule-patches/export.sh` needed. `N64Recomp` checkout still
+carries s90-128's accumulated uncommitted history (same
+flagged-not-actioned posture as prior sessions; `rogue_squadron64`
+sibling checkout likewise unchanged, flagged since s54).
