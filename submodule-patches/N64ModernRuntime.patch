@@ -222,7 +222,7 @@ index 8c8e5d1..7a9085d 100644
          assert(false);
          std::exit(EXIT_FAILURE);
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..dbc0296 100644
+index 43509ba..b925521 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -8,6 +8,7 @@
@@ -233,7 +233,7 @@ index 43509ba..dbc0296 100644
  #include <ultramodern/ultra64.h>
  #include <ultramodern/ultramodern.hpp>
  
-@@ -64,6 +65,15 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -64,6 +65,23 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
  void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr, size_t num_bytes) {
      // TODO use word copies when possible
  
@@ -242,14 +242,22 @@ index 43509ba..dbc0296 100644
 +    // the log (the existing [dma] log in do_dma fires *after* this call
 +    // returns, so it never appears on the abort path).
 +    if (std::getenv("ROGUESQ_LOG_DMA")) {
-+        fprintf(stderr, "[rom-read] phys=0x%08X ram=0x%08llX bytes=0x%zX\n", physical_addr, (unsigned long long)ram_address, num_bytes);
++        // s85 shared-corruption-race probe: identify the calling guest thread the
++        // same way [thr-resume]/[thr-destroy] do (id/thr/ctx host pointers), so a
++        // garbage physical_addr here can be cross-referenced against those logs'
++        // thread identity in the same run instead of only correlating by time.
++        PTR(OSThread) self_ptr = ultramodern::this_thread();
++        OSThread* self = self_ptr ? TO_PTR(OSThread, self_ptr) : nullptr;
++        fprintf(stderr, "[rom-read] phys=0x%08X ram=0x%08llX bytes=0x%zX thr_id=%d thr=%p ctx=%p\n",
++            physical_addr, (unsigned long long)ram_address, num_bytes,
++            self ? (int)self->id : -1, (void*)self, self ? (void*)self->context : nullptr);
 +        fflush(stderr);
 +    }
 +
      // TODO handle misaligned DMA
      assert((physical_addr & 0x1) == 0 && "Only PI DMA from aligned ROM addresses is currently supported");
      assert((ram_address & 0x7) == 0 && "Only PI DMA to aligned RDRAM addresses is currently supported");
-@@ -274,6 +284,23 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -274,6 +292,23 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              // read cart rom
              recomp::do_rom_read(rdram, rdram_address, physical_addr, size);
  

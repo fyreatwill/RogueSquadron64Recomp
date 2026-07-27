@@ -136,7 +136,16 @@ comes straight from the calling thread's register context
 (`ctx->r7`), so this may be the **same shared corruption race** as the
 s70–s72 OSThread UAF / s83–s84 thr-resume `bad=1` — not a 6th independent
 bug, one race surfacing wherever a corrupted read is dereferenced first.
-Full detail: PORTING-STATE s83–s85.
+**s86:** added `[rom-read]` thread-identity fields (thr_id/thr/ctx) to
+test the hypothesis; one soak's `do_rom_read` never fired corrupted (488
+calls, all sane) so the test is **inconclusive, not refuted** — but the
+process still died, **earlier than usual** (hold+~15s), to a **7th, new**
+crash: `assert(!decodeTMEM || (width>0 && height>0))` in
+`RT64::TextureCache::queueGPUUploadTMEM` (`rt64_texture_cache.cpp:1285`),
+reached from `State::fullSyncFramebufferPairTiles`'s real-texture-decode
+path with `callTile.sampleWidth`/`sampleHeight` (`rt64_state.cpp:1329`)
+zero for a `decodeTMEM=true` load. Not further root-caused (1 data point).
+Full detail: PORTING-STATE s83–s86.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -221,7 +230,9 @@ intermittent-black B1–B4 (s81); last-drawn sane-width gate (s82, G1);
 evalCubicSplineAtTime NaN root-caused, 2 new crash classes found (s83);
 thr-resume `bad=1` gated (unvalidated), 5th crash class found (s84);
 frameStartReset was a fluke, do_rom_read corruption root-caused, unified
-shared-race hypothesis raised (s85).**
+shared-race hypothesis raised (s85); shared-race test inconclusive
+(do_rom_read didn't recur), 7th crash class found firing even earlier
+(s86).**
 AVAILABLE CRAFT reachable. **s75:** single Start → hangar-flight.
 **s78–s79:** RDP-`fs` plateaus post-leave (S1). **s80:** synthetic FIRE continues.
 **s81:** black = mode-3 presenting wild last-drawn. **s82:** always-on sane-width
@@ -240,8 +251,15 @@ hit s80's parked `do_rom_read` Abort/SIGSEGV with a **garbage `physical_addr`**
 (added `[rom-read]` logging, `lib/` exported+committed) that varies run-to-run
 (odd-small vs. ~208 MB-OOB) — raised, not yet proven, that this is the **same**
 shared-corruption race as the OSThread UAF / thr-resume `bad=1` families
-rather than a 6th independent bug. Leave key closed. Origin still cannot name
-scenes. Full detail PORTING-STATE s68–s85; `scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
+rather than a 6th independent bug. **s86:** added thread-identity fields to
+`[rom-read]` to test that hypothesis; one soak's `do_rom_read` stayed clean
+(488 calls, all sane) so the test is inconclusive — but died *earlier* than
+usual to a **7th** crash, `assert(width>0 && height>0)` in
+`queueGPUUploadTMEM` for a real texture decode with a zero tile-sample
+dimension (`rt64_state.cpp:1329` → `rt64_rdp_tmem.cpp:52` →
+`rt64_texture_cache.cpp:1285`), not yet root-caused. Leave key closed. Origin
+still cannot name scenes. Full detail PORTING-STATE s68–s86;
+`scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -270,70 +288,73 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s85)
+## Next steps, in order of expected value (s86)
 
-1. **M3 — test the shared-corruption-race hypothesis (s85, new, highest
-   value).** Two s85 soaks hit s80's parked `do_rom_read` Abort/SIGSEGV
-   with a **garbage `physical_addr`** that differs run-to-run (odd-small vs.
-   `0x1C676672`/~208 MB-OOB). `osPiStartDma_recomp` reads that value
-   straight from the calling thread's register context (`ctx->r7`,
-   `pi.cpp:339-354`) — if that context was corrupted by the same race
-   behind the s70–s72 OSThread UAF / s83–s84 thr-resume `bad=1`, this would
-   explain why the "dominant crash" keeps changing shape each session
-   (spline NaN → Metal SIGSEGV / thr-resume UAF → frameStartReset SIGBUS →
-   do_rom_read corruption) instead of 5+ independent bugs. Discriminating
-   measurement: log the identity of the thread executing
-   `osPiStartDma_recomp` (thread id / OSThread ptr) at the moment
-   `physical_addr` is garbage, cross-reference against the always-on
-   `[thr-resume]`/`[ost-wb]` logs already in the same run. Correlation on
-   ≥2 soaks → chase the shared race directly (highest leverage: one fix
-   could close 3+ crash classes at once). No correlation → refuted, fall
-   back to characterizing each crash site independently (frameStartReset
-   next, per s84).
-2. **M3 — retry the `thr-resume bad=1` gate soak for a positive control
+1. **M3 — root-cause the s86 `queueGPUUploadTMEM` zero-size assert (new,
+   highest value: it now fires earliest of all seven crash sites).**
+   `rt64_state.cpp:1329` passes `callTile.sampleWidth`/`sampleHeight` into
+   `TextureManager::uploadTexture` → `queueGPUUploadTMEM`
+   (`rt64_texture_cache.cpp:1285`) uninspected; one of them was 0 for a
+   `decodeTMEM=true` load. First step: log `sampleWidth`/`sampleHeight`
+   alongside the tile's line/mask/lrs/lrt/uls/ult fields whenever either is
+   ≤0, gated on a new env var, to see whether this is a legitimate
+   degenerate LOADTILE (skip the upload, don't assert) or itself a garbage
+   read (feeds back into the shared-race hypothesis below). One data point
+   so far (s86) — reproduce at least once more before concluding either way.
+2. **M3 — retry the shared-corruption-race test (s85 hypothesis, s86
+   instrumentation already in place).** s86 added `thr_id`/`thr`/`ctx` to
+   `[rom-read]` but the soak's `do_rom_read` never fired corrupted (488/488
+   calls sane) because item 1's new crash intervened first — the test is
+   **inconclusive, not refuted**. Needs a soak where `do_rom_read` actually
+   corrupts again (as it did 2/2 in s85) to check whether the logged
+   thread id/ctx match a nearby `[thr-resume]`/`[ost-wb]` event. This is
+   iteration 2 of the ITERATION.md budget on this hypothesis (1 null so
+   far) — one more inconclusive/null result and reassess per rule 8.
+3. **M3 — retry the `thr-resume bad=1` gate soak for a positive control
    (U3 still open).** s84 landed the gate (`lib/N64ModernRuntime/ultramodern/
    src/threads.cpp:198-238`, `[thr-resume-skip]`, exported + committed) but
-   two soaks since (s84, s85 x2) all saw `bad_total=0` — gate still
-   unexercised. Worth another attempt once item 1's instrumentation is in
-   place anyway (same soak can serve both purposes).
-3. **M3 — check the Metal-shader-compiler SIGSEGV's reproducibility** (s83
+   three soaks since (s84, s85 x2, s86) all saw `bad_total=0` — gate still
+   unexercised. Same soak can serve items 1–3 at once.
+4. **M3 — check the Metal-shader-compiler SIGSEGV's reproducibility** (s83
    spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no
    source on our side). Still only one data point.
-4. **M3 — confirm the s83 spline div0 guard actually engages.** 0/2 fires so
-   far (still 0 after s85's 2 more soaks); real fix by code inspection
-   (genuine 0/0 IEEE division) but no same-run positive control yet.
-5. **M3 — characterize `frameStartReset` SIGBUS if it recurs.** Demoted
-   from "dominant blocker" after s85: 0/2 repro soaks. Only worth dedicated
-   attention again if it reappears; do not gate it speculatively without a
-   faulting instruction (no existing detector, unlike thr-resume).
-6. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once items 1–5 are clear:
+5. **M3 — confirm the s83 spline div0 guard actually engages.** 0/3 fires so
+   far (still 0 after s86); real fix by code inspection (genuine 0/0 IEEE
+   division) but no same-run positive control yet.
+6. **M3 — characterize `frameStartReset` SIGBUS if it recurs.** Demoted
+   from "dominant blocker" after s85: 0/2 repro soaks, 0/1 in s86. Only
+   worth dedicated attention again if it reappears; do not gate it
+   speculatively without a faulting instruction (no existing detector,
+   unlike thr-resume).
+7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once items 1–6 are clear:
    `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40; document phase timeline.
    Gate already keeps black off; residual S1 `fs` freeze (~3769–3861 plateau,
    s82/s85) may still stall animation — if stick marks show no pose change on
    a frozen frame, next is S1 FULL_SYNC for hangar-flight tasks (not
    leave-key, not wild-FB).
-7. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
+8. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` 3→0.
    Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
-8. Past the first sustained mission hold: expect further new failure classes (mission overlay
+9. Past the first sustained mission hold: expect further new failure classes (mission overlay
    DMA → missing-func / UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture
    corruption). Each new failure is its own work unit.
-9. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
+10. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
    — thread exhausted (s55–s58).** Prefer M3 mission-content work over reopening this section.
-10. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
+11. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
    carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user
    before committing there.
-11. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
-12. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+12. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
+13. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
-Done this session: reproduced `frameStartReset` twice — it never recurred
-(fluke, demoted from "dominant blocker"); both soaks instead hit s80's
-parked `do_rom_read` Abort/SIGSEGV, root-caused via source read as a
-corrupted `physical_addr` argument (not a hardware alignment fault),
-confirmed garbage via new `[rom-read]` logging (`lib/`, exported +
-committed) across two runs with different bad values. Raised a unifying
-hypothesis: this and 2+ other crash classes (OSThread UAF, thr-resume
-`bad=1`) may share one root-cause race rather than being independent bugs.
+Done this session: added thread-identity fields (`thr_id`/`thr`/`ctx`) to
+the `[rom-read]` diagnostic to test the s85 shared-corruption-race
+hypothesis (`lib/`, exported + committed); rebuilt clean; ran one soak.
+`do_rom_read` never corrupted this run (488/488 calls sane) so the test is
+inconclusive, not refuted. The process still died — earlier than any
+prior soak (hold+~15s) — to a **7th, new** crash: a zero-width/height
+texture-decode assert in `RT64::TextureCache::queueGPUUploadTMEM`. Crash
+inventory is now 7 sites since s83; only 2 (spline NaN, thr-resume `bad=1`)
+have an actual code fix in place, the rest are characterized-but-open.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work

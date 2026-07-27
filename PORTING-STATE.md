@@ -6530,3 +6530,73 @@ stronger than a hypothesis.
   the next work unit becomes finding *that* race, not gating each symptom.
   If no correlation: the hypothesis is refuted and each crash site goes
   back to being characterized independently.
+
+## Session 86 (2026-07-27) — shared-race test INCONCLUSIVE (do_rom_read never fired); found a 7th, EARLIER-firing crash class
+
+Iteration 1 on the s85 shared-corruption-race hypothesis. Added
+`thr_id=%d thr=%p ctx=%p` to the `[rom-read]` diagnostic
+(`lib/N64ModernRuntime/librecomp/src/pi.cpp:65-85`), identifying the calling
+guest thread via `ultramodern::this_thread()` the same way
+`[thr-resume]`/`[thr-destroy]` already do, so a garbage `physical_addr`
+could be cross-referenced against those logs' thread identity in the same
+run. `export.sh` run, patch refreshed and committed same session. Rebuilt
+clean (`cmake --build . -j8`, exit 0).
+
+One soak (`corrgate1`: `env ROGUESQ_LOG_DMA=1 PROBE_MODE=start_only
+HOLD_S=30 zsh scratch/s73_post_a_scene/run_mission_keys.sh corrgate1 0 12`).
+Reached war room → AVAILABLE CRAFT → SELECT YOUR CRAFT → left via Start,
+same as s75+. Died at hold-iter 15 (~+15s post-leave, wall=37s from Start).
+
+**Discriminating test result: inconclusive, not refuted.** `do_rom_read`
+was called 488 times this run; every `physical_addr` was sane (range
+`0x10001000`-`0x10ff7330`, all even/aligned, all `thr_id=2`) — the
+corruption **never recurred**. With no garbage value to correlate, the
+shared-race hypothesis could not be tested either way this soak. This is
+iteration 1 of the ITERATION.md budget (rule 8: stop after 3 consecutive
+nulls) — one null so far, not yet at the stop threshold, but the *reason*
+for the null is itself informative (see next).
+
+**New finding: a 7th crash class, and it fires *before* do_rom_read gets
+a chance to corrupt.** The process aborted on:
+```
+Assertion failed: (!decodeTMEM || ((width > 0) && (height > 0))),
+function queueGPUUploadTMEM, file rt64_texture_cache.cpp, line 1285.
+```
+Stack: `queueGPUUploadTMEM` <- `TextureManager::uploadTexture` <-
+`State::fullSyncFramebufferPairTiles`'s per-draw-call lambda (real,
+`decodeTMEM=true` texture upload, not the raw-TMEM path) <-
+`State::fullSync` <- `GBI_RDP::fullSync` <- RDP list processing <-
+`gfx_thread_func`. Source read: `uploadTexture` (`rt64_rdp_tmem.cpp:52-66`)
+passes `callTile.sampleWidth`/`sampleHeight`
+(`rt64_state.cpp:1329`) straight into `queueGPUUploadTMEM`
+uninspected — one of those two RDP-derived tile-sample dimensions was
+**zero** for a load the game asked to decode. Not yet root-caused further
+(is `sampleWidth`/`sampleHeight` computed from a wild tile line/mask/lrs/
+lrt that itself came from corrupted state — same family as the other six
+— or is it a legitimate degenerate LOADTILE the interpreter should just
+skip?). One data point only.
+
+**Crash inventory is now 7 distinct sites since s83**, and the "dominant
+blocker" keeps changing because whichever one fires soonest wins the race
+each run: evalCubicSplineAtTime NaN (s83, guarded) → Metal shader-compiler
+SIGSEGV / thr-resume UAF (s83) → frameStartReset SIGBUS (s84, 1/3 recent
+soaks) → do_rom_read corrupted physical_addr (s85, 2/2 that session, 0/1
+this session) → **queueGPUUploadTMEM zero-size assert (s86, 1/1 this
+session, fired earliest yet — hold+~15s, before do_rom_read's usual
+window)**. Each demotion so far has been "it just didn't recur," not "it
+was fixed" — only the spline NaN and the thr-resume `bad=1` sites have an
+actual code change in place.
+
+**Rules out / keep:**
+- Shared-race hypothesis: neither supported nor refuted this session —
+  needs another soak where `do_rom_read` actually fires corrupted to test
+  the correlation. The TMEM-assert crash is orthogonal evidence for
+  *nothing* yet (no thread-identity data logged for it) but shows the
+  corruption-family sessions have been sampling an increasingly crowded
+  field of race-timing-dependent crash sites, which is consistent with
+  (but does not prove) one underlying shared race whose symptom depends on
+  which corrupted read gets dereferenced first.
+- Do not gate/fix the TMEM zero-size assert by clamping width/height to 1
+  — same reasoning as the do_rom_read asserts: an assert catching a real
+  degenerate case should stay loud until root-caused, not be silenced into
+  a wrong-but-alive texture upload.
