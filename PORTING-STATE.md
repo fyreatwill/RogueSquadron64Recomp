@@ -11988,3 +11988,99 @@ the raw multi-`env`-var one-liner doesn't survive this session's shell
 tooling's static analysis; reusable for any future re-run of this exact
 recipe). `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
 `scratch/agent/NEXT.md` (this write-up). No other files touched.
+
+## Session 136 — 2026-07-27
+
+**Executed NEXT.md's prescribed work unit: source-read `submitSceneNodeRender`'s
+non-free-list code for a 2nd unguarded pointer-chase idiom.** Found one,
+guarded it, ran the soak — a real, informative null (not a discriminating
+result for the 18th-class question, but a real bug fixed and a real
+data point on the do_rom_read family's recurrence rate).
+
+**The read.** Delegated the ~2966-line source read (`N64Recomp/RecompiledFuncs/
+funcs_4.c:6-2972`) to a subagent scoped to skip the already-guarded
+`findAndUnlinkSmallestEntry`-return free-list-walk idiom (proven innocent of
+the 18th class twice, s131/s134) and hunt for a structurally different
+unguarded-pointer-chase shape. It found one, occurring twice: a pointer
+(`$s1`/`ctx->r17`) loaded directly from a fixed global table (bases `-0x1758`
+and `-0x1750` at guest `0x80010308`/`0x80010A1C`, indexed by the
+material-group loop variable -- two separate inlined copies of the same
+source loop), dereferenced immediately, surviving untouched across an
+intervening free-list-walk detour (different registers), then walked as its
+own "next" linked list (offset `0x0`) inside a loop (`L_8001049C`/
+`L_80010A2C`) whose body dereferences `+0x4` every iteration and feeds
+`heapFreeListDequeue` -- the same nearest-symbol match as the 18th crash
+class, but via a completely different, previously-unaudited pointer source
+than the already-guarded free-list-return-value idiom. Verified directly by
+reading the regenerated source at both sites (not trusting the subagent's
+report unread): confirmed `r17` is live and dereferenced at 4 distinct
+points (guest `0x8001030C`/`0x80010490`/`0x8001049C`/`0x800104B0` for site 1,
+and the equivalent 4 for site 2) with zero range checks anywhere in the
+chain, and confirmed the intervening free-list-walk detour uses entirely
+different registers (`r2`-`r4`), so it never touches or protects `r17`.
+
+**The fix.** Landed `_mat_list_guard1_patch`/`_mat_list_guard2_patch` in
+`fixup_game_funcs.py` (`funcs_4.c`-scoped), same `U32()`-before-bounds-compare
+discipline as every prior guard in this series. Guarded at the single point
+each table lookup's result first becomes live (before ANY dereference) --
+this protects every downstream use with one check per site instead of one
+per dereference. Bail targets are each site's own natural "done with this
+table entry, continue the outer loop" reentry point: site 1 has a
+ready-made label (`L_800104BC`) that re-derives everything it needs fresh,
+so a bare `goto` suffices; site 2 has no label at the exact right spot, so
+the bail inlines the same `$s0--` decrement the original code performs
+immediately before falling into `L_80010CF0`, preserving outer-loop
+progress so a repeat corruption can't spin on the same table entry forever.
+New env vars `ROGUESQ_LOG_SCENE_MATLIST_GUARD1`/`GUARD2`.
+
+Full delete-all regen (`make_elf.py` -> `N64Recomp` (`regen_n64recomp.sh`) ->
+`fixup_game_funcs.py` -> `cmake --build`): patch report showed both new
+sites patched **exactly x1**, every pre-existing family's patch count
+unchanged from s135 (no duplicates -- 5th clean delete-all cycle in a row).
+Build exit 0, only the pre-existing warning classes (cop0/DDIV
+sign-conversion).
+
+**Soak (`matlist1`, `PROBE_MODE=start_only HOLD_S=30`,
+`ROGUESQ_LOG_THREAD_RESUME=0` per s93's confound fix, every `ROGUESQ_LOG_*`
+flag armed via `scratch/agent/run_matlist1.sh`):** both new guards fired
+**0/0** -- an uncontrolled null, not a refutation (the table lookup was
+never entered with a bad value this run, or the corruption didn't reach
+this code path this time). The already-guarded free-list-walk idiom's 3
+guards also held 0/0/0 (expected, consistent with s131/s134's "proven
+innocent" finding). Process died at hold-iter 11 (~12s wall into hold) to
+a **byte-identical recurrence of the tracked `do_rom_read`/`piDmaWorker`
+corruption race**: `[dma-ring-consumer] devAddr=0x6C676672
+dramAddr=0x80195190`, `do_rom_read` <- `do_dma` <- `osPiStartDma_recomp` <-
+`piDmaWorker` -- the exact same signature as s85/s91/s93/s94/s101-104/s135
+and others. **This is neither a new `submitSceneNodeRender` mystery nor the
+18th class** (`heapFreeListDequeue`/`submitSceneNodeRender` strings absent
+from this run's crash -- the crash resolves directly to `do_rom_read`, a
+completely separate, already-tracked bug family). Controls held:
+`thr-resume bad_total=0` (further support for U3), `ost-wb SKIP_OOB=5`
+(existing gate firing as expected), `missing-func=0`. `UnhandledJump=385`
+-- the pre-existing, already-documented (s79/s135) RSP-microcode secondary
+signal, not a new class, out of scope here.
+
+**Consequence.** This is attempt **1/3** (rule 8 budget) for the
+material-batch-list-guard hypothesis specifically -- one non-discriminating
+soak is not grounds to park it yet. But it is the **2nd consecutive soak**
+(s135, s136) to die to the `do_rom_read` family specifically, out of the
+last 4 render-guard soaks (s133 Metal SIGSEGV, s134 18th class, s135/s136
+do_rom_read) -- worth tracking as a frequency data point, not yet a
+"dominant" claim (2/4, not 4/4). The guard stays in the code regardless of
+whether it discriminates any specific crash -- same standing policy since
+s99, it fixes 2 genuinely real unguarded-pointer-chase bugs.
+
+No `lib/` files touched this session (only `N64Recomp/fixup_game_funcs.py`
+and regenerated `RecompiledFuncs/*.c`, both outside `lib/` -- same posture
+as every guard-series session since s99, no `submodule-patches/export.sh`
+needed).
+
+### Files
+`N64Recomp/fixup_game_funcs.py` (new guard patches). `N64Recomp/
+RecompiledFuncs/funcs_4.c` (regenerated, not committed here -- see the
+`N64Recomp` sibling-checkout note in CURRENT-TRUTH's housekeeping section).
+`scratch/agent/run_matlist1.sh` (new soak wrapper, same shape as
+`run_emitdl3.sh`). `scratch/s73_post_a_scene/matlist1/` (soak logs, not
+committed, scratch). `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
+`scratch/agent/NEXT.md` (this write-up).

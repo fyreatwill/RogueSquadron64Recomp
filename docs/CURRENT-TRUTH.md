@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s135)
+## Next steps, in order of expected value (s136)
 
 0a. **CLOSED (s135): `emitAllocatedDLCommand` soak hypothesis parked,
     3-attempt budget exhausted per rule 8.** s133 → environment-side
@@ -663,22 +663,35 @@ cost three sessions before the recursive mutex.
     separately-tracked `do_rom_read`/`piDmaWorker` corruption SIGSEGV.
     Guards `emit-dl-guard2`/`3` never fired (0/0 all 3 attempts) but
     both stay in the code (real fixes, independent of this question).
-    **Next work unit: source-read `submitSceneNodeRender`'s remaining
-    ~2746 lines** (`N64Recomp/RecompiledFuncs/funcs_4.c`) for a 2nd,
-    distinct unguarded pointer-chase idiom — not the free-list-walk one
-    already guarded 9x and proven innocent twice (s131, s134). The 18th
-    class (`heapFreeListDequeue` nearest-symbol) has recurred twice
-    post-fix with every known guard silent both times, satisfying the
-    "only act on it if it recurs on its own" trigger set at s131/s133.
-    This is a pure source-reading task — no soak, no rebuild — read the
-    function end to end looking for the same shape as every other guard
-    in this series (a table/array lookup or list-node return used as a
-    pointer without a null/range check before dereference), guard any
-    found the same way as the existing series (truncate `ctx->rN`
-    through `U32()` before comparing, per s99's lesson). If nothing
-    matches, the crash may be a misattributed nearest-symbol match to
-    code outside this function (s131's other open branch) — in that
-    case pivot to Thread B (item -1 below) instead.
+
+0b. **IN PROGRESS (s136, attempt 1/3): `submitSceneNodeRender`
+    material-batch-list guard, landed and soaked once.** The prescribed
+    source-read (funcs_4.c, non-free-list code) found a 2nd, distinct
+    unguarded pointer-chase idiom — a pointer loaded from a fixed global
+    table (bases -0x1758/-0x1750, two inlined occurrences) that is
+    dereferenced and then walked as its own linked list, feeding
+    `heapFreeListDequeue` (the same nearest-symbol match as the 18th
+    class) via a completely different pointer source than the
+    already-guarded free-list-return-value idiom. Guarded
+    (`MATLIST_GUARD1`/`GUARD2`, `N64Recomp/fixup_game_funcs.py`), full
+    delete-all regen + clean build (patch report exact x1/x1, no
+    duplicates). Soak 1: both new guards **0/0** (uncontrolled null),
+    process died at hold-iter 11 to a byte-identical recurrence of the
+    tracked `do_rom_read`/`piDmaWorker` corruption race (2nd straight
+    soak to die there, s135+s136) — neither confirms nor refutes the
+    new guard, and the 18th class itself did not recur this run either.
+    **Next work unit: re-soak the same recipe (attempt 2/3)** —
+    `scratch/agent/run_matlist1.sh` (no rebuild needed, binary is
+    current). Discriminating outcomes: (1) either new guard fires →
+    likely root cause of the 18th class found; (2) guard stays silent
+    AND the 18th class itself recurs → this idiom is also not the
+    cause, pivot to the misattribution branch (s131's other open
+    question — would need disassembly-level work); (3) another
+    `do_rom_read` recurrence (3rd straight) → treat as its own signal:
+    the do_rom_read family may now be winning the hold-window race
+    consistently enough that Thread B (below) should be promoted from
+    fallback to primary, since it's preventing validation of any
+    further hangar-tick-family guard. Full detail: PORTING-STATE s136.
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with
