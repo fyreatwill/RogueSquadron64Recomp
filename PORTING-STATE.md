@@ -9934,3 +9934,112 @@ makes it read a different byte than offset `+0x0` of the intended slot.
 patch on `musyxTriggerVoiceAttack` (`funcs_24.c`). Regenerated
 `N64Recomp/RecompiledFuncs/*.c` and rebuilt `RogueSquadron64Recomp`
 (build/ is gitignored, not committed). No `lib/` edits this session.
+
+## Session 117 (2026-07-27) — first-ever runtime capture of `voice+0x0` going nonzero: ASCII-shaped garbage, not a boolean flag, addressing itself proven correct
+
+Continued NEXT.md's prescribed work unit: land a value-and-address log at
+the `voice+0x0` gate check inside `musyxMixActiveVoices`
+(`funcs_24.c:2586-2588`, `MEM_BU(ctx->r4, 0X0)` immediately before the
+gating `beq`). Logged `ctx->r4` (voice-array base), `ctx->r16` (loop
+index, stable across the per-voice offset math that clobbers r2/r3), and
+the byte value, gated behind a new `ROGUESQ_LOG_VOICE_ACTIVE_GATE=1`.
+
+**voicegate1 (first design, capped at 64 total lines):** built and soaked
+clean (rc 0 throughout the regen chain: `make_elf.py` → `N64Recomp`
+(`subprocess.run(cwd=...)` workaround) → `fixup_game_funcs.py` → `cmake
+--build`, patch confirmed applied exactly once via grep). Process
+survived the whole scripted run without crashing (`CRASH: 0`). The gate
+fired all 64/64 times with `byte=0x00` and addresses striding exactly
+`0x88` (136 bytes) apart across indices 0-19, cycling — proves the
+addressing arithmetic itself is sane (refutes hypothesis (b), a base/
+offset bug in the gate check, for this run) but is otherwise uninformative:
+`musyx-dma-call`/`fill-range-args` also fired **0x** this run, meaning
+`musyxRenderVoiceSamples` never ran at all here — fully consistent with
+byte=0 the whole time, no contradiction to explain. Root cause of the
+non-finding: `musyxMixActiveVoices` scans ~20 voices per call, so a
+64-line cap exhausts within the first few audio ticks — a window that
+closes well under a second into the run, nowhere near the ~140s mark
+where s116 proved the gated function actually executes. **This was an
+instrument-coverage bug in this session's own first design**, not a new
+hypothesis; fixed in the same session before drawing any conclusion from
+it.
+
+**Redesign:** decoupled "capture a nonzero value if one ever occurs"
+(uncapped running counter, output capped at 64 *nonzero* hits, tagged
+`[voice-active-gate-nz]`) from "prove logging survived to the end of the
+run" (an unconditional heartbeat every 5000th check regardless of value,
+tagged `[voice-active-gate-hb]`) — the same
+positive-control-independent-of-outcome pattern CLAUDE.md's iron rule 1
+requires. Full regen (fresh ELF — `fixup_game_funcs.py` is not
+idempotent, s102) confirmed the patch applied exactly once, clean
+rebuild.
+
+**voicegate2:** crashed at hold-iter 6 (~119s wall) to a **SIGBUS
+(signal 10)**, backtrace `menuOverlayInit` → `static_5_800C6854` →
+`static_5_800AAD9C` → `static_5_800AB1C8` — none of these three
+`static_5_*` addresses match any previously-catalogued crash site (the
+9th/10th/12th/16th/17th classes in this same `menuOverlayInit`/
+hangar-tick family all resolve to different named or numbered functions);
+this is a **probable new (20th) class**, one occurrence, not chased this
+session (out of scope for this work unit; catalogued for the guard-
+treatment backlog alongside the 18th/19th from s108/s109).
+
+Despite the early crash (before the ~140s DMA window — `musyx-dma-call`/
+`fill-range-args` stayed 0/0 again, not a contradiction, just didn't run
+long enough to reach that stage), the redesigned instrument delivered
+the discriminating result:
+- **Heartbeat fired 26 times, n=0 through n=125000** — real, same-run
+  proof that logging survived almost the entire run (not truncated
+  early like voicegate1), and that the voice-array base legitimately
+  changes over the run's lifetime (`0x80169460` near process start →
+  `0x801714D0` later, a full reallocation between scene transitions —
+  expected behavior, not a bug).
+- **Nonzero fires: 5, for the first time ever.** `n=68874 idx=0x10
+  base=0x80171D50 byte=0x65` ('e'), `n=68875 idx=0x11 base=0x80171DD8
+  byte=0x78` ('x'), then three more at `idx=0x11 base=0x80171DD8
+  byte=0x02` (`n=68893/68911/68929`, each 18 checks apart — once per
+  full ~18-20-voice sweep). Both base addresses match the base+idx*0x88
+  arithmetic exactly against the heartbeat's own later idx=0 reading
+  (`0x801714D0`), i.e. **the addressing is provably correct at the
+  moment of the nonzero read too** — hypothesis (b) is refuted a second
+  way, on the actual nonzero case this time, not just the all-zero
+  control case.
+- The two distinct nonzero values are telling: `0x65`/`0x78` are
+  printable ASCII letters, not clean boolean semantics (0/1), and the
+  settled `0x02` a few checks later is also not a typical "is-active"
+  sentinel. This is the same general shape s94/s102 already
+  characterized for the corrupted DMA `devAddr` field (`"wing"`/`"lg?r"`
+  patterns — structured, ASCII-range, non-random) — **not proven
+  byte-identical or same-source without a wider dump, but strongly
+  suggestive that `voice+0x0` doesn't need a dedicated legitimate writer
+  at all: it may simply be inside the blast radius of the same
+  still-unlocated overrun/wrong-struct write already under investigation
+  for `devAddr`.** If so, the multi-session hunt for a "the byte gets
+  legitimately set nonzero somewhere" writer (s105-116) was chasing a
+  writer that doesn't exist — the gate is satisfied by incidental
+  corruption, not a state transition.
+
+**Reframes M3 item -1**: from "find `voice+0x0`'s nonzero writer" (now
+very likely a dead end — s116 already proved the 3 candidate writers/
+callers don't explain it, and this session's runtime data shows the
+nonzero values look like corruption, not intentional state) to "confirm
+or refute that `voice+0x0`'s corruption is the *same* source as the
+already-characterized `devAddr` corruption" — a single, sharper,
+higher-value question that unifies two previously-separate multi-session
+threads (the s94-102 DMA-caller hunt and the s105-116 voice+0x0 hunt)
+into one.
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: new `ROGUESQ_LOG_VOICE_ACTIVE_GATE`
+patch on `musyxMixActiveVoices` (`funcs_24.c`), redesigned mid-session
+(uncapped-nonzero-capture + periodic heartbeat) after the first design's
+coverage bug was found and fixed in the same session. Regenerated
+`N64Recomp/RecompiledFuncs/*.c` (full ELF regen both times, per s102's
+non-idempotency finding) and rebuilt `RogueSquadron64Recomp` twice
+(build/ is gitignored, not committed). No `lib/` edits this session.
+`N64Recomp` is itself a separate git checkout (not a `lib/` submodule of
+this repo) with its own uncommitted changes accumulating across
+sessions s90-117 in `fixup_game_funcs.py`/`RecompiledFuncs/`; `git`
+operations there require interactive approval this session did not have
+— flagged for the user (same posture as s54's `rogue_squadron64` sibling
+checkout), not committed autonomously.

@@ -681,23 +681,40 @@ cost three sessions before the recursive mutex.
    every session, "uninitialized by design" (the explanation that closed
    the analogous `+0x34` question) does not cleanly apply here — `+0x0`
    has two confirmed writers-to-zero and zero confirmed writers-to-nonzero,
-   yet reads nonzero in practice. **Next work unit**: add a direct
-   value-and-address log at the gate check itself inside
-   `musyxMixActiveVoices` (`funcs_24.c:2586-2588`, the `MEM_BU(ctx->r4, 0X0)`
-   read) — log the computed voice-array base, the loop index, and the
-   byte value every time the gate is checked, for several frames. This is
-   the direct analog of the instrument that resolved the `+0x34` mystery
-   (s114's `ROGUESQ_LOG_STREAM_NODE_INIT`): it will show whether the
-   nonzero byte is a consistent bit-pattern (deterministic heap/addressing
-   bug, same *class* as `+0x34` but a different mechanism) or whether the
-   index/base computation itself looks wrong (an addressing bug reading a
-   different struct or an out-of-bounds slot entirely). Do not re-instrument
-   `musyxKeyOnVoice`/`isAudioSlotActive`/the caller-side chain — all closed
-   this session. Full detail: PORTING-STATE s116.
+   yet reads nonzero in practice.
+   **s117:** landed the value-and-address log NEXT.md prescribed
+   (`ROGUESQ_LOG_VOICE_ACTIVE_GATE=1`, `musyxMixActiveVoices`
+   gate check). First design (cap=64 total) was itself flawed — the
+   ~20-voices-per-call scan rate exhausts a 64-line cap within the first
+   audio ticks, nowhere near the ~140s window that matters; fixed in the
+   same session (uncapped nonzero-capture + a value-independent 5000-check
+   heartbeat as the coverage control) before drawing conclusions. The
+   corrected soak (`voicegate2`) got a heartbeat spanning n=0-125000 (real
+   coverage proof) and, for the first time ever, **captured the byte going
+   nonzero**: `0x65`('e')/`0x78`('x') at consecutive voice slots, then
+   `0x02` three more times — addresses matched the base+idx*0x88 arithmetic
+   exactly (hypothesis (b), an addressing bug, refuted a second way, now
+   on the nonzero case too). The values are ASCII-shaped, not boolean —
+   the same general signature s94/s102 already characterized for the
+   corrupted DMA `devAddr` field. **Reframes the question**: not "find
+   `voice+0x0`'s legitimate writer" (increasingly looks like it doesn't
+   exist) but "is this the SAME corruption source as `devAddr`'s, just a
+   wider blast radius than assumed" — unifying the s94-102 and s105-116
+   threads. **Next work unit**: widen the nonzero-hit log to dump several
+   bytes around `voice+0x0` (not just the 1 byte) and directly compare
+   against a same-run `musyx-dma-call` corrupted-`devAddr` capture for a
+   byte-for-byte or pattern match — the discriminating test for "same
+   source" vs. "coincidentally also text-shaped." A probable-new **20th**
+   crash class surfaced opportunistically (`voicegate2`, SIGBUS via
+   `menuOverlayInit` → `static_5_800C6854` → `static_5_800AAD9C` →
+   `static_5_800AB1C8`, 1 occurrence) — catalogued, not chased. Do not
+   re-instrument `musyxKeyOnVoice`/`isAudioSlotActive`/the caller-side
+   chokepoint chain, and do not re-run the capped voicegate1 design — both
+   closed. Full detail: PORTING-STATE s116-s117.
    (Also flagged, not chased: the s84 `frameStartReset` SIGBUS — called a
-   "fluke" in s85 after 0/2 non-recurrence — recurred once more this
-   session (2/4 soaks total across s84/s85/s116); worth revisiting if it
-   keeps preempting the target window, not dominant enough yet to gate.)
+   "fluke" in s85 after 0/2 non-recurrence — recurred once more in s116
+   (2/4 soaks total across s84/s85/s116); worth revisiting if it keeps
+   preempting the target window, not dominant enough yet to gate.)
 
 -2. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
