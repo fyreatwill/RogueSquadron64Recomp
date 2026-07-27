@@ -10629,3 +10629,124 @@ mandatory-audit rule). No `lib/` edits this session — no
 s90-122's accumulated uncommitted history (same flagged-not-actioned
 posture as prior sessions; `rogue_squadron64` sibling checkout likewise
 unchanged, flagged since s54).
+
+## Session 123 (2026-07-27) — source-pinned the 18th crash class's real fault site (nearest-symbol attribution was wrong by a whole function), landed and soaked a guard following the established family pattern, clean negative control, no regression
+
+Followed NEXT.md exactly: source-read `submitSceneNodeRender` before
+instrumenting, per this family's own established convention (12th/16th/
+17th classes all got the same treatment on their 2nd recurrence).
+
+**Step 1 — resolved the nearest-symbol address.** `symbol_files/
+main_overlay.txt` places `heapFreeListDequeue` at `0x8000CFD4`. The 2nd
+occurrence's backtrace offset (`+12704` = `0x31A0`) resolves to
+`0x8000CFD4 + 0x31A0 = 0x80010174`. That address is **not** inside
+`heapFreeListDequeue` at all — confirmed by `grep`ping the recompiled
+tree (`N64Recomp/RecompiledFuncs/funcs_4.c`), `0x80010174` is a label
+(`L_80010174`) inside `submitSceneNodeRender`'s own body, a wholly
+different function that merely happens to sit at a higher address in
+the same overlay. This is a sharper instance of NEXT.md's own warning
+("nearest exported symbol is known-imprecise for this family") — not
+just imprecise by a few instructions, imprecise by an entire function.
+
+**Step 2 — read the actual code at that label.** It is a singly-linked-
+list "find the tail" walk, fed by `findAndUnlinkSmallestEntry`'s return
+value (copied into `$a0`/`ctx->r4` just before):
+
+    L_80010174:
+        v1 = *v1;      // 0x80010174 -- the crash PC, exactly
+        v0 = *v1;      // 0x80010178
+        if (v0 != 0) goto L_80010174;
+
+A **new shape** for this family: not a fixed-table lookup (12th/16th
+class) and not a single arg-pointer deref checked once at entry (9th/
+10th/11th class), but an **unbounded pointer-chasing loop** with zero
+validation on the chased pointer (`$v1`) at any step, on any iteration.
+If the node `findAndUnlinkSmallestEntry` returns is corrupt, or any
+node's own first field ("next") is corrupt, the very next iteration
+dereferences garbage — landing exactly on `0x80010174`, matching the
+crash PC precisely (not "somewhere nearby", the literal instruction).
+
+**Step 3 — found a safe bail-out target already in the original code.**
+At `0x80010160`, when the initial `$a0` is null, the original code
+already jumps to `L_800101A4`, which reloads its one live register
+(`$a0`) fresh from a global list-head at `0x801163B0` — it depends on
+nothing computed inside the loop. That makes it a ready-made "abandon
+this relink, treat it as an empty list" reentry point, semantically
+identical to what the original code already does for the null-pointer
+case. Landed the guard at the top of `L_80010174` (covers both the
+initial fallthrough into the loop and the loop's own back-edge, since
+both pass through the label): bounds-check `U32(ctx->r3)` against the
+RDRAM window (`0x80000000`-`0x80800000`, same convention as every prior
+guard in this file), and `goto L_800101A4` on failure. Logs
+`[scene-node-list-guard]` when `ROGUESQ_LOG_SCENE_NODE_LIST_GUARD=1`.
+Applied `U32()` truncation before the bounds compare per s99's own
+postmortem (a bare 64-bit `ctx->rN` compare against 32-bit literal
+bounds is a documented 100%-false-positive trap).
+
+**Regen + build:** full delete-all → `make_elf.py` → `regen_n64recomp.sh`
+→ `fixup_game_funcs.py` → `cmake --build` cycle. Patch report audited in
+full: every line's multiplicity matched expectation (audio gate `x3`,
+musyxKeyOnVoice div-traps `x8`, everything else `x1`), including the new
+`funcs_4.c: submitSceneNodeRender free-list-walk guard patched x1` line.
+Build exit 0, only pre-existing-class format warnings.
+
+**Soak (`s123guard`, `ROGUESQ_LOG_SCENE_NODE_LIST_GUARD=1
+ROGUESQ_LOG_ASSET_ALLOC=1 ROGUESQ_LOG_VOICE_ACTIVE_GATE=1
+PROBE_MODE=start_only HOLD_S=30`):** clean negative control —
+`[scene-node-list-guard]` fired 0 times, no regression anywhere else
+(`thr-resume bad=1: 0`, `missing-func: 0`). Process reached hold-iter 11
+before dying to a **SIGSEGV inside `do_rom_read`** itself (backtrace:
+`do_rom_read` ← `do_dma` ← `osPiStartDma_recomp` ← `piDmaWorker`) — the
+same long-running shared-corruption-race family from s85/s91/s93/s94/
+s101 (this run didn't arm `ROGUESQ_LOG_DMA`, so the exact `devAddr`
+value wasn't captured, but the backtrace shape is an exact match to
+every prior occurrence). The 18th class (`submitSceneNodeRender`) did
+**not** recur this run, so there is no same-session positive control on
+the guard itself — expected and acceptable per this file's own
+precedent (s99-s110 all landed guards on a clean negative control alone;
+requiring a positive control before landing was never the bar).
+`[voice-active-gate-nz]` (s122's H2 instrument, kept armed
+opportunistically per NEXT.md) fired **29 times** this run (58 log
+lines counting the byte-dump continuation line each fire emits) — the
+**first same-run positive control this specific instrument has ever
+obtained** (s122's two soaks were 0/2). This closes the "untested, not
+refuted" status NEXT.md flagged for H2 and is the 3rd of the 3 allowed
+attempts on this exact co-occurrence question (rule 8) — with a result
+this time, not another null.
+
+**Offline analysis of the captured data (zero extra cost, same soak):**
+`[asset-alloc]` fired its usual 6x, constant `ptr=0x8062B850` (matching
+s122's both soaks exactly). The 29 `[voice-active-gate-nz]` corruption
+hits all carry `arrayBase=0x801714D0` with `base` addresses spanning
+`0x80171D50`-`0x80172548` (idx 0x10-0x1F, `count` 0x12/0x18/0x20 across
+different points in the run). **`0x8062B850` vs. the
+`0x80171Dxx`-`0x80172xxx` corruption range is ~5.87 MB apart** — the
+same non-overlap s122 already found with only asset-alloc data; now
+confirmed against a real, same-run corruption event instead of an
+untested guess. **H2 in its specific form (coincidence with
+`loadAssetAndIterateSubchunks`'s particular buffer) is REFUTED with a
+positive control, 3/3 attempts, rule 8 satisfied — do not re-run this
+soak shape.** The corrupted bytes themselves are, again, long readable
+asset-name fragments (`main_n_atpt_lod`, `at_6`, `at_7`, `pilot_sd`,
+plus the `iexpl2_t`/`tarexex`-shaped strings already seen s118) — same
+general signature as every prior capture, reinforcing s118's own
+reframe ("some name/asset table is aliasing the voice array" — not yet
+which one, and now confirmed it is not the specific buffer this
+session's asset-alloc instrument tracks).
+
+**Consequence:** the 18th crash class is now guarded the same way as
+the 12th/16th/17th before it. Per this family's history, the process
+will very likely die to some *other* still-unguarded class or to the
+`do_rom_read` corruption race on the next soak — that is expected, not
+a failure of this guard.
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: added `_scene_node_list_guard_patch`
+(new, `ROGUESQ_LOG_SCENE_NODE_LIST_GUARD` env gate) targeting
+`submitSceneNodeRender`'s free-list-walk loop at `L_80010174` in
+`funcs_4.c`. Full delete-all regen + rebuild ran clean (patch-report
+audit passed, mandatory per s120/s121). No `lib/` edits this session —
+no `submodule-patches/export.sh` needed. `N64Recomp` checkout still
+carries s90-123's accumulated uncommitted history (same
+flagged-not-actioned posture as prior sessions; `rogue_squadron64`
+sibling checkout likewise unchanged, flagged since s54).

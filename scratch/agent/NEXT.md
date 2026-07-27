@@ -1,105 +1,56 @@
-# NEXT work unit — pin down the 18th crash class's real fault site (s123)
+# NEXT work unit — guard the 9th crash class (s124)
 
-s122 source-refuted literal H1 for the `voice+0x0` mystery
-(`allocateSongChannelArray` already zero-inits every live voice's byte 0
-right after `rs_malloc`, unconditionally — see PORTING-STATE Session 122)
-and landed `ROGUESQ_LOG_ASSET_ALLOC=1` to test H2's address-coincidence
-question, but got 0/2 same-run corruption positive controls (the
-`[voice-active-gate-nz]` instrument never fired in either soak) — so
-that specific test remains **untested**, not refuted. Read PORTING-STATE's
-Session 122 entry before doing anything else; this file only has the
-actionable summary.
+s123 closed two things cleanly: (1) the 18th crash class
+(`submitSceneNodeRender`'s free-list-walk loop) is now source-pinned and
+guarded (`ROGUESQ_LOG_SCENE_NODE_LIST_GUARD`, clean 0/0 negative
+control) — nearest-symbol attribution had pointed at `heapFreeListDequeue`
+but the real crash PC was a label inside a completely different
+function; (2) the H2 address-coincidence question for `voice+0x0`
+corruption (does the corrupted content coincide with
+`loadAssetAndIterateSubchunks`'s asset buffer?) got its first-ever
+same-run positive control (29 `[voice-active-gate-nz]` fires) and is
+now **REFUTED**, not just untested — 3/3 attempts used, rule 8 closed,
+do not re-run this soak shape. Read PORTING-STATE's Session 123 entry
+before doing anything else; this file only has the actionable summary.
 
-The 2nd `assetalloc` soak died to a **2nd occurrence of the already-
-catalogued 18th crash class** (first seen s108, `docs/CURRENT-TRUTH.md`
-"M3" section, nearest-symbol `heapFreeListDequeue + 12704` via
-`submitSceneNodeRender` ← `processSceneNode` ← `traverseSceneGraphRecursive`
-← `setupCameraMatrices`). Per this codebase's own established convention
-(every other class in the hangar-tick-crash family — 12th, 16th, 17th —
-got source-read + guarded on its 2nd recurrence), this is now the
-highest-information-value next step: a confirmed-recurring, uninstrumented
-crash beats a 3rd blind attempt at a co-occurrence that's been null twice.
+## Two live threads — pick ONE, in this order
 
-## Why this beats a 3rd asset-alloc soak
+### Thread A (recommended): guard the 9th crash class
 
-Rule 8 (3 consecutive same-hypothesis attempts with no discriminating
-result → stop and reassess) isn't triggered yet (2/3 used), but the
-asset-alloc/voice-gate co-occurrence soaks aren't just non-discriminating
-— they're not even reaching the condition being tested (0/2
-`[voice-active-gate-nz]` fires at all). A 3rd attempt with the same soak
-shape has no reason to behave differently. The 18th-class crash, by
-contrast, just went from "1 occurrence, not chased" to "2 occurrences,
-same family's own trigger condition met" — a genuinely new, actionable
-data point, not a repeat of the same null.
+Highest expected value right now: convert another catalogued-but-
+unguarded crash class into a guard, following the exact template that
+just worked cleanly 5 times running (11th/12th/16th/17th/18th, all
+landed, all clean negative controls, zero regressions introduced).
 
-## The work unit
+**9th class**: SIGBUS in `updateAnimatedTextureStreaming`
+(`N64Recomp/RecompiledFuncs/funcs_11.c:13667`, real function, reached
+via the `menuOverlayInit` hangar-tick chain), first seen s89. Catalog
+entry (`docs/CURRENT-TRUTH.md`, crash catalog list) already
+characterizes it as "unguarded `MEM_W` off `a0`" — the same shape as
+the 11th class (`projectModelBoundsToScreen`, guarded s101). 1
+occurrence only, never recurred — guarding on a single occurrence has
+ample precedent (11th itself was guarded after exactly 1 occurrence).
 
-1. **Source-read first** (do not instrument blind). Find
-   `submitSceneNodeRender` in the recompiled tree (`grep -rn
-   "submitSceneNodeRender" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/*.c`
-   — it will show up as a `RECOMP_FUNC` definition in exactly one file
-   and as call-site comments elsewhere) and read the function body.
-   Remember: this family's crash sites have consistently turned out to
-   be an unguarded table-lookup-then-dereference (12th, 16th class) or
-   an unguarded arg-pointer deref (11th, 14th class) — check for that
-   shape first, matching the `_composeNpcOrientationMatrix`/
-   `_activateAnimationKeyframe`/`_projectModelBoundsToScreen` template
-   already in `fixup_game_funcs.py` (search for those names to see the
-   guard pattern: entry diagnostic + `goto` to the function's own real
-   epilogue label, `U32()`-truncated bounds check — s99's own postmortem
-   flags the truncation step as mandatory, a bare 64-bit `ctx->rN`
-   compare against 32-bit bounds is a documented false-positive trap).
-2. **Do not trust "nearest exported symbol" as the actual crash site.**
-   `heapFreeListDequeue + 12704` is known-imprecise for this family
-   (large per-frame offsets are normal here, not a symbolication bug) —
-   the real fault could be many instructions past that export, possibly
-   in a different (static/inlined) function entirely. If `nm`/symbol
-   lookup on the built binary can narrow the offset further, do that
-   before guessing which recompiled C function actually contains
-   guest address implied by the offset.
-3. **If a clear unguarded-deref shape is found**, land a guard following
-   the exact template already used 3 times in this file (entry log +
-   `goto` real-epilogue + `U32()`-safe bounds check), full delete-all
-   regen, audit the patch report for `x1`, rebuild, one soak to check
-   for a clean negative control (this function's own guard doesn't fire
-   0/N is fine, that's expected — positive control on the crash itself
-   recurring is the harder bar, don't require it before landing the
-   guard, precedent: s99-s110 all landed guards without a same-session
-   positive control).
-4. **If no clear deref shape is found** (this class might be genuinely
-   inside `heapFreeListDequeue` itself, i.e. real heap/allocator
-   corruption rather than a guest-code bug), do not force a guard —
-   report it as RT64/allocator-internal (like the 13th/15th/19th classes)
-   and move to the next item below instead.
-
-## Opportunistic, no extra cost
-
-Keep `ROGUESQ_LOG_ASSET_ALLOC=1` and `ROGUESQ_LOG_VOICE_ACTIVE_GATE=1`
-armed in whatever soak this work unit runs (both already landed, free to
-leave on) — if `[voice-active-gate-nz]` happens to fire this time, that's
-a 3rd, free data point for the H2 coincidence question without spending
-a dedicated soak on it.
-
-## Do not
-
-- Do not re-run the `songlifecycle` idx-vs-count soak shape — closed,
-  3/3 attempts, s121 gave a clean discriminating result (PORTING-STATE
-  s121).
-- Do not re-test the `shutdownAudioEngine` alias hypothesis as causal —
-  refuted 2/2 (s120).
-- Do not re-litigate hypothesis (b) (`musyxInitVoiceFromSample`
-  comparison) — closed s117-119.
-- Do not treat s122's `caller_ra=0x00000000` (all 6 `[asset-alloc]`
-  fires, both soaks) as a corruption signal — s92 already established
-  this is routine (thread-dispatch-context artifact), seen identically
-  in 3 unrelated entry logs.
-- When landing a new guard, always truncate a `ctx->rN` value through
-  `U32()` before comparing against 32-bit literal bounds — s99's own
-  guard had a 100%-false-positive bug from skipping this.
-
-## Regen reminder (delete-first is mandatory; audit every run)
-
-1. Delete all existing output first (do NOT skip this):
+1. **Source-read the full function first** (do not trust the s89
+   one-line characterization blind — it was written mid-investigation,
+   not from a dedicated read). Read `funcs_11.c` from line 13667 to its
+   closing brace. Confirm: where `a0`/`ctx->r4` (or whichever register
+   holds the guest pointer) is first assigned, every place it's
+   dereferenced, and the function's real epilogue label (search for the
+   `restore $ra` / stack-pop sequence near the end, same technique
+   s101 used to find `L_80066204` for `projectModelBoundsToScreen`).
+2. **Land the guard following the `_project_model_bounds_guard_patch`
+   template exactly** (`N64Recomp/fixup_game_funcs.py`, search for that
+   function name to copy the pattern): entry-point bounds check via
+   `U32(ctx->rN) < 0x80000000u || >= 0x80800000u`, gated by a new env
+   var (`ROGUESQ_LOG_ANIM_TEX_STREAM_GUARD` — note `ROGUESQ_LOG_ANIM_TEX_STREAM`,
+   no `_GUARD` suffix, already exists as s90's entry-diagnostic flag;
+   do not collide with it, pick a distinct name), `goto` to the real
+   epilogue on failure. Mandatory: truncate through `U32()` before the
+   bounds compare (s99's postmortem — skipping this gave a 100%
+   false-positive guard once already).
+3. **Full delete-all regen is mandatory** (NEXT.md's own recurring
+   reminder — `N64Recomp` silently keeps stale output otherwise):
    ```
    python3 -c "
    from pathlib import Path
@@ -107,19 +58,63 @@ a dedicated soak on it.
    base = Path('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs')
    for f in base.glob('funcs_*.c'): os.remove(f)
    "
+   python3 /Users/williambuckley/Documents/Tools/rogue_squadron64/tools/make_elf.py
+   zsh tools/agent/regen_n64recomp.sh
+   python3 /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py
    ```
-2. `python3 <rogue_squadron64>/tools/make_elf.py` (absolute path, no `cd`)
-3. `zsh tools/agent/regen_n64recomp.sh` (wraps
-   `cd .../N64Recomp && ./build/N64Recomp rogue_squadron.toml` as a
-   single allowlisted command)
-4. `python3 /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-   — read the full report, not just grep for your own patch — confirm
-   every line's `x{n}` matches its expected/intentional multiplicity
-   (audio gate `x3`, musyxKeyOnVoice div-traps `x8`, everything else `x1`).
-5. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8`
-   — grep for `error:` explicitly.
-6. Soak via `env <FLAGS> PROBE_MODE=start_only HOLD_S=30 zsh
-   scratch/s73_post_a_scene/run_mission_keys.sh <tag> 5 8`.
+   Read the **full** fixup report, not just your own patch's line —
+   confirm every other line's multiplicity is unchanged (audio gate
+   `x3`, musyxKeyOnVoice `x8`, everything else `x1`) before trusting
+   the build.
+4. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8`
+   — grep for `error:` explicitly, 0 expected.
+5. One soak: `env ROGUESQ_LOG_ANIM_TEX_STREAM_GUARD=1
+   PROBE_MODE=start_only HOLD_S=30 zsh
+   scratch/s73_post_a_scene/run_mission_keys.sh s124guard 5 8`.
+   A clean negative control (0 fires, no regression) is sufficient to
+   land it — do not require a positive control before accepting the
+   guard (s99-s123's own precedent: none of them had one at landing
+   time).
+
+### Thread B (alternative, if A is somehow blocked): the audio-corruption pivot
+
+The `voice+0x0` mystery (s105-123, now the single longest-running open
+thread) still has an unidentified corruption source. s118's own reframe
+("is the voice-array base pointer itself corrupted to point into some
+other name table, and if so which one") is the right next question, but
+its most obvious test (compare against `musyxInitVoiceFromSample`'s
+pointer) is a dead end — s119 found that function never fires on this
+driven path, 0/0 across 2 soaks, closed. **Do not retry that.** A fresh
+angle: grep the recompiled tree for what else constructs a name/string
+table with entries shaped like `at_6`/`at_7`/`main_n_atpt_lod`/
+`pilot_sd` (the exact strings s118's and s123's dumps captured) — that
+producer's buffer address is the next coincidence candidate, not
+`loadAssetAndIterateSubchunks` (now cleared) and not
+`musyxInitVoiceFromSample` (already the zero-init writer, unrelated to
+this content). This is a real investigation, not a mechanical guard —
+expect it to take more than one iteration; write the actual hypothesis
+table into this file before running anything, per ITERATION.md's own
+requirement.
+
+## Do not
+
+- Do not re-run the asset-alloc/voice-gate co-occurrence soak
+  (`ROGUESQ_LOG_ASSET_ALLOC` + `ROGUESQ_LOG_VOICE_ACTIVE_GATE` together
+  to test coincidence with `loadAssetAndIterateSubchunks` specifically)
+  — closed 3/3, refuted with a positive control, s123.
+- Do not re-run the `songlifecycle` idx-vs-count soak shape — closed
+  3/3, s121.
+- Do not re-test the `shutdownAudioEngine` alias hypothesis as causal —
+  refuted 2/2, s120.
+- Do not re-litigate hypothesis (b) (`musyxInitVoiceFromSample`
+  comparison as a pointer-identity check) — closed s117-119.
+- Do not re-soak the `submitSceneNodeRender` guard specifically to
+  force a positive control — not required before landing (see Thread A
+  step 5), and per this family's history the crash that recurs next is
+  as likely to be some *other* still-unguarded class as this one.
+- When landing any new guard, always truncate a `ctx->rN` value through
+  `U32()` before comparing against 32-bit literal bounds (s99's
+  100%-false-positive lesson, repeated in every guard since).
 
 ## Housekeeping still flagged, still not done
 
@@ -127,8 +122,15 @@ a dedicated soak on it.
 mechanism/architecture material to PROJECT-OVERVIEW.md and prune
 superseded detail, paired with a real experiment — not on its own.
 
+The crash catalog (`docs/CURRENT-TRUTH.md`, "Crash catalog" list) is
+missing a table entry for the probable-20th class first mentioned s117
+(`voicegate2`, SIGBUS via `menuOverlayInit` → `static_5_800C6854` →
+`static_5_800AAD9C` → `static_5_800AB1C8`, 1 occurrence, never chased) —
+worth adding when convenient, not urgent enough to spend a dedicated
+iteration on by itself.
+
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git
 checkout, not a `lib/` submodule, with uncommitted changes across
-s90-122 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
+s90-123 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
 Same posture as the `rogue_squadron64` sibling checkout flagged since
 s54. Worth asking the user whether/how to commit that history.

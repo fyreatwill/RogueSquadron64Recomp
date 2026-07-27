@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s122)
+## Next steps, in order of expected value (s123)
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121).** s121 ran the identical delete-all →
@@ -914,6 +914,42 @@ cost three sessions before the recursive mutex.
    arguably higher expected value right now than a 3rd blind attempt at
    the rare asset-alloc/voice-gate co-occurrence. Full detail:
    PORTING-STATE s122.
+   **s123: 18th crash class source-read, pinned, and guarded — CLOSED.**
+   The nearest-symbol attribution (`heapFreeListDequeue + 12704`) resolved
+   to `0x80010174`, which is **not** inside `heapFreeListDequeue`
+   (`0x8000CFD4`) at all — it's a label inside `submitSceneNodeRender`'s
+   own body (`funcs_4.c`), a different function entirely (nearest-symbol
+   was imprecise by a whole function, not just an offset). The real code
+   there is an unbounded linked-list "find the tail" walk
+   (`v1 = *v1; v0 = *v1;` loop, fed by `findAndUnlinkSmallestEntry`'s
+   return) with no validation on the chased pointer at any iteration — a
+   new shape for this family (not a table lookup like 12th/16th, not a
+   single entry-checked arg pointer like 9th/10th/11th). Guarded at the
+   loop's own label (covers both the initial fallthrough and the
+   loop-back branch) with a `U32()`-safe RDRAM-range bounds check,
+   bailing to the original code's own pre-existing "abandon this relink"
+   reentry point (`L_800101A4`, already used for the null-initial-pointer
+   case, so semantically consistent with the function's own design).
+   Full delete-all regen + rebuild ran clean (patch report audited,
+   `submitSceneNodeRender free-list-walk guard patched x1`). Soak: clean
+   negative control (0 fires, no regression), process survived past this
+   site and died instead to the long-running `do_rom_read` SIGSEGV
+   corruption race (s85/s91/s93/s94/s101 family) — no same-session
+   positive control on the new guard, expected/acceptable per this file's
+   own precedent (s99-s110 never required one before landing). **Bonus,
+   same soak, zero extra cost:** `[voice-active-gate-nz]` (H2's
+   instrument) got its first-ever same-run positive control (29 fires,
+   after 0/2 in s122) — the 3rd and last allowed attempt on this
+   co-occurrence question (rule 8), and this time with data instead of
+   another null. `[asset-alloc]`'s buffer (`0x8062B850`, constant) never
+   overlaps or neighbors the corrupted range (`0x80171Dxx`-`0x80172xxx`,
+   ~5.87 MB apart) — **H2 in its specific form is now REFUTED with a
+   positive control, not just untested; do not re-run this soak shape.**
+   Corrupted content is again long readable asset-name fragments
+   (`main_n_atpt_lod`, `at_6`, `at_7`, `pilot_sd`), matching s118's
+   signature — reinforces "some name/asset table aliases the voice
+   array" without yet identifying which one (not this session's asset
+   loader instance). Full detail: PORTING-STATE s123.
 
 -2. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
@@ -1342,14 +1378,19 @@ cost three sessions before the recursive mutex.
      one function (not once); all 5 guarded
      (`ROGUESQ_LOG_HANGAR_BAY_SCENE_GUARD`), 0/5 clean negative control,
      no positive control yet (crash itself hasn't recurred to test it).
-   - 18th (probable), nearest symbol `heapFreeListDequeue + 12704`
-     (s108) via `submitSceneNodeRender` ← `processSceneNode` ←
-     `traverseSceneGraphRecursive` ← `setupCameraMatrices` — same outer
-     chain shape as the 14th class but no `reserveAndEmitDLEntry` frame
-     present, so a different leaf (large per-frame offsets are this
-     family's normal nearest-exported-symbol attribution, not a
-     symbolication error). 1 occurrence. Not instrumented yet per the
-     2nd-recurrence convention.
+   - 18th, nearest symbol `heapFreeListDequeue + 12704` (s108, 2nd
+     occurrence s122) via `submitSceneNodeRender` ← `processSceneNode` ←
+     `traverseSceneGraphRecursive` ← `setupCameraMatrices` — the
+     nearest-exported-symbol attribution turned out to be wrong by a
+     whole function, not just an offset: `0x8000CFD4 + 0x31A0 =
+     0x80010174` is a label inside `submitSceneNodeRender` itself
+     (`funcs_4.c`), not inside `heapFreeListDequeue`. Real shape: an
+     unbounded linked-list "find the tail" walk with no pointer
+     validation at any iteration — new for this family (not a table
+     lookup, not a single entry-checked arg pointer). **Guarded s123**
+     (`ROGUESQ_LOG_SCENE_NODE_LIST_GUARD`, bails to the function's own
+     pre-existing null-pointer reentry point `L_800101A4`), 0/0 clean
+     negative control, no positive control yet.
    - 19th, RT64-internal `SIGSEGV` in `plume::MetalFramebuffer`'s
      constructor (s109) via `RT64::FramebufferManager::createTileCopyRecord`
      → `RT64::RenderTarget::setupColorFramebuffer`/`clearColorTarget` →
