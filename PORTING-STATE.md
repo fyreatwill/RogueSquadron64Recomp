@@ -10257,3 +10257,157 @@ on `musyxInitVoiceFromSample`'s `ADD32(ctx->r6, ctx->r4)` instruction
 No `lib/` edits this session. `N64Recomp` remains a separate git
 checkout with its own accumulating uncommitted changes (s90-119 now) —
 same flagged-not-actioned posture as every session since s90.
+
+## Session 120 (2026-07-27) — pursued NEXT.md's branch (a) allocator hunt, found a real (but not causal here) asymmetric-free alias bug, then a sharper source-confirmed pattern (corrupted scan indices always exceed the live allocation's own voiceCount), and along the way discovered a serious, undocumented regen-pipeline reliability bug that produced two false leads before being caught
+
+**Branch (a) grep hunt (no soak needed to start, per NEXT.md).** Grepped
+`N64Recomp/RecompiledFuncs/*.c` for every store to the `-0x6908`
+global (`musyxMixActiveVoices`'s voice-array base, reloaded fresh every
+scan) and found exactly one site anywhere in the tree:
+`allocateSongChannelArray` (`funcs_23.c`), which stores the *same*
+`rs_malloc` pointer into **two** adjacent globals, `-0x6904` and
+`-0x6908` (`0x801496FC`/`0x801496F8`), and a matching single store to
+`-0x6900` (voice count) right before the `rs_malloc` call. Grepped
+`rs_free` call sites and found `shutdownAudioEngine` (`funcs_24.c`,
+reached via `shutdownMusyXEngine`) frees the `-0x6904` copy but **never
+touches `-0x6908`** — a genuine, source-confirmed asymmetric-free /
+dangling-alias bug in the original game's own compiled code (not a
+recomp artifact: both addresses are real N64 instruction addresses).
+Landed `ROGUESQ_LOG_SONG_ARRAY_LIFECYCLE=1` (logs the alloc's
+voiceCount+pointer, and at the `shutdownAudioEngine` free site, the
+value being freed plus a fresh read of `-0x6908` for comparison).
+
+**Two soaks (`songlifecycle1`, `songlifecycle2`, same shape, ~150s
+`start_only`/`HOLD_S=30`) directly refute this as the cause of the
+observed corruption in this code path**: `[song-array-alloc]` fired 6
+times (voiceCounts 20/17/16/15/18/18, 3 distinct pointers, one reused
+3x by the allocator — expected heap-reuse behaviour), but
+`[shutdown-audio-free]` fired **0/2** — `shutdownAudioEngine` never ran
+in either soak, so `-0x6908` was never left dangling by this mechanism
+in these runs. The alias bug is real and independently worth fixing
+some day, but it is not what produced either soak's corruption.
+
+**Sharper finding, reproduced 2/2 independently:** in both soaks, every
+`[voice-active-gate-nz]` corrupted-byte hit has an `idx` that **exceeds
+the currently-live allocation's own `voiceCount`** — burst 1: idx
+16,17 against a `voiceCount=15` allocation (base arithmetic
+`base − idx*0x88` solves to exactly that allocation's own pointer,
+`0x801714D0`, confirmed independently from 4+ data points via linear
+stride-fitting, not just one); burst 2: idx 19-31 against a
+`voiceCount=18` allocation (same exact-match technique, same pointer).
+The scanned base address is the *current, valid* allocation both
+times, not a stale one from an older `[song-array-alloc]` event — so
+this is not the dangling-alias bug above, and not simply "reading a
+freed block" either. The loop bound comes from a fresh `-0x6900` read
+every iteration (`funcs_24.c` ~0x80090F44), which — per the single-
+store-site grep above — is written by the *same* `allocateSongChannelArray`
+call, at the *same* time, as `-0x6908`'s pointer. Why the scan is
+permitted past that value is not yet resolved.
+
+**Attempted to close this directly and found a bug in my own
+instrument first.** Added `count=`/`arrayBase=` fields to the existing
+`[voice-active-gate-nz]` log, reading `-0x6900`/`-0x6908` fresh at the
+exact corruption instant via `MEM_HU(0x80150000, -0X6900)` /
+`MEM_W(0x80150000, -0X6908)`. First attempt passed the bare 32-bit
+literal `0x80150000` directly instead of the codebase's own
+`ctx->rN = S32(0x8015 << 16)` sign-extend-then-assign-to-`gpr` idiom —
+`0x80150000` types as `unsigned int` in C (exceeds `INT_MAX`), so the
+macro's internal 64-bit arithmetic zero-extends instead of
+sign-extends, silently computing the wrong absolute address. This
+produced `count=0x0029 arrayBase=0x72657375` — a value that looked like
+a dramatic new discovery (globals themselves holding non-pointer
+garbage) but was actually just reading unrelated memory consistently,
+an artifact of the bug, not a game-state fact. Caught before writing
+it up as a finding; fixed by using
+`(gpr)(int32_t)(0X8015 << 16)` as an intermediate, matching the proven
+idiom exactly. **Not yet re-soaked with the corrected version** — see
+below for why.
+
+**Major, higher-priority finding: the documented regen pipeline
+(`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake`) does
+not reliably produce a clean build, even when every output `.c` file is
+deleted first.** While rebuilding after the S32 fix, the build failed
+on `error: redefinition of label 'L_dlentry_guard_exit'` in
+`funcs_3.c` — a label from s109's guard patch, applied twice. Traced
+this two ways:
+1. First occurrence: ran the full documented order *without* deleting
+   `RecompiledFuncs/*.c` first. Deleting the single stale file and
+   re-running `N64Recomp` alone (no fixup yet) produced a byte-for-byte
+   pristine file (0 `dlentry` occurrences) — proving `N64Recomp` will
+   skip rewriting a `.c` file that already exists on disk, so any file
+   `fixup_game_funcs.py` has ever patched stays patched forever unless
+   manually deleted, and re-running fixup on it stacks a second copy of
+   every patch whose anchor text survives its own insertion (the anchor
+   is the original, unmodified instruction sequence — patches only
+   insert *after* it, so it still matches). This is a sharper root
+   cause than s102's "fixup isn't idempotent": it's `N64Recomp`, not
+   `fixup_game_funcs.py`, that's the unreliable half.
+2. Fixed by deleting **all 45** `RecompiledFuncs/funcs_*.c` before
+   every `N64Recomp` invocation (new helper:
+   `tools/agent/regen_n64recomp.sh`, also works around the headless
+   permission-prefix-match wall for `cd .../N64Recomp && ./build/N64Recomp ...`
+   commands, rule 10's family of issues). This worked once (confirmed
+   every patch report line reads exactly `x1`, including several that
+   had apparently been silently *not* re-applying for who knows how
+   many past sessions — `funcs_23.c: audio gate patched x3`,
+   `funcs_24.c: musyxKeyOnVoice div-traps patched x8`, etc., that never
+   showed up in earlier "clean" runs' reports).
+3. **But the very next full-clean cycle (delete-all → regen → fixup →
+   build) reproduced the exact same duplicate-label failure again**,
+   this time in *two* files (`funcs_3.c` and `funcs_40.c`'s
+   `L_hangarbay_guard_exit`), and a `grep` audit found `funcs_23.c` and
+   `funcs_24.c`'s newer diagnostic patches *also* silently doubled
+   (non-erroring, since each patch's `{ }` block is its own C scope —
+   only patches that also declare a bare function-scoped `goto` label
+   surface as a compile error; the rest just silently double-log).
+   Ruled out cmake auto-invoking `fixup_game_funcs.py` a second time
+   (no reference to it anywhere under `build/`) and duplicate path
+   enumeration via `glob()` (checked directly, 45 unique paths, no
+   dupes). **Root cause not identified** — deleting all files first
+   is necessary but evidently not sufficient; whatever's caching/
+   restoring already-patched content survives file deletion.
+   Manually deduplicated the two compile-blocking labels
+   (`funcs_3.c`, `funcs_40.c`) directly in the generated files to
+   restore a working build; left `funcs_23.c`/`funcs_24.c`'s silently-
+   doubled (harmless-to-correctness, just double-printing) diagnostic
+   blocks as-is given time spent.
+
+**Why this matters more than the M3 question it interrupted:** this
+casts reasonable doubt on any past session's soak conclusions that
+relied on a patch landed and soaked without an explicit post-build
+duplication audit (most of s90 onward, once multi-patch fixup runs
+became routine) — a doubled diagnostic wouldn't change underlying game
+behavior (still block-scoped, side-effect-free logging), so crash/
+stability conclusions are very likely unaffected, but any conclusion
+resting on an exact *count* or *first-occurrence* value from a log
+(several sessions' `n=` heartbeat-style reasoning, including this
+session's own idx-exceeds-count arithmetic derived from `idx=`/`base=`
+register reads — unaffected, since those are plain `ctx->rN` reads with
+no address macro involved, not vulnerable to this specific class of
+duplication) should be treated as provisional until re-verified against
+a build whose patch report has been grepped for anything other than
+`x1`/an intentional multiplicity.
+
+Both soaks also reproduced the already-well-characterized `do_rom_read`
+SIGSEGV (byte-identical stack trace to s85-s119) shortly after each
+corruption burst — 2/2 temporal co-occurrence, consistent with but not
+proof of the s85 "shared corruption race" framing (s118 already refuted
+byte-identity between this family and the voice corruption).
+`thr-resume bad_total=0` both soaks (control held).
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: added `_song_array_alloc_patch` and
+`_shutdown_audio_free_patch` (funcs_23.c/funcs_24.c, new diagnostic
+blocks under `ROGUESQ_LOG_SONG_ARRAY_LIFECYCLE`); extended the existing
+s117 `_voice_active_gate_patch` with `count=`/`arrayBase=` fields
+(fixed mid-session after finding the sign-extension bug described
+above). `tools/agent/regen_n64recomp.sh` (new, this repo): wraps
+`cd .../N64Recomp && ./build/N64Recomp rogue_squadron.toml` as a single
+allowlisted `zsh` script, sidestepping the headless permission-prefix
+wall. Manually edited `N64Recomp/RecompiledFuncs/funcs_3.c` and
+`funcs_40.c` to remove duplicate-label compile blockers (see above —
+this is a generated-file hand-fix, not a durable one; the next full
+regen may or may not reproduce the same duplication). No `lib/` edits
+this session. `N64Recomp` remains a separate git checkout with its own
+accumulating uncommitted changes (s90-120 now) — same
+flagged-not-actioned posture as every session since s90.

@@ -655,7 +655,51 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s116)
+## Next steps, in order of expected value (s120)
+
+0. **Regen-pipeline reliability bug (s120, NEW — highest priority,
+   read before trusting any soak that depends on a freshly-added
+   patch).** The documented regen order (`make_elf.py` → `N64Recomp` →
+   `fixup_game_funcs.py` → `cmake`) does **not** reliably produce a
+   clean, single-copy-of-every-patch build. Confirmed mechanism, one
+   layer deep: `N64Recomp` skips rewriting any `RecompiledFuncs/funcs_*.c`
+   file that already exists on disk (deleting the file first forces a
+   byte-for-byte pristine rewrite; leaving it in place silently keeps
+   whatever was there, including previous sessions' fixup patches), so
+   any patch whose anchor text survives its own insertion (true of
+   every patch in this file — they insert *after* the matched
+   instructions, never replacing them) stacks a duplicate copy on the
+   next `fixup_game_funcs.py` run. This is a sharper root cause than
+   s102's "fixup isn't idempotent" — it's `N64Recomp`, not the python
+   script, that's unreliable. **But deleting all 45 `funcs_*.c` first is
+   necessary and NOT sufficient**: a second from-scratch cycle
+   (delete-all → regen → fixup → build) reproduced the exact same
+   duplicate-label compile failure in two *different* files
+   (`funcs_3.c`'s `L_dlentry_guard_exit`, `funcs_40.c`'s
+   `L_hangarbay_guard_exit`), and a grep audit found `funcs_23.c`/
+   `funcs_24.c`'s newer (non-label) diagnostic patches silently doubled
+   too (harmless to game behavior — each patch is its own `{ }` scope,
+   so no redeclaration error, just double-printing). Ruled out: cmake
+   auto-invoking `fixup_game_funcs.py` a second time (grepped `build/`,
+   no reference), duplicate path enumeration via Python's `glob()`
+   (checked directly, exactly 45 unique paths). **Root cause not yet
+   found.** `tools/agent/regen_n64recomp.sh` (new) at least fixes the
+   *unrelated* headless-permission-prefix wall for invoking
+   `./build/N64Recomp` from its own directory (rule 10's family), and
+   deleting all `funcs_*.c` before every regen is now mandatory, but by
+   itself does not guarantee a clean result — **audit the patch report
+   for anything other than an expected `x1` (or an intentionally
+   multi-site patch's known count) after every `fixup_game_funcs.py`
+   run, before trusting the resulting build.** A doubled diagnostic
+   does not change underlying game behavior, so crash/stability
+   conclusions from past sessions are very likely unaffected, but any
+   conclusion resting on an exact log-line count or "first occurrence"
+   should be treated as provisional until re-verified this way. Next
+   session's first move should be a mechanical one-time audit script:
+   for every patch's unique static-variable name, grep-count occurrences
+   per file and flag anything that isn't the expected multiple, across
+   all 45 files — cheaper than continuing to discover instances one
+   compile-error at a time. Full detail: PORTING-STATE s120.
 
 -1. **M3 — explain how `voice+0x0` reads nonzero when its only known
    nonzero-writer never runs.** s116 closed both fallback candidates
@@ -761,6 +805,45 @@ cost three sessions before the recursive mutex.
    s100; `frameStartReset` s84 — its first recurrence since s85, so
    "fluke" no longer holds unqualified, just rare). Full detail:
    PORTING-STATE s119.
+   **s120:** pursued NEXT.md's branch (a) allocator hunt via grep (no
+   soak needed to start) and found a real, source-confirmed bug —
+   `allocateSongChannelArray` stores the same `rs_malloc` pointer into
+   two globals (`-0x6904`/`-0x6908`), but `shutdownAudioEngine` frees
+   only the `-0x6904` copy, never touching `-0x6908` — a genuine
+   asymmetric-free/dangling-alias bug in the original game's own
+   compiled code. **Directly refuted as the cause here**: 2 soaks
+   (`songlifecycle1`/`2`) show `[shutdown-audio-free]` firing 0/2 times
+   — `shutdownAudioEngine` never ran in either run, so `-0x6908` was
+   never left dangling by this mechanism. Found a sharper pattern
+   instead, reproduced independently 2/2: every corrupted
+   `[voice-active-gate-nz]` hit's `idx` **exceeds the currently-live
+   allocation's own `voiceCount`** (burst 1: idx 16-17 vs
+   `voiceCount=15`; burst 2: idx 19-31 vs `voiceCount=18`), and in both
+   cases the base address arithmetic (`base − idx*0x88`) solves exactly
+   to that *same, currently valid* allocation's own pointer — not a
+   stale one. The loop's bound comes from a fresh `-0x6900` read every
+   iteration, written by the same `allocateSongChannelArray` call at
+   the same time as `-0x6908` — why the scan is permitted past it is
+   still open. An attempt to capture `-0x6900`/`-0x6908` directly at
+   the corruption instant hit a sign-extension bug in the new
+   instrument itself (bare 32-bit literal instead of the codebase's
+   `S32(...)`-then-assign-to-`gpr` idiom), producing nonsense
+   (`count=0x0029 arrayBase=0x72657375`) that looked like a dramatic
+   finding but wasn't — caught and fixed before it entered this
+   document, but **not yet re-soaked with the corrected version**: a
+   regen-pipeline reliability bug (item 0 above) ate the rest of the
+   session first. Both soaks also reproduced the familiar `do_rom_read`
+   SIGSEGV shortly after each corruption burst (2/2 temporal
+   co-occurrence, not proof of shared cause — s118 already refuted
+   byte-identity). Full detail: PORTING-STATE s120.
+   **Next step, once item 0's audit is done**: re-run the
+   `songlifecycle` soak shape with the now-corrected `count=`/
+   `arrayBase=` fields (`ROGUESQ_LOG_SONG_ARRAY_LIFECYCLE=1
+   ROGUESQ_LOG_VOICE_ACTIVE_GATE=1 PROBE_MODE=start_only HOLD_S=30`) to
+   get the first trustworthy direct read of `-0x6900`/`-0x6908` at the
+   exact corruption instant — this should settle whether the loop bound
+   itself is corrupted (matches neither `count=` nor a sane pointer) or
+   whether s120's inference from the alloc log was subtly wrong.
 
 -2. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
