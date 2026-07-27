@@ -6885,3 +6885,117 @@ it didn't fire either soak.
   itself never separately fired; advancePlayerAnimationPhase SIGBUS —
   parked, unreproduced since s87; updateAnimatedTextureStreaming SIGBUS —
   new, this session).
+
+## Session 90 (2026-07-27) — 3rd consecutive "armed the TMEM-zero flag, a NEW earlier crash preempted it" outcome; found a 10th crash class; batched entry-log instruments for the two most recent uninstrumented sites
+
+Ran NEXT.md's prescribed soak exactly as written: `env
+ROGUESQ_LOG_ANIM_CB=1 ROGUESQ_LOG_TMEM_ZERO=1 PROBE_MODE=start_only
+HOLD_S=30 zsh scratch/s73_post_a_scene/run_mission_keys.sh animcb4 0
+12` — reused the existing build, no regen needed for the soak itself.
+Reached phase width=1024 at 44.8s, ran the key schedule, stabilized,
+entered the hold window, and died at hold-iter 13 (SIGBUS, signal 10),
+~15s wall into the hold.
+
+**`ROGUESQ_LOG_TMEM_ZERO` still did not fire (0/0, 4th soak in a row
+with it either armed or not: s87, animcb2 unarmed, animcb3, animcb4).**
+**`[anim-recurse]` fired 3610/3610 (real positive control)** with `sp`
+confined to the same 6 known values (312-byte band) right up to the
+crash — consistent with every soak since s88, uninformative for the
+parked hypothesis since this crash isn't in that function's call chain
+either. **`thr-resume bad_total=0`** again — 3rd/4th data point
+supporting the s84 gate (U3) holding.
+
+**The crash is a 10th, brand-new class**, not either of the two this
+soak was built to discriminate between. Full backtrace:
+
+```
+[CRASH] caught signal 10 (Bus error: 10)
+static_5_800B4048 + 2424
+static_5_800AB658 + 55972       (updateHangarBayScene)
+static_5_800AAD9C + 4000        (runHangarSelectionFrame)
+static_5_800C6854 + 628         (runHangarMenuFromOverlay)
+menuOverlayInit + 3512
+mainGameLoop + 2400
+```
+
+Resolved the three outer frames against `main_overlay.txt` (previous
+sessions had only ever seen these as bare `static_5_*` addresses):
+`updateHangarBayScene` (0x800AB658, "hangar bay camera/scene update"),
+`runHangarSelectionFrame` (0x800AAD9C), `runHangarMenuFromOverlay`
+(0x800C6854) — all three are known, previously-analyzed functions, not
+new mystery code. The innermost frame, `static_5_800B4048`, has no
+confirmed C-source name (a `main_overlay.txt` comment guesses
+"updateTextOverlayLookupEntry" but that name doesn't appear anywhere in
+the actual `N64Recomp/RecompiledFuncs/*.c` the binary was built from —
+treat the comment as an unverified annotation, not a fact). Read the
+function source (`funcs_41.c:577-782`, `updateHangarBayScene` calls it
+directly at `funcs_41.c:4249`): it takes two pointer args (`a0`→`$s1`,
+`a1`→`$t0`), dereferences `a1` **four times** via `MEM_W(ctx->r8,
+0x10/0x14)` to pull two floats, scales them, and stores computed
+values into a struct returned by `findLookupEntryByKey`/
+`setLookupEntryField5ByKey`. Same shape as every other crash in this
+family: an unchecked raw `MEM_W` deref (`recomp.h:95`) off a pointer
+that arrived as a function argument, with no source-level way to tell
+whether the argument itself is what's corrupted without a live value.
+**Not yet confirmed** which specific deref in the function is the
+faulting one (native crash offset +2424 bytes isn't directly mappable
+to a MIPS instruction without disassembly) — the entry-arg log below
+is scoped to discriminate "garbage-valued pointer" vs. "valid pointer,
+corrupted target," same as every prior instrument in this family.
+
+**Pattern worth flagging**: this is the 3rd time in a row (s87, animcb3,
+animcb4) that arming `ROGUESQ_LOG_TMEM_ZERO` for a soak specifically
+built to catch the `queueGPUUploadTMEM` assert instead produced a
+*different, new* crash that fired earlier. The one time the assert
+itself actually fired (animcb2), the flag was *not* armed. Small-N (n=4)
+so this could easily be coincidence rather than a real interaction, but
+per ITERATION.md rule 8, 3 consecutive non-discriminating attempts at
+this exact experiment shape is enough to stop repeating it as the
+primary plan — see next-steps reordering.
+
+**Work landed this session (batched instrumentation, not run yet):**
+added two more entry-log diagnostics to `N64Recomp/fixup_game_funcs.py`
+following the exact `_anim_cb_patch` pattern (s88's lesson: read the
+generated C back after patching, not just the regex, and did so — both
+landed x1, confirmed via `grep`):
+- `ROGUESQ_LOG_ANIM_TEX_STREAM=1` on `updateAnimatedTextureStreaming`
+  (`funcs_11.c`) — logs `a0` (`ctx->r4`) at entry. This is the 9th
+  crash class (s89), still uninstrumented until now; NEXT.md's s89 plan
+  called for exactly this but 3 subsequent soaks kept dying to
+  something else first.
+- `ROGUESQ_LOG_HANGAR_ENTRY=1` on `static_5_800B4048` (`funcs_41.c`,
+  today's 10th class) — logs `a0`/`a1` (`ctx->r4`/`ctx->r5`) at entry.
+
+Ran `python3 fixup_game_funcs.py` directly against the current
+on-disk `RecompiledFuncs/*.c` (no `make_elf.py`/`N64Recomp` regen —
+only the fixup script changed, not the ELF or symbol files) followed
+by `cmake --build . -j8`: build exit 0, only pre-existing-class format-
+string warnings (`%08X` vs `%08llX` on `gpr`/`uint64_t` args — same
+warning shape already present in the existing `[anim-recurse]` log,
+cosmetic, not fixed). **Not yet soaked** — next iteration's job.
+
+**Rules out / keep:**
+- TMEM-zero assert (item 1): still 0/4 co-occurrences with the log
+  armed. Demoting "run a soak specifically to catch this" from primary
+  plan to opportunistic (keep the flag armed on every soak, since it's
+  a free no-op, but stop treating catching it as this session's goal).
+- 10th crash class recorded: `static_5_800B4048` SIGBUS (unconfirmed
+  name, "updateTextOverlayLookupEntry" per an unverified doc comment),
+  called from the known function `updateHangarBayScene`. Same
+  unchecked-raw-deref-off-an-arg shape as the rest of the family.
+  Instrument landed, not yet run.
+- Crash inventory: 10 distinct classes now on record. Two have actual
+  code fixes (evalCubicSplineAtTime NaN, thr-resume UAF gate). Six now
+  have live entry/field diagnostics armed and waiting for a coincident
+  soak (anim-recurse, TMEM-zero, rom-read thread-identity, and as of
+  this session anim-tex-stream + hangar-entry-800B4048); frameStartReset
+  and the Metal SIGSEGV remain uninstrumented (both single-occurrence,
+  demoted priority).
+- **Found why the s85 shared-corruption-race retest (item 3, s86-s89)
+  never saw `do_rom_read` corrupt again**: every one of those sessions
+  assumed the log gate was `ROGUESQ_LOG_ROM_READ`, but the actual
+  `getenv` check in `lib/N64ModernRuntime/librecomp/src/pi.cpp:72` is
+  `ROGUESQ_LOG_DMA` — a name that was never armed in animcb2/3/4 (or,
+  per the s89 note, in s89's soaks either). This isn't a null result on
+  the hypothesis; it's an unarmed instrument reported as a null result
+  for 4 sessions. Next soak must use `ROGUESQ_LOG_DMA=1`.

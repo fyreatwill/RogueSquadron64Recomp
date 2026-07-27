@@ -187,6 +187,31 @@ possibly-corrupt `a0` — same signature as s85's `do_rom_read` and the
 OSThread UAF family. `[anim-recurse] sp` stayed flat (same 2 of the 6
 known values) through both new crashes, neither of which is even in
 that function's call chain. Full detail: PORTING-STATE s89.
+**s90:** ran the exact NEXT.md-prescribed soak again (`animcb4`) — still
+0/4 co-occurrences of the TMEM-zero log firing (armed or not, across
+s87/animcb2/animcb3/animcb4), and for the 3rd soak in a row with the
+flag armed, a **different, newer** crash preempted it — a **10th**
+class, SIGBUS in `static_5_800B4048` (no confirmed source name; a
+`main_overlay.txt` comment guesses "updateTextOverlayLookupEntry" but
+that name is absent from the actual built `RecompiledFuncs/*.c` —
+treat as unverified), called from the known `updateHangarBayScene`
+(0x800AB658) → `runHangarSelectionFrame` → `runHangarMenuFromOverlay`
+→ `menuOverlayInit`. Same unchecked-`MEM_W`-off-an-arg shape as the
+rest of the family (dereferences its `a1` arg 4× at fixed offsets).
+`[anim-recurse]` fired 3610/3610 (control good, `sp` still the same 6
+values); `thr-resume bad_total=0` again (3rd/4th support for U3).
+Landed batched entry-log instruments for the two most recent
+still-uninstrumented crash sites — `ROGUESQ_LOG_ANIM_TEX_STREAM=1`
+(9th class, `updateAnimatedTextureStreaming`) and
+`ROGUESQ_LOG_HANGAR_ENTRY=1` (10th class, `static_5_800B4048`) — in
+`N64Recomp/fixup_game_funcs.py`, following the `_anim_cb_patch`
+pattern; verified via `grep` that both landed x1 in the regenerated
+`.c`, then rebuilt clean (exit 0, only pre-existing-class format
+warnings). **Not yet soaked.** Per ITERATION.md rule 8, demoting "run a
+soak specifically to catch the TMEM-zero assert" from primary plan to
+opportunistic (keep the flag armed everywhere, it's free, but stop
+treating catching it as the goal) after 3 non-discriminating attempts.
+Full detail: PORTING-STATE s90.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -278,7 +303,10 @@ firing even earlier still (s87); s87's self-recursion hypothesis refuted
 at the source level, correctly-targeted instrument shows no recursion,
 thr-resume gate U3 closed, first crash-free soak since s83 (s88);
 anim-recursion hypothesis parked after a 3rd non-recurrence, TMEM-zero
-assert reproduced with a full backtrace, 9th crash class found (s89).**
+assert reproduced with a full backtrace, 9th crash class found (s89);
+3rd straight "armed TMEM-zero, a newer crash preempted it" outcome,
+10th crash class found, batched entry-log instruments for the 9th and
+10th classes (s90).**
 AVAILABLE CRAFT reachable. **s75:** single Start → hangar-flight.
 **s78–s79:** RDP-`fs` plateaus post-leave (S1). **s80:** synthetic FIRE continues.
 **s81:** black = mode-3 presenting wild last-drawn. **s82:** always-on sane-width
@@ -332,7 +360,18 @@ a red herring (already guarded before reaching `uploadTexture`). Found a
 (`funcs_11.c:13665`, via `menuOverlayInit`), likely an unchecked `MEM_W`
 deref off a corrupt `a0` — same signature as the shared-corruption-race
 family. Leave key closed. Origin still cannot name
-scenes. Full detail PORTING-STATE s68–s89;
+scenes. **s90:** re-ran the same soak shape a 3rd time with the flag
+armed; TMEM-zero still 0/4, and a **10th** crash preempted it again:
+SIGBUS in `static_5_800B4048` (unconfirmed name), called from the known
+`updateHangarBayScene` → `runHangarSelectionFrame` →
+`runHangarMenuFromOverlay` → `menuOverlayInit` chain — same
+unchecked-`MEM_W`-off-an-arg shape. `[anim-recurse]`/`thr-resume` controls
+held again. Landed batched entry-log instruments for the 9th
+(`ROGUESQ_LOG_ANIM_TEX_STREAM=1`) and 10th
+(`ROGUESQ_LOG_HANGAR_ENTRY=1`) crash sites, built clean, not yet soaked.
+Per rule 8, demoted "catch TMEM-zero with the flag armed" from primary
+plan to opportunistic after 3 non-discriminating attempts.
+Full detail PORTING-STATE s68–s90;
 `scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
@@ -362,110 +401,134 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s89)
+## Next steps, in order of expected value (s90)
 
-1. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert (now
-   has a real backtrace, s89).** Path confirmed: `fullSyncFramebufferPairTiles`
-   → `uploadTile` lambda → `TextureManager::uploadTexture` (`rt64_state.cpp:1329`)
-   → `queueGPUUploadTMEM` (`rt64_rdp_tmem.cpp:84` → `rt64_texture_cache.cpp:1285`).
-   The "undefined tile" logging (`rt64_state.cpp:550`) is a **ruled-out**
-   red herring — that path already returns via `callTile.valid` before
-   `uploadTexture` is called (`rt64_state.cpp:1210`), so the zero must
-   come from a *valid* tile's `sampleWidth`/`sampleHeight`. The dormant
-   `ROGUESQ_LOG_TMEM_ZERO=1` log (`rt64_rdp_tmem.cpp:63`) has now gone
-   0/0 across **3** soaks with the flag armed or not (s87, animcb2 no
-   flag, animcb3 with flag) — the assert and the logging flag have not
-   yet coincided in the same run. Next: keep `ROGUESQ_LOG_TMEM_ZERO=1`
-   armed on every soak until it does; the log prints the full `LoadTile`
-   (uls/ult/lrs/lrt/masks/etc.) which discriminates "legitimate
-   degenerate LOADTILE" from "corrupted state" per the code comment.
-2. **M3 — characterize the new 9th crash class, SIGBUS in
-   `updateAnimatedTextureStreaming` (s89).** Real function,
-   `N64Recomp/RecompiledFuncs/funcs_11.c:13665`, called via
-   `menuOverlayInit` → `static_5_800C6854` → `static_5_800AAD9C` →
-   `static_5_800ADB70`. Crash offset (+92 native bytes) falls among the
-   function's first `MEM_W` reads off `ctx->r16` (`= a0`, set from
-   `ctx->r18`/`$s2` at the call site, `funcs_11.c:14518`) — `MEM_W` is
-   an unchecked raw pointer cast (`recomp.h:95`), so a corrupted `a0`
-   is a direct wild dereference. Add an entry-log instrument (same
-   pattern as `ROGUESQ_LOG_ANIM_CB`, in `N64Recomp/fixup_game_funcs.py`)
-   logging `ctx->r4` (a0) at this function's entry to see whether the
-   pointer looks garbage-valued before the crash, or points into
-   plausible struct memory (favoring "valid pointer, corrupted target"
-   over "corrupted pointer itself").
-3. **M3 — retry the shared-corruption-race test (s85 hypothesis, s86
+1. **M3 — run the batched-instrument soak now that it's built (s90 landed
+   both instruments, not yet run).** `N64Recomp/fixup_game_funcs.py` now
+   also patches `ROGUESQ_LOG_ANIM_TEX_STREAM=1` (9th crash class,
+   `updateAnimatedTextureStreaming`, logs `a0` at entry) and
+   `ROGUESQ_LOG_HANGAR_ENTRY=1` (10th class, `static_5_800B4048`, logs
+   `a0`/`a1` at entry) — both built clean into the current binary.
+   Command: `env ROGUESQ_LOG_ANIM_CB=1 ROGUESQ_LOG_TMEM_ZERO=1
+   ROGUESQ_LOG_ANIM_TEX_STREAM=1 ROGUESQ_LOG_HANGAR_ENTRY=1
+   PROBE_MODE=start_only HOLD_S=30 zsh
+   scratch/s73_post_a_scene/run_mission_keys.sh animcb5 0 12` (batch
+   everything live in one soak per ITERATION.md's own instrumentation
+   rule, rather than one flag at a time — the last 3 soaks each armed a
+   different single flag and each time a *different* crash preempted the
+   target, so batching maximizes the odds this soak's crash is one we
+   can already read). Discriminator: whichever of the 4 armed logs fires
+   right before the crash tells you which crash class recurred and
+   whether its argument pointer looks garbage-valued or plausible.
+2. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert.**
+   Path confirmed: `fullSyncFramebufferPairTiles` → `uploadTile` lambda
+   → `TextureManager::uploadTexture` (`rt64_state.cpp:1329`) →
+   `queueGPUUploadTMEM` (`rt64_rdp_tmem.cpp:84` →
+   `rt64_texture_cache.cpp:1285`). The dormant `ROGUESQ_LOG_TMEM_ZERO=1`
+   log (`rt64_rdp_tmem.cpp:63`) has now gone **0/4** across soaks with
+   the flag armed or not (s87, animcb2 no flag, animcb3, animcb4) — 3
+   consecutive *armed* attempts were each preempted by a different,
+   newer crash before reaching this one. Per rule 8, demoted from
+   "dedicated soak" to "keep it armed opportunistically" (folded into
+   item 1's batch) rather than a standalone experiment.
+3. **M3 — characterize the 10th crash class, SIGBUS in
+   `static_5_800B4048` (s90).** No confirmed source name (a
+   `main_overlay.txt` comment guesses "updateTextOverlayLookupEntry",
+   unverified — absent from the built `.c`). Called from
+   `updateHangarBayScene` (0x800AB658) → `runHangarSelectionFrame`
+   (0x800AAD9C) → `runHangarMenuFromOverlay` (0x800C6854) →
+   `menuOverlayInit`. Source (`N64Recomp/RecompiledFuncs/funcs_41.c:577-782`)
+   shows it dereferences its `a1` argument 4× via unchecked `MEM_W` at
+   fixed offsets (0x10/0x14) before calling `findLookupEntryByKey`/
+   `setLookupEntryField5ByKey`. Entry-log instrument
+   (`ROGUESQ_LOG_HANGAR_ENTRY=1`) already landed and built — folded into
+   item 1's batched soak.
+4. **M3 — retry the shared-corruption-race test (s85 hypothesis, s86
    instrumentation already in place).** `[rom-read]` thread-identity
    fields exist but no soak since s86 has seen `do_rom_read` corrupt
-   again (0/1 in s86, s88, s89 — `ROGUESQ_LOG_ROM_READ` wasn't armed in
-   s89 either; confirm the env var name before the next attempt). Needs
-   a soak where `do_rom_read` actually corrupts (as it did 2/2 in s85)
-   to check whether the logged thread id/ctx match a nearby
-   `[thr-resume]`/`[ost-wb]` event. This hypothesis now has **3 candidate
-   dereference sites** (`do_rom_read` physical_addr, s85;
-   `updateAnimatedTextureStreaming` a0, s89; and arguably the OSThread
-   UAF family itself) all sharing the same "corrupted register → raw
-   unchecked deref" shape — worth stepping back to ask whether the
-   common thread is upstream of any single site (e.g. a shared context-
-   swap path) rather than instrumenting each site individually forever.
-4. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89).** 3
+   again (0/1 in s86, s88, s89, s90 — **s90 found why**: the actual gate
+   is `ROGUESQ_LOG_DMA`, not `ROGUESQ_LOG_ROM_READ` as every prior
+   session assumed — `lib/N64ModernRuntime/librecomp/src/pi.cpp:72` —
+   so animcb2-4 never armed it at all. Use `ROGUESQ_LOG_DMA=1` in the
+   next batched soak). This hypothesis now has **4 candidate dereference
+   sites**
+   (`do_rom_read` physical_addr, s85; `updateAnimatedTextureStreaming`
+   a0, s89; `static_5_800B4048` a1, s90; the OSThread UAF family) all
+   sharing the same "corrupted register → raw unchecked deref" shape —
+   worth stepping back to ask whether the common thread is upstream of
+   any single site (e.g. a shared context-swap path) rather than
+   instrumenting each site individually forever. The crash inventory
+   growing by one nearly every soak (7→8→9→10 across s86-s90) is itself
+   evidence for "one shared, increasingly-early-firing race" over "10
+   independent unrelated bugs," but not yet proven — still single-source
+   per site.
+5. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89).** 3
    consecutive non-recurrences since s88 landed the correct instrument
    (s88, animcb2, animcb3) against 8 total crashing soaks since s83. Do
    not spend a dedicated soak chasing this further; if it recurs
    incidentally during a soak run for a different reason, the
    `ROGUESQ_LOG_ANIM_CB=1` instrument is still live and ready to read.
-5. **M3 — check the Metal-shader-compiler SIGSEGV's reproducibility** (s83
+6. **M3 — check the Metal-shader-compiler SIGSEGV's reproducibility** (s83
    spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no
    source on our side). Still only one data point.
-6. **M3 — confirm the s83 spline div0 guard actually engages.** 0/5 fires
-   so far (still 0 after s88/s89); real fix by code inspection (genuine
+7. **M3 — confirm the s83 spline div0 guard actually engages.** 0/5 fires
+   so far (still 0 after s88/s89/s90); real fix by code inspection (genuine
    0/0 IEEE division) but no same-run positive control yet.
-7. **M3 — characterize `frameStartReset` SIGBUS if it recurs.** Demoted
-   from "dominant blocker" after s85: 0 recurrences in s86–s89 (4 soaks).
+8. **M3 — characterize `frameStartReset` SIGBUS if it recurs.** Demoted
+   from "dominant blocker" after s85: 0 recurrences in s86–s90 (5 soaks).
    Only worth dedicated attention again if it reappears; do not gate it
    speculatively without a faulting instruction (no existing detector,
    unlike thr-resume).
-8. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once items 1–3 are clear:
+9. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once items 1–4 are clear:
    `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40; document phase timeline.
-   Gate already keeps black off; residual S1 `fs` freeze (~3769–3861 plateau,
-   s82/s85/s88/s89) may still stall animation — if stick marks show no pose
-   change on a frozen frame, next is S1 FULL_SYNC for hangar-flight tasks
-   (not leave-key, not wild-FB).
-9. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
+   Gate already keeps black off; residual S1 `fs` freeze (~3769–3872 plateau,
+   s82/s85/s88/s89/s90) may still stall animation — if stick marks show no
+   pose change on a frozen frame, next is S1 FULL_SYNC for hangar-flight
+   tasks (not leave-key, not wild-FB).
+10. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` 3→0.
    Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
-10. Past the first sustained mission hold: expect further new failure classes (mission overlay
+11. Past the first sustained mission hold: expect further new failure classes (mission overlay
    DMA → missing-func / UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture
    corruption). Each new failure is its own work unit.
-11. **Doc housekeeping — `CURRENT-TRUTH.md` well over the ~35 KB CLAUDE.md guideline
+12. **Doc housekeeping — `CURRENT-TRUTH.md` well over the ~35 KB CLAUDE.md guideline
    — thread exhausted (s55–s58).** Prefer M3 mission-content work over reopening this section.
-12. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
+13. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
    carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user
    before committing there.
-13. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
-14. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+14. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
+15. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
-Done this session (s89): reran the s88 soak shape twice (`animcb2`,
-`animcb3`) per NEXT.md's plan to catch the s87 `advancePlayerAnimationPhase`
-SIGBUS with the instrument live. Neither soak reproduced it — 3rd
-consecutive non-recurrence since s88 — so per ITERATION.md rule 8 the
-hypothesis is now **parked** rather than spending a 4th soak on it.
-Both soaks crashed on other things, which turned out to be the more
-valuable result: `animcb2` hit the s86 TMEM-zero assert
-(`queueGPUUploadTMEM`) and produced its **first-ever full backtrace**,
-letting the "undefined tile" logging be ruled out as a red herring
-(already guarded upstream) and pinning the exact call path
-(`fullSyncFramebufferPairTiles` → `uploadTile` → `uploadTexture` →
-`queueGPUUploadTMEM`). Piggybacking `ROGUESQ_LOG_TMEM_ZERO=1` onto
-`animcb3` (as NEXT.md suggested) still didn't fire the log, because
-`animcb3` crashed on a **9th, brand-new** class instead: SIGBUS in
-`updateAnimatedTextureStreaming` (`funcs_11.c:13665`, real function),
-read down to an unchecked raw `MEM_W` dereference off a possibly-
-corrupted `a0` — the same "corrupted register → raw deref" shape as
-s85's `do_rom_read` bug. Crash inventory grows to 9 sites; still only 2
-(spline NaN, thr-resume `bad=1`) have an actual code fix. `[anim-recurse]`
-`sp` stayed flat through both new crashes (same 2 of 6 known values),
-consistent with s88 but uninformative for the parked hypothesis since
-neither crash was in that function's call chain.
+Done this session (s90): ran NEXT.md's prescribed soak (`animcb4`,
+`ROGUESQ_LOG_ANIM_CB=1 ROGUESQ_LOG_TMEM_ZERO=1 PROBE_MODE=start_only
+HOLD_S=30`) to try to catch the TMEM-zero assert with the log armed.
+It still didn't fire (0/4 across s87/animcb2/animcb3/animcb4) — a
+**different, newer crash preempted it for the 3rd soak in a row** with
+the flag armed (s87, animcb3, animcb4), a pattern strong enough that
+per rule 8 this specific experiment shape (dedicated soak to catch
+TMEM-zero) is now demoted to "keep the flag armed opportunistically,"
+not a standalone plan. The preempting crash was a **10th, brand-new**
+class: SIGBUS in `static_5_800B4048` (no confirmed source name),
+called from the known `updateHangarBayScene` → `runHangarSelectionFrame`
+→ `runHangarMenuFromOverlay` → `menuOverlayInit` chain — read the
+source (`funcs_41.c:577-782`) down to an unchecked raw `MEM_W` deref
+off its `a1` argument (4 separate dereferences at fixed offsets), the
+same shape as every other crash in this family. `[anim-recurse]` fired
+3610/3610 (control good, `sp` still the same 6 known values);
+`thr-resume bad_total=0` again (3rd/4th support for the U3 gate).
+Rather than run a 4th single-flag soak, spent the rest of the session
+landing **batched** entry-log instruments (per ITERATION.md's own
+"batch instrumentation" rule) for the two most recent uninstrumented
+sites — `ROGUESQ_LOG_ANIM_TEX_STREAM=1` (9th class,
+`updateAnimatedTextureStreaming`, still uninstrumented since s89
+despite being planned) and `ROGUESQ_LOG_HANGAR_ENTRY=1` (10th class,
+today's) — both in `N64Recomp/fixup_game_funcs.py` following the
+`_anim_cb_patch` pattern, verified landed via `grep`, rebuilt clean
+(exit 0). **Not yet soaked** — that's the next iteration's job, with
+all 4+ diagnostic flags armed at once so whichever crash fires next is
+more likely to already have a live instrument reading it. Crash
+inventory grows to 10 sites; still only 2 (spline NaN, thr-resume
+`bad=1`) have an actual code fix.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
