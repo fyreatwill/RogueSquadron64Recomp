@@ -8167,3 +8167,131 @@ the regex-collision fix; N64Recomp sibling checkout, untracked in its own
 git per every prior session's note). Log:
 `scratch/s73_post_a_scene/s100_composenpc_guard1/run.log` (clean 0/544
 negative control, died to new 17th class inside `updateHangarBayScene`).
+
+## Session 101 (2026-07-27) — landed and soaked the 11th crash class's guard (`projectModelBoundsToScreen`); clean negative control, and for the first time since s94 the process survived the entire hangar-tick-family gauntlet and reached the ~140s DMA window alive — `ROGUESQ_LOG_DMA_CALLER` fired for the first time ever (0/0 across 7 prior soaks, s95–s100), closing the multi-session "who calls `submitDmaRequestBatch` indirectly" question: it's `musyxSynthFrame`, called from `viRetraceHandlerThread`. `do_rom_read` recurred a 6th time (byte-identical corruption pattern) immediately after, now with the producer identified
+
+Source-read `projectModelBoundsToScreen` (`0x80065E98`,
+`N64Recomp/RecompiledFuncs/funcs_15.c:4928-5626`) before writing anything,
+per NEXT.md's explicit instruction. Confirmed this crash is a **different
+shape** from the 12th/16th class's "byte-from-a-fixed-table-then-deref"
+signature — there is no lookup table here at all. The function receives
+its model-bounds struct pointer directly as arg `a0` (copied to
+`s6`/`ctx->r22` at the very top, `0x80065EA0: addu $s6, $a0, $zero`) and
+dereferences it directly and repeatedly through the body (`MEM_W(ctx->r22,
+0x24)` at `0x80066038` and again at `0x800660C4`), and also passes
+`s6+0x2c` as `a0` into the `mat3x4Multiply` callee only four instructions
+after `s6` is set (`0x80065EA4`) — so a corrupt `a0` could crash either
+inside this function's own body or inside `mat3x4Multiply` before this
+function has any chance to check anything. This matches the shape s89
+used to describe the 9th (`updateAnimatedTextureStreaming`, unchecked
+`a0`) and 10th (`static_5_800B4048`, unchecked `a1`) classes — "unchecked
+pointer arg dereferenced directly" — and this function is reached through
+the identical per-frame hangar-selection call chain
+(`hangarTickCameraOrbit` → `static_5_800A9270` → `runHangarSelectionFrame`
+→ ...) that produces those two, so treated as the same family rather than
+a "bad fit for a guard" requiring the `reserveAndEmitDLEntry` fallback.
+
+Landed the guard immediately after `s6`/`ctx->r22` is set, before its
+first use — earlier in the function than either prior guard, since here
+the risk is the raw arg pointer rather than a computed table-lookup
+result. Same template as s99/s100: `uint32_t r22_lo = U32(ctx->r22);`
+checked against `[0x80000000, 0x80800000)`, and on failure `goto`s the
+function's own real epilogue, confirmed by reading to the closing brace —
+`L_80066204` (`funcs_15.c:5592`, reloads `$ra`/`s0-s7`/`f20`/`f22`/`f24`
+unconditionally and pops `$sp` by `0xF0`). New always-on flag:
+`ROGUESQ_LOG_PROJECT_MODEL_BOUNDS_GUARD=1`. Confirmed both regex anchors
+(`0x80065EA0` entry and `L_80066204` epilogue) are unique to `funcs_15.c`
+across the whole `RecompiledFuncs/` tree via grep before trusting them
+(s100's lesson) — no collision this time, but file-scoped the
+substitution anyway (`p.name == "funcs_15.c"`) as a belt-and-suspenders
+habit for any future copy of this patch. `fixup_game_funcs.py` reported
+`patched x1` in exactly `funcs_15.c`, no others.
+
+Build (`cmake --build ... -j8`) exit 0, no new warnings (my own guard's
+`fprintf` casts every value through `U32()` first, matching the existing
+family convention, so no `%08X`-vs-`gpr` format warning). Ran the soak
+NEXT.md specified (`s101_projectbounds_guard1`, `PROBE_MODE=start_only
+HOLD_S=30`, full family instrument set armed, `run.log` in
+`scratch/s73_post_a_scene/s101_projectbounds_guard1/`): phase-1024 at
+44.6s, phase-512/war-room at 73.8s, full key schedule, craft stable,
+Start probe, hold window completed all 12 stable + 12 hold snaps —
+**the first soak since before s95 to survive the entire hangar-tick
+gauntlet without a new or recurring 9th–18th-class crash intervening.**
+`[project-model-bounds-guard]` **0/0** — clean negative control (no
+false-positive firing), but like s99/s100 no positive control either:
+the function's own dereferences never saw a bad pointer this run. Every
+other family control held: `[anim-recurse]` 3806/3806, `[dlentry-
+reserveAndEmit]` 24044, `[anim-tex-stream]` 6083, `[hangar-entry]` 3
+(fired, no crash inside that callee), `[tmem-zero]` 0 (12th soak in a
+row, still opportunistic-only), `[anim-keyframe-guard]` 0/0,
+`[compose-npc-orient-guard]` 0/0 (both s99/s100 guards still clean),
+`thr-resume bad_total` unobserved directly this run (no `[thr-resume]`
+verbose logging armed by design, matching s93's confound-avoidance rule —
+the skip-gate itself stayed active, just unlogged).
+
+**At 144.9s (`vi_width=640`, `update_screen #8694`), the process moved
+into the DMA-adjacent window and, for the first time in this
+instrument's history, `ROGUESQ_LOG_DMA_CALLER` actually fired:**
+
+```
+[dma-ring-caller] resolved 0x8000569C, native backtrace (8 frames):
+0   rs64_log_dma_ring_caller
+1   get_function
+2   musyxSynthFrame + 6668
+3   viRetraceHandlerThread + 5000
+4   run_thread_function
+5-7 (libc++ thread trampoline frames)
+```
+
+This closes the question CURRENT-TRUTH's item 1 has carried since s93/s94
+("an indirect call to `submitDmaRequestBatch` exists somewhere, not yet
+located") and that `ROGUESQ_LOG_DMA_CALLER` (landed s95) had gone **0/0
+across 7 consecutive soaks** (s95, s96, s97, and four more between s98-
+s100 per the family-control lines) because every prior soak died to a
+hangar-tick-family crash before ever reaching the ~140s mark. **The
+indirect caller is `musyxSynthFrame`** — a per-VI-retrace audio-synthesis
+tick, called from `viRetraceHandlerThread`, **not** the mission/DL code
+path anyone had been assuming. Immediately after this, the DMA ring
+producer log fired 9 times (n=1–n=9, matching s94's exact pattern:
+climbing-then-jittering `dramAddr` from `0x80195190` to `0x80197590`,
+every `devAddr` decoding as ASCII text — `"lgfr"`, `"wing"`, `"lcre"`,
+`"lglr"`, `"witg"`, `"lgqr"`, `"lgrr"`, `"wiyg"`, `"wizg"`), then
+`[dma-ring-consumer]` read `n=2`'s exact fields and `do_rom_read`
+recurred a **6th** time (`phys=0x1C676672 dram=0x80195190 bytes=0x600`,
+byte-identical to s85/s91/s93/s94's occurrences), crashing with SIGSEGV
+(signal 11) in `do_rom_read` via `osPiStartDma_recomp` ← `piDmaWorker`.
+**New, narrower hypothesis for next session**: the ASCII-decoding
+`devAddr` values look like overlapping fragments of sample/instrument
+name strings, not addresses — consistent with s94's "off-by-a-field bug
+in the caller, writing a name/string-table field where `devAddr`
+belongs" framing, now with a named, source-readable caller
+(`musyxSynthFrame`) instead of an unknown one. Do not assume this is the
+never-called MusyX RSP audio ucode M5 describes — `musyxSynthFrame`
+appears to be a distinct, actively-running HLE/native audio-tick
+function; that relationship is unconfirmed and worth clarifying before
+building on it.
+
+**Assessment:** best single-session outcome in this arc since s94. The
+guard itself lands the same way s99/s100's did (clean negative control,
+no positive control, kept as an unproven-but-harmless defensive fix) —
+but the real payoff is that clearing the 11th class (plus s99/s100's 16th
+and 12th) apparently removed enough of the hangar-tick crash family's
+"any one of ~9 classes could win the race" noise that a single soak
+finally ran long enough to answer M3's other open question. One data
+point only — do not conclude the hangar-tick family is closed off (no
+9th-18th class fired this run, but that could be this run's luck, not a
+proven trend) — but this is the first time in 7 attempts the DMA window
+was even reached, so it is at minimum a strong existence proof that
+landing these guards is the right lever for reaching that window
+reliably, not just a side quest.
+
+### Files
+
+Code: `N64Recomp/fixup_game_funcs.py` (new
+`ROGUESQ_LOG_PROJECT_MODEL_BOUNDS_GUARD` guard on
+`projectModelBoundsToScreen`, file-scoped to `funcs_15.c`; N64Recomp
+sibling checkout, untracked in its own git per every prior session's
+note). Log:
+`scratch/s73_post_a_scene/s101_projectbounds_guard1/run.log` (clean 0/0
+negative control on the new guard; first-ever `dma-ring-caller` fire
+naming `musyxSynthFrame`; 6th `do_rom_read` recurrence).

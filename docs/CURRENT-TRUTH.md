@@ -572,275 +572,136 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s100)
+## Next steps, in order of expected value (s101)
 
+-1. **M3 — source-read `musyxSynthFrame`'s indirect call to
+   `submitDmaRequestBatch` and fix the field-mapping bug.** s101 closed
+   the 7-session-old "who calls it indirectly" question (see item 1,
+   below, now marked CLOSED): the caller is `musyxSynthFrame`
+   (`N64Recomp/RecompiledFuncs/funcs_24.c:3095`), reached from
+   `viRetraceHandlerThread` (a per-VI-retrace audio tick, **not** the
+   mission/DL code path every prior session assumed). The exact call
+   site is `funcs_24.c:3856-3875`: `a0 = MEM_W(G_BASE - 0x68D8)`,
+   `a1 = MEM_HU(G_BASE - 0x68DC)` (a flag/count checked non-zero to even
+   take this branch), `a2 = G_BASE - 0x68D0` (an address, not a value),
+   target function pointer `v1 = MEM_W(G_BASE - 0x6624)` where
+   `G_BASE = 0x8015<<16`. Next step: read `submitDmaRequestBatch`'s own
+   signature (`funcs_1.c`, found s93) to map which of a0-a2 becomes
+   `devAddr`, and read what actually lives at `G_BASE-0x68D8` at
+   runtime — the s94/s101 `dma-ring-producer` logs show `devAddr`
+   decoding as overlapping ASCII fragments of what look like
+   sample/instrument name strings ("lgfr", "wing", "lcre", …), which
+   points at a wrong-field-read (reading a name-table entry where a
+   numeric address/offset belongs) rather than memory corruption or a
+   race — this should be source-fixable once confirmed, unlike every
+   earlier framing of this bug (shared-corruption race, consumer
+   desync, external RDRAM stomp — all already refuted, see item 1).
+   **Discriminating check**: log the actual value at `G_BASE-0x68D8`
+   (and its neighbors ±4/±8 bytes) from inside `musyxSynthFrame` right
+   before the call, alongside what `ROGUESQ_LOG_DMA_RING` already
+   shows came out the other end as `devAddr` — if a nearby field (e.g.
+   a name pointer one struct member over) matches the corrupted
+   `devAddr` bit-for-bit, that confirms the wrong-offset hypothesis and
+   names the exact fix (adjust the offset/field used to build the
+   request). Full detail: PORTING-STATE s101.
 0. **M3 — land the same guard-not-instrument treatment on the next
-   most-recurring characterized class: 11th (`projectModelBoundsToScreen`,
-   1 occurrence, s92) or 14th (`reserveAndEmitDLEntry`, 1 occurrence,
-   s98), per s99/s100's own precedent.** s100 landed and validated the
-   `composeNpcOrientationMatrix` guard (12th class) — source-read
-   confirmed the same unguarded-table-lookup-then-deref shape first (a
-   byte from a fixed table scaled by a 632-byte stride into a fixed
-   global array, dereferenced immediately as `v1`/`ctx->r3`), guarded
-   right after `v1` is computed, `goto`s the function's real epilogue
-   `L_800AB618`. Soak: 0/544 fires — a clean negative control, but no
-   positive control (`composeNpcOrientationMatrix` itself never crashed
-   this run). Every other family control held (`anim-recurse` 3294,
-   `dlentry-reserveAndEmit` 18832, `anim-tex-stream` 4292, `hangar-entry`
-   2, `tmem-zero` 0/11 soaks, `anim-keyframe-guard` 0/0, `thr-resume
-   bad_total=0`). Process died at hold-iter 1 (earliest yet) to a **new,
-   17th** crash: fault address resolves directly inside
-   `updateHangarBayScene` itself (`static_5_800AB658`), not the
-   already-catalogued 10th class (whose signature innermost frame,
-   `static_5_800B4048`, is absent from this backtrace — checked
-   carefully because the outer three frames are identical to s90's 10th-
-   class trace, but s90's had 6 frames and this one has 5). Per NEXT.md's
-   own outcome-2 branch, catalogued and not chased this session —
-   `updateHangarBayScene` (`N64Recomp/RecompiledFuncs/funcs_40.c:7117-
-   13921`, ~6800 lines, "indexes per-bay tables by gHangarCurrentBay" per
-   `main_overlay.txt`) is plausibly the same unguarded-lookup family, but
-   **not yet source-read** — that is next session's job if this class
-   recurs, not this one's.
-   **s100 also caught a regex false positive worth generalizing**: the
-   guard's anchor text (matched on raw instruction comments, not
-   function-scoped) also matched inside `hangarInitialize`, an unrelated
-   function in a *different* overlay that happens to share the same
-   guest address range (overlays reuse virtual addresses) — including
-   the same `L_800AB618` label name, so the `goto` would have compiled
-   and silently corrupted a working function. **Any future guard patch
-   in `fixup_game_funcs.py` must check its own `patched xN` report for
-   more than one file matching**; if it does, that's a bug to find before
-   trusting the build, not a bonus. Fixed here by scoping the substitution
-   to the one file the target function is actually defined in
-   (`p.name == "funcs_40.c"`).
-   **Critical lesson from s99, still applies to every future guard in
-   this family**: guest registers (`ctx->rN`) are `gpr` = `uint64_t`
-   (`recomp.h:84`), and `MEM_W` returns a *signed* `int32_t` — assigning
-   a real guest pointer (top bit set) sign-extends it to
-   `0xFFFFFFFF800xxxxx` on the 64-bit register. **Never compare a raw
-   `ctx->rN` value against 32-bit literal bounds** — always truncate
-   through `U32()` first (`uint32_t lo = U32(ctx->rN);` then compare
-   `lo`). Verify any new guard's fire rate looks like a rare-case control
-   (near-zero), not "fires on every call," before trusting a
-   0-fires-and-still-crashed result.
-   Outcomes: (a) the new guard fires and the process survives further —
-   real progress, re-open item 1 below immediately; (b) the guard never
-   fires and a different crash preempts it — if it's an already-
-   catalogued class (recurrence), do not spend a 2nd soak on this exact
-   site, pick whichever of {11th, 14th} you didn't just try; if it's a
-   genuinely new (18th+) class, catalog it and still move on rather than
-   chasing it; (c) build/regen failure — debug before soaking. **Do not
-   re-soak `composeNpcOrientationMatrix` or `activateAnimationKeyframe`**
-   — both guards are landed and validated (clean negative controls),
-   treat them as closed.
-1. **M3 — find the indirect caller of `submitDmaRequestBatch`.**
-   **Discriminating question CLOSED (s94)**: the producer/consumer ring
-   instrument (`ROGUESQ_LOG_DMA_RING=1`, landed in
-   `N64Recomp/fixup_game_funcs.py`) ran once and answered it —
-   the producer log fired **10 times in one soak**, not once: `n=0` is
-   the known boot call (matches exactly), then ~140s later **9 more
-   firings** back-to-back with climbing `dramAddr`
-   (`0x80195190`→`0x80197590`) but every `devAddr` decoding as ASCII
-   text ("wing", "lcre", "lgfr", …), never a plausible ROM address.
-   The very next entry (`n=1`'s fields exactly) is what the consumer
-   reads and crashes on — **do_rom_read recurred a 5th time**,
-   byte-identical again. A fresh grep for `submitDmaRequestBatch(rdram`
-   across all 45 `funcs_*.c` still returns exactly 1 hit (the boot
-   call), and the loop body has no yield points (can't stall 140s
-   mid-iteration) — **do not re-run this grep or re-derive this,
-   it's done twice now (s93, s94)**. This rules out "the boot call
-   loops more than once" and lands on **NEXT.md's own "producer fires
-   >1 time" branch**: an indirect call (`LOOKUP_FUNC`/`jalr`) to
-   `submitDmaRequestBatch` (guest `0x8000569C`) exists somewhere in the
-   game and has not been located. **Do NOT plan to "dump the
-   `OSIoMesg` at `mb`"** (refuted s92) and **do NOT cite `ra=0` as
-   corruption evidence** (refuted s92, routine on 487+ calls). **Do
-   NOT re-open "is it a consumer index-desync bug" or "is it an
-   external RDRAM stomp"** — s94 already shows the bad value present
-   at write-time inside the *producer's own log*, ruling both of those
-   out; the bug is upstream of the ring, in whoever calls
-   `submitDmaRequestBatch` indirectly.
-   **s95: instrument landed at the `get_function` chokepoint (not a
-   call-site grep); first soak inconclusive, not refuted.** Confirmed
-   via the codegen template (`N64Recomp/src/cgenerator.cpp`) and a
-   fresh count (28388/28389 `LOOKUP_FUNC(` sites) that **every**
-   indirect call in the recompiled program routes through
-   `get_function` (`lib/N64ModernRuntime/librecomp/src/overlays.cpp:397`)
-   immediately before invoking its result, and that the known boot-time
-   call is compiled as a direct (literal-named) call that never touches
-   it — so an instrument there fires only for a genuine unlocated
-   indirect caller, with no extra filtering needed. `ROGUESQ_LOG_DMA_
-   CALLER=1` takes a native `backtrace()` inside `get_function` when the
-   resolved address is `0x8000569C` (get_function's own frame sits
-   directly under the calling generated function, naming the caller
-   without needing `ctx` — deliberately did **not** widen
-   `get_function`'s signature to thread `ctx` through, since that
-   signature is a shared ABI with the mods system and the
-   live-recompiler JIT and changing it would ripple into both). Built
-   clean, `submodule-patches/export.sh` run, committed. **One soak
-   (`s95_dmacaller1`): 0/0 fires** — not a null result on the question;
-   the process died at hold+~5s to an unrelated crash (see 1c below)
-   well before the ~140s mark where the phenomenon occurs in every
-   prior soak that reached it. Do not treat this as evidence against
-   the indirect-caller hypothesis. **Concrete next instrument, still
-   armed and ready**: re-run the same repro with `ROGUESQ_LOG_DMA_
-   CALLER=1` (combine with `ROGUESQ_LOG_DMA_RING=1`/`ROGUESQ_LOG_DMA=1`
-   as a same-run positive control — the boot-call `n=0` producer entry
-   should always fire first). Once the caller is found, read its
-   source: the bug is almost certainly a wrong field offset or wrong
-   array stride when it builds the request array it hands to
-   `submitDmaRequestBatch` (a name/label field landing where `devAddr`
-   is expected), which should be fixable at the source level once the
-   caller is identified — this is now closer to a real fix than any
-   prior session's framing.
-   **s96: 2nd consecutive inconclusive attempt.** Re-ran the identical
-   s95 repro, no rebuild. `composeNpcOrientationMatrix` did **not**
-   recur (still only 1 recent occurrence, s95); instead a **brand-new
-   13th crash class** killed the process even earlier (hold+~3s vs
-   s95's ~5s), again before the ~140s DMA window —
-   `ROGUESQ_LOG_DMA_CALLER` **0/0 again**, `dma-ring-producer` only the
-   n=0 boot call, `do_rom_read` clean (488/488 sane). Checked and
-   **refuted same-session** (no soak needed) a plausible confound:
-   `ROGUESQ_LOG_DMA_CALLER`'s check inside `get_function` is a single
-   `int32_t` compare before any `getenv` (which is itself cached), so
-   it is not adding meaningful per-call overhead to the hot chokepoint
-   — the two early deaths are ordinary variance among the 9th–13th
-   hangar-tick crash family, not an instrumentation artifact. Per rule
-   8, one more identical retry is allowed before parking; if it also
-   dies early to an unrelated crash, stop retrying blind and instead
-   instrument whichever of classes 9–13 has recurred most.
-   **s97: 3rd (final allowed) identical retry — parked.** Died even
-   earlier (hold+~7s) to a **brand-new 14th class** (see item 1e
-   below), `ROGUESQ_LOG_DMA_CALLER` 0/0 a 3rd time. Per rule 8 this
-   closes the 3-attempt budget for this exact blind repro — **do not
-   re-run the plain DMA-caller repro again**; the instrument stays
-   armed opportunistically only. Pivoted per this item's own
-   outcome-3 branch: tallied the 9th–12th family's occurrences (9th=1,
-   10th=1, 11th=1, 12th=2), landed `ROGUESQ_LOG_COMPOSE_NPC=1` on the
-   12th class (`composeNpcOrientationMatrix`, most frequent) and
-   re-soaked. Got a clean **597/597 positive control** with no crash
-   on that path (evidence against, not proof against — see item 1c) —
-   but the process died to yet **another brand-new class, 15th** (see
-   item 1f), later than any DMA-caller-only attempt (hold+~14s) but
-   still before the ~140s window. Two soaks, two first-time crashes,
-   zero recurrence of anything previously catalogued — do not treat
-   either new class as informative about the DMA-caller hypothesis
-   itself. Full detail: PORTING-STATE s97.
-   **s98: instrumented the 14th class (`reserveAndEmitDLEntry`) per
-   s97's own plan — clean 19428/19428 positive control, no crash on
-   that path, but the process died to a brand-new **16th class**
-   (`activateAnimationKeyframe`, source-characterized: unguarded
-   table-lookup-then-deref, `table[arg_r4 & 0xFFFF]` then `+0x30`
-   deref with no null/range check — same shape as the rest of the
-   family) at hold+~5s. 4th consecutive session ending this way.
-   Checked existing timing data (no new soak needed): the DMA-adjacent
-   `do_rom_read` crash consistently lands hold+11-15s while this
-   family's one-offs land hold+3-17s — the two windows **overlap, they
-   are not sequential**, so outrunning the family with a shorter hold
-   (a literal reading of this item's own outcome-2 branch) is not
-   coherent. **Next session: land a defensive guard at the
-   characterized site instead of another one-off instrument** —
-   mirrors s83/s84's successful gates. Full detail: PORTING-STATE s98.**
-   **s99: landed and validated the 16th class's guard**
-   (`activateAnimationKeyframe`) — `goto`s the function's real exit
-   label (`L_80061F18`) rather than a bare `return;`, since the function
-   spills callee-saved registers and the guest `$sp` to its own stack
-   frame and a naive early return would corrupt the caller's register
-   state and leak a 40-byte guest-stack drift on every fire. First build
-   had a real self-found bug (guard compared the 64-bit sign-extended
-   `gpr` register against 32-bit literal bounds, so it fired on
-   30333/30333 calls — 100% false positive, effectively disabling the
-   function every call); fixed by truncating through `U32()` first.
-   Corrected soak: guard's own control now reads 0/0 (a real, working
-   negative control), but the process died to a **recurrence of the
-   already-catalogued 15th class** (RT64-internal `loadDrawState`
-   assert, s97) at hold+~5s, not a new 17th class. Per this item's own
-   outcome-2 branch, next is the same guard treatment for
-   `composeNpcOrientationMatrix` (12th class, 2 occurrences: s74, s95).
-   Full detail: PORTING-STATE s99.**
-   1a. **Confound theory CONFIRMED and CLOSED (s93).** s92's attempt to
-   drop `ROGUESQ_LOG_THREAD_RESUME=1` from the repro never actually
-   took effect — `scratch/s73_post_a_scene/run_mission_keys.sh` line 8
-   hardcoded the export unconditionally, silently overriding the `env
-   ROGUESQ_LOG_THREAD_RESUME=0` prefix. Fixed (now defaults, doesn't
-   force); the very next soak with the flag genuinely off reproduced
-   `do_rom_read` immediately (hold+13s). Do not re-open this question;
-   the script is fixed, use `ROGUESQ_LOG_THREAD_RESUME=0` when the log
-   volume isn't specifically needed.
-   1b. **M3 — characterize the 11th crash class (s92): SIGBUS in
-   `projectModelBoundsToScreen`** (confirmed real symbol, `0x80065E98`),
-   via `hangarTickCameraOrbit` (`static_5_800ADB70`) ← a
-   symbol_files-named-but-semantically-suspect `loadCutsceneAssetsByIndex`
-   (`static_5_800A9270`) ← `runHangarSelectionFrame` →
-   `runHangarMenuFromOverlay` → `menuOverlayInit` — same hangar-tick
-   family as the 9th/10th classes. Not yet instrumented; no dedicated
-   soak needed yet, fold into whichever soak runs next and read the
-   crash log for it. Did not recur in s93 (do_rom_read won the race
-   instead, as expected with the confound removed).
-   1c. **M3 — 12th crash class: SIGBUS in `composeNpcOrientationMatrix`**
-   (`static_5_800AB1C8`, confirmed real symbol via `symbol_files/
-   main_overlay.txt`), via `runHangarSelectionFrame` (`static_5_800AAD9C`)
-   ← `runHangarMenuFromOverlay` (`static_5_800C6854`) ← `menuOverlayInit`
-   — same hangar-tick family as the 9th/10th/11th classes. Recurred s95
-   (hold+~5s, killed the run before the DMA-caller instrument's target
-   window). Not actually new to this session — one prior, uncatalogued
-   occurrence exists at s74 (`keys1` run, before the s78/s82/s84
-   stability gates landed), never folded into the numbered list because
-   it didn't recur in the many soaks between s74 and s95. `thr-resume
-   bad_total=0` both times it's been seen — rules out the s72 OSThread-
-   UAF family specifically. **s97: instrumented** (`ROGUESQ_LOG_
-   COMPOSE_NPC=1` on `static_5_800AB1C8`, `N64Recomp/
-   fixup_game_funcs.py`) after tallying as the family's most-frequent
-   member. One soak: **597/597 fires (clean positive control)**, stable
-   unremarkable arg values (`arg_r4=0x00000000`, `arg_r5=0x80165E60`,
-   `ra=0x00000000`, the last routine per s92) right up to an unrelated
-   crash — **no recurrence of composeNpcOrientationMatrix's own SIGBUS
-   this soak**, evidence against it being the dominant blocker but not
-   strong enough alone to retire the class (recurred s74, s95; clean
-   s92, s93, s97 — now 2-for-5 across sessions that reached this
-   window). Instrument stays armed and ready.
-   1d. **M3 — 13th crash class (s96): SIGABRT, `Assertion failed:
-   ("Unimplemented reinterpretation logic." && ...)` in
-   `RT64::FramebufferManager::reinterpretTileRecord`
-   (`rt64_framebuffer_manager.cpp:480`)**, via `recordOperations` ←
-   `State::fullSync`'s per-pair lambda ← `fullSync` ← `GBI_RDP::fullSync`
-   ← `Interpreter::processRDPLists` ← the normal RDP-submission chain —
-   **not** the hangar-tick family (9th–13th... wait, this one is the
-   RDP/framebuffer-reinterpretation path, distinct from the
-   `MEM_W`-off-an-arg shape classes 9–12 share). RT64-internal code (no
-   source-level bug on our side, same class as the s86 TMEM-zero
-   assert) hitting a format-reinterpretation case the upstream author
-   never implemented. First occurrence, hold+~3s, killed the run before
-   the DMA-caller instrument's target window. No field values logged at
-   the assert site. Not yet instrumented; no dedicated soak needed
-   unless it recurs, per the same 2nd-recurrence convention as 1b/1c.
-   1e. **M3 — 14th crash class (s97): SIGBUS in
-   `reserveAndEmitDLEntry`**, via `submitSceneNodeRender` ←
-   `processSceneNode` ← `traverseSceneGraphRecursive` (recurses once)
-   ← `setupCameraMatrices` ← the known `runHangarSelectionFrame` →
-   `runHangarMenuFromOverlay` → `menuOverlayInit` chain — same
-   hangar-tick family as 9th–12th, different leaf (scene-graph
-   traversal / DL-entry reservation, not a bare `MEM_W`-off-an-arg
-   deref). First occurrence, hold+~7s, killed the run before the
-   DMA-caller instrument's target window. Promoted to item 0 above
-   (guest-side, fixable, recommended next work unit) rather than
-   waiting for a 2nd recurrence, given how many different crashes are
-   now contending for this window.
-   1f. **M3 — 15th crash class (s97): SIGABRT, RT64-internal assert in
-   `loadDrawState`** (`rt64_state.cpp:747`, `"Sample size calculation
-   can only result in non-zero values"` on `dstCallTile.sampleWidth/
-   sampleHeight`), via `RT64::RDP::drawTris` ← `GBI_RDP::decodeTriangles`
-   ← `GBI_RDP::tri` ← `Interpreter::processRDPLists` ← the normal
-   RDP-submission chain — same shape as the 13th class (RT64-internal,
-   no source-level bug on our side), a *different* call path than the
-   still-dormant `queueGPUUploadTMEM` zero-size check (item 2) despite
-   the rhyming "zero sample size" symptom. Three `[rt64] loadDrawState:
-   copy-mode draw with undefined tile 7, marking invalid` lines
-   immediately precede the assert — per s89, treat as a red herring
-   (already guarded before this site) unless a future session shows
-   otherwise. First occurrence, hold+~14s. Not instrumentable in a
-   useful way (RT64-internal, no source on our side); park until 2nd
-   recurrence, same convention as 1b–1e.
+   most-recurring characterized, still-unguarded class: 14th
+   (`reserveAndEmitDLEntry`, 1 occurrence, s98) or the 17th
+   (`updateHangarBayScene` itself, s100 — not yet source-read).** Three
+   guards landed and validated so far, all with the same outcome shape
+   (clean negative control, no positive control yet, `U32()`-truncated
+   bounds check, `goto` to the function's real epilogue — never a bare
+   `return;`): 16th (`activateAnimationKeyframe`, s99), 12th
+   (`composeNpcOrientationMatrix`, s100), 11th
+   (`projectModelBoundsToScreen`, s101). **Do not re-soak any of these
+   three** — treat them as closed. **Every guard patch must verify its
+   own `fixup_game_funcs.py` "patched xN" report names only the one
+   expected file** (s100 caught a real cross-overlay regex collision
+   this way — overlays reuse guest address ranges, so an
+   instruction-text-only anchor is not automatically unique). s101's
+   soak (the first to survive the whole hangar-tick gauntlet and reach
+   the ~140s DMA window, see item -1) is one data point suggesting these
+   three guards may already be enough to reach that window reliably —
+   not proven, but if the next soak also reaches ~140s alive, that
+   hypothesis strengthens and chasing the remaining unguarded classes
+   (9th, 10th, 13th–15th, 17th) drops in priority relative to item -1.
+   Full detail: PORTING-STATE s99-s101.
+1. **M3 — find the indirect caller of `submitDmaRequestBatch`: CLOSED
+   (s101).** The producer/consumer ring instrument (s94) proved an
+   unlocated indirect call existed (producer log fires 10x/soak once
+   the run reaches ~140s, not just the known boot call, every firing
+   after `n=0` carrying `devAddr` that decodes as ASCII text —
+   "wing"/"lcre"/"lgfr"/… — never a plausible ROM address). The
+   `get_function`-chokepoint backtrace instrument (`ROGUESQ_LOG_DMA_
+   CALLER=1`, landed s95) then went **0/0 for 7 consecutive soaks**
+   (s95–s100) because every one of those soaks died to a hangar-tick-
+   family crash before ever reaching that window — see the crash
+   catalog below, and item 0's guard work that eventually cleared
+   enough of that family for a soak to survive through it. **s101's
+   soak was the first to reach ~140s alive, and the instrument fired
+   immediately**: the caller is `musyxSynthFrame`
+   (`N64Recomp/RecompiledFuncs/funcs_24.c:3095`, a per-VI-retrace audio
+   tick), called from `viRetraceHandlerThread` — not the mission/DL
+   code path every earlier session assumed. Confirmed real regressions
+   this question already ruled out and must **not** be reopened:
+   the `ra=0x00000000` "corruption signature" (refuted s92 — routine on
+   487+ calls across four unrelated call sites), "dump the `OSIoMesg`
+   at `mb`" (refuted s92 — `mb` is never dereferenced), "consumer index
+   desync" and "external RDRAM stomp" (both refuted s94 — the bad value
+   is present at write-time inside the producer's own log), and "the
+   boot call loops more than once" (refuted s93/s94 — exactly 1
+   `submitDmaRequestBatch(rdram` call site exists in all 45
+   `funcs_*.c`, no yield points in its loop body). **Next step is item
+   -1 above**: source-read `musyxSynthFrame`'s call site
+   (`funcs_24.c:3856-3875`) and `submitDmaRequestBatch`'s own signature
+   to find the field-mapping bug. Full detail: PORTING-STATE s93-s101.
+
+   **Crash catalog** (family = reached via the hangar-tick per-frame
+   chain `runHangarSelectionFrame` → `runHangarMenuFromOverlay` →
+   `menuOverlayInit` unless noted; "guarded" = landed + soaked with a
+   clean negative control, treat as closed, do not re-soak):
+   - 9th, `updateAnimatedTextureStreaming` (`funcs_11.c:13665`, s89):
+     unguarded `MEM_W` off `a0`. 1 occurrence, not recurred since.
+     Not guarded yet.
+   - 10th, `static_5_800B4048` (unconfirmed name, s90): unguarded
+     `MEM_W` off `a1` (4 fixed-offset derefs). 1 occurrence. Not
+     guarded yet.
+   - 11th, `projectModelBoundsToScreen` (`0x80065E98`, s92): direct
+     deref of arg `a0` (no table lookup, different shape from 12th/16th
+     — see PORTING-STATE s101). **Guarded s101**
+     (`ROGUESQ_LOG_PROJECT_MODEL_BOUNDS_GUARD`), 0/0 clean negative
+     control, no positive control yet.
+   - 12th, `composeNpcOrientationMatrix` (`static_5_800AB1C8`, s74 +
+     s95): unguarded table-byte-lookup-then-deref (632-byte stride into
+     a fixed global array). 2 occurrences. **Guarded s100**
+     (`ROGUESQ_LOG_COMPOSE_NPC_GUARD`), 0/544 clean negative control.
+   - 13th, RT64-internal assert in
+     `FramebufferManager::reinterpretTileRecord`
+     (`rt64_framebuffer_manager.cpp:480`, s96) — RDP-submission path,
+     not the hangar-tick family. No source-level fix available. 1
+     occurrence, park until 2nd recurrence.
+   - 14th, `reserveAndEmitDLEntry` (s97/s98): scene-graph-traversal /
+     DL-entry shape, not a bare `MEM_W`-off-an-arg deref — flagged as
+     possibly needing different treatment than the table-lookup family.
+     1 occurrence. Not guarded yet (candidate for item 0).
+   - 15th, RT64-internal assert in `loadDrawState`
+     (`rt64_state.cpp:747`, s97) — RDP-submission path, no source-level
+     fix available. Recurred once (s99). Park; track recurrence only.
+   - 16th, `activateAnimationKeyframe` (s98): unguarded table-byte-
+     lookup-then-deref, same shape as 12th. **Guarded s99**
+     (`ROGUESQ_LOG_ANIM_KEYFRAME_GUARD`), 0/0 clean negative control.
+   - 17th, fault inside `updateHangarBayScene` itself (`static_5_
+     800AB658`, s100) — outer call chain matches the 10th class but the
+     backtrace is one frame shallower (no `static_5_800B4048` frame),
+     confirmed a distinct class. 1 occurrence. Not source-read yet;
+     candidate for item 0 if it recurs.
+   Also worth remembering: s93's `ROGUESQ_LOG_THREAD_RESUME` confound
+   (a repro script was hardcoding the flag on, silently defeating a
+   "turn it off" plan) is fixed at the source
+   (`scratch/s73_post_a_scene/run_mission_keys.sh` now defaults, doesn't
+   force) — do not re-diagnose this if a future soak looks like it's
+   carrying unwanted log volume, just check the `env` prefix took
+   effect.
 2. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert.**
    Path confirmed: `fullSyncFramebufferPairTiles` → `uploadTile` lambda
    → `TextureManager::uploadTexture` (`rt64_state.cpp:1329`) →

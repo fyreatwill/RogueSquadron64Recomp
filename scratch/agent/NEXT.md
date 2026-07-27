@@ -1,168 +1,135 @@
-# NEXT work unit — M3: guard `projectModelBoundsToScreen` (11th crash class, s101)
+# NEXT work unit — M3: find and fix the `musyxSynthFrame` DMA field bug (s102)
 
-s100 landed and validated the `composeNpcOrientationMatrix` guard (12th
-class) — clean negative control (0/544 fires), no evidence the guard is
-wrong — but the process died to a **new, 17th** crash inside
-`updateHangarBayScene` itself before the guard's fire rate could be
-tested against a real bad case. Read PORTING-STATE.md's Session 100
-entry before doing anything else; this file only has the actionable
-summary.
+s101 closed the 7-session-old "who calls `submitDmaRequestBatch`
+indirectly" question: it's `musyxSynthFrame` (a per-VI-retrace audio
+tick), called from `viRetraceHandlerThread`. It also landed and validated
+the 11th crash class's guard (`projectModelBoundsToScreen`, clean 0/0
+negative control). Read PORTING-STATE.md's Session 101 entry before doing
+anything else; this file only has the actionable summary.
 
 ## The work unit
 
-Per CURRENT-TRUTH.md's own outcome-(b) branch (guard landed cleanly, a
-different crash preempted it — move to the next-most-recurring
-characterized class): guard **`projectModelBoundsToScreen`** (11th
-crash class, 1 occurrence: s92), same guard-not-instrument treatment as
-s99 gave the 16th class and s100 gave the 12th.
+Source-read `musyxSynthFrame`'s indirect call and `submitDmaRequestBatch`'s
+signature to find the exact field-mapping bug, then fix it at the source
+(N64Recomp/fixup_game_funcs.py), guest-side.
 
-1. **Source-read the crash mechanism first — this has NOT been done
-   yet.** s92 only captured a backtrace and confirmed the real symbol
-   name (`0x80065E98`, `N64Recomp/RecompiledFuncs/funcs_15.c:4928`); the
-   actual crash line inside the function body has never been read. Read
-   the function and confirm it has the same "unguarded pointer from a
-   table lookup / arg" shape as the rest of this family (12th, 16th, and
-   probably the new 17th) before writing a guard. **If it turns out to
-   be a different shape** — e.g. the way s98 found `reserveAndEmitDLEntry`
-   (14th class) was actually a scene-graph-traversal/display-list-entry
-   issue, not a `MEM_W`-off-an-arg deref — characterize first, guard
-   second, exactly as s98 did. If `projectModelBoundsToScreen` turns out
-   to be a bad fit for a guard, fall back to `reserveAndEmitDLEntry`
-   (14th class, `N64Recomp/RecompiledFuncs/funcs_3.c`, entry-log
-   instrument `ROGUESQ_LOG_DLENTRY=1` already armed and gave a clean
-   positive control at s98) instead — but characterize its actual shape
-   first too, it is explicitly flagged as possibly different from the
-   table-lookup family.
-2. Guard the confirmed crash site in `N64Recomp/fixup_game_funcs.py`,
-   following the `_compose_npc_orient_guard_patch` template (freshest,
-   most-annotated example — search for that function name). Three
-   things to get right, all learned the hard way in s99/s100:
-   - **ABI safety**: find the function's own real exit label (the
-     epilogue that restores callee-saved registers / pops `$sp`) and
-     `goto` there instead of a bare `return;` — do not assume `return;`
-     is safe without checking the prologue first.
-   - **64-bit sign-extension**: guest registers (`ctx->rN`) are `gpr` =
-     `uint64_t` (`recomp.h:84`); `MEM_W` returns a signed `int32_t`.
-     **Always truncate through `U32()` first**
-     (`uint32_t lo = U32(ctx->rN);` then compare `lo` against
-     `0x80000000u`/`0x80800000u`). Skipping this gave s99's guard a
-     30333/30333 false-positive rate before it was caught same-session.
-   - **File-scope the regex anchor.** s100 found that an instruction-
-     text-only regex anchor (no function-boundary check) can match
-     inside a *different* function in a *different* overlay that
-     happens to share the same guest address range and coincidentally
-     contains the identical instruction sequence — `fixup_game_funcs.py`
-     reported `patched x1` in **two** files for the s100 guard before
-     the bug was caught (`funcs_27.c`'s `hangarInitialize`, an unrelated
-     working function, would have silently gotten a broken `goto`).
-     **After running the fixup script, check the `patched xN` report
-     names exactly the one file the target function is defined in** —
-     if it reports more than one file, that's a bug to find (scope the
-     substitution with `if p.name == "the_right_file.c":`), not a bonus.
-3. `python3 /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-   — verify the new patch reports `patched x1` in exactly the expected
-   file, no others.
-4. If `fixup_game_funcs.py` reports patching a *stale* `RecompiledFuncs/`
-   (e.g. a leftover buggy patch from a prior attempt this session), you
-   must regenerate fresh first: `zsh -c "cd ~/Documents/Tools/rogue_squadron64 && python3 tools/make_elf.py"`
-   then `zsh -c "cd ~/Documents/Tools/N64Recomp && ./build/N64Recomp rogue_squadron.toml"`,
-   THEN re-run `fixup_game_funcs.py`. Otherwise (pristine `RecompiledFuncs/`
-   still on disk from the last regen) the fixup script alone is enough.
-5. Rebuild: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build -j 8` — exit clean (only the pre-existing-class format/sign warnings).
-6. Soak with the full flag set plus every family instrument (all free,
-   keep them all armed — add whatever new `ROGUESQ_LOG_*` flag the new
-   guard defines):
+1. **Read `submitDmaRequestBatch`'s own body first** — its address is
+   guest `0x8000569C`; find it in `N64Recomp/RecompiledFuncs/` (grep for
+   `0x8000569C:` in the file `funcs_1.c`, per s93's discovery of the ring
+   producer). Confirm which of its arguments (`a0`-`a3`) maps to the
+   `devAddr` field the ring-producer log already prints (`ROGUESQ_LOG_
+   DMA_RING`'s `[dma-ring-producer]` line, `dma-ring-producer` fprintf
+   site in `fixup_game_funcs.py`) — this tells you which register at the
+   call site is the one carrying garbage.
+2. **Read the call site**: `N64Recomp/RecompiledFuncs/funcs_24.c:3856-
+   3875`, inside `musyxSynthFrame` (starts at `funcs_24.c:3095`). As of
+   s101 this is known to set up (all relative to `G_BASE = 0x8015<<16`):
+   `a0 = MEM_W(G_BASE - 0x68D8)`, `a1 = MEM_HU(G_BASE - 0x68DC)` (a
+   flag/count gating whether this branch even runs), `a2 = G_BASE -
+   0x68D0` (an address, not a loaded value), target function pointer
+   `v1 = MEM_W(G_BASE - 0x6624)`. Cross-reference against step 1's answer
+   to see which of a0/a1/a2 is supposed to be `devAddr` and what it
+   actually contains.
+3. **Discriminating instrument** (batch instrument everything in one
+   build/run per ITERATION.md's rule): add a log at the `musyxSynthFrame`
+   call site (new `ROGUESQ_LOG_MUSYX_DMA_CALL=1` flag, same pattern as
+   every prior guard/log in `fixup_game_funcs.py`) that prints the raw
+   values of whichever registers map to a0-a2 right before the call,
+   **plus** the values at a few neighboring offsets of whichever global
+   struct `G_BASE-0x68D8`/`-0x68D0` live in (±4/±8 bytes) — if a
+   neighboring field (e.g. a sample/instrument name-table pointer)
+   matches the corrupted `devAddr` the ring-producer log shows
+   bit-for-bit, that names the exact wrong-offset bug. The existing
+   `[dma-ring-producer]` log already prints the corrupted value on the
+   other end of the same call in the same run — no need to guess, just
+   compare the two logs from one soak.
+4. **If a wrong-offset/wrong-field bug is confirmed**: the fix is
+   guest-side, in `N64Recomp/fixup_game_funcs.py` (a hand-patch
+   correcting the offset used to load the value that becomes `devAddr`,
+   or correcting which struct member gets passed as the DMA-batch
+   argument) — follow the same "patch text anchored on the exact
+   instruction, file-scoped, verify `patched x1` in exactly the expected
+   file" discipline as every guard patch this session and last (s99-101).
+   **If the mechanism turns out NOT to be a simple wrong-offset read**
+   (e.g. it's a genuine race between two threads touching the same
+   global, or a legitimately variable value that's supposed to be
+   interpreted differently) — characterize that instead of forcing a fix
+   that doesn't match the evidence; a correct root-cause writeup is a
+   valid outcome even without a fix landed this session.
+5. Regen order if any `RecompiledFuncs/*.c` changes are needed beyond the
+   fixup script (unlikely — this should be a `fixup_game_funcs.py`-only
+   change like every guard so far): `make_elf.py` → `N64Recomp` →
+   `fixup_game_funcs.py` → `cmake --build`. If only editing
+   `fixup_game_funcs.py`, re-running it alone against the existing
+   `RecompiledFuncs/` is enough (same as every guard session).
+6. Rebuild: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build -j 8` — exit clean (only the pre-existing-class format/sign warnings).
+7. Soak with the full flag set plus every family instrument (all free,
+   keep them all armed) plus the new `ROGUESQ_LOG_MUSYX_DMA_CALL=1`:
    ```
    env ROGUESQ_LOG_ANIM_CB=1 ROGUESQ_LOG_TMEM_ZERO=1 \
        ROGUESQ_LOG_ANIM_TEX_STREAM=1 ROGUESQ_LOG_HANGAR_ENTRY=1 \
        ROGUESQ_LOG_COMPOSE_NPC=1 ROGUESQ_LOG_DLENTRY=1 \
        ROGUESQ_LOG_ANIM_KEYFRAME_GUARD=1 ROGUESQ_LOG_COMPOSE_NPC_GUARD=1 \
-       ROGUESQ_LOG_<NEW_GUARD_FLAG>=1 \
+       ROGUESQ_LOG_PROJECT_MODEL_BOUNDS_GUARD=1 \
+       ROGUESQ_LOG_MUSYX_DMA_CALL=1 \
        ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_DMA_RING=1 ROGUESQ_LOG_DMA_CALLER=1 \
        ROGUESQ_LOG_THREAD_RESUME=0 \
        PROBE_MODE=start_only HOLD_S=30 zsh \
-       /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/s73_post_a_scene/run_mission_keys.sh s101_<name>_guard1 0 12
+       /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/s73_post_a_scene/run_mission_keys.sh s102_<name> 0 12
    ```
-   Run in the **background**; wait for the actual game PID (`pgrep -f
-   './RogueSquadron64Recomp'` or check the PID the wrapper script prints,
-   e.g. `pid 96755` in its own stdout) to exit — **s100 wasted a full
-   wait cycle by polling `pgrep -f "build/RogueSquadron64Recomp"`, which
-   never matches because the binary is launched as `./RogueSquadron64Recomp`
-   from inside `build/`, not with a `build/` prefix in its argv0/cmdline**.
-   Prefer waiting on the specific PID printed by the wrapper script
-   (`kill -0 $PID` in a loop) or grep for `RogueSquadron64Recomp$` without
-   a path prefix. Do not declare an outcome before the process has
-   genuinely exited and `run.log` / the wrapper's own stdout summary
-   block (`--- summary ---` ... `--- done ---`) has been read.
+   Run in the **background**; wait for the PID the wrapper script prints
+   (or `pgrep -fl 'RogueSquadron64Recomp$'`, never `pgrep -f
+   "build/RogueSquadron64Recomp"` — s100's lesson, the binary's argv0 has
+   no `build/` prefix) to exit before reading `run.log`.
 
 ## Outcomes
 
-1. **Guard fires (at a plausible, non-universal rate) and the process
-   survives further** — real progress. If it reaches the ~140s DMA
-   window, immediately check `ROGUESQ_LOG_DMA_CALLER` and
-   `do_rom_read`/`pi-start-dma` per M3's original open question
-   (CURRENT-TRUTH item 1) — all instruments are already armed in the
-   same soak, no rebuild needed.
-2. **Guard never fires, a different crash preempts it.** Read the new
-   backtrace carefully before concluding anything — s100 initially
-   suspected a recurrence of the 10th class from the outer three frames
-   matching, but the *depth* of the backtrace (5 frames vs. the 10th
-   class's 6) proved it was actually a new, 17th class. Check whether
-   the innermost frame matches an already-known leaf site exactly
-   (function name AND presence/absence of the expected deeper frame),
-   not just the outer call chain. If it's a genuine recurrence of an
-   already-catalogued class (9-17, or the RT64-internal 13th/15th),
-   that's a cleaner signal — do not spend a 2nd soak on this exact site,
-   move to whichever of {`projectModelBoundsToScreen`,
-   `reserveAndEmitDLEntry`} you didn't just try. If it's an genuinely new
-   (18th+) class, catalog it (name, address, backtrace, call chain) and
-   still move on rather than chasing it — this family has never
-   rewarded a same-site retry, per rule 8.
-3. **Guard fires but the process still dies the same way** — the bounds
-   check is wrong (too permissive, or the `U32()` truncation was
-   skipped) or the skip path has a side effect that breaks something
-   downstream. Read the new backtrace; it will tell you which.
+1. **Confirmed wrong-offset/wrong-field bug, guard/fix lands, `do_rom_read`
+   does not recur (or recurs with a now-sane `devAddr`)** — this would be
+   the first real fix (not just a defensive guard) to the do_rom_read
+   family; M3's DMA-adjacent blocker may be resolved. Re-run the soak once
+   more to confirm before declaring it closed (two soaks, not one, given
+   how many sessions this bug has resisted).
+2. **The corrupted value doesn't match any neighboring field** — the bug
+   is more subtle than a wrong-offset read (maybe a genuine cross-thread
+   race on this specific global, given `musyxSynthFrame` runs on the VI
+   retrace thread while other threads also touch shared state). Write up
+   what was ruled out and what the remaining hypothesis is; do not force
+   a guess-and-check fix without evidence.
+3. **A hangar-tick-family crash (9th, 10th, 13th-15th, 17th — see
+   CURRENT-TRUTH's crash catalog under item 1) preempts the soak before
+   it reaches the ~140s window again** — if it's a recurrence, that's a
+   useful data point (the 11th/12th/16th guards may not be sufficient
+   alone); if it's an 18th+ new class, catalog it and pick whichever of
+   the still-unguarded classes (14th `reserveAndEmitDLEntry`, 17th
+   `updateHangarBayScene`) to guard next, per item 0's own guidance,
+   rather than re-attempting this exact repro a 2nd time in the same
+   session (rule 8).
 
 ## Do not
 
-- Do not re-soak `composeNpcOrientationMatrix` or
-  `activateAnimationKeyframe` — both guards are landed and validated
-  (clean negative controls, s99/s100). Leave both
-  `ROGUESQ_LOG_ANIM_KEYFRAME_GUARD=1` and
-  `ROGUESQ_LOG_COMPOSE_NPC_GUARD=1` armed in every soak going forward
-  (they're free) but treat both as closed, not targets.
-- Do not skip the source-read step before guarding — confirm the crash
-  shape matches the table-lookup-then-deref family before copy-pasting
-  the guard pattern. If it's a different shape (like the 14th class may
-  be), characterize first.
-- Do not compare a raw `ctx->rN` (`gpr`/`uint64_t`) value against
-  32-bit literal bounds — always truncate through `U32()` first.
-- Do not assume a bare `return;` is ABI-safe inside a guard without
-  first checking whether the function spills callee-saved registers /
-  adjusts `$sp` in its prologue.
-- Do not trust a `fixup_game_funcs.py` "patched xN" report without
-  checking which file(s) it patched — s100 found a real regex collision
-  across overlays; verify it's exactly the one expected file.
-- Do not plan around "shorten the hold to reach the DMA window before
-  the crash family" — refuted s98, the windows overlap.
-- Do not re-run the plain DMA-caller repro as a dedicated work unit
-  (3/3 attempts spent s95-s97, parked).
+- Do not re-soak `activateAnimationKeyframe`, `composeNpcOrientationMatrix`,
+  or `projectModelBoundsToScreen` — all three guards are landed and
+  validated (clean negative controls, s99-s101). Leave their
+  `ROGUESQ_LOG_*_GUARD` flags armed in every soak going forward but treat
+  them as closed.
+- Do not re-run the plain "blind DMA-caller repro with no source read"
+  — that question is closed (s101). Any future soak toward this bug
+  should carry the new `ROGUESQ_LOG_MUSYX_DMA_CALL` instrument, not just
+  `ROGUESQ_LOG_DMA_CALLER`.
+- Do not cite `ra=0x00000000` as corruption evidence (refuted s92,
+  reconfirmed every session since).
 - Do not re-grep for `submitDmaRequestBatch(rdram`, ring literal
   constants, or `LOOKUP_FUNC(` call-site counts (done, stable, s93-s95).
-- Do not cite `ra=0x00000000` as corruption evidence (refuted s92,
-  routine on 487+ calls, reconfirmed every session since).
-- Do not spend a soak trying to characterize the 13th or 15th crash
-  classes (RT64-internal asserts, no fix available on our side) — track
-  recurrence only.
-- Do not poll for the game process with `pgrep -f "build/RogueSquadron64Recomp"`
-  — it never matches (the binary is launched as `./RogueSquadron64Recomp`
-  with no `build/` prefix in argv0). Use the PID the wrapper script
-  prints, or `pgrep -f 'RogueSquadron64Recomp$'`.
-- Do not invoke the N64Recomp binary or `make_elf.py` by a bare/relative
-  path from an unapproved cwd. Use `zsh -c "..."` wrapping or
-  `python3 ...` (matches `Bash(python3:*)`); `cmake --build /abs/path -j 8`
-  (no leading `cd`) matches `Bash(cmake:*)` directly.
+- Do not assume `musyxSynthFrame` is part of the "never-called" MusyX RSP
+  audio ucode M5 describes — it appears to be a distinct, actively-running
+  HLE/native audio-tick function reached via `viRetraceHandlerThread`;
+  that relationship to M5's audio ucode is unconfirmed, don't build on it
+  either way without checking.
+- Do not compare a raw `ctx->rN` (`gpr`/`uint64_t`) value against 32-bit
+  literal bounds in any new guard — always truncate through `U32()` first.
+- Do not trust a `fixup_game_funcs.py` "patched xN" report without
+  checking which file(s) it patched.
 - `N64Recomp/fixup_game_funcs.py` is untracked in N64Recomp's own git,
-  by design (every session since s95) — do not attempt to commit it
-  there; the durable record lives in `PORTING-STATE.md`/`CURRENT-TRUTH.md`
-  in this repo.
+  by design — do not attempt to commit it there; the durable record lives
+  in `PORTING-STATE.md`/`CURRENT-TRUTH.md` in this repo.
