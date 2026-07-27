@@ -33,6 +33,13 @@ if [ "$PROMPT_FILE" = "--describe" ]; then
   exit 0
 fi
 
+# Small-context runners get the context budget appended to the iteration
+# prompt. Claude's window (1M) swallows this repo's 390 KB ledger; grok's does
+# not - measured s64, 105k tokens in 3 calls, then a silent cancel.
+prompt_with_budget() {
+  cat "$PROMPT_FILE" tools/agent/CONTEXT-BUDGET.md
+}
+
 case "$RUNNER" in
   claude)
     exec claude -p "$(cat "$PROMPT_FILE")" \
@@ -48,7 +55,7 @@ case "$RUNNER" in
     # An explicit turn bound. NOTE: this was NOT the cause of the early
     # "Cancelled" iterations - raising it changed nothing; the Stop hook was
     # (see stop_gate.sh). Kept as a real safety bound on a runaway iteration.
-    exec grok --single "$(cat "$PROMPT_FILE")" \
+    exec grok --single "$(prompt_with_budget)" \
       ${RUNNER_MODEL:+-m "$RUNNER_MODEL"} \
       --max-turns "${RUNNER_MAX_TURNS:-200}" \
       --permission-mode acceptEdits \
@@ -62,7 +69,7 @@ case "$RUNNER" in
     # iteration build and commit. If captures that write OUTSIDE the repo
     # (screencapture to mktemp dirs) fail under it, raise RUNNER_SANDBOX
     # deliberately rather than reaching for --dangerously-bypass-*.
-    exec codex exec "$(cat "$PROMPT_FILE")" \
+    exec codex exec "$(prompt_with_budget)" \
       ${RUNNER_MODEL:+-m "$RUNNER_MODEL"} \
       -s "${RUNNER_SANDBOX:-workspace-write}" \
       -C "$PWD" 2>&1
