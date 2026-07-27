@@ -5808,3 +5808,60 @@ craft input, phase timeline. SIGBUS class closed under current LLE path.
 - `lib/rt64/src/hle/rt64_state.cpp` (instrument + always-on sane writeback gate)
 - `submodule-patches/rt64.patch` (exported)
 - `scratch/s71_sigbus_triage/run_soak.sh` (+ `writer1/`, `writer1_fix/`)
+
+## Session 73 (2026-07-27) — post-`a` is SELECT YOUR CRAFT, not sustained mission
+
+### Work unit
+Characterize post-SIGBUS "mission texture / black gap" (NEXT.md T1–T4). No rebuild;
+batch offline analysis of s72 soak `scratch/s71_sigbus_triage/writer1_fix/` (gate already in
+binary, grace=65s). Positive control same-run: thr-resume `bad_total=0` (122062), process
+alive full grace, exit=2=0, fs max=3621 climbing.
+
+### Grace timeline (visual + pixel stats)
+
+| t post-`a` | scene |
+|---|---|
+| 0–1 s | AVAILABLE CRAFT (holograms cleared after `a`) |
+| 2–6 s | pure black |
+| 7 s | capital-ship / space **flash** + heavy texture garbage |
+| 8–9 s | black / partial |
+| 10–65 s | **SELECT YOUR CRAFT** (X-wing hangar pad, orbit animates, multi-hue floor) |
+
+### Log census (independent of PNGs)
+
+- VI: after first 512 entry, origin only alternates `0x6AB400`/`0x656400` for the rest of the run
+  (no new phase on mission entry).
+- last-drawn: 1444× sane `0x656000`/`0x6AB000` w=512; **54 wild** (w∉{512,640}) only in the
+  transition cluster (#1818–#1898) then back to the pair.
+- present: 1437/1438 drawn from the sane pair; never presents a wild last-drawn address.
+- ost-wb SKIP WIDTH/OOB: 21 (gate holds). SIGBUS remains closed.
+
+### T1–T4
+
+| ID | Result |
+|----|--------|
+| T1 garbage CIMG drives present | **Refuted for sustained frames** — wild last-drawn transition-only; present stays on war-room pair |
+| T2 mission TMEM/upload failure | **Wrong phase** — sustained content is craft-select menu, not mission |
+| T3 wrong VI after mission entry | **Refuted** — still in menu FB pair because destination is menu; origin never left |
+| T4 black gap then recover | **Partial** — gap real; recover is SELECT YOUR CRAFT, not clean mission |
+
+### Scene-identity correction
+s70–s72 residual "mission texture garbage" applied mainly to the **g07 flash**. With process
+alive 65s (only possible after s72), stable destination matches s69's late grace: **SELECT YOUR
+CRAFT**. s70 H2 ("never stays on craft-select") was an artifact of dying at g07; s72/s73 refute
+that under survival.
+
+### Ruled out
+- Extending writeback gate to draw-skip of insane-width FBs as the fix for the sustained garbage
+  (present already ignores them).
+- Treating multi-hue floor on SELECT YOUR CRAFT as in-mission texture pipeline until a true
+  mission hold is reached.
+
+### Next
+From SELECT YOUR CRAFT, probe Start/`a` (and second press) phase-gated after craft-select is
+stable (~g12+), capture until mission or another menu. Separate: g07 flash if it reappears on
+true mission entry.
+
+### Files
+- `scratch/s73_post_a_scene/ANALYSIS.md` + key grace PNGs
+- reuses `scratch/s71_sigbus_triage/writer1_fix/`
