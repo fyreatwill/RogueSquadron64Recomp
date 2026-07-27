@@ -5533,3 +5533,67 @@ Static context for the next unit (not implemented this session):
 - `tools/fixup_factor5_ucode.py` (fixup 7)
 - regenerated `build/factor5_ucode/factor5_ucode_recompiled.c` (gitignored)
 - `scratch/s68_imem_site/run1/`, `scratch/s68_imem_site/run_death_repro.sh`
+
+## Session 69 (2026-07-26) — CLIP_1FBC → goto L_1650 reconnect; permanent ImemOverrun freeze gone
+
+### Work unit
+Reconnect CLIP_1FBC's `j L_1650` after fixup 6 has defined the resident
+`L_1650:` label (s68 attribution). One death-repro under default `-O2` with
+unsampled runner histogram + same-run positive control.
+
+### What was implemented
+- Fixup 8 in `tools/fixup_factor5_ucode.py`: after fixup 6/7, rewrite the
+  CLIP_1FBC hard-exit form
+  (`// goto L_1650 — out-of-IMEM…` + optional s68 note + `return ImemOverrun`)
+  to `rs64_note_imem_overrun("L_1650_enter"); goto L_1650;`. Marker
+  `/* fixup: L_1650 reconnect */`. Requires `L_1650:` already present.
+- Death-repro summary extended for `L_1650_enter`, clip-stray, ucode-restart,
+  fs max, exit-other.
+
+### Measurement (`scratch/s68_imem_site/run_reconnect/`, default `-O2`)
+Positive control: **`site=control` fired once** — instrument live.
+
+| metric | s68 run1 (baseline) | s69 reconnect |
+|--------|---------------------|---------------|
+| exit=2 (ImemOverrun) | **2090** | **0** |
+| exit=1 | 2975 | 4342 |
+| other exit | 0 | 0 |
+| fs plateau / max | **2152 frozen** | **3377 climbing** (last=max) |
+| L_1650 hard-exit note | 2090 (counter identity) | 0 |
+| L_1650_enter (rate-lim log) | — | 502 lines; atomic `#` to **46300** |
+| control | 1 | 1 |
+| clip-stray / ucode-restart / missing-func / Unhandled / crash | 0 | 0 |
+| last origin | 0x00656400 frozen | 0x006AB400 alternating with 0x00656400 |
+| last runner task | exit=2 syncs=0 | #4342 exit=1 syncs=1 tris≈447 texrect=77 |
+
+Phase path: 640→1024@44.6s → 512/0x6AB400@73.7s; schedule
+`3:start 25:start 40:start 60:a` + 25s grace completed, process still alive.
+
+Grace screenshots (frame hashes):
+- g01: AVAILABLE CRAFT; g02–g08 black (same ~5–8s black as s61);
+- g09: corrupted geometry (texture-garbage bands + X-wing silhouette);
+- g10–g25: **SELECT YOUR CRAFT** with X-wing — **18/24 consecutive frames DIFF**
+  (camera orbit continues; not a freezeframe).
+
+`0x00656400` (s62 freeze origin) first appears at update_screen #6720 with
+`fs=3295` and keeps presenting while **fs advances 3295→3372** — the prior
+freeze signature is absent.
+
+### Conclusion (two independent lines: exit=2 count 2090→0; fs no longer plateaus)
+**H1 wins.** Reconnecting `goto L_1650` after the label exists is the correct
+model for the permanent-boundary freeze: every former ImemOverrun path is now
+a completed `exit=1 syncs=1` task, and FULL_SYNC keeps advancing through the
+grace window. H2 (wrong setup / clip-stray / UnhandledJumpTarget) refuted
+(0 of each). H3 (second independent freeze cause that still plateaus `fs`)
+refuted for the ImemOverrun-class freeze; `fs` climbs continuously.
+
+**Not yet M3 done-when:** 60s of continuous *in-mission* rendering with craft
+response is still open. This run's late grace is animating craft-select, not a
+confirmed 60s mission soak — the ImemOverrun freeze mechanism is closed; the
+mission-entry / texture-corruption / stay-in-mission questions are the next
+surface.
+
+### Files
+- `tools/fixup_factor5_ucode.py` (fixup 8)
+- regenerated `build/factor5_ucode/factor5_ucode_recompiled.c` (gitignored)
+- `scratch/s68_imem_site/run_reconnect/`, updated `run_death_repro.sh`

@@ -12,11 +12,12 @@ fixups self-gate by detecting which file is being processed.
     target wraps RSP's 12-bit IMEM PC into the boot-resident ucode-self-reload
     trampoline (DMA the same ucode back into IMEM, `jr` to entry 0x1080).
     Modelling it as `return ImemOverrun` (the generic fixup-1 rule, written
-    s1/s2 under "never taken in practice") is what freezes mission geometry
-    from task ~#3141 on (s64). Instead: `goto RS64_UCODE_ENTRY` — skip the
-    redundant DMA (content is already resident and identical) and re-enter
-    this function's first real instruction. The L_1650 clip-splice site stays
-    under the generic hard-exit rule (different target, already explained).
+    s1/s2 under "never taken in practice") was the initial s64 freeze
+    suspect; s67 refuted it (live under NO_OPT, 0 fires). Instead: `goto
+    RS64_UCODE_ENTRY` — skip the redundant DMA and re-enter this function's
+    first real instruction. CLIP_1FBC's `j L_1650` is severed by fixup 1
+    (label not yet defined) and restored by fixup 8 after fixup 6 inserts
+    the resident L_1650: helper (s68 attribution, s69 reconnect).
 
 1b. Silence the boot ucode's expected `jr $7=0x1080` printf (boot file only).
     factor5_boot ends by DMA'ing the main ucode to IMEM[0x1080] then doing
@@ -886,6 +887,50 @@ if is_main_ucode and IMEM_NOTE_MARKER not in text:
     imem_note_applied = True
 
 # ---------------------------------------------------------------------------
+# Fixup 8: reconnect CLIP_1FBC → goto L_1650 (s69) — main ucode only
+# ---------------------------------------------------------------------------
+# s68: every exit=2 (ImemOverrun) is the fixup-1 hard exit at CLIP_1FBC's
+# `j L_1650`. The target label L_1650: is inserted by fixup 6 (clip-splice
+# resident helper, byte-identical to ovl4). Fixup 1 runs *before* that label
+# exists, so it rewrites the goto into ImemOverrun. This pass restores the
+# goto once the label is present. The host-stub note becomes a "path taken"
+# counter (site=L_1650_enter), not an error — positive control at entry
+# (site=control) still required in the same run.
+L1650_RECONNECT_MARKER = "/* fixup: L_1650 reconnect */"
+l1650_reconnect_applied = False
+if is_main_ucode and L1650_RECONNECT_MARKER not in text:
+    if not re.search(r"^L_1650:", text, flags=re.MULTILINE):
+        print(
+            "fixup_factor5_ucode: FIXUP 8 PRECONDITION FAILED: L_1650: label "
+            "missing (fixup 6 must define it before reconnect).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    # Match s68 instrumented hard-exit, or bare fixup-1 form if fixup 7 skipped.
+    l1650_hard = re.compile(
+        r"// goto L_1650 — out-of-IMEM target, never taken in practice;\n"
+        r"\n?"
+        r"(?:[ \t]*rs64_note_imem_overrun\(\"L_1650\"\);  /\* fixup: imem site note \*/\n)?"
+        r"([ \t]*)return RspExitReason::ImemOverrun;"
+    )
+    def l1650_reconnect_repl(m: re.Match) -> str:
+        ind = m.group(1)
+        return (
+            f"// j L_1650 (restored after label exists; s69)  {L1650_RECONNECT_MARKER}\n"
+            f"{ind}rs64_note_imem_overrun(\"L_1650_enter\");  /* fixup: imem site note */\n"
+            f"{ind}goto L_1650;"
+        )
+    text, n_reconnect = l1650_hard.subn(l1650_reconnect_repl, text, count=1)
+    if n_reconnect != 1:
+        print(
+            f"fixup_factor5_ucode: FIXUP 8 ANCHOR FAILED: expected 1 CLIP_1FBC "
+            f"L_1650 hard-exit site to reconnect, found {n_reconnect}.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    l1650_reconnect_applied = True
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:
@@ -915,5 +960,7 @@ if CLIP_MARKER in text and CLIP_MARKER not in original:
     notes.append("spliced real clip overlay (CLIP_* labels, id-4 routing)")
 if imem_note_applied:
     notes.append("ImemOverrun site notes (L_1650/epilogue/control)")
+if l1650_reconnect_applied:
+    notes.append("CLIP_1FBC → goto L_1650 reconnect (s69)")
 
 print(f"fixup_factor5_ucode: {path} — " + ("; ".join(notes) if notes else "updated"), file=sys.stderr)

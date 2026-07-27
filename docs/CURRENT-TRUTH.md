@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 68)
+## Current truth (as of session 69)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -68,8 +68,8 @@ Menu state machine (s48, three driven runs; extended s50): title —start→ SEL
 room / SELECT LEVEL —start→ **AVAILABLE CRAFT** (craft-select screen: X-wing hologram, "PRIMARY
 WEAPON: BLASTERS" / "DEFENSE: SHIELD", two alternate-craft thumbnails; footer keeps "AMBUSH AT MOS
 EISLEY / PRESS [A] FOR LEVEL DESCRIPTION"). Renders correctly, stable for 20s observed (s50). The
-LEVEL DESCRIPTION prompt (`a` from AVAILABLE CRAFT) does **not** show a description card — see the
-black-screen/crash entry below; mission launch itself is still untested.
+LEVEL DESCRIPTION prompt (`a` from AVAILABLE CRAFT) does **not** show a description card (s61–s69:
+black gap, then further UI / mission-shaped content). Mission launch + 60s hold still open for M3.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -83,45 +83,15 @@ complete. VI origin **cannot** discriminate menu scenes (the war room presents f
 war room) — but see s48: origin distinguishes *phases*, not which menu scene is on screen.
 
 Remaining visual defects:
-- **s50/s51's AVAILABLE CRAFT → LEVEL DESCRIPTION black-screen + silent process death did NOT
-  reproduce in s61 (0/2, same schedule, positive control satisfied both times).** What replaced it,
-  reproduced 2/2: the screen goes black ~5-8s after the `a` press (no description card ever shows),
-  then renders **one frame of the mission itself** — X-wing near a capital ship, "AMBUSH AT MOS
-  EISLEY" opening, the first in-mission geometry ever seen in this project — and then freezes on
-  that exact frame. The RDP `fs` (FULL_SYNC) counter climbs steadily through the AVAILABLE CRAFT
-  hold and then **stops incrementing for good** (run1 plateaus at `fs=3355`, run2 at `fs=3341`,
-  each for the last 24 `[vi] update_screen` lines in its log); `origin`/`drawn` freeze with it.
-  `[vi] update_screen`/`[threadPresent]` keep firing with the frozen values — the present loop is
-  alive, no task after the freeze point ever reaches FULL_SYNC. This is the s51/s58 "some DL task
-  never reaches FULL_SYNC" hypothesis, now pinned to a concrete counter value instead of an
-  inference. Run2 additionally showed texture corruption on the same ship geometry (not in run1) —
-  a second, uninvestigated defect. Zero `missing-func`/`UnhandledJumpTarget`/`dmem-race`/crash-
-  handler output in either run — the process is frozen, not crashed.
-  **s62: `rsp_task_log_and_reset` is now wired up** (fixup 2b in `tools/fixup_factor5_ucode.py`,
-  called from the L_1090 iteration-cap synthetic-halt site) and the freeze reproduced a 3rd time
-  (fs plateau 2179, origin frozen 0x00656400). The trace **rules out an RSP task looping**: of 5066
-  `[lle task]` calls only 823 (16%) ever hit the 16384-iteration cap, every one of those 823 shows
-  `tri=0 texrect=0` as a constant background pattern present since task #1 (not freeze-specific),
-  and **zero tasks hit the cap at all during or after the freeze** (last cap-hit is log line 16557
-  of 81236 — nothing in the ~65,000 lines after it, including the whole frozen tail). RSP-side
-  submission and present logging both look continuously healthy through the freeze. This points to
-  a **CPU-side stall** (game logic never submits the next real mission-content DL) rather than an
-  RSP ucode infinite loop or missing FULL_SYNC opcode — redirect investigation to whatever CPU code
-  should be submitting fresh mission geometry per frame. Full detail: PORTING-STATE s61, s62.
-  **s63 (log re-analysis only, no new run) sharpens this**: s62's "RSP submission keeps running
-  healthily through the freeze" undersold what's in its own logs. Task-submission rate (`[lle task]`)
-  collapses ~100x at the exact `fs` plateau line in all 3 existing captures, and in the two captures
-  long enough to show it (run1, run2), submission then **stops completely** after exactly 5–6 more
-  calls. Those final calls' `dl` pointers are **bit-for-bit identical across run1 and run2, in the
-  same order** (`0x807513E0, 0x8074ADC8, 0x807550B8, 0x8072C918, 0x80754458`) — independent
-  processes, independent wall-clock timing, identical terminal content sequence. This rules out a
-  race/timing-sensitive hang and points to a deterministic fixed sequence the CPU walks through once
-  before going silent. Two false leads were caught and killed with a second data source before being
-  recorded: an ImemOverrun exit-code streak in run3 that looked causal but is absent in run1/run2
-  (run-specific artifact, not the mechanism), and a long stretch of reused fixed `dl` addresses in all
-  3 runs that looked like stale-content resubmission but has `fs` climbing normally through it (this
-  phase reuses a fixed staging buffer by design — not evidence of a stall). Full detail: PORTING-STATE
-  s63.
+- **~~s50/s51 AVAILABLE CRAFT → black → one mission frame → `fs` freeze~~ — FIXED s69.**
+  Mechanism (s64–s68): post-load tasks exit `RspExitReason::ImemOverrun` because CLIP_1FBC's
+  `j L_1650` was rewritten to a hard exit by fixup 1 before fixup 6 defined the resident
+  `L_1650:` label. s69 fixup 8 restores `goto L_1650`; death-repro exit=2 2090→0, fs climbs
+  past the old plateau. Pre-fix narrative and false leads (CPU-side stall, sampled-log
+  "RSP healthy") are in PORTING-STATE s61–s68 and the Overturned section. **Still open for
+  M3:** 60s continuous *in-mission* hold with craft input; s69 grace after `a` showed black
+  then animating SELECT YOUR CRAFT (not yet a mission soak). Texture corruption on mission-
+  shaped content (s61 run2; s69 grace_09 bands) remains a separate defect.
   ~~**s51 also found a generalizable environment confound**: driven runs stall in phase-advance
   under concurrent system load~~ — **OVERTURNED, s60. There is no load confound.** The three repro
   scripts set no `ROGUESQ_*` variables at all, so from a clean shell the binary took the **HLE**
@@ -156,10 +126,9 @@ Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regress
 0 `[dmem-race]`, 0 asserts. `[missing-func]` clean in every soaked phase to date, **except**: s49's
 undriven outdoor-512 stretch stubbed 3 distinct addresses once each (0x800C7120, 0x800FBD48,
 0x800FB190) with 0 aborts — never itemized before because prior soaks targeted hangar/war-room, not
-outdoor. Parked as an M4 curiosity, not a blocker. **s50, new menu territory only:** AVAILABLE
-CRAFT's LEVEL DESCRIPTION prompt kills the process with **none** of these four counters firing —
-see "Remaining visual defects" above. Single-run, not yet reproduced; does not touch the s27–s49
-stability record for hangar/war-room/outdoor, which stands unchanged.
+outdoor. Parked as an M4 curiosity, not a blocker. **s50–s68 mission-entry path:** no longer a
+process death (s61) and no longer an ImemOverrun `fs` freeze (s69); hangar/war-room/outdoor
+stability record from s27–s49 stands unchanged.
 
 ## Goal stack — work strictly top-down
 
@@ -176,22 +145,19 @@ Stability 0 except 3 gracefully-stubbed `[missing-func]` addresses in the undriv
 never soaked before — parked as M4 (identified s53, fixed s54, runtime check outstanding — see
 step 2 below). Full detail: PORTING-STATE s49.
 
-**M3 — first gameplay: OPENED (s50), freeze is ImemOverrun on post-mission-load tasks (s64), L_0000
-refuted (s67), **site attributed to CLIP_1FBC → L_1650 hard exit (s68)**.**
-AVAILABLE CRAFT confirmed reachable; the `a` press loads and renders one frame of the mission
-(X-wing near a capital ship, "AMBUSH AT MOS EISLEY") then `fs` freezes — reproduced 7/7 including
-s68. Unsampled runner histogram: clean `exit=1 syncs=1` until a hard boundary (s64: #3141; s67 O0:
-#3215; s68: #3147), then 100% of remaining tasks are `exit=2` (ImemOverrun) `syncs=0` with real
-triangle content. Not load-gated.
-**s67:** L_0000 self-restart is live under `ROGUESQ_UCODE_NO_OPT=ON` and fires **0** times while
-freeze tasks still exit ImemOverrun — L_0000 is not the freeze path.
-**s68:** external noinline host stub `rs64_note_imem_overrun` (dpc_bridge) tags both remaining
-sites + a same-run `control` at entry. Death-repro under default `-O2`: control=1,
-`L_1650` counter ≡ every exit=2 (2090), epilogue=0 (DCE'd dead code). Permanent boundary at
-#3148; 172 intermittent L_1650 exit=2 earlier (clip-shaped, from #907). The L_1650 **label
-already exists** as the fixup-6 clip-splice resident helper (byte-identical to ovl4); CLIP_1FBC's
-`j L_1650` was severed by fixup 1 running *before* that label is defined. **Next:** reconnect
-`goto L_1650` after the label exists and re-run the death-repro. Full detail PORTING-STATE s68.
+**M3 — first gameplay: OPENED (s50); ImemOverrun freeze FIXED (s69).**
+AVAILABLE CRAFT confirmed reachable. Pre-s69: `a` → black → one mission frame → `fs` freeze,
+reproduced 7/7 (s61–s68). Mechanism chain: unsampled runner histogram (s64) → L_0000 refuted
+(s67) → every exit=2 is CLIP_1FBC's fixup-1 hard exit for `j L_1650` (s68, counter ≡ 2090
+exit=2) → **s69 reconnects `goto L_1650` after fixup 6 defines the resident label** (fixup 8
+in `tools/fixup_factor5_ucode.py`). Death-repro under default `-O2` with same-run control=1:
+**exit=2: 0** (was 2090), **fs climbs to 3377** (was plateau 2152), last tasks `exit=1
+syncs=1` tris≈447, 0 clip-stray / UnhandledJumpTarget / missing-func / crash. Path-taken note
+`L_1650_enter` atomic count reaches ~46k. Grace captures: black g02–g08, then animating
+SELECT YOUR CRAFT (18/24 frame DIFF) — not a freezeframe. Mission-origin `0x656400` presents
+while fs still advances. **Remaining for M3 done-when:** confirm sustained *in-mission*
+geometry (not just craft-select) for 60s with craft response to synthetic input; grace_09
+texture corruption still open. Full detail PORTING-STATE s68–s69.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -220,29 +186,27 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s68)
+## Next steps, in order of expected value (s69)
 
-1. **M3 — reconnect CLIP_1FBC → `goto L_1650` (site attributed s68; label already resident).**
-   s68 proved every exit=2 is the fixup-1 hard exit at CLIP_1FBC's `j L_1650`. The target label
-   `L_1650:` already exists (fixup 6 clip-splice, identical to ovl4). Fixup ordering is the bug:
-   fixup 1 rewrites `goto L_1650` to ImemOverrun *before* fixup 6 defines the label. Next work
-   unit: (a) in `tools/fixup_factor5_ucode.py`, after fixup 6 (or as a dedicated pass), restore
-   `goto L_1650` at the CLIP_1FBC site (keep the `[ucode-imem]` note temporarily as a
-   "should go to 0" control, or drop it), (b) one death-repro under default `-O2` with
-   `ROGUESQ_LOG_RUNNER_ALL=1`, (c) expect permanent-boundary exit=2 → 0, `fs` keeps climbing past
-   ~2150, and ideally in-mission frames continue. If reconnecting still yields exit=2 from some
-   *other* path, re-check the note counter. Full detail: PORTING-STATE s68. **Do not re-litigate
-   L_0000** unless `[ucode-restart]` fires under `ROGUESQ_UCODE_NO_OPT=ON`.
+1. **M3 — 60s in-mission soak (ImemOverrun freeze closed s69; stay-in-mission still open).**
+   s69: reconnect CLIP_1FBC → `goto L_1650` (fixup 8) drops exit=2 to 0 and lets `fs` climb
+   through grace. Late grace showed animating SELECT YOUR CRAFT, not a confirmed continuous
+   mission. Next: extend the death-repro (or a dedicated soak script) to hold past `a` for
+   ≥60s of captures, phase-gate on mission origin `0x656400` / visual mission content, and
+   drive craft input. Discriminate: (H-mission) continuous mission frames for 60s with
+   changing camera/craft vs (H-menu) state machine returns to craft-select after the black
+   gap vs (H-corrupt) mission presents but texture/geometry is unusable (grace_09 shape).
+   Full detail: PORTING-STATE s69. **Do not re-litigate L_0000 / L_1650 reconnect** unless
+   exit=2 reappears.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
    pipeline clean (build exit 0). What's left: an undriven run phase-gated to the outdoor-512
    stretch (s49 shape) to confirm `grep -c "\[missing-func\]"` drops from 3 to 0 there with 0 new
    stability-counter hits elsewhere. Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
-3. Once the `fs` freeze is fixed, continue past the mission's first rendered frame toward
-   60s of in-mission rendering. Expect further new failure classes (mission overlay DMA →
-   missing-func / UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice
-   recipe, run2's texture corruption). Each new failure is its own work unit.
+3. Past the first sustained mission hold: expect further new failure classes (mission overlay
+   DMA → missing-func / UnhandledJumpTarget, new VI phase, overlays 12/44 splice, s61 run2
+   texture corruption / grace_09 bands). Each new failure is its own work unit.
 4. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
    (39,784 bytes as of s58, down from 43,143 at s55's start) — this thread is now effectively
    exhausted.** s55 migrated the M1/M2 mechanism paragraphs to `docs/PROJECT-OVERVIEW.md` §3. s56
@@ -442,7 +406,9 @@ any s2–s4 conclusion without checking that section.
   stands as hardware truth; it is not the path freeze tasks take. **Why believable:** the source
   block literally returns ImemOverrun on both bgez outcomes, freeze onset coincides with
   triangle-heavy tasks, and the static disassembly of L_0000 is multi-source clean.
-  **s68 follow-through:** the actual site is CLIP_1FBC → L_1650 (counter ≡ every exit=2); see M3.
+  **s68–s69 follow-through:** actual site was CLIP_1FBC → L_1650 hard exit (s68 counter ≡ every
+  exit=2); reconnecting `goto L_1650` after the fixup-6 label (s69 fixup 8) drops exit=2 to 0
+  and unfreezes `fs`.
 - **Claim (s23):** the hangar's remaining dimness is real vertex lighting, not shade-decode, because
   its shade census is healthy. **Overturned by s25:** that census was the magnitude-only classifier
   s24 proved cannot distinguish −118 from +118 (PROJECT-OVERVIEW §4.2), so "ok" was really the
