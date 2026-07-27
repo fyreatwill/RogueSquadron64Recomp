@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 104)
+## Current truth (as of session 105)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -708,6 +708,28 @@ cost three sessions before the recursive mutex.
    **Next step: find what writes `voice+0x34`** — `musyxKeyOnVoice`
    (`funcs_24.c:1825`) is the obvious first read, not yet done. Full
    detail: PORTING-STATE s104.
+   **s105 update:** read `musyxKeyOnVoice` — it writes a similar-looking
+   3-word block, but its destination is computed from a *different*
+   global (`G_BASE-0x68B0`'s dereferenced value, an RSP cmd-list head
+   per the existing symbol comment), not the array
+   `musyxRenderVoiceSamples` actually reads — **cleared as a red
+   herring**. Found the real match instead: `musyxInitVoiceFromSample`
+   (`funcs_24.c:5753`, guest `0x80092128`), whose `G_BASE-0x6908`+
+   `voiceIdx*0x88` voice-slot base matches `musyxRenderVoiceSamples`'s
+   own array by 3 independent offset checks (`+0x4` rate, `+0x3C`/
+   `+0x40` loop points). Its body does a single verbatim word copy,
+   `voice+0x34 = sampleDesc+0x4` (plus `+0x38/+0x3C/+0x40` from
+   `sampleDesc+0xC/+0x10/+0x14`) — no arithmetic to be buggy. Both its
+   call sites build `sampleDesc` fresh from call-site-local sources (a
+   global scratch struct in `funcs_22.c`, an on-stack struct from local
+   registers in `funcs_26.c`), not a raw asset-table read. Landed
+   `ROGUESQ_LOG_INIT_VOICE_SAMPLE=1` and soaked: **fired 0/0** while the
+   `do_rom_read` crash recurred a 10th time, byte-identical —
+   **inconclusive, not a refutation** (no same-run positive control
+   that the instrument can fire at all). Next session needs that
+   positive control (e.g. a soak through title-screen music, where a
+   fresh key-on is all but certain) before spending another soak on the
+   hangar-scene repro. Full detail: PORTING-STATE s105.
 0a. **Tooling: `fixup_game_funcs.py` is not actually idempotent**
    (found s102 while re-running it for the item above) — every patch's
    regex anchor matches text that's left unchanged after insertion, so

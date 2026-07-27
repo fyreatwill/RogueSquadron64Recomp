@@ -8682,3 +8682,108 @@ before assuming they're unrelated.
 Instruments `ROGUESQ_LOG_MUSYX_DMA_CALL=1`, `ROGUESQ_LOG_STREAM_TAG=1`,
 and the new `ROGUESQ_LOG_FILL_RANGE_ARGS=1` all stay landed and armed
 — keep all three in every future soak on this bug.
+
+## Session 105 (2026-07-27) — read `musyxKeyOnVoice` per s104's own next
+step and found it writes a *different* struct than the one
+`musyxRenderVoiceSamples` reads (a red herring); found the actual
+matching writer, `musyxInitVoiceFromSample`, doing a clean verbatim
+field copy with no arithmetic bug; landed a targeted instrument that
+came back 0/0 — inconclusive without a positive control, not a
+refutation, and reframes next session's first move
+
+Read `musyxKeyOnVoice` (`funcs_24.c:1825`, guest `0x80090A3C`) start to
+finish, per s104's own flagged next step. It **does** write a 3-word
+block at destination `+0x30/+0x34/+0x38` (source-copied from a
+"command" entry's `+0x34/+0x38/+0x3C`), which looked at first glance
+like a match for the field we're chasing. But its destination pointer
+is computed from a completely different global (`G_BASE-0x68B0`'s
+*dereferenced* value, i.e. a runtime pointer stored at guest
+`0x80149750`, described by the existing `musyxBuildVoiceCommandList`
+symbol comment as the head of an "RSP cmd-list") — not the
+`G_BASE-0x6908`-plus-`voiceIdx*0x88` array that `musyxRenderVoiceSamples`
+actually indexes (confirmed by re-reading `musyxRenderVoiceSamples`
+itself, `funcs_24.c:6-`: its own `$s1` is simply its own `a0` argument,
+untouched by any global lookup). **`musyxKeyOnVoice`'s write is to an
+unrelated RSP-microcode command list, not the CPU-side voice struct —
+cleared as a suspect for this specific field.**
+
+Found the actual matching writer instead: **`musyxInitVoiceFromSample`**
+(`funcs_24.c:5753`, guest `0x80092128`, symbol-commented "load
+loop/base/sampPtr from descriptor"). Its voice-slot base is
+`G_BASE-0x6908` indexed by `voiceIdx*0x88` — matching
+`musyxRenderVoiceSamples`'s own indexing exactly, confirmed by 3
+independent offset matches: `+0x4` (rate, this function's own default
+`0x1000` write vs. `musyxRenderVoiceSamples`'s `MEM_HU(+0x4)` read) and
+`+0x3C`/`+0x40` (loop points, written here from `sampleDesc+0x10`/
+`+0x14`, read directly by `musyxRenderVoiceSamples`'s own resample
+loop). Its body contains one exact-match instruction, `sw $v1,
+0x34($a0)` where `$v1 = MEM_W(a1, 0x4)` — i.e. `voice+0x34 =
+sampleDesc+0x4`, a straight verbatim word copy, no arithmetic to be
+buggy in. Also copies `sampleDesc+0xC/+0x10/+0x14` to `voice+0x38/
++0x3C/+0x40` in the same few instructions — the entire block the bug
+chain traces back to.
+
+Both call sites (`funcs_22.c:3667`, `funcs_26.c:1418`) build
+`sampleDesc` **fresh, right before the call**, rather than pointing at
+a stable ROM/asset table entry: `funcs_22.c`'s site points `a1` at a
+fixed global scratch address (`G_BASE-0x5358`, conditionally adjusted
+by `-8`) that earlier code in the same function populates field by
+field; `funcs_26.c`'s site builds a small on-stack struct from local
+registers (`$s1`-`$s6`) immediately above the call. Neither is a raw
+"read the wrong offset of a real asset table" bug on its face — if the
+corruption enters here, it's carried in from whichever of those
+call-site-local sources the live run actually used, not from a
+mis-indexed table lookup inside `musyxInitVoiceFromSample` itself.
+
+Landed `ROGUESQ_LOG_INIT_VOICE_SAMPLE=1` (`N64Recomp/fixup_game_funcs.py`,
+anchored on the function's entry boilerplate, file-scoped to
+`funcs_24.c` — confirmed only one definition of this function exists
+in the whole `RecompiledFuncs/` tree, no collision risk). Logs raw
+incoming `a0` (voiceIdx) and `a1` (sampleDesc pointer) plus the 5
+dwords at `sampleDesc+0x4/0x8/0xC/0x10/0x14` at entry, before anything
+touches them. Full regen from ELF (`make_elf.py` → `N64Recomp` →
+`fixup_game_funcs.py` → `cmake --build`, all rc 0); fixup report showed
+`funcs_24.c: musyxInitVoiceFromSample incoming-args diagnostic patched
+x1` — exactly one hit, in the expected file, no duplication.
+
+Soaked (`scratch/s73_post_a_scene/s105_initvoice/run.log`,
+`PROBE_MODE=start_only HOLD_S=30`, `ROGUESQ_LOG_THREAD_RESUME=0`,
+`ROGUESQ_LOG_MUSYX_DMA_CALL=1` + `ROGUESQ_LOG_STREAM_TAG=1` +
+`ROGUESQ_LOG_FILL_RANGE_ARGS=1` + `ROGUESQ_LOG_INIT_VOICE_SAMPLE=1`).
+Reached the ~140s DMA window alive (`vi_width=640` at 142.4s) and died
+at hold-iter ~11-15s to the same `do_rom_read` crash as every prior
+session — **10th occurrence**, byte-identical corruption shape
+(`fill-range-args n=0 a1_dram=0x6C676672`/`n=1 a1_dram=0x77696E67` =
+`musyx-dma-call entry=0/1 devAddr` exactly, "lgfr"/"wing" pattern
+unchanged) — notably captured as a raw SIGSEGV in `do_rom_read` this
+time rather than the deliberate alignment assert seen in most prior
+write-ups; same function/call-stack (`do_rom_read` ← `do_dma` ←
+`osPiStartDma_recomp` ← `piDmaWorker`), so treated as the same crash
+family, not a new class.
+
+**`[init-voice-sample]` fired 0/0** — `musyxInitVoiceFromSample` was
+never entered at any point in this run's lifetime, start to crash, despite
+the corruption recurring on schedule. Per iron rule 1 this is
+**inconclusive, not a refutation**: there is no same-run positive
+control proving the instrument *can* fire at all. Two live
+explanations, neither tested yet: (a) this driven scene's music/SFX
+never triggers a *new* key-on during the whole run (all currently
+active voices were already playing before the process reached a state
+where a fresh note-on would call this function), so the function is
+simply never exercised in this phase — in which case chasing it
+further needs a soak through an earlier point where a song definitely
+starts fresh (e.g. title-screen music) to get the positive control
+first; or (b) despite the 3 matching offsets, `musyxInitVoiceFromSample`'s
+`G_BASE-0x6908` array and `musyxRenderVoiceSamples`'s own `a0` are not
+actually the same base after all, and the offset match is coincidence
+— in which case `musyxKeyOnVoice`'s RSP-list destination or a third,
+still-unlocated writer is the real one. **Do not re-instrument
+`musyxInitVoiceFromSample` again without first getting a positive
+control** (e.g. verify it fires at least once during the title-screen
+music at boot, before spending another soak on the hangar-scene
+repro).
+
+Instruments `ROGUESQ_LOG_MUSYX_DMA_CALL=1`, `ROGUESQ_LOG_STREAM_TAG=1`,
+`ROGUESQ_LOG_FILL_RANGE_ARGS=1`, and the new
+`ROGUESQ_LOG_INIT_VOICE_SAMPLE=1` all stay landed and armed — keep all
+four in every future soak on this bug.
