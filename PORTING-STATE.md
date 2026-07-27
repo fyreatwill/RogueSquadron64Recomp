@@ -10750,3 +10750,89 @@ no `submodule-patches/export.sh` needed. `N64Recomp` checkout still
 carries s90-123's accumulated uncommitted history (same
 flagged-not-actioned posture as prior sessions; `rogue_squadron64`
 sibling checkout likewise unchanged, flagged since s54).
+
+## Session 124 (2026-07-27) — guarded the 9th crash class (updateAnimatedTextureStreaming), following the same template that has now closed 7 classes in this family; guard itself never exercised this soak, process died to the pre-existing do_rom_read corruption race instead
+
+Followed NEXT.md's Thread A exactly: convert another catalogued-but-
+unguarded hangar-tick-family crash class into a guard.
+
+**Source read (`N64Recomp/RecompiledFuncs/funcs_11.c:13667-14268`,
+full function, not the s89 mid-investigation one-liner):** confirms
+s89's characterization. `$a0`/`ctx->r4` is copied to `$s0`/`ctx->r16`
+at the function's own entry (`0x80053F90: addu $s0, $a0, $zero`) and
+dereferenced repeatedly starting a handful of instructions later —
+`MEM_W(ctx->r16, 0x2C)` at `0x80053FA8`, then again at `0x8005403C`/
+`0x80054048`/`0x80054058`/`0x80054070`/`0x80054084`/`0x80054098`/
+`0x800540B8`/`0x800540CC`/`0x800540E0`, all direct derefs off the same
+unguarded pointer, no null/range check anywhere before the first one.
+Same "unchecked pointer arg dereferenced directly" shape as the 10th
+(`static_5_800B4048`) and 11th (`projectModelBoundsToScreen`, s101)
+classes. Confirmed the function's real epilogue by reading to its
+closing brace: `L_8005425C` (restores `$ra`/`$s0`-`$s4` from the stack,
+pops `$sp` by `0x38`) — the same register-save layout the entry
+prologue sets up (`0x20`=s0, `0x24`=s1, `0x28`=s2, `0x2c`=s3,
+`0x30`=s4, `0x34`=ra, matching the prologue's own stores).
+
+**Guard landed** (`N64Recomp/fixup_game_funcs.py`,
+`_anim_tex_stream_guard_patch`), anchored on the unique
+(grep-confirmed single-hit-across-all-45-files) entry copy line and
+file-scoped to `funcs_11.c` per s100's belt-and-suspenders lesson even
+though the anchor was already unique. Follows the exact template of
+every guard since s99: `U32(ctx->r16)` truncation before the bounds
+compare (`< 0x80000000u || >= 0x80800000u`), `goto L_8005425C` on
+failure, gated by a new env var `ROGUESQ_LOG_ANIM_TEX_STREAM_GUARD`
+(distinct from s90's pre-existing entry-diagnostic flag
+`ROGUESQ_LOG_ANIM_TEX_STREAM` — do not confuse the two).
+
+**Regen:** full delete-all (`N64Recomp/RecompiledFuncs/funcs_*.c`) →
+`make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py` → full
+report audit. Every line's multiplicity matched expectations exactly
+(audio gate x3, musyxKeyOnVoice div-traps x8, every guard/diagnostic
+from s99-s123 present exactly once, new
+`updateAnimatedTextureStreaming arg-pointer guard patched x1`) — no
+duplication this cycle. `cmake --build build -j8` under
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`: exit 0, 0
+`error:` lines, only the pre-existing-class format/pointer-sign
+warnings.
+
+**Soak (`s124guard`, `ROGUESQ_LOG_ANIM_TEX_STREAM_GUARD=1
+PROBE_MODE=start_only HOLD_S=30`):** guard fired **0/0**. Notably
+weaker than the usual "clean negative control on an executed path" —
+the function's own pre-existing entry diagnostic
+(`[anim-tex-stream]`) also fired **0 times**, meaning
+`updateAnimatedTextureStreaming` was never called at all this run, not
+just never fed a bad pointer. Landed anyway per this file's own
+precedent (s99-s123: no soak has ever required a positive or even an
+executed-negative control before accepting a guard). No regressions
+elsewhere: `thr-resume bad=1: 0`, `missing-func: 0`, `UnhandledJump: 0`,
+`ost-wb SKIP_OOB: 3` (same as the s123 baseline), `lle tasks: 5026`.
+Process reached SELECT YOUR CRAFT stable, the single Start succeeded
+into hangar-flight, and it died at **hold-iter 11** (~11s into the 30s
+hold window) to a **SIGSEGV inside `do_rom_read`** — backtrace
+`do_rom_read` ← `do_dma` ← `osPiStartDma_recomp` ← `piDmaWorker`,
+the identical shape to every prior occurrence of this long-running
+shared-corruption-race family (s85/s91/s93/s94/s101/s123). This run
+didn't arm `ROGUESQ_LOG_DMA`/`ROGUESQ_LOG_PI_START_DMA`, so the exact
+`devAddr` value wasn't captured, but the backtrace alone is an exact
+match and the hold+11s timing lands squarely in this family's
+established hold+11-15s window (s98). Not a new class; not
+re-diagnosed — per rule 8 and this family's own precedent, chasing
+`do_rom_read` itself is a separate, already-tracked thread (item -1 in
+CURRENT-TRUTH), not something to re-open opportunistically here.
+
+**Consequence:** 7 of the hangar-tick-family's catalogued classes are
+now guarded (16th/12th/11th/14th/17th/18th/9th). Per this family's
+history, the next soak will very likely die to some other still-
+unguarded class, an already-guarded class recurring without a positive
+control yet, or the `do_rom_read` race — expected, not a guard failure.
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: added `_anim_tex_stream_guard_patch`
+(new, `ROGUESQ_LOG_ANIM_TEX_STREAM_GUARD` env gate) targeting
+`updateAnimatedTextureStreaming`'s `$s0`/`ctx->r16` arg-pointer copy at
+`funcs_11.c:13691-13692`. Full delete-all regen + rebuild ran clean
+(patch-report audit passed, mandatory per s120/s121). No `lib/` edits
+this session — no `submodule-patches/export.sh` needed. `N64Recomp`
+checkout still carries s90-124's accumulated uncommitted history (same
+flagged-not-actioned posture as prior sessions; `rogue_squadron64`
+sibling checkout likewise unchanged, flagged since s54).

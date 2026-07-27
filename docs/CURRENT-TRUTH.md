@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s123)
+## Next steps, in order of expected value (s124)
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121).** s121 ran the identical delete-all →
@@ -950,6 +950,36 @@ cost three sessions before the recursive mutex.
    signature — reinforces "some name/asset table aliases the voice
    array" without yet identifying which one (not this session's asset
    loader instance). Full detail: PORTING-STATE s123.
+   **s124: 9th crash class (`updateAnimatedTextureStreaming`) guarded —
+   CLOSED.** Full source read (`funcs_11.c:13667-14268`) confirmed the
+   s89 characterization: `$a0`/`ctx->r4` is copied to `$s0`/`ctx->r16` at
+   the function's own top (`0x80053F90`) and dereferenced repeatedly
+   from a few instructions later (`MEM_W(ctx->r16, 0x2C)` at
+   `0x80053FA8`, `MEM_W(ctx->r16, 0x8)` at `0x80054038`, etc. — same
+   "unchecked pointer arg dereferenced directly" shape as the 10th/11th
+   classes), with real epilogue `L_8005425C` (restores `$ra`/`s0`-`s4`,
+   pops `$sp` by `0x38`). Guarded at the `$s0`/`r16` copy site with the
+   same `U32()`-truncated bounds check + `goto`-to-epilogue template as
+   every prior guard in this family (`ROGUESQ_LOG_ANIM_TEX_STREAM_GUARD`,
+   distinct from s90's pre-existing entry-diagnostic flag
+   `ROGUESQ_LOG_ANIM_TEX_STREAM`). Full delete-all regen + rebuild ran
+   clean (patch report audited: `updateAnimatedTextureStreaming
+   arg-pointer guard patched x1`, every other line's multiplicity
+   unchanged). Soak (`s124guard`): guard fired 0/0 **and** the function's
+   own s90 entry diagnostic also fired 0/0 — `updateAnimatedTextureStreaming`
+   was never entered at all this run, so this is weaker than the usual
+   "clean negative control on an executed path" (10th/12th/17th's
+   precedent); it's an untested guard on an unexercised path, landed
+   anyway per this file's own precedent that no positive/executed
+   control is required before landing. No regressions in any other
+   family control (`thr-resume bad=1: 0`, `ost-wb SKIP_OOB: 3` same as
+   usual, `missing-func: 0`, `UnhandledJump: 0`). Process reached SELECT
+   YOUR CRAFT stable, single Start succeeded into hangar-flight, and
+   died at hold+11s to the long-running `do_rom_read`/`piDmaWorker`
+   corruption-race SIGSEGV (same signature as s85/s91/s93/s94/s101/s123 —
+   `do_rom_read` → `do_dma` → `osPiStartDma_recomp` → `piDmaWorker`),
+   landing squarely in this family's established hold+11-15s window.
+   Not a new class; not re-diagnosed. Full detail: PORTING-STATE s124.
 
 -2. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
@@ -1275,16 +1305,18 @@ cost three sessions before the recursive mutex.
    yet — cheap fix (exclude matches already followed by the `// PATCH:`
    marker, or always regen from ELF before running fixup) — worth a
    work unit before it compounds further.
-0b. **M3 — hangar-tick-family guard program: 5 classes guarded, all with
-   clean negative controls (16th/12th/11th/14th/17th).** All follow the
+0b. **M3 — hangar-tick-family guard program: 7 classes guarded, all with
+   clean negative controls (16th/12th/11th/14th/17th/18th/9th).** All follow the
    same shape (`U32()`-truncated bounds check, `goto` to the function's
    real epilogue — never a bare `return;`): 16th
    (`activateAnimationKeyframe`, s99), 12th (`composeNpcOrientationMatrix`,
    s100), 11th (`projectModelBoundsToScreen`, s101), 14th
    (`reserveAndEmitDLEntry`, s109), 17th (`updateHangarBayScene`, s110 —
    this one needed 5 separate guard sites in one function, not one; see
-   PORTING-STATE s110). **Do not re-soak any of these five** — treat them
-   as closed. **Every guard patch must verify its own
+   PORTING-STATE s110), 18th (`submitSceneNodeRender` free-list-walk,
+   s123), 9th (`updateAnimatedTextureStreaming`, s124 — guard never
+   exercised this soak, function itself wasn't entered). **Do not re-soak
+   any of these seven** — treat them as closed. **Every guard patch must verify its own
    `fixup_game_funcs.py` "patched xN" report names only the expected
    file(s)** (s100 caught a real cross-overlay regex collision this way;
    s110 found the *same* function collides with `funcs_27.c` at all 6 of
@@ -1337,7 +1369,11 @@ cost three sessions before the recursive mutex.
    clean negative control, treat as closed, do not re-soak):
    - 9th, `updateAnimatedTextureStreaming` (`funcs_11.c:13665`, s89):
      unguarded `MEM_W` off `a0`. 1 occurrence, not recurred since.
-     Not guarded yet.
+     **Guarded s124** (`ROGUESQ_LOG_ANIM_TEX_STREAM_GUARD`), 0/0 clean
+     negative control — but the function itself was never entered in
+     that soak (its own entry diagnostic also 0/0), so this is an
+     untested guard on an unexercised path, not a proven-safe executed
+     one.
    - 10th, `static_5_800B4048` (unconfirmed name, s90): unguarded
      `MEM_W` off `a1` (4 fixed-offset derefs). 1 occurrence. Not
      guarded yet.
@@ -1423,8 +1459,7 @@ cost three sessions before the recursive mutex.
    Instrument (`ROGUESQ_LOG_HANGAR_ENTRY=1`) stays armed and ready; no
    dedicated soak needed, fold into whatever soak runs next.
 4. **M3 — characterize the 9th crash class, `updateAnimatedTextureStreaming`
-   SIGBUS (s89).** Also did not recur in s91. Instrument
-   (`ROGUESQ_LOG_ANIM_TEX_STREAM=1`) stays armed.
+   SIGBUS (s89): CLOSED, guarded s124.** See crash catalog and item 0b above.
 5. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89).** 3
    consecutive non-recurrences since s88 landed the correct instrument
    (s88, animcb2, animcb3) against 8 total crashing soaks since s83. Do
