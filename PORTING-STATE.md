@@ -11069,3 +11069,126 @@ alone. `N64Recomp` checkout still carries s90-126's accumulated
 uncommitted history (same flagged-not-actioned posture as prior
 sessions; `rogue_squadron64` sibling checkout likewise unchanged,
 flagged since s54).
+
+## Session 127 (2026-07-27) — Thread A re-audit (NEXT.md) generalizes further: BOTH the 9th (updateAnimatedTextureStreaming) and 10th (static_5_800B4048) classes had a second unguarded pointer-chase site the s124/s125 guards never covered; guarded all 5 new sites, soak both new guards unexercised, but for the first time this family's whole 30s hold window ran with zero crashes
+
+Picked up Thread A exactly where NEXT.md left it: "the mechanical
+thing never done for the other 7 guarded multi-site functions... is
+reading each one FULLY to its own closing brace... looking for a
+second table-lookup-then-deref or unchecked-arg-deref shape past the
+already-guarded site," starting with the 9th/10th classes as
+suggested (smallest functions, s124/s125's reads flagged as possibly
+not full-body).
+
+**Audit method:** dispatched two parallel read-only agents, each given
+the exact file/line range for one function's full body (funcs_11.c
+13667-14282 for `updateAnimatedTextureStreaming`; funcs_41.c 579-808
+for `static_5_800B4048`) and told exactly what the existing guard
+already covers, so they wouldn't re-report the known site. Both came
+back positive. Verified both by direct source read before writing any
+patch (per this session's own standing rule — subagent reports are
+claims, not facts, until source-checked).
+
+**`static_5_800B4048` finding (verified, funcs_41.c:644-655):** the
+s125 guard covers `ctx->r8` (the `$a1` copy). A few instructions
+later, `0x800B4088: lw $v1, -0x379C($v0)` reads a raw pointer out of a
+fixed global table slot — address 0x800D0000-0x379C = 0x800CC864, a
+**different** slot from the function's own already-initialized-cache
+check at entry (`-0x37A4`/0x800CC85C, confirmed by comparing the two
+literal offsets directly) — into `ctx->r3`, then immediately
+dereferences it (`0x800B4094: lw $s0, 0xC($v1)`) with **no null or
+range check at all**. The dereferenced result (`ctx->r16`) is then
+reused 8 more times through the rest of the code path. Same
+"read-a-global-table-pointer-then-deref-it" signature as the
+`composeNpcOrientationMatrix` 2nd-site guard (s126) and the
+`updateHangarBayScene` 5-site guard (s110).
+
+**`updateAnimatedTextureStreaming` finding (verified,
+funcs_11.c:14074-14093 and its mirror 14171-14191):** the s124 guard
+covers `ctx->r16` (the `$a0` copy). Past that guard, the function has
+two mirrored branches, each loading a struct-field pointer off the
+already-guarded `ctx->r16` (offsets 0x14/0x1C in branch 1, 0x18/0x20
+in branch 2) and chasing it two hops deep: the first hop
+(`ctx->r2 = MEM_W(ctx->r16, 0x14)`) only gets a **null** check
+(`beq $v0,$zero,...`), not a range check, before being dereferenced at
+offset 0; the second hop (`ctx->r20 = MEM_W(ctx->r16, 0x1C)`) gets
+**no check at all** before being dereferenced at offset 4; and the
+result of the first hop's own dereference (reassigned into `ctx->r2`)
+gets no check before ITS use at offset 0x24. Same family signature,
+just chained two levels instead of one.
+
+**Guards landed (`N64Recomp/fixup_game_funcs.py`):** one new guard for
+`static_5_800B4048` (`ROGUESQ_LOG_HANGAR_ENTRY_GUARD2`, checks
+`ctx->r3`, goes to the existing real epilogue `L_800B4154`) and four
+new guard sites for `updateAnimatedTextureStreaming`
+(`ROGUESQ_LOG_ANIM_TEX_STREAM_GUARD2`, sites A-D covering both hops of
+both mirrored branches, all `goto` the existing `L_8005425C`) — same
+U32()-truncate-then-[0x80000000,0x80800000)-bounds template as every
+guard in this family, same file-scoping belt-and-suspenders (grep
+confirmed `0x800B4088`'s literal text also appears in funcs_28.c, a
+different overlay sharing this guest address range — the s100/s126
+collision shape again).
+
+**Regen:** full delete-all (`N64Recomp/RecompiledFuncs/funcs_*.c`) →
+`make_elf.py` → `env ./build/N64Recomp rogue_squadron.toml` →
+`env python3 fixup_game_funcs.py` → full report audit. Every
+pre-existing line matched expectations exactly (audio gate x3,
+musyxKeyOnVoice div-traps x8, every guard/diagnostic from s99-s126
+present exactly once) plus the 5 new lines (`updateAnimatedTexture
+Streaming 2nd-site struct-field-ptr guard site A/B/C/D patched x1`
+each, `static_5_800B4048 2nd global-table-ptr guard patched x1`) — no
+duplication this cycle. `DEVELOPER_DIR=/Applications/Xcode.app/
+Contents/Developer cmake --build build -j8`: exit 0, only the
+pre-existing DDIV pointer-sign warnings and SDL2 link-version
+warnings, no errors.
+
+**Soak (`guard2_s127`, all four new/existing guard-diagnostic flags
+armed together, `PROBE_MODE=start_only HOLD_S=30`, via
+`scratch/s73_post_a_scene/run_mission_keys.sh guard2_s127 5 8`):**
+both target functions' own entry diagnostics fired **0 times** —
+neither `updateAnimatedTextureStreaming` nor `static_5_800B4048` was
+called at all this run, so both new guards are **unexercised (0/0)**,
+same caveat as every guard landed so far in this family. The notable
+result is what *didn't* happen: **`CRASH: 0`** — the process survived
+the entire 30s hold window plus grace window and had to be killed at
+the end, rather than dying to the tracked `do_rom_read`/`piDmaWorker`
+race (which has fired in every one of the last several soaks,
+typically hold+11-15s) or any other class. Checked the raw log
+directly for every known crash signature (`do_rom_read`,
+`piDmaWorker`, `Abort`, `SIGSEGV`, `SIGBUS`, `signal`) — all 6 hits
+are routine `[thr-destroy-signal] ... live=1` lines, not crashes.
+`missing-func: 0`, `UnhandledJump: 0`, `thr-resume bad=1: 0`,
+`exit=2: 0`. This is only the second fully crash-free soak recorded
+in this family's history (the first being s88); like s88, it says
+nothing about whether any specific guard works (none of this
+session's fired), just that this run's exact code-path/timing
+happened not to hit any of the family's known bad sites, including
+the still-unguarded `do_rom_read` race itself.
+
+**Consequence:** Thread A's hypothesis — "a guard landed after ONE bad
+site in a function does not mean that function has only one such
+site" — is now confirmed a 2nd time (composeNpcOrientationMatrix,
+s126; now both of the 9th/10th classes too), on the very first two
+functions re-audited. Strong prior that the remaining 5
+already-guarded multi-site functions (11th `projectModelBoundsToScreen`,
+14th `reserveAndEmitDLEntry`, 17th `submitSceneNodeRender`, 18th
+`updateHangarBayScene` — already has 5 sites A-E, may be exempt — and
+16th `activateAnimationKeyframe`) are worth the same full-body
+re-read before assuming "guarded" means "fully guarded." Not yet
+done this session; next session should continue Thread A with those 5,
+in the order NEXT.md already specifies, or pivot to Thread B (the
+`voice+0x0` corruption investigation, s105-123, still open) if a 3rd
+consecutive audit comes back clean per rule 8's budget discipline (2
+non-null audits doesn't reach that threshold yet — continue Thread A).
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: added `_hangar_deref_guard2_patch`
+(new, `ROGUESQ_LOG_HANGAR_ENTRY_GUARD2` env gate, funcs_41.c) and
+`_make_anim_tex_stream_guard2_patch`/`_anim_tex_stream_guard2_sites`
+(new, `ROGUESQ_LOG_ANIM_TEX_STREAM_GUARD2` env gate, 4 sites,
+funcs_11.c). Full delete-all regen + rebuild ran clean (patch-report
+audit passed, build exit 0). No `lib/` edits this session — no
+`submodule-patches/export.sh` needed. `N64Recomp` checkout still
+carries s90-127's accumulated uncommitted history (same
+flagged-not-actioned posture as prior sessions; `rogue_squadron64`
+sibling checkout likewise unchanged, flagged since s54).

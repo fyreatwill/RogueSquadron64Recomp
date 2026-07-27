@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s126)
+## Next steps, in order of expected value (s127)
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with
@@ -781,6 +781,21 @@ cost three sessions before the recursive mutex.
    (unexercised, 0/0, died to the tracked `do_rom_read` race at hold+11s,
    matching s125 almost exactly). There is no 20th function-level class.
    Full detail: PORTING-STATE s126.
+   **s127 (Thread A re-audit):** re-read the 9th (`updateAnimated
+   TextureStreaming`) and 10th (`static_5_800B4048`) classes to their
+   closing braces — both had a SECOND unguarded pointer-chase site the
+   s124/s125 guards never covered (same "read a struct/global-table
+   pointer field, then deref it with no range check" shape as s126's
+   finding). Guarded all 5 new sites (`ROGUESQ_LOG_HANGAR_ENTRY_GUARD2`,
+   `ROGUESQ_LOG_ANIM_TEX_STREAM_GUARD2` sites A-D), full regen+rebuild
+   clean, one soak — both new guards unexercised (0/0, neither function
+   called this run), but for the first time since s88 the **entire 30s
+   hold window ran with zero crashes** (not evidence the guards work;
+   just this run's path missed every known bad site including the
+   `do_rom_read` race). Thread A's generalization now holds 2/2 on the
+   functions tried — strong prior the other 5 already-guarded multi-site
+   functions (11th, 14th, 16th, 17th, 18th) have the same gap. Full
+   detail: PORTING-STATE s127.
    (Also flagged, not chased: the s84 `frameStartReset` SIGBUS — called a
    "fluke" in s85 after 0/2 non-recurrence — recurred once more in s116
    (2/4 soaks total across s84/s85/s116); worth revisiting if it keeps
