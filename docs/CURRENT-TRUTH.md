@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s129)
+## Next steps, in order of expected value (s130)
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with
@@ -834,6 +834,24 @@ cost three sessions before the recursive mutex.
    already-committed patches — no session's work was sitting
    unexported). Next: item 3/5, `activateAnimationKeyframe` (16th
    class, `funcs_14.c`, guard at s99). Full detail: PORTING-STATE s129.
+   **s130 (Thread A re-audit, item 1/3 of the remaining 3):** SECOND
+   clean audit — `activateAnimationKeyframe` (16th class, `funcs_14.c`)'s
+   only unguarded-external-pointer site is the one s99 already guards
+   (a table lookup off its own `a0` argument into `ctx->r17`); no second
+   occurrence of that table load, and none of the function's own raw
+   incoming arguments are dereferenced anywhere else. Running tally:
+   **4 hits, 2 clean, of 6 audited.** One new lead surfaced but
+   deliberately not chased (scope discipline): starting mid-function
+   `ctx->r5` is reassigned to the return value of a call to
+   `getPlayerSlotFieldAt34` and then dereferenced ~13 times with zero
+   check — a *callee-return-value* trust boundary, not a re-deref of
+   this function's own argument, so it's a different class than Thread
+   A's pattern and belongs to a future audit of `getPlayerSlotFieldAt34`
+   itself if it ever surfaces in a crash backtrace. No code change, no
+   rebuild, no soak this session (submodule dirty trees re-verified
+   against exported patches first). Next: item 2/3, `submitSceneNodeRender`
+   (17th class, `funcs_4.c`, guard at s123). Full detail: PORTING-STATE
+   s130.
    **s118:** ran the exact discriminating test above (32-byte dump at
    `voice+0x0` nonzero hits, same-run vs. `musyx-dma-call`). The dumps
    are long readable ASCII strings, not raw garbage — e.g. `"explo_

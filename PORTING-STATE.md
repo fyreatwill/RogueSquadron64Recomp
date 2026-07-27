@@ -11378,3 +11378,78 @@ instruction set as every prior soak, no new instrument to exercise).
 ### Files
 No files changed. `N64Recomp` and `rogue_squadron64` sibling checkouts
 unchanged from s128's flagged-not-actioned posture.
+
+## Session 130 (2026-07-27) — Thread A re-audit item 1/3 (of the remaining 3): `activateAnimationKeyframe` (16th class) is the SECOND clean audit in the series — its s99 guard is the only unguarded-external-pointer site in the function, no code change landed
+
+Before touching anything: re-verified both `lib/` submodules
+(`N64ModernRuntime`, `rt64`) against `submodule-patches/*.patch` — both
+dirty working trees are byte-for-byte identical to the already-exported
+patches, confirming (not just assuming, per the standing environment
+note) that nothing from a prior session is at risk.
+
+Continued Thread A per NEXT.md's order: item 1 of the 3 remaining
+functions, `activateAnimationKeyframe`
+(`N64Recomp/RecompiledFuncs/funcs_14.c:1629-2138`, 16th crash class,
+existing guard at s99 covers `ctx->r17` — the result of a table lookup
+at `0x80061CA4` indexed by the function's own `a0`/`ctx->r4` argument —
+`goto`ing the function's real epilogue `L_80061F18` if the loaded
+pointer is out of the `[0x80000000, 0x80800000)` RDRAM range).
+
+**Audit method:** same as s126-129 — one Explore-type subagent given the
+exact line range, a precise description of what the s99 guard already
+covers (so it wouldn't re-report uses of `ctx->r17` after the guard),
+and the s129-refined instruction not to flag internal allocator/free-
+list traffic reloaded from a fixed global. Verified its findings
+directly against source before concluding (subagent reports are claims,
+not facts).
+
+**Subagent finding:** no second occurrence of the table-load-into-r17
+pattern anywhere in the function, and none of the function's own raw
+incoming arguments (`ctx->r4`/`r5`/`r6`/`r7`) are ever dereferenced as a
+pointer outside the already-guarded site — `r4` is used only as a
+small masked/looped integer, `r5`'s *original* value is preserved in
+`ctx->r19` and never dereferenced, `r6` is used only as an 8-bit flag
+byte, and `r7` never carries an incoming argument in this function at
+all (every appearance is a freshly-built local loop pointer). It also
+flagged, but explicitly ruled out of scope, a heavily-used pointer:
+starting at line 1729 `ctx->r5` is reassigned to the return value of a
+call to `getPlayerSlotFieldAt34` and then dereferenced unconditionally
+~13 more times for the rest of the function (reads at lines 1753, 1787,
+1844, 1884, 1908, 1929, 1963, 2020, 2060, 2082, 2109, writes at 2087/
+2089) with zero null/range check — but reasoned this is a *different*
+function's return value being trusted, not this function's own raw
+argument re-derefed, so it falls outside Thread A's specific bug
+pattern (an audit of `getPlayerSlotFieldAt34` itself would be the right
+place to judge whether that pointer needs a guard).
+
+**Verification (direct grep across the full function body):** confirmed
+both claims. `grep -n "MEM_W(ctx->r2, 0X0)"` and a search for any other
+`0x8009FC10`/table-construction sequence in lines 1629-2138 returns
+exactly one hit, the already-guarded line 1657. `grep -n "ctx->r5\b"`
+across the same range confirms the exact sequence the subagent
+described: `ctx->r19 = ADD32(ctx->r5, 0)` at line 1637 (preserving the
+original argument, untouched thereafter), then `ctx->r5` reassigned
+three times (1722, 1726, 1729 — the last from `ctx->r2`, the call's
+return value) before 13 unconditional dereferences through the rest of
+the function. This matches the shape the subagent flagged and correctly
+scoped out: a callee-return-value trust boundary, not a re-deref of this
+function's own raw incoming argument.
+
+**Result: no second site inside `activateAnimationKeyframe` itself, no
+guard landed, no rebuild needed.** Updated running tally: **4 hits, 2
+clean, out of 6 functions audited** (2 of the 3 originally-remaining:
+`reserveAndEmitDLEntry` s129, `activateAnimationKeyframe` s130). One
+new open lead surfaced but deliberately not chased this session (scope
+discipline, not oversight): `getPlayerSlotFieldAt34`'s return value is
+dereferenced without any check by at least this one caller — worth a
+audit of its own if it ever surfaces in a crash backtrace, but is a
+different trust boundary than Thread A's "second deref of the same
+guarded argument" pattern and would be scope creep to guard here.
+
+No `lib/` edits, no `N64Recomp/RecompiledFuncs/*.c` regen, no rebuild,
+no soak this session — nothing changed at either the guest-code or
+runtime level.
+
+### Files
+No files changed. `N64Recomp` and `rogue_squadron64` sibling checkouts
+unchanged from s128/s129's flagged-not-actioned posture.
