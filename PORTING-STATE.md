@@ -11862,3 +11862,68 @@ session). This repo: `build/` rebuilt binary (gitignored),
 `git status --short lib/` at session start and end — both submodules show
 the same pre-existing dirty-pointer state as every prior session since
 s54/s90, nothing new to export).
+
+## Session 134 — 2026-07-27
+
+**Re-ran the `emitAllocatedDLCommand` soak, attempt 2/3 per rule 8 (NEXT.md's
+own prescribed command, no rebuild — the s133 binary was already current).**
+Same recipe: `PROBE_MODE=start_only HOLD_S=30`, every `ROGUESQ_LOG_*` flag
+freshly re-enumerated via `grep -oE 'ROGUESQ_LOG_[A-Z_0-9]+' N64Recomp/
+fixup_game_funcs.py` (33 flags, one more than s133's hardcoded list —
+`ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD`/`ROGUESQ_LOG_HANGAR_BAY_SCENE_GUARD`
+were present but not obviously new), `zsh run_mission_keys.sh emitdl2 5 12`.
+
+**Result: `emit-dl-guard2`/`emit-dl-guard3` fired 0/0 again — still no
+positive control for the s133 fix, 2nd null in a row.** But this run's death
+is *not* a 3rd distinct new crash (NEXT.md's outcome-3 branch) — it is a
+**byte-for-byte recurrence of the already-catalogued 18th class** (first
+seen s108, refuted-not-fixed by s131's exhaustive free-list-walk guard
+sweep): `[CRASH] signal 10` at nearest-symbol `heapFreeListDequeue + 12704`
+← `submitSceneNodeRender + 27540` ← `processSceneNode` ←
+`traverseSceneGraphRecursive` ← `setupCameraMatrices` ←
+`static_5_800AAD9C` (`runHangarSelectionFrame`) ← `static_5_800C6854`
+(`runHangarMenuFromOverlay`) ← `menuOverlayInit` — every frame and every
+byte offset identical to s131's own logged backtrace, including the
+`heapFreeListDequeue + 12704`/`submitSceneNodeRender + 27540` pair. Died at
+hold-iter 5 (~5s into the 30s hold), between s131's hold-iter 3 and s132/
+s133's later deaths.
+
+**This is now the 2nd fully-post-fix recurrence of the 18th class**
+(s131 was the 1st, with all nine `SCENE_NODE_LIST_GUARD`/`GUARD2`/`GUARD3`
+sites already landed and silent; this run has the same nine guards plus
+s133's two new `emit-dl-guard2`/`3` sites, all still silent). NEXT.md
+(written this session, before the soak) explicitly parked this class —
+"still hasn't recurred since [s131]; do not chase with a dedicated repro
+soak; only act on it if it recurs on its own" — and it just did, as a
+byproduct of an unrelated soak, which is exactly the trigger condition
+NEXT.md itself set for re-opening it. This **reinforces, a second
+independent time, s131's own conclusion**: the guarded free-list-walk idiom
+is not this crash's actual cause (all copies present and silent, twice
+now), and the bug is either a different unguarded pointer chase somewhere
+else in `submitSceneNodeRender`'s ~2746 remaining lines, or a misattributed
+nearest-symbol match to code outside this function entirely (s131's own
+two open branches — still both open, this run adds no new discriminating
+evidence between them, just a 2nd confirmation the crash itself is real
+and recurring, not a fluke).
+
+**Assessment for the `emitAllocatedDLCommand` hypothesis specifically:**
+across both soak attempts so far (s133, s134), the process has never once
+reached `emitAllocatedDLCommand` with a bad pointer, and both times died to
+a *different*, already-catalogued crash first (s133: Apple-Metal-internal
+SIGSEGV, environment-side; s134: 18th-class `heapFreeListDequeue`
+recurrence, guest-side but already known). Both are non-discriminating for
+this specific hypothesis, but neither is a fresh mystery needing its own
+chase. Per rule 8 this is the 2nd non-discriminating attempt — one more
+(attempt 3/3) is still within budget for a future session, but two-for-two
+losses to *known* faster-firing crashes is itself informative: whatever
+guards `emitAllocatedDLCommand`'s two sites, the soak recipe's actual
+bottleneck for testing them is that something else in the same hangar-tick
+window crashes first more often than not. No code changed this session
+(no rebuild — reused the existing s133 binary); no `lib/` files touched
+(confirmed `git status --short lib/` unchanged from session start).
+
+### Files
+`scratch/s73_post_a_scene/emitdl2/` (soak logs — `run.log` 20MB, 17
+screenshots; not committed, scratch). `PORTING-STATE.md` /
+`docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md` (this write-up). No other
+files touched.

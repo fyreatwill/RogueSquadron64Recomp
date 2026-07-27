@@ -655,24 +655,33 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s133)
+## Next steps, in order of expected value (s134)
 
-0a. **Re-attempt the `emitAllocatedDLCommand` soak (s133 attempt 1/3, null
-    without a positive control).** Same recipe as `emitdl1`
-    (`scratch/s73_post_a_scene/run_mission_keys.sh <tag> 5 12`,
-    `PROBE_MODE=start_only HOLD_S=30`, every `ROGUESQ_LOG_*` flag armed —
-    re-enumerate via `grep -oE 'ROGUESQ_LOG_[A-Z_0-9]+' N64Recomp/
-    fixup_game_funcs.py | sort -u` rather than copying s133's list, in
-    case a future session adds more). Discriminating outcomes: (a)
-    `emit-dl-guard2`/`3` fires → the s133 fix is confirmed live and
-    correctly diagnosed; (b) `emitAllocatedDLCommand` crashes again with
-    the guards NOT firing → the idiom guarded isn't this crash's actual
-    cause (same shape as s131's own free-list-walk refutation) and the
-    real call site needs re-deriving from the backtrace's host-code byte
-    offsets some other way; (c) a 3rd different crash preempts again →
-    per rule 8, this becomes the 2nd non-discriminating attempt, still
-    short of the 3-attempt budget. No code change needed for this step,
-    just a re-run.
+0a. **Re-attempt the `emitAllocatedDLCommand` soak a 3rd and final time
+    (attempt 3/3 per rule 8 — s133 attempt 1 and s134 attempt 2 both
+    null-without-discriminating).** Same recipe (`emitdl2`'s command,
+    tag `emitdl3`), no rebuild needed. s133 died to the environment-side
+    Apple-Metal SIGSEGV; s134 died to a 2nd fully-post-fix recurrence of
+    the already-catalogued 18th class (`heapFreeListDequeue + 12704` ←
+    `submitSceneNodeRender + 27540`, byte-identical to s131's own
+    backtrace) — both non-discriminating for this hypothesis, neither a
+    fresh mystery. If attempt 3/3 *also* fails to discriminate (guards
+    still 0/0, a 3rd crash — new or known — preempts again): per rule 8,
+    STOP re-soaking this specific hypothesis, park it (both guards stay
+    regardless — they fix real bugs independent of this question), and
+    pivot to either (i) the now-twice-recurred 18th class directly — it
+    has recurred on its own twice post-fix now, satisfying NEXT.md's own
+    "only act on it if it recurs on its own" trigger, so a source read of
+    `submitSceneNodeRender`'s remaining ~2746 lines for a 2nd unguarded
+    pointer-chase idiom (distinct from the free-list-walk one already
+    guarded 9x) is now warranted — or (ii) Thread B (audio-corruption
+    pivot, `voice+0x0`/`+0x34`, s105-123, still the longest-running open
+    thread). Discriminating outcomes for attempt 3/3, same as before: (a)
+    `emit-dl-guard2`/`3` fires → fix confirmed live; (b) a 3rd
+    `emitAllocatedDLCommand` crash with guards silent → idiom guarded
+    isn't the cause, re-derive the real site from source; (c) yet
+    another different crash preempts → exhausts the 3-attempt budget,
+    pivot per above.
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with
@@ -981,6 +990,23 @@ cost three sessions before the recursive mutex.
    as every guard since s99). Per rule 8 this is soak attempt 1/3 for
    this hypothesis — one more attempt is still in budget. Full detail:
    PORTING-STATE s133.
+   **s134 (re-attempt the `emitAllocatedDLCommand` soak, attempt 2/3):**
+   same recipe, no rebuild. `emit-dl-guard2`/`3` again 0/0 — 2nd null in a
+   row, still neither confirmed nor refuted. Death this time is **not** a
+   3rd new crash: it's a byte-for-byte recurrence of the already-
+   catalogued 18th class (`heapFreeListDequeue + 12704` ←
+   `submitSceneNodeRender + 27540` ← ... ← `menuOverlayInit`, every frame
+   and offset identical to s131's own backtrace) — the **2nd fully-post-
+   fix recurrence** of that class (1st was s131 itself, with all 9
+   free-list-walk guards already landed and silent both times). This
+   satisfies NEXT.md's own "only act on it if it recurs on its own"
+   trigger for the 18th class, and reinforces s131's refutation a 2nd
+   independent time: the guarded idiom is not the actual cause. Per rule
+   8, one more `emitAllocatedDLCommand` soak attempt (3/3) is still in
+   budget, but two-for-two losses to known, already-catalogued crashes
+   (not fresh mysteries) suggests the soak recipe's bottleneck is that
+   something else in the same window crashes first more often than not.
+   Full detail: PORTING-STATE s134.
    **s118:** ran the exact discriminating test above (32-byte dump at
    `voice+0x0` nonzero hits, same-run vs. `musyx-dma-call`). The dumps
    are long readable ASCII strings, not raw garbage — e.g. `"explo_
