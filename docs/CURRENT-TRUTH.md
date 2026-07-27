@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 79)
+## Current truth (as of session 80)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -84,9 +84,14 @@ map hits**; **`fs` still freezes ~3297** (G1 refuted / G2). Gate kept as safety.
 **s79 (D3):** offline fbgate3 parse — onset **#4252** (after #4251 syncs=1):
 **914/914** trailing high-tri `syncs=0` (S1); S2 refuted (0 trailing syncs≥1);
 UnhandledJump 0x0231 starts **#4265** (13 exit=1 tasks later) — **secondary**,
-not onset cause (S3); last `fs` increase ≈#4254 then plateau 3297; pixel freeze
-byte-identical craft_stable→hold. **M3 blocker = post-leave FULL_SYNC loss +
-VI_FULLSYNC stall (S1), not leave key, not FB-map pollution, not 0x0231 primary.**
+not onset cause (S3); last RDP-`fs` increase ≈#4254 then plateau 3297; pixel
+freeze byte-identical craft_stable→hold. **M3 blocker = post-leave FULL_SYNC
+loss (S1), not leave key, not FB-map pollution, not 0x0231 primary.**
+**s80 (V1–V4):** always-on `[vi-fs-decision]` — synthetic **FIRE continues**
+(+141) after RDP-`fs` plateau; V1/V3/V4 **refuted**; s79 "VI_FULLSYNC stalls"
+was an **`fs` misread** (`fs` = DPC FULL_SYNC *opcode* count, not synthetic
+`fullSync()`). Present: intermittent black + content (no 0x0231 this run);
+death = unaligned `do_rom_read` Abort.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -166,14 +171,15 @@ step 2 below). Full detail: PORTING-STATE s49.
 
 **M3 — first gameplay: OPENED (s50); ImemOverrun FIXED (s69); OSThread SIGBUS FIXED (s72);
 post-`a` scene ID (s73); Start path isolated (s74/s75); hold/assert triage (s76/s77);
-wild-FB refuse gate (s78, G1 refuted); D3 S1–S4 discriminated (s79).**
-AVAILABLE CRAFT reachable. thr-resume bad=0 holds through s78. **s75:** single Start →
-hangar-flight by +2–4s. **s78:** refuse gate keeps map clean; **fs still ~3297**.
-**s79:** post-leave tasks permanently lose RDP FULL_SYNC from #4252 (S1); pair-gate
-skip of real SYNC_FULL refuted (S2); UnhandledJump 0x0231 is post-onset secondary
-(S3); VI_FULLSYNC only advances ~once more then stalls. Leave key closed. Origin
-still cannot name scenes. Full detail PORTING-STATE s68–s79;
-`scratch/s73_post_a_scene/SYNCS0_ANALYSIS.md`.
+wild-FB refuse gate (s78, G1 refuted); D3 S1–S4 (s79); VI_FULLSYNC decision V1–V4 (s80).**
+AVAILABLE CRAFT reachable. thr-resume bad=0 holds through s80. **s75:** single Start →
+hangar-flight by +2–4s. **s78:** refuse gate keeps map clean; RDP-`fs` still plateaus.
+**s79:** post-leave tasks permanently lose RDP FULL_SYNC (S1); S2/S3-primary refuted.
+**s80:** synthetic VI_FULLSYNC **still FIREs** after S1 (V1/V3/V4 dead; V2 partial —
+intermittent black despite FIRE + `present-1024 empty=0`). RDP-`fs` plateau ≠ synthetic
+stall. UnhandledJump 0x0231 **0** this run (fbgate3 had 898). Death: unaligned
+`do_rom_read`. Leave key closed. Origin still cannot name scenes. Full detail
+PORTING-STATE s68–s80; `scratch/s73_post_a_scene/VIFS1_ANALYSIS.md`.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -202,26 +208,25 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s79)
+## Next steps, in order of expected value (s80)
 
-1. **M3 — why VI_FULLSYNC stalls after post-leave SYNC_FULL loss (S1 follow-through).**
-   s79: tasks from #4252 emit 0 SYNC_FULL forever; `fs` advances only once more (~#4254)
-   then plateaus at 3297. Synthetic path requires
-   `!FullSyncSeen && (addressChanged || stalled) && fbPairCount>0`
-   (`rt64_state.cpp`). One build: always-on rate-limited `[vi-fs-decision]` log
-   (fire vs skip + the four predicates + pending fbPairCount), optional CIMG-target
-   census (sane 0x656/0x6AB vs wild) on the same binary. Soak start_only HOLD_S=20.
-   Discriminate: empty pending pairs vs synthetic never called vs fullSync no-op.
-2. **M3 — after present holds ≥60s:** re-run hold+stick (`HOLD_S=60`, marks 10/25/40) for
-   craft response; document phase timeline. UnhandledJump 0x0231 is secondary (s79) —
-   only chase if present holds and 0x0231 still kills tasks.
+1. **M3 — intermittent black after leave despite healthy synthetic FIRE (V2 follow-through).**
+   s80: after permanent high-tri `syncs=0`, VI_FULLSYNC still FIRE (pairs 1–3, sane
+   lastCimg 0x656/0x6AB); `present-1024 empty=0` throughout; snaps alternate ~94% black
+   with rich content (hold_09/15). Discriminate: game intentionally clears FB vs present
+   showing stale pair vs capture of real black frames. Prefer one soak with
+   phase-scoped present draw-addr + mean-luma log (or offline snap timeline already
+   enough for a tighter present-queue probe). HOLD_S=30+.
+2. **M3 — after present holds ≥60s continuous content:** re-run hold+stick (`HOLD_S=60`,
+   marks 10/25/40) for craft response; document phase timeline. UnhandledJump 0x0231
+   was **0** on s80 vifs1 — only chase if it returns and kills content.
 3. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` 3→0.
    Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
 4. Past the first sustained mission hold: expect further new failure classes (mission overlay
    DMA → missing-func / UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture
-   corruption). Each new failure is its own work unit. s78 `do_rom_read` SIGSEGV on hold —
-   park until present holds.
+   corruption). Each new failure is its own work unit. s80 unaligned `do_rom_read` Abort
+   at phase 640 ~150s — park until present holds.
 5. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
    — thread exhausted (s55–s58).** Prefer M3 mission-content work over reopening this section.
 6. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
@@ -230,8 +235,8 @@ cost three sessions before the recursive mutex.
 7. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
 8. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
-Done this session: ~~D3 S1–S4 discrimination~~ (s79) — S1 supported, S2/S3-as-primary
-refuted; next is VI_FULLSYNC decision instrument.
+Done this session: ~~V1–V4 VI_FULLSYNC decision~~ (s80) — synthetic path healthy;
+s79 fs-stall reading overturned; next is intermittent-black / present content.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
@@ -485,6 +490,15 @@ any s2–s4 conclusion without checking that section.
   still at `syncs=0` before the first jump. Jump is real and permanent after #4265 but
   **not** the FULL_SYNC-loss root. **Why believable:** 899 jump lines dominate the
   freeze-window log and correlate with the stuck phase in wall-clock time.
+- **Claim (s79 residual):** after post-leave SYNC_FULL loss, VI_FULLSYNC stalls
+  (only one more `fs` advance then plateau) — so the present freeze is a synthetic
+  decision failure (`fbPairCount==0` / no-trigger / FullSyncSeen). **Overturned by
+  s80:** always-on `[vi-fs-decision]` shows **FIRE continues** (+141 synth) after
+  RDP-`fs` plateaus; V1/V3/V4 refuted. `fs`/`rdpFs` counts DPC FULL_SYNC *opcodes*,
+  not synthetic `State::fullSync()` — plateau is S1 restated. **Why believable:**
+  the `[vi] fs=` field was the only advance metric in s78/s79 logs and moved in
+  lockstep with healthy present earlier, so its freeze looked like the synthetic
+  path stopping.
 
 ### Dead ends — labelled as such in the log, do not retry
 

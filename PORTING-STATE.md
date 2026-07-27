@@ -6129,3 +6129,45 @@ Pixel freeze: `craft_stable`…`hold_10_sr` byte-identical (md5 `09d7963e9fd2`).
 - Do **not** treat 0x0231 as the FULL_SYNC-loss root; park as secondary after present holds.
 - S1 next: why VI_FULLSYNC only advances once post-onset (`fbPairCount` / decision log).
 - Detail: `scratch/s73_post_a_scene/SYNCS0_ANALYSIS.md`.
+
+## Session 80 (2026-07-27) — VI_FULLSYNC decision healthy; s79 fs-stall misread
+
+### Work unit
+M3 next-step #1 (s79): always-on rate-limited `[vi-fs-decision]` in
+`lib/rt64/src/hle/rt64_state.cpp` (not gated on `ROGUESQ_LOG_ALLOC`). Logs
+FIRE|SKIP + reason (swap/stalled/seen/no-trigger/pair=0) + seen/addrCh/stalled/
+pairs/vi/lastCimg/lastW/synth/rdpFs + cumulative skip counters. Built; exported
+`submodule-patches/rt64.patch`; soak
+`env PROBE_MODE=start_only HOLD_S=20 zsh scratch/s73_post_a_scene/run_mission_keys.sh vifs1 0 12`.
+
+### Positive control (same run)
+1460 logged `[vi-fs-decision]` lines; 1103 FIRE / 357 SKIP; first FIRE at #373
+(attribution/640 synthetic). Final: synth=1103 skSeen=3860 skNoTrig=3955 skPair0=74.
+
+### V1–V4
+
+| ID | Claim | Verdict |
+|----|--------|---------|
+| V1 | pairs=0 blocks synthetic | **REFUTED** — 142 FIRE after rdpFs plateau, pairs 1–5 |
+| V2 | FIRE but present/content dead | **PARTIAL** — FIRE + empty=0 present-1024; intermittent black snaps |
+| V3 | no-trigger | **REFUTED** — late FIRE reason=swap addrCh=1 |
+| V4 | FullSyncSeen stuck | **REFUTED** — FIRE seen=0 |
+
+### Overturn: s79 "VI_FULLSYNC stalls"
+`fs` / decision `rdpFs` = `rs64_dpc_get_cumulative_fullsyncs()` (RDP FULL_SYNC
+**opcode** count in dpc_bridge), **not** synthetic `State::fullSync()` count.
+S1 (tasks emit syncs=0) forces rdpFs plateau by definition. This run: rdpFs
+plateaus at 3770 (#7717) while synth climbs 962→1103 (+141 FIRE). Detail:
+`scratch/s73_post_a_scene/VIFS1_ANALYSIS.md`.
+
+### This run vs fbgate3
+UnhandledJump **0** (fbgate3: 898). Permanent high-tri syncs=0 onset **#4745**
+(174 trailing) vs #4252. Pixels intermittent (black hold_01–05/11/14 vs rich
+hold_09/15), not byte-identical freeze. Death: unaligned `do_rom_read` Abort
+after phase→640 @150s. thr-resume bad=0.
+
+### Rules out / keep
+- Do **not** re-instrument "why synthetic does not fire" — it does.
+- Do **not** treat RDP-`fs` plateau as synthetic stall.
+- Next: intermittent black despite FIRE + empty=0 (present path / real black
+  frames). Park do_rom_read until present holds ≥60s continuous content.

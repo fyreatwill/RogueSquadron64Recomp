@@ -3241,7 +3241,7 @@ index d1a9f4e..7025af8 100644
          // with the GPU-side stage 2.5 counter, this shows how many texrects
          // enter the pipeline vs how many reach the for-loop.
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..5bbeedb 100644
+index 10f98af..8122825 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -3262,11 +3262,13 @@ index 10f98af..5bbeedb 100644
  
  #include "im3d/im3d.h"
  #include "im3d/im3d_math.h"
-@@ -27,7 +36,281 @@
+@@ -27,7 +36,283 @@
  #define MI_INTR_DP          0x00000020
  #define MI_INTR_SP          0x00000001
  
 +extern "C" __attribute__((weak)) uint32_t rs64_phase_ord(void);
++// Defined in src/rsp/dpc_bridge.cpp — RDP FULL_SYNC byte counter (not synthetic).
++extern "C" __attribute__((weak)) uint32_t rs64_dpc_get_cumulative_fullsyncs(void);
 +
 +#include <string>
 +
@@ -3544,7 +3546,7 @@ index 10f98af..5bbeedb 100644
      const float ShiftScaleMap[] = {
          1.0f,
          1.0f / 2.0f,
-@@ -259,7 +542,11 @@ namespace RT64 {
+@@ -259,7 +544,11 @@ namespace RT64 {
  
                      // Failsafe cases.
                      if (tile.line == 0) {
@@ -3557,7 +3559,7 @@ index 10f98af..5bbeedb 100644
                          dstCallTile.valid = false;
                          continue;
                      }
-@@ -270,13 +557,31 @@ namespace RT64 {
+@@ -270,13 +559,31 @@ namespace RT64 {
                      dstCallTile.reinterpretSiz = 0;
                      dstCallTile.reinterpretFmt = 0;
                      dstCallTile.tlut = rdp->otherMode.textLUT();
@@ -3590,7 +3592,7 @@ index 10f98af..5bbeedb 100644
  
                      // Estimate sampling width and height based on masks ands tiles, whichever are smaller.
                      const bool clampS = (tile.masks == 0) || (tile.cms & G_TX_CLAMP);
-@@ -288,14 +593,262 @@ namespace RT64 {
+@@ -288,14 +595,262 @@ namespace RT64 {
                      dstCallTile.sampleWidth = static_cast<uint16_t>(std::min(tileWidth, maskWidth));
                      dstCallTile.sampleHeight = static_cast<uint16_t>(std::min(tileHeight, maskHeight));
  
@@ -3856,7 +3858,7 @@ index 10f98af..5bbeedb 100644
                      dstRDPTile.address = int(tile.tmem) << 3;
                      dstRDPTile.palette = tile.palette;
                      dstRDPTile.masks = (tile.masks > 0) ? (1 << tile.masks) : 0;
-@@ -435,9 +988,12 @@ namespace RT64 {
+@@ -435,9 +990,12 @@ namespace RT64 {
      }
  
      void State::flush() {
@@ -3869,7 +3871,7 @@ index 10f98af..5bbeedb 100644
  
          // Assign some parameters to the draw call.
          const int workloadCursor = ext.workloadQueue->writeCursor;
-@@ -522,6 +1078,12 @@ namespace RT64 {
+@@ -522,6 +1080,12 @@ namespace RT64 {
          if (!fbPair.drawColorRect.isEmpty()) {
              auto &colorImg = fbPair.colorImage;
              auto &depthImg = fbPair.depthImage;
@@ -3882,7 +3884,7 @@ index 10f98af..5bbeedb 100644
              uint32_t colorHeight = fbPair.drawColorRect.bottom(true);
              uint32_t colorWriteWidth = (colorHeight > 1) ? colorImg.width : std::min(fbPair.drawColorRect.right(true), int32_t(colorImg.width));
              uint32_t depthWriteWidth = 0;
-@@ -574,6 +1136,7 @@ namespace RT64 {
+@@ -574,6 +1138,7 @@ namespace RT64 {
                  depthFb->lastWriteTimestamp = writeTimestamp;
                  framebufferManager.changeRAM(depthFb, depthFb->addressStart, depthFb->addressStart + depthFbBytes);
              }
@@ -3890,7 +3892,7 @@ index 10f98af..5bbeedb 100644
          }
  
          // Store the process Id this framebuffer pair was submitted under.
-@@ -593,8 +1156,15 @@ namespace RT64 {
+@@ -593,8 +1158,15 @@ namespace RT64 {
              return;
          }
          
@@ -3908,7 +3910,7 @@ index 10f98af..5bbeedb 100644
  
          const int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
-@@ -640,6 +1210,113 @@ namespace RT64 {
+@@ -640,6 +1212,113 @@ namespace RT64 {
              }
  
              if (!callTile.tileCopyUsed) {
@@ -4022,7 +4024,7 @@ index 10f98af..5bbeedb 100644
                  if (callTile.tmemHashOrID != 0) {
                      textureManager.uploadEmpty(this, ext.textureCache, workload.submissionFrame, callTile.sampleWidth, callTile.sampleHeight, callTile.tmemHashOrID);
                  }
-@@ -649,6 +1326,118 @@ namespace RT64 {
+@@ -649,6 +1328,118 @@ namespace RT64 {
                  else {
                      callTile.tmemHashOrID = textureManager.uploadTexture(this, callTile.loadTile, ext.textureCache, workload.submissionFrame, callTile.sampleWidth, callTile.sampleHeight, callTile.tlut);
                  }
@@ -4141,7 +4143,7 @@ index 10f98af..5bbeedb 100644
              }
              else if (callTile.reinterpretTile) {
                  struct ReinterpretHashData {
-@@ -765,6 +1554,35 @@ namespace RT64 {
+@@ -765,6 +1556,35 @@ namespace RT64 {
          flush();
          submitFramebufferPair(FramebufferPair::FlushReason::ProcessDisplayListsEnd);
  
@@ -4177,7 +4179,7 @@ index 10f98af..5bbeedb 100644
          // Append any framebuffer operations to the end of the last framebuffer pair.
          int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
-@@ -1149,6 +1967,13 @@ namespace RT64 {
+@@ -1149,6 +1969,13 @@ namespace RT64 {
                  if (!fbPair.drawColorRect.isEmpty()) {
                      const auto &colorImg = fbPair.colorImage;
                      const auto &depthImg = fbPair.depthImage;
@@ -4191,7 +4193,7 @@ index 10f98af..5bbeedb 100644
                      colorHeight = fbPair.drawColorRect.bottom(true);
                      colorWriteWidth = (colorHeight > 1) ? colorImg.width : std::min(fbPair.drawColorRect.right(true), int32_t(colorImg.width));
                      depthWriteWidth = 0;
-@@ -1426,11 +2251,21 @@ namespace RT64 {
+@@ -1426,11 +2253,21 @@ namespace RT64 {
                              depthFb->lastWriteType = Framebuffer::Type::Depth;
                          }
  
@@ -4217,7 +4219,7 @@ index 10f98af..5bbeedb 100644
                          }
                      }
  
-@@ -1462,11 +2297,41 @@ namespace RT64 {
+@@ -1462,11 +2299,41 @@ namespace RT64 {
                          // 1MB gate is safe (real N64 framebuffers are always
                          // at >=0x80100000) and unblocks Factor 5 boot.
                          if (colorFb->addressStart >= 0x100000) {
@@ -4261,7 +4263,7 @@ index 10f98af..5bbeedb 100644
                          }
                      }
  
-@@ -1899,6 +2764,50 @@ namespace RT64 {
+@@ -1899,6 +2766,122 @@ namespace RT64 {
              }
          }
          
@@ -4282,16 +4284,88 @@ index 10f98af..5bbeedb 100644
 +                (g_rs64LastAdvance.time_since_epoch().count() != 0) &&
 +                (std::chrono::duration<double, std::milli>(now - g_rs64LastAdvance).count() > 100.0);
 +
-+            if (!g_rs64FullSyncSeen && (addressChanged || stalled) && (pending.fbPairCount > 0)) {
-+                static uint64_t syntheticCount = 0;
-+                syntheticCount++;
-+                if (getenv("ROGUESQ_LOG_ALLOC") != nullptr && (syntheticCount % 64) == 1) {
-+                    fprintf(stderr, "[vi-fullsync #%llu] viAddr=0x%08X fbPairCount=%u reason=%s\n",
-+                        (unsigned long long)syntheticCount, viAddress, pending.fbPairCount,
-+                        addressChanged ? "swap" : "stalled");
++            // s80 V1–V4: always-on rate-limited decision log (not ROGUESQ_LOG_ALLOC).
++            // Discriminates empty pending pairs vs no-trigger vs FullSyncSeen stuck
++            // vs fire-with-no-present-advance after post-leave SYNC_FULL loss.
++            const bool seen = g_rs64FullSyncSeen;
++            const uint32_t pairs = pending.fbPairCount;
++            const bool trigger = addressChanged || stalled;
++            const bool willFire = !seen && trigger && (pairs > 0);
++            const char *reason;
++            if (willFire) {
++                reason = addressChanged ? "swap" : "stalled";
++            } else if (seen) {
++                reason = "seen";
++            } else if (!trigger) {
++                reason = "no-trigger";
++            } else if (pairs == 0) {
++                reason = "pair=0";
++            } else {
++                reason = "other";
++            }
++
++            {
++                static uint64_t decisionN = 0;
++                static uint64_t synthFireN = 0;
++                static uint64_t skipSeenN = 0, skipNoTrigN = 0, skipPair0N = 0, skipOtherN = 0;
++                static uint64_t logByReason[5] = {};
++                decisionN++;
++                int rIdx = 0;
++                if (willFire) {
++                    synthFireN++;
++                    rIdx = 0;
++                } else if (seen) {
++                    skipSeenN++;
++                    rIdx = 1;
++                } else if (!trigger) {
++                    skipNoTrigN++;
++                    rIdx = 2;
++                } else if (pairs == 0) {
++                    skipPair0N++;
++                    rIdx = 3;
++                } else {
++                    skipOtherN++;
++                    rIdx = 4;
++                }
++                logByReason[rIdx]++;
++                // First 48 of each reason class; every 32nd overall; every fire.
++                const bool logIt = willFire || (logByReason[rIdx] <= 48) || ((decisionN % 32) == 0);
++                if (logIt) {
++                    uint32_t rdpFs = 0;
++                    if (rs64_dpc_get_cumulative_fullsyncs) {
++                        rdpFs = rs64_dpc_get_cumulative_fullsyncs();
++                    }
++                    uint32_t lastCimg = 0;
++                    uint16_t lastW = 0;
++                    if (pairs > 0) {
++                        const FramebufferPair &lp = pending.fbPairs[pairs - 1];
++                        lastCimg = lp.colorImage.address;
++                        lastW = lp.colorImage.width;
++                    }
++                    fprintf(stderr,
++                        "[vi-fs-decision] #%llu %s reason=%s seen=%d addrCh=%d stalled=%d "
++                        "pairs=%u vi=0x%08X lastCimg=0x%08X lastW=%u synth=%llu rdpFs=%u "
++                        "skSeen=%llu skNoTrig=%llu skPair0=%llu\n",
++                        (unsigned long long)decisionN,
++                        willFire ? "FIRE" : "SKIP",
++                        reason,
++                        seen ? 1 : 0,
++                        addressChanged ? 1 : 0,
++                        stalled ? 1 : 0,
++                        pairs,
++                        viAddress,
++                        lastCimg,
++                        (unsigned)lastW,
++                        (unsigned long long)synthFireN,
++                        rdpFs,
++                        (unsigned long long)skipSeenN,
++                        (unsigned long long)skipNoTrigN,
++                        (unsigned long long)skipPair0N);
 +                    fflush(stderr);
 +                }
++            }
 +
++            if (willFire) {
 +                // fullSync() ends the display-list CPU profiler partway through
 +                // and restarts it at the end, because on its normal path it runs
 +                // inside Interpreter::processRDPLists, which brackets it. Called
@@ -4312,7 +4386,7 @@ index 10f98af..5bbeedb 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1959,8 +2868,20 @@ namespace RT64 {
+@@ -1959,8 +2942,20 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -4335,7 +4409,7 @@ index 10f98af..5bbeedb 100644
                  return;
              }
          }
-@@ -1972,7 +2893,11 @@ namespace RT64 {
+@@ -1972,7 +2967,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -4348,7 +4422,7 @@ index 10f98af..5bbeedb 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +2958,51 @@ namespace RT64 {
+@@ -2033,26 +3032,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
