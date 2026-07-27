@@ -5914,3 +5914,42 @@ Fix before next path-isolation run (unique probe tags).
 Isolate Start-only vs double-Start vs a→Start with unique snap tags; then 60s
 hangar-flight/mission hold + craft input. Residual transition SIGBUS and
 MetalFramebuffer SIGSEGV are follow-ups once key path is pin-pointed.
+
+## Session 75 (2026-07-27) — single Start launches hangar-flight
+
+### Work unit
+M3: isolate Start launch path from SELECT YOUR CRAFT (S1–S4). One soak:
+`PROBE_MODE=start_only` via `run_mission_keys.sh startonly 20 12`.
+
+### Result — S1 supported
+From stable SELECT YOUR CRAFT (yel≈13k, visual full HUD), **one Start** leaves
+within 2–4s into hangar-flight (airborne X-wing, no menu text, multi-hue floor
+garbage). Title-yellow: craft_stable 13075 → after_p1_start_02 488 →
+after_p1_start_04 0. Process alive through 20s grace; CRASH=0; thr-resume bad=0;
+exit=2=0.
+
+### Ruled out (this run)
+- **S2** double-Start required — only one post-stable Start fired.
+- **S3** Start-after-`a` required — probe was Start-only after craft-select was
+  already stable (schedule `a` was the earlier AVAILABLE CRAFT transition).
+- **S4** as a hard rule — this Start was not dropped. s74's "first Start +3s still
+  SELECT" is best read as snap-overwrite / short window / intermittent drop, not
+  a mandatory double-Start chord.
+
+### Positive control
+pre_p1_start / craft_stable show SELECT with high title-yellow before the probe;
+instrument and scene ID are live in the same run.
+
+### Residual (not S1)
+Content hangar-flight ~6–9s post-leave, then black captures; `fs` freezes at 3360
+while process stays up (keys2 instead SIGSEGV MetalFramebuffer ~10s). Blocks 60s
+hold quality, not leave-key discovery.
+
+### Files
+- `scratch/s73_post_a_scene/startonly/`, `startonly_console.txt`
+- `scratch/s73_post_a_scene/STARTONLY_ANALYSIS.md`
+
+### Next
+60s hangar-flight hold + craft stick input on the start_only path; treat fs-freeze /
+black present / Metal SIGSEGV as the hold blockers if they prevent 60s of visible
+craft response.
