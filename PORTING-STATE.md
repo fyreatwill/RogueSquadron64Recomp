@@ -6091,3 +6091,41 @@ step), instrument `[fb-get] REFUSE`, soak start_only HOLD_S=20 with
 - Keep gate default-on as safety (map ~7, no wild tilecopy).
 - Do not convert createTileCopy assert→skip (still no found=0 log).
 - Next: high-tri `syncs=0` / FULL_SYNC starvation post-leave (D3).
+
+## Session 79 (2026-07-27) — D3 S1–S4: post-leave syncs=0 is primary; UnhandledJump secondary
+
+### Work unit
+Discriminate high-tri `syncs=0` / FULL_SYNC starvation (D3) per NEXT S1–S4.
+**Capture-once / analyze-many:** offline full parse of s78 `fbgate3/run.log`
+(already `ROGUESQ_LOG_RUNNER_ALL=1`). No new build — re-running the same soak
+without new counters would not add information.
+
+### Positive control (same log)
+5165 `[runner]` (every task), 1133 `[last-drawn]`, 899 UnhandledJump 0x0231,
+40 `[fb-get] REFUSE`. Instruments fire.
+
+### Transition
+| task# | exit | tris | tex | fill | syncs | note |
+|------:|-----:|-----:|----:|-----:|------:|------|
+| 4251 | 1 | 1122 | 57 | 1 | 1 | last high-tri syncs≥1 (2385-streak) |
+| 4252 | 1 | 587 | 0 | 0 | 0 | **onset** — DL shape change |
+| 4253–4264 | 1 | ~590 | 0 | 0 | 0 | 13 healthy Broke, still no FULL_SYNC |
+| 4265+ | 3 | ~170–320 | 0 | 0 | 0 | UnhandledJump 0x0231 forever |
+
+After onset: **914/914** high-tri `syncs=0`, **0** recoveries. Last `fs`
+increase ≈ task **#4254** → plateau **3297** (30 samples) while ~900 tasks continue.
+Pixel freeze: `craft_stable`…`hold_10_sr` byte-identical (md5 `09d7963e9fd2`).
+
+### Hypotheses
+| ID | Outcome | Why |
+|----|---------|-----|
+| **S1** tasks emit 0 SYNC_FULL; VI_FULLSYNC stalls | **SUPPORTED** | 100% syncs=0 from #4252; fs plateaus one task after onset |
+| **S2** SYNC_FULL emitted but fullSync skipped | **REFUTED** | 0 trailing high-tri with syncs≥1 |
+| **S3** UnhandledJump causes onset | **REFUTED as primary** | Jump @ #4265, 13 tasks *after* onset; gap is exit=1+syncs=0 |
+| **S4** present follows dead last-drawn | **PARTIAL** | wild last-drawn at #4251; present-1024 empty=0 on sane FBs until ~#4265 then stops; not two-source "geometry elsewhere" |
+
+### Rules out / keep
+- Do **not** chase pair-gate skip of real SYNC_FULL (S2 dead).
+- Do **not** treat 0x0231 as the FULL_SYNC-loss root; park as secondary after present holds.
+- S1 next: why VI_FULLSYNC only advances once post-onset (`fbPairCount` / decision log).
+- Detail: `scratch/s73_post_a_scene/SYNCS0_ANALYSIS.md`.

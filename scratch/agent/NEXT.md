@@ -1,49 +1,50 @@
-# NEXT work unit — M3: high-tri syncs=0 / FULL_SYNC starvation (D3)
+# NEXT work unit — M3: VI_FULLSYNC decision after post-leave SYNC_FULL loss
 
-s78: wild-FB refuse gate live; G1 refuted. `fs` freezes ~3297 with trailing
-tasks `syncs=0` from #4252 (s77: #4326). Gate stays as safety. Detail:
-`scratch/s73_post_a_scene/FBGATE_ANALYSIS.md`.
+s79: S1 supported (100% trailing `syncs=0` from #4252; fs plateaus ~#4254 at
+3297). S2/S3-primary refuted. Detail:
+`scratch/s73_post_a_scene/SYNCS0_ANALYSIS.md`.
 
-## Competing hypotheses
+## Competing hypotheses (why fs stops after one more advance)
 
 | ID | Claim | If true, we will see… |
 |----|--------|------------------------|
-| S1 | Trailing hangar-flight tasks emit 0 SYNC_FULL in the post-translation hist → VI_FULLSYNC is the only frame boundary and it stops matching | `ROGUESQ_LOG_RUNNER_ALL=1`: tasks after leave have tris>0 and syncs=0; VI_FULLSYNC / present early lines stop or stall when fs plateaus |
-| S2 | Tasks still emit SYNC_FULL but fullSync is skipped/failing (pair/path gate over-filter) | runner hist shows syncs≥1 on trailing high-tri tasks, yet fs still plateaus; gate-skip counters rise in same window |
-| S3 | RSP UnhandledJump (0x0231, s78) aborts tasks before SYNC_FULL | UnhandledJump count correlates 1:1 with syncs=0 onset task#; fixing/skipping that jump restores syncs≥1 |
-| S4 | Present follows a dead last-drawn while geometry still lands in a live FB | last-drawn stays wild/NO-FB while a sane FB (0x6AB000/0x656000) still receives draws; force-present of that addr shows content during "freeze" |
+| V1 | `pending.fbPairCount==0` after onset → synthetic never fires | `[vi-fs-decision] SKIP pair=0` dominates freeze window; addressChanged still true on VI swaps |
+| V2 | Synthetic fires but `fullSync()` early-outs / does not advance `fs` | `FIRE` lines continue while `fs` stuck; pair skip / workload counters rise |
+| V3 | `addressChanged` false and `stalled` false (VI path not entering condition) | SKIP reason=no-trigger; origins not changing and wall clock <100ms between checks (unlikely at freeze) |
+| V4 | `g_rs64FullSyncSeen` stuck true without real SYNC_FULL | SKIP reason=seen; runner still shows syncs=0 (instrument bug or unexpected setter) |
 
-## Discriminating measurement (one build if new counters, one soak)
+## Discriminating measurement (ONE build, ONE soak)
 
-Phase-gate: start_only HOLD_S=20, `ROGUESQ_LOG_RUNNER_ALL=1` (already in
-`run_mission_keys.sh`), keep tilecopy optional off to reduce noise.
+Add always-on rate-limited log in `rt64_state.cpp` VI_FULLSYNC block (not
+behind `ROGUESQ_LOG_ALLOC`):
 
-```bash
-env PROBE_MODE=start_only HOLD_S=20 \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh syncs0 0 12
-# offline (never cat whole log):
-#   first task with tris>100 and syncs=0 after the last syncs≥1 high-tri
-#   UnhandledJump count before/after that task#
-#   fs max + how many consecutive update_screen share that fs
-#   last-drawn / vi-follow NO-FB in the freeze window
-#   pixel stats craft_stable vs hold_02 vs hold_10
+```
+[vi-fs-decision] #N fire|skip reason=... seen= fsSeen addrCh= stalled= pairs=N vi=0x.. fs=N
 ```
 
-If S2 needs a gate-skip counter, add one build of
-`[fb-pair] SKIP wild/oob` at the workload/fullSync early-outs (batch with any
-other counters).
+Batch optional: post-onset CIMG target class counter (sane 512 @0x656/0x6AB vs
+wild/refused) if cheap on the same edit.
+
+```bash
+# after build:
+env PROBE_MODE=start_only HOLD_S=20 \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh vifs1 0 12
+# offline:
+#   first decision after last runner syncs>=1 high-tri
+#   FIRE vs SKIP counts while fs plateaus
+#   pairs distribution in freeze window
+#   export submodule-patches if lib/rt64 edited
+```
 
 ### Outcomes
 
-- **S1:** next unit = why hangar-flight DLs lose FULL_SYNC (ucode/DL walk), or
-  strengthen VI_FULLSYNC during that phase.
-- **S2:** relax/fix pair skip so legitimate post-leave pairs still fullSync.
-- **S3:** map jump 0x0231 (overlay/ucode) — separate unit.
-- **S4:** present-follow fix for hangar-flight FB, not runner.
+- **V1:** next = why hangar-flight DLs / refuse path produce zero pairs (CIMG targets).
+- **V2:** next = fullSync early-out / pair skip after s78 gate.
+- **V3/V4:** fix VI_FULLSYNC trigger or FullSyncSeen lifetime.
 
 ## Do not
 
-- Re-open wild-FB registration (s78 closed G1).
-- Convert createTileCopy assert→skip without found=0.
-- Cross-run A/B on animating hangar-flight without phase gate.
-- Sampled `ROGUESQ_LOG_RUNNER` (1-in-32) for single-task questions — use `_ALL`.
+- Re-open S2 (syncs emitted but skipped) — s79 refuted.
+- Chase UnhandledJump 0x0231 as primary present fix.
+- Sampled `ROGUESQ_LOG_RUNNER` for single-task questions.
+- Re-run fbgate3-class soak without the new decision log.
