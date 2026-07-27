@@ -655,50 +655,49 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s115)
+## Next steps, in order of expected value (s116)
 
--1. **M3 — find what writes `voice+0x0` (the active-voice byte) nonzero
-   outside the confirmed-dead `musyxTriggerVoiceAttack` call chain.**
-   s115 **closed** the `voice+0x34`-writer question for good (3rd
-   independent line of evidence: s111 found the only literal writer,
-   s113 found no computed-offset writer, s115 found the array's own
-   allocator `allocateSongChannelArray` — `funcs_23.c:10687` — never
-   initializes offset 0x34 either, only 0x0/0x84/0x85) — `voice+0x34` is
-   uninitialized-by-design heap content whenever a voice is never
-   explicitly key-oned via `musyxInitVoiceFromSample`, fully explaining
-   the ASCII-shaped, run-to-run-identical corruption (deterministic heap
-   layout, not a race — s85's "shared race" framing is closed). **s114's
-   "reopening" of this question was itself a misreading of s113's own
-   text** (s113 never disputed the one known writer exists; it only
-   ruled out a second, computed-offset one) — see PORTING-STATE s115 for
-   the correction.
-   The real open question s115 found instead: `musyxMixActiveVoices`
-   (`funcs_24.c:2477`, called 3x from the always-running `musyxSynthFrame`)
-   only calls `musyxRenderVoiceSamples` (the `voice+0x34` reader) when
-   `voice+0x0 != 0` — an explicit active-flag gate, confirmed zeroed at
-   allocation. The only known writer of `voice+0x0 = 1`,
-   `musyxTriggerVoiceAttack` (`funcs_24.c:6085`), is itself called only
-   from the same two chains already proven dead (s105-s110/s114:
-   `tickAllAudioChannels`, `startStreamedSampleVoice`/
-   `serviceVoicePoolFrame`) — yet `musyxRenderVoiceSamples` demonstrably
-   *does* run every corrupting soak (that's the only path into
-   `fillSampleStreamRange`, active via `musyx-dma-call`/`fill-range-args`
-   every session since s102). Something else must be setting `voice+0x0`
-   nonzero. **Both s111's and s113's "-0x6908 audits" have a structural
-   blind spot**, flagged but not acted on since s111: they only find
-   functions that load the `-0x6908` global fresh; any function that
-   instead *receives* an already-computed voice pointer as an argument
-   (the same category `musyxRenderVoiceSamples`/`musyxKeyOnVoice`
-   themselves are in) is invisible to that grep and was never checked for
-   a `+0x0` write. **Next work unit**: find that writer among
-   argument-receiving voice-pointer functions reachable from
-   `musyxSynthFrame`'s always-running path; if found, check whether it
-   also sets `+0x34` (if not, that call site — not the allocator, not a
-   blind zero-fill of `+0x34` — is the real fix site, since `+0x34`'s
-   true role as a stream/DMA-source address means 0 is not a confirmed-safe
-   default). Do not re-run the `-0x6908` literal-grep audit method again —
-   it has now demonstrably missed real candidates twice. Full detail:
-   PORTING-STATE s115.
+-1. **M3 — explain how `voice+0x0` reads nonzero when its only known
+   nonzero-writer never runs.** s116 closed both fallback candidates
+   NEXT.md named (`musyxKeyOnVoice`: exhaustive read of all ~650 lines
+   found zero writes to its argument anywhere, read-only; `isAudioSlotActive`:
+   confirmed pure query, no store) and confirmed via grep that
+   `musyxRenderVoiceSamples` (`funcs_24.c:2623`, gated `if (voice+0x0 != 0)`)
+   has exactly one call site anywhere — ruling out a second, ungated
+   entry path. Landed `ROGUESQ_LOG_VOICE_ATTACK_ENTRY=1` directly on
+   `musyxTriggerVoiceAttack`'s own prologue (a chokepoint that catches
+   *any* caller, unlike s105-110's caller-side-only instruments) and ran
+   3 soaks. The 3rd (`voiceattack3`) is decisive: reached the
+   `do_rom_read` crash window at 140.1s with `musyx-dma-call` firing 17x
+   and `fill-range-args` firing 7x (same-run **positive control** proving
+   `musyxRenderVoiceSamples` genuinely ran multiple times) while
+   `[voice-attack-entry]` fired **0x**. This is now a null result *with*
+   a positive control, CLAUDE.md's own bar for a real result: the one
+   known writer of `voice+0x0` nonzero anywhere in the tree provably
+   never executes, in a run where the gate it's supposed to set clearly
+   *was* satisfied. Since s115 already established both zeroing writers
+   (`allocateSongChannelArray`, `musyxInitVoiceFromSample` — the latter's
+   own `+0x0=0` write at `funcs_24.c:5804` was a new s116 finding) DO run
+   every session, "uninitialized by design" (the explanation that closed
+   the analogous `+0x34` question) does not cleanly apply here — `+0x0`
+   has two confirmed writers-to-zero and zero confirmed writers-to-nonzero,
+   yet reads nonzero in practice. **Next work unit**: add a direct
+   value-and-address log at the gate check itself inside
+   `musyxMixActiveVoices` (`funcs_24.c:2586-2588`, the `MEM_BU(ctx->r4, 0X0)`
+   read) — log the computed voice-array base, the loop index, and the
+   byte value every time the gate is checked, for several frames. This is
+   the direct analog of the instrument that resolved the `+0x34` mystery
+   (s114's `ROGUESQ_LOG_STREAM_NODE_INIT`): it will show whether the
+   nonzero byte is a consistent bit-pattern (deterministic heap/addressing
+   bug, same *class* as `+0x34` but a different mechanism) or whether the
+   index/base computation itself looks wrong (an addressing bug reading a
+   different struct or an out-of-bounds slot entirely). Do not re-instrument
+   `musyxKeyOnVoice`/`isAudioSlotActive`/the caller-side chain — all closed
+   this session. Full detail: PORTING-STATE s116.
+   (Also flagged, not chased: the s84 `frameStartReset` SIGBUS — called a
+   "fluke" in s85 after 0/2 non-recurrence — recurred once more this
+   session (2/4 soaks total across s84/s85/s116); worth revisiting if it
+   keeps preempting the target window, not dominant enough yet to gate.)
 
 -2. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102

@@ -9826,3 +9826,111 @@ candidates twice.
 None changed — pure source-read session (direct reads, not subagent
 delegated, of `funcs_22.c`, `funcs_23.c`, `funcs_24.c`, `funcs_26.c` and
 re-reads of PORTING-STATE s110-s114); no build, no run, no `lib/` edits.
+
+## Session 116 (2026-07-27) — closed both named fallback candidates for `voice+0x0`, proved the one known writer never fires even with a same-run positive control that the gate it sets IS being satisfied
+
+Continued NEXT.md's M3 item -1 work unit: find what actually sets
+`voice+0x0` (the active-voice flag `musyxMixActiveVoices` checks before
+calling `musyxRenderVoiceSamples`, the sole entry point into
+`fillSampleStreamRange`'s corrupted-`devAddr` chain).
+
+**Source read, no build yet needed for these parts:**
+- Read `musyxMixActiveVoices` (`funcs_24.c:2477-3096`) in full. Confirmed
+  its only per-voice call is `musyxRenderVoiceSamples` (`funcs_24.c:2623`,
+  gated `if (voice+0x0 != 0)`, `funcs_24.c:2587-2592`). The function's
+  second half (post `L_80090F5C`) operates on a *different* global
+  (base `-0x68F8`, not `-0x6908`) that coincidentally shares the same
+  136-byte element stride — a distinct "voice command list" struct, not
+  the real voice array.
+- Traced a previously-uncatalogued call chain from that second struct:
+  `musyxSynthFrame` (`funcs_24.c:3279`, unconditional every frame) calls
+  `musyxBuildVoiceCommandList` (`funcs_24.c:2787`), which calls
+  `musyxKeyOnVoice` (`funcs_24.c:2860`) on an element of the `-0x68F8`
+  array (not the real `-0x6908` voice array) when that element's `+0x22`
+  byte is zero. Confirmed only one call site (`musyxBuildVoiceCommandList`
+  itself has only one caller too) — not a new lead regardless, per the
+  next point.
+- Read `musyxKeyOnVoice` (`funcs_24.c:1825-2476`, ~650 lines) exhaustively
+  for every use of its argument register (`ctx->r16`/`$s0`): every single
+  reference is a *load* (offsets `0x21,0x24,0x28,0x2C,0x30,0x34,0x38,
+  0x3C,0x40,0x44,0x46,0x48,0x4A,0x50,0x58,0x5C,0x60,0x64,0x66,0x68,0x6A,
+  0x6C,0x6E,0x70,0x72,0x74`) — **zero writes to its argument anywhere**.
+  This definitively refutes it as a `+0x0` writer for *any* struct it's
+  given, closing NEXT.md's fallback candidate #1.
+- Read `isAudioSlotActive` (`funcs_24.c:5731-5754`): a 6-instruction pure
+  query (`MEM_BU(voice,0x0)` then `0 < x`), no store at all. Closes
+  fallback candidate #2.
+- Re-read `musyxInitVoiceFromSample` around its already-known `+0x34`
+  write and found (previously undocumented) it **also explicitly clears
+  `voice+0x0 = 0`** (`funcs_24.c:5804`) when assigning a fresh sample —
+  a second explicit zeroing site beyond `allocateSongChannelArray`'s
+  allocation-time zero (s115). Reinforces that `+0x0` should reliably
+  read 0 absent an explicit nonzero write.
+- Grepped the whole recompiled tree for `musyxTriggerVoiceAttack`'s
+  guest address (`0x8009231C`) as a data literal: found nowhere outside
+  its own definition and the two known static call sites
+  (`funcs_23.c:4887`, `funcs_26.c:1573`) — no function-pointer-table
+  entry references it, so no *table-driven* indirect call is evidenced
+  (the mechanism that resolved the analogous s94-101 DMA-caller mystery).
+  A register-loaded `jalr` from an unfound caller remains structurally
+  invisible to this method, same blind spot as always.
+- Grepped for all call sites of `musyxRenderVoiceSamples` itself: exactly
+  one (`funcs_24.c:2623`, inside `musyxMixActiveVoices`, the gated one).
+  Rules out a second, ungated entry point as the resolution to the
+  contradiction below.
+
+**Instrument landed** (`N64Recomp/fixup_game_funcs.py`, `funcs_24.c`):
+`ROGUESQ_LOG_VOICE_ATTACK_ENTRY=1` on `musyxTriggerVoiceAttack`'s own
+prologue — deliberately a *different* chokepoint than s105-110's
+caller-side instruments (`tickAllAudioChannels`/`serviceVoicePoolFrame`
+entry), which only catch specific known call chains. An entry log on the
+function itself catches *any* call reaching it, direct or indirect,
+known caller or not — the same "instrument the target, not the suspected
+caller" fix that eventually solved the s94-101 DMA-caller mystery.
+
+**Full regen + soaks** (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`
+→ `cmake --build`, all rc 0, patch confirmed applied exactly once via
+`grep -c`; `N64Recomp` itself required the `subprocess.run(cwd=...)`
+workaround for the headless-Bash approval wall, same as PORTING-STATE
+s95/s99 already documented):
+- **voiceattack1** (`PROBE_MODE=start_only HOLD_S=30`): died at hold+8s
+  to a SIGBUS in `frameStartReset` — the s84 crash previously called a
+  "fluke" after 0/2 non-recurrence in s85. This is its 2nd recurrence
+  overall (2/4 soaks across s84/s85/s116) — not dominant, but "fluke" was
+  too strong a word; flagged, not chased further this session.
+  `[voice-attack-entry]` 0/0 but **inconclusive** (died before the ~140s
+  corruption window, no positive control).
+- **voiceattack2** (same flags): reached the classic `do_rom_read` SIGSEGV
+  at 137.3s — the same corruption-window timing as every prior session
+  since s85. `[voice-attack-entry]` still 0/0, but still lacking an
+  in-run positive control (didn't have `musyx-dma-call`/`fill-range-args`
+  armed this run).
+- **voiceattack3** (added `ROGUESQ_LOG_MUSYX_DMA_CALL=1
+  ROGUESQ_LOG_FILL_RANGE_ARGS=1` alongside, batching the existing
+  confirmed-working controls per ITERATION.md rule 1): reached the same
+  `do_rom_read` crash at 140.1s. **`musyx-dma-call` fired 17x,
+  `fill-range-args` fired 7x — both proving `musyxRenderVoiceSamples`
+  (the ONE function gated behind `voice+0x0 != 0`) genuinely ran multiple
+  times this session — while `[voice-attack-entry]` fired 0x.**
+
+**This is now a null result WITH a same-run positive control** (CLAUDE.md's
+own bar): the only known writer of `voice+0x0` nonzero anywhere in the
+recompiled tree provably never executes, in a run where the gate it's
+supposed to set IS being satisfied for at least 7-17 voice-render calls.
+Combined with s115's finding that both zeroing writers (array allocation,
+`musyxInitVoiceFromSample`) reliably run and clear this exact byte, "the
+byte is simply uninitialized-by-design" (the explanation that closed the
+analogous `+0x34` question) does **not** cleanly apply here — `+0x0` has
+*two* confirmed writers and *zero* confirmed nonzero-setters, yet reads
+nonzero in practice. Two live hypotheses, not yet split: (a) the specific
+voice slot `musyxMixActiveVoices` checks is read via a bad index/base and
+lands outside what was actually zeroed (an out-of-bounds or wrong-struct
+read, same *class* as the `+0x34` finding but a different mechanism), or
+(b) the gate check's addressing itself has a bug (base or offset) that
+makes it read a different byte than offset `+0x0` of the intended slot.
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: new `ROGUESQ_LOG_VOICE_ATTACK_ENTRY`
+patch on `musyxTriggerVoiceAttack` (`funcs_24.c`). Regenerated
+`N64Recomp/RecompiledFuncs/*.c` and rebuilt `RogueSquadron64Recomp`
+(build/ is gitignored, not committed). No `lib/` edits this session.
