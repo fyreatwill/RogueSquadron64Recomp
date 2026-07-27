@@ -1,0 +1,30 @@
+pid 89680 out=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/s73_post_a_scene/hold60 stable=12s grace=0s
+window 15109
+waiting for VI width 1024 (timeout 600s)
+phase width=1024 reached after 45.0s
+[keys] start at 3s (from-phase)
+[keys] start at 25s (from-phase)
+[keys] start at 40s (from-phase)
+[keys] a at 60s (from-phase)
+wait 12s for SELECT YOUR CRAFT stable
+[keys] probe p1 start
+hold window 60s @ 1 Hz with sticks: 10:sr 25:sl 40:su
+game process gone at hold-iter 7
+hold done wall=6s
+grace window 0s @ 1 Hz after probes
+game process gone at grace-iter 1
+done wall=27s
+--- summary ---
+lle tasks: 4333
+exit=2: 0
+exit=1: 4475
+missing-func: 0
+UnhandledJump: 0
+thr-resume bad=1: 0
+ost-wb SKIP_WIDTH: 15
+ost-wb SKIP_OOB: 7
+fs max: 3364
+last fs line: [vi] update_screen #8128 origin=0x006AB400 width=512 status=0x3246 v_current=0 nonzero=1 fs=3364 pq.wc=2 wq.wc=1
+last phase: [phase] vi_width=512 (was 1024) origin=0x006AB400 at 73.9s update_screen #4434
+CRASH: 1
+--- done ---

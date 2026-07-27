@@ -5953,3 +5953,51 @@ hold quality, not leave-key discovery.
 60s hangar-flight hold + craft stick input on the start_only path; treat fs-freeze /
 black present / Metal SIGSEGV as the hold blockers if they prevent 60s of visible
 craft response.
+
+## Session 76 (2026-07-27) — hangar-flight hold fails: createTileCopyRecord assert ~12s post-leave
+
+### Work unit
+M3 60s hangar-flight hold + stick on start_only path (NEXT.md H1–H4).
+
+### What ran
+- Extended `scratch/s73_post_a_scene/run_mission_keys.sh`: `HOLD_S` hold_NN snaps + stick
+  schedule (`STICK_SCHEDULE` default `10:sr 25:sl 40:su`, 400 ms). start_only leave-confirm
+  shortens to 5s when HOLD_S>0.
+- One soak: `env PROBE_MODE=start_only HOLD_S=60 zsh …/run_mission_keys.sh hold60 0 12`
+  → `scratch/s73_post_a_scene/hold60/` + `hold60_console.txt` + `HOLD60_ANALYSIS.md`.
+
+### Controls (same run)
+- Pre-leave SELECT: title-yellow **13040** + visual SELECT YOUR CRAFT (craft_stable).
+- Leave: yel → 0 by after_p1_start_04; hangar-flight content hold_01–02 / after_04–05.
+- thr-resume bad=1: **0**; exit=2: **0**; missing-func/UnhandledJump: **0**.
+- Stick never fired (death at hold-iter 7 before mark 10) → H4 N/A.
+
+### Discriminating results
+| H | Claim | Outcome |
+|---|--------|---------|
+| H1 | 60s content hold | **Refuted** — dead ~7s into hold (~12s post-Start leave) |
+| H2 | fs freeze + black, process may live | **Partial** — fs plateaus at **3364** from #7872; black snaps; process aborts |
+| H3 | process dies <60s | **Supported** — signal 6 Abort |
+| H4 | stick moves craft | no data |
+
+### Death (new site vs keys2)
+```
+Assertion failed: (fbIt != framebuffers.end()), function createTileCopyRecord,
+  rt64_framebuffer_manager.cpp:190
+```
+WorkloadQueue render thread. Pre-assert: wild last-drawn cluster (w=4007 etc;
+113/1314 w>1280), `copy-mode draw with undefined tile 7`, trailing tasks #4329–4332
+syncs=0 with tris≈566–599. **Not** MetalFramebuffer SIGSEGV (keys2) and **not** s72
+OSThread writeback (bad=0). Same present/RT64 hangar-flight residual family.
+
+### Rules out / does not
+- Waiting longer alone is not enough for M3 60s (H1 closed this path).
+- Does not re-open s72 writeback.
+- Does not prove stick input path (never reached).
+- Does not fix present; next unit is diagnose this assert / wild CIMG under hangar-flight
+  with counters scoped post-leave (same-run positive control required).
+
+### Next
+Diagnose hangar-flight present death: createTileCopyRecord missing-fb + wild last-drawn
++ fs freeze at ~3364; convert assert to skip or filter garbage FBs if that is the writer
+path — only after same-run positive control that the op path fires on good frames too.
