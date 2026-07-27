@@ -664,34 +664,33 @@ cost three sessions before the recursive mutex.
     Guards `emit-dl-guard2`/`3` never fired (0/0 all 3 attempts) but
     both stay in the code (real fixes, independent of this question).
 
-0b. **IN PROGRESS (s136, attempt 1/3): `submitSceneNodeRender`
-    material-batch-list guard, landed and soaked once.** The prescribed
-    source-read (funcs_4.c, non-free-list code) found a 2nd, distinct
-    unguarded pointer-chase idiom — a pointer loaded from a fixed global
-    table (bases -0x1758/-0x1750, two inlined occurrences) that is
-    dereferenced and then walked as its own linked list, feeding
-    `heapFreeListDequeue` (the same nearest-symbol match as the 18th
-    class) via a completely different pointer source than the
-    already-guarded free-list-return-value idiom. Guarded
-    (`MATLIST_GUARD1`/`GUARD2`, `N64Recomp/fixup_game_funcs.py`), full
-    delete-all regen + clean build (patch report exact x1/x1, no
-    duplicates). Soak 1: both new guards **0/0** (uncontrolled null),
-    process died at hold-iter 11 to a byte-identical recurrence of the
-    tracked `do_rom_read`/`piDmaWorker` corruption race (2nd straight
-    soak to die there, s135+s136) — neither confirms nor refutes the
-    new guard, and the 18th class itself did not recur this run either.
-    **Next work unit: re-soak the same recipe (attempt 2/3)** —
-    `scratch/agent/run_matlist1.sh` (no rebuild needed, binary is
-    current). Discriminating outcomes: (1) either new guard fires →
-    likely root cause of the 18th class found; (2) guard stays silent
-    AND the 18th class itself recurs → this idiom is also not the
-    cause, pivot to the misattribution branch (s131's other open
-    question — would need disassembly-level work); (3) another
-    `do_rom_read` recurrence (3rd straight) → treat as its own signal:
-    the do_rom_read family may now be winning the hold-window race
-    consistently enough that Thread B (below) should be promoted from
-    fallback to primary, since it's preventing validation of any
-    further hangar-tick-family guard. Full detail: PORTING-STATE s136.
+0b. **PARKED at 2/3 (s136-s137): `submitSceneNodeRender`
+    material-batch-list guard (`MATLIST_GUARD1`/`GUARD2`).** Two soaks,
+    both 0/0 on the new guards (uncontrolled null both times), both
+    dying to the tracked `do_rom_read`/`piDmaWorker` corruption race
+    (byte-identical `devAddr=0x6C676672 dramAddr=0x80195190`), not the
+    18th class. Both guards stay in the code regardless (real
+    unguarded-pointer-chase fixes, independent of this question). Per
+    NEXT.md's own pre-committed decision rule, a **3rd consecutive
+    `do_rom_read` recurrence** (s135, s136, s137 — three different
+    render-guard hypotheses in a row) triggers promoting Thread B
+    (below) from fallback to primary rather than spending the 3rd
+    material-batch-list attempt. Of the last 5 render-guard soaks
+    (s133-s137), `do_rom_read` now accounts for 3/5 — a clear plurality,
+    not yet "always." Full detail: PORTING-STATE s136-s137.
+
+0c. **PROMOTED TO PRIMARY (s137): Thread B, the audio-corruption pivot
+    (`voice+0x0`/`+0x34`, s105-136).** Longest-running open thread;
+    every recent bystander recurrence has confirmed the same closed
+    mechanism (`fillSampleStreamRange`'s own arguments already corrupted
+    at entry) without new information. Next work unit is the
+    fresh-angle grep flagged since s126: search all `funcs_*.c` /
+    `symbol_files/*.txt` for other code that constructs a name/string
+    table with entries shaped like the corrupted bytes actually seen
+    (`at_6`, `at_7`, `main_n_atpt_lod`, `pilot_sd`, and the
+    `iexpl2_t`/`tarexex`-shaped strings from s118) — i.e. find what else
+    builds or indexes that table, as a candidate for what's aliasing
+    `voice+0x34`. See NEXT.md for the exact grep commands.
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with

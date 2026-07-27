@@ -12084,3 +12084,65 @@ RecompiledFuncs/funcs_4.c` (regenerated, not committed here -- see the
 `run_emitdl3.sh`). `scratch/s73_post_a_scene/matlist1/` (soak logs, not
 committed, scratch). `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
 `scratch/agent/NEXT.md` (this write-up).
+
+## Session 137 (2026-07-27) — re-soaked the material-batch-list guard (attempt 2/3): 0/0 again, and a 3rd straight `do_rom_read` recurrence triggers NEXT.md's own outcome-3 branch -- promoting the audio-corruption pivot (Thread B) from fallback to primary instead of a 3rd soak
+
+Ran exactly the work unit NEXT.md prescribed: re-soak s136's
+`submitSceneNodeRender` material-batch-list guards (`MATLIST_GUARD1`/`2`)
+with the identical recipe, no rebuild (binary unchanged since s136). New
+wrapper `scratch/agent/run_matlist2.sh` (copy of `run_matlist1.sh`, tag
+changed `matlist1` -> `matlist2` so logs don't overwrite the first soak,
+per NEXT.md's explicit instruction). Confirmed no new `ROGUESQ_LOG_*`
+flags had been added since s136 (`grep -oE` count still 34, identical
+list) so the wrapper needed no other changes.
+
+**Soak (`matlist2`, `PROBE_MODE=start_only HOLD_S=30`,
+`ROGUESQ_LOG_THREAD_RESUME=0`, all 34 flags armed):** both new guards
+fired **0/0** again -- second straight uncontrolled null on this
+hypothesis. Process died at hold-iter 11 (~12s into hold, same timing as
+s136) to a **byte-identical recurrence of the tracked
+`do_rom_read`/`piDmaWorker` corruption race**: crash backtrace resolves
+directly to `do_rom_read` <- `do_dma` <- `osPiStartDma_recomp` <-
+`piDmaWorker` (no guest frames, no `heapFreeListDequeue`/
+`submitSceneNodeRender` in the stack -- the 18th class did **not**
+recur). `[dma-ring-consumer]`/`[musyx-dma-call]` confirm the exact same
+`devAddr=0x6C676672 dramAddr=0x80195190` fields as every prior occurrence
+(s85/s91/s93/s94/s101-104/s135/s136). Run summary: 5161 lle tasks, exit=2
+0, missing-func 0, thr-resume bad=1 0, ost-wb SKIP_OOB 4, fs max 3292,
+CRASH 1.
+
+**Consequence.** This is the **3rd consecutive soak in this render-guard
+series to die to `do_rom_read`** (s135, s136, s137 -- three different
+hypotheses in a row: `emitAllocatedDLCommand`'s final attempt, and both
+material-batch-list attempts). NEXT.md named this exact count in advance
+as its outcome-3 trigger: "a 3rd straight `do_rom_read` recurrence ...
+promote Thread B (the audio-corruption pivot) from fallback to primary
+for the next work unit instead of a 3rd material-batch-list soak." Per
+that pre-committed decision rule (and per rule 8's spirit -- three
+independent render-guard hypotheses losing the race to the same crash is
+itself a discriminating result about which bug currently dominates the
+hold window, even though it discriminates nothing about the guards
+themselves), this session does **not** spend a 3rd attempt on the
+material-batch-list hypothesis. Both guards (`MATLIST_GUARD1`/`2`) stay in
+the code regardless -- unchanged standing policy since s99, they fix real
+unguarded-pointer-chase bugs independent of whether they ever explain a
+crash. The material-batch-list hypothesis is now parked at 2/3 (not
+formally exhausted, but deprioritized below Thread B).
+
+**Numbers, not adjectives, per this project's own discipline:** of the
+last 5 render-guard soaks (s133-s137), `do_rom_read` accounts for 3/5
+(s135, s136, s137); the other 2 were the Metal-internal SIGSEGV (s133) and
+the 18th class (s134). Not yet "always" -- but a clear plurality, and
+climbing, consistent with `do_rom_read` currently being the fastest-firing
+crash in the hold window for whatever code path these renderer soaks
+exercise, ahead of any single still-unguarded hangar-tick-family class.
+
+No `lib/` files touched this session (no code changed at all -- this was
+a soak-only iteration reusing the s136 binary). No `N64Recomp` edits
+either.
+
+### Files
+`scratch/agent/run_matlist2.sh` (new soak wrapper, tag-only diff from
+`run_matlist1.sh`). `scratch/s73_post_a_scene/matlist2/` (soak logs, not
+committed, scratch). `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
+`scratch/agent/NEXT.md` (this write-up).

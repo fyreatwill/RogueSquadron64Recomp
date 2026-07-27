@@ -1,105 +1,90 @@
-# NEXT work unit — re-soak the s136 material-batch-list guard (attempt 2/3)
+# NEXT work unit — Thread B primary: locate the string/name-table code that aliases voice+0x34
 
-s136 executed s135's prescribed work unit (source-read `submitSceneNodeRender`'s
-non-free-list code for a 2nd unguarded pointer-chase idiom), found one,
-guarded it, and ran one soak. Read PORTING-STATE's Session 136 entry before
+s137 re-soaked s136's `submitSceneNodeRender` material-batch-list guard
+(attempt 2/3) and got a 3rd straight `do_rom_read`/`piDmaWorker` corruption
+recurrence (s135, s136, s137) — the exact trigger NEXT.md itself had
+pre-committed to as grounds to promote Thread B (the audio-corruption
+pivot) from fallback to primary, instead of spending a 3rd
+material-batch-list soak. Read PORTING-STATE's Session 137 entry before
 doing anything else; this file only has the actionable summary.
 
-## What s136 did and found
+## What s137 did and found
 
-Found a pointer (`$s1`/`ctx->r17`) loaded directly from a fixed global table
-(bases `-0x1758` and `-0x1750`, guest `0x80010308`/`0x80010A1C`, two
-separate inlined occurrences of the same source loop, indexed by the
-material-group loop variable) that is dereferenced immediately, survives
-untouched across an intervening free-list-walk detour (different
-registers), and is then walked as its own "next" linked list (offset
-`0x0`) inside a loop whose body dereferences `+0x4` every iteration and
-feeds `heapFreeListDequeue` — the same nearest-symbol match as the 18th
-crash class, but via a pointer source completely different from the
-already-guarded (and twice-proven-innocent, s131/s134) free-list-return-
-value idiom.
+Ran the prescribed re-soak (`scratch/agent/run_matlist2.sh`, no rebuild,
+same recipe as s136 with the tag changed `matlist1` -> `matlist2`).
+`MATLIST_GUARD1`/`GUARD2` fired **0/0** again (2nd straight uncontrolled
+null). Process died at hold-iter 11 (~12s into hold, same timing as
+s136) to a byte-identical `do_rom_read` crash (`devAddr=0x6C676672
+dramAddr=0x80195190`, same signature as s85/s91/s93/s94/s101-104/s135/
+s136) — not the 18th class, no guest frames in the crashing backtrace at
+all. Both guards stay in the code (real fixes, independent of this
+question); the material-batch-list hypothesis is parked at 2/3, not
+formally exhausted but deprioritized below Thread B per the outcome-3
+rule below.
 
-Guarded both sites (`MATLIST_GUARD1`/`GUARD2` in `N64Recomp/
-fixup_game_funcs.py`, `funcs_4.c`-scoped) at the point each table lookup's
-result first becomes live, before any dereference — U32()-truncated bounds
-check, bail to each site's own natural "done with this table entry, move
-to the next" reentry point (site 1: existing label `L_800104BC`; site 2:
-inlines the `$s0--` decrement then jumps to `L_80010CF0`, since no
-ready-made label sits at the right spot). Full delete-all regen + clean
-build: patch report showed both new sites patched exactly x1, every
-pre-existing family's count unchanged from s135 (5th clean delete-all
-cycle in a row, no duplicates).
+**Frequency data point (numbers, not adjectives):** of the last 5
+render-guard soaks (s133-s137), `do_rom_read` now accounts for 3/5
+(s135, s136, s137); the other 2 were the Metal-internal SIGSEGV (s133)
+and the 18th class (s134). A clear plurality, not yet "always."
 
-**Soak 1 (`matlist1`):** both new guards fired **0/0** (uncontrolled null —
-not a refutation). Process died at hold-iter 11 (~12s into the hold
-window) to a byte-identical recurrence of the tracked
-`do_rom_read`/`piDmaWorker` corruption race (`devAddr=0x6C676672
-dramAddr=0x80195190`, same signature as s85/s91/s93/s94/s101-104/s135).
-The 18th class itself (`heapFreeListDequeue`/`submitSceneNodeRender`
-strings) did **not** recur this run either — the crash resolves directly
-to `do_rom_read`, a completely separate, already-tracked bug family.
+## Do next: the fresh-angle grep (Thread B primary, first time as primary since s105-114)
 
-## Do next: re-soak the exact same recipe (attempt 2/3, rule 8 budget)
+This thread has been flagged-but-not-executed since s126: what else in
+the guest code constructs a name/string table with entries shaped like
+the corrupted bytes actually observed at `voice+0x34`
+(`main_n_atpt_lod`, `at_6`, `at_7`, `pilot_sd`, plus the
+`iexpl2_t`/`tarexex`-shaped strings from s118)? The established
+mechanism (s104/s114) is that `fillSampleStreamRange`'s own arguments
+are *already* corrupted at entry — nothing wrong with that function's
+own arithmetic. The bug is upstream: something is aliasing or
+misindexing into a name/string table and the result ends up written (or
+read) as if it were `voice+0x34`.
 
-No rebuild needed — the binary from s136 is still current (only the guard
-env vars change between runs, not the code).
+**Concrete first steps** (not yet run — this is genuinely the first
+step, do not skip past it to instrumenting code):
 
-```
-zsh scratch/agent/run_matlist1.sh
-```
+1. Locate the string literals themselves in the ROM to get their file
+   offsets:
+   ```
+   strings -a -t x build/rogue_squadron.z64 | grep -iE \
+     "pilot_sd|atpt_lod|expl2_te|xenlight|xckpit|main_n_a|tarexex|explh_te"
+   ```
+2. Cross-reference against `symbol_files/main_overlay.txt`'s "Strings"
+   section (`grep "type:asciz" symbol_files/main_overlay.txt` — this
+   section lists `D_80xxxxxx = 0x80xxxxxx; // type:asciz size:N` RAM
+   addresses but not the text content, so step 1's ROM offsets need to
+   be mapped to RAM addresses via the overlay's known load bias before
+   they can be matched to a `D_` symbol — **this mapping is the first
+   genuinely unresolved unknown in this whole thread and is worth
+   nailing down carefully**, not guessing).
+3. Once a `D_80xxxxxx` string address is identified, grep
+   `N64Recomp/RecompiledFuncs/*.c` for that literal hex address to find
+   what function(s) reference it — a function referencing *several*
+   such string addresses in sequence is the table-builder candidate;
+   read its source directly (not via a subagent summary) to see how it
+   indexes/strides into the table and whether that arithmetic could
+   plausibly land on `voice+0x34` (known corruption range
+   `arrayBase=0x801714D0`, hits spanning `0x80171D50`-`0x80172548`,
+   s126).
 
-(This wrapper already exports every `ROGUESQ_LOG_*` flag,
-`ROGUESQ_LOG_THREAD_RESUME=0` per s93's confound fix, `PROBE_MODE=start_only
-HOLD_S=30`, and calls `run_mission_keys.sh matlist2 5 12` — **edit the tag
-from `matlist1` to `matlist2`** before running, so this run's logs don't
-overwrite the first soak's `scratch/s73_post_a_scene/matlist1/` directory.)
+**Discriminating outcome:** finding the table-builder function and
+confirming its indexing math can reach the `0x80171Dxx`-`0x80172xxx`
+range would close this thread's 30+-session open question outright — a
+real root cause, not another bystander recurrence. If step 2's
+ROM->RAM mapping turns out to be non-trivial or ambiguous, that itself
+is worth writing up precisely (what's blocking it, what would resolve
+it) rather than guessing an address and grepping for it speculatively.
 
-If new `ROGUESQ_LOG_*` flags have been added to `fixup_game_funcs.py` since
-s136 (check first: `grep -oE 'ROGUESQ_LOG_[A-Z_0-9]+' N64Recomp/
-fixup_game_funcs.py | sort -u` — s136's list had 34 flags), add them to the
-wrapper before running, mirroring the existing `export` lines.
+## Thread A (all 8 hangar-tick-family functions): CLOSED, do not re-open
 
-**Discriminating outcomes:**
-1. `scene-matlist-guard1` or `scene-matlist-guard2` fires (count > 0) →
-   likely root cause of the 18th class found; if the process also
-   survives past where it would have died, that's strong same-run
-   corroboration. Update CURRENT-TRUTH, consider this thread closed
-   (pending a 2nd confirming soak per the project's 2-independent-lines
-   rule).
-2. Guards stay silent (0/0 again) AND the 18th class itself
-   (`heapFreeListDequeue`/`submitSceneNodeRender` in the crash) recurs on
-   its own → this idiom, like the free-list-walk one before it, is also
-   not the cause. Per rule 8 this would still be attempt 2/3, not enough
-   to fully park — but strongly weight toward pivoting to the
-   misattribution branch (s131's other open question: the nearest-symbol
-   match may resolve to code outside `submitSceneNodeRender` entirely —
-   would need disassembly-level work, a bigger task) rather than a 3rd
-   soak of the same shape.
-3. **A 3rd straight `do_rom_read` recurrence** (this would be s135 +
-   s136 + this run) → treat this as a standalone signal worth acting on:
-   the do_rom_read family may now be winning the hold-window race
-   consistently enough that it is *functionally* blocking validation of
-   any further hangar-tick-family guard, not just occasionally
-   preempting one. In that case, **promote Thread B (below) from
-   fallback to primary** for the next work unit instead of a 3rd
-   material-batch-list soak — three independent hypotheses in a row
-   (emitAllocatedDLCommand x1 of its 3, matlist x2) losing the race to
-   the same crash is itself information, per this project's own
-   "numbers, not adjectives" discipline. Do not treat this as "confirmed
-   dominant" without the actual count in hand — check it before writing
-   any such claim into CURRENT-TRUTH.
-
-## Thread B (fallback, still unchanged in substance): the audio-corruption pivot (voice+0x0/+0x34, s105-136)
-
-Still the single longest-running open thread. Every recent bystander
-recurrence (s103, s104, s114, s135, s136) has confirmed the same closed
-mechanism (`fillSampleStreamRange`'s own arguments already corrupted at
-entry) without new information. Needs the fresh-angle grep s126 proposed:
-what else constructs a name/string table with entries shaped like
-`at_6`/`at_7`/`main_n_atpt_lod`/`pilot_sd` — unchanged since s126-136's
-framing. If s136's outcome-3 branch above triggers, this becomes the
-primary work unit; the concrete first step is still that grep, not another
-soak.
+`composeNpcOrientationMatrix`, `updateAnimatedTextureStreaming`,
+`static_5_800B4048`, `projectModelBoundsToScreen`, `reserveAndEmitDLEntry`,
+`activateAnimationKeyframe`, `submitSceneNodeRender` (free-list idiom,
+s123/s131/s134 — proven innocent twice — and material-batch-list idiom,
+s136/s137 — 2/3 soaks, parked not proven innocent), `updateHangarBayScene`
+— all guarded and exhaustively source-audited. `emitAllocatedDLCommand`'s
+two `findAndUnlinkSmallestEntry` sites are also guarded and parked (3/3
+soaks exhausted, s133-s135). Do not re-audit or re-guard any of these.
 
 ## This session's environment notes (carry forward, still current)
 
@@ -112,61 +97,46 @@ soak.
   linearly to guest instruction addresses or source line numbers.
 - `rm` on paths outside `scratch/` requires approval and does NOT accept
   glob patterns — use a `python3 -c` one-liner with `pathlib.Path.glob()`
-  for the delete-all step (confirmed working again this session: `python3
-  -c "import pathlib; [f.unlink() for f in pathlib.Path('RecompiledFuncs').glob('funcs_*.c')]"`
-  run with cwd `N64Recomp`, deletes only the 45 `funcs_*.c` files, leaves
-  `funcs.h`/`lookup.cpp`/`recomp_overlays.inl` alone).
+  for the delete-all step: `python3 -c "import pathlib; [f.unlink() for f
+  in pathlib.Path('RecompiledFuncs').glob('funcs_*.c')]"` run with cwd
+  `N64Recomp`, deletes only the 45 `funcs_*.c` files, leaves
+  `funcs.h`/`lookup.cpp`/`recomp_overlays.inl` alone.
 - Do NOT re-run `fixup_game_funcs.py` a second time in the same session
   (non-idempotent, s102).
-- Running `./tools/agent/regen_n64recomp.sh` directly via Bash required
-  approval and was blocked despite matching the `Bash(./tools/:*)`
-  allowlist entry; invoking the identical command as `zsh tools/agent/
-  regen_n64recomp.sh` (matching the separate `Bash(zsh:*)` allow rule
-  instead) went through without a prompt — use the `zsh <script>` form
-  for this script going forward. Also: `cmake --build` must be run with
-  cwd `build/` — remember to `cd` back to the repo root afterward (a
-  session this iteration briefly lost track of cwd after a `cd build &&
-  cmake` call and `scratch/` looked like it didn't exist as a result;
-  it was a cwd issue, not a missing-directory issue).
+- Use `zsh tools/agent/regen_n64recomp.sh` (not the bare
+  `./tools/agent/regen_n64recomp.sh` form) — matches the `Bash(zsh:*)`
+  allow rule cleanly. `cmake --build` must be run with cwd `build/` —
+  remember to `cd` back to the repo root afterward.
 - The multi-`env`-var one-liner still trips the Bash static-command-
-  analyzer — the wrapper-script-file workaround (`scratch/agent/
-  run_matlist1.sh` this session, `run_emitdl3.sh` before it) continues to
-  work; write a new one per soak tag rather than trying to parametrize
-  a single reusable script via more env-var indirection (that reintroduces
-  the same analyzer problem).
+  analyzer — write a new wrapper script file per soak tag
+  (`scratch/agent/run_<tag>.sh`) rather than trying to parametrize a
+  single reusable script via more env-var indirection.
 - A `run_mission_keys.sh` soak with `run_in_background: true` plus a
   blocking `TaskOutput` (block=true, generous timeout) works cleanly.
-  Note: the Stop hook fires and blocks ending the turn while a background
-  soak is still running and `scratch/agent/STATUS` still says `WORKING` —
-  either finish the soak and the full exit-contract writeup in the same
-  turn (what this session did, via a blocking `TaskOutput` wait), or
-  expect the hook to bounce you back with "Exit contract unmet" until you
-  do.
+  The Stop hook fires and blocks ending the turn while a background soak
+  is still running and `scratch/agent/STATUS` still says `WORKING` —
+  finish the soak and the full exit-contract writeup in the same turn.
 
 ## Do not
 
-- Do not re-audit any of the 8 Thread A functions again (Thread A is
-  CLOSED as of s132: composeNpcOrientationMatrix,
-  updateAnimatedTextureStreaming, static_5_800B4048,
-  projectModelBoundsToScreen, reserveAndEmitDLEntry,
-  activateAnimationKeyframe, submitSceneNodeRender (free-list idiom and
-  now the material-batch-list idiom too, both closed as of s136 — its
-  *other* code, if any further idiom is suspected, is still fair game),
-  updateHangarBayScene).
+- Do not re-audit any of the 8 Thread A functions again (see "Thread A"
+  section above — CLOSED as of s132/s137).
 - Do not re-guard `emitAllocatedDLCommand`'s two `findAndUnlinkSmallestEntry`
   walk-loop sites, or `submitSceneNodeRender`'s free-list-walk sites (9
-  sites) or its material-batch-list sites (2 sites, s136) — all already
-  landed and exhaustively verified against source.
+  sites) or its material-batch-list sites (2 sites) — all already landed
+  and exhaustively verified against source.
+- Do not run a 3rd material-batch-list soak as the next work unit — the
+  outcome-3 trigger fired (s137); Thread B is primary now. A 3rd soak of
+  this specific hypothesis is not forbidden forever, just not the next
+  thing to reach for.
 - Do not treat a 0/0 guard-fire result as "the guard doesn't work" or
-  "the fix is wrong" — it's an uncontrolled null, not a refutation. Only
-  a positive control (guard fires) or a repeat crash with the guard
-  silent would actually discriminate.
+  "the fix is wrong" — it's an uncontrolled null, not a refutation.
 - Do not chase the s83/s133 Apple-Metal-internal SIGSEGV as if it were a
   guest-code bug — it has no guest frames anywhere in its backtrace.
-- Do not chase the `do_rom_read`/`piDmaWorker` corruption race
-  opportunistically outside of this file's explicit outcome-3 branch —
-  it's tracked as its own item (Thread B / M3) in CURRENT-TRUTH's
-  next-steps list.
+- Do not chase the `do_rom_read`/`piDmaWorker` corruption race as its own
+  investigation right now — it's exactly what Thread B (above) already
+  is; don't open a parallel/duplicate investigation under a different
+  name.
 - When landing any new guard, always truncate a `ctx->rN` value through
   `U32()` before comparing against 32-bit literal bounds (s99's
   100%-false-positive lesson).
@@ -179,7 +149,7 @@ PROJECT-OVERVIEW.md and prune superseded detail, paired with a real
 experiment — not on its own.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
-not a `lib/` submodule, with uncommitted changes across s90-136
+not a `lib/` submodule, with uncommitted changes across s90-137
 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`). Same
 posture as the `rogue_squadron64` sibling checkout flagged since s54.
 Worth asking the user whether/how to commit that history.
