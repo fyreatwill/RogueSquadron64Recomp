@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 111)
+## Current truth (as of session 112)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -861,6 +861,34 @@ cost three sessions before the recursive mutex.
    handles (or fails to handle) jump target `0x1883` before designing any
    instrument — do not assume the mechanism. Full detail: PORTING-STATE
    s111.
+   **s112 update: hypothesis (a) REFUTED at the source level, no
+   build/soak needed — s111's own framing conflated two different
+   microcodes.** `factor5_ucode` (no suffix) is the **graphics** ucode:
+   `src/main/main.cpp:407` calls it unconditionally for every gfx task
+   (confirmed the hot-path call site; `docs/factor5-ucode-dispatch.md`
+   independently confirms its dispatch table is vertex/clip/F3D-opcode
+   logic, not audio). The **actual** MusyX audio ucode is a differently
+   named function, `factor5_ucode_b` — `main.cpp:76` only
+   `extern`-declares it, and a repo-wide grep for `factor5_ucode_b(`
+   across `src/` finds **zero call sites**, matching `main.cpp:292`'s own
+   comment verbatim ("an earlier theory recompiled 0x99FE0 as a 'second
+   gfx ucode' factor5_ucode_b — wrong: it's the audio ucode... must never
+   run for gfx tasks"). So the `0x1883` diagnostic that fired 385x in
+   s110 is from the **graphics** ucode (called thousands of times per
+   soak for ordinary DL processing), not from any MusyX/audio code path —
+   M5's "never-called artifact" note is about `factor5_ucode_b` and was
+   never in tension with s110's observation to begin with. **`voice+0x34`
+   cannot be explained by this RSP task.** Side finding, not pursued
+   further: `0x1883` sits strictly between labels `L_1828`/`L_18F0`
+   (mid-instruction, not a jump-table entry) and its low 12 bits (`0x883`)
+   aren't a multiple of 4 — the jump target itself looks like a corrupted
+   register value, plausibly a downstream symptom of the same corruption
+   rather than a new mechanism, but this needs its own investigation, not
+   assumed. **Reopens hypothesis (b)**: a runtime-computed (non-literal-
+   offset) store into the voice struct that s111's literal-immediate grep
+   (`MEM_W(0X34, ...)`) could not see by construction (e.g. a copy loop
+   indexed by a variable field offset). Not yet searched. Full detail:
+   PORTING-STATE s112.
 0a. **Tooling: `fixup_game_funcs.py` is not actually idempotent**
    (found s102 while re-running it for the item above) — every patch's
    regex anchor matches text that's left unchanged after insertion, so

@@ -1,50 +1,59 @@
-# NEXT work unit — M3: read how factor5_ucode's RSP dispatch handles jump target 0x1883 (s112)
+# NEXT work unit — M3: find a computed-offset write to voice+0x34 in guest C (s113)
 
-s111 retired the "enumerate static writers of `voice+0x34`" work unit with
-a **decisive null**, via grep/source-read only (no build, no soak — exactly
-as NEXT.md's own step 1 specified). Read PORTING-STATE.md's Session 111
-entry before doing anything else; this file only has the actionable
-summary.
+s112 retired the "RSP MusyX ucode writes voice+0x34" hypothesis with a
+**decisive source-level refutation**, no build, no soak. Read
+PORTING-STATE.md's Session 112 entry before doing anything else; this file
+only has the actionable summary.
 
 ## Why this is the next work unit
 
-s111's grep was exhaustive: the entire voice array (`G_BASE-0x6908 +
-voiceIdx*0x88`) is addressed from exactly one file (`funcs_24.c`, 21
-load sites of the base pointer, all mapped to their 14 enclosing
-functions), and within that file exactly one write to offset `0x34`
-exists anywhere — the already-cleared `musyxInitVoiceFromSample`
-(s105/s106). No other function, guarded or not, touches offset 0x34 at
-all except as a read. **The corruption does not enter via any
-`MEM_W(...,0x34)` store in guest C.** That closes the "static guest-C
-write" branch of the M3 blocker question for good — do not re-grep this,
-do not re-instrument any of the 14 cleared functions.
+s111 enumerated every **literal-offset** guest-C write to `voice+0x34`
+(`MEM_W(0X34, ...)` textual grep) and found exactly one, already cleared
+(`musyxInitVoiceFromSample`). It then guessed the corruption must come
+from the RSP MusyX audio ucode instead. s112 read the actual call graph
+and refuted that: `factor5_ucode` (the function whose `0x1883` diagnostic
+s110 saw fire) is the **graphics** ucode, called every task
+(`src/main/main.cpp:407`) — it has nothing to do with audio. The real
+MusyX ucode, `factor5_ucode_b`, is **provably dead code**: `main.cpp:76`
+only declares it `extern`, and a `grep -rn "factor5_ucode_b(" src/` finds
+zero call sites anywhere. There is no RSP-side write path into MusyX
+voice state at all, because the audio ucode never runs.
 
-The one candidate NEXT.md itself anticipated for exactly this outcome:
-an LLE RSP-side write via the MusyX audio microcode (`factor5_ucode`),
-which has its own independent RDRAM write path this session's grep
-cannot see by construction (it's not in `RecompiledFuncs/*.c` at all).
-This gained real, independent support from s110 (a *different* session,
-*before* this null was known): 385 lines of `Unhandled jump target 0x1883
-in microcode factor5_ucode` fired for the first time ever in that soak's
-log — every prior soak's version of this diagnostic read 0. M5's own
-notes describe the recompiled MusyX ucode as "recompiles but is a
-never-called artifact" — s110's evidence contradicts that assumption.
+That leaves exactly the branch NEXT.md flagged at s111 as hypothesis (b):
+**a runtime-computed (non-literal) offset store** into the voice struct
+that a grep for the literal text `0x34` cannot find by construction — e.g.
+a byte/word copy loop indexed by a variable field offset, a `memcpy`-
+shaped helper, or a struct-copy where the destination pointer is offset by
+a variable at runtime (`MEM_W(rdram, someVariableOffset, ...)` where
+`someVariableOffset` is never the literal `0x34` in source text but
+evaluates to it at runtime).
 
 ## What's confirmed (do not re-derive)
 
-- `voice+0x34` has exactly one guest-C writer (`musyxInitVoiceFromSample`,
-  `funcs_24.c:5881`), already cleared (s105/s106, clean verbatim copy,
-  0/0 with positive control).
+- `voice+0x34` has exactly one **literal-offset** guest-C writer
+  (`musyxInitVoiceFromSample`, `funcs_24.c:5881`), already cleared
+  (s105/s106, clean verbatim copy, 0/0 with positive control).
 - No other function among the 14 that touch the voice array (via the
-  `G_BASE-0x6908` global slot, `funcs_24.c` only) writes offset 0x34 —
-  most never reference it at all; `musyxKeyOnVoice` reads it 3x but that's
-  a different, already-cleared global per s105; `musyxRenderVoiceSamples`
-  reads it once (the exact corrupted read feeding `fillSampleStreamRange`,
-  s103/s104) but never writes it.
+  `G_BASE-0x6908` global slot, `funcs_24.c` only) has a **literal**
+  `0x34` write. `musyxKeyOnVoice` reads it 3x (different, already-cleared
+  global, s105); `musyxRenderVoiceSamples` reads it once (the exact
+  corrupted read feeding `fillSampleStreamRange`, s103/s104) but never
+  writes it.
+- **The RSP-ucode branch is closed, not just parked** (s112): `factor5_ucode`
+  = graphics ucode (runs constantly, unrelated dispatch table per
+  `docs/factor5-ucode-dispatch.md`); `factor5_ucode_b` = the actual MusyX
+  ucode, confirmed **never called anywhere in `src/`**. Do not revisit RSP
+  ucode as a write-path candidate without new evidence that changes this
+  call-graph fact.
+- The `0x1883` unhandled-jump-target diagnostic is an artifact of the
+  graphics ucode's own dispatch (target falls mid-instruction between
+  `L_1828`/`L_18F0`, non-4-aligned) — plausibly itself a downstream
+  symptom of stray corrupted register state, not a new mechanism. Not
+  investigated further; low priority unless it recurs with a discriminable
+  pattern.
 - `fillSampleStreamRange`'s own arguments are corrupted at function entry
   (s104) — the bug is upstream of every guest-C function characterized so
-  far, all the way back to the voice+0x34 field itself, which nothing in
-  guest C ever writes with a bad value.
+  far, all the way back to the voice+0x34 field itself.
 - The `tickAudioChannel`/`musyx-gate1` investigative thread is retired
   (s110, 5 null sessions) — do not resume it.
 - The hangar-tick-family guard program (5 classes: 16th/12th/11th/14th/
@@ -55,58 +64,60 @@ never-called artifact" — s110's evidence contradicts that assumption.
 
 ## The work unit
 
-1. **Read, don't instrument yet.** Find where `Unhandled jump target
-   0x1883 in microcode factor5_ucode` is emitted — likely
-   `build/factor5_ucode/factor5_ucode_recompiled.c` (s110 cited line 230
-   for the message) or wherever the RSP dispatch loop for this ucode
-   lives. Identify: what jump table / dispatch mechanism is `0x1883`
-   supposed to select, and what does "unhandled" mean here — does
-   execution fall through to garbage, skip the instruction, or abort?
-2. **Read `docs/factor5-ucode-dispatch.md`** (already exists in this repo)
-   for the documented dispatch mechanism before guessing at the code.
-   Check `tools/fixup_factor5_ucode.py` and `tools/decode_factor5_table.py`
-   / `tools/disasm_factor5_full.py` for any existing tooling that already
-   decodes this table — don't re-derive decode logic that already exists.
-3. **Determine whether this ucode path can write to the voice array's
-   RDRAM address range at all.** The RSP ucode operates on `dmem[]` and
-   RDRAM via its own `MEM_W`-equivalent macros (see
-   `include/rsp_dpc_macros.h`) — trace whether a MusyX audio RSP task's
-   output writes into the same RDRAM region as the guest-C voice array
-   (`G_BASE-0x6908`-relative), or into a completely different region
-   (e.g. only ucode-private DMEM/output buffers that never reach RDRAM).
-   If the address ranges provably never overlap, that's a real result
-   that refutes hypothesis (a) — write it down and reopen hypothesis (b)
-   (a runtime-computed store offset in guest C that a literal grep can't
-   see) instead of assuming ucode involvement.
-4. **Only if the source read shows a plausible RDRAM write path**, design
-   one narrowly-targeted instrument (e.g. log every RSP-side RDRAM store
-   this ucode task performs, gated to fire only during the ~140s DMA
-   window) and soak once. Name the discriminating outcome before running:
-   does a logged RSP write's target address/timing match the known
-   `devAddr=0x6C676672 dramAddr=0x80195190` corruption window?
+1. **Read, don't instrument yet.** In `N64Recomp/RecompiledFuncs/funcs_24.c`
+   (and any of the other 13 functions touching the voice array), search for
+   writes that reference the voice-slot base pointer with a **non-literal**
+   offset — i.e. any `MEM_W(rdram, <expr>, ...)` or equivalent store where
+   `<expr>` is a computed value (register arithmetic, loop index, a field
+   read from another struct) rather than a literal hex immediate. Look
+   specifically for copy-loop shapes (`for`/`while` with an incrementing
+   store address) that could land on offset `0x34` for some iteration
+   without ever spelling `0x34` in source.
+2. **Cross-check against the two already-known consumers.** Both
+   `fillSampleStreamRange`'s corrupted arguments and
+   `acquireSampleStreamBlock`'s cache-key argument (s103) trace back to
+   this same field. If a computed-offset writer exists, its target
+   expression should be traceable to the same voice-slot base pattern
+   (`G_BASE-0x6908 + voiceIdx*0x88`) or to whatever intermediate struct
+   sits between the voice array and these two functions' arguments.
+3. **If no computed-offset writer is found in guest C either**, the
+   remaining candidates are: (c) the corruption is written by MusyX's own
+   asset data at load time (a bad ROM/asset table entry, not a runtime
+   store bug), or (d) it enters through a completely different subsystem
+   that happens to alias the same RDRAM address (an unrelated writer with
+   a wrong computed address, not voice-array-aware at all — revisit the
+   s94-s95 "unlocated indirect caller of `submitDmaRequestBatch`" angle,
+   but this time hunting for an indirect *writer into the voice array*,
+   not the DMA-batch populator, which s102 already cleared as innocent).
+   Name which of (c)/(d) is more supported by the existing evidence
+   (structured tag-like byte patterns in the corrupted values, per s102)
+   before choosing a next probe.
+4. **Only if a plausible computed-offset writer is found**, design one
+   narrowly-targeted instrument and soak once. Name the discriminating
+   outcome before running: does the writer's logged target offset/value
+   match the known `devAddr=0x6C676672 dramAddr=0x80195190` corruption
+   signature?
 
 ## Do not
 
-- Do not re-grep or re-instrument any of the 14 functions in `funcs_24.c`
-  characterized this session — that question is closed.
+- Do not re-grep for literal `0x34` writes — that question is closed
+  (s111).
+- Do not re-investigate the RSP ucode as a write path — closed (s112):
+  `factor5_ucode_b` (real MusyX ucode) never runs; `factor5_ucode` (what
+  s110's diagnostic actually fired in) is graphics-only.
 - Do not resume the `tickAudioChannel`/`musyx-gate1` chain (retired s110).
 - Do not re-soak the five hangar-tick-family guarded classes in isolation.
-- Do not design an RSP-ucode instrument before reading
-  `docs/factor5-ucode-dispatch.md` and the existing decode tooling — this
-  is new investigative surface for the M3 thread, don't guess at
-  mechanisms that may already be documented.
 - Do not run `fixup_game_funcs.py` more than once per ELF regen.
 - Do not cite `ra=0x00000000`, or re-open "random/race/stomp" framings for
   the `devAddr` corruption (refuted s92, 10+ independent lines of evidence
-  against, including 2 sessions reaching the window through entirely
-  different guard states and recurring byte-identical).
+  against).
 
 ## Housekeeping flagged, not this session's job either
 
-`docs/CURRENT-TRUTH.md` is ~107 KB, still roughly 3x the ~35KB target in
-CLAUDE.md/ITERATION.md. Flagged for several sessions running without
-action — worth a dedicated compression work unit (migrate durable
-mechanism/architecture material to PROJECT-OVERVIEW.md, prune superseded
-detail, especially the now-closed hangar-tick-family guard narration)
-paired with a real experiment per ITERATION.md (compressing docs alone
-does not count as an ADVANCED work unit).
+`docs/CURRENT-TRUTH.md` is well over the ~35KB target in CLAUDE.md/
+ITERATION.md. Flagged for many sessions running without action — worth a
+dedicated compression work unit (migrate durable mechanism/architecture
+material to PROJECT-OVERVIEW.md, prune superseded detail, especially the
+now-closed hangar-tick-family guard narration and the now-closed RSP-ucode
+detour) paired with a real experiment per ITERATION.md (compressing docs
+alone does not count as an ADVANCED work unit).
