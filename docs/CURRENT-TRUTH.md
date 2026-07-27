@@ -655,10 +655,14 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s125)
+## Next steps, in order of expected value (s126)
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
-   NOT deterministic, s121).** s121 ran the identical delete-all →
+   NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with
+   the mandatory patch-report audit and again found every line's
+   multiplicity exactly as expected, no duplicates — 2 clean cycles now
+   vs. s120's 2 dirty ones, still "can happen," not "will happen").**
+   s121 ran the identical delete-all →
    `make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py` →
    `cmake --build` cycle and got a **fully clean result**: every patch
    report line `x1` (or its documented multiplicity), no duplicate
@@ -764,6 +768,19 @@ cost three sessions before the recursive mutex.
    re-instrument `musyxKeyOnVoice`/`isAudioSlotActive`/the caller-side
    chokepoint chain, and do not re-run the capped voicegate1 design — both
    closed. Full detail: PORTING-STATE s116-s117.
+   **s126 closed the "probable-20th class" question**: source read found
+   all three backtrace addresses are already-known functions
+   (`runHangarMenuFromOverlay`, `runHangarSelectionFrame`,
+   `composeNpcOrientationMatrix` — the already-guarded 12th class, s99/
+   s100) — s117's "none of these match a catalogued site" was an
+   address-lookup claim, not a source read, and was wrong. The real news:
+   `composeNpcOrientationMatrix` has a SECOND, independent unguarded
+   table-deref loop (runtime-variable NPC-count bound, not the fixed-8
+   loop s100 guarded) with the identical crash shape — guarded it
+   (`ROGUESQ_LOG_COMPOSE_NPC_GUARD2`), full regen+rebuild clean, one soak
+   (unexercised, 0/0, died to the tracked `do_rom_read` race at hold+11s,
+   matching s125 almost exactly). There is no 20th function-level class.
+   Full detail: PORTING-STATE s126.
    (Also flagged, not chased: the s84 `frameStartReset` SIGBUS — called a
    "fluke" in s85 after 0/2 non-recurrence — recurred once more in s116
    (2/4 soaks total across s84/s85/s116); worth revisiting if it keeps
