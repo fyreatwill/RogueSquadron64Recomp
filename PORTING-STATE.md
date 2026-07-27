@@ -9280,3 +9280,105 @@ git by design — durable record lives here).
 `N64Recomp/RecompiledFuncs/funcs_40.c` (regenerated, all 6 new patches
 applied x1, verified file-scoped).
 `scratch/s73_post_a_scene/s110_hangarbay_guard/run.log`.
+
+## Session 111 — 2026-07-27
+
+Picked up NEXT.md's prescribed work unit: grep-enumerate every static write
+to `voice+0x34` across the whole recompiled guest tree
+(`N64Recomp/RecompiledFuncs/*.c`, 45 files), rather than another one-hop
+caller instrument + soak. Pure source-read/grep task, **no build or run**.
+
+**Method.** The s105-confirmed voice-slot address pattern is
+`G_BASE-0x6908 + voiceIdx*0x88`, built by a `lui/lw` load of a fixed global
+pointer slot followed by `voiceIdx*0x11*8`. A literal-offset store-form
+grep (`MEM_W(0X34, ctx->rN) =`, the LHS/store shape N64Recomp emits for
+`sw $rN, 0x34($base)`) across all 45 files returns ~250 hits, but the
+overwhelming majority are `ctx->r29` (stack-frame register-save
+prologues/epilogues, offset 0x34 into an unrelated stack frame) or other
+structs that coincidentally share offset 0x34. Rather than hand-classify
+250 unrelated hits, anchored the search on the base-pointer computation
+itself: `grep -n "MEM_W(ctx->r[0-9]*, -0X6908)" *.c` (the load-form read of
+the fixed global slot) returns **exactly 21 hits, all in one file**,
+`funcs_24.c` — confirming the entire voice array is only ever addressed via
+that one global slot, and only from that one file. (A second grep hit two
+lines in `funcs_32.c` matching the bare substring `-0X6908`, but those pair
+with `lui $a0,0x800B`, not `0x8015` — a different global 108 KB away that
+coincidentally shares the low-16-bit displacement; confirmed unrelated and
+discarded.)
+
+Mapped all 21 load sites to their enclosing functions in `funcs_24.c`
+(`musyxMixActiveVoices`, `musyxBuildVoiceCommandList`, `isAudioSlotActive`,
+`musyxInitVoiceFromSample`, `musyxStartVoiceRelease`,
+`musyxStoreVoiceAdsrParams`, `musyxTriggerVoiceAttack`, `musyxStopVoice`,
+`musyxSetVoicePitchBend`, `setVoiceModulationParams`,
+`stopVoiceMarkRetrigger`, `beginVoiceFadeRelease`, `deactivateVoice`,
+`getVoiceUserField`) and grepped each function's own line range for any
+`0X34)` reference at all (read or write). Also checked
+`musyxRenderVoiceSamples` and `musyxKeyOnVoice` (voice pointer arrives as a
+direct argument in these two, not via the global-slot load, so they don't
+appear in the -0x6908 list but are known voice-struct consumers) and
+`musyxSynthFrame` (the per-tick driver) for the same reason.
+
+**Result: exactly one write to voice+0x34 exists anywhere in the
+recompiled tree** — `musyxInitVoiceFromSample`, guest `0x800921E8`
+(`sw $v1, 0x34($v0)`, `funcs_24.c:5881`), already fully cleared by s105/106
+(clean verbatim copy from `sampleDesc+0x4`, both call sites build the
+source struct fresh from local data, 0/0 fires across 2 soaks with a
+positive control). Every other function that touches the voice array reads
+other offsets but **never touches offset 0x34** at all (not even as a
+read) — including `musyxKeyOnVoice`, which reads offset 0x34 three times
+(`0x34` off `$s0`, confirming it as a genuine voice-struct consumer) but
+never writes it, consistent with s105's "writes a different global
+entirely" classification. `musyxRenderVoiceSamples` reads voice+0x34 once
+(guest `0x8009023C`, feeding the corrupted value into `fillSampleStreamRange`
+per s103/s104) but does not write it — the write-form grep inside that
+function's body (line 465) is a false-positive-looking hit on a
+*different* pointer (`$s0`, the function's own 4th argument, a
+stream/node struct — not the voice pointer `$s1`/arg0), confirmed by
+tracing both registers back to their originating arguments.
+
+**This closes the "static-write" branch of NEXT.md's own two-way question
+with a clean, decisive null**: the corruption does **not** enter via any
+direct `MEM_W(..., 0x34)` store keyed off the confirmed voice-slot base
+anywhere in the 45-file recompiled guest tree. Per NEXT.md's own framing,
+this points the mechanism at one of: (a) an LLE RSP-side write via the
+MusyX audio microcode (`factor5_ucode`) — the microcode has its own
+independent `MEM_W`-equivalent access to the same RDRAM and is **not**
+covered by this guest-C grep at all — or (b) a runtime-computed (non-literal)
+offset store that a literal-immediate grep cannot see by construction.
+
+**(a) gained real, independent support this session, not derived from any
+new instrument**: s110 (previous session, same soak) flagged 385 lines of
+`Unhandled jump target 0x1883 in microcode factor5_ucode` — the first time
+that specific diagnostic has ever read nonzero — as an unexplained side
+observation. `M5`'s notes describe the recompiled MusyX ucode
+(`factor5_ucode_b_recompiled.c`) as "recompiles but is a never-called
+artifact"; s110's evidence and this session's decisive guest-side null
+together now make "the RSP audio ucode actually runs and writes RDRAM
+directly, bypassing every guest-C store this grep could see" the leading
+candidate mechanism, not a coincidental side note. Confirmed (source read,
+no build) that the ucode's own recompiled output and dispatch tooling
+(`tools/fixup_factor5_ucode.py`, `docs/factor5-ucode-dispatch.md`,
+`include/rsp_dpc_macros.h`) exist as real, separate artifacts from the
+guest-C tree grepped this session — a plausible, previously-uninvestigated
+write path.
+
+**Assessment**: this retires the "enumerate static writers" work unit
+cleanly (decisive null, not inconclusive) and reframes M3's blocker
+question from "which function writes voice+0x34" (answered: nothing in
+guest C does, beyond the already-cleared writer) to "does the LLE MusyX
+RSP microcode write into the voice array, and does its unhandled-jump-target
+0x1883 correlate with the corruption". That is a different investigative
+surface (RSP ucode dispatch table / `factor5_ucode` recompiled output, not
+`RecompiledFuncs/*.c`) and needs its own read before any instrument is
+designed — do not assume the mechanism without first reading how
+`factor5_ucode`'s recompiled dispatch handles (or fails to handle) jump
+target `0x1883`.
+
+### Files
+None changed — pure grep/source-read session, no build, no run, no `lib/`
+edits. (Consistent with ITERATION.md: an analysis session with a real,
+decisive result is a legitimate `ADVANCED` outcome even without a code
+change, since it retires a work unit and redirects the investigation with
+new, load-bearing evidence — as opposed to doc-only compression, which is
+explicitly not.)

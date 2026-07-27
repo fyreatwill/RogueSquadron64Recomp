@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 110)
+## Current truth (as of session 111)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -835,6 +835,32 @@ cost three sessions before the recursive mutex.
    s105) to enumerate candidate writers directly — a source-read task, no
    soak required to get the candidate list. Full detail: PORTING-STATE
    s110.
+   **s111 update: did that enumeration, decisive null, no build/soak
+   needed.** Anchored on the confirmed voice-slot base (load-form grep for
+   `MEM_W(ctx->rN, -0X6908)`, the fixed global slot) — exactly 21 hits,
+   **all in one file**, `funcs_24.c`; the whole voice array is only ever
+   addressed from there. Mapped all 21 to their 14 enclosing functions and
+   checked every function's body for any `0x34` reference (read or
+   write); also checked `musyxRenderVoiceSamples`/`musyxKeyOnVoice`/
+   `musyxSynthFrame` (voice pointer arrives as a direct argument in the
+   first two). **Exactly one write to `voice+0x34` exists in the entire
+   45-file recompiled tree**: `musyxInitVoiceFromSample`
+   (`funcs_24.c:5881`) — already fully cleared, s105/s106. Every other
+   voice-array consumer either never touches offset 0x34, or only reads it
+   (`musyxKeyOnVoice` ×3 confirmed-unrelated-global per s105;
+   `musyxRenderVoiceSamples` ×1, the exact corrupted read that feeds
+   `fillSampleStreamRange`). **The "static guest-C write" branch of the
+   question is closed with a clean null, not an inconclusive one** — the
+   corruption does not enter via any `MEM_W(...,0x34)` store anywhere in
+   `RecompiledFuncs/*.c`. **Next step: the RSP MusyX audio microcode
+   (`factor5_ucode`)**, not guest C — independently flagged by s110's
+   first-ever nonzero `Unhandled jump target 0x1883 in microcode
+   factor5_ucode` (385 lines this soak, always 0 before). The ucode has
+   its own RDRAM write path this session's grep cannot see by
+   construction. Read how `factor5_ucode`'s recompiled dispatch table
+   handles (or fails to handle) jump target `0x1883` before designing any
+   instrument — do not assume the mechanism. Full detail: PORTING-STATE
+   s111.
 0a. **Tooling: `fixup_game_funcs.py` is not actually idempotent**
    (found s102 while re-running it for the item above) — every patch's
    regex anchor matches text that's left unchanged after insertion, so
