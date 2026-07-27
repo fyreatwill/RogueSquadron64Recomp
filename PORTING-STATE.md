@@ -11755,3 +11755,110 @@ committed — sibling checkout). This repo: `build/` rebuilt binary
 (gitignored), `scratch/s73_post_a_scene/hangarbay1/` (soak logs, not
 committed — scratch), `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
 `scratch/agent/NEXT.md` (this write-up).
+
+## Session 133 (2026-07-27) — root-caused and guarded the s132 `emitAllocatedDLCommand` crash's likely mechanism (same findAndUnlinkSmallestEntry-return + walk-loop idiom as s123/s131, now found in a SECOND function); soak's target crash did not recur, guard got no positive control, process instead died to the already-catalogued s83 Apple-Metal-internal shader-compiler SIGSEGV (informative but not confirming)
+
+**Starting point:** `scratch/agent/NEXT.md` (as left by s132) named one work
+unit: source-read `emitAllocatedDLCommand` (the new, cleanly-symbolicated
+SIGBUS that ended s132's soak — backtrace `emitAllocatedDLCommand <-
+submitSceneNodeRender <- processSceneNode <- traverseSceneGraphRecursive x2
+<- setupCameraMatrices <- runHangarSelectionFrame <- runHangarMenuFromOverlay
+<- menuOverlayInit`, real symbol names all the way down) and, if an obvious
+unguarded deref turned up matching this family's established shape, guard it.
+
+**What the read found.** `emitAllocatedDLCommand` (guest `0x80008688`,
+`funcs_3.c:2412-2948`, 536 lines / ~134 guest instructions — small compared
+to the audit-series functions) contains the EXACT SAME
+`findAndUnlinkSmallestEntry`-return + walk-loop idiom s123/s131 already
+fixed in `submitSceneNodeRender` (9 inlined copies there), inlined here
+**twice** — once per allocation attempt, at call sites `0x800086C8`
+(result into `$a0`/`r4`) and `0x800088C8` (result into `$a1`/`r5`). Both
+copies share the exact gap s131 found in the other function: the existing
+null check on the `findAndUnlinkSmallestEntry` return (`r4`/`r5 == 0`) only
+catches a literal null, not a corrupted-but-nonzero value — the pointer's
+very first dereference (`ctx->r2 = MEM_W(ctx->r4/r5, 0X0)`) and the
+walk-loop's loop-back dereference (`ctx->r3 = MEM_W(ctx->r3, 0X0)`) are both
+raw, unchecked `MEM_W` accesses on a value this project has repeatedly found
+corruptible. Confirmed by directly reading `submitSceneNodeRender`'s
+already-patched analog (`funcs_4.c:198-285`) line-by-line first, to fix an
+initial mistake: the first patch draft appended the guard *after* the
+dereference (copied from the wrong template, the `updateAnimatedTextureStreaming`
+2nd-site pattern which legitimately checks a value produced by an
+already-safe prior deref) instead of *before* it — caught before regen by
+re-deriving the correct placement from the validated s131 code itself, not
+from the (subtly wrong) first draft.
+
+**The fix.** Added `_make_emit_dl_guard2_patch`/`_make_emit_dl_guard3_patch`
++ 2-entry site tables to `fixup_game_funcs.py`, mirroring s131's
+`GUARD2`/`GUARD3` shape exactly: `U32()`-truncated `[0x80000000,
+0x80800000)` bound check, bail to the SAME label the code's own
+pre-existing null check already uses for an empty free list (`L_80008814`
+for the `r4` copy, `L_80008918` for the `r5` copy) — identical
+degrade-to-empty-list semantics, not a new code path. New env vars
+`ROGUESQ_LOG_EMIT_DL_GUARD2`/`ROGUESQ_LOG_EMIT_DL_GUARD3`. Anchor addresses
+(`0x800087D8`/`0x800087E4`/`0x800088DC`/`0x800088E8`) confirmed unique
+within `funcs_3.c` (each occurs exactly once) before writing the regexes;
+file-scoped to `funcs_3.c` regardless, per s100's standing lesson.
+
+Full delete-all regen (`make_elf.py` -> N64Recomp (`regen_n64recomp.sh`) ->
+`fixup_game_funcs.py` -> `cmake --build`): patch report showed **all 4 new
+sites patched exactly x1** (2x GUARD2, 2x GUARD3), every pre-existing
+family's patch count unchanged from s132 (no duplicates — 4th clean
+delete-all cycle in a row). Spot-read both regenerated sites directly
+against source: both match the validated s131 shape exactly (guard runs
+*before* the deref, deref line re-emitted unchanged when the check passes).
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
+build -j8`: exit 0, only the pre-existing DDIV pointer-sign and SDL2
+link-version warning classes.
+
+**Soak (`emitdl1`, `PROBE_MODE=start_only HOLD_S=30`, every
+`ROGUESQ_LOG_*` flag in the codebase armed — 32 flags total, enumerated by
+grep against `fixup_game_funcs.py` rather than hand-copied from a prior
+session's list, to guarantee nothing new since s90-132 was missed):** new
+guards **0/0** — no positive control, `emitAllocatedDLCommand` was never
+even entered with a corrupted pointer this run (can't confirm or refute the
+fix). Every other family also held clean (0 fires on all `*_guard*` flags;
+positive controls for entry diagnostics did fire as expected —
+`anim-tex-stream` 4508, `anim-recurse` 3350, `stream-node-init` 32-all-zero
+consistent with s114/s124, `thr-resume` 119989 resumes/`bad_total=0`,
+`dma-ring-producer`/`consumer` 1/2 as usual). Process survived to
+**hold-iter 8** — notably longer than s132's "essentially instant" death,
+though still well short of a clean 30s hold. Death was **not** the target
+crash: full native backtrace resolves entirely inside Apple's own
+frameworks (`libCoreFSCache fscache_insert_and_retain` <- `Metal
+MTLCompilerFSCache::addElement` <- `MultiLevelAirCache::addElement` <-
+`newSpecializedFunctionWithDescriptor` <- `MTLCompilerScheduler` <-
+`libdispatch` worker thread) — a 2nd occurrence of the exact SIGSEGV class
+s83 first catalogued ("SIGSEGV inside Apple's Metal.framework shader
+compiler (no source on our side)"), now with a fuller, more specific frame
+(`fscache_insert_and_retain`) than s83's original report. No guest code
+anywhere in this backtrace; not attributable to any fix in this session or
+this project's own code.
+
+**Assessment.** This is a **null result without a positive control** (iron
+rule 1) on the specific question "does this guard fix the crash" — cannot
+be entered into CURRENT-TRUTH as a confirmed fix. It IS informative on two
+narrower points: (1) the guard code itself is confirmed inert/harmless in
+normal operation (2 more genuinely real unguarded-pointer-chase bugs fixed
+regardless, matching this project's standing policy of keeping guards that
+fix a real defect whether or not they're proven to be *the* cause of any
+specific crash — same policy as every guard since s99), and (2) the s83
+Apple-Metal-internal SIGSEGV class is confirmed recurring and
+environment-side, not a new guest-code bug to chase. Per rule 8, this is
+soak attempt 1/3 for the `emitAllocatedDLCommand` hypothesis — a second
+attempt next session is still within budget, not yet a repeat pattern.
+
+### Files
+`N64Recomp/fixup_game_funcs.py`: added `_make_emit_dl_guard2_patch`/
+`_make_emit_dl_guard3_patch` + `_emit_dl_guard2_sites`/`_emit_dl_guard3_sites`
+(2 entries each). `N64Recomp/RecompiledFuncs/funcs_3.c`: regenerated +
+patched (not committed — sibling checkout, same posture as s54/s90-132).
+`rogue_squadron64/build/roguesquadron.elf`: regenerated (not committed —
+sibling checkout, unchanged content since no symbol-file edits this
+session). This repo: `build/` rebuilt binary (gitignored),
+`scratch/s73_post_a_scene/emitdl1/` (soak logs, not committed — scratch),
+`PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md`
+(this write-up). No `lib/` files touched this session (confirmed via
+`git status --short lib/` at session start and end — both submodules show
+the same pre-existing dirty-pointer state as every prior session since
+s54/s90, nothing new to export).

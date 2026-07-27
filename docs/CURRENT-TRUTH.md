@@ -655,7 +655,24 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s131)
+## Next steps, in order of expected value (s133)
+
+0a. **Re-attempt the `emitAllocatedDLCommand` soak (s133 attempt 1/3, null
+    without a positive control).** Same recipe as `emitdl1`
+    (`scratch/s73_post_a_scene/run_mission_keys.sh <tag> 5 12`,
+    `PROBE_MODE=start_only HOLD_S=30`, every `ROGUESQ_LOG_*` flag armed —
+    re-enumerate via `grep -oE 'ROGUESQ_LOG_[A-Z_0-9]+' N64Recomp/
+    fixup_game_funcs.py | sort -u` rather than copying s133's list, in
+    case a future session adds more). Discriminating outcomes: (a)
+    `emit-dl-guard2`/`3` fires → the s133 fix is confirmed live and
+    correctly diagnosed; (b) `emitAllocatedDLCommand` crashes again with
+    the guards NOT firing → the idiom guarded isn't this crash's actual
+    cause (same shape as s131's own free-list-walk refutation) and the
+    real call site needs re-deriving from the backtrace's host-code byte
+    offsets some other way; (c) a 3rd different crash preempts again →
+    per rule 8, this becomes the 2nd non-discriminating attempt, still
+    short of the 3-attempt budget. No code change needed for this step,
+    just a re-run.
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with
@@ -936,6 +953,34 @@ cost three sessions before the recursive mutex.
    handler itself falls back to nearest-symbol, not a blanket problem
    with every crash log — worth re-examining if a future "nearest-symbol"
    crash reappears. Full detail: PORTING-STATE s132.
+   **s133 (root-cause the s132 `emitAllocatedDLCommand` crash):** source
+   read found the EXACT SAME `findAndUnlinkSmallestEntry`-return +
+   walk-loop idiom s123/s131 already fixed in `submitSceneNodeRender`,
+   inlined here too — twice (once per allocation attempt, `r4`/`r5`
+   copies). Guarded both the same way (`ROGUESQ_LOG_EMIT_DL_GUARD2`/
+   `GUARD3`, bail to the pre-existing null-check label), full delete-all
+   regen+rebuild clean (4/4 new sites x1, no duplicates — 4th clean
+   cycle in a row), spot-read both regenerated sites against source to
+   confirm guard-before-deref placement (caught and fixed a wrong-
+   template mistake — guard-after-deref — before regen). Soak
+   (`emitdl1`, same recipe as s132 plus the 2 new flags, all 32
+   `ROGUESQ_LOG_*` flags armed): **0/0 on the new guards** — no positive
+   control, `emitAllocatedDLCommand` never even entered with a bad
+   pointer this run, so the fix is neither confirmed nor refuted. Every
+   other family also held clean; entry-diagnostic positive controls
+   fired as usual (anim-tex-stream 4508, anim-recurse 3350, thr-resume
+   119989/`bad_total=0`). Process reached **hold-iter 8** (notably
+   longer than s132's near-instant death) before dying to a **2nd
+   occurrence of the already-catalogued s83 Apple-Metal-internal
+   shader-compiler SIGSEGV** (`libCoreFSCache fscache_insert_and_retain`
+   ← `MTLCompilerFSCache`/`MultiLevelAirCache` ← `newSpecializedFunction
+   WithDescriptor` ← `MTLCompilerScheduler` ← libdispatch worker — no
+   guest code anywhere in the backtrace, not attributable to this or any
+   prior session's guest-code fix). Both new guards kept regardless
+   (2 genuinely real unguarded-pointer-chase bugs, same standing policy
+   as every guard since s99). Per rule 8 this is soak attempt 1/3 for
+   this hypothesis — one more attempt is still in budget. Full detail:
+   PORTING-STATE s133.
    **s118:** ran the exact discriminating test above (32-byte dump at
    `voice+0x0` nonzero hits, same-run vs. `musyx-dma-call`). The dumps
    are long readable ASCII strings, not raw garbage — e.g. `"explo_
