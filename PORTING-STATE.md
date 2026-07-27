@@ -6254,3 +6254,78 @@ Detail: `scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
 - Keep always-on sane-width gate (store + mode-3).
 - Do **not** treat frozen content as fixed present — S1 FULL_SYNC loss still freezes after ~5s of hangar-flight motion.
 - Next: 60s hold/craft stick once NaN assert death is contained; or soften NaN assert first if soak dies before stick marks.
+
+## Session 83 (2026-07-27) — root-caused evalCubicSplineAtTime NaN; two NEW crash classes found underneath
+
+### Work unit
+NEXT.md: contain the s82 `evalCubicSplineAtTime` NaN Abort. Root-caused
+instead of soft-returning at the assert: the function's only division
+(`0x8001906C div.s $f4,$f0,$f1` — parametric time-in-segment, `f1` = interval
+width between two spline keyframes) computes `0/0` → NaN whenever two
+consecutive keyframes share the same time, which the codegen's own
+`NAN_CHECK` macro (every FP op, `include/recomp.h:396`, global — not
+per-function) catches downstream on `f28` and aborts. Chose to guard the
+division at its source rather than loosen `NAN_CHECK`, since that macro is
+the only NaN safety net for every other function in the game.
+
+### Patch
+`N64Recomp/fixup_game_funcs.py` (untracked helper in the sibling N64Recomp
+checkout, same convention as the existing musyxKeyOnVoice/audio-gate/jr-t9
+hand patches already living there uncommitted — not a `lib/` submodule, no
+`submodule-patches/export.sh` needed): new regex patch guards
+`ctx->f4.fl = DIV_S(ctx->f0.fl, ctx->f1.fl)` in `evalCubicSplineAtTime` with
+`if (ctx->f1.fl == 0.0f)` → log first 20 occurrences to stderr as
+`[spline-div0]` + `ctx->f4.fl = 0.0f` (else branch unchanged). Regen order
+followed: `fixup_game_funcs.py` idempotent (`no changes needed` on rerun) →
+`cmake --build build -j8` clean, exit 0. **Bug in first patch attempt**: a
+Python raw-string using `\"` inside a `re.sub` **replacement** string leaves
+a literal backslash before the quote in the output (raw strings still need
+`\"` to embed the delimiter, but re.sub's replacement-escape processing does
+not collapse it) — caught by reading the patched `.c` file before building,
+fixed by switching that fragment to a single-quoted raw string so `"` needs
+no escaping. Lesson: never trust a `re.sub` replacement string containing
+escaped quotes without eyeballing the byte output once.
+
+### Runs
+Two `PROBE_MODE=start_only HOLD_S=30` soaks
+(`scratch/s73_post_a_scene/spline1/`, `spline2/`), same script/env as s82.
+Both reached width-1024 at 44.6s and SELECT YOUR CRAFT normally (unchanged
+from s82). **`[spline-div0]` fired 0/2 times in both runs** — the guard
+never engaged, so N1–N4 from NEXT.md are **untested, not refuted**: the
+0/0 condition either didn't occur this run or a different crash always wins
+the race first. Both runs died from something else, and it was a
+**different** something else each time:
+- **spline1**: SIGSEGV in Apple's `Metal.framework` shader-compiler
+  internals (`MTLCompilerFSCache`/hash-table rehash under
+  `dispatch_workloop_worker_thread`) at hold-iter 3 (~+3s). Not our code —
+  the crashing frames are entirely inside Metal. `fs` reached 3775 (past
+  s82's 3784 plateau claim — comparable, not clearly worse).
+- **spline2**: SIGBUS at hold-iter 11 (~+12s), stack
+  `resume_thread_tagged` → `LightweightSemaphore::signal` on a
+  `[thr-resume] ... live=0 ... bad=1` context — the **same UAF-shaped
+  crash class as s70–s72** (stale/destroyed `OSThread.context` resumed).
+  `fs` reached 3769. The s78 wild-FB-writeback gate was firing in this run
+  too (`SKIP_OOB=18`) but did not prevent this one.
+
+### Root cause located for the SIGBUS (not yet fixed)
+`lib/N64ModernRuntime/ultramodern/src/threads.cpp:198-238`
+(`resume_thread_tagged`): already instruments exactly this condition
+(`bad = (t==nullptr) || (ctx==nullptr) || !live`, logged every call since
+some earlier session) but **only logs it** — line 237
+(`t->context->running.signal();`) runs unconditionally after the `bad=1`
+log line, with no early return. The detector already exists; the gate does
+not.
+
+### Rules out / keep
+- Fix is real (root cause, not symptom-patch) but **unvalidated at runtime**
+  — 0/2 same-run positive control. Do not claim N1 confirmed.
+- Do **not** conflate the two new crashes: Metal-internal SIGSEGV has no
+  source on our side to fix (park; check reproducibility only, don't chase
+  code); the SIGBUS `bad=1` UAF resume has a known instrumented site and an
+  obvious next patch (early-return/skip resume on `bad`, same pattern as the
+  s78 wild-FB refuse gate).
+- Next: gate `resume_thread_tagged` on `bad` (skip signal, log
+  `[thr-resume-skip]`) — same-run positive control is the existing `bad=1`
+  counter; discriminating outcome is whether the SIGBUS stops recurring
+  while `bad_total` stays nonzero (proves the gate fires, not that the
+  condition stopped happening).

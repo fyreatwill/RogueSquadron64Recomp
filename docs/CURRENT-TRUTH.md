@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 82)
+## Current truth (as of session 83)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -104,6 +104,17 @@ was 8/8 early holds black); hangar-flight content + ~5s motion then freeze
 on last sane frame. **G1 supported / G2–G4 refuted.** Residual: S1 `fs`
 plateau ~3784; Abort ~hold+6s from `evalCubicSplineAtTime` NaN assert.
 Detail: `scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
+**s83:** root-caused the NaN — `evalCubicSplineAtTime`'s only division
+(0x8001906C, parametric time-in-segment) is `0/0` on a zero-width spline
+interval (two keyframes sharing one time); guarded at the source in
+`N64Recomp/fixup_game_funcs.py` (not `lib/`, no submodule patch). Guard
+**0/2 fires** across two soaks — unvalidated, not confirmed. Both soaks
+instead died from two **different**, previously-unseen crashes once the
+deterministic assert stopped winning the race: a SIGSEGV inside Apple's
+`Metal.framework` shader compiler (no source on our side), and a SIGBUS
+resuming a `[thr-resume] live=0 bad=1` thread context — same UAF class as
+s70–s72, root site identified at `threads.cpp:198-238` (`bad` is already
+detected and logged, just never gated). Full detail: PORTING-STATE s83.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -184,14 +195,19 @@ step 2 below). Full detail: PORTING-STATE s49.
 **M3 — first gameplay: OPENED (s50); ImemOverrun FIXED (s69); OSThread SIGBUS FIXED (s72);
 post-`a` scene ID (s73); Start path isolated (s74/s75); hold/assert triage (s76/s77);
 wild-FB refuse gate (s78); D3 S1–S4 (s79); VI_FULLSYNC decision V1–V4 (s80);
-intermittent-black B1–B4 (s81); last-drawn sane-width gate (s82, G1).**
-AVAILABLE CRAFT reachable. thr-resume bad=0. **s75:** single Start → hangar-flight.
+intermittent-black B1–B4 (s81); last-drawn sane-width gate (s82, G1);
+evalCubicSplineAtTime NaN root-caused, 2 new crash classes found (s83).**
+AVAILABLE CRAFT reachable. **s75:** single Start → hangar-flight.
 **s78–s79:** RDP-`fs` plateaus post-leave (S1). **s80:** synthetic FIRE continues.
 **s81:** black = mode-3 presenting wild last-drawn. **s82:** always-on sane-width
 gate — **black duty-cycle collapses**; hangar-flight visible ~5s then freezes on
-last sane frame (S1 residual). Death now `evalCubicSplineAtTime` NaN Abort
-(~hold+6s). Leave key closed. Origin still cannot name scenes. Full detail
-PORTING-STATE s68–s82; `scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
+last sane frame (S1 residual); death `evalCubicSplineAtTime` NaN Abort (~hold+6s).
+**s83:** NaN div0 guarded at source (unvalidated, 0/2 fires); with that assert no
+longer winning the race, 2 soaks died from 2 *different* crashes instead — Metal-
+internal shader-compiler SIGSEGV (no source on our side), and a `thr-resume
+bad=1` UAF SIGBUS (same class as s70–s72, detector exists at
+`threads.cpp:198-238`, never gated). Leave key closed. Origin still cannot name
+scenes. Full detail PORTING-STATE s68–s83; `scratch/s73_post_a_scene/LDGATE1_ANALYSIS.md`.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -220,36 +236,55 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s82)
+## Next steps, in order of expected value (s83)
 
-1. **M3 — contain hangar-flight early death (`evalCubicSplineAtTime` NaN Abort).**
-   s82 dies ~hold+6s on `assert(ctx->f28.fl == ctx->f28.fl)` in recomp
-   `funcs_4.c` / `buildPositionAndCallTransformHelper`. Soften to log+skip (or
-   return) so HOLD_S=60 can run; positive control: assert path fires ≥1 log line
-   and process survives past hold_30. Discriminate: death gone + content holds
-   → unblocks craft stick; death moves → new class.
-2. **M3 — HOLD_S=60 craft stick (M3 DoD body)** after death contained:
+1. **M3 — gate the `thr-resume bad=1` UAF resume (SIGBUS, s83 recurrence of the
+   s70–s72 class).** `lib/N64ModernRuntime/ultramodern/src/threads.cpp:198-238`
+   already computes and logs `bad = (t==nullptr)||(ctx==nullptr)||!live` on
+   every resume but never gates on it — line 237 signals unconditionally.
+   Add an early return (skip resume, log `[thr-resume-skip]`) when `bad`,
+   same pattern as the s78 wild-FB refuse gate. Remember: this is `lib/`, so
+   `submodule-patches/export.sh` + commit in the same iteration.
+   Positive control: `bad_total` counter stays nonzero (proves the condition
+   still occurs) while the SIGBUS itself stops. Discriminate: SIGBUS gone +
+   soak reaches hold_30 → try HOLD_S=60 next; SIGBUS gone but new death →
+   new class; SIGBUS persists → gate placed wrong or resume path differs.
+2. **M3 — check the Metal-shader-compiler SIGSEGV's reproducibility** (s83
+   spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no
+   source on our side). One soak isn't enough to know if this is a
+   rebuild-triggered shader-cache-population artifact (retry-fixable) or a
+   recurring hazard. Don't write code for it yet — just rerun once the SIGBUS
+   gate (item 1) is in, and see if it still appears.
+3. **M3 — confirm the s83 spline div0 guard actually engages.** 0/2 fires so
+   far; it's a real fix by code inspection (genuine 0/0 IEEE division) but
+   has no same-run positive control yet. If items 1–2 clear and a NaN abort
+   reappears, that's the signal to look harder at when the guard should have
+   fired and didn't.
+4. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once items 1–3 are clear:
    `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40; document phase timeline.
-   Gate already keeps black off; residual S1 freeze may still stall animation —
-   if stick marks show no pose change on frozen frame, next is S1 FULL_SYNC for
-   hangar-flight tasks (not leave-key, not wild-FB).
-3. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
+   Gate already keeps black off; residual S1 `fs` freeze (~3769–3784 plateau,
+   s82/s83) may still stall animation — if stick marks show no pose change on
+   a frozen frame, next is S1 FULL_SYNC for hangar-flight tasks (not
+   leave-key, not wild-FB).
+5. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` 3→0.
    Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
-4. Past the first sustained mission hold: expect further new failure classes (mission overlay
+6. Past the first sustained mission hold: expect further new failure classes (mission overlay
    DMA → missing-func / UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture
    corruption). Each new failure is its own work unit. s80 unaligned `do_rom_read` Abort
    at phase 640 ~150s — park until present holds.
-5. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
+7. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
    — thread exhausted (s55–s58).** Prefer M3 mission-content work over reopening this section.
-6. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
+8. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
    carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user
    before committing there.
-7. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
-8. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+9. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
+10. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
-Done this session: ~~sane-width last-drawn/mode-3 gate (G1)~~ (s82) — black collapses;
-gate kept.
+Done this session: evalCubicSplineAtTime NaN root-caused and guarded at source
+(s83) — unvalidated (0/2 fires) but a genuine fix, not a symptom patch. Found
+2 new crash classes underneath (Metal SIGSEGV, thr-resume SIGBUS) once the
+deterministic assert stopped winning the race.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
@@ -281,6 +316,8 @@ Game functions (s1) — all four steps, in order:
      instead of `LOOKUP_FUNC(ctx->r25)`
    - `musyxKeyOnVoice` `break 6/7` div-by-zero guards → early `return`, keyed on the exact `do_break`
      constants 2148076780..2148077008
+   - `evalCubicSplineAtTime` (s83) zero-width-interval div0 guard at `0x8001906C` (`funcs_4.c`) —
+     `f1.fl==0` → log first 20 as `[spline-div0]` + `f4.fl=0` instead of `DIV_S` producing NaN
 4. `cd build && cmake --build . -j8`
 
 RSP ucode (only when a ucode toml changes): `~/Documents/Tools/N64Recomp/build/RSPRecomp` on
