@@ -52,8 +52,20 @@ case "$RUNNER" in
     export RS64_SKIP_STOP_HOOK=1   # grok runs the Stop hook and aborts on a block
     # dontAsk never prompts and still honours the deny rules protecting lib/,
     # which is the right posture for an unattended run - acceptEdits still asks
-    # for bash and an unanswerable prompt is a hazard headless. NOTE: this did
-    # NOT fix grok's early-cancel bug (tested s64, still Cancelled at 2 turns).
+    # for bash and an unanswerable prompt is a hazard headless.
+    # 2026-07-26 late-night investigation: every logged grok Cancelled run
+    # (21:32 and 21:38) predates at least one of the three fixes (skip-hook
+    # 21:37, context budget 21:46, dontAsk 21:52) — the current combined
+    # config has NEVER been tried on a real iteration. Four controlled probes
+    # under the current config all pass with stopReason=EndTurn: trivial
+    # no-tool, tool-using (read + git), non-allowlisted command (dontAsk
+    # auto-allows, no prompt, no cancel), and a 66k-token multi-doc read.
+    # The old "still Cancelled at 2 turns" s64 note was measured under
+    # acceptEdits, where the first unanswerable bash permission prompt
+    # cancels the turn — which also explains why cancels landed at varying
+    # context sizes (55k-106k): they tracked the first prompting tool call,
+    # not a context ceiling. Next grok attempt should just be a real
+    # iteration with this config as-is.
     # Do NOT reach for bypassPermissions; it would drop the deny rules too.
     # grok mirrors Claude Code's headless flags closely: -p/--single,
     # --output-format, --permission-mode, --allow/--deny.

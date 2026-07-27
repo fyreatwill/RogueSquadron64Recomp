@@ -21,7 +21,6 @@ mkdir -p "$AG"
 #              the contract is not.
 VERIFY=0
 if [ "${1:-}" = "--verify" ]; then VERIFY=1; input=''; else input="$(cat)"; fi
-
 # MEASURED, do not "simplify" away: grok DOES read .claude/settings.json and
 # DOES run this Stop hook (stopReason=EndTurn in a repo without the settings
 # file, Cancelled with it). Unlike Claude Code it treats a hook block as a
