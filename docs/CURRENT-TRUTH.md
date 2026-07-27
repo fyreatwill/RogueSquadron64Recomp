@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 69)
+## Current truth (as of session 70)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -83,15 +83,16 @@ complete. VI origin **cannot** discriminate menu scenes (the war room presents f
 war room) — but see s48: origin distinguishes *phases*, not which menu scene is on screen.
 
 Remaining visual defects:
-- **~~s50/s51 AVAILABLE CRAFT → black → one mission frame → `fs` freeze~~ — FIXED s69.**
-  Mechanism (s64–s68): post-load tasks exit `RspExitReason::ImemOverrun` because CLIP_1FBC's
-  `j L_1650` was rewritten to a hard exit by fixup 1 before fixup 6 defined the resident
-  `L_1650:` label. s69 fixup 8 restores `goto L_1650`; death-repro exit=2 2090→0, fs climbs
-  past the old plateau. Pre-fix narrative and false leads (CPU-side stall, sampled-log
-  "RSP healthy") are in PORTING-STATE s61–s68 and the Overturned section. **Still open for
-  M3:** 60s continuous *in-mission* hold with craft input; s69 grace after `a` showed black
-  then animating SELECT YOUR CRAFT (not yet a mission soak). Texture corruption on mission-
-  shaped content (s61 run2; s69 grace_09 bands) remains a separate defect.
+- **~~s50/s51 AVAILABLE CRAFT → black → one mission frame → `fs` freeze~~ — ImemOverrun FIXED s69;
+  process death reopened s70 as a different class.** Mechanism of the old freeze (s64–s68):
+  post-load tasks exited `RspExitReason::ImemOverrun` because CLIP_1FBC's `j L_1650` was a hard
+  exit before fixup 6 defined the resident label; s69 fixup 8 restores `goto L_1650` (exit=2
+  2090→0). **s70 60s soak (2/2):** after `a`, black gap → one mission-shaped frame with
+  **texture-garbage bands** (capital ship / space) → **SIGBUS (signal 10)** at ~8 s post-`a`
+  in `resume_thread` → `moodycamel::LightweightSemaphore::signal`. exit=2 stays 0; fs plateaus
+  ~3291 just before the bus error. Stack identical both runs. Texture corruption on that
+  single mission frame is real but second to process death. s69's 25 s grace (0 CRASH, late
+  SELECT YOUR CRAFT) did not reproduce today — treat as outlier.
   ~~**s51 also found a generalizable environment confound**: driven runs stall in phase-advance
   under concurrent system load~~ — **OVERTURNED, s60. There is no load confound.** The three repro
   scripts set no `ROGUESQ_*` variables at all, so from a clean shell the binary took the **HLE**
@@ -126,9 +127,9 @@ Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regress
 0 `[dmem-race]`, 0 asserts. `[missing-func]` clean in every soaked phase to date, **except**: s49's
 undriven outdoor-512 stretch stubbed 3 distinct addresses once each (0x800C7120, 0x800FBD48,
 0x800FB190) with 0 aborts — never itemized before because prior soaks targeted hangar/war-room, not
-outdoor. Parked as an M4 curiosity, not a blocker. **s50–s68 mission-entry path:** no longer a
-process death (s61) and no longer an ImemOverrun `fs` freeze (s69); hangar/war-room/outdoor
-stability record from s27–s49 stands unchanged.
+outdoor. Parked as an M4 curiosity, not a blocker. **s50–s70 mission-entry path:** no longer an
+ImemOverrun `fs` freeze (s69); **s70 reopens process death** as SIGBUS ~8 s post-`a` (2/2).
+Hangar/war-room/outdoor stability record from s27–s49 stands unchanged.
 
 ## Goal stack — work strictly top-down
 
@@ -145,19 +146,17 @@ Stability 0 except 3 gracefully-stubbed `[missing-func]` addresses in the undriv
 never soaked before — parked as M4 (identified s53, fixed s54, runtime check outstanding — see
 step 2 below). Full detail: PORTING-STATE s49.
 
-**M3 — first gameplay: OPENED (s50); ImemOverrun freeze FIXED (s69).**
-AVAILABLE CRAFT confirmed reachable. Pre-s69: `a` → black → one mission frame → `fs` freeze,
-reproduced 7/7 (s61–s68). Mechanism chain: unsampled runner histogram (s64) → L_0000 refuted
-(s67) → every exit=2 is CLIP_1FBC's fixup-1 hard exit for `j L_1650` (s68, counter ≡ 2090
-exit=2) → **s69 reconnects `goto L_1650` after fixup 6 defines the resident label** (fixup 8
-in `tools/fixup_factor5_ucode.py`). Death-repro under default `-O2` with same-run control=1:
-**exit=2: 0** (was 2090), **fs climbs to 3377** (was plateau 2152), last tasks `exit=1
-syncs=1` tris≈447, 0 clip-stray / UnhandledJumpTarget / missing-func / crash. Path-taken note
-`L_1650_enter` atomic count reaches ~46k. Grace captures: black g02–g08, then animating
-SELECT YOUR CRAFT (18/24 frame DIFF) — not a freezeframe. Mission-origin `0x656400` presents
-while fs still advances. **Remaining for M3 done-when:** confirm sustained *in-mission*
-geometry (not just craft-select) for 60s with craft response to synthetic input; grace_09
-texture corruption still open. Full detail PORTING-STATE s68–s69.
+**M3 — first gameplay: OPENED (s50); ImemOverrun FIXED (s69); post-`a` SIGBUS blocks soak (s70).**
+AVAILABLE CRAFT reachable. ImemOverrun chain closed s64–s69 (CLIP_1FBC → `goto L_1650`,
+exit=2 2090→0). **s70 soak (2/2, 65 s grace planned):** process dies ~8 s after `a` with
+`[CRASH] signal 10 (Bus error)` in ultramodern `resume_thread` / `LightweightSemaphore::signal`
+(idle → pause_self → swap_to_thread). exit=2=0, control=1 both runs. Visual: AVAILABLE CRAFT
+→ black (g02–g06) → one **mission** frame with texture garbage (g07 capital ship) → death.
+fs plateaus ~3291 for the last ~6 presents before SIGBUS. Precursors (correlation only):
+unimplemented RT64 `fmt=7` readback/writeback and wild `last-drawn` widths. **M3 now blocked
+on surviving past this SIGBUS**, then on 60s in-mission hold + craft input. Origin `0x656400`
+is also the war-room pair partner of `0x6AB400` — not a mission-only tag; use captures.
+Full detail PORTING-STATE s68–s70.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -186,54 +185,36 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s69)
+## Next steps, in order of expected value (s70)
 
-1. **M3 — 60s in-mission soak (ImemOverrun freeze closed s69; stay-in-mission still open).**
-   s69: reconnect CLIP_1FBC → `goto L_1650` (fixup 8) drops exit=2 to 0 and lets `fs` climb
-   through grace. Late grace showed animating SELECT YOUR CRAFT, not a confirmed continuous
-   mission. Next: extend the death-repro (or a dedicated soak script) to hold past `a` for
-   ≥60s of captures, phase-gate on mission origin `0x656400` / visual mission content, and
-   drive craft input. Discriminate: (H-mission) continuous mission frames for 60s with
-   changing camera/craft vs (H-menu) state machine returns to craft-select after the black
-   gap vs (H-corrupt) mission presents but texture/geometry is unusable (grace_09 shape).
-   Full detail: PORTING-STATE s69. **Do not re-litigate L_0000 / L_1650 reconnect** unless
-   exit=2 reappears.
-2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
+1. **M3 — triage post-`a` SIGBUS (blocks 60s soak; ImemOverrun still closed).** s70 2/2:
+   ~8 s after LEVEL DESCRIPTION `a`, SIGBUS in `resume_thread` →
+   `moodycamel::LightweightSemaphore::signal` (same stack both runs). exit=2=0; one
+   mission-shaped corrupted frame at g07 then death. Next work unit: identify which
+   `OSThread_t` is resumed with a bad semaphore (UAF of destroyed thread vs corrupt
+   pointer vs double-signal), with a same-run positive control that the instrument fires
+   on a *healthy* resume before the crash site. Correlated but unproven: `fmt=7`
+   unimplemented readback and wild `last-drawn` addresses immediately before the bus
+   error. Do **not** re-litigate L_0000 / L_1650 unless exit=2 reappears. Full detail:
+   PORTING-STATE s70. Soak harness: `scratch/s70_mission_soak/run_soak.sh`.
+2. **M3 — after SIGBUS is survivable:** re-run 60s soak; expect H3 texture corruption on
+   mission frames as the next surface (g07 capital-ship garbage). Then craft input.
+3. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
    pipeline clean (build exit 0). What's left: an undriven run phase-gated to the outdoor-512
    stretch (s49 shape) to confirm `grep -c "\[missing-func\]"` drops from 3 to 0 there with 0 new
    stability-counter hits elsewhere. Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
-3. Past the first sustained mission hold: expect further new failure classes (mission overlay
-   DMA → missing-func / UnhandledJumpTarget, new VI phase, overlays 12/44 splice, s61 run2
-   texture corruption / grace_09 bands). Each new failure is its own work unit.
-4. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
-   (39,784 bytes as of s58, down from 43,143 at s55's start) — this thread is now effectively
-   exhausted.** s55 migrated the M1/M2 mechanism paragraphs to `docs/PROJECT-OVERVIEW.md` §3. s56
-   compressed the s5–s31 Overturned-conclusions entries with §4.x pointers. s57 compressed "Method
-   traps" the same way and reviewed "Dead ends" (no further trim found). **s58 opened the one
-   section every prior session had deliberately left alone — the s44–s48 Overturned-conclusions
-   entries (clip-dispatch mechanism, war-room scene identity) — and found exactly one safe cut**:
-   the s12–s47 "main-menu hangar" entry restated a mechanism already given in full in the "s48
-   scene-identity correction" paragraph earlier in this file, so it's now a pointer plus its unique
-   proof/why-believable content. **The other 3 entries (s46 clip-overlay-in-ROM, s46 non-L_1298-jr
-   routing safety, s47 wrong scene-origin attributions) were reviewed against the same two tests
-   used successfully elsewhere in the file (restated elsewhere? exact §4.x instance?) and both came
-   back negative for all three — they are a considered "leave alone," not a skipped review.** No
-   further lever is identified in this section. Fallback work when load blocks steps 1–2 has now
-   run out; prefer step 5 (surface the sibling-repo question) over re-opening this section without a
-   new angle. Full detail: PORTING-STATE s58.
-5. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
-   is its own git repo and carries uncommitted changes to 4 symbol files —
-   `cinematic_overlay.txt`, `main_overlay.txt`, `menu_overlay.txt` (pre-existing, unknown origin)
-   plus `mission_overlay.txt` (s54's fix). Ask the user whether/how they want this checkout's
-   history managed before any iteration commits there.
-6. **Band-row coverage history** (settled chain, for reference): s41 `MARK_VTX` proved a coverage
-   hole; s42 `LOG_YHIST` proved submission through band rows; s43 `LOG_ZSTATE` proved raster-clean
-   draws; s27–s31 eliminated texture decode; s45–s47 pinned and fixed the clip-dispatch loss; s48
-   proved the fix fills the band (and renamed the scene); s49 closed the regression sweep. s40's
-   `col`-write probe fails its own control — do not reuse.
-7. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
+5. Past the first sustained mission hold: expect further new failure classes (mission overlay
+   DMA → missing-func / UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture
+   corruption). Each new failure is its own work unit.
+6. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
+   — thread exhausted (s55–s58).** Prefer M3 SIGBUS work over reopening this section.
+7. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
+   carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user
+   before committing there.
+8. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
+9. **GPU→CPU present PNG** via `NativeTarget::copyToRAM` — a convenience, not a blocker.
 
 Done, do not redo:
 - ~~Optimise the ucode vector path~~ — s38: it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work

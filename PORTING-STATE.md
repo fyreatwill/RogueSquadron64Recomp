@@ -5597,3 +5597,62 @@ surface.
 - `tools/fixup_factor5_ucode.py` (fixup 8)
 - regenerated `build/factor5_ucode/factor5_ucode_recompiled.c` (gitignored)
 - `scratch/s68_imem_site/run_reconnect/`, updated `run_death_repro.sh`
+
+## Session 70 (2026-07-26) — M3 60s soak: mission flash + texture garbage + SIGBUS @ ~8s post-`a` (2/2)
+
+### Work unit
+60s post-`a` soak after s69 L_1650 reconnect (NEXT.md H1–H4). No code change;
+binary already has fixup 8 (`L_1650_enter` present). Script:
+`scratch/s70_mission_soak/run_soak.sh` (same schedule as s61–s69 death-repro,
+grace=65s @ 1 Hz, unsampled runner histogram, control site).
+
+### Runs (`scratch/s70_mission_soak/run{1,2}/`)
+
+| metric | run1 | run2 |
+|--------|------|------|
+| control | 1 | 1 |
+| exit=2 | **0** | **0** |
+| exit=1 | 4393 | 4392 |
+| L_1650 hard | 0 | 0 |
+| L_1650_enter lines | 476 | 476 |
+| clip-stray / missing-func / UnhandledJump | 0 | 0 |
+| process gone | **grace-iter 8** | **grace-iter 8** |
+| fs max / last | 3292 plateau | 3291 plateau |
+| `[CRASH]` | **SIGBUS (signal 10)** | **SIGBUS (signal 10)** |
+
+Stack (identical top, both runs):
+`idle_thread_handle` → `pause_self` → `check_running_queue` → `swap_to_thread`
+→ `resume_thread_and_wait` → `resume_thread` → `moodycamel::LightweightSemaphore::signal`
+→ `std::__atomic_base::fetch_add` → **Bus error**.
+
+### Grace visual timeline (run2; run1 lost content after g01)
+
+| t post-`a` | frame | scene |
+|---|---|---|
+| 0 | pre/post_060 | AVAILABLE CRAFT (X-wing present pre; fading post) |
+| 1 s | grace_01 | AVAILABLE CRAFT, holograms gone, blue beam only |
+| 2–6 s | grace_02..06 | pure black (same ~5–8 s gap as s61–s69) |
+| 7 s | grace_07 | **mission-shaped**: capital-ship / hangar exterior + space; **heavy texture garbage bands** (H3) |
+| ~8 s | — | process SIGBUS; no further frames |
+
+### Hypothesis outcomes
+
+| ID | Result |
+|----|--------|
+| H1 (60s continuous mission) | **Refuted** — dies ~8 s; only one mission-looking frame captured |
+| H2 (return to craft-select for whole soak) | **Refuted for this path** — never stays on craft-select; black → mission garbage → death (s69 did show animating SELECT YOUR CRAFT after black under a 25 s grace with **0 CRASH** — path variance or race; not reproduced today) |
+| H3 (mission presents unusable) | **Confirmed** (grace_07 capital-ship + noise bands; matches s61 run2 / s69 grace_09 shape) |
+| H4 (new freeze class ≠ ImemOverrun) | **Confirmed 2/2** — exit=2 stays 0; crash is SIGBUS in ultramodern thread resume, not RSP ImemOverrun; fs plateaus ~3291 for the last ~6 `update_screen`s before the bus error |
+
+Positive control satisfied both runs (`site=control` = 1). ImemOverrun freeze remains closed.
+
+### Notes
+- Origin `0x00656400` alone is **not** a mission discriminator: it is also the war-room pair partner of `0x006AB400` from the first 512-wide present. Scene identity is visual.
+- Precursors near crash (both runs): `[rt64] copyFromRAM: skipping unimplemented readback fmt=7 siz=0 (4069x434)` and wild `last-drawn` widths (0xB6FFFF, 0xFFE660, 0xFF72C0). Correlation only — not proven causal.
+- s69 same schedule + 25 s grace: process alive, 0 CRASH, late grace SELECT YOUR CRAFT. Today's 2/2 SIGBUS is the new default on this machine/binary; treat s69 survival as a non-reproduced outlier, not as proof the crash is absent.
+
+### Next
+Triage SIGBUS: which `OSThread_t` is resumed with a dead semaphore (UAF vs corrupt pointer), and whether the fmt=7 / garbage `last-drawn` path is the trigger. Texture corruption on the single mission frame is real but second to process death.
+
+### Files
+- `scratch/s70_mission_soak/run_soak.sh`, `run1/`, `run2/`, console logs
