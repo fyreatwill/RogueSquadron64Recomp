@@ -50,32 +50,33 @@ case "$RUNNER" in
 
   grok)
     export RS64_SKIP_STOP_HOOK=1   # grok runs the Stop hook and aborts on a block
-    # dontAsk never prompts and still honours the deny rules protecting lib/,
-    # which is the right posture for an unattended run - acceptEdits still asks
-    # for bash and an unanswerable prompt is a hazard headless.
-    # 2026-07-26 late-night investigation: every logged grok Cancelled run
-    # (21:32 and 21:38) predates at least one of the three fixes (skip-hook
-    # 21:37, context budget 21:46, dontAsk 21:52) — the current combined
-    # config has NEVER been tried on a real iteration. Four controlled probes
-    # under the current config all pass with stopReason=EndTurn: trivial
-    # no-tool, tool-using (read + git), non-allowlisted command (dontAsk
-    # auto-allows, no prompt, no cancel), and a 66k-token multi-doc read.
-    # The old "still Cancelled at 2 turns" s64 note was measured under
-    # acceptEdits, where the first unanswerable bash permission prompt
-    # cancels the turn — which also explains why cancels landed at varying
-    # context sizes (55k-106k): they tracked the first prompting tool call,
-    # not a context ceiling. Next grok attempt should just be a real
-    # iteration with this config as-is.
-    # Do NOT reach for bypassPermissions; it would drop the deny rules too.
-    # grok mirrors Claude Code's headless flags closely: -p/--single,
-    # --output-format, --permission-mode, --allow/--deny.
-    # An explicit turn bound. NOTE: this was NOT the cause of the early
-    # "Cancelled" iterations - raising it changed nothing; the Stop hook was
-    # (see stop_gate.sh). Kept as a real safety bound on a runaway iteration.
+    # ROOT CAUSE of every grok "Cancelled" iteration, found 2026-07-26 by
+    # debug log (--debug-file): in headless --single mode grok's ACP client
+    # initializes with fs:{writeTextFile:false} — it declares itself unable
+    # to grant file-write permission — so the FIRST write/edit tool call dies
+    # with cancellationCategory=PermissionCancelled and grok reports the
+    # whole turn as Cancelled. That is why every iteration cancelled exactly
+    # when it moved from reading to implementing, at whatever context size it
+    # happened to have (55k-106k): the token counts tracked the first write,
+    # not a context ceiling, and neither dontAsk nor acceptEdits helps
+    # because the client cannot grant what it never declared.
+    # THE FIX: --always-approve. Verified 2026-07-26: writes succeed, and
+    # settings.json deny rules protecting lib/ are STILL enforced under it
+    # ("Denied by permission policy: deny rule on bash matching 'git clean'"
+    # returned as a tool error the model sees, not a turn cancellation).
+    # Also measured: grok parses but IGNORES additionalDirectories in
+    # .claude/settings.json — sibling-repo access rides on the Read() allow
+    # rules instead. RS64_SKIP_STOP_HOOK is real and separate: without it the
+    # Stop hook cancels grok turns too (env var reaches the hook fine).
+    if [ -n "${RUNNER_PERMISSION_MODE:-}" ]; then
+      perm_args=(--permission-mode "$RUNNER_PERMISSION_MODE")
+    else
+      perm_args=(--always-approve)
+    fi
     exec grok --single "$(prompt_with_budget)" \
       ${RUNNER_MODEL:+-m "$RUNNER_MODEL"} \
       --max-turns "${RUNNER_MAX_TURNS:-200}" \
-      --permission-mode "${RUNNER_PERMISSION_MODE:-dontAsk}" \
+      "${perm_args[@]}" \
       --output-format json 2>&1
     ;;
 
