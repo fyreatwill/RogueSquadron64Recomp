@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 103)
+## Current truth (as of session 104)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -401,6 +401,18 @@ creation time. 8th `do_rom_read` recurrence, byte-identical, same
 ~140s/hold+11s window. Also fixed s102's flagged patch-duplication
 symptom incidentally via a full ELF regen. Full detail: PORTING-STATE
 s103.
+**s104:** found that node-allocator (`initSampleStreamBlockCache`) and
+**cleared it** — every node-claim path recomputes the base field fresh
+from `fillSampleStreamRange`'s own arguments before use, so a stale
+allocator value was never possible. New instrument
+(`ROGUESQ_LOG_FILL_RANGE_ARGS=1`) proved those arguments are themselves
+already corrupted at function entry (byte-for-byte match to the known
+`devAddr` corruption), closing "is this function's own arithmetic
+buggy" (no) and localizing the bug to whatever writes the one shared
+struct field (`voice+0x34`) both this function's and
+`acquireSampleStreamBlock`'s arguments trace back to — not yet located.
+9th `do_rom_read` recurrence, same signature. Full detail:
+PORTING-STATE s104.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -612,7 +624,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s103)
+## Next steps, in order of expected value (s104)
 
 -1. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
@@ -673,6 +685,29 @@ cost three sessions before the recursive mutex.
    this session (every patch reapplied x1, confirmed via the fixup
    script's own report) — the underlying non-idempotency bug in the
    script is still unfixed. Full detail: PORTING-STATE s103.
+   **s104 update:** found `fillSampleStreamRange`'s node allocator
+   (`initSampleStreamBlockCache`, `funcs_23.c:12070`, guest `0x8008F858`)
+   and **cleared it** — it only ever sets a new node's `0x0`/`0x4`/`0x14`
+   fields; every path that (re)claims a node (free-list pop, single-node
+   eviction, general LRU eviction) converges on one block
+   (`funcs_23.c:12993-12999`) that unconditionally recomputes
+   `node->0x8 = a1 - ((a1-a3) mod 0x600)` fresh from
+   `fillSampleStreamRange`'s own arguments before every use, so the
+   allocator never needs to initialize it. Landed
+   `ROGUESQ_LOG_FILL_RANGE_ARGS=1` to test whether those arguments (`a1`
+   dram target, `a3` tag) are themselves already corrupted at entry —
+   **confirmed yes**: logged values match the batch's corrupted
+   `devAddr` byte-for-byte (`a1_dram=0x6C676672`/`0x77696E67` = the same
+   run's `entry=0`/`entry=1` `devAddr`). **This closes "is
+   `fillSampleStreamRange`'s own arithmetic buggy"**: no, its inputs
+   arrive pre-corrupted. Both `a1`/`a3` here and `acquireSampleStreamBlock`'s
+   (unreached this run) `a0` all trace back to one shared struct field,
+   `*(voice_ptr + 0x34)`, read in `musyxRenderVoiceSamples`
+   (`funcs_24.c` ~397-451, all 4 call sites in that function share the
+   shape). do_rom_read recurred a 9th time, byte-identical family.
+   **Next step: find what writes `voice+0x34`** — `musyxKeyOnVoice`
+   (`funcs_24.c:1825`) is the obvious first read, not yet done. Full
+   detail: PORTING-STATE s104.
 0a. **Tooling: `fixup_game_funcs.py` is not actually idempotent**
    (found s102 while re-running it for the item above) — every patch's
    regex anchor matches text that's left unchanged after insertion, so

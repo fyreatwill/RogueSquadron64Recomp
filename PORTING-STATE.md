@@ -8578,3 +8578,107 @@ find that allocator/initializer.
 Instrument `ROGUESQ_LOG_STREAM_TAG=1` stays landed and armed (cheap,
 proved something concrete even at 0 fires) but is no longer the active
 lead — do not re-soak specifically for it.
+
+## Session 104 (2026-07-27) — refuted the `-0x664C` node allocator as the corruption source; new instrument proves the corruption is already present in `fillSampleStreamRange`'s own incoming arguments, closing the "is this function's arithmetic buggy" question and localizing the search to whatever writes the shared struct field both suspect functions read from
+
+**Read `NEXT.md` first.** s103 left an open question: whatever
+allocates/initializes `fillSampleStreamRange`'s `-0x664C` range-list
+nodes must set a new node's `+0x8` field (the value that becomes
+`devAddr`'s base) — that initializer was the next candidate for the
+field-mapping bug.
+
+### Found the allocator — and cleared it
+
+`initSampleStreamBlockCache` (`funcs_23.c:12070-12227`, guest
+`0x8008F858`), found via a straightforward `664C` grep across
+`funcs_23.c` (a hit at guest `0x8008F8D0`, well before
+`fillSampleStreamRange`'s own range at `0x8008FAAC`). Source-read in
+full: a one-time MusyX-init routine. It calls `rs_malloc` twice — once
+for a `1536*N`-byte sample-data buffer (`N` = the function's own `a0`
+argument, the block count), once for a `24*N`-byte array of `N`
+0x18-byte list nodes — then builds the node array's forward/backward
+links (offsets `0x0`/`0x4`) and assigns each node a `0x600`-byte slice
+of the sample buffer (offset `0x14` = `sample_base + i*0x600`,
+confirming `0x600` as this system's fixed block size, matching
+`fillSampleStreamRange`'s own `0x600` comparison constant from s103).
+**It never touches offsets `0x8`, `0xC`, or `0x10` of any node.**
+
+This looked at first like exactly the bug (a field silently left as
+heap garbage) — but reading the rest of `fillSampleStreamRange` (past
+where s103 stopped, `funcs_23.c:12693-13002`) shows every path that
+claims a node for use — free-list pop (`L_8008FCD8`), single-active-
+node eviction (`L_8008FD48` fast path when the active list has exactly
+one entry), and general LRU eviction (unlinking the active list's tail
+and reinserting it at the front, the longer `L_8008FD48` path) — all
+converge on one shared block (`L_8008FDB8`, guest `0x8008FDB8`,
+`funcs_23.c:12993-12999`) that **unconditionally recomputes**
+`node->0x8 = a1 - ((a1 - a3) mod 0x600)` from the function's own `a1`
+(the requested DRAM target) and `a3` (the tag) arguments, immediately
+before use. So the allocator never needs to initialize `+0x8` — nothing
+ever reads a node's `+0x8` without first passing through this
+recompute. **`initSampleStreamBlockCache` is cleared as a suspect.**
+
+### New instrument — and a clean discriminating result
+
+This pushes the search one level up: `a1`/`a3` are themselves computed
+in `musyxRenderVoiceSamples` (`funcs_24.c` ~397-451, identical shape at
+all 4 `fillSampleStreamRange` call sites in that function, not just the
+2 s103 had looked at) from a single shared source: `MEM_W($s1, 0x34)`
+— and `$s1` there is `musyxRenderVoiceSamples`'s own `a0` argument (a
+per-voice/stream descriptor pointer). Notably this is the **exact same
+struct field** (`+0x34`) the existing `fixup_game_funcs.py` comment for
+`ROGUESQ_LOG_STREAM_TAG` had already identified as feeding
+`acquireSampleStreamBlock`'s (unreached-this-run) `a0` argument at a
+different call site in the same function — i.e. both candidate writer
+functions independently bottom out at one shared field.
+
+Landed `ROGUESQ_LOG_FILL_RANGE_ARGS=1` (`N64Recomp/fixup_game_funcs.py`,
+anchored on `fillSampleStreamRange`'s function-entry boilerplate) to log
+its raw incoming `a0`-`a3` (`ctx->r4`-`r7`) before anything touches
+them. Full regen from ELF (`make_elf.py` → `N64Recomp` →
+`fixup_game_funcs.py` → `cmake --build`, all rc 0); fixup report showed
+every patch applied exactly **x1** including the new one — no
+duplication this time (s103's full-regen workaround holds up on a
+second use).
+
+Soaked (`scratch/s73_post_a_scene/s104_fillargs/run.log`,
+`PROBE_MODE=start_only HOLD_S=30`, `ROGUESQ_LOG_THREAD_RESUME=0`,
+`ROGUESQ_LOG_MUSYX_DMA_CALL=1` + `ROGUESQ_LOG_STREAM_TAG=1` +
+`ROGUESQ_LOG_FILL_RANGE_ARGS=1`). Reached the ~140s DMA window alive
+(phase log: `vi_width=640` at 146.5s) and died at hold-iter 15 to the
+same `do_rom_read` assertion abort as every prior session (9th
+occurrence; `[rom-read]`/`[pi-start-dma]` fields weren't logged this
+run since `ROGUESQ_LOG_DMA` wasn't armed, but the assert signature and
+call stack are byte-identical to s85/s91/s93/s94/s101-103). Controls
+held: `thr-resume bad=1` 0, `ost-wb SKIP_WIDTH` 0.
+
+**`[fill-range-args]` fired 7 times, immediately before `[musyx-dma-call]`'s
+9-entry batch dump, and the values match byte-for-byte**: `n=0
+a1_dram=0x6C676672` = the batch's `entry=0 devAddr=0x6C676672`
+("lgfr") exactly; `n=1 a1_dram=0x77696E67` = `entry=1
+devAddr=0x77696E67` ("wing") exactly. **The corruption is already
+present in `fillSampleStreamRange`'s own incoming `a1`/`a3` arguments
+at function entry, before its alignment arithmetic runs at all.** This
+closes the question s103 left open in the opposite direction from what
+looked likely: `fillSampleStreamRange`'s own computed-arithmetic write
+site is not just plausible-looking, it's **confirmed clean** — for
+these entries, `(a1-a3) mod 0x600` evaluates to 0, so `node->0x8` comes
+out numerically equal to the already-corrupted `a1` verbatim. The bug
+is not in either candidate function; it is wherever `voice+0x34` (the
+one shared struct field both functions' arguments trace back to) gets
+written.
+
+**Next work unit**: find what writes `*(voice_ptr + 0x34)`. Candidates
+not yet checked: `musyxKeyOnVoice` (`funcs_24.c:1825`, the obvious
+per-voice setup function — not yet read this session) or a MusyX
+sample/instrument-descriptor loader elsewhere. Also unresolved and
+worth clarifying next session (found but not chased, low priority):
+`fillSampleStreamRange`'s own `a0` argument is `$s0+0x34` (a
+*different* register, `$s0`, not `$s1`) at its call sites — same
+offset, different base pointer; worth confirming whether `$s0`/`$s1`
+are two elements of the same array or genuinely different structs
+before assuming they're unrelated.
+
+Instruments `ROGUESQ_LOG_MUSYX_DMA_CALL=1`, `ROGUESQ_LOG_STREAM_TAG=1`,
+and the new `ROGUESQ_LOG_FILL_RANGE_ARGS=1` all stay landed and armed
+— keep all three in every future soak on this bug.
