@@ -22,6 +22,18 @@ mkdir -p "$AG"
 VERIFY=0
 if [ "${1:-}" = "--verify" ]; then VERIFY=1; input=''; else input="$(cat)"; fi
 
+# MEASURED, do not "simplify" away: grok DOES read .claude/settings.json and
+# DOES run this Stop hook (stopReason=EndTurn in a repo without the settings
+# file, Cancelled with it). Unlike Claude Code it treats a hook block as a
+# cancellation and aborts the whole turn instead of continuing — so the gate
+# guaranteed every grok iteration died mid-thought having done nothing. For
+# non-claude runners the contract is enforced by loop.sh's post-hoc
+# `--verify` pass and its retry instead, which is the same contract checked a
+# moment later. runner.sh exports this for those runners.
+if [ "${VERIFY:-0}" != "1" ] && [ -n "${RS64_SKIP_STOP_HOOK:-}" ]; then
+  exit 0
+fi
+
 # --- loop guard --------------------------------------------------------------
 # The counter lives OUTSIDE the repo, keyed by session id. A first smoke test
 # showed the agent editing an in-repo counter to force the gate open; the gate

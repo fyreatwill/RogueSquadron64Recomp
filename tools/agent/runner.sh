@@ -15,8 +15,23 @@
 # and its retry. Same contract either way, checked at a different moment.
 set -u
 cd "$(dirname "$0")/../.."
-PROMPT_FILE="${1:?usage: runner.sh <prompt-file>}"
+PROMPT_FILE="${1:?usage: runner.sh <prompt-file> | runner.sh --describe}"
 RUNNER="${RUNNER:-claude}"
+
+# Only the claude branch falls back to LOOP_MODEL; the others pass no model
+# flag unless RUNNER_MODEL is set, so they use their own default. --describe
+# reports what will ACTUALLY be used, so the loop banner cannot drift from the
+# invocation (it printed "model=sonnet" for a grok run that never saw it).
+if [ "$PROMPT_FILE" = "--describe" ]; then
+  case "$RUNNER" in
+    claude) echo "runner=claude model=${RUNNER_MODEL:-${LOOP_MODEL:-sonnet}}" ;;
+    grok)   echo "runner=grok model=${RUNNER_MODEL:-<grok default>} max_turns=${RUNNER_MAX_TURNS:-200}" ;;
+    codex)  echo "runner=codex model=${RUNNER_MODEL:-<codex default>} sandbox=${RUNNER_SANDBOX:-workspace-write}" ;;
+    custom) echo "runner=custom cmd=${RUNNER_CMD:-<unset>}" ;;
+    *)      echo "runner=$RUNNER (unknown)" ;;
+  esac
+  exit 0
+fi
 
 case "$RUNNER" in
   claude)
@@ -27,15 +42,21 @@ case "$RUNNER" in
     ;;
 
   grok)
+    export RS64_SKIP_STOP_HOOK=1   # grok runs the Stop hook and aborts on a block
     # grok mirrors Claude Code's headless flags closely: -p/--single,
     # --output-format, --permission-mode, --allow/--deny.
+    # An explicit turn bound. NOTE: this was NOT the cause of the early
+    # "Cancelled" iterations - raising it changed nothing; the Stop hook was
+    # (see stop_gate.sh). Kept as a real safety bound on a runaway iteration.
     exec grok --single "$(cat "$PROMPT_FILE")" \
       ${RUNNER_MODEL:+-m "$RUNNER_MODEL"} \
+      --max-turns "${RUNNER_MAX_TURNS:-200}" \
       --permission-mode acceptEdits \
       --output-format json 2>&1
     ;;
 
   codex)
+    export RS64_SKIP_STOP_HOOK=1   # belt and braces; verified for grok, unverified for codex
     # `codex exec` is the non-interactive mode and does not prompt for
     # approvals. workspace-write is the least privilege that still lets an
     # iteration build and commit. If captures that write OUTSIDE the repo

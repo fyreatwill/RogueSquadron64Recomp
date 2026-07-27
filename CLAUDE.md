@@ -13,7 +13,11 @@ this macOS port — CURRENT-TRUTH wins wherever they disagree.
 The loop is runner-agnostic (`tools/agent/runner.sh`): `RUNNER=claude` (default,
 `LOOP_MODEL` picks the model), `RUNNER=grok`, `RUNNER=codex`, or `RUNNER=custom`
 with `RUNNER_CMD`. The Stop-hook gate in `.claude/settings.json` is a Claude
-Code feature — codex and grok never run it, so `loop.sh` also runs
+Code feature — but **grok DOES read `.claude/settings.json` and DOES run the
+Stop hook** (measured s64: stopReason=EndTurn without the file, Cancelled with
+it), and it aborts the whole turn on a hook block instead of continuing. So
+`runner.sh` exports `RS64_SKIP_STOP_HOOK=1` for grok and codex, and `loop.sh`
+runs
 `tools/agent/stop_gate.sh --verify` after every iteration whatever the runner,
 and re-invokes with the unmet condition. **If you add a contract rule, put it in
 `stop_gate.sh`, not in the hook config, or it will only apply to Claude.**

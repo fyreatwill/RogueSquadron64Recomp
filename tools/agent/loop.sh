@@ -32,7 +32,7 @@ notify_blocked() {
   log "BLOCKED - fix it, delete $AG/BLOCKED.md, rerun."
 }
 
-log "run starting $(date) — runner=${RUNNER:-claude} model=${RUNNER_MODEL:-$LOOP_MODEL} cap=$ITER_CAP"
+log "run starting $(date) — $(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh --describe) cap=$ITER_CAP"
 
 n=0
 waits=0

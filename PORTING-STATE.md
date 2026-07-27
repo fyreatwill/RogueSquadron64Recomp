@@ -5107,3 +5107,146 @@ session didn't answer and next session should.
 Files: none changed (log-only analysis). Scratch working files (`exits_scratch.txt` in each run
 directory) were deleted after use — not durable artifacts, the line numbers above are sufficient to
 reproduce the analysis from the existing logs.
+
+## Session 64 (2026-07-26) — M3 freeze mechanism found: a perspective-divide branch RSPRecomp
+couldn't statically resolve, stubbed to a synthetic halt in s1-era code, fires on real mission
+triangle content and eats every post-freeze task's SYNC_FULL
+
+### Starting state: recovering an interrupted iteration
+On start, `scratch/s61_death_repro/run4/` already existed (game capture from ~17:36–17:41, several
+hours before this session's start) with `ROGUESQ_LOG_SEQ=1` output and partial extraction files
+(`dlhead_tail.txt`, `dlsub_tail.txt`) but no write-up, no commit — a prior iteration ran the NEXT.md
+work unit (decode the 5 trailing DLs for a SYNC_FULL opcode) and stopped before finishing. Rather
+than discard that run (one-game-run-at-a-time and "capture once, analyze many" both argue against
+re-running for free), this session first tried to complete the analysis from run4's data.
+
+**Method dead end, caught by its own positive control.** NEXT.md's plan was to grep the raw
+`ROGUESQ_LOG_SEQ` DL-byte dumps for the SYNC_FULL word pattern. Zero matches for `29000000` (or any
+other candidate encoding) anywhere in the entire 108K-line run4 log, including in DLs from tasks
+known to be healthy — the positive control failed before the trailing tasks were even examined.
+Root cause: `ROGUESQ_LOG_SEQ` (`main.cpp:517`) dumps the bytes at `task->t.data_ptr` **before** RSP
+translation — Factor 5's custom per-task DL-head/window-chase encoding, not the raw RDP opcode
+stream `hist[0x29]`/`ROGUESQ_LOG_RUNNER` measures after translation. Manually decoding this custom
+pre-translation format for a yes/no opcode question is the wrong instrument; the codebase already
+has the right one (`rs64_dpc_drain_histogram`, exposed via `ROGUESQ_LOG_RUNNER`).
+
+**Second, independent instrumentation bug found before it could contaminate the result.**
+`rs64_dpc_drain_histogram()` (`src/rsp/dpc_bridge.cpp:112`) resets its 64-entry opcode counters on
+every call. `ROGUESQ_LOG_RUNNER`'s existing call site (`main.cpp:447-465`) only calls it for 1-in-32
+sampled tasks (`s_n <= 8 || (s_n & 31) == 0`) — so the 31 un-sampled tasks between samples silently
+accumulate into whichever task number is next sampled, misattributing an aggregate as a single
+task's content. This is a second instance of the §4.1 "sampled-log miscount" trap, previously
+undocumented for this specific flag. Fixed with a new opt-in `ROGUESQ_LOG_RUNNER_ALL` env var
+(`main.cpp`) that drains+prints every task, unsampled — existing default behavior unchanged.
+`export.sh` not needed (`src/` is this repo's own tree, not `lib/`).
+
+### What ran
+Rebuilt (`cmake --build .`, clean, exit 0) with the `ROGUESQ_LOG_RUNNER_ALL` addition, then re-ran
+`scratch/s61_death_repro_capture.sh run5` with `ROGUESQ_LOG_RUNNER=1 ROGUESQ_LOG_RUNNER_ALL=1` added
+to `ROGUESQ_LOG_SEQ=1 ROGUESQ_LOG_DPC=1` (already in the script) — same schedule as run1-4. One game
+process at a time, confirmed no other instance running first.
+
+### What run5 found
+**Positive control passes**: tasks #1-3140 show `syncs=1` on every single task (unsampled, not
+inferred) — `[runner] task #1 ... syncs=1 cimg=2 depth=1` through `task #3140 ... texrects=113
+syncs=1`. Global `fs` plateaus at exactly **2145**, which is *exactly* the count of tasks with
+nonzero `syncs=` in the unsampled log (2145/4900) — two independently-counted numbers agreeing
+exactly, strong same-run corroboration.
+
+**The transition, task #3141, is a hard, permanent, one-line boundary**:
+```
+task #3140 exit=1 dl_ptr=0x8073F9E8 tris=0   texrects=113 fillrects=0 syncs=1 cimg=3 depth=3
+task #3141 exit=2 dl_ptr=0x80738F18 tris=37  texrects=0   fillrects=1 syncs=0 cimg=2 depth=1
+task #3142 exit=2 dl_ptr=0x80744078 tris=37  texrects=0   fillrects=1 syncs=0 cimg=2 depth=1
+...
+task #4900 exit=2 dl_ptr=0x80748ED8 tris=12  texrects=0   fillrects=0 syncs=0 cimg=1 depth=1
+```
+`exit=2` is `RspExitReason::ImemOverrun` (`lib/N64ModernRuntime/librecomp/include/librecomp/rsp.hpp:13-21`
+— 0=Invalid, 1=Broke, **2=ImemOverrun**, 3=UnhandledJumpTarget, 4=Unsupported, 5=SwapOverlay,
+6=UnhandledResumeTarget). From #3141 onward — **2755 consecutive tasks, 100% of the remainder of the
+run** — every task exits `ImemOverrun` and every task has `syncs=0`. Content is not empty:
+`tris` runs 37→38→198+ across these tasks (real triangle geometry, growing — this is the mission's
+actual 3D content, not a stub/idle task), and `rs64_dpc_defer_end(r != UnhandledJumpTarget)`
+(`main.cpp:435`) explicitly still commits ImemOverrun output to RT64, which is why that content
+visibly rendered (matching the single frame of mission geometry s61 first observed).
+**Directly answers NEXT.md's discriminating question**: the trailing DLs do not contain SYNC_FULL —
+not because the CPU switched to a non-mission task type, but because the RSP task **halts partway
+through processing real mission geometry**, before it ever reaches the DL's closing SYNC_FULL.
+
+Unlike run1/run2 (submission stops completely after 5-6 trailing calls, s63), run5's task submission
+never stops within the capture window — largest gap between consecutive `[lle task]` lines anywhere
+in the run is 2388 lines, occurring early (before line 1634), nothing unusual near the freeze; the
+CPU keeps handing the RSP a new doomed task continuously, ~4900 of them, right up to the scripted
+kill. This is consistent with -O2's ~4.5ms/task throughput (s38): ~1760 post-freeze tasks/run5's ~8s
+of grace-window wall-clock is in the right ballpark. Read as: run1/run2's apparent "hard stop" and
+run5's "keeps going" are the same underlying state (RSP burning every task on this ImemOverrun
+before SYNC_FULL) observed at different points/durations, not two different mechanisms — not yet
+proven, flagged for a future long-duration capture if it matters.
+
+### Root cause, found in the generated ucode source
+`grep -n "out-of-IMEM target" build/factor5_ucode/factor5_ucode_recompiled.c` finds exactly 2 sites
+where `tools/fixup_factor5_ucode.py`'s fixup 1 (see its own docstring, written at s1/s2) replaced a
+statically-undefined `goto` with a synthetic `return RspExitReason::ImemOverrun;`. The first, at
+`factor5_ucode_recompiled.c:2666-2672`, inside `factor5_ucode()` itself:
+```c
+// bgez        $2, L_0000
+if (RSP_SIGNED(r2) >= 0) {
+    // vmadh       $v7, $v7, $v30[2]
+    rsp.VMADH<10>(rsp.vpu.r[7], rsp.vpu.r[7], rsp.vpu.r[30]);
+    // goto L_0000 — out-of-IMEM target, never taken in practice;
+    return RspExitReason::ImemOverrun;
+}
+```
+preceded by `mfc2 $2, $v29[6]` / `vrcph`/`vrcpl`/`vrcph` — a VRCPH/VRCPL reciprocal (1/w) sequence,
+the standard N64 perspective-divide idiom for vertex screen-space transform. The fixup script's own
+1b docstring already named this exact case: *"a `bgez $2, +0xC` near end-of-IMEM in a
+perspective-divide block whose target wraps past 0x04002000"* — written at s1/s2 as a documented
+assumption ("never taken in practice") based on every scene tested through s63 (title, war room,
+outdoor, hangar — none needed heavy real-time perspective-divide branching down this exact path).
+**Mission gameplay is the first content in this project to falsify that assumption**: real 3D
+triangle vertices apparently drive the reciprocal's sign-check (`r2 >= 0`) true on this path, taking
+a branch RSPRecomp could not statically resolve (its target, computed via IMEM wraparound math,
+fell outside the function's recognized PC range at translation time) and that s1/s2 stubbed to a
+synthetic halt rather than resolve. A second, less-likely site (`factor5_ucode_recompiled.c:3009-3028`,
+inside the M1 clip-splice `CLIP_1FBC` block, `j L_1650`) exists but its target label is one of clip
+fixup 6's declared "expected resident" helpers (implying it's normally reachable via a different,
+already-working path) and its context (clip-dispatch machinery, stable since s48) makes it a poor
+match for a defect that only started firing on mission triangle geometry — not chased further this
+session, flagged for elimination if the primary site doesn't pan out.
+
+### Revises s62/s63
+s62/s63 concluded "RSP-side is ruled out, this is upstream, CPU-side" — built on two things that
+both turn out to be incomplete: (1) `[task-brief]`'s 823-task iteration-cap population is a real,
+separate, phase-independent `tri=0 texrect=0` background pattern unrelated to this freeze (that part
+still stands), and (2) s63's run1/run2 "ImemOverrun is a run3-only artifact" refutation relied on the
+**throttled** `[lle send_dl #N]` line (prints task 1-8 then every 32nd) showing `exit=1` on every
+*sampled* task through the freeze — but the actual affected population in run1/run2 was only 5-6
+trailing tasks total (per s63's own finding), and a 1-in-32 sample has near-zero probability of ever
+landing on 5-6 specific tasks. The "refutation" was built entirely from pre-freeze tasks (which
+correctly show `Broke`), never from the trailing tasks themselves — the same sampled-log-miscount
+class as the histogram bug found earlier this session, now identified a second time in a different
+flag. With `ROGUESQ_LOG_RUNNER_ALL` (unsampled), the freeze **is** RSP-side: a specific branch in
+`factor5_ucode()`'s perspective-divide code that the s1/s2-era fixup script intentionally, explicitly
+stubbed to a halt, on the documented (and until now correct) assumption that real content would
+never take it.
+
+### Ruled out / superseded this session
+- Manual byte-decoding of `ROGUESQ_LOG_SEQ` dumps as a way to detect SYNC_FULL — wrong pre-translation
+  encoding, positive control fails.
+- s63's "ImemOverrun is a run3-only artifact, absent in run1/run2" — the absence was a sampling
+  artifact of the 1-in-32 `[lle send_dl #N]` throttle, not a real difference between runs.
+- "RSP-side is ruled out" (s62/s63) — overturned; RSP-side is now the leading, well-evidenced
+  mechanism.
+
+### Next step
+Determine the real target of the `bgez $2, L_0000` branch at
+`build/factor5_ucode/factor5_ucode_recompiled.c:2666` (or confirm it is genuinely unreachable on real
+hardware, meaning some *other* upstream bug is feeding this reciprocal a value real N64 code would
+never produce). Needs the original Factor 5 ucode disassembly around this instruction (`factor5_rsp.toml`
+/ the ucode's ROM offset) to see what real hardware does when the IMEM-wrapped branch is taken — a
+tiny nearby clamp/special-case routine RSPRecomp's function-boundary detection excluded, or a
+genuinely dead branch. This determines whether the fix is "extend the recompiled function's PC range
+to include the real handler" or "find what's producing an out-of-range reciprocal input upstream."
+
+Files: `src/main/main.cpp` (`ROGUESQ_LOG_RUNNER_ALL` diagnostic — committed). `scratch/s61_death_repro/run5/`
+(log + 28 screenshots, gitignored). `scratch/agent/run5_stdout.log` (script tail, gitignored).
