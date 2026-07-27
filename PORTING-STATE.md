@@ -6329,3 +6329,87 @@ not.
   counter; discriminating outcome is whether the SIGBUS stops recurring
   while `bad_total` stays nonzero (proves the gate fires, not that the
   condition stopped happening).
+
+## Session 84 (2026-07-27) — thr-resume `bad=1` gate landed, unvalidated (U3); found a 4th, EARLIER-firing crash class
+
+### Work unit
+NEXT.md: gate `resume_thread_tagged` (`lib/N64ModernRuntime/ultramodern/src/threads.cpp:198-238`)
+so a `bad=1` resume (null thread/context, or a context not in the live set)
+is skipped instead of signalled — same pattern as the s78 wild-FB refuse
+gate. Competing hypotheses U1–U4 in NEXT.md; discriminating measurement was
+one `PROBE_MODE=start_only HOLD_S=30` soak with the gate live.
+
+### Patch
+`threads.cpp`: moved the `bad` computation (`t==nullptr || ctx==nullptr ||
+!live`) and the `g_thr_resume_bad`/`g_thr_resume_healthy` atomic increments
+out from behind `thr_resume_log_enabled()` so they run on every resume
+regardless of the `ROGUESQ_LOG_THREAD_RESUME` env var (previously the whole
+detector, not just the verbose log, was opt-in — an always-on gate cannot
+depend on an opt-in diagnostic). Both the fast (`!thr_resume_log_enabled()`)
+and verbose paths now: if `bad`, log `[thr-resume-skip] ... bad_total=N`
+(fflushed) and `return` without touching `t->context->running.signal()`;
+otherwise fall through to the original signal call unchanged. Fixes a
+pre-existing secondary bug as a side effect: the old code's "FATAL null
+context" log for `ctx==nullptr` was already followed unconditionally by
+`t->context->running.signal()` — a guaranteed null-pointer deref/crash the
+log message never prevented. `lib/`, so `./submodule-patches/export.sh` run
+and the refreshed `N64ModernRuntime.patch` committed same iteration. Build
+clean, exit 0, no new warnings.
+
+### Run
+One soak, `scratch/s73_post_a_scene/thrgate1/`, same script/env as
+s82/s83 (`ROGUESQ_LOG_THREAD_RESUME=1` was exported by the harness script
+itself, so this run exercised the verbose/logging branch of the new code,
+not the fast-path branch). Reached width-1024 at 44.7s, SELECT YOUR CRAFT
+normally, single Start (`p1`) left cleanly, then **died at hold-iter 1
+(~+1s post-leave)** — the earliest death of any soak in this s81–s84 arc
+(previous: s81 pure-black-heavy holds, s82 hold+6s NaN, s83 hold+3s/hold+12s).
+
+`thr-resume bad=1: 0` for the entire run (117218 resumes, `healthy_total`
+climbing 1:1 with `n`, `bad_total` never leaves 0) — **U3**: the gate never
+got a same-run positive control. `[thr-resume-skip]` fired 0 times. This
+run neither confirms nor refutes U1/U2 for the gate itself; `exit=2=0`,
+`UnhandledJump=0`, `missing-func=0`, 4776 `[lle task]` all present, `fs`
+plateaued at the by-now-familiar 3783 — nothing about the gated code path
+regressed anything that could be checked.
+
+### The new crash
+`[CRASH] caught signal 10 (Bus error: 10)`, full native backtrace:
+```
+frameStartReset + 532
+  <- static_5_800AAD9C (runHangarSelectionFrame) + 1012
+  <- static_5_800C6854 (runHangarMenuFromOverlay) + 628
+  <- menuOverlayInit + 3512
+  <- mainGameLoop + 2400
+```
+Symbol names from `symbol_files/main_overlay.txt`: `frameStartReset` =
+0x8000A6CC ("resets per-frame counters ..., calls heapWalker, slot
+dispatch"), `runHangarSelectionFrame` = 0x800AAD9C, `runHangarMenuFromOverlay`
+= 0x800C6854 ("polls func_800AAD9C in a loop until user selection ...").
+This is the **hangar-selection per-frame poll loop itself** — code that
+runs while still inside SELECT YOUR CRAFT / during the leave transition,
+not the thread-resume/semaphore-signal path from s70–s72/s83's spline2 at
+all. Different subsystem, different call stack, no overlap with the gate
+just added. A bus error at a fixed offset inside `frameStartReset` is
+consistent with an unaligned multi-byte load/store — same general fault
+class as s80's parked "unaligned `do_rom_read` Abort", but a different
+call site (s80's was in the DL/ROM-read path at phase 640 ~150s; this one
+is in the hangar per-frame reset path at leave-time).
+
+### Rules out / keep
+- Gate lands clean, no regressions, but **unvalidated** — treat as
+  untested, not fixed, exactly per U3. Do not remove or re-litigate it;
+  rerun to get a same-run `bad_total>0` positive control before concluding
+  anything about the SIGBUS it targets.
+- This is a **5th** distinct crash class surfaced since s83 started peeling
+  back the deterministic NaN assert (spline NaN — now guarded; Metal
+  `MTLCompilerFSCache` SIGSEGV; thr-resume UAF SIGBUS; now `frameStartReset`
+  SIGBUS) — each soak that removes the previous fastest-to-fire crash
+  exposes a new one that was firing even less often or losing the race.
+  Do **not** conflate this with the thr-resume SIGBUS the gate targets —
+  unrelated code path, same masking pattern NEXT.md's U4 anticipated for
+  the Metal crash.
+- Next: characterize `frameStartReset` SIGBUS reproducibility (does it
+  recur, and at what call count / offset) before deciding whether to fix or
+  park it; only after it stops dominating does another thr-resume-gate soak
+  have a real chance at a `bad_total>0` positive control.
