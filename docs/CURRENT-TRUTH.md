@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 107)
+## Current truth (as of session 109)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -624,7 +624,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s107)
+## Next steps, in order of expected value (s109)
 
 -1. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
@@ -796,6 +796,24 @@ cost three sessions before the recursive mutex.
    soak** — reaching the window reliably is now the bottleneck for this
    whole line of inquiry, not the instrument itself. Full detail:
    PORTING-STATE s108.
+   **s109 update:** guarded the 14th class (`reserveAndEmitDLEntry`) —
+   `U32(ctx->r16)` RDRAM-range check, `goto` a new dedicated epilogue
+   label (`L_dlentry_guard_exit`, does not reuse an existing label since
+   none was ABI-safe from the guard's insertion point), built clean,
+   patched x1 in `funcs_3.c` only. Also capped the function's previously-
+   uncapped entry diagnostic (`ROGUESQ_LOG_DLENTRY`, flagged in NEXT.md).
+   One soak: guard read **0/0** (`a0` never bad this run — not a positive
+   result, the class simply didn't trigger), entry log fired 20/20
+   (cap confirmed working). Process still died at 73.9s, same window as
+   s108's 3 deaths, this time to a **new, 19th class**: RT64-internal
+   `SIGSEGV` in `plume::MetalFramebuffer`'s constructor via
+   `RT64::FramebufferManager::createTileCopyRecord` →
+   `RT64::RenderTarget::setupColorFramebuffer`/`clearColorTarget` (a
+   render-thread frame, not the guest hangar-tick chain every other class
+   in this family shares) — 1 occurrence, not source-read, several
+   `[last-drawn-skip]` wild/OOB rejections immediately preceding it in the
+   log (plausibly related, not confirmed). Full detail: PORTING-STATE
+   s109.
 0a. **Tooling: `fixup_game_funcs.py` is not actually idempotent**
    (found s102 while re-running it for the item above) — every patch's
    regex anchor matches text that's left unchanged after insertion, so
@@ -811,27 +829,31 @@ cost three sessions before the recursive mutex.
    marker, or always regen from ELF before running fixup) — worth a
    work unit before it compounds further.
 0b. **M3 — land the same guard-not-instrument treatment on the next
-   most-recurring characterized, still-unguarded class: 14th
-   (`reserveAndEmitDLEntry`, 1 occurrence, s98) or the 17th
-   (`updateHangarBayScene` itself, s100 — not yet source-read).** Three
+   most-recurring characterized, still-unguarded class: 17th
+   (`updateHangarBayScene` itself, s100 — not yet source-read).** Four
    guards landed and validated so far, all with the same outcome shape
    (clean negative control, no positive control yet, `U32()`-truncated
    bounds check, `goto` to the function's real epilogue — never a bare
    `return;`): 16th (`activateAnimationKeyframe`, s99), 12th
    (`composeNpcOrientationMatrix`, s100), 11th
-   (`projectModelBoundsToScreen`, s101). **Do not re-soak any of these
-   three** — treat them as closed. **Every guard patch must verify its
-   own `fixup_game_funcs.py` "patched xN" report names only the one
-   expected file** (s100 caught a real cross-overlay regex collision
-   this way — overlays reuse guest address ranges, so an
-   instruction-text-only anchor is not automatically unique). s101's
-   soak (the first to survive the whole hangar-tick gauntlet and reach
-   the ~140s DMA window, see item -1) is one data point suggesting these
-   three guards may already be enough to reach that window reliably —
-   not proven, but if the next soak also reaches ~140s alive, that
-   hypothesis strengthens and chasing the remaining unguarded classes
-   (9th, 10th, 13th–15th, 17th) drops in priority relative to item -1.
-   Full detail: PORTING-STATE s99-s101.
+   (`projectModelBoundsToScreen`, s101), 14th (`reserveAndEmitDLEntry`,
+   s109). **Do not re-soak any of these four** — treat them as closed.
+   **Every guard patch must verify its own `fixup_game_funcs.py`
+   "patched xN" report names only the one expected file** (s100 caught a
+   real cross-overlay regex collision this way — overlays reuse guest
+   address ranges, so an instruction-text-only anchor is not
+   automatically unique). s101's soak (the first to survive the whole
+   hangar-tick gauntlet and reach the ~140s DMA window, see item -1) is
+   one data point suggesting guards may already be enough to reach that
+   window reliably; s109's soak reopens that question slightly — it died
+   before the window again, but to a genuinely new (19th) class outside
+   this guarded family, not a recurrence of an unguarded member, so it
+   does not weigh against the hypothesis. Two new single-occurrence
+   classes now block reliable passage (probable-18th `heapFreeListDequeue`-
+   area and 19th `MetalFramebuffer`/`createTileCopyRecord`) — neither has
+   hit its 2nd-recurrence bar for instrumenting yet, so the next-highest
+   guard candidate is still the 17th (already characterized, s100).
+   Full detail: PORTING-STATE s99-s101, s109.
 1. **M3 — find the indirect caller of `submitDmaRequestBatch`: CLOSED
    (s101).** The producer/consumer ring instrument (s94) proved an
    unlocated indirect call existed (producer log fires 10x/soak once
@@ -889,7 +911,11 @@ cost three sessions before the recursive mutex.
    - 14th, `reserveAndEmitDLEntry` (s97/s98): scene-graph-traversal /
      DL-entry shape, not a bare `MEM_W`-off-an-arg deref — flagged as
      possibly needing different treatment than the table-lookup family.
-     1 occurrence. Not guarded yet (candidate for item 0).
+     1 occurrence. **Guarded s109** (`ROGUESQ_LOG_DLENTRY_GUARD`), clean
+     negative control (0 fires across the run; the capped entry log
+     confirms the function itself is called frequently) but no positive
+     control yet — the original SIGBUS has not recurred since to prove
+     the guard actually catches it.
    - 15th, RT64-internal assert in `loadDrawState`
      (`rt64_state.cpp:747`, s97) — RDP-submission path, no source-level
      fix available. Recurred once (s99). Park; track recurrence only.
@@ -909,6 +935,16 @@ cost three sessions before the recursive mutex.
      family's normal nearest-exported-symbol attribution, not a
      symbolication error). 1 occurrence. Not instrumented yet per the
      2nd-recurrence convention.
+   - 19th, RT64-internal `SIGSEGV` in `plume::MetalFramebuffer`'s
+     constructor (s109) via `RT64::FramebufferManager::createTileCopyRecord`
+     → `RT64::RenderTarget::setupColorFramebuffer`/`clearColorTarget` →
+     `plume::MetalDevice::createFramebuffer` — a render-thread frame
+     (`WorkloadQueue::threadRenderFrame`/`renderThreadLoop`), not the
+     guest hangar-tick call chain every other class in this family
+     shares. Several `[last-drawn-skip]` wild/OOB rejections immediately
+     precede it in the log — plausibly related (a wild framebuffer
+     descriptor reaching tile-copy/framebuffer creation with a bad
+     dimension), not confirmed. 1 occurrence, not source-read.
    Also worth remembering: s93's `ROGUESQ_LOG_THREAD_RESUME` confound
    (a repro script was hardcoding the flag on, silently defeating a
    "turn it off" plan) is fixed at the source

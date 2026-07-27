@@ -9034,3 +9034,108 @@ insufficient (small sample, different crash each time).
 N64Recomp's own git by design — durable record lives here).
 `N64Recomp/RecompiledFuncs/funcs_24.c` (regenerated, patch applied x1).
 `scratch/s73_post_a_scene/s108_musyx_gate{,2,3}/run.log`.
+
+## Session 109 — 2026-07-27
+
+Picked up NEXT.md's prescribed work unit: guard the 14th hangar-tick crash
+class, `reserveAndEmitDLEntry` (`N64Recomp/RecompiledFuncs/funcs_3.c`,
+guest `0x8000CB88`). Three changes to `N64Recomp/fixup_game_funcs.py`:
+
+1. **Capped the existing `ROGUESQ_LOG_DLENTRY` diagnostic** (landed s98,
+   flagged uncapped in NEXT.md) — added `if (s_dlentry_n < 20)` around the
+   `fprintf`, matching every other diagnostic in the file. This function is
+   called once per scene-graph node per frame, so leaving it uncapped could
+   have produced an unbounded log.
+2. **Added a dedicated epilogue-only label** (`L_dlentry_guard_exit`)
+   immediately before the function's real `$ra`/`$s1`/`$s0` restore
+   sequence (guest `0x8000CE7C`-`0x8000CE90`), anchored on that unique
+   restore-sequence text and file-scoped to `funcs_3.c`.
+3. **Added the guard itself**: sanity-checks `U32(ctx->r16)` (the `a0`
+   argument, saved to `$s0`/`ctx->r16` at function entry) against the
+   `0x80000000`-`0x80800000` RDRAM range, following the s99-s101 guard
+   convention exactly (`U32()` truncation before the compare, `goto` a real
+   epilogue, never a bare `return;`).
+
+**Placement correction (found before shipping, not after a failed soak):**
+NEXT.md's literal wording said to guard "immediately after
+`ctx->r16 = ADD32(ctx->r4, 0);`" (right after the entry diagnostic). Source
+reading the full prologue first showed this is unsafe: at that point `$ra`
+and the old `$s1` are not yet saved to their stack slots (`0x18`/`0x14` off
+`$sp`) — only the old `$s0` is (saved one instruction earlier, before
+reassignment). Jumping straight to a restore-from-stack epilogue from there
+would load uninitialized stack bytes into `$ra` and corrupt the return
+address on the way out. The function's own existing bounds check (an
+`sltu`/`bne` a few instructions later, unrelated to this guard — it
+compares `$s0` against a value loaded from a fixed global slot, likely a
+buffer-end check, not an address-space sanity check) saves `$ra` to its
+stack slot on both the taken and fall-through paths at guest `0x8000CBAC`.
+The guard is anchored on the fall-through copy of that save (disambiguated
+from the taken-branch copy via a lookahead on the immediately-following
+`0x8000CBB0 lui`, which only precedes the fall-through copy) — this is
+still strictly before the first dereference of `ctx->r16`
+(`MEM_W(0X0, ctx->r16) = 0xB5000000;` at `0x8000CBBC`), and now all three
+restore-target stack slots are populated before any jump to the epilogue.
+
+Full regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` →
+`cmake --build`), all exit 0. Fixup report showed all three new patches
+applied exactly `x1` in `funcs_3.c` only (no cross-function anchor
+collision, per s100's lesson). Verified the patched output by reading it
+back: guard lands after both `$ra`-save copies and before the first
+dereference; the new label lands immediately before the real restore
+sequence, in the same style as every other label in the file. Build clean,
+only pre-existing warning classes (`DDIV` pointer-sign, SDL2 dylib version).
+
+**One soak** (`s109_dlentry_guard`, same repro shape as s101-s108,
+`ROGUESQ_LOG_DLENTRY=1 ROGUESQ_LOG_DLENTRY_GUARD=1` added to the existing
+flag set): died at **73.9s**, hold-iter 1 — squarely inside the same
+73.5-73.9s death window all 3 of s108's soaks hit, before the ~140s DMA
+window. `[dlentry-reserveAndEmit]` fired **20/20 (capped correctly)**, so
+the cap fix works and the function is confirmed live and frequent as
+expected. **`[dlentry-guard]` fired 0/0** — `ctx->r16`/`a0` was never
+out-of-range this run, so the guard neither fired nor could be tested
+against a real bad value; this is an honest null, not a positive result for
+the guard, and not evidence the 14th class is fixed (it never got a chance
+to trigger this run either way).
+
+**The crash itself is a new, 19th class** — and unlike every other member
+of this family, it is **not** a guest-side SIGBUS from an unguarded
+pointer. Full backtrace: `SIGSEGV` (signal 11) inside
+`plume::MetalFramebuffer::MetalFramebuffer` (constructor), called from
+`plume::MetalDevice::createFramebuffer` ← `std::make_unique<MetalFramebuffer>`
+← `RT64::RenderTarget::setupColorFramebuffer` ←
+`RT64::RenderTarget::clearColorTarget` ←
+`RT64::FramebufferManager::createTileCopyRecord` ←
+`RT64::FramebufferManager::recordOperations` ←
+`RT64::WorkloadQueue::threadRenderFrame` ← `WorkloadQueue::renderThreadLoop`
+(a render-thread frame, not the guest-code/hangar-tick call chain the other
+18 classes share). Preceding log lines show several `[last-drawn-skip]`
+wild/OOB last-drawn rejections (`addr=0x000BCA20 w=689`, `addr=0x00000000
+w=97/193`) right before the crash — plausibly related (a wild framebuffer
+descriptor reaching tile-copy/framebuffer-creation code with a bad
+dimension), but not yet traced to a specific field; **not root-caused this
+session**, single occurrence, not instrumented. All other family controls
+held clean: `thr-resume bad=1: 0`, `missing-func: 0`, `UnhandledJump: 0`.
+
+**Assessment**: per NEXT.md's own outcome-2 branch ("if it still dies
+before the window, to a different crash, log that as the next class in the
+catalog"), this is exactly that outcome. The guard landed cleanly and is
+ready to catch a real bad `a0` whenever one occurs, but this run's death
+came from an unrelated, previously-unseen RT64-internal crash first. Per
+rule 8 this is 1 occurrence — not chased further this session. Two crash
+sites now stand between reliably reaching the ~140s DMA window: the
+probable-18th (`heapFreeListDequeue`-area, s108, 1 occurrence) and this new
+19th (`MetalFramebuffer`/`createTileCopyRecord`, s109, 1 occurrence) — both
+single-occurrence, neither meets the 2nd-recurrence bar for instrumenting
+yet. Next highest-value step is the same guard treatment for the 17th
+class (`updateHangarBayScene`, not yet source-read) per CURRENT-TRUTH item
+0b's list, since it already has a confirmed real backtrace and is next in
+line; alternatively, watch for a 2nd occurrence of either new class before
+committing instrumentation effort to it.
+
+### Files
+`N64Recomp/fixup_game_funcs.py` (capped `_reserve_emit_dl_entry_patch`
+diagnostic; new `_dlentry_epilogue_label_patch` and `_dlentry_guard_patch`;
+untracked in N64Recomp's own git by design — durable record lives here).
+`N64Recomp/RecompiledFuncs/funcs_3.c` (regenerated, all 3 patches applied
+x1).
+`scratch/s73_post_a_scene/s109_dlentry_guard/run.log`.
