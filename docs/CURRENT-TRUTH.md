@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s130)
+## Next steps, in order of expected value (s131)
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with
@@ -852,6 +852,43 @@ cost three sessions before the recursive mutex.
    against exported patches first). Next: item 2/3, `submitSceneNodeRender`
    (17th class, `funcs_4.c`, guard at s123). Full detail: PORTING-STATE
    s130.
+   **s131 (Thread A re-audit, item 2/2 of the remaining, `submitSceneNodeRender`):**
+   a HIT, and a big one — the s123 guard covers only 1 of **9** inlined
+   copies of the same `findAndUnlinkSmallestEntry`-return + walk-loop
+   idiom in this function (one per allocation attempt), and even that
+   one copy was missing a check on its *first* touch of the pointer
+   (before the loop-back edge s123 guarded). Landed `GUARD2` (initial
+   deref, all 9 sites) and `GUARD3` (loop-back walk, the 8 sites that
+   had nothing) via one parametrized template in `fixup_game_funcs.py`,
+   full delete-all regen + clean build, patch report audited (9/8/1
+   exactly as expected). **But the soak (`guard_s131`, all 3 flags
+   armed) refutes the hypothesis it was built to confirm**: 0/0/0
+   guard fires, yet the process died even earlier than usual
+   (hold+~2s vs. the usual hold+11-15s) to the **exact same
+   nearest-symbol crash signature** s108/s122/s123 already catalogued
+   as the 18th class (`heapFreeListDequeue + 12704` — the identical
+   byte offset across 3 independent builds — via `submitSceneNodeRender`
+   ← `processSceneNode` ← `traverseSceneGraphRecursive` ←
+   `setupCameraMatrices` ← `runHangarSelectionFrame` ←
+   `runHangarMenuFromOverlay` ← `menuOverlayInit`). Every known copy of
+   the guarded idiom is now covered and none tripped, so **the
+   free-list-walk mechanism is refuted as this crash's actual cause**
+   — either a different, still-unguarded site in the same function, or
+   (per s123's own precedent) a nearest-symbol misattribution of a
+   crash that isn't in this function's guest code at all. An attempted
+   `nm`-based independent re-derivation of the real crash address was
+   **inconclusive** (compared post-ASLR-slide runtime addresses against
+   link-time file addresses without capturing the slide — invalid
+   comparison, do not repeat without first logging the process's own
+   load base). Both new guards are kept regardless (9 genuinely
+   unguarded pointer chases, same shape as every other confirmed hit in
+   this family) but the 18th class itself is **reopened, not closed**.
+   Running tally: **5 hits, 2 clean, of 7 audited.** One function left:
+   `updateHangarBayScene` (18th-class label collision alert: this
+   function is *unrelated* to the "18th class" crash discussed above —
+   the numbering is historical, not the same thing — `funcs_40.c`,
+   guard at s110, 5 sites A-E already guarded). Full detail:
+   PORTING-STATE s131.
    **s118:** ran the exact discriminating test above (32-byte dump at
    `voice+0x0` nonzero hits, same-run vs. `musyx-dma-call`). The dumps
    are long readable ASCII strings, not raw garbage — e.g. `"explo_
