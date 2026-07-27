@@ -7648,3 +7648,165 @@ wins" is more tractable than hoping to out-run all of them at once).
 
 No code changes this session (repro-only). Logs:
 `scratch/s73_post_a_scene/s96_dmacaller2/run.log`.
+
+## Session 97 (2026-07-27) — 3rd (final allowed) DMA-caller repro attempt died early to a brand-new 14th crash class; per rule 8, pivoted to instrumenting the most-recurring hangar-tick crash class (`composeNpcOrientationMatrix`, 12th) instead of a 4th blind retry; that soak got a clean positive control (597 fires, no crash on that path) but died to a brand-new, unrelated 15th crash class (RT64-internal zero-sample-size assert in `loadDrawState`)
+
+### Setup
+
+Per NEXT.md's mandated 3rd-and-last identical retry of the s95/s96
+DMA-caller repro:
+
+```
+env ROGUESQ_LOG_ANIM_CB=1 ROGUESQ_LOG_TMEM_ZERO=1 \
+    ROGUESQ_LOG_ANIM_TEX_STREAM=1 ROGUESQ_LOG_HANGAR_ENTRY=1 \
+    ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_DMA_RING=1 ROGUESQ_LOG_DMA_CALLER=1 \
+    ROGUESQ_LOG_THREAD_RESUME=0 \
+    PROBE_MODE=start_only HOLD_S=30 zsh \
+    scratch/s73_post_a_scene/run_mission_keys.sh s97_dmacaller3 0 12
+```
+
+No rebuild needed for this first soak (nothing changed since s96).
+
+### Result 1: `s97_dmacaller3`
+
+Died at hold-iter 7 (~hold+7s), earlier than s95 (~5s) but later than
+s96 (~3s) — still well before the ~140s mark where the DMA phenomenon
+occurs in every soak that reaches it. `ROGUESQ_LOG_DMA_CALLER`: **0/0
+again**. `dma-ring-producer`: only the `n=0` boot call (1/1), same as
+s95/s96 — confirms the run never reached the relevant window.
+`do_rom_read`: 488/488 sane, no crash. `anim-recurse`/`anim-tex-stream`/
+`hangar-entry`/`tmem-zero`: controls held, no crash on any of those
+paths either.
+
+The crash itself is **new** — a **14th crash class**: SIGBUS in
+`reserveAndEmitDLEntry`, called from `submitSceneNodeRender` ←
+`processSceneNode` ← `traverseSceneGraphRecursive` (recursing once) ←
+`setupCameraMatrices` ← `static_5_800AAD9C` (`runHangarSelectionFrame`)
+← `static_5_800C6854` (`runHangarMenuFromOverlay`) ← `menuOverlayInit`
+— the same hangar-tick-per-frame call chain as the 9th–13th classes,
+but a different leaf site (scene-graph traversal / display-list-entry
+reservation, not a `MEM_W`-off-an-arg deref). Not instrumented (first
+occurrence, per the project's 2nd-recurrence convention).
+
+This is the **3rd consecutive** soak with `ROGUESQ_LOG_DMA_CALLER`
+armed that died to a different, unrelated crash before the ~140s
+target window (s95: 12th class; s96: 13th class; s97: 14th class).
+Per rule 8 and NEXT.md's own outcome-3 branch, this closes out the
+"3 allowed non-discriminating attempts" — **parked** "catch
+`ROGUESQ_LOG_DMA_CALLER` with this exact repro" as opportunistic
+(instrument stays armed everywhere, it's free, but no more dedicated
+soaks chasing it blind).
+
+### Pivot: instrument the most-recurring hangar-tick crash class
+
+Per NEXT.md's outcome-3 branch, tallied total occurrences across all
+sessions for the 9th–12th classes (the `MEM_W`-off-an-arg family the
+project has been tracking as a set):
+
+| class | function | occurrences | sessions |
+|---|---|---|---|
+| 9th | `updateAnimatedTextureStreaming` | 1 | s89 |
+| 10th | `static_5_800B4048` | 1 | s90 |
+| 11th | `projectModelBoundsToScreen` | 1 | s92 |
+| 12th | `composeNpcOrientationMatrix` | 2 | s74 (uncatalogued), s95 |
+
+`composeNpcOrientationMatrix` (12th, `static_5_800AB1C8`) is the
+clear most-frequent — landed `ROGUESQ_LOG_COMPOSE_NPC=1`, an entry-log
+instrument (guest `a0`/`a1`/`ra` at function entry) in
+`N64Recomp/fixup_game_funcs.py`, following the exact pattern of the
+9th/10th-class instruments. Confirmed the real name via
+`symbol_files/main_overlay.txt` (`composeNpcOrientationMatrix =
+0x800AB1C8`), same "assigned to a non-overlay file" shape as the M4
+stub functions and the 12th class's original s92 discovery — the
+recompiler still emits the `static_5_800AB1C8` fallback name in
+`RecompiledFuncs/funcs_40.c`, root cause not further chased (out of
+scope for this instrument). `python3 fixup_game_funcs.py` reported
+`funcs_40.c: static_5_800AB1C8 (composeNpcOrientationMatrix) entry
+diagnostic patched x1` — landed exactly once, as expected. Rebuild
+(`cmake --build .`) exit 0, no new errors.
+
+### Result 2: `s97_composenpc`
+
+Same repro, same env plus `ROGUESQ_LOG_COMPOSE_NPC=1`. Died at
+hold-iter 13 (~hold+14s) — later than any of the three DMA-caller-only
+attempts, but still before the ~140s DMA window. `ROGUESQ_LOG_
+COMPOSE_NPC` fired **597/597** (real positive control — the function
+runs constantly during the hangar-tick per-frame poll, as expected)
+with **no crash on that code path**: `arg_r4` was `0x00000000` on
+every one of the last several hundred calls, `arg_r5` pinned to
+`0x80165E60`, `ra` always `0x00000000` (routine per s92, not a
+corruption signal) — stable, unremarkable values right up to the
+crash. This is evidence *against* `composeNpcOrientationMatrix` being
+the dominant blocker in this particular run, though a single soak
+without composeNpcOrientationMatrix's own SIGBUS recurring is not
+strong enough to retire the class (it has now recurred at s74, s95;
+did not recur s92, s93, s97).
+
+The crash that did fire is **new again** — a **15th crash class**:
+`SIGABRT` from an RT64-internal assert, not a SIGBUS in guest code:
+
+```
+Assertion failed: ((dstCallTile.sampleWidth > 0) && (dstCallTile.sampleHeight > 0)
+&& "Sample size calculation can only result in non-zero values."),
+function loadDrawState, file rt64_state.cpp, line 747.
+```
+
+Backtrace: `RT64::State::loadDrawState` ← `RT64::RDP::drawTris` ←
+`RT64::GBI_RDP::decodeTriangles` ← `RT64::GBI_RDP::tri` ←
+`RT64::Interpreter::processRDPLists` ← `Application::processDisplayLists`
+← `run_rdp_submission` ← `submit_rdp_range` ← `rs64_dpc_defer_end` ←
+`factor5_gfx_runner` ← `rs64_run_lle_gfx` ← `RT64Context::send_dl` ←
+`gfx_thread_func` — the normal RDP-submission chain, same shape as the
+s96 13th-class `reinterpretTileRecord` assert (RT64-internal, no
+source-level bug on our side, a format/sample-size case its own author
+didn't handle). Three `[rt64] loadDrawState: copy-mode draw with
+undefined tile 7, marking invalid` lines immediately precede the
+assert in the log — per s89's finding that this specific log line is a
+red herring for the TMEM-zero-adjacent assert family (already guarded
+before reaching the crash site), treat it the same way here unless a
+future session shows otherwise. `ROGUESQ_LOG_TMEM_ZERO` stayed 0/0
+(still never fired, now 0/8 across 8 soaks with it armed) — this new
+assert is a *different* call path than `queueGPUUploadTMEM`'s zero-size
+check (item 2 in Next steps), not a duplicate of it, even though the
+symptom ("zero sample dimensions") rhymes.
+
+### Assessment
+
+Two soaks this session, two brand-new crash classes (14th, 15th),
+zero recurrence of anything previously catalogued. The hangar-tick
+per-frame window between "SELECT YOUR CRAFT stable" and the ~140s DMA
+mark is proving to have an unusually wide variety of latent bugs (now
+14 distinct crash sites reachable from that window alone, all first
+occurrences except the 12th), each independently capable of winning
+the crash race before any specific target phenomenon is reached. The
+`composeNpcOrientationMatrix` instrument did get a clean positive
+control and produced evidence against that specific function being
+this run's blocker, which is a real (if modest) result — but it did
+not make the process survive longer in any way that helped reach the
+DMA-caller window.
+
+### Next
+
+Per NEXT.md's own contract, the blind DMA-caller repro is now parked
+(3/3 non-discriminating attempts spent). The next work unit should
+NOT be a 4th identical retry. Two live options, roughly equal expected
+value: (a) re-run `s97_composenpc`'s exact repro once more — one data
+point isn't enough to judge whether `composeNpcOrientationMatrix` is
+now suppressed or just didn't happen to fire this run — or (b)
+instrument one of the two brand-new classes found this session (14th
+`reserveAndEmitDLEntry`, 15th RT64-internal `loadDrawState`) since
+they're now tied with the 9th/10th/11th for "least characterized."
+Given the RT64-internal asserts (13th, 15th) are not source-fixable on
+our side even once characterized, prioritize (b) with the 14th class
+(`reserveAndEmitDLEntry`, guest-side code, actually fixable) over
+further work on RT64-internal ones.
+
+### Files
+
+Code: `N64Recomp/fixup_game_funcs.py` (new `ROGUESQ_LOG_COMPOSE_NPC`
+instrument on `static_5_800AB1C8`; N64Recomp is a sibling checkout
+whose `fixup_game_funcs.py`/`RecompiledFuncs/` are untracked in that
+repo's own git — no separate commit exists or is expected for them,
+consistent with every prior session's identical instruments).
+Logs: `scratch/s73_post_a_scene/s97_dmacaller3/run.log`,
+`scratch/s73_post_a_scene/s97_composenpc/run.log`.

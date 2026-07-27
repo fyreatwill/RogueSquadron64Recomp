@@ -424,7 +424,12 @@ crash class before reaching the target window) (s95); 2nd consecutive
 inconclusive attempt — 12th class didn't recur but a brand-new 13th
 crash class (RT64-internal `reinterpretTileRecord` assert) died even
 earlier, instrumentation-overhead confound checked and refuted at the
-source (s96).**
+source (s96); 3rd (final allowed) attempt died even earlier to a
+brand-new 14th class, parking the blind DMA-caller repro per rule 8;
+pivoted to instrumenting the most-recurring hangar-tick class
+(composeNpcOrientationMatrix, 12th) — clean positive control, no
+crash on that path, but a brand-new 15th (RT64-internal) class killed
+the run instead (s97).**
 AVAILABLE CRAFT reachable. **s75:** single Start → hangar-flight.
 **s78–s79:** RDP-`fs` plateaus post-leave (S1). **s80:** synthetic FIRE continues.
 **s81:** black = mode-3 presenting wild last-drawn. **s82:** always-on sane-width
@@ -519,8 +524,34 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s96)
+## Next steps, in order of expected value (s97)
 
+0. **M3 — instrument the 14th crash class, SIGBUS in
+   `reserveAndEmitDLEntry` (s97).** This is the recommended next work
+   unit, ahead of the parked DMA-caller repro and ahead of re-running
+   `composeNpcOrientationMatrix`'s soak: it's guest-side code (a real,
+   fixable bug, unlike the RT64-internal 13th/15th classes), first
+   occurrence but in the same well-trodden hangar-tick window as the
+   9th–12th family, and reducing how many different crashes can win
+   the early-death race raises the odds any future soak (DMA-caller or
+   otherwise) survives long enough to reach its own target window.
+   Backtrace: `reserveAndEmitDLEntry` ← `submitSceneNodeRender` ←
+   `processSceneNode` ← `traverseSceneGraphRecursive` (recurses once)
+   ← `setupCameraMatrices` ← `static_5_800AAD9C`
+   (`runHangarSelectionFrame`) ← `static_5_800C6854`
+   (`runHangarMenuFromOverlay`) ← `menuOverlayInit`. Not yet
+   instrumented; find the function in `RecompiledFuncs/*.c`, log its
+   incoming args at entry following the `ROGUESQ_LOG_HANGAR_ENTRY`/
+   `ROGUESQ_LOG_COMPOSE_NPC` pattern (`N64Recomp/fixup_game_funcs.py`),
+   rebuild, re-run the standard repro
+   (`scratch/s73_post_a_scene/run_mission_keys.sh`, `PROBE_MODE=
+   start_only HOLD_S=30`, all `ROGUESQ_LOG_*` flags on,
+   `ROGUESQ_LOG_THREAD_RESUME=0`). Per rule 8, if this soak also dies
+   early to yet another new crash rather than recurring or reaching
+   the DMA-caller window, that's a real, escalating signal (3+ brand-
+   new classes in the same window across 2 sessions) worth surfacing
+   as its own question rather than continuing to instrument one-off
+   crashes.
 1. **M3 — find the indirect caller of `submitDmaRequestBatch`.**
    **Discriminating question CLOSED (s94)**: the producer/consumer ring
    instrument (`ROGUESQ_LOG_DMA_RING=1`, landed in
@@ -597,6 +628,23 @@ cost three sessions before the recursive mutex.
    8, one more identical retry is allowed before parking; if it also
    dies early to an unrelated crash, stop retrying blind and instead
    instrument whichever of classes 9–13 has recurred most.
+   **s97: 3rd (final allowed) identical retry — parked.** Died even
+   earlier (hold+~7s) to a **brand-new 14th class** (see item 1e
+   below), `ROGUESQ_LOG_DMA_CALLER` 0/0 a 3rd time. Per rule 8 this
+   closes the 3-attempt budget for this exact blind repro — **do not
+   re-run the plain DMA-caller repro again**; the instrument stays
+   armed opportunistically only. Pivoted per this item's own
+   outcome-3 branch: tallied the 9th–12th family's occurrences (9th=1,
+   10th=1, 11th=1, 12th=2), landed `ROGUESQ_LOG_COMPOSE_NPC=1` on the
+   12th class (`composeNpcOrientationMatrix`, most frequent) and
+   re-soaked. Got a clean **597/597 positive control** with no crash
+   on that path (evidence against, not proof against — see item 1c) —
+   but the process died to yet **another brand-new class, 15th** (see
+   item 1f), later than any DMA-caller-only attempt (hold+~14s) but
+   still before the ~140s window. Two soaks, two first-time crashes,
+   zero recurrence of anything previously catalogued — do not treat
+   either new class as informative about the DMA-caller hypothesis
+   itself. Full detail: PORTING-STATE s97.
    1a. **Confound theory CONFIRMED and CLOSED (s93).** s92's attempt to
    drop `ROGUESQ_LOG_THREAD_RESUME=1` from the repro never actually
    took effect — `scratch/s73_post_a_scene/run_mission_keys.sh` line 8
@@ -627,9 +675,17 @@ cost three sessions before the recursive mutex.
    stability gates landed), never folded into the numbered list because
    it didn't recur in the many soaks between s74 and s95. `thr-resume
    bad_total=0` both times it's been seen — rules out the s72 OSThread-
-   UAF family specifically. Not yet instrumented; no dedicated soak
-   needed yet unless it recurs a 3rd time, in which case give it its own
-   `ROGUESQ_LOG_*` entry-log in the style of classes 9–11.
+   UAF family specifically. **s97: instrumented** (`ROGUESQ_LOG_
+   COMPOSE_NPC=1` on `static_5_800AB1C8`, `N64Recomp/
+   fixup_game_funcs.py`) after tallying as the family's most-frequent
+   member. One soak: **597/597 fires (clean positive control)**, stable
+   unremarkable arg values (`arg_r4=0x00000000`, `arg_r5=0x80165E60`,
+   `ra=0x00000000`, the last routine per s92) right up to an unrelated
+   crash — **no recurrence of composeNpcOrientationMatrix's own SIGBUS
+   this soak**, evidence against it being the dominant blocker but not
+   strong enough alone to retire the class (recurred s74, s95; clean
+   s92, s93, s97 — now 2-for-5 across sessions that reached this
+   window). Instrument stays armed and ready.
    1d. **M3 — 13th crash class (s96): SIGABRT, `Assertion failed:
    ("Unimplemented reinterpretation logic." && ...)` in
    `RT64::FramebufferManager::reinterpretTileRecord`
@@ -645,6 +701,33 @@ cost three sessions before the recursive mutex.
    the DMA-caller instrument's target window. No field values logged at
    the assert site. Not yet instrumented; no dedicated soak needed
    unless it recurs, per the same 2nd-recurrence convention as 1b/1c.
+   1e. **M3 — 14th crash class (s97): SIGBUS in
+   `reserveAndEmitDLEntry`**, via `submitSceneNodeRender` ←
+   `processSceneNode` ← `traverseSceneGraphRecursive` (recurses once)
+   ← `setupCameraMatrices` ← the known `runHangarSelectionFrame` →
+   `runHangarMenuFromOverlay` → `menuOverlayInit` chain — same
+   hangar-tick family as 9th–12th, different leaf (scene-graph
+   traversal / DL-entry reservation, not a bare `MEM_W`-off-an-arg
+   deref). First occurrence, hold+~7s, killed the run before the
+   DMA-caller instrument's target window. Promoted to item 0 above
+   (guest-side, fixable, recommended next work unit) rather than
+   waiting for a 2nd recurrence, given how many different crashes are
+   now contending for this window.
+   1f. **M3 — 15th crash class (s97): SIGABRT, RT64-internal assert in
+   `loadDrawState`** (`rt64_state.cpp:747`, `"Sample size calculation
+   can only result in non-zero values"` on `dstCallTile.sampleWidth/
+   sampleHeight`), via `RT64::RDP::drawTris` ← `GBI_RDP::decodeTriangles`
+   ← `GBI_RDP::tri` ← `Interpreter::processRDPLists` ← the normal
+   RDP-submission chain — same shape as the 13th class (RT64-internal,
+   no source-level bug on our side), a *different* call path than the
+   still-dormant `queueGPUUploadTMEM` zero-size check (item 2) despite
+   the rhyming "zero sample size" symptom. Three `[rt64] loadDrawState:
+   copy-mode draw with undefined tile 7, marking invalid` lines
+   immediately precede the assert — per s89, treat as a red herring
+   (already guarded before this site) unless a future session shows
+   otherwise. First occurrence, hold+~14s. Not instrumentable in a
+   useful way (RT64-internal, no source on our side); park until 2nd
+   recurrence, same convention as 1b–1e.
 2. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert.**
    Path confirmed: `fullSyncFramebufferPairTiles` → `uploadTile` lambda
    → `TextureManager::uploadTexture` (`rt64_state.cpp:1329`) →
