@@ -679,18 +679,30 @@ cost three sessions before the recursive mutex.
     (s133-s137), `do_rom_read` now accounts for 3/5 — a clear plurality,
     not yet "always." Full detail: PORTING-STATE s136-s137.
 
-0c. **PROMOTED TO PRIMARY (s137): Thread B, the audio-corruption pivot
-    (`voice+0x0`/`+0x34`, s105-136).** Longest-running open thread;
-    every recent bystander recurrence has confirmed the same closed
-    mechanism (`fillSampleStreamRange`'s own arguments already corrupted
-    at entry) without new information. Next work unit is the
-    fresh-angle grep flagged since s126: search all `funcs_*.c` /
-    `symbol_files/*.txt` for other code that constructs a name/string
-    table with entries shaped like the corrupted bytes actually seen
-    (`at_6`, `at_7`, `main_n_atpt_lod`, `pilot_sd`, and the
-    `iexpl2_t`/`tarexex`-shaped strings from s118) — i.e. find what else
-    builds or indexes that table, as a candidate for what's aliasing
-    `voice+0x34`. See NEXT.md for the exact grep commands.
+0c. **Thread B, the audio-corruption pivot (`voice+0x0`/`+0x34`,
+    s105-138).** Longest-running open thread. **s138** ran the s126
+    fresh-angle grep (ROM string locate + ROM->RAM mapping, no rebuild):
+    solved the ROM->RAM bias for this overlay's rodata
+    (`RAM = ROM_offset + 0x7FFFF400`, triple-cross-validated: 3 symbol-file
+    pairs + independent disassembly-operand extraction from
+    `loadExplosionTextures` all agree exactly) — but applying it shows the
+    one static ROM table matching the "explo_tex"/"explh_tex" theme sits
+    at `0x8003B370`-`0x8003B3EC`, ~20.3 MB from the corruption zone
+    (`0x80171D50`-`0x80172548`), unreachable by that function's own
+    small-offset (0-0x1C) indexing — **refutes "a static compile-time ROM
+    string table is what's being aliased/indexed."** A full-ROM strings
+    dump also found **zero literal matches** for the digit-suffixed
+    fragments (`explo_tex2`, `x7`-`x11`, `main_n_atpt_lod`, `at_6`, `at_7`,
+    `pilot_sd`) — those are runtime-constructed, not ROM data. Reframes
+    (does not overturn) s120's already-established mechanism: an
+    out-of-bounds scan past the voice array's own `voiceCount` reads
+    whatever `rs_malloc` allocation is heap-adjacent to it — s122/123
+    already refuted the one specific adjacent-allocation candidate tested
+    (`loadAssetAndIterateSubchunks`'s DMA buffer, ~5.87 MB away, closed
+    3/3). **Next work unit: find which `rs_malloc` call's buffer actually
+    lands adjacent to the voice array** (`arrayBase=0x801714D0`) at
+    corruption time — a heap-layout/allocation-order question, not more
+    string/table grepping. Full detail: PORTING-STATE s138.
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with

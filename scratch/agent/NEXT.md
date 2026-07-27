@@ -1,79 +1,84 @@
-# NEXT work unit — Thread B primary: locate the string/name-table code that aliases voice+0x34
+# NEXT work unit — Thread B: find the rs_malloc buffer heap-adjacent to the voice array
 
-s137 re-soaked s136's `submitSceneNodeRender` material-batch-list guard
-(attempt 2/3) and got a 3rd straight `do_rom_read`/`piDmaWorker` corruption
-recurrence (s135, s136, s137) — the exact trigger NEXT.md itself had
-pre-committed to as grounds to promote Thread B (the audio-corruption
-pivot) from fallback to primary, instead of spending a 3rd
-material-batch-list soak. Read PORTING-STATE's Session 137 entry before
+s138 ran the s126-flagged fresh-angle grep (pure source/data read, no
+rebuild, no soak) and got a real discriminating result, but it's a
+refutation, not a close. Read PORTING-STATE's Session 138 entry before
 doing anything else; this file only has the actionable summary.
 
-## What s137 did and found
+## What s138 did and found
 
-Ran the prescribed re-soak (`scratch/agent/run_matlist2.sh`, no rebuild,
-same recipe as s136 with the tag changed `matlist1` -> `matlist2`).
-`MATLIST_GUARD1`/`GUARD2` fired **0/0** again (2nd straight uncontrolled
-null). Process died at hold-iter 11 (~12s into hold, same timing as
-s136) to a byte-identical `do_rom_read` crash (`devAddr=0x6C676672
-dramAddr=0x80195190`, same signature as s85/s91/s93/s94/s101-104/s135/
-s136) — not the 18th class, no guest frames in the crashing backtrace at
-all. Both guards stay in the code (real fixes, independent of this
-question); the material-batch-list hypothesis is parked at 2/3, not
-formally exhausted but deprioritized below Thread B per the outcome-3
-rule below.
+Located the one ROM string table matching the "explo_tex"/"explh_tex"
+theme (`build/rogue_squadron.z64`, offsets `0x3bf70`-`0x3bfec`), and
+solved the ROM->RAM mapping question NEXT.md had flagged as unresolved:
+`RAM = ROM_offset + 0x7FFFF400`, confirmed two independent ways (symbol-file
+cross-reference on 3 pairs; direct disassembly-operand extraction from
+`loadExplosionTextures` in `N64Recomp/RecompiledFuncs/funcs_13.c`, guest
+`0x8006108C`) — both agree exactly on all 4 addresses checked.
 
-**Frequency data point (numbers, not adjectives):** of the last 5
-render-guard soaks (s133-s137), `do_rom_read` now accounts for 3/5
-(s135, s136, s137); the other 2 were the Metal-internal SIGSEGV (s133)
-and the 18th class (s134). A clear plurality, not yet "always."
+Applying that bias, the explosion-texture table sits at
+`0x8003B370`-`0x8003B3EC` — **~20.3 MB away** from the corruption zone
+(`arrayBase=0x801714D0`, hits `0x80171D50`-`0x80172548`). The function's
+own indexing only ever uses small fixed offsets (0-0x1C). **This refutes
+"a static compile-time ROM string table is what's being aliased/indexed
+into voice+0x34."** A full-ROM strings dump (`scratch/agent/rom_strings.txt`,
+506k lines, gitignored, kept for reuse) also found zero literal matches
+anywhere for the digit-suffixed fragments (`explo_tex2`, `x7`-`x11`,
+`main_n_atpt_lod`, `at_6`, `at_7`, `pilot_sd`) — those are not ROM data at
+all, consistent with being runtime-constructed (name + appended index,
+plausible for a numbered-asset-variant scheme).
 
-## Do next: the fresh-angle grep (Thread B primary, first time as primary since s105-114)
+**This does not overturn s120's mechanism, it sharpens it.** s120 already
+established: the corrupted reads are an out-of-bounds scan past the voice
+array's own live `voiceCount`, landing on whatever `rs_malloc` allocation
+happens to sit adjacent to it in the heap — not a code-level indexing bug
+into a named table at all. s122/s123 already tested and refuted the one
+specific adjacent-allocation candidate anyone had checked
+(`loadAssetAndIterateSubchunks`'s DMA buffer, `ptr=0x8062B850`, ~5.87 MB
+away, H2 closed 3/3 per rule 8, do not re-run). s138 just eliminated a
+second, more literal-minded candidate (a static ROM table) by showing it's
+even farther away and arithmetically unreachable.
 
-This thread has been flagged-but-not-executed since s126: what else in
-the guest code constructs a name/string table with entries shaped like
-the corrupted bytes actually observed at `voice+0x34`
-(`main_n_atpt_lod`, `at_6`, `at_7`, `pilot_sd`, plus the
-`iexpl2_t`/`tarexex`-shaped strings from s118)? The established
-mechanism (s104/s114) is that `fillSampleStreamRange`'s own arguments
-are *already* corrupted at entry — nothing wrong with that function's
-own arithmetic. The bug is upstream: something is aliasing or
-misindexing into a name/string table and the result ends up written (or
-read) as if it were `voice+0x34`.
+## Do next: find what actually allocates next to the voice array
 
-**Concrete first steps** (not yet run — this is genuinely the first
-step, do not skip past it to instrumenting code):
+The remaining open question is a heap-layout question, not a code-search
+question: **at the moment of a corrupted `[voice-active-gate-nz]` hit,
+which `rs_malloc` call's returned buffer covers `0x80171D50`-`0x80172548`?**
 
-1. Locate the string literals themselves in the ROM to get their file
-   offsets:
-   ```
-   strings -a -t x build/rogue_squadron.z64 | grep -iE \
-     "pilot_sd|atpt_lod|expl2_te|xenlight|xckpit|main_n_a|tarexex|explh_te"
-   ```
-2. Cross-reference against `symbol_files/main_overlay.txt`'s "Strings"
-   section (`grep "type:asciz" symbol_files/main_overlay.txt` — this
-   section lists `D_80xxxxxx = 0x80xxxxxx; // type:asciz size:N` RAM
-   addresses but not the text content, so step 1's ROM offsets need to
-   be mapped to RAM addresses via the overlay's known load bias before
-   they can be matched to a `D_` symbol — **this mapping is the first
-   genuinely unresolved unknown in this whole thread and is worth
-   nailing down carefully**, not guessing).
-3. Once a `D_80xxxxxx` string address is identified, grep
-   `N64Recomp/RecompiledFuncs/*.c` for that literal hex address to find
-   what function(s) reference it — a function referencing *several*
-   such string addresses in sequence is the table-builder candidate;
-   read its source directly (not via a subagent summary) to see how it
-   indexes/strides into the table and whether that arithmetic could
-   plausibly land on `voice+0x34` (known corruption range
-   `arrayBase=0x801714D0`, hits spanning `0x80171D50`-`0x80172548`,
-   s126).
+**Concrete first steps** (source read first, per this thread's own
+established discipline — do not skip to instrumenting):
 
-**Discriminating outcome:** finding the table-builder function and
-confirming its indexing math can reach the `0x80171Dxx`-`0x80172xxx`
-range would close this thread's 30+-session open question outright — a
-real root cause, not another bystander recurrence. If step 2's
-ROM->RAM mapping turns out to be non-trivial or ambiguous, that itself
-is worth writing up precisely (what's blocking it, what would resolve
-it) rather than guessing an address and grepping for it speculatively.
+1. `allocateSongChannelArray` (`funcs_23.c`, s120) is the voice array's own
+   allocator — re-read its call site to get the requested size, so you know
+   how far past `0x801714D0` the array's *own* legitimate end is (this
+   tells you exactly how far out-of-bounds idx 0x10-0x1F actually reaches
+   past `voiceCount`, in bytes — not yet computed).
+2. Grep `N64Recomp/RecompiledFuncs/*.c` for every `rs_malloc` call site
+   (there won't be many) and, for each, read enough of its surrounding
+   function to estimate a rough allocation size and *when in the boot/scene
+   sequence* it fires — the goal is a short list of "allocated around the
+   same time as the voice array, plausible size to land adjacent" candidates,
+   not an exhaustive audit of every allocator in the game.
+3. The most direct way to actually answer this without guessing: extend the
+   existing `[song-array-alloc]` instrument (already logs the voice array's
+   own `ptr`+`voiceCount`, s120) to ALSO log every *other* `rs_malloc`
+   call's return pointer + requested size in the same run (a single new
+   env-gated instrument at `rs_malloc`'s own return, `funcs_0.c:2743` per
+   s113's note — batch this with the existing flags, one soak). Then
+   offline-sort by pointer value to find which allocation's
+   `[ptr, ptr+size)` range actually contains `0x80171D50` at the time of a
+   `[voice-active-gate-nz]` hit in the same run — this is the discriminating
+   measurement; a same-run positive control is the existing
+   `[voice-active-gate-nz]` fire itself (already reliable, fires every soak
+   that reaches the hangar).
+
+**Discriminating outcome:** if exactly one allocation's range covers the
+corruption addresses, that allocator's call site is very likely the true
+source of the aliased data (or at minimum narrows "what other subsystem's
+data lives there" precisely enough to read its write path next). If no
+allocation covers it, the buffer sitting there is either freed-but-not-cleared
+memory from something that *used to* occupy that range (a stale-heap-content
+question, different from an aliasing question) — worth distinguishing
+explicitly rather than assuming either framing.
 
 ## Thread A (all 8 hangar-tick-family functions): CLOSED, do not re-open
 
@@ -116,6 +121,14 @@ soaks exhausted, s133-s135). Do not re-audit or re-guard any of these.
   The Stop hook fires and blocks ending the turn while a background soak
   is still running and `scratch/agent/STATUS` still says `WORKING` —
   finish the soak and the full exit-contract writeup in the same turn.
+- Output redirection (`>`) from Bash is sandboxed to the session's
+  allowed working directories — writing a large one-off dump (e.g. a
+  full ROM `strings` scan) must target `scratch/agent/` or another
+  allowed dir, not `/tmp`.
+- `symbol_files/main_overlay.txt`'s "Strings" section sometimes DOES
+  include decoded string content in the comment (`// type:asciz - 'name'`),
+  not just bare addresses — check there directly before assuming a ROM
+  offset->RAM address mapping has to be derived from scratch every time.
 
 ## Do not
 
@@ -125,10 +138,11 @@ soaks exhausted, s133-s135). Do not re-audit or re-guard any of these.
   walk-loop sites, or `submitSceneNodeRender`'s free-list-walk sites (9
   sites) or its material-batch-list sites (2 sites) — all already landed
   and exhaustively verified against source.
-- Do not run a 3rd material-batch-list soak as the next work unit — the
-  outcome-3 trigger fired (s137); Thread B is primary now. A 3rd soak of
-  this specific hypothesis is not forbidden forever, just not the next
-  thing to reach for.
+- Do not re-run the `loadAssetAndIterateSubchunks`/asset-alloc soak shape
+  (H2, s122/123, closed 3/3) or grep further for static ROM string tables
+  as the aliasing source (s138, refuted by distance) — Thread B's live
+  question is now "which `rs_malloc` buffer is heap-adjacent," not
+  "which string table is being indexed."
 - Do not treat a 0/0 guard-fire result as "the guard doesn't work" or
   "the fix is wrong" — it's an uncontrolled null, not a refutation.
 - Do not chase the s83/s133 Apple-Metal-internal SIGSEGV as if it were a

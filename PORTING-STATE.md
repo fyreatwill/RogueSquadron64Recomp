@@ -12146,3 +12146,80 @@ either.
 `run_matlist1.sh`). `scratch/s73_post_a_scene/matlist2/` (soak logs, not
 committed, scratch). `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
 `scratch/agent/NEXT.md` (this write-up).
+
+## Session 138 (2026-07-27) — Thread B fresh-angle grep run: solved the ROM->RAM string-table mapping NEXT.md flagged as unresolved, then used it to refute the specific "static ROM literal table" candidate for the voice+0x34 aliasing source
+
+Ran NEXT.md's exact prescribed first steps (pure source/data read, no
+rebuild, no soak) for Thread B's fresh-angle grep: locate the ROM string
+literals behind the asset-name fragments observed at the corrupted
+`voice+0x34` reads (s118/s126: `explo_tex`/`explh_tex`/`iexpl2_tx`-shaped
+strings, plus digit-suffixed/two-word fragments `explo_tex2`, `explx3`,
+`x7`..`x11`, `main_n_atpt_lod`, `at_6`, `at_7`, `pilot_sd`, `xenlight`,
+`xckpit`, `mat_6`, `mat_7`, `_main_0`).
+
+**Step 1 (ROM string locate):** `strings -a -t x` over `build/rogue_squadron.z64`
+found exactly one real ROM string table matching this theme, a 12-byte-stride
+explosion-texture asset-name table at ROM `0x3bf70`-`0x3bfec`: `explo2_IMGS`,
+`explo_tex`, `explo2hi_IMGS`, `explh_tex`, `ionexp_IMGS`, `iexplo_tx`,
+`ionex2_IMGS`, `iexpl2_tx`, `smkexp_IMGS`, `sexplo_tx`, `smkexp_PAL`. A full
+506k-line strings dump of the whole ROM (`-n 3`, kept at
+`scratch/agent/rom_strings.txt`, gitignored) found **zero literal matches**
+anywhere for `tarexex`, `main_n_atpt_lod`, `at_6`, `at_7`, or `pilot_sd` —
+those specific fragments are not compile-time ROM string data at all.
+
+**Step 2 (ROM->RAM mapping, the "genuinely unresolved unknown" NEXT.md
+flagged):** solved and triple-cross-validated. `symbol_files/main_overlay.txt`'s
+Strings section already lists several of this same table's neighbors with
+both RAM address *and* decoded content in the comment (`strLoTx = 0x8003B404;
+// ... 'lo_tx'`, `strMGold = 0x8003B418; // ... 'm_gold'`, `strMSilver =
+0x8003B420; // ... 'm_silver'`) — matching them against this session's own
+ROM offsets for the same strings (`lo_tx` at `0x3c004`, `m_gold` at `0x3c018`,
+`m_silver` at `0x3c020`) gives an identical bias for all three pairs:
+**RAM = ROM_offset + 0x7FFFF400.** Independent 2nd confirmation: read
+`loadExplosionTextures` directly in `N64Recomp/RecompiledFuncs/funcs_13.c`
+(guest `0x8006108C`, matches `symbol_files/main_overlay.txt`'s own comment
+naming exactly these two string pairs) and extracted the four literal RAM
+addresses its two `loadAssetAndIterateSubchunks` calls pass as name
+arguments: `0x8003B370`, `0x8003B37C`, `0x8003B388`, `0x8003B398`. Applying
+the offline-derived bias to the four matching ROM offsets
+(`explo2_IMGS`=`0x3bf70`, `explo_tex`=`0x3bf7c`, `explo2hi_IMGS`=`0x3bf88`,
+`explh_tex`=`0x3bf98`) reproduces those exact four addresses byte-for-byte.
+Two independently-derived methods (symbol-file cross-reference; disassembly
+operand extraction) agree exactly — this closes the mapping question CLAUDE.md's
+two-source rule requires, not a single-source guess.
+
+**Discriminating result (why this is a real test, not just infrastructure):**
+applying the same bias to the full explosion-texture table places every
+entry in `0x8003B370`-`0x8003B3EC` — **~20.3 MB away** from the corrupted
+read range (`arrayBase=0x801714D0`, hits at `0x80171D50`-`0x80172548`,
+s122/s126). `loadExplosionTextures`/`loadAssetAndIterateSubchunks`'s own
+indexing (read directly, `funcs_13.c`) only ever adds small fixed offsets
+(0-0x1C) to these bases — there is no plausible index/stride bug in this
+function that reaches 20 million bytes away. Combined with step 1's "zero
+literal matches" result for the digit-suffixed fragments (`explo_tex2`,
+`x7`-`x11`, etc. — these look like a runtime-*constructed* name+index
+string, not anything stored verbatim in ROM), **this refutes "the voice
+array is aliasing/indexing into this — or any — static compile-time ROM
+string literal table"** as the mechanism, closing off the literal reading
+of NEXT.md's "find the table-builder" framing (there is no compile-time
+table close enough to be reached by any small-index bug).
+
+**Reframes Thread B, doesn't close it.** This is consistent with, and
+sharpens, s120's already-established mechanism (not overturned, reinforced):
+the corrupted-index scan reads *past* the voice array's own `voiceCount`
+into whatever heap allocation happens to sit adjacent to it at
+`0x80171D50`+ — s122/s123 already tested and refuted the one *specific*
+adjacent-allocation candidate that was checked (`loadAssetAndIterateSubchunks`'s
+own DMA buffer, `ptr=0x8062B850`, ~5.87 MB away, H2 closed 3/3 per rule 8).
+This session's result narrows further: whatever heap buffer actually is
+adjacent is very likely also *runtime-constructed* (matches the
+digit-suffixed shape), not a copy of any static ROM table — so the next
+useful move is finding *which* `rs_malloc` call lands its buffer physically
+next to the voice array at the time of the corrupted scan, not more string
+grepping. No rebuild, no soak, no code changed this session (pure
+source/data read, per NEXT.md's own instruction not to skip past step 1).
+
+### Files
+`scratch/agent/rom_strings.txt` (full ROM strings dump with hex offsets,
+scratch, gitignored, reusable — "capture once" per CLAUDE.md). `PORTING-STATE.md`
+/ `docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md` (this write-up).
