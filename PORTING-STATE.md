@@ -8295,3 +8295,164 @@ note). Log:
 `scratch/s73_post_a_scene/s101_projectbounds_guard1/run.log` (clean 0/0
 negative control on the new guard; first-ever `dma-ring-caller` fire
 naming `musyxSynthFrame`; 6th `do_rom_read` recurrence).
+
+## Session 102 (2026-07-27) — source-read `submitDmaRequestBatch` and the `musyxSynthFrame` call site, landed a correctly-targeted instrument, and proved the corrupted `devAddr` is already present in the source batch array before the call — ruling out both functions as the bug site and reframing the search one level further upstream
+
+### What ran
+
+Per NEXT.md's queued work unit (M3 item -1): source-read
+`submitDmaRequestBatch`'s own body (`N64Recomp/RecompiledFuncs/
+funcs_1.c:6168`, guest `0x8000569C`) before instrumenting anything, per
+the iteration contract's "check the boring thing first" rule and s92's
+own lesson about not instrumenting before reading the callee.
+
+**Finding 1 — `submitDmaRequestBatch`'s actual signature**, confirmed by
+reading its loop body (not assumed): `a0` (`ctx->r4`) is a pointer to an
+array of 12-byte entries (`{size, devAddr, dramAddr}` at offsets
+`+0x0/+0x4/+0x8`), `a1` (`ctx->r5`) is the entry count (loop bound,
+`blez $s1` gate + `slt $t0,$s1` loop condition), `a2` (`ctx->r6`) is set
+but not used in the copy loop itself. The loop increments both the
+entry pointer and its `+8`-offset read cursor by `0xC` per iteration
+(`addiu $s0,$s0,0xC` / `addiu $a3,$a3,0xC`) and copies each entry
+verbatim into the DMA ring: entry`+0x0` → ring`+0x0` ("size"), entry
+`+0x4` → ring`+0x4` ("devAddr" — the field every prior session's logs
+show corrupted), entry`+0x8` → ring`+0x8` ("dramAddr"). This is a
+faithful, unremarkable copy loop — no wrong-offset bug here.
+
+**Finding 2 — this refutes/refines NEXT.md's own instrument plan.**
+NEXT.md (written by s101, before this read) asked to log neighbors of
+the *global slot* `G_BASE-0x68D8` on the theory that `a0` might itself
+be an address one field off from the right one. The call site
+(`funcs_24.c:3856-3875`, inside `musyxSynthFrame`) actually does `a0 =
+MEM_W(G_BASE-0x68D8)` — a **pointer value loaded out of** that slot, not
+the slot's own address (unlike `a2`, which genuinely is the literal
+address `G_BASE-0x68D0` via `addiu`). So the informative neighbors to
+inspect are around the *entry array `a0` points to*, not around the
+global pointer variable itself — NEXT.md's originally-planned instrument
+would not have tested the right thing.
+
+**Instrument landed** (correctly targeting the above): new
+`ROGUESQ_LOG_MUSYX_DMA_CALL=1` flag in `N64Recomp/fixup_game_funcs.py`,
+file-scoped to `funcs_24.c` (anchor text grep-confirmed unique before
+scoping, following s100's belt-and-suspenders convention regardless).
+Logs `a0`/`a1`/`a2` plus up to 3 decoded entries plus a raw word window
+from `a0-16` to `a0+32`, all read from inside `musyxSynthFrame` right
+before the call — directly comparable against the same-run
+`dma-ring-producer` log.
+
+**Housekeeping finding (unplanned, found while re-running the fixup
+script):** `fixup_game_funcs.py`'s patches are **not actually idempotent**
+despite the module docstring's claim. Each patch's regex anchor matches
+the original instruction text, which is left unchanged after insertion —
+so re-running the script against files that already carry a patch (i.e.
+without a full `make_elf.py`→`N64Recomp` regen in between) inserts a
+**second** copy of every matching patch. Confirmed via `grep -c` on
+`funcs_40.c`: the s100 `composeNpcOrientationMatrix` guard comment
+appears **3 times**, not once — accumulated across s100/s101/this
+session's `python3 fixup_game_funcs.py` re-runs, none of which did a full
+ELF regen first. Functionally harmless so far (each duplicate is an
+identical guard; the first one's `goto` always wins if the pointer is
+bad, so extras are dead code, not a correctness bug), but it means the
+script is quietly bloating `RecompiledFuncs/*.c` every session and any
+future guard whose anchor text happens to include something
+order-sensitive would be at risk. Not fixed this session (out of scope
+for the queued work unit) — flagged as a real, if low-priority, tooling
+defect for a future work unit (the fix is straightforward: exclude
+matches immediately followed by the corresponding `// PATCH:` marker, or
+just always regen from ELF before running fixup).
+
+Rebuilt clean (`DEVELOPER_DIR=... cmake --build ... -j 8`, exit 0, only
+the pre-existing-class format/sign warnings). Soaked with the full
+family-instrument set plus the new flag
+(`scratch/s73_post_a_scene/s102_musyxdma/run.log`,
+`PROBE_MODE=start_only HOLD_S=30`, `ROGUESQ_LOG_THREAD_RESUME=0` per
+s93's confound lesson).
+
+### Result
+
+Second soak ever (after s101) to survive the full hangar-tick-family
+gauntlet and reach the ~140s DMA window alive. `[musyx-dma-call]` fired
+17 times (positive control — the call happens, gated correctly on
+`a1!=0`); the crash was the familiar `do_rom_read` SIGSEGV, **7th
+occurrence**, byte-identical fields to every prior hit (`phys=
+0x1C676672 dram=0x80195190 bytes=0x600`). Guard controls held: 11th/12th/
+16th classes (`project-model-bounds-guard`/`compose-npc-orient-guard`/
+`anim-keyframe-guard`) all fired 0 times (clean negative control, no new
+data); `anim-recurse` 12102/12102 and `anim-tex-stream` 20664/no-crash
+held as usual; `tmem-zero` still 0/9; no 9th–18th class fired.
+`dlentry-reserveAndEmit` (14th class, previously only 1 occurrence) fired
+79860 times this run with no crash — first real usage-frequency data
+point for that log, not concerning on its own (no assertion tied to it).
+
+**The key result** is the `[musyx-dma-call]` log for `n=0` (the call that
+feeds the crashing consumer read), captured **before** `submitDmaRequestBatch`
+is even entered:
+
+```
+[musyx-dma-call] n=0 a0=0x80179A60 a1=0x00000009 a2=0x80149730
+[musyx-dma-call]   entry=0 size=0x00000600 devAddr=0x6C676672 dramAddr=0x80195190
+[musyx-dma-call]   entry=1 size=0x00000600 devAddr=0x77696E67 dramAddr=0x80195790
+[musyx-dma-call]   entry=2 size=0x00000300 devAddr=0x6C637265 dramAddr=0x80195D90
+[musyx-dma-call]   window[-16]=0x00010000 window[-12]=0x00000510 window[-8]=0x4C3F5300 window[-4]=0x00000000
+[musyx-dma-call]   window[+0]=0x00000600 window[+4]=0x6C676672 window[+8]=0x80195190 ...
+```
+
+`entry=0`'s `devAddr` (`0x6C676672`) is **already** the exact corrupted
+value the ring-producer/consumer/`pi-start-dma`/`rom-read` logs show
+downstream, bit-for-bit, at the moment `musyxSynthFrame` reads it out of
+the array at `a0=0x80179A60` — **before** the call into
+`submitDmaRequestBatch` even happens. This **proves** (not just refutes
+by elimination) that neither `musyxSynthFrame`'s call-site register setup
+nor `submitDmaRequestBatch`'s copy loop introduces or corrupts the value
+— the bug is already fully formed in whatever populated this batch array,
+one or more levels further upstream than either function this session
+investigated.
+
+The full 9-entry batch this run (`n=1`–`n=9` in `dma-ring-producer`
+terms, `n=0` there is the unrelated boot call) decodes as: `lgfr`,
+`wing`, `lcre`, `lglr`, `witg`, `lgqr`, `lgrr`, `wiyg`, `wizg`. This is
+**not unstructured garbage** — every entry fits one of exactly two
+4-byte shapes: `"lg" + <1 varying byte> + "r"` (n=1,4,6,7) or `"wi" +
+<1 varying byte> + "g"` (n=2,5,8,9), plus one outlier (`n=3`, "lcre").
+`size` and `dramAddr` are sane and mutually consistent in every entry
+(`dramAddr` increments by exactly the previous entry's `size`: `0x80195190
+→(+0x600)→ 0x80195790 →(+0x600)→ 0x80195D90`), so only the `devAddr`
+field is wrong, consistently, across the whole batch — not a one-off
+bit-flip. The fixed 2-byte prefix + 1 fixed suffix byte + 1 varying byte
+shape is a stronger structural signature than "looks like ASCII" alone:
+it reads like a **packed tag/index word being read where a ROM offset
+belongs** (e.g. a 2-byte type tag + 2-byte per-entry sub-index, or a
+name/hash table entry), not memory noise, a race, or a stomp. This is
+additional, independent evidence against every already-refuted framing
+(random per-run garbage, shared-corruption race, consumer desync,
+external stomp) — the same two structural "families" recur with the
+same shape both within this run's 9 entries and matching (for `n=1`)
+every previous session's exact value back to s85.
+
+### Assessment
+
+This is real, source-grounded progress, not a repeat of the s94-s95
+"instrument fired, still don't know who's upstream" pattern — this
+session **positively confirmed** (via direct read-before-the-call
+instrumentation, not inference) that the bug is not in either function
+NEXT.md asked to investigate, and characterized the corruption's shape
+precisely enough to narrow what kind of function must be upstream (one
+that builds a small array of `{size, devAddr, dramAddr}` audio-DMA
+requests once per VI retrace, sourcing `devAddr` from the wrong field of
+whatever per-sample/per-instrument descriptor it reads). It does **not**
+land a fix — per NEXT.md's own outcome-2 branch, forcing a guess-and-check
+fix without knowing the populating function would not be evidence-based.
+Matches outcome 2 as anticipated, but with substantially more evidence
+than "doesn't match a neighboring field" — the neighboring-field question
+was based on a premise (s101's) this session's own source read corrected
+before ever building the wrong instrument.
+
+### Files
+
+Code: `N64Recomp/fixup_game_funcs.py` (new
+`ROGUESQ_LOG_MUSYX_DMA_CALL` diagnostic at the `musyxSynthFrame` call
+site, file-scoped to `funcs_24.c`; N64Recomp sibling checkout, untracked
+in its own git per every prior session's note). Log:
+`scratch/s73_post_a_scene/s102_musyxdma/run.log` (17/17 positive control
+on the new instrument; 7th `do_rom_read` recurrence; entry-array
+corruption proven pre-existing at read time).

@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 100)
+## Current truth (as of session 102)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -361,6 +361,33 @@ already-catalogued 10th class — that class's signature innermost frame,
 outcome-2 branch, catalogued and not chased; next up is the same guard
 treatment for the 11th (`projectModelBoundsToScreen`) or 14th
 (`reserveAndEmitDLEntry`) class. Full detail: PORTING-STATE s100.
+**s101:** landed and validated the 11th class's guard
+(`projectModelBoundsToScreen`, clean 0/0 negative control) — and for the
+first time since s94, the process survived the entire hangar-tick-family
+gauntlet and reached the ~140s DMA window alive. `ROGUESQ_LOG_DMA_
+CALLER` (landed s95, 0/0 across 7 prior soaks) fired for the first time
+ever: the indirect caller of `submitDmaRequestBatch` is `musyxSynthFrame`
+(a per-VI-retrace audio tick), called from `viRetraceHandlerThread` —
+closing the multi-session "who calls it indirectly" question.
+`do_rom_read` recurred a 6th time (byte-identical corruption pattern)
+immediately after. Full detail: PORTING-STATE s101.
+**s102:** source-read `submitDmaRequestBatch` (confirmed: faithful
+`{size,devAddr,dramAddr}` array-copy loop, no bug) and the
+`musyxSynthFrame` call site (confirmed: `a0`/`a1`/`a2` correctly mapped —
+refining s101's own instrument plan, which had assumed `a0` was an
+address rather than a pointer value loaded from one). Landed a
+correctly-targeted instrument (`ROGUESQ_LOG_MUSYX_DMA_CALL=1`) that
+proved the corrupted `devAddr` is **already present** in the batch array
+before the call — ruling out both functions as the bug site — and fully
+characterized the corruption's shape across all 9 entries in the batch
+(two consistent 4-byte tag/index patterns, `"lg?r"`/`"wi?g"`, with
+sane/self-consistent `size`/`dramAddr` fields), reinforcing that this is
+a structured wrong-field read, not noise/race/stomp. 7th `do_rom_read`
+recurrence, byte-identical. Also found (unplanned): `fixup_game_funcs.py`
+is not actually idempotent — re-running it without a full ELF regen
+duplicates every already-applied patch (confirmed 3 copies of s100's
+guard in `funcs_40.c`). Harmless so far, flagged for a future work unit.
+Full detail: PORTING-STATE s102.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -572,39 +599,55 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s101)
+## Next steps, in order of expected value (s102)
 
--1. **M3 — source-read `musyxSynthFrame`'s indirect call to
-   `submitDmaRequestBatch` and fix the field-mapping bug.** s101 closed
-   the 7-session-old "who calls it indirectly" question (see item 1,
-   below, now marked CLOSED): the caller is `musyxSynthFrame`
-   (`N64Recomp/RecompiledFuncs/funcs_24.c:3095`), reached from
-   `viRetraceHandlerThread` (a per-VI-retrace audio tick, **not** the
-   mission/DL code path every prior session assumed). The exact call
-   site is `funcs_24.c:3856-3875`: `a0 = MEM_W(G_BASE - 0x68D8)`,
-   `a1 = MEM_HU(G_BASE - 0x68DC)` (a flag/count checked non-zero to even
-   take this branch), `a2 = G_BASE - 0x68D0` (an address, not a value),
-   target function pointer `v1 = MEM_W(G_BASE - 0x6624)` where
-   `G_BASE = 0x8015<<16`. Next step: read `submitDmaRequestBatch`'s own
-   signature (`funcs_1.c`, found s93) to map which of a0-a2 becomes
-   `devAddr`, and read what actually lives at `G_BASE-0x68D8` at
-   runtime — the s94/s101 `dma-ring-producer` logs show `devAddr`
-   decoding as overlapping ASCII fragments of what look like
-   sample/instrument name strings ("lgfr", "wing", "lcre", …), which
-   points at a wrong-field-read (reading a name-table entry where a
-   numeric address/offset belongs) rather than memory corruption or a
-   race — this should be source-fixable once confirmed, unlike every
-   earlier framing of this bug (shared-corruption race, consumer
-   desync, external RDRAM stomp — all already refuted, see item 1).
-   **Discriminating check**: log the actual value at `G_BASE-0x68D8`
-   (and its neighbors ±4/±8 bytes) from inside `musyxSynthFrame` right
-   before the call, alongside what `ROGUESQ_LOG_DMA_RING` already
-   shows came out the other end as `devAddr` — if a nearby field (e.g.
-   a name pointer one struct member over) matches the corrupted
-   `devAddr` bit-for-bit, that confirms the wrong-offset hypothesis and
-   names the exact fix (adjust the offset/field used to build the
-   request). Full detail: PORTING-STATE s101.
-0. **M3 — land the same guard-not-instrument treatment on the next
+-1. **M3 — find the still-unlocated function that POPULATES the
+   MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
+   source-read `submitDmaRequestBatch` (confirmed: `a0`=pointer to an
+   array of 12-byte `{size,devAddr,dramAddr}` entries, `a1`=count,
+   faithful copy loop, no bug here) and the `musyxSynthFrame` call site
+   (confirmed: `a0`/`a1`/`a2` are correctly mapped — `a0` is a genuine
+   pointer VALUE loaded from `G_BASE-0x68D8`, not the slot's own address
+   like s101 assumed for its planned instrument). Landed a
+   correctly-targeted instrument (`ROGUESQ_LOG_MUSYX_DMA_CALL=1`,
+   `funcs_24.c`) that logs the batch array's contents **before** the
+   call. Result: `entry=0`'s `devAddr` is **already** the exact
+   corrupted value (`0x6C676672`) at read time, inside
+   `musyxSynthFrame`, before `submitDmaRequestBatch` is ever entered —
+   **proves** the bug is upstream of both functions this session
+   cleared, not in either of them. **s102 also fully characterized the
+   corruption's shape** (all 9 entries in the batch, not just the
+   crashing one): every `devAddr` fits one of two 4-byte patterns —
+   `"lg"+<1 byte>+"r"` or `"wi"+<1 byte>+"g"` — while `size`/`dramAddr`
+   in the same entries are sane and mutually consistent (`dramAddr`
+   increments by the previous entry's `size` exactly). This is a
+   structured tag/index-like value, not noise — reinforces (with a new,
+   independent data point) that every prior "race"/"stomp"/"random"
+   framing is wrong, not just "unconfirmed". **Next step**: find what
+   populates the array at `a0` (this run: `0x80179A60`) — likely a
+   MusyX "queue next sample DMA" builder that runs earlier in the same
+   per-VI-retrace tick, sourcing `devAddr` from the wrong field of a
+   per-sample/per-instrument descriptor (name/tag field instead of ROM
+   offset). Candidate approach: grep `RecompiledFuncs/` for stores to
+   `0x80179A60`-relative offsets, or for the fixed global pointer that
+   must hold this address (likely near `G_BASE-0x68D8`'s neighborhood —
+   check what writes *that* slot, not just what reads it). Full detail:
+   PORTING-STATE s102.
+0a. **Tooling: `fixup_game_funcs.py` is not actually idempotent**
+   (found s102 while re-running it for the item above) — every patch's
+   regex anchor matches text that's left unchanged after insertion, so
+   re-running the script without a full ELF regen in between inserts a
+   **second** copy of every patch already applied. Confirmed via
+   `grep -c` on `funcs_40.c`: the s100 `composeNpcOrientationMatrix`
+   guard appears **3 times** (accumulated across s100/s101/s102, none
+   of which regenerated from ELF first). Harmless so far (duplicate
+   guards are dead code, not incorrect — the first copy's `goto` always
+   wins), but bloats `RecompiledFuncs/*.c` every session and is a latent
+   risk for any future patch whose anchor is order-sensitive. Not fixed
+   yet — cheap fix (exclude matches already followed by the `// PATCH:`
+   marker, or always regen from ELF before running fixup) — worth a
+   work unit before it compounds further.
+0b. **M3 — land the same guard-not-instrument treatment on the next
    most-recurring characterized, still-unguarded class: 14th
    (`reserveAndEmitDLEntry`, 1 occurrence, s98) or the 17th
    (`updateHangarBayScene` itself, s100 — not yet source-read).** Three
