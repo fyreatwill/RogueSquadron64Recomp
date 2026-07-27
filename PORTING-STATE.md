@@ -7810,3 +7810,128 @@ repo's own git — no separate commit exists or is expected for them,
 consistent with every prior session's identical instruments).
 Logs: `scratch/s73_post_a_scene/s97_dmacaller3/run.log`,
 `scratch/s73_post_a_scene/s97_composenpc/run.log`.
+
+## Session 98 (2026-07-27) — landed NEXT.md's `reserveAndEmitDLEntry` (14th class) entry instrument; clean positive control, but the process died to a brand-new 16th crash class (`activateAnimationKeyframe`) before the 14th class could recur — 4th consecutive session ending in "different new crash preempts the target," now source-characterized
+
+Executed the exact work unit s97's NEXT.md specified: found `reserveAndEmitDLEntry`
+in `N64Recomp/RecompiledFuncs/funcs_3.c:14433`, added an entry-log patch
+(`ROGUESQ_LOG_DLENTRY=1`, logs `ctx->r4`/`ctx->r5`/`ctx->r31`) in
+`N64Recomp/fixup_game_funcs.py` following the exact `_hangar_entry_patch`/
+`_compose_npc_orientation_patch` template. `fixup_game_funcs.py` confirmed
+`funcs_3.c: reserveAndEmitDLEntry entry diagnostic patched x1`. Full regen
+pipeline not needed (guest code only, no ELF/symbol change) — rebuilt via
+`cmake --build . -j 8`, exit clean, only pre-existing `-Wformat` warnings in
+unrelated instruments.
+
+One soak (`s98_dlentry1`, full flag set per NEXT.md including
+`ROGUESQ_LOG_THREAD_RESUME=0` per the s93 confound fix) reached "SELECT YOUR
+CRAFT stable" normally (phase-1024 at 44.7s, probes through the schedule,
+craft stable, single Start probe) then died at **hold-iter 5** (~hold+4-5s)
+to a SIGBUS in `activateAnimationKeyframe` — **a brand-new 16th crash
+class**, not `reserveAndEmitDLEntry`. `[dlentry-reserveAndEmit]` fired
+**19428/19428** — a strong positive control confirming the instrument works
+and the function runs constantly (every scene-graph node emit) without
+crashing on this path. Every other family instrument also fired as a
+control: `[anim-recurse]` 10017, `[compose-npc-orient]` 1132,
+`[hangar-entry]` 6, `[anim-tex-stream]` 13335; `[tmem-zero]` still 0 (now
+0/9 soaks armed). `ROGUESQ_LOG_DMA_CALLER` fired 0 times (expected — died
+long before the ~140s DMA window); `dma-ring-producer` only the `n=0` boot
+call (3 lines, one real event logged 3x per call site convention), same
+positive-control shape as every prior soak that didn't reach the anomaly.
+
+Backtrace: `activateAnimationKeyframe` <- `static_5_800AAD9C`
+(`runHangarSelectionFrame`) <- `static_5_800C6854`
+(`runHangarMenuFromOverlay`) <- `menuOverlayInit` <- `mainGameLoop` <-
+`mainBootstrapWorker`. **Notably this is a *different* call path into
+`activateAnimationKeyframe` than the one s87/s88 investigated** —
+s88's source read established `advancePlayerAnimationPhase` makes exactly
+two direct `jal`s to `activateAnimationKeyframe` and has zero indirect
+calls of its own; this session's crash instead reaches the same function
+straight from the hangar-tick chain (`runHangarSelectionFrame` calling it
+directly, not via `advancePlayerAnimationPhase`), so it is a second,
+independent call site into a function already known to run in this window.
+
+Source-read `activateAnimationKeyframe` (`RecompiledFuncs/funcs_14.c:1629`,
+guest `0x80061C74`), no rebuild needed — same investigative move as s88's
+correction, done before proposing any fix. The crash mechanism is a
+classic unguarded table-lookup-then-dereference, identical shape to every
+other class in this family:
+
+    ctx->r2 = ADD32(((ctx->r4 & 0xFFFF) << 2), 0x8009FC10);  // table_base + (a0&0xFFFF)*4
+    ctx->r17 = MEM_W(ctx->r2, 0x0);                          // s1 = table[idx]  (funcs_14.c:1657)
+    ctx->r3  = MEM_W(ctx->r17, 0x30);                        // deref s1+0x30, no null/range check (funcs_14.c:1661)
+
+`arg_r4` (the function's first argument, an animation/keyframe index) is
+used unchecked as a table index; whatever pointer that slot holds is
+dereferenced immediately at offset 0x30 with no bounds or null check. If
+`arg_r4` is out of the table's real range, or the table slot itself hasn't
+been populated yet, the dereference SIGBUSes. This is the same
+"unchecked-pointer/index-off-an-arg" signature as the 9th
+(`updateAnimatedTextureStreaming`), 10th (`static_5_800B4048`), and 14th
+(`reserveAndEmitDLEntry`, `arg_r5=0x20000000` in every logged call in this
+soak — a suspiciously round, flag-like value, consistent with the family's
+"garbage-looking but structured" corruption signature) classes.
+
+### Reframing NEXT.md's outcome-2 guidance
+
+NEXT.md's outcome-2 branch (correctly triggered by this result) suggested
+attacking timing — "a shorter hold or narrower probe schedule could reach
+the DMA-caller window before hitting any of this family." **Checked this
+against the existing timing data already in this log before adopting it**:
+grepping this file's own past `hold+`/`hold-iter` mentions shows the
+`do_rom_read`/DMA-adjacent crash consistently lands at **hold+11-15s**
+(s85, s91, s93 all "hold+13s"; s94 "hold+13s into a driven session"),
+while this family's one-off crashes land anywhere from **hold+3s to
+hold+17s** across sessions (s96 13th class hold+~3s, this session's 16th
+class hold+~4-5s, s97's 15th class hold+~14s) — i.e. **the two windows
+overlap, they are not sequential**. Shortening the hold to "get past the
+crash family before reaching the DMA window" is not coherent: the DMA
+phenomenon's own window sits inside the same few-second span as the crash
+family's, not after it. This corrects outcome-2's literal suggestion
+without contradicting its actual point (stop instrumenting one-off
+crashes) — full detail is a log-only re-read of existing session data, no
+new soak was needed to check this.
+
+### Assessment
+
+Four consecutive sessions (s95, s96, s97, s98) and 6 soaks now end the same
+way: reach the hangar-tick window, hit a brand-new crash class, die before
+~15s into the hold. 16 distinct crash classes cataloged in this window
+total (9th-16th being the guest-side, source-fixable family; 13th/15th
+RT64-internal). Two of the guest-side family are now source-characterized
+at the mechanism level (this session's `activateAnimationKeyframe`, and by
+extension the same shape almost certainly applies to the still-uncharacterized
+9th/10th/11th/12th/14th sites, which share the identical
+"MEM_W-off-an-arg-or-table-slot, no check" signature per their own session
+writeups). Given that four sessions of pure observation have each found a
+*different* new crash rather than converging on a fix, and given the
+mechanism is now understood well enough at two sites to write an actual
+guard, the productive move for M3 is a state change: stop adding read-only
+entry-log instruments to catalog new crashes, and instead **land a
+defensive guard** at a characterized site, mirroring the two prior
+successful patterns in this codebase (s83's `evalCubicSplineAtTime` 0/0
+guard, s84's `resume_thread_tagged` `bad=1` skip-gate) — both fixed their
+own crash class outright rather than just observing it.
+
+### Next
+
+Guard `activateAnimationKeyframe`'s table-lookup dereference
+(`funcs_14.c:1656-1661`, guest `0x80061CA4-0x80061CAC`): before the
+`MEM_W(ctx->r17, 0x30)` read, check `ctx->r17` for a plausible valid RDRAM
+pointer (non-zero, within the guest RAM range the runtime maps) and skip
+the crashing path (log via a new `ROGUESQ_LOG_ANIM_KEYFRAME_GUARD`-style
+flag, always-on skip like s84's gate) if it looks bad. This is a genuine
+fix attempt, not another observe-only instrument, and directly tests
+whether guarding this one site reduces the crash-family's win rate in the
+race — if a subsequent soak reaches a later hold-iter or a different class
+entirely, that is itself informative (proves this specific site was
+sometimes the blocker); if a soak now reaches the DMA-caller window (~140s)
+for the first time, M3's actual blocking question (item 1) reopens
+immediately with all its instruments already armed.
+
+### Files
+
+Code: `N64Recomp/fixup_game_funcs.py` (new `ROGUESQ_LOG_DLENTRY` instrument
+on `reserveAndEmitDLEntry`; N64Recomp is a sibling checkout, untracked in
+its own git per every prior session's note). Logs:
+`scratch/s73_post_a_scene/s98_dlentry1/run.log`.

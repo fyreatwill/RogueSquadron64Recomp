@@ -313,6 +313,22 @@ stomped afterward — points at an off-by-a-field bug in the unknown
 caller (writing a name/string-table field where `devAddr` belongs),
 narrower and more source-findable than a generic cross-subsystem memory
 race. Full detail: PORTING-STATE s94.
+**s95-s98:** 4 sessions, 6 soaks, each died to a *different* brand-new
+crash class in the "SELECT YOUR CRAFT stable → hold" window before
+reaching the DMA-caller window — 16 crash classes cataloged total (9th-16th
+guest-side/fixable, 13th/15th RT64-internal). s98 source-characterized the
+mechanism at the 16th class (`activateAnimationKeyframe`, a second,
+independent call site into a function s87/88 already partly investigated):
+unguarded table-lookup-then-dereference (`table[arg_r4 & 0xFFFF]` then
+`deref+0x30`, no null/range check) — same signature as every other class
+in this family. Checked existing timing data (no new soak needed): the
+DMA-adjacent `do_rom_read` crash consistently lands hold+11-15s while this
+family's one-offs land hold+3-17s — **the two windows overlap, they are
+not sequential**, so "shorten the hold to outrun the crash family" (a
+literal reading of s97's outcome-2 branch) is not coherent. **Pivot for
+next session: land a defensive guard at a characterized site (mirroring
+s83/s84's successful gates) instead of another observe-only instrument.**
+Full detail: PORTING-STATE s98.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -524,34 +540,41 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s97)
+## Next steps, in order of expected value (s98)
 
-0. **M3 — instrument the 14th crash class, SIGBUS in
-   `reserveAndEmitDLEntry` (s97).** This is the recommended next work
-   unit, ahead of the parked DMA-caller repro and ahead of re-running
-   `composeNpcOrientationMatrix`'s soak: it's guest-side code (a real,
-   fixable bug, unlike the RT64-internal 13th/15th classes), first
-   occurrence but in the same well-trodden hangar-tick window as the
-   9th–12th family, and reducing how many different crashes can win
-   the early-death race raises the odds any future soak (DMA-caller or
-   otherwise) survives long enough to reach its own target window.
-   Backtrace: `reserveAndEmitDLEntry` ← `submitSceneNodeRender` ←
-   `processSceneNode` ← `traverseSceneGraphRecursive` (recurses once)
-   ← `setupCameraMatrices` ← `static_5_800AAD9C`
-   (`runHangarSelectionFrame`) ← `static_5_800C6854`
-   (`runHangarMenuFromOverlay`) ← `menuOverlayInit`. Not yet
-   instrumented; find the function in `RecompiledFuncs/*.c`, log its
-   incoming args at entry following the `ROGUESQ_LOG_HANGAR_ENTRY`/
-   `ROGUESQ_LOG_COMPOSE_NPC` pattern (`N64Recomp/fixup_game_funcs.py`),
-   rebuild, re-run the standard repro
+0. **M3 — land a defensive guard on `activateAnimationKeyframe`'s
+   table-lookup deref (the 16th crash class, s98), instead of another
+   observe-only instrument.** Four consecutive sessions (s95-s98, 6
+   soaks) each died to a *different* brand-new crash in the "SELECT
+   YOUR CRAFT stable → hold" window before reaching the DMA-caller
+   window; s98 source-characterized the mechanism at this site
+   (`N64Recomp/RecompiledFuncs/funcs_14.c:1656-1661`, guest
+   `0x80061CA4-0x80061CAC`): `ctx->r17 = table[(arg_r4 & 0xFFFF)]`
+   (table base `0x8009FC10`) then an immediate `MEM_W(ctx->r17, 0x30)`
+   deref with no null/range check on `ctx->r17` — same
+   "unguarded-pointer-off-a-lookup" signature as the rest of this
+   family. Add a guard right before that deref: if `ctx->r17` looks
+   invalid (0, or outside the guest RAM range the runtime maps), skip
+   the crashing path and log via an always-on flag (mirror s84's
+   `resume_thread_tagged`/`bad=1` skip-gate — `lib/N64ModernRuntime`
+   pattern is C++, this is generated guest C, so follow the
+   `fixup_game_funcs.py` patch convention instead, same file as every
+   other instrument in this family). This is a genuine fix attempt,
+   not another catalog entry: **do not** just log-and-continue-without-
+   guarding (that reproduces the crash, it doesn't survive it). Rebuild,
+   re-run the standard repro
    (`scratch/s73_post_a_scene/run_mission_keys.sh`, `PROBE_MODE=
-   start_only HOLD_S=30`, all `ROGUESQ_LOG_*` flags on,
-   `ROGUESQ_LOG_THREAD_RESUME=0`). Per rule 8, if this soak also dies
-   early to yet another new crash rather than recurring or reaching
-   the DMA-caller window, that's a real, escalating signal (3+ brand-
-   new classes in the same window across 2 sessions) worth surfacing
-   as its own question rather than continuing to instrument one-off
-   crashes.
+   start_only HOLD_S=30`, all `ROGUESQ_LOG_*` flags on including the new
+   guard's flag, `ROGUESQ_LOG_THREAD_RESUME=0`). Outcomes: (a) the guard
+   fires and the process survives further into the hold or reaches the
+   DMA-caller window — real progress, re-open item 1 below immediately;
+   (b) the guard never fires and a *different* crash (17th class) kills
+   the process anyway — informative (this specific site wasn't this
+   run's blocker), do not spend a 2nd soak chasing this one site, pick
+   the next-most-recurring characterized class instead
+   (`composeNpcOrientationMatrix`, 2 occurrences) for the same
+   guard-not-instrument treatment; (c) build/regen failure — debug
+   before soaking, do not soak a broken build.
 1. **M3 — find the indirect caller of `submitDmaRequestBatch`.**
    **Discriminating question CLOSED (s94)**: the producer/consumer ring
    instrument (`ROGUESQ_LOG_DMA_RING=1`, landed in
@@ -645,6 +668,21 @@ cost three sessions before the recursive mutex.
    zero recurrence of anything previously catalogued — do not treat
    either new class as informative about the DMA-caller hypothesis
    itself. Full detail: PORTING-STATE s97.
+   **s98: instrumented the 14th class (`reserveAndEmitDLEntry`) per
+   s97's own plan — clean 19428/19428 positive control, no crash on
+   that path, but the process died to a brand-new **16th class**
+   (`activateAnimationKeyframe`, source-characterized: unguarded
+   table-lookup-then-deref, `table[arg_r4 & 0xFFFF]` then `+0x30`
+   deref with no null/range check — same shape as the rest of the
+   family) at hold+~5s. 4th consecutive session ending this way.
+   Checked existing timing data (no new soak needed): the DMA-adjacent
+   `do_rom_read` crash consistently lands hold+11-15s while this
+   family's one-offs land hold+3-17s — the two windows **overlap, they
+   are not sequential**, so outrunning the family with a shorter hold
+   (a literal reading of this item's own outcome-2 branch) is not
+   coherent. **Next session: land a defensive guard at the
+   characterized site instead of another one-off instrument** —
+   mirrors s83/s84's successful gates. Full detail: PORTING-STATE s98.**
    1a. **Confound theory CONFIRMED and CLOSED (s93).** s92's attempt to
    drop `ROGUESQ_LOG_THREAD_RESUME=1` from the repro never actually
    took effect — `scratch/s73_post_a_scene/run_mission_keys.sh` line 8
