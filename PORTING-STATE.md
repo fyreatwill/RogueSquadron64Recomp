@@ -12223,3 +12223,107 @@ source/data read, per NEXT.md's own instruction not to skip past step 1).
 `scratch/agent/rom_strings.txt` (full ROM strings dump with hex offsets,
 scratch, gitignored, reusable — "capture once" per CLAUDE.md). `PORTING-STATE.md`
 / `docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md` (this write-up).
+
+## Session 139 (2026-07-27) — landed and soaked the universal rs_malloc allocation log NEXT.md's step 3 specified; found and fixed a real argument-order bug in the instrument itself; corrected soak narrows Thread B's "which allocation is adjacent" question from the whole heap to 3 named boot-time buffers
+
+Executed NEXT.md's step 3 exactly: instrumented `rs_malloc` itself
+(`N64Recomp/RecompiledFuncs/funcs_0.c:2743`, patched via
+`N64Recomp/fixup_game_funcs.py`, `ROGUESQ_LOG_RS_MALLOC=1`) rather than each
+of its ~40+ call sites, logging every allocation's returned pointer,
+requested size, and caller return address at the function's own single
+`return;`. Chose a whole-function instrument over more per-call-site patches
+(the s120/s122 pattern) because the goal — "every allocation in the run" —
+doesn't scale to enumerating call sites.
+
+**Caught and fixed a real bug in the new instrument before trusting its
+data.** First soak (`rsmalloc1`, full regen + build, clean) produced
+17962 `[rs-malloc]` lines whose `size` field was implausible: 59% read
+`size=0`, and the nonzero remainder clustered into exactly 7 values
+(`4, 8, 9, 16, 128, 129`) — flag-bitmask shaped, not realistic byte counts
+for a general allocator serving asset loads and DMA buffers alike. Source-read
+`rs_malloc`'s body between entry and `L_80001B44` before trusting the soak
+further (per this thread's own established discipline) and found the
+argument order was backwards from what the patch assumed: `$a0`
+(`ctx->r4`) is the size — confirmed by the very next lines rounding it
+`(a0+0xF)&~0xF`, a textbook 16-byte-alignment idiom — and `$a1`
+(`ctx->r5`, what the patch had captured as "size") is a **pool-selector
+flags word**, tested via `&0x4`/`&0x10` to choose among three heap globals
+at `0x8011xxxx`. Fixed the capture (now reads `ctx->r4` for size, logs
+`ctx->r5` separately as `flags`), full regen + rebuild (clean), re-soak.
+
+**Corrected soak (`rsmalloc1`, overwritten) gives a real, plausible size
+distribution** (1024, 24, 40, 72, 520, 28, 4104, 60, 32768, 356, 4096, …,
+17651 total calls) and directly confirms the fix: the allocation immediately
+preceding each `[song-array-alloc]` line now reports a size matching
+`voiceCount * 136` exactly for all 4 song-loads this run (`voiceCount=17`→
+`size=2312`, `=15`→`2040`, `=18`→`2448` ×2) — establishing the voice
+array's per-slot stride as **136 bytes (0x88)**, not previously measured.
+Both soaks died identically to the tracked `do_rom_read`/`piDmaWorker`
+corruption SIGSEGV (hold+13s and hold+11s respectively — 3rd/4th
+consecutive recurrence across the last 2 sessions' render/malloc-guard
+soaks, reinforcing s137's "clear plurality" framing) — not informative on
+its own, already-tracked.
+
+**The corrected soak reproduced 5 distinct `[voice-active-gate-nz]`
+corruption hits (positive control, arrayBase=0x801714D0 again), all while
+the array's *own* allocation was the `voiceCount=15` one (`size=2040`,
+buffer ends `0x80171CD8`).** The hit addresses (`idx=0x10`→`0x80171D50`,
+`idx=0x11`→`0x80171DD8`) are **2176 and 2312 bytes past the array's own
+start — both past its actual 2040-byte malloc'd length.** This is a
+sharper, more literal confirmation of s120's mechanism than any prior
+session had: the read isn't just past a *count* field, it's provably past
+the buffer's own allocated byte extent, established directly from this
+run's own size log rather than inferred.
+
+**Ran the discriminating measurement NEXT.md's step 3 asked for**: sorted
+every `[rs-malloc] ptr/size` pair by allocation order and checked which
+ones' `[ptr, ptr+size)` range covers `0x80171D50`-`0x80172548` (offline
+Python, no rebuild). Result is not "exactly one" as NEXT.md's best-case
+branch hoped, but a **short, closed list of exactly 3 candidates**, all
+allocated once at or near boot and never returned by `rs_malloc` again
+for the rest of the run (checked by grepping every later `[rs-malloc] ptr=`
+line for these 3 exact pointers — zero hits, so if freed they were never
+handed back out): `ptr=0x8016FD20 size=8568` (line 66, immediately after
+the very first song-array-alloc), `ptr=0x80171470 size=32768` (line 1969,
+overlapping the array's own base address region by only 96 bytes), and
+the `voiceCount=17` array's own paired follow-on buffer `ptr=0x80171DF0
+size=7728` (line 536, superseded by the later `voiceCount=15`/`18`
+reallocations but never freed-and-reused elsewhere per the same check).
+All three sit in the same `~0x8016D000`-`0x80179000` heap region as the
+voice array itself, all requested through the same `flags=0x0` pool.
+`caller_ra=0x00000000` on all 17651 logged calls (100%, not just a
+sample) — extends s92's "universal-zero, not corruption-specific" finding
+to a 4th independent entry log, so this field stays unusable for identifying
+which function called `rs_malloc` and should not be re-litigated as evidence
+of anything.
+
+**Tried one more cheap, no-rebuild step before stopping**: grepped the
+recompiled C for the 3 candidates' sizes as hex literals (`0X2178`,
+`0X1E30`, `0X8000`) hoping to find a call site setting the size as an
+immediate constant the way `os_message_related` boilerplate sometimes
+does. No real hits (the one `0X2178` match was an unrelated `MEM_W` stack
+offset, not a size argument; `0X1E30` had zero matches; `0X8000` is too
+common a bit-mask constant to be useful). Confirms these sizes are
+runtime-computed (consistent with the array's own `voiceCount*136`
+pattern) — a literal grep cannot identify the caller; only an `rs_free`
+instrument (to test which of the 3 candidates gets freed before a hit) or
+manual call-chain tracing from the boot sequence can narrow further.
+
+**Net effect on Thread B**: not closed, but the search space is now 3
+named, fixed pointers instead of "the whole heap" — a real narrowing, not
+a null result, even though it fell short of NEXT.md's best-case "exactly
+one" outcome. The instrument-bug-catch is itself worth keeping as a
+lesson: this codebase's `rs_malloc` has `(size, flags)` argument order,
+not `(pool/size, size)` as assumed by analogy with libc `malloc` — any
+future patch touching `rs_malloc` callers should use this confirmed
+order, not re-derive it.
+
+### Files
+`N64Recomp/fixup_game_funcs.py` (new `rs_malloc` entry+exit patch, s139,
+sibling checkout not a `lib/` submodule — same uncommitted-history flag as
+s90-138, not committed autonomously per that standing note).
+`scratch/agent/run_rsmalloc1.sh` (new soak wrapper, "batch everything"
+recipe). `scratch/s73_post_a_scene/rsmalloc1/run.log` (2nd, corrected soak;
+1st/buggy soak's log was overwritten by the re-run, not preserved — the
+size-field bug is fully described above instead). `PORTING-STATE.md` /
+`docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md` (this write-up).

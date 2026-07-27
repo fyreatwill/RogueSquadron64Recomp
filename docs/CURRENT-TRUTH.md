@@ -704,6 +704,38 @@ cost three sessions before the recursive mutex.
     corruption time — a heap-layout/allocation-order question, not more
     string/table grepping. Full detail: PORTING-STATE s138.
 
+0d. **s139: ran the discriminating rs_malloc-range-overlap measurement
+    s138 called for.** Landed a universal `rs_malloc` allocation log
+    (`ROGUESQ_LOG_RS_MALLOC=1`, `N64Recomp/fixup_game_funcs.py`, patches
+    `rs_malloc` itself rather than call sites) — caught and fixed a real
+    bug in it first (the patch had `$a0`/`$a1` backwards; `$a0` is size,
+    `$a1` is a pool-selector flags word, confirmed by the `(a0+0xF)&~0xF`
+    alignment idiom a few lines later). Corrected soak confirms the voice
+    array's per-slot stride is **136 bytes**, and that this run's 5
+    corruption hits (`idx=0x10/0x11`) are provably past the array's own
+    *actual malloc'd length* (2040 bytes for the active `voiceCount=15`
+    allocation), not just past an abstract count. Offline range-overlap
+    analysis narrows "which allocation is adjacent" from the whole heap to
+    **3 named boot-time pointers** (`0x8016FD20`/8568B, `0x80171470`/32768B,
+    `0x80171DF0`/7728B — none ever reallocated elsewhere for the rest of
+    the run). Not "exactly one" (NEXT.md's best case), but a real, closed,
+    named shortlist. `caller_ra=0x00000000` universal on 100% of 17651
+    calls this run, extending s92's finding — stays unusable as evidence.
+    3rd/4th straight `do_rom_read`/`piDmaWorker` recurrence across the last
+    2 sessions' soaks. Full detail: PORTING-STATE s139.
+
+**Next work unit (s140): discriminate among the 3 boot-time candidates.**
+Neither a literal-constant grep (tried, s139, no hits — sizes are
+runtime-computed) nor the existing instruments can tell them apart. Two
+viable next moves, pick one: (a) add an `rs_free` log (mirror the
+`rs_malloc` patch shape, same file) and re-soak — if exactly one of the 3
+candidates gets freed before a same-run corruption hit, that is strong
+evidence it's the freed-but-not-cleared source; (b) source-read the boot
+sequence in `N64Recomp/RecompiledFuncs/funcs_23.c`/`funcs_24.c` around the
+call that immediately follows each `allocateSongChannelArray` invocation
+(the 7728-byte candidate's caller) to identify it by control flow instead
+of by register value, since `caller_ra` is confirmed permanently unusable.
+
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with
    the mandatory patch-report audit and again found every line's

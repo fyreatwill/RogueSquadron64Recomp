@@ -1,169 +1,180 @@
-# NEXT work unit — Thread B: find the rs_malloc buffer heap-adjacent to the voice array
+# NEXT work unit — Thread B: discriminate among 3 boot-time allocation candidates
 
-s138 ran the s126-flagged fresh-angle grep (pure source/data read, no
-rebuild, no soak) and got a real discriminating result, but it's a
-refutation, not a close. Read PORTING-STATE's Session 138 entry before
-doing anything else; this file only has the actionable summary.
+s139 ran the discriminating rs_malloc-range-overlap measurement s138's own
+NEXT.md called for, landed a real result, but it's a narrowing, not a
+close. Read PORTING-STATE's Session 139 entry before doing anything else;
+this file only has the actionable summary.
 
-## What s138 did and found
+## What s139 did and found
 
-Located the one ROM string table matching the "explo_tex"/"explh_tex"
-theme (`build/rogue_squadron.z64`, offsets `0x3bf70`-`0x3bfec`), and
-solved the ROM->RAM mapping question NEXT.md had flagged as unresolved:
-`RAM = ROM_offset + 0x7FFFF400`, confirmed two independent ways (symbol-file
-cross-reference on 3 pairs; direct disassembly-operand extraction from
-`loadExplosionTextures` in `N64Recomp/RecompiledFuncs/funcs_13.c`, guest
-`0x8006108C`) — both agree exactly on all 4 addresses checked.
+Landed `ROGUESQ_LOG_RS_MALLOC=1`: patches `rs_malloc` itself
+(`N64Recomp/RecompiledFuncs/funcs_0.c:2743`, via `N64Recomp/
+fixup_game_funcs.py`) to log every allocation's `ptr`, `size`, `flags`,
+and `caller_ra` at its single `return;`. Chose to instrument the function
+once rather than every one of its ~40+ call sites.
 
-Applying that bias, the explosion-texture table sits at
-`0x8003B370`-`0x8003B3EC` — **~20.3 MB away** from the corruption zone
-(`arrayBase=0x801714D0`, hits `0x80171D50`-`0x80172548`). The function's
-own indexing only ever uses small fixed offsets (0-0x1C). **This refutes
-"a static compile-time ROM string table is what's being aliased/indexed
-into voice+0x34."** A full-ROM strings dump (`scratch/agent/rom_strings.txt`,
-506k lines, gitignored, kept for reuse) also found zero literal matches
-anywhere for the digit-suffixed fragments (`explo_tex2`, `x7`-`x11`,
-`main_n_atpt_lod`, `at_6`, `at_7`, `pilot_sd`) — those are not ROM data at
-all, consistent with being runtime-constructed (name + appended index,
-plausible for a numbered-asset-variant scheme).
+**First soak's data was wrong — caught before trusting it.** The size
+field was flag-shaped (7 discrete values, 59% zero), not byte-count-shaped.
+Source-read the function body and found the patch had `$a0`/`$a1`
+backwards: `$a0` (`ctx->r4`) is the size (confirmed by `(a0+0xF)&~0xF`
+alignment a few lines later), `$a1` (`ctx->r5`) is a pool-selector flags
+word (`&0x4`/`&0x10` tested to pick among 3 heap globals). Fixed, full
+regen + rebuild (clean), re-soaked. **Any future rs_malloc-adjacent patch
+should use this confirmed `(size, flags)` order, not guess by analogy with
+libc `malloc`.**
 
-**This does not overturn s120's mechanism, it sharpens it.** s120 already
-established: the corrupted reads are an out-of-bounds scan past the voice
-array's own live `voiceCount`, landing on whatever `rs_malloc` allocation
-happens to sit adjacent to it in the heap — not a code-level indexing bug
-into a named table at all. s122/s123 already tested and refuted the one
-specific adjacent-allocation candidate anyone had checked
-(`loadAssetAndIterateSubchunks`'s DMA buffer, `ptr=0x8062B850`, ~5.87 MB
-away, H2 closed 3/3 per rule 8, do not re-run). s138 just eliminated a
-second, more literal-minded candidate (a static ROM table) by showing it's
-even farther away and arithmetically unreachable.
+**Corrected soak, real findings:**
+- Voice array per-slot stride = **136 bytes** (`voiceCount*136` matches
+  the logged allocation size exactly, all 4 song-loads this run).
+- This run's 5 `[voice-active-gate-nz]` hits (`idx=0x10`/`0x11`,
+  `arrayBase=0x801714D0`) happened while the *active* array allocation was
+  the `voiceCount=15` one (`size=2040`, ends `0x80171CD8`) — the hit
+  addresses (`0x80171D50`/`0x80171DD8`) are **2176/2312 bytes past that
+  buffer's own actual malloc'd end**, not just past an abstract count
+  field. Sharper confirmation of s120's mechanism than before.
+- Range-overlap analysis (offline Python, sort all `[rs-malloc]` ptr/size
+  pairs, find which cover `0x80171D50`-`0x80172548`) found **3 candidates**,
+  not NEXT.md's best-case "exactly one": `ptr=0x8016FD20 size=8568`
+  (boot, right after the very first song-array-alloc), `ptr=0x80171470
+  size=32768` (boot, starts only 96 bytes before the array's own base),
+  `ptr=0x80171DF0 size=7728` (the `voiceCount=17` array's own paired
+  follow-on buffer, superseded by later reallocations). None of these 3
+  pointers is ever returned by `rs_malloc` again later in the run (checked
+  by grep) — if any was freed, its space was never handed back out to
+  anything else logged.
+- `caller_ra=0x00000000` on **100% of 17651 calls this run** — extends
+  s92's "universal-zero, not corruption-specific" finding to a 4th
+  independent entry log. Confirmed unusable for identifying call sites;
+  do not re-litigate this as evidence of anything.
+- A literal-constant grep for the 3 candidates' sizes as hex (`0X2178`,
+  `0X1E30`, `0X8000`) in `RecompiledFuncs/*.c` found nothing real — sizes
+  are runtime-computed, not compile-time literals. This approach is
+  closed; don't retry it.
 
-## Do next: find what actually allocates next to the voice array
+## Do next: discriminate among the 3 candidates
 
-The remaining open question is a heap-layout question, not a code-search
-question: **at the moment of a corrupted `[voice-active-gate-nz]` hit,
-which `rs_malloc` call's returned buffer covers `0x80171D50`-`0x80172548`?**
+Pick ONE of these two (both are viable; (a) is more mechanical/faster,
+(b) is more certain but slower):
 
-**Concrete first steps** (source read first, per this thread's own
-established discipline — do not skip to instrumenting):
+**(a) Add an `rs_free` log and re-soak.** `rs_free` is the sibling
+function right after `rs_malloc` in `funcs_0.c` (~line 3073, confirmed by
+this session's own read — re-verify the exact body before patching, don't
+assume the shape mirrors `rs_malloc`). Log `ptr` + `caller_ra` (caller_ra
+will likely also read 0, per the pattern above — don't be surprised, it's
+not new evidence). Same soak recipe (`scratch/agent/run_rsmalloc1.sh`,
+add `ROGUESQ_LOG_RS_FREE=1`… landed as a new flag). Discriminating
+outcome: if exactly one of the 3 candidate pointers (`0x8016FD20`,
+`0x80171470`, `0x80171DF0`) appears in an `[rs-free]` line *before* a
+same-run `[voice-active-gate-nz]` hit, that is strong evidence it's the
+freed-but-not-cleared source. If none of the 3 are ever freed, that
+refutes the "freed-and-reused" framing entirely and reframes this as
+"still-allocated buffer being read out-of-bounds by two different
+subsystems simultaneously" — a different, still-useful answer, not a
+null result.
 
-1. `allocateSongChannelArray` (`funcs_23.c`, s120) is the voice array's own
-   allocator — re-read its call site to get the requested size, so you know
-   how far past `0x801714D0` the array's *own* legitimate end is (this
-   tells you exactly how far out-of-bounds idx 0x10-0x1F actually reaches
-   past `voiceCount`, in bytes — not yet computed).
-2. Grep `N64Recomp/RecompiledFuncs/*.c` for every `rs_malloc` call site
-   (there won't be many) and, for each, read enough of its surrounding
-   function to estimate a rough allocation size and *when in the boot/scene
-   sequence* it fires — the goal is a short list of "allocated around the
-   same time as the voice array, plausible size to land adjacent" candidates,
-   not an exhaustive audit of every allocator in the game.
-3. The most direct way to actually answer this without guessing: extend the
-   existing `[song-array-alloc]` instrument (already logs the voice array's
-   own `ptr`+`voiceCount`, s120) to ALSO log every *other* `rs_malloc`
-   call's return pointer + requested size in the same run (a single new
-   env-gated instrument at `rs_malloc`'s own return, `funcs_0.c:2743` per
-   s113's note — batch this with the existing flags, one soak). Then
-   offline-sort by pointer value to find which allocation's
-   `[ptr, ptr+size)` range actually contains `0x80171D50` at the time of a
-   `[voice-active-gate-nz]` hit in the same run — this is the discriminating
-   measurement; a same-run positive control is the existing
-   `[voice-active-gate-nz]` fire itself (already reliable, fires every soak
-   that reaches the hangar).
-
-**Discriminating outcome:** if exactly one allocation's range covers the
-corruption addresses, that allocator's call site is very likely the true
-source of the aliased data (or at minimum narrows "what other subsystem's
-data lives there" precisely enough to read its write path next). If no
-allocation covers it, the buffer sitting there is either freed-but-not-cleared
-memory from something that *used to* occupy that range (a stale-heap-content
-question, different from an aliasing question) — worth distinguishing
-explicitly rather than assuming either framing.
+**(b) Source-read the boot call chain instead of instrumenting further.**
+The `0x80171DF0`/7728-byte candidate is allocated immediately after every
+`allocateSongChannelArray` call (paired 1:1, confirmed s139) — read
+`funcs_23.c`/`funcs_24.c` around `allocateSongChannelArray`'s own call
+site to find what calls it and what it calls immediately after, to name
+this 7728-byte allocator function directly instead of via a corrupted
+register. The `0x8016FD20`/8568-byte and `0x80171470`/32768-byte
+candidates are boot-only (called once, near the very start of the log,
+right after the very first song load) — read the boot sequence in
+whatever function drives `initSampleStreamBlockCache` / the initial
+`allocateSongChannelArray` call to find what else it sets up at that
+point in the same pass.
 
 ## Thread A (all 8 hangar-tick-family functions): CLOSED, do not re-open
 
 `composeNpcOrientationMatrix`, `updateAnimatedTextureStreaming`,
 `static_5_800B4048`, `projectModelBoundsToScreen`, `reserveAndEmitDLEntry`,
 `activateAnimationKeyframe`, `submitSceneNodeRender` (free-list idiom,
-s123/s131/s134 — proven innocent twice — and material-batch-list idiom,
-s136/s137 — 2/3 soaks, parked not proven innocent), `updateHangarBayScene`
-— all guarded and exhaustively source-audited. `emitAllocatedDLCommand`'s
-two `findAndUnlinkSmallestEntry` sites are also guarded and parked (3/3
-soaks exhausted, s133-s135). Do not re-audit or re-guard any of these.
+material-batch-list idiom), `updateHangarBayScene` — all guarded and
+exhaustively source-audited. `emitAllocatedDLCommand`'s two
+`findAndUnlinkSmallestEntry` sites are also guarded and parked. Do not
+re-audit or re-guard any of these.
 
 ## This session's environment notes (carry forward, still current)
 
+- `rs_malloc`'s real argument order is `(size, flags)` — `$a0`=size
+  (rounded `(x+0xF)&~0xF`), `$a1`=pool-selector flags (`&0x4`/`&0x10`
+  chooses among 3 heap globals at `0x8011xxxx`). Do not re-derive this by
+  guessing; it's now source-confirmed (s139).
+- Before trusting ANY new instrument's first soak, sanity-check the
+  logged values against a plausibility prior (e.g. "do these look like
+  real byte sizes, not flag bits") — this is what caught the s139 bug.
+  A instrument that compiles clean and fires is not the same as an
+  instrument that's reading the right registers.
+- `caller_ra` (`ctx->r31` at function entry) reads `0x00000000` on
+  effectively 100% of entries across every entry-log instrument landed so
+  far (anim-recurse, anim-tex-stream, hangar-entry, now rs-malloc) — this
+  is confirmed benign/universal, not corruption-specific (s92, reinforced
+  s139). Stop treating it as a signal.
 - The guard-placement bug caught s133 (regex-replacement pattern shape
   varies between prior guards — always re-derive from the specific prior
-  guard's landed, regenerated output, not from whichever nearby Python
-  function you copy-pasted last) is still a live risk for any future
-  guard in this series.
-- Host-code crash-offset arithmetic (`function + N bytes`) does NOT map
-  linearly to guest instruction addresses or source line numbers.
+  guard's landed, regenerated output) is still a live risk for any future
+  patch in this series.
 - `rm` on paths outside `scratch/` requires approval and does NOT accept
-  glob patterns — use a `python3 -c` one-liner with `pathlib.Path.glob()`
-  for the delete-all step: `python3 -c "import pathlib; [f.unlink() for f
-  in pathlib.Path('RecompiledFuncs').glob('funcs_*.c')]"` run with cwd
-  `N64Recomp`, deletes only the 45 `funcs_*.c` files, leaves
-  `funcs.h`/`lookup.cpp`/`recomp_overlays.inl` alone.
+  glob patterns — use a `python3 -c` one-liner with `pathlib.Path.glob()`:
+  `python3 -c "import pathlib; [f.unlink() for f in
+  pathlib.Path('RecompiledFuncs').glob('funcs_*.c')]"` run with cwd
+  `N64Recomp`, deletes only the 45 `funcs_*.c` files.
 - Do NOT re-run `fixup_game_funcs.py` a second time in the same session
-  (non-idempotent, s102).
-- Use `zsh tools/agent/regen_n64recomp.sh` (not the bare
-  `./tools/agent/regen_n64recomp.sh` form) — matches the `Bash(zsh:*)`
-  allow rule cleanly. `cmake --build` must be run with cwd `build/` —
-  remember to `cd` back to the repo root afterward.
-- The multi-`env`-var one-liner still trips the Bash static-command-
-  analyzer — write a new wrapper script file per soak tag
-  (`scratch/agent/run_<tag>.sh`) rather than trying to parametrize a
-  single reusable script via more env-var indirection.
-- A `run_mission_keys.sh` soak with `run_in_background: true` plus a
-  blocking `TaskOutput` (block=true, generous timeout) works cleanly.
-  The Stop hook fires and blocks ending the turn while a background soak
-  is still running and `scratch/agent/STATUS` still says `WORKING` —
-  finish the soak and the full exit-contract writeup in the same turn.
+  without a full regen first (non-idempotent, s102) — always delete
+  `RecompiledFuncs/funcs_*.c`, re-run `make_elf.py` then
+  `regen_n64recomp.sh`, THEN `fixup_game_funcs.py` once.
+- Use `zsh tools/agent/regen_n64recomp.sh` (matches the `Bash(zsh:*)`
+  allow rule). `cmake --build` must be run with cwd `build/`.
+- Write a new wrapper script file per soak tag (`scratch/agent/run_
+  <tag>.sh`) rather than parametrizing a single reusable script via env
+  indirection — the multi-`env`-var one-liner trips the Bash
+  static-command-analyzer.
+- A `run_mission_keys.sh` soak with `run_in_background: true`, waited on
+  via a blocking `while kill -0 <pid>; do sleep 5; done` loop (not a raw
+  sleep), works cleanly — the harness sends a task-notification when the
+  background command exits either way.
 - Output redirection (`>`) from Bash is sandboxed to the session's
-  allowed working directories — writing a large one-off dump (e.g. a
-  full ROM `strings` scan) must target `scratch/agent/` or another
-  allowed dir, not `/tmp`.
+  allowed working directories — target `scratch/agent/` or another
+  allowed dir, not `/tmp`, for one-off dumps.
 - `symbol_files/main_overlay.txt`'s "Strings" section sometimes DOES
-  include decoded string content in the comment (`// type:asciz - 'name'`),
-  not just bare addresses — check there directly before assuming a ROM
-  offset->RAM address mapping has to be derived from scratch every time.
+  include decoded string content in the comment — check there directly
+  before assuming a ROM offset->RAM mapping needs deriving from scratch.
 
 ## Do not
 
-- Do not re-audit any of the 8 Thread A functions again (see "Thread A"
-  section above — CLOSED as of s132/s137).
-- Do not re-guard `emitAllocatedDLCommand`'s two `findAndUnlinkSmallestEntry`
-  walk-loop sites, or `submitSceneNodeRender`'s free-list-walk sites (9
-  sites) or its material-batch-list sites (2 sites) — all already landed
-  and exhaustively verified against source.
+- Do not re-audit any of the 8 Thread A functions again.
+- Do not re-guard `emitAllocatedDLCommand`'s or `submitSceneNodeRender`'s
+  already-landed guard sites (free-list-walk, material-batch-list) —
+  exhaustively verified against source already.
 - Do not re-run the `loadAssetAndIterateSubchunks`/asset-alloc soak shape
-  (H2, s122/123, closed 3/3) or grep further for static ROM string tables
-  as the aliasing source (s138, refuted by distance) — Thread B's live
-  question is now "which `rs_malloc` buffer is heap-adjacent," not
-  "which string table is being indexed."
-- Do not treat a 0/0 guard-fire result as "the guard doesn't work" or
-  "the fix is wrong" — it's an uncontrolled null, not a refutation.
-- Do not chase the s83/s133 Apple-Metal-internal SIGSEGV as if it were a
-  guest-code bug — it has no guest frames anywhere in its backtrace.
+  (H2, closed 3/3) or grep further for static ROM string tables (s138,
+  refuted by distance) or literal size constants for the 3 s139
+  candidates (tried, s139, no real hits, sizes are runtime-computed).
+- Do not treat a 0/0 guard-fire result as "the guard doesn't work."
+- Do not chase the s83/s133 Apple-Metal-internal SIGSEGV as a guest bug —
+  no guest frames anywhere in its backtrace.
 - Do not chase the `do_rom_read`/`piDmaWorker` corruption race as its own
-  investigation right now — it's exactly what Thread B (above) already
-  is; don't open a parallel/duplicate investigation under a different
-  name.
-- When landing any new guard, always truncate a `ctx->rN` value through
-  `U32()` before comparing against 32-bit literal bounds (s99's
-  100%-false-positive lesson).
+  separate investigation — it IS Thread B; this is now its 3rd/4th
+  consecutive recurrence across the last 2 sessions' soaks (s136-s139),
+  not a new mystery each time.
+- Do not treat `caller_ra=0x00000000` as evidence of anything (s92,
+  reinforced s139) — it is universal across every entry-log instrument.
+- When landing any new guard/instrument touching a `ctx->rN` value,
+  always truncate through `U32()` before comparing against 32-bit literal
+  bounds (s99's 100%-false-positive lesson), and sanity-check the FIRST
+  soak's logged values against a plausibility prior before trusting them
+  (s139's a0/a1 lesson) — a clean compile is not the same as correct data.
 
 ## Housekeeping still flagged, still not done
 
-`docs/CURRENT-TRUTH.md` is well over the ~35 KB target (2200+ lines,
+`docs/CURRENT-TRUTH.md` is well over the ~35 KB target (2270+ lines,
 growing). Migrate durable mechanism/architecture material to
 PROJECT-OVERVIEW.md and prune superseded detail, paired with a real
 experiment — not on its own.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
-not a `lib/` submodule, with uncommitted changes across s90-137
+not a `lib/` submodule, with uncommitted changes across s90-139
 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`). Same
 posture as the `rogue_squadron64` sibling checkout flagged since s54.
 Worth asking the user whether/how to commit that history.
