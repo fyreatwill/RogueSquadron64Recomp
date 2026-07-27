@@ -141,6 +141,27 @@ else:
   if printf '%s' "$errtxt" | grep -qiE 'resets? at|resets? in|resets? [0-9]|try again (later|at)|limit will reset'; then
     : # falls through to the transient handler below - sleep, do not stop
   elif printf '%s' "$errtxt" | grep -qiE 'monthly spend limit|spend limit|credit balance|insufficient quota'; then
+    # The API's wording is not trustworthy here: on 2026-07-27 a 5-hour
+    # window cap returned 429 "You've hit your monthly spend limit" and the
+    # loop hard-stopped over credit that was still there. Before declaring a
+    # hard cap, verify with a minimal cheap probe — from /tmp so the repo's
+    # Stop hook cannot turn "reply OK" into a 34-turn contract session
+    # (that happened). Claude-runner only; other providers keep the old
+    # behavior since probing them from here would spend the wrong quota.
+    if [ "${RUNNER:-claude}" = "claude" ] && \
+       probe="$( cd /tmp && claude -p 'Reply with exactly OK.' --model haiku --output-format json 2>&1 )" && \
+       ! printf '%s' "$probe" | grep -qiE 'spend limit|usage limit|session limit|credit balance|insufficient quota'; then
+      waits=$((waits+1))
+      if [ "$waits" -gt "$MAX_LIMIT_WAITS" ]; then
+        { echo "# $waits consecutive limit waits (probe kept succeeding while the"
+          echo "iteration model kept failing — possibly a model-specific cap), $(date)"
+          echo; echo "Last claude output:"; printf '%s\n' "$out" | tail -20; } > "$AG/BLOCKED.md"
+        notify_blocked
+        exit 2
+      fi
+      log "hard-cap wording but a cheap probe succeeded — window has reset, retrying shortly (wait $waits/$MAX_LIMIT_WAITS)"
+      n=$((n-1)); sleep 60; continue
+    fi
     { echo "# Hard spend/quota cap reached, $(date)"; echo;
       echo "This is NOT a transient rate limit and sleeping will not clear it."
       echo "Raise or reset the cap (claude.ai/settings/usage), then delete this"
