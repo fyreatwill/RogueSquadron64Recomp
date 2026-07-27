@@ -5474,3 +5474,62 @@ model if that path is ever taken under a non-DCE build; it is not the freeze fix
 
 Files: `tools/fixup_factor5_ucode.py`, regenerated `build/factor5_ucode/factor5_ucode_recompiled.c` (gitignored),
 `scratch/s67_self_restart/run{1,2_O0}/`.
+
+## Session 68 (2026-07-26) — freeze-phase ImemOverrun is 100% the L_1650 hard exit
+
+### Work unit
+Instrument the two remaining source-level `return ImemOverrun` sites in
+`factor5_ucode_recompiled.c` (CLIP_1FBC → L_1650 hard exit; bare epilogue) with
+distinct tags via an **external noinline** host stub, plus a same-run positive
+control at ucode entry. One death-repro under default `-O2`.
+
+### What was implemented
+- `rs64_note_imem_overrun(const char* site)` in `src/rsp/dpc_bridge.cpp`
+  (`extern "C" __attribute__((noinline))`, rate-limited `[ucode-imem] #N site=…`).
+- Fixup 7 in `tools/fixup_factor5_ucode.py`: wires `control` at `RS64_UCODE_ENTRY`
+  (once), `L_1650` at the CLIP_1FBC hard exit, `epilogue` before `rs64_clip_stray`.
+  Idempotent; runs before the early-exit equality check so a fully-fixed prior
+  file still receives it.
+
+### Measurement (`scratch/s68_imem_site/run1/`, default `-O2`)
+Positive control: **`site=control` fired once** — instrument is live (s67's DCE trap avoided).
+
+| site | logged (rate-limited) | counter range | notes |
+|------|----------------------|---------------|-------|
+| control | 1 | #1 | entry once |
+| L_1650 | 59 | #2..#2000 | sole ImemOverrun producer |
+| epilogue | 0 | — | DCE'd under `-O2` (dead after the L_1650 return) |
+
+Runner histogram (unsampled):
+- 5065 `[runner] task` lines; exit=1: 2975; exit=2: **2090**.
+- Last clean task: **#3147** `exit=1 syncs=1`. From **#3148** every task is
+  `exit=2 syncs=0` with real tris (37 at the boundary → 12 later). Matches s67
+  permanent boundary (~#3215/#3216) within run-to-run noise.
+- 172 intermittent exit=2 before the permanent boundary (first at #907, clip-shaped).
+- **All 2090 exit=2 have syncs=0.**
+- Counter identity: max `[ucode-imem] #` = **2000** = last rate-limit multiple of
+  100 below **1(control) + 2090(exit=2) = 2091**. So **every ImemOverrun is the
+  L_1650 site** — no residual H3 population.
+- `fs` plateaus at **2152**; present loop alive on frozen origin `0x00656400`.
+- 0 `clip-stray` / `missing-func` / `Unhandled jump`.
+
+### Conclusion (two independent lines: site counter ≡ exit=2 count; permanent
+boundary still exit=2 with L_1650 still ticking)
+**H1 wins. Freeze tasks — and every earlier intermittent exit=2 — take the
+CLIP_1FBC → L_1650 fixup-1 hard exit.** H2 (epilogue) refuted (0 hits; code DCE'd
+as unreachable). H3 (other exit=2 producer) refuted by counter identity.
+
+Static context for the next unit (not implemented this session):
+- `L_1650:` already exists as a resident clip-splice label (fixup 6), byte-identical
+  to ovl4's L_1650. CLIP_1FBC's original `j L_1650` was converted to ImemOverrun by
+  **fixup 1 running before fixup 6 defines the label**, so the live path never
+  reaches the helper that is already in the binary. Reconnecting
+  `goto L_1650` after the label exists is the prime fix candidate — verify with
+  the same death-repro (expect exit=2 → 0 at the permanent boundary, `fs` keeps
+  climbing).
+
+### Files
+- `src/rsp/dpc_bridge.cpp` (host stub)
+- `tools/fixup_factor5_ucode.py` (fixup 7)
+- regenerated `build/factor5_ucode/factor5_ucode_recompiled.c` (gitignored)
+- `scratch/s68_imem_site/run1/`, `scratch/s68_imem_site/run_death_repro.sh`

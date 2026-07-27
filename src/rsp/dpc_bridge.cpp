@@ -8,6 +8,7 @@
 // the ucode see "RDP completed instantly" and exit.
 
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <atomic>
 #include <mutex>
@@ -1287,6 +1288,20 @@ extern "C" void rs64_dpc_defer_end(int commit) {
         }
     }
     g_deferred_ranges.clear();
+}
+
+// s68: external noinline host stub for ImemOverrun site attribution. Called
+// from factor5_ucode_recompiled.c at the remaining hard-exit sites (L_1650 /
+// bare epilogue) plus a once-per-process "control" call at ucode entry.
+// Lives in a different TU so default -O2 cannot DCE the call sites the way
+// it did for s67's ucode-local volatile/fprintf on the L_0000 block.
+extern "C" __attribute__((noinline)) void rs64_note_imem_overrun(const char* site) {
+    static std::atomic<int> n{0};
+    int k = ++n;
+    if (k <= 40 || (k % 100) == 0) {
+        fprintf(stderr, "[ucode-imem] #%d site=%s\n", k, site ? site : "?");
+        fflush(stderr);
+    }
 }
 
 // Called from the factor5_ucode synthetic-halt site. Logs per-task RDP byte

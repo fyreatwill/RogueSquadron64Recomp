@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 67)
+## Current truth (as of session 68)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -177,21 +177,21 @@ never soaked before — parked as M4 (identified s53, fixed s54, runtime check o
 step 2 below). Full detail: PORTING-STATE s49.
 
 **M3 — first gameplay: OPENED (s50), freeze is ImemOverrun on post-mission-load tasks (s64), L_0000
-self-restart implemented and **refuted** as the site tasks actually hit (s67).**
+refuted (s67), **site attributed to CLIP_1FBC → L_1650 hard exit (s68)**.**
 AVAILABLE CRAFT confirmed reachable; the `a` press loads and renders one frame of the mission
-(X-wing near a capital ship, "AMBUSH AT MOS EISLEY") then `fs` freezes — reproduced 6/6 including
-s67. Unsampled runner histogram (s64, reconfirmed s67 O0): clean `exit=1 syncs=1` until a hard
-boundary (s64: #3141; s67 O0: #3215), then 100% of remaining tasks are `exit=2` (ImemOverrun)
-`syncs=0` with real triangle content. Not load-gated.
-**s67:** `tools/fixup_factor5_ucode.py` fixup 1a rewrites **both** L_0000 outcomes (taken bgez and
-not-taken fallthrough) to `goto RS64_UCODE_ENTRY` with a `[ucode-restart]` counter. Under
-`ROGUESQ_UCODE_NO_OPT=ON` (only build where that code survives — default `-O2` DCE's the whole
-end-of-IMEM block) the counter fired **0** times across a full death-repro while freeze-phase tasks
-still exited ImemOverrun from #3216 on. So L_0000 is not the path freeze tasks take. s66's static
-read of what L_0000 *would* do on hardware still stands; it is simply not the freeze site.
-Remaining source-level ImemOverrun returns: the clip-splice `j L_1650` site and a bare epilogue
-after it. **Next:** determine the real target of `j L_1650` / whether freeze tasks hit it, and
-model that path. Full detail PORTING-STATE s67.
+(X-wing near a capital ship, "AMBUSH AT MOS EISLEY") then `fs` freezes — reproduced 7/7 including
+s68. Unsampled runner histogram: clean `exit=1 syncs=1` until a hard boundary (s64: #3141; s67 O0:
+#3215; s68: #3147), then 100% of remaining tasks are `exit=2` (ImemOverrun) `syncs=0` with real
+triangle content. Not load-gated.
+**s67:** L_0000 self-restart is live under `ROGUESQ_UCODE_NO_OPT=ON` and fires **0** times while
+freeze tasks still exit ImemOverrun — L_0000 is not the freeze path.
+**s68:** external noinline host stub `rs64_note_imem_overrun` (dpc_bridge) tags both remaining
+sites + a same-run `control` at entry. Death-repro under default `-O2`: control=1,
+`L_1650` counter ≡ every exit=2 (2090), epilogue=0 (DCE'd dead code). Permanent boundary at
+#3148; 172 intermittent L_1650 exit=2 earlier (clip-shaped, from #907). The L_1650 **label
+already exists** as the fixup-6 clip-splice resident helper (byte-identical to ovl4); CLIP_1FBC's
+`j L_1650` was severed by fixup 1 running *before* that label is defined. **Next:** reconnect
+`goto L_1650` after the label exists and re-run the death-repro. Full detail PORTING-STATE s68.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -220,26 +220,26 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s67)
+## Next steps, in order of expected value (s68)
 
-1. **M3 — identify and fix the ImemOverrun site freeze tasks actually take (L_0000 refuted s67;
-   L_1650 is the prime remaining candidate).** s67 left only two `return ImemOverrun` sites in
-   `factor5_ucode_recompiled.c`: the clip-splice `j L_1650` at `CLIP_1FBC` (fixup-1 hard exit) and a
-   bare epilogue return after it. Next work unit: (a) instrument both remaining sites with distinct
-   log tags that survive `-O2` (external noinline host stub in `dpc_bridge.cpp`, not a ucode-local
-   static — s67 showed even `volatile`+`asm memory` die when O2 proves a block unreachable),
-   (b) one death-repro under default `-O2` with `ROGUESQ_LOG_RUNNER=1` + `LOG_RUNNER_ALL=1`,
-   (c) read which tag fires at the permanent exit=2 boundary (~task #3200). If L_1650: static-resolve
-   its real target the way s66 did for L_0000 (ROM bytes + IMEM wrap) and implement the matching
-   model in fixup. Full detail: PORTING-STATE s67. **Do not re-litigate L_0000** unless a new
-   measurement shows `[ucode-restart]` firing under `ROGUESQ_UCODE_NO_OPT=ON`.
+1. **M3 — reconnect CLIP_1FBC → `goto L_1650` (site attributed s68; label already resident).**
+   s68 proved every exit=2 is the fixup-1 hard exit at CLIP_1FBC's `j L_1650`. The target label
+   `L_1650:` already exists (fixup 6 clip-splice, identical to ovl4). Fixup ordering is the bug:
+   fixup 1 rewrites `goto L_1650` to ImemOverrun *before* fixup 6 defines the label. Next work
+   unit: (a) in `tools/fixup_factor5_ucode.py`, after fixup 6 (or as a dedicated pass), restore
+   `goto L_1650` at the CLIP_1FBC site (keep the `[ucode-imem]` note temporarily as a
+   "should go to 0" control, or drop it), (b) one death-repro under default `-O2` with
+   `ROGUESQ_LOG_RUNNER_ALL=1`, (c) expect permanent-boundary exit=2 → 0, `fs` keeps climbing past
+   ~2150, and ideally in-mission frames continue. If reconnecting still yields exit=2 from some
+   *other* path, re-check the note counter. Full detail: PORTING-STATE s68. **Do not re-litigate
+   L_0000** unless `[ucode-restart]` fires under `ROGUESQ_UCODE_NO_OPT=ON`.
 2. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
    pipeline clean (build exit 0). What's left: an undriven run phase-gated to the outdoor-512
    stretch (s49 shape) to confirm `grep -c "\[missing-func\]"` drops from 3 to 0 there with 0 new
    stability-counter hits elsewhere. Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
-3. Once the `fs` freeze is understood/fixed, continue past the mission's first rendered frame toward
+3. Once the `fs` freeze is fixed, continue past the mission's first rendered frame toward
    60s of in-mission rendering. Expect further new failure classes (mission overlay DMA →
    missing-func / UnhandledJumpTarget, new VI phase, possibly overlays 12/44 needing the s47 splice
    recipe, run2's texture corruption). Each new failure is its own work unit.
@@ -442,6 +442,7 @@ any s2–s4 conclusion without checking that section.
   stands as hardware truth; it is not the path freeze tasks take. **Why believable:** the source
   block literally returns ImemOverrun on both bgez outcomes, freeze onset coincides with
   triangle-heavy tasks, and the static disassembly of L_0000 is multi-source clean.
+  **s68 follow-through:** the actual site is CLIP_1FBC → L_1650 (counter ≡ every exit=2); see M3.
 - **Claim (s23):** the hangar's remaining dimness is real vertex lighting, not shade-decode, because
   its shade census is healthy. **Overturned by s25:** that census was the magnitude-only classifier
   s24 proved cannot distinguish −118 from +118 (PROJECT-OVERVIEW §4.2), so "ok" was really the

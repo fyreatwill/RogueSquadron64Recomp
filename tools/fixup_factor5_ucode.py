@@ -773,6 +773,124 @@ if is_main_ucode and CLIP_MARKER not in text:
         1, "L_1650 label")
 
 # ---------------------------------------------------------------------------
+# Fixup 7: ImemOverrun site attribution (s68) — main ucode only
+# ---------------------------------------------------------------------------
+# s67 refuted L_0000 as the freeze path. Two source-level
+# `return RspExitReason::ImemOverrun` sites remain: CLIP_1FBC's fixup-1 hard
+# exit for `j L_1650`, and a bare epilogue return after that block's nops.
+# Both get a distinct call into `rs64_note_imem_overrun` (host stub in
+# dpc_bridge.cpp, other TU, noinline) so default -O2 cannot DCE the instrument
+# the way it erased s67's ucode-local volatile/fprintf. A once-per-process
+# "control" call at RS64_UCODE_ENTRY is the same-run positive control.
+# Must run BEFORE the early-exit equality check so a fully-fixed prior file
+# still receives this instrumentation on re-run.
+IMEM_NOTE_MARKER = "/* fixup: imem site note */"
+imem_note_applied = False
+if is_main_ucode and IMEM_NOTE_MARKER not in text:
+    # Host-stub declaration next to the existing task-log extern if present,
+    # otherwise just before factor5_ucode.
+    if "extern \"C\" void rsp_task_log_and_reset" in text:
+        text = text.replace(
+            'extern "C" void rsp_task_log_and_reset(uint32_t iters, uint32_t data_size,'
+            ' uint32_t r17, uint32_t cmd_w0, uint32_t cmd_w1);  /* fixup: task log call */',
+            'extern "C" void rsp_task_log_and_reset(uint32_t iters, uint32_t data_size,'
+            ' uint32_t r17, uint32_t cmd_w0, uint32_t cmd_w1);  /* fixup: task log call */\n'
+            'extern "C" void rs64_note_imem_overrun(const char* site);  ' + IMEM_NOTE_MARKER,
+            1,
+        )
+    else:
+        text = text.replace(
+            "RspExitReason factor5_ucode(",
+            'extern "C" void rs64_note_imem_overrun(const char* site);  ' + IMEM_NOTE_MARKER + "\n"
+            "RspExitReason factor5_ucode(",
+            1,
+        )
+
+    # Positive control: first entry into RS64_UCODE_ENTRY only.
+    # Prefer the post-fixup-1a labelled form; fall back to post-r18-init.
+    control_body = (
+        '    { static int rs64_imem_ctrl = 0; if (!rs64_imem_ctrl) {'
+        ' rs64_imem_ctrl = 1; rs64_note_imem_overrun("control"); } }  '
+        + IMEM_NOTE_MARKER + "\n"
+    )
+    control_patterns = [
+        (
+            re.compile(
+                r"(RS64_UCODE_ENTRY:  /\* fixup: L_0000 self-restart \*/\n)"
+            ),
+            r"\1" + control_body,
+        ),
+        (
+            re.compile(
+                r"(    r18 = 0x100;  " + re.escape(R18_MARKER) + r"\n)"
+            ),
+            r"\1" + control_body,
+        ),
+    ]
+    n_ctrl = 0
+    for pat, repl in control_patterns:
+        text, n_ctrl = pat.subn(repl, text, count=1)
+        if n_ctrl == 1:
+            break
+    if n_ctrl != 1:
+        print(
+            "fixup_factor5_ucode: FIXUP 7 ANCHOR FAILED (control): "
+            "could not place rs64_note_imem_overrun(\"control\") at entry.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # L_1650 hard-exit site (CLIP_1FBC → j L_1650 rewritten by fixup 1).
+    l1650 = re.compile(
+        r"(// goto L_1650 — out-of-IMEM target, never taken in practice;\n"
+        r"\n?"
+        r")([ \t]*)return RspExitReason::ImemOverrun;"
+    )
+    def l1650_repl(m: re.Match) -> str:
+        ind = m.group(2)
+        return (
+            m.group(1)
+            + ind + 'rs64_note_imem_overrun("L_1650");  ' + IMEM_NOTE_MARKER + "\n"
+            + ind + "return RspExitReason::ImemOverrun;"
+        )
+    text, n_l1650 = l1650.subn(l1650_repl, text, count=1)
+    if n_l1650 != 1:
+        print(
+            f"fixup_factor5_ucode: FIXUP 7 ANCHOR FAILED (L_1650): "
+            f"expected 1 L_1650 ImemOverrun site, found {n_l1650}.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # Bare epilogue return immediately before rs64_clip_stray.
+    epilogue = re.compile(
+        r"([ \t]*)return RspExitReason::ImemOverrun;\n"
+        r"(rs64_clip_stray:  /\* fixup: clipsplice \*/)"
+    )
+    def epi_repl(m: re.Match) -> str:
+        ind = m.group(1)
+        return (
+            ind + 'rs64_note_imem_overrun("epilogue");  ' + IMEM_NOTE_MARKER + "\n"
+            + ind + "return RspExitReason::ImemOverrun;\n"
+            + m.group(2)
+        )
+    text, n_epi = epilogue.subn(epi_repl, text, count=1)
+    if n_epi != 1:
+        print(
+            f"fixup_factor5_ucode: FIXUP 7 ANCHOR FAILED (epilogue): "
+            f"expected 1 bare ImemOverrun before rs64_clip_stray, found {n_epi}.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    imem_note_applied = True
+
+# ---------------------------------------------------------------------------
+
+# Make sure <cstdio> is available for the iter-cap fprintf.
+if "#include <cstdio>" not in text:
+    text = text.replace('#include "librecomp/rsp.hpp"',
+                        '#include <cstdio>\n#include "librecomp/rsp.hpp"', 1)
 
 if text == original:
     sys.exit(0)
@@ -795,10 +913,7 @@ if STRAY_MARKER in text and STRAY_MARKER not in original:
     notes.append("injected stray-0x1DB0 source trace (ROGUESQ_UCODE_CULLSTATS=2)")
 if CLIP_MARKER in text and CLIP_MARKER not in original:
     notes.append("spliced real clip overlay (CLIP_* labels, id-4 routing)")
+if imem_note_applied:
+    notes.append("ImemOverrun site notes (L_1650/epilogue/control)")
 
-# Make sure <cstdio> is available for the iter-cap fprintf.
-if "#include <cstdio>" not in text:
-    text = text.replace('#include "librecomp/rsp.hpp"',
-                        '#include <cstdio>\n#include "librecomp/rsp.hpp"', 1)
-    path.write_text(text, encoding="utf-8")
-print(f"fixup_factor5_ucode: {path} — " + "; ".join(notes), file=sys.stderr)
+print(f"fixup_factor5_ucode: {path} — " + ("; ".join(notes) if notes else "updated"), file=sys.stderr)
