@@ -420,7 +420,11 @@ finding an unlocated indirect caller whose batch writes ASCII-looking
 garbage into the `devAddr` field at write-time, not via a later stomp
 (s94); `get_function`-chokepoint instrument landed to find that caller
 directly, first soak inconclusive (died early to a 12th, recurring
-crash class before reaching the target window) (s95).**
+crash class before reaching the target window) (s95); 2nd consecutive
+inconclusive attempt — 12th class didn't recur but a brand-new 13th
+crash class (RT64-internal `reinterpretTileRecord` assert) died even
+earlier, instrumentation-overhead confound checked and refuted at the
+source (s96).**
 AVAILABLE CRAFT reachable. **s75:** single Start → hangar-flight.
 **s78–s79:** RDP-`fs` plateaus post-leave (S1). **s80:** synthetic FIRE continues.
 **s81:** black = mode-3 presenting wild last-drawn. **s82:** always-on sane-width
@@ -515,7 +519,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s94)
+## Next steps, in order of expected value (s96)
 
 1. **M3 — find the indirect caller of `submitDmaRequestBatch`.**
    **Discriminating question CLOSED (s94)**: the producer/consumer ring
@@ -577,6 +581,22 @@ cost three sessions before the recursive mutex.
    is expected), which should be fixable at the source level once the
    caller is identified — this is now closer to a real fix than any
    prior session's framing.
+   **s96: 2nd consecutive inconclusive attempt.** Re-ran the identical
+   s95 repro, no rebuild. `composeNpcOrientationMatrix` did **not**
+   recur (still only 1 recent occurrence, s95); instead a **brand-new
+   13th crash class** killed the process even earlier (hold+~3s vs
+   s95's ~5s), again before the ~140s DMA window —
+   `ROGUESQ_LOG_DMA_CALLER` **0/0 again**, `dma-ring-producer` only the
+   n=0 boot call, `do_rom_read` clean (488/488 sane). Checked and
+   **refuted same-session** (no soak needed) a plausible confound:
+   `ROGUESQ_LOG_DMA_CALLER`'s check inside `get_function` is a single
+   `int32_t` compare before any `getenv` (which is itself cached), so
+   it is not adding meaningful per-call overhead to the hot chokepoint
+   — the two early deaths are ordinary variance among the 9th–13th
+   hangar-tick crash family, not an instrumentation artifact. Per rule
+   8, one more identical retry is allowed before parking; if it also
+   dies early to an unrelated crash, stop retrying blind and instead
+   instrument whichever of classes 9–13 has recurred most.
    1a. **Confound theory CONFIRMED and CLOSED (s93).** s92's attempt to
    drop `ROGUESQ_LOG_THREAD_RESUME=1` from the repro never actually
    took effect — `scratch/s73_post_a_scene/run_mission_keys.sh` line 8
@@ -610,6 +630,21 @@ cost three sessions before the recursive mutex.
    UAF family specifically. Not yet instrumented; no dedicated soak
    needed yet unless it recurs a 3rd time, in which case give it its own
    `ROGUESQ_LOG_*` entry-log in the style of classes 9–11.
+   1d. **M3 — 13th crash class (s96): SIGABRT, `Assertion failed:
+   ("Unimplemented reinterpretation logic." && ...)` in
+   `RT64::FramebufferManager::reinterpretTileRecord`
+   (`rt64_framebuffer_manager.cpp:480`)**, via `recordOperations` ←
+   `State::fullSync`'s per-pair lambda ← `fullSync` ← `GBI_RDP::fullSync`
+   ← `Interpreter::processRDPLists` ← the normal RDP-submission chain —
+   **not** the hangar-tick family (9th–13th... wait, this one is the
+   RDP/framebuffer-reinterpretation path, distinct from the
+   `MEM_W`-off-an-arg shape classes 9–12 share). RT64-internal code (no
+   source-level bug on our side, same class as the s86 TMEM-zero
+   assert) hitting a format-reinterpretation case the upstream author
+   never implemented. First occurrence, hold+~3s, killed the run before
+   the DMA-caller instrument's target window. No field values logged at
+   the assert site. Not yet instrumented; no dedicated soak needed
+   unless it recurs, per the same 2nd-recurrence convention as 1b/1c.
 2. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert.**
    Path confirmed: `fullSyncFramebufferPairTiles` → `uploadTile` lambda
    → `TextureManager::uploadTexture` (`rt64_state.cpp:1329`) →

@@ -7541,3 +7541,110 @@ question.
 `lib/N64ModernRuntime/librecomp/src/overlays.cpp` (instrument, exported
 to `submodule-patches/N64ModernRuntime.patch`, committed);
 `scratch/s73_post_a_scene/s95_dmacaller1/run.log`.
+
+## Session 96 (2026-07-27) — re-ran the s95 DMA-caller repro (`s96_dmacaller2`); `composeNpcOrientationMatrix` did not recur, but a brand-new (13th) crash class killed the process even earlier, still before the ~140s DMA window — 2nd consecutive inconclusive attempt
+
+### Work unit
+
+Exact re-run NEXT.md prescribed: same flag set
+(`ROGUESQ_LOG_ANIM_CB=1 ROGUESQ_LOG_TMEM_ZERO=1
+ROGUESQ_LOG_ANIM_TEX_STREAM=1 ROGUESQ_LOG_HANGAR_ENTRY=1 ROGUESQ_LOG_DMA=1
+ROGUESQ_LOG_DMA_RING=1 ROGUESQ_LOG_DMA_CALLER=1 ROGUESQ_LOG_THREAD_RESUME=0`,
+`PROBE_MODE=start_only HOLD_S=30`), no rebuild (binary unchanged since
+s95). No source or instrument changes this session — purely a repro
+soak.
+
+### Result
+
+Timeline (from the script's own stdout, not `run.log` — the script's
+`print` calls go to the wrapper's stdout, only the game binary's output
+is redirected into `run.log`; conflating the two wastes a grep, note
+for future sessions): phase width=1024 (title) at 44.8s, scripted
+`start/start/start/a` at 3/25/40/60s from-phase (AVAILABLE CRAFT),
+12s stable wait, single `start` leave probe, then the 30s hold window.
+**Process died at hold-iter 3** (~3s post-leave) — even earlier than
+s95's ~5s.
+
+Crash: **SIGABRT**, `Assertion failed: ("Unimplemented reinterpretation
+logic." && (...three OR'd format-combo checks...)), function
+reinterpretTileRecord, file rt64_framebuffer_manager.cpp, line 480`.
+Backtrace: `RT64::FramebufferManager::reinterpretTileRecord` ←
+`RT64::FramebufferManager::recordOperations` ← `State::fullSync`'s
+lambda ← `State::fullSync` ← `GBI_RDP::fullSync` ←
+`Interpreter::processRDPLists` ← `Application::processDisplayLists` ←
+`run_rdp_submission` ← `submit_rdp_range` ← `rs64_dpc_defer_end` ←
+`factor5_gfx_runner` ← `rs64_run_lle_gfx` ← `RT64Context::send_dl` ←
+`gfx_thread_func`. This is RT64-internal code (no source-level bug on
+our side to fix, same class as the s86 TMEM-zero assert) hitting a
+framebuffer-format reinterpretation case its own author never
+implemented — a **13th, brand-new crash class**, first occurrence. No
+field values are logged at the assert site (just the source condition
+text), so the actual `srcFmt`/`srcSiz`/`dstFmt`/`dstSiz`/`tlutFormat`
+combination that triggered it is unknown; not instrumenting yet per
+the project's own convention (first occurrence, no dedicated soak
+until a 2nd recent recurrence).
+
+`composeNpcOrientationMatrix` (the 12th class, s92/s95) did **not**
+recur this run (0/0) — still only 1 recent occurrence (s95), doesn't
+meet the 2nd-recurrence bar NEXT.md set for promoting it to a
+dedicated instrument.
+
+Controls/other instruments: `dma-ring-producer` fired **only the n=0
+boot call** (1/1) — confirms the process died before the ~140s mark
+where the indirect-caller phenomenon occurs, same as s95.
+`ROGUESQ_LOG_DMA_CALLER` **0/0 again** — inconclusive, not refuted,
+for the same reason. `pi-start-dma`/`rom-read`: 488/488 calls, all
+sane physical addresses — `do_rom_read` did not crash this run.
+`anim-tex-stream` fired 4361 times, `hangar-entry` 2 times, both with
+no crash (controls held). `anim-recurse`/TMEM-zero not read this run
+(not needed for the result).
+
+### Assessment
+
+This is the **2nd consecutive soak** with `ROGUESQ_LOG_DMA_CALLER`
+armed that died to a *different*, unrelated crash before the ~140s
+target window (s95: 12th class at hold+~5s; s96: 13th class at
+hold+~3s). Per rule 8 this is 2 of up to 3 allowed non-discriminating
+attempts — not yet grounds to park the DMA-caller hypothesis itself.
+But two different early deaths in a row, both earlier than s93/s94's
+soaks (which reached the ~140s mark and discriminated cleanly with a
+similar-but-not-identical flag set), raises a **new, unconfirmed**
+question worth a single falsifying check before a 3rd blind retry:
+does adding `ROGUESQ_LOG_DMA_CALLER` itself perturb timing enough to
+let other races win earlier — the same *shape* of confound as s93's
+`ROGUESQ_LOG_THREAD_RESUME` finding, not the same mechanism? The
+instrument's check runs unconditionally inside `get_function`, a
+single chokepoint called for every indirect (`LOOKUP_FUNC`/`jalr`) call
+in the entire recompiled program (28388 call sites) — if that check
+does anything more expensive than a raw integer compare per call (e.g.
+an uncached `getenv()` read), it adds trivial-looking but very
+high-frequency overhead exactly where s93's confound lived. **Checked
+immediately, same session, no soak needed**: read
+`lib/N64ModernRuntime/librecomp/src/overlays.cpp:406-423` —
+`rs64_log_dma_ring_caller`'s first statement is `if (addr !=
+k_submit_dma_request_batch) return;`, a single `int32_t` compare, and
+only the (already-rare) matching path reaches the `getenv`, which is
+itself cached in a function-local `static const bool` evaluated once
+via an immediately-invoked lambda. Per-call overhead for the other
+28387 non-matching call sites is one integer comparison — **this
+refutes the overhead-confound hypothesis** without needing a 3rd soak
+to test it. The two early deaths are better explained as ordinary
+variance in which of several known-racy hangar-tick crash classes
+(9th–13th, all sharing the unchecked-`MEM_W`-off-a-register-arg shape)
+wins first, not as an artifact of this instrument.
+
+### Next
+
+No fix needed (hypothesis refuted at the source, not by a soak). Just
+re-run the same repro a 3rd time — per rule 8 that's the last attempt
+before parking "catch DMA_CALLER with this repro" as opportunistic,
+the same demotion `ROGUESQ_LOG_TMEM_ZERO` got at s90. If it dies early
+again to yet another unrelated crash, stop retrying blind and instead
+pick whichever of the 9th–13th crash-class family has now recurred
+most and instrument that one (breaking the tie of "which racy crash
+wins" is more tractable than hoping to out-run all of them at once).
+
+### Files
+
+No code changes this session (repro-only). Logs:
+`scratch/s73_post_a_scene/s96_dmacaller2/run.log`.

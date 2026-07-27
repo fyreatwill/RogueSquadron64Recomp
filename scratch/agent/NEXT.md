@@ -1,77 +1,61 @@
 # NEXT work unit — M3: find the indirect caller of `submitDmaRequestBatch`
 
-s95 landed the instrument this file previously prescribed
-(`ROGUESQ_LOG_DMA_CALLER=1`, a `get_function`-chokepoint backtrace
-instrument, `lib/N64ModernRuntime/librecomp/src/overlays.cpp`). It is
-built, committed, and correctly working (positive control fired), but
-its first soak never reached the part of the run where the phenomenon
-happens. Read PORTING-STATE.md's Session 95 entry before doing
-anything else; this file only has the actionable summary.
+s96 was the 2nd consecutive inconclusive attempt at this. Read
+PORTING-STATE.md's Session 96 entry before doing anything else; this
+file only has the actionable summary.
 
 ## What's established (do not re-derive)
 
 - `get_function` (`lib/N64ModernRuntime/librecomp/src/overlays.cpp:397`)
-  is a genuine single chokepoint for every indirect
-  (`LOOKUP_FUNC`/`jalr`) call in the recompiled program — confirmed via
-  the codegen template (`N64Recomp/src/cgenerator.cpp:410,414`, the
-  sibling tool checkout) and a fresh count: 28388/28389 `LOOKUP_FUNC(`
-  call sites across all 45 `N64Recomp/RecompiledFuncs/funcs_*.c` are
-  followed immediately by `(rdram, ctx);` on the same line (the one
-  non-match is a comment). **Do not re-derive this**, it's done once
-  already (s95) on top of s93/s94's direct-call-site grep.
-- The known boot-time call to `submitDmaRequestBatch` is compiled as a
-  **direct** call (literal function name, not through `LOOKUP_FUNC`),
-  so it structurally cannot trigger `ROGUESQ_LOG_DMA_CALLER` — only a
-  genuine unlocated indirect caller can. No extra filtering is needed
-  in the instrument.
-- `ROGUESQ_LOG_DMA_CALLER=1` is armed and correctly implemented (uses a
-  native `backtrace()` inside `get_function`, since `get_function`'s
-  own frame sits directly under the calling generated function — no
-  need to widen `get_function`'s signature, which is a shared ABI with
-  the mods system and the live-recompiler JIT, don't touch it).
-- s95's soak (`s95_dmacaller1`) got **0/0** on this instrument, but
-  that is **not evidence against the hypothesis**: the same-run
-  positive control (`dma-ring-producer n=0`, the boot call) fired
-  exactly as expected, and the process died at hold+~5s — well before
-  the ~140s mark where every prior soak that survived that long saw
-  the phenomenon. The run simply never reached the relevant window.
-  Do not count this as 1 of 3 "non-discriminating attempts" against
-  the DMA-caller hypothesis itself; it's an environment miss, not a
-  result. (It IS relevant to a different, older hypothesis — see
-  "12th crash class" below.)
+  is the genuine single chokepoint for every indirect (`LOOKUP_FUNC`/
+  `jalr`) call in the recompiled program (s95, confirmed via codegen
+  template + a 28388/28389 call-site count). The known boot-time call
+  to `submitDmaRequestBatch` is a **direct** call and structurally
+  cannot trigger the instrument. **Do not re-derive this.**
+- `ROGUESQ_LOG_DMA_CALLER=1` is armed, correctly implemented, and
+  **cheap**: `rs64_log_dma_ring_caller` (`overlays.cpp:406-423`) does a
+  single `int32_t` compare against the target address *before* any
+  `getenv` call, and the `getenv` itself is cached in a function-local
+  `static const bool`. **s96 checked this by reading the source (no
+  soak needed) and refuted "the instrument perturbs timing" as an
+  explanation for early deaths — do not re-check this.**
+- Two soaks in a row (s95, s96) with this instrument armed died before
+  the ~140s mark where the DMA phenomenon occurs, each to a
+  **different, unrelated** crash (12th class `composeNpcOrientationMatrix`
+  at s95; a brand-new 13th class, an RT64-internal
+  `reinterpretTileRecord` "Unimplemented reinterpretation logic" assert
+  at `rt64_framebuffer_manager.cpp:480`, at s96). **Neither counts as
+  evidence against the DMA-caller hypothesis** — both are environment
+  misses (the run never reached the relevant window). Per rule 8,
+  that's 2 of up to 3 allowed non-discriminating attempts.
 - Do NOT re-plan "dump the `OSIoMesg` at `mb`" (refuted s92) or cite
   `ra=0` as corruption evidence (refuted s92, routine on 487+ calls).
   Do NOT re-open "is it a consumer index-desync bug" or "is it an
   external RDRAM stomp" — s94's producer-side log already shows the
   corruption present at write-time, ruling out both.
 - Do NOT re-grep for `submitDmaRequestBatch(rdram` or the
-  `LOOKUP_FUNC(` call-site count — both done, stable, not going to
-  change between sessions.
+  `LOOKUP_FUNC(` call-site count — both done, stable, not changing.
 
-## New this session: 12th crash class (SIGBUS in `composeNpcOrientationMatrix`)
+## The 13th crash class (new this session, s96)
 
-s95's soak died to a SIGBUS at hold+~5s, stack:
-`composeNpcOrientationMatrix` (`static_5_800AB1C8`) ←
-`runHangarSelectionFrame` (`static_5_800AAD9C`) ←
-`runHangarMenuFromOverlay` (`static_5_800C6854`) ← `menuOverlayInit`.
-All four names confirmed real via `symbol_files/main_overlay.txt`. Not
-actually new — one prior, uncatalogued occurrence exists at session 74
-(`keys1` run), before the s78/s82/s84 stability gates landed; it never
-recurred in the many soaks between s74 and s95, so it was never folded
-into the numbered crash-class list. `thr-resume bad_total=0` both
-times — rules out the s72 OSThread-UAF family for this one
-specifically. **Not yet instrumented.** Per the project's usual rule
-(don't dedicate a soak to a crash until its 2nd *recent* recurrence),
-no standalone experiment yet — but if it recurs again in the next
-soak, that's the 2nd recurrence in two sessions and it becomes the
-next instrumentation target (a `ROGUESQ_LOG_*` entry-log at
-`composeNpcOrientationMatrix`'s entry, same pattern as classes 9–11
-in `N64Recomp/fixup_game_funcs.py`).
+SIGABRT: `Assertion failed: ("Unimplemented reinterpretation logic." &&
+(...three OR'd format-combo checks on srcFmt/srcSiz/dstFmt/dstSiz/
+tlutFormat...)), function reinterpretTileRecord, file
+rt64_framebuffer_manager.cpp, line 480`. Backtrace:
+`RT64::FramebufferManager::reinterpretTileRecord` ← `recordOperations`
+← `State::fullSync`'s per-pair lambda ← `fullSync` ← `GBI_RDP::fullSync`
+← `Interpreter::processRDPLists` ← the normal RDP-submission chain.
+This is RT64-internal code (same class as the s86 TMEM-zero assert) —
+no source-level bug on our side, just a format-reinterpretation case
+its own author never implemented. First occurrence, hold+~3s. No field
+values logged at the assert site (only the source condition text).
+**Not yet instrumented** — per the project's convention, wait for a
+2nd recent recurrence before dedicating a soak to it.
 
 ## The work unit
 
-Re-run the exact same repro that s95 used, no changes needed (the
-instrument is already built and committed):
+One more identical retry of the exact s95/s96 repro (this is the 3rd
+and last allowed attempt per rule 8 before parking):
 
 ```
 env ROGUESQ_LOG_ANIM_CB=1 ROGUESQ_LOG_TMEM_ZERO=1 \
@@ -79,36 +63,45 @@ env ROGUESQ_LOG_ANIM_CB=1 ROGUESQ_LOG_TMEM_ZERO=1 \
     ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_DMA_RING=1 ROGUESQ_LOG_DMA_CALLER=1 \
     ROGUESQ_LOG_THREAD_RESUME=0 \
     PROBE_MODE=start_only HOLD_S=30 zsh \
-    scratch/s73_post_a_scene/run_mission_keys.sh s96_dmacaller2 0 12
+    scratch/s73_post_a_scene/run_mission_keys.sh s97_dmacaller3 0 12
 ```
 
-Two possible outcomes, both informative:
+Note: the script's own `print` output (phase timings, `[keys]` lines,
+hold/grace status) goes to the Bash tool's own stdout capture, NOT into
+`$OUTDIR/run.log` — only the game binary's stdout/stderr is redirected
+there. Read both: the tool output for the script's own timeline/status
+lines, `run.log` for `[CRASH]`/instrument fires. (s96 initially grepped
+`run.log` for `[keys]` and got a false 0 — wasted a step rediscovering
+this; don't repeat it.)
 
-1. **`composeNpcOrientationMatrix` recurs again** (2nd time in two
-   sessions, 3rd overall counting s74). Treat it as the real blocker
-   for this instrument and switch this work unit to characterizing/
-   instrumenting it instead — read its source
-   (`N64Recomp/RecompiledFuncs/funcs_40.c:6278`, look for an unchecked
-   `MEM_W`/`MEM_BU` deref off a register that could hold a corrupt
-   value, same shape as classes 9–11) and land an entry-log the same
-   way `ROGUESQ_LOG_ANIM_TEX_STREAM`/`ROGUESQ_LOG_HANGAR_ENTRY` were
-   added.
-2. **The run survives past ~140s** (matches the "fluke" pattern of
-   `frameStartReset` at s85, which never recurred). Then either:
-   - `ROGUESQ_LOG_DMA_CALLER` fires — read the backtrace, it names the
-     actual indirect caller of `submitDmaRequestBatch` directly. Go
-     read that caller's source: the bug is almost certainly a wrong
-     field offset or wrong array stride writing a name/label-table
-     value into a `devAddr` field.
-   - It doesn't fire, but `do_rom_read` still crashes — would be a
-     genuinely new, discriminating result (contradicts s94's finding
-     that the corrupted value only ever appears via the 9 unexplained
-     `dma-ring-producer` firings); re-examine whether s94's read of
-     the producer log was somehow specific to that one run.
+Outcomes:
 
-Rebuild is not needed for this iteration (nothing changed since s95's
-build). If you do need to rebuild for any reason, the pipeline is
-`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`.
+1. **Reaches ~140s and `ROGUESQ_LOG_DMA_CALLER` fires** — read the
+   backtrace, it names the actual indirect caller of
+   `submitDmaRequestBatch` directly. Go read that caller's source: the
+   bug is almost certainly a wrong field offset or wrong array stride
+   writing a name/label-table value into a `devAddr` field.
+2. **Reaches ~140s, `do_rom_read` crashes but `ROGUESQ_LOG_DMA_CALLER`
+   never fired** — genuinely new, contradicts s94's finding; re-examine
+   whether s94's read of the producer log was specific to that run.
+3. **Dies early again to any crash (12th, 13th, or new)** — this is
+   the 3rd non-discriminating attempt. Per rule 8, STOP retrying this
+   blind repro. Instead: tally which of the hangar-tick-adjacent crash
+   classes (9th `updateAnimatedTextureStreaming`, 10th
+   `static_5_800B4048`, 11th `projectModelBoundsToScreen`, 12th
+   `composeNpcOrientationMatrix`) has the most total occurrences across
+   all sessions and give *that one* a dedicated `ROGUESQ_LOG_*`
+   entry-log (same pattern as `ROGUESQ_LOG_ANIM_TEX_STREAM`/
+   `ROGUESQ_LOG_HANGAR_ENTRY`) as the next work unit — reducing how many
+   different crashes can win the early-death race is now higher
+   expected value than a 4th blind retry of the same repro. (The 13th
+   class, `reinterpretTileRecord`, is RT64-internal and not part of
+   this MEM_W-off-an-arg family — don't fold it into this tally.)
+
+Rebuild is not needed (nothing changed since s95's build). If a
+dedicated instrument for a hangar-tick crash class is landed instead
+(outcome 3), the pipeline is `make_elf.py` → `N64Recomp` →
+`fixup_game_funcs.py` → `cmake --build`.
 
 ## Do not
 
@@ -121,7 +114,9 @@ build). If you do need to rebuild for any reason, the pipeline is
   shows the bad value at write-time, ruling both out.
 - Do not combine `ROGUESQ_LOG_THREAD_RESUME=1` with this repro without
   a specific reason — confirmed confound (s93).
-- Do not treat s95's 0/0 as a strike against the DMA-caller hypothesis
-  — the run died before the relevant window, it's an environment miss
-  not a null result. Budget rule 8 applies to genuine non-discriminating
-  attempts; this doesn't count as one yet.
+- Do not re-check whether `ROGUESQ_LOG_DMA_CALLER` itself adds overhead
+  — read the source and refuted, s96 (single int compare, cached
+  getenv).
+- Do not grep `run.log` for the script's own `[keys]`/phase-timing
+  lines — they aren't there (s96); read the Bash tool's stdout capture
+  for those instead.
