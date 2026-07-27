@@ -1,119 +1,117 @@
-# NEXT work unit — M3: confirm/refute the s87 `advancePlayerAnimationPhase` self-recursion SIGBUS
+# NEXT work unit — M3: reproduce the `advancePlayerAnimationPhase` SIGBUS with the s88 instrument live
 
-s87 landed `ROGUESQ_LOG_TMEM_ZERO=1` to test s86's `queueGPUUploadTMEM`
-zero-size-assert hypothesis (`env ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_TMEM_ZERO=1
-PROBE_MODE=start_only HOLD_S=30 zsh
-scratch/s73_post_a_scene/run_mission_keys.sh tmemzero1 0 12`). The
-instrument never fired (`[tmem-zero-upload]` 0/0 in the 142K-line log) —
-not because the hypothesis is wrong, but because the process died even
-earlier than s86 (hold+~3s vs. hold+~15s) to a **brand-new, 8th** crash:
+s87 found an 8th crash class (SIGBUS, two identical consecutive frames
+`advancePlayerAnimationPhase + 2572`) and guessed a mechanism (self-
+recursion via a callback slot at guest `0x80139968`). **s88 refuted that
+specific mechanism at the source level**: the call site s87 cited
+(`0x8006426C`) belongs to a *different* function, `invokeMenuOverlayHeaderCallback`,
+never reached from `advancePlayerAnimationPhase`'s own body —
+`advancePlayerAnimationPhase` has zero indirect calls of its own (checked
+by reading its full C body, `N64Recomp/RecompiledFuncs/funcs_14.c:4029-4331`
+after a fresh regen — only two direct `jal`s, both to
+`activateAnimationKeyframe`, whose own callees make no further calls).
+
+s88 landed a **correctly-targeted** instrument instead:
+`ROGUESQ_LOG_ANIM_CB=1` logs guest `$sp` (`ctx->r29`, a depth proxy) +
+`arg_r4`/`arg_r5`/`ra` at the function's own entry
+(`N64Recomp/fixup_game_funcs.py`, new `_anim_cb_patch` block — **not**
+`lib/`, no `submodule-patches/export.sh` needed). It fired 3296/3296 in
+one soak (positive control confirmed) — but **that soak never crashed at
+all** (first crash-free soak since s83, all 8 known classes, 0 fires).
+So the instrument is proven to work but has never yet been observed
+during an actual crash.
+
+## Do first, before running anything
+
+Check whether the last soak's clean run was a fluke or the new normal:
+run the exact same soak shape again. If it stays clean 2/2, that's itself
+an important data point (see "If it stays clean" below) — don't just
+keep re-running hoping for a crash without updating the docs to reflect
+that.
+
+## Competing hypotheses (unchanged from s87, now better-instrumented)
+
+1. **Self-recursion via *some* corrupted pointer/data**, just not the one
+   s87 guessed — e.g. `activateAnimationKeyframe`'s track-walk (its
+   symbol comment: "Recursively walks track at *(a1+0xC)") hitting a
+   corrupted or cyclic pointer chain that eventually calls back through
+   `advancePlayerAnimationPhase` via a route not yet traced. `$sp` would
+   start moving away from its normal ~6-value band in the calls
+   immediately before a crash.
+2. **Not stack-depth recursion at all.** The crash trace's two identical
+   frames could be a **symbolication artifact**: if the true fault is a
+   wild `MEM_W`/`MEM_B` write in inlined code, or if the unwinder's
+   frame-pointer walk got confused by a corrupted/overwritten frame, it
+   can print the same nearest-preceding-symbol twice without real
+   recursion. `$sp` would stay flat (like this run) right up to the
+   crash — consistent with "the bug is a bad memory write somewhere in
+   this function's body or its inlined callees, not unbounded recursion."
+
+## Command
 
 ```
-[CRASH] caught signal 10 (Bus error: 10), dumping stack:
-...
-3   RogueSquadron64Recomp   advancePlayerAnimationPhase + 2572
-4   RogueSquadron64Recomp   advancePlayerAnimationPhase + 2572
-5   RogueSquadron64Recomp   static_5_800AAD9C + 1160
-6   RogueSquadron64Recomp   static_5_800C6854 + 628
-7   RogueSquadron64Recomp   menuOverlayInit + 3512
-8   RogueSquadron64Recomp   mainGameLoop + 2400
+env ROGUESQ_LOG_ANIM_CB=1 PROBE_MODE=start_only HOLD_S=30 zsh \
+  scratch/s73_post_a_scene/run_mission_keys.sh animcb2 0 12
 ```
-
-Frames 3 and 4 are the SAME return address — `advancePlayerAnimationPhase`
-(guest `0x80062B04`, `symbol_files/main_overlay.txt:2998`) calling back
-into itself.
-
-## Source-level finding (already done, do not redo)
-
-`N64Recomp/RecompiledFuncs/funcs_14.c:8130-8153` — the function has
-exactly ONE indirect call in its entire body:
-
-```c
-// 0x80064260: lui         $v0, 0x8014
-ctx->r2 = S32(0X8014 << 16);
-// 0x80064268: lw          $v0, -0x6698($v0)
-ctx->r2 = MEM_W(ctx->r2, -0X6698);        // reads *(0x80139968)
-// 0x8006426C: jalr        $v0
-LOOKUP_FUNC(ctx->r2)(rdram, ctx);          // calls through it
-```
-
-`$v0` is loaded from a **fixed global slot at guest address 0x80139968**
-— a callback-table pointer, not a static call target. If whatever last
-wrote that slot pointed back at `advancePlayerAnimationPhase` itself (or
-`LOOKUP_FUNC`'s resolution of a corrupted/stale value lands there), the
-call recurses with no visible base case on this path, eating stack until
-it hits the guard page — matching SIGBUS (guard-page hit) rather than
-SIGSEGV (wild write).
-
-This is a **hypothesis from source reading only** — one data point, not
-yet confirmed by a live value.
-
-## Why this is now the highest-value target
-
-It fires earliest of all 8 known crash sites (hold+~3s), which means it
-blocks every other item on the M3 list (items 2–4 in CURRENT-TRUTH's
-next-steps, including s87's own still-untested TMEM-zero instrument) from
-getting a chance to run further. Same "whichever fires soonest wins the
-race" pattern as s84→s85→s86→s87.
-
-## Competing hypotheses
-
-1. **Self-recursion via a stale/corrupted callback pointer.** The slot at
-   `0x80139968` was last written with a value that resolves (via
-   `LOOKUP_FUNC`) back to `advancePlayerAnimationPhase`'s own entry point
-   — either because something legitimately re-entered this callback loop,
-   or because the slot itself is garbage (another shared-corruption-race
-   datum, same family as items 2–3 in CURRENT-TRUTH's next-steps).
-2. **Legitimate deep-but-bounded recursion that happens to overflow the
-   host stack.** If the callback chain is supposed to terminate but the
-   host thread's stack size is smaller than what N64 hardware effectively
-   allowed (recompiled C uses much more stack per "frame" than native
-   MIPS), a call chain that was fine on real hardware could genuinely
-   overflow here — no corruption involved, just a stack-budget mismatch
-   from the recompilation approach itself.
+(reuses the build from s88 — no regen needed unless you change the
+instrument itself.)
 
 ## Discriminating measurement
 
-1. In `N64Recomp/RecompiledFuncs/funcs_14.c` at line ~8148-8153 (the
-   `jalr`/`LOOKUP_FUNC` call site inside `advancePlayerAnimationPhase`),
-   add a `fprintf(stderr, "[anim-cb] slot=0x80139968 val=0x%08X self=%d\n", ...)`
-   gated on a new env var (e.g. `ROGUESQ_LOG_ANIM_CB=1`), logging
-   `ctx->r2` and whether it equals `0x80062B04` (this function's own
-   entry). **This file is regenerated by the pipeline** — per CLAUDE.md
-   hard rules, do NOT hand-edit `funcs_14.c` directly; add the log via
-   `N64Recomp/fixup_game_funcs.py` (same pattern as the s83 spline guard)
-   so it survives the next regen, then run `make_elf.py` → `N64Recomp` →
-   `fixup_game_funcs.py` → `cmake --build`.
-2. Also log a simple recursion-depth counter (thread-local or a small
-   static counter incremented/decremented around the call) to distinguish
-   "genuinely deep, no repeats" (hypothesis 2) from "repeats at low depth"
-   (hypothesis 1 — the same slot value keeps calling back immediately).
-3. Rebuild, re-run the same soak shape (`PROBE_MODE=start_only HOLD_S=30`,
-   plus the two existing env vars from items 2 to keep collecting their
-   data if this crash is fixed/gated before they can fire).
-4. **Discriminate:**
-   - `val` resolves to `advancePlayerAnimationPhase`'s own address
-     (`0x80062B04`) and recursion depth is low (a handful of frames, not
-     thousands) before the crash → hypothesis 1 (self-recursion via bad
-     pointer) supported. Do NOT silently break the recursion (no
-     min-depth clamp) — find what's *supposed* to be in that slot instead
-     (grep for writes to `0x80139968` / whatever symbol owns it).
-   - `val` is some other, unrelated address and depth is very high
-     (thousands of frames) → hypothesis 2 (genuine stack budget mismatch)
-     supported; the fix is a larger host stack for this thread, not a
-     logic change.
+1. `grep -c CRASH scratch/s73_post_a_scene/animcb2/run.log` — if 0 again,
+   this is now 2/2 clean vs. 5/5 crashing (s83–s87). That asymmetry is
+   itself worth a documented conclusion: either something changed between
+   s87 and s88/s89 (check: was anything about the build, env, or timing
+   different?), or the crash really is a low-probability race and 30s
+   holds aren't long enough to reliably hit it — in which case, consider
+   a longer `HOLD_S` (e.g. 90) or running back-to-back soaks to build a
+   crash/no-crash ratio before spending another iteration guessing at
+   mechanism from a single crash log.
+2. If it crashes: `grep -n CRASH` for the line number, then look at the
+   ~20 `[anim-recurse]` lines immediately before it.
+   - `sp` flat (same handful of values as the rest of the run) right up
+     to the crash → hypothesis 2 supported (not real recursion; look for
+     a wild-write signature elsewhere — e.g. check `arg_r4`/`arg_r5` at
+     the last entries for garbage-looking pointers, and consider adding
+     a similar entry log to `activateAnimationKeyframe` next).
+   - `sp` drops sharply and repeatedly in the last N entries (genuine
+     nested growth) → hypothesis 1 supported; that's real recursion and
+     worth checking whether `arg_r4` repeats (same slot pointer calling
+     itself) or advances (walking a corrupted/cyclic linked structure).
 
 ## Do not
 
-- Do not hand-edit `N64Recomp/RecompiledFuncs/funcs_14.c` and expect it to
-  survive — put the log in `fixup_game_funcs.py` per CLAUDE.md hard rules.
-- Do not re-attempt the s86/s87 TMEM-zero-upload soak (CURRENT-TRUTH
-  next-steps item 2) as the primary target this iteration — it is blocked
-  behind this earlier-firing crash exactly the way item 2 was blocked
-  behind this one last time.
-- Do not disassemble the live binary to chase this — the source read
-  already narrows it to the single indirect-call site above.
-- Budget: this is iteration 1 on the animation-callback-recursion
-  hypothesis. Per ITERATION.md rule 8, stop experimenting after 3
-  consecutive iterations with no discriminating result and go BLOCKED or
-  fall back to characterizing it as an unexplained one-off.
+- Do not re-guess a specific call site from a line-number grep without
+  confirming which `RECOMP_FUNC` block the lines belong to — that's
+  exactly the mistake s87 made and s88 spent most of its budget
+  correcting.
+- Do not hand-edit `N64Recomp/RecompiledFuncs/funcs_14.c` — the
+  instrument lives in `N64Recomp/fixup_game_funcs.py` and is idempotent
+  across regens.
+- If using a function `repl` in `re.subn` (as `_anim_cb_patch` does),
+  remember this sidesteps `re.sub`'s replacement-template backslash
+  processing — plain Python string escaping applies as normal. If you
+  instead write a raw-string template (the style used elsewhere in this
+  file), remember `\\` collapses to `\` there and `\'`/`\"` do **not**
+  behave the way they look; read the generated C back before building,
+  not just after a successful compile (the s88 bug compiled fine on
+  the buggy first attempt — nothing caught the mangled quotes until the
+  file was read).
+- Budget: this is iteration 2 of the ITERATION.md rule-8 budget on the
+  anim-recursion hypothesis family (s87: 1 refuted guess; s88: 1
+  correctly-targeted but crash-free run). One more inconclusive result
+  (crash-free again, or a crash whose `[anim-recurse]` data doesn't
+  discriminate) and reassess — either fall back to characterizing this
+  as a rare/unrepducible one-off and move to next-steps item 2 (TMEM-
+  zero assert) or item 3 (shared-race retest), or go BLOCKED with the
+  specific question "does this crash reproduce at all outside s87's one
+  observation."
+
+## If items 1-style soaks keep coming back clean
+
+Consider whether the s84 thr-resume gate (now validated, U3 closed) or
+some other recent change incidentally reduced how often *any* of the 8
+crash classes fires — worth a quick same-run check of whether `bad_total`
+and `[rom-read]` corruption rates look different across the last few
+soaks (s85/s86/s87/s88) rather than assuming the anim-recursion bug
+specifically got harder to hit.

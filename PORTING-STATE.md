@@ -6675,3 +6675,126 @@ in place; the rest — including this one — are characterized-but-open.
   function pointer) and the raw slot value at `0x80139968` immediately
   before the `jalr`/`LOOKUP_FUNC` call, gated on a new env var, to
   confirm/refute self-recursion before attempting any fix.
+
+## Session 88 (2026-07-27) — s87's self-recursion hypothesis refuted at the source level; correctly-targeted instrument shows no recursion, and this soak is the first crash-free run since s83
+
+**Before building anything: re-checked s87's source-level finding, per
+ITERATION.md's "write down the discriminating measurement before
+building" rule.** NEXT.md said `advancePlayerAnimationPhase`'s only
+indirect call was at guest `0x8006426C` (`jalr $v0`, `$v0` from global
+slot `0x80139968`), citing `funcs_14.c:8130-8153`. Re-reading the current
+(freshly regenerated) `funcs_14.c`: **that line range belongs to a
+different function, `invokeMenuOverlayHeaderCallback`** (`RECOMP_FUNC`
+starts at line 8125; its own entry, `0x80064248`, is 4 bytes before the
+`0x8006426C` call site s87 quoted). `advancePlayerAnimationPhase`'s own
+body (`funcs_14.c:4029-4331`, entry `0x80062B04`) was checked directly:
+**zero `jalr`/`LOOKUP_FUNC` occurrences** — only two direct `jal`s, both
+to `activateAnimationKeyframe` (`0x80061C74`), whose own callees
+(`getPlayerSlotFieldAt34`, `setLookupEntryField5ByKey`) make no further
+calls at all. **s87's specific mechanism (self-recursion via the
+`0x80139968` callback slot) is refuted by source read — that slot is
+never read from anywhere in the call chain that actually contains the
+crashing frame.** Believable because line-range grep found "the only
+indirect call in 8130-8153" without checking which `RECOMP_FUNC` block
+those lines actually belonged to.
+
+**Corrected instrument:** since the crash trace's two duplicate frames
+(`advancePlayerAnimationPhase + 2572` twice, same native address
+`0x1007b0618` both times per the raw s87 crash log,
+`scratch/s73_post_a_scene/tmemzero1/run.log`) name a function with no
+indirect call and no direct self-call anywhere in its immediate call
+graph, the mechanism is not yet known — so instead of instrumenting a
+specific (guessed) call site, logged **function entry** itself:
+guest `$sp` (`ctx->r29`, before the function's own `-0x20` adjustment —
+a direct proxy for call depth, since MIPS o32 grows the frame by a fixed
+amount per nested call) plus `arg_r4`/`arg_r5`/`ra`, gated on
+`ROGUESQ_LOG_ANIM_CB=1`. Landed in `N64Recomp/fixup_game_funcs.py` (new
+`_anim_cb_patch` regex block, matched on the function's fixed 3-line
+prologue) — **not** `lib/`, so no `submodule-patches/export.sh` needed
+(same precedent as the s83 spline guard). `fixup_game_funcs.py` itself is
+untracked in the N64Recomp sibling repo (pre-existing state, matches how
+the spline patch was handled). One authoring bug caught before running:
+the first version of the regex replacement used raw-string fragments
+whose backslash-escaped quotes got mangled by `re.sub`'s own replacement-
+template processing (`\'0\'` came out literally as backslash-quote-0-
+backslash-quote in the generated C). Fixed by switching to a **function**
+`repl` argument (`re.subn(pattern, callable, text)`), which uses the
+return value verbatim with no template reprocessing — caught by reading
+the generated C back before building, not by a failed compile.
+
+Regenerated clean: `make_elf.py` → `N64Recomp rogue_squadron.toml`
+(invoked via `subprocess.run(cwd=...)` from `python3 -c`, since direct
+`Bash` invocation of `./build/N64Recomp` inside the N64Recomp
+additionalDirectory required interactive approval even though
+`Bash(./build/:*)` is allowlisted for the primary project — persisted
+oddity, not investigated further, workaround matches a prior session's
+already-documented pattern at PORTING-STATE.md:4537) → `fixup_game_funcs.py`
+→ `cmake --build . -j8` (0 errors, only pre-existing warnings).
+
+**Soak** (`animcb1`: `env ROGUESQ_LOG_ANIM_CB=1 PROBE_MODE=start_only
+HOLD_S=30 zsh scratch/s73_post_a_scene/run_mission_keys.sh animcb1 0
+12`): reached war room → AVAILABLE CRAFT → SELECT YOUR CRAFT → left via
+Start (same path as s75+), ran the full 30 s hold window, and was killed
+cleanly by the script's own `kill -9` at the end. **Zero crashes of any
+of the 8 known classes** — `grep -c CRASH` on the full 145K-line
+`run.log` is 0. This is the **first soak since s83 to survive to natural
+completion** instead of dying to one of the eight crash sites; every
+soak from s83 through s87 died within seconds to tens of seconds of the
+hold window starting.
+
+**`[anim-recurse]` fired 3296/3296 times (real positive control — the
+instrument works and the code path is hot).** `sp` took only **6 distinct
+values** across all 3296 calls, spanning `0x80165DD8`–`0x80165F10` (0x138
+= 312 bytes total spread, not "thousands of nested frames"):
+`0x80165F10`×2202, `0x80165EF8`×545, `0x80165ED0`×545, three singletons
+below. `arg_r4` alternated between small clusters of slot pointers 0x30
+apart (e.g. `0x801BD600`/`0x801BD630` early, `0x801CD730`/`0x801CD760`
+late) — consistent with the normal per-frame, per-animating-slot call
+pattern the function's doc comment describes, called and returned
+between each entry, not nested. **Neither of NEXT.md's two competing
+hypotheses is supported by this data — there is no recursion, deep or
+shallow, in this run at all.** The s87 SIGBUS did not reproduce.
+
+**Bonus finding: the s84 `thr-resume bad=1` gate got its first-ever
+positive control.** Four soaks since s84 (s84 itself, s85 x2, s86, s87)
+all logged `bad_total=0` — this run logged `bad_total=1` at
+`n=119208` (`run.log:144962`, `[thr-resume-skip] n=119208 tag=run_next
+id=0 ctx=0x0 live=0 bad_total=1`), 164 lines from the end of the log, and
+the **process did not crash afterward** — it ran to the natural end of
+the hold window and was killed on schedule. **U3 (CURRENT-TRUTH
+next-steps item 4) is now closed**: the gate fired for real and the
+process survived.
+
+**Interpretation:** this run is a second, independent data point for
+s85's shared-corruption-race hypothesis — the same soak shape (same
+script, same env baseline, same scene path) sometimes dies within
+seconds (s83–s87, five soaks in a row) and sometimes runs completely
+clean including exercising the one confirmed corruption event (thr-resume
+`bad=1`) without incident. That is much more consistent with an
+intermittent race than with a deterministic bug in any of the eight
+characterized crash sites — none of which are logic bugs that should
+sometimes not fire given the same code path is clearly exercised (3296
+animation-phase calls, war room → craft-select → hangar-flight all
+happened normally). Single-source (one clean run) — do not treat "the
+crashes are rare" as proven; next clean-vs-crashed pair should look for
+what differs (timing jitter, thread scheduling) between them.
+
+**Rules out / keep:**
+- s87's NEXT.md hypothesis (self-recursion via the `0x80139968` callback
+  slot inside `advancePlayerAnimationPhase`) is **refuted** — that slot
+  is read inside `invokeMenuOverlayHeaderCallback`, an unrelated function
+  never reached from the crash's call chain. Do not re-instrument that
+  call site for this bug.
+- The `ROGUESQ_LOG_ANIM_CB=1` entry-log instrument is real, correctly
+  targeted (function itself, not a guessed call site), and committed —
+  reuse it directly on the next soak that reproduces the SIGBUS; look at
+  the last few `[anim-recurse]` lines before the crash for whether `sp`
+  is still flat (points to something *other* than a stack-depth
+  explanation entirely — e.g. corruption of the callback/return path
+  itself) or finally starts moving (supports genuine unbounded
+  recursion).
+- U3 (thr-resume `bad=1` gate positive control) — closed, remove from
+  next-steps.
+- Items 2/3 (TMEM-zero-upload assert, do_rom_read shared-race retest)
+  are still blocked on a soak that reproduces those specific crashes;
+  this soak reproduced neither (it reproduced nothing).
