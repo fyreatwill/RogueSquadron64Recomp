@@ -87,10 +87,17 @@ case "$RUNNER" in
     # iteration build and commit. If captures that write OUTSIDE the repo
     # (screencapture to mktemp dirs) fail under it, raise RUNNER_SANDBOX
     # deliberately rather than reaching for --dangerously-bypass-*.
-    exec codex exec "$(prompt_with_budget)" \
+    # --json: JSONL events including per-turn token usage (codex reports no
+    # dollar cost; compute it from tokens if comparing against claude/grok).
+    # </dev/null: codex appends piped stdin to the prompt and prints
+    # "Reading additional input from stdin..." — never let it wait on a
+    # detached loop's stdin. rc IS nonzero on a usage limit as of CLI
+    # 0.144.3 (measured 2026-07-27: rc=1, {"type":"error","message":"You've
+    # hit your usage limit..."}), so loop.sh's rc check catches it.
+    exec codex exec --json "$(prompt_with_budget)" \
       ${RUNNER_MODEL:+-m "$RUNNER_MODEL"} \
       -s "${RUNNER_SANDBOX:-workspace-write}" \
-      -C "$PWD" 2>&1
+      -C "$PWD" < /dev/null 2>&1
     ;;
 
   custom)

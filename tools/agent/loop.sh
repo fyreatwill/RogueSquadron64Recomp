@@ -75,22 +75,51 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   errtxt="$(printf '%s' "$out" | python3 -c '
 import json, sys
 raw = sys.stdin.read()
-try:
-    d = json.loads(raw)
-except Exception:
-    print(raw); sys.exit()
-parts = []
-for k in ("error", "subtype", "stopReason", "stop_reason", "api_error_status", "terminal_reason"):
-    v = d.get(k)
-    if v is not None:
-        parts.append(str(v))
-if d.get("is_error"):
-    parts.append("is_error")
-    for k in ("result", "text"):
+
+def fields(d):
+    parts = []
+    for k in ("error", "subtype", "stopReason", "stop_reason",
+              "api_error_status", "terminal_reason", "message"):
         v = d.get(k)
         if v is not None:
-            parts.append(str(v))
-print("\n".join(parts))
+            parts.append(v if isinstance(v, str) else json.dumps(v))
+    if d.get("is_error"):
+        parts.append("is_error")
+        for k in ("result", "text"):
+            v = d.get(k)
+            if v is not None:
+                parts.append(str(v))
+    return parts
+
+try:
+    d = json.loads(raw)
+    if isinstance(d, dict):
+        print("\n".join(fields(d))); sys.exit()
+except Exception:
+    pass
+
+# JSONL (codex --json) or mixed plain text: JSON event lines contribute only
+# error-ish events; non-JSON lines pass through raw (limit messages are
+# sometimes plain text).
+parts, sawjson = [], False
+for line in raw.splitlines():
+    line = line.strip()
+    if not line:
+        continue
+    try:
+        ev = json.loads(line)
+    except Exception:
+        parts.append(line)
+        continue
+    sawjson = True
+    if isinstance(ev, dict):
+        t = str(ev.get("type", ""))
+        if "error" in t or "fail" in t or "error" in ev:
+            parts.append(json.dumps(ev))
+if not sawjson and not parts:
+    print(raw)
+else:
+    print("\n".join(parts))
 ' 2>/dev/null)" || errtxt="$out"
 
   # NOTE: limits are classified BEFORE the contract check on purpose. `codex`
