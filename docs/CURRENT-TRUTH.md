@@ -413,6 +413,37 @@ struct field (`voice+0x34`) both this function's and
 `acquireSampleStreamBlock`'s arguments trace back to — not yet located.
 9th `do_rom_read` recurrence, same signature. Full detail:
 PORTING-STATE s104.
+**s105-s110:** chased `voice+0x34`'s writer two ways: `musyxInitVoiceFromSample`
+(`funcs_24.c`, literal `sw $v1,0x34($a0)`, verbatim `sampleDesc+0x4` copy)
+identified s105 as the matching writer (base/stride confirmed 3 ways) but
+its instrument fired **0/0** across a full soak to hangar-flight death —
+inconclusive, no positive control ever obtained; s106-s109 tried to prove
+the call chain reaches it at all (`tickAudioChannel`/`serviceVoicePoolFrame`
+entry counters, gate-value logging) with no discriminating result; s110
+retired this call-chain angle after 5 null sessions.
+**s111-s113:** closed both remaining write-mechanism candidates instead —
+RSP MusyX ucode (`factor5_ucode_b`, s112: proven dead code, zero call
+sites) and computed-offset guest-C stores (s113: exhaustive per-file audit
+of all 3 files referencing the voice-array base, every store terminates
+in a literal non-0x34 offset) — leading s113 to an unplanned "uninitialized
+heap read, no write needed" hypothesis for the `-0x664C` node fields.
+**s114:** ran the discriminating instrument s113 itself proposed
+(`ROGUESQ_LOG_STREAM_NODE_INIT=1`, node's raw `0x8`/`0x10` at allocation) —
+positive control 32/32, **all-zero** at allocation, reproduced twice.
+Source-verified (not subagent-reported) that **s113's audit had a gap**:
+`musyxInitVoiceFromSample` — the exact function s105 already flagged, and
+which s113's own function list names — contains a literal `MEM_W(0X34,
+ctx->r4) = ctx->r3;` write to the voice array, missed by s113's "never
+0x34" claim (`funcs_24.c:5881`, confirmed by direct read). **Hypothesis
+(b) (a literal-offset write to `voice+0x34` exists) was never actually
+refuted.** Combined with s104's already-established mechanism (every node
+claim unconditionally recomputes `0x8` from `fillSampleStreamRange`'s own,
+already-corrupted, arguments), the all-zero-at-init result is fully
+explained — no second mechanism needed, the chain closes back to "what
+corrupts `voice+0x34`" exactly where s110 parked it. Second soak (no
+rebuild) added a fresh boot→title data point for `musyxInitVoiceFromSample`
+(still 0/0), widening but not closing s105's inconclusive null. Full
+detail: PORTING-STATE s114.
 
 **s48 scene-identity correction:** there is no "main-menu hangar". The 512-wide origin-0x6AB400
 scene is the round **level-select war room**. Pre-clip-fix it rendered with every clip-needing
@@ -624,9 +655,37 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s113)
+## Next steps, in order of expected value (s114)
 
--1. **M3 — find the still-unlocated function that POPULATES the
+-1. **M3 — find what writes/corrupts `voice+0x34` (the field
+   `musyxRenderVoiceSamples` reads, that traces all the way through
+   `fillSampleStreamRange`'s node-claim path into the corrupted DMA
+   `devAddr`).** Reopened this session after finding s113's closure of
+   this exact question was based on an audit that missed a real writer.
+   `musyxInitVoiceFromSample` (`funcs_24.c:5881`, guest ~`0x800921E8`)
+   does a literal `voice+0x34 = sampleDesc+0x4` word copy (found s105,
+   independently re-confirmed by direct read s114) — the open question
+   was never "does a writer exist" (it does) but "does it ever run, and
+   is `sampleDesc` already corrupted when it does." Two soaks now show
+   **0/0 fires** for this function (s105: full soak through hangar-flight
+   death, ~140s+hold; s114: fresh cold-boot-through-title soak) — still
+   not a positive control either way, just a wider null. Two candidate
+   next moves, neither tried: (a) re-read the s105-s110 call-chain map
+   (`soundMacroOpPlaySampleKeymap`/`tickAudioChannel` and
+   `startStreamedSampleVoice`/`serviceVoicePoolFrame`, the two known
+   call sites) to find a *third* angle to a positive control before
+   spending another soak blind; (b) skip needing this function to fire
+   at all — source-read one level further up, into whichever of its two
+   call sites' `sampleDesc`-building code (`funcs_22.c`'s fixed global
+   scratch address vs. `funcs_26.c`'s stack buffer from `$s1`-`$s6`) is
+   actually live, looking for where *that* data could pick up a
+   tag/string-shaped value instead of a real sample-rate field. Do not
+   resume the retired tickAudioChannel/voice-trigger entry-counter
+   soaking (s105-s110, 5 null sessions) as a blind repro attempt — reread
+   it for structure, don't rerun it hoping for a different outcome.
+   Full detail: PORTING-STATE s114.
+
+-2. **M3 — find the still-unlocated function that POPULATES the
    MusyX DMA-batch array `musyxSynthFrame` reads from.** s102
    source-read `submitDmaRequestBatch` (confirmed: `a0`=pointer to an
    array of 12-byte `{size,devAddr,dramAddr}` entries, `a1`=count,

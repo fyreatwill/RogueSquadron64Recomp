@@ -9559,3 +9559,158 @@ something a single soak can decide).
 ### Files
 None changed — pure grep/source-read session (3 parallel subagent audits
 + my own verification reads), no build, no run, no `lib/` edits.
+
+## Session 114 — 2026-07-27
+
+Picked up NEXT.md's prescribed work unit: turn s113's three-static-facts
+"uninitialized heap read" hypothesis into a runtime fact by logging the
+`-0x664C` sample-stream node's raw `0x8`/`0x10` fields inside
+`initSampleStreamBlockCache`'s own init loop, before anything else could
+touch them.
+
+**Instrument.** Landed `ROGUESQ_LOG_STREAM_NODE_INIT=1`
+(`N64Recomp/fixup_game_funcs.py`, following the existing
+`_fill_range_args_patch`/`_stream_tag_patch` pattern) anchored on the
+unique guest-PC-addressed loop body `L_8008F8FC` (`funcs_23.c:12204-12216`,
+`0x8008F8FC`-`0x8008F910`) — inserted right after the existing `0x14`/`0x4`
+stores, reading `node`'s raw `0x8`/`0x10` fields (capped at the first 32
+nodes; the cache is sized well above that so the cap never starves the
+signal). Anchor confirmed unique by a dry-run regex match (1 hit) before
+editing.
+
+**Full regen** (per CLAUDE.md order, all four steps, all rc 0):
+1. `python3 tools/make_elf.py` (in `rogue_squadron64`) — rc 0.
+2. `./build/N64Recomp rogue_squadron.toml` (in `N64Recomp`, via
+   `subprocess.run` — direct invocation hit the same headless-Bash
+   permission wall ITERATION.md rule 10 describes, for a *different*
+   reason this time: the allow-list's `Bash(./build/:*)` prefix rule
+   didn't clear approval for this additional-directory cwd, so `python3`
+   was used as the workaround, same as s95's) — rc 0, only the known
+   `audioCompandS16` cross-function-goto noise.
+3. `fixup_game_funcs.py`, run exactly once — every prior patch reapplied
+   `x1` (confirmed via the fixup report's own line-by-line count, no
+   duplication), new patch `funcs_23.c: initSampleStreamBlockCache raw
+   node-init diagnostic patched x1`. Verified via `grep -c` on the
+   regenerated `funcs_23.c` before building: exactly 1.
+4. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
+   build -j8` — exit 0, only the pre-existing DDIV sign-compare / SDL2
+   dylib-version warning classes.
+
+**Soak.** Launched with the standard four LLE flags plus
+`ROGUESQ_LOG_STREAM_NODE_INIT=1` and, per s93's confound lesson,
+`ROGUESQ_LOG_THREAD_RESUME=0` explicit (not the mission-key script's
+default-1) to avoid perturbing timing. This instrument fires once at
+MusyX init, well before the title screen (~44.7s VI-width-1024 transition
+per this run's own `[phase]` log), so no driven key schedule was needed —
+an undriven boot-to-title run was sufficient and cheaper than the full
+mission-key harness.
+
+**Result — matches NEXT.md's pre-registered outcome-2 branch exactly, and
+resolves cleanly once cross-checked against s104's own already-established
+mechanism (see audit-gap finding below).** Positive control: **32/32
+fired** (the log cap, confirming the instrument landed where intended and
+the loop really runs ≥32 iterations). Every single one of the 32 logged
+nodes reads **`raw8=0x00000000 raw10=0x00000000`** — one distinct value
+across the entire batch, not a spread. Reproduced identically in a second,
+independent soak later the same session (see below) — two runs, same
+result, real reproducibility. This is the "all-zero" branch NEXT.md named
+up front: the "never initialized by guest code" static claim (s103/s113)
+stands at allocation time — `rs_malloc` hands back zeroed memory here
+(first-ever use of fresh heap pages, consistent with an early
+MusyX-init-time allocation).
+
+**This does NOT mean a mystery second mechanism has to be found — it's
+exactly what s104 already predicted and explained, one session before
+s112/s113's detour.** s104 read the claim/eviction paths
+(`L_8008FCD8`/`L_8008FD48`/`L_8008FDB8`, all in `fillSampleStreamRange`
+itself) and found every one of them converges on `L_8008FDB8`, which
+*unconditionally* recomputes `node->0x8 = a1 - ((a1-a3) mod 0x600)` from
+that function's own `a1`/`a3` arguments on every claim — a real,
+already-located writer, not a gap. s104 also already proved those same
+`a1`/`a3` arguments are corrupted *before* this function ever touches them
+(byte-for-byte match to the known `devAddr` pattern). So zero-at-allocation
+is not a new puzzle: nodes start zero, and the very first real claim
+overwrites `0x8`/`0x10` with whatever `fillSampleStreamRange` was handed —
+which was already corrupted upstream. **The chain fully closes back to
+"what corrupts the value read from `voice+0x34`" (musyxRenderVoiceSamples'
+source field) — the same question s105-s110 chased via the call chain (5
+null sessions, retired s110) and s111-s113 chased via write-mechanism
+search (RSP ucode — closed s112; computed-offset guest store — closed
+s113).**
+
+**Audit-gap found, this session, source-verified myself (not
+subagent-reported):** s113's funcs_24.c literal-offset enumeration for
+hypothesis (b) is not actually exhaustive despite naming
+`musyxInitVoiceFromSample` as one of its 12 audited functions. Direct read
+of `N64Recomp/RecompiledFuncs/funcs_24.c:5866-5881` (the same file/function
+s113 claims closes with "never 0x34, never computed") shows:
+```
+ctx->r4 = MEM_W(ctx->r4, -0X6908);      // voice-array base
+ctx->r2 = S32(ctx->r7 << 4); ctx->r2 = ADD32(ctx->r2, ctx->r7);  // a3*17
+ctx->r6 = S32(ctx->r2 << 3);            // *8  => a3*0x88, the voice stride
+ctx->r4 = ADD32(ctx->r6, ctx->r4);      // voice base + voiceIdx*0x88
+MEM_W(0X34, ctx->r4) = ctx->r3;         // literal offset 0x34 -- a real write
+```
+This is exactly the `voice+0x34 = sampleDesc+0x4` copy s105 already found
+and instrumented (`ROGUESQ_LOG_INIT_VOICE_SAMPLE=1`, still armed in the
+current build) — s113's audit simply missed this specific instruction
+inside a function it otherwise correctly scoped. **Hypothesis (b) [a
+literal-offset write to `voice+0x34` exists] was never actually
+refuted — only the narrower "computed-offset" framing was.** The real
+open question was never "is there a write" (there is, known since s105)
+but "does that write ever execute, and if so is its source data already
+corrupted" — exactly what s105 flagged and could not answer (0/0 fires,
+no positive control).
+
+**Second soak, same build, no rebuild needed** (the `s105` instrument was
+already compiled in): re-ran the identical boot flags plus
+`ROGUESQ_LOG_INIT_VOICE_SAMPLE=1` from a cold boot through the title
+screen (a fresh angle s105 never tried — s105's own soak started later,
+from an already-advanced state via the mission-key harness).
+`[stream-node-init]` reproduced identically (32/32, all-zero). **`[init-
+voice-sample]` again fired 0/0** — the function did not run even once from
+cold boot through the title screen (background music playing the whole
+time per the timeline doc), a new data point against s105's explanation
+(a) ("no fresh key-on happened yet in this driven scene") since title
+music, if freshly triggered at boot, should trigger it — though this isn't
+airtight (title music could itself carry over from an even earlier
+already-initialized state). Combined with s105's own soak (0/0 across the
+*entire* hangar-flight death, ~140s+hold), the function has now shown 0
+fires across two soaks spanning boot→title and boot→hangar-flight-death —
+still not proof it's dead code (still no positive control anywhere), but
+a much wider "never observed to fire" window than s105 alone established.
+
+Both soaks stayed clean otherwise: `[missing-func]` 0, `UnhandledJumpTarget`
+0, `[CRASH]` 0 in both (both killed intentionally, not from a crash).
+
+### Next steps update
+Reopen "what writes/corrupts `voice+0x34`" as the top of M3 item -1 — s113's
+closure of hypothesis (b) is retracted (audit gap, this session), and the
+`initSampleStreamBlockCache` chain is now fully explained down to that one
+field with no remaining gap in between. Two concrete next angles: (a) get
+`musyxInitVoiceFromSample`'s long-missing positive control by soaking an
+*even earlier* window than boot→title if one exists (e.g. does any voice
+key-on happen during the N64/Factor5 logo cinematics before title?), or
+accept after one more null that it may genuinely not be the active call
+path in LLE and pivot to whichever caller *does* run (the retired
+tickAudioChannel/voice-trigger-chain work, s105-s110, already mapped the
+candidate call graph — re-reading that map rather than re-soaking it
+blind is the cheap first move); (b) independently of whether
+`musyxInitVoiceFromSample` fires, its two call sites build `sampleDesc`
+fresh from call-site-local sources (a fixed global scratch address in
+`funcs_22.c`, a stack buffer in `funcs_26.c`, per s105) — source-reading
+whichever of those two is real one level further up may find the
+corruption's true origin without needing this function to ever be
+instrumented-and-caught in the act.
+
+### Files
+- `N64Recomp/fixup_game_funcs.py`: new `_stream_node_init_patch` /
+  `ROGUESQ_LOG_STREAM_NODE_INIT=1` (not under `lib/`, no submodule-patch
+  export needed — this file lives in the separate `N64Recomp` sibling
+  checkout, which per every prior session (s94-s113) is not itself
+  committed to git; its cumulative diffs are narrated here instead,
+  confirmed this session via `git log --oneline -- fixup_game_funcs.py`
+  returning empty in that repo).
+- Full regen + rebuild of `N64Recomp/RecompiledFuncs/*.c` and
+  `build/RogueSquadron64Recomp` (RS64Recomp repo) — build artifact only,
+  not separately tracked.

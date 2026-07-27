@@ -1,145 +1,134 @@
-# NEXT work unit — M3: confirm/refute "voice+0x34 corruption is
-uninitialized heap memory, not a corrupted write" (s114)
+# NEXT work unit — M3: find what writes/corrupts `voice+0x34` (s115)
 
-s113 closed both open hypotheses about a *write* mechanism (RSP ucode,
-s112; computed-offset guest-C store, s113) with decisive source-level
-refutations, no build/soak needed for either. It then found, as an
-unplanned byproduct of the same audit, a well-supported new explanation
-that doesn't involve a write bug at all. Read PORTING-STATE.md's Session
-113 entry before doing anything else; this file only has the actionable
-summary.
+s114 ran the discriminating instrument s113 proposed
+(`ROGUESQ_LOG_STREAM_NODE_INIT=1`) and got a clean, twice-reproduced
+result: the `-0x664C` sample-stream nodes read all-zero at allocation
+time. Read PORTING-STATE.md's Session 114 entry before doing anything
+else; this file only has the actionable summary.
 
-## Why this is the next work unit
+## Why this reopens (not closes) the investigation
 
-Three independent static facts now agree that the `-0x664C` sample-stream
-node's offsets `0x8`/`0x10` (the two fields `fillSampleStreamRange` sums
-into the corrupted `devAddr`, per s103) are **never initialized by any
-guest code**:
+s113 claimed hypothesis (b) — "a literal-offset write to `voice+0x34`
+exists in guest C" — was exhaustively refuted (an audit of all 3 files
+referencing the voice-array base, claiming every store terminates in a
+literal non-0x34 offset). **That claim was wrong.** s114 re-read
+`N64Recomp/RecompiledFuncs/funcs_24.c:5866-5881` directly (not via
+subagent) and found a literal `MEM_W(0X34, ctx->r4) = ctx->r3;` write
+inside `musyxInitVoiceFromSample` — one of the 12 functions s113's own
+list names as audited. This is not a new discovery: it's the exact
+writer s105 already found and instrumented
+(`ROGUESQ_LOG_INIT_VOICE_SAMPLE=1`, still armed in the current build),
+which s113 simply overlooked while re-auditing the same file.
 
-1. The node-claim path, `acquireSampleStreamBlock`, never touches
-   `0x8`/`0x10`/`0x14` (s103).
-2. The node allocator, `initSampleStreamBlockCache`
-   (`funcs_23.c:12103`, guest `0x8008F858`), only ever writes `0x4` and
-   `0x14` per node (s113) — never `0x8`/`0x10`.
-3. No other file in the recompiled tree references the exact literal
-   `-0X664C` at all (`grep -rl -- "-0X664C" RecompiledFuncs/*.c` returns
-   only `funcs_23.c`, s113) — so there is no fourth function anywhere
-   that could be the missing initializer.
-
-Plus: `rs_malloc` (`funcs_0.c:2743`, the allocator these nodes come from)
-has no `memset`/`bzero` call anywhere in its body — it does not zero
-returned memory (s113).
-
-Put together: `fillSampleStreamRange` reads `node->0x8`/`node->0x10` and
-sums them into `devAddr` — but nothing ever wrote those fields. It's
-reading whatever `rs_malloc` handed back: leftover contents of previously-
-used heap memory. This would explain, with an actual mechanism instead of
-a label, both of the two facts every prior hypothesis in this chain
-(s85-s104) struggled to explain at once: the **structured, tag-like**
-byte patterns in the corrupted values (s102's `"lg?r"`/`"wi?g"` — plausible
-fragments of leftover asset-name/string data, not noise) and the **byte-
-identical reproduction across independent runs/rebuilds** (s91/s93 — not a
-race, just a deterministic function of asset-load heap history that is
-itself deterministic per boot).
-
-This is three static facts, not a runtime observation — strong, but not
-yet the two-independent-runtime-lines bar this file's own rules ask for
-before writing "confirmed" into CURRENT-TRUTH. One cheap, narrowly-
-targeted log turns it into a runtime fact.
+Combined with s104's already-established mechanism — every
+`fillSampleStreamRange` node-claim unconditionally recomputes
+`node->0x8` from that function's own `a1`/`a3` arguments (already proven
+corrupted at entry, byte-for-byte matching the known `devAddr` pattern)
+— s114's all-zero-at-allocation result needs no new mechanism to explain
+it: nodes start zero, the first real claim overwrites them with
+already-corrupted data. **The chain closes cleanly back to "what
+corrupts the value at `voice+0x34`" — exactly the question s105-s110
+spent 5 sessions on before parking it (s110), and s111-s113 spent 3
+sessions on before wrongly believing they'd closed it.**
 
 ## What's confirmed (do not re-derive)
 
-- Hypothesis (a) RSP MusyX ucode write path: **closed** (s112,
-  `factor5_ucode_b` never called anywhere in `src/`).
-- Hypothesis (b) computed-offset guest-C write to `voice+0x34`: **closed**
-  (s113, exhaustive read of all 3 files referencing the voice-array
-  base — every store terminates in a literal, non-0x34 offset).
-- `initSampleStreamBlockCache` (`funcs_23.c:12103`): the `-0x664C` list's
-  node allocator, `rs_malloc`s `count*0x18`-byte nodes, init loop at
-  `funcs_23.c:12204-12228` writes only `0x4` (next-pointer) and `0x14`
-  (data-buffer address, `base+n*0x600`) per node.
-- `acquireSampleStreamBlock`'s node-claim path never touches
-  `0x8`/`0x10`/`0x14` (s103) — already confirmed, don't re-derive.
-- `fillSampleStreamRange` (`funcs_23.c:12473`, guest `0x8008FAAC`) computes
-  `entry.devAddr = node->0x8 + node->0x10` (s103) and its own incoming
-  arguments are already corrupted at function entry, matching the known
-  `devAddr` pattern byte-for-byte (s104) — both facts stand, this session
-  doesn't change them, it explains *why* they're true.
-- `rs_malloc` (`funcs_0.c:2743`): no zeroing call in its body — confirmed
-  by a full read of the function, not a guess.
-- The `tickAudioChannel`/`musyx-gate1`/voice-trigger-chain investigative
-  thread is retired (s110, 5 null sessions) — irrelevant to this question,
-  do not resume it.
-- The hangar-tick-family guard program (5 classes) is closed pending a
-  free positive control — do not re-soak it in isolation.
+- `initSampleStreamBlockCache`'s node-init loop writes all-zero into
+  `0x8`/`0x10` at allocation (s114, 32/32 positive control, reproduced
+  twice in one session). This is a real, replicated runtime fact, not
+  single-source within this session — though it is the only session to
+  have measured it.
+- `fillSampleStreamRange`'s claim/eviction paths (`L_8008FCD8`/
+  `L_8008FD48`/`L_8008FDB8`) unconditionally recompute `node->0x8` from
+  the function's own already-corrupted `a1`/`a3` arguments (s104) — this
+  is why allocation-time zero and read-time corruption don't conflict.
+  Do not re-instrument this; it's a closed loop, not a gap.
+- `musyxInitVoiceFromSample` (`funcs_24.c:5753`, guest `0x80092128`)
+  writes `voice+0x34 = sampleDesc+0x4` via a literal offset (confirmed
+  twice now: s105's read, s114's independent re-read). Base/stride
+  (`G_BASE-0x6908` + `voiceIdx*0x88`) matches `musyxRenderVoiceSamples`'s
+  own indexing by 3 independent field offsets (s105) — this is very
+  likely the right function, not a coincidental match.
+- `musyxInitVoiceFromSample`'s own instrument
+  (`ROGUESQ_LOG_INIT_VOICE_SAMPLE=1`) has fired **0/0 across two
+  independent soaks**: s105 (full soak through hangar-flight death,
+  ~140s+hold) and s114 (fresh cold-boot-through-title soak). Still not a
+  positive control in either direction — this is a wide null, not a
+  refutation. Do not soak a third time with only this flag and hope for
+  a different outcome; that would be the 3rd non-discriminating attempt
+  on the exact same instrument (ITERATION.md rule 8) — redesign first.
+- Its two call sites (`funcs_22.c:3667`, `funcs_26.c:1418`) build
+  `sampleDesc` fresh right before the call: one from a fixed global
+  scratch address (`G_BASE-0x5358`, conditionally `-8`), the other from
+  a small on-stack buffer populated from local registers (`$s1`-`$s6`)
+  (s105). Neither traced further yet.
+- The tickAudioChannel/voice-trigger call-chain mapping (s105-s110) is
+  retired as a *blind repro* target (5 null sessions) but its call-graph
+  findings are still valid, reusable facts: `soundMacroOpPlaySampleKeymap`
+  (funcs_22.c, called from `tickAudioChannel`, funcs_23.c:3081, itself
+  called only from `tickAllAudioChannels`) and
+  `startStreamedSampleVoice` (funcs_26.c, called from
+  `serviceVoicePoolFrame`, which has **zero** static/address-taken
+  references anywhere in `RecompiledFuncs/*.c` — an indirect-call site,
+  same shape as `musyxSynthFrame`'s caller before s101 found it).
+- Hypothesis (a) RSP MusyX ucode write path: still closed (s112,
+  unrelated to this — `voice+0x34` is written by real guest C, not RSP
+  code).
 - `fixup_game_funcs.py` is still not idempotent — full ELF regen before
   every fixup run, run it exactly once per regen.
 
-## The work unit
+## The work unit — pick ONE of these two angles, not both
 
-1. **Land one instrument, following the existing `_fill_range_args_patch`
-   pattern** (`N64Recomp/fixup_game_funcs.py:922`, targets
-   `RECOMP_FUNC void fillSampleStreamRange(...)`'s header with a regex,
-   same style as `_stream_tag_patch`/`_musyx_dma_call_patch`). New patch
-   should target `initSampleStreamBlockCache`'s header
-   (`RECOMP_FUNC void initSampleStreamBlockCache\(uint8_t\* rdram, recomp_context\* ctx\) \{`)
-   and insert a log statement **inside the per-node init loop**
-   (`L_8008F8FC`, right after the existing `0x4`/`0x14` stores at
-   `funcs_23.c:12205-12216`), reading the node's raw `0x8`/`0x10` fields
-   *before this function ever writes anything else to them* (it doesn't,
-   confirmed above — this read is genuinely "as rs_malloc handed it
-   back"). Gate on a new env var, e.g. `ROGUESQ_LOG_STREAM_NODE_INIT=1`,
-   same on/off caching idiom as every existing gate in this file
-   (`s_..._enabled < 0` → check `getenv` once). Log: node index, node
-   address, raw `MEM_W(0x8, node)`, raw `MEM_W(0x10, node)`. Cap the log
-   (e.g. first 32 nodes) — this only runs once per cache init, so a cap
-   is generous, not restrictive.
-2. **Positive control is automatic**: the function runs exactly once at
-   MusyX init with a known node count (already used to size the
-   `rs_malloc` call). The log should fire exactly that many times. If it
-   fires 0 times, the instrument didn't land where intended; that is a
-   build/patch bug, not a null result.
-3. **Regen order**: `make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`
-   (once) → `cmake --build`. Verify via `grep -c` on the regenerated
-   `funcs_23.c` that the patch landed exactly once before building.
-4. **Soak once, discriminating outcome named up front**: if the logged
-   `0x8`/`0x10` values are already non-zero at allocation time (before
-   any consumer has run), and especially if any of them decode to the
-   same tag-like ASCII shapes s102 characterized (`"lg?r"`/`"wi?g"` or
-   similar), that's direct runtime confirmation of "uninitialized heap
-   memory read as data," turning this from a well-supported static
-   hypothesis into a closed root cause. If they read as all-zero, the
-   "never initialized" static claim was still right but `rs_malloc`
-   apparently does return zeroed memory in practice (e.g. first-ever use
-   of fresh heap pages) — in which case the corruption must appear
-   *later*, between allocation and `fillSampleStreamRange`'s read, and
-   the next step becomes finding what reuses this heap region in between
-   (a genuine second mechanism, not the same one).
+**Angle (a) — resolve the `musyxInitVoiceFromSample` null via the call
+graph, not another blind soak.** Before touching env vars or code:
+source-read whichever of `serviceVoicePoolFrame`'s or
+`tickAllAudioChannels`' own callers/gates would explain a permanent 0/0 —
+e.g. does `serviceVoicePoolFrame`'s indirect caller even get resolved
+under `ROGUESQ_STUB_MISSING_FUNCS=1` (could it silently no-op if
+unresolved)? Is there a countdown/gate (like the `musyxSynthFrame`
+gate-1 countdown s108 found) upstream of `tickAudioChannel` that could
+explain zero *new* key-ons across 140+ seconds of continuous music? If
+source-reading surfaces a concrete "this gate is closed and here's why"
+answer, that's a clean discriminating result with no build needed. If it
+surfaces a *different* candidate call path instead, redirect there.
+
+**Angle (b) — trace `sampleDesc`'s origin one level up, bypassing the
+need for a positive control entirely.** Read `funcs_22.c:3667`'s and
+`funcs_26.c:1418`'s call sites and the code that populates
+`G_BASE-0x5358`/the `$s1`-`$s6` stack buffer immediately before each
+call. If one of the two call sites is provably dead (e.g. its own caller
+is never reached, mirroring how s112 killed the RSP-ucode branch), that
+narrows to one live source — then check *that* source's own derivation:
+does it ever read a name/tag/string field into what should be a
+sample-rate-shaped value? This can produce a decisive result via pure
+source-read, no soak required, which is cheaper and matches the
+"boring/source-first" rule.
+
+Prefer (b) if the source read is tractable in one sitting — it can close
+the loop without needing a positive control at all. Fall back to (a),
+and only then to a new instrument/soak, if (b) dead-ends.
 
 ## Do not
 
-- Do not re-search for a computed-offset or RSP-ucode write path — both
-  closed (s112, s113).
-- Do not re-derive `acquireSampleStreamBlock`'s or
-  `initSampleStreamBlockCache`'s already-confirmed field lists.
-- Do not resume the `tickAudioChannel`/voice-trigger-chain (retired
-  s110).
-- Do not re-soak the five hangar-tick-family guarded classes in
-  isolation.
-- Do not run `fixup_game_funcs.py` more than once per ELF regen.
-- Do not cite `ra=0x00000000`, or re-open "random/race/stomp" framings
-  for the `devAddr` corruption pattern itself (refuted s92) — this
-  session's hypothesis is compatible with "deterministic," not a
-  reopening of the race framing.
+- Do not re-run `ROGUESQ_LOG_STREAM_NODE_INIT=1` again — confirmed
+  twice, all-zero, closed.
+- Do not re-soak `ROGUESQ_LOG_INIT_VOICE_SAMPLE=1` alone a third time
+  hoping for a different fire count — redesign (angle a) or bypass
+  (angle b) first, per rule 8.
+- Do not re-open hypothesis (a) (RSP ucode write) — closed s112,
+  unaffected by this session's findings.
+- Do not re-run `fixup_game_funcs.py` more than once per ELF regen.
+- Do not trust a "closed" claim in CURRENT-TRUTH/PORTING-STATE about a
+  file-wide audit without spot-checking at least one named function
+  yourself first — s113's closure of hypothesis (b) was wrong, and the
+  gap sat undetected for one full session.
 
-## Housekeeping flagged, not this session's job either
+## Housekeeping flagged, still not done
 
-`docs/CURRENT-TRUTH.md` is well over the ~35KB target in CLAUDE.md/
-ITERATION.md (now larger after s113's addition). Flagged for many
-sessions running without action — worth a dedicated compression work
-unit (migrate durable mechanism/architecture material to
-PROJECT-OVERVIEW.md, prune superseded detail — especially the now-closed
-hangar-tick-family guard narration, the now-closed RSP-ucode detour, and
-the now-closed computed-offset-write detour) paired with a real
-experiment per ITERATION.md (compressing docs alone does not count as an
-ADVANCED work unit).
+`docs/CURRENT-TRUTH.md` is now ~116 KB, over 3x the ~35 KB target in
+CLAUDE.md/ITERATION.md, and grew further this session. Worth a dedicated
+compression work unit (migrate durable mechanism/architecture material
+to PROJECT-OVERVIEW.md, prune superseded detail — the now-retracted s113
+closure narration is a good first prune candidate once s115+ settles
+the real answer) paired with a real experiment per ITERATION.md
+(compressing docs alone does not count as an ADVANCED work unit).
