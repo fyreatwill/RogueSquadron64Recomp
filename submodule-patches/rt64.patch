@@ -3073,10 +3073,10 @@ index d1a9f4e..7025af8 100644
          // with the GPU-side stage 2.5 counter, this shows how many texrects
          // enter the pipeline vs how many reach the for-loop.
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..f1fb4a8 100644
+index 10f98af..c9b6376 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
-@@ -4,8 +4,16 @@
+@@ -4,8 +4,17 @@
  
  #include "rt64_state.h"
  
@@ -3087,19 +3087,186 @@ index 10f98af..f1fb4a8 100644
  #include <cinttypes>
 +#include <cstdio>
 +#include <cstdlib>
++#include <cstring>
 +#include <map>
 +#include <mutex>
 +#include <vector>
  
  #include "im3d/im3d.h"
  #include "im3d/im3d_math.h"
-@@ -27,7 +35,115 @@
+@@ -27,7 +36,281 @@
  #define MI_INTR_DP          0x00000020
  #define MI_INTR_SP          0x00000001
  
 +extern "C" __attribute__((weak)) uint32_t rs64_phase_ord(void);
 +
 +#include <string>
++
++// ROGUESQ_LOG_OST_WB=1 — s72: RT64 writeback vs OSThread 0x801494B0 (phys 0x1494B0).
++// Discriminates W1 (writeback smashes audio thr OSThread.context). Positive control:
++// non-overlapping writebacks emit [ost-wb] control lines. OVERLAP = W1 hit.
++// CTX_CHANGED_* = field mutated (by this writeback, or observed between writebacks).
++//
++// s72 fix (always on): refuse writebacks with insane width or that would run past
++// 8MB RDRAM. The old floor (addressStart >= 0x100000) still stands, but the s72
++// SIGBUS was a depth writeback at addr=0x140000 w=4067 covering [0x140000,0x3E1332)
++// — past the floor, over the audio OSThread. Width cap 1280 > any real VI (1024).
++namespace {
++    static bool ost_wb_log_enabled() {
++        static int cached = -1;
++        if (cached < 0) {
++            const char *e = std::getenv("ROGUESQ_LOG_OST_WB");
++            cached = (e && e[0] && e[0] != '0') ? 1 : 0;
++        }
++        return cached != 0;
++    }
++
++    // Host-layout OSThread in RDRAM (recomp mode): sizeof=48, pri@4, context@32.
++    static constexpr uint32_t kOstWatchPhys = 0x1494B0u;
++    static constexpr uint32_t kOstWatchSize = 48u;
++    static constexpr uint32_t kOstPriOff = 4u;
++    static constexpr uint32_t kOstCtxOff = 32u;
++    static constexpr uint32_t kRdramBytes = 0x800000u;
++    static constexpr uint32_t kMaxSaneFbWidth = 1280u;
++
++    static std::atomic<uint32_t> g_ost_wb_control{0};
++    static std::atomic<uint32_t> g_ost_wb_overlap{0};
++    static std::atomic<uint32_t> g_ost_wb_ctx_by_wb{0};
++    static std::atomic<uint32_t> g_ost_wb_ctx_pre{0};
++    static std::atomic<uint32_t> g_ost_wb_skip{0};
++    static uint64_t g_ost_last_ctx = 0;
++    static bool g_ost_have_ctx = false;
++    static std::mutex g_ost_wb_mu;
++
++    // Returns false if writeback must be skipped (caller still keeps CIMG for draw).
++    static bool rs64_writeback_sane(const char *tag, uint32_t addressStart,
++                                    uint32_t rowWidth, uint8_t siz,
++                                    uint32_t rowStart, uint32_t rowEnd) {
++        if (addressStart < 0x100000u) {
++            return false; // existing low-mem floor (caller usually gates this already)
++        }
++        if (rowWidth == 0 || rowWidth > kMaxSaneFbWidth) {
++            const uint32_t n = ++g_ost_wb_skip;
++            if (n <= 20 || (n % 50) == 0) {
++                std::fprintf(stderr,
++                    "[ost-wb] SKIP_WIDTH #%u tag=%s addr=0x%X w=%u siz=%u rows=%u..%u\n",
++                    n, tag, addressStart, rowWidth, (unsigned)siz, rowStart, rowEnd);
++                std::fflush(stderr);
++            }
++            return false;
++        }
++        const uint32_t rowBytes = (uint32_t)rowWidth << siz >> 1;
++        if (rowBytes == 0) {
++            return false;
++        }
++        const uint64_t writeEnd = (uint64_t)addressStart + (uint64_t)rowEnd * (uint64_t)rowBytes;
++        if (writeEnd > kRdramBytes) {
++            const uint32_t n = ++g_ost_wb_skip;
++            if (n <= 20 || (n % 50) == 0) {
++                std::fprintf(stderr,
++                    "[ost-wb] SKIP_OOB #%u tag=%s addr=0x%X w=%u siz=%u rows=%u..%u end=0x%llx\n",
++                    n, tag, addressStart, rowWidth, (unsigned)siz, rowStart, rowEnd,
++                    (unsigned long long)writeEnd);
++                std::fflush(stderr);
++            }
++            return false;
++        }
++        return true;
++    }
++
++    static void ost_wb_read_fields(const uint8_t *RDRAM, uint64_t *ctx_out, int32_t *pri_out) {
++        std::memcpy(ctx_out, RDRAM + kOstWatchPhys + kOstCtxOff, sizeof(*ctx_out));
++        std::memcpy(pri_out, RDRAM + kOstWatchPhys + kOstPriOff, sizeof(*pri_out));
++    }
++
++    // Call immediately before a writeback; returns write [start,end) and whether it
++    // overlaps the watched OSThread. Logs OVERLAP always; control at a low rate.
++    static void ost_wb_before(const char *tag, const uint8_t *RDRAM,
++                              uint32_t addressStart, uint32_t rowWidth, uint8_t siz,
++                              uint32_t rowStart, uint32_t rowEnd,
++                              uint32_t *writeStartOut, uint32_t *writeEndOut, bool *overlapOut,
++                              uint64_t *ctxBeforeOut, int32_t *priBeforeOut) {
++        const uint32_t rowBytes = (uint32_t)rowWidth << siz >> 1;
++        const uint32_t writeStart = addressStart + rowStart * rowBytes;
++        const uint32_t writeEnd = addressStart + rowEnd * rowBytes;
++        const uint32_t watchEnd = kOstWatchPhys + kOstWatchSize;
++        const bool overlap = (writeStart < watchEnd) && (writeEnd > kOstWatchPhys);
++        *writeStartOut = writeStart;
++        *writeEndOut = writeEnd;
++        *overlapOut = overlap;
++
++        uint64_t ctx = 0;
++        int32_t pri = 0;
++        ost_wb_read_fields(RDRAM, &ctx, &pri);
++        *ctxBeforeOut = ctx;
++        *priBeforeOut = pri;
++
++        std::lock_guard<std::mutex> lock(g_ost_wb_mu);
++        if (g_ost_have_ctx && ctx != g_ost_last_ctx) {
++            const uint32_t n = ++g_ost_wb_ctx_pre;
++            std::fprintf(stderr,
++                "[ost-wb] CTX_CHANGED_PRE #%u tag=%s prev=0x%llx now=0x%llx pri=%d "
++                "wb=[0x%X,0x%X) addr=0x%X rows=%u..%u w=%u siz=%u overlap=%d\n",
++                n, tag,
++                (unsigned long long)g_ost_last_ctx, (unsigned long long)ctx, (int)pri,
++                writeStart, writeEnd, addressStart, rowStart, rowEnd, rowWidth, (unsigned)siz,
++                overlap ? 1 : 0);
++            std::fflush(stderr);
++        }
++        g_ost_last_ctx = ctx;
++        g_ost_have_ctx = true;
++
++        if (overlap) {
++            const uint32_t n = ++g_ost_wb_overlap;
++            std::fprintf(stderr,
++                "[ost-wb] OVERLAP #%u tag=%s wb=[0x%X,0x%X) len=%u watch=[0x%X,0x%X) "
++                "addr=0x%X rows=%u..%u w=%u siz=%u ctx_before=0x%llx pri=%d\n",
++                n, tag, writeStart, writeEnd, writeEnd - writeStart,
++                kOstWatchPhys, watchEnd,
++                addressStart, rowStart, rowEnd, rowWidth, (unsigned)siz,
++                (unsigned long long)ctx, (int)pri);
++            std::fflush(stderr);
++        } else {
++            const uint32_t n = ++g_ost_wb_control;
++            if (n <= 20 || (n % 500) == 0) {
++                std::fprintf(stderr,
++                    "[ost-wb] control #%u tag=%s wb=[0x%X,0x%X) addr=0x%X "
++                    "rows=%u..%u w=%u siz=%u ctx=0x%llx pri=%d\n",
++                    n, tag, writeStart, writeEnd, addressStart,
++                    rowStart, rowEnd, rowWidth, (unsigned)siz,
++                    (unsigned long long)ctx, (int)pri);
++                std::fflush(stderr);
++            }
++        }
++    }
++
++    static void ost_wb_after(const char *tag, const uint8_t *RDRAM,
++                             uint32_t writeStart, uint32_t writeEnd, bool overlap,
++                             uint64_t ctxBefore, int32_t priBefore) {
++        uint64_t ctx = 0;
++        int32_t pri = 0;
++        ost_wb_read_fields(RDRAM, &ctx, &pri);
++        std::lock_guard<std::mutex> lock(g_ost_wb_mu);
++        g_ost_last_ctx = ctx;
++        g_ost_have_ctx = true;
++        if (ctx != ctxBefore || pri != priBefore) {
++            const uint32_t n = ++g_ost_wb_ctx_by_wb;
++            std::fprintf(stderr,
++                "[ost-wb] CTX_CHANGED_BY_WB #%u tag=%s overlap=%d wb=[0x%X,0x%X) "
++                "ctx 0x%llx->0x%llx pri %d->%d\n",
++                n, tag, overlap ? 1 : 0, writeStart, writeEnd,
++                (unsigned long long)ctxBefore, (unsigned long long)ctx,
++                (int)priBefore, (int)pri);
++            std::fflush(stderr);
++        } else if (overlap) {
++            std::fprintf(stderr,
++                "[ost-wb] OVERLAP_NO_CTX_CHANGE tag=%s wb=[0x%X,0x%X) ctx=0x%llx pri=%d\n",
++                tag, writeStart, writeEnd, (unsigned long long)ctx, (int)pri);
++            std::fflush(stderr);
++        }
++    }
++}
++
 +// ROGUESQ_LOG_STAGES=1 (session 32) — exhaustive phase-scoped stage counters.
 +// Thousands of RDP draws are seen while only ~150 game calls reach workloads;
 +// these four counters localise which stage drops them. Counts EVERY event and
@@ -3209,7 +3376,7 @@ index 10f98af..f1fb4a8 100644
      const float ShiftScaleMap[] = {
          1.0f,
          1.0f / 2.0f,
-@@ -259,7 +375,11 @@ namespace RT64 {
+@@ -259,7 +542,11 @@ namespace RT64 {
  
                      // Failsafe cases.
                      if (tile.line == 0) {
@@ -3222,7 +3389,7 @@ index 10f98af..f1fb4a8 100644
                          dstCallTile.valid = false;
                          continue;
                      }
-@@ -270,13 +390,31 @@ namespace RT64 {
+@@ -270,13 +557,31 @@ namespace RT64 {
                      dstCallTile.reinterpretSiz = 0;
                      dstCallTile.reinterpretFmt = 0;
                      dstCallTile.tlut = rdp->otherMode.textLUT();
@@ -3255,7 +3422,7 @@ index 10f98af..f1fb4a8 100644
  
                      // Estimate sampling width and height based on masks ands tiles, whichever are smaller.
                      const bool clampS = (tile.masks == 0) || (tile.cms & G_TX_CLAMP);
-@@ -288,14 +426,262 @@ namespace RT64 {
+@@ -288,14 +593,262 @@ namespace RT64 {
                      dstCallTile.sampleWidth = static_cast<uint16_t>(std::min(tileWidth, maskWidth));
                      dstCallTile.sampleHeight = static_cast<uint16_t>(std::min(tileHeight, maskHeight));
  
@@ -3521,7 +3688,7 @@ index 10f98af..f1fb4a8 100644
                      dstRDPTile.address = int(tile.tmem) << 3;
                      dstRDPTile.palette = tile.palette;
                      dstRDPTile.masks = (tile.masks > 0) ? (1 << tile.masks) : 0;
-@@ -435,9 +821,12 @@ namespace RT64 {
+@@ -435,9 +988,12 @@ namespace RT64 {
      }
  
      void State::flush() {
@@ -3534,7 +3701,7 @@ index 10f98af..f1fb4a8 100644
  
          // Assign some parameters to the draw call.
          const int workloadCursor = ext.workloadQueue->writeCursor;
-@@ -593,8 +982,15 @@ namespace RT64 {
+@@ -593,8 +1149,15 @@ namespace RT64 {
              return;
          }
          
@@ -3552,7 +3719,7 @@ index 10f98af..f1fb4a8 100644
  
          const int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
-@@ -640,6 +1036,113 @@ namespace RT64 {
+@@ -640,6 +1203,113 @@ namespace RT64 {
              }
  
              if (!callTile.tileCopyUsed) {
@@ -3666,7 +3833,7 @@ index 10f98af..f1fb4a8 100644
                  if (callTile.tmemHashOrID != 0) {
                      textureManager.uploadEmpty(this, ext.textureCache, workload.submissionFrame, callTile.sampleWidth, callTile.sampleHeight, callTile.tmemHashOrID);
                  }
-@@ -649,6 +1152,118 @@ namespace RT64 {
+@@ -649,6 +1319,118 @@ namespace RT64 {
                  else {
                      callTile.tmemHashOrID = textureManager.uploadTexture(this, callTile.loadTile, ext.textureCache, workload.submissionFrame, callTile.sampleWidth, callTile.sampleHeight, callTile.tlut);
                  }
@@ -3785,7 +3952,7 @@ index 10f98af..f1fb4a8 100644
              }
              else if (callTile.reinterpretTile) {
                  struct ReinterpretHashData {
-@@ -765,6 +1380,35 @@ namespace RT64 {
+@@ -765,6 +1547,35 @@ namespace RT64 {
          flush();
          submitFramebufferPair(FramebufferPair::FlushReason::ProcessDisplayListsEnd);
  
@@ -3821,7 +3988,51 @@ index 10f98af..f1fb4a8 100644
          // Append any framebuffer operations to the end of the last framebuffer pair.
          int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
-@@ -1899,6 +2543,50 @@ namespace RT64 {
+@@ -1462,11 +2273,41 @@ namespace RT64 {
+                         // 1MB gate is safe (real N64 framebuffers are always
+                         // at >=0x80100000) and unblocks Factor 5 boot.
+                         if (colorFb->addressStart >= 0x100000) {
+-                            colorFb->copyNativeToRAM(&RDRAM[colorFb->addressStart], colorWriteWidth, colorRowStart, std::min(colorRowEnd, colorFb->height));
++                            const uint32_t cRowEnd = std::min(colorRowEnd, colorFb->height);
++                            if (rs64_writeback_sane("color", colorFb->addressStart, colorWriteWidth,
++                                    colorFb->siz, colorRowStart, cRowEnd)) {
++                                if (ost_wb_log_enabled()) {
++                                    uint32_t ws = 0, we = 0;
++                                    bool ov = false;
++                                    uint64_t ctxB = 0;
++                                    int32_t priB = 0;
++                                    ost_wb_before("color", RDRAM, colorFb->addressStart, colorWriteWidth,
++                                        colorFb->siz, colorRowStart, cRowEnd, &ws, &we, &ov, &ctxB, &priB);
++                                    colorFb->copyNativeToRAM(&RDRAM[colorFb->addressStart], colorWriteWidth, colorRowStart, cRowEnd);
++                                    ost_wb_after("color", RDRAM, ws, we, ov, ctxB, priB);
++                                } else {
++                                    colorFb->copyNativeToRAM(&RDRAM[colorFb->addressStart], colorWriteWidth, colorRowStart, cRowEnd);
++                                }
++                            }
+                         }
+ 
+                         if (depthWriteWidth > 0 && depthFb->addressStart >= 0x100000) {
+-                            depthFb->copyNativeToRAM(&RDRAM[depthFb->addressStart], depthWriteWidth, depthRowStart, std::min(depthRowEnd, depthFb->height));
++                            const uint32_t dRowEnd = std::min(depthRowEnd, depthFb->height);
++                            if (rs64_writeback_sane("depth", depthFb->addressStart, depthWriteWidth,
++                                    depthFb->siz, depthRowStart, dRowEnd)) {
++                                if (ost_wb_log_enabled()) {
++                                    uint32_t ws = 0, we = 0;
++                                    bool ov = false;
++                                    uint64_t ctxB = 0;
++                                    int32_t priB = 0;
++                                    ost_wb_before("depth", RDRAM, depthFb->addressStart, depthWriteWidth,
++                                        depthFb->siz, depthRowStart, dRowEnd, &ws, &we, &ov, &ctxB, &priB);
++                                    depthFb->copyNativeToRAM(&RDRAM[depthFb->addressStart], depthWriteWidth, depthRowStart, dRowEnd);
++                                    ost_wb_after("depth", RDRAM, ws, we, ov, ctxB, priB);
++                                } else {
++                                    depthFb->copyNativeToRAM(&RDRAM[depthFb->addressStart], depthWriteWidth, depthRowStart, dRowEnd);
++                                }
++                            }
+                         }
+                     }
+ 
+@@ -1899,6 +2740,50 @@ namespace RT64 {
              }
          }
          
@@ -3872,7 +4083,7 @@ index 10f98af..f1fb4a8 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1959,8 +2647,20 @@ namespace RT64 {
+@@ -1959,8 +2844,20 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -3895,7 +4106,7 @@ index 10f98af..f1fb4a8 100644
                  return;
              }
          }
-@@ -1972,7 +2672,11 @@ namespace RT64 {
+@@ -1972,7 +2869,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -3908,7 +4119,7 @@ index 10f98af..f1fb4a8 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +2737,51 @@ namespace RT64 {
+@@ -2033,26 +2934,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");

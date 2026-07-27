@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 71)
+## Current truth (as of session 72)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -83,16 +83,16 @@ complete. VI origin **cannot** discriminate menu scenes (the war room presents f
 war room) — but see s48: origin distinguishes *phases*, not which menu scene is on screen.
 
 Remaining visual defects:
-- **~~s50/s51 AVAILABLE CRAFT → black → one mission frame → `fs` freeze~~ — ImemOverrun FIXED s69;
-  process death reopened s70 as a different class; s71 root-caused the crash site.** Old freeze
-  (s64–s68): CLIP_1FBC → hard exit before L_1650; s69 fixup 8 → exit=2 2090→0. **s70/s71 soak:**
-  after `a`, black gap → one mission-shaped frame with texture garbage → **SIGBUS ~8 s post-`a`**
-  in `resume_thread` → `LightweightSemaphore::signal`. **s71 (instrument + live-ctx set, positive
-  control passed):** crash is **not** UAF of a destroyed thread. Exactly one bad resume in 103967:
-  OSThread at RDRAM **`0x801494B0`** (`runAiAudioStreamPlaybackLoop` @ `0x8008ED70`, pri 122)
-  has host `context` bit-corrupted in-place (`0xa50f75380` → `0x850f45380`, xor `0x200030000`)
-  between two consecutive scheduler resumes while idle is running; that OSThread is never
-  destroyed. Writer unproven (H4 gfx/`last-drawn` still candidate). exit=2 stays 0.
+- **~~s50/s51 AVAILABLE CRAFT → black → one mission frame → `fs` freeze / SIGBUS~~ — ImemOverrun
+  FIXED s69; SIGBUS FIXED s72.** Old freeze (s64–s68): CLIP_1FBC → L_1650 hard exit; s69 fixup 8
+  → exit=2 0. **s70/s71:** post-`a` SIGBUS was bit-corrupt `OSThread.context` on
+  `runAiAudioStreamPlaybackLoop` @ `0x801494B0` (not UAF). **s72:** writer is RT64 **depth
+  writeback** of a garbage FB (`addr=0x140000 w=4067`, range `[0x140000,0x3E1332)` covering the
+  OSThread). Old floor `addressStart >= 0x100000` let it through. Always-on gate now also
+  requires **width ≤ 1280** and **write end ≤ 8MB**; CIMG kept for draw, writeback skipped.
+  Discover run: OVERLAP+CTX_CHANGED_BY_WB on the death path (control writebacks still logged).
+  Fix soak 65s post-`a`: 0 bad resumes, process alive, fs advancing, SKIP_WIDTH/OOB firing.
+  **Still open on mission path:** black gap + texture garbage after `a` (g07 capital-ship class).
   ~~**s51 also found a generalizable environment confound**: driven runs stall in phase-advance
   under concurrent system load~~ — **OVERTURNED, s60. There is no load confound.** The three repro
   scripts set no `ROGUESQ_*` variables at all, so from a clean shell the binary took the **HLE**
@@ -127,9 +127,9 @@ Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regress
 0 `[dmem-race]`, 0 asserts. `[missing-func]` clean in every soaked phase to date, **except**: s49's
 undriven outdoor-512 stretch stubbed 3 distinct addresses once each (0x800C7120, 0x800FBD48,
 0x800FB190) with 0 aborts — never itemized before because prior soaks targeted hangar/war-room, not
-outdoor. Parked as an M4 curiosity, not a blocker. **s50–s71 mission-entry path:** ImemOverrun
-`fs` freeze fixed (s69); process death is SIGBUS from bit-corrupt `OSThread.context` on
-`runAiAudioStreamPlaybackLoop` (s71). Hangar/war-room/outdoor stability from s27–s49 stands.
+outdoor. Parked as an M4 curiosity, not a blocker. **s50–s72 mission-entry path:** ImemOverrun
+fixed (s69); SIGBUS from garbage depth writeback fixed (s72). Hangar/war-room/outdoor stability
+from s27–s49 stands; post-`a` process now soaks 65s+ without death.
 
 ## Goal stack — work strictly top-down
 
@@ -146,14 +146,13 @@ Stability 0 except 3 gracefully-stubbed `[missing-func]` addresses in the undriv
 never soaked before — parked as M4 (identified s53, fixed s54, runtime check outstanding — see
 step 2 below). Full detail: PORTING-STATE s49.
 
-**M3 — first gameplay: OPENED (s50); ImemOverrun FIXED (s69); SIGBUS site identified (s71).**
-AVAILABLE CRAFT reachable. ImemOverrun closed s64–s69. **s70 crash:** SIGBUS ~8 s post-`a` in
-`resume_thread`→`signal` (2/2). **s71 triage:** not thread UAF; RDRAM OSThread
-`0x801494B0` / `runAiAudioStreamPlaybackLoop` has `context` bit-smashed mid-schedule (1 bad
-resume / 103967; live-set positive control OK). **M3 blocked on stopping that corruption (or
-defensively skipping signal when `live=0` only after writer is known)** then 60s mission hold +
-craft input. Origin `0x656400` is also war-room pair partner of `0x6AB400` — use captures.
-Full detail PORTING-STATE s68–s71.
+**M3 — first gameplay: OPENED (s50); ImemOverrun FIXED (s69); SIGBUS FIXED (s72).**
+AVAILABLE CRAFT reachable. ImemOverrun closed s64–s69. SIGBUS was RT64 depth writeback of
+garbage `w=4067` ZIMG into OSThread `0x801494B0` (s71 site, s72 writer+gate). **s72 fix soak:**
+65s post-`a` process alive, 0 bad resumes, fs advancing; mission-shaped content frames after a
+black gap. Remaining M3 work: clean up mission texture garbage, craft input, formal 60s hold
+with phase timeline. Origin `0x656400` is also war-room pair partner of `0x6AB400` — use
+captures. Full detail PORTING-STATE s68–s72.
 *Done when:* 60 seconds of in-mission rendering, craft visibly responds to synthetic input,
 stability counters 0, and the phase timeline in this document covers the mission.
 
@@ -182,18 +181,15 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s71)
+## Next steps, in order of expected value (s72)
 
-1. **M3 — find writer of OSThread `0x801494B0` / stop context corruption (blocks soak).**
-   s71: SIGBUS is `signal()` on bit-corrupted `context` of `runAiAudioStreamPlaybackLoop`
-   (never destroyed; not UAF). Corruption window is between resume n and n+1 while idle
-   runs; `last-drawn #1870` sits in that window (single-run correlation). Next work unit:
-   catch the store that mutates `OSThread.context` at that RDRAM address (watchpoint /
-   scoped RDRAM store log / RT64 writeback range check), with a same-run control that
-   benign stores elsewhere still log. Do **not** re-litigate UAF or L_1650. Instrument
-   remains under `ROGUESQ_LOG_THREAD_RESUME=1`. Harness: `scratch/s71_sigbus_triage/run_soak.sh`.
-2. **M3 — after corruption stopped (or safely guarded):** re-run 60s soak; expect mission
-   texture garbage next (g07 capital-ship). Then craft input.
+1. **M3 — post-SIGBUS mission content (texture garbage / black gap).** Process now survives
+   65s+ after `a` (s72). Next: characterize the post-`a` black gap and mission texture garbage
+   (g07 capital-ship class) with phase-gated captures + RDP/CIMG census in one soak. Harness:
+   `scratch/s71_sigbus_triage/run_soak.sh writer1_fix 65` (or a dedicated `s72_mission/` copy).
+   Do **not** re-litigate SIGBUS/writeback unless a new bad resume appears.
+2. **M3 — craft input + formal 60s in-mission hold** once a stable mission frame identity is
+   known. Drive stick/buttons; document phase timeline for the mission.
 3. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
    check remains).** s54 added the 3 lines to
    `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` and ran the full regen
@@ -204,7 +200,7 @@ cost three sessions before the recursive mutex.
    DMA → missing-func / UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture
    corruption). Each new failure is its own work unit.
 6. **Doc housekeeping — `CURRENT-TRUTH.md` still slightly over the ~35 KB CLAUDE.md guideline
-   — thread exhausted (s55–s58).** Prefer M3 SIGBUS work over reopening this section.
+   — thread exhausted (s55–s58).** Prefer M3 mission-content work over reopening this section.
 7. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
    carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user
    before committing there.
@@ -434,6 +430,12 @@ any s2–s4 conclusion without checking that section.
   resumes had `live=0`, with a bit-diff vs the prior good pointer. **Why believable:** stack
   lands in `LightweightSemaphore::signal` after `resume_thread`, the classic UAF symptom, and
   destroy/create churn of other threads (ids 6–10) sits earlier in the same mission-entry window.
+- **Claim (s71 H4 partial):** context bit-corruption is an unknown in-place smash; `last-drawn
+  #1870` is only timing correlation. **Closed by s72:** the writer is the RT64 depth writeback
+  immediately after that last-drawn, range `[0x140000,0x3E1332)` overlapping OSThread phys
+  `0x1494B0`, with before/after snapshot proving the mutate. Width/OOB writeback gate stops
+  the SIGBUS. **Why the correlation looked weak:** last-drawn only updates atomics (no RDRAM
+  store); the actual store is the subsequent `copyNativeToRAM` on the paired depth FB.
 
 ### Dead ends — labelled as such in the log, do not retry
 

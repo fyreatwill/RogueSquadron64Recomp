@@ -5726,3 +5726,85 @@ Find the writer of RDRAM OSThread at `0x801494B0` (or defend resume when `live=0
 - `lib/N64ModernRuntime/ultramodern/src/threads.cpp`
 - `submodule-patches/N64ModernRuntime.patch` (exported)
 - `scratch/s71_sigbus_triage/run_soak.sh`, `sigbus1/`
+
+## Session 72 (2026-07-27) — M3 SIGBUS writer = RT64 depth writeback (W1); width/OOB gate stops it
+
+### Work unit
+Find writer of OSThread `0x801494B0.context` corruption (s71). Instrument RT64
+`copyNativeToRAM` writebacks under `ROGUESQ_LOG_OST_WB=1`: range-overlap vs
+phys `[0x1494B0,0x1494E0)` (host-layout OSThread, sizeof=48, context@32, pri@4),
+before/after context snapshot, same-run control for non-overlapping writebacks.
+Harness: `scratch/s71_sigbus_triage/run_soak.sh`.
+
+### Run 1 — discover (`writer1/`, grace=15s, no gate yet)
+
+| metric | value |
+|--------|-------|
+| ost-wb control (positive) | **39** (first 5 at legitimate 320-wide FBs) |
+| ost-wb OVERLAP | **1** |
+| ost-wb CTX_CHANGED_BY_WB | **1** |
+| ost-wb CTX_CHANGED_PRE | 0 |
+| thr-resume bad=1 | 1 |
+| process | gone grace-iter 8 (~8s post-`a`) |
+
+Smoking-gun window (log order):
+```
+[last-drawn] #1870 0xFB9600 -> 0xE20000 w=4067 siz=0
+[ost-wb] OVERLAP #1 tag=depth wb=[0x140000,0x3E1332) len=2757426
+         watch=[0x1494B0,0x1494E0) addr=0x140000 rows=0..339 w=4067 siz=2
+         ctx_before=0x95333e430 pri=122
+[ost-wb] CTX_CHANGED_BY_WB #1 tag=depth overlap=1
+         ctx 0x95333e430->0x85330e430 pri 122->120
+[thr-resume] n=103912 … thr=0x3001494b0 pri=120 ctx=0x85330e430 live=0 bad=1
+[CRASH] SIGBUS
+```
+
+**W1 confirmed (two lines of evidence):** (1) write range covers OSThread;
+(2) before→after snapshot shows context+pri mutate inside that same writeback.
+W2/W3/W4 unnecessary for the death path — the writer is RT64 depth writeback
+of a garbage SETZIMG (addr=0x140000 ≥ old 0x100000 floor, w=4067). Existing
+floor does not protect this.
+
+### Fix (always-on, same file)
+`rs64_writeback_sane` before color/depth `copyNativeToRAM`: keep
+`addressStart >= 0x100000`, add **width ≤ 1280** and **write end ≤ 8MB RDRAM**.
+CIMG still accepted for draw; only writeback is skipped. Rate-limited
+`[ost-wb] SKIP_WIDTH` / `SKIP_OOB` logs always on.
+
+### Run 2 — verify (`writer1_fix/`, grace=65s)
+
+| metric | value |
+|--------|-------|
+| ost-wb control | 41 (still healthy) |
+| OVERLAP / CTX_CHANGED_* | **0 / 0** |
+| SKIP_WIDTH / SKIP_OOB | 14 / 7 (rate-limited log counts; more skips exist) |
+| thr-resume bad=1 | **0** (122062 resumes) |
+| process | **alive full 65s** post-`a` (killed by harness) |
+| fs | advances through soak (max 3621) |
+| exit=2 | 0 |
+| CRASH | none |
+
+Grace PNGs: black/UI gap early (~grace_02–06 small), then sustained content
+frames ~900 KB from grace_09 onward (mission-shaped path continues rendering).
+
+### Hypothesis table
+
+| ID | Result |
+|----|--------|
+| W1 RT64 writeback into OSThread | **Confirmed** + fixed |
+| W2 game MIPS store | Not needed for death path (writer identified) |
+| W3 host ultra field tear | Refuted for death path |
+| W4 unrelated heap smash | Refuted for death path |
+
+### Positive controls
+- Discover run: non-overlap control lines fire throughout boot/menu.
+- Fix run: control still fires; SKIP lines fire on garbage; no false OVERLAP.
+
+### Next
+M3 unblocked for 60s mission hold: inspect post-`a` texture garbage (g07),
+craft input, phase timeline. SIGBUS class closed under current LLE path.
+
+### Files
+- `lib/rt64/src/hle/rt64_state.cpp` (instrument + always-on sane writeback gate)
+- `submodule-patches/rt64.patch` (exported)
+- `scratch/s71_sigbus_triage/run_soak.sh` (+ `writer1/`, `writer1_fix/`)
