@@ -63,6 +63,36 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   rc=$?
   printf '%s\n' "$out" >> "$AG/loop.log"
 
+  # Limit classification must look at the runner's ERROR fields, never its
+  # narrative: s68's grok iteration described RSP timing as "the rate-limit
+  # math lines up" and the loop slept 30 minutes on a fully successful,
+  # committed iteration. If the output parses as JSON, build the string the
+  # limit patterns run against from error-ish fields only — including
+  # result/text solely when is_error is set (claude puts real limit messages
+  # in "result", but successful narratives live there too). If it does not
+  # parse, fall back to the raw output: real limit messages are sometimes
+  # plain text.
+  errtxt="$(printf '%s' "$out" | python3 -c '
+import json, sys
+raw = sys.stdin.read()
+try:
+    d = json.loads(raw)
+except Exception:
+    print(raw); sys.exit()
+parts = []
+for k in ("error", "subtype", "stopReason", "stop_reason", "api_error_status", "terminal_reason"):
+    v = d.get(k)
+    if v is not None:
+        parts.append(str(v))
+if d.get("is_error"):
+    parts.append("is_error")
+    for k in ("result", "text"):
+        v = d.get(k)
+        if v is not None:
+            parts.append(str(v))
+print("\n".join(parts))
+' 2>/dev/null)" || errtxt="$out"
+
   # NOTE: limits are classified BEFORE the contract check on purpose. `codex`
   # exits 0 even when it did nothing but print "You've hit your usage limit",
   # so an rc-based test cannot see that failure — and if the contract check ran
@@ -79,9 +109,9 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   # is what the loop is SUPPOSED to sleep through, and it often carries upsell
   # wording ("upgrade your plan") that would otherwise read as a hard cap. A
   # stated reset time means the window reopens by itself: always transient.
-  if printf '%s' "$out" | grep -qiE 'resets? at|resets? in|try again (later|at)|limit will reset'; then
+  if printf '%s' "$errtxt" | grep -qiE 'resets? at|resets? in|resets? [0-9]|try again (later|at)|limit will reset'; then
     : # falls through to the transient handler below - sleep, do not stop
-  elif printf '%s' "$out" | grep -qiE 'monthly spend limit|spend limit|credit balance|insufficient quota'; then
+  elif printf '%s' "$errtxt" | grep -qiE 'monthly spend limit|spend limit|credit balance|insufficient quota'; then
     { echo "# Hard spend/quota cap reached, $(date)"; echo;
       echo "This is NOT a transient rate limit and sleeping will not clear it."
       echo "Raise or reset the cap (claude.ai/settings/usage), then delete this"
@@ -92,7 +122,7 @@ while [ "$n" -lt "$ITER_CAP" ]; do
     exit 2
   fi
 
-  if [ $rc -ne 0 ] || printf '%s' "$out" | grep -qiE 'usage limit|rate.?limit|overloaded|resets at'; then
+  if [ $rc -ne 0 ] || printf '%s' "$errtxt" | grep -qiE 'usage limit|session limit|rate.?limit|overloaded|resets at'; then
     waits=$((waits+1))
     if [ "$waits" -gt "$MAX_LIMIT_WAITS" ]; then
       { echo "# Loop gave up after $waits consecutive limit/error waits, $(date)"; echo;
@@ -143,6 +173,8 @@ while [ "$n" -lt "$ITER_CAP" ]; do
     out="$(RUNNER=claude LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$AG/RETRY_PROMPT.md")"
     printf '%s\n' "$out" >> "$AG/loop.log"
     # A retry that itself hits a limit is not a contract failure - stop retrying.
+    # (Raw-output match is acceptable here: a false positive merely stops
+    # retrying early, it does not put the loop to sleep.)
     if printf '%s' "$out" | grep -qiE 'usage limit|rate.?limit|spend limit|overloaded'; then
       log "retry $cr hit a provider limit; abandoning contract retries this iteration"
       break
