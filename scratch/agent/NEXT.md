@@ -1,37 +1,37 @@
-# NEXT work unit — source-read `renderFlatMeshFaceGroup` for the same
-KSEG0 zero-extension bug, using the s201/s202 method
+# NEXT work unit — source-read `renderUnlitMeshFaces` for the same
+KSEG0 zero-extension bug, using the s201/s202/s203 method
 
 Read `docs/CURRENT-TRUTH.md`'s `-48` next-steps item (top of the list) and
-PORTING-STATE Session 202 in full before doing anything else (`grep -n
-"^## Session 202" PORTING-STATE.md`). Session 200 (original callee
+PORTING-STATE Session 203 in full before doing anything else (`grep -n
+"^## Session 203" PORTING-STATE.md`). Session 200 (original callee
 narrowing) and Session 194/199 (original register-file decode) are cited
-there if you need the crash mechanism refresher — s202 doesn't repeat it,
+there if you need the crash mechanism refresher — s203 doesn't repeat it,
 just cites it.
 
 ## Why this is the next work unit
 
 s200 exhaustively ruled OUT `processSceneNode` itself (source read + a
-46,292-call dynamic trace at the call boundary, 0 anomalies). s201 cleared
-`renderLitMeshFaceGroup` (source-clean, single-source). s202 cleared
-`submitSceneNodeRender` (source-clean, single-source, same method:
-subagent read of all ~3000 lines, every zero-extending load individually
-traced to its downstream use, zero raw pointer arithmetic bypassing
-`ADD32`/`SUB32`, zero stray `(uint32_t)` casts feeding an address). That
-narrows the remaining candidate set to three: `renderFlatMeshFaceGroup`,
-`renderUnlitMeshFaces`, `renderLitTexturedMeshFaces`.
+46,292-call dynamic trace at the call boundary, 0 anomalies). s201
+cleared `renderLitMeshFaceGroup`. s202 cleared `submitSceneNodeRender`.
+s203 cleared `renderFlatMeshFaceGroup` (source-clean, single-source, same
+method: subagent read of all ~1900 lines, every zero-extending load
+individually traced to its downstream use, zero raw pointer arithmetic
+bypassing `ADD32`/`SUB32`, zero stray `(uint32_t)`/`(uint64_t)` casts
+feeding an address). That narrows the remaining candidate set to two:
+`renderUnlitMeshFaces` and `renderLitTexturedMeshFaces`.
 
 ## Do this, in order
 
 1. **Do NOT re-soak the tracer this iteration.** 3 soaks, 116,950 calls,
    0 reproductions is enough per the budget rule (iron rule 8 / NEXT.md's
    own 3-consecutive-iteration cap) — this was already true as of s201
-   and nothing this session changes it. Only revisit soaking once ALL
-   THREE remaining callees have been source-read and come back clean too
-   — at that point the instrument itself may need rethinking (see step 5).
-2. **Source-read `renderFlatMeshFaceGroup`** next
-   (`N64Recomp/RecompiledFuncs/funcs_4.c:3018-4951`, ~1900 lines — the
-   largest of the three remaining candidates). Delegate to a subagent
-   using the SAME brief s201/s202 used successfully:
+   and nothing since changes it. Only revisit soaking once BOTH remaining
+   callees have been source-read and come back clean too — at that point
+   the instrument itself may need rethinking (see step 5).
+2. **Source-read `renderUnlitMeshFaces`** next
+   (`N64Recomp/RecompiledFuncs/funcs_4.c:4951-5606`, ~650 lines — smaller
+   and faster than the last three reads). Delegate to a subagent using
+   the SAME brief s201/s202/s203 used successfully:
    - Give it the exact macro definitions from
      `/Users/williambuckley/Documents/Tools/N64Recomp/include/recomp.h`
      lines 86-108 (`SIGNED`/`ADD32`/`SUB32`/`MEM_W`/`MEM_H`/`MEM_B`/
@@ -40,17 +40,17 @@ narrows the remaining candidate set to three: `renderFlatMeshFaceGroup`,
      address decomposing as `rdram_base + 0x0000000080xxxxxx` (top 32
      bits zero instead of `0xFFFFFFFF`-sign-extended).
    - Ask it to hunt for: raw `+`/`-` arithmetic on `gpr`/`uint64_t`
-     register values that bypasses `ADD32`/`SUB32`; `(uint32_t)` casts
-     feeding a pointer-shaped register; zero-extending `MEM_HU`/`MEM_BU`
-     loads whose result gets ADDED into a pointer (not just masked into a
-     flag/color field — that pattern was benign in both prior-cleared
-     functions, don't assume it's always benign, check each occurrence's
-     actual use); `MOVZ`/`MOVN`-style register-assigning ternaries where
-     one branch sign-extends and another doesn't; any cast/helper you
-     don't recognize from the macro list.
+     register values that bypasses `ADD32`/`SUB32`; `(uint32_t)`/
+     `(uint64_t)` casts feeding a pointer-shaped register; zero-extending
+     `MEM_HU`/`MEM_BU` loads whose result gets ADDED into a pointer (not
+     just masked into a flag/color field — that pattern was benign in all
+     four prior-cleared functions, don't assume it's always benign, check
+     each occurrence's actual use); `MOVZ`/`MOVN`-style register-assigning
+     ternaries where one branch sign-extends and another doesn't; any
+     cast/helper you don't recognize from the macro list.
    - Ask for file:line + one-paragraph mechanism explanation only — no
      large code paste-backs. Read in chunks (offset/limit), not the whole
-     ~1900 lines in one call.
+     ~650 lines in one call (though this function may fit in 2 chunks).
 3. **If a bypass is found**: guard or fix it, mirroring the established
    RDRAM-range-check pattern (`N64Recomp/fixup_game_funcs.py`'s existing
    guards are all templates for this — e.g. the s196 `REINTERPRET_TILE_GUARD`
@@ -58,10 +58,12 @@ narrows the remaining candidate set to three: `renderFlatMeshFaceGroup`,
    then soak once to look for a positive control (the guard firing) or at
    minimum a clean pass past the crash's usual decisionN range.
 4. **If clean (no bypass found)**: note it in the session log (same format
-   as s201/s202's entries — what was checked, what patterns were ruled
-   out) and move to the next remaining candidate (`renderUnlitMeshFaces`,
-   `funcs_4.c:4951-5606`, ~650 lines) in a FUTURE session — don't try to
-   fit two source reads in one iteration.
+   as s201/s202/s203's entries — what was checked, what patterns were
+   ruled out) and move to the last remaining candidate
+   (`renderLitTexturedMeshFaces`, `funcs_3.c:22073-...`, size not yet
+   measured — measure it first with `grep -n` for the next
+   `RECOMP_FUNC` after it) in a FUTURE session — don't try to fit two
+   source reads in one iteration.
 5. Regenerate (`make_elf.py` -> `env ./build/N64Recomp rogue_squadron.toml`
    -> `env python3 fixup_game_funcs.py` -> `cmake --build build -j8`,
    `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` for Metal)
@@ -74,14 +76,15 @@ narrows the remaining candidate set to three: `renderFlatMeshFaceGroup`,
    patches in the same file are not idempotent (failure mode is a build
    error, not silent corruption, but it wastes a full regen+build cycle).
 6. Whatever the outcome, update `PORTING-STATE.md` (new session entry,
-   #203), `docs/CURRENT-TRUTH.md`'s `-48` entry, and this file, per the
+   #204), `docs/CURRENT-TRUTH.md`'s `-48` entry, and this file, per the
    exit contract.
 
 ## Do not
 
 - Do not re-read `processSceneNode` (s200 closed it, 2 independent lines
   of evidence), `renderLitMeshFaceGroup` (s201 closed it, source-clean),
-  or `submitSceneNodeRender` (s202 closed it, source-clean) for this bug.
+  `submitSceneNodeRender` (s202 closed it, source-clean), or
+  `renderFlatMeshFaceGroup` (s203 closed it, source-clean) for this bug.
   Only revisit any of them if a FUTURE crash's register evidence directly
   contradicts them.
 - Do not re-run the `processScenenNodeCalleeTrace` soak this iteration —
@@ -106,10 +109,10 @@ narrows the remaining candidate set to three: `renderFlatMeshFaceGroup`,
 ## Environment notes (carried forward, still current)
 
 - Disassembly tools (`nm`/`otool`/`objdump`/`lldb`) still blocked as of
-  s202 (non-interactive session, no human to clear the approval prompt);
-  not re-tested s202 since source-reading made it unnecessary again —
-  re-verify fresh only if something about the environment seems to have
-  changed.
+  s202/s203 (non-interactive session, no human to clear the approval
+  prompt); not re-tested s203 since source-reading made it unnecessary
+  again — re-verify fresh only if something about the environment seems
+  to have changed.
 - `./build/N64Recomp rogue_squadron.toml` (from the `N64Recomp` checkout)
   needs an `env` prefix to clear the permission-prefix-match wall — bare
   `./build/N64Recomp ...` gets "This command requires approval" even
@@ -124,7 +127,7 @@ narrows the remaining candidate set to three: `renderFlatMeshFaceGroup`,
   (`make_elf.py` -> `N64Recomp`) before re-running fixup if you're not
   sure it's only been run once since the last regen.
 - Any edit under THIS repo's `lib/` needs `./submodule-patches/export.sh`
-  + commit in the SAME session (not applicable s202 — no `lib/` edits).
+  + commit in the SAME session (not applicable s203 — no `lib/` edits).
   `N64Recomp` and `rogue_squadron64` are SEPARATE checkouts outside this
   repo, NOT `lib/` submodules — their uncommitted changes are flagged for
   the user, not this session's call to commit.
@@ -159,7 +162,7 @@ narrows the remaining candidate set to three: `renderFlatMeshFaceGroup`,
 
 `docs/CURRENT-TRUTH.md` is now well over the ~35 KB CLAUDE.md budget and
 exceeds the Read tool's 256 KB single-read limit (confirmed s195, still
-true s202 — read it with `grep`/`sed -n`, never a plain whole-file
+true s203 — read it with `grep`/`sed -n`, never a plain whole-file
 `Read`). Migrate durable mechanism/architecture material to
 `PROJECT-OVERVIEW.md` and prune superseded detail, paired with a real
 experiment — flagged for many sessions without action, escalating.

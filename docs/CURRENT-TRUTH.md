@@ -663,12 +663,13 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s201)
+## Next steps, in order of expected value (s203)
 
--48. **(s200/s201/s202) `processSceneNode+8772` KSEG0-zero-extension bug:
-    `processSceneNode`, `renderLitMeshFaceGroup`, AND `submitSceneNodeRender`
-    are all now source-clean — search narrows to the three remaining direct
-    callees.** s200 exhaustively ruled out
+-48. **(s200/s201/s202/s203) `processSceneNode+8772` KSEG0-zero-extension
+    bug: `processSceneNode`, `renderLitMeshFaceGroup`,
+    `submitSceneNodeRender`, AND `renderFlatMeshFaceGroup` are all now
+    source-clean — search narrows to the two remaining direct callees.**
+    s200 exhaustively ruled out
     `processSceneNode` by two independent lines of evidence (full static
     read + a 46,292-call dynamic trace at the call boundary, 0 anomalies —
     see prior entry text below, still accurate). s201 ran 2 more soaks of
@@ -702,23 +703,34 @@ cost three sessions before the recursive mutex.
     dereferenced), all 22 `MEM_HU`/`MEM_BU` loads individually traced to
     flags/index-comparisons/free-list-offsets never added into a pointer
     outside `ADD32`, no `MOVZ`/`MOVN`-style mismatched-extension ternaries.
-    Same single-source caveat as `renderLitMeshFaceGroup`.
+    Same single-source caveat as `renderLitMeshFaceGroup`. s203 repeated
+    the same method on `renderFlatMeshFaceGroup`
+    (`funcs_4.c:3018-4951`, ~1900 lines, largest of the three remaining
+    at the time). **Result: also clean** — zero raw 64-bit pointer
+    arithmetic bypassing `ADD32`/`SUB32` anywhere in the function (every
+    pointer/offset computation goes through it), zero `(uint32_t)`/
+    `(uint64_t)` casts, all 49 `MEM_HU`/`MEM_BU` zero-extending loads
+    individually traced to flag/comparison/index fields or output
+    color/material descriptor packing (never fed into a pointer outside
+    `ADD32`), only 5 ternaries in the function and all are plain
+    `sltu`-derived booleans (no `MOVZ`/`MOVN`-style mismatched-extension
+    pattern). Same single-source caveat as the prior three.
 
-    **Remaining candidates** (unexamined): `renderFlatMeshFaceGroup`
-    (`funcs_4.c:3018-4951`, ~1900 lines), `renderUnlitMeshFaces`
+    **Remaining candidates** (unexamined): `renderUnlitMeshFaces`
     (`funcs_4.c:4951-5606`, ~650 lines), `renderLitTexturedMeshFaces`
     (`funcs_3.c:22073-...`, size not yet measured). **Best next work
-    unit**: subagent-assisted source read of `renderFlatMeshFaceGroup` next
-    (largest of the remaining three) using the exact same brief/method as
-    s201/s202 (recomp.h:86-108 macros + the zero-extension signature) — do
-    NOT re-soak the tracer again this cycle, 3 soaks with 0 reproductions
-    is enough per the budget rule; only revisit soaking if all three
-    remaining callees come back clean too (at that point, reconsider
-    whether the tracer itself needs to log more — e.g. every internal
-    pointer computation, not just call-boundary args — since the current
-    instrument would be structurally blind to a defect that's introduced
-    AND consumed entirely within one callee, never crossing back through a
-    logged boundary). Full detail: PORTING-STATE Session 200, 201, 202
+    unit**: subagent-assisted source read of `renderUnlitMeshFaces` next
+    (smaller/faster than the last three reads) using the exact same
+    brief/method as s201/s202/s203 (recomp.h:86-108 macros + the
+    zero-extension signature) — do NOT re-soak the tracer again this
+    cycle, 3 soaks with 0 reproductions is enough per the budget rule;
+    only revisit soaking if both remaining callees come back clean too
+    (at that point, reconsider whether the tracer itself needs to log
+    more — e.g. every internal pointer computation, not just
+    call-boundary args — since the current instrument would be
+    structurally blind to a defect that's introduced AND consumed
+    entirely within one callee, never crossing back through a logged
+    boundary). Full detail: PORTING-STATE Session 200, 201, 202, 203
     (and Session 194/199 for the original register-file decode this all
     traces back to).
 

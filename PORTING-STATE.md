@@ -18879,3 +18879,75 @@ back clean, the search must widen beyond the five direct callees (e.g.
 reconsider whether the defect lives in a grandchild callee, or whether
 the tracer instrument needs to log more than call-boundary args — see
 NEXT.md's own note on this from s201).
+## Session 203 (2026-07-28) — source read of `renderFlatMeshFaceGroup` for the `+8772` KSEG0-zero-extension bug: clean, narrows the remaining candidate set to two
+
+Continuation of NEXT.md item -48. Per s202's narrowing (`processSceneNode`,
+`renderLitMeshFaceGroup`, and `submitSceneNodeRender` all source-clean),
+this session's sole work unit was a subagent-delegated full source read
+of `renderFlatMeshFaceGroup` (`N64Recomp/RecompiledFuncs/funcs_4.c:3018-4951`,
+~1900 lines, largest of the three remaining candidates), using the exact
+same brief that closed the prior three functions (the `recomp.h:86-108`
+macro definitions, the exact KSEG0 zero-extension signature, and
+instructions to check every zero-extending load's actual downstream use
+rather than assume the prior sessions' benign pattern generalizes).
+
+Per NEXT.md's own instruction, did NOT re-soak the `processScenenNodeCalleeTrace`
+tracer this iteration — 3 soaks / 116,950 calls / 0 reproductions from
+s200-201 already exhausts the budget rule for that instrument.
+
+**Result: clean.** The subagent read the full function in 4 sequential
+chunks (no gaps) plus grepped the whole range for raw `+`/`-` arithmetic
+on `ctx->rN`/`gpr` values bypassing `ADD32`/`SUB32` and for stray
+`(uint32_t)`/`(uint64_t)` casts. Specifically ruled out:
+- Zero raw 64-bit pointer arithmetic bypassing `ADD32`/`SUB32` anywhere
+  in the function — every pointer/offset computation (funcs_4.c:3056,
+  3288, 3306, 3330/3336/3346, 4426, 4449, 4852-4923 free-list-table
+  rebuild) goes through `ADD32`; subtractions are all done as
+  `ADD32(x, -N)`, no `SUB32` call needed.
+- Zero `(uint32_t)`/`(uint64_t)` casts anywhere in the function (grep
+  confirmed zero matches for either cast form).
+- All 49 `MEM_HU`/`MEM_BU` zero-extending loads in the function
+  individually traced downstream, falling into two safe clusters:
+  flag/comparison/index fields (e.g. lines 3566, 3584, 3809/3849,
+  3821/3859-3865, 3891, 4285/4439/4688/4842 — LOD/shading-mode/UV-
+  presence/free-list-capacity checks) and byte/halfword packing into
+  output color/material descriptor words written via `MEM_W` (never
+  read back as an address) (e.g. lines 3945-4017, 4068, 4102-4114,
+  4043-4053/4158-4170/4238-4248, 4180/4252 — the last two used purely
+  as `sllv` shift amounts). One occurrence (line 4863, a 0/1
+  double-buffer index byte) is shifted `<<2` and combined via `ADD32`
+  (not raw `+`) into five static base pointers (4873-4923) to select
+  per-buffer free-list heads — correctly truncating, no bypass.
+- Only 5 ternaries in the whole function (~lines 3368, 3640, 4287, 4487,
+  4690), all `sltu`-derived boolean `cond ? 1 : 0` assignments — never a
+  pointer-vs-pointer or pointer-vs-zero select, so no `MOVZ`/`MOVN`-style
+  mismatched-extension pattern.
+- No unrecognized casts/helpers outside the documented macro set; the
+  only "unusual" arithmetic is MIPS `mult`/`div` emulation (lines
+  4133-4144, 4191-4192) for texel-count/mipmap math, entirely on plain
+  integers, never touching a pointer register.
+
+This is single-source (static read only, no matching dynamic trace
+inside this function's own body) — same caveat as s201/s202's findings,
+treat as provisional not closed with `processSceneNode`'s two-
+independent-line confidence.
+
+**Remaining candidates, narrowed to two**: `renderUnlitMeshFaces`
+(`funcs_4.c:4951-5606`, ~650 lines), `renderLitTexturedMeshFaces`
+(`funcs_3.c:22073-...`, size not yet measured). No code changes landed
+this session (nothing to patch — clean read only); no regen/build
+needed. No `lib/` edits this session.
+
+**Rules out**: `renderFlatMeshFaceGroup` as the site of the `+8772`
+zero-extension bug (single-source static confidence, matching the prior
+three functions' confidence level).
+
+**Next work unit**: subagent-assisted source read of `renderUnlitMeshFaces`
+(`funcs_4.c:4951-5606`, ~650 lines — smaller and faster than the previous
+three reads) using the identical brief/method. If it and
+`renderLitTexturedMeshFaces` both come back clean, all five direct
+callees of `processSceneNode` will be source-clean and the search must
+widen beyond them (e.g. reconsider whether the defect lives in a
+grandchild callee, or whether the tracer instrument needs to log more
+than call-boundary args — see prior sessions' notes on this fallback).
+
