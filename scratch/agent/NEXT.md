@@ -1,100 +1,119 @@
-# NEXT work unit — re-run the `schedcaller`-shape soak (2nd miss so far)
+# NEXT work unit — identify guest thread id 0, then design a fix/instrument
+# for the scheduler silent-drop mechanism (s180's finding)
 
-s179 landed the `[hangar-loop]` instrument NEXT.md asked for and confirmed by
-source read that `runHangarMenuFromOverlay`'s `L_800C68AC` loop is the ONLY
-static call site of `runHangarSelectionFrame`, with no wait/yield of its own
-— so watching it directly answers "does the guest thread stop being
-scheduled, or does it keep running but skip the call". Read PORTING-STATE
-Session 179 before doing anything else; this file only has the actionable
-summary.
+Read PORTING-STATE Session 180 in full before doing anything else (`grep -n
+"^## Session 180" PORTING-STATE.md`); this file only has the actionable
+summary. Also read docs/CURRENT-TRUTH.md's `-32` next-steps item — it has
+the same summary in slightly more compressed form plus the exact fix-design
+constraints to respect.
 
-## What s179 established (read before doing anything else)
+## What s180 established (read before doing anything else)
 
-- **Source-confirmed exactly 2 static call sites** to `static_5_800AAD9C`
-  (`runHangarSelectionFrame`), both the identical `L_800C68AC` loop inside
-  `runHangarMenuFromOverlay`, duplicated across two overlay-instance copies
-  (`funcs_29.c`, `funcs_43.c`). No other static caller anywhere in
-  `RecompiledFuncs/`.
-- **Landed `ROGUESQ_LOG_HANGAR_LOOP=1`** (iteration counter + guest thread id
-  at the loop head) and a new ctx-register-free thread-id probe,
-  `rogue_current_thread_id(uint8_t* rdram)`
-  (`lib/N64ModernRuntime/ultramodern/src/threads.cpp`) — deliberately not
-  `osGetThreadId_recomp`, which clobbers live `ctx->r2`/`ctx->r4` registers
-  mid-loop. `lib/` patch exported + committed.
-- **One soak (`schedcaller1`) gave a clean positive control but missed the
-  target.** `[hangar-loop]` fired 518/518 times, guest thread id **always
-  `3`** (new data point: one consistent thread owns this loop). But the run
-  never reached a sustained `stalled=1` — died at hold-iter 1
-  (`[vi-fs-decision] #7857`, `rdpFs=3740`, far short of s178's `#14080`
-  onset) to a **3rd occurrence of the s84 `frameStartReset` SIGBUS**
-  (backtrace: `static_5_800C6854` → `static_5_800AAD9C` →
-  `frameStartReset`, exactly the predicted chain). This is the SAME crash
-  that preempted s177's one prior attempt at this soak shape — 2 of the
-  last 3 dedicated attempts now lost to it.
-- **`frameStartReset` itself has no bug in its own guest body** (already
-  source-verified in an earlier session, search PORTING-STATE for prior
-  mentions) — do not re-open that as a fresh investigation from this
-  session's finding alone. It's flagged as a recurring competitor, not a
-  new mystery to chase from scratch.
-- **Incidental, already resolved — do not re-derive**: `[swap-ack-wait]`
-  reaching `call=4755` while `[hangar-loop]` only reached `n=518` in the
-  same run is NOT evidence of a hidden indirect caller of
-  `runHangarSelectionFrame`. `waitForPrevFrameDone` (the only caller of
-  `waitForPostSwapAck`) has 22 call sites across 10 files — it's a shared
-  per-frame utility, not exclusive to this loop. The static-call-site count
-  for `runHangarSelectionFrame` specifically (2, both this loop) stands.
-- **4th `rdpFs`-onset data point**: plateaued at 3740 right before this
-  crash, inside the s176/177/178 `~3175-3802` candidate-ceiling band.
+- **Reproduced the sustained graphics-task-submission stall crash-free for
+  the first time** (`schedcaller2`, the 3rd/last rule-8-allowed attempt at
+  this soak shape). `CRASH: 0`, hold+grace both completed (wall=161s),
+  `[vi-fs-decision]` decisions **#8000-#16256** are one unbroken run of
+  `stalled=1 pairs=0` with `rdpFs` frozen at exactly `3747` (5th data point
+  in the `~3560-3802` candidate shared-ceiling band).
+- **Discriminating result closed**: `[hangar-loop]`'s last firing (`n=538`,
+  thread id **3**, 2nd confirmation it's always this thread) is immediately
+  followed by `[swap-ack-wait] call=4781`'s clean, fully-matched
+  enter/pre-recv/post-recv (no orphan) — then **neither instrument fires
+  again for the rest of the run**. This confirms the outer polling loop
+  itself stops iterating (not: keeps running while the callee silently skips
+  the wait).
+- **Root mechanism found, source-confirmed, single-run positive control**:
+  between that clean `call=4781` and the stall's onset, exactly one
+  `[thr-resume-skip] tag=run_next id=0 ctx=0x0 live=0 bad_total=1` fires
+  (the always-on s84 UAF guard — `ROGUESQ_LOG_THREAD_RESUME` was 0 this run,
+  so this is the cheap-atomic path, not the verbose log) — with **nothing
+  else logged in between**. Read `resume_thread_tagged` /
+  `run_next_thread` / `run_next_thread_and_wait`
+  (`lib/N64ModernRuntime/ultramodern/src/threads.cpp:198-278`) plus
+  `mesgqueue.cpp:105/143` (what guest `osRecvMesg`/`osSendMesg`'s blocking
+  path compiles to) before touching anything — the mechanism: when the
+  scheduler pops a "next" thread off `running_queue` to hand off to, and
+  that thread's context is `bad` (the s70-s94-family UAF signature), the
+  guard prints `[thr-resume-skip]` and **returns without retrying the next
+  queue entry or waking whichever thread yielded expecting the handoff**.
+  If the popped thread (**id 0**) was the one that would eventually have
+  serviced the swap-ack message queue thread 3 is blocked on, thread 3 never
+  gets resumed — permanent, total stall, and the game process itself never
+  crashes (hence this run's `CRASH: 0`), it just silently stops advancing.
+- **This is a single run, single firing** — strong (tight timing, real
+  source mechanism, not a guess) but per rule 4 needs a 2nd independent line
+  of evidence before "current truth" treats it as more than a strong lead.
 
-## Do next
+## Do next, in order
 
-1. **Re-run the exact `schedcaller1` recipe** (copy
-   `scratch/agent/run_schedcaller1.sh` to a new tag, e.g. `schedcaller2` —
-   no code/instrument changes needed, the instrument is already validated).
-   Per rule 8, this is the 3rd attempt total at this soak shape (s177 1st
-   miss, s179 2nd miss, both to `frameStartReset`) — allowed one more before
-   parking per rule 8's 3-consecutive-null budget.
-2. **If it reproduces the sustained stall**: check where `[hangar-loop]`'s
-   last line falls relative to `[swap-ack-wait]`'s last line (same call
-   number/nearby → loop itself stopped, points at guest-thread scheduling
-   starvation; `[hangar-loop]` keeps advancing well past where
-   `[swap-ack-wait]` stops → loop keeps running but its callee silently
-   skips the wait, points at a guest-side state/flag check instead). Also
-   note whether thread id `3` still shows up in the last `[hangar-loop]`
-   lines (only one data point so far that it's always `3` — a 2nd
-   confirmation would be worth having before treating that as fixed).
-3. **If it's preempted by `frameStartReset` a 3rd time**: per rule 8, STOP
-   attempting this exact soak shape. Two options, pick based on what's
-   cheaper to try first:
-   - Redesign the repro to start later in the timeline / skip past
-     wherever `frameStartReset` tends to fire (its 3 occurrences: s84
-     hold+~1s, s177 wall~146.5s, s179 hold-iter 1 — inconsistent timing, so
-     "skip past" may not be a coherent fix; check the 3 occurrences'
-     `[vi-fs-decision]` decision numbers, not wall-clock, before assuming
-     this is viable).
-   - Pivot to the shared-corruption-race family directly (do_rom_read /
-     OSThread UAF / thr-resume `bad=1` lineage, s85-s94) since it's now
-     the single biggest obstacle to reaching the stall state at all in 2 of
-     3 recent attempts.
-4. **Independently, also worth pursuing**: any soak that lands a 5th
-   `rdpFs`-onset data point further tightens the ~3500-3800 ceiling band.
+1. **Source-read only, no rebuild.** Find what guest thread id 0 actually is.
+   Grep `RecompiledFuncs/*.c` (or the relevant lib runtime call sites) for
+   `osCreateThread` calls and their `id` arguments — find the one that
+   creates id 0, and whatever name/role can be inferred from its entry
+   function or the overlay it lives in. Cross-reference against the already
+   known threads in this investigation (id 3 = hangar-loop/menu thread; PI
+   DMA worker was id 1, per s93). This either confirms or refutes the
+   sub-hypothesis that id 0 is specifically the swap-ack/present producer —
+   important context before designing any fix, since a wrong guess about
+   *why* dropping id 0 matters could lead to a fix that doesn't address the
+   real dependency.
+2. **Decide the fix shape** based on what id 0 turns out to be. Two
+   candidate directions (not exhaustive — this is not yet a designed fix,
+   it's the next work unit's actual decision to make):
+   - Make `resume_thread_tagged`'s bad-context branch retry with the next
+     `running_queue` entry instead of just returning (turns a silent
+     scheduling-slot loss into "skip the bad thread, try the next one" —
+     closer to what a real OS scheduler would do on a dead thread).
+   - Give `run_next_thread_and_wait`'s caller (the message-queue blocking
+     path in `mesgqueue.cpp`) a way to detect that the specific thread it
+     was counting on will never run and recover (e.g. re-queue itself and
+     retry, or time out).
+   Either is a real change to shared scheduler code, not a guest-code guard
+   — treat with the same care as every prior fix in this project: keep
+   register-value comparisons truncated (`U32()` etc, per s99's lesson),
+   keep any guest-code-adjacent path ABI-correct, and validate with a
+   same-run positive AND negative control before trusting it.
+3. **Land whichever fix/instrument step 2 settles on**, following the usual
+   regen pipeline if it touches guest-code fixups, or just `cmake --build`
+   if it's pure `lib/` runtime C++ (see "environment notes" below for the
+   exact commands). If it touches `lib/`, run `submodule-patches/export.sh`
+   and commit the refreshed patches in the same session — hard rule.
+4. **Soak it.** Reuse the `schedcaller`-shape env block (copy
+   `scratch/agent/run_schedcaller2.sh` to a new tag, e.g. `schedguard1`) —
+   it's already validated to reach the target stall state reliably-ish (1 of
+   3 recent attempts, now unblocked from the `frameStartReset` competitor
+   since that soak shape survived crash-free this time). Discriminating
+   outcomes:
+   - Fix prevents the stall entirely (thread 3 keeps advancing past where
+     `[thr-resume-skip] id=0` used to fire, `[lle task]` submission
+     continues) → strong support, but still only 1 run — needs a repeat
+     before calling this milestone-closing.
+   - Stall still occurs but `[thr-resume-skip]`/`bad_total` no longer
+     precedes it → refutes this session's mechanism as *sufficient* (may
+     still be a contributing factor, or the wrong causal read).
+   - Stall recurs with the exact same signature (`id=0`, immediately
+     preceding onset) unfixed → confirms the mechanism is real but the fix
+     attempt didn't address it — iterate on the fix, not the investigation.
 
 ## Do not
 
-- Do not re-investigate `frameStartReset`'s own guest body — already
-  source-verified clean (no bug there); any real fix effort belongs in its
-  callees or the shared-corruption-race family (see PORTING-STATE, search
-  "frameStartReset" for the full prior investigation before touching this).
-- Do not treat the `[swap-ack-wait]` vs `[hangar-loop]` count mismatch as
-  evidence of a hidden indirect caller of `runHangarSelectionFrame` — this
-  is closed (22 unrelated call sites to the shared `waitForPrevFrameDone`
-  utility fully explain it).
-- Do not re-litigate whether `waitForPostSwapAck` itself is the blocking
-  point inside `runHangarSelectionFrame` — s178 already closed that with a
-  clean, fully-matched negative control.
-- Do not treat isolated `stalled=1` blips (this run: 43 of them, none
-  sustained) as evidence of reproducing the real condition — only a
-  sustained `stalled=1 pairs=0` stretch counts.
+- Do not treat the s180 finding as fully confirmed yet — it's one run, one
+  `[thr-resume-skip]` firing. Get a 2nd independent data point (ideally via
+  the fix-validation soak in step 4 above) before promoting language in
+  CURRENT-TRUTH from "candidate root cause" to established fact.
+- Do not re-litigate the `[hangar-loop]` vs `[swap-ack-wait]` discriminating
+  question — s180 closed it (outer loop stops iterating, confirmed by two
+  independent soaks now showing thread id 3 consistently and the paired
+  stop point).
+- Do not re-open `frameStartReset` as an investigation thread — still
+  source-verified clean in its own body (multiple prior sessions); this
+  session's crash-free run doesn't change that, it just means this
+  particular soak avoided it, not that it's fixed.
+- Do not attempt a 4th `schedcaller`-shape soak with the OLD instrument set
+  hoping for another lucky crash-free run before designing the fix — rule 8
+  already closed that repro angle at 3 attempts (this session's was the
+  3rd). The next soak should be validating a fix/instrument change, not a
+  blind repeat.
 
 ## Blocking on a long-running soak (learned the hard way, still current)
 
@@ -103,13 +122,12 @@ call with output redirected to a log file and a generous timeout (~480s
 covers this env block's 120s hold + overhead) — the script blocks until the
 game process exits, no polling loop needed. If it exceeds the foreground
 timeout, the harness moves it to background automatically and notifies on
-completion. **s179 update**: if you DO background it (e.g. via
-`run_in_background: true`), do not just wait passively for the notification
-and end your turn — the Stop hook checks `scratch/agent/STATUS` immediately
-and will fire before the notification lands if the turn ends first. Instead,
-after backgrounding the run, immediately issue a SECOND, foreground Bash
-call that blocks on the wrapper's own process exiting (a small script under
-`scratch/agent/`, e.g.:
+completion. If you DO background it (e.g. via `run_in_background: true`), do
+not just wait passively for the notification and end your turn — the Stop
+hook checks `scratch/agent/STATUS` immediately and will fire before the
+notification lands if the turn ends first. Instead, after backgrounding the
+run, immediately issue a SECOND, foreground Bash call that blocks on the
+wrapper's own process exiting (a small script under `scratch/agent/`, e.g.:
 ```
 until ! ps aux | grep -q "[r]un_mission_keys.sh <tag>"; do sleep 5; done
 ```
@@ -127,9 +145,9 @@ summary block is complete.
 ## This session's environment notes (carry forward, still current)
 
 - Re-running the same script/tag **overwrites** the previous run's
-  `run.log` in place — copy the driver script to a new tag name per soak
-  (e.g. `schedcaller2` from `schedcaller1`) so each soak's full run.log and
-  screenshots land in their own directory, never overwritten.
+  `run.log` in place — copy the driver script to a new tag name per soak so
+  each soak's full run.log and screenshots land in their own directory,
+  never overwritten.
 - Running `N64Recomp/build/N64Recomp` or any script under
   `RogueSquadron64Recomp/tools/agent/*.sh` / `scratch/agent/*.sh` directly
   gets denied even though the text matches an allowlisted prefix —
@@ -160,27 +178,22 @@ summary block is complete.
   `zsh tools/agent/regen_n64recomp.sh`) then `fixup_game_funcs.py` once,
   then `cmake --build`. For pure host/runtime C++ changes: just
   `cmake --build`, no regen needed at all.
-- **s179: a new host-side C++ helper called FROM guest code needs an
-  `rdram` parameter if it uses `TO_PTR`/`PTR` macros** — those macros
-  reference an in-scope variable literally named `rdram` (RDRAM-relative-
-  pointer build mode), which every `RECOMP_FUNC` already has; a
-  no-argument helper fails to compile with "use of undeclared identifier
-  'rdram'". Do NOT call `osGetThreadId_recomp`/other `_recomp`-suffixed
-  functions from a mid-function diagnostic patch — they take/clobber
-  `ctx->rN` registers that are live guest state at that point.
+- A new host-side C++ helper called FROM guest code needs an `rdram`
+  parameter if it uses `TO_PTR`/`PTR` macros (RDRAM-relative-pointer build
+  mode); do NOT call `osGetThreadId_recomp`/other `_recomp`-suffixed
+  functions from a mid-function diagnostic patch — they clobber `ctx->rN`
+  registers that are live guest state at that point.
 - Before writing ANY new patch to `fixup_game_funcs.py`, grep for the
   exact anchor text's uniqueness both within the target file and (if using
   a short/generic snippet) across the whole `RecompiledFuncs/` tree —
-  function-name-anchored patches (e.g. `RECOMP_FUNC void <name>(...)`) are
-  safe since function names are unique repo-wide; mid-function anchors
-  (loop bodies, specific instruction addresses, labels) should be grepped
-  for uniqueness first and file-scoped (`if p.name == "funcs_N.c"`) if not
-  naturally unique — same as every prior patch in this file.
+  function-name-anchored patches are safe since function names are unique
+  repo-wide; mid-function anchors (loop bodies, specific instruction
+  addresses, labels) should be grepped for uniqueness first and file-scoped
+  (`if p.name == "funcs_N.c"`) if not naturally unique.
 - `nm`, `otool`, `lldb` are NOT on the Bash allowlist — use
-  `scratch/agent/machoparse.py` for Mach-O symbol reads (gives function
-  sizes via symtab sort, NOT disassembly). A crash's own `[CRASH]` stack
-  dump (native symbol names + offsets) is usually enough to identify the
-  function without needing this.
+  `scratch/agent/machoparse.py` for Mach-O symbol reads. A crash's own
+  `[CRASH]` stack dump is usually enough to identify the function without
+  needing this.
 - Reading a `RECOMP_FUNC` body directly from
   `N64Recomp/RecompiledFuncs/funcs_*.c` (via `grep -n "RECOMP_FUNC void
   <name>"`) is far more reliable than trusting a `symbol_files/*.txt`
@@ -205,9 +218,13 @@ summary block is complete.
   scripts/logs under `scratch/agent/` or `scratch/s73_post_a_scene/` never
   need `git add` — they're intentionally untracked.
 - A `grep -c "[pattern]"` across a very large run.log (millions of lines
-  from a per-tick instrument like `[rs-malloc-walk]`) is fine and fast —
-  no need to avoid grepping big log files, just don't `cat`/`Read` them
-  wholesale.
+  from a per-tick instrument) is fine and fast — no need to avoid grepping
+  big log files, just don't `cat`/`Read` them wholesale. Prefer `grep -n
+  "pattern" file > scratch/agent/some_name.txt` then `Read` the small
+  extracted file, rather than piping large greps through further shell
+  commands (each Bash call must be a single operation; chained pipes with
+  `awk`/`head`/`tail` after a `grep` frequently get denied as "multiple
+  operations" even though they're one shell pipeline).
 - When a soak survives the full hold window, `run_mission_keys.sh`'s
   summary line `UnhandledJump: N` can be nonzero from totally benign RSP
   microcode fallback noise — grep the actual matched lines before reading
@@ -229,7 +246,7 @@ superseded detail, paired with a real experiment. Flagged for many
 sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
-not a `lib/` submodule, with uncommitted changes across s90-179
+not a `lib/` submodule, with uncommitted changes across s90-180
 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`). Same
 posture as the `rogue_squadron64` sibling checkout flagged since s54.
 Worth asking the user whether/how to commit that history.
