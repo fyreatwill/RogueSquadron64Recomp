@@ -15613,3 +15613,148 @@ graphics-task-submission stall (s162's finding) directly — not reached
 this run (died too early), but reached crash-free by both s166's and
 s167's runs, so it remains the actual M3 frontier once this family's
 noise is set aside. See `scratch/agent/NEXT.md`.
+
+## Session 169 (2026-07-28) — source-read located and guarded all 3 unguarded free-list-pop derefs inside `reserveAndEmitDLEntry`; 2 soaks show 0/2 recurrence of the 14th-class crash that killed s168 (best-ever crash-free hold on record), but neither the new guards nor s109's guard ever fired, and the 2nd soak crashed anyway to an unrelated, previously-uncatalogued runtime-scheduler SIGSEGV
+
+### Work unit
+
+Per `scratch/agent/NEXT.md` step 1: source-read `reserveAndEmitDLEntry`
+(`N64Recomp/RecompiledFuncs/funcs_3.c`, guest `0x8000CB88`-`0x8000CE90`)
+past the s109 guard's coverage, looking for the same "unguarded pointer
+or table-lookup result, then immediate dereference" shape as the rest of
+this crash family (9th-12th, 14th's first deref all fit it).
+
+### Source-read result
+
+The function calls `findAndUnlinkSmallestEntry()` — an internal free-list
+pop — **three separate times** (labels `after_0`/`after_1`/`after_2` in
+the recompiled C, guest `0x8000CBC8`/`0x8000CCC4`/`0x8000CDD0`). Each call
+site already null-checks the returned pointer (`if (rX == 0) goto
+<skip-label>;`, skipping the deref block when the free list was empty)
+but **never range-checks a non-null return** before dereferencing it —
+the identical "lookup result dereferenced without validating it's a
+plausible RDRAM pointer" shape as the rest of the family, just one level
+removed from s109's guard (which only covers the incoming *argument*
+pointer, `ctx->r16`, not these three internal pop results). This matches
+s168's own offset hint (native crash at `reserveAndEmitDLEntry + 4608`,
+"not near the top"): the first occurrence (`0x8000CBDC`, ~21 guest
+instructions in) is close to the top, but the second (`0x8000CCD8`, ~84
+instructions in) and third (`0x8000CDE4`, ~151 instructions in, plus its
+chained continuation through `0x8000CE68`/`0x8000CE70` near the function's
+very end at ~184/230 instructions) both clear a "skip the first 30-40
+instructions" bar and land progressively later in the function body,
+consistent with a deep-offset native fault.
+
+### Fix landed
+
+`N64Recomp/fixup_game_funcs.py`: three new guard patches, one per pop
+site, following the s99-s101/s109 convention exactly (`U32()` truncation,
+`0x80000000`-`0x80800000` RDRAM range check) — but reusing each site's
+**own existing null-check skip label** (`L_8000CC18` / `L_8000CD14` /
+`L_8000CE20`) instead of adding new labels, since the null-check already
+proved that label is safe to jump to when there's no valid node to use.
+Shared log gate `ROGUESQ_LOG_DLENTRY_POP_GUARD=1`, `site=0/1/2` field
+distinguishes which one fired. Regenerated via
+`tools/agent/regen_n64recomp.sh` (fixup-script-only change, no
+`make_elf.py` needed) then `fixup_game_funcs.py` once
+(`scratch/agent/s169_fixup.log`: `site=0`/`site=1`/`site=2` each patched
+`x1`, no duplication, plus the pre-existing s109 patches also `x1` each —
+confirms `fixup_game_funcs.py`'s per-run non-idempotence from s102 wasn't
+re-triggered). `cmake --build` clean, exit 0, only pre-existing-class
+format warnings.
+
+### Soak 1 (`scratch/agent/run_dlentrypopguard1.sh`, same env block as
+s168's `run_rsfreewalk1.sh` plus `ROGUESQ_LOG_DLENTRY_POP_GUARD=1`)
+
+**Full 120s hold window survived crash-free** — `CRASH: 0`, 6545
+`[lle task]`s, `fs max=4009`, `ost-wb SKIP_OOB=12` (control activity
+present), `thr-resume bad=1: 0`, `missing-func: 0`, `UnhandledJump: 0`.
+This is the **best crash-free result on record for this env block**,
+surpassing s166's previous best (4709 tasks, first-ever full-hold
+survival). However: `[dlentry-pop-guard]` fired **0** times and the s109
+`[dlentry-guard]` fired **0** times — **no positive control for either
+guard this run**. `[dlentry-reserveAndEmit]` (the plain entry log, capped
+at 20) did fire 20/20, confirming the function itself was reached and ran
+normally throughout.
+
+### Soak 2 (same script, same tag, re-run to test reproducibility —
+same rationale as s167's re-run of s166's finding)
+
+Crashed at **hold-iter 6** (wall=5s into the hold, before the earliest
+`STICK_SCHEDULE` entry at 10s) — pop-guards and s109 guard again **0**
+fires each, and critically **not the 14th class at all**: a SIGSEGV
+(signal 11) with a completely different stack, entirely inside the
+runtime scheduler, no guest code involved:
+
+```
+idle_thread_handle -> pause_self -> check_running_queue -> swap_to_thread
+-> resume_thread_and_wait -> wait_for_resumed
+-> moodycamel::LightweightSemaphore::tryWait
+-> std::__atomic_base<long>::load -> SIGSEGV
+```
+
+This is the **same broad idle-thread scheduler path** as s70's SIGBUS
+(`idle_thread_handle -> pause_self -> check_running_queue ->
+swap_to_thread -> resume_thread_and_wait -> resume_thread ->
+LightweightSemaphore::signal -> fetch_add -> Bus error`) — same call
+chain down through `swap_to_thread`, but a **different leaf function**
+(`tryWait`/`load` vs `signal`/`fetch_add`) and a **different signal**
+(11 vs 10). Grepped this file for `tryWait` and `__atomic_base.*load`:
+zero prior hits — this specific leaf/signal combination is not
+previously catalogued under any class number. Given it's runtime
+(`ultramodern`) code, not a guest-recompiled function, it doesn't fit
+this session's guarded-deref numbering scheme; it reads as another
+manifestation of the same shared thread-context-corruption family raised
+at s85 and touched again at s70/s72/s83-s86 (`thr-resume bad=1` fired 0
+this run, so that specific gate didn't catch whatever corrupted the
+context this time either). **Not root-caused this session** — out of
+scope for this work unit, flagged for a future one.
+
+### Interpretation
+
+Across both soaks: **0/2 recurrence of the specific 14th-class crash
+that killed s168's run** (`reserveAndEmitDLEntry`, either via the s109
+site or any of the 3 newly-guarded pop sites). That's a genuine
+improvement over s168 (which died to this exact crash at hold-iter 3).
+But because **none of the guards ever produced a positive control across
+either run**, this can't be distinguished from the established confound
+(same or rebuilt binary, run-to-run timing nondeterminism changes which
+bug wins the race first — s93, s160/161, s167) — it's equally consistent
+with "the guards happen to cover the real fault and it's fixed" and with
+"this build's binary layout just didn't hit that specific fault site
+either time, for reasons unrelated to the new guards." Unlike s166 (whose
+single soak gave no reproducibility check at all), this session got a
+second data point via immediate re-run, and that second run **did**
+crash — just to something else. The pop-guards are real, correctly
+targeted (same convention as the validated 9th-12th/s109 guards), and
+harmless (0/0 negative control, no regression signal) — keep them armed.
+Whether they're *the* fix for the 14th class's deeper site remains
+unconfirmed; a 3rd soak (per rule 8's 3-attempt budget) is the natural
+next test, but was not run this session (budget spent on the
+reproducibility check + this write-up instead).
+
+### Files touched
+
+`N64Recomp/fixup_game_funcs.py` (own git checkout, not `lib/`): added the
+3 free-list-pop guard patches. `N64Recomp/RecompiledFuncs/funcs_3.c`:
+regenerated + patched (mechanical). New file:
+`scratch/agent/run_dlentrypopguard1.sh` (soak driver, mirrors
+`run_rsfreewalk1.sh` plus the new env var). Not yet committed in the
+`N64Recomp` checkout — same standing posture flagged since s90.
+
+### Next
+
+Per rule 8, this is soak-attempt 1-of-3 for "do the new pop-guards fix
+the 14th class" (2 runs, both informative, neither with a positive
+control). Options, in order: (1) run soak 2/3 — if the 14th class
+recurs WITH a guard firing, the fix is confirmed; if it recurs with NO
+guard firing, the fault site is still unlocated and needs a fresh
+source-read; if it doesn't recur again, treat as tentatively closed after
+a 3rd null. (2) separately, the new scheduler-level SIGSEGV
+(`wait_for_resumed`/`tryWait`) is a new, real, previously-uncatalogued
+data point for the still-open shared-corruption-race hypothesis (s85) —
+worth a dedicated soak of its own once the 14th-class question is
+settled. (3) if soak budget is better spent elsewhere, pivot to the
+post-leave graphics-task-submission stall (s162), reached crash-free by
+s166/s167/this session's soak 1, remains the actual M3 frontier once
+this family's noise is set aside. See `scratch/agent/NEXT.md`.

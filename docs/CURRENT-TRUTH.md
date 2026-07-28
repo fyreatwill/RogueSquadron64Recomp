@@ -659,9 +659,37 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s168)
+## Next steps, in order of expected value (s169)
 
--20. **NEW TOP PRIORITY (s168): landed the `rs_free` free-list walk-log
+-21. **NEW TOP PRIORITY (s169): source-read `reserveAndEmitDLEntry` past
+    the s109 guard and found it calls `findAndUnlinkSmallestEntry()` (an
+    internal free-list pop) 3 separate times (`after_0`/`after_1`/`after_2`,
+    guest `0x8000CBC8`/`0x8000CCC4`/`0x8000CDD0`), each null-checking but
+    never range-checking the popped pointer before dereferencing it — same
+    unguarded-pop-then-deref shape as the rest of the family. Landed 3 new
+    guards (`ROGUESQ_LOG_DLENTRY_POP_GUARD=1`, reusing each site's own
+    null-check skip label, `N64Recomp/fixup_game_funcs.py`/`funcs_3.c`),
+    built clean. Soak 1 (`scratch/agent/run_dlentrypopguard1.sh`): **full
+    120s hold crash-free, best-ever result for this env block** (6545
+    tasks vs s166's 4709) — but neither the new guards nor s109's guard
+    fired (no positive control). Soak 2 (identical re-run, reproducibility
+    check): crashed at hold-iter 6, but to an **unrelated, previously-
+    uncatalogued runtime-scheduler SIGSEGV** (`idle_thread_handle ->
+    check_running_queue -> swap_to_thread -> wait_for_resumed ->
+    LightweightSemaphore::tryWait -> atomic load`, same broad chain as
+    s70's SIGBUS but a different leaf/signal) — again 0 guard fires.
+    **Net: 0/2 recurrence of the 14th-class crash that killed s168**, but
+    unconfirmed (no positive control either run) — equally consistent
+    with "fixed" and with "this build's binary layout didn't hit that
+    fault site either time" (the established rebuild/timing confound,
+    s93/s160-161/s167). Guards are real, correctly targeted, harmless
+    (0/0 negative control) — keep armed. **Next work unit: soak 2/3**
+    per rule 8 — if the 14th class recurs with a guard firing, confirmed
+    fix; if it recurs with no guard firing, the fault site is still
+    unlocated; if it doesn't recur a 3rd time, treat as tentatively
+    closed. Full detail: PORTING-STATE s169.
+
+-20. **(s168, superseded as top priority by s169 above): landed the `rs_free` free-list walk-log
     NEXT.md prescribed (mirrors s165's `rs_malloc` walk-log exactly,
     `ROGUESQ_LOG_RS_FREE_WALK=1`, `N64Recomp/fixup_game_funcs.py`,
     `funcs_0.c`). One soak: the 24th class did NOT recur (informative
