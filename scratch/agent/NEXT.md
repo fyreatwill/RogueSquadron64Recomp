@@ -1,70 +1,84 @@
-# NEXT work unit — find the 2nd, still-unguarded deref in the waitForAnyAudioSlot chain
+# NEXT work unit — source-read `processSceneNode`'s self-recursive SIGBUS
 
-s173 landed and validated the `rs_malloc` walk-loop guard NEXT.md asked
-for (0/0 across 2 soaks, real negative control — 17,683 clean calls, no
-corrupted size seen), so that specific question is not further actionable
-right now. Both soaks instead died to *other* crashes: one to the already-
-catalogued s83 Metal-internal shader-compiler SIGSEGV (unrelated, no
-source on our side, ignore it), and one to a **recurrence of the 23rd
-crash class** (`waitForAnyAudioSlot` chain) **despite s166's own guard on
-that exact chain being confirmed active in the build**. Read PORTING-STATE
-Session 173 before doing anything else; this file only has the actionable
-summary.
+s174 source-read `tickMusyXIfActive`'s 5 callees, found and guarded the
+23rd crash class's 2nd bug (`tickAndReap3DAudioVoices`), built and soaked
+it once. The guard never fired (0/0), and — more informatively — neither
+did s166's `isAudioSlotActive` guard on the same chain: the
+`waitForAnyAudioSlot`-chain corruption simply didn't happen this run at
+all, even though the soak used the exact same driven-input recipe as
+s173's soak that died to it at `decisionN=356`. This run instead survived
+27x further (`decisionN=9694`, deep into the 120s hold window) before
+dying to a **2nd independent occurrence** of an already-catalogued but
+never-source-read crash: `processSceneNode` self-recursion. Read
+PORTING-STATE Session 174 before doing anything else; this file only has
+the actionable summary.
 
-## What s173 established (read before doing anything else)
+## What s174 established (read before doing anything else)
 
-- **The `rs_malloc` walk-loop guard is landed, built clean, and soaked
-  twice** (`N64Recomp/fixup_game_funcs.py`, new
-  `ROGUESQ_LOG_RS_MALLOC_WALK_GUARD` env var, file-scoped `funcs_0.c`).
-  **Not committed** — same long-standing uncommitted-history posture as
-  `N64Recomp` since s54/s90, not this session's call to resolve.
-- **The 23rd crash class (`waitForAnyAudioSlot` chain) is at least 2
-  distinct bugs, not 1.** s166 guarded `isAudioSlotActive`'s base-pointer
-  deref (`funcs_24.c`, always-on regardless of its own log env var) and
-  that guard is confirmed patched into this build (`fixup.log`:
-  "isAudioSlotActive base-pointer guard patched x1"). Despite that, s173
-  soak 2 died with an identical-looking backtrace (SIGSEGV inside
-  `waitForAnyAudioSlot` +76 native bytes <- `menuOverlayInit` <-
-  `mainGameLoop` <- `mainBootstrapWorker`), **before VI width 1024/title
-  screen was ever reached** (`decisionN=356`, task #278 — earliest known
-  death in the whole project's crash-family history).
-- **Source-read this session, no rebuild needed, ruled out 2 of 3 shallow
-  candidates:**
-  - `anyAudioSlotActive` itself (`funcs_23.c:8806`): every `MEM_*` access
-    is off a fixed literal global address (`0x800A0F50`, `0x80141AD0`,
-    `0x8014530C`) — no computed-pointer deref anywhere in its own body.
-    Calls `audioStubReturnZero` (stub) and `isAudioSlotActive` (already
-    guarded). **Ruled out.**
-  - `tickMusyXIfActive` (`funcs_23.c:6785`, only entered if fixed-global
-    byte `0x800A0F50` is nonzero — i.e. audio genuinely active): its own
-    body has **zero direct `MEM_*` derefs**, only calls into 5 deeper
-    functions. **Not itself the fault site, but the fault is somewhere
-    inside one of its callees:**
-    `factor5MutexAcquire`, `tickActiveSongs`, `tickAndReap3DAudioVoices`,
-    `stopAllSynthVoices`, `factor5MutexRelease` — **none of these 5 have
-    been source-read yet.**
+- **The `tickAndReap3DAudioVoices` guard is landed, built clean, and
+  soaked once** (`N64Recomp/fixup_game_funcs.py`, new
+  `ROGUESQ_LOG_TICK_REAP_3D_VOICES_GUARD` env var, file-scoped
+  `funcs_26.c`). **Not committed** — same long-standing uncommitted-
+  history posture as `N64Recomp` since s54/s90, not this session's call to
+  resolve.
+- **The `waitForAnyAudioSlot` chain (23rd crash class, both known
+  sub-bugs) is confirmed racy, not deterministic given the driven-input
+  recipe.** Do not read a future 0/0 on either audio guard as proof
+  they're wrong or unnecessary — it may simply mean that run's corruption
+  didn't occur. Only a *positive* control (the guard actually firing) or a
+  large multi-soak sample would settle whether the guard is sufficient.
+- **4 of the 5 candidates NEXT.md (s173) listed are now ruled out**:
+  `factor5MutexAcquire`/`factor5MutexRelease` (fixed literal address only,
+  no computed deref), `stopAllSynthVoices` (already range-checked by an
+  `slt` loop bound), and `tickActiveSongs`'s own body (compile-time-bounded
+  addresses only). **One new candidate was found but not guarded**:
+  `tickActiveSongs`'s callee `tickSongSequence` (funcs_25.c:4878) has 2
+  unguarded per-song linked-list walks at funcs_25.c:5018-5046 and
+  5050-5077 (list heads at struct offsets `0xE78`/`0xE7C`, null-check-only,
+  same shape as the bug just fixed) — flagged as the next candidate for
+  this specific chain if a future soak shows this session's fix alone
+  doesn't close class 23, but NOT today's priority (see below).
+- **`processSceneNode`'s self-recursive SIGBUS now has 2 independent
+  occurrences** (s172 soak 1, s174) with a fully matching backtrace:
+  `processSceneNode` (self, +8148 bytes) <- `traverseSceneGraphRecursive`
+  <- `setupCameraMatrices` <- `static_5_800C9BF0` <- `menuOverlayInit` <-
+  `mainGameLoop` <- `mainBootstrapWorker`. Never source-read. This is now
+  the crash that actually surfaces once the audio-chain race doesn't hit
+  first — reasonably the next priority.
 
 ## Do next
 
-**Source-read the 5 unexamined callees of `tickMusyXIfActive`** for this
-family's dominant unguarded-deref shape (fixed-global-table-pointer
-indexed and dereferenced with no null/range check — the 12th/14th/16th/
-21st/23rd(-a) classes' shared signature; or a corrupted-size free-list
-walk like `rs_malloc`'s, if any of the 5 turn out to touch a heap
-structure):
-1. `factor5MutexAcquire`/`factor5MutexRelease` — likely thin wrappers
-   around a mutex primitive, probably low-risk, but confirm before ruling
-   out.
-2. `tickActiveSongs`, `tickAndReap3DAudioVoices`, `stopAllSynthVoices` —
-   these are the substantive per-frame audio-tick bodies and the most
-   likely fault sites given they're where actual voice/song list walking
-   would happen (same shape as every other guarded crash in this family).
-3. Once the actual unguarded deref is found and confirmed unique (grep the
-   guest address across all `funcs_*.c` before patching, per every prior
-   guard's own lesson), guard it with the standard idiom (bounds-check the
-   computed pointer against `0x80000000u`/`0x80800000u`, bail to the
-   function's own real exit — `goto` a label or `return;` with a safe
-   default, whichever is ABI-correct for that function's frame shape).
+**Source-read `processSceneNode`** (`N64Recomp/RecompiledFuncs/funcs_4.c`,
+around lines 13759-14861 — grep `RECOMP_FUNC void processSceneNode` to get
+the exact start line, since line numbers shift after every regen) and its
+caller `traverseSceneGraphRecursive` in the same file:
+
+1. Determine whether the self-recursion is **guest-intentional** (a real
+   scene-graph tree walk — e.g. recursing into child/sibling nodes — that
+   should terminate on a leaf/null but doesn't because a child pointer is
+   corrupted or the graph has an accidental cycle) or this family's usual
+   **unguarded-deref shape** (a fixed-table lookup indexing into something
+   that happens to loop back into the same function via a computed
+   function-pointer call, unlikely here given the backtrace shows literal
+   self-recursion, not an indirect call — but confirm by reading, don't
+   assume).
+2. If it's a real tree walk: look for what the guest code bounds it with
+   (if anything). A missing depth cap or a corrupted "child" pointer that
+   happens to point back into an ancestor (creating a cycle) are the two
+   most likely mechanisms. Either fix would look different: a depth cap
+   added at the guard idiom's usual insertion point (this function's
+   entry, incrementing a static/stack depth counter and bailing past some
+   sane limit like 64-256), or a range/identity check on the specific
+   pointer being recursed through if it can be traced to a single
+   corrupting write elsewhere.
+3. Once the mechanism is identified and unique guest addresses are
+   confirmed via grep (per every prior guard's lesson — do this BEFORE
+   writing the patch, not after), guard it following the same
+   comment-plus-patch-function convention in `N64Recomp/fixup_game_funcs.py`
+   as every guard before it (see the `_tick_and_reap_3d_audio_voices_guard_patch`
+   function landed this session for the most recent example, including how
+   to route the bail through an existing epilogue label vs. a bare
+   `return;` depending on whether the function is frameless).
 4. Regen: `zsh tools/agent/regen_n64recomp.sh` then
    `python3 /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
    ONCE (redirect to a log — it is NOT idempotent), verify the patch report
@@ -72,38 +86,43 @@ structure):
    (`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
    /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build`).
 5. Soak with the new guard's env var armed (copy
-   `scratch/agent/run_rsmallocwalkguard2.sh` to a new tag, keep every prior
-   env var — they're all free) and check whether it fires (positive
-   control) and whether the process survives past `decisionN=356`/task
-   #278 (s173's earliest-known death point).
+   `scratch/agent/run_tickreap3dvoicesguard1.sh` to a new tag, keep every
+   prior env var — they're all free, including
+   `ROGUESQ_LOG_TICK_REAP_3D_VOICES_GUARD=1` and
+   `ROGUESQ_LOG_AUDIO_SLOT_ACTIVE_GUARD=1` from this session) and check
+   whether it fires (positive control) and whether the process survives
+   past `decisionN=9694`/hold-iter 28 (s174's death point) or further still.
 
-**Why this is top priority over s172's other 2 leads** (`processSceneNode`
-self-recursive SIGBUS, `submitSceneNodeRender+16780`): this crash now kills
-the run *before the title screen even renders* — strictly earlier than
-either of those, and earlier than every other crash in the family's
-history. Fixing the earliest blocker first is the highest-information-
-value move; the other two leads are still open but lower priority.
+**Why this is top priority over `tickSongSequence`'s 2 list walks**: this
+crash is the one that actually kills runs once the audio-chain race
+doesn't hit — it's the next thing actually blocking progress, observed
+twice independently. The `tickSongSequence` leads are real but currently
+masked by whichever bug wins the race first; revisit them once
+`processSceneNode` stops being the dominant early-blocking crash.
 
 ## Do not
 
-- Do not re-run `run_rsmallocwalkguard1.sh`/`_2.sh` unmodified hoping for a
-  3rd data point on the walk-loop guard specifically — it's landed, it has
-  a real negative control, and per rule 8 this question is not the one to
-  keep spending soaks on right now. The env blocks are still useful
-  scaffolding to copy from, just don't re-run them as-is for that question.
-- Do not assume `isAudioSlotActive`'s guard (s166) is broken or wrong just
-  because a similar-looking crash recurred — the backtrace and source read
-  both point to a *different*, deeper site, not a hole in that guard
-  itself.
-- Do not skip the source read and jump straight to instrumenting all 5
-  candidate functions at once "to be safe" — per rule 6 (source-read
-  before instrumenting), read each function's actual body first; most
-  functions in this codebase turn out to have zero or one real deref
-  candidate once actually read, not several.
+- Do not re-run `run_tickreap3dvoicesguard1.sh` unmodified hoping for a 2nd
+  data point on that guard specifically as your primary work unit — it's
+  landed, it's a real (if uninformative) negative control, and the more
+  actionable finding this session is the `processSceneNode` recurrence.
+  The env block is still useful scaffolding to copy from for whatever new
+  guard you add.
+- Do not treat this session's "chain didn't crash at all" result as
+  evidence the `tickAndReap3DAudioVoices` guard fixed anything — no
+  positive control fired. It's exactly as inconclusive as s173's own null,
+  just for a different reason (this run's race went a different way).
+- Do not skip the source read and jump straight to instrumenting
+  `processSceneNode` "to be safe" — per rule 6, read the function and its
+  caller fully first. Given the backtrace shows literal self-recursion
+  (not an indirect call through a corrupted function pointer), the fix
+  shape here may look different from every guard so far (a depth cap
+  rather than a bounds-checked deref) — don't force-fit the usual template
+  before confirming what the actual defect is.
 
 ## Blocking on a long-running soak (learned the hard way, still current)
 
-Simplest approach (used successfully s168–s173): run the driver script
+Simplest approach (used successfully s168-s174): run the driver script
 itself as a single foreground Bash call with output redirected to a log
 file and a generous timeout (~480s covers this env block's 120s hold +
 overhead) — the script blocks until the game process exits, no polling
@@ -167,12 +186,16 @@ loop needed. `until ! pgrep -f "RogueSquadron64Recomp" ...` is broken under
 - `lib/N64ModernRuntime` and `lib/rt64` always show as "modified content"
   in the parent repo's `git status` — normal, long-standing state. Only run
   `submodule-patches/export.sh` + commit if you actually edit something
-  under `lib/` this session (s173 did NOT touch `lib/` — all edits were in
+  under `lib/` this session (s174 did NOT touch `lib/` — all edits were in
   the separate `N64Recomp` sibling checkout's `fixup_game_funcs.py`).
 - `/scratch/` is entirely gitignored in this repo except 3 force-tracked
   files: `scratch/agent/NEXT.md`, `OUTCOME`, `STATUS`. New soak
   scripts/logs under `scratch/agent/` or `scratch/s73_post_a_scene/` never
   need `git add` — they're intentionally untracked.
+- A `grep -c "[pattern]"` across a very large run.log (millions of lines
+  from a per-tick instrument like `[rs-malloc-walk]`) is fine and fast —
+  no need to avoid grepping big log files, just don't `cat`/`Read` them
+  wholesale.
 
 ## Housekeeping still flagged, still not done
 
@@ -182,7 +205,7 @@ superseded detail, paired with a real experiment. Flagged for many
 sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
-not a `lib/` submodule, with uncommitted changes across s90-173
+not a `lib/` submodule, with uncommitted changes across s90-174
 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`). Same
 posture as the `rogue_squadron64` sibling checkout flagged since s54.
 Worth asking the user whether/how to commit that history.

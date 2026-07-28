@@ -659,9 +659,37 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s173)
+## Next steps, in order of expected value (s174)
 
--25. **NEW TOP PRIORITY (s173): landed and validated the `rs_malloc` walk-loop
+-26. **NEW TOP PRIORITY (s174): source-read `tickMusyXIfActive`'s 5 callees
+    found and guarded the 23rd crash class's 2nd bug**
+    (`tickAndReap3DAudioVoices`'s active-voice-list node-pointer deref,
+    `N64Recomp/RecompiledFuncs/funcs_26.c:4224-4225`, mutable-global list
+    root `0x80153414`, null-checked only, no range check — guarded via
+    `goto` to the function's own epilogue `L_80098F8C` since it is not
+    frameless). Ruled out the other 4 candidates by direct read:
+    `factor5MutexAcquire`/`Release` touch only a fixed literal counter
+    address; `stopAllSynthVoices` is already range-checked by an `slt`
+    loop bound; `tickActiveSongs`'s own body only computes compile-time-
+    bounded addresses, but its callee `tickSongSequence` (funcs_25.c:
+    5018-5046, 5050-5077) has 2 more unguarded list walks — **not guarded
+    this session**, next candidate if needed. One soak (guard built,
+    armed): **0/0 on both this new guard AND s166's `isAudioSlotActive`
+    guard** — the `waitForAnyAudioSlot` chain corruption did not occur at
+    all this run, proving that crash is **racy across runs, not
+    deterministic given the recipe** (this soak's driven-input schedule
+    matches s173's exactly, yet ran ~27x further into the decision stream,
+    `decisionN=9694` vs. s173's `356`, without hitting either known
+    candidate site). The process instead died to a **2nd independent
+    occurrence of the already-catalogued (s172) `processSceneNode`
+    self-recursive SIGBUS** (funcs_4.c ~13759-14861, via
+    `traverseSceneGraphRecursive`/`setupCameraMatrices`) — same backtrace
+    shape both times, now meeting the two-independent-observations bar.
+    **Best next work unit: source-read `processSceneNode`'s self-recursion**
+    — never opened, now the crash that actually surfaces once the audio-
+    chain race doesn't hit. Full detail: PORTING-STATE s174.
+
+-25. **(s173, superseded as top priority by s174 above): landed and validated the `rs_malloc` walk-loop
     deref guard NEXT.md asked for (`N64Recomp/fixup_game_funcs.py`,
     `ROGUESQ_LOG_RS_MALLOC_WALK_GUARD`, file-scoped `funcs_0.c`), but 2
     soaks show it isn't this run's dominant early crash: 0/0 fires despite
