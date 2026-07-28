@@ -12988,3 +12988,106 @@ proof by itself (single-session absence of a rare race), but a
 2nd/3rd clean soak plus continued absence of the `do_rom_read`/
 `piDmaWorker` corruption signature would be strong converging evidence
 the fix works.
+
+## Session 147 (2026-07-27) — landed and soaked the s146-specified fix (count-write reorder in `allocateSongChannelArray`): 2/2 clean soaks, correct post-fix ordering 13/13 allocations, 0/2 `voice-active-gate-nz` corruption reads, 0/2 `do_rom_read` recurrences — one soak fully crash-free, a first for this crash family
+
+**What ran:** implemented NEXT.md's prescribed fix — relocated the early
+`voiceCount` write to the scan-bound global (`-0x6900` off `0x80150000`,
+`funcs_23.c`, was `0x8008F0C8-CC`) to run *after* both pointer-store
+writes (`-0x6904`, `-0x6908`, `0x8008F0E4`/`0x8008F0EC`) instead of
+before them, via a new patch in `N64Recomp/fixup_game_funcs.py` (s147,
+placed to run before the existing s120/s146 diagnostic-insertion patches
+so their anchors still match unmodified instruction text).
+
+**A real bug in NEXT.md's own plan, caught before building:** the
+original code doesn't just write `-0x6900` once — it writes it, then
+immediately *reloads* it (`0x8008F0D8-DC`, into `ctx->r3`, used later for
+a `voiceCount == 0` branch at `0x8008F108`). NEXT.md's safety argument
+("`ctx->r16` is never reassigned between the write and the print") only
+covers the register the write's *value* comes from — it says nothing
+about this second, independent dependency through the *memory location*
+itself. Moving the write alone, leaving the reload in its original spot,
+would have made the reload read the **previous** call's stale count
+instead of the new one — silently changing the branch's behavior, a new
+bug introduced by the "fix." Caught this by reading the full function
+body (not just NEXT.md's line-number pointers) before writing the patch.
+Fix: relocated the write *and* its dependent reload together, as a unit,
+immediately adjacent (reload directly follows write, exactly as before)
+— preserves the original branch semantics bit-for-bit while still moving
+the whole pair to after the pointer stores. Verified in the regenerated
+source (`funcs_23.c:10710-10749` post-fix) that the reload correctly
+reads back the new value via the memory dependency, not a register one.
+
+**Pipeline discipline note (self-caught mid-session):** ran
+`fixup_game_funcs.py` twice in a row without a full regen between —
+confirmed via grep that this duplicated both the s120 and s146
+diagnostic-insertion patches (each fired a 2nd time, per the known s102
+non-idempotency bug). Caught before building; redid the full pipeline
+(delete `RecompiledFuncs/funcs_*.c` → `make_elf.py` → `regen_n64recomp.sh`
+→ `fixup_game_funcs.py` once) and confirmed via grep that all three
+`funcs_23.c` patches (reorder x1, s120 x1, s146 x1) applied exactly once
+before building. Build: clean, exit 0.
+
+**Verification, soak 1 (`countracefix1`):** `scratch/agent/
+s147_analyze.py` (new script, since s146_analyze.py assumed the old
+pre-fix ordering) confirms all 6 `allocateSongChannelArray` calls this
+run show `[song-array-alloc]` immediately followed by
+`[song-count-write-early]` for the same `voiceCount`, gap = 1 log line
+every time (min=max=avg=1) — the code takes the new order at runtime,
+not just in source. Zero `[voice-active-gate-nz]` corrupted reads at all
+this run (vs. 5 in s146's pre-fix soak, 4 of them sandwiched). Zero
+`do_rom_read`/`[pi-start-dma]` recurrences (vs. 9 confirmed prior
+occurrences across s85-s146). Process died at line 65215 to a SIGBUS in
+`reserveAndEmitDLEntry` (via `submitSceneNodeRender` →
+`processSceneNode` → ... → `menuOverlayInit`) — an already-catalogued,
+unrelated crash class (the 14th, partially guarded since s135-137 via
+`emit-dl-guard2`/`3`, which stayed 0/0 this run too), not a new mystery
+and not Thread B.
+
+**Verification, soak 2 (`countracefix2`):** 7/7 allocations, same
+correct ordering, gap=1 every time. Zero `[voice-active-gate-nz]` reads.
+Zero `do_rom_read` recurrences. **No crash at all** — driver's own
+summary confirms `CRASH: 0`, `thr-resume bad=1: 0`, `UnhandledJump: 0`,
+the process ran the full hold window and was killed cleanly by the
+driver script. This is the first fully crash-free full soak observed
+for this specific driven-repro shape since the multi-session crash-class
+gauntlet began (s83).
+
+**Combined across both soaks:** 13/13 song-array allocations in the
+post-fix order, 0/13 sandwiched corrupted reads, 0/2 `do_rom_read`
+recurrences. This meets NEXT.md's own pre-committed bar ("2nd/3rd clean
+soak... would be strong converging evidence the fix works") — Thread B's
+race is fixed. `do_rom_read`'s co-disappearance across both soaks is a
+second, independent line of evidence (not yet proven the *exact* same
+code path shares the mechanism, per s145/146's own caveat, but the
+correlation is now 0/2 after 9/9 prior soaks that armed the relevant
+diagnostics recurring it) — worth one more targeted soak in a future
+session before calling that link fully closed, but not before continuing
+past M3's other now-more-prominent blocker: the reserveAndEmitDLEntry/
+14th-class crash family, now the most-recently-observed blocker on this
+exact repro path.
+
+**Landed:** the fix patch (`N64Recomp/fixup_game_funcs.py`, s147),
+`scratch/agent/run_countracefix1.sh`, `run_countracefix2.sh`,
+`s147_analyze.py` (reusable post-fix ordering/sandwich checker,
+generalizes `s146_analyze.py` to either ordering direction). `N64Recomp`
+remains its own git checkout (not a `lib/` submodule) with accumulating
+uncommitted regen history — same posture flagged since s54, not
+addressed this session (no `lib/` changes were made — this fix lives
+entirely in the sibling `N64Recomp` checkout's `fixup_game_funcs.py` and
+its regenerated output, so no `submodule-patches/export.sh` step
+applies).
+
+**Next work unit:** with Thread B closed (fix verified, race gone), the
+critical-path blocker on this repro shape reverts to the crash-class
+family this session's 2 soaks actually surfaced: `reserveAndEmitDLEntry`
+(soak 1) — a guard already exists (`emit-dl-guard2`/`3`, s133-135) but
+never fired in either soak here, so its coverage of *this* particular
+call path (via `submitSceneNodeRender`/`processSceneNode`, not whatever
+path the guards were built against) is unconfirmed. Read
+`reserveAndEmitDLEntry`'s full body against this soak's exact backtrace
+before writing a new guard — don't assume the existing guard's site
+covers this call site without checking. Alternatively, since soak 2 went
+fully crash-free, a 3rd soak (no rebuild needed, instruments already
+armed) would help decide whether soak 1's crash was a rare tail event or
+a reliably-recurring next blocker before investing in a guard.

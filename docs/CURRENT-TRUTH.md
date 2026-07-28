@@ -655,24 +655,33 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s146)
+## Next steps, in order of expected value (s147)
 
--1. **NEW TOP PRIORITY (s146): fix the count-then-pointer-store race in
-    `allocateSongChannelArray` — Thread B's root cause (0c below) is now
-    directly proven, not just circumstantial.** s146 landed
-    `[song-count-write-early]` logging right after the early `voiceCount`
-    write (`funcs_23.c:10713`) and caught a live scan sandwiched inside
-    the exact window between that write and the matching pointer-store /
-    `[song-array-alloc]` print, 4 times in one soak (`run_countrace1.sh`,
-    `scratch/s73_post_a_scene/countrace1/run.log:39205-39218`). Fix:
-    move the early count-write to **after** the pointer-store block
-    (`funcs_23.c:10722-10733`) instead of before it — s146 confirmed
-    `ctx->r16` (voiceCount) is never reassigned in between, so the
-    reorder is register-safe and needs no lock (none exists anywhere in
-    this family, s144). Verify with a fresh soak (`run_countrace2.sh` or
-    similar): no `[voice-active-gate-nz]` line should ever again fall
-    inside a `[song-count-write-early]`/`[song-array-alloc]` window.
-    Full detail: PORTING-STATE s146.
+-1. **CLOSED (s147): the count-then-pointer-store race in
+    `allocateSongChannelArray` (Thread B's root cause, 0c below) is
+    fixed and verified.** Relocated the early `voiceCount` write to
+    run *after* the pointer-store block (`N64Recomp/fixup_game_funcs.py`,
+    new s147 patch) — plus its dependent reload (`0x8008F0D8-DC`), moved
+    as a unit so the reload still reads back exactly what was just
+    written (moving the write alone would have made the reload read the
+    *previous* call's stale count, a new bug NEXT.md's register-only
+    safety argument didn't rule out). 2/2 verification soaks
+    (`countracefix1`, `countracefix2`) clean: 13/13 allocations in the
+    correct post-fix order, 0/13 `[voice-active-gate-nz]` corrupted
+    reads (vs. 5 pre-fix), 0/2 `do_rom_read` recurrences (vs. 9 prior
+    occurrences) — soak 2 was the **first fully crash-free full soak**
+    for this repro shape since s83. Full detail: PORTING-STATE s147.
+    **New top priority:** soak 1 died to the already-catalogued 14th
+    crash class (`reserveAndEmitDLEntry` via `submitSceneNodeRender`),
+    now the most-recently-observed blocker on this path — its existing
+    guards (`emit-dl-guard2`/`3`, s133-135) stayed 0/0 both soaks here,
+    so their coverage of *this* call path is unconfirmed. Read
+    `reserveAndEmitDLEntry`'s full body against the soak-1 backtrace
+    (`scratch/s73_post_a_scene/countracefix1/run.log:65215`) before
+    writing a new guard. A cheap first move (no rebuild): rerun
+    `run_countracefix1.sh`/`2.sh` once or twice more (no code change) to
+    see whether soak 1's crash was a rare tail event or the reliably-
+    recurring next blocker, before investing in a guard.
 
 0a. **CLOSED (s135): `emitAllocatedDLCommand` soak hypothesis parked,
     3-attempt budget exhausted per rule 8.** s133 → environment-side
@@ -696,8 +705,9 @@ cost three sessions before the recursive mutex.
     (s133-s137), `do_rom_read` now accounts for 3/5 — a clear plurality,
     not yet "always." Full detail: PORTING-STATE s136-s137.
 
-0c. **Thread B, the audio-corruption pivot (`voice+0x0`/`+0x34`,
-    s105-138).** Longest-running open thread. **s138** ran the s126
+0c. **CLOSED (s147, see item -1 above): fix landed and verified.**
+    Thread B, the audio-corruption pivot (`voice+0x0`/`+0x34`,
+    s105-138) — longest-running open thread, history below. **s138** ran the s126
     fresh-angle grep (ROM string locate + ROM->RAM mapping, no rebuild):
     solved the ROM->RAM bias for this overlay's rodata
     (`RAM = ROM_offset + 0x7FFFF400`, triple-cross-validated: 3 symbol-file
