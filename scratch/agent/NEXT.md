@@ -1,180 +1,174 @@
-# NEXT work unit — instrument the camera's own pose values (not a derived
-# matrix) across a long soak, phase-gated around the ~140s/crawl-exit mark,
-# to find whether the CAMERA freezes or the SCENE CONTENT feeding it freezes
+# NEXT work unit — find whether scene-graph traversal STOPS or CONTINUES
+# WITHOUT SUBMITTING at the render freeze, by instrumenting processSceneNode/
+# submitSceneNodeRender/traverseSceneGraphRecursive call counts
 
-Read PORTING-STATE Session 223 in full (`grep -n "^## Session 223"
-PORTING-STATE.md`) before doing anything else. Short version: s223 refuted
-the leading hypothesis (a degenerate 3x3-matrix-inverse determinant in
-`mat3x3InverseInto`, called from `setupCameraMatrices` right before
-`traverseSceneGraphRecursive`) with a well-controlled null — 456,000+
-diagnostic firings spanning the ENTIRE 350s hold window, genuinely varying
-determinant values, never once zero/Inf/NaN. That candidate is closed.
-
-**But s223 also produced a much bigger, unplanned finding**: re-running
-s222's own `schedulepush2` script byte-for-byte (same schedule, same code)
-did NOT reproduce s222's "frozen from hold_04 onward" result. Instead this
-run reached real space-combat mesh content (`hold_01`-`10`, an X-wing near
-a capital-ship hull) and the opening crawl (`hold_15`-`74`, `[phase]`
-`origin=0x006A2900` at 140.6s — the SAME address and near-identical
-timestamp as s154's own "furthest ever past the crawl" milestone) before
-freezing at `hold_75` onward on a flat, single-color ground-fill frame —
-visually DIFFERENT from s150/s222's "torn/striped degenerate polygon"
-description. **Non-determinism is now proven on identical scripted input**,
-not just inferred from schedule-to-schedule variation across sessions.
-
-Also established: at the very end of the frozen window, `[vi-fs-decision]`
-shows `stalled=0, reason=swap, rdpFs=3481` still incrementing — the
-swap/present pipeline is demonstrably alive, ruling out a render-pipeline
-stall as this freeze's cause. Combined with the mat3inv null, the freeze
-mechanism is narrowed to: something in the game's own logic/state-machine
-(whatever drives camera pose or scene-graph content per frame) stops
-advancing, while the rest of the engine (VI swaps, RDP fullsync counters)
-keeps ticking normally.
+Read PORTING-STATE Session 224 in full (`grep -n "^## Session 224"
+PORTING-STATE.md`) before doing anything else. Short version: s224 answered
+the discriminating question NEXT.md posed at the end of s223 — instrumented
+`setupCameraMatrices`'s own raw `+0x2C` submatrix m00 field (NOT the
+mat3x3InverseInto-derived inverse, which s223 already closed) and found it
+**keeps changing for ~60 seconds of process time AFTER the on-screen
+picture (and the RDP full-sync counter) have already frozen**. That is
+NEXT.md's pre-registered "downstream" outcome: the camera-matrix code is
+NOT the wedge. Something between "camera pose computed" and "pixels drawn"
+stops producing new content while the camera (and whatever drives it)
+keeps running for a while longer, before the camera itself ALSO eventually
+freezes (a later, separate, unexplained event).
 
 ## Why this is the priority
 
-The mat3x3InverseInto lead and the composeNpcOrientationMatrix lead
-(closed since s157/s158, 7 guards, 508/508 entry-confirmed, 0/0 guards —
-do NOT re-open) are both dead ends now. The s223 bonus finding is a new,
-higher-value thread: for the first time, this investigation has direct
-evidence that the freeze's ENDPOINT differs across nominally-identical
-runs (dead hangar vs. past-the-crawl-then-frozen-on-ground), which means
-the freeze is not a fixed frame/state but a "whatever the camera/scene was
-doing gets stuck wherever it happens to be" phenomenon. Distinguishing
-"camera pose itself freezes" from "camera keeps moving but content behind
-it doesn't" is the key discriminating question before any fix attempt.
+Both prior leads — `mat3x3InverseInto`'s determinant (s223) and
+`composeNpcOrientationMatrix` (s157/s158) — are now closed dead ends, each
+re-confirmed null across 2+ independent soaks. s224's new finding gives a
+concrete next target: the freeze must be somewhere in the scene-graph
+population/traversal/draw-submission chain, since the camera (upstream)
+and the swap/present pipeline (downstream, per s223/s224's `[vi-fs-decision]`
+findings) are BOTH still alive well past the freeze. `processSceneNode`,
+`submitSceneNodeRender`, and `traverseSceneGraphRecursive` (all
+`funcs_4.c`, all already named in s150/s220/s221's backtraces and s224's
+own read of `setupCameraMatrices`) sit exactly in that gap.
 
 ## Do this iteration
 
-### Step 1 — pick ONE camera-pose field and log it at low frequency
+### Step 1 — pick a call-count instrument, not a value instrument
 
-Do NOT re-read `setupCameraMatrices`/`mat3x3InverseInto`/
-`composeNpcOrientationMatrix` again (all closed this session or before).
-Instead: find where `setupCameraMatrices` (`N64Recomp/RecompiledFuncs/
-funcs_4.c:19142-21603`) reads or writes the camera's own position/
-orientation/lookat fields (likely near the top of the function, before the
-guPerspective/guScale/guLookAt-style calls around `funcs_4.c:19160-19340`
-per s223's partial read of that region) — pick ONE such field (a position
-X/Y/Z or a single rotation angle, NOT the whole matrix) that plausibly
-represents "where the camera currently is/points," not a derived product.
+Unlike s223/s224 (which needed to see a VALUE freeze), this step needs to
+answer a simpler binary: does the function still get CALLED after the
+freeze, at a normal rate, or does its call rate drop to near-zero? So the
+diagnostic is a periodic call counter (like `[processSceneNode-recursion-
+depth-guard(entry)]`, already present per s219 fixups — check whether it's
+already suitable before adding a new one) on `processSceneNode` and
+`submitSceneNodeRender`. `traverseSceneGraphRecursive`
+(`funcs_4.c:15053-15357`) doesn't yet have one — check
+`grep -n "traverseSceneGraphRecursive\|processSceneNode\|submitSceneNodeRender"
+fixup_game_funcs.py` (sibling `N64Recomp` checkout) first to see what's
+already wired (s224 confirmed `processSceneNode` already has several
+tracers/guards from s219-221 — re-read what they log before adding
+anything redundant).
 
-### Step 2 — instrument, gated behind a new ROGUESQ_LOG_* env var
+### Step 2 — instrument, gated behind existing or new env vars
 
-Add ONE targeted, always-firing-but-capped log (e.g. print every ~60
-frames, roughly once per second, NOT every call — this field is read far
-more often than once/frame) at that field, via `fixup_game_funcs.py`
-(sibling `N64Recomp` checkout) following the same pattern as
-`ROGUESQ_LOG_MAT3INV` added this session (entry-style periodic log, no
-guard/bail). Full clean regen recipe (proven twice now, s221 and s223):
-delete all 45 `RecompiledFuncs/funcs_*.c`, `python3 tools/make_elf.py`
-(rogue_squadron64 checkout), `./build/N64Recomp rogue_squadron.toml` (or
-`tools/agent/regen_n64recomp.sh`), `fixup_game_funcs.py` **exactly once**
-(capture output to a file, grep the file, never re-invoke), `cmake --build
-. -j8` with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
+If `processSceneNode`'s existing diagnostics (callee tracers site=A..J,
+`ROGUESQ_LOG_...`) already give a periodic call-count signal, REUSE them —
+don't add a new one for the same function. Where a genuine gap exists
+(most likely `traverseSceneGraphRecursive`, which s224 confirmed has no
+instrumentation at all), add ONE new periodic entry counter (every ~60
+calls, same throttling discipline as `ROGUESQ_LOG_CAMPOSE`) via
+`fixup_game_funcs.py`. Full clean regen recipe (proven 3x now, s221/223/224):
+delete all `RecompiledFuncs/funcs_*.c`
+(`python3 -c "import glob, os; [os.remove(f) for f in glob.glob('funcs_*.c')]"`
+from that directory), `python3 tools/make_elf.py` (rogue_squadron64
+checkout), `tools/agent/regen_n64recomp.sh` (N64Recomp checkout),
+`fixup_game_funcs.py` **exactly once** (capture output to a file, grep it,
+never re-invoke), `cmake --build . -j8` with
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
 
-### Step 3 — soak, phase-gate on the crawl-exit, checksum-verify
+### Step 3 — soak, phase-gate on the checksum-observed freeze, correlate by line number
 
-Reuse `scratch/s73_post_a_scene/run_mat3inv2.sh` as the template (same
-`schedulepush2`-derived schedule, `HOLD_S=350`, synchronous foreground
-Bash call, ~580s timeout) — copy to a new tag, add the new env var,
-keep all s222/s223 diagnostics armed as regression checks. Because s223
-showed this exact schedule is non-deterministic (2 very different
-outcomes from 2 identical runs), budget for up to **2 attempts this
-session** (not more — budget rule 8) before treating a null as
-inconclusive rather than negative. After each run:
-- MD5-checksum a spread of `hold_NN.png` (`python3 -c "import hashlib;
-  ..."` one-liner, not shell loops — trips the sandbox gate for unclear
-  reasons, per longstanding note below) to find the actual freeze onset
-  this run, whatever content it reaches.
-- Compare the new camera-pose log's values in a window BEFORE the freeze
-  onset vs. AFTER it (same run, phase-gated on the checksum-observed
-  onset, not a cross-run comparison).
+Reuse `scratch/s73_post_a_scene/run_campose1.sh` as the template (same
+`schedulepush2`-derived schedule, `HOLD_S=350`, synchronous foreground Bash
+call, ~580s timeout) — copy to a new tag, arm the new/reused counter(s),
+keep ALL prior diagnostics armed as regression checks (`ROGUESQ_LOG_CAMPOSE`,
+`ROGUESQ_LOG_MAT3INV`, the s222/s223 guard set). This schedule is proven
+non-deterministic (s223) — budget up to 2 attempts before treating a null
+as inconclusive. After each run:
+- MD5-checksum `hold_NN.png` (`scratch/agent/checksum_campose1.py` is a
+  ready-made template — copy and repoint `d`) to find this run's own
+  freeze onset — do NOT assume it matches s224's `hold_82`, this schedule
+  varies run to run.
+- Use `scratch/agent/analyze_campose1.py` as a template for line-number
+  correlation: find the new counter's line number nearest the freeze-onset
+  `[phase]`/`[vi-fs-decision]` region (same technique s224 used to line up
+  `campose1`'s freeze timing against `n` values).
 
 Discriminating outcomes:
-- **Camera-pose field stops changing at the freeze onset** → confirms
-  "stuck camera" — the state-machine driving camera updates has wedged;
-  next step is finding what SHOULD have advanced it (an animation-
-  finished flag, a timer, a scripted-sequence index) and why it didn't.
-- **Camera-pose field KEEPS changing after the freeze onset** → the camera
-  is fine; the bug is downstream (scene-graph population/visibility/
-  culling stops updating while the camera moves through empty/unchanging
-  space) — next step shifts to `processSceneNode`/`submitSceneNodeRender`
-  rather than the camera-matrix functions.
-- **This run doesn't freeze at all, or freezes at a totally different
-  point** → reinforces non-determinism; note the new onset point/content
-  reached and do NOT treat 1 non-reproducing run as refuting anything —
-  needs a 2nd same-script attempt (still within this session's budget)
-  before concluding.
+- **Call rate drops to near-zero (or stops entirely) at the freeze onset**
+  → confirms scene traversal/submission itself is the wedge — next step is
+  finding WHY it stops being called (what should be invoking it every
+  frame, and why that caller stalls) — likely one level up the call chain
+  from wherever stops.
+- **Call rate stays roughly constant through and after the freeze** → the
+  traversal keeps running but isn't producing visible output — points to a
+  visibility/culling check inside the traversal always failing after some
+  point, or draw commands being built but never actually reaching the RDP
+  (worth cross-referencing against `[vi-fs-decision]`'s `rdpFs` plateau —
+  if traversal keeps running but `rdpFs` never advances, the gap is
+  between traversal and RDP submission specifically).
+- **This run doesn't freeze at all, or freezes at a very different point**
+  → reinforces non-determinism (s223); note the new onset and don't
+  conclude from 1 non-reproducing run — budget a 2nd attempt.
 
 ## Do NOT do this iteration
 
-- Do not re-instrument `mat3x3InverseInto` or `composeNpcOrientationMatrix`
-  — both closed (refuted / 7-guards-0/0-with-508/508-entry-confirmed,
-  respectively). Re-testing either is budget-rule-8 territory.
-- Do not treat s222's "no soak reaches mesh content" framing as true
-  anymore — it's in "Overturned conclusions" now. Content IS reachable,
-  non-deterministically.
-- Do not conclude anything from a single soak this session without the
-  MD5-checksum step — a crash-free or clean-looking run is not evidence
-  the picture actually progressed (s222's own lesson, reconfirmed s223).
+- Do not re-instrument `setupCameraMatrices`'s own pose fields, `+0x2C`
+  submatrix, or `mat3x3InverseInto` again — s224 answered the camera
+  question (keeps changing well past the freeze); re-testing is
+  budget-rule-8 territory.
+- Do not re-instrument `composeNpcOrientationMatrix` — closed since
+  s157/s158 (7 guards, 508/508 entry-confirmed, 0/0 guards).
+- Do not treat s224's "camera keeps moving ~60s past the freeze" finding
+  as fully closed — it's ONE run of ONE new instrument (see caveat in
+  PORTING-STATE Session 224). If this iteration's soak happens to freeze
+  cleanly again, a quick checksum + `[campose-entry]` correlation (reusing
+  the still-armed `ROGUESQ_LOG_CAMPOSE`) is a cheap bonus 2nd data point —
+  but the primary instrument this iteration is the new scene-graph call
+  counter, not a re-run of campose1's exact design.
 
 ## Environment notes (carried forward, still current)
 
-- **This exact schedule (s222's `schedulepush2` / s223's `run_mat3inv2.sh`)
-  is now PROVEN non-deterministic on identical input** — 1 of 2 runs froze
-  immediately in the hangar, the other reached the opening crawl. Do not
-  assume a single soak's outcome generalizes; budget 2 attempts before
-  drawing conclusions, per Step 3 above.
-- **Full clean-room regen recipe, proven twice (s221, s223)**: delete all
-  `RecompiledFuncs/funcs_*.c` (`python3 -c "import glob, os; [os.remove(f)
-  for f in glob.glob('funcs_*.c')]"` from that directory), re-run
-  `make_elf.py` + `N64Recomp`, run `fixup_game_funcs.py` **exactly once**,
-  capturing its report to a file — this is safer than trying to apply
-  fixup incrementally on top of already-patched files and avoids any
-  repeat-invocation label-duplication risk entirely.
-- **A whole-tree label-dup audit (`grep -oE '^L_[A-Za-z0-9_]+:$'
-  funcs_*.c | sort | uniq -c`) WILL show many labels appearing >1x ACROSS
-  DIFFERENT files/functions** (address-derived names naturally recur
-  across unrelated functions) — this is expected and harmless (C labels
-  are function-scoped). Only a duplicate WITHIN the same function body is
-  the s221 failure mode; the build is the definitive test either way.
+- **This exact schedule (s222's `schedulepush2` / s223's `run_mat3inv2.sh`
+  / s224's `run_campose1.sh`) is PROVEN non-deterministic on identical
+  input.** Budget 2 attempts before drawing conclusions, per Step 3 above.
+- **Full clean-room regen recipe, proven 3x (s221, s223, s224)**: delete
+  all `RecompiledFuncs/funcs_*.c`, re-run `make_elf.py` + `N64Recomp`, run
+  `fixup_game_funcs.py` **exactly once**, capturing its report to a file —
+  safer than incremental patching, avoids repeat-invocation label-dup risk.
+- **`fixup_game_funcs.py` is NOT idempotent — NEVER run it twice in the
+  same session without a delete-all-funcs regen in between.**
 - **Verify a "crash-free" soak visually before trusting it**: MD5-checksum
-  a spread of `hold_NN.png` files
-  (`python3 -c "import hashlib; print(hashlib.md5(open(f,'rb').read()).hexdigest())"`
-  per file, or loop over a list in one Python invocation — plain `md5`/
-  shell `for` loops over multiple files tripped the sandbox's command-
-  approval gate for unclear reasons; Python one-liners did not).
-- **Launch soaks synchronously (foreground), not backgrounded, when they
-  fit the tool timeout.** Budget ~80s of nav/stable/leave overhead on top
-  of `HOLD_S` when picking a timeout (`HOLD_S=350` + ~80s overhead ≈ 430s
-  wall, comfortably inside a 600s Bash timeout).
-- **`mat3x3InverseInto` is `funcs_5.c:7208-~7460`** (generic 3x3-inverse
-  utility, ~50 call sites across the whole game — `ra` in `ctx->r31` reads
-  as 0x0 at the diagnostic's insertion point since this leaf function never
-  itself calls anything before that point, so it does NOT distinguish
-  caller identity; don't rely on it for that). `setupCameraMatrices` is
-  `funcs_4.c:19142-21603`, `traverseSceneGraphRecursive` is
-  `funcs_4.c:15053-15357`. `composeNpcOrientationMatrix`
-  (`static_5_800AB1C8`) is `funcs_40.c:6280-7200`, CLOSED (see above).
+  a spread of `hold_NN.png` files (Python one-liner/script, not shell
+  loops — shell `for` loops over multiple files tripped the sandbox's
+  command-approval gate for unclear reasons in past sessions).
+- **Launch soaks synchronously (foreground), not backgrounded.** Budget
+  ~80s of nav/stable/leave overhead on top of `HOLD_S` when picking a
+  timeout (`HOLD_S=350` + ~80s overhead ≈ 430s wall, inside a 600s Bash
+  timeout).
+- **Correlating a new diagnostic's call-count/`n` value against wall-clock
+  freeze timing**: use the run's own `[phase]` log lines (real process-time
+  timestamps, e.g. `at 170.6s`) and find the nearest diagnostic log line by
+  LINE NUMBER (not by estimating elapsed time from driver-script stdout,
+  which is comparatively imprecise) — `scratch/agent/analyze_campose1.py`
+  is a working template for this (bisect over collected line numbers).
+- **`setupCameraMatrices` is `funcs_4.c:19142-21603`**, `mat3x3InverseInto`
+  is `funcs_5.c:7208-~7460`, `traverseSceneGraphRecursive` is
+  `funcs_4.c:15053-15357` (NOT yet instrumented, best next target),
+  `processSceneNode` (has several s219-221 tracers/guards already, check
+  before adding more), `submitSceneNodeRender` (also has s219-221
+  guards). `composeNpcOrientationMatrix` (`static_5_800AB1C8`) is
+  `funcs_40.c:6280-7200`, CLOSED.
+- **Camera struct layout (from s224's source read of `setupCameraMatrices`,
+  `$s1`/`ctx->r17`)**: `+0x0` a gating flag (controls whether the `+0x2C`
+  submatrix gets inverted this call, does NOT gate the
+  `traverseSceneGraphRecursive` call itself, which is unconditional);
+  `+0x10/+0x14/+0x18/+0x1C` an INTEGER viewport rect (x0,y0,x1,y1), not
+  camera pose; `+0x20/+0x24/+0x28` perspective near/scale float scalars;
+  `+0x2C` a 3x3 float rotation submatrix (36 bytes, to `+0x50`) — the only
+  orientation data in this struct. World position/view concatenation
+  happens via a separate FIXED global matrix address (`0x8012xxxx -
+  0x23A4`), not through this per-call struct — if a future translation/
+  position probe is wanted, that global address is the place to look, not
+  another camera-struct offset.
+- **`ROGUESQ_LOG_CAMPOSE=1`** (new, s224): logs `setupCameraMatrices`'s
+  raw `+0x2C` m00 + gating flag + struct pointer, every 60th call, uncapped
+  on NaN/Inf, `funcs_4.c` guest `0x800178A8`. Still armed in `campose1`'s
+  driver script — keep armed in future soaks as a regression check per the
+  "do not re-run as primary instrument" note above.
 - **`emitAllocatedDLCommand` is `funcs_3.c:2622-3210`**, `renderUnlitMeshFaces`
   is `funcs_4.c:4963-5630` (both guarded, s219/s221, still structurally
-  unconfirmed). `heapWalker` is `funcs_3.c:99-700`, `heapFreeListDequeue`
-  is `funcs_3.c:15427-17128` (both s217/s218, unchanged).
-- **`fixup_game_funcs.py` is NOT idempotent — NEVER run it twice in the
-  same session without a delete-all-funcs regen in between.** Redirect the
-  FIRST run's output to a file under `scratch/agent/` and grep the file,
-  never re-invoke the script.
-- **Raw crash logs are often still on disk long after the session that
-  produced them** — `grep` the actual `run.log` under
-  `scratch/s73_post_a_scene/<tag>/run.log` before trusting a prose summary.
-- **`recomp.h` location**: `lib/N64ModernRuntime/N64Recomp/include/
-  recomp.h` — nested submodule inside `lib/N64ModernRuntime`.
-  `submodule-patches/export.sh`/`apply.sh` cover both copies. Any edit
-  under `lib/` needs `export.sh` + commit, same session. **`NAN_CHECK`
-  (`recomp.h:396`) is `assert(val==val)` — this catches true NaN but NOT
-  Inf** (`Inf==Inf` is true), and only checks its own operand, never a
-  computed result — a real gap in this project's NaN-defense strategy,
-  worth remembering for any future transform-corruption hunt.
+  unconfirmed — 0/0 across every soak so far including s224's, which never
+  exercised either). `heapWalker` is `funcs_3.c:99-700`,
+  `heapFreeListDequeue` is `funcs_3.c:15427-17128` (both s217/s218,
+  unchanged, still 0/0 in s224).
 - **`fixup_game_funcs.py` lives at
   `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`** —
   the sibling checkout, genuinely untracked there (known since s83, not
@@ -187,7 +181,7 @@ Discriminating outcomes:
   function F means the fault is inside F's own body.
 - `recomp.h`: `U32(val)` = `(uint32_t)(val)`; `gpr` = `uint64_t`; a legit
   KSEG0 `gpr` sign-extends, upper bits `0xFFFFFFFF`. Always check upper 32
-  bits explicitly — a bare `U32()` check is blind to this corruption shape.
+  bits explicitly.
 - `rm -f <glob>`/`find <dir> -delete` are blocked — use
   `python3 -c "import glob, os; [os.remove(f) for f in glob.glob('<pattern>')]"`.
 - `./build/N64Recomp rogue_squadron.toml` needs an `env` prefix and must run
@@ -195,22 +189,19 @@ Discriminating outcomes:
   `tools/agent/regen_n64recomp.sh`). Compound `cd ... && cmd` gets denied in
   one Bash call — issue `cd` and the following command as SEPARATE Bash
   calls; redirecting output (`> file`) in the same call as a `cd` also gets
-  denied — write output to a file via a separate, non-`cd`-prefixed call.
+  denied.
 - `git -C <path> <cmd>` does not match a `Bash(git <cmd>:*)` allow-rule —
   `cd` into the target dir first (its own Bash call), then run bare
   `git <cmd>`.
 - Re-running the same soak script/tag OVERWRITES the previous run's
   `run.log` in place — copy the driver script to a new tag name per soak.
-- The `grep -ac '[CRASH]'` count in `run_mission_keys.sh`'s summary counts
-  LINES matching the tag, not crash EVENTS — grep `caught signal` for the
-  real event count.
 - `scratch/agent/STATUS`/`OUTCOME` get reset at the START of each iteration
   by the harness — finding them reset at session start is normal.
 
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget and the
-Read tool's 256 KB single-read limit (confirmed s195, still true s223 —
+Read tool's 256 KB single-read limit (confirmed s195, still true s224 —
 read it with `grep`/offset-limited `Read`, never a plain whole-file `Read`).
 Migrate durable mechanism/architecture material to `PROJECT-OVERVIEW.md` and
 prune superseded detail, paired with a real experiment — flagged for 20+

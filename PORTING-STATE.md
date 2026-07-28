@@ -21336,3 +21336,102 @@ samples, 350 `hold_NN.png` frames, `run.log`), drivers
 `scratch/s73_post_a_scene/run_mat3inv1.sh` / `run_mat3inv2.sh`. Regen logs:
 `scratch/agent/s223_make_elf.log`, `s223_n64recomp.log`, `s223_fixup.log`,
 `s223_build.log`.
+
+## Session 224 (2026-07-28) — the camera's own raw pose field keeps changing for ~60s AFTER the picture (and RDP full-sync counter) already froze, directly answering NEXT.md's discriminating question: this is a downstream scene-graph/render-submission freeze, NOT a stuck camera
+
+Per NEXT.md Step 1/2: `setupCameraMatrices` (`funcs_4.c:19142-21603`) never
+reads a separate XYZ translation field from the camera struct passed in
+`$s1`/`ctx->r17` — offsets `0x10/0x14/0x18/0x1C` are an integer viewport
+rect, `0x20/0x24/0x28` are perspective near/scale scalars, and the only
+orientation data in the struct is the `+0x2C` 3x3 submatrix that
+`mat3x3InverseInto` conditionally inverts (s223's now-closed lead). World
+position/view concatenation happens through a separate fixed-address global
+matrix (`0x8012xxxx - 0x23A4`), not through this struct. So the field
+chosen — the camera's own field, not a derived product, per NEXT.md's
+constraint — is `m[0][0]` of that raw `+0x2C` submatrix, read directly
+BEFORE any inversion, logged (`ROGUESQ_LOG_CAMPOSE`, `fixup_game_funcs.py`
+funcs_4.c, guest `0x800178A8`) alongside the struct's own gating flag
+(`+0x0`) and the struct pointer itself (to catch camera-instance swaps),
+every 60th call, uncapped on NaN/Inf. Clean delete-all-funcs regen (not
+incremental, same proven recipe as s221/s223), built clean (0 errors).
+
+**Soak** (`campose1`, same `schedulepush2`-derived schedule as
+s222/s223's `mat3inv2`, `HOLD_S=350`, synchronous foreground): survived
+the full 350s hold crash-free. `[campose-entry]` fired 966/966 times, real
+positive control (`camptr` visits at least 5 distinct camera-struct
+addresses over the run's early menu/craft-select phase before settling on
+one address for the whole flight portion), 0 abnormal (NaN/Inf) — a 2nd,
+independent confirmation that this struct field is never corrupted
+(complements, does not duplicate, `mat3inv-entry`'s 385/0-abnormal 2nd
+confirmation of s223's already-closed determinant null in the same run).
+
+**MD5-checksummed all 350 `hold_NN.png`** (`scratch/agent/checksum_campose1.py`):
+this run's picture changes through `hold_82`, then is byte-identical
+`hold_82`...`hold_350` — a real-content freeze (checksums 1/12-40/70-76/81/82
+all distinct, matching the pattern of genuine motion, not an immediate
+dead-hangar hang). Cross-checked against this same run's own `[phase]` log:
+the LAST `vi_width` transition in the entire 420s-wall run is at process
+time **170.6s** (line 176881, `vi_width=512 origin=0x00690400`) — no further
+VI-resolution changes for the remaining ~250s, consistent with the
+checksum-observed freeze. `[vi-fs-decision]` at the very end of the run
+still shows `stalled=0, reason=swap` with the VI buffer address actively
+alternating (`0x690000`/`0x620000`) but `rdpFs` plateaued at **3965** — a
+2nd independent soak reconfirming s223's finding that the swap/present
+pipeline stays alive through the freeze (ruling out a present-pipeline
+stall) while RDP task submission itself has stopped.
+
+**The discriminating result**: correlating `[campose-entry]`'s own line
+numbers against this same freeze window shows the camera struct pointer
+settles onto its final value (`0x80138D20`, the flight camera) right around
+`n=15000` (line 177777, essentially coincident with the 170.6s phase
+transition and the checksum freeze onset) — but **`m00` keeps changing for
+another ~5880 calls** after that (0.99 → 0.887 → 0.823 → 0.809, a brief
+plateau ~0.808 for a few hundred calls, then 0.742 → 0.350 → 0.289 → 0.292 →
+0.293 → 0.291), only freezing permanently at **`m00=-0.707199`** at
+`n=20880` (line 229189) — roughly **60+ seconds of continued camera-pose
+change after the on-screen picture and RDP submission had already gone
+static**, before the camera itself also eventually wedges and holds
+`-0.707199` for the remaining 36900 calls (~end of the 350s hold).
+
+**This directly answers NEXT.md's Step-3 discriminating question**: the
+camera does NOT stop at the same moment the picture does — it keeps being
+computed for roughly a minute afterward — so per NEXT.md's own framing,
+this is the **"camera keeps changing after freeze onset" outcome**: the
+camera-matrix code itself is not the wedge; something downstream (scene-
+graph population, node visibility/culling, or draw-command submission
+itself — `processSceneNode`/`submitSceneNodeRender`/
+`traverseSceneGraphRecursive`) stops producing new drawable content while
+the camera (and whatever drives it) keeps running for a while longer. The
+camera's own later freeze (`n=20880`) is a secondary event, not yet
+explained — plausibly it depends on state that the render freeze already
+broke (an animation/timer tied to visible progress), or is an unrelated 2nd
+wedge; not investigated this session.
+
+**Caveat (rule 4)**: the *picture*-freeze timing has 2 independent
+corroborating signals within this one run (checksum + `[phase]`/
+`[vi-fs-decision]` plateau) and is consistent with s222/s223's established
+pattern across many runs — well-supported. The *specific new claim* here
+("camera keeps moving ~60s past the render freeze") rests on ONE run of
+this ONE new instrument — strong and internally clean (966/966 positive
+control, 0 abnormal, a sharp and large 60s separation, not a marginal
+effect), but not yet independently reproduced. Given the schedule's proven
+non-determinism (s223), a repeat run may freeze at a different point or not
+reach this same clean two-stage pattern; treat as strong first evidence,
+not fully closed, but strong enough to redirect the investigation.
+
+**Next step**: per NEXT.md's own pre-registered outcome mapping, shift to
+`processSceneNode`/`submitSceneNodeRender`/`traverseSceneGraphRecursive`
+(scene-graph population/visibility/culling) rather than any more camera-
+matrix instrumentation — do NOT re-instrument `setupCameraMatrices`'s own
+pose fields again (this lead is now answered, not closed to zero, but the
+next informative diagnostic is downstream). A call-count/heartbeat counter
+in `processSceneNode` or `submitSceneNodeRender`, phase-gated the same way
+(checksum + `[phase]` correlation), would show directly whether traversal
+stops entirely at the freeze or continues traversing without submitting
+new draw commands (e.g. a visibility/cull check always failing after some
+point). Soak artifacts: `scratch/s73_post_a_scene/campose1/` (350
+`hold_NN.png` frames, `run.log`, 966 `[campose-entry]` lines), driver
+`scratch/s73_post_a_scene/run_campose1.sh`. Analysis scripts:
+`scratch/agent/checksum_campose1.py`, `scratch/agent/analyze_campose1.py`.
+Regen logs: `scratch/agent/make_elf_s224.log`, `regen_n64recomp_s224.log`,
+`fixup_s224.log`, `build_s224.log`.

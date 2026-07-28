@@ -663,7 +663,62 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s223)
+## Next steps, in order of expected value (s224)
+
+-65. **(s224) Answered NEXT.md's discriminating question: the camera's own
+    raw pose field (`setupCameraMatrices`'s `+0x2C` submatrix `m00`, read
+    directly, not the mat3x3InverseInto-derived inverse) keeps changing for
+    ~60s of process time AFTER the picture (and RDP full-sync counter)
+    have already frozen — this is a downstream scene-graph/render-
+    submission freeze, NOT a stuck camera.** Landed `ROGUESQ_LOG_CAMPOSE`
+    (`fixup_game_funcs.py`, `funcs_4.c:0x800178A8`) logging the camera
+    struct's own `+0x2C` m00 element (raw, pre-inversion — the field
+    NEXT.md asked for, since this function has no separate XYZ translation
+    field; world position/view lives in a separate fixed-address global
+    matrix, not this struct) + gating flag + struct pointer, every 60th
+    call. Soak (`campose1`, same `schedulepush2`-derived schedule as
+    s222/s223) survived the full 350s hold crash-free, 966/966 real
+    positive-control fires (camera pointer visits ≥5 distinct addresses
+    before settling on the flight camera), 0/966 abnormal (NaN/Inf) — a
+    2nd independent confirmation this field is never corrupted, alongside
+    a 2nd independent 0/385-abnormal reconfirmation of s223's closed
+    `mat3x3InverseInto` null in the same run. MD5-checksums of all 350
+    `hold_NN.png` show this run's picture freezes at `hold_82` (byte-
+    identical `hold_82`-`hold_350`); the run's own `[phase]` log shows its
+    LAST `vi_width` transition at process time 170.6s (no further VI
+    changes for the remaining ~250s) and `[vi-fs-decision]` shows
+    `rdpFs` plateaued at 3965 with the swap/present pipeline still
+    demonstrably alive (`stalled=0`, buffer address still alternating) —
+    2nd independent soak reconfirming s223's "not a present-pipeline
+    stall" finding. Correlating line numbers: the camera pointer settles
+    on the flight camera right around the same point the picture freezes
+    (`n≈15000`, coincident with the 170.6s phase transition) — but `m00`
+    keeps changing for another ~5880 calls (real values: 0.99→0.887→
+    0.823→0.809→...→0.742→0.350→0.289→0.292→0.293→0.291) before freezing
+    permanently at `m00=-0.707199` at `n=20880`, roughly 60+ seconds of
+    process time later. **This is NEXT.md's pre-registered "camera keeps
+    changing after freeze onset" outcome** — the camera-matrix code is not
+    the wedge; the bug is downstream (scene-graph population/visibility/
+    culling or draw-command submission itself stops producing new
+    content while the camera, and whatever drives it, keeps running for a
+    while longer). The camera's own later freeze (`n=20880`) is a
+    secondary, unexplained event — not investigated this session.
+    **Caveat**: the picture-freeze timing has 2 independent corroborating
+    signals within this run (checksum + phase/vi-fs-decision) and matches
+    the s222/s223 pattern across many runs — well-supported. The specific
+    NEW claim (camera keeps moving ~60s past the render freeze) is from
+    ONE run of this ONE new instrument — clean and large-margin, but not
+    yet independently reproduced; given this schedule's proven
+    non-determinism (s223), treat as strong first evidence redirecting the
+    investigation, not as fully closed. **Next step**: do NOT re-
+    instrument `setupCameraMatrices`'s own pose fields again (this
+    question is answered); shift to `processSceneNode`/
+    `submitSceneNodeRender`/`traverseSceneGraphRecursive` (`funcs_4.c`) —
+    add a call-count/heartbeat counter, phase-gated the same way, to see
+    whether scene traversal stops entirely at the freeze or continues
+    without submitting new draw commands (e.g. a visibility/cull check
+    always failing after some point). Full detail: PORTING-STATE Session
+    224.
 
 -64. **(s223) Refuted the `mat3x3InverseInto`/`setupCameraMatrices` `+0x2C`
     determinant hypothesis with a well-controlled null (456k+ firings
