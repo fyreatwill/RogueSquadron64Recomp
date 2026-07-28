@@ -14852,3 +14852,176 @@ Characterize the graphics-task-submission stall: find the guest function
 that should be submitting the next display list after the establishing-
 dive shot and determine what it's blocked on (asset DMA completion vs.
 input wait vs. something else). See `scratch/agent/NEXT.md`.
+
+## Session 163 (2026-07-27) — source-read found a concrete 3rd mechanism (unbounded audio-drain spin loop) for the s162 stall, landed a correctly-targeted instrument, but the soak died even earlier to a recurrence of the already-parked `emitAllocatedDLCommand` crash before reaching the target window
+
+Per NEXT.md's own instruction ("source-read before instrumenting"), delegated
+a research-only subagent to find the guest function that drives the
+Chapter-1 cutscene/crawl state machine forward, before writing any new
+`ROGUESQ_LOG_*` flag. Also, mid-session, accidentally re-ran
+`fixup_game_funcs.py` a 2nd time without a full regen in between (exactly
+the non-idempotency trap NEXT.md warns about) — caught it immediately via
+`grep -c` on the new patch's marker string (2 hits instead of 1), and fixed
+it properly (delete `RecompiledFuncs/funcs_*.c` → `make_elf.py` →
+`regen_n64recomp.sh` → `fixup_game_funcs.py` exactly once, reverified 1 hit)
+before building. Flagging so a future session doesn't have to rediscover
+that the "don't re-run fixup twice" rule has zero tolerance — even a
+same-session accidental re-run duplicates every patch in the touched file.
+
+### Source-read finding: neither of NEXT.md's two hypotheses as literally worded is what the code does
+
+`cinematicLoopBody` (0x800A5D80, `funcs_27.c:106840`) calls `static_6_800AF550`
+(real body `funcs_44.c:6187`) every frame; that function accumulates
+elapsed time against a **fixed `.rodata` float literal** (0x800A5D70) — a
+pure per-frame timer, not a poll on any DMA/asset-done flag. Crossing the
+threshold sends control to `L_800A64BC`
+(`funcs_27.c:107336-107340`), the cutscene's own teardown path:
+`bufferArbiterProducerScanWait` (0x8000BF60) → `cinematicDeactivator` →
+`waitForAnyAudioSlot` (0x800668B0) → `cinematicShutdownAudioAndAssets`.
+Read `waitForAnyAudioSlot`'s actual body (`funcs_15.c:6896`) directly (not
+inferred from the name): it's
+
+```
+L_800668C0:
+    tickMusyXIfActive(rdram, ctx);      // first iteration only, outside the label
+L_800668C0:
+    anyAudioSlotActive(rdram, ctx);
+    if ((r2 & 0xFF) == 0) goto L_800668C0;
+```
+
+— i.e. `while (!anyAudioSlotActive()) { }` with **no iteration cap and no
+yield inside the loop**, calling `tickMusyXIfActive` only once before
+entering, contrary to my first-pass reading (corrected on the 2nd read —
+`tickMusyXIfActive` runs once before the label, not every iteration; the
+loop body itself only calls `anyAudioSlotActive`). Read `anyAudioSlotActive`
+(`funcs_23.c:8806`) too: its final return is
+`v0 = ((s1 & 0xFF) < 1) ? 1 : 0` where `s1` is an OR-accumulation of
+`isAudioSlotActive()` across up to `MEM_BU(0x1AD0, 0x80140000)` channels —
+so it returns **1 when NO channel is active, 0 when at least one is** — the
+function name is inverted relative to its own logic; `waitForAnyAudioSlot`
+is actually a **drain-wait**: spin until every audio voice slot reports
+idle. **This is a 3rd, previously un-named mechanism** (not H-DMA's
+asset-flag poll, not H-INPUT's skip-button poll): if any voice never
+signals idle (e.g. a stuck/looping channel, possibly from the same
+DMA/asset-corruption family that's dogged this project since s85), this
+spin loop never returns, and cinematicLoopBody never proceeds to whatever
+submits the next display list — while the loop's neighbor,
+`tickMusyXIfActive`, keeps the audio-ucode task counter moving, which is
+exactly the s160/s161 log signature (`[lle task]` ticking forever while
+`fs` is frozen). Also found by the same read: `selectPostCrawlCraft`
+(0x800CB9BC) has exactly one caller, a menu_overlay mission-setup function
+unreached from `cinematicLoopBody` — ruling out the "does craft-select
+happen twice" alternate framing NEXT.md's Q4 raised. Full agent report
+available in this session's transcript; not re-derived here to keep this
+entry a summary.
+
+### Instrument landed (`N64Recomp/fixup_game_funcs.py`, not `lib/` — same convention as every prior guard/log in this family)
+
+`ROGUESQ_LOG_AUDIO_DRAIN=1`, three-site patch on `waitForAnyAudioSlot`
+(`funcs_15.c`, file-scoped): entry log (call index + active-channel count +
+return address), a heartbeat every 2000 loop iterations via a new
+file-scope `static long g_audio_drain_iters` global (proves runaway
+spinning without flooding the log), and an exit log with the total
+iteration count for that call. 4 call sites exist for this function
+(`funcs_27/29/32/39.c`) so ordinary menu/cutscene teardown calls earlier in
+a soak give a same-run positive control for "this function normally
+returns fast" against whatever call is stuck at the actual stall. Full
+delete-all regen + fixup (exactly once, verified) + `cmake --build`, clean
+(pre-existing warning classes only, no new errors).
+
+### Soak (`audiodrain1`): also tests H-INPUT in the same run (cheaper, no separate soak needed)
+
+New script `scratch/agent/run_audiodrain1.sh`, based on
+`run_subtitleguard2.sh`'s env block (every existing `ROGUESQ_LOG_*` flag
+kept) plus `ROGUESQ_LOG_AUDIO_DRAIN=1` and an extended
+`STICK_SCHEDULE="10:sr 25:sl 40:su 95:start 100:a"` — the `95:start
+100:a` entries are new, timed to land after s162's ~hold_92 freeze onset
+in `subtitleguard2`, testing whether a late "continue" press un-sticks the
+stall (H-INPUT).
+
+**Result: inconclusive for both hypotheses.** The process died at
+**hold-iter 6** — far earlier than s160/s161's full 120s crash-free
+soaks — to a SIGBUS in `emitAllocatedDLCommand` (`submitSceneNodeRender
++21192` ← `processSceneNode` ← `traverseSceneGraphRecursive` (recurses) ←
+`setupCameraMatrices` ← `runHangarSelectionFrame` ← `runHangarMenuFromOverlay`
+← `menuOverlayInit`) — this is **not a new crash class**: it's the same
+symbol/call-chain shape as the s132 crash that s133-135 chased and
+ultimately **parked** after a 3-attempt budget (s135, `CURRENT-TRUTH.md`
+"next steps" history), just recurring a 4th time, and doing so **past**
+the two guards s133 landed for it
+(`ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`, both **0/0** this run — neither
+guarded idiom was hit). The function-internal offset shifted from the
+original s132 crash (`+3984` pre-guard) to `+4584` here, a ~600-byte
+delta consistent with the 2 guard blocks s133 inserted before it — i.e.
+this really does look like the same underlying crash site, just not the
+same idiom the existing guards check, meaning either **a 3rd unguarded
+site inside `emitAllocatedDLCommand` with a similar-but-not-identical
+shape**, or the two existing guards' bounds check doesn't cover this
+particular bad-pointer value. Not further root-caused this session (out
+of scope for this iteration's work unit; flagged for a future one if this
+class keeps recurring — s135 explicitly parked it, this is a data point
+for reopening that decision, not a unilateral reopen).
+
+The new `ROGUESQ_LOG_AUDIO_DRAIN` instrument got a **partial positive
+control**: 4 entries, 3 exits, 0 heartbeats (meaning every completed call
+returned in under 2000 iterations — fast, normal). The 4th call's missing
+exit line is most likely a different guest OS thread (audio tick vs. the
+graphics/menu thread that actually crashed) still in-flight when the
+process died, not evidence of a hang — the crash's own backtrace shows a
+completely different call chain (scene-graph rendering, not
+`cinematicLoopBody`'s teardown), so the two are almost certainly
+concurrent, unrelated activity on separate guest threads. **Zero data
+obtained on the actual question** (does `waitForAnyAudioSlot` ever get
+stuck at the real stall) because the process never survived long enough
+to reach the intro-cutscene's teardown call specifically — the crash this
+run intervened first, exactly the "died even earlier to an existing,
+already-catalogued crash" pattern this project has hit repeatedly (s95,
+s96, s97, s133, s134).
+
+### What this establishes / rules out
+
+- The cutscene's own advance-and-teardown logic is a pure elapsed-timer
+  followed by two blocking primitives, confirmed by direct source read —
+  narrows the stall's possible cause to "one of these two blocking calls
+  never returns" as a 3rd concrete mechanism, sitting alongside (not yet
+  ruling out) H-DMA and H-INPUT.
+- The `emitAllocatedDLCommand`/s132 crash family is NOT actually closed by
+  s135's "parked" decision in practice — it just recurred a 4th time, past
+  the existing guards, in a run that wasn't even trying to reproduce it.
+  This soak recipe (`PROBE_MODE=start_only`, full flag set, `HOLD_S=120`)
+  keeps being a magnet for this exact crash family when run fresh; s160/
+  s161's 2 clean runs may be the outliers, not this one.
+- The audio-drain instrument itself is validated as functioning (fires,
+  logs sane call-index/channel-count values) but has not yet been tested
+  against the actual stall — that test still needs a soak that survives
+  past the crash family long enough to reach hold+90s.
+
+### Files touched
+
+- `N64Recomp/fixup_game_funcs.py`: 3-site `waitForAnyAudioSlot` diagnostic
+  patch (`ROGUESQ_LOG_AUDIO_DRAIN`), file-scoped to `funcs_15.c`.
+  Not `lib/`, no `submodule-patches/export.sh` needed (same posture as
+  every other fixup-script patch in this family).
+- `scratch/agent/run_audiodrain1.sh`: new soak script (H-AUDIO-DRAIN +
+  H-INPUT combined test).
+- Full delete-all regen (`make_elf.py` → `regen_n64recomp.sh` →
+  `fixup_game_funcs.py`, exactly once, reverified) + `cmake --build`,
+  clean.
+- Removed a stray `scratch_addrs.txt` scratch file the research subagent
+  left in the sibling `rogue_squadron64` checkout (untracked cruft, not
+  user work — the checkout's own pre-existing uncommitted `symbol_files/*`
+  changes from earlier sessions were left untouched, per the s54
+  precedent of not touching that flagged, unrelated state).
+
+### Next
+
+Re-attempt the same soak (attempt 2/3 for "does the process reach the
+actual stall window at all with this recipe") — no rebuild needed, the
+instrument is already armed. If it dies to the same `emitAllocatedDLCommand`
+recurrence again, that's a 2nd data point toward reopening that parked
+hypothesis (a 3rd unguarded site, most likely) rather than continuing to
+treat it as a bystander. If it survives to the stall, check
+`[audio-drain-enter]`/`[audio-drain-heartbeat]`/`[audio-drain-exit]`
+against the stall's onset timestamp — a call with entries but no exit and
+climbing heartbeats at exactly the stall point would confirm H-AUDIO-DRAIN
+directly. See `scratch/agent/NEXT.md`.

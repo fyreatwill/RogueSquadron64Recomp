@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 162)
+## Current truth (as of session 163)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -659,9 +659,55 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s162)
+## Next steps, in order of expected value (s163)
 
--14. **NEW TOP PRIORITY (s162): the s160/s161 "menu-hold" soaks already reached
+-15. **NEW TOP PRIORITY (s163): source-read found a concrete 3rd mechanism for
+    the s162 stall (an unbounded audio-drain spin loop in the cutscene's own
+    teardown path), instrument landed and validated, but the soak died even
+    earlier than usual to a recurrence of the already-`parked` (s135)
+    `emitAllocatedDLCommand` crash before ever reaching the stall window —
+    zero data obtained on the actual question.** `cinematicLoopBody`'s
+    advance-and-teardown gate (`static_6_800AF550`, `funcs_44.c:6187`) is a
+    pure per-frame elapsed-timer against a fixed `.rodata` literal — NOT a
+    poll on any DMA/asset-done flag (rules out H-DMA's specific wording) —
+    and its teardown branch (`L_800A64BC`) calls two blocking primitives,
+    `bufferArbiterProducerScanWait` then `waitForAnyAudioSlot`
+    (`funcs_15.c:6896`). Read `waitForAnyAudioSlot`'s actual body: it is
+    `while (!anyAudioSlotActive()) {}` with **no iteration cap and no yield**
+    — and `anyAudioSlotActive` (`funcs_23.c:8806`) returns 1 when NO channel
+    is active, 0 when at least one is (name is inverted relative to its own
+    logic) — so this is a **drain-wait**: spin until every audio voice
+    reports idle. If one voice never signals idle, this never returns,
+    while its neighbor `tickMusyXIfActive` keeps ticking — exactly matching
+    the s160/s161 signature (`[lle task]` running forever, `fs` frozen).
+    This is a 3rd hypothesis (**H-AUDIO-DRAIN**), neither H-DMA nor H-INPUT
+    as literally worded. Landed `ROGUESQ_LOG_AUDIO_DRAIN=1`
+    (`N64Recomp/fixup_game_funcs.py`, file-scoped `funcs_15.c`: entry/
+    heartbeat-every-2000-iters/exit logging) and extended the key schedule
+    to also test H-INPUT in the same soak
+    (`scratch/agent/run_audiodrain1.sh`, `STICK_SCHEDULE` adds `95:start
+    100:a` after s162's ~hold_92 freeze onset). **Soak result: the process
+    died at hold-iter 6** (far short of the ~92s needed to reach the
+    stall) to a SIGBUS in `emitAllocatedDLCommand` — same call-chain shape
+    as the s132 crash s133-135 already chased and parked after a 3-attempt
+    budget, recurring a 4th time, **past** the 2 existing guards
+    (`ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`, both 0/0 this run) — the
+    function-internal crash offset shifted by ~600 bytes from s132's
+    original, consistent with those 2 guard blocks now sitting before it,
+    suggesting a 3rd unguarded site with a similar-but-not-identical shape,
+    or a guard bounds-check gap. Not root-caused further this session
+    (out of scope for this iteration's work unit). The audio-drain
+    instrument got a partial positive control (4 entries/3 exits/0
+    heartbeats — all completed calls returned fast) but **zero data on the
+    actual stalling call**, since the process never survived long enough.
+    **Next work unit:** re-attempt the same soak (no rebuild needed,
+    attempt 2/3 for "does this recipe reach the stall window at all") —
+    see `scratch/agent/NEXT.md`. If `emitAllocatedDLCommand` recurs again,
+    that's a 2nd data point toward reopening the s135-parked hypothesis
+    (likely a 3rd unguarded site) rather than treating it as a bystander.
+    Full detail: PORTING-STATE s163.
+
+-14. **s162: the s160/s161 "menu-hold" soaks already reached
     a never-before-seen mission-intro cutscene (STAR WARS logo → "Chapter 1"
     crawl → establishing dive shot), then hit a genuine graphics-task-
     submission stall — not a crash. This is now the M3 frontier, replacing

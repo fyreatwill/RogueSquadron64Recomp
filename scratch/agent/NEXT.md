@@ -1,201 +1,166 @@
-# NEXT work unit — characterize the post-cutscene graphics-task-submission stall
+# NEXT work unit — retry the audio-drain/H-INPUT soak (attempt 2/3)
 
-s162 found (by re-reading screenshots s160/s161 already captured — no new
-soak) that the "menu-hold" crash-free soaks actually already drive the
-process past SELECT YOUR CRAFT into a real, never-before-documented
-Chapter-1 mission-intro cutscene (STAR WARS logo → "Chapter 1"/"THE RED…"
-crawl → black → desert-horizon dive toward a hangar). The process doesn't
-crash there — it stalls: `[vi-fs-decision]` reports `stalled=1 pairs=0`
-continuously and the RDP `fs` (FULL_SYNC) counter freezes, while `[lle
-task]` (audio RSP ucode) and `[rs-malloc]` (heap allocation) keep firing to
-the very last line of the log in both runs. Read PORTING-STATE's Session
-162 entry before doing anything else; this file only has the actionable
-summary.
+s163 source-read `cinematicLoopBody`'s cutscene-teardown path and found a
+concrete 3rd mechanism for the s162 graphics-task-submission stall
+(H-AUDIO-DRAIN: `waitForAnyAudioSlot`, `funcs_15.c:6896`, is an unbounded
+`while (!anyAudioSlotActive()) {}` spin with no iteration cap — if one audio
+voice never reports idle, this never returns, while its neighbor
+`tickMusyXIfActive` keeps the audio-ucode counter moving, matching the
+s160/s161 `[lle task]`-forever/`fs`-frozen signature exactly). Landed
+`ROGUESQ_LOG_AUDIO_DRAIN=1` (3-site instrument: entry/heartbeat-every-2000-
+iters/exit) and extended the key schedule to test H-INPUT in the same run
+(`scratch/agent/run_audiodrain1.sh`, `STICK_SCHEDULE` adds `95:start 100:a`
+after s162's ~hold_92 freeze onset). Read PORTING-STATE Session 163 before
+doing anything else; this file only has the actionable summary.
 
-## What s162 did and found
+## What s163's soak actually got (read before re-running)
 
-1. Re-read `scratch/s73_post_a_scene/subtitleguard1/hold_*.png` and
-   `subtitleguard2/hold_*.png` (120 screenshots each, already captured by
-   s160/s161, no rebuild/no run needed) via a subagent for the bulk pass,
-   spot-verified key frames directly.
-2. Found the logo→crawl→dive cutscene in both runs (two-source). Corrects
-   s161's claim that "no mission was ever entered" — it was, s161 just
-   never looked at the hold screenshots past the instrument-count summary.
-3. Diffed which per-tag counters keep incrementing past the RDP `fs`
-   plateau in both `run.log`s: `[lle task]` and `[rs-malloc]` both do (all
-   the way to the last line of both logs); the menu-tick family
-   (`anim-recurse`, `compose-npc-orient`, `hangar-entry`) stops around the
-   same point, but that's expected since those are hangar-menu-loop
-   functions that should stop once you leave the menu.
-4. The two runs' actual terminal frames differ: s161 (`subtitleguard2`)
-   froze mid-dive-shot at `vi_width=0`; s160 (`subtitleguard1`) ended on an
-   uncharacterized frame (`hold_120.png`) showing a small grey/white
-   object with a trailing line against pure black, at `vi_width=128` — a
-   VI width never seen before in this project. This specific difference is
-   **not** two-source; don't build a theory on it yet.
+The `audiodrain1` soak died at **hold-iter 6** — far short of the ~92s
+needed to reach the stall — to a SIGBUS in `emitAllocatedDLCommand`
+(`submitSceneNodeRender +21192` ← `processSceneNode` ←
+`traverseSceneGraphRecursive` (recurses) ← `setupCameraMatrices` ←
+`runHangarSelectionFrame` ← `runHangarMenuFromOverlay` ← `menuOverlayInit`).
+This is the **same call-chain shape as the s132 crash** that s133-135 chased
+and explicitly **parked** after exhausting a 3-attempt budget — it recurred
+a 4th time here, **past** the two existing guards
+(`ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`, both **0/0** this run). The crash's
+offset inside `emitAllocatedDLCommand` shifted ~600 bytes from s132's
+original (`+3984` → `+4584`), consistent with the 2 already-landed guard
+blocks now sitting before the actual crash site — meaning either a 3rd
+unguarded site with a similar-but-not-identical shape exists in that
+function, or the 2 existing guards' bounds check has a gap. **Not
+root-caused this session** — out of scope for that iteration's single work
+unit.
+
+The new `ROGUESQ_LOG_AUDIO_DRAIN` instrument got a partial positive control
+(4 entries, 3 exits, 0 heartbeats — every completed call returned fast,
+under 2000 iterations) but **zero data on the actual stalling call**, since
+the process never survived long enough to reach the cutscene's real
+teardown. Both H-AUDIO-DRAIN and H-INPUT remain untested.
 
 ## Do next
 
-**The goal is now to find WHY graphics-task submission stops, not to run
-another menu-hold soak** — the menu-transition question is closed (s161)
-and the "does the cutscene exist" question is closed (s162). This is a new
-question with its own discriminating measurement to design.
-
-1. **Source-read before instrumenting** (per the project's own repeated
-   lesson — s88, s92, s102, s159 all found wrong targets from skipping
-   this step). Find the guest function responsible for driving the mission
-   intro / cutscene sequencer forward — likely reachable from
-   `mainGameLoop`/`menuOverlayInit`'s sibling functions, or a
-   mission-load/cutscene-state-machine function. Grep `RecompiledFuncs/`
-   and `symbol_files/` for cutscene/crawl/briefing-shaped names first
-   (e.g. anything referencing "crawl", "briefing", "intro", "chapter",
-   "cutscene", "mission_start") before guessing a call chain from scratch.
-2. **Design the discriminating instrument** around the two live hypotheses
-   from s162:
-   - H-DMA: the cutscene's next graphics task depends on an asset load
-     (texture/geometry/audio-sync data) that never completes, because of
-     the same DMA-ring/asset-streaming corruption family documented s85–
-     s114 (`do_rom_read` garbage `devAddr`, ultimately traced to a
-     corrupted `voice+0x34`-adjacent field, never fully closed). Test:
-     is `do_rom_read`/the DMA-ring instruments (`ROGUESQ_LOG_DMA`,
-     `ROGUESQ_LOG_DMA_RING`, both already wired and free — reuse
-     `subtitleguard2`'s env block verbatim) firing a corrupted read near
-     the stall's onset?
-   - H-INPUT: the cutscene is legitimately waiting for a "press X to
-     skip/continue" input the script's schedule doesn't send (the
-     existing schedule only has Start once, pre-leave, and stick moves at
-     +10/25/40s into the hold — all of which land inside the cutscene
-     itself per s162's timeline, not after it). Test: extend the key
-     schedule to press `a` and/or `start` again at a time known (from
-     s162's timeline reconstruction — see PORTING-STATE s162 hold_NN
-     table) to land AFTER the dive-shot freeze point, and see if it
-     un-sticks the stall. This is the cheaper test to try first since it
-     needs no new instrument, only a new key-schedule script.
-   Try H-INPUT first (cheaper, one soak, no new logging) before chasing
-   H-DMA (which needs correlating an existing-but-unreviewed instrument
-   against a specific stall timestamp).
-3. **Write a new script** `scratch/agent/run_<tag>.sh` per project
-   convention (do not parametrize the existing ones via env indirection).
-   Base it on `run_subtitleguard2.sh`'s env block (keep every
-   `ROGUESQ_LOG_*` flag — they're free) but extend
-   `run_mission_keys.sh`'s `STICK_SCHEDULE`/key handling, or add a new
-   `PROBES`/hold-window key entry, to press a likely "continue" key
-   (`a` and/or `start`) at approximately hold-second 95-100 (post-freeze,
-   per s162's `subtitleguard2` timeline: freeze onset ~hold_92).
-4. **If the stall clears**: the phase timeline gets extended again — watch
-   for new crash classes past this point, this is genuinely unexplored
-   territory. If a new crash appears, catalogue it as the 22nd class per
-   the family's existing convention (full source read before guarding).
-5. **If the stall does NOT clear with an input press**: that weakens
-   H-INPUT and strengthens H-DMA — pivot to correlating the DMA-ring
-   instruments against the stall's onset timestamp in the existing
-   `subtitleguard1`/`subtitleguard2` logs (no new soak needed for this
-   first pass — the instruments were already armed and captured, just not
-   yet checked against the *cutscene* stall specifically, only against the
-   older hangar-tick-era `do_rom_read` crashes).
+1. **Re-run the exact same soak, unchanged** (no rebuild — the instrument
+   and key schedule are already armed and built):
+   ```
+   zsh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/run_audiodrain1.sh \
+     > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/run_audiodrain2_driver.log 2>&1
+   ```
+   (Rename the soak tag inside a **copy** of the script first —
+   `scratch/agent/run_audiodrain2.sh` with `RUNTAG=audiodrain2` in the final
+   `run_mission_keys.sh` line — per the project convention of one script per
+   soak tag, not reusing the same output directory.)
+   Block synchronously with the documented pgrep loop before closing out:
+   ```
+   until ! pgrep -f "RogueSquadron64Recomp" >/dev/null 2>&1; do sleep 5; done
+   ```
+2. **This is soak attempt 2/3** for the question "does this recipe
+   (`PROBE_MODE=start_only`, full flag set, `HOLD_S=120`, extended
+   `STICK_SCHEDULE`) reach the actual ~92s stall window at all, given the
+   `emitAllocatedDLCommand` crash family keeps intervening first." Per rule
+   8, one more attempt (3/3) is available after this one if it's still
+   inconclusive.
+3. **Branch on the outcome:**
+   - **If it reaches the stall window (hold+~90s or later) and stalls
+     as before:** check `[audio-drain-enter]`/`[audio-drain-heartbeat]`/
+     `[audio-drain-exit]` in `scratch/s73_post_a_scene/audiodrain2/run.log`
+     against the stall's onset timestamp (`grep -n "vi-fs-decision.*stalled=1"`
+     to find where it starts). An entry with no matching exit and climbing
+     heartbeat counts exactly at that point **confirms H-AUDIO-DRAIN**
+     directly — a real finding, write it up. If instead the stall clears
+     after the `95:start`/`100:a` presses, that's H-INPUT confirmed instead
+     — also write it up, and don't chase H-AUDIO-DRAIN further.
+   - **If it dies again to `emitAllocatedDLCommand`** (same crash, 5th
+     total occurrence): this is now a genuine 2nd data point for reopening
+     the s135-parked hypothesis rather than treating it as a bystander.
+     Next step then becomes: source-read the **rest** of
+     `emitAllocatedDLCommand` (`funcs_3.c:2464` onward — s133 only found
+     and guarded 2 of what may be 3+ occurrences of the
+     `findAndUnlinkSmallestEntry`-return-then-walk idiom) looking
+     specifically for a 3rd unguarded site with a *similar but not
+     identical* shape to the 2 already-guarded ones (per this project's
+     repeated lesson: a "same signature, different exact idiom" gap is
+     exactly how the 9th-through-21st crash classes in this family kept
+     evading guards). This becomes a NEW, higher-priority work unit —
+     write it up as such rather than continuing the audio-drain soak
+     attempts.
+   - **If it dies to any other, different crash:** log it per the family's
+     existing convention (new class if uncatalogued, recurrence note if
+     not), and this counts as the 2nd of the 3 allowed attempts either way.
 
 ## Do not
 
-- Do not re-run `run_subtitleguard1.sh`/`run_subtitleguard2.sh` unchanged
-  again — both questions they were designed to answer (menu-transition
-  crash-free, and now the cutscene's existence/stall mechanism) are
-  answered from the existing captures.
-- Do not claim the `vi_width=128` object-in-void frame (s160's terminal
-  state) is understood — it hasn't been looked at closely yet, only
-  spot-checked. Don't build a theory on one unexamined data point.
-- Do not re-open the s159 `loadDrawState`/15th-class question (closed by
-  full source proof, RT64-side, guard always-on) or the
+- Do not treat the `emitAllocatedDLCommand` recurrence as a NEW crash class
+  — it is not; it is the already-known, already-parked s132 crash. Don't
+  re-litigate s133-135's root-cause work, only note the recurrence + guard
+  gap.
+- Do not re-run `run_subtitleguard1.sh`/`run_subtitleguard2.sh` — those
+  questions are answered (s160-162).
+- Do not treat the audio-drain instrument's "4 entries/3 exits" as evidence
+  of a hang — the crash backtrace shows a completely different call chain
+  (scene-graph rendering, not `cinematicLoopBody`), so the missing exit is
+  almost certainly a different, still-running guest thread, not a stuck
+  loop. Only a heartbeat line (which never fired) would be real evidence of
+  spinning.
+- Do not re-open the s159 `loadDrawState`/15th-class question or the
   `static_5_800AAD9C` dispatcher hypothesis (closed s157).
-- Do not re-guard the two `drawSubtitleText` candidates s160 explicitly
-  declined to guard without a discriminating result pointing at them
-  specifically.
 
 ## This session's environment notes (carry forward, still current)
 
-- **`nm`, `otool`, `lldb` are NOT on the Bash allowlist** and there is no
-  human present in this autonomous loop to grant the approval prompt.
-  `scratch/agent/machoparse.py` reads Mach-O `LC_SYMTAB` directly as a
-  working replacement.
-- **The actual per-tag guard/control counts live in
-  `scratch/s73_post_a_scene/<tag>/run.log`**, not in
-  `scratch/agent/run_<tag>_driver.log` — the driver log only has the
-  ~30-line summary block.
-- Guard tag names in the log don't always match the env var name — grep
-  loosely (substring, not exact bracket-tag) or check one real log line
-  before writing a counting script.
-- **Reading screenshots directly (the `Read` tool on a `.png`) works and
-  is the ground truth for scene identity** — title-yellow-pixel-count
-  heuristics and VI-width alone are not sufficient to identify a scene
-  (this session's whole finding was missed because prior sessions used
-  only those proxies). For a long hold sequence (100+ frames), delegate
-  the bulk visual review to a subagent rather than reading every frame
-  in the main loop's own context — sample sparsely, densify around any
-  frame where the description would change, and always diff a
-  late-sequence "is this frozen" candidate against the actual last frame.
-- When testing a regex pattern against a RecompiledFuncs `.c` file from
-  the Bash tool, write a `.py` script file and run it — do NOT use
-  `python3 -c "..."` with the outer shell command in DOUBLE quotes
-  (silently eats `\$` before Python sees it).
-- zsh's bracket-glob expansion rejects patterns containing a literal
-  `[tag` inside a `for`-loop body — write a small Python script
-  (`re.findall`) to count multiple `[tag]`-style log markers in one pass.
-- A crash-class hypothesis (or a crash-free result) that held for one
-  soak is not guaranteed to recur/not-recur on the next soak — two
-  agreeing soaks is the bar for concluding anything; one is not.
-- Function/line-number estimates in NEXT.md/PORTING-STATE drift a few
-  lines every regen — always grep/read the actual regenerated file
-  before writing a regex anchor or planning a reorder.
-- N64Recomp's codegen convention for a fixed-global access: writes are
-  `MEM_W(<offset>, ctx-><base>) = ctx-><src>;`; reads flip the argument
-  order to `ctx-><dst> = MEM_W(ctx-><base>, <offset>);`.
-- `caller_ra` (`ctx->r31` at function entry) reads `0x00000000`
-  universally — stop treating it as a signal (s92, s139-141).
+- **CRITICAL, learned the hard way this session: `fixup_game_funcs.py` is
+  non-idempotent even within checking its own output** — running it a 2nd
+  time to `grep` its stdout (e.g. to verify a patch applied) **also
+  re-applies every patch a 2nd time**, duplicating them in the regenerated
+  `.c` files. There is no safe "just check" invocation. If you need to
+  verify what a fixup run reported, redirect its output to a log file on
+  the ONE invocation and grep the log file afterward — never invoke the
+  script itself a 2nd time "just to see the output again." Full regen
+  order remains: delete `RecompiledFuncs/funcs_*.c` → `python3
+  tools/make_elf.py` (cwd `~/Documents/Tools/rogue_squadron64`) → `zsh
+  tools/agent/regen_n64recomp.sh` (cwd this repo) → `fixup_game_funcs.py`
+  **exactly once** (cwd doesn't actually matter for this script — verified
+  it still applies correctly from a different cwd this session — but keep
+  invoking it only once regardless).
+- `nm`, `otool`, `lldb` are NOT on the Bash allowlist — use
+  `scratch/agent/machoparse.py` for Mach-O symbol reads if ever needed.
+- The actual per-tag guard/control counts live in
+  `scratch/s73_post_a_scene/<tag>/run.log`, not the driver log (only has
+  the summary block).
+- `nm`-adjacent lesson reused this session: reading a `RECOMP_FUNC` body
+  directly from `N64Recomp/RecompiledFuncs/funcs_*.c` (found via `grep -n
+  "RECOMP_FUNC void <name>"`) is far more reliable than trusting a
+  `symbol_files/*.txt` comment — this session found the `waitForAnyAudioSlot`
+  name is functionally inverted relative to what its body actually does;
+  the comment-only read would have been wrong.
+- `git -C <path> status` from this session's Bash tool triggers an approval
+  prompt (treated like a directory-changing compound command) — use a
+  separate `cd <path>` call followed by a separate `git status` call
+  instead.
+- Reading screenshots directly (the `Read` tool on a `.png`) remains ground
+  truth for scene identity.
 - `rm` on paths outside `scratch/` requires approval and does NOT accept
-  glob patterns — use a `python3 -c` one-liner with `pathlib.Path.glob()`.
-- **Do NOT re-run `fixup_game_funcs.py` a second time in the same session
-  without a full regen first** (non-idempotent, s102/s157) — delete
-  `RecompiledFuncs/funcs_*.c`, re-run `python3 tools/make_elf.py` (cwd
-  `~/Documents/Tools/rogue_squadron64`), then `zsh
-  tools/agent/regen_n64recomp.sh` (cwd this repo, NOT `N64Recomp`), THEN
-  `fixup_game_funcs.py` once (cwd `N64Recomp`) — verify by grepping the
-  regenerated `.c` directly.
-- `cmake --build` needs cwd `build/` and
-  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` for Metal
-  shader rebuilds.
-- Write a new wrapper script file per soak tag (`scratch/agent/run_
-  <tag>.sh`) rather than parametrizing a single reusable script via env
-  indirection.
-- Launch the soak via `zsh <absolute-path>/run_<tag>.sh > <absolute-path>/
-  run_<tag>_driver.log 2>&1` as a `run_in_background` Bash call, then
-  block synchronously with `until ! pgrep -f "RogueSquadron64Recomp"
-  >/dev/null 2>&1; do sleep 5; done` before closing out the iteration.
-- Checking submodule (`lib/...`) git status needs `env GIT_DIR=lib/X/.git
-  GIT_WORK_TREE=lib/X git status --short`, or a plain `cd <absolute path>`
-  as its own command followed by a separate `git status` call.
+  glob patterns.
 - Output redirection (`>`) from Bash is sandboxed to the session's allowed
-  working directories — target `scratch/agent/`, not `/tmp`. Use an
-  absolute path in the redirect target and skip `cd` in the same command.
-- Prefer a single `python3 script.py` file (Write then run) for
-  multi-step log analysis instead of a bash heredoc.
-- Chaining many `grep`/`echo` statements with `&&`/`;` in one Bash call
-  can trip the "multiple operations require approval" gate — split into
-  separate Bash calls. Plain `git status --short` alone has also required
-  approval this session.
-- This fix family lives entirely in the sibling `N64Recomp` checkout
-  (`fixup_game_funcs.py` + regenerated `RecompiledFuncs/*.c`), not `lib/`
-  — no `submodule-patches/export.sh` step needed for it. The 15th-class
-  guard (s159) lives in `lib/rt64` instead — that step DID apply.
+  working directories — target `scratch/agent/`, never `/tmp`.
+- `cmake --build` needs cwd `build/` and
+  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
 
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is still far over the ~35 KB target — migrate
 durable mechanism/architecture material to PROJECT-OVERVIEW.md and prune
 superseded detail, paired with a real experiment. Flagged for many
-sessions without action. Header line fixed to "session 162" this session
-(was stale at "119").
+sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
-not a `lib/` submodule, with uncommitted changes across s90-161
+not a `lib/` submodule, with uncommitted changes across s90-163
 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`). Same
 posture as the `rogue_squadron64` sibling checkout flagged since s54.
 Worth asking the user whether/how to commit that history.
+
+`~/Documents/Tools/rogue_squadron64` also still carries pre-existing
+uncommitted `symbol_files/*` changes from earlier sessions (unrelated to
+this session's work — a stray `scratch_addrs.txt` left by this session's
+research subagent was removed, but the `symbol_files/*` diffs were left
+untouched per the s54 precedent). Still flagged for the user, not
+committed autonomously.
