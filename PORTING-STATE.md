@@ -16871,3 +16871,137 @@ Per NEXT.md's step 1, re-ran the `schedcaller`-shape soak again (`schedguard4`, 
 3. `tickSongSequence`'s 2 unguarded list walks (funcs_25.c:5018-5046, 5050-5077, found s174, not guarded) — still open, still lower priority.
 4. `submitSceneNodeRender+16780` (s171) — still open, still lowest priority of the characterized-but-unfixed leads.
 5. The `rs_free ← rebuildActiveDisplayObjectList` SIGBUS this session (shared-heap-corruption family) — not guarded, matches an already-catalogued family shape, lower priority than item 1 above.
+
+## Session 184 (2026-07-28) — source-read confirmed candidate (a) is mechanistically real (a strict priority-greater-than scheduler gate can strand a low-priority thread), landed and validated a scheduler-decision instrument to test it; one soak died before reaching the stall region to a distinct, previously-uncatalogued SIGBUS signature inside `evalCubicSplineAtTime`
+
+### Work unit
+NEXT.md step 1: source-read the three -35 candidates before instrumenting. Read
+`lib/N64ModernRuntime/ultramodern/src/threads.cpp` (`resume_thread_tagged`,
+`run_next_thread`, `run_next_thread_and_wait`) and `scheduling.cpp`
+(`schedule_running_thread`, `swap_to_thread`, `check_running_queue`,
+`pause_self`/`yield_self`) end to end, plus `mesgqueue.cpp`'s `do_send`/`do_recv`
+blocking paths.
+
+### Finding: two structurally different "who runs next" mechanisms exist, and only one is priority-blind
+- `check_running_queue()` (called after every non-blocking `osSendMesg`/
+  `osJamMesg`/`osRecvMesg`, `osSetThreadPri`, `osStartThread`) only swaps to the
+  head of `running_queue` if `next_thread->priority > self->priority` —
+  **strictly greater**. A tie or a lower-priority queued thread is left
+  queued, untouched, and the function returns silently.
+- `run_next_thread()` (reached only via `run_next_thread_and_wait`, itself only
+  called from `do_send`/`do_recv`'s **blocking** loops in `mesgqueue.cpp` and
+  from `osStopThread`'s self-stop path, and from `_thread_func`'s natural-exit
+  path) pops `running_queue` **unconditionally**, ignoring priority entirely.
+- Consequence: a thread queued into `running_queue` via `schedule_running_thread`
+  (the wake-a-blocked-thread path in `do_send`/`do_recv`) is only guaranteed to
+  run again if *some* thread, at some point, executes a genuine blocking wait
+  (hitting the unconditional pop) — never-preempting priority comparisons alone
+  cannot resume it if every thread that subsequently calls
+  `check_running_queue` has priority ≥ the queued thread's.
+- Checked this against real data already on disk from s183's `schedguard4/`
+  run.log (`[thr-create-id]` lines, no new soak needed): `mainBootstrapWorker`
+  (thread id=3, entry `0x80000C68` — the hangar-loop/graphics-task-producer
+  thread per s93) is created at **priority 10**, one of the lowest of any
+  active thread in the roster; `viRetraceHandlerThread` (entry `0x80019868`)
+  runs at **priority 117**, and the three audio-related id=0 threads
+  (entries `0x8001C328`/`0x80019BF4`/`0x8008ED70`, the last confirmed s70/71
+  as `runAiAudioStreamPlaybackLoop`) run at **117-122**. This is exactly the
+  priority shape the mechanism needs: if thread 3 is ever queued by a
+  non-blocking send/recv from one of these ≥117-priority threads, and none of
+  them subsequently performs a genuine blocking wait, thread 3 stays parked
+  with **zero** `resume_thread_tagged` activity of any kind — matching s183's
+  "0 `thr-resume-skip`, 0 resume activity near the stall" observation exactly,
+  and doing so **without needing the s84 UAF guard to fire at all**.
+
+### Instrument landed (`lib/N64ModernRuntime`, pure host C++, no guest/fixup changes)
+`ROGUESQ_LOG_SCHED=1` (new env gate, mirrors `ROGUESQ_LOG_THREAD_RESUME`'s
+cached-getenv pattern; **not** always-on because both call sites are hot —
+`check_running_queue` and `run_next_thread` run on every message send/recv,
+same class of hot path s93 found perturbs timing when logged verbosely):
+- `scheduling.cpp` `schedule_running_thread`: `[sched-queue] thr=%p id=%d
+  pri=%d` — every time a thread is queued into `running_queue`.
+- `scheduling.cpp` `check_running_queue`: `[sched-check] self_thr=%p
+  self_id=%d self_pri=%d head_thr=%p head_id=%d head_pri=%d swap=%d` — only
+  inside the already-existing `!thread_queue_empty()` branch, so it does not
+  fire on the common (queue-empty) case.
+- `threads.cpp` `run_next_thread`: `[sched-runnext] popped_thr=%p popped_id=%d
+  popped_pri=%d` — every unconditional pop.
+Patch exported (`./submodule-patches/export.sh` — only
+`submodule-patches/N64ModernRuntime.patch` changed, `rt64.patch` untouched)
+and committed this session. Built clean via `cmake --build build`
+(`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`), 0 errors, only
+pre-existing SDL2-compat linker version warnings.
+
+### Soak (`schedguard5`, same env block as `schedguard3`/`schedguard4` plus `ROGUESQ_LOG_SCHED=1`)
+Positive control fired: 72382 `[sched-queue]`, 333003 `[sched-check]`, 72380
+`[sched-runnext]` lines. **Died at hold-iter 6** (`decisionN=8327`), well
+*before* the `#9770`-`#9792`-equivalent stall-onset region s180/s183 both
+reached (~decision 9770-9792) — this run never got far enough to test the
+hypothesis directly. Death: **SIGBUS (signal 10)** inside `evalCubicSplineAtTime
++ 2552`, called from `buildPositionAndCallTransformHelper` →
+`setupActorAnchorTransformType1` → `static_5_800AB658` → `static_5_800AAD9C` →
+`static_5_800C6854` → `menuOverlayInit` → `mainGameLoop` →
+`mainBootstrapWorker`. **This is not the s83-guarded crash** — s83's guard
+targets a `NAN_CHECK` assert abort (signal 6/SIGABRT) at one specific
+division site (`0x8001906C`); this is a bus error (signal 10, an out-of-bounds
+memory access), a different signal and almost certainly a different fault
+site within the same function, not previously catalogued under this name.
+Not root-caused this session (would need its own source read — flagged, not
+chased, per the "don't spend a soak chasing an unrelated crash" posture that
+already applies to `rs_free`/`rebuildActiveDisplayObjectList`).
+
+### What the pre-crash data does say (non-discriminating for -35, but not nothing)
+In the ~8300 decisions before death, `[sched-queue]` (72382) and
+`[sched-runnext]` (72380) counts are within 2 of each other — i.e. in normal
+(non-stalled) operation, almost every thread that gets queued does
+subsequently get an unconditional-pop chance; starvation via the strict
+priority gate is **not** the routine case. This refines rather than confirms
+the hypothesis: reaching the stall would require the unconditional-pop path
+(`run_next_thread`) to stop firing *for any thread* right around the stall
+onset — not a generic, ever-present race. The right discriminating check for
+a future run that reaches the stall: does `[sched-runnext]` stop appearing
+entirely in the window after the last `[sched-queue]` that names the producer
+thread's `thr=` pointer.
+
+### Rules out / keeps
+- Keeps `ROGUESQ_LOG_SCHED` armed as a free addition for any future soak that
+  reaches the stall region (same posture as `[thr-create-id]`).
+- Does not rule in or out candidate (a) — inconclusive, this run didn't reach
+  the target window. Not yet a 2nd or 3rd attempt on this specific
+  instrument (rule 8 budget: 1 of up to 3 before re-planning).
+- Surfaces a new, distinct SIGBUS signature in `evalCubicSplineAtTime`
+  (signal 10, offset +2552) as a competing early-death risk for any future
+  soak attempting to reach the stall region, alongside the already-catalogued
+  Metal-internal SIGSEGV and the `rs_free`/heap-corruption family.
+
+### Carried-forward open items (item 1 refined, others unchanged from s183)
+
+1. **Re-run the `ROGUESQ_LOG_SCHED=1` soak** (new tag, e.g. `schedguard6`) to
+   actually reach the `#9770`-`#9792`-equivalent stall-onset window. Grep for
+   the producer thread's `thr=` pointer (cross-reference `[thr-create-id]`)
+   across `[sched-queue]`/`[sched-check]`/`[sched-runnext]` in that window:
+   does it get a `[sched-queue]` entry with no subsequent `[sched-check
+   swap=1]` or `[sched-runnext popped_id=<same>]` before the stall, AND does
+   `[sched-runnext]` stop appearing *for any thread* around the same point?
+   Both together would confirm candidate (a) as this run's mechanism; either
+   alone is not sufficient (see "what the pre-crash data does say" above).
+2. Candidates (b) (`viRetraceHandlerThread`/`musyxSynthFrame` lock/resource
+   contention) and (c) (heap-exhaustion on the producer's own allocation
+   path) remain unexamined — only pursue if step 1's re-run is also
+   inconclusive (rule 8: 3 attempts on one hypothesis before re-planning).
+3. New, not-yet-root-caused SIGBUS in `evalCubicSplineAtTime+2552` (signal 10,
+   distinct from s83's guarded NAN_CHECK abort) — competes with the Metal
+   SIGSEGV and `rs_free` heap-corruption family as an early-death risk;
+   lower priority than item 1, flagged for a future session if it recurs.
+4. Retire "tighten the rdpFs ceiling band" — unchanged from s183, still retired.
+5. `tickSongSequence`'s 2 unguarded list walks (funcs_25.c:5018-5046,
+   5050-5077, found s174) — still open, still lower priority.
+6. `submitSceneNodeRender+16780` (s171) — still open, still lowest priority.
+7. The `rs_free ← rebuildActiveDisplayObjectList` SIGBUS (s183) —
+   shared-heap-corruption family, not guarded, lower priority than item 1.
+
+**Full detail**: this entry. Code changes: `lib/N64ModernRuntime/ultramodern/src/scheduling.cpp`
+and `threads.cpp` (`ROGUESQ_LOG_SCHED` instrument), patch exported + committed.
+Soak artifacts: `scratch/s73_post_a_scene/schedguard5/` (run.log ~3.96M lines),
+driver summary `scratch/agent/schedguard5_driver.log`, driver scripts
+`scratch/agent/run_schedguard5.sh`/`wait_for_schedguard5.sh`.

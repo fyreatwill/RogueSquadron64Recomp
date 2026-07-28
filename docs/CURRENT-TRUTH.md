@@ -663,11 +663,38 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s183)
+## Next steps, in order of expected value (s184)
 
--35. **NEW TOP PRIORITY (s183): find what actually stops graphics-task
-    submission in a run that reaches the stall WITHOUT `[thr-resume-skip]`
-    firing** — s183's `schedguard4` reached and sustained the target stall
+-35. **STILL TOP PRIORITY (s183, refined s184): find what actually stops
+    graphics-task submission in a run that reaches the stall WITHOUT
+    `[thr-resume-skip]` firing.** **s184**: source-read confirmed a real,
+    previously-uninstrumented mechanism that needs no UAF guard at all —
+    `check_running_queue()` only swaps to a queued thread if its priority is
+    **strictly greater** than the caller's; the only priority-blind pop is
+    `run_next_thread()`'s unconditional pop, reached only when some thread
+    performs a genuine blocking wait. `mainBootstrapWorker` (the hangar-loop/
+    graphics-producer thread) is created at **priority 10** vs. **117-122**
+    for the VI-retrace/audio threads — exactly the shape needed for the
+    producer to get queued (via a non-blocking send/recv) and then never
+    resumed if none of those higher-priority threads ever blocks again.
+    Landed `ROGUESQ_LOG_SCHED=1` (`[sched-queue]`/`[sched-check]`/
+    `[sched-runnext]`, `lib/N64ModernRuntime`, exported+committed) to test it.
+    One soak (`schedguard5`) validated the positive control (72382/333003/72380
+    fires) but **died at decision 8327, before the stall-onset window
+    (~9770-9792)**, to a **new, distinct SIGBUS** in `evalCubicSplineAtTime
+    +2552` (signal 10 — NOT s83's guarded NAN_CHECK abort, a different signal
+    and fault site under the same function name, not root-caused).
+    Inconclusive for the hypothesis; one usable data point though: pre-crash,
+    `[sched-queue]` (72382) and `[sched-runnext]` (72380) counts nearly
+    balance, so routine starvation is not the normal case — the mechanism
+    would need `run_next_thread` to stop firing for *any* thread right at the
+    stall, which this run didn't reach far enough to observe. Next: re-run
+    with a new tag to actually reach the stall window (1 of up to 3 attempts
+    on this instrument before falling back to candidates (b)/(c) per rule 8).
+    Full detail: PORTING-STATE Session 184.
+
+    **s183 finding this refines (still valid as one confirmed instance, not
+    the whole explanation):** `schedguard4` reached and sustained the target stall
     for the first time (hold-iter 68, deepest ever; 2688 consecutive
     `stalled=1` decisions before death) but fired `[thr-resume-skip]` **0**
     times the entire run, weakening (not confirming) s180's scheduler
