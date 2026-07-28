@@ -21174,3 +21174,165 @@ only); no `lib/` files touched, nothing to export. Soak artifacts:
 on disk as-is at `scratch/s73_post_a_scene/schedulepush1/`
 (`run_schedulepush1.sh`) — contaminated, not deleted, in case its partial
 frames are useful context later.
+
+## Session 223 (2026-07-28) — refuted the mat3x3InverseInto/setupCameraMatrices determinant hypothesis with a well-controlled null (456k+ firings spanning the whole hold), but a same-schedule re-run of s222's exact soak reached mesh-heavy space combat AND the opening crawl for a 2nd-ever time, then froze on a flat ground-color fill (not "torn/striped") with the swap/present pipeline still demonstrably live — non-determinism now proven on byte-identical scripted input, not just suspected
+
+NEXT.md's planned unit: source-read `setupCameraMatrices`/
+`traverseSceneGraphRecursive`/`composeNpcOrientationMatrix` end to end for a
+transform value that could go degenerate during the post-`SELECT YOUR
+CRAFT` camera fly-out, then land ONE targeted diagnostic and re-soak.
+
+**Source read** (delegated to an Explore sub-agent, then independently
+verified by direct read, not taken on trust): `setupCameraMatrices`
+(`N64Recomp/RecompiledFuncs/funcs_4.c:19142-21603`) conditionally computes
+a 3x3 matrix inverse of the camera struct's own `+0x2C` submatrix
+(`$s1+0x2C`, gated on a flag byte at `$s1+0x0`) at `funcs_4.c:21299-21322`,
+immediately before calling `traverseSceneGraphRecursive` — i.e. its output
+feeds straight into the corrupted-frame render path this whole lineage
+(s150/s220/s221/s222) has been chasing. The callee,
+`mat3x3InverseInto` (`funcs_5.c:7208-7208+`), computes the determinant via
+cofactor expansion then `f10 = 1.0f / det` at guest `0x8001C7E4`
+(`funcs_5.c:7326`) — a zero/degenerate determinant produces `+/-Inf` here.
+Critically, `NAN_CHECK` (`recomp.h:396`, `assert(val == val)`) passes for
+`Inf` (`Inf == Inf` is true) and only catches true `NaN`, and only checks
+its own OPERAND, never a result — so an `Inf` here sails past every
+downstream `NAN_CHECK` on its own value, and the three adjugate multiplies
+that follow (`0x8001C7E8`/`0x8001C7F0`/`0x8001C7F8`) check their input
+operands (`Inf` passes) but never re-check the PRODUCT. If any cofactor
+term is exactly `0.0`, `Inf * 0.0 = NaN` would be produced and stored
+straight into the output matrix with no assert ever tripping — a plausible
+"silent NaN, no crash" mechanism matching the observed symptom (permanent
+visual corruption, process never crashes) exactly. `composeNpcOrientation
+Matrix` (`static_5_800AB1C8`) was read too (matching the s150 backtrace
+name) but NOT chosen as the instrumentation target: it already carries 7
+guards from s99-s158, all confirmed 0/0 across every soak despite its
+entry diagnostic firing 508/508 in at least one prior run (CURRENT-TRUTH
+item -9/-10) — re-treading that exact function would be budget-rule-8
+territory (a 3rd+ attempt at an already-dead-ended lead), whereas
+`mat3x3InverseInto` was untested by any prior session.
+
+**Instrument landed**: `fixup_game_funcs.py` (sibling `N64Recomp` checkout,
+untracked there per the s83 flag, not this repo's commit scope) gained a
+new patch at `funcs_5.c`'s `0x8001C7E4` div site — entry counter (capped at
+first 3 + every 2000th to bound log volume, since this is a generic 3x3-
+inverse utility called from ~50 sites, ~1300×/s in practice) plus an
+UNCAPPED abnormal-value log (`det==0.0f || isnan(inv_scale) ||
+isinf(inv_scale)`) gated behind `ROGUESQ_LOG_MAT3INV=1`. Full regen done
+clean-room per the s221-proven recipe (not incremental) to avoid any
+repeat-invocation risk: deleted all 45 `RecompiledFuncs/funcs_*.c`,
+`python3 tools/make_elf.py` (rogue_squadron64 checkout), `./build/N64Recomp
+rogue_squadron.toml` (fresh regen), `fixup_game_funcs.py` run **exactly
+once** (report captured to `scratch/agent/s223_fixup.log`, confirms
+`funcs_5.c: mat3x3InverseInto det/inverse diagnostic (0x8001C7E4) patched
+x1` — no duplication). Whole-tree label-dup audit
+(`grep -oE '^L_[A-Za-z0-9_]+:$' funcs_*.c | sort | uniq -c`) showed several
+labels appearing >1x across DIFFERENT files/functions (e.g.
+`L_800AA950` in `funcs_27.c`) — but C labels are function-scoped, not
+file-scoped, so cross-function name reuse from address-derived label
+naming is expected and harmless; the s221 failure mode was the SAME label
+appearing >1x INSIDE one function body, which this audit did not find, and
+the build (below) is the definitive test regardless. `DEVELOPER_DIR=
+/Applications/Xcode.app/Contents/Developer cmake --build . -j8` — clean,
+0 errors, only the pre-existing 46 warnings.
+
+**Soak 1** (`mat3inv1`, `scratch/s73_post_a_scene/run_mat3inv1.sh`,
+s222's `schedulepush2` schedule reused verbatim + `ROGUESQ_LOG_MAT3INV=1`
+added, launched synchronously per NEXT.md's explicit instruction): died at
+hold-iter 3 (~3s into the hold) to SIGBUS, `x9=0x0000000300000000`,
+backtrace `static_5_800C6854 [runHangarMenuFromOverlay] <- menuOverlayInit
+<- mainGameLoop`. **Not a new bug**: this is the already-catalogued,
+already-refuted-as-"hunt the write site" raw-KSEG0-host-rdram-base-pointer
+crash family (s194/s219, CURRENT-TRUTH items -60/-59), part of the SAME
+hangar-selection call-chain family as this whole investigation. It is,
+however, the EARLIEST-yet manifestation of that family in this lineage's
+timeline (previously always later than hold-iter 3) — another data point
+for "this lineage's soaks are known non-deterministic," not a discriminating
+result for the mat3inv hypothesis (0 abnormal / 53 entries logged before
+the crash, all `det` near 1.0 — inconclusive, the process died before
+reaching the freeze window).
+
+**Soak 2** (`mat3inv2`, identical script copied verbatim, only the tag
+renamed, re-run once per the "one game run at a time" rule): survived the
+ENTIRE 350s hold crash-free (`CRASH: 0`, killed manually at the end,
+matching s219/s221's cleanest prior survivals). **Positive control
+satisfied emphatically**: `mat3inv-entry` fired 456,000+ times, sampled
+values spanning the WHOLE hold window including well past the eventual
+freeze onset (last sampled line `n=456000` near the very end of the run) —
+determinant values varied genuinely (`0.015625`, `1`, `1.19709`,
+`1.95313e-06`, `3.375`, ... — never a constant stub value, confirming real
+per-frame data is flowing through) but **never once hit `0`, `Inf`, or
+`NaN`** (`grep -c mat3inv-abnormal` = 0). This is the cleanest negative
+result in this whole investigation's leaf-guard history: unlike the 4 prior
+soaks' 0/0 nulls (where the instrumented code path itself never fired at
+all — an uncontrolled null per Iron rule 1), this one fired copiously
+across the exact window under investigation and simply never showed the
+hypothesized value. **The mat3x3InverseInto/setupCameraMatrices `+0x2C`
+determinant hypothesis is refuted** — this candidate site is not the
+corruption mechanism, at least not via a zero/degenerate determinant.
+
+**Unplanned, higher-value finding**: MD5-checksumming `mat3inv2`'s own
+`hold_NN.png` captures shows this run — running the byte-identical
+schedule/script as s222's `schedulepush2` — did NOT reproduce s222's
+"frozen from hold_04 onward" result at all. Instead: `hold_01`-`hold_10`
+show a genuine space-combat scene (X-wing near a capital-ship/station
+hull, visible TMEM-noise texture corruption on the geometry but real,
+distinct mesh content, not the hangar); `hold_15`-`hold_59` show a
+letterboxed cutscene (clean sky/desert horizon establishing shot, no
+corruption); content keeps changing through `hold_60`-`hold_74` (the
+horizon visibly rising / letterbox narrowing, i.e. a continuous downward
+camera tilt); then the picture freezes byte-identically from `hold_75`
+through `hold_349` (the last checked frame) on a flat, single-color
+tan/beige fill — the camera having tilted down far enough to be looking
+at nothing but a plain distant ground plane, filling the whole frame.
+`[phase]` log lines corroborate real progression, not just cosmetic
+similarity: `vi_width` 1024 (44.5s, SELECT YOUR CRAFT) -> 512 (73.2s,
+`origin=0x006AB400`, matches s154's own "reached the hangar/departure"
+address) -> 640 (**140.6s, `origin=0x006A2900`, the exact address and
+near-identical timestamp as s154's "reached the crawl scene at 141.4s" —
+CURRENT-TRUTH item -6, "the furthest the process has ever rendered
+past the crawl"**) -> 512 (169.9s, `origin=0x00690400`, a phase never
+previously reached in this specific lineage). **This is only the 2nd time
+in the whole project's history this exact crawl-scene milestone has been
+reached**, and the first time via this s150-s222 investigation's own
+soak recipe. It directly contradicts s222's own framing ("no soak has
+ever reached mesh-heavy content", CURRENT-TRUTH item -63) as a universal
+statement: the identical schedule, run twice, produced a total dead-hangar-
+freeze once (s222) and a run past the opening crawl the very next time
+(this session) — **non-determinism is now demonstrated on byte-identical
+scripted input**, not merely inferred from varying schedules across
+sessions.
+
+**The freeze mechanism is also narrowed, not just relocated**: at the very
+end of `mat3inv2`'s run, `[vi-fs-decision]` reports `#31683 FIRE
+reason=swap ... stalled=0 ... rdpFs=3481` — the swap/present pipeline is
+demonstrably still alive and actively incrementing `rdpFs` at the moment
+the screenshot content has been frozen for ~275s. This rules out a
+render-pipeline/present stall (the `[vi-fs-decision]` stall class this
+project has separately tracked since s180) as the cause of THIS freeze —
+the renderer keeps presenting, it is simply presenting the identical scene
+every time, meaning whatever supplies the camera pose / scene-graph
+content per frame has stopped changing while the rest of the engine
+keeps ticking. Combined with this session's own mat3inv null, the
+remaining candidate is a game-logic/state-machine freeze (the top-level
+scene/camera-update driver stops advancing) rather than either a
+transform-math corruption (refuted this session) or a presentation stall
+(refuted this session). The frozen frame's flat-color-fill signature (not
+"torn/striped") is also visually distinct from s150/s222's description —
+consistent with a camera stuck pointed at a plain, distant, undetailed
+ground/skybox plane rather than at a NaN-mangled mesh; not yet proven
+which of "same mechanism, different endpoint" vs. "different mechanism
+entirely" is correct.
+
+**Fix status**: no fix landed — this session narrows the mechanism, it
+does not close it. The `ROGUESQ_LOG_MAT3INV` diagnostic stays in place
+(harmless, env-gated, zero cost when unset) as a permanent regression
+check for any future camera-transform work. `lib/` untouched, nothing to
+export; the `fixup_game_funcs.py` edit lives in the sibling `N64Recomp`
+checkout per the standing s83 flag, out of this repo's commit scope.
+Soak artifacts: `scratch/s73_post_a_scene/mat3inv1/` (early-crash, 53
+mat3inv samples, `run.log`),
+`scratch/s73_post_a_scene/mat3inv2/` (full 350s survival, 456k+ mat3inv
+samples, 350 `hold_NN.png` frames, `run.log`), drivers
+`scratch/s73_post_a_scene/run_mat3inv1.sh` / `run_mat3inv2.sh`. Regen logs:
+`scratch/agent/s223_make_elf.log`, `s223_n64recomp.log`, `s223_fixup.log`,
+`s223_build.log`.

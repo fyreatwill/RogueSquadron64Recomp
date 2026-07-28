@@ -663,7 +663,75 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s222)
+## Next steps, in order of expected value (s223)
+
+-64. **(s223) Refuted the `mat3x3InverseInto`/`setupCameraMatrices` `+0x2C`
+    determinant hypothesis with a well-controlled null (456k+ firings
+    spanning the whole hold, determinant genuinely varying but never
+    0/Inf/NaN) — AND, unplanned, an exact re-run of s222's own
+    `schedulepush2` script reached real space-combat mesh content plus the
+    opening crawl (2nd time ever, matching s154's milestone) before
+    freezing on a flat ground-color fill, refuting s222's "no soak has
+    ever reached mesh-heavy content" as universal and proving
+    run-to-run non-determinism on byte-identical scripted input.**
+    Source-read (Explore sub-agent + independent verification)
+    `setupCameraMatrices` (`funcs_4.c:21299-21322`) conditionally inverts
+    the camera struct's own `+0x2C` 3x3 submatrix via `mat3x3InverseInto`
+    (`funcs_5.c:7208+`, `1.0f/det` at guest `0x8001C7E4`) right before
+    calling `traverseSceneGraphRecursive` — a zero/degenerate `det` would
+    produce `Inf`, which `NAN_CHECK` (`assert(val==val)`) cannot catch
+    (`Inf==Inf` is true), and whose subsequent `Inf*0.0=NaN` products (the
+    3 adjugate multiplies right after) are never re-checked before being
+    stored — a plausible silent-corruption mechanism matching "picture
+    corrupts, process never crashes" exactly. Landed a targeted diagnostic
+    (`ROGUESQ_LOG_MAT3INV`, entry counter + uncapped abnormal-value log,
+    `fixup_game_funcs.py` in the sibling `N64Recomp` checkout) via a clean
+    delete-all-funcs regen (not incremental) to avoid any repeat-invocation
+    risk, built clean. **1st soak** (`mat3inv1`) died at hold-iter 3 to the
+    already-catalogued `0x0000000300000000`/`static_5_800C6854` crash
+    family (s194/s219) — earliest-yet manifestation, not a new bug,
+    inconclusive (53 mat3inv samples, all near-1.0, process died too early).
+    **2nd soak** (`mat3inv2`, same script re-run once): survived the full
+    350s hold crash-free. mat3inv fired 456,000+ times across the ENTIRE
+    window (confirmed still logging at n=456000 near the very end, well
+    past the freeze onset) with real varying determinant values but never
+    abnormal — **the cleanest, best-controlled negative result in this
+    investigation's leaf-guard history** (unlike every prior 0/0 null,
+    this one actually exercised the code path under test throughout).
+    **Bonus finding, higher value than the planned unit**: MD5-checksums of
+    `mat3inv2`'s own screenshots show real content the whole s150-s222
+    lineage assumed unreachable — `hold_01`-`10` a genuine space-combat
+    scene (X-wing near a capital-ship hull), `hold_15`-`74` a letterboxed
+    cutscene with a continuously tilting-down camera (sky/desert horizon
+    narrowing), then a byte-identical freeze from `hold_75` onward on a
+    flat single-color ground fill (visually DIFFERENT from s150/s222's
+    "torn/striped degenerate polygon" description). `[phase]` lines
+    corroborate real progression: `vi_width` 1024(44.5s)->512(73.2s,
+    matches s154's hangar-departure address)->**640(140.6s,
+    `origin=0x006A2900`, the SAME address/near-identical timestamp as
+    s154's own "furthest ever past the crawl" milestone, item -6 below)**
+    ->512(169.9s, never-before-reached in this lineage). Also: at the very
+    end of the frozen window, `[vi-fs-decision]` shows `stalled=0,
+    reason=swap, rdpFs=3481` still incrementing — **ruling out a
+    render/present-pipeline stall** as this freeze's cause (the swap
+    mechanism is alive; it is presenting the identical scene repeatedly).
+    **Net effect on the working theory**: the freeze is real and
+    reproduces, but is now narrowed to neither a transform-math corruption
+    (refuted) nor a presentation stall (refuted) — the remaining candidate
+    is a game-logic/state-machine freeze (whatever drives camera
+    pose/scene-graph content per frame stops advancing while the rest of
+    the engine keeps ticking). **Next step**: (a) do NOT re-instrument
+    `mat3x3InverseInto` or `composeNpcOrientationMatrix` again — both are
+    now closed leads (the latter already had 7 guards + 508/508 entry
+    confirmation with 0/0 guards, per item -9/-10 below); (b) since content
+    IS reachable at least sometimes, next soak should add a low-frequency
+    diagnostic logging the actual camera position/orientation values (not
+    just a derived matrix) throughout a long hold, phase-gated around the
+    140s/crawl-exit mark, to directly observe whether the camera's own
+    pose values stop changing at the freeze point (confirms "stuck
+    camera") vs. keep changing while the rendered content doesn't (points
+    further downstream, e.g. scene-graph population/visibility). Full
+    detail: PORTING-STATE Session 223.
 
 -63. **(s222) 4th consecutive null closes the "schedule density" hypothesis
     for good — checksum-verified, the on-screen picture freezes on a
@@ -4585,6 +4653,24 @@ Standing warnings:
   keep using them rather than winctl directly for driven runs.
 
 ## Overturned conclusions — do not act on these
+
+- **Claim (s222):** "no soak has ever reached mesh-heavy content" / the
+  post-`SELECT YOUR CRAFT` corruption freezes the picture within ~4s of
+  leaving the menu on EVERY soak, independent of schedule. **Overturned
+  (refined) by s223:** an exact byte-for-byte re-run of s222's own
+  `schedulepush2` script reached genuine space-combat mesh content
+  (`hold_01`-`10`) and the opening crawl (`hold_15`-`74`, matching s154's
+  own "furthest ever" milestone, item -6 below) before freezing — the
+  identical schedule that produced s222's total dead-hangar-freeze produced
+  a run past the crawl the very next attempt. The freeze phenomenon itself
+  is real and still reproduces (now on a flat ground-color fill rather than
+  a torn/striped polygon), but "every soak, ~4s post-leave, no exceptions"
+  was an artifact of a 4-soak sample size, not a structural guarantee —
+  reaching further content is possible, apparently non-deterministically,
+  with the SAME scripted input. Believable because 4 consecutive soaks
+  (s180-s222 lineage) really did show the identical pattern, which looked
+  like determinism until a 5th, identical-input attempt broke it. Full
+  detail: PORTING-STATE Session 223, CURRENT-TRUTH item -64.
 
 - **Claim (s216-218):** the identical corrupt literal `0x0000000300000000`
   seen at `x0`/`x8` in three crash dumps (`heapFreeListDequeue`, `heapWalker`,
