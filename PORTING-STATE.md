@@ -20046,3 +20046,162 @@ Zero new git-tracked file changes needed in this repo beyond
 change landed in the separate `N64Recomp` checkout
 (`fixup_game_funcs.py`, not `lib/`, no `export.sh` needed per NEXT.md's own
 note), and the new soak scripts/logs live under gitignored `scratch/`.
+
+## Session 215 (2026-07-28) — source-read reclassifies s214's do_send SIGBUS as
+NOT the s176+ scheduler-UAF family; landed and soaked a new mesgqueue guard;
+soak died to yet another unrelated pre-existing crash before the guard could
+be exercised against the target, extending the "random unrelated crash wins
+the race" pattern to a 6th consecutive session and surfacing a much higher-
+value lead for next session
+
+### Work unit: Option A from NEXT.md (chase the do_send SIGBUS)
+
+Per NEXT.md's decision gate ("prefer A only if the source read in step 2
+confirms same-mechanism quickly, within ~15 min"), read
+`lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp`'s `do_send`/`do_recv`
+and cross-referenced against the s176-184 thread-context-UAF mechanism
+(`threads.cpp`'s `resume_thread_tagged`/`run_next_thread_and_wait`/
+`wait_for_resumed`).
+
+**Finding: the do_send SIGBUS is almost certainly NOT the s176+
+scheduler-UAF family — it's a structurally different, more mundane bug.**
+This build has no LTO (`grep -rn "INTERPROCEDURAL_OPTIMIZATION\|LTO"` on both
+CMakeLists.txt files: 0 hits) and is `CMAKE_BUILD_TYPE=Debug` (confirmed via
+`build/CMakeCache.txt`), so there is effectively no cross-translation-unit
+inlining. `do_send` (mesgqueue.cpp) and `run_next_thread_and_wait`/
+`wait_for_resumed`/`resume_thread_tagged` (threads.cpp) are separate TUs with
+real out-of-line calls between them — a fault instruction inside any of the
+threads.cpp functions would dladdr-symbolicate to THAT function's own symbol,
+not to `do_send+388`. Since the crash's `[CRASH][pc-symbol]` line resolved
+directly to `_Z7do_sendPhiibb+388` (established s213 as more precise than
+`backtrace_symbols_fd`), the faulting instruction is almost certainly literal
+code inside `do_send`'s own compiled body, not a callee.
+
+The only unguarded native dereferences directly in `do_send`'s body are the
+`TO_PTR(OSMesgQueue, mq_)` computation and the two
+`TO_PTR(OSMesg, mq->msg)[...]` writes. `TO_PTR` (`ultra64.h:42`,
+`#if 0`-gated native-compile branch confirmed dead, so the active branch is
+always `((type*)(&rdram[(uint64_t)var - 0xFFFFFFFF80000000]))`) does
+zero-bounds-checked pointer arithmetic on a raw 32-bit guest value — if `mq_`
+(the guest `OSMesgQueue*` argument) or `mq->msg` (a struct field read out of
+that same queue) is corrupted, the very next field access SIGBUSes with a
+wild native address. This is the **same generic "unguarded TO_PTR on a
+corrupted guest pointer" pattern already fixed at ~15 other sites this
+project** (heapWalker's 10 GUARD/GUARD3 sites, `activateAnimationKeyframe`,
+`composeNpcOrientationMatrix`, `rs_malloc`/`rs_free` call sites, the s78/s182
+framebuffer refuse gates) — not a new investigation thread, and not the
+scheduler-UAF mechanism s214 hedged toward ("this looks like the crash
+variant of that same corrupted-thread-context family" — that framing is
+**superseded** by this session's structural read; see CURRENT-TRUTH).
+
+Also checked: `PTR(x)` is `int32_t` in the active build config (not the
+64-bit-register case heapWalker's guards handle) — `mq_`/`mq->msg` are
+already-truncated 32-bit values by the time C++ sees them, so this is a
+simpler single-range bounds check, not an "upper 32 bits" check.
+
+### Fix landed
+
+`lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp`: added
+`mesgqueue_guard_refuse(who, mq_)`, mirroring the s78
+`FramebufferManager::get()` refuse-gate pattern — rejects (returns `false`
+instead of dereferencing) any guest pointer outside `0x80000000`-`0x80800000`
+(the same 8MB KSEG0/RDRAM bound used by every other guard site in this
+project). Applied at the top of both `do_send` and `do_recv` (guarding
+`mq_` before `TO_PTR(OSMesgQueue, mq_)`), and a second time on `mq->msg`
+immediately before each `TO_PTR(OSMesg, mq->msg)` dereference in both
+functions (4 call sites total) — `mq_` itself checked out doesn't guarantee
+the struct's own `msg` field wasn't independently corrupted by the same
+upstream heap-corruption family. Diagnostic: an always-on atomic counter
+(`g_mesgqueue_guard_bad`) plus an `ROGUESQ_LOG_MESGQUEUE_GUARD`-gated
+`fprintf` (always prints on the very first refusal regardless of the env var,
+so a same-run positive control doesn't depend on remembering to set it).
+Pure `lib/N64ModernRuntime` host C++, no guest regen needed. Built clean
+(`cmake --build . -j8`, only pre-existing SDL2-version linker warnings).
+Exported (`submodule-patches/export.sh`, refreshed
+`submodule-patches/N64ModernRuntime.patch`, +100 lines) and committed this
+session.
+
+### Soak (`mesgqueueguard1`, copy of s214's `run_heapwalkerguard4.sh` env
+block/`STICK_SCHEDULE`, `ROGUESQ_LOG_MESGQUEUE_GUARD=1` added)
+
+Died at hold-iter 91 (~100s into the 300s hold) to signal 6 (abort):
+`Assertion failed: (ctx->f2.fl == ctx->f2.fl), function mat3x3InverseInto,
+file funcs_5.c, line 7582` — the project-wide `NAN_CHECK` safety assert
+family (s83 `evalCubicSplineAtTime`, s214 soak 1 `sinfApprox`) firing at yet
+**another** new call site. `[mesgqueue-guard]` fired **0** times,
+`[heapwalker-guard]`/`[heapwalker-guard3]` (still armed, carried over from
+s214's env block) fired **0** times, `[unlit-mesh-tracer]` **0** hits — the
+process never reached the do_send/do_recv corruption window (if one even
+exists on this run's random schedule) before dying to an unrelated crash.
+
+**No direct positive control for "do_send/do_recv executed and passed the
+guard cleanly N times" was instrumented** (the guard only logs on refusal,
+not on every call) — a real gap, flagged for next session if this exact
+question needs revisiting. Indirect evidence the guarded code path was live:
+`[thr-resume] tag=run_next` fired part of 202,082 total `[thr-resume]`
+events by the time of the crash, and `run_next_thread_and_wait` (which the
+`tag=run_next` resumes trace back to) is reached **exclusively** through
+`do_send`/`do_recv`'s blocking loops or `osStopThread`'s self-stop path —
+so `do_send`/`do_recv` almost certainly ran many thousands of times this run
+without the guard ever refusing, consistent with a genuine but rare
+corruption event (s214 saw it exactly once) rather than dead/unreached code.
+
+### Rules out / reframes
+
+**Supersedes s214's "this looks like the crash variant of that [s176+
+scheduler-UAF] family" framing** — this session's structural read (no LTO,
+Debug build, dladdr resolves straight to `do_send`'s own symbol) makes it far
+more likely the do_send SIGBUS is a plain corrupted-guest-pointer crash, the
+same family as ~15 other already-guarded sites, not a new manifestation of
+the multi-session scheduler stall investigation. Single-source (one
+structural/source-level read, not cross-confirmed by a second independent
+run) — flag as such if cited before a 2nd line of evidence lands (e.g. a
+future soak where the guard actually fires with a wild `mq_`/`mq->msg`
+value, or a future soak reaching the same SIGBUS with the guard still
+silent, which would refute this session's read).
+
+**Does not confirm or refute** whether the mesgqueue guard actually fixes
+the target SIGBUS — the soak never got the opportunity. Neither confirmed
+nor refuted, same "instrument armed but crash race lost to an unrelated bug"
+outcome as s209/s210/s211/s214.
+
+### The bigger pattern, and this session's real finding
+
+This is the **6th consecutive session** (s209, s210, s211, s213, s214, s215)
+where a soak of this general recipe family dies to a genuinely different,
+previously-uncatalogued-at-that-call-site crash before reaching its intended
+target — 3 of those 6 were `NAN_CHECK` assert firings alone (s83 lineage,
+now at `evalCubicSplineAtTime`, `sinfApprox`, `mat3x3InverseInto` — 3
+distinct call sites of the identical assert). Continuing to design ever-more-
+targeted single-purpose guards one soak at a time, when a random *different*
+pre-existing bug has better than even odds of winning the race first, is
+hitting diminishing returns — each session characterizes and fixes one real
+thing, but the overall "can we reach content past the craft-select hold"
+question is not advancing at the same rate.
+
+**High-value lead for next session, not yet acted on this session (too big a
+decision to tack onto an already-substantial iteration):** `NAN_CHECK` is
+defined in `N64Recomp/include/recomp.h:396-397` as `assert(val == val)`, and
+the line immediately below it (`recomp.h:399`) is a **pre-existing, already-
+written no-op alternative**: `//#define NAN_CHECK(val)` — commented out, not
+something that needs to be authored from scratch. Toggling which of the two
+definitions is active is a single-line edit in a header the game's generated
+code (`funcs_*.c`) includes at compile time, not something baked into
+generated code content — almost certainly a plain `cmake --build` recompile,
+**not** a full `make_elf.py -> N64Recomp -> fixup_game_funcs.py` regen (not
+yet verified this session — flagged as the first thing to check, not
+assumed). If confirmed cheap, this could eliminate the entire recurring
+`NAN_CHECK`-family crash class in one edit (it has now independently
+blocked at least s83, s97-99 lineage, s214 soak 1, and this session), letting
+soaks reach much further before dying to something else. Trade-off: it also
+suppresses whatever genuine floating-point NaN bugs are actually occurring
+at those call sites — acceptable if the goal is "reach further past
+craft-select to test unrelated fixes," not acceptable if a NaN itself is the
+thing under investigation. This needs its own session with a clear
+before/after soak-depth comparison, not a rushed addition here.
+
+**Full detail**: this entry. Code: `lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp`
+(`mesgqueue_guard_refuse` + 4 call sites) — patch exported
+(`submodule-patches/N64ModernRuntime.patch`) + committed this session. Soak
+artifacts: `scratch/s73_post_a_scene/mesgqueueguard1/` (run.log, screenshots),
+driver script `scratch/s73_post_a_scene/run_mesgqueueguard1.sh`.

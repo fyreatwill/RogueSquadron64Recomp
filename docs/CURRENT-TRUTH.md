@@ -663,9 +663,45 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s214)
+## Next steps, in order of expected value (s215)
 
--55. **(s214) heapWalker's upper-32-bits guard fix SHIPPED (10/10 sites,
+-56. **(s215) do_send SIGBUS reclassified: NOT the s176+ scheduler-UAF
+    family — a mesgqueue guard is now shipped but untested live; the bigger
+    lead is disabling `NAN_CHECK` project-wide.** s214 hedged that the
+    `do_send`/`mesgqueue.cpp` SIGBUS "looks like" a crash variant of the
+    s176+ thread-context-UAF stall investigation — s215's source read
+    **supersedes that framing**. This build has no LTO and is
+    `CMAKE_BUILD_TYPE=Debug` (no cross-TU inlining), so a crash dladdr-
+    resolving straight to `_Z7do_sendPhiibb+388` means the fault is literal
+    code inside `do_send` itself, not a callee like `run_next_thread_and_wait`
+    (a separate TU, would symbolicate to its own name if the fault were
+    there). The only unguarded native derefs directly in `do_send`/`do_recv`
+    are `TO_PTR(OSMesgQueue, mq_)` and `TO_PTR(OSMesg, mq->msg)` — the same
+    generic "unguarded TO_PTR on a corrupted guest pointer" pattern as
+    heapWalker/`rs_malloc`/`rs_free`/the s78 framebuffer gates, not the
+    scheduler mechanism. Landed `mesgqueue_guard_refuse()`
+    (`lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp`, KSEG0-range check
+    at 4 call sites, `ROGUESQ_LOG_MESGQUEUE_GUARD=1` to see fires), built
+    clean, exported+committed. One soak (`mesgqueueguard1`): 0 guard fires,
+    process died at hold+100s to yet ANOTHER new `NAN_CHECK` call site
+    (`mat3x3InverseInto`, `funcs_5.c:7582`) before reaching whatever window
+    the do_send SIGBUS needs — inconclusive for the guard itself (one free
+    re-run available if this exact question is picked up again), but this
+    is the **6th consecutive session** (s209/210/211/213/214/215) losing the
+    race to a random unrelated crash, 3 of them `NAN_CHECK` firings at 3
+    different call sites. **Higher-value lead, not yet tried**: `NAN_CHECK`
+    (`N64Recomp/include/recomp.h:396-397`, `assert(val == val)`) has an
+    already-written, currently-commented-out no-op alternative one line below
+    it (`recomp.h:399`) — flipping which is active is a 1-line header edit
+    that (unverified but likely) needs only a plain rebuild, not a full
+    regen, and could eliminate this entire recurring crash family in one
+    shot, letting future soaks reach much further before dying to something
+    else. Trade-off: masks real NaN bugs at those call sites — fine for
+    "reach past craft-select," not fine if a NaN itself is under
+    investigation. Full detail: PORTING-STATE Session 215.
+
+-55. **(s214, do_send framing here SUPERSEDED by -56 above) heapWalker's
+    upper-32-bits guard fix SHIPPED (10/10 sites,
     confirmed patched in generated `funcs_3.c` before building) but is still
     UNTESTED live — 2 soaks in a row hit unrelated crashes before reaching
     heapWalker at all, so the mechanism is neither confirmed nor refuted.**
@@ -690,10 +726,12 @@ cost three sessions before the recursive mutex.
     session vs 1-for-1 in s213 suggests race-dependent non-determinism, not
     a stable repro) and design a fresh recipe/approach, or (b) address one of
     the two newly-surfaced blockers (sinfApprox NaN call site, or the
-    do_send SIGBUS — the latter is higher-value since it may be a live crash
-    variant of the long-standing s176+ stall bug and could unblock multiple
-    future soaks at once) before attempting heapWalker again. Full detail:
-    PORTING-STATE Session 214.
+    do_send SIGBUS) before attempting heapWalker again. **s215 update: the
+    do_send SIGBUS is NOT the s176+ stall bug** (see -56 above) — a guard is
+    shipped but unconfirmed live; the NAN_CHECK-disable lead in -56 is now
+    the higher-value pick for (b), since it targets the whole family
+    (sinfApprox included) at once rather than one call site. Full detail:
+    PORTING-STATE Session 214, superseded in part by Session 215.
 
 -54. **(s213, PARTIALLY ADDRESSED s214 above — see -55; guard code now
     ships the upper-bits check this item asked for, but the live-fire test

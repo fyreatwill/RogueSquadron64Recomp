@@ -471,6 +471,106 @@ index 1f3a4cf..b9cc34f 100644
      osViSetMode(rdram, (int32_t)ctx->r4);
  }
  
+diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
+index 9944a02..b99b340 100644
+--- a/ultramodern/src/mesgqueue.cpp
++++ b/ultramodern/src/mesgqueue.cpp
+@@ -1,11 +1,50 @@
+ #include <bitset>
+ #include <thread>
++#include <cstdio>
++#include <cstdlib>
++#include <atomic>
+ 
+ #include "blockingconcurrentqueue.h"
+ 
+ #include "ultramodern/ultra64.h"
+ #include "ultramodern/ultramodern.hpp"
+ 
++// s215: do_send/do_recv dereference their PTR(OSMesgQueue) argument via
++// TO_PTR's unchecked `&rdram[(uint64_t)var - 0xFFFFFFFF80000000]` arithmetic
++// (ultra64.h) with no bounds check -- a corrupted mq_ (same "wild guest
++// pointer from upstream heap corruption" family as heapWalker/rs_malloc/
++// rs_free, see PORTING-STATE s214/s215) turns into a wild native dereference
++// and SIGBUSes with no guest-side diagnostic. Mirrors the s78
++// FramebufferManager::get() refuse-gate pattern: reject an out-of-KSEG0-range
++// mq_ before it reaches TO_PTR instead of crashing on the first field access.
++static bool mesgqueue_guard_log_enabled() {
++    static int cached = -1;
++    if (cached < 0) {
++        const char* e = std::getenv("ROGUESQ_LOG_MESGQUEUE_GUARD");
++        cached = (e && e[0] && e[0] != '0') ? 1 : 0;
++    }
++    return cached != 0;
++}
++
++static std::atomic<uint32_t> g_mesgqueue_guard_bad{0};
++
++// Returns true (refuse) if mq_ is outside the game's KSEG0 RDRAM range
++// (0x80000000-0x80800000, the same 8MB bound used by every other guard site
++// in this project).
++static bool mesgqueue_guard_refuse(const char* who, int32_t mq_) {
++    uint32_t addr = (uint32_t)mq_;
++    if (addr >= 0x80000000u && addr < 0x80800000u) {
++        return false;
++    }
++    uint32_t bad_total = ++g_mesgqueue_guard_bad;
++    if (mesgqueue_guard_log_enabled() || bad_total == 1) {
++        std::fprintf(stderr, "[mesgqueue-guard] %s refused mq_=0x%08X (out of KSEG0 range) bad_total=%u\n",
++            who, addr, bad_total);
++        std::fflush(stderr);
++    }
++    return true;
++}
++
+ struct QueuedMessage {
+     PTR(OSMesgQueue) mq;
+     OSMesg mesg;
+@@ -90,6 +129,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+ }
+ 
+ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
++    if (mesgqueue_guard_refuse("do_send", mq_)) {
++        return false;
++    }
+     OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
+     if (!block) {
+         // If non-blocking, fail if the queue is full.
+@@ -106,6 +148,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+         }
+     }
+     
++    // mq_ itself checked out above, but its `msg` field is struct data that
++    // could independently be corrupted by the same upstream heap-corruption
++    // family (rs_malloc/rs_free/heapWalker) without mq_ itself being wild --
++    // check it too before the unchecked TO_PTR write below.
++    if (mesgqueue_guard_refuse("do_send:msg", mq->msg)) {
++        return false;
++    }
++
+     if (jam) {
+         // Jams insert at the head of the message queue's buffer.
+         mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
+@@ -129,6 +179,9 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+ }
+ 
+ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
++    if (mesgqueue_guard_refuse("do_recv", mq_)) {
++        return false;
++    }
+     OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
+     if (!block) {
+         // If non-blocking, fail if the queue is empty
+@@ -145,6 +198,9 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+     }
+ 
+     if (msg_ != NULLPTR) {
++        if (mesgqueue_guard_refuse("do_recv:msg", mq->msg)) {
++            return false;
++        }
+         *TO_PTR(OSMesg, msg_) = TO_PTR(OSMesg, mq->msg)[mq->first];
+     }
+     
 diff --git a/ultramodern/src/scheduling.cpp b/ultramodern/src/scheduling.cpp
 index a22f747..d0510cb 100644
 --- a/ultramodern/src/scheduling.cpp
