@@ -472,7 +472,7 @@ index 1f3a4cf..b9cc34f 100644
  }
  
 diff --git a/ultramodern/src/threads.cpp b/ultramodern/src/threads.cpp
-index 812c556..cdd99b3 100644
+index 812c556..4b419fc 100644
 --- a/ultramodern/src/threads.cpp
 +++ b/ultramodern/src/threads.cpp
 @@ -1,7 +1,12 @@
@@ -680,7 +680,28 @@ index 812c556..cdd99b3 100644
          cur_context->running.signal();
      }
  }
-@@ -347,8 +473,18 @@ void thread_cleaner_func() {
+@@ -337,6 +463,20 @@ PTR(OSThread) ultramodern::this_thread() {
+     return thread_self;
+ }
+ 
++// ROGUESQ (s179): guest-callable current-thread-id probe with no ctx/register
++// side effects, so it's safe to call from the middle of a patched guest
++// function body (unlike osGetThreadId_recomp, which clobbers ctx->r2/r4).
++// Takes rdram because TO_PTR (RDRAM-relative-pointer build mode) resolves
++// against an in-scope variable literally named `rdram` -- every RECOMP_FUNC
++// already has one, so the guest-side patch just passes its own.
++// Used by the fixup_game_funcs.py [hangar-loop] instrument to identify which
++// OS thread executes runHangarMenuFromOverlay's per-frame polling loop, for
++// cross-reference against [thr-resume]/[thr-resume-skip] (s84-s94 lineage).
++extern "C" int rogue_current_thread_id(uint8_t* rdram) {
++    OSThread* self = thread_self ? TO_PTR(OSThread, thread_self) : nullptr;
++    return self ? (int)self->id : -1;
++}
++
+ static std::thread thread_cleaner_thread;
+ static moodycamel::BlockingConcurrentQueue<UltraThreadContext*> deleted_threads{};
+ extern std::atomic_bool exited;
+@@ -347,8 +487,18 @@ void thread_cleaner_func() {
          UltraThreadContext* to_delete;
          if (deleted_threads.wait_dequeue_timed(to_delete, 10ms)) {
              debug_printf("[Cleanup] Deleting thread context %p\n", to_delete);
@@ -699,7 +720,7 @@ index 812c556..cdd99b3 100644
              delete to_delete;
          }
      }
-@@ -359,6 +495,11 @@ void ultramodern::init_thread_cleanup() {
+@@ -359,6 +509,11 @@ void ultramodern::init_thread_cleanup() {
  }
  
  void ultramodern::cleanup_thread(UltraThreadContext *cur_context) {

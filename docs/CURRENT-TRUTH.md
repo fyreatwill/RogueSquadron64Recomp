@@ -659,9 +659,79 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s178)
+## Next steps, in order of expected value (s179)
 
--30. **NEW TOP PRIORITY (s178): find and instrument the caller/scheduler of
+-31. **NEW TOP PRIORITY (s179): re-attempt the `schedcaller`-shape soak (landed
+    instrument, 1 miss so far) to catch the stall with `[hangar-loop]` armed.**
+    Source-read (before instrumenting, per rule 6) confirmed
+    `static_5_800AAD9C` (`runHangarSelectionFrame`) has **exactly 2 static
+    call sites**, both the same guest instruction (`L_800C68AC` inside
+    `runHangarMenuFromOverlay`, duplicated across two overlay-instance
+    copies — `funcs_29.c`/`funcs_43.c`, identical text) — no other static
+    caller anywhere in `RecompiledFuncs/`. That loop's body has no wait/yield
+    of its own; all per-frame pacing happens inside the callee (the
+    already-instrumented `waitForPrevFrameDone`→`waitForPostSwapAck` chain,
+    s177/178). So the loop stopping without taking the
+    `gracefulMenuShutdown` exit can only mean the guest OS thread executing
+    it stopped being resumed/scheduled — exactly NEXT.md's (now this
+    session's) discriminating question. Landed `ROGUESQ_LOG_HANGAR_LOOP=1`
+    (iteration counter + guest thread id via a new **ctx-register-free**
+    probe, `rogue_current_thread_id(uint8_t* rdram)` in
+    `lib/N64ModernRuntime/ultramodern/src/threads.cpp` — deliberately NOT
+    `osGetThreadId_recomp`, which clobbers `ctx->r2`/`ctx->r4` and would
+    corrupt the surrounding loop's live registers; needs an `rdram` param
+    because `TO_PTR` in RDRAM-relative-pointer mode references that exact
+    identifier name, caught as a build error on the first attempt and
+    fixed same-session). `lib/` patch exported + committed. One soak
+    (`schedcaller1`, s178's full instrument set plus this one,
+    `ROGUESQ_LOG_THREAD_RESUME` deliberately left at `0` per s93's confound
+    finding) gave a **clean positive control** — `[hangar-loop]` fired
+    518/518 times, **guest thread id was `3` on every single firing** (a
+    new, real data point: one consistent OS thread owns this loop for the
+    whole run) — but the run **never reached the target stalled state**
+    (only 43 isolated `stalled=1` blips, none sustained; per NEXT.md's own
+    prior "do not" note these are not evidence of the real condition).
+    Died fast instead (`hold-iter 1`, `[vi-fs-decision]` decision `#7857`,
+    far short of s178's `#14080` onset) to a **3rd occurrence of the s84
+    `frameStartReset` SIGBUS** — backtrace confirms the exact expected
+    chain (`static_5_800C6854` → `static_5_800AAD9C` → `frameStartReset`),
+    the same crash that also preempted s177's one prior attempt at this
+    soak shape. **Softens "fluke" further**: 2 of the last 3 dedicated
+    stall-repro attempts (s177, s179) have now been preempted by this one
+    class before ever reaching a stalled state — not yet a majority, but
+    no longer a 1-in-5 outlier either. Per PORTING-STATE's existing
+    `frameStartReset` investigation (search that file, not re-read here):
+    the function's own guest body has **no bug** (already source-verified)
+    — any fix effort belongs in its callees/the shared-corruption-race
+    family, not in `frameStartReset` itself; **do not re-open that as a
+    new investigation thread from this session's finding alone.**
+    Incidental (incurred zero extra soak cost): found `waitForPrevFrameDone`
+    — and therefore the single call site of `waitForPostSwapAck` — has
+    **22 call sites across 10 files**, i.e. it's a shared per-frame
+    swap-pacing utility used broadly across the game, not exclusive to this
+    loop. This fully explains an apparent count mismatch in this run's own
+    log (`[swap-ack-wait]` reached `call=4755`, `[hangar-loop]` only
+    `n=518`) without contradiction — the two instruments answer
+    different-scoped questions (all 22 sites' combined activity vs. this
+    one specific call site's own iteration count) — **do not read that
+    mismatch as evidence of a hidden indirect caller of
+    `runHangarSelectionFrame` itself**; the static-call-site count for that
+    specific function (2, both this loop) stands as source-verified.
+    Bonus: `rdpFs` plateaued at **3740** right before this crash — a 4th
+    data point inside the s176/177/178 `~3175-3802` candidate-ceiling band.
+    **Next step: re-run the same `schedcaller`-shape soak again (tag
+    `schedcaller2`) — rule 8 allows up to 3 attempts on the same hypothesis
+    before parking it, and this is only the 2nd (s177 was the 1st miss on
+    this general soak shape, this session's is the 2nd, both to the same
+    preempting crash).** If a 3rd attempt is also preempted before
+    reaching a sustained `stalled=1`, park this repro angle per rule 8 and
+    reconsider: either accept `[hangar-loop]`'s existing 518/518 positive
+    control as sufficient validation and design a repro that starts later
+    in the timeline (skip past where `frameStartReset` tends to fire), or
+    pursue the shared-corruption-race family directly since it's now
+    demonstrably the single biggest obstacle to reaching this state at all.
+
+-30. **(s178, superseded as top priority by s179 above): find and instrument the caller/scheduler of
     `runHangarSelectionFrame`.** s178 re-ran s177's `swapackwait1` recipe
     (tag `swapackwait2`, no other changes) and for the first time caught the
     actual graphics-task-submission stall crash-free with the producer-side
