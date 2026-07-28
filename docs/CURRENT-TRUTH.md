@@ -663,7 +663,44 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s190)
+## Next steps, in order of expected value (s191)
+
+-40. **(s191) re-ran the fixed `sceneptrguard` soak a 2nd time (`sceneptrguard4`,
+    byte-identical config to s190's `sceneptrguard3`) — died again before the
+    9660-9800 target window (decisionN=7897, even earlier than s190's 8053),
+    but to a DIFFERENT already-catalogued crash this time, which refutes
+    `reserveAndEmitDLEntry` as a specific recurring blocker.** The crash was
+    signal 6 (SIGABRT) in the RT64 graphics thread — `TextureCache::
+    queueGPUUploadTMEM`'s zero-tile-dimension assert
+    (`lib/rt64/src/render/rt64_texture_cache.cpp:1285`), the project's
+    single most historically-recurring crash class (first seen s86, 8+
+    occurrences, still an open goal-stack item M3) — not `reserveAndEmitDLEntry`
+    (the s190 blocker). `[scene-node-ptr-guard]` fired **0 times again**
+    (2/2 null on the positive control) — the fix's target mechanism
+    (corrupted sibling pointer into `processSceneNode`) has still never been
+    observed live since the fix landed. Confirmed the s190 fix is intact and
+    unregressed before soaking (source grep, not assumed). Full detail:
+    PORTING-STATE Session 191.
+
+    **Best next work unit — two valid options, in order:** (1) one more
+    identical blind soak attempt is still within the iron-rule-8 budget
+    (this is strike 2 of 3 on "does a fix-soak reach the target window") —
+    if it also dies early to an unrelated already-catalogued bug, that's the
+    3rd strike and blind repeats must stop; OR (2), likely higher
+    information value now: add a defensive guard to `queueGPUUploadTMEM`
+    (bare early `return;` before line 1287 when `decodeTMEM && (width<=0 ||
+    height<=0)` — no locks held yet at that point, a clean skip-the-upload
+    site) mirroring the project's established `rs_malloc`/`rs_free`/
+    `scene-node-ptr` guard pattern. This is the single most frequent crash
+    in the project's whole history and has now killed 2/2 fix-soaks before
+    they could even test the actual question — neutralizing it (even
+    provisionally, gated behind a new `ROGUESQ_LOG_*` env var with a
+    positive-control requirement) directly attacks the dominant obstacle to
+    ALL further soak progress, not just this one investigation. **This is a
+    `lib/rt64` C++ edit, not a `RecompiledFuncs` fixup patch** — needs
+    `submodule-patches/export.sh` + a commit in the same session, and only a
+    plain `cmake --build` (no regen/fixup pipeline; pure runtime change per
+    the established `lib/N64ModernRuntime`/`lib/rt64` exception).
 
 -39. **(s190) landed the missing `processSceneNode` node-pointer guard
     (`ROGUESQ_LOG_SCENE_NODE_PTR_GUARD`, `N64Recomp/fixup_game_funcs.py`),

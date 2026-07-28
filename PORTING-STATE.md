@@ -17655,3 +17655,78 @@ No `submodule-patches/export.sh` needed — all edits this session were in the
 standalone `N64Recomp` tool checkout (`fixup_game_funcs.py`,
 `RecompiledFuncs/*.c` regenerated output) and `RogueSquadron64Recomp/scratch/
 agent/*`, nothing under `RogueSquadron64Recomp/lib/`.
+
+## Session 191 (2026-07-28) — re-ran the fixed `sceneptrguard` soak (2nd attempt); blocked again before the target window, but by a DIFFERENT already-catalogued crash class this time, which refutes `reserveAndEmitDLEntry` as a specific recurring blocker and points at a higher-value next unit
+
+Per NEXT.md: confirmed the build already carries s190's fixed
+`processSceneNode` node-pointer guard (`grep` for
+`s_process_scene_node_ptr_guard` + the `ctx->r3 = MEM_W(ctx->r17, 0XC);`
+anchor line in `N64Recomp/RecompiledFuncs/funcs_4.c` — 3 occurrences total,
+guard block at 13793-13807 with the anchor correctly re-emitted right after
+it, matching the fixed patch, not the regressed one). No regen/fixup needed.
+
+Copied `scratch/agent/run_sceneptrguard3.sh` to `run_sceneptrguard4.sh`
+(tag only change, byte-identical env block — same s188 full instrumentation
+set plus `ROGUESQ_LOG_SCENE_NODE_PTR_GUARD=1`/`ROGUESQ_LOG_SCHED=1`) and ran
+it as a backgrounded soak, blocked on via `TaskOutput`.
+
+**Result: died at decisionN=7897 — earlier than s190's `sceneptrguard3`
+(8053), and still well short of the 9660-9800 target window.** Crash was
+signal 6 (SIGABRT), NOT `reserveAndEmitDLEntry` (the s190 blocker) — full
+backtrace is the RT64 graphics-thread `queueGPUUploadTMEM` zero-tile-
+dimension assert (`lib/rt64/src/render/rt64_texture_cache.cpp:1285`,
+`Assertion failed: (!decodeTMEM || ((width > 0) && (height > 0)))`), the
+project's oldest and most heavily-recurring catalogued crash class (first
+identified s86, "item 2" in the goal-stack catalog, already counted at "7th
+occurrence overall" as of s108 — this is at least an 8th). `[scene-node-
+ptr-guard]` fired **0 times again** (2nd straight null on the positive
+control) — the corrupted-sibling-pointer mechanism the fix targets has
+still never been observed live in either soak run since the fix landed.
+
+**This is a real discriminating result, just not the one the soak was
+designed to produce.** s190 (NEXT.md, CURRENT-TRUTH item -39) flagged
+`reserveAndEmitDLEntry` as a possible "own recurring obstacle" if it blocked
+"2/2 or more" attempts — it did not: this run's blocker was an entirely
+different, unrelated subsystem (RT64 graphics thread, not game-thread guest
+code; SIGABRT assert, not SIGBUS). That refutes treating
+`reserveAndEmitDLEntry` as a specific recurring gate and confirms the
+existing "ordinary soak-to-soak crash-site variance" framing from s189 — but
+sharpens it: the variance isn't just which processSceneNode-adjacent bug
+fires, it's ANY of the project's ~15-18 still-open crash classes racing to
+fire first, and this session shows the single most historically frequent one
+(`queueGPUUploadTMEM`) is a live, undiminished threat to every soak attempt.
+2/2 fix-soaks have now died before the target window, each to a different
+already-catalogued, unrelated bug — the fix itself remains neither confirmed
+nor refuted.
+
+### Result
+
+1. Confirmed the s190 fix (guard + regression repair) is intact and
+   unmodified in the current build — verified by source grep, not assumed.
+2. Ran a 2nd fix-soak (`sceneptrguard4`), byte-identical config to s190's
+   `sceneptrguard3`. Per iron rule 8 (3-strikes-same-hypothesis budget),
+   this is strike 2 of 3 on "does a soak with this fix reach the target
+   window" — one more blind identical attempt is still within budget, but a
+   3rd null result should trigger a mandatory pivot rather than a 4th soak.
+3. `reserveAndEmitDLEntry` demoted from "possible recurring blocker" back to
+   "single s190 occurrence" — no 2nd data point supporting it as its own
+   obstacle.
+4. Identified `queueGPUUploadTMEM` (RT64 graphics thread, `rt64_texture_
+   cache.cpp:1285`) as a plausible higher-value next target: it is the
+   project's single most-recurring crash class across its whole history
+   (8+ occurrences, dating to s86, still an open goal-stack item, M3), it
+   just killed the 2nd of 2 fix-soaks before the target window, and its
+   guard site is trivially simple — a bare early `return;` before line 1287
+   (no locks held, no resources acquired yet) would convert the abort into a
+   skipped upload, mirroring the project's established rs_malloc/rs_free/
+   scene-node-ptr defensive-guard pattern. This is a `lib/rt64` C++ edit
+   (not a `RecompiledFuncs` fixup patch), so it needs `submodule-patches/
+   export.sh` + a commit in the same session it's added, and a
+   `cmake --build` (no regen/fixup pipeline needed — pure runtime change).
+   Not implemented this session — flagged as next work unit, in scope, not
+   yet attempted, to keep this iteration to its single prescribed unit (the
+   soak NEXT.md asked for).
+
+No `submodule-patches/export.sh` needed this session — the only edit was a
+new soak driver script under `RogueSquadron64Recomp/scratch/agent/` (`/scratch/`
+is gitignored except `NEXT.md`/`OUTCOME`/`STATUS`), nothing under `lib/`.
