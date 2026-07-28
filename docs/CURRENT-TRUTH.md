@@ -663,7 +663,60 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s217)
+## Next steps, in order of expected value (s218)
+
+-59. **(s218) heapWalker GUARD4 landed (5 sites, the actual gap GUARD3 left
+    open) — heapWalker signature didn't recur (hold-iter 28, far past s217's
+    iter 1), but a THIRD independent sighting of the exact corrupt literal
+    `0x0000000300000000` surfaced in a totally unrelated subsystem
+    (scene-graph rendering). Pivot recommendation: stop per-site guarding,
+    hunt for the WRITE site.** Read `heapWalker` end to end (`funcs_3.c:99-
+    700` — NOT `99-7978`, NEXT.md's inherited line-range estimate was simply
+    wrong, corrected this session by checking `grep -n "^RECOMP_FUNC"`
+    directly rather than trusting it; the function is small enough it didn't
+    need subagent delegation after all). Found the actual mechanism GUARD3
+    (s172) misses: each of the 5 per-mode-table walk loops does TWO
+    consecutive dereferences per iteration (`v1 = *v1; v0 = *v1;`), and
+    GUARD3 only validates the pointer used to *produce* the first deref's
+    result — it never validates that *result itself* before the second,
+    immediately-following deref uses it. That second deref (byte-identical
+    `MEM_W(ctx->r3, 0X0)` shape to the first) was completely unguarded,
+    structurally explaining why the existing 10-site guard has stayed
+    armed-and-silent across 4 consecutive heapWalker-attributed deaths.
+    Shipped GUARD4 at all 5 sites (`fixup_game_funcs.py`, upper-32-bit
+    template), with a bail target one label further than GUARD3's own
+    (`L_XXXX40`-shaped, not `L_XXXX2C`) after confirming the closer label
+    still writes through the corrupted pointer.
+
+    Soak (`heapwalkerguard4_1`, s213-217 recipe, 6 diagnostics armed): all 6
+    fired 0 times (no regression, but GUARD4 itself unconfirmed live — the
+    run never routed through heapWalker's loop this time). Died at
+    **hold-iter 28** (wall=30s) to a **new** SIGBUS in `renderUnlitMeshFaces`
+    (via `traverseSceneGraphRecursive`/`processSceneNode`/
+    `setupCameraMatrices` — scene-graph rendering, not heap-walking at all)
+    carrying the **identical literal corrupt value**
+    (`x8=0x0000000300000000`, `si_addr=x8+x9` exactly) as s216's
+    `heapFreeListDequeue` crash and s217's `heapWalker` crash — now 3
+    independent sightings across 3 structurally-unrelated subsystems in 3
+    consecutive sessions.
+
+    **Conclusion (three-source confirmed): this is not a per-consumer bug —
+    per-site guarding is whack-a-mole against a single shared corruption
+    source.** The next session should NOT source-read another consumer
+    function looking for an unguarded deref (that pattern has now paid off
+    twice — s217, s218 — but each time reveals another unrelated consumer
+    with the same symptom, never the origin). Instead: hunt for the WRITE
+    site(s) capable of producing this exact bit pattern (integer `3` alone in
+    a 64-bit slot's upper half) — grep for a small mode/generation/type-tag
+    value of `3` combined into a pointer-sized slot via `|`/`+`/a raw 64-bit
+    write outside `S32()`/`ADD32()`/`U32()` discipline, and seriously
+    consider whether `ultramodern`'s native (C++, not guest-MIPS) thread-
+    context save/restore code could alias a stray native value into a
+    `ctx->rN`-shaped slot shared across these unrelated call sites — the
+    fact that the SAME literal reaches 3 unrelated guest functions is much
+    easier to explain via one shared native-side corruption point than via 3
+    coincidentally-identical guest-side bugs. Full detail: PORTING-STATE
+    Session 218.
 
 -58. **(s217) heapFreeListDequeue source-read done and guarded (4 sites,
     class-A upstream-propagation, high confidence) — but the soak never

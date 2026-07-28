@@ -20504,3 +20504,141 @@ see the `N64Recomp` sibling-checkout note in CURRENT-TRUTH's housekeeping
 section). Soak artifacts: `scratch/s73_post_a_scene/heaplistdeq1/`
 (run.log, screenshots), driver script
 `scratch/s73_post_a_scene/run_heaplistdeq1.sh`.
+
+## Session 218 (2026-07-28) — source-read `heapWalker` end to end per NEXT.md's
+plan, found and fixed the ACTUAL gap GUARD3 left open (a second, unguarded
+deref per loop iteration using the freshly-read pointer value), shipped
+GUARD4 (5 sites); the soak didn't recur the heapWalker signature at all
+(reached hold-iter 28, far past s217's hold-iter 1) but died to a **third**
+independent sighting of the exact literal corrupt value
+`0x0000000300000000`, this time in a completely unrelated subsystem
+(scene-graph rendering, not heap-walking) — upgrading last session's
+"two-source" lead to a three-source one and pointing the investigation away
+from per-site guarding entirely.
+
+### Correcting NEXT.md's own line-range estimate
+
+NEXT.md inherited an estimate that `heapWalker` was `funcs_3.c:99-7978`
+(~7880 lines) and told this session to delegate the read to a subagent given
+the size. Before delegating, checked it directly: `grep -n "^RECOMP_FUNC"
+funcs_3.c` shows the *next* function (`countDisplayListChunks`) starts at
+line 701 — `heapWalker` is actually **99-700, ~600 lines**. Small enough to
+read directly in one `Read` call; no delegation needed. (The 7978 figure
+seems to have been carried forward from an unrelated function's size at some
+earlier session and never re-checked — exactly the kind of unverified
+line-range NEXT.md's own instructions warned this session to confirm before
+trusting.)
+
+### Source read: the actual mechanism GUARD3 misses
+
+Read the full function directly. All 5 per-mode-table sections share an
+identical shape: load a table-sourced head pointer `a0`; if non-null,
+dereference it once (`v0 = *a0`, the GUARD2/head-deref site, s157); if that
+dereference is non-zero (list has 2+ entries), walk a loop:
+
+```
+v1 = a0;
+LOOP:
+    v1 = *v1;      // (A) GUARD3 (s172) validates the OLD v1 before this load
+    v0 = *v1;      // (B) peek: dereferences the NEW v1 -- the value (A) JUST
+                    //     read from heap/RDRAM memory, i.e. untrusted content
+                    //     -- with ZERO validation
+    if (v0 != 0) goto LOOP;
+```
+GUARD3 validates the pointer used to *produce* line (A)'s result, but never
+validates the *value* that produces — and that value is immediately
+re-dereferenced by line (B), one full iteration before GUARD3 would ever
+re-check it (on the next loop-back, if the peek says "keep going"). This
+structurally explains why the existing 10-site guard (`heapwalker-guard`/
+`heapwalker-guard3`) has now stayed armed-and-silent (0/0) across **4
+consecutive soaks** (s214 x2, s217, and every prior heapWalker-attributed
+death) while the crash signature keeps recurring: GUARD3 was never
+positioned to catch the deref that actually faults. Confirmed line (B)'s
+`MEM_W(ctx->r3, 0X0)` call shape is byte-identical to line (A)'s, which
+explains why both would produce the identical crash-address arithmetic
+(`si_addr = corrupt_value + rdram_base`) when either one is the fault site.
+
+Verified all 5 loops share this shape by direct read (not sampling one and
+assuming): loop-back labels `L_80007A1C`/`L_80007A78`/`L_80007AD4`/
+`L_80007B30`/`L_80007B8C` (matching `_heapwalker_guard3_sites` in
+`fixup_game_funcs.py` exactly, confirming s172's list is complete for what it
+guards), each followed immediately by the unguarded peek load at `+4`
+(`0x80007A20`/`0x80007A7C`/`0x80007AD8`/`0x80007B34`/`0x80007B90`).
+
+### Guard landed: heapWalker GUARD4 (5 sites)
+
+Also had to work out a safe bail target, which is *not* simply "the loop's
+own postloop-append label" (e.g. `L_80007A2C`) the way GUARD3's bail target
+is — that label's code unconditionally **writes through** the walked-to
+pointer (`MEM_W(0X0, ctx->r3) = ...`, linking the list's tail into another
+structure) before falling into the next block, so jumping there with a still-
+corrupt `v1` would just relocate the fault a few lines later. Read forward to
+find the first label that only touches `a0` (`ctx->r4`, the table-sourced,
+structurally-trusted head pointer) and not `v1` — that's consistently 0x14
+bytes past the postloop-append label in all 5 cases (`L_80007A40`/
+`L_80007A9C`/`L_80007AF8`/`L_80007B54`/`L_80007BB0`) — and used that as the
+skip target instead. Same upper-32-bit-check template as GUARD3/`heaplistdeq`
+guard (env var `ROGUESQ_LOG_HEAPWALKER_GUARD4`). Landed in
+`fixup_game_funcs.py` (`N64Recomp` sibling checkout, not `lib/` — see
+CURRENT-TRUTH's housekeeping note on this file's persistence, unchanged this
+session).
+
+Full regen (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py`, run once ->
+`cmake --build`): confirmed exactly 5 sites patched exactly once
+(`grep -c "heapwalker-guard4" funcs_3.c` = 5, syntax-checked one site by
+direct read). Build exit 0, only pre-existing warning classes (DDIV
+sign-conversion, SDL2-version linker warnings).
+
+### Soak (`heapwalkerguard4_1`, same s213-217 STICK_SCHEDULE/HOLD_S=300
+recipe, all 6 diagnostics armed): heapWalker signature didn't recur, but a
+new crash surfaced the same corrupt literal in a third, unrelated subsystem
+
+`ROGUESQ_LOG_UNLIT_MESH_TRACER`, `ROGUESQ_LOG_HEAPWALKER_GUARD`,
+`ROGUESQ_LOG_HEAPWALKER_GUARD3`, `ROGUESQ_LOG_HEAPWALKER_GUARD4`,
+`ROGUESQ_LOG_MESGQUEUE_GUARD`, `ROGUESQ_LOG_HEAPLISTDEQ_GUARD` all armed;
+NAN_CHECK left at default (ON), untouched per NEXT.md's instruction.
+
+Died at **hold-iter 28** (wall=30s) — considerably further than s217's
+hold-iter 1/wall=0s, though single-run and not attributable to GUARD4 with
+confidence (9 straight sessions of "random unrelated crash wins the race"
+variance already established). All 6 armed guards/tracers fired **0 times**
+(`heapwalker-guard`/`-guard3`/`-guard4`/`heaplistdeq-guard`/`mesgqueue-guard`
+all 0; `unlit-mesh-tracer`'s positive control fired once, confirming the
+instrument itself works, but none of its labeled OOB-address sites fired).
+
+Crash: signal 10 (SIGBUS), `[CRASH][pc-symbol] pc=... sym=renderUnlitMeshFaces
++792` (backtrace frame reads `+640` — the usual dladdr-vs-backtrace precision
+gap, s213; dladdr is the trusted one). Backtrace:
+`traverseSceneGraphRecursive` -> `processSceneNode` -> `renderUnlitMeshFaces`,
+via `setupCameraMatrices` -> `static_5_800C9BF0` -> `menuOverlayInit` ->
+`mainGameLoop` — **scene-graph rendering, not heap-walking at all**, the
+first time this crash-literal has appeared outside the heap free-list-walk
+family. Register dump: `x8=0x0000000300000000`, `x9=0x0000000080630062`,
+`si_addr=0x380630062` (`x8+x9`, exact match) — **the same literal
+`0x0000000300000000` upper-bits shape as s216's `heapFreeListDequeue` crash
+and s217's `heapWalker`-attributed crash**, now in a third register slot
+(`x8`, not `x0`/`x9` as before) at a third, structurally unrelated call site
+never before covered by any guard or the existing `unlit-mesh-tracer`
+instrument (which logs OOB `MEM_W` addresses at specific labeled sites in
+this same function but didn't fire — this fault is at an untraced site
+within it).
+
+**Conclusion, three-source confirmed**: this is not a per-consumer bug that
+per-site guarding will ever fully whack down — the identical corrupt 64-bit
+literal (integer `3` in the upper 32 bits) has now surfaced in the heap
+free-list-walker, the heap mode-table walker, and scene-graph mesh rendering,
+three subsystems with no structural relationship to each other except that
+they all eventually dereference *some* pointer-sized value. This is strong
+evidence of a single shared corruption source (something writes this exact
+bit pattern into a location many unrelated consumers later read), not
+independent local bugs. **Recommended pivot for next session**: stop adding
+consumer-side guards one call site at a time and instead hunt for the WRITE
+site(s) capable of producing this literal — grep for anywhere a small
+integer (a mode/generation/type tag equal to `3`) could get OR'd, shifted, or
+raw-written into a 64-bit slot's upper half outside the `S32()`/`ADD32()`/
+`U32()` discipline, and consider whether `ultramodern`'s native thread-
+context save/restore (C++, not guest MIPS) could alias a stray `int` value
+into a `ctx->rN`-shaped slot shared across these unrelated call sites. Full
+detail above; soak artifacts: `scratch/s73_post_a_scene/heapwalkerguard4_1/`
+(run.log), driver script
+`scratch/s73_post_a_scene/run_heapwalkerguard4_1.sh`.
