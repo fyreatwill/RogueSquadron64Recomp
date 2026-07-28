@@ -663,7 +663,38 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s197)
+## Next steps, in order of expected value (s198)
+
+-47. **(s198) 3rd consecutive clean pass through the 18th class's death zone
+    (still no positive control for the s197 guard) — 18th class reclassified
+    "very likely fixed, mechanism unconfirmed"; a 2nd occurrence of the
+    s192/s193 `runVideoFrameTick+1568` SIGBUS promotes it to the new
+    dominant, top-priority blocker.** 4th `cacheheadguard` soak
+    (`cacheheadguard4`, identical config to `cacheheadguard1`) reached
+    decisionN=15418 — past both the 7902-7968 death zone and the 9660-9792
+    target window, 2nd-furthest ever. `[scene-node-cache-guard]`,
+    `[scene-node-ptr-guard]`, `[reinterpret-tile-guard]` all still 0 fires
+    (0/4, 6+/6+, 1/1). Died to a SIGBUS at native offset `runVideoFrameTick
+    +1568` — the EXACT offset of s192's `sceneptrguard5` crash
+    (decisionN=8972), now a confirmed 2nd occurrence with the same
+    duplicated-frame unwind shape, not a one-off. Per NEXT.md's own
+    discriminating criteria: 3 clean passes in a row (s197 soaks 1/3, this
+    run) is strong circumstantial evidence the 18th class is fixed even
+    without the guard ever firing — retire it as the primary blocker.
+    `runVideoFrameTick+1568` becomes the new top priority: 2/2 confirmed
+    occurrences, currently the furthest-reaching known crash. Guarding it
+    needs the actual faulting deref at that native offset; s193 already
+    established disassembly tooling (`otool`/`nm`/`objdump`/`lldb`) is not
+    on this session's Bash allowlist. Full detail: PORTING-STATE Session 198.
+
+    **Best next work unit**: either (a) request one-off `otool -tv`/
+    `objdump -d` approval to precisely locate the +1568 deref, or (b) add a
+    broader defensive guard across every pointer dereference in
+    `runVideoFrameTick`'s recompiled C body (`N64Recomp/RecompiledFuncs/
+    funcs_0.c:1459` onward) accepting some imprecision, now that 2 confirmed
+    occurrences justify the cost. Once guarded, the s190 `scene-node-ptr-guard`
+    (still 0/6+, completely untested) and s196 13th-class guard (still 1/1
+    untested) become the next reachable, unverified targets.
 
 -46. **(s197) found and guarded the one dereference in the 18th-crash-class
     free-list idiom that bypasses GUARD/GUARD2/GUARD3 entirely (the
@@ -685,16 +716,13 @@ cost three sessions before the recursive mutex.
     s165/s173-catalogued 23rd-class `waitForAnyAudioSlot` SIGSEGV — neither
     is a regression from this session's change.
 
-    **Best next work unit**: re-soak with 1-2 more `cacheheadguard` runs
-    (new tags) seeking either the guard actually firing (positive control)
-    or a 3rd clean pass through the 7902-7968 zone, before concluding the
-    18th class is closed. This is attempt 1 of up to 3 on this instrument
-    (iron rule 8 budget: 2 more before re-planning). If the class keeps not
-    recurring, the s190 `scene-node-ptr-guard` (still 0/6, completely
-    untested) and the s196 13th-class guard (still unverified, soak never
-    reached it before this session) both become reachable and should be the
-    next thing a clean run exercises — do NOT re-touch either guard itself,
-    they remain correct-per-spec and untested, not wrong.
+    **Resolved by s198 (see -47 above)**: a 4th soak (`cacheheadguard4`)
+    gave a 3rd consecutive clean pass through the 7902-7968 zone — per this
+    entry's own criteria, that's enough to reclassify the 18th class as
+    "very likely fixed, mechanism unconfirmed" without spending the 3rd
+    budgeted soak attempt chasing a guard fire that may never come. The
+    guard itself remains 0/4, still no positive control — leave it alone
+    unless new evidence (a fire, or a recurrence right after one) appears.
 
 -45. **(s196) landed the 13th-class `reinterpretTileRecord` guard (mirrors
     s192's `queueGPUUploadTMEM` pattern exactly) — but the soak never reached

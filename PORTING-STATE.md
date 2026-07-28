@@ -18341,3 +18341,109 @@ gitignored (not committed, per standing convention).
 5. Housekeeping still flagged, still not done: `docs/CURRENT-TRUTH.md`
    remains over budget and over the Read tool's single-read limit; migrate
    durable material to `PROJECT-OVERVIEW.md`.
+
+## Session 198 (2026-07-28) — 4th `cacheheadguard` soak gets a 3rd clean pass through the 18th class's death zone (still no positive control) AND a 2nd occurrence of the s192/s193 `runVideoFrameTick+1568` SIGBUS, confirming it as a real recurring crash class and the new dominant soak-blocker
+
+### What ran
+
+Per NEXT.md, copied `scratch/agent/run_cacheheadguard1.sh` to
+`run_cacheheadguard4.sh` (identical env block, `ROGUESQ_LOG_SCENE_NODE_CACHE_GUARD=1`
+already armed, tag renamed), ran it unmodified
+(`scratch/s73_post_a_scene/cacheheadguard4/run.log`, `run_mission_keys.sh
+cacheheadguard4 5 12`).
+
+### Result
+
+Game died at hold-iter 112 (~125s wall), `decisionN=15418` — past both the
+18th class's 7902-7968 death zone (s195/s196) and the 9660-9792
+scene-node-ptr-guard target window, and the 2nd-furthest decisionN ever
+recorded (behind only s197 soak 1's 15719).
+
+`[scene-node-cache-guard]` (the new s197 guard), `[scene-node-ptr-guard]`
+(s190), and `[reinterpret-tile-guard]` (s196) all fired **0 times** — still
+no same-run positive control for any of the three. Only the routine,
+already-established `[rs-malloc-walk-guard]`/`[rs-free-walk-guard]` pair
+fired, at their usual periodic cadence (every ~184-185 decisions), last
+firing at decisionN=9813, unrelated to the crash.
+
+**The crash itself is a SIGBUS** (`si_addr=0x320000000 si_code=1`, `pc`
+inside `runVideoFrameTick+1568` per the unwound backtrace: `runVideoFrameTick`
+(x2, duplicated frame) <- `static_6_800A9ABC` <- `cinematicLoopBody` <-
+`mainGameLoop` <- `mainBootstrapWorker`). This is the SAME crash s192/s193
+already catalogued and left unguarded (native offset **+1568**, identical
+to s192's `sceneptrguard5` occurrence at decisionN=8972; s193 tried and
+abandoned guarding it for lack of disassembly tooling, see PORTING-STATE
+Session 193). This is the **2nd independent occurrence** of this exact
+signature (same offset, same duplicated-frame stack-unwind pattern
+S192 already source-read and attributed to `frameStartReset`/
+`advancePlayerAnimationPhase`-style unwind duplication, not true
+recursion), now confirmed as a real recurring crash class rather than a
+one-off, and — because every soak that reaches this far now dies here
+instead of to the 18th/13th/23rd classes — it is now the **dominant
+blocker** on any soak reaching further into the run.
+
+### Rules out / narrows
+
+- **3rd consecutive clean pass through the 18th class's 7902-7968 death
+  zone with zero recurrence** (s197 soaks 1 and 3, now this run) — per
+  NEXT.md's own discriminating criteria, 3 clean passes in a row is strong
+  circumstantial evidence the s197 cached-free-list-head guard's target bug
+  is fixed, even though the guard itself has never fired (0/4 across all 4
+  `cacheheadguard` soaks to date). Per NEXT.md: **write this up as "very
+  likely fixed, mechanism unconfirmed"** rather than continuing to soak the
+  same hypothesis — the 18th crash class no longer meets the bar to be
+  called the primary blocker.
+- **Confirms `runVideoFrameTick+1568` as a genuine recurring crash class**,
+  not the single-occurrence s192 anomaly it was previously logged as —
+  2 occurrences (s192 decisionN=8972, this session decisionN=15418), same
+  native offset, same duplicated-frame unwind shape, ~6 sessions apart.
+  Promotes it from "new, previously-uncatalogued, not root-caused further"
+  (s192's framing) to "confirmed recurring, currently the dominant
+  soak-blocker" — ahead of both the 18th class (now very-likely-fixed) and
+  the untested s190/s196 guards, which this run passed through without
+  incident but also without exercising.
+- Does NOT newly root-cause `runVideoFrameTick+1568` — s193 already
+  established that native-offset disassembly is required and unavailable
+  on this session's Bash allowlist (`otool`/`nm`/`objdump`/`lldb` all
+  blocked); that constraint is unchanged this session and was not
+  re-attempted (out of scope for this iteration's planned work unit).
+
+### Landed (this session)
+
+`scratch/agent/run_cacheheadguard4.sh` (new soak driver, gitignored, not
+committed — standing convention). No code changes; no `lib/` edits, so no
+`submodule-patches/export.sh` needed this session. This repo's own tracked
+files updated: `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, this
+entry.
+
+### Carried-forward open items
+
+1. **`runVideoFrameTick+1568` SIGBUS is now the top-priority open crash
+   class** — 2/2 confirmed occurrences, currently the furthest-reaching
+   blocker in the project. Guarding it defensively (the established
+   rs_malloc/rs_free/scene-node-ptr/queueGPUUploadTMEM pattern) requires
+   knowing the actual faulting dereference at native offset +1568, which
+   requires disassembly tooling this session doesn't have approved
+   (s193's conclusion, unchanged). Next session should either (a) request
+   `otool -tv`/`objdump -d` approval for one-off use, or (b) try a
+   source-level defensive guard on EVERY pointer deref in
+   `runVideoFrameTick`'s recompiled C body
+   (`N64Recomp/RecompiledFuncs/funcs_0.c:1459` onward) rather than the one
+   exact instruction, accepting some imprecision, since 2 confirmed
+   occurrences now justify the guard-authoring cost that felt premature at
+   s193's single-occurrence stage.
+2. The s197 `scene-node-cache-guard`, s190 `scene-node-ptr-guard`, and s196
+   `reinterpret-tile-guard` are all still 0-fire across every soak to
+   date (4/4, 6+/6+, and 1/1 soaks respectively) — none has a same-run
+   positive control. Per NEXT.md's own guidance, do NOT re-touch any of
+   their logic on a null result alone; only revisit if a soak produces NEW
+   evidence (a fire with insane fields, or a crash recurring right after a
+   fire).
+3. The 23rd crash class's 2nd unguarded site (`waitForAnyAudioSlot` chain,
+   s173) and the `evalCubicSplineAtTime` SIGBUS family (s184/s197) remain
+   open, unroot-caused, lower priority than item 1 — both are less
+   frequently the blocker than `runVideoFrameTick` now appears to be.
+4. Housekeeping still flagged, still not done: `docs/CURRENT-TRUTH.md`
+   remains well over the ~35 KB CLAUDE.md budget and over the Read tool's
+   256 KB single-read limit; migrate durable material to
+   `PROJECT-OVERVIEW.md` and prune, paired with a real experiment.
