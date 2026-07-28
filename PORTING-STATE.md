@@ -19872,3 +19872,96 @@ see whether removing them lets the run reach `renderUnlitMeshFaces` without
 hitting either s210's crash or s211's stall. Full analysis commands are
 reproducible via `grep -na`/`sed -n` on the two existing logs (no new
 artifacts needed for this session's finding).
+
+## Session 213 (2026-07-28) — 4th soak (varied recipe) hits a genuinely new
+`heapWalker+1128` crash whose register shape proves a generalizable,
+project-wide blind spot in every `U32(ctx->rN)`-truncated guard, not a
+heapWalker-specific miss
+
+Ran NEXT.md's prescribed 4th soak: copied `run_unlitmeshtracer7.sh` to
+`run_unlitmeshtracer8.sh`, changed only `STICK_SCHEDULE` to drop the early
+pre-craft-select camera nudges (`STICK_SCHEDULE="95:start 100:a 150:sr
+200:sl 250:su"`, was `"10:sr 25:sl 40:su 95:start 100:a 150:sr 200:sl
+250:su"`), tag `unlitmeshtracer8`. Every other env var
+(`ROGUESQ_LOG_UNLIT_MESH_TRACER=1`, `PROBE_MODE=start_only`, `HOLD_S=300`,
+`CAPTURE_TICK_S=0.2`, `HOLD_TICK_S=1`) byte-identical to unlitmeshtracer7.
+
+**Result**: the run reached `SELECT YOUR CRAFT stable` normally (phase width
+1024 at 46.4s, same as prior soaks) but the game process died at
+`hold-iter 1` — almost immediately after the hold window opened, far
+earlier than s210's crash (6s into hold) or s211's stall (near the run's
+natural 300s end). `unlit-mesh-tracer`/`B_LOADED`: 0 lines again — the
+original s208 `ctx->r16` question is STILL unanswered, now 0/5 soaks across
+4 sessions (s209/s210/s211/s213) and 3 different varied recipes.
+
+**Crash detail** (`scratch/s73_post_a_scene/unlitmeshtracer8/run.log:141317-
+141353`): signal 10 (Bus error), `si_addr=far=0x380003827`,
+`decisionN=7988 lastFireDecisionN=7969 decisionsSinceFire=19 stalledNow=0`
+(not stall-related — genuine crash during active operation). Register dump:
+`x10=0x0000000080003827`, `x11=x12=x13=0x0000000080000000`, all other
+general-purpose registers either small stack/heap pointers or zero.
+
+**Finding 1 — live confirmation of the s157/s172 inlining theory.**
+`[CRASH][pc-symbol]` (dladdr-based, trusted per NEXT.md environment notes)
+names `heapWalker+1128`. `backtrace_symbols_fd`'s own stack dump names the
+*same* frame `frameStartReset+532` (duplicated at frames 3 and 4). s157/s172
+theorized from a source read alone (never proven with a live crash) that
+`frameStartReset`-attributed crashes are actually inside its first,
+unconditional callee `heapWalker`, misattributed by imprecise
+symbolication — this crash is the first LIVE data point where both
+symbolication paths disagree on the exact same frame and the more precise
+one (dladdr) names heapWalker. Confirms the theory; not itself new
+evidence about heapWalker's specific fault mechanism.
+
+**Finding 2 — the crash's register shape exposes a project-wide guard
+design gap, source-confirmed via `recomp.h`.** heapWalker already carries
+10 guard sites since s172 (5 head-deref `GUARD` on `ctx->r4`, 5 walk-loop
+`GUARD3` on `ctx->r3`), each written as `if (U32(ctx->rN) < 0x80000000u ||
+U32(ctx->rN) >= 0x80800000u) goto <skip>;`. Neither guard fired this run.
+Dispatched a research agent to read `recomp.h` (`N64Recomp/include/
+recomp.h`, identical copy in this repo's `lib/N64ModernRuntime/N64Recomp/
+include/recomp.h`) for the exact macro bodies:
+- `U32(val)` = `(uint32_t)(val)` — plain truncation to the low 32 bits.
+- `gpr` = `uint64_t` (`ctx->r4` etc. are 64-bit fields).
+- `MEM_W(offset, reg)` = `*(int32_t*)(rdram + ((reg) + (offset) -
+  0xFFFFFFFF80000000))` — uses the FULL 64-bit `reg`, no truncation.
+
+Cross-referenced against the s99 lesson already in this doc (and
+CURRENT-TRUTH ~line 343): a *correctly* sign-extended KSEG0 pointer has
+upper 32 bits `0xFFFFFFFF` (that's why s99's guard, written to compare the
+raw 64-bit `gpr` against a 32-bit literal, false-positived on 100% of calls
+before being fixed to truncate through `U32()` first). This run's crashing
+register (`x10=0x0000000080003827`) has upper bits `0x00000000`, not
+`0xFFFFFFFF` — the same "KSEG0-zero-extension" shape already named for item
+-49's `renderUnlitMeshFaces`/`0x80630062` bug and s210's
+`evalCubicSplineAtTime`/`0x7ffffff8` bug (3 distinct exact values, so still
+NOT one shared deterministic constant — but a 3rd independent function now
+hit by the qualitatively identical corruption mechanism).
+
+**The mechanism, stated precisely**: `U32()` discards the upper 32 bits
+before the bounds check runs, but a legit sign-extended pointer
+(upper=`0xFFFFFFFF`) and a corrupt zero-extended one (upper=`0x00000000`)
+have IDENTICAL low-32-bit representations. Any guard using this exact
+`U32(ctx->rN) < 0x80000000u || >= 0x80800000u` template is structurally
+unable to tell them apart — not a coverage gap (missing site), a design
+gap in the check itself. This template is used project-wide, not just in
+heapWalker (same pattern at CURRENT-TRUTH doc lines ~3109/3402/3434/3622/
+3777).
+
+**Not yet done this session** (would require its own build+soak cycle,
+against "one work unit" discipline): actually adding an upper-bits check
+(`(ctx->rN >> 32) != 0xFFFFFFFFu`) to heapWalker's 10 existing sites and
+soaking to see if the strengthened guard fires live for the first time.
+That's the next work unit — see NEXT.md.
+
+**Ruled out this session**: heapWalker's own existing GUARD/GUARD3 protecting
+this run's crash site was not itself investigated for which of the 10 sites
+is nearest pc+1128 — no disassembly tool is available (blocked, re-confirmed
+prior sessions) to map the offset to a specific site, so it's unknown
+whether this crash hit an already-guarded-but-blind site or a still-
+uncovered 11th call. Irrelevant to the fix: the upper-bits check needs
+adding to all 10 regardless.
+
+Zero new git-tracked file changes needed beyond `scratch/agent/
+run_unlitmeshtracer8.sh` (gitignored) and this doc pair — no code patch
+landed this session, the source read was analysis only.

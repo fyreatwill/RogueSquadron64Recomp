@@ -663,7 +663,61 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s212)
+## Next steps, in order of expected value (s213)
+
+-54. **(s213) 4th soak (deliberately varied recipe, dropped early sticks
+    per -53) hit a genuinely NEW crash — `heapWalker+1128` — and, cross-
+    referenced against the s99/s157/s172 guard history and a fresh source
+    read of `recomp.h`, this crash's register shape PROVES a generalizable,
+    project-wide blind spot in every existing `U32(ctx->rN)`-truncated
+    guard, not just a heapWalker-specific gap.** `run_unlitmeshtracer8.sh`
+    (`STICK_SCHEDULE="95:start 100:a 150:sr 200:sl 250:su"`, sticks before
+    95s dropped) reached `SELECT YOUR CRAFT stable` normally but SIGBUS'd
+    almost immediately after ("hold-iter 1", far earlier than s210's 6s-in
+    or s211's near-end stall) — `unlit-mesh-tracer`/`B_LOADED`: 0 lines
+    again, so the original s208 `ctx->r16` question is STILL unanswered
+    (3rd different early-blocking failure across 3 varied recipes now).
+    **Two findings from this one crash:**
+    (1) `[CRASH][pc-symbol]` (dladdr, trusted per NEXT.md) names
+    `heapWalker+1128`, while `backtrace_symbols_fd` names the SAME frame
+    `frameStartReset+532` (twice, frames 3+4) — this is the first LIVE
+    confirmation of the s157/s172 "frameStartReset-attributed crashes are
+    actually inside its first callee, heapWalker, misattributed by
+    imprecise symbolication" theory; previously only source-read-inferred,
+    never proven with an actual crash's dual symbolication.
+    (2) The crash's register dump (`x10=0x0000000080003827`,
+    `x11`/`x12`/`x13=0x0000000080000000`, `si_addr=far=0x380003827`) has
+    upper-32-bits `0x00000000` — but a CORRECTLY sign-extended KSEG0 `gpr`
+    (per the s99 lesson at line ~343 of this doc: raw 64-bit-vs-32-bit-
+    literal comparisons false-positive at 100% because legit KSEG0
+    pointers sign-extend to upper=`0xFFFFFFFF`) should have upper bits
+    `0xFFFFFFFF`, not `0x00000000` — this is the SAME "KSEG0-zero-extension"
+    shape already named for item -49's `renderUnlitMeshFaces`/`0x80630062`
+    bug and s210's `evalCubicSplineAtTime`/`0x7ffffff8` bug, now a **3rd
+    independent function** hit by the identical corruption class (still 3
+    distinct exact values, so NOT one shared deterministic constant, but a
+    shared mechanism). Read `recomp.h` this session (`U32(val)` =
+    `(uint32_t)(val)`, `gpr` = `uint64_t`, `MEM_W(offset,reg)` =
+    `*(int32_t*)(rdram + (reg + offset - 0xFFFFFFFF80000000))` using the
+    FULL 64-bit `reg`, no truncation) and confirmed mechanistically: a
+    guard written as `U32(ctx->r4) < 0x80000000u || >= 0x80800000u`
+    (heapWalker's existing GUARD/GUARD3, in place since s172, both sites
+    unfired this run) CANNOT distinguish a legit sign-extended pointer
+    (upper=`0xFFFFFFFF`) from a corrupt zero-extended one (upper=
+    `0x00000000`) — their low 32 bits are IDENTICAL by construction, and
+    `U32()` discards the only bits that would tell them apart. **This is
+    not a heapWalker-specific miss; every guard in the project using this
+    exact `U32()`-truncated-bounds template (heapWalker GUARD/GUARD3, and
+    the same pattern noted at doc lines ~3109/3402/3434/3622/3777) shares
+    this structural blind spot.** **Next work unit**: add an upper-bits
+    check (`(reg) >> 32 != 0xFFFFFFFFu` alongside the existing `U32()`
+    range check) to heapWalker's 10 existing guard sites first (cheapest,
+    already-instrumented function) as a scoped test, rebuild, soak, and
+    check whether the guard NOW fires — a live fire would be the first
+    positive control this mechanism has ever produced, and (if it also
+    stops the crash) would be evidence this same upper-bits check could
+    retire the `ctx->r16`/item -49 investigation too once applied there.
+    Full detail: PORTING-STATE Session 213.
 
 -53. **(s212) Offline cross-reference of s210/s211 logs REFUTES the "shared
     ~60-75s trigger" hypothesis from -52 below — clean Outcome B, no 3rd

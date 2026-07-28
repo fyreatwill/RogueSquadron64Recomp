@@ -1,108 +1,135 @@
-# NEXT work unit — 4th soak with a DELIBERATELY VARIED recipe (drop early
-stick inputs), now that s212 closed the "shared trigger" question
+# NEXT work unit — add an upper-32-bits check to heapWalker's existing
+guards and soak for the first-ever live fire
 
-Read PORTING-STATE Session 212 in full (`grep -n "^## Session 212"
-PORTING-STATE.md`) before doing anything else. Short version: s212 did the
-zero-cost offline cross-reference of s210/s211's existing `run.log`s that
-s211 called for, and it's a clean Outcome B (null) with a bonus correction:
-the `vi_width=512` transition both logs hit at ~74s is a BENIGN,
-reproducible recipe event (craft-select-exit) — both logs show only a
-handful of transient `stalled=1` blips right after it, then real `FIRE`
-events resume for tens of thousands more lines. s211's REAL permanent stall
-doesn't onset until decision #7840 of ~8032 (right before the run's natural
-300s-hold end), nowhere near 73.6s. s210's crash happens during confirmed
-NORMAL (non-stalled) operation. **The two failures are independent — no
-shared trigger, no 3rd confirming run needed.** This question is CLOSED.
+Read PORTING-STATE Session 213 in full (`grep -n "^## Session 213"
+PORTING-STATE.md`) before doing anything else. Short version: s213's 4th
+soak (varied recipe) hit a brand-new crash, `heapWalker+1128`
+(dladdr-confirmed; `backtrace_symbols_fd` mis-names the same frame
+`frameStartReset+532` — first LIVE proof of the s157/s172 inlining theory).
+The crash's register dump (`x10=0x0000000080003827`, upper 32 bits
+`0x00000000`) is the same "KSEG0-zero-extension" shape already named for
+item -49's `renderUnlitMeshFaces` bug and s210's `evalCubicSplineAtTime`
+bug — a 3rd independent function hit by the same corruption class. Cross-
+referencing `recomp.h` (`U32(val)`=`(uint32_t)(val)`, `gpr`=`uint64_t`,
+`MEM_W` uses the FULL 64-bit `reg` with no truncation) proves heapWalker's
+existing 10 guards (`U32(ctx->rN) < 0x80000000u || >= 0x80800000u`, in
+place since s172, neither fired this run) are STRUCTURALLY blind to this
+exact corruption: a legit sign-extended KSEG0 pointer (upper=`0xFFFFFFFF`)
+and a corrupt zero-extended one (upper=`0x00000000`) have identical low-32
+bits, and `U32()` discards the only bits that would tell them apart. This
+is a project-wide guard-design gap, not a heapWalker-specific miss (same
+`U32()`-truncated template used at CURRENT-TRUTH doc lines ~3109/3402/
+3434/3622/3777).
 
 ## Do exactly one this iteration
 
-**Run a 4th soak with a deliberately VARIED recipe** (NOT a repeat of
-unlitmeshtracer6/7 — budget rule 8 still applies to identical-recipe
-repeats, but this is a genuinely different recipe, so it's a fresh
-hypothesis test, not a 4th attempt on the same one):
+**Add an upper-bits check to heapWalker's 10 existing guard sites, rebuild,
+and soak** — the first live test of whether this strengthened check can
+catch what the current guards miss:
 
-1. Copy `scratch/agent/run_unlitmeshtracer7.sh` to a new tag (e.g.
-   `run_unlitmeshtracer8.sh`), same directory
-   (`RogueSquadron64Recomp/scratch/agent/`).
-2. Change ONLY `STICK_SCHEDULE`: drop the early `10:sr 25:sl 40:su` entries
-   (pre-craft-select camera nudges, not needed for the craft-select-to-leave
-   flow — they're not what triggers either known failure). New value:
-   `STICK_SCHEDULE="95:start 100:a 150:sr 200:sl 250:su"`. Leave every other
-   env var (`ROGUESQ_LOG_UNLIT_MESH_TRACER=1`, `PROBE_MODE=start_only`,
-   `HOLD_S=300`, `CAPTURE_TICK_S=0.2`, `HOLD_TICK_S=1`) byte-identical.
-3. Change the tag argument to `run_mission_keys.sh` to match the new script
-   name (e.g. `unlitmeshtracer8`).
-4. Launch with `Bash(..., run_in_background=true)`, then block with
-   `TaskOutput(task_id, block=true, timeout=420000)` (7 min — 300s hold +
-   grace + startup overhead).
-5. Check the same three things s212 checked, in order:
-   - `CRASH: N` in the summary — if 0 and unlit-mesh-tracer/`B_LOADED`
-     lines are non-zero, the original s208 `ctx->r16` question is FINALLY
-     answered this run (see CURRENT-TRUTH item -49 for what a fired
-     `B_LOADED` check would mean).
-   - If `CRASH: 0` but tracer lines are still 0, check `[phase]`/
-     `[vi-fs-decision] stalled=` the same way s212 did — did it still hit
-     the permanent stall, and if so, does dropping the early sticks shift
-     WHEN in the log it onsets (still near the natural end, or earlier)?
-   - If it crashes again, check `[CRASH][pc-symbol]` — same
-     `evalCubicSplineAtTime` signature, or something new?
+1. Open `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`,
+   find `_make_heapwalker_guard_patch` (~line 3035) and
+   `_make_heapwalker_guard3_patch` (~line 3112).
+2. In BOTH patch bodies, change the bounds-check condition from
+   `if (r4_lo < 0x80000000u || r4_lo >= 0x80800000u) {` (GUARD, uses
+   `ctx->r4`) and the equivalent `r3_lo` line (GUARD3, uses `ctx->r3`) to
+   ALSO reject a nonzero-but-wrong upper 32 bits. Concretely, add a
+   sibling check on the raw 64-bit register value, e.g.:
+   `uint64_t r4_hi = (uint64_t)ctx->r4 >> 32;` /
+   `uint64_t r3_hi = (uint64_t)ctx->r3 >> 32;` and extend the `if` to
+   `if (r4_lo < 0x80000000u || r4_lo >= 0x80800000u || r4_hi != 0xFFFFFFFFu)`
+   (same for r3/r3_hi). Keep the existing `fprintf` diagnostics but add the
+   hi value to the printed line (e.g. `bad_r4=0x%08X hi=0x%08X`) so a fire
+   is distinguishable as "low-range-bad" vs "hi-extension-bad" — this
+   distinction IS the discriminating measurement.
+3. Regen order (NOT optional, hard rule): `make_elf.py` -> `N64Recomp` ->
+   `fixup_game_funcs.py` -> `cmake` (`DEVELOPER_DIR=/Applications/Xcode.app/
+   Contents/Developer cmake --build build` or however this repo's build
+   step normally runs — check `docs/CURRENT-TRUTH.md`'s build section if
+   unsure of the exact invocation).
+4. Copy `scratch/agent/run_unlitmeshtracer8.sh` to a new tag (e.g.
+   `run_heapwalkerguard4.sh`), set `ROGUESQ_LOG_HEAPWALKER_GUARD=1` and
+   `ROGUESQ_LOG_HEAPWALKER_GUARD3=1` (both currently unset/0 in the
+   unlitmeshtracer8 recipe — needed this time so a fire is actually logged),
+   same `STICK_SCHEDULE` (the varied one from s213, already reaches the
+   crash once). Change the tag argument to match.
+5. Launch with `Bash(..., run_in_background=true)`, block with
+   `TaskOutput(task_id, block=true, timeout=420000)`.
+6. Check, in order:
+   - Does `[heapwalker-guard]`/`[heapwalker-guard3]` fire at all
+     (`grep -c` in the new run.log)? If yes with `hi=` != `0xFFFFFFFF`,
+     this is the FIRST LIVE POSITIVE CONTROL for the zero-extension theory
+     — the mechanism is proven, not just inferred from a post-mortem
+     register dump.
+   - Does `CRASH: N` stay near 0 (or at least not repeat the exact
+     `heapWalker+1128`/`si_addr=0x380003827` signature)? If the guard fires
+     AND the crash stops, the fix works — write it up as resolved for this
+     specific crash and flag whether the same technique should extend to
+     the `ctx->r16`/item -49 guard (not yet built, still just tracer-only)
+     once that guard exists.
+   - If the guard still doesn't fire AND the crash recurs identically, the
+     upper-bits theory is REFUTED for this specific crash (the corruption
+     isn't in `ctx->r4`/`ctx->r3` at all, something else feeds the bad
+     address) — note this precisely, don't force a positive spin.
 
 ## Discriminating outcomes
 
-- **Tracer fires, `B_LOADED` check runs, `CRASH: 0`** — the original s208
-  question is answered this run. This is the primary goal; if this happens,
-  stop and write up the result (this is the highest-value outcome this
-  probe can produce).
-- **`CRASH: 0`, stall again, tracer still 0** — dropping the early sticks
-  didn't change the outcome; the recipe's craft-select-exit behavior itself
-  (independent of the specific stick timing) drives toward the stall. Note
-  where in the log the permanent stall onsets this time and compare to
-  s211's decision #7840-of-8032 (near-end) pattern.
-- **Crashes again on `evalCubicSplineAtTime`** — 2nd occurrence of this new
-  bug, now worth its own investigation (register pattern already flagged as
-  suspicious in s210 — 6 registers at `0x80000000`, same qualitative shape
-  as the `+8772` bug's `0x80630062`).
-- **Crashes on something else entirely** — new signature, write it up,
-  don't fold into either existing bug's evidence without a 2nd occurrence.
+- **Guard fires with `hi != 0xFFFFFFFF`, crash gone** — mechanism proven
+  AND fixed for heapWalker; strong candidate to generalize to every other
+  `U32()`-truncated guard in the project (a real, scoped, high-value
+  follow-up, not this iteration's job).
+- **Guard fires, crash still happens somewhere else** — the specific site
+  hit this time is now closed, but heapWalker (or a caller) has more than
+  one corrupted-register path; note where the new crash lands.
+- **Guard never fires, crash recurs identically** — refutes the theory for
+  THIS crash; the corrupted value feeding `heapWalker+1128`'s dereference
+  isn't `ctx->r4`/`ctx->r3` at the 10 known sites — needs a fresh
+  source-read of heapWalker for an 11th/uncovered call shape (per s213,
+  no disassembly tool is available to map pc+1128 to an exact line, so this
+  would be a full careful re-read, not a quick grep).
+- **Guard never fires, no crash at all this soak** — inconclusive (the
+  crash itself may just not have reproduced this run); re-run once before
+  concluding anything, this doesn't count toward budget rule 8 since it's
+  the same recipe validating the SAME fix, not a repeat probe of an
+  unresolved hypothesis.
 
 ## Do not
 
-- Do not repeat the unlitmeshtracer6/7 recipe verbatim (STICK_SCHEDULE
-  unchanged) — that would be the 4th identical-recipe attempt, still
-  against budget rule 8. The stick-schedule change above IS the required
-  variation.
-- Do not reopen item -35 (graphics-task-submission stall mechanism,
-  `[thr-resume-skip]`/UAF-guard investigation) as a fresh investigation —
-  still budget-closed since s186. s212's refined timing (onset near
-  decision #7840-of-8032, adjacent to `[thr-resume-skip]`) is noted in
-  CURRENT-TRUTH item -53 but is NOT grounds to reopen -35's closed budget.
-- Do not re-litigate the "shared trigger" question — CLOSED at s212 with a
-  clean, evidence-backed null. If a 5th run someday shows a genuinely new
-  timing coincidence, that would be fresh evidence, not a re-litigation.
-- Do not re-add the `B_LOADED` check to `fixup_game_funcs.py` — already
-  present, verified clean/no duplicates through s211.
-- Do not re-read `renderUnlitMeshFaces`'s source as a fresh whole-function
-  pass — s204, s207 (twice) already did this exhaustively.
-- Do not re-attempt `nm`/`atos`/`otool`/`objdump` — blocked, re-confirmed
-  s207, not re-litigated since.
-- Do not re-touch any of the existing GUARD/tracer instrumentation
-  (SCENE_NODE_LIST_GUARD family, SCENE_NODE_CACHE_GUARD, scene-node-ptr-guard,
-  REINTERPRET_TILE_GUARD, video-frame-tick-guard, the processSceneNode
-  callee tracers A-J, or the unlit-mesh-tracer sites A-D/B_LOADED) — all
-  correct-per-spec, no new evidence against any of them.
+- Do not touch the `ctx->r16`/`renderUnlitMeshFaces`/item -49 guard this
+  iteration — it doesn't exist yet (tracer-only), and this iteration's
+  scope is heapWalker's already-built guards only.
+- Do not re-open the "shared ~60-75s trigger" question (s212, CLOSED) or
+  re-litigate s211's stall (item -35, budget-closed since s186).
+- Do not attempt a 5th `STICK_SCHEDULE` variation this iteration — the
+  varied recipe from s213 already reliably reaches this crash; changing it
+  again would just be re-rolling the dice on which failure appears, not
+  advancing the discriminating test above.
+- Do not re-attempt `nm`/`otool`/`objdump`/`lldb` to map `heapWalker+1128`
+  to an exact source line — blocked, re-confirmed s207/s213.
 
 ## Environment notes (carried forward, still current)
 
-- The `[CRASH][pc-symbol]` diagnostic (`src/main/main.cpp`, `dladdr()` on the
-  raw mcontext `pc`) is permanent, always-on, and has hits naming
-  `renderUnlitMeshFaces` (`+508`, `+792`) and `evalCubicSplineAtTime+1008` —
-  trust it over `backtrace_symbols_fd()`'s output when they disagree.
+- The `[CRASH][pc-symbol]` diagnostic (dladdr on the raw mcontext `pc`) is
+  permanent, always-on, and is MORE PRECISE than `backtrace_symbols_fd` —
+  s213 found a live case where they disagree on the same frame
+  (`heapWalker+1128` vs `frameStartReset+532`) and dladdr was right per the
+  s157/s172 source-read theory. Trust dladdr.
 - Disassembly/symbolication tools (`nm`/`otool`/`objdump`/`lldb`/`atos`) are
   ALL blocked (non-interactive session, no human to clear the approval
-  prompt) — re-verified s207, not re-tried since.
+  prompt) — re-verified s207, s213.
+- `recomp.h` (`N64Recomp/include/recomp.h`, identical copy at
+  `lib/N64ModernRuntime/N64Recomp/include/recomp.h`): `U32(val)` =
+  `(uint32_t)(val)`; `gpr` = `uint64_t`; `MEM_W(offset,reg)` =
+  `*(int32_t*)(rdram + ((reg)+(offset) - 0xFFFFFFFF80000000))` using the
+  full 64-bit `reg`. A legit KSEG0 `gpr` is sign-extended, upper bits
+  `0xFFFFFFFF` (s99 precedent: comparing the raw 64-bit value against a
+  32-bit literal directly false-positives at 100% for exactly this reason,
+  which is why every guard since s99 truncates through `U32()` first — but
+  that same truncation is what makes them blind to zero-extension
+  corruption).
 - This project builds `CMAKE_BUILD_TYPE=Debug` (`-O0`) globally; `RECOMP_FUNC`
   is `noinline` — no game function can be silently inlined into a caller
-  (s207, build-config-verified, not an inference).
+  (s207, build-config-verified).
 - `rm -f <glob>` and `find <dir> -delete` are BOTH blocked in this sandbox.
   Use `python3 -c "import glob, os; [os.remove(f) for f in
   glob.glob('<pattern>')]"` instead.
@@ -115,25 +142,20 @@ hypothesis test, not a 4th attempt on the same one):
   commit in the SAME session. `N64Recomp` and `rogue_squadron64` are
   SEPARATE checkouts outside this repo, NOT `lib/` submodules — their
   uncommitted changes are flagged for the user, not this session's call to
-  commit.
+  commit. (Note: editing `N64Recomp/fixup_game_funcs.py` per this NEXT.md's
+  step 1 is in that separate checkout, not `lib/` — no export.sh needed for
+  that edit itself, but if the regen step also touches anything under this
+  repo's `lib/`, export+commit that part.)
 - Re-running the same soak script/tag overwrites the previous run's
   `run.log` in place — copy the driver script to a new tag name per soak.
-  With minimal logging (s210/s211), `run.log` is only ~20MB/~140K lines —
-  much cheaper to `grep -a`/`sed -n` in full than the old full-logging scale.
 - `ROGUESQ_LLE_FORCE`/`ROGUESQ_LLE_UNGATED`/`ROGUESQ_LLE_SOLO`/
   `ROGUESQ_STUB_MISSING_FUNCS` are set INSIDE `run_mission_keys.sh` itself
-  (line 6), not the driver scripts — confirmed s210/s211, don't add them
-  redundantly to new driver scripts.
+  (line 6), not the driver scripts.
 - Running scripts under `RogueSquadron64Recomp/tools/agent/*.sh` /
   `scratch/agent/*.sh` directly gets denied — prefix with `zsh`.
 - Compound `cd ... && zsh ...`/`cd ... && cmake ...` gets denied in ONE
-  Bash call — prefer separate Bash calls. Output-redirection compounds
-  (`cmd > file`, `cmd | tee file`, and even a plain `cd X && sed ... > Y`)
-  also get flagged — use the `Write` tool for small file writes, or run
-  `sed`/similar with absolute paths and no `cd` in the same call. Piping a
-  `cd`-prefixed compound into another command (e.g. `cd X && cmd | cmd2`)
-  is ALSO flagged even with no redirection — prefer plain absolute-path
-  commands with no `cd` at all when piping (confirmed s212).
+  Bash call — prefer separate Bash calls. Output-redirection compounds also
+  get flagged — use the `Write` tool for small file writes.
 - Heredocs get rejected by this session's Bash tool — use the Write tool
   instead (write to `scratch/agent/`, not `/tmp`).
 - `/scratch/` is entirely gitignored except `scratch/agent/NEXT.md`,
@@ -142,23 +164,30 @@ hypothesis test, not a 4th attempt on the same one):
   START of each iteration by the harness — finding them in that state at
   session start is normal.
 - Launch soaks with `Bash(..., run_in_background=true)` then block with
-  `TaskOutput(task_id, block=true, timeout=180000-480000)` — do not end the
-  turn while a background soak is still running.
-- `[vi-fs-decision]` lines carry a `stalled=` field per-decision, not just a
-  single terminal state — grepping `stalled=` values across a log's full
-  decision sequence (not just the tail) is necessary to distinguish a
-  transient/self-resolving blip from the real permanent stall (s212).
+  `TaskOutput(task_id, block=true, timeout=180000-480000)`.
+- `[vi-fs-decision]` lines carry a `stalled=` field per-decision — grep the
+  full sequence, not just the tail, to distinguish a transient blip from a
+  permanent stall.
 
 ## Housekeeping still flagged, still not done
 
-`docs/CURRENT-TRUTH.md` is now over 4400 lines and well past both the
-~35 KB CLAUDE.md budget and the Read tool's 256 KB single-read limit
-(confirmed s195, still true s212 — read it with `grep`/`sed -n`, never a
-plain whole-file `Read`). Migrate durable mechanism/architecture material to
+`docs/CURRENT-TRUTH.md` is now ~4490 lines, well past both the ~35 KB
+CLAUDE.md budget and the Read tool's 256 KB single-read limit (confirmed
+s195, still true s213 — read it with `grep`/`sed -n`, never a plain
+whole-file `Read`). Migrate durable mechanism/architecture material to
 `PROJECT-OVERVIEW.md` and prune superseded detail, paired with a real
-experiment — flagged for 10+ sessions without action, escalating.
+experiment — flagged for 11+ sessions without action, escalating.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` and
 `~/Documents/Tools/rogue_squadron64` are separate git checkouts with
 long-standing uncommitted changes, unrelated to this session's commit
 scope. Still flagged for the user, not committed autonomously.
+
+`lib/N64ModernRuntime` and `lib/rt64` show as modified in `git status` at
+the start of s213 (pre-existing, not caused by s213's work) — not
+investigated this session (out of scope for the prescribed work unit); if
+a future session touches anything under `lib/`, remember the export.sh +
+same-session-commit rule applies, and it may be worth first checking
+whether these two submodules' patches are still in sync with
+`submodule-patches/*.patch` before assuming this is normal steady-state
+dirtiness.
