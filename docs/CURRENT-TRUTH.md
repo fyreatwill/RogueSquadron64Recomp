@@ -663,41 +663,54 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s200)
+## Next steps, in order of expected value (s201)
 
--48. **(s200) `processSceneNode+8772` KSEG0-zero-extension bug: exhaustively
-    ruled out inside `processSceneNode` itself by TWO independent lines of
-    evidence — the defect must be inside one of the five render callees it
-    invokes, not the caller.** A full static read of `processSceneNode`
-    (`N64Recomp/RecompiledFuncs/funcs_4.c:13777-14913`) found every pointer
-    reaching a `MEM_W`/`MEM_H`/`MEM_B` traces through `ADD32`/`SUB32`/`S32`/
-    `MEM_W` (`recomp.h:89-108`), which re-sign-extend on every use regardless
-    of stored bit pattern — no bypass exists in this function's literal C.
-    A new call-site tracer (10 sites A-J, `ROGUESQ_LOG_PROCESS_SCENE_NODE_GUARD`,
-    `N64Recomp/fixup_game_funcs.py`) logging the pointer args passed to
-    `submitSceneNodeRender`/`renderFlatMeshFaceGroup`/`renderLitMeshFaceGroup`/
-    `renderUnlitMeshFaces`/`renderLitTexturedMeshFaces` confirmed it
-    dynamically: 46,292/46,292 logged calls in one soak had fully canonical
-    (sign-extended) args — 0 anomalies, and the tracer's 46k real firings
-    are themselves the positive control. Since the crash's `lr` is a RETURN
-    address into `processSceneNode` (fault is one frame deeper), and the
-    caller-side boundary is now proven clean, **the defect must be internal
-    to one of those five callees** — most are large (up to ~5000 lines:
-    `renderLitMeshFaceGroup` `funcs_4.c:8356-13425`; `submitSceneNodeRender`
-    `funcs_4.c:6-3018`; `renderFlatMeshFaceGroup` `funcs_4.c:3018-4951`;
-    `renderUnlitMeshFaces` `funcs_4.c:4951-5606`; `renderLitTexturedMeshFaces`
-    `funcs_3.c:22073-...`). **Best next work unit**: re-run the same soak
-    driver (`scratch/agent/run_processscenenodecalleetrace1.sh`, new tag)
-    until it either reproduces the crash (then `tail -1` the
-    `[process-scene-node-callee]` lines to name which single callee was
-    entered last, turning the search into one named function) or 3
-    consecutive iterations pass without recurrence (then fall back to a
-    direct, prioritized read of `renderLitMeshFaceGroup` first — it's the
-    biggest, most complex of the five, and the site-I/site-D pair (the
-    `$s1`/`$s0`-branch symmetric calls to it) had among the highest call
-    counts, 10,427 and untested respectively, in the one soak so far).
-    Full detail: PORTING-STATE Session 200 (and Session 194/199 for the
-    original register-file decode this all traces back to).
+-48. **(s200/s201) `processSceneNode+8772` KSEG0-zero-extension bug:
+    `processSceneNode` itself AND its highest-call-volume callee,
+    `renderLitMeshFaceGroup`, are both now source-clean — search narrows to
+    the four remaining direct callees.** s200 exhaustively ruled out
+    `processSceneNode` by two independent lines of evidence (full static
+    read + a 46,292-call dynamic trace at the call boundary, 0 anomalies —
+    see prior entry text below, still accurate). s201 ran 2 more soaks of
+    the same tracer (`processscenenodecalleetrace2`/`3`, no rebuild): both
+    died early (wall=22s/38s) to two DIFFERENT already-catalogued crash
+    classes (`frameStartReset+532` SIGBUS, the s84-origin "shared
+    corruption race" family; `runVideoFrameTick+1576` SIGBUS, the
+    s192/s198/s199 recurring class, item -47.5 below), NEITHER matching
+    the target `+8772` signature — bringing the cumulative tracer total to
+    **116,950 real calls, 0 non-canonical args, across 3 soaks**, still 0
+    reproductions of the target crash. Per the budget rule (3 consecutive
+    uninformative soaks), s201 stopped soaking and pivoted to the
+    documented fallback: a subagent-assisted full source read of
+    `renderLitMeshFaceGroup` (`N64Recomp/RecompiledFuncs/funcs_4.c:8356-13424`,
+    ~5068 lines — biggest and highest-call-volume of the five, 10,427
+    calls at one site alone per s200). **Result: clean** — zero raw
+    arithmetic bypassing `ADD32`/`SUB32`, zero `(uint32_t)` casts, all
+    zero-extending `MEM_HU`/`MEM_BU` loads feed only small flag/color/LUT
+    fields never used as pointers, all `MEM_W` results sign-extend via C's
+    implicit `int32_t`->`gpr` assignment rule, no `MOVZ`/`MOVN`-style
+    register ternaries, no raw pointer casts. This is single-source
+    (static read only, no matching dynamic trace INSIDE this function's
+    own body) — treat as provisional, not closed with `processSceneNode`'s
+    confidence.
+
+    **Remaining candidates** (unexamined): `submitSceneNodeRender`
+    (`funcs_4.c:6-3018`, ~3000 lines), `renderFlatMeshFaceGroup`
+    (`funcs_4.c:3018-4951`), `renderUnlitMeshFaces` (`funcs_4.c:4951-5606`),
+    `renderLitTexturedMeshFaces` (`funcs_3.c:22073-...`). **Best next work
+    unit**: subagent-assisted source read of `submitSceneNodeRender` next
+    (largest of the remaining four) using the exact same brief/method as
+    s201's `renderLitMeshFaceGroup` read (recomp.h:86-108 macros + the
+    zero-extension signature) — do NOT re-soak the tracer again this cycle,
+    3 soaks with 0 reproductions is enough per the budget rule; only
+    revisit soaking if all four remaining callees come back clean too (at
+    that point, reconsider whether the tracer itself needs to log more —
+    e.g. every internal pointer computation, not just call-boundary args —
+    since the current instrument would be structurally blind to a defect
+    that's introduced AND consumed entirely within one callee, never
+    crossing back through a logged boundary). Full detail: PORTING-STATE
+    Session 200, 201 (and Session 194/199 for the original register-file
+    decode this all traces back to).
 
 -47.5. **(s199) `runVideoFrameTick+1568` guard landed (3 sites,
     `ROGUESQ_LOG_VIDEO_FRAME_TICK_GUARD`, `N64Recomp/fixup_game_funcs.py`)

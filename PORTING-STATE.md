@@ -18707,3 +18707,108 @@ exact callee to focus on) or budget is exhausted, per NEXT.md's own
 **Housekeeping still flagged, still not done**: `docs/CURRENT-TRUTH.md`
 still over the ~35 KB budget; `N64Recomp` and `rogue_squadron64` checkouts
 still carry unrelated uncommitted changes, still not this session's call.
+
+
+## Session 201 (2026-07-28) — 2 more `processSceneNodeCalleeTrace` soaks add 70,658 more canonical-argument calls (116,950 total, 0 anomalies) but neither reproduces the `+8772` signature; per the 3-soak budget rule, pivoted to a direct source read of `renderLitMeshFaceGroup` and cleared it too, narrowing the remaining suspect set to four
+
+Continuation of NEXT.md item -48 (s200's `processSceneNode` render-callee
+zero-extension bug). Read `docs/CURRENT-TRUTH.md`'s `-48` entry and this
+file's Session 200 in full before starting, per NEXT.md's own instructions.
+
+**Step 1-2: two more soaks of the existing tracer.** Copied
+`run_processscenenodecalleetrace1.sh` to `..._2.sh` and `..._3.sh` (tag
+only changed, same standard env block + `ROGUESQ_LOG_PROCESS_SCENE_NODE_GUARD=1`,
+no rebuild — s200's binary already carries the tracer). Both soaks died
+much earlier than typical runs (wall=22s and wall=38s respectively, vs.
+s200's multi-minute soak) to two DIFFERENT, already-catalogued crash
+classes, NEITHER matching the `processSceneNode+8772` KSEG0
+zero-extension signature:
+
+- **`processscenenodecalleetrace2`**: SIGBUS, `si_addr=0x3f4800000`
+  (not the `rdram_base+0x0000000080xxxxxx` pattern), backtrace
+  `frameStartReset+532` (doubled, stack-unwind-duplication artifact per
+  s87/88's established reading) <- `static_5_800AAD9C` <-
+  `static_5_800C6854` <- `menuOverlayInit` <- `mainGameLoop`. This is the
+  s84-origin `frameStartReset` SIGBUS family (source-verified clean in
+  its own body since s84/s177/s179; part of the still-unexplained
+  "shared corruption race" family) — an already-catalogued, unrelated
+  crash, not a regression from anything this session touched.
+  `[process-scene-node-callee]` logged 34,485 calls before the crash, 0
+  non-canonical (grep for an anomaly marker found zero matches; last
+  logged call, site=E `submitSceneNodeRender` n=6480, fully canonical
+  `0xffffffff80xxxxxx`-shaped args).
+- **`processscenenodecalleetrace3`**: SIGBUS, `si_addr=0x340db6c62`
+  (also not the target pattern), backtrace `runVideoFrameTick+1576`
+  (doubled) <- `menuOverlayInit` <- `mainGameLoop`. This is the
+  s192/s198/s199 recurring `runVideoFrameTick` wild-pointer-deref class
+  (previously logged at exactly `+1568`; this occurrence decodes 8 bytes
+  later at `+1576` — close enough to be the same site under normal
+  unwind/symbolication variance, no rebuild happened between occurrences
+  so the function's own code didn't change; not investigated further
+  this session, flagged for whoever next works item -47.5). 
+  `[process-scene-node-callee]` logged 36,173 more calls, again 0
+  anomalies (last logged call, site=E `submitSceneNodeRender` n=7718,
+  canonical).
+
+Combined with s200's original 46,292, **three soaks now total 116,950
+real dynamic calls at the processSceneNode-to-callee boundary, 0
+non-canonical pointer args** — the tracer keeps firing correctly (proven
+by the sheer volume, still the positive control), the "0 anomalies"
+result keeps being informative rather than silent. But across 3 attempts,
+none has reproduced the `+8772` signature itself — per NEXT.md's own
+budget rule ("3 consecutive uninformative iterations on this hypothesis
+-> STOP, fall back"), this session stopped soaking after the 3rd and
+moved to the documented fallback (item -48's own "best next work unit"
+text, NEXT.md step 4): a direct, prioritized read of
+`renderLitMeshFaceGroup`, unprompted by a fresh crash.
+
+**Step 3/4: source read of `renderLitMeshFaceGroup`.** Delegated to a
+subagent (briefed with the exact `recomp.h:86-108` macro definitions and
+the exact zero-extension crash signature, per s200's own successful
+approach) to read the full ~5068-line body
+(`N64Recomp/RecompiledFuncs/funcs_4.c:8356-13424`) hunting for any
+pointer-shaped computation that bypasses `ADD32`/`SUB32`/the `(int32_t)`
+sign-extend convention. **Result: clean, no bypass found.** Specifically
+verified: zero raw `ctx->rN +/- ctx->rM` arithmetic outside
+`ADD32`/`SUB32`; zero `(uint32_t)` casts in the whole function; all
+~70 `MEM_HU`/`MEM_BU` (zero-extending) loads only feed small flag/color/
+LUT fields that get masked/shifted into packed DL command words, never
+added into a pointer register (so zero- vs. sign-extension is moot for
+them — an LHU/LBU result always has bit31=0 anyway); all `MEM_W` results
+assigned to `ctx->rN` sign-extend automatically via C's `int32_t`-source
+-> `uint64_t gpr`-target assignment rule; no `MOVZ`/`MOVN`-style register-
+assigning ternaries (only ordinary `cond?1:0` boolean flags); no raw
+pointer casts, `memcpy`, or indirect calls outside the macro convention;
+`mfc1`-derived float-to-int values are all routed through `(int32_t)`
+before assignment. This is ONE line of evidence (static read only, no
+matching dynamic trace inside this specific function's body — unlike
+`processSceneNode`, which had both), so treat "renderLitMeshFaceGroup
+cleared" as provisional/single-source, not closed with the same
+confidence as `processSceneNode` itself.
+
+**What this rules out / narrows**: of the five candidate callees,
+`renderLitMeshFaceGroup` — the largest (~5000 lines) and highest-call-
+volume one (10,427 calls at one site alone in s200's soak) — is now
+source-clean by the same standard applied to `processSceneNode`. The
+remaining four unexamined candidates are `submitSceneNodeRender`
+(`funcs_4.c:6-3018`, ~3000 lines), `renderFlatMeshFaceGroup`
+(`funcs_4.c:3018-4951`), `renderUnlitMeshFaces` (`funcs_4.c:4951-5606`),
+and `renderLitTexturedMeshFaces` (`funcs_3.c:22073-...`). The subagent
+also incidentally named several of `renderLitMeshFaceGroup`'s OWN internal
+helper calls it traced through while confirming cleanliness
+(`buildOrientedFaceGeometry`, `emitMaterialTexturedDL`/`Alt`,
+`findAndUnlinkSmallestEntry`, `resetVertexCacheSlot`,
+`getTextureLUTFieldAt8`/`A`, `appendRdpStateDl`, `emitAllocatedDLCommand`)
+— these are NOT part of the five-callee set from processSceneNode's
+direct call sites and were not source-read for the bug themselves this
+session; flagged only as a secondary candidate list if all four remaining
+top-level callees also come back clean.
+
+**Not yet resolved**: the bug's exact location remains unknown; four of
+five direct callees are now unexamined. No code change landed this
+session (source reads only, no lib/ or N64Recomp/ patch this iteration —
+`fixup_game_funcs.py` and the tracer are unchanged from s200).
+
+**Housekeeping still flagged, still not done**: `docs/CURRENT-TRUTH.md`
+still over the ~35 KB budget; `N64Recomp` and `rogue_squadron64` checkouts
+still carry unrelated uncommitted changes, still not this session's call.
