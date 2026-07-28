@@ -19703,3 +19703,107 @@ Full run artifacts: `scratch/s73_post_a_scene/unlitmeshtracer6/run.log`
 (143,093 lines), screenshots in the same directory
 (`craft_stable.png`, `hold_01.png`-`hold_05.png` show the reached scene
 before the crash).
+
+## Session 211 (2026-07-28) — fresh re-soak (unlitmeshtracer7) hits a 3rd
+distinct blocker (the already-catalogued graphics-task-submission stall) in
+a row, crash-free this time, still 0/0 on `renderUnlitMeshFaces`; incidentally
+lands a 2nd-occurrence data point supporting s180's UAF-guard stall mechanism
+that s183 had weakened
+
+Ran NEXT.md step 1 exactly: copied `run_unlitmeshtracer6.sh` to
+`run_unlitmeshtracer7.sh`, changed only the tag (`unlitmeshtracer6` ->
+`unlitmeshtracer7`), every env var byte-identical. Launched in background,
+blocked on it with `TaskOutput` (480s timeout).
+
+**Result: `CRASH: 0` — the process did NOT crash this run**, unlike both
+prior attempts (s209 hung/blew up, s210 SIGBUS'd). It ran the full 300s hold
++ grace window and was killed cleanly at the end (`wall=369s`). But
+`renderUnlitMeshFaces`'s tracer/`B_LOADED` check again logged **0 lines**
+(`grep -a -c "UNLIT_MESH_TRACER\|B_LOADED" run.log` = 0) — so the `+8772`
+`ctx->r16` question is STILL unanswered, for a **3rd different reason** in a
+row (s209: self-inflicted log-volume blowup; s210: unrelated
+`evalCubicSplineAtTime` crash; s211/this run: the process froze on the
+already-catalogued **graphics-task-submission stall**).
+
+**Diagnosis of this run's blocker**: `[phase]` log shows `vi_width` transitions
+0->320->640->1024 (craft-select reached at 44.6s) ->512 at 73.6s, then
+**no further phase transition for the remaining ~270s of hold+grace**.
+`[vi-fs-decision]` shows `rdpFs` climbing to 3770 by wall~139s-equivalent log
+position, then `stalled=1 pairs=0` continuously to the end of the 141,869-line
+log — this is the exact signature CURRENT-TRUTH already tracks under "Next
+steps" item -35/PORTING-STATE s176-183 (graphics-task-submission stall,
+RDP `fs` frozen, `vi_width=512` origin in the craft-select/war-room region).
+`rdpFs=3770` falls inside the previously-observed cluster (~3560-3802,
+s176-179; s183 later showed this is content-dependent, not a fixed ceiling).
+**This is a re-occurrence of a known bug, not a new one** — no new candidate
+bug written up, per NEXT.md's instruction to only write up genuinely new
+signatures.
+
+**Incidental 2nd data point on the stall's mechanism**: grepped
+`[thr-resume-skip]` in this run's log — it fired exactly once
+(`n=117997 tag=run_next id=0 ctx=0x0 live=0 bad_total=1`, immediately preceded
+by `[thr-resume] FATAL null context`), and the very next `[vi-fs-decision]`
+line already shows `rdpFs=3770` (no further increment ever) transitioning to
+`stalled=1` one decision later. This is the SAME adjacency s180 found
+(UAF-guard skip fires immediately before the sustained-stall onset) — s183
+had weakened that mechanism by reaching a sustained stall with **0**
+`thr-resume-skip` fires in that run. Taken together: the UAF-guard skip is
+present at some stall onsets (s180, this run) and absent at others (s183) —
+**not a strictly necessary trigger for every occurrence**, but too tightly
+time-correlated when it IS present to be coincidence. Narrows the open
+question (CURRENT-TRUTH next-steps item -35) toward "two stall subtypes, or a
+racy trigger" rather than either extreme ("always this guard" / "never
+related").
+
+**Also notable**: the craft-select screen (`vi_width=1024`) was live and
+non-frozen from 44.6s to 73.6s (~29s) before the stall onset, and the
+unlit-mesh-tracer/`B_LOADED` check still logged 0 lines in that entire
+crash-free, stall-free window. That's mild evidence `renderUnlitMeshFaces`
+is NOT called merely by having the SELECT YOUR CRAFT menu on screen — more
+consistent with it being reached later (post-selection rendering or an
+actual mission/hangar-flight scene), which this run's stall (striking before
+the `hold_95`/`hold_100` "start"/"a" leave-key presses) never got to
+exercise. Single-run, not yet cross-checked against an unstalled run that
+reaches leave-key territory.
+
+**Possible shared timing window across s210/s211's two different disruptive
+events**: s210's `evalCubicSplineAtTime` SIGBUS hit ~6s into the hold window,
+which (per this run's own `wait 12s for SELECT YOUR CRAFT stable` + identical
+`phase width=1024 reached after ~45s` timing) lands at roughly **~63-64s**
+absolute wall-clock. This run's graphics-task-submission stall onset was
+**73.6s** absolute. Both are independent failure MODES (a SIGBUS vs a silent
+freeze, in different subsystems) but land within ~10s of each other in
+absolute wall-clock, under the byte-identical minimal-logging recipe, well
+before the scripted `hold_95`/`hold_100` leave-key presses (~150s+ absolute).
+This is a pattern worth checking OFFLINE (no new soak needed — both
+`unlitmeshtracer6/run.log` and `unlitmeshtracer7/run.log` already exist):
+cross-reference what else is happening in both logs in the ~60-75s window
+(e.g. a periodic heap-walk crossing a threshold, or the `10:sr 25:sl 40:su`
+early stick-input sequence settling) that might be a shared trigger for
+otherwise-unrelated-looking failures. Single-observation (2 runs, 2 different
+events) — not yet a confirmed link, flagged as the cheapest next probe since
+it costs zero new builds/soaks.
+
+**Budget-rule-8 call**: this is the 3rd consecutive session (s209, s210,
+s211) whose sole soak attempt at reaching `renderUnlitMeshFaces` failed for a
+different reason each time, with 0/3 discriminating results on the actual
+`ctx->r16` question. Per the iteration contract, stopping the identical-recipe
+soak here rather than launching a 4th. The instrumentation itself
+(`B_LOADED` check, unlit-mesh-tracer) remains unexercised-but-unfalsified —
+nothing here casts doubt on it; the environment simply hasn't produced a run
+that both survives cleanly AND reaches the traced call site.
+
+**What this rules out / rules in**:
+- RULED IN (re-confirmed, not new): the graphics-task-submission stall is a
+  real, recurring, environment-level hazard that can independently block
+  unrelated investigations reaching late-game scenes — now confirmed to have
+  intercepted this investigation too.
+- STRENGTHENED (2nd occurrence, still not conclusive): the `[thr-resume-skip]`
+  UAF-guard-adjacent-to-stall-onset pattern from s180, previously weakened by
+  s183's 0-fire counterexample — now 2-for-3 across the sessions that have
+  looked, i.e., present-but-not-necessary.
+- STILL OPEN: the `+8772`/`ctx->r16` KSEG0-zero-extension question — 0/4
+  soaks across s209-s211 have produced a live measurement.
+
+Full run artifact: `scratch/s73_post_a_scene/unlitmeshtracer7/run.log`
+(141,869 lines).

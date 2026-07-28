@@ -663,9 +663,37 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s210)
+## Next steps, in order of expected value (s211)
 
--51. **(s210, CONFIRMED + NEW FINDING) s209's ~47x log-volume blowup is
+-52. **(s211, BUDGET RULE 8 INVOKED) 3rd consecutive session (s209/s210/s211)
+    whose only soak attempt at reaching `renderUnlitMeshFaces` failed for a
+    DIFFERENT reason each time — 0/4 total soaks across these 3 sessions have
+    produced a live measurement of the `ctx->r16` question.** s211 re-ran the
+    exact `unlitmeshtracer6` minimal-logging recipe (`unlitmeshtracer7`, tag
+    only changed) and this time the process did NOT crash (`CRASH: 0`,
+    completed the full 300s hold+grace) — but hit the ALREADY-CATALOGUED
+    graphics-task-submission stall instead (`[phase]` shows `vi_width=512`
+    at 73.6s with no further transition; `rdpFs` frozen at 3770,
+    `stalled=1 pairs=0` continuously to end of log — same signature as
+    s176-183, `rdpFs` within the previously-observed cluster). Not a new bug;
+    no new candidate written up. Unlit-mesh-tracer/`B_LOADED`: 0 lines again.
+    **Incidental finding**: a `[thr-resume-skip]` (the s84 UAF guard) fires
+    once, immediately adjacent to the stall's onset — the same tight
+    adjacency s180 found and s183 later weakened with a 0-fire
+    counterexample; this is a 2nd occurrence WITH the fire, meaning the
+    guard is present-but-not-necessary across observed stall onsets, not
+    resolving item -35 (already budget-closed at s186, not reopening it).
+    **Also flagged (single-observation, zero-cost to check)**: s210's crash
+    (~63-64s absolute) and s211's stall onset (73.6s absolute) land within
+    ~10s of each other under the byte-identical recipe — worth an OFFLINE
+    cross-reference of both existing `run.log`s for a shared ~60-75s trigger
+    before spending a 4th soak. **Per iteration budget rule 8, NOT launching
+    a 4th identical-recipe soak next session** — the next work unit is the
+    zero-cost offline log cross-reference above; only if that's a dead end
+    does a 4th soak (with a deliberately varied recipe, not a repeat) become
+    the fallback. Full detail: PORTING-STATE Session 211.
+
+-51. **(s210, SUPERSEDED s211 above — see -52) s209's ~47x log-volume blowup is
     CONFIRMED self-inflicted logging overhead, not a real regression — but
     the minimal-logging re-soak crashed on a NEW, previously-unseen bug
     (`evalCubicSplineAtTime+1008` SIGBUS) before ever reaching
