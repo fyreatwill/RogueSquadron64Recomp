@@ -19020,3 +19020,77 @@ brief/method. If it also comes back clean, all five direct callees of
 them (e.g. reconsider whether the defect lives in a grandchild callee, or
 whether the tracer instrument needs to log more than call-boundary args —
 see prior sessions' notes on this fallback).
+
+## Session 205 (2026-07-28) — source read of `renderLitTexturedMeshFaces`, the LAST direct callee, for the `+8772` KSEG0-zero-extension bug: clean — callee-narrowing strategy now EXHAUSTED
+
+Continuation of NEXT.md item -48. Per s204's narrowing (`processSceneNode`,
+`renderLitMeshFaceGroup`, `submitSceneNodeRender`, `renderFlatMeshFaceGroup`,
+and `renderUnlitMeshFaces` all source-clean), this session's sole work unit
+was a subagent-delegated full source read of `renderLitTexturedMeshFaces`
+(`N64Recomp/RecompiledFuncs/funcs_3.c:22073-23886`, ~1813 lines — confirmed
+by `grep -n "^RECOMP_FUNC" funcs_3.c`, the last function in the file, ending
+at EOF rather than another `RECOMP_FUNC` boundary; the largest of the six
+functions examined for this bug), using the identical brief that closed the
+prior five (the `recomp.h:86-108` macro definitions, the exact KSEG0
+zero-extension signature, and instructions to check every zero-extending
+load's actual downstream use rather than assume the pattern generalizes).
+
+Per NEXT.md's own instruction, did NOT re-soak the `processScenenNodeCalleeTrace`
+tracer this iteration — 3 soaks / 116,950 calls / 0 reproductions from
+s200-201 already exhausts the budget rule for that instrument.
+
+**Result: clean.** The subagent read the function in 4 chunks and confirmed:
+- Zero raw `+`/`-` arithmetic bypassing `ADD32`/`SUB32` anywhere in the
+  function; zero `(uint32_t)`/`(uint64_t)` casts.
+- All 6 `MEM_HU`/`MEM_BU` zero-extending loads traced individually: a stack
+  byte flag (22568, 23445) passed as a call argument to
+  `emitTexturedFaceGeometry`, never used as an address; a global counter
+  (22631, 23744, 23806) read-incremented-stored, never used as an address;
+  and one (23831) that DOES feed a pointer computation (a table-selector
+  byte, shifted `S32(ctx->r2 << 2)` then `ADD32(ctx->r2, ctx->r3)`, lines
+  23836-23853, repeated once more at 23848-23853) — but every step of that
+  computation goes through the sign-extending `S32`/`ADD32` macros, so the
+  final pointer is correctly re-sign-extended despite the initial
+  zero-extending byte load. Not a bypass.
+- All ternaries in the function (22122, 22437, 22468, 23119, 23273, and
+  others) are plain `sltu`/`slti`-derived booleans (`X < Y ? 1 : 0`), none
+  are `MOVZ`/`MOVN`-style mismatched-extension value selects.
+
+This is single-source (static read only, no matching dynamic trace inside
+this function's own body) — same caveat as s201-204's findings.
+
+No code changes landed this session (nothing to patch — clean read only);
+no regen/build needed. No `lib/` edits this session.
+
+**Rules out**: `renderLitTexturedMeshFaces` as the site of the `+8772`
+zero-extension bug (single-source static confidence, matching the prior
+five functions' confidence level).
+
+**This closes out the callee-narrowing strategy entirely.** All SIX
+functions in `processSceneNode`'s direct-callee chain — `processSceneNode`
+itself (s200, two independent lines of evidence), `renderLitMeshFaceGroup`
+(s201), `submitSceneNodeRender` (s202), `renderFlatMeshFaceGroup` (s203),
+`renderUnlitMeshFaces` (s204), and `renderLitTexturedMeshFaces` (s205, this
+session) — are now source-clean by the same method. There is no seventh
+candidate to invent; re-reading any of the six a second time without new
+evidence would violate the "do not re-read a cleared function" rule.
+
+**Next work unit (pivot, not another callee)**: the current
+`processScenenNodeCalleeTrace` tracer only logs args AT call boundaries —
+it is structurally blind to a defect introduced AND consumed entirely
+within one callee's own body (e.g. inside an uninstrumented grandchild
+call, or a value computed and dereferenced without ever crossing back
+through a logged boundary). Two candidate next moves, in order of
+information value:
+1. Build a NEW instrument that logs every internal pointer computation
+   (every `MEM_W`/`MEM_H`/`MEM_B`/`MEM_HU`/`MEM_BU` address argument, not
+   just call-boundary args) within the six cleared functions during a
+   phase-gated soak — this directly tests the "defect lives inside one
+   callee's body" hypothesis the source reads couldn't rule out.
+2. Re-examine the original s194/s199 register-file decode to check whether
+   the fault address's decomposition actually implicates
+   `processSceneNode`'s direct-callee chain specifically, or whether it
+   merely happens to be active at the same call depth as some unrelated
+   path — i.e. sanity-check the premise that started the whole
+   callee-narrowing effort, since 6/6 clean reads is itself weak evidence
+   the premise needs re-examining.

@@ -663,13 +663,15 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s203)
+## Next steps, in order of expected value (s205)
 
--48. **(s200/s201/s202/s203/s204) `processSceneNode+8772` KSEG0-zero-extension
-    bug: `processSceneNode`, `renderLitMeshFaceGroup`,
-    `submitSceneNodeRender`, `renderFlatMeshFaceGroup`, AND
-    `renderUnlitMeshFaces` are all now source-clean — search narrows to
-    the ONE remaining direct callee, `renderLitTexturedMeshFaces`.**
+-48. **(s200/s201/s202/s203/s204/s205) `processSceneNode+8772` KSEG0-zero-extension
+    bug: ALL SIX direct-callee-chain functions
+    (`processSceneNode`, `renderLitMeshFaceGroup`, `submitSceneNodeRender`,
+    `renderFlatMeshFaceGroup`, `renderUnlitMeshFaces`, AND
+    `renderLitTexturedMeshFaces`) are now source-clean. The callee-narrowing
+    strategy is EXHAUSTED — pivot to instrumenting internal pointer
+    computations, not call-boundary args, next.**
     s200 exhaustively ruled out
     `processSceneNode` by two independent lines of evidence (full static
     read + a 46,292-call dynamic trace at the call boundary, 0 anomalies —
@@ -729,23 +731,43 @@ cost three sessions before the recursive mutex.
     `MOVZ`/`MOVN`-style pointer select. Same single-source caveat as the
     prior four.
 
-    **Remaining candidate: exactly one.** `renderLitTexturedMeshFaces`
-    (`funcs_3.c:22073-...`, size not yet measured) is now the ONLY
-    unexamined direct callee of `processSceneNode` for this bug. **Best
-    next work unit**: measure its size first (`grep -n "^RECOMP_FUNC"
-    funcs_3.c` for the next boundary after 22073), then subagent-assisted
-    source read using the exact same brief/method as s201-204
-    (recomp.h:86-108 macros + the zero-extension signature) — do NOT
-    re-soak the tracer again this cycle, 3 soaks with 0 reproductions is
-    enough per the budget rule. If this LAST callee also comes back
-    clean, the callee-narrowing strategy is exhausted and the tracer
-    itself needs rethinking next — e.g. logging every internal pointer
-    computation, not just call-boundary args, since the current
-    instrument would be structurally blind to a defect that's introduced
-    AND consumed entirely within one callee, never crossing back through
-    a logged boundary. Full detail: PORTING-STATE Session 200-204 (and
-    Session 194/199 for the original register-file decode this all
-    traces back to).
+    s205 repeated the same subagent-brief method on the last remaining
+    candidate, `renderLitTexturedMeshFaces` (`funcs_3.c:22073-23886`,
+    ~1813 lines, largest of the six). **Result: also clean** — zero raw
+    `+`/`-` arithmetic bypassing `ADD32`/`SUB32`, zero `(uint32_t)`/
+    `(uint64_t)` casts anywhere in the function, all 6 `MEM_HU`/`MEM_BU`
+    loads individually traced to non-address uses (stack byte flags
+    passed as call args, a global counter) except one (23831) that feeds
+    a pointer computation — but that computation's shift+add
+    (23836-23853) goes entirely through `S32`/`ADD32`, so the final
+    pointer is correctly re-sign-extended despite the zero-extending byte
+    load, not a bypass. All ternaries are plain `sltu`/`slti`-derived
+    booleans, no `MOVZ`/`MOVN`-style mismatched-extension value selects.
+    Same single-source caveat as the prior five (static read only).
+
+    **Callee-narrowing is now EXHAUSTED.** All six functions in
+    `processSceneNode`'s direct-callee chain are source-clean by the same
+    method; there is no seventh candidate to invent. Per two independent
+    lines of evidence at the top of the chain (s200's dynamic trace +
+    static read) and single-source static reads for the five callees,
+    this rules out a call-boundary-crossing defect in this chain as the
+    +8772 mechanism. **The pivot for the next work unit**: the current
+    `processScenenNodeCalleeTrace` tracer only logs args AT call
+    boundaries, so it is structurally blind to a defect introduced AND
+    consumed entirely within one callee's own body — e.g. inside a
+    grandchild call the tracer doesn't instrument, or a value that's
+    computed and dereferenced without ever crossing back through a logged
+    boundary. Next step is a NEW instrument: either (a) log every
+    internal pointer computation (every `MEM_W`/`MEM_H`/`MEM_B` address
+    argument, not just call args) within the six cleared functions and
+    their own callees during a soak, phase-gated the same way as before,
+    or (b) reconsider whether `+8772` is even inside this call chain at
+    all — re-examine the original s194/s199 register-file decode for
+    whether the fault address's decomposition actually implicates
+    `processSceneNode`'s callees specifically, versus some other path
+    that merely happens to be active at the same call depth. Full detail:
+    PORTING-STATE Session 200-205 (and Session 194/199 for the original
+    register-file decode this all traces back to).
 
 -47.5. **(s199) `runVideoFrameTick+1568` guard landed (3 sites,
     `ROGUESQ_LOG_VIDEO_FRAME_TICK_GUARD`, `N64Recomp/fixup_game_funcs.py`)
