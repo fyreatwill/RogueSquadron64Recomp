@@ -15282,3 +15282,132 @@ gets real support. Prefer (1) first since it's free and doesn't burn a
 soak attempt on a still-unstable recipe. This closes out the
 audiodrain1/2/3 line of soaks per rule 8 — no more unmodified repeats of
 this recipe. See `scratch/agent/NEXT.md`.
+
+## Session 166 (2026-07-27) — source-read found and guarded a concrete unguarded-pointer deref matching the 23rd class's family shape; validating soak was the cleanest ever recorded for this env block, but the guard itself got no positive control, so attribution is unresolved — the confound hypothesis is well supported either way
+
+### Work unit
+
+Per `scratch/agent/NEXT.md` step 1: read `waitForAnyAudioSlot`'s two
+direct callees before writing anything. `tickMusyXIfActive`
+(`funcs_23.c:6785`) is all-callee (`factor5MutexAcquire`/
+`tickActiveSongs`/`tickAndReap3DAudioVoices`/`stopAllSynthVoices`/
+`factor5MutexRelease`), no raw `MEM_*` deref of its own — ruled out.
+`anyAudioSlotActive` (`funcs_23.c:8806`) loops `isAudioSlotActive` per
+channel index `0..chCount-1` off a **fresh** `MEM_BU(0x80141AD0)` re-read
+each iteration — no deref itself, ruled out as the direct site but not as
+the source of a bad index. One level deeper, `isAudioSlotActive`
+(`funcs_24.c:5788`) is the real site: loads a base pointer from the fixed
+global slot at `0x801496F8` (`lw $v0, -0x6908($v0)` off `lui $v0,0x8015`),
+computes `base + a0*136` (the `sll/addu/sll` idiom for `×17×8`), and does
+`lbu $v0, 0x0($v1)` with **zero null-check on the base pointer** —
+textbook match for this family's dominant shape (12th/14th/16th/21st
+classes: fixed-global table pointer, indexed, dereferenced with no
+null/range check). Also checked `rs_free` (`funcs_0.c:3093`,
+`waitForAnyAudioSlot`'s other global-pointer-sourced callee, called twice
+near its exit) — it already null-checks its argument at entry
+(`beq $s0, $zero, L_80001F78`), ruled out as a candidate.
+
+Could not disassemble the crash's native `+76`-byte offset to confirm
+this is the *exact* faulting instruction — `nm`/`otool`/`lldb` are not on
+the Bash allowlist (`scratch/agent/machoparse.py` only reads Mach-O
+symbols, not disassembly) — so this is a strong, concrete, family-shape
+match, not a byte-for-byte proven root cause. `isAudioSlotActive` is
+frameless (no `$sp` adjustment, no callee-saved spills), so per NEXT.md
+step 2's judgment call ("only do this if the source-read genuinely
+identifies a concrete site"), landed a guard the same way as every prior
+site in this family (s99's fixed lesson: truncate the `ctx->rN` value
+through `U32()` before comparing against the `0x80000000`–`0x80800000`
+valid-RDRAM-pointer bound) — but as a bare early `return;` with
+`ctx->r2 = 0` (safe "not active" default) instead of a `goto`, since there
+is no existing epilogue label to jump to and none of the ABI-restore
+concerns every previous guard's `goto` had to reason about apply here.
+Guest addresses `0x80092110`/`0x80092114` confirmed unique across the
+whole `RecompiledFuncs/` tree (not just `funcs_24.c`) via grep before
+writing the patch — same belt-and-suspenders check s100's collision
+taught. Full regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`,
+patched x1, clean report, no duplication) → `cmake --build`, exit 0, only
+pre-existing-class warnings.
+
+### Result: 0 crashes across the entire 120s hold + full input sequence — the cleanest run ever recorded for this env block, but the new guard never fired (0/0, no positive control)
+
+Ran `scratch/agent/run_audioslotguard1.sh` — identical env block to
+s165's `run_audiodrain3.sh` (all ~35 loggers kept, nothing dropped) plus
+`ROGUESQ_LOG_AUDIO_SLOT_ACTIVE_GUARD=1` for the new guard. Result: the
+process **never crashed**. It reached VI width 1024 (title) at 44.8s,
+drove through the full `STICK_SCHEDULE` (including the `95:start`
+leave-key press), held the entire 120s window, and was still alive at
+wall=163s when the driver killed it — every one of the 23 known crash
+classes fired 0 times, every existing guard's log tag is absent from the
+run (`grep`ed the full 1.6M-line log for any `-guard` tag: none), and
+`[rs-malloc-walk]` fired 1,581,316 times as a clean positive control on
+the logging pipeline itself.
+
+The new `[audio-slot-active-guard]` tag **never fired** — no positive
+control. `[audio-drain-enter]` (the pre-existing s163 instrument) fired
+only 4 times total, all `chCount=121`, all resolving without a heartbeat
+(i.e. `anyAudioSlotActive` found an active slot on its first or near-first
+pass every time) — `waitForAnyAudioSlot` was barely exercised this run,
+consistent with the guarded base pointer simply never being invalid this
+time, not with the guard skipping a would-be crash.
+
+The run did reproduce the **already-known** s162 post-leave
+graphics-task-submission stall (`[vi-fs-decision] stalled=1 pairs=0`
+continuous from mid-run, `rdpFs` plateaued at 3719 — inside the
+3297–3784 range every prior crash-free/stall run has plateaued at), so
+this is not a new frontier past that stall, but it **is** a 3rd
+independent instance of a fully crash-free run through the entire known
+23-class gauntlet (after s160/s161), now reproduced under a **much
+heavier** instrumentation load (35+ loggers plus the new guard) and
+driving further (4709 `[lle task]` entries vs. s165's 267) than any prior
+soak in the `audiodrain`/`hangar-tick` lineage.
+
+### What this does and doesn't prove
+
+**Does not prove**: that the `isAudioSlotActive` guard fixed the 23rd
+crash class — the guard never fired, so there is no evidence it was ever
+on the crash's actual path this run. The candidate remains plausible but
+unvalidated.
+
+**Does support**: NEXT.md step 3's confound hypothesis, and more strongly
+than the originally planned experiment would have — the plan was to drop
+~35 env vars and see if boot still died early; instead this run **kept**
+all ~35 vars, added a 36th, and still ran the entire gauntlet crash-free.
+A rebuild that changes nothing about the actual bug (the guard is
+dead code this run) still produced a completely different outcome than
+s165's `audiodrain3` (which died at task #267 under the same-ish
+instrumentation load, before this session's rebuild). This is now a
+**3rd** instance of "a rebuild/relink changes which bug wins a timing
+race" in this project's history (after s93's `ROGUESQ_LOG_THREAD_RESUME`
+confound and s160→s161's own corroboration pattern), reinforcing the
+shared-corruption/race framing from s85–s114 over a "23rd class is a
+deterministic new frontier" framing. **Do not treat "23rd class blocks
+earliest" as settled** — treat it as one data point in a family that
+clearly has run-to-run/build-to-build variance independent of any single
+guard.
+
+### Files touched
+
+`N64Recomp/fixup_game_funcs.py` (new `ROGUESQ_LOG_AUDIO_SLOT_ACTIVE_GUARD=1`
+guard on `isAudioSlotActive`, file-scoped to `funcs_24.c`) — own checkout,
+not `lib/`, no `submodule-patches/export.sh` needed (same posture as
+s90-165's other `fixup_game_funcs.py` edits, still flagged as an
+uncommitted sibling history for the user). Full regen + rebuild, both
+clean. `scratch/agent/run_audioslotguard1.sh` (new, copy of
+`run_audiodrain3.sh`'s env block + the new guard's log var + new RUNTAG).
+
+### Next
+
+The guard is harmless and stays armed (matches the family's established
+practice: land plausible guards even without a positive control, per
+s99–s101/s128/s160). Two live options, neither burns a "recipe" budget
+since this is a fresh soak shape, not a repeat: (1) run the exact same
+`run_audioslotguard1.sh` again — if it stays crash-free a 2nd time,
+that's the two-source rule on "this heavy env block is not what's
+killing early boot," a stronger and cheaper result than chasing the 23rd
+class further; (2) if a future soak *does* reproduce the 23rd class,
+check whether `[audio-slot-active-guard]` fires this time — that would
+be the guard's first positive control and would confirm or refute the
+candidate directly. Prefer (1) first: it's a direct corroboration of
+today's already-strong result and keeps the two-source rule honest
+before spending more effort on the (still unconfirmed) 23rd-class site.
+See `scratch/agent/NEXT.md`.

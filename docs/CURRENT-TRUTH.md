@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 164)
+## Current truth (as of session 166)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -659,9 +659,34 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s165)
+## Next steps, in order of expected value (s166)
 
--17. **NEW TOP PRIORITY (s165): landed the `rs_malloc` free-list walk-log
+-18. **NEW TOP PRIORITY (s166): source-read found and guarded a concrete
+    unguarded-pointer deref (`isAudioSlotActive`, `funcs_24.c:5788` — base
+    pointer from a fixed global slot, indexed, dereferenced with no
+    null-check, the family's dominant shape) matching the 23rd crash
+    class's call chain. Full regen+rebuild clean. The validating soak
+    (`run_audioslotguard1.sh`, same ~35-logger env block as s165's
+    `audiodrain3` plus the new guard's log var) was the cleanest run ever
+    recorded for this env block: 0 crashes across the entire 120s hold +
+    full input sequence (title → SELECT YOUR CRAFT → leave-key → known
+    post-leave stall), 4709 `[lle task]` entries vs. s165's death at
+    task #267. BUT the new guard never fired (0/0, no positive control) —
+    `waitForAnyAudioSlot` was barely exercised (4 calls, all resolved
+    immediately) and its base pointer was never observed invalid. Cannot
+    attribute survival to the guard itself; it's at least as consistent
+    with a 3rd instance of this project's "rebuild changes which bug wins
+    the race" confound (s93, s160→s161) as with an actual fix. Treat
+    "23rd class blocks earliest" as **not settled** — it is one data
+    point in a family with clear run-to-run/build-to-build variance.
+    **Next work unit:** re-run `run_audioslotguard1.sh` unmodified once —
+    if it stays crash-free a 2nd time, that's the two-source rule on "this
+    heavy env block doesn't kill early boot," cheaper and stronger than
+    chasing the 23rd class further; if a future soak *does* reproduce the
+    23rd class, check whether the guard fires this time (its first real
+    positive-control opportunity). Full detail: PORTING-STATE s166.
+
+-17. **(s165, superseded as top priority by s166 above): landed the `rs_malloc` free-list walk-log
     (`ROGUESQ_LOG_RS_MALLOC_WALK=1`, `N64Recomp/fixup_game_funcs.py`,
     file-scoped `funcs_0.c`, logs node addr/flags/size at `L_80001BEC`
     before the advance) and ran the 3rd/final `audiodrain` attempt
