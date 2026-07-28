@@ -14008,3 +14008,146 @@ validating today's craft-shadow guard.
 - `scratch/s73_post_a_scene/craftshadowguard1/` — this session's run: `run.log`, `pre_*`/`stable_*`/`post_*` screenshots.
 - `scratch/agent/run_craftshadowguard1_driver.log` — driver summary.
 
+## Session 156 (2026-07-27) — confirmed NEXT.md's s155 `composeNpcOrientationMatrix` 5th-site candidate by a full end-to-end source read AND found a structurally identical 6th site the proportional estimate had no way to predict; guarded both, rebuilt clean, soaked — 0/0 on all 6 guards (composeNpcOrientationMatrix's 12th-class crash simply didn't recur this run), but the process died to a recurrence of the already-catalogued 5th class (`frameStartReset` SIGBUS, 3rd occurrence ever) at a call chain that shares its first 3 frames with the 12th class's own chain
+
+### What ran
+
+Per NEXT.md's own step 1 ("read the full function end to end once... the
+estimate could be off by enough to point at the wrong site, and a full
+read is the same cost either way for an 879-line function"): read
+`N64Recomp/RecompiledFuncs/funcs_40.c:6280-7158` (the entirety of
+`static_5_800AB1C8` / `composeNpcOrientationMatrix`) in two passes,
+listing every unguarded pointer/table dereference not already covered
+by guards 1-4.
+
+### What it found
+
+1. **s155's proportional-offset candidate (guest `0x800AB444`-`0x800AB458`,
+   host `funcs_40.c:6769-6785`) is real**, confirmed by direct reading
+   rather than estimate: it is a global doubly-linked-list push-to-front
+   (`newNode->next = head; if (head) head->prev = newNode; newNode->prev
+   = NULL; head = newNode`) where `head` is loaded fresh from a fixed
+   global slot (`MEM_W(ctx->r22, -0x2990)`, `$s6`-relative) and checked
+   only for `== 0` before being dereferenced at `+0x4` — no sanity check
+   on the pointer's value once known-nonzero. Same "trust a corrupted
+   global as a valid pointer" shape as guards 1-4, just against a
+   list-head global instead of the table-array global those check.
+2. **A second, byte-for-byte structurally identical site exists** at
+   guest `0x800AB5E4`-`0x800AB5F8` (host `:7083-7099`) — the SAME
+   push-to-front idiom against the SAME global slot, in the function's
+   *second* loop (the runtime-count loop guard2 partially covers), never
+   flagged by s155's proportional estimate because the estimate was
+   built from a single crash's host-byte offset and had no way to see a
+   second occurrence of the same bug shape elsewhere in the function.
+   This is the concrete payoff of NEXT.md's "full read, not just the one
+   candidate" instruction — a narrower "confirm the estimate" pass would
+   have stopped after site 1 and missed site 2 entirely.
+3. Both writes target the identical literal instruction pattern (`sw
+   $s3, 0x4($v0)`) at different addresses, so each needed its own guard
+   rather than a single shared one — same precedent as guards 1-4 each
+   getting independent instrumentation despite sharing a bug family.
+   Unlike guards 1-4 (which must reject `== 0` as well as out-of-range),
+   these two only need the upper/lower kseg0 bound check: the `== 0`
+   case already takes a separate `goto` before either write is reached,
+   so the guarded value is provably nonzero at the check point.
+
+### What landed
+
+Guard5 (site 1) and guard6 (site 2) in `N64Recomp/fixup_game_funcs.py`,
+same template as guards 1-4 (`U32()`-truncate, range-check against
+`[0x80000000, 0x80800000)`, `goto L_800AB618` on failure, gated behind
+`ROGUESQ_LOG_COMPOSE_NPC_GUARD5`/`_GUARD6`). Full regen (`make_elf.py`
+-> `N64Recomp` -> `fixup_game_funcs.py`, `RecompiledFuncs/funcs_*.c`
+deleted first per the non-idempotency rule) — both patched x1, confirmed
+via `grep -n "GUARD5\|GUARD6"` on the regenerated `.c`. `cmake --build`
+exit 0, only the pre-existing DDIV format warning.
+
+### Soak (`run_composeguard56.sh`, `composeguard56/`)
+
+Same standing battery plus `ROGUESQ_LOG_COMPOSE_NPC_GUARD5=1`/`_GUARD6=1`,
+`ROGUESQ_LOG_LOAD_CRAFT_SHADOW_GUARD=1` still armed (s155's guard still
+unvalidated). Died at hold-iter 5 (~5s in), `origin=0x006AB400` at
+73.6s — essentially the same phase/wall-time as s155's death (hold-iter
+4, 73.6s), reinforcing that this is a contended window where several
+crash classes race rather than a single deterministic failure point.
+
+`grep -c` results: `compose-npc-orient-guard5`/`-guard6`/`-guard`/
+`-guard2`/`-guard3`/`-guard4` all **0/0** — none of the 6
+`composeNpcOrientationMatrix` guards fired; the 12th class simply did
+not recur this run (no positive control obtained for guard5/guard6,
+consistent with this family's established pattern of guards going
+unvalidated for several soaks before ever getting hit — e.g. guard4's
+own "0/544 clean negative control, no positive control" at s100).
+
+Crash instead: SIGBUS (`signal 10`) at `frameStartReset + 532`, backtrace
+`frameStartReset <- static_5_800AAD9C <- static_5_800C6854 <-
+menuOverlayInit <- mainGameLoop <- mainBootstrapWorker`. This is the
+**already-catalogued 5th crash class** (first seen s84, 2nd occurrence
+s108, this is the **3rd occurrence** — CURRENT-TRUTH's standing item 8
+tracked it as "worth dedicated attention only if it starts recurring
+more often"). **Non-obvious finding**: the first 3 frames of this
+backtrace (`static_5_800AAD9C <- static_5_800C6854 <- menuOverlayInit`)
+are byte-for-byte the SAME 3 frames s155's `composeNpcOrientationMatrix`
+crash backtrace had — the two "different" crash classes share a common
+call path up to `static_5_800AAD9C`, diverging only in which function it
+(or its immediate caller) ends up invoking. That raises a new,
+unconfirmed hypothesis: `static_5_800AAD9C`'s dispatch between
+`composeNpcOrientationMatrix` and `frameStartReset` may itself be
+reading corrupted dispatch state, rather than these being two
+independent bugs that happen to preempt each other by timing alone.
+Not source-read this session — flagged as the highest-value next probe.
+
+Other family controls: `thr-resume bad=1` 0/0 (still no recurrence),
+`ost-wb SKIP_OOB` 18 (gate still firing, expected), `missing-func`/
+`UnhandledJump` both 0, `fs max` 3751 (comparable to prior soaks in this
+window).
+
+### Conclusion
+
+The 5th/6th `composeNpcOrientationMatrix` guards are real, source-confirmed
+fixes for a genuine bug shape (2 independent occurrences, not 1) but
+remain **unvalidated** — same status as several guards before them in
+this family. The practical blocker to validating them, and to ever
+reaching `loadCraftShadowTextures` (s155, also still unvalidated), is
+no longer solely `composeNpcOrientationMatrix` — it's this whole
+contended window, where `frameStartReset` just won the race this time.
+The 3rd occurrence of `frameStartReset` (vs. CURRENT-TRUTH's "2nd, still
+not dominant" framing) plus the shared-backtrace-prefix observation
+together make this the strongest deprioritization signal frameStartReset
+has had since s84.
+
+### Next steps
+
+1. **Source-read `static_5_800AAD9C`** (the shared dispatcher for both
+   `composeNpcOrientationMatrix` and `frameStartReset`) to test the new
+   shared-dispatch-corruption hypothesis directly — does it read a
+   corrupted selector/pointer to decide which function to call, or is
+   the shared backtrace prefix coincidental (e.g. a per-frame scene-node
+   iterator that legitimately calls many different per-node handlers,
+   of which these are two)? This is a source-read, no soak needed to
+   start.
+2. If the dispatch hypothesis holds, consider whether a single guard at
+   `static_5_800AAD9C` (validating the dispatch value before use) could
+   subsume multiple of this family's crash classes at once, rather than
+   guarding each callee independently — a potentially much
+   higher-leverage fix than continuing to add per-callee guards one
+   crash at a time.
+3. If refuted, `frameStartReset` still has "no existing detector, no
+   faulting instruction identified" per CURRENT-TRUTH item 8 — the next
+   step there is unchanged: source-read `frameStartReset` itself (not
+   yet done in any of its 3 occurrences) to find the actual faulting
+   dereference before gating it.
+4. Re-soak `composeguard56`'s shape once more only after either (1) or
+   (3) lands a change — per rule 8, this is soak #1 on the guard5/6
+   hypothesis, not yet a 3rd non-discriminating attempt, but a repeat
+   soak with no code change would be a 2nd data point on "did
+   composeNpcOrientationMatrix recur," not a new experiment.
+
+### Files
+
+- `N64Recomp/fixup_game_funcs.py` — guard5/guard6 patches added (composeNpcOrientationMatrix 5th/6th list-head-deref sites).
+- `N64Recomp/RecompiledFuncs/funcs_40.c` — regenerated with all 6 guards applied (verified x1 each via `grep`/fixup report).
+- `scratch/agent/run_composeguard56.sh` — this session's soak script.
+- `scratch/s73_post_a_scene/composeguard56/` — this session's run: `run.log` (4.6 MB), `pre_*`/`stable_*`/`hold_*`/`post_*` screenshots.
+- `scratch/agent/run_composeguard56_driver.log` — driver summary.
+

@@ -657,41 +657,46 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s155)
+## Next steps, in order of expected value (s156)
 
--7. **NEW TOP PRIORITY (s155): guarded the 20th class
-    (`loadCraftShadowTextures`), rebuilt clean, but the soak never
-    exercised it (0/0) — it died earlier instead to a recurrence of the
-    already-catalogued 12th class (`composeNpcOrientationMatrix`) at a
-    call chain/offset that doesn't match any of that function's 4
-    existing guards, pointing at a likely 5th unguarded site.** The
-    craft-shadow guard itself (`N64Recomp/RecompiledFuncs/funcs_16.c:
-    13038-13051`, bounds the craft-type index to 0-13 against the
-    14-entry sentinel table at `0x8013A528`) is landed and verified
-    (x1 via grep, matches this family's established
-    table-lookup-then-deref shape) but **unvalidated** — the soak died
-    at hold-iter 4 (~3s in, `origin=0x006AB400` at 73.6s), far short of
-    the crawl scene where this function would ever run. Crash backtrace:
-    `composeNpcOrientationMatrix (static_5_800AB1C8+6004) ←
-    static_5_800AAD9C ← static_5_800C6854 ← menuOverlayInit ←
-    mainGameLoop` — same 4-frame chain s116/s117/s126 already know as
-    this function's home, but none of the 4 existing guards
-    (`COMPOSE_NPC_GUARD`/`GUARD2`/`GUARD3`/`GUARD4`) fired this run
-    (0/0 each), so this is not a recurrence of an already-covered site.
-    A proportional host-byte-offset estimate (crash at 51.6% through an
-    11632B function) lands in the source gap between the 3rd/4th-site
-    guards (`funcs_40.c:6581`/`:6620`) and the 2nd-site guard (`:6843`);
-    reading that gap found a plausible candidate at `:6769-6785`
-    (guest `0x800AB444`-`0x800AB458`): a list-head pointer read from a
-    fixed global slot, checked only for `== 0`, then dereferenced at
-    `+0x4` with no other sanity check — same "trust a corrupted global
-    as a valid pointer" shape as every guard in this family. **This is
-    a proportional estimate, not a confirmed offset match — source-read
-    to confirm before guarding it.** Next work unit: confirm and guard
-    that candidate site (bail to `L_800AB618`, already used by guard4
-    and reachable from there), then re-soak with both guards armed —
-    this is now the standing blocker to ever validating today's
-    craft-shadow guard. Full detail: PORTING-STATE s155.
+-8. **NEW TOP PRIORITY (s156): source-read `static_5_800AAD9C`,
+    the shared dispatcher for both `composeNpcOrientationMatrix` (12th
+    class) and `frameStartReset` (5th class).** s155's proportional
+    candidate for a 5th `composeNpcOrientationMatrix` unguarded site was
+    **confirmed real** by a full end-to-end source read (not just
+    estimate) — AND the same read found a **6th**, structurally
+    identical site the estimate had no way to predict. Both guarded
+    (`ROGUESQ_LOG_COMPOSE_NPC_GUARD5`/`_GUARD6`, `funcs_40.c`), rebuilt
+    clean, soaked (`composeguard56`) — but 0/0 on all 6
+    `composeNpcOrientationMatrix` guards (the 12th class simply didn't
+    recur this run; still unvalidated, same status several guards in
+    this family have carried before). The process instead died to
+    `frameStartReset + 532` (SIGBUS, **3rd occurrence** — s84, s108, now
+    s156) at backtrace `frameStartReset ← static_5_800AAD9C ←
+    static_5_800C6854 ← menuOverlayInit ← mainGameLoop`. **The first 3
+    frames are byte-identical to s155's `composeNpcOrientationMatrix`
+    crash backtrace** (`composeNpcOrientationMatrix ←
+    static_5_800AAD9C ← static_5_800C6854 ← menuOverlayInit`) — the two
+    crash classes share a call path up to `static_5_800AAD9C`, diverging
+    only in which function it (or its caller) ends up invoking. New,
+    unconfirmed hypothesis: `static_5_800AAD9C` may read corrupted
+    dispatch state to decide which function to call, rather than these
+    being two independent bugs that merely preempt each other by timing.
+    Next work unit: source-read `static_5_800AAD9C` to test this —
+    if it holds, one guard there could subsume multiple crash classes at
+    once; if refuted (e.g. it's a legitimate per-node dispatcher over
+    many distinct handlers), `frameStartReset` itself still has no
+    located faulting instruction across any of its 3 occurrences and is
+    the next thing to source-read. Full detail: PORTING-STATE s156.
+
+-7. **s155: guarded the 20th class (`loadCraftShadowTextures`,
+    `N64Recomp/RecompiledFuncs/funcs_16.c:13038-13051`, bounds the
+    craft-type index to 0-13 against the 14-entry sentinel table at
+    `0x8013A528`) — landed, verified x1, still unvalidated (0/0 across
+    2 soaks now, s155 and s156) because the process keeps dying earlier
+    in the same war-room/craft-select window to other classes.
+    `composeNpcOrientationMatrix`'s 5th/6th sites (s155's candidate)
+    confirmed and guarded, see -8 above.
 
 -6. **s154: the "does the FULL_SYNC-loss freeze
     recover" question is ANSWERED — yes, at least once — and a new,
@@ -2273,13 +2278,16 @@ and named it. Full detail: PORTING-STATE s143.
 7. **M3 — confirm the s83 spline div0 guard actually engages.** 0/5 fires
    so far (still 0 after s88/s89/s90); real fix by code inspection (genuine
    0/0 IEEE division) but no same-run positive control yet.
-8. **M3 — characterize `frameStartReset` SIGBUS if it recurs again.**
-   Demoted from "dominant blocker" after s85 (0 recurrences in s86–s90,
-   5 soaks); **recurred once more, s108** (2nd total occurrence, still
-   not dominant — 1 in ~13 soaks since s84). Only worth dedicated
-   attention if it starts recurring more often; do not gate it
-   speculatively without a faulting instruction (no existing detector,
-   unlike thr-resume).
+8. **M3 — characterize `frameStartReset` SIGBUS.** Demoted from
+   "dominant blocker" after s85 (0 recurrences in s86–s90, 5 soaks);
+   recurred s108 (2nd occurrence); **recurred again s156 (3rd
+   occurrence, `+532`)** at a call chain (`static_5_800AAD9C ←
+   static_5_800C6854 ← menuOverlayInit`) that is byte-identical to the
+   12th class's (`composeNpcOrientationMatrix`) own chain — see item -8
+   at the top of this list for the shared-dispatcher hypothesis this
+   raised. Superseded: "only worth attention if it recurs more often" —
+   it has (now 3 occurrences, most recent 2 in consecutive sessions);
+   still no located faulting instruction/detector in any of the 3.
 9. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once items 1–4 are clear:
    `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40; document phase timeline.
    Gate already keeps black off; residual S1 `fs` freeze (~3769–3872 plateau,
