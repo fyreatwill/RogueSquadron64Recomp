@@ -1,106 +1,97 @@
-# NEXT work unit — source-read and (if it matches) guard the new 20th crash class
+# NEXT work unit — confirm and (if real) guard composeNpcOrientationMatrix's likely 5th unguarded site
 
-s154 answered the "does the FULL_SYNC-loss freeze recover" question that
-motivated s151-s153 (**yes, at least once** — `rdpFs` resumed climbing
-after a 686-decision plateau) and, as a direct consequence of surviving
-that plateau, reached the furthest content ever seen past the crawl
-scene: a planet-horizon establishing shot then a ship-silhouette shot,
-both clean/coherent. The run then died to a **brand-new, 20th crash
-class** never seen before in this investigation. Read PORTING-STATE's
-Session 154 entry before doing anything else; this file only has the
-actionable summary.
+s155 landed and verified the s154-planned `loadCraftShadowTextures`
+guard (20th crash class) — real change, built clean — but the soak
+never exercised it (0/0, function never reached). The process instead
+died much earlier than recent runs to a recurrence of the 12th class
+(`composeNpcOrientationMatrix`), and **none of that function's 4
+existing guards fired**, pointing at a genuinely new, un-covered site.
+Read PORTING-STATE's Session 155 entry before doing anything else; this
+file only has the actionable summary.
 
-## What s154 did and found
+## What s155 did and found
 
-1. **Re-ran `scratch/agent/run_extendhold1.sh` unchanged** (2nd of 3
-   allowed attempts on the "does it recover" question, per rule 8).
-   Preserved s153's crash artifacts first (`extendhold1` →
-   `extendhold1_s153`).
-2. **Reached the crawl scene this time** (`origin=0x006A2900` at
-   `141.4s`) and reproduced the exact plateau signature s152/s153
-   already characterized: `rdpFs` stuck at `3516` across decisions
-   `#8970`-`#9656` (686 consecutive `FIRE reason=swap` entries).
-3. **New: the plateau ended on its own.** By decision `#10912`, `rdpFs`
-   had moved to `4142`; it climbed steadily to `5607` by the time of the
-   eventual crash, with no further plateau in between (checked via a
-   dense per-decision dump of the whole tail, not just endpoints).
-   **This answers the standing question: the freeze is not
-   unconditionally permanent.** Treat future `[vi-fs-decision]` plateaus
-   as "possibly transient, watch it longer" rather than "stuck," unless/
-   until a future run shows one that never recovers within a very long
-   hold.
-4. **Screenshots explain why `fs` resumed**: the game was still
-   progressing visually the whole time. `hold_90.png` — new content, a
-   clean planetary-horizon shot (no corruption, unlike every previous
-   post-leave scene). `hold_95.png`/`hold_101.png` (last frame before
-   death) — a second new scene, an engine-glow fan + dark ship
-   silhouette, Star-Destroyer-flyover-shaped, matching the
-   Tatooine/"AMBUSH AT MOS EISLEY" mission setting. This is the furthest
-   the process has ever rendered.
-5. **Death: a genuinely new backtrace.**
-   ```
-   loadCraftShadowTextures + 612
-    <- allocateAndInitCraftNpcContext + 564
-    <- static_6_800A7C4C + 10756
-    <- load_cutscene + 4300
-    <- cinematicLoopBody + 3160
-    <- mainGameLoop + 5220
-   ```
-   Grepped both docs for every symbol in this chain — zero prior hits.
-   Not the `processSceneNode` family (s151/s153), not any already-
-   guarded hangar-tick site, not the tracked `do_rom_read`/DMA race.
-   Catalogued as the **20th class** (the earlier "20th" from s116/s126
-   was retracted as a misattribution, so the number is free again).
-   **Not source-read yet — 1 occurrence.**
+1. Verified a guard for `loadCraftShadowTextures` (already landed by an
+   interrupted prior iteration, `N64Recomp/RecompiledFuncs/funcs_16.c:
+   13038-13051` — bounds the craft-type index to 0-13 against the
+   14-entry sentinel table at `0x8013A528`, matches this family's
+   established table-lookup-then-deref shape), confirmed it applied
+   exactly once, rebuilt clean (`cmake --build`, exit 0).
+2. Soaked (`scratch/agent/run_craftshadowguard1.sh`) — died at
+   hold-iter 4 (~3s in), `origin=0x006AB400` at 73.6s, nowhere near the
+   crawl scene where `loadCraftShadowTextures` would run.
+   `[load-craft-shadow-guard]`: 0/0 (expected/fine negative control,
+   just unexercised).
+3. Crash backtrace: `composeNpcOrientationMatrix
+   (static_5_800AB1C8+6004) <- static_5_800AAD9C <- static_5_800C6854
+   <- menuOverlayInit <- mainGameLoop` — the known 12th-class call
+   chain (s116/s117/s126), but **all 4 existing guards
+   (COMPOSE_NPC_GUARD/GUARD2/GUARD3/GUARD4) fired 0/0 this run** — the
+   crash is not at any already-covered site.
+4. A **proportional** host-byte-offset estimate (crash at 51.6% through
+   the 11632B function) landed in the source gap between the
+   3rd/4th-site guards (`N64Recomp/RecompiledFuncs/funcs_40.c:6581`/
+   `:6620`) and the 2nd-site guard (`:6843`). Reading that gap found a
+   plausible candidate at `:6769-6785` (guest `0x800AB444`-
+   `0x800AB458`): a list-head pointer loaded from a fixed global slot
+   (`MEM_W(ctx->r22, -0X2990)`), checked only for `== 0`
+   (`:6771-6772`), then dereferenced at `+0x4`
+   (`MEM_W(0X4, ctx->r2) = ctx->r19`, `:6780`) with no other sanity
+   check on the pointer value — same "trust a corrupted global as a
+   valid pointer" shape as this whole family, but distinct from the 4
+   already-guarded array-index-bound sites.
+   **This is a proportional estimate, not a confirmed offset match.**
+   Do not guard it on this evidence alone.
 
 ## Do next
 
-1. **Source-read the 20th class before instrumenting or guarding
-   anything**, per the standing "source-read before instrumenting" rule
-   (cheaper than a blind soak, and this family's guards have a
-   consistent shape to check against first):
-   - Use `scratch/agent/machoparse.py` (proven working, s152/s153) to
-     get the exact host-compiled address/size for
-     `loadCraftShadowTextures` and `allocateAndInitCraftNpcContext`.
-   - Map the crash offset (`+612` into `loadCraftShadowTextures`) back
-     to source via the existing `symbol_files/` the same way s99-s101
-     and s151-s153 did for `processSceneNode`/`composeNpcOrientationMatrix`.
-   - Check whether it matches the established shape this whole
-     investigation keeps finding: `table[idx]` (or a struct/global
-     pointer field) read then dereferenced with no bounds/null check.
-2. **If it matches, guard it** the same way s99-s101/s126-s128 did:
-   `goto` the function's own real exit label (find it first — don't
-   assume a bare `return;` is ABI-safe), landed in
-   `N64Recomp/fixup_game_funcs.py`, full regen (`make_elf.py` →
-   `N64Recomp` → `fixup_game_funcs.py` — NOT idempotent, delete
-   `RecompiledFuncs/funcs_*.c` first) → `cmake --build`, verify the
-   patch landed exactly once via `grep` on the regenerated `.c`.
-3. **Soak once after guarding** (reuse `run_extendhold1.sh` or a fresh
-   `run_<tag>.sh` per the standing "new script per soak" convention) to
-   see whether the process now survives past this class into more of
-   the cutscene. A 0/0 negative control (function never hit) is fine
-   and expected per this family's pattern — don't treat it as a failed
-   soak.
-4. **If it does NOT match the table-deref shape**, don't force a guard
-   — characterize what it actually is (source-read the real bug) and
-   decide fix-vs-catalog-and-move-on same as s109's RT64-internal 19th
-   class was handled (catalogued, not fixed, since it wasn't the guest
-   guardable-bug shape).
+1. **Confirm the candidate before guarding it.** Options, cheapest
+   first:
+   - Read the full function (`funcs_40.c:6280-7159`) end to end once,
+     specifically listing every unguarded pointer/table dereference not
+     already covered by guards 1-4, not just the one proportional-match
+     candidate — the estimate could be off by enough to point at the
+     wrong site, and a full read is the same cost either way for an
+     879-line function.
+   - If ambiguous, add a cheap entry-only diagnostic at the candidate
+     line (log `ctx->r2`'s value right before the `:6780` deref, gated
+     behind a new `ROGUESQ_LOG_*` flag) and re-run
+     `run_craftshadowguard1.sh`'s soak shape once — a positive control
+     (nonzero low-probability-valid pointer that then faults) would
+     confirm; 0/0 again would mean the estimate missed and a fuller
+     read is needed regardless.
+2. **If confirmed, guard it** the same way as guards 1-4: bail to
+   `L_800AB618` (already used by guard4, confirmed reachable from this
+   site per the existing control flow), landed in
+   `N64Recomp/fixup_game_funcs.py`, full regen (`make_elf.py` ->
+   `N64Recomp` -> `fixup_game_funcs.py` — NOT idempotent, delete
+   `RecompiledFuncs/funcs_*.c` first) -> `cmake --build`, verify x1 via
+   grep on the regenerated `.c`.
+3. **Soak once** (new `run_<tag>.sh` per the standing convention) with
+   both this guard and the s155 `loadCraftShadowTextures` guard armed
+   (`ROGUESQ_LOG_COMPOSE_NPC_GUARD5=1`-or-whatever-flag-name +
+   `ROGUESQ_LOG_LOAD_CRAFT_SHADOW_GUARD=1`, plus the rest of the
+   standing battery) — see whether the process now reaches further
+   into the war-room/craft-select region, and whether
+   `loadCraftShadowTextures` finally gets exercised.
+4. **If the candidate does NOT pan out** (full read finds no matching
+   unguarded site, or the diagnostic never fires with a plausible
+   near-valid pointer), catalogue `composeNpcOrientationMatrix`'s 5th
+   crash occurrence as characterized-but-unlocated and move to the next
+   item in CURRENT-TRUTH's "Next steps" list rather than iterating a
+   4th time on this one function (rule 8 budget).
 
 ## Do not
 
-- Do not re-run `run_extendhold1.sh` a 3rd time purely to re-confirm
-  "does it recover" — that question is answered (n=1, recovers). A 3rd
-  attempt would only be useful if specifically targeting the new 20th
-  class or trying to get a 2nd recovery data point, not as a repeat of
-  the same experiment.
-- Do not assume the recovery is deterministic/reliable — it's one data
-  point. Don't write "the freeze always recovers" into CURRENT-TRUTH;
-  the current wording already hedges this correctly.
-- Do not conflate the 20th class with the `processSceneNode` family
-  just because both are post-crawl — the backtraces share zero frames.
-- `[vi-fs-decision]` is always-on (s80), not gated by any `ROGUESQ_*`
-  env var — no need to add it to any soak's export list.
+- Do not guard the `:6769-6785` candidate without first confirming it —
+  the proportional-offset match is suggestive, not proof; a wrong guard
+  wastes a soak and risks masking a different real bug.
+- Do not re-run `run_extendhold1.sh`'s "does it recover" experiment
+  again — that question is closed (s154, n=1, recovers). This session's
+  blocker is upstream of that scene entirely.
+- Do not conflate this new candidate site with the already-guarded
+  guard1-4 sites in commit messages/docs — it would be a genuinely
+  5th, independent site if confirmed.
 
 ## This session's environment notes (carry forward, still current)
 
@@ -108,6 +99,12 @@ actionable summary.
   human present in this autonomous loop to grant the approval prompt.**
   `scratch/agent/machoparse.py` is the working replacement (reads
   Mach-O `LC_SYMTAB` directly). Don't rediscover this.
+- **Do NOT delegate a work unit's regen/build/soak/document steps to
+  the Agent tool inside this autonomous loop** — the prior `abd7abc`
+  iteration went `BLOCKED` because Agent-tool delegation is incompatible
+  with the per-turn Stop-hook exit contract (the subagent's result
+  isn't available to close out the same turn). Do every step directly
+  with Bash/Read/Edit in this session's own turn instead.
 - `run_mission_keys.sh`'s hold loop supports `HOLD_TICK_S` for
   sub-second capture density within the hold window; `CAPTURE_TICK_S`
   only densifies the earlier probe-wait loop.
@@ -144,6 +141,10 @@ actionable summary.
 - Checking submodule (`lib/...`) git status needs `env GIT_DIR=lib/X/.git
   GIT_WORK_TREE=lib/X git status --short`, or a plain `cd <absolute
   path>` as its own command followed by a separate `git status` call.
+  A plain `git status`/`git -C <path> status` from this repo's own root
+  can itself require approval in a non-interactive loop — if it does,
+  don't fight it; proceed without the status check when it's not load-
+  bearing for the current step.
 - Output redirection (`>`) from Bash is sandboxed to the session's
   allowed working directories — target `scratch/agent/`, not `/tmp`.
 - Prefer a single `python3 script.py` file (Write then run) for
@@ -160,13 +161,13 @@ actionable summary.
 
 ## Housekeeping still flagged, still not done
 
-`docs/CURRENT-TRUTH.md` is still far over the ~35 KB target — migrate
-durable mechanism/architecture material to PROJECT-OVERVIEW.md and prune
-superseded detail, paired with a real experiment. Flagged for many
-sessions without action.
+`docs/CURRENT-TRUTH.md` is still far over the ~35 KB target (191 KB as
+of s155) — migrate durable mechanism/architecture material to
+PROJECT-OVERVIEW.md and prune superseded detail, paired with a real
+experiment. Flagged for many sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git
 checkout, not a `lib/` submodule, with uncommitted changes across
-s90-154 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
+s90-155 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
 Same posture as the `rogue_squadron64` sibling checkout flagged since
 s54. Worth asking the user whether/how to commit that history.

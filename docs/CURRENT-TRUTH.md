@@ -657,43 +657,67 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s154)
+## Next steps, in order of expected value (s155)
 
--6. **NEW TOP PRIORITY (s154): the "does the FULL_SYNC-loss freeze
+-7. **NEW TOP PRIORITY (s155): guarded the 20th class
+    (`loadCraftShadowTextures`), rebuilt clean, but the soak never
+    exercised it (0/0) — it died earlier instead to a recurrence of the
+    already-catalogued 12th class (`composeNpcOrientationMatrix`) at a
+    call chain/offset that doesn't match any of that function's 4
+    existing guards, pointing at a likely 5th unguarded site.** The
+    craft-shadow guard itself (`N64Recomp/RecompiledFuncs/funcs_16.c:
+    13038-13051`, bounds the craft-type index to 0-13 against the
+    14-entry sentinel table at `0x8013A528`) is landed and verified
+    (x1 via grep, matches this family's established
+    table-lookup-then-deref shape) but **unvalidated** — the soak died
+    at hold-iter 4 (~3s in, `origin=0x006AB400` at 73.6s), far short of
+    the crawl scene where this function would ever run. Crash backtrace:
+    `composeNpcOrientationMatrix (static_5_800AB1C8+6004) ←
+    static_5_800AAD9C ← static_5_800C6854 ← menuOverlayInit ←
+    mainGameLoop` — same 4-frame chain s116/s117/s126 already know as
+    this function's home, but none of the 4 existing guards
+    (`COMPOSE_NPC_GUARD`/`GUARD2`/`GUARD3`/`GUARD4`) fired this run
+    (0/0 each), so this is not a recurrence of an already-covered site.
+    A proportional host-byte-offset estimate (crash at 51.6% through an
+    11632B function) lands in the source gap between the 3rd/4th-site
+    guards (`funcs_40.c:6581`/`:6620`) and the 2nd-site guard (`:6843`);
+    reading that gap found a plausible candidate at `:6769-6785`
+    (guest `0x800AB444`-`0x800AB458`): a list-head pointer read from a
+    fixed global slot, checked only for `== 0`, then dereferenced at
+    `+0x4` with no other sanity check — same "trust a corrupted global
+    as a valid pointer" shape as every guard in this family. **This is
+    a proportional estimate, not a confirmed offset match — source-read
+    to confirm before guarding it.** Next work unit: confirm and guard
+    that candidate site (bail to `L_800AB618`, already used by guard4
+    and reachable from there), then re-soak with both guards armed —
+    this is now the standing blocker to ever validating today's
+    craft-shadow guard. Full detail: PORTING-STATE s155.
+
+-6. **s154: the "does the FULL_SYNC-loss freeze
     recover" question is ANSWERED — yes, at least once — and a new,
-    20th crash class now blocks further progress.** 2nd of 3 allowed
-    `run_extendhold1.sh` (`HOLD_S=120`) attempts, unchanged from s153's
-    script. This time it reached the crawl scene
-    (`origin=0x006A2900` at `141.4s`) and reproduced the plateau exactly
-    (`rdpFs` stuck at `3516` across decisions `#8970`-`#9656`, 686
-    consecutive `FIRE reason=swap` entries) — but then **`rdpFs` resumed
-    climbing** (`4142` by `#10912`, up to `5607` at the eventual crash),
-    contradicting a "permanent stall" reading. Screenshots show why: the
-    game kept progressing through cinematic content underneath the
-    frozen counter — `hold_90.png` is a brand-new scene (planetary-horizon
-    establishing shot, geometrically clean, no corruption) and
-    `hold_95.png`/`hold_101.png` show a second new scene (engine-glow
-    fan + dark ship silhouette, Star-Destroyer-flyover-shaped) — the
-    furthest the process has ever rendered past the crawl. **Do not
-    treat a `[vi-fs-decision]` plateau as automatically permanent going
-    forward** — watch `rdpFs` over a longer window before concluding
-    "stuck." Death was a brand-new, never-before-seen backtrace:
-    `loadCraftShadowTextures ← allocateAndInitCraftNpcContext ←
-    static_6_800A7C4C ← load_cutscene ← cinematicLoopBody ← mainGameLoop`
-    — grepped clean against both docs, a genuinely new call chain (not
-    the `processSceneNode` family s151/s153 crashed in, not any guarded
-    hangar-tick site, not the tracked `do_rom_read` race). Catalogued as
-    the **20th class** (the earlier "20th" from s116/s126 was retracted,
-    so the number was free) — 1 occurrence, not yet source-read.
-    **Next work unit: source-read `loadCraftShadowTextures`/
-    `allocateAndInitCraftNpcContext`** the same way s99-s101 characterized
-    the hangar-tick family (`machoparse.py` + `symbol_files/` to map the
-    crash offset back to source; check for the same unguarded
-    table-lookup-then-deref shape) and guard it if it matches — this is
-    now the standing blocker to reaching further into the mission-intro
-    cutscene, since the `fs`-plateau question that motivated s151-s153
-    is provisionally closed (recovers, n=1 — don't over-generalize from
-    one instance). Full detail: PORTING-STATE s154.
+    20th crash class blocked further progress (now guarded, see -7
+    above).** 2nd of 3 allowed `run_extendhold1.sh` (`HOLD_S=120`)
+    attempts, unchanged from s153's script. This time it reached the
+    crawl scene (`origin=0x006A2900` at `141.4s`) and reproduced the
+    plateau exactly (`rdpFs` stuck at `3516` across decisions
+    `#8970`-`#9656`, 686 consecutive `FIRE reason=swap` entries) — but
+    then **`rdpFs` resumed climbing** (`4142` by `#10912`, up to `5607`
+    at the eventual crash), contradicting a "permanent stall" reading.
+    Screenshots show why: the game kept progressing through cinematic
+    content underneath the frozen counter — `hold_90.png` is a
+    brand-new scene (planetary-horizon establishing shot, geometrically
+    clean, no corruption) and `hold_95.png`/`hold_101.png` show a
+    second new scene (engine-glow fan + dark ship silhouette,
+    Star-Destroyer-flyover-shaped) — the furthest the process has ever
+    rendered past the crawl. **Do not treat a `[vi-fs-decision]`
+    plateau as automatically permanent going forward** — watch `rdpFs`
+    over a longer window before concluding "stuck." Death was a
+    brand-new backtrace: `loadCraftShadowTextures ←
+    allocateAndInitCraftNpcContext ← static_6_800A7C4C ← load_cutscene
+    ← cinematicLoopBody ← mainGameLoop` — catalogued as the **20th
+    class** (the earlier "20th" from s116/s126 was retracted, so the
+    number was free) — source-read and guarded s155 (see -7). Full
+    detail: PORTING-STATE s154.
 
 -5. **s153: the crawl-scene hang IS confirmed the same
     class as s79/s80's FULL_SYNC-loss (item 1 from s152 is now closed);

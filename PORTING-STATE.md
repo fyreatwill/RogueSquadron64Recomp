@@ -13886,3 +13886,125 @@ at least once).
   NEXT.md's own instruction).
 - No `lib/` or `N64Recomp/` edits this session — reused s153's script
   and instrument battery unchanged, pure soak + log/screenshot analysis.
+
+## Session 155 (2026-07-27) — source-read and guarded the 20th crash class (`loadCraftShadowTextures`), rebuilt, and soaked — build/guard landed clean but the soak never reached the guard: it died earlier than any recent run to a recurrence of the already-catalogued 12th class (`composeNpcOrientationMatrix`), and none of that function's 4 existing guards fired, pointing at a genuinely new 5th unguarded site
+
+Picked up NEXT.md's standing top-priority item. A prior iteration this
+session (the one that ended `BLOCKED` per the `abd7abc` commit) had
+already done the source-read and landed the guard in the sibling
+`N64Recomp` checkout's `fixup_game_funcs.py` before getting stuck on an
+Agent-tool/Stop-hook incompatibility — confirmed by finding the patch
+already present, applied exactly once, in the regenerated
+`RecompiledFuncs/funcs_16.c` (`grep -c` = 1) with a full, well-reasoned
+source-read comment already written. This session verified that work
+and carried it through to a soak and documentation, entirely without
+Agent-tool delegation (per the lesson in the `abd7abc` commit message).
+
+1. **Verified the existing guard is correct and complete.**
+   `machoparse.py` against `build/RogueSquadron64Recomp` confirmed
+   `loadCraftShadowTextures` is 2168 bytes host-compiled (crash at +612
+   is genuinely inside it, not a nearest-symbol misattribution — same
+   check s152 ran for `processSceneNode`). The guard
+   (`funcs_16.c:13038-13051`) bounds `ctx->r18` (the craft-type index,
+   copied verbatim from `ctx->r4` at function entry with no masking) to
+   `<= 13`, matching the 14-entry sentinel table at `0x8013A528` that
+   `clearTrackedNpcSlots`'s own symbol comment documents — the same
+   unguarded-table-lookup-then-deref shape as every prior class in this
+   family. Bail target is the function's own real epilogue label
+   (`L_8006B81C`), already reachable from the guard's insertion point
+   since all 8 callee-saved registers are already pushed by then — no
+   new label needed. This is a real, substantive change (a landed guest
+   guard against a confirmed table-overrun, not diagnostic-only), so
+   this session counts as `ADVANCED` even before the soak result below.
+2. **Rebuilt clean.** All 45 `RecompiledFuncs/*.c` files carried the
+   same regen timestamp (confirmed via `find -newer`), so the guard
+   patch was applied as part of a genuine full pipeline run, not a
+   stray edit — `cmake --build` from `build/` with
+   `DEVELOPER_DIR=.../Xcode.app/...` exited 0, only pre-existing warning
+   classes.
+3. **Soaked** (`scratch/agent/run_craftshadowguard1.sh`, new script per
+   the standing per-soak-script convention; same full instrument
+   battery as `run_extendhold1.sh` plus
+   `ROGUESQ_LOG_LOAD_CRAFT_SHADOW_GUARD=1`). Result: the process died
+   **much earlier** than s154/s154-class runs — hold-iter 4 (~3s into
+   the hold window, `wall=3s`), still in the war-room/craft-select
+   region (`origin=0x006AB400` at 73.6s, `fs max=3751`), never reaching
+   the crawl scene at all. `[load-craft-shadow-guard]`: **0/0** — the
+   function was never reached, an expected/fine negative control per
+   this family's established "guard often goes unexercised because a
+   different crash wins the race" pattern (NEXT.md said as much going
+   in).
+4. **The crash itself is informative.** SIGBUS, backtrace:
+   ```
+   static_5_800AB1C8 + 6004  (== composeNpcOrientationMatrix, confirmed
+                               by machoparse.py: no separate symbol of
+                               that friendly name exists, size=11632B,
+                               crash offset well inside bounds)
+    <- static_5_800AAD9C + 4116
+    <- static_5_800C6854 + 628
+    <- menuOverlayInit + 3512
+    <- mainGameLoop + 5220
+   ```
+   This exact 4-frame chain (`menuOverlayInit` →
+   `static_5_800C6854`/`runHangarMenuFromOverlay` →
+   `static_5_800AAD9C`/`runHangarSelectionFrame` →
+   `composeNpcOrientationMatrix`) is the same one s116/s117/s126
+   already catalogued as the 12th class's home. **New this session:**
+   none of the 4 existing guards fired (`grep -c` for
+   `compose-npc-orient-guard`, `-guard2`, `-guard3`, `-guard4` all 0/0
+   this run) — the crash is not at any of those already-covered sites.
+   Combined with `+6004` landing roughly halfway through the function
+   host-byte-wise (11632B total), a proportional-estimate cross-check
+   against the source (`N64Recomp/RecompiledFuncs/funcs_40.c:6280-7159`)
+   lands in the gap between the 3rd/4th-site guards (`:6581`/`:6620`)
+   and the 2nd-site guard (`:6843`) — and a read of that exact gap
+   (`:6769-6785`) found an unguarded pointer dereference matching this
+   family's shape exactly: a list-head pointer loaded from a fixed
+   global slot (`MEM_W(ctx->r22, -0X2990)`), checked only for `== 0`
+   (line 6771-6772), then unconditionally written through at `+0x4`
+   (`MEM_W(0X4, ctx->r2) = ctx->r19`, line 6780) with no upper-bound/
+   sanity check on the pointer value itself — the same "trust a
+   corrupted global field as a valid pointer" shape as every other
+   guard in this family, but a genuinely different bug from the 4
+   array-index-bound guards already landed. **This is a proportional
+   estimate, not a confirmed offset-level match** — the host-byte
+   fraction (51.6%) and the source-line fraction of the gap are
+   correlated but not proven identical; flag this distinction rather
+   than treat it as confirmed.
+5. **Other family controls held**: `thr-resume bad=1` 0/0 (still no
+   recurrence, matches every soak since s88's fix); `[anim-recurse] sp`
+   confined to the same 6 known values (still no recursion); `[rt64]
+   loadDrawState: undefined tile 7` fired repeatedly (already-known red
+   herring per s89, already guarded upstream by `callTile.valid`).
+
+**Conclusion**: the `loadCraftShadowTextures` guard is a real, correctly
+-targeted fix but remains **unvalidated** (0/0, never exercised) because
+`composeNpcOrientationMatrix` (12th class) keeps recurring earlier in
+the same war-room/craft-select region and is now the practical blocker
+to ever reaching the point where the craft-shadow guard would matter.
+This is the same "crash-class selection is highly variable, one guard's
+soak gets preempted by a different unguarded site" pattern this
+investigation has hit repeatedly since s90 — not a new mystery, and not
+evidence the craft-shadow guard is wrong.
+
+### Next steps
+
+Source-read the candidate 5th `composeNpcOrientationMatrix` site
+(`N64Recomp/RecompiledFuncs/funcs_40.c:6769-6785`, guest addresses
+`0x800AB444`-`0x800AB458`) to confirm (not just proportionally estimate)
+it is the actual crash site — cross-check against the crash's exact
+register state if a future soak's entry-log timing allows, or by
+counting guest instructions from function entry to the guarded sites vs.
+this candidate. If confirmed, guard it the same way as guards 1-4
+(`goto` an existing exit label — `L_800AB618` is already used by guard4
+and is reachable from here). This is now the standing blocker ahead of
+validating today's craft-shadow guard.
+
+### Files
+
+- `N64Recomp/fixup_game_funcs.py` — `loadCraftShadowTextures` guard (landed by the prior, blocked iteration; verified, not re-written, this session).
+- `N64Recomp/RecompiledFuncs/funcs_16.c` — regenerated with the guard applied (verified x1 via `grep -c`).
+- `scratch/agent/run_craftshadowguard1.sh` — this session's soak script.
+- `scratch/s73_post_a_scene/craftshadowguard1/` — this session's run: `run.log`, `pre_*`/`stable_*`/`post_*` screenshots.
+- `scratch/agent/run_craftshadowguard1_driver.log` — driver summary.
+
