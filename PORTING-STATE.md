@@ -14403,3 +14403,118 @@ unexercised soak — still not evidence it's wrong, per NEXT.md's own note).
   `scratch/agent/fixup_s158.log`, `scratch/agent/build_s158.log` — this
   session's regen/build/fixup logs.
 
+## Session 159 (2026-07-27) — proved by full source read that RT64's 15th crash class (`loadDrawState` zero-sample assert) cannot be caused by any guest-supplied tile field, landed an always-on guard+log+clamp at the site instead of chasing a guest-side instrument that the proof rules out; soak's crash was neither the 15th class nor `composeNpcOrientationMatrix` but a brand-new, 21st crash class inside `drawSubtitleText`, reached earlier in the menu flow than any prior soak in this family
+
+### What s159 did
+
+1. Per NEXT.md's step 1, traced every write path to `dstCallTile.sampleWidth`/
+   `sampleHeight` in `RT64::State::loadDrawState` (`lib/rt64/src/hle/
+   rt64_state.cpp:441-747`) end to end, instead of guessing where to
+   instrument:
+   - The only initial write (`:595-596`) is `min(tileWidth, maskWidth)` /
+     `min(tileHeight, maskHeight)`. `tileWidth`/`tileHeight` are always
+     `std::max(computed, 1)` when clamped, or `0xFFFF` when wrapping — never
+     less than 1 by construction (`:591-592`). `maskWidth`/`maskHeight` are
+     `0xFFFF` when `tile.masks`/`maskt == 0`, else `1 << tile.masks` — and
+     `tile.masks`/`maskt` are `uint8_t` (`lib/rt64/src/common/
+     rt64_load_types.h:20-21`) written from exactly one call site
+     (`lib/rt64/src/hle/rt64_rdp.cpp:611`, `RDP::setTile`), fed by
+     `DisplayList::p1(pos, 4)` (`lib/rt64/src/gbi/rt64_gbi.cpp:37-39`,
+     `(w1 >> pos) & 0xF`) at the sole call site
+     (`lib/rt64/src/gbi/rt64_gbi_rdp.cpp:60-61`) — **structurally bounded to
+     0-15 regardless of what garbage is in the guest DL word `w1`**, so
+     `1 << tile.masks` is at most `1 << 15 = 32768`, never 0, never UB.
+   - The 3 subsequent writers (`ROGUESQ_FLATTEN_RGBA16`/`_I4`/`_CI4`,
+     `:661-744`) are all default-OFF debug probes (per CURRENT-TRUTH's
+     "Default-OFF" list) and were not armed this soak.
+   - The one writer in between (`ROGUESQ_FIX_SAMPLE_BOUNDS`, default ON,
+     `:598-659`) explicitly does `dstCallTile.sampleWidth =
+     std::max(wantW, 1)` (`:655-656`) — clamped, cannot zero.
+   - Conclusion: **no combination of guest-supplied `LoadTile` fields
+     (masks, maskt, cms, cmt, uls, ult, lrs, lrt) can make this formula
+     compute 0** under the code's own type/masking invariants. This is a
+     proof from the merged source, not a hypothesis — closing NEXT.md's
+     framed question definitively in the "RT64-side, out of scope for the
+     guest-guard approach" direction, without needing to build a
+     guest-dispatch instrument that a genuine zero was never going to reach
+     anyway.
+2. Landed a guard at the assert site itself (`rt64_state.cpp:746-780`)
+   instead: if `sampleWidth`/`sampleHeight` are still 0 despite the proof
+   above, log every raw tile field (`masks`/`maskt`/`cms`/`cmt`/`uls`/`ult`/
+   `lrs`/`lrt`) plus an independently-recomputed-from-scratch width/height,
+   then clamp to 1 and continue instead of aborting. The recompute is the
+   actual discriminator for a future hit: if it's also 0, this session's
+   proof has a gap; if it's non-zero, `dstCallTile` was corrupted (or its
+   backing `std::vector` reallocated out from under the held reference —
+   `dstCallTile` is `auto &drawData.callTiles[callTileIndex]`, taken once at
+   `:543` and written across 200+ lines) between the correct write at `:595`
+   and this read at `:747`, which would be an RT64-internal concurrency bug,
+   not guest data. `lib/` change — ran `./submodule-patches/export.sh` and
+   committed the refreshed `rt64.patch` in this same session (hard rule).
+3. `cmake --build` (cwd `build/`, `DEVELOPER_DIR=...Xcode.app...`) — exit 0,
+   only pre-existing imgui `-Wnontrivial-memcall` warnings, no new ones.
+4. Soaked (`scratch/agent/run_zerosample1.sh`, same full battery as s158's
+   `run_composeguard7.sh`, no new env var needed since the guard is
+   always-on). **Died far earlier in the menu flow than any prior soak in
+   this family**: driver log shows the title→1024 phase transition at
+   45.0s, two scheduled `start` key presses both completed (screenshots
+   exist for both), then the process died during the subsequent 12s
+   "wait for SELECT YOUR CRAFT stable" window — **before ever reaching
+   SELECT YOUR CRAFT, the war room, or hangar-flight this run**. No further
+   `[phase]` transition past `vi_width=1024` was ever logged. `[compose-npc]`
+   entry diagnostic: **0** this run (function never even reached, unlike
+   s158's 508/508) — confirms the death genuinely predates the whole
+   post-leave/hangar-tick window this family usually crashes in.
+
+### The actual crash
+
+Signal 10 (Bus error), backtrace: `drawSubtitleText+34664` ←
+`setupCameraMatrices+27984` ← `static_5_800B47D0+99260` ←
+`menuOverlayInit+4472` ← `mainGameLoop` ← `mainBootstrapWorker` ← thread
+entry. Confirmed via `scratch/agent/machoparse.py build/RogueSquadron64Recomp
+drawSubtitleText` that `drawSubtitleText` really is a 37300-byte function
+(next symbol is `setupCameraMatrices`) — the +34664 offset is genuinely
+inside `drawSubtitleText`'s own body, not a misattributed nearby-symbol
+artifact like `static_5_800B4048` was in s90. **New, 21st crash class**
+(highest previously catalogued was 20th, s154) — first appearance, not
+source-read yet. Neither the 15th class (`[zero-sample-guard]`: 0 fires) nor
+`composeNpcOrientationMatrix` (entry: 0) fired this run — genuinely a
+different bug, reached earlier in the run than either. All other standing
+controls held: `missing-func` 1 (new address `0x800C4ED8`, 0 aborts, same
+graceful-stub pattern as the s49/s53 M4 curiosity — parked, not a blocker),
+`UnhandledJump` 0, `thr-resume bad=1` 0, `ost-wb SKIP_WIDTH`/`SKIP_OOB` both
+0, `fs max` 2165.
+
+### What this rules out / establishes
+
+- **The 15th class (`loadDrawState` zero-sample assert) is now proven
+  RT64-internal, not guest-data-driven** — no `LoadTile` field combination
+  reaching this code today can zero the sample dimensions. Chasing a
+  guest-side dispatch instrument for it (NEXT.md's original step 1 framing)
+  would have been chasing a mechanism that provably doesn't exist. The
+  landed guard (log raw fields + recompute + clamp) is the correct next
+  move if it ever fires again: it will show directly whether `dstCallTile`
+  itself was corrupted between write and read, pointing at a `std::vector`
+  reallocation/reference-invalidation bug rather than anything fixable by
+  guest-side guarding.
+- **Unvalidated this run** (0/0, like most guards in this family on their
+  first soak) — not evidence it's wrong, the 15th class simply didn't
+  recur.
+- Discovered that the SELECT GAME → SELECT YOUR CRAFT menu transition
+  itself (not just the post-leave hangar-flight window this family has
+  focused on for ~15 sessions) has its own, previously-unobserved crash
+  path through `drawSubtitleText`/`setupCameraMatrices`/`static_5_800B47D0`.
+  This is earlier in the state machine than every crash class catalogued
+  since s86 — worth treating as a **new, higher-priority failure window**
+  rather than folding into the existing post-leave family until source-read
+  proves otherwise.
+
+### Files touched
+
+- `lib/rt64/src/hle/rt64_state.cpp` — `[zero-sample-guard]` at the
+  `loadDrawState` sample-size assert (`:746-780`). `lib/`, patch exported
+  (`submodule-patches/rt64.patch`) and committed this session.
+- `scratch/agent/run_zerosample1.sh` — this session's soak script.
+- `scratch/s73_post_a_scene/zerosample1/` — this session's run: `run.log`,
+  `pre_*`/`post_*` screenshots.
+- `scratch/agent/run_zerosample1_driver.log` — driver summary.

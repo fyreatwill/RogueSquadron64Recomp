@@ -1,84 +1,86 @@
-# NEXT work unit — characterize the guest call chain feeding RT64's 15th crash class
+# NEXT work unit — source-read the brand-new 21st crash class (drawSubtitleText)
 
-s158 fully closed out the s157 work unit (composeNpcOrientationMatrix's 7th
-site: found, guarded, built, soaked) but the soak's crash was a different,
-already-catalogued class instead. Read PORTING-STATE's Session 158 entry
-before doing anything else; this file only has the actionable summary.
+s159 closed out the s158 work unit (proved via full source read that the
+15th crash class, `loadDrawState`'s zero-sample-size assert, cannot be
+caused by any guest-supplied tile field — it's RT64-internal, not
+guest-guardable) and landed a guard+log+clamp at the assert site instead of
+a guest-dispatch instrument that the proof shows would never have fired.
+The soak that validated the build found a brand-new, earlier-in-the-run
+crash instead. Read PORTING-STATE's Session 159 entry before doing anything
+else; this file only has the actionable summary.
 
-## What s158 did and found
+## What s159 did and found
 
-1. Read the two NEXT.md-flagged unaccounted-for regions of
-   `composeNpcOrientationMatrix` (`N64Recomp/RecompiledFuncs/funcs_40.c`):
-   `:6280-6374` (prologue, before guard1) — clean, no unguarded deref.
-   `:6857-7108` (between guard2 and guard6) — found the 7th site at guest
-   `0x800AB4E8`/`0x800AB4EC` (source `:6901-6904`): a pointer field is read
-   out of an already-guard2-validated table entry (`lw $v0, 0x4($s2)`) and
-   **immediately dereferenced** (`lw $v0, 0x0($v0)`) with **no check at
-   all** — stricter than guards 1-6's shape (those guard the table-entry
-   address itself; this guards a field read *out of* that entry).
-2. Guarded it (`ROGUESQ_LOG_COMPOSE_NPC_GUARD7`, `N64Recomp/
-   fixup_game_funcs.py`, inserted after the guard6 block, same
-   `U32()`-range-check-then-`goto L_800AB618` template). Full regen (`rm
-   funcs_*.c` → `make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py`
-   once), verified x1 via grep, `cmake --build` exit clean.
-3. Soaked (`scratch/agent/run_composeguard7.sh`). Reached SELECT YOUR CRAFT,
-   left into hangar-flight, died at **hold-iter 1, wall=0s**. Entry
-   diagnostic 508/508 (function reached) but **all 7 guards 0/0** —
-   `composeNpcOrientationMatrix` never crashed this run at all, so guard7 is
-   **unvalidated, not refuted**.
-4. The actual crash: signal 6, `assert((dstCallTile.sampleWidth > 0) &&
-   (dstCallTile.sampleHeight > 0))` in `RT64::State::loadDrawState`
-   (`rt64_state.cpp:747`) ← `RT64::RDP::drawTris` ← `GBI_RDP::decodeTriangles`.
-   This is the **already-catalogued 15th class** (first seen s97, recurred
-   s99, s149 — **this is its 4th occurrence**), RT64-internal, not a new
-   class and not `composeNpcOrientationMatrix`. It now recurs more reliably
-   and earlier (hold+0-14s across all 4 hits) than any single
-   `composeNpcOrientationMatrix` site — plausibly the thing preventing
-   guard7 (and heapWalker's 4 guards, also still 0/0 after 2 soaks) from
-   ever getting exercised.
+1. Traced every writer of `dstCallTile.sampleWidth`/`sampleHeight` in
+   `RT64::State::loadDrawState` (`lib/rt64/src/hle/rt64_state.cpp:441-747`)
+   and every input field's provable bounds (`tile.masks`/`maskt` are 4-bit
+   masked at the sole `SetTile` write path, so 0-15 always; every writer
+   either clamps to `>=1` or is a default-OFF debug probe). Proved the
+   assert's precondition cannot fail from guest data under the current
+   code — closing the s158 question in the "RT64-internal" direction.
+2. Landed `[zero-sample-guard]` at the assert site (`rt64_state.cpp:746-780`,
+   always-on): logs raw tile fields + an independent recompute, clamps to 1
+   instead of aborting if the precondition would fail. `lib/` change,
+   `submodule-patches/export.sh` run + committed.
+3. Built clean, soaked (`scratch/agent/run_zerosample1.sh`). Died **far
+   earlier than any prior soak in this family** — during the SELECT GAME →
+   SELECT YOUR CRAFT menu transition itself, before any VI phase past 1024,
+   before `composeNpcOrientationMatrix`'s entry diagnostic even fired (0
+   this run vs. 508/508 in s158). Neither the 15th class nor
+   `composeNpcOrientationMatrix` fired.
+4. The actual crash: SIGBUS, backtrace `drawSubtitleText+34664` ←
+   `setupCameraMatrices+27984` ← `static_5_800B47D0+99260` ←
+   `menuOverlayInit+4472` ← `mainGameLoop`. Confirmed via
+   `scratch/agent/machoparse.py build/RogueSquadron64Recomp drawSubtitleText`
+   that the function really is 37300 bytes (next symbol
+   `setupCameraMatrices`) — the offset lands genuinely inside its own body,
+   not a misattributed neighbor. **New, 21st crash class** (previous
+   highest was 20th, s154) — not source-read yet.
 
 ## Do next
 
-1. **Find the guest-side RDP-command dispatch that sets up the tile/sample
-   state `loadDrawState` consumes**, i.e. whatever populates
-   `dstCallTile.sampleWidth`/`sampleHeight` before `drawTris` is reached.
-   Start from the RT64 side to find the call boundary (`rt64_state.cpp`
-   around line 747 and its caller `RT64::RDP::drawTris` in
-   `rt64_rdp*.cpp`), then look for the corresponding guest-side RSP-command
-   handling (likely `gsDPSetTile`/`gsDPLoadTile`/`gsSPTriangle`-family
-   opcodes in `lib/rt64` or wherever this repo's RDP command interpreter
-   lives) that computes the sample dimensions from tile state. This is
-   `lib/` code (RT64), not `N64Recomp/` guest-recompiled code — if you edit
-   anything under `lib/`, run `./submodule-patches/export.sh` and commit
-   the refreshed patches in the same iteration (hard rule, CLAUDE.md).
-2. **Land a targeted instrument** (not a guess) that logs the tile-setup
-   inputs (whatever RDP command / tile index / mask+shift fields feed
-   `sampleWidth`/`sampleHeight`) at the point they're computed — the goal is
-   to see whether the zero/invalid value already exists in guest-supplied
-   tile state (matches this whole family's "guest data is corrupt/garbage,
-   guard it" pattern, and would make this class fixable the same way as the
-   16 guest-side guards already landed) or whether it's computed correctly
-   from sane guest inputs and then miscalculated on the RT64 side (would
-   mean this class is out of scope for the guest-guard approach entirely —
-   say so plainly and re-prioritize away from it if so).
-3. **Only if that instrument is inconclusive or this line of investigation
-   dead-ends after a reasonable attempt**, fall back to: soak again with
-   `ROGUESQ_LOG_COMPOSE_NPC_GUARD7=1` (already wired into
-   `scratch/agent/run_composeguard7.sh`, reusable) purely to get guard7 (and
-   the heapWalker guards) their first positive control — but per rule 8,
-   this is a *secondary* goal now, not a soak to run for its own sake a 3rd
-   time without a code change.
+1. **Locate `drawSubtitleText` in `N64Recomp/RecompiledFuncs/*.c`.** Use
+   `machoparse.py` against the guest address (grep `symbol_files/*.txt` for
+   `drawSubtitleText` to get its guest address, or grep the generated `.c`
+   files directly for the function name / its address comment) — do not
+   trust a stale line-number estimate, always grep the current regenerated
+   tree first (drift is normal after any regen, per this file's own
+   standing note below).
+2. **Read the function's body for the same unguarded-table/pointer-deref
+   shape as the family's other 20 guest-side classes** — a byte/index read
+   from an argument or fixed table used to compute an address, then
+   immediately dereferenced with no `==0`/range check. This family's guards
+   have found this exact shape in every one of the last ~10 classes; look
+   for it first before assuming something novel.
+3. **If found**: guard it the same way as the other 20 (`goto` the
+   function's own real exit label — find it from the function's actual
+   epilogue, do not reuse another function's label — `U32()`-truncate,
+   range-check `0x80000000`-`0x80800000` for pointer-shaped values, log
+   behind a `ROGUESQ_LOG_*` env var). Full regen (`rm funcs_*.c` →
+   `make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py` once),
+   verify the patch landed exactly once via `grep`, build, soak with the
+   same full battery (copy `scratch/agent/run_zerosample1.sh`, add the new
+   `ROGUESQ_LOG_*` var).
+4. **If NOT found** (e.g. the crash is in inlined RT64/library code, or the
+   dereference shape doesn't match): say so plainly in PORTING-STATE and
+   characterize what IS there instead — do not force-fit a guard that
+   doesn't match the actual bug.
+5. **Open question worth resolving early**: is this 21st class a reliably
+   early, front-of-the-queue blocker (like the 15th class was for the
+   post-leave window), or a one-off? One data point so far. If it recurs on
+   the very next soak, treat the SELECT GAME → SELECT YOUR CRAFT transition
+   as a *new, higher-priority failure window* ahead of the old post-leave
+   family, per rule 8 (don't over-conclude from 1 data point, but don't
+   ignore a death this much earlier than the entire family's history either).
 
 ## Do not
 
-- Do not re-read `composeNpcOrientationMatrix`'s already-covered regions
-  (`:6374-6857`, guards 1-6's own neighborhoods) looking for an 8th site —
-  not indicated by any evidence yet; the s158 soak never even reached this
-  function's crash path.
-- Do not treat guard7 or the heapWalker guards' 0/0 as evidence they were
-  wrong — same "unvalidated, not yet exercised" status many guards in this
-  family carry before eventually getting hit. Two consecutive non-crashing
-  soaks is not the same as "this class stopped happening."
+- Do not re-open the s158 "is the 15th class guest-side or RT64-side"
+  question — s159 answered it by full source proof (RT64-side). Do not
+  re-instrument the guest RDP tile-setup dispatch for it.
+- Do not treat `[zero-sample-guard]` 0/0 or `composeNpcOrientationMatrix`'s
+  0-entry-count this run as evidence either is wrong — the soak simply died
+  before reaching either code path.
 - Do not re-litigate the `static_5_800AAD9C` dispatcher hypothesis (closed,
   s157) or re-read `frameStartReset` itself (clean, s157).
 
@@ -99,12 +101,9 @@ before doing anything else; this file only has the actionable summary.
   is incompatible with the per-turn Stop-hook exit contract. Do every
   step directly with Bash/Read/Edit in this session's own turn.
 - A crash-class hypothesis that held for one soak is not guaranteed to
-  recur on the very next soak of the "same" scene — this family's
-  crash-class selection has been highly variable across ~20 sessions.
-  The 15th class is the current exception: 4/4 recent late-window
-  soaks that didn't hit a `composeNpcOrientationMatrix` guard hit this
-  class instead, worth treating as the new default expectation for
-  this scene until disproven.
+  recur on the very next soak — this family's crash-class selection has
+  been highly variable across ~20 sessions. Don't assume the 21st class
+  will recur just because it was dramatic; don't assume it won't either.
 - Function/line-number estimates in NEXT.md/PORTING-STATE drift a few
   lines every regen — always grep/read the actual regenerated file
   before writing a regex anchor or planning a reorder.
@@ -155,8 +154,8 @@ before doing anything else; this file only has the actionable summary.
 - This fix family lives entirely in the sibling `N64Recomp` checkout
   (`fixup_game_funcs.py` + regenerated `RecompiledFuncs/*.c`), not
   `lib/` — no `submodule-patches/export.sh` step needed for it. The
-  NEW work unit above (15th class) may live in `lib/rt64` instead —
-  if so, that step DOES apply.
+  15th-class guard (s159) lives in `lib/rt64` instead — that step DID
+  apply and was done.
 
 ## Housekeeping still flagged, still not done
 
@@ -167,6 +166,6 @@ many sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git
 checkout, not a `lib/` submodule, with uncommitted changes across
-s90-158 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
+s90-159 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
 Same posture as the `rogue_squadron64` sibling checkout flagged since
 s54. Worth asking the user whether/how to commit that history.

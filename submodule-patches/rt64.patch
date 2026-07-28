@@ -3299,7 +3299,7 @@ index 6051f4e..e4a8fc3 100644
          uint64_t hash = TMEMHasher::hash(TMEM, loadTile, width, height, tlut, TMEMHasher::CurrentHashVersion);
          if (hashSet.find(hash) == hashSet.end()) {
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..8122825 100644
+index 10f98af..973d2ef 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -3650,7 +3650,7 @@ index 10f98af..8122825 100644
  
                      // Estimate sampling width and height based on masks ands tiles, whichever are smaller.
                      const bool clampS = (tile.masks == 0) || (tile.cms & G_TX_CLAMP);
-@@ -288,14 +595,262 @@ namespace RT64 {
+@@ -288,14 +595,302 @@ namespace RT64 {
                      dstCallTile.sampleWidth = static_cast<uint16_t>(std::min(tileWidth, maskWidth));
                      dstCallTile.sampleHeight = static_cast<uint16_t>(std::min(tileHeight, maskHeight));
  
@@ -3803,6 +3803,46 @@ index 10f98af..8122825 100644
 +                    }
 +
                      // Check if we need to use raw TMEM decoding because the tile can sample more bytes than TMEM actually allows.
++                    // ROGUESQ 15th-crash-class guard (s159): this assert has fired 4
++                    // times (s97/s99/s149/s158). Session158/159 source-read every
++                    // write path to sampleWidth/sampleHeight above and proved it
++                    // cannot reach here: masks/maskt are always 0-15 (p1(pos,4)
++                    // masks them to 4 bits at SetTile, the only writer), so
++                    // maskWidth/maskHeight are always 0xFFFF or in [2,32768], and
++                    // tileWidth/tileHeight are always >=1 via the explicit
++                    // std::max(...,1) above — no combination of guest-supplied tile
++                    // fields can make sampleWidth/sampleHeight compute to 0. If this
++                    // still fires, dstCallTile was corrupted (or its backing vector
++                    // reallocated out from under this reference) between the write
++                    // above and this read, not a guest-data problem. Log the raw
++                    // fields plus an independent from-scratch recompute so the next
++                    // hit tells us whether the recompute is also 0 (formula gap,
++                    // refutes this analysis) or non-zero (confirms post-write
++                    // corruption) — then clamp instead of aborting so the run
++                    // continues past this class instead of dying here.
++                    if ((dstCallTile.sampleWidth == 0) || (dstCallTile.sampleHeight == 0)) {
++                        const int32_t rawTileWidth = clampS ? std::max((int32_t(tile.lrs) - int32_t(tile.uls) + 4) / 4, 1) : 0xFFFF;
++                        const int32_t rawTileHeight = clampT ? std::max((int32_t(tile.lrt) - int32_t(tile.ult) + 4) / 4, 1) : 0xFFFF;
++                        const int32_t rawMaskWidth = (tile.masks > 0) ? static_cast<int32_t>(1 << tile.masks) : 0xFFFF;
++                        const int32_t rawMaskHeight = (tile.maskt > 0) ? static_cast<int32_t>(1 << tile.maskt) : 0xFFFF;
++                        fprintf(stderr,
++                            "[zero-sample-guard] sw=%u sh=%u masks=%u/%u cms=%02x/%02x "
++                            "uls=%u ult=%u lrs=%u lrt=%u clamp=%d/%d "
++                            "recompute_w=%d recompute_h=%d raw_tw=%d raw_mw=%d raw_th=%d raw_mh=%d\n",
++                            (unsigned)dstCallTile.sampleWidth, (unsigned)dstCallTile.sampleHeight,
++                            (unsigned)tile.masks, (unsigned)tile.maskt,
++                            (unsigned)tile.cms, (unsigned)tile.cmt,
++                            (unsigned)tile.uls, (unsigned)tile.ult,
++                            (unsigned)tile.lrs, (unsigned)tile.lrt,
++                            (int)clampS, (int)clampT,
++                            (int)std::min(rawTileWidth, rawMaskWidth),
++                            (int)std::min(rawTileHeight, rawMaskHeight),
++                            (int)rawTileWidth, (int)rawMaskWidth,
++                            (int)rawTileHeight, (int)rawMaskHeight);
++                        fflush(stderr);
++                        dstCallTile.sampleWidth = std::max<uint16_t>(dstCallTile.sampleWidth, 1);
++                        dstCallTile.sampleHeight = std::max<uint16_t>(dstCallTile.sampleHeight, 1);
++                    }
                      assert((dstCallTile.sampleWidth > 0) && (dstCallTile.sampleHeight > 0) && "Sample size calculation can only result in non-zero values.");
 -                    dstCallTile.rawTMEM = TMEMHasher::requiresRawTMEM(tile, dstCallTile.sampleWidth, dstCallTile.sampleHeight);
 -                    
@@ -3916,7 +3956,7 @@ index 10f98af..8122825 100644
                      dstRDPTile.address = int(tile.tmem) << 3;
                      dstRDPTile.palette = tile.palette;
                      dstRDPTile.masks = (tile.masks > 0) ? (1 << tile.masks) : 0;
-@@ -435,9 +990,12 @@ namespace RT64 {
+@@ -435,9 +1030,12 @@ namespace RT64 {
      }
  
      void State::flush() {
@@ -3929,7 +3969,7 @@ index 10f98af..8122825 100644
  
          // Assign some parameters to the draw call.
          const int workloadCursor = ext.workloadQueue->writeCursor;
-@@ -522,6 +1080,12 @@ namespace RT64 {
+@@ -522,6 +1120,12 @@ namespace RT64 {
          if (!fbPair.drawColorRect.isEmpty()) {
              auto &colorImg = fbPair.colorImage;
              auto &depthImg = fbPair.depthImage;
@@ -3942,7 +3982,7 @@ index 10f98af..8122825 100644
              uint32_t colorHeight = fbPair.drawColorRect.bottom(true);
              uint32_t colorWriteWidth = (colorHeight > 1) ? colorImg.width : std::min(fbPair.drawColorRect.right(true), int32_t(colorImg.width));
              uint32_t depthWriteWidth = 0;
-@@ -574,6 +1138,7 @@ namespace RT64 {
+@@ -574,6 +1178,7 @@ namespace RT64 {
                  depthFb->lastWriteTimestamp = writeTimestamp;
                  framebufferManager.changeRAM(depthFb, depthFb->addressStart, depthFb->addressStart + depthFbBytes);
              }
@@ -3950,7 +3990,7 @@ index 10f98af..8122825 100644
          }
  
          // Store the process Id this framebuffer pair was submitted under.
-@@ -593,8 +1158,15 @@ namespace RT64 {
+@@ -593,8 +1198,15 @@ namespace RT64 {
              return;
          }
          
@@ -3968,7 +4008,7 @@ index 10f98af..8122825 100644
  
          const int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
-@@ -640,6 +1212,113 @@ namespace RT64 {
+@@ -640,6 +1252,113 @@ namespace RT64 {
              }
  
              if (!callTile.tileCopyUsed) {
@@ -4082,7 +4122,7 @@ index 10f98af..8122825 100644
                  if (callTile.tmemHashOrID != 0) {
                      textureManager.uploadEmpty(this, ext.textureCache, workload.submissionFrame, callTile.sampleWidth, callTile.sampleHeight, callTile.tmemHashOrID);
                  }
-@@ -649,6 +1328,118 @@ namespace RT64 {
+@@ -649,6 +1368,118 @@ namespace RT64 {
                  else {
                      callTile.tmemHashOrID = textureManager.uploadTexture(this, callTile.loadTile, ext.textureCache, workload.submissionFrame, callTile.sampleWidth, callTile.sampleHeight, callTile.tlut);
                  }
@@ -4201,7 +4241,7 @@ index 10f98af..8122825 100644
              }
              else if (callTile.reinterpretTile) {
                  struct ReinterpretHashData {
-@@ -765,6 +1556,35 @@ namespace RT64 {
+@@ -765,6 +1596,35 @@ namespace RT64 {
          flush();
          submitFramebufferPair(FramebufferPair::FlushReason::ProcessDisplayListsEnd);
  
@@ -4237,7 +4277,7 @@ index 10f98af..8122825 100644
          // Append any framebuffer operations to the end of the last framebuffer pair.
          int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
-@@ -1149,6 +1969,13 @@ namespace RT64 {
+@@ -1149,6 +2009,13 @@ namespace RT64 {
                  if (!fbPair.drawColorRect.isEmpty()) {
                      const auto &colorImg = fbPair.colorImage;
                      const auto &depthImg = fbPair.depthImage;
@@ -4251,7 +4291,7 @@ index 10f98af..8122825 100644
                      colorHeight = fbPair.drawColorRect.bottom(true);
                      colorWriteWidth = (colorHeight > 1) ? colorImg.width : std::min(fbPair.drawColorRect.right(true), int32_t(colorImg.width));
                      depthWriteWidth = 0;
-@@ -1426,11 +2253,21 @@ namespace RT64 {
+@@ -1426,11 +2293,21 @@ namespace RT64 {
                              depthFb->lastWriteType = Framebuffer::Type::Depth;
                          }
  
@@ -4277,7 +4317,7 @@ index 10f98af..8122825 100644
                          }
                      }
  
-@@ -1462,11 +2299,41 @@ namespace RT64 {
+@@ -1462,11 +2339,41 @@ namespace RT64 {
                          // 1MB gate is safe (real N64 framebuffers are always
                          // at >=0x80100000) and unblocks Factor 5 boot.
                          if (colorFb->addressStart >= 0x100000) {
@@ -4321,7 +4361,7 @@ index 10f98af..8122825 100644
                          }
                      }
  
-@@ -1899,6 +2766,122 @@ namespace RT64 {
+@@ -1899,6 +2806,122 @@ namespace RT64 {
              }
          }
          
@@ -4444,7 +4484,7 @@ index 10f98af..8122825 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1959,8 +2942,20 @@ namespace RT64 {
+@@ -1959,8 +2982,20 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -4467,7 +4507,7 @@ index 10f98af..8122825 100644
                  return;
              }
          }
-@@ -1972,7 +2967,11 @@ namespace RT64 {
+@@ -1972,7 +3007,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -4480,7 +4520,7 @@ index 10f98af..8122825 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +3032,51 @@ namespace RT64 {
+@@ -2033,26 +3072,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");

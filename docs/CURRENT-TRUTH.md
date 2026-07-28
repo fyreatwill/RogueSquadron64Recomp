@@ -657,11 +657,57 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s158)
+## Next steps, in order of expected value (s159)
 
--10. **NEW TOP PRIORITY (s158): characterize the guest-side call chain
-    feeding RT64's 15th crash class (`loadDrawState` zero-sample-size
-    assert).** s158 fully answered the s157 work unit (read both
+-11. **NEW TOP PRIORITY (s159): source-read and characterize the brand-new
+    21st crash class** — SIGBUS inside `drawSubtitleText` (confirmed real,
+    37300-byte function via `machoparse.py`; crash at `+34664`, genuinely
+    inside its own body), backtrace `drawSubtitleText` ← `setupCameraMatrices`
+    ← `static_5_800B47D0` ← `menuOverlayInit` ← `mainGameLoop`. First
+    appearance, s159, found while soaking the s159 `loadDrawState` guard
+    (see -10). **Notable: this is the earliest death yet in the whole
+    post-s86 family** — it happened during the SELECT GAME → SELECT YOUR
+    CRAFT menu transition itself, before any `[phase]` transition past
+    `vi_width=1024`, before `composeNpcOrientationMatrix`'s entry diagnostic
+    even fired (0 this run, vs. 508/508 in s158) — i.e. before the
+    post-leave hangar-flight window this family has focused on since s86.
+    Next work unit: read `drawSubtitleText` in `N64Recomp/RecompiledFuncs/`
+    (find via `machoparse.py` + the guest address, or grep symbol_files) for
+    the same unguarded-table/pointer-deref shape as the family's other 20
+    guest-side classes; if found, guard it the same way (`goto` the
+    function's real epilogue, `U32()`-range-check). If this new, earlier
+    failure window turns out to be a stable, reliably-earlier blocker (like
+    the 15th class was for the old window), treat it as **replacing** the
+    post-leave window as the primary target, not just adding to it. Full
+    detail: PORTING-STATE s159.
+
+-10. **s159: proved by full source read that the 15th crash class
+    (`loadDrawState` zero-sample-size assert) cannot be caused by ANY
+    guest-supplied tile field** — `tile.masks`/`maskt` are structurally
+    bounded to 0-15 (4-bit mask at the sole `SetTile` write path,
+    `rt64_gbi_rdp.cpp`/`rt64_rdp.cpp`), and every writer of
+    `sampleWidth`/`sampleHeight` either clamps to `std::max(..., 1)` or is a
+    default-OFF debug probe — so `1 << tile.masks` and `tileWidth`/
+    `tileHeight` can never combine to 0. This closes the original s158
+    framing ("is it guest garbage or an RT64 bug?") in the **RT64-internal**
+    direction — a guest-dispatch instrument was never going to catch a
+    mechanism that provably doesn't exist. Landed a guard at the assert site
+    instead (`lib/rt64/src/hle/rt64_state.cpp:746-780`,
+    `[zero-sample-guard]`, always-on): logs every raw tile field + an
+    independent recompute, then clamps to 1 instead of aborting. **If it
+    fires again**, a non-zero recompute confirms `dstCallTile` (a live
+    reference into `drawData.callTiles`, held across 200+ lines) was
+    corrupted or its backing vector reallocated between the correct write
+    (`:595`) and the read (`:747`) — an RT64-side reference-invalidation
+    bug, not guest-fixable; a zero recompute would mean this session's proof
+    has a gap. **Unvalidated this soak** (0/0 — the class simply didn't
+    recur; the soak died even earlier, to the new 21st class, see -11).
+    `lib/` change, patch exported + committed. Full detail: PORTING-STATE
+    s159.
+
+*(original s158 framing, superseded by -11/-10 above — kept for context)*:
+    ~~characterize the guest-side call chain feeding RT64's 15th crash
+    class.~~ s158 fully answered the s157 work unit (read both
     flagged gaps in `composeNpcOrientationMatrix`; found and guarded a
     genuine 7th unguarded site, `funcs_40.c:6901-6904` — a pointer field
     read from an already-validated table entry then immediately
