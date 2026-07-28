@@ -663,9 +663,26 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s208)
+## Next steps, in order of expected value (s209)
 
--49. **(s208, SHARPENS s194-207) `processSceneNode+8772`/`renderUnlitMeshFaces`
+-50. **(s209, NEW BLOCKER) Both soaks this session hit a reproducible ~47x
+    log-volume blowup (`rs-free-walk` lines: 1.98M baseline vs 104.8M/172.1M
+    this session, same script/duration) that appears to prevent the
+    craft-select/hangar scene from ever being reached — 0 `renderUnlitMeshFaces`
+    calls logged in either retry, including the always-on-at-call-1 positive
+    control. This is now the top-priority next step, ahead of resuming the
+    `ctx->r16` widen probe below: run a control soak with ONLY
+    `ROGUESQ_LOG_UNLIT_MESH_TRACER=1` set (strip `ROGUESQ_LOG_RS_FREE_WALK`,
+    `ROGUESQ_LOG_SCHED`, `ROGUESQ_LOG_RUNNER_ALL`, and the rest of the ~60
+    other `ROGUESQ_LOG_*` vars `run_unlitmeshtracer3.sh`-family scripts turn
+    on) to test the boring explanation first: does stripping the other
+    verbose diagnostics (which cost real wall-clock time to fprintf,
+    potentially starving actual game-logic progress within the fixed 361s
+    hold window) let the run reach the target scene normally? Full detail:
+    PORTING-STATE Session 209.
+
+-49. **(s208, STATUS: probe landed s209, not yet run to a valid result — see
+    -50 above) `processSceneNode+8772`/`renderUnlitMeshFaces`
     KSEG0-zero-extension bug: built and soaked the `MEM_W`-address bounds
     tracer NEXT.md prescribed (4 sites: funcs_4.c:4975/5009/5546/5563) — the
     tracer's positive control fired (proves it executed on the exact call

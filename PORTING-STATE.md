@@ -19501,3 +19501,125 @@ glob,os; ..."` works and is now the established workaround.
 `N64Recomp/RecompiledFuncs/funcs_4.c` (the new tracer) are uncommitted in the
 separate `N64Recomp` checkout, same posture as every prior session's guards —
 flagged for the user, not `lib/`, no `submodule-patches/export.sh` applies.
+
+
+## Session 209 (2026-07-28) — ran NEXT.md's two-step probe for the `processSceneNode+8772`/`renderUnlitMeshFaces` KSEG0-zero-extension bug: step 1 (symbol grep) is a clean negative, step 2 (widen tracer to `ctx->r16` itself) landed and built clean but got 2/2 ambiguous nulls from a NEW, large, reproducible log-volume anomaly that kept both soaks from ever reaching the traced scene
+
+**Goal**: NEXT.md's prescribed two-step probe for the recurring `0x80630062`
+KSEG0-zero-extension value (s208's finding): (1) grep decomp/symbol data for
+the literal address, no build required; (2) if that's a dead end, widen the
+`renderUnlitMeshFaces` `MEM_W`-bounds tracer to validate `ctx->r16` itself
+(the LOADED value from site B) immediately after its load, not just the
+load's source address, since sites A-D only ever checked source addresses.
+
+**Step 1 — grep, clean negative.** Searched `rogue_squadron64` and `N64Recomp`
+checkouts for `80630062` / `2154823778` (hex and decimal forms): zero hits in
+either checkout, including `roguesquadron.yaml`'s segment/symbol tables and
+`docs/data_blob/data_subsegments.yaml`. Also checked proximity: parsed every
+`0x`-prefixed 6-8 hex digit literal across `.yaml/.txt/.map/.csv/.json/.h/.c`
+files in `rogue_squadron64` for anything within `0x1000` of the target VRAM
+address — zero hits. Characterized the address itself: `0x80630062 -
+0x80000000 = 0x630062` (~6.19 MB into RDRAM), well beyond the highest static
+segment vram found in `roguesquadron.yaml` (~`0x8012xxxx`, ~1.2 MB) — i.e.
+this address sits deep in heap/dynamic-allocation territory, not near any
+named static segment. This is a real, if soft, negative for explanation (a2)
+(a fixed named symbol/asset at that address) — doesn't fully rule out an
+unnamed dynamic table at a fixed offset, but no direct symbol-table evidence
+supports (a2) either. Per NEXT.md, moved to step 2.
+
+**Step 2 — landed the widened tracer.** Added a new patch block to
+`fixup_game_funcs.py` (N64Recomp checkout) inserting
+`_rogue_unlit_mesh_tracer_check("B_LOADED", ctx->r16, 0X0)` immediately after
+site B's load (`funcs_4.c:5031`, `ctx->r16 = MEM_W(ctx->r20, 0X20)`), anchored
+on the unique unpatched line so it can't double-match. This validates the
+LOADED value itself (dominates all ~35 subsequent derefs of `ctx->r16`
+before the loop-back reload), not just the load's source address like sites
+A-D. Regenerated `RecompiledFuncs/funcs_4.c` (deleted only that file per the
+s208-confirmed-safe method, re-ran `N64Recomp` + `fixup_game_funcs.py`) —
+patch report showed all 5 sites (A, B, C, D, B_LOADED) patched exactly x1,
+no duplicates. Verified the inserted line's placement by grep (line 5032,
+directly after the line-5031 load, before the first subsequent deref at
+line 5057). Built clean (`cmake --build build --target RogueSquadron64Recomp
+-j8`, exit 0, only pre-existing sign-conversion warnings).
+
+**Step 3 — two soaks, both ambiguous nulls, but NOT the same failure mode as
+s208's pre-fix `unlitmeshtracer2`.** Copied `run_unlitmeshtracer3.sh` to
+`run_unlitmeshtracer4.sh` (env vars unchanged, only the run tag), ran full
+361s wall-clock, game process never crashed and had to be killed at grace
+end. Zero `unlit-mesh-tracer` lines of ANY kind in the log, including the
+positive-control counter (which s208 fixed to always log at call #1) — this
+means `renderUnlitMeshFaces` was never called this run, not that the
+instrument is broken (verified the calls==1 fix is present and unmodified in
+the regenerated source). Retried once (`run_unlitmeshtracer5.sh`, per
+NEXT.md's explicit allowance for one retry on an ambiguous null): same
+result, 0 tracer lines of any kind, full 361s run, no crash.
+
+**The real finding: both retries hit a NEW, large, reproducible log-volume
+anomaly, not random flakiness.** `wc -l` comparison against s208's own
+successful baseline run (`unlitmeshtracer3`, same script family, same 361s
+duration):
+- `unlitmeshtracer3` (s208 baseline): 4,491,703 total lines, 1,983,118
+  `rs-free-walk` lines (44%).
+- `unlitmeshtracer4` (this session, retry 1): 210,033,256 total lines,
+  104,756,052 `rs-free-walk` lines (50%) — **47x more total log volume than
+  baseline for the identical script and duration.**
+- `unlitmeshtracer5` (this session, retry 2): 210,920,521 total lines,
+  172,072,292 `rs-free-walk` lines (82%) — **also ~47x baseline, and the
+  `rs-free-walk` share of the log grew further.**
+
+Sampled the first 3,000,000 `rs-free-walk` lines of `unlitmeshtracer5`:
+182,297 DISTINCT `node=0x...` addresses — this isn't one enormous walk of a
+single fixed structure, it's either a genuinely huge/growing heap graph or a
+repeating walk over a large set. `[process-scene-node-callee] site=I`
+lines are present (confirmed via the same sample), so `processSceneNode`
+itself IS running and reaching at least one of its already-tracked callee
+sites — the run is not fully hung/frozen, but whatever is driving the
+`rs-free-walk` volume is consuming the overwhelming majority of the 361s
+window and the craft-select/hangar scene that exercises
+`renderUnlitMeshFaces` is apparently never reached (or reached too briefly
+to log a single call) before the hold window ends.
+
+**What this does NOT show**: no evidence this is caused by the `B_LOADED`
+patch itself — that edit is a pure `getenv`-gated observer inserted at
+`funcs_4.c:5032`, three lines from the existing (already-soaked, s208-clean)
+site B, in a file wholly unrelated to `rs-free-walk`'s subsystem (a
+different allocator-diagnostics path, not touched this session). Checked
+`git status` in this repo: `lib/N64ModernRuntime`/`lib/rt64` show as
+modified, but this is the SAME long-standing uncommitted-patch state
+CURRENT-TRUTH has documented for many sessions, not a new change introduced
+this session — doesn't explain a NEW regression between s208's run and now.
+
+**What this rules out**: budget rule 8 (3 consecutive uninformative
+soaks on one hypothesis → stop and pick the next highest-value probe) is now
+2-of-a-possible-3 on the ambiguous-null failure mode specifically (distinct
+from the (a1)/(a2) hypothesis pair itself, which still has zero discriminating
+evidence either way — the probe never got a chance to run in a valid scene
+state). Per NEXT.md's explicit "don't retry more than ~3 times total"
+ceiling for this failure class, stopping here rather than burning a 3rd soak,
+and treating the log-volume anomaly itself as the new highest-priority
+question: it is now the actual blocker for ALL further soak-based work in
+this scene, not just this specific probe.
+
+**Next work unit** (see rewritten NEXT.md): before re-attempting the
+`ctx->r16` widen probe a 3rd time, characterize the `rs-free-walk` blowup
+directly — cheapest test first is a control soak with ONLY
+`ROGUESQ_LOG_UNLIT_MESH_TRACER=1` set (strip the ~60 other `ROGUESQ_LOG_*`
+vars this script turns on, including `ROGUESQ_LOG_RS_FREE_WALK`,
+`ROGUESQ_LOG_SCHED`, `ROGUESQ_LOG_RUNNER_ALL`) to test the boring
+explanation first: does disabling the other verbose diagnostics (which
+themselves cost real wall-clock time to fprintf, potentially starving actual
+game-logic progress within the same 361s hold window) let the run reach
+craft-select/hangar and fire the unlit-mesh tracer normally? If yes, this
+was an I/O-bound self-inflicted slowdown from over-instrumentation, not a
+new game-logic regression — cheap, mundane, and directly actionable (drop
+the always-on diagnostics for soaks targeting this specific bug). If the
+run still never reaches the scene even with minimal logging, the `rs-free-walk`
+volume growth is a real behavioral change worth its own investigation
+(possibly the s84-era "shared corruption race" family, per CURRENT-TRUTH's
+existing cross-reference) independent of the `+8772` bug.
+
+**Uncommitted, not this repo's call**: `N64Recomp/fixup_game_funcs.py` (new
+`B_LOADED` patch block) and `N64Recomp/RecompiledFuncs/funcs_4.c` (regenerated
+with all 5 tracer sites) are uncommitted in the separate `N64Recomp` checkout,
+same posture as every prior session's guards — flagged for the user, not
+`lib/`, no `submodule-patches/export.sh` applies.

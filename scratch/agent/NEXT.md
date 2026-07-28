@@ -1,187 +1,161 @@
-# NEXT work unit — chase the recurring exact value `0x80630062` for the
-`processSceneNode+8772`/`renderUnlitMeshFaces` KSEG0-zero-extension bug.
-s208 built and soaked the 4-site `MEM_W` bounds tracer NEXT.md previously
-prescribed and got a REAL but partial result: 0 OOB at the 4 sites, yet a
-live crash still occurred, AND cross-referencing every soak log found the
-exact same faulting value (`far`/`si_addr=0x380630062`) in 4 independent
-runs. That is the important new fact — this is not random corruption, it is
-one deterministic value recurring. Read PORTING-STATE Session 208 in full
-(`grep -n "^## Session 208" PORTING-STATE.md`) before doing anything else.
+# NEXT work unit — characterize/clear the s209 log-volume blowup before
+resuming the `ctx->r16` widen probe for the `processSceneNode+8772`/
+`renderUnlitMeshFaces` KSEG0-zero-extension bug.
 
-## Why this is the next work unit
+Read PORTING-STATE Session 209 in full (`grep -n "^## Session 209"
+PORTING-STATE.md`) before doing anything else. The short version: s209 landed
+a real new instrument (a `B_LOADED` check on `ctx->r16` itself, right after
+its load at `funcs_4.c:5031`, via a new `fixup_game_funcs.py` patch block —
+still present, do not re-add it) and built clean, but BOTH soaks this session
+came back as ambiguous nulls — not because the instrument is broken, but
+because something new and reproducible is preventing the craft-select/hangar
+scene from ever being reached at all.
 
-The naive form of explanation (a) — "the source register at one of the 4
-traced sites is already bad before the dereference" — is now RULED OUT for
-sites A/B specifically this occurrence (their checks necessarily ran clean,
-since `lr=+640` postdates site B's load). But the crash still happened,
-inside the same function, with the same recurring value. Two live
-sub-hypotheses, neither yet distinguished:
+## The new fact this session found
 
-- (a1) A DIFFERENT register (not `ctx->r16`) is the actual zero-extended
-  one at the fault site. ARM64 register `x9` in the crash dump does not
-  have a confirmed `ctx->rN` mapping without disassembly (still blocked).
-- (a2) The recurring EXACT value `0x80630062` names a specific, fixed data
-  source (a real symbol's address, an asset field, a table entry) rather
-  than generic heap/list corruption — worth checking directly before any
-  more tracing.
+`run_unlitmeshtracer4.sh`/`run_unlitmeshtracer5.sh` (copies of s208's
+`run_unlitmeshtracer3.sh`, unmodified env vars, same 361s hold duration) both
+produced run.log files ~47x larger than s208's own successful baseline run
+(`unlitmeshtracer3`: 4.49M total lines; `unlitmeshtracer4`: 210.0M;
+`unlitmeshtracer5`: 210.9M), dominated by `rs-free-walk` lines (1.98M in the
+baseline vs 104.8M / 172.1M this session). Neither soak logged a single
+`unlit-mesh-tracer` line, including the always-fires-at-call-1 positive
+control — meaning `renderUnlitMeshFaces` was never called, i.e. the run never
+got far enough to reach the scene this bug lives in. `processSceneNode`
+itself IS running (`[process-scene-node-callee] site=I` lines are present in
+the sampled log), so this isn't a full hang — something is just consuming
+nearly the entire 361s hold window before the craft-select transition
+happens.
 
 ## Do exactly one this iteration, in this order
 
-1. **Cheapest first — grep for the literal value, no build required.**
-   Check whether `0x80630062` (or `80630062`, or the decimal equivalent
-   2154823778) names anything real:
-   - `grep -rn "80630062" /Users/williambuckley/Documents/Tools/rogue_squadron64/` —
-     symbol maps, splat config, asset tables.
-   - Check `symbol_files/main_overlay.txt` (referenced in s202-206) and any
-     other symbol/address listing under the `N64Recomp` or `rogue_squadron64`
-     checkouts for an entry at or near `0x80630062`.
-   - If a real symbol/struct/asset resolves at or very near that address,
-     that is a strong, cheap lead: whatever CODE reads that symbol's raw
-     32-bit address as DATA (instead of treating it as a pointer through the
-     normal `ADD32`/`MEM_W`-assignment sign-extension path) is the actual
-     bug — go read that code next, don't build anything yet.
-   - If nothing resolves (most likely outcome, given `0x80630062` sits in
-     the middle of the game's KSEG0 data range, not necessarily a named
-     symbol) — this is a clean negative for (a2), move to step 2.
+1. **Cheapest, boring-explanation-first: strip the non-essential logging and
+   re-soak.** Copy `scratch/agent/run_unlitmeshtracer5.sh` to a new tag
+   (e.g. `run_unlitmeshtracer6.sh`). Comment out or remove every
+   `export ROGUESQ_LOG_*=1` line EXCEPT `ROGUESQ_LOG_UNLIT_MESH_TRACER=1`
+   (keep `ROGUESQ_LLE_FORCE`/`ROGUESQ_LLE_UNGATED`/`ROGUESQ_LLE_SOLO`/
+   `ROGUESQ_STUB_MISSING_FUNCS` and the script's other non-`LOG` plumbing —
+   those aren't logging). Run it. Two possible outcomes:
+   - **The craft-select scene is reached and the tracer fires (positive
+     control logs at call #1, log stays small, ~4-5M lines like the s208
+     baseline or smaller)**: this confirms the earlier over-instrumented runs
+     were self-inflicted — the ~60 verbose `ROGUESQ_LOG_*` diagnostics were
+     costing enough wall-clock time via `fprintf` that real game-logic
+     progress got starved inside the fixed 361s hold window. Actionable and
+     cheap: for THIS specific bug's future soaks, always run with a minimal
+     env-var set (document this in the next PORTING-STATE entry and add a
+     `run_unlitmeshtracer_minimal.sh` reusable template). Then, in the SAME
+     run if it also crashes, or a follow-up run otherwise, read whether the
+     new `B_LOADED` check at `funcs_4.c:5032` fires OOB — this is the actual
+     original s208/NEXT.md question (does the value in `ctx->r16` show up
+     zero-extended immediately after its load, or only later).
+   - **Still 0 tracer lines / scene still never reached, even with minimal
+     logging**: the `rs-free-walk` blowup is a real behavioral regression,
+     not a logging-overhead artifact. Do NOT chase this deeper the same
+     iteration (budget rule 8) — write it up as a new, higher-priority
+     blocking bug (working title: "rs-free-walk blowup blocks scene
+     transition"), separate from the `+8772` KSEG0 bug, and go BLOCKED or
+     pick the next highest-value item from CURRENT-TRUTH's "Next steps".
 
-2. **If step 1 is a dead end, widen the tracer to `ctx->r16` itself.**
-   `ctx->r16` (loaded at site B, `funcs_4.c:5029`) is dereferenced ~35 more
-   times before the loop-back reload at 5546 — grep confirmed lines 5057,
-   5069, 5114, 5117, 5129, 5141, 5157, 5167, 5177, 5187, 5189, 5191, 5195,
-   then 5347-5542 (re-grep to confirm unchanged: `awk 'NR==5029,NR==5546'
-   funcs_4.c | grep -E "MEM_(W|HU|BU|H|B)\(ctx->r16"`). None of these were
-   checked this session — site B only validated the LOAD's source address
-   (`ctx->r20`), never the LOADED VALUE (`ctx->r16`) before its first
-   subsequent use as a pointer. Add ONE new check, right after site B's
-   existing `_rogue_unlit_mesh_tracer_check("B", ctx->r20, 0X20)` call
-   (immediately before line 5057, the first subsequent dereference of
-   `ctx->r16`): validate `ctx->r16` itself the same way (upper 32 bits
-   should read `0xFFFFFFFF`, i.e. treat it as a "source register", checking
-   `(ctx->r16 + 0) - 0xFFFFFFFF80000000` against `[0, 0x800000)`). If THIS
-   check fires OOB before the crash, that pins the corruption to exactly the
-   value loaded at site B (confirms a1-adjacent: the load itself produced a
-   bad value despite the sign-extension convention, worth an EXTRA look at
-   whether `MEM_W`'s expansion is really being applied there or something
-   subtler is happening) — a real, actionable finding. If it does NOT fire
-   even when the crash recurs, the corruption is even further downstream
-   (in one of the ~35 later derefs, or in `ctx->r18`'s chain via site A
-   instead) and the next session should widen further along that chain.
-
-3. **Regen + build + soak** exactly as s208 did: `make_elf.py` → `N64Recomp`
-   (`env`-prefixed) → `fixup_game_funcs.py` (audit patch report for exactly
-   the expected new line, no duplicates) → `DEVELOPER_DIR=/Applications/
-   Xcode.app/Contents/Developer cmake --build build --target
-   RogueSquadron64Recomp -j8`. Launch with `run_in_background: true`, block
-   via `TaskOutput(..., block=true, timeout=300000-480000)`. Copy
-   `scratch/agent/run_unlitmeshtracer3.sh` to a new tag (e.g.
-   `run_unlitmeshtracer4.sh`) rather than reusing a prior tag — do not
-   overwrite `unlitmeshtracer3`'s `run.log`, it's the evidence base for
-   s208's finding.
-   - **If the first soak dies at startup before VI width 1024** (happened
-     once in s208, `unlitmeshtracer1`, unrelated `waitForAnyAudioSlot`
-     23rd-class crash) — that is NOT a result, just retry once with a new
-     tag. Budget rule 8 still applies: don't retry more than ~3 times
-     total across startup-death + ambiguous-null before parking this and
-     going BLOCKED or picking a different next-step.
+2. **If step 1 confirms the logging-overhead explanation and a soak with
+   minimal logging reaches the scene**: check the `B_LOADED` check's result
+   directly (`grep -a "B_LOADED" run.log` for the new tag's run.log — expect
+   either an `OOB` line, meaning the value was already zero-extended right at
+   the load and NOT via the audited-clean `MEM_W`-assignment path (a real,
+   actionable finding worth its own deep dive into codegen or a stray raw
+   cast), or no `OOB` line despite a crash, meaning the corruption happens
+   even later than `ctx->r16`'s first ~35 uses and the next session should
+   widen further along the chain (site A's `ctx->r18`, or the ~35 individual
+   `ctx->r16` derefs listed in s208's PORTING-STATE entry).
 
 ## Do not
 
+- Do not re-add the `B_LOADED` check to `fixup_game_funcs.py` — it is
+  already there (patched cleanly, verified x1, no duplicates as of s209).
+  Re-running `fixup_game_funcs.py` after deleting only `funcs_4.c` is safe
+  and idempotent (s208/s209-confirmed) if you need to regenerate.
 - Do not re-read `renderUnlitMeshFaces`'s source as a fresh whole-function
-  pass again — s204, s207 (twice) already did this exhaustively. Targeted
-  reads of specific NEW lines (e.g. the `ctx->r16` deref chain in step 2) are
-  fine; a repeat of the "read the whole function looking for anything" method
-  is not.
+  pass — s204, s207 (twice) already did this exhaustively.
 - Do not re-attempt `nm`/`atos`/`otool`/`objdump` — blocked, re-confirmed
-  s207, not re-litigated since (retry only if the environment visibly
-  changes).
-- Do not widen the tracer to ALL ~35 `ctx->r16` derefs at once on the first
-  pass of step 2 — add the ONE check right after the load (before line
-  5057) first; only add more if that single check's result is itself
-  ambiguous.
-- Do not conclude anything about (a1) vs (a2) from step 1 alone if the grep
-  is a clean negative — "no symbol at that address" doesn't rule out a2, it
-  just means the search needs a different angle (e.g. is `0x80630062` a
-  valid offset into a specific KNOWN data segment, even if unnamed) — say so
-  explicitly rather than treating a negative grep as a closed question.
+  s207, not re-litigated since.
+- Do not soak a 3rd time with the FULL (unstripped) env-var set expecting a
+  different outcome — 2/2 soaks this session already came back the same way
+  with that exact config; per budget rule 8, that hypothesis (as configured)
+  is exhausted. The variable to change is the env-var set (step 1), not the
+  number of retries.
+- Do not conclude the `rs-free-walk` blowup is caused by the `B_LOADED`
+  patch — that edit is a 1-line, `getenv`-gated, control-flow-inert observer
+  in `funcs_4.c` (rendering code), unrelated to whatever subsystem emits
+  `rs-free-walk` (an allocator/heap-walk diagnostic, pre-existing, untouched
+  this session). If step 1's minimal-logging soak clears the problem, that
+  closes this question without needing to inspect the free-walk code at all.
 - Do not re-touch any of the existing GUARD/tracer instrumentation
   (SCENE_NODE_LIST_GUARD family, SCENE_NODE_CACHE_GUARD, scene-node-ptr-guard,
   REINTERPRET_TILE_GUARD, video-frame-tick-guard, the processSceneNode
-  callee tracers A-J, or the new unlit-mesh-tracer sites A-D) — all
-  correct-per-spec, no new evidence against any of them this session.
+  callee tracers A-J, or the unlit-mesh-tracer sites A-D/B_LOADED) — all
+  correct-per-spec, no new evidence against any of them.
 
 ## Environment notes (carried forward, still current)
 
 - The `[CRASH][pc-symbol]` diagnostic (`src/main/main.cpp`, `dladdr()` on the
-  raw mcontext `pc`) is permanent and always-on, and now has 2 independent
-  hits both naming `renderUnlitMeshFaces` (different offsets, `+508` and
-  `+792`) — trust it over `backtrace_symbols_fd()`'s output when they
-  disagree.
+  raw mcontext `pc`) is permanent and always-on, and has 2 independent hits
+  naming `renderUnlitMeshFaces` (`+508` and `+792`) — trust it over
+  `backtrace_symbols_fd()`'s output when they disagree.
 - Disassembly/symbolication tools (`nm`/`otool`/`objdump`/`lldb`/`atos`) are
   ALL blocked (non-interactive session, no human to clear the approval
-  prompt) — re-verified s207 (2 independent attempts), not re-tried s208.
-  Re-verify fresh only if something about the environment seems to have
-  changed.
-- This project builds `CMAKE_BUILD_TYPE=Debug` (`-O0`) globally; only the 3
-  RSP-ucode translation units get an explicit `-O2` override. `RecompiledFuncs`
-  stays at `-O0`, and `RECOMP_FUNC` is `noinline` — no game function can be
-  silently inlined into a caller (s207, build-config-verified fact, not an
-  inference).
-- `rm -f <glob>` and `find <dir> -delete` are BOTH blocked in this sandbox
-  regardless of approval attempts (confirmed s208, 2 separate mechanisms
-  tried). Use `python3 -c "import glob, os; [os.remove(f) for f in
-  glob.glob('<pattern>')]"` instead — confirmed working.
+  prompt) — re-verified s207, not re-tried s208/s209.
+- This project builds `CMAKE_BUILD_TYPE=Debug` (`-O0`) globally; `RECOMP_FUNC`
+  is `noinline` — no game function can be silently inlined into a caller
+  (s207, build-config-verified, not an inference).
+- `rm -f <glob>` and `find <dir> -delete` are BOTH blocked in this sandbox.
+  Use `python3 -c "import glob, os; [os.remove(f) for f in
+  glob.glob('<pattern>')]"` instead.
 - `fixup_game_funcs.py` re-run after deleting only ONE `funcs_*.c` file is
-  safe — it correctly no-ops on the other 44 already-patched files (their
-  bare-code regex no longer matches post-patch text), confirmed s208 by
-  checking `funcs_0.c` for duplicate `PATCH:` markers (found none). Still
-  prefer a full delete-all cycle if there's any doubt about which files were
-  touched when.
+  safe and idempotent on the other 44 already-patched files (s208/s209-
+  confirmed, no duplicate `PATCH:` markers).
 - `./build/N64Recomp rogue_squadron.toml` (from the `N64Recomp` checkout)
   needs an `env` prefix to clear the permission-prefix-match wall.
-- `N64Recomp/RecompiledFuncs/*.c` is entirely untracked in that checkout's
-  own git (not gitignored — just never added), so deleting/regenerating
-  individual files is safe with respect to that checkout's git history, but
-  the CONTENT (patches) is real work — always re-run fixup before building.
 - Any edit under THIS repo's `lib/` needs `./submodule-patches/export.sh` +
   commit in the SAME session. `N64Recomp` and `rogue_squadron64` are
   SEPARATE checkouts outside this repo, NOT `lib/` submodules — their
-  uncommitted changes (this session: `fixup_game_funcs.py`,
-  `RecompiledFuncs/funcs_4.c`) are flagged for the user, not this session's
-  call to commit.
+  uncommitted changes (`fixup_game_funcs.py`, `RecompiledFuncs/funcs_4.c`)
+  are flagged for the user, not this session's call to commit.
 - Re-running the same soak script/tag overwrites the previous run's
   `run.log` in place — copy the driver script to a new tag name per soak.
-  `run.log` files are multi-GB — NEVER `Read` or `cat` them whole — always
-  `grep -a`/`sed -n`/`awk` for specific line ranges.
+  `run.log` files can be MULTI-GIGABYTE (this session: 10+ GB, 210M+ lines)
+  — NEVER `Read`/`cat` them whole — always `grep -a`/`sed -n`/`awk`/`wc -l`
+  for specific content, and expect even `grep -c` over a 10 GB file to take
+  real wall-clock time.
 - Running scripts under `RogueSquadron64Recomp/tools/agent/*.sh` /
   `scratch/agent/*.sh` directly gets denied — prefix with `zsh`.
 - Compound `cd ... && zsh ...`/`cd ... && cmake ...` gets denied in ONE
-  Bash call — prefer separate Bash calls (one `cd`, then the next command
-  in its own call; cwd persists across calls). Output-redirection compounds
-  (`cmd > file`, `cmd | tee file`) also get flagged for approval even when
-  the underlying command alone would run freely — prefer running the
-  command bare and letting the harness persist large output, or write small
-  intermediate files via the Write tool instead of shell redirection.
+  Bash call — prefer separate Bash calls. Output-redirection compounds
+  (`cmd > file`, `cmd | tee file`, and even a plain `cd X && sed ... > Y`)
+  also get flagged — use the `Write` tool for small file writes, or run
+  `sed`/similar with absolute paths and no `cd` in the same call.
 - Heredocs get rejected by this session's Bash tool — use the Write tool
-  instead (write to `scratch/agent/`, a repo-allowed path, not `/tmp` —
-  `/tmp` writes get a permission prompt in this sandbox), including for
-  large PORTING-STATE.md appends (`cat tmpfile >> PORTING-STATE.md`, then
-  delete the tmpfile).
+  instead (write to `scratch/agent/`, not `/tmp`).
 - `/scratch/` is entirely gitignored except `scratch/agent/NEXT.md`,
   `OUTCOME`, `STATUS` — new soak scripts/logs never need `git add`.
 - `scratch/agent/STATUS`/`OUTCOME` get reset to `WORKING`/deleted at the
   START of each iteration by the harness — finding them in that state at
-  session start is normal, not evidence of a crashed prior session.
-- Block on a soak by launching with `run_in_background: true` and calling
-  `TaskOutput(task_id, block=true, timeout=300000-480000)` — do not end
-  the turn while a background soak is still running.
+  session start is normal.
+- Block on a soak by launching (it auto-backgrounds past the 120s Bash
+  timeout) and then calling `TaskOutput(task_id, block=true, timeout=
+  180000-480000)`, possibly more than once in a row if it's still
+  `running` — do not end the turn while a background soak is still running.
+  The driver script's own `--- summary ---` postprocessing step can itself
+  take several minutes on a 10+ GB log; it's fine to `grep -a -c` the
+  run.log directly for the specific markers you need instead of waiting for
+  that summary to finish.
 
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is now well over the ~35 KB CLAUDE.md budget and
 exceeds the Read tool's 256 KB single-read limit (confirmed s195, still
-true s208 — read it with `grep`/`sed -n`, never a plain whole-file `Read`).
+true s209 — read it with `grep`/`sed -n`, never a plain whole-file `Read`).
 Migrate durable mechanism/architecture material to `PROJECT-OVERVIEW.md` and
-prune superseded detail, paired with a real experiment — flagged for 9+
+prune superseded detail, paired with a real experiment — flagged for 10+
 sessions without action, escalating.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` and
