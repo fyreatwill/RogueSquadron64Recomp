@@ -17410,3 +17410,140 @@ Soak artifacts: `scratch/s73_post_a_scene/schedtick1/` (run.log, screenshots),
 driver summary `scratch/agent/schedtick1_driver.log`, driver script
 `scratch/agent/run_schedtick1.sh`, extracted tick lines
 `scratch/agent/schedtick1_ticks.txt`.
+
+## Session 189 (2026-07-28) — took NEXT.md's recommended path (B): surveyed every catalogued crash-time `decisionN` across ALL historical soak logs instead of running a new soak. The "4 unrelated crash families cluster near 9770-9792" claim does not survive the full dataset — but a DIFFERENT, stronger signal was hiding in it: the "new" processSceneNode crash that ended s188 is not new at all, it's the SAME bug recurring a 3rd and 4th time, always in this exact decision neighborhood
+
+**Work unit** (NEXT.md path (B), cheap/no-build): `[CRASH][vifs-snapshot]
+decisionN=...` is unconditionally armed in the crash handler (`src/main/
+main.cpp`, reused by s188's `[sched-tick]` work), so every soak ever run
+under this instrument left a crash-time decisionN reading regardless of what
+the soak was actually testing. Grepped `vifs-snapshot` across every
+`scratch/s73_post_a_scene/*/run.log` (`grep -rn -F "vifs-snapshot"
+scratch/s73_post_a_scene/*/run.log`) to build an unbiased sample of "where in
+the run did soaks tend to die," independent of the schedguard/schedtick
+lineage's own narrative.
+
+**Full dataset** (16 runs, sorted by decisionN at crash/last-fire):
+`356` (rsmallocwalkguard2, early degenerate crash, excluded from spacing
+stats below), `7734` (schedguard2), `7857` (schedcaller1), `7919`
+(heapwalkerguard3_2), `8016` (schedguard3), `8042` (rsmallocwalkguard1),
+`8273` (schedguard1), `8327` (schedguard5), `8414` (crashvifs1), `8616`
+(schedguard6), `9661` (heapwalkerguard3_1), `9694` (tickreap3dvoicesguard1),
+`9789` (schedtick1), `10535` (schedguard7), `12490` (schedguard4, this is
+`lastFireDecisionN` — see below), `14267` (swapackwait1).
+
+**Discriminating read #1 — the "clustering" claim over-included two crashes
+that aren't actually near the window.** Nearest-neighbor gaps across the 15
+non-outlier points average **~467 decisions** (sum of gaps 6533 over 14
+intervals), with a dense sub-cluster from 7734-8616 (8 points, avg gap ~110)
+and another from 9661-9789 (3 points, avg gap ~64). Measured against that:
+`evalCubicSplineAtTime` (s184, decisionN=8327) is **1443 decisions** from the
+9770-9792 window's near edge, and `rs_free` (s185/s186, decisionN=8616) is
+**1154 decisions** away — both comparable to or larger than the *typical*
+inter-crash gap seen anywhere else in this dataset. Their inclusion in s188's
+"4 unrelated crash families cluster near 9770-9792" writeup (CURRENT-TRUTH
+item -37) was not supported by the data once compared against the full
+history, not just the 3-4 most recent sessions — this is the "boring
+explanation first" check NEXT.md's rule 5 calls for, and it substantially
+weakens (does not fully kill — see #2) the "shared game-state trigger" frame
+those two crash sites were cited as evidence for.
+
+**Discriminating read #2 — but two OLDER runs nobody had cross-referenced
+against the 9770-9792 window turn out to be the exact same crash as s188's
+"new" one.** Pulled the crash stacks for the two points that DO fall inside
+the dense 9661-9789 sub-cluster: `heapwalkerguard3_1` (decisionN=9661) and
+`tickreap3dvoicesguard1` (decisionN=9694). Both are **byte-identical in
+shape** to s188's `schedtick1` (decisionN=9789) crash: `SIGBUS ←
+processSceneNode+8148/8456 (self-call) ← processSceneNode+8148/8456 ←
+traverseSceneGraphRecursive+1576 ← setupCameraMatrices+27372 ←
+static_5_800C9BF0+4440 ← menuOverlayInit+6004 ← mainGameLoop+2400 ←
+mainBootstrapWorker+2032`, same frame-by-frame call chain down to the byte
+offsets (which only drift because these are 3 different builds). This is the
+**already-catalogued s172-lineage `processSceneNode` self-recursion SIGBUS**
+(CURRENT-TRUTH ~line 1703, 1744-1850 for prior source-reads) — not a new
+crash family at all. So instead of "processSceneNode is a new 4th family
+that happened to land in the window once," the honest count is: **this one
+specific, already-partially-source-read bug has now independently fired at
+least 3 times (heapwalkerguard3_1, tickreap3dvoicesguard1, schedtick1),
+across 3 different sessions with different guards/instruments active, always
+somewhere in a 128-decision span (9661-9789)** — on top of its original s172
+catalog entry. That is a real, reproducible recurrence pattern for a single
+bug, not evidence of "many different latent bugs" being drawn to the same
+point by unknown game state.
+
+**Discriminating read #3 — the one confirmed real stall (not just a crash)
+also isn't decision-count-pinned.** `schedguard4` (s183) is the only run that
+ever sustained the actual `-35` stall (`stalledNow=1` for 2688 consecutive
+decisions) — its `lastFireDecisionN=9770` is literally what "the historical
+9770-9792 window" was named after; it's not independent evidence, it's the
+anchor. Checked whether any OTHER run shows `stalledNow=1` at crash time as a
+sanity check on whether stall onset is decision-count-pinned at all:
+`schedguard2` (s182) crashed with `stalledNow=1` at decisionN=**7734** — a
+completely different crash (`RT64::FramebufferStorage::store` OOB, s182's
+own already-fixed bug, well before the fbsync-oob-skip guard landed in that
+same session) and **2000+ decisions away** from 9770. This is weak evidence
+on its own (single-decision `stalledNow` flag at the moment of an unrelated
+crash, not a sustained freeze like schedguard4's), but it's a second
+data point showing "stalled" states aren't exclusively tied to the ~9770
+neighborhood either.
+
+**Revised conclusion — corrects CURRENT-TRUTH item -37**: There is no
+support for "decision ~9770-9792 is a point where many unrelated bugs
+converge because of shared game/mission state." The real picture is
+simpler and more actionable: **the processSceneNode self-recursion SIGBUS
+(s172 lineage) is the single most frequent obstacle in the 9660-9800
+decision neighborhood specifically**, confirmed by 3 independent recurrences
+now (plus its original catalog entry), while the two other crash sites
+previously cited as part of the "clustering" (`evalCubicSplineAtTime`,
+`rs_free`) are ordinary crashes at ordinary distances that don't belong in
+this narrative.
+
+**Critical addendum, checked before writing this up as "just land a
+guard"**: this is NOT a fresh, unguarded crash site — `N64Recomp/
+fixup_game_funcs.py` already carries FOUR guards on this exact function
+from earlier sessions: `_scene_node_list_guard_patch`
+(`ROGUESQ_LOG_SCENE_NODE_LIST_GUARD`), 2 more deref-site guards
+(`..._LIST_GUARD2`/`..._LIST_GUARD3`, s99-101-era), and s175's
+recursion-depth cap (`ROGUESQ_LOG_SCENE_NODE_DEPTH_GUARD`, static counter,
+caps at depth 128, decrements at the function's confirmed sole epilogue
+`L_80015528`). Checked `run_schedtick1.sh`: **all four were armed
+(`=1`) in the s188 soak that just crashed here** — `grep -c
+"scene-node-list-guard\|scene-node-depth-guard" schedtick1/run.log` is
+**0 for all four**, i.e. none of them fired, yet the process still died to
+this exact backtrace. Same result for `tickreap3dvoicesguard1` (the 3
+list-guards were armed there too, s174, predates the depth cap — also
+0/0/0). **This refutes s175's own working hypothesis** (unbounded
+recursion depth → native stack overflow, hence a depth cap as the fix
+shape) at least as the sole mechanism: if depth were the cause, either the
+guard would trip before the crash, or the crash would occur near a
+consistent stack-relative offset consistent with overflow at a shallower
+depth than 128 — instead the SIGBUS keeps landing at effectively the same
+in-function PC offset (`+7176`/`+7640`/`+8148`/`+8456` — drifting only with
+each rebuild's codegen, not with run-to-run recursion depth) across 4+
+independent recurrences, which looks much more like a **single specific
+unguarded dereference at a fixed source line that none of the 4 existing
+guards happen to cover**, not a stack-depth phenomenon. **This directly
+resolves NEXT.md's undecided (A) vs (B) fork, but sharpens (A)**:
+**source-read `processSceneNode`/`traverseSceneGraphRecursive` again,
+specifically to find the REAL faulting deref** (not to add a 5th guard
+blind) — CURRENT-TRUTH already has prior source-read notes on this exact
+function (~line 1703, 1724, 1735, 1765, 1809, 3899-3941 in the fixup
+script itself for the depth-cap's own reasoning) to build on, and the
+"a3 argument is clobbered, not a depth counter" / "sibling list rooted at
+0x80112B20" groundwork from s175 is still valid raw material — but the
+conclusion that recursion depth is the mechanism should be treated as
+weakened, not confirmed.
+
+**What this does and doesn't show**: does not touch the `rs_free`
+free-list-corruption root cause (still out of scope per NEXT.md "do not").
+Does not run a new soak or touch `lib/` — pure log analysis over existing
+gitignored soak artifacts, no `submodule-patches/export.sh` needed this
+session. Does not yet land the `processSceneNode` guard itself — that is
+next session's unit (source-read first, per rule 5, since it changes control
+flow inside a recursive function, unlike s188's pure log-line add).
+
+Raw grep output and the sorted decisionN table are reproducible via `grep
+-rn -F "vifs-snapshot" scratch/s73_post_a_scene/*/run.log` — not saved as a
+separate artifact since `scratch/` outside `scratch/agent/{NEXT,OUTCOME,
+STATUS}` is gitignored and would not survive to the next session; this
+session entry is the durable copy.
