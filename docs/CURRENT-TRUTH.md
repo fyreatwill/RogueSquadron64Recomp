@@ -657,29 +657,56 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s159)
+## Next steps, in order of expected value (s160)
 
--11. **NEW TOP PRIORITY (s159): source-read and characterize the brand-new
-    21st crash class** — SIGBUS inside `drawSubtitleText` (confirmed real,
-    37300-byte function via `machoparse.py`; crash at `+34664`, genuinely
-    inside its own body), backtrace `drawSubtitleText` ← `setupCameraMatrices`
-    ← `static_5_800B47D0` ← `menuOverlayInit` ← `mainGameLoop`. First
-    appearance, s159, found while soaking the s159 `loadDrawState` guard
-    (see -10). **Notable: this is the earliest death yet in the whole
-    post-s86 family** — it happened during the SELECT GAME → SELECT YOUR
-    CRAFT menu transition itself, before any `[phase]` transition past
-    `vi_width=1024`, before `composeNpcOrientationMatrix`'s entry diagnostic
-    even fired (0 this run, vs. 508/508 in s158) — i.e. before the
-    post-leave hangar-flight window this family has focused on since s86.
-    Next work unit: read `drawSubtitleText` in `N64Recomp/RecompiledFuncs/`
-    (find via `machoparse.py` + the guest address, or grep symbol_files) for
-    the same unguarded-table/pointer-deref shape as the family's other 20
-    guest-side classes; if found, guard it the same way (`goto` the
-    function's real epilogue, `U32()`-range-check). If this new, earlier
-    failure window turns out to be a stable, reliably-earlier blocker (like
-    the 15th class was for the old window), treat it as **replacing** the
-    post-leave window as the primary target, not just adding to it. Full
-    detail: PORTING-STATE s159.
+-12. **NEW TOP PRIORITY (s160): corroborate the crash-free soak with a 2nd,
+    independent run before concluding anything.** s160 source-read the
+    entire 21st crash class (`drawSubtitleText`, see -11) and guarded the
+    one genuinely-matching unguarded-pointer-deref site it found (a
+    per-position glyph-pointer cache dereferenced before its own later null
+    check, `N64Recomp/fixup_game_funcs.py`, `[subtitle-glyph-guard]`/
+    `[subtitle-glyph-guard2]`, `funcs_4.c:0x80016328`/`0x80016790`). The
+    resulting soak (`scratch/agent/run_subtitleguard1.sh`) was **the first
+    fully crash-free run in the entire post-s86 family since s88** — full
+    120s hold + grace (157s wall), `compose-npc`/`anim-recurse`/
+    `anim-tex-stream`/`hangar-entry` all exercised with 0 crashes, killed
+    only by the script's own timeout, not a signal. **But the two new
+    guards themselves are 0/0 (unvalidated)** — a guard that never fires
+    and a bug that's genuinely gone look identical after one soak, and
+    this family has had crash-free soaks turn out to be single flukes
+    before (s85's `frameStartReset`, s89's 3-non-recurrence pattern). Next
+    work unit: re-run `scratch/agent/run_subtitleguard1.sh` (or an
+    equivalent-battery script) once more, no code changes. Three outcomes:
+    (a) 2nd soak also crash-free → two-source rule satisfied, this becomes
+    the strongest stability result in the project's history, revisit
+    whether M3's "60s in-mission" done-criteria language now needs
+    updating rather than just "reachable"; (b) 2nd soak crashes on the
+    21st class again → the guard doesn't cover the real mechanism, go back
+    to the two documented-but-not-guarded candidates in PORTING-STATE s160
+    (unbounded 0xFFFF-run-count loop; frame-reset-bounded cache write) or
+    re-examine with fresh eyes; (c) 2nd soak crashes on a different,
+    already-catalogued class → progress (this class is likely fixed),
+    continue down the family list from whatever crashed. Full detail:
+    PORTING-STATE s160.
+
+-11. **s159/s160: the 21st crash class, `drawSubtitleText`, has a landed,
+    first-soak-clean guard — see -12 for the corroboration step, do not
+    treat this as closed yet.** Originally found s159 as a brand-new SIGBUS
+    (confirmed real, 37300-byte *host*-compiled function via
+    `machoparse.py`, crash at host offset `+34664`, genuinely inside its
+    own body — but note the guest-instruction span is only ~4.8 KB, so that
+    host offset does NOT map proportionally to a guest address; s160 had to
+    read the whole function, not jump to an estimated line), backtrace
+    `drawSubtitleText` ← `setupCameraMatrices` ← `static_5_800B47D0` ←
+    `menuOverlayInit` ← `mainGameLoop`. **Notable: this was the earliest
+    death yet in the whole post-s86 family when first found** — during the
+    SELECT GAME → SELECT YOUR CRAFT menu transition itself, before any
+    `[phase]` transition past `vi_width=1024`, before
+    `composeNpcOrientationMatrix`'s entry diagnostic even fired. s160
+    found this function is atypically well-guarded compared to the rest of
+    the family (real bounds checks on almost every guest-controlled index)
+    and traced the one genuine match to the family's classic shape — see
+    -12 and PORTING-STATE s160 for the mechanism and the guard.
 
 -10. **s159: proved by full source read that the 15th crash class
     (`loadDrawState` zero-sample-size assert) cannot be caused by ANY

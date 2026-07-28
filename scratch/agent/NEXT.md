@@ -1,86 +1,84 @@
-# NEXT work unit — source-read the brand-new 21st crash class (drawSubtitleText)
+# NEXT work unit — corroborate the s160 crash-free soak
 
-s159 closed out the s158 work unit (proved via full source read that the
-15th crash class, `loadDrawState`'s zero-sample-size assert, cannot be
-caused by any guest-supplied tile field — it's RT64-internal, not
-guest-guardable) and landed a guard+log+clamp at the assert site instead of
-a guest-dispatch instrument that the proof shows would never have fired.
-The soak that validated the build found a brand-new, earlier-in-the-run
-crash instead. Read PORTING-STATE's Session 159 entry before doing anything
-else; this file only has the actionable summary.
+s160 source-read the entire `drawSubtitleText` function (the 21st crash
+class, first found s159), found and guarded the one site matching the
+family's classic "unguarded table-pointer deref" shape, and reran the full
+soak battery. Result: **the process survived the whole 120s hold + grace
+window with 0 crashes of any of the 21 catalogued classes** — the first
+fully crash-free soak in this family since s88. Read PORTING-STATE's
+Session 160 entry before doing anything else; this file only has the
+actionable summary.
 
-## What s159 did and found
+## What s160 did and found
 
-1. Traced every writer of `dstCallTile.sampleWidth`/`sampleHeight` in
-   `RT64::State::loadDrawState` (`lib/rt64/src/hle/rt64_state.cpp:441-747`)
-   and every input field's provable bounds (`tile.masks`/`maskt` are 4-bit
-   masked at the sole `SetTile` write path, so 0-15 always; every writer
-   either clamps to `>=1` or is a default-OFF debug probe). Proved the
-   assert's precondition cannot fail from guest data under the current
-   code — closing the s158 question in the "RT64-internal" direction.
-2. Landed `[zero-sample-guard]` at the assert site (`rt64_state.cpp:746-780`,
-   always-on): logs raw tile fields + an independent recompute, clamps to 1
-   instead of aborting if the precondition would fail. `lib/` change,
-   `submodule-patches/export.sh` run + committed.
-3. Built clean, soaked (`scratch/agent/run_zerosample1.sh`). Died **far
-   earlier than any prior soak in this family** — during the SELECT GAME →
-   SELECT YOUR CRAFT menu transition itself, before any VI phase past 1024,
-   before `composeNpcOrientationMatrix`'s entry diagnostic even fired (0
-   this run vs. 508/508 in s158). Neither the 15th class nor
-   `composeNpcOrientationMatrix` fired.
-4. The actual crash: SIGBUS, backtrace `drawSubtitleText+34664` ←
-   `setupCameraMatrices+27984` ← `static_5_800B47D0+99260` ←
-   `menuOverlayInit+4472` ← `mainGameLoop`. Confirmed via
-   `scratch/agent/machoparse.py build/RogueSquadron64Recomp drawSubtitleText`
-   that the function really is 37300 bytes (next symbol
-   `setupCameraMatrices`) — the offset lands genuinely inside its own body,
-   not a misattributed neighbor. **New, 21st crash class** (previous
-   highest was 20th, s154) — not source-read yet.
+1. Located `drawSubtitleText` at guest address `0x800159B4`
+   (`N64Recomp/RecompiledFuncs/funcs_4.c:15603-18922`) and read the entire
+   function body (confirmed real epilogue at the closing `return;`, so no
+   code was left unread).
+2. Found the function is atypically well-guarded compared to the rest of
+   the family — almost every guest-controlled index has a real MIPS bounds
+   check ahead of it. Considered and **ruled out** (checked, not assumed)
+   an unbounded persistent-counter table write as the bug, because its two
+   counters are reset every frame (`frameStartReset`/`initRenderStateArrays`,
+   confirmed via `grep` for their literal reset writes).
+3. Found and guarded the one genuine match to the family's shape: a
+   per-string-position glyph-pointer cache entry (`ctx->r16`, read from a
+   fixed table indexed by character position) is dereferenced twice
+   **before** the function's own later null check on the same value.
+   Guarded both occurrences (`N64Recomp/fixup_game_funcs.py`,
+   `_subtitle_glyph_ptr_guard_patch`/`_guard2_patch`,
+   `ROGUESQ_LOG_SUBTITLE_GLYPH_GUARD`/`GUARD2`) by range-checking
+   `ctx->r16` and, on failure, jumping to each site's own pre-existing
+   "next character" label rather than aborting the whole function.
+4. Full regen + build (exit 0) + soak
+   (`scratch/agent/run_subtitleguard1.sh`). **`CRASH: 0`** — full 157s wall
+   time, killed only by the script's own timeout. `[compose-npc]` 777,
+   `[anim-recurse]` 3748, `[anim-tex-stream]` 6006, `[hangar-entry]` 3, all
+   with 0 crashes — every family this soak exercises came back clean.
+   **But `[subtitle-glyph-guard]`/`[subtitle-glyph-guard2]` are 0/0** — the
+   guard itself is unvalidated; the crash may simply not have recurred
+   for reasons unrelated to the guard.
 
 ## Do next
 
-1. **Locate `drawSubtitleText` in `N64Recomp/RecompiledFuncs/*.c`.** Use
-   `machoparse.py` against the guest address (grep `symbol_files/*.txt` for
-   `drawSubtitleText` to get its guest address, or grep the generated `.c`
-   files directly for the function name / its address comment) — do not
-   trust a stale line-number estimate, always grep the current regenerated
-   tree first (drift is normal after any regen, per this file's own
-   standing note below).
-2. **Read the function's body for the same unguarded-table/pointer-deref
-   shape as the family's other 20 guest-side classes** — a byte/index read
-   from an argument or fixed table used to compute an address, then
-   immediately dereferenced with no `==0`/range check. This family's guards
-   have found this exact shape in every one of the last ~10 classes; look
-   for it first before assuming something novel.
-3. **If found**: guard it the same way as the other 20 (`goto` the
-   function's own real exit label — find it from the function's actual
-   epilogue, do not reuse another function's label — `U32()`-truncate,
-   range-check `0x80000000`-`0x80800000` for pointer-shaped values, log
-   behind a `ROGUESQ_LOG_*` env var). Full regen (`rm funcs_*.c` →
-   `make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py` once),
-   verify the patch landed exactly once via `grep`, build, soak with the
-   same full battery (copy `scratch/agent/run_zerosample1.sh`, add the new
-   `ROGUESQ_LOG_*` var).
-4. **If NOT found** (e.g. the crash is in inlined RT64/library code, or the
-   dereference shape doesn't match): say so plainly in PORTING-STATE and
-   characterize what IS there instead — do not force-fit a guard that
-   doesn't match the actual bug.
-5. **Open question worth resolving early**: is this 21st class a reliably
-   early, front-of-the-queue blocker (like the 15th class was for the
-   post-leave window), or a one-off? One data point so far. If it recurs on
-   the very next soak, treat the SELECT GAME → SELECT YOUR CRAFT transition
-   as a *new, higher-priority failure window* ahead of the old post-leave
-   family, per rule 8 (don't over-conclude from 1 data point, but don't
-   ignore a death this much earlier than the entire family's history either).
+1. **Re-run the exact same soak once more, unchanged** —
+   `zsh scratch/agent/run_subtitleguard1.sh > scratch/agent/run_
+   subtitleguard2_driver.log 2>&1` (rename the tag inside a copied script,
+   e.g. `run_subtitleguard2.sh` with `zsh run_mission_keys.sh
+   subtitleguard2 5 12` at the end, so the two runs' capture directories
+   don't collide) — **no code changes, no rebuild needed.**
+2. **Read the outcome and follow the three-way branch s160 already wrote
+   into `docs/CURRENT-TRUTH.md` next-steps item -12**:
+   - Crash-free again → two independent crash-free soaks. This is the
+     strongest stability result in the project's history. Write it up
+     prominently, and seriously consider whether M3's done-criteria
+     ("60 seconds of in-mission rendering, craft visibly responds to
+     synthetic input") is now within reach with a longer/more actively
+     driven hold, not just passively surviving.
+   - 21st class recurs → the new guard doesn't cover the real mechanism.
+     Go back to the two documented-but-not-guarded candidates from s160
+     (PORTING-STATE): the unbounded 0xFFFF-sentinel-run-counting loop
+     (`0x800161A4`), or re-examine the guarded sites for a mistake (e.g.
+     wrong bail label, wrong register).
+   - A different, already-catalogued class crashes instead → progress
+     (the 21st class is likely actually fixed); pick the next class by
+     recurrence count from PORTING-STATE's crash-class catalogue and
+     apply the same source-read-then-guard treatment.
+3. **Do not conclude anything about the guard's correctness from a single
+   soak** — this family has had single-soak crash-free runs before that
+   didn't repeat (nothing new here, this is just rule 4/the two-source
+   rule applied plainly).
 
 ## Do not
 
-- Do not re-open the s158 "is the 15th class guest-side or RT64-side"
-  question — s159 answered it by full source proof (RT64-side). Do not
-  re-instrument the guest RDP tile-setup dispatch for it.
-- Do not treat `[zero-sample-guard]` 0/0 or `composeNpcOrientationMatrix`'s
-  0-entry-count this run as evidence either is wrong — the soak simply died
-  before reaching either code path.
+- Do not re-open the s159 "is the 15th class (`loadDrawState`) guest-side
+  or RT64-side" question — s159 answered it by full source proof
+  (RT64-side, `[zero-sample-guard]` guard already landed and always-on).
+- Do not re-guard the two candidates s160 explicitly declined to guard
+  (unbounded 0xFFFF-run-count loop; frame-reset-bounded cache write)
+  without first getting a discriminating result that points at them
+  specifically — s160's reasoning for skipping both is written into
+  PORTING-STATE s160 and CURRENT-TRUTH, re-read it before re-deriving.
 - Do not re-litigate the `static_5_800AAD9C` dispatcher hypothesis (closed,
   s157) or re-read `frameStartReset` itself (clean, s157).
 
@@ -89,9 +87,13 @@ else; this file only has the actionable summary.
 - **`nm`, `otool`, `lldb` are NOT on the Bash allowlist and there is no
   human present in this autonomous loop to grant the approval prompt.**
   `scratch/agent/machoparse.py` is the working replacement (reads
-  Mach-O `LC_SYMTAB` directly) — confirmed still works this session
-  (`machoparse.py <binary> <symbol>` prints size via next-symbol-by-
-  address delta). Don't rediscover this.
+  Mach-O `LC_SYMTAB` directly) — confirmed still works this session.
+  **New s160 caveat: a host-compiled function's byte offset (from a
+  backtrace) does NOT map proportionally to a guest-instruction offset**
+  — floating-point-heavy code sections expand far more than plain
+  memory-op sections under `RECOMP_FUNC` codegen. If a function is small
+  enough to read in full (a few thousand lines), just read the whole
+  thing rather than trying to estimate a line from the host offset.
 - **When testing a regex pattern against a RecompiledFuncs `.c` file
   from the Bash tool, write a `.py` script file and run it** — do NOT
   use `python3 -c "..."` with the outer shell command in DOUBLE
@@ -100,10 +102,19 @@ else; this file only has the actionable summary.
   the Agent tool inside this autonomous loop** — Agent-tool delegation
   is incompatible with the per-turn Stop-hook exit contract. Do every
   step directly with Bash/Read/Edit in this session's own turn.
+- **zsh's bracket-glob expansion rejects patterns containing a literal
+  `[tag` inside a `for`-loop body** (`grep -ac "\[$tag"` style commands
+  fail with "Contains expansion" even though the exact same `grep`
+  works fine typed as a single non-looped command) — write a small
+  Python script (`re.findall`) to count multiple `[tag]`-style log
+  markers in one pass instead of a zsh loop. See
+  `scratch/agent/s160_count.py` for the working pattern.
 - A crash-class hypothesis that held for one soak is not guaranteed to
-  recur on the very next soak — this family's crash-class selection has
-  been highly variable across ~20 sessions. Don't assume the 21st class
-  will recur just because it was dramatic; don't assume it won't either.
+  recur (or not recur) on the very next soak — this family's crash-class
+  selection has been highly variable across ~20 sessions. Don't assume
+  a crash-free run repeats just because it was dramatic; don't assume it
+  doesn't either — that's exactly what the next soak (item 1 above) is
+  for.
 - Function/line-number estimates in NEXT.md/PORTING-STATE drift a few
   lines every regen — always grep/read the actual regenerated file
   before writing a regex anchor or planning a reorder.
@@ -166,6 +177,6 @@ many sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git
 checkout, not a `lib/` submodule, with uncommitted changes across
-s90-159 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
+s90-160 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
 Same posture as the `rogue_squadron64` sibling checkout flagged since
 s54. Worth asking the user whether/how to commit that history.

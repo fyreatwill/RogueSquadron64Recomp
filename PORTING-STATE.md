@@ -14518,3 +14518,135 @@ graceful-stub pattern as the s49/s53 M4 curiosity — parked, not a blocker),
 - `scratch/s73_post_a_scene/zerosample1/` — this session's run: `run.log`,
   `pre_*`/`post_*` screenshots.
 - `scratch/agent/run_zerosample1_driver.log` — driver summary.
+
+## Session 160 (2026-07-27) — full source read of `drawSubtitleText` (the 21st crash class) found and guarded a genuine unguarded-pointer-deref site matching the family's classic shape; soak was the first fully crash-free run in the entire family since s88 (single data point, guard itself unvalidated 0/0)
+
+### What s160 did
+
+1. Located `drawSubtitleText` in the regenerated tree: guest address
+   `0x800159B4` (`symbol_files/main_overlay.txt:1666`), found in
+   `N64Recomp/RecompiledFuncs/funcs_4.c:15603-18922`. Read the **entire**
+   function body end to end (confirmed the real epilogue at the closing
+   `return;`/`0x80016C3C`/`0x80016C40`, so no code was left unread — the
+   function's guest-instruction span is only ~4.8 KB despite a 37300-byte
+   *host*-compiled size, which is why the crash's host-offset (+34664) could
+   not be mapped proportionally to a guest address without a disassembler
+   that isn't on the allowlist; a full read was the only reliable option).
+2. Found this function is **atypically well-guarded** compared to the rest
+   of the family: nearly every guest-controlled array/string index has a
+   real MIPS bounds-check branch (`sltu`/loop-limit compare) translated
+   ahead of it, matching legitimate original Factor 5 code rather than the
+   "no check at all" shape the other 20 classes shared. Two candidates were
+   weighed and one ruled out before landing a guard:
+   - An unbounded "count consecutive 0xFFFF sentinels" loop
+     (`0x800161A4`-`0x800161B4`) reads a caller-populated glyph-index array
+     with no length bound — a real latent OOB-read risk, but weaker
+     evidence it's reachable with malformed data in practice, and correctly
+     terminates in-loop rather than crashing under any data seen so far.
+     Not guarded this session (documented, not force-fit).
+   - A per-call-site table-write for a kerning/DL cache
+     (`0x800166FC`-`0x80016738`), indexed by two persistent global counters
+     with no visible modulo. Traced both counters' only reset sites
+     (`grep` for `MEM_W(0X7C00,`/`MEM_W(-0X5B58,` writes of literal `0`
+     across all `funcs_*.c`) to `frameStartReset` and
+     `initRenderStateArrays` — **both reset every frame**, which refutes
+     the "grows unbounded across many frames" theory that would have made
+     this the leading candidate. Not guarded (checked, not assumed, per
+     rule 5 — boring explanation first).
+3. Found the genuine match: a per-string-position glyph-pointer cache read
+   from a fixed table (`0x8011....-0x1758`, 4-byte stride,
+   `ctx->r16 = MEM_W(charIndex*4 + table_base, 0X0)`) is dereferenced twice
+   (`MEM_HU(ctx->r16, 0X6)` then `MEM_HU(ctx->r16, 0X4)`, computing glyph
+   advance/kerning) **before** the function's own null check on the same
+   value (`beq $s0, $zero, ...`) — which exists a dozen-plus lines later in
+   the same block but only guards a separate linked-list-walk loop, not
+   this earlier pair of reads. If the cache entry for a given position is
+   unpopulated (0 — e.g. an unsupported/never-cached glyph), this
+   dereferences guest address `0x6`/`0x4` — unmapped, SIGBUS. Occurs twice,
+   structurally identical, once per branch of a runtime alignment switch
+   (`0x80016328`/`$s2`-loop and its mirror `0x80016790`/`$a2`-loop) — same
+   "value read from a fixed table, immediately dereferenced, no check"
+   shape as every other class in this family, just one level more
+   indirect (a cache slot, not a direct guest-data table).
+4. Guarded both sites (`N64Recomp/fixup_game_funcs.py`): range-check
+   `ctx->r16` (`0x80000000`-`0x80800000`, `U32()`-truncated per s99's
+   lesson) right after the table read, before either dereference; on
+   failure, `goto` each site's own pre-existing "next character" label
+   (`L_80016670` / `L_80016AD0` — the same label the surrounding
+   terminator-match branch already jumps to a few lines above), not a new
+   label — this is a mid-function continuation point already proven
+   ABI-safe by the existing code, not the function's exit epilogue (unlike
+   most of this family's guards, this one doesn't need to abandon the
+   whole function, just skip one broken character). Confirmed both anchor
+   lines (`0x80016328:`/`0x80016790:`) unique across all `funcs_*.c` via
+   `grep` before writing the patch (s100's lesson). Full regen
+   (`rm funcs_*.c` → `make_elf.py` → `regen_n64recomp.sh` →
+   `fixup_game_funcs.py` once) — fixup report confirmed both patches landed
+   **exactly once** (`grep` on the regenerated `.c`, not the report tail).
+5. `cmake --build` — exit 0, no new warnings/errors, `funcs_4.c` recompiled
+   and the executable relinked (confirmed via build log, not assumed from
+   a stale mtime).
+6. Soaked (`scratch/agent/run_subtitleguard1.sh`, same full battery as
+   s159's `run_zerosample1.sh` plus the two new `ROGUESQ_LOG_SUBTITLE_
+   GLYPH_GUARD`/`GUARD2` flags). **Result: `CRASH: 0`** — the process
+   survived the full 120s hold + grace window (157s wall) and was killed
+   by the script itself, not by a crash. This is only the **2nd fully
+   crash-free soak in the whole post-s86 family's ~70-session history**
+   (the 1st was s88).
+
+### Controls and diagnostics this run
+
+`[compose-npc]` entry: 777 (reached and ran clean, further than s158's
+508/508); `[anim-recurse]`: 3748; `[anim-tex-stream]`: 6006;
+`[hangar-entry]`: 3 — all positive-control-good, 0 crashes in any of those
+families. `[zero-sample-guard]` (15th class, s159's guard): 0/0 — not
+reached/not triggered. `[subtitle-glyph-guard]`/`[subtitle-glyph-guard2]`
+(this session's new guards): **0/0 — unvalidated, no positive control**.
+`thr-resume bad=1`: 0. `missing-func`: 0. `UnhandledJump`: 234 (present but
+not flagged as the primary blocker by any prior session; not chased this
+session, per rule 8 — one thing at a time). `ost-wb SKIP_OOB`: 19,
+`SKIP_WIDTH`: 0 (both pre-existing always-on gates, not new activity).
+`fs max`: 4127.
+
+### What this does and does not establish
+
+- **Does not confirm the guard fixed the 21st crash class** — with 0/0 on
+  both new guards, the crash simply didn't recur this run, the same
+  "unvalidated" shape as most of this family's first-soak results (e.g.
+  s99, s100, s155, s158, s159 before it). A guard that never fires and a
+  bug that's actually gone look identical after one soak.
+- **Does establish** a real, full crash-free soak through the SELECT GAME →
+  SELECT YOUR CRAFT transition, the hangar-tick family (`compose-npc`,
+  `anim-recurse`, `anim-tex-stream`, `hangar-entry` all exercised with 0
+  crashes), and a 120s hold with stick input (camera orbit) with 0 crashes
+  of ANY of the 21 catalogued classes. Single data point — per rule 8 and
+  the family's own repeated lesson (s85, s89, s90), do not treat this as
+  "fixed" until a 2nd independent soak agrees (two-source rule). If a 2nd
+  soak reproduces cleanly with 0 crashes, this would be the strongest
+  stability result in the project's history and M3's "60s of in-mission
+  rendering" definition-of-done should be revisited as newly reachable; if
+  the 2nd soak crashes again (same or different class), file this as
+  "helped, not sufficient" and continue down the family list.
+- The two candidates considered and **not** guarded (unbounded
+  0xFFFF-run-count loop; frame-reset-bounded cache-table write) are
+  documented above so a future session doesn't re-derive the same
+  reasoning from scratch — the first is a real but weaker-evidence latent
+  risk, the second was checked and refuted as an unbounded-growth
+  candidate specifically (not "assumed safe").
+
+### Files touched
+
+- `N64Recomp/fixup_game_funcs.py` — two new patches,
+  `_subtitle_glyph_ptr_guard_patch`/`_subtitle_glyph_ptr_guard2_patch`,
+  landed in `funcs_4.c` (`drawSubtitleText`, sites `0x80016328`/
+  `0x80016790`). Sibling checkout, not `lib/` — no `submodule-patches/
+  export.sh` needed (same posture as every prior guard in this family).
+- `scratch/agent/run_subtitleguard1.sh` — this session's soak script.
+- `scratch/s73_post_a_scene/subtitleguard1/` — this session's run:
+  `run.log`, `after_p1_start_*.png` screenshots.
+- `scratch/agent/run_subtitleguard1_driver.log` — driver summary.
+- `scratch/agent/s160_makeelf.log`/`s160_regen.log`/`s160_fixup.log`/
+  `s160_build.log` — this session's regen/build logs.
+- `scratch/agent/s160_count.py` — grep-count helper for the guard/control
+  tags in `run.log` (zsh's bracket-glob expansion rejects `[tag` patterns
+  directly; a small Python regex count sidesteps it).
