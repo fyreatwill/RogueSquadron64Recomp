@@ -5256,10 +5256,19 @@ index 6891b7b..9744c8d 100644
          const uint32_t bufferOffset = getNativeSize(width, rowStart, siz);
          const uint32_t bufferSize = getNativeSize(width, rowEnd - rowStart, siz);
 diff --git a/src/render/rt64_texture_cache.cpp b/src/render/rt64_texture_cache.cpp
-index 0848f3e..137b6c0 100644
+index 0848f3e..b67a077 100644
 --- a/src/render/rt64_texture_cache.cpp
 +++ b/src/render/rt64_texture_cache.cpp
-@@ -217,6 +217,29 @@ namespace RT64 {
+@@ -4,6 +4,8 @@
+ 
+ #define STB_IMAGE_IMPLEMENTATION
+ 
++#include <cstdlib>
++
+ #include "ddspp/ddspp.h"
+ #include "stb/stb_image.h"
+ #include "xxHash/xxh3.h"
+@@ -217,6 +219,29 @@ namespace RT64 {
      void TextureMap::add(uint64_t hash, uint64_t creationFrame, Texture *texture) {
          assert(hashMap.find(hash) == hashMap.end());
  
@@ -5289,6 +5298,38 @@ index 0848f3e..137b6c0 100644
          // Check for free spaces on the LIFO queue first.
          uint32_t textureIndex;
          if (!freeSpaces.empty()) {
+@@ -1259,6 +1284,31 @@ namespace RT64 {
+     }
+ 
+     void TextureCache::queueGPUUploadTMEM(uint64_t hash, uint64_t creationFrame, const uint8_t *bytes, int bytesCount, int width, int height, uint32_t tlut, const LoadTile &loadTile, bool decodeTMEM) {
++        // PATCH: queueGPUUploadTMEM zero-size guard (s192) -- decodeTMEM
++        // uploads with width<=0 or height<=0 trip the assert below; this is
++        // the project's single most-recurring crash (8+ occurrences since
++        // s86, open goal-stack item M3) and has now blocked 2/2 attempts to
++        // soak-test the s190 processSceneNode fix. Skip the upload instead
++        // of asserting; ROGUESQ_LOG_TMEM_ZERO_GUARD=1 logs each occurrence
++        // with a bounded fire counter (mirrors the rs_malloc/rs_free/
++        // scene-node-ptr guard pattern -- see N64Recomp/fixup_game_funcs.py).
++        if (decodeTMEM && ((width <= 0) || (height <= 0))) {
++            static int s_tmem_zero_guard_enabled = -1;
++            if (s_tmem_zero_guard_enabled < 0) {
++                const char *e = std::getenv("ROGUESQ_LOG_TMEM_ZERO_GUARD");
++                s_tmem_zero_guard_enabled = (e && e[0] && e[0] != '0') ? 1 : 0;
++            }
++            if (s_tmem_zero_guard_enabled) {
++                static int s_tmem_zero_guard_n = 0;
++                fprintf(stderr,
++                    "[tmem-zero-guard] n=%d hash=0x%016llX creationFrame=%llu width=%d height=%d decodeTMEM=%d\n",
++                    s_tmem_zero_guard_n, (unsigned long long)hash, (unsigned long long)creationFrame,
++                    width, height, (int)decodeTMEM);
++                s_tmem_zero_guard_n++;
++            }
++            return;
++        }
++
+         assert(!decodeTMEM || ((width > 0) && (height > 0)));
+ 
+         TextureUpload newUpload;
 diff --git a/src/shaders/RasterPS.hlsl b/src/shaders/RasterPS.hlsl
 index f5beee9..f255ea0 100644
 --- a/src/shaders/RasterPS.hlsl
