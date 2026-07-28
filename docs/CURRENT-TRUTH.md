@@ -659,9 +659,42 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s175)
+## Next steps, in order of expected value (s176)
 
--27. **NEW TOP PRIORITY (s175): source-read `processSceneNode`'s
+-28. **NEW TOP PRIORITY (s176): 2nd consecutive full-hold crash-free soak
+    (`scenenodedepthguard2`, exact repeat of s175's recipe, new tag only) —
+    still 0/0 on every guard in the family, including the new depth-cap
+    guard. Per rule 8, the crash-family-guarding line of work is now
+    provisionally parked (2/2 clean, diminishing value from a 3rd identical
+    soak) in favor of a genuinely new finding: the graphics-task-submission
+    stall (s162's -14, now superseded by this entry) does NOT only strike
+    post-leave during the mission-intro cutscene.** This run's process froze
+    solid inside SELECT YOUR CRAFT itself, before either scripted leave-key
+    press (`hold_95`/`hold_100`) ever executed — confirmed via
+    `[vi-fs-decision]` (last real FIRE/SKIP-stalled=0 transition at counter
+    #8079, then 300 straight `stalled=1 pairs=0` entries with `rdpFs` frozen
+    at 3746 through the end of the log) and via `[phase]` (last width
+    transition logged is still `vi_width=512 origin=0x006AB400`, the
+    craft-select origin — no post-leave phase transition ever happened).
+    Screenshots corroborate: `hold_05.png` through the final `grace_01.png`
+    are pixel-identical. By contrast, this same session's `scenenodedepthguard1`
+    run (see s175) froze much later, at `vi_width=640 origin=0x006A2900`
+    (the post-leave cutscene origin s162 identified), stall onset near
+    counter #14528 of ~16000 — i.e. **the same soak recipe produced two
+    structurally different stall onset points in back-to-back runs**: one
+    pre-leave (idling in the menu), one post-leave (mid-cutscene). This
+    rules out "blocked on a post-dive-shot-specific guest function" as the
+    *sole* mechanism (s162's leading candidate) — a shared, scene-state-
+    independent trigger (most plausibly tick-count or resource-count based)
+    is now at least as plausible. **Best next work unit: instrument the
+    stall's own trigger condition correlated against wall-clock/tick count
+    rather than scene state** — the stall has now been seen in 4 independent
+    soaks (s160, s161, and this session's 2 runs) with the surface symptom
+    identical (`stalled=1 pairs=0`, RDP `fs` frozen, audio/heap still
+    running) but the onset point varying, which is the actual
+    discriminating signal to chase next. Full detail: PORTING-STATE s176.
+
+-27. **(s175, superseded as top priority by s176 above): source-read `processSceneNode`'s
     self-recursion and guarded it with a recursion-depth cap** —
     confirmed by direct source read (`N64Recomp/RecompiledFuncs/funcs_4.c:
     13759-14861`) this is a real, guest-intentional sibling-list tree walk
@@ -1045,7 +1078,11 @@ cost three sessions before the recursive mutex.
     (likely a 3rd unguarded site) rather than treating it as a bystander.
     Full detail: PORTING-STATE s163.
 
--14. **s162: the s160/s161 "menu-hold" soaks already reached
+-14. **NARROWED by s176 (see -28 above): the stall's onset is not fixed to
+    the post-leave cutscene — a same-recipe soak can also freeze pre-leave,
+    still inside SELECT YOUR CRAFT. The "find the guest function blocked
+    after the dive shot" framing below is too narrow; kept for history.**
+    s162: the s160/s161 "menu-hold" soaks already reached
     a never-before-seen mission-intro cutscene (STAR WARS logo → "Chapter 1"
     crawl → establishing dive shot), then hit a genuine graphics-task-
     submission stall — not a crash. This is now the M3 frontier, replacing

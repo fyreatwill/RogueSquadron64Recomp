@@ -1,113 +1,117 @@
-# NEXT work unit — get a 2nd data point on the processSceneNode depth-cap guard
+# NEXT work unit — characterize the graphics-task-submission stall's trigger condition
 
-s175 source-read `processSceneNode`'s self-recursive SIGBUS (2 independent
-prior occurrences: s172 soak 1, s174) and confirmed by direct read it is a
-real, guest-intentional sibling-list tree walk with no depth cap anywhere
-in the original code. Landed a recursion-depth-cap guard, rebuilt, and ran
-one soak. Read PORTING-STATE Session 175 before doing anything else; this
-file only has the actionable summary.
+s176 got a 2nd consecutive full-hold crash-free soak (`scenenodedepthguard2`,
+exact repeat of s175's recipe) — still 0/0 on every guard in the family,
+including the new `processSceneNode` depth-cap guard from s175. Per rule 8,
+the crash-family-guarding line of work is now provisionally parked (2/2
+clean, a 3rd identical soak has low expected value). Read PORTING-STATE
+Session 176 before doing anything else; this file only has the actionable
+summary.
 
-## What s175 established (read before doing anything else)
+## What s176 established (read before doing anything else)
 
-- **The `processSceneNode` recursion-depth-cap guard is landed, built
-  clean, and soaked once** (`N64Recomp/fixup_game_funcs.py`, new
-  `ROGUESQ_LOG_SCENE_NODE_DEPTH_GUARD` env var, file-scoped `funcs_4.c`,
-  cap=128). **Not committed** — same long-standing uncommitted-history
-  posture as `N64Recomp` since s54/s90, not this session's call to
-  resolve.
-- **The soak (`scenenodedepthguard1`) survived the ENTIRE 120s hold
-  window + grace window alive** — process had to be manually killed, it
-  never crashed. This is the first soak in the whole s160s-s174 lineage
-  to do this. `lle tasks: 5774`, `exit=2: 0`, `missing-func: 0`,
-  `thr-resume bad=1: 0`. The summary script's `UnhandledJump: 873` is
-  benign RSP-audio-ucode noise (`0x17F0`/`0x0231` in `factor5_ucode`),
-  unrelated to the guest-CPU crash family — do not mistake it for a new
-  problem.
-- **BUT the new guard never fired (0/0), and neither did any other guard
-  in the family this run.** This is a null result on the fix specifically,
-  not a positive control. Per s173/s174's own already-established finding,
-  this whole crash family is racy across runs given an identical recipe —
-  a clean run does not by itself prove the guard caused it. Do NOT write
-  "processSceneNode fixed" into CURRENT-TRUTH based on this one soak; it
-  needs either a 2nd clean soak (probabilistic support) or a soak where
-  the guard actually trips (a real positive control).
-- **This is soak 1 of this specific hypothesis**, not soak 3 — per rule 8,
-  there is budget to run this same soak again before parking it.
+- **2nd consecutive full-hold crash-free soak.** `scenenodedepthguard2`
+  (same recipe as s175's `scenenodedepthguard1`, only the tag renamed so
+  both runs' logs/screenshots survive side by side). `CRASH: 0`,
+  `lle tasks: 4775`, `missing-func: 0`, `thr-resume bad=1: 0`,
+  `UnhandledJump: 0`. Every guard in the family, including
+  `[scene-node-depth-guard]`, is 0/0 — confirmed by grepping the raw
+  run.log for every guard tag, not just the summary counters.
+- **New finding: the graphics-task-submission stall (s162's -14, CURRENT-TRUTH
+  line ~1048) does not only strike post-leave during the mission-intro
+  cutscene.** This session's 2 runs, same recipe, produced 2 structurally
+  different stall onset points:
+  - `scenenodedepthguard2` (run 2) froze **before** either scripted
+    leave-key press (`hold_95`/`hold_100`) executed, still inside SELECT
+    YOUR CRAFT — confirmed via `[vi-fs-decision]` (last real transition at
+    counter #8079, then 300 straight `stalled=1 pairs=0`) and `[phase]`
+    (last width transition still `vi_width=512 origin=0x006AB400`, no
+    post-leave transition ever logged). Screenshots `hold_05.png` through
+    `grace_01.png` are pixel-identical.
+  - `scenenodedepthguard1` (run 1, s175) froze **after** leaving, mid
+    cutscene (`vi_width=640 origin=0x006A2900`, s162's cutscene origin),
+    much later in the run (stall onset near counter #14528 of ~16000).
+  - Surface symptom is identical both times (`stalled=1 pairs=0`, RDP `fs`
+    frozen, `[lle task]`/`[rs-malloc]` still running, process alive) — only
+    the onset *point* in the state machine differs. This rules out "blocked
+    on a function specific to the post-dive-shot code path" as the sole
+    mechanism; a scene-state-independent trigger (tick count or resource
+    count) is now at least as plausible.
+- 4 total stall occurrences now on record: s160, s161 (both post-leave,
+  per s162), and this session's 2 runs (one post-leave, one pre-leave).
 
 ## Do next
 
-Re-run the exact same soak (`scratch/agent/run_scenenodedepthguard1.sh`,
-unmodified — every instrument in the family stays armed, they're free) for
-a 2nd data point:
+Instrument the stall's trigger condition, correlated against **wall-clock /
+tick count**, not scene state — that's the variable that's actually
+different between this session's 2 runs (run 2 stalled at wall ~75-80s /
+`[vi-fs-decision]` counter ~8079; run 1 stalled at wall ~140s / counter
+~14528).
 
-```
-zsh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/run_scenenodedepthguard1.sh > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/scenenodedepthguard1_run2_driver.log 2>&1
-```
-
-(the script's own `run_mission_keys.sh` call uses tag `scenenodedepthguard1`
-internally, which will **overwrite** run 1's `run.log` in place — `cp -r
-scratch/s73_post_a_scene/scenenodedepthguard1 scratch/s73_post_a_scene/scenenodedepthguard1_run1_archive`
-first if you want to diff the two raw logs, or edit the script to use a
-new tag name like `scenenodedepthguard2` before running, which is cleaner
-and matches the project's usual per-soak-tag convention.)
-
-Discriminating outcomes:
-1. **Guard fires (positive control) and process survives past the fire
-   point** — the fix works as designed; can start writing "confirmed fix"
-   into CURRENT-TRUTH once this is the 2nd independent supporting data
-   point.
-2. **Guard fires but process still dies to a processSceneNode-shaped
-   crash anyway** — cap of 128 may be too high, or corruption exists
-   elsewhere in the same function; re-examine.
-3. **Process survives the full hold again, guard still 0/0** — 2nd
-   consecutive full-hold survival without ever needing the guard is still
-   meaningful (probabilistic support that the dominant early-blocking bugs
-   in this lineage are now guarded, even without directly observing this
-   specific fix fire) — but keep the "single-source" caveat until a 3rd
-   data point or an actual guard fire settles it.
-4. **A new, uncatalogued crash class appears** — catalogue it per the
-   family's established pattern (this would be the natural next early-
-   blocking bug to chase, now that both the audio-chain race and
-   processSceneNode's runaway recursion seem to be covered).
-
-If outcome 3 or 4 happens and you have soak budget left in this session,
-a 3rd soak is reasonable before invoking rule 8's "stop and pick a new
-avenue" (this is 2 or 3 attempts on the SAME hypothesis, not yet past the
-budget).
+1. Before writing any new instrument, grep the existing `[vi-fs-decision]`
+   fields (`synth=`, `skSeen=`, `skNoTrig=`, `skPair0=`) for both runs at
+   their respective stall-onset lines and look for a shared threshold value
+   any of those counters cross right before `stalled=1` becomes permanent —
+   this needs no rebuild, just re-reading logs already captured:
+   - `scratch/s73_post_a_scene/scenenodedepthguard1/run.log`
+   - `scratch/s73_post_a_scene/scenenodedepthguard2/run.log`
+   Look specifically at the field values on the LAST `stalled=0` line in
+   each run and see whether any one field (not `rdpFs`, which differs
+   between runs) is close to a common value/threshold.
+2. If no shared threshold jumps out from the existing logs, the
+   discriminating instrument is probably on the *producer* side (whatever
+   guest code is supposed to submit the next display list task) rather than
+   the `[vi-fs-decision]` consumer/gate logic already instrumented — that
+   producer has never been logged. Source-read the call site that should
+   submit graphics tasks during the SELECT YOUR CRAFT idle loop (likely
+   somewhere in the `runHangarSelectionFrame`/`runHangarMenuFromOverlay`
+   family already characterized across s84-s101) and check whether it's
+   still being called after the stall onset, or has itself stopped running.
+3. Discriminating outcomes:
+   - **The producer call stops being invoked at all** → points to a hang/
+     early-return/infinite-loop-elsewhere in guest code upstream of DL
+     submission (a logic bug, not a corruption race).
+   - **The producer keeps being called but its output is rejected/ignored**
+     → points back into the `[vi-fs-decision]` gate logic itself (a
+     threshold or state-tracking bug in the RT64-side scheduler, not guest
+     code).
+   - **A shared tick/counter threshold explains both runs' onset** → gives
+     a concrete reproduction recipe (drive the counter to that value
+     directly) instead of waiting ~75-140s of wall-clock per attempt.
 
 ## Do not
 
-- Do not conclude "processSceneNode's self-recursion is fixed" from a
-  single soak where the guard never fired — that is exactly the kind of
-  single-source, unvalidated-guard conclusion rule 4 exists to prevent.
-- Do not skip straight to a brand-new hypothesis/instrument just because
-  the guard didn't fire — this crash family's whole multi-session history
-  says a 0/0 guard result on soak 1 is uninformative on its own; get a 2nd
-  data point on the SAME guard first, per rule 8's "3 attempts" budget.
-- Do not read the full-hold survival as proof the game is stable overall —
-  it is one soak, using one specific driven-input recipe
-  (`10:sr 25:sl 40:su 95:start 100:a`), and this whole project's history is
-  full of soaks that survive one recipe cleanly and then crash on the very
-  next run of the identical recipe.
+- Do not re-run the identical `scenenodedepthguard1`/`2` recipe a 3rd time
+  hoping for a positive control on the depth-cap guard — 2/2 clean is
+  already a reasonable stopping point per rule 8, and the more
+  information-rich next step is the stall characterization above.
+- Do not assume the stall is "the same bug" across all 4 known occurrences
+  just because the surface symptom matches — s176's own finding is that the
+  onset *point* differs meaningfully; treat "one shared mechanism" as an
+  unconfirmed hypothesis until a shared trigger is actually found.
+- Do not conclude the crash family is fully closed — 2/2 clean soaks is
+  probabilistic support, not proof, and this whole project's history is
+  full of soaks that survive one recipe and then crash on the very next
+  identical run.
 
 ## Blocking on a long-running soak (learned the hard way, still current)
 
-Simplest approach (used successfully s168-s175): run the driver script
-itself as a single foreground Bash call with output redirected to a log
-file and a generous timeout (~480s covers this env block's 120s hold +
-overhead) — the script blocks until the game process exits, no polling
-loop needed. If it exceeds the foreground timeout, the harness moves it to
-background automatically and notifies on completion — do not sleep-poll
-in the meantime, just wait for the notification.
+Simplest approach: run the driver script itself as a single foreground Bash
+call with output redirected to a log file and a generous timeout (~480s
+covers this env block's 120s hold + overhead) — the script blocks until the
+game process exits, no polling loop needed. If it exceeds the foreground
+timeout, the harness moves it to background automatically and notifies on
+completion — do not sleep-poll in the meantime, just wait for the
+notification.
 
 ## This session's environment notes (carry forward, still current)
 
 - Re-running the same script/tag **overwrites** the previous run's
-  `run.log` in place — `cp -r` the whole tag directory aside first (e.g.
-  `scratch/s73_post_a_scene/<tag>` -> `scratch/s73_post_a_scene/<tag>_archive`)
-  if you need to diff two runs' raw logs, or better, copy the driver
-  script to a new tag name per soak so each soak's full run.log and
-  screenshots land in their own directory, never overwritten.
+  `run.log` in place — copy the driver script to a new tag name per soak
+  (e.g. `scenenodedepthguard2` from `scenenodedepthguard1`) so each soak's
+  full run.log and screenshots land in their own directory, never
+  overwritten. This is now the established convention going forward, not
+  just a one-off workaround.
 - Running `N64Recomp/build/N64Recomp` or any script under
   `RogueSquadron64Recomp/tools/agent/*.sh` / `scratch/agent/*.sh` directly
   gets denied even though the text matches an allowlisted prefix —
@@ -139,7 +143,7 @@ in the meantime, just wait for the notification.
 - Before writing ANY new patch to `fixup_game_funcs.py`, grep for the
   exact anchor text's uniqueness both within the target file and (if using
   a short/generic snippet) across the whole `RecompiledFuncs/` tree —
-  s100's `composeNpcOrientationMatrix` guard and this session's own
+  s100's `composeNpcOrientationMatrix` guard and s175's own
   `processSceneNode` entry-anchor both needed widening from a 1-2 line
   match to a longer, uniquely-identifying one after a collision was found.
 - `nm`, `otool`, `lldb` are NOT on the Bash allowlist — use
@@ -165,8 +169,7 @@ in the meantime, just wait for the notification.
 - `lib/N64ModernRuntime` and `lib/rt64` always show as "modified content"
   in the parent repo's `git status` — normal, long-standing state. Only run
   `submodule-patches/export.sh` + commit if you actually edit something
-  under `lib/` this session (s175 did NOT touch `lib/` — all edits were in
-  the separate `N64Recomp` sibling checkout's `fixup_game_funcs.py`).
+  under `lib/` this session (s175/s176 did NOT touch `lib/`).
 - `/scratch/` is entirely gitignored in this repo except 3 force-tracked
   files: `scratch/agent/NEXT.md`, `OUTCOME`, `STATUS`. New soak
   scripts/logs under `scratch/agent/` or `scratch/s73_post_a_scene/` never
@@ -181,6 +184,13 @@ in the meantime, just wait for the notification.
   microcode factor5_ucode") — grep the actual matched lines before reading
   a nonzero count as a regression; it is NOT the same thing as a guest-CPU
   `UnhandledJumpTarget`.
+- Screenshots (`hold_NN.png`, `grace_NN.png`, `craft_stable.png`) are
+  genuinely useful for characterizing a "process alive but stuck" state —
+  reading a handful of them directly (via the Read tool, not a subagent)
+  is cheap and found this session's main new finding. Compare the SAME
+  tick number across two runs, and compare a late-hold frame against the
+  run's own `craft_stable.png`/early frames to spot exactly when a run
+  visually froze, not just whether it eventually froze.
 
 ## Housekeeping still flagged, still not done
 
@@ -190,7 +200,7 @@ superseded detail, paired with a real experiment. Flagged for many
 sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
-not a `lib/` submodule, with uncommitted changes across s90-175
+not a `lib/` submodule, with uncommitted changes across s90-176
 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`). Same
 posture as the `rogue_squadron64` sibling checkout flagged since s54.
 Worth asking the user whether/how to commit that history.

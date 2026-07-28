@@ -16564,3 +16564,43 @@ gitignored, not tracked — consistent with every prior session.
    and passed that window fully alive, a future soak that reaches the same
    depth without crashing is the first real opportunity to actually
    observe that window's behavior instead of dying before it.
+
+## Session 176 (2026-07-28) — 2nd consecutive full-hold crash-free soak (scenenodedepthguard2), still 0/0 on every family guard; found the graphics-task-submission stall's onset point is not fixed to the post-leave cutscene — this run stalled before any leave-key press ever fired, while still idling in SELECT YOUR CRAFT
+
+### What ran
+
+Re-ran s175's exact soak recipe unchanged, per NEXT.md's own instruction, using a new tag name (`scenenodedepthguard2` instead of overwriting `scenenodedepthguard1`) so both runs' logs and screenshots survive side by side for direct comparison.
+
+- Copied `scratch/agent/run_scenenodedepthguard1.sh` -> `run_scenenodedepthguard2.sh`, changing only the tag argument; every env var/instrument/guard left identical.
+- Ran it (`scratch/agent/scenenodedepthguard2_driver.log`).
+
+### Result 1: 2nd consecutive full-hold survival, all guards still 0/0
+
+- `CRASH: 0`, process alive at grace-window end, killed manually (wall=161s). Grepped the full run.log for `SIGBUS|SIGSEGV|Abort|assert|Fatal|crash` (excluding guard-diagnostic text): 0 hits.
+- Grepped for every guard tag in the family (including `[scene-node-depth-guard]`, confirmed as the exact printf tag at `fixup_game_funcs.py:3880`): 0 matches anywhere in the log — the new depth-cap guard, and every other guard armed in the env block, fired 0 times.
+- `lle tasks: 4775`, `exit=2: 0`, `missing-func: 0`, `thr-resume bad=1: 0`, `UnhandledJump: 0` (run 1 had 873, already-known-benign RSP-ucode noise; this run had none at all).
+- **Per NEXT.md's own outcome-3 branch: this is a 2nd consecutive full-hold survival without the guard ever firing** — probabilistic support that the crash family's dominant early-blocking bugs are now covered, still without a positive control on this specific fix (2/2 on "survives," still single-source on "this guard is why").
+
+### Result 2 (new, unplanned): the graphics-task-submission stall's onset point is not fixed to the post-leave cutscene
+
+Compared this run's screenshots against run 1's side by side (both preserved under separate tag directories, `scratch/s73_post_a_scene/scenenodedepthguard{1,2}/`):
+
+- **This run (scenenodedepthguard2) froze inside SELECT YOUR CRAFT itself**, before the scripted `95:start 100:a` leave-key presses ever executed. `hold_05.png` through `grace_01.png` are pixel-identical (a rotated/degraded view of the X-wing hangar pad, garbage-hued floor) — the freeze onset is within the first ~5s of the 120s hold. Confirmed independently via `[vi-fs-decision]`: the last `stalled=0`/FIRE transition is at counter #8079 (`rdpFs=3746`), then 300 consecutive `stalled=1 pairs=0` entries through the end of the log, `rdpFs` never incrementing past 3746 again. The `[phase]` log's last width-transition line is still `vi_width=512 origin=0x006AB400` (the craft-select/war-room origin) at wall 75.8s — **no further phase transition was ever logged**, meaning the process never got as far as leaving SELECT YOUR CRAFT; the stall preempted the scripted leave-key presses (`hold_95`/`hold_100`) entirely.
+- **Run 1 (scenenodedepthguard1) froze much later**, after already leaving into the post-leave mission-intro cutscene: its last `[phase]` line is `vi_width=640 origin=0x006A2900 at 141.8s` — origin `0x6A2900` is the same cutscene-window origin s162 (-14) identified for the STAR WARS-logo/crawl/dive sequence — and its stall onset (`stalled=0` last seen at counter #14528 of ~16000 total `[vi-fs-decision]` lines) is correspondingly much later in the run than run 2's #8079-of-~16352.
+- **The same graphics-task-submission-stall symptom (RDP `fs` frozen, `stalled=1 pairs=0`, process otherwise alive) has now been observed at two structurally different points in the menu/mission state machine**: once mid-cutscene post-leave (s162's original characterization, and again in this session's run 1), and once — new this session — while still idling in SELECT YOUR CRAFT before any leave input took effect. s162's -14 next-step ("find the guest function that submits the next DL after the establishing dive shot") assumed the stall is gated on the post-leave transition; **that framing is too narrow** — the stall can strike during the pre-leave idle/camera-orbit loop too, which never calls that post-leave code path at all.
+
+### Rules out / narrows
+
+- Does not change the s175 depth-cap guard's confirmation status — still single-source on "the guard itself is the cause," 2/2 on "the recipe reliably survives the whole crash family."
+- **Narrows the -14 stall hypothesis**: "blocked on some post-dive-shot-specific guest function" (s162's leading candidate) cannot be the *only* mechanism, since this run's stall happened without ever reaching that code path. A shared, earlier-triggering condition (tick-count-based, or a resource exhaustion not specific to the cutscene) is now at least as plausible as a cutscene-specific blocked call.
+- Both runs agree on the surface symptom (`stalled=1 pairs=0`, RDP `fs` frozen, `[lle task]`/`[rs-malloc]` still running) — that part of s162's characterization stands, two-source confirmed across 4 total occurrences now (s160, s161, this session's run 1, this session's run 2).
+
+### Landed (this session)
+
+`scratch/agent/run_scenenodedepthguard2.sh` (copy of run 1's script, tag renamed only) — gitignored, not tracked, consistent with prior sessions' soak scripts. No code changes. This repo's tracked files: `scratch/agent/NEXT.md`, `docs/CURRENT-TRUTH.md`, this entry.
+
+### Next
+
+1. **The crash-family-guarding line of work has now delivered 2/2 clean full-hold soaks — treat it as provisionally closed for now** (not proven, but out of expected-value budget per rule 8: a 3rd identical soak would mostly re-confirm what's already 2/2). Pivot to the graphics-task-submission stall as the active M3 frontier, per s162's own framing, now refined by this session: the discriminating question is no longer "what guest function should run after the dive shot" alone, it's "what condition (tick count? resource count? both?) triggers the stall regardless of which menu/cutscene state the process is in." A same-recipe soak with the stall's own diagnostic counters correlated against wall-clock/tick-count (not scene state) is the next useful instrument.
+2. `tickSongSequence`'s 2 unguarded list walks (funcs_25.c:5018-5046, 5050-5077, found s174, not guarded) — still open, lower priority than the stall now that 2/2 soaks reach that bug's territory without ever triggering it.
+3. `submitSceneNodeRender+16780` (s171) — still open, still lowest priority of the characterized-but-unfixed leads.
