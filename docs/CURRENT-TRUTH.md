@@ -659,9 +659,48 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s166)
+## Next steps, in order of expected value (s167)
 
--18. **NEW TOP PRIORITY (s166): source-read found and guarded a concrete
+-19. **NEW TOP PRIORITY (s167): re-ran `run_audioslotguard1.sh` unmodified
+    per s166's own plan — it did NOT stay crash-free. 2nd run died at
+    hold-iter 96 (task #7452, fs plateau 4163) to a brand-new **24th**
+    crash class: SIGBUS inside `rs_free` (`funcs_0.c:3093`, the shared
+    free-list-header walk region ~`0x8010FEE0`), called with a pointer
+    read from `freeManifestSegmentAssets`'s fixed 4-entry manifest table
+    (`funcs_1.c:3728`, base `0x8011A80` stride `0x50`, field `+0x40`),
+    itself called from `menuOverlayInit` → `mainGameLoop` →
+    `mainBootstrapWorker`. Never-before-seen call chain (confirmed by
+    grep — `freeManifestSegmentAssets` appears nowhere else in
+    PORTING-STATE). The `isAudioSlotActive` guard fired **0/0 again**
+    (2nd straight null) and the crash is nowhere near its call site, so
+    per NEXT.md's own outcome-2 branch: **stop treating the guard as an
+    answer to anything** — keep it armed (harmless) but demote it to
+    parked, unvalidated. **The 23rd class itself also did not recur**
+    either run — 0/2 now, informative but not a fix claim.
+    **More load-bearing result than the guard question: no rebuild
+    happened between the two runs** (`build/RogueSquadron64Recomp` mtime
+    23:05, both driver runs started after that, confirmed via `find
+    -newer`) — same binary, run twice, produced crash-free then a
+    brand-new crash. This is a clean **refutation, for this specific
+    pair**, of "rebuild/relink changes which bug wins the race" (s93,
+    s160→s161) as *the* explanation for run-to-run variance in this
+    family — the variance is real timing-nondeterminism, not purely a
+    binary-layout artifact of rebuilding. Doesn't overturn s93 (that
+    case *did* involve a rebuild and *did* show a clean before/after),
+    but it does mean "just rebuild and re-run" is not guaranteed to
+    stabilize behavior even holding the binary fixed.
+    **Next work unit:** extend s165's `rs_malloc` free-list walk-log
+    (`ROGUESQ_LOG_RS_MALLOC_WALK=1`) with an analogous `rs_free`
+    walk-log at the same free-list-header region, to test whether this
+    24th class is the same shared free-list-corruption family as s164's
+    `rs_malloc` SIGBUS (both walk structures rooted near `0x8011xxxx`)
+    rather than an independent bug. Do NOT re-run
+    `run_audioslotguard1.sh` a 3rd time unmodified — 2 data points
+    (crash-free/crash) already satisfies the two-source rule on "this
+    env block does not reliably survive," per NEXT.md's own stopping
+    rule. Full detail: PORTING-STATE s167.
+
+-18. **(s166, superseded as top priority by s167 above): source-read found and guarded a concrete
     unguarded-pointer deref (`isAudioSlotActive`, `funcs_24.c:5788` — base
     pointer from a fixed global slot, indexed, dereferenced with no
     null-check, the family's dominant shape) matching the 23rd crash

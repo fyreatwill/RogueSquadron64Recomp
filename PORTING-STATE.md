@@ -15411,3 +15411,109 @@ candidate directly. Prefer (1) first: it's a direct corroboration of
 today's already-strong result and keeps the two-source rule honest
 before spending more effort on the (still unconfirmed) 23rd-class site.
 See `scratch/agent/NEXT.md`.
+
+## Session 167 (2026-07-27) — re-ran `run_audioslotguard1.sh` unmodified per s166's own plan; it did NOT stay crash-free, dying instead to a brand-new 24th crash class in `rs_free`; the two runs also refute "rebuild changes which bug wins" as the explanation here, since no rebuild happened between them
+
+s166 landed a guard on `isAudioSlotActive` (a concrete unguarded
+base-pointer deref matching the family's dominant shape) as a candidate
+fix for the 23rd crash class, but the validating soak's guard never
+fired (0/0) — no positive control. NEXT.md's own plan: re-run the exact
+same script unmodified once; crash-free twice satisfies the two-source
+rule and lets the guard question be set aside, a crash tells us more.
+
+**Ran it.** `scratch/agent/run_audioslotguard1.sh`, unmodified, same
+binary (`build/RogueSquadron64Recomp`, mtime 23:05, unchanged from the
+s166 run — confirmed via `find -newer` across the whole tree between the
+two driver-log timestamps: nothing else was rebuilt either). Outcome:
+**it crashed.** Died at hold-iter 96 (task #7452, `lle tasks: 7452`,
+`fs max: 4163`), later into the hold than several past deaths but well
+before the full 120s + grace window completed cleanly the way s166's run
+did.
+
+**Not the 23rd class.** `grep -c "audio-slot-active-guard"` on the new
+run's log: 0 — the guard did not fire, 2nd straight null (0/0 across
+both soaks now). The crash backtrace is a SIGBUS (signal 10) with a
+completely different call chain:
+
+```
+rs_free (funcs_0.c:3093)
+  <- freeManifestSegmentAssets (funcs_1.c:3728)
+  <- menuOverlayInit
+  <- mainGameLoop
+  <- mainBootstrapWorker
+```
+
+Confirmed via `grep -n "freeManifestSegmentAssets" PORTING-STATE.md
+docs/CURRENT-TRUTH.md` returning zero hits before this session — this
+exact call chain has never been catalogued. It is the **24th** distinct
+crash class (23 is the highest number in use going into this session).
+
+**Source-read the mechanism (no rebuild needed, both functions already
+in `RecompiledFuncs/`).** `freeManifestSegmentAssets` walks a fixed
+4-entry manifest table at guest `0x8011A80` (stride `0x50`); for each
+entry it reads a pointer-sized field at offset `+0x40`
+(`ctx->r4 = MEM_W(ctx->r16, 0X40)`, `funcs_1.c:3819-3820`) and passes it
+straight to `rs_free` with no validation — the same "read a field off a
+fixed-address table, dereference/pass it unguarded" shape as every prior
+class in this family (s99, s100, s101, etc.). `rs_free` itself does
+guard against a literal null pointer at entry (`funcs_0.c:3109-3110`,
+`beq $s0, $zero, L_80001F78` skips the whole body), so the crash is not
+a simple null deref — the table field held a *non-null, invalid*
+pointer, and the SIGBUS actually happens inside `rs_free`'s free-list
+walk logic (the region right after the `osRecvMesg`/list-header read at
+`funcs_0.c:3131-3136`, guest base `0x8011` `-0xE8`/`-0x120` — i.e. the
+same `0x8010Fxxx`-ish free-list-header neighborhood implicated in s164's
+`rs_malloc` walk SIGBUS). Plausible reading: this is another surface of
+the same shared free-list-corruption mechanism s164/s165 were chasing in
+`rs_malloc`, now showing up on the `rs_free` side — not yet proven,
+no instrument landed for it this session.
+
+**More load-bearing than the crash-class taxonomy: the rebuild-confound
+question.** s93 and the s160→s161 pair both showed "a rebuild happened,
+and the crash that won the race changed" — consistent with, but not
+proof of, "rebuilds specifically are what perturbs the race." This
+session is a cleaner test: **the exact same binary, run twice in a row
+with nothing rebuilt in between**, went crash-free then crashed on a
+brand-new class. That single fact refutes "only rebuilds can cause this"
+as a complete explanation — the nondeterminism is present run-to-run
+even holding the binary perfectly fixed. It doesn't overturn s93 (which
+remains a real, separately-confirmed instance of a rebuild changing
+outcomes), but it means future soak planning should not treat "avoid
+rebuilding between comparison runs" as sufficient to get a stable
+before/after signal.
+
+**Attribution scorecard after 2 runs of this exact recipe:**
+- `isAudioSlotActive` guard: 0/0 both runs — unvalidated, demoted from
+  "candidate fix" to "harmless parked guard," same posture as several
+  other guards in this family (s99–s101, s128, s160) that never got a
+  positive control.
+- 23rd crash class (`waitForAnyAudioSlot`): did not recur either run —
+  0/2, informative null, not a refutation (rule: a null needs a
+  same-run positive control to mean anything, and this family's controls
+  are about *other* logs, not this specific site).
+- 24th crash class (`rs_free` ← `freeManifestSegmentAssets`): 1/2, new
+  this session.
+
+Per NEXT.md's own stopping rule ("2 data points is enough to act on...
+a 3rd identical run without new information would just be burning a
+soak"), this closes the `run_audioslotguard1.sh` recipe. Do not re-run
+it unmodified again.
+
+### Files touched
+
+None (no rebuild this session — pure re-run of an existing script plus
+source reads of already-generated `RecompiledFuncs/*.c`).
+
+### Next
+
+Two live options, neither a repeat of an exhausted recipe: (1) extend
+s165's `rs_malloc` free-list walk-log pattern
+(`ROGUESQ_LOG_RS_MALLOC_WALK=1`, `N64Recomp/fixup_game_funcs.py`,
+`funcs_0.c`) with an analogous `rs_free` walk-log at the same
+free-list-header region, to directly test the "same shared
+free-list-corruption mechanism, surfacing on the free side this time"
+hypothesis raised above; (2) if that's inconclusive, pivot to
+characterizing the post-leave graphics-task-submission stall itself
+(s162's finding) — still the actual M3 frontier once a soak reaches it
+crash-free, which both s166's and this session's runs did before their
+respective deaths. See `scratch/agent/NEXT.md`.
