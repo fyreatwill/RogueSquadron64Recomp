@@ -663,11 +663,36 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s185)
+## Next steps, in order of expected value (s186)
 
--35. **STILL TOP PRIORITY (s183, refined s184/s185): find what actually stops
-    graphics-task submission in a run that reaches the stall WITHOUT
-    `[thr-resume-skip]` firing.** **s184**: source-read confirmed a real,
+-35. **`ROGUESQ_LOG_SCHED` instrument's rule-8 budget is now CLOSED (s186):
+    3 of 3 attempts spent, all inconclusive for candidate (a).** `schedguard7`
+    (3rd attempt) reached the furthest yet — decision `#10535`, PAST the
+    `#9770`-`#9792` historical stall-onset window — but never sustained a
+    stall (max gap between logged decisions: 32, far short of the >100
+    signature); it then died to the same `rs_free ← rebuildActiveDisplayObjectList`
+    crash as s183, byte-identical call chain. 3rd straight confirmation that
+    `[sched-queue]`/`[sched-runnext]` stay near-balanced and the producer
+    thread (`mainBootstrapWorker`, id=3) keeps getting scheduled normally
+    right up to its own unrelated crash — this crash family is orthogonal to
+    the scheduling hypothesis, not a manifestation of it. Across the whole
+    `schedcaller`/`schedguard` line (s180-186), the `rs_free`/heap-corruption
+    family has now killed 3 of the last 4 attempts (s183, s185, s186) — it is
+    the single most frequent thing pre-empting reach into this content
+    window. **Mandatory pivot next session, per NEXT.md's own decision
+    tree**: either candidate (b) (`viRetraceHandlerThread`/`musyxSynthFrame`
+    lock/resource contention against the producer), candidate (c)
+    (heap-exhaustion on the producer's own allocation path), or — the
+    higher-information-value choice given how often it's pre-empting
+    progress — **land a defensive guard on `rs_free ← rebuildActiveDisplayObjectList`**
+    (s99-s101 precedent: `goto` the real epilogue on a bad table/pointer
+    read) purely to buy runway for a future scheduling-instrument attempt.
+    Full detail: PORTING-STATE Session 186.
+
+    **s183-s185 finding this closes out (still valid as confirmed instances,
+    not the whole explanation): find what actually stops graphics-task
+    submission in a run that reaches the stall WITHOUT `[thr-resume-skip]`
+    firing.** **s184**: source-read confirmed a real,
     previously-uninstrumented mechanism that needs no UAF guard at all —
     `check_running_queue()` only swaps to a queued thread if its priority is
     **strictly greater** than the caller's; the only priority-blind pop is

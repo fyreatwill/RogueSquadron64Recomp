@@ -1,99 +1,91 @@
-# NEXT work unit — 3rd and FINAL `ROGUESQ_LOG_SCHED` attempt to reach the
-# stall window before the rule-8 budget on this instrument closes.
+# NEXT work unit — mandatory pivot: land a defensive guard on the
+# `rs_free ← rebuildActiveDisplayObjectList` crash to buy runway
 
-Read PORTING-STATE Session 185 in full before doing anything else (`grep -n
-"^## Session 185" PORTING-STATE.md`); this file only has the actionable
+Read PORTING-STATE Session 186 in full before doing anything else (`grep -n
+"^## Session 186" PORTING-STATE.md`); this file only has the actionable
 summary. Also read docs/CURRENT-TRUTH.md's `-35` next-steps item (top of the
 list).
 
-## What s184/s185 established (read before doing anything else)
+## Why this is the pivot (read before doing anything else)
 
-- Source-read (s184) confirmed candidate (a) is mechanistically real:
-  `check_running_queue()` only swaps to a queued thread if its priority is
-  **strictly greater** than the caller's. The only priority-blind resume is
-  `run_next_thread()`'s unconditional pop, reached only via a genuine
-  blocking wait. `mainBootstrapWorker` (id=3, entry `0x80000C68`, the
-  hangar-loop/graphics-task-producer thread) runs at **priority 10** vs.
-  **117-122** for the VI-retrace/audio threads — the shape the mechanism
-  needs.
-- `ROGUESQ_LOG_SCHED=1` (`lib/N64ModernRuntime`, already committed) is
-  landed and validated: `[sched-queue] thr=%p id=%d pri=%d`,
-  `[sched-check] self_thr=%p self_id=%d self_pri=%d head_thr=%p head_id=%d
-  head_pri=%d swap=%d`, `[sched-runnext] popped_thr=%p popped_id=%d
-  popped_pri=%d`.
-- **Two soaks now (`schedguard5` s184, `schedguard6` s185), both died BEFORE
-  the target stall-onset window (`#9770`-`#9792` from s180/s183)**:
-  - `schedguard5`: died decision `#8327`, cause = new `evalCubicSplineAtTime
-    +2552` SIGBUS (signal 10, not root-caused, not the s83-guarded abort).
-  - `schedguard6`: died decision `#8616` (even earlier), cause = recurrence
-    of the already-catalogued 24th class (`rs_free` ← `freeManifestSegmentAssets`,
-    s167) — **confirmed orthogonal to the scheduling hypothesis**: the
-    producer thread (`thr=0x300163e20 id=3`) was being actively scheduled
-    and resumed right up to the crash instant (last `[sched-runnext]` before
-    death popped that exact thread normally).
-  - Both runs: pre-crash `[sched-queue]` and `[sched-runnext]` counts are
-    within 2 of each other (72382/72380, then 77510/77508) — 2 independent
-    confirmations that routine starvation via the strict-priority gate is
-    NOT the normal case in the window this instrument can actually observe.
-    This is consistent background information, not yet the discriminating
-    result (which requires reaching the stall itself).
-- **This is 2 of up to 3 attempts on this instrument (rule 8).** This
-  iteration is the 3rd and final one. If it ALSO dies before reaching the
-  stall region, DO NOT run a 4th — pivot immediately to candidate (b)
-  (`viRetraceHandlerThread`/`musyxSynthFrame` lock/resource contention) or
-  (c) (heap-exhaustion on the producer's own allocation path), or consider
-  landing a defensive guard on the recurring `rs_free`/heap-corruption
-  family first (s99-s101 precedent: table-lookup-then-deref guards) purely
-  to buy enough runway for a future attempt to reach the stall at all —
-  independent of actually fixing that family.
+The `ROGUESQ_LOG_SCHED` instrument's rule-8 budget is closed: 3 of 3 attempts
+(`schedguard5`/`6`/`7`, s184-s186) spent, none reached AND sustained the
+target stall while the instrument was live. Do NOT run a 4th attempt on that
+instrument this session.
+
+Across the whole `schedcaller`/`schedguard` line (s180-186), the shared
+`rs_free`-family heap-corruption crash (`rs_free ← rebuildActiveDisplayObjectList`,
+s183 and s186; `rs_free ← freeManifestSegmentAssets`, s167/s185 — same family,
+different call sites) has now killed **3 of the last 4 attempts** to reach
+the stall region. It is the single most frequent thing pre-empting progress.
+Per NEXT.md's own prior framing (s185) and rule 8, the highest-information-
+value move now is to land a defensive guard on it — mirroring the s99-s101
+precedent (`activateAnimationKeyframe`/`composeNpcOrientationMatrix`: an
+unguarded table-lookup-then-dereference, fixed with a `goto` to the
+function's real epilogue on a bad read) — purely to buy runway so a FUTURE
+scheduling-instrument attempt can actually reach and sustain the stall. This
+is NOT an attempt to fix the underlying shared-corruption race (still
+unlocated after s85-s114's chase); it is a local guard at one known crash
+site.
+
+Candidates (b) (`viRetraceHandlerThread`/`musyxSynthFrame` lock/resource
+contention against the producer) and (c) (heap-exhaustion on the producer's
+own allocation path) remain unexamined and are the fallback if this guard
+doesn't pan out or turns out not to be straightforward.
 
 ## Do next, in order
 
-1. **Re-run the exact same soak with a new tag** (`schedguard7` — copy
-   `scratch/agent/run_schedguard6.sh`/`wait_for_schedguard6.sh`, bump the
-   tag only, verbatim otherwise). No source changes needed.
-2. **In the resulting run.log, first check whether the stall region was
-   reached at all** (grep for `stalled=1` runs of length >100, or the
-   `[CRASH][vifs-snapshot] decisionN=` value at death vs. `#9770`-`#9792`).
-   - If it died early again (any cause): this closes the instrument's rule-8
-     budget (3 of 3 spent, all inconclusive). Do NOT plan a 4th attempt.
-     Write up the 3-attempt pattern (which crash class each time, whether
-     any of them recur) and move to step 3's fallback.
-3. **If the stall region IS reached this time**, the discriminating check is
-   BOTH of:
-   a. Does the producer thread (`thr=0x300163e20`, cross-reference
-      `[thr-create-id] id=3 entry=0x80000C68` to confirm the pointer is
-      stable run-to-run — it may not be, ASLR/allocator-dependent) get a
-      `[sched-queue]` entry with no matching later `[sched-check swap=1]` or
-      `[sched-runnext popped_id=3]` before the stall?
-   b. Does `[sched-runnext]` (the priority-blind pop) **stop appearing
-      entirely, for any thread**, at the same point?
-   Both together → strong confirmation of candidate (a) → proceed to fix
-   design (retry-next-queue-entry vs. a timeout/wake-caller path in
-   `check_running_queue`, see PORTING-STATE Session 180/181 step 2 for the
-   original framing, still valid).
-   Only (a) without (b), or neither → refute/weaken candidate (a) for this
-   run, and the instrument's budget is now spent regardless (this was
-   attempt 3 of 3) — mandatory pivot to (b)/(c) next session either way.
+1. **Source-read `rebuildActiveDisplayObjectList` and its call to `rs_free`**
+   in `N64Recomp/RecompiledFuncs/` (grep `RECOMP_FUNC void
+   rebuildActiveDisplayObjectList` to find the file). Find the exact
+   `rs_free(...)` call site and trace what pointer/arg it's freeing — per
+   s183's crash, the free-list node being walked has a garbage `flags`/`size`
+   (`flags=0x0 size=2155119224` in s186, `flags=0x1 size=0` etc. in nearby
+   walk lines) — this is `rs_free`'s own internal free-list walk hitting a
+   corrupt node, NOT necessarily a bad argument from the caller. Read
+   `rs_free`'s implementation itself (likely in `lib/` or a `funcs_*.c`) to
+   find where it walks the free list and what a defensible guard looks like
+   (e.g., bounds/sanity check on a node's `size`/`flags` before dereferencing
+   further, matching the shape of the s99-s101 guards).
+2. **Check whether `rs_free` is a single shared function** (called from many
+   places, including `freeManifestSegmentAssets` per s167/s185) — if so, a
+   guard at the walk site inside `rs_free` itself fixes ALL call sites in
+   this family at once, which is preferable to guarding each caller
+   separately (`rebuildActiveDisplayObjectList`, `freeManifestSegmentAssets`,
+   and s164's `rs_malloc` counterpart if it shares walk code).
+3. **Design the guard**: on detecting a node with clearly-insane `flags`/
+   `size` (establish a concrete threshold from the crash data — e.g. `size`
+   sanity-bounded against the known heap size, `flags` restricted to the
+   small set of real values seen in clean walks: `0x0`/`0x1` per the
+   `[rs-free-walk]` log lines), skip/abort that walk step instead of
+   dereferencing further, logging a new `[rs-free-walk-guard]` (or similar)
+   line so a soak gives a positive control.
+4. **Implement, regen if needed, build clean**, following the regen-order
+   rule (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake`) if
+   this touches `RecompiledFuncs/` via `fixup_game_funcs.py`, or a plain
+   `cmake --build` if it's a pure `lib/` host-side change (check where
+   `rs_free`'s actual implementation lives before assuming which path
+   applies).
+5. **Soak once** (new tag, e.g. `rsfreeguard1`) with the SAME env block as
+   `run_schedguard7.sh` (keep `ROGUESQ_LOG_SCHED=1` armed — it's free and
+   still useful background data even though its own budget is spent) to
+   check: does the guard's positive control fire (proving the bad node is
+   real and getting caught), and does the process survive further / reach
+   the stall region now that this specific crash is defused?
 
 ## Do not
 
-- Do not run a 4th attempt on `ROGUESQ_LOG_SCHED` if this one also dies
-  early — rule 8's budget is 3, this is the 3rd.
-- Do not chase the `evalCubicSplineAtTime+2552` SIGBUS (s184) or the
-  `rs_free ← freeManifestSegmentAssets`/`rebuildActiveDisplayObjectList`
-  heap-corruption family (s183/s185) with a dedicated soak — both are
-  already-catalogued or flagged-not-chased, lower priority than reaching
-  the stall window. (Landing a defensive guard on the `rs_free` family to
-  buy runway is a legitimate NEXT session's fallback if this attempt also
-  fails, per the note above — but that is a different, larger work unit
-  than "chasing" it, and only becomes the plan after this 3rd attempt.)
-- Do not turn on `ROGUESQ_LOG_THREAD_RESUME=1` for this soak (s93's
-  confound: perturbs timing enough to change which crash/stall wins the
-  race). `ROGUESQ_LOG_SCHED=1` is a separate, already-landed gate — keep it
-  on, it's the point of this soak.
-- Do not re-litigate whether the outer hangar loop "stops iterating" as a
-  whole — s180 closed that.
+- Do not run a 4th `ROGUESQ_LOG_SCHED`-dedicated attempt — that instrument's
+  budget is spent (3/3, s184-s186). Keep the flag armed opportunistically in
+  future soaks (it's free), but it is no longer the active investigation.
+- Do not attempt to root-cause the *shared-corruption-race* itself (the thing
+  that corrupts a free-list node's `flags`/`size` in the first place) as part
+  of this work unit — that chase (s85-s114) is a much larger, multi-session
+  investigation. This work unit is a local defensive guard only, same scope
+  as s99-s101.
+- Do not chase `evalCubicSplineAtTime+2552` (s184, still uncatalogued root
+  cause, hasn't recurred) — lower priority, not this session's unit.
+- Do not turn on `ROGUESQ_LOG_THREAD_RESUME=1` for this soak (s93's confound).
 
 ## Blocking on a long-running soak (learned the hard way, still current)
 
@@ -230,6 +222,9 @@ summary block is complete.
   noticeably longer to appear than the first few on a multi-hundred-MB
   run.log — wait for the wrapper shell script's own process to exit too
   (not just the game PID) before treating the summary as complete.
+- Python one-liners via Bash (`python3 -c "..."`) are useful for analyzing
+  extracted log data (e.g. gap analysis on decision numbers) without
+  needing awk/sed pipe chains that get denied as "multiple operations".
 
 ## Housekeeping still flagged, still not done
 

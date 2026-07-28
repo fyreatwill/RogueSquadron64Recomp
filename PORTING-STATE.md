@@ -17099,3 +17099,110 @@ only needed a 2nd data point.
 instrument as-is). Soak artifacts: `scratch/s73_post_a_scene/schedguard6/`
 (run.log ~227 MB), driver summary `scratch/agent/schedguard6_driver.log`,
 driver scripts `scratch/agent/run_schedguard6.sh`/`wait_for_schedguard6.sh`.
+
+## Session 186 (2026-07-28) — 3rd and FINAL `ROGUESQ_LOG_SCHED` attempt (`schedguard7`) — furthest reach yet (decision #10535, past the #9770-#9792 window) but never sustained a stall, then died to the same `rs_free ← rebuildActiveDisplayObjectList` recurrence as s183; closes the instrument's rule-8 budget (3/3 spent, all inconclusive) — mandatory pivot next session
+
+### Work unit
+NEXT.md step 1: re-run the `ROGUESQ_LOG_SCHED=1` soak a 3rd time with a fresh
+tag (`schedguard7`, copied verbatim from `run_schedguard6.sh`/
+`wait_for_schedguard6.sh` except the tag — diffed to confirm only the tag
+changed). No source changes; this was the last of the 3 allowed attempts per
+rule 8.
+
+### Result
+- **Furthest any `ROGUESQ_LOG_SCHED` soak has gotten**: died at **decision
+  `#10535`** (`[CRASH][vifs-snapshot] decisionN=10535 lastFireDecisionN=10530
+  decisionsSinceFire=5 lastFireWasStalled=0 stalledNow=0`) — past both
+  `schedguard5`'s `#8327` and `schedguard6`'s `#8616`, and past the
+  `#9770`-`#9792` stall-onset window itself (s180/s183).
+- **But it never entered a sustained stall.** Checked every logged
+  `[vi-fs-decision]` line's decision number for gaps (2044 lines logged,
+  `#1`-`#10530`): the largest gap between consecutively-logged decisions is
+  **32**, nowhere near the ">100 consecutive `stalled=1`" signature that
+  marked the real stall in s180/s183 (2688 decisions in s183). The run had
+  several **transient** `stalled=1` blips (`#8908`, `#10134`, `#10189`,
+  `#10226`) that all self-recovered via a `FIRE reason=swap` shortly after —
+  not the sustained, un-recovering stall this instrument is trying to catch.
+  `rdpFs` plateaued at 3990 (vs. s183's 4010 — still content-dependent, not a
+  fixed ceiling) for the last ~39 logged decisions before death, but the
+  process never got the chance to show whether that plateau would have led
+  into a sustained stall — the crash intervened first.
+- Cause: SIGBUS (signal 10) in `rs_free` ← `rebuildActiveDisplayObjectList` ←
+  `static_5_800C9BF0` ← `menuOverlayInit` ← `mainGameLoop` ←
+  `mainBootstrapWorker` — **byte-for-byte the same call chain as s183's**
+  crash (garbage free-list node, `flags=0x0 size=2155119224`). Not a new
+  class; 2nd occurrence of this exact combination in the shared-heap-
+  corruption-walker family (s164 `rs_malloc`, s167/s185 `rs_free ←
+  freeManifestSegmentAssets`, s183 and now this session `rs_free ←
+  rebuildActiveDisplayObjectList`).
+- Scheduling orthogonality check (same method as s185): the last
+  `[sched-runnext]` line before death popped `thr=0x300163e20 id=3` — cross-
+  referenced against `[thr-create-id] id=3 thr=0x300163e20 pri=10
+  entry=0x80000C68`, confirming this is `mainBootstrapWorker`, the producer
+  thread itself (also the crashing thread in the backtrace). `[sched-check]`
+  lines with `self_id=3` continue right up to the last log lines before the
+  crash. The producer was being actively scheduled and was itself running at
+  the moment of an unrelated heap-corruption bug — a 3rd consecutive
+  confirmation that this crash family is orthogonal to the -35 scheduling
+  hypothesis, not a manifestation of it.
+- Instrument counts (3rd data point): 88041 `[sched-queue]`, 398479
+  `[sched-check]`, 88039 `[sched-runnext]` — queue/pop counts again within 2
+  of each other (s184: 72382/72380; s185: 77510/77508). **3rd independent
+  confirmation** that routine starvation via the strict priority-greater gate
+  is not observed to be the normal case in this window.
+
+### Rules out / keeps
+- **Closes the `ROGUESQ_LOG_SCHED` instrument's rule-8 budget: 3 of 3
+  attempts spent, all inconclusive for candidate (a).** None of the 3 runs
+  ever reached AND sustained the target stall while the instrument was live
+  — 2 died before the window (`schedguard5`/`6`), 1 passed through and past
+  the window without ever stalling (`schedguard7`, this session). Candidate
+  (a) (strict-priority scheduler gate starving the producer) is neither
+  confirmed nor cleanly refuted — it simply was never tested against an
+  actual stall occurrence. What IS now a 3-session-consistent pattern: in
+  every window this instrument could observe (pre-stall, in this
+  session's case also past the historical stall-onset point), `[sched-queue]`
+  and `[sched-runnext]` stay near-balanced and the producer keeps getting
+  scheduled normally.
+- **New wrinkle for the "is the stall even the certain outcome" question**:
+  this is the first run in the `schedcaller`/`schedguard` line to push past
+  the historical `#9770`-`#9792` onset decision number without stalling at
+  all — reinforcing s183's "content-dependent, not a fixed ceiling" framing
+  one step further: not just the plateau *value* varies run-to-run, whether
+  a given run stalls by a given decision count varies too. Single-session
+  observation, not yet a confirmed general claim.
+- Does not rule out that the `rs_free`/heap-corruption family is now the
+  dominant thing pre-empting reach into the stall region across this whole
+  line of soaks: of 3 `ROGUESQ_LOG_SCHED` attempts, 2 died to this exact
+  family (`schedguard6`, `schedguard7`) and the 3rd (`schedguard5`) died to
+  a different, also-uncatalogued crash. Across the wider `schedcaller`/
+  `schedguard` line (s180-186), this family has now killed runs 3 times
+  (s183, s185, s186) — the single most frequent specific crash blocking
+  reach into this content window.
+
+### Carried-forward open items (mandatory pivot per rule 8 — item 1 replaces s185's item 1)
+
+1. **Mandatory pivot away from `ROGUESQ_LOG_SCHED`/candidate (a) as the
+   active investigation.** Per NEXT.md's own decision tree, the next session
+   must choose one of: (b) `viRetraceHandlerThread`/`musyxSynthFrame`
+   lock/resource contention against the producer; (c) heap-exhaustion on the
+   producer's own allocation path; or — the higher-information-value choice
+   given this session's result — **land a defensive guard on the
+   `rs_free ← rebuildActiveDisplayObjectList` site** (s99-s101 precedent:
+   `goto` the function's real epilogue on a bad table/pointer read) purely
+   to buy runway past this specific, now 3-times-recurring, crash so a
+   future `ROGUESQ_LOG_SCHED`-successor attempt can actually reach and
+   sustain the stall to test candidate (a) properly. This is a different,
+   larger work unit than "chasing" the crash for its own sake.
+2. Candidates (b)/(c) remain unexamined.
+3. `evalCubicSplineAtTime+2552` SIGBUS (s184, signal 10) — still not root-
+   caused, still not recurred a 2nd time. Lower priority than item 1.
+4. `tickSongSequence`'s 2 unguarded list walks (funcs_25.c:5018-5046,
+   5050-5077, found s174) — still open, still lower priority.
+5. `submitSceneNodeRender+16780` (s171) — still open, still lowest priority.
+
+**Full detail**: this entry. No code changes this session (reused s184's
+instrument as-is, 3rd and final data point). Soak artifacts:
+`scratch/s73_post_a_scene/schedguard7/` (run.log ~253 MB), driver summary
+`scratch/agent/schedguard7_driver.log`, driver scripts
+`scratch/agent/run_schedguard7.sh`/`wait_for_schedguard7.sh`.
