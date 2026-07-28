@@ -663,7 +663,39 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s186)
+## Next steps, in order of expected value (s187)
+
+-36. **Landed the mandatory-pivot defensive guard on `rs_free`'s free-list
+    walk (s187) — validated with a strong positive control, first
+    fully crash-free full-length soak in the whole s180-187 lineage.**
+    `rs_free` (`N64Recomp/RecompiledFuncs/funcs_0.c:3106`, a single shared
+    `RECOMP_FUNC` covering every caller including
+    `rebuildActiveDisplayObjectList` and `freeManifestSegmentAssets`)
+    contains 3 near-identical free-list coalescing walk loops that compute
+    `next = node + size_field` with zero bounds checking (`recomp.h`'s
+    `MEM_W`/`MEM_HU` macros do raw unclamped pointer arithmetic) and then
+    dereference through it. Guarded all 3 (`N64Recomp/fixup_game_funcs.py`,
+    mirrors the s173 `rs_malloc` guard exactly: `0x80000000u`/`0x80800000u`
+    RDRAM bounds, `goto` each loop's own natural terminator-exit label,
+    new env var `ROGUESQ_LOG_RS_FREE_WALK_GUARD`). One soak
+    (`rsfreeguard1`): `[rs-free-walk-guard]` fired **1901 times** (all
+    `loop=1`, all the same corrupted node `0x807982B6`/`bad_next=
+    0x8475841C`) and the process **survived the entire 120s hold + grace
+    window, had to be killed manually, `CRASH: 0`**. This closes out the
+    "3 of the last 4 scheduling-line attempts killed by this family"
+    problem that blocked s183/s185/s186. **Not yet known**: whether the
+    `-35` stall itself still occurs past this guard — the `decisionN`
+    counter is crash-only (`[CRASH][vifs-snapshot]`), so a crash-free run
+    like this one reports nothing about stall status. `[sched-queue]`/
+    `[sched-runnext]` (131076/131075) stayed near-balanced the whole run,
+    at least consistent with "never stalled." **Best next work unit: add
+    a periodic (non-crash-gated) decision-count log tick**, then re-run
+    the `ROGUESQ_LOG_SCHED` env block (the flag itself is free to observe,
+    even though rule 8 closed *dedicated* attempts on it) now that this
+    crash family no longer pre-empts reach into the stall region. Also
+    still open: the underlying corruption source itself (s85-s114 chase,
+    not touched this session) — this guard treats the symptom. Full
+    detail: PORTING-STATE Session 187.
 
 -35. **`ROGUESQ_LOG_SCHED` instrument's rule-8 budget is now CLOSED (s186):
     3 of 3 attempts spent, all inconclusive for candidate (a).** `schedguard7`

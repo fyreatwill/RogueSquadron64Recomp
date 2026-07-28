@@ -17206,3 +17206,117 @@ instrument as-is, 3rd and final data point). Soak artifacts:
 `scratch/s73_post_a_scene/schedguard7/` (run.log ~253 MB), driver summary
 `scratch/agent/schedguard7_driver.log`, driver scripts
 `scratch/agent/run_schedguard7.sh`/`wait_for_schedguard7.sh`.
+
+## Session 187 (2026-07-28) — landed the mandatory-pivot defensive guard on `rs_free`'s free-list walk (3 loops, `N64Recomp/fixup_game_funcs.py`), positive control fired 1901x on ONE persistent corrupted node, and the soak survived the ENTIRE 120s hold + grace window with zero crashes — first fully crash-free full-length run anywhere in the s180-187 `schedcaller`/`schedguard`/`rsfreeguard` lineage
+
+### What ran
+Per NEXT.md's mandatory pivot (s186 closed the `ROGUESQ_LOG_SCHED` rule-8
+budget at 3/3 inconclusive): source-read `rs_free`
+(`N64Recomp/RecompiledFuncs/funcs_0.c:3106`, confirmed itself a
+`RECOMP_FUNC` — a single shared guest function, so a guard inside it covers
+every caller including `rebuildActiveDisplayObjectList` (s183/s186) and
+`freeManifestSegmentAssets` (s167/s185) at once). Found `rs_free` contains
+**3 near-identical coalescing free-list walk loops**
+(`L_80001CE0`/`L_80001DCC`/`L_80001EB4`), each computing
+`next = node + size_field` with **zero bounds checking anywhere in the
+recomp memory macros** (`N64Recomp/include/recomp.h`'s `MEM_W`/`MEM_HU` do
+raw pointer arithmetic into the `rdram` buffer, no clamp) and then
+dereferencing through that computed address a few instructions later. s186's
+own `[rs-free-walk]` log had already shown the shape: `node=0x80160120
+flags=0x0 size=2155119224` — a garbage size that overflows the node's
+address 27 MB past the 8 MB RDRAM window (`ram_size = 0x800000`,
+`lib/N64ModernRuntime/librecomp/src/sp.cpp:23`), guaranteeing a wild
+dereference on the very next access.
+
+Landed a guard (mirroring the s173 `rs_malloc` walk-loop-deref-guard
+precedent exactly: same `0x80000000u`/`0x80800000u` RDRAM bounds, same
+`goto` to the loop's own natural "terminator bit already set" exit label
+instead of continuing to dereference) at all 3 walk loops, gated by a
+single new env var `ROGUESQ_LOG_RS_FREE_WALK_GUARD`, logging
+`[rs-free-walk-guard] loop=<1|2|3> n=<fire count> bad_next=<addr>
+node=<addr> ra=<addr>` on trip. Loop 1's bail target is `L_80001D94`, loop
+2's is `L_80001E80`, loop 3's is `L_80001F64` (the function's own
+lock-release-and-return tail) — each chosen to exactly match that loop's
+existing "list search ends here" control-flow shape, not skip any
+additional coalescing work beyond what the real terminator path already
+skips.
+
+Regenerated fresh (`N64Recomp` was NOT re-run on an already-patched
+`funcs_0.c` — regenerated from the ELF first per the non-idempotency rule,
+then `fixup_game_funcs.py` once): fixup log confirms all 3 new patches at
+exactly x1 (`funcs_0.c: rs_free free-list walk-loop deref guard loop{1,2,3}
+patched x1`), plus the pre-existing s140/s168 rs_free patches also at x1
+each (no duplication). Built clean
+(`DEVELOPER_DIR=.../Xcode.app/... cmake --build build`).
+
+One soak (`rsfreeguard1`, same env block as `run_schedguard7.sh` plus
+`ROGUESQ_LOG_RS_FREE_WALK_GUARD=1`, `ROGUESQ_LOG_SCHED=1` kept armed): the
+process **survived the entire 120s hold window + 0s grace and had to be
+killed manually** (`game process still alive; killing`) — `CRASH: 0` in the
+driver summary. `[rs-free-walk-guard]` fired **1901 times**, all
+`loop=1`, all on the exact same node/corruption pair
+(`node=0x807982B6 bad_next=0x8475841C`) — a single persistently-corrupted
+free-list node that `rs_free` re-encounters on every single call for the
+rest of the run, now safely bailed every time instead of crashing on
+(what must have been, pre-guard) an eventual unlucky hit. `[sched-queue]`/
+`[sched-runnext]`: 131076/131075 — near-balanced, consistent with s184-186.
+
+### Rules out / keeps
+- **This specific `rs_free` free-list-walk corruption family (killed s183,
+  s185, s186 — 3 of the last 4 scheduling-line attempts) is now defended
+  against at its walk site.** Positive control is unambiguous: 1901 fires
+  in one run, process did not crash. This is a local guard (buying
+  runway), NOT a fix for the underlying corruption that puts the insane
+  size value in the free list in the first place — that chase (s85-s114)
+  is still open and this session did not touch it.
+- **New data point for that still-open corruption chase, not investigated
+  further this session**: unlike s173's `rs_malloc` guard (corruption
+  proved racy across runs — 0/0 fires with 17,683 clean calls one run),
+  this `rs_free` corruption looks **deterministic within a run once it
+  occurs** — the same node/bad_next pair fired on essentially every `rs_free`
+  call for the remainder of the soak (1901x), not a rare one-off. Worth
+  keeping in mind if/when the corruption-source chase resumes: this
+  particular node persists in the free list rather than being cleaned up
+  or re-corrupted differently each time.
+- **Did not observe or rule out the `-35` stall itself this run.** The
+  crash-only `[CRASH][vifs-snapshot] decisionN=...` counter is the only
+  place `ROGUESQ_LOG_SCHED`'s decision number gets printed — with no
+  crash this run, there is no decision-number readout at all, so we cannot
+  tell whether this run passed through, sustained, or never reached the
+  historical stall window. `[sched-queue]`/`[sched-runnext]` staying
+  near-balanced for the whole run is at least consistent with "never
+  stalled," matching s183/s186's balanced-until-the-crash pattern, but is
+  not itself proof either way. **Instrumentation gap for next session**:
+  a periodic (not just crash-time) `decisionN` log line would let a
+  crash-free run like this one actually report whether it stalled.
+
+### Carried-forward open items
+
+1. **Add a periodic (non-crash-gated) `[sched-decision]`-style log tick**
+   (e.g. every N decisions, or on a wall-clock timer) so a crash-free run
+   can report whether/when it hit the `-35` stall, since this session's
+   guard just produced the first crash-free run in the lineage and it went
+   fully "dark" on that specific question. This unblocks re-testing
+   candidate (a) (`ROGUESQ_LOG_SCHED`'s own hypothesis, rule-8 budget
+   closed for *dedicated* attempts but the flag itself is still armed and
+   free to observe) now that this crash family longer pre-empts reach.
+2. Candidates (b) (`viRetraceHandlerThread`/`musyxSynthFrame` lock/resource
+   contention) and (c) (heap-exhaustion on the producer's allocation path)
+   remain unexamined.
+3. `evalCubicSplineAtTime+2552` SIGBUS (s184, signal 10) — still not root-
+   caused, still not recurred a 2nd time.
+4. `tickSongSequence`'s 2 unguarded list walks (funcs_25.c:5018-5046,
+   5050-5077, found s174) — still open.
+5. `submitSceneNodeRender+16780` (s171) — still open, still lowest priority.
+6. The underlying `rs_free`-corruption source (what writes the insane size
+   into node `0x807982B6`'s free-list header in the first place) is still
+   unlocated — this session's guard treats the symptom, not the cause.
+
+**Full detail**: this entry. Code changes: `N64Recomp/fixup_game_funcs.py`
+(3 new patch blocks, `rs_free free-list walk-loop deref guard loop{1,2,3}`),
+regenerated `N64Recomp/RecompiledFuncs/funcs_0.c` (not committed — N64Recomp
+is a separate, long-uncommitted sibling checkout per existing housekeeping
+note, unchanged this session). No `lib/` changes, no `submodule-patches/
+export.sh` needed. Soak artifacts: `scratch/s73_post_a_scene/rsfreeguard1/`
+(run.log), driver summary `scratch/agent/rsfreeguard1_driver.log`, driver
+script `scratch/agent/run_rsfreeguard1.sh`.
