@@ -663,9 +663,43 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s207)
+## Next steps, in order of expected value (s208)
 
--48. **(s207, REFINES s206) `processSceneNode+8772` KSEG0-zero-extension bug:
+-49. **(s208, SHARPENS s194-207) `processSceneNode+8772`/`renderUnlitMeshFaces`
+    KSEG0-zero-extension bug: built and soaked the `MEM_W`-address bounds
+    tracer NEXT.md prescribed (4 sites: funcs_4.c:4975/5009/5546/5563) — the
+    tracer's positive control fired (proves it executed on the exact call
+    that crashed) but ZERO of the 4 sites flagged out-of-bounds, while the
+    process still SIGBUS'd with `far=0x380630062` at
+    `renderUnlitMeshFaces+792` (2nd independent `dladdr` pc-symbol hit on
+    this function, different offset than s206's `+508`). Cross-referencing
+    this exact `far`/`si_addr` value across every soak log
+    (`grep 'si_addr=0x380630062\|far=0x380630062' scratch/s73_post_a_scene/*/run.log`)
+    found it in FOUR runs (`mcontext1`/s194, `videoframetickguard3`,
+    `pcsymbolize1`/s206, `unlitmeshtracer3`/s208) — **the identical byte
+    value `0x80630062` recurring across independent runs/inputs means this
+    is a deterministic data source, not random heap corruption. s194's
+    "not yet confirmed recurring" is SUPERSEDED: confirmed recurring, 4
+    occurrences, single value.** Since `lr=+640` (the `getTextureLUTFieldAt8`
+    call's return point, `funcs_4.c:5104`) postdates site B's load
+    (line 5029), sites A/B necessarily ran clean before the crash — ruling
+    out the NAIVE form of explanation (a) (source register already bad at
+    load time) for those two sites. But `ctx->r16` (site B's result) is
+    dereferenced ~35 more times before the loop-back reload (5057, 5069,
+    5114-5195, 5347-5542) and none of those were checked — and per C's
+    verified-correct `int32_t->uint64_t` sign-extension-on-assignment
+    convention, a value legitimately loaded via `MEM_W` should NEVER end up
+    zero-extended, so if `ctx->r16` truly held `0x0000000080630062` at fault
+    time, it did not arrive through the already-audited-clean load path.
+    **Next work unit, in priority order** (cheapest falsification first):
+    (1) grep decomp symbol tables / asset data for the literal address
+    `80630062` — the recurring EXACT value may just name a real fixed
+    symbol/offset, no build needed; (2) if that's a dead end, widen the
+    tracer to check `ctx->r16` itself (not just its load's source address)
+    right after the site-B load, before line 5057's first subsequent
+    dereference. Full detail: PORTING-STATE Session 208.
+
+-48. **(s207, SUPERSEDED framing — see -49 above for what's current)**
     the targeted re-read of `renderUnlitMeshFaces` at the `+508` offset
     (funcs_4.c:4951-5605) is still clean — no source-level zero-extension
     bypass anywhere in the function or its one callee (`getTextureLUTFieldAt8`,
@@ -677,12 +711,10 @@ cost three sessions before the recursive mutex.
     pointer chase in this function dereferences DATA corrupted by some other
     function (would mean callee-narrowing was mis-scoped from the start);
     (b) an ARM64 codegen issue invisible at the C level (exotic, lowest
-    priority per boring-first). **Next work unit: build the `MEM_W`-address
-    tracer scoped to this one function** (the two pointer-chase reload sites
-    at funcs_4.c:5546/5563, plus the two initial loads at 4975/5009),
-    bounds-checking against `rdram` before each dereference and logging
-    (not skipping) on failure — tests explanation (a) directly. Full detail:
-    PORTING-STATE Session 207.
+    priority per boring-first). s208 built the tracer this called for and
+    got a partial-discriminating result (see -49) rather than a clean
+    confirm/deny of (a) vs (b) — still not fully resolved but no longer just
+    two undistinguished branches. Full detail: PORTING-STATE Session 207.
 
     **(s206) Prior finding, still the basis for the above**: a direct
     `dladdr`-based pc symbolizer (new `[CRASH][pc-symbol]`
