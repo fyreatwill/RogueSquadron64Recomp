@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s136)
+## Next steps, in order of expected value (s140)
 
 0a. **CLOSED (s135): `emitAllocatedDLCommand` soak hypothesis parked,
     3-attempt budget exhausted per rule 8.** s133 → environment-side
@@ -703,6 +703,28 @@ cost three sessions before the recursive mutex.
     lands adjacent to the voice array** (`arrayBase=0x801714D0`) at
     corruption time — a heap-layout/allocation-order question, not more
     string/table grepping. Full detail: PORTING-STATE s138.
+
+    **s139** landed `ROGUESQ_LOG_RS_MALLOC=1` (instruments `rs_malloc`
+    itself), caught+fixed a real `$a0`/`$a1` argument-order bug in its own
+    first soak before trusting the data, then found rs_malloc's true
+    signature is `(size, flags)`. Corrected soak narrowed "which heap
+    allocation is adjacent to the voice array" to 3 named boot-time
+    candidates (`0x8016FD20`/8568B, `0x80171470`/32768B,
+    `0x80171DF0`/7728B), not the hoped-for "exactly one". **s140** landed
+    the sibling `ROGUESQ_LOG_RS_FREE=1` instrument and re-soaked (first
+    crash-free soak in this whole series — 0/0 across every known crash
+    class, process survived the full hold+grace window). Two real
+    findings: (1) **none of the 3 candidates are ever freed this run** —
+    refutes the "freed-and-reused" framing outright, reframing this as a
+    still-allocated buffer read out-of-bounds, not a stale/UAF pointer;
+    (2) a per-hit range check against this run's own 2 actual hit
+    addresses (not the older aggregate zone) **refutes the
+    `0x80171DF0`/7728B candidate** — its range starts after both observed
+    hit addresses, so it cannot be the buffer being read. **Thread B now
+    narrows to 2 candidates**: `0x8016FD20`/8568B and `0x80171470`/32768B
+    (the stronger one by adjacency — starts 96 bytes before the array's
+    own base). Neither is yet named to a source function. Full detail:
+    PORTING-STATE s139-s140.
 
 0d. **s139: ran the discriminating rs_malloc-range-overlap measurement
     s138 called for.** Landed a universal `rs_malloc` allocation log

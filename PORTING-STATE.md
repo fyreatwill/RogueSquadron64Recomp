@@ -12327,3 +12327,83 @@ recipe). `scratch/s73_post_a_scene/rsmalloc1/run.log` (2nd, corrected soak;
 1st/buggy soak's log was overwritten by the re-run, not preserved — the
 size-field bug is fully described above instead). `PORTING-STATE.md` /
 `docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md` (this write-up).
+
+## Session 140 (2026-07-27) — landed an `rs_free` log (NEXT.md option (a)) to discriminate among s139's 3 rs_malloc candidates; refutes the "freed-and-reused" framing outright and refutes 1 of the 3 candidates on a per-hit range check, narrowing to 2
+
+Ran the single work unit NEXT.md specified: add an `rs_free` log alongside
+the existing `rs_malloc` log and re-soak to test whether any of s139's 3
+candidate buffers (`0x8016FD20`/8568B, `0x80171470`/32768B,
+`0x80171DF0`/7728B — all covering some part of the `voice+0x34` corruption
+zone `0x80171D50`-`0x80172548`) get freed before a same-run
+`[voice-active-gate-nz]` hit.
+
+**Instrument.** `rs_free` (`funcs_0.c:3085`, confirmed via source read) is
+`void` and takes `ptr` as `$a0`/`ctx->r4` — unlike `rs_malloc` there's no
+computed exit value to correlate against, so the log fires once at entry
+(`ROGUESQ_LOG_RS_FREE=1`, `N64Recomp/fixup_game_funcs.py`, new patch block
+mirroring the `rs_malloc` one). Verified the prologue copies `ctx->r4` into
+`ctx->r16` unconditionally on both branches of the `ptr==0` check and that
+`ctx->r31` is untouched before the first internal `jal`, so reading both
+directly at the top of the function body is safe — no argument-order
+guessing this time (s139's own lesson applied). Full regen
+(`make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py`, confirmed the
+new patch landed exactly once by grepping the regenerated `funcs_0.c`
+directly rather than re-running the non-idempotent fixup script a second
+time) → `cmake --build` clean (exit 0, only pre-existing-class warnings).
+
+**Soak** (`scratch/agent/run_rsfree1.sh`, same "batch every `ROGUESQ_LOG_*`
+flag" recipe as `run_rsmalloc1.sh` plus `ROGUESQ_LOG_RS_FREE=1`,
+`ROGUESQ_LOG_THREAD_RESUME=0`): **first crash-free soak in this whole
+render-guard/Thread-B series** — survived the full hold+grace window
+(0 crashes, process still alive, script had to kill it). `[rs-free]` fired
+16445/16445 real free events (strong positive control — the instrument is
+reading live data, not a dead branch). 10 `[voice-active-gate-nz]` hits,
+same shape as s139 (`idx=0x10`/`0x11`, `arrayBase=0x801714D0`,
+`base=0x80171D50`/`0x80171DD8`).
+
+**Finding 1 — freed-and-reused framing REFUTED.** None of the 3 candidate
+pointers appear in any `[rs-free]` line, anywhere in the run (checked by
+exact-pointer grep, not just "before the hit" — there is no occurrence to
+be before or after). The only `0x8017xxxx`-range frees this run are two
+unrelated pointers (`0x8017D910`, `0x8017E0B0`), nowhere near any of the 3
+candidates. This is NEXT.md's own predicted alternative outcome, not a null
+result: all 3 candidates are still-allocated for the run's entire duration,
+so whatever is reading past the voice array's own bounds is reading a live,
+never-freed neighboring buffer — not a stale pointer into freed memory.
+
+**Finding 2 — per-hit range check refutes 1 of the 3 candidates.** s139's
+"3 candidates" came from an aggregate zone (`0x80171D50`-`0x80172548`)
+built across a different session's hit set. Re-checked against *this run's
+own* 2 actual hit addresses (`0x80171D50`, `0x80171DD8`, each read as a
+32-byte dump per the log's own field width) against each candidate's
+`[ptr, ptr+size)` range:
+- `0x8016FD20`/8568 → `[0x8016FD20, 0x80171E98)` — covers both hits.
+- `0x80171470`/32768 → `[0x80171470, 0x80179470)` — covers both hits.
+- `0x80171DF0`/7728 → `[0x80171DF0, 0x80173C20)` — starts *after* both hit
+  addresses (`0x80171D50` and `0x80171DD8` are both `< 0x80171DF0`) —
+  **cannot be the buffer being read at either observed address, refuted.**
+
+This is the `voiceCount=17` array's own paired follow-on buffer (s139's own
+description) — makes sense as the weakest candidate, since it was already
+flagged as "superseded by later reallocations" rather than a boot-time
+constant.
+
+**Net: Thread B narrows from 3 candidates to 2** — `0x8016FD20`/8568
+(boot, right after the very first song-array-alloc) and `0x80171470`/32768
+(boot, starts only 96 bytes before the array's own base `0x801714D0` —
+still the stronger candidate by adjacency, per s139's own reasoning, and
+now also the only one whose range would cover a hit anywhere in the full
+historical aggregate zone, not just this run's 2 addresses). Neither has
+been named to a source function yet — that's NEXT.md's next step, now via
+option (b) (source-read the boot sequence) since option (a) (this session)
+is exhausted: there is no "before/after a free" event left to look for
+when nothing is ever freed.
+
+**Landed:** `N64Recomp/fixup_game_funcs.py` (new `rs_free` log patch block,
+uncommitted — same "own git checkout, not `lib/`" posture as the
+`rs_malloc` patch, flagged since s54/s139).
+`scratch/agent/run_rsfree1.sh` (new soak wrapper).
+`scratch/s73_post_a_scene/rsfree1/run.log` (the soak).
+`scratch/agent/s140_overlap.py` (one-off range-overlap check, kept for
+reference). `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
+`scratch/agent/NEXT.md` (this write-up).
