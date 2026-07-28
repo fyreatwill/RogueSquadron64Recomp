@@ -665,10 +665,11 @@ cost three sessions before the recursive mutex.
 
 ## Next steps, in order of expected value (s203)
 
--48. **(s200/s201/s202/s203) `processSceneNode+8772` KSEG0-zero-extension
+-48. **(s200/s201/s202/s203/s204) `processSceneNode+8772` KSEG0-zero-extension
     bug: `processSceneNode`, `renderLitMeshFaceGroup`,
-    `submitSceneNodeRender`, AND `renderFlatMeshFaceGroup` are all now
-    source-clean — search narrows to the two remaining direct callees.**
+    `submitSceneNodeRender`, `renderFlatMeshFaceGroup`, AND
+    `renderUnlitMeshFaces` are all now source-clean — search narrows to
+    the ONE remaining direct callee, `renderLitTexturedMeshFaces`.**
     s200 exhaustively ruled out
     `processSceneNode` by two independent lines of evidence (full static
     read + a 46,292-call dynamic trace at the call boundary, 0 anomalies —
@@ -714,24 +715,36 @@ cost three sessions before the recursive mutex.
     color/material descriptor packing (never fed into a pointer outside
     `ADD32`), only 5 ternaries in the function and all are plain
     `sltu`-derived booleans (no `MOVZ`/`MOVN`-style mismatched-extension
-    pattern). Same single-source caveat as the prior three.
+    pattern). Same single-source caveat as the prior three. s204 repeated
+    the same method on `renderUnlitMeshFaces` (`funcs_4.c:4951-5605`,
+    ~654 lines). **Result: also clean** — zero raw `+`/`-` arithmetic on
+    register values bypassing `ADD32`/`SUB32` anywhere in the function
+    (every pointer/offset computation, including the linked-list-node
+    pointer chase at 5546 and the list-node/vertex pointers at 5019/5022/
+    5548/5566/5572, goes through `ADD32`/`MEM_W`), zero `(uint32_t)`/
+    `(uint64_t)` casts, all ~45 `MEM_HU`/`MEM_BU` zero-extending loads
+    individually traced to flag/mask/compare/shift-amount/packed-output-
+    word roles (never summed into a later-dereferenced address), the one
+    ternary present (5552) is a plain `sltu`-derived boolean, not a
+    `MOVZ`/`MOVN`-style pointer select. Same single-source caveat as the
+    prior four.
 
-    **Remaining candidates** (unexamined): `renderUnlitMeshFaces`
-    (`funcs_4.c:4951-5606`, ~650 lines), `renderLitTexturedMeshFaces`
-    (`funcs_3.c:22073-...`, size not yet measured). **Best next work
-    unit**: subagent-assisted source read of `renderUnlitMeshFaces` next
-    (smaller/faster than the last three reads) using the exact same
-    brief/method as s201/s202/s203 (recomp.h:86-108 macros + the
-    zero-extension signature) — do NOT re-soak the tracer again this
-    cycle, 3 soaks with 0 reproductions is enough per the budget rule;
-    only revisit soaking if both remaining callees come back clean too
-    (at that point, reconsider whether the tracer itself needs to log
-    more — e.g. every internal pointer computation, not just
-    call-boundary args — since the current instrument would be
-    structurally blind to a defect that's introduced AND consumed
-    entirely within one callee, never crossing back through a logged
-    boundary). Full detail: PORTING-STATE Session 200, 201, 202, 203
-    (and Session 194/199 for the original register-file decode this all
+    **Remaining candidate: exactly one.** `renderLitTexturedMeshFaces`
+    (`funcs_3.c:22073-...`, size not yet measured) is now the ONLY
+    unexamined direct callee of `processSceneNode` for this bug. **Best
+    next work unit**: measure its size first (`grep -n "^RECOMP_FUNC"
+    funcs_3.c` for the next boundary after 22073), then subagent-assisted
+    source read using the exact same brief/method as s201-204
+    (recomp.h:86-108 macros + the zero-extension signature) — do NOT
+    re-soak the tracer again this cycle, 3 soaks with 0 reproductions is
+    enough per the budget rule. If this LAST callee also comes back
+    clean, the callee-narrowing strategy is exhausted and the tracer
+    itself needs rethinking next — e.g. logging every internal pointer
+    computation, not just call-boundary args, since the current
+    instrument would be structurally blind to a defect that's introduced
+    AND consumed entirely within one callee, never crossing back through
+    a logged boundary. Full detail: PORTING-STATE Session 200-204 (and
+    Session 194/199 for the original register-file decode this all
     traces back to).
 
 -47.5. **(s199) `runVideoFrameTick+1568` guard landed (3 sites,

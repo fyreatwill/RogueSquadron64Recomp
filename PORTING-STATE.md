@@ -18951,3 +18951,72 @@ widen beyond them (e.g. reconsider whether the defect lives in a
 grandchild callee, or whether the tracer instrument needs to log more
 than call-boundary args — see prior sessions' notes on this fallback).
 
+
+## Session 204 (2026-07-28) — source read of `renderUnlitMeshFaces` for the `+8772` KSEG0-zero-extension bug: clean, narrows the remaining candidate set to exactly one
+
+Continuation of NEXT.md item -48. Per s203's narrowing (`processSceneNode`,
+`renderLitMeshFaceGroup`, `submitSceneNodeRender`, and
+`renderFlatMeshFaceGroup` all source-clean), this session's sole work unit
+was a subagent-delegated full source read of `renderUnlitMeshFaces`
+(`N64Recomp/RecompiledFuncs/funcs_4.c:4951-5605`, ~654 lines, smaller than
+the prior three reads), using the exact same brief that closed the prior
+four functions (the `recomp.h:86-108` macro definitions, the exact KSEG0
+zero-extension signature, and instructions to check every zero-extending
+load's actual downstream use rather than assume the prior sessions' benign
+pattern generalizes).
+
+Per NEXT.md's own instruction, did NOT re-soak the `processScenenNodeCalleeTrace`
+tracer this iteration — 3 soaks / 116,950 calls / 0 reproductions from
+s200-201 already exhausts the budget rule for that instrument.
+
+**Result: clean.** The subagent confirmed the exact function range first
+(4951-5605; next `RECOMP_FUNC`, `resetVertexCacheSlot`, begins at 5606),
+then read it in sequential chunks plus grepped the full range for raw
+`+`/`-` arithmetic and stray casts. Specifically ruled out:
+- Zero raw 64-bit pointer arithmetic bypassing `ADD32`/`SUB32` anywhere in
+  the function. All pointer/offset computations route through `ADD32` or
+  are built via `MEM_W` reassignment, including: the table-entry address
+  at 5064-5067 (`ADD32(ctx->r2, ctx->r3)`, a MEM_HU-shifted index plus a
+  MEM_W-loaded rodata base); the byte-flag-to-pointer reassignments at
+  5164/5169 (`ctx->r5`/`r6` via `MEM_W`, then used as bases for
+  `MEM_B`/`MEM_BU` reads at 5199-5299); the linked-list node pointer at
+  5008/5546 (always via `MEM_W`, including the self-referential
+  pointer-chase reload at 5546); and the list-node/vertex pointers at
+  5019/5022/5548/5566/5572 (all via `ADD32`).
+- Zero `(uint32_t)`/`(uint64_t)` casts anywhere in the function (grep
+  confirmed zero matches), and zero `MOVZ`/`MOVN`-style register-assigning
+  ternaries.
+- All ~45 `MEM_HU`/`MEM_BU` zero-extending loads in the function
+  individually traced downstream — every one feeds only a flag/mask/
+  compare, a shift-and-OR into a packed output word stored via `MEM_W`, a
+  multiplier/divisor operand, or an argument to
+  `getTextureLUTFieldAt8`/`do_break` — none is ever added into a value
+  that becomes a pointer/address argument to
+  `MEM_W`/`MEM_H`/`MEM_HU`/`MEM_BU`/`MEM_B`.
+- Only one ternary in the whole function (line 5552,
+  `ctx->r2 = ctx->r17 < ctx->r2 ? 1 : 0`) — a plain `sltu`-derived boolean,
+  not a pointer-vs-pointer or pointer-vs-zero select.
+
+This is single-source (static read only, no matching dynamic trace inside
+this function's own body) — same caveat as s201/s202/s203's findings,
+treat as provisional not closed with `processSceneNode`'s two-independent-
+line confidence.
+
+**Remaining candidate: exactly one.** `renderLitTexturedMeshFaces`
+(`funcs_3.c:22073-...`, size not yet measured) is now the ONLY unexamined
+direct callee of `processSceneNode` for this bug. No code changes landed
+this session (nothing to patch — clean read only); no regen/build needed.
+No `lib/` edits this session.
+
+**Rules out**: `renderUnlitMeshFaces` as the site of the `+8772`
+zero-extension bug (single-source static confidence, matching the prior
+four functions' confidence level).
+
+**Next work unit**: measure `renderLitTexturedMeshFaces`'s exact size
+first (`grep -n "^RECOMP_FUNC" funcs_3.c` for the next boundary after
+22073), then subagent-assisted source read using the identical
+brief/method. If it also comes back clean, all five direct callees of
+`processSceneNode` will be source-clean and the search must widen beyond
+them (e.g. reconsider whether the defect lives in a grandchild callee, or
+whether the tracer instrument needs to log more than call-boundary args —
+see prior sessions' notes on this fallback).
