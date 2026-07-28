@@ -655,7 +655,24 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s145)
+## Next steps, in order of expected value (s146)
+
+-1. **NEW TOP PRIORITY (s146): fix the count-then-pointer-store race in
+    `allocateSongChannelArray` — Thread B's root cause (0c below) is now
+    directly proven, not just circumstantial.** s146 landed
+    `[song-count-write-early]` logging right after the early `voiceCount`
+    write (`funcs_23.c:10713`) and caught a live scan sandwiched inside
+    the exact window between that write and the matching pointer-store /
+    `[song-array-alloc]` print, 4 times in one soak (`run_countrace1.sh`,
+    `scratch/s73_post_a_scene/countrace1/run.log:39205-39218`). Fix:
+    move the early count-write to **after** the pointer-store block
+    (`funcs_23.c:10722-10733`) instead of before it — s146 confirmed
+    `ctx->r16` (voiceCount) is never reassigned in between, so the
+    reorder is register-safe and needs no lock (none exists anywhere in
+    this family, s144). Verify with a fresh soak (`run_countrace2.sh` or
+    similar): no `[voice-active-gate-nz]` line should ever again fall
+    inside a `[song-count-write-early]`/`[song-array-alloc]` window.
+    Full detail: PORTING-STATE s146.
 
 0a. **CLOSED (s135): `emitAllocatedDLCommand` soak hypothesis parked,
     3-attempt budget exhausted per rule 8.** s133 → environment-side

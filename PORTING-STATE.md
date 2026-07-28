@@ -12882,3 +12882,109 @@ scan) applying across both observed corruption byte-offsets.
 this write-up. `N64Recomp` is its own git checkout (not a `lib/`
 submodule) with the accumulating uncommitted regen history flagged
 since s54/NEXT.md — same posture, not addressed this session.
+
+## Session 146 (2026-07-27) — landed the count-write instrument s145 specified and caught the race window firing live: a corrupted scan sandwiched between the count write and the matching pointer store, in-run — Thread B's root cause is now directly proven, not just circumstantial
+
+Ran exactly the work unit s145/NEXT.md specified: added
+`[song-count-write-early]` logging immediately after
+`allocateSongChannelArray`'s early `voiceCount` write to the scan-bound
+global (`funcs_23.c:10712-10713`, matched NEXT.md's own line estimate
+exactly this time — first exact match in 4 sessions), gated on the
+existing `ROGUESQ_LOG_SONG_ARRAY_LIFECYCLE` flag per NEXT.md's
+instruction not to add a new one. Verified the patch applied exactly
+once via grep before building; full regen (`make_elf.py` → `N64Recomp`
+→ `fixup_game_funcs.py` once → `cmake --build`) exit 0, no new warnings.
+Also confirmed (source read, before writing up the fix plan below) that
+`ctx->r16` (the register holding `voiceCount`) is never reassigned
+between the early count-write (`:10699`) and the existing
+`[song-array-alloc]` print (`:10745`, which already reads `ctx->r16` for
+its own log line) — the pointer-store block does not clobber it, so
+reordering the count-write to after the pointer-store block is
+register-safe (relevant to the fix plan below).
+
+**Soak** (`scratch/agent/run_countrace1.sh`, copied forward from
+`run_voicecursor1.sh` with the full existing diagnostic battery kept
+armed, `ROGUESQ_LOG_THREAD_RESUME=0` per s93's confound finding): reached
+SELECT YOUR CRAFT, left into hangar-flight, survived ~30s of hold before
+dying to a **SIGBUS in `frameStartReset`** (`static_5_800AAD9C` →
+`static_5_800C6854` → `menuOverlayInit` → `mainGameLoop` chain) — the
+same crash class first seen s84, previously assessed "a fluke, not a
+dominant blocker" after non-recurrence in s85's repro soaks (F4). This
+is its **first recurrence since s84**; still a minority outcome (1 of
+~8 soaks across s84-s146 that have hit it), not promoted to a tracked
+class of its own. Notably, `do_rom_read`/`piDmaWorker` did **not**
+recur this run (0/1) — breaking what would otherwise have been a 3rd
+consecutive recurrence (s135/s136/s137 pattern) and confirming s137's
+own observation that it's a plurality cause, not an inevitability.
+
+**The discriminating result — direct proof, not inference:** 6
+`[song-count-write-early]`/`[song-array-alloc]` pairs fired this run
+(one per song load); parsed the full run log
+(`scratch/s73_post_a_scene/countrace1/run.log`) pairing each
+`[song-count-write-early]` line with its next `[song-array-alloc]` line
+and checking for any `[voice-active-gate-nz]` line strictly between
+them, in log order. **5 of 6 windows were clean** (2-13 log lines wide,
+no scan landed inside), but the `voiceCount=18` window
+(`run.log:39205`-`39218`, 13 lines wide) had **3 of the run's 5 total
+`[voice-active-gate-nz]` fires sandwiched directly inside it**:
+
+    [song-count-write-early] voiceCount=18
+    [voice-active-gate-nz] n=69257 idx=0x10 base=0x80171D50 byte=0x65 count=0x0012 arrayBase=0x801714D0
+    [voice-cursor-hb] n=0 slot=1 cursor=0 capacity=48 max=0 overflow_total=0
+    [voice-active-gate-nz] n=69258 idx=0x11 base=0x80171DD8 byte=0x78 count=0x0012 arrayBase=0x801714D0
+    [voice-active-gate-nz] n=69276 idx=0x11 base=0x80171DD8 byte=0x02 count=0x0012 arrayBase=0x801714D0
+    [voice-active-gate-nz] n=69294 idx=0x11 base=0x80171DD8 byte=0x02 count=0x0012 arrayBase=0x801714D0
+    [voice-active-gate-nz] n=69312 idx=0x11 base=0x80171DD8 byte=0x02 count=0x0012 arrayBase=0x801714D0
+    [rs-malloc] ptr=0x801714D0 size=2448 flags=0x0 caller_ra=0x00000000
+    [song-array-alloc] voiceCount=18 ptr=0x801714D0
+
+Every one of those 4 corrupted-gate reads shows `count=0x0012` (18, the
+just-written NEW value) against `arrayBase=0x801714D0` — the address
+`rs_malloc` had **not yet returned** at read time (it appears 2 lines
+later) — with `idx` 0x10/0x11 (16/17), both past any sane bound for the
+*previous* allocation. This is no longer circumstantial (s145's framing,
+inferred only from which alloc-print came before/after in the log) — the
+scan is captured **inside** the exact instruction window this session's
+new instrument bracket-marks, in the same run, 4 separate times. **Per
+NEXT.md's own pre-committed decision rule, Thread B's root cause is
+closed: the non-atomic count-then-pointer-store race in
+`allocateSongChannelArray`, first proposed s145, is now directly proven
+via a live-captured scan inside the exact instrumented window** — not
+merely a plausible ordering inference.
+
+**Controls held:** `[anim-recurse]` 3232/3232 sp-flat; `thr-resume
+bad=1` 0/0; `[voice-cursor-overflow]` 0/0 (unrelated write-cursor
+hypothesis, s144/145, stays refuted); TMEM-zero 0/0; `[voice-cursor-hb]`
+fired once more, again cross-checkable against `[voice-active-gate-nz]`'s
+5 real fires (both small-count, consistent with s145's "genuinely few
+active-voice hits this run" note, not a broken instrument).
+
+**Landed:** `[song-count-write-early]` instrument
+(`N64Recomp/fixup_game_funcs.py`, regenerated + rebuilt),
+`scratch/agent/run_countrace1.sh`, `scratch/agent/s146_analyze.py`
+(reusable log-pairing/sandwich-check script for this family of
+ordering questions), this write-up. `N64Recomp` remains its own git
+checkout (not a `lib/` submodule) with accumulating uncommitted regen
+history — same posture flagged since s54, not addressed this session.
+
+**Next work unit (fix, not another observe-only instrument):** eliminate
+the race window rather than lock around it — no lock/mutex primitive
+exists anywhere in this family (s144), and every other fix in this
+codebase's guard series has been a source-level reorder/guard, not new
+synchronization primitives. Concretely: move the early count-write
+(`MEM_H(-0X6900, ctx->r1) = ctx->r16;`, `funcs_23.c:10713`) to **after**
+the pointer-store block (`funcs_23.c:10722-10733`, both `-0x6904` and
+`-0x6908` stores) instead of before it — this session confirmed
+`ctx->r16` is never reassigned in between, so the reorder is
+register-safe. That makes the scan-bound global only ever advance
+*after* the new array pointer is already published, closing the window
+for this specific race (the corresponding read-side reload-every-
+iteration behavior, already confirmed s145, needs no change). Verify by
+re-running the exact same `run_countrace1.sh` soak (or a fresh
+`run_countrace2.sh` copy) and checking that no `[voice-active-gate-nz]`
+line ever again falls inside a `[song-count-write-early]`/
+`[song-array-alloc]` window across a full soak — a clean run is not
+proof by itself (single-session absence of a rare race), but a
+2nd/3rd clean soak plus continued absence of the `do_rom_read`/
+`piDmaWorker` corruption signature would be strong converging evidence
+the fix works.

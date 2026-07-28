@@ -1,136 +1,136 @@
-# NEXT work unit — Thread B: pin down the count-write-before-pointer-store race directly
+# NEXT work unit — Thread B: fix the proven race, verify corruption stops
 
-s145 landed and soaked the cursor-overrun instrument s144 specified —
-read PORTING-STATE's Session 145 entry before doing anything else; this
+s146 landed and soaked the count-write instrument s145 specified --
+read PORTING-STATE's Session 146 entry before doing anything else; this
 file only has the actionable summary.
 
-## What s145 did and found
+## What s146 did and found
 
-Landed `ROGUESQ_LOG_VOICE_CURSOR=1` (`musyxMixActiveVoices`'s write-cursor
-read/increment/store-back site, `funcs_24.c:2653-2668` — NOT NEXT.md's
-`~2648-2664` estimate, off by a few lines again; always confirm against
-the actual `RECOMP_FUNC` boundaries, this is now a recurring lesson).
-Full regen + soak (`scratch/agent/run_voicecursor1.sh`).
+Landed `[song-count-write-early]` logging immediately after
+`allocateSongChannelArray`'s early `voiceCount` write to the scan-bound
+global (`funcs_23.c:10712-10713`, exact match to NEXT.md's own line
+estimate this time), gated on the existing
+`ROGUESQ_LOG_SONG_ARRAY_LIFECYCLE` flag. Full regen + soak
+(`scratch/agent/run_countrace1.sh`).
 
-**The write-cursor-overflow hypothesis is refuted for a live-captured
-corruption event.** 0/8 fires of `[voice-cursor-overflow]` (positive
-control confirmed: 8/8 matches the pre-existing, independent
-`[voice-active-gate-nz]` counter on the same gate condition). At the
-exact same moment (same log-order neighborhood), that pre-existing
-counter caught a real corruption live: `idx=0x10`/`0x11` (16/17) scanned
-against a freshly-logged `count=0x0012` (18) while the array itself was
-still the **previous** `voiceCount=15` allocation (valid indices 0-14
-only) — bytes read decode as the exact ASCII fragments (`explo_tex2`,
-`x10`, `x11`) s138 catalogued as runtime-only. This closes that
-question: they're leftover bytes from a **recycled, unrelated prior
-heap allocation**, not static ROM data, not a stomp, not a table-index
-bug.
+**Thread B's root cause is now directly proven, not circumstantial.**
+Parsed the full run log pairing each `[song-count-write-early]` line
+with its next `[song-array-alloc]` line and checking for any
+`[voice-active-gate-nz]` line strictly between them. 5/6 windows this
+run were clean, but the `voiceCount=18` window
+(`scratch/s73_post_a_scene/countrace1/run.log:39205-39218`, 13 lines
+wide) had **4 of the run's 5 total corrupted-gate reads sandwiched
+directly inside it** — `idx=0x10`/`0x11` scanned against `count=0x0012`
+(18, the just-written new value) while `arrayBase` was still the old
+allocation's address (rs_malloc for the new one hadn't returned yet,
+appearing 2 log lines later). This is the scan caught live, inside the
+exact instrumented window, 4 separate times in one run — not inference
+from which print came first.
 
-**Real mechanism identified (source-confirmed, not yet directly
-instrumented):** `allocateSongChannelArray` writes the new `voiceCount`
-to the scan-bound global (`0x80149700`) at `funcs_23.c:10712-10713` —
-**many instructions before** it calls `rs_malloc` and stores the new
-array pointer / prints `[song-array-alloc]` at `:10717-10738`. This is a
-non-atomic (count, pointer) pair with **no lock anywhere in this family**
-(s144 already confirmed no mutex exists). A concurrently-scanning
-`musyxMixActiveVoices` (audio runs off the VI-retrace thread per s101)
-can observe the **new**, larger count against the **still-old**, smaller
-array mid-scan — landing past the old allocation's true bound into
-whatever the allocator's free-list handed back, still carrying the prior
-occupant's un-overwritten bytes.
+**Mechanism (unchanged from s145, now proven):** `allocateSongChannelArray`
+writes the new `voiceCount` to the scan-bound global (`0x80149700`) at
+`funcs_23.c:10712-10713` — many instructions **before** it calls
+`rs_malloc` and stores the new array pointer at `:10722-10733`. No lock
+exists anywhere in this family (s144 confirmed). A concurrently-scanning
+`musyxMixActiveVoices` (audio runs off the VI-retrace thread, s101) can
+observe the new, larger count against the still-old, smaller array
+mid-scan, landing past the old allocation's true bound into whatever
+`rs_malloc`'s free-list handed back — still carrying a prior occupant's
+un-overwritten bytes (the ASCII fragments s138 catalogued).
 
-This is currently a **single occurrence**, inferred from log-line
-ordering (the scan's corrupted reads appeared between the last
-`voiceCount=15` alloc's print and the next `voiceCount=18` alloc's
-print) — strong circumstantial evidence, not yet a direct proof that a
-scan's count-read literally executed inside the count-write-to-pointer-
-store window.
+`do_rom_read`/`piDmaWorker` did NOT recur this run (0/1) — the process
+instead died to a SIGBUS in `frameStartReset` (`funcs_23.c` chain via
+`static_5_800AAD9C`/`static_5_800C6854`/`menuOverlayInit`), the same
+class first seen s84 and assessed a fluke after non-recurrence in s85 —
+still a minority outcome (1 of ~8 soaks since s84), not promoted to a
+tracked class.
 
-## Do next: instrument the count-write site directly to prove (or refute) the race window
+## Do next: land the fix, verify the race window closes
 
-This is a small instrument (one new log site, no new hypothesis to
-design) + one soak — budget it as one iteration; if it fires with a
-scan sandwiched inside the window, Thread B's root cause is closed and
-the next unit becomes "add a lock/guard, verify corruption stops."
+This is a small, register-confirmed-safe source reorder + one soak —
+budget it as one iteration. s146 already confirmed `ctx->r16`
+(voiceCount) is never reassigned between the count-write site and the
+existing `[song-array-alloc]` print, so moving the write is safe.
 
-1. In `allocateSongChannelArray` (`funcs_23.c`), add a log immediately
-   after the early count-write (`funcs_23.c:10712-10713`,
-   `MEM_H(-0X6900, ctx->r1) = ctx->r16;`) — BEFORE the `rs_malloc` call —
-   printing the new `voiceCount` with a tag like
-   `[song-count-write-early]`. Gate it on the existing
-   `ROGUESQ_LOG_SONG_ARRAY_LIFECYCLE` env var (reuse s120's flag, don't
-   add a new one — this is the same lifecycle question).
-2. Rebuild via the full regen pipeline (delete `RecompiledFuncs/funcs_*.c`
+1. In `allocateSongChannelArray` (`funcs_23.c`, edit via
+   `N64Recomp/fixup_game_funcs.py` — hand-edits to generated code die at
+   the next regen), move the early count-write
+   (`MEM_H(-0X6900, ctx->r1) = ctx->r16;`, currently
+   `funcs_23.c:10712-10713`, right after the `lui $at,0x8015` at
+   `:10710-10711`) to **after** the pointer-store block
+   (`funcs_23.c:10722-10733` in the current build — reconfirm exact
+   lines after regen, they drift every session). Keep the existing
+   `lui`/`sh` instruction pair intact, just relocate it as a unit to
+   right after the second pointer store (`-0x6908`) and before the
+   `[song-array-alloc]` diagnostic block.
+2. This makes the scan-bound global only advance *after* the new array
+   pointer is already published — closes the window for this specific
+   race. The read side (reload-every-iteration in
+   `musyxMixActiveVoices`, confirmed s145) needs no change.
+3. Rebuild via the full regen pipeline (delete `RecompiledFuncs/funcs_*.c`
    → `make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py` once →
-   `cmake --build`), verify the new patch applied exactly once by
-   grepping the regenerated `.c` before building.
-3. Soak with `ROGUESQ_LOG_SONG_ARRAY_LIFECYCLE=1` and
-   `ROGUESQ_LOG_VOICE_ACTIVE_GATE=1` both armed (keep the rest of the
-   existing battery from `run_voicecursor1.sh` too — copy it to a new
-   `run_countrace1.sh` per this session's environment note, don't
-   parametrize the existing script).
-4. Discriminating question: does any `[voice-active-gate-nz]` line
-   (or a new corrupted read) appear, in log order, **between** a
-   `[song-count-write-early]` line and its corresponding
-   `[song-array-alloc]` line (same voiceCount value, since both fire
-   once per call)? If yes — race window directly proven, add a lock or
-   reorder the writes (pointer+memset before count) as the fix. If the
-   window is large (many lines between the two prints) but no scan ever
-   lands inside it across a full soak, that's evidence the window is
-   real but rarely hit — still worth a defensive fix (reordering costs
-   nothing) but downgrades urgency.
-5. Do NOT re-derive the cursor/capacity math again — s142/s144/s145
-   already closed it (capacity formula `N*(voiceCount+1)`, `N` read from
-   `0x8014974E`, cached at `0x80149704`).
+   `cmake --build`), verify the reordered patch applied exactly once by
+   grepping the regenerated `.c` before building — confirm the count-write
+   line now appears textually AFTER the two pointer-store lines.
+4. Soak with the same full diagnostic battery as `run_countrace1.sh`
+   (copy forward to `run_countracefix1.sh`, keep
+   `ROGUESQ_LOG_SONG_ARRAY_LIFECYCLE=1` and
+   `ROGUESQ_LOG_VOICE_ACTIVE_GATE=1` armed to check the fix directly).
+5. Discriminating question: across the full soak, does any
+   `[voice-active-gate-nz]` line ever again fall between a
+   `[song-count-write-early]` line and its matching `[song-array-alloc]`
+   line? (Reuse `scratch/agent/s146_analyze.py` — it already does this
+   pairing/sandwich check, just point it at the new log file.) A single
+   clean soak is not proof by itself (the race was already rare — only
+   1/6 windows hit this run), but a 2nd/3rd clean soak plus continued
+   absence of the `do_rom_read`/`piDmaWorker` byte-identical corruption
+   signature (`devAddr=0x6C676672 dramAddr=0x80195190`) across those
+   soaks would be strong converging evidence the fix works. If it DOES
+   still fire post-fix, the reorder didn't close the window (check for a
+   second writer, or a different non-atomic pair) — do not assume the
+   fix worked without checking.
+6. If the fix soak's own corruption checks come back clean 2-3 times
+   running, the next work unit becomes checking whether `do_rom_read`
+   stops recurring too (it shares the same general non-atomic-global
+   mechanism family per s145/146, though not yet proven the same code
+   path) — that would be the real end-to-end validation this multi-
+   session thread has been chasing since s105.
 
 ## Do not
 
-- Do not re-read `musyxMixActiveVoices`/`musyxBuildVoiceCommandList` —
-  fully characterized s143-145 (index math, +0x34 refuted, cursor
-  mechanism, capacity source, this session's scan-loop reread-per-
-  iteration behavior at `:2681-2696`). Closed.
-- Do not re-litigate whether the `explo_tex2`/`x10`/`x11` fragments are
-  static ROM data — s138 already showed they're absent from a full-ROM
-  strings dump, and s145 now explains why (recycled heap, not a string
-  table read via a computed index).
-- Do not re-guess `setupSongRenderBuffers` / `buildSongDecodeBufferRing`
-  as producers of 8568/32768 — refuted, s141.
-- Do not re-audit Thread A's 8 hangar-tick-family functions — closed,
-  s90-137.
-- Do not add the `ROGUESQ_LOG_VOICE_CURSOR` instrument again — it's
-  landed and working (0/8 overflow, 8/8 positive control this run); keep
-  it armed in future soaks, it's free and already proved useful as a
-  cross-check.
+- Do not re-derive the cursor/capacity math, the ROM->RAM bias, or the
+  ASCII-fragment provenance again — all closed (s138-s146).
+- Do not re-instrument `musyxMixActiveVoices`'s read side — it already
+  reloads its bound fresh every iteration (confirmed s145); the bug is
+  entirely on the write side.
+- Do not treat a single clean soak post-fix as proof — this race was
+  hit in only 1 of 6 windows in s146's own soak; absence needs 2-3
+  repeats to mean something (see step 6).
+- Do not drop `ROGUESQ_LOG_VOICE_CURSOR`, `[song-array-alloc]`, or any
+  other instrument from the existing battery — it's free and already
+  proved useful as a cross-check (generalizes every session so far).
 
 ## This session's environment notes (carry forward, still current)
 
-- **Cross-check a low-fire-count instrument against a sibling counter on
-  the same gate condition before calling it weak.** s145's
-  `[voice-cursor-hb]` printed only once (heartbeat is every 5000) which
-  looked like a near-null result until cross-referencing the
-  pre-existing `[voice-active-gate-nz]` counter (same `byte != 0` gate)
-  showed exactly 8 true fires both times — the instrument was fine, the
-  event was just rare this run. Generalizes to any low-count diagnostic
-  in this family.
-- **A corruption doesn't have to be caught by the instrument you built
-  to be caught.** s145's actual discriminating finding came from a
-  *pre-existing* log line (`[voice-active-gate-nz]`, s117) that happened
-  to capture the corruption live in the same window as the new
-  instrument's sample — always grep the FULL run log for every armed
-  diagnostic's output, not just the one you just added, before writing
-  up a run as inconclusive.
-- Function/line-number estimates in NEXT.md are consistently a few lines
-  off from the actual `RECOMP_FUNC` boundaries in regenerated `.c` —
-  4th time this has been true (s100, s144, s145). Always grep/read the
-  actual file before writing a regex anchor; never trust a remembered
-  line range.
+- **A corrupted read doesn't have to be caught by the instrument you
+  just built to be caught.** s145 and s146 both found their
+  discriminating result via the *pre-existing* `[voice-active-gate-nz]`
+  log line, not the new instrument itself — always grep the FULL run
+  log for every armed diagnostic's output, not just the one you just
+  added, before writing up a run as inconclusive or as a weak result.
+- Function/line-number estimates in NEXT.md are usually a few lines off
+  from the actual `RECOMP_FUNC` boundaries in regenerated `.c` (s100,
+  s144, s145) but matched exactly this session (s146) — still always
+  grep/read the actual file before writing a regex anchor; don't assume
+  either direction.
 - N64Recomp's codegen convention for a fixed-global access: writes are
   `MEM_W(<offset>, ctx-><base>) = ctx-><src>;`; reads flip the argument
   order to `ctx-><dst> = MEM_W(ctx-><base>, <offset>);`.
-- `[rs-malloc-site]`-to-`[rs-malloc]` correlation-by-log-order technique
-  (s141) and this session's "sandwich a corrupted read between two known
-  print lines" technique both generalize to any ordering/timing question
-  where a direct lock/mutex log isn't available.
+- "Sandwich a corrupted read between two known print lines" (s145's
+  log-order technique, now upgraded by s146 to "bracket the exact
+  instrumented window and catch it live") generalizes to any
+  ordering/timing question where a direct lock/mutex log isn't
+  available.
 - `caller_ra` (`ctx->r31` at function entry) reads `0x00000000`
   universally — stop treating it as a signal (s92, s139, s140, s141).
 - `rm` on paths outside `scratch/` requires approval and does NOT accept
@@ -147,16 +147,11 @@ the next unit becomes "add a lock/guard, verify corruption stops."
   shader rebuilds.
 - Write a new wrapper script file per soak tag (`scratch/agent/run_
   <tag>.sh`) rather than parametrizing a single reusable script via env
-  indirection. `run_voicecursor1.sh` is a good template (copies the full
-  armed-diagnostics battery from `run_rsmallocsite1.sh` plus the new
-  flag) — copy it forward rather than the older `run_mission_keys.sh`
-  directly, so the accumulated battery of diagnostics doesn't get
-  dropped session to session.
+  indirection. `run_countrace1.sh` (this session) and `run_voicecursor1.sh`
+  (s145) are good templates — copy the full armed-diagnostics battery
+  forward rather than dropping back to `run_mission_keys.sh` directly.
 - Launch the soak via `zsh <absolute-path>/run_<tag>.sh > <absolute-path>/
-  run_<tag>_driver.log 2>&1` as a `run_in_background` Bash call — a
-  compound `cd ... && zsh ...` with output redirection gets denied
-  ("changes directories and writes via output redirection"); the target
-  script already `cd`s internally so no separate `cd` is needed. Then
+  run_<tag>_driver.log 2>&1` as a `run_in_background` Bash call, then
   block synchronously with `until ! pgrep -f "./RogueSquadron64Recomp"
   >/dev/null 2>&1; do sleep 5; done` before closing out the iteration.
 - Checking submodule (`lib/...`) git status needs `env GIT_DIR=lib/X/.git
@@ -164,20 +159,24 @@ the next unit becomes "add a lock/guard, verify corruption stops."
   path>` as its own command followed by a separate `git status` call.
 - Output redirection (`>`) from Bash is sandboxed to the session's
   allowed working directories — target `scratch/agent/`, not `/tmp`.
-- Prefer a single `python3 - <<'EOF' ... EOF` heredoc for multi-step log
-  analysis instead of chaining many small grep/echo commands (the Bash
-  tool also rejects some multi-statement one-liners with inline `echo`/
-  `grep` chains — a heredoc script sidesteps that).
+- Prefer a single `python3 script.py` file (Write then run) for
+  multi-step log analysis instead of a bash heredoc — heredocs with
+  f-string braces containing quotes get rejected by the Bash tool's
+  expansion-obfuscation heuristic.
 
 ## Housekeeping still flagged, still not done
 
-`docs/CURRENT-TRUTH.md` is well over the ~35 KB target (2400+ lines,
-growing). Migrate durable mechanism/architecture material to
+`docs/CURRENT-TRUTH.md` is ~171 KB (2450+ lines), far over the ~35 KB
+target. Migrate durable mechanism/architecture material to
 PROJECT-OVERVIEW.md and prune superseded detail, paired with a real
-experiment — not on its own.
+experiment — not on its own. This has been flagged for many sessions
+without action; if Thread B's fix soak (this file's primary work unit)
+comes back clean 2-3 times running and the thread closes out, the
+housekeeping prune would be a reasonable pairing for the session that
+writes up that closure.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
-not a `lib/` submodule, with uncommitted changes across s90-145
+not a `lib/` submodule, with uncommitted changes across s90-146
 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`). Same
 posture as the `rogue_squadron64` sibling checkout flagged since s54.
 Worth asking the user whether/how to commit that history.
