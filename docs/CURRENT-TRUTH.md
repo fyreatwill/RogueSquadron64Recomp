@@ -657,9 +657,42 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s152)
+## Next steps, in order of expected value (s153)
 
--4. **NEW TOP PRIORITY (s152): the s151 crash at this exact scene did NOT
+-5. **NEW TOP PRIORITY (s153): the crawl-scene hang IS confirmed the same
+    class as s79/s80's FULL_SYNC-loss (item 1 from s152 is now closed);
+    the "does it ever recover on a long hold" question is still open —
+    the soak built to test it got preempted by an early, unrelated crash
+    before reaching the target window.** From `scratch/s73_post_a_scene/
+    scenerq1/run.log` (s152's own capture, no rebuild needed): `[vi-fs-
+    decision]`'s `rdpFs` counter plateaus at `3527` at decision `#9049`
+    (`synth=962`) and 529 more synthetic `FIRE reason=swap` events fire
+    after that with `rdpFs` never moving again, through the end of the
+    log (`#10624`, `synth=1491`) — the exact "synthetic FIRE continues
+    after the fs plateau" signature s80 root-caused for the hangar-leave
+    window. Bonus: `lastCimg`/`lastW` in those late fires drift into wild
+    values, extending s81's "mode-3 present of wild last-drawn" reading
+    into this window too. **Conclusion: same class, not a new mystery —
+    don't investigate the crawl-scene hang and the hangar-leave hang
+    separately.** The follow-up soak (`scratch/agent/run_extendhold1.sh`,
+    `HOLD_S=120`) never reached the crawl scene at all — it crashed at
+    74.1s (hold-iter 3, still in the war-room/craft-select region) with a
+    SIGBUS backtrace rooted at `processSceneNode+7176 ←
+    submitSceneNodeRender ← traverseSceneGraphRecursive ←
+    setupCameraMatrices ← ... ← menuOverlayInit`. This is inside the same
+    11188-byte function as s151's confirmed `+7640` crash but a different
+    offset and call path — an unconfirmed but plausible sibling of the
+    unguarded-table-deref family already guarded elsewhere (s99-s101), not
+    yet source-read. **Next work unit: re-run `run_extendhold1.sh`
+    (`HOLD_S=120`, unchanged) — this was only the 1st attempt, budget rule
+    8 allows up to 3 before parking.** If it reaches the crawl scene and
+    the hold window ends with the process still alive, that answers
+    "recovers" as `no` (permanent) unless a later hold-second shows `fs`
+    moving again; if the process is dead before the hold window, that's
+    itself informative about which crash class dominates this longer
+    scene traversal. Full detail: PORTING-STATE s153.
+
+-4. **s152: the s151 crash at this exact scene did NOT
     recur — instead the process HUNG, and the hang looks like the
     already-characterized s79/s80 FULL_SYNC-loss class recurring in a new
     window, not a fresh mystery.** Resolved two things NEXT.md left open

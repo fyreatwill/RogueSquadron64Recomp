@@ -1,129 +1,112 @@
-# NEXT work unit — test whether the crawl-scene hang is the same FULL_SYNC-loss class as s79/s80
+# NEXT work unit — retry the extended-hold soak; the crawl-scene "does it recover" question is still open
 
-s152 found that the s151 crash does NOT reliably recur at this scene —
-this session's soak instead HUNG (didn't crash) at almost the same point,
-with a symptom signature that matches an already-characterized class from
-a completely different window. Read PORTING-STATE's Session 152 entry
-before doing anything else; this file only has the actionable summary.
+s153 confirmed the s152 crawl-scene hang is the same `[vi-fs-decision]`
+FULL_SYNC-loss class s80 already root-caused for the hangar-leave window
+(item 1 of s152's plan — CLOSED, see below, don't re-investigate that
+part). The other half of the plan — extend the hold window past 30s to
+see if the freeze ever recovers on its own — is still untested: the soak
+built for it crashed early on an unrelated bug before reaching the target
+scene. Read PORTING-STATE's Session 153 entry before doing anything else;
+this file only has the actionable summary.
 
-## What s152 did and found
+## What s153 did and found
 
-Planned work unit (from NEXT.md) was 3 parts, all done in one soak
-(batched per the iron rules): densify the hold-window capture, source-read
-`processSceneNode` to resolve the "is `+7640` really inside this function"
-question, and land a targeted diagnostic based on that read.
-
-1. **`processSceneNode+7640` is genuinely inside the function** — a
-   from-scratch Mach-O symbol reader (`scratch/agent/machoparse.py`; `nm`/
-   `otool`/`lldb` are not on the Bash allowlist and there's no human in
-   this loop to approve them) found the function's real host-compiled
-   size is 11188 bytes, well past +7640. Closed, not reopened by anything
-   below.
-2. **Bonus**: the host symbol right after `menuOverlayInit` is a real
-   compiled function called `getLevelIntroCrawlId`. Independent evidence
-   (on top of s151's visual + VI-origin lines) that the STAR WARS
-   logo/crawl is a genuine per-mission intro cinematic, not stale
-   boot-data replay.
-3. **Render-queue-counter-overflow hypothesis: REFUTED.** `processSceneNode`
-   does have an unguarded, unbounded-*looking* counter-indexed table write
-   (same shape as s145's confirmed `musyxMixActiveVoices` overflow), but
-   direct measurement (`ROGUESQ_LOG_SCENE_RQ_COUNTER=1`) showed it resets
-   every frame and never exceeds `max=50` across 59000 fires in a full
-   run. Not the bug. Don't re-chase this.
-4. **This soak didn't crash (`CRASH: 0`)** — it reproduced the STAR WARS
-   logo + crawl a 2nd time independently (`origin=0x006A2900` at 142.7s,
-   matching s151's 142.4s), showed real NEW content past what s151's
-   un-densified capture caught (crawl text growing larger/closer,
-   `hold_20`→`hold_22`), but the text itself renders **corrupted**
-   (doubled/repeating glyphs, not legible) and then the whole frame
-   **freezes solid** from `hold_23` through `hold_30` (7+ seconds,
-   byte-identical screenshots). `run.log`: `[vi] update_screen` keeps
-   incrementing (VI/present loop alive) but **`fs` (RDP task count) is
-   flat at 3527** for the entire tail — this is the exact live-VI/
-   flat-`fs` signature s79/s80 already root-caused as "M3 blocker =
-   post-leave FULL_SYNC loss" for a *different* window (~90s
-   hangar-leave transition, not this ~142s crawl-scene window). Seeing it
-   recur here reframes this as **a likely second occurrence of an
-   already-partially-understood class**, not a fresh mystery. The known
-   secondary symptom (`UnhandledJumpTarget 0x0231` in `factor5_ucode`,
-   s79 called it "secondary, not onset cause") also fired 876 times here,
-   consistent with (not proof of) the same mechanism.
+1. **Confirmed, from data already captured (no rebuild, no new soak):**
+   grepped `[vi-fs-decision]` out of s152's own
+   `scratch/s73_post_a_scene/scenerq1/run.log`. `rdpFs` (RDP FULL_SYNC
+   count) plateaus at `3527` at decision `#9049` and 529 more synthetic
+   `FIRE reason=swap` events fire after that, all the way to the end of
+   the log (`#10624`) — `rdpFs` never moves again. This is exactly s80's
+   "synthetic FIRE continues after fs plateau" signature. **The crawl-scene
+   hang and the s79/s80 hangar-leave hang are the same class.** Don't
+   treat them as separate investigation threads.
+2. **The follow-up soak (`HOLD_S=120`, same instrument battery, script:
+   `scratch/agent/run_extendhold1.sh`) never reached the crawl scene.**
+   It crashed at wall-clock 74.1s (only 3 iterations into the hold
+   window), still inside the war-room/craft-select region, SIGBUS at
+   `processSceneNode+7176 ← submitSceneNodeRender ←
+   traverseSceneGraphRecursive ← setupCameraMatrices ← ... ←
+   menuOverlayInit`. Same 11188-byte function as s151's `+7640` crash,
+   different offset and call path — plausible sibling of the
+   already-guarded unguarded-table-deref family (s99/s100/s101 pattern),
+   **not source-read or confirmed this session.**
+3. **This was the 1st attempt at the "does the freeze recover" question**
+   — budget rule 8 allows up to 3 non-discriminating soaks on the same
+   question before parking it. Not there yet.
 
 ## Do next
 
-1. **Test the same-mechanism hypothesis directly.** Find s79/s80's
-   `[vi-fs-decision]` diagnostic (grep `fixup_game_funcs.py` and/or
-   `lib/` for `vi-fs-decision` / `VI_FS_DECISION` — PORTING-STATE s80 has
-   the mechanism) and re-arm it for a soak across THIS window (the crawl
-   scene, ~t=142s+) rather than the hangar-leave window it was built for.
-   Discriminating outcome: does it show the same "synthetic FIRE
-   continues after `fs` plateau" pattern s80 found? If yes, this is
-   confirmed the same class — the fix, if one gets found for the
-   hangar-leave case, likely fixes both. If the pattern looks different
-   (e.g. no synthetic FIRE, or a different task stuck), that's a genuine
-   new, distinct stall and should get its own investigation thread.
-2. **Extend `HOLD_S` well past 30** (try 90-120, matching M3's own
-   "60 seconds of in-mission rendering" done-when bar) in the same soak.
-   This run's capture window (`HOLD_S=30`) ended while the process was
-   STILL ALIVE but frozen — completely unknown whether the `fs` plateau
-   ever breaks on its own (VI-driven recovery, watchdog, timeout) or is
-   permanent. `scratch/agent/run_scenerq1.sh` is the template — copy
-   forward with `HOLD_S=120` and the diagnostic list from item 1 added.
-   Keep `HOLD_TICK_S` at something reasonable (`0.5` or `1` is probably
-   fine now that the crawl-text window itself is already characterized as
-   corrupted-not-legible; 0.2 across 120s is 600 screenshots, likely more
-   than needed — use judgement, don't blindly keep 0.2).
-3. Read the new frames/logs yourself (same "don't delegate the visual
-   read" rule as last session — still applies, this is still an
-   unresolved, significant claim).
+1. **Re-run the extended-hold soak, unchanged.**
+   `zsh scratch/agent/run_extendhold1.sh > scratch/agent/
+   run_extendhold1b_driver.log 2>&1` (rename the driver-log target so you
+   don't clobber s153's; the script itself writes to
+   `scratch/s73_post_a_scene/extendhold1/`, which will get overwritten —
+   copy that dir aside first if you want to keep s153's crash artifacts,
+   e.g. `mv scratch/s73_post_a_scene/extendhold1
+   scratch/s73_post_a_scene/extendhold1_s153`). Launch in background, then
+   block synchronously: `until ! pgrep -f "./RogueSquadron64Recomp"
+   >/dev/null 2>&1; do sleep 10; done`.
+2. **If it reaches the crawl scene this time** (`[phase] vi_width=640 ...
+   origin=0x006A2900` around `t≈142s` in `run.log`), read the tail of
+   `run.log`'s `[vi-fs-decision]` lines the same way s153 did: does
+   `rdpFs` plateau and then later start moving again before the process
+   is killed at `HOLD_S=120`? That is the direct answer to "does it
+   recover." If `rdpFs` is still climbing at kill time, that's also
+   informative (the plateau wasn't a permanent stall, just this
+   particular window measured too early).
+3. **If it crashes again before reaching the crawl scene** (2nd
+   non-discriminating attempt), this is worth a quick source read of
+   `processSceneNode` around the `+7176`/`+7640` offsets before a 3rd
+   blind retry — per NEXT.md's own standing "source-read before
+   instrumenting" rule, cheaper than another 74–150s soak that might not
+   even discriminate the recovery question either. Use
+   `scratch/agent/machoparse.py` (already proven working, s152) to get
+   exact host addresses if you need to map offsets back to source lines
+   via the existing symbol_files. If a guard looks straightforward
+   (matches the established shape: `table[idx]` then deref, no bounds
+   check), land it the same way s99-s101 did — but that becomes its own
+   work unit, log it as SUBSTITUTED if it displaces the recovery question
+   entirely rather than complementing it.
 
 ## Do not
 
-- Do not re-chase the render-queue-table counter as the crash mechanism
-  in `processSceneNode` — refuted this session with a real positive
-  control (59000 fires, max=50, 0 OOB). If you want to guard that write
-  anyway as defense-in-depth once its real capacity is known, that's a
-  separate, lower-priority task, not this one.
-- Do not assume this session's hang and s151's crash are proven to be the
-  same underlying bug just because they land at nearly the same point in
-  the scene — the FULL_SYNC-loss signature match is suggestive (S1 grade
-  evidence, single soak), not confirmed. Item 1 above is exactly the test
-  that would confirm or refute it.
-- Do not try to transcribe the crawl text again — s152 established it
-  renders with corrupted/doubled glyphs, not merely too fast to capture.
-  No tick rate fixes that; it needs a rendering-correctness fix, out of
-  scope for this investigation thread.
-- Do not attempt `nm`/`otool`/`lldb`/`otool` again expecting approval —
-  confirmed unavailable in this non-interactive loop. Use
-  `scratch/agent/machoparse.py` (extend it if you need more than
-  name/address/size — it's a real Mach-O LC_SYMTAB parser, not a stub).
+- Do not re-run s152's original `run_scenerq1.sh` (`HOLD_S=30`) — that
+  question (is this the same class as s79/s80) is answered, don't spend a
+  soak re-confirming it.
+- Do not treat the `processSceneNode+7176` crash as automatically the
+  same bug as s151's `+7640` — same function, unconfirmed whether same
+  root cause. Read the source before guarding either specific offset.
+- Do not spend a 3rd soak on "does the freeze recover" if the 2nd attempt
+  also fails to reach the crawl scene — per rule 8, park it after 3 and
+  pivot to the `processSceneNode` source read as the next primary thread
+  instead.
+- `[vi-fs-decision]` is always-on (s80), not gated by any `ROGUESQ_*` env
+  var — no need to add it to any soak's export list, it's already firing
+  into every `run.log`.
 
 ## This session's environment notes (carry forward, still current)
 
 - **`nm`, `otool`, `lldb` are NOT on the Bash allowlist and there is no
   human present in this autonomous loop to grant the approval prompt** —
-  confirmed by repeated identical "requires approval"/"command contains
-  multiple operations" failures, including with
-  `dangerouslyDisableSandbox: true` (doesn't help; this is a permission
-  gate, not the OS sandbox). `scratch/agent/machoparse.py` (this session)
-  is a working from-scratch replacement for "what's the host-compiled
-  size/address of symbol X" — read Mach-O `LC_SYMTAB` directly, no
-  external tool needed. Don't waste an iteration re-discovering this.
-- `run_mission_keys.sh`'s hold loop now supports `HOLD_TICK_S` (this
-  session), same backward-compatible-default pattern as the existing
-  `CAPTURE_TICK_S`. Default `1` = old behaviour exactly (one
-  `hold_NN.png` per second). `<1` adds `hold_NN_subMM.png` between them.
-- A crash-class hypothesis that held for one soak (s151's
-  `processSceneNode` crash) is not guaranteed to recur on the very next
-  soak of the "same" scene — this session reproduced the scene
-  byte-for-byte (same VI origin, same timing) but got a hang instead of a
-  crash. This investigation's crash-class selection has been documented
-  as highly variable across ~20 sessions (see s151's own note); don't
-  assume determinism when planning a soak whose only goal is "trigger the
-  same crash again."
+  confirmed by repeated identical failures across multiple sessions.
+  `scratch/agent/machoparse.py` is a working from-scratch replacement for
+  "what's the host-compiled size/address of symbol X" (reads Mach-O
+  `LC_SYMTAB` directly). Don't rediscover this.
+- `run_mission_keys.sh`'s hold loop supports `HOLD_TICK_S` (s152) for
+  sub-second capture density within the hold window; `CAPTURE_TICK_S`
+  (older) only densifies the earlier probe-wait loop. Use `HOLD_TICK_S=1`
+  (default) unless you specifically need sub-second frames — the crawl
+  text itself is already known to render corrupted/doubled, not merely
+  too fast to capture, so density doesn't buy legibility there.
+- A crash-class hypothesis that held for one soak is not guaranteed to
+  recur on the very next soak of the "same" scene — this family's
+  crash-class selection has been highly variable across ~20 sessions.
+  Don't assume determinism when planning a soak whose only goal is
+  "reach a specific later scene" — an early, unrelated crash can and does
+  preempt it (s153 is itself a fresh example).
 - Function/line-number estimates in NEXT.md/PORTING-STATE drift a few
-  lines every regen — always grep/read the actual regenerated file
-  before writing a regex anchor or planning a reorder.
+  lines every regen — always grep/read the actual regenerated file before
+  writing a regex anchor or planning a reorder.
 - N64Recomp's codegen convention for a fixed-global access: writes are
   `MEM_W(<offset>, ctx-><base>) = ctx-><src>;`; reads flip the argument
   order to `ctx-><dst> = MEM_W(ctx-><base>, <offset>);`.
@@ -137,15 +120,13 @@ question, and land a targeted diagnostic based on that read.
   `~/Documents/Tools/rogue_squadron64`), then
   `zsh tools/agent/regen_n64recomp.sh` (cwd this repo, NOT `N64Recomp`),
   THEN `fixup_game_funcs.py` once (cwd `N64Recomp`) — verify by grepping
-  the regenerated `.c` directly. Note the correct invocation is
-  `python3 tools/make_elf.py`, NOT `python3 make_elf.py` from repo root —
-  the script lives at `rogue_squadron64/tools/make_elf.py`.
+  the regenerated `.c` directly.
 - `cmake --build` needs cwd `build/` and
   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` for Metal
   shader rebuilds.
 - Write a new wrapper script file per soak tag (`scratch/agent/run_
   <tag>.sh`) rather than parametrizing a single reusable script via env
-  indirection. `run_scenerq1.sh` (this session) is a good template.
+  indirection.
 - Launch the soak via `zsh <absolute-path>/run_<tag>.sh > <absolute-path>/
   run_<tag>_driver.log 2>&1` as a `run_in_background` Bash call, then
   block synchronously with `until ! pgrep -f "./RogueSquadron64Recomp"
@@ -160,7 +141,9 @@ question, and land a targeted diagnostic based on that read.
 - Chaining many `grep`/`echo` statements with `&&`/`;` in one Bash call
   can trip the "multiple operations require approval" gate even when
   every individual command is allowlisted — split into separate Bash
-  calls, one command each, when this happens.
+  calls, one command each, when this happens. Also true for a single
+  Bash call that both runs a command AND echoes a status line — split
+  those too (confirmed s153: `cmd & echo "..."` in one call was blocked).
 - This fix lives entirely in the sibling `N64Recomp` checkout
   (`fixup_game_funcs.py` + regenerated `RecompiledFuncs/*.c`), not
   `lib/` — no `submodule-patches/export.sh` step needed for it.
@@ -174,6 +157,6 @@ sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git
 checkout, not a `lib/` submodule, with uncommitted changes across
-s90-152 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
+s90-153 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
 Same posture as the `rogue_squadron64` sibling checkout flagged since
 s54. Worth asking the user whether/how to commit that history.

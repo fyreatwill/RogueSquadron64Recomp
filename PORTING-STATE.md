@@ -13673,3 +13673,94 @@ whether it ever recovers on a longer hold). Full detail above.
   reader (host function addresses/sizes without `nm`).
 - `scratch/s73_post_a_scene/scenerq1/` — run log + 150 hold screenshots
   (5 Hz) + probe/stable screenshots.
+
+## Session 153 (2026-07-27) — confirmed the s152 crawl-scene hang is the same `[vi-fs-decision]` "synthetic FIRE continues after `fs` plateau" class s80 found in the hangar-leave window, from data s152 had already captured, no rebuild needed; the planned follow-up (extend `HOLD_S` to see if the freeze recovers) got preempted by an early, unrelated crash and stayed unanswered
+
+### What ran
+
+Two-part work unit from NEXT.md's "-4" item. Part 1 needed no new soak:
+`[vi-fs-decision]` (s80, always-on since that session, gated by nothing)
+was already firing into s152's own `scratch/s73_post_a_scene/scenerq1/
+run.log` (1892 lines) because that soak's instrument battery happened to
+include everything upstream of it. Read it directly instead of re-running.
+Part 2 needed a new soak: `scratch/agent/run_extendhold1.sh`, identical
+instrument battery to s152's `run_scenerq1.sh`, `HOLD_S=120` (was 30),
+`HOLD_TICK_S=1` (was 0.2 — NEXT.md's own guidance, crawl text already
+known to render corrupted so sub-second density wasn't buying anything),
+`CAPTURE_TICK_S` unchanged. Launched in the background, waited
+synchronously (`until ! pgrep ... RogueSquadron64Recomp`) for the process
+to exit before proceeding, per the standing soak pattern.
+
+### Part 1 result: CONFIRMED, same class as s79/s80
+
+`grep vi-fs-decision scratch/s73_post_a_scene/scenerq1/run.log` shows
+`rdpFs` (the RDP FULL_SYNC-opcode counter) first reaching its final value
+`3527` at decision `#9049` (`synth=962`) and staying pinned at `3527`
+through the last line in the file, decision `#10624` (`synth=1491`) —
+**529 more synthetic `FIRE reason=swap` events fired, all with `seen=0`,
+after `rdpFs` stopped moving**, across roughly 1575 decisions and (per
+the driver summary) the remaining ~7 seconds of the hold window. This is
+exactly s80's discriminating signature ("synthetic FIRE continues after
+the `fs` plateau" — i.e. the driver keeps deciding a real framebuffer swap
+happened and firing the synthetic completion path, even though the RDP
+genuinely stopped completing tasks). Bonus observation not in s80's
+original write-up: right at the plateau onset the fired pairs' `lastCimg`
+values are sane (`0x006A2400`/`0x00644800`, matching the two VI origins
+in play, `lastW=640`), but by the end of the log `lastCimg`/`lastW` have
+drifted into clearly wild values (`0x00FE7xxx`/`0x00AE03F1` with widths
+like `1`, `97`, `4083`) — consistent with s81's "mode-3 present of wild
+last-drawn" characterization of the visual symptom, now shown to extend
+into this window too. **Conclusion: this is confirmed (not just
+suggestive) the same FULL_SYNC-loss class as s79/s80, recurring in the
+crawl-scene window rather than a distinct bug.** Upgrades s152's
+single-soak S1-grade suggestion to a same-run, two-independent-line
+confirmation (signature match + no counter-example anywhere in the log).
+
+### Part 2 result: inconclusive — preempted by an early, different crash
+
+The `run_extendhold1` soak never reached the crawl-scene window at all.
+It crashed at wall-clock **74.1s** (hold-iter 3, ~2s into the 120s hold
+window) — long before s152's soak reached the `142s` crawl scene, and
+still inside the war-room/craft-select region (`last phase` line shows
+`vi_width=512 origin=0x006AB400`). Backtrace:
+`processSceneNode+7176 ← submitSceneNodeRender ← traverseSceneGraphRecursive
+← setupCameraMatrices ← static_5_800AAD9C ← static_5_800C6854 ←
+menuOverlayInit`, SIGBUS. This is **inside the same function as s151's
+`processSceneNode+7640` crash** (confirmed real, s152's `machoparse.py`
+measurement: function is 11188 bytes host-compiled, both offsets are
+within it) but at a **different offset and a different call path**
+(`submitSceneNodeRender` vs. whatever chain led to s151's site — not
+recorded in enough detail last session to compare directly). Given this
+family's already-documented extreme session-to-session crash-class
+variability (NEXT.md's own carried-forward note, ~20 sessions), this
+reads as another data point in that variability, not evidence the
+`+7640` and `+7176` sites are the same bug — they're close enough in the
+same function to plausibly share the unguarded-table-deref shape common
+to every other guarded class in this investigation, but that's
+unconfirmed, not measured this session. **Item 2's actual question (does
+the crawl-scene `fs` plateau ever recover on a long hold) is still
+open** — this soak never got there to test it.
+
+### Conclusion / next steps
+
+Part 1 closes cleanly: the crawl-scene hang and the hangar-leave hang are
+the same class, don't investigate them as separate mysteries. Part 2's
+question survives untested; re-attempting it costs one soak (this was
+the 1st attempt, not yet at the rule-8 budget ceiling) — same script,
+same `HOLD_S=120`, no changes needed, since nothing about this session's
+early crash indicates a repeatable blocker at that new site (0/1, no
+positive control either way). Secondary, lower-priority thread opened:
+whether `processSceneNode+7176` is worth a source read alongside the
+already-catalogued `+7640` site, given both are unguarded-table-deref
+candidates in a function this investigation has already characterized
+that pattern for repeatedly (s99, s100, s101 all guarded exactly this
+shape in other functions).
+
+### Files
+
+- `scratch/agent/run_extendhold1.sh` — new soak wrapper, `HOLD_S=120`,
+  `HOLD_TICK_S=1`, otherwise identical battery to `run_scenerq1.sh`.
+- `scratch/s73_post_a_scene/extendhold1/` — run log + screenshots (crash
+  came before the hold window produced much to capture).
+- No `lib/` or `N64Recomp/` edits this session — pure analysis of
+  existing armed logging plus one soak with an existing instrument set.
