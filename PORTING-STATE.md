@@ -16169,3 +16169,125 @@ Soak scripts/logs (`scratch/agent/run_heapwalkerguard3_{1,2}.sh`,
    were confirmed to help (both soaks still died well before that window).
    Keep deferring that question until items 1-3 stop finding new early
    crash sites every soak.
+
+## Session 173 (2026-07-28) — landed and validated the `rs_malloc` walk-loop deref guard per NEXT.md, but its 2 soaks show it isn't the dominant early-crash site this run — instead recurred a **new, still-unguarded** SIGSEGV in the `waitForAnyAudioSlot` call chain, deeper than s166's own guard on the same chain
+
+### What ran
+
+Read the free-list walk loop in full first (`N64Recomp/RecompiledFuncs/
+funcs_0.c` ~2860-3020, guest `L_80001BB0`-`L_80001C04`) to trace its actual
+exit/termination condition before guarding anything, per NEXT.md's own
+instruction. Confirmed: the walk's loop-back deref at `0x80001BF4`
+(`MEM_HU(next, 0x10)`, `next = node + size` computed the line before) is
+followed by a branch on bit `0x8` of the dereferenced flags halfword — if
+set, the code falls through to `L_80001C04` (list search ends, `ctx->r4`
+left unchanged); if clear, it advances `ctx->r4 = next+0x10` and loops back
+to `L_80001BC4`. `ctx->r3` (the dereferenced value itself) is never read
+again after that one branch, so bailing straight to `L_80001C04` without
+setting it is behaviorally identical to the real "bit was set" exit — no
+new termination path invented, matching the rest of this family's guard
+idiom (same `0x80000000u`/`0x80800000u` bounds check, `goto` the loop's own
+natural exit label).
+
+Landed the guard (`N64Recomp/fixup_game_funcs.py`, file-scoped to
+`funcs_0.c`, new env var `ROGUESQ_LOG_RS_MALLOC_WALK_GUARD`) right between
+the existing s165 walk-log and the risky deref, following the same
+comment-plus-patch-function convention as every prior guard. Full regen
+(`N64Recomp` -> `fixup_game_funcs.py`, redirected to a log, verified exactly
+x1, no duplication) -> clean rebuild (exit 0, only the pre-existing warning
+classes).
+
+Ran 2 soaks (`run_rsmallocwalkguard1.sh`/`_2.sh`, copies of s171/s172's
+env block plus the new guard's var armed):
+
+- **Soak 1**: survived to hold-iter 3 (~3s past SELECT YOUR CRAFT stable).
+  New guard: **0/0** — but the walk itself was heavily exercised
+  (1,604,266 `[rs-malloc-walk]` log lines, 17,683 `rs_malloc` calls this
+  run) with every size value sane (32/48/768/1536-byte allocations near
+  the crash, no garbage seen). Process instead died to the **s83-catalogued
+  Metal-internal shader-compiler SIGSEGV** (`fscache_insert_and_retain` ->
+  `MTLCompilerFSCache::addElement` -> ... -> `_dispatch_workloop_worker_
+  thread`, no source on our side, not a guest-code crash at all).
+- **Soak 2**: died far earlier — **before VI width 1024/title screen was
+  ever reached** (`decisionN=356`, task #278). Backtrace: SIGSEGV directly
+  inside `waitForAnyAudioSlot` (+76 native bytes) <- `menuOverlayInit` <-
+  `mainGameLoop` <- `mainBootstrapWorker` <- `run_thread_function`. This is
+  the **same call chain s166 already investigated and partially guarded**
+  (23rd crash class, first seen s165's `audiodrain3`) — but s166's guard
+  (`isAudioSlotActive`'s base-pointer deref, `funcs_24.c`, **always-on**
+  regardless of its log env var) is confirmed patched into this exact build
+  (`fixup.log`: "isAudioSlotActive base-pointer guard patched x1") and did
+  **not** fire (its log var, `ROGUESQ_LOG_AUDIO_SLOT_ACTIVE_GUARD`, wasn't
+  armed this run, but the guard's bounds-check branch itself is unconditional
+  and would have prevented a crash at that exact site regardless). **This
+  means the fault is at a genuinely different, still-unguarded site within
+  the same chain** — s166's fix closed one deref but not the one this soak
+  hit.
+
+### Source-read of the two shallower remaining candidates (no rebuild, free)
+
+- `anyAudioSlotActive` itself (`funcs_23.c:8806`): every `MEM_*` access is
+  off a **fixed literal global address** (`0x800A0F50`, `0x80141AD0`,
+  `0x8014530C`) — no computed/corrupted-pointer deref anywhere in its own
+  body. Calls `audioStubReturnZero` (stub) and `isAudioSlotActive` (already
+  guarded, s166). **Ruled out** as this soak's fault site.
+- `tickMusyXIfActive` (`funcs_23.c:6785`): only entered if a fixed-global
+  byte (`0x800A0F50`) is nonzero (i.e. audio genuinely active this run —
+  consistent with getting past boot's initial silence); its own body has
+  **zero direct `MEM_*` derefs**, only calls into `factor5MutexAcquire`,
+  `tickActiveSongs`, `tickAndReap3DAudioVoices`, `stopAllSynthVoices`,
+  `factor5MutexRelease` — none of which have been source-read yet. **Not
+  ruled out** — the fault is most likely one level deeper than either
+  function this session actually opened, in one of these five callees.
+
+### Rules out / narrows
+
+- **The rs_malloc walk-loop guard question is not settled by this session
+  (0/0 across 2 soaks) but for the same reason as s172's heapWalker
+  guards**: neither soak's `rs_malloc` calls this run happened to hit a
+  corrupted size, not that the guard is misplaced — 17,683 clean calls is
+  a real, if uninformative, negative control.
+- **s166's `isAudioSlotActive` guard is confirmed still active and still
+  not sufficient** — a 2nd, independent occurrence of a crash landing
+  inside the `waitForAnyAudioSlot` chain despite that guard being armed.
+  This narrows, rather than closes, the 23rd crash class: it is not one
+  bug but at least two, and the 2nd is still open.
+- Soak 1's death to the Metal-internal shader-compiler SIGSEGV (a
+  known-unfixable-on-our-side class since s83) reinforces that this
+  family's soaks can die to entirely unrelated host-toolchain crashes
+  before ever reaching guest-code territory — not new information, but a
+  reminder not to over-read any single soak's death site.
+
+### Landed (this session)
+
+`N64Recomp/fixup_game_funcs.py`: `rs_malloc` free-list walk-loop
+computed-pointer deref guard (new, `ROGUESQ_LOG_RS_MALLOC_WALK_GUARD`).
+`N64Recomp/RecompiledFuncs/funcs_0.c`: regenerated with the guard applied
+(verified x1, no duplication). Not committed — same long-standing
+uncommitted-history posture as `N64Recomp` since s54/s90 (not this
+session's call to resolve). This repo's own tracked files: `scratch/agent/
+NEXT.md`, `docs/CURRENT-TRUTH.md`, this entry. Soak scripts/logs
+(`scratch/agent/run_rsmallocwalkguard{1,2}.sh`, full run logs under
+`scratch/s73_post_a_scene/rsmallocwalkguard{1,2}/`) are gitignored, not
+tracked.
+
+### Next
+
+1. **Best next work unit: source-read the 5 still-unexamined callees of
+   `tickMusyXIfActive`** (`factor5MutexAcquire`, `tickActiveSongs`,
+   `tickAndReap3DAudioVoices`, `stopAllSynthVoices`, `factor5MutexRelease`
+   — none opened this session) for an unguarded deref matching this
+   family's dominant shape (fixed-global-pointer-then-index, or a
+   corrupted-size/corrupted-pointer walk like `rs_malloc`'s). This is now
+   the **earliest-blocking** open crash site in the whole project (kills
+   the run before the title screen even renders) and s166's own guard
+   already proved this exact family of fix works when correctly targeted —
+   just needs the actual site found one level deeper.
+2. `processSceneNode`'s self-recursive SIGBUS (s172 soak 1) — still open,
+   still not source-read, still lower priority than item 1 given item 1 is
+   now the earliest-blocking known crash.
+3. `submitSceneNodeRender+16780` (s171) — still open, still lowest
+   priority of the 3 characterized-but-unfixed leads.
+4. The s169/s170 scheduler-SIGSEGV H1/H2 question remains blocked on runs
+   reliably reaching the deep-stall window — keep deferring until items
+   1-3 stop finding new early crash sites every soak.

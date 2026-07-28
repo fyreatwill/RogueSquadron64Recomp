@@ -659,9 +659,31 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s172)
+## Next steps, in order of expected value (s173)
 
--24. **NEW TOP PRIORITY (s172): fixed a real gap in the heapWalker guard
+-25. **NEW TOP PRIORITY (s173): landed and validated the `rs_malloc` walk-loop
+    deref guard NEXT.md asked for (`N64Recomp/fixup_game_funcs.py`,
+    `ROGUESQ_LOG_RS_MALLOC_WALK_GUARD`, file-scoped `funcs_0.c`), but 2
+    soaks show it isn't this run's dominant early crash: 0/0 fires despite
+    17,683 clean `rs_malloc` calls (real negative control), one soak died
+    to the already-catalogued s83 Metal-internal shader-compiler SIGSEGV
+    (unrelated, no source on our side), the other died to a **recurrence
+    of the 23rd crash class** (`waitForAnyAudioSlot` chain, first seen
+    s165) despite s166's own guard on that chain (`isAudioSlotActive`
+    base-pointer deref) being confirmed active in the build. **This proves
+    the 23rd class is at least 2 distinct bugs, not 1** — s166 closed one
+    deref, this soak hit a different, still-unguarded one, one level
+    deeper (source-read this session ruled out `anyAudioSlotActive` itself
+    and found `tickMusyXIfActive`'s own body has zero direct derefs — the
+    fault is in one of its 5 unexamined callees: `factor5MutexAcquire`,
+    `tickActiveSongs`, `tickAndReap3DAudioVoices`, `stopAllSynthVoices`,
+    `factor5MutexRelease`). **Best next work unit: source-read those 5
+    functions for the family's dominant unguarded-deref shape** — this is
+    now the earliest-blocking known crash in the whole project (kills the
+    run before the title screen even renders, decisionN=356, task #278).
+    Full detail: PORTING-STATE s173.
+
+-24. **(s172, superseded as top priority by s173 above): fixed a real gap in the heapWalker guard
     (missing 5th head-deref site + all 5 walk-loops completely unguarded,
     `N64Recomp/fixup_game_funcs.py`/`funcs_3.c`) — 2 soaks show 0/0 on both
     new guards (heapWalker isn't the culprit either soak), but each soak
