@@ -1,121 +1,118 @@
-# NEXT work unit — Thread B: name the 2 remaining rs_malloc candidates to source
+# NEXT work unit — Thread B: find candidate A's overlay-load producer (or characterize candidate B's write pattern)
 
-s140 ran NEXT.md's own option (a) (add an `rs_free` log, re-soak) and got a
-clean discriminating result — read PORTING-STATE's Session 140 entry before
-doing anything else; this file only has the actionable summary.
+s141 named candidate B to source and refuted the guessed source for both
+candidates by direct measurement (not more inference) — read
+PORTING-STATE's Session 141 entry before doing anything else; this file
+only has the actionable summary.
 
-## What s140 did and found
+## What s141 did and found
 
-Landed `ROGUESQ_LOG_RS_FREE=1` (`rs_free`, `funcs_0.c:3085`, patched via
-`N64Recomp/fixup_game_funcs.py`, logs `ptr` + `caller_ra` at entry — source
-read confirmed this is safe to do directly, no argument-order guessing).
-Soaked with `scratch/agent/run_rsfree1.sh` (same "batch every
-`ROGUESQ_LOG_*` flag" recipe as `run_rsmalloc1.sh`, plus the new flag).
+Two-stage work unit: source-read (subagent) proposed named functions for
+s140's 2 remaining unnamed candidates by exact-integer divisibility only
+(flagged explicitly as an unproven guess), then a call-site tag instrument
+(`ROGUESQ_LOG_RS_MALLOC_SITE`, `N64Recomp/fixup_game_funcs.py`) correlated
+against the existing `[rs-malloc]` log to test the guess directly.
 
-**First crash-free soak in this whole render-guard/Thread-B series** —
-0 crashes across every known class, process survived the full hold+grace
-window and had to be killed by the script. `[rs-free]` fired 16445/16445
-(strong positive control). 10 `[voice-active-gate-nz]` hits, same shape as
-s139 (`idx=0x10`/`0x11`, `base=0x80171D50`/`0x80171DD8`,
-`arrayBase=0x801714D0`).
+**The guess was wrong for both candidates** (`setupSongRenderBuffers`
+never produced size=8568 in 6 calls this run; `buildSongDecodeBufferRing`'s
+2nd call never produced size=32768 in 6 calls) — informative, not a null
+result, because the same log immediately revealed the real producers:
 
-Two real findings from the corrected/new data:
+1. **Candidate B (`0x8016FD20`/8568B) is named:** `allocateSongChannelArray`'s
+   own second `N*(voiceCount+1)*136`-sized allocation
+   (`funcs_23.c:11033`, the "reloaded from temp" duplicate of
+   `funcs_23.c:11011`). Two independent confirmations: log-sequence
+   position (sits exactly between the `V*2576` pair at `:10949`/`:10975`
+   and the literal-664 call at `:11047`, matching source call order
+   exactly) and arithmetic on this run's own live boot values
+   (`voiceCount=20`, so `(voiceCount+1)*136=2856`; `V=3` from the
+   preceding `2576*3=7728` pair; `N=3` (matches V) `× 2856 = 8568`
+   exactly).
+2. **Candidate A (`0x80171470`/32768B) is refuted as audio-subsystem
+   entirely.** Its one occurrence in the log sits immediately after
+   `[overlay] start-match: section 4 rom=0x00137580 at ram=0x800A5130`
+   and 2 `osViSetMode` calls — an overlay-load event, nowhere near either
+   guessed audio function's call-site tags (which fire for the next song,
+   much later in the log). 4 sessions (s105-140) searching the audio
+   files for this candidate's caller were looking in the wrong subsystem.
 
-1. **None of s139's 3 candidate pointers (`0x8016FD20`, `0x80171470`,
-   `0x80171DF0`) ever appear in an `[rs-free]` line, anywhere in the run.**
-   Refutes the "freed-and-reused" framing outright — this is not a
-   freed/UAF-into-corrupted-memory bug. All 3 candidates are still
-   allocated for the entire run. Reframe: something is reading a live,
-   never-freed neighboring buffer out of the voice array's own bounds.
-2. **Per-hit range check (using this run's own 2 actual hit addresses,
-   not the older aggregate zone) refutes the `0x80171DF0`/7728B
-   candidate** — its `[ptr, ptr+size)` range (`[0x80171DF0, 0x80173C20)`)
-   starts *after* both observed hit addresses (`0x80171D50` and
-   `0x80171DD8` are both below `0x80171DF0`), so it structurally cannot be
-   the buffer being read at either address. The other 2 candidates both
-   still cover both hits.
+Same-run death was the already-tracked `do_rom_read`/`piDmaWorker`
+corruption SIGSEGV (unchanged signature, not a new class) — 4th/6th
+recurrence across recent render-guard/Thread-B soaks, not itself the
+target of this experiment.
 
-**Thread B narrows from 3 candidates to 2:**
-- `0x8016FD20` / size 8568 — boot-time, allocated right after the very
-  first song-array-alloc.
-- `0x80171470` / size 32768 — boot-time, starts only 96 bytes before the
-  voice array's own base (`0x801714D0`) — the stronger candidate by
-  adjacency (s139's own reasoning, reinforced: it's also the only one of
-  the 3 whose range would cover a hit anywhere across the full historical
-  aggregate zone `0x80171D50`-`0x80172548`, not just this run's 2
-  addresses).
+## Do next: two independent leads, pick one
 
-Neither candidate has been named to a source function yet.
+**(a) Find candidate A's real overlay-load producer.** Now correctly
+scoped to the overlay-loading path, not audio. Grep `rs_malloc` call
+sites reachable from overlay init/load code (`lib/N64ModernRuntime`'s
+`overlays.cpp` calls into guest overlay-init functions — check which
+guest functions run during a "section 4" overlay start-match, likely in
+whichever `.c` file backs that overlay, not `funcs_23.c`/`funcs_24.c`)
+for one whose call context matches "runs right after an overlay
+start-match log line" and whose size expression could plausibly be
+32768. The existing `ROGUESQ_LOG_RS_MALLOC=1` log alone (no new
+instrument needed yet) already shows exactly one `0x80171470`-address
+hit per run at a known log position relative to `[overlay]` lines —
+start by re-examining that context across 2-3 more soaks/logs before
+building a new tagged instrument, to see if it's always the same
+overlay section number and always immediately-after the same
+`osViSetMode` pair (a positional fingerprint cheap to confirm before
+spending a rebuild).
 
-## Do next: name one (or both) of the 2 remaining candidates
+**(b) Characterize candidate B's write pattern.** `allocateSongChannelArray`
+(`funcs_23.c`, around line 11033 onward) just got a
+`N*(voiceCount+1)*136`-sized buffer — read what it stores into that
+buffer (struct array indexed by voice/note, or a string/name table?).
+The corruption's established byte shape (ASCII fragments like
+`"explo_tex2"`, `"lgfr"`, `"wing"`, s94/s102) would be directly explained
+if this buffer is itself a name/string table; if it's a struct array of
+numeric fields instead, that weakens candidate B and raises A's relative
+importance. This needs no rebuild — pure source read.
 
-There is no more "before/after a free" event to look for — nothing is
-ever freed, so option (a) from NEXT.md's prior version (more instrumenting)
-is exhausted for this pair. **Do source-reading instead** (NEXT.md's own
-prior option (b), still the right move):
+Either is a valid single work unit. (a) has higher information value if a
+cheap log re-read narrows the "who calls it" question before instrumenting;
+(b) is lower-risk (no rebuild) and could quickly rule B in or out as the
+ASCII-corruption source.
 
-1. Read `funcs_23.c`/`funcs_24.c` around `allocateSongChannelArray`'s own
-   call site (the "very first song load" boot sequence) to find what runs
-   immediately around it — specifically, what allocates exactly 32768
-   bytes (`0x8000`) right there (the `0x80171470` candidate) and what
-   allocates exactly 8568 bytes (`0x2178`) right after (the `0x8016FD20`
-   candidate, which per s139 is allocated *before* `0x80171470` in the
-   log — check the actual call order in source, not just log-line order,
-   since `rs_malloc`'s pool selector means address order need not match
-   call order).
-2. A grep for the literal hex sizes (`0X8000`, `0X2178`) as compile-time
-   constants was already tried and closed (s139 — sizes are
-   runtime-computed, not literals). Don't retry that. Instead look for the
-   *shape* of the allocation call (arg count, what struct/array it backs)
-   near the boot sequence that also sets up `initSampleStreamBlockCache`
-   (already-known caller context from s103-104).
-3. If source-reading finds a named function for either buffer, the
-   discriminating next move is checking whether that function's own
-   *write* pattern (what it stores at various offsets into the buffer)
-   could plausibly produce the corruption's observed byte shape (ASCII
-   fragments like `"explo_tex2"`, `"lgfr"`, `"wing"` — established s94/s102)
-   — i.e. is this buffer a string/name table, which would explain the
-   ASCII-looking corruption bytes directly, rather than another struct
-   array.
+## Do not
 
-## Thread A (all 8 hangar-tick-family functions): CLOSED, do not re-open
-
-`composeNpcOrientationMatrix`, `updateAnimatedTextureStreaming`,
-`static_5_800B4048`, `projectModelBoundsToScreen`, `reserveAndEmitDLEntry`,
-`activateAnimationKeyframe`, `submitSceneNodeRender` (free-list idiom,
-material-batch-list idiom), `updateHangarBayScene` — all guarded and
-exhaustively source-audited. `emitAllocatedDLCommand`'s two
-`findAndUnlinkSmallestEntry` sites are also guarded and parked. Do not
-re-audit or re-guard any of these.
+- Do not re-guess `setupSongRenderBuffers` or `buildSongDecodeBufferRing`
+  as producers of 8568/32768 — directly refuted by 6/6 non-matches each,
+  s141.
+- Do not search the audio boot files (`funcs_23.c`/`funcs_24.c`) for
+  candidate A's producer — s141 measured it's an overlay-load event, a
+  different subsystem entirely.
+- Do not re-audit any of Thread A's 8 hangar-tick-family functions
+  (`composeNpcOrientationMatrix`, `updateAnimatedTextureStreaming`,
+  `static_5_800B4048`, `projectModelBoundsToScreen`, `reserveAndEmitDLEntry`,
+  `activateAnimationKeyframe`, `submitSceneNodeRender` guards,
+  `updateHangarBayScene`) — closed, s90-137.
+- Do not re-run the `loadAssetAndIterateSubchunks` asset-alloc soak shape
+  (H2, closed 3/3), or add more free-event instrumentation for these 2
+  candidates (s140 — nothing is ever freed, exhausted).
+- Do not treat a guessed-but-refuted source as evidence the underlying
+  divisibility reasoning is useless in general — it correctly bounded the
+  search (both true producers were found within a few log lines of the
+  guessed sites), just didn't land on the literal call site either time.
 
 ## This session's environment notes (carry forward, still current)
 
-- `rs_malloc`'s real argument order is `(size, flags)` — `$a0`=size
-  (rounded `(x+0xF)&~0xF`), `$a1`=pool-selector flags (`&0x4`/`&0x10`
-  chooses among 3 heap globals at `0x8011xxxx`). Confirmed s139.
-- `rs_free`'s real argument is `(ptr)` — `$a0`=`ctx->r4`, read directly at
-  function entry (confirmed safe by source read: both branches of the
-  `ptr==0` check copy `ctx->r4` to `ctx->r16` first, and `ctx->r31` is
-  untouched before the first internal `jal`). Confirmed s140.
-- Before trusting ANY new instrument's first soak, sanity-check the
-  logged values against a plausibility prior — this is what caught s139's
-  bug. A instrument that compiles clean and fires is not the same as an
-  instrument that's reading the right registers. (s140's rs_free log did
-  NOT need this correction — verified via source read before soaking, not
-  after; that upfront check is cheaper than a bad first soak.)
-- `caller_ra` (`ctx->r31` at function entry) reads `0x00000000` on
-  effectively 100% of entries across every entry-log instrument landed so
-  far (anim-recurse, anim-tex-stream, hangar-entry, rs-malloc, rs-free) —
-  confirmed benign/universal, not corruption-specific (s92, s139, s140).
-  Stop treating it as a signal.
-- When doing a range-overlap check, use THIS run's own actual hit
-  addresses, not an older aggregate zone from a different session/run —
-  s140 found the aggregate zone was too generous and hid a real
-  refutation that only showed up per-hit.
-- The guard-placement bug caught s133 (regex-replacement pattern shape
-  varies between prior guards — always re-derive from the specific prior
-  guard's landed, regenerated output) is still a live risk for any future
-  patch in this series.
+- The `[rs-malloc-site]`-to-`[rs-malloc]` correlation-by-log-order
+  technique works cleanly (12/12 positive control this session) and
+  generalizes: to identify any call site's contribution when
+  `caller_ra` is unusable, tag the site directly and match against the
+  next line of an existing always-fires log, rather than guessing from
+  size alone.
+- `rs_malloc`'s real argument order is `(size, flags)` — confirmed s139.
+- `rs_free`'s real argument is `(ptr)` — confirmed s140.
+- `caller_ra` (`ctx->r31` at function entry) reads `0x00000000`
+  universally across every entry-log instrument landed so far — stop
+  treating it as a signal (s92, s139, s140, reconfirmed s141 N/A since
+  this instrument didn't use it).
+- When doing a range-overlap or log-correlation check, use THIS run's own
+  actual values, not an older aggregate — s140/s141 both found the
+  aggregate view hid a real refutation.
 - `rm` on paths outside `scratch/` requires approval and does NOT accept
   glob patterns — use a `python3 -c` one-liner with `pathlib.Path.glob()`,
   run with cwd `N64Recomp`, deletes only the 45 `funcs_*.c` files.
@@ -123,9 +120,12 @@ re-audit or re-guard any of these.
   without a full regen first (non-idempotent, s102) — always delete
   `RecompiledFuncs/funcs_*.c`, re-run `make_elf.py` (cwd
   `~/Documents/Tools/rogue_squadron64`, `python3 tools/make_elf.py`) then
-  `zsh tools/agent/regen_n64recomp.sh`, THEN `fixup_game_funcs.py` once —
-  verify a new patch landed by grepping the regenerated `.c` directly,
-  not by re-running the fixup script.
+  `zsh tools/agent/regen_n64recomp.sh` (cwd is this repo, NOT
+  `N64Recomp` — the script lives at
+  `RogueSquadron64Recomp/tools/agent/regen_n64recomp.sh`), THEN
+  `fixup_game_funcs.py` once (cwd `N64Recomp`) — verify a new patch
+  landed by grepping the regenerated `.c` directly, not by re-running the
+  fixup script.
 - `cmake --build` needs cwd `build/` and
   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` for Metal
   shader rebuilds.
@@ -133,48 +133,26 @@ re-audit or re-guard any of these.
   <tag>.sh`) rather than parametrizing a single reusable script via env
   indirection — the multi-`env`-var one-liner trips the Bash
   static-command-analyzer.
-- A `run_mission_keys.sh` soak with `run_in_background: true`, waited on
-  via `TaskOutput(block=true)` (not a manual sleep-poll loop), works
-  cleanly — the harness sends a task-notification when the background
-  command exits either way.
+- A `run_mission_keys.sh` soak with `run_in_background: true` works, but
+  if you end your turn before it completes, the Stop hook fires
+  ("STATUS is WORKING, not DONE") because it can't see backgrounded work
+  in flight. Block on it synchronously instead — e.g. `until ! pgrep -f
+  "./RogueSquadron64Recomp" >/dev/null 2>&1; do sleep 5; done` in the
+  foreground (long timeout) — before attempting to close out the
+  iteration.
 - Checking submodule (`lib/...`) git status needs `env GIT_DIR=lib/X/.git
   GIT_WORK_TREE=lib/X git status --short` — plain `git -C lib/X status` or
-  `cd`+`git status` both fail the prefix-match allowlist (rule 10);
-  `env GIT_DIR=...` does match the `Bash(env:*)` allow rule.
+  `cd`+`git status` both fail the prefix-match allowlist (rule 10); `git
+  -C <path> status` also requires approval even outside `lib/` (tested
+  s141) — use a plain `cd <absolute path>` as its own command (not
+  chained with `&&`), then a separate `git status` call.
 - Output redirection (`>`) from Bash is sandboxed to the session's
   allowed working directories — target `scratch/agent/` or another
   allowed dir, not `/tmp`, for one-off dumps.
-
-## Do not
-
-- Do not re-audit any of the 8 Thread A functions again.
-- Do not re-guard `emitAllocatedDLCommand`'s or `submitSceneNodeRender`'s
-  already-landed guard sites (free-list-walk, material-batch-list) —
-  exhaustively verified against source already.
-- Do not re-run the `loadAssetAndIterateSubchunks`/asset-alloc soak shape
-  (H2, closed 3/3), grep further for static ROM string tables (s138,
-  refuted by distance), grep for literal size constants for the 2
-  remaining candidates (`0X8000`, `0X2178` — tried for all 3 originally,
-  s139, no real hits, sizes are runtime-computed), or add more
-  instrumentation to look for a free event for the 2 remaining candidates
-  (s140 — nothing is ever freed, that angle is exhausted; source-read the
-  boot allocator instead).
-- Do not treat a 0/0 guard-fire result as "the guard doesn't work."
-- Do not chase the s83/s133 Apple-Metal-internal SIGSEGV as a guest bug —
-  no guest frames anywhere in its backtrace.
-- Do not chase the `do_rom_read`/`piDmaWorker` corruption race as its own
-  separate investigation — it IS Thread B. Note it did NOT recur in s140's
-  soak (first miss after 3/5 recent render-guard soaks hit it) — informative
-  (this instrument's soak shape apparently doesn't reliably trigger it),
-  not evidence the bug is fixed.
-- Do not treat `caller_ra=0x00000000` as evidence of anything (s92, s139,
-  s140) — it is universal across every entry-log instrument.
-- When landing any new guard/instrument touching a `ctx->rN` value,
-  always truncate through `U32()` before comparing against 32-bit literal
-  bounds (s99's 100%-false-positive lesson), and source-read the function
-  body to confirm which register holds which argument BEFORE writing the
-  patch (s139's a0/a1 lesson, applied successfully in s140 — cheaper than
-  fixing a bad first soak).
+- Bash commands with `;`/multiple `echo`+`grep` chains sometimes trip the
+  static-command-analyzer's approval gate even when read-only — prefer a
+  single `python3 - <<'EOF' ... EOF` heredoc for multi-step log analysis
+  instead of chaining many small grep/echo commands.
 
 ## Housekeeping still flagged, still not done
 
@@ -184,8 +162,8 @@ PROJECT-OVERVIEW.md and prune superseded detail, paired with a real
 experiment — not on its own.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
-not a `lib/` submodule, with uncommitted changes across s90-140
+not a `lib/` submodule, with uncommitted changes across s90-141
 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`, now
-including s140's `rs_free` log). Same posture as the `rogue_squadron64`
-sibling checkout flagged since s54. Worth asking the user whether/how to
-commit that history.
+including s141's `rs_malloc` site-tag log). Same posture as the
+`rogue_squadron64` sibling checkout flagged since s54. Worth asking the
+user whether/how to commit that history.

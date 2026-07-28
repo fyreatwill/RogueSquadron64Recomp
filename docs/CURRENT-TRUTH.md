@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s140)
+## Next steps, in order of expected value (s141)
 
 0a. **CLOSED (s135): `emitAllocatedDLCommand` soak hypothesis parked,
     3-attempt budget exhausted per rule 8.** s133 → environment-side
@@ -726,6 +726,29 @@ cost three sessions before the recursive mutex.
     own base). Neither is yet named to a source function. Full detail:
     PORTING-STATE s139-s140.
 
+    **s141** named candidate B and refuted the leading guess for both.
+    Source-reading (subagent) proposed both candidates by exact-integer
+    divisibility only (`setupSongRenderBuffers`'s own `rs_malloc` call
+    divides 8568 exactly by 24; `buildSongDecodeBufferRing`'s 2nd call
+    divides 32768 exactly by 256) — flagged explicitly as unproven. A
+    call-site tag instrument (`ROGUESQ_LOG_RS_MALLOC_SITE`) correlating
+    against the existing `[rs-malloc]` log by sequence order (12/12
+    positive control) **refuted both guesses directly**: across 6 calls
+    each this run, neither site ever produced 8568 or 32768. But the log
+    pinpointed the real producers unguessed: **candidate B
+    (`0x8016FD20`/8568B) is `allocateSongChannelArray`'s own second
+    `N*(voiceCount+1)*136` allocation (`funcs_23.c:11033`)** — confirmed
+    by log-order position (sits exactly between the `V*2576` pair and the
+    literal-664 call, matching source order) and by arithmetic on this
+    run's own live values (`voiceCount=20`, `N=3` → `3*21*136=8568`
+    exactly). **Candidate A (`0x80171470`/32768B) is refuted as an
+    audio-subsystem allocation at all** — its one occurrence in the log
+    sits immediately after `[overlay] start-match: section 4`, i.e. it's
+    produced during overlay loading, a different subsystem than 4
+    sessions (s105-140) assumed. Same-run death was the already-tracked
+    `do_rom_read`/`piDmaWorker` corruption SIGSEGV (not a new class).
+    Full detail: PORTING-STATE s141.
+
 0d. **s139: ran the discriminating rs_malloc-range-overlap measurement
     s138 called for.** Landed a universal `rs_malloc` allocation log
     (`ROGUESQ_LOG_RS_MALLOC=1`, `N64Recomp/fixup_game_funcs.py`, patches
@@ -746,17 +769,25 @@ cost three sessions before the recursive mutex.
     3rd/4th straight `do_rom_read`/`piDmaWorker` recurrence across the last
     2 sessions' soaks. Full detail: PORTING-STATE s139.
 
-**Next work unit (s140): discriminate among the 3 boot-time candidates.**
-Neither a literal-constant grep (tried, s139, no hits — sizes are
-runtime-computed) nor the existing instruments can tell them apart. Two
-viable next moves, pick one: (a) add an `rs_free` log (mirror the
-`rs_malloc` patch shape, same file) and re-soak — if exactly one of the 3
-candidates gets freed before a same-run corruption hit, that is strong
-evidence it's the freed-but-not-cleared source; (b) source-read the boot
-sequence in `N64Recomp/RecompiledFuncs/funcs_23.c`/`funcs_24.c` around the
-call that immediately follows each `allocateSongChannelArray` invocation
-(the 7728-byte candidate's caller) to identify it by control flow instead
-of by register value, since `caller_ra` is confirmed permanently unusable.
+**Next work unit (s141→s142): find candidate A's real overlay-load
+producer, and check candidate B's write pattern.** Two independent leads,
+either is a valid next work unit:
+(a) Candidate A (`0x80171470`/32768B) is now known to fire during overlay
+loading (log context: right after `[overlay] start-match: section 4
+rom=0x00137580 at ram=0x800A5130`), not audio boot — grep `rs_malloc` call
+sites reachable from the overlay-load path (`overlays.cpp` / the guest
+overlay-init functions, not `funcs_23.c`/`funcs_24.c`) for one computing
+32768 (or whose call sequence sits right after an overlay start-match
+log line). Do NOT re-search the audio files for this candidate; that
+angle is now closed by s141's direct measurement.
+(b) Candidate B is now named (`allocateSongChannelArray`,
+`funcs_23.c:11033`, `N*(voiceCount+1)*136` sized) — the next
+discriminating move per the original plan is checking whether this
+function's own write pattern into that buffer could plausibly produce
+the corruption's known ASCII-fragment byte shape (`"explo_tex2"`,
+`"lgfr"`, `"wing"`, established s94/s102) — i.e. is this a string/name
+table or a struct array. Source-read `funcs_23.c` around line 11033
+onward for what it stores into the buffer it just allocated.
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with

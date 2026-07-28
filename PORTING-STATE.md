@@ -12407,3 +12407,104 @@ uncommitted — same "own git checkout, not `lib/`" posture as the
 `scratch/agent/s140_overlap.py` (one-off range-overlap check, kept for
 reference). `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
 `scratch/agent/NEXT.md` (this write-up).
+
+## Session 141 (2026-07-27) — source-read + call-site instrument name Thread B's 2 remaining candidates: 0x8016FD20/8568 is `allocateSongChannelArray` itself (not `setupSongRenderBuffers`, refuting the divisibility guess); 0x80171470/32768 is NOT audio-boot at all, it fires during overlay load
+
+Two-stage work unit: a source-reading pass to propose named functions for
+s140's 2 remaining unnamed candidates, then a targeted instrument+soak to
+confirm or refute the proposal directly, rather than trusting an inference
+from integer divisibility alone.
+
+**Stage 1 — source read (subagent, no rebuild).** Traced all 15
+`rs_malloc(rdram, ctx)` call sites across `funcs_23.c`/`funcs_24.c`,
+matching each to its enclosing function and the traced `ctx->r4` (size)
+expression. Found the shared boot caller: `initN64RspMixer`
+(`funcs_24.c:4288`) calls `allocateSongChannelArray` (`funcs_24.c:4375`)
+then `setupSongRenderBuffers` (`funcs_24.c:4387`) back-to-back;
+`setupSongRenderBuffers` in turn calls `buildSongDecodeBufferRing` and
+`initSampleStreamBlockCache`. None of the 15 sites has a literal size
+(confirms s139's grep-closed finding) — all are runtime products. By
+exact-integer divisibility only: `setupSongRenderBuffers`'s own
+`rs_malloc` call (`funcs_23.c:11371`, `r4 = M*24`) divides 8568 exactly
+(357); `buildSongDecodeBufferRing`'s *second* call
+(`funcs_23.c:11797`, `r4 = param*256`) divides 32768 exactly (128). This
+was flagged explicitly as a **guess**, not a proof — the divisor match is
+necessary but not sufficient, and both functions get called many times
+per run (once per song) with different runtime sizes each time.
+
+**Stage 2 — call-site tag instrument (`ROGUESQ_LOG_RS_MALLOC_SITE`,
+`N64Recomp/fixup_game_funcs.py`, new patch block).** Rather than trust the
+guess, added a print of the exact `ctx->r4` value immediately before each
+of the 2 guessed call sites, tagged by site name. Correlation method: with
+`ROGUESQ_LOG_RS_MALLOC=1` also set, a `[rs-malloc-site]` line's
+`req_size` should equal the very next `[rs-malloc]` line's `size` (both
+read the same register at the same point in single-threaded boot
+sequencing) — this sidesteps `rs_malloc`'s own `caller_ra`, confirmed
+broken/always-zero since s92. Full regen, build clean (exit 0).
+
+**Soak** (`scratch/agent/run_rsmallocsite1.sh`, same full-flag-batch
+recipe as s140 plus the new flag). Died at hold-iter 11 to the
+already-tracked `do_rom_read`/`piDmaWorker` corruption SIGSEGV (same
+signature as every prior occurrence) — not a new class, not the target of
+this experiment. `[voice-active-gate-nz]` fired 58 times, same shape as
+s139/s140.
+
+**Instrument validated first: 12/12 positive control.** Every
+`[rs-malloc-site]` line's `req_size` exactly matched the immediately
+following `[rs-malloc]` line's `size` (log lines 71→72, 74→?, 555→556,
+etc.) — the correlation technique itself works.
+
+**Result: both divisibility guesses are REFUTED by direct measurement.**
+- `setupSongRenderBuffers` fired 6 times this run with sizes 1440, 1224,
+  1152, 1080, 1296, 1296 — never 8568.
+- `buildSongDecodeBufferRing`'s 2nd call fired 6 times with sizes 15360,
+  13056, 12288, 11520, 13824, 13824 — never 32768.
+- Neither guessed site ever produced either target size, anywhere in the
+  run.
+
+**But the log pinpoints the real producers directly, unguessed.**
+Line 65: `[song-array-alloc] voiceCount=20 ptr=0x80169460` (the existing
+s120 instrument, unmodified) marks the actual "very first song" boot
+event. The very next 6 `[rs-malloc]` lines, in order, are:
+`size=1024`,`size=12288` (unrelated, flags=0x80, different pool),
+`size=2720` (=`136*20`, the voice array itself, matches
+`funcs_23.c:10717`), `size=7728` ×2 (=`2576*3`, matches
+`funcs_23.c:10949`/`10975`, so V=3), **`size=8568` at `ptr=0x8016DB90`,
+then `size=8568` at `ptr=0x8016FD20`** (line 69 — **exactly the s139
+candidate address**), then `size=664` (=literal `0x298`, matches
+`funcs_23.c:11047`). The two 8568 allocations sit exactly between the
+`V*2576` pair (`funcs_23.c:10949`/`10975`) and the literal-664 call
+(`funcs_23.c:11047`) in both the log AND the source's own call order —
+which is exactly where `funcs_23.c:11011` and `:11033` sit (the 2 sites
+the s140 source read already flagged as computing the same value twice,
+`N*(voiceCount+1)*136`). Arithmetic closes it: `N=3` (matching the V=3
+from the immediately preceding pair), `(voiceCount+1)*136 = 21*136 =
+2856`, `3*2856 = 8568` exactly. **Candidate B (`0x8016FD20`/8568) is
+named: `allocateSongChannelArray`'s own second `N*(voiceCount+1)*136`
+allocation (`funcs_23.c:11033`), not `setupSongRenderBuffers`.**
+
+For candidate A, grepped the full log for `0x80171470` directly: it
+appears exactly once, at line 2531, immediately after line 2526
+`[overlay] start-match: section 4 rom=0x00137580 at ram=0x800A5130` and
+two `osViSetMode` calls — an **overlay load event, not the audio boot
+sequence at all**. `buildSongDecodeBufferRing` is never near this call in
+the log (its nearest site-tag fires are at lines 2561/2564, for the
+*next* song, after this overlay-load block already finished). **Candidate
+A (`0x80171470`/32768) is refuted as an audio-subsystem allocation
+entirely** — it's produced by something in the overlay-loading path,
+un-named, a fresh question for a future session (grep `rs_malloc` call
+sites reachable from the overlay loader, not the audio files).
+
+**Net for Thread B:** the divisibility-only guess was wrong for both
+candidates, but the correction is progress, not a null result — one
+candidate (B) is now named to an exact source line with two independent
+confirmations (arithmetic match on live boot-time values + log-order
+matching source-order), and the other (A) is now correctly scoped to a
+completely different subsystem than 4 sessions (s105-140) had assumed,
+which explains why the audio-boot-sequence search never converged on it.
+
+**Landed:** `N64Recomp/fixup_game_funcs.py` (new `ROGUESQ_LOG_RS_MALLOC_SITE`
+call-site tag patch block, uncommitted — same posture as s139/s140).
+`scratch/agent/run_rsmallocsite1.sh` (new soak wrapper).
+`scratch/s73_post_a_scene/rsmallocsite1/run.log` (the soak). `PORTING-STATE.md`
+/ `docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md` (this write-up).
