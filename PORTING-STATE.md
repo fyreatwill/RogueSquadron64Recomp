@@ -13764,3 +13764,125 @@ shape in other functions).
   came before the hold window produced much to capture).
 - No `lib/` or `N64Recomp/` edits this session — pure analysis of
   existing armed logging plus one soak with an existing instrument set.
+
+## Session 154 (2026-07-27) — re-ran the extended-hold soak (2nd of 3 allowed attempts) — this time it reached the crawl scene, the RDP `fs` plateau **recovered on its own mid-run**, and the game rendered the furthest-ever new content (a planet-horizon shot then a ship silhouette, cinematic-shaped) before dying to a brand-new, unrelated 20th crash class
+
+### What ran
+
+Exactly NEXT.md's prescribed retry: moved s153's `extendhold1/` capture
+dir aside (`extendhold1_s153`), reran `scratch/agent/run_extendhold1.sh`
+unchanged (`HOLD_S=120`, same instrument battery), blocked on the process
+exiting, then read `run.log`'s `[vi-fs-decision]` tail the way s153 did.
+
+### Found
+
+**The freeze recovers.** This run reached the crawl scene
+(`[phase] vi_width=640 (was 512) origin=0x006A2900 at 141.4s
+update_screen #8483`, same origin s151-s153 already tied to the intro
+cinematic) and initially reproduced the exact s152/s153 signature:
+`rdpFs` (RDP FULL_SYNC opcode count) plateaus at **3516**, holding flat
+across decisions **#8970 through #9656** (686 consecutive
+`[vi-fs-decision]` entries, all `FIRE reason=swap`, synthetic swaps
+firing the whole time with `rdpFs` never moving — the identical
+"synthetic FIRE continues after `fs` plateau" shape s80/s152/s153
+characterized). Unlike every prior observation of this signature,
+**this run did not stay stuck**: by decision **#10912**, `rdpFs` had
+moved to **4142**, and it kept climbing steadily all the way to
+**5607** at the moment of the eventual crash (`fs max: 5607` in the
+soak summary, confirmed via a dense per-decision dump — no further
+plateau after the recovery point). This directly answers NEXT.md's open
+question: **the FULL_SYNC-loss state is not a permanent stall in at
+least this instance** — it is a transient condition the run recovered
+from unassisted, after being stuck for roughly 686 decisions (out of
+~10600 total in the log).
+
+**Bonus, unplanned — furthest content ever reached.** The screenshots
+across the plateau/recovery window show *why* `fs` resumed: the game
+was still progressing through cinematic content the whole time, just
+not draining the RDP queue for a stretch. `hold_45/60/85.png` (before
+and during the plateau) are pure black. `hold_90.png` — taken during
+the climb from 3516 toward 5607 — is a **new scene never seen before in
+this investigation**: a curved planetary horizon against black space,
+composed exactly like the iconic *Star Wars* opening establishing shot.
+`hold_95.png` and `hold_101.png` (the last frame before death) show a
+second new scene: a fan of dark radiating lines converging on a bright
+white wedge with a dark red/black shape at the right edge — read as an
+engine-glow/ship-silhouette shot, consistent with a Star-Destroyer-style
+flyover matching the "AMBUSH AT MOS EISLEY" mission's Tatooine setting.
+Both scenes are geometrically coherent (no corruption, no garbage
+colors) — a different, cleaner failure mode than every prior post-leave
+scene in this investigation. This is the first time the process has
+rendered content past the crawl text at all.
+
+**New, 20th crash class.** The run ultimately died (`CRASH: 1`, hold-
+iter 102/120, `hold done wall=111s`) to a SIGBUS with a backtrace never
+seen before in ~154 sessions:
+
+```
+loadCraftShadowTextures + 612
+ <- allocateAndInitCraftNpcContext + 564
+ <- static_6_800A7C4C + 10756
+ <- load_cutscene + 4300
+ <- cinematicLoopBody + 3160
+ <- mainGameLoop + 5220
+```
+
+Grepped both docs for every symbol in this backtrace — zero prior hits.
+This is a distinct call chain from the `processSceneNode`/
+`submitSceneNodeRender`/`traverseSceneGraphRecursive` family that every
+crawl-scene/craft-select crash so far (s151, s153) has shared; it is
+also distinct from the guarded hangar-tick family (composeNpcOrientation
+Matrix, projectModelBoundsToScreen, etc.) and from the tracked `do_rom_
+read`/DMA-ring race. `load_cutscene` and `cinematicLoopBody` are new
+names in this investigation's vocabulary — consistent with the game
+having moved from the crawl into an actual mission-intro cutscene
+(craft/NPC shadow-texture loading is exactly what a cinematic establishing
+shot would trigger). Not source-read this session — 1 occurrence, not
+yet root-caused, catalogued per the standing convention (the retracted
+"20th" from s116/s126 leaves this number free; s99-101's unguarded-
+table-deref shape has not been confirmed here, this is a fresh site).
+
+### What this rules out / reframes
+
+- Refutes reading the s79/s80/s152/s153 "`fs` plateau + synthetic FIRE
+  continues" signature as an unconditional permanent hang — it is a
+  slow patch, not necessarily terminal. Future observations of the same
+  signature should not be assumed stuck without watching `rdpFs` over a
+  longer window first.
+- Reframes the crawl-scene investigation: the blocker to reaching
+  further mission content is **not** primarily the FULL_SYNC-loss state
+  (which resolved itself here) but the crash-class gauntlet — this run
+  got further than any before specifically because it survived long
+  enough for the plateau to clear on its own, then died to an unrelated,
+  new bug once genuinely new content (the cutscene) started exercising
+  code paths (texture/NPC-context allocation for a cutscene) this
+  investigation had never reached before.
+- Does not tell us whether the recovery is reliable/reproducible (n=1)
+  or was itself luck (e.g., some other counter crossing a threshold).
+  Don't generalize "it always recovers" from one instance.
+
+### Next work unit
+
+Per NEXT.md's own plan, the immediate next step is to characterize the
+new 20th class (`loadCraftShadowTextures`/`allocateAndInitCraftNpcContext`)
+the same way s99-s101 characterized the hangar-tick family: source-read
+first (find the exact host file/offsets via `machoparse.py` against
+`symbol_files/`), confirm whether it's the same unguarded-table-deref
+shape, and guard it if so. This is now the standing blocker to reaching
+further into the mission-intro cutscene, since the `fs`-plateau question
+that motivated the last 3 sessions is provisionally answered (recovers,
+at least once).
+
+### Files
+
+- `scratch/s73_post_a_scene/extendhold1_s153/` — s153's original crash
+  artifacts, preserved before this session's rerun overwrote
+  `extendhold1/`.
+- `scratch/s73_post_a_scene/extendhold1/` — this session's run: `run.log`
+  (100626 lines) + `hold_01..101.png` (new: `hold_90.png` planet-horizon
+  shot, `hold_95.png`/`hold_101.png` ship-silhouette shot).
+- `scratch/agent/run_extendhold1b_driver.log` — this session's driver
+  log (kept separate from s153's `run_extendhold1_driver.log` per
+  NEXT.md's own instruction).
+- No `lib/` or `N64Recomp/` edits this session — reused s153's script
+  and instrument battery unchanged, pure soak + log/screenshot analysis.

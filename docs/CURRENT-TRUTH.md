@@ -657,9 +657,45 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s153)
+## Next steps, in order of expected value (s154)
 
--5. **NEW TOP PRIORITY (s153): the crawl-scene hang IS confirmed the same
+-6. **NEW TOP PRIORITY (s154): the "does the FULL_SYNC-loss freeze
+    recover" question is ANSWERED — yes, at least once — and a new,
+    20th crash class now blocks further progress.** 2nd of 3 allowed
+    `run_extendhold1.sh` (`HOLD_S=120`) attempts, unchanged from s153's
+    script. This time it reached the crawl scene
+    (`origin=0x006A2900` at `141.4s`) and reproduced the plateau exactly
+    (`rdpFs` stuck at `3516` across decisions `#8970`-`#9656`, 686
+    consecutive `FIRE reason=swap` entries) — but then **`rdpFs` resumed
+    climbing** (`4142` by `#10912`, up to `5607` at the eventual crash),
+    contradicting a "permanent stall" reading. Screenshots show why: the
+    game kept progressing through cinematic content underneath the
+    frozen counter — `hold_90.png` is a brand-new scene (planetary-horizon
+    establishing shot, geometrically clean, no corruption) and
+    `hold_95.png`/`hold_101.png` show a second new scene (engine-glow
+    fan + dark ship silhouette, Star-Destroyer-flyover-shaped) — the
+    furthest the process has ever rendered past the crawl. **Do not
+    treat a `[vi-fs-decision]` plateau as automatically permanent going
+    forward** — watch `rdpFs` over a longer window before concluding
+    "stuck." Death was a brand-new, never-before-seen backtrace:
+    `loadCraftShadowTextures ← allocateAndInitCraftNpcContext ←
+    static_6_800A7C4C ← load_cutscene ← cinematicLoopBody ← mainGameLoop`
+    — grepped clean against both docs, a genuinely new call chain (not
+    the `processSceneNode` family s151/s153 crashed in, not any guarded
+    hangar-tick site, not the tracked `do_rom_read` race). Catalogued as
+    the **20th class** (the earlier "20th" from s116/s126 was retracted,
+    so the number was free) — 1 occurrence, not yet source-read.
+    **Next work unit: source-read `loadCraftShadowTextures`/
+    `allocateAndInitCraftNpcContext`** the same way s99-s101 characterized
+    the hangar-tick family (`machoparse.py` + `symbol_files/` to map the
+    crash offset back to source; check for the same unguarded
+    table-lookup-then-deref shape) and guard it if it matches — this is
+    now the standing blocker to reaching further into the mission-intro
+    cutscene, since the `fs`-plateau question that motivated s151-s153
+    is provisionally closed (recovers, n=1 — don't over-generalize from
+    one instance). Full detail: PORTING-STATE s154.
+
+-5. **s153: the crawl-scene hang IS confirmed the same
     class as s79/s80's FULL_SYNC-loss (item 1 from s152 is now closed);
     the "does it ever recover on a long hold" question is still open —
     the soak built to test it got preempted by an early, unrelated crash
