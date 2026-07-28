@@ -18114,3 +18114,89 @@ re-attempted this session — no evidence the allowlist changed since
 s193/s194, and the mcontext dump plus this session's stack-based crash
 identification continue to make disassembly unnecessary for the crashes
 seen so far.
+
+## Session 196 (2026-07-28) — landed the 13th-class `reinterpretTileRecord` guard per NEXT.md; soak never reached it, instead hit a fresh recurrence of the long-standing 18th crash class even earlier than the 13th class's own decisionN, promoting it ahead in the blocker order
+
+Per NEXT.md's fully-specified work unit: replaced the hard `assert("Unimplemented
+reinterpretation logic." && (...))` in `RT64::FramebufferManager::reinterpretTileRecord`
+(`lib/rt64/src/hle/rt64_framebuffer_manager.cpp:475-480`) with a named `reinterpretSupported`
+bool (the exact same 3-way OR condition, unchanged) and, when false, a bounded fire-counter
+log gated by `ROGUESQ_LOG_REINTERPRET_TILE_GUARD=1` (`[reinterpret-tile-guard] n=... srcId=...
+dstId=... srcFmt=... srcSiz=... dstFmt=... dstSiz=... tlutFormat=...`) followed by `return;`
+instead of dispatching the reinterpret — mirrors the s192 `queueGPUUploadTMEM` guard pattern
+exactly, per NEXT.md's instruction. Pure `lib/rt64` host C++, no guest regen needed. Rebuilt
+clean (`cmake --build build --target RogueSquadron64Recomp -j`,
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`) — only the pre-existing
+`operator""_json`/`operator""_json_pointer` deprecation warnings from `contrib/json/json.hpp`,
+unrelated to this change. Exported patches (`./submodule-patches/export.sh`,
+`submodule-patches/rt64.patch` +43 lines) and committed in this session per the hard rule.
+
+**Soak (`reinterptileguard1`, exact same config as s195's `mcontext2`/`sceneptrguard5` plus the
+new `ROGUESQ_LOG_REINTERPRET_TILE_GUARD=1`, via `run_mission_keys.sh reinterptileguard1 5 12`):**
+`[reinterpret-tile-guard]` fired **0 times** — same for `[scene-node-ptr-guard]` (0 times, still
+untested). The soak died at `decisionN=7902` — **earlier** than s195's `reinterpretTileRecord`
+assert hit (~7968) — to a SIGBUS (signal 10), `far=0x380000000`, backtrace: nearest-symbol
+`heapFreeListDequeue + 12704` ← `submitSceneNodeRender + 28208` ← `processSceneNode + 7800` ←
+`traverseSceneGraphRecursive + 1576` ← `setupCameraMatrices + 27372` ← `static_5_800AAD9C`
+(`runHangarSelectionFrame`) ← `static_5_800C6854` (`runHangarMenuFromOverlay`) ←
+`menuOverlayInit` ← `mainGameLoop`.
+
+**This is not a new crash.** Cross-referenced against PORTING-STATE: this exact nearest-symbol
+signature and outer call chain is the project's own **18th crash class**, first catalogued s108,
+source-read and guarded s123 (`ROGUESQ_LOG_SCENE_NODE_LIST_GUARD`, an unbounded linked-list
+tail-walk with no pointer validation), then **reopened** at s131/s134 when the guarded idiom
+fired 0/0 across two independent post-guard recurrences of the identical
+`heapFreeListDequeue + 12704` string — meaning the guarded free-list-walk is refuted as the
+actual cause, and the true crash site inside `submitSceneNodeRender` (or a nearest-symbol
+misattribution outside it entirely) was left unresolved as of s135, the last session that
+touched it. This session's occurrence (`submitSceneNodeRender + 28208`) matches s181's own
+single occurrence of the same offset almost exactly (`submitSceneNodeRender + 28208`, s181,
+also un-chased, flagged "if it recurs"). **This is that recurrence** — 2nd occurrence of the
++28208 offset specifically, ~15 sessions later, same nearest-symbol string, same full outer
+chain. Per iron rule 4 (two independent lines of evidence), this now qualifies as a confirmed,
+still-open, still-unfixed crash class blocking soak progress — and unlike the last several
+sessions' dominant blockers, it fires **before** the 13th-class guard's own target line, so it
+is now the earliest blocker in soak order, ahead of both the newly-guarded 13th class and the
+untested s190 scene-node-ptr-guard.
+
+**What this rules in/out for the new guard:** `[reinterpret-tile-guard]`'s 0-count result is
+**inconclusive by itself** — it cannot distinguish "the guard is correct and the unsupported
+format combo simply hasn't recurred a 3rd time" from "the guard is unreachable this run because
+something else (the 18th class) now kills the process before `reinterpretTileRecord` is ever
+called." This run demonstrates the latter: decisionN=7902 < the s195 assert's ~7968, so the
+guard's own code path was never reached at all this run. The guard itself is unverified (neither
+confirmed nor refuted) and should NOT be read as a null result under iron rule 1 — there is no
+positive control this run for anything past decisionN=7902.
+
+**Rules out:** nothing new about the 13th class itself (still parked at 2 occurrences, s96/s195,
+guard now landed but unverified). **Confirms:** the 18th class (`heapFreeListDequeue + 12704`)
+is still live, unfixed, and recurring as of 15+ sessions after its s181 sighting and ~65 sessions
+after its s131 reopening — the longest-standing unresolved crash family in the project, now
+also the most proximate blocker to any further soak progress.
+
+**Full detail**: this entry. Code: `lib/rt64/src/hle/rt64_framebuffer_manager.cpp` (guard
+added, patch exported + committed this session). Soak artifacts:
+`scratch/s73_post_a_scene/reinterptileguard1/` (run.log, screenshots), driver script
+`scratch/agent/run_reinterptileguard1.sh`.
+
+### Carried-forward open items
+
+1. **18th crash class (`heapFreeListDequeue + 12704` / `submitSceneNodeRender`) is the new
+   dominant blocker** — recurred this session at `+28208` (2nd sighting of that offset, after
+   s181), decisionN=7902, earlier than everything else currently tracked. Per NEXT.md's own
+   decision tree from s135 (never acted on since — the 13th class took priority in the
+   interim), the next pivot is a source-read of `submitSceneNodeRender`'s remaining
+   un-audited body (`funcs_4.c`) to find the actual unguarded pointer chase, since the s123
+   free-list-walk guard is refuted as the cause (0/0 across 2+ post-guard recurrences,
+   s131/s134, this session adds a 3rd with 0 fires again — not re-verified this session, but
+   consistent).
+2. `[reinterpret-tile-guard]` (13th class, this session) — landed, unverified (0/0, no
+   positive control this run). Needs either a run that doesn't die to the 18th class first, or
+   a forcing hook (mirror s193's `ROGUESQ_TEST_FORCE_TMEM_ZERO` approach) to get a positive
+   control independent of the 18th class's interference.
+3. `[scene-node-ptr-guard]` (s190) — still 0/5 (now 0/6) fires across every soak on record;
+   the primary open goal-stack question (does the s190 fix work) remains completely untested,
+   now blocked behind BOTH the 18th class and the 13th class in soak order.
+4. `processSceneNode+8772` / `far=rdram_base+0x80630062` (s194) — still single-occurrence,
+   non-recurring (this session's soak did not reach decisionN=9741 to re-test it), out of scope
+   per iron rule 4 until it recurs on its own.

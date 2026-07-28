@@ -663,7 +663,54 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s195)
+## Next steps, in order of expected value (s196)
+
+-45. **(s196) landed the 13th-class `reinterpretTileRecord` guard (mirrors
+    s192's `queueGPUUploadTMEM` pattern exactly) — but the soak never reached
+    it, dying instead to a FRESH recurrence of the long-standing 18th crash
+    class even earlier in decisionN, which is now the dominant blocker.**
+    Replaced the hard `assert("Unimplemented reinterpretation logic." &&
+    (...))` at `lib/rt64/src/hle/rt64_framebuffer_manager.cpp:476-480` with a
+    named `reinterpretSupported` bool (condition unchanged) + a
+    `ROGUESQ_LOG_REINTERPRET_TILE_GUARD`-gated bounded-counter log + early
+    `return;` on the unsupported-format-combo path. Pure `lib/rt64` change,
+    rebuilt clean, patch exported + committed.
+
+    Soak (`reinterptileguard1`, identical config to s195's `mcontext2` plus
+    the new env var, `run_mission_keys.sh reinterptileguard1 5 12`):
+    `[reinterpret-tile-guard]` 0 fires, `[scene-node-ptr-guard]` 0 fires
+    (still 0/6 cumulative). Died at `decisionN=7902` — **earlier** than
+    s195's `reinterpretTileRecord` assert hit (~7968), meaning the new guard
+    was never even reached this run. Crash: SIGBUS, nearest-symbol
+    `heapFreeListDequeue + 12704` ← `submitSceneNodeRender + 28208` ←
+    `processSceneNode` ← `traverseSceneGraphRecursive` ←
+    `setupCameraMatrices` ← `runHangarSelectionFrame` ←
+    `runHangarMenuFromOverlay` ← `menuOverlayInit` ← `mainGameLoop` — this is
+    the project's own **18th crash class** (catalogued s108, guarded s123,
+    **reopened** s131/s134 when the s123 guard fired 0/0 across 2 independent
+    post-guard recurrences, meaning the guarded free-list-walk is refuted as
+    the real cause). This session's `+28208` offset matches s181's own single
+    prior sighting of that exact offset almost exactly — **this is that
+    sighting's 2nd occurrence**, ~15 sessions later, confirming it under
+    iron rule 4. It is the longest-standing unresolved crash family in the
+    project (first flagged s108) and is now, for the first time, also the
+    earliest blocker in soak order — ahead of both the 13th class (guarded
+    this session, unverified) and the s190 scene-node-ptr-guard (still
+    completely untested, 0/6).
+
+    **Best next work unit**: source-read `submitSceneNodeRender`'s remaining
+    un-audited body (`funcs_4.c`) to find the actual unguarded pointer chase
+    behind the 18th class — the s123 guard covers the wrong mechanism
+    (refuted s131/s134), so a fix requires finding what else in that
+    function dereferences an unvalidated pointer. This was already NEXT.md's
+    own decision-tree pivot as of s135 but was never acted on (the 13th class
+    took priority in the interim). If a source-level guard can be landed and
+    confirmed live, the 13th-class guard becomes newly testable in the same
+    soak that tests it. Do NOT re-touch the s123
+    `ROGUESQ_LOG_SCENE_NODE_LIST_GUARD` guard itself (confirmed not the
+    cause, standing since s131). Do NOT re-touch the 13th-class guard landed
+    this session (correct per spec, just unverified — needs either a run
+    that survives past the 18th class, or a forcing hook).
 
 -44. **(s195) re-ran s194's mcontext soak for a 2nd occurrence — s194's
     `processSceneNode`-adjacent crash did NOT recur; instead the soak died
@@ -3465,12 +3512,12 @@ and named it. Full detail: PORTING-STATE s143.
      `FramebufferManager::reinterpretTileRecord`
      (`rt64_framebuffer_manager.cpp:476-480`, s96) — RDP-submission path,
      not the hangar-tick family. **2nd occurrence confirmed s195** (~99
-     sessions later, byte-for-byte identical backtrace) — no longer
-     single-occurrence, promote out of "parked." Now the current dominant
-     pre-target-window blocker (fires at decisionN~7968, before the
-     9660-9792 target window). Unguarded — best next work unit is an
-     early-return guard mirroring `queueGPUUploadTMEM`'s pattern (see s195
-     next-steps entry).
+     sessions later, byte-for-byte identical backtrace). **Guarded s196**
+     (`ROGUESQ_LOG_REINTERPRET_TILE_GUARD`, mirrors `queueGPUUploadTMEM`'s
+     pattern exactly, early-return on unsupported format combo instead of
+     asserting), 0/0 — no positive control yet, and the s196 soak never
+     reached this line at all (died earlier, to the 18th class) so this is
+     NOT a clean negative control either — genuinely untested this session.
    - 14th, `reserveAndEmitDLEntry` (s97/s98): scene-graph-traversal /
      DL-entry shape, not a bare `MEM_W`-off-an-arg deref — flagged as
      possibly needing different treatment than the table-lookup family.

@@ -756,7 +756,7 @@ index 873883d..a210afa 100644
      }
  
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
-index 7d385fa..4c145fd 100644
+index 7d385fa..ac7cba2 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
 +++ b/src/hle/rt64_framebuffer_manager.cpp
 @@ -6,6 +6,9 @@
@@ -949,6 +949,48 @@ index 7d385fa..4c145fd 100644
  
          TileCopy &srcTile = tileCopies[op.reinterpretTile.srcId];
          if (srcTile.ignore) {
+@@ -341,12 +472,37 @@ namespace RT64 {
+             dstTile.needsDiscard = false;
+         }
+ 
+-        // Assert for known reinterpretation cases only that are currently supported by the shader.
+-        assert("Unimplemented reinterpretation logic." && (
++        // PATCH: reinterpretTileRecord unsupported-format guard (s196) -- the
++        // hard assert below is the project's 13th crash class (first seen
++        // s96, parked "until 2nd recurrence", confirmed recurring at s195
++        // with a byte-for-byte identical backtrace). Mirrors the s192
++        // queueGPUUploadTMEM guard: compute the supported-cases condition,
++        // and if the format combo isn't one of the shader's known cases,
++        // skip the reinterpret dispatch instead of asserting.
++        // ROGUESQ_LOG_REINTERPRET_TILE_GUARD=1 logs each occurrence with a
++        // bounded fire counter.
++        const bool reinterpretSupported =
+             ((c.srcFmt == G_IM_FMT_RGBA) && (c.srcSiz == G_IM_SIZ_16b) && (c.dstSiz == G_IM_SIZ_8b) && (c.tlutFormat > 0)) ||
+             ((c.srcSiz == G_IM_SIZ_8b) && ((c.dstFmt == G_IM_FMT_CI) || (c.dstFmt == G_IM_FMT_I) || (c.dstFmt == G_IM_FMT_IA)) && (c.dstSiz == G_IM_SIZ_8b) && (c.tlutFormat == 0)) ||
+-            ((c.srcFmt == G_IM_FMT_RGBA) && (c.srcSiz == G_IM_SIZ_16b) && (c.dstFmt == G_IM_FMT_IA) && (c.dstSiz == G_IM_SIZ_16b))
+-            ));
++            ((c.srcFmt == G_IM_FMT_RGBA) && (c.srcSiz == G_IM_SIZ_16b) && (c.dstFmt == G_IM_FMT_IA) && (c.dstSiz == G_IM_SIZ_16b));
++
++        if (!reinterpretSupported) {
++            static int s_reinterpret_tile_guard_enabled = -1;
++            if (s_reinterpret_tile_guard_enabled < 0) {
++                const char *e = std::getenv("ROGUESQ_LOG_REINTERPRET_TILE_GUARD");
++                s_reinterpret_tile_guard_enabled = (e && e[0] && e[0] != '0') ? 1 : 0;
++            }
++            if (s_reinterpret_tile_guard_enabled) {
++                static int s_reinterpret_tile_guard_n = 0;
++                fprintf(stderr,
++                    "[reinterpret-tile-guard] n=%d srcId=%llu dstId=%llu srcFmt=%u srcSiz=%u dstFmt=%u dstSiz=%u tlutFormat=%u\n",
++                    s_reinterpret_tile_guard_n,
++                    (unsigned long long)(op.reinterpretTile.srcId), (unsigned long long)(op.reinterpretTile.dstId),
++                    c.srcFmt, c.srcSiz, c.dstFmt, c.dstSiz, c.tlutFormat);
++                s_reinterpret_tile_guard_n++;
++            }
++            return;
++        }
+ 
+         while (descriptorReinterpretSetsCount >= descriptorReinterpretSets.size()) {
+             descriptorReinterpretSets.emplace_back();
 diff --git a/src/hle/rt64_framebuffer_pair.cpp b/src/hle/rt64_framebuffer_pair.cpp
 index c944393..d8803d4 100644
 --- a/src/hle/rt64_framebuffer_pair.cpp
