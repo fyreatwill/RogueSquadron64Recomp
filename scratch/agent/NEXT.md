@@ -1,106 +1,86 @@
-# NEXT work unit — find composeNpcOrientationMatrix's 7th unguarded site
+# NEXT work unit — characterize the guest call chain feeding RT64's 15th crash class
 
-s157 closed out the s156 "shared corrupted dispatcher" question (refuted)
-and landed 4 new guards in `heapWalker` — real changes, built clean — but
-the soak's crash came from `composeNpcOrientationMatrix` again, at a site
-none of its existing 6 guards cover. Read PORTING-STATE's Session 157 entry
+s158 fully closed out the s157 work unit (composeNpcOrientationMatrix's 7th
+site: found, guarded, built, soaked) but the soak's crash was a different,
+already-catalogued class instead. Read PORTING-STATE's Session 158 entry
 before doing anything else; this file only has the actionable summary.
 
-## What s157 did and found
+## What s158 did and found
 
-1. Read `static_5_800AAD9C` end to end (`N64Recomp/RecompiledFuncs/
-   funcs_40.c:5464-5863`, guest `0x800AAD9C`+). It is a straight-line
-   per-frame tick: 13 unconditional `jal` calls in a fixed sequence
-   (`static_5_800C6660`, `pollControllerInputs`,
-   `setNewAndPreviousButtonsPressed`, `waitForPrevFrameDone`,
-   `frameStartReset`, `advancePlayerAnimationPhase`,
-   `activateAnimationKeyframe` x2, a conditional `static_5_800CBE00`,
-   `tickWrappingTimerAccumulatorList`, `hangarUpdateSecWeaponIfChanged`,
-   `static_5_800AB658`/`updateHangarBayScene`,
-   `static_5_800AB1C8`/`composeNpcOrientationMatrix`). **No branch, no
-   function pointer, no table index anywhere** — REFUTES the
-   "corrupted dispatcher" hypothesis. Do not revisit without new
-   evidence.
-2. Read `frameStartReset` itself (`funcs_3.c:7839-8086`, guest
-   `0x8000A6CC`-`0x8000A858`). Every `MEM_*` address there is a
-   compile-time constant (two fixed zero-fill loops, one table-index
-   load that only stores the result without dereferencing it) — **no
-   unguarded dereference in this function's own body.** Any future
-   `frameStartReset`-attributed crash is either in one of its two real
-   callees (`heapWalker`, `tickTextureMaterialExpiry`) or an inlining
-   artifact of the backtrace symbolication — don't re-read
-   `frameStartReset` itself again without new evidence pointing there.
-3. Read `heapWalker` (`funcs_3.c:99-560`, guest `0x800079F0`-
-   `0x80007CB4` — `frameStartReset`'s first, unconditional callee) end
-   to end and found **4 unguarded sites**: each reads a linked-list
-   head pointer from a per-mode table (offsets `0x63C8`/`-0x5B50`/
-   `-0x5BA8`/`-0x5B60`, indexed by a global mode byte), checks only
-   `== 0`, then dereferences it directly with no upper/lower bound —
-   the established family shape. Guarded all 4
-   (`ROGUESQ_LOG_HEAPWALKER_GUARD`, `N64Recomp/fixup_game_funcs.py`),
-   full regen, `cmake --build` exit 0, verified x1 each.
-4. Soaked (`scratch/agent/run_heapwalkerguard1.sh`) — **heapwalker-guard
-   0/0** (unvalidated, not exercised) and **all 6
-   `composeNpcOrientationMatrix` guards 0/0** again. Process died to a
-   **4th recurrence** of `composeNpcOrientationMatrix` (12th class) at
-   `static_5_800AB1C8 + 6168` (function now 12700B compiled per
-   `machoparse.py`, up from s99's 11632B — it has grown from the 6
-   guards' own inserted code), **outside all 6 existing guards**.
-   `arg_r4` at entry was ruled out as a discriminator (only ever
-   `0x00000000`/`0x00000001` across 537 calls this run, both common).
-5. A rough proportional-offset estimate (6168/12700 = 48.6% -> guest
-   line ≈6720 of `funcs_40.c:6280-7186`) landed in the guard4-guard5
-   gap (`:6620`-`:6780`) — but reading that exact gap found only
-   fixed-global byte compares and float matrix math, no unguarded
-   dereference. **The estimate did not localize a new site this time.**
+1. Read the two NEXT.md-flagged unaccounted-for regions of
+   `composeNpcOrientationMatrix` (`N64Recomp/RecompiledFuncs/funcs_40.c`):
+   `:6280-6374` (prologue, before guard1) — clean, no unguarded deref.
+   `:6857-7108` (between guard2 and guard6) — found the 7th site at guest
+   `0x800AB4E8`/`0x800AB4EC` (source `:6901-6904`): a pointer field is read
+   out of an already-guard2-validated table entry (`lw $v0, 0x4($s2)`) and
+   **immediately dereferenced** (`lw $v0, 0x0($v0)`) with **no check at
+   all** — stricter than guards 1-6's shape (those guard the table-entry
+   address itself; this guards a field read *out of* that entry).
+2. Guarded it (`ROGUESQ_LOG_COMPOSE_NPC_GUARD7`, `N64Recomp/
+   fixup_game_funcs.py`, inserted after the guard6 block, same
+   `U32()`-range-check-then-`goto L_800AB618` template). Full regen (`rm
+   funcs_*.c` → `make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py`
+   once), verified x1 via grep, `cmake --build` exit clean.
+3. Soaked (`scratch/agent/run_composeguard7.sh`). Reached SELECT YOUR CRAFT,
+   left into hangar-flight, died at **hold-iter 1, wall=0s**. Entry
+   diagnostic 508/508 (function reached) but **all 7 guards 0/0** —
+   `composeNpcOrientationMatrix` never crashed this run at all, so guard7 is
+   **unvalidated, not refuted**.
+4. The actual crash: signal 6, `assert((dstCallTile.sampleWidth > 0) &&
+   (dstCallTile.sampleHeight > 0))` in `RT64::State::loadDrawState`
+   (`rt64_state.cpp:747`) ← `RT64::RDP::drawTris` ← `GBI_RDP::decodeTriangles`.
+   This is the **already-catalogued 15th class** (first seen s97, recurred
+   s99, s149 — **this is its 4th occurrence**), RT64-internal, not a new
+   class and not `composeNpcOrientationMatrix`. It now recurs more reliably
+   and earlier (hold+0-14s across all 4 hits) than any single
+   `composeNpcOrientationMatrix` site — plausibly the thing preventing
+   guard7 (and heapWalker's 4 guards, also still 0/0 after 2 soaks) from
+   ever getting exercised.
 
 ## Do next
 
-1. **Read the still-unread regions of `composeNpcOrientationMatrix`**
-   (`N64Recomp/RecompiledFuncs/funcs_40.c:6280-7186`) for the same
-   "table/list-head read, `==0`-only check, then deref" shape used by
-   all 6 existing guards. Priority order (least-recently-read first):
-   - `:6280`-`:6374` (before guard1 — the function's own prologue and
-     early setup, never fully read in any prior session per available
-     notes).
-   - `:6857`-`:7108` (between guard2 and guard6 — a ~250-line span,
-     larger than the guard4-guard5 gap this session found clean).
-   - Only if both come up empty, re-check `:6374`-`:6581` (guard1 to
-     guard3) and `:6620`-`:6780` more carefully — this session's read
-     of the tail of that range (`:6640`-`:6780`) was not exhaustive
-     line-by-line, just a scan.
-2. **Guard whatever site is found**, following the established
-   template: bail via `goto` to the function's own exit label
-   (`L_800AB618` for interior sites; check which label is actually
-   reachable/correct for the new site's position), `U32()`-truncate-
-   then-range-check against `0x80000000`-`0x80800000`, same
-   fprintf-behind-an-env-var logging convention as guards 1-6.
-3. **Do not** re-run the exact same `heapwalkerguard1` soak shape again
-   without a code change first — `heapwalker-guard` is one clean 0/0,
-   not yet a 2nd non-discriminating attempt; it's fine to include the
-   flag in the next soak's battery (it's free) but the goal of the next
-   soak should be validating a NEW composeNpcOrientationMatrix guard,
-   not re-testing heapWalker.
-4. If a full line-by-line read of the entire function turns up nothing
-   new, consider: the 4th recurrence's crash might not be a 7th
-   *static* unguarded site but the SAME site as one of guards 1-6 hit
-   via a *different* register/path the existing guard's specific
-   register check doesn't cover (e.g. a guard that checks `ctx->r2` but
-   the crash this time corrupts a different register feeding the same
-   dereference instruction) — re-examine each existing guard's exact
-   checked register against the surrounding code for a sibling
-   unguarded register use nearby, not just brand-new lines.
+1. **Find the guest-side RDP-command dispatch that sets up the tile/sample
+   state `loadDrawState` consumes**, i.e. whatever populates
+   `dstCallTile.sampleWidth`/`sampleHeight` before `drawTris` is reached.
+   Start from the RT64 side to find the call boundary (`rt64_state.cpp`
+   around line 747 and its caller `RT64::RDP::drawTris` in
+   `rt64_rdp*.cpp`), then look for the corresponding guest-side RSP-command
+   handling (likely `gsDPSetTile`/`gsDPLoadTile`/`gsSPTriangle`-family
+   opcodes in `lib/rt64` or wherever this repo's RDP command interpreter
+   lives) that computes the sample dimensions from tile state. This is
+   `lib/` code (RT64), not `N64Recomp/` guest-recompiled code — if you edit
+   anything under `lib/`, run `./submodule-patches/export.sh` and commit
+   the refreshed patches in the same iteration (hard rule, CLAUDE.md).
+2. **Land a targeted instrument** (not a guess) that logs the tile-setup
+   inputs (whatever RDP command / tile index / mask+shift fields feed
+   `sampleWidth`/`sampleHeight`) at the point they're computed — the goal is
+   to see whether the zero/invalid value already exists in guest-supplied
+   tile state (matches this whole family's "guest data is corrupt/garbage,
+   guard it" pattern, and would make this class fixable the same way as the
+   16 guest-side guards already landed) or whether it's computed correctly
+   from sane guest inputs and then miscalculated on the RT64 side (would
+   mean this class is out of scope for the guest-guard approach entirely —
+   say so plainly and re-prioritize away from it if so).
+3. **Only if that instrument is inconclusive or this line of investigation
+   dead-ends after a reasonable attempt**, fall back to: soak again with
+   `ROGUESQ_LOG_COMPOSE_NPC_GUARD7=1` (already wired into
+   `scratch/agent/run_composeguard7.sh`, reusable) purely to get guard7 (and
+   the heapWalker guards) their first positive control — but per rule 8,
+   this is a *secondary* goal now, not a soak to run for its own sake a 3rd
+   time without a code change.
 
 ## Do not
 
-- Do not re-litigate the `static_5_800AAD9C` dispatcher hypothesis — closed,
-  refuted by direct source read (s157).
-- Do not re-read `frameStartReset` itself looking for a bug in its own
-  body — read end to end already, confirmed clean (s157). If it
-  recurs again, look at its callees instead.
-- Do not treat `heapwalker-guard`'s 0/0 as evidence the guard was
-  wrong — same "unvalidated, not yet exercised" status many guards in
-  this family carry before eventually getting hit.
+- Do not re-read `composeNpcOrientationMatrix`'s already-covered regions
+  (`:6374-6857`, guards 1-6's own neighborhoods) looking for an 8th site —
+  not indicated by any evidence yet; the s158 soak never even reached this
+  function's crash path.
+- Do not treat guard7 or the heapWalker guards' 0/0 as evidence they were
+  wrong — same "unvalidated, not yet exercised" status many guards in this
+  family carry before eventually getting hit. Two consecutive non-crashing
+  soaks is not the same as "this class stopped happening."
+- Do not re-litigate the `static_5_800AAD9C` dispatcher hypothesis (closed,
+  s157) or re-read `frameStartReset` itself (clean, s157).
 
 ## This session's environment notes (carry forward, still current)
 
@@ -111,21 +91,20 @@ before doing anything else; this file only has the actionable summary.
   (`machoparse.py <binary> <symbol>` prints size via next-symbol-by-
   address delta). Don't rediscover this.
 - **When testing a regex pattern against a RecompiledFuncs `.c` file
-  from the Bash tool, write a `.py` script file and run it — do NOT
+  from the Bash tool, write a `.py` script file and run it** — do NOT
   use `python3 -c "..."` with the outer shell command in DOUBLE
-  quotes.** Bash's double-quote escaping silently eats `\$` before
-  Python ever sees it (turns `\$v0` into `$v0`), making a perfectly
-  correct regex look like it doesn't match. This cost real time this
-  session chasing a phantom bug. Single-quoted `-c` args are safer but
-  a scratch `.py` file (see `scratch/agent/test_pattern.py`) is safest.
+  quotes (silently eats `\$` before Python sees it).
 - **Do NOT delegate a work unit's regen/build/soak/document steps to
   the Agent tool inside this autonomous loop** — Agent-tool delegation
-  is incompatible with the per-turn Stop-hook exit contract (the
-  subagent's result isn't available to close out the same turn). Do
-  every step directly with Bash/Read/Edit in this session's own turn.
+  is incompatible with the per-turn Stop-hook exit contract. Do every
+  step directly with Bash/Read/Edit in this session's own turn.
 - A crash-class hypothesis that held for one soak is not guaranteed to
   recur on the very next soak of the "same" scene — this family's
   crash-class selection has been highly variable across ~20 sessions.
+  The 15th class is the current exception: 4/4 recent late-window
+  soaks that didn't hit a `composeNpcOrientationMatrix` guard hit this
+  class instead, worth treating as the new default expectation for
+  this scene until disproven.
 - Function/line-number estimates in NEXT.md/PORTING-STATE drift a few
   lines every regen — always grep/read the actual regenerated file
   before writing a regex anchor or planning a reorder.
@@ -137,10 +116,8 @@ before doing anything else; this file only has the actionable summary.
 - `rm` on paths outside `scratch/` requires approval and does NOT accept
   glob patterns — use a `python3 -c` one-liner with `pathlib.Path.glob()`.
 - **Do NOT re-run `fixup_game_funcs.py` a second time in the same
-  session without a full regen first** (non-idempotent, s102 — s157
-  hit this again by accident: a 2nd invocation duplicated 3
-  `reserveAndEmitDLEntry`-related patches; caught before a build, fixed
-  by a clean re-regen). Delete `RecompiledFuncs/funcs_*.c`, re-run
+  session without a full regen first** (non-idempotent, s102/s157) —
+  Delete `RecompiledFuncs/funcs_*.c`, re-run
   `python3 tools/make_elf.py` (cwd `~/Documents/Tools/rogue_squadron64`),
   then `zsh tools/agent/regen_n64recomp.sh` (cwd this repo, NOT
   `N64Recomp`), THEN `fixup_game_funcs.py` once (cwd `N64Recomp`) —
@@ -149,9 +126,8 @@ before doing anything else; this file only has the actionable summary.
 - **When capturing a fixup/regen report with Bash, don't pipe through
   `tail -N` if you need to check for a specific file's entries** —
   `sorted(base.glob(...))` processes `funcs_3.c` before `funcs_4.c`,
-  `funcs_8.c`, etc. (lexicographic, not numeric), so early files' report
-  lines can scroll off a `tail`-truncated view of a 100+ line report.
-  Redirect to a log file and `grep` it instead.
+  `funcs_8.c`, etc. (lexicographic, not numeric). Redirect to a log file
+  and `grep` it instead.
 - `cmake --build` needs cwd `build/` and
   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` for Metal
   shader rebuilds.
@@ -165,31 +141,22 @@ before doing anything else; this file only has the actionable summary.
 - Checking submodule (`lib/...`) git status needs `env GIT_DIR=lib/X/.git
   GIT_WORK_TREE=lib/X git status --short`, or a plain `cd <absolute
   path>` as its own command followed by a separate `git status` call.
-  A plain `git status`/`git -C <path> status` from this repo's own root
-  can itself require approval in a non-interactive loop — if it does,
-  don't fight it; proceed without the status check when it's not load-
-  bearing for the current step.
 - Output redirection (`>`) from Bash is sandboxed to the session's
   allowed working directories — target `scratch/agent/`, not `/tmp`.
-  Also: a `cd <dir> && cmd > file` compound command in one Bash call can
-  itself get denied ("changes directories and write via output
-  redirection require explicit approval") — use an absolute path in the
-  redirect target and skip the `cd` instead.
+  A `cd <dir> && cmd > file` compound command in one Bash call can
+  itself get denied — use an absolute path in the redirect target and
+  skip the `cd` instead (run `cd <dir>` as its own prior Bash call).
 - Prefer a single `python3 script.py` file (Write then run) for
   multi-step log analysis instead of a bash heredoc.
 - Chaining many `grep`/`echo` statements with `&&`/`;` in one Bash call
   can trip the "multiple operations require approval" gate even when
   every individual command is allowlisted — split into separate Bash
-  calls, one command each, when this happens. Also true for a single
-  Bash call that both runs a command AND echoes a status line (e.g.
-  `cmd & echo "..."` in one call) — split those too. Also true for
-  unquoted `$g` shell-variable-like tokens in a for-loop one-liner
-  (bash reads `$g` as "simple_expansion" needing approval even inside
-  single quotes in some cases) — prefer literal repeated commands over
-  a shell for-loop with variable interpolation when this happens.
+  calls, one command each, when this happens.
 - This fix family lives entirely in the sibling `N64Recomp` checkout
   (`fixup_game_funcs.py` + regenerated `RecompiledFuncs/*.c`), not
-  `lib/` — no `submodule-patches/export.sh` step needed for it.
+  `lib/` — no `submodule-patches/export.sh` step needed for it. The
+  NEW work unit above (15th class) may live in `lib/rt64` instead —
+  if so, that step DOES apply.
 
 ## Housekeeping still flagged, still not done
 
@@ -200,6 +167,6 @@ many sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git
 checkout, not a `lib/` submodule, with uncommitted changes across
-s90-157 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
+s90-158 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
 Same posture as the `rogue_squadron64` sibling checkout flagged since
 s54. Worth asking the user whether/how to commit that history.

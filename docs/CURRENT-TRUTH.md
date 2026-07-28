@@ -657,32 +657,48 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s157)
+## Next steps, in order of expected value (s158)
 
--9. **NEW TOP PRIORITY (s157): find `composeNpcOrientationMatrix`'s
-    (12th class) 7th unguarded site.** s157 closed out the s156 "shared
-    corrupted dispatcher" investigation (refuted — see superseded
-    section) and instead found + guarded 4 new unguarded sites in
-    `heapWalker` (`ROGUESQ_LOG_HEAPWALKER_GUARD`, `N64Recomp/
-    RecompiledFuncs/funcs_3.c`) — landed, built clean, but
-    **unvalidated** (0/0, not exercised this soak). The soak's actual
-    crash was a **4th recurrence** of `composeNpcOrientationMatrix`
-    (12th class) at `static_5_800AB1C8 + 6168` (function now 12700B
-    compiled, up from s99's 11632B due to guards 1-6's own code) —
-    **outside all 6 existing guards** (all 0/0 this run). A rough
-    proportional-offset estimate (6168/12700 = 48.6% -> guest line
-    ≈6720 in `funcs_40.c:6280-7186`) landed in the guard4-guard5 gap
-    (`:6620`-`:6780`), but a direct read of that gap found only
-    fixed-global byte compares and float math — no unguarded
-    dereference. The estimate is not reliable enough to localize this
-    site on its own this time. Next work unit: read the other
-    unaccounted-for regions of the function not yet covered by any
-    guard or already read (roughly `:6280`-`:6374` before guard1, and
-    `:6857`-`:7108` between guard2 and guard6) for the same
-    "table/list-head read, `==0`-only check, then deref" shape; guard
-    whichever site matches, following the established template (`goto`
-    the function's own exit label, `U32()`-truncate-then-range-check).
-    Full detail: PORTING-STATE s157.
+-10. **NEW TOP PRIORITY (s158): characterize the guest-side call chain
+    feeding RT64's 15th crash class (`loadDrawState` zero-sample-size
+    assert).** s158 fully answered the s157 work unit (read both
+    flagged gaps in `composeNpcOrientationMatrix`; found and guarded a
+    genuine 7th unguarded site, `funcs_40.c:6901-6904` — a pointer field
+    read from an already-validated table entry then immediately
+    dereferenced with **no check at all**, `ROGUESQ_LOG_COMPOSE_NPC_
+    GUARD7`) but the soak's actual crash was **not**
+    `composeNpcOrientationMatrix` at all (all 7 guards 0/0, entry
+    diagnostic 508/508 confirms it was reached but never crashed) — it
+    was a **4th recurrence** of the already-catalogued **15th class**
+    (RT64-internal, `rt64_state.cpp:747`, `assert((dstCallTile.
+    sampleWidth > 0) && (dstCallTile.sampleHeight > 0))` in
+    `RT64::State::loadDrawState`, first seen s97, recurred s99/s149).
+    This class now recurs **more reliably and earlier** (hold+0-14s
+    across all 4 hits) than any single `composeNpcOrientationMatrix`
+    site — it is very likely the thing preventing guard7 (and future
+    guards) from ever getting exercised. It has no guest-side source
+    (RT64-internal), but unlike the TMEM-zero family (s86-90) **no
+    `ROGUESQ_LOG_*` instrument exists yet at the guest dispatch site**
+    that sets up the tile/sample state `loadDrawState` consumes — next
+    work unit: find the guest call site (search `GBI_RDP`/tile-setup
+    RDP command handling, likely `gsDPSetTile`/`gsDPLoadTile`-family
+    opcodes reaching `RT64::RDP::drawTris`'s call into `loadDrawState`)
+    that computes `dstCallTile.sampleWidth`/`sampleHeight`, and log its
+    inputs to see whether the zero/invalid value is guest-side garbage
+    (fixable by a guard, matching this whole family's pattern) or an
+    RT64-side arithmetic bug (not fixable here). Full detail:
+    PORTING-STATE s158.
+
+-9. **s157/s158: `composeNpcOrientationMatrix`'s (12th class) 7th
+    unguarded site found and guarded** (`funcs_40.c:6901-6904`,
+    `ROGUESQ_LOG_COMPOSE_NPC_GUARD7`) — landed, built clean, but
+    **unvalidated** (0/0, the function never crashed in the s158 soak;
+    see -10 above for why). s157 also found + guarded 4 new sites in
+    `heapWalker` (`ROGUESQ_LOG_HEAPWALKER_GUARD`) — still unvalidated
+    after 2 soaks (s157, s158) not exercising the crash path. Neither
+    0/0 result is evidence the guards are wrong; both remain dormant
+    until a soak's actual crash routes through them again. Full detail:
+    PORTING-STATE s157/s158.
 
 -8. **s156: refuted the "shared corrupted dispatcher" hypothesis for
     `static_5_800AAD9C`** by a full end-to-end source read (s157) — it

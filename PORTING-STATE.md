@@ -14304,3 +14304,102 @@ regression); `UnhandledJump`/`missing-func` both 0.
   truncation artifact on a 130-line report, not a real pattern bug; kept as
   a reusable pattern-testing harness, not deleted).
 
+## Session 158 (2026-07-27) — read the two NEXT.md-flagged unaccounted-for regions of `composeNpcOrientationMatrix`, found and guarded a genuine 7th unguarded site (`funcs_40.c:6901-6904`); soak's crash was a 4th recurrence of the already-catalogued 15th class (RT64-internal `loadDrawState` assert), guard7 unvalidated (0/0) — not a discriminating result for the guard itself, but rules out this exact site as a false lead and narrows the search further
+
+### What s158 did
+
+1. Read `N64Recomp/RecompiledFuncs/funcs_40.c:6280-6374` (the function's own
+   prologue, before guard1) line by line, per NEXT.md's priority order.
+   Found no unguarded dereference — every `MEM_*` access there is either a
+   register-save-to-stack, a fixed-global load (`lui`/`addiu` pair), or a
+   `lbu` off a fixed byte table already covered by the L_800AB228 loop's own
+   entry sequence (guard1 covers the resulting address at `:6374`). Clean.
+2. Read `funcs_40.c:6857-7108` (between guard2 and guard6) line by line, the
+   larger of the two flagged gaps. This range is the second loop's body
+   (`L_800AB49C`, structurally mirroring the first loop at `L_800AB228` but
+   operating on a second per-frame list). Found the 7th site at guest
+   `0x800AB4E8`/`0x800AB4EC` (source `:6901-6904`): after guard2 validates
+   `ctx->r3` (the table-entry address, matching `$s2`'s own value since both
+   derive from the same `s1 + fixed-global` computation), the code loads a
+   **new runtime pointer field** out of that entry — `ctx->r2 = MEM_W(ctx->r18, 0x4)`
+   (`lw $v0, 0x4($s2)`) — and **immediately dereferences it** —
+   `ctx->r2 = MEM_W(ctx->r2, 0x0)` (`lw $v0, 0x0($v0)`) — with **no check at
+   all**, not even guards 1-6's `==0`/range check. This is a stricter version
+   of the family's established shape (table/list-head read then deref): here
+   the loaded value isn't just an index into a fixed table, it's a pointer
+   field that could be null, stale, or garbage, dereferenced with zero
+   validation. Distinguishable from guard2's own site: guard2 protects the
+   *table-entry* address itself; this protects a *field read out of* that
+   already-validated entry, a different value entirely.
+3. Guarded it (`ROGUESQ_LOG_COMPOSE_NPC_GUARD7`, `N64Recomp/fixup_game_funcs.py`,
+   inserted right after the guard6 block): `U32()`-truncate the loaded field,
+   range-check against `0x80000000`-`0x80800000`, `goto L_800AB618` (the
+   function's own real exit label, same as all 6 prior guards) on failure,
+   fprintf-behind-env-var logging on the same convention. Anchored the regex
+   on the exact `lw $v0, 0x4($s2)` comment + statement pair, confirmed unique
+   via `grep` before writing the patch.
+4. Full regen (`rm RecompiledFuncs/funcs_*.c` → `make_elf.py` (cwd
+   `rogue_squadron64`) → `regen_n64recomp.sh` (cwd this repo) →
+   `fixup_game_funcs.py` once (cwd `N64Recomp`)) — fixup report confirms all
+   8 `composeNpcOrientationMatrix` patches (entry diagnostic + 7 guards)
+   applied exactly x1 each, guard7's code verified present exactly once via
+   `grep` in the regenerated `funcs_40.c`. `cmake --build` exit clean, no new
+   warnings.
+5. Soaked (`scratch/agent/run_composeguard7.sh`, same full battery as s157's
+   heapwalkerguard1 script plus `ROGUESQ_LOG_COMPOSE_NPC_GUARD7=1`). Reached
+   SELECT YOUR CRAFT stable, left into hangar-flight — then died at
+   **hold-iter 1, wall=0s** (earliest-class death timing, matching s99/s100's
+   "immediately post-leave" pattern). Entry diagnostic positive control fired
+   508/508 (function genuinely reached this run); **all 7 guards 0/0**
+   (guard7 included) — `composeNpcOrientationMatrix` did not recur this run
+   at all, so guard7 is unvalidated, not refuted.
+
+### The actual crash
+
+Signal 6 (Abort), `Assertion failed: ((dstCallTile.sampleWidth > 0) &&
+(dstCallTile.sampleHeight > 0) && ...), function loadDrawState, file
+rt64_state.cpp, line 747` — backtrace `RT64::State::loadDrawState` ←
+`RT64::RDP::drawTris` ← `RT64::GBI_RDP::decodeTriangles` ← ... ← guest
+`send_dl`/`run_lle_gfx`. This is the **already-catalogued 15th crash class**
+(RT64-internal, first seen s97, recurred s99 and s149 — **this is its 4th
+documented occurrence**), not a new class and not `composeNpcOrientationMatrix`.
+All standard controls held: `missing-func` 0, `UnhandledJump` 0, `thr-resume
+bad=1` 0, `ost-wb SKIP_WIDTH` 0 / `SKIP_OOB` 9 (pre-existing gate, no
+regression), `fs max` 3725, `heapwalker-guard` 0/0 (2nd consecutive
+unexercised soak — still not evidence it's wrong, per NEXT.md's own note).
+
+### What this rules out / establishes
+
+- `composeNpcOrientationMatrix`'s 7th site (`:6901-6904`) is a real,
+  well-characterized bug (unguarded pointer-field dereference) and is now
+  guarded — but **unvalidated**: this soak never re-entered the crash path
+  that would exercise it. Do not treat 0/0 here as "the site was wrong."
+- The 15th class (RT64-internal `loadDrawState` zero-sample-size assert) is
+  now the **most-recurring single blocker** in this family at 4 documented
+  hits (s97, s99, s149, s158), consistently landing very early post-leave
+  (hold+0-14s across occurrences) — more consistently early than any single
+  `composeNpcOrientationMatrix` site has been. It is RT64-internal (no
+  guest-side source to patch directly), but the *guest-side call chain that
+  feeds it a zero/invalid sample dimension* has never been characterized —
+  unlike the TMEM-zero family (s86-90), no `ROGUESQ_LOG_*` instrument exists
+  at the guest dispatch site that would show what tile/texture state is
+  responsible. This is now a plausible next-highest-value target: it recurs
+  more reliably than any remaining `composeNpcOrientationMatrix` site and
+  may be blocking guard7 (and future guards) from ever getting validated.
+
+### Files touched
+
+- `N64Recomp/fixup_game_funcs.py` — added the `composeNpcOrientationMatrix`
+  7th guard (`_compose_npc_orient_guard7_patch`), inserted after the guard6
+  block. Not committed (sibling checkout, same posture as s54/s90-157 —
+  flagged for the user, not auto-committed).
+- `N64Recomp/RecompiledFuncs/funcs_*.c` — regenerated fresh, fixup run
+  exactly once. Not committed (same posture).
+- `scratch/agent/run_composeguard7.sh` — this session's soak script.
+- `scratch/s73_post_a_scene/composeguard7/` — this session's run: `run.log`,
+  `pre_*`/`stable_*`/`post_*`/`after_p1_start_*` screenshots.
+- `scratch/agent/run_composeguard7_driver.log` — driver summary.
+- `scratch/agent/make_elf_s158.log`, `scratch/agent/n64recomp_s158.log`,
+  `scratch/agent/fixup_s158.log`, `scratch/agent/build_s158.log` — this
+  session's regen/build/fixup logs.
+
