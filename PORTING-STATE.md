@@ -17005,3 +17005,97 @@ and `threads.cpp` (`ROGUESQ_LOG_SCHED` instrument), patch exported + committed.
 Soak artifacts: `scratch/s73_post_a_scene/schedguard5/` (run.log ~3.96M lines),
 driver summary `scratch/agent/schedguard5_driver.log`, driver scripts
 `scratch/agent/run_schedguard5.sh`/`wait_for_schedguard5.sh`.
+
+## Session 185 (2026-07-28) — 2nd `ROGUESQ_LOG_SCHED` attempt (`schedguard6`), same as s184's step 1 prescribed; died at decision #8616, again before the `#9770`-`#9792` stall-onset window, to a recurrence of the already-catalogued `rs_free ← freeManifestSegmentAssets` heap-corruption class (24th, first seen s167) — 2nd of up to 3 attempts on this instrument, still inconclusive for candidate (a)
+
+### Work unit
+NEXT.md step 1: re-run the `ROGUESQ_LOG_SCHED=1` soak with a fresh tag
+(`schedguard6`, copied from `run_schedguard5.sh`/`wait_for_schedguard5.sh`
+verbatim except the tag) to actually reach the stall-onset window this time.
+No source changes — the instrument landed and validated s184; this iteration
+only needed a 2nd data point.
+
+### Result
+- Soak died at **hold-iter 11** (driver log), **decision `#8616`**
+  (`[CRASH][vifs-snapshot] decisionN=8616 lastFireDecisionN=8614
+  decisionsSinceFire=2 lastFireWasStalled=0 stalledNow=0`) — well before the
+  `#9770`-`#9792` stall-onset window from s180/s183, and even earlier than
+  s184's `schedguard5` death at `#8327`. **Did not reach the target region a
+  2nd time.**
+- Cause: SIGBUS (signal 10) in `rs_free` ← `freeManifestSegmentAssets` ←
+  `menuOverlayInit` ← `mainGameLoop` ← `mainBootstrapWorker`, with a garbage
+  free-list node (`flags=0xCCE3 size=3194749028`) immediately before the
+  crash in `[rs-free-walk]` logging. This is **not a new crash class** — it's
+  the 24th class from s167 (`rs_free ← freeManifestSegmentAssets`), already
+  catalogued as part of the shared-heap-corruption-walker family (same family
+  as s183's `rs_free ← rebuildActiveDisplayObjectList`, s164's `rs_malloc ←
+  rebuildActiveDisplayObjectList`). A recurrence, not a new mystery.
+- One thing checked beyond a bare re-run: whether the crash itself was
+  scheduling-related. It wasn't — `[sched-check] self_thr=0x300163e20
+  self_id=3` (the producer, `mainBootstrapWorker`) appears repeatedly in the
+  ~150 log lines immediately before the crash, and the last
+  `[sched-runnext]` line before death (`popped_thr=0x300163e20 popped_id=3`)
+  is the producer itself being unconditionally popped and resumed normally.
+  The producer was executing and being scheduled fine right up to the
+  instant it hit its own, unrelated heap-corruption bug — this death is
+  orthogonal to the -35 scheduling hypothesis, not a manifestation of it.
+- Pre-crash instrument counts: 77510 `[sched-queue]`, 350305 `[sched-check]`,
+  77508 `[sched-runnext]` — queue and unconditional-pop counts again within 2
+  of each other (s184's `schedguard5` was 72382/72380). **2nd independent
+  confirmation** that routine starvation via the strict priority-greater gate
+  is not the normal case in the pre-stall window — consistent with, not a
+  new refutation of, s184's framing.
+
+### Rules out / keeps
+- Does not rule in or out candidate (a) — 2nd consecutive inconclusive
+  attempt (this run didn't reach the target window either). 2 of up to 3
+  attempts on this instrument before mandatory pivot to candidates (b)/(c)
+  per rule 8.
+- Confirms (2nd data point) that pre-stall `[sched-queue]`/`[sched-runnext]`
+  counts run near-balanced — reinforces s184's "would need `run_next_thread`
+  to stop firing for any thread right at the stall, not a constant
+  background race" framing.
+- The `rs_free ← freeManifestSegmentAssets` class (s167, 24th) recurring
+  earlier than any of s180/s183/s184's death points suggests it — along with
+  the `evalCubicSplineAtTime+2552` SIGBUS (s184) and the `rs_free ←
+  rebuildActiveDisplayObjectList` recurrence (s183) — has become the
+  dominant early-death risk in this specific `STICK_SCHEDULE`/hold-window
+  shape, ahead of reaching the stall at all. Not chased this session (per
+  NEXT.md's explicit "do not spend a soak chasing it" instruction) but worth
+  flagging: if a 3rd attempt also dies early to this same family, the next
+  session should consider whether the family itself needs a guard (à la
+  s99/s100/s101's `activateAnimationKeyframe`/`composeNpcOrientationMatrix`/
+  `projectModelBoundsToScreen` treatment) purely to buy enough runway to
+  reach the stall region, independent of whether it's ever fixed for its own
+  sake.
+
+### Carried-forward open items (item 1 refined, others unchanged from s184)
+
+1. **Re-run the `ROGUESQ_LOG_SCHED=1` soak a 3rd and final time** (new tag,
+   e.g. `schedguard7`) to reach the `#9770`-`#9792`-equivalent stall-onset
+   window. Same discriminating check as s184 item 1. **If this 3rd attempt
+   also dies before reaching the stall region, per rule 8 this closes out
+   the instrument's budget — do not run a 4th; pivot to candidate (b)
+   (`viRetraceHandlerThread`/`musyxSynthFrame` lock/resource contention) or
+   (c) (heap-exhaustion on the producer's own allocation path), or consider
+   guarding the recurring `rs_free`/heap-corruption family first to buy
+   runway (see "Rules out / keeps" above) before a 4th blind attempt.**
+2. Candidates (b)/(c) remain unexamined — mandatory next step if item 1's
+   3rd attempt is also inconclusive.
+3. `evalCubicSplineAtTime+2552` SIGBUS (s184, signal 10, distinct from s83's
+   guarded NAN_CHECK abort) — still not root-caused, still not recurred a
+   2nd time (this session hit a different crash instead). Lower priority
+   than item 1.
+4. Retire "tighten the rdpFs ceiling band" — unchanged, still retired.
+5. `tickSongSequence`'s 2 unguarded list walks (funcs_25.c:5018-5046,
+   5050-5077, found s174) — still open, still lower priority.
+6. `submitSceneNodeRender+16780` (s171) — still open, still lowest priority.
+7. The shared `rs_free`/heap-corruption family (`rebuildActiveDisplayObjectList`
+   s183, `freeManifestSegmentAssets` s167/s185) — recurring, not guarded;
+   candidate for a defensive guard if it keeps pre-empting attempts to reach
+   the stall region (see "Rules out / keeps" above).
+
+**Full detail**: this entry. No code changes this session (reused s184's
+instrument as-is). Soak artifacts: `scratch/s73_post_a_scene/schedguard6/`
+(run.log ~227 MB), driver summary `scratch/agent/schedguard6_driver.log`,
+driver scripts `scratch/agent/run_schedguard6.sh`/`wait_for_schedguard6.sh`.

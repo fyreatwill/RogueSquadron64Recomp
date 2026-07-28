@@ -1,115 +1,99 @@
-# NEXT work unit — re-run the ROGUESQ_LOG_SCHED soak to actually reach the
-# stall window; the instrument is landed and validated, it just hasn't been
-# tested against the target region yet.
+# NEXT work unit — 3rd and FINAL `ROGUESQ_LOG_SCHED` attempt to reach the
+# stall window before the rule-8 budget on this instrument closes.
 
-Read PORTING-STATE Session 184 in full before doing anything else (`grep -n
-"^## Session 184" PORTING-STATE.md`); this file only has the actionable
+Read PORTING-STATE Session 185 in full before doing anything else (`grep -n
+"^## Session 185" PORTING-STATE.md`); this file only has the actionable
 summary. Also read docs/CURRENT-TRUTH.md's `-35` next-steps item (top of the
 list).
 
-## What s184 established (read before doing anything else)
+## What s184/s185 established (read before doing anything else)
 
-- Source-read (not instrumented blind) confirmed candidate (a) from the prior
-  NEXT.md is mechanistically real: `check_running_queue()`
-  (`lib/N64ModernRuntime/ultramodern/src/scheduling.cpp`) only swaps to a
-  queued thread if `next_thread->priority > self->priority` — **strictly
-  greater**, never on a tie or lower. The only priority-blind resume is
-  `run_next_thread()`'s unconditional pop (`threads.cpp`), reached only via
-  `run_next_thread_and_wait`, itself only called from `do_send`/`do_recv`'s
-  **blocking** loops (`mesgqueue.cpp`) or a thread's own self-stop/natural-exit.
-- Real priority data (read from s183's already-on-disk `schedguard4/run.log`
-  `[thr-create-id]` lines, no new soak needed) supports the shape this
-  mechanism needs: `mainBootstrapWorker` (id=3, entry `0x80000C68` — the
-  hangar-loop/graphics-task-producer thread) is created at **priority 10**;
-  `viRetraceHandlerThread` (entry `0x80019868`) and the 3 audio-related id=0
-  threads run at **117-122**. If the producer is ever queued (via a
-  non-blocking send/recv originating from one of these higher-priority
-  threads) and none of them subsequently performs a genuine blocking wait,
-  the producer sits parked with **zero** `resume_thread_tagged` calls of any
-  kind — exactly matching s183's "0 `thr-resume-skip`, 0 resume activity"
-  observation, without needing the s84 UAF guard to fire at all.
-- Landed `ROGUESQ_LOG_SCHED=1` (new env gate, same cached-getenv pattern as
-  `ROGUESQ_LOG_THREAD_RESUME`, **not** always-on — both call sites are hot,
-  same class of path s93 found perturbs timing when logged verbosely):
-  - `[sched-queue] thr=%p id=%d pri=%d` (`schedule_running_thread`, every
-    queue insertion)
-  - `[sched-check] self_thr=%p self_id=%d self_pri=%d head_thr=%p head_id=%d
-    head_pri=%d swap=%d` (`check_running_queue`, only when the queue is
-    non-empty — doesn't fire on the common case)
-  - `[sched-runnext] popped_thr=%p popped_id=%d popped_pri=%d`
-    (`run_next_thread`, every unconditional pop)
-  `lib/N64ModernRuntime` patch exported + committed this session.
-- One soak (`schedguard5`, `run_schedguard5.sh` — copy of `schedguard4`'s env
-  block plus `ROGUESQ_LOG_SCHED=1`) validated the positive control (72382
-  `[sched-queue]`, 333003 `[sched-check]`, 72380 `[sched-runnext]` fires) but
-  **died at decision `#8327`, well before the stall-onset window
-  (`#9770`-`#9792` in s183/s180)** — never reached the target region. Death:
-  a **new, distinct SIGBUS** (signal 10) inside `evalCubicSplineAtTime +2552`,
-  via `buildPositionAndCallTransformHelper` → `setupActorAnchorTransformType1`
-  → `static_5_800AB658` → `static_5_800AAD9C` → `static_5_800C6854` →
-  `menuOverlayInit` → `mainGameLoop` → `mainBootstrapWorker`. **Not** the
-  s83-guarded crash (that one is a `NAN_CHECK` assert abort, signal 6, at one
-  specific division site) — a bus error is a different signal and almost
-  certainly a different fault site under the same function name. Not
-  root-caused this session; flagged as a new early-death competitor alongside
-  the already-catalogued Metal-internal SIGSEGV and the `rs_free`/heap-
-  corruption family. Do not chase it unless it recurs and blocks multiple
-  attempts in a row.
-- One informative (non-discriminating) pre-crash data point: in the ~8300
-  decisions before death, `[sched-queue]` (72382) and `[sched-runnext]`
-  (72380) counts are within 2 of each other — routine starvation via the
-  strict priority gate is **not** the normal case; nearly every queued thread
-  gets an unconditional-pop chance eventually. This means reaching the stall
-  under this hypothesis requires `run_next_thread` to stop firing *for any
-  thread* right around the stall onset, not a constant background race — a
-  sharper thing to look for than "the producer's own pointer stops
-  appearing" alone.
+- Source-read (s184) confirmed candidate (a) is mechanistically real:
+  `check_running_queue()` only swaps to a queued thread if its priority is
+  **strictly greater** than the caller's. The only priority-blind resume is
+  `run_next_thread()`'s unconditional pop, reached only via a genuine
+  blocking wait. `mainBootstrapWorker` (id=3, entry `0x80000C68`, the
+  hangar-loop/graphics-task-producer thread) runs at **priority 10** vs.
+  **117-122** for the VI-retrace/audio threads — the shape the mechanism
+  needs.
+- `ROGUESQ_LOG_SCHED=1` (`lib/N64ModernRuntime`, already committed) is
+  landed and validated: `[sched-queue] thr=%p id=%d pri=%d`,
+  `[sched-check] self_thr=%p self_id=%d self_pri=%d head_thr=%p head_id=%d
+  head_pri=%d swap=%d`, `[sched-runnext] popped_thr=%p popped_id=%d
+  popped_pri=%d`.
+- **Two soaks now (`schedguard5` s184, `schedguard6` s185), both died BEFORE
+  the target stall-onset window (`#9770`-`#9792` from s180/s183)**:
+  - `schedguard5`: died decision `#8327`, cause = new `evalCubicSplineAtTime
+    +2552` SIGBUS (signal 10, not root-caused, not the s83-guarded abort).
+  - `schedguard6`: died decision `#8616` (even earlier), cause = recurrence
+    of the already-catalogued 24th class (`rs_free` ← `freeManifestSegmentAssets`,
+    s167) — **confirmed orthogonal to the scheduling hypothesis**: the
+    producer thread (`thr=0x300163e20 id=3`) was being actively scheduled
+    and resumed right up to the crash instant (last `[sched-runnext]` before
+    death popped that exact thread normally).
+  - Both runs: pre-crash `[sched-queue]` and `[sched-runnext]` counts are
+    within 2 of each other (72382/72380, then 77510/77508) — 2 independent
+    confirmations that routine starvation via the strict-priority gate is
+    NOT the normal case in the window this instrument can actually observe.
+    This is consistent background information, not yet the discriminating
+    result (which requires reaching the stall itself).
+- **This is 2 of up to 3 attempts on this instrument (rule 8).** This
+  iteration is the 3rd and final one. If it ALSO dies before reaching the
+  stall region, DO NOT run a 4th — pivot immediately to candidate (b)
+  (`viRetraceHandlerThread`/`musyxSynthFrame` lock/resource contention) or
+  (c) (heap-exhaustion on the producer's own allocation path), or consider
+  landing a defensive guard on the recurring `rs_free`/heap-corruption
+  family first (s99-s101 precedent: table-lookup-then-deref guards) purely
+  to buy enough runway for a future attempt to reach the stall at all —
+  independent of actually fixing that family.
 
 ## Do next, in order
 
-1. **Re-run the exact same soak with a new tag** (e.g. `schedguard6` — copy
-   `scratch/agent/run_schedguard5.sh`, bump the tag, do not reuse
-   `schedguard5`). No source changes needed unless step 1 below is
-   inconclusive a 2nd time.
+1. **Re-run the exact same soak with a new tag** (`schedguard7` — copy
+   `scratch/agent/run_schedguard6.sh`/`wait_for_schedguard6.sh`, bump the
+   tag only, verbatim otherwise). No source changes needed.
 2. **In the resulting run.log, first check whether the stall region was
    reached at all** (grep for `stalled=1` runs of length >100, or the
-   decision number at death vs. `#9770`-`#9792`). If it died early again
-   (any cause), that is data point 2 of up to 3 before falling back to
-   candidates (b)/(c) per rule 8 — do not treat a 2nd early death as license
-   to abandon the instrument after only 1 real attempt.
-3. **If the stall region is reached**, the discriminating check is BOTH of:
-   a. Does the producer thread (identify its `thr=` pointer via
-      `[thr-create-id]`, cross-reference `entry=0x80000C68` for
-      `mainBootstrapWorker` or whichever thread is actually driving
-      `[lle task]`/`[swap-ack-wait]` this run) get a `[sched-queue]` entry
-      with no matching later `[sched-check swap=1]` or `[sched-runnext
-      popped_id=<same>]` before the stall?
+   `[CRASH][vifs-snapshot] decisionN=` value at death vs. `#9770`-`#9792`).
+   - If it died early again (any cause): this closes the instrument's rule-8
+     budget (3 of 3 spent, all inconclusive). Do NOT plan a 4th attempt.
+     Write up the 3-attempt pattern (which crash class each time, whether
+     any of them recur) and move to step 3's fallback.
+3. **If the stall region IS reached this time**, the discriminating check is
+   BOTH of:
+   a. Does the producer thread (`thr=0x300163e20`, cross-reference
+      `[thr-create-id] id=3 entry=0x80000C68` to confirm the pointer is
+      stable run-to-run — it may not be, ASLR/allocator-dependent) get a
+      `[sched-queue]` entry with no matching later `[sched-check swap=1]` or
+      `[sched-runnext popped_id=3]` before the stall?
    b. Does `[sched-runnext]` (the priority-blind pop) **stop appearing
       entirely, for any thread**, at the same point?
-   Both together → strong confirmation of candidate (a) as this run's
-   mechanism → proceed to fix design (retry-next-queue-entry vs. a
-   timeout/wake-caller path in `check_running_queue`, see PORTING-STATE
-   Session 180/181 step 2 for the original framing, still valid).
-   Only (a) without (b), or neither → refute/weaken for this run, and this
-   was attempt N of the up-to-3 budget on this hypothesis.
+   Both together → strong confirmation of candidate (a) → proceed to fix
+   design (retry-next-queue-entry vs. a timeout/wake-caller path in
+   `check_running_queue`, see PORTING-STATE Session 180/181 step 2 for the
+   original framing, still valid).
+   Only (a) without (b), or neither → refute/weaken candidate (a) for this
+   run, and the instrument's budget is now spent regardless (this was
+   attempt 3 of 3) — mandatory pivot to (b)/(c) next session either way.
 
 ## Do not
 
-- Do not treat the `evalCubicSplineAtTime+2552` SIGBUS as the same bug as
-  s83's guarded NaN abort — different signal (10 vs 6), do not "re-check the
-  existing guard" as if it should have caught this; it wouldn't have, they're
-  different faults.
-- Do not spend a soak chasing that SIGBUS, or the `rs_free ←
-  rebuildActiveDisplayObjectList` heap-corruption SIGBUS (s183) — both are
-  already-catalogued-family or flagged-not-chased, lower priority than
-  reaching the stall window.
+- Do not run a 4th attempt on `ROGUESQ_LOG_SCHED` if this one also dies
+  early — rule 8's budget is 3, this is the 3rd.
+- Do not chase the `evalCubicSplineAtTime+2552` SIGBUS (s184) or the
+  `rs_free ← freeManifestSegmentAssets`/`rebuildActiveDisplayObjectList`
+  heap-corruption family (s183/s185) with a dedicated soak — both are
+  already-catalogued or flagged-not-chased, lower priority than reaching
+  the stall window. (Landing a defensive guard on the `rs_free` family to
+  buy runway is a legitimate NEXT session's fallback if this attempt also
+  fails, per the note above — but that is a different, larger work unit
+  than "chasing" it, and only becomes the plan after this 3rd attempt.)
 - Do not turn on `ROGUESQ_LOG_THREAD_RESUME=1` for this soak (s93's
   confound: perturbs timing enough to change which crash/stall wins the
   race). `ROGUESQ_LOG_SCHED=1` is a separate, already-landed gate — keep it
   on, it's the point of this soak.
 - Do not re-litigate whether the outer hangar loop "stops iterating" as a
-  whole — s180 closed that. What's being tested now is a specific,
-  source-confirmed mechanism for *why*, independent of the s84 UAF guard.
+  whole — s180 closed that.
 
 ## Blocking on a long-running soak (learned the hard way, still current)
 
@@ -172,8 +156,7 @@ summary block is complete.
   moving on. If you edit the patch text after a first (buggy) attempt,
   you MUST re-run the FULL pipeline from a fresh `N64Recomp` regen — do not
   just re-run fixup on already-patched files. (Not needed for pure `lib/`
-  host C++ changes — those only need `cmake --build`, as this session's
-  scheduling.cpp/threads.cpp change confirmed again.)
+  host C++ changes — those only need `cmake --build`.)
 - If only `fixup_game_funcs.py`/a `lib/rt64` or `N64ModernRuntime` C++ file
   changed (not symbol files or the ELF), you don't need `make_elf.py` —
   for guest-code fixup changes: `N64Recomp` (via
@@ -192,11 +175,6 @@ summary block is complete.
   repo-wide; mid-function anchors (loop bodies, specific instruction
   addresses, labels) should be grepped for uniqueness first and file-scoped
   (`if p.name == "funcs_N.c"`) if not naturally unique.
-- A new env-gated instrument shared across multiple translation units (e.g.
-  `scheduling.cpp` and `threads.cpp` both needing `ROGUESQ_LOG_SCHED`) is
-  simplest as a small duplicated static cached-getenv function per TU
-  (matching the existing `thr_resume_log_enabled()` pattern) rather than a
-  shared header change — lower risk, same cost.
 - `nm`, `otool`, `lldb` are NOT on the Bash allowlist — use
   `scratch/agent/machoparse.py` for Mach-O symbol reads. A crash's own
   `[CRASH]` stack dump is usually enough to identify the function without

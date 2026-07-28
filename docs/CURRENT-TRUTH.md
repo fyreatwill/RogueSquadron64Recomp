@@ -663,9 +663,9 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s184)
+## Next steps, in order of expected value (s185)
 
--35. **STILL TOP PRIORITY (s183, refined s184): find what actually stops
+-35. **STILL TOP PRIORITY (s183, refined s184/s185): find what actually stops
     graphics-task submission in a run that reaches the stall WITHOUT
     `[thr-resume-skip]` firing.** **s184**: source-read confirmed a real,
     previously-uninstrumented mechanism that needs no UAF guard at all —
@@ -684,14 +684,30 @@ cost three sessions before the recursive mutex.
     (~9770-9792)**, to a **new, distinct SIGBUS** in `evalCubicSplineAtTime
     +2552` (signal 10 — NOT s83's guarded NAN_CHECK abort, a different signal
     and fault site under the same function name, not root-caused).
-    Inconclusive for the hypothesis; one usable data point though: pre-crash,
-    `[sched-queue]` (72382) and `[sched-runnext]` (72380) counts nearly
-    balance, so routine starvation is not the normal case — the mechanism
-    would need `run_next_thread` to stop firing for *any* thread right at the
-    stall, which this run didn't reach far enough to observe. Next: re-run
-    with a new tag to actually reach the stall window (1 of up to 3 attempts
-    on this instrument before falling back to candidates (b)/(c) per rule 8).
-    Full detail: PORTING-STATE Session 184.
+    **s185**: 2nd attempt (`schedguard6`, no source changes, fresh tag) —
+    died **even earlier**, at decision **8616** (still before the
+    ~9770-9792 window), to a recurrence of the already-catalogued 24th crash
+    class (`rs_free` ← `freeManifestSegmentAssets`, s167) — confirmed
+    orthogonal to the scheduling hypothesis (the producer thread,
+    `thr=0x300163e20 id=3`, was actively being scheduled and resumed right
+    up to the instant of its own unrelated heap-corruption crash: last
+    `[sched-runnext]` before death popped that exact thread normally). 2nd
+    independent confirmation that pre-crash `[sched-queue]`/`[sched-runnext]`
+    counts run near-balanced (77510/77508 this run vs. 72382/72380 in s184) —
+    routine starvation is still not the normal case in the window this
+    instrument can actually observe. **2 of up to 3 attempts on this
+    instrument now spent, both inconclusive** (neither reached the target
+    stall window) — next soak is the 3rd and final allowed attempt before a
+    mandatory pivot to candidates (b)/(c) per rule 8. New observation for
+    future planning: the early-death crash roster in this specific
+    `STICK_SCHEDULE`/hold-window shape (`evalCubicSplineAtTime+2552` s184,
+    `rs_free ← freeManifestSegmentAssets` s185, `rs_free ←
+    rebuildActiveDisplayObjectList` s183) is now pre-empting reaching the
+    stall more often than reaching it at all — if the 3rd attempt also dies
+    early, consider guarding the recurring `rs_free`/heap-corruption family
+    (à la s99-s101's table-lookup guards) purely to buy runway, independent
+    of fixing it for its own sake. Full detail: PORTING-STATE Sessions
+    184-185.
 
     **s183 finding this refines (still valid as one confirmed instance, not
     the whole explanation):** `schedguard4` reached and sustained the target stall
