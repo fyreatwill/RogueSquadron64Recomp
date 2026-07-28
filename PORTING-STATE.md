@@ -17730,3 +17730,69 @@ nor refuted.
 No `submodule-patches/export.sh` needed this session — the only edit was a
 new soak driver script under `RogueSquadron64Recomp/scratch/agent/` (`/scratch/`
 is gitignored except `NEXT.md`/`OUTCOME`/`STATUS`), nothing under `lib/`.
+
+## Session 192 (2026-07-28) — landed the `queueGPUUploadTMEM` zero-size defensive guard NEXT.md's Option B called for (the project's single most-recurring crash, 8+ occurrences since s86); soak with it active reached the furthest `decisionN` yet (8972, vs. 7897/8053 in s191/s190) but the guard itself never fired — it died to a NEW, previously-uncatalogued crash class instead
+
+Landed `lib/rt64/src/render/rt64_texture_cache.cpp:1284`'s guard exactly as
+NEXT.md Option B specified: confirmed no existing guard already covered
+this exact assert site (`ROGUESQ_LOG_TMEM_ZERO` in
+`rt64_rdp_tmem.cpp:63` is a diagnostic logger further upstream in
+`uploadTexture`, not a guard on `queueGPUUploadTMEM`'s assert — still
+true, s191/NEXT.md's read of it holds). Added a getenv-gated
+(`ROGUESQ_LOG_TMEM_ZERO_GUARD`), bounded-counter, tagged-fprintf guard
+(`[tmem-zero-guard]`) that skips the upload instead of asserting when
+`decodeTMEM && (width<=0 || height<=0)` — mirrors the established
+rs_malloc (s173) / rs_free (s187) / scene-node-ptr (s190) pattern. Pure
+`lib/rt64` C++ change (no regen/fixup pipeline); added an explicit
+`#include <cstdlib>` since, unlike `fprintf`/`assert`, `std::getenv` had
+no prior use in this translation unit to confirm transitive availability.
+Built clean (`cmake --build build --target RogueSquadron64Recomp`, only
+pre-existing unrelated deprecation warnings), `./submodule-patches/
+export.sh` run and `submodule-patches/rt64.patch` + `lib/rt64` committed
+in this same session (commit `14bf1d4`), per the hard rule.
+
+Soaked with the identical s190/s191 env block plus the new
+`ROGUESQ_LOG_TMEM_ZERO_GUARD=1` (`scratch/agent/run_sceneptrguard5.sh`,
+copied from `run_sceneptrguard4.sh`). Result: **`[tmem-zero-guard]` fired
+0 times, `[scene-node-ptr-guard]` fired 0 times** (positive control not
+established for either guard this run) — died at hold-iter 15 (~15s into
+the 120s hold) to a SIGBUS, `decisionN=8972`. This is FURTHER than either
+prior sceneptrguard soak (s191: 7897, s190: 8053) but still short of the
+9660-9792 target window.
+
+**The crash itself is a new backtrace, not previously catalogued**:
+`runVideoFrameTick` (x2 in the unwound stack) ← `menuOverlayInit` ←
+`mainGameLoop` ← `mainBootstrapWorker`. Source-checked
+(`N64Recomp/RecompiledFuncs/funcs_0.c:1459` onward, confirmed via `awk`
+extraction + grep) — `runVideoFrameTick` contains **zero calls to
+itself**, so per the same reasoning already established for
+`frameStartReset` (s84) and `advancePlayerAnimationPhase` (s87/88), the
+doubled frame is almost certainly a stack-unwind duplication artifact,
+not true recursion. Not root-caused further this session (out of scope,
+matches the project's existing practice of flagging new-looking crashes
+for a future session rather than chasing them inline, e.g. the
+`traverseSceneGraphRecursive` mention at PORTING-STATE line ~16807).
+
+**What this does and doesn't show:**
+- Does NOT confirm the `queueGPUUploadTMEM` guard works as a soak-progress
+  unblocker — it never got the chance to fire; a different, unrelated,
+  newly-observed crash killed the run first, before decisionN reached
+  wherever the TMEM assert would have fired.
+- Does NOT refute the guard either — same reasoning, it was never
+  exercised.
+- DOES add a 3rd data point to the "ordinary soak-to-soak crash variance"
+  pattern first identified in s191: three consecutive `sceneptrguard`
+  soaks (s190, s191, s192) have now each died to a THIRD different crash
+  class before reaching the target window (`reserveAndEmitDLEntry`,
+  `queueGPUUploadTMEM`, `runVideoFrameTick`), and the `decisionN` at death
+  has moved in both directions (8053 → 7897 → 8972) — consistent with
+  variance across the whole open crash catalogue, not a trend.
+- Per iron rule 8, this is the 3RD consecutive iteration testing "does a
+  fix-soak reach the target decisionN window" with no discriminating
+  result (scene-node-ptr-guard still 0/3 fires) — **mandatory pivot**:
+  the next unit should not be a 4th blind soak. Either guard the new
+  `runVideoFrameTick` crash (same defensive pattern, would make it 4/4
+  guarded blockers) or pick a genuinely different probe (e.g. a
+  positive-control run that deliberately forces the TMEM zero-size
+  condition to confirm the new guard's logging/counter code path is
+  reachable at all, independent of whether a real soak ever hits it).

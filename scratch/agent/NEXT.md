@@ -1,123 +1,103 @@
-# NEXT work unit — either the 3rd (and last, per rule 8) blind sceneptrguard
-# soak, OR (likely higher value) a defensive guard on queueGPUUploadTMEM,
-# the project's most-recurring crash and 2/2 blocker of the last two soaks
+# NEXT work unit — iron-rule-8 mandatory pivot: do NOT run a 4th blind
+# sceneptrguard soak. Pick ONE of the two options below.
 
-Read PORTING-STATE Session 191 in full before doing anything else (`grep -n
-"^## Session 191" PORTING-STATE.md`); this file only has the actionable
-summary. Also read docs/CURRENT-TRUTH.md's `-40` next-steps item (top of the
+Read PORTING-STATE Session 192 in full before doing anything else (`grep -n
+"^## Session 192" PORTING-STATE.md`); this file only has the actionable
+summary. Also read docs/CURRENT-TRUTH.md's `-41` next-steps item (top of the
 list).
 
 ## Why this is the next work unit (read before doing anything else)
 
-s190 landed a fix (`processSceneNode` node-pointer guard,
-`ROGUESQ_LOG_SCENE_NODE_PTR_GUARD`) whose effectiveness is still untested —
-two soaks since (`sceneptrguard3` in s190, `sceneptrguard4` in s191, byte-
-identical config) have both died BEFORE the 9660-9800 decisionN window the
-fix targets, at decisionN 8053 and 7897 respectively. Critically, **each
-soak died to a DIFFERENT already-catalogued, unrelated crash** —
-`reserveAndEmitDLEntry` (game-thread SIGBUS) in s190,
-`queueGPUUploadTMEM` (RT64 graphics-thread SIGABRT assert,
-`lib/rt64/src/render/rt64_texture_cache.cpp:1285`) in s191. This refutes
-`reserveAndEmitDLEntry` as a specific recurring blocker (was 1/2, not 2/2)
-and confirms the "ordinary soak-to-soak crash variance" framing — but
-sharpens it: it's not variance among processSceneNode-adjacent bugs, it's
-variance among the project's whole ~15-18-strong catalogue of still-open
-crash classes, and `queueGPUUploadTMEM` is the single most frequent one in
-the project's entire history (first seen s86, 8+ occurrences, open goal-
-stack item M3) — it just killed 2/2 fix-soaks in a row before they got far
-enough to test anything.
+s192 landed the `queueGPUUploadTMEM` zero-size guard NEXT.md's s191 recommended
+(`ROGUESQ_LOG_TMEM_ZERO_GUARD`, `lib/rt64/src/render/rt64_texture_cache.cpp:1284`,
+commit `14bf1d4`). A soak with it active (`sceneptrguard5`) reached
+`decisionN=8972` — the furthest of the 3 `sceneptrguard` soaks so far (s190:
+8053, s191: 7897, s192: 8972) — but still short of the 9660-9792 target
+window, and **the new guard never fired** (0/1). The run instead died to a
+NEW, previously-uncatalogued crash: `runVideoFrameTick` SIGBUS (backtrace:
+`runVideoFrameTick` x2 <- `menuOverlayInit` <- `mainGameLoop` <-
+`mainBootstrapWorker`). Source-read (`N64Recomp/RecompiledFuncs/funcs_0.c:1459`)
+confirmed **zero self-calls** in the function body — per the same reasoning
+already established for `frameStartReset` (s84) and `advancePlayerAnimationPhase`
+(s87/88), the doubled frame in the unwound stack is almost certainly a
+stack-unwind duplication artifact, not true recursion. Not root-caused
+further — the actual faulting deref inside the function is still unidentified.
 
-`[scene-node-ptr-guard]` has fired **0 times across both soaks** — the
-fix's target mechanism (corrupted sibling pointer reaching
-`processSceneNode`) has never been directly observed since the fix landed.
-The underlying question (does the fix work, does decisionN push past 9792,
-does the `-35` stall signature appear) remains completely untested — not
-refuted, just never reached.
+`[scene-node-ptr-guard]` has now fired **0 times across all 3 soaks**
+(s190/s191/s192). The underlying question this whole lineage exists to
+answer — does the s190 processSceneNode fix work, does decisionN push past
+9792, does the `-35` stall signature appear — remains completely untested.
 
-## Two valid options, in order — pick ONE per iron rule 8 (do not do both
-## in the same iteration; that's two work units)
+**This is the 3rd consecutive iteration testing "does a fix-soak reach the
+target decisionN window" with no discriminating result.** Per iron rule 8,
+blind repeats must stop now. Pick ONE of the two options below — NOT a 4th
+`sceneptrguard6` soak.
 
-### Option A — one more blind soak (last one allowed before mandatory pivot)
+## Two valid options, in order — pick ONE (do not do both in the same
+## iteration; that's two work units)
 
-This is strike 2 of 3 on "does a fix-soak reach the target window" (iron
-rule 8: 3 consecutive same-hypothesis iterations with no discriminating
-result → stop and pivot). One more identical attempt is still in budget.
-If you pick this and it ALSO dies early to an unrelated already-catalogued
-bug, that's the 3rd strike — do not run a 4th; write up the pattern and
-pivot to Option B (or something else) in the SAME iteration's writeup, per
-rule 8's own instruction ("pick the highest-information-value next probe").
+### Option A — guard the new `runVideoFrameTick` crash (likely higher value)
 
-1. Copy `scratch/agent/run_sceneptrguard4.sh` to `run_sceneptrguard5.sh`
-   (tag-only change, keep the env block byte-identical).
-2. Run it exactly like the prior 2 attempts (background + `TaskOutput`
-   block, or foreground with a generous timeout ~480s+).
-3. Check: does decisionN reach past 9792? Does `[scene-node-ptr-guard]`
-   fire at all (positive control)? If it crashes early again, which
-   already-catalogued class this time (grep the backtrace against
-   PORTING-STATE)?
+Rationale: every soak-blocking crash seen in this lineage guarded == maximum
+odds the NEXT soak actually reaches the target window and finally tests the
+processSceneNode fix. This would be the 4th such guard (rs_malloc s173,
+rs_free s187, scene-node-ptr s190, queueGPUUploadTMEM s192).
 
-### Option B — guard `queueGPUUploadTMEM` (likely higher information value)
+1. Read the FULL body of `runVideoFrameTick`
+   (`N64Recomp/RecompiledFuncs/funcs_0.c:1459` onward — it's a large
+   function, read past where the earlier grep/awk excerpt stopped) to find
+   the actual faulting dereference. Do NOT guess a guard site from the
+   backtrace alone — the backtrace only says the crash is IN this function,
+   not WHERE. Cross-reference the `[CRASH]` stack's native offset
+   (`runVideoFrameTick + 1568`) against the compiled binary if needed
+   (`scratch/agent/machoparse.py` — `nm`/`otool`/`lldb` are not on the Bash
+   allowlist).
+2. Once the faulting deref is identified, add a getenv-gated
+   (`ROGUESQ_LOG_VIDEO_FRAME_TICK_GUARD` or similar — check it's not
+   already claimed first), bounded-counter, tagged-fprintf guard in
+   `N64Recomp/fixup_game_funcs.py` (mirrors the `processSceneNode`
+   node-pointer guard pattern from s190 — this is a `RecompiledFuncs`
+   patch, so it DOES need the regen/fixup pipeline: `make_elf.py` ->
+   `N64Recomp` -> `fixup_game_funcs.py` -> `cmake`).
+3. Soak with the new guard plus the full s192 env block
+   (`scratch/agent/run_sceneptrguard5.sh` + the new var) as
+   `sceneptrguard6`. Positive control: does the new guard fire? Does
+   decisionN push further than 8972? Does it finally reach 9660-9792 and
+   fire `[scene-node-ptr-guard]`?
 
-Attacks the crash that has now blocked 2/2 fix-soaks and is the single most
-historically-recurring bug in the whole project. Source (already read this
-session, `lib/rt64/src/render/rt64_texture_cache.cpp:1284-1303`):
+### Option B — positive-control the `queueGPUUploadTMEM` guard in isolation
 
-```cpp
-void TextureCache::queueGPUUploadTMEM(uint64_t hash, uint64_t creationFrame, const uint8_t *bytes, int bytesCount, int width, int height, uint32_t tlut, const LoadTile &loadTile, bool decodeTMEM) {
-    assert(!decodeTMEM || ((width > 0) && (height > 0)));
+Rationale: the guard landed s192 has ZERO confirmation it is even reachable
+— it compiled and linked, but no run has ever exercised it. A guard that
+has never fired is an unverified claim, not a working fix, no matter how
+plausible the source-read.
 
-    TextureUpload newUpload;
-    ...
-```
-
-No locks are held and no resources are acquired before the assert — a bare
-early `return;` right after a logged bail is a clean, safe skip-the-upload
-site. Mirror the project's established defensive-guard pattern (`rs_malloc`
-s173, `rs_free` s187, `scene-node-ptr` s190): new `ROGUESQ_LOG_*` env var
-(suggest `ROGUESQ_LOG_TMEM_ZERO_GUARD`, distinct from the pre-existing
-unused `ROGUESQ_LOG_TMEM_ZERO` diagnostic-only var mentioned in older
-sessions — check it's not already claimed with `grep -rn
-ROGUESQ_LOG_TMEM_ZERO lib/`), log guest-visible context (hash, width,
-height, decodeTMEM) once per fire with a bounded counter, then `return;`
-instead of falling through to the assert.
-
-Steps:
-1. `grep -n "ROGUESQ_LOG_TMEM_ZERO" lib/rt64/src/render/rt64_texture_cache.cpp
-   lib/rt64/src -r` first — confirm no existing guard already covers this
-   exact site (older sessions added `ROGUESQ_LOG_TMEM_ZERO` as a diagnostic
-   logger elsewhere in the upload path, NOT a guard on this assert — verify
-   that's still true before assuming a green field).
-2. Add the guard in `lib/rt64/src/render/rt64_texture_cache.cpp` near line
-   1285 (getenv-gated, matches the pattern of other `lib/` guards already in
-   this file/tree if any exist — grep for an existing `getenv(` pattern in
-   `lib/rt64` first to match style; if none exists there yet, mirror the
-   `N64Recomp/fixup_game_funcs.py` guards' getenv-once-cached idiom).
-3. This is a PURE `lib/rt64` runtime change — no regen/fixup pipeline
-   needed. Just `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-   cmake --build build --target RogueSquadron64Recomp -j`.
-4. **`./submodule-patches/export.sh` (relative path from repo root) +
-   `git add`/`git commit` in THIS SAME session** — `lib/` edits not
-   exported and committed this session are lost at the next reset (hard
-   rule, CLAUDE.md).
-5. Soak with the guard active (same s188/s190/s191 env block plus the new
-   var) — positive control is the guard firing at least once; if it fires,
-   check whether the run then survives further (reaches a new decisionN
-   high-water mark, or reaches the 9660-9800 window and tests the ACTUAL
-   processSceneNode question this whole lineage has been trying to reach).
+1. Find or construct a game state/repro that reliably hits the
+   `decodeTMEM && (width<=0 || height<=0)` condition — check PORTING-STATE
+   s86-s101 (the original discovery/characterization sessions for this
+   crash class) for a known trigger path or scene.
+2. Run a short soak targeting that specific state with
+   `ROGUESQ_LOG_TMEM_ZERO_GUARD=1` active and confirm `[tmem-zero-guard]`
+   fires at least once, with sane-looking logged fields (hash/width/
+   height/decodeTMEM) — this is the missing positive control, not a new
+   soak toward the processSceneNode question.
+3. If it fires: the guard is confirmed live and this line item closes. If
+   it still doesn't fire even when deliberately targeted, that's a much
+   more concerning finding (the guard's condition may not match the
+   assert's actual trigger condition in practice) and warrants a fresh
+   source comparison between the guard's `if` and the assert's negation.
 
 ## Do not
 
-- Do not do BOTH options in one iteration — pick one, per the single-work-
-  unit rule.
-- Do not re-touch the `processSceneNode` node-pointer guard itself — still
-  fixed and verified intact (confirmed again by source grep in s191).
-- Do not treat `reserveAndEmitDLEntry` as a recurring blocker needing its
-  own fix — s191 refuted that (1/2 occurrences, not 2/2).
+- Do not run a 4th blind `sceneptrguard` soak (`sceneptrguard6` with no new
+  guard) — that violates iron rule 8, already at 3/3 same-hypothesis
+  iterations with no discriminating result.
+- Do not re-touch the `processSceneNode` node-pointer guard or the
+  `queueGPUUploadTMEM` guard's existing logic — both still fixed and
+  intact as landed (s190, s192).
 - Do not attempt to root-cause `queueGPUUploadTMEM`'s actual corrupted-
-  width/height source (goal-stack M3, "root-cause/fix") — Option B above is
-  a defensive skip-guard only, matching the project's established pattern
-  for unblocking soak progress, not a real fix. Root-causing it is a much
-  larger, separate investigation out of scope here.
+  width/height source (goal-stack M3, full root-cause/fix) — out of scope,
+  a much larger separate investigation.
 - Do not re-attempt root-causing the underlying `rs_free` free-list
   corruption source itself (s85-s114 chase) — still out of scope.
 - Do not turn on `ROGUESQ_LOG_THREAD_RESUME=1` (s93's confound).
@@ -136,16 +116,17 @@ trips the Stop hook's exit-contract check prematurely.
 
 - **`N64Recomp/fixup_game_funcs.py` is non-idempotent** — running it a 2nd
   time (even just to check stdout) re-applies every patch again,
-  duplicating them. If adding a NEW patch: regenerate fresh first (`zsh
-  tools/agent/regen_n64recomp.sh`), THEN run `python3
+  duplicating them. If adding a NEW patch (Option A needs this): regenerate
+  fresh first (`zsh tools/agent/regen_n64recomp.sh`), THEN run `python3
   /absolute/path/to/N64Recomp/fixup_game_funcs.py > log` exactly once. Grep
   the log for the new patch's report line to confirm exactly x1, and check
-  older patches' lines are ALSO x1 (not x2). **Not relevant to Option B** —
-  that's a pure `lib/rt64` change, no fixup pipeline involved.
+  older patches' lines are ALSO x1 (not x2).
 - A pure `lib/N64ModernRuntime`/`lib/rt64` runtime change (not a
   `RecompiledFuncs/*.c` patch) does NOT need the regen/fixup pipeline at
   all — just `cmake --build build --target RogueSquadron64Recomp -j`
-  directly.
+  directly. (This is what s192's guard used — Option B stays in this
+  lane; Option A's new guard would NOT, since it's a `RecompiledFuncs`
+  patch.)
 - Re-running the same soak script/tag **overwrites** the previous run's
   `run.log` in place — copy the driver script to a new tag name per soak.
 - Running scripts under `RogueSquadron64Recomp/tools/agent/*.sh` /
@@ -172,13 +153,19 @@ trips the Stop hook's exit-contract check prematurely.
 - Output redirection is sandboxed to the session's allowed working
   directories (this repo, N64Recomp, rogue_squadron64) — redirecting to
   `/tmp/...` gets blocked; use a path under `scratch/agent/` instead.
+- When adding a `std::getenv`/`fprintf` guard to a `lib/rt64` `.cpp` file
+  that doesn't already use those calls, don't assume `<cstdlib>`/`<cstdio>`
+  are transitively available — check first, add an explicit include if
+  needed (s192 needed `<cstdlib>` in `rt64_texture_cache.cpp`).
 
 ## Housekeeping still flagged, still not done
 
-`docs/CURRENT-TRUTH.md` is now over ~36 KB (growing every session) —
-migrate durable mechanism/architecture material to PROJECT-OVERVIEW.md and
-prune superseded detail, paired with a real experiment. Flagged for many
-sessions without action.
+`docs/CURRENT-TRUTH.md` is now ~270 KB (`wc -l` ~3900 lines) — WAY over the
+~35 KB CLAUDE.md budget, growing every session. Migrate durable
+mechanism/architecture material to PROJECT-OVERVIEW.md and prune superseded
+detail, paired with a real experiment. Flagged for many sessions without
+action — this is becoming a real cost (the file no longer fits a single
+`Read` call without offset/limit).
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` and
 `~/Documents/Tools/rogue_squadron64` are separate git checkouts with

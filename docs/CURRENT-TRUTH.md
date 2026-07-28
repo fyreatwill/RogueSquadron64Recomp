@@ -663,7 +663,40 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s191)
+## Next steps, in order of expected value (s192)
+
+-41. **(s192) landed the `queueGPUUploadTMEM` zero-size defensive guard
+    (`ROGUESQ_LOG_TMEM_ZERO_GUARD`, `lib/rt64/src/render/
+    rt64_texture_cache.cpp:1284`) that -40 recommended, but a soak with it
+    active never exercised it** — it died to a NEW, previously-uncatalogued
+    crash (`runVideoFrameTick` SIGBUS, likely a stack-unwind duplication
+    artifact per source-read, not true recursion) at `decisionN=8972` — the
+    furthest of the 3 `sceneptrguard` soaks so far (s190: 8053, s191: 7897,
+    s192: 8972), but still short of the 9660-9792 target window.
+    `[scene-node-ptr-guard]` fired 0/3 times across all three soaks;
+    `[tmem-zero-guard]` fired 0/1 on its debut run. Guard commit: `14bf1d4`
+    (`submodule-patches/rt64.patch` exported + committed same session per
+    hard rule). Full detail: PORTING-STATE Session 192.
+
+    **This is the 3rd consecutive iteration on "does a fix-soak reach the
+    target decisionN window" with no discriminating result — iron rule 8
+    mandatory pivot.** Do not run a 4th blind `sceneptrguard` soak. Two
+    valid next units, in order: (1) guard the new `runVideoFrameTick`
+    crash the same defensive way (getenv-gated skip, bounded counter) —
+    would make every soak-blocking crash seen in this lineage guarded,
+    maximizing the odds the NEXT soak actually reaches the target window;
+    source is `N64Recomp/RecompiledFuncs/funcs_0.c:1459`, no self-call
+    confirmed (checked this session), so the actual faulting deref is
+    still unidentified — read the full function body before guessing where
+    to place the guard, don't guess from the backtrace alone. OR (2) a
+    positive-control-first sanity check: deliberately force the
+    `queueGPUUploadTMEM` zero-size condition (or find a game state that's
+    known to trigger it, e.g. via the s86-101 history) to confirm
+    `[tmem-zero-guard]`'s logging/counter code actually fires and is
+    reachable, independent of whether an ordinary soak ever hits it —
+    since its only soak so far never fired it at all, there is currently
+    ZERO confirmation the guard code path is even reachable, only that it
+    compiles and links.
 
 -40. **(s191) re-ran the fixed `sceneptrguard` soak a 2nd time (`sceneptrguard4`,
     byte-identical config to s190's `sceneptrguard3`) — died again before the
@@ -3361,6 +3394,11 @@ and named it. Full detail: PORTING-STATE s143.
    carrying unwanted log volume, just check the `env` prefix took
    effect.
 2. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert.**
+   (s192: a defensive skip-guard now exists, `ROGUESQ_LOG_TMEM_ZERO_GUARD`
+   at `rt64_texture_cache.cpp:1284` — this is a stopgap that skips the
+   upload, matching the project's established pattern elsewhere; it does
+   NOT close this goal-stack item, which is still the actual root-cause
+   fix. The guard has not yet been confirmed reachable/firing in any run.)
    Path confirmed: `fullSyncFramebufferPairTiles` → `uploadTile` lambda
    → `TextureManager::uploadTexture` (`rt64_state.cpp:1329`) →
    `queueGPUUploadTMEM` (`rt64_rdp_tmem.cpp:84` →
