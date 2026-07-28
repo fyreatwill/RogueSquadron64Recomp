@@ -16034,3 +16034,138 @@ under `scratch/agent/crashvifs1_*.log` / `scratch/s73_post_a_scene/crashvifs1/`.
    (`reserveAndEmitDLEntry`) — same family, likely same unguarded-deref
    shape, source-read `submitSceneNodeRender`'s own guest body before
    guessing.
+
+## Session 172 (2026-07-28) — heapWalker's guard had a real gap (missing 5th site + all 5 walk-loops totally unguarded); fixed it, but 2 soaks show the walk-loop guard is not the culprit (0/0 both runs) — two *new*, better-characterized crash sites found instead, one with strong mechanistic evidence
+
+### What ran
+
+Per NEXT.md's Option A (characterize/fix what's killing runs at hold-iter
+4-8 so soaks reliably reach the deep-stall window s169/s170's scheduler-
+SIGSEGV question is actually about), re-read `heapWalker`
+(`N64Recomp/RecompiledFuncs/funcs_3.c`, guest `0x800079F0`-`0x80007C6x`)
+end to end instead of assuming the s157 guard was correctly placed just
+because it was carefully reasoned through once (NEXT.md's own suggestion).
+
+Found the guard covers only 4 of **5** identical per-mode-table head-deref
+sites — s157's site table simply omitted the 5th (`0x80007B80`), which had
+**no** guard at all, not even the bounds check the other 4 got. Worse: at
+all 5 sites, the guard only covers the *head* pointer read
+(`lw $v0,0x0($a0)`); the walk **loop** that follows (`L_80007A1C:` etc. —
+`v1 = *v1; v0 = *v1;` repeated on the loop-back edge, walking every
+subsequent node in the list) was **never guarded at all**, at any of the 5
+sites. This is the exact same shape already fixed elsewhere in this project
+(submitSceneNodeRender's GUARD2/GUARD3 pair, s131; emitAllocatedDLCommand,
+s133) — a head-deref guard alone only protects a list of length 0-1; any
+list with 2+ live entries walks through the completely unprotected loop.
+This is a plausible explanation for why `ROGUESQ_LOG_HEAPWALKER_GUARD` has
+stayed 0/0 across every soak since s157 despite `frameStartReset`-attributed
+crashes continuing to recur against exactly the class it's supposed to
+cover: the guard was watching the wrong dereference.
+
+Fixed both gaps in `N64Recomp/fixup_game_funcs.py`: added the missing 5th
+initial-deref site to the existing `_heapwalker_guard_sites` table, and
+added a new loop-back guard section (`ROGUESQ_LOG_HEAPWALKER_GUARD3`,
+5 sites: `0x80007A1C/0x80007A78/0x80007AD4/0x80007B30/0x80007B8C`) patterned
+directly on the proven GUARD3 mechanism. Regenerated fresh
+(`regen_n64recomp.sh` -> `fixup_game_funcs.py` once, verified all 10 sites
+patched exactly x1 each in the fixup log, no duplication) and rebuilt clean
+(0 errors).
+
+Two soaks with both new env vars armed alongside the full existing
+instrument set (`run_heapwalkerguard3_1.sh`/`_2.sh`, same recipe as
+s169-s171's `run_crashvifs1.sh` plus `ROGUESQ_LOG_HEAPWALKER_GUARD3=1`):
+
+- **Soak 1: survived to hold-iter 27 (~30s into the hold)** — markedly
+  longer than any of s171's 3 soaks (hold-iter 4, 8, or the one full-hold
+  crash-free run notwithstanding, this is the longest *crashing* soak of
+  this family to date). `HEAPWALKER_GUARD`/`GUARD3`: **0/0 both** — heapWalker
+  was never entered with a corrupted table entry this run; the crash is
+  unrelated to heapWalker's own bug. New crash instead: SIGBUS, fault
+  directly inside `processSceneNode` (self-recursive, 2 frames of it) via
+  `traverseSceneGraphRecursive` via `setupCameraMatrices` — a different
+  path into the same broad scene-graph family as `submitSceneNodeRender`
+  (s171's soak-1 crash) and `reserveAndEmitDLEntry` (14th class), but a
+  distinct, previously-uncharacterized fault site within `processSceneNode`
+  itself (not yet source-read — function spans ~1100 lines,
+  `funcs_4.c:13759-14861`).
+- **Soak 2: died at hold-iter 1** (~0s into hold) — much earlier, back to
+  the s171 range. `HEAPWALKER_GUARD`/`GUARD3`: **0/0 both** again. New
+  crash, different site again: SIGBUS **directly inside `rs_malloc` itself**
+  (`rs_malloc + 2020`), called from `rebuildActiveDisplayObjectList` <-
+  `static_5_800AAD9C` (the per-frame tick function that also calls
+  `heapWalker`, `frameStartReset`, `composeNpcOrientationMatrix`, etc.) <-
+  `static_5_800C6854` <- `menuOverlayInit`. **Strong mechanistic lead, not
+  just a backtrace**: the log line immediately preceding the crash
+  (`ROGUESQ_LOG_RS_MALLOC_WALK`, landed s165, log-only — never guarded) reads
+  `[rs-malloc-walk] node=0x801B0190 flags=0x0 size=2955542528` — a garbage
+  ~2.75 GB size field. Source-read the walk (`funcs_0.c` ~line 2909-2969):
+  the loop reads a node's size field (`MEM_W(r4,0x4)`), computes
+  `next = node + size` (`ADD32(r4, r2)`, line 2967), then immediately
+  dereferences `next` (`MEM_HU(r2, 0x10)`, line 2969) with **zero bounds
+  check on the computed pointer** before that deref. A garbage size (as
+  logged) produces a wild `next` address, and the very next instruction
+  dereferences it — this lines up exactly with the observed
+  `rs_malloc + 2020` fault offset and is the same "trust a corrupted value
+  as a valid address" shape as every other guard in this project, just a
+  size-computed pointer instead of a stored one.
+
+### Rules out / narrows
+
+- The s157 `heapWalker` guard's persistent 0/0 status was suspected
+  (NEXT.md) to mean either "correctly placed but never triggered" or
+  "wrong location." This session's fix closes that ambiguity for the *head*
+  case (genuinely was missing 1/5 sites) but the walk-loop half remains
+  **unconfirmed** — 0/0 across 2 soaks is still not enough data to say
+  whether the loop guard would ever fire; neither soak entered heapWalker's
+  bad-data path at all.
+- **Not** a repeat of s171's `submitSceneNodeRender+16780` (that crash is in
+  a different function in the backtrace) or `frameStartReset+532`
+  (`heapWalker` inlining) — both this session's crashes are new, distinct
+  sites within the same broad "unguarded per-frame-tick dereference" family.
+- Survival length (hold-iter 27 vs. 1) varies by ~27x between two soaks of
+  the *identical* recipe with the identical binary — reinforces that this
+  family's crashes are non-deterministic in *which* site fires first, not
+  that any one fix meaningfully extends survival on its own (n=2, no
+  before/after comparison run this session).
+
+### Landed (this session)
+
+`N64Recomp/fixup_game_funcs.py`: heapWalker 5th initial-deref site +
+5-site loop-back guard (GUARD3, new). `N64Recomp/RecompiledFuncs/funcs_3.c`:
+regenerated with both patch sets applied (verified x1 each, no duplication).
+Not committed — `N64Recomp` is its own sibling git checkout outside this
+repo's `lib/`, same long-standing uncommitted-history posture flagged since
+s54/s90 (not this session's call to resolve). This repo's own tracked
+files: `scratch/agent/NEXT.md`, `docs/CURRENT-TRUTH.md`, this entry.
+Soak scripts/logs (`scratch/agent/run_heapwalkerguard3_{1,2}.sh`,
+`heapwalkerguard3_{1,2}_driver.log`, full run logs under
+`scratch/s73_post_a_scene/heapwalkerguard3_{1,2}/`) are gitignored
+(`/scratch/`), not tracked — consistent with existing project convention.
+
+### Next
+
+1. **Best next work unit: guard the `rs_malloc` free-list walk's
+   node+size-computed-pointer deref** (`funcs_0.c` ~line 2967-2969, guest
+   `0x80001BF0`/`0x80001BF4`) — the best-evidenced lead this session
+   produced (log value immediately before the crash matches the exact
+   garbage-pointer-deref mechanism the source read exposed). Bounds-check
+   the computed `next` pointer (same `0x80000000`-`0x80800000` idiom used
+   everywhere else in this family) before the `MEM_HU(next, 0x10)` read;
+   bail to whatever this loop's own degrade-to-stop path is (read the loop
+   in full first — this session did not trace its exit/termination
+   condition, only the single iteration the crash landed in).
+2. `processSceneNode`'s self-recursive SIGBUS (soak 1) is a second,
+   independent lead but far less characterized — the function is ~1100
+   lines (`funcs_4.c:13759-14861`) and has not been source-read for its own
+   unguarded-deref shape yet. Lower priority than item 1 given item 1's
+   stronger evidence, but worth a source read if item 1's fix doesn't
+   extend survival on its own.
+3. `submitSceneNodeRender+16780` (s171's soak-1 finding, `funcs_4.c:6-2999`)
+   remains unguarded and uninvestigated — still open, still lower priority
+   than items 1-2 above given this session found 2 *newer* leads with
+   better evidence.
+4. The s169/s170 scheduler-SIGSEGV H1/H2 question is still blocked on runs
+   reliably reaching the deep-stall window — none of this session's fixes
+   were confirmed to help (both soaks still died well before that window).
+   Keep deferring that question until items 1-3 stop finding new early
+   crash sites every soak.

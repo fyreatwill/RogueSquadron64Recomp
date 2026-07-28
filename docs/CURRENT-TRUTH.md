@@ -659,9 +659,29 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s171)
+## Next steps, in order of expected value (s172)
 
--23. **NEW TOP PRIORITY (s171): landed the crash-instant `[vi-fs-decision]`
+-24. **NEW TOP PRIORITY (s172): fixed a real gap in the heapWalker guard
+    (missing 5th head-deref site + all 5 walk-loops completely unguarded,
+    `N64Recomp/fixup_game_funcs.py`/`funcs_3.c`) — 2 soaks show 0/0 on both
+    new guards (heapWalker isn't the culprit either soak), but each soak
+    surfaced a *different*, newer, better-characterized crash instead of
+    heapWalker's own bug: soak 1 survived to hold-iter 27 (longest crashing
+    soak of this family yet) then SIGBUS in `processSceneNode` (self-
+    recursive, via `traverseSceneGraphRecursive`/`setupCameraMatrices`,
+    `funcs_4.c:13759-14861`, not yet source-read); soak 2 died at hold-iter 1
+    to SIGBUS **directly inside `rs_malloc` itself**, with the log line
+    immediately before the crash showing a garbage ~2.75 GB free-list-node
+    size (`[rs-malloc-walk] size=2955542528`) — source-read confirmed the
+    walk computes `next = node + size` then dereferences `next` with **zero
+    bounds check** (`funcs_0.c` ~line 2967-2969, guest `0x80001BF0`/
+    `0x80001BF4`), the exact mechanism a garbage size would trigger.
+    **Best next work unit: guard that `rs_malloc` walk's computed-pointer
+    deref** (same `0x80000000`-`0x80800000` idiom as the rest of the
+    family) — read the loop's full exit condition first, then bail there.
+    Full detail: PORTING-STATE s172.
+
+-23. **(s171, superseded as top priority by s172 above): landed the crash-instant `[vi-fs-decision]`
     snapshot s170 asked for (`rs64_get_vifs_crash_snapshot`, always-on, no
     env var — `lib/rt64/src/hle/rt64_state.cpp` + `src/main/main.cpp`), but
     3 soaks of the same recipe (0/3) never reproduced the target scheduler
