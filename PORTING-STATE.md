@@ -18812,3 +18812,70 @@ session (source reads only, no lib/ or N64Recomp/ patch this iteration —
 **Housekeeping still flagged, still not done**: `docs/CURRENT-TRUTH.md`
 still over the ~35 KB budget; `N64Recomp` and `rogue_squadron64` checkouts
 still carry unrelated uncommitted changes, still not this session's call.
+
+
+## Session 202 (2026-07-28) — source read of `submitSceneNodeRender` for the `+8772` KSEG0-zero-extension bug: clean, narrows the remaining candidate set to three
+
+Continuation of NEXT.md item -48. Per s201's narrowing (`processSceneNode`
+itself and `renderLitMeshFaceGroup` both source-clean), this session's
+sole work unit was a subagent-delegated full source read of
+`submitSceneNodeRender` (`N64Recomp/RecompiledFuncs/funcs_4.c:6-3017`,
+~3000 lines, largest of the four remaining candidates), using the exact
+same brief that closed `renderLitMeshFaceGroup` in s201 (the
+`recomp.h:86-108` macro definitions, the exact KSEG0 zero-extension
+signature, and instructions to check every zero-extending load's actual
+downstream use rather than assume the s201 benign pattern generalizes).
+
+Per NEXT.md's own instruction, did NOT re-soak the `processScenenNodeCalleeTrace`
+tracer this iteration — 3 soaks / 116,950 calls / 0 reproductions from
+s200-201 already exhausts the budget rule for that instrument.
+
+**Result: clean.** The subagent read the full function in 7 sequential
+chunks (no gaps) plus grepped the whole range for raw `+`/`-` arithmetic
+on `ctx->rN` bypassing `ADD32`/`SUB32` and for stray `(uint32_t)` casts.
+Specifically ruled out:
+- Zero raw pointer arithmetic bypassing `ADD32`/`SUB32` anywhere in the
+  function.
+- Zero `(uint32_t)` casts feeding a pointer computation — the only
+  `U32()` calls found are inside pre-existing PATCH guard blocks (lines
+  213, 236, 294, 525, ...) and are used solely for bounds-check
+  comparisons/logging against `ctx->r31`/`ctx->r4`, never written back
+  into the `gpr` used as the actual dereferenced address.
+- All 22 `MEM_HU`/`MEM_BU` zero-extending loads in the function (lines
+  46, 168, 501, 505, 538, 873, 899, 932, 1180, 1192, 1216, 1396, 1713,
+  1811, 1815, 1858, 2400, 2426, 2459, 2723, 2903, 2924) individually
+  traced downstream: boolean flags, material-index/handle comparisons
+  against sentinel `-1` (re-sign-extended via `ADD32` before further
+  use, never dereferenced directly), or free-list slot counters
+  added into a base pointer via `ADD32` (safe small-offset indexing) —
+  none is added into a pointer-shaped register outside `ADD32`.
+- `S32(...)` assignments to `ctx->rN` (hundreds of occurrences, the
+  `lui`-pattern) correctly sign-extend via `gpr`'s `uint64_t` type and
+  C's value-preserving `int32_t -> uint64_t` conversion rule.
+- No `MOVZ`/`MOVN`-style register-assigning ternaries with mismatched
+  sign/zero-extension branches.
+- No unrecognized casts/helpers outside the documented macro set.
+
+This is single-source (static read only, no matching dynamic trace
+inside this function's own body) — same caveat as s201's
+`renderLitMeshFaceGroup` finding, treat as provisional not closed with
+`processSceneNode`'s two-independent-line confidence.
+
+**Remaining candidates, narrowed to three**: `renderFlatMeshFaceGroup`
+(`funcs_4.c:3018-4951`, ~1900 lines), `renderUnlitMeshFaces`
+(`funcs_4.c:4951-5606`, ~650 lines), `renderLitTexturedMeshFaces`
+(`funcs_3.c:22073-...`, size not yet measured). No code changes landed
+this session (nothing to patch — clean read only); no regen/build
+needed. No `lib/` edits this session.
+
+**Rules out**: `submitSceneNodeRender` as the site of the `+8772`
+zero-extension bug (single-source static confidence, matching
+`renderLitMeshFaceGroup`'s s201 confidence level).
+
+**Next work unit**: subagent-assisted source read of
+`renderFlatMeshFaceGroup` (`funcs_4.c:3018-4951`, next largest of the
+three remaining) using the identical brief/method. If all three come
+back clean, the search must widen beyond the five direct callees (e.g.
+reconsider whether the defect lives in a grandchild callee, or whether
+the tracer instrument needs to log more than call-boundary args — see
+NEXT.md's own note on this from s201).

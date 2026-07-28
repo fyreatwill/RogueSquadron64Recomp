@@ -665,10 +665,10 @@ cost three sessions before the recursive mutex.
 
 ## Next steps, in order of expected value (s201)
 
--48. **(s200/s201) `processSceneNode+8772` KSEG0-zero-extension bug:
-    `processSceneNode` itself AND its highest-call-volume callee,
-    `renderLitMeshFaceGroup`, are both now source-clean — search narrows to
-    the four remaining direct callees.** s200 exhaustively ruled out
+-48. **(s200/s201/s202) `processSceneNode+8772` KSEG0-zero-extension bug:
+    `processSceneNode`, `renderLitMeshFaceGroup`, AND `submitSceneNodeRender`
+    are all now source-clean — search narrows to the three remaining direct
+    callees.** s200 exhaustively ruled out
     `processSceneNode` by two independent lines of evidence (full static
     read + a 46,292-call dynamic trace at the call boundary, 0 anomalies —
     see prior entry text below, still accurate). s201 ran 2 more soaks of
@@ -692,25 +692,35 @@ cost three sessions before the recursive mutex.
     register ternaries, no raw pointer casts. This is single-source
     (static read only, no matching dynamic trace INSIDE this function's
     own body) — treat as provisional, not closed with `processSceneNode`'s
-    confidence.
+    confidence. s202 repeated the same subagent-brief method on
+    `submitSceneNodeRender` (`funcs_4.c:6-3017`, ~3000 lines, largest of
+    the remaining four). **Result: also clean** — zero raw pointer
+    arithmetic bypassing `ADD32`/`SUB32`, zero `(uint32_t)` casts feeding a
+    pointer computation (the only `U32()` calls found are inside
+    pre-existing PATCH guard blocks, used solely for bounds-check
+    comparison/logging, never written back into the address actually
+    dereferenced), all 22 `MEM_HU`/`MEM_BU` loads individually traced to
+    flags/index-comparisons/free-list-offsets never added into a pointer
+    outside `ADD32`, no `MOVZ`/`MOVN`-style mismatched-extension ternaries.
+    Same single-source caveat as `renderLitMeshFaceGroup`.
 
-    **Remaining candidates** (unexamined): `submitSceneNodeRender`
-    (`funcs_4.c:6-3018`, ~3000 lines), `renderFlatMeshFaceGroup`
-    (`funcs_4.c:3018-4951`), `renderUnlitMeshFaces` (`funcs_4.c:4951-5606`),
-    `renderLitTexturedMeshFaces` (`funcs_3.c:22073-...`). **Best next work
-    unit**: subagent-assisted source read of `submitSceneNodeRender` next
-    (largest of the remaining four) using the exact same brief/method as
-    s201's `renderLitMeshFaceGroup` read (recomp.h:86-108 macros + the
-    zero-extension signature) — do NOT re-soak the tracer again this cycle,
-    3 soaks with 0 reproductions is enough per the budget rule; only
-    revisit soaking if all four remaining callees come back clean too (at
-    that point, reconsider whether the tracer itself needs to log more —
-    e.g. every internal pointer computation, not just call-boundary args —
-    since the current instrument would be structurally blind to a defect
-    that's introduced AND consumed entirely within one callee, never
-    crossing back through a logged boundary). Full detail: PORTING-STATE
-    Session 200, 201 (and Session 194/199 for the original register-file
-    decode this all traces back to).
+    **Remaining candidates** (unexamined): `renderFlatMeshFaceGroup`
+    (`funcs_4.c:3018-4951`, ~1900 lines), `renderUnlitMeshFaces`
+    (`funcs_4.c:4951-5606`, ~650 lines), `renderLitTexturedMeshFaces`
+    (`funcs_3.c:22073-...`, size not yet measured). **Best next work
+    unit**: subagent-assisted source read of `renderFlatMeshFaceGroup` next
+    (largest of the remaining three) using the exact same brief/method as
+    s201/s202 (recomp.h:86-108 macros + the zero-extension signature) — do
+    NOT re-soak the tracer again this cycle, 3 soaks with 0 reproductions
+    is enough per the budget rule; only revisit soaking if all three
+    remaining callees come back clean too (at that point, reconsider
+    whether the tracer itself needs to log more — e.g. every internal
+    pointer computation, not just call-boundary args — since the current
+    instrument would be structurally blind to a defect that's introduced
+    AND consumed entirely within one callee, never crossing back through a
+    logged boundary). Full detail: PORTING-STATE Session 200, 201, 202
+    (and Session 194/199 for the original register-file decode this all
+    traces back to).
 
 -47.5. **(s199) `runVideoFrameTick+1568` guard landed (3 sites,
     `ROGUESQ_LOG_VIDEO_FRAME_TICK_GUARD`, `N64Recomp/fixup_game_funcs.py`)
