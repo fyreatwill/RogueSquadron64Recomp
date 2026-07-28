@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 119)
+## Current truth (as of session 162)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -63,7 +63,9 @@ Driven from the title with `PROBE_KEYS_FROM_PHASE=1` (s23, scene names corrected
 | 46.7 s | 1024 | clean title |
 | ~50 s | 1024 | **SELECT GAME** (photographic hangar backdrop, AAA save, ERASE GAME) — waits for input indefinitely |
 | +1 press | 512, origin 0x6AB400, colour 0x656000/0x6AB000 | **level-select war room → SELECT LEVEL — "AMBUSH AT MOS EISLEY"** with X-wing hologram (the scene s12–s47 called the "main-menu hangar"; see s48 below) |
-| ~93 s | 640 | transition — **process dies here** (undriven-era observation) |
+| ~93 s | 640 | transition — process died here in the undriven-era observation and in every crashing run of the post-s86 family; **on the s160/s161 crash-free runs the process instead survives past here** (see below) |
+| leave SELECT YOUR CRAFT (1 Start press) | 512→640, origin 0x6AB400→0x6A2900ish | **s162 (offline reanalysis of s160/s161 captures): a Chapter-1 mission-intro cutscene** — gold "STAR WARS" logo bumper → "Chapter 1"/"THE RED…" crawl text → black → desert-planet horizon widening into a fast dive toward a hangar structure (establishing shot, not gameplay). Never documented before s162; the s75/s76/s161 "hangar-flight" label for this window was an unverified inference from title-yellow color decay, not from the picture itself. |
+| ~+90-115s post-leave | varies (0 or 128 in the two known runs) | **graphics-task-submission stall** — `[vi-fs-decision]` reports `stalled=1 pairs=0` continuously, RDP `fs` counter frozen, process alive (`[lle task]` audio ucode and `[rs-malloc]` heap allocation keep running to the end of the log). Not a crash. Mechanism not yet root-caused — see next-steps item -14. |
 
 Menu state machine (s48, three driven runs; extended s50; post-`a` path s73; Start path s74/s75;
 hold attempt s76):
@@ -657,9 +659,40 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s161)
+## Next steps, in order of expected value (s162)
 
--13. **NEW TOP PRIORITY (s161): two-source rule now satisfied — drive the
+-14. **NEW TOP PRIORITY (s162): the s160/s161 "menu-hold" soaks already reached
+    a never-before-seen mission-intro cutscene (STAR WARS logo → "Chapter 1"
+    crawl → establishing dive shot), then hit a genuine graphics-task-
+    submission stall — not a crash. This is now the M3 frontier, replacing
+    "survive the menu-transition crash family" (closed, 2/2).** Found by
+    re-reading the 120 `hold_NN.png` screenshots each of s160/s161 already
+    captured (no new soak) — nobody had looked past the instrument-count
+    summary before. `PROBE_MODE=start_only`'s one Start press already leaves
+    SELECT YOUR CRAFT into this cutscene; s75/s76/s161's "hangar-flight"
+    label for the post-leave scene was an inference from title-yellow color
+    decay, never verified against the actual picture, and was wrong.
+    Two-source confirmed in both `subtitleguard1` and `subtitleguard2`:
+    both show the same logo→crawl→dive sequence, and both end with
+    `[vi-fs-decision] ... stalled=1 pairs=0` continuously (RDP `fs` frozen —
+    5618 in s161, 4127 in s160) while `[lle task]` (audio RSP ucode) and
+    `[rs-malloc]` (heap) keep firing to the very last line of both logs —
+    i.e. the process is alive, audio/heap are still running, only
+    graphics-task submission has permanently stopped. **Next work unit:**
+    find the guest function that should submit the next display list after
+    the establishing-dive shot and determine what it's blocked on (leading
+    candidates: the DMA-ring/asset-streaming corruption family that's dogged
+    this project since s85, or a legitimate "press X to continue" input gate
+    the script's Start/stick schedule doesn't satisfy — not yet
+    distinguished). The two runs' exact final frames differ (s161 froze
+    mid-dive at `vi_width=0`; s160 ended on an uncharacterized small
+    object-in-void frame at `vi_width=128`) — that specific difference is
+    NOT yet two-source, don't over-claim it. Full detail: PORTING-STATE
+    s162.
+
+-13. **s161: two-source rule satisfied on "survives the menu-transition +
+    hangar-tick hold" — SUPERSEDED as the active frontier by s162 above,
+    but still true as far as it goes.** Original text: drive the
     process PAST SELECT YOUR CRAFT into an actual mission, not another
     repeat of the menu-hold soak.** s161 re-ran s160's exact soak
     unchanged (`scratch/agent/run_subtitleguard2.sh`, only the capture tag

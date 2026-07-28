@@ -14749,3 +14749,106 @@ gates).
 - `scratch/agent/s161_count.py` — grep-count helper for the guard/control
   tags in `run.log` (same pattern as s160's `s160_count.py`, updated tag
   list and target path).
+
+## Session 162 (2026-07-27) — the s160/s161 "menu-hold" soaks actually reached a never-before-seen mission-intro cutscene, then hit a genuine graphics-task-submission stall (not a crash)
+
+### Work unit
+
+NEXT.md's prescribed unit was "extend the soak key schedule to add a Start
+press past SELECT YOUR CRAFT." Before writing a new script (a new
+build/run cycle), re-read the existing `subtitleguard1`/`subtitleguard2`
+captures per the "capture once, analyze many" rule — `PROBE_MODE=start_only`
+already fires exactly one Start press right at the top of the hold window
+(`PROBES=(p1:start:5)` in `run_mission_keys.sh` when `HOLD_S>0`), so s160/
+s161 already tested the leave-into-mission path; nobody had reviewed the
+120 `hold_NN.png` screenshots each run captured to see what scene was
+actually on screen. Did that review (via a subagent for the bulk pass,
+spot-verified directly) instead of running a 3rd soak.
+
+### Finding 1: both crash-free soaks already ran a Chapter-1 mission-intro cutscene (two-source, no new soak needed)
+
+`subtitleguard2/hold_12.png`–`hold_21.png`: a shrinking gold "STAR WARS"
+logo (classic recede/zoom bumper). `hold_22.png`: "…apter 1" / "THE RED…"
+crawl text. `hold_23`–`26`: crawl fades to black. `hold_88`–`91`: a desert
+horizon appears and widens into a fast dive toward a hangar structure with
+motion-blur streaks and a red glow (an establishing shot, not gameplay).
+Independently verified in `subtitleguard1`: `hold_15.png` shows the same
+"STAR WARS" logo at a different (earlier) hold-second, `hold_95.png` shows
+the same desert-horizon shot. **This is a genuinely new, previously
+undocumented state** — no session before this one had reviewed the
+post-leave screenshots closely enough to notice it; s75/s76/s161 all
+described the post-leave scene only as "hangar-flight" (a garbled/wrong
+read, established at s75 from title-yellow color decay alone, never from
+the actual picture content of a 120s hold). **This overturns s161's own
+claim** ("no mission was ever entered... this soak battery has never
+attempted [in-mission rendering]") — the single Start press that leaves
+SELECT YOUR CRAFT does trigger a real mission-intro sequence; s161 didn't
+notice because it never looked at the hold screenshots past the
+instrument-count summary.
+
+### Finding 2: the terminal state is a stall, not a crash — two-source, same mechanism, different plateau values
+
+Both runs' `run.log` show identical shape at the end: `[vi-fs-decision]`
+logs `SKIP reason=pair=0 seen=0 addrCh=0 stalled=1 pairs=0` continuously
+for thousands of consecutive VI retraces (guard2: `rdpFs=5618` frozen from
+partway through to the very last line at #15968; guard1: `rdpFs=4127`
+frozen the same way) — the RDP FULL_SYNC opcode counter that has tracked
+graphics-command throughput since s10 simply stops incrementing. Checked
+whether this is a full process hang or a graphics-specific one by diffing
+which per-tag counters keep moving past the plateau: **`[lle task]`**
+(RSP audio-ucode task dispatch, `yield_ptr=0x80162DF0 yield_size=0xC00`
+constant shape, present in both logs since line ~110) and **`[rs-malloc]`**
+(guest heap allocator) both continue firing all the way to the last line
+of both logs (guard2: last `[lle task]` at log line 95841 of 95963; guard1:
+last at 90489 of 90677, immediately followed by `[rs-malloc]` at 90490/
+90492) — **audio processing and heap allocation are still alive and
+active** while graphics-command submission (`[vi-fs-decision] pairs=0`,
+frozen `rdpFs`) has permanently stopped. The menu-tick family counters
+(`[anim-recurse]`, `[compose-npc-orient-800AB1C8]`, `[hangar-entry-
+800B4048]`) stop around the same point in both logs, but that's expected —
+those are menu/hangar-selection-frame functions, not general liveness
+counters, and leaving into the cutscene should stop them regardless of
+whether anything else hangs.
+
+### What this establishes
+
+- **The correct M3 frontier is no longer "survive the menu-transition
+  crash family" (closed, 2/2) — it's "why does RSP graphics-task
+  submission permanently stop partway through/after the Chapter-1
+  intro cutscene, while audio and heap allocation keep running."** This
+  is a new, two-source-confirmed, well-characterized blocker, found by
+  reanalysis, zero new builds or runs.
+- Not yet located: which guest function is supposed to submit the next
+  graphics task and isn't, or what it's blocked waiting on. Prime
+  suspects by pattern-match to this project's history: the same DMA-ring/
+  asset-streaming corruption family (`do_rom_read`, s85–s114) stalling an
+  asset load the cutscene's next graphics task depends on; or a genuine
+  wait-for-player-input gate (a "press X to continue" the script's
+  Start/stick inputs don't satisfy) that isn't a bug at all.
+- The two runs' very last frames differ (guard2 froze mid-dive-shot at
+  `vi_width=0`; guard1's last frame, `hold_120.png`, shows a small
+  grey/white wireframe-trailing object against pure black at
+  `vi_width=128`, a state never seen in this project before) — **the
+  specific terminal visual is not yet two-source**, only the
+  "reaches the cutscene, then graphics-submission stalls" mechanism is.
+  Do not over-claim the `vi_width=128` object frame as characterized;
+  it needs its own look before any claim is made about what it is.
+- Corollary: the phase timeline in CURRENT-TRUTH ("transition — process
+  dies here" at the end of the driven table) is now known to be wrong for
+  the crash-free runs — the process does not die there anymore, it
+  proceeds into the intro cutscene and stalls later, alive.
+
+### Files touched (read-only investigation this session — no code changes, no rebuild)
+
+- Reanalyzed `scratch/s73_post_a_scene/subtitleguard1/hold_*.png` and
+  `subtitleguard2/hold_*.png` (already captured by s160/s161).
+- Reanalyzed `scratch/s73_post_a_scene/subtitleguard{1,2}/run.log` for the
+  `[vi-fs-decision]`/`[lle task]`/`[rs-malloc]` tail-of-log comparison.
+- No new soak, no new instrument, no rebuild this session.
+
+### Next
+
+Characterize the graphics-task-submission stall: find the guest function
+that should be submitting the next display list after the establishing-
+dive shot and determine what it's blocked on (asset DMA completion vs.
+input wait vs. something else). See `scratch/agent/NEXT.md`.
