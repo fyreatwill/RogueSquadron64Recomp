@@ -663,7 +663,47 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s189)
+## Next steps, in order of expected value (s190)
+
+-39. **(s190) landed the missing `processSceneNode` node-pointer guard
+    (`ROGUESQ_LOG_SCENE_NODE_PTR_GUARD`, `N64Recomp/fixup_game_funcs.py`),
+    but its effectiveness against the target self-recursion bug is still
+    untested** — a soak with the fix hit a different, already-catalogued
+    crash (`reserveAndEmitDLEntry`, 14th class, decisionN=8053) before
+    reaching the 9660-9800 decision window. Correction to -38 below: only 1
+    of its "4 existing guards" is actually on `processSceneNode` (the depth
+    cap); the other 3 (`_scene_node_list_guard_patch`/`_guard2`/`_guard3`)
+    are patched into `submitSceneNodeRender` (funcs_4.c:6-2999), a
+    completely different function not in this crash's call stack — checked
+    by cross-referencing guest addresses against `grep -n "^RECOMP_FUNC"
+    funcs_4.c`, not just guard names. Source-read confirmed the mechanism:
+    `traverseSceneGraphRecursive`'s sibling walk (global `0x80112B20`,
+    next-pointer at node offset 0, funcs_4.c:15073-15074) passes its raw,
+    never-bounds-checked pointer straight into `processSceneNode`'s `a2`
+    argument, which becomes `ctx->r17` and is dereferenced on entry with no
+    validation — explaining the fixed-native-offset SIGBUS without needing
+    a depth-overflow explanation. **Also caught and fixed a self-introduced
+    regression this session**: the first patch version silently deleted
+    `ctx->r3 = MEM_W(ctx->r17, 0XC);` (an over-greedy regex match whose
+    replacement never re-emitted the anchor line it consumed), causing a
+    2/2-reproducible immediate crash (decisionN~150, new signature) with the
+    guard itself never firing — caught via a same-session control build
+    (identical env, patch disabled) that ran the full 120s hold crash-free
+    to decisionN 14721+, confirming the regression was the patch, not
+    pre-existing state. Full detail: PORTING-STATE Session 190.
+
+    **Best next work unit**: re-run the `sceneptrguard`-style soak (fixed
+    build, `ROGUESQ_LOG_SCENE_NODE_PTR_GUARD=1` plus the full s188 env
+    block) again — soak-to-soak crash-site variance is well established in
+    this dataset (16 different decisionN values across 16 runs), so a
+    different attempt may get past the `reserveAndEmitDLEntry` obstacle at
+    ~8053 and actually reach the 9660-9800 window this fix targets. If
+    `reserveAndEmitDLEntry` keeps recurring first, it may need its own guard
+    extension (mirrors the s169 pattern: 3 guards already added to this
+    function, at least one more unguarded site now confirmed at native
+    +5212) before the `processSceneNode` question can be tested at all —
+    but do not open that as a full investigation without at least one more
+    soak attempt first, since it may just be run-to-run variance.
 
 -38. **(s189, corrects -37's clustering claim): surveyed crash-time `decisionN`
     across ALL 16 historical soak logs instead of running a new soak (NEXT.md's

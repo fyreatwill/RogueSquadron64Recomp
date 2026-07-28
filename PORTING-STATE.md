@@ -17547,3 +17547,111 @@ Raw grep output and the sorted decisionN table are reproducible via `grep
 separate artifact since `scratch/` outside `scratch/agent/{NEXT,OUTCOME,
 STATUS}` is gitignored and would not survive to the next session; this
 session entry is the durable copy.
+
+## Session 190 (2026-07-28) — corrected a documentation error in s189's "4 existing guards on processSceneNode" claim (only 1 of the 4 actually touches that function), landed the missing node-pointer guard, caught and fixed a self-introduced regression via a control-run comparison, then hit a different, already-catalogued crash before reaching the target decision window
+
+**Correction before doing anything else**: NEXT.md/CURRENT-TRUTH item -38 said
+`N64Recomp/fixup_game_funcs.py` carries "4 guards on this exact function
+(`processSceneNode`)" and that none of them fired in `schedtick1`. Cross-
+referencing guest addresses (not just guard names) against the function
+boundaries (`grep -n "^RECOMP_FUNC" funcs_4.c`) shows this was wrong: 3 of the
+4 (`_scene_node_list_guard_patch`/`_guard2`/`_guard3`, fixup script lines
+~2337-2478) are patched into **`submitSceneNodeRender`** (funcs_4.c:6-2999,
+guest ~0x8000FEA0-0x800112xx) — a completely different function that guards
+its own free-list allocator walk and is not even in this crash's call stack.
+Only s175's recursion-depth cap (fixup script lines ~3899-3990) actually
+touches `processSceneNode` (funcs_4.c:13759-14879), and it only counts calls —
+it never validates the node pointer itself. So the interior of
+`processSceneNode` had **zero** real deref guards, not 3, before this session.
+This doesn't overturn s189's core finding (the crash is one specific unguarded
+dereference, not a depth phenomenon) but it does mean the "none of 4 guards
+fired" evidence was 4x weaker than it looked — only 1 of the citations was
+actually a relevant null result.
+
+**Source-read** (`processSceneNode`/`traverseSceneGraphRecursive`,
+funcs_4.c:13759-15184, building on s175's own groundwork comment) found the
+mechanism NEXT.md asked for: `traverseSceneGraphRecursive` walks a sibling
+list rooted at mutable global `0x80112B20`, reading each node's own "next"
+field at offset 0 with zero bounds checking (funcs_4.c:15073-15074,
+`ctx->r3 = MEM_W(ctx->r3, 0X0)`), then passes that same raw pointer straight
+into the recursive `processSceneNode(rdram, ctx)` call as its `a2` argument
+— which becomes `processSceneNode`'s own node pointer (`ctx->r17`/$s1,
+funcs_4.c:13766-13767) and is dereferenced immediately on entry
+(funcs_4.c:13792 pre-patch, `MEM_W(ctx->r17, 0XC)`) with no validation
+anywhere in between. A single corrupted "next" field anywhere in the sibling
+chain flows straight through the recursive-call boundary into a raw
+dereference — explaining the fixed native-offset SIGBUS across independent
+recurrences/rebuilds without needing a depth-overflow explanation.
+
+**Fix landed**: a new entry-point guard on `processSceneNode`'s node pointer
+(`ctx->r17`), checked once right after s175's depth cap and before the first
+dereference, bailing to the same `L_80015528` exit with the same `ctx->r2=0`
+sentinel the caller's sibling-loop condition already reads as "stop
+iterating this level" (`N64Recomp/fixup_game_funcs.py`, new
+`ROGUESQ_LOG_SCENE_NODE_PTR_GUARD` env var, `[scene-node-ptr-guard]` log
+tag). Full regen (`make_elf.py` not needed, only fixup script changed →
+`regen_n64recomp.sh` → `fixup_game_funcs.py` once, confirmed `x1` for the new
+patch and all 3 pre-existing `processSceneNode`-adjacent patches still `x1`,
+no duplication) → `cmake --build`, exit 0, only pre-existing-class warnings.
+
+**Caught and fixed a self-introduced regression before it could contaminate
+the result** (this is itself the most reusable finding this session): the
+first version of the patch's regex match consumed the pre-existing
+`ctx->r3 = MEM_W(ctx->r17, 0XC);` line as a stable anchor but the replacement
+function never re-emitted it, silently **deleting that instruction** from
+the compiled function. Two soaks on that build (`sceneptrguard1`,
+`sceneptrguard2`, same env block as s188's `schedtick1` plus the new guard's
+env var) both crashed **immediately and byte-identically** at
+decisionN=151/149 — a brand-new signature never seen before
+(`submitSceneNodeRender+2156` self-call, called from `processSceneNode`,
+never a scene the game had reached this early in any prior soak) — with the
+new guard's own log tag **never firing** (0/0), which was the tell: the
+guard's mere presence, not its activation, was changing behavior, pointing
+at a codegen bug rather than a triggered false-positive. Built and ran a
+control (`controlnoguard1`): identical env block, only the new patch
+disabled (temporarily neutered via `if False and p.name == ...`) — survived
+the **entire 120s hold + grace window with zero crashes**, decisionN reached
+14721+ before being killed manually. That confirmed the regression was
+caused by the patch itself, not the pre-existing lib state, and pointed
+straight at the deleted deref line once the diff was re-examined. Fixed by
+re-appending the original line to the replacement string; regenerated,
+confirmed `x1` again, rebuilt.
+
+**Post-fix soak (`sceneptrguard3`)**: no regression — decisionN climbed
+cleanly through a real VI-width transition (1024→512, a legitimate mission
+load, not a crash) to **8053** before dying to a SIGBUS in
+`reserveAndEmitDLEntry` (called via `submitSceneNodeRender` ←
+`processSceneNode` ← `traverseSceneGraphRecursive` (twice, +1576/+2336) ←
+`setupCameraMatrices` ← ...). This is the **already-catalogued 14th class**
+(`reserveAndEmitDLEntry`, first identified s168-171, PORTING-STATE ~15574-
+15780) recurring at a native offset (+5212) past both the s109 guard and the
+3 guards s169 added — a whack-a-mole-shaped "another unguarded deref in the
+same function" recurrence, not a new bug family. **`scene-node-ptr-guard`
+did not fire** (0) — meaning this run never reached a call where the node
+pointer was actually corrupted, so **the guard's effectiveness against the
+target processSceneNode self-recursion bug (9660-9800 decisionN window) is
+still untested** — the run was blocked by a different, earlier crash before
+it could get there.
+
+### Result
+
+1. Corrected CURRENT-TRUTH item -38: only 1 of the "4 existing guards" is
+   actually on `processSceneNode`; the other 3 guard an unrelated function
+   (`submitSceneNodeRender`).
+2. Landed `ROGUESQ_LOG_SCENE_NODE_PTR_GUARD` on `processSceneNode`'s node
+   pointer (`N64Recomp/fixup_game_funcs.py`, funcs_4.c entry, mirrors the
+   depth-cap's bail semantics).
+3. Found, root-caused, and fixed a self-introduced regression (deleted
+   instruction from an over-greedy regex match) using a same-session control
+   build as the discriminating test — 2/2 crash with the bug, 1/1 crash-free
+   past decisionN 14721+ with the same patch disabled.
+4. The actual target question (does the fixed guard let decisionN push past
+   9792, and does the `-35` stall signature appear) is **still open** — this
+   run hit a different, already-catalogued crash (`reserveAndEmitDLEntry`,
+   14th class) at decisionN=8053 first. Not evidence against the fix; just
+   an earlier obstacle in the same run.
+
+No `submodule-patches/export.sh` needed — all edits this session were in the
+standalone `N64Recomp` tool checkout (`fixup_game_funcs.py`,
+`RecompiledFuncs/*.c` regenerated output) and `RogueSquadron64Recomp/scratch/
+agent/*`, nothing under `RogueSquadron64Recomp/lib/`.
