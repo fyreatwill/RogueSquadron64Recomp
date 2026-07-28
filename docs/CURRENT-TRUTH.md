@@ -663,7 +663,55 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s221)
+## Next steps, in order of expected value (s222)
+
+-63. **(s222) 4th consecutive null closes the "schedule density" hypothesis
+    for good — checksum-verified, the on-screen picture freezes on a
+    degenerate-polygon frame ~4s after leaving SELECT YOUR CRAFT and
+    NEVER changes again for the remaining ~340s, crash-free, no matter how
+    much scripted input follows. This is s150's already-diagnosed
+    "corrupting camera move into the same hangar scene" (see "Overturned
+    conclusions"), now reconfirmed a 4th time — but now surviving
+    crash-free thanks to guards shipped since s150, so it manifests as a
+    silent permanent hang instead of a crash. `unlit-mesh-tracer`/
+    `renderunlit-guard`/`emit-dl-guard2`/`3`/`heapwalker-guard`(`3`/`4`)/
+    `heaplistdeq-guard`/`mesgqueue-guard` all stayed 0 across all of it.**
+    A soak with 3 Start presses (20/40/60s, vs. the old single `95:start`)
+    and a sustained `su`/`sr`/`sd`/`sl` pulse every 8s from 70-342s
+    (`schedulepush2`, `HOLD_S=350`) ran the full hold crash-free
+    (`CRASH: 0`) — but MD5-checksumming the run's own `hold_NN.png`
+    captures shows `hold_04.png`...`hold_350.png` are byte-identical (one
+    hash, 12 sample points across the whole window, including every
+    scripted keypress). Walking the finer 0.2s-tick `after_p1_start_*.png`
+    series brackets the freeze's onset to a precise window: still a clean,
+    coherent hangar-departure shot at 3.0s post-leave, already the same
+    torn/striped degenerate-polygon frame that then freezes forever by
+    4.0s post-leave. Cross-referenced against s150 (item -2 in "Overturned
+    conclusions"): identical phenomenon (same hangar scene, closer/lower
+    camera angle, escalating render corruption into large degenerate
+    polygons) — s150 called it a "corrupting camera move", never a real
+    launch, and flagged it unfixed. s150's own soak crashed mid-corruption
+    (3rd recurrence of the 12th crash class); this soak, with ~70 sessions
+    more guard-hardening on top, doesn't crash at all — it just hangs on
+    the corrupted frame indefinitely. **This — not guard coverage on any
+    leaf render function, not schedule density — is the best-evidenced
+    reason no soak has ever reached mesh-heavy content.** Bonus 2nd data
+    point (still single-shape, not yet two-source): a *separate*, later
+    (~406s wall) `[thr-resume-skip] bad_total=1` fires immediately before
+    the run's `[vi-fs-decision]` log-level stall onset (`stalled=1`
+    permanent, `rdpFs` frozen at 3724), reproducing s180's candidate
+    mechanism for that distinct, downstream stall class. **Next step**:
+    source-read `setupCameraMatrices`/`traverseSceneGraphRecursive`/
+    `composeNpcOrientationMatrix` (all three already named in s150's and
+    s220/s221's matching backtraces) end to end looking for what corrupts
+    the camera/vertex transform during this specific post-leave camera
+    path — NOT another leaf-function guard soak. Also found and worked
+    around a real hazard: a previous iteration's soak
+    (`schedulepush1`) was left orphaned mid-run (backgrounded, then the
+    turn ended before it finished, silently killing it with no crash
+    logged) — this session's replacement ran synchronously (foreground
+    Bash, no `&`, generous timeout) specifically to avoid repeating that.
+    Full detail: PORTING-STATE Session 222.
 
 -62. **(s221) Closed the actual gap behind s220's `emitAllocatedDLCommand`
     hold-iter-1 crash — not a new bug, a 15+-session-old guard mechanism
@@ -4843,6 +4891,14 @@ specific instance in PORTING-STATE:
   (s11).
 
 Not yet generalized in PROJECT-OVERVIEW — specific to this codebase's instruments:
+- A "crash-free, full hold survived" soak is not evidence the game did anything for that hold —
+  MD5-checksum the `hold_NN.png` series before trusting a diagnostic null; s222's soak logged 991
+  `[vi-fs-decision] FIRE` events and ran its full 350s hold with 0 crashes while the actual on-screen
+  picture was byte-identical from `hold_04.png` onward, frozen the entire time.
+- Launching a soak with `run_in_background=true` and then ending the turn before it finishes risks
+  the harness reaping the whole process tree mid-run (s222 found exactly this: an orphaned soak,
+  no crash logged, process gone, ~40 min stale). For soaks that fit the tool timeout, launch
+  synchronously (foreground, no `&`) instead — it cannot be orphaned by a premature turn-end.
 - Sparse one-shot screenshots land on genuine inter-screen transitions and read as a regression;
   always burst-sample (28 frames at 0.15 s: 27/28 with content, where 4 one-shots showed black) (s9).
 - Validate a suppression instrument before believing a null result: `ROGUESQ_SUPPRESS_SHIFT=1`

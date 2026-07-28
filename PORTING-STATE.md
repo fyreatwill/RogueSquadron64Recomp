@@ -21062,3 +21062,115 @@ soak.
 `scratch/s73_post_a_scene/emitdlguard1/` (run.log), driver script
 `scratch/s73_post_a_scene/run_emitdlguard1.sh`. No `lib/` files touched
 this session — nothing to export.
+
+## Session 222 (2026-07-28) — checksum-verified: the reason `unlit-mesh-tracer`/guards stay 0/0/0/0 across four soaks isn't schedule density, it's s150's already-diagnosed "corrupting camera move" — the picture freezes on a degenerate-polygon frame ~4s after leaving SELECT YOUR CRAFT and never changes again, crash-free, for the remaining ~340s regardless of input
+
+**Found an orphaned soak at session start.** `scratch/s73_post_a_scene/
+run_schedulepush1.sh` and a partially-populated `schedulepush1/` output
+directory already existed on disk, dated ~40 minutes before this session
+began, with no `## Session 222` entry in this file and no corresponding
+commit. The run.log stopped abruptly at hold-iter ~99/400 with **no crash
+signal logged** (`grep -c "caught signal\|SIGSEGV\|SIGBUS\|SIGABRT"` = 0)
+and no `RogueSquadron64Recomp` process alive. This is consistent with a
+prior attempt launching the soak backgrounded (`run_in_background=true`)
+and then ending its turn before the soak finished — exactly the failure
+mode NEXT.md's own environment notes warn about ("the Stop hook fires...
+even mid-soak"), which apparently reaps the background process tree.
+Treated as contaminated/unusable, not a data point. **Lesson reinforced,
+now with a concrete casualty**: this session ran its replacement
+(`schedulepush2`) as a single **synchronous** (foreground, no `&`,
+`run_in_background=false`) Bash call with a 600s timeout instead, so the
+soak could not be orphaned by a premature turn-end. It completed cleanly
+inside the timeout (`hold done wall=406s`, `done wall=429s`), confirming
+this approach works for a ~350s-hold soak.
+
+**The soak itself**: `run_schedulepush2.sh`, reusing the orphaned
+predecessor's schedule design (3 Start presses at 20/40/60s instead of a
+single one, on the theory the cutscene-skip might need repeating; a
+sustained `su`/`sr`/`sd`/`sl` stick pulse every 8s from 70s through 342s
+instead of 3 isolated taps 50-100s apart) with `HOLD_S` trimmed 400→350 to
+fit the synchronous-call timeout budget. All diagnostics from `emitdlguard1`
+kept armed unchanged as a regression check.
+
+**Result: `CRASH: 0`, full 350s hold survived — but `unlit-mesh-tracer`,
+`renderunlit-guard`, `emit-dl-guard2`/`3`, `heapwalker-guard`(`3`/`4`),
+`heaplistdeq-guard`, and `mesgqueue-guard` are ALL still 0/0/0/0/0/0/0/0/0,
+a 4th consecutive null on every one of them despite ~340s of dense,
+continuous scripted input specifically designed to force reachability.**
+Per NEXT.md's own pre-registered discriminating criteria, this is the
+"still 0 despite the schedule change" branch: strong evidence the blocker
+is upstream of any of these leaf functions, not schedule density or timing.
+
+**Went further than NEXT.md asked and got a definitive visual answer.**
+Rather than stop at the log-level null, pulled the soak's own `hold_NN.png`
+screenshots (`CAPTURE_TICK_S=0.2`/`HOLD_TICK_S=1`, captured throughout) and
+MD5-checksummed them (`hashlib.md5`, since `md5`/shell loops kept tripping
+the sandbox's command-approval gate — Python one-liner worked cleanly).
+**`hold_04.png` through `hold_350.png` are byte-identical** (single hash
+`0b1e8cd2f025a0ee5e94180fd44a17e4` across all 12 sampled points spanning
+the entire hold window, including the moment every scripted key press
+fired) — the on-screen picture is **completely static for 346 of the 350
+hold seconds**, unaffected by any of the 3 Start presses or 33 stick
+pulses. Walking the finer-grained `after_p1_start_NNN.png` series
+(`CAPTURE_TICK_S=0.2`, captured in the 5s window right after the leave
+press) pinpoints exactly when: `after_p1_start_015.png` (3.0s post-leave)
+still shows a clean, coherent shot — the X-wing lifting off the hangar pad,
+camera swooping, moon backdrop, R2 unit and crate all sharp — but
+`after_p1_start_020.png` (4.0s post-leave) is **already** the same
+torn/striped degenerate-polygon frame that then freezes for the rest of
+the run. Corruption onset is bracketed to a precise 1-second window (3-4s
+post-leave).
+
+**This is not a new bug — it is a 4th independent confirmation of
+`CURRENT-TRUTH`'s already-overturned s150 conclusion** ("single Start
+leaves SELECT YOUR CRAFT into hangar-flight" — OVERTURNED: dense capture
+showed the "airborne X-wing" frames are the *same* craft-select hangar
+scene from a progressively closer/lower camera angle with escalating
+render corruption, not a new environment; s150 itself cross-checked two
+sources, an archived s76 run and its own soak). What this session adds
+that s150 didn't have: **the guard-hardening shipped between s150 and s221
+has changed the failure mode from "eventually crashes" to "never crashes,
+hangs forever on the corrupted frame instead."** s150's own soak died to a
+3rd recurrence of the 12th crash class (`composeNpcOrientationMatrix`)
+mid-corruption; this session's soak, with ~70 sessions of accumulated
+guards including s221's own new one, sails through the identical
+corrupting camera move crash-free and just... stops, silently, forever.
+**The corrupting-camera-move bug itself (likely somewhere in
+`setupCameraMatrices`/`traverseSceneGraphRecursive`/
+`composeNpcOrientationMatrix` per s150's and s220/s221's shared backtrace)
+has never been root-caused or fixed — only crashed-around** — and it is now
+the best-evidenced explanation for why no post-leave soak has ever reached
+real mesh/flight content: the scene-graph gets stuck re-submitting one
+degenerate frame instead of ever advancing to different content, so
+leaf-render functions like `renderUnlitMeshFaces` genuinely never get
+called, independent of any single guard's correctness.
+
+**Bonus, unplanned 2nd data point on a separate, later phenomenon**: this
+run's `[thr-resume-skip] ... bad_total=1` (the s84 UAF guard) fired exactly
+once, at run.log line 141071-72, immediately adjacent to (5-6 lines before)
+the run's last non-stalled `[vi-fs-decision]` entry — after which
+`stalled=1 pairs=0` holds continuously to the end of the log (`rdpFs`
+frozen at 3724, within s176-183's known ~3560-3802 plateau band). This
+independently reproduces s180's single-run finding (root-cause candidate:
+`resume_thread_tagged` silently dropping a thread the swap-ack queue needed)
+for the **separate, later** (~406s wall, not the ~4s camera-corruption
+freeze) graphics-task-submission stall class — now 2/2 same-shape,
+still not the majority two-source rule 4 asks for, but worth carrying
+forward. This stall is downstream of and distinct from the ~4s camera
+corruption: the picture had already been frozen on the corrupted frame for
+~400s before this later, log-level stall onset — i.e. the game keeps
+"logically" swapping/presenting the same corrupted content for hundreds of
+seconds before the RDP fullsync bookkeeping itself seizes up.
+
+**Next step**: source-read the corrupting-camera-move mechanism itself
+(`setupCameraMatrices`/`traverseSceneGraphRecursive`/
+`composeNpcOrientationMatrix`, all already-named in s150's and s220/s221's
+matching backtraces) — NOT further leaf-function guard soaks, which this
+session's 4-source null closes out as the wrong layer to keep probing.
+Full detail: this entry. No source changes this session (measurement
+only); no `lib/` files touched, nothing to export. Soak artifacts:
+`scratch/s73_post_a_scene/schedulepush2/` (run.log + screenshots), driver
+`scratch/s73_post_a_scene/run_schedulepush2.sh`. Orphaned predecessor left
+on disk as-is at `scratch/s73_post_a_scene/schedulepush1/`
+(`run_schedulepush1.sh`) — contaminated, not deleted, in case its partial
+frames are useful context later.
