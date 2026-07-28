@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s142)
+## Next steps, in order of expected value (s144)
 
 0a. **CLOSED (s135): `emitAllocatedDLCommand` soak hypothesis parked,
     3-attempt budget exhausted per rule 8.** s133 → environment-side
@@ -794,6 +794,37 @@ cost three sessions before the recursive mutex.
     unnoted structural link between Thread B's "which allocation is
     heap-adjacent" question and the corruption's own byte shape. Full
     detail: PORTING-STATE s143.
+
+    **s144** (pure source read via subagent + 1 direct spot-check, no
+    rebuild, NEXT.md's own prescribed follow-up): read both consumers
+    (`musyxMixActiveVoices` `funcs_24.c:2477-2811`,
+    `musyxBuildVoiceCommandList` `funcs_24.c:2812-3121`) end-to-end.
+    **+0x34 refuted for both** — neither function's own indexing math
+    into a slot-derived, 136-byte-stride item ever computes that offset
+    (the only two `0x34` literals in either function are an unrelated
+    `$sp`-relative `$s3` spill/reload). **Found a real bug instead**:
+    `musyxMixActiveVoices` writes into the toggle-selected slot via a
+    persistent global write-cursor (`0x80149710`/`0x80149712`, one
+    halfword per slot) that it increments and stores back every hit with
+    **no comparison against any voiceCount/capacity value anywhere in
+    the function** — its only indirect limiter is a different global
+    (`0x80149700`) that bounds the unrelated *source*-side scan, not this
+    buffer's own allocation size. `musyxBuildVoiceCommandList` then
+    consumes that exact same unchecked cursor as its own loop bound
+    (handed to it as `a1` by `musyxSynthFrame`, `:3299-3300`), with no
+    re-validation either. Confirmed no lock/mutex exists in either
+    function, and `musyxMixActiveVoices` independently re-reads the
+    async-flipped toggle 5 separate times per call rather than caching it
+    once. **Reframes Thread B's leading hypothesis**: from "which
+    `rs_malloc` allocation is heap-adjacent" to "does this unchecked
+    cursor overrun its slot and corrupt something heap-adjacent" — a
+    concrete, source-confirmed unbounded-write mechanism, not yet proven
+    to be the specific writer of the arrayBase `+0x34` corruption (the
+    victim is a different buffer; the link, if real, is spatial/heap-
+    adjacency, same open question as before but now with a named
+    mechanism). Deliberately did not build the toggle-desync or
+    cursor-overrun instrument this session — both are rebuild+instrument
+    work, correctly deferred per rule 8. Full detail: PORTING-STATE s144.
 
 0d. **s139: ran the discriminating rs_malloc-range-overlap measurement
     s138 called for.** Landed a universal `rs_malloc` allocation log

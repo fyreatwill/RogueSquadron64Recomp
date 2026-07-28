@@ -12666,3 +12666,107 @@ reportable finding rather than a sprawling multi-function audit.
 **Landed:** nothing (pure source read via subagent, no code/instrument
 changes, no rebuild, no soak this session). `PORTING-STATE.md` /
 `docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md` (this write-up).
+
+## Session 144 (2026-07-27) — read both slot-buffer consumers full-body (NEXT.md's prescribed work unit): refutes "either function's own indexing reaches +0x34", finds a real unchecked-cursor bug instead — a new, more specific Thread B hypothesis
+
+Ran exactly the work unit s143 handed off: read `musyxMixActiveVoices`
+and `musyxBuildVoiceCommandList` end-to-end in `funcs_24.c` and answer
+the three prescribed questions (index bound, +0x34 access, timing
+hazard). Delegated the read to a subagent (Explore, foreground) with the
+full address-decode context and exact questions, per this session's
+Fable-mode operating rules; spot-checked the subagent's most load-bearing
+claim (the unchecked write-cursor) directly against `funcs_24.c:2610-2680`
+before trusting it. No rebuild, no soak — this was declared source-read
+only in NEXT.md.
+
+**Function boundaries** (corrected from NEXT.md's estimates):
+`musyxMixActiveVoices` is `funcs_24.c:2477-2811`;
+`musyxBuildVoiceCommandList` is `funcs_24.c:2812-3121` (ends well before
+the estimated 3300 — `musyxSynthFrame` starts at `:3122`, not after
+3300).
+
+**Finding 1 — +0x34, refuted for both functions.** Neither function's
+own byte-offset arithmetic into a slot-derived, 136-byte-stride item
+pointer ever computes `+0x34`. The only two `0x34` literals in either
+function (`:2502-2503`, `:2795-2796`) are `$sp`-relative spill/reload of
+register `$s3` in `musyxMixActiveVoices`'s prologue/epilogue — unrelated
+to any voice-item struct. Field offsets actually touched against
+slot-derived item bases: `0x0, 0x22, 0x7C, 0x80, 0x84` (destination,
+`musyxMixActiveVoices`) and `0x0, 0x84, 0x85` (fixed source array,
+`musyxMixActiveVoices`) and `0x22, 0x3C, 0x54, 0x7C, 0x84`
+(`musyxBuildVoiceCommandList`). **This closes NEXT.md's headline
+question: these two consumers are not the direct writer of the +0x34
+corruption via their own indexing math.**
+
+**Finding 2 — a real unchecked-cursor bug, not previously characterized.**
+`musyxMixActiveVoices` writes into the toggle-selected destination slot
+using a persistent **global** write-cursor at `0x80149710`/`0x80149712`
+(a halfword per slot, `-0x68F0`/`-0x68EE` from the `0x8015`-page base) —
+read pre-increment as the item index (`funcs_24.c:2648, :2653-2654` and
+parallel sites at `:2705-2706, :2735-2736, :2753-2754, :2767-2768`),
+scaled by `idx*136` (`<<4` then `+idx` then `<<3`, confirmed directly at
+`:2647-2660`: `sll $a3,$v1,4; addu $a3,$a3,$v1; sll $a3,$a3,3`), then
+incremented and written straight back to the same global address with
+**no comparison against any voiceCount/capacity value anywhere in the
+function** (increment+store confirmed directly at `:2663-2664,
+:2673-2674`: `addiu $v0,$a0,0x1; sh $v0,0x0($s1)`). The only bound
+governing how many times this cursor increments is a *different* global
+halfword at `0x80149700` (`-0x6900`) that limits the **source**-side
+scan loop over the fixed voice-state array at `0x801496F8` — re-read
+fresh from the global every iteration (`:2682-2691`), not the same value
+and not obviously tied to the destination buffer's own
+`(voiceCount+1)*136` allocation size (that association isn't verifiable
+from this file — `allocateSongChannelArray`, which sets the real
+capacity, lives in `funcs_23.c`).
+
+`musyxBuildVoiceCommandList` doesn't read the toggle or slot table
+itself at all — it trusts `a0`/`a1` handed to it by its caller,
+`musyxSynthFrame` (`:3281-3284` XORs the toggle to select the *other*
+slot, `:3291-3292` loads that slot's raw buffer pointer as `a0`,
+`:3299-3300` loads **the same per-slot cursor** at `0x80149710`/
+`0x80149712` as `a1`). So `musyxBuildVoiceCommandList`'s loop bound is
+literally the unchecked write-cursor `musyxMixActiveVoices` just
+incremented on the *other* slot the previous tick — with, again, no
+re-validation against the buffer's actual allocated size anywhere in
+either function.
+
+**Finding 3 — timing hazard confirmed present, not just hypothesized.**
+No mutex/lock/barrier call exists in either function. `musyxMixActiveVoices`
+re-reads the toggle byte from global memory **five separate times**
+within one call (`:2488-2489, :2623-2624, :2657-2658, :2703-2704,
+:2729-2730`) rather than caching it once in a local, each time
+independently re-deriving "the current slot" — and the toggle is flipped
+asynchronously by `musyxSynthFrame` every VI-retrace tick
+(`:4116-4127` in absolute terms, i.e. the file's `musyxSynthFrame` body).
+Nothing in `musyxMixActiveVoices` guarantees all five re-reads observe
+the same slot selection within a single call. `musyxBuildVoiceCommandList`
+has no analogous internal hazard (it never reads the toggle itself), but
+inherits whatever `musyxSynthFrame`'s own toggle-read/XOR/table-lookup
+sequence produces at `:3281-3300`.
+
+**Reframing of Thread B:** the leading hypothesis is no longer "which
+`rs_malloc` allocation is heap-adjacent to the voice array" (s138-s143's
+framing) — it's now "does the unchecked `0x80149710`/`0x80149712`
+write-cursor in `musyxMixActiveVoices` ever exceed the destination
+slot's actual allocated item count, and does the resulting out-of-bounds
+write land at a byte offset that could explain the observed +0x34
+corruption in a *different* buffer" (the corruption's confirmed victim
+is the arrayBase voice array at `0x801714D0`+, not this slot pair
+directly — the connection, if real, would have to be spatial/heap-
+adjacency, same as the original Thread B framing, but now with a
+concrete unbounded-write mechanism instead of an unidentified writer).
+This is a genuine, source-confirmed bug (unbounded index write, no
+capacity check) independent of whether it explains the tracked
+corruption — worth fixing/guarding regardless, per the project's pattern
+of gating every characterized unguarded-access site (s99-s101 family).
+
+**Not done, deliberately (per NEXT.md's own explicit deferral):** did
+not build the toggle-desync timing instrument, and did not build an
+instrument to catch the write-cursor exceeding capacity — both are
+rebuild+instrument work, correctly deferred to the next session per
+rule 8 (don't stack speculative work same-session as a source-read
+unit).
+
+**Landed:** nothing code-side (pure source read + one direct
+spot-check, no rebuild, no soak). `PORTING-STATE.md` /
+`docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md` (this write-up).
