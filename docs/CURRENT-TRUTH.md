@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s141)
+## Next steps, in order of expected value (s142)
 
 0a. **CLOSED (s135): `emitAllocatedDLCommand` soak hypothesis parked,
     3-attempt budget exhausted per rule 8.** s133 → environment-side
@@ -748,6 +748,26 @@ cost three sessions before the recursive mutex.
     sessions (s105-140) assumed. Same-run death was the already-tracked
     `do_rom_read`/`piDmaWorker` corruption SIGSEGV (not a new class).
     Full detail: PORTING-STATE s141.
+
+    **s142** (pure source read, no rebuild, NEXT.md option (b)):
+    characterized candidate B's write pattern by reading
+    `allocateSongChannelArray` end-to-end. **Neither candidate B
+    (`funcs_23.c:11033`) nor its identically-sized twin (`:11011`) is ever
+    written to by this function** — both are allocated, pointer-stashed to
+    a global (`0x80149708`/`0x8014970C`), and left untouched; the function's
+    only other work after them is a literal-664B buffer that *does* get
+    memset+dcache-writeback, and then it returns. A whole-file grep
+    confirms no other function in `funcs_23.c` reads either global either
+    (`setupSongRenderBuffers`, the next function in the file, was already
+    refuted as producer s141 and now also isn't a consumer). This weakens
+    (does not close) candidate B as the *direct* writer of the observed
+    ASCII-fragment corruption — if it's the real culprit, some other,
+    not-yet-located function (plausibly a different overlay/file) writes
+    through the stashed pointer. Bonus 2nd-source confirmation: arrayBase's
+    stride (136B) independently matches `symbol_files/main_overlay.
+    txt:319`'s human-RE comment ("RSP-mixer voice-slot array... stride
+    0x88"), previously uncross-checked against s104's measurement. Full
+    detail: PORTING-STATE s142.
 
 0d. **s139: ran the discriminating rs_malloc-range-overlap measurement
     s138 called for.** Landed a universal `rs_malloc` allocation log

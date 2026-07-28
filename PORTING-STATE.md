@@ -12508,3 +12508,77 @@ call-site tag patch block, uncommitted — same posture as s139/s140).
 `scratch/agent/run_rsmallocsite1.sh` (new soak wrapper).
 `scratch/s73_post_a_scene/rsmallocsite1/run.log` (the soak). `PORTING-STATE.md`
 / `docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md` (this write-up).
+
+## Session 142 (2026-07-27) — characterized candidate B's write pattern (NEXT.md option (b), pure source read, no rebuild): neither of the two identically-sized N*(voiceCount+1)*136 allocations is ever written to by `allocateSongChannelArray` itself, weakening candidate B as the direct writer of the ASCII corruption
+
+Picked option (b) from s141's NEXT.md over option (a): lower risk (no
+rebuild/soak needed), and directly answers "is this buffer a name/string
+table (would explain the ASCII corruption) or a numeric struct array."
+
+**Method:** read `allocateSongChannelArray` end-to-end
+(`N64Recomp/RecompiledFuncs/funcs_23.c:10687-11094`, the full function body,
+not an excerpt) and traced every `rs_malloc` call's size expression and what
+happens to its returned pointer afterward.
+
+**Findings:**
+
+1. **Neither N*136 buffer is ever written to.** The function makes 6
+   `rs_malloc` calls total, in source order: (1) `voiceCount*136`
+   ("arrayBase", ptr duplicated to two globals, `0x801496FC`/`0x801496F8`);
+   (2)/(3) the already-known `V*2576` pair (`:10949`/`:10975`, ptrs at
+   `0x80149758`/`0x8014975C`); (4) `N*(voiceCount+1)*136` at `:11011` (ptr
+   stored to `0x80149708`); (5) **candidate B**, the same
+   `N*(voiceCount+1)*136` value *reloaded from the halfword temp `:11011`
+   wrote* rather than recomputed (`:11033`, ptr stored to `0x8014970C`);
+   (6) a literal 664B (`0x298`) buffer that **does** get initialized —
+   `rs_memset` to zero, then `osWritebackDCache`, then the function
+   returns. Allocations (4) and (5) get no store instruction of any kind
+   between their `rs_malloc` call and the function's `jr $ra` — they are
+   allocated, pointer-stashed to a global, and untouched. Allocation (1)
+   (arrayBase) *is* partially initialized by this function (a per-slot loop
+   zeroing offsets `0x0`/`0x85` and setting `0x84=0xFF` for each of
+   `voiceCount` slots) — the asymmetry (arrayBase gets per-slot init,
+   candidate B's buffer doesn't) is itself informative: whatever populates
+   candidate B's contents happens in a different function, later.
+2. **No other function in `funcs_23.c` touches the two candidate-B-family
+   globals either.** Grepped the whole file for the literal offsets
+   (`0x68F8`/`0x68F4`/`0x68FC`, the `lui 0x8015`-relative encodings used at
+   the allocation site) — all 4 hits are inside `allocateSongChannelArray`
+   itself. `setupSongRenderBuffers` (the very next function in the file,
+   `:11095` on) does not reference these offsets via a `0x8014`-relative
+   encoding either (checked directly, 0 hits) — already independently
+   established as NOT the producer of size 8568 (s141), and now also not a
+   consumer of the pointers.
+3. **Independent stride cross-check (unplanned, from `symbol_files/
+   main_overlay.txt:319`):** `0x801496F8` (arrayBase's duplicate copy) is
+   documented there as "the RSP-mixer voice-slot array installed by
+   `initN64RspMixer`... stride 0x88" — 0x88 = 136 decimal, exactly matching
+   s104's independently-measured per-slot stride. This is a 2nd, previously
+   uncross-checked source (a human RE comment, not measurement) agreeing
+   with the runtime measurement — a legitimate two-source confirmation for
+   an already-believed fact, not new information about candidate B itself.
+   No equivalent named symbol exists near `0x80149708`/`0x8014970C`
+   (candidate B's globals) in that file — grepped, 0 hits.
+
+**Interpretation:** this weakens (does not close) candidate B as *itself*
+the writer of the observed ASCII-fragment corruption pattern
+(`"explo_tex2"`, `"lgfr"`, `"wing"`, s94/s102) — `allocateSongChannelArray`
+never writes anything into that buffer, so if candidate B really is what's
+being read out-of-bounds and misinterpreted as those ASCII fragments, the
+actual writer is a separate, not-yet-located function that consumes the
+pointer stashed at `0x8014970C` — plausibly in a different overlay/`.c`
+file, since nothing in `funcs_23.c` reads it back. This doesn't rule
+candidate B in or out relative to candidate A; it just moves the open
+question from "what is candidate B's allocation site" (closed, s141) to
+"who writes through candidate B's pointer, and with what data shape."
+
+**Not done, deliberately:** did not chase the `0x80149708`/`0x8014970C`
+consumer across other files this session — that's a new, larger grep-scope
+question (which overlay/file reads a global pointer stashed by
+`funcs_23.c`) better scoped as its own work unit with a plan, per
+NEXT.md's own advice not to let one session's "pick one" balloon into
+chasing both leads at once.
+
+**Landed:** nothing (pure source read, no code/instrument changes this
+session). `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
+`scratch/agent/NEXT.md` (this write-up).

@@ -1,79 +1,91 @@
-# NEXT work unit — Thread B: find candidate A's overlay-load producer (or characterize candidate B's write pattern)
+# NEXT work unit — Thread B: find candidate A's overlay-load producer, or find candidate B's consumer/writer
 
-s141 named candidate B to source and refuted the guessed source for both
-candidates by direct measurement (not more inference) — read
-PORTING-STATE's Session 141 entry before doing anything else; this file
-only has the actionable summary.
+s142 characterized candidate B's write pattern (a pure source read, no
+rebuild) and found it's never written to by its own allocating function —
+read PORTING-STATE's Session 142 entry before doing anything else; this
+file only has the actionable summary.
 
-## What s141 did and found
+## What s142 did and found
 
-Two-stage work unit: source-read (subagent) proposed named functions for
-s140's 2 remaining unnamed candidates by exact-integer divisibility only
-(flagged explicitly as an unproven guess), then a call-site tag instrument
-(`ROGUESQ_LOG_RS_MALLOC_SITE`, `N64Recomp/fixup_game_funcs.py`) correlated
-against the existing `[rs-malloc]` log to test the guess directly.
+Picked NEXT.md's option (b) (characterize candidate B's write pattern,
+lower risk, no rebuild) over option (a) (find candidate A's producer).
 
-**The guess was wrong for both candidates** (`setupSongRenderBuffers`
-never produced size=8568 in 6 calls this run; `buildSongDecodeBufferRing`'s
-2nd call never produced size=32768 in 6 calls) — informative, not a null
-result, because the same log immediately revealed the real producers:
+Read `allocateSongChannelArray` end-to-end
+(`N64Recomp/RecompiledFuncs/funcs_23.c:10687-11094`). It makes 6
+`rs_malloc` calls in source order:
 
-1. **Candidate B (`0x8016FD20`/8568B) is named:** `allocateSongChannelArray`'s
-   own second `N*(voiceCount+1)*136`-sized allocation
-   (`funcs_23.c:11033`, the "reloaded from temp" duplicate of
-   `funcs_23.c:11011`). Two independent confirmations: log-sequence
-   position (sits exactly between the `V*2576` pair at `:10949`/`:10975`
-   and the literal-664 call at `:11047`, matching source call order
-   exactly) and arithmetic on this run's own live boot values
-   (`voiceCount=20`, so `(voiceCount+1)*136=2856`; `V=3` from the
-   preceding `2576*3=7728` pair; `N=3` (matches V) `× 2856 = 8568`
-   exactly).
-2. **Candidate A (`0x80171470`/32768B) is refuted as audio-subsystem
-   entirely.** Its one occurrence in the log sits immediately after
-   `[overlay] start-match: section 4 rom=0x00137580 at ram=0x800A5130`
-   and 2 `osViSetMode` calls — an overlay-load event, nowhere near either
-   guessed audio function's call-site tags (which fire for the next song,
-   much later in the log). 4 sessions (s105-140) searching the audio
-   files for this candidate's caller were looking in the wrong subsystem.
+1. `voiceCount*136` ("arrayBase" — the RSP-mixer voice-slot array,
+   confirmed against `symbol_files/main_overlay.txt:319`'s independent
+   "stride 0x88" comment) — ptr duplicated to globals `0x801496FC`/
+   `0x801496F8`. **This one gets a per-slot init loop** (zeroes offsets
+   `0x0`/`0x85`, sets `0x84=0xFF`, for each of `voiceCount` slots).
+2/3. The already-known `V*2576` pair (`:10949`/`:10975`).
+4. `N*(voiceCount+1)*136` at `:11011` — ptr stored to global `0x80149708`.
+5. **Candidate B**: the *same* `N*(voiceCount+1)*136` value, reloaded from
+   the halfword `:11011` wrote (not recomputed) — `:11033`, ptr stored to
+   global `0x8014970C`.
+6. A literal 664B (`0x298`) buffer — **this one gets `rs_memset` to zero +
+   `osWritebackDCache`**, then the function returns.
 
-Same-run death was the already-tracked `do_rom_read`/`piDmaWorker`
-corruption SIGSEGV (unchanged signature, not a new class) — 4th/6th
-recurrence across recent render-guard/Thread-B soaks, not itself the
-target of this experiment.
+**Key finding: allocations 4 and 5 (both `N*(voiceCount+1)*136`, including
+candidate B) get NO store instruction between their `rs_malloc` call and
+the function's return.** They're allocated and pointer-stashed to a
+global, nothing else. A whole-file grep of `funcs_23.c` for the literal
+offsets (`0x68F8`/`0x68F4`/`0x68FC`) confirms **no other function in this
+file references those two globals either** — including
+`setupSongRenderBuffers` (the very next function in the file), which was
+already refuted as candidate B's *allocator* (s141) and is now confirmed
+to not be its *consumer* either.
+
+This **weakens (does not close) candidate B** as the direct writer of the
+ASCII-fragment corruption pattern (`"explo_tex2"`, `"lgfr"`, `"wing"`,
+s94/s102) — if candidate B really is what's being read out-of-bounds, the
+actual writer must be a separate, not-yet-located function elsewhere
+(plausibly a different overlay/`.c` file, since `funcs_23.c` itself never
+reads the pointer back).
+
+No soak this session (pure source read, no rebuild, no new instrument).
 
 ## Do next: two independent leads, pick one
 
-**(a) Find candidate A's real overlay-load producer.** Now correctly
-scoped to the overlay-loading path, not audio. Grep `rs_malloc` call
-sites reachable from overlay init/load code (`lib/N64ModernRuntime`'s
-`overlays.cpp` calls into guest overlay-init functions — check which
-guest functions run during a "section 4" overlay start-match, likely in
-whichever `.c` file backs that overlay, not `funcs_23.c`/`funcs_24.c`)
-for one whose call context matches "runs right after an overlay
-start-match log line" and whose size expression could plausibly be
-32768. The existing `ROGUESQ_LOG_RS_MALLOC=1` log alone (no new
-instrument needed yet) already shows exactly one `0x80171470`-address
-hit per run at a known log position relative to `[overlay]` lines —
-start by re-examining that context across 2-3 more soaks/logs before
-building a new tagged instrument, to see if it's always the same
-overlay section number and always immediately-after the same
-`osViSetMode` pair (a positional fingerprint cheap to confirm before
-spending a rebuild).
+**(a) Find candidate A's real overlay-load producer.** Unchanged from
+s141 — still open. Now correctly scoped to the overlay-loading path, not
+audio. Grep `rs_malloc` call sites reachable from overlay init/load code
+(`lib/N64ModernRuntime`'s `overlays.cpp` calls into guest overlay-init
+functions — check which guest functions run during a "section 4" overlay
+start-match, likely in whichever `.c` file backs that overlay, not
+`funcs_23.c`/`funcs_24.c`) for one whose call context matches "runs right
+after an overlay start-match log line" and whose size expression could
+plausibly be 32768. The existing `ROGUESQ_LOG_RS_MALLOC=1` log alone (no
+new instrument needed yet) already shows exactly one `0x80171470`-address
+hit per run at a known log position relative to `[overlay]` lines — start
+by re-examining that context across 2-3 more soaks/logs before building a
+new tagged instrument, to see if it's always the same overlay section
+number and always immediately-after the same `osViSetMode` pair (a
+positional fingerprint cheap to confirm before spending a rebuild).
 
-**(b) Characterize candidate B's write pattern.** `allocateSongChannelArray`
-(`funcs_23.c`, around line 11033 onward) just got a
-`N*(voiceCount+1)*136`-sized buffer — read what it stores into that
-buffer (struct array indexed by voice/note, or a string/name table?).
-The corruption's established byte shape (ASCII fragments like
-`"explo_tex2"`, `"lgfr"`, `"wing"`, s94/s102) would be directly explained
-if this buffer is itself a name/string table; if it's a struct array of
-numeric fields instead, that weakens candidate B and raises A's relative
-importance. This needs no rebuild — pure source read.
+**(b) Find who reads/writes through candidate B's global pointer
+(`0x8014970C`, and its twin `0x80149708`).** New question, raised by s142.
+Since `funcs_23.c` never references either global after allocating them,
+the consumer is somewhere else — pure source read first (grep other
+`funcs_*.c` files, or `main_overlay.txt`/`mission_overlay.txt` symbol
+comments, for the absolute addresses `0x80149708`/`0x8014970C`; a
+different function may reach the same address via a different `lui`
+upper-half constant than `0x8015`, e.g. `lui 0x8014` + offset `0x9708` —
+match on the resulting absolute address, not the literal offset string).
+If a plain grep across all 45 `funcs_*.c` files finds nothing, the
+consumer may be reached only via an indirect call (`LOOKUP_FUNC`/`jalr`,
+same shape as s94's candidate-A-producer search) — in that case this lead
+needs an instrument (log every write through the pointer) rather than
+more grepping, similar to s139/s141's `rs-malloc`/`rs-malloc-site`
+technique but for writes-through-a-known-address instead of call sites.
 
-Either is a valid single work unit. (a) has higher information value if a
-cheap log re-read narrows the "who calls it" question before instrumenting;
-(b) is lower-risk (no rebuild) and could quickly rule B in or out as the
-ASCII-corruption source.
+Either is a valid single work unit. (a) has been open longer and directly
+resolves candidate A's remaining unknown; (b) is the freshest lead and
+could quickly confirm/deny whether candidate B is a name/string table (its
+never-initialized-here status is consistent with either "written
+elsewhere with string data" or "never actually populated, a red herring
+allocation" — only finding the writer distinguishes them).
 
 ## Do not
 
@@ -83,6 +95,9 @@ ASCII-corruption source.
 - Do not search the audio boot files (`funcs_23.c`/`funcs_24.c`) for
   candidate A's producer — s141 measured it's an overlay-load event, a
   different subsystem entirely.
+- Do not re-check whether `allocateSongChannelArray` itself writes to
+  candidate B's buffer — s142 read the full function body, confirmed 0
+  stores between the `rs_malloc` call and `jr $ra`, exhausted.
 - Do not re-audit any of Thread A's 8 hangar-tick-family functions
   (`composeNpcOrientationMatrix`, `updateAnimatedTextureStreaming`,
   `static_5_800B4048`, `projectModelBoundsToScreen`, `reserveAndEmitDLEntry`,
@@ -99,20 +114,25 @@ ASCII-corruption source.
 ## This session's environment notes (carry forward, still current)
 
 - The `[rs-malloc-site]`-to-`[rs-malloc]` correlation-by-log-order
-  technique works cleanly (12/12 positive control this session) and
-  generalizes: to identify any call site's contribution when
-  `caller_ra` is unusable, tag the site directly and match against the
-  next line of an existing always-fires log, rather than guessing from
-  size alone.
+  technique works cleanly (12/12 positive control, s141) and generalizes:
+  to identify any call site's contribution when `caller_ra` is unusable,
+  tag the site directly and match against the next line of an existing
+  always-fires log, rather than guessing from size alone.
 - `rs_malloc`'s real argument order is `(size, flags)` — confirmed s139.
 - `rs_free`'s real argument is `(ptr)` — confirmed s140.
 - `caller_ra` (`ctx->r31` at function entry) reads `0x00000000`
   universally across every entry-log instrument landed so far — stop
-  treating it as a signal (s92, s139, s140, reconfirmed s141 N/A since
-  this instrument didn't use it).
+  treating it as a signal (s92, s139, s140, s141).
 - When doing a range-overlap or log-correlation check, use THIS run's own
   actual values, not an older aggregate — s140/s141 both found the
   aggregate view hid a real refutation.
+- When reading recompiled `.c` for a fixed guest global address, remember
+  different call sites can reach the same address via different
+  `lui`-page/offset splits — grepping for one literal offset string (e.g.
+  `-0x68F8`) only finds sites using that exact split, not all consumers
+  (s142; not yet proven this actually happened for candidate B, but it's
+  the reason a whole-file grep can read as "0 consumers" when the true
+  answer is "0 consumers using this split").
 - `rm` on paths outside `scratch/` requires approval and does NOT accept
   glob patterns — use a `python3 -c` one-liner with `pathlib.Path.glob()`,
   run with cwd `N64Recomp`, deletes only the 45 `funcs_*.c` files.
@@ -163,7 +183,6 @@ experiment — not on its own.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
 not a `lib/` submodule, with uncommitted changes across s90-141
-(`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`, now
-including s141's `rs_malloc` site-tag log). Same posture as the
-`rogue_squadron64` sibling checkout flagged since s54. Worth asking the
-user whether/how to commit that history.
+(`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`). Same
+posture as the `rogue_squadron64` sibling checkout flagged since s54.
+Worth asking the user whether/how to commit that history.
