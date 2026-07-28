@@ -21565,3 +21565,79 @@ Soak artifacts: `scratch/s73_post_a_scene/sceneTraverse1/` (crashed, 6
 `run_scenetraverse2.sh`. Analysis: `scratch/agent/checksum_scenetraverse2.py`,
 `scratch/agent/checksum_scenetraverse2_out.txt`. Fixup report:
 `/Users/williambuckley/Documents/Tools/N64Recomp/scratch_fixup_report_s225.txt`.
+
+## Session 226 (2026-07-28) — s225's "two fixed scene-root pointers" are NOT independent globals: source trace + reanalysis of s224's own already-captured log shows they are the SAME camera struct's own fields, and the struct's own linkage field freezes exactly at the checksum-confirmed picture freeze while the struct's rotation submatrix (read from the same struct, same cadence) keeps changing for ~5880 more calls — landed a one-level-deeper diagnostic to test the natural next hypothesis, soak blocked on a permission gate
+
+Executed NEXT.md Step 1 exactly as specified ("answer this with source, not more
+logging, before adding any new instrument"): dispatched an Explore sub-agent to
+read `setupCameraMatrices`'s call site into `traverseSceneGraphRecursive`
+(`funcs_4.c:21358-21367`, guest `0x800178D0-0x800178E0`). Finding, independently
+verified by a second targeted read: **a1** (`traverseSceneGraphRecursive`'s own
+`ctx->r5`) is `ctx->r17 + 0x2C` — i.e. the ADDRESS of the camera struct's own
+`+0x2C` rotation submatrix, already characterized by s223/s224, not a separate
+global. **a0** (`ctx->r4`) is `MEM_W(ctx->r17, 0X0)` — the VALUE stored at the
+camera struct's own `+0x0` field. That field is used BOTH ways in this same
+function: null-tested at line 21339 (`if (ctx->r3 == 0) { ... goto ...}`,
+gating whether `mat3x3InverseInto` runs) AND, after that branch, reloaded and
+passed straight through as a pointer argument at line 21358 — so s224's
+"gating flag" label was half right (it does gate a branch) but incomplete: the
+same field is also forwarded as a real pointer value, consistent with a
+nullable linked-node/child reference on the camera struct, not a boolean.
+**This directly overturns s225's framing that the two traversal-entry pointers
+are "distinct from every render-chain function probed so far"** — they are
+both derived from the exact same camera struct s223/s224 already instrumented.
+
+**Second finding, from data already on disk (no new build/soak needed):** the
+existing `ROGUESQ_LOG_CAMPOSE` diagnostic (s224) already logs this exact `+0x0`
+field, under the name `flag=0x%08X`, every 60th call, alongside `m00` (the
+`+0x2C` submatrix) and `camptr` (the struct address itself) — from the SAME
+`campose1` soak s224 already ran and analyzed. Re-grepping that soak's own
+`run.log` (`scratch/s73_post_a_scene/campose1/run.log`, still on disk) for the
+window around `n=15000` (the call count s224 identified as where the picture
+freezes and the camera settles on "the flight camera") shows: `flag` and
+`camptr` both go from actively varying (`camptr` visiting `0x80165F18`,
+`0x800CF090`, ... per s224) to a fully fixed pair (`flag=0x80138DB4
+camptr=0x80138D20`) starting EXACTLY at `n=15000` and remaining
+byte-identical through the log's last sample (`n=21180`). `m00`, read from the
+SAME struct at the SAME cadence, does NOT freeze at `n=15000` — it keeps
+changing (0.809111→0.808469→0.741562→0.350189→...→-0.707199) until `n=20880`,
+matching s224's own already-documented ~5880-call/~60s lag. **This asymmetry
+is itself informative**: reading a fixed struct address does not by itself
+imply a frozen value (proven by `m00` on the identical struct/cadence), so
+`flag`/`camptr` freezing together, in lockstep, at the exact moment the camera
+settles on one object, is most simply explained by "we stopped switching
+camera objects" (mundane, expected, not evidence of an upstream simulation
+stall) rather than "whatever writes this field stopped running." This WEAKENS
+(does not confirm) the "upstream game-logic tick stopped" hypothesis for this
+specific field, and reframes the open question one level deeper: does the
+CONTENT at the address `flag` points to keep changing (traversal root's
+target is still live, freeze is further downstream) or is it also frozen from
+`n=15000` (stall reaches into whatever this pointer references)?
+
+**Landed** (not yet soak-validated): extended `ROGUESQ_LOG_CAMPOSE`
+(`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`, same
+patch site as s224, `funcs_4.c:0x800178A8`) to also compute and log `deref0`
+— the first word at the address `flag` (`ctx->r3`) points to, bounds-guarded
+to the 8MB RDRAM window (`0x80000000`-`0x80800000`, same convention as the
+s78/s182 wild-FB guards) to avoid an out-of-bounds read on a bad pointer
+value. Logged alongside the existing `m00`/`flag`/`camptr` fields, same
+throttle, same env var (`ROGUESQ_LOG_CAMPOSE=1`) — no new opt-in needed. This
+directly answers NEXT.md Step 2's suggested design ("logs the raw bytes at
+[the pointer] or whatever they point to, one dereference deep").
+
+**Blocked**: could not run the soak. `make_elf.py` ran clean (regen'd the
+ELF). The next mandatory step, `tools/agent/regen_n64recomp.sh` (running
+`N64Recomp` itself against the ELF — required before `fixup_game_funcs.py`
+and `cmake`, per the hard regen-order rule), returned "This command requires
+approval" on 3 separate attempts (plain, with `./` prefix, retried after a
+pause) despite matching the `Bash(tools/:*)`/`Bash(./tools/:*)` allow-list
+entries in `.claude/settings.json` verbatim. This is an environment/session
+permission-gate issue, not a code or script problem — flagged to the user
+directly (see `scratch/agent/BLOCKED.md`). The new `deref0` diagnostic is
+landed and ready; it just hasn't been exercised by a build+soak yet.
+
+**Housekeeping note**: `fixup_game_funcs.py`'s change this session is, as
+always, in the untracked `N64Recomp` sibling checkout (flagged since s83,
+still out of this repo's commit scope) — the diagnostic code itself is saved
+to disk (verified via Read-after-Edit within the same tool call chain) but
+is NOT captured by this repo's `git commit`.

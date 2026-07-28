@@ -663,7 +663,46 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s225)
+## Next steps, in order of expected value (s226)
+
+-67. **(s226) s225's "two fixed scene-root pointers" are NOT independent
+    globals — source trace shows both derive from the SAME camera struct
+    s223/s224 already instrumented, and reanalysis of s224's OWN already-
+    captured log (no new soak needed) shows the struct's `+0x0` linkage
+    field freezes in lockstep with the struct address itself at the exact
+    checksum-confirmed picture-freeze point, while the struct's `+0x2C`
+    rotation submatrix (same struct, same cadence) does NOT — proving
+    "reads a fixed address" doesn't imply "frozen value" and weakening the
+    upstream-simulation-tick-stopped hypothesis for this specific field.**
+    `traverseSceneGraphRecursive`'s a1 (`funcs_4.c:21358-21367`) is trivially
+    `camera_struct_ptr + 0x2C` (the submatrix address); a0 is
+    `MEM_W(camera_struct_ptr, 0x0)` — a field that is BOTH null-tested as a
+    gate (line 21339) AND passed straight through as a pointer (line 21358),
+    i.e. a nullable linked-node reference, not the pure boolean s224's
+    "gating flag" label implied. Grepping the existing `campose1` soak log
+    (s224, `scratch/s73_post_a_scene/campose1/run.log`, already on disk)
+    for this exact field (logged there as `flag=0x%08X`, s224 didn't realize
+    its significance) shows `flag`/`camptr` both go fixed at `n=15000`
+    (matching s224's own freeze-onset finding) and stay byte-identical
+    through `n=21180`, while `m00` (same struct, `+0x2C`) keeps changing
+    until `n=20880` — the same ~5880-call lag s224 already documented, now
+    with a same-struct control proving the freeze isn't simply "we stopped
+    reading fresh data from this address." **Landed** (not yet soak-
+    validated): extended `ROGUESQ_LOG_CAMPOSE`
+    (`N64Recomp/fixup_game_funcs.py`, same patch site, same env var) to also
+    log `deref0` — the first word at the address `flag` points to, bounds-
+    guarded to the 8MB RDRAM window. **Blocked**: `tools/agent/
+    regen_n64recomp.sh` returned "This command requires approval" on 3
+    attempts despite matching the `Bash(tools/:*)` allow-list verbatim — an
+    environment/permission issue, not a code problem. `make_elf.py` already
+    ran clean. **Next step**: get the regen approval unblocked (human
+    action, see BLOCKED.md), then run `regen_n64recomp.sh` ->
+    `fixup_game_funcs.py` (once) -> cmake build -> soak (reuse
+    `run_campose1.sh`/`schedulepush2`-family schedule, copy to a new tag),
+    then grep the new `deref0` field the same way this session grepped
+    `flag`: does it freeze at `n=15000` (stall reaches into the pointed-to
+    content) or keep changing (traversal root's target is still live, real
+    freeze is further downstream)? Full detail: PORTING-STATE Session 226.
 
 -66. **(s225) The whole scene-graph chain (`traverseSceneGraphRecursive` ->
     `processSceneNode` -> `submitSceneNodeRender`) keeps firing at a steady
