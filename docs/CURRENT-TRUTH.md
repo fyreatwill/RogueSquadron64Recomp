@@ -659,9 +659,38 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s174)
+## Next steps, in order of expected value (s175)
 
--26. **NEW TOP PRIORITY (s174): source-read `tickMusyXIfActive`'s 5 callees
+-27. **NEW TOP PRIORITY (s175): source-read `processSceneNode`'s
+    self-recursion and guarded it with a recursion-depth cap** —
+    confirmed by direct source read (`N64Recomp/RecompiledFuncs/funcs_4.c:
+    13759-14861`) this is a real, guest-intentional sibling-list tree walk
+    (rooted at mutable global `0x80112B20`, next-pointer at node offset 0)
+    with **no depth argument or local cap anywhere in the original code**
+    — the `a3` argument threaded through the recursive call is immediately
+    clobbered for unrelated arithmetic, ruling out "it's secretly a depth
+    counter." Landed a `static`-counter depth cap (128) that increments at
+    function entry and decrements once at the function's single real
+    epilogue (`L_80015528`, confirmed the sole convergence point for every
+    return path), bailing with return value 0 (which the caller's own
+    sibling-loop reads as "stop") past the cap. Built clean. **One soak
+    (guard armed): the process survived the ENTIRE 120s hold window +
+    grace alive** (had to be killed manually) — the first fully
+    crash-free full-length soak anywhere in the s160s-s174 lineage.
+    **BUT the new guard itself never fired (0/0), same for every other
+    guard in the family this run** — this is a null result on the fix
+    specifically (rule 1: not a positive control), consistent with the
+    already-established finding (s173/s174) that this whole crash family
+    is racy across runs given an identical recipe, not deterministic.
+    **Best next work unit: re-run the same soak recipe for a 2nd data
+    point** — watch for either another full-hold survival (strengthens
+    the case without ever needing the guard to fire) or a run where the
+    guard actually trips (first positive control on this fix). Per rule
+    8 this is soak 1 of a fresh hypothesis, not the 3rd, so there is
+    budget to keep going before parking it. Full detail: PORTING-STATE
+    s175.
+
+-26. **(s174, superseded as top priority by s175 above): source-read `tickMusyXIfActive`'s 5 callees
     found and guarded the 23rd crash class's 2nd bug**
     (`tickAndReap3DAudioVoices`'s active-voice-list node-pointer deref,
     `N64Recomp/RecompiledFuncs/funcs_26.c:4224-4225`, mutable-global list

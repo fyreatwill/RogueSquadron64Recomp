@@ -16431,3 +16431,136 @@ scripts.
 4. The s169/s170 scheduler-SIGSEGV H1/H2 question remains blocked on runs
    reliably reaching the deep-stall window — keep deferring until items
    1-3 stop finding new early crash sites every soak.
+
+## Session 175 (2026-07-28) — source-read `processSceneNode`'s self-recursion, confirmed a real guest-intentional sibling-list tree walk with no depth cap anywhere, guarded it with a recursion-depth cap — soak with the new guard armed survived the ENTIRE 120s hold window + grace alive (first fully crash-free full-length soak in the whole s160s-s174 lineage), though the guard itself never fired (no positive control)
+
+### What ran
+
+Source-read `processSceneNode` (`N64Recomp/RecompiledFuncs/funcs_4.c:13759-
+14861`) and its self-call site directly (not delegated), per NEXT.md's own
+instruction and rule 6:
+
+- The function walks a singly-linked sibling list rooted at mutable global
+  `0x80112B20` (funcs_4.c:15037-15038/15051-15052), advanced each iteration
+  by dereferencing the current node's own "next" field at offset 0
+  (`ctx->r3 = MEM_W(ctx->r3, 0X0)`, funcs_4.c:15055-15056) — and calls
+  **itself** once per sibling (funcs_4.c:15044) to recursively render that
+  sibling's own subtree. This is a real, guest-intentional scene-graph tree
+  walk, not this family's usual fixed-table-lookup-then-deref shape.
+- Confirmed no depth bound exists anywhere: the `a3` argument threaded
+  through the recursive call (`ctx->r7`) is immediately clobbered for
+  unrelated local float-to-fixed arithmetic at funcs_4.c:13922-13940 (not a
+  depth counter), and no local/static counter exists in the function at
+  all. This matches the crash's own signature better than a single-deref
+  bug would: both catalogued occurrences (s172 soak 1, s174) died deep
+  inside the function's own native code (native PC +8148 bytes past the
+  function start) rather than at any one identifiable dereference — the
+  shape of a native C-stack overflow from unbounded recursion, not a bad
+  pointer dereference.
+- Confirmed the function's control flow funnels every return path (the
+  sole `return;` at the end, plus every internal early-exit `goto`) through
+  one real epilogue label, `L_80015528` (restores `$s0-$s3`/`$ra`, pops
+  `$sp` by `0x30`) — confirmed unique within `funcs_4.c` via grep, as was
+  the 3-line prologue anchor used for the entry-side patch (the naive
+  1-line anchor collided with an unrelated function elsewhere in the same
+  file, so the entry patch anchors on 3 lines instead, following s100's
+  own collision lesson).
+
+Landed a recursion-depth cap (`N64Recomp/fixup_game_funcs.py`, file-scoped
+`funcs_4.c`, new env var `ROGUESQ_LOG_SCENE_NODE_DEPTH_GUARD`): a `static
+int` counter (deliberately declared at the function's top-level scope, not
+wrapped in its own `{ }` like every other guard in this file, so the same
+counter is visible at both the entry-increment site and the far-away
+epilogue-decrement site within the same function body) increments at
+function entry and decrements once at the shared epilogue, so it tracks
+true recursion depth 1:1 regardless of which internal path returns. On
+tripping past 128, sets the return value (`ctx->r2`/`$v0`) to 0 before
+bailing to the epilogue — the caller's own sibling-loop condition
+(funcs_4.c:15053-15070) reads this value and stops issuing further sibling
+calls when it's false, so tripping the cap also cleanly halts the runaway
+branch rather than leaving the parent looping on a return value from a
+call that never ran. Full regen (`N64Recomp` -> `fixup_game_funcs.py`,
+redirected to a log, verified both new patch lines exactly x1 each, no
+duplication) -> clean rebuild (exit 0, only pre-existing warning classes).
+
+Ran 1 soak (`run_scenenodedepthguard1.sh`, copy of s174's env block plus
+the new guard's var armed):
+
+- **New guard: 0/0** — never fired. No positive control.
+- **Every other guard in the family also 0/0 this run**
+  (`tickAndReap3DAudioVoices`, `isAudioSlotActive`, and everything else
+  armed in the env block).
+- **The process did not crash at all.** It ran the full title -> SELECT
+  GAME -> war room -> AVAILABLE CRAFT -> SELECT YOUR CRAFT -> 120s hold
+  window (with the `10:sr 25:sl 40:su 95:start 100:a` stick schedule) ->
+  0s grace window, ending with "game process still alive; killing" at
+  wall=157s. This is the first soak in the entire s160s-s174 lineage to
+  survive the complete hold+grace window alive — every prior soak in this
+  stretch died to some crash class before reaching this point.
+  `lle tasks: 5774`, `exit=2: 0`, `missing-func: 0`, `thr-resume bad=1: 0`,
+  `ost-wb SKIP_WIDTH: 0` (`SKIP_OOB: 6`, benign/expected), `fs max: 3585`.
+  The summary script's `UnhandledJump: 873` is **not** guest-CPU related —
+  confirmed by direct read of the matched lines: all 873 are
+  `Unhandled jump target 0x17F0`/`0x0231` "in microcode factor5_ucode"
+  (RSP audio-ucode LLE fallback path, the same pre-existing, previously-
+  documented-as-secondary condition from s79 — grepped for
+  `SIGBUS|SIGSEGV|Abort|assert|Fatal|crash` across the full run log,
+  0 hits outside guard-diagnostic text).
+
+### Rules out / narrows
+
+- **The `processSceneNode` self-recursion is a genuine unbounded-depth-walk
+  bug, not (only) a corrupted-pointer-deref bug** — confirmed by source
+  read, not inferred from the crash alone. The depth-cap fix directly
+  targets the mechanism NEXT.md's own branch-2 predicted.
+- **This soak is a null result on the new guard specifically** (0/0, no
+  positive control) — per rule 1, do not read "guard never fired" as "the
+  guard fixed the bug." The informative part is the full-hold survival
+  itself, which is a genuine first for this lineage, not proof this
+  particular guard caused it (this whole crash family has been shown
+  repeatedly, including twice this week, to be racy across runs with an
+  identical recipe — s173/s174 already established that a given soak's
+  race can simply not hit any known corruption site at all).
+- **Single-source, not yet two independent occurrences of "the depth-cap
+  fix specifically closes this crash class."** Per rule 4, needs a 2nd
+  soak (or, better, one where the guard actually fires) before this enters
+  the confirmed-fix bucket.
+
+### Landed (this session)
+
+`N64Recomp/fixup_game_funcs.py`: `processSceneNode` recursion-depth cap
+(new, entry-increment + epilogue-decrement pair, `ROGUESQ_LOG_SCENE_NODE_
+DEPTH_GUARD`, cap=128). `N64Recomp/RecompiledFuncs/funcs_4.c`: regenerated
+with both patch sites applied (verified x1 each, no duplication). Not
+committed — same long-standing uncommitted-history posture as `N64Recomp`
+since s54/s90 (not this session's call to resolve). This repo's own
+tracked files: `scratch/agent/NEXT.md`, `docs/CURRENT-TRUTH.md`, this
+entry. Soak script/log (`scratch/agent/run_scenenodedepthguard1.sh`, full
+run log under `scratch/s73_post_a_scene/scenenodedepthguard1/`) are
+gitignored, not tracked — consistent with every prior session.
+
+### Next
+
+1. **Best next work unit: re-run the same soak (or an equivalent recipe)
+   for a 2nd data point.** Two live branches to watch for: (a) another
+   fully crash-free run (2nd independent occurrence, strengthens the case
+   this lineage's dominant early crashes are now guarded even without ever
+   directly observing the depth-cap fire), or (b) a run where the guard
+   *does* fire (first-ever positive control on this specific fix) — check
+   whether the process survives past the fire point either way. If instead
+   a *new*, uncatalogued crash class shows up, catalogue it per the
+   family's established pattern rather than chasing it immediately (rule
+   8: this is soak 1, not the 3rd, so there is budget to keep going on this
+   hypothesis before parking it).
+2. `tickSongSequence`'s 2 unguarded list walks (funcs_25.c:5018-5046,
+   5050-5077, found s174, not guarded) — next candidate for the
+   `waitForAnyAudioSlot` chain if a future soak shows the
+   `tickAndReap3DAudioVoices`/`isAudioSlotActive` guards alone don't close
+   that class (still no positive control on either).
+3. `submitSceneNodeRender+16780` (s171) — still open, still lowest priority
+   of the characterized-but-unfixed leads.
+4. The s169/s170 scheduler-SIGSEGV H1/H2 question remains blocked on runs
+   reliably reaching the deep-stall window — now that a soak has reached
+   and passed that window fully alive, a future soak that reaches the same
+   depth without crashing is the first real opportunity to actually
+   observe that window's behavior instead of dying before it.
