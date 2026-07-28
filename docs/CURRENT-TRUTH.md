@@ -655,7 +655,7 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s144)
+## Next steps, in order of expected value (s145)
 
 0a. **CLOSED (s135): `emitAllocatedDLCommand` soak hypothesis parked,
     3-attempt budget exhausted per rule 8.** s133 → environment-side
@@ -825,6 +825,30 @@ cost three sessions before the recursive mutex.
     mechanism). Deliberately did not build the toggle-desync or
     cursor-overrun instrument this session — both are rebuild+instrument
     work, correctly deferred per rule 8. Full detail: PORTING-STATE s144.
+
+    **s145** (landed + soaked the cursor-overrun instrument s144
+    specified, `ROGUESQ_LOG_VOICE_CURSOR=1`): the write-cursor-overflow
+    hypothesis is **refuted** for a live-captured corruption event — 0/8
+    fires, cursor never near the (independently cross-checked) capacity.
+    But the run's own pre-existing `[voice-active-gate-nz]` log caught a
+    real corruption live in the same window: scan `idx=0x10/0x11` (16/17)
+    read against a freshly-logged `count=0x0012` (18) while the array
+    itself was still sized for the **previous** `voiceCount=15` (valid
+    indices 0-14) — the bytes read decode as the exact ASCII fragments
+    (`explo_tex2`, `x10`, `x11`) s138 catalogued as runtime-only/absent
+    from a ROM strings dump, closing that question: they're leftover
+    bytes from a recycled, unrelated prior heap allocation. **Real
+    mechanism found**: `allocateSongChannelArray` writes the new
+    `voiceCount` to the scan-bound global (`0x80149700`)
+    **many instructions before** it calls `rs_malloc`/stores the new
+    array pointer/prints its own log line (`funcs_23.c:10712-10738`) — a
+    non-atomic pair, no lock (consistent with s144's "no mutex anywhere"
+    finding) — so a concurrently-scanning `musyxMixActiveVoices` (audio
+    runs off the VI-retrace thread, s101) can see the **new**, larger
+    count against the **still-old**, smaller array. Single-occurrence,
+    not yet reproduced a 2nd time; sibling to (not proven identical to)
+    the historically-tracked `+0x34`/`do_rom_read` signature, which did
+    not itself recur this run. Full detail: PORTING-STATE s145.
 
 0d. **s139: ran the discriminating rs_malloc-range-overlap measurement
     s138 called for.** Landed a universal `rs_malloc` allocation log

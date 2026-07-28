@@ -12770,3 +12770,115 @@ unit).
 **Landed:** nothing code-side (pure source read + one direct
 spot-check, no rebuild, no soak). `PORTING-STATE.md` /
 `docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md` (this write-up).
+
+## Session 145 (2026-07-27) — landed and soaked the write-cursor-vs-capacity instrument s144 specified: refutes the write-cursor-overflow hypothesis for a live-captured corruption event, and finds the real mechanism instead — a non-atomic count-then-pointer update race in `allocateSongChannelArray`
+
+Ran exactly the work unit s144/NEXT.md specified: found the real cursor
+read/increment/store-back site by direct source read of
+`musyxMixActiveVoices` (`funcs_24.c:2653-2668` — NEXT.md's own line
+estimate, `~2648-2664`, was off by a few lines per this session's now-
+recurring lesson that generated-`.c` line numbers never match an
+estimate), and the real capacity source by direct source read of
+`allocateSongChannelArray` (`funcs_23.c:10984-11043`): capacity is
+computed once as `N * (voiceCount+1)` where `N` is itself a runtime
+16-bit value read from `0x8014974E` (not a compile-time literal 2, as
+"double-buffered" might suggest), cached at `0x80149704`, and reused
+unchanged for both slots' `rs_malloc` sizes.
+
+**Instrument landed** (`ROGUESQ_LOG_VOICE_CURSOR=1`,
+`N64Recomp/fixup_game_funcs.py`, inserted immediately after the cursor's
+own store-back instruction): logs the pre-increment cursor value
+(`ctx->r4`, still live and unclobbered at that point), a freshly-read
+toggle/slot byte, and a freshly-read capacity value from `0x80149704` —
+independent of register state, matching this project's established
+diagnostic convention. Verified it patched exactly once via grep before
+building; full regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`
+once → `cmake --build`) exit 0, no new warnings.
+
+**Soak** (`scratch/agent/run_voicecursor1.sh`, all existing family
+diagnostics kept armed alongside the new one, `ROGUESQ_LOG_THREAD_RESUME=0`
+per s93's confound finding): reached SELECT YOUR CRAFT, left into
+hangar-flight, survived the full 30s hold + grace window with **0
+crashes** — first fully clean run in the render-guard/Thread-B series in
+several sessions (informative but secondary to the discriminating
+result below).
+
+**Positive control:** `[voice-cursor-hb]` fired only once (`n=0`,
+heartbeat is every 5000) because the true fire count this run was tiny
+— confirmed by cross-checking against the *existing*
+`[voice-active-gate-nz]` control (same gating condition, `byte != 0`):
+exactly 8 total fires, matching. Not a broken instrument; genuinely few
+active-voice hits this run. Do not read "1 heartbeat line" as a weak
+control in isolation — check it against a sibling counter on the same
+gate, as done here.
+
+**The discriminating result:** 0/8 `[voice-cursor-overflow]` fires
+(cursor never reached capacity) — but the run's own
+`[voice-active-gate-nz]` log (pre-existing, unrelated instrument on a
+*different* read site in the same function) independently caught a live
+corruption event in the same log window (lines 39024-39032 of
+`scratch/s73_post_a_scene/voicecursor1/run.log`): `idx=0x10`/`0x11`
+(16/17 decimal) read from `arrayBase=0x801714D0` with `count=0x0012` (18)
+logged in the very same line, while the last-printed
+`[song-array-alloc]` before this point was `voiceCount=15` (only
+indices 0-14 should ever be scanned) and the *next* one
+(`voiceCount=18`, matching the anomalous `count=18` already observed)
+printed only afterward, at line 39034. The bytes read at those two
+indices decode as ASCII: `"explo_tex2"` + padding + `0xFFFFFFFF` +
+`"explx3"` at idx 0x10, and `"x10"`/`"explo_te"...`/`0xFFFFFFFF`/`"x11"`
+at idx 0x11 — an **exact match** to the digit-suffixed fragments
+(`explo_tex2`, `x10`, `x11`) s138 catalogued as present at runtime but
+**absent from a full-ROM strings dump** (i.e. runtime-constructed, not
+static data) — closing that open question: they are leftover bytes from
+a **different, earlier heap allocation** (plausibly a texture-name/tag
+table built by the explosion-texture subsystem, freed and its memory
+recycled by `rs_malloc` for this later song's voice array), exposed
+because the scan read 2-3 items past the array's true legitimate bound.
+
+**Why my planned hypothesis is refuted for this instance:** at the exact
+same moment (same heartbeat sample, `n=0`, sandwiched between two of the
+corrupted `nz` log lines), the write-cursor was `cursor=0` against
+`capacity=48` — nowhere near overflowing. The corruption instead traces
+to the **scan/read side**, not the write-cursor: `musyxMixActiveVoices`'s
+source-array scan loop re-reads its bound fresh from `0x80149700` every
+iteration (confirmed directly, `funcs_24.c:2681-2696`,
+`sltu`+reread-every-iteration), and `allocateSongChannelArray` writes the
+**new** count to `0x80149700` (`funcs_23.c:10712-10713`) many
+instructions **before** it calls `rs_malloc` and stores the new array
+pointer / prints `[song-array-alloc]` (`funcs_23.c:10717-10738`) — a
+non-atomic pair with no lock (s144 already confirmed no mutex exists
+anywhere in this family). If `musyxMixActiveVoices` scans during that
+window on a different thread (audio runs off `musyxSynthFrame` on the VI-
+retrace thread, per s101), it sees the **new**, larger count against the
+**still-old** array — landing past the old allocation's real bound into
+whatever the allocator's free-list handed back to a still-not-yet-
+initialized new buffer. `capacity=48` cross-checks exactly against the
+`voiceCount=15` formula (`N=3`, `(15+1)*3=48`), independently confirming
+`N=3` for this run — new information, not previously pinned to a number.
+
+**Reframing of Thread B (again):** the write-cursor-overflow hypothesis
+(s144's framing) is refuted for this captured instance, though it
+remains a real, independent unguarded-write bug worth a guard regardless
+(unchanged from s144). The corruption's actual mechanism is now a
+**non-atomic count-then-pointer update race** in
+`allocateSongChannelArray`, landing on **recycled, not-yet-reused heap
+content from a prior, unrelated allocation** — not a stomp, not a
+generic race, not a static-table indexing bug (all previously
+considered and closed, s103/s113/s138). This is a single-occurrence,
+single-source finding — a second, independent soak that reproduces the
+same `idx > last-known-voiceCount` + `count` field mismatch would
+confirm it as more than a one-off. The `do_rom_read`/`piDmaWorker`
+corruption (the historically tracked +0x34 signature) did NOT recur
+this run, so this finding covers a sibling read site (`voice+0x0`, the
+scan/gate byte) in the same function, not a proven identical code path
+to the +0x34 corruption — but it is strong corroborating evidence for
+the same general class of bug (asynchronous, non-atomic multi-field
+global state updated without a lock, read mid-update by a concurrent
+scan) applying across both observed corruption byte-offsets.
+
+**Landed:** `ROGUESQ_LOG_VOICE_CURSOR=1` instrument
+(`N64Recomp/fixup_game_funcs.py`, regenerated + rebuilt, committed via
+`export.sh`-equivalent — see below), `scratch/agent/run_voicecursor1.sh`,
+this write-up. `N64Recomp` is its own git checkout (not a `lib/`
+submodule) with the accumulating uncommitted regen history flagged
+since s54/NEXT.md — same posture, not addressed this session.
