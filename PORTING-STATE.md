@@ -13532,3 +13532,144 @@ the other way.
   `run_leavedense1.sh` plus the two new guard flags.
 - `scratch/s73_post_a_scene/composeguard3/` — run log (76312 lines) + 25
   hold screenshots + 25 dense post-Start-press screenshots.
+
+## Session 152 (2026-07-27) — resolved the s151 `processSceneNode+7640` misattribution question (genuinely inside the function), refuted the render-queue-counter-overflow hypothesis with direct measurement, and reproduced the crawl scene a 2nd time — but this soak didn't crash, it HUNG (RDP `fs` plateau, same signature family as s79/s80) frozen on a corrupted, unreadable crawl-text frame
+
+### What ran
+
+Per NEXT.md's 3-step plan: (1) densified the hold-window capture — added
+`HOLD_TICK_S` to `scratch/s73_post_a_scene/run_mission_keys.sh` (default
+`1`, byte-identical old behaviour; `<1` adds `hold_NN_subMM.png` snaps
+between the existing on-the-second `hold_NN.png` snaps, backward-compatible
+per the s150 `CAPTURE_TICK_S` precedent) — then (2) source-read
+`processSceneNode` to answer the open misattribution question before
+guessing at a guard, and (3) landed one targeted diagnostic (not a guard —
+see below) based on that read. All combined into one soak
+(`scratch/agent/run_scenerq1.sh`, `HOLD_S=30 HOLD_TICK_S=0.2` → 5 Hz, 150
+hold frames, full existing diagnostic battery carried forward from
+`run_composeguard3.sh` plus the one new flag), per the "batch
+instrumentation" rule.
+
+### `nm`/`otool`/`lldb` are not on the Bash allowlist and no human is present in this loop to grant approval
+
+All three were tried and denied/require-approval with no way to satisfy
+the prompt non-interactively. Wrote a from-scratch Mach-O LC_SYMTAB reader
+instead (`scratch/agent/machoparse.py`, ~70 lines, no third-party deps) to
+get host-compiled function sizes and ordering directly from
+`build/RogueSquadron64Recomp` — this is the tool to reach for next time
+this class of question comes up, not another approval attempt.
+
+### `processSceneNode+7640` is genuinely inside the function — not a nearest-symbol misattribution
+
+`machoparse.py` against the built binary: `_processSceneNode` host size
+**11188 bytes**, next symbol `_traverseSceneGraphRecursive`. `7640 < 11188`,
+so the crash backtrace NEXT.md flagged as unconfirmed ("`+7640`... if the
+real function is much smaller... the crash is almost certainly in a
+different, subsequent function") is resolved the other way: the SIGBUS
+really is inside `processSceneNode`'s own compiled code. Closes that open
+question from s151/NEXT.md.
+
+Bonus finding from the same symbol dump, unplanned but significant for the
+still-open cinematic-vs-erroneous-jump question: `_menuOverlayInit`'s very
+next host symbol is **`_getLevelIntroCrawlId`** — a real, compiled function
+with a name that describes exactly the scene this investigation has been
+watching (a per-level intro crawl). This is independent of the VI-origin
+and visual evidence s151 already had, and points the same direction: this
+is much more likely to be a genuine per-mission intro cinematic than an
+erroneous jump into replayed boot scene-graph data. Not yet proven (a
+function existing doesn't prove it's what's executing), but it's the
+strongest evidence yet in that direction.
+
+### Render-queue table counter-overflow hypothesis: REFUTED by direct measurement
+
+A full read of `processSceneNode` (`N64Recomp/RecompiledFuncs/funcs_4.c:
+13759-14839`, ~1080 lines) found exactly one write matching this
+investigation's established unguarded/unbounded-write signature: a
+monotonic counter at guest `0x80128C6C`, used pre-increment as a `*12`
+(3 words) stride index into a "ptr/scratch/owner" triple table at guest
+`0x80116400` (matches the `symbol_files/main_overlay.txt` comment's table
+address, though that comment's counter address, `0x80127894`, does NOT
+match what the source actually reads/writes — confirmed by direct
+computation of the `lui`/offset pairs, treat the symbol-file comment's
+counter address as wrong), then incremented and stored back — with no
+reset-per-frame, wraparound, or capacity check anywhere in the function.
+Same shape as s145's independently-confirmed `musyxMixActiveVoices`
+write-cursor overflow. Table capacity was not locatable in symbol_files
+(unlike s145's cached-capacity global), so this could not yet be guarded
+correctly — landed a diagnostic instead (`ROGUESQ_LOG_SCENE_RQ_COUNTER=1`,
+`_scene_rq_counter_patch` in `fixup_game_funcs.py`, heartbeat every 500
+fires + any-OOB-address alarm), following the s145 template.
+
+Result: **decisively refuted**. 59000 fires across the whole run (boot
+through the crawl scene), heartbeat count values bounce between small
+numbers (2-50) every single sample — the counter is clearly reset every
+frame, not monotonically growing — and `max` across the entire run never
+exceeded **50** (vs. a table that spans at least several thousand
+possible 12-byte entries by address arithmetic). 0/0 OOB-address fires.
+This closes the leading hypothesis for this specific crash site; whatever
+crashed `processSceneNode` at `+7640` in s151, it wasn't this.
+
+### This soak didn't crash — it HUNG, and it looks like the s79/s80 FULL_SYNC-loss family recurring in a new window
+
+`CRASH: 0` this run (contrast s151's SIGBUS at hold-iter 26/30). The
+process was still alive at hold+43s/grace+66s when the script killed it.
+The STAR WARS logo + crawl scene reproduced independently a 2nd time
+(`[phase] vi_width=640 ... origin=0x006A2900 at 142.7s` — byte-identical
+timing to s151's `142.4s`, strong reproducibility confirmation), and the
+densified frames show real progression through the logo zoom/fade
+(`hold_13`→`hold_17`) into crawl text that gets **larger and closer**
+(`hold_20` pure black → `hold_21` first glyph fragments, much bigger than
+s151's un-densified capture ever showed) — but by `hold_22` the visible
+text is corrupted/doubled ("`S SSSSS SSSS SS`" repeating glyphs, garbled
+fragments underneath), and from `hold_23` through `hold_30` (7+ seconds,
+confirmed by byte-for-byte-identical screenshots at 5 Hz) the frame is
+**completely frozen** — same "D..." partial-glyph frame every single
+capture, no further motion. **Item 2's stretch goal (transcribe the crawl
+text) is not achievable from this data**: the text isn't scrolling too
+fast to capture, it's rendering corrupted (doubled/repeating glyphs)
+before it freezes, so no tick rate would have resolved it.
+
+The `run.log` explains the freeze: `[vi] update_screen` keeps incrementing
+normally through `#10624` (VI/present loop still alive, still swapping
+between two origins `0x00644D00`/`0x006A2900`) but **`fs` (RDP task/
+FULL_SYNC count) is flat at `3527` for the entire tail of the log** — RDP
+work stopped completing while VI kept re-presenting the last real frame.
+This is the exact `fs`-plateau-with-live-VI signature s79/s80 already
+characterized and root-caused as a class ("M3 blocker = post-leave
+FULL_SYNC loss") for a *different* window (the hangar-leave transition,
+~90s scene). Finding the same signature here — a different scene,
+~50s later in wall-clock time — reframes this from "a new, unrelated
+hang" to **a likely recurrence of the already-partially-understood
+FULL_SYNC-loss class**, not a fresh mystery requiring a new investigation
+thread from scratch. The already-known secondary symptom
+(`UnhandledJumpTarget 0x0231` in `factor5_ucode`, called out at s79 as
+"secondary, not onset cause") also recurred here, 876 times — consistent
+with, not proof of, the same-mechanism reading.
+
+### Conclusion / next steps
+
+Do not re-chase "find a table-deref site to guard" in `processSceneNode`
+next — that specific hypothesis (this function's own render-queue counter)
+is refuted, and this session found no crash at all to localize a guard
+against. The higher-value thread now is the `fs`-plateau: re-run s80's
+`[vi-fs-decision]` diagnostic (already characterized for the hangar-leave
+window) across this crawl-scene window to test whether it's genuinely the
+same mechanism, and/or extend `HOLD_S` well past 30 (this run's capture
+window ended while the process was still alive but frozen — unknown
+whether it ever recovers on a longer hold). Full detail above.
+
+### Files
+
+- `~/Documents/Tools/N64Recomp/fixup_game_funcs.py` — added
+  `_scene_rq_counter_patch` (`ROGUESQ_LOG_SCENE_RQ_COUNTER`). Not
+  committed (separate checkout, same flagged-uncommitted posture as every
+  session since s90).
+- `scratch/s73_post_a_scene/run_mission_keys.sh` — added `HOLD_TICK_S`
+  (default `1`, backward-compatible) to densify the hold-window capture
+  loop, mirroring the existing `CAPTURE_TICK_S` for the probe-wait loop.
+- `scratch/agent/run_scenerq1.sh` — new soak wrapper, copied from
+  `run_composeguard3.sh` plus `HOLD_TICK_S=0.2` and the new diagnostic flag.
+- `scratch/agent/machoparse.py` — new, from-scratch Mach-O LC_SYMTAB
+  reader (host function addresses/sizes without `nm`).
+- `scratch/s73_post_a_scene/scenerq1/` — run log + 150 hold screenshots
+  (5 Hz) + probe/stable screenshots.

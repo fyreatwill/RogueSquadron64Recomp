@@ -136,7 +136,14 @@ if (( HOLD_S > 0 )); then
     for entry in ${=STICK_SCHEDULE}; do
         STICK_AT[${entry%%:*}]=${entry#*:}
     done
-    print "hold window ${HOLD_S}s @ 1 Hz with sticks: $STICK_SCHEDULE"
+    # s152: HOLD_TICK_S densifies capture WITHIN each hold second (default 1
+    # = unchanged behaviour, exactly one hold_NN.png per second like before).
+    # A value <1 (e.g. 0.2) adds hold_NN_subMM.png snaps between the
+    # on-the-second snap and the next one, at roughly 1/HOLD_TICK_S Hz --
+    # CAPTURE_TICK_S (existing) only densifies the earlier probe-wait loop,
+    # not this one (flagged unresolved since s150/s151's NEXT.md).
+    HOLD_TICK_S=${HOLD_TICK_S:-1}
+    print "hold window ${HOLD_S}s @ 1 Hz (sub-tick ${HOLD_TICK_S}s) with sticks: $STICK_SCHEDULE"
     LEAVE_T=$(date +%s)
     for i in $(seq 1 "$HOLD_S"); do
         kill -0 "$PID" 2>/dev/null || { print "game process gone at hold-iter $i"; break; }
@@ -150,7 +157,19 @@ if (( HOLD_S > 0 )); then
         else
             snap "hold_$(printf '%02d' $i)"
         fi
-        sleep 1
+        if (( $(print "$HOLD_TICK_S < 1" | bc -l) )); then
+            NSUB=$(print "(1 / $HOLD_TICK_S) - 1" | bc)
+            subdone=0
+            for j in $(seq 1 "$NSUB"); do
+                sleep "$HOLD_TICK_S"
+                kill -0 "$PID" 2>/dev/null || { subdone=1; break; }
+                snap "hold_$(printf '%02d' $i)_sub$(printf '%02d' $j)"
+            done
+            (( subdone )) && break
+            sleep "$HOLD_TICK_S"
+        else
+            sleep 1
+        fi
     done
     print "hold done wall=$(print "$(date +%s) - $LEAVE_T" | bc)s"
     GRACE=0

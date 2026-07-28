@@ -657,9 +657,60 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s151)
+## Next steps, in order of expected value (s152)
 
--3. **NEW TOP PRIORITY (s151): a genuinely NEW post-hangar scene appeared
+-4. **NEW TOP PRIORITY (s152): the s151 crash at this exact scene did NOT
+    recur — instead the process HUNG, and the hang looks like the
+    already-characterized s79/s80 FULL_SYNC-loss class recurring in a new
+    window, not a fresh mystery.** Resolved two things NEXT.md left open
+    and refuted one hypothesis, all in one soak (densified capture +
+    source read + one diagnostic, `scratch/agent/run_scenerq1.sh`):
+    (1) **`processSceneNode+7640` is genuinely inside the function**, not
+    a nearest-symbol misattribution — a from-scratch Mach-O symbol reader
+    (`scratch/agent/machoparse.py`; `nm`/`otool`/`lldb` are not on the
+    Bash allowlist and no human is present in this loop to approve them)
+    found the function's real host-compiled size is 11188 bytes, well
+    past the crash's +7640 offset. (2) **Bonus, unplanned**: the very
+    next host symbol after `menuOverlayInit` is a real compiled function
+    named `getLevelIntroCrawlId` — independent evidence (on top of s151's
+    visual + VI-origin lines) that this is a genuine per-mission intro
+    cinematic, not a replay of stale boot scene-graph data. (3) **The
+    render-queue-table counter-overflow hypothesis for the crash site is
+    refuted**: `processSceneNode` does have an unguarded, unbounded-looking
+    write (a monotonic counter into a 12-byte-stride table, same shape as
+    s145's confirmed `musyxMixActiveVoices` overflow) but direct
+    measurement (`ROGUESQ_LOG_SCENE_RQ_COUNTER=1`) shows it resets every
+    frame and never exceeds `max=50` across 59000 fires — not the bug.
+    **What actually happened this soak**: `CRASH: 0` — the process was
+    still alive at hold+43s when killed. The STAR WARS logo + crawl
+    reproduced a 2nd time, independently (`origin=0x006A2900` at
+    `142.7s`, matching s151's `142.4s`), and the densified (5 Hz) capture
+    shows real progression — logo zoom/fade, then crawl text that gets
+    larger/closer than s151's capture ever showed — but the text itself
+    renders **corrupted** (`hold_22`: repeating/doubled glyphs, not
+    legible prose) and by `hold_23` the frame is **completely frozen**
+    (byte-identical through `hold_30`, 7+ seconds). `run.log` shows why:
+    `[vi] update_screen` keeps incrementing normally (VI/present loop
+    alive) but **`fs` (RDP task count) is flat at 3527** for the entire
+    tail — RDP stopped completing work while VI kept re-presenting the
+    last frame. This is the same live-VI/flat-`fs` signature s79/s80
+    already characterized as "M3 blocker = post-leave FULL_SYNC loss" for
+    a *different* window (~90s hangar-leave transition) — seeing it again
+    here (~50s later in wall-clock time, a different scene) reframes this
+    as a likely recurrence of that already-partially-understood class.
+    The known secondary symptom (`UnhandledJumpTarget 0x0231` in
+    `factor5_ucode`) also recurred, 876 times, consistent with (not proof
+    of) the same mechanism. **Next work unit**: re-run s80's
+    `[vi-fs-decision]` diagnostic across this crawl-scene window to test
+    whether it's genuinely the same mechanism as the hangar-leave
+    FULL_SYNC loss, and/or extend `HOLD_S` well past 30 (this run's
+    capture window ended while the process was still alive but frozen —
+    unknown whether it ever recovers). Do NOT re-chase a table-deref
+    guard in `processSceneNode` — that specific hypothesis is refuted and
+    there was no crash this run to localize a guard against. Full detail:
+    PORTING-STATE s152.
+
+-3. **s151: a genuinely NEW post-hangar scene appeared
     for the first time in ~150 sessions — a "STAR WARS" logo + scrolling-
     crawl-style intro — before crashing again ~6s later. This SUPPORTS
     s150's hypothesis (a) ("this camera path is a genuine launch
