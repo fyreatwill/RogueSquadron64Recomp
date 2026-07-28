@@ -3299,7 +3299,7 @@ index 6051f4e..e4a8fc3 100644
          uint64_t hash = TMEMHasher::hash(TMEM, loadTile, width, height, tlut, TMEMHasher::CurrentHashVersion);
          if (hashSet.find(hash) == hashSet.end()) {
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..b21d83e 100644
+index 10f98af..1d65bb9 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -4291,7 +4291,70 @@ index 10f98af..b21d83e 100644
                      colorHeight = fbPair.drawColorRect.bottom(true);
                      colorWriteWidth = (colorHeight > 1) ? colorImg.width : std::min(fbPair.drawColorRect.right(true), int32_t(colorImg.width));
                      depthWriteWidth = 0;
-@@ -1426,11 +2293,21 @@ namespace RT64 {
+@@ -1357,12 +2224,30 @@ namespace RT64 {
+                             uint32_t readRowCount = colorFb->height - colorFb->readHeight;
+                             uint32_t readFbBytes = readRowBytes * readRowCount;
+                             uint32_t storageAddress = colorImg.address + readRowBytes * colorFb->readHeight;
+-                            workload.fbStorage.store(pairCursor, storageAddress, &RDRAM[storageAddress], readFbBytes);
+-                            FramebufferChange *colorFbChange = colorFb->readChangeFromStorage(ext.framebufferGraphicsWorker, workload.fbStorage, scratchFbChangePool, Framebuffer::Type::Color,
+-                                colorImg.fmt, pairCursor, colorFb->readHeight, readRowCount, ext.shaderLibrary);
++                            // s182: FramebufferManager::get()'s s78 refuse gate keeps a wild
++                            // FB out of framebuffers[], but the refuseFb it returns still
++                            // carries the wild width/height/address, and this read has no
++                            // bounds check of its own -- SIGBUS reading &RDRAM[storageAddress]
++                            // past the 8MB RDRAM buffer (confirmed: crash address matched a
++                            // same-tick [fb-get] REFUSE oob=1 log exactly).
++                            static constexpr uint64_t kRdramBytes = 0x800000u;
++                            const uint64_t rangeEnd = (uint64_t)storageAddress + (uint64_t)readFbBytes;
++                            if ((storageAddress >= kRdramBytes) || (rangeEnd > kRdramBytes)) {
++                                static std::atomic<int> s_skip{ 0 };
++                                const int n = ++s_skip;
++                                if (n <= 40 || (n % 200) == 0) {
++                                    std::fprintf(stderr, "[fbsync-oob-skip] color #%d addr=0x%08X bytes=%u\n", n, storageAddress, readFbBytes);
++                                    std::fflush(stderr);
++                                }
++                            }
++                            else {
++                                workload.fbStorage.store(pairCursor, storageAddress, &RDRAM[storageAddress], readFbBytes);
++                                FramebufferChange *colorFbChange = colorFb->readChangeFromStorage(ext.framebufferGraphicsWorker, workload.fbStorage, scratchFbChangePool, Framebuffer::Type::Color,
++                                    colorImg.fmt, pairCursor, colorFb->readHeight, readRowCount, ext.shaderLibrary);
+ 
+-                            if (colorFbChange != nullptr) {
+-                                colorTarget->copyFromChanges(ext.framebufferGraphicsWorker, *colorFbChange, colorFb->width, readRowCount, colorFb->readHeight, ext.shaderLibrary);
++                                if (colorFbChange != nullptr) {
++                                    colorTarget->copyFromChanges(ext.framebufferGraphicsWorker, *colorFbChange, colorFb->width, readRowCount, colorFb->readHeight, ext.shaderLibrary);
++                                }
+                             }
+ 
+                             colorFb->readHeight = colorFb->height;
+@@ -1401,6 +2286,18 @@ namespace RT64 {
+                                 uint32_t readRowCount = depthFb->height - depthFb->readHeight;
+                                 uint32_t readFbBytes = readRowBytes * readRowCount;
+                                 uint32_t storageAddress = depthImg.address + readRowBytes * depthFb->readHeight;
++                                // s182: same OOB-read guard as the color block above.
++                                static constexpr uint64_t kRdramBytes = 0x800000u;
++                                const uint64_t rangeEnd = (uint64_t)storageAddress + (uint64_t)readFbBytes;
++                                if ((storageAddress >= kRdramBytes) || (rangeEnd > kRdramBytes)) {
++                                    static std::atomic<int> s_skip{ 0 };
++                                    const int n = ++s_skip;
++                                    if (n <= 40 || (n % 200) == 0) {
++                                        std::fprintf(stderr, "[fbsync-oob-skip] depth #%d addr=0x%08X bytes=%u\n", n, storageAddress, readFbBytes);
++                                        std::fflush(stderr);
++                                    }
++                                }
++                                else {
+                                 workload.fbStorage.store(pairCursor, storageAddress, &RDRAM[storageAddress], readFbBytes);
+                                 FramebufferChange *depthFbChange = depthFb->readChangeFromStorage(ext.framebufferGraphicsWorker, workload.fbStorage, scratchFbChangePool, Framebuffer::Type::Depth,
+                                     G_IM_FMT_DEPTH, pairCursor, depthFb->readHeight, readRowCount, ext.shaderLibrary);
+@@ -1409,6 +2306,7 @@ namespace RT64 {
+                                     depthTarget->copyFromChanges(ext.framebufferGraphicsWorker, *depthFbChange, depthFb->width, readRowCount, depthFb->readHeight, ext.shaderLibrary);
+                                     depthFbChanged = true;
+                                 }
++                                }
+ 
+                                 depthFb->readHeight = depthFb->height;
+                             }
+@@ -1426,11 +2324,21 @@ namespace RT64 {
                              depthFb->lastWriteType = Framebuffer::Type::Depth;
                          }
  
@@ -4317,7 +4380,7 @@ index 10f98af..b21d83e 100644
                          }
                      }
  
-@@ -1462,11 +2339,41 @@ namespace RT64 {
+@@ -1462,11 +2370,41 @@ namespace RT64 {
                          // 1MB gate is safe (real N64 framebuffers are always
                          // at >=0x80100000) and unblocks Factor 5 boot.
                          if (colorFb->addressStart >= 0x100000) {
@@ -4361,7 +4424,7 @@ index 10f98af..b21d83e 100644
                          }
                      }
  
-@@ -1873,6 +2780,25 @@ namespace RT64 {
+@@ -1873,6 +2811,25 @@ namespace RT64 {
          clearExtended();
      }
      
@@ -4387,7 +4450,7 @@ index 10f98af..b21d83e 100644
      void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
-@@ -1899,6 +2825,132 @@ namespace RT64 {
+@@ -1899,6 +2856,132 @@ namespace RT64 {
              }
          }
          
@@ -4520,7 +4583,7 @@ index 10f98af..b21d83e 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1959,8 +3011,20 @@ namespace RT64 {
+@@ -1959,8 +3042,20 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -4543,7 +4606,7 @@ index 10f98af..b21d83e 100644
                  return;
              }
          }
-@@ -1972,7 +3036,11 @@ namespace RT64 {
+@@ -1972,7 +3067,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -4556,7 +4619,7 @@ index 10f98af..b21d83e 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +3101,51 @@ namespace RT64 {
+@@ -2033,26 +3132,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");

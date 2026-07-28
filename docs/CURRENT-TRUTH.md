@@ -21,7 +21,11 @@ Metal shader rebuilds need full Xcode on PATH:
   wrap), `ROGUESQ_FIX_SAMPLE_BOUNDS` (s15), `ROGUESQ_VI_FULLSYNC` (s11), PresentEarly fallthrough +
   forceAdvance + `ROGUESQ_PRESENT_EARLY_FORCE` (s21), deferred-range coalescing (opt out with
   `ROGUESQ_NO_DPC_MERGE=1`, s10), **s78 wild/OOB FB refuse** in `FramebufferManager::get`
-  (width>1280 or past 8MB — same family as s72 writeback; does **not** unfreeze present).
+  (width>1280 or past 8MB — same family as s72 writeback; does **not** unfreeze present),
+  **s182 `[fbsync-oob-skip]` guard** in `State::fullSync`'s color/depth read-into-`fbStorage`
+  blocks (`rt64_state.cpp`) — s78's refuse gate returns a `refuseFb` that still carries the wild
+  width/height, and this downstream RDRAM read had no bounds check of its own; skips the
+  `FramebufferStorage::store` read when it would exceed the 8MB RDRAM buffer, same family as s72/s78.
 - Default-OFF, keep them off: `ROGUESQ_FIX_DXT` (s22/s23), `ROGUESQ_FIX_DXT_I` (s27, null on
   hangar band), `ROGUESQ_FLATTEN_I4` / `FLATTEN_RGBA16` / `FLATTEN_CI4` (attribution probes),
   `ROGUESQ_SHADE_ONLY_MONO` (s30; pad-only, not a band fix), `ROGUESQ_SHADE_WRAP=3` (s31 shared
@@ -659,12 +663,49 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s181)
+## Next steps, in order of expected value (s182)
 
--33. **NEW TOP PRIORITY (s181): reach the stall again with the new
-    `[thr-create-id]`/`thr=%p` instrument armed (always-on already), then
-    cross-reference the `[thr-resume-skip] thr=%p` value against this run's
-    `[thr-create-id]` lines to learn which specific thread was dropped.**
+-34. **NEW TOP PRIORITY (s182): re-attempt the stall repro now that the
+    `FramebufferStorage::store` OOB-read crash (found this session) no
+    longer preempts it; the nearest remaining obstacle is a
+    non-deterministic, already-catalogued Metal-internal shader-compiler
+    SIGSEGV (s83/s96 lineage, no source on our side).** s182 re-ran the
+    `schedcaller`-shape soak (`schedguard2`) and found it died **even
+    earlier** than s181's attempt (hold-iter 1 vs hold-iter 7) to a
+    brand-new crash: SIGBUS in `RT64::FramebufferStorage::store`'s memcpy,
+    called from `State::fullSync`'s color/depth read-into-storage blocks
+    (`rt64_state.cpp:2227`/`2271`). Root-caused it as a **real gap in the
+    s78 `FramebufferManager::get()` refuse gate**: that gate keeps a wild
+    FB out of `framebuffers[]` but still returns a `refuseFb` carrying the
+    same wild `width`/`height`/`address`, and this downstream read site has
+    no bounds check of its own — confirmed exactly by a same-tick
+    `[fb-get] REFUSE addr=0x00FF3EC0 w=225 h=158 oob=1` whose computed
+    `rangeEnd` lands ~8MB past the 8MB RDRAM buffer. **Fixed** (`lib/rt64/
+    src/hle/rt64_state.cpp`, both color and depth blocks): skip the
+    `fbStorage.store`/RDRAM read when `storageAddress`/`rangeEnd` would
+    exceed `0x800000` (reusing s78's constant), logging
+    `[fbsync-oob-skip]` (throttled, same pattern as `[fb-get] REFUSE`).
+    Pure `lib/rt64` host C++, rebuilt clean, patch exported+committed.
+    **Validated same-session**: soak `schedguard3` (identical env/tag-bump)
+    got a clean positive control (`[fbsync-oob-skip]` 17/17), the exact
+    crash that killed `schedguard2` did not recur, and the process
+    progressed further (`decisionN=8016` vs `7734`, hold-iter 3 vs 1)
+    before dying to the unrelated Metal-internal SIGSEGV instead. Neither
+    `schedguard2` nor `schedguard3` fired `[thr-resume-skip]` even once, so
+    s180's "2nd independent confirmation" of the scheduler silent-drop
+    mechanism (item -33 below) is still outstanding — this session only
+    removed one early-crash competitor. Full detail: PORTING-STATE Session
+    182.
+
+-33. **(s181): reach the stall again with the new `[thr-create-id]`/`thr=%p`
+    instrument armed (always-on already), then cross-reference the
+    `[thr-resume-skip] thr=%p` value against this run's `[thr-create-id]`
+    lines to learn which specific thread was dropped.** Now that -34's fix
+    removes one specific early-crash competitor, re-attempt this 1-2 more
+    times before treating the Metal-internal SIGSEGV itself as worth a
+    characterization pass (no source on our side — only "what shader/
+    material combination triggers a first-time compile here" is
+    investigable, not directly fixable).
     s181 source-read + one soak **refuted s180's implicit premise that "id 0"
     names a single specific thread**: grepping every `osCreateThread_recomp`
     call site found **8 of 10 literal-id call sites pass `id=0`**, and a

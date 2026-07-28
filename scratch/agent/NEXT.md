@@ -1,80 +1,90 @@
-# NEXT work unit — reach the stall with the new [thr-create-id]/thr=%p
-# instrument armed, then identify the actually-dropped thread by pointer
+# NEXT work unit — re-attempt the stall repro now that the
+# FramebufferStorage::store OOB-read crash is fixed
 
-Read PORTING-STATE Session 181 in full before doing anything else (`grep -n
-"^## Session 181" PORTING-STATE.md`); this file only has the actionable
-summary. Also read docs/CURRENT-TRUTH.md's `-33` next-steps item (and `-32`
-right below it, which still has the original s180 mechanism writeup).
+Read PORTING-STATE Session 182 in full before doing anything else (`grep -n
+"^## Session 182" PORTING-STATE.md`); this file only has the actionable
+summary. Also read docs/CURRENT-TRUTH.md's `-34` next-steps item (top of the
+list) and `-33` right below it (still the original s180/s181 goal, unchanged).
 
-## What s181 established (read before doing anything else)
+## What s182 established (read before doing anything else)
 
-- **Refuted s180's implicit premise that guest thread "id 0" names one
-  specific thread.** Grepped every `osCreateThread_recomp(` call site in
-  `N64Recomp/RecompiledFuncs/*.c` (10 real sites) and read each one's
-  argument setup: **8 of 10 pass a literal `id=0`**. A same-run dump proved
-  **≥9 distinct threads share id=0** in a normal boot: `idle_thread_handle`
-  (entry `0x800017A0`, pri 10), `thread3_video_handle` (entry `0x80001088`,
-  pri 9), an unnamed child of it (entry `0x800016AC`, pri 127), 3 threads
-  from one boot function (entries `0x80019868`/`0x80019BF4`/`0x8001C328`,
-  pri 117/122/122), one more standalone one (entry `0x80002E10`, pri 118),
-  and — via an exact `thr_rdram` address match to s70/71's already-known
-  crash site — **the audio thread `runAiAudioStreamPlaybackLoop`**
-  (`thr_rdram=0x801494B0`). Ids 1+ ARE unique (id=1 matched s93's
-  `piDmaWorker`, id=3 matched s93's `mainBootstrapWorker` exactly, both by
-  entry address). **A fix or instrument keyed on `id==0` alone is a guess
-  among ≥9 candidates — do not design one that way.**
-- **Landed and validated (18/18 positive control) the fix for this**: an
-  always-on `[thr-create-id] id=%d thr=%p pri=%d entry=0x%08X
-  thr_rdram=0x%08X` log at thread-creation time (`osCreateThread`,
-  `lib/N64ModernRuntime/ultramodern/src/threads.cpp`, right after
-  `t->context = context;`), plus `thr=%p pri=%d` added to the existing
-  cheap `[thr-resume-skip]` line (`resume_thread_tagged`, same file). Both
-  changes are pure `lib/` host C++, already rebuilt clean, patch exported
-  and committed. **These are always-on regardless of
-  `ROGUESQ_LOG_THREAD_RESUME`** (which must stay 0 per s93's confound
-  finding — do not turn it on for this soak).
-- **One soak (`schedguard1`) did not reach the stall** — died at hold+~7s to
-  a new-looking SIGBUS (`traverseSceneGraphRecursive` →
-  `processSceneNode` → `submitSceneNodeRender`, called from the known
-  `runHangarSelectionFrame` → `runHangarMenuFromOverlay` → `menuOverlayInit`
-  → `mainGameLoop` chain). Not chased — out of scope, flagged only. Because
-  the run never fired `[thr-resume-skip]`, it adds **zero** new data toward
-  s180's still-open "2nd independent confirmation" requirement (rule 4).
+- Re-ran the `schedcaller`-shape soak (`schedguard2`) with the s181
+  `[thr-create-id]`/`thr=%p` instrument still armed. It died **even earlier**
+  than s181's own attempt (hold-iter 1, ~1s into the 120s hold) to a
+  brand-new crash: SIGBUS in `RT64::FramebufferStorage::store`'s `memcpy`
+  (`lib/rt64/src/hle/rt64_framebuffer_storage.cpp:30`), called from
+  `RT64::State::fullSync`'s color/depth read-into-storage blocks
+  (`rt64_state.cpp:2227`/`2271`).
+- Root-caused it: `FramebufferManager::get()`'s s78 refuse gate keeps a wild
+  FB out of `framebuffers[]`, but the `refuseFb` it returns **still carries
+  the wild `width`/`height`/`address`** (only `readHeight` is forced to 0).
+  `State::fullSync`'s `if (colorFb->height > colorFb->readHeight)` block
+  doesn't know the FB was refused, so it still reads `&RDRAM[storageAddress]`
+  for `readFbBytes` bytes using those wild dimensions — with no bounds check
+  anywhere in that path — and runs off the end of the 8MB RDRAM buffer.
+  Confirmed exactly: a same-tick `[fb-get] REFUSE addr=0x00FF3EC0 w=225
+  h=158 oob=1` fired ~1300 lines before the crash; its computed `rangeEnd`
+  lands ~8MB past the buffer's actual 8MB size.
+- **Fixed** (`lib/rt64/src/hle/rt64_state.cpp`, both the color block
+  ~2222-2254 and the mirrored depth block ~2284-2312): skip the
+  `fbStorage.store`/RDRAM read when `storageAddress >= 0x800000 ||
+  storageAddress + readFbBytes > 0x800000` (reusing s78's 8MB constant),
+  logging `[fbsync-oob-skip] color|depth #%d addr=... bytes=...` (throttled,
+  same pattern as `[fb-get] REFUSE`). `readHeight` still advances to `height`
+  either way so a skip doesn't get retried every tick. Pure `lib/rt64` host
+  C++ — rebuilt clean, patch exported (`submodule-patches/rt64.patch`) +
+  committed.
+- **Validated same session**: soak `schedguard3` (identical env block,
+  tag-bumped) got a clean positive control (`[fbsync-oob-skip]` fired
+  17/17), the exact crash that killed `schedguard2` did **not** recur, and
+  the process progressed further (`decisionN=8016` vs `7734` at death,
+  hold-iter 3 vs 1) before dying to a **different, already-catalogued**
+  crash instead: a SIGSEGV entirely inside Apple's Metal shader-compiler
+  internals (`MTLCompilerFSCache`/`MultiLevelAirCache`, no source on our
+  side) — same class first seen s83 and s96, known to be non-deterministic
+  (doesn't always recur).
+- Neither `schedguard2` nor `schedguard3` fired `[thr-resume-skip]` even
+  once — s180's "2nd independent confirmation" of the scheduler
+  silent-drop mechanism (the actual M3 top-priority target) is **still
+  outstanding**. This session's fix only removed one specific early-crash
+  competitor.
 
 ## Do next, in order
 
-1. **Re-run the `schedcaller`-shape soak** (copy `run_schedguard1.sh` to a
-   new tag, e.g. `schedguard2` — do not reuse a tag, it overwrites
-   `run.log`). This is a fresh attempt at a NEW question (which thread is
-   actually dropped), not a blind repeat of the old repro — rule 8's
-   3-attempt cap on the *old* instrument set doesn't apply here, but do
-   apply ordinary judgment: if 3 consecutive attempts with this instrument
-   set also fail to reach the stall, park and reconsider (e.g. a
-   longer/different STICK_SCHEDULE, or accept the `submitSceneNodeRender`
-   family as a competing, now more-frequent blocker worth its own
-   characterization pass).
+1. **Re-run the `schedcaller`-shape soak again** (copy `run_schedguard3.sh`
+   to a new tag, e.g. `schedguard4` — do not reuse a tag, it overwrites
+   `run.log`). Same env block, same `STICK_SCHEDULE`. Goal: get past the
+   Metal-internal SIGSEGV (non-deterministic, may not recur this time) and
+   reach the actual stall region (`[vi-fs-decision]` decisions in the
+   ~8000-16256 range, `rdpFs` plateauing ~3560-3802).
 2. **If a run reaches the stall and fires `[thr-resume-skip]`**: grep the
    line's `thr=0x...` value, then grep this run's own `[thr-create-id]`
-   lines for the matching `thr=` value. That gives you the dropped thread's
-   `id`/`pri`/`entry`/`thr_rdram` — cross-reference `entry` against the list
-   in "What s181 established" above (and against s93's `piDmaWorker`
-   `0x80005570` / `mainBootstrapWorker` `0x80000C68` if the id turns out to
-   be 1 or 3) to name the thread's role. This is the actual answer to "is it
-   the swap-ack producer" that s180/s181 couldn't give.
-3. **Once the dropped thread's role is known, decide the fix shape** (this
-   was s180/NEXT.md's original step 2, still valid, still not yet done):
+   lines for the matching `thr=` value. That gives the dropped thread's
+   `id`/`pri`/`entry`/`thr_rdram` — cross-reference `entry` against s181's
+   catalogued list (PORTING-STATE Session 181) to name the thread's role.
+   This is the actual answer to "is it the swap-ack producer" that
+   s180-s182 still haven't been able to give.
+3. **If the Metal-internal SIGSEGV recurs 2-3 times in a row instead**: per
+   rule 8, stop blindly re-attempting and consider whether it's worth a
+   characterization pass of its own — NOT a fix (no source on our side), but
+   understanding *what* triggers a first-time shader/material compile at
+   this point in the hangar scene might suggest a way to pre-warm or avoid
+   it. This would be a new, separate work unit, not a continuation of the
+   scheduler-stall investigation.
+4. **Once the dropped thread's role is known (from step 2), decide the fix
+   shape** (this was s180/s181's original step 2, still valid, still not
+   done):
    - Make `resume_thread_tagged`'s bad-context branch retry the next
      `running_queue` entry instead of just returning.
    - Give `run_next_thread_and_wait`'s caller (the message-queue blocking
      path in `mesgqueue.cpp:105/143`) a way to detect its target thread
      will never run and recover (timeout, requeue-and-retry).
-   Either is a real change to shared scheduler code — treat with the same
-   care as every prior fix in this project (truncate register-value
-   comparisons through `U32()`, keep any guest-code-adjacent path
-   ABI-correct via `goto` to the real exit label, validate with a same-run
-   positive AND negative control before trusting it, per the s99-s101
-   lessons already in CURRENT-TRUTH).
-4. **Land the fix, rebuild, export+commit if `lib/` touched, soak it.**
+   Either is a real change to shared scheduler code — same care as every
+   prior fix here (truncate register-value comparisons through `U32()`,
+   keep any guest-code-adjacent path ABI-correct via `goto` to the real
+   exit label, validate with a same-run positive AND negative control
+   before trusting it).
+5. **Land the fix, rebuild, export+commit if `lib/` touched, soak it.**
    Discriminating outcomes:
    - Fix prevents the stall entirely (thread 3 / the hangar loop keeps
      advancing past where `[thr-resume-skip]` used to fire) → strong
@@ -90,14 +100,13 @@ right below it, which still has the original s180 mechanism writeup).
 - Do not design or land a fix keyed on `id==0` alone — s181 proved that's
   ambiguous among ≥9 threads. Use the `thr=%p` cross-reference (step 2
   above) first.
-- Do not re-open the `submitSceneNodeRender+28208` SIGBUS from s181's soak
-  as a primary investigation thread this iteration — it's flagged, not
-  characterized; chasing it is a valid *future* work unit if it recurs and
-  keeps preempting this repro, but the current top priority is the
-  scheduler-stall mechanism per the goal stack (M3).
+- Do not re-open the `submitSceneNodeRender+28208` SIGBUS from s181's soak,
+  or try to "fix" the Metal-internal shader-compiler SIGSEGV directly (no
+  source on our side) — both are flagged, not primary targets this
+  iteration.
 - Do not turn on `ROGUESQ_LOG_THREAD_RESUME=1` for this soak (s93's
   confound: it perturbs timing enough to change which crash/stall wins the
-  race). The new instruments are always-on and don't need it.
+  race). The instruments already armed are always-on and don't need it.
 - Do not re-litigate "does the outer hangar loop stop iterating vs. does the
   callee silently skip the wait" — s180 closed this (outer loop stops).
 
@@ -146,6 +155,10 @@ summary block is complete.
   each Bash call should be a single command; run follow-ups as separate
   calls (including a trailing `echo` after a redirected command — that
   also counts as a 2nd operation and gets denied).
+- `submodule-patches/export.sh` must be invoked as a relative path
+  (`./submodule-patches/export.sh`) from the repo root cwd — an absolute
+  path gets denied even though it's functionally the same command, because
+  the allowlist is a literal prefix match on the command string.
 - Same for `python3 fixup_game_funcs.py` — it uses an absolute
   `pathlib.Path("/Users/.../N64Recomp/RecompiledFuncs")` internally, so it
   can be invoked as `python3 /absolute/path/to/fixup_game_funcs.py > log`
@@ -158,7 +171,7 @@ summary block is complete.
   moving on. If you edit the patch text after a first (buggy) attempt,
   you MUST re-run the FULL pipeline from a fresh `N64Recomp` regen — do not
   just re-run fixup on already-patched files. (Not needed for pure `lib/`
-  host C++ changes like s181's — those only need `cmake --build`.)
+  host C++ changes — those only need `cmake --build`.)
 - If only `fixup_game_funcs.py`/a `lib/rt64` or `N64ModernRuntime` C++ file
   changed (not symbol files or the ELF), you don't need `make_elf.py` —
   for guest-code fixup changes: `N64Recomp` (via
@@ -231,12 +244,13 @@ summary block is complete.
 
 ## Housekeeping still flagged, still not done
 
-`docs/CURRENT-TRUTH.md` is now ~250 KB, wildly over the ~35 KB target —
-migrate durable mechanism/architecture material to PROJECT-OVERVIEW.md and
-prune superseded detail, paired with a real experiment (do not spend a
-whole iteration on pure doc cleanup per ITERATION.md — "compressing
-CURRENT-TRUTH is not advancing" — but if a natural break comes up, this is
-overdue). Flagged for many sessions without action.
+`docs/CURRENT-TRUTH.md` is now well over 100 KB, wildly over the ~35 KB
+target — migrate durable mechanism/architecture material to
+PROJECT-OVERVIEW.md and prune superseded detail, paired with a real
+experiment (do not spend a whole iteration on pure doc cleanup per
+ITERATION.md — "compressing CURRENT-TRUTH is not advancing" — but if a
+natural break comes up, this is overdue). Flagged for many sessions without
+action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
 not a `lib/` submodule, with uncommitted changes across many sessions
