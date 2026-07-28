@@ -65,7 +65,7 @@ Driven from the title with `PROBE_KEYS_FROM_PHASE=1` (s23, scene names corrected
 | +1 press | 512, origin 0x6AB400, colour 0x656000/0x6AB000 | **level-select war room → SELECT LEVEL — "AMBUSH AT MOS EISLEY"** with X-wing hologram (the scene s12–s47 called the "main-menu hangar"; see s48 below) |
 | ~93 s | 640 | transition — process died here in the undriven-era observation and in every crashing run of the post-s86 family; **on the s160/s161 crash-free runs the process instead survives past here** (see below) |
 | leave SELECT YOUR CRAFT (1 Start press) | 512→640, origin 0x6AB400→0x6A2900ish | **s162 (offline reanalysis of s160/s161 captures): a Chapter-1 mission-intro cutscene** — gold "STAR WARS" logo bumper → "Chapter 1"/"THE RED…" crawl text → black → desert-planet horizon widening into a fast dive toward a hangar structure (establishing shot, not gameplay). Never documented before s162; the s75/s76/s161 "hangar-flight" label for this window was an unverified inference from title-yellow color decay, not from the picture itself. |
-| ~+90-115s post-leave | varies (0 or 128 in the two known runs) | **graphics-task-submission stall** — `[vi-fs-decision]` reports `stalled=1 pairs=0` continuously, RDP `fs` counter frozen (5 occurrences now cluster at `rdpFs`~3560-3802, a candidate shared ceiling — s176-179). Not a crash; a **staggered** subsystem shutdown (s178): `[lle task]`/`[swap-ack-wait]` (graphics-task submission and its per-frame producer) stop first, `[rs-malloc]` (heap allocation) a bit later, `[rs-free-walk]` (heap free-walking) keeps running to the very end of the log — the older "audio ucode and heap allocation keep running to the end" wording (s162) does not hold uniformly. s178 confirmed the per-frame producer (`runHangarSelectionFrame` -> `waitForPrevFrameDone` -> `waitForPostSwapAck`) is never stuck mid-call (clean matched enter/pre-recv/post-recv, zero orphans) — it simply stops being invoked at all, coincident with graphics-task submission stopping. s179 source-confirmed the polling loop calling it has no wait/yield of its own. **s180: reproduced the sustained stall crash-free for the first time** (`schedcaller2`, 3rd/last allowed attempt) and found a source-confirmed, tightly-timed candidate root cause: exactly one `[thr-resume-skip] tag=run_next id=0 ctx=0x0 live=0 bad_total=1` fires (the s84 UAF guard) immediately before the stall's onset, with nothing else in between. Source read of `resume_thread_tagged`/`run_next_thread`/`run_next_thread_and_wait` (`lib/N64ModernRuntime/ultramodern/src/threads.cpp:198-278`, and `mesgqueue.cpp:105/143` — the guest `osRecvMesg`/`osSendMesg` blocking path) shows the guard, on finding the popped "next" thread's context bad, silently returns without retrying the next queue entry or waking the thread that yielded expecting a handoff — so if the popped thread (id 0) was the one meant to eventually service the swap-ack message queue, the caller (thread 3, running the hangar loop) blocks forever. **Single-run finding, not yet independently confirmed (rule 4)** — see next-steps item -32 for the follow-up (identify thread id 0, then design a targeted fix/instrument). Full mechanism writeup: PORTING-STATE Session 180. |
+| ~+90-115s post-leave | varies (0 or 128 in the two known runs) | **graphics-task-submission stall** — `[vi-fs-decision]` reports `stalled=1 pairs=0` continuously, RDP `fs` counter frozen (5 occurrences now cluster at `rdpFs`~3560-3802, a candidate shared ceiling — s176-179). Not a crash; a **staggered** subsystem shutdown (s178): `[lle task]`/`[swap-ack-wait]` (graphics-task submission and its per-frame producer) stop first, `[rs-malloc]` (heap allocation) a bit later, `[rs-free-walk]` (heap free-walking) keeps running to the very end of the log — the older "audio ucode and heap allocation keep running to the end" wording (s162) does not hold uniformly. s178 confirmed the per-frame producer (`runHangarSelectionFrame` -> `waitForPrevFrameDone` -> `waitForPostSwapAck`) is never stuck mid-call (clean matched enter/pre-recv/post-recv, zero orphans) — it simply stops being invoked at all, coincident with graphics-task submission stopping. s179 source-confirmed the polling loop calling it has no wait/yield of its own. **s180: reproduced the sustained stall crash-free for the first time** (`schedcaller2`, 3rd/last allowed attempt) and found a source-confirmed, tightly-timed candidate root cause: exactly one `[thr-resume-skip] tag=run_next id=0 ctx=0x0 live=0 bad_total=1` fires (the s84 UAF guard) immediately before the stall's onset, with nothing else in between. Source read of `resume_thread_tagged`/`run_next_thread`/`run_next_thread_and_wait` (`lib/N64ModernRuntime/ultramodern/src/threads.cpp:198-278`, and `mesgqueue.cpp:105/143` — the guest `osRecvMesg`/`osSendMesg` blocking path) shows the guard, on finding the popped "next" thread's context bad, silently returns without retrying the next queue entry or waking the thread that yielded expecting a handoff — so if the popped thread (id 0) was the one meant to eventually service the swap-ack message queue, the caller (thread 3, running the hangar loop) blocks forever. **Single-run finding, not yet independently confirmed (rule 4)**. **s181: refuted the "id 0 names one specific thread" reading** — source+runtime confirmed **≥9 distinct guest threads share `id=0`** (idle, video, an unnamed video-child, 3 boot threads, one more, and the audio thread `runAiAudioStreamPlaybackLoop`, the last via an exact OSThread-address match to s70/71); only ids 1+ are per-thread-unique (id=1/3 matched s93's known `piDmaWorker`/`mainBootstrapWorker`). Landed an always-on `[thr-create-id]` log (id/thr-pointer/pri/entry at creation) plus `thr=%p pri=%d` on the skip line so a future stall-reaching soak can identify the dropped thread by pointer, not by the uninformative `id`. One soak with the new instrument armed didn't reach the stall (died early to an unrelated, uncatalogued SIGBUS). See next-steps item -33 for the follow-up. Full detail: PORTING-STATE Session 181 (mechanism itself: Session 180). |
 
 Menu state machine (s48, three driven runs; extended s50; post-`a` path s73; Start path s74/s75;
 hold attempt s76):
@@ -659,11 +659,38 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s180)
+## Next steps, in order of expected value (s181)
 
--32. **NEW TOP PRIORITY (s180): identify guest thread id 0, then design a fix
-    or targeted instrument for the scheduler silent-drop mechanism found this
-    session.** s180's 3rd (and rule-8-final) `schedcaller`-shape attempt
+-33. **NEW TOP PRIORITY (s181): reach the stall again with the new
+    `[thr-create-id]`/`thr=%p` instrument armed (always-on already), then
+    cross-reference the `[thr-resume-skip] thr=%p` value against this run's
+    `[thr-create-id]` lines to learn which specific thread was dropped.**
+    s181 source-read + one soak **refuted s180's implicit premise that "id 0"
+    names a single specific thread**: grepping every `osCreateThread_recomp`
+    call site found **8 of 10 literal-id call sites pass `id=0`**, and a
+    same-run `[thr-create-id]` dump confirmed **≥9 distinct threads share
+    id=0** in a normal run — `idle_thread_handle`, `thread3_video_handle`, an
+    unnamed child of it, 3 boot-sequence threads, one more unnamed one, and
+    (via an exact `thr_rdram` address match to s70/71) **the audio thread
+    `runAiAudioStreamPlaybackLoop`**. `id=1`/`id=3` matched s93's known
+    `piDmaWorker`/`mainBootstrapWorker` exactly, confirming ids 1+ ARE
+    per-thread-unique — only `id=0` is a shared default. **A fix keyed on
+    `id==0` alone would be a guess among ≥9 candidates, not a targeted fix.**
+    Landed (and positive-controlled 18/18) a new always-on log,
+    `[thr-create-id] id=%d thr=%p pri=%d entry=0x%08X thr_rdram=0x%08X`
+    (`osCreateThread`, right after context creation) plus `thr=%p pri=%d`
+    added to the existing cheap `[thr-resume-skip]` line — both in
+    `lib/N64ModernRuntime/ultramodern/src/threads.cpp`, patch
+    exported+committed. **This run did not reach the stall** (died hold+7s
+    to a new-looking SIGBUS in `traverseSceneGraphRecursive`/
+    `processSceneNode`/`submitSceneNodeRender`, not chased, see PORTING-STATE
+    s181) — 0 new `[thr-resume-skip]` firings, so s180's mechanism still
+    needs its 2nd independent data point (rule 4). Full detail:
+    PORTING-STATE Session 181.
+
+-32. **(s180, refined by s181 above): design a fix or targeted instrument
+    for the scheduler silent-drop mechanism.** s180's 3rd (and rule-8-final)
+    `schedcaller`-shape attempt
     (`schedcaller2`) **reproduced the sustained graphics-task-submission
     stall crash-free** — the first time either outcome (crash-free / reaches
     the stall) has happened together; `CRASH: 0`, hold+grace both completed,
@@ -691,12 +718,12 @@ cost three sessions before the recursive mutex.
     2nd independent line of evidence before entering "current truth" as more
     than a strong lead). Full mechanism writeup: PORTING-STATE Session 180.
     **Next steps, in order:**
-    1. Source-read only (no rebuild): find what guest thread id 0 is —
-       grep `osCreateThread` call sites for the one passing `id=0`,
-       cross-reference against known per-frame/audio/present threads. This
-       either confirms or refutes the "id 0 is the swap-ack producer"
-       sub-hypothesis before any instrument is designed.
-    2. Once id 0's role is known, decide the fix shape: does
+    1. ~~Source-read: find what guest thread id 0 is.~~ **Done, s181 — see
+       -33 above: refuted "id 0 = one thread" (≥9 threads share it); use the
+       new `[thr-create-id]`/`thr=%p` instrument (-33) on the next soak that
+       reaches the stall instead of guessing from `id` alone.
+    2. Once the specific dropped thread's identity is known (via -33's
+       instrument, not `id` alone), decide the fix shape: does
        `resume_thread_tagged`'s bad-context branch need to retry the next
        running-queue entry instead of just returning? Does
        `run_next_thread_and_wait`'s caller need a way to detect it will

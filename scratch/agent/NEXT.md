@@ -1,119 +1,105 @@
-# NEXT work unit — identify guest thread id 0, then design a fix/instrument
-# for the scheduler silent-drop mechanism (s180's finding)
+# NEXT work unit — reach the stall with the new [thr-create-id]/thr=%p
+# instrument armed, then identify the actually-dropped thread by pointer
 
-Read PORTING-STATE Session 180 in full before doing anything else (`grep -n
-"^## Session 180" PORTING-STATE.md`); this file only has the actionable
-summary. Also read docs/CURRENT-TRUTH.md's `-32` next-steps item — it has
-the same summary in slightly more compressed form plus the exact fix-design
-constraints to respect.
+Read PORTING-STATE Session 181 in full before doing anything else (`grep -n
+"^## Session 181" PORTING-STATE.md`); this file only has the actionable
+summary. Also read docs/CURRENT-TRUTH.md's `-33` next-steps item (and `-32`
+right below it, which still has the original s180 mechanism writeup).
 
-## What s180 established (read before doing anything else)
+## What s181 established (read before doing anything else)
 
-- **Reproduced the sustained graphics-task-submission stall crash-free for
-  the first time** (`schedcaller2`, the 3rd/last rule-8-allowed attempt at
-  this soak shape). `CRASH: 0`, hold+grace both completed (wall=161s),
-  `[vi-fs-decision]` decisions **#8000-#16256** are one unbroken run of
-  `stalled=1 pairs=0` with `rdpFs` frozen at exactly `3747` (5th data point
-  in the `~3560-3802` candidate shared-ceiling band).
-- **Discriminating result closed**: `[hangar-loop]`'s last firing (`n=538`,
-  thread id **3**, 2nd confirmation it's always this thread) is immediately
-  followed by `[swap-ack-wait] call=4781`'s clean, fully-matched
-  enter/pre-recv/post-recv (no orphan) — then **neither instrument fires
-  again for the rest of the run**. This confirms the outer polling loop
-  itself stops iterating (not: keeps running while the callee silently skips
-  the wait).
-- **Root mechanism found, source-confirmed, single-run positive control**:
-  between that clean `call=4781` and the stall's onset, exactly one
-  `[thr-resume-skip] tag=run_next id=0 ctx=0x0 live=0 bad_total=1` fires
-  (the always-on s84 UAF guard — `ROGUESQ_LOG_THREAD_RESUME` was 0 this run,
-  so this is the cheap-atomic path, not the verbose log) — with **nothing
-  else logged in between**. Read `resume_thread_tagged` /
-  `run_next_thread` / `run_next_thread_and_wait`
-  (`lib/N64ModernRuntime/ultramodern/src/threads.cpp:198-278`) plus
-  `mesgqueue.cpp:105/143` (what guest `osRecvMesg`/`osSendMesg`'s blocking
-  path compiles to) before touching anything — the mechanism: when the
-  scheduler pops a "next" thread off `running_queue` to hand off to, and
-  that thread's context is `bad` (the s70-s94-family UAF signature), the
-  guard prints `[thr-resume-skip]` and **returns without retrying the next
-  queue entry or waking whichever thread yielded expecting the handoff**.
-  If the popped thread (**id 0**) was the one that would eventually have
-  serviced the swap-ack message queue thread 3 is blocked on, thread 3 never
-  gets resumed — permanent, total stall, and the game process itself never
-  crashes (hence this run's `CRASH: 0`), it just silently stops advancing.
-- **This is a single run, single firing** — strong (tight timing, real
-  source mechanism, not a guess) but per rule 4 needs a 2nd independent line
-  of evidence before "current truth" treats it as more than a strong lead.
+- **Refuted s180's implicit premise that guest thread "id 0" names one
+  specific thread.** Grepped every `osCreateThread_recomp(` call site in
+  `N64Recomp/RecompiledFuncs/*.c` (10 real sites) and read each one's
+  argument setup: **8 of 10 pass a literal `id=0`**. A same-run dump proved
+  **≥9 distinct threads share id=0** in a normal boot: `idle_thread_handle`
+  (entry `0x800017A0`, pri 10), `thread3_video_handle` (entry `0x80001088`,
+  pri 9), an unnamed child of it (entry `0x800016AC`, pri 127), 3 threads
+  from one boot function (entries `0x80019868`/`0x80019BF4`/`0x8001C328`,
+  pri 117/122/122), one more standalone one (entry `0x80002E10`, pri 118),
+  and — via an exact `thr_rdram` address match to s70/71's already-known
+  crash site — **the audio thread `runAiAudioStreamPlaybackLoop`**
+  (`thr_rdram=0x801494B0`). Ids 1+ ARE unique (id=1 matched s93's
+  `piDmaWorker`, id=3 matched s93's `mainBootstrapWorker` exactly, both by
+  entry address). **A fix or instrument keyed on `id==0` alone is a guess
+  among ≥9 candidates — do not design one that way.**
+- **Landed and validated (18/18 positive control) the fix for this**: an
+  always-on `[thr-create-id] id=%d thr=%p pri=%d entry=0x%08X
+  thr_rdram=0x%08X` log at thread-creation time (`osCreateThread`,
+  `lib/N64ModernRuntime/ultramodern/src/threads.cpp`, right after
+  `t->context = context;`), plus `thr=%p pri=%d` added to the existing
+  cheap `[thr-resume-skip]` line (`resume_thread_tagged`, same file). Both
+  changes are pure `lib/` host C++, already rebuilt clean, patch exported
+  and committed. **These are always-on regardless of
+  `ROGUESQ_LOG_THREAD_RESUME`** (which must stay 0 per s93's confound
+  finding — do not turn it on for this soak).
+- **One soak (`schedguard1`) did not reach the stall** — died at hold+~7s to
+  a new-looking SIGBUS (`traverseSceneGraphRecursive` →
+  `processSceneNode` → `submitSceneNodeRender`, called from the known
+  `runHangarSelectionFrame` → `runHangarMenuFromOverlay` → `menuOverlayInit`
+  → `mainGameLoop` chain). Not chased — out of scope, flagged only. Because
+  the run never fired `[thr-resume-skip]`, it adds **zero** new data toward
+  s180's still-open "2nd independent confirmation" requirement (rule 4).
 
 ## Do next, in order
 
-1. **Source-read only, no rebuild.** Find what guest thread id 0 actually is.
-   Grep `RecompiledFuncs/*.c` (or the relevant lib runtime call sites) for
-   `osCreateThread` calls and their `id` arguments — find the one that
-   creates id 0, and whatever name/role can be inferred from its entry
-   function or the overlay it lives in. Cross-reference against the already
-   known threads in this investigation (id 3 = hangar-loop/menu thread; PI
-   DMA worker was id 1, per s93). This either confirms or refutes the
-   sub-hypothesis that id 0 is specifically the swap-ack/present producer —
-   important context before designing any fix, since a wrong guess about
-   *why* dropping id 0 matters could lead to a fix that doesn't address the
-   real dependency.
-2. **Decide the fix shape** based on what id 0 turns out to be. Two
-   candidate directions (not exhaustive — this is not yet a designed fix,
-   it's the next work unit's actual decision to make):
-   - Make `resume_thread_tagged`'s bad-context branch retry with the next
-     `running_queue` entry instead of just returning (turns a silent
-     scheduling-slot loss into "skip the bad thread, try the next one" —
-     closer to what a real OS scheduler would do on a dead thread).
+1. **Re-run the `schedcaller`-shape soak** (copy `run_schedguard1.sh` to a
+   new tag, e.g. `schedguard2` — do not reuse a tag, it overwrites
+   `run.log`). This is a fresh attempt at a NEW question (which thread is
+   actually dropped), not a blind repeat of the old repro — rule 8's
+   3-attempt cap on the *old* instrument set doesn't apply here, but do
+   apply ordinary judgment: if 3 consecutive attempts with this instrument
+   set also fail to reach the stall, park and reconsider (e.g. a
+   longer/different STICK_SCHEDULE, or accept the `submitSceneNodeRender`
+   family as a competing, now more-frequent blocker worth its own
+   characterization pass).
+2. **If a run reaches the stall and fires `[thr-resume-skip]`**: grep the
+   line's `thr=0x...` value, then grep this run's own `[thr-create-id]`
+   lines for the matching `thr=` value. That gives you the dropped thread's
+   `id`/`pri`/`entry`/`thr_rdram` — cross-reference `entry` against the list
+   in "What s181 established" above (and against s93's `piDmaWorker`
+   `0x80005570` / `mainBootstrapWorker` `0x80000C68` if the id turns out to
+   be 1 or 3) to name the thread's role. This is the actual answer to "is it
+   the swap-ack producer" that s180/s181 couldn't give.
+3. **Once the dropped thread's role is known, decide the fix shape** (this
+   was s180/NEXT.md's original step 2, still valid, still not yet done):
+   - Make `resume_thread_tagged`'s bad-context branch retry the next
+     `running_queue` entry instead of just returning.
    - Give `run_next_thread_and_wait`'s caller (the message-queue blocking
-     path in `mesgqueue.cpp`) a way to detect that the specific thread it
-     was counting on will never run and recover (e.g. re-queue itself and
-     retry, or time out).
-   Either is a real change to shared scheduler code, not a guest-code guard
-   — treat with the same care as every prior fix in this project: keep
-   register-value comparisons truncated (`U32()` etc, per s99's lesson),
-   keep any guest-code-adjacent path ABI-correct, and validate with a
-   same-run positive AND negative control before trusting it.
-3. **Land whichever fix/instrument step 2 settles on**, following the usual
-   regen pipeline if it touches guest-code fixups, or just `cmake --build`
-   if it's pure `lib/` runtime C++ (see "environment notes" below for the
-   exact commands). If it touches `lib/`, run `submodule-patches/export.sh`
-   and commit the refreshed patches in the same session — hard rule.
-4. **Soak it.** Reuse the `schedcaller`-shape env block (copy
-   `scratch/agent/run_schedcaller2.sh` to a new tag, e.g. `schedguard1`) —
-   it's already validated to reach the target stall state reliably-ish (1 of
-   3 recent attempts, now unblocked from the `frameStartReset` competitor
-   since that soak shape survived crash-free this time). Discriminating
-   outcomes:
-   - Fix prevents the stall entirely (thread 3 keeps advancing past where
-     `[thr-resume-skip] id=0` used to fire, `[lle task]` submission
-     continues) → strong support, but still only 1 run — needs a repeat
-     before calling this milestone-closing.
+     path in `mesgqueue.cpp:105/143`) a way to detect its target thread
+     will never run and recover (timeout, requeue-and-retry).
+   Either is a real change to shared scheduler code — treat with the same
+   care as every prior fix in this project (truncate register-value
+   comparisons through `U32()`, keep any guest-code-adjacent path
+   ABI-correct via `goto` to the real exit label, validate with a same-run
+   positive AND negative control before trusting it, per the s99-s101
+   lessons already in CURRENT-TRUTH).
+4. **Land the fix, rebuild, export+commit if `lib/` touched, soak it.**
+   Discriminating outcomes:
+   - Fix prevents the stall entirely (thread 3 / the hangar loop keeps
+     advancing past where `[thr-resume-skip]` used to fire) → strong
+     support, but still needs a repeat before calling this
+     milestone-closing.
    - Stall still occurs but `[thr-resume-skip]`/`bad_total` no longer
-     precedes it → refutes this session's mechanism as *sufficient* (may
-     still be a contributing factor, or the wrong causal read).
-   - Stall recurs with the exact same signature (`id=0`, immediately
-     preceding onset) unfixed → confirms the mechanism is real but the fix
-     attempt didn't address it — iterate on the fix, not the investigation.
+     precedes it → refutes the mechanism as *sufficient*.
+   - Stall recurs with the same signature unfixed → confirms the mechanism
+     but the fix attempt didn't address it — iterate on the fix.
 
 ## Do not
 
-- Do not treat the s180 finding as fully confirmed yet — it's one run, one
-  `[thr-resume-skip]` firing. Get a 2nd independent data point (ideally via
-  the fix-validation soak in step 4 above) before promoting language in
-  CURRENT-TRUTH from "candidate root cause" to established fact.
-- Do not re-litigate the `[hangar-loop]` vs `[swap-ack-wait]` discriminating
-  question — s180 closed it (outer loop stops iterating, confirmed by two
-  independent soaks now showing thread id 3 consistently and the paired
-  stop point).
-- Do not re-open `frameStartReset` as an investigation thread — still
-  source-verified clean in its own body (multiple prior sessions); this
-  session's crash-free run doesn't change that, it just means this
-  particular soak avoided it, not that it's fixed.
-- Do not attempt a 4th `schedcaller`-shape soak with the OLD instrument set
-  hoping for another lucky crash-free run before designing the fix — rule 8
-  already closed that repro angle at 3 attempts (this session's was the
-  3rd). The next soak should be validating a fix/instrument change, not a
-  blind repeat.
+- Do not design or land a fix keyed on `id==0` alone — s181 proved that's
+  ambiguous among ≥9 threads. Use the `thr=%p` cross-reference (step 2
+  above) first.
+- Do not re-open the `submitSceneNodeRender+28208` SIGBUS from s181's soak
+  as a primary investigation thread this iteration — it's flagged, not
+  characterized; chasing it is a valid *future* work unit if it recurs and
+  keeps preempting this repro, but the current top priority is the
+  scheduler-stall mechanism per the goal stack (M3).
+- Do not turn on `ROGUESQ_LOG_THREAD_RESUME=1` for this soak (s93's
+  confound: it perturbs timing enough to change which crash/stall wins the
+  race). The new instruments are always-on and don't need it.
+- Do not re-litigate "does the outer hangar loop stop iterating vs. does the
+  callee silently skip the wait" — s180 closed this (outer loop stops).
 
 ## Blocking on a long-running soak (learned the hard way, still current)
 
@@ -171,7 +157,8 @@ summary block is complete.
   the log for your new patch's report lines to confirm exactly x1 before
   moving on. If you edit the patch text after a first (buggy) attempt,
   you MUST re-run the FULL pipeline from a fresh `N64Recomp` regen — do not
-  just re-run fixup on already-patched files.
+  just re-run fixup on already-patched files. (Not needed for pure `lib/`
+  host C++ changes like s181's — those only need `cmake --build`.)
 - If only `fixup_game_funcs.py`/a `lib/rt64` or `N64ModernRuntime` C++ file
   changed (not symbol files or the ELF), you don't need `make_elf.py` —
   for guest-code fixup changes: `N64Recomp` (via
@@ -224,7 +211,11 @@ summary block is complete.
   extracted file, rather than piping large greps through further shell
   commands (each Bash call must be a single operation; chained pipes with
   `awk`/`head`/`tail` after a `grep` frequently get denied as "multiple
-  operations" even though they're one shell pipeline).
+  operations" even though they're one shell pipeline). Also: `sed -n
+  'N,Mp' file` per-file works fine for reading small windows around known
+  line numbers; a shell loop with `for loc in "file:line" ...; do ...;
+  done` gets denied ("Contains simple_expansion") — issue one `sed` call
+  per location instead, batched in parallel tool calls.
 - When a soak survives the full hold window, `run_mission_keys.sh`'s
   summary line `UnhandledJump: N` can be nonzero from totally benign RSP
   microcode fallback noise — grep the actual matched lines before reading
@@ -240,13 +231,15 @@ summary block is complete.
 
 ## Housekeeping still flagged, still not done
 
-`docs/CURRENT-TRUTH.md` is still far over the ~35 KB target — migrate
-durable mechanism/architecture material to PROJECT-OVERVIEW.md and prune
-superseded detail, paired with a real experiment. Flagged for many
-sessions without action.
+`docs/CURRENT-TRUTH.md` is now ~250 KB, wildly over the ~35 KB target —
+migrate durable mechanism/architecture material to PROJECT-OVERVIEW.md and
+prune superseded detail, paired with a real experiment (do not spend a
+whole iteration on pure doc cleanup per ITERATION.md — "compressing
+CURRENT-TRUTH is not advancing" — but if a natural break comes up, this is
+overdue). Flagged for many sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
-not a `lib/` submodule, with uncommitted changes across s90-180
+not a `lib/` submodule, with uncommitted changes across many sessions
 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`). Same
 posture as the `rogue_squadron64` sibling checkout flagged since s54.
 Worth asking the user whether/how to commit that history.

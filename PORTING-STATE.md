@@ -16772,3 +16772,47 @@ This is only the 2nd positive control the s84 gate has ever gotten (1st was s88,
 2. Try to land a 6th `rdpFs`-onset data point (any soak) to further tighten the ~3500-3800 ceiling band (now: 3560/3561/3784/3740/3747).
 3. `tickSongSequence`'s 2 unguarded list walks (funcs_25.c:5018-5046, 5050-5077, found s174, not guarded) — still open, still lower priority.
 4. `submitSceneNodeRender+16780` (s171) — still open, still lowest priority of the characterized-but-unfixed leads.
+
+## Session 181 (2026-07-28) — refuted s180's "id 0 = single specific thread" premise; landed and validated an always-on thread-identity instrument; one soak, died early to a new-looking crash before reaching the stall
+
+Followed NEXT.md's step 1 exactly: source-read only, no rebuild, before designing any fix. Grepped every `osCreateThread_recomp(` call site in `N64Recomp/RecompiledFuncs/*.c` (11 hits, one is the `funcs.h` declaration) and read each one's argument setup back to where `$a1` (the `id` argument, `ctx->r5`) is assigned.
+
+**Finding: `id` is not a unique per-thread identifier in this game — id=0 is the default/shared id used by most non-worker threads.** Of 10 real call sites, 8 pass a literal `id=0` (`ADD32(0,0)` into `ctx->r5`) and only 2 pass a dynamically-loaded id (one loads from a caller-supplied struct field, generic thread-spawn helper). The 8 literal-id=0 sites, decoded from their neighboring `entry`/`pri` argument setup, are: `idle_thread_handle` (entry `0x800017A0`, pri 10) spawning `thread3_video_handle` (entry `0x80001088`, pri 9), which itself spawns a child at entry `0x800016AC` (pri 127); a boot function creating 3 more threads back-to-back (entries `0x80019868`/`0x80019BF4`/`0x8001C328`, pri 117/122/122); one more standalone creator (entry `0x80002E10`, pri 118). This directly contradicts NEXT.md's framing ("identify what guest thread id 0 is" as if it names one thread) — **refuted**, not just unconfirmed.
+
+**Confirmed by runtime data, not just static source-reading.** `osCreateThread`'s real implementation (`lib/N64ModernRuntime/ultramodern/src/threads.cpp:355`, `t->id = id`) proves the guest `id` argument is exactly the field the `[thr-resume-skip]`/`[thr-resume]` logs print — no host-side remapping. Landed a new always-on, unconditional log line at thread-creation time (`[thr-create-id] id=%d thr=%p pri=%d entry=0x%08X thr_rdram=0x%08X`, right after `t->context = context;` in `osCreateThread`, `threads.cpp`) plus two new fields (`thr=%p pri=%d`) on the existing cheap `[thr-resume-skip]` line — both changes are pure `lib/` host C++, no guest-code regen needed. Rebuilt clean (`cmake --build`, warnings only pre-existing SDL2-version-mismatch linker warnings). Exported patches (`submodule-patches/export.sh`) — committed this session per the hard rule.
+
+One soak (`schedguard1`, copy of `run_schedcaller2.sh` verbatim except the tag) confirms the instrument works and extends the finding with real runtime addresses:
+```
+[thr-create-id] id=0 thr=0x30010d218 pri=10  entry=0x800017A0 thr_rdram=0x8010D218   (idle_thread_handle)
+[thr-create-id] id=0 thr=0x30010d3d0 pri=9   entry=0x80001088 thr_rdram=0x8010D3D0   (thread3_video_handle)
+[thr-create-id] id=0 thr=0x30010dda0 pri=127 entry=0x800016AC thr_rdram=0x8010DDA0
+[thr-create-id] id=1 thr=0x300154710 pri=120 entry=0x80005570 thr_rdram=0x80154710   (piDmaWorker, matches s93)
+[thr-create-id] id=2 thr=0x300154b40 pri=32  entry=0x80004360 thr_rdram=0x80154B40
+[thr-create-id] id=0 thr=0x30011cd28 pri=117 entry=0x80019868 thr_rdram=0x8011CD28
+[thr-create-id] id=0 thr=0x30011da98 pri=122 entry=0x80019BF4 thr_rdram=0x8011DA98
+[thr-create-id] id=0 thr=0x30011ced8 pri=122 entry=0x8001C328 thr_rdram=0x8011CED8
+[thr-create-id] id=3 thr=0x300163e20 pri=10  entry=0x80000C68 thr_rdram=0x80163E20   (mainBootstrapWorker, matches s93)
+[thr-create-id] id=0 thr=0x30010ff70 pri=118 entry=0x80002E10 thr_rdram=0x8010FF70
+[thr-create-id] id=0 thr=0x3001494b0 pri=122 entry=0x8008ED70 thr_rdram=0x801494B0   (thr_rdram matches s70/71's runAiAudioStreamPlaybackLoop OSThread address exactly)
+[thr-create-id] id=4 thr=0x300193050 pri=6   entry=0x8006F2CC thr_rdram=0x80193050
+[thr-create-id] id=5 thr=0x300261e40 pri=10  entry=0x800495FC thr_rdram=0x80261E40
+[thr-create-id] id=6 thr=0x3001b3fc0 pri=6   entry=0x8006F2CC thr_rdram=0x801B3FC0
+[thr-create-id] id=7 thr=0x3001dd170 pri=5   entry=0x800B3650 thr_rdram=0x801DD170
+[thr-create-id] id=8 thr=0x3001937f0 pri=6   entry=0x8006F2CC thr_rdram=0x801937F0
+[thr-create-id] id=9 thr=0x3001bdbb0 pri=5   entry=0x800B3650 thr_rdram=0x801BDBB0
+[thr-create-id] id=10 thr=0x3001937f0 pri=6  entry=0x8006F2CC thr_rdram=0x801937F0
+```
+Positive control: 18/18 fired, matching exactly the source-read prediction (8 literal-id=0 boot/idle/video/audio threads, plus the already-known id=1 PI-DMA-worker and id=3 mainBootstrapWorker from s93). **At least 9 distinct threads share id=0** in a normal run — idle, video, an unnamed video-child, 3 boot-sequence threads, one more unnamed one, and (via the `thr_rdram` address match to s70/71) the **audio playback thread `runAiAudioStreamPlaybackLoop`**. A bare `[thr-resume-skip] id=0` therefore cannot, by itself, tell you which of these was dropped — `thr=%p` now can, by cross-referencing this same run's `[thr-create-id]` lines for the matching host pointer.
+
+**This run did not reach the target stall.** It died at hold-iter 7 (~7s into the 120s hold) to a new-looking SIGBUS (signal 10) inside a scene-graph traversal chain (`traverseSceneGraphRecursive` → `processSceneNode` → `submitSceneNodeRender`, called from the already-known `static_5_800AAD9C`/`runHangarSelectionFrame` → `static_5_800C6854`/`runHangarMenuFromOverlay` → `menuOverlayInit` → `mainGameLoop` chain) — not chased further, out of scope for this iteration, flagged for a future session if it recurs. `[thr-resume-skip]` fired 0 times this run (no UAF-guard trigger at all before the crash), so this run adds no new data point toward s180's 2nd-confirmation requirement — that's still open.
+
+**Rules out:** "id 0 in the skip log identifies a specific known thread (e.g. the swap-ack producer)" as a safe assumption for any future fix design — a fix keyed on `id==0` alone would be as likely to be dropping the idle thread, the video thread, the audio thread, or any of 3 anonymous boot threads as it would the actual swap-ack-relevant one. Does **not** rule out that thread 0-as-popped-in-s180's-log specifically was the swap-ack-relevant thread — that identity is still unknown; the instrument to determine it (cross-referencing `thr=%p` against `[thr-create-id]`) now exists but hasn't yet been exercised on a run that actually reaches the stall.
+
+**Full detail**: this entry. Code: `lib/N64ModernRuntime/ultramodern/src/threads.cpp` (`resume_thread_tagged` cheap-skip line, `osCreateThread`'s new `[thr-create-id]` line) — `lib/` patch exported + committed this session. Soak artifacts: `scratch/s73_post_a_scene/schedguard1/` (run.log, screenshots), driver summary `scratch/agent/schedguard1_driver.log`, driver script `scratch/agent/run_schedguard1.sh`.
+
+### Carried-forward open items (unchanged from s180 except item 1, refined)
+
+1. **Get a soak that reaches the stall again with the new `[thr-create-id]`/`thr=%p` instrument armed** (it already is, always-on) — when `[thr-resume-skip]` fires near the stall's onset, grep its `thr=%p` value against this run's `[thr-create-id]` lines to learn which of the ≥9 id=0 threads (or id 1/2/3/4/5/6/7/8/9/10) was actually dropped, by entry address and inferred role. That answer is a precondition for designing a correctly-targeted fix (retry-next-queue-entry vs. wake-the-yielding-thread-on-timeout) — do not design the fix from the `id=0` value alone, per this session's finding.
+2. Try to land a 6th `rdpFs`-onset data point (any soak) to further tighten the ~3500-3800 ceiling band (now: 3560/3561/3784/3740/3747).
+3. `tickSongSequence`'s 2 unguarded list walks (funcs_25.c:5018-5046, 5050-5077, found s174, not guarded) — still open, still lower priority.
+4. `submitSceneNodeRender+16780` (s171) — still open, still lowest priority of the characterized-but-unfixed leads. (This session's `submitSceneNodeRender+28208` SIGBUS is a different offset/call site — not yet confirmed as the same underlying bug, not chased.)
