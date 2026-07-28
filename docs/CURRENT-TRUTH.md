@@ -74,7 +74,9 @@ title —start→ SELECT GAME —start→ war room / SELECT LEVEL —start→ **
 SELECT YOUR CRAFT** (hangar pad + full X-wing, "PRESS [A] FOR CRAFT DESCRIPTION", multi-hue
 floor garbage; camera orbits). From SELECT YOUR CRAFT: **`a` no-ops** (s74); **single Start
 is enough** to leave into hangar-flight (s75/s76: title-yellow ~13k → 0 by +2–4s; airborne
-X-wing). VI stays on the 0x6AB400/0x656400 pair — origin cannot name these scenes (s48).
+X-wing) — **OVERTURNED s150 (see "Overturned conclusions"): same craft-select scene, a
+corrupting camera move, not a new environment.** VI stays on the 0x6AB400/0x656400 pair —
+origin cannot name these scenes (s48).
 **s76 hold:** content through ~+7–9s post-leave then black + **`fs` freeze ~3364**;
 process Abort in `createTileCopyRecord` (~12s). **s77:** createTileCopy **found=0 never**;
 wild FB **registered** (`fbW=4030`); `fs` freeze **~3361**; high-tri `syncs=0` from
@@ -655,7 +657,42 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s147)
+## Next steps, in order of expected value (s150)
+
+-2. **NEW TOP PRIORITY (s150): "single Start leaves SELECT YOUR CRAFT into
+    hangar-flight" (s75/s76) is OVERTURNED — mission-entry is unanswered
+    again.** Densified capture (0.2s-tick screenshots across the
+    post-Start-press window, `run_leavedense1.sh`/`leavedense1/`) shows
+    the previously-called "hangar-flight, airborne X-wing" frames are the
+    *same* SELECT YOUR CRAFT hangar 3D scene — identical X-wing pose, R2
+    unit, red crate, wall paneling, moon backdrop — just a progressively
+    closer/lower camera angle with escalating render corruption (large
+    striped/aliased degenerate polygons), not a new environment. Cross-
+    checked against the archived s76 `hold60/after_p1_start_04`/`hold_01`/
+    `hold_04.png` (an independent prior run, not a new soak) — same
+    scene, same corruption shape, second confirmation. Third, independent,
+    code-level line of evidence from this soak's own crash: process died
+    to a **3rd recurrence of the already-catalogued 12th crash class**
+    (`composeNpcOrientationMatrix`/`static_5_800AB1C8`, SIGBUS, signal 10)
+    past **both** of its existing guards (s100 first-loop guard, s126
+    second-loop guard — neither fired, 0/567 entries), meaning a 3rd,
+    still-unlocated unguarded fault site exists inside the function —
+    and its full backtrace (`menuOverlayInit` → `runHangarMenuFromOverlay`
+    [`static_5_800C6854`] → `runHangarSelectionFrame` [`static_5_800AAD9C`]
+    → `composeNpcOrientationMatrix`) is **entirely already-known
+    hangar-menu code**, none of it mission-overlay. See "Overturned
+    conclusions" for the full writeup. **Next work unit, either:** (a)
+    source-read `composeNpcOrientationMatrix` end-to-end (not just the
+    two known loops) to find and guard the 3rd fault site — the most
+    direct path to surviving past this crash and seeing what (if
+    anything) the camera path settles into; or (b) instrument the
+    Start-press handler itself (find what `menuOverlayInit`/
+    `runHangarMenuFromOverlay` branch the Start key actually triggers) to
+    determine whether this camera path is a genuine launch-cinematic that
+    would eventually cut to a mission scene, or a dead-end animation
+    that never leaves the hangar-selection subsystem. Do NOT re-assume
+    "leave transition already fires, only survival is open" — that
+    framing (s149) is the thing s150 overturned.
 
 -1. **CLOSED (s147): the count-then-pointer-store race in
     `allocateSongChannelArray` (Thread B's root cause, 0c below) is
@@ -2232,6 +2269,29 @@ Standing warnings:
   keep using them rather than winctl directly for driven runs.
 
 ## Overturned conclusions — do not act on these
+
+- **Claim (s75/s76):** a single Start press from SELECT YOUR CRAFT leaves the
+  menu into a distinct "hangar-flight" scene — an airborne X-wing outside the
+  hangar. **Overturned by s150:** dense (0.2s-tick) capture across the same
+  transition, cross-checked against the s76 `hold60/` archive (an
+  independent prior run, not a new soak — two sources), shows the
+  "airborne X-wing" frames are the *same* craft-select hangar 3D scene
+  (identical X-wing pose, R2 unit, crate, wall paneling, moon backdrop)
+  viewed from a progressively closer/lower camera angle with escalating
+  render corruption (large striped/aliased degenerate polygons), not a
+  new environment. A third, independent, code-level check confirms it:
+  this session's crash (3rd recurrence of the already-catalogued 12th
+  class, `composeNpcOrientationMatrix`, past both its s100/s126 guards —
+  a 3rd, still-unlocated fault site) backtraces entirely through
+  already-known hangar-menu functions (`menuOverlayInit` →
+  `runHangarMenuFromOverlay` → `runHangarSelectionFrame` →
+  `composeNpcOrientationMatrix`), none of them mission-overlay code.
+  Believable because the title-yellow HUD text really does disappear and
+  a tilted ship silhouette against stars reads as "flying", but the
+  pre-Start static menu already shares that same starfield/moon backdrop,
+  and the hangar walls stay visible in every post-Start frame examined.
+  **Reopens "what leaves SELECT YOUR CRAFT into a mission" as unanswered.**
+  Full detail: PORTING-STATE s150.
 
 `## LLE stabilization session 2 (2026-07-12)` sits out of order in the log, between s7 and s8: its
 conclusions are among the oldest in the file, not the newest.

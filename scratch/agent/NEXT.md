@@ -1,122 +1,112 @@
-# NEXT work unit — identify the post-leave scene and survive its first ~2s
+# NEXT work unit — find and guard composeNpcOrientationMatrix's 3rd fault site
 
-s149 closed the `reserveAndEmitDLEntry` recurrence-rate question (parked
-at 1/4, no guard) and found something more useful by reading this
-session's own screenshots: the single-Start "leave SELECT YOUR CRAFT"
-transition **already fires** in the standard countracefix repro shape —
-read PORTING-STATE's Session 149 entry (including its addendum) before
+s150 overturned s75/s76's "single Start leaves SELECT YOUR CRAFT into
+hangar-flight" claim — read PORTING-STATE's Session 150 entry before
 doing anything else; this file only has the actionable summary.
 
-## What s149 did and found
+## What s150 did and found
 
-Ran `run_countracefix4.sh` (4th soak in the family, no code changes) to
-answer NEXT.md's own queued question: does `reserveAndEmitDLEntry`
-recur a 2nd time (worth guarding) or stay rare? It did **not** recur —
-1/4 across the battery, parked per this thread's own decision rule
-(doesn't clear "reachable and recurring"). `do_rom_read` also did not
-recur (0/4, 3rd confirmation Thread B stays closed).
+Densified the post-Start-press screenshot capture (0.2s ticks instead of
+1 Hz) to answer NEXT.md's own question: does a real flight/mission
+scene stabilize post-leave, or is it glitch all the way? Neither,
+exactly — the dense frames (`scratch/s73_post_a_scene/leavedense1/`)
+show the camera staying in the **same SELECT YOUR CRAFT hangar scene**
+(same X-wing, R2 unit, red crate, wall paneling, moon backdrop) the
+whole time, just moving to a progressively closer/lower angle while
+render corruption escalates (giant striped/aliased degenerate
+polygons), until it freezes on a corrupted frame and crashes.
 
-The soak died earlier than any prior countracefix soak (hold+2s) to a
-**recurrence of the already-catalogued 15th crash class**: RT64-internal
-`Assertion failed: ((dstCallTile.sampleWidth > 0) &&
-(dstCallTile.sampleHeight > 0) ...)`, function `loadDrawState`, file
-`rt64_state.cpp`, line 747 (first seen s97, recurred s99, this is the
-3rd occurrence). Backtrace: `RT64::State::loadDrawState` ←
-`RT64::RDP::drawTris` ← `GBI_RDP::decodeTriangles` ← `GBI_RDP::tri` ←
-`Interpreter::processRDPLists` ← `Application::processDisplayLists` —
-no source on our side.
+Cross-checked against the **archived s76 `hold60/` screenshots**
+(independent 2nd source, no new soak needed) — same scene, same
+corruption shape. **Third** line of evidence: this soak's crash
+backtraces entirely through already-known hangar-menu functions
+(`menuOverlayInit` → `runHangarMenuFromOverlay` → `runHangarSelectionFrame`
+→ `composeNpcOrientationMatrix`), none of it mission-overlay code.
 
-**The important part:** before writing this up as "still stuck in the
-pre-mission menu" (what VI-phase tracking alone would suggest — last
-`[phase]` line stayed on the pre-leave 512/0x6AB400 pair, s48 already
-established this pair can't distinguish menu scenes), the screenshots
-this exact soak captured were read directly:
-- `scratch/s73_post_a_scene/countracefix4/pre_p1_start.png` and
-  `post_p1_start.png` (bracketing the single Start press, 0.6s apart):
-  both still show the static **SELECT YOUR CRAFT** menu (hangar pad,
-  "PRESS [A] FOR CRAFT DESCRIPTION", parked X-wing).
-- `hold_01.png` / `hold_02.png` (+1s / +2s into the hold window that
-  follows the Start press, i.e. ~1-2s post-press): a **completely
-  different scene** — steep rotated camera, motion-blur speed lines,
-  heavily glitched multi-hue textures on ship and background geometry.
-  This is visually consistent with s75/s76's already-documented "single
-  Start leaves into hangar-flight" transition (title-yellow fade →
-  airborne X-wing), not a continuation of the menu.
+**So "leaves into hangar-flight" was wrong** — it's a corrupting camera
+move within the same menu scene, not a scene change. This **reopens**
+"what leaves SELECT YOUR CRAFT into a mission" (s75/s76/s149 had this
+marked closed; it is not).
 
-**So the leave transition already fires in this exact repro shape.**
-"What input leaves SELECT YOUR CRAFT" (the question NEXT.md posed as
-plan (b) last session) is not actually open — it was already answered
-by s75/s76 and is now reconfirmed visually here. The real open
-questions are: (1) what does the post-leave scene actually settle into
-— a non-interactive hangar-flight cutscene, or the start of a real
-mission? — and (2) can the process survive past the first ~2s of it,
-since that is exactly the window where this session's crash (and the
-whole s95-99 "SELECT YOUR CRAFT stable → hold" crash-family catalogue,
-15+ classes) keeps landing.
+The crash itself: 3rd recurrence of the already-catalogued **12th
+class** (`composeNpcOrientationMatrix`, `static_5_800AB1C8`), but past
+**both** its existing guards (s100 first-loop, s126 second-loop —
+neither fired, 0/567 entries). A 3rd, still-unlocated fault site exists
+inside this function.
 
 ## Do next
 
-1. **Densify screenshot capture across the leave transition, no new
-   hypothesis needed yet.** `run_mission_keys.sh`'s current schedule
-   only snaps `pre_p1_start`/`post_p1_start` (0.6s bracket) then 1 Hz
-   during the hold window — coarse for a transition that's already
-   shown to change completely within 1s. Either lower the hold loop's
-   sleep interval for the first ~5s post-Start-press (e.g. 0.2s ticks)
-   or add explicit snaps at +0.2/+0.4/.../+2.0s right after the p1
-   probe's key send, before the existing 1 Hz hold loop starts. This
-   needs a script edit but no rebuild.
-2. Rerun once with the denser capture. Discriminating read: do the
-   dense frames show a coherent flight/mission scene stabilizing (even
-   briefly, before whatever crashes it) — supports "hangar-flight is
-   real interactive content, just crash-prone" — or do they show
-   uninterrupted glitch/garbage frames all the way to the crash —
-   supports "the RT64-internal assert family fires on the transition's
-   *load* itself, before any real content renders". Either answer is
-   informative for prioritizing (guard-the-transition vs.
-   survive-then-see-if-its-a-mission).
-3. If a real, if brief, hangar-flight/mission scene is visible before
-   the crash: capture what its VI parameters look like (width/origin)
-   distinct from the menu pair — closes the "VI phase can't see this
-   transition" gap for future soaks, letting the phase-based M3 check
-   actually detect in-mission time instead of reading it as menu-only.
-4. Do NOT spend a session re-deriving "what input leaves the menu" —
-   that's closed (s75/s76, reconfirmed s149). Do NOT restart
-   `reserveAndEmitDLEntry` soaking without a new angle (targeted
-   instrumentation of `findAndUnlinkSmallestEntry`'s free-list state,
-   not another blind repro) — it's parked at 1/4 per rule 8.
+1. **Source-read `composeNpcOrientationMatrix` end-to-end** in
+   `~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c` (grep
+   `static_5_800AB1C8`) — not just the two already-guarded loops
+   (`L_800AB228..L_800AB460` first loop, `L_800AB49C..L_800AB610` second
+   loop). Look for a third unguarded table-lookup-then-deref or raw
+   pointer deref elsewhere in the function body. The crash's stack-frame
+   offset from this soak (`static_5_800AB1C8 + 5376`) may help locate it
+   relative to the function's start if you can get a symbol size/offset
+   reference (check `nm`/`dwarfdump` on the built binary, or count bytes
+   from the function's opening brace in the generated C if no debug
+   symbols survive translation).
+2. Add a 3rd guard (`ROGUESQ_LOG_COMPOSE_NPC_GUARD3`, following the exact
+   template of guard/guard2 in `fixup_game_funcs.py` lines ~565-651:
+   bounds-check the computed pointer against `0x80000000-0x80800000`,
+   `goto L_800AB618` on failure) at the newly-found site. File-scope the
+   regex match to `funcs_40.c` (guard1/guard2's comments explain why:
+   `hangarInitialize` in a different overlay shares this address range
+   and has byte-identical instruction sequences at points).
+3. Full regen (`make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py`
+   once, cwd `N64Recomp`) — verify the new patch fired exactly `x1` via
+   grep before building. `cmake --build` from `build/` with
+   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
+4. Soak with the guard armed (copy `run_leavedense1.sh`'s battery
+   forward, add `ROGUESQ_LOG_COMPOSE_NPC_GUARD3=1`). Discriminating
+   outcome: does the process now survive past the point where this
+   crash previously landed? If yes, densify capture again past that
+   point — does a genuinely NEW scene (not the craft-select hangar)
+   ever appear, supporting hypothesis (a) from PORTING-STATE s150 (this
+   camera path is a real launch cinematic that cuts to a mission)? If
+   the guard fires but the process still dies elsewhere, or if no new
+   scene ever appears even with the crash survived, that supports
+   hypothesis (b) (this Start-triggered path never leaves the
+   hangar-selection subsystem at all).
 
 ## Do not
 
-- Do not re-derive or re-verify the count-write/pointer-store ordering
-  fix (Thread B, `allocateSongChannelArray`) — closed, 0/4 clean
-  `do_rom_read` non-recurrences across s147-149.
-- Do not assume `emit-dl-guard2`/`3` covers any part of
-  `reserveAndEmitDLEntry` — confirmed s148 they live in a different
-  function entirely (`emitAllocatedDLCommand`).
-- Do not write a guard for `reserveAndEmitDLEntry`/
-  `findAndUnlinkSmallestEntry` without a new discriminating angle — at
-  1/4 it does not clear this thread's "reachable and recurring" bar,
-  and rule 8's 4-soak budget on this exact repro shape is spent.
-- Do not treat "single Start leaves SELECT YOUR CRAFT" as an open
-  question — it's answered (s75/s76, s149).
+- Do not re-treat "single Start leaves SELECT YOUR CRAFT into a mission"
+  as answered — s150 overturned that; it is open again.
+- Do not re-run the `reserveAndEmitDLEntry` soak battery — parked at 1/4
+  per rule 8, no new angle available (targeted `findAndUnlinkSmallestEntry`
+  free-list instrumentation would be a new angle; blind repro is not).
+- Do not re-derive the count-write/pointer-store ordering fix (Thread B,
+  `allocateSongChannelArray`) — closed, 0/4 clean `do_rom_read`
+  non-recurrences across s147-150 (s150 didn't re-arm it but nothing
+  contradicts the closure).
+- Do not assume `emit-dl-guard2`/`3` covers `reserveAndEmitDLEntry` —
+  confirmed s148 they live in a different function (`emitAllocatedDLCommand`).
 - Do not re-run `fixup_game_funcs.py` twice without a full regen between
-  runs (delete `RecompiledFuncs/funcs_*.c` → `make_elf.py` →
-  `regen_n64recomp.sh` → `fixup_game_funcs.py` once) — verify via grep
-  that any patch you land fired exactly `x1` before building.
+  runs — verify via grep that any patch you land fired exactly `x1`
+  before building.
 
 ## This session's environment notes (carry forward, still current)
 
-- **A corrupted read doesn't have to be caught by the instrument you
-  just built to be caught.** Always grep the FULL run log for every
-  armed diagnostic's output, not just the one you just added, before
-  writing up a run as inconclusive or as a weak result.
-- **Screenshots a script already captured are free evidence — read them
-  before assuming a scene-identity question needs a new soak.** This
-  session's whole revised framing for (b) came from looking at PNGs
-  `run_mission_keys.sh` had already taken, not from new instrumentation.
+- **`CAPTURE_TICK_S` is now available in `run_mission_keys.sh`'s probe
+  loop** (default 1, backward compatible) — set it lower (e.g. 0.2) for
+  dense capture across any future transition; no rebuild needed.
+- **A soak's own screenshots are free evidence — read them, and check
+  whether an *archived prior soak's* screenshots corroborate, before
+  writing up a scene-identity claim as single-source.** This session's
+  overturn used both this soak's dense frames AND the untouched s76
+  archive as two independent sources, with zero extra soak cost for the
+  second one.
+- **A crash's own backtrace is evidence about game state, not just a
+  bug to fix.** Which functions appear in a SIGBUS backtrace tells you
+  what code was actually executing — cross-check it against the
+  overlay/subsystem boundaries you already know (hangar-menu vs.
+  mission-overlay) before accepting a scene-identity claim from visuals
+  alone.
 - VI-phase tracking (`[phase] vi_width=...`) cannot distinguish scenes
-  that share VI parameters (s48) — a `[phase]` line staying flat does
-  NOT mean the screen content is unchanged; check screenshots too.
+  that share VI parameters (s48) — doubly confirmed s150: the "new
+  scene" it couldn't see turned out to not be a new scene at all.
 - Function/line-number estimates in NEXT.md/PORTING-STATE drift a few
   lines every regen — always grep/read the actual regenerated file
   before writing a regex anchor or planning a reorder.
@@ -139,8 +129,8 @@ whole s95-99 "SELECT YOUR CRAFT stable → hold" crash-family catalogue,
   shader rebuilds.
 - Write a new wrapper script file per soak tag (`scratch/agent/run_
   <tag>.sh`) rather than parametrizing a single reusable script via env
-  indirection. `run_countracefix4.sh` (this session) is a good template
-  — copy the full armed-diagnostics battery forward.
+  indirection. `run_leavedense1.sh` (this session) is a good template —
+  copy the full armed-diagnostics battery forward.
 - Launch the soak via `zsh <absolute-path>/run_<tag>.sh > <absolute-path>/
   run_<tag>_driver.log 2>&1` as a `run_in_background` Bash call, then
   block synchronously with `until ! pgrep -f "./RogueSquadron64Recomp"
@@ -167,7 +157,7 @@ whole s95-99 "SELECT YOUR CRAFT stable → hold" crash-family catalogue,
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is still far over the ~35 KB target (currently
-~175 KB) — its "Next steps" section alone is now over 1500 lines,
+~180+ KB) — its "Next steps" section alone is now well over 1500 lines,
 narrating multiple closed threads almost verbatim rather than
 compressed. Migrate durable mechanism/architecture material to
 PROJECT-OVERVIEW.md and prune superseded detail, paired with a real
@@ -175,6 +165,6 @@ experiment. Flagged for many sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git
 checkout, not a `lib/` submodule, with uncommitted changes across
-s90-149 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
+s90-150 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
 Same posture as the `rogue_squadron64` sibling checkout flagged since
 s54. Worth asking the user whether/how to commit that history.

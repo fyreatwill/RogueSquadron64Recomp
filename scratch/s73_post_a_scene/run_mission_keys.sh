@@ -119,10 +119,12 @@ for entry in $PROBES; do
     print "[keys] probe $tag $name"
     sleep 0.6
     snap "post_${tag}_${name}"
-    for j in $(seq 1 "$wait_s"); do
+    TICK=${CAPTURE_TICK_S:-1}
+    NTICKS=$(print "$wait_s / $TICK" | bc)
+    for j in $(seq 1 "$NTICKS"); do
         kill -0 "$PID" 2>/dev/null || break
-        snap "after_${tag}_${name}_$(printf '%02d' $j)"
-        sleep 1
+        snap "after_${tag}_${name}_$(printf '%03d' $j)"
+        sleep "$TICK"
     done
 done
 

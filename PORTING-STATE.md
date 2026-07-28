@@ -13265,3 +13265,128 @@ across the first 5s post-Start (current schedule only snaps at
 `pre_p1`/`post_p1` then 1 Hz hold frames) to identify what scene
 `hold_01`/`hold_02` actually are before assuming a new "find the input"
 experiment is needed.
+
+
+## Session 150 (2026-07-27) — densified screenshot capture across the single-Start leave transition (0.2s ticks) and cross-checked it against the archived s76 run: the "hangar-flight, airborne X-wing" scene from s75/s76 is the same SELECT YOUR CRAFT hangar with a corrupting camera zoom, not a new environment — overturns s75/s76, reopens "what leaves SELECT YOUR CRAFT into a mission"
+
+### What ran
+
+NEXT.md's planned work unit: densify the post-Start-press capture cadence
+(previous schedule: 0.6s bracket, then 1 Hz) to determine whether the
+scene s149 found at `hold_01`/`hold_02.png` (+1-2s post-Start) is a real,
+if brief, flight/mission scene stabilizing before the crash, or
+uninterrupted glitch/garbage. Edited `scratch/s73_post_a_scene/
+run_mission_keys.sh`'s probe-wait loop to respect a new `CAPTURE_TICK_S`
+env var (default 1, unchanged for every other caller); wrote
+`scratch/agent/run_leavedense1.sh` (same full diagnostic battery as
+`run_countracefix4.sh`, copied forward per NEXT.md's own template
+guidance) with `CAPTURE_TICK_S=0.2`. One soak, tag `leavedense1`,
+25 frames at 0.2s cadence covering the ~5s window after the single
+Start press that leaves SELECT YOUR CRAFT, plus the usual 1 Hz hold
+window.
+
+### What the dense frames show
+
+`after_p1_start_001` through `_005` (+0.6-1.6s post-press): still the
+static SELECT YOUR CRAFT framing — "SELECT YOUR CRAFT" / "PRESS [A] FOR
+CRAFT DESCRIPTION" text, X-wing on the pad, moon backdrop, R2 unit, red
+crate — camera merely continuing its pre-existing orbit (already
+established as normal behavior for this menu, s73).
+`after_p1_start_010` (+2.6s): text overlay gone, camera has moved to a
+closer/lower angle, but it is recognizably the **same** hangar bay:
+same wall paneling, same moon, same X-wing pose, same R2 unit and red
+crate still visible.
+`after_p1_start_013`/`016` (+3.2-3.8s): camera continues closing in;
+large striped/aliased degenerate-polygon artifacts (a big fan-shaped
+surface rendering as dense parallel stripes) begin appearing at the top
+of frame, alongside continuing-correct hangar geometry and the same
+X-wing.
+`after_p1_start_022` through `hold_07` (+4.8s onward, ~9s wall time):
+**byte-identical** (confirmed both by file size and pixel comparison) —
+the last-drawn-sane-width gate (G1, s82) is holding this corrupted-but-
+sane-width frame while the process is otherwise dead in the water, then
+crashes.
+
+At no point does a new location, ship exterior view, HUD, or flight
+geometry appear. The hangar walls, moon, R2 unit, and red crate are
+identifiable in every frame up to the freeze.
+
+### Independent cross-check (2nd source, no new soak)
+
+The archived `scratch/s73_post_a_scene/hold60/` directory (s76's actual
+run) still has its screenshots. Read `after_p1_start_04.png`, `hold_01.
+png`, and `hold_04.png` directly — the frames s76's own analysis
+(`HOLD60_ANALYSIS.md`) called "hangar-flight content" and "airborne
+X-wing" are the **identical scene** this session's `leavedense1` found:
+same hangar bay walls (same blue/pink/teal glitch-panel pattern), same
+X-wing pose and pad, same close/low camera angle. This is a second,
+independent data point (a different run, different session, prior to
+this soak) agreeing with this session's read.
+
+### Third line of evidence: the crash's own backtrace
+
+This soak's process died to a SIGBUS (signal 10), backtrace:
+`menuOverlayInit` → `static_5_800C6854` (`runHangarMenuFromOverlay`) →
+`static_5_800AAD9C` (`runHangarSelectionFrame`) → `static_5_800AB1C8`
+(`composeNpcOrientationMatrix`). Cross-referenced against the crash
+catalogue: this is the already-catalogued **12th class**
+(`composeNpcOrientationMatrix`), first found s74/s95, guarded twice
+already (s100's first-loop guard, `ROGUESQ_LOG_COMPOSE_NPC_GUARD`;
+s126's second-loop guard, `ROGUESQ_LOG_COMPOSE_NPC_GUARD2`) — this is
+its **3rd occurrence**. Both guards were armed this soak and neither
+fired (0 hits across all 567 function-entry log lines, `arg_r4` only
+ever `0x0`/`0x1`, both known-safe values) — the crash's actual fault
+site is a **3rd, still-unlocated** unguarded dereference inside this
+function, past both existing guards. Independent of the screenshot
+read, this backtrace is itself evidence: every frame in it is
+already-known hangar-menu-overlay code (`runHangarMenuFromOverlay`,
+`runHangarSelectionFrame`, `composeNpcOrientationMatrix`) — none of it
+is mission-overlay code. The crash happened while still executing the
+hangar-selection menu's own per-frame logic, which is inconsistent with
+having already transitioned into a mission or even a distinct
+non-interactive flight cutscene driven by different overlay code.
+
+### Conclusion
+
+**s75/s76's "single Start leaves SELECT YOUR CRAFT into hangar-flight"
+is overturned**, on three independent lines of evidence (this session's
+dense capture, the archived s76 screenshots read fresh, and this
+session's crash backtrace). What actually happens: the Start press
+triggers an extended in-place camera path within the *same* craft-select
+3D scene — camera moves to a progressively closer/lower angle — while
+rendering corruption escalates (large striped/aliased degenerate
+polygons), until the last-drawn gate freezes on a corrupted frame and
+the process crashes to the 12th class's 3rd (new, unlocated) fault site.
+Believable at s75/s76 because the title-yellow HUD text really does
+disappear (a real menu-UI-left signal) and a tilted ship silhouette
+against a starfield reads as "flying" — but the pre-Start static menu
+already shares that same starfield/moon backdrop (s73 already noted
+"camera orbits" even at rest), and the hangar walls remain visible in
+every post-Start frame examined here.
+
+This reopens "what input/sequence actually leaves SELECT YOUR CRAFT
+into a mission" — not closed by s75/s76 after all. Two live
+hypotheses for next session: (a) this camera path IS a genuine
+launch-prep cinematic that would eventually cut to a real mission scene,
+and the crash simply happens before that cut — surviving past the 12th
+class's 3rd fault site is the way to find out; (b) the Start press
+triggers some other in-hangar animation unrelated to mission launch, and
+real mission entry needs a different, still-unfound input or sequence.
+
+### Diagnostics / stability, this soak
+
+`do_rom_read`/`piDmaWorker`: 0 (Thread B stays closed, consistent with
+s147-149). `reserveAndEmitDLEntry`: 0 (still 1/4 overall, stays parked
+per rule 8 — not re-tested this session, no new data). `last-drawn-skip`
+(G1 gate): 42 fires. `thr-resume bad=1`: 0. `missing-func`/
+`UnhandledJump`: 0. LLE tasks: 4814. `fs` max 3776, plateaued at the
+same 0x6AB400/0x656400 VI-origin pair the whole run (s48: this pair
+cannot distinguish scenes — doubly confirmed this session, since the
+scene it's hiding turned out to still be the same menu, not a new one).
+
+### Files
+
+- `scratch/s73_post_a_scene/run_mission_keys.sh` — added `CAPTURE_TICK_S`
+  support to the probe-wait loop (backward compatible, default 1).
+- `scratch/agent/run_leavedense1.sh` — new soak wrapper, `CAPTURE_TICK_S=0.2`.
+- `scratch/s73_post_a_scene/leavedense1/` — run log + 50 screenshots.
