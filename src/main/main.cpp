@@ -34,6 +34,7 @@
 #include <execinfo.h>
 #include <unistd.h>
 #include <sys/ucontext.h>
+#include <dlfcn.h>
 #endif
 
 // N64 button bitmasks (from libultra PR/controller.h)
@@ -1687,6 +1688,28 @@ int main(int argc, char* argv[]) {
                         "[CRASH][mcontext] fp=0x%016llx lr=0x%016llx sp=0x%016llx cpsr=0x%08x\n",
                         (unsigned long long)ss.__fp, (unsigned long long)ss.__lr,
                         (unsigned long long)ss.__sp, (unsigned)ss.__cpsr);
+                    // s206: symbolize the raw faulting pc directly via dladdr,
+                    // bypassing backtrace()'s frame-pointer walk entirely. s194/
+                    // s199 showed backtrace_symbols_fd duplicating "processSceneNode
+                    // + 8772" (an lr value) at both the crashing frame and its
+                    // caller's frame -- consistent with pc landing in a leaf
+                    // function that never established its own frame record, which
+                    // a fp-chain walker can't see past. dladdr looks up pc's
+                    // enclosing symbol from the same Mach-O symbol table
+                    // independent of any frame chain, so it resolves correctly
+                    // even for a frameless leaf.
+                    Dl_info dli{};
+                    if (dladdr((void*)(uintptr_t)ss.__pc, &dli) && dli.dli_sname) {
+                        fprintf(stderr,
+                            "[CRASH][pc-symbol] pc=0x%llx sym=%s+%lld base=%p\n",
+                            (unsigned long long)ss.__pc, dli.dli_sname,
+                            (long long)((uintptr_t)ss.__pc - (uintptr_t)dli.dli_saddr),
+                            dli.dli_fbase);
+                    } else {
+                        fprintf(stderr,
+                            "[CRASH][pc-symbol] pc=0x%llx sym=<unresolved>\n",
+                            (unsigned long long)ss.__pc);
+                    }
                 }
             }
 #else

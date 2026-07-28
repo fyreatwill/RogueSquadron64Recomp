@@ -19094,3 +19094,149 @@ information value:
    path — i.e. sanity-check the premise that started the whole
    callee-narrowing effort, since 6/6 clean reads is itself weak evidence
    the premise needs re-examining.
+## Session 206 (2026-07-28) — added a direct `dladdr`-based pc symbolizer to the crash handler (Option B's premise check, sharpened into a real instrument) and got an immediate, non-speculative hit: the `+8772` bug's actual faulting `pc` is `renderUnlitMeshFaces+508` — OVERTURNING s204's "clean" verdict on that function
+
+**Work unit**: NEXT.md's Option B (sanity-check whether the crash's register
+evidence actually mechanically implicates `processSceneNode`'s six direct
+callees, before investing in Option A's heavier internal-pointer tracer).
+
+**What the premise check found, before writing any code**: re-reading s194
+(`PORTING-STATE.md:17883-18007`) and the raw crash log it was drawn from
+(`scratch/s73_post_a_scene/mcontext1/run.log:4468140-4468173`, still on disk)
+turned up something s194/s199's prose summary didn't make explicit: the
+`[CRASH]` handler's `backtrace_symbols_fd()` output shows
+`processSceneNode + 8772` at BOTH frame 3 (immediately below `_sigtramp`,
+i.e. the actual crashing frame) AND frame 4 (its own caller) — the exact
+SAME address, duplicated. That address (`0x00000001028ee4fc`) is the `lr`
+register value, not the `pc` (`pc=0x1028cc4a4` in that same dump, ~132 KB
+earlier in the binary — nowhere near `processSceneNode`'s own range). This
+is the classic signature of a frame-pointer-chain unwinder failing on a
+LEAF frame that never established its own `x29`/`x30` save (no separate
+frame record to walk): `backtrace()` shows the return address twice instead
+of ever resolving the true faulting symbol. **This means the "six
+source-clean direct callees" conclusion (s200-205) was built on backtraces
+that never actually named the crashing function — the callee-narrowing
+strategy's target was always `lr`, never `pc`.** This is exactly the
+"was the link always circumstantial" question Option B asked — answer:
+partially. `lr` genuinely does confirm the fault is one call-frame deeper
+than `processSceneNode+8772`, which does mechanically implicate its direct
+callees (there are only 5 possible calls in the whole function body,
+confirmed by grepping `funcs_4.c:13777-14913` for the `FuncName(rdram, ctx)`
+call convention — no other candidates exist, and `processSceneNode` does
+NOT call itself). But WHICH of the five was never actually established
+dynamically — s200-205's "clean" verdicts were all static-source-only reads
+(explicitly flagged "single-source, provisional" in every one of their own
+entries), never cross-checked against which callee's frame the crash was
+actually IN.
+
+**Fix built and tested rather than just reasoned about**: added a direct
+`dladdr()` call on the raw `ss.__pc` mcontext register inside the
+SIGSEGV/SIGBUS/SIGABRT handler (`src/main/main.cpp`, `#include <dlfcn.h>`,
+new `[CRASH][pc-symbol]` line printing `dli_sname`/offset/`dli_fbase`) —
+this resolves pc's enclosing symbol straight from the Mach-O symbol table,
+independent of the frame-pointer chain, so it works even for a frameless
+leaf. Pure `src/main/main.cpp` change (this repo, not `lib/`), no
+regen/fixup pipeline needed (same category as s194's original mcontext
+dump). Built clean with `cmake --build build --target
+RogueSquadron64Recomp -j` (same 2 pre-existing unrelated `json.hpp`
+deprecation warnings, nothing new).
+
+**Soak (`scratch/agent/run_pcsymbolize1.sh`, tag `pcsymbolize1`, identical
+env block to s199's `videoframetickguard3` plus
+`ROGUESQ_LOG_PROCESS_SCENE_NODE_GUARD=1`)**: reached VI width 1024 at 44.9s,
+ran the scripted key sequence, died at hold-iter 27 (~30s into the hold),
+`decisionN=9679` — the same narrow decisionN band (9660-9800) as both prior
+`+8772` occurrences (9741 s194, 9788 s199). **`x9=0x0000000080630062`** —
+byte-for-byte identical low bits to both prior occurrences, confirming this
+is the same bug's 3rd occurrence, not a new one. `CRASH: 35` in the run
+summary (the usual mix of routine already-catalogued small crashes this
+soak's env block doesn't guard against); the fatal one is what matters:
+
+```
+[CRASH][mcontext] x8 =0x0000000300000000
+[CRASH][mcontext] x9 =0x0000000080630062
+[CRASH][mcontext] fp=0x000000016db0a7c0 lr=0x0000000104c4711c sp=0x000000016db0a790 cpsr=0xa0000000
+[CRASH][pc-symbol] pc=0x104c24a60 sym=renderUnlitMeshFaces+508 base=0x104564000
+[CRASH][vifs-snapshot] decisionN=9679 lastFireDecisionN=9678 decisionsSinceFire=1 lastFireWasStalled=0 stalledNow=0
+```
+(`scratch/s73_post_a_scene/pcsymbolize1/run.log:4463555-4463585`)
+
+**Positive control**: the new `[CRASH][pc-symbol]` line fired and resolved
+to a real, plausible symbol name with a sane small offset (not garbage, not
+`<unresolved>`) on the very first crash it had a chance to fire for in this
+run — the instrument works.
+
+**This is a real, non-speculative answer, not a re-read of old evidence**:
+the faulting `pc` is inside `renderUnlitMeshFaces`, 508 bytes past its
+entry point — directly contradicting s204's "clean" verdict on that exact
+function. s204's read was single-source (static only, explicitly flagged
+"treat as provisional... same caveat as s201/s202/s203"); it is now
+SUPERSEDED by this direct dynamic evidence. The other four callees
+(`renderLitMeshFaceGroup`, `submitSceneNodeRender`,
+`renderFlatMeshFaceGroup`, `renderLitTexturedMeshFaces`) are NOT
+contradicted by this run and remain provisionally clean, but should be
+treated with the same "static-only, not cross-checked dynamically" caveat
+until/unless a future crash's `pc-symbol` line names one of them instead.
+
+**What this does and doesn't show**:
+- DOES confirm Option B's premise check was worth running before Option A:
+  building the heavier "log every internal MEM_W address in all six
+  functions" tracer would have wasted a session instrumenting 5 functions
+  that (per this evidence) aren't where the crash is.
+- DOES pinpoint the search to ONE function, and to a specific ~508-byte
+  (~127 ARM64 instruction) region near its entry, rather than the whole
+  ~654-line/~2600-byte function s204 read in full.
+- DOES NOT yet identify the exact source line or C statement responsible
+  (disassembly tools still blocked, no direct byte-offset-to-source-line
+  map available) — that's the natural next work unit: re-read
+  `renderUnlitMeshFaces`'s FIRST ~60-80 source lines (the portion most
+  likely to compile to the first ~127 ARM64 instructions after the
+  function prologue) specifically for the zero-extension bypass pattern
+  s204's full-function read may have glossed over, or instrument that
+  specific early region with the `[CRASH][pc-symbol]`-adjacent
+  `processScenenNodeCalleeTrace`-style per-`MEM_W`-address logging (Option
+  A's idea, now correctly SCOPED to one function instead of six).
+- DOES NOT change any guard/behavior — `[CRASH][pc-symbol]` is a read-only
+  diagnostic on the already-fatal crash path, same category as s194's
+  `[CRASH][mcontext]` addition; zero cost on the non-crash path, permanent,
+  no env gate needed.
+
+**Rules out**: the "callee-narrowing strategy is EXHAUSTED, all six
+source-clean" conclusion from s205/CURRENT-TRUTH item -48 — it is
+SUPERSEDED for `renderUnlitMeshFaces` specifically. The broader
+"defect is internal to one of the five render callees, not
+`processSceneNode` itself or a call-boundary-crossing value" conclusion
+from s200 (two independent lines of evidence: static read + 116,950-call
+dynamic trace) still stands and is now further corroborated (dynamic pc
+evidence lands inside a callee, exactly as s200 predicted).
+
+**Landed (this session)**: `src/main/main.cpp` (`dladdr` pc-symbol
+diagnostic, this repo, committed). `scratch/agent/run_pcsymbolize1.sh`
+(gitignored, standing convention). `docs/CURRENT-TRUTH.md`,
+`scratch/agent/NEXT.md`, this entry. No `lib/` edits this session.
+
+### Carried-forward open items
+
+1. **`renderUnlitMeshFaces+508` is now the single, precisely-scoped next
+   work unit for the `+8772` KSEG0-zero-extension bug** — re-read the
+   function's early region (`N64Recomp/RecompiledFuncs/funcs_4.c:4951-~5030`,
+   the portion most likely to correspond to the first ~127 post-prologue
+   ARM64 instructions) with fresh eyes for the zero-extension-bypass
+   pattern, or build a `renderUnlitMeshFaces`-scoped internal-`MEM_W`-address
+   tracer (Option A, now correctly narrowed to one function). Best next
+   work unit.
+2. `runVideoFrameTick+1568`: still 2 clean soaks of 3 (1 uninformative), 0
+   recurrence, 0 guard fires — unchanged this session, still lower priority
+   than item 1.
+3. The s197 `scene-node-cache-guard`, s190 `scene-node-ptr-guard`, s196
+   `reinterpret-tile-guard` remain 0-fire across every soak to date — no
+   new evidence this session, do not re-touch.
+4. The 23rd crash class (`waitForAnyAudioSlot`) and the
+   `evalCubicSplineAtTime` SIGBUS family remain open, lower priority,
+   untouched this session.
+5. Housekeeping still flagged, still not done: `docs/CURRENT-TRUTH.md`
+   remains well over the ~35 KB CLAUDE.md budget and the Read tool's 256 KB
+   limit; migrate durable material to `PROJECT-OVERVIEW.md` and prune,
+   paired with a real experiment. Escalating — now 7+ sessions flagged
+   without action (s195 through s206).
+

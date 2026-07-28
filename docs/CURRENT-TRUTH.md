@@ -663,15 +663,49 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s205)
+## Next steps, in order of expected value (s206)
 
--48. **(s200/s201/s202/s203/s204/s205) `processSceneNode+8772` KSEG0-zero-extension
-    bug: ALL SIX direct-callee-chain functions
-    (`processSceneNode`, `renderLitMeshFaceGroup`, `submitSceneNodeRender`,
-    `renderFlatMeshFaceGroup`, `renderUnlitMeshFaces`, AND
-    `renderLitTexturedMeshFaces`) are now source-clean. The callee-narrowing
-    strategy is EXHAUSTED — pivot to instrumenting internal pointer
-    computations, not call-boundary args, next.**
+-48. **(s206, SUPERSEDES s205) `processSceneNode+8772` KSEG0-zero-extension
+    bug: a direct `dladdr`-based pc symbolizer (new `[CRASH][pc-symbol]`
+    line, `src/main/main.cpp`) caught a 3rd occurrence and named the
+    faulting pc directly for the first time: `renderUnlitMeshFaces+508`.
+    This OVERTURNS s204's "clean" verdict on that function — it was
+    single-source/static-only and is now contradicted by direct dynamic
+    evidence. Next work unit: re-read `renderUnlitMeshFaces`'s early region
+    (`funcs_4.c:4951-~5030`) or build a tracer scoped to just that
+    function's internal `MEM_W` addresses.**
+    Prior conclusion (s205, now superseded): "ALL SIX direct-callee-chain
+    functions (`processSceneNode`, `renderLitMeshFaceGroup`,
+    `submitSceneNodeRender`, `renderFlatMeshFaceGroup`,
+    `renderUnlitMeshFaces`, `renderLitTexturedMeshFaces`) are source-clean,
+    callee-narrowing EXHAUSTED, pivot to instrumenting internal pointer
+    computations across all six." This was believable because s200-205's
+    reads were methodical and consistent, and because the crash handler's
+    `backtrace_symbols_fd()` output only ever showed `processSceneNode +
+    8772` (the `lr` value, duplicated across two frames) — never a deeper
+    frame — which read as "the trail goes cold at processSceneNode's
+    boundary," not as "the unwinder failed to resolve the true pc." s206
+    found the raw crash log still had `pc=0x1028cc4a4` sitting right next
+    to that `lr`, ~132 KB earlier in the binary and never printed as a
+    symbol — the unwinder was silently dropping its best evidence, the
+    same class of bug s194 originally found in the handler itself (see
+    s194 below). Full detail: PORTING-STATE Session 206.
+
+    **Still valid from s200-205** (not contradicted, corroborated): the
+    defect is internal to one of the five render callees, not
+    `processSceneNode` itself or a call-boundary-crossing value (s200's
+    two independent lines of evidence: full static read + 116,950-call
+    dynamic trace at the call boundary, 0 anomalies) — s206's direct pc
+    evidence landing inside a callee confirms this. The other four
+    callees' "clean" verdicts (`renderLitMeshFaceGroup`,
+    `submitSceneNodeRender`, `renderFlatMeshFaceGroup`,
+    `renderLitTexturedMeshFaces`) are not contradicted by s206 but remain
+    static-only/provisional, same as they always were.
+
+    Prior (superseded) narrative, kept for the narrowing methodology
+    detail (which functions were read, in what order, what each read
+    ruled out) — still accurate as a record of what was checked, just not
+    as a conclusion that the search is exhausted:
     s200 exhaustively ruled out
     `processSceneNode` by two independent lines of evidence (full static
     read + a 46,292-call dynamic trace at the call boundary, 0 anomalies —
@@ -745,28 +779,19 @@ cost three sessions before the recursive mutex.
     booleans, no `MOVZ`/`MOVN`-style mismatched-extension value selects.
     Same single-source caveat as the prior five (static read only).
 
-    **Callee-narrowing is now EXHAUSTED.** All six functions in
-    `processSceneNode`'s direct-callee chain are source-clean by the same
-    method; there is no seventh candidate to invent. Per two independent
-    lines of evidence at the top of the chain (s200's dynamic trace +
-    static read) and single-source static reads for the five callees,
-    this rules out a call-boundary-crossing defect in this chain as the
-    +8772 mechanism. **The pivot for the next work unit**: the current
-    `processScenenNodeCalleeTrace` tracer only logs args AT call
-    boundaries, so it is structurally blind to a defect introduced AND
-    consumed entirely within one callee's own body — e.g. inside a
-    grandchild call the tracer doesn't instrument, or a value that's
-    computed and dereferenced without ever crossing back through a logged
-    boundary. Next step is a NEW instrument: either (a) log every
-    internal pointer computation (every `MEM_W`/`MEM_H`/`MEM_B` address
-    argument, not just call args) within the six cleared functions and
-    their own callees during a soak, phase-gated the same way as before,
-    or (b) reconsider whether `+8772` is even inside this call chain at
-    all — re-examine the original s194/s199 register-file decode for
-    whether the fault address's decomposition actually implicates
-    `processSceneNode`'s callees specifically, versus some other path
-    that merely happens to be active at the same call depth. Full detail:
-    PORTING-STATE Session 200-205 (and Session 194/199 for the original
+    **SUPERSEDED s206**: this "callee-narrowing EXHAUSTED, all six clean"
+    conclusion turned out to rest on a blind spot in the crash handler's
+    own backtrace, not on the underlying facts — see the top of this item
+    for what actually happened. s206 added a `dladdr`-based pc symbolizer
+    that bypassed the frame-pointer-chain unwinder entirely and directly
+    named `renderUnlitMeshFaces+508` as the 3rd occurrence's faulting
+    location, contradicting s204's static-only "clean" verdict on that
+    function. The reasoning below (why `processSceneNode` itself and the
+    other four callees are still believed clean) remains valid; only the
+    "exhausted, no more candidates" framing and the "pivot to a six-function
+    internal tracer" plan are superseded — the search is no longer
+    exhausted, it's precisely scoped to one function. Full detail:
+    PORTING-STATE Session 200-206 (and Session 194/199 for the original
     register-file decode this all traces back to).
 
 -47.5. **(s199) `runVideoFrameTick+1568` guard landed (3 sites,
