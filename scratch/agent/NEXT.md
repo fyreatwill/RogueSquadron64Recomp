@@ -1,118 +1,109 @@
-# NEXT work unit — Thread B: find candidate A's overlay-load producer, or find candidate B's consumer/writer
+# NEXT work unit — Thread B: characterize the double-buffered slot readers' indexing math
 
-s142 characterized candidate B's write pattern (a pure source read, no
-rebuild) and found it's never written to by its own allocating function —
-read PORTING-STATE's Session 142 entry before doing anything else; this
-file only has the actionable summary.
+s143 found candidate B's consumer (pure source read, no rebuild) — read
+PORTING-STATE's Session 143 entry before doing anything else; this file
+only has the actionable summary.
 
-## What s142 did and found
+## What s143 did and found
 
-Picked NEXT.md's option (b) (characterize candidate B's write pattern,
-lower risk, no rebuild) over option (a) (find candidate A's producer).
+Delegated the multi-file grep to a subagent (kept 45 generated `.c`
+files out of the main context window). Confirmed N64Recomp's codegen
+convention for these two fixed globals: writes are `MEM_W(-0X68F8,
+ctx->r1) = ctx->r2;`, reads flip the argument order:
+`ctx->r4 = MEM_W(ctx->r1, -0X68F8);`.
 
-Read `allocateSongChannelArray` end-to-end
-(`N64Recomp/RecompiledFuncs/funcs_23.c:10687-11094`). It makes 6
-`rs_malloc` calls in source order:
+**Candidate B (`0x8014970C`) is not orphaned.** It's slot 1 of a
+2-entry double-buffered pointer table with slot 0 at `0x80149708`,
+selected by a 1-byte toggle at `0x80149702`. All three real players are
+in `funcs_24.c` (not `funcs_23.c`, which is why s142's grep of that file
+alone found nothing):
 
-1. `voiceCount*136` ("arrayBase" — the RSP-mixer voice-slot array,
-   confirmed against `symbol_files/main_overlay.txt:319`'s independent
-   "stride 0x88" comment) — ptr duplicated to globals `0x801496FC`/
-   `0x801496F8`. **This one gets a per-slot init loop** (zeroes offsets
-   `0x0`/`0x85`, sets `0x84=0xFF`, for each of `voiceCount` slots).
-2/3. The already-known `V*2576` pair (`:10949`/`:10975`).
-4. `N*(voiceCount+1)*136` at `:11011` — ptr stored to global `0x80149708`.
-5. **Candidate B**: the *same* `N*(voiceCount+1)*136` value, reloaded from
-   the halfword `:11011` wrote (not recomputed) — `:11033`, ptr stored to
-   global `0x8014970C`.
-6. A literal 664B (`0x298`) buffer — **this one gets `rs_memset` to zero +
-   `osWritebackDCache`**, then the function returns.
+- `musyxMixActiveVoices` (`funcs_24.c:2477+`) reads the **current**
+  slot (toggle value directly) and dereferences it, indexing voice
+  flag bytes and feeding `musyxRenderVoiceSamples`.
+- `musyxBuildVoiceCommandList` (`funcs_24.c:2812+`) reads the **other**
+  slot (`toggle XOR 1`) and feeds an inner call at guest `0x80091034`.
+- `musyxSynthFrame` (`funcs_24.c:4117-4127`) flips the toggle
+  (`xori $v0,$v0,1`) every call — a per-VI-retrace audio tick, already
+  known (s101) as the function that indirectly calls
+  `submitDmaRequestBatch` (the separately-tracked DMA-ring producer in
+  the `do_rom_read`/`piDmaWorker` corruption thread).
 
-**Key finding: allocations 4 and 5 (both `N*(voiceCount+1)*136`, including
-candidate B) get NO store instruction between their `rs_malloc` call and
-the function's return.** They're allocated and pointer-stashed to a
-global, nothing else. A whole-file grep of `funcs_23.c` for the literal
-offsets (`0x68F8`/`0x68F4`/`0x68FC`) confirms **no other function in this
-file references those two globals either** — including
-`setupSongRenderBuffers` (the very next function in the file), which was
-already refuted as candidate B's *allocator* (s141) and is now confirmed
-to not be its *consumer* either.
+Sanity-checked the grep methodology against the already-known arrayBase
+globals (`-0x6904`/`-0x6908`) — dozens of genuine hits in the same
+`funcs_24.c` musyx functions, confirming it isn't silently missing real
+consumers.
 
-This **weakens (does not close) candidate B** as the direct writer of the
-ASCII-fragment corruption pattern (`"explo_tex2"`, `"lgfr"`, `"wing"`,
-s94/s102) — if candidate B really is what's being read out-of-bounds, the
-actual writer must be a separate, not-yet-located function elsewhere
-(plausibly a different overlay/`.c` file, since `funcs_23.c` itself never
-reads the pointer back).
+**Why this matters:** both candidate buffers share the exact same
+136-byte stride and `(voiceCount+1)`-based sizing as the arrayBase voice
+array the corruption has always hit at a fixed `+0x34` offset (s104 on).
+That structural coincidence was not visible before this session.
 
-No soak this session (pure source read, no rebuild, no new instrument).
+No soak this session (pure source read via subagent, no rebuild, no new
+instrument).
 
-## Do next: two independent leads, pick one
+## Do next: read the two consumer functions' bodies in full
 
-**(a) Find candidate A's real overlay-load producer.** Unchanged from
-s141 — still open. Now correctly scoped to the overlay-loading path, not
-audio. Grep `rs_malloc` call sites reachable from overlay init/load code
-(`lib/N64ModernRuntime`'s `overlays.cpp` calls into guest overlay-init
-functions — check which guest functions run during a "section 4" overlay
-start-match, likely in whichever `.c` file backs that overlay, not
-`funcs_23.c`/`funcs_24.c`) for one whose call context matches "runs right
-after an overlay start-match log line" and whose size expression could
-plausibly be 32768. The existing `ROGUESQ_LOG_RS_MALLOC=1` log alone (no
-new instrument needed yet) already shows exactly one `0x80171470`-address
-hit per run at a known log position relative to `[overlay]` lines — start
-by re-examining that context across 2-3 more soaks/logs before building a
-new tagged instrument, to see if it's always the same overlay section
-number and always immediately-after the same `osViSetMode` pair (a
-positional fingerprint cheap to confirm before spending a rebuild).
+Single work unit, pure source read, no rebuild — same low-risk posture
+as s142/s143:
 
-**(b) Find who reads/writes through candidate B's global pointer
-(`0x8014970C`, and its twin `0x80149708`).** New question, raised by s142.
-Since `funcs_23.c` never references either global after allocating them,
-the consumer is somewhere else — pure source read first (grep other
-`funcs_*.c` files, or `main_overlay.txt`/`mission_overlay.txt` symbol
-comments, for the absolute addresses `0x80149708`/`0x8014970C`; a
-different function may reach the same address via a different `lui`
-upper-half constant than `0x8015`, e.g. `lui 0x8014` + offset `0x9708` —
-match on the resulting absolute address, not the literal offset string).
-If a plain grep across all 45 `funcs_*.c` files finds nothing, the
-consumer may be reached only via an indirect call (`LOOKUP_FUNC`/`jalr`,
-same shape as s94's candidate-A-producer search) — in that case this lead
-needs an instrument (log every write through the pointer) rather than
-more grepping, similar to s139/s141's `rs-malloc`/`rs-malloc-site`
-technique but for writes-through-a-known-address instead of call sites.
-
-Either is a valid single work unit. (a) has been open longer and directly
-resolves candidate A's remaining unknown; (b) is the freshest lead and
-could quickly confirm/deny whether candidate B is a name/string table (its
-never-initialized-here status is consistent with either "written
-elsewhere with string data" or "never actually populated, a red herring
-allocation" — only finding the writer distinguishes them).
+1. Read `funcs_24.c:2477-2650` (`musyxMixActiveVoices`) end-to-end.
+2. Read `funcs_24.c:2812-3300` (`musyxBuildVoiceCommandList`) end-to-end.
+3. For each, answer:
+   - What bounds the per-voice/per-item index used against the slot
+     pointer? Checked against `voiceCount` (matching the buffer's own
+     `voiceCount+1` sizing, i.e. no bug) or against a different,
+     possibly stale count read from somewhere else (a real bug
+     candidate)?
+   - Does either function's byte-offset math into a slot ever land on
+     `+0x34` specifically — the exact offset the corruption has been
+     observed at since s104? If yes, this may BE the corruption site,
+     not merely an adjacent allocation, and the next step becomes an
+     instrument logging that specific access. If no offset ever reaches
+     `+0x34` in either function, that's a real, reportable refutation of
+     "these consumers are the writer."
+   - Is there any ordering/locking guarantee between `musyxSynthFrame`'s
+     toggle flip and the two readers, or could a reader observe a toggle
+     mid-flip / stale relative to an in-progress `rs_malloc`-allocated-
+     but-not-yet-populated slot? (A timing question — note it as a
+     hypothesis needing an instrument to confirm; do NOT build that
+     instrument yet, this work unit is source-read only.)
+4. If a genuine `+0x34` access is found in either function's own
+   indexing math, that is this session's headline result — write it up
+   and make "instrument that exact access" the following session's
+   work unit. If not, write up the refutation and let the toggle-desync
+   timing hypothesis become the next candidate (would need a rebuild +
+   instrument, a bigger unit — flag it, don't start it same-session per
+   rule 8's spirit of not stacking speculative work).
 
 ## Do not
 
+- Do not re-grep for candidate B's consumer — s143 found and named it
+  (`musyxMixActiveVoices`/`musyxBuildVoiceCommandList`/`musyxSynthFrame`,
+  all `funcs_24.c`).
+- Do not re-characterize `allocateSongChannelArray`'s own write pattern
+  — s142 exhausted that (0 stores into either N*(voiceCount+1)*136
+  buffer from its allocating function).
 - Do not re-guess `setupSongRenderBuffers` or `buildSongDecodeBufferRing`
-  as producers of 8568/32768 — directly refuted by 6/6 non-matches each,
-  s141.
-- Do not search the audio boot files (`funcs_23.c`/`funcs_24.c`) for
-  candidate A's producer — s141 measured it's an overlay-load event, a
-  different subsystem entirely.
-- Do not re-check whether `allocateSongChannelArray` itself writes to
-  candidate B's buffer — s142 read the full function body, confirmed 0
-  stores between the `rs_malloc` call and `jr $ra`, exhausted.
-- Do not re-audit any of Thread A's 8 hangar-tick-family functions
-  (`composeNpcOrientationMatrix`, `updateAnimatedTextureStreaming`,
-  `static_5_800B4048`, `projectModelBoundsToScreen`, `reserveAndEmitDLEntry`,
-  `activateAnimationKeyframe`, `submitSceneNodeRender` guards,
-  `updateHangarBayScene`) — closed, s90-137.
-- Do not re-run the `loadAssetAndIterateSubchunks` asset-alloc soak shape
-  (H2, closed 3/3), or add more free-event instrumentation for these 2
-  candidates (s140 — nothing is ever freed, exhausted).
-- Do not treat a guessed-but-refuted source as evidence the underlying
-  divisibility reasoning is useless in general — it correctly bounded the
-  search (both true producers were found within a few log lines of the
-  guessed sites), just didn't land on the literal call site either time.
+  as producers of 8568/32768 — directly refuted, s141.
+- Do not re-search the audio boot files for candidate A's overlay-load
+  producer — separate, still-open lead (s141), not this session's focus;
+  don't let this session's "pick one" balloon into chasing both.
+- Do not re-audit any of Thread A's 8 hangar-tick-family functions —
+  closed, s90-137.
+- Do not build the toggle-desync instrument yet — this work unit is a
+  source read to determine whether it's even worth building.
 
 ## This session's environment notes (carry forward, still current)
 
+- Delegating a multi-file grep (45 generated `.c` files) to a subagent
+  worked well — kept the raw grep output out of the main context window
+  and returned a synthesized finding with file:line citations. Prefer
+  this shape again for any "search across all funcs_*.c" question.
+- N64Recomp's codegen convention for a fixed-global access: writes are
+  `MEM_W(<offset>, ctx-><base>) = ctx-><src>;`; reads flip the argument
+  order to `ctx-><dst> = MEM_W(ctx-><base>, <offset>);`. Grepping for the
+  offset literal alone (not the full statement shape) catches both.
 - The `[rs-malloc-site]`-to-`[rs-malloc]` correlation-by-log-order
   technique works cleanly (12/12 positive control, s141) and generalizes:
   to identify any call site's contribution when `caller_ra` is unusable,
@@ -128,11 +119,10 @@ allocation" — only finding the writer distinguishes them).
   aggregate view hid a real refutation.
 - When reading recompiled `.c` for a fixed guest global address, remember
   different call sites can reach the same address via different
-  `lui`-page/offset splits — grepping for one literal offset string (e.g.
-  `-0x68F8`) only finds sites using that exact split, not all consumers
-  (s142; not yet proven this actually happened for candidate B, but it's
-  the reason a whole-file grep can read as "0 consumers" when the true
-  answer is "0 consumers using this split").
+  `lui`-page/offset splits — but for this pair (`0x80149708`/
+  `0x8014970C`) the split is now fully resolved (`0x8015`-page, `-0x68F8`/
+  `-0x68F4`); grepping the offset-literal substrings caught every real
+  consumer, sanity-checked against the arrayBase globals (s143).
 - `rm` on paths outside `scratch/` requires approval and does NOT accept
   glob patterns — use a `python3 -c` one-liner with `pathlib.Path.glob()`,
   run with cwd `N64Recomp`, deletes only the 45 `funcs_*.c` files.
@@ -182,7 +172,7 @@ PROJECT-OVERVIEW.md and prune superseded detail, paired with a real
 experiment — not on its own.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
-not a `lib/` submodule, with uncommitted changes across s90-141
+not a `lib/` submodule, with uncommitted changes across s90-143
 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`). Same
 posture as the `rogue_squadron64` sibling checkout flagged since s54.
 Worth asking the user whether/how to commit that history.

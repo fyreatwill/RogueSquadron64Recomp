@@ -12582,3 +12582,87 @@ chasing both leads at once.
 **Landed:** nothing (pure source read, no code/instrument changes this
 session). `PORTING-STATE.md` / `docs/CURRENT-TRUTH.md` /
 `scratch/agent/NEXT.md` (this write-up).
+
+## Session 143 (2026-07-27) — found candidate B's consumer/writer (NEXT.md option (b)): it's slot 1 of a double-buffered pointer table, not orphaned; both consumers are in `funcs_24.c`
+
+Picked NEXT.md's option (b) again (find who reads/writes through
+candidate B's global pointer, `0x8014970C`/`0x80149708`) — a pure
+source-grep task, delegated whole to a subagent (general-purpose,
+foreground) to keep the multi-file grep out of the main context window,
+per this session's Fable-mode operating rules. No rebuild, no soak.
+
+**Method:** the subagent (1) read `funcs_23.c:11005-11045` to establish
+the exact N64Recomp codegen convention for accessing these two fixed
+globals — writes are `MEM_W(-0X68F8, ctx->r1) = ctx->r2;` (offset first,
+base second), reads flip the argument order: `ctx->r4 = MEM_W(ctx->r1,
+-0X68F8);` — then (2) grepped all 45 `funcs_*.c` files for both the
+offset literals (`68F8`/`68F4`) and the low-16-bit literals
+(`9708`/`970C`) and the raw absolute addresses, (3) cross-checked
+`symbol_files/main_overlay.txt` for named comments near this address
+range, and (4) sanity-checked its own methodology by re-running the same
+grep shape against the already-known arrayBase globals (`-0x6904`/
+`-0x6908`) to confirm real hits aren't being silently missed.
+
+**Findings:**
+
+1. **Candidate B is not orphaned.** `0x80149708` (slot 0) and
+   `0x8014970C` (slot 1, = candidate B) are the two halves of a
+   double-buffered pointer table, selected by a 1-byte toggle at
+   `0x80149702`. `allocateSongChannelArray` (`funcs_23.c`) initializes
+   the toggle to 0 (`:10743-10744`) as part of the same allocation
+   sequence already characterized s141/s142.
+2. **Both real consumers live in `funcs_24.c`, not `funcs_23.c`** — this
+   is exactly why s142's whole-file grep of `funcs_23.c` alone found
+   nothing:
+   - `musyxMixActiveVoices` (`funcs_24.c:2477+`): at `:2536-2537` loads
+     `(0x8015<<16) - 0x68F8` = `0x80149708` as a base pointer kept live
+     for the rest of the function; at `:2624/2630/2634` it loads the
+     toggle byte at `-0x68FE` (`0x80149702`), shifts it `<<2`, indexes
+     into the base, and dereferences (`lw $t0, 0x0($v0)`) — reading
+     whichever slot the toggle currently selects, then uses the result to
+     index voice-active-flag bytes (offsets `0x85`/`0x84`/`0x0`) and as an
+     argument to `musyxRenderVoiceSamples`.
+   - `musyxBuildVoiceCommandList` (`funcs_24.c:2812+`): at
+     `:3282-3292` loads the same toggle byte, **XORs it with 1** (selects
+     the *other* slot from whichever `musyxMixActiveVoices` is using),
+     computes the same `0x8015`-page base, and reads the pointer at
+     either `0x80149708` or `0x8014970C` plus a companion halfword at
+     `-0x68F0` (`0x80149710`) — feeding an inner call at guest
+     `0x80091034`.
+   - `musyxSynthFrame` (`funcs_24.c:3122+`): at `:4117-4127`, `lbu
+     $v0,-0x68FE; xori $v0,$v0,1; sb $v0,-0x68FE` — **the toggle's
+     writer**, flipping it every call. This is a per-VI-retrace audio
+     tick (already established s101 as the function that indirectly
+     calls `submitDmaRequestBatch`, the DMA-ring producer in the
+     still-separately-tracked `do_rom_read` thread).
+3. **Sanity check passed:** the same grep shape against `-0x6904`/
+   `-0x6908` (arrayBase's own globals) returns dozens of real hits
+   concentrated in the same `funcs_24.c` musyx functions — confirms the
+   methodology finds genuine consumers and isn't undercounting.
+4. **Bonus 2nd-source confirmation** (from `main_overlay.txt:319`,
+   already used s142 for the stride fact): explicitly names
+   `0x801496F8` as "the RSP-mixer voice-slot array installed by
+   `initN64RspMixer`... stride 0x88" — reconfirms arrayBase's identity,
+   no equivalent name exists for the `0x80149708`/`0x8014970C` pair in
+   that file (0 hits either session).
+
+**Interpretation:** this closes the "who is candidate B's consumer"
+question s142 opened, but it does *not* close Thread B overall — it
+reframes it. The two candidate buffers are the same 136-byte stride and
+the same `N*(voiceCount+1)` sizing as the arrayBase voice array the
+corruption is known to hit at a fixed `+0x34` offset (s104 on). Whether
+either consumer's own indexing math into these buffers ever reaches that
+same `+0x34` offset, and whether the toggle can desync from the two
+`rs_malloc` calls' completion (one is a straight allocation, the other a
+reload of the same halfword — s142), is now the open, source-readable
+question — not more grepping for an unlocated consumer.
+
+**Not done, deliberately:** did not read the full bodies of
+`musyxMixActiveVoices`/`musyxBuildVoiceCommandList` beyond the specific
+lines needed to identify the access pattern — that's the next work
+unit's job, scoped separately so this session's result stays a single,
+reportable finding rather than a sprawling multi-function audit.
+
+**Landed:** nothing (pure source read via subagent, no code/instrument
+changes, no rebuild, no soak this session). `PORTING-STATE.md` /
+`docs/CURRENT-TRUTH.md` / `scratch/agent/NEXT.md` (this write-up).

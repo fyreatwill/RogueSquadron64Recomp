@@ -769,6 +769,32 @@ cost three sessions before the recursive mutex.
     0x88"), previously uncross-checked against s104's measurement. Full
     detail: PORTING-STATE s142.
 
+    **s143** (pure source read via subagent, no rebuild, NEXT.md option
+    (b)): found candidate B is **not orphaned** — it's slot 1 of a
+    2-entry double-buffered pointer table (slot 0 = `0x80149708`
+    "candidate A-family", slot 1 = `0x8014970C` "candidate B"), selected
+    by a toggle byte at `0x80149702` that `musyxSynthFrame` flips (XOR 1)
+    every call. `musyxMixActiveVoices` (`funcs_24.c:2477+`) reads the
+    *current* slot via the toggle; `musyxBuildVoiceCommandList`
+    (`funcs_24.c:2812+`) reads the *other* slot via `toggle XOR 1` — a
+    genuine producer/consumer pair, both in `funcs_24.c`, previously
+    unsearched because s142 only checked `funcs_23.c`. Confirmed exact
+    N64Recomp codegen convention for the fixed-global access pattern:
+    `MEM_W(-0X68F8, ctx->r1) = ctx->r2` (write) vs. `ctx->r4 =
+    MEM_W(ctx->r1, -0X68F8)` (read, base/offset argument order flips).
+    Sanity-checked the grep methodology against the already-known
+    arrayBase globals (`-0x6904`/`-0x6908`) — dozens of genuine hits in
+    `funcs_24.c`'s musyx functions, confirming the method isn't silently
+    missing real consumers. **Reframes the search**: this is no longer
+    "find candidate B's unlocated consumer" (closed) but "does the
+    per-frame toggle ever desync from the allocation lifecycle, or does
+    either consumer's indexing math exceed the buffer's own
+    `(voiceCount+1)` bound" — both candidate buffers share the exact same
+    136-byte stride as the arrayBase voice array itself, a previously
+    unnoted structural link between Thread B's "which allocation is
+    heap-adjacent" question and the corruption's own byte shape. Full
+    detail: PORTING-STATE s143.
+
 0d. **s139: ran the discriminating rs_malloc-range-overlap measurement
     s138 called for.** Landed a universal `rs_malloc` allocation log
     (`ROGUESQ_LOG_RS_MALLOC=1`, `N64Recomp/fixup_game_funcs.py`, patches
@@ -789,25 +815,24 @@ cost three sessions before the recursive mutex.
     3rd/4th straight `do_rom_read`/`piDmaWorker` recurrence across the last
     2 sessions' soaks. Full detail: PORTING-STATE s139.
 
-**Next work unit (s141→s142): find candidate A's real overlay-load
-producer, and check candidate B's write pattern.** Two independent leads,
-either is a valid next work unit:
-(a) Candidate A (`0x80171470`/32768B) is now known to fire during overlay
-loading (log context: right after `[overlay] start-match: section 4
-rom=0x00137580 at ram=0x800A5130`), not audio boot — grep `rs_malloc` call
-sites reachable from the overlay-load path (`overlays.cpp` / the guest
-overlay-init functions, not `funcs_23.c`/`funcs_24.c`) for one computing
-32768 (or whose call sequence sits right after an overlay start-match
-log line). Do NOT re-search the audio files for this candidate; that
-angle is now closed by s141's direct measurement.
-(b) Candidate B is now named (`allocateSongChannelArray`,
-`funcs_23.c:11033`, `N*(voiceCount+1)*136` sized) — the next
-discriminating move per the original plan is checking whether this
-function's own write pattern into that buffer could plausibly produce
-the corruption's known ASCII-fragment byte shape (`"explo_tex2"`,
-`"lgfr"`, `"wing"`, established s94/s102) — i.e. is this a string/name
-table or a struct array. Source-read `funcs_23.c` around line 11033
-onward for what it stores into the buffer it just allocated.
+**Next work unit (s143→s144): characterize `musyxMixActiveVoices`'/
+`musyxBuildVoiceCommandList`'s indexing math against the two
+double-buffered `(voiceCount+1)*136`-sized slots.** Pure source read,
+no rebuild, same low-risk posture as s142/s143. Read
+`funcs_24.c:2477-2650` (`musyxMixActiveVoices`) and `funcs_24.c:2812-3300`
+(`musyxBuildVoiceCommandList`) end-to-end and answer: (1) what bounds the
+per-voice index used against the slot pointer — is it checked against
+`voiceCount` (matching the buffer's own `(voiceCount+1)` sizing) or some
+other, possibly stale, count; (2) does either function's 136-byte-stride
+offset math ever reach a field at `+0x34` specifically (the exact offset
+the corruption has always been observed at, s104 on) into one of these
+slots rather than into the arrayBase voice array itself — if so this may
+BE the corruption site, not just an adjacent allocation; (3) whether
+`musyxSynthFrame`'s toggle flip (`funcs_24.c:4117-4127`) could race
+against either reader if they don't share a lock/ordering guarantee (a
+timing-desync hypothesis, would need an instrument to confirm, not just
+a source read). Do NOT re-search for candidate B's consumer — s143 found
+and named it. Full detail: PORTING-STATE s143.
 
 0. **Regen-pipeline reliability bug (s120, intermittent — confirmed
    NOT deterministic, s121; s126 ran a 3rd clean delete-all cycle with
