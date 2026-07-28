@@ -16649,3 +16649,52 @@ The new instrument itself behaved exactly as designed and gives a genuine (if na
 2. If the shared-ceiling candidate (Result 2, ~3500-3800 on `rdpFs`/`skSeen`/`skNoTrig`) survives a 3rd occurrence at a similar value, that becomes the priority lead over the producer-side instrument — it would give a concrete reproduction target (drive the counter to ~3500-3800) instead of waiting on wall-clock.
 3. `tickSongSequence`'s 2 unguarded list walks (funcs_25.c:5018-5046, 5050-5077, found s174, not guarded) — still open, still lower priority.
 4. `submitSceneNodeRender+16780` (s171) — still open, still lowest priority of the characterized-but-unfixed leads.
+
+## Session 178 (2026-07-28) — first-ever crash-free capture of the actual graphics-task-submission stall with the producer instrument armed: refutes BOTH of s177's anticipated outcomes, finds instead that the per-frame producer chain (and graphics-task submission itself) simply stop being invoked, closely correlated in log position; independently confirms the s176/177 "shared ceiling" candidate with a 3rd data point landing in the predicted band
+
+### What ran
+
+Per NEXT.md step 1: copied `run_swapackwait1.sh` to `run_swapackwait2.sh` (tag rename only, same env block/instruments/`STICK_SCHEDULE`) and ran one soak. No code changes this session — pure re-run + offline analysis of the resulting ~3.6 GB / 73.5M-line `run.log`, all via targeted `grep`/`awk` passes (never `cat`/`Read` on the file itself), per the "capture once, analyze many" rule.
+
+### Result 1: process survived the entire 120s hold + grace window alive, no crash — the first clean capture of the stall itself under this instrument
+
+Driver summary: `CRASH: 0`, `game process still alive; killing` (script had to SIGKILL it after the hold+grace window elapsed, vs. every prior `swapackwait*`/`scenenodedepthguard*` soak either crashing or the process exiting on its own). `fs max: 3579`, last `[vi] update_screen` line at guest-time-equivalent counter #16064, `origin=0x00696100 width=640`. This is the actual graphics-task-submission stall (`[vi-fs-decision] stalled=1 pairs=0` persisting), not a crash — the first time this exact soak recipe has reproduced it since the instrument was landed (s177's one prior attempt crashed on `frameStartReset` before ever reaching a stalled state).
+
+### Result 2: 3rd data point CONFIRMS the s176/177 "shared ceiling" candidate — promote from single-source candidate to a real, narrow, reproducible band
+
+The persistent stall's `rdpFs` plateaus at exactly **3579** (`skSeen=3604`, `skNoTrig=3466`), and the transition from `stalled=0` to a *persistent* `stalled=1` happens at counter `#14080` with `rdpFs=3560` already — both values squarely inside the `~3175-3802` band s177 found (single-source, background-agent grep) across the two s176 runs. Three independent occurrences (s176 run 1: onset ~3746; s176 run 2: onset ~3563; this run: onset ~3560, plateau 3579) now cluster inside a band roughly 200-250 wide out of a run that otherwise varies wildly in wall-clock/tick terms — this is now **two-source-equivalent** (s177's background-agent grep + this session's direct verification) and should be treated as an established, reproducible pattern: some fixed-size resource (buffer/queue-slot/semaphore count around 3500-3800) is exhausted at roughly the same *operation count* across runs, not gated by wall-clock or scene state. Not yet root-caused to a specific counter/buffer, but now a concrete, driveable target (any soak whose `rdpFs` approaches ~3500-3600 should be watched closely for the stall).
+
+Nuance: within this run, `[vi-fs-decision]` also logged one single, isolated `stalled=0 reason=no-trigger` sample at `#15296` in the middle of an otherwise-continuous `stalled=1` run (#14080 through #16064 at kill time) — a one-tick blip, not a real recovery (no framebuffer pair was ever registered around it, `pairs=0` throughout). Not investigated further; noted so a future session doesn't mistake it for evidence of intermittent recovery.
+
+### Result 3: the swap-ack-wait instrument refutes BOTH of NEXT.md's anticipated outcomes — a 3rd, more specific mechanism instead
+
+Neither of s177's two hypothesized outcomes happened:
+- **Not** "blocked forever inside `osRecvMesg_recomp`" — every `[swap-ack-wait]` call this run completed cleanly: 5768 `enter` events, 9447 `pre-recv`, 9447 `post-recv` (perfectly matched, zero orphans), and the very last call (`call=5767`) shows a complete `enter`/`pre-recv`/`post-recv` triple with nothing dangling.
+- **Not** "keeps cycling normally throughout the stall window" either — `[swap-ack-wait]` simply **stops appearing in the log at all** after `call=5767` (line ~64,036,414), for the remaining ~9.5M lines of the run (log ends at line 73,542,139) until the process was killed. The per-frame producer chain (`runHangarSelectionFrame` -> `waitForPrevFrameDone` -> `waitForPostSwapAck`) was never invoked again, not stuck mid-call.
+
+This closely correlates with graphics task submission itself: the last `[lle task]` entry (RSP graphics-task submission — literally what "graphics-task-submission stall" names) is at line 64,761,412, and the driver summary's `lle tasks: 5767` count matches `[swap-ack-wait]`'s last call number almost exactly. Both stop within ~700K log lines of each other, both far short of the log's end — i.e. **graphics-task submission genuinely halts** (not merely "this one wait call never returns"), and it halts at essentially the same point the calling per-frame loop stops iterating.
+
+The process is not a full hang, though: `[rs-malloc]` continues logging until line 67,300,546 (further than graphics/swap-ack-wait but still short of the end), and `[rs-free-walk]` dominates the log's final ~2 MB, still firing at the moment of the kill — a **staggered subsystem shutdown**, not a simultaneous freeze. Matches the pre-existing CURRENT-TRUTH characterization ("process alive... heap allocation keep running to the end of the log") only partially: heap *free-walking* runs to the very end this session, but heap *allocation* (`rs-malloc`) and graphics-task submission both stop well before the end, a nuance not previously documented.
+
+`UnhandledJump: 873` this run — checked directly (not assumed): 867/873 matched lines decode as `Unhandled jump target 0x0231|0x17F0 in microcode factor5_ucode`, the already-documented benign RSP-microcode-fallback pattern, not a guest-CPU regression (the remaining ~6 are truncated duplicates of the same two lines at a log-rotation boundary, not new patterns).
+
+### Rules out / narrows
+
+- **Refutes** "the producer is blocked forever inside `osRecvMesg_recomp`" (s177's outcome-1 hypothesis) — clean, fully-matched enter/pre-recv/post-recv counts through the last call, no orphaned wait.
+- **Refutes** "the producer keeps cycling normally throughout the stall" (s177's outcome-2 hypothesis, would have pointed at the RT64-side gate logic alone) — the producer stops being invoked at all, well before the stall's own tail end.
+- **Reframes the root-cause direction**: the bug is not inside `waitForPostSwapAck`/`osRecvMesg_recomp` itself — it's upstream, in whatever schedules/loops `runHangarSelectionFrame` (its caller, or the guest OS thread executing it). That loop or thread stops iterating/being resumed at almost exactly the point graphics-task submission stops, which is a new, more specific, and more answerable question than "does this one wait call return."
+- **Promotes** the s176/177 shared-ceiling candidate (`rdpFs`/`skSeen`/`skNoTrig` ~3175-3802) from single-source to a 3-occurrence-confirmed pattern.
+- Partially corrects the pre-existing CURRENT-TRUTH stall characterization: heap *allocation* and graphics-task submission both stop before the log's end this run, only heap *free-walking* runs to the very end — "audio ucode and heap allocation keep running to the end of the log" (s162 wording) does not hold uniformly across all subsystems in this occurrence.
+
+### Landed (this session)
+
+- `scratch/agent/run_swapackwait2.sh` (copy of `run_swapackwait1.sh`, tag renamed only, no other changes) — gitignored, not tracked.
+- No code changes. `N64Recomp`'s `fixup_game_funcs.py`/`RecompiledFuncs/*.c` state unchanged from s177 (still uncommitted in that sibling checkout, same posture flagged since s90).
+- This repo's tracked files: `scratch/agent/NEXT.md`, `docs/CURRENT-TRUTH.md`, this entry.
+
+### Next
+
+1. **Find and instrument the caller/scheduler of `runHangarSelectionFrame`** — the new, sharper question this session's result raises. Source-read first (per rule 6): identify what guest OS thread executes `runHangarSelectionFrame` and what its own outer loop waits on between per-frame calls (likely a VI-retrace-driven message wait, separate from `waitForPostSwapAck`). An entry/exit log on that outer loop, correlated against the same `rdpFs`/log-line-position markers used this session, would show directly whether that thread stops being resumed at all (points at OS-thread/scheduler-level starvation, same family as the s84-s94 thr-resume/OSThread-corruption investigations) or whether it keeps running but takes a different path that skips `runHangarSelectionFrame` (points at a guest-side state/flag check).
+2. Try to land a 4th `rdpFs`-onset data point (any soak, doesn't need to be this exact recipe) to further tighten the ~3500-3800 ceiling band — if a driveable reproduction (e.g. spamming whatever operation increments this counter) gets the stall to trigger predictably near a fixed count rather than an unpredictable wall-clock window, that becomes a much cheaper repro than a 120s+ soak.
+3. `tickSongSequence`'s 2 unguarded list walks (funcs_25.c:5018-5046, 5050-5077, found s174, not guarded) — still open, still lower priority.
+4. `submitSceneNodeRender+16780` (s171) — still open, still lowest priority of the characterized-but-unfixed leads.

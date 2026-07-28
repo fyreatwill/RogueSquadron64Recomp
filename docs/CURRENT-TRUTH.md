@@ -65,7 +65,7 @@ Driven from the title with `PROBE_KEYS_FROM_PHASE=1` (s23, scene names corrected
 | +1 press | 512, origin 0x6AB400, colour 0x656000/0x6AB000 | **level-select war room → SELECT LEVEL — "AMBUSH AT MOS EISLEY"** with X-wing hologram (the scene s12–s47 called the "main-menu hangar"; see s48 below) |
 | ~93 s | 640 | transition — process died here in the undriven-era observation and in every crashing run of the post-s86 family; **on the s160/s161 crash-free runs the process instead survives past here** (see below) |
 | leave SELECT YOUR CRAFT (1 Start press) | 512→640, origin 0x6AB400→0x6A2900ish | **s162 (offline reanalysis of s160/s161 captures): a Chapter-1 mission-intro cutscene** — gold "STAR WARS" logo bumper → "Chapter 1"/"THE RED…" crawl text → black → desert-planet horizon widening into a fast dive toward a hangar structure (establishing shot, not gameplay). Never documented before s162; the s75/s76/s161 "hangar-flight" label for this window was an unverified inference from title-yellow color decay, not from the picture itself. |
-| ~+90-115s post-leave | varies (0 or 128 in the two known runs) | **graphics-task-submission stall** — `[vi-fs-decision]` reports `stalled=1 pairs=0` continuously, RDP `fs` counter frozen, process alive (`[lle task]` audio ucode and `[rs-malloc]` heap allocation keep running to the end of the log). Not a crash. Mechanism not yet root-caused — see next-steps item -14. |
+| ~+90-115s post-leave | varies (0 or 128 in the two known runs) | **graphics-task-submission stall** — `[vi-fs-decision]` reports `stalled=1 pairs=0` continuously, RDP `fs` counter frozen (3 occurrences now cluster at `rdpFs`~3560-3802, a candidate shared ceiling — s176/177/178). Not a crash; a **staggered** subsystem shutdown (s178): `[lle task]`/`[swap-ack-wait]` (graphics-task submission and its per-frame producer) stop first, `[rs-malloc]` (heap allocation) a bit later, `[rs-free-walk]` (heap free-walking) keeps running to the very end of the log — the older "audio ucode and heap allocation keep running to the end" wording (s162) does not hold uniformly. s178 confirmed the per-frame producer (`runHangarSelectionFrame` -> `waitForPrevFrameDone` -> `waitForPostSwapAck`) is never stuck mid-call (clean matched enter/pre-recv/post-recv, zero orphans) — it simply stops being invoked at all, coincident with graphics-task submission stopping. Root mechanism not yet found — see next-steps item -30 (find the caller/scheduler of `runHangarSelectionFrame`). |
 
 Menu state machine (s48, three driven runs; extended s50; post-`a` path s73; Start path s74/s75;
 hold attempt s76):
@@ -659,9 +659,46 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s177)
+## Next steps, in order of expected value (s178)
 
--29. **NEW TOP PRIORITY (s177): re-run the `swapackwait1` soak recipe to actually
+-30. **NEW TOP PRIORITY (s178): find and instrument the caller/scheduler of
+    `runHangarSelectionFrame`.** s178 re-ran s177's `swapackwait1` recipe
+    (tag `swapackwait2`, no other changes) and for the first time caught the
+    actual graphics-task-submission stall crash-free with the producer-side
+    `ROGUESQ_LOG_SWAP_ACK_WAIT` instrument armed. Result refutes BOTH outcomes
+    NEXT.md anticipated: not "blocked forever inside `osRecvMesg_recomp`"
+    (5768 `enter`, 9447/9447 matched `pre-recv`/`post-recv`, zero orphans,
+    the last call completes cleanly) and not "keeps cycling normally
+    throughout the stall" either — `[swap-ack-wait]` simply **stops
+    appearing at all** after `call=5767` (line ~64.04M of a 73.54M-line
+    log), closely correlated with `[lle task]` (graphics-task submission
+    itself) also stopping around the same point (last entry line ~64.76M,
+    driver summary `lle tasks: 5767` matches the last swap-ack-wait call
+    number almost exactly). The per-frame producer chain
+    (`runHangarSelectionFrame` -> `waitForPrevFrameDone` ->
+    `waitForPostSwapAck`) was never invoked again — not stuck mid-call, its
+    caller/scheduler stopped iterating. Not a full hang: `[rs-malloc]`
+    continues to line ~67.3M and `[rs-free-walk]` keeps firing all the way
+    to the log's end (line 73.54M, still active at kill time) — a
+    staggered subsystem shutdown, partially correcting the older "heap
+    allocation keeps running to the end" (s162) wording (allocation stops
+    early; free-walking does not). **Next step: identify the guest OS
+    thread that executes `runHangarSelectionFrame` and what its own outer
+    loop waits on between per-frame calls (likely VI-retrace-driven,
+    separate from `waitForPostSwapAck`), and instrument entry/exit on that
+    outer loop to see whether the thread stops being resumed at all (points
+    at OS-thread/scheduler starvation, same family as s84-s94's
+    thr-resume/OSThread-corruption investigations) or keeps running but
+    takes a path that skips `runHangarSelectionFrame` (points at a
+    guest-side state/flag check).** Independently, this run's `rdpFs`
+    plateau (3579, persistent-stall onset at #14080 with `rdpFs=3560`) is a
+    3rd data point squarely inside s176/177's ~3175-3802 candidate-ceiling
+    band — promotes that pattern from single-source to a 3-occurrence-
+    confirmed, driveable reproduction target (any soak whose `rdpFs`
+    approaches ~3500-3600 should be watched closely for the stall). Full
+    detail: PORTING-STATE s178.
+
+-29. **(s177, superseded as top priority by s178 above): re-run the `swapackwait1` soak recipe to actually
     catch the graphics-task-submission stall with the new producer-side
     instrument armed.** s177 corrected s176's framing before instrumenting:
     source-read `rt64_state.cpp` (~2841) shows the `[vi-fs-decision]`
