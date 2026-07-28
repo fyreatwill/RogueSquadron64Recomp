@@ -657,41 +657,52 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s160)
+## Next steps, in order of expected value (s161)
 
--12. **NEW TOP PRIORITY (s160): corroborate the crash-free soak with a 2nd,
-    independent run before concluding anything.** s160 source-read the
-    entire 21st crash class (`drawSubtitleText`, see -11) and guarded the
-    one genuinely-matching unguarded-pointer-deref site it found (a
-    per-position glyph-pointer cache dereferenced before its own later null
-    check, `N64Recomp/fixup_game_funcs.py`, `[subtitle-glyph-guard]`/
-    `[subtitle-glyph-guard2]`, `funcs_4.c:0x80016328`/`0x80016790`). The
-    resulting soak (`scratch/agent/run_subtitleguard1.sh`) was **the first
-    fully crash-free run in the entire post-s86 family since s88** — full
-    120s hold + grace (157s wall), `compose-npc`/`anim-recurse`/
-    `anim-tex-stream`/`hangar-entry` all exercised with 0 crashes, killed
-    only by the script's own timeout, not a signal. **But the two new
-    guards themselves are 0/0 (unvalidated)** — a guard that never fires
-    and a bug that's genuinely gone look identical after one soak, and
-    this family has had crash-free soaks turn out to be single flukes
-    before (s85's `frameStartReset`, s89's 3-non-recurrence pattern). Next
-    work unit: re-run `scratch/agent/run_subtitleguard1.sh` (or an
-    equivalent-battery script) once more, no code changes. Three outcomes:
-    (a) 2nd soak also crash-free → two-source rule satisfied, this becomes
-    the strongest stability result in the project's history, revisit
-    whether M3's "60s in-mission" done-criteria language now needs
-    updating rather than just "reachable"; (b) 2nd soak crashes on the
-    21st class again → the guard doesn't cover the real mechanism, go back
-    to the two documented-but-not-guarded candidates in PORTING-STATE s160
-    (unbounded 0xFFFF-run-count loop; frame-reset-bounded cache write) or
-    re-examine with fresh eyes; (c) 2nd soak crashes on a different,
-    already-catalogued class → progress (this class is likely fixed),
-    continue down the family list from whatever crashed. Full detail:
-    PORTING-STATE s160.
+-13. **NEW TOP PRIORITY (s161): two-source rule now satisfied — drive the
+    process PAST SELECT YOUR CRAFT into an actual mission, not another
+    repeat of the menu-hold soak.** s161 re-ran s160's exact soak
+    unchanged (`scratch/agent/run_subtitleguard2.sh`, only the capture tag
+    differs) and got a **2nd consecutive fully crash-free result**:
+    `CRASH: 0`, wall=157s, killed only by the script's own timeout —
+    `compose-npc-orient-800AB1C8` 893, `anim-recurse` 3982,
+    `anim-tex-stream` 6872, `hangar-entry` 3, all exercised with 0
+    crashes (s160 had 777/3748/6006/3 respectively — same order of
+    magnitude, both clean). The `[subtitle-glyph-guard]`/
+    `[subtitle-glyph-guard2]` instruments are **still 0/0 across both
+    soaks** — the guard's correctness is still unconfirmed, but the
+    crash-free *outcome* is now two-source. This is the **2nd and 3rd
+    fully crash-free soaks in the whole post-s86 family's ~70+-session
+    history** (the 1st was s88, which itself did not repeat on its very
+    next attempts — see s89). Per rule 8: this is exactly 2 agreeing data
+    points, which is what the two-source rule asks for — do **not** run a
+    3rd identical soak next; that would be a 3rd consecutive attempt at
+    an already-answered question. **Important scope caveat**: both
+    crash-free soaks used only scripted stick input inside the
+    **SELECT YOUR CRAFT menu** hold window (`PROBE_MODE=start_only`, no
+    mission actually entered) — this result does NOT mean the process has
+    survived 60s of in-mission rendering, only that the menu-transition +
+    hangar-tick crash family looks survivable twice in a row. M3's
+    done-criteria explicitly requires in-mission rendering with the craft
+    responding to input, which this soak battery never attempts. Next
+    work unit: identify and try the input sequence that leaves SELECT
+    YOUR CRAFT into an actual mission (s75/s76 already established that a
+    single Start leaves SELECT YOUR CRAFT into "hangar-flight" — re-read
+    that transition and extend the soak script's key schedule past it,
+    watching for new crash classes in the mission-load path itself, which
+    this family has never soaked before). Full detail: PORTING-STATE
+    s161.
 
--11. **s159/s160: the 21st crash class, `drawSubtitleText`, has a landed,
-    first-soak-clean guard — see -12 for the corroboration step, do not
-    treat this as closed yet.** Originally found s159 as a brand-new SIGBUS
+-12. **s159/s160: the 21st crash class, `drawSubtitleText`, has a landed
+    guard now corroborated by 2 independent crash-free soaks (s160, s161)
+    — see -13.** Still not proven the guard is *why* (0/0 positive control
+    on the guard itself across both runs), but the outcome-level two-source
+    rule is satisfied. Do not re-run this exact soak a 3rd time without a
+    new, specific reason (see -13).
+
+-11. **s159/s160: the 21st crash class, `drawSubtitleText`, has a landed
+    guard corroborated by 2 crash-free soaks — see -13.** Originally found
+    s159 as a brand-new SIGBUS
     (confirmed real, 37300-byte *host*-compiled function via
     `machoparse.py`, crash at host offset `+34664`, genuinely inside its
     own body — but note the guest-instruction span is only ~4.8 KB, so that

@@ -14650,3 +14650,102 @@ session, per rule 8 — one thing at a time). `ost-wb SKIP_OOB`: 19,
 - `scratch/agent/s160_count.py` — grep-count helper for the guard/control
   tags in `run.log` (zsh's bracket-glob expansion rejects `[tag` patterns
   directly; a small Python regex count sidesteps it).
+
+## Session 161 (2026-07-27) — corroboration re-run of s160's crash-free soak: 2nd consecutive crash-free run, two-source rule satisfied, strongest stability result in the project's history to date
+
+### What s161 did
+
+Per s160's own NEXT.md branch and CURRENT-TRUTH next-steps item -12: re-ran
+the exact same soak battery unchanged (no code changes, no rebuild) as
+`subtitleguard2`, to test whether s160's crash-free result was real or a
+single-soak fluke (this family has had that happen before — s85's
+`frameStartReset`, s89's 3-non-recurrence pattern — so rule 4/the
+two-source rule explicitly applies before concluding anything).
+
+1. Copied `scratch/agent/run_subtitleguard1.sh` to
+   `run_subtitleguard2.sh`, changing only the capture tag
+   (`subtitleguard1` → `subtitleguard2`) so the two runs' output
+   directories don't collide. Every `ROGUESQ_LOG_*` flag, `HOLD_S=120`,
+   `PROBE_MODE=start_only`, and the `run_mission_keys.sh subtitleguard2 5
+   12` invocation are byte-identical to s160's script.
+2. Ran the soak (background Bash, blocked on `pgrep` until the process
+   exited). Wall time **157s**, identical to s160's run.
+
+### Result: CRASH: 0, 2nd consecutive
+
+`grep -ac '\[CRASH\]' subtitleguard2/run.log` → **0**. The driver summary
+confirms: `hold done wall=133s`, `grace window 0s`, `done wall=157s`,
+`game process still alive; killing` — killed by the script's own timeout,
+identically to s160, not by a signal.
+
+### Controls and diagnostics this run
+
+`[compose-npc-orient-800AB1C8]`: 893 fires (vs. s160's 777 — same order of
+magnitude, further reached); `[anim-recurse]`: 3982 (vs. 3748);
+`[anim-tex-stream]`: 6872 (vs. 6006); `[hangar-entry]`: 3 (vs. 3, exact
+match) — all four hangar-tick-family paths exercised again this run, all
+clean, 0 crashes. `[subtitle-glyph-guard]`/`[subtitle-glyph-guard2]`: **0/0
+again** — still no positive control on the guard itself after 2 soaks;
+the crash's non-recurrence still cannot be attributed to the guard firing
+rather than the bug simply not being hit. `thr-resume bad=1`: 0.
+`missing-func`: 0. `fs max`: 5618 (vs. s160's 4127 — run progressed
+further before the script's own kill, consistent with a longer-lived
+process). `ost-wb SKIP_OOB`: 5, `SKIP_WIDTH`: 0 (pre-existing always-on
+gates).
+
+### What this establishes
+
+- **Two-source rule satisfied**: two independent soaks (s160
+  `subtitleguard1`, s161 `subtitleguard2`), same battery, same code, both
+  fully crash-free through the SELECT GAME → SELECT YOUR CRAFT transition
+  and the full 120s hangar-tick hold window with stick input. This is
+  **the 2nd and 3rd fully crash-free soaks in the whole post-s86 family's
+  ~70+-session history** (the 1st was s88, which itself did not repeat on
+  its own very next attempts — see s89's 3-non-recurrence). Per NEXT.md's
+  own pre-written branch (a): this is now **the strongest stability
+  result in the project's history.**
+- **Still does not confirm the subtitle-glyph guard specifically fixed
+  anything** — 0/0 on both new guards across both soaks means the
+  21st-class crash mechanism simply never got exercised by either run,
+  not that the guard intercepted it. The crash-free result could equally
+  be explained by: the guard working, the 21st class being rare/timing-
+  dependent and just not landing twice, or (per s159's own "atypically
+  well-guarded" observation about this function) the function being
+  fundamentally close to correct already and s160's guard covering a
+  site that was never going to be hit in practice. No experiment run so
+  far distinguishes these.
+- **Does not by itself mean the family's other 20 catalogued crash
+  classes are fixed** — they were exercised (compose-npc, anim-recurse,
+  anim-tex-stream, hangar-entry all fired with real counts) but a
+  non-recurrence after 2 soaks is a much weaker claim than "root-caused
+  and guarded" for classes that were never source-read this session.
+  Do not treat classes 1-20 as closed; only the 21st class has a
+  candidate fix landed.
+- **M3 revisit, per NEXT.md's own instruction**: M3's done-criteria is
+  "60 seconds of in-mission rendering, craft visibly responds to
+  synthetic input, stability counters 0, and the phase timeline covers
+  the mission." This soak's 120s hold uses only scripted stick input
+  (`sr`/`sl`/`su` at fixed offsets) in the SELECT YOUR CRAFT **menu**,
+  not in-mission play — the process has not yet been observed to *enter*
+  a mission and hold there. Two crash-free soaks in the menu/hangar-tick
+  family is real progress toward M3 but does **not** satisfy M3's
+  definition of done, which requires reaching and surviving in-mission
+  rendering specifically. Next session's highest-value move is attempting
+  to actually drive the process past SELECT YOUR CRAFT into a mission
+  (the path this soak battery does not exercise) now that the
+  menu-transition crash family looks survivable twice in a row, rather
+  than a 3rd repeat of the identical soak (which per rule 8 would be a
+  3rd consecutive attempt at the same hypothesis with diminishing
+  information value — 2 agreeing data points already satisfy the
+  two-source rule).
+
+### Files touched
+
+- `scratch/agent/run_subtitleguard2.sh` — this session's soak script
+  (copy of s160's `run_subtitleguard1.sh`, tag changed only).
+- `scratch/s73_post_a_scene/subtitleguard2/` — this session's run:
+  `run.log`, `after_p1_start_*.png` screenshots.
+- `scratch/agent/run_subtitleguard2_driver.log` — driver summary.
+- `scratch/agent/s161_count.py` — grep-count helper for the guard/control
+  tags in `run.log` (same pattern as s160's `s160_count.py`, updated tag
+  list and target path).
