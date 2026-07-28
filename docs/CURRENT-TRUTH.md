@@ -663,7 +663,64 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s194)
+## Next steps, in order of expected value (s195)
+
+-44. **(s195) re-ran s194's mcontext soak for a 2nd occurrence — s194's
+    `processSceneNode`-adjacent crash did NOT recur; instead the soak died
+    to a DIFFERENT, older catalogued crash (13th class,
+    `reinterpretTileRecord`, parked at s96 "until 2nd recurrence") which
+    just got exactly that 2nd occurrence, ~99 sessions later, byte-for-byte
+    identical backtrace.** Ran `scratch/agent/run_mcontext2.sh` (identical
+    env block to `mcontext1`, same binary, no rebuild) via
+    `run_mission_keys.sh mcontext2 5 12`. Result: `decisionN=7968` (earlier
+    than mcontext1's 9741, and before the 9660-9792 target window),
+    `[scene-node-ptr-guard]` still 0 fires this soak (0/5 cumulative across
+    all soaks to date). `grep -l "processSceneNode + 8772"
+    scratch/s73_post_a_scene/*/run.log` still matches only `mcontext1` — the
+    s194 crash is now single-occurrence-and-non-recurring; per NEXT.md's own
+    decision tree, do NOT sink further budget localizing it, and it should
+    NOT be treated as the dominant blocker.
+
+    Instead, the crash that fired this soak (signal 6/SIGABRT, not
+    SIGSEGV/SIGBUS) is `RT64::FramebufferManager::reinterpretTileRecord`'s
+    `assert("Unimplemented reinterpretation logic." && (...))`
+    (`lib/rt64/src/hle/rt64_framebuffer_manager.cpp:476-480`) — an
+    RDP-framebuffer-format-reinterpretation combo the vendored RT64 shader
+    logic doesn't handle. Backtrace (both s96 and s195, identical shape):
+    `reinterpretTileRecord` ← `recordOperations` ← `State::fullSync` ←
+    `GBI_RDP::fullSync` ← `Interpreter::processRDPLists` ←
+    `Application::processDisplayLists` ← `run_rdp_submission` ←
+    `submit_rdp_range` ← `rs64_dpc_defer_end` ← `factor5_gfx_runner` ←
+    `rs64_run_lle_gfx` ← `RT64Context::send_dl` ← `gfx_thread_func`. This is
+    now a **confirmed 2-occurrence recurring crash** (two independent
+    sessions, s96 and s195), not a one-off — the condition for promoting it
+    out of "parked" (set at s96) is met. It now fires BEFORE the target
+    window, the same role `queueGPUUploadTMEM` played before its s192 guard
+    landed.
+
+    Secondary confirmation: the s194 crash-handler fix (siginfo + full
+    ARM64 register dump) generalizes correctly to a SIGABRT (not just
+    SIGSEGV/SIGBUS as previously confirmed) — `far=0x0`, `esr=0x56000080`
+    (SVC exception class, consistent with an abort trap), and the
+    `[CRASH][vifs-snapshot]` fields were internally sane
+    (`decisionN=7968 lastFireDecisionN=7922 decisionsSinceFire=46`). Second
+    positive control for the s194 instrument, different signal type.
+
+    **Best next work unit**: guard `reinterpretTileRecord`'s assert the same
+    defensive way as `queueGPUUploadTMEM` (s192,
+    `lib/rt64/src/render/rt64_texture_cache.cpp:1308-1329`) — replace the
+    hard `assert(...)` with an early return (skip the reinterpret dispatch,
+    matching the assert's own condition) plus a getenv-gated, bounded-
+    counter log (e.g. `ROGUESQ_LOG_REINTERPRET_TILE_GUARD`), mirroring the
+    existing pattern exactly. This directly targets the current dominant
+    pre-target-window blocker; if it works, the next soak should get
+    materially closer to (or past) decisionN=9792 and finally test whether
+    `[scene-node-ptr-guard]` (s190, still 0/5) fires at all. Requires editing
+    `lib/rt64` — must run `./submodule-patches/export.sh` and commit the
+    refreshed patch in the same session per hard rule. Do NOT touch the
+    `processSceneNode` s194 lead further (non-recurring, out of scope per
+    iron rule 4) or re-attempt disassembly tools this session (unconfirmed
+    to have changed since s193/s194).
 
 -43. **(s194) disassembly tools confirmed still blocked (otool/objdump both
     denied approval again) — pivoted instead to fixing the crash handler
@@ -3406,9 +3463,14 @@ and named it. Full detail: PORTING-STATE s143.
      (`ROGUESQ_LOG_COMPOSE_NPC_GUARD`), 0/544 clean negative control.
    - 13th, RT64-internal assert in
      `FramebufferManager::reinterpretTileRecord`
-     (`rt64_framebuffer_manager.cpp:480`, s96) — RDP-submission path,
-     not the hangar-tick family. No source-level fix available. 1
-     occurrence, park until 2nd recurrence.
+     (`rt64_framebuffer_manager.cpp:476-480`, s96) — RDP-submission path,
+     not the hangar-tick family. **2nd occurrence confirmed s195** (~99
+     sessions later, byte-for-byte identical backtrace) — no longer
+     single-occurrence, promote out of "parked." Now the current dominant
+     pre-target-window blocker (fires at decisionN~7968, before the
+     9660-9792 target window). Unguarded — best next work unit is an
+     early-return guard mirroring `queueGPUUploadTMEM`'s pattern (see s195
+     next-steps entry).
    - 14th, `reserveAndEmitDLEntry` (s97/s98): scene-graph-traversal /
      DL-entry shape, not a bare `MEM_W`-off-an-arg deref — flagged as
      possibly needing different treatment than the table-lookup family.

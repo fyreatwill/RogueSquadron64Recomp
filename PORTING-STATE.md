@@ -18004,3 +18004,113 @@ soak-blocking bottleneck or a one-off; that's the natural next probe.
   spot: `SA_SIGINFO` was being requested but its payload thrown away. Any
   future SIGSEGV/SIGBUS in this project now gets this register dump for
   free, no rebuild required.
+
+## Session 195 (2026-07-28) — re-ran s194's mcontext soak for a 2nd occurrence of the new processSceneNode-adjacent crash; it did NOT recur, but the soak instead hit a DIFFERENT, older crash class (13th, RT64 `reinterpretTileRecord` assert, parked at s96 "until 2nd recurrence") getting exactly that 2nd occurrence, ~99 sessions later, byte-for-byte identical backtrace — promoting it to the current dominant pre-target-window blocker
+
+**What ran.** Copied `scratch/agent/run_mcontext1.sh` to `run_mcontext2.sh`
+with an identical env block (same `mcontext1`/s192-s193 `sceneptrguard5`
+config, `PROBE_MODE=start_only`, `HOLD_S=120`, same `STICK_SCHEDULE`), tag
+changed to `mcontext2`. Same binary as s194 (`build/RogueSquadron64Recomp`,
+built 2026-07-28 05:39) — no rebuild, no regen/fixup needed (NEXT.md's
+plan step 1). Ran via `zsh scratch/agent/run_mcontext2.sh` in the
+background, blocked on completion via `TaskOutput(..., timeout=480000)`.
+No game process was running beforehand (checked `ps aux` first).
+
+**What it showed.**
+
+1. **s194's crash did NOT recur.** `grep -l "processSceneNode + 8772"
+   scratch/s73_post_a_scene/*/run.log` still matches only `mcontext1`. This
+   soak died at `decisionN=7968` (`[CRASH][vifs-snapshot]` line) — earlier
+   than mcontext1's 9741, and before the 9660-9792 target window was ever
+   reached. Per NEXT.md's own decision tree ("doesn't recur, dies to
+   something else... don't sink further budget localizing it"), the s194
+   lead is now correctly classified single-occurrence/non-recurring and
+   parked, not promoted to a confirmed root cause (iron rule 4 — a 2nd
+   occurrence is exactly what was being tested for, and it didn't come).
+
+2. **`[scene-node-ptr-guard]` (s190) still 0 fires** — `grep -c
+   "scene-node-ptr-guard\]" scratch/s73_post_a_scene/mcontext2/run.log`
+   returns 0, and a cumulative `grep -rc` across every `run.log` under
+   `scratch/s73_post_a_scene/*/` still returns 0 for every soak on record.
+   The s190 fix remains completely untested (now 0/5).
+
+3. **The soak instead died to a DIFFERENT, previously-catalogued crash:**
+   signal 6 (SIGABRT), `Assertion failed: ("Unimplemented reinterpretation
+   logic." && (...)), function reinterpretTileRecord, file
+   rt64_framebuffer_manager.cpp, line 480`. This is the project's own 13th
+   crash class, first seen at s96 with the note "1 occurrence, park until
+   2nd recurrence" (`docs/CURRENT-TRUTH.md`, goal-stack crash catalog).
+   `grep -rl "reinterpretTileRecord" scratch/s73_post_a_scene/*/run.log`
+   matches exactly two runs: `s96_dmacaller2` and `mcontext2` — this soak
+   IS that 2nd recurrence, ~99 sessions (s96 → s195) apart. The symbolized
+   backtrace is byte-for-byte identical in shape between the two
+   occurrences: `RT64::FramebufferManager::reinterpretTileRecord` ←
+   `recordOperations` ← `State::fullSync`'s lambda ← `State::fullSync` ←
+   `GBI_RDP::fullSync` ← `Interpreter::processRDPLists` ←
+   `Application::processDisplayLists` ← `ultramodern::run_rdp_submission`
+   ← `ultramodern::submit_rdp_range` ← `rs64_dpc_defer_end` ←
+   `factor5_gfx_runner` ← `rs64_run_lle_gfx` ← `RT64Context::send_dl` ←
+   `gfx_thread_func`. Two independent sessions hitting the identical stack
+   is a real confirmed-recurring result, not a fluke (iron rule 4
+   satisfied for THIS crash class, even though it wasn't the crash being
+   tested for).
+
+   Read the actual assert site (`lib/rt64/src/hle/
+   rt64_framebuffer_manager.cpp:439-480`): `reinterpretTileRecord` builds a
+   `CommandListReinterpretDispatch` from an RDP framebuffer-format
+   reinterpretation request (`op.reinterpretTile.{srcFmt,srcSiz,dstFmt,
+   dstSiz,tlutFormat}`) and asserts the combination matches one of 3
+   hard-coded cases the vendored RT64 compute shader currently implements;
+   any other combination — which is what the game is apparently emitting —
+   trips the assert unconditionally (this repo's build has asserts live,
+   not compiled out). The condition being asserted is already fully
+   computed as a boolean at the assert call site, meaning an early-return
+   guard (skip the reinterpret dispatch when the condition is false,
+   instead of asserting) is a small, mechanical, low-risk change — same
+   shape as the s192 `queueGPUUploadTMEM` zero-size guard
+   (`lib/rt64/src/render/rt64_texture_cache.cpp:1308-1329`), which is the
+   established precedent pattern in this codebase for exactly this
+   situation (an RT64-internal assert blocking soak progress, fixed with a
+   getenv-gated early-return + bounded fire counter, no engine-level
+   understanding of the framebuffer subsystem required).
+
+4. **Secondary finding — the s194 crash-handler fix generalizes to
+   SIGABRT, not just SIGSEGV/SIGBUS.** This is the first time the new
+   `[CRASH][siginfo]`/`[CRASH][mcontext]` dump has fired on a signal 6.
+   Fields are internally sane: `far=0x0` (no memory fault — correct for an
+   abort trap, not a deref), `esr=0x56000080` (SVC exception class,
+   consistent with the `abort()`→`pthread_kill` path visible in the
+   symbolized backtrace beneath the mcontext dump), and the
+   `[CRASH][vifs-snapshot]` decision-counter fields
+   (`decisionN=7968 lastFireDecisionN=7922 decisionsSinceFire=46
+   lastFireWasStalled=0 stalledNow=0`) are consistent with the rest of the
+   log around that point. Second positive control for the s194 instrument,
+   on a different signal type than the first (SIGSEGV/SIGBUS at s194).
+
+**What it rules out.**
+
+- Rules out (for now) that s194's `processSceneNode + 8772` /
+  unmasked-KSEG0-pointer crash is the dominant, reliably-recurring
+  soak-blocker — it did not recur on the very next soak with an identical
+  config, while a completely different, older crash did. Single-occurrence
+  status stands; no further localization budget should go into it until a
+  2nd occurrence actually appears.
+- Rules out that `reinterpretTileRecord`'s s96 occurrence was a one-off
+  fluke worth permanently parking — it has now recurred, with an identical
+  backtrace, confirming it as a real, stable crash class tied to a
+  specific unhandled RDP format-reinterpretation combination, not
+  environment noise.
+- Does not yet answer whether guarding `reinterpretTileRecord` will let a
+  soak reach the 9660-9792 target window — that requires actually landing
+  the guard and re-soaking (next work unit), not assumed here.
+
+**Carried forward, unchanged.** `[scene-node-ptr-guard]` (s190) is 0/5
+fires across all soaks on record — the primary open goal-stack question
+(does the s190 `processSceneNode` node-pointer fix work) remains
+completely untested. `queueGPUUploadTMEM`'s guard (s192) remains landed
+and confirmed live (s193 positive control) and was not touched this
+session. Disassembly tools (`otool`/`objdump`/`nm`/`lldb`) were not
+re-attempted this session — no evidence the allowlist changed since
+s193/s194, and the mcontext dump plus this session's stack-based crash
+identification continue to make disassembly unnecessary for the crashes
+seen so far.
