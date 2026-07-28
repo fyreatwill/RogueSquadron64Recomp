@@ -13390,3 +13390,145 @@ scene it's hiding turned out to still be the same menu, not a new one).
   support to the probe-wait loop (backward compatible, default 1).
 - `scratch/agent/run_leavedense1.sh` — new soak wrapper, `CAPTURE_TICK_S=0.2`.
 - `scratch/s73_post_a_scene/leavedense1/` — run log + 50 screenshots.
+
+## Session 151 (2026-07-27) — landed 2 more `composeNpcOrientationMatrix` guards (3rd/4th unguarded table-deref sites), soaked, and reached a genuinely NEW post-hangar scene for the first time in the whole investigation: a "STAR WARS" logo + scrolling-crawl-style intro, confirmed by both a never-before-seen VI origin and non-corrupted-hangar visual content, before crashing again ~6s later
+
+### Guard work (planned work unit)
+
+Delegated a source read of `composeNpcOrientationMatrix`
+(`static_5_800AB1C8`, `N64Recomp/RecompiledFuncs/funcs_40.c:6280-7130`) to
+find the 3rd, still-unlocated fault site s150 established must exist
+(past both the s100/s126 guards, 0/567 fires). Found it directly-verified
+by source read (not just the subagent's report): the first loop
+re-derives guard1's exact pointer (`byte*632 + base@-0x25A4($s5)`) a
+SECOND time into a different register chain (`s0`/`ctx->r16` instead of
+`v1`/`ctx->r3`) a few lines later in the same loop body
+(`0x800AB364-0x37C`), dereferenced unguarded at `0x800AB380`
+(`funcs_40.c:6582`) — a compiler CSE-miss duplicate of the same bug
+shape, invisible to guard1 because it's a different register. The same
+recomputed value is dereferenced a SECOND time at `0x800AB3A4`
+(`funcs_40.c:6607`), guarded independently (guard4) rather than assumed
+identical to guard3's checked value, since `composeRotationMatrixSlot2`
+is called in between and its callee-saved-register behavior wasn't
+proven. Landed both as `ROGUESQ_LOG_COMPOSE_NPC_GUARD3`/`GUARD4` in
+`fixup_game_funcs.py`, same template/bail-target (`L_800AB618`) as
+guard1/guard2, file-scoped to `funcs_40.c`. Full regen pipeline (delete
+`RecompiledFuncs/funcs_*.c` → `make_elf.py` → `regen_n64recomp.sh` →
+`fixup_game_funcs.py` once) — verified via grep both patches fired
+exactly `x1` before building. Build: clean, exit 0.
+
+### Soak (`composeguard3`, `run_composeguard3.sh`, full battery + both new guard flags armed)
+
+**Guards 3/4 got no data either way** — `[compose-npc-orient]` (the
+function's own entry log) fired **0 times** this run, meaning
+`composeNpcOrientationMatrix` was never even called, so this soak cannot
+confirm or refute whether the new guards fix the 3rd/4th sites. Not a
+regression either (nothing to regress).
+
+**But the process survived far longer than any prior soak in this
+family**: died at hold-iter 26 of 30 (~last 4s of the hold window),
+versus every previously-catalogued class in this exact repro shape dying
+between hold+1s and hold+17s. This alone is not proof the new guards
+caused it (composeNpcOrientationMatrix was never reached, so the 12th
+class simply didn't recur this run for unrelated reasons — crash-class
+selection has been highly soak-to-soak variable throughout this
+investigation) — flagged as suggestive, not conclusive.
+
+### The actual finding: a new scene appeared
+
+Reading this soak's own screenshots (`scratch/s73_post_a_scene/
+composeguard3/hold_13.png` through `hold_25_sl.png`) shows something
+never seen in ~150 sessions of this investigation: starting at
+`hold_13`, the corrupted craft-select hangar view is replaced by a
+**"STAR WARS" logo** (the same logo asset used in the game's own boot
+attribution sequence, per the unattended timeline in
+`docs/CURRENT-TRUTH.md`), growing larger across `hold_13`→`hold_17`
+(consistent with a dolly/zoom animation), fading to black by `hold_22`,
+then at `hold_24`/`hold_25` small yellow glyph fragments appear and
+streak/shrink across the frame in a pattern consistent with a scrolling
+opening-crawl-style text intro (fragments read roughly "...s ssssss
+ssss ss...ssed...sln..." — too corrupted/cropped to transcribe a full
+phrase, but the motion and typography read as crawl text, not menu UI).
+
+**Independent, code-level confirmation**: `[phase] vi_width` log shows
+exactly one phase transition in the back half of this run — width 640,
+origin **`0x006A2900`**, at t=142.4s (`run.log:71058`) — timed almost
+exactly to the `hold_24`/`hold_25` frames (hold started ~t=116.6s per
+the driver's own press schedule, so hold+25≈141.6s). This origin is
+**not** any of the 3 previously-catalogued menu/outdoor origins
+(`0x690400` outdoor, `0x6AB400` war room/craft-select, plus the boot
+sequence's own `0x000280`/`0x66A500`/`0x790400`) — the first genuinely
+new VI origin observed in this entire investigation. Per s48's own
+caveat, VI parameters alone can't identify a scene, but a **novel**
+value co-occurring with visually distinct, non-corrupted-hangar content
+is a different, stronger claim than "same params, assume same scene."
+
+**Two independent lines of evidence (visual + VI-origin) converge**: a
+real, new scene began playing. Whether it is a genuine per-mission
+intro cinematic (Star Wars films' movies open the same way; plausible
+this game apes that per-mission) or an errant jump into replaying
+boot-sequence scene-graph data (the corrupted camera path could plausibly
+have wandered into stale/reused node pointers that happen to describe
+the boot logo) is **not yet distinguished** — both are consistent with
+what was observed. This directly **supports hypothesis (a)** from s150
+("this camera path IS a genuine launch cinematic") over hypothesis (b)
+("dead-end animation that never leaves hangar-selection") — the process
+was NOT still executing hangar-menu code by the time of the new scene;
+see crash backtrace below, which is scene-graph-render code, not
+menu-specific.
+
+### The crash that ended it
+
+`[CRASH] caught signal 10 (Bus error: 10)`, backtrace resolves to
+`processSceneNode + 7640` (appearing twice consecutively — likely
+self-recursion, though the huge byte offset relative to this function's
+expected small "per-node body" size per `symbol_files/main_overlay.txt`
+makes a nearest-symbol misattribution plausible, same caveat as the
+10th/18th classes' unconfirmed names) ← `traverseSceneGraphRecursive`
+← `setupCameraMatrices` ← `static_5_800C9BF0` ← `menuOverlayInit` ←
+`mainGameLoop`. `ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3` (which cover the
+already-catalogued 14th class, `reserveAndEmitDLEntry`, whose typical
+backtrace also runs through `submitSceneNodeRender`/`processSceneNode`)
+were armed and **did not fire** — inconclusive whether this is the 14th
+class in an inlined/misattributed form or a genuinely distinct site;
+not resolved this session. `menuOverlayInit` is still in the stack at
+crash time — the intro cinematic is being driven from the same
+top-level function as the hangar menu (unsurprising; likely one
+big per-frame dispatcher for the whole post-title flow), so its
+presence doesn't by itself argue against a real scene change.
+
+### Diagnostics / stability, this soak
+
+`compose-npc-orient` entry log: 0 (function never reached, no guard
+data). `emit-dl-guard2`/`3`: 0/0 (no data on the 14th class either).
+`do_rom_read`/`piDmaWorker`: not grepped this session (Thread B has been
+closed since s147, not re-checked). `thr-resume bad=1`: 0. `missing-func`/
+`UnhandledJump`: 0. LLE tasks: 5689. `fs` max 4009. `ost-wb SKIP_OOB`: 18
+(gate active, no regression).
+
+### Conclusion / next steps
+
+Do not re-run this exact soak expecting the same crash-class outcome —
+crash-class selection has been highly variable across ~20 sessions now;
+the composeNpcOrientationMatrix guards remain unvalidated (no positive
+control yet) simply because that function wasn't reached this time.
+**Higher priority than re-testing the guards**: densify capture
+specifically across `hold_13`→`hold_25` (the STAR WARS-logo-through-crawl
+window) in a fresh soak, and identify/guard whatever crashes at
+`processSceneNode`/offset+7640 so the process can survive into whatever
+comes after the crawl — if a real mission/flight scene follows, M3's
+"first gameplay" milestone is close; if it loops back to the title/boot
+scene instead, that resolves the cinematic-vs-erroneous-jump question
+the other way.
+
+### Files
+
+- `~/Documents/Tools/N64Recomp/fixup_game_funcs.py` — added
+  `_compose_npc_orient_guard3_patch`/`_compose_npc_orient_guard4_patch`
+  (`ROGUESQ_LOG_COMPOSE_NPC_GUARD3`/`GUARD4`), same file as every prior
+  compose-npc-orient guard. Not committed (separate checkout, same
+  flagged-uncommitted posture as every session since s90).
+- `scratch/agent/run_composeguard3.sh` — new soak wrapper, copied from
+  `run_leavedense1.sh` plus the two new guard flags.
+- `scratch/s73_post_a_scene/composeguard3/` — run log (76312 lines) + 25
+  hold screenshots + 25 dense post-Start-press screenshots.

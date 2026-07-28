@@ -657,9 +657,55 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s150)
+## Next steps, in order of expected value (s151)
 
--2. **NEW TOP PRIORITY (s150): "single Start leaves SELECT YOUR CRAFT into
+-3. **NEW TOP PRIORITY (s151): a genuinely NEW post-hangar scene appeared
+    for the first time in ~150 sessions — a "STAR WARS" logo + scrolling-
+    crawl-style intro — before crashing again ~6s later. This SUPPORTS
+    s150's hypothesis (a) ("this camera path is a genuine launch
+    cinematic") over hypothesis (b) ("dead-end hangar animation").**
+    Landed 2 more `composeNpcOrientationMatrix` guards (3rd/4th unguarded
+    table-deref sites, `ROGUESQ_LOG_COMPOSE_NPC_GUARD3`/`GUARD4` in
+    `N64Recomp/fixup_game_funcs.py`) per item -2 below, then soaked
+    (`composeguard3`). The function was never reached this run (0
+    `[compose-npc-orient]` entry logs), so the guards remain
+    **unvalidated** — but the process survived to hold-iter 26/30 (far
+    longer than any prior soak in this family, which died hold+1-17s)
+    and its own screenshots (`scratch/s73_post_a_scene/composeguard3/
+    hold_13.png` through `hold_25_sl.png`) show a **"STAR WARS" logo**
+    (the same asset as the game's own boot attribution sequence) growing
+    across `hold_13`→`hold_17` (dolly/zoom), fading to black by
+    `hold_22`, then crawl-text-like glyph fragments streaking across
+    `hold_24`/`hold_25` — visually nothing like the corrupted hangar
+    seen in every prior soak. **Independent code-level confirmation**:
+    `[phase] vi_width` shows a transition to width 640, origin
+    **`0x006A2900`** at t=142.4s — timed almost exactly to `hold_24`/
+    `hold_25` (hold started ~t=116.6s) — the **first novel VI origin**
+    observed in this entire investigation (not `0x690400` outdoor, not
+    `0x6AB400` war room/craft-select, not any boot-sequence origin). Two
+    independent lines (visual + VI-origin) converge on "a real, new
+    scene began." **Not yet resolved**: whether this is a genuine
+    per-mission intro cinematic or an errant jump into replaying stale
+    boot-sequence scene-graph data — both are consistent with what was
+    observed. Crash that ended it: SIGBUS resolving to `processSceneNode
+    + 7640` (self-recursive-looking, offset large enough that a nearest-
+    symbol misattribution is plausible) ← `traverseSceneGraphRecursive`
+    ← `setupCameraMatrices` ← `static_5_800C9BF0` ← `menuOverlayInit` ←
+    `mainGameLoop`; `emit-dl-guard2`/`3` (which cover the already-
+    catalogued 14th class, `reserveAndEmitDLEntry`, sharing this same
+    `submitSceneNodeRender`/`processSceneNode` backtrace shape) were
+    armed and did not fire — inconclusive whether this is the 14th class
+    inlined or a genuinely distinct site. **Next work unit**: densify
+    capture (`CAPTURE_TICK_S=0.2` or lower) specifically across the
+    `hold_13`→`hold_25` window in a fresh soak to nail down the crawl
+    text and the exact crash timing, AND source-read/guard whatever
+    crashes at `processSceneNode`+7640 so the process can survive past
+    the crawl — if a real mission/flight scene follows, M3 is close; if
+    it loops back to title/boot, that resolves the cinematic-vs-
+    erroneous-jump question the other way. Full detail: PORTING-STATE
+    s151.
+
+-2. **s150: "single Start leaves SELECT YOUR CRAFT into
     hangar-flight" (s75/s76) is OVERTURNED — mission-entry is unanswered
     again.** Densified capture (0.2s-tick screenshots across the
     post-Start-press window, `run_leavedense1.sh`/`leavedense1/`) shows
