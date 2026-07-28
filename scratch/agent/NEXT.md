@@ -1,114 +1,106 @@
-# NEXT work unit — re-attempt the stall repro now that the
-# FramebufferStorage::store OOB-read crash is fixed
+# NEXT work unit — find what stops graphics-task submission in a run that
+# reaches the stall WITHOUT `[thr-resume-skip]` firing
 
-Read PORTING-STATE Session 182 in full before doing anything else (`grep -n
-"^## Session 182" PORTING-STATE.md`); this file only has the actionable
-summary. Also read docs/CURRENT-TRUTH.md's `-34` next-steps item (top of the
-list) and `-33` right below it (still the original s180/s181 goal, unchanged).
+Read PORTING-STATE Session 183 in full before doing anything else (`grep -n
+"^## Session 183" PORTING-STATE.md`); this file only has the actionable
+summary. Also read docs/CURRENT-TRUTH.md's `-35` next-steps item (top of the
+list).
 
-## What s182 established (read before doing anything else)
+## What s183 established (read before doing anything else)
 
-- Re-ran the `schedcaller`-shape soak (`schedguard2`) with the s181
-  `[thr-create-id]`/`thr=%p` instrument still armed. It died **even earlier**
-  than s181's own attempt (hold-iter 1, ~1s into the 120s hold) to a
-  brand-new crash: SIGBUS in `RT64::FramebufferStorage::store`'s `memcpy`
-  (`lib/rt64/src/hle/rt64_framebuffer_storage.cpp:30`), called from
-  `RT64::State::fullSync`'s color/depth read-into-storage blocks
-  (`rt64_state.cpp:2227`/`2271`).
-- Root-caused it: `FramebufferManager::get()`'s s78 refuse gate keeps a wild
-  FB out of `framebuffers[]`, but the `refuseFb` it returns **still carries
-  the wild `width`/`height`/`address`** (only `readHeight` is forced to 0).
-  `State::fullSync`'s `if (colorFb->height > colorFb->readHeight)` block
-  doesn't know the FB was refused, so it still reads `&RDRAM[storageAddress]`
-  for `readFbBytes` bytes using those wild dimensions — with no bounds check
-  anywhere in that path — and runs off the end of the 8MB RDRAM buffer.
-  Confirmed exactly: a same-tick `[fb-get] REFUSE addr=0x00FF3EC0 w=225
-  h=158 oob=1` fired ~1300 lines before the crash; its computed `rangeEnd`
-  lands ~8MB past the buffer's actual 8MB size.
-- **Fixed** (`lib/rt64/src/hle/rt64_state.cpp`, both the color block
-  ~2222-2254 and the mirrored depth block ~2284-2312): skip the
-  `fbStorage.store`/RDRAM read when `storageAddress >= 0x800000 ||
-  storageAddress + readFbBytes > 0x800000` (reusing s78's 8MB constant),
-  logging `[fbsync-oob-skip] color|depth #%d addr=... bytes=...` (throttled,
-  same pattern as `[fb-get] REFUSE`). `readHeight` still advances to `height`
-  either way so a skip doesn't get retried every tick. Pure `lib/rt64` host
-  C++ — rebuilt clean, patch exported (`submodule-patches/rt64.patch`) +
-  committed.
-- **Validated same session**: soak `schedguard3` (identical env block,
-  tag-bumped) got a clean positive control (`[fbsync-oob-skip]` fired
-  17/17), the exact crash that killed `schedguard2` did **not** recur, and
-  the process progressed further (`decisionN=8016` vs `7734` at death,
-  hold-iter 3 vs 1) before dying to a **different, already-catalogued**
-  crash instead: a SIGSEGV entirely inside Apple's Metal shader-compiler
-  internals (`MTLCompilerFSCache`/`MultiLevelAirCache`, no source on our
-  side) — same class first seen s83 and s96, known to be non-deterministic
-  (doesn't always recur).
-- Neither `schedguard2` nor `schedguard3` fired `[thr-resume-skip]` even
-  once — s180's "2nd independent confirmation" of the scheduler
-  silent-drop mechanism (the actual M3 top-priority target) is **still
-  outstanding**. This session's fix only removed one specific early-crash
-  competitor.
+- Re-ran the `schedcaller`-shape soak a 4th time (`schedguard4`, verbatim
+  copy of `schedguard3` except the tag). It reached **hold-iter 68** — the
+  deepest any soak in this line has gotten (previous best: hold-iter 3) —
+  and **sustained the target stall for 2688 consecutive `[vi-fs-decision]`
+  decisions** (`#9792`→`#12480`, all `SKIP ... stalled=1 pairs=0`) before
+  dying.
+- Death: SIGBUS in `rs_free` (`funcs_0.c:3093`) ← `rebuildActiveDisplayObjectList`
+  ← `static_5_800C9BF0` ← `menuOverlayInit` ← `mainGameLoop` ←
+  `mainBootstrapWorker`. Same shared-heap-corruption walker family as s164's
+  22nd class (`rs_malloc`, same caller) and s167's 24th class (`rs_free`,
+  different caller) — not a new independent bug, low priority.
+- **The key result**: `grep -c "thr-resume-skip" run.log` → **0** for the
+  entire run, despite the process reaching, sustaining, and dying inside the
+  exact stall region s180 characterized. s180's single prior occurrence
+  found a `[thr-resume-skip] ... bad_total=1` firing immediately before that
+  run's stall onset and framed it as *the* root cause. This run's onset was
+  just as tightly timed (`#9770` last `FIRE` → `#9792` first `stalled=1`,
+  ~22 decisions / a few hundred ms) but had **zero** scheduler-resume
+  activity anywhere nearby — checked the raw log window directly
+  (`sed -n '3862860,3866000p' schedguard4/run.log`, tag-filtered): the only
+  non-heap-walk line in that whole window is the `#9770 FIRE` line itself.
+- This **weakens, does not refute**, s180's mechanism: it may still be *a*
+  valid cause (s180's own occurrence), just not the *only* one. Multiple
+  independent mechanisms landing on the same externally-observed symptom
+  (`[vi-fs-decision] stalled=1 pairs=0` sustained, `[lle task]`/
+  `[swap-ack-wait]` simply stop being invoked) is now the better-supported
+  framing.
+- Also found: `rdpFs` plateauing and the actual stall are **two distinct
+  events**, not one. `rdpFs` climbed to 3999 then jumped to 4010 at decision
+  `#9144`, and normal `FIRE reason=swap` activity continued for 626 more
+  decisions (`#9144`→`#9770`) at that same pinned `rdpFs` value before the
+  real stall (no more FIREs at all) began at `#9792`. The plateau value
+  (4010 this run vs. 3560-3802 in prior runs) is content-dependent, not a
+  fixed hang ceiling — the "tighten the ceiling band" open item from prior
+  sessions is retired, not worth further soaks.
 
 ## Do next, in order
 
-1. **Re-run the `schedcaller`-shape soak again** (copy `run_schedguard3.sh`
-   to a new tag, e.g. `schedguard4` — do not reuse a tag, it overwrites
-   `run.log`). Same env block, same `STICK_SCHEDULE`. Goal: get past the
-   Metal-internal SIGSEGV (non-deterministic, may not recur this time) and
-   reach the actual stall region (`[vi-fs-decision]` decisions in the
-   ~8000-16256 range, `rdpFs` plateauing ~3560-3802).
-2. **If a run reaches the stall and fires `[thr-resume-skip]`**: grep the
-   line's `thr=0x...` value, then grep this run's own `[thr-create-id]`
-   lines for the matching `thr=` value. That gives the dropped thread's
-   `id`/`pri`/`entry`/`thr_rdram` — cross-reference `entry` against s181's
-   catalogued list (PORTING-STATE Session 181) to name the thread's role.
-   This is the actual answer to "is it the swap-ack producer" that
-   s180-s182 still haven't been able to give.
-3. **If the Metal-internal SIGSEGV recurs 2-3 times in a row instead**: per
-   rule 8, stop blindly re-attempting and consider whether it's worth a
-   characterization pass of its own — NOT a fix (no source on our side), but
-   understanding *what* triggers a first-time shader/material compile at
-   this point in the hangar scene might suggest a way to pre-warm or avoid
-   it. This would be a new, separate work unit, not a continuation of the
-   scheduler-stall investigation.
-4. **Once the dropped thread's role is known (from step 2), decide the fix
-   shape** (this was s180/s181's original step 2, still valid, still not
-   done):
-   - Make `resume_thread_tagged`'s bad-context branch retry the next
-     `running_queue` entry instead of just returning.
-   - Give `run_next_thread_and_wait`'s caller (the message-queue blocking
-     path in `mesgqueue.cpp:105/143`) a way to detect its target thread
-     will never run and recover (timeout, requeue-and-retry).
-   Either is a real change to shared scheduler code — same care as every
-   prior fix here (truncate register-value comparisons through `U32()`,
-   keep any guest-code-adjacent path ABI-correct via `goto` to the real
-   exit label, validate with a same-run positive AND negative control
-   before trusting it).
-5. **Land the fix, rebuild, export+commit if `lib/` touched, soak it.**
-   Discriminating outcomes:
-   - Fix prevents the stall entirely (thread 3 / the hangar loop keeps
-     advancing past where `[thr-resume-skip]` used to fire) → strong
-     support, but still needs a repeat before calling this
-     milestone-closing.
-   - Stall still occurs but `[thr-resume-skip]`/`bad_total` no longer
-     precedes it → refutes the mechanism as *sufficient*.
-   - Stall recurs with the same signature unfixed → confirms the mechanism
-     but the fix attempt didn't address it — iterate on the fix.
+1. **Source-read before instrumenting (rule 5)** — three candidates, in
+   order of how directly they could explain "producer stops being invoked,
+   zero thread-resume log activity nearby":
+   a. Re-examine the outer hangar-tick loop (the one s180 already confirmed
+      "stops iterating", not the callee) for an exit/break path that does
+      NOT go through `resume_thread_tagged`'s bad-context branch at all —
+      e.g. a *normal*, successful thread switch (context fine, `bad=0`) that
+      simply never switches back to the hangar-loop thread. Read
+      `lib/N64ModernRuntime/ultramodern/src/threads.cpp`'s
+      `run_next_thread`/`run_next_thread_and_wait` and the scheduler's
+      `running_queue` logic end to end — is there a path where a thread
+      voluntarily yields (not via the UAF guard) and its intended resumer
+      is simply never re-queued?
+   b. Read `viRetraceHandlerThread`/`musyxSynthFrame` (the per-VI-retrace
+      audio tick, source-confirmed s101/s102) for any lock/mutex/resource
+      shared with the graphics-task producer that could block it silently
+      (no error, no log) if the audio thread itself stalls or loops.
+   c. Check whether `[rs-malloc-walk]`/`[rs-free-walk]` volume — which
+      dominates the log almost totally during and immediately after the
+      stall onset in `schedguard4` — correlates with a heap-exhaustion or
+      allocation-stall condition specifically on the graphics-task
+      producer's own allocation path (does it call `rs_malloc`/`rs_free`
+      anywhere in its per-frame path? grep before assuming).
+2. **Land a targeted instrument for whichever candidate survives source
+   review** — do not instrument all three blind. Keep everything already
+   armed (all the `schedguard3`/`schedguard4` env vars, `[thr-create-id]`,
+   `thr=%p`) since they're free and a future run correlating with
+   `[thr-resume-skip]` is still a valid, useful data point.
+3. **Re-run the soak** (new tag, e.g. `schedguard5` — copy `run_schedguard4.sh`,
+   do not reuse a tag). Discriminating outcomes:
+   - New instrument fires right at the `#9770`→`#9792`-equivalent
+     transition in this run → strong candidate, worth a fix design.
+   - Fires but not correlated with the transition → refute, try the next
+     candidate.
+   - Stall recurs with `[thr-resume-skip]` firing this time → s180's
+     mechanism gets its 2nd independent confirmation after all; proceed to
+     the original fix-design step (see PORTING-STATE Session 180/181 step
+     2, still valid: retry-next-`running_queue`-entry vs.
+     give-the-caller-a-timeout).
 
 ## Do not
 
-- Do not design or land a fix keyed on `id==0` alone — s181 proved that's
-  ambiguous among ≥9 threads. Use the `thr=%p` cross-reference (step 2
-  above) first.
-- Do not re-open the `submitSceneNodeRender+28208` SIGBUS from s181's soak,
-  or try to "fix" the Metal-internal shader-compiler SIGSEGV directly (no
-  source on our side) — both are flagged, not primary targets this
-  iteration.
+- Do not re-litigate "does the outer hangar loop stop iterating vs. does the
+  callee silently skip the wait" as a whole — s180 already closed the
+  outer-loop-stops-iterating part. What's open now is narrower: *why* it
+  stops, in a run where the one known why (s84 UAF guard) didn't fire.
+- Do not treat s180's mechanism as dead — it's one confirmed instance, just
+  not a necessary one. A future run where `[thr-resume-skip]` fires right at
+  onset is still valuable corroborating evidence for that specific path.
+- Do not spend a soak chasing the `rs_free ← rebuildActiveDisplayObjectList`
+  crash — it's an already-catalogued heap-corruption family, lower priority
+  than the stall-mechanism question.
 - Do not turn on `ROGUESQ_LOG_THREAD_RESUME=1` for this soak (s93's
   confound: it perturbs timing enough to change which crash/stall wins the
-  race). The instruments already armed are always-on and don't need it.
-- Do not re-litigate "does the outer hangar loop stop iterating vs. does the
-  callee silently skip the wait" — s180 closed this (outer loop stops).
+  race).
 
 ## Blocking on a long-running soak (learned the hard way, still current)
 
@@ -224,11 +216,11 @@ summary block is complete.
   extracted file, rather than piping large greps through further shell
   commands (each Bash call must be a single operation; chained pipes with
   `awk`/`head`/`tail` after a `grep` frequently get denied as "multiple
-  operations" even though they're one shell pipeline). Also: `sed -n
-  'N,Mp' file` per-file works fine for reading small windows around known
-  line numbers; a shell loop with `for loc in "file:line" ...; do ...;
-  done` gets denied ("Contains simple_expansion") — issue one `sed` call
-  per location instead, batched in parallel tool calls.
+  operations" even though they're one shell pipeline). `sed -n 'N,Mp' file`
+  per-file works fine for reading small windows around known line numbers.
+  `awk` range patterns like `NR==A,NR==B && /x/` do NOT behave as expected
+  (parses as a weird precedence trap) — use `sed -n 'A,Bp' file | grep
+  ...` instead for "lines A-B matching X".
 - When a soak survives the full hold window, `run_mission_keys.sh`'s
   summary line `UnhandledJump: N` can be nonzero from totally benign RSP
   microcode fallback noise — grep the actual matched lines before reading
