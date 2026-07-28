@@ -659,9 +659,31 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s170)
+## Next steps, in order of expected value (s171)
 
--22. **NEW TOP PRIORITY (s170): the s169-soak-2 runtime-scheduler SIGSEGV
+-23. **NEW TOP PRIORITY (s171): landed the crash-instant `[vi-fs-decision]`
+    snapshot s170 asked for (`rs64_get_vifs_crash_snapshot`, always-on, no
+    env var — `lib/rt64/src/hle/rt64_state.cpp` + `src/main/main.cpp`), but
+    3 soaks of the same recipe (0/3) never reproduced the target scheduler
+    SIGSEGV — instead hit 2 different, earlier-position crashes (a new,
+    not-yet-characterized `submitSceneNodeRender+16780` site, and a
+    recurrence of the old `frameStartReset`/`heapWalker`-inlining class
+    whose guard still never fires) plus one crash-free full hold. Checking
+    FIRE-event spacing in the logs around both crashes found FIRE recurs
+    every 8–61 decisions in this active window — **`decisionsSinceFire`
+    values of 22–24 are unremarkable/average spacing here, not proximity
+    evidence** — this undercuts, rather than supports, s170's single-run
+    stall-clear-adjacency lead. Bigger finding: both crashes happened at
+    hold-iter 4–8, far earlier than where the target bug actually lives
+    (deep in the late-run ~90%-stuck stall region) — **these soaks never
+    reached the phase the hypothesis is about.** Per rule 8, this exact
+    recipe is closed for this question (0/3 this session, 2/3 total across
+    s169/s170/s171). Next: either fix/characterize what's killing runs at
+    hold-iter 4–8 so soaks reliably reach the deep-stall window first, or
+    keep accumulating scheduler-SIGSEGV data points across batches of 3.
+    Full detail: PORTING-STATE s171.
+
+-22. **(s170, superseded as top priority by s171 above): the s169-soak-2 runtime-scheduler SIGSEGV
     recurred a 2nd time (soak 3/3 of the same recipe) — closes the 14th-
     class pop-guard question (item -21 below, 0/3, tentatively-fixed-
     unconfirmed) and opens this as the live frontier.** Backtrace

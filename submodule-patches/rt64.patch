@@ -3299,7 +3299,7 @@ index 6051f4e..e4a8fc3 100644
          uint64_t hash = TMEMHasher::hash(TMEM, loadTile, width, height, tlut, TMEMHasher::CurrentHashVersion);
          if (hashSet.find(hash) == hashSet.end()) {
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..973d2ef 100644
+index 10f98af..b21d83e 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -4361,7 +4361,33 @@ index 10f98af..973d2ef 100644
                          }
                      }
  
-@@ -1899,6 +2806,122 @@ namespace RT64 {
+@@ -1873,6 +2780,25 @@ namespace RT64 {
+         clearExtended();
+     }
+     
++    // s171: crash-instant snapshot of [vi-fs-decision] state, read by the
++    // SIGSEGV/SIGBUS handler in main.cpp (rs64_get_vifs_crash_snapshot) to test
++    // whether the s169/s170 runtime-scheduler SIGSEGV is adjacent to a
++    // stall-clear FIRE event or independent of it (H1 vs H2, see NEXT.md).
++    // Updated on every decision below, not just when the rate-limited log
++    // line actually prints, so it reflects the true most-recent state.
++    static std::atomic<uint64_t> g_vifsDecisionSnapshot{0};
++    static std::atomic<uint64_t> g_vifsLastFireDecisionSnapshot{0};
++    static std::atomic<int> g_vifsLastFireWasStalledSnapshot{0};
++    static std::atomic<int> g_vifsStalledNowSnapshot{0};
++
++    extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *lastFireDecisionN,
++                                                  int *lastFireWasStalled, int *stalledNow) {
++        *decisionN = g_vifsDecisionSnapshot.load(std::memory_order_relaxed);
++        *lastFireDecisionN = g_vifsLastFireDecisionSnapshot.load(std::memory_order_relaxed);
++        *lastFireWasStalled = g_vifsLastFireWasStalledSnapshot.load(std::memory_order_relaxed);
++        *stalledNow = g_vifsStalledNowSnapshot.load(std::memory_order_relaxed);
++    }
++
+     void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
+         // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
+         if (debuggerInspector.paused && !fromEarlyPresent) {
+@@ -1899,6 +2825,132 @@ namespace RT64 {
              }
          }
          
@@ -4426,6 +4452,16 @@ index 10f98af..973d2ef 100644
 +                    rIdx = 4;
 +                }
 +                logByReason[rIdx]++;
++
++                // s171: always update the crash snapshot, independent of the
++                // rate-limited print below.
++                g_vifsDecisionSnapshot.store(decisionN, std::memory_order_relaxed);
++                g_vifsStalledNowSnapshot.store(stalled ? 1 : 0, std::memory_order_relaxed);
++                if (willFire) {
++                    g_vifsLastFireDecisionSnapshot.store(decisionN, std::memory_order_relaxed);
++                    g_vifsLastFireWasStalledSnapshot.store(!addressChanged ? 1 : 0, std::memory_order_relaxed);
++                }
++
 +                // First 48 of each reason class; every 32nd overall; every fire.
 +                const bool logIt = willFire || (logByReason[rIdx] <= 48) || ((decisionN % 32) == 0);
 +                if (logIt) {
@@ -4484,7 +4520,7 @@ index 10f98af..973d2ef 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1959,8 +2982,20 @@ namespace RT64 {
+@@ -1959,8 +3011,20 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -4507,7 +4543,7 @@ index 10f98af..973d2ef 100644
                  return;
              }
          }
-@@ -1972,7 +3007,11 @@ namespace RT64 {
+@@ -1972,7 +3036,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -4520,7 +4556,7 @@ index 10f98af..973d2ef 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +3072,51 @@ namespace RT64 {
+@@ -2033,26 +3101,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");

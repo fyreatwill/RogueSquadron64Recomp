@@ -15886,3 +15886,151 @@ scaffolding for this analysis, deleted before commit.
    fallback, per NEXT.md's own ordering — and per Result 3 above, may
    turn out to be the same investigation as item 1 rather than a
    separate one.
+
+## Session 171 (2026-07-28) — landed a crash-instant `[vi-fs-decision]` snapshot per s170's own plan; 3 soaks never reproduced the target scheduler SIGSEGV, but the FIRE-spacing check that would have supported the stall-clear-adjacency hypothesis instead undercuts it
+
+Picked up mid-iteration: `scratch/agent/STATUS` was `WORKING` with `OUTCOME` deleted
+(uncommitted) at session start, from an iteration that had started but not
+finished — no dangling soak logs existed this time (unlike going into s170),
+so this session started the prescribed work unit fresh rather than analyzing
+leftovers.
+
+### What was built
+
+s170's NEXT.md asked for a soak that logs `[vi-fs-decision]`'s state at the
+*moment* `[CRASH]` fires, not reconstructed after the fact by scanning the
+full log — to discriminate **H1** (the s169/s170 runtime-scheduler SIGSEGV
+only happens near a stall-clear FIRE event) from **H2** (it can happen at any
+point regardless of stall state).
+
+Added a small always-on instrument, no new `ROGUESQ_*` env var (the point was
+to have it fire unconditionally alongside any crash, not to require
+remembering to arm it):
+
+- `lib/rt64/src/hle/rt64_state.cpp`: 4 file-scope `std::atomic` snapshot
+  variables (`decisionN`, `lastFireDecisionN`, `lastFireWasStalled`,
+  `stalledNow`), updated on **every** `[vi-fs-decision]` decision inside
+  `State::updateScreen` (not just the rate-limited ones that actually print),
+  plus an `extern "C" rs64_get_vifs_crash_snapshot(...)` accessor — same
+  static-atomic-plus-accessor pattern already used for
+  `rs64_dpc_get_cumulative_fullsyncs` (`src/rsp/dpc_bridge.cpp`), just in the
+  opposite direction (lib/rt64 → src/main instead of src → lib/rt64).
+- `src/main/main.cpp`: the POSIX `SA_SIGINFO` handler (SIGSEGV/SIGBUS/SIGABRT)
+  now calls that accessor and prints
+  `[CRASH][vifs-snapshot] decisionN=... lastFireDecisionN=... decisionsSinceFire=... lastFireWasStalled=... stalledNow=...`
+  immediately after the existing `[CRASH] caught signal...` line, before the
+  backtrace.
+
+Full regen not needed (no guest-code/fixup change this session — pure
+runtime/host C++). `DEVELOPER_DIR=... cmake --build .` exit 0, only
+pre-existing-class warnings (json literal-operator deprecation, imgui
+non-trivial memset — both present before this change). `lib/rt64` patch
+re-exported via `submodule-patches/export.sh` per the hard rule (this is the
+first `lib/` edit since s84's thread-resume gate to touch `rt64_state.cpp`
+outside guest-fixup territory).
+
+### 3 soaks, same env block as s169/s170's `run_dlentrypopguard1.sh` (`scratch/agent/run_crashvifs1.sh`)
+
+None reproduced the target scheduler SIGSEGV (`idle_thread_handle ->
+swap_to_thread -> wait_for_resumed -> tryWait -> atomic load`, signal 11).
+All 3 outcomes below are logged in full at `scratch/agent/crashvifs1_run1.log`,
+`crashvifs1_run2.log` (crash-free), and the live
+`scratch/s73_post_a_scene/crashvifs1/run.log` (soak 3's raw log — copy aside
+before re-running this script again, it overwrites in place).
+
+- **Soak 1**: SIGBUS at hold-iter 4 (~4s post-leave). Backtrace faults
+  **directly inside `submitSceneNodeRender+16780`** (no deeper frame below
+  it) — this exact offset does not match any previously-catalogued crash
+  site found by grepping `PORTING-STATE.md` for `submitSceneNodeRender +`;
+  not source-characterized this session (would be a 2nd work unit; flagged,
+  not chased). Snapshot: `decisionN=8126 lastFireDecisionN=8104
+  decisionsSinceFire=22 lastFireWasStalled=1 stalledNow=0`.
+- **Soak 2**: **crash-free**, full 120s hold survived, killed only at the
+  scripted grace-window end — no `[CRASH]` line at all, so no data point for
+  H1/H2 this run (expected; not every soak of this recipe crashes, matching
+  s169 soak 1's history).
+- **Soak 3**: SIGBUS at hold-iter 8 (~7s post-leave). Backtrace:
+  `frameStartReset+532` — an **exact offset match** to the class
+  root-caused earlier in the project's history (see the `heapWalker`
+  investigation above, PORTING-STATE ~line 14189): `frameStartReset`'s own
+  guest body has no data-derived dereference, so this is an inlining
+  artifact of its first unconditional callee, `heapWalker`, whose 4
+  unguarded free-list-head sites already carry a guard
+  (`ROGUESQ_LOG_HEAPWALKER_GUARD`, armed in this env block). The guard did
+  **not** fire (`grep -c heapwalker` = 0), continuing that guard's
+  long-standing unvalidated status — informative, not new. Snapshot:
+  `decisionN=8414 lastFireDecisionN=8390 decisionsSinceFire=24
+  lastFireWasStalled=0 stalledNow=0`.
+
+Per rule 8's 3-attempt budget: **this specific recipe is now closed for the
+"reproduce the target scheduler SIGSEGV" question** — 0/3 across this
+session plus 2/3 from s169/s170 (2 total hits, both under a different recipe
+shape/duration than these 3). Do not spend a 4th soak here blindly hoping to
+hit it again; see "Next" below for the reframed approach.
+
+### The FIRE-spacing check that complicates the stall-clear-adjacency hypothesis
+
+Before treating `decisionsSinceFire=22`/`24` as any kind of signal, checked
+what "normal" spacing between `[vi-fs-decision]` FIRE events looks like in
+the window where these 2 crashes actually happened (`grep "vi-fs-decision.*FIRE"`
+on the tail of each log). In both logs, FIRE events (`reason=swap` and
+`reason=stalled` both present) recur roughly **every 8–61 decisions**
+throughout this **active** early-post-leave window — nothing like the
+"~90% stuck in `stalled=1 pairs=0`" signature s170 found in the *deep,
+late-run* stall region. A `decisionsSinceFire` of 22–24 is therefore
+**unremarkable, near-average spacing for this window**, not evidence of
+proximity to anything — the two data points gathered this session **do not
+support H1** the way s170's single post-hoc read (crash following the stall's
+one late clear-event by ~6500 lines) suggested it might.
+
+More importantly: both of this session's crashes happened at **hold-iter
+4–8 (~4–7s post-leave)** — far earlier in wall-clock/log terms than s170's
+target crash, which happened near the **end of a long soak**, deep inside
+the ~90%-stuck stall region described above. **These 3 soaks never reached
+the phase where the target bug actually lives.** Two different
+earlier-position bugs (the new `submitSceneNodeRender` site, and the
+recurring `frameStartReset`/`heapWalker` class) keep killing the process
+during the active window, well before it would ever reach the late stall
+where s169/s170's scheduler SIGSEGV occurred. The instrument itself is
+proven to work (it printed plausible, self-consistent data in both crashing
+soaks) — it just hasn't yet been tested in the actual regime the hypothesis
+is about.
+
+### Controls held
+
+`thr-resume bad=1` 0/0 all 3 runs; `UnhandledJump`/`missing-func` both 0 all
+3 runs; `ost-wb SKIP_OOB` fired 7/9/19 (pre-existing always-on gate, no
+regression); none of the composeNpc/animTexStream/hangarEntry/dlentryPop
+guards fired in any of the 3 runs (all still unvalidated, unchanged status).
+
+### Files touched
+
+`lib/rt64/src/hle/rt64_state.cpp` (crash-snapshot atomics + accessor),
+`src/main/main.cpp` (extern decl + handler wiring), `submodule-patches/rt64.patch`
+(re-exported). `scratch/agent/run_crashvifs1.sh` (new driver), 3 soak logs
+under `scratch/agent/crashvifs1_*.log` / `scratch/s73_post_a_scene/crashvifs1/`.
+
+### Next
+
+1. **The scheduler SIGSEGV question needs a soak that actually reaches the
+   deep post-leave stall region before the H1/H2 test means anything** — not
+   another blind re-run of this exact recipe (budget spent, 0/3 this
+   session). Two live options, either legitimate: (a) source-characterize
+   and fix whatever is killing runs at hold-iter 4–8 first (the new
+   `submitSceneNodeRender+16780` site, and/or figure out why the
+   long-armed, long-unvalidated `heapWalker` guard still never fires despite
+   `frameStartReset`-attributed crashes recurring against it specifically),
+   so soaks survive long enough to reach the target window more reliably;
+   or (b) accept the low hit rate and run several more soaks purely to
+   accumulate scheduler-SIGSEGV data points when they happen to occur,
+   budgeting per rule 8 (3 at a time, park and switch focus between
+   batches).
+2. Do **not** re-run `run_crashvifs1.sh`/`run_dlentrypopguard1.sh` a 4th
+   time in a row hoping to hit the scheduler SIGSEGV — per rule 8, pick
+   option 1 or 2 above deliberately instead.
+3. If pursuing option 1's `submitSceneNodeRender+16780` site: it is one
+   frame *below* `processSceneNode`/`traverseSceneGraphRecursive` in the
+   same broad scene-graph traversal chain that also reaches the 14th class
+   (`reserveAndEmitDLEntry`) — same family, likely same unguarded-deref
+   shape, source-read `submitSceneNodeRender`'s own guest body before
+   guessing.

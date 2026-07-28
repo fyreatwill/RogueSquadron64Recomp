@@ -80,6 +80,10 @@ extern "C" void rs64_dpc_defer_end(int commit);
 extern RspExitReason factor5_boot (uint8_t* rdram, uint32_t ucode_addr);
 extern uint8_t dmem[];
 extern "C" void rs64_dpc_drain_histogram(uint32_t out[64]);
+// Defined in lib/rt64/src/hle/rt64_state.cpp — s171 crash-instant snapshot
+// of [vi-fs-decision] state, read from the SIGSEGV/SIGBUS handler below.
+extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *lastFireDecisionN,
+                                              int *lastFireWasStalled, int *stalledNow);
 
 // Cached for the next ucode invocation. get_rsp_microcode is called with the
 // OSTask immediately before the ucode runs on the same thread.
@@ -1655,6 +1659,18 @@ int main(int argc, char* argv[]) {
         sa.sa_sigaction = [](int sig, siginfo_t*, void*) {
             fprintf(stderr, "[CRASH] caught signal %d (%s), dumping stack:\n",
                 sig, strsignal(sig));
+            // s171: snapshot of [vi-fs-decision] state at crash time — tests
+            // whether the s169/s170 runtime-scheduler SIGSEGV is adjacent to
+            // a stall-clear FIRE event (H1) or independent of stall state (H2).
+            // decisionsSinceFire small (single digits) => H1; large/never => H2.
+            uint64_t decisionN = 0, lastFireDecisionN = 0;
+            int lastFireWasStalled = 0, stalledNow = 0;
+            rs64_get_vifs_crash_snapshot(&decisionN, &lastFireDecisionN, &lastFireWasStalled, &stalledNow);
+            fprintf(stderr,
+                "[CRASH][vifs-snapshot] decisionN=%llu lastFireDecisionN=%llu "
+                "decisionsSinceFire=%llu lastFireWasStalled=%d stalledNow=%d\n",
+                (unsigned long long)decisionN, (unsigned long long)lastFireDecisionN,
+                (unsigned long long)(decisionN - lastFireDecisionN), lastFireWasStalled, stalledNow);
             void* frames[64];
             int count = backtrace(frames, 64);
             backtrace_symbols_fd(frames, count, STDERR_FILENO);
