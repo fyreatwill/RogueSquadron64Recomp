@@ -15162,3 +15162,123 @@ recipe unchanged, on the chance this run was unlucky. Given the declining
 survival trend (hold-iter 6 → hold-iter 2) and that option (1) is
 strictly informative even if the soak dies again, prefer (1) for the next
 work unit. See `scratch/agent/NEXT.md`.
+
+## Session 165 (2026-07-27) — landed the free-list walk-log per NEXT.md, ran the 3rd/final audiodrain attempt: the 22nd `rs_malloc` class did not recur (clean 23160-sample positive control, no corrupted values), but the process died even earlier than ever — a brand-new 23rd crash, SIGSEGV directly inside `waitForAnyAudioSlot` during ordinary boot, before the title screen even renders
+
+### Work unit
+
+Per `scratch/agent/NEXT.md` step 1: instrumented `rs_malloc`'s free-list
+walk directly. Source-read confirmed the walk loop (`funcs_0.c`,
+`L_80001BC4`→`L_80001BEC`→loop) reads each node's `flags` halfword and
+`size` word, computes `end = addr+size`, then advances to `end+0x10` and
+loops — matching NEXT.md's "`a0 = a0 + size + 0x10`" description exactly.
+Added a single log insertion at `L_80001BEC` (file-scoped to
+`funcs_0.c`), the one point every "advance to next node" iteration passes
+through (the only skip path is "found a fit," which exits without
+advancing and can't fault) — logs node address, a fresh raw re-read of
+the flags halfword, and the already-loaded size word, all **before** the
+advance arithmetic, gated on a new `ROGUESQ_LOG_RS_MALLOC_WALK=1`. Full
+regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`, patched x1,
+clean log, no other duplication) → `cmake --build`, exit 0, only
+pre-existing-class warnings. Copied `run_audiodrain2.sh` →
+`run_audiodrain3.sh` (RUNTAG=audiodrain3), added the new env var, kept
+every other flag from the existing full audiodrain env block, and ran it
+— **this was the 3rd and final allowed attempt at this exact recipe**
+per rule 8 (attempt 1 = s163 `audiodrain1`, died hold-iter 6 to
+`emitAllocatedDLCommand`; attempt 2 = s164 `audiodrain2`, died hold-iter 2
+to the 22nd `rs_malloc` class).
+
+### Result: CRASH:1, but not `rs_malloc` — a brand-new, 23rd class, and far earlier than any prior death in the family
+
+The walk-log instrument worked exactly as designed and got a strong
+positive control: **23160 `[rs-malloc-walk]` lines**, spanning 641
+`rs_malloc` calls, covering the entire boot sequence up to the crash.
+Every logged value is plausible: `flags` only ever took one of 9 small
+bit combinations (`0x1,0x2,0x4,0x6,0x8,0x9,0x10,0x80,0x81`), `size`
+ranged `0`–`5074864` bytes, and manual inspection of the tail (the ~40
+nodes walked immediately before the process died) showed nothing
+resembling the DMA-ring family's ASCII-garbage corruption pattern
+(`"wing"`/`"lcre"` etc.) — every value looked like a genuine allocator
+size/flags pair. **The 22nd `rs_malloc` crash simply did not recur this
+run**, so this is an informative null on "does the corrupted free-list
+node look like the DMA-ring corruption" — the instrument is proven and
+ready to catch it opportunistically next time it fires, but answered
+nothing this session because the bug it targets didn't happen to trigger.
+
+Instead, the process died **at task #267, 1.7s into VI width 640** —
+i.e. during ordinary boot/attribution, **before the title screen (VI
+width 1024, normally ~46.5s in) is ever reached**. This is dramatically
+earlier than every other class in the 16-class hangar-tick family (which
+die tens of seconds in, post-menu) and earlier than either of the two
+prior audiodrain attempts (hold-iter 6, hold-iter 2 — both well past
+boot). Crash backtrace:
+
+```
+[CRASH] caught signal 11 (Segmentation fault: 11)
+3   waitForAnyAudioSlot + 76
+4   menuOverlayInit + 7100
+5   mainGameLoop + 1532
+6   mainBootstrapWorker + 2032
+```
+
+Grepped `docs/CURRENT-TRUTH.md` and this file for `waitForAnyAudioSlot`
+combined with SIGSEGV/crash: no prior occurrence as a *crash* (it was
+previously characterized only as a spin-loop hang candidate, s163). This
+is a genuinely new (**23rd**) crash class by symbol identity, and the
+first SIGSEGV (not SIGBUS) in the whole hangar-tick/heap-corruption
+family to date.
+
+### Two things this is NOT, that it looked like it might be at first
+
+1. **Not the s163 H-AUDIO-DRAIN mechanism recurring as designed.** s163
+   found `waitForAnyAudioSlot` reachable from `cinematicLoopBody`'s
+   post-cutscene teardown, hypothesizing an unbounded spin (not a crash)
+   as the ~92s stall's cause. Here the same function is called directly
+   from `menuOverlayInit` at ordinary boot — a call site s163 never
+   looked at — and it **crashes** rather than spinning. `waitForAnyAudioSlot`
+   is evidently reachable from more places than previously mapped, and
+   can fault outright, not just hang. `menuOverlayInit`'s own body calls
+   `tickMusyXIfActive`/`anyAudioSlotActive` via `goto`-after-call (real C
+   calls per `funcs_15.c:6918/6927`, not literal inlining), so the fault
+   could physically be inside either callee with the outer frame's name
+   surviving in the backtrace if the optimizer merged frames — not yet
+   disambiguated.
+2. **Not yet trusted as "the earliest-blocking class."** This run's own
+   walk-log added 23160 extremely high-frequency `fprintf`+the env
+   block's ~35 other armed loggers on top of it — the exact shape of
+   confound s93 already caught once this project (`ROGUESQ_LOG_THREAD_RESUME`
+   silently changing which crash won a race). A crash this much earlier
+   than every previous soak, on the very first run of a brand-new
+   high-volume instrument, is at least as consistent with "the walk-log's
+   own overhead perturbed timing enough to let this crash win" as with
+   "this is now genuinely the earliest-blocking bug." Not tested either
+   way this session — flagged, not resolved.
+
+### Files touched
+
+`N64Recomp/fixup_game_funcs.py` (new `ROGUESQ_LOG_RS_MALLOC_WALK=1` patch
+on `rs_malloc`, file-scoped to `funcs_0.c`) — own checkout, not `lib/`,
+no `submodule-patches/export.sh` needed (same posture as s90-164's other
+`fixup_game_funcs.py` edits, still flagged as an uncommitted sibling
+history for the user). Full regen + rebuild, both clean.
+`scratch/agent/run_audiodrain3.sh` (new, copy of `run_audiodrain2.sh` +
+the new env var + RUNTAG).
+
+### Next
+
+Per NEXT.md's own outcome-3 branch ("dies to yet another different
+crash: catalogue it, treat the recipe as too unstable to keep probing
+blind, pivot to characterizing whichever class blocks furthest") — but
+with the added twist that "furthest" is now ambiguous given the confound
+risk above. Two live options: (1) characterize the 23rd class directly —
+source-read `menuOverlayInit`'s call into `waitForAnyAudioSlot` and
+`anyAudioSlotActive`'s body for an unguarded deref (matching this
+family's dominant shape), independent of timing; this doesn't need a
+soak, just source reading, so it's cheap and can't be confounded. (2) Test
+the confound hypothesis directly — one soak with `ROGUESQ_LOG_RS_MALLOC_WALK=1`
+alone (drop the other ~35 env vars) to see if boot still dies this early;
+if it does, the walk-log isn't the cause and "23rd class blocks earliest"
+gets real support. Prefer (1) first since it's free and doesn't burn a
+soak attempt on a still-unstable recipe. This closes out the
+audiodrain1/2/3 line of soaks per rule 8 — no more unmodified repeats of
+this recipe. See `scratch/agent/NEXT.md`.

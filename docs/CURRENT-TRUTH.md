@@ -659,9 +659,40 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s164)
+## Next steps, in order of expected value (s165)
 
--16. **NEW TOP PRIORITY (s164): audio-drain soak attempt 2/3 (`audiodrain2`)
+-17. **NEW TOP PRIORITY (s165): landed the `rs_malloc` free-list walk-log
+    (`ROGUESQ_LOG_RS_MALLOC_WALK=1`, `N64Recomp/fixup_game_funcs.py`,
+    file-scoped `funcs_0.c`, logs node addr/flags/size at `L_80001BEC`
+    before the advance) and ran the 3rd/final `audiodrain` attempt
+    (`audiodrain3`). Clean 23160-line positive control, no corruption
+    seen (22nd `rs_malloc` class did not recur — informative null, not a
+    refutation). The process instead died to a brand-new 23rd crash,
+    SIGSEGV in/near `waitForAnyAudioSlot` called directly from
+    `menuOverlayInit`, and far earlier than any prior death in the whole
+    family — task #267, 1.7s in, before VI width 1024/title screen is
+    ever reached.** Two things not yet resolved: (a) this is the exact
+    function s163 flagged for H-AUDIO-DRAIN, but crashing rather than
+    spinning, from a call site (`menuOverlayInit`, boot-time) s163 never
+    examined — `waitForAnyAudioSlot` is reachable from more places than
+    mapped; (b) **confound risk**: this run also introduced the walk-log's
+    own 23160 high-frequency `fprintf` calls on top of ~35 other armed
+    loggers, the same shape of confound s93 already found once
+    (`ROGUESQ_LOG_THREAD_RESUME` silently changing which crash won a
+    race) — an unusually early crash on the very first run of a big new
+    logger is at least as consistent with "instrumentation overhead
+    changed the race" as with "this is now the genuinely earliest-
+    blocking bug." **Next work unit, in order:** (1) source-read
+    `menuOverlayInit`'s call into `waitForAnyAudioSlot`/`anyAudioSlotActive`
+    for an unguarded deref matching this family's dominant shape — free,
+    no soak needed, can't be confounded; (2) if inconclusive, one soak
+    with `ROGUESQ_LOG_RS_MALLOC_WALK=1` alone (dropping the other ~35 env
+    vars) to test the confound hypothesis directly. This closes the
+    `audiodrain1/2/3` line per rule 8 — no more unmodified repeats. Full
+    detail: PORTING-STATE s165.
+
+-16. **(s164, superseded as top priority by s165 above, mechanism still
+    live): audio-drain soak attempt 2/3 (`audiodrain2`)
     died even earlier than attempt 1 (hold-iter 2 vs hold-iter 6), NOT to a
     recurrence of `emitAllocatedDLCommand` but to a brand-new, never-before-
     seen 22nd crash class — SIGBUS inside `rs_malloc` itself (the guest heap
