@@ -663,7 +663,49 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s192)
+## Next steps, in order of expected value (s193)
+
+-42. **(s193) closed the "-41" open question — the s192 `queueGPUUploadTMEM`
+    guard is now confirmed live via a positive control — but the
+    `runVideoFrameTick` crash from s192 is STILL uncatalogued and unguarded,
+    and remains the current blocker on any soak reaching the
+    scene-node-ptr-guard's 9660-9792 target window.** Attempted -41's
+    Option A first (guard `runVideoFrameTick`) but abandoned it: identifying
+    the real faulting instruction at native offset `+1568` requires
+    disassembling the compiled ARM64 binary, and `nm`/`otool`/`lldb`/
+    `objdump` are not on this session's Bash allowlist. A from-scratch
+    hand-rolled decoder (`scratch/agent/s193_disasm.py`) produced an
+    internally-inconsistent result (the "crashing" instruction decoded as a
+    harmless unconditional branch, preceded by an implausible ~19MB-target
+    `BL`) — a clear sign the decoder itself isn't trustworthy, not a real
+    finding about the crash. Did not guess a guard site from that. Pivoted
+    to -41's Option B instead: added a test-only one-shot forcing hook
+    (`ROGUESQ_TEST_FORCE_TMEM_ZERO=1`, `lib/rt64/src/render/
+    rt64_texture_cache.cpp:1287`) that deliberately zeroes `width` on the
+    first `decodeTMEM` upload, guaranteeing the s192 guard's condition
+    trips. Soaked (`scratch/agent/run_tmemforce1.sh`, 60s hold): `[tmem-
+    zero-guard]` fired exactly once with sane fields (`hash=
+    0xA30077F480E4940E creationFrame=39 width=0 height=27 decodeTMEM=1`),
+    and the run completed the full hold with `CRASH: 0` — the guard's early
+    return demonstrably prevented the crash it's designed to prevent.
+    `submodule-patches/rt64.patch` exported + committed same session per
+    hard rule. Full detail: PORTING-STATE Session 193.
+
+    **Best next work unit**: get real disassembly capability for this
+    project (either get `otool -tv` / `objdump -d` approved onto the Bash
+    allowlist for one-off use, or invest in a self-consistent ARM64 decoder
+    — the current one in `scratch/agent/s193_disasm.py` is NOT
+    trustworthy, it produced an internally-inconsistent decode this
+    session), THEN use it to find `runVideoFrameTick`'s actual faulting
+    deref at native offset `+1568` and guard it the same defensive way as
+    the other 3 soak-blockers (rs_malloc, rs_free, scene-node-ptr,
+    queueGPUUploadTMEM). This would make every previously-seen
+    soak-blocking crash in the `sceneptrguard` lineage guarded, maximizing
+    the odds the next soak finally reaches the 9660-9792 target window and
+    tests the s190 `processSceneNode` fix (`[scene-node-ptr-guard]` still
+    0/3 fires across all soaks to date). Do NOT guess a guard site without
+    a trustworthy disassembly read — confirmed this session that guessing
+    from an unverified hand-decoder is worse than not guarding at all.
 
 -41. **(s192) landed the `queueGPUUploadTMEM` zero-size defensive guard
     (`ROGUESQ_LOG_TMEM_ZERO_GUARD`, `lib/rt64/src/render/
@@ -674,29 +716,11 @@ cost three sessions before the recursive mutex.
     furthest of the 3 `sceneptrguard` soaks so far (s190: 8053, s191: 7897,
     s192: 8972), but still short of the 9660-9792 target window.
     `[scene-node-ptr-guard]` fired 0/3 times across all three soaks;
-    `[tmem-zero-guard]` fired 0/1 on its debut run. Guard commit: `14bf1d4`
+    `[tmem-zero-guard]` fired 0/1 on its debut run — **s193 closed this gap
+    with a positive control, see -42 above; the guard is now confirmed
+    live.** Guard commit: `14bf1d4`
     (`submodule-patches/rt64.patch` exported + committed same session per
     hard rule). Full detail: PORTING-STATE Session 192.
-
-    **This is the 3rd consecutive iteration on "does a fix-soak reach the
-    target decisionN window" with no discriminating result — iron rule 8
-    mandatory pivot.** Do not run a 4th blind `sceneptrguard` soak. Two
-    valid next units, in order: (1) guard the new `runVideoFrameTick`
-    crash the same defensive way (getenv-gated skip, bounded counter) —
-    would make every soak-blocking crash seen in this lineage guarded,
-    maximizing the odds the NEXT soak actually reaches the target window;
-    source is `N64Recomp/RecompiledFuncs/funcs_0.c:1459`, no self-call
-    confirmed (checked this session), so the actual faulting deref is
-    still unidentified — read the full function body before guessing where
-    to place the guard, don't guess from the backtrace alone. OR (2) a
-    positive-control-first sanity check: deliberately force the
-    `queueGPUUploadTMEM` zero-size condition (or find a game state that's
-    known to trigger it, e.g. via the s86-101 history) to confirm
-    `[tmem-zero-guard]`'s logging/counter code actually fires and is
-    reachable, independent of whether an ordinary soak ever hits it —
-    since its only soak so far never fired it at all, there is currently
-    ZERO confirmation the guard code path is even reachable, only that it
-    compiles and links.
 
 -40. **(s191) re-ran the fixed `sceneptrguard` soak a 2nd time (`sceneptrguard4`,
     byte-identical config to s190's `sceneptrguard3`) — died again before the

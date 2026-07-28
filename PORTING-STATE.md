@@ -17796,3 +17796,86 @@ for a future session rather than chasing them inline, e.g. the
   positive-control run that deliberately forces the TMEM zero-size
   condition to confirm the new guard's logging/counter code path is
   reachable at all, independent of whether a real soak ever hits it).
+
+## Session 193 (2026-07-28) — attempted Option A (guard the `runVideoFrameTick` crash), found the crash site can't be safely guarded without disassembly tooling this session has none of; pivoted to Option B and CLOSED it — the s192 `queueGPUUploadTMEM` guard now has a confirmed-live positive control
+
+**Option A attempt, and why it was abandoned (not a wasted step — a real
+negative result):** NEXT.md's Option A asked to read the full body of
+`runVideoFrameTick` (`N64Recomp/RecompiledFuncs/funcs_0.c:1459`, ~415 lines)
+and find the actual faulting dereference at native offset `+1568`
+(`0x00000001040b7cb8`, confirmed via `sceneptrguard5/run.log:3958648-49` —
+the address that killed s192's soak). The recompiled-C source at that MIPS
+instruction range doesn't map 1:1 to the compiled ARM64 binary's byte
+offsets, so the only way to identify the actual faulting instruction is to
+disassemble the binary at that offset — and `nm`/`otool`/`lldb`/`objdump`
+are not on this session's Bash allowlist (confirmed: `otool` triggers an
+approval prompt a non-interactive session can't clear). Wrote a
+from-scratch Mach-O symbol-table reader + minimal ARM64 load/store decoder
+(`scratch/agent/machoparse.py` already existed for symbol addr/size;
+added `scratch/agent/s193_disasm.py` for the actual instruction decode,
+`scratch/agent/s193_symrange.py` to rule out a hidden local-symbol
+boundary). Result: confirmed no other symbol (local or external) exists
+between `runVideoFrameTick` and `coalesceFreeHeapBlocks`, so offset+1568 is
+unambiguously inside `runVideoFrameTick`'s own compiled body — but the
+decoded instruction at that exact offset is `0x14000001`, an unconditional
+branch (`B pc+4`), which cannot itself raise a bus error, and the
+instruction immediately before it hand-decodes as a `BL` with an
+implausibly large (~19 MB) target offset for a ~5 KB function, which reads
+as a decode error somewhere in my by-hand bit-field arithmetic rather than
+real code. **Conclusion: a hand-rolled ARM64 decoder without cross-checking
+against a real disassembler is not trustworthy enough to place a guard
+on** — NEXT.md explicitly warned "do not guess a guard site from the
+backtrace alone," and guessing off a self-decoded instruction stream with a
+demonstrated internal inconsistency is exactly that. Did not add a guard.
+This crash stays uncatalogued/unguarded; a future session should either
+get a real disassembler approved onto the Bash allowlist (`otool -tv` or
+`objdump -d --start-address=... --stop-address=...` on `build/
+RogueSquadron64Recomp`) or extend the hand-rolled decoder far enough to be
+self-consistent before trusting it again.
+
+**Option B, executed and CLOSED:** per NEXT.md's alternative, added a
+test-only one-shot forcing hook to `queueGPUUploadTMEM`
+(`lib/rt64/src/render/rt64_texture_cache.cpp:1287`, right before the s192
+guard): gated behind `ROGUESQ_TEST_FORCE_TMEM_ZERO=1`, it zeroes `width` on
+the first `decodeTMEM` upload seen, guaranteeing the s192 guard's `if`
+condition trips — this is a positive control on the INSTRUMENT (does the
+guard's code path fire and log correctly), not a claim about the real bug's
+natural trigger conditions, exactly per iron rule 1. Built clean (pure
+`lib/rt64` change, no regen/fixup pipeline), soaked
+(`scratch/agent/run_tmemforce1.sh`, `ROGUESQ_LOG_TMEM_ZERO_GUARD=1` +
+`ROGUESQ_TEST_FORCE_TMEM_ZERO=1`, 60s hold). Result:
+`[tmem-zero-guard] n=0 hash=0xA30077F480E4940E creationFrame=39 width=0
+height=27 decodeTMEM=1` (`scratch/s73_post_a_scene/tmemforce1/run.log:5977`)
+— fired exactly once (matches the one-shot hook), fields are sane (a
+real-looking 64-bit hash, small positive `creationFrame`, the forced
+`width=0` alongside an untouched real `height=27`, `decodeTMEM=1` as
+expected), and the run completed its full 60s hold with `CRASH: 0` — the
+guard's early `return;` demonstrably prevented what would otherwise have
+been the `queueGPUUploadTMEM` assert crash. **This closes the open
+question from s192: the guard is confirmed live and reachable, not just
+compiled and linked.** `./submodule-patches/export.sh` run,
+`submodule-patches/rt64.patch` committed this session per the hard rule.
+
+**What this does and doesn't show:**
+- DOES confirm the s192 `queueGPUUploadTMEM` guard's code path is reachable
+  and its logging is correct — this was previously unconfirmed (0/1 in
+  s192's own soak).
+- DOES NOT confirm the guard fires under NATURAL (non-forced) game
+  conditions in an ordinary soak — s192's soak still stands as 0/1 organic.
+  The forcing hook proves the instrument works, not that the real bug's
+  natural trigger rate has changed.
+- DOES NOT touch or weaken the guard's existing logic — the forcing hook
+  is a separate, clearly-labeled, env-gated block that runs BEFORE the
+  s192 guard's own check, only takes effect when
+  `ROGUESQ_TEST_FORCE_TMEM_ZERO` is explicitly set, and is a no-op
+  otherwise (confirmed: this run's `[scene-node-ptr-guard]` and other
+  instrumentation were untouched, and no other soak this session had the
+  var set).
+- DOES NOT advance the `runVideoFrameTick` crash question at all — still
+  uncatalogued, unguarded, and still the current blocker on soaks trying to
+  reach the scene-node-ptr-guard's 9660-9792 target decisionN window (per
+  s192, it killed that soak at decisionN=8972).
+- Confirms (again) that hand-rolled reverse-engineering without proper
+  tooling has a real failure mode in this project (inconsistent decode
+  output caught before it produced a bad guess) — worth fixing the tooling
+  gap rather than repeating the workaround per-session.
