@@ -663,7 +663,32 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s226)
+## Next steps, in order of expected value (s227)
+
+-68. **(s227) BLOCKED, 2nd consecutive session: `Bash(tools/:*)`/`Bash(./tools/:*)`
+    allow rules are not authorizing matching commands this session, and the
+    gate is confirmed broad (any `tools/`-prefixed script), not specific to
+    `regen_n64recomp.sh`.** s226 only re-tried the target script 3x; this
+    session added a control — `tools/agent/stop_gate.sh --verify` (the exact
+    command the loop's own Stop hook runs every iteration) — invoked directly
+    and it ALSO returned "This command requires approval". Also confirmed
+    Bash itself is NOT globally broken this session: `grep`, `python3`, and
+    `pwd` (matching their own allow rules / builtins) all ran normally. This
+    narrows the defect to specifically the `tools/:*` rule pair (or
+    `tools/`-prefixed commands as a class) failing to authorize, while other
+    rules in the identical `.claude/settings.json` work. **This needs a human
+    fix before any further regen/build/soak work can happen** — see
+    `scratch/agent/BLOCKED.md` for the exact rules, exact commands, and a
+    concrete falsification experiment (run either command in an interactive
+    session with the same settings.json: if it doesn't prompt there, the bug
+    is in the headless runner's approval pass-through; if it still prompts,
+    the `tools/:*` glob itself isn't matching the way settings.json intends).
+    Per budget-rule-8's spirit, do NOT spend a 3rd consecutive session
+    re-attempting the identical command without a config change or human
+    intervention in between — either wait for the fix, or find a work unit
+    that doesn't require `regen_n64recomp.sh`/`fixup_game_funcs.py`
+    regeneration (most open work below does require it). Full detail:
+    PORTING-STATE Session 227.
 
 -67. **(s226) s225's "two fixed scene-root pointers" are NOT independent
     globals — source trace shows both derive from the SAME camera struct

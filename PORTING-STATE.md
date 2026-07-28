@@ -21641,3 +21641,54 @@ always, in the untracked `N64Recomp` sibling checkout (flagged since s83,
 still out of this repo's commit scope) — the diagnostic code itself is saved
 to disk (verified via Read-after-Edit within the same tool call chain) but
 is NOT captured by this repo's `git commit`.
+
+## Session 227 (2026-07-28) — s226's permission gate is confirmed session-wide on `tools/` script execution (not specific to `regen_n64recomp.sh`), and narrowed to the `Bash(tools/:*)`/`Bash(./tools/:*)` rule pair specifically — other allow-listed command families work fine the same session
+
+**Blocked again, 2nd consecutive session, same gate.** Per NEXT.md's Step 0,
+retried `./tools/agent/regen_n64recomp.sh` once (budget: at most 2 attempts
+this iteration) → `This command requires approval`, identical to s226's 3
+failures. Before spending the retry, ran NEXT.md's own suggested control
+first: `tools/agent/stop_gate.sh --verify` — the exact command the loop's
+Stop hook (`.claude/settings.json` line 87) runs successfully every single
+iteration — invoked directly as a Bash tool call. It ALSO returned "This
+command requires approval". This is new information s226 didn't have (s226
+only re-tried the one target script 3x, never a control): the gate is not
+specific to `regen_n64recomp.sh`, it covers `tools/`-prefixed script
+execution broadly, this session.
+
+Narrowed further with two more one-shot checks (not budget spend against the
+regen hypothesis — a different, orthogonal question: is ALL Bash broken this
+session, or just this rule pair): `grep -n "campose-entry" PORTING-STATE.md`
+and `python3 --version`, both allow-listed via their own `Bash(grep:*)` /
+`Bash(python3:*)` rules, both ran normally. `pwd` (implicit builtin) also
+ran fine. So this session's Bash tool is NOT globally broken — it's
+specifically the `Bash(tools/:*)` / `Bash(./tools/:*)` allow rules (or
+`tools/`-prefixed commands as a class) that aren't being honored, while
+other rules in the identical `.claude/settings.json`, same session, work as
+expected.
+
+**Rules out**: "this is specific to `regen_n64recomp.sh`" (s226's implicit
+framing, since it only tested that one script) — refuted by the
+`stop_gate.sh --verify` control. "Bash tool is broken entirely this
+session" — refuted by `grep`/`python3`/`pwd` all working.
+
+**Still open, now sharper**: why do `Bash(tools/:*)` and `Bash(./tools/:*)`
+specifically fail to authorize matching commands while other allow rules in
+the same file, same session, work normally? Two candidate mechanisms written
+into `scratch/agent/BLOCKED.md`'s refutation section: (a) the headless
+autonomous-loop runner isn't passing these two rules through to the
+approval flow correctly (a runner/invocation issue, not a settings.json
+content issue), or (b) a Claude Code version/glob-matching change means the
+literal pattern `tools/:*` no longer matches the way it used to — testable
+by a human running either command in an interactive session with the same
+settings.json.
+
+**No new build, no new soak this session** — did not touch Step 1-3 of
+NEXT.md, since Step 0 (the precondition) failed. The already-landed `deref0`
+diagnostic in `N64Recomp/fixup_game_funcs.py` is untouched, unverified,
+still waiting on a working regen. Escalated to the user via
+`scratch/agent/BLOCKED.md` with the exact rules, exact commands, and a
+concrete falsification experiment for a human to run. Per this project's own
+budget-rule-8 spirit (applied to environment access), the 3rd consecutive
+session should NOT re-attempt the identical command without a config change
+or human intervention in between.
