@@ -20943,3 +20943,122 @@ expected value than a 3rd identical Step-1 re-soak.
 `scratch/s73_post_a_scene/renderunlitguard2/` (run.log, screenshots), driver
 script `scratch/s73_post_a_scene/run_renderunlitguard2.sh`. No `lib/` files
 touched this session — nothing to export.
+
+## Session 221 (2026-07-28) — found and closed the actual gap behind s220's `emitAllocatedDLCommand` hold-iter-1 crash: a 15+-session-old guard mechanism (s133) that only covered 2 of the function's 3 identical unguarded copies, not a new bug
+
+NEXT.md's planned unit: source-read `emitAllocatedDLCommand`
+(`funcs_3.c:2622-3210`, confirmed via `grep -n "^RECOMP_FUNC"` — matches
+s220's estimate exactly) end to end and guard whatever unguarded
+peek-load idiom explains s220's hold-iter-1 crash there.
+
+**The read found something better than a new guard: the function already
+has a guard mechanism for exactly this idiom, and it has a documented gap.**
+Session s133 (PORTING-STATE.md:11791+) found that `emitAllocatedDLCommand`
+inlines the same `findAndUnlinkSmallestEntry`-return-then-walk-to-tail-of-
+chain idiom `submitSceneNodeRender` was guarded for (s123/s131), and shipped
+`GUARD2` (validates the pointer before its first deref) + `GUARD3`
+(validates the loop-back pointer inside the walk loop) via a generic
+`_emit_dl_guard2_sites`/`_emit_dl_guard3_sites` table mechanism in
+`fixup_game_funcs.py`. s133's own comment says the idiom is inlined "TWICE"
+(an `r4` copy, an `r5` copy) and lists exactly two site-tuples per table.
+
+**That count is wrong.** The idiom is inlined **three** times: `r4` is
+reused by two *separate* copies (`findAndUnlinkSmallestEntry` call sites at
+`0x800086C8` and `0x800087C4`), not one, plus the `r5` copy
+(`0x800088C8`). s133 patched the *second* `r4` copy
+(`0x800087D8`/`0x800087E4`, skip-label `L_80008814`) and the `r5` copy
+(`0x800088DC`/`0x800088E8`, skip-label `L_80008918`) — but never the
+**first** copy (`0x800086DC`/`0x800086E8`, skip-label `L_80008718`), which
+is exactly s220's crash: s133's own original bug report backtrace
+(`emitAllocatedDLCommand <- submitSceneNodeRender <- processSceneNode <-
+traverseSceneGraphRecursive x2 <- setupCameraMatrices <-
+runHangarSelectionFrame <- runHangarMenuFromOverlay <- menuOverlayInit`,
+PORTING-STATE.md:11791+) is structurally identical to s220's. Confirmed by
+direct source read (not grep-only): lines 2683-2703 have the raw
+`MEM_W(ctx->r4, 0X0)` / `MEM_W(ctx->r3, 0X0)` pair with **no** guard block,
+while the byte-identical-shaped code at 2862-2909 and 3063-3109 already
+carries s133's guard blocks verbatim.
+
+**This also explains a 15+-session-standing mystery, not just s220's
+crash**: `emit-dl-guard2`/`emit-dl-guard3` have fired **0/0 in every single
+soak since s133 shipped them** (s135, s139, s143, s148, s... — see
+PORTING-STATE.md grep hits at lines 11876, 11942, 13044, 13084/13101,
+13489/13503, 14952, 19322 — all "0/0", spanning ~85 sessions of elapsed
+project history) despite `emitAllocatedDLCommand` demonstrably executing
+every run. The standing explanation was some flavor of "this code path
+isn't exercised" — but the real explanation may simply be that the two
+*guarded* copies aren't the ones the game reaches, while the *unguarded*
+first copy is.
+
+**Fix**: added the missing site as a third tuple to both
+`_emit_dl_guard2_sites` and `_emit_dl_guard3_sites` in
+`fixup_game_funcs.py` (sibling `N64Recomp` checkout) — same template, same
+bail-to-the-copy's-own-existing-null-check-label discipline (`L_80008718`,
+exactly matching how the other two sites reuse `L_80008814`/`L_80008918`).
+No new guard mechanism invented; this is closing a 3-vs-2 counting gap in
+an existing one.
+
+**Regen mishap, caught and fixed same-session**: ran `fixup_game_funcs.py`
+three times in a row while trying to grep its output for the new guard's
+report lines, not realizing (despite CURRENT-TRUTH item 0 documenting
+exactly this risk) that repeated invocations on an already-patched tree can
+duplicate insertions. A whole-tree label-duplication audit
+(`grep`-per-file, `^L_[A-Za-z0-9_]+:$`, flag any file where a label appears
+more than once) caught real damage from this: `L_dlentry_guard_exit`
+(`funcs_3.c`) and `L_hangarbay_guard_exit` (`funcs_40.c`) were each defined
+**3 times** — the exact duplicate-label failure mode item 0 describes,
+reproduced live. Recovered correctly: deleted all 45 `RecompiledFuncs/
+funcs_*.c`, re-ran `N64Recomp` for a pristine regen, ran
+`fixup_game_funcs.py` **exactly once**, and re-audited — both labels back
+to 1 occurrence, `emit-dl-guard2`/`3`'s report lines each showed `x1` for
+all 3 sites (no duplication of the new site either). Clean build (100%,
+only pre-existing warnings). **Lesson for future sessions: never pipe
+`fixup_game_funcs.py`'s output through a second invocation to filter for
+specific lines — capture the first run's output to a file and grep the
+file, exactly as CURRENT-TRUTH's own audit protocol already prescribes.**
+
+**Soak** (`emitdlguard1`, s213-220 recipe: `STICK_SCHEDULE="95:start 100:a
+150:sr 200:sl 250:su"`, `HOLD_S=300`, all prior guards armed as a
+regression check plus `ROGUESQ_LOG_EMIT_DL_GUARD2`/`3`): survived the
+**entire 300s hold window with 0 crashes** (`hold done wall=343s`, killed
+manually at the end, `CRASH: 0` in the summary) — the cleanest, longest
+survival in the whole s209-221 lineage (ties s219's `renderunlitguard1`,
+which also completed the full window). **But every diagnostic fired 0
+times this run**: `emit-dl-guard2`, `emit-dl-guard3` (all 3 sites, old and
+new), `unlit-mesh-tracer`, `renderunlit-guard`, `heapwalker-guard`/`3`/`4`,
+`mesgqueue-guard`, `heaplistdeq-guard` — all silent. Per rule 1 this is an
+**uncontrolled null, not a confirmation**: the process never crashed, but
+none of the guarded code paths (old or new) were ever proven to execute
+either. Consistent with, not contradicting, the "the two old guarded sites
+were never the reachable ones" theory (they stayed silent as always) but
+does not yet prove the new site is reachable and effective — it's equally
+consistent with "the game simply didn't take the code path that
+crashed in s220 this run" (this lineage's soaks are known non-deterministic
+run to run, per s216-220's own varying death points).
+
+**Rules out**: nothing formally (null result). **Does not confirm**: the
+new guard actually intercepts anything live yet.
+
+**Updates the picture**: the missing-site fix is well-precedented (reuses
+an established mechanism, closes a real 3-vs-2 counting gap, matches s220's
+backtrace exactly) and shipped clean, but is UNCONFIRMED live — same status
+`renderUnlitMeshFaces`'s s219 guard was left in after its own first
+crash-free 300s soak. Two now-parallel unconfirmed guards from this
+lineage (`renderUnlitMeshFaces` s219, `emitAllocatedDLCommand` s221) both
+need a soak that actually forces their target code path, not just another
+unchanged re-run — repeating the identical `STICK_SCHEDULE` a 3rd/2nd time
+respectively is hitting budget-rule-8 territory. **Next step**: a soak with
+a schedule change specifically designed to increase the odds of exercising
+`emitAllocatedDLCommand`'s first allocation path AND `renderUnlitMeshFaces`
+(e.g. a longer or denser stick schedule after the `95:start` transition
+into hangar-flight, since both guarded functions are scene-graph-render
+leaf functions that should fire heavily once real flight/mesh content is
+on screen) rather than a byte-identical re-run of either guard's own
+soak.
+
+**Full detail**: this entry. Code:
+`fixup_game_funcs.py` (sibling `N64Recomp` checkout, `_emit_dl_guard2_sites`/
+`_emit_dl_guard3_sites`, new tuples). Soak artifacts:
+`scratch/s73_post_a_scene/emitdlguard1/` (run.log), driver script
+`scratch/s73_post_a_scene/run_emitdlguard1.sh`. No `lib/` files touched
+this session — nothing to export.

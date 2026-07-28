@@ -663,7 +663,53 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s220)
+## Next steps, in order of expected value (s221)
+
+-62. **(s221) Closed the actual gap behind s220's `emitAllocatedDLCommand`
+    hold-iter-1 crash — not a new bug, a 15+-session-old guard mechanism
+    (s133) that only covered 2 of the function's 3 identical unguarded
+    copies. Fix shipped and built clean, but UNCONFIRMED live (uncontrolled
+    null soak, same status as item -61's `renderUnlitMeshFaces` guard).**
+    Source-read `emitAllocatedDLCommand` (`funcs_3.c:2622-3210`) end to end
+    and found it already has a `GUARD2`/`GUARD3` mechanism for the exact
+    `findAndUnlinkSmallestEntry`-return-then-walk-to-tail idiom from s133 —
+    but s133's own comment ("inlined here TWICE") undercounted: the idiom
+    is inlined **three** times (`r4` reused by two separate copies at
+    `0x800086C8`/`0x800087C4`, plus an `r5` copy at `0x800088C8`), and s133
+    only ever patched the second `r4` copy and the `r5` copy, never the
+    first (`0x800086DC`/`0x800086E8`) — which is exactly s220's crash
+    (byte-identical backtrace shape to s133's own original bug report).
+    This also explains `emit-dl-guard2`/`3`'s **0/0 firing rate across
+    every soak since s133** (~85 sessions of elapsed history,
+    PORTING-STATE.md lines 11876/11942/13044/13084/14952/19322): the two
+    guarded copies may simply never be the ones the game reaches, while the
+    unguarded first copy is. Added the missing site as a third tuple to
+    `_emit_dl_guard2_sites`/`_emit_dl_guard3_sites` in
+    `fixup_game_funcs.py` (same template, same bail-to-own-null-check-label
+    discipline) — no new guard mechanism, closing a 3-vs-2 counting gap.
+    **Regen mishap caught and fixed same-session**: accidentally ran
+    `fixup_game_funcs.py` 3x while grepping its output, which (per item 0
+    below) duplicated two labels (`L_dlentry_guard_exit`,
+    `L_hangarbay_guard_exit`, each x3) — caught via a whole-tree label-dup
+    audit, fixed with a clean delete-all-funcs + regen + single fixup run,
+    re-audited clean, built clean. **Lesson: never pipe
+    `fixup_game_funcs.py`'s output through a second invocation to filter
+    for lines — capture once to a file, grep the file.**
+    Soak (`emitdlguard1`, s213-220 recipe) **survived the full 300s hold
+    window with 0 crashes** (ties s219's `renderunlitguard1` as the
+    cleanest run in the s209-221 lineage) — but EVERY diagnostic fired 0
+    times (`emit-dl-guard2`/`3` including the new site, `unlit-mesh-tracer`,
+    `renderunlit-guard`, `heapwalker-guard`/`3`/`4`, `mesgqueue-guard`,
+    `heaplistdeq-guard`), so per rule 1 this is an uncontrolled null: no
+    regression, but no proof the new guard (or `renderUnlitMeshFaces`'s
+    s219 guard) intercepts anything live either. **Next step**: a soak with
+    a schedule CHANGE (not a byte-identical re-run of either guard's own
+    soak — both are now at 1 identical-schedule attempt each, re-running
+    unchanged a 2nd/3rd time is budget-rule-8 territory) designed to push
+    further into hangar-flight / mesh-heavy content, to actually exercise
+    both still-unconfirmed guards (`renderUnlitMeshFaces` s219,
+    `emitAllocatedDLCommand` s221) in one soak. Full detail: PORTING-STATE
+    Session 221.
 
 -61. **(s220) Re-soak of `renderunlitguard1` (unchanged script, tag
     `renderunlitguard2`) leaves item -60's guard question STILL unconfirmed
