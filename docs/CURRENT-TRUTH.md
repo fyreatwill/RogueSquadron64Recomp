@@ -657,37 +657,49 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s156)
+## Next steps, in order of expected value (s157)
 
--8. **NEW TOP PRIORITY (s156): source-read `static_5_800AAD9C`,
-    the shared dispatcher for both `composeNpcOrientationMatrix` (12th
-    class) and `frameStartReset` (5th class).** s155's proportional
-    candidate for a 5th `composeNpcOrientationMatrix` unguarded site was
-    **confirmed real** by a full end-to-end source read (not just
-    estimate) — AND the same read found a **6th**, structurally
-    identical site the estimate had no way to predict. Both guarded
-    (`ROGUESQ_LOG_COMPOSE_NPC_GUARD5`/`_GUARD6`, `funcs_40.c`), rebuilt
-    clean, soaked (`composeguard56`) — but 0/0 on all 6
-    `composeNpcOrientationMatrix` guards (the 12th class simply didn't
-    recur this run; still unvalidated, same status several guards in
-    this family have carried before). The process instead died to
-    `frameStartReset + 532` (SIGBUS, **3rd occurrence** — s84, s108, now
-    s156) at backtrace `frameStartReset ← static_5_800AAD9C ←
-    static_5_800C6854 ← menuOverlayInit ← mainGameLoop`. **The first 3
-    frames are byte-identical to s155's `composeNpcOrientationMatrix`
-    crash backtrace** (`composeNpcOrientationMatrix ←
-    static_5_800AAD9C ← static_5_800C6854 ← menuOverlayInit`) — the two
-    crash classes share a call path up to `static_5_800AAD9C`, diverging
-    only in which function it (or its caller) ends up invoking. New,
-    unconfirmed hypothesis: `static_5_800AAD9C` may read corrupted
-    dispatch state to decide which function to call, rather than these
-    being two independent bugs that merely preempt each other by timing.
-    Next work unit: source-read `static_5_800AAD9C` to test this —
-    if it holds, one guard there could subsume multiple crash classes at
-    once; if refuted (e.g. it's a legitimate per-node dispatcher over
-    many distinct handlers), `frameStartReset` itself still has no
-    located faulting instruction across any of its 3 occurrences and is
-    the next thing to source-read. Full detail: PORTING-STATE s156.
+-9. **NEW TOP PRIORITY (s157): find `composeNpcOrientationMatrix`'s
+    (12th class) 7th unguarded site.** s157 closed out the s156 "shared
+    corrupted dispatcher" investigation (refuted — see superseded
+    section) and instead found + guarded 4 new unguarded sites in
+    `heapWalker` (`ROGUESQ_LOG_HEAPWALKER_GUARD`, `N64Recomp/
+    RecompiledFuncs/funcs_3.c`) — landed, built clean, but
+    **unvalidated** (0/0, not exercised this soak). The soak's actual
+    crash was a **4th recurrence** of `composeNpcOrientationMatrix`
+    (12th class) at `static_5_800AB1C8 + 6168` (function now 12700B
+    compiled, up from s99's 11632B due to guards 1-6's own code) —
+    **outside all 6 existing guards** (all 0/0 this run). A rough
+    proportional-offset estimate (6168/12700 = 48.6% -> guest line
+    ≈6720 in `funcs_40.c:6280-7186`) landed in the guard4-guard5 gap
+    (`:6620`-`:6780`), but a direct read of that gap found only
+    fixed-global byte compares and float math — no unguarded
+    dereference. The estimate is not reliable enough to localize this
+    site on its own this time. Next work unit: read the other
+    unaccounted-for regions of the function not yet covered by any
+    guard or already read (roughly `:6280`-`:6374` before guard1, and
+    `:6857`-`:7108` between guard2 and guard6) for the same
+    "table/list-head read, `==0`-only check, then deref" shape; guard
+    whichever site matches, following the established template (`goto`
+    the function's own exit label, `U32()`-truncate-then-range-check).
+    Full detail: PORTING-STATE s157.
+
+-8. **s156: refuted the "shared corrupted dispatcher" hypothesis for
+    `static_5_800AAD9C`** by a full end-to-end source read (s157) — it
+    is a straight-line per-frame tick with 13 unconditional calls in a
+    fixed sequence (including both `frameStartReset` and
+    `composeNpcOrientationMatrix`), never a table/function-pointer
+    dispatch on a runtime selector. The shared 3-frame backtrace prefix
+    across the two crash classes is coincidental, not evidence of one
+    shared bug — **do not revisit this hypothesis without new
+    evidence.** s157 also source-read `frameStartReset` itself and
+    found no unguarded dereference in its own guest body (every
+    `MEM_*` address there is a compile-time constant) — any future
+    `frameStartReset`-attributed crash should be investigated in its
+    callees (`heapWalker`, already given 4 guards this session, or
+    `tickTextureMaterialExpiry`, not yet read) rather than in
+    `frameStartReset` itself again. Full detail: PORTING-STATE
+    s156/s157.
 
 -7. **s155: guarded the 20th class (`loadCraftShadowTextures`,
     `N64Recomp/RecompiledFuncs/funcs_16.c:13038-13051`, bounds the

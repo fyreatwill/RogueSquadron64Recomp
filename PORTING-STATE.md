@@ -14151,3 +14151,156 @@ has had since s84.
 - `scratch/s73_post_a_scene/composeguard56/` — this session's run: `run.log` (4.6 MB), `pre_*`/`stable_*`/`hold_*`/`post_*` screenshots.
 - `scratch/agent/run_composeguard56_driver.log` — driver summary.
 
+## Session 157 (2026-07-27) — refuted the s156 "shared corrupted dispatcher" hypothesis by a full source read; found and guarded 4 new unguarded sites instead, in `heapWalker` (not `frameStartReset` itself); soak's crash was a 3rd, uncovered site inside `composeNpcOrientationMatrix`, not `frameStartReset` recurring nor heapWalker
+
+Followed NEXT.md's plan exactly: source-read `static_5_800AAD9C` (the function
+s156 found calling both `frameStartReset` and `composeNpcOrientationMatrix`
+just before a crash in each) to test whether it is a corrupted dispatcher
+picking which function to call.
+
+### 1. `static_5_800AAD9C` refuted as a dispatcher
+
+Read the full function (`N64Recomp/RecompiledFuncs/funcs_40.c:5464-5863`,
+guest `0x800AAD9C`-`0x800AAFA4`+) end to end. It is a straight-line per-frame
+tick with **13 unconditional `jal` calls in a fixed sequence** — no branch, no
+function-pointer/`LOOKUP_FUNC` load, no table index anywhere in the body:
+`static_5_800C6660`, `pollControllerInputs`, `setNewAndPreviousButtonsPressed`,
+`waitForPrevFrameDone`, `frameStartReset` (line 5542), `advancePlayerAnimation
+Phase`, `activateAnimationKeyframe` (twice), a conditional `static_5_800CBE00`,
+`tickWrappingTimerAccumulatorList`, `hangarUpdateSecWeaponIfChanged`,
+`static_5_800AB658`/`updateHangarBayScene`, then (line 5867)
+`static_5_800AB1C8`/`composeNpcOrientationMatrix`. **This refutes the
+dispatch-corruption hypothesis** — `frameStartReset` and
+`composeNpcOrientationMatrix` are simply two of many direct, unconditional
+callees of this one per-frame function; the shared 3-frame backtrace prefix
+across their crash classes is coincidental, not evidence of one shared bug.
+
+### 2. `frameStartReset` itself has no unguarded dereference
+
+Per NEXT.md's fallback plan, read `frameStartReset`'s own guest body
+(`N64Recomp/RecompiledFuncs/funcs_3.c:7839-8086`, guest `0x8000A6CC`-
+`0x8000A858`, ~99 instructions) end to end. Every address used in a `MEM_*`
+macro there is a compile-time `lui`+`addiu` constant (two fixed-size zero-fill
+loops over a global buffer, one table-index load that only *stores* the
+loaded value without dereferencing it) — **no data-derived pointer is ever
+dereferenced in this function's own body.** `frameStartReset` cannot be the
+site of its own SIGBUS.
+
+### 3. `heapWalker` — frameStartReset's first, unconditional callee — has 4 unguarded sites of the established family shape
+
+`frameStartReset`'s very first instruction is `jal 0x800079F0` →
+`heapWalker` (`funcs_3.c:99-560`, guest `0x800079F0`-`0x80007CB4`), called
+unconditionally every single frame, before `tickTextureMaterialExpiry` (its
+only other callee). Read it end to end and found **4 near-identical sites**
+(guest `0x80007A04`/`0x80007A60`/`0x80007ABC`/`0x80007B18`, table offsets
+`0x63C8`/`-0x5B50`/`-0x5BA8`/`-0x5B60`): each reads a linked-list head pointer
+out of a per-mode table (indexed by a global mode byte at `0x8012_base-
+0x5767`, the same 8-bit-bounded table-index idiom already established safe
+elsewhere in this project), checks the head **only for `== 0`**, then
+dereferences it directly (`MEM_W(head, 0x0)`, walking the list via
+`MEM_W(node, 0x0)` in a loop) and later writes through it again
+(`MEM_W(head, 0x4) = 0`) — the exact "trust a corrupted global as a valid
+pointer" shape as every guard already landed in this project, this time
+against a per-mode list head instead of a fixed slot or per-node table.
+`frameStartReset`'s crash offset (`+532` native bytes, s156) being far larger
+than `frameStartReset`'s own compact ~0x18C-byte guest body, combined with
+`heapWalker` being a much larger same-translation-unit function called
+first, makes it the leading inlining-attribution candidate (not proven by a
+live bad-pointer value — no soak had run with the guard armed before this
+session's own soak, see below).
+
+### 4. Landed and soaked
+
+Guarded all 4 sites (`ROGUESQ_LOG_HEAPWALKER_GUARD`, `N64Recomp/
+fixup_game_funcs.py`, bails to each site's own pre-existing `== 0` skip
+label — identical degrade-to-empty-slot semantics the code already uses for
+the genuine null case). Full regen (`make_elf.py` → `N64Recomp` →
+`fixup_game_funcs.py`, run exactly once on a fresh delete — a first
+accidental double-run duplicated 3 unrelated, already-known-non-idempotent
+`reserveAndEmitDLEntry` patches per s102's flagged bug, caught before it
+reached a build and fixed by a second clean regen), verified x1 each via the
+fixup report + `grep` on the regenerated `.c`, `cmake --build` exit 0 (only
+pre-existing-class warnings). Soak (`scratch/agent/run_heapwalkerguard1.sh`,
+same full battery as s156's `composeguard56` plus
+`ROGUESQ_LOG_HEAPWALKER_GUARD=1`): **`heapwalker-guard` 0/0** (not exercised,
+unvalidated — same status several guards in this family have carried before
+eventually getting hit) and **all 6 `composeNpcOrientationMatrix` guards
+0/0** again. Process died at hold-iter 4 (~3s post-leave, same shape as
+every recent soak) to a SIGBUS backtrace:
+```
+static_5_800AB1C8 + 6168   (composeNpcOrientationMatrix; size now 12700B,
+                             confirmed via machoparse.py against the current
+                             build — grew from s99's 11632B due to guards
+                             1-6's own inserted code)
+ <- static_5_800AAD9C + 4116
+ <- static_5_800C6854 + 628
+ <- menuOverlayInit + 3512
+ <- mainGameLoop + 2400
+```
+**A 4th recurrence of the 12th class, at yet another site none of the 6
+existing guards cover** — not `frameStartReset` (that class did not recur
+this run) and not `heapWalker` (never crashed). The function's own entry
+diagnostic (`[compose-npc-orient-800AB1C8]`) fired 537 times this run with
+`arg_r4` taking only two values across the whole run (`0x00000000` 255x,
+`0x00000001` 282x) — **ruled out** as the discriminator (a null `arg_r4` is
+common, not anomalous, so it is not what makes this particular call crash).
+
+### Proportional-offset cross-check (rough, not conclusive)
+
+`6168/12700 = 48.6%` of the function's compiled size maps (by the same
+proportional technique s155 used successfully) to roughly guest line 6280 +
+0.486*(7186-6280) ≈ **line 6720** in `funcs_40.c` (function now spans
+6280-7186, confirmed by reading forward to its closing `;}`). That estimate
+lands in the gap between guard4 (`:6620`) and guard5 (`:6780`) — **but a read
+of that exact gap (`:6640-6779`) found only fixed-global byte compares and
+floating-point matrix composition, no unguarded pointer dereference** — the
+estimate likely landed on the wrong side of the true site, or the
+size/offset-to-line proportionality assumption itself is too coarse to
+localize a single instruction this time. Not pursued further this session
+(time-boxed); flagged as a starting point, not a confirmed candidate, for
+the next iteration.
+
+### Controls held
+
+`thr-resume bad=1` 0/0 (still no recurrence); `[anim-recurse] sp` still
+confined to known values (not checked in detail this session, no anomaly
+reported); `ost-wb SKIP_OOB` fired 10x (pre-existing always-on gate, no
+regression); `UnhandledJump`/`missing-func` both 0.
+
+### What this rules out / establishes
+
+- The "shared corrupted dispatcher" framing for `static_5_800AAD9C` is
+  **closed, refuted by direct source read** — do not revisit without new
+  evidence.
+- `frameStartReset` has no bug in its own guest body — any future
+  `frameStartReset`-attributed crash should be investigated in its callees
+  (`heapWalker`, `tickTextureMaterialExpiry`) or treated as an inlining
+  artifact, not by re-reading `frameStartReset` itself again.
+- `heapWalker`'s 4 sites are guarded but **unvalidated** — same status as
+  several other guards in this family; do not treat 0/0 as evidence they
+  were wrong.
+- `composeNpcOrientationMatrix` (12th class) now has its **4th** documented
+  recurrence at a site outside all 6 existing guards, reinforcing that this
+  function likely has more unguarded sites than the 6 found so far via
+  proportional-estimate/full-read combined.
+
+### Files touched
+
+- `N64Recomp/fixup_game_funcs.py` — added the `heapWalker` 4-site guard
+  (`_heapwalker_guard_sites`), inserted after the `composeNpcOrientationMatrix`
+  guard5/6 block. Not committed (sibling checkout, same posture as s54/
+  s90-156 — flagged for the user, not auto-committed).
+- `N64Recomp/RecompiledFuncs/funcs_3.c` / `funcs_40.c` (and all other
+  `funcs_*.c`) — regenerated fresh, fixup run exactly once. Not committed
+  (same posture).
+- `scratch/agent/run_heapwalkerguard1.sh` — this session's soak script.
+- `scratch/s73_post_a_scene/heapwalkerguard1/` — this session's run:
+  `run.log`, `pre_*`/`stable_*`/`hold_*`/`post_*` screenshots.
+- `scratch/agent/run_heapwalkerguard1_driver.log` — driver summary.
+- `scratch/agent/regen_s157.log`, `scratch/agent/build_s157.log`,
+  `scratch/agent/fixup_s157.log` — this session's regen/build/fixup logs.
+- `scratch/agent/test_pattern.py` — scratch regex-debugging script (the
+  "no match" scare during this session turned out to be a `tail -60`
+  truncation artifact on a 130-line report, not a real pattern bug; kept as
+  a reusable pattern-testing harness, not deleted).
+
