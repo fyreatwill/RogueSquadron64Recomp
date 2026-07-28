@@ -709,6 +709,28 @@ cost three sessions before the recursive mutex.
     (unexplored: what input reachably leaves that menu into gameplay —
     the existing `PROBE_KEYS`/stick schedule in `run_mission_keys.sh`
     was built for hold-window soak coverage, not mission entry).
+    **s149 (4th and final-per-rule-8 soak on (a)):** `reserveAndEmitDLEntry`
+    did **not** recur — stands at **1/4**, **parked, no guard written**
+    (doesn't clear this thread's own "reachable and recurring" bar).
+    `do_rom_read` also did not recur (**0/4**, a 3rd independent
+    confirmation Thread B stays closed). Process died earlier than any
+    prior countracefix soak (hold+2s) to a **recurrence of the
+    already-catalogued 15th crash class** (RT64-internal `loadDrawState`
+    zero-sample-size assert, `rt64_state.cpp:747`, first seen s97,
+    recurred s99, now a 3rd time) — not a new class. No source changes.
+    **(a) is now answered.** Screenshot check on this exact soak (no new
+    run) **revises (b)'s framing**: `hold_01`/`hold_02.png` (+1-2s after
+    the p1 Start press) already show a completely different, heavily
+    glitched rotated-camera scene vs. the static SELECT YOUR CRAFT menu
+    in `pre_p1_start`/`post_p1_start.png` — the leave transition **did**
+    fire (consistent with s75/s76's "single Start leaves into
+    hangar-flight"), just invisible to VI-phase tracking (same
+    0x6AB400 pair, s48). **"What input leaves the menu" is not actually
+    open — it's answered.** The real open question is what that
+    post-leave scene is (cutscene vs. real mission) and surviving its
+    first ~2s, which is exactly where this session's crash and the
+    whole s95-99 crash family keep landing. Full detail: PORTING-STATE
+    s149.
 
 0a. **CLOSED (s135): `emitAllocatedDLCommand` soak hypothesis parked,
     3-attempt budget exhausted per rule 8.** s133 → environment-side

@@ -13164,3 +13164,104 @@ YOUR CRAFT** into a mission — unexplored territory; the existing
 `PROBE_KEYS`/stick schedule in `run_mission_keys.sh` was built to
 exercise the hold window for crash-hunting, not to test mission-entry
 inputs, so this is a genuinely new question, not a rerun of prior work.
+
+## Session 149 (2026-07-27) — ran countracefix4, the 4th (final-per-rule-8) soak on the `reserveAndEmitDLEntry` recurrence-rate question; it did NOT recur (stays 1/4, park it), but the process died earlier than any prior countracefix soak to a recurrence of the already-catalogued 15th crash class (RT64-internal `loadDrawState` zero-sample-size assert, first seen s97, now 3rd occurrence)
+
+Picked up an interrupted prior iteration (STATUS was `WORKING`,
+`OUTCOME` deleted, no uncommitted code — a session that started but
+never finished writing up; discarded cleanly, no lost work). Ran
+NEXT.md's queued, no-rebuild plan (a): copied `run_countracefix3.sh`
+forward unchanged (env battery + tag only) to `run_countracefix4.sh`
+and reran the same repro shape a 4th time.
+
+**Result — `reserveAndEmitDLEntry`/`findAndUnlinkSmallestEntry` did
+NOT recur.** `[dlentry-reserveAndEmit]` entry log fired 20/20 clean (function
+confirmed hot/reachable, same as every prior soak), 0
+`[dlentry-guard]` fires, 0 SIGBUS at that site. Combined across the
+4-soak countracefix battery (s147 soak1/2, s148 soak3, this soak):
+**`reserveAndEmitDLEntry` stands at 1/4.** Per NEXT.md's own decision
+rule (soak 4 is the final allowed attempt on this hypothesis before a
+new angle is required, rule 8), this is the answer: **park it, do not
+write a guard** — 1/4 does not clear this thread's "confirmed
+reachable and recurring" bar, and a guard against an unconfirmed
+mechanism risks repeating s99's false-positive-guard lesson.
+
+**`do_rom_read`/`piDmaWorker` also did not recur** — 0 fires this run,
+now **0/4** across the full countracefix battery, a 3rd independent
+confirmation that Thread B (s105-148) stays closed.
+`[voice-active-gate-nz]` also clean (0 corrupted reads).
+
+**Process died earlier than any prior countracefix soak** — `hold
+done wall=2s` (vs. 35-58s for soaks 1-3), i.e. it crashed almost
+immediately after entering the hold window, before any of the
+scripted stick inputs fired. Cause: `Assertion failed:
+((dstCallTile.sampleWidth > 0) && (dstCallTile.sampleHeight > 0) &&
+"Sample size calculation can only result in non-zero values."),
+function loadDrawState, file rt64_state.cpp, line 747` (signal 6,
+Abort) — backtrace `RT64::State::loadDrawState` ← `RT64::RDP::drawTris`
+← `GBI_RDP::decodeTriangles` ← `GBI_RDP::tri` ←
+`Interpreter::processRDPLists` ← `Application::processDisplayLists`.
+Cross-checked against PORTING-STATE: this is **not a new class** —
+exact same assertion text/file/line as the already-catalogued **15th
+crash class**, first seen s97 (during the `composeNpcOrientationMatrix`
+soak) and recurred once already at s99. This is its **3rd
+occurrence**, always RT64-internal (no source on our side, same family
+as the s86/s87 TMEM/sample-size-zero asserts but a different call
+site — direct triangle-draw path via `drawTris`, not the texture-upload
+path via `queueGPUUploadTMEM`). A `[rt64] loadDrawState: copy-mode draw
+with undefined tile 7, marking invalid` log line immediately preceded
+the crash, consistent with s89's finding that this logging is a red
+herring already guarded before `uploadTexture` — the assert fires on a
+different, unguarded path through the same function.
+
+**No source/patch changes this session** — pure repro, no rebuild.
+Landed `scratch/agent/run_countracefix4.sh` (4th soak in the
+`run_countracefix*.sh` family, same battery, tag `countracefix4`).
+
+**M3 status: still not met.** This soak's crash-free stretch (73.6s to
+last phase line, `vi_width=512 origin=0x006AB400`) was again entirely
+in the pre-mission menu/hangar-selection scene — no in-mission
+rendering observed.
+
+**Next work unit, per NEXT.md's own two-branch plan:** (a) is now
+answered (park `reserveAndEmitDLEntry` at 1/4, no guard) — all
+remaining budget should go to **(b): find the mission-entry input from
+SELECT YOUR CRAFT**, unexplored territory. If a future session wants a
+5th `reserveAndEmitDLEntry` data point, that needs a new angle (e.g.
+targeted instrumentation of `findAndUnlinkSmallestEntry`'s free-list
+state), not a 5th blind repro, per rule 8.
+
+**Addendum — screenshot check on this exact soak revises the (b) framing.**
+Before writing up (b) as "fully unexplored", read this run's own
+captured screenshots (no new soak needed, they were already taken by
+`run_mission_keys.sh`'s existing PROBE_MODE=start_only p1 probe).
+`pre_p1_start.png`/`post_p1_start.png` (bracketing the single Start
+press) both still show static **SELECT YOUR CRAFT** (hangar pad,
+"PRESS [A] FOR CRAFT DESCRIPTION", X-wing on the pad) — no visible
+change within the 0.6s window `run_mission_keys.sh` waits after the
+key send. But `hold_01.png`/`hold_02.png` (+1s/+2s into the hold
+window that follows, i.e. ~1-2s after the Start press) show a
+**completely different scene**: a steep rotated camera, motion-blur
+speed-line background, and heavily glitched/garbled multi-hue textures
+on both the ship and background geometry — visually consistent with
+s75/s76's already-documented "single Start leaves into hangar-flight"
+transition (title-yellow fade, airborne X-wing), not a continuation of
+the static menu. **The Start press did work — the leave transition
+fired in this exact repro.** VI phase tracking never showed this (last
+`[phase]` line stayed at the pre-leave 512/0x6AB400 pair, s48's
+"VI stays on the same pair, origin cannot name these scenes" applies
+here too), which is why the phase-based M3 status check above read this
+as "still pre-mission" — that check only has VI width/origin to go on
+and is blind to a same-VI-parameters scene change. **Revises (b):**
+"what input leaves SELECT YOUR CRAFT" is not actually an open question
+— it's already answered (s75/s76, reconfirmed visually here) — the open
+question is what the post-leave scene actually is (hangar-flight
+cutscene vs. real mission load) and whether the process can survive the
+first 1-2s of it, since that is exactly where this session's crash (and
+the whole s95-99 "SELECT YOUR CRAFT stable → hold" crash-family
+catalogue) keeps landing. Next session should pull the s75/s76 archived
+screenshots (if kept) or run a soak with denser screenshot capture
+across the first 5s post-Start (current schedule only snaps at
+`pre_p1`/`post_p1` then 1 Hz hold frames) to identify what scene
+`hold_01`/`hold_02` actually are before assuming a new "find the input"
+experiment is needed.

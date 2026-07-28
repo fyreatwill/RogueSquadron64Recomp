@@ -1,90 +1,104 @@
-# NEXT work unit — Thread B closed (2nd confirmation); pick (a) firm up reserveAndEmitDLEntry's rate, or (b) find the mission-entry input
+# NEXT work unit — identify the post-leave scene and survive its first ~2s
 
-s148 reran the exact countracefix soak battery a 3rd time (no code
-change) and got a 2nd straight fully crash-free run -- read
-PORTING-STATE's Session 148 entry before doing anything else; this file
-only has the actionable summary.
+s149 closed the `reserveAndEmitDLEntry` recurrence-rate question (parked
+at 1/4, no guard) and found something more useful by reading this
+session's own screenshots: the single-Start "leave SELECT YOUR CRAFT"
+transition **already fires** in the standard countracefix repro shape —
+read PORTING-STATE's Session 149 entry (including its addendum) before
+doing anything else; this file only has the actionable summary.
 
-## What s148 did and found
+## What s149 did and found
 
-Source-read `reserveAndEmitDLEntry` (`N64Recomp/RecompiledFuncs/
-funcs_3.c:14487`) against soak 1's exact backtrace
-(`scratch/s73_post_a_scene/countracefix1/run.log:65215`) before
-instrumenting, per this thread's own established practice. Found
-`emit-dl-guard2`/`3` (s133-135) actually live in a **different
-function**, `emitAllocatedDLCommand` (`funcs_3.c:2412`) -- confirms
-s147's open "is this guard's coverage of this call path unconfirmed?"
-question with a definite **no, it doesn't cover it at all**, they just
-share a name-adjacent function family. The real crash traces into
-`findAndUnlinkSmallestEntry` (`funcs_6.c:12472`), a bucketed best-fit
-free-list allocator walking singly-linked lists over fixed globals at
-`0x8011xxxx`/`0x8012xxxx`.
+Ran `run_countracefix4.sh` (4th soak in the family, no code changes) to
+answer NEXT.md's own queued question: does `reserveAndEmitDLEntry`
+recur a 2nd time (worth guarding) or stay rare? It did **not** recur —
+1/4 across the battery, parked per this thread's own decision rule
+(doesn't clear "reachable and recurring"). `do_rom_read` also did not
+recur (0/4, 3rd confirmation Thread B stays closed).
 
-Reran the exact same battery a 3rd time (`countracefix3`, no rebuild):
-**fully crash-free** (`CRASH: 0`, 5920 LLE tasks, process alive at 58s
-wall-clock, killed on schedule not by a signal). Combined across the
-3-soak countracefix battery (s147 soak1/2 + s148 soak3):
-**`do_rom_read`/`piDmaWorker` is now 0/3** -- Thread B (s105-148) is
-closed with two independent clean confirmations, not one.
-**`reserveAndEmitDLEntry` is 1/3** -- a rare tail event in the
-already-catalogued 14-class crash family (17+ classes catalogued total
-across this project), not yet a reliably-recurring blocker. No guard
-written -- 1/3 doesn't clear this thread's own bar for "confirmed
-reachable and recurring" before writing a fix.
+The soak died earlier than any prior countracefix soak (hold+2s) to a
+**recurrence of the already-catalogued 15th crash class**: RT64-internal
+`Assertion failed: ((dstCallTile.sampleWidth > 0) &&
+(dstCallTile.sampleHeight > 0) ...)`, function `loadDrawState`, file
+`rt64_state.cpp`, line 747 (first seen s97, recurred s99, this is the
+3rd occurrence). Backtrace: `RT64::State::loadDrawState` ←
+`RT64::RDP::drawTris` ← `GBI_RDP::decodeTriangles` ← `GBI_RDP::tri` ←
+`Interpreter::processRDPLists` ← `Application::processDisplayLists` —
+no source on our side.
 
-**M3 status check (not advanced this session):** the 58s crash-free
-stretch was entirely inside the pre-mission **SELECT YOUR CRAFT**
-menu scene (`vi_width` stayed on the 512/640 menu pair the whole run).
-M3's "done when" bar needs 60s of *in-mission* rendering -- this result
-demonstrates menu-scene stability, not mission-scene stability.
+**The important part:** before writing this up as "still stuck in the
+pre-mission menu" (what VI-phase tracking alone would suggest — last
+`[phase]` line stayed on the pre-leave 512/0x6AB400 pair, s48 already
+established this pair can't distinguish menu scenes), the screenshots
+this exact soak captured were read directly:
+- `scratch/s73_post_a_scene/countracefix4/pre_p1_start.png` and
+  `post_p1_start.png` (bracketing the single Start press, 0.6s apart):
+  both still show the static **SELECT YOUR CRAFT** menu (hangar pad,
+  "PRESS [A] FOR CRAFT DESCRIPTION", parked X-wing).
+- `hold_01.png` / `hold_02.png` (+1s / +2s into the hold window that
+  follows the Start press, i.e. ~1-2s post-press): a **completely
+  different scene** — steep rotated camera, motion-blur speed lines,
+  heavily glitched multi-hue textures on ship and background geometry.
+  This is visually consistent with s75/s76's already-documented "single
+  Start leaves into hangar-flight" transition (title-yellow fade →
+  airborne X-wing), not a continuation of the menu.
 
-## Do next: pick one, per this session's own two-branch recommendation
+**So the leave transition already fires in this exact repro shape.**
+"What input leaves SELECT YOUR CRAFT" (the question NEXT.md posed as
+plan (b) last session) is not actually open — it was already answered
+by s75/s76 and is now reconfirmed visually here. The real open
+questions are: (1) what does the post-leave scene actually settle into
+— a non-interactive hangar-flight cutscene, or the start of a real
+mission? — and (2) can the process survive past the first ~2s of it,
+since that is exactly the window where this session's crash (and the
+whole s95-99 "SELECT YOUR CRAFT stable → hold" crash-family catalogue,
+15+ classes) keeps landing.
 
-**(a) Firm up `reserveAndEmitDLEntry`'s rate (lower-risk, incremental):**
-1. Copy `scratch/agent/run_countracefix3.sh` to `run_countracefix4.sh`
-   (same battery, tag `countracefix4`), rerun. No rebuild needed.
-2. Discriminating question: does the crash recur (2/4, worth guarding)
-   or stay rare (1/4, park it and move to (b))? 2-3 soaks total on a
-   hypothesis is this project's own established bar (rule 8) -- this
-   would be the 4th, so treat whatever this soak shows as the answer,
-   don't spend a 5th without a new angle.
-3. If it recurs: guard `findAndUnlinkSmallestEntry`'s free-list walk
-   using the same pattern as every prior guard in this family (s99-101,
-   133-135) -- a source-level null/alignment check that `goto`s the
-   real epilogue, `U32()`-truncate any `ctx->rN` compared against a
-   literal (s99's lesson).
+## Do next
 
-**(b) Find the mission-entry input from SELECT YOUR CRAFT (higher-value,
-unexplored):** this is new territory -- `run_mission_keys.sh`'s
-`PROBE_KEYS`/stick schedule was built to exercise the hold window for
-crash-hunting, not to test what actually leaves the craft-select menu
-into a mission. Read `run_mission_keys.sh` and the menu state machine
-notes in `docs/CURRENT-TRUTH.md` (search "SELECT YOUR CRAFT") for what's
-already known about this menu's controls, then try a driven soak that
-holds a candidate mission-entry input (likely another `a`/start
-variant, or a d-pad/stick selection before confirming) instead of just
-sticks during the hold window. This is the path toward actually
-attempting M3's "done when" bar rather than more menu-scene stability
-soaking.
-
-Given (a) is cheap (one more soak, no new code) and (b) is genuinely new
-work, a reasonable order is: run (a) first since it's already queued and
-free, then spend the bulk of the next session's budget on (b) regardless
-of (a)'s outcome -- (a) at 1/4 or 2/4 doesn't change that M3 progress
-needs (b) either way.
+1. **Densify screenshot capture across the leave transition, no new
+   hypothesis needed yet.** `run_mission_keys.sh`'s current schedule
+   only snaps `pre_p1_start`/`post_p1_start` (0.6s bracket) then 1 Hz
+   during the hold window — coarse for a transition that's already
+   shown to change completely within 1s. Either lower the hold loop's
+   sleep interval for the first ~5s post-Start-press (e.g. 0.2s ticks)
+   or add explicit snaps at +0.2/+0.4/.../+2.0s right after the p1
+   probe's key send, before the existing 1 Hz hold loop starts. This
+   needs a script edit but no rebuild.
+2. Rerun once with the denser capture. Discriminating read: do the
+   dense frames show a coherent flight/mission scene stabilizing (even
+   briefly, before whatever crashes it) — supports "hangar-flight is
+   real interactive content, just crash-prone" — or do they show
+   uninterrupted glitch/garbage frames all the way to the crash —
+   supports "the RT64-internal assert family fires on the transition's
+   *load* itself, before any real content renders". Either answer is
+   informative for prioritizing (guard-the-transition vs.
+   survive-then-see-if-its-a-mission).
+3. If a real, if brief, hangar-flight/mission scene is visible before
+   the crash: capture what its VI parameters look like (width/origin)
+   distinct from the menu pair — closes the "VI phase can't see this
+   transition" gap for future soaks, letting the phase-based M3 check
+   actually detect in-mission time instead of reading it as menu-only.
+4. Do NOT spend a session re-deriving "what input leaves the menu" —
+   that's closed (s75/s76, reconfirmed s149). Do NOT restart
+   `reserveAndEmitDLEntry` soaking without a new angle (targeted
+   instrumentation of `findAndUnlinkSmallestEntry`'s free-list state,
+   not another blind repro) — it's parked at 1/4 per rule 8.
 
 ## Do not
 
 - Do not re-derive or re-verify the count-write/pointer-store ordering
-  fix (Thread B) -- closed, 3/3 clean `do_rom_read` non-recurrences
-  across s147-148.
+  fix (Thread B, `allocateSongChannelArray`) — closed, 0/4 clean
+  `do_rom_read` non-recurrences across s147-149.
 - Do not assume `emit-dl-guard2`/`3` covers any part of
-  `reserveAndEmitDLEntry` -- confirmed s148 they live in a different
+  `reserveAndEmitDLEntry` — confirmed s148 they live in a different
   function entirely (`emitAllocatedDLCommand`).
 - Do not write a guard for `reserveAndEmitDLEntry`/
-  `findAndUnlinkSmallestEntry` without first confirming a recurrence --
-  at 1/3 it does not clear this thread's own "reachable and recurring"
-  bar yet.
+  `findAndUnlinkSmallestEntry` without a new discriminating angle — at
+  1/4 it does not clear this thread's "reachable and recurring" bar,
+  and rule 8's 4-soak budget on this exact repro shape is spent.
+- Do not treat "single Start leaves SELECT YOUR CRAFT" as an open
+  question — it's answered (s75/s76, s149).
 - Do not re-run `fixup_game_funcs.py` twice without a full regen between
   runs (delete `RecompiledFuncs/funcs_*.c` → `make_elf.py` →
   `regen_n64recomp.sh` → `fixup_game_funcs.py` once) — verify via grep
@@ -96,6 +110,13 @@ needs (b) either way.
   just built to be caught.** Always grep the FULL run log for every
   armed diagnostic's output, not just the one you just added, before
   writing up a run as inconclusive or as a weak result.
+- **Screenshots a script already captured are free evidence — read them
+  before assuming a scene-identity question needs a new soak.** This
+  session's whole revised framing for (b) came from looking at PNGs
+  `run_mission_keys.sh` had already taken, not from new instrumentation.
+- VI-phase tracking (`[phase] vi_width=...`) cannot distinguish scenes
+  that share VI parameters (s48) — a `[phase]` line staying flat does
+  NOT mean the screen content is unchanged; check screenshots too.
 - Function/line-number estimates in NEXT.md/PORTING-STATE drift a few
   lines every regen — always grep/read the actual regenerated file
   before writing a regex anchor or planning a reorder.
@@ -118,12 +139,14 @@ needs (b) either way.
   shader rebuilds.
 - Write a new wrapper script file per soak tag (`scratch/agent/run_
   <tag>.sh`) rather than parametrizing a single reusable script via env
-  indirection. `run_countracefix3.sh` (this session) is a good template
+  indirection. `run_countracefix4.sh` (this session) is a good template
   — copy the full armed-diagnostics battery forward.
 - Launch the soak via `zsh <absolute-path>/run_<tag>.sh > <absolute-path>/
   run_<tag>_driver.log 2>&1` as a `run_in_background` Bash call, then
   block synchronously with `until ! pgrep -f "./RogueSquadron64Recomp"
-  >/dev/null 2>&1; do sleep 5; done` before closing out the iteration.
+  >/dev/null 2>&1; do sleep 5; done` before closing out the iteration —
+  the Stop hook checks `scratch/agent/STATUS` and will re-fire if you
+  try to end the turn while a soak is still running.
 - Checking submodule (`lib/...`) git status needs `env GIT_DIR=lib/X/.git
   GIT_WORK_TREE=lib/X git status --short`, or a plain `cd <absolute
   path>` as its own command followed by a separate `git status` call.
@@ -143,17 +166,15 @@ needs (b) either way.
 
 ## Housekeeping still flagged, still not done
 
-`docs/CURRENT-TRUTH.md` is still far over the ~35 KB target (its "Next
-steps" section alone is ~1460 lines, s105-148's Thread B saga narrated
-almost verbatim rather than compressed). Migrate durable
-mechanism/architecture material to PROJECT-OVERVIEW.md and prune
-superseded detail, paired with a real experiment. Flagged for many
-sessions without action -- worth doing once Thread B's own history
-(now closed) can be compressed to a short summary instead of the full
-s105-148 blow-by-blow.
+`docs/CURRENT-TRUTH.md` is still far over the ~35 KB target (currently
+~175 KB) — its "Next steps" section alone is now over 1500 lines,
+narrating multiple closed threads almost verbatim rather than
+compressed. Migrate durable mechanism/architecture material to
+PROJECT-OVERVIEW.md and prune superseded detail, paired with a real
+experiment. Flagged for many sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git
 checkout, not a `lib/` submodule, with uncommitted changes across
-s90-148 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
+s90-149 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`).
 Same posture as the `rogue_squadron64` sibling checkout flagged since
 s54. Worth asking the user whether/how to commit that history.
