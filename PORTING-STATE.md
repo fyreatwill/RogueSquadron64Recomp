@@ -21692,3 +21692,67 @@ concrete falsification experiment for a human to run. Per this project's own
 budget-rule-8 spirit (applied to environment access), the 3rd consecutive
 session should NOT re-attempt the identical command without a config change
 or human intervention in between.
+
+Per NEXT.md's Step 0 (written by s227), re-ran the control command
+`tools/agent/stop_gate.sh --verify` first, before touching the actual
+regen work. It failed identically to s226/s227: "This command requires
+approval." Per this project's own budget rule (iron rule 8, applied to
+environment access rather than a hypothesis), did NOT retry a 4th time or
+attempt `regen_n64recomp.sh`. Instead spent the session on ONE targeted
+falsification test rather than repeating the same diagnosis.
+
+**New test**: `build/idontexist_permcheck_s228 --help` — a command
+targeting the `Bash(build/:*)` allow rule (a DIFFERENT rule from
+`tools/:*`) with a deliberately nonexistent binary, so a "command not
+found" response would prove permission WAS granted (failure happening
+after the permission layer, inside the shell), while "requires approval"
+would prove the block happens AT the permission layer, before the shell
+ever runs anything. Result: "This command requires approval" — same
+failure mode as `tools/:*`, on an entirely different rule.
+
+**This overturns the s226/s227 framing that the gate is specific to
+`tools/:*`/`./tools/:*`.** It is not. Both `tools/:*` and `build/:*` fail
+identically. Cross-referencing which rules in `.claude/settings.json` HAVE
+been empirically confirmed working this session and prior sessions
+(`grep`, `python3`, `pwd`, `git status`/`diff`/`log`/`show`, `git add`) —
+every working rule is shaped `Bash(<bare-word>:*)` or
+`Bash(<word> <word>:*)`, i.e. the ruled prefix is a complete command
+token that is followed by a space in real invocations. Every failing rule
+found so far is shaped `Bash(<dir>/:*)` — a bare directory name ending in
+a slash, where real commands continue immediately with no space
+(`tools/agent/stop_gate.sh`, not `tools/ agent/stop_gate.sh`).
+
+**New hypothesis, sharper than s227's two candidates**: Claude Code's
+`Bash(<prefix>:*)` syntax treats `:*` as "exact command-word, then any
+argument after a space" rather than a raw string-prefix wildcard — so a
+rule intended to match "anything starting with `tools/`" needs the
+glob-only form `Bash(tools/*)` (no colon), not `Bash(tools/:*)`. This
+would explain 100% of the observed pattern with a single mechanism, is a
+known distinction in glob-permission systems, and predicts a specific,
+cheap, testable fix. Written up in full in `scratch/agent/BLOCKED.md`,
+including the exact settings.json edit to try (`tools/:*` -> `tools/*`,
+`./tools/:*` -> `./tools/*`, `build/:*` -> `build/*`, `./build/:*` ->
+`./build/*`) and a falsification path (test in an interactive session
+first if a human wants to confirm before editing).
+
+**No new build, no new soak this session** — the `deref0` diagnostic
+(landed s226, `N64Recomp/fixup_game_funcs.py`) remains unvalidated, third
+session running. Everything in CURRENT-TRUTH's "Next steps" that requires
+a rebuild is blocked behind this same gate. Escalated to the user via a
+rewritten `scratch/agent/BLOCKED.md` with a specific proposed fix (not
+just a repeated diagnosis) — per this project's rules, will NOT re-attempt
+`regen_n64recomp.sh` or `stop_gate.sh --verify` a 4th consecutive session
+without evidence the environment or settings.json changed.
+
+**Separate finding, unrelated to the permission gate**: while investigating
+why s227's commit message claimed "escalated to the user in BLOCKED.md" yet
+`git log --all -- scratch/agent/BLOCKED.md` showed no matching commit,
+found the real cause — `/scratch/` is wholesale gitignored
+(`.gitignore:80`), and only `STATUS`/`OUTCOME`/`NEXT.md` were ever
+force-added as tracked exceptions. `git add -A` silently skips new files
+under an ignored directory (no error), so `BLOCKED.md`/`SUBSTITUTION.md`
+have never actually persisted to git history despite prior sessions'
+commit messages claiming otherwise — s226's and s227's BLOCKED.md content
+existed on disk within those sessions but is gone now. This session force-
+added its own `BLOCKED.md` (`git add -f`) so it survives. Documented in
+NEXT.md so future sessions do the same for BLOCKED.md/SUBSTITUTION.md.

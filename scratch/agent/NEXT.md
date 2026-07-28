@@ -1,44 +1,52 @@
-# NEXT work unit — this session is BLOCKED on a permission-gate issue;
-# check for a human fix before touching the regen/soak work again
+# NEXT work unit — 3rd consecutive session BLOCKED on the permission gate;
+# a specific fix has been proposed for a human, check for it before touching
+# regen/soak work again
 
-Read `scratch/agent/BLOCKED.md` in full first — it has the exact rules,
-exact commands, and results from s227's diagnosis. Short version: for 2
-consecutive sessions (s226, s227), `.claude/settings.json`'s
-`Bash(tools/:*)` / `Bash(./tools/:*)` allow rules have NOT authorized
-commands that match them verbatim — this includes `tools/agent/
-regen_n64recomp.sh` (the actual target) AND `tools/agent/stop_gate.sh
---verify` (a control command the loop's own Stop hook runs successfully
-every iteration). s227 also confirmed Bash itself is NOT globally broken
-this session: `grep`, `python3`, and `pwd` all ran fine, matching their own
-allow rules. So this is narrowly the `tools/:*` rule pair (or `tools/`-
-prefixed commands as a class) failing to authorize, not a broader sandbox
-failure.
+Read `scratch/agent/BLOCKED.md` in full first — s228 sharpened the
+diagnosis from "tools/-specific" (s226/s227's framing) to a whole class of
+`.claude/settings.json` allow rules (any `Bash(<dir>/:*)`-shaped rule, not
+just `tools/:*`) and proposed a concrete one-line-per-rule fix: change
+`tools/:*` -> `tools/*`, `./tools/:*` -> `./tools/*`, `build/:*` ->
+`build/*`, `./build/:*` -> `./build/*`. This has NOT yet been applied or
+tested — it needs a human to edit `.claude/settings.json` (or explicitly
+confirm/deny the hypothesis) between s228 and whenever this next runs.
 
 ## Do this iteration
 
-### Step 0 — check whether the gate cleared
+### Step 0 — check whether the gate cleared or the fix landed
 
-Try, in order, stopping at the first failure:
+First check whether `.claude/settings.json` changed:
+
+    git log --oneline -3 -- .claude/settings.json
+
+If a commit touched it since s228, or if `grep -n "tools/\*\|build/\*"
+.claude/settings.json` shows the proposed glob-only form is now present,
+the fix likely landed — proceed to try the actual command:
 
     tools/agent/stop_gate.sh --verify
 
-If this ALSO returns "This command requires approval" (not real output),
-the gate has NOT cleared. Per this project's own budget rule (applied to
-environment access, not a hypothesis), this would be a 3rd consecutive
-session hitting the identical gate. **Do NOT retry it again.** Go straight
-to BLOCKED: write a fresh `scratch/agent/BLOCKED.md` noting this is now 3
-sessions running (link s226, s227 in PORTING-STATE.md), and that this
-strongly suggests something outside the sandbox needs the user's direct
-attention (a Claude Code version issue, a stale permission cache, or a
-headless-runner invocation bug — see the "falsification experiment" section
-of s227's BLOCKED.md for how a human can pin down which). Then follow the
-exit contract (PORTING-STATE entry, CURRENT-TRUTH next-steps, this file,
-commit, STATUS=BLOCKED, OUTCOME=BLOCKED) and stop — do not attempt a 4th
-consecutive identical retry in a future session without evidence the
-environment changed.
+If this produces REAL verification output (not the "This command requires
+approval" message), the gate has cleared — proceed to Step 1.
 
-If `stop_gate.sh --verify` SUCCEEDS (produces real verification output, not
-the approval-required message), the gate has cleared — proceed to Step 1.
+If `.claude/settings.json` has NOT changed since s228's commit AND you
+have no other evidence the environment changed, **do NOT re-run
+`stop_gate.sh --verify` or any `tools/`/`build/`-prefixed command** — that
+would be a 4th consecutive identical retry with no new information, which
+iron rule 8 and s228's BLOCKED.md both say not to do. Go straight to
+BLOCKED: write a fresh `scratch/agent/BLOCKED.md` (or update the existing
+one) noting this is now 4 sessions running (s226-s229), link them in
+PORTING-STATE.md, and reiterate the fix is still pending. Then follow the
+exit contract and stop.
+
+If `.claude/settings.json` DID change but `stop_gate.sh --verify` STILL
+fails, that refutes s228's hypothesis (the glob-form fix didn't help) —
+this is valuable new information. Write it up in BLOCKED.md as a refuted
+hypothesis (don't just repeat it) and consider what's left: possibly the
+headless-runner pass-through explanation from s227's original two
+candidates, which was never directly tested. Go BLOCKED with this
+narrowed state; do not keep guessing at fixes without human input at that
+point — 4 sessions of blocked regen work is enough to require direct
+human debugging.
 
 ### Step 1 — resume the deref0 soak (only if Step 0 succeeded)
 
@@ -55,13 +63,14 @@ blocking it, s221/223/224/225):
    `python3 -c "import glob, os; [os.remove(f) for f in
    glob.glob('funcs_*.c')]"`.
 2. `python3 tools/make_elf.py` (`rogue_squadron64` checkout) — check
-   staleness first; s226/s227 already ran this and nothing since should
-   have touched the ROM/symbols.
+   staleness first; s226/s227/s228 already ran this and nothing since
+   should have touched the ROM/symbols.
 3. `./tools/agent/regen_n64recomp.sh` (this repo, cwd-independent). This is
-   the step that's been gated — confirm it actually runs this time (real
-   N64Recomp output, not the approval message) before continuing.
+   the step that's been gated 3 sessions running — confirm it actually
+   runs this time (real N64Recomp output, not the approval message)
+   before continuing.
 4. `fixup_game_funcs.py` **exactly once** — capture output to
-   `N64Recomp/scratch_fixup_report_s228.txt` (new tag), grep it for
+   `N64Recomp/scratch_fixup_report_s229.txt` (new tag), grep it for
    "camera-pose diagnostic" to confirm the `deref0` patch applied.
 5. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
    build -j8` (from `build/`).
@@ -100,16 +109,26 @@ Discriminating outcomes (unchanged from s226/s227's design, still valid):
 - Do not re-instrument scene-graph call rates — closed since s225.
 - Do not re-add the `deref0` field if present — investigate why it's
   missing (don't silently re-patch) if it's gone.
-- Do not attempt `regen_n64recomp.sh` (or any `tools/` script) a 3rd
-  consecutive session without either Step 0's control succeeding first, or
-  documented evidence the environment changed since s227.
+- Do not attempt `regen_n64recomp.sh`, `stop_gate.sh --verify`, or any
+  other `tools/`/`build/`-prefixed command a 4th consecutive session
+  without either Step 0's control succeeding, or documented evidence
+  (a settings.json diff) that the environment changed since s228.
+- Do not re-propose a different fix for the permission gate without first
+  checking whether s228's proposed fix was tried and what happened — read
+  BLOCKED.md's "What's already been tried" section fully before adding a
+  new hypothesis.
 
-## Environment notes (carried forward, still current)
+## Environment notes (carried forward, updated s228)
 
-- **Permission gate on `tools/:*` allow rules — BLOCKED 2 consecutive
-  sessions (s226, s227) as of this writing.** See `scratch/agent/BLOCKED.md`
-  for full diagnosis. Control test for next session: `tools/agent/
-  stop_gate.sh --verify` alone, before touching the actual regen script.
+- **Permission gate — BLOCKED 3 consecutive sessions (s226, s227, s228) as
+  of this writing.** s228 narrowed it from "`tools/:*`-specific" to a
+  whole class of rules (any `Bash(<dir>/:*)` pattern fails; `build/:*`
+  confirmed failing too, identically to `tools/:*`) and proposed a
+  concrete fix: change the four affected rules in `.claude/settings.json`
+  from `<dir>/:*` to `<dir>/*` (drop the colon). See
+  `scratch/agent/BLOCKED.md` for full detail, falsification path, and the
+  reasoning. **Check whether this fix was applied before doing anything
+  else this session** (Step 0 above).
 - **`deref0` diagnostic landed s226**, NOT yet soak-validated. Lives in
   `N64Recomp/fixup_game_funcs.py`'s existing `_campose_diag_patch` function
   (same patch site as s224's `ROGUESQ_LOG_CAMPOSE`, `funcs_4.c:0x800178A8`).
@@ -134,15 +153,25 @@ Discriminating outcomes (unchanged from s226/s227's design, still valid):
 - **`/tmp` is not writable this session** — write scratch/report files
   inside `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64` only.
 - **Compound `cd ... && cmd` gets denied in one Bash call** — issue `cd` and
-  the following command as SEPARATE Bash calls.
+  the following command as SEPARATE Bash calls. Also confirmed s228:
+  chaining multiple `;`-separated commands in one Bash call, where any one
+  of them isn't individually allow-listed, denies the WHOLE compound
+  command (e.g. `git check-ignore` isn't in the git-subcommand allow list,
+  and chaining it with other commands via `;` blocked all of them) — split
+  into separate Bash calls per command, don't assume partial execution.
 - **`git -C <path> <cmd>` does not match a `Bash(git <cmd>:*)` allow-rule**
   — `cd` first (its own Bash call), then bare `git <cmd>`.
+- **`git check-ignore` is not in the git-subcommand allow list** (only
+  `add`/`commit`/`diff`/`log`/`show`/`status`/`apply`/`stash list` are) —
+  requires approval, this is expected/correct, not part of the `tools/`/
+  `build/` bug.
 - **Headless permission matching is a PREFIX match on the command string**
   — a leading env assignment breaks it (`PROBE_MODE=1 zsh run.sh` doesn't
   match a `zsh` allow rule; write `env PROBE_MODE=1 zsh run.sh` instead).
-  This is a SEPARATE, older, already-understood quirk from the NEW s226/s227
-  `tools/:*` gate — don't conflate them. The env-prefix issue has a known
-  workaround (`env` prefix); the `tools/:*` gate does not yet.
+  This is a SEPARATE, older, already-understood quirk from the s226-s228
+  `Bash(<dir>/:*)` gate — don't conflate them. The env-prefix issue has a
+  known workaround (`env` prefix); the directory-prefix gate's proposed fix
+  is the settings.json edit in BLOCKED.md, not yet confirmed.
 - **Setup camera struct layout** (s223/s224/s226): `+0x0` a nullable
   linked-node pointer (tested null at `funcs_4.c:21339`, forwarded as a
   traversal-root pointer at `funcs_4.c:21358`); `+0x10/+0x14/+0x18/+0x1C` an
@@ -190,14 +219,30 @@ Discriminating outcomes (unchanged from s226/s227's design, still valid):
   `run.log` in place — copy the driver script to a new tag name per soak.
 - `scratch/agent/STATUS`/`OUTCOME` get reset at the START of each iteration
   by the harness — finding them reset at session start is normal.
+- **ROOT CAUSE FOUND s228 for why `scratch/agent/BLOCKED.md` never
+  persists across sessions: `/scratch/` is wholesale gitignored**
+  (`.gitignore:80`). Only `STATUS`, `OUTCOME`, and `NEXT.md` were ever
+  force-added as tracked exceptions (`git ls-files scratch/agent/` to
+  confirm the current exception list). `BLOCKED.md`/`SUBSTITUTION.md` are
+  plain new files each session, so a bare `git add -A` silently skips them
+  — no error, no warning in the commit output, so the commit "succeeds"
+  and the message can truthfully say "wrote BLOCKED.md" while the file
+  never enters git history. This is why `git log --all --
+  scratch/agent/BLOCKED.md` kept coming up empty for s226/s227 despite
+  their commit messages. **Fix, applied s228**: `git add -f
+  scratch/agent/BLOCKED.md` explicitly. If a future session wants
+  BLOCKED.md/SUBSTITUTION.md to survive, use `-f` (or add them to
+  `.gitignore`'s exception list with a `!scratch/agent/BLOCKED.md`-style
+  negation) — do not assume `git add -A` covers them.
 
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget and the
-Read tool's 256 KB single-read limit (confirmed s195, still true s227 — read
-it with `grep`/offset-limited `Read`, never a plain whole-file `Read`).
-Migrate durable mechanism/architecture material to `PROJECT-OVERVIEW.md` and
-prune superseded detail — flagged for 23+ sessions without action, escalating.
+Read tool's 256 KB single-read limit (confirmed s195, still true s228 —
+read it with `grep`/offset-limited `Read`, never a plain whole-file
+`Read`). Migrate durable mechanism/architecture material to
+`PROJECT-OVERVIEW.md` and prune superseded detail — flagged for 24+
+sessions without action, escalating.
 
 `fixup_game_funcs.py`'s untracked, single-copy state in the `N64Recomp`
 sibling checkout has been flagged since s83, still not fixed (not this
@@ -208,7 +253,10 @@ repo's commit scope) — worth surfacing to the user directly.
 long-standing uncommitted changes, unrelated to this repo's commit scope.
 Still flagged for the user, not committed autonomously.
 
-`lib/rt64` still shows as modified in `git status` — pre-existing, not
-investigated; still worth checking whether its patches are in sync with
-`submodule-patches/rt64*.patch` before assuming this is normal
-steady-state dirtiness.
+`lib/rt64` and `lib/N64ModernRuntime` both show as modified in `git
+status` as of s228 (N64ModernRuntime is new this session, rt64 is
+pre-existing) — not investigated; worth checking whether these are
+in-progress uncommitted patches vs. drift from `submodule-patches/*.patch`
+before assuming steady-state dirtiness. If a future session touches either
+submodule, remember CLAUDE.md's hard rule: any edit under `lib/` must be
+followed by `submodule-patches/export.sh` + a commit in the same session.

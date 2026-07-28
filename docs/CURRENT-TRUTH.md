@@ -663,9 +663,39 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s227)
+## Next steps, in order of expected value (s228)
 
--68. **(s227) BLOCKED, 2nd consecutive session: `Bash(tools/:*)`/`Bash(./tools/:*)`
+-69. **(s228) BLOCKED, 3rd consecutive session — the gate is NOT specific to
+    `tools/:*`; it's a whole class of allow rules (`Bash(<dir>/:*)`, a bare
+    directory ending in a slash) failing, while `Bash(<word>:*)` rules work
+    fine.** Overturns s227's "narrows to `tools/:*` specifically" framing.
+    Ran s227's own planned control (`stop_gate.sh --verify`) first — failed
+    identically, 3rd session in a row, so per iron rule 8 did NOT retry a
+    4th time. Instead ran one new falsification test:
+    `build/idontexist_permcheck_s228 --help` (nonexistent binary, so
+    "command not found" would prove permission was granted while "requires
+    approval" proves the block is at the permission layer) — **also
+    failed**, on a completely different allow rule (`Bash(build/:*)`, not
+    `Bash(tools/:*)`). Cross-referencing every rule confirmed working this
+    and prior sessions (`cmake:*`, `python3:*`, `grep:*`, `git add:*`,
+    `git status:*`, etc. — all bare-word-then-`:*`) against every rule
+    confirmed failing (`tools/:*`, `./tools/:*`, `build/:*` — all
+    dir-ending-in-slash-then-`:*`) produces a single clean hypothesis:
+    Claude Code's `:*` suffix means "exact command word, then anything
+    after a space," not "raw string prefix" — so a rule meant to match
+    "anything starting with `tools/`" (no space after the slash in real
+    commands) needs the plain-glob form `Bash(tools/*)`, not
+    `Bash(tools/:*)`. **Concrete fix proposed for a human to test**: in
+    `.claude/settings.json`, change `tools/:*` -> `tools/*`,
+    `./tools/:*` -> `./tools/*`, `build/:*` -> `build/*`,
+    `./build/:*` -> `./build/*`. Full write-up, falsification path, and
+    impact assessment in `scratch/agent/BLOCKED.md`. Do NOT re-attempt
+    `regen_n64recomp.sh` or any `tools/`/`build/`-prefixed command a 4th
+    consecutive session without evidence the environment or
+    settings.json changed. Full detail: PORTING-STATE Session 228.
+
+-68. **(s227, superseded by s228 above — kept for the trail) BLOCKED, 2nd
+    consecutive session: `Bash(tools/:*)`/`Bash(./tools/:*)`
     allow rules are not authorizing matching commands this session, and the
     gate is confirmed broad (any `tools/`-prefixed script), not specific to
     `regen_n64recomp.sh`.** s226 only re-tried the target script 3x; this
