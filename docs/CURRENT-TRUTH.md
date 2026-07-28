@@ -663,7 +663,38 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s196)
+## Next steps, in order of expected value (s197)
+
+-46. **(s197) found and guarded the one dereference in the 18th-crash-class
+    free-list idiom that bypasses GUARD/GUARD2/GUARD3 entirely (the
+    cached-free-list-head pop at `funcs_4.c` `L_800101AC`, taken when the
+    global free-list cache is non-empty at entry — skips
+    `findAndUnlinkSmallestEntry` and all 3 existing guards). New guard:
+    `ROGUESQ_LOG_SCENE_NODE_CACHE_GUARD`.** 2 of 3 soaks
+    (`cacheheadguard1`/`2`/`3`) reached and passed cleanly through the 18th
+    class's reliable recent death point (decisionN 7902-7968, where
+    s195/s196 died) with **zero recurrence** — soak 1 reached decisionN=15719,
+    the furthest ever recorded (previous best 9741), ending only on wall-clock
+    budget, not a crash. **But the new guard itself never fired in any soak**
+    (0/0/0) — no same-run positive control yet, so this is suggestive, not
+    confirmed. Both passing runs instead died to already-catalogued, unrelated
+    crashes: soak 1's "clean" run had no crash at all; soak 3 died at
+    decisionN=8267 to the s184-catalogued `evalCubicSplineAtTime` SIGBUS
+    family (different offset, `+732` vs s184's `+2552`, still not
+    root-caused); soak 2 died at decisionN=359 (before VI width 1024) to the
+    s165/s173-catalogued 23rd-class `waitForAnyAudioSlot` SIGSEGV — neither
+    is a regression from this session's change.
+
+    **Best next work unit**: re-soak with 1-2 more `cacheheadguard` runs
+    (new tags) seeking either the guard actually firing (positive control)
+    or a 3rd clean pass through the 7902-7968 zone, before concluding the
+    18th class is closed. This is attempt 1 of up to 3 on this instrument
+    (iron rule 8 budget: 2 more before re-planning). If the class keeps not
+    recurring, the s190 `scene-node-ptr-guard` (still 0/6, completely
+    untested) and the s196 13th-class guard (still unverified, soak never
+    reached it before this session) both become reachable and should be the
+    next thing a clean run exercises — do NOT re-touch either guard itself,
+    they remain correct-per-spec and untested, not wrong.
 
 -45. **(s196) landed the 13th-class `reinterpretTileRecord` guard (mirrors
     s192's `queueGPUUploadTMEM` pattern exactly) — but the soak never reached

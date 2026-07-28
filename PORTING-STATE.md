@@ -18200,3 +18200,144 @@ added, patch exported + committed this session). Soak artifacts:
 4. `processSceneNode+8772` / `far=rdram_base+0x80630062` (s194) — still single-occurrence,
    non-recurring (this session's soak did not reach decisionN=9741 to re-test it), out of scope
    per iron rule 4 until it recurs on its own.
+
+## Session 197 (2026-07-28) — source-read found the ONE dereference in the 18th-crash-class free-list idiom that bypasses GUARD/GUARD2/GUARD3 entirely, landed a guard for it; 2 of 3 soaks reached (and passed through) the 18th class's previous death point with zero recurrence, but the new guard itself never fired (no positive control yet) and both passing runs instead died to already-catalogued, unrelated crashes
+
+### What ran
+
+Per NEXT.md, delegated a full source-read of `submitSceneNodeRender`
+(`N64Recomp/RecompiledFuncs/funcs_4.c:6-2999`) to a subagent to find an
+unguarded pointer-chase not covered by the existing GUARD/GUARD2/GUARD3
+(s123/s131). It returned 6 ranked candidates; verified candidate #1 by hand
+(funcs_4.c:179-306, the free-list-push/pop sequence) and found the REAL
+gap, more precise than the agent's framing: at `0x8001014C`
+(`bne $a0,$zero,L_800101AC`), if the persistent global free-list cache
+(`0x801163B0`) is non-zero at function entry, execution jumps straight to
+`L_800101AC`, skipping `findAndUnlinkSmallestEntry` and all three existing
+guards (which only protect the path taken when the cache is empty). At
+`L_800101AC`/`0x800101B4` the reloaded cache pointer is dereferenced for the
+first time with zero validation. This is structurally the SAME reason
+GUARD/GUARD2/GUARD3 have fired 0/0 across 2 independent post-guard
+recurrences (s131/s134) of the exact same crash signature (`+28208`): the
+crash isn't in the part they guard, it's in the one dereference they can't
+reach.
+
+Landed the guard (`N64Recomp/fixup_game_funcs.py`, new function inserted
+after the GUARD2/GUARD3 block, file-scoped to `funcs_4.c`, new env var
+`ROGUESQ_LOG_SCENE_NODE_CACHE_GUARD`): checks the reloaded cache pointer for
+RDRAM-range sanity before the deref; on failure, logs, resets the corrupt
+global cache to 0 (so the NEXT call takes the `findAndUnlinkSmallestEntry`
+path instead of re-hitting the same corrupt value forever — unlike the
+other 3 guards' bail targets, simply re-jumping to the existing "empty
+cache" reentry point here would immediately re-crash on the same corrupt
+global, so this guard explicitly clears it), sets the local copy to 0 to
+match, and jumps to `L_800101C8` — the same merge point the code's own
+`r2==0` branch already reaches, no new code path invented.
+
+Regenerated (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py`, verified
+`submitSceneNodeRender cached-free-list-head guard patched x1`, no
+duplication) and rebuilt clean (`DEVELOPER_DIR=... cmake --build build -j8`,
+0 errors, only pre-existing warning classes).
+
+### Soaks (`cacheheadguard1`/`2`/`3`, same env block as `reinterptileguard1`
+plus the new guard's var armed, `run_mission_keys.sh <tag> 5 12`)
+
+- **Soak 1**: `CRASH: 0`. Reached **decisionN=15719** — the furthest ever
+  recorded in this project (previous best: s194's 9741) — with the run
+  ending only because the hold window's wall-clock budget expired, not a
+  crash. Passed cleanly through both the 18th class's death point
+  (~7902-7968, where s195/s196 died) and the entire 9660-9792 target
+  window. **But**: zero fires from ANY scene-node guard (cache, ptr, list,
+  list2, list3) and zero from the 13th-class reinterpret-tile guard — this
+  is a null result on whether the new guard's specific mechanism was
+  exercised, not just a clean pass.
+- **Soak 2**: died at **decisionN=359**, before VI width 1024 was even
+  reached. SIGSEGV inside `waitForAnyAudioSlot` (+76 native bytes) <-
+  `menuOverlayInit` <- `mainGameLoop` <- `mainBootstrapWorker` — this is the
+  already-catalogued **23rd crash class** (first seen s165, partially
+  guarded s166, confirmed a 2nd still-open unguarded site s173, same exact
+  offset). Unrelated to this session's change (different subsystem,
+  different call chain, decisionN two orders of magnitude earlier than the
+  18th class ever fires) — not informative either way for the 18th class.
+- **Soak 3**: died at **decisionN=8267**, SIGBUS (signal 10) inside
+  `evalCubicSplineAtTime + 732`, called from
+  `buildPositionAndCallTransformHelper` -> `setupActorAnchorTransformType1`
+  -> `static_5_800AB658` -> `static_5_800AAD9C` -> `static_5_800C6854` ->
+  `menuOverlayInit` -> `mainGameLoop`. This is the SAME family as s184's
+  already-catalogued, already-flagged-as-open `evalCubicSplineAtTime+2552`
+  SIGBUS (distinct from s83's guarded NAN_CHECK abort) — a different offset
+  within the same function, still not root-caused, "flagged for a future
+  session if it recurs" per s184. decisionN=8267 is still **past** both
+  s195's 7968 and s196's 7902 death points, i.e. this run also passed
+  through the 18th class's previous death zone without recurrence, before
+  dying to this different pre-existing open item.
+
+### Rules out / narrows
+
+- **2 of 3 soaks reached and passed through the 18th class's reliable
+  recent death point (7902-7968) with zero recurrence** of that exact
+  signature (`submitSceneNodeRender+28208`) — a real, if not airtight,
+  positive sign for the cached-head-bypass hypothesis. The 3rd soak died
+  too early (decisionN=359) to be informative either way.
+- **Not yet a confirmed fix**: the new guard (`scene-node-cache-guard`)
+  never fired in any of the 3 soaks, so there is no same-run positive
+  control demonstrating the corrupt-pointer path it targets is real and was
+  actually hit and neutralized. Per iron rule 1, this remains an open
+  question — the clean passes are consistent with the fix working, but
+  equally consistent with the corrupt-cache condition simply not arising
+  this session's 3 runs (the crash was never a 100%-reproducible-per-run
+  event even before this fix — s181's sighting and s196's recurrence were
+  ~15 sessions apart).
+- Both "passing" runs (1 and 3) died instead to ALREADY-CATALOGUED,
+  unrelated crashes (23rd class `waitForAnyAudioSlot`, s165/s166/s173; and
+  the s184 `evalCubicSplineAtTime` SIGBUS family) — neither is a regression
+  introduced by this session's change (different subsystems, different call
+  chains, one of them fires two orders of magnitude earlier in decisionN
+  than the 18th class ever has).
+- Confirms (again) that this soak family's runs are subject to several
+  independent, non-deterministic early-death risks (Metal shader-compiler
+  SIGSEGV since s83, 23rd-class audio SIGSEGV since s165, `evalCubicSplineAtTime`
+  SIGBUS since s184) that can end a run before it ever reaches the 18th
+  class's territory — a 3-of-3 soak budget on one hypothesis is not always
+  enough to get even 3 informative data points, only 2 of these 3 were
+  informative for the 18th-class question.
+
+### Landed (this session)
+
+`N64Recomp/fixup_game_funcs.py`: new `submitSceneNodeRender` cached-free-list-head
+guard (`ROGUESQ_LOG_SCENE_NODE_CACHE_GUARD`), inserted after the existing
+GUARD2/GUARD3 block. `N64Recomp/RecompiledFuncs/funcs_4.c`: regenerated with
+the guard applied (verified x1, no duplication). Not committed — same
+long-standing uncommitted-history posture as `N64Recomp` since s54/s90 (not
+this session's call to resolve, per NEXT.md's own housekeeping note).
+This repo's own tracked files: `scratch/agent/NEXT.md`, `docs/CURRENT-TRUTH.md`,
+this entry. Soak scripts `scratch/agent/run_cacheheadguard{1,2,3}.sh` and
+full run logs under `scratch/s73_post_a_scene/cacheheadguard{1,2,3}/` are
+gitignored (not committed, per standing convention).
+
+### Carried-forward open items
+
+1. **Re-soak `cacheheadguard` (new tag, e.g. `cacheheadguard4`/`5`) seeking
+   either a same-run positive control (the guard actually firing with sane
+   fields) or a 3rd clean pass through the 7902-7968 death zone** — 2
+   consecutive informative clean passes is suggestive but not yet the "2nd
+   independent recurrence" bar this project holds itself to for closing a
+   crash class; a 3rd informative run either way (guard fires, or crash
+   recurs despite the guard, or another clean pass) would settle it. Budget:
+   this is attempt 1 of up to 3 on this specific instrument (iron rule 8) —
+   2 more soaks before this needs re-planning, not abandoning.
+2. If the 18th class continues not to recur, the s190 `scene-node-ptr-guard`
+   (still 0/6 fires across every soak to date, completely untested) and the
+   s196 13th-class `reinterpretTileRecord` guard (still unverified, soak
+   never reached it before this session) both become reachable and are the
+   next things a clean run should exercise.
+3. The 23rd crash class's 2nd unguarded site (`waitForAnyAudioSlot` chain,
+   s173) remains open and unroot-caused — still a competing early-death
+   risk for any future soak, unrelated to this session's work.
+4. `evalCubicSplineAtTime` SIGBUS family (s184's `+2552`, this session's
+   `+732` — at least 2 distinct offsets within the same function, neither
+   root-caused) remains open, unrelated to this session's work, still lower
+   priority than items 1-2 per s184's own posture.
+5. Housekeeping still flagged, still not done: `docs/CURRENT-TRUTH.md`
+   remains over budget and over the Read tool's single-read limit; migrate
+   durable material to `PROJECT-OVERVIEW.md`.

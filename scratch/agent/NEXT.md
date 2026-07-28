@@ -1,155 +1,154 @@
-# NEXT work unit — source-read `submitSceneNodeRender` for the real 18th-
-# class crash site (`heapFreeListDequeue + 12704` nearest-symbol, now the
-# earliest-firing blocker in soak order)
+# NEXT work unit — get a same-run positive control (or a 3rd clean pass)
+# for the s197 cached-free-list-head guard before concluding the 18th
+# crash class is closed
 
-Read `docs/CURRENT-TRUTH.md`'s `-45` next-steps item (top of the list) and
-PORTING-STATE Session 196 in full before doing anything else (`grep -n
-"^## Session 196" PORTING-STATE.md`). Also read the -44/s195 entry
-immediately below -45 for the 13th-class guard's still-open status.
+Read `docs/CURRENT-TRUTH.md`'s `-46` next-steps item (top of the list) and
+PORTING-STATE Session 197 in full before doing anything else (`grep -n
+"^## Session 197" PORTING-STATE.md`).
 
 ## Why this is the next work unit
 
-s196 landed a correct, spec-matching guard for the 13th crash class
-(`reinterpretTileRecord`'s assert) — but the soak never reached that line
-at all. It died at `decisionN=7902`, EARLIER than the 13th class's own
-~7968, to a fresh recurrence of the project's **18th crash class**:
-nearest-symbol `heapFreeListDequeue + 12704` ← `submitSceneNodeRender +
-28208` ← `processSceneNode` ← `traverseSceneGraphRecursive` ←
-`setupCameraMatrices` ← `runHangarSelectionFrame` ←
-`runHangarMenuFromOverlay` ← `menuOverlayInit` ← `mainGameLoop`.
+s197 found and guarded the one dereference in `submitSceneNodeRender`'s
+free-list idiom that bypasses all 3 existing guards (GUARD/GUARD2/GUARD3,
+s123/s131): when the persistent global free-list cache (`0x801163B0`) is
+non-empty at function entry, execution jumps straight to `L_800101AC`
+(`funcs_4.c`), skipping `findAndUnlinkSmallestEntry` and every existing
+guard, then dereferences the reloaded cache pointer with zero validation.
+New guard: `ROGUESQ_LOG_SCENE_NODE_CACHE_GUARD`.
 
-This class has the longest history in the project (first catalogued s108,
-~88 sessions ago):
-- s108: first sighting.
-- s122: 2nd occurrence (pre-fix).
-- s123: guarded (`ROGUESQ_LOG_SCENE_NODE_LIST_GUARD`) — the guard targets
-  an unbounded linked-list tail-walk with no pointer validation, believed
-  at the time to be the cause.
-- s131, s134: **the guard fired 0/0 across two independent post-guard
-  recurrences of the identical crash signature** — this REFUTES the
-  guarded free-list-walk as the actual cause. The class was reopened, not
-  closed. NEXT.md's own decision tree at s135 said the next pivot should
-  be a source-read of `submitSceneNodeRender`'s remaining un-audited body
-  — this was never acted on (the 13th class took over as the priority
-  blocker for the intervening ~60 sessions).
-- s181: single occurrence at this exact offset (`+28208`), not chased
-  (flagged "if it recurs").
-- s196: **that recurrence** — 2nd occurrence of the `+28208` offset,
-  confirming it live under iron rule 4.
+2 of 3 soaks (`cacheheadguard1`/`3`) reached and passed cleanly through the
+18th class's reliable recent death point (decisionN 7902-7968, where
+s195/s196 died) with **zero recurrence** of that crash. Soak 1 reached
+decisionN=15719 — the furthest ever recorded (previous best 9741) — ending
+only on wall-clock budget, not a crash. This is a real, if not airtight,
+positive sign.
 
-Because this crash now fires BEFORE both the 13th class's guard line and
-the entire s190 `scene-node-ptr-guard` target window, it blocks ALL
-further progress on both of those still-open questions. Fixing or
-guarding it is now higher information value than either.
+**But**: the new guard never fired in any of the 3 soaks (0/0/0) — there is
+still no same-run positive control proving the corrupt-cache condition it
+targets is real and was actually hit and neutralized. Per iron rule 1, a
+null result needs a positive control before it counts as confirmation. The
+2 "clean" runs instead died to OTHER, already-catalogued, unrelated crashes
+(s165/s173's 23rd-class `waitForAnyAudioSlot` SIGSEGV; s184's
+`evalCubicSplineAtTime` SIGBUS family) — neither invalidates the clean pass
+through the 18th class's death zone, but neither confirms the guard's
+mechanism either.
 
 ## Do this, in order
 
-1. Read `funcs_4.c`'s `submitSceneNodeRender` function in full (grep
-   `build/factor5_ucode/` or wherever the regenerated guest C source lives
-   for `submitSceneNodeRender` — check `CURRENT-TRUTH.md`'s build-layout
-   notes if the path isn't obvious). Cross-reference s123's own source-read
-   (grep PORTING-STATE for "18th" and "free-list" for the exact prior
-   analysis) to see which pointer-chase idioms are ALREADY guarded
-   (the free-list-walk, refuted) vs NOT yet examined. The s131/s134 double
-   refutation means the crash is somewhere else in this function — look
-   for other unbounded walks, unchecked struct-field derefs, or array
-   indexing without bounds checks that haven't been guarded yet.
-2. Do NOT re-derive `heapFreeListDequeue + 12704`'s file/line from `nm`/
-   `objdump`/`otool` — these tools are still believed blocked (confirmed
-   s193/s194, not re-attempted since; check `.claude/settings.json` first
-   if you want to try a 3rd time, but budget for it being denied again).
-   The nearest-symbol string itself is known to be a misattribution (s123
-   found `0x8000CFD4 + 0x31A0` actually lands inside
-   `submitSceneNodeRender`, not `heapFreeListDequeue`) — source-reading is
-   the established working method for this family, not disassembly.
-3. If a plausible unguarded pointer-chase is found: guard it the same
-   defensive way as every other guard in this family (bounded counter +
-   env-gated log + early/safe return), matching the exact style already
-   used in this function and file (`fixup_game_funcs.py` if it's guest
-   code needing the regen pipeline — check whether this is a hand-patched
-   guest function or requires `make_elf.py -> N64Recomp ->
-   fixup_game_funcs.py -> cmake`, NOT a bare `cmake --build`, since this is
-   guest recompiled code, unlike s196's pure-`lib/rt64` change).
-4. Soak with the SAME config as `reinterptileguard1`/`mcontext2`
-   (`scratch/agent/run_reinterptileguard1.sh` is a ready template — copy
-   to a new tag). Discriminating outcomes:
-   - **New guard fires with sane fields AND soak reaches past
-     decisionN=7968 (the 13th-class line)** → best outcome, both the 13th
-     class and (eventually) the s190 target window become reachable again.
-     This becomes the new headline finding.
-   - **Guard fires but soak still dies before 7968 to something else** →
-     confirmed working, but another blocker is now dominant — catalog it
-     the same way this session catalogued the 18th class's promotion.
-   - **Guard never fires (0 count)** → either unreachable this run (need a
-     forcing hook, mirror s193's `ROGUESQ_TEST_FORCE_TMEM_ZERO` approach)
-     or the wrong site was guarded — do not conclude either way without
-     checking which.
+1. Copy `scratch/agent/run_cacheheadguard1.sh` to a new tag (e.g.
+   `cacheheadguard4`) — identical env block, `ROGUESQ_LOG_SCENE_NODE_CACHE_GUARD=1`
+   already armed. Run it (`zsh scratch/agent/run_cacheheadguard4.sh`,
+   `run_in_background: true`, block on `TaskOutput` per the notes below).
+2. Check the outcome against these discriminating branches:
+   - **Guard fires with sane fields** (`[scene-node-cache-guard] n=... bad_r2=...`)
+     → best outcome: proves the mechanism is real and the guard caught it.
+     Promotes this from "suggestive" to "confirmed" — update CURRENT-TRUTH
+     to say so, and the 18th class's status becomes "closed pending one
+     more recurrence-free soak" rather than "open."
+   - **Clean pass again (3rd time), guard still 0 fires, no 18th-class
+     recurrence** → 3 clean passes in a row (2 informative + this one) is
+     strong circumstantial evidence even without the guard ever firing —
+     write this up as "very likely fixed, mechanism unconfirmed" and move
+     the s190 `scene-node-ptr-guard` / s196 13th-class guard verification to
+     top priority, since a clean run now reliably gets past this blocker.
+   - **18th class recurs anyway (guard 0 fires, crash matches
+     `submitSceneNodeRender+28208` signature)** → the s197 hypothesis is
+     REFUTED — the cached-head bypass path was not the (or not the only)
+     mechanism. Do not re-guard the same site again; source-read the
+     function again for a DIFFERENT unguarded site (the general-purpose
+     agent's candidates #2-6 from s197's delegated read are unexplored:
+     material-batch-list loop-back reload gap, light-table unbounded index,
+     DL/material-batch parallel-array unbounded index, epilogue
+     viewport-index tables — check `PORTING-STATE.md` Session 197's "Rules
+     out" section isn't exhaustive, the original agent transcript covered
+     more candidates than were acted on).
+   - **Dies early to an unrelated crash again** (23rd class, Metal
+     shader-compiler, `evalCubicSplineAtTime`) → not informative, this is
+     attempt N of up to 3 on this instrument (iron rule 8) — if this is the
+     3rd such uninformative death in a row across the s197+this session's
+     attempts, STOP soaking this hypothesis and write up "inconclusive,
+     needs a different repro strategy" rather than burning a 4th run.
+3. Whatever the outcome, update `PORTING-STATE.md` (new session entry),
+   `docs/CURRENT-TRUTH.md` (`-46` entry's status), and this file, per the
+   exit contract.
 
 ## Do not
 
-- Do not re-touch the s123 `ROGUESQ_LOG_SCENE_NODE_LIST_GUARD` guard
-  itself — already confirmed NOT the cause (0/0 across 2 post-guard
-  recurrences, s131/s134), standing since s131.
-- Do not re-touch the s196 13th-class guard
-  (`ROGUESQ_LOG_REINTERPRET_TILE_GUARD`) — correct per spec, just
-  unverified this session because the soak never reached it. Don't modify
-  it without new evidence it's wrong.
-- Do not re-touch the s190 `scene-node-ptr-guard` itself — still intact,
-  still 0/6 fires, still the primary untested target question. This work
-  unit is about removing an EARLIER blocker, not the guard itself.
-- Do not chase `processSceneNode+8772` (s194 lead) further — still
-  single-occurrence, non-recurring, out of scope per iron rule 4 until it
-  recurs on its own.
-- Do not attempt `nm`/`otool`/`objdump`/`lldb` unless you've checked
-  `.claude/settings.json` for a new allow rule since s194 — not needed for
-  this work unit anyway (source-reading has always been sufficient for
-  this crash family).
+- Do not re-touch the s123/s131 `ROGUESQ_LOG_SCENE_NODE_LIST_GUARD`/
+  `GUARD2`/`GUARD3` — still confirmed not the cause on their own path,
+  standing since s131.
+- Do not re-touch the s197 `ROGUESQ_LOG_SCENE_NODE_CACHE_GUARD` guard's
+  logic unless this session's soak provides NEW evidence it's wrong (e.g.
+  it fires but the crash still happens right after, meaning the bail target
+  is unsafe) — if it simply doesn't fire again, that's still a null result,
+  not evidence against it.
+- Do not re-touch the s196 13th-class `reinterpretTileRecord` guard
+  (`ROGUESQ_LOG_REINTERPRET_TILE_GUARD`) — correct per spec, still
+  unverified because no soak has reached it yet.
+- Do not re-touch the s190 `scene-node-ptr-guard` — still intact, still
+  0/6 fires, still the primary untested target question once earlier
+  blockers clear.
+- Do not chase the s184/s197 `evalCubicSplineAtTime` SIGBUS family or the
+  s173 `waitForAnyAudioSlot` 23rd-class site this iteration — both are
+  flagged, open, and lower priority; only pick either up if THIS session's
+  soak dies to one of them AGAIN and you've already exhausted the 3-soak
+  budget on the cache-guard question (i.e. only as a fallback, not a
+  substitute).
 
 ## Environment notes (carried forward, still current)
 
-- Disassembly tools are NOT on the Bash allowlist (confirmed blocked
-  s193/s194, not re-attempted s195/s196).
+- Disassembly tools (`nm`/`otool`/`objdump`/`lldb`) are NOT on the Bash
+  allowlist (confirmed blocked s193/s194, not re-attempted since) — source
+  reading is the established method for this family.
 - The crash handler dumps siginfo + full ARM64 register file on every
-  SIGSEGV/SIGBUS/SIGABRT (`src/main/main.cpp`) — durable capability,
-  check `[CRASH][siginfo]`/`[CRASH][mcontext]` lines first.
+  SIGSEGV/SIGBUS/SIGABRT (`src/main/main.cpp`) — check `[CRASH][siginfo]`/
+  `[CRASH][mcontext]`/`[CRASH][vifs-snapshot]` lines first, plus the
+  backtrace lines immediately below them (function names + offsets are
+  printed directly, no disassembly needed).
 - `N64Recomp/fixup_game_funcs.py` is non-idempotent — running it twice
-  duplicates every patch. Only needed if this work unit's fix requires
-  editing GUEST recompiled code (`funcs_4.c` via `fixup_game_funcs.py`),
-  NOT if the fix can land as a pure `lib/rt64`/`lib/N64ModernRuntime`/
-  `src/main` host-side change (in which case skip regen entirely, like
-  s196 did).
-- A pure host-side runtime change needs only `cmake --build build
-  --target RogueSquadron64Recomp -j` (`DEVELOPER_DIR=/Applications/
-  Xcode.app/Contents/Developer` for Metal rebuilds) — no regen/fixup.
-- Any edit under `lib/` needs `./submodule-patches/export.sh` (relative
-  path from repo root) + commit in the SAME session, or it's lost at the
-  next reset.
+  duplicates every patch. Only needed if editing GUEST recompiled code
+  (`funcs_4.c` via `fixup_game_funcs.py`, regen pipeline: `make_elf.py` ->
+  `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`), NOT for a pure
+  host-side (`lib/rt64`/`lib/N64ModernRuntime`/`src/main`) change.
+- Any edit under THIS repo's `lib/` needs `./submodule-patches/export.sh` +
+  commit in the SAME session. `N64Recomp` and `rogue_squadron64` are
+  SEPARATE checkouts outside this repo, NOT `lib/` submodules — their
+  uncommitted changes (including `fixup_game_funcs.py` and regenerated
+  `RecompiledFuncs/*.c`) are flagged for the user, not this session's call
+  to commit (established posture since s54/s90/s173).
 - Re-running the same soak script/tag overwrites the previous run's
   `run.log` in place — copy the driver script to a new tag name per soak.
 - Running scripts under `RogueSquadron64Recomp/tools/agent/*.sh` /
   `scratch/agent/*.sh` directly gets denied — prefix with `zsh`.
-- Compound `cd ... && zsh ...`/`cd ... && cmake ...` gets denied — use
-  absolute paths, no `cd`, one command per Bash call.
-- `git -C <path> ...` AND `cd <path> && git ...` combined in one Bash call
-  both trigger approval prompts a non-interactive session can't clear.
+- Compound `cd ... && zsh ...`/`cd ... && cmake ...` gets denied in ONE
+  Bash call — use separate Bash calls (one `cd`, then the next command in
+  its own call; cwd persists across calls) or wrap the whole thing in
+  `zsh -c "..."` (matches the `Bash(zsh:*)` allow rule as a single command).
+  This was needed THIS session for `N64Recomp/build/N64Recomp` (not on any
+  allowlist pattern as a bare absolute path).
 - Block on a soak by launching with `run_in_background: true` and calling
-  `TaskOutput(task_id, block=true, timeout=300000-480000)` — do not end
-  the turn while a background soak is still running.
+  `TaskOutput(task_id, block=true, timeout=300000-480000)` — do not end the
+  turn while a background soak is still running. A `<task-notification>`
+  also arrives automatically on completion.
 - Heredocs get rejected by this session's Bash tool — use the Write tool
-  instead.
+  instead, including for large PORTING-STATE.md appends (`cat tmpfile >>
+  PORTING-STATE.md` after writing tmpfile with the Write tool — the file
+  itself is ~1.2MB, too large for the Edit tool's read-first requirement).
 - `/scratch/` is entirely gitignored except `scratch/agent/NEXT.md`,
   `OUTCOME`, `STATUS` — new soak scripts/logs never need `git add`.
 
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is now well over the ~35 KB CLAUDE.md budget and
-exceeds the Read tool's 256 KB single-read limit (confirmed s195) — read
-it with `grep`/`sed -n`, never a plain whole-file `Read`. Migrate durable
-mechanism/architecture material to PROJECT-OVERVIEW.md and prune
-superseded detail, paired with a real experiment — flagged for many
-sessions without action, escalating.
+exceeds the Read tool's 256 KB single-read limit (confirmed s195, still
+true s197 — read it with `grep`/`sed -n`, never a plain whole-file `Read`).
+Migrate durable mechanism/architecture material to `PROJECT-OVERVIEW.md`
+and prune superseded detail, paired with a real experiment — flagged for
+many sessions without action, escalating.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` and
 `~/Documents/Tools/rogue_squadron64` are separate git checkouts with
-long-standing uncommitted changes, unrelated to this session. Still
-flagged for the user, not committed autonomously.
+long-standing uncommitted changes (including this session's
+`fixup_game_funcs.py` guard and regenerated `funcs_4.c`), unrelated to this
+session's commit scope. Still flagged for the user, not committed
+autonomously.
