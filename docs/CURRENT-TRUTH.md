@@ -663,23 +663,47 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s209)
+## Next steps, in order of expected value (s210)
 
--50. **(s209, NEW BLOCKER) Both soaks this session hit a reproducible ~47x
-    log-volume blowup (`rs-free-walk` lines: 1.98M baseline vs 104.8M/172.1M
-    this session, same script/duration) that appears to prevent the
-    craft-select/hangar scene from ever being reached — 0 `renderUnlitMeshFaces`
-    calls logged in either retry, including the always-on-at-call-1 positive
-    control. This is now the top-priority next step, ahead of resuming the
-    `ctx->r16` widen probe below: run a control soak with ONLY
-    `ROGUESQ_LOG_UNLIT_MESH_TRACER=1` set (strip `ROGUESQ_LOG_RS_FREE_WALK`,
-    `ROGUESQ_LOG_SCHED`, `ROGUESQ_LOG_RUNNER_ALL`, and the rest of the ~60
-    other `ROGUESQ_LOG_*` vars `run_unlitmeshtracer3.sh`-family scripts turn
-    on) to test the boring explanation first: does stripping the other
-    verbose diagnostics (which cost real wall-clock time to fprintf,
-    potentially starving actual game-logic progress within the fixed 361s
-    hold window) let the run reach the target scene normally? Full detail:
-    PORTING-STATE Session 209.
+-51. **(s210, CONFIRMED + NEW FINDING) s209's ~47x log-volume blowup is
+    CONFIRMED self-inflicted logging overhead, not a real regression — but
+    the minimal-logging re-soak crashed on a NEW, previously-unseen bug
+    (`evalCubicSplineAtTime+1008` SIGBUS) before ever reaching
+    `renderUnlitMeshFaces`, so the `ctx->r16` question below is STILL
+    unresolved. Stripping all `ROGUESQ_LOG_*` vars except
+    `ROGUESQ_LOG_UNLIT_MESH_TRACER=1` collapsed `run.log` from s209's 210M
+    lines to 143,093 lines and let the run reach `SELECT YOUR CRAFT stable`
+    in 46.0s (never reached at all in s209's two soaks) — this rules out
+    `rs-free-walk` blowup as an independent regression. But the process then
+    SIGBUS'd 6s into the hold window at `evalCubicSplineAtTime+1008`
+    (signal 10, `si_addr=0x37ffffff8`), a spline/animation-eval function
+    unrelated to the `+8772` bug's call chain — so `renderUnlitMeshFaces`
+    was never called this run and the `B_LOADED`/unlit-mesh-tracer
+    instruments logged 0 lines for a legitimate reason (crashed elsewhere
+    first), not because they're broken. Notably, 6 of the new crash's dumped
+    registers (`x10,x11,x12,x14,x15,x17`) hold the exact value
+    `0x0000000080000000` and the faulting address decomposes as
+    `x8+x9 (0x7ffffff8)` — the same qualitative "value clustered at the
+    32-bit sign-bit boundary" shape as the `+8772` bug's recurring
+    `0x80630062`, but this is SINGLE-OCCURRENCE and a different function, so
+    it is NOT yet folded into that bug's evidence — flagged as a new,
+    plausibly-related-by-pattern, unconfirmed bug. **Immediate next step**:
+    re-run the identical minimal-logging soak (`run_unlitmeshtracer6.sh`
+    recipe, new tag) — if `evalCubicSplineAtTime` crashes again, that's a
+    2nd data point worth its own investigation; if instead the run reaches
+    `renderUnlitMeshFaces` and fires the `B_LOADED` check, that finally
+    answers the original s208 question. Full detail: PORTING-STATE
+    Session 210.
+
+-50. **(s209, RESOLVED s210 — see -51 above) Both soaks that session hit a
+    reproducible ~47x log-volume blowup (`rs-free-walk` lines: 1.98M
+    baseline vs 104.8M/172.1M, same script/duration) that appeared to
+    prevent the craft-select/hangar scene from ever being reached — 0
+    `renderUnlitMeshFaces` calls logged in either retry, including the
+    always-on-at-call-1 positive control. s210 confirmed this was
+    self-inflicted logging overhead (stripping the verbose diagnostics let
+    the scene get reached normally), not a real behavioral regression. Full
+    detail: PORTING-STATE Session 209.
 
 -49. **(s208, STATUS: probe landed s209, not yet run to a valid result — see
     -50 above) `processSceneNode+8772`/`renderUnlitMeshFaces`

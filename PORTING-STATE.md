@@ -19623,3 +19623,83 @@ existing cross-reference) independent of the `+8772` bug.
 with all 5 tracer sites) are uncommitted in the separate `N64Recomp` checkout,
 same posture as every prior session's guards — flagged for the user, not
 `lib/`, no `submodule-patches/export.sh` applies.
+
+## Session 210 (2026-07-28) — minimal-logging re-soak CONFIRMS s209's blowup
+was self-inflicted logging overhead, but the soak crashed on a DIFFERENT,
+previously-unseen bug (`evalCubicSplineAtTime` SIGBUS) before ever reaching
+`renderUnlitMeshFaces`, leaving the `+8772` `ctx->r16` widen question still
+unresolved
+
+Ran NEXT.md's step-1 probe: copied `run_unlitmeshtracer5.sh` to
+`run_unlitmeshtracer6.sh`, removed all ~60 `ROGUESQ_LOG_*` vars except
+`ROGUESQ_LOG_UNLIT_MESH_TRACER=1`, kept every other env var (`PROBE_MODE`,
+`HOLD_S=300`, `CAPTURE_TICK_S`, `HOLD_TICK_S`, `STICK_SCHEDULE`) byte-identical
+to unlitmeshtracer5. `ROGUESQ_LLE_FORCE`/`UNGATED`/`SOLO`/`STUB_MISSING_FUNCS`
+are set inside `run_mission_keys.sh` itself (confirmed via grep before
+running), not the driver script, so nothing needed duplicating there.
+
+**Result — log volume collapsed and real progress resumed**: `run.log` came
+back at 143,093 lines / 20 MB — a ~1470x reduction from s209's 210.0M/210.9M-line
+blowup, and even smaller than s208's own 4.49M-line "successful" baseline
+(explained below: this run crashed far earlier in wall-clock terms). The
+craft-select scene, which s209's two full-logging soaks NEVER reached in
+361s, was reached this time in 46.0s (`phase width=1024 reached after 46.0s`,
+`wait 12s for SELECT YOUR CRAFT stable` succeeded, hold window started).
+`rs-free-walk` line count in this run: 0 (that log var was one of the ones
+stripped, consistent with it being a real, if extremely verbose, diagnostic
+rather than some parallel corruption). **This confirms explanation (a) from
+s209/NEXT.md: the ~60 verbose `ROGUESQ_LOG_*` diagnostics were costing enough
+real fprintf wall-clock time to starve actual game-logic progress inside the
+fixed hold window — the blowup was self-inflicted over-instrumentation, not
+a new behavioral regression.** `rs-free-walk`-blowup-as-real-regression is
+now RULED OUT; no follow-up investigation of that subsystem is needed for
+this question.
+
+**But the soak did not survive to test the original `ctx->r16` question**:
+the game process crashed only 6 seconds into the 300s hold window
+(`game process gone at hold-iter 6`), and the crash signature is NEW —
+`[CRASH][pc-symbol] pc=0x100ea56e8 sym=evalCubicSplineAtTime+1008
+base=0x1007a0000`, signal 10 (Bus error), `si_addr=0x37ffffff8 si_code=1`.
+This is NOT `renderUnlitMeshFaces` (the `+8772` bug's function) — it's a
+spline/animation-evaluation function, never before named by the crash
+handler in this bug's history. `grep -a -c "unlit-mesh-tracer" run.log` and
+`grep -a -c "B_LOADED" run.log` both returned 0 — but this is a DIFFERENT
+kind of null than s209's ambiguous one: s209's soaks never progressed far
+enough to reach the scene at all (0 `processSceneNode`-adjacent activity
+near the target); this run DID reach and pass through the craft-select
+scene, then crashed on an unrelated bug before `renderUnlitMeshFaces` (or at
+least before this run's particular code path through it) ever got called.
+The `B_LOADED`/tracer instruments are not implicated as broken — they simply
+never got a chance to fire before the process died elsewhere.
+
+**The new crash's register pattern is suspicious and possibly related**: of
+the dumped `x0`-`x28` registers, six (`x10`, `x11`, `x12`, `x14`, `x15`,
+`x17`) hold the exact value `0x0000000080000000`, and `x9=0x00000000_7ffffff8`
+(`0x80000000 - 8`). The faulting address decomposes cleanly as
+`si_addr (0x37ffffff8) = x8 (0x300000000) + x9 (0x7ffffff8)` — i.e., a base
+register plus an offset register that itself looks like corrupted/
+near-zero-extended garbage clustered around `0x80000000`, the same
+qualitative shape (a value hovering at the 32-bit sign-bit boundary) as the
+`+8772` bug's `0x0000000080630062`. This is SINGLE-OCCURRENCE evidence only
+(1 crash, this session) — not yet cross-referenced against any other run,
+and `evalCubicSplineAtTime` is architecturally unrelated to
+`renderUnlitMeshFaces`'s call chain, so this is flagged as a **new,
+plausibly-related-by-pattern but NOT confirmed-related bug**, not folded
+into the `+8772` bug's evidence base.
+
+**What this rules out / rules in**:
+- RULED OUT: `rs-free-walk` blowup as a real, independent behavioral
+  regression (was self-inflicted logging overhead — confirmed, single-source
+  this run, but the ~1470x volume drop plus the scene now being reached at
+  all is a strong, hard-to-explain-another-way signal).
+- STILL OPEN: does `ctx->r16` show up already zero-extended right at its
+  `funcs_4.c:5031` load (the `B_LOADED` check's actual question) — this run
+  produced no data either way, for a new and different reason than s209.
+- NEW, UNCONFIRMED: `evalCubicSplineAtTime+1008` SIGBUS with an
+  `0x80000000`-clustered register pattern — worth a second occurrence before
+  treating as more than a single-source curiosity.
+
+Full run artifacts: `scratch/s73_post_a_scene/unlitmeshtracer6/run.log`
+(143,093 lines), screenshots in the same directory
+(`craft_stable.png`, `hold_01.png`-`hold_05.png` show the reached scene
+before the crash).
