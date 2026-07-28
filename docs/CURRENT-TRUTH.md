@@ -663,7 +663,48 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s187)
+## Next steps, in order of expected value (s188)
+
+-37. **Landed the periodic `[sched-tick]` readout s187 called for, ran one
+    soak (`schedtick1`): decisionN/queueN/runnextN climbed in lockstep with
+    NO stall signature the entire run, but a new (already-catalogued)
+    `processSceneNode` self-recursion SIGBUS killed it at decision `#9789`
+    — dead center in the historical `#9770`-`#9792` stall-onset window.**
+    Added `rs64_get_sched_queue_count()` (new atomic in `scheduling.cpp`,
+    incremented in `schedule_running_thread`) and a `[sched-tick]` line
+    printed every 750 `run_next_thread` pops from `threads.cpp`, reusing
+    `rs64_get_vifs_crash_snapshot` (previously crash-handler-only) to read
+    the live `decisionN` (`lib/N64ModernRuntime`, exported+committed).
+    `schedtick1` (same env block as s187's `rsfreeguard1`): 119 tick lines,
+    `decisionN` rose smoothly from 195 to 9789 with `queueN`/`runnextN`
+    incrementing at a constant ~750-per-tick rate throughout — no plateau,
+    no growing gap, at any point up to the crash. This is a THIRD
+    independent run (after s184's 8327, s185's 8616) showing no scheduler
+    starvation signature pre-crash, and the first to show it holding
+    steady lockstep data all the way into the historical stall-onset
+    window itself, not just up to an earlier death. **New wrinkle**: the
+    crash that ended this run was `processSceneNode` self-recursion SIGBUS
+    (already catalogued, s172 lineage — see line ~1703), a DIFFERENT crash
+    family than the `rs_free` one s187's guard defused, landing at almost
+    exactly the same decision number three unrelated crash families
+    (`evalCubicSplineAtTime` s184, `rs_free` s185/186, now `processSceneNode`
+    s188) have now died near. That clustering — 3 distinct crash sites, all
+    within or just before the same ~9770-9792 decision window, across runs
+    with different guards active — is itself now a pattern worth treating
+    as a candidate signal (something about game/scene state at that point
+    in the mission is the common factor, not any one crash's specific
+    bug) rather than coincidence. Not yet a confirmed finding (one data
+    point per crash site) — needs a discriminating test, not another guard.
+    **Best next work unit**: either (a) run `schedtick1`-style soaks 2-3
+    (rule-8 budget: 1 of up to 3 spent on this specific stall/no-stall
+    question) to see whether decisionN can be pushed PAST 9792 now that
+    `rs_free` is guarded — a `processSceneNode` self-recursion guard would
+    be needed to get further, which is a bigger unit than "add a log line";
+    or (b) step back and ask what actually happens at decision ~9770-9792
+    in terms of game/mission state (scene complexity, asset load, whatever
+    `processSceneNode`/`evalCubicSplineAtTime`/`rs_free` all touch around
+    there) instead of chasing individual crash sites one at a time. Full
+    detail: PORTING-STATE Session 188.
 
 -36. **Landed the mandatory-pivot defensive guard on `rs_free`'s free-list
     walk (s187) — validated with a strong positive control, first

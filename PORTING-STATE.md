@@ -17320,3 +17320,93 @@ note, unchanged this session). No `lib/` changes, no `submodule-patches/
 export.sh` needed. Soak artifacts: `scratch/s73_post_a_scene/rsfreeguard1/`
 (run.log), driver summary `scratch/agent/rsfreeguard1_driver.log`, driver
 script `scratch/agent/run_rsfreeguard1.sh`.
+
+## Session 188 (2026-07-28) — added the periodic `[sched-tick]` decisionN/queueN/runnextN readout s187 called for; one soak shows lockstep no-stall data all the way into the historical stall-onset window, killed there by a THIRD, different, already-catalogued crash family
+
+**Work unit** (from NEXT.md, unchanged from what s187 left): `ROGUESQ_LOG_SCHED`'s
+only `decisionN` readout was `[CRASH][vifs-snapshot]`, crash-time-only —
+useless on a crash-free run like s187's `rsfreeguard1`. Added a periodic,
+non-crash-gated tick line so a soak's scheduler counters can be read against
+`decisionN` even when nothing crashes.
+
+**Change** (`lib/N64ModernRuntime`, exported+committed via
+`submodule-patches/export.sh`):
+- `scheduling.cpp`: new `static std::atomic<uint64_t> g_sched_queue_count`,
+  incremented in `schedule_running_thread` (guarded by the existing
+  `sched_log_enabled()`/`ROGUESQ_LOG_SCHED` check, same as the pre-existing
+  `[sched-queue]` line). New `extern "C" uint64_t rs64_get_sched_queue_count(void)`
+  getter, since `scheduling.cpp` and `threads.cpp` are separate translation
+  units with no shared header for this.
+- `threads.cpp`: `run_next_thread` now (inside the same `sched_log_enabled()`
+  block as `[sched-runnext]`) keeps a local `static uint64_t
+  s_runnext_tick_count`, and every 750 pops calls the newly-reused
+  `rs64_get_vifs_crash_snapshot` (previously only called from the
+  SIGSEGV/SIGBUS handler in `src/main/main.cpp`) plus the new
+  `rs64_get_sched_queue_count()`, and prints:
+  `[sched-tick] decisionN=<n> queueN=<a> runnextN=<b> stalledNow=<0|1>`.
+  Declared both externs `extern "C"` at file scope in `threads.cpp`.
+
+**Build**: `cmake --build build --target RogueSquadron64Recomp -j` — clean
+build, only `scheduling.cpp.o`/`threads.cpp.o` recompiled and
+`libultramodern.a`/the final binary relinked (rt64 untouched, correctly not
+rebuilt).
+
+**Soak** (`schedtick1`, identical env block to s187's `rsfreeguard1`,
+`ROGUESQ_LOG_SCHED=1` already armed in that block, so no new flag needed —
+copied the driver script per the never-overwrite rule):
+- **Positive control**: 119 `[sched-tick]` lines fired, `89329`
+  `[sched-queue]` / `89327` `[sched-runnext]` raw event lines under the hood
+  — the instrument produced real, non-zero data across the whole run, not
+  just a single sample.
+- **Discriminating read**: `decisionN` climbed smoothly and monotonically
+  from 195 (first tick) to 9789 (crash), `queueN`/`runnextN` incrementing at
+  a **constant ~750-per-tick rate the entire run** — no plateau, no growing
+  gap between ticks, at ANY point, right up to the crash. This is the
+  **3rd independent soak** (after s184's `schedguard5` dying at decision
+  8327, s185's `schedguard6` dying at 8616) to show clean lockstep
+  scheduler activity with zero starvation signature — and the first to
+  hold that lockstep pattern all the way INTO the historical `#9770`-`#9792`
+  stall-onset window itself, not just up to an earlier death.
+- **What killed it**: NOT the `rs_free` family s187 guarded (that guard's
+  own `[rs-free-walk]`/`[rs-free-walk-guard]` diagnostic lines are present
+  and clean in this run's tail — no guard fire, no corruption on this walk).
+  Instead: `SIGBUS` (signal 10) in `processSceneNode`'s self-recursion
+  (`processSceneNode+8456 ← processSceneNode+8456 ← traverseSceneGraphRecursive
+  ← setupCameraMatrices ← ... ← mainGameLoop ← mainBootstrapWorker`), at
+  **decision #9789** — dead center in the `#9770`-`#9792` window. This crash
+  site is NOT new: it's the already-catalogued `processSceneNode`
+  self-recursion SIGBUS family from the s172 lineage (CURRENT-TRUTH
+  ~line 1703), just not previously observed to land exactly in this decision
+  window.
+
+**What this does and doesn't show**:
+- Rules out (3rd confirmation) that `check_running_queue`'s strict-priority
+  gate is starving `mainBootstrapWorker` in the portion of the run this
+  instrument can observe — the producer thread's scheduling activity tracks
+  linearly with `decisionN` with no sign of falling behind, all the way to
+  9789.
+- Does NOT tell us whether the `-35` stall itself would occur past decision
+  9792 under this guard set, because the run never got there — a different,
+  already-known crash family (not chased or guarded this session) got there
+  first.
+- **New observation, not yet a finding** (one data point per crash site,
+  needs a discriminating test before entering the "next steps" ranking as
+  more than a hypothesis): three DIFFERENT, unrelated crash families —
+  `evalCubicSplineAtTime` (s184, died at 8327), `rs_free` (s185/186, died at
+  8616/8616), `processSceneNode` (s188, died at 9789, IN the window) — have
+  now all died within or just short of the same narrow decision-count
+  region across four attempts with different guards active each time. That
+  could mean the decision-count metric itself correlates with some game/
+  mission state (scene complexity, an asset load, whatever these unrelated
+  code paths have in common around there) that makes many different latent
+  bugs likelier to fire around the same point in a run — worth flagging as
+  a candidate signal, not yet confirmed.
+
+**Rule-8 budget**: 1 of up to 3 soaks spent on the "does decisionN keep
+climbing past 9792 under the rs_free guard" question (NEXT.md's framing);
+2 remain before mandatory pivot.
+
+Soak artifacts: `scratch/s73_post_a_scene/schedtick1/` (run.log, screenshots),
+driver summary `scratch/agent/schedtick1_driver.log`, driver script
+`scratch/agent/run_schedtick1.sh`, extracted tick lines
+`scratch/agent/schedtick1_ticks.txt`.
