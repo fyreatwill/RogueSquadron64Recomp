@@ -663,10 +663,29 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s206)
+## Next steps, in order of expected value (s207)
 
--48. **(s206, SUPERSEDES s205) `processSceneNode+8772` KSEG0-zero-extension
-    bug: a direct `dladdr`-based pc symbolizer (new `[CRASH][pc-symbol]`
+-48. **(s207, REFINES s206) `processSceneNode+8772` KSEG0-zero-extension bug:
+    the targeted re-read of `renderUnlitMeshFaces` at the `+508` offset
+    (funcs_4.c:4951-5605) is still clean — no source-level zero-extension
+    bypass anywhere in the function or its one callee (`getTextureLUTFieldAt8`,
+    funcs_6.c:13392, confirmed architecturally `noinline` per `RECOMP_FUNC`
+    in `recomp.h:22` and this project's `CMAKE_BUILD_TYPE=Debug`/`-O0` build
+    of `RecompiledFuncs`, so it cannot be a mis-attributed inlined fault).
+    Disassembly tools (`nm`, `atos`) re-confirmed blocked (2 independent
+    attempts this session). Two live explanations, undistinguished: (a) the
+    pointer chase in this function dereferences DATA corrupted by some other
+    function (would mean callee-narrowing was mis-scoped from the start);
+    (b) an ARM64 codegen issue invisible at the C level (exotic, lowest
+    priority per boring-first). **Next work unit: build the `MEM_W`-address
+    tracer scoped to this one function** (the two pointer-chase reload sites
+    at funcs_4.c:5546/5563, plus the two initial loads at 4975/5009),
+    bounds-checking against `rdram` before each dereference and logging
+    (not skipping) on failure — tests explanation (a) directly. Full detail:
+    PORTING-STATE Session 207.
+
+    **(s206) Prior finding, still the basis for the above**: a direct
+    `dladdr`-based pc symbolizer (new `[CRASH][pc-symbol]`
     line, `src/main/main.cpp`) caught a 3rd occurrence and named the
     faulting pc directly for the first time: `renderUnlitMeshFaces+508`.
     This OVERTURNS s204's "clean" verdict on that function — it was

@@ -19240,3 +19240,130 @@ diagnostic, this repo, committed). `scratch/agent/run_pcsymbolize1.sh`
    paired with a real experiment. Escalating — now 7+ sessions flagged
    without action (s195 through s206).
 
+
+## Session 207 (2026-07-28) — targeted re-read of `renderUnlitMeshFaces` at the `+508` offset: still clean, but a build-config check settles the standing "could the callee be inlined" question and revises the offset->source-line mapping confidence
+
+**Goal**: NEXT.md's prescribed work unit — re-read `renderUnlitMeshFaces`
+(`N64Recomp/RecompiledFuncs/funcs_4.c:4951-5605`) with the `+508`-byte dladdr
+offset (s206) as a targeted map, not a blind whole-function pass, to find the
+`+8772` KSEG0-zero-extension bug's root cause inside the one function s206's
+new pc-symbol diagnostic named directly.
+
+**Step 1 — re-verify disassembly tools are still blocked (2 independent
+attempts, not just precedent)**: `nm ./RogueSquadron64Recomp` (from `build/`)
+and `atos -o build/RogueSquadron64Recomp -l 0x104564000 0x104c24a60` (using
+s206's own captured pc/base pair, which would have given a direct
+source-file:line resolution if it worked, entirely sidestepping the
+byte-offset-guessing exercise below) — **both denied**, "This command requires
+approval," in this non-interactive session. Confirms s202-206's note is still
+current; not re-litigating this again barring an environment change.
+
+**Step 2 — a build-config fact that answers a standing open question**: grepped
+`CMakeLists.txt` for the RecompiledFuncs target and found (line 239, s38's own
+comment): **this whole project builds `CMAKE_BUILD_TYPE=Debug` (`-O0`), and
+`RecompiledFuncs` (which holds `funcs_4.c`/`funcs_6.c`) is NOT in the
+short-list of 3 translation units (`FACTOR5_UCODE_C`/`_B_C`/`_BOOT_C`) that get
+an explicit `-O2` override.** So `renderUnlitMeshFaces` and its callee both
+compile fully unoptimized. Separately, `RECOMP_FUNC` (`N64Recomp/include/recomp.h:22`)
+expands to `extern inline __attribute__((weak,noinline))` on the clang/GCC
+branch this build uses — **every recompiled game function, including
+`getTextureLUTFieldAt8`, is explicitly `noinline`.**
+
+Together these two facts **definitively rule out** the possibility raised
+while re-reading this session (see Step 3): that `renderUnlitMeshFaces+508`
+in the crash log could actually be *inside* an inlined call to
+`getTextureLUTFieldAt8` (the function's one and only callee — grepped the
+full `4951-5605` range for the `[A-Za-z_]+\(rdram, *ctx\);` call pattern s206
+used on `processSceneNode`, exactly one hit). `noinline` + `-O0` means that
+call is a real, separate machine-code jump to a real, separate symbol; a
+fault inside it would dladdr-resolve to `getTextureLUTFieldAt8+N`, not
+`renderUnlitMeshFaces+508`. **The crash is confirmed to be genuinely inside
+`renderUnlitMeshFaces`'s own body**, closing off a branch that would otherwise
+have needed its own investigation.
+
+`-O0` also revises (upward in confidence, but not to certainty) the
+offset-to-source-line linear-mapping assumption NEXT.md flagged as unverified:
+no inlining, no cold-path splitting, no instruction scheduling/reordering at
+`-O0` — source order should track machine-code order much more faithfully
+than under `-O2`. The magnitude of the ARM64-instructions-per-MIPS-line ratio
+is still unmeasured (no calibration point exists — this is the only
+`[CRASH][pc-symbol]` line captured so far, see PORTING-STATE grep), and `-O0`
+tends to be *more* verbose per statement (stack-spill-heavy), which could push
+the true offset earlier than a naive per-line estimate, not later — so this
+is a *directional* refinement, not a solved calibration.
+
+**Step 3 — the actual re-read.** Read `funcs_4.c:4951` through `5605` (the
+full function, but line-by-line with the offset framing and the callee
+question in mind, not a repeat of s204's method) plus `funcs_6.c:13392-13417`
+(the one callee, `getTextureLUTFieldAt8`). Findings:
+
+- The conservative NEXT.md window (`4951-5030`, prologue + the linked-list
+  null-check preamble) is unchanged-clean: stack saves, one `ADD32`-derived
+  pointer (`s4`/`r20` from the incoming arg), straightforward `MEM_W` reads
+  assigned directly into `gpr` (`ctx->rN`) fields, which sign-extend
+  correctly via C's implicit `int32_t -> uint64_t` promotion rule on
+  assignment (same convention verified for the other five callees since
+  s200).
+- The one callee call site (`getTextureLUTFieldAt8`, line 5083, ~132 source
+  lines / an estimated ballpark of the 127-ARM64-instruction mark) — the
+  callee itself (`funcs_6.c:13392-13417`, 11 real instructions) is a clean
+  bounded LUT lookup: its one argument is masked `& 0xFFFF` on entry, all
+  address math goes through `ADD32`, the one load is `MEM_HU` at a fixed
+  `+8` offset whose result is returned directly (a 16-bit field value, not
+  used as a pointer). No zero-extension-bypass pattern; also now confirmed
+  architecturally non-inlined (Step 2), so this call cannot be the
+  `+508`-attributed fault regardless.
+- Extended the read past both offset estimates through the rest of the
+  function (`5090-5605`) with the same checklist — including the two loop
+  back-edges that walk linked-list "next" pointers via `MEM_W(reg, 0)`/`MEM_W(reg,
+  4)` (lines 5546, 5563 — exactly the free-list/linked-list pointer-chase
+  pattern that has been the root cause of several OTHER guards elsewhere in
+  this codebase, e.g. s123/s131's `SCENE_NODE_LIST_GUARD` family, s133's
+  `EMIT_DL_GUARD2`/`GUARD3` — so this was checked with extra scrutiny). Both
+  reload directly into `ctx->r16`/`ctx->r18` (`gpr`), same correct-sign-extension
+  convention. The register restore epilogue (`5586-5599`) is plain stack
+  reloads. **No `(uint32_t)`/`(uint64_t)` cast, no raw `+`/`-` bypassing
+  `ADD32`/`SUB32`, no `MEM_HU`/`MEM_BU` result feeding a pointer instead of a
+  flag/mask/color field, no `MOVZ`/`MOVN`-style mismatched-extension ternary,
+  anywhere in the function or its one callee.** This corroborates s204's
+  original static verdict even under a fresh, offset-focused, extra-scrutiny
+  pass — the contradiction s206 raised (dynamic pc evidence vs. static clean
+  read) is NOT resolved by finding a source-level bug; the function still
+  reads as correct C given every register's provenance traced this session.
+
+**What this rules out**: the `getTextureLUTFieldAt8`-inlining hypothesis
+(architecturally impossible per Step 2); a source-level zero-extension bypass
+anywhere in `renderUnlitMeshFaces`'s own body (re-confirmed, now twice,
+single-source/static-only both times).
+
+**What this does NOT resolve**: why a function that reads clean at the C
+level produces a KSEG0-zero-extension-shaped crash. Two live explanations,
+neither yet distinguished: (a) the corruption is in the DATA a clean pointer
+chase dereferences — i.e. some node in the list `renderUnlitMeshFaces` walks
+was written with a bad address by a *different* function entirely, and this
+function is just the first one unlucky enough to dereference it (which would
+mean the callee-narrowing approach itself was mis-scoped from the start —
+worth flagging up, not yet acted on); (b) a genuine ARM64 codegen issue
+specific to a pattern in this function, not visible at the C source level
+(clang `-O0` miscompile) — exotic, unconsidered until now, should stay lowest
+priority per the boring-first-explanations rule until (a) and a proper
+runtime tracer are exhausted.
+
+**Positive control**: N/A this session (source read + build-config grep, no
+new runtime instrument built/run).
+
+**Two independent lines of evidence**: still single-source (static read only)
+on this function specifically. The `noinline`+`-O0` build-config fact is a
+separate, independently-verifiable line of evidence (from `CMakeLists.txt`
+and `recomp.h`, not from behavior), corroborating the "genuinely inside this
+function" conclusion.
+
+**Next work unit** (see rewritten NEXT.md): build the `MEM_W`-address tracer
+scoped to just this one function, now correctly informed by the loop
+structure mapped this session — instrument the two pointer-chase reload
+sites (`funcs_4.c:5546`, `5563`) plus the two initial pointer loads
+(`4975`, `5009`) with a bounds check against `rdram`'s valid range, logging
+before the dereference (not skipping — preserves timing/behavior for
+reproduction), gated on a new env var following this codebase's existing
+GUARD convention. This directly tests explanation (a) above (bad data reaching
+a clean dereference) without needing the byte-offset guess to be precise.

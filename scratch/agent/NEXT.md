@@ -1,101 +1,136 @@
-# NEXT work unit — `renderUnlitMeshFaces+508` is the precisely-scoped
-target for the `+8772` KSEG0-zero-extension bug. The callee-narrowing
-search is NOT exhausted; s206 named the exact function via a new
-`dladdr`-based crash-handler diagnostic.
+# NEXT work unit — build a `MEM_W`-address bounds tracer scoped to
+`renderUnlitMeshFaces` for the `+8772`/`+508` KSEG0-zero-extension bug.
+Source reading is exhausted for this function (s204 whole-function pass,
+s207 offset-targeted re-read — both clean, zero source-level bypass found).
 
 Read `docs/CURRENT-TRUTH.md`'s `-48` next-steps item (top of the list) and
-PORTING-STATE Session 206 in full before doing anything else (`grep -n
-"^## Session 206" PORTING-STATE.md`). Sessions 194/199 (original
-register-file decode) and 200-205 (the five callee source reads, four
-still standing) are cited there if you need the crash mechanism refresher.
+PORTING-STATE Session 207 in full before doing anything else (`grep -n
+"^## Session 207" PORTING-STATE.md`). Session 206 (the dladdr pc-symbol hit)
+and 200-205 (the callee source reads) are cited there if you need the crash
+mechanism refresher.
 
 ## Why this is the next work unit
 
-s206 added a direct `dladdr()` call on the raw mcontext `pc` register
-inside the SIGSEGV/SIGBUS/SIGABRT handler (`src/main/main.cpp`, new
-`[CRASH][pc-symbol]` line) because the existing `backtrace_symbols_fd()`
-output was silently failing to name the true faulting frame — it only ever
-showed `processSceneNode + 8772` (the `lr` register, duplicated across two
-backtrace frames), never the deeper frame where the fault actually
-happened, because a frame-pointer-chain unwinder can't see past a leaf
-frame with no saved `x29`/`x30`. One soak with the new diagnostic
-(`pcsymbolize1`) caught a 3rd occurrence of the bug (`x9=0x80630062`,
-byte-for-byte match to both priors, `decisionN=9679`, same 9660-9800 band)
-and the new line read:
+s204 and s207 (this session, offset-targeted, extra scrutiny on the two
+linked-list pointer-chase reload sites) both read `renderUnlitMeshFaces`
+(`N64Recomp/RecompiledFuncs/funcs_4.c:4951-5605`) and its one callee
+(`getTextureLUTFieldAt8`, `funcs_6.c:13392-13417`, confirmed architecturally
+non-inlined — `RECOMP_FUNC` is `noinline` per `recomp.h:22`, and this
+project builds `RecompiledFuncs` at `CMAKE_BUILD_TYPE=Debug`/`-O0`, so no
+compiler could have inlined it regardless) and found **zero** source-level
+zero-extension bypass: every pointer computation goes through `ADD32`/`SUB32`
+(which force-`(int32_t)`-then-widen-to-`gpr`), every `MEM_W` result assigns
+directly into a `gpr` (`ctx->rN`) field (sign-extends via C's implicit
+`int32_t -> uint64_t` promotion), every `MEM_HU`/`MEM_BU` zero-extending load
+feeds only a flag/mask/color/comparison field, never a pointer.
 
-```
-[CRASH][pc-symbol] pc=0x104c24a60 sym=renderUnlitMeshFaces+508 base=0x104564000
-```
+Yet s206's `dladdr`-based pc symbolizer directly named `renderUnlitMeshFaces+508`
+as the actual faulting pc on a 3rd occurrence of this bug — real dynamic
+evidence, not a guess. The contradiction between "source reads clean" and
+"dynamic evidence says it's in here" is not resolved by more reading. Two
+explanations, undistinguished:
 
-This directly contradicts s204's "clean" verdict on `renderUnlitMeshFaces`
-(`N64Recomp/RecompiledFuncs/funcs_4.c:4951-5605`) — that read was
-single-source/static-only and explicitly flagged as provisional. The other
-four callees (`renderLitMeshFaceGroup`, `submitSceneNodeRender`,
-`renderFlatMeshFaceGroup`, `renderLitTexturedMeshFaces`) are NOT
-contradicted and stay provisionally clean.
+- (a) **Bad data, clean dereference**: some node in the linked list this
+  function walks was written with a corrupted/zero-extended address by a
+  DIFFERENT function entirely (not `renderUnlitMeshFaces` itself), and this
+  function is simply the first to dereference it. If true, the whole
+  callee-narrowing strategy (s194-207) was scoped to the wrong place from
+  the start — the bug is upstream, in whatever writes these list nodes.
+- (b) **ARM64 codegen issue**: a genuine clang miscompile of some pattern in
+  this function at `-O0`, invisible at the C source level. Exotic — keep
+  lowest priority per the boring-first-explanations rule until (a) is ruled
+  out.
+
+A `MEM_W`-address bounds tracer scoped to just this one function tests (a)
+directly: if the address about to be dereferenced is already out of
+`rdram`'s valid range BEFORE the macro's own dereference, the DATA was bad
+walking in — confirms (a) and points at whichever earlier write put it there
+(cross-reference with existing write-side guards). If the address is fine
+right up until the crash (i.e., the tracer's own bounds check never fires but
+the crash still happens), that's evidence AGAINST (a) and points toward (b)
+or a still-unidentified third explanation.
 
 ## Do exactly one this iteration
 
-**Re-read `renderUnlitMeshFaces`'s early region with the offset as a map,
-not a blind full-function pass.** 508 bytes / 4 bytes-per-ARM64-instruction
-≈ 127 instructions past the function's entry point (after prologue). Given
-N64Recomp's typical per-MIPS-instruction expansion ratio, this most likely
-falls within roughly the first 20-40 MIPS-equivalent source statements of
-the function — i.e. `funcs_4.c:4951` through somewhere in the 4980-5030
-range (s204's own notes put the first interesting pointer computation, the
-table-entry address, at 5064-5067 — check whether that's before or after
-the 508-byte mark, and read everything strictly earlier than it with fresh
-eyes, since s204's own summary of that region ruled it out but did so as
-part of a whole-function pass, not a targeted one).
+1. **Instrument** `funcs_4.c`'s `renderUnlitMeshFaces` via a NEW
+   `fixup_game_funcs.py` patch block (regen order: hand-edits to generated
+   code go in fixup scripts or they die at the next regen — see the existing
+   `_psn_callee_trace`/GUARD patches around line 4548+ and line 2342+ for the
+   codebase's established pattern: a `static int s_..._enabled = -1;` +
+   `getenv()`-gated check, `fprintf(stderr, ...)` unthrottled when enabled).
+   Add a bounds check macro/inline call BEFORE the dereference at these four
+   sites (line numbers as of this session — re-grep to confirm unchanged
+   before patching, in case a regen shifted them):
+   - `funcs_4.c:4975` — `ctx->r18 = MEM_W(ctx->r20, 0X54);` (first list head load)
+   - `funcs_4.c:5009` — `ctx->r16 = MEM_W(ctx->r20, 0X20);` (second list head load)
+   - `funcs_4.c:5546` — `ctx->r16 = MEM_W(ctx->r16, 0X0);` (inner loop pointer-chase reload)
+   - `funcs_4.c:5563` — `ctx->r18 = MEM_W(ctx->r18, 0X4);` (outer loop pointer-chase reload)
 
-Steps:
-1. Confirm the function's exact byte layout is even inferable this way —
-   sanity-check by finding `resetVertexCacheSlot`'s own first-crash
-   evidence (if any exists) or another symbol with a known small offset,
-   to confirm dladdr's offsets track source order roughly linearly (they
-   should, absent unusual compiler reordering, but don't assume — check
-   if there's contradicting evidence before trusting the estimate).
-2. Read `funcs_4.c:4951` through roughly `5030` (pad generously past the
-   127-instruction estimate — better to over-read a little than
-   under-read) line by line for the same zero-extension-bypass pattern as
-   every prior session: a pointer computation that reaches a
-   `MEM_W`/`MEM_H`/`MEM_B` address argument WITHOUT going through
-   `ADD32`/`SUB32`/`S32`'s `(int32_t)` re-sign-extension, or a stray
-   `(uint32_t)`/`(uint64_t)` cast, or a `MEM_HU`/`MEM_BU` zero-extending
-   load whose result feeds a pointer instead of a flag/mask.
-3. If found: this is the root cause. Fix it (either correct the extension
-   at the source, matching `MEM_W`'s convention, or add a targeted guard
-   via `fixup_game_funcs.py` if the underlying game data can legitimately
-   be a small/negative value being misread) and verify with one soak past
-   decisionN 9800 without recurrence.
-4. If NOT found in that narrower region: the offset-to-source-line mapping
-   assumption in step 1 may be wrong, OR the defect is in a call
-   `renderUnlitMeshFaces` itself makes (check whether it calls anything
-   besides the macros — grep `funcs_4.c:4951-5605` for
-   `[A-Za-z_]+\(rdram, *ctx\)` the same way s206 did for `processSceneNode`,
-   to see if it has its own callees that could own byte offset 508).
-   Don't fall back to re-reading the WHOLE function again (s204 already
-   did that at static-only confidence) — instead scope a `MEM_W`-address
-   tracer to just this one function (Option A from s205's NEXT.md, now
-   correctly narrowed to one function instead of six) as the next pivot.
+   For each, before the `MEM_W(...)` call, check whether the SOURCE register
+   (`ctx->r20`/`ctx->r16`/`ctx->r18` — the one being read FROM, i.e. the
+   pointer already in hand before this load) has the expected KSEG0 upper
+   bits (`(reg >> 32) == 0xFFFFFFFF`) and whether the resulting rdram-relative
+   byte offset (`(reg + offset) - 0xFFFFFFFF80000000`, matching `MEM_W`'s own
+   formula in `recomp.h:95-96`) falls inside `[0, rdram_size)`. Log (do NOT
+   skip/guard — this must not change behavior or it invalidates reproduction)
+   with `fprintf(stderr, "[CRASH][unlit-mesh-tracer] site=<A|B|C|D> reg=0x%016llx offset=0x%x computed_addr=... IN_BOUNDS|OOB\n", ...)`
+   gated behind a new env var, e.g. `ROGUESQ_LOG_UNLIT_MESH_TRACER`. Only log
+   on OOB by default to keep log volume sane during a soak (this differs from
+   the unthrottled convention of the older GUARDs — justified because this
+   function is hot, called every frame per visible mesh).
+2. **Positive control, in the same soak**: also add an UNCONDITIONAL counter
+   (increments every call to `renderUnlitMeshFaces`, logged every N=10000
+   calls or on process exit) so a null result is verifiable as "the function
+   ran and the check executed" and not "the instrument never fired." This is
+   the iron rule #1 requirement — a null result without this is worthless.
+3. **Regen + build**: `make_elf.py` -> `N64Recomp` (`env`-prefixed, from the
+   `N64Recomp` checkout) -> `fixup_game_funcs.py` -> cmake (DEVELOPER_DIR=
+   /Applications/Xcode.app/Contents/Developer cmake --build ...). Confirm the
+   fixup report line shows the four sites patched.
+4. **Soak**: launch with `ROGUESQ_LOG_UNLIT_MESH_TRACER=1` (use `env` prefix
+   per the permission-matching note below), `run_in_background: true`, block
+   via `TaskOutput(..., block=true, timeout=300000-480000)`. Copy the driver
+   script to a new tag name (do not reuse a prior soak's `run.log` path).
+   Expected discriminating outcomes:
+   - **OOB fires before a crash, at one of the four sites** → confirms
+     explanation (a). The site tells you which register/list was already bad
+     walking in — grep for what else in this codebase writes to that same
+     struct offset to find the actual corrupting function.
+   - **Soak crashes with the same `+8772`/`renderUnlitMeshFaces+508` signature
+     but the tracer NEVER logged an OOB** → rules out (a) for these four
+     sites specifically (not all-encompassing — only tests these four
+     reloads, not every `MEM_W` in the function). Escalate toward (b) or
+     widen the tracer to the remaining `MEM_W` call sites in the function
+     before considering a codegen-bug hypothesis.
+   - **Soak completes with 0 crashes of this signature** (this bug is rare —
+     3 occurrences across many prior soaks) → inconclusive on its own; check
+     the positive-control counter incremented a nontrivial amount (confirms
+     the function is actually being exercised) and extend the soak duration
+     next iteration rather than concluding anything.
 
 ## Do not
 
+- Do not re-read `renderUnlitMeshFaces`'s source again this iteration — s204
+  and s207 both did this at increasing scrutiny, 0 findings each time. Build
+  the tracer instead.
 - Do not re-read `processSceneNode`, `renderLitMeshFaceGroup`,
   `submitSceneNodeRender`, `renderFlatMeshFaceGroup`, or
-  `renderLitTexturedMeshFaces` this iteration — s206's evidence didn't
-  touch them; they remain provisionally clean at the same confidence they
-  already had. Only revisit if a FUTURE crash's `[CRASH][pc-symbol]` line
-  names one of them instead.
-- Do not re-run the `processScenenNodeCalleeTrace` call-boundary tracer —
-  still 3 soaks/116,950 calls/0 reproductions, budget exhausted, and s206
-  already showed the defect is INSIDE a callee's body, not at a call
-  boundary, so that specific instrument can't see it regardless.
+  `renderLitTexturedMeshFaces` this iteration — still provisionally clean,
+  untouched by s206/s207's evidence.
+- Do not re-attempt `nm`/`atos`/`otool`/`objdump` this iteration — s207
+  re-confirmed both `nm` and `atos` still require approval and are denied in
+  this non-interactive session (2 independent attempts). Only retry if
+  something about the environment has visibly changed.
+- Do not widen the tracer to instrument EVERY `MEM_W` call in the function on
+  the first pass — start with the four highest-probability sites (the two
+  list-head loads, the two loop-back pointer-chase reloads) to keep the log
+  volume and the fixup patch bounded. Widen only if this soak's result is
+  genuinely ambiguous (see "Expected discriminating outcomes" above).
 - Do not re-touch the s123/s131 `SCENE_NODE_LIST_GUARD`/`GUARD2`/`GUARD3`,
   the s197 `SCENE_NODE_CACHE_GUARD`, the s190 `scene-node-ptr-guard`, the
   s196 `REINTERPRET_TILE_GUARD`, or s199's `video-frame-tick-guard` — all
   correct-per-spec, all still 0-fire (or unconfirmed), no new evidence
-  against any of them this session.
+  against any of them.
 - Do not chase the `frameStartReset+532` family, the 23rd-class
   `waitForAnyAudioSlot` SIGSEGV, or the `evalCubicSplineAtTime` SIGBUS
   family this iteration unless this session's own work produces new
@@ -103,25 +138,34 @@ Steps:
 
 ## Environment notes (carried forward, still current)
 
-- The new `[CRASH][pc-symbol]` diagnostic (`src/main/main.cpp`, `dladdr()`
-  on the raw mcontext `pc`) is now permanent and always-on (no env gate) —
-  every future crash gets a real symbol name for the actual faulting
-  frame, not just `lr`'s duplicated frame. Trust it over
+- The `[CRASH][pc-symbol]` diagnostic (`src/main/main.cpp`, `dladdr()` on the
+  raw mcontext `pc`) is permanent and always-on — trust it over
   `backtrace_symbols_fd()`'s output when the two disagree.
-- Disassembly tools (`nm`/`otool`/`objdump`/`lldb`) still blocked as of
-  s202-206 (non-interactive session, no human to clear the approval
-  prompt); re-verify fresh only if something about the environment seems
-  to have changed. `dladdr()` (via a source-level patch, not an external
-  tool invocation) is a viable substitute for symbol-level questions and
-  does NOT hit this approval wall — consider it first for any future
-  "which function is this address in" question before assuming
-  disassembly is required.
+- Disassembly/symbolication tools (`nm`/`otool`/`objdump`/`lldb`/`atos`) are
+  ALL blocked as of s207 (non-interactive session, no human to clear the
+  approval prompt) — re-verified this session with `nm` AND `atos`
+  specifically (`atos` was a promising alternative since it resolves
+  addresses to file:line directly from debug info, sidestepping the whole
+  byte-offset-guessing exercise, but it's denied same as the rest). Re-verify
+  fresh only if something about the environment seems to have changed.
+- This project builds `CMAKE_BUILD_TYPE=Debug` (`-O0`) globally; only the 3
+  RSP-ucode translation units (`FACTOR5_UCODE_C`/`_B_C`/`_BOOT_C`) get an
+  explicit `-O2` override (`CMakeLists.txt:239-247`, s38's own comment).
+  `RecompiledFuncs` (all of `funcs_*.c`) stays at `-O0`. `RECOMP_FUNC`
+  (`N64Recomp/include/recomp.h:22`, non-MSVC branch) is `extern inline
+  __attribute__((weak,noinline))` — every recompiled game function is
+  explicitly non-inlinable. Together: no game function can be silently
+  inlined into a caller, and `-O0` means no cold-path splitting/instruction
+  reordering — a dladdr symbol+offset genuinely identifies where in that
+  function's own body (in roughly source order) a fault occurred, even
+  though the precise ARM64-instructions-per-source-line ratio is still
+  uncalibrated (only one `[CRASH][pc-symbol]` sample exists so far).
 - `./build/N64Recomp rogue_squadron.toml` (from the `N64Recomp` checkout)
   needs an `env` prefix to clear the permission-prefix-match wall — bare
   `./build/N64Recomp ...` gets "This command requires approval" even
   though `Bash(./build/:*)` is allowlisted (hit repeatedly; trust this,
   don't re-litigate).
-- The crash handler dumps siginfo + full ARM64 register file + the new
+- The crash handler dumps siginfo + full ARM64 register file + the
   pc-symbol line on every SIGSEGV/SIGBUS/SIGABRT (`src/main/main.cpp`) —
   check `[CRASH][siginfo]`/`[CRASH][mcontext]`/`[CRASH][pc-symbol]`/
   `[CRASH][vifs-snapshot]` lines first, plus the backtrace lines
@@ -129,19 +173,18 @@ Steps:
 - `N64Recomp/fixup_game_funcs.py` is **not fully idempotent** — confirmed
   s200. Always regen (`make_elf.py` -> `N64Recomp`) before re-running
   fixup if you're not sure it's only been run once since the last regen.
-  (Not applicable if your fix is a pure C source edit inside
-  `funcs_4.c`/`funcs_3.c` made via a NEW `fixup_game_funcs.py` patch block
-  — but IS applicable once you've run fixup once this session.)
 - Any edit under THIS repo's `lib/` needs `./submodule-patches/export.sh`
   + commit in the SAME session. `N64Recomp` and `rogue_squadron64` are
   SEPARATE checkouts outside this repo, NOT `lib/` submodules — their
   uncommitted changes are flagged for the user, not this session's call
-  to commit.
+  to commit. (This iteration's edits are to `N64Recomp/fixup_game_funcs.py`
+  and `N64Recomp/RecompiledFuncs/funcs_4.c` — both live in the SEPARATE
+  `N64Recomp` checkout, not this repo's `lib/`, so no `export.sh` applies;
+  flag the uncommitted `N64Recomp` changes for the user same as always.)
 - Re-running the same soak script/tag overwrites the previous run's
   `run.log` in place — copy the driver script to a new tag name per soak.
   `run.log` files are multi-GB — NEVER `Read` or `cat` them whole — always
-  `grep -a`/`sed -n` for specific line ranges, and use `grep -a` (not
-  plain `grep`) since these logs can contain binary-looking bytes.
+  `grep -a`/`sed -n` for specific line ranges.
 - Running scripts under `RogueSquadron64Recomp/tools/agent/*.sh` /
   `scratch/agent/*.sh` directly gets denied — prefix with `zsh`.
 - Compound `cd ... && zsh ...`/`cd ... && cmake ...` gets denied in ONE
@@ -164,10 +207,10 @@ Steps:
 
 `docs/CURRENT-TRUTH.md` is now well over the ~35 KB CLAUDE.md budget and
 exceeds the Read tool's 256 KB single-read limit (confirmed s195, still
-true s206 — read it with `grep`/`sed -n`, never a plain whole-file
+true s207 — read it with `grep`/`sed -n`, never a plain whole-file
 `Read`). Migrate durable mechanism/architecture material to
 `PROJECT-OVERVIEW.md` and prune superseded detail, paired with a real
-experiment — flagged for 7+ sessions without action, escalating.
+experiment — flagged for 8+ sessions without action, escalating.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` and
 `~/Documents/Tools/rogue_squadron64` are separate git checkouts with
