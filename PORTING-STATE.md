@@ -19965,3 +19965,84 @@ adding to all 10 regardless.
 Zero new git-tracked file changes needed beyond `scratch/agent/
 run_unlitmeshtracer8.sh` (gitignored) and this doc pair — no code patch
 landed this session, the source read was analysis only.
+
+## Session 214 (2026-07-28) — heapWalker upper-32-bits guard shipped and
+soaked twice; both soaks hit unrelated crashes before reaching heapWalker+1128
+
+Per NEXT.md: added the upper-bits check to heapWalker's 10 existing guard
+sites (GUARD, `_make_heapwalker_guard_patch`, and GUARD3,
+`_make_heapwalker_guard3_patch`, both in `N64Recomp/fixup_game_funcs.py`).
+Both now reject a nonzero-but-wrong upper 32 bits in addition to the
+existing `U32()`-truncated low-32 range check:
+`if (r4_lo < 0x80000000u || r4_lo >= 0x80800000u || r4_hi != 0xFFFFFFFFu)`
+(same shape for r3/GUARD3), with `r4_hi`/`r3_hi` computed from the untouched
+64-bit `ctx->r4`/`ctx->r3` (`(uint32_t)((uint64_t)ctx->rN >> 32)`) — this is
+exactly the bit range `U32()` discards, per s213's structural-blindness
+finding. The `fprintf` diagnostics for both guards now also print `hi=0x%08X`
+so a fire is distinguishable as low-range-bad vs hi-extension-bad. Full
+regen pipeline run clean: `make_elf.py` -> `N64Recomp` ->
+`fixup_game_funcs.py` (all 10 sites patched x1, confirmed via grep on the
+generated `funcs_3.c` before building) -> `cmake --build . -j8` (100% built,
+warnings only, no errors).
+
+Soaked twice with `ROGUESQ_LOG_HEAPWALKER_GUARD=1` and
+`ROGUESQ_LOG_HEAPWALKER_GUARD3=1` both set (previously 0/unset — this is the
+first soak where a fire would actually be logged), same s213 varied
+`STICK_SCHEDULE` that reliably reached `heapWalker+1128` once before:
+
+- **Soak 1** (`heapwalkerguard4a/run.log`): crashed almost immediately
+  (hold-iter 3, wall=3s) on `Assertion failed: (ctx->f10.fl == ctx->f10.fl),
+  function sinfApprox, file funcs_5.c, line 6460` — the project-wide
+  `NAN_CHECK` safety assert (documented since s83 for `evalCubicSplineAtTime`,
+  CURRENT-TRUTH line ~113) firing at a **different call site** (`sinfApprox`)
+  than previously catalogued. Signal 6 (abort), not the target SIGBUS. Never
+  reached `SELECT YOUR CRAFT`'s post-hold gameplay flow far enough to
+  exercise heapWalker at all — 0 `[unlit-mesh-tracer]` hits, 0 guard fires.
+- **Soak 2** (`heapwalkerguard4/run.log`, overwrote the same tag — re-run
+  per NEXT.md's explicit "re-run once before concluding" allowance for a
+  no-crash/inconclusive result): got much further (hold-iter 94, wall=104s,
+  vi_width phase transitions through 512/640 before a garbage
+  `vi_width=2147614720` reading at the same moment as the crash) but hit a
+  **different** crash: signal 10 (SIGBUS) inside native runtime code,
+  `_Z7do_sendPhiibb+388` (`do_send`, `mesgqueue.cpp` — the guest
+  `osSendMesg`/`osRecvMesg` blocking-path implementation, not recompiled
+  MIPS game code). `do_send`/`do_recv` are the same functions implicated in
+  the long-running s176+ "graphics-task-submission stall" thread-context-UAF
+  investigation (PORTING-STATE ~L16759-16896) — this looks like the crash
+  variant of that same corrupted-thread-context family rather than a new
+  bug class, but it's a live crash (not a silent stall) which hasn't been
+  logged from this exact call site before. Also 0 `[unlit-mesh-tracer]` hits
+  and 0 guard fires — still never reached heapWalker's code path, despite
+  running ~35x longer than soak 1 before dying.
+
+**Net result: the upper-bits guard fix itself shipped clean (real code
+change, builds, is live in the binary — 10/10 sites confirmed patched), but
+neither soak produced the discriminating measurement** (a guard fire, or a
+recurrence of the exact `heapWalker+1128`/`frameStartReset+532` signature).
+This is the SAME pattern as s209/s210/s211: three-plus consecutive runs each
+blocked by a genuinely different, unrelated crash before reaching the
+intended probe point, strongly suggesting non-deterministic thread-scheduling
+races decide which of several latent bugs fires first on any given run,
+independent of which specific bug is being tested for. Per NEXT.md's own
+outcome table, "guard never fires, no crash" is inconclusive and only buys
+one free re-run (used here); a 3rd soak now would be re-rolling the dice
+against explicit guidance, not advancing the discriminating test — stopping
+per the spirit of budget rule 8.
+
+**What this rules out:** nothing new is ruled out about the zero-extension
+theory itself (it's neither confirmed nor refuted by this session — the
+target crash simply didn't recur). What it DOES establish: the guard code is
+correctly built and live, so the NEXT session that reaches a heapWalker crash
+will get a clean answer immediately without needing another build cycle.
+
+**What this adds:** a 3rd and 4th independent crash signature to the "things
+that can kill a soak before it reaches the intended target" list (sinfApprox
+NaN assert, do_send SIGBUS) — both pre-existing bug classes (NAN_CHECK family,
+thread-context-corruption family) manifesting at new call sites, not new bug
+categories requiring fresh investigation threads of their own.
+
+Zero new git-tracked file changes needed in this repo beyond
+`docs/CURRENT-TRUTH.md`/`PORTING-STATE.md`/`scratch/agent/NEXT.md` — the code
+change landed in the separate `N64Recomp` checkout
+(`fixup_game_funcs.py`, not `lib/`, no `export.sh` needed per NEXT.md's own
+note), and the new soak scripts/logs live under gitignored `scratch/`.

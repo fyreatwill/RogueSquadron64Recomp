@@ -663,9 +663,41 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s213)
+## Next steps, in order of expected value (s214)
 
--54. **(s213) 4th soak (deliberately varied recipe, dropped early sticks
+-55. **(s214) heapWalker's upper-32-bits guard fix SHIPPED (10/10 sites,
+    confirmed patched in generated `funcs_3.c` before building) but is still
+    UNTESTED live — 2 soaks in a row hit unrelated crashes before reaching
+    heapWalker at all, so the mechanism is neither confirmed nor refuted.**
+    Both `GUARD` (`_make_heapwalker_guard_patch`) and `GUARD3`
+    (`_make_heapwalker_guard3_patch`) in `N64Recomp/fixup_game_funcs.py` now
+    reject `hi != 0xFFFFFFFFu` in addition to the existing `U32()` range
+    check — full regen+build clean. Soak 1 (`heapwalkerguard4a/`) died in 3s
+    on a NEW call site for the pre-existing `NAN_CHECK` assert family
+    (`sinfApprox`, `funcs_5.c:6460`, signal 6) — never reached craft-select-
+    exit. Soak 2 (`heapwalkerguard4/`, the one free re-run NEXT.md allows for
+    an inconclusive result) got 35x further (104s into hold) but died on a
+    NEW call site for the pre-existing thread-context-corruption family
+    (`do_send`/`mesgqueue.cpp`, signal 10 SIGBUS, same functions implicated
+    in the s176+ stall investigation) — still never reached heapWalker.
+    Neither soak logged a single `[heapwalker-guard]`/`[heapwalker-guard3]`
+    fire or a single `[unlit-mesh-tracer]` hit. **Do NOT soak a 3rd time on
+    this same recipe** — per NEXT.md's own rule, 2 non-discriminating soaks
+    already used the one free re-run; a 3rd is re-rolling dice, not
+    advancing. **Next work unit**: either (a) accept that this specific
+    varied recipe (`STICK_SCHEDULE="95:start 100:a 150:sr 200:sl 250:su"`)
+    is no longer reliable for reaching heapWalker (its 1-for-3 hit rate this
+    session vs 1-for-1 in s213 suggests race-dependent non-determinism, not
+    a stable repro) and design a fresh recipe/approach, or (b) address one of
+    the two newly-surfaced blockers (sinfApprox NaN call site, or the
+    do_send SIGBUS — the latter is higher-value since it may be a live crash
+    variant of the long-standing s176+ stall bug and could unblock multiple
+    future soaks at once) before attempting heapWalker again. Full detail:
+    PORTING-STATE Session 214.
+
+-54. **(s213, PARTIALLY ADDRESSED s214 above — see -55; guard code now
+    ships the upper-bits check this item asked for, but the live-fire test
+    itself is still pending) 4th soak (deliberately varied recipe, dropped early sticks
     per -53) hit a genuinely NEW crash — `heapWalker+1128` — and, cross-
     referenced against the s99/s157/s172 guard history and a fresh source
     read of `recomp.h`, this crash's register shape PROVES a generalizable,
