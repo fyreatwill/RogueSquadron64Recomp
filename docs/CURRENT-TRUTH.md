@@ -659,9 +659,51 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s176)
+## Next steps, in order of expected value (s177)
 
--28. **NEW TOP PRIORITY (s176): 2nd consecutive full-hold crash-free soak
+-29. **NEW TOP PRIORITY (s177): re-run the `swapackwait1` soak recipe to actually
+    catch the graphics-task-submission stall with the new producer-side
+    instrument armed.** s177 corrected s176's framing before instrumenting:
+    source-read `rt64_state.cpp` (~2841) shows the `[vi-fs-decision]`
+    `stalled` field is defined purely from `std::chrono::steady_clock`
+    elapsed time (>100ms since last VI-address change) — **not** a hidden
+    guest tick/resource-count threshold as s176's NEXT.md speculated. The
+    real open question is why the pending workload's `pairs` (fbPairCount)
+    field stays 0 forever once stalled, i.e. why the guest stops
+    registering new framebuffer pairs. Source-traced the per-frame producer
+    chain (`runHangarSelectionFrame` → `waitForPrevFrameDone` →
+    `waitForPostSwapAck`, the only point in that per-frame function that
+    can block before doing any of the frame's real work) and landed
+    `ROGUESQ_LOG_SWAP_ACK_WAIT` (entry + pre/post-recv logging around the
+    `osRecvMesg_recomp` call inside `waitForPostSwapAck`, `funcs_5.c:6013`,
+    via `N64Recomp/fixup_game_funcs.py`). One soak (`swapackwait1`) ran
+    clean through the instrument (7391 `enter`, 10033 matched
+    `pre-recv`/`post-recv` pairs, zero orphaned waits) but **did not
+    reproduce the stall this run** — it crashed instead to a recurrence of
+    the s84 `frameStartReset` SIGBUS (2nd occurrence ever, softening s85's
+    "fluke" label) after going further than either s176 run before dying
+    (`rdpFs` reached 4125 vs. 3563-3746 at the prior runs' stall onsets).
+    **The instrument is armed and validated (real positive control on its
+    own mechanics, real negative control on "stuck in this wait" for this
+    run's failure mode) but still untested against its actual target** —
+    next soak should re-run the same recipe (or extend `STICK_SCHEDULE`)
+    specifically watching for either outcome: last log line `pre-recv` with
+    no matching `post-recv` and no further `enter` (confirms
+    blocked-forever-in-`osRecvMesg` as the stall mechanism), or
+    `enter`/`pre-recv`/`post-recv` cycling normally throughout an observed
+    stall window (refutes this mechanism, points back at the RT64-side
+    `[vi-fs-decision]` gate logic itself). **Secondary lead, same priority
+    tier:** an offline re-analysis of the two s176 stall logs (background
+    agent, no rebuild) found `rdpFs`/`skSeen`/`skNoTrig` cluster in a
+    narrow ~3175-3802 band at both runs' stall onset despite an 87%
+    wall-clock difference between the two runs — a candidate shared
+    internal ceiling (fixed-size buffer/queue/semaphore count), not
+    wall-clock-scaled. Single-source (one grep pass); if a 3rd occurrence
+    lands near the same value, this becomes a concrete, driveable
+    reproduction target instead of a wall-clock wait. Full detail:
+    PORTING-STATE s177.
+
+-28. **(s176, superseded as top priority by s177 above): 2nd consecutive full-hold crash-free soak
     (`scenenodedepthguard2`, exact repeat of s175's recipe, new tag only) —
     still 0/0 on every guard in the family, including the new depth-cap
     guard. Per rule 8, the crash-family-guarding line of work is now

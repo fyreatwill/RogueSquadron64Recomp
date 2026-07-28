@@ -1,98 +1,90 @@
-# NEXT work unit — characterize the graphics-task-submission stall's trigger condition
+# NEXT work unit — catch the graphics-task-submission stall with the swap-ack-wait instrument armed
 
-s176 got a 2nd consecutive full-hold crash-free soak (`scenenodedepthguard2`,
-exact repeat of s175's recipe) — still 0/0 on every guard in the family,
-including the new `processSceneNode` depth-cap guard from s175. Per rule 8,
-the crash-family-guarding line of work is now provisionally parked (2/2
-clean, a 3rd identical soak has low expected value). Read PORTING-STATE
-Session 176 before doing anything else; this file only has the actionable
-summary.
+s177 corrected s176's framing (the `[vi-fs-decision]` "stalled" field is
+wall-clock-defined, not a hidden counter threshold — see below) and landed a
+targeted producer-side instrument, but the one soak that ran didn't reproduce
+the stall itself. Read PORTING-STATE Session 177 before doing anything else;
+this file only has the actionable summary.
 
-## What s176 established (read before doing anything else)
+## What s177 established (read before doing anything else)
 
-- **2nd consecutive full-hold crash-free soak.** `scenenodedepthguard2`
-  (same recipe as s175's `scenenodedepthguard1`, only the tag renamed so
-  both runs' logs/screenshots survive side by side). `CRASH: 0`,
-  `lle tasks: 4775`, `missing-func: 0`, `thr-resume bad=1: 0`,
-  `UnhandledJump: 0`. Every guard in the family, including
-  `[scene-node-depth-guard]`, is 0/0 — confirmed by grepping the raw
-  run.log for every guard tag, not just the summary counters.
-- **New finding: the graphics-task-submission stall (s162's -14, CURRENT-TRUTH
-  line ~1048) does not only strike post-leave during the mission-intro
-  cutscene.** This session's 2 runs, same recipe, produced 2 structurally
-  different stall onset points:
-  - `scenenodedepthguard2` (run 2) froze **before** either scripted
-    leave-key press (`hold_95`/`hold_100`) executed, still inside SELECT
-    YOUR CRAFT — confirmed via `[vi-fs-decision]` (last real transition at
-    counter #8079, then 300 straight `stalled=1 pairs=0`) and `[phase]`
-    (last width transition still `vi_width=512 origin=0x006AB400`, no
-    post-leave transition ever logged). Screenshots `hold_05.png` through
-    `grace_01.png` are pixel-identical.
-  - `scenenodedepthguard1` (run 1, s175) froze **after** leaving, mid
-    cutscene (`vi_width=640 origin=0x006A2900`, s162's cutscene origin),
-    much later in the run (stall onset near counter #14528 of ~16000).
-  - Surface symptom is identical both times (`stalled=1 pairs=0`, RDP `fs`
-    frozen, `[lle task]`/`[rs-malloc]` still running, process alive) — only
-    the onset *point* in the state machine differs. This rules out "blocked
-    on a function specific to the post-dive-shot code path" as the sole
-    mechanism; a scene-state-independent trigger (tick count or resource
-    count) is now at least as plausible.
-- 4 total stall occurrences now on record: s160, s161 (both post-leave,
-  per s162), and this session's 2 runs (one post-leave, one pre-leave).
+- **Corrected NEXT.md's own s176 framing**: source-read `lib/rt64/src/hle/
+  rt64_state.cpp` (~2841-2843) shows `[vi-fs-decision]`'s `stalled` field is
+  computed directly from `std::chrono::steady_clock` — `(now -
+  g_rs64LastAdvance) > 100ms` — not from any guest tick or resource count.
+  s176's NEXT.md guess ("most plausibly tick-count or resource-count based")
+  was never source-verified and is refuted. The real open question was never
+  "what value does `stalled` cross" — it's **why the pending workload's
+  `pairs` field (fbPairCount) stays 0 forever once stalled**, i.e. why the
+  guest stops registering new framebuffer pairs at all.
+- **New candidate lead (single-source, offline grep, no rebuild)**: at both
+  s176 runs' last real `stalled=0` transition before their respective stall
+  onsets, `rdpFs`/`skSeen`/`skNoTrig` cluster in a narrow ~3175-3802 band
+  despite run 1 running 87% longer in wall-clock time than run 2 before
+  onset. If these counters were wall-clock/tick-scaled they should differ by
+  roughly that same 87% — instead they're within 5-8% of each other. This
+  suggests a shared, roughly-fixed internal ceiling (buffer/queue-slot/
+  semaphore count in the ~3500-3800 range), not a wall-clock/tick threshold.
+  Not yet confirmed by a 3rd data point.
+- **Landed and soaked `ROGUESQ_LOG_SWAP_ACK_WAIT`** (`N64Recomp/
+  fixup_game_funcs.py`, funcs_5.c): entry + pre-recv/post-recv logging around
+  `waitForPostSwapAck`'s `osRecvMesg_recomp` call — the only point in the
+  per-frame producer chain (`runHangarSelectionFrame` -> `waitForPrevFrameDone`
+  -> `waitForPostSwapAck`) that can block before the frame does any real work
+  (animation, camera, `submitGfxFrame`). Built clean (exit 0).
+- **One soak (`swapackwait1`) did NOT reproduce the stall** — it crashed
+  instead to a recurrence of the s84 `frameStartReset` SIGBUS (2nd occurrence
+  ever; source-confirmed zero self-calls in that function, so the doubled
+  stack frame in its backtrace is very likely a stack-unwind artifact, same
+  pattern as s87/88's `advancePlayerAnimationPhase`). The new instrument
+  itself is validated: 7391 `enter`, 10033 matched `pre-recv`/`post-recv`
+  pairs, zero orphaned waits, clean right up to the crash — a real negative
+  control for "stuck in this wait" *for this run's failure mode*, but it says
+  nothing about the actual stall since the stall didn't happen this run.
 
 ## Do next
 
-Instrument the stall's trigger condition, correlated against **wall-clock /
-tick count**, not scene state — that's the variable that's actually
-different between this session's 2 runs (run 2 stalled at wall ~75-80s /
-`[vi-fs-decision]` counter ~8079; run 1 stalled at wall ~140s / counter
-~14528).
-
-1. Before writing any new instrument, grep the existing `[vi-fs-decision]`
-   fields (`synth=`, `skSeen=`, `skNoTrig=`, `skPair0=`) for both runs at
-   their respective stall-onset lines and look for a shared threshold value
-   any of those counters cross right before `stalled=1` becomes permanent —
-   this needs no rebuild, just re-reading logs already captured:
-   - `scratch/s73_post_a_scene/scenenodedepthguard1/run.log`
-   - `scratch/s73_post_a_scene/scenenodedepthguard2/run.log`
-   Look specifically at the field values on the LAST `stalled=0` line in
-   each run and see whether any one field (not `rdpFs`, which differs
-   between runs) is close to a common value/threshold.
-2. If no shared threshold jumps out from the existing logs, the
-   discriminating instrument is probably on the *producer* side (whatever
-   guest code is supposed to submit the next display list task) rather than
-   the `[vi-fs-decision]` consumer/gate logic already instrumented — that
-   producer has never been logged. Source-read the call site that should
-   submit graphics tasks during the SELECT YOUR CRAFT idle loop (likely
-   somewhere in the `runHangarSelectionFrame`/`runHangarMenuFromOverlay`
-   family already characterized across s84-s101) and check whether it's
-   still being called after the stall onset, or has itself stopped running.
-3. Discriminating outcomes:
-   - **The producer call stops being invoked at all** → points to a hang/
-     early-return/infinite-loop-elsewhere in guest code upstream of DL
-     submission (a logic bug, not a corruption race).
-   - **The producer keeps being called but its output is rejected/ignored**
-     → points back into the `[vi-fs-decision]` gate logic itself (a
-     threshold or state-tracking bug in the RT64-side scheduler, not guest
-     code).
-   - **A shared tick/counter threshold explains both runs' onset** → gives
-     a concrete reproduction recipe (drive the counter to that value
-     directly) instead of waiting ~75-140s of wall-clock per attempt.
+1. **Re-run the `swapackwait1` recipe** (`scratch/agent/run_swapackwait1.sh`,
+   copy to a new tag first per the renaming convention below) specifically
+   trying to catch the graphics-task-submission stall itself with the new
+   instrument armed. This is soak attempt 1 of a fresh hypothesis test (the
+   producer-side instrument has never actually been checked against a real
+   stall occurrence) — per rule 8 there's budget for up to 3 attempts before
+   parking this line.
+2. When a soak DOES stall (`[vi-fs-decision]` shows `stalled=1 pairs=0`
+   persisting), grep `[swap-ack-wait]` near the stall onset line number:
+   - **Last log line is `pre-recv` with no matching `post-recv`, and no
+     further `enter` ever** → CONFIRMS the per-frame producer is blocked
+     forever inside `osRecvMesg_recomp` waiting for a swap-ack message that
+     never arrives. This would be a genuine root-cause finding — next step
+     would be tracing who is supposed to send that message (likely a
+     simulated VI/DP interrupt handler) and why it stops firing.
+   - **`enter`/`pre-recv`/`post-recv` keep cycling normally throughout the
+     stall window** → REFUTES this specific mechanism. Points back at the
+     RT64-side `[vi-fs-decision]` gate logic itself (`rt64_state.cpp`
+     `updateScreen`) — the producer keeps submitting frames but something
+     about how `pending.fbPairCount` gets reset/consumed discards them.
+3. **Independently, also check whether a 3rd stall occurrence's onset
+   `rdpFs`/`skSeen`/`skNoTrig` values land near the same ~3175-3802 band** as
+   s176's two runs — if so, this becomes the higher-priority lead (a
+   concrete, driveable reproduction target) over the producer-instrument
+   line above. Both checks can be done from the same soak's log, no need to
+   choose one over the other in advance.
 
 ## Do not
 
-- Do not re-run the identical `scenenodedepthguard1`/`2` recipe a 3rd time
-  hoping for a positive control on the depth-cap guard — 2/2 clean is
-  already a reasonable stopping point per rule 8, and the more
-  information-rich next step is the stall characterization above.
-- Do not assume the stall is "the same bug" across all 4 known occurrences
-  just because the surface symptom matches — s176's own finding is that the
-  onset *point* differs meaningfully; treat "one shared mechanism" as an
-  unconfirmed hypothesis until a shared trigger is actually found.
-- Do not conclude the crash family is fully closed — 2/2 clean soaks is
-  probabilistic support, not proof, and this whole project's history is
-  full of soaks that survive one recipe and then crash on the very next
-  identical run.
+- Do not conclude the `waitForPostSwapAck` hypothesis is confirmed OR refuted
+  based on s177's soak — it never actually hit the stall, so there is no
+  data point yet either way.
+- Do not treat s84's `frameStartReset` SIGBUS as "just a fluke" anymore
+  without qualification — it has now recurred once (2 total occurrences
+  across many soaks), which is more than the single s84 sighting s85 called
+  a fluke after only 2 non-recurrences. Still much rarer than the family's
+  dominant classes; don't over-invest in it, but don't dismiss it either.
+- Do not assume the doubled `frameStartReset + 532` stack frame means real
+  self-recursion — source-checked this session (`funcs_3.c:7969`), zero
+  self-calls in the function body. Treat it as a stack-unwind display
+  artifact unless a future backtrace shows genuinely different call sites.
 
 ## Blocking on a long-running soak (learned the hard way, still current)
 
@@ -102,16 +94,20 @@ covers this env block's 120s hold + overhead) — the script blocks until the
 game process exits, no polling loop needed. If it exceeds the foreground
 timeout, the harness moves it to background automatically and notifies on
 completion — do not sleep-poll in the meantime, just wait for the
-notification.
+notification. If you do start it with `run_in_background: true` directly
+(also fine), and the Stop-hook gate fires before the notification arrives,
+a plain foreground `while kill -0 <pid>; do sleep 5; done` wait (single Bash
+call, generous timeout) is an acceptable way to actively block until it
+exits — this is not the same as sleep-polling for status updates, it's
+waiting out a known-bounded external process per this project's own
+documented convention.
 
 ## This session's environment notes (carry forward, still current)
 
 - Re-running the same script/tag **overwrites** the previous run's
   `run.log` in place — copy the driver script to a new tag name per soak
-  (e.g. `scenenodedepthguard2` from `scenenodedepthguard1`) so each soak's
-  full run.log and screenshots land in their own directory, never
-  overwritten. This is now the established convention going forward, not
-  just a one-off workaround.
+  (e.g. `swapackwait2` from `swapackwait1`) so each soak's full run.log and
+  screenshots land in their own directory, never overwritten.
 - Running `N64Recomp/build/N64Recomp` or any script under
   `RogueSquadron64Recomp/tools/agent/*.sh` / `scratch/agent/*.sh` directly
   gets denied even though the text matches an allowlisted prefix —
@@ -143,9 +139,11 @@ notification.
 - Before writing ANY new patch to `fixup_game_funcs.py`, grep for the
   exact anchor text's uniqueness both within the target file and (if using
   a short/generic snippet) across the whole `RecompiledFuncs/` tree —
-  s100's `composeNpcOrientationMatrix` guard and s175's own
-  `processSceneNode` entry-anchor both needed widening from a 1-2 line
-  match to a longer, uniquely-identifying one after a collision was found.
+  function-name-anchored patches (e.g. `RECOMP_FUNC void <name>(...)`) are
+  safe since function names are unique repo-wide; mid-function anchors
+  (loop bodies, specific instruction addresses) should be grepped for
+  uniqueness first and file-scoped (`if p.name == "funcs_N.c"`) same as
+  every prior patch in this file.
 - `nm`, `otool`, `lldb` are NOT on the Bash allowlist — use
   `scratch/agent/machoparse.py` for Mach-O symbol reads (gives function
   sizes via symtab sort, NOT disassembly — it cannot map a crash's byte
@@ -169,7 +167,8 @@ notification.
 - `lib/N64ModernRuntime` and `lib/rt64` always show as "modified content"
   in the parent repo's `git status` — normal, long-standing state. Only run
   `submodule-patches/export.sh` + commit if you actually edit something
-  under `lib/` this session (s175/s176 did NOT touch `lib/`).
+  under `lib/` this session (s177 did NOT touch `lib/` — the new instrument
+  is entirely in the `N64Recomp` sibling checkout's `fixup_game_funcs.py`).
 - `/scratch/` is entirely gitignored in this repo except 3 force-tracked
   files: `scratch/agent/NEXT.md`, `OUTCOME`, `STATUS`. New soak
   scripts/logs under `scratch/agent/` or `scratch/s73_post_a_scene/` never
@@ -177,7 +176,9 @@ notification.
 - A `grep -c "[pattern]"` across a very large run.log (millions of lines
   from a per-tick instrument like `[rs-malloc-walk]`) is fine and fast —
   no need to avoid grepping big log files, just don't `cat`/`Read` them
-  wholesale.
+  wholesale. Delegating this kind of pure-grep analysis to a background
+  Agent (general-purpose, read-only Bash) keeps the huge log content out
+  of the main context entirely — worked well this session for a 3.7GB log.
 - When a soak survives the full hold window, `run_mission_keys.sh`'s
   summary line `UnhandledJump: N` can be nonzero from totally benign RSP
   microcode fallback noise (`Unhandled jump target 0x17F0`/`0x0231` "in
@@ -187,10 +188,16 @@ notification.
 - Screenshots (`hold_NN.png`, `grace_NN.png`, `craft_stable.png`) are
   genuinely useful for characterizing a "process alive but stuck" state —
   reading a handful of them directly (via the Read tool, not a subagent)
-  is cheap and found this session's main new finding. Compare the SAME
-  tick number across two runs, and compare a late-hold frame against the
-  run's own `craft_stable.png`/early frames to spot exactly when a run
-  visually froze, not just whether it eventually froze.
+  is cheap. Compare the SAME tick number across two runs, and compare a
+  late-hold frame against the run's own `craft_stable.png`/early frames to
+  spot exactly when a run visually froze.
+- The run_mission_keys.sh summary block's later `print` lines (UnhandledJump,
+  thr-resume bad=1, ost-wb SKIP_WIDTH/OOB, fs max, last fs line, last phase,
+  CRASH count) can take noticeably longer to appear than the first few
+  (lle tasks/exit=1/exit=2/missing-func) on a multi-hundred-MB run.log —
+  if you check the driver log immediately after the game process itself
+  exits, wait for the wrapper shell script's own process to exit too (not
+  just the game PID) before treating the summary as complete.
 
 ## Housekeeping still flagged, still not done
 
@@ -200,7 +207,7 @@ superseded detail, paired with a real experiment. Flagged for many
 sessions without action.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` is its own git checkout,
-not a `lib/` submodule, with uncommitted changes across s90-176
+not a `lib/` submodule, with uncommitted changes across s90-177
 (`fixup_game_funcs.py` plus regenerated `RecompiledFuncs/*.c`). Same
 posture as the `rogue_squadron64` sibling checkout flagged since s54.
 Worth asking the user whether/how to commit that history.
