@@ -20849,3 +20849,97 @@ new `renderUnlitMeshFaces` guard, uncommitted per standing convention). Soak
 artifacts: `scratch/s73_post_a_scene/renderunlitguard1/` (run.log,
 screenshots), driver script
 `scratch/s73_post_a_scene/run_renderunlitguard1.sh`.
+
+## Session 220 (2026-07-28) — re-soak per NEXT.md Step 1 (unchanged script):
+`renderunlit-guard` positive control still 0/0 a 2nd time, but the run dies
+at the earliest possible point (hold-iter 1) to a genuinely NEW crash site
+(`emitAllocatedDLCommand`, same scene-graph-render family as the
+`renderUnlitMeshFaces` bug) carrying the same `0x0000000300000000` literal,
+plus `heapWalker` GUARD4 fires for the first time ever (2x) across 3 soaks.
+
+Copied `run_renderunlitguard1.sh` to `run_renderunlitguard2.sh` unchanged
+(only the tag renamed, per NEXT.md's explicit instruction not to redesign
+before a 2nd Step-1 attempt) and ran it once. Diagnostics: same 7 armed
+(`unlit-mesh-tracer`, `renderunlit-guard`, `heapwalker-guard`/`-guard3`/
+`-guard4`, `mesgqueue-guard`, `heaplistdeq-guard`).
+
+**Result**: died at **hold-iter 1 (wall=0s)** — the earliest death point in
+the entire s209-219 lineage, tied with s217's earliest recurrence, and a
+stark contrast with this exact script's own prior run (`renderunlitguard1`,
+s219) surviving the full 300s hold. Confirms (again) the standing
+non-determinism finding: identical script, wildly different outcome,
+run-to-run.
+
+**Positive control (`unlit-mesh-tracer`) fired 0 times again** —
+`renderUnlitMeshFaces` was not called this run either. `[renderunlit-guard]`
+also fired 0 times. Per NEXT.md's own decision tree ("Positive control fires
+0 again → try Step 2 rather than repeating Step 1 a third time"), this
+guard's live-fire status is still unconfirmed after 2 attempts; a 3rd
+identical re-soak would violate budget rule 8. **This specific question
+(does the s219 guard work) remains open and should move to Step 2 (forced
+scene entry) or be superseded by the new lead below.**
+
+**New crash, not renderUnlitMeshFaces or heapWalker**: `[CRASH][pc-symbol]
+sym=emitAllocatedDLCommand+5832`
+(`N64Recomp/RecompiledFuncs/funcs_3.c:2622-3210`), reached via
+`submitSceneNodeRender` → `processSceneNode` → `traverseSceneGraphRecursive`
+(x2) → `setupCameraMatrices` → `static_5_800AAD9C` → `static_5_800C6854` →
+`menuOverlayInit` → `mainGameLoop` — i.e. inside the SELECT YOUR CRAFT
+hangar/camera-orbit scene's own rendering (s48's "hangar pad + X-wing,
+camera orbits"), not flight content, and happening so early (hold-iter 1)
+that it plausibly explains why so many prior soaks never reach flight at
+all: the process is dying rendering the craft-select scene itself before
+the hold schedule's `95:start` key (the one documented, per CURRENT-TRUTH's
+menu-state-machine section, to leave SELECT YOUR CRAFT into hangar-flight)
+ever fires.
+
+Register dump: `x9=0x0000000300000000` (the same process-constant rdram
+host-base literal identified by s194/s219, here landing in a different
+register than the `x0`/`x8` slot seen in the renderUnlitMeshFaces crashes —
+expected, since register allocation is call-site-specific, not evidence
+against the s219 "constant, not corruption" conclusion), `x10=
+0x0000000080000000` (a suspiciously round, un-subtracted KSEG0-tagged
+guest pointer — looks like guest address `0x0`, i.e. an unvalidated/possibly
+null pointer used directly), `far=si_addr=0x380000000` =
+`x9+x10` exactly. Same mechanism family s194 named originally (raw KSEG0
+guest pointer added directly to rdram-base with no `MEM_W`-style
+subtraction), a 4th subsystem hit by it (after `renderUnlitMeshFaces`,
+`heapFreeListDequeue`, `heapWalker`) — **not source-read this session**
+(one soak was this iteration's planned unit; a new source-read is next
+session's work, per the "note it, don't source-read same-session" budget
+discipline NEXT.md already applied to `heapWalker`'s open `x9=0x38d47580`
+lead).
+
+**`heapwalker-guard4` fired for the first time ever this session** (`n=0
+site=0x80007A7C bad_r3=0x00010001 hi=0x00000000`, `n=0
+site=0x80007AD8 bad_r3=0x9C909498 hi=0xFFFFFFFF`) — 0/0 across both prior
+soaks that had it armed (`heapwalkerguard4_1` s218, `renderunlitguard1`
+s219), now 2/2 here. Confirms GUARD4 is not dead code: both catches are
+genuinely invalid `ctx->r3` values by the guard's own check (`r3_lo` outside
+`[0x80000000, 0x80800000)`, or `r3_hi != 0xFFFFFFFF`) that would otherwise
+have fed a real dereference. No `heapWalker`-attributed crash occurred this
+run, so this does NOT yet confirm the guard prevents its originally-targeted
+crash (that still needs a run that would have hit the old signature) — but
+it's the first evidence the guard code path executes for real, invalid
+input at all.
+
+**Rules out**: nothing new formally refuted. **Confirms**: run-to-run
+non-determinism (again); the s219 "constant, not corruption" reading of
+`0x0000000300000000` (holds up in a 4th, structurally distinct call site
+with the constant in a different register).
+
+**Updates the picture**: the dominant blocker for reaching flight/mesh
+content in these soaks may not be `renderUnlitMeshFaces` or `heapWalker`
+specifically but this same family of unguarded raw-KSEG0-pointer-plus-
+constant faults recurring across many leaf functions in the scene-graph
+render pipeline (`emitAllocatedDLCommand` now joins `renderUnlitMeshFaces`,
+`heapFreeListDequeue`, `heapWalker`) — 4 independent consumers of what is
+likely a small number of genuinely corrupted (or simply un-translated)
+upstream pointer values, not 4 independent bugs to whack-a-mole
+individually. Source-reading `emitAllocatedDLCommand` next is higher
+expected value than a 3rd identical Step-1 re-soak.
+
+**Full detail**: this entry. Soak artifacts:
+`scratch/s73_post_a_scene/renderunlitguard2/` (run.log, screenshots), driver
+script `scratch/s73_post_a_scene/run_renderunlitguard2.sh`. No `lib/` files
+touched this session — nothing to export.

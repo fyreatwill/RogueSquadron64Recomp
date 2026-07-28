@@ -663,7 +663,36 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s219)
+## Next steps, in order of expected value (s220)
+
+-61. **(s220) Re-soak of `renderunlitguard1` (unchanged script, tag
+    `renderunlitguard2`) leaves item -60's guard question STILL unconfirmed
+    (`unlit-mesh-tracer`/`renderunlit-guard` both 0/0 a 2nd time), but
+    surfaces a higher-value new lead: a 4th independent consumer of the same
+    "raw KSEG0 guest pointer + rdram-base constant, no `MEM_W` subtraction"
+    fault family, in `emitAllocatedDLCommand` (`funcs_3.c:2622-3210`), hit at
+    hold-iter 1 (earliest death in the whole s209-219 lineage) while
+    rendering the SELECT YOUR CRAFT hangar/camera-orbit scene itself — i.e.
+    plausibly BEFORE the hold schedule's `95:start` key (documented to leave
+    craft-select into flight) ever gets to fire. If this crash is a dominant
+    early blocker, source-reading and guarding it may do more to unblock
+    reaching flight/mesh content than repeating the renderUnlitMeshFaces
+    soak.** Register dump: `x9=0x0000000300000000` (the s194/s219
+    process-constant, here in a different register slot than prior
+    sightings — consistent with, not contradicting, the "constant" reading),
+    `x10=0x0000000080000000` (round-number, un-subtracted KSEG0-tagged guest
+    pointer — looks like guest address 0), `far=x9+x10` exactly. Call chain:
+    `submitSceneNodeRender`→`processSceneNode`→`traverseSceneGraphRecursive`
+    (x2)→`setupCameraMatrices`. **Next step**: source-read
+    `emitAllocatedDLCommand` end to end for the same "unguarded peek-load on
+    a freshly-read, unvalidated pointer" idiom the `heapWalker`/
+    `heapFreeListDequeue`/`renderUnlitMeshFaces` guards were all built for,
+    ship a matching guard, re-soak. Separately: `heapWalker` GUARD4 fired for
+    the first time ever this session (2 catches, both genuinely invalid
+    `ctx->r3` per its own check) after 0/0 across its first 2 soaks — real
+    evidence it's not dead code, though it still hasn't been tested against
+    its originally-targeted crash signature. Full detail: PORTING-STATE
+    Session 220.
 
 -60. **(s219) REFUTES item -59's "hunt the write site of 0x0000000300000000"
     premise — that value is the constant native RDRAM host base pointer, not
