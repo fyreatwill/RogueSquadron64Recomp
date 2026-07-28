@@ -33,6 +33,7 @@
 #include "win_compat.h"
 #include <execinfo.h>
 #include <unistd.h>
+#include <sys/ucontext.h>
 #endif
 
 // N64 button bitmasks (from libultra PR/controller.h)
@@ -1656,9 +1657,41 @@ int main(int argc, char* argv[]) {
         struct sigaction sa {};
         sa.sa_flags = SA_SIGINFO | SA_RESETHAND;
         sigemptyset(&sa.sa_mask);
-        sa.sa_sigaction = [](int sig, siginfo_t*, void*) {
+        sa.sa_sigaction = [](int sig, siginfo_t* info, void* ucontext_raw) {
             fprintf(stderr, "[CRASH] caught signal %d (%s), dumping stack:\n",
                 sig, strsignal(sig));
+            // s194: dump siginfo + the ARM64 register file at fault time --
+            // SA_SIGINFO already gave us these two params, previously
+            // discarded. si_addr/__far is the exact faulting virtual address;
+            // x0-x28 let us identify which register held the bad pointer
+            // directly, without disassembling the crashing instruction.
+            if (info) {
+                fprintf(stderr, "[CRASH][siginfo] si_addr=%p si_code=%d si_errno=%d\n",
+                    info->si_addr, info->si_code, info->si_errno);
+            }
+#if defined(__APPLE__) && defined(__aarch64__)
+            if (ucontext_raw) {
+                ucontext_t* uc = static_cast<ucontext_t*>(ucontext_raw);
+                if (uc->uc_mcontext) {
+                    const auto& ss = uc->uc_mcontext->__ss;
+                    const auto& es = uc->uc_mcontext->__es;
+                    fprintf(stderr,
+                        "[CRASH][mcontext] pc=0x%llx far=0x%llx esr=0x%x exception=0x%x\n",
+                        (unsigned long long)ss.__pc, (unsigned long long)es.__far,
+                        (unsigned)es.__esr, (unsigned)es.__exception);
+                    for (int i = 0; i < 29; i++) {
+                        fprintf(stderr, "[CRASH][mcontext] x%-2d=0x%016llx\n",
+                            i, (unsigned long long)ss.__x[i]);
+                    }
+                    fprintf(stderr,
+                        "[CRASH][mcontext] fp=0x%016llx lr=0x%016llx sp=0x%016llx cpsr=0x%08x\n",
+                        (unsigned long long)ss.__fp, (unsigned long long)ss.__lr,
+                        (unsigned long long)ss.__sp, (unsigned)ss.__cpsr);
+                }
+            }
+#else
+            (void)ucontext_raw;
+#endif
             // s171: snapshot of [vi-fs-decision] state at crash time — tests
             // whether the s169/s170 runtime-scheduler SIGSEGV is adjacent to
             // a stall-clear FIRE event (H1) or independent of stall state (H2).

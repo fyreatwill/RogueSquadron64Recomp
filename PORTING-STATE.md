@@ -17879,3 +17879,128 @@ compiled and linked.** `./submodule-patches/export.sh` run,
   tooling has a real failure mode in this project (inconsistent decode
   output caught before it produced a bad guess) — worth fixing the tooling
   gap rather than repeating the workaround per-session.
+
+## Session 194 (2026-07-28) — disassembly tools still blocked (confirmed again); pivoted to a source-level fix instead — the SIGSEGV/SIGBUS handler now dumps siginfo + the full ARM64 register file, and its FIRST soak both reached a new furthest decisionN (9741, inside the 9660-9792 target window) and caught a brand-new, precisely-characterized crash via the register dump alone, with no disassembler at all
+
+**Disassembly tooling: confirmed still blocked, did not re-litigate.**
+Retried NEXT.md's Option A first-step exactly as specified: plain
+`otool -tv -p` and `objdump --disassemble-symbols=` against
+`build/RogueSquadron64Recomp`, as ordinary non-piped Bash calls. Both
+required approval and were denied in this non-interactive session, same as
+s193. Per NEXT.md's own guidance ("try once at the start... if still
+blocked, don't burn budget re-attempting"), did not retry a 3rd time and
+did not touch `s193_disasm.py` (still unvalidated, still not trusted).
+
+**Pivot: the crash handler was silently discarding its own best evidence.**
+Reading the existing POSIX signal handler
+(`src/main/main.cpp:1654-1683`) to plan the decoder-validation sub-step
+turned up a cheaper, more reliable path: it installs with `SA_SIGINFO`
+(`sa.sa_flags = SA_SIGINFO | SA_RESETHAND`) but the handler lambda was
+`[](int sig, siginfo_t*, void*)` — both the `siginfo_t*` (has `si_addr`,
+the exact faulting virtual address) and the `void*` `ucontext_t*` (has the
+full ARM64 register file: `x0`-`x28`, `fp`, `lr`, `sp`, `pc`, `cpsr`, plus
+`__es.__far`/`__esr`/`__exception`, all inside `uc_mcontext->__ss`/`__es`
+on Darwin/arm64) were being discarded. This is strictly better than
+disassembly for identifying a bad-pointer crash: instead of inferring which
+register held the bad value from the instruction encoding, the register
+file at the exact fault instant is just... there, already captured by the
+kernel, for free. No new build risk beyond the crash path itself (all other
+code paths unaffected).
+
+**Change:** `src/main/main.cpp` — added `#include <sys/ucontext.h>` (not
+`<ucontext.h>`, which requires `_XOPEN_SOURCE` on this SDK and errored:
+"deprecated ucontext routines require _XOPEN_SOURCE to be defined"; the
+BSD-style `<sys/ucontext.h>` header exposes the same `ucontext_t`/
+`mcontext_t` struct layout without that guard). Extended the lambda to
+print `[CRASH][siginfo] si_addr=... si_code=... si_errno=...` and, on
+`__APPLE__ && __aarch64__`, `[CRASH][mcontext] pc=... far=... esr=...
+exception=...` followed by all 29 `x` registers and `fp`/`lr`/`sp`/`cpsr`.
+Pure `src/main/main.cpp` change (this repo, not `lib/`) — built with a
+plain `cmake --build build --target RogueSquadron64Recomp -j`, no
+regen/fixup pipeline needed, builds clean (2 pre-existing unrelated
+deprecation warnings in `rt64`'s vendored `json.hpp`, nothing new).
+
+**Soak (`scratch/agent/run_mcontext1.sh`, tag `mcontext1`, identical env
+block to s192/s193's `sceneptrguard5`): the new dump fired, gave a sane,
+internally-consistent read, and the run reached the furthest decisionN of
+any soak to date.** `CRASH: 34` in the summary (many are the routine
+already-catalogued small crashes this soak script's env block doesn't
+guard against; the interesting one is the fatal one that ended the run):
+
+```
+[CRASH] caught signal 10 (Bus error: 10), dumping stack:
+[CRASH][siginfo] si_addr=0x380630062 si_code=1 si_errno=0
+[CRASH][mcontext] pc=0x1028cc4a4 far=0x380630062 esr=0x92000006 exception=0x0
+[CRASH][mcontext] x0 =0x0000000300000000   (== x8; almost certainly the rdram host base pointer)
+[CRASH][mcontext] x8 =0x0000000300000000
+[CRASH][mcontext] x9 =0x0000000080630062   (raw, UNSIGN-EXTENDED KSEG0 guest pointer)
+... (x1-x7, x10-x28 mostly small/zero, not implicated)
+[CRASH][mcontext] fp=0x000000016fe628c0 lr=0x00000001028ee4fc sp=0x000000016fe62890 cpsr=0xa0000000
+[CRASH][vifs-snapshot] decisionN=9741 lastFireDecisionN=9740 decisionsSinceFire=1 lastFireWasStalled=0 stalledNow=0
+3   RogueSquadron64Recomp   0x00000001028ee4fc processSceneNode + 8772
+5   RogueSquadron64Recomp   0x00000001028ef910 traverseSceneGraphRecursive + 1576
+```
+(`scratch/s73_post_a_scene/mcontext1/run.log:4468133-4468166`)
+
+**Reading the register file directly identifies the bug class, no
+disassembly needed:** `far` (== `si_addr`, self-consistent) decomposes
+exactly as `x0/x8 (0x300000000) + x9 (0x80630062)` — the host rdram base
+pointer plus a guest pointer that STILL HAS its KSEG0 tag (`0x80000000`)
+intact and is zero-extended (upper 32 bits of x9 are 0), not sign-extended.
+Compare `N64Recomp/include/recomp.h`'s `MEM_W` macro (the normal/correct
+path): `rdram + ((reg + offset) - 0xFFFFFFFF80000000)`, which only works
+because `ADD32` sign-extends 32-bit register values through `(gpr)(int32_t)(...)`
+to `0xFFFFFFFF80xxxxxx` before the macro subtracts the KSEG0 base. Here,
+whatever computed this address added the RAW, zero-extended 32-bit guest
+value directly to the rdram base with NO KSEG0 subtraction at all — a
+different, less-safe code path than `MEM_W`, producing an ~2 GB wild
+pointer instead of a valid ~8 MB rdram offset. This is a genuinely new
+mechanism, distinct from every previously-catalogued crash in this
+project's history (none of which were characterized as a masking/sign-
+extension bug before). `lr=processSceneNode+8772` is the RETURN address of
+a call from inside `processSceneNode` (`N64Recomp/RecompiledFuncs/funcs_4.c:13759-14873`)
+to whatever's at the actual faulting `pc` — the unwinder couldn't resolve a
+symbol for `pc` itself (likely a small/leaf helper with no separate frame),
+which is why the backtrace shows the caller. **Single-source, first
+occurrence** — `grep -l "processSceneNode + 8772" scratch/s73_post_a_scene/*/run.log`
+matches only this run; not yet confirmed as a recurring crash class the
+way `queueGPUUploadTMEM`/`rs_malloc` are.
+
+**Milestone: furthest decisionN yet, and it's INSIDE the target window.**
+Prior furthest was s192's 8972; this soak reached 9741, past the
+`[scene-node-ptr-guard]` target window's start (9660) and still short of
+its end (9792). `[scene-node-ptr-guard]` fired 0 times again (now 0/4
+across all soaks) — this NEW crash killed the run before the guarded site
+could be exercised, so the s190 fix is STILL untested, but the accumulated
+guards from s190-s193 are demonstrably doing their job: this is the first
+soak to ever get this deep. Did not attempt to pinpoint the exact source
+statement or add a guard this session — that's real, separate, bounded
+work (need to identify which call site inside `processSceneNode` passes an
+unmasked pointer, most likely by finding a place that skips `MEM_W`/`ADD32`
+and does raw pointer arithmetic) and this session's actual deliverable
+(the mcontext instrument) is already a complete, validated, standalone
+unit. Two runs is not enough to know if this crash is itself the new
+soak-blocking bottleneck or a one-off; that's the natural next probe.
+
+**What this does and doesn't show:**
+- DOES confirm the new `[CRASH][siginfo]`/`[CRASH][mcontext]` dump is live,
+  reachable, and produces internally-consistent, sane values (positive
+  control: `si_addr == far`, `x0 == x8`, the decomposition arithmetic checks
+  out exactly) — this is now a permanent, always-on diagnostic (no env
+  gate needed; it's pure stderr text on an already-fatal path, costs
+  nothing on the non-crash path).
+- DOES identify a real, previously-invisible bug MECHANISM (KSEG0-tagged
+  pointer added to rdram base without the usual sign-extend + subtract) —
+  but from ONE occurrence. Treat as a strong lead, not a confirmed
+  root-cause, until it recurs or is traced to a specific source line.
+- DOES NOT touch or replace any existing guard (`scene-node-ptr`,
+  `tmem-zero`, depth-cap, etc.) — all read-only diagnostic, added purely
+  inside the crash-signal path.
+- DOES NOT resolve the `runVideoFrameTick` crash from s192/s193 — it simply
+  didn't recur this run (this soak died to a different, new crash before
+  reaching that code path, or reached a state where it no longer applies;
+  not investigated further this session).
+- Confirms the project's crash handler had a several-session-old blind
+  spot: `SA_SIGINFO` was being requested but its payload thrown away. Any
+  future SIGSEGV/SIGBUS in this project now gets this register dump for
+  free, no rebuild required.

@@ -663,7 +663,52 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s193)
+## Next steps, in order of expected value (s194)
+
+-43. **(s194) disassembly tools confirmed still blocked (otool/objdump both
+    denied approval again) — pivoted instead to fixing the crash handler
+    itself, which turned out to be discarding its own best evidence.** The
+    POSIX `SA_SIGINFO` handler (`src/main/main.cpp:1654-1683`) requests
+    `siginfo_t*`/`ucontext_t*` but the lambda signature threw both away.
+    Extended it to print `si_addr`/`si_code` and, on `__APPLE__ &&
+    __aarch64__`, the full ARM64 register file (`x0`-`x28`, `fp`/`lr`/`sp`/
+    `pc`/`cpsr`, `far`/`esr`) from `uc_mcontext`. Needed `#include
+    <sys/ucontext.h>` (not `<ucontext.h>`, which errors without
+    `_XOPEN_SOURCE` on this SDK). Pure `src/main/main.cpp` change (this
+    repo, not `lib/`) — plain `cmake --build`, no regen/fixup needed.
+
+    First soak with it (`scratch/agent/run_mcontext1.sh`, tag `mcontext1`,
+    same env block as s192/s193's `sceneptrguard5`) both confirmed the
+    instrument (positive control: `si_addr==far`, internally-consistent
+    register decomposition) AND reached decisionN=9741 — the furthest of
+    any soak to date, and INSIDE the `[scene-node-ptr-guard]` target window
+    (9660-9792) for the first time ever. It crashed on a NEW,
+    previously-uncatalogued bug before the guarded site fired
+    (`[scene-node-ptr-guard]` now 0/4): `far=0x380630062` decomposes exactly
+    as `x0/x8 (0x300000000, rdram host base) + x9 (0x80630062, a raw
+    zero-extended KSEG0 guest pointer, KSEG0 tag NOT stripped)` — i.e. some
+    code path added a guest pointer to the rdram base WITHOUT the usual
+    sign-extend-then-subtract-0xFFFFFFFF80000000 that `MEM_W` does
+    (`N64Recomp/include/recomp.h`). `lr=processSceneNode+8772`
+    (`funcs_4.c:13759-14873`) is the return address of the call to whatever
+    actually faulted (unresolved symbol at the real `pc`). Single-source,
+    first occurrence (`grep -l "processSceneNode + 8772"
+    scratch/s73_post_a_scene/*/run.log` matches only this run) — not yet
+    confirmed recurring. Full detail: PORTING-STATE Session 194.
+
+    **Best next work unit**: soak again with the mcontext dump active
+    (already permanent/always-on, no new env var) to get a 2nd occurrence
+    of this crash signature — confirms whether it's the new dominant
+    soak-blocker (like `queueGPUUploadTMEM` was) or a one-off. If it
+    recurs, use the register evidence (rdram-base + unmasked-KSEG0-pointer
+    pattern) to find the specific unmasked-arithmetic call site inside
+    `processSceneNode` (grep for raw pointer math that bypasses `MEM_W`/
+    `ADD32`'s sign-extension, near where sibling/child scene-node pointers
+    get passed to a callee) and guard it the same defensive way as the
+    other soak-blockers. The `runVideoFrameTick` crash (s192/s193, still
+    uncatalogued) did NOT recur this soak — leave it alone until it's seen
+    to still be a live blocker (may have been dodged by getting further
+    into the scene this run, not fixed).
 
 -42. **(s193) closed the "-41" open question — the s192 `queueGPUUploadTMEM`
     guard is now confirmed live via a positive control — but the
