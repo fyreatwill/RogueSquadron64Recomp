@@ -20642,3 +20642,210 @@ into a `ctx->rN`-shaped slot shared across these unrelated call sites. Full
 detail above; soak artifacts: `scratch/s73_post_a_scene/heapwalkerguard4_1/`
 (run.log), driver script
 `scratch/s73_post_a_scene/run_heapwalkerguard4_1.sh`.
+
+## Session 219 (2026-07-28) — refutes NEXT.md's "hunt the write site of the
+literal `0x0000000300000000`" premise: that value is not corrupted data, it
+is this process's constant native RDRAM host base pointer, already named as
+such by s194 and never connected back to by s216-218; one of the "three
+independent sightings" (s218's `renderUnlitMeshFaces` crash) is actually the
+4th recurrence of a bug s194/s199 already diagnosed and precisely localized
+20+ sessions ago and simply never fixed. Sourced-read that exact function,
+found and shipped a guard for the one unguarded "peek-load on a freshly-read
+list-walk pointer" site in it (same idiom as heapWalker GUARD4/
+heapFreeListDequeue's guard), regenerated clean, and soaked to a **first**:
+the full 300s hold window completed with **zero crashes** — but the new
+guard's positive control (the pre-existing `unlit-mesh-tracer` call counter)
+fired **zero times**, meaning `renderUnlitMeshFaces` was never even called
+this run. Per rule 1, the clean soak is an uncontrolled null on this specific
+fix, not a confirmation.
+
+### Step 1 (NEXT.md): tabulating the three sightings turned up a fact NEXT.md's
+own authors didn't have
+
+Before writing any new instrumentation, did NEXT.md's own prescribed Step 1
+(`grep -n "0x0000000300000000" PORTING-STATE.md`, build a table of session /
+register / low-32-bits). The grep surfaced hits going back further than
+s216-218 — to **s194** (`PORTING-STATE.md:17930-17968`) and **s199**
+(`:19144-19211`), sessions the s216-218 lineage never cited. Reading those in
+full changes the picture completely:
+
+- **s194** (crash log still on disk,
+  `scratch/s73_post_a_scene/mcontext1/run.log:4468133-4468166`): first-ever
+  register-level crash dump, decomposed `si_addr` directly as `x0/x8
+  (0x0000000300000000) + x9 (0x0000000080630062)` and stated explicitly:
+  "`x0 =0x0000000300000000 (== x8; almost certainly the rdram host base
+  pointer)`". s194 then derived the actual mechanism from `recomp.h`'s real
+  `MEM_W` macro (`rdram + ((reg+offset) - 0xFFFFFFFF80000000)`, which only
+  produces a valid ~8MB rdram offset because `ADD32` sign-extends a 32-bit
+  guest value to `0xFFFFFFFF80xxxxxx` first): whatever computed this
+  particular fault address added the RAW, zero-extended 32-bit guest pointer
+  (`x9=0x80630062`, KSEG0 tag `0x8` intact, upper 32 bits zero, not
+  `0xFFFFFFFF`) directly to the rdram host base with **no KSEG0 subtraction
+  at all** — a different, unsafe code path from `MEM_W`. `lr` pointed at
+  `processSceneNode+8772`, calling into an unresolved leaf.
+- **s199** (log still on disk,
+  `scratch/s73_post_a_scene/pcsymbolize1/run.log:4463555-4463585`): added a
+  `dladdr`-on-raw-`pc` diagnostic (`[CRASH][pc-symbol]`, still permanent
+  today) specifically to pin down that unresolved leaf, and got
+  `sym=renderUnlitMeshFaces+508`, **byte-identical** `x9=0x0000000080630062`
+  to s194 — confirmed same bug, 2nd occurrence, `decisionN` in the same
+  9660-9800 band both times. CURRENT-TRUTH item -48 (superseded) and the s199
+  entry both flag `renderUnlitMeshFaces+508` as "the single, precisely-scoped
+  next work unit" — this was never picked up.
+- **s216** (`heapFreeListDequeue`, raw dump: `si_addr=0x338d47580`,
+  `x8=0x300000000` — the s216 writeup's transcribed `x9=0x0000000300000000`
+  does not arithmetically reproduce its own stated `si_addr` and appears to
+  be a copy-paste slip; the raw log for that specific run was not re-checked
+  this session, budget permitting a future session should verify it
+  directly).
+- **s217** (`heapWalker`, raw dump re-pulled this session from
+  `scratch/s73_post_a_scene/heaplistdeq1/run.log:140456-140491`, still on
+  disk): `x0=x8=0x0000000300000000`, **`x9=0x0000000038d47580`** (not
+  `0x80xxxxxx`-shaped — no KSEG0 tag), `si_addr=0x338d47580`, exactly `x0+x9`.
+  This is a **different** low-32-bit value from s194/s199/s218's
+  `0x80630062` and does not carry the KSEG0-tag shape at all — a separate
+  bug from the renderUnlitMeshFaces one, not the same value recurring.
+- **s218** (raw dump re-pulled this session from
+  `scratch/s73_post_a_scene/heapwalkerguard4_1/run.log:169337-169370`, still
+  on disk): `x8=0x0000000300000000`, **`x9=0x0000000080630062`**,
+  `si_addr=0x380630062`, `sym=renderUnlitMeshFaces+792`. **Byte-identical
+  `x9` to s194 and s199** — this is the SAME already-diagnosed bug's 4th
+  recurrence (offset `+792` vs. `+508`, ~70 ARM64 instructions apart in a
+  `-O0`/no-LTO build — plausibly two different call/loop iterations hitting
+  the same faulting instruction, or a slightly different codegen offset from
+  intervening unrelated patches over 20 sessions; not investigated further
+  this session), not a new, independent "third sighting."
+
+**Discriminating conclusion**: `x0`/`x8 = 0x0000000300000000` is a
+**process-wide constant** (the host virtual address this build's mmap/malloc
+happened to place the RDRAM buffer at — identical across every run for
+months of sessions, which is itself consistent with a deterministic
+allocator/ASLR-disabled layout, not evidence of a shared write). It appears
+in every one of these dumps for the boring reason that `MEM_W` (and any
+code imitating it) always adds rdram-base to compute a host address — of
+course it's present whenever ANY memory access faults. **NEXT.md's premise
+("hunt for the write site of this literal") has no target: there is no
+write, and the "three-source-confirmed" framing in CURRENT-TRUTH item -59
+conflates one already-solved bug (s194/s199/s218, 3 of the 4 same-value
+sightings) with at least one structurally distinct one (s217, different low
+bits, no KSEG0 tag) that happens to share the same uninteresting rdram-base
+addend.** The real, per-site question was always "what corrupts/leaves
+unmasked the OTHER operand (`x9`)" — precisely the question s216's and
+s217's own source-reads already answered correctly for their own functions
+(class A, upstream-corrupted-value propagation) without needing to invoke a
+shared literal at all.
+
+### Fix: renderUnlitMeshFaces list-walk peek-load guard
+
+Read `renderUnlitMeshFaces` end to end
+(`N64Recomp/RecompiledFuncs/funcs_4.c:4963-5630`, ~668 lines, no delegation
+needed) specifically hunting for the same "peek-load on a freshly-read,
+unvalidated list-walk pointer" gap GUARD4 (s218) fixed in `heapWalker` and
+the loop-back guard (s217) fixed in `heapFreeListDequeue`. Grepped every
+`MEM_W(ctx->rN, ...)` in the function for one immediately re-reading the
+same register at offset 0 right after an assignment to it (the exact GUARD4
+shape) — found exactly **one** such site, at `0x80011CE0`:
+
+```
+L_80011CDC:
+    ctx->r18 = MEM_W(ctx->r18, 0X0);   // 0x80011CDC: validated by the
+                                        // loop's own beq/bne structure
+    ctx->r2  = MEM_W(ctx->r18, 0X0);   // 0x80011CE0: peek-load on the BRAND
+                                        // NEW r18 -- zero validation
+    if (ctx->r2 != 0) goto L_80011CDC;
+```
+
+No other `MEM_W(ctx->rN, offset)` pair in this function repeats the same
+register at the same offset back-to-back — unlike `heapWalker`'s 5 identical
+copies, this function has only the one. (This function also has 3 *other*
+pre-existing, unrelated single-deref list-walk-shaped loads already covered
+by the s208/s209 `unlit-mesh-tracer` observer sites A-D — none of those is
+the double-deref shape; confirmed by direct inspection, not assumed.)
+
+Shipped a guard (`fixup_game_funcs.py`, mirroring the `heapwalker_guard4`
+template exactly: upper-32-bit check `r18_hi != 0xFFFFFFFF` — a bare
+`U32()` truncated compare would silently PASS this corruption shape, per
+s213's documented trap). Bail target: force `ctx->r18 = 0` then `goto
+L_80011CEC` — that label is this loop's own natural exit, and it already
+contains the exact "list is empty" handling
+(`if (ctx->r18 == 0) { ctx->r10 = 0 | 0xFFFF; goto L_800120A4; }`) the
+function was compiled with; forcing `r18=0` makes that pre-existing branch
+fire correctly with no new semantics invented, the same "reuse the
+function's own degrade contract" approach every prior guard in this family
+uses.
+
+Regenerated in the mandated order (`make_elf.py` → `N64Recomp` →
+`fixup_game_funcs.py` → `cmake --build`). Fixup report confirmed the new
+patch matched **exactly once** (`funcs_4.c: renderUnlitMeshFaces list-walk
+peek-load guard (0x80011CE0) patched x1`), alongside the pre-existing
+`heapWalker`/tracer patches re-applying normally (no double-apply, single
+fixup run). Build clean (only the pre-existing `DDIV` pointer-sign
+deprecation warnings, nothing new).
+
+`fixup_game_funcs.py` lives in the untracked sibling `N64Recomp` checkout
+(known, flagged risk since s83 — not this session's problem to fix); the
+edit is on disk but outside this repo's commit scope, same as every prior
+session's edits there. No `lib/` files touched this session — nothing to
+export.
+
+### Soak (`renderunlitguard1`, s213-218 recipe, 7 diagnostics armed including
+the new `ROGUESQ_LOG_RENDERUNLIT_GUARD`)
+
+**Result: hold window ran to completion (300s) with `CRASH: 0`** — the
+process was still alive and had to be killed at the end. This is the
+**first soak in the entire s209-218 lineage to survive the full hold
+window** (prior sessions died at hold-iter 1, 3, 9, 28, etc.). `fs max`
+reached 4212 (a new high vs. the previously-noted 3560-4010 plateau band),
+and the last recorded phase was `vi_width=512 origin=0x00690400` at 243.4s —
+consistent with genuinely being in outdoor/flight content, not stuck in an
+early menu.
+
+**But the positive control failed**: `grep -c "unlit-mesh-tracer"
+renderunlitguard1/run.log` = **0** — not even the always-on
+`positive-control calls=N` counter fired once. `renderUnlitMeshFaces` was
+never called during this entire 360-second run. (For comparison,
+`heapwalkerguard4_1`'s own log shows exactly one `positive-control calls=1`
+line — so even a soak that DID reach the target crash only called this
+"hot, every frame" function once before dying, underscoring how
+non-deterministic reaching mesh-rendering content is run-to-run in this
+harness, consistent with the standing "no cross-run A/B on animating
+scenes" rule.) `[renderunlit-guard]`, `[heapwalker-guard]`,
+`[heapwalker-guard3]`, `[heapwalker-guard4]`, `[heaplistdeq-guard]`,
+`[mesgqueue-guard]` all fired 0 times too — a totally clean, guard-silent
+run.
+
+**Per rule 1, this is an uncontrolled null, not a confirmation**: the clean
+300s hold does not demonstrate the new guard fixed anything, because the
+guarded function was never exercised. It's also not a regression signal
+(nothing fired that shouldn't have). The "first full-hold survival" milestone
+is real and worth noting but cannot currently be attributed to this
+session's change specifically.
+
+### Rules out / reframes
+
+**Rules out** CURRENT-TRUTH item -59's framing that this is "one shared
+corruption source" requiring a write-site hunt — the four register dumps
+above show two genuinely different `x9` values (`0x80630062` at three sites,
+`0x38d47580` at one), meaning at most 3 of the 4 sightings share a cause,
+and even those 3 share only the already-understood, uninteresting rdram-base
+constant, not a mystery payload.
+
+**Confirms** (re-confirms, doesn't newly establish) s194/s199's original
+mechanism finding and closes out their flagged-but-never-executed "next work
+unit" — this session is the first to actually act on the s199 recommendation
+20 sessions later.
+
+**Does not resolve** s217's `heapWalker`/`x9=0x38d47580` sighting — that
+value's shape doesn't match the KSEG0-tag pattern this session's fix
+targets, and remains a genuinely separate, still-unexplained corruption
+worth its own source read if it recurs. Also flagging for a future session
+(not this session's budget): re-verify s216's raw run log directly (if still
+findable — `heapFreeListDequeue`, s216, tag likely under
+`scratch/s73_post_a_scene/`) since its written-up `x9` value doesn't
+arithmetically match its own stated `si_addr`.
+
+**Full detail**: this entry. Code: `fixup_game_funcs.py` (sibling checkout,
+new `renderUnlitMeshFaces` guard, uncommitted per standing convention). Soak
+artifacts: `scratch/s73_post_a_scene/renderunlitguard1/` (run.log,
+screenshots), driver script
+`scratch/s73_post_a_scene/run_renderunlitguard1.sh`.

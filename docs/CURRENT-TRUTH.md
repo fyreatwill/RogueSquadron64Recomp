@@ -663,9 +663,43 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s218)
+## Next steps, in order of expected value (s219)
 
--59. **(s218) heapWalker GUARD4 landed (5 sites, the actual gap GUARD3 left
+-60. **(s219) REFUTES item -59's "hunt the write site of 0x0000000300000000"
+    premise — that value is the constant native RDRAM host base pointer, not
+    corrupted data; there is no write site.** NEXT.md's own Step 1 (tabulate
+    prior sightings) turned up s194/s199 (PORTING-STATE.md:17930-17968,
+    :19144-19211), sessions the s216-218 lineage never cited. s194 named
+    `x0/x8=0x0000000300000000` directly as "almost certainly the rdram host
+    base pointer" and diagnosed the real mechanism: some code adds this
+    constant directly to a RAW, un-subtracted KSEG0-tagged guest pointer
+    (`x9`, e.g. `0x80630062`) instead of going through `MEM_W`'s
+    sign-extend-then-subtract-KSEG0-base discipline. Re-pulling the still-
+    on-disk raw logs for all 4 "sightings" (s194, s199, s217, s218) shows
+    `x9` differs across them — `0x80630062` at 3 sites (s194, s199, s218,
+    **byte-identical**, i.e. the SAME never-fixed bug's 4th recurrence, not 3
+    independent sightings), `0x38d47580` at 1 (s217, no KSEG0-tag shape, a
+    genuinely different, separate bug). Source-read `renderUnlitMeshFaces`
+    (funcs_4.c:4963-5630) end to end, found the one unguarded "peek-load on a
+    freshly-read list-walk pointer" site (`0x80011CE0`, same idiom as
+    heapWalker GUARD4/heapFreeListDequeue's guard) closing out s199's
+    20-session-old, never-executed "next work unit" recommendation. Shipped
+    the guard (`fixup_game_funcs.py`), clean regen+build. Soak
+    (`renderunlitguard1`) is the **first in the s209-218 lineage to survive
+    the full 300s hold window with 0 crashes** — but the guarded function's
+    own positive control (`unlit-mesh-tracer` call counter) fired **0
+    times**, so `renderUnlitMeshFaces` was never even called this run; per
+    rule 1 this is an uncontrolled null on the fix specifically, not a
+    confirmation, though it is a real (if unattributable) milestone. **Next
+    step**: re-run the same soak (or one with a schedule more likely to
+    force mesh-heavy content) until the positive control actually fires, to
+    get a real read on whether this guard prevents its target crash. Do NOT
+    revive the "shared write site" hunt — it's refuted by the raw register
+    data, not just unconfirmed. `heapWalker`'s `x9=0x38d47580` sighting
+    (s217) remains genuinely unexplained and is a legitimate, separate
+    future lead if it recurs. Full detail: PORTING-STATE Session 219.
+
+-59. **(s218, corrected s219 — see -60) heapWalker GUARD4 landed (5 sites, the actual gap GUARD3 left
     open) — heapWalker signature didn't recur (hold-iter 28, far past s217's
     iter 1), but a THIRD independent sighting of the exact corrupt literal
     `0x0000000300000000` surfaced in a totally unrelated subsystem
@@ -4428,6 +4462,25 @@ Standing warnings:
   keep using them rather than winctl directly for driven runs.
 
 ## Overturned conclusions — do not act on these
+
+- **Claim (s216-218):** the identical corrupt literal `0x0000000300000000`
+  seen at `x0`/`x8` in three crash dumps (`heapFreeListDequeue`, `heapWalker`,
+  `renderUnlitMeshFaces`) is a single shared corruption source being WRITTEN
+  somewhere and later read by unrelated consumers ("three-source-confirmed",
+  former item -59). **Overturned by s219:** that register is this process's
+  constant, unchanging native RDRAM host base pointer (already named as such
+  by s194, `PORTING-STATE.md:17934` — "almost certainly the rdram host base
+  pointer" — a session s216-218 never cited), present in every `MEM_W`-style
+  fault by construction, not corrupted data with a write site. The actually-
+  wild operand is the OTHER register (`x9`), which differs across the
+  sightings: byte-identical `0x80630062` at 3 of them (s194/s199/s218, all
+  the SAME already-diagnosed, never-fixed `renderUnlitMeshFaces` bug's 4th
+  recurrence, not 3 independent ones) vs. `0x38d47580` at the 4th (s217,
+  `heapWalker`, no KSEG0-tag shape at all — a separate bug). Believable
+  because the shared constant really is byte-identical across sessions
+  months apart, which does look like "the same value being written" until
+  you check what that constant actually represents. Full detail: PORTING-
+  STATE Session 219, CURRENT-TRUTH item -60.
 
 - **Claim (s75/s76):** a single Start press from SELECT YOUR CRAFT leaves the
   menu into a distinct "hangar-flight" scene — an airborne X-wing outside the
