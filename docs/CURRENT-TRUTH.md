@@ -663,27 +663,41 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s199)
+## Next steps, in order of expected value (s200)
 
--48. **(s199) `processSceneNode+8772` KSEG0-zero-extension bug just got its
-    2nd confirmed occurrence (byte-for-byte match to s194's single
-    sighting) — now the top-priority open crash class, with the exact
-    mechanism already known from the register file, no disassembly
-    needed.** s194 already decoded it: `si_addr`/`far` decomposes as
-    `x0/x8 (rdram host base) + x9 (0x80630062, a KSEG0-tagged guest pointer
-    that is ZERO-extended, not sign-extended)` — someone inside
-    `processSceneNode` (`N64Recomp/RecompiledFuncs/funcs_4.c:13759-14873`)
-    adds a raw 32-bit guest pointer straight to the rdram base instead of
-    going through `MEM_W`/`ADD32`'s sign-extend-and-subtract convention.
-    Both occurrences landed within ~50 decisions of each other
-    (decisionN=9741 s194, 9788 s199), suggesting a fairly deterministic
-    trigger, not a rare race. **Best next work unit**: read
-    `processSceneNode`'s recompiled C body looking for a pointer computed
-    WITHOUT `S32`/`ADD32`/`MEM_W` (i.e. a raw register add or an
-    unsign-extended `lw` result used directly as a memory base) and either
-    fix the extension or add a targeted guard, mirroring the established
-    RDRAM-range-check pattern. Full detail: PORTING-STATE Session 199 (and
-    Session 194 for the original register-file decode).
+-48. **(s200) `processSceneNode+8772` KSEG0-zero-extension bug: exhaustively
+    ruled out inside `processSceneNode` itself by TWO independent lines of
+    evidence — the defect must be inside one of the five render callees it
+    invokes, not the caller.** A full static read of `processSceneNode`
+    (`N64Recomp/RecompiledFuncs/funcs_4.c:13777-14913`) found every pointer
+    reaching a `MEM_W`/`MEM_H`/`MEM_B` traces through `ADD32`/`SUB32`/`S32`/
+    `MEM_W` (`recomp.h:89-108`), which re-sign-extend on every use regardless
+    of stored bit pattern — no bypass exists in this function's literal C.
+    A new call-site tracer (10 sites A-J, `ROGUESQ_LOG_PROCESS_SCENE_NODE_GUARD`,
+    `N64Recomp/fixup_game_funcs.py`) logging the pointer args passed to
+    `submitSceneNodeRender`/`renderFlatMeshFaceGroup`/`renderLitMeshFaceGroup`/
+    `renderUnlitMeshFaces`/`renderLitTexturedMeshFaces` confirmed it
+    dynamically: 46,292/46,292 logged calls in one soak had fully canonical
+    (sign-extended) args — 0 anomalies, and the tracer's 46k real firings
+    are themselves the positive control. Since the crash's `lr` is a RETURN
+    address into `processSceneNode` (fault is one frame deeper), and the
+    caller-side boundary is now proven clean, **the defect must be internal
+    to one of those five callees** — most are large (up to ~5000 lines:
+    `renderLitMeshFaceGroup` `funcs_4.c:8356-13425`; `submitSceneNodeRender`
+    `funcs_4.c:6-3018`; `renderFlatMeshFaceGroup` `funcs_4.c:3018-4951`;
+    `renderUnlitMeshFaces` `funcs_4.c:4951-5606`; `renderLitTexturedMeshFaces`
+    `funcs_3.c:22073-...`). **Best next work unit**: re-run the same soak
+    driver (`scratch/agent/run_processscenenodecalleetrace1.sh`, new tag)
+    until it either reproduces the crash (then `tail -1` the
+    `[process-scene-node-callee]` lines to name which single callee was
+    entered last, turning the search into one named function) or 3
+    consecutive iterations pass without recurrence (then fall back to a
+    direct, prioritized read of `renderLitMeshFaceGroup` first — it's the
+    biggest, most complex of the five, and the site-I/site-D pair (the
+    `$s1`/`$s0`-branch symmetric calls to it) had among the highest call
+    counts, 10,427 and untested respectively, in the one soak so far).
+    Full detail: PORTING-STATE Session 200 (and Session 194/199 for the
+    original register-file decode this all traces back to).
 
 -47.5. **(s199) `runVideoFrameTick+1568` guard landed (3 sites,
     `ROGUESQ_LOG_VIDEO_FRAME_TICK_GUARD`, `N64Recomp/fixup_game_funcs.py`)

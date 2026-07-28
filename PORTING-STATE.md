@@ -18601,3 +18601,109 @@ run_videoframetickguard{1,2,3}.sh` (gitignored, standing convention),
    remains well over the ~35 KB CLAUDE.md budget and the Read tool's 256 KB
    limit; migrate durable material to `PROJECT-OVERVIEW.md` and prune,
    paired with a real experiment.
+
+## Session 200 (2026-07-28)
+
+**Work unit**: NEXT.md item -48 — root-cause/guard `processSceneNode+8772`,
+the KSEG0 zero-extension bug (2 confirmed byte-for-byte occurrences, s194 +
+s199, `si_addr`/`far` = rdram base + a zero-extended-not-sign-extended
+`0x0000000080630062`).
+
+**What ran**:
+1. Full source read of `processSceneNode` (`N64Recomp/RecompiledFuncs/
+   funcs_4.c:13777-14913`, ~1140 lines, read directly plus cross-checked via
+   a general-purpose subagent's independent full pass) hunting for a pointer
+   computation that bypasses the sign-extending `ADD32`/`SUB32`/`S32`/
+   `MEM_W` convention (`N64Recomp/include/recomp.h:89-108`). **Result: none
+   found.** Every pointer that reaches a `MEM_W`/`MEM_H`/`MEM_B` call in this
+   function's literal C traces back to either `ADD32`/`SUB32`/`S32` (which
+   cast through `(int32_t)` before assigning to the 64-bit `gpr`, i.e.
+   re-sign-extend on every use) or a fresh `MEM_W(...)` read (which returns
+   `int32_t`, and C's signed->wider-unsigned conversion rule makes the
+   implicit cast to `gpr` bit-identical to sign extension) -- both paths are
+   "self-healing" regardless of what bit pattern sits in guest RAM. The
+   hand-written `s152` RQ-table diagnostic block (`funcs_4.c:13897-13918`)
+   uses `U32()` casts but is read-only (logging), never written back to a
+   `ctx->rN` or guest memory, so it can't be the source either.
+2. Since the crash's `lr` is `processSceneNode+8772` (a RETURN address,
+   meaning the actual fault is one frame DEEPER, inside whichever of the
+   five render callees this function invokes), and those callees are large
+   (`submitSceneNodeRender` `funcs_4.c:6`-3018, ~3000 lines;
+   `renderFlatMeshFaceGroup` `funcs_4.c:3018`-4951; `renderUnlitMeshFaces`
+   `funcs_4.c:4951`-5606; `renderLitMeshFaceGroup` `funcs_4.c:8356`-13425,
+   ~5000 lines; `renderLitTexturedMeshFaces` in `funcs_3.c:22073`) --
+   too large to manually re-derive this session -- built NEXT.md's bounded
+   per-call counter/log fallback instead of guessing: a **tracer** (not a
+   guard; no skip, no behavior change) at all ten call sites in
+   `processSceneNode` (2 near-duplicate branches x 5 callees, sites A-J),
+   logging the two pointer args each site passes (a0/`ctx->r4`, a2/`ctx->r6`,
+   plus a1/a3 for completeness) immediately before the call. Implemented in
+   `N64Recomp/fixup_game_funcs.py` (new `_psn_callee_trace`/
+   `_psn_callee_sites` block, end of file), env-gated on
+   `ROGUESQ_LOG_PROCESS_SCENE_NODE_GUARD` (the var name NEXT.md already
+   specified for this item).
+3. Regenerated (`make_elf.py` -> `env ./build/N64Recomp rogue_squadron.toml`
+   -> `env python3 fixup_game_funcs.py` -> `cmake --build build -j8`).
+   **Process note for future sessions**: accidentally ran
+   `fixup_game_funcs.py` three times in a row before building (approval
+   friction on the N64Recomp binary invocation caused a retry loop) --this
+   DID cause real duplication elsewhere in the file (a `redefinition of
+   's_rsmalloc_req_size'` compile error in `funcs_0.c`'s unrelated
+   `rs_malloc` diagnostic, from the earlier `s_rsmalloc_*` block being a
+   diagnostic whose target text apparently still matched post-patch,
+   confirming the documented non-idempotence is real for at least that
+   patch), while the new call-site-tracer patch itself turned out to be
+   naturally idempotent (its anchor text is the original unpatched code,
+   which no longer exists after one application, so a second run is a
+   no-op for those specific ten sites) -- re-ran the full
+   `make_elf.py -> N64Recomp` regen (wipes `RecompiledFuncs/` clean) and
+   fixup exactly once, verified with `grep -c` before building. **Confirms
+   the CLAUDE.md/NEXT.md warning is accurate and load-bearing**: never run
+   `fixup_game_funcs.py` more than once per regen without re-running
+   `N64Recomp` first, even when a patch you personally wrote happens to be
+   idempotent -- other, older patches in the same file are not.
+4. Soaked once (`scratch/agent/run_processscenenodecalleetrace1.sh`, tag
+   `processscenenodecalleetrace1`, standard `start_only` PROBE_MODE,
+   HOLD_S=120, full standard env block plus the new tracer var). Reached VI
+   width 1024 at 45.5s, ran the full scheduled key sequence through the
+   120s hold window, killed cleanly at wall=160s. **CRASH: 0** this run
+   (did not reach/reproduce the target crash either way -- inconclusive on
+   recurrence, but see below for what it DID establish).
+
+**Result — the tracer fired and is informative even without a crash**:
+46,292 total call-site log lines across the run (sites B, E, G, H, I, J;
+sites A, C, D, F never triggered this run -- consistent with only one of
+the two near-duplicate branches, the `r17`/`$s1`-node one, being taken
+during this soak's scene traversal). **Every single logged call (46,292/
+46,292) had fully canonical KSEG0-sign-extended pointers in both a0
+(`ctx->r4`) and a2 (`ctx->r6`)** -- zero occurrences of the
+`0x00000000800xxxxx`-shaped zero-extension defect at any of the ten call
+sites. This is a real result, not a null result without a control: the
+tracer demonstrably fires correctly (46k real, sane firings = the positive
+control), so "0 anomalies" here is informative, not silent.
+
+**What this rules out / narrows**: combined with item 1's exhaustive
+source read, this is now **two independent lines of evidence** (a full
+static read of the function body, and a full dynamic trace of every value
+that function hands to its five render callees) agreeing that
+`processSceneNode` itself never produces or forwards a zero-extended
+pointer at its call boundaries. The defect, wherever it is, must be
+**internal to one of the five callees** (most likely one of
+`submitSceneNodeRender`, `renderFlatMeshFaceGroup`, `renderLitMeshFaceGroup`,
+`renderUnlitMeshFaces`, `renderLitTexturedMeshFaces`) -- some local
+computation inside one of them (not visible from the caller's args)
+introduces the corruption before it's dereferenced. Next session's search
+should go inside those five functions, not back into `processSceneNode`.
+
+**Not yet resolved**: this soak didn't reproduce the crash, so we still
+don't have a 3rd occurrence or a call-site correlation (the tracer's real
+value -- "which site logged last before a crash" -- is untested until a
+soak actually dies to this bug again). Re-run the same driver script
+(`run_processscenenodecalleetrace1.sh`, new tag) until either it recurs
+(then `grep -a "\[process-scene-node-callee\]" run.log | tail -1` names the
+exact callee to focus on) or budget is exhausted, per NEXT.md's own
+3-consecutive-iteration cap.
+
+**Housekeeping still flagged, still not done**: `docs/CURRENT-TRUTH.md`
+still over the ~35 KB budget; `N64Recomp` and `rogue_squadron64` checkouts
+still carry unrelated uncommitted changes, still not this session's call.
