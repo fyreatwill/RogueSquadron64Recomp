@@ -20335,3 +20335,172 @@ and-hope guard.
 session end), `submodule-patches/export.sh`/`apply.sh` (durable fix, kept).
 Soak artifacts: `scratch/s73_post_a_scene/nancheckoff1/` (run.log,
 screenshots), driver script `scratch/s73_post_a_scene/run_nancheckoff1.sh`.
+
+## Session 217 (2026-07-28) — source-read `heapFreeListDequeue` per NEXT.md's
+plan, confirmed all 4 unbounded free-list-walk loops are class-A (upstream-
+corrupted-value propagation, not locally-computed), shipped an upper-32-bit
+loop-back guard mirroring heapWalker's GUARD3 template; the soak never
+reached that code at all — it died at hold-iter 1 (wall=0s, the earliest
+death of this entire soak lineage) to a **recurrence of the established
+heapWalker/frameStartReset+532 signature**, still 0/0 on the already-shipped
+10-site heapwalker guard, and produced a second independent sighting of the
+exact literal corrupt value `0x0000000300000000` first seen in s216 — now a
+two-source-confirmed lead pointing at a single systemic corruption source,
+not a per-site bug.
+
+### Source read: heapFreeListDequeue (NEXT.md's prescribed work unit)
+
+Delegated a full structural read of the ~1700-line function
+(`N64Recomp/RecompiledFuncs/funcs_3.c:15427-17128`) to a subagent, scoped to
+NEXT.md's exact discriminating question (does the crash come from a value
+already corrupted on arrival, or does the function itself miscompute a
+pointer via arithmetic that could produce upper-bits `0x3`). Verified the
+report's key claims directly against source (not trusting it unread):
+
+- Found **four byte-identical copies** of the same unbounded singly-linked-
+  list "find the tail" walk already recognized elsewhere in this codebase as
+  the free-list-walk idiom (`heapWalker` GUARD3 s172, `submitSceneNodeRender`
+  s123/s131): `v1 = *v1; v0 = *v1;` looping on the loop-back branch, zero
+  validation on the chased pointer at any step. Confirmed all 4 loop labels
+  and their natural loop-exit targets by direct `Read`: `L_8000D060` ->
+  `L_8000D070`, `L_8000D198` -> `L_8000D1A8`, `L_8000D2E4` -> `L_8000D2F4`,
+  `L_8000D6B4` -> `L_8000D6C4`.
+- Confirmed this function does **not** compute the `0x3`-upper-bits value
+  itself: every 32-bit `MEM_W` load in this function sign/zero-extends
+  correctly on assignment into a `gpr` (`uint64_t`), and no site combines a
+  small loop-counter/flag into a pointer's upper bits outside the existing
+  `S32()`/`ADD32()`/`U32()` discipline. **Answer to NEXT.md's discriminating
+  question: class (A), upstream-corrupted value merely propagated — high
+  confidence**, same family as every other guarded site in this codebase,
+  not a new heapFreeListDequeue-specific bug class.
+- Checked `fixup_game_funcs.py` for any existing patch touching
+  `heapFreeListDequeue`'s own guest range (`0x8000CFD4`-`0x8000D9D0`,
+  `funcs_3.c`): none. The `0x80010xxx`-prefixed guards nearby
+  (`submitSceneNodeRender`, s123/s131) are a coincidentally-adjacent,
+  unrelated function in a different file (`funcs_4.c`) — confirmed not
+  overlapping.
+
+### Guard landed: heapFreeListDequeue loop-back guard (4 sites)
+
+Per NEXT.md step 5's bar ("if the read is fast and conclusive, land a guard
+mirroring the existing pattern and soak once"), landed
+`_make_heaplistdeq_guard_patch` in `fixup_game_funcs.py`, applied to all 4
+loop-back sites (`funcs_3.c`). Mirrors `heapWalker`'s GUARD3 template
+**exactly**, including its upper-32-bit check
+(`r3_hi != 0xFFFFFFFFu`) — deliberately NOT the older
+`_scene_node_list_guard_patch` style (a bare `U32()`-truncated compare),
+because that style would **silently pass** this session's corruption shape:
+the low 32 bits of the corrupted pointer look like a valid KSEG0 address on
+their own (`0x80000000`-range), and only the upper 32 bits (`0x3`, not the
+legit `0xFFFFFFFF`) reveal the corruption. This is s213's own documented
+trap, re-applied correctly this time. New env var
+`ROGUESQ_LOG_HEAPLISTDEQ_GUARD`. Bail target for each site is its own
+natural loop-exit label (identical "list ends here" degrade semantics as
+every prior guard in this family).
+
+Full delete-all regen (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py`
+-> `cmake --build`): patch report confirmed exactly 4 sites patched exactly
+once (`grep -c "s217, heapFreeListDequeue"` = 4). **Caught and fixed a
+self-inflicted mistake before it reached the build**: ran
+`fixup_game_funcs.py` twice in a row against the same already-patched
+output while sanity-checking the first run's report, which double-applied
+an unrelated, non-idempotent pre-existing patch (s139's `rs_malloc` entry
+diagnostic — its regex matches even already-patched text, unlike the
+label-anchored guard patches) and produced 6 "redefinition of
+'s_rsmalloc_*'" compile errors in `funcs_0.c`. Fixed by re-running the full
+regen from `make_elf.py` (fresh, unpatched `RecompiledFuncs`) and invoking
+`fixup_game_funcs.py` exactly once. **Worth flagging for a future session**:
+the `rs_malloc` entry-diagnostic patch (and possibly others) lacks the
+"already patched" guard that the label-anchored guards get for free from
+their own text substitution — a future session could add an idempotency
+check the same way if this bites again, but it's not this session's plan and
+wasn't chased further per rule 8. Build exit 0, only the pre-existing
+warning classes (cop0/DDIV sign-conversion, one `[anim-tex-stream]`
+`%08X`-vs-`gpr` format warning, pre-existing).
+
+### Soak (`heaplistdeq1`, same s213-216 STICK_SCHEDULE/HOLD_S=300 recipe, all
+4 diagnostics armed): guard never reached, but produced a highly relevant
+recurrence instead
+
+`ROGUESQ_LOG_UNLIT_MESH_TRACER`, `ROGUESQ_LOG_HEAPWALKER_GUARD`,
+`ROGUESQ_LOG_HEAPWALKER_GUARD3`, `ROGUESQ_LOG_MESGQUEUE_GUARD`,
+`ROGUESQ_LOG_HEAPLISTDEQ_GUARD` all armed. NAN_CHECK left at default (ON),
+not touched this session per NEXT.md's explicit instruction.
+
+Died at **hold-iter 1, wall=0s** — the process was gone essentially the
+instant the hold window (and its stick-schedule inputs) began, the earliest
+death of the entire s209-217 soak lineage (previous floor was s213's
+hold-iter 1 with some nonzero wall time). Crash: signal 10 (SIGBUS),
+`[CRASH][pc-symbol] pc=0x1013b0208 sym=heapWalker+2480 base=0x100fc0000`.
+Native backtrace frame #3/#4: `frameStartReset + 532` (the call site inside
+`frameStartReset` that unconditionally calls `heapWalker`, per Session 157's
+finding that `heapWalker` is "`frameStartReset`'s first, unconditional
+callee" — not a symbolication conflict, a normal caller/callee frame pair:
+the crash PC is genuinely inside `heapWalker`'s own body, at whichever
+offset depends on which heap-mode-table entry gets walked this run, while
+the constant `frameStartReset+532` offset is simply the one instruction
+address that calls it, stable across every prior occurrence of this
+signature too). This is a **recurrence of the exact
+`heapWalker+NNNN`/`frameStartReset+532` signature** s214 flagged as the
+target the 10-site heapwalker guard (`heapwalker-guard`/`heapwalker-guard3`,
+GUARD2 head-deref + GUARD3 loop-back, s157/s172) was built to catch — and
+with both env vars armed, **both guards fired 0 times again**, same as
+every prior soak that's touched this class. `heaplistdeq-guard` and
+`unlit-mesh-tracer` also 0/0 (expected: this crash happened in the
+craft-select MENU flow, `menuOverlayInit` -> `static_5_800C6854` ->
+`static_5_800AAD9C` -> `frameStartReset`, never reaching the
+scene-rendering call path `heapFreeListDequeue`'s guard or the mesh tracer
+instrument). 35 `[CRASH]`-tagged lines (`grep -c` over the whole tag
+family, not event count) but exactly 1 real `caught signal` event.
+
+**New lead: two independent sightings of the identical literal corrupt
+value `0x0000000300000000`.** Full register dump this session: `x0=x8=
+0x0000000300000000`, `x9=0x0000000038d47580`,
+`si_addr=0x0000000338d47580`. Arithmetic check: `0x0000000300000000 +
+0x0000000038d47580 = 0x0000000338d47580` — an **exact match** to
+`si_addr`. This means the fault address is literally `x0 + x9`, where `x0`
+holds exactly `3 << 32` (the integer 3, shifted into the upper 32 bits of a
+64-bit register) and `x9` holds what looks like an otherwise-plausible heap
+address. s216's `heapFreeListDequeue` crash showed the **same exact value**,
+`x0=x9=0x0000000300000000`, at a completely different call site (scene-graph
+rendering, not the craft-select menu). Two independent occurrences of the
+identical constant at two unrelated code locations, one session apart,
+meets this project's two-source bar: **this is very likely one specific,
+systemic corruption source writing exactly the integer 3 into what later
+gets read/added as the upper half of a 64-bit pointer** — not per-consumer
+noise. Neither occurrence's consuming function computes this value itself
+(confirmed for `heapFreeListDequeue` this session by direct source read;
+`heapWalker`'s equivalent read is NEXT.md's natural next step). Candidate
+mechanisms, not yet investigated: a stray small integer (loop counter, mode
+index, enum value) landing in the upper half of a `uint64_t` via
+uninitialized-register reuse across a context switch, a union/type-pun bug
+in native (non-guest) code that touches thread contexts, or a heap block
+header field that legitimately contains small integers (a size class, a
+generation count) being misread as pointer bits somewhere upstream of both
+crash sites.
+
+### Rules out / reframes
+
+**Does not overturn the class-A conclusion for `heapFreeListDequeue`** —
+that read stands on its own regardless of this soak's outcome (the function
+itself provably can't produce the `0x3` shape; NOW there's a second,
+independent crash site, `heapWalker`, that ALSO provably didn't need to —
+the value arrived pre-corrupted in both cases per this session's analysis of
+where `x0` first appears in the crash dump vs. computed).
+
+**Reinforces, does not newly establish**: the already-suspected pattern that
+`heapWalker`'s 10-site guard (s157 GUARD2, s172 GUARD3) does not cover the
+actual fault site — this is now at least the 3rd soak (alongside s214's two)
+to hit this exact signature with both guards armed and 0 fires recorded.
+Per rule 8's spirit, this specific "are the 10 existing sites the right
+ones" question has now failed to get a discriminating answer across enough
+attempts that the next move should be a fresh, targeted source read of
+`heapWalker`'s full body (mirroring this session's `heapFreeListDequeue`
+methodology) rather than another blind soak — see NEXT.md.
+
+Full detail: this entry. Code: `N64Recomp/fixup_game_funcs.py` (new
+`_make_heaplistdeq_guard_patch`, 4 sites), regenerated (not committed here,
+see the `N64Recomp` sibling-checkout note in CURRENT-TRUTH's housekeeping
+section). Soak artifacts: `scratch/s73_post_a_scene/heaplistdeq1/`
+(run.log, screenshots), driver script
+`scratch/s73_post_a_scene/run_heaplistdeq1.sh`.

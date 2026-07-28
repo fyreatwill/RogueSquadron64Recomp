@@ -663,7 +663,67 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s216)
+## Next steps, in order of expected value (s217)
+
+-58. **(s217) heapFreeListDequeue source-read done and guarded (4 sites,
+    class-A upstream-propagation, high confidence) — but the soak never
+    reached that code, dying instead to a RECURRENCE of the established
+    `heapWalker`/`frameStartReset+532` signature at the earliest point of
+    the entire s209-217 lineage (hold-iter 1, wall=0s), with the existing
+    10-site heapwalker guard still 0/0.** Full read of `heapFreeListDequeue`
+    (`funcs_3.c:15427-17128`) confirmed NEXT.md's plan: found 4 identical
+    unbounded free-list-walk loops, all provably unable to compute the
+    `0x3`-upper-bits corruption shape themselves (every `MEM_W` load
+    correctly sign/zero-extends into `gpr`), so all 4 are upstream-corrupted-
+    value propagation sites, same family as every other guard in this
+    codebase. Shipped a guard mirroring `heapWalker`'s GUARD3 template
+    exactly (upper-32-bit check, NOT the older bare-`U32()` style — that
+    style would silently PASS this corruption shape, since the low 32 bits
+    alone look like a valid KSEG0 address). Clean regen+build (self-inflicted
+    double-fixup-run mistake caught and fixed before it reached soak, see
+    Session 217 for the idempotency gap it exposed in the unrelated
+    `rs_malloc` diagnostic patch).
+
+    The soak (`heaplistdeq1`, same s213-216 recipe) never got far enough to
+    test the new guard — it died in the craft-select MENU flow itself,
+    before any scene rendering, to `[CRASH][pc-symbol]
+    sym=heapWalker+2480`, backtrace frame `frameStartReset+532` (the stable
+    call-site address that unconditionally calls `heapWalker`, per Session
+    157 — NOT a symbolication conflict, a normal caller/callee pair; the
+    varying `heapWalker+NNNN` offset reflects which heap-mode-table entry
+    gets walked each run). This is the SAME target signature the existing
+    10-site `heapwalker-guard`/`heapwalker-guard3` (s157/s172) was built to
+    catch, both armed, both fired **0 times again** — at least the 3rd soak
+    now (alongside s214's two) to hit this exact signature with the guard
+    watching and not firing, meaning the 10 existing sites still don't cover
+    the actual fault site.
+
+    **New two-source-confirmed lead**: the crash register dump showed
+    `x0=x8=0x0000000300000000` (`si_addr` = `x0 + x9` exactly, i.e. the
+    literal integer 3 shifted into a 64-bit register's upper half, added to
+    an otherwise-plausible heap address) — the **identical literal value**
+    s216's unrelated `heapFreeListDequeue` crash showed
+    (`x0=x9=0x0000000300000000`). Two independent occurrences of the exact
+    same corrupt constant at two unrelated call sites, one session apart:
+    meets this project's two-source bar for "this is a real, systemic
+    corruption source; not noise." Neither consuming function computes it
+    locally (confirmed for `heapFreeListDequeue`; `heapWalker`'s equivalent
+    check is the natural next read).
+
+    **Recommended next work unit**: a fresh, targeted full-body source read
+    of `heapWalker` (`funcs_3.c:99-7978`, ~7880 lines — likely needs
+    chunking/delegation given the size) mirroring this session's
+    `heapFreeListDequeue` methodology, focused on (a) finding the actual
+    unguarded site(s) the 10 existing guards miss, and (b) hunting
+    specifically for wherever a small integer could leak into a 64-bit
+    register's upper 32 bits as exactly `3`, now that this shape has two
+    independent sightings. Do NOT just add more `0x80000000`-`0x80800000`
+    range guards blindly — the existing 10 already do that and still don't
+    catch it, so the miss is either a site the sweep didn't find, or the
+    check itself has a gap (e.g. only checking `ctx->r3`/`ctx->r4` at one
+    point in a chain where the corrupted register is actually different, or
+    a call into a native/runtime helper outside the guarded MIPS-translated
+    code entirely). Full detail: PORTING-STATE Session 217.
 
 -57. **(s216) NAN_CHECK-disable A/B soak ran: confirms the mechanism works (0
     asserts) but REFUTES it as the dominant blocker — died even earlier
