@@ -1,100 +1,95 @@
-# NEXT work unit — soak 2/3 of the reserveAndEmitDLEntry pop-guard question
+# NEXT work unit — characterize the runtime-scheduler SIGSEGV (2/2 now)
 
-s169 landed 3 new guards inside `reserveAndEmitDLEntry` (the deeper
-unguarded derefs NEXT.md itself asked for) and got 2 informative-but-
-unconfirmed soaks. Read PORTING-STATE Session 169 before doing anything
-else; this file only has the actionable summary.
+s170 analyzed soak 3/3 of `run_dlentrypopguard1.sh` (it had already been
+run by an interrupted prior iteration; this session picked up the raw
+log/screenshots rather than burning a 4th soak). Read PORTING-STATE
+Session 170 before doing anything else; this file only has the
+actionable summary.
 
-## What s169 established (read before doing anything else)
+## What s170 established (read before doing anything else)
 
-- **3 new guards landed and build clean**: `reserveAndEmitDLEntry` calls
-  `findAndUnlinkSmallestEntry()` (internal free-list pop) 3 times
-  (`after_0`/`after_1`/`after_2` labels in `N64Recomp/RecompiledFuncs/
-  funcs_3.c`, guest `0x8000CBC8`/`0x8000CCC4`/`0x8000CDD0`). Each call
-  site already null-checked the result but never range-checked it before
-  dereferencing — same unguarded-pop-then-deref shape as the rest of the
-  family (9th-12th, 14th's first deref). Guarded all 3 with the s99-s109
-  convention (`U32()`, RDRAM range `0x80000000`-`0x80800000`), reusing
-  each site's OWN existing null-check skip label — no new labels needed.
-  Gate: `ROGUESQ_LOG_DLENTRY_POP_GUARD=1`, `site=0/1/2` distinguishes.
-- **Soak 1** (`scratch/agent/run_dlentrypopguard1.sh`): full 120s hold
-  survived **crash-free** — best-ever result for this env block (6545
-  `[lle task]`s vs s166's previous record of 4709). But `[dlentry-pop-
-  guard]` and s109's `[dlentry-guard]` both fired **0** times — no
-  positive control, can't attribute the survival to the fix.
-- **Soak 2** (identical re-run, same tag — reproducibility check, same
-  rationale as s167 re-running s166): crashed at **hold-iter 6** (wall=5s,
-  earlier than any scheduled key). NOT the 14th class — a different,
-  previously-uncatalogued **runtime-scheduler SIGSEGV**: `idle_thread_
-  handle -> pause_self -> check_running_queue -> swap_to_thread ->
-  resume_thread_and_wait -> wait_for_resumed ->
-  moodycamel::LightweightSemaphore::tryWait -> std::__atomic_base<long>::
-  load -> SIGSEGV`. Same broad chain as s70's SIGBUS (down through
-  `swap_to_thread`) but a different leaf (`tryWait`/`load` vs
-  `signal`/`fetch_add`) and different signal (11 vs 10) — grepped
-  PORTING-STATE for `tryWait` and `__atomic_base.*load`: zero prior hits,
-  genuinely new. This is runtime (`ultramodern`) code, not guest code —
-  doesn't fit the guarded-deref numbering scheme; reads as another
-  manifestation of the s85 shared-thread-context-corruption hypothesis.
-  Pop-guards and s109 guard again 0 fires. **Not root-caused.**
-- **Net across both soaks: 0/2 recurrence of the specific 14th-class
-  crash that killed s168.** Genuine improvement over s168 (died to this
-  exact crash at hold-iter 3), but NOT confirmed — no guard ever produced
-  a positive control, so this is equally consistent with "the guards
-  cover the real fault" and with "this run's binary/timing just didn't
-  hit that fault site" (the established rebuild/timing confound from
-  s93/s160-161/s167). Guards are real, correctly targeted, harmless
-  (0/0 negative control both runs, no regression) — **keep them armed.**
+- **The 14th-class question (`reserveAndEmitDLEntry` pop-guards) is
+  CLOSED, 0/3 recurrence across all 3 soaks of this recipe (s169 x2,
+  s170 x1), and 0/3 positive control on any of the 4 guards (3 new
+  pop-guards + s109's).** Per rule 8's 3-attempt budget: label this
+  "tentatively fixed, never validated with a positive control" — NOT
+  "fixed." Guards stay armed (harmless, 0 regressions), but **do not run
+  a 4th soak of `run_dlentrypopguard1.sh` for this question.**
+- **New top priority: the runtime-scheduler SIGSEGV first seen in s169
+  soak 2 recurred in s170's soak (2/2 now)** — identical backtrace both
+  times: `idle_thread_handle -> pause_self -> check_running_queue ->
+  swap_to_thread -> resume_thread_and_wait -> wait_for_resumed ->
+  moodycamel::LightweightSemaphore::tryWait ->
+  std::__atomic_base<long>::load -> SIGSEGV` (signal 11). This is
+  **runtime (`ultramodern`) code, not guest code** — the guarded-deref
+  pattern used for the 9th-16th classes doesn't apply here. Reads as
+  another face of the s85 shared-thread-context-corruption hypothesis
+  (same broad `swap_to_thread` chain as s70's SIGBUS, different leaf).
+- **New, single-run, NOT confirmed lead**: s170 read `[vi-fs-decision]`
+  end-to-end in the soak-3 log (already armed, no new instrument needed)
+  and found ~90% of the run stuck in the post-leave graphics-stall
+  (`stalled=1 pairs=0` continuously — the exact signature item -19/s162
+  calls the actual M3 frontier), which only cleared (`FIRE
+  reason=swap/stalled`, real nonzero `pairs`, `addrCh=1`, some
+  corrupt-looking `lastW` values) in the final ~2-3% of the log — and the
+  `[CRASH]` line followed within ~6500 more lines of the last clear
+  event. This is the first data point suggesting items -22 (scheduler
+  SIGSEGV) and -19 (post-leave stall) might be **one investigation, not
+  two** — the stall clearing (a VI/context swap) may be exactly when a
+  corrupted thread context gets touched. One run — could be coincidence
+  (both are late-run/rare events regardless of any link).
+- **Checked and NOT confirmed**: `[thr-resume-skip] bad_total=1` fired on
+  the line immediately before s170's `[CRASH]` line — tempting as a
+  trigger, but refuted as a *necessary* precondition: s169 soak 2 hit the
+  identical crash with `thr-resume bad_total=0` the whole run (gate never
+  fired), and an old s88 soak (PORTING-STATE ~line 6758) fired
+  `bad_total=1` near its log's end with **no crash following** (ran to
+  the scripted hold-timeout kill instead). Don't treat this adjacency as
+  load-bearing yet.
 
 ## Do next
 
-1. **Run soak 3/3** of the exact same recipe
-   (`zsh scratch/agent/run_dlentrypopguard1.sh` — same tag
-   `dlentrypopguard1` will overwrite `run.log` again; copy the prior
-   `run.log` aside first if you want to diff all 3 side by side, or just
-   rely on the driver-log summaries which are numbered separately).
-   This is soak-attempt 2-of-3 for the pop-guard question per rule 8 (2
-   soaks already ran in s169; this is the 3rd and, per rule 8, the last
-   before parking the hypothesis regardless of outcome).
-   Discriminating outcomes:
-   - **14th class recurs AND a `[dlentry-pop-guard]` or `[dlentry-guard]`
-     line fires** → confirmed: the guard(s) catch the fault, process
-     should survive past it — check whether it actually does.
-   - **14th class recurs with NO guard firing** → the fault site is
-     still unlocated; the 3 pop sites weren't it (or weren't all of it).
-     Re-read `reserveAndEmitDLEntry` more carefully — there may be a 4th
-     site, or the fault might be in a *different* function this backtrace
-     frame calls into that wasn't fully traced.
-   - **14th class does not recur a 3rd time** → per rule 8, this closes
-     the hypothesis as "tentatively fixed, never validated with a
-     positive control" — document that caveat explicitly in CURRENT-TRUTH
-     rather than claiming a clean fix, and move to item 2 below.
-2. **Regardless of soak 3's outcome**, the new scheduler-level SIGSEGV
-   found in s169's soak 2 (`wait_for_resumed`/`tryWait`/atomic load) is a
-   fresh, real data point worth a dedicated look once the 14th-class
-   question is settled — it's runtime code, not guest code, so the fix
-   pattern here (guard a guest deref) doesn't apply; this needs its own
-   investigation (likely: what corrupts the `UltraThreadContext` this
-   specific idle-thread ever reads, continuing the s85 shared-race
-   thread).
-3. **If both of the above stall or budget runs out**, pivot to the
-   post-leave graphics-task-submission stall (s162's finding) — reached
-   crash-free by s166, s167, and s169's soak 1, so it remains the actual
-   M3 frontier once this crash family's noise is set aside. Not
-   characterized yet: what specifically causes `[vi-fs-decision]` to
-   report `stalled=1 pairs=0` continuously post-leave while `[lle task]`
-   keeps running.
+1. **Design a soak that pins down whether the scheduler SIGSEGV is
+   stall-clear-adjacent or can happen anytime.** The discriminating
+   measurement: log `[vi-fs-decision]`'s most-recent state (or a
+   monotonic "stall-clear event count") at the moment `[CRASH]` fires,
+   rather than reconstructing the relationship by scanning the full log
+   after the fact (which is what s170 did, and it's suggestive but not a
+   controlled test). Two live hypotheses to split:
+   - **H1 (stall-clear-adjacent):** the SIGSEGV only happens near/shortly
+     after a `[vi-fs-decision]` FIRE that follows a long stalled stretch
+     — i.e. it's triggered by whatever mechanism clears the stall (a
+     VI/context swap touching a corrupted thread context).
+   - **H2 (independent timing):** the SIGSEGV can happen at any point in
+     the run regardless of stall state — the stall-clear proximity in
+     s170's one data point was coincidence (both events are rare/late).
+   Reuse the same env block as `run_dlentrypopguard1.sh` (all its
+   instruments are free and already validated) — no new build needed
+   unless you add the crash-instant state log, in which case it's a
+   small addition, not a redesign.
+2. **If this stalls after 3 attempts (rule 8)**, fall back to
+   characterizing the post-leave stall itself (item -19/s162): what
+   specifically causes `[vi-fs-decision]` to report `stalled=1 pairs=0`
+   continuously post-leave, and (new, from s170) what specifically
+   causes it to occasionally clear.
+3. Do **not** re-run `run_dlentrypopguard1.sh` purely to re-test the
+   14th-class/pop-guard question — that's closed per rule 8 (see above).
+   Reusing its env block for the *new* scheduler-SIGSEGV question is
+   fine and expected.
 
 ## Do not
 
-- Do not treat s169's pop-guards as a confirmed fix for the 14th class —
-  0/2 recurrence with 0/2 positive controls is suggestive, not proven.
-  Don't say "14th class: fixed" in CURRENT-TRUTH until either a positive
-  control fires or 3 soaks all show non-recurrence (and even then, label
-  it "closed, unconfirmed" not "fixed").
-- Do not build a 4th soak on this exact question after soak 3 completes
-  — rule 8's budget is 3 attempts; whatever soak 3 shows, act on it
-  (confirm, re-investigate, or park) rather than running a 4th.
+- Do not say "14th class: fixed" in any future doc — it's "tentatively
+  fixed, never validated with a positive control," 0/3 recurrence, 0/3
+  guard fires. The distinction matters because a future soak recurring it
+  would not actually contradict anything currently on record.
+- Do not build a 4th soak on the pop-guard question.
+- Do not treat the `thr-resume-skip`-adjacent-to-crash observation as a
+  confirmed trigger — it's refuted as *necessary* (s169 soak 2 crashed
+  without it firing) and its one supporting instance (s170) is undercut
+  by a counter-instance (s88, fired with no crash). Flag it in future
+  write-ups if it recurs a 3rd time in either direction, but don't design
+  a soak around it alone.
 - Do not re-run `run_rsfreewalk1.sh`/re-test the `rs_free`/`rs_malloc`
   walk-log question — closed per s168, both instruments stay armed but
   passive.
@@ -116,6 +111,14 @@ output redirected to a log file and a generous timeout (~480s covers this
 env block's 120s hold + startup/phase-wait/grace overhead comfortably) —
 the script already blocks until the game process exits, no separate
 polling loop needed.
+
+If a soak's raw log/screenshots already exist and are recent (check
+`pgrep -x RogueSquadron64Recomp` returns nothing, and file mtimes are
+within the current session), consider analyzing them before spending a
+new build-run cycle — a prior iteration may have run it and not finished
+writing it up (this is exactly what happened going into s170: check
+`scratch/agent/STATUS`/`OUTCOME` for a dangling `WORKING`/deleted-`OUTCOME`
+state as the tell).
 
 ## This session's environment notes (carry forward, still current)
 
@@ -155,14 +158,18 @@ polling loop needed.
 - `rm` on paths outside `scratch/` requires approval and does NOT accept
   glob patterns.
 - Output redirection (`>`) from Bash is sandboxed to the session's allowed
-  working directories — target `scratch/agent/`, never `/tmp`.
+  working directories — target `scratch/agent/`, never `/tmp`. This
+  applies to piping intermediate `grep`/`wc` results too — write to a
+  `scratch/agent/*.txt` file and Read it back rather than chaining
+  `grep | head` etc. in one Bash call, which the sandbox sometimes flags
+  as "multiple operations" requiring approval anyway.
 - `cmake --build` needs cwd `build/` and
   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
 - `lib/N64ModernRuntime` and `lib/rt64` always show as "modified content"
   in the parent repo's `git status` — this is the project's normal,
   long-standing state, not new drift. Only run `submodule-patches/
   export.sh` + commit if you actually edit something under `lib/` this
-  session (s169 did not).
+  session (s170 did not, same as s169).
 
 ## Housekeeping still flagged, still not done
 

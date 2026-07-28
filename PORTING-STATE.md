@@ -15758,3 +15758,131 @@ settled. (3) if soak budget is better spent elsewhere, pivot to the
 post-leave graphics-task-submission stall (s162), reached crash-free by
 s166/s167/this session's soak 1, remains the actual M3 frontier once
 this family's noise is set aside. See `scratch/agent/NEXT.md`.
+
+## Session 170 (2026-07-28) — analyzed soak 3/3 of `run_dlentrypopguard1.sh` (already executed by an interrupted prior iteration, never written up): 14th class closes 0/3, the s169-soak-2 scheduler SIGSEGV recurred a 2nd time, and a new single-run hypothesis links it to the post-leave graphics-stall's end
+
+### Housekeeping note on how this session started
+
+`scratch/agent/STATUS` was left as `WORKING` (uncommitted diff from the
+last-committed `DONE`) and `scratch/agent/OUTCOME` had been deleted,
+uncommitted — the signature of a prior iteration that ran the soak this
+session was supposed to run, then had its session end before it could
+write up or commit. `scratch/s73_post_a_scene/dlentrypopguard1/run.log`
+and its screenshot set were ~5 minutes old at this session's start (game
+process confirmed not running via `pgrep -x`) — a completed run, not a
+stale leftover from s169. Rather than re-run a 4th soak (rule 8 caps this
+question at 3 attempts, and this run has every marker s169's plan asked
+for), this session analyzed the existing capture as soak 3/3.
+
+### Result 1: 14th class (`reserveAndEmitDLEntry`) — 0/3, closes per rule 8, unconfirmed
+
+`grep -c` on the 3.4M-line `run.log`: `[dlentry-pop-guard]` 0, s109's
+`[dlentry-guard]` 0, `[dlentry-reserveAndEmit]` (plain entry log, capped
+20) 20/20 — function reached and ran normally, same as both s169 soaks.
+The 14th-class crash itself did not recur. That makes it **0/3 across
+all three soaks of this exact recipe**, and **0/3 for a positive control
+on any of the 4 guards** (3 pop-guards + s109's). Per NEXT.md's own
+decision tree and rule 8's 3-attempt budget: **close this hypothesis as
+"tentatively fixed, never validated with a positive control"** — not
+"fixed." The guards are real, correctly targeted, harmless (0
+regressions any of the 3 runs) — stay armed, but stop budgeting soaks to
+this specific question.
+
+### Result 2: 2nd full-120s-hold survival, crash arrives only at the very tail
+
+All `hold_01.png`...`hold_120.png` present (120/120) — this soak matches
+s169 soak 1's "full hold survived" outcome, making 2 of the 3 soaks in
+this series full-hold survivals (only soak 2, at hold-iter 6, was the
+outlier). `[lle task]` count 4763 (vs. soak 1's 6545 — lower, but task
+count isn't a reliable cross-run yardstick by itself). `rdpFs` (the
+`[vi-fs-decision]` counter, not the older `fs` name) climbed to 3734 by
+the end, comparable to soak 1's `fs max=4009`. Controls: `[dlentry-
+reserveAndEmit]` 20/20, `ost-wb SKIP_OOB` 20/20, `missing-func` 0,
+`UnhandledJump` 0 — no regression signal anywhere else in the family.
+
+### Result 3: the crash — same new scheduler SIGSEGV as s169 soak 2, now 2/2
+
+The single `[CRASH]` line (3448849 of 3448868 total lines — literally
+near the last screen's worth of the log) has the **identical** backtrace
+to s169 soak 2's previously-uncatalogued runtime-scheduler bug:
+
+```
+idle_thread_handle -> pause_self -> check_running_queue -> swap_to_thread
+-> resume_thread_and_wait -> wait_for_resumed
+-> moodycamel::LightweightSemaphore::tryWait
+-> std::__atomic_base<long>::load -> SIGSEGV (signal 11)
+```
+
+This is now **2/2 occurrences of this exact leaf/signal** across the
+dlentrypopguard soak series (previously only 1 data point, from s169
+soak 2) — real and recurring, not a one-off fluke of that specific run.
+It happened at the very tail of this run, well past every scripted probe
+(leave-confirm Start press, full 120s hold with stick pulses at
++10/+25/+40/+95/+100) — i.e., this run got **further** into the scene
+than any prior soak in wall-clock/scripted-event terms, and still hit
+this bug eventually. Reinforces s169's read: this is runtime
+(`ultramodern`) code, not a guest-recompiled function, so it doesn't fit
+the guarded-deref numbering scheme — it's a fresh manifestation of the
+s85 shared-thread-context-corruption family, still not root-caused.
+
+### Checked, not confirmed: a `thr-resume-skip`-adjacent-to-crash lead
+
+`[thr-resume-skip] tag=run_next id=0 ctx=0x0 live=0 bad_total=1` fired
+exactly once in this run, on the line **immediately before** the
+`[CRASH]` line. Tempting to read as causal (the gate skips signaling a
+corrupt/dead thread context, and the very next scheduler action
+SIGSEGVs) — but checked both other known data points and neither
+supports a clean causal rule: **s169 soak 2** crashed on the identical
+scheduler bug with `thr-resume bad_total=0` the entire run (gate never
+fired, so a fire is not necessary for this crash); **s88** (PORTING-STATE
+~line 6758) logged a `thr-resume-skip bad_total=1` fire **164 lines from
+the end of its log with no crash following** — that run survived to the
+scripted hold-timeout kill. Adjacency in this run is a **lead worth
+re-checking on the next scheduler-bug soak, not a confirmed mechanism** —
+flag it, don't build on it yet.
+
+### New hypothesis (single data point): the crash lands right where the post-leave graphics-stall clears
+
+`ROGUESQ_LOG_DMA_RING`/other instruments weren't the interesting one this
+time — `[vi-fs-decision]` (armed in this soak's env block already) tells
+a clear story when read in full: from roughly entry `#387` (line 284674)
+through `#6656` (line 3166144) — **about 90% of this run's log** — the
+decision is `SKIP reason=pair=0 ... stalled=1 pairs=0` continuously, the
+exact signature s162/NEXT.md item 3 calls the "post-leave graphics-task-
+submission stall." In the **final ~2-3% of the run**, starting at entry
+`#6744` (line 3340045), it starts `FIRE`ing again — `reason=swap`/
+`reason=stalled` with real nonzero `pairs` (2, 18, 3, 14, 7) and
+`addrCh=1` (a context/VI-address change), some with corrupt-looking
+`lastW` values (3297, 3137, 225 — same shape as previously-catalogued
+wild-framebuffer widths). The `[CRASH]` line follows within ~6500 more
+log lines of the last of these FIREs. **This is the first data
+connecting NEXT.md's items 2 and 3**: the stall isn't necessarily
+permanent — it can clear — and when it clears (a VI/context swap) is
+close in the log to where the corrupted-scheduler crash happens. One run,
+not proven, easily coincidence (both are rare/late-run events) — but
+worth designing a discriminating instrument for: does the scheduler
+SIGSEGV only ever occur near a stall-clear event, or can it happen mid-
+stall too? That would need `[vi-fs-decision]` state logged as of the
+crash instant, not just scanned after the fact.
+
+### Files touched
+
+None (analysis-only iteration — no rebuild, no new instrument, no soak
+run by this session). `scratch/agent/stalled_lines.txt` created as scratch
+scaffolding for this analysis, deleted before commit.
+
+### Next
+
+1. **New top priority**: the runtime-scheduler SIGSEGV (item 2 from
+   s169/NEXT.md), now with 2 data points instead of 1. Design a soak that
+   logs `[vi-fs-decision]`'s current state (or at least a monotonic
+   counter of stall-clear events) directly at crash time, to test the new
+   stall-clear-adjacency hypothesis discriminatingly rather than by
+   post-hoc log scanning.
+2. Do **not** run a 4th soak of `run_dlentrypopguard1.sh` for the 14th-
+   class question — budget spent, closed per rule 8 (see Result 1).
+3. If the scheduler-SIGSEGV investigation stalls, item 3 (characterizing
+   *why* the stall happens/clears in the first place) remains the
+   fallback, per NEXT.md's own ordering — and per Result 3 above, may
+   turn out to be the same investigation as item 1 rather than a
+   separate one.

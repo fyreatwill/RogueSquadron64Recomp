@@ -659,9 +659,39 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s169)
+## Next steps, in order of expected value (s170)
 
--21. **NEW TOP PRIORITY (s169): source-read `reserveAndEmitDLEntry` past
+-22. **NEW TOP PRIORITY (s170): the s169-soak-2 runtime-scheduler SIGSEGV
+    recurred a 2nd time (soak 3/3 of the same recipe) — closes the 14th-
+    class pop-guard question (item -21 below, 0/3, tentatively-fixed-
+    unconfirmed) and opens this as the live frontier.** Backtrace
+    identical both times: `idle_thread_handle -> pause_self ->
+    check_running_queue -> swap_to_thread -> resume_thread_and_wait ->
+    wait_for_resumed -> moodycamel::LightweightSemaphore::tryWait ->
+    std::__atomic_base<long>::load -> SIGSEGV` — runtime (`ultramodern`)
+    code, not guest code, so the guarded-deref pattern doesn't apply; reads
+    as another face of the s85 shared-thread-context-corruption family.
+    New, single-run lead (not confirmed): reading `[vi-fs-decision]` end to
+    end in the soak-3 log showed ~90% of the run stuck in the post-leave
+    `stalled=1 pairs=0` graphics-stall (item -19/s162's finding) that only
+    cleared (`FIRE reason=swap/stalled`, real `pairs`, `addrCh=1`) in the
+    last ~2-3% of the log, with the `[CRASH]` line following within ~6500
+    more lines of the last clear-event — i.e. the stall's end and this
+    crash are close together in the same run. Also checked and **did not
+    confirm**: a `[thr-resume-skip] bad_total=1` line fired immediately
+    before this soak's crash, tempting as a trigger, but s169 soak 2 hit
+    the identical crash with `bad_total=0` all run, and an old s88 soak
+    (PORTING-STATE ~line 6758) fired `bad_total=1` near its log's end with
+    **no** crash following — adjacency isn't a reliable signal yet.
+    **Next work unit:** design a soak that logs `[vi-fs-decision]`'s state
+    (or a stall-clear counter) at the moment of crash, not just scanned
+    after the fact, to test whether this scheduler SIGSEGV only occurs
+    near a stall-clear or can happen mid-stall too. Full detail:
+    PORTING-STATE s170.
+
+-21. **(s169, superseded as top priority by s170 above — 14th class closed
+    0/3, tentatively fixed but never validated with a positive control):**
+    source-read `reserveAndEmitDLEntry` past
     the s109 guard and found it calls `findAndUnlinkSmallestEntry()` (an
     internal free-list pop) 3 separate times (`after_0`/`after_1`/`after_2`,
     guest `0x8000CBC8`/`0x8000CCC4`/`0x8000CDD0`), each null-checking but
@@ -678,16 +708,15 @@ cost three sessions before the recursive mutex.
     check_running_queue -> swap_to_thread -> wait_for_resumed ->
     LightweightSemaphore::tryWait -> atomic load`, same broad chain as
     s70's SIGBUS but a different leaf/signal) — again 0 guard fires.
-    **Net: 0/2 recurrence of the 14th-class crash that killed s168**, but
-    unconfirmed (no positive control either run) — equally consistent
-    with "fixed" and with "this build's binary layout didn't hit that
-    fault site either time" (the established rebuild/timing confound,
-    s93/s160-161/s167). Guards are real, correctly targeted, harmless
-    (0/0 negative control) — keep armed. **Next work unit: soak 2/3**
-    per rule 8 — if the 14th class recurs with a guard firing, confirmed
-    fix; if it recurs with no guard firing, the fault site is still
-    unlocated; if it doesn't recur a 3rd time, treat as tentatively
-    closed. Full detail: PORTING-STATE s169.
+    **Soak 3 (s170):** another full 120s hold survival, crashed only at the
+    very tail to the **identical** scheduler SIGSEGV (2/2 now) — guards
+    still 0/4 total. **Net: 0/3 recurrence of the 14th-class crash across
+    all 3 soaks**, and 0/3 for any positive control on the 4 guards. Per
+    rule 8's 3-attempt budget: **closed as "tentatively fixed, never
+    validated with a positive control"** — not "fixed." Guards are real,
+    correctly targeted, harmless (0 regressions any run) — stay armed, but
+    do not spend a 4th soak on this question. Full detail: PORTING-STATE
+    s169, s170.
 
 -20. **(s168, superseded as top priority by s169 above): landed the `rs_free` free-list walk-log
     NEXT.md prescribed (mirrors s165's `rs_malloc` walk-log exactly,
