@@ -663,7 +663,75 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s224)
+## Next steps, in order of expected value (s225)
+
+-66. **(s225) The whole scene-graph chain (`traverseSceneGraphRecursive` ->
+    `processSceneNode` -> `submitSceneNodeRender`) keeps firing at a steady
+    rate through the ENTIRE visibly-frozen window — this rules out a
+    scene-traversal stall as the wedge — AND, unplanned, the RDP full-sync
+    counter (`rdpFs`) keeps climbing for nearly all of the same window in
+    this run, overturning s224's "RDP full-sync also frozen" framing on a
+    single-run basis.** Landed `ROGUESQ_LOG_SCENE_TRAVERSE` (new, entry
+    counter on `traverseSceneGraphRecursive`, `funcs_4.c:15053`, guest
+    `0x80015548`, every 60th call — the one function in the chain with zero
+    prior instrumentation) and reused two already-existing periodic
+    diagnostics per NEXT.md's explicit "don't duplicate" instruction:
+    `processSceneNode`'s `[scene-rq-counter-hb]` (s152) and its callee
+    call-site tracer (s200, `ROGUESQ_LOG_PROCESS_SCENE_NODE_GUARD`, which
+    covers the 2 `submitSceneNodeRender` call sites). 1st soak
+    (`sceneTraverse1`) crashed at hold-iter 6 to the unrelated, already-
+    catalogued `emitAllocatedDLCommand` raw-pointer fault family (funcs_3.c,
+    not funcs_4.c — orthogonal to this investigation, consistent with
+    s223's proven schedule non-determinism); the new diagnostic still fired
+    502 times before the crash (positive control). 2nd soak
+    (`sceneTraverse2`, same script, fresh tag): full 350s hold crash-free.
+    MD5-checksums of all 350 `hold_NN.png` found the picture frozen from
+    `hold_01` onward (single MD5 for the whole window — freeze predates the
+    hold entirely, matching s222's "~4s after leaving SELECT YOUR CRAFT" at
+    73.2s per this run's own `[phase]` log). Line-number correlation against
+    `run.log` (173,501 lines) found all three diagnostics still firing
+    within ~2,000 lines of the file's actual end (`[scene-traverse-entry]`
+    n=29520 at line 171628; `[scene-rq-counter-hb]` n=41000 at line 171390;
+    `[process-scene-node-callee]` site=E n=5915 at line 171688, 2 lines from
+    EOF) — i.e. still running right up to the SIGKILL, not stopping at the
+    freeze onset (line 98088). **This answers NEXT.md's discriminating
+    question with the "stays roughly constant" branch**: scene traversal is
+    NOT the wedge; it keeps calling all the way down to
+    `submitSceneNodeRender` throughout. The `[scene-traverse-entry]` a0/a1
+    args alternate between just 2 fixed pointers (`0x80165D38`/`0x80165DC8`)
+    for the whole post-freeze window, suggesting a genuinely STATIC scene
+    root being walked repeatedly, not a partial/failing walk of a changing
+    one. **Second, unplanned finding**: `rdpFs` was 2174 at freeze onset and
+    climbed ~linearly (+16 per ~800 log lines) to 3719 by line 170912 (near
+    EOF), only flat for the log's last ~2,400 lines (plausibly just the
+    final pre-SIGKILL moment) — in THIS run the RDP full-sync counter did
+    NOT plateau at the freeze the way s224's run showed. Combined: camera
+    pose keeps changing (s224), scene traversal keeps running and calling
+    `submitSceneNodeRender` (this session), and the RDP keeps completing
+    full-syncs (this session, single-run) — the pipeline is demonstrably
+    ALIVE top-to-bottom throughout the freeze. The bug is not a stall in
+    this chain; it produces the exact same pixel output every cycle,
+    consistent with s222's "degenerate-polygon frame" description if the
+    underlying scene/world data itself stopped updating upstream of this
+    chain (distinct from the camera-pose field, which keeps moving).
+    **Caveat**: the rdpFs-keeps-climbing observation is one run; s224's
+    rdpFs-frozen conclusion was also effectively one run — given proven
+    schedule non-determinism (s223) these may both be genuine on different
+    runs rather than one refuting the other; a 2nd confirmation is needed
+    before treating "present pipeline alive throughout" as fully closed.
+    **Unrelated, not chased**: soak 1's `emitAllocatedDLCommand+6608` crash
+    fired with 0 `EMIT_DL_GUARD*` lines — this specific fault site isn't
+    covered by s221's guard; worth a coverage audit next time this crash
+    family resurfaces. **Next step**: do NOT re-instrument
+    `traverseSceneGraphRecursive`/`processSceneNode`/`submitSceneNodeRender`
+    call rates again (this question is answered — chain confirmed alive).
+    The open question is now what feeds the traversal's two fixed root
+    pointers (`0x80165D38`/`0x80165DC8`) — i.e. what upstream game-logic/
+    simulation-tick function should be mutating the scene/world data behind
+    them each frame, and whether IT has stopped being called (a genuinely
+    new, uninstrumented target, distinct from every render-chain function
+    probed so far) or is being called but writing stale/unreachable data.
+    Full detail: PORTING-STATE Session 225.
 
 -65. **(s224) Answered NEXT.md's discriminating question: the camera's own
     raw pose field (`setupCameraMatrices`'s `+0x2C` submatrix `m00`, read

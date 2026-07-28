@@ -21435,3 +21435,133 @@ point). Soak artifacts: `scratch/s73_post_a_scene/campose1/` (350
 `scratch/agent/checksum_campose1.py`, `scratch/agent/analyze_campose1.py`.
 Regen logs: `scratch/agent/make_elf_s224.log`, `regen_n64recomp_s224.log`,
 `fixup_s224.log`, `build_s224.log`.
+
+## Session 225 (2026-07-28) — the whole scene-graph chain (`traverseSceneGraphRecursive` -> `processSceneNode` -> `submitSceneNodeRender`) keeps firing at a steady rate through the ENTIRE visibly-frozen window, AND the RDP full-sync counter keeps climbing for nearly all of it too — overturning s224's "RDP full-sync also frozen" framing and relocating the wedge to "same output every frame," not "pipeline stalled"
+
+Executed NEXT.md's work unit exactly: added a new periodic entry counter to
+`traverseSceneGraphRecursive` (funcs_4.c:15053, guest 0x80015548), the one
+function in the camera->render chain with zero prior instrumentation.
+Reused two already-existing periodic/unconditional diagnostics instead of
+duplicating them, per NEXT.md Step 1's explicit instruction: `processSceneNode`'s
+`[scene-rq-counter-hb]` (s152, every 500th render-queue registration) and
+`processSceneNode`'s callee call-site tracer (s200, `ROGUESQ_LOG_PROCESS_SCENE_NODE_GUARD`,
+unconditional per-call at 10 call sites including the 2 that call
+`submitSceneNodeRender`). New env var: `ROGUESQ_LOG_SCENE_TRAVERSE=1`, logs
+`n` (monotonic call counter) every 60th call, guest addr 0x80015548,
+funcs_4.c. Full clean-room regen (delete all `funcs_*.c`, `make_elf.py`,
+`N64Recomp`, `fixup_game_funcs.py` once, `cmake --build`) succeeded; fixup
+report confirmed `x1` patch application (`traverseSceneGraphRecursive entry
+counter diagnostic patched x1`).
+
+**Soak attempt 1** (`sceneTraverse1`, same schedule as s222-224): crashed at
+hold-iter 6 (~6s into the 350s hold) to `emitAllocatedDLCommand+6608`, a raw
+KSEG0-pointer-plus-rdram-constant fault (`si_addr=0x380000000`) — the same
+crash FAMILY s220/s221 already diagnosed and partially guarded, but this
+exact fault site apparently isn't covered (0 `EMIT_DL_GUARD*` lines fired
+despite the crash). This is orthogonal to the scene-traversal investigation
+(different file, funcs_3.c not funcs_4.c) and consistent with the
+already-proven schedule non-determinism (s223) rather than a regression from
+this session's patch — the new `[scene-traverse-entry]` diagnostic itself
+fired correctly 502 times (positive control) before the unrelated crash.
+Not chased further this session (would be its own work unit); flagged below.
+
+**Soak attempt 2** (`sceneTraverse2`, identical script, fresh tag): full
+350s hold survived crash-free (`CRASH: 0`). Checksum of all 350
+`hold_NN.png` frames (`scratch/agent/checksum_scenetraverse2.py`) found
+**exactly one** MD5 transition in the whole hold window — at `hold_01`
+itself. Every single frame from `hold_01` through `hold_350` is byte-identical.
+Cross-referencing the run's own `[phase]` log: the last real VI-width
+transition is at 73.2s (`vi_width=512 (was 1024) origin=0x006AB400`,
+matching s222's "freezes ~4s after leaving SELECT YOUR CRAFT" finding almost
+exactly), meaning the freeze onset predates `hold_01` — the entire captured
+350s hold window is ALL post-freeze, with no in-window transition to
+correlate against. This actually simplifies the discriminating measurement:
+any instrument that keeps moving throughout the ENTIRE hold window is, by
+construction, moving through the whole frozen period.
+
+Line-number correlation (`grep -n`, `awk` scans of `run.log`, 173,501
+total lines) against this run's diagnostics:
+
+- `[scene-traverse-entry]`: n=0 at line 2624 (startup), n=24840 at line
+  95162 (just before the 73.2s freeze onset at line 98088), **n=29520 at
+  line 171628 — 1,873 lines from the file's actual end (173,501)**. Firing
+  continued essentially to the moment the process was killed.
+- `[scene-rq-counter-hb]` (`processSceneNode`): n=41000 at line 171390,
+  again within ~2,000 lines of file end.
+- `[process-scene-node-callee]` site=E (`submitSceneNodeRender` call site):
+  n=5915 at line 171688 — **2 lines from the literal end of the log file**.
+  `submitSceneNodeRender` was still being invoked at the last moment
+  captured before SIGKILL.
+
+All three diagnostics — spanning the full depth of the suspected chain,
+`traverseSceneGraphRecursive` -> `processSceneNode` -> `submitSceneNodeRender`
+— independently confirm continuous execution through the entire 350s frozen
+window. This directly answers NEXT.md's discriminating question with the
+"stays roughly constant" branch, not the "drops to near-zero" branch: **the
+scene-graph traversal/submission chain is NOT the wedge.** It keeps running,
+keeps calling all the way down to `submitSceneNodeRender`, and (per the
+`[scene-traverse-entry]` a0/a1 argument values, which alternate between just
+two fixed pointers — `0x80165D38`/`0x80165DC8` — for the entire post-freeze
+window instead of varying) appears to be walking a genuinely STATIC scene
+root over and over, not failing partway through a changing one.
+
+**Second, unplanned finding, equally load-bearing**: `rdpFs` (the RDP
+full-sync counter, read from the same `[vi-fs-decision]` lines s223/s224
+already relied on) does NOT plateau at the freeze onset in this run. It was
+2174 at freeze onset (line 98085, 73.2s) and climbed essentially linearly
+(+16 roughly every ~800 log lines, a very regular cadence) all the way to
+3719 by line 170912 — i.e. through nearly the entire 350s hold — only going
+flat (3721, unchanged for the last 785 samples) in the log's final ~2,400
+lines, plausibly just the last couple of seconds before the driver's SIGKILL
+rather than a genuine mid-run plateau. This overturns s224's framing that
+"the RDP full-sync counter" itself had already frozen alongside the picture
+in that session's run — in THIS run it kept climbing for nearly the whole
+window while the picture stayed byte-identical. Combined with the
+scene-traversal finding, the emerging picture is: camera pose keeps
+changing (s224), scene traversal keeps running and keeps calling
+`submitSceneNodeRender` (this session), and the RDP keeps completing
+full-sync cycles (this session) — the entire pipeline, top to bottom, is
+demonstrably ALIVE and cycling throughout the visible freeze. The bug is not
+a stall anywhere in this chain; it is that the pipeline produces the exact
+same pixel output on every cycle. That is consistent with s222's own
+description of the frozen frame as "a degenerate-polygon frame" — a
+plausible mechanism is that whatever data traverseSceneGraphRecursive walks
+each pass (the two fixed root pointers noted above) is itself frozen
+upstream of this chain (a game-logic/simulation update that stopped
+advancing world/animation state, distinct from the camera-pose field s224
+already showed keeps moving), so the render pipeline faithfully re-renders
+the same stale scene every single frame.
+
+**Caveat, one run**: this session's rdpFs-keeps-climbing observation is a
+single soak; s224's rdpFs-frozen conclusion was also effectively single-run
+(s223's soak, reused). Given the proven schedule non-determinism (s223),
+these may both be true on different runs rather than one superseding the
+other — flag for a 2nd independent confirmation before fully closing the
+"present pipeline alive" question either way.
+
+**What this rules out**: a scene-graph-traversal-stops hypothesis (this
+session's primary target) and, provisionally, an RDP-submission-stops
+hypothesis (this session's secondary finding, single-run). What it does NOT
+yet explain: WHY the same static content keeps being walked/rendered — i.e.
+what upstream game-logic/animation update should be advancing the scene
+data between traversal passes and isn't. Not yet identified: whether the
+world-state pointers behind the two fixed root addresses
+(`0x80165D38`/`0x80165DC8`) are themselves stale/corrupted, or whether some
+separate simulation-tick function that should be mutating the data behind
+them has itself stopped being called (an update-vs-render split, not yet
+distinguished).
+
+**Unrelated open item, not chased this session**: soak attempt 1's
+`emitAllocatedDLCommand+6608` crash (`si_addr=0x380000000`) fired with zero
+`EMIT_DL_GUARD*` diagnostic lines, meaning this specific fault site isn't
+covered by s221's guard. Worth a source-read/guard-coverage audit next time
+this crash family resurfaces, but out of scope for this session's scene-
+graph work unit.
+
+Soak artifacts: `scratch/s73_post_a_scene/sceneTraverse1/` (crashed, 6
+`hold_NN.png` frames, `run.log`), `scratch/s73_post_a_scene/sceneTraverse2/`
+(350 `hold_NN.png` frames, `run.log`, crash-free). Driver scripts:
+`scratch/s73_post_a_scene/run_scenetraverse1.sh`,
+`run_scenetraverse2.sh`. Analysis: `scratch/agent/checksum_scenetraverse2.py`,
+`scratch/agent/checksum_scenetraverse2_out.txt`. Fixup report:
+`/Users/williambuckley/Documents/Tools/N64Recomp/scratch_fixup_report_s225.txt`.
