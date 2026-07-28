@@ -15517,3 +15517,99 @@ characterizing the post-leave graphics-task-submission stall itself
 (s162's finding) — still the actual M3 frontier once a soak reaches it
 crash-free, which both s166's and this session's runs did before their
 respective deaths. See `scratch/agent/NEXT.md`.
+
+## Session 168 (2026-07-27) — landed the `rs_free` free-list walk-log per NEXT.md step 1; the 24th class did NOT recur (informative null, clean 1.78M/1.59M-sample positive controls on both walk-logs, no corruption pattern in either), but the process died earlier than any soak on record (hold-iter 3, wall=2s) to a recurrence of the already-catalogued 14th class (`reserveAndEmitDLEntry`) — and that recurrence exposes a real gap in the s109 guard
+
+### What ran
+
+Landed `ROGUESQ_LOG_RS_FREE_WALK=1` in `N64Recomp/fixup_game_funcs.py`
+(`funcs_0.c`), mirroring s165's `rs_malloc` walk-log exactly: patched at
+`L_80001CE0` (`rs_free`'s free-list walk loop, `lw $v0, 0x4($a1)` — the
+size-word read), confirmed via grep that this label is the walk's single
+re-entry point (only one `goto L_80001CE0` in the function, the loop-back
+at `0x80001D8C`). Logs node address (`ctx->r5`), flags (`ctx->r3`, already
+freshly loaded for the same node from either the initial list-header read
+or the loop-back re-read — no second read needed, unlike `rs_malloc`'s
+walk-log which had to re-read flags), and size (`ctx->r2`, just loaded) —
+same three fields as `[rs-malloc-walk]`, directly comparable shape.
+
+Full regen (`N64Recomp` re-run via `tools/agent/regen_n64recomp.sh`, no
+`make_elf.py` needed — only the fixup script changed, not symbols/ELF)
+then `fixup_game_funcs.py` once (redirected to
+`scratch/agent/fixup_s168.log`, confirmed `x1` for the new patch plus the
+2 other `rs_malloc`/`rs_free` patches, no duplication), then
+`cmake --build` clean (exit 0, only pre-existing-class warnings). One soak
+(`scratch/agent/run_rsfreewalk1.sh`, same env block as s166's
+`run_audioslotguard1.sh` minus `ROGUESQ_LOG_AUDIO_SLOT_ACTIVE_GUARD=1`
+— budget spent per s167 — plus the new `ROGUESQ_LOG_RS_FREE_WALK=1`).
+
+### Result
+
+The 24th class (`rs_free` SIGBUS via `freeManifestSegmentAssets`) **did
+not recur** — 0/3 now across s167/this run (well, 1/2 pre-this-session,
+0/1 this session: net 1/3 total occurrences of this exact recipe family).
+Both walk-logs fired extensively and cleanly as positive controls:
+1,776,442 `[rs-free-walk]` lines and 1,593,351 `[rs-malloc-walk]` lines,
+every one showing `flags=0x2` and a plausible, non-repeating size (no
+ASCII-text-shaped garbage, no wildly out-of-range values) — i.e. the
+free-list itself was never observed corrupted this run, on either side.
+This is an **informative null**, not a refutation: the mechanism under
+test (list-header corruption visible in the walk) simply wasn't exercised
+by whatever triggers the 24th class, consistent with this family's
+established run-to-run nondeterminism.
+
+Instead, the process died **earlier than any soak on record** — hold-iter
+3, wall=2s into the 120s hold window, well before any of the
+`STICK_SCHEDULE` presses (earliest at 10s) — to a **recurrence of the
+already-catalogued 14th class**: SIGBUS in `reserveAndEmitDLEntry`
+(confirmed real symbol, first seen s97), full backtrace
+`reserveAndEmitDLEntry` ← `submitSceneNodeRender` ← `processSceneNode` ←
+`traverseSceneGraphRecursive` (recurses once) ← `setupCameraMatrices` ←
+`static_5_800AAD9C` ← `static_5_800C6854` ← `menuOverlayInit` ←
+`mainGameLoop` ← `mainBootstrapWorker` — exactly the s97 chain, not a new
+class. Not near either walk-log's code path (different function entirely,
+different overlay).
+
+**New, more actionable finding than the null itself**: the s109 guard on
+`reserveAndEmitDLEntry` (`ROGUESQ_LOG_DLENTRY_GUARD=1`, checks `ctx->r16`
+— the function's first-arg pointer — against the RDRAM bound right after
+the function's own early bounds check) **produced zero log lines this
+run** despite the crash happening *inside this exact function*. The crash
+backtrace resolves to `reserveAndEmitDLEntry + 4608` (native code
+offset) — a large offset suggesting the actual fault is deep in the
+function body, past whatever the s109 guard covers (which only guards the
+one early `ctx->r16` deref at the top, per its own comment). **The s109
+guard is real but incomplete**: it stops the specific crash it was built
+for, but this function apparently has at least one more unguarded deref
+further in, not yet located. This reframes "14th class: guarded, s109" —
+it should read "14th class: partially guarded, a deeper unguarded site in
+the same function still crashes."
+
+### Files touched
+
+`N64Recomp/fixup_game_funcs.py` (own git checkout, not `lib/` — no
+`submodule-patches/export.sh` needed): added the `rs_free` walk-log patch.
+`N64Recomp/RecompiledFuncs/funcs_0.c`: regenerated + patched (mechanical,
+not hand-edited). New file: `scratch/agent/run_rsfreewalk1.sh` (soak
+driver). Not yet committed in the `N64Recomp` checkout — same standing
+posture as every other `N64Recomp`-side change since s90 (flagged, not
+autonomously committed there; this repo's own commit covers the
+`RogueSquadron64Recomp`-side files: `scratch/agent/*`, docs).
+
+### Next
+
+The `rs_free`/`rs_malloc` walk-log line is now closed (informative null,
+both instruments validated with real positive controls — keep them armed,
+stop chasing this specific soak recipe further per the null-result
+guidance). Two live options: (1) locate the actual unguarded deref inside
+`reserveAndEmitDLEntry` past the s109 guard's coverage — source-read the
+function body between the guard's anchor point and offset-equivalent of
+native `+4608`, looking for the same "unguarded pointer table lookup"
+shape as the rest of this family, then extend the guard (or add a second
+one) to cover it; this is a concrete, well-scoped next unit with a clear
+success criterion (guard fires + process survives past this crash site).
+(2) if that stalls, pivot to characterizing the post-leave
+graphics-task-submission stall (s162's finding) directly — not reached
+this run (died too early), but reached crash-free by both s166's and
+s167's runs, so it remains the actual M3 frontier once this family's
+noise is set aside. See `scratch/agent/NEXT.md`.

@@ -659,9 +659,43 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s167)
+## Next steps, in order of expected value (s168)
 
--19. **NEW TOP PRIORITY (s167): re-ran `run_audioslotguard1.sh` unmodified
+-20. **NEW TOP PRIORITY (s168): landed the `rs_free` free-list walk-log
+    NEXT.md prescribed (mirrors s165's `rs_malloc` walk-log exactly,
+    `ROGUESQ_LOG_RS_FREE_WALK=1`, `N64Recomp/fixup_game_funcs.py`,
+    `funcs_0.c`). One soak: the 24th class did NOT recur (informative
+    null — both walk-logs fired as clean positive controls, 1.78M/1.59M
+    lines, every entry `flags=0x2` with a plausible non-repeating size,
+    no corruption pattern on either side of the free list this run).
+    **The walk-log line is now closed** — keep both instruments armed
+    (they're free and validated), stop chasing this specific soak recipe.
+    Process instead died **earlier than any soak on record** (hold-iter
+    3, wall=2s, before any scheduled key press) to a **recurrence of the
+    already-catalogued 14th class** (`reserveAndEmitDLEntry` SIGBUS, full
+    backtrace matches s97 exactly: ← `submitSceneNodeRender` ←
+    `processSceneNode` ← `traverseSceneGraphRecursive` (recurses once) ←
+    `setupCameraMatrices` ← `static_5_800AAD9C` ← `static_5_800C6854` ←
+    `menuOverlayInit` ← `mainGameLoop` ← `mainBootstrapWorker`) — not a
+    new class, but a load-bearing new fact about an *existing* one: the
+    **s109 guard on this function produced zero log lines** despite the
+    crash happening inside it. The crash backtrace resolves to
+    `reserveAndEmitDLEntry + 4608` (native offset) — far past the single
+    early `ctx->r16` deref the s109 guard covers (confirmed via its own
+    comment/placement). **The s109 guard is real but incomplete**: this
+    function has at least one more unguarded deref, deeper in the body,
+    not yet located or guarded.
+    **Next work unit:** source-read `reserveAndEmitDLEntry`
+    (`N64Recomp/RecompiledFuncs/funcs_3.c`, guest range starting
+    `0x8000CB8C`-ish per the s109 comment) past the guard's anchor point,
+    looking for the same "unguarded pointer/table lookup then deref"
+    shape as the rest of this family (9th-12th, 14th classes all share
+    it), then extend or add a 2nd guard at that site. Success criterion:
+    guard fires (or the site is provably unreachable this run) AND the
+    process survives past where this crash currently kills it. Full
+    detail: PORTING-STATE s168.
+
+-19. **(s167, still valid background, superseded as top priority by s168 above): re-ran `run_audioslotguard1.sh` unmodified
     per s166's own plan — it did NOT stay crash-free. 2nd run died at
     hold-iter 96 (task #7452, fs plateau 4163) to a brand-new **24th**
     crash class: SIGBUS inside `rs_free` (`funcs_0.c:3093`, the shared
