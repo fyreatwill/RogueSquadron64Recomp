@@ -663,7 +663,44 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s198)
+## Next steps, in order of expected value (s199)
+
+-48. **(s199) `processSceneNode+8772` KSEG0-zero-extension bug just got its
+    2nd confirmed occurrence (byte-for-byte match to s194's single
+    sighting) — now the top-priority open crash class, with the exact
+    mechanism already known from the register file, no disassembly
+    needed.** s194 already decoded it: `si_addr`/`far` decomposes as
+    `x0/x8 (rdram host base) + x9 (0x80630062, a KSEG0-tagged guest pointer
+    that is ZERO-extended, not sign-extended)` — someone inside
+    `processSceneNode` (`N64Recomp/RecompiledFuncs/funcs_4.c:13759-14873`)
+    adds a raw 32-bit guest pointer straight to the rdram base instead of
+    going through `MEM_W`/`ADD32`'s sign-extend-and-subtract convention.
+    Both occurrences landed within ~50 decisions of each other
+    (decisionN=9741 s194, 9788 s199), suggesting a fairly deterministic
+    trigger, not a rare race. **Best next work unit**: read
+    `processSceneNode`'s recompiled C body looking for a pointer computed
+    WITHOUT `S32`/`ADD32`/`MEM_W` (i.e. a raw register add or an
+    unsign-extended `lw` result used directly as a memory base) and either
+    fix the extension or add a targeted guard, mirroring the established
+    RDRAM-range-check pattern. Full detail: PORTING-STATE Session 199 (and
+    Session 194 for the original register-file decode).
+
+-47.5. **(s199) `runVideoFrameTick+1568` guard landed (3 sites,
+    `ROGUESQ_LOG_VIDEO_FRAME_TICK_GUARD`, `N64Recomp/fixup_game_funcs.py`)
+    — 2 of 3 soaks pass cleanly through both prior death points (8972,
+    15418) with 0 recurrence, but the guard itself never fired (0/3) and a
+    3rd soak died to the item above before a 3rd clean pass could be
+    collected.** Disassembly tooling (`otool`/`nm`/`objdump`/`lldb`)
+    re-confirmed still blocked (non-interactive session, no human to clear
+    the approval prompt) — this guard is the source-level fallback per
+    NEXT.md, guarding the one place in the function that dereferences a
+    pointer loaded from a fixed global (guest `0x8010FCB0`) rather than the
+    function's own arguments, matching s198's own `si_addr=0x320000000`
+    evidence (wild/unmasked-pointer signature). One more informative soak
+    (reaching past decisionN~9800 without dying to `processSceneNode+8772`
+    first) would either complete this project's 3-pass "very likely fixed"
+    bar or catch a same-run positive control. Lower priority than -48 now.
+    Full detail: PORTING-STATE Session 199.
 
 -47. **(s198) 3rd consecutive clean pass through the 18th class's death zone
     (still no positive control for the s197 guard) — 18th class reclassified

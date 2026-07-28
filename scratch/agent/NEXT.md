@@ -1,125 +1,140 @@
-# NEXT work unit — guard (or get disassembly on) the `runVideoFrameTick
-+1568` SIGBUS, now the confirmed dominant soak-blocker
+# NEXT work unit — root-cause/guard `processSceneNode+8772`, the KSEG0
+zero-extension bug, now the confirmed dominant soak-blocker
 
-Read `docs/CURRENT-TRUTH.md`'s `-47` next-steps item (top of the list) and
-PORTING-STATE Session 198 in full before doing anything else (`grep -n
-"^## Session 198" PORTING-STATE.md`). Also skim Session 192's and 193's
-entries (`grep -n "^## Session 19[23]" PORTING-STATE.md`) — 193 already
-tried and abandoned disassembling this exact crash site once; read why
-before repeating that attempt blindly.
+Read `docs/CURRENT-TRUTH.md`'s `-48` next-steps item (top of the list) and
+PORTING-STATE Session 199 in full before doing anything else (`grep -n
+"^## Session 199" PORTING-STATE.md`). Also read Session 194's original
+register-file decode of this exact crash (`grep -n "^## Session 194"
+PORTING-STATE.md`) — it already did the hard part (identifying the bug
+mechanism from the ARM64 register dump, no disassembler needed), do not
+re-derive it from scratch.
 
 ## Why this is the next work unit
 
-s198's 4th `cacheheadguard` soak gave a 3rd consecutive clean pass through
-the 18th crash class's death zone (decisionN=15418, past the 9660-9792
-target window) — per NEXT.md's own prior criteria that retires the 18th
-class as the primary blocker (still unconfirmed by a guard fire, 0/4, but
-not worth a 5th blind soak on the same hypothesis per iron rule 8).
-
-Instead, the run died to `runVideoFrameTick+1568` SIGBUS — the SAME native
-offset as s192's `sceneptrguard5` crash (decisionN=8972). Two occurrences,
-same offset, same duplicated-frame stack-unwind shape, ~6 sessions apart:
-this is now a CONFIRMED recurring crash class, not the one-off s192 left it
-as. It is currently the furthest-reaching blocker in the project (killed
-the run at decisionN=15418, well past every other guard's target window),
-so it is now the top-priority open item.
+s199 added a defensive guard for the (then-)top-priority `runVideoFrameTick
++1568` SIGBUS and ran 3 soaks to test it. 2 of the 3 soaks were informative
+and passed cleanly through that crash's two prior death points
+(decisionN=8972, 15418) with zero recurrence — suggestive, not yet
+confirmed (this project's own bar, applied to the 18th class in s195-s198,
+is 3 consecutive clean passes; only 2 landed this session). But the 3rd
+soak died to something else entirely: a SIGBUS at decisionN=9788 that is a
+**byte-for-byte match** to s194's single-occurrence `processSceneNode+8772`
+crash (`si_addr=0x380630062`, same low 20 bits, same duplicated-frame
+backtrace shape). s194 already decoded the mechanism directly from the
+ARM64 register file: `far` = `x0/x8` (rdram host base) + `x9`
+(`0x80630062`, a KSEG0-tagged guest pointer that's **zero-extended**, not
+**sign-extended** — the normal `MEM_W`/`ADD32` path always sign-extends
+32-bit guest addresses to `0xFFFFFFFF80xxxxxx` before subtracting the KSEG0
+base; here something added the raw, zero-extended value directly, producing
+a ~2 GB wild offset instead of a valid ~8 MB one). Two occurrences, exact
+match, ~50 decisions apart (9741, 9788) — this is now BOTH the
+best-characterized AND the most-recently-blocking crash in the project, so
+it outranks the still-unconfirmed `runVideoFrameTick+1568` guard follow-up.
 
 ## Do this, in order
 
-1. **Try disassembly tooling again, once, before falling back to a
-   broad guard.** s193 confirmed `otool`/`nm`/`objdump`/`lldb` are not on
-   the Bash allowlist and a hand-rolled ARM64 decoder
-   (`scratch/agent/s193_disasm.py`) produced an internally-inconsistent
-   result. If a tool-approval prompt is available this session (check
-   whether the environment changed since s193 — try `otool -tv build/
-   RogueSquadron64Recomp | head` and see if it's actually denied or just
-   needs approval, don't assume from the old citation), get precise
-   disassembly at native offset `runVideoFrameTick+1568`
-   (`0x00000001040b7cb8`-equivalent for this build — recompute the actual
-   address for THIS build's binary, it will differ) and identify the real
-   faulting dereference. If tooling is confirmed still unavailable, do NOT
-   retry the hand-rolled decoder (already shown untrustworthy) — go to
-   step 2.
-2. **Fallback: broad defensive guard across `runVideoFrameTick`'s
-   recompiled C body.** Read the full function
-   (`N64Recomp/RecompiledFuncs/funcs_0.c:1459` onward, ~415 lines, per
-   s193's citation — confirm the current line range first, the file may
-   have shifted since s193's guards). Identify every raw pointer
-   dereference reachable from guest-controlled data (the same class of bug
-   s197 found: unmasked KSEG0 pointers, uninitialized cache reloads) and
-   wrap each with the same RDRAM-range sanity check + logged bail used by
-   the rs_malloc/rs_free/scene-node-ptr/queueGPUUploadTMEM/
-   scene-node-cache guards. New env var suggestion:
-   `ROGUESQ_LOG_VIDEO_FRAME_TICK_GUARD`. This trades precision for
-   coverage — acceptable now that 2 confirmed occurrences justify the
-   cost (per s193's own framing, this felt premature at 1 occurrence, not
-   at 2).
-3. Regenerate (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` ->
+1. **Read `processSceneNode`'s full recompiled C body**
+   (`N64Recomp/RecompiledFuncs/funcs_4.c:13759-14873`, ~1100 lines — this is
+   a big function, read it in chunks, don't try one 256 KB `Read` call).
+   Look specifically for a pointer computation that does NOT go through
+   `S32(...)`/`ADD32(...)`/`MEM_W(...)`'s sign-extend convention — i.e. a
+   raw `ctx->rN + ctx->rM` used directly as a `MEM_W`/`MEM_H`/`MEM_B` base,
+   or a 32-bit load whose result gets used as a pointer without going
+   through the normal `S32`/sign-extension path first. The bug signature
+   (`x9=0x0000000080630062`, top 32 bits zero) means the specific
+   instruction either does an unsigned load (`lwu`, if the recompiler ever
+   emits one) or manually zero-extends where the original MIPS intended
+   sign-extension — grep for unusual-looking casts/`(uint32_t)`/`U32(...)`
+   near pointer arithmetic in this function as a starting point.
+2. **Cross-check against the two known crash instances** to narrow the
+   search: `lr=processSceneNode+8772` in both s194 and s199 (this is the
+   RETURN address into `processSceneNode`, not the actual faulting `pc` —
+   the fault itself is one level deeper, in an unresolved leaf/inlined
+   helper the unwinder can't name). `decisionN` was 9741 (s194) and 9788
+   (s199) — close enough that the specific scene-node/asset that triggers
+   this is probably loaded/walked at a fairly fixed point during mission
+   startup (not a random late-game state). If a source read alone doesn't
+   pin the exact statement, consider a bounded per-call counter/log
+   (`ROGUESQ_LOG_PROCESS_SCENE_NODE_PTR`, one line per pointer computed
+   without the normal sign-extend path) to narrow it empirically, batched
+   into the SAME build as any guard you add — don't spend a separate
+   build-run cycle just to locate it if you can guard defensively instead.
+3. **Guard the deref** once located: same RDRAM-range-sanity-check +
+   logged-bail pattern as every other guard in this project
+   (`rs_malloc`/`rs_free`/`scene-node-ptr`/`scene-node-cache`/s199's new
+   `video-frame-tick-guard`). New env var suggestion:
+   `ROGUESQ_LOG_PROCESS_SCENE_NODE_GUARD`. If the exact call site can't be
+   isolated with confidence, a broader defensive pass across
+   `processSceneNode`'s pointer derefs (same "trade precision for
+   coverage" tradeoff s199 used for `runVideoFrameTick`) is an acceptable
+   fallback — but try for precision first this time, since the register
+   evidence already narrows the search a lot more than `runVideoFrameTick
+   +1568` ever did.
+4. Regenerate (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` ->
    `cmake --build build -j8`, `DEVELOPER_DIR=/Applications/Xcode.app/
    Contents/Developer` for Metal), verify the patch applied exactly once
-   (grep the regenerated `funcs_0.c` for your new guard, count should be 1
-   not 2 — `fixup_game_funcs.py` is non-idempotent).
-4. Soak (`scratch/agent/run_videoframetickguard1.sh`, copy
-   `run_cacheheadguard4.sh`'s env block, add the new guard's env var,
-   rename the tag). Discriminating outcomes:
+   (grep the regenerated `funcs_4.c` for your new guard, count should match
+   the number of sites you patched — `fixup_game_funcs.py` is
+   non-idempotent).
+5. Soak (copy `scratch/agent/run_videoframetickguard2.sh` — it's a clean,
+   working driver with the full standard env block plus
+   `ROGUESQ_LOG_VIDEO_FRAME_TICK_GUARD=1` already set from s199 — add your
+   new guard's env var, rename the tag). Discriminating outcomes:
    - **Guard fires with sane fields, soak reaches further than
-     decisionN=15418 or completes clean** → strong positive signal, write
-     up as likely-fixed pending a 2nd soak (same bar as every other guard
-     in this project).
-   - **Guard fires but crash still happens right after** → the bail target
-     is unsafe, needs a different reentry point (same failure mode s197
-     had to design around for the cache guard — its bail target explicitly
-     resets the corrupt global rather than reusing the empty-cache reentry
-     point).
-   - **0 fires, crash recurs at the SAME +1568 offset** → your guard
-     didn't cover the actual faulting site; the disassembly-avoidance
-     tradeoff failed, escalate to requesting real tool access rather than
-     guessing again.
-   - **0 fires, no recurrence, dies to something else** → 3rd clean pass
-     of a DIFFERENT kind — informative for `runVideoFrameTick` specifically
-     even without a guard fire, same "N clean passes" reasoning applied
-     this session to the 18th class.
-5. Whatever the outcome, update `PORTING-STATE.md` (new session entry),
-   `docs/CURRENT-TRUTH.md` (`-47` entry's status), and this file, per the
-   exit contract.
+     decisionN=9788 or completes clean** → strong positive signal, write up
+     as likely-fixed pending a 2nd soak.
+   - **Guard fires but crash still happens right after** → bail target is
+     unsafe, needs a different reentry point.
+   - **0 fires, crash recurs at the SAME +8772 offset** → guard missed the
+     actual faulting site, don't guess again — narrow further with the
+     counter/log approach from step 2 before re-guessing.
+   - **0 fires, no recurrence, dies to something else** → informative clean
+     pass; if it's a THIRD clean pass on `runVideoFrameTick+1568`'s old
+     death zone (see item -47.5 in CURRENT-TRUTH), that completes THAT
+     item's 3-pass bar as a nice side effect — note it either way.
+6. Whatever the outcome, update `PORTING-STATE.md` (new session entry),
+   `docs/CURRENT-TRUTH.md` (both `-48` and `-47.5` entries' status), and
+   this file, per the exit contract.
 
 ## Do not
 
 - Do not re-touch the s123/s131 `SCENE_NODE_LIST_GUARD`/`GUARD2`/`GUARD3`,
-  the s197 `SCENE_NODE_CACHE_GUARD`, the s190 `scene-node-ptr-guard`, or
-  the s196 `REINTERPRET_TILE_GUARD` — all correct-per-spec, all still
-  0-fire, none has new evidence against it. The 18th crash class is now
-  "very likely fixed, mechanism unconfirmed" — do not spend another soak
-  chasing its guard's positive control; only revisit if THIS session's
-  soak produces a fresh recurrence unprompted.
-- Do not repeat s193's hand-rolled ARM64 decoder approach a 2nd time — it
-  already proved internally inconsistent once; if real tooling is
-  unavailable, go straight to the broad-guard fallback (step 2), don't
-  re-derive the same untrustworthy result.
+  the s197 `SCENE_NODE_CACHE_GUARD`, the s190 `scene-node-ptr-guard`, the
+  s196 `REINTERPRET_TILE_GUARD`, or s199's new `video-frame-tick-guard` — all
+  correct-per-spec, all still 0-fire, none has new evidence against it this
+  session. Only revisit `video-frame-tick-guard` if a soak while working
+  THIS item happens to reach past decisionN~9800 and either fires it or
+  reproduces `+1568` again (informative either way, log it, don't
+  proactively chase it).
+- Do not repeat s193's hand-rolled ARM64 decoder approach — already proven
+  untrustworthy once, and this session's register-file evidence (from s194)
+  makes it unnecessary for this specific bug anyway.
 - Do not chase the 23rd-class `waitForAnyAudioSlot` SIGSEGV or the
   `evalCubicSplineAtTime` SIGBUS family this iteration unless THIS
   session's soak dies to one of them AGAIN after exhausting budget on
-  `runVideoFrameTick` — both remain open, flagged, lower priority.
+  `processSceneNode+8772` — both remain open, flagged, lower priority.
 
 ## Environment notes (carried forward, still current)
 
-- Disassembly tools (`nm`/`otool`/`objdump`/`lldb`) were NOT on the Bash
-  allowlist as of s193/s194 (confirmed blocked) — re-verify fresh this
-  session (step 1) rather than assuming unchanged, but don't burn more
-  than one quick check on it before falling back.
+- Disassembly tools (`nm`/`otool`/`objdump`/`lldb`) confirmed STILL blocked
+  as of s199 (`otool -tv` returns "This command requires approval", no
+  human present in this non-interactive session to clear it) — re-verify
+  fresh next session only if something about the environment seems to have
+  changed; otherwise trust this citation and don't re-spend the check.
 - The crash handler dumps siginfo + full ARM64 register file on every
   SIGSEGV/SIGBUS/SIGABRT (`src/main/main.cpp`) — check `[CRASH][siginfo]`/
   `[CRASH][mcontext]`/`[CRASH][vifs-snapshot]` lines first, plus the
-  backtrace lines immediately below them (function names + offsets are
-  printed directly, no disassembly needed for THAT part — only the
-  in-function offset-to-source mapping needs real disassembly).
+  backtrace lines immediately below them. This is how s194 root-caused
+  `processSceneNode+8772`'s mechanism with zero disassembly — use the same
+  approach for the actual faulting `pc` (one frame deeper than the `lr`
+  the backtrace shows) if you need to narrow further.
 - `N64Recomp/fixup_game_funcs.py` is non-idempotent — running it twice
   duplicates every patch.
 - Any edit under THIS repo's `lib/` needs `./submodule-patches/export.sh` +
   commit in the SAME session. `N64Recomp` and `rogue_squadron64` are
   SEPARATE checkouts outside this repo, NOT `lib/` submodules — their
-  uncommitted changes are flagged for the user, not this session's call to
-  commit.
+  uncommitted changes (including s199's `fixup_game_funcs.py` guard) are
+  flagged for the user, not this session's call to commit.
 - Re-running the same soak script/tag overwrites the previous run's
   `run.log` in place — copy the driver script to a new tag name per soak.
   `run.log` files are multi-GB; NEVER `Read` or `cat` them whole — always
@@ -146,12 +161,16 @@ so it is now the top-priority open item.
 - `scratch/agent/STATUS`/`OUTCOME` get reset to `WORKING`/deleted at the
   START of each iteration by the harness — finding them in that state at
   session start is normal, not evidence of a crashed prior session.
+- Uninformative soaks happen (s199 soak 1 died at decisionN=440 to an
+  unrelated known crash, before even reaching VI width 1024) — don't
+  read too much into a single early/unrelated death; just re-run once
+  more, same as s199 did.
 
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is now well over the ~35 KB CLAUDE.md budget and
 exceeds the Read tool's 256 KB single-read limit (confirmed s195, still
-true s198 — read it with `grep`/`sed -n`, never a plain whole-file `Read`).
+true s199 — read it with `grep`/`sed -n`, never a plain whole-file `Read`).
 Migrate durable mechanism/architecture material to `PROJECT-OVERVIEW.md`
 and prune superseded detail, paired with a real experiment — flagged for
 many sessions without action, escalating.

@@ -18447,3 +18447,157 @@ entry.
    remains well over the ~35 KB CLAUDE.md budget and over the Read tool's
    256 KB single-read limit; migrate durable material to
    `PROJECT-OVERVIEW.md` and prune, paired with a real experiment.
+
+## Session 199 (2026-07-28) — added a source-level defensive guard on `runVideoFrameTick`'s 3 global video-state-pointer derefs (disassembly still blocked); 2 informative soaks show no recurrence of the `+1568` crash, but a 3rd soak's DEATH is itself the headline: a byte-for-byte 2nd occurrence of s194's single-occurrence `processSceneNode+8772` KSEG0-zero-extension bug, promoting it to the new top-priority confirmed-recurring crash
+
+### Disassembly tooling: re-confirmed still blocked, did not retry further
+
+Per NEXT.md step 1, tried `otool -tv build/RogueSquadron64Recomp` fresh this
+session as a plain non-piped Bash call. Result: `"This command requires
+approval"` — no human is present in this non-interactive session to clear
+it, same outcome s193/s194 already established. Did not retry a 2nd time
+(NEXT.md's own guidance) and did not touch the hand-rolled decoder
+(`s193_disasm.py`, already shown untrustworthy). Went straight to step 2,
+the broad defensive-guard fallback.
+
+### What ran — the guard
+
+A full read of `runVideoFrameTick` (`N64Recomp/RecompiledFuncs/funcs_0.c:1459`,
+the whole ~415-line/177-MIPS-instruction function, confirmed still exactly
+this range) found the function's derefs fall into two clearly distinct
+classes: the vast majority use pointers that come directly from the
+function's own arguments (`$s3`/`$s0`/`$s2`, `ctx->r19`/`r16`/`r18`) —
+exercised on literally every call across every soak this project has ever
+run, with zero attributable crashes. But at 3 sites (MIPS
+`0x8000154C`/`0x8000157C`/`0x800015BC`) the function instead LOADS A POINTER
+FROM A FIXED GLOBAL RDRAM ADDRESS (`lui $v0,0x8011; lw $v0,-0x350($v0)` ==
+guest `0x8010FCB0`) and immediately dereferences it via raw `MEM_W`/
+`do_swl`/`do_swr` writes (offsets `0x10`-`0x44`) with zero validation — the
+same "cached/global pointer, never checked" shape as every previously
+guarded crash class in this project (s99, s100, s109, s169, s197's
+`scene-node-cache-guard`). All 3 writes are gated behind a chain of
+conditional branches upstream (`reapplyDisplayMode` returning 0, a byte flag
+at `$s2+4`, etc.), so this global is exercised far less often than the rest
+of the function — consistent with an intermittent, thousands-of-decisions-deep
+crash rather than an every-call one.
+
+Cross-checked against s198's own crash evidence: the s194 crash-handler
+upgrade recorded `si_addr=0x320000000` for this exact `+1568` crash — many
+GB past any valid rdram offset, the signature of an unmasked/garbage
+pointer, not a near-miss. This matches the global-pointer hypothesis:
+`MEM_W` (`N64Recomp/include/recomp.h`) is completely unbounded (
+`rdram + ((reg+offset) - 0xFFFFFFFF80000000)`, no range check at all,
+relies entirely on the register holding a correctly sign-extended
+`0x80000000`-`0x807FFFFF` guest address) — if the global at `0x8010FCB0` is
+ever 0/uninitialized/corrupt, the resulting host pointer lands wildly
+outside the 8 MB rdram buffer.
+
+Guarded all 3 sites (`N64Recomp/fixup_game_funcs.py`, `funcs_0.c`,
+`ROGUESQ_LOG_VIDEO_FRAME_TICK_GUARD`): after each load, check the pointer is
+in the valid RDRAM range; if not, log (env-gated) and skip ONLY that site's
+reads+writes (confirmed by reading the surrounding code that every register
+touched is freshly reloaded by the next site or the function epilogue — no
+stale-value hazard from skipping). Unlike s197's cache guard, does NOT reset
+the global to a known-safe value — its true semantics (likely a camera/
+video-mode state struct, not a free-list head) aren't established, so
+overwriting it could introduce a new bug; skip-only is the minimal,
+defensible change. Full regen (`make_elf.py` → `N64Recomp` →
+`fixup_game_funcs.py` → `cmake --build`) ran clean; verified the patch
+applied exactly once per site (`grep -c "video-frame-tick-guard"
+funcs_0.c` → 3, not 6). Pure `N64Recomp/fixup_game_funcs.py` change (outside
+this repo, flagged for the user per standing convention, not committed by
+this session).
+
+### Soaks (3 runs, `scratch/agent/run_videoframetickguard{1,2,3}.sh`, copies of `run_cacheheadguard4.sh` + the new env var)
+
+1. **`videoframetickguard1`: uninformative.** Died at decisionN=440 —
+   before the game even reached the VI-1024 phase gate ("process gone while
+   waiting for phase") — to the already-catalogued, lower-priority 23rd
+   crash class (`waitForAnyAudioSlot` SIGSEGV, `si_addr=0x400141ad3`,
+   backtrace `waitForAnyAudioSlot ← menuOverlayInit ← mainGameLoop ←
+   mainBootstrapWorker`, matches s165/s173's signature). Unrelated to this
+   session's change; guard never had a chance to be exercised.
+2. **`videoframetickguard2`: informative clean pass.** Reached VI-1024,
+   completed the full 120s hold with all scripted stick inputs, and the
+   process was STILL ALIVE when the script's own timeout killed it
+   (`decisionN>=15033` at the last logged `[sched-tick]`) — no crash at all,
+   past both s192's 8972 and s198's 15418 death points for the `+1568`
+   crash. `[video-frame-tick-guard]` fired 0 times.
+3. **`videoframetickguard3`: informative, but died to a DIFFERENT crash.**
+   Died at hold-iter 27 (~30s into the hold), decisionN=9788, to a SIGBUS
+   that is a BYTE-FOR-BYTE MATCH to s194's single-occurrence
+   `processSceneNode+8772` crash: `si_addr=0x380630062`,
+   `pc=0x1012d89b4`/`far` matches, backtrace `processSceneNode` (x2,
+   duplicated frame) ← `traverseSceneGraphRecursive` ← `setupCameraMatrices`
+   ← `static_5_800C9BF0` ← `menuOverlayInit` ← `mainGameLoop` ←
+   `mainBootstrapWorker` — same duplicated-frame shape, same low bits
+   (`...630062`) in the faulting address as s194's `x9=0x0000000080630062`
+   (a KSEG0-tagged, zero-extended-not-sign-extended guest pointer added
+   directly to the rdram host base with no masking — s194 already
+   root-caused this exact mechanism by reading the register file, see
+   PORTING-STATE Session 194). `[video-frame-tick-guard]` fired 0 times
+   (crash is unrelated to this session's guard sites).
+
+### Rules out / narrows
+
+- **`runVideoFrameTick+1568` did NOT recur across 2 informative soaks**
+  (soaks 2 and 3 both passed cleanly through its 2 known prior death points,
+  8972 and 15418, without hitting it) — suggestive but NOT yet at this
+  project's own established bar (3 consecutive clean passes, the standard
+  applied to the 18th class in s195-s198) for calling it "very likely
+  fixed." The guard itself never fired (0/3 across all 3 soaks, including
+  the uninformative one) — still no same-run positive control, same
+  situation as every other guard added on a single/double occurrence in
+  this project's history. **One more informative soak (reaching past
+  decisionN~9800 without dying to `processSceneNode+8772` first) would
+  either complete the 3-pass bar or find the guard's positive control.**
+- **`processSceneNode+8772` is now CONFIRMED RECURRING, not the
+  single-occurrence s194 anomaly it was carried forward as** (s198's own
+  carried-forward list, item 4, explicitly called it "still single-occurrence,
+  non-recurring... out of scope per iron rule 4 until it recurs on its
+  own" — it just recurred, with an exact match down to the low 20 bits of
+  the faulting address). This is now the best-characterized open crash in
+  the project: s194 already identified the precise mechanism from the
+  register file alone (a KSEG0-tagged guest pointer, `0x80630062`, added
+  directly to the rdram host base with NO sign-extend-and-subtract, unlike
+  the standard `MEM_W` path) — someone inside `processSceneNode`
+  (`N64Recomp/RecompiledFuncs/funcs_4.c:13759-14873`) is doing raw pointer
+  arithmetic instead of going through `MEM_W`/`ADD32`. Both occurrences
+  landed within a ~50-decision window of each other (9741, 9788) — close
+  enough to suggest a specific, fairly deterministic trigger (likely a
+  specific scene-node's stored child/sibling pointer, corrupted or
+  never-masked at write time, walked at a consistent point during mission
+  startup) rather than a rare race.
+
+### Landed (this session)
+
+`N64Recomp/fixup_game_funcs.py` (outside this repo, flagged for user, not
+committed here) — 3-site `runVideoFrameTick` global-pointer guard,
+`ROGUESQ_LOG_VIDEO_FRAME_TICK_GUARD`. This repo: `scratch/agent/
+run_videoframetickguard{1,2,3}.sh` (gitignored, standing convention),
+`docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, this entry.
+
+### Carried-forward open items
+
+1. **`processSceneNode+8772` KSEG0-zero-extension bug is now the
+   top-priority open crash class** — 2/2 confirmed occurrences
+   (decisionN=9741 s194, decisionN=9788 this session), exact mechanism
+   already known from the register file (no disassembly needed): find the
+   call site inside `processSceneNode` that adds a raw, unmasked/
+   zero-extended 32-bit guest pointer to the rdram base instead of using
+   `MEM_W`/`ADD32`'s sign-extend-and-subtract convention, and either fix the
+   extension or guard the deref. Best next work unit.
+2. `runVideoFrameTick+1568`: 2 clean soaks (of 3 total, 1 uninformative) with
+   0 recurrence and 0 guard fires — one more informative soak would either
+   complete the project's 3-pass "very likely fixed" bar or catch a
+   same-run positive control. Not urgent relative to item 1 (which is now
+   closer to root-caused and killed a soak more recently/directly).
+3. The s197 `scene-node-cache-guard`, s190 `scene-node-ptr-guard`, and s196
+   `reinterpret-tile-guard` remain 0-fire across every soak to date — do
+   not re-touch on a null result alone.
+4. The 23rd crash class (`waitForAnyAudioSlot`) and the
+   `evalCubicSplineAtTime` SIGBUS family remain open, lower priority.
+5. Housekeeping still flagged, still not done: `docs/CURRENT-TRUTH.md`
+   remains well over the ~35 KB CLAUDE.md budget and the Read tool's 256 KB
+   limit; migrate durable material to `PROJECT-OVERVIEW.md` and prune,
+   paired with a real experiment.
