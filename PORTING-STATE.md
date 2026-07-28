@@ -19807,3 +19807,68 @@ that both survives cleanly AND reaches the traced call site.
 
 Full run artifact: `scratch/s73_post_a_scene/unlitmeshtracer7/run.log`
 (141,869 lines).
+
+## Session 212 (2026-07-28) — offline cross-reference of s210/s211 logs
+REFUTES the "shared ~60-75s trigger" hypothesis: the `vi_width=512`
+transition both logs share at ~74s is a benign, reproducible recipe event,
+not a stall trigger; s210's crash and s211's real stall are independently
+timed and structurally unrelated
+
+Ran NEXT.md step 1 exactly, zero new builds/runs: cross-referenced
+`unlitmeshtracer6/run.log` (s210, 143,093 lines, crashed) and
+`unlitmeshtracer7/run.log` (s211, 141,869 lines, stalled) for `[phase]`,
+`[thr-resume-skip]`, and `[vi-fs-decision] stalled=` state around the
+~60-75s window both prior sessions flagged as suspiciously close.
+
+**Finding 1 — the `vi_width=512` transition itself is not anomalous.** Both
+logs hit it at nearly the same point (s210: 75.2s/update_screen #4511;
+s211: 73.6s/update_screen #4415, ~1.6s apart) — but in BOTH logs this
+transition is followed by only a handful of transient `stalled=1` blips
+(s210: 6, then 1, then 1, interspersed with 152 `stalled=0` decisions over
+the next ~58,000 log lines; s211: 9 blips then 3 clean decisions) before
+`stalled=0` resumes with real `FIRE`/swap events and `rdpFs` climbing
+normally. This matches s183's prior finding that transient stalls are
+content-dependent and self-resolving, not the terminal freeze — i.e. this
+is a normal, reproducible feature of this recipe's craft-select-exit
+transition, not either bug's trigger.
+
+**Finding 2 — s211's REAL (permanent, never-recovers) stall does not onset
+at 73.6s at all; it onsets at decision #7840 of ~8032 total (log line
+140374), immediately adjacent to the single `[thr-resume-skip]` fire (line
+140370) and right before the process is killed at the 300s hold boundary.**
+The s211 PORTING-STATE write-up's framing ("vi_width transitions
+...->512 at 73.6s, then no further phase transition... rdpFs climbing to
+3770... then stalled=1 continuously to the end") was accurate about the
+eventual frozen state but did not distinguish the benign 73.6s transition
+from the actual stall onset ~200 decisions before the run ends — they are
+two separate events separated by the bulk of the log, not one.
+
+**Finding 3 — s210's crash happens during confirmed NORMAL (non-stalled)
+operation, not during any stall.** The last 3 `[vi-fs-decision]` lines
+before the `[CRASH]` block (lines 142904-142987, decisions #8261/#8288/#8295)
+all show `stalled=0` with active `FIRE reason=swap` events and `rdpFs=3772`
+still incrementing. The crash is not preceded by, or a consequence of, a
+stall condition — it happens mid-normal-execution, ~51 log lines before the
+SIGBUS.
+
+**Conclusion: Outcome B (clean null) from NEXT.md, with a bonus correction.**
+There is no shared trigger between s210's `evalCubicSplineAtTime` crash and
+s211's graphics-task-submission stall (item -35) — the ~10s proximity in
+the earlier write-up was an artifact of misreading the benign 73.6s
+transition as the stall's onset, when the real onset is ~200 decisions
+later, right at the run's natural end. The two failures are independent:
+s210 never reached a permanent stall before its unrelated crash; s211 never
+crashed and its stall correlates with the `[thr-resume-skip]`
+UAF-guard-adjacency already tracked under item -35 (not reopened this
+session, per NEXT.md). This closes the "shared trigger" question for good —
+no 3rd confirming run needed, the discriminating evidence was already in
+both existing logs.
+
+**Per NEXT.md step 2's fallback** (now the live path since step 1 was a
+clean dead end): next session should run a 4th soak with a deliberately
+VARIED recipe — drop the early `10:sr 25:sl 40:su` stick inputs (pre-craft-
+select camera nudges, not needed for the craft-select-to-leave flow) — to
+see whether removing them lets the run reach `renderUnlitMeshFaces` without
+hitting either s210's crash or s211's stall. Full analysis commands are
+reproducible via `grep -na`/`sed -n` on the two existing logs (no new
+artifacts needed for this session's finding).

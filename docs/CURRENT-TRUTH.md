@@ -663,9 +663,35 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s211)
+## Next steps, in order of expected value (s212)
 
--52. **(s211, BUDGET RULE 8 INVOKED) 3rd consecutive session (s209/s210/s211)
+-53. **(s212) Offline cross-reference of s210/s211 logs REFUTES the "shared
+    ~60-75s trigger" hypothesis from -52 below — clean Outcome B, no 3rd
+    confirming run needed.** Both logs hit `vi_width=512` at nearly the same
+    time (s210: 75.2s; s211: 73.6s) but this transition is a BENIGN,
+    reproducible recipe event (craft-select-exit), not a stall trigger —
+    both logs show only a handful of transient `stalled=1` blips right
+    after it, then `stalled=0`/real `FIRE` events resume for tens of
+    thousands more log lines. s211's REAL (permanent, never-recovers) stall
+    does not onset until decision #7840 of ~8032 (log line 140374, right
+    next to the `[thr-resume-skip]` fire and the 300s hold boundary) — ~200
+    decisions before the run ends, nowhere near 73.6s. s210's crash happens
+    during confirmed NORMAL, non-stalled operation (`stalled=0`, active
+    `FIRE` events, `rdpFs=3772` still incrementing in the 3 decisions
+    immediately before the `[CRASH]` block) — not a consequence of any
+    stall. **The two failures (s210's `evalCubicSplineAtTime` crash, s211's
+    item -35 stall) are independent; the earlier "~10s apart, suspicious"
+    framing was a misread of the benign transition as the stall's onset.**
+    Zero new builds/runs this session — this closes the question using only
+    the two existing logs. **Next work unit (per NEXT.md step 2's fallback,
+    now live): a 4th soak with a DELIBERATELY VARIED recipe** — drop the
+    early `10:sr 25:sl 40:su` stick inputs (pre-craft-select camera nudges,
+    not needed for the craft-select-to-leave flow) to see if removing them
+    lets the run reach `renderUnlitMeshFaces` without hitting either s210's
+    crash or s211's stall. Full detail: PORTING-STATE Session 212.
+
+-52. **(s211, SUPERSEDED s212 above — see -53; "shared trigger" question now
+    CLOSED, not open) 3rd consecutive session (s209/s210/s211)
     whose only soak attempt at reaching `renderUnlitMeshFaces` failed for a
     DIFFERENT reason each time — 0/4 total soaks across these 3 sessions have
     produced a live measurement of the `ctx->r16` question.** s211 re-ran the
