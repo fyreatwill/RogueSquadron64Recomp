@@ -13091,3 +13091,76 @@ covers this call site without checking. Alternatively, since soak 2 went
 fully crash-free, a 3rd soak (no rebuild needed, instruments already
 armed) would help decide whether soak 1's crash was a rare tail event or
 a reliably-recurring next blocker before investing in a guard.
+
+## Session 148 (2026-07-27) — read `reserveAndEmitDLEntry` against soak 1's backtrace (closes the "does `emit-dl-guard2`/`3` cover this site" question: no, wrong function), reran the exact countracefix battery a 3rd time — fully crash-free again, `do_rom_read` now 0/3, `reserveAndEmitDLEntry` 1/3 (rare tail event, not a reliably-recurring blocker)
+
+Per NEXT.md's own step 1/2: source-read before instrumenting, then one
+more repro soak, no rebuild.
+
+**Source read (`N64Recomp/RecompiledFuncs/funcs_3.c`):**
+`emit-dl-guard2`/`3` (s133-135) live inside `emitAllocatedDLCommand`
+(line 2412) — a **different function** from `reserveAndEmitDLEntry`
+(line 14487), the one that actually crashed in `countracefix1`. This
+closes s147's open question ("is this guard's coverage of *this* call
+path unconfirmed?") with a definite no — the two guards were never
+built against this crash site at all, they just share a name-adjacent
+function family. `reserveAndEmitDLEntry` itself has its own existing
+guard (`[dlentry-guard]`, s109) on its `arg_r4`/`s0` pointer
+(`0x80000000`-`0x80800000` range check) but the actual crash traces
+into `findAndUnlinkSmallestEntry` (`funcs_6.c:12472`), a bucketed
+best-fit free-list allocator that walks/unlinks singly-linked lists over
+fixed globals at `0x8011xxxx`/`0x8012xxxx` — a plausible SIGBUS site
+if that free-list's own internal pointers are ever corrupted (same
+"shared corruption race" shape as every other class in this family), but
+distinct from the args `[dlentry-guard]` already checks.
+
+**Soak (`countracefix3`):** exact same battery as `countracefix1`/`2`
+(`scratch/agent/run_countracefix3.sh`, no code change, no rebuild).
+Result: **fully crash-free** — `CRASH: 0` in the driver summary, 5920
+LLE tasks, process alive at the 58s wall-clock mark and killed on
+schedule by the harness, not by a signal. `thr-resume bad=1: 0`,
+`ost-wb SKIP_OOB: 4` (control fired, as expected), `UnhandledJump: 903`
+(a routine, non-fatal count seen throughout this family, not a new
+finding). All armed diagnostics for this crash family read 0: 0
+`[dlentry-guard]`, 0 `[emit-dl-guard2]`, 0 `[emit-dl-guard3]`, 0
+`[voice-active-gate-nz]`, 0 `do_rom_read`/`piDmaWorker` lines anywhere
+in the 84k-line log. `[dlentry-reserveAndEmit]` entry log fired (capped
+at 20, so the function is confirmed hot/reachable), all clean.
+
+**Combined across the 3-soak countracefix battery (s147 soak1/2 +
+s148 soak3):** `do_rom_read`/`piDmaWorker` corruption is **0/3** —
+closing the loop NEXT.md itself asked for ("2-3 more soaks... write it
+up as a second closure"). Thread B (s105-148, the longest-running open
+thread in this project) is closed with two independent clean
+confirmations, not one. `reserveAndEmitDLEntry` is **1/3** — informative
+as a rare tail event in the already-catalogued 14-class family (this
+project has now catalogued at least 17 distinct crash classes across
+s83-100; this is not a new, 18th one), not yet a reliably-recurring
+blocker. No guard written this session: per this thread's own
+established practice (s99's false-positive lesson, s133-137's
+"don't guard speculatively"), a fix needs the crash confirmed reachable
+*and* recurring before it's worth writing, and 1/3 doesn't clear that
+bar yet.
+
+**M3 status check:** this soak's 58s of fully crash-free time was still
+entirely inside the pre-mission **SELECT YOUR CRAFT**
+menu/hangar-selection scene — `vi_width` never left the 512/640 menu
+pair, last phase line `origin=0x006A2900 width=640`. M3's "done when"
+bar (60s of *in-mission* rendering, craft responds to synthetic input,
+0 stability counters) is not met by this result; it demonstrates menu-
+scene stability, not mission-scene stability, though it is the longest
+sustained crash-free stretch on this exact repro path observed to date.
+
+**Landed:** `scratch/agent/run_countracefix3.sh` (3rd soak in the
+`run_countracefix*.sh` family, same battery, tag `countracefix3`). No
+source/patch changes this session — pure read + repro, no rebuild.
+
+**Next work unit:** two reasonable directions, neither urgent-blocking:
+(a) one more countracefix-shape soak to move `reserveAndEmitDLEntry`'s
+rate from 1/3 toward a firmer read (2-3 soaks is this project's own
+established bar for "informative either way"); or (b) pivot off pure
+stability-soaking toward actually finding what input leaves **SELECT
+YOUR CRAFT** into a mission — unexplored territory; the existing
+`PROBE_KEYS`/stick schedule in `run_mission_keys.sh` was built to
+exercise the hold window for crash-hunting, not to test mission-entry
+inputs, so this is a genuinely new question, not a rerun of prior work.

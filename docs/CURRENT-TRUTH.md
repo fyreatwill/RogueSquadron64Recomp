@@ -671,17 +671,44 @@ cost three sessions before the recursive mutex.
     reads (vs. 5 pre-fix), 0/2 `do_rom_read` recurrences (vs. 9 prior
     occurrences) — soak 2 was the **first fully crash-free full soak**
     for this repro shape since s83. Full detail: PORTING-STATE s147.
-    **New top priority:** soak 1 died to the already-catalogued 14th
-    crash class (`reserveAndEmitDLEntry` via `submitSceneNodeRender`),
-    now the most-recently-observed blocker on this path — its existing
-    guards (`emit-dl-guard2`/`3`, s133-135) stayed 0/0 both soaks here,
-    so their coverage of *this* call path is unconfirmed. Read
-    `reserveAndEmitDLEntry`'s full body against the soak-1 backtrace
-    (`scratch/s73_post_a_scene/countracefix1/run.log:65215`) before
-    writing a new guard. A cheap first move (no rebuild): rerun
-    `run_countracefix1.sh`/`2.sh` once or twice more (no code change) to
-    see whether soak 1's crash was a rare tail event or the reliably-
-    recurring next blocker, before investing in a guard.
+    **s148 (2nd closure, per this item's own step 4):** reran the exact
+    same battery a 3rd time (`countracefix3`, pure repro, no code
+    change) — **fully crash-free again** (0 crashes, 5920 LLE tasks,
+    process alive at the 58s wall-clock mark, killed by the harness on
+    schedule, not by a signal). `do_rom_read`/`piDmaWorker` now stands
+    at **0/3 recurrences** across the full countracefix battery
+    (soak1-3), holding for a 2nd straight session — this is the
+    end-to-end validation this thread (s105-148) was chasing; Thread B
+    is closed with two independent clean confirmations, not one.
+    Source-read first (before soaking) established `emit-dl-guard2`/`3`
+    (s133-135) live in `emitAllocatedDLCommand` (`funcs_3.c:2412`), a
+    **different function** from the one that crashed in soak 1,
+    `reserveAndEmitDLEntry` (`funcs_3.c:14487`) — confirms those guards
+    were never expected to cover soak 1's crash site, closing that open
+    question from s147. `reserveAndEmitDLEntry` itself allocates via
+    `findAndUnlinkSmallestEntry` (`funcs_6.c:12472`), a bucketed
+    best-fit free-list walker over fixed globals at `0x8011xxxx`/
+    `0x8012xxxx` — a plausible SIGBUS site if that free-list's own
+    pointers are ever corrupted, but **did not recur this soak**
+    (0 `[dlentry-guard]` fires, 20/20 `[dlentry-reserveAndEmit]` entry
+    logs clean, 0 `[emit-dl-guard2]`/`3` fires as expected). Across the
+    3-soak countracefix battery, `reserveAndEmitDLEntry` is now **1/3**
+    — informative as a rare tail event in the already-catalogued 14-class
+    family, not (yet) a reliably-recurring blocker; no guard written this
+    session, per NEXT.md's own decision rule (a fix needs the crash
+    confirmed *reachable and recurring* first). **New top priority:**
+    M3's "done when" bar (60s of in-mission rendering, craft responds,
+    0 stability counters) is not yet met — this soak's 58s of
+    crash-free time was still the pre-mission **SELECT YOUR CRAFT**
+    menu/hangar-selection scene (`vi_width` never left the 512/640
+    menu pair; last phase line still `origin=0x006A2900`), not a
+    mission. Next work unit: either (a) one more countracefix-shape
+    soak to build a 3rd/4th crash-free data point and firm up the 1/3
+    `reserveAndEmitDLEntry` rate before deciding fix-vs-park, or (b)
+    pivot toward actually entering a mission from SELECT YOUR CRAFT
+    (unexplored: what input reachably leaves that menu into gameplay —
+    the existing `PROBE_KEYS`/stick schedule in `run_mission_keys.sh`
+    was built for hold-window soak coverage, not mission entry).
 
 0a. **CLOSED (s135): `emitAllocatedDLCommand` soak hypothesis parked,
     3-attempt budget exhausted per rule 8.** s133 → environment-side
