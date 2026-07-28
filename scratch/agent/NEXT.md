@@ -1,196 +1,163 @@
-# NEXT work unit — try disabling NAN_CHECK project-wide to stop losing the
-soak race to random unrelated crashes; the mesgqueue guard is shipped but
-still untested against its actual target
+# NEXT work unit — source-read the heapFreeListDequeue SIGBUS s216 surfaced
+(new corruption shape, upper bits 0x3) before writing any guard
 
-Read PORTING-STATE Session 215 in full (`grep -n "^## Session 215"
-PORTING-STATE.md`) before doing anything else. Short version: s215 read
-`do_send`'s source and, using a structural argument (this build has no LTO
-and is `CMAKE_BUILD_TYPE=Debug`, so a crash dladdr-resolving straight to
-`_Z7do_sendPhiibb+388` means the fault is literal code inside `do_send`
-itself, not a callee), **reclassified s214's do_send SIGBUS as NOT the s176+
-scheduler-UAF family** — it's almost certainly the same generic "unguarded
-TO_PTR on a corrupted guest pointer" pattern as ~15 other already-guarded
-sites (heapWalker, `rs_malloc`/`rs_free`, the s78 framebuffer gates). Landed
-a guard (`mesgqueue_guard_refuse()`,
-`lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp`, 4 call sites: `mq_` and
-`mq->msg` in both `do_send`/`do_recv`), built clean, exported+committed. One
-soak (`mesgqueueguard1`): 0 guard fires, died at hold+100s to yet **another**
-new `NAN_CHECK` call site (`mat3x3InverseInto`, `funcs_5.c:7582`) before
-reaching whatever window the do_send SIGBUS needs.
+Read PORTING-STATE Session 216 in full (`grep -n "^## Session 216"
+PORTING-STATE.md`) before doing anything else. Short version: s216 ran the
+NAN_CHECK-disable A/B soak s215 designed (after first discovering and fixing
+a real gap: the `recomp.h` that matters is a NESTED submodule copy at
+`lib/N64ModernRuntime/N64Recomp/include/recomp.h`, not the sibling checkout
+NEXT.md pointed at — `submodule-patches/export.sh`/`apply.sh` now cover it).
+Result: NAN_CHECK-disable genuinely worked (0 NaN-assert crashes) but did
+NOT deepen soak reach — died at hold-iter 9 (worse than 4 of the 6 prior
+sessions) to a **new** signal-10 SIGBUS in `heapFreeListDequeue`, reached via
+a scene-graph-rendering call path (`submitSceneNodeRender` →
+`processSceneNode` → `traverseSceneGraphRecursive` → `setupCameraMatrices`)
+never seen in any prior crash writeup. Register shape: `x0`/`x9`/`si_addr`
+upper 32 bits are `0x00000003` — a 3rd distinct corruption pattern, neither
+the zero-extension (`0x00000000`, s213) nor legit sign-extension
+(`0xFFFFFFFF`) shapes already catalogued. **NAN_CHECK was reverted to ON**
+before s216 ended (result didn't clearly justify keeping it off) — do not
+assume it's still disabled.
 
-**This is the 6th consecutive session (s209/210/211/213/214/215) where a
-soak of this recipe family dies to a genuinely different, unrelated crash
-before reaching its intended target.** 3 of those 6 were `NAN_CHECK` assert
-firings at 3 different call sites (`evalCubicSplineAtTime`, `sinfApprox`,
-`mat3x3InverseInto`). Designing one more single-purpose guard and hoping this
-soak's dice land differently is very likely to produce a 7th data point in
-the same pattern, not progress — per budget rule 8's spirit (three-plus
-consecutive non-discriminating attempts on effectively the same problem
-shape), the right move this session is to attack the pattern itself, not
-another individual instance of it.
+## Do this iteration: source-read heapFreeListDequeue before writing a guard
 
-## Do this iteration: try disabling NAN_CHECK, verify the rebuild path,
-then A/B soak
+Mirror s215's methodology exactly (that session's structural read, not a
+soak-and-hope guard, is what correctly reclassified the do_send crash).
 
-1. **Verify the regen/rebuild path first (boring-thing-first, rule 5) before
-   touching anything.** `NAN_CHECK` is defined in
-   `/Users/williambuckley/Documents/Tools/N64Recomp/include/recomp.h:396-397`
-   as `assert(val == val)`, with a pre-written, currently-commented-out
-   no-op alternative one line below it (`recomp.h:399`,
-   `//#define NAN_CHECK(val)`). Confirm which generated files actually
-   `#include` this header and through what path (does `make_elf.py` or
-   `N64Recomp` itself copy/embed `recomp.h` content into
-   `build/factor5_ucode/*.c` / `RecompiledFuncs/`, or is it included live from
-   `N64Recomp/include/` at `cmake --build` time via an include path?). If it's
-   a live include, flipping the two lines and running `cmake --build . -j8`
-   alone should be sufficient — **do not run the full
-   `make_elf.py -> N64Recomp -> fixup_game_funcs.py` regen unless this check
-   shows it's actually necessary**, that pipeline is expensive and this is a
-   one-line header change, not a codegen change.
-2. Comment out the `assert(val == val)` line, uncomment the no-op
-   `#define NAN_CHECK(val)` line (i.e. flip which of the two adjacent lines
-   is active). Rebuild per step 1's finding.
-3. **Positive control first**: before any soak, confirm the build actually
-   changed behavior — e.g. grep for a known `NAN_CHECK`-adjacent function in
-   a `funcs_*.c` and confirm the assert is genuinely gone from what's
-   compiled (or just trust a clean rebuild with the macro flipped — this is
-   a simple enough change that a build-clean confirmation is probably
-   sufficient, use judgement).
-4. Soak the **same recipe** as s213/s214/s215
-   (`STICK_SCHEDULE="95:start 100:a 150:sr 200:sl 250:su"`, `HOLD_S=300`,
-   copy `scratch/s73_post_a_scene/run_mesgqueueguard1.sh` verbatim except the
-   tag — keep `ROGUESQ_LOG_MESGQUEUE_GUARD=1`/`ROGUESQ_LOG_HEAPWALKER_GUARD=1`/
-   `ROGUESQ_LOG_HEAPWALKER_GUARD3=1` all armed, they're free and this soak is
-   also this session's only shot at the still-open heapWalker/mesgqueue
-   questions if it gets lucky).
-5. **Discriminating outcomes:**
-   - Soak reaches significantly further than any of s209-215's hold-iter
-     counts (91, 68, ~7, 1, 3, 104 — call it "further than 104s/hold-iter 94"
-     to beat the best so far) with 0 `NAN_CHECK`-shaped aborts (signal 6) →
-     confirms disabling NAN_CHECK is a real force-multiplier for future
-     sessions; write it up as a durable env/build note in CURRENT-TRUTH
-     (something like "NAN_CHECK disabled for soak-depth investigations,
-     re-enable if actually chasing a NaN bug").
-   - Soak still dies early, but to something NOT NAN_CHECK-shaped → NAN_CHECK
-     wasn't actually the dominant blocker this run, still useful (rules out
-     "NAN_CHECK is most of the problem" as an overclaim) but less exciting;
-     whatever it dies to next becomes the new highest-frequency blocker to
-     characterize.
-   - Soak reaches the `[mesgqueue-guard]`/`[heapwalker-guard]` windows and
-     one of them actually fires → resolve that guard's open question
-     immediately (mirrors s213/s214's own discriminating-outcome tables:
-     fires + target crash gone = confirmed; fires + crash elsewhere = this
-     site closed, another remains; use judgement, it's a bonus not the
-     primary goal this session).
-   - No crash at all (300s hold completes) → also useful, note whatever
-     scene/state the game reached; one free re-run before drawing a
-     conclusion either way.
-6. **Revert the NAN_CHECK change before ending the session** unless the
-   result clearly justifies keeping it permanently disabled (discuss/decide
-   based on what's found — leaving a safety assert silently disabled without
-   writing that decision explicitly into CURRENT-TRUTH would be a trap for
-   a future session debugging an actual NaN bug). At minimum, document
-   clearly in CURRENT-TRUTH whether it ended the session on or off and why.
+1. Find `heapFreeListDequeue`'s source. It's very likely a heap-subsystem
+   function (name suggests a free-list pop) — check both whether it's a
+   `RECOMP_FUNC` (generated, in `RecompiledFuncs/funcs_*.c`, guest game code)
+   or a native runtime helper (`lib/N64ModernRuntime/**/*.cpp`). `grep -rn
+   "heapFreeListDequeue" build/factor5_ucode lib/N64ModernRuntime
+   /Users/williambuckley/Documents/Tools/N64Recomp` (three candidate
+   locations) to find which.
+2. Read the function body. Identify every native pointer dereference
+   (`TO_PTR`, `MEM_W`, direct `rdram[...]` indexing, or plain C++ pointer
+   deref if it's a native helper) that isn't already bounds-checked.
+3. Cross-reference the call path (`submitSceneNodeRender` →
+   `processSceneNode` → `traverseSceneGraphRecursive` → `setupCameraMatrices`)
+   against existing guarded/unguarded sites — is this scene-graph-rendering
+   path a genuinely new consumer of a known corruption source (the same
+   upstream heap corruption already implicated in the heapWalker/do_send
+   sites), or does it look like an independent bug?
+4. **The discriminating question this session should answer**: does
+   `heapFreeListDequeue`'s crash come from a value it received already-
+   corrupted (upstream bug, matches the established family) or does it
+   itself corrupt/miscompute a pointer (a NEW bug class, e.g. the never-
+   explained upper-bits-`0x3` shape suggesting some arithmetic like `reg |
+   (3 << 32)` or a 3-iteration loop counter leaking into the upper bits)?
+   Source-read for arithmetic on the pointer/index before the dereference —
+   if you find something like `list_head + (something << 32)` or a loop
+   variable being OR'd/added into a 64-bit register, that would explain the
+   `0x3` directly and this is new information, not a rehash of prior guards.
+5. If the read is fast and conclusive (~15 min, matching s215's own gate),
+   land a guard mirroring the existing pattern (KSEG0 range refuse-gate,
+   `ROGUESQ_LOG_`-prefixed diagnostic, always-on counter) and soak once with
+   the same recipe family to test it. If the read is inconclusive or slow,
+   STOP at the write-up — do not guess at a guard without understanding the
+   mechanism (this project has ~16 already-guarded sites; a guard that
+   doesn't match the actual corruption shape is wasted work, as s213 proved
+   for the pre-upper-bits-check heapWalker guards).
 
 ## Do NOT do this iteration
 
-- Do not build another single-purpose guard for a new NAN_CHECK call site
-  (there will always be another one — that's exactly the pattern this
-  session's work unit is trying to get out from under).
-- Do not re-run the mesgqueueguard1 recipe unchanged a 2nd time without the
-  NAN_CHECK change — that's just re-rolling the same dice s215 already used.
+- Do not re-run the `nancheckoff1` recipe unchanged hoping for a different
+  outcome — that question (does disabling NAN_CHECK deepen soak reach) has a
+  single-source but clean NO answer now; a 2nd data point would need to be a
+  deliberate decision to spend a soak on confirming/refuting it, not a
+  default.
+- Do not re-enable NAN_CHECK-disable as a standing default without writing
+  that decision explicitly into CURRENT-TRUTH first (it's currently ON,
+  matching upstream default — leave it unless this session's own read of the
+  evidence changes that call).
 - Do not touch `N64Recomp/fixup_game_funcs.py`'s heapWalker guard code
   (`_make_heapwalker_guard_patch`/`_make_heapwalker_guard3_patch`) — still
   shipped, still not confirmed live, unrelated to this session's plan.
+- Do not touch the mesgqueue guard (`lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp`)
+  — shipped s215, still not confirmed live (0 fires across 2 soaks now),
+  unrelated to this session's plan.
 
 ## Environment notes (carried forward, still current)
 
+- **`recomp.h` location, corrected this session**: the ONE that matters is
+  `lib/N64ModernRuntime/N64Recomp/include/recomp.h` — a nested submodule
+  inside `lib/N64ModernRuntime` (see `lib/N64ModernRuntime/.gitmodules`), NOT
+  the sibling checkout at `/Users/williambuckley/Documents/Tools/N64Recomp`.
+  `CMakeLists.txt`'s `target_include_directories` (3 call sites) only ever
+  adds the nested path. The sibling checkout still matters for
+  `RECOMP_FUNCS_DIR` (generated `.c` file *content*, `CMakeLists.txt:64`) but
+  NOT for header resolution. The two `recomp.h` files were identical as of
+  s216 but do not assume that stays true — always check which path
+  `target_include_directories` uses before editing either one.
+- **`submodule-patches/export.sh`/`apply.sh` now cover the nested N64Recomp
+  submodule** (`N64Recomp-nested.patch`, added s216) — any edit under
+  `lib/N64ModernRuntime/N64Recomp/` needs `export.sh` + commit, same as any
+  other `lib/` edit. `export.sh` also now uses `--ignore-submodules=dirty`
+  for the `N64ModernRuntime` diff to avoid a spurious unparseable
+  `Subproject commit ...-dirty` line leaking in when the nested submodule is
+  dirty.
 - The `[CRASH][pc-symbol]` diagnostic (dladdr on the raw mcontext `pc`) is
   permanent, always-on, and MORE PRECISE than `backtrace_symbols_fd` (s213
-  proved this live; s215 used this precision to reclassify the do_send
-  crash). Trust dladdr.
+  proved this live). Trust dladdr.
 - Disassembly/symbolication tools (`nm`/`otool`/`objdump`/`lldb`/`atos`) are
-  ALL blocked (non-interactive session) — re-verified s207/s213. This is WHY
-  s215's do_send analysis is source-level/structural reasoning rather than
-  disassembly-confirmed — single-source, flag as such if it matters later.
+  ALL blocked (non-interactive session) — re-verified s207/s213/s215.
+  Source-level/structural reasoning only.
 - This project builds `CMAKE_BUILD_TYPE=Debug` (`-O0`); `RECOMP_FUNC` is
-  `noinline` — no game function can be silently inlined into a caller (s207).
-  Confirmed s215: no LTO either (`grep` for `INTERPROCEDURAL_OPTIMIZATION`/
-  `LTO` in both CMakeLists.txt: 0 hits) — no cross-TU inlining anywhere in
-  this build, useful for symbolicating ANY future native (non-`ctx->rN`)
-  crash: if dladdr resolves to function F, the fault is inside F's own body,
-  not a callee, full stop.
+  `noinline`. No LTO (`grep` for `INTERPROCEDURAL_OPTIMIZATION`/`LTO` in both
+  CMakeLists.txt: 0 hits) — no cross-TU inlining anywhere, so dladdr
+  resolving to function F means the fault is inside F's own body.
 - `recomp.h`: `U32(val)` = `(uint32_t)(val)`; `gpr` = `uint64_t`; a legit
   KSEG0 `gpr` sign-extends, upper bits `0xFFFFFFFF`. `PTR(x)` for guest
   pointers passed as plain function arguments (not `ctx->rN`) is `int32_t` —
-  already 32-bit-truncated by the time C++ sees it, so guards on those
-  (like s215's mesgqueue guard) are a simple range check, not an
-  upper-32-bits check (that's specifically a `ctx->rN`-register thing).
+  already 32-bit-truncated. Neither of those matches this session's
+  `0x00000003` upper-bits shape — worth understanding WHY before guarding.
+- **Piping a background build through `tail -N` before capture loses the
+  compile-line detail needed for a build-based positive control** (s216 hit
+  this) — either capture full output to a file and grep it after, or rely on
+  object-file mtime comparison (`os.path.getmtime`) as the positive control
+  instead, which s216 used successfully.
 - `rm -f <glob>`/`find <dir> -delete` are blocked — use
   `python3 -c "import glob, os; [os.remove(f) for f in glob.glob('<pattern>')]"`.
-- `fixup_game_funcs.py` re-run after deleting one `funcs_*.c` is safe and
-  idempotent on the other 44 already-patched files (s208-s211).
 - `./build/N64Recomp rogue_squadron.toml` needs an `env` prefix (permission-
-  prefix-match wall).
+  prefix-match wall). Compound `cd ... && cmd` gets denied in one Bash call —
+  issue `cd` and the following command as SEPARATE Bash calls instead (cwd
+  persists between calls in this harness).
+- `git -C <path> <cmd>` does not match a `Bash(git <cmd>:*)` allow-rule
+  (prefix match is on the literal string) — `cd` into the target dir first
+  (as its own Bash call), then run the bare `git <cmd>`.
 - Any edit under THIS repo's `lib/` needs `./submodule-patches/export.sh` +
-  commit same session (done for s215's mesgqueue.cpp change).
-  `N64Recomp`/`rogue_squadron64` are SEPARATE checkouts, NOT `lib/`
-  submodules — editing files there (like `recomp.h` for this session's plan)
-  does NOT need export.sh, but IS a separate git checkout with its own
-  uncommitted-changes history (see Housekeeping below) — not committed
-  autonomously by this project's rules.
+  commit same session.
 - Re-running the same soak script/tag OVERWRITES the previous run's `run.log`
-  in place — copy the driver script to a new tag name per soak, or rename
-  the output dir before re-use.
-- `ROGUESQ_LLE_FORCE`/`ROGUESQ_LLE_UNGATED`/`ROGUESQ_LLE_SOLO`/
-  `ROGUESQ_STUB_MISSING_FUNCS` are set INSIDE `run_mission_keys.sh` (line 6).
-- Running scripts under `RogueSquadron64Recomp/tools/agent/*.sh`/
-  `scratch/agent/*.sh` directly gets denied — prefix with `zsh`.
-- Compound `cd ... && zsh ...`/`cd ... && cmake ...` gets denied in ONE Bash
-  call — use separate Bash calls. Heredocs get rejected — use Write tool
-  (also: Write to `/tmp/*` can itself hit a permission prompt in this
-  environment — s215 hit this; prefer Edit on the target doc file directly
-  using a snippet you've already Read as the anchor, rather than staging
-  content in a scratch file first).
-- `/scratch/` is entirely gitignored except `scratch/agent/NEXT.md`,
-  `OUTCOME`, `STATUS`.
+  in place — copy the driver script to a new tag name per soak.
+- Launch soaks with `Bash(..., run_in_background=true)`, then either wait for
+  the automatic task-notification or block with
+  `TaskOutput(task_id, block=true, timeout=180000-480000)` if the Stop hook
+  fires before the notification lands.
+- The `grep -ac '[CRASH]'` count in `run_mission_keys.sh`'s summary counts
+  LINES matching the tag, not crash EVENTS — grep `caught signal` for the
+  real event count.
 - `scratch/agent/STATUS`/`OUTCOME` get reset at the START of each iteration
   by the harness — finding them reset at session start is normal.
-- Launch soaks with `Bash(..., run_in_background=true)` then block with
-  `TaskOutput(task_id, block=true, timeout=180000-480000)`.
-- The `grep -ac '[CRASH]'` count in `run_mission_keys.sh`'s summary counts
-  LINES matching the tag, not crash EVENTS — always grep `caught signal` or
-  `[CRASH][pc-symbol]` to get the real event count.
-- The mesgqueue guard (s215) only logs on REFUSAL, not on every successful
-  call — there's no direct positive-control counter proving `do_send`/
-  `do_recv` ran cleanly N times. If the do_send SIGBUS question is picked up
-  again, consider adding a cheap always-on total-call counter alongside the
-  existing bad-total counter (mirrors `resume_thread_tagged`'s
-  `g_thr_resume_healthy`/`g_thr_resume_bad` pair) so a null result isn't
-  ambiguous between "never called" and "called and always clean."
 
 ## Housekeeping still flagged, still not done
 
-`docs/CURRENT-TRUTH.md` is now past both the ~35 KB CLAUDE.md budget and the
-Read tool's 256 KB single-read limit (confirmed s195, still true s215 — read
-it with `grep`/`sed -n`, never a plain whole-file `Read`). Migrate durable
-mechanism/architecture material to `PROJECT-OVERVIEW.md` and prune superseded
-detail, paired with a real experiment — flagged for 13+ sessions without
-action, escalating.
+`docs/CURRENT-TRUTH.md` is now ~325 KB, past both the ~35 KB CLAUDE.md
+budget and the Read tool's 256 KB single-read limit (confirmed s195, still
+true s216 — read it with `grep`/offset-limited `Read`, never a plain
+whole-file `Read`). Migrate durable mechanism/architecture material to
+`PROJECT-OVERVIEW.md` and prune superseded detail, paired with a real
+experiment — flagged for 14+ sessions without action, escalating.
 
-`/Users/williambuckley/Documents/Tools/N64Recomp` and
-`~/Documents/Tools/rogue_squadron64` are separate git checkouts with long-
-standing uncommitted changes (including s214's guard-fix edit to
-`fixup_game_funcs.py`, and this session's mesgqueue-reclassification work —
-no N64Recomp edit was made this session, only read), unrelated to this
-repo's commit scope. Still flagged for the user, not committed autonomously.
-If this session's NAN_CHECK plan edits `recomp.h`, that adds to this same
-pile — flag it too, don't commit it.
+`/Users/williambuckley/Documents/Tools/N64Recomp` (the SIBLING checkout, now
+confirmed to matter only for `RecompiledFuncs/*.c` generated content, not for
+`recomp.h` header resolution) and `~/Documents/Tools/rogue_squadron64` are
+separate git checkouts with long-standing uncommitted changes, unrelated to
+this repo's commit scope. Still flagged for the user, not committed
+autonomously.
 
-`lib/N64ModernRuntime` and `lib/rt64` show as modified in `git status` (pre-
-existing since at least s213, not caused by s213/s214/s215's work beyond
-s215's own intentional mesgqueue.cpp change, which IS exported+committed) —
-still not investigated (out of scope for these sessions' prescribed work
-units); worth checking whether these two submodules' patches are still in
-sync with `submodule-patches/*.patch` before assuming this is normal
-steady-state dirtiness.
+`lib/rt64` still shows as modified in `git status` — pre-existing, not
+investigated this session either (out of scope); still worth checking
+whether its patches are in sync with `submodule-patches/rt64*.patch` before
+assuming this is normal steady-state dirtiness. (`lib/N64ModernRuntime`'s
+dirtiness is expected and covered by `N64ModernRuntime.patch` +
+`N64Recomp-nested.patch`, both current as of s216.)

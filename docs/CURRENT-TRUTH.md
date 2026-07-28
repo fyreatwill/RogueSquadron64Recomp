@@ -663,9 +663,57 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s215)
+## Next steps, in order of expected value (s216)
 
--56. **(s215) do_send SIGBUS reclassified: NOT the s176+ scheduler-UAF
+-57. **(s216) NAN_CHECK-disable A/B soak ran: confirms the mechanism works (0
+    asserts) but REFUTES it as the dominant blocker — died even earlier
+    (hold-iter 9) to a genuinely new SIGBUS. NAN_CHECK is back ON.** Executed
+    -56's plan below. Found and fixed a real gap first: the `recomp.h` that
+    matters is NOT the sibling checkout -56/NEXT.md pointed at
+    (`/Users/williambuckley/Documents/Tools/N64Recomp/include/recomp.h`) — it's
+    a SECOND, nested copy at
+    `lib/N64ModernRuntime/N64Recomp/include/recomp.h` (a nested submodule of
+    `lib/N64ModernRuntime`; `CMakeLists.txt`'s `target_include_directories`
+    only ever points there). The two files were byte-identical before this
+    session, which is why this went unnoticed, but the nested one is the one
+    the build actually uses, it IS under this repo's `lib/`, and
+    `submodule-patches/export.sh`/`apply.sh` had **zero coverage** for it —
+    any edit there was silently unprotected. Fixed: added
+    `N64Recomp-nested.patch` export/apply to both scripts (also added
+    `--ignore-submodules=dirty` to the `N64ModernRuntime` diff line — a dirty
+    nested submodule otherwise leaks an unparseable `Subproject commit
+    ...-dirty` line into `N64ModernRuntime.patch`). This fix is durable and
+    kept regardless of the NAN_CHECK experiment's outcome.
+
+    Flipped the nested `recomp.h`'s NAN_CHECK to the no-op, `cmake --build`
+    only (confirmed live include, no regen needed), positive-control via
+    object mtime (`funcs_42.c.o` recompiled 42s after the header edit).
+    Soaked the identical s213/214/215 recipe (`nancheckoff1`): **0 signal-6
+    NaN-assert events** (mechanism genuinely works), but died at **hold-iter
+    9** — worse than 4 of the 6 prior sessions (91, 68, ~7, 1, 3, 104) — to a
+    **new** signal-10 SIGBUS in `heapFreeListDequeue` (via
+    `submitSceneNodeRender`/`processSceneNode`/`traverseSceneGraphRecursive`/
+    `setupCameraMatrices`, a scene-graph-rendering path not seen in any prior
+    crash writeup this lineage). Corruption shape is also new: upper 32 bits
+    of the wild pointer are `0x00000003` (`x0`/`x9`/`si_addr`), not the
+    previously-catalogued `0x00000000` (s213 zero-extension) or `0xFFFFFFFF`
+    (legit sign-extension) — a 3rd distinct corruption pattern, not yet
+    explained.
+
+    **Conclusion (single-source, one soak): NAN_CHECK was real but was never
+    "the" dominant blocker** — of 7 sessions now (s209-211, s213-216), NaN
+    asserts explain 3 early deaths and unguarded-`TO_PTR`-shaped SIGBUS
+    explains the rest; removing one slice doesn't shrink the other.
+    Per NEXT.md's own bar ("revert unless the result clearly justifies
+    keeping it disabled"), reverted: `recomp.h` restored to
+    `assert(val == val)`, patch re-exported to 0 lines (confirmed empty),
+    rebuilt clean. **NAN_CHECK is ON at session end.** New lead for a future
+    session (not chased this session, rule 8): `heapFreeListDequeue`'s
+    upper-bits-`0x3` SIGBUS, needs its own source-read-first pass mirroring
+    s215's do_send methodology before any guard is written. Full detail:
+    PORTING-STATE Session 216.
+
+-56. **(s215, A/B-tested s216 above — NAN_CHECK reverted, see -57) do_send SIGBUS reclassified: NOT the s176+ scheduler-UAF
     family — a mesgqueue guard is now shipped but untested live; the bigger
     lead is disabling `NAN_CHECK` project-wide.** s214 hedged that the
     `do_send`/`mesgqueue.cpp` SIGBUS "looks like" a crash variant of the

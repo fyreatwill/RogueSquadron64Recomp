@@ -1,10 +1,11 @@
 #!/bin/bash
 # Re-apply the submodule working-tree patches after any submodule reset.
 #
-# lib/N64ModernRuntime and lib/rt64 (and rt64's own nested contrib submodules)
-# carry uncommitted working-tree changes that months of this port depend on:
-# the shared-DMEM serialization, the overlay loader, the RT64 assert-guard
-# chain, the Metal/plume additions. If a submodule ever gets reset, run this.
+# lib/N64ModernRuntime and lib/rt64 (and rt64's own nested contrib submodules,
+# plus N64ModernRuntime's own nested N64Recomp submodule) carry uncommitted
+# working-tree changes that months of this port depend on: the shared-DMEM
+# serialization, the overlay loader, the RT64 assert-guard chain, the
+# Metal/plume additions. If a submodule ever gets reset, run this.
 #
 # Regenerate the patches after making new submodule edits:
 #   ./submodule-patches/export.sh
@@ -26,6 +27,7 @@ apply_one() { # $1 = submodule path, $2 = patch file
 }
 
 apply_one lib/N64ModernRuntime            N64ModernRuntime.patch
+apply_one lib/N64ModernRuntime/N64Recomp  N64Recomp-nested.patch
 apply_one lib/rt64                        rt64.patch
 apply_one lib/rt64/src/contrib/hlslpp     rt64-hlslpp.patch
 apply_one lib/rt64/src/contrib/plume      rt64-plume.patch

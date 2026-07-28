@@ -20205,3 +20205,133 @@ before/after soak-depth comparison, not a rushed addition here.
 (`submodule-patches/N64ModernRuntime.patch`) + committed this session. Soak
 artifacts: `scratch/s73_post_a_scene/mesgqueueguard1/` (run.log, screenshots),
 driver script `scratch/s73_post_a_scene/run_mesgqueueguard1.sh`.
+
+## Session 216 (2026-07-28) — corrected NEXT.md's file-path assumption (the
+NAN_CHECK header that matters is a nested submodule, uncovered by
+export.sh/apply.sh until this session), executed the NAN_CHECK-disable A/B
+soak s215 designed, and got a clean discriminating result: disabling
+NAN_CHECK produces 0 NaN-assert crashes but does NOT deepen soak reach —
+died at hold-iter 9 to a genuinely new, previously-uncatalogued SIGBUS in
+`heapFreeListDequeue` with a novel corruption shape, refuting "NAN_CHECK is
+the dominant blocker" as an overclaim; reverted per plan
+
+### Boring-thing-first check (step 1 of NEXT.md's plan) found a real gap
+
+Before touching anything, verified which `recomp.h` the build actually
+compiles against, per rule 5. **NEXT.md's premise was wrong**: it pointed at
+`/Users/williambuckley/Documents/Tools/N64Recomp/include/recomp.h` (the
+separate sibling checkout) and reasoned edits there wouldn't need
+`export.sh` because that checkout isn't under this repo's `lib/`. But
+`CMakeLists.txt:96/157/268` (`target_include_directories`) only ever adds
+`${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/N64Recomp/include` — a **second,
+nested copy of N64Recomp that lives inside the `lib/N64ModernRuntime`
+submodule as its own nested submodule** (`lib/N64ModernRuntime/.gitmodules`
+has `[submodule "N64Recomp"] path = N64Recomp`). `RECOMP_FUNCS_DIR`
+(`CMakeLists.txt:64`, `${CMAKE_SOURCE_DIR}/../N64Recomp/RecompiledFuncs`)
+does pull generated `.c` files from the sibling checkout, but their
+`#include` of `recomp.h` resolves through the include path to the **nested**
+copy, not the sibling one. The two files were byte-identical
+(`diff` = no output) before this session's edit, which is why nobody had
+been burned by this yet — but the nested copy is the one that's live, and it
+**is** under this repo's `lib/`, so the "any edit under lib/ needs
+export.sh + commit" hard rule applies to it.
+
+Checked coverage: `submodule-patches/export.sh`/`apply.sh` only handled
+`lib/N64ModernRuntime`, `lib/rt64`, and rt64's two nested contrib submodules
+— **zero coverage for `lib/N64ModernRuntime/N64Recomp`**. Any prior or
+future edit to files under that nested submodule (recomp.h or otherwise)
+would have been silently unprotected: invisible to `export.sh`, lost on any
+reset of the parent submodule, no patch to restore it from. Fixed this
+session: added a `N64Recomp-nested.patch` export/apply pair to both scripts
+(`submodule-patches/export.sh`, `submodule-patches/apply.sh`). Also had to
+add `--ignore-submodules=dirty` to the `N64ModernRuntime` diff line —
+without it, a dirty nested `N64Recomp` leaks a spurious
+`Subproject commit ...-dirty` pointer line into `N64ModernRuntime.patch`
+that `git apply` can't consume (caught this live: `N64ModernRuntime.patch`
+grew from 958 to 964 lines on first export, traced to exactly this, fixed
+before it was committed).
+
+This gap-fix is a durable, standalone improvement independent of the
+NAN_CHECK experiment's outcome — kept regardless of what the soak showed.
+
+### NAN_CHECK flip, positive control, soak
+
+Edited `lib/N64ModernRuntime/N64Recomp/include/recomp.h:396-399` (swapped
+which of the two adjacent `#define NAN_CHECK` lines is active — the no-op
+alternative was already pre-written per s215). `cmake --build . -j8` only
+(no full regen — confirmed live include, not baked into generated code, per
+NEXT.md's step 1 question). Build clean, only pre-existing warnings.
+**Positive control**: build log's compile lines were lost (piped through
+`tail -100` before capture, a self-inflicted mistake), so confirmed via
+object mtimes instead — `funcs_42.c.o` mtime was 42s newer than the
+`recomp.h` edit, proving the dependency was picked up and the object
+actually recompiled, not stale. Exported+committed the flip
+(`submodule-patches/N64Recomp-nested.patch`, 18 lines) before soaking.
+
+Soak `nancheckoff1` (`scratch/s73_post_a_scene/run_nancheckoff1.sh`,
+identical env/`STICK_SCHEDULE`/`HOLD_S=300` to s213/214/215's recipe):
+
+- **0 signal-6 (NAN_CHECK assert) events** — the flip worked as intended,
+  confirming NAN_CHECK really was firing in 3 of the prior 6 sessions and is
+  now genuinely suppressed.
+- **Died at hold-iter 9** (~9s into the 300s hold) to **signal 10 (Bus
+  error)** — `[CRASH][pc-symbol] pc=0x105102768 sym=heapFreeListDequeue+12952
+  base=0x104d84000`. Backtrace: `heapFreeListDequeue` ← `submitSceneNodeRender`
+  ← `processSceneNode` ← `traverseSceneGraphRecursive` ← `setupCameraMatrices`
+  ← `static_5_800AAD9C` ← `static_5_800C6854` ← `menuOverlayInit` ←
+  `mainGameLoop` ← `mainBootstrapWorker` — a scene-graph-rendering call path,
+  not seen in any prior do_send/heapWalker crash writeup.
+- `si_addr=0x380000000`, `x0=0x0000000300000000`, `x9=0x0000000300000000` —
+  a **new corruption shape**: upper 32 bits of the corrupted 64-bit value are
+  `0x00000003`, not the previously-catalogued `0x00000000` (s213's heapWalker
+  zero-extension case) or `0xFFFFFFFF` (legit KSEG0 sign-extension). Low 32
+  bits (`0x80000000`) are exactly KSEG0 base — consistent with the general
+  "corrupted-guest-pointer" family, but a corruption pattern not seen before.
+- `[mesgqueue-guard]`/`[heapwalker-guard]`/`[heapwalker-guard3]` fired **0**
+  times — process died before reaching whichever window those need, same as
+  every prior session in this lineage.
+
+hold-iter 9 sits in the LOW end of the s209-215 range (91, 68, ~7, 1, 3,
+104) — worse than 4 of 6 prior sessions, only beating s213 (1) and s214 (3).
+
+### Discriminating outcome and decision
+
+Matches NEXT.md's 2nd outcome exactly: **"Soak still dies early, but to
+something NOT NAN_CHECK-shaped → NAN_CHECK wasn't actually the dominant
+blocker this run... whatever it dies to next becomes the new
+highest-frequency blocker to characterize."** Single soak (one data point,
+per rule 8 budget this session did not spend a 2nd/3rd soak chasing it), but
+decisive enough on its own terms: disabling NAN_CHECK measurably worked (0
+asserts) yet did NOT produce a deeper run — it does not "clearly justify
+keeping it permanently disabled" per NEXT.md step 6's bar, so **reverted**
+before ending the session (`recomp.h` restored to `assert(val == val)` as
+default-active, `N64Recomp-nested.patch` re-exported back to 0 lines,
+confirmed empty; rebuilt clean to restore the pre-session binary). NAN_CHECK
+is back ON at session end.
+
+### Rules out / reframes
+
+**Refutes "NAN_CHECK is most of the problem" as an overclaim** (single-source
+— one soak). The pattern across 7 sessions now (s209-211, s213-216) is not
+"one dominant blocker to fix" but a wide population of independent,
+low-frequency corrupted-guest-pointer-shaped crashes at different call
+sites, of which NAN_CHECK-family asserts were only ~43% (3/7) of observed
+early deaths — disabling them removes that slice but the remaining slice
+(SIGBUS at unguarded `TO_PTR`-style sites) is at least as deep, per this
+run's hold-iter 9.
+
+**New lead, not acted on this session** (rule 8: don't chase a 1-occurrence
+crash into a new guard the same session that found it): `heapFreeListDequeue`
+SIGBUS via the scene-graph rendering path, upper-bits-`0x3` corruption
+pattern — distinct from every previously-catalogued corruption shape
+(`0x0` zero-extension, `0xFFFFFFFF` sign-extension). Whether this is a new
+independent heap-corruption source or the same upstream corruption manifesting
+differently at a different consumer is unknown — needs its own
+source-read-first session mirroring s215's do_send methodology, not a soak-
+and-hope guard.
+
+**Full detail**: this entry. Code:
+`lib/N64ModernRuntime/N64Recomp/include/recomp.h` (reverted, net no-op at
+session end), `submodule-patches/export.sh`/`apply.sh` (durable fix, kept).
+Soak artifacts: `scratch/s73_post_a_scene/nancheckoff1/` (run.log,
+screenshots), driver script `scratch/s73_post_a_scene/run_nancheckoff1.sh`.
