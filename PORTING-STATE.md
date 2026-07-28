@@ -15025,3 +15025,140 @@ treat it as a bystander. If it survives to the stall, check
 against the stall's onset timestamp — a call with entries but no exit and
 climbing heartbeats at exactly the stall point would confirm H-AUDIO-DRAIN
 directly. See `scratch/agent/NEXT.md`.
+
+## Session 164 (2026-07-27) — audio-drain soak attempt 2/3: died even earlier than attempt 1, to a brand-new 22nd crash class inside `rs_malloc`'s own free-list walk, not a recurrence of `emitAllocatedDLCommand`
+
+### Work unit
+
+Per `scratch/agent/NEXT.md`'s explicit plan, re-ran s163's `audiodrain1`
+soak unchanged (no rebuild — instrument and key schedule already armed)
+as `audiodrain2`, testing the same two live hypotheses for the s162
+graphics-task-submission stall (H-AUDIO-DRAIN: `waitForAnyAudioSlot` spin
+never returns; H-INPUT: a late `start`/`a` press at hold+95/100s clears
+the stall). This was soak attempt 2/3 for "does this recipe reach the
+~92s stall window at all," per the budget s163 set after attempt 1 died
+at hold-iter 6 to a recurrence of the parked `emitAllocatedDLCommand`
+crash (s132/s133-135).
+
+### Result: died at hold-iter 2 (even earlier than attempt 1's hold-iter 6), CRASH: 1, NOT `emitAllocatedDLCommand`
+
+The crash backtrace:
+
+```
+[CRASH] caught signal 10 (Bus error: 10)
+3   rs_malloc + 492
+4   rebuildActiveDisplayObjectList + 224
+5   static_5_800AAD9C + 5192
+6   static_5_800C6854 + 628
+7   menuOverlayInit + 3512
+8   mainGameLoop + 2400
+9   mainBootstrapWorker + 2032
+```
+
+`static_5_800AAD9C` is the known dispatcher (NEXT.md: "closed s157," not
+itself a bug site) — the actual fault is inside `rs_malloc`, the guest
+heap allocator itself, not in an unguarded guest-code pointer deref one
+frame up. **This is a genuinely new crash class — grepped both
+`docs/CURRENT-TRUTH.md` and this file for `rs_malloc`/
+`rebuildActiveDisplayObjectList` combined with SIGBUS/crash; no prior
+occurrence.** The family's highest catalogued class going into this
+session was the 21st (`drawSubtitleText`, s159/s160) — this is the
+**22nd**.
+
+### Source read: `rs_malloc` is a real free-list-walking allocator, not a stub — the fault site is very plausibly a corrupted free-list node, not a bad argument
+
+Read both functions directly from `N64Recomp/RecompiledFuncs/` (not a
+symbol-file comment):
+
+- `rebuildActiveDisplayObjectList` (`funcs_14.c:8544`) calls
+  `rs_malloc(rdram, ctx)` as the very first thing it does, with fixed
+  `a0=0x400` (1024 bytes), `a1=0` (flags) — confirmed by the already-armed
+  `[rs-malloc]` log line immediately preceding the crash (see below): this
+  is not a corrupted-argument crash, the call inputs are sane and
+  identical to 14 immediately-prior successful calls this same run.
+- `rs_malloc` (`funcs_0.c:2745`) is a genuine heap allocator: after
+  `ensureHeapInitialized` and an `osRecvMesg` lock/unlock pair, it walks a
+  linked free list starting at `L_80001BB0`/`L_80001BC4` — for each node,
+  loads a `flags` halfword (`MEM_HU(a0, 0)`), a `size` word
+  (`MEM_W(a0, 0x4)`), and on a "not the last node" flag, advances
+  `a0 = a0 + size + 0x10` to the next node (`L_80001BF4`/`L_80001C00`). A
+  free-list node whose `size` field is corrupted (garbage) would make this
+  walk jump to an unmapped address, and the walk's own next-iteration load
+  (`MEM_HU`) would SIGBUS exactly like the observed crash — a plausible,
+  concrete mechanism, not yet confirmed by a live node dump.
+
+### `[rs-malloc]` log (already armed this run, free data) shows the crashing call broke a 14-for-14 streak, ruling out "always fails on this input"
+
+```
+[rs-malloc] ptr=0x801CD7D0 size=1024 flags=0x0 caller_ra=0x00000000   (×14, lines 64213–64448)
+[CRASH] caught signal 10 ...                                          (line 64474, no matching log line for the crashing call)
+```
+
+Same `ptr`/`size`/`flags` on every one of the 14 prior calls this run
+(`rebuildActiveDisplayObjectList` runs once per hangar-tick frame,
+allocates+presumably frees the same 1024-byte block each time — a churn
+pattern, not a one-shot init) — and the crashing call has **no** log
+line, meaning it faulted inside the free-list walk *before* reaching the
+log write at the function's return, consistent with the walk-jumps-off-
+into-unmapped-memory mechanism above. `caller_ra=0x00000000` on every
+line is the already-established (s92) **routine** artifact, not evidence
+by itself — noted only for completeness.
+
+### What this establishes / rules out
+
+- **Not a recurrence of `emitAllocatedDLCommand`/s132.** Different
+  function, different call chain, different signal-adjacent frame
+  entirely. NEXT.md's "if it dies to any other, different crash" branch
+  applies: catalogued as new (22nd), this counts as the 2nd of the 3
+  allowed soak attempts.
+- **Not an argument-corruption crash** — the call's own inputs
+  (`size=1024 flags=0`) are fixed and identical to 14 successful calls
+  moments earlier in the same run. This narrows the mechanism to
+  *allocator-internal state* (free-list metadata) rather than a bad
+  pointer handed in from the caller — a different flavor from every prior
+  guest-code "unguarded `table[idx]` deref" class in this family (9th
+  through 21st).
+- **Fits, but does not yet confirm, the long-running "shared heap
+  corruption" thread** raised at s85 and chased through the DMA-ring/
+  `voice+0x34` investigation (s91–s114): a free-list node's `size` field
+  going bad between allocator calls is the same shape of bug (a fixed
+  struct offset getting stomped by something unrelated) as `voice+0x34`,
+  `ring_slot+0x4`, and the OSThread-context corruption chased earlier —
+  just landing in the allocator's own bookkeeping this time instead of a
+  MusyX voice struct. Not proven to be the *same* corruption source; only
+  noted as a strong pattern match worth testing directly before treating
+  it as a 3rd independent bug.
+- **Zero new data on H-AUDIO-DRAIN/H-INPUT** — same outcome as attempt 1;
+  the process still hasn't survived long enough to reach the ~92s stall
+  window. Both hypotheses remain untested.
+- The pre-cutscene hangar-tick window (`menuOverlayInit` → ... →
+  `runHangarSelectionFrame`/`rebuildActiveDisplayObjectList` etc.) is, if
+  anything, **less stable** than when last soaked — this run died at
+  hold-iter 2 vs. attempt 1's hold-iter 6, to a brand-new class in both
+  cases. Continuing to blind-soak the exact same recipe a 3rd time has a
+  visibly declining chance of reaching the target window; per rule 8 the
+  higher-value move is to characterize this new crash (or the shared-
+  corruption hypothesis directly) before spending the 3rd attempt.
+
+### Files touched
+
+None — read-only investigation this session (soak used already-armed
+instruments from s163/`run_audiodrain1.sh`; `run_audiodrain2.sh` is a
+tag-renamed copy per NEXT.md's own instruction, no logic change). No
+rebuild.
+
+### Next
+
+Two live options, in order of expected value: (1) dump the crashing
+free-list node directly — extend `[rs-malloc]` (or add a dedicated
+free-list-walk log) to print each node's `flags`/`size`/address as
+`rs_malloc` walks it, which would show the corrupted field's actual value
+and, if it resembles a known-corrupted pattern (ASCII-looking garbage,
+like the `voice+0x34`/DMA-ring family), strengthen the shared-corruption
+hypothesis directly — cheap (one instrument, reuses the existing armed
+soak recipe) and answers a real question either way. (2) spend the 3rd
+and final allowed attempt at the exact same `audiodrain1`/`audiodrain2`
+recipe unchanged, on the chance this run was unlucky. Given the declining
+survival trend (hold-iter 6 → hold-iter 2) and that option (1) is
+strictly informative even if the soak dies again, prefer (1) for the next
+work unit. See `scratch/agent/NEXT.md`.

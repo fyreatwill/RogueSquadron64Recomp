@@ -6,7 +6,7 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
-## Current truth (as of session 163)
+## Current truth (as of session 164)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -659,9 +659,40 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s163)
+## Next steps, in order of expected value (s164)
 
--15. **NEW TOP PRIORITY (s163): source-read found a concrete 3rd mechanism for
+-16. **NEW TOP PRIORITY (s164): audio-drain soak attempt 2/3 (`audiodrain2`)
+    died even earlier than attempt 1 (hold-iter 2 vs hold-iter 6), NOT to a
+    recurrence of `emitAllocatedDLCommand` but to a brand-new, never-before-
+    seen 22nd crash class — SIGBUS inside `rs_malloc` itself (the guest heap
+    allocator), called from `rebuildActiveDisplayObjectList` with fixed,
+    sane arguments (`size=1024 flags=0`) identical to 14 immediately-prior
+    successful calls the same run.** Source-read confirmed `rs_malloc`
+    (`N64Recomp/RecompiledFuncs/funcs_0.c:2745`) is a genuine free-list-
+    walking allocator: it loads each node's `flags` halfword and `size`
+    word and advances `a0 = a0 + size + 0x10` to the next node
+    (`L_80001BB0`–`L_80001C04`) — a node with a corrupted `size` field
+    would make the walk jump into unmapped memory and SIGBUS on the next
+    load, exactly matching the observed crash (fault inside `rs_malloc`,
+    not at entry; the already-armed `[rs-malloc]` log shows 14 identical
+    successful calls then a crash with **no** matching log line, meaning
+    the fault happened mid-walk before the function's own return/log
+    statement). Zero new data on H-AUDIO-DRAIN/H-INPUT (still untested —
+    process hasn't survived to the ~92s stall window in either attempt).
+    Pattern-matches (not yet proven identical to) the long-parked "shared
+    heap corruption" thread from s85–s114 (`voice+0x34`, DMA-ring
+    `devAddr`, OSThread context) — a fixed struct offset going bad between
+    otherwise-normal calls is the same shape of bug, just landing in the
+    allocator's own free-list bookkeeping this time. **Next work unit:**
+    dump the free-list node's actual `flags`/`size`/address as `rs_malloc`
+    walks it (extend `[rs-malloc]` or add a dedicated walk-log) — if the
+    corrupted `size` value resembles the known ASCII-garbage corruption
+    pattern from the DMA-ring family, that's a strong, cheap link between
+    two previously-separate crash investigations. This is preferred over
+    spending the 3rd (final) blind soak attempt on the identical recipe,
+    given the declining survival trend. Full detail: PORTING-STATE s164.
+
+-15. **s163: source-read found a concrete 3rd mechanism for
     the s162 stall (an unbounded audio-drain spin loop in the cutscene's own
     teardown path), instrument landed and validated, but the soak died even
     earlier than usual to a recurrence of the already-`parked` (s135)
