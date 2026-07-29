@@ -21693,6 +21693,13 @@ budget-rule-8 spirit (applied to environment access), the 3rd consecutive
 session should NOT re-attempt the identical command without a config change
 or human intervention in between.
 
+## Session 228 (2026-07-28) — overturns s226/s227's "`tools/:*`-specific" framing: `Bash(build/:*)` (a different rule) fails identically via a control test, narrowing the gate to a whole class of `Bash(<dir>/:*)` rules vs. working `Bash(<word>:*)` rules, with a concrete one-line-per-rule settings.json fix proposed for a human
+
+*(Note: this session's header was missing in the original write-up — the
+body below ran on directly after s227's closing paragraph with no `##`
+break. Added retroactively s229 while appending this session's entry, no
+content changed.)*
+
 Per NEXT.md's Step 0 (written by s227), re-ran the control command
 `tools/agent/stop_gate.sh --verify` first, before touching the actual
 regen work. It failed identically to s226/s227: "This command requires
@@ -21756,3 +21763,97 @@ commit messages claiming otherwise — s226's and s227's BLOCKED.md content
 existed on disk within those sessions but is gone now. This session force-
 added its own `BLOCKED.md` (`git add -f`) so it survives. Documented in
 NEXT.md so future sessions do the same for BLOCKED.md/SUBSTITUTION.md.
+
+## Session 229 (2026-07-28) — the permission gate fix landed and cleared: `stop_gate.sh --verify` and `regen_n64recomp.sh` both ran for real. Soak-validated `deref0`: it does NOT freeze near flag/camptr's freeze point, and keeps changing far longer than `m00` did too — strengthens s224/s226's "downstream freeze, not a stuck camera" conclusion and rules out the pointed-to struct content as frozen
+
+**Step 0 (gate check)**: `git log --oneline -3 -- .claude/settings.json`
+showed a new commit, `89ba212 agent infra: fix Bash(dir/:*) allow rules —
+prefix:* only matches at a word boundary...`, and `grep -n "tools/\*\|
+build/\*" .claude/settings.json` confirmed the four rules now read
+`Bash(tools/*)` / `Bash(./tools/*)` / `Bash(build/*)` / `Bash(./build/*)`
+— the glob-only form s228 proposed, colon dropped. Ran the control:
+`tools/agent/stop_gate.sh --verify` returned REAL output — "Exit contract
+unmet: scratch/agent/STATUS is 'WORKING', not DONE or BLOCKED" — not the
+"This command requires approval" block message. **This confirms s228's
+hypothesis was correct and the fix works**: the gate is cleared, 4
+sessions after it first appeared (s226-s229).
+
+**Step 1-3 (resumed soak)**: `deref0` diagnostic confirmed still present
+in `N64Recomp/fixup_game_funcs.py` unchanged (`grep -n "deref0"`). Clean-
+room regen: `RecompiledFuncs/funcs_*.c` was already empty (no stale files
+to delete — the last successful regen predates this checkout state, or a
+prior session's delete never got a matching regen before the gate hit).
+`python3 tools/make_elf.py` (rogue_squadron64 checkout) — clean, 2962/3768
+symbols emitted, matching prior runs. `./tools/agent/regen_n64recomp.sh`
+— ran for real this time (N64Recomp `[Info]` tail-call diagnostics
+streamed normally, no approval block) — 4-session block cleared. Compound
+`cd N64Recomp && python3 fixup_game_funcs.py > ...` was rejected by the
+sandbox as a cd+redirect compound (known quirk, split into separate Bash
+calls); once split, `fixup_game_funcs.py` ran exactly once, captured to
+`N64Recomp/scratch_fixup_report_s229.txt`, and `grep -n "camera-pose
+diagnostic"` confirmed the patch applied (`funcs_4.c:142: setupCameraMatrices
+camera-pose diagnostic (0x800178A8) patched x1`). `DEVELOPER_DIR=... cmake
+--build build -j8` (backgrounded, since it's a long-running build with no
+interactive dependency) succeeded — `[100%] Built target
+RogueSquadron64Recomp`, only the pre-existing sign-conversion warnings.
+
+New soak driver `run_campose3.sh` (copy of `run_campose1.sh`, same
+`schedulepush2`-derived schedule, new tag per the no-overwrite rule),
+launched synchronously per NEXT.md's instruction. Full 350s hold completed
+crash-free (`CRASH: 0`, `exit=2: 0`), wall=422s, 16824 LLE tasks, matching
+prior soaks' shape.
+
+**Checksum** (`checksum_campose3.py`, repointed copy of
+`checksum_campose1.py`): picture settles to a final frozen hash at
+`hold_82` and stays byte-identical through `hold_350` (this run's freeze
+onset is later than s225's `hold_01` and s222's ~4s figure — reconfirms
+s223's proven non-determinism in exact onset timing across otherwise-
+identical scripted input; not a new finding, just this run's instance of
+the already-documented variance).
+
+**campose log analysis** (979 `[campose-entry]`/`[campose-abnormal]`
+lines, `n=0` to `n=58560`, parsed with a small Python script rather than
+grepped/dumped in full): `flag`/`camptr` go fixed at `n=15360` (matches
+s224/s226's ~15000 figure) and stay byte-identical through the rest of the
+run. **`m00` keeps changing until `n=21240`** (close to s224's own
+already-documented `n=20880` figure, same phenomenon, this run's instance).
+**`deref0` keeps changing until `n=57900`** — i.e., through nearly the
+*entire* remaining run (58560 is the last sample), roughly 2.7x further
+past the freeze point than `m00`'s own lag, and `deref0_valid=1`
+throughout (never an invalid/out-of-range pointer). This directly answers
+NEXT.md's discriminating question: **outcome #2 confirmed** — "deref0
+keeps changing after flag/camptr freeze (matching the m00 pattern) →
+pointed-to content still live; freeze is further downstream (traversal
+walk logic or a content-independent culling check)." Outcome #1 ("deref0
+also freezes at/near the same n") and outcome #3 ("deref0_valid=0
+throughout") are both refuted.
+
+**What this rules out**: the camera struct's own linkage pointer target
+(the memory `flag`/`camptr` points into) is NOT frozen — it keeps being
+written to for the vast majority of the visibly-frozen window. Combined
+with s225's already-closed finding that `traverseSceneGraphRecursive` /
+`processSceneNode` / `submitSceneNodeRender` all keep firing at a steady
+rate through the whole freeze, this now closes off "the camera-adjacent
+data itself stopped updating" as an explanation at two levels deep (the
+struct's own fields, AND the first word of what one of those fields
+points to). The freeze must be either (a) in scene-graph traversal logic
+that reads this live data but computes/selects the same result every call
+regardless of the change (a content-independent culling/selection check),
+or (b) downstream of traversal entirely — in DL emission, RDP submission,
+or the display-list/framebuffer target itself not reflecting the updated
+state. Neither has direct instrumentation yet.
+
+**Two independent lines of evidence** for "downstream, not stuck-camera":
+(1) this session's own `deref0` result, (2) s224/s226's prior, independent
+finding that `m00` (same struct, different field) also outlives the
+freeze point. Two same-struct fields agreeing is corroborating but not
+fully independent (common data source) — still label the overall
+"downstream freeze" conclusion as resting on the scene-traversal-firing
+evidence (s225, a genuinely different subsystem) as the second independent
+leg.
+
+**Housekeeping fix, unrelated to the main finding**: s228's PORTING-STATE.md
+entry was missing its own `## Session 228` header (content ran on directly
+after s227's closing paragraph) — added the header retroactively this
+session, no body content changed, so `grep "^## Session"` and similar
+future lookups find it.

@@ -663,9 +663,28 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s228)
+## Next steps, in order of expected value (s229)
 
--69. **(s228) BLOCKED, 3rd consecutive session — the gate is NOT specific to
+-70. **(s229) Permission gate CLEARED (s228's fix confirmed working) —
+    `deref0` soak-validated: it does NOT freeze near `flag`/`camptr`'s
+    freeze point (`n=15360`), and keeps changing until `n=57900`, far
+    longer than `m00`'s own already-documented lag (`n=21240`).** This
+    closes off "the camera struct's pointed-to content is frozen" at one
+    more level of depth, on top of s225's already-closed "scene-traversal
+    call chain keeps firing throughout the freeze." **Next step: the
+    freeze is confirmed downstream of both the camera struct's own fields
+    AND the first word of what one of those fields points to, AND the
+    traversal/submission call chain's firing rate — so the next
+    discriminating probe should target either (a) a content-independent
+    culling/selection check inside `processSceneNode`/
+    `submitSceneNodeRender` that could select the identical draw output
+    regardless of live input, or (b) the DL-emission/RDP-submission
+    payload itself (log the actual emitted display-list bytes or a hash of
+    them, not just call counts, across the freeze boundary — call counts
+    already proven non-discriminating by s225).** Full detail: PORTING-
+    STATE Session 229.
+
+-69. **(s228, RESOLVED s229 — kept for the trail) BLOCKED, 3rd consecutive session — the gate is NOT specific to
     `tools/:*`; it's a whole class of allow rules (`Bash(<dir>/:*)`, a bare
     directory ending in a slash) failing, while `Bash(<word>:*)` rules work
     fine.** Overturns s227's "narrows to `tools/:*` specifically" framing.
