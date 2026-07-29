@@ -1,123 +1,111 @@
-# NEXT work unit — find and guard composeNpcOrientationMatrix's 8th
-# unguarded deref site (the new blocker), THEN re-soak C_LOADED
+# NEXT work unit — re-analyze s256's own guard8soak1 log for item -49's
+# widening question BEFORE spending a new build-run cycle
 
-## Where the investigation stands (s255)
+## Where the investigation stands (s256)
 
-s255 picked up item -49's `renderUnlitMeshFaces` KSEG0-zero-extension chase
-(CURRENT-TRUTH, search for `-49\.`/`-96\.`). Two things landed:
+s256 closed the `composeNpcOrientationMatrix` 8th gap s255 surfaced (full
+function read of `funcs_40.c:6293-7213`, found an unguarded pointer-field
+deref at guest `0x800AB5B4`-`0x800AB5BC` right before the
+`projectModelBoundsToScreen` call, same shape as guard7's site but the
+sibling branch). Landed `COMPOSE_NPC_GUARD8`, rebuilt, soaked as
+`guard8soak1`.
 
-1. **Free discriminating result, no build needed**: s254's `hangarlistguard1`
-   soak already had `ROGUESQ_LOG_UNLIT_MESH_TRACER=1` armed and already
-   reached the `+792` crash (5th confirmed occurrence). Re-grepping that
-   existing log (`grep -a -c "unlit-mesh-tracer\|B_LOADED"
-   scratch/s73_post_a_scene/hangarlistguard1/run.log`) shows exactly 1
-   `unlit-mesh-tracer` line (the positive-control counter, `calls=1`) and
-   ZERO `B_LOADED` lines — `ctx->r16` was NOT out-of-bounds right after its
-   initial load (`funcs_4.c:5072`) on the one call that then crashed. Rules
-   out "already bad at load time" for this occurrence too.
-2. Landed `C_LOADED`: a new tracer check right after the loop-back reload
-   at guest `0x80012080` (`ctx->r16 = MEM_W(ctx->r16, 0X0)`), mirroring
-   `B_LOADED`'s source-vs-value pattern — that site's existing check only
-   validated the reload's SOURCE address, never the RESULT. Added to
-   `fixup_game_funcs.py` (N64Recomp checkout), regenerated, built clean,
-   patch report confirmed 6/6 tracer sites x1.
-3. **Soak (`cloadedsoak1`)**: reached SELECT-CRAFT at 75.1s, then crashed
-   in the hangar menu at `static_5_800AB1C8+6168`
-   (`composeNpcOrientationMatrix`, called from
-   `runHangarSelectionFrame`/`runHangarMenuFromOverlay`/`menuOverlayInit`)
-   — `renderUnlitMeshFaces` was NEVER called this run (0 tracer lines of
-   any kind). Uninformative null for `C_LOADED` specifically (1 of a
-   possible 3 before the budget-rule-8 stop-and-redirect point).
-4. **The actual finding**: this function already has 7 guards
-   (s97-s101/s128), all confirmed still executing (551
-   `compose-npc-orient-guard` lines this run), but none of them caught this
-   fault — an 8th, previously-uncovered deref site. Same shape as s254's
-   `HANGARLIST_GUARD` discovery: a per-frame hangar-menu function with a
-   gap that blocks the game from ever reaching the render code this whole
-   investigation actually cares about.
+**Result, real and discriminating**: the menu-crash class that killed
+every soak since s255 is GONE (901 exercised calls, 0/8 guard fires this
+run). The soak crossed SELECT-CRAFT (74.5s) and ran all the way to VI
+frame #9664 — **`renderUnlitMeshFaces` was actually called this time**
+(`unlit-mesh-tracer` positive-control counter fired, silent in every prior
+soak since s255) — then crashed at the same already-tracked bug:
+`renderUnlitMeshFaces+792`, `si_addr=0x380630062`. This is the **6th
+confirmed occurrence** of item -49's recurring KSEG0-zero-extension bug.
+`B_LOADED`/`C_LOADED` both fired 0 times — 2nd of 3 allowed uninformative
+nulls on that specific widening question (budget rule 8).
+
+Log location: `scratch/s73_post_a_scene/guard8soak1/run.log` (~253MB,
+4,440,859 lines). Already confirmed via grep:
+- `compose-npc-orient-800AB1C8` (entry diag): 901 hits
+- `compose-npc-orient-guard` through `guard8`: 0 hits, all 8
+- `unlit-mesh-tracer`: 1 hit (the positive-control line itself)
+- `B_LOADED` / `C_LOADED`: 0 hits each
+- Crash at line ~4440808, `pc-symbol renderUnlitMeshFaces+792`
 
 ## The next work unit, in priority order
 
-### Step 1 (do this first): find and guard the new composeNpcOrientationMatrix gap
+### Step 1 (do this first, no build needed): mine `guard8soak1/run.log` for anything upstream of the crash
 
-Read `static_5_800AB1C8` (`composeNpcOrientationMatrix`) in
-`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c`
-start to end (starts line 6293; find the closing brace / next
-`RECOMP_FUNC` for the true extent — it's a big function, expect 500+
-lines). Cross-reference against the 7 existing guard sites (search
-`ROGUESQ_LOG_COMPOSE_NPC_GUARD` through `_GUARD7` in `fixup_game_funcs.py`,
-`N64Recomp` checkout) to see which raw pointer derefs are NOT already
-guard-wrapped. Same recipe as s254's `HANGARLIST_GUARD`: find the genuinely
-unguarded raw `MEM_*(reg, ...)` deref that a corrupted/out-of-KSEG0-range
-`reg` would hit, add ONE guard (bail to the function's real epilogue —
-find it by reading to the closing brace first, do NOT guess), rebuild,
-soak with a NEW tag (do not reuse `cloadedsoak1`).
+Per CLAUDE.md's "capture once, analyze many" rule: this run's log has
+NEVER been analyzed beyond the 5 grep counts above. Before spending
+another build-run cycle, check what else it contains around the single
+`renderUnlitMeshFaces` call (line ~4440808 backwards):
+- `grep -a -n "unlit-mesh-tracer\|renderUnlitMeshFaces\|B_LOADED\|C_LOADED"
+  run.log` — confirm there is exactly ONE call to the function this run
+  (not multiple, with only the last one crashing) by checking if any
+  non-tracer log lines reference the function earlier.
+- Read ~200 lines of context immediately before the crash (`sed -n
+  '4440600,4440810p' run.log`, cheaper than grep -B on a 253MB file) to
+  see what the last few frames were doing — was this a normal per-frame
+  render call, or something unusual (e.g. right after a scene transition,
+  right after `runHangarSelectionFrame`)?
+- Check `ctx->r16`'s value lineage more directly: since `B_LOADED`/
+  `C_LOADED` didn't fire, the corruption (if any) happens somewhere else
+  entirely in the function, or `ctx->r16` was never actually corrupted at
+  the guest level and the real bug is in the recompiler's own address
+  translation (a hypothesis flagged before but never conclusively tested
+  — see CURRENT-TRUTH `0x80630062`/`x9` register-pattern entries).
 
-Discriminating outcomes: guard fires with sane fields -> mechanism
-confirmed, hold should get past this menu crash and progress further
-(toward `renderUnlitMeshFaces` or another, later blocker) — a real
-positive control since this crash was hot this run; crash recurs at a
-DIFFERENT site -> progress, wasn't the only gap; crash recurs at the exact
-same signature -> guard missed something, re-read; 0 fires -> this
-specific crash wasn't hot this run, check what (if anything) recurred
-instead.
+### Step 2: only if step 1 finds nothing new, one more (3rd, final) `C_LOADED` re-soak
 
-### Step 2: once past that, re-soak to test `C_LOADED`
-
-Only after step 1's guard is landed and confirmed to get the game past the
-`composeNpcOrientationMatrix` crash: re-run a `cloadedsoak`-style soak (new
-tag) and check whether `renderUnlitMeshFaces` gets called this time
-(`grep -a -c "unlit-mesh-tracer" run.log` — the positive-control counter
-line proves it ran at all) and whether `C_LOADED` fires. If it fires with
-a sane-looking loaded value that's actually the bad `0x80630062` pattern,
-that PINS the corruption to between the reload and its use — genuinely
-narrows the bug for the first time in this multi-session chase. If it's
-still clean (0 fires) right up to another `+792` crash, that's the 2nd of
-3 allowed uninformative nulls on this specific question — one more retry
-permitted before budget rule 8 says stop and redirect.
+This is the last of the 3 allowed uninformative nulls on the `C_LOADED`
+widening question specifically (budget rule 8). If step 2 also comes back
+with 0 `C_LOADED` fires, STOP re-soaking this exact question — write the
+hypothesis/evidence table into a fresh NEXT.md and either widen the tracer
+to a different site or redirect to a different item -49 sub-question
+entirely (e.g. the recompiler-translation hypothesis above).
 
 Command pattern (copy the driver, don't re-run in place):
 ```
-cp scratch/s73_post_a_scene/run_cloadedsoak1.sh scratch/s73_post_a_scene/run_<newtag>.sh
-# edit the new file's last line's tag argument, and armed env if step 1 added a new ROGUESQ_LOG_* var
+cp scratch/s73_post_a_scene/run_guard8soak1.sh scratch/s73_post_a_scene/run_<newtag>.sh
+# edit the new file's last line's tag argument
 zsh scratch/s73_post_a_scene/run_<newtag>.sh   # run_in_background: true
 # read first output line for "pid NNNNN", then block:
 # until ! kill -0 <pid> 2>/dev/null; do sleep 10; done
 ```
 
-No regen/rebuild needed for a re-soak alone — only if step 1 lands new
-guard code. Verify a fresh binary before trusting any result: `strings
-build/RogueSquadron64Recomp | grep '<your-new-marker>'` plus `ls -la
-build/RogueSquadron64Recomp` vs. the soak's start time.
+No regen/rebuild needed — `guard8soak1`'s binary already has every guard/
+tracer through s256. Verify a fresh-enough binary before trusting any
+result: `strings build/RogueSquadron64Recomp | grep compose-npc-orient-
+guard8` plus `ls -la build/RogueSquadron64Recomp` vs. the soak's start
+time (only matters if you rebuild; a bare re-soak reuses the existing
+binary and needs no re-verification).
 
 ## Do NOT do this iteration
 
-- Do NOT re-run `cloadedsoak1` in place, or skip straight to step 2
-  without closing the `composeNpcOrientationMatrix` gap first — the render
-  code isn't reachable until that crash is fixed, so a bare re-soak would
-  just burn a 2nd uninformative null for free information already in
-  hand.
+- Do NOT re-run `guard8soak1` in place — copy to a new tag.
+- Do NOT skip step 1 (log mining) and jump straight to a re-soak — the
+  existing 253MB log has not been fully read yet, only grep-counted on 5
+  markers. CLAUDE.md's capture-once-analyze-many rule applies directly
+  here.
 - Do NOT re-attempt `nm`/`atos` for offset localization — confirmed
   unusable 3+ independent times. Crash offsets on this project's symbol
   format are NATIVE code offsets, not guest MIPS addresses.
-- Do NOT credit `HANGARLIST_GUARD`'s continued 0-fire count as "unneeded"
-  — it simply wasn't the crash that was hot this particular run.
-- Do NOT fold the `evalCubicSplineAtTime`(s210)/`composeNpcOrientationMatrix`
-  (s255) `0x80000000`-clustered register patterns into one claim yet —
-  each is single-occurrence, different function, flagged as a pattern
-  worth watching, not a confirmed shared root cause.
-- Do NOT invoke `fixup_game_funcs.py` more than once per regen cycle.
+- Do NOT credit `COMPOSE_NPC_GUARD8` (or any of guards 1-7) with directly
+  "catching" anything this run — all 8 fired 0/901. The evidence for the
+  fix is the DISAPPEARANCE of the menu-crash class across 901 calls, not a
+  guard catching a bad value in the act. Keep that distinction explicit in
+  any future write-up.
+- Do NOT fold this run's crash into a "new" bug — it is an exact
+  `renderUnlitMeshFaces+792`/`0x380630062` signature match, the 6th
+  confirmed occurrence of the existing item -49 bug.
 
-## Environment notes (carried forward, still current as of s255)
+## Environment notes (carried forward, still current as of s256)
 
 - **`+N` crash-symbol offsets are NATIVE (compiled ARM64) code offsets,
   NOT guest MIPS addresses.** Use the offset only to identify WHICH
   function to read in full; never try to place it at a specific guest
   instruction.
-- The current binary (as of s255's build) already has `C_LOADED`,
-  `HANGARLIST_GUARD`, `MATLIST_GUARD3`, and every other guard/tracer
-  landed through s255 — no rebuild needed for a bare re-soak, only if you
-  land new code.
+- The current binary (as of s256's build) has `COMPOSE_NPC_GUARD8` and
+  every other guard/tracer landed through s256 — no rebuild needed for a
+  bare re-soak, only if you land new code.
 - **Block-wait pattern**: launch the soak with Bash `run_in_background:
   true`, read the driver's first output line for `pid NNNNN out=...`,
   then run a SECOND Bash call (foreground, generous timeout up to
@@ -135,7 +123,9 @@ build/RogueSquadron64Recomp` vs. the soak's start time.
   `menuOverlayInit`/`runHangarSelectionFrame`/`runHangarMenuFromOverlay`
   frames (menu family) vs. `traverseSceneGraphRecursive`/`processSceneNode`/
   render-function frames (actual gameplay render family) to tell which
-  regime you're in before reading the wrong function.
+  regime you're in before reading the wrong function. **As of s256, a
+  soak can now reach WELL past this marker (VI frame #9664 vs. the
+  transition's frame #4437) into real gameplay rendering.**
 - **Regen is mandatory-delete-all-first, AND fixup must run EXACTLY
   ONCE**: delete all 45 `RecompiledFuncs/funcs_*.c`
   (`python3 -c "import glob, os; [os.remove(f) for f in glob.glob('...')]"`,
@@ -159,7 +149,7 @@ sites, `funcs_4.c`), `renderLitTexturedMeshFaces` (11 sites, `funcs_3.c`),
 `func_800AE3F0` (10 sites, `funcs_27.c`), `beginFrameDLChunk` /
 `emitFrameRdpInitDl` (10 sites each, `funcs_3.c`).
 
-`docs/CURRENT-TRUTH.md` housekeeping — still ~407 KB+, flagged 45+
+`docs/CURRENT-TRUTH.md` housekeeping — still ~407 KB+, flagged 46+
 sessions, still not done. Per `ITERATION.md` this does NOT count as
 `ADVANCED` on its own — pair it with a real change or expect to file
 `SUBSTITUTED`.
@@ -168,7 +158,7 @@ sessions, still not done. Per `ITERATION.md` this does NOT count as
 
 `docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget and the
 Read tool's 256 KB single-read limit (still ~407 KB+ / ~6000+ lines,
-flagged 45+ sessions without action).
+flagged 46+ sessions without action).
 
 `fixup_game_funcs.py`'s untracked, single-copy state in the `N64Recomp`
 sibling checkout has been flagged since s83, still not fixed (not this

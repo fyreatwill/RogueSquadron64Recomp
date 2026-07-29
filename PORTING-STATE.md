@@ -24245,3 +24245,105 @@ one data point each).
 `lib/` edit this session -- `submodule-patches/export.sh` not needed.
 
 **Housekeeping**: `CURRENT-TRUTH.md` size still flagged, unaddressed again.
+
+## Session 256 (2026-07-29) — closed the 8th `composeNpcOrientationMatrix` gap s255 surfaced; soak confirms real forward progress: the menu-crash class is GONE (901 calls, 0/8 guard fires), game now reaches `renderUnlitMeshFaces` and hits item -49's already-tracked bug for its 6th confirmed occurrence
+
+**Goal**: NEXT.md step 1 — find and guard `composeNpcOrientationMatrix`'s
+(`static_5_800AB1C8`, `funcs_40.c:6293-7213`) 8th unguarded deref site,
+identified by s255 as the new blocker standing between the game and
+re-testing `C_LOADED`.
+
+**Full read of the function, start to end** (all 921 lines). Cross-referenced
+every raw `MEM_*` deref against the 7 existing guards (guard1/6293-6400,
+guard2/6870-6883, guard3/6594-6607, guard4/6633-6646, guard5/6793-6806,
+guard6/7135-7148, guard7/6916-6929). Found the gap at guest `0x800AB5B4`-
+`0x800AB5BC`: right before the call into `projectModelBoundsToScreen`, the
+same table-entry pointer guard2 already validated (re-derived here via the
+same `-0x25A4($s5)` table-base + `$s1` index arithmetic, so the *base*
+address is sound) has its `+0x4` pointer field reloaded (`lw $v0,
+0x4($v0)`) and the freshly-loaded result is **immediately dereferenced**
+(`lw $a3, 0x0($v0)`) with **zero validation** — textbook "load a pointer
+field, deref it without checking" shape, structurally identical to guard7's
+own site (`0x4($s2)` then `0x0($v0)`) but on the sibling branch of this
+loop iteration (the one that reaches `projectModelBoundsToScreen` instead
+of the abs/sub distance calc guard7's branch computes). No other unguarded
+site found in the full read — all other raw derefs either hit stack slots,
+fixed lui-based global constants/counters, or the already-guarded
+table/list addresses.
+
+**Landed `COMPOSE_NPC_GUARD8`**: added to `fixup_game_funcs.py` (N64Recomp
+checkout), same U32()-range-check-then-`goto L_800AB618` template as
+guards 1-7, anchored on the unique `0x800AB5B4` comment+code pair (confirmed
+unique via grep before patching). Regenerated (deleted all 45
+`RecompiledFuncs/funcs_*.c`, `make_elf.py` -> `N64Recomp` ->
+`fixup_game_funcs.py` -> `cmake --build`, in that order, fixup run exactly
+once). Patch report confirmed `composeNpcOrientationMatrix 8th
+pointer-field-deref guard patched x1`, no stacking. Build clean. Verified
+fresh binary (`strings build/RogueSquadron64Recomp | grep
+compose-npc-orient-guard8` -> 1 hit, mtime after build).
+
+**Soak (`guard8soak1`, same env/schedule as `cloadedsoak1` plus
+`ROGUESQ_LOG_COMPOSE_NPC_GUARD8=1`)**: this is a real, discriminating,
+same-run-positive-controlled result. `composeNpcOrientationMatrix`'s entry
+diagnostic fired 901 times this run (real exercise of the function, not a
+skipped path) and **none of the 8 guards fired** — but critically, the
+menu-crash class that killed every soak since s255 (`+6168`,
+`composeNpcOrientationMatrix`) **did not recur at all**. The run crossed
+the `vi_width=512` SELECT-CRAFT transition at 74.5s exactly as before, then
+kept running render frames all the way to VI frame #9664 (`update_screen`),
+**reached and called `renderUnlitMeshFaces`** (`unlit-mesh-tracer`
+positive-control counter fired, `calls=1` — the same counter that was
+completely silent, 0 lines of any kind, in s255's `cloadedsoak1` run,
+proving this run got strictly further than every soak since s255), and
+crashed there: `renderUnlitMeshFaces+792`, `si_addr=0x380630062`,
+`processSceneNode`/`traverseSceneGraphRecursive`/`setupCameraMatrices`
+backtrace — an **exact signature match** to s208's and s254's occurrences,
+the **6th confirmed occurrence** of item -49's recurring KSEG0-zero-
+extension bug (not a new issue). `B_LOADED`/`C_LOADED` both 0 fires this
+run too — same uninformative-null shape as s255 for the widening question
+itself (2nd of the 3 allowed nulls per budget rule 8 on that specific
+sub-question), but this run is NOT uninformative for the actual planned
+work unit: it directly confirms the 8th-gap hypothesis (closing it removed
+the menu-crash class entirely, from a crash the game hit on effectively
+every soak since s255 to zero recurrences across 901 calls) and it
+re-opens the path to `renderUnlitMeshFaces` that s255 had closed off, which
+is real, load-bearing forward progress for item -49's own chase.
+
+**Rules this out**: "the 8th gap wasn't real / guard8 was superfluous" —
+if the gap weren't real, the menu crash should have recurred at the same
+signature; instead it vanished across 901 exercised calls of the same
+function. Also rules out "the render path is unreachable for some other
+reason" — it's reachable now, and reaches deep enough to hit a
+well-catalogued, unrelated bug 6 sessions running.
+
+**Rules NOT out**: whether `guard8`'s specific branch (the
+`projectModelBoundsToScreen` path) was the exact one hit by s255's crash,
+since the guard never actually fired this run (0/901) to catch a bad
+value in the act — the evidence is indirect (crash class gone, not "guard
+caught it red-handed"). A future soak where `COMPOSE_NPC_GUARD8` actually
+fires would be the stronger, direct confirmation; none of guards 1-7 fired
+either, so this is consistent with "this run's 901 calls all had clean
+data everywhere in this function," not specifically "guard8's branch was
+never exercised."
+
+**Next step, highest value**: continue item -49's chase using this soak's
+own data — `C_LOADED`/`B_LOADED` both still 0 fires despite
+`renderUnlitMeshFaces` actually running this time (unlike s255). Since this
+run got to VI frame #9664 (long past the SELECT-CRAFT transition at frame
+#4437) before crashing, the crash happened during real per-frame gameplay
+rendering, not a single queued call — worth re-analyzing this run's OWN
+log for any further-widened tracer data before spending a new build-run
+cycle, same "analyze what's already collected" discipline s255 used
+successfully on s254's log. If a re-soak is still needed, that is the
+3rd-of-3 allowed uninformative null on the `C_LOADED` widening question
+specifically — per budget rule 8, a 3rd null should trigger a stop-and-
+redirect (widen the tracer further, or pick a different site) rather than
+a 4th identical re-soak.
+
+**Housekeeping**: no `lib/` edit this session — `submodule-patches/
+export.sh` not needed. `fixup_game_funcs.py`'s edit (guard8) is again
+uncommitted in the separate `N64Recomp` sibling checkout, same posture as
+every prior session's guards, still out of this repo's commit scope.
+`CURRENT-TRUTH.md` size still flagged, unaddressed again (this session did
+not do housekeeping — it landed a real fix + soak, which stands on its own
+as `ADVANCED`).

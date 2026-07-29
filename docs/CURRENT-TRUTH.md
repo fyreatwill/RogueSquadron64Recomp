@@ -663,7 +663,39 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s255)
+## Next steps, in order of expected value (s256)
+
+-97. **(s256) Closed the 8th `composeNpcOrientationMatrix` gap s255
+    surfaced, with a real discriminating soak result.** Full start-to-end
+    read of `static_5_800AB1C8` (`funcs_40.c:6293-7213`) found the gap at
+    guest `0x800AB5B4`-`0x800AB5BC`: the table-entry pointer guard2
+    already validates gets its `+0x4` field reloaded and the freshly-
+    loaded result immediately dereferenced with zero validation, right
+    before the call into `projectModelBoundsToScreen` -- same shape as
+    guard7's site but on the sibling branch. Added `COMPOSE_NPC_GUARD8`
+    (`fixup_game_funcs.py`, sibling `N64Recomp` checkout), rebuilt clean,
+    verified fresh binary. **Soak** (`guard8soak1`): the
+    `composeNpcOrientationMatrix` menu-crash class that killed every soak
+    since s255 is now GONE across 901 exercised calls (0/8 guards fired) --
+    the run crossed SELECT-CRAFT (74.5s) and kept going all the way to VI
+    frame #9664, **reached and called `renderUnlitMeshFaces`**
+    (`unlit-mesh-tracer` positive control fired -- silent in every soak
+    since s255), then crashed there: `renderUnlitMeshFaces+792`,
+    `si_addr=0x380630062`, an exact signature match to s208/s254's
+    occurrences -- the **6th confirmed occurrence** of item -49's
+    recurring KSEG0-zero-extension bug, not a new issue. `B_LOADED`/
+    `C_LOADED` both 0 fires again -- 2nd of 3 allowed uninformative nulls
+    on that specific widening question (budget rule 8), but NOT
+    uninformative for this session's actual work unit: closing the 8th gap
+    is directly confirmed (crash class eliminated across 901 calls) and
+    real forward progress (render path reachable again, deep per-frame
+    gameplay reached, not just a queued single call). **Next step,
+    highest value**: re-analyze THIS run's own log for further tracer data
+    before spending a new build-run cycle (same discipline s255 used on
+    s254's log) -- if a re-soak is still needed for `C_LOADED`, it is the
+    3rd-of-3 allowed null and should trigger stop-and-redirect per budget
+    rule 8, not a 4th identical attempt. Full detail: PORTING-STATE
+    Session 256.
 
 -96. **(s255) Landed item -49's next tracer-widen step (`C_LOADED`), and
     re-analysis of s254's OWN already-collected log answered the widen
