@@ -24785,3 +24785,101 @@ unaddressed again (still growing — now ~450KB, ~13x the ~35KB target;
 this session did not attempt a prune, having spent its budget on 3 build-
 soak cycles that produced 2 real discriminating results, which stands on
 its own as `ADVANCED`; a dedicated pruning session is overdue).
+
+## Session 261 (2026-07-29) — closed s260's 9th `composeNpcOrientationMatrix` gap; single-soak result is the strongest of this whole investigation: `unlit-mesh-tracer` positive control fired for the FIRST TIME EVER (0 hits across every prior soak, 10+ sessions), the run survived to VI-update #8552/143.1s (previous best ~75s), and it converged on the already-catalogued item -49 `renderUnlitMeshFaces` bug (7th confirmed occurrence, exact `+792`/`0x380630062` signature match to s208/s254/s256)
+
+Full source read of `static_5_800AB1C8` (funcs_40.c:6293-7228, the whole
+function, cross-referenced against all 8 existing guard sites via
+`fixup_game_funcs.py` grep so no line was re-read twice) found the 9th
+gap immediately: guard7 (s158) validates the pointer FIELD loaded from a
+table entry at native `0x800AB4E8` (`ctx->r2 = MEM_W(ctx->r18, 0X4)`)
+before it is dereferenced one instruction later at `0x800AB4EC`
+(`ctx->r2 = MEM_W(ctx->r2, 0X0)`) — but that dereference produces a
+**brand-new pointer value guard7 never checks**, and that new value is
+used directly as the base for `0x68($v0)`/`0x5C($v0)`/`0x70($v0)`/
+`0x64($v0)` (`0x800AB4F0`-`0x800AB504`) with zero validation. Grepped the
+whole function for `0x68($v0)` and found exactly one occurrence — a
+byte-for-byte match to the crash's `si_addr=0x380000068` low bits
+(`rdram_base + 0x80000068`), confirming this is the site before writing
+any code. Same "load a pointer field, deref it without checking" family
+shape as guard7/guard8, one level deeper (guard7 protects the FIRST
+deref, nothing protected the second).
+
+**Guard idiom, deliberately different from guards 1-8**: NEXT.md's own
+analysis (s260) was right that a plain `>= 0x80000000` check would NOT
+catch this value — `0x80000068`, and even the bare `0x80000000` base,
+both pass a standard KSEG0 lower bound trivially. `ROGUESQ_LOG_
+COMPOSE_NPC_GUARD9` instead rejects anything below `0x80001000`: every
+literal KSEG0 constant anywhere in this file (and everywhere else in this
+investigation's logs) sits at `0x800A0000`+ or higher, and `0x80000000-
+0x80000FFF` is the N64's reserved boot-vector/IPL3 region — never a
+legitimate game data pointer, so tightening the lower bound to `0x80001000`
+cannot reject real data. Bails to the same real epilogue `L_800AB618`
+guards 1-8 already proved ABI-safe. File-scoped to `funcs_40.c` per
+guards 1-8's own precedent (`funcs_27.c`'s `hangarInitialize` has a
+byte-identical `0x800AB4EC: lw $v0, 0x0($v0)` at this same reused address
+range, grep-confirmed before writing the regex anchor).
+
+Full regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`, output
+captured to `scratch/agent/s261_fixup.log` and grepped — all 9 guards +
+entry diagnostic each patched exactly `x1`, no silent double-apply),
+clean `cmake --build .` (0 errors, only pre-existing sign-conversion
+warnings), `strings`-verified all 5 tracked env vars present
+(`ROGUESQ_LOG_COMPOSE_NPC_GUARD9`, `SETLOOKUP_ARG_GUARD`,
+`SETLOOKUP_TABLE_GUARD`, `EVALSPLINE_GUARD`, `HANGAR_BAY_DEREF_GUARD`).
+
+**Soak (`composeguard9`, `scratch/s73_post_a_scene/composeguard9/run.log`,
+4.47M lines): `[compose-npc-orient-guard]` through `guard9` all 0 fires
+across 899 calls to the function** (entry diagnostic `[compose-npc-orient-
+800AB1C8]` count) — the whole 9-guard family is now clean on this run.
+`SETLOOKUP_ARG_GUARD`/`SETLOOKUP_TABLE_GUARD` also 0 fires (3rd
+independent soak confirming s260's fix holds). `EVALSPLINE_GUARD`/
+`HANGAR_BAY_DEREF_GUARD` (G30/G31) also 0 fires, same as every soak since
+their own fixes landed. **The run reached `[phase] vi_width=640 (was 512)
+... at 143.1s update_screen #8552`** — the SELECT-CRAFT→mission transition
+(512) happened at 75.0s same as always, but this is the first soak in the
+whole investigation to survive a SECOND phase transition past it, all the
+way into actual mission/render code. `[CRASH][unlit-mesh-tracer] positive-
+control calls=1` — **the very first hit this counter has EVER recorded**
+(0 across every prior soak this whole investigation, per NEXT.md's own
+running tally). Crash backtrace: `renderUnlitMeshFaces+792` (native pc
+offset) called from `processSceneNode`→`traverseSceneGraphRecursive`→
+`setupCameraMatrices`→`static_5_800C9BF0`→`menuOverlayInit`→
+`mainGameLoop`, `si_addr=0x380630062` — decomposes as `rdram_base +
+0x80630062`, the exact already-catalogued item -49 KSEG0-zero-extension
+signature (PORTING-STATE -49/s208/s254/s256), now its **7th confirmed
+occurrence**. `R7A_LOADED`/`R7B_LOADED` (s257's still-untested tracer
+sites) did not fire — the crash happened on the function's first and only
+call (`calls=1`) before those later-in-function sites were reached, so
+they still have not gotten a real positive-control test; that remains
+open.
+
+**What this rules out**: the `composeNpcOrientationMatrix` 9-guard
+whack-a-mole family (s100-s261, 21+ sessions of history) is closed as a
+BLOCKER to reaching `renderUnlitMeshFaces` — this is the first time this
+investigation has ever gotten a live call into that function with a real
+crash inside it, not a crash on the way there. **What this does not rule
+out**: whether a 10th `composeNpcOrientationMatrix` gap exists that
+simply wasn't exercised by this one scripted sequence (same caveat as
+s260's note on `setLookupEntryField5ByKey`'s 18 call sites) — single-soak
+result, iron rule 4 not yet satisfied for this specific guard9 fix, though
+the qualitative signal (first-ever positive control hit) is far stronger
+than a typical 0-fires null result.
+
+**Next work unit**: pick up item -49's own next prescribed step directly
+(`R7A_LOADED`/`R7B_LOADED` positive-control soak, PORTING-STATE -49) now
+that a run can actually reach `renderUnlitMeshFaces` with a live call —
+no more `composeNpcOrientationMatrix` gaps sit in front of it. Re-running
+`composeguard9` once more first would also satisfy iron rule 4 for the
+9-guard family's closure; either is defensible, see `scratch/agent/
+NEXT.md`.
+
+**Housekeeping**: no `lib/` edit this session — `submodule-patches/
+export.sh` not needed. `fixup_game_funcs.py`'s guard9 edit is again
+uncommitted in the separate `N64Recomp` sibling checkout, same posture as
+every prior session's guards. `CURRENT-TRUTH.md` size still flagged,
+unaddressed again (still ~450KB, ~13x the ~35KB target; this session's
+budget went to one build-soak cycle that produced the strongest single
+result of the investigation to date — a first-ever positive control hit —
+which stands on its own as `ADVANCED`; the pruning session is now
+overdue across 3+ consecutive sessions and should be prioritized soon).

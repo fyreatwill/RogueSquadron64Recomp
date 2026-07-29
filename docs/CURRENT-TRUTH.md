@@ -663,7 +663,48 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s260)
+## Next steps, in order of expected value (s261)
+
+-102. **(s261) Closed s260's 9th `composeNpcOrientationMatrix` gap
+    (`COMPOSE_NPC_GUARD9`) — the whole 9-guard whack-a-mole family (s100-261,
+    21+ sessions) is now closed as a blocker: this soak got the FIRST-EVER
+    live call into `renderUnlitMeshFaces` (`unlit-mesh-tracer` positive
+    control fired for the first time in this investigation's entire
+    history), survived to VI-update #8552/143.1s (previous best ~75s, a
+    full second phase transition past SELECT-CRAFT), and converged on the
+    already-catalogued item -49 KSEG0-zero-extension bug for its 7th
+    confirmed occurrence (exact `+792`/`0x380630062` signature match to
+    s208/s254/s256).** Full read of `static_5_800AB1C8` (funcs_40.c:6293+)
+    found the gap: guard7 (s158) validates a pointer FIELD at native
+    `0x800AB4E8`, but the dereference of THAT pointer one instruction later
+    (`0x800AB4EC`, `ctx->r2 = MEM_W(ctx->r2, 0X0)`) produces a brand-new,
+    wholly unchecked pointer immediately used as the base for
+    `0x68($v0)`/`0x5C($v0)`/`0x70($v0)`/`0x64($v0)` — the literal `0x68`
+    offset is a byte-for-byte match to the crash's `si_addr=0x380000068`
+    (grep-confirmed only `0x68($v0)` occurrence in the function). Because a
+    plain `>=0x80000000` guard would NOT catch this value (`0x80000068`,
+    and even the bare `0x80000000`, both pass trivially), guard9 tightens
+    the lower bound to `0x80001000` — justified because every literal
+    KSEG0 constant anywhere in this file sits at `0x800A0000`+, and
+    `0x80000000-0x80000FFF` is the N64's reserved boot-vector/IPL3 region,
+    never a legitimate game pointer. Soak (`composeguard9`,
+    `scratch/s73_post_a_scene/composeguard9/run.log`): all 9 compose-npc
+    guards 0 fires across 899 calls, `SETLOOKUP_ARG_GUARD`/
+    `SETLOOKUP_TABLE_GUARD`/`EVALSPLINE_GUARD`/`HANGAR_BAY_DEREF_GUARD` all
+    still 0 fires (further confirms s258-260's fixes hold). Single-soak
+    result (iron rule 4 not yet satisfied for guard9 specifically), but the
+    qualitative signal — a positive control that has NEVER fired before —
+    is far stronger than a typical 0-fires null result. `R7A_LOADED`/
+    `R7B_LOADED` (s257's untested tracer sites) still didn't fire: the
+    crash happened on the function's first and only call, before those
+    later-in-function sites were reached. **Next step, highest value**:
+    pick up item -49's own next prescribed step directly (`R7A_LOADED`/
+    `R7B_LOADED` positive-control soak — see the -49 entry below) now that
+    a run can actually reach `renderUnlitMeshFaces` with a live call, no
+    `composeNpcOrientationMatrix` gap sits in front of it anymore.
+    Re-running `composeguard9` once more first would also satisfy iron
+    rule 4 for the 9-guard family's closure specifically. Full detail:
+    PORTING-STATE Session 261.
 
 -101. **(s260) Closed s259's `setLookupEntryField5ByKey` lead, but it took TWO
     guards, not one — the first guard (validating the caller's argument) was
@@ -2635,9 +2676,15 @@ cost three sessions before the recursive mutex.
     call in s256 — rules out the entire traced r16/r18/r20 chain for that
     occurrence. s257 widened to a new site (`R7A_LOADED`/`R7B_LOADED`,
     funcs_4.c's only remaining uncovered pointer) but hasn't gotten a
-    positive-control soak yet — see -98 above, blocked on the SAME
-    whack-a-mole family's `static_5_800AB658` site (s248) killing runs
-    before they reach `renderUnlitMeshFaces` at all. 6th occurrence
+    positive-control soak yet — was blocked on the SAME whack-a-mole
+    family's `composeNpcOrientationMatrix` gaps killing runs before they
+    reach `renderUnlitMeshFaces` at all; **that family is now CLOSED as of
+    s261 (9 guards, see -102 above)**, so this is now directly actionable:
+    next soak should just re-run with the existing armed tracer set (no new
+    build needed unless `R7A_LOADED`/`R7B_LOADED` env vars aren't already
+    in the script) and read whether those two sites fire. 7th occurrence
+    confirmed s261 (`composeguard9` soak, first-ever live call into the
+    function), same `+792`/`0x380630062` signature exactly. 6th occurrence
     confirmed s256, see -97 above — same `+792`/`0x380630062`
     signature exactly, plus a negative result on the "named symbol"
     explanation (grepped `symbol_files/*.txt` for `80630062`, 0 hits))
