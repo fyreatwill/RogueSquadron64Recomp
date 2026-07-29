@@ -37,6 +37,15 @@ extern "C" uint32_t rs64_phase_ord(void) {
     return g_rs64_phase_ord.load(std::memory_order_relaxed);
 }
 
+// Shared wall-clock epoch (s234) so guest-side diagnostics (funcs_*.c PATCH
+// blocks, via extern "C" declaration) can emit timestamps directly
+// comparable to the [phase] line below and to host-side hold_NN.png capture
+// timing — one clock, not a second independently-skewed one per diagnostic.
+static const std::chrono::steady_clock::time_point g_rs64_t0 = std::chrono::steady_clock::now();
+extern "C" double rs64_elapsed_seconds(void) {
+    return std::chrono::duration<double>(std::chrono::steady_clock::now() - g_rs64_t0).count();
+}
+
 extern "C" void rs64_dpc_get_cumulative_histogram(uint32_t out[64]);
 extern "C" uint32_t rs64_dpc_get_cumulative_fullsyncs();
 extern "C" void rs64_cine_dump_if_stuck(void);
@@ -815,9 +824,7 @@ public:
                 ultramodern::renderer::ViRegs* pvi = ultramodern::renderer::get_vi_regs();
                 const uint32_t w = pvi->VI_WIDTH_REG;
                 if (w != s_last_width) {
-                    static const auto s_t0 = std::chrono::steady_clock::now();
-                    const double el = std::chrono::duration<double>(
-                        std::chrono::steady_clock::now() - s_t0).count();
+                    const double el = rs64_elapsed_seconds();
                     fprintf(stderr,
                         "[phase] vi_width=%u (was %u) origin=0x%08X at %.1fs update_screen #%d\n",
                         w, s_last_width == 0xFFFFFFFF ? 0u : s_last_width,

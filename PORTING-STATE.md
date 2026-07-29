@@ -22224,3 +22224,82 @@ scope (`lib/` dirty-but-uninvestigated — confirmed again this session no
 `lib/` edits were made, so no `export.sh` obligation triggered;
 `fixup_game_funcs.py` untracked sibling state; `CURRENT-TRUTH.md` still
 373 KB, over both the ~35 KB budget and the Read tool's 256 KB limit).
+
+## Session 234 (2026-07-28)
+
+**Work unit**: NEXT.md's wall-clock/`hold_N` bridge — the missing piece
+identified in s233 that blocks correlating `dl-payload` staleness onset
+with the checksum-based visual-freeze frame within a single run.
+
+**Instrument landed**: `rs64_elapsed_seconds()`
+(`src/main/rt64_render_context.cpp`) — hoisted the `[phase]` line's private
+`static const auto s_t0 = steady_clock::now()` to a file-scope epoch shared
+via a new `extern "C" double rs64_elapsed_seconds(void)`, following the
+exact pattern already used by `rs64_bump_phase_ord`/`rs64_phase_ord` in the
+same file. This guarantees the guest-side diagnostic and the `[phase]` line
+read the *same* clock rather than inventing a second, potentially-skewed
+one, per NEXT.md's explicit instruction. `fixup_game_funcs.py`'s
+`ROGUESQ_LOG_DL_PAYLOAD_STALE` PATCH block (`funcs_4.c:13918` anchor) now
+declares `extern double rs64_elapsed_seconds(void);` inline (same idiom as
+the existing `rogue_current_thread_id` extern) and appends ` t=%.1f` to
+`[dl-payload-tracker-armed]`, `[dl-payload-content-changed]`,
+`[dl-payload-content-stale]`, and `[dl-payload-tracker-hb]`. Separately,
+`run_mission_keys.sh` now writes `proc_start_epoch.txt` (real UNIX epoch,
+`date +%s`) immediately after launching the game process, so the guest's
+process-relative `t=` field converts to real wall-clock and becomes
+directly comparable to `hold_NN.png` file mtimes (also real wall-clock) —
+this sidesteps the harder problem of locating a "hold-window-start" anchor
+in the driver's own unredirected stdout that NEXT.md flagged as a fallback.
+Standard regen recipe ran clean (`make_elf.py` -> `regen_n64recomp.sh` ->
+`fixup_game_funcs.py` once, report line `funcs_4.c: DL-emission payload
+hash diagnostic patched x1`, spot-checked `funcs_4.c:13956-13995` for the
+actual `t=%.1f`/`rs64_elapsed_seconds()` text -> `cmake --build`, 0
+errors/0 new warnings).
+
+**Soak (`campose10`, 1 attempt, per NEXT.md's explicit 1-attempt budget for
+validating a new diagnostic feature)**: copied `campose9` unchanged except
+the tag. **Positive control confirmed** — `t=` fires and increases
+monotonically through the run: `[dl-payload-tracker-armed] ... t=3.0`,
+`[dl-payload-tracker-hb] n=0 ... t=3.0`, `n=5000 ... t=14.2`, `n=10000 ...
+t=20.1`, `n=20000 ... t=37.1`, five `[dl-payload-content-changed]` events
+up to `t=74.7`. The instrument itself works exactly as designed. **But the
+actual discriminating experiment could not run this iteration**: the
+process crashed at t=74.5-74.7s (SIGBUS signal 10, `si_addr=0x336000004`,
+`submitSceneNodeRender+31672` <- `processSceneNode` <- `traverseSceneGraphRecursive`
+<- `setupCameraMatrices`) during the SELECT-CRAFT->mission transition,
+before the hold loop began at all (`"game process gone at hold-iter 1"`).
+Zero `hold_NN.png` frames were captured (nothing for `checksum_campose10.py`
+to compare against), and only 5 `[dl-payload-content-changed]` events fired
+in total — none reached the 10000-call-gap `[dl-payload-content-stale]`
+threshold.
+
+**Is this the new code's fault?** Can't tell from n=1, but the balance of
+evidence favors "no": this exact crash signature/window matches the
+already-documented pre-existing instability at the SELECT-CRAFT->mission
+transition (CURRENT-TRUTH -71/-72, s230/s231 — 0/4 epoch-diagnostic-armed
+soaks survived it, with differing crash sites each time, and s231
+specifically refuted "diagnostic I/O volume causes this" for a much
+heavier diagnostic than this session's one-extra-already-rate-limited-call
+addition). s223/s233 also proved this exact schedule lands the transition
+at wildly different wall-clock times run to run (73.8s vs 174.8s in
+`campose8` vs `campose9`) — pure non-determinism, not a diagnostic
+artifact. Against that: `campose8` and `campose9` (identical armed set,
+missing only the `t=` field) were both `CRASH: 0` through this same
+window, so the sample isn't clean enough to fully clear the new code
+either. Treating this as **inconclusive, single-source**, not evidence
+against the instrument.
+
+**Next step**: one more soak (`campose11`, a fresh, explicit budget
+decision, unmodified script/binary) to see whether the bridge can reach the
+hold window at all. `checksum_campose10.py` (mtime-aware, already written
+this session, needs only the directory name changed for `campose11`) is
+ready to pair with a new `correlate_campose11.py` (parse `t=` fields +
+`proc_start_epoch.txt`, convert to real wall-clock, diff against
+`hold_NN.png` mtimes) the moment a soak survives to the freeze window.
+
+**Housekeeping**: same items flagged again, still not this session's scope
+(`lib/` dirty-but-uninvestigated — no `lib/` edits made this session either,
+so no `export.sh` obligation; `fixup_game_funcs.py` untracked sibling
+checkout state, now carrying this session's patch too — same standing
+exposure since s83; `CURRENT-TRUTH.md` still far over both the ~35 KB
+budget and the Read tool's 256 KB limit, unmigrated for 30+ sessions).

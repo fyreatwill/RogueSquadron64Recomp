@@ -663,7 +663,58 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s233)
+## Next steps, in order of expected value (s234)
+
+-75. **(s234) Landed and positive-control-validated the wall-clock/hold_N
+    bridge s233's NEXT.md called for, but the single validation soak
+    crashed at the known-fragile SELECT-CRAFT->mission transition (~74.5s)
+    before reaching the hold window, so the actual staleness-vs-freeze
+    correlation still has not run.** New instrument:
+    `rs64_elapsed_seconds()` (`src/main/rt64_render_context.cpp`) — a
+    file-scope `steady_clock` epoch, following the same pattern as the
+    existing `rs64_bump_phase_ord`/`rs64_phase_ord` pair, now shared by
+    both the `[phase]` line (previously had its own private epoch) and a
+    new `t=%.1f` field on `[dl-payload-tracker-armed]`/
+    `[dl-payload-content-changed]`/`[dl-payload-content-stale]`/
+    `[dl-payload-tracker-hb]` (`fixup_game_funcs.py`, same
+    `ROGUESQ_LOG_DL_PAYLOAD_STALE` PATCH block). `run_mission_keys.sh` also
+    now stamps `proc_start_epoch.txt` (real UNIX epoch at process launch)
+    so `t=` converts to real wall-clock, directly comparable to
+    `hold_NN.png` file mtimes, without needing to parse the driver's own
+    unredirected stdout. Regenerated clean (`make_elf.py` -> `N64Recomp` ->
+    `fixup_game_funcs.py` x1 -> `cmake --build`, 0 errors).
+    **Positive control confirmed**: `campose10` (same armed set/schedule as
+    `campose8`/`campose9`) shows `t=` firing and increasing monotonically
+    (`t=3.0` at tracker-arm, `t=14.2/20.1/37.1` heartbeats, up to `t=74.7`
+    on the last `dl-payload-content-changed` event) — the instrument works.
+    **But the run crashed at t=74.5-74.7s** (SIGBUS signal 10,
+    `submitSceneNodeRender+31672` <- `processSceneNode` <-
+    `traverseSceneGraphRecursive` <- `setupCameraMatrices`,
+    `si_addr=0x336000004`) during the SELECT-CRAFT->mission transition,
+    before the hold loop ever started — 0 `hold_NN.png` frames captured, 0
+    `[dl-payload-content-stale]` events (only 5 `content-changed` events
+    fired total). This crash signature matches the already-documented
+    pre-existing instability at this exact transition (CURRENT-TRUTH
+    -71/-72, s230/s231: 0/4 epoch-armed soaks survived it, and s231 already
+    refuted "diagnostic I/O volume causes this" for a much heavier
+    diagnostic than this session's one-extra-already-rate-limited-call
+    addition) plus s223/s233's proof that this exact schedule lands the
+    transition at wildly different wall-clock times run to run — the more
+    likely read is ordinary non-determinism, not new fragility from this
+    session's code. But `campose8`/`campose9` (same armed set, no `t=`
+    field) were both `CRASH: 0` through this same window, so n=1 cannot
+    fully clear the new code either — **inconclusive, single-source, do not
+    treat as either a resolved pass or fail for the instrument's safety.**
+    **Next step**: one more soak (`campose11`, a fresh explicit budget
+    decision, unmodified script/binary) — if it also crashes at ~74s, that
+    is still consistent with known non-determinism; if it survives to the
+    hold window, pair `checksum_campose10.py` (mtime-aware, already
+    written, rename target dir for `campose11`) with a new
+    `correlate_campose11.py` (parse `t=` + `proc_start_epoch.txt`, convert
+    to real wall-clock, diff against `hold_NN.png` mtimes) to finally
+    answer the staleness-onset-vs-freeze-frame question this probe chain
+    (s229-s234) has been built toward. Full detail: PORTING-STATE Session
+    234.
 
 -74. **(s233) Closed off s232's Option B (static-data classification of the
     disputed `0x80332xxx` address pool) as impossible — it's unambiguously

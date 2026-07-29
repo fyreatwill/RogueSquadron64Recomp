@@ -26,6 +26,12 @@ fi
 
 ./RogueSquadron64Recomp > "$OUTDIR/run.log" 2>&1 &
 PID=$!
+# s234: real UNIX-epoch process-start stamp, so the game's own t=%.1f
+# diagnostic fields (process-relative, rs64_elapsed_seconds()) can be
+# converted to real wall-clock and cross-referenced against hold_NN.png
+# file mtimes (also real wall-clock) without needing to parse this
+# driver's own (unredirected) stdout for a matching anchor.
+date +%s > "$OUTDIR/proc_start_epoch.txt"
 print "pid $PID out=$OUTDIR stable=${STABLE_S}s grace=${GRACE}s"
 
 WID=""
