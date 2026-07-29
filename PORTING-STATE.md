@@ -24532,3 +24532,114 @@ every prior session's guards, still out of this repo's commit scope.
 `CURRENT-TRUTH.md` size still flagged, unaddressed again (this session
 landed a real new guard pair + soak with a genuine crash-site change,
 which stands on its own as `ADVANCED`).
+
+## Session 259 (2026-07-29) — guarded `evalCubicSplineAtTime`'s unguarded pointer per s258's lead; guard was inert this run (0 fires) but the soak advanced past that whole call chain into a BRAND NEW, unrelated crash inside `activateAnimationKeyframe`'s `setLookupEntryField5ByKey` callee, which is precisely localized to a null-only (not range) check at `0x80061EF8`
+
+**Work unit**: s258 left a clear lead — `evalCubicSplineAtTime` (reached via
+`static_5_800AB658` → `setupActorAnchorTransformType1` →
+`buildPositionAndCallTransformHelper`) had an unguarded pointer feeding a
+Bus error. Read all 3 functions in full (`funcs_4.c:25612-26093`,
+`funcs_15.c:4019-4930`, `funcs_15.c:5758-5799`). `evalCubicSplineAtTime`
+loads `ctx->r16` from the spline-data struct's `+0x8` field (guest
+`0x80018FCC`) with zero validation, dereferenced 2 instructions later
+(`0x80018FF0`) as the base of the keyframe binary-search loop's first
+read — identical "load struct field, deref immediately, no range check"
+shape as every other guard in this project (`RENDERUNLIT_GUARD` is the
+canonical example). Per NEXT.md's explicit instruction ("guard the
+earliest unvalidated load found"), guarded this one, not the later
+`ctx->r8`-based reads at `0x800190CC`+.
+
+**Guard mechanics**: unlike `RENDERUNLIT_GUARD` (which reuses an existing
+mid-function "list empty" label), `evalCubicSplineAtTime` has no partial-
+skip path — the entire rest of the function (search loop, float
+interpolation math, AND the r8-based reads) transitively depends on this
+one struct. So a dedicated epilogue label (`L_evalspline_guard_exit`) was
+inserted immediately before the function's real restore-and-return
+sequence (guest `0x80019188`), and the guard `goto`s there directly. This
+is ABI-safe because the prologue (`0x80018F9C`-`0x80018FB8`) already saves
+`$s0`/`$s1`/`$f20`/`$f22`/`$f24`/`$f26`/`$f28`/`$f30` to their stack slots
+strictly BEFORE this guard's anchor point (right after the r16 load) — so
+every value the epilogue restores is already correct on the stack, same
+ABI-safety reasoning s109 used for `L_dlentry_guard_exit`. New env var:
+`ROGUESQ_LOG_EVALSPLINE_GUARD`. Output (`*a2`, the 3 interpolated floats)
+is left as whatever the caller already had on a guard fire — leaving
+stale data beats a crash, same trade-off every prior guard in this
+codebase makes.
+
+**Build**: full regen (delete all `funcs_*.c`, `make_elf.py` →
+`regen_n64recomp.sh` → `fixup_game_funcs.py` exactly once — confirmed both
+`evalCubicSplineAtTime epilogue label (L_evalspline_guard_exit) patched
+x1` and `evalCubicSplineAtTime struct-field pointer guard (0x80018FCC)
+patched x1` in the fixup report), clean `cmake --build .`, `strings`-
+verified both `ROGUESQ_LOG_EVALSPLINE_GUARD` and (as the same-run control)
+`ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD` present in the binary.
+
+**Soak** (`evalsplineguard1`, ~222MB `run.log`, same `STICK_SCHEDULE` as
+every prior soak in this family): `EVALSPLINE_GUARD` got 0 fires
+(uninformative on the guard's own question), `HANGAR_BAY_DEREF_GUARD`
+(G30/G31) also 0 fires, `unlit-mesh-tracer` still 0 hits
+(`renderUnlitMeshFaces` never called) — the game never went through
+`evalCubicSplineAtTime`/`buildPositionAndCallTransformHelper`/
+`setupActorAnchorTransformType1` at all this run. **The run crashed at
+almost the same VI tick as s258** (`update_screen #~8192`-`#8236` vs.
+s258's `#8320` — close enough to be the same ballpark, not a clear
+improvement or regression), **but via a COMPLETELY DIFFERENT, never-
+before-implicated call chain**: `static_5_800AAD9C`
+(`runHangarSelectionFrame`) → `advancePlayerAnimationPhase` →
+`activateAnimationKeyframe` → `setLookupEntryField5ByKey`, Bus error
+(`si_addr=0x3c04b1980`, `x8=0x300000000` rdram base, `x9=0xc04b1980` — a
+THIRD distinct wild-value shape, matching neither the `0x80630062` KSEG0-
+zero-extension pattern nor s258's `0x7ffffff8`-ish sentinel value).
+
+**Caveat, carried forward honestly (iron rule 4, single-source)**: one run
+cannot distinguish "the evalCubicSplineAtTime guard is a real fix that let
+the run progress into previously-unreached territory" from "scripted-input
+run-to-run variance landed on a different code path entirely" (identical
+caveat to s258's own g30g31soak1 result). Do not credit the guard with
+fixing anything beyond "matches the established idiom, 0 fires so far,
+crash-of-record moved to a new site."
+
+**Localized the new crash precisely** (this part IS a concrete finding,
+not speculation): `setLookupEntryField5ByKey` (funcs_15.c:70-130, tiny
+function) has exactly ONE call site inside `activateAnimationKeyframe`
+(funcs_14.c:1629-2138 is the function's real extent; of the 18
+`setLookupEntryField5ByKey(rdram, ctx);` call sites in the whole file,
+only the one at line 2116 falls inside this range — the crash symbol's
+native `+5152` offset is NOT a line number and was not used to make this
+determination). The argument feeding it, `ctx->r4 = MEM_W(ctx->r17, 0XF4)`
+at guest `0x80061EF4`, is checked ONLY for `== 0` (`0x80061EF8: beq $a0,
+$zero, L_80061F18`) before being passed in — never against the full
+`0x80000000`-`0x80800000` KSEG0 range + hi-word check every other guard in
+this project uses. A non-null-but-garbage value in `$s1+0xF4` sails
+through this check untouched and gets dereferenced inside the callee
+(`MEM_W(ctx->r4, 0X0)` / `MEM_HU(ctx->r4, 0X4)`, funcs_15.c:87/74) with no
+further validation anywhere. This is a distinct site from
+`activateAnimationKeyframe`'s existing s98 "table-deref guard" (confirmed
+by grepping `fixup_game_funcs.py` — that guard covers a different
+address).
+
+**What this rules out**: `evalCubicSplineAtTime`'s specific unguarded
+pointer was not what killed s258's run in a way that reproduces
+deterministically at the exact same VI tick — this run's crash-of-record
+moved entirely to a different subsystem (animation-keyframe lookup, not
+the actor-anchor-transform/spline chain). **What this does not rule
+out**: the evalCubicSplineAtTime guard remains a legitimate, idiom-
+matching fix regardless of whether it was "the" blocker this run; keeping
+it in place is consistent with every prior guard's cost/benefit in this
+project.
+
+**Next work unit**: widen the existing `== 0` check at guest `0x80061EF8`
+(inside `activateAnimationKeyframe`, funcs_14.c) to the standard KSEG0
+range + hi-word guard, reusing the existing `goto L_80061F18;` bail
+target already compiled into the `==0` path (no new label needed — same
+"reuse the function's own existing degrade path" approach as every prior
+guard). Rebuild, re-soak under a new tag. See `scratch/agent/NEXT.md`.
+
+**Housekeeping**: no `lib/` edit this session (N64ModernRuntime/rt64
+submodule diffs pre-date this session, untouched) — `submodule-patches/
+export.sh` not needed. The `fixup_game_funcs.py` edit (EVALSPLINE_GUARD)
+is again uncommitted in the separate `N64Recomp` sibling checkout, same
+posture as every prior session's guards, still out of this repo's commit
+scope. `CURRENT-TRUTH.md` size still flagged, unaddressed again (this
+session landed a real new guard + soak with a genuine crash-site change,
+which stands on its own as `ADVANCED`).

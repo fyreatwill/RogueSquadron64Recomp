@@ -1,97 +1,109 @@
-# NEXT work unit — guard the unguarded pointer feeding `evalCubicSplineAtTime`'s
-# Bus error (s258 lead, a NEW crash site reached deeper into the same
-# `static_5_800AB658` menu-crash whack-a-mole family)
+# NEXT work unit — widen the null-only check feeding
+# `setLookupEntryField5ByKey` inside `activateAnimationKeyframe` to a full
+# KSEG0 range guard (s259's lead, a NEW crash family, unrelated to the
+# `-0x25A4`/hangar-bay/evalCubicSplineAtTime chains)
 
-## Where the investigation stands (s258)
+## Where the investigation stands (s259)
 
-s258 closed the 2 gaps its own scan found in `static_5_800AB658`'s
-already-systematic `-0x25A4` array-deref guard family (`fixup_game_funcs.py`'s
-`_hangarbay_deref_guard_sites`, s132): 26 sites (G1-G29) were guarded as of
-s132's "complete" audit, but a fresh full-body read (prompted by s257's
-own crash) found 2 more identical-shape occurrences the original sweep
-missed, between `G28` (`0x800ADA2C`) and the `G29` merge point
-(`L_800ADB18`): `0x800ADA88`/`0x800ADAD4` (funcs_40.c:14302-14305,
-14348-14351). Added as `G30`/`G31`, same guard generator, same env var
-(`ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD`), same exit label. Full regen,
-clean build, `strings`-verified (28 `hangar-bay-deref-guard` literals,
-up from 26).
+s259 guarded `evalCubicSplineAtTime`'s unguarded struct-field pointer
+(s258's lead): `ctx->r16` loaded from `+0x8` of the spline-data struct at
+guest `0x80018FCC`, dereferenced 2 instructions later with zero
+validation. Bail target: a dedicated epilogue label
+(`L_evalspline_guard_exit`) inserted right before the function's real
+restore-and-return sequence (`0x80019188`) — ABI-safe since the prologue
+already saved `$s0`/`$s1`/FP20-30 to stack before the guard's anchor
+point. New env var `ROGUESQ_LOG_EVALSPLINE_GUARD`. Full regen, clean
+build, `strings`-verified.
 
-**Soak (`g30g31soak1`, `scratch/s73_post_a_scene/g30g31soak1/run.log`,
-~212MB): G30/G31 got 0 fires (uninformative null on that exact
-question), but the run crashed at a NEW, deeper site — real evidence of
-progress even without a fire.** The SELECT-CRAFT phase transition landed
-at the usual 74.9s (`update_screen #4460`). s257's run crashed almost
-immediately after (`#4474`, ~14 ticks later). **This run survived to
-`update_screen #8320` — roughly 3860 more VI updates** — before crashing,
-still inside the same outer call chain (`mainGameLoop` ← `menuOverlayInit`
-← `runHangarMenuFromOverlay` ← `runHangarSelectionFrame` ←
-`static_5_800AB658`), but this time at native offset **+61812** (not
-s257's +49104), reached through a subroutine chain never before
-implicated in this bug family:
+**Soak (`evalsplineguard1`, `scratch/s73_post_a_scene/evalsplineguard1/
+run.log`, ~222MB): EVALSPLINE_GUARD got 0 fires (uninformative), but the
+run crashed at a BRAND NEW site — real evidence the crash-of-record moved,
+even without a guard fire.** Crashed at almost the same VI tick as s258
+(`update_screen #~8192-8236` vs s258's `#8320` — same ballpark, not a
+clear improvement), but via a call chain NEVER before implicated in this
+whole investigation:
 
 ```
-static_5_800AB658 (+61812)
-  -> setupActorAnchorTransformType1 (+368)
-    -> buildPositionAndCallTransformHelper (+1292)
-      -> evalCubicSplineAtTime (+732, CRASHES at +1008)
+static_5_800AAD9C (runHangarSelectionFrame)
+  -> advancePlayerAnimationPhase
+    -> activateAnimationKeyframe
+      -> setLookupEntryField5ByKey  (CRASHES)
 ```
 
-Register dump: `pc=0x104e5c5a8`, `far=0x37ffffff8`, `x8=0x0000000300000000`
-(rdram host base), `x9=0x000000007ffffff8` (the wild guest-side value —
-note this is NOT the familiar `0x80630062`-shaped KSEG0-zero-extension
-value seen in item -49's occurrences; it looks more like a raw
-`0x7FFFFFF8`-ish sentinel or a corrupted/uninitialized float-adjacent
-value — read the crash site itself before assuming it's the same
-mechanism as item -49). Bus error (signal 10), not segfault — consistent
-with a misaligned or wildly-out-of-range access.
+Register dump: `si_addr=0x3c04b1980`, `x8=0x0000000300000000` (rdram host
+base), `x9=0x00000000c04b1980` (wild guest value — a THIRD distinct shape:
+not the `0x80630062` KSEG0-zero-extension pattern, not s258's `0x7ffffff8`
+sentinel-like value either). Bus error (signal 10).
 
-**Caveat, carried forward honestly**: this was a single run, not a
-formal same-run A/B (iron rule 2 forbids cross-run A/B on animating
-menu/scene state anyway). The ~4x-longer survival is *suggestive* that
-closing G30/G31 helped, but it is equally possible this is scripted-
-input run-to-run variance reaching a slightly different code path.
-Treat as single-source (iron rule 4) until a second independent line of
-evidence agrees (e.g. two more soaks both surviving similarly long).
+**Caveat, carried forward honestly**: single run, not a formal same-run
+A/B (iron rule 2). Cannot distinguish "the evalCubicSplineAtTime guard
+really let the run progress further" from "scripted-input run-to-run
+variance landed on a different code path" (identical caveat to s258's own
+result). Treat as single-source (iron rule 4).
 
 `unlit-mesh-tracer` again had 0 hits this run (`renderUnlitMeshFaces`
-still never called) — the game is still dying in the hangar menu before
-ever reaching gameplay rendering, so `R7A_LOADED`/`R7B_LOADED` (item -49's
-open sub-question) still have not had a positive-control opportunity.
-Do NOT re-attempt that soak until this NEW blocker is also closed.
+still never called) — game still dies in the hangar menu before ever
+reaching gameplay rendering, so `R7A_LOADED`/`R7B_LOADED` (item -49's open
+sub-question) still have not had a positive-control opportunity. Do NOT
+re-attempt that soak until this NEW blocker is also closed.
+
+## The bug is ALREADY precisely localized — read first, but the site is known
+
+`setLookupEntryField5ByKey` (funcs_15.c:70-130, 61 lines, tiny) has
+exactly ONE call site inside `activateAnimationKeyframe`
+(funcs_14.c:1629-2138 is the function's real extent — verified via
+`awk '/^RECOMP_FUNC/{print NR}' funcs_14.c`; of 18 total
+`setLookupEntryField5ByKey(rdram, ctx);` call sites in the whole file,
+only the one at line 2116 falls in this range). **Do NOT use the crash
+symbol's native `+5152` offset as a line number — it is not one** (same
+"+N is a native ARM64 offset, not a guest address or C line" rule as
+always).
+
+The argument feeding the crashing call (funcs_14.c:2090-2097):
+
+```c
+// 0x80061EF4: lw          $a0, 0xF4($s1)
+ctx->r4 = MEM_W(ctx->r17, 0XF4);
+// 0x80061EF8: beq         $a0, $zero, L_80061F18
+if (ctx->r4 == 0) {
+    ctx->r2 = ctx->r18 & 0XFF;
+        goto L_80061F18;
+}
+```
+
+This checks ONLY `== 0`, never the full `0x80000000`-`0x80800000` KSEG0
+range + `0xFFFFFFFF` hi-word check every other guard in this project
+uses. A non-null-but-garbage value in `$s1+0xF4` sails through and gets
+dereferenced inside the callee (funcs_15.c:74/87: `MEM_HU(ctx->r4, 0X4)`,
+`MEM_W(ctx->r4, 0X0)`) with zero further validation. This is a DIFFERENT
+site from `activateAnimationKeyframe`'s existing s98 "table-deref guard"
+(confirmed by grepping `fixup_game_funcs.py` for `activateAnimationKeyframe`
+— that guard covers a different address).
 
 ## The next work unit, in priority order
 
-### Step 1: read `evalCubicSplineAtTime`, `buildPositionAndCallTransformHelper`,
-### `setupActorAnchorTransformType1` for the unguarded pointer
+### Step 1: re-read the exact site to confirm nothing has shifted
 
 ```
-grep -n "^RECOMP_FUNC.*evalCubicSplineAtTime\|^RECOMP_FUNC.*buildPositionAndCallTransformHelper\|^RECOMP_FUNC.*setupActorAnchorTransformType1" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+grep -n "setLookupEntryField5ByKey" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_14.c
 ```
+Confirm line 2116 is still the one inside `activateAnimationKeyframe`
+(1629-2138), and re-read funcs_14.c:2080-2119 to confirm the `beq
+$a0,$zero,L_80061F18` shape is unchanged before editing anything.
 
-`evalCubicSplineAtTime` already has an existing div-by-zero guard
-(unrelated — from an earlier session, see fixup report line
-"evalCubicSplineAtTime div0 guard patched x1"); do not confuse that with
-what's needed here. We need a pointer-range guard, same idiom as every
-prior guard in this project (`RENDERUNLIT_GUARD` in funcs_4.c:5044-5060
-is still the canonical example to copy). Since these are 3 small-ish
-functions (not a 7000-line function like `static_5_800AB658`), a single
-read of each in full should be tractable without fanning out multiple
-agents — try reading each function directly first; only fan out if one
-of them turns out to be unexpectedly large.
+### Step 2: widen the guard, same idiom as always, reuse the existing bail
 
-Look for a `MEM_W`/`MEM_H`/`MEM_B`-loaded value used as a base pointer
-with no `0x80000000`-`0x80800000` + `0xFFFFFFFF`-hi-word range check
-before the dereference — the crash's `x9=0x7ffffff8` value is notably
-NOT in the `0x80000000-0x80800000` range itself (it's below it), so the
-existing guard idiom's bounds check should catch it cleanly if applied
-at the right site.
-
-### Step 2: guard the earliest unvalidated load found, same idiom as always
-
-Copy the `RENDERUNLIT_GUARD`-style block (range-check + zero-and-bail on
-failure, respecting the function's own control flow for where "bail"
-should jump to — read enough context to find the right target, don't
-invent one).
+In `fixup_game_funcs.py`, add a patch for `funcs_14.c` that changes the
+`if (ctx->r4 == 0)` check at this site to ALSO reject out-of-KSEG0-range
+values (same `U32(ctx->r4) < 0x80000000u || >= 0x80800000u || hi_word !=
+0xFFFFFFFFu` idiom as `RENDERUNLIT_GUARD`), still jumping to the SAME
+existing `L_80061F18` label (no new label needed — the function already
+treats that path as "skip the call, degrade gracefully", exactly the
+"reuse the function's own existing degrade path" principle every prior
+guard in this codebase follows). New env var name suggestion:
+`ROGUESQ_LOG_SETLOOKUP_ARG_GUARD` (or similar — follow the existing
+naming convention, don't collide with `ACTIVATE_ANIM_KEYFRAME` guard's
+existing env var).
 
 ### Step 3: full regen -> build -> soak (new tag)
 
@@ -107,7 +119,7 @@ cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build .
 strings /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build/RogueSquadron64Recomp | grep <new guard's env-var name>
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/s73_post_a_scene
-cp run_g30g31soak1.sh run_<newtag>.sh   # edit the last line's tag; ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD stays armed as a same-run control, add your new guard's env var too
+cp run_evalsplineguard1.sh run_<newtag>.sh   # edit the last line's tag; keep ROGUESQ_LOG_EVALSPLINE_GUARD and ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD armed as same-run controls, add your new guard's env var too
 zsh run_<newtag>.sh   # run_in_background: true, then block-wait on the pid
 ```
 
@@ -120,40 +132,52 @@ mechanism found; if the hold now survives further AND
 `renderUnlitMeshFaces` finally gets called (`unlit-mesh-tracer` positive
 control fires), R7A/R7B_LOADED get their first real test in the same
 run — read their fire counts directly. Crash recurs at a DIFFERENT site
--> still progress, repeat the process. Crash recurs at the EXACT same
-`evalCubicSplineAtTime`/`buildPositionAndCallTransformHelper`/
-`setupActorAnchorTransformType1` signature -> guard missed the actual
-load or didn't cover all call paths into these functions (they may be
-called from elsewhere too — grep for other callers before assuming
-`static_5_800AB658` is the only entry point).
+-> still progress, repeat the process (this whole investigation has been
+whack-a-mole across many independent unguarded-pointer families — that is
+expected, not a failure mode). Crash recurs at the EXACT same
+`setLookupEntryField5ByKey`/`activateAnimationKeyframe` signature -> guard
+missed the actual load or there's a 2nd call site with the same gap
+(re-check: are there other callers of `setLookupEntryField5ByKey` besides
+`activateAnimationKeyframe`'s line 2116? There are 17 others in the file —
+check which functions they fall in before assuming this is the only
+entry point).
 
 ## Do NOT do this iteration
 
-- Do NOT re-run `g30g31soak1` in place — copy to a new tag.
-- Do NOT credit G30/G31 with fixing anything beyond "matches the
-  established idiom, 0 fires so far" — the survival-length improvement
-  is single-source evidence, not confirmed causality (see caveat above).
+- Do NOT re-run `evalsplineguard1` in place — copy to a new tag.
+- Do NOT credit `EVALSPLINE_GUARD` with fixing anything beyond "matches
+  the established idiom, 0 fires so far" — the crash-of-record moving to
+  a new site is single-source evidence (iron rule 4), not confirmed
+  causality. Same caveat applies to G30/G31 from s258.
 - Do NOT re-attempt the R7A/R7B_LOADED soak until this NEW
-  `evalCubicSplineAtTime` blocker is closed — the game still never
-  reaches `renderUnlitMeshFaces`.
+  `setLookupEntryField5ByKey` blocker is also closed — the game still
+  never reaches `renderUnlitMeshFaces`.
 - Do NOT re-attempt `nm`/`atos`/`objdump` for offset localization --
   confirmed unusable 3+ independent times. Use `scratch/agent/machoparse.py`
   if function-size verification is ever needed again.
-- Do NOT skip straight to guarding without reading the function bodies
-  first — same rule as every prior guard in this file.
+- Do NOT use a crash symbol's native `+N` offset as a source line number
+  or guest address — confirmed misleading again this session (funcs_14.c
+  line 2116 has no numeric relationship to the reported `+5152` offset;
+  the match was coincidental digit-count, not fact).
 
-## Environment notes (carried forward, still current as of s258)
+## Environment notes (carried forward, still current as of s259)
 
 - **`+N` crash-symbol offsets are NATIVE (compiled ARM64) code offsets,
   NOT guest MIPS addresses.** Use the offset only to identify WHICH
   function to read in full; never try to place it at a specific guest
-  instruction or extrapolate C line number from it.
+  instruction or extrapolate a C line number from it (this bit s259's
+  first-pass reasoning — the actual localization came from counting which
+  of 18 call sites falls inside the caller's own line range, not from the
+  offset number).
 - **Block-wait pattern**: launch the soak with Bash `run_in_background:
   true`, read the driver's first output line for `pid NNNNN out=...`,
   then a SECOND Bash call (foreground, timeout up to 480000ms) that polls
   `until ! kill -0 <game_pid> 2>/dev/null; do sleep N; done`.
-- `/tmp` is not writable this session — write scratch/report files inside
-  `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64` only.
+- `/tmp` is not writable this session for GAME artifacts — write scratch/
+  report files inside `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64`
+  only (the harness's own background-task stdout capture under
+  `/private/tmp/claude-501/...` is a different, harness-managed path and
+  is fine to read from).
 - **Headless permission matching is a PREFIX match** — write
   `env PROBE_MODE=1 zsh run.sh`, not `PROBE_MODE=1 zsh run.sh`. Compound
   `cd ... && ... > file` commands with output redirection after a `cd`
@@ -164,12 +188,10 @@ called from elsewhere too — grep for other callers before assuming
   after a `cd` — prefer a plain `cd <path>` call first, then a bare
   `git status`/`git ...` with no `-C` and no chaining.
 - Redirecting a build/regen command's output to a scratch log file with
-  `> path 2>&1` on the SAME line as the command can itself get rejected
-  (seen s258: `python3 tools/make_elf.py > log 2>&1` failed with a
-  cryptic "Contains simple_expansion" error even with no `cd` in the
-  command) — if that happens, just run the bare command without
-  redirection and let the tool's own output capture handle it; don't
-  burn time debugging the redirect.
+  `> path 2>&1` on the SAME line as the command can itself get rejected --
+  if that happens, just run the bare command without redirection and let
+  the tool's own output capture handle it; don't burn time debugging the
+  redirect.
 - **The `[phase] vi_width=512 (was 1024) origin=0x006AB400` line at
   ~t=74-75s is THE confirmed SELECT-CRAFT->mission transition marker.**
   Use `update_screen #N` counts before/after this line to measure how far
@@ -210,9 +232,9 @@ sites, `funcs_4.c`), `renderLitTexturedMeshFaces` (11 sites, `funcs_3.c`),
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget and the
-Read tool's 256 KB single-read limit (still ~432 KB+ / ~6200+ lines,
-flagged 48+ sessions without action). Its top-of-file "as of session 166"
-header is also stale (actual session count is 258+) — nobody has
+Read tool's 256 KB single-read limit (still ~6280+ lines / ~440 KB+,
+flagged 49+ sessions without action). Its top-of-file "as of session 166"
+header is also stale (actual session count is 259+) — nobody has
 corrected this drift in a long time; flagging again, still not this
 session's focus.
 

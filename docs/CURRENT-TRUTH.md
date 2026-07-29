@@ -663,7 +663,68 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s258)
+## Next steps, in order of expected value (s259)
+
+-100. **(s259) Guarded the `evalCubicSplineAtTime` unguarded pointer s258's
+    lead pointed at; soak shows the guard is inert (0 fires, no crash there)
+    but the run advanced past it into a BRAND NEW, unrelated crash family:
+    `activateAnimationKeyframe`'s `setLookupEntryField5ByKey` callee.**
+    Read all 3 functions in s258's lead (`evalCubicSplineAtTime`,
+    `buildPositionAndCallTransformHelper`, `setupActorAnchorTransformType1`,
+    funcs_4.c/funcs_15.c) in full. `evalCubicSplineAtTime` loads
+    `ctx->r16` from the spline-data struct's `+0x8` field (`0x80018FCC`)
+    completely unvalidated, dereferenced 2 instructions later
+    (`0x80018FF0`) in the keyframe binary-search loop's first read --
+    same "load struct field, deref immediately, no range check" shape as
+    every prior guard. No existing mid-function degrade path exists (the
+    whole function transitively depends on this one struct, including the
+    later `ctx->r8`-based reads at `0x800190CC`+), so a dedicated epilogue
+    label (`L_evalspline_guard_exit`) was inserted immediately before the
+    function's real restore-and-return sequence (`0x80019188`) -- ABI-safe
+    because the prologue already saves `$s0`/`$s1`/`$f20-30` to their stack
+    slots before the guard's anchor point (same technique as s109's
+    `L_dlentry_guard_exit`). New env var `ROGUESQ_LOG_EVALSPLINE_GUARD`.
+    Full regen, clean build, `strings`-verified (both
+    `ROGUESQ_LOG_EVALSPLINE_GUARD` and `ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD`
+    present). **Soak (`evalsplineguard1`, ~222MB run.log): EVALSPLINE_GUARD
+    got 0 fires, `HANGAR_BAY_DEREF_GUARD` (G30/G31) also 0 fires,
+    `unlit-mesh-tracer` still 0 hits -- the game never reached
+    `evalCubicSplineAtTime`/`buildPositionAndCallTransformHelper`/
+    `setupActorAnchorTransformType1` at all this run, and still never
+    reaches `renderUnlitMeshFaces`.** The run crashed at almost the same VI
+    tick as s258 (`update_screen #~8192-8236` vs. s258's `#8320` -- close
+    enough to be the same ballpark, not meaningfully further or shorter),
+    but via a COMPLETELY DIFFERENT call chain never before implicated:
+    `static_5_800AAD9C` (`runHangarSelectionFrame`) → `advancePlayerAnimationPhase`
+    → `activateAnimationKeyframe` → `setLookupEntryField5ByKey`, Bus error
+    (`si_addr=0x3c04b1980`, `x9=0xc04b1980` -- yet another distinct wild-
+    value shape, neither the `0x80630062` KSEG0-zero-extension pattern nor
+    s258's `0x7ffffff8` sentinel-like value). **Single-source, iron rule 4
+    applies**: this could mean the evalCubicSplineAtTime guard is a real
+    fix that let the run get further into a previously-unreached branch, OR
+    it could be scripted-input run-to-run variance landing on a different
+    code path entirely (same caveat as s258's g30g31soak1) -- cannot
+    distinguish with one run. Read `setLookupEntryField5ByKey` (funcs_15.c:
+    70-130, small function) and its ONE call site inside
+    `activateAnimationKeyframe` (funcs_14.c:1629-2138, the only
+    `setLookupEntryField5ByKey(rdram, ctx);` call among the file's 18 sites
+    that actually falls inside this function's line range -- do NOT trust
+    the crash symbol's `+5152` native offset as a line number, it is not
+    one) that DOES localize the bug precisely: `ctx->r4 = MEM_W(ctx->r17,
+    0XF4)` at guest `0x80061EF4` is guarded ONLY by a `== 0` null check
+    (`0x80061EF8`/`beq $a0,$zero`), never by the full
+    `0x80000000`-`0x80800000` KSEG0 range check every other guard in this
+    project uses -- a non-null-but-garbage value in `$s1+0xF4` sails
+    through untouched and gets dereferenced inside the callee
+    (`setLookupEntryField5ByKey`'s `MEM_W(ctx->r4, 0X0)`/`MEM_HU(ctx->r4,
+    0X4)`, funcs_15.c:87/74). **Next step, highest value**: widen the
+    existing null-check at `0x80061EF8` (funcs_14.c, inside
+    `activateAnimationKeyframe`) to the standard KSEG0 range+hi-word guard,
+    same bail idiom as every prior guard (this one already has a clean
+    `goto L_80061F18;` on the existing `==0` path to reuse -- extend the
+    condition, don't add a new label), rebuild, re-soak new tag. Do NOT
+    re-run `evalsplineguard1` in place. Full detail: PORTING-STATE
+    Session 259.
 
 -99. **(s258) Closed the 2 gaps s257's own plan found in the `-0x25A4`
     hangar-bay-deref-guard family (`G30`/`G31`); soak shows real forward
