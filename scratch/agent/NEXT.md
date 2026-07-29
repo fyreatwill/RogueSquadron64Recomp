@@ -1,157 +1,133 @@
-# NEXT work unit — static trace the new scissor-rect Metal SIGABRT
+# NEXT work unit — land + confirm the scissor-rect out-of-bounds guard
 
 ## Where the investigation stands
 
-s244 landed and confirmed a fix for s243's `fbSize()==0` NaN-viewport
-crash (`lib/rt64/src/render/rt64_vi_renderer.cpp`, `VIRenderer::
-render()` now skips the draw for that frame when `vi.fbSize()` reports a
-zero component). The `mtldebug2` re-soak confirmed with a same-run
-positive control: the exact `osViSetMode #12`/`viW=0` trigger point now
-logs `[vi zero-size guard] skipping VI draw, fbSize=(0,0)` twice instead
-of crashing, and zero `Viewport Validation` assertions appear anywhere
-in the run. **This specific fix is DONE — do not re-open it.**
+s245 statically traced s244's new Metal SIGABRT (`Set Scissor Rects
+Validation (rect.x(77)+rect.width(0))(77) must be <= render pass
+width(6)`, `FramebufferRenderer::submitRasterScene`) to a confirmed
+mechanism — **do not re-open the static trace, it's done**:
 
-The same `mtldebug2` soak still crashed, but on a **NEW, unrelated**
-Metal SIGABRT:
+1. `render pass width(6)` is a REAL, correctly-created 6px-wide
+   `RenderTarget` (from `fbPair.colorImage.width` — traced
+   `rt64_state.cpp:2128` and `2052-2054`), not a misread of a bigger
+   target.
+2. The only width guard on this path (`rt64_state.cpp:2015`, "s78")
+   only rejects `width==0` or `width>1280` — 6 passes clean. This is
+   the SAME "1..257 wild width garbage" class already named in
+   `rt64_framebuffer_renderer.cpp:646-654`'s s82 comment, whose guard
+   only covers a different, unrelated consumer (VI-presentation
+   "last-drawn" heuristic).
+3. The scissor rect (`x=77`) overflows because `convertFixedRect()`
+   (`rt64_framebuffer_renderer.cpp:60-91`) never scales/clips the raw
+   RDP-native scissor coordinate against the actual destination
+   target's width — a normal ~320px-screen coordinate passes through
+   almost unmodified onto the 6px target.
 
-```
--[MTLDebugRenderCommandEncoder setScissorRects:count:]:4189: failed assertion `Set Scissor Rects Validation
-(rect.x(77) + rect.width(0))(77) must be <= render pass width(6)
-'
-```
+Full mechanism detail: PORTING-STATE Session 245. Full original crash
+detail: PORTING-STATE Session 244.
 
-Stack: `RT64::FramebufferRenderer::submitRasterScene` (a lambda over
-`InstanceDrawCall`) -> `MetalCommandList::drawInstanced` ->
-`checkForUpdatesInGraphicsState` -> `-[MTLDebugRenderCommandEncoder
-setScissorRects:count:]`. **This is a completely different code path
-from `VIRenderer`** — raster-scene framebuffer submission, not VI
-presentation — so s244's guard is unrelated to it and cannot have
-caused or masked it.
+## This iteration: implement fix (b) from s245, then confirm
 
-Timing note (NOT yet causal evidence): this crash fired at wall-clock
-t≈131.7s, the same approximate window as the s238-242 host-CALayer
-`n=12420`/`t≈131s` SIGSEGV family — but different signal (SIGABRT vs
-SIGSEGV), different stack, different validation message. **Do not
-conflate the two.** Full detail and log excerpts: PORTING-STATE Session
-244.
+s245 proposed two fixes and preferred (b) as lower-risk:
 
-## Hypotheses for this iteration
+- (a) Widen the `rt64_state.cpp:2015` guard to reject wild widths at
+  target-creation time — risk: unclear if 1..257 is EVER a legitimate
+  width for some real small N64 framebuffer use in this game, and s82's
+  `saneW` guard was deliberately scoped narrow for a reason not fully
+  re-investigated this session.
+- **(b) PREFERRED — clip/skip out-of-bounds scissor rects in
+  `submitRasterScene`**, mirroring the existing empty-scissor skip
+  already in that exact function
+  (`lib/rt64/src/render/rt64_framebuffer_renderer.cpp:736-757`, comment:
+  *"Draw calls can sometimes end up with empty scissors and cause
+  validation errors. We just skip them."*). Same pattern, same
+  function, already proven safe — lower risk than touching target
+  creation.
 
-1. **H1 — `render pass width(6)` is a genuinely tiny, valid render
-   target** (e.g. a 1D lookup texture, a shadow map tile, a
-   cubemap/icon face) and the scissor rect (`rect.x=77`) is being
-   computed against the WRONG target's dimensions — a scale/space
-   mismatch bug (something computing a scissor in one framebuffer's
-   coordinate space but applying it to a different, smaller one).
-2. **H2 — `render pass width(6)` is itself a degenerate/uninitialized
-   value** (should be some real width like 320/512/1024 but reads as 6
-   due to a stale pointer, uninitialized struct field, or an
-   arithmetic bug elsewhere) — same *class* of bug as s243/s244's
-   `fbSize()==0` (a numeric field going degenerate transiently), just
-   in a different subsystem (raster scene submission vs VI
-   presentation).
-3. **H3 — this is a pre-existing bug unrelated to anything from s238
-   onward**, and it was simply never reached before because the
-   VI-NaN crash (s243) or the CALayer SIGSEGV (s238-242) always fired
-   first in every prior soak — s244's guard just cleared the path for
-   the game to run long enough to reach it. (This has a reasonably
-   high prior — it's the simplest explanation for "why has nobody seen
-   this before" and doesn't require inventing a new interaction.)
+### Do this iteration
 
-**Discriminating measurement for THIS iteration**: static read only
-(no `lib/` edit yet — per "no speculative fix" rule, confirm the
-mechanism before touching code). Read
-`lib/rt64/src/render/rt64_framebuffer_renderer.cpp`'s
-`submitRasterScene()` and whatever function computes the scissor rect
-for an `InstanceDrawCall` (grep for `setScissors`/`RenderRect` calls in
-that file, similar to how s243 traced `getViewportAndScissor()`). Find:
-(a) what render target width=6 corresponds to (grep for where that
-framebuffer's dimensions get set — is 6 ever a legitimate designed
-size, or clearly a fallback/uninitialized default?), (b) where
-`rect.x=77` comes from and whether it's computed against a DIFFERENT
-framebuffer's size than the one actually being rendered to (H1) or
-whether the width itself is corrupt (H2).
+1. Read `rt64_framebuffer_renderer.cpp:730-773` again (the
+   `previousScissor != triangles.scissor` / `setScissors` call site) to
+   confirm the exact insertion point and what target-dimension fields
+   are available at that point (`fbStorage->colorTarget->width`/
+   `->height` — confirm these field names exist on `RenderTarget` by
+   grepping its class, don't assume).
+2. Add a guard immediately after (or merged with) the existing
+   `triangles.scissor.isEmpty()` check: if the scissor rect's `right` or
+   `bottom` exceeds `fbStorage->colorTarget->width`/`height` (or `left`/
+   `top` are negative/exceed bounds), either (i) clamp the rect to the
+   target's actual bounds before calling `setScissors`, or (ii) skip the
+   draw call entirely like the empty-scissor case does. Clamping is
+   probably more correct (still draws SOMETHING instead of dropping
+   geometry) but skipping is simpler and matches the existing pattern —
+   pick based on which is a smaller diff against the existing code
+   shape; either is acceptable given the goal is "stop the crash", not
+   "render this degenerate framebuffer correctly" (it's a 6px-wide
+   garbage-width target, not a real gameplay-visible framebuffer).
+3. Gate a log line behind a new env var (`RT64_LOG_SCISSOR_CLAMP` or
+   similar — follow the exact `getenv`-cached-static-lambda pattern from
+   `rt64_vi_renderer.cpp`'s `RT64_LOG_VI_ZERO_SIZE`, see NEXT.md's old
+   "Env-gated logging pattern to reuse" note, still valid) so a re-soak
+   can positive-control-confirm the guard actually fires on the real
+   trigger (iron rule 1 — a null result without a positive control is
+   worthless).
+4. Build clean (`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+   cmake --build build`), verify the fresh binary carries the new log
+   string (`strings build/RogueSquadron64Recomp | grep <new-tag>`) and is
+   newer than the soak's start time before trusting any result.
+5. Re-soak with a NEW tag (e.g. `scissorfix1`) using the same
+   `campose*`/`schedulepush2` schedule as `mtldebug1`/`mtldebug2`,
+   `GAME_EXTRA_ENV="MTL_DEBUG_LAYER=1 RT64_LOG_VI_ZERO_SIZE=1
+   RT64_LOG_SCISSOR_CLAMP=1"` (keep the VI guard's log armed too, no
+   reason to drop it). Expected discriminating outcome: the new guard's
+   log line fires at/around the same t≈131.7s window the crash used to
+   hit, AND zero `Set Scissor Rects Validation` assertions appear
+   anywhere in `run.log` (mirrors s244's confirmation pattern exactly).
+6. `lib/rt64` will be touched — run `./submodule-patches/export.sh` and
+   confirm the new guard's lines appear in the refreshed
+   `submodule-patches/rt64.patch` before committing (hard rule, iron
+   rule 9).
+7. If the soak reveals the guard fires but ANOTHER new crash surfaces
+   past it (as happened s243->s244->s245), that's fine — document it the
+   same way, do not chase it in the same iteration (budget rule).
 
-## Do this iteration
+### Do NOT do this iteration
 
-1. Read `lib/rt64/src/render/rt64_framebuffer_renderer.cpp` — find
-   `submitRasterScene()` and trace how `RenderRect`/scissor values are
-   built for `InstanceDrawCall`s (mirror s243's method: find the
-   producing function(s), read the actual arithmetic, don't guess).
-2. Grep for where the render pass's own width/height (the `render pass
-   width(6)` in the assertion) is set — likely a `Framebuffer`/
-   `RenderFramebufferStorage` field passed into
-   `FramebufferRenderer::recordFramebuffer()` (the caller one frame up
-   the crash stack, in the same file). Trace it back to its origin.
-3. Determine H1 vs H2 vs H3 from the static read alone if possible. If
-   the code doesn't discriminate cleanly, the next step (still this
-   iteration if budget allows, else next iteration) is a **targeted
-   log line** (same `getenv`-cached-static-lambda pattern used for
-   `RT64_LOG_VI_ZERO_SIZE`) printing the render target's actual
-   width/height and the pointer/ID identifying which framebuffer it is,
-   gated behind a new env var, immediately before the `setScissors`
-   call — NOT a fix yet, just enough instrumentation to confirm which
-   hypothesis is correct on the next soak.
-4. Do NOT implement a guard/fix until the static read (and possibly one
-   instrumented soak) has identified the actual mechanism — this
-   mirrors s243's discipline (trace first, guard second, confirmed
-   guard third) which worked cleanly for the VI bug in s243/s244.
-5. If this touches `lib/rt64` (it will, at minimum for instrumentation),
-   run `./submodule-patches/export.sh` and commit the refreshed patch
-   in the SAME iteration (hard rule, iron rule 9).
-
-## Do NOT do this iteration
-
-- Do NOT re-open or re-guard the `fbSize()==0` VI-NaN bug — s244 fixed
-  and confirmed it. Re-litigating it would be regressing to a solved
-  problem.
-- Do NOT assume the scissor-rect crash is connected to the s238-242
-  CALayer SIGSEGV family just because the timing (t≈131s) overlaps —
-  that is an unproven hypothesis (see H3 above for the more likely
-  boring explanation: this bug was always there, just never reached).
-- Do NOT jump straight to a fix/guard without first reading the actual
-  code — "clamp `render pass width` to something non-zero" without
-  knowing WHY it's 6 risks papering over a real corruption bug the same
-  way a blind clamp would have for the VI case (though in that case the
-  static trace happened to fully explain the 0/0 NaN mechanism before
-  the guard was written — do the same rigor here).
+- Do NOT re-open the static trace — s245 already identified the
+  mechanism with high confidence from two converging code paths.
+- Do NOT implement fix (a) (widening the target-creation width guard)
+  instead of (b) unless (b) turns out to be structurally impossible —
+  (b) was assessed as lower-risk in s245 and should be tried first.
 - Do NOT re-run `mtldebug1`/`mtldebug2`/`malloclog1`/`malloclog2`/
-  `metalresize1`/`campose15` (all superseded/results stand). A fresh
-  soak here should be a NEW tag (e.g. `scissorprobe1`) once
-  instrumentation is ready.
+  `metalresize1`/`campose15` (all superseded/results stand). Use a new
+  tag (`scissorfix1`).
+- Do NOT assume this connects to the s238-242 CALayer SIGSEGV family
+  just because of timing overlap (t≈131s) — still unproven, still not
+  established either way (carried forward from s244/s245).
 
-## Environment notes (carried forward, still current as of s244)
+## Environment notes (carried forward, still current as of s245)
 
-- **Permission gate CONFIRMED CLEARED through s244.**
+- **Permission gate CONFIRMED CLEARED through s245.**
 - **`GAME_EXTRA_ENV`** (`run_mission_keys.sh`, s241): space-separated
   `VAR=val VAR2=val2` string, scopes extra env vars to ONLY the game
-  process. `mtldebug2` used `MTL_DEBUG_LAYER=1 RT64_LOG_VI_ZERO_SIZE=1`
-  successfully — same mechanism, just add another `VAR=1` to the string
-  for new instrumentation.
-- **`RT64_LOG_VI_ZERO_SIZE=1`** is now a real, working env var
-  (`lib/rt64/src/render/rt64_vi_renderer.cpp`) — keep it armed in any
-  future soak of this render path in case the guard fires unexpectedly
-  often (worth knowing even though the immediate crash is fixed).
-- **Env-gated logging pattern to reuse for any new instrument**:
-  `static const bool s_X = [](){ const char *v =
-  std::getenv("VAR_NAME"); return v && v[0] && v[0] != '0'; }();` then
-  `if (s_X) { std::fprintf(stderr, ...); std::fflush(stderr); }` —
-  matches existing style in `rt64_present_queue.cpp` and now
-  `rt64_vi_renderer.cpp`. Needs `#include <cstdio>` and `#include
-  <cstdlib>` at the top of the file if not already present.
-  **Watch for hlslpp swizzle-type format-string mismatches**: `%u` with
+  process.
+- **Env-gated logging pattern**: `static const bool s_X = [](){ const
+  char *v = std::getenv("VAR_NAME"); return v && v[0] && v[0] != '0'; }();`
+  then `if (s_X) { std::fprintf(stderr, ...); std::fflush(stderr); }` —
+  needs `#include <cstdio>`/`<cstdlib>` if not already present in the
+  file (`rt64_framebuffer_renderer.cpp` already has extensive
+  `ROGUESQ_LOG_*` uses of this exact pattern in the same function —
+  copy the local style, not the VI file's).
+- **Watch for hlslpp swizzle-type format-string mismatches**: `%u` with
   an `hlslpp::uintN`'s `.x`/`.y` member needs an explicit
-  `(unsigned int)(...)` cast or the compiler warns (caught this in s244
-  before trusting the soak).
-- **Block-wait pattern confirmed again (s244)**: `TaskOutput` with
-  `block: true` and a generous timeout (180000-480000ms) against the
-  background task ID returns the final result cleanly when the Stop
-  hook fires mid-soak — no need to re-launch.
+  `(unsigned int)(...)` cast or the compiler warns (caught in s244).
+- **Block-wait pattern**: `TaskOutput` with `block: true` and a generous
+  timeout (180000-480000ms) against the background task ID returns the
+  final result cleanly when the Stop hook fires mid-soak.
 - `/tmp` is not writable this session — write scratch/report files
   inside `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64` only.
-- Compound `cd ... && ...` commands and `git -C <path> <cmd>` get
-  blocked/require extra approval — issue `cd` as its own Bash call
-  first, then the next command separately.
+- Compound `cd ... && ...` and `git -C <path> <cmd>` get blocked/need
+  extra approval — issue `cd` as its own Bash call first.
 - **Headless permission matching is a PREFIX match** — write
   `env PROBE_MODE=1 zsh run.sh`, not `PROBE_MODE=1 zsh run.sh`.
 - **`campose*` armed env-var set** (unchanged since `campose11`):
@@ -161,42 +137,38 @@ whether the width itself is corrupt (H2).
   `ROGUESQ_LOG_MESGQUEUE_GUARD`, `ROGUESQ_LOG_HEAPLISTDEQ_GUARD`,
   `ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`, `ROGUESQ_LOG_DL_PAYLOAD_STALE=1`
   — keep these armed in any new soak.
-- **SELECT-CRAFT->mission transition family tally unchanged this
-  session**: 5/10 crashed vs 5/10 survived (CALayer SIGSEGV family
-  only, as of `malloclog2`, s242). `mtldebug1`'s NaN-viewport SIGABRT
-  and `mtldebug2`'s scissor-rect SIGABRT are BOTH excluded from this
-  tally — different crashes entirely.
+- **SELECT-CRAFT->mission transition family tally unchanged**: 5/10
+  crashed vs 5/10 survived (CALayer SIGSEGV family only, as of
+  `malloclog2`, s242). The VI-NaN and scissor-rect SIGABRTs are
+  excluded from this tally — different crashes entirely.
 - **`rs64_elapsed_seconds()`** (`src/main/rt64_render_context.cpp`,
   `extern "C"`) is the canonical shared wall-clock — declare
-  `extern "C" double rs64_elapsed_seconds(void);` at NAMESPACE scope
-  (not inside a function body) in any new PATCH block that needs it.
+  `extern "C" double rs64_elapsed_seconds(void);` at NAMESPACE scope in
+  any new PATCH block that needs it.
 - **Verify "crash-free" visually**: MD5-checksum a spread of `hold_NN.png`
-  (Python script, not shell loops) — `scratch/agent/
-  checksum_campose11.py` (s235) is mtime-aware, reuse this pattern.
+  — `scratch/agent/checksum_campose11.py` (s235) is mtime-aware, reuse
+  this pattern.
 - **`rm -f <glob>`/`find <dir> -delete` are blocked** — use
   `python3 -c "import glob, os; [os.remove(f) for f in glob.glob('<pattern>')]"`.
 - Re-running the same soak script/tag OVERWRITES the previous run's
   `run.log` in place — copy the driver script to a new tag name per soak.
-- The driver's own `CRASH: N` summary line counts occurrences of the
-  LITERAL STRING `[CRASH]` (many per single crash event) — grep
-  specifically for `[CRASH] caught signal` to count actual crash events.
+- The driver's own `CRASH: N` summary counts occurrences of the LITERAL
+  STRING `[CRASH]` (many per crash) — grep `[CRASH] caught signal` for
+  actual crash event counts.
 - `scratch/agent/STATUS`/`OUTCOME` get reset at the START of each
-  iteration by the harness — finding them reset at session start is
-  normal.
+  iteration by the harness — normal.
 - **`/scratch/` is wholesale gitignored** — only `STATUS`, `OUTCOME`,
   `NEXT.md`, and `run_mission_keys.sh` are tracked exceptions.
 - Verify a fresh binary before trusting a null result: `strings
-  build/RogueSquadron64Recomp | grep '<your-new-tag>'` confirms the log
-  string actually compiled in, and `ls -la build/RogueSquadron64Recomp`
-  vs. the soak's start time confirms it's not a stale binary — both
-  cheap, do them before trusting any zero-count result.
+  build/RogueSquadron64Recomp | grep '<your-new-tag>'` plus `ls -la
+  build/RogueSquadron64Recomp` vs. the soak's start time.
 
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget (now
-~393 KB) and the Read tool's 256 KB single-read limit (confirmed s195,
-still true s244 — read it with `grep`/offset-limited `Read`, never a
-plain whole-file `Read`) — flagged for 35+ sessions without action.
+~394 KB) and the Read tool's 256 KB single-read limit (confirmed s195,
+still true s245 — read it with `grep`/offset-limited `Read`, never a
+plain whole-file `Read`) — flagged for 36+ sessions without action.
 Migrate durable mechanism/architecture material to `PROJECT-OVERVIEW.md`
 and prune superseded detail.
 
@@ -211,8 +183,7 @@ Still flagged for the user, not committed autonomously.
 
 The pre-existing NaN/`NAN_CHECK` and unguarded-deref crash families still
 have a proposed but unshipped fix (CURRENT-TRUTH -55/-56, PORTING-STATE
-Session 215) — this is a GUEST-side recompiled-C-code assert family
-(`sinfApprox`, `funcs_5.c`), confirmed DIFFERENT from s243/s244's
-HOST-side Metal-validation bugs (different mechanism, different code,
-different crash signatures) — do not conflate. Still worth picking up on
-its own merits eventually but is NOT the next work unit.
+Session 215) — GUEST-side recompiled-C-code assert family (`sinfApprox`,
+`funcs_5.c`), confirmed DIFFERENT from the HOST-side Metal-validation
+bugs (s243/s244/s245) — do not conflate. Still worth picking up on its
+own merits eventually but is NOT the next work unit.

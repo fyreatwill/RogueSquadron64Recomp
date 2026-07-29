@@ -23085,3 +23085,101 @@ different mechanism), so it is not counted toward the existing 5/10 vs
 scope (`fixup_game_funcs.py` untracked sibling-checkout state,
 `CURRENT-TRUTH.md` over both size budgets, now flagged for 35+
 sessions).
+
+## Session 245 (2026-07-28)
+
+**Work unit**: static trace of s244's new scissor-rect Metal SIGABRT
+(`Set Scissor Rects Validation (rect.x(77)+rect.width(0))(77) must be <=
+render pass width(6)`, `FramebufferRenderer::submitRasterScene`). No
+`lib/` edit this session — static read only, per NEXT.md's discipline
+(trace first, guard second, confirmed guard third, same as s243/s244).
+
+**Mechanism found, H2+H3 CONFIRMED, H1 refuted-and-refined, from static
+read alone (two converging code paths, no soak needed to discriminate)**:
+
+1. **`render pass width(6)` is a genuinely tiny GPU texture, not a
+   corrupted read of a bigger one** — it is created from
+   `fbPair.colorImage.width` (`rt64_state.cpp:2128`,
+   `drawParams.fbWidth = fbPair.colorImage.width`) which is the SAME
+   value used to build the `RenderTargetKey` that creates/looks up the
+   actual color target (`rt64_state.cpp:2052-2054`,
+   `fbKey.colorTargetKey = RenderTargetKey(colorFb->addressStart,
+   colorFb->width, ...); colorTarget = &renderTargetManager.get(...)`).
+   So a real 6px-wide `RenderTarget` gets allocated — this is H2's
+   "degenerate value", not H1's "wrong target's dimensions read by
+   mistake".
+2. **The only width-sanity guard on this path (`rt64_state.cpp:2015`,
+   "s78") only rejects `width == 0` or `width > kMaxSaneFbWidth`
+   (`=1280u`, `rt64_state.cpp:70`)** — a width of 6 is neither, so it
+   sails through untouched. This is the SAME general class of bug
+   already named and partially fixed in a DIFFERENT, unrelated consumer:
+   `rt64_framebuffer_renderer.cpp:646-654`'s "s82" comment says
+   verbatim *"refuse wild widths (1..257 garbage)"* and gates a
+   `saneW` check against `{320, 512, 640, 1024}` — but that guard only
+   protects the VI-presentation "last-drawn framebuffer" heuristic, not
+   render-target creation or scissor validation. 6 falls squarely in
+   the already-documented "1..257 garbage" range. This confirms H3:
+   this is the SAME pre-existing wild-width phenomenon s82 already
+   named, just reaching a second, previously-unguarded consumer now
+   that s244's VI-NaN fix lets the game run long enough to get there.
+3. **Why the scissor rect (`x=77`) overflows a 6px target**: traced
+   `convertFixedRect()` (`rt64_framebuffer_renderer.cpp:60-91`, the
+   function that builds `InstanceDrawCall.triangles.scissor` at line
+   1964) and `FixedRect::left/right(true)`
+   (`rt64_common.h:73-97`, implementation not re-read but the signature
+   and call sites confirm these return raw RDP/N64-native pixel
+   coordinates from the game's `SetScissor` command, e.g. up to ~320,
+   independent of the destination `colorImage`'s declared width).
+   `convertFixedRect()` only applies origin-recentering
+   (`computeOrigin`, scaled by `fbWidth`) and misalignment correction —
+   it does **not** scale or clip the raw coordinate against the actual
+   destination target's pixel width. So when `fbWidth`/`colorImg.width`
+   is a wild garbage value like 6, a `SetScissor` command whose
+   coordinates were meant for the real ~320px-wide screen (`x=77`)
+   passes through nearly unmodified, producing a scissor rect that
+   grossly exceeds the actual 6px target — exactly the assertion Metal's
+   debug layer caught. This mechanism generalizes: ANY wild-width target
+   combined with a normal-screen-scale scissor command will hit this,
+   not just this one instance.
+4. **H1 (scissor computed against a DIFFERENT target's size than the one
+   actually bound) is REFUTED as stated** — `drawParams.fbWidth` and the
+   bound `colorTarget`'s actual width both trace back to the same
+   `fbPair.colorImage.width`, so there is no cross-target coordinate-space
+   mismatch. H1 is better restated as: there is no validation ANYWHERE
+   on this path that clips/rejects a scissor rect against the actual
+   bound target's dimensions — the existing empty-scissor skip
+   (`rt64_framebuffer_renderer.cpp:736-757`, comment: *"Draw calls can
+   sometimes end up with empty scissors and cause validation errors. We
+   just skip them."*) already established that this general class of
+   "bad scissor reaches the Metal encoder" problem is known and handled
+   for the empty case, but not for the out-of-bounds case.
+
+**Two proposed fixes for next iteration** (NOT implemented this
+session, per "trace first" discipline):
+
+- (a) Extend the s78 width guard at `rt64_state.cpp:2015` to reject the
+  same "1..257 wild" range s82 already names (or require a minimum sane
+  width), preventing the tiny garbage target from ever being created.
+  Risk: unclear if 1..257 is EVER a legitimate width for some real
+  small N64 framebuffer use case in this game — s82's guard was scoped
+  to a narrow heuristic, not target creation, so widening its scope
+  needs care.
+- (b) Clip/skip scissor rects that exceed the destination target's
+  actual bound width/height in `submitRasterScene`, mirroring the
+  existing empty-scissor skip at line 736-757 (add an out-of-bounds
+  check next to the `isEmpty()` check, using `fbStorage->colorTarget`'s
+  actual `width`/`height`). This is more general — it catches this bug
+  class regardless of WHY the target ended up tiny — and needs no
+  change to framebuffer/target creation logic. **Preferred**: lower risk,
+  same pattern already proven safe in this exact function.
+
+Static trace only — no `lib/` edit, no `submodule-patches/export.sh`
+needed this session (nothing under `lib/` changed).
+
+**Verdict on the family tally**: unchanged — this is still a distinct,
+uncounted crash (not the SELECT-CRAFT->mission CALayer SIGSEGV family).
+
+**Housekeeping**: same items flagged again, still not this session's
+scope (`fixup_game_funcs.py` untracked sibling-checkout state,
+`CURRENT-TRUTH.md` over both size budgets, now flagged for 36+
+sessions).

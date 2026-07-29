@@ -663,7 +663,34 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s244)
+## Next steps, in order of expected value (s245)
+
+-86. **(s245) Static-traced s244's new scissor-rect Metal SIGABRT to a
+    confirmed mechanism — H2+H3 CONFIRMED, H1 refuted-and-refined, no
+    soak needed to discriminate (two static code paths converge).**
+    `render pass width(6)` is a REAL 6px-wide `RenderTarget`, correctly
+    created from `fbPair.colorImage.width` (`rt64_state.cpp:2128,
+    2052-2054`) — not a misread of a different, bigger target (H1 as
+    originally stated is refuted). The only guard on this path
+    (`rt64_state.cpp:2015`, "s78") rejects only `width==0` or
+    `width>kMaxSaneFbWidth` (1280) — 6 passes clean. This is the SAME
+    "1..257 wild width garbage" class already named verbatim in
+    `rt64_framebuffer_renderer.cpp:646-654`'s s82 comment, whose `saneW`
+    guard only protects an unrelated VI-presentation heuristic, not
+    target creation (H3 confirmed: pre-existing, known bug class,
+    reaching a second unguarded consumer now that s244 cleared the
+    earlier crash). The scissor rect itself (`x=77`) overflows because
+    `convertFixedRect()` (`rt64_framebuffer_renderer.cpp:60-91`) never
+    scales/clips the RDP-native scissor coordinate against the actual
+    destination target's width — it passes a normal ~320px-screen
+    coordinate through almost unmodified onto a 6px target. Two fixes
+    proposed for next iteration (not yet implemented — trace-first
+    discipline): (a) widen the s78 guard to reject wild widths at
+    creation time, or (b) **preferred** — clip/skip out-of-bounds
+    scissor rects in `submitRasterScene`, mirroring the existing
+    empty-scissor skip at `rt64_framebuffer_renderer.cpp:736-757` (same
+    function, same pattern, already proven safe). No `lib/` edit this
+    session (static read only). Full detail: PORTING-STATE Session 245.
 
 -85. **(s244) Landed the `fbSize()==0` guard in `rt64_vi_renderer.cpp`
     (skip the VI draw for that frame) and re-soaked (`mtldebug2`) —
