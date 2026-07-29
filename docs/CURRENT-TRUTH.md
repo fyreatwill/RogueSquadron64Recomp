@@ -663,7 +663,63 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s264)
+## Next steps, in order of expected value (s265)
+
+-106. **(s265) Landed the "last-executed-guest-PC breadcrumb" instrument
+    (`g_rs64_last_guest_pc`) s264 flagged as a generically-overdue
+    investment, verified it works correctly, but the target
+    `submitSceneNodeRender+19268` crash did not recur in any of 6 soaks this
+    session.** Since every recompiled MIPS instruction in `funcs_4.c` already
+    carries a `// 0xGUEST_ADDR: mnemonic` comment (a 1:1 guest-address
+    index), a `fixup_game_funcs.py` pass now stamps a global with that
+    address after every such comment inside `submitSceneNodeRender`
+    (`BREADCRUMB`, patched x1179), and the SIGSEGV/SIGBUS handler
+    (`main.cpp`) prints it as `[CRASH][last-guest-pc]`. **Build gotcha
+    worth remembering**: the actual game build's headers come from
+    `lib/N64ModernRuntime/N64Recomp/include/recomp.h` (a vendored copy),
+    NOT `~/Documents/Tools/N64Recomp/include/recomp.h` (the standalone
+    codegen tool's own copy) — editing only the latter produced 20
+    "undeclared identifier" build errors with no obvious link to the cause;
+    both were edited for consistency, only the `lib/` one is load-bearing.
+    Regen fully clean (fixup report diffed byte-for-byte against s263's
+    known-good report, zero differences besides the new BREADCRUMB line).
+
+    **6 soaks (`run_breadcrumb1.sh`)**: 1 clean, 5 crashes — but ALL 5
+    crashed in functions OTHER than `submitSceneNodeRender`
+    (`tickTextureMaterialExpiry+612`, `__pthread_kill+8`,
+    `unregisterServiceWorker+536`, `coalesceFreeHeapBlocks+2108`,
+    `static_5_800AB658+49104`), and in every single one,
+    `[CRASH][last-guest-pc]=0x80011088` — confirmed via `grep` to be
+    `submitSceneNodeRender`'s own LAST instruction (`funcs_4.c:4241/4245`,
+    right before the next `RECOMP_FUNC` begins), i.e. its normal return
+    point. This proves the instrument works (plausible, source-verifiable,
+    non-zero every time) AND that the function ran to completion normally
+    in all 6 attempts — the target crash simply didn't recur.
+
+    **Reframes priority**: combined with s263 (1/3) and s264 (1/1), the
+    target crash has now fired in only 2 of 10 total attempts across 3
+    sessions (~20%). Undirected re-soaking is a low-hit-rate strategy for
+    THIS crash specifically; the instrument is armed and will nail the
+    exact guest instruction the moment it does recur, but a future session
+    may get more value addressing whichever of the 4 more-frequent crash
+    symbols above is currently crowding out reproduction attempts.
+    **Caveat, unverified this session**: those 4 symbols carry different
+    ASLR-shifted `base=` addresses and at least 2 look like plausible
+    nearest-symbol misattributions over stripped code (same caveat the
+    existing `[CRASH][pc-symbol]` comment already documents) — do NOT
+    treat them as 4 confirmed distinct bugs without applying s264's
+    `s193_disasm.py`/`s264_symrange.py` method to each first.
+
+    **Next work unit**: re-run `run_breadcrumb1.sh` (or any soak driver —
+    the breadcrumb is unconditional/always-on now) enough times to catch a
+    `submitSceneNodeRender`-range crash again (budget for several attempts
+    given the measured ~20% hit rate); when one lands, read
+    `[CRASH][last-guest-pc]`, `grep` that address in `funcs_4.c` for the
+    exact source line, read that region, and add ONE guard — localization
+    is now solved outright, no more disassembly correlation needed. If
+    spare budget remains, apply `s193_disasm.py`/`s264_symrange.py` to this
+    session's 4 unresolved crash symbols (do any repeat the same
+    already-catalogued class?). Full detail: PORTING-STATE Session 265.
 
 -105. **(s264) Ran s263's prescribed 2nd `dequeueguard1` soak (iron rule 4) —
     it crashed, not clean, and a NEW disassembly-based methodology proves the

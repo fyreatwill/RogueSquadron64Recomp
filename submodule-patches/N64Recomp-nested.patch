@@ -1,0 +1,20 @@
+diff --git a/include/recomp.h b/include/recomp.h
+index 73f3e73..fcacdcf 100644
+--- a/include/recomp.h
++++ b/include/recomp.h
+@@ -452,6 +452,15 @@ recomp_func_t* get_function(int32_t vram);
+ 
+ extern int32_t* section_addresses;
+ 
++// s265: last-executed-guest-PC breadcrumb -- a cheap, always-on global that
++// recompiled function bodies can stamp with their own guest MIPS address
++// before/at each instruction, so a crash handler can report exactly which
++// guest instruction was executing without disassembling native code or
++// correlating branch density (see RogueSquadron64Recomp docs/CURRENT-TRUTH,
++// s264's manual-localization bottleneck note). Defined once in
++// RogueSquadron64Recomp/src/main/main.cpp; injected by fixup_game_funcs.py.
++extern volatile uint32_t g_rs64_last_guest_pc;
++
+ #define LO16(x) \
+     ((x) & 0xFFFF)
+ 

@@ -86,6 +86,14 @@ extern "C" void rs64_dpc_drain_histogram(uint32_t out[64]);
 // of [vi-fs-decision] state, read from the SIGSEGV/SIGBUS handler below.
 extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *lastFireDecisionN,
                                               int *lastFireWasStalled, int *stalledNow);
+// s265: last-executed-guest-PC breadcrumb. Stamped by submitSceneNodeRender's
+// recompiled body (fixup_game_funcs.py-injected, one store per guest
+// instruction) so the crash handler below can report exactly which guest
+// MIPS instruction was executing, instead of requiring manual native-offset
+// disassembly/branch-density correlation (s264's bottleneck). Declared
+// `extern` in recomp.h so any RECOMP_FUNC translation unit can write it by
+// name; defined once here.
+extern "C" volatile uint32_t g_rs64_last_guest_pc = 0;
 
 // Cached for the next ucode invocation. get_rsp_microcode is called with the
 // OSTask immediately before the ucode runs on the same thread.
@@ -1712,6 +1720,11 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
+            // s265: last guest MIPS instruction address stamped by
+            // submitSceneNodeRender's breadcrumb (see recomp.h /
+            // fixup_game_funcs.py). 0 means the crash is not inside that
+            // function's instrumented range (or it never ran this soak).
+            fprintf(stderr, "[CRASH][last-guest-pc] pc=0x%08x\n", g_rs64_last_guest_pc);
 #else
             (void)ucontext_raw;
 #endif
