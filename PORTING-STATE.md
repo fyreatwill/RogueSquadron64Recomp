@@ -22303,3 +22303,84 @@ so no `export.sh` obligation; `fixup_game_funcs.py` untracked sibling
 checkout state, now carrying this session's patch too — same standing
 exposure since s83; `CURRENT-TRUTH.md` still far over both the ~35 KB
 budget and the Read tool's 256 KB limit, unmigrated for 30+ sessions).
+
+## Session 235 (2026-07-28)
+
+**Ran the payoff soak (`campose11`) the wall-clock/`hold_N` bridge (s234)
+was built for — it survived, and the resulting correlation closes off the
+stuck-render-cache-DL-payload theory (Option A, s233) for the 13 tracked
+content pointers.**
+
+`campose11` = `campose10` copied unmodified except the `RUNTAG` (per
+NEXT.md's explicit instruction not to re-touch the diagnostic this
+iteration — same binary, same armed env-var set, same
+`schedulepush2`/`campose*` schedule). Launched as a single foreground
+Bash call backgrounded with `run_in_background: true` (this exceeded the
+default foreground timeout as expected) and block-waited via `TaskOutput`.
+**Result: `CRASH: 0`, full 464s wall, survived the ~74s SELECT-CRAFT→
+mission transition that killed `campose10`** (that transition is
+confirmed non-deterministic per s223/s233 — this is 1/1 for this specific
+soak, not a claim the transition is now safe in general). 350 `hold_NN.png`
+frames captured, tracker armed and firing throughout.
+
+**Correlation** (`scratch/agent/checksum_campose11.py` +
+`scratch/agent/correlate_campose11.py`, both new this session):
+- Visual freeze frame: `hold_270`, mtime `1785293649.24`. The picture was
+  NOT static before this — checksums show it oscillating between two
+  hashes (`c082c0fd...`/`85534fcb...`, consistent with a blinking/flashing
+  HUD element) up through `hold_265`, then it locks permanently on
+  `85534fcb...` from `hold_270` through `hold_350` (the last captured
+  frame). This looks like an animation/blink timer halting, not a
+  render-cache serving stale geometry.
+- `proc_start_epoch.txt` = `1785293179` (real UNIX epoch at process
+  launch) → freeze frame's `t`-equivalent (elapsed real seconds since
+  process launch) = **470.2s**.
+- DL-payload tracker: last `[dl-payload-content-stale]` event at **t=234.6s**
+  (`stale_count=26`, content `0x80332FEC`); last `changed_count` increase
+  at **t=237.8s**; `changed_count`/`stale_count` then hold flat
+  (`changed_count=4251`, `stale_count=26`) through every heartbeat to
+  `t=571.1s` (the last log line before the process was killed — the
+  extra ~100s past the 464s "done wall" figure is explained by `done
+  wall` being measured from the `a`-press, not from process launch).
+- **Gap: freeze_elapsed (470.2s) − last_stale_t (234.6s) = 235.6s.** The
+  DL-payload content the tracker follows went stale and stopped changing
+  nearly four minutes BEFORE the picture actually froze — not at/after
+  it. A clock-alignment slop of a few seconds (between `g_rs64_t0`'s
+  static-init time and the `proc_start_epoch.txt` stamp taken right after
+  `PID=$!`) cannot flip a 235.6s gap.
+
+**Conclusion**: for the 13 content pointers this tracker follows, staleness
+is NOT the cause of the visual freeze — it happens well before, and the
+picture kept visibly changing (the blink) for another ~4 minutes after
+those pointers went stale. This is much more consistent with s233's
+alternate reading (legitimate load-once-then-static HUD/menu content) than
+with a stuck render cache that causes the freeze. **This closes off
+Option A (per-content-pointer staleness) as an explanation for the
+picture-freeze phenomenon** — single-source (one soak), but the 235.6s
+margin is far too large for measurement slop to explain away, so this is
+being written into CURRENT-TRUTH as a closed line, not held back as
+"inconclusive." A second independent soak would still be worth running if
+the picture-freeze mechanism itself becomes the active investigation
+target again, to confirm the gap direction reproduces.
+
+**What actually freezes the picture is still unknown** — this session only
+rules out one specific candidate mechanism. The blink-then-lock signature
+suggests some game-side animation/timer logic itself stops advancing
+around t=470s, which is a different question from "is the DL-payload
+render cache stuck." Other diagnostics were armed in this same soak
+(`ROGUESQ_LOG_CAMPOSE`, `MAT3INV`, `UNLIT_MESH_TRACER`,
+`RENDERUNLIT_GUARD`, `HEAPWALKER_GUARD`/`3`/`4`, `MESGQUEUE_GUARD`,
+`HEAPLISTDEQ_GUARD`, `EMIT_DL_GUARD2`/`3`) but none of their log lines
+carry a `t=` field yet, so none of them can be correlated against the
+t=470.2s freeze point without first adding the same
+`rs64_elapsed_seconds()` bridge to their PATCH blocks — flagged as next
+iteration's most promising probe (camera-pose data specifically, since a
+frozen `campose` stream would mean game logic itself stalled, not just
+rendering).
+
+**Housekeeping**: same items flagged again, still not this session's scope
+(`lib/` dirty-but-uninvestigated — no `lib/` edits made this session
+either, so no `export.sh` obligation; `fixup_game_funcs.py` untracked
+sibling checkout state — unchanged this session, no new patch added;
+`CURRENT-TRUTH.md` still far over both the ~35 KB budget and the Read
+tool's 256 KB limit, unmigrated for 30+ sessions).

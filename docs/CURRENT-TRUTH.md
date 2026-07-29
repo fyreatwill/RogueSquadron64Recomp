@@ -663,7 +663,38 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s234)
+## Next steps, in order of expected value (s235)
+
+-76. **(s235) Ran the payoff soak (`campose11`) the wall-clock/`hold_N`
+    bridge (s234) was built for. It survived to the hold window
+    (`CRASH: 0`, 464s wall) and the resulting correlation CLOSES OFF
+    Option A (per-content-pointer DL-payload staleness, s233) as the cause
+    of the visual freeze.** Freeze frame `hold_270` (checksums show the
+    picture blinking between two hashes up to `hold_265`, then locking
+    permanently from `hold_270` on — an animation/timer halt signature,
+    not obviously a stale-cache signature) converts via
+    `proc_start_epoch.txt` to real elapsed time **470.2s**. The DL-payload
+    tracker's last staleness/content-change event fires at **t=234.6s/
+    237.8s** and then sits flat through every heartbeat to t=571.1s. **Gap
+    = 235.6s: staleness predates the freeze by nearly 4 minutes**, not
+    at/after it — a margin far too large for clock-alignment slop (a few
+    seconds) to explain away. Single-source (one soak) but the margin is
+    decisive enough to write as closed rather than inconclusive; a second
+    soak is only worth spending if the picture-freeze mechanism becomes
+    the active target again and the gap direction needs reconfirming.
+    **What actually freezes the picture is still open** — this only rules
+    out one candidate. Scripts: `scratch/agent/checksum_campose11.py`,
+    `scratch/agent/correlate_campose11.py` (both new, reusable pattern for
+    any future `hold_N`↔`t=` correlation). **Next step**: the blink-halt
+    signature suggests game-logic/animation-timer stall, not render-cache
+    staleness — extend the `rs64_elapsed_seconds()` `t=` bridge to the
+    OTHER diagnostics already armed in this same soak (camera-pose
+    `[campose-entry]` lines are the highest-value target: if the camera
+    stream itself also stalls at ~470s, that points to a broader
+    game-logic freeze, not a rendering-only bug) before running a new
+    soak — the existing `campose11` armed-set is otherwise unchanged and
+    ready to reuse once that instrument lands. Full detail: PORTING-STATE
+    Session 235.
 
 -75. **(s234) Landed and positive-control-validated the wall-clock/hold_N
     bridge s233's NEXT.md called for, but the single validation soak
