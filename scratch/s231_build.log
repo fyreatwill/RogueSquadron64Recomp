@@ -1,0 +1,1739 @@
+[  0%] Built target spirv-cross-core
+[  0%] Built target fmt
+[  3%] Built target re-spirv
+[  4%] Built target libzstd_static
+[  5%] Built target file_to_c
+[  5%] Built target nfd
+[  5%] Built target plume
+[  5%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c.o
+[  6%] Built target miniz
+[  6%] Built target re-spirv-cli
+[  6%] Built target SymbolLists
+[  6%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c.o
+[  6%] Copying manpage zstd.1
+[  7%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_10.c.o
+[  8%] Built target zstd
+[ 13%] Built target rabbitizer
+[ 13%] Built target zstd.1
+[ 13%] Copying manpage zstdgrep.1
+[ 15%] Built target ultramodern
+[ 15%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_11.c.o
+[ 15%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_12.c.o
+[ 15%] Copying manpage zstdless.1
+[ 15%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_13.c.o
+[ 15%] Built target zstdgrep.1
+[ 15%] Built target zstdless.1
+[ 15%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_14.c.o
+[ 16%] Built target zstd-frugal
+[ 16%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_15.c.o
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_14.c:4051:34: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+ 4050 |             fprintf(stderr, "[anim-recurse] n=%d sp=0x%08X arg_r4=0x%08X arg_r5=0x%08X ra=0x%08X\n",
+      |                                                       ~~~~
+      |                                                       %08llX
+ 4051 |                     s_anim_cb_n, ctx->r29, ctx->r4, ctx->r5, ctx->r31);
+      |                                  ^~~~~~~~
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_14.c:4051:44: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+ 4050 |             fprintf(stderr, "[anim-recurse] n=%d sp=0x%08X arg_r4=0x%08X arg_r5=0x%08X ra=0x%08X\n",
+      |                                                                     ~~~~
+      |                                                                     %08llX
+ 4051 |                     s_anim_cb_n, ctx->r29, ctx->r4, ctx->r5, ctx->r31);
+      |                                            ^~~~~~~
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_14.c:4051:53: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+ 4050 |             fprintf(stderr, "[anim-recurse] n=%d sp=0x%08X arg_r4=0x%08X arg_r5=0x%08X ra=0x%08X\n",
+      |                                                                                   ~~~~
+      |                                                                                   %08llX
+ 4051 |                     s_anim_cb_n, ctx->r29, ctx->r4, ctx->r5, ctx->r31);
+      |                                                     ^~~~~~~
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_14.c:4051:62: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+ 4050 |             fprintf(stderr, "[anim-recurse] n=%d sp=0x%08X arg_r4=0x%08X arg_r5=0x%08X ra=0x%08X\n",
+      |                                                                                             ~~~~
+      |                                                                                             %08llX
+ 4051 |                     s_anim_cb_n, ctx->r29, ctx->r4, ctx->r5, ctx->r31);
+      |                                                              ^~~~~~~~
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:6042:50: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+ 6041 |             fprintf(stderr, "[dma-ring-consumer] n=%d slot_idx=%u tag=%u size=0x%08X devAddr=0x%08X dramAddr=0x%08X\n",
+      |                                                                       ~~
+      |                                                                       %llu
+ 6042 |                     s_dma_ring_cons_n, slot_idx, ctx->r2, MEM_W(ctx->r6, 0X0), MEM_W(ctx->r6, 0X4), MEM_W(ctx->r6, 0X8));
+      |                                                  ^~~~~~~
+1 warning generated.
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_11.c:13676:42: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+ 13675 |             fprintf(stderr, "[anim-tex-stream] n=%d arg_r4=0x%08X ra=0x%08X\n",
+       |                                                              ~~~~
+       |                                                              %08llX
+ 13676 |                     s_anim_tex_stream_n, ctx->r4, ctx->r31);
+       |                                          ^~~~~~~
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_11.c:13676:51: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+ 13675 |             fprintf(stderr, "[anim-tex-stream] n=%d arg_r4=0x%08X ra=0x%08X\n",
+       |                                                                        ~~~~
+       |                                                                        %08llX
+ 13676 |                     s_anim_tex_stream_n, ctx->r4, ctx->r31);
+       |                                                   ^~~~~~~~
+[ 16%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_16.c.o
+4 warnings generated.
+[ 17%] Creating zstdmt symlink
+[ 17%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_17.c.o
+[ 17%] Built target zstdmt
+[ 17%] Built target texture_hasher
+[ 17%] Built target spirv-cross-reflect
+[ 17%] Built target texture_packer
+[ 18%] Built target spirv-cross-util
+[ 18%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_18.c.o
+[ 19%] Built target spirv-cross-glsl
+2 warnings generated.
+[ 20%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_19.c.o
+[ 21%] Built target N64Recomp
+[ 21%] Creating zstdcat symlink
+[ 21%] Creating unzstd symlink
+[ 21%] Built target zstdcat
+[ 21%] Built target unzstd
+[ 21%] Creating zstdcat.1 symlink
+[ 21%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c.o
+[ 22%] Creating unzstd.1 symlink
+[ 22%] Built target zstdcat.1
+[ 22%] Built target spirv-cross-cpp
+[ 22%] Built target unzstd.1
+[ 22%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_20.c.o
+[ 22%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_21.c.o
+[ 22%] Built target spirv-cross-hlsl
+[ 22%] Built target spirv-cross-msl
+[ 22%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_22.c.o
+[ 22%] Built target LiveRecomp
+[ 23%] Built target spirv-cross-c
+[ 23%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c.o
+[ 23%] Built target spirv-cross
+[ 23%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c.o
+[ 23%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_25.c.o
+[ 23%] Built target spirv_cross_msl
+[ 24%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c.o
+[ 24%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c.o
+[ 27%] Built target librecomp
+[ 27%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c.o
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:8361:22: warning: self-comparison always evaluates to false [-Wtautological-compare]
+ 8361 |         if (ctx->r24 != ctx->r24) {
+      |                      ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:8415:22: warning: self-comparison always evaluates to false [-Wtautological-compare]
+ 8415 |         if (ctx->r24 != ctx->r24)[ 27%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_29.c.o
+ {
+      |                      ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:8465:22: warning: self-comparison always evaluates to false [-Wtautological-compare]
+ 8465 |         if (ctx->r24 != ctx->r24) {
+      |                      ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:8511:18: warning: self-comparison always evaluates to false [-Wtautological-compare]
+ 8511 |     if (ctx->r24 != ctx->r24) {
+      |                  ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10110:43: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10110 |         DDIV(S64(ctx->r2), S64(ctx->r21), &lo, &hi);
+       |                                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10110:48: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10110 |         DDIV(S64(ctx->r2), S64(ctx->r21), &lo, &hi);
+       |                                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10122:43: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10122 |         DDIV(S64(ctx->r2), S64(ctx->r21), &lo, &hi);
+       |                                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10122:48: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10122 |         DDIV(S64(ctx->r2), S64(ctx->r21), &lo, &hi);
+       |                                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10130:43: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10130 |         DDIV(S64(ctx->r2), S64(ctx->r21), &lo, &hi);
+       |                                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10130:48: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10130 |         DDIV(S64(ctx->r2), S64(ctx->r21), &lo, &hi);
+       |                                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10135:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10135 |     DDIV(S64(ctx->r2), S64(ctx->r21), &lo, &hi);
+       |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10135:44: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10135 |     DDIV(S64(ctx->r2), S64(ctx->r21), &lo, &hi);
+       |                                            ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10451:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10451 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10451:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10451 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10455:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10455 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10455:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10455 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10715:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10715 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10715:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10715 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10747:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10747 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10747:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10747 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10795:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10795 |     DMULT(S64(0), S64(ctx->r27), &lo, &hi);
+       |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10795:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10795 |     DMULT(S64(0), S64(ctx->r27), &lo, &hi);
+       |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10797:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10797 |     DDIV(S64(0), S64(ctx->r29), &lo, &hi);
+       |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10797:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10797 |     DDIV(S64(0), S64(ctx->r29), &lo, &hi);
+       |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10883:40: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10883 |     DMULT(S64(ctx->r2), S64(ctx->r27), &lo, &hi);
+       |                                        ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10883:45: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10883 |     DMULT(S64(ctx->r2), S64(ctx->r27), &lo, &hi);
+       |                                             ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10885:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10885 |     DDIV(S64(ctx->r2), S64(ctx->r29), &lo, &hi);
+       |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:10885:44: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10885 |     DDIV(S64(ctx->r2), S64(ctx->r29), &lo, &hi);
+       |                                            ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:11363:40: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11363 |     DDIV(S64(ctx->r12), S64(ctx->r29), &lo, &hi);
+       |                                        ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:11363:45: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11363 |     DDIV(S64(ctx->r12), S64(ctx->r29), &lo, &hi);
+       |                                             ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:11451:41: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11451 |     DMULT(S64(ctx->r14), S64(ctx->r27), &lo, &hi);
+       |                                         ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:11451:46: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11451 |     DMULT(S64(ctx->r14), S64(ctx->r27), &lo, &hi);
+       |                                              ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:11530:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11530 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:11530:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11530 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:12917:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 12917 |     DDIV(S64(ctx->r2), S64(ctx->r23), &lo, &hi);
+       |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:12917:44: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 12917 |     DDIV(S64(ctx->r2), S64(ctx->r23), &lo, &hi);
+       |                                            ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+[ 27%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c.o
+[ 27%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_30.c.o
+[ 27%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_31.c.o
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99267:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99267 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99267:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99267 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99330:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99330 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99330:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99330 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99332:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99332 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99332:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99332 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99392:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99392 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99392:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99392 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99394:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99394 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99394:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99394 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99454:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99454 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99454:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99454 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99456:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99456 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99456:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99456 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99518:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99518 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99518:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99518 |     DDIV[ 27%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_32.c.o
+(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99542:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99542 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99542:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99542 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99544:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99544 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99544:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99544 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99546:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99546 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99546:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99546 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99548:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99548 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99548:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99548 |     DMULT(S64(0), S64(0), &lo, &hi);
+       |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99608:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99608 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99608:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99608 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99610:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99610 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99610:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99610 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99612:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99612 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99612:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99612 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99614:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99614 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:99614:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 99614 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:101655:41: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 101655 |     DMULT(S64(ctx->r10), S64(ctx->r21), &lo, &hi);
+        |                                         ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:101655:46: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 101655 |     DMULT(S64(ctx->r10), S64(ctx->r21), &lo, &hi);
+        |                                              ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:101694:40: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 101694 |     DMULT(S64(ctx->r30), S64(ctx->r6), &lo, &hi);
+        |                                        ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:101694:45: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 101694 |     DMULT(S64(ctx->r30), S64(ctx->r6), &lo, &hi);
+        |                                             ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102402:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102402 |     DMULT(S64(0), S64(ctx->r15), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102402:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102402 |     DMULT(S64(0), S64(ctx->r15), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102522:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102522 |     DMULT(S64(0), S64(0), &lo, &hi);
+        |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102522:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102522 |     DMULT(S64(0), S64(0), &lo, &hi);
+        |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102530:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102530 |     DMULT(S64(0), S64(0), &lo, &hi);
+        |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102530:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102530 |     DMULT(S64(0), S64(0), &lo, &hi);
+        |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102550:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102550 |     DMULT(S64(0), S64(0), &lo, &hi);
+        |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102550:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102550 |     DMULT(S64(0), S64(0), &lo, &hi);
+        |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102595:27: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102595 |     DMULT(S64(0), S64(0), &lo, &hi);
+        |                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102595:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102595 |     DMULT(S64(0), S64(0), &lo, &hi);
+        |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102692:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102692 |     DDIV(S64(0), S64(ctx->r16), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102692:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102692 |     DDIV(S64(0), S64(ctx->r16), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102836:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102836 |     DDIV(S64(0), S64(ctx->r17), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102836:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102836 |     DDIV(S64(0), S64(ctx->r17), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102886:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102886 |     DMULT(S64(0), S64(ctx->r17), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:102886:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 102886 |     DMULT(S64(0), S64(ctx->r17), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103009:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103009 |     DDIV(S64(0), S64(ctx->r18), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103009:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103009 |     DDIV(S64(0), S64(ctx->r18), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103071:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103071 |     DMULT(S64(0), S64(ctx->r19), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103071:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103071 |     DMULT(S64(0), S64(ctx->r19), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103365:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103365 |     DDIV(S64(0), S64(ctx->r21), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103365:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103365 |     DDIV(S64(0), S64(ctx->r21), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103405:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103405 |     DMULT(S64(0), S64(ctx->r22), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103405:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103405 |     DMULT(S64(0), S64(ctx->r22), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103451:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103451 |     DDIV(S64(0), S64(ctx->r22), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103451:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103451 |     DDIV(S64(0), S64(ctx->r22), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103469:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103469 |     DMULT(S64(0), S64(ctx->r22), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103469:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103469 |     DMULT(S64(0), S64(ctx->r22), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103496:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103496 |     DDIV(S64(0), S64(ctx->r23), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103496:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103496 |     DDIV(S64(0), S64(ctx->r23), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103500:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103500 |     DDIV(S64(0), S64(ctx->r23), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103500:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103500 |     DDIV(S64(0), S64(ctx->r23), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103510:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103510 |     DDIV(S64(0), S64(ctx->r23), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103510:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103510 |     DDIV(S64(0), S64(ctx->r23), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:14733:38: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+ 14732 |                 fprintf(stderr, "[d/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103609:33:lentry-reserveAndEmit] n=%d arg_r4=0x%08X warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103609 |   arg_   DDr5=0x%08X ra=0x%08X\n",
+       |                                                                         ~~~~
+       IV(S64(0)|                                                                         %08llX
+, S64 14733 |                  (ctx->r24), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void        s_dDDIV(lentry_n, ctx->r4, ctx->inr5, ct64_t tx->r31);
+       |                                      ^~~~~~~
+a, int64/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:14733:47: warning: _t b, int64_t* quoformat specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+t, i 14732 | nt64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103609:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103609 |     DDIV(S64(0)                fprintf(stderr, "[dlentry-re, S64(ctxserve->r24), &lo,And &hiEmit] n=%d arg_r4=0x%08X arg_);
+        |                                      ^~~
+r5=0x%/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here08X ra=0x%08X\n"
+   73 | st,
+       |                                                                                       ~~~~
+       | atic inline void DDIV(int64_t a, int64_t b, i                                                                                      %08llX
+nt64 14733 |    _t* q    uot, i     nt64_t* rem) {
+      |                                                                       ^   
+         s_dlentry_n, ctx->r4, ctx->r5, ctx->r31);
+       |                                               ^~~~~~~
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:14733:56: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+ 14732 |                 fprintf(stderr, "[dlentry-reserveAnd/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103729:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103729 |     DDIV(S64(0), S64(Emit] n=%d arg_r4=0x%08X arg_r5=0x%08X ra=0x%08X\n",
+       |                                                                                                 ~~~~
+       |                                                                                                 %08llX
+ 14733 |  ctx->r25), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56:         note: passing argument to parameter 'quot' here
+               s_dlentry   73 | static inl_nine voi, ctx->r4, ctx-d DDIV(int64_>r5, ctx-t a, int64_t b, >r3int64_t* quot1);
+       |                                                        ^~~~~~~~
+, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103729:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103729 |     DDIV(S64(0), S64(ctx->r25), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103743:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103743 |   [ 95%] Built target rt64
+  DMULT(S64(0), S64(ctx->r25), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103743:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103743 |     DMULT(S64(0), S64(ctx->r25), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103749:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103749 |     DDIV(S64(0), S64(ctx->r25), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103749:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103749 |     DDIV(S64(0), S64(ctx->r25), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103758:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103758 |     DDIV(S64(0), S64(ctx->r25), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103758:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103758 |     DDIV(S64(0), S64(ctx->r25), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103804:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103804 |     DMULT(S64(0), S64(ctx->r26), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103804:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103804 |     DMULT(S64(0), S64(ctx->r26), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103846:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103846 |     DMULT(S64(0), S64(ctx->r26), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103846:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103846 |     DMULT(S64(0), S64(ctx->r26), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103911:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103911 |     DDIV(S64(0), S64(ctx->r27), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103911:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103911 |     DDIV(S64(0), S64(ctx->r27), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103946:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103946 |     DMULT(S64(0), S64(ctx->r27), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103946:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103946 |     DMULT(S64(0), S64(ctx->r27), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103964:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103964 |     DMULT(S64(0), S64(ctx->r28), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103964:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103964 |     DMULT(S64(0), S64(ctx->r28), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103966:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103966 |     DMULT(S64(0), S64(ctx->r28), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103966:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103966 |     DMULT(S64(0), S64(ctx->r28), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103968:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103968 |     DDIV(S64(0), S64(ctx->r28), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:103968:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 103968 |     DDIV(S64(0), S64(ctx->r28), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104097:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104097 |     DDIV(S64(0), S64(ctx->r29), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104097:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104097 |     DDIV(S64(0), S64(ctx->r29), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104124:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104124 |     DMULT(S64(0), S64(ctx->r30), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104124:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104124 |     DMULT(S64(0), S64(ctx->r30), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104307:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104307 |     DMULT(S64(0), S64(ctx->r15), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104307:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104307 |     DMULT(S64(0), S64(ctx->r15), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104319:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104319 |     DDIV(S64(0), S64(ctx->r15), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104319:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104319 |     DDIV(S64(0), S64(ctx->r15), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104397:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104397 |     DMULT(S64(0), S64(ctx->r15), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104397:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104397 |     DMULT(S64(0), S64(ctx->r15), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104497:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104497 |     DMULT(S64(0), S64(ctx->r14), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104497:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104497 |     DMULT(S64(0), S64(ctx->r14), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+[ 96%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_33.c.o
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104543:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104543 |     DDIV(S64(0), S64(ctx->r14), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104543:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104543 |     DDIV(S64(0), S64(ctx->r14), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104569:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104569 |     DMULT(S64(0), S64(ctx->r13), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104569:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104569 |     DMULT(S64(0), S64(ctx->r13), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104670:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104670 |     DDIV(S64(0), S64(ctx->r13), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104670:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104670 |     DDIV(S64(0), S64(ctx->r13), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104694:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104694 |     DDIV(S64(0), S64(ctx->r13), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104694:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104694 |     DDIV(S64(0), S64(ctx->r13), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104716:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104716 |     DMULT(S64(0), S64(ctx->r13), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104716:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104716 |     DMULT(S64(0), S64(ctx->r13), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104787:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104787 |     DDIV(S64(0), S64(ctx->r12), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104787:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104787 |     DDIV(S64(0), S64(ctx->r12), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104850:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104850 |     DDIV(S64(0), S64(ctx->r12), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104850:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104850 |     DDIV(S64(0), S64(ctx->r12), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104965:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104965 |     DMULT(S64(0), S64(ctx->r11), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104965:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104965 |     DMULT(S64(0), S64(ctx->r11), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104990:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104990 |     DDIV(S64(0), S64(ctx->r11), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:104990:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 104990 |     DDIV(S64(0), S64(ctx->r11), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105074:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105074 |     DDIV(S64(0), S64(ctx->r11), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105074:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105074 |     DDIV(S64(0), S64(ctx->r11), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105099:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105099 |     DMULT(S64(0), S64(ctx->r11), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105099:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105099 |     DMULT(S64(0), S64(ctx->r11), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105155:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105155 |     DMULT(S64(0), S64(ctx->r10), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105155:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105155 |     DMULT(S64(0), S64(ctx->r10), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105238:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105238 |     DMULT(S64(0), S64(ctx->r10), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105238:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105238 |     DMULT(S64(0), S64(ctx->r10), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105322:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105322 |     DMULT(S64(0), S64(ctx->r10), &lo, &hi);
+        |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105322:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105322 |     DMULT(S64(0), S64(ctx->r10), &lo, &hi);
+        |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105370:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105370 |     DDIV(S64(0), S64(ctx->r9), &lo, &hi);
+        |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105370:37: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105370 |     DDIV(S64(0), S64(ctx->r9), &lo, &hi);
+        |                                     ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105404:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105404 |     DMULT(S64(0), S64(ctx->r9), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105404:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105404 |     DMULT(S64(0), S64(ctx->r9), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105430:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105430 |     DDIV(S64(0), S64(ctx->r9), &lo, &hi);
+        |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105430:37: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105430 |     DDIV(S64(0), S64(ctx->r9), &lo, &hi);
+        |                                     ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105489:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105489 |     DMULT(S64(0), S64(ctx->r9), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105489:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105489 |     DMULT(S64(0), S64(ctx->r9), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105523:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105523 |     DMULT(S64(0), S64(ctx->r9), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105523:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105523 |     DMULT(S64(0), S64(ctx->r9), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105588:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105588 |     DDIV(S64(0), S64(ctx->r9), &lo, &hi);
+        |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105588:37: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105588 |     DDIV(S64(0), S64(ctx->r9), &lo, &hi);
+        |                                     ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105675:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105675 |     DMULT(S64(0), S64(ctx->r8), &lo, &hi);
+        |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105675:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105675 |     DMULT(S64(0), S64(ctx->r8), &lo, &hi);
+        |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105713:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105713 |     DDIV(S64(0), S64(ctx->r8), &lo, &hi);
+        |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105713:37: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105713 |     DDIV(S64(0), S64(ctx->r8), &lo, &hi);
+        |                                     ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105794:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105794 |     DDIV(S64(0), S64(ctx->r8), &lo, &hi);
+        |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105794:37: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105794 |     DDIV(S64(0), S64(ctx->r8), &lo, &hi);
+        |                                     ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105861:32: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105861 |     DDIV(S64(0), S64(ctx->r8), &lo, &hi);
+        |                                ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:105861:37: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 105861 |     DDIV(S64(0), S64(ctx->r8), &lo, &hi);
+        |                                     ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+[ 96%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c.o
+3 warnings generated.
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:220:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+  220 |     DDIV(S64(0), S64(ctx->r20), &lo, &hi);
+      |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:220:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+  220 |     DDIV(S64(0), S64(ctx->r20), &lo, &hi);
+      |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:236:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+  236 |     DDIV(S64(ctx->r1), S64(ctx->r8), &lo, &hi);
+      |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:236:43: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+  236 |     DDIV(S64(ctx->r1), S64(ctx->r8), &lo, &hi);
+      |                                           ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^[ 96%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_35.c.o
+
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:1236:22: warning: self-comparison always evaluates to false [-Wtautological-compare]
+ 1236 |         if (ctx->r24 != ctx->r24) {
+      |                      ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:1264:22: warning: self-comparison always evaluates to false [-Wtautological-compare]
+ 1264 |         if (ctx->r24 != ctx->r24) {
+      |                      ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:1289:22: warning: self-comparison always evaluates to false [-Wtautological-compare]
+ 1289 |         if (ctx->r24 != ctx->r24) {
+      |                      ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:1310:18: warning: self-comparison always evaluates to false [-Wtautological-compare]
+ 1310 |     if (ctx->r24 != ctx->r24) {
+      |                  ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:4182:34: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 4182 |     DMULT(S64(0), S64(ctx->r31), &lo, &hi);
+      |                                  ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:4182:39: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 4182 |     DMULT(S64(0), S64(ctx->r31), &lo, &hi);
+      |                                       ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:6098:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 6098 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:6098:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 6098 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:6100:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 6100 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:6100:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 6100 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:6102:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 6102 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:6102:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 6102 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:6104:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 6104 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:6104:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 6104 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:8159:41: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 8159 |     DMULT(S64(ctx->r10), S64(ctx->r21), &lo, &hi);
+      |                                         ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:8159:46: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 8159 |     DMULT(S64(ctx->r10), S64(ctx->r21), &lo, &hi);
+      |                                              ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:8198:40: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 8198 |     DMULT(S64(ctx->r30), S64(ctx->r6), &lo, &hi);
+      |                                        ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:57: note: passing argument to parameter 'lo64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                         ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:8198:45: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 8198 |     DMULT(S64(ctx->r30), S64(ctx->r6), &lo, &hi);
+      |                                             ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:41:72: note: passing argument to parameter 'hi64' here
+   41 | static inline void DMULT(int64_t a, int64_t b, int64_t* lo64, int64_t* hi64) {
+      |                                                                        ^
+[ 96%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_36.c.o
+[ 96%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_37.c.o
+22 warnings generated.
+[ 96%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_38.c.o
+[ 96%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_39.c.o
+[ 96%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c.o
+[ 97%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c.o
+[ 97%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_41.c.o
+190 warnings generated.
+[ 97%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_42.c.o
+[ 97%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_43.c.o
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_41.c:588:39: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+  587 |             fprintf(stderr, "[hangar-entry-800B4048] n=%d arg_r4=0x%08X arg_r5=0x%08X ra=0x%08X\n",
+      |                                                                    ~~~~
+      |                                                                    %08llX
+  588 |                     s_hangar_entry_n, ctx->r4, ctx->r5, ctx->r31);
+      |                                       ^~~~~~~
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_41.c:588:48: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+  587 |             fprintf(stderr, "[hangar-entry-800B4048] n=%d arg_r4=0x%08X arg_r5=0x%08X ra=0x%08X\n",
+      |                                                                                  ~~~~
+      |                                                                                  %08llX
+  588 |                     s_hangar_entry_n, ctx->r4, ctx->r5, ctx->r31);
+      |                                                ^~~~~~~
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_41.c:588:57: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+  587 |             fprintf(stderr, "[hangar-entry-800B4048] n=%d arg_r4=0x%08X arg_r5=0x%08X ra=0x%08X\n",
+      |                                                                                            ~~~~
+      |                                                                                            %08llX
+  588 |                     s_hangar_entry_n, ctx->r4, ctx->r5, ctx->r31);
+      |                                                         ^~~~~~~~
+[ 97%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_44.c.o
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c:5302:33: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 5302 |     DDIV(S64(0), S64(ctx->r20), &lo, &hi);
+      |                                 ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c:5302:38: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 5302 |     DDIV(S64(0), S64(ctx->r20), &lo, &hi);
+      |                                      ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c:6289:45: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+ 6288 |             fprintf(stderr, "[compose-npc-orient-800AB1C8] n=%d arg_r4=0x%08X arg_r5=0x%08X ra=0x%08X\n",
+      |                                                                          ~~~~
+      |                                                                          %08llX
+ 6289 |                     s_compose_npc_orient_n, ctx->r4, ctx->r5, ctx->r31);
+      |                                             ^~~~~~~
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c:6289:54: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+ 6288 |             fprintf(stderr, "[compose-npc-orient-800AB1C8] n=%d arg_r4=0x%08X arg_r5=0x%08X ra=0x%08X\n",
+      |                                                                                        ~~~~
+      |                                                                                        %08llX
+ 6289 |                     s_compose_npc_orient_n, ctx->r4, ctx->r5, ctx->r31);
+      |                                                      ^~~~~~~
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c:6289:63: warning: format specifies type 'unsigned int' but the argument has type 'gpr' (aka 'unsigned long long') [-Wformat]
+ 6288 |             fprintf(stderr, "[compose-npc-orient-800AB1C8] n=%d arg_r4=0x%08X arg_r5=0x%08X ra=0x%08X\n",
+      |                                                                                                  ~~~~
+      |                                                                                                  %08llX
+ 6289 |                     s_compose_npc_orient_n, ctx->r4, ctx->r5, ctx->r31);
+      |                                                               ^~~~~~~~
+[ 97%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_5.c.o
+[ 97%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_6.c.o
+[ 97%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_7.c.o
+[ 97%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c.o
+5 warnings generated.
+[ 98%] Building C object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_9.c.o
+[ 98%] Building CXX object CMakeFiles/RecompiledFuncs.dir/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/lookup.cpp.o
+3 warnings generated.
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9739:30: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 9739 |         DDIV(S64(0), S64(0), &lo, &hi);
+      |                              ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9739:35: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 9739 |         DDIV(S64(0), S64(0), &lo, &hi);
+      |                                   ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9744:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 9744 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9744:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 9744 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9788:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 9788 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9788:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 9788 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9831:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 9831 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9831:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 9831 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9835:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 9835 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9835:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 9835 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9968:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 9968 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9968:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 9968 |     DDIV(S64(0), S64(0), &lo, &hi);
+      |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10012:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10012 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10012:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10012 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10345:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10345 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10345:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10345 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10390:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10390 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10390:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10390 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10628:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10628 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10628:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10628 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10632:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10632 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10632:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10632 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10676:30: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10676 |         DDIV(S64(0), S64(0), &lo, &hi);
+       |                              ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10676:35: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10676 |         DDIV(S64(0), S64(0), &lo, &hi);
+       |                                   ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10681:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10681 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10681:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 10681 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11019:30: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11019 |         DDIV(S64(0), S64(0), &lo, &hi);
+       |                              ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11019:35: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11019 |         DDIV(S64(0), S64(0), &lo, &hi);
+       |                                   ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11024:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11024 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11024:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11024 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11068:30: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11068 |         DDIV(S64(0), S64(0), &lo, &hi);
+       |                              ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11068:35: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11068 |         DDIV(S64(0), S64(0), &lo, &hi);
+       |                                   ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11073:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11073 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11073:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11073 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11314:30: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11314 |         DDIV(S64(0), S64(0), &lo, &hi);
+       |                              ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11314:35: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11314 |         DDIV(S64(0), S64(0), &lo, &hi);
+       |                                   ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11319:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11319 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11319:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11319 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11363:30: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11363 |         DDIV(S64(0), S64(0), &lo, &hi);
+       |                              ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11363:35: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11363 |         DDIV(S64(0), S64(0), &lo, &hi);
+       |                                   ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11368:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11368 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11368:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11368 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11681:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11681 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11681:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11681 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11726:26: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11726 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                          ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:56: note: passing argument to parameter 'quot' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                        ^
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:11726:31: warning: passing 'uint64_t *' (aka 'unsigned long long *') to parameter of type 'int64_t *' (aka 'long long *') converts between pointers to integer types with different sign [-Wpointer-sign]
+ 11726 |     DDIV(S64(0), S64(0), &lo, &hi);
+       |                               ^~~
+/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h:73:71: note: passing argument to parameter 'rem' here
+   73 | static inline void DDIV(int64_t a, int64_t b, int64_t* quot, int64_t* rem) {
+      |                                                                       ^
+46 warnings generated.
+[ 98%] Linking CXX static library libRecompiledFuncs.a
+[ 98%] Built target RecompiledFuncs
+[ 98%] Building CXX object CMakeFiles/RogueSquadron64Recomp.dir/src/main/register_overlays.cpp.o
+[ 98%] Linking CXX executable RogueSquadron64Recomp
+ld: warning: building for macOS-11.0, but linking with dylib '/opt/homebrew/opt/sdl2-compat/lib/libSDL2-2.0.0.dylib' which was built for newer version 26.0
+ld: warning: building for macOS-11.0, but linking with dylib '/opt/homebrew/opt/sdl2-compat/lib/libSDL2-2.0.0.dylib' which was built for newer version 26.0
+[100%] Built target RogueSquadron64Recomp

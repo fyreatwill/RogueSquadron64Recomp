@@ -663,9 +663,38 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s230)
+## Next steps, in order of expected value (s231)
 
--71. **(s230) Landed a render-cache "epoch" diagnostic in `processSceneNode`
+-72. **(s231) Refutes s230's "diagnostic I/O overhead" hypothesis with two
+    independent attempts; the SELECT-CRAFT->mission VI transition (~73-74s)
+    is independently fragile and 0/4 epoch-armed soaks have survived it.**
+    Reduced the render-cache epoch diagnostic's I/O 10x/40x (heartbeat
+    `%500`->`%5000`, transition-log threshold `run>=50`->`run>=2000`,
+    `N64Recomp/fixup_game_funcs.py`) and re-soaked twice (`campose5`,
+    `campose6`). Both still crashed within ~0.3s of each other at the same
+    transition point (73.8s/74.1s) despite far less fprintf volume —
+    ruling out I/O as the mechanism. Crash sites differ each time and match
+    already-known pre-existing families: `campose5` = SIGBUS in
+    `memcpy_recomp+288`; `campose6` = SIGABRT via the pre-existing
+    `NAN_CHECK` assert in `sinfApprox` (`funcs_5.c:6460`, same family as
+    CURRENT-TRUTH -55/-56). **Combined with campose4's two attempts (s230,
+    also crashed at ~73s with 2 more distinct PCs), this transition has now
+    killed 4/4 epoch-armed soaks before reaching the freeze window
+    (`n=15360`+) — the epoch diagnostic itself is not implicated (s230's
+    disabled-diagnostic control ran clean), the transition is just a
+    reliable landing zone for this codebase's existing crash-family bugs.**
+    **Next step**: this exact channel (epoch diagnostic through
+    SELECT-CRAFT->mission on the `campose*`/`schedulepush2` schedule) is not
+    productive at a 0/4 hit rate — per iron rule 8, do NOT attempt a 5th
+    soak on it unmodified. Either (a) find/build a schedule that shortens or
+    skips the SELECT-CRAFT screen before re-attempting, or (b) switch to
+    s229's Probe B (DL-emission/RDP payload bytes across the freeze
+    boundary) instead, which is not gated on surviving this transition any
+    more than every other probe already run. Full detail: PORTING-STATE
+    Session 231.
+
+-71. **(s230, superseded in priority by s231 above — kept for the trail)
+    Landed a render-cache "epoch" diagnostic in `processSceneNode`
     (RDRAM global 0x8011A894, `funcs_4.c:13881-13890`/`:14732-14751`, env
     var `ROGUESQ_LOG_RENDER_CACHE_EPOCH=1`) and confirmed it fires and
     shows the epoch is a LIVE, actively-changing value early in a run

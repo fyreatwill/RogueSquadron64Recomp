@@ -21964,3 +21964,74 @@ it before re-attempting the freeze-boundary measurement.
 **Housekeeping**: none needed beyond the above — `lib/rt64`/
 `lib/N64ModernRuntime` still show modified in `git status`, still not
 investigated (no `lib/` edits made this session either).
+
+## Session 231 (2026-07-28)
+
+**Work unit**: NEXT.md's planned reduced-I/O re-soak of s230's render-cache
+epoch diagnostic. Edited both patch functions
+(`_render_cache_epoch_patch_a`/`_b` in `N64Recomp/fixup_game_funcs.py`):
+heartbeat modulus `% 500` -> `% 5000` and per-transition log threshold
+`run >= 50` -> `run >= 2000` at both call sites, logic unchanged. Regenerated
+(`make_elf.py` -> `regen_n64recomp.sh` -> `fixup_game_funcs.py` once,
+confirmed both the regression-check report line and the new `% 5000`/
+`>= 2000` values landed in generated `funcs_4.c`) and rebuilt clean
+(`DEVELOPER_DIR=... cmake --build build -j8`, exit 0, only pre-existing
+warnings).
+
+**Soak (2 budgeted attempts, both run synchronously, `campose5`/`campose6`,
+copied from `campose4`/s230 with only the I/O-throttle change)**:
+
+- `campose5`: crashed at **73.8s** VI transition (`SELECT-CRAFT`->mission,
+  `vi_width 1024->512`), signal 10 (Bus error), `pc-symbol
+  memcpy_recomp+288`. A 3rd distinct crash PC for this transition window
+  (campose4 attempt1 = `static_5_800AB658+49104`, attempt2 =
+  `tickTextureMaterialExpiry+612`).
+- `campose6`: crashed at **74.1s**, same transition, signal 6 (Abort trap),
+  `pc-symbol __pthread_kill+8`. Log shows the real cause immediately above
+  the abort: `Assertion failed: (ctx->f10.fl == ctx->f10.fl), function
+  sinfApprox, file funcs_5.c, line 6460` — the pre-existing `NAN_CHECK`
+  assert family already documented (CURRENT-TRUTH -55/-56, PORTING-STATE
+  Session 214/215): a NaN reached `sinfApprox`'s squaring step and the
+  recompiler's built-in `NAN_CHECK(ctx->f10.fl)` guard fired.
+
+**Conclusion — discriminates cleanly against s230's leading hypothesis**:
+reducing the diagnostic's I/O by 10x (heartbeat) and 40x (transition-log
+threshold) did NOT prevent the crash. Both attempts still died within
+~0.3-0.6s of each other, right at the SELECT-CRAFT->mission VI transition,
+matching campose4's timing almost exactly despite far less `fprintf` volume.
+This refutes "diagnostic I/O overhead perturbs timing into a crash" as the
+mechanism (two independent attempts, two different underlying crash sites,
+same transition point — iron rule 4 satisfied). The transition itself is
+independently fragile: it's a landing zone for this codebase's pre-existing
+crash-family bugs (unguarded derefs + NaN propagation into unguarded
+`sinfApprox`/similar call sites), and this specific epoch diagnostic (armed
+or throttled) is not the cause — it's incidental. **Per NEXT.md's own
+explicit branch for this outcome and iron rule 8, did NOT attempt a 3rd
+soak this session.**
+
+This does NOT answer the original discriminating question from s229/s230
+(does the render-cache epoch go constant at/near the already-known freeze
+point, `n=15360`+?) — the epoch diagnostic itself never got observed data
+past ~n=1500 in any attempt so far (s230's non-crashed prefix), since every
+soak with it armed has died at the ~73s SELECT-CRAFT transition, thousands
+of calls before the freeze window. Four soaks in a row now (campose4 x2,
+campose5, campose6) — 0/4 have reached the freeze window with the epoch
+diagnostic armed. The diagnostic itself is not implicated (control run s230
+was clean), but this specific mission/schedule path reliably dies before
+useful data can be collected.
+
+**Next step reframed**: stop trying to push this exact diagnostic through
+the SELECT-CRAFT->mission transition — it is not survivable often enough to
+be a productive channel (0/4). Either (a) find/build a schedule that skips
+or shortens the SELECT-CRAFT screen (reducing exposure to this fragile
+transition) before re-attempting the epoch soak, or (b) abandon the epoch
+approach for now and switch to Probe B from s229 (DL-emission/RDP payload
+bytes across the freeze boundary), which does not require surviving this
+transition any more than any other soak already has.
+
+**Housekeeping**: none done — `lib/rt64`/`lib/N64ModernRuntime` still show
+modified in `git status`, still not investigated (no `lib/` edits this
+session). `fixup_game_funcs.py`'s untracked state in the `N64Recomp` sibling
+checkout still not fixed (not this repo's scope, flagged since s83).
+`docs/CURRENT-TRUTH.md` still over both size budgets, still not migrated
+(flagged 27+ sessions).
