@@ -23258,3 +23258,85 @@ crashed vs 5/10 survived as of `malloclog2`/s242).
 scope (`fixup_game_funcs.py` untracked sibling-checkout state,
 `CURRENT-TRUTH.md` over both size budgets, now flagged for 37+
 sessions).
+
+## Session 247 (2026-07-28)
+
+Planned work unit per `NEXT.md`: get the first clean `MTL_DEBUG_LAYER=1`
+family-tally data point past the SELECT-CRAFT->mission transition, on the
+premise (from s246's `NEXT.md`) that `scissorfix1` "only held in the
+ship-select hangar screen, it did NOT cross into a mission".
+
+**Before launching a new soak, re-read `scissorfix1/run.log`** (cheap,
+no build/run cost) to get the exact schedule that crosses the transition,
+per NEXT.md step 1. Found `scissorfix1`'s driver script
+(`run_scissorfix1.sh`) uses the byte-identical `STICK_SCHEDULE` and
+`GAME_EXTRA_ENV` to `run_mtldebug2.sh`/`run_campose11.sh` — the scripts
+differ only in `RUNTAG`. Grepped `scissorfix1/run.log` for the `[phase]`
+transition lines and found:
+
+```
+[phase] vi_width=1024 (was 640) origin=0x00790400 at 45.3s update_screen #2684
+[phase] vi_width=512 (was 1024) origin=0x006AB400 at 74.4s update_screen #4433
+```
+
+The second line is the exact SELECT-CRAFT->mission transition signature
+established across dozens of prior sessions (e.g. s242: `vi_width=512
+(was 1024)` at `t=74.5s`, `update_screen #4428` — same origin
+`0x006AB400`, same width pair, ~5 counter / 0.1s apart, well within
+run-to-run jitter). `scissorfix1` ran the full 350s hold past this point
+(350 `hold_NN.png` files present) with `CRASH: 0` (already established in
+s246) and zero `SIGSEGV`/`SIGABRT`/`CALayer` occurrences (re-confirmed
+this session via grep). **s246's `NEXT.md` premise was wrong** —
+`scissorfix1` was already a clean `MTL_DEBUG_LAYER=1` crossing, just not
+recognized as such because s246's write-up focused only on the scissor
+guard's own positive control, not on whether the run crossed the
+family's trigger transition.
+
+Ran a second soak (`mtldebug3`, `scratch/s73_post_a_scene/
+run_mtldebug3.sh`) with the identical schedule/`GAME_EXTRA_ENV`
+(`MTL_DEBUG_LAYER=1 RT64_LOG_VI_ZERO_SIZE=1 RT64_LOG_SCISSOR_CLAMP=1`) and
+armed-var set as `scissorfix1`, new tag only — no code changes, same
+binary (`strings build/RogueSquadron64Recomp | grep scissor-clamp`
+confirmed 1 hit before soaking, binary mtime matches the s246 build).
+Launched as a single foreground-then-backgrounded Bash call, block-waited
+to completion.
+
+**Result**: `CRASH: 0`, wall=475s, driver summary `exit=1: 5000, exit=2:
+0`, transition signature `vi_width=512 (was 1024) origin=0x006AB400 at
+74.5s update_screen #4434` (matches `scissorfix1`'s within 0.1s/1
+counter). Grepped `run.log`: `SIGSEGV` 0, `SIGABRT` 0, `CALayer` 0,
+`Validation` 1 (the expected `Metal API Validation Enabled` startup
+banner, same as `scissorfix1`), `[scissor-clamp]` 5 (log-budget-capped
+display, same as `scissorfix1`), `[vi zero-size guard]` 2 (same as
+`scissorfix1`). 350 `hold_NN.png` files present, confirming the full
+hold ran and was captured.
+
+**New sub-tally**: SELECT-CRAFT->mission CALayer SIGSEGV family, under
+`MTL_DEBUG_LAYER=1` + both s244 (VI zero-size) and s246 (scissor-clamp)
+guards armed: **2/2 survived** (`scissorfix1`, `mtldebug3`). Kept
+separate from the pre-existing 5/10-vs-5/10 tally (`malloclog2`/s242 and
+earlier), which was gathered WITHOUT `MTL_DEBUG_LAYER=1` and without
+either guard — different condition set, per s246's own instruction not
+to merge blindly. n=2 does not statistically distinguish from the 50%
+baseline (P(2/2 clean | true p=0.5) = 0.25) — labeled suggestive,
+low-n, not conclusive. Neither run's `run.log` contains the string
+`CALayer` at all (not even as a non-matching false-positive substring),
+so this soak is silent on H1 vs. H2 vs. H3 from s246's `NEXT.md` — it
+answers "did it crash in these 2 runs" (no) but not "why does it crash
+in ~4/9 of the historical runs" or "would `MTL_DEBUG_LAYER` surface a
+sharper diagnostic if a crash did occur" (untested, no crash occurred to
+test it against).
+
+No `lib/` or `src/` edit this session — soak + log analysis only, no
+`export.sh` needed, nothing to commit from the submodules.
+
+**Housekeeping**: same items flagged again, still not this session's
+scope. `CURRENT-TRUTH.md` is now ~406 KB / 5786+ lines (over both the
+~35 KB CLAUDE.md budget and the Read tool's 256 KB single-read limit),
+flagged for 38+ sessions without action — this is now a real workflow
+cost (every session must offset-read or grep it instead of reading it
+normally) and should be picked up on its own merits soon rather than
+re-flagged indefinitely. `fixup_game_funcs.py` untracked sibling-checkout
+state (s83+) and the two unrelated dirty checkouts (`N64Recomp`,
+`rogue_squadron64`) still not this repo's commit scope, still worth
+surfacing to the user directly.

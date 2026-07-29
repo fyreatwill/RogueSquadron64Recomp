@@ -663,7 +663,44 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s246)
+## Next steps, in order of expected value (s247)
+
+-88. **(s247) Corrected a wrong s246 premise and added a 2nd clean
+    `MTL_DEBUG_LAYER=1` family-tally data point past the SELECT-CRAFT->
+    mission transition — CALayer SIGSEGV family now 2/2 survived under
+    the stricter instrument (vs. 5/10 survived without it).** s246's
+    `NEXT.md` claimed `scissorfix1`'s soak "only held in the ship-select
+    hangar, did not cross into a mission" — re-reading `scissorfix1/
+    run.log` before launching a new soak found that claim was WRONG:
+    `scissorfix1` used the byte-identical `STICK_SCHEDULE` to
+    `mtldebug2`/`campose11` and its `[phase]` log shows `vi_width=512
+    (was 1024) origin=0x006AB400 at 74.4s update_screen #4433` — the
+    exact, many-sessions-established SELECT-CRAFT->mission transition
+    signature (compare s242: `vi_width=512 (was 1024)` at `t=74.5s`,
+    `update_screen #4428` — same origin/width pair). `scissorfix1`
+    already ran the full 350s hold past that point with `CRASH: 0` and
+    zero SIGSEGV/SIGABRT/CALayer — it was an unrecognized first clean
+    data point for the family tally under `MTL_DEBUG_LAYER=1`. Ran a 2nd
+    soak (`mtldebug3`, identical schedule/env/guards, new tag only —
+    not a re-run of a superseded tag) to confirm: **`CRASH: 0`, wall=475s,
+    same transition signature at `74.5s update_screen #4434`, zero
+    SIGSEGV/SIGABRT/CALayer/Metal-Validation-assertion occurrences**, both
+    positive controls fired clean (`[scissor-clamp]` 5x, `[vi zero-size
+    guard]` 2x — same pattern as `scissorfix1`, confirming the guards are
+    still live and the null result isn't a "never reached" false
+    negative). **New sub-tally: 2/2 survived crossing the transition with
+    `MTL_DEBUG_LAYER=1` + both s244/s246 guards armed** — kept SEPARATE
+    from the older 5/10-vs-5/10 tally (different instrument/condition set,
+    per s246's own instruction not to merge blindly). n=2 is not enough to
+    statistically distinguish from the 50% baseline (P(2/2 clean | true
+    p=0.5) = 0.25) — this is suggestive, not conclusive; label it
+    single-condition, low-n. Neither run's `run.log` contains a `CALayer`
+    string at all, so this soak gives no NEW information toward H1 vs H2
+    vs H3 from s246's `NEXT.md` — it only says the family didn't fire in
+    these 2 runs, not why it fires in the other ~4/9 historical crashed
+    runs of the old tally. No `lib/` or `src/` edit this session (soak +
+    log analysis only, no code changed, no `export.sh` needed). Full
+    detail: PORTING-STATE Session 247.
 
 -87. **(s246) Implemented + soak-confirmed s245's preferred fix (b) for
     the scissor-rect out-of-bounds Metal SIGABRT — CLOSED, two
