@@ -24643,3 +24643,145 @@ posture as every prior session's guards, still out of this repo's commit
 scope. `CURRENT-TRUTH.md` size still flagged, unaddressed again (this
 session landed a real new guard + soak with a genuine crash-site change,
 which stands on its own as `ADVANCED`).
+
+## Session 260 (2026-07-29) — closed s259's `setLookupEntryField5ByKey` lead, but it took two guards, not one: the caller-argument guard was a red herring, the real bug was a 2nd-level pointer loaded inside the callee's own search loop. Confirmed with 2 independent soaks that the targeted crash no longer reproduces; the run now dies via a NEW, 9th unguarded gap in the already-8-guard `composeNpcOrientationMatrix` family
+
+**Work unit**: s259 left a precise lead — `activateAnimationKeyframe`'s
+call to `setLookupEntryField5ByKey` (funcs_14.c:2116, the only one of 18
+call sites in the file that falls inside `activateAnimationKeyframe`'s own
+range 1629-2138) passed an argument (`ctx->r4`, loaded from `$s1+0xF4` at
+guest `0x80061EF4`) that was checked ONLY against zero before being handed
+to the callee, which dereferences it further with no range validation.
+
+**First guard (`SETLOOKUP_ARG_GUARD`)**: widened the existing `if
+(ctx->r4 == 0)` check to the standard KSEG0-range + hi-word idiom, but
+implemented it by coercing an out-of-range value to 0 right before the
+pre-existing check runs (rather than adding a parallel `goto`), so the
+function's own `L_80061F18` bail path handles both cases identically — no
+new label needed. New env var `ROGUESQ_LOG_SETLOOKUP_ARG_GUARD`.
+
+**Regen mistake caught and corrected**: `fixup_game_funcs.py` was
+accidentally run twice against the same regenerated source on the first
+pass (a stray verification re-run), silently double-inserting the guard
+block (2 copies of the same PATCH block back to back — harmless
+functionally, since it's the same check twice, but violates "fixup runs
+exactly once" and would have looked confusing in a future diff or
+`nm`/`objdump` pass). Caught by grepping `SETLOOKUP_ARG_GUARD` occurrence
+count in the regenerated file before building. Full regen redone from
+scratch (delete all `funcs_*.c` → `make_elf.py` → `regen_n64recomp.sh` →
+`fixup_game_funcs.py` exactly once, captured to a log file, greppable
+report line count confirmed `x1`). **Lesson for future sessions**: always
+redirect `fixup_game_funcs.py`'s stdout to a file (`> scratch/agent/*.log`)
+and grep it, rather than trusting a terminal `tail`, which can silently
+truncate or hide a duplicate run.
+
+**Soak 1 (`setlookupguard1`, 224MB `run.log`)**: `SETLOOKUP_ARG_GUARD` got
+**0 fires**, but the run crashed with the **EXACT same signature** as
+s259's crash — same call stack (`static_5_800AAD9C` →
+`advancePlayerAnimationPhase` → `activateAnimationKeyframe` →
+`setLookupEntryField5ByKey`), same `si_addr=0x3c04b1980`/
+`x9=0x00000000c04b1980`, same ~VI-8192 crash mark. This is a genuine
+discriminating result (not a null result — iron rule 1's positive-control
+concern doesn't apply here because the ABSENCE of a fire combined with the
+SAME crash recurring is itself informative): `ctx->r4` was demonstrably
+clean on every call this run, including the crashing one, so the argument
+was never the wild pointer.
+
+**Re-read `setLookupEntryField5ByKey`'s body in full** (funcs_15.c:70-130)
+to find the real bug: after the safe first deref (`ctx->r2 =
+MEM_HU(ctx->r4, 0x4)`), the function's search loop (label `L_800646BC`)
+reloads `ctx->r3 = MEM_W(ctx->r4, 0X0)` **on every iteration** — this is a
+table-base pointer stored INSIDE the already-validated struct, a
+genuinely distinct value from `ctx->r4` itself, not a re-read of the same
+thing. The loop then computes `ctx->r3 = index*8 + ctx->r3` and
+dereferences THAT (`ctx->r2 = MEM_W(ctx->r3, 0X0)`, guest `0x800646C8`)
+with zero validation anywhere. `x9=0xc04b1980` matches this 2nd-level
+pointer's shape exactly (a garbage value that's neither in the
+`0x80000000`-`0x80800000` KSEG0 range nor zero) — the argument-level guard
+could never have caught this because the argument itself genuinely was
+fine.
+
+**Second guard (`SETLOOKUP_TABLE_GUARD`)**: added at `0x800646BC`
+(funcs_15.c), validating `ctx->r3` immediately after its load, bailing via
+`ctx->r2 = 0; return;` if out of range — chosen to exactly match the
+loop's own "not found" exit (`L_800646F0`, which also leaves `r2=0` and
+returns) since no caller anywhere checks this function's return value,
+only its side-effect byte write (`MEM_B(0X5, ctx->r3) = ctx->r6` at
+`0x800646D8`) on the found-a-match path. New env var
+`ROGUESQ_LOG_SETLOOKUP_TABLE_GUARD`.
+
+**Build**: full regen redone again (both guards now in `fixup_game_funcs.py`
+— `funcs_14.c` and `funcs_15.c` patches), clean `cmake --build .`,
+`strings`-verified both `ROGUESQ_LOG_SETLOOKUP_ARG_GUARD` and
+`ROGUESQ_LOG_SETLOOKUP_TABLE_GUARD` present in the binary alongside the
+carried-forward `ROGUESQ_LOG_EVALSPLINE_GUARD`/
+`ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD` controls.
+
+**Soak 2 (`setlookupguard2`, 224MB `run.log`)**: **0 fires on all 4 armed
+guards** (`SETLOOKUP_ARG`, `SETLOOKUP_TABLE`, `EVALSPLINE`,
+`HANGAR_BAY_DEREF` G30/G31) **and the process survived the full 195s
+scripted sequence with `CRASH: 0`** — the driver had to `SIGKILL` it after
+completion rather than observing a crash. This is the first full survival
+of the entire scripted probe sequence recorded anywhere in this
+investigation's session history (s131 onward). Flagged as single-source
+per iron rule 4 — re-ran once more rather than crediting it immediately.
+
+**Soak 3 (`setlookupguard3`)**: crashed after only ~3s into the hold
+window (much earlier than any prior run), but **the targeted
+`setLookupEntryField5ByKey` bug still did not recur** — both its guards
+(`SETLOOKUP_ARG`, `SETLOOKUP_TABLE`) again got 0 fires, and the crash
+signature is entirely different. This gives **2 independent lines of
+evidence** (iron rule 4 satisfied) that this specific bug is genuinely
+fixed, not just run-to-run variance: across 2 soaks under the fix, the
+exact crash that killed s259 and `setlookupguard1` never reappeared.
+
+**New crash (soak 3)**: `static_5_800AB1C8` (`composeNpcOrientationMatrix`
+— the function s252-s256 already added 8 guards to)
+crashed at native offset `+6168`/`+9024`, with **all 8 existing guards'
+diagnostics (`compose-npc-orient-guard` through `guard8`) showing 0
+fires** — confirmed via `grep -o` over the full run.log that only the
+entry diagnostic (`[compose-npc-orient-800AB1C8]`, 543 hits) fired, none
+of the 8 fix diagnostics. This is a genuinely NEW, 9th unguarded gap in
+this function, not a re-occurrence of any of the first 8. `si_addr=
+0x380000068` decomposes as rdram-base (`0x300000000`) + guest pointer
+`0x80000068` — **notably, this value technically PASSES the standard
+`0x80000000`-`0x80800000` KSEG0-range-check idiom** used by every guard in
+this codebase, because it's a near-null pointer (only `0x68` bytes past
+the very start of KSEG0) that still falls "in range." This is a new
+corruption shape this investigation hasn't catalogued before: the
+existing 8 guards (and the standard idiom in general) would not have
+caught it even if placed at the right site, because the naive range check
+alone doesn't distinguish a legitimately low-but-valid KSEG0 address from
+a near-null garbage one. Not yet resolved whether this specific `0x68`
+offset is meaningful (e.g., a fixed struct-field offset applied to an
+uninitialized-to-zero base) or coincidental.
+
+**What this rules out**: the `setLookupEntryField5ByKey` bug family (both
+the argument and the internal table-pointer shapes) is closed — 2
+soaks under the fix never reproduced it. **What this does not rule out**:
+whether there are OTHER `setLookupEntryField5ByKey` call sites (17 besides
+the one in `activateAnimationKeyframe`) with the same 2nd-level-pointer
+gap that simply weren't exercised by this scripted sequence — the guard
+covers the function itself, not a specific caller, so this should already
+be closed for all 18 sites, but has only been soak-tested via the one
+call path this investigation has been chasing.
+
+**Next work unit**: read `static_5_800AB1C8` (`composeNpcOrientationMatrix`,
+funcs_40.c:6293+) in full, locate the guest instruction at native
+`+6168`/`+9024` (do NOT treat these as line numbers or guest addresses —
+established rule, confirmed misleading again in s259/s260), find the
+unguarded `MEM_W`/`MEM_HU` load this crash traces to, and determine
+whether the near-null `0x80000068` value is itself the bug (needs a
+tighter guard than the standard idiom) or a symptom of something upstream
+leaving a struct pointer uninitialized. See `scratch/agent/NEXT.md`.
+
+**Housekeeping**: no `lib/` edit this session (N64ModernRuntime/rt64
+submodule diffs pre-date this session, untouched) — `submodule-patches/
+export.sh` not needed. Both `fixup_game_funcs.py` edits (SETLOOKUP_ARG_GUARD,
+SETLOOKUP_TABLE_GUARD) are again uncommitted in the separate `N64Recomp`
+sibling checkout, same posture as every prior session's guards, still out
+of this repo's commit scope. `CURRENT-TRUTH.md` size still flagged,
+unaddressed again (still growing — now ~450KB, ~13x the ~35KB target;
+this session did not attempt a prune, having spent its budget on 3 build-
+soak cycles that produced 2 real discriminating results, which stands on
+its own as `ADVANCED`; a dedicated pruning session is overdue).

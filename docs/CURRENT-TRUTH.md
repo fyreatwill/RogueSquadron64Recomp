@@ -663,7 +663,68 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s259)
+## Next steps, in order of expected value (s260)
+
+-101. **(s260) Closed s259's `setLookupEntryField5ByKey` lead, but it took TWO
+    guards, not one — the first guard (validating the caller's argument) was
+    a red herring; the real bug was a 2nd-level pointer loaded INSIDE the
+    callee. Confirmed with 2 soaks that the originally-targeted crash no
+    longer reproduces; found a NEW, 9th unguarded gap in the already-8-guard
+    `composeNpcOrientationMatrix` family as the next blocker.** Read
+    `setLookupEntryField5ByKey` (funcs_15.c:70-130) in full per s259's plan:
+    the caller-side null-only check at `0x80061EF8` (`activateAnimationKeyframe`,
+    funcs_14.c:2092) was widened to the standard KSEG0-range guard
+    (`ROGUESQ_LOG_SETLOOKUP_ARG_GUARD`, coerces an out-of-range nonzero
+    `ctx->r4` to 0 right before the pre-existing `==0` check, reusing the
+    existing `L_80061F18` bail — no new label). **Resoak (`setlookupguard1`,
+    224MB log): 0 fires, but the EXACT same crash recurred** (same call
+    stack, same `si_addr=0x3c04b1980`/`x9=0xc04b1980`, same ~VI-8192 mark) —
+    a genuine discriminating result proving `ctx->r4` (the argument) was
+    clean on every call this run, including the crashing one. Re-read
+    `setLookupEntryField5ByKey`'s body: it loads `ctx->r2 = MEM_HU(ctx->r4,
+    0x4)` (safe, guarded) then, inside its search loop (`L_800646BC`),
+    reloads `ctx->r3 = MEM_W(ctx->r4, 0X0)` **every iteration** — a
+    table-base pointer stored INSIDE the already-validated struct, a
+    genuinely different value from `ctx->r4` itself — then computes
+    `ctx->r3 = index*8 + ctx->r3` and dereferences THAT at `0x800646C8`
+    with zero validation. `x9=0xc04b1980` matches this 2nd-level pointer,
+    not the argument. Added `ROGUESQ_LOG_SETLOOKUP_TABLE_GUARD` at
+    `0x800646BC` (funcs_15.c), bailing via `ctx->r2 = 0; return;` — same
+    observable behavior as the loop's own "not found" exit (`L_800646F0`),
+    since no caller checks the return value. Full regen, clean build,
+    `strings`-verified (both new env vars present). **Soak 1
+    (`setlookupguard2`, 224MB log): 0 fires on ALL 4 armed guards
+    (SETLOOKUP_ARG, SETLOOKUP_TABLE, EVALSPLINE, HANGAR_BAY_DEREF G30/G31)
+    AND the process survived the FULL 195s scripted sequence with `CRASH: 0`
+    — the first full survival anywhere in this investigation's session
+    history.** Single-source (iron rule 4) — re-ran once more.
+    **Soak 2 (`setlookupguard3`): the targeted `setLookupEntryField5ByKey`
+    crash still did not recur (0 fires on both its guards across BOTH soaks
+    = 2 independent lines of evidence it's actually fixed, not just
+    variance), but the run crashed after only ~3s via a DIFFERENT,
+    already-partially-guarded function: `composeNpcOrientationMatrix`
+    (`static_5_800AB1C8`), native offset `+6168` inside the function, all
+    3 diagnostics (`compose-npc-orient-guard` through `guard8`) showing 0
+    fires — a genuinely NEW, 9th unguarded gap in a function that already
+    has 8 guards from s252-s256.** `si_addr=0x380000068` decomposes as
+    rdram-base (`0x300000000`) + guest pointer `0x80000068` — **notable:
+    this guest value technically PASSES the standard
+    `0x80000000-0x80800000` KSEG0-range-check idiom used by every guard in
+    this codebase**, because it's a near-null pointer (offset `+0x68` from
+    the very start of KSEG0) that's still nominally "in range" — a
+    plausible new corruption shape the standard idiom is blind to. Not yet
+    investigated: whether tightening guards to also reject suspiciously
+    low KSEG0 offsets (e.g. `< 0x80001000` or similar) would have been
+    right, or whether `0x80000068` is itself a valid-but-wrong pointer this
+    entry's actual bug is that some earlier code failed to populate the
+    real pointer. **Next step, highest value**: read `static_5_800AB1C8`
+    (funcs_40.c:6293+) in full, locate the guest instruction at native
+    `+6168`/`+9024` (do NOT trust these numbers as line numbers —
+    established rule), find which of its unguarded `MEM_W`/`MEM_HU` loads
+    this crash traces to, and determine whether it's a "load a near-null
+    struct pointer, deref it" shape (same family as the other 8 guards) or
+    something structurally different. Full detail: PORTING-STATE Session
+    260.
 
 -100. **(s259) Guarded the `evalCubicSplineAtTime` unguarded pointer s258's
     lead pointed at; soak shows the guard is inert (0 fires, no crash there)
