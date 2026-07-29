@@ -663,7 +663,39 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s254)
+## Next steps, in order of expected value (s255)
+
+-96. **(s255) Landed item -49's next tracer-widen step (`C_LOADED`), and
+    re-analysis of s254's OWN already-collected log answered the widen
+    question for `B_LOADED` for free (no build): `ctx->r16` was NOT
+    out-of-bounds right after its initial load on the call that then
+    crashed at `+792` (5th occurrence) -- rules out "already bad at load
+    time" again, points at the `L_80012080` loop-back reload as the next
+    place to check (that site's existing check only validates the SOURCE
+    address of the reload, never the reloaded RESULT -- same source-vs-
+    value gap `B_LOADED` already closed for site B). Added `C_LOADED`
+    right after that reload (`fixup_game_funcs.py`, sibling `N64Recomp`
+    checkout, anchored on a 3-line label-prefixed block since the bare
+    reload line recurs verbatim in an unrelated function). Build clean,
+    patch report confirmed all 6 tracer sites x1. **Soak**
+    (`cloadedsoak1`): reached SELECT-CRAFT at 75.1s then crashed in the
+    hangar menu at `static_5_800AB1C8+6168` (`composeNpcOrientationMatrix`)
+    -- `renderUnlitMeshFaces` was NEVER called this run (0 tracer lines of
+    any kind), an uninformative null for the `C_LOADED` question itself.
+    **But this surfaced a genuinely new, previously-uncaught 8th unguarded
+    deref site inside `composeNpcOrientationMatrix`** (which already has 7
+    guards from s97-s101/s128, all confirmed still live via 551
+    `compose-npc-orient-guard` diagnostic lines, none of which caught this
+    fault) -- same "menu crashes before reaching render code" shape as
+    s254's `HANGARLIST_GUARD` finding, and now the actual blocker for
+    re-testing `C_LOADED`. **Next step, highest value: full read of
+    `static_5_800AB1C8` (funcs_40.c:6293-?) to find and guard the 8th gap**
+    (same recipe as s254's `HANGARLIST_GUARD`: one focused function read,
+    one guard, re-soak) -- do this BEFORE re-attempting the `C_LOADED`
+    soak a 2nd time, since the render code isn't reachable until this
+    upstream crash is closed. `heapwalker-guard4`/`MATLIST_GUARD3` still
+    unexercised, same open question as s254. Full detail: PORTING-STATE
+    Session 255.
 
 -95. **(s254) Re-ran s253's prescribed re-soak, got a discriminating answer,
     found and closed a real upstream blocker, hit a known bug 27x further
@@ -2369,7 +2401,10 @@ cost three sessions before the recursive mutex.
     the scene get reached normally), not a real behavioral regression. Full
     detail: PORTING-STATE Session 209.
 
--49. **(s208, STATUS: probe landed s209, not yet run to a valid result; 5th
+-49. **(s208, STATUS: `B_LOADED` (s209) answered via s254's own log, no new
+    build — NOT out-of-bounds right after load on the crashing call; `C_LOADED`
+    (s255) widens to the loop-back reload but hasn't reached a valid soak yet
+    — see -96 above, blocked on a NEW `composeNpcOrientationMatrix` gap. 5th
     occurrence confirmed s254, see -95 above — same `+792`/`0x380630062`
     signature exactly, plus a negative result on the "named symbol"
     explanation (grepped `symbol_files/*.txt` for `80630062`, 0 hits))

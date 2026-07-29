@@ -24155,3 +24155,93 @@ edit this session -- `submodule-patches/export.sh` not needed.
 **Housekeeping**: `CURRENT-TRUTH.md` size still flagged, unaddressed
 again (picked the code-change option, same as s253). Other flagged items
 unchanged.
+
+## Session 255 (2026-07-29) — landed `C_LOADED`, item -49's next widening step, and ran it: uninformative null on the widen question itself (the traced function was never called this run), but the run surfaced a genuinely NEW, previously-uncaught 8th unguarded deref site inside `composeNpcOrientationMatrix`, now the actual blocker for re-testing the tracer
+
+**Goal**: NEXT.md's Option A -- continue item -49's `renderUnlitMeshFaces`
+`ctx->r16` KSEG0-zero-extension chase. Before doing anything else, checked
+whether s254's own `hangarlistguard1` soak (which already had
+`ROGUESQ_LOG_UNLIT_MESH_TRACER=1` armed and reached the `+792` crash for the
+5th confirmed occurrence) already contained the discriminating data for the
+existing `B_LOADED` check (added s209, never previously analyzed against a
+run that actually reached the crash). It did: `grep -c unlit-mesh-tracer`
+on that log returns exactly 1 line -- the positive-control counter
+(`calls=1`) -- and zero `B_LOADED` lines, meaning `ctx->r16` was NOT
+out-of-bounds right after its initial load (`funcs_4.c:5072`) on the one
+call that then crashed at `+792`. **This is a real, no-build-needed
+discriminating result**: it rules out "already bad at load time" for the
+5th occurrence too (consistent with s208/s209's suspicion), and narrows the
+search to somewhere between that load and the fault -- specifically
+implicating the loop-back reload at `L_80012080`
+(`ctx->r16 = MEM_W(ctx->r16, 0X0)`, guest `0x80012080`), whose existing
+site-C check only validates the reload's SOURCE address (the OLD,
+already-good `ctx->r16`), never the freshly-loaded RESULT -- the exact same
+source-vs-value gap `B_LOADED` closed for site B.
+
+**Landed `C_LOADED`**: added a new patch block to `fixup_game_funcs.py`
+(N64Recomp checkout) inserting
+`_rogue_unlit_mesh_tracer_check("C_LOADED", ctx->r16, 0X0)` immediately
+after the `L_80012080` reload, anchored on the label-prefixed 3-line block
+(comment + label + reload line) rather than the bare reload line alone,
+since that exact text recurs verbatim in an unrelated function earlier in
+the same file (`funcs_4.c:4488`) and a bare-line anchor would have
+mis-patched there instead. Regenerated (deleted all 45
+`RecompiledFuncs/funcs_*.c`, `make_elf.py` -> `N64Recomp` ->
+`fixup_game_funcs.py` -> `cmake --build`) -- patch report confirmed all 6
+tracer sites (A, B, C, D, B_LOADED, C_LOADED) patched exactly x1, no
+duplicates. Build clean. Verified fresh binary (`strings` shows
+`C_LOADED` x1, mtime after build).
+
+**Soak (`cloadedsoak1`, same env/schedule as `hangarlistguard1`)**: reached
+the `vi_width=512` SELECT-CRAFT transition at 75.1s (consistent with prior
+runs), then crashed inside the hangar-selection menu at
+`static_5_800AB1C8+6168` (`composeNpcOrientationMatrix`), called from
+`static_5_800AAD9C`/`runHangarSelectionFrame` <-
+`static_5_800C6854`/`runHangarMenuFromOverlay` <- `menuOverlayInit` -- the
+same menu-crash family as s254's `HANGARLIST_GUARD` fix, but a different
+function. **`renderUnlitMeshFaces` was never called this run** (zero
+`unlit-mesh-tracer` lines of ANY kind, including the positive-control
+counter that fires unconditionally on call #1) -- an uninformative null
+for the `C_LOADED` question specifically, same failure shape as s209's
+first two soaks (crashed upstream of the traced function, not inside it).
+`HANGARLIST_GUARD` fired 0 times (not exercised, consistent with a
+different crash path this run). 551 `compose-npc-orient-guard`-family
+diagnostic lines appeared -- confirms the function's 7 EXISTING guards
+(s97-s101/s128) are live and executing -- but none of them caught this
+fault, meaning this is a genuinely 8th, previously-uncovered deref site in
+the same function, not a regression in one of the 7.
+
+**Register pattern, single-occurrence, flagged not folded in**: `x9`,
+`x10`-`x14` all hold `0x00000000_80000000`-family values at crash time
+(`x9=0x0000000300000000`, `x10=0x0000000080000068`,
+`x11`-`x14=0x0000000080000000` each), the same qualitative "value hovering
+at the 32-bit sign-bit boundary" shape s210 flagged for
+`evalCubicSplineAtTime`'s crash -- worth watching for a 2nd occurrence but
+not evidence of a shared root cause on its own (different function, only
+one data point each).
+
+**What this rules out / in**:
+- RULES OUT (this occurrence): `ctx->r16` bad already at its initial
+  `funcs_4.c:5072` load -- confirmed via existing log re-analysis, no new
+  build needed for this part.
+- STILL OPEN: whether `ctx->r16` goes bad at the `L_80012080` loop-back
+  reload (`C_LOADED`'s actual question) -- `cloadedsoak1` produced no data
+  either way, for the same reason as s209's first two soaks (never reached
+  the traced function).
+- NEW, UNCONFIRMED, actionable: `composeNpcOrientationMatrix` has an 8th
+  unguarded deref site distinct from its existing 7 guards, currently the
+  most-recently-observed blocker preventing runs from reaching
+  `renderUnlitMeshFaces` at all in this exact scene/schedule. Per budget
+  rule 8 this is 1-of-a-possible-3 uninformative nulls on the `C_LOADED`
+  question specifically -- not yet at the stop threshold, but the next
+  attempt should close this new gap first (same shape as s254's
+  `HANGARLIST_GUARD`: read the function fully, find the gap, one guard)
+  rather than re-soak blind a 2nd time.
+
+**Uncommitted, not this repo's call**: `N64Recomp/fixup_game_funcs.py`
+(new `C_LOADED` patch block) and `N64Recomp/RecompiledFuncs/funcs_4.c`
+(regenerated with 6 tracer sites) are uncommitted in the separate
+`N64Recomp` checkout, same posture as every prior session's guards. No
+`lib/` edit this session -- `submodule-patches/export.sh` not needed.
+
+**Housekeeping**: `CURRENT-TRUTH.md` size still flagged, unaddressed again.
