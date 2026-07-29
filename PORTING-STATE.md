@@ -24883,3 +24883,125 @@ budget went to one build-soak cycle that produced the strongest single
 result of the investigation to date — a first-ever positive control hit —
 which stands on its own as `ADVANCED`; the pruning session is now
 overdue across 3+ consecutive sessions and should be prioritized soon).
+
+## Session 262 (2026-07-29) — added `renderUnlitMeshFaces` GUARD2 for a real, previously-missed gap (the same peek-load bug s219 fixed for the loop's back-edge, but missed pre-loop) — result UNVERIFIED, since the soak that carried it never called the function at all, dying instead to a fresh occurrence of the project's long-standing, still-unresolved "18th crash class" upstream in `submitSceneNodeRender`, which is now the higher-priority next blocker
+
+Picked up NEXT.md's Option A directly: dispatched a subagent to re-read
+`renderUnlitMeshFaces` (`funcs_4.c:4989-5674`) looking for the untraced
+2nd-level pointer-chase gap that must explain s261's "0 fires on all 8
+existing tracer sites, yet still crashed" result. The agent's top finding,
+independently verified by direct inspection: the list-walk's PRE-loop
+peek-load at native `0x80011CD0` (`ctx->r2 = MEM_W(ctx->r18, 0X0)`,
+~funcs_4.c:5031) is the exact same "freshly-read, unvalidated pointer
+immediately dereferenced" idiom s219 (s218/s219 sessions) already diagnosed
+and fixed — but only for the loop's BACK-EDGE copy of this identical
+peek-load, two lines later at `0x80011CE0`. s219's fix regex anchored
+specifically on the `L_80011CDC:\n    // 0x80011CDC...` loop-label text, so
+it only ever matched the back-edge occurrence and silently missed this
+earlier, pre-loop occurrence of the same pattern in the same function.
+Confirmed by direct read of the pre-fixup source: line 5020's tracer site
+"A" only validates the READ that produces `ctx->r18` (`ctx->r20+0x54`), not
+`ctx->r18`'s own value — so the very next statement, the pre-loop peek-load,
+dereferences a completely unvalidated pointer. This is fully consistent with
+s261's own result (0 fires on every one of A/B/D/R7A_LOADED/R7B_LOADED/
+C/C_LOADED/the s219 guard, single call, immediate crash) since all of those
+sites sit downstream of this one.
+
+Added `renderUnlitMeshFaces GUARD2` (`fixup_game_funcs.py`, same env var
+`ROGUESQ_LOG_RENDERUNLIT_GUARD` as GUARD1 so no soak-script change was
+needed to arm it, same bounds check `0x80000000 <= r18_lo < 0x80800000 &&
+hi==0xFFFFFFFF`, same bail target `L_80011CEC` GUARD1 already proved
+ABI-safe, zeroes `ctx->r18` first so the downstream `if (ctx->r18==0)`
+check at `0x80011CF0` degrades correctly). Full delete-all regen
+(`python3 tools/make_elf.py` in `rogue_squadron64` — 3768 symbols loaded,
+2962 emitted, clean; `./build/N64Recomp rogue_squadron.toml` in `N64Recomp`
+— standard `[Info]`/`Unhandled cop0`/`No function found for jal target`
+noise only, no errors; `env python3 fixup_game_funcs.py` output captured to
+`scratch/agent/s262_fixup.log` and grepped: both `renderUnlitMeshFaces`
+guards — the pre-existing GUARD1 at `0x80011CE0` and the new GUARD2 at
+`0x80011CD0` — patched `x1` each, every other family at its documented
+multiplicity (`GUARD2`-suffix `submitSceneNodeRender` guard `x9`, `GUARD3`
+`x8`, `audio gate` `x3`, `a3-pointer guard3` `x2`, `MATLIST_GUARD3` `x2` —
+all matching precedent, no new duplication), 222-line report total, 0
+error/traceback/exception lines). Clean `cmake --build build -j8`
+(`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`): exit 0, only
+the pre-existing DDIV pointer-sign-conversion warnings (46). `strings`
+confirmed `ROGUESQ_LOG_RENDERUNLIT_GUARD` present in the built binary.
+
+**Soak** (`preloopguard1`, copied from `run_composeguard9.sh` with
+`HOLD_S` bumped 150→240 to give real headroom past the previous best
+(143.1s) if the fix actually held; every other env var and the
+`STICK_SCHEDULE` left identical; `run_mission_keys.sh preloopguard1 5 12`).
+`scratch/s73_post_a_scene/preloopguard1/run.log`, 3.92M lines:
+- `[renderunlit-guard]`: **0 occurrences of the label at all** (not just 0
+  fires — the string never appears), and `[CRASH][unlit-mesh-tracer]
+  positive-control calls=` also never appears. **`renderUnlitMeshFaces` was
+  not called even once this run** — per iron rule 1, GUARD2 got no
+  same-run positive control, so this result is UNVERIFIED, not a
+  confirmation and not a refutation.
+- All 9 `compose-npc-orient-guard*` diagnostics: 0 fires (3rd independent
+  soak confirming s261's fix holds, iron rule 4 now satisfied for that
+  family from a 3rd angle).
+- `SCENE_NODE_LIST_GUARD`/`GUARD2`/`GUARD3` (the s123-era
+  `submitSceneNodeRender` free-list guards): 0 fires.
+- Phase transitions: `vi_width=1024` at 45.6s, `vi_width=512` (was 1024 —
+  the SELECT-CRAFT→mission marker) at 74.4s. No further transition this
+  run (composeguard9's 143.1s third-transition mark was not reached).
+- **Crash**: SIGBUS, `si_addr=0x380000000`, `x0=x9=0x0000000300000000`
+  (rdram-base-plus-zero, the established signature of a raw NULL guest
+  pointer dereference), `pc-symbol=heapFreeListDequeue+16188`, backtrace
+  `heapFreeListDequeue ← submitSceneNodeRender+28952 ←
+  processSceneNode+11828 ← traverseSceneGraphRecursive ←
+  setupCameraMatrices ← static_5_800AAD9C ← static_5_800C6854 ←
+  menuOverlayInit ← mainGameLoop`, `decisionN=8373`.
+
+This call-chain shape (`heapFreeListDequeue`-area SIGBUS reached via
+`submitSceneNodeRender` ← `processSceneNode` ← `traverseSceneGraphRecursive`
+← `setupCameraMatrices`) is byte-for-byte the project's own long-standing
+**18th crash class**: first flagged s108 (1-off), recurred s122 (2nd
+occurrence, `+12704` offset), "closed" s123 with a free-list-walk-loop
+guard (`SCENE_NODE_LIST_GUARD`) — but that guard was later **reopened**
+s131/s134 when it fired 0/0 across 2 independent post-guard recurrences of
+the identical crash, refuting it as the actual mechanism. Recurred again
+s196 (`+28208` offset, 0 fires on the guard, `decisionN` earlier than the
+target crash it was chasing that session) and s198 (reclassified "very
+likely fixed, mechanism unconfirmed" after 3 consecutive clean passes with
+no recurrence). **This session's occurrence (`+28952`/`+16188` offsets,
+`decisionN=8373`, guard present and silent) contradicts s198's "very
+likely fixed" read** — same guard-present-but-silent pattern that reopened
+this class the first time. Per this project's own established convention
+(nearest-symbol native offsets drift build-to-build and are not meaningful
+as fixed identifiers — only the call-chain shape and the guard's own
+silence are), this is not evidence of a NEW bug, just the same
+never-actually-root-caused one recurring again.
+
+**What this rules out / establishes**: (1) `renderUnlitMeshFaces` GUARD2 is
+a real, correctly-targeted fix for a real gap (verified by direct source
+comparison to the s219 precedent it mirrors), but remains completely
+unverified dynamically — next soak that reaches `renderUnlitMeshFaces` at
+all will be its first real test. (2) The 18th crash class is definitively
+NOT closed — s198's "very likely fixed" conclusion is superseded by this
+session's 4th occurrence with the guard present and silent. (3) On this
+scripted-input path, the 18th class now sits UPSTREAM of both item -49 and
+GUARD2's own code, meaning it blocks testing GUARD2 the same way the
+`composeNpcOrientationMatrix` family blocked `renderUnlitMeshFaces` for
+20+ sessions before s261 closed it — this is now the single highest-value
+next work unit.
+
+**Next work unit**: s196's own prescription, written 66 sessions ago and
+never executed — source-read `submitSceneNodeRender`'s remaining
+un-audited body (`funcs_4.c`) to find the actual unguarded pointer chase
+behind the 18th class. Do NOT re-touch `ROGUESQ_LOG_SCENE_NODE_LIST_GUARD`
+itself (already refuted as the true mechanism, s131/s134). Once a correctly
+targeted guard lands and a soak survives past this point, that same soak
+becomes the first real (and if it also reaches `renderUnlitMeshFaces`, the
+2nd independent) test of this session's GUARD2 for free.
+
+**Housekeeping**: no `lib/` edit this session — `submodule-patches/
+export.sh` not needed. `fixup_game_funcs.py`'s GUARD2 edit is again
+uncommitted in the separate `N64Recomp` sibling checkout, same posture as
+every prior session's guards (established, accepted practice, not a gap to
+fix). `CURRENT-TRUTH.md` size still flagged, unaddressed again (still
+~455KB; the pruning session flagged 3+ consecutive sessions ago is now 4+
+overdue — this session's budget went to the one build-soak-analyze cycle
+above, which produced a real, actionable finding on its own).

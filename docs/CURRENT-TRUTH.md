@@ -663,7 +663,87 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s261)
+## Next steps, in order of expected value (s262)
+
+-103. **(s262) Added `renderUnlitMeshFaces` GUARD2 for the pre-loop peek-load
+    gap a subagent-assisted re-read found — but the soak that tested it never
+    even called `renderUnlitMeshFaces` (0/0 on the positive-control counter),
+    so the fix is UNVERIFIED, not refuted. Instead the run died earlier, to a
+    fresh (Nth) occurrence of the project's long-standing, still-unresolved
+    "18th crash class" (`heapFreeListDequeue`-area SIGBUS via
+    `submitSceneNodeRender`, first flagged s108, reopened s131/s134, never
+    actually source-read to completion per s196's own prescription) — this is
+    now the higher-priority blocker for the NEXT soak, ahead of item -49.**
+    Source: a subagent re-read `renderUnlitMeshFaces` (funcs_4.c:4989-5674)
+    looking for the untraced 2nd-level pointer chase that must explain
+    s261's 0-fires-everywhere result, and found one: the list-walk's
+    PRE-loop peek-load at native `0x80011CD0` (`ctx->r2 = MEM_W(ctx->r18,
+    0X0)`, funcs_4.c ~line 5031) is the exact same "freshly-read,
+    unvalidated pointer immediately dereferenced" shape s219 already fixed
+    for the loop's BACK-EDGE copy of this identical peek-load
+    (`0x80011CE0`) — but s219's regex anchor was `L_80011CDC:\n    // ...`,
+    which only matches the loop label, so it silently missed this earlier,
+    pre-loop occurrence two instructions up. Added `renderUnlitMeshFaces
+    GUARD2` (same env var `ROGUESQ_LOG_RENDERUNLIT_GUARD` as GUARD1, same
+    bounds check, same bail target `L_80011CEC`, `fixup_game_funcs.py`).
+    Full delete-all regen (`make_elf.py` → `N64Recomp` →
+    `fixup_game_funcs.py`, output captured to
+    `scratch/agent/s262_fixup.log` and grepped: both renderUnlitMeshFaces
+    guards patched `x1`, every other family at its documented multiplicity,
+    no duplicates), clean `cmake --build build -j8` (0 errors, only
+    pre-existing DDIV sign-conversion warnings), `strings`-verified
+    `ROGUESQ_LOG_RENDERUNLIT_GUARD` present.
+
+    **Soak (`preloopguard1`, `scratch/s73_post_a_scene/preloopguard1/run.log`,
+    3.92M lines, `HOLD_S=240`): `renderunlit-guard` 0 fires (both GUARD1 and
+    GUARD2 share this label) — but `[CRASH][unlit-mesh-tracer]
+    positive-control calls=` NEVER appears in the log at all, meaning
+    `renderUnlitMeshFaces` was not called even once this run.** This is a
+    null result with NO positive control on the exact code path GUARD2 sits
+    on — per iron rule 1, GUARD2 is UNVERIFIED, not confirmed, and NOT
+    refuted either (it simply wasn't exercised). All 9
+    `compose-npc-orient-guard*` diagnostics: 0 fires (3rd independent soak
+    confirming that family's closure holds). Phase transitions reached
+    only `vi_width=1024` at 45.6s and `vi_width=512` (was 1024, the
+    SELECT-CRAFT→mission marker) at 74.4s — no 3rd transition this run
+    (composeguard9's 143.1s `vi_width=640` mark was not reached).
+
+    **Crash**: SIGBUS, `si_addr=0x380000000`, `x0=x9=0x0000000300000000`
+    (rdram-base-plus-zero — the textbook signature of a raw NULL guest
+    pointer dereference, per s219's own established reading of this
+    literal), symbol `heapFreeListDequeue+16188`, backtrace
+    `heapFreeListDequeue` ← `submitSceneNodeRender+28952` ←
+    `processSceneNode+11828` ← `traverseSceneGraphRecursive` ←
+    `setupCameraMatrices` ← `static_5_800AAD9C` ← `static_5_800C6854` ←
+    `menuOverlayInit` ← `mainGameLoop`, at `decisionN=8373`. This call chain
+    (`heapFreeListDequeue`-area SIGBUS via `submitSceneNodeRender` ←
+    `processSceneNode` ← `traverseSceneGraphRecursive` ← `setupCameraMatrices`)
+    is byte-for-byte the project's own already-catalogued **18th crash
+    class** (first flagged s108, "closed" by s123's free-list-walk guard,
+    then **reopened s131/s134** when that guard fired 0/0 across 2
+    independent post-guard recurrences — refuting it as the true cause —
+    and last seen s196/s198, where it was reclassified "very likely fixed,
+    mechanism unconfirmed" after 3 consecutive clean passes). All 3 armed
+    `SCENE_NODE_LIST_GUARD`/`GUARD2`/`GUARD3` diagnostics: 0 fires this
+    run too — so s198's "very likely fixed" read is now CONTRADICTED by a
+    4th occurrence with the guard present and silent, the same
+    guard-present-but-silent pattern that reopened it the first time.
+    **This session's `+28952`/`+16188` offsets are NEW** (prior sightings:
+    s122 `+12704`, s196 `+28208`) — consistent with this project's
+    established "nearest-symbol offsets drift release-to-release, don't
+    trust the number, trust the call-chain shape" rule, not evidence of a
+    different bug.
+
+    **Next work unit, highest value**: s196's own prescription, never
+    executed — source-read `submitSceneNodeRender`'s remaining un-audited
+    body (`funcs_4.c`) to find the actual unguarded pointer chase behind
+    the 18th class (s123's guard covers a DIFFERENT, already-refuted
+    mechanism — do not re-touch `ROGUESQ_LOG_SCENE_NODE_LIST_GUARD` itself).
+    Once a real guard lands there, the SAME soak becomes the 2nd
+    independent test of this session's `renderUnlitMeshFaces` GUARD2 for
+    free, since fixing the 18th class is a precondition for reaching
+    `renderUnlitMeshFaces` at all on this scripted-input path. Full detail:
+    PORTING-STATE Session 262.
 
 -102. **(s261) Closed s260's 9th `composeNpcOrientationMatrix` gap
     (`COMPOSE_NPC_GUARD9`) — the whole 9-guard whack-a-mole family (s100-261,
@@ -2670,7 +2750,15 @@ cost three sessions before the recursive mutex.
     the scene get reached normally), not a real behavioral regression. Full
     detail: PORTING-STATE Session 209.
 
--49. **(s208, STATUS: `B_LOADED` (s209) answered via s254's own log, no new
+-49. **(s208, STATUS: s262 added `renderUnlitMeshFaces` GUARD2 for a newly-found
+    pre-loop peek-load gap (0x80011CD0, the same shape s219 fixed for the
+    loop's back-edge but missed pre-loop) — UNVERIFIED, not refuted: the
+    soak that carried it never called `renderUnlitMeshFaces` at all (0/0
+    positive control), dying instead to a recurrence of the unrelated,
+    longer-standing "18th crash class" upstream in `submitSceneNodeRender`.
+    See -103 above for full detail; that entry is now the higher-priority
+    next work unit since fixing it is a precondition for even reaching this
+    function again. `B_LOADED` (s209) answered via s254's own log, no new
     build — NOT out-of-bounds right after load on the crashing call; `C_LOADED`
     (s255/s256) both answered null with 0 fires but DID get a positive-control
     call in s256 — rules out the entire traced r16/r18/r20 chain for that
