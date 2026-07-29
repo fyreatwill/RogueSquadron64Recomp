@@ -23460,3 +23460,125 @@ Full detail this session only; not yet scoped into hypotheses/steps
 scope (see prior sessions for the running list — `CURRENT-TRUTH.md` size,
 `fixup_game_funcs.py` untracked sibling-checkout state, the two unrelated
 dirty checkouts). All still true, still not addressed.
+
+## Session 249 (2026-07-28)
+
+**Picked option 1 from s248's `NEXT.md` (project-wide static sweep for the
+"RDRAM-base-constant + un-subtracted wild guest pointer" whack-a-mole
+family) over option 2 (`CURRENT-TRUTH.md` housekeeping), since it's real
+code and per `ITERATION.md` housekeeping alone doesn't count as
+`ADVANCED`. Landed one new guard (`selectPostCrawlCraft`,
+`funcs_30.c`) plus a reusable project-wide candidate-finder script; build
+clean; 1 soak run showed no regression from the change and no new
+information on whether the guarded site is actually hot.**
+
+**Step 1 — grep the idiom shape project-wide, as NEXT.md's first step
+asked.** The naive signature (self-referential `ctx->rX = MEM_W(ctx->rX,
+0X0)`, matching heapWalker/heapFreeListDequeue's already-fixed shape) hits
+794 times across the 45 `funcs_*.c` files — far too broad; most are
+one-shot, already-bounded dereferences, not unguarded list-walk loops.
+Narrowed with a script
+(`scratch/agent/find_unguarded_walks.py`, output
+`scratch/agent/unguarded_walk_candidates.json`) that requires the
+self-ref load to sit at a labeled loop target which is the destination of
+a **backward** `goto` (i.e. an actual loop back-edge, not just any
+self-ref line) and have no existing `PATCH` guard already covering it.
+This dropped the count to **143 candidate sites across 43 functions** —
+still confirmed the exclusion logic works (heapWalker itself, already
+fully guarded, correctly does not appear). Full per-function breakdown
+is in `NEXT.md` for the next iteration; the JSON has exact file/line/label
+per site.
+
+**Step 2 — picked ONE site to actually fix this session** rather than
+patch all 143 blind (no time to hand-verify bail semantics for 43
+functions in one sitting, and a wrong bail target risks a worse bug than
+the crash it's meant to prevent). Picked `selectPostCrawlCraft`
+(`funcs_30.c`, 3 of the 143 candidates) because its name matches the
+"SELECT-CRAFT" transition this project has instrumented and soaked
+against for 30+ sessions. A full end-to-end read of the function (it's a
+single ~800-line body, no other `RECOMP_FUNC` boundary inside — same
+"decompiler never split it" pattern as `heapWalker`) found:
+- Site 1 (`0x800CBBD8`, register `r16`/`$s0`): a "free every node in a
+  list" loop — frees an `0x5C` sub-object then the node itself, walking
+  via the node's own next-pointer field. **This is the one fixed this
+  session.**
+- Sites 2/3 (`0x800CBDA8`/`0x800CBDE4`): two near-identical inlined
+  list-insert helpers appended to the tail of a list — NOT fixed this
+  session, flagged in `NEXT.md` for a future iteration with their own
+  trace.
+
+**Important correction to the mechanical grep's own signature**: reading
+site 1's loop body found the vulnerable pointer is dereferenced through
+**two different registers** on loop entry — `ctx->r4 = MEM_W(ctx->r17,
+0X5C)` immediately followed by the self-referential `ctx->r16 =
+MEM_W(ctx->r16, 0X0)` — because `r17` and `r16` hold the same
+(potentially corrupted) node address at loop entry (`ctx->r17 =
+ADD32(ctx->r16, 0)` on every back-edge). A guard placed only before the
+self-referential line, matching every prior guard's literal pattern,
+would still leave the FIRST dereference (`ctx->r17`) exposed and
+reachable — the crash could still happen one line earlier. The guard
+added here sits immediately after the loop label, before either
+dereference, checking `ctx->r16` (the value both registers share at that
+point) against the standard KSEG0 bounds
+(`0x80000000`-`0x80800000`, `hi==0xFFFFFFFF`). Bail target: `ctx->r2 =
+S32(0X800D << 16); goto L_800CBC04;` — verified by reading forward from
+`L_800CBC04` that `r2` there is an independent fixed constant
+(`0x800D0000`, used only for one further `rs_free()` at a hardcoded
+offset, never derived from `r16`/`r17`), and that the loop's own natural
+exit path (`r16==0`) sets `r2` to this exact same constant before falling
+into the same label — so the bail is indistinguishable from "list ended
+here" to all downstream code, matching this codebase's established
+"give up gracefully" bail contract. This asymmetry (mechanical grep
+signature vs. the actual multi-register vulnerable window) is worth
+carrying into the remaining 142 candidates — do not assume the
+self-ref line alone is always the right/only guard point; read the whole
+loop body first.
+
+**Build**: mandatory delete-all-45-`funcs_*.c` → `make_elf.py` →
+`regen_n64recomp.sh` → `fixup_game_funcs.py` → `cmake --build`. Patch
+report audited: `funcs_30.c: selectPostCrawlCraft free-list-walk
+loop-back guard (0x800CBBD8) patched x1` — exactly the expected
+multiplicity, no duplicate. `cmake --build` exit 0. Binary verified fresh
+(`strings build/RogueSquadron64Recomp | grep selectpostcrawl-guard` hits
+exactly once, binary mtime matches the build).
+
+**Soak** (`scratch/s73_post_a_scene/run_selectpostcrawlguard1.sh`,
+tag `selectpostcrawlguard1`, all `campose11`-baseline guards armed plus
+the new `ROGUESQ_LOG_SELECTPOSTCRAWL_GUARD=1`, `HOLD_S=150`): crossed the
+established SELECT-CRAFT->mission transition cleanly (`vi_width=512 (was
+1024) origin=0x006AB400 at 75.3s`), then died at hold-iter 1 to `signal
+10 (SIGBUS)`, `x0`/`x9`=`0x0000000300000000` — symbolized PC
+`reserveAndEmitDLEntry+6264`. This is the SAME already-catalogued 14th
+whack-a-mole class (`reserveAndEmitDLEntry`, first guarded s109, flagged
+recurring in CURRENT-TRUTH multiple times since) — **not** a new bug and
+**not** caused by this session's edit (different function entirely, no
+call/data relationship to `selectPostCrawlCraft`'s 3 sites). Existing
+`heapwalker-guard4` fired 2x as a same-run positive control (instruments
+were live). The new `selectpostcrawl-guard` fired **0 times** — an
+honest single-sample null result: this run's corruption never reached
+that specific site, which says nothing about whether the guard is
+correct or whether the site is ever hot, only that this one sample didn't
+exercise it. Not treated as a "fix confirmed" — no crash was ever
+observed at this exact site to begin with (it was found via static
+analysis, not a live crash repro), so there is no before/after crash
+comparison to make. This is exactly what `NEXT.md`'s own framing
+anticipated: preventive hardening against a known bug *class*, not a
+targeted fix for an observed crash.
+
+**Where the new code actually lives**: like every prior guard in this
+family, the patch is in `fixup_game_funcs.py` in the sibling
+`~/Documents/Tools/N64Recomp` checkout, which is untracked by git (flagged
+since s83, not this repo's commit scope) — the analysis script and
+candidate list are the only artifacts this session that are actually
+committed by `RogueSquadron64Recomp`'s own git history.
+
+**Net effect**: real code change landed (guard + script), build clean,
+no regression, informative null on the guard's own firing. 142 candidate
+sites remain, catalogued in `NEXT.md` for future iterations — each needs
+the same full-loop-body read as this session's site 1, not a mechanical
+batch-apply.
+
+**Housekeeping**: `CURRENT-TRUTH.md` size still flagged (unaddressed
+again this session — picked the code-change option over housekeeping per
+`ITERATION.md`'s own incentive). Other flagged items (sibling-checkout
+untracked state, two unrelated dirty checkouts) unchanged.

@@ -1,96 +1,142 @@
-# NEXT work unit — MTL_DEBUG_LAYER sampling is now paused (rule 8); pick
-# between the whack-a-mole static sweep and the overdue CURRENT-TRUTH
-# housekeeping
+# NEXT work unit — continue the project-wide whack-a-mole static sweep
+# (142 candidates remain), or pivot to CURRENT-TRUTH housekeeping
 
-## Where the investigation stands (s248)
+## Where the investigation stands (s249)
 
-s248 found s247's `NEXT.md` had a stale premise (its "option 2," the
-NaN_CHECK-disable pivot, was actually already tried, A/B-tested, and
-REVERTED at s216 — CURRENT-TRUTH `-57` — not "unshipped" as claimed; both
-`-55`/`-56` that were cited are themselves headed SUPERSEDED). That
-option is a dead end — do not revive it without a genuinely new angle.
+s249 started the static sweep s248 proposed (option 1) instead of
+CURRENT-TRUTH housekeeping (option 2), since it's real code and
+housekeeping alone doesn't count as `ADVANCED` per `ITERATION.md`.
 
-s248 then ran the 3rd consecutive `MTL_DEBUG_LAYER=1` soak (`mtldebug4`)
-on the CALayer-SIGSEGV-family question. It crossed the SELECT-CRAFT->
-mission transition cleanly and both existing guards' positive controls
-fired, but died at hold-iter 1 (t≈134s, right around the CALayer family's
-usual ~131s window) to an unrelated, already-catalogued guest-side SIGBUS
-— the "RDRAM-base-constant (`0x300000000`) + un-subtracted wild guest
-pointer" whack-a-mole family (10+ known sites in the `menuOverlayInit`/
-`runHangarSelectionFrame` chain since s89-93/s194/s219-220). Timing
-overlap alone is not evidence of a shared cause (different signal:
-SIGBUS not SIGSEGV; different stack: guest code, not `RT64`/
-`CAMetalLayer`) — established discipline, not a new call. **Sub-tally
-stays 2/2** — this run doesn't move it either way.
-
-**This is the 3rd consecutive non-discriminating iteration on the
-MTL_DEBUG_LAYER hypothesis** (mtldebug3 = attempt 2, mtldebug4 = attempt
-3). Per this project's own rule 8 and per NEXT.md's own previously-stated
-trigger condition: **do NOT run a 4th plain-repeat MTL_DEBUG_LAYER soak
-on this recipe.** If you want to pursue the CALayer question again, it
-needs a genuinely different angle — e.g. first clearing the whack-a-mole
-family enough to reliably reach the t≈131s window, or picking a schedule
-variant not yet tried — not just another `mtldebugN` copy.
+Landed:
+1. `scratch/agent/find_unguarded_walks.py` — script that greps all 45
+   `RecompiledFuncs/funcs_*.c` files (in the sibling `N64Recomp` checkout)
+   for unguarded singly-linked-list walk loops: a labeled loop target
+   that is the destination of a **backward** `goto` (real back-edge, not
+   just any label), containing a self-referential load
+   (`ctx->rX = MEM_W(ctx->rX, 0X0)`) within 4 lines of the label, with no
+   existing `PATCH` guard already covering it. The naive self-ref-only
+   signature hits 794 sites (way too broad — most are safe one-shot
+   dereferences); this narrows to **143 candidates across 43 functions**.
+2. `scratch/agent/unguarded_walk_candidates.json` — the full candidate
+   list: file, label, line numbers, enclosing function name, snippet.
+3. One guard shipped: `selectPostCrawlCraft` (`funcs_30.c`, address
+   `0x800CBBD8`) — see `fixup_game_funcs.py` comment (sibling `N64Recomp`
+   checkout) and PORTING-STATE Session 249 for the full mechanism,
+   including an important correction: **the naive self-ref signature is
+   necessary but not sufficient** — read the WHOLE loop body before
+   guarding, not just the flagged line, because the same untrusted
+   pointer is often dereferenced through a second register one line
+   earlier (missed by the mechanical grep). Do not batch-apply guards
+   from the JSON without this per-site read.
+4. Build clean (patch report audited, exactly `x1`, no duplicate), 1 soak
+   (`selectpostcrawlguard1`) — crossed the SELECT-CRAFT transition clean,
+   died to the ALREADY-CATALOGUED `reserveAndEmitDLEntry` (14th class)
+   whack-a-mole SIGBUS, unrelated to and not caused by this session's
+   edit. New guard fired 0/1 — informative null, not a confirmed fix
+   (there was no observed crash at this site to begin with; this is
+   preventive hardening, not a repro-driven fix).
 
 ## The two real remaining options
 
-1. **Project-wide static sweep for the whack-a-mole family** (new
-   candidate, not started). The "RDRAM host-base constant
-   (`0x0000000300000000`) added directly to a raw, un-subtracted,
-   KSEG0-tagged guest pointer" idiom has now cost at least 6 sessions
-   worth of soaks their outcome (s89-93, s194, s216's `nancheckoff1`,
-   s219-220, s248) by pre-empting whatever the soak was actually trying
-   to test. Every fix shipped so far (heapWalker GUARD/GUARD3/GUARD4,
-   `renderUnlitMeshFaces`, `heapFreeListDequeue`) was found by manually
-   source-reading ONE function at a time after it happened to crash.
-   Nobody has yet tried the inverse: grep/read the recompiled `funcs_*.c`
-   sources (or the fixup script's own patch targets) for the general
-   *shape* of this bug — a raw `MEM_W`-style host-pointer arithmetic that
-   skips the sign-extend-then-KSEG0-subtract discipline — and guard
-   every instance found in one pass, the same way heapWalker's own
-   GUARD4 came from re-reading `heapWalker` end-to-end rather than
-   patching one more site. This is a real code change (counts as
-   ADVANCED) and has unusually high leverage: it's the thing most
-   often standing between ANY soak and the content further out.
-   First step, if picked: source-read (Explore agent, since this spans
-   many `funcs_*.c` files) for the exact idiom shape from the 3-4
-   already-fixed sites (`heapWalker`, `renderUnlitMeshFaces`,
-   `heapFreeListDequeue` — grep `fixup_game_funcs.py` for their patch
-   functions to get the precise byte pattern each one matches), then
-   grep the same shape project-wide before writing any new guard.
+1. **Continue the static sweep** — 142 candidates remain (full list
+   below). Each needs the SAME rigor as `selectPostCrawlCraft`: read the
+   whole loop body (not just the flagged self-ref line), identify every
+   register that aliases the untrusted pointer, find a safe bail target
+   by reading forward from the natural loop-exit label to confirm no
+   downstream code depends on the guarded register's value, then patch +
+   regen + build + audit the patch-report multiplicity + (ideally) one
+   soak. This is real, valuable, `ADVANCED`-able work with unusually
+   high leverage (this family has cost 6+ sessions their actual
+   experiments by pre-empting soaks — see s89-93/s194/s216/s219-220/s248).
+   Good next candidates, roughly in order of plausible relevance to
+   frequently-soaked call paths (render/DL-emission functions, all in
+   `funcs_3.c`/`funcs_4.c`, are the same family as the already-fixed
+   `heapWalker`/`renderUnlitMeshFaces`/`submitSceneNodeRender`):
+   `selectPostCrawlCraft`'s own remaining 2 sites (`0x800CBDA8`,
+   `0x800CBDE4` — two near-identical inlined list-insert helpers, NOT
+   yet traced), `renderLitMeshFaceGroup` (14 sites, `funcs_4.c`),
+   `renderLitTexturedMeshFaces` (11 sites, `funcs_3.c`),
+   `func_800AE3F0` (10 sites, `funcs_27.c`), `beginFrameDLChunk` /
+   `emitFrameRdpInitDl` (10 sites each, `funcs_3.c`).
+2. **`docs/CURRENT-TRUTH.md` housekeeping** — still ~407 KB+, flagged
+   40+ sessions, still not done. Per `ITERATION.md` this does NOT count
+   as `ADVANCED` on its own — pair it with a real change or expect to
+   file `SUBSTITUTED`.
 
-2. **`docs/CURRENT-TRUTH.md` housekeeping** — now ~407 KB / 5850+ lines
-   (grew again this session), flagged 39+ sessions, still over both the
-   ~35 KB CLAUDE.md budget and the Read tool's 256 KB single-read limit.
-   Per `ITERATION.md`'s own OUTCOME contract, compressing/editing this
-   doc does NOT count as `ADVANCED` — so if you pick this, expect to
-   file the iteration as `SUBSTITUTED` (with a real `SUBSTITUTION.md`:
-   what stopped a soak/code-change work unit, THIS iteration's evidence
-   for it, and the falsifying experiment) or find a way to pair it with
-   a real experiment/change in the same session. Migrate durable
-   mechanism/architecture write-ups (superseded items older than ~15-20
-   entries back, once fully captured in compact form) to
-   `PROJECT-OVERVIEW.md`, prune the rest. Real work, probably 2-3
-   iterations, don't half-do it.
+## Full candidate list (143 total, 1 fixed this session)
 
-No hard recommendation between these two on purpose — option 1 is higher
-expected value (real fix, unblocks future soaks) but is a genuine
-source-reading + guarding task, not a quick experiment; option 2 is
-overdue but explicitly doesn't count as advancing per the contract. Name
-the choice and reason in that session's PORTING-STATE entry.
+Grouped by `(file, function)`. Format: `file: func -- N site(s) -- lines
+[selfref line numbers in funcs_*.c, sibling N64Recomp/RecompiledFuncs/]`.
+Re-derive with `python3 scratch/agent/find_unguarded_walks.py` if the
+sibling checkout changes (it regenerates `unguarded_walk_candidates.json`
+too). `selectPostCrawlCraft`'s first site (line 30362) is DONE; its other
+2 (30684, 30735) are not.
+
+```
+funcs_20.c: model_animation_offset_convert -- 1 -- [1947]
+funcs_23.c: tickAudioChannel -- 1 -- [2089]
+funcs_25.c: stopSongByHandle -- 2 -- [4630, 4690]
+funcs_25.c: tickSongSequence -- 2 -- [5118, 5178]
+funcs_27.c: cutsceneDispatchSlotsByFlag -- 2 -- [114157, 114365]
+funcs_27.c: func_800AE3F0 -- 10 -- [169135, 169295, 169437, 169619, 169832, 169992, 170163, 170308, 177403, 177555]
+funcs_3.c: allocDLBlockToFillRectList -- 1 -- [1136]
+funcs_3.c: allocDLBlockToListB -- 1 -- [1281]
+funcs_3.c: allocDLBlockToListC -- 1 -- [1426]
+funcs_3.c: allocDLBlockToListD -- 1 -- [1571]
+funcs_3.c: allocateDisplayListBuffer -- 1 -- [970]
+funcs_3.c: beginFrameDLChunk -- 10 -- [8442, 8699, 8937, 9190, 9392, 9640, 9840, 10087, 10323, 10564]
+funcs_3.c: commitMeshDrawBatchRefs -- 3 -- [2458, 2477, 2501]
+funcs_3.c: countDisplayListChunks -- 1 -- [788]
+funcs_3.c: drainMeshReleaseQueue -- 5 -- [1725, 1788, 1846, 1918, 1980]
+funcs_3.c: drawFrameProfilerBars -- 2 -- [11150, 11339]
+funcs_3.c: emitColorFillRect -- 8 -- [6258, 6447, 6642, 6835, 7108, 7340, 7574, 7814]
+funcs_3.c: emitFrameRdpInitDl -- 10 -- [4141, 4328, 4529, 4720, 4936, 5157, 5354, 5550, 5747, 5959]
+funcs_3.c: emitMaterialTexturedDL -- 5 -- [18717, 18994, 19214, 19438, 19633]
+funcs_3.c: emitMaterialTexturedDLAlt -- 5 -- [19901, 20176, 20381, 20597, 20835]
+funcs_3.c: heapFreeListInsert -- 1 -- [58]
+funcs_3.c: reclaimDisplayListChunk -- 1 -- [852]
+funcs_3.c: recordDeferredDrawRefA -- 1 -- [13976]
+funcs_3.c: recordDeferredDrawRefB -- 1 -- [14181]
+funcs_3.c: recordDeferredDrawRefC -- 1 -- [14388]
+funcs_3.c: recordDeferredDrawRefD -- 1 -- [14593]
+funcs_3.c: recordDeferredDrawRefVariant -- 1 -- [2241]
+funcs_3.c: renderLitTexturedMeshFaces -- 11 -- [22357, 22407, 22447, 22908, 23039, 23148, 23180, 23334, 23486, 23681, 23816]
+funcs_3.c: reserveAndEmitDLEntry -- 3 -- [14836, 15029, 15222]
+funcs_30.c: selectPostCrawlCraft -- 2 remaining (1 of 3 fixed s249) -- [30684, 30735]
+funcs_35.c: static_4_800B13E0 -- 8 -- [3551, 3711, 3853, 4035, 4248, 4408, 4579, 4724]
+funcs_35.c: static_4_800B3FB4 -- 1 -- [11851]
+funcs_35.c: static_4_800B40A0 -- 1 -- [12007]
+funcs_4.c: buildOrientedFaceGeometry -- 3 -- [7611, 7842, 8175]
+funcs_4.c: drawSubtitleText -- 6 -- [16349, 16581, 16945, 17740, 18531, 19115]
+funcs_4.c: drawTextGlyphRect -- 1 -- [15740]
+funcs_4.c: renderFlatMeshFaceGroup -- 6 -- [3189, 3421, 3693, 4338, 4540, 4741]
+funcs_4.c: renderLitMeshFaceGroup -- 14 -- [8640, 8870, 9142, 9562, 10174, 10426, 10760, 10957, 11318, 11615, 11997, 12635, 12916, 13230]
+funcs_4.c: renderUnlitMeshFaces -- 1 -- [5017]
+funcs_4.c: setupCameraMatrices -- 3 -- [19722, 20792, 20981]
+funcs_43.c: static_5_800CBBB8 -- 1 -- [13142]
+funcs_43.c: static_5_800CBD88 -- 1 -- [13480]
+funcs_43.c: static_5_800CBDC4 -- 1 -- [13535]
+```
+
+Note: `funcs_4.c: renderUnlitMeshFaces -- 1 -- [5017]` is a SEPARATE site
+from the one already guarded there (s219, address `0x80011CE0`) — not yet
+traced, worth a look since that function is already known-hot.
 
 ## Do NOT do this iteration
 
-- Do NOT run `mtldebug5` (or any byte-identical-recipe MTL_DEBUG_LAYER
-  soak) — 3 consecutive non-discriminating results already, rule 8.
+- Do NOT re-run `mtldebug1`..`mtldebug4`, `scissorfix1`, `malloclog1`,
+  `malloclog2`, `metalresize1`, `selectpostcrawlguard1` in place —
+  superseded tags. New soaks need new tags.
+- Do NOT batch-apply guards from the JSON candidate list mechanically —
+  s249 found the naive self-ref signature misses a second aliased
+  register in at least one case; every site needs its own full-loop-body
+  read first.
 - Do NOT revive the NaN_CHECK-disable idea (CURRENT-TRUTH `-55`/`-56`) —
-  already tried, A/B-tested, and reverted at s216 (`-57`). Not a fork.
-- Do NOT re-run `scissorfix1`, `mtldebug1`, `mtldebug2`, `mtldebug3`,
-  `mtldebug4`, `malloclog1`, `malloclog2`, `metalresize1` in place.
+  already tried, A/B-tested, and reverted at s216 (`-57`).
 
-## Environment notes (carried forward, still current as of s248)
+## Environment notes (carried forward, still current as of s249)
 
-- **Permission gate CONFIRMED CLEARED through s248.**
+- **Permission gate CONFIRMED CLEARED through s249.**
 - **`GAME_EXTRA_ENV`** (`run_mission_keys.sh`, s241): space-separated
   `VAR=val VAR2=val2` string, scopes extra env vars to ONLY the game
   process.
@@ -98,36 +144,45 @@ the choice and reason in that session's PORTING-STATE entry.
   char *v = std::getenv("VAR_NAME"); return v && v[0] && v[0] != '0'; }();`
   then `if (s_X) { std::fprintf(stderr, ...); std::fflush(stderr); }`.
 - **Block-wait pattern**: launch the soak with Bash `run_in_background:
-  true`, then `TaskOutput` with `block: true` against the returned task
-  ID (400000-480000ms timeout) — this worked cleanly for `mtldebug4`
-  (23s wall, but the pattern handles the full 350s+ hold fine too, as
-  proven at `mtldebug3`).
-- **`update_screen` counter rate is ~60/s** once past the title screen in
-  this recording (confirmed again at `mtldebug4`: `#102`@2.3s to
-  `#4436`@74.5s ≈ 60.9/s) — useful for extrapolating wall-clock death
-  time from the last `[vi]` line when the driver's own `wall=` figure
-  undercounts (e.g. `mtldebug4` reported `wall=23s` for the whole script
-  but the counter shows death was really at process-wall-time ≈134s).
+  true`, then block-wait on the returned task ID (400000-480000ms
+  timeout) — confirmed working again at `selectpostcrawlguard1`.
+- **`update_screen` counter rate is ~60/s** once past the title screen —
+  useful for extrapolating wall-clock death time from the last `[vi]`
+  line when the driver's own `wall=` figure undercounts.
 - `/tmp` is not writable this session — write scratch/report files
   inside `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64` only.
 - Compound `cd ... && ...` and `git -C <path> <cmd>` get blocked/need
   extra approval — issue `cd` as its own Bash call first, and plain
-  `git status`/`git diff`/etc. (no `-C`) once cwd is already there.
+  `git status`/`git diff`/etc. (no `-C`) once cwd is already there. Even
+  `cd ... && cmd > file` (redirection) gets blocked as a compound op —
+  issue the `cd` as its own call, then the redirecting command separately.
 - **Headless permission matching is a PREFIX match** — write
   `env PROBE_MODE=1 zsh run.sh`, not `PROBE_MODE=1 zsh run.sh`.
-- **`campose*` armed env-var set** (unchanged since `campose11`):
+- **`campose*` armed env-var set** (unchanged since `campose11`, now also
+  used by `selectpostcrawlguard1`):
   `ROGUESQ_LOG_CAMPOSE`, `ROGUESQ_LOG_MAT3INV`,
   `ROGUESQ_LOG_UNLIT_MESH_TRACER`, `ROGUESQ_LOG_RENDERUNLIT_GUARD`,
   `ROGUESQ_LOG_HEAPWALKER_GUARD`/`GUARD3`/`GUARD4`,
   `ROGUESQ_LOG_MESGQUEUE_GUARD`, `ROGUESQ_LOG_HEAPLISTDEQ_GUARD`,
   `ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`, `ROGUESQ_LOG_DL_PAYLOAD_STALE=1`
-  — keep these armed in any new soak.
+  — plus the new `ROGUESQ_LOG_SELECTPOSTCRAWL_GUARD=1` (s249). Keep all
+  armed in any new soak; see
+  `scratch/s73_post_a_scene/run_selectpostcrawlguard1.sh` for the full
+  current set (this file survives across sessions on disk even though
+  `scratch/` is gitignored — copy it forward for new soaks; only
+  `STATUS`/`OUTCOME`/`NEXT.md`/`run_mission_keys.sh` are git-tracked).
 - **The `[phase] vi_width=512 (was 1024) origin=0x006AB400` line at
   ~t=74-75s is THE confirmed SELECT-CRAFT->mission transition marker.**
-- **`rs64_elapsed_seconds()`** (`src/main/rt64_render_context.cpp`,
-  `extern "C"`) is the canonical shared wall-clock — declare
-  `extern "C" double rs64_elapsed_seconds(void);` at NAMESPACE scope in
-  any new PATCH block that needs it.
+- **Regen is mandatory-delete-all-first**: per CURRENT-TRUTH item 0,
+  `N64Recomp` skips rewriting any `funcs_*.c` that already exists on
+  disk, so leftover files from a previous session silently stack
+  duplicate patches. Always `rm`/delete all 45 `RecompiledFuncs/funcs_*.c`
+  before `make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py` →
+  `cmake --build`, and audit the fixup patch-report for anything other
+  than the expected `xN` multiplicity before trusting the build (s249
+  did this, found no anomalies beyond the pre-existing, already-known
+  double-report quirk in `emitAllocatedDLCommand`'s GUARD2/r4 lines,
+  unrelated to this session's edit).
 - **Verify "crash-free" visually**: MD5-checksum a spread of `hold_NN.png`
   — `scratch/agent/checksum_campose11.py` (s235) is mtime-aware, reuse
   this pattern.
@@ -137,12 +192,14 @@ the choice and reason in that session's PORTING-STATE entry.
   `run.log` in place — copy the driver script to a new tag name per soak.
 - The driver's own `CRASH: N` summary counts occurrences of the LITERAL
   STRING `[CRASH]` (many per crash) — grep `[CRASH] caught signal` for
-  actual crash event counts (confirmed again this session: `CRASH: 35`
-  displayed, actual count 1).
+  actual crash event counts.
 - `scratch/agent/STATUS`/`OUTCOME` get reset at the START of each
   iteration by the harness — normal.
 - **`/scratch/` is wholesale gitignored** — only `STATUS`, `OUTCOME`,
-  `NEXT.md`, and `run_mission_keys.sh` are tracked exceptions.
+  `NEXT.md`, and `run_mission_keys.sh` are tracked exceptions. Non-tracked
+  scratch files (driver scripts, analysis scripts, logs) persist on disk
+  across sessions but are not in git history — don't assume they're safe
+  from an actual `git clean`/fresh-checkout scenario.
 - Verify a fresh binary before trusting a null result: `strings
   build/RogueSquadron64Recomp | grep '<your-new-tag>'` plus `ls -la
   build/RogueSquadron64Recomp` vs. the soak's start time.
@@ -150,13 +207,13 @@ the choice and reason in that session's PORTING-STATE entry.
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget and the
-Read tool's 256 KB single-read limit (now ~407 KB / 5850+ lines,
-confirmed still true s248) — flagged for 39+ sessions without action. See
-option 2 above.
+Read tool's 256 KB single-read limit (still ~407 KB+ / 5900+ lines,
+flagged 40+ sessions without action).
 
 `fixup_game_funcs.py`'s untracked, single-copy state in the `N64Recomp`
 sibling checkout has been flagged since s83, still not fixed (not this
-repo's commit scope) — worth surfacing to the user directly.
+repo's commit scope) — worth surfacing to the user directly. Every guard
+in the whack-a-mole family, including this session's, lives there.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` and
 `~/Documents/Tools/rogue_squadron64` are separate git checkouts with

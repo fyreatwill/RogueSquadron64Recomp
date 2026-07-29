@@ -663,7 +663,45 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s248)
+## Next steps, in order of expected value (s249)
+
+-90. **(s249) Started the project-wide static sweep for the "RDRAM-base +
+    un-subtracted wild pointer" whack-a-mole family (s248's option 1):
+    landed a candidate-finder script (143 unguarded-list-walk sites
+    across 43 functions, `scratch/agent/find_unguarded_walks.py` /
+    `unguarded_walk_candidates.json`) and fixed ONE of them
+    (`selectPostCrawlCraft`, `funcs_30.c`, 0x800CBBD8), chosen because its
+    name matches the "SELECT-CRAFT" transition marker this project has
+    used for 30+ sessions.** A full end-to-end read (mandatory before any
+    guard, per this family's own established discipline) found the
+    naive self-referential-load signature is necessary but NOT
+    sufficient: the vulnerable pointer is dereferenced through TWO
+    different registers on loop entry (`ctx->r4 = MEM_W(ctx->r17, 0X5C)`
+    then the self-ref `ctx->r16 = MEM_W(ctx->r16, 0X0)`, both derived from
+    the same untrusted value) — a guard placed only before the self-ref
+    line (matching every prior guard's literal template) would still
+    leave the first dereference exposed. Fix sits before BOTH. Build
+    clean (patch report audited: exactly `x1`, no duplicate), binary
+    verified fresh. **Soak** (`selectpostcrawlguard1`, `HOLD_S=150`):
+    crossed the SELECT-CRAFT transition cleanly at the established
+    signature (75.3s), then died to the ALREADY-CATALOGUED 14th
+    whack-a-mole class (`reserveAndEmitDLEntry+6264`, same
+    `x0`/`x9`=`0x300000000` signature, first guarded s109) — confirmed
+    NOT caused by this session's edit (unrelated function, no
+    data/call relationship to the 3 candidate sites in
+    `selectPostCrawlCraft`). Existing `heapwalker-guard4` fired 2x same-run
+    as a positive control. The new guard itself fired **0 times** —
+    single-sample null, not a "confirmed fix" (there was never an
+    observed crash at this exact site to compare against; this is
+    preventive hardening against a known bug class, not a targeted
+    repro fix). **142 candidate sites remain**, full breakdown at the
+    bottom of `NEXT.md` — each needs the same full-loop-body read as this
+    session's site (the register-aliasing gotcha above applies broadly;
+    do not batch-apply the naive template). Sibling-checkout
+    `fixup_game_funcs.py` state (untracked by git, flagged since s83)
+    is where the actual patch code lives, same as every prior guard in
+    this family — only the analysis script is committed by this repo.
+    Full detail: PORTING-STATE Session 249.
 
 -89. **(s248) Corrected a stale NEXT.md premise (its "option 2," the
     NaN_CHECK-disable pivot, was already tried+reverted at s216/-57, not
