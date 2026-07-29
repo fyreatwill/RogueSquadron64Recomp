@@ -22910,3 +22910,88 @@ from prior sessions); no `submodule-patches/export.sh` needed.
 scope (`fixup_game_funcs.py` untracked sibling-checkout state,
 `CURRENT-TRUTH.md` over both size budgets, now flagged for 33+
 sessions).
+
+## Session 243 (2026-07-28)
+
+Ran the `mtldebug1` soak per s242's NEXT.md plan: same `campose*`/guard
+set and `schedulepush2` schedule as `malloclog2`, `GAME_EXTRA_ENV="MTL_DEBUG_LAYER=1"`
+(Apple's Metal API validation layer) instead of malloc-scribble vars,
+scoped to only the game process via the s241 `GAME_EXTRA_ENV` mechanism.
+
+**Positive control passed**: `run.log` line 1 is
+`Metal API Validation Enabled`, confirming the env var reached the
+Metal runtime inside the game process (not silent like `malloclog2`'s
+MSL/scribble vars were).
+
+**Result: the soak found a NEW, distinct, much-earlier crash — NOT the
+`n=12420`/`t≈131s` host-CALayer-teardown SIGSEGV family under
+investigation.** `MTL_DEBUG_LAYER` triggered a fatal Metal validation
+assertion at guest decision counter `n=4421` (vs. the family's
+historical `n=12420`), well before the SELECT-CRAFT->mission transition
+was even reached:
+
+```
+-[MTLDebugRenderCommandEncoder setViewports:count:]:3961: failed assertion `Viewport Validation
+viewport.originX must not be infinite or NaN.
+viewport.originY must not be infinite or NaN.
+viewport.width must not be infinite or NaN.
+viewport.height must not be infinite or NaN.
+```
+
+This aborts (`SIGABRT`, `pthread_kill`/`abort`), not the SIGSEGV pattern
+of the s238-242 line of investigation. Stack: `MetalCommandList::
+checkForUpdatesInGraphicsState` -> `MetalCommandList::drawInstanced` ->
+`RT64::VIRenderer::render` -> `PresentQueue::threadPresent` ->
+`PresentQueue::threadLoop`. The `run.log` frame immediately preceding
+the crash shows `[pe gate #3183] ... viDiff=1 ... viW=0` — a transient
+VI-width read of **zero** — right after an `osViSetMode #12` mode change
+one line earlier (`width=512`).
+
+**Static read confirms the exact mechanism (two independent lines of
+evidence: dynamic trigger log + static code trace agree).**
+`lib/rt64/src/render/rt64_vi_renderer.cpp`:
+- `getViewportAndScissor()` (line 103) sets `sdSize = vi.fbSize()`
+  (when `removeBlackBorders` is on, which it is here).
+- `computeHDSize()` (line 17-19): `hdSize = sdSize * resolutionScale /
+  downsamplingScale` — if `sdSize.x` (or `.y`) is 0, `hdSize`'s
+  corresponding component is also 0.
+- `fromSDtoHD()` (line 21-24): `relativeScale = hdSize / sdSize` — with
+  both numerator and denominator 0, this is **0/0 = NaN**, which then
+  multiplies into every viewport coordinate downstream, exactly
+  matching the Metal validation error text.
+
+So: a transient VI framebuffer width (or height) of 0 during a mode
+switch produces a `0/0` NaN in `fromSDtoHD`'s scale factor, which
+`MTL_DEBUG_LAYER` catches as a hard abort but which is presumably
+silently tolerated (drawn as garbage or clipped) by Metal with
+validation off — consistent with why this has never surfaced as a
+`[CRASH]` in any prior (non-`MTL_DEBUG_LAYER`) soak despite `vi.fbSize()`
+apparently hitting zero at least this once.
+
+**This does NOT confirm or refute H1/H2/H3 for the original s238
+host-CALayer investigation** — this is a different call stack, a
+different signal (SIGABRT vs SIGSEGV), and fires at a different (much
+earlier) guest decision count. It's an open question whether this
+`fbSize()==0` transient is a NEW, previously-invisible bug that
+`MTL_DEBUG_LAYER` merely exposes, or whether it's incidental/rare enough
+to be unrelated to the CALayer crash family's `n=12420` convergence.
+**Do not conflate the two families without further evidence.**
+
+This is a single-source finding (one soak) for the trigger *condition*
+(`viW=0` at gate #3183), but the causal *mechanism* (0/0 NaN in
+`fromSDtoHD`) is confirmed by static code read independently of the
+dynamic log — satisfies iron rule 4 for the mechanism, not yet for
+"how often `fbSize()` hits zero in general."
+
+This session did not modify `lib/rt64`/`lib/N64ModernRuntime` source
+(read-only static trace); no `submodule-patches/export.sh` needed. A
+fix (guard against zero `sdSize`/`hdSize` components in
+`rt64_vi_renderer.cpp`) is proposed but NOT implemented this session,
+per the standing "no speculative fix" rule — the next iteration's work
+unit is to add the guard and re-soak with `MTL_DEBUG_LAYER=1` armed to
+confirm the assertion stops firing.
+
+**Housekeeping**: same items flagged again, still not this session's
+scope (`fixup_game_funcs.py` untracked sibling-checkout state,
+`CURRENT-TRUTH.md` over both size budgets, now flagged for 34+
+sessions).

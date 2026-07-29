@@ -663,7 +663,40 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s242)
+## Next steps, in order of expected value (s243)
+
+-84. **(s243) `MTL_DEBUG_LAYER=1` soak (`mtldebug1`) found a NEW, distinct
+    crash — a Metal viewport-validation SIGABRT (`viewport.originX/Y/
+    width/height must not be infinite or NaN`) at guest decision
+    `n=4421`, far earlier than the `n=12420` host-CALayer-teardown
+    SIGSEGV family this soak was meant to probe. NOT the same bug —
+    different signal (SIGABRT vs SIGSEGV), different stack
+    (`RT64::VIRenderer::render` -> `MetalCommandList::drawInstanced` ->
+    `checkForUpdatesInGraphicsState` -> `setViewports:count:`), fires
+    long before the family's convergence point.** Root cause traced
+    (static read, `lib/rt64/src/render/rt64_vi_renderer.cpp`): the
+    `run.log` frame immediately before the crash shows a transient VI
+    framebuffer width read of **0** (`[pe gate #3183] viW=0`, right after
+    an `osViSetMode #12` mode change); `getViewportAndScissor()` ->
+    `computeHDSize()` -> `fromSDtoHD()` computes `relativeScale =
+    hdSize/sdSize`, and when `sdSize.x` (from `vi.fbSize()`) is 0, so is
+    `hdSize.x` (it's derived by multiplying `sdSize`), giving **0/0 =
+    NaN** that propagates into the viewport rect — exactly matching the
+    validation error. Two independent lines of evidence agree (dynamic
+    trigger log + static code trace), but this is a single soak for
+    "how often does `fbSize()` hit zero" — don't over-generalize the
+    frequency. **Positive control passed**: `run.log` line 1 is `Metal
+    API Validation Enabled`, confirming the layer was actually armed
+    (unlike `malloclog2`'s silent malloc vars). **No fix implemented
+    this session** (static read only, no `lib/` edit, no
+    `export.sh` needed) — per "no speculative fix" rule, the concrete
+    guard (skip/clamp the viewport when `sdSize`/`hdSize` has a
+    zero component in `rt64_vi_renderer.cpp`) is the next work unit,
+    followed by a re-soak with `MTL_DEBUG_LAYER=1` still armed to
+    confirm the assertion stops firing. **This finding does NOT move the
+    5/10-vs-5/10 CALayer-family tally either way** — it's an unrelated
+    crash surfaced by turning on a stricter validator, not evidence
+    about the SIGSEGV family. Full detail: PORTING-STATE Session 243.
 
 -83. **(s242) Ran the clean `malloclog2` re-soak — `CRASH: 0`, no crash to
     analyze, and no `malloc`-related output at all appeared in `run.log`
