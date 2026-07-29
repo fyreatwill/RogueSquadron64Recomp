@@ -663,7 +663,55 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s253)
+## Next steps, in order of expected value (s254)
+
+-95. **(s254) Re-ran s253's prescribed re-soak, got a discriminating answer,
+    found and closed a real upstream blocker, hit a known bug 27x further
+    in.** `matlistguard3soak2` reproduced s253's exact weak-null pattern
+    (`MATLIST_GUARD3`/`heapwalker-guard4` both 0 fires) but this time
+    crashed almost immediately after SELECT-CRAFT (`hold-iter 1`,
+    wall=0s) at a NEW site: `static_5_800A9270+668` <-
+    `static_5_800AAD9C` (`runHangarSelectionFrame`) <- `static_5_800C6854`
+    (`runHangarMenuFromOverlay`) <- `menuOverlayInit` -- **this answers
+    s253's open question**: the guard-4/matlist controls aren't failing
+    to fire due to an instrumentation problem, the game is crashing
+    INSIDE THE HANGAR-SELECTION MENU before ever reaching the
+    scene-render path that exercises them. A full read of
+    `static_5_800A9270` (funcs_40.c:5314-5463) found a genuine,
+    previously-unguarded gap: a fixed-table-indexed linked-list-insert
+    idiom loads a pointer `p` (`MEM_W(ctx->r4, 0X4)` at `0x800A92FC`) with
+    zero validation and dereferences it 3x with no null/range check
+    anywhere (`0x800A9308` unconditional write, `0x800A9310`/`0x800A9318`
+    conditional deref+write, `0x800A9324`/`0x800A9328` always-executed
+    deref+write) -- same hangar-selection per-frame family as the
+    9th-17th crash classes, this exact site never guarded before (prior
+    guards here, s101/s128, only cover the `projectModelBoundsToScreen`
+    callee). Added `HANGARLIST_GUARD` (1 site, `fixup_game_funcs.py`,
+    sibling `N64Recomp` checkout): guards the first load, bails to the
+    real epilogue `L_800A9350` on invalid/null. Build clean (patch report
+    confirmed `x1`, no stacking). **Soak** (`hangarlistguard1`):
+    `HANGARLIST_GUARD` fired 0/1 (not exercised this run), but the run
+    got PAST the menu crash entirely -- sustained render-loop activity
+    (`campose-entry` 238x, `scene-rq-counter-hb` 115x, `present-1024`
+    1918x) that `matlistguard3soak2` never reached at all (0 renders).
+    Hold survived to **hold-iter 27 (wall=30s)**, a 27x improvement over
+    the immediately-prior run, before hitting a DIFFERENT, already-
+    tracked bug: `renderUnlitMeshFaces+792`, `si_addr=0x380630062` --
+    an EXACT match to s208's `unlitmeshtracer3` occurrence (5th confirmed
+    occurrence total of item -49's recurring `0x80630062` KSEG0-zero-
+    extension bug, not a new issue, not the same shape as this session's
+    fix). Grepped `rogue_squadron64/symbol_files/*.txt` for the literal
+    `80630062` (item -49's own cheapest next step) -- zero hits, rules
+    out "it's a named symbol/asset address" as an explanation. **Next
+    step, highest value: pick up item -49's own prescribed continuation**
+    (widen a tracer to check `ctx->r16` itself, not just its load's
+    source address, right after `renderUnlitMeshFaces`'s site-B load,
+    before line 5057's first subsequent dereference) -- this is a
+    separate, deeper, already-well-defined investigation thread, not a
+    simple guard-by-inspection gap like this session's fix.
+    `heapwalker-guard4`/`MATLIST_GUARD3` STILL have not fired in any soak
+    since s253 landed them -- open question, now for a run that gets past
+    `renderUnlitMeshFaces` too. Full detail: PORTING-STATE Session 254.
 
 -94. **(s253) Chased the s252 `submitSceneNodeRender+18600` lead.** First
     corrected the lead's own premise: `+18600` is a NATIVE (compiled
@@ -2321,8 +2369,11 @@ cost three sessions before the recursive mutex.
     the scene get reached normally), not a real behavioral regression. Full
     detail: PORTING-STATE Session 209.
 
--49. **(s208, STATUS: probe landed s209, not yet run to a valid result — see
-    -50 above) `processSceneNode+8772`/`renderUnlitMeshFaces`
+-49. **(s208, STATUS: probe landed s209, not yet run to a valid result; 5th
+    occurrence confirmed s254, see -95 above — same `+792`/`0x380630062`
+    signature exactly, plus a negative result on the "named symbol"
+    explanation (grepped `symbol_files/*.txt` for `80630062`, 0 hits))
+    `processSceneNode+8772`/`renderUnlitMeshFaces`
     KSEG0-zero-extension bug: built and soaked the `MEM_W`-address bounds
     tracer NEXT.md prescribed (4 sites: funcs_4.c:4975/5009/5546/5563) — the
     tracer's positive control fired (proves it executed on the exact call

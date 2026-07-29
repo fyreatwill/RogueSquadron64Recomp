@@ -24049,3 +24049,109 @@ edit this session -- `submodule-patches/export.sh` not needed.
 
 **Housekeeping**: `CURRENT-TRUTH.md` size still flagged, unaddressed
 again (picked the code-change option). Other flagged items unchanged.
+
+## Session 254 (re-soak resolved: not a guard-gap null, a different crash upstream -- found and closed it, surfaced a 5th occurrence of the long-tracked `renderUnlitMeshFaces` bug)
+
+**Re-ran s253's prescribed next step first**: `matlistguard3soak2`
+(same script, new tag), binary verified fresh
+(`SCENE_MATLIST_GUARD3`/`HEAPWALKER_GUARD4` both present in `strings`).
+Result: `MATLIST_GUARD3` fired 0/2 again, `heapwalker-guard4` fired 0
+again -- same weak-null pattern as s253. But this time the run crashed
+almost immediately after the SELECT-CRAFT transition (`hold-iter 1`,
+wall=0s into the hold), in a NEW location: `static_5_800A9270+668` <-
+`static_5_800AAD9C` (`runHangarSelectionFrame`) <- `static_5_800C6854`
+(`runHangarMenuFromOverlay`) <- `menuOverlayInit`. This answers s253's
+open question directly: `heapwalker-guard4`/`MATLIST_GUARD3` aren't
+failing to fire because of some instrumentation problem -- the game is
+crashing INSIDE THE HANGAR-SELECTION MENU itself, before it ever reaches
+the scene-render code path that would exercise those guards. The
+SELECT-CRAFT screen sitting static in s253 wasn't a fluke either time;
+it's this crash cutting the run short right after the transition.
+
+**Full start-to-end read of `static_5_800A9270`** (funcs_40.c:5314-5463,
+~150 lines, confirmed real epilogue `L_800A9350` by reading to the
+closing brace) found a genuine, previously-unguarded gap: a fixed-table-
+indexed linked-list-insert idiom. `ctx->r3 = MEM_W(ctx->r4, 0X4)` at
+`0x800A92FC` loads a pointer `p` out of a table entry with ZERO
+validation, then the function dereferences it three times with no
+null/range check anywhere: an unconditional write `MEM_W(0XC, ctx->r3) =
+ctx->r2` at `0x800A9308` (present in both the taken and fall-through
+paths of the next branch -- MIPS branch-delay-slot duplication, not a
+recompiler bug), a further deref of the value just written
+(`MEM_W(ctx->r2, 0XC)` at `0x800A9310`, written to at `0x800A9318`) when
+that branch's other operand is non-zero, and a second independent
+reload+deref of the SAME field (`MEM_W(ctx->r3, 0X4)` then `MEM_W(0X10,
+ctx->r2) = 0` at `0x800A9324`/`0x800A9328`) in the always-executed
+`L_800A931C` block. This is the same well-catalogued hangar-selection
+per-frame crash family as the 9th-17th classes (PORTING-STATE s89-s110)
+-- this exact site inside `static_5_800A9270` itself was never
+previously guarded (prior guards here, s101/s128, only cover its
+`projectModelBoundsToScreen` callee).
+
+**Patched**: new `HANGARLIST_GUARD` in `fixup_game_funcs.py` (sibling
+`N64Recomp` checkout), 1 site, right after the first load, before any of
+the three uses -- closes all three at once, same "guard the earliest
+load" shape as s101. Bails to the real epilogue `L_800A9350` on an
+invalid (including null) pointer. New env var
+`ROGUESQ_LOG_HANGARLIST_GUARD`.
+
+**Regen**: full delete-all-45 -> `make_elf.py` -> `N64Recomp` ->
+`fixup_game_funcs.py` (once, report showed `funcs_40.c: static_5_800A9270
+hangar-select list-insert guard (HANGARLIST_GUARD) patched x1`, no
+duplicate/stacked patches) -> `cmake --build` (clean, only pre-existing
+`DDIV` pointer-sign warnings, no errors). Binary verified fresh
+(`hangarlist-guard` x1 and `scene-matlist-guard3` x2 both present in
+`strings`, mtime after build).
+
+**Soak** (`run_hangarlistguard1.sh`, tag `hangarlistguard1`, same full
+baseline env block plus `ROGUESQ_LOG_HANGARLIST_GUARD=1`, `HOLD_S=150`):
+**discriminating result** -- `HANGARLIST_GUARD` fired 0 times (the guard
+itself wasn't exercised this run), but critically the run got PAST the
+menu crash entirely this time: `campose-entry` fired 238x, `scene-rq-
+counter-hb` 115x, `present-1024` 1918x, `rs-malloc-walk`/`rs-free-walk`
+in the millions -- real, sustained engagement with the render loop that
+`matlistguard3soak2` never reached (0 renders, dead in the menu at
+hold-iter 1). The hold now survived to **hold-iter 27 (wall=30s)**
+before crashing, a 27x improvement over the immediately-prior run under
+otherwise-identical script/schedule/binary-family conditions. This is
+real forward motion, but still not proof the guard itself was the cause
+(0 fires means the bad-pointer condition it guards against didn't recur
+this run) -- the more defensible read is "closing this gap let the run
+progress far enough to hit the NEXT bug down the chain," not "this gap
+was blocking everything."
+
+**The crash it hit next is not new**: `renderUnlitMeshFaces+792`,
+`si_addr=0x380630062` -- an EXACT match (same offset, same faulting
+value) to s208's `unlitmeshtracer3` occurrence, and the same recurring
+`0x80630062` low-32-bits value seen in `mcontext1`/s194,
+`videoframetickguard3`, and `pcsymbolize1`/s206 (different offset,
+`+508`, but same value). This is the 5th confirmed occurrence of
+CURRENT-TRUTH item -49's already-tracked, not-yet-root-caused "KSEG0-
+zero-extension" bug (a deterministic, non-random data source per s208's
+own reasoning) -- **not** a new bug, and specifically not the same shape
+as this session's own `HANGARLIST_GUARD`-style gaps (item -49's own
+analysis already ruled out "source register already bad at load time"
+for the two sites nearest the crash; this needs the wider-scope tracer
+item -49 itself prescribes, not another guard-by-inspection).
+
+Also ran item -49's own cheapest prescribed next step (no build needed):
+grepped `rogue_squadron64/symbol_files/*.txt` for the literal
+`80630062` -- **zero hits**. This rules out "the recurring value is
+literally a named symbol/asset address from the human-authored symbol
+tables," narrowing (but not resolving) the KSEG0-zero-extension
+investigation for whoever picks it up next.
+
+**Net effect**: 1 new, genuine gap found and closed (`HANGARLIST_GUARD`,
+1 site) via full-body read discipline, in a function nobody had
+previously read start-to-end. Discriminating evidence that s253's
+"weak null" framing was actually masking a real, closer, upstream
+blocker (this session's gap) rather than an unlucky non-repro -- fixing
+it let the run travel 27x further before hitting a *different*,
+already-long-tracked bug. `heapwalker-guard4`/`MATLIST_GUARD3` STILL
+have not fired in any soak since s253 landed them; that question remains
+open, now for a run that gets past `renderUnlitMeshFaces`. No `lib/`
+edit this session -- `submodule-patches/export.sh` not needed.
+
+**Housekeeping**: `CURRENT-TRUTH.md` size still flagged, unaddressed
+again (picked the code-change option, same as s253). Other flagged items
+unchanged.
