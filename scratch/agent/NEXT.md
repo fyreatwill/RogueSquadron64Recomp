@@ -1,154 +1,152 @@
-# NEXT work unit — guard the fbSize()==0 NaN-viewport crash, then re-soak
+# NEXT work unit — static trace the new scissor-rect Metal SIGABRT
 
 ## Where the investigation stands
 
-This is a NEW finding (s243), separate from the s238-242 host-CALayer
-SIGSEGV investigation at the SELECT-CRAFT->mission transition (`n=12420`,
-`t≈131s`). Do NOT conflate the two.
+s244 landed and confirmed a fix for s243's `fbSize()==0` NaN-viewport
+crash (`lib/rt64/src/render/rt64_vi_renderer.cpp`, `VIRenderer::
+render()` now skips the draw for that frame when `vi.fbSize()` reports a
+zero component). The `mtldebug2` re-soak confirmed with a same-run
+positive control: the exact `osViSetMode #12`/`viW=0` trigger point now
+logs `[vi zero-size guard] skipping VI draw, fbSize=(0,0)` twice instead
+of crashing, and zero `Viewport Validation` assertions appear anywhere
+in the run. **This specific fix is DONE — do not re-open it.**
 
-s243 ran `mtldebug1` (`MTL_DEBUG_LAYER=1`, Apple's Metal API validation
-layer) per s242's plan. It found a **different, much earlier** crash: a
-fatal Metal viewport-validation `SIGABRT` at guest decision `n=4421`:
+The same `mtldebug2` soak still crashed, but on a **NEW, unrelated**
+Metal SIGABRT:
 
 ```
--[MTLDebugRenderCommandEncoder setViewports:count:]:3961: failed assertion `Viewport Validation
-viewport.originX must not be infinite or NaN.
-viewport.originY must not be infinite or NaN.
-viewport.width must not be infinite or NaN.
-viewport.height must not be infinite or NaN.
+-[MTLDebugRenderCommandEncoder setScissorRects:count:]:4189: failed assertion `Set Scissor Rects Validation
+(rect.x(77) + rect.width(0))(77) must be <= render pass width(6)
+'
 ```
 
-Stack: `RT64::VIRenderer::render` -> `MetalCommandList::drawInstanced`
--> `MetalCommandList::checkForUpdatesInGraphicsState` ->
-`-[MTLDebugRenderCommandEncoder setViewports:count:]`.
+Stack: `RT64::FramebufferRenderer::submitRasterScene` (a lambda over
+`InstanceDrawCall`) -> `MetalCommandList::drawInstanced` ->
+`checkForUpdatesInGraphicsState` -> `-[MTLDebugRenderCommandEncoder
+setScissorRects:count:]`. **This is a completely different code path
+from `VIRenderer`** — raster-scene framebuffer submission, not VI
+presentation — so s244's guard is unrelated to it and cannot have
+caused or masked it.
 
-`run.log`'s frame immediately before the crash: `[pe gate #3183] ...
-viDiff=1 ... viW=0` — the VI framebuffer width read as **0**, one line
-after an `osViSetMode #12` mode-change log line (`width=512`).
-
-**Root cause (static read, `lib/rt64/src/render/rt64_vi_renderer.cpp`)**:
-- `getViewportAndScissor()` (~line 103): `sdSize = vi.fbSize()` (when
-  `removeBlackBorders` is true, which it is in this build).
-- `computeHDSize()` (line 17-19): `hdSize = sdSize * resolutionScale /
-  downsamplingScale` — if `sdSize.x` (or `.y`) is 0, the corresponding
-  `hdSize` component is also 0 (0 times anything is 0).
-- `fromSDtoHD()` (line 21-24): `relativeScale = hdSize / sdSize` — with
-  both 0, this is **0/0 = NaN**, which then multiplies into every
-  viewport coordinate downstream (`topLeftViewport`/`bottomRightViewport`
-  in `getViewportAndScissor`, line 112-115), producing exactly the NaN
-  viewport Metal's validator caught.
-
-This is presumably silently tolerated (garbage draw or invisible frame)
-by Metal with validation OFF — plausible explanation for why it's never
-shown up as a `[CRASH]` in any prior non-`MTL_DEBUG_LAYER` soak despite
-`vi.fbSize()` apparently hitting zero at least once here.
-
-**Open question, NOT yet answered**: is this `fbSize()==0` transient a
-rare one-off (e.g. specific to the VI mode-switch this schedule
-triggers), or does it happen routinely and Metal just eats it silently
-every other soak? This session is a single data point for frequency.
+Timing note (NOT yet causal evidence): this crash fired at wall-clock
+t≈131.7s, the same approximate window as the s238-242 host-CALayer
+`n=12420`/`t≈131s` SIGSEGV family — but different signal (SIGABRT vs
+SIGSEGV), different stack, different validation message. **Do not
+conflate the two.** Full detail and log excerpts: PORTING-STATE Session
+244.
 
 ## Hypotheses for this iteration
 
-1. **H1 — guarding the zero-size case in `fromSDtoHD`/`computeHDSize`
-   eliminates the assertion.** Adding an early-out (skip the draw, or
-   clamp `sdSize`/`hdSize` components away from 0) when `vi.fbSize()` is
-   degenerate stops the `Viewport Validation` abort in a re-soak with
-   the same schedule.
-2. **H2 — the guard changes symptom but not root cause.** The abort
-   stops, but something else visibly breaks (e.g. a one-frame visual
-   glitch, or a different downstream NaN reappears elsewhere consuming
-   `hdSize`) — the fix is incomplete or needs to move earlier (e.g.
-   guard `vi.fbSize()` itself, not just this one consumer).
-3. **H3 — this is unrelated noise.** `fbSize()==0` was itself a fluke of
-   this exact schedule/instrumentation combination and won't recur;
-   guarding it is harmless but low-value. (Low prior — the mechanism is
-   fully explained by a real code path, not a coincidence, so this
-   should only be entertained if the guard has zero effect on repeat
-   soaks AND `fbSize()==0` never recurs in logging.)
+1. **H1 — `render pass width(6)` is a genuinely tiny, valid render
+   target** (e.g. a 1D lookup texture, a shadow map tile, a
+   cubemap/icon face) and the scissor rect (`rect.x=77`) is being
+   computed against the WRONG target's dimensions — a scale/space
+   mismatch bug (something computing a scissor in one framebuffer's
+   coordinate space but applying it to a different, smaller one).
+2. **H2 — `render pass width(6)` is itself a degenerate/uninitialized
+   value** (should be some real width like 320/512/1024 but reads as 6
+   due to a stale pointer, uninitialized struct field, or an
+   arithmetic bug elsewhere) — same *class* of bug as s243/s244's
+   `fbSize()==0` (a numeric field going degenerate transiently), just
+   in a different subsystem (raster scene submission vs VI
+   presentation).
+3. **H3 — this is a pre-existing bug unrelated to anything from s238
+   onward**, and it was simply never reached before because the
+   VI-NaN crash (s243) or the CALayer SIGSEGV (s238-242) always fired
+   first in every prior soak — s244's guard just cleared the path for
+   the game to run long enough to reach it. (This has a reasonably
+   high prior — it's the simplest explanation for "why has nobody seen
+   this before" and doesn't require inventing a new interaction.)
 
-**Discriminating measurement**: instrument `vi.fbSize()` (or the
-`sdSize`/`hdSize` computation directly) to log when either component is
-0, guard against it (see fix sketch below), rebuild, and re-run the
-`mtldebug1`-style soak (same schedule) with `MTL_DEBUG_LAYER=1` still
-armed. If the `Viewport Validation` assertion is gone AND the zero-size
-log line still fires (proving the condition still occurs but is now
-handled), that's H1 confirmed with a positive control. If the assertion
-is gone but the zero-size log line never fires either, the guard's
-positive control failed — the "fix" can't be trusted yet.
+**Discriminating measurement for THIS iteration**: static read only
+(no `lib/` edit yet — per "no speculative fix" rule, confirm the
+mechanism before touching code). Read
+`lib/rt64/src/render/rt64_framebuffer_renderer.cpp`'s
+`submitRasterScene()` and whatever function computes the scissor rect
+for an `InstanceDrawCall` (grep for `setScissors`/`RenderRect` calls in
+that file, similar to how s243 traced `getViewportAndScissor()`). Find:
+(a) what render target width=6 corresponds to (grep for where that
+framebuffer's dimensions get set — is 6 ever a legitimate designed
+size, or clearly a fallback/uninitialized default?), (b) where
+`rect.x=77` comes from and whether it's computed against a DIFFERENT
+framebuffer's size than the one actually being rendered to (H1) or
+whether the width itself is corrupt (H2).
 
 ## Do this iteration
 
-1. Read `lib/rt64/src/render/rt64_vi_renderer.cpp` lines 1-125 (already
-   read once this session, contents fresh in PORTING-STATE Session 243).
-2. Add a guard: when `sdSize.x <= 0 || sdSize.y <= 0` (or `hdSize.x <= 0
-   || hdSize.y <= 0` after `computeHDSize`), skip calling
-   `commandList->setViewports(viewport)` for that frame (return early
-   from `draw()`/`render()` before it), OR clamp `sdSize`/`hdSize` to a
-   minimum of e.g. `{1.0f, 1.0f}` before the division in `fromSDtoHD`.
-   Prefer skip-the-draw if a one-frame skip is visually harmless (VI
-   width 0 for one frame during a mode switch is presumably a blank/
-   transitional frame anyway) — simpler and avoids picking an arbitrary
-   clamp value. Add a one-line log (reuse the `ROGUESQ_LOG_*` env-gated
-   pattern already used elsewhere in this codebase, or a plain
-   `fprintf(stderr, ...)` gated by a new `RT64_LOG_VI_ZERO_SIZE` env var)
-   so the re-soak can confirm the guard actually fired (positive
-   control — iron rule 1).
-3. This touches `lib/rt64` — **run `./submodule-patches/export.sh` and
-   commit the refreshed patch in this SAME iteration** (CLAUDE.md hard
-   rule, iron rule 9). Rebuild:
-   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build`
-   (check the actual build command/target used in prior sessions if this
-   invocation fails — grep PORTING-STATE.md for the last successful
-   `cmake --build` line if unsure).
-4. Verify the fresh binary carries the new log string: `strings
-   build/RogueSquadron64Recomp | grep RT64_LOG_VI_ZERO_SIZE` (or
-   whatever string you chose) before soaking.
-5. Copy `run_mtldebug1.sh` to `run_mtldebug2.sh` in
-   `scratch/s73_post_a_scene/`, same schedule/env, add the new guard's
-   log env var to `GAME_EXTRA_ENV` alongside `MTL_DEBUG_LAYER=1`. Tag:
-   `mtldebug2`. Run with `run_in_background: true`, block-wait via
-   `TaskOutput` if the Stop hook fires mid-run (confirmed pattern,
-   s242/s243) rather than re-launching.
-6. Check `run.log` for: (a) the zero-size guard log line firing at all
-   (positive control the condition still occurs), (b) absence of the
-   `Viewport Validation` assertion, (c) whether the SELECT-CRAFT->
-   mission transition and beyond is reached crash-free or hits the
-   ORIGINAL `n=12420` SIGSEGV family instead (that would be a genuinely
-   interesting result — it would mean this NaN-viewport bug was masking
-   or unrelated to the CALayer crash, resolved either way).
+1. Read `lib/rt64/src/render/rt64_framebuffer_renderer.cpp` — find
+   `submitRasterScene()` and trace how `RenderRect`/scissor values are
+   built for `InstanceDrawCall`s (mirror s243's method: find the
+   producing function(s), read the actual arithmetic, don't guess).
+2. Grep for where the render pass's own width/height (the `render pass
+   width(6)` in the assertion) is set — likely a `Framebuffer`/
+   `RenderFramebufferStorage` field passed into
+   `FramebufferRenderer::recordFramebuffer()` (the caller one frame up
+   the crash stack, in the same file). Trace it back to its origin.
+3. Determine H1 vs H2 vs H3 from the static read alone if possible. If
+   the code doesn't discriminate cleanly, the next step (still this
+   iteration if budget allows, else next iteration) is a **targeted
+   log line** (same `getenv`-cached-static-lambda pattern used for
+   `RT64_LOG_VI_ZERO_SIZE`) printing the render target's actual
+   width/height and the pointer/ID identifying which framebuffer it is,
+   gated behind a new env var, immediately before the `setScissors`
+   call — NOT a fix yet, just enough instrumentation to confirm which
+   hypothesis is correct on the next soak.
+4. Do NOT implement a guard/fix until the static read (and possibly one
+   instrumented soak) has identified the actual mechanism — this
+   mirrors s243's discipline (trace first, guard second, confirmed
+   guard third) which worked cleanly for the VI bug in s243/s244.
+5. If this touches `lib/rt64` (it will, at minimum for instrumentation),
+   run `./submodule-patches/export.sh` and commit the refreshed patch
+   in the SAME iteration (hard rule, iron rule 9).
 
 ## Do NOT do this iteration
 
-- Do NOT touch `lib/N64ModernRuntime` — this fix is entirely within
-  `lib/rt64`.
-- Do NOT re-run `malloclog1`/`malloclog2`/`metalresize1`/`campose15`/
-  `mtldebug1` (all superseded/results stand).
-- Do NOT assume this guard fixes the s238-242 host-CALayer SIGSEGV
-  family — they are DIFFERENT crashes (different signal, different
-  stack, different trigger point). Report the `mtldebug2` re-soak result
-  on its own terms; only note a connection if the CALayer crash actually
-  stops recurring across multiple soaks after this fix (it won't be
-  provable in one soak either way — see CLAUDE.md "no cross-run A/B on
-  animating scenes").
-- Do NOT skip `submodule-patches/export.sh` — this WILL touch `lib/rt64`.
+- Do NOT re-open or re-guard the `fbSize()==0` VI-NaN bug — s244 fixed
+  and confirmed it. Re-litigating it would be regressing to a solved
+  problem.
+- Do NOT assume the scissor-rect crash is connected to the s238-242
+  CALayer SIGSEGV family just because the timing (t≈131s) overlaps —
+  that is an unproven hypothesis (see H3 above for the more likely
+  boring explanation: this bug was always there, just never reached).
+- Do NOT jump straight to a fix/guard without first reading the actual
+  code — "clamp `render pass width` to something non-zero" without
+  knowing WHY it's 6 risks papering over a real corruption bug the same
+  way a blind clamp would have for the VI case (though in that case the
+  static trace happened to fully explain the 0/0 NaN mechanism before
+  the guard was written — do the same rigor here).
+- Do NOT re-run `mtldebug1`/`mtldebug2`/`malloclog1`/`malloclog2`/
+  `metalresize1`/`campose15` (all superseded/results stand). A fresh
+  soak here should be a NEW tag (e.g. `scissorprobe1`) once
+  instrumentation is ready.
 
-## Environment notes (carried forward, still current as of s243)
+## Environment notes (carried forward, still current as of s244)
 
-- **Permission gate CONFIRMED CLEARED through s243.**
+- **Permission gate CONFIRMED CLEARED through s244.**
 - **`GAME_EXTRA_ENV`** (`run_mission_keys.sh`, s241): space-separated
   `VAR=val VAR2=val2` string, scopes extra env vars to ONLY the game
-  process. Reused successfully for `MTL_DEBUG_LAYER=1` in `mtldebug1`
-  (positive control: `run.log` line 1 = `Metal API Validation Enabled`).
-- **Block-wait pattern confirmed again (s243)**: `TaskOutput` with
+  process. `mtldebug2` used `MTL_DEBUG_LAYER=1 RT64_LOG_VI_ZERO_SIZE=1`
+  successfully — same mechanism, just add another `VAR=1` to the string
+  for new instrumentation.
+- **`RT64_LOG_VI_ZERO_SIZE=1`** is now a real, working env var
+  (`lib/rt64/src/render/rt64_vi_renderer.cpp`) — keep it armed in any
+  future soak of this render path in case the guard fires unexpectedly
+  often (worth knowing even though the immediate crash is fixed).
+- **Env-gated logging pattern to reuse for any new instrument**:
+  `static const bool s_X = [](){ const char *v =
+  std::getenv("VAR_NAME"); return v && v[0] && v[0] != '0'; }();` then
+  `if (s_X) { std::fprintf(stderr, ...); std::fflush(stderr); }` —
+  matches existing style in `rt64_present_queue.cpp` and now
+  `rt64_vi_renderer.cpp`. Needs `#include <cstdio>` and `#include
+  <cstdlib>` at the top of the file if not already present.
+  **Watch for hlslpp swizzle-type format-string mismatches**: `%u` with
+  an `hlslpp::uintN`'s `.x`/`.y` member needs an explicit
+  `(unsigned int)(...)` cast or the compiler warns (caught this in s244
+  before trusting the soak).
+- **Block-wait pattern confirmed again (s244)**: `TaskOutput` with
   `block: true` and a generous timeout (180000-480000ms) against the
   background task ID returns the final result cleanly when the Stop
   hook fires mid-soak — no need to re-launch.
-- **`MTL_DEBUG_LAYER=1` is a strong instrument** — it caught a real bug
-  on the very first soak, unlike the silent `MallocStackLogging`
-  attempt. Worth keeping armed in future soaks of this render path even
-  after this specific NaN-viewport bug is fixed, in case it surfaces
-  more.
 - `/tmp` is not writable this session — write scratch/report files
   inside `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64` only.
 - Compound `cd ... && ...` commands and `git -C <path> <cmd>` get
@@ -163,12 +161,11 @@ positive control failed — the "fix" can't be trusted yet.
   `ROGUESQ_LOG_MESGQUEUE_GUARD`, `ROGUESQ_LOG_HEAPLISTDEQ_GUARD`,
   `ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`, `ROGUESQ_LOG_DL_PAYLOAD_STALE=1`
   — keep these armed in any new soak.
-- **This exact schedule (`schedulepush2`/`campose*` family) crash rate at
-  the SELECT-CRAFT->mission transition is 5/10 soaks crashed vs 5/10
-  survived** (as of `malloclog2`, s242) for the ORIGINAL CALayer SIGSEGV
-  family — `mtldebug1`'s new SIGABRT does NOT count against this tally,
-  it's a different crash that fires before the transition is even
-  reached.
+- **SELECT-CRAFT->mission transition family tally unchanged this
+  session**: 5/10 crashed vs 5/10 survived (CALayer SIGSEGV family
+  only, as of `malloclog2`, s242). `mtldebug1`'s NaN-viewport SIGABRT
+  and `mtldebug2`'s scissor-rect SIGABRT are BOTH excluded from this
+  tally — different crashes entirely.
 - **`rs64_elapsed_seconds()`** (`src/main/rt64_render_context.cpp`,
   `extern "C"`) is the canonical shared wall-clock — declare
   `extern "C" double rs64_elapsed_seconds(void);` at NAMESPACE scope
@@ -196,12 +193,12 @@ positive control failed — the "fix" can't be trusted yet.
 
 ## Housekeeping still flagged, still not done
 
-`docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget and the
-Read tool's 256 KB single-read limit (confirmed s195, still true s243 —
-read it with `grep`/offset-limited `Read`, never a plain whole-file
-`Read`) — flagged for 34+ sessions without action. Migrate durable
-mechanism/architecture material to `PROJECT-OVERVIEW.md` and prune
-superseded detail.
+`docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget (now
+~393 KB) and the Read tool's 256 KB single-read limit (confirmed s195,
+still true s244 — read it with `grep`/offset-limited `Read`, never a
+plain whole-file `Read`) — flagged for 35+ sessions without action.
+Migrate durable mechanism/architecture material to `PROJECT-OVERVIEW.md`
+and prune superseded detail.
 
 `fixup_game_funcs.py`'s untracked, single-copy state in the `N64Recomp`
 sibling checkout has been flagged since s83, still not fixed (not this
@@ -215,7 +212,7 @@ Still flagged for the user, not committed autonomously.
 The pre-existing NaN/`NAN_CHECK` and unguarded-deref crash families still
 have a proposed but unshipped fix (CURRENT-TRUTH -55/-56, PORTING-STATE
 Session 215) — this is a GUEST-side recompiled-C-code assert family
-(`sinfApprox`, `funcs_5.c`), confirmed DIFFERENT from s243's HOST-side
-Metal-viewport-NaN bug (different mechanism, different code, different
-crash signature) — do not conflate the two. Still worth picking up on
+(`sinfApprox`, `funcs_5.c`), confirmed DIFFERENT from s243/s244's
+HOST-side Metal-validation bugs (different mechanism, different code,
+different crash signatures) — do not conflate. Still worth picking up on
 its own merits eventually but is NOT the next work unit.

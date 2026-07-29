@@ -5393,6 +5393,42 @@ index 0848f3e..da2a177 100644
          assert(!decodeTMEM || ((width > 0) && (height > 0)));
  
          TextureUpload newUpload;
+diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
+index b4ff4e9..cf58a14 100644
+--- a/src/render/rt64_vi_renderer.cpp
++++ b/src/render/rt64_vi_renderer.cpp
+@@ -4,6 +4,9 @@
+ 
+ #include "rt64_vi_renderer.h"
+ 
++#include <cstdio>
++#include <cstdlib>
++
+ #include "shared/rt64_hlsl.h"
+ #include "shared/rt64_video_interface.h"
+ 
+@@ -67,6 +70,21 @@ namespace RT64 {
+ 
+         descriptorSet->setTexture(descriptorSet->gInput, p.texture, RenderTextureLayout::SHADER_READ);
+ 
++        // A VI mode switch can transiently report a zero-sized framebuffer (observed at guest
++        // decision n=4421, one line after an osViSetMode call). computeHDSize()/fromSDtoHD() would
++        // divide 0/0 into NaN, which Metal's viewport validator (MTL_DEBUG_LAYER=1) fatally rejects.
++        // Skip this frame's draw entirely rather than feed a degenerate size through the pipeline.
++        const hlslpp::uint2 fbSize = p.vi->fbSize();
++        if ((fbSize.x == 0) || (fbSize.y == 0)) {
++            static const bool s_logViZeroSize = [](){ const char *v = std::getenv("RT64_LOG_VI_ZERO_SIZE"); return v && v[0] && v[0] != '0'; }();
++            if (s_logViZeroSize) {
++                std::fprintf(stderr, "[vi zero-size guard] skipping VI draw, fbSize=(%u,%u)\n", (unsigned int)(fbSize.x), (unsigned int)(fbSize.y));
++                std::fflush(stderr);
++            }
++
++            return;
++        }
++
+         RenderViewport viewport;
+         RenderRect scissor;
+         getViewportAndScissor(p.swapChain, *p.vi, p.resolutionScale, p.downsamplingScale, p.removeBlackBorders, viewport, scissor);
 diff --git a/src/shaders/RasterPS.hlsl b/src/shaders/RasterPS.hlsl
 index f5beee9..f255ea0 100644
 --- a/src/shaders/RasterPS.hlsl

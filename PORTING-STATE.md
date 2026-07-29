@@ -22995,3 +22995,93 @@ confirm the assertion stops firing.
 scope (`fixup_game_funcs.py` untracked sibling-checkout state,
 `CURRENT-TRUTH.md` over both size budgets, now flagged for 34+
 sessions).
+
+## Session 244 (2026-07-28)
+
+**Work unit**: implement s243's proposed fix (guard the `fbSize()==0`
+NaN-viewport crash in `lib/rt64/src/render/rt64_vi_renderer.cpp`) and
+re-soak with `MTL_DEBUG_LAYER=1` still armed to test H1 ("guarding the
+zero-size case eliminates the assertion").
+
+**Fix landed**: `VIRenderer::render()` now reads `p.vi->fbSize()` once
+at the top of the function (before any viewport/push-constant work) and
+returns early — skipping the entire draw for that frame — if either
+component is 0. Logging is gated behind a new `RT64_LOG_VI_ZERO_SIZE`
+env var (`std::getenv`-cached-in-a-static-lambda pattern, matching the
+existing style in `rt64_present_queue.cpp`) so a re-soak can confirm via
+positive control that the guard actually fires rather than trusting a
+silent null result (iron rule 1). This guard covers BOTH consumers of
+`fbSize()` in this file — `getViewportAndScissor()`'s `sdSize` (gated by
+`removeBlackBorders`, which is on in this build) and the unconditional
+`pushConstants.videoResolution = computeHDSize(fbSize, ...)` on the line
+below it — by construction, since it returns before either runs. Built
+clean (`DEVELOPER_DIR=... cmake --build build`, only pre-existing
+`json.hpp` deprecation warnings survive); verified the fresh binary
+carries both new strings (`strings build/RogueSquadron64Recomp | grep
+RT64_LOG_VI_ZERO_SIZE` and `vi zero-size guard` both hit) before
+trusting the soak. `lib/rt64` touched -> ran `submodule-patches/
+export.sh` and confirmed the new guard's two lines appear in the
+refreshed `submodule-patches/rt64.patch` before committing (hard rule).
+
+**Re-soak (`mtldebug2`)**: same `campose*`/`schedulepush2` schedule as
+`mtldebug1`, `GAME_EXTRA_ENV="MTL_DEBUG_LAYER=1
+RT64_LOG_VI_ZERO_SIZE=1"`. Result, **H1 CONFIRMED with a same-run
+positive control**:
+
+- The exact same trigger point as `mtldebug1` — `osViSetMode #12`
+  followed by `[pe gate #3180/#3181] viW=0` — now produces two
+  `[vi zero-size guard] skipping VI draw, fbSize=(0,0)` log lines
+  instead of a crash. The guard fired on the real condition, not a
+  synthetic one (positive control passed, iron rule 1).
+- Zero occurrences of the `Viewport Validation`/`viewport.originX...
+  must not be infinite or NaN` assertion anywhere in this run's
+  `run.log` (previously fatal at guest decision `n=4421` in
+  `mtldebug1`). The game proceeds cleanly through the same VI mode
+  switch (`[phase] vi_width=512 (was 1024) ... update_screen #4430` logs
+  normally immediately after the two guarded frames).
+- Two independent lines of evidence now agree for this specific fix:
+  s243's static code trace (predicted the guard would eliminate the
+  assertion) and this session's dynamic re-soak (it did).
+
+**But the soak still crashed** — a NEW, different, later Metal
+validation `SIGABRT`:
+
+```
+-[MTLDebugRenderCommandEncoder setScissorRects:count:]:4189: failed assertion `Set Scissor Rects Validation
+(rect.x(77) + rect.width(0))(77) must be <= render pass width(6)
+'
+```
+
+Stack: `FramebufferRenderer::submitRasterScene` (lambda over
+`InstanceDrawCall`) -> `MetalCommandList::drawInstanced` ->
+`checkForUpdatesInGraphicsState` -> `setScissorRects:count:`. This is a
+**completely different code path from the VI guard** — raster-scene
+framebuffer submission, not VI presentation — so the guard landed this
+session cannot be responsible for it either way; it is not a regression
+introduced by this fix. `run.log` context: it fired at wall-clock
+t≈131.7s (`[dl-payload-content-stale] ... t=131.7` immediately
+precedes it), which is the SAME approximate transition window as the
+s238-242 host-CALayer `n=12420`/`t≈131s` SIGSEGV family — but it is a
+different signal (SIGABRT vs SIGSEGV), a different stack, and a
+different validation message, so this is NOT being counted as or
+conflated with that family. It may be coincidental timing (both are
+triggered by general instability around the SELECT-CRAFT->mission
+transition) or the two may share an upstream cause; **not established
+either way, single soak, do not over-read the timing coincidence.**
+`render pass width(6)` (a render target only 6 pixels wide) is itself
+suspicious and worth a static read next — it doesn't obviously connect
+to `vi.fbSize()` (this call stack never touches `VIRenderer`), so it's
+most likely a distinct degenerate-size bug in a small/icon-sized
+framebuffer's scissor-rect computation, not a second symptom of the
+same VI bug.
+
+**Verdict on the family tally**: unchanged this session — this soak's
+crash is neither a SELECT-CRAFT->mission CALayer SIGSEGV nor a survival
+of that specific family (it aborts before/around the same window via a
+different mechanism), so it is not counted toward the existing 5/10 vs
+5/10 tally.
+
+**Housekeeping**: same items flagged again, still not this session's
+scope (`fixup_game_funcs.py` untracked sibling-checkout state,
+`CURRENT-TRUTH.md` over both size budgets, now flagged for 35+
+sessions).

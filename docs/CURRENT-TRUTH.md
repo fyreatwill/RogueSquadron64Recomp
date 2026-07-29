@@ -663,9 +663,40 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s243)
+## Next steps, in order of expected value (s244)
 
--84. **(s243) `MTL_DEBUG_LAYER=1` soak (`mtldebug1`) found a NEW, distinct
+-85. **(s244) Landed the `fbSize()==0` guard in `rt64_vi_renderer.cpp`
+    (skip the VI draw for that frame) and re-soaked (`mtldebug2`) —
+    H1 CONFIRMED with a same-run positive control: the exact `osViSetMode
+    #12`/`viW=0` trigger point that produced s243's fatal `Viewport
+    Validation` NaN assertion now logs
+    `[vi zero-size guard] skipping VI draw, fbSize=(0,0)` twice and the
+    game proceeds cleanly (assertion count 0 in the full `run.log`).**
+    Two independent lines of evidence agree (s243's static trace + this
+    session's dynamic re-soak). Committed with `submodule-patches/
+    export.sh` refreshed (touched `lib/rt64`). **But the soak still
+    crashed on a NEW, unrelated Metal SIGABRT** — `Set Scissor Rects
+    Validation` (`rect.x(77)+rect.width(0) > render pass width(6)`) in
+    `FramebufferRenderer::submitRasterScene` -> `drawInstanced` ->
+    `checkForUpdatesInGraphicsState` -> `setScissorRects:count:`, a
+    **completely different code path from `VIRenderer`** (raster-scene
+    framebuffer submission, not VI presentation) — the guard landed this
+    session cannot have caused it. Fired at wall-clock t≈131.7s, the same
+    approximate window as the s238-242 host-CALayer `n=12420`/`t≈131s`
+    SIGSEGV family, but different signal/stack/message — **do NOT
+    conflate with that family; timing overlap is not yet evidence of a
+    shared cause** (single soak). `render pass width(6)` (a 6px-wide
+    render target) doesn't obviously connect to `vi.fbSize()` — this
+    stack never touches `VIRenderer` — so it's most likely a distinct
+    degenerate-size bug in a small/icon-sized framebuffer's scissor-rect
+    computation. **Next step**: static read of `FramebufferRenderer::
+    submitRasterScene` and whatever computes its scissor rect, to find
+    where `render pass width(6)` and `rect.x(77)` come from, before
+    proposing a fix (same discipline as s243: static trace first, then
+    guard, then re-soak). Full detail: PORTING-STATE Session 244.
+
+-84. **(s243, SUPERSEDED by s244's fix landing — kept for mechanism
+    detail) `MTL_DEBUG_LAYER=1` soak (`mtldebug1`) found a NEW, distinct
     crash — a Metal viewport-validation SIGABRT (`viewport.originX/Y/
     width/height must not be infinite or NaN`) at guest decision
     `n=4421`, far earlier than the `n=12420` host-CALayer-teardown
