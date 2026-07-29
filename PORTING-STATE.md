@@ -21857,3 +21857,110 @@ entry was missing its own `## Session 228` header (content ran on directly
 after s227's closing paragraph) — added the header retroactively this
 session, no body content changed, so `grep "^## Session"` and similar
 future lookups find it.
+
+## Session 230 (2026-07-28) — found and instrumented a concrete render-cache "epoch" mechanism in `processSceneNode`; diagnostic confirms the epoch is a live, actively-changing value early in a run (not stuck), but two soak attempts with it armed both crashed near the SELECT-CRAFT→mission VI transition, before reaching the freeze window — a same-binary control (unmodified campose3, diagnostic compiled in but not env-enabled) ran clean 424s, isolating the crash to the diagnostic being ACTIVE, not to the new code's mere presence
+
+**Read-only source trace (Probe A from s229's NEXT.md, no build) found a
+concrete candidate mechanism.** Delegated a deep read of
+`submitSceneNodeRender`/`processSceneNode` (`funcs_4.c`, ~4200 combined
+lines of decompiled MIPS-to-C) to a subagent, then independently verified
+every cited line myself before acting on it (all confirmed accurate):
+`submitSceneNodeRender` reads a global word at fixed guest RDRAM address
+`0x8011A894` near its top (`funcs_4.c:10-12`) and unconditionally stamps
+it into `MEM_W(node_ptr+0x30)` every call (`funcs_4.c:41-42`).
+`processSceneNode` has two near-identical cache-check blocks
+(`funcs_4.c:13881-13890` and `:14732-14751`) comparing this same global
+against a previously-stamped `+0x30` value — on match it falls through to
+`L_80014FE8` and reuses a cached `+0x34` value feeding a render-queue
+insert (the same queue the existing s152 diagnostic already confirmed
+keeps growing); on mismatch it jumps to a recompute path
+(`L_8001513C`/`L_80015404`).
+
+**Important sub-finding: exhaustive grep across every `funcs_*.c` file
+for a write to this exact address (the only valid MIPS lui/addiu
+encoding, base `0x8012<<16` offset `-0x576C`) found exactly ONE writer**:
+`buildAndRegisterDefaultMaterial` (`funcs_4.c:22608-22636`), which sets
+it to the hardcoded constant `1` conditionally — not an increment. No
+per-frame increment site was found anywhere in the recompiled game code
+via static search. This raised real uncertainty about whether the
+mechanism was even a live "epoch" at all (vs. a one-time material-
+registry-generation stamp) — resolved empirically below, not by more
+static reading (would have been a 2nd+ full-function read pass on the
+same question; chose to instrument and measure instead, per iron rule 8's
+spirit and the project's own stated preference for discriminating
+measurement over indefinite static analysis).
+
+**Landed a diagnostic** (`fixup_game_funcs.py`, two new patch functions
+`_render_cache_epoch_patch_a`/`_b`, both anchored on the existing
+`ctx->r2 = MEM_W(ctx->r16/r17, 0X30);` lines at the two call sites) gated
+by a new env var `ROGUESQ_LOG_RENDER_CACHE_EPOCH=1`. Logs, per site: a
+running call counter, the epoch value, the stamped comparison value, a
+hit/miss flag, a heartbeat every 500 calls, and an unconditional log of
+the first hit↔miss transition after a run of ≥50 consecutive same-result
+calls (to cheaply capture change points without flooding output). Full
+regen/build succeeded clean (`make_elf.py` → `regen_n64recomp.sh` →
+`fixup_game_funcs.py` once → cmake build, all green, patch report
+confirmed both sites patched x1).
+
+**campose4 attempt 1** (new tag, copied from s229's `campose3` per
+NEXT.md's own instructions, same schedule, `ROGUESQ_LOG_RENDER_CACHE_EPOCH=1`
+added): diagnostic fired correctly and immediately answered part of the
+question — the epoch value is genuinely LIVE during early gameplay,
+climbing `0x24 → 0xE7 → 0x114 → 0x14A → 0x171 → 0x183` across the first
+~1500 `processSceneNode` calls (roughly monotonic, not a stuck constant).
+This rules out the most trivial reading of H2 ("constant the whole
+run"). But the game process crashed at wall≈23s (`hold-iter 3`), a
+Bus error at `pc=0x104c4c8ac`, symbol `static_5_800AB658+49104`
+(`far=0x380000014`) — well before the previously-observed freeze windows
+(`n=15360`+ in s223-s229). Preserved as
+`scratch/s73_post_a_scene/campose4_attempt1_crash/`.
+
+**campose4 attempt 2** (2nd of 2 budgeted soak attempts, identical
+script): crashed again, even earlier (wall≈21s, `hold-iter 1`), a
+different Bus error at `pc=0x1009cfee4`, symbol
+`tickTextureMaterialExpiry+612` (`far=0x38000ffb2`). Both crashes'
+`[phase] vi_width=512 (was 1024)` transition line landed within 0.6s of
+each other (73.9s vs 73.3s) — i.e., both crashes cluster tightly around
+the SELECT-YOUR-CRAFT→mission-launch VI-width transition, not at a
+random point. Different PC/symbol between the two attempts argues
+against a single deterministic fault line in the new patch's own logic
+(a genuine bug in one exact line would crash at the same PC every time);
+both `far` addresses match the `0x38...`-prefixed garbage-pointer pattern
+already common across this codebase's many pre-existing unguarded-deref
+crash families (the same family the dozens of existing `GUARD`-suffixed
+patches exist to catch). Preserved as
+`scratch/s73_post_a_scene/campose4_attempt2_crash/`.
+
+**Control test (not one of the 2 budgeted soak attempts — a
+discriminating check, iron rule 1's positive-control spirit applied to a
+crash instead of a null result)**: re-ran s229's UNMODIFIED `campose3`
+script verbatim (copied to a new tag `campose3control_s230` so as not to
+overwrite s229's original log, same freshly-rebuilt binary with the new
+patch code compiled in but `ROGUESQ_LOG_RENDER_CACHE_EPOCH` left unset)
+— ran the FULL 424s hold window clean, `CRASH: 0`. This isolates the
+cause to the diagnostic being ACTIVELY ENABLED at runtime (the extra
+`fprintf` I/O and branch-history bookkeeping), not to the mere presence
+of the new compiled code shifting binary layout. Most likely explanation:
+the added I/O overhead perturbs frame timing enough to reproducibly (2/2)
+nudge this specific, already-timing-sensitive scene-transition window
+into a pre-existing crash-family bug that this exact schedule would
+otherwise avoid or hit only rarely — not a new bug introduced by the
+diagnostic's own logic. This is a hypothesis, not a proven mechanism;
+flagged as such.
+
+**Net result — the core H1/H2/H3 discriminating question (does the
+epoch value go constant at/near the already-known picture-freeze point)
+is UNANSWERED this session.** The crash pre-empted reaching that window
+in both attempts. This is a null result on the main question WITH a
+positive control satisfied (the instrument demonstrably fires and
+produces real, changing data before the crash, and the control run proves
+the binary itself is sound) — legitimate per iron rule 1, but incomplete.
+Genuinely new information gained: (1) the epoch is confirmed live/
+changing early in a run, ruling out the trivial "stuck from frame 1"
+reading of H2; (2) this diagnostic's I/O overhead is load-bearing for
+run stability near this specific transition — next session must reduce
+it before re-attempting the freeze-boundary measurement.
+
+**Housekeeping**: none needed beyond the above — `lib/rt64`/
+`lib/N64ModernRuntime` still show modified in `git status`, still not
+investigated (no `lib/` edits made this session either).

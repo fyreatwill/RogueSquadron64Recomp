@@ -663,9 +663,31 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s229)
+## Next steps, in order of expected value (s230)
 
--70. **(s229) Permission gate CLEARED (s228's fix confirmed working) —
+-71. **(s230) Landed a render-cache "epoch" diagnostic in `processSceneNode`
+    (RDRAM global 0x8011A894, `funcs_4.c:13881-13890`/`:14732-14751`, env
+    var `ROGUESQ_LOG_RENDER_CACHE_EPOCH=1`) and confirmed it fires and
+    shows the epoch is a LIVE, actively-changing value early in a run
+    (not stuck) — but BOTH soak attempts with it armed crashed near the
+    SELECT-CRAFT→mission VI transition (~73s), before reaching the
+    freeze window (`n=15360`+). A control run (same binary, same
+    unmodified `campose3` script, diagnostic compiled in but NOT
+    env-enabled) ran clean 424s with 0 crashes — isolating the cause to
+    the diagnostic being ACTIVE (I/O overhead perturbing timing), not to
+    the new code's mere presence in the binary.** The core discriminating
+    question from s229 (does the epoch go constant at/near the freeze
+    point) is still UNANSWERED. **Next step: reduce the diagnostic's I/O
+    overhead before re-soaking** — increase the heartbeat interval well
+    past 500 (e.g. 5000+) and/or drop the per-transition unconditional
+    log, keeping only a coarse periodic sample, then re-run campose4 (or
+    a fresh tag) budgeting 2 fresh attempts. If a reduced-I/O version
+    still crashes at the same ~73s transition, treat that transition
+    itself as a separate, genuinely fragile timing window worth its own
+    investigation. Full detail: PORTING-STATE Session 230.
+
+-70. **(s229, superseded in priority by s230 above — kept for the trail)
+    Permission gate CLEARED (s228's fix confirmed working) —
     `deref0` soak-validated: it does NOT freeze near `flag`/`camptr`'s
     freeze point (`n=15360`), and keeps changing until `n=57900`, far
     longer than `m00`'s own already-documented lag (`n=21240`).** This
