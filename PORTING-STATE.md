@@ -22610,3 +22610,98 @@ not explain a host QuartzCore crash).
 scope (`lib/`, `fixup_game_funcs.py` untracked sibling-checkout state,
 `CURRENT-TRUTH.md` over both size budgets) — no `lib/` edits made this
 session, so no `export.sh`/commit obligation triggered.
+
+## Session 239 (2026-07-28)
+
+**Work unit** (from NEXT.md s238): static, read-only investigation of
+`lib/rt64/src/contrib/plume/plume_metal.cpp` (rt64's actual Metal
+backend, not the `contrib/metal-cpp` Apple bindings) and
+`src/main/rt64_render_context.cpp` for the resize/teardown path that
+could explain s238's host-side SIGSEGV inside QuartzCore
+(`x_hash_table_remove_ptr`<-`CAMediaTimingInvalidate`<-`-[CALayer
+dealloc]`<-`CA::Transaction::commit`). No build, no soak — per NEXT.md
+and iron rule 8 (the `campose*` soak budget was spent as of s238).
+Delegated the file reads to a general-purpose subagent to keep the
+source dumps out of the main session's context; verified its key
+file:line citations directly afterward (`plume_metal.cpp:2084-2109`,
+`rt64_present_queue.cpp:110-120` and `840-860`) before writing them into
+this ledger.
+
+**Finding — one concrete, narrow, PLAUSIBLE-not-CONFIRMED candidate**:
+`MetalSwapChain::resize()` (`plume_metal.cpp:2084-2101`) calls
+`layer->setDrawableSize(drawableSize)` (line 2093) from inside
+`PresentQueue::threadLoop()`, which runs on a dedicated background
+thread (spawned as `new std::thread(&PresentQueue::threadLoop, this)`,
+`rt64_present_queue.cpp:117`, thread named `"RT64 Present"`,
+`rt64_present_queue.cpp:855`) — not the main thread, which is what owns
+`Cocoa_PumpEvents`/`CA::Transaction::commit` in the crash's outer
+frames. `CAMetalLayer` property setters like `setDrawableSize:`
+participate in CoreAnimation's implicit-transaction/timing bookkeeping,
+which Apple does not document as safe to mutate from a non-main thread
+(unlike `nextDrawable`/drawable `present()`, which ARE documented
+thread-safe). A race here is a plausible mechanism for exactly this
+symptom: corruption introduced by the cross-thread mutation, but only
+surfacing later — during a subsequent `-[CALayer dealloc]` inside
+`CA::Transaction::commit` on the main thread — rather than crashing
+immediately at the mutation site. That fits the observed frame-count-
+delayed (not immediate) fault better than a direct double-release at the
+resize call site would.
+
+**Important gap, found by the same static read, that keeps this at
+PLAUSIBLE rather than CONFIRMED**: there is no `SDL_SetWindowSize` or
+window-recreation call anywhere in `src/main/` in this repo. The
+VI_WIDTH register flip (1024->512, logged at `src/main/
+rt64_render_context.cpp:814-838`) is a guest-side N64 framebuffer
+register change, not a host OS window resize — no code path was found
+in this repo that makes a VI_WIDTH change directly call into
+`MetalSwapChain::resize()` or otherwise resize the host window/
+`CAMetalLayer`. This means the tight correlation (crash at n=12420/
+t≈131s, ~56s after the VI-width transition at t≈74.2s) could be
+coincidental — both could be periodic, frame-count-driven events that
+happen to land near each other across all 3 soaks — rather than causally
+linked through this specific resize path. Do not upgrade this to
+"confirmed" without closing that gap.
+
+**Weaker/ruled-out leads from the same read**: `MetalSwapChain::layer`
+(`plume_metal.h:238`) is a raw pointer, never retained or released in
+this file (set once at `plume_metal.cpp:1998`; `~MetalSwapChain()` at
+`2026-2027` is a no-op) — no direct double-release of the `CALayer`
+object itself lives in this file. `MetalSwapChain::
+currentAvailableDrawableIndex` (`plume_metal.h:244`) is read
+non-atomically on the present thread (`acquireTexture`, `plume_metal.
+cpp:2154-2155`) and written inside a GPU-completion-handler callback
+that can run on yet another thread (`plume_metal.cpp:2056`) — a real
+unsynchronized data race, but it affects drawable/texture refcounting,
+not the `CALayer` object directly, so it's a weaker match to this
+specific crash signature. No fixed-size pool/ring-buffer/counter
+(`MAX_DRAWABLES = 3`, `plume_metal.cpp:89`) numerically lines up with
+n=12420 or the ~56s delay.
+
+**What this rules out / narrows**: this is NOT the guest-side NaN/
+`NAN_CHECK`/unguarded-deref crash family (CURRENT-TRUTH -55/-56) — that
+proposed hardening still does not touch this code path and remains a
+separate, lower-priority item. This session made no `lib/` edits (read
+only), so no `submodule-patches/export.sh`/commit obligation was
+triggered.
+
+**Next step**: before touching `plume_metal.cpp`, get the missing
+discriminating measurement that would confirm or refute the resize-path
+hypothesis directly, rather than patching on a plausible-but-unconfirmed
+story: instrument `MetalSwapChain::resize()`/`needsResize()`
+(`plume_metal.cpp:2088`/`2103`) with a call counter plus an
+`rs64_elapsed_seconds()` timestamp, and check in a soak whether
+`resize()` actually fires anywhere near n=12420/t≈131s at all. A null
+result here (resize never fires near that point) refutes this whole
+hypothesis and reopens the search; a positive result upgrades the
+thread-marshaling fix (dispatch the `layer->setDrawableSize()` mutation
+onto the main run loop/thread) to a small, concretely testable patch
+worth a positive-control soak (2 soaks, watching specifically for the
+`x_hash_table_remove_ptr`/`CAMediaTimingInvalidate` signature to stop
+recurring).
+
+**Housekeeping**: same items flagged again, still not this session's
+scope (`lib/`, `fixup_game_funcs.py` untracked sibling-checkout state,
+`CURRENT-TRUTH.md` over both size budgets — now larger still after this
+session's addition, migration to `PROJECT-OVERVIEW.md` remains undone).
+No `lib/` edits made this session, so no `export.sh`/commit obligation
+triggered.

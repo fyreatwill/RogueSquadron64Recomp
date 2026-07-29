@@ -663,7 +663,52 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s238)
+## Next steps, in order of expected value (s239)
+
+-80. **(s239) Static read of `lib/rt64/src/contrib/plume/plume_metal.cpp` +
+    `rt64_present_queue.cpp` for the s238 host-CALayer-crash hypothesis —
+    found one concrete, narrow, PLAUSIBLE-not-CONFIRMED candidate: a
+    cross-thread `CAMetalLayer` property mutation.** `MetalSwapChain::
+    resize()` (`plume_metal.cpp:2088-2101`) calls `layer->
+    setDrawableSize(drawableSize)` (line 2093) from `PresentQueue::
+    threadLoop()` — a dedicated background thread (`"RT64 Present"`,
+    spawned `rt64_present_queue.cpp:117`), NOT the main thread that owns
+    `Cocoa_PumpEvents`/`CA::Transaction::commit` (the crash's outer
+    frames). `CAMetalLayer` setters like `setDrawableSize:` participate in
+    CoreAnimation's implicit-transaction bookkeeping and are not
+    documented thread-safe (unlike `nextDrawable`/drawable `present()`,
+    which Apple does document as thread-safe) — a race here plausibly
+    produces exactly this signature: corruption surfacing later, during a
+    subsequent `-[CALayer dealloc]` inside `CA::Transaction::commit` on
+    the main thread, rather than crashing immediately at the mutation
+    site. This would explain a frame-count-delayed (not immediate) fault.
+    **Important gap the agent found**: there is no `SDL_SetWindowSize`/
+    window-recreation call anywhere in `src/main/` — the VI_WIDTH register
+    flip (1024->512, `src/main/rt64_render_context.cpp:814-838`) is a
+    guest-side N64 framebuffer register change, not a host OS window
+    resize, and no code path was found that makes VI_WIDTH directly drive
+    a host window/`CAMetalLayer` resize. So the n=12420/t≈131s convergence
+    with the VI-width transition at t≈74.2s (~56s earlier) may be
+    coincidental (both periodic/frame-count-driven) rather than causally
+    linked through this resize path — **do not treat this as confirmed**.
+    Weaker/ruled-out leads: `MetalSwapChain::layer` (`plume_metal.h:238`)
+    is a raw, never-retained/released pointer (no direct double-release
+    of the `CALayer` itself found in this file); `currentAvailableDrawable
+    Index` (`plume_metal.h:244`) has a genuine unsynchronized cross-thread
+    read/write but affects drawable/texture refcounting, not `CALayer`
+    directly — weaker match. No fixed-size pool/counter (`MAX_DRAWABLES=3`,
+    `plume_metal.cpp:89`) numerically aligns with n=12420 or ~56s.
+    **Next step**: before patching, get the missing discriminating
+    measurement — instrument `MetalSwapChain::resize()`/`needsResize()`
+    (`plume_metal.cpp:2088/2103`) with a call counter + `rs64_elapsed_
+    seconds()` timestamp to check whether `resize()` actually fires
+    anywhere near n=12420/t≈131s at all. If it never fires there, this
+    hypothesis is refuted and the search must widen; if it does, the
+    thread-marshaling fix (dispatch the `layer->setDrawableSize()` call
+    onto the main run loop) becomes a small, testable patch worth a
+    positive-control soak (2 soaks, crash-family-specific: does the
+    `x_hash_table_remove_ptr`/`CAMediaTimingInvalidate` signature stop
+    recurring). Full detail: PORTING-STATE Session 239.
 
 -79. **(s238) 3rd consecutive crashed `campose*` soak (`campose14`) —
     iron rule 8 budget spent, no more blind re-soaks — but this crash is a
