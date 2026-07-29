@@ -1,116 +1,111 @@
-# NEXT work unit — stand up Apple's own allocation/layer debug tooling
-# (MallocNanoZone=0 MallocStackLogging=1 / MTL_DEBUG_LAYER=1) against the
-# s238 host-side QuartzCore SIGSEGV, now that TWO static/dynamic candidate
-# searches (s239, s240) have both come up empty for a concrete write site.
+# NEXT work unit — run the FIXED malloc-debug-tooling soak (malloclog2)
 
 ## Where the investigation stands
 
 s238 found a host-side SIGSEGV inside Apple QuartzCore
 (`x_hash_table_remove_ptr`<-`CAMediaTimingInvalidate`<-`-[CALayer
-dealloc]`<-`CA::Transaction::commit`), converging 3/3 soaks
-(`campose12`/`13`/`14`) on the same trigger point: guest call counter
-`n=12420`, wall-clock `t≈130.8-131.7s`.
+dealloc]`<-`CA::Transaction::commit`), converging 3/3 soaks on the same
+trigger point: guest call counter `n=12420`, wall-clock `t≈130.8-131.7s`.
 
-s239 (static read of `plume_metal.cpp`/`rt64_present_queue.cpp`) proposed
-ONE candidate: a cross-thread `CAMetalLayer::setDrawableSize` race in
-`MetalSwapChain::resize()`, called from the `PresentQueue` background
-thread, not the main thread that owns `CA::Transaction::commit`.
+s239 (static read) proposed a cross-thread `CAMetalLayer::
+setDrawableSize` race candidate. s240 (dynamic instrument) REFUTED it —
+zero fires across a 459s soak, traced to `resize()` never being called
+because nothing in `src/main/` ever resizes the host window.
 
-s240 instrumented `resize()`'s drawable-size-change branch
-(`[metal-resize-entry]`, `plume_metal.cpp:2092-2096`) and soaked it
-(`metalresize1`): **zero fires in 459s**, including a run that survived
-the historical crash trigger point entirely (`CRASH: 0`). Traced why:
-`needsResize()` (`plume_metal.cpp:2105-2109`) gates `resize()`, and
-nothing in `src/main/` ever resizes the host window, so `resize()` is
-never invoked in normal operation. **This REFUTES the s239 hypothesis**
-with two independent lines of evidence (static + dynamic) — full detail
-PORTING-STATE Session 240, CURRENT-TRUTH -81.
+s241 tried to stand up Apple's malloc debug tooling
+(`MallocStackLogging=1`/`MallocScribble=1`) but:
+1. Discovered `~/Library/Logs/DiagnosticReports/` is outside this
+   session's allowed directories, and `malloc_history`/`atos`/`leaks`
+   are not in the Bash permission allowlist — **the "post-mortem query
+   malloc_history against the crash" plan is unreachable in this
+   sandbox, full stop.** Don't re-attempt it without a human granting
+   access or an allowlist change.
+2. Found the `malloclog1` soak was confounded: exporting `Malloc*` vars
+   at the wrapper level leaked them into every helper subprocess
+   `run_mission_keys.sh` spawns (bc/sleep/date/tail/sed/nested zsh), not
+   just the game binary, adding CPU churn during the timing-sensitive
+   pre-phase-gate window. Fixed via a new `GAME_EXTRA_ENV` mechanism in
+   `run_mission_keys.sh` (scopes extra env vars to ONLY the game
+   process's `env` invocation at the launch line) — verified
+   byte-identical behavior for unset `GAME_EXTRA_ENV` before trusting it.
+   `run_malloclog2.sh` is staged, ready to run, uses the fix.
 
-That closes the only concrete candidate either static read has found.
-Continuing to hunt for a 2nd/3rd candidate site by eyeballing
-`plume_metal.cpp` is low information value now — two passes over the
-same ~2000-line file have found one candidate and it was wrong. The
-higher-value move is to stop guessing WHERE the corruption happens and
-instead let Apple's own tooling tell us, at the point it actually
-occurs.
+The `malloclog1` run itself: `CRASH: 0` — inconclusive given the
+confound, not a real data point either way.
 
-## Do this iteration — stand up the tooling, do NOT expect to fix anything yet
+## Do this iteration
 
-This is a TOOLING + ONE SOAK work unit. The goal is a captured stack
-trace at the actual over-release/bad-write, not a patch.
-
-1. **Read `run_mission_keys.sh` and the launch line
-   (`./RogueSquadron64Recomp > "$OUTDIR/run.log" 2>&1 &`,
-   `scratch/s73_post_a_scene/run_mission_keys.sh:27`)** — the env vars
-   below need to be exported in the driver script BEFORE that launch
-   line, same pattern as the existing `ROGUESQ_LOG_*` exports.
-2. Add to a new copy of the driver
-   (`run_malloclog1.sh`, copied from `run_metalresize1.sh` — do NOT
-   overwrite `run_metalresize1.sh`, that instrument/result stays as
-   ground truth):
-   - `export MallocNanoZone=0`
-   - `export MallocStackLogging=1`
-   - Consider `MallocScribble=1` too (fills freed memory with a
-     recognizable pattern, `0x55`, making use-after-free reads more
-     likely to crash immediately/visibly instead of silently reading
-     stale-but-plausible data) — cheap to add, same soak, no extra cost.
-   - Do NOT add `MTL_DEBUG_LAYER=1` in the SAME soak as
-     `MallocStackLogging=1` — Metal's own validation layer is expensive
-     and changes GPU-side timing/scheduling enough that it could mask or
-     shift the bug (the crash is already known to be timing-sensitive,
-     iron rule 2 territory). Run `MallocStackLogging` alone first; only
-     add `MTL_DEBUG_LAYER` as a SEPARATE follow-up soak if the malloc
-     approach doesn't pan out.
-3. **Positive control, in the same run**: `MallocStackLogging=1` alone
-   does not crash on its own — verify it's actually active by checking
-   for its known startup behavior (it prints nothing by default, but
-   `leaks`/`malloc_history` can query a live PID). If unsure how to
-   positive-control this cheaply, the crash itself IS the control: if
-   the process crashes with `MallocStackLogging=1` active, run
-   `atos`/`malloc_history <pid> <bad-address>` (or capture the crash
-   dump path from `Console`/`~/Library/Logs/DiagnosticReports/`) on the
-   captured `si_addr` BEFORE the process's memory is torn down —
-   `MallocStackLogging` data lives in the process while it's alive AND
-   in a `.malloc_history`/crash-report addendum after a crash on macOS,
-   depending on OS version; check which applies THIS macOS version
-   before assuming the workflow.
-4. Run ONE soak with the same schedule/env as `metalresize1` (full
-   `campose*`/guard set stays armed) plus the new malloc env vars.
-5. **Discriminating outcome**: does this soak crash at all (given the
-   non-determinism, it may not — that's a null result requiring a
-   re-soak per iron rule 8's 3-strikes budget, not evidence of anything
-   yet)? If it crashes, does `MallocStackLogging`/`malloc_history`
-   produce an allocation-site stack trace for the faulting address? If
-   yes, that stack trace names the actual bug — evaluate it directly
-   rather than continuing to guess.
+1. Run `zsh run_malloclog2.sh` from `scratch/s73_post_a_scene/`
+   (`run_in_background: true`, generous timeout 480000-600000ms — same
+   pattern as `metalresize1`/`malloclog1`, ~460s expected). Foreground/
+   synchronous within the background task (it does its own SIGKILL at
+   the end); block-wait with `TaskOutput` if the Stop hook fires mid-run
+   rather than re-launching.
+2. Positive control / sanity check BEFORE trusting any result: this run
+   should behave like a normal soak with no extra subprocess overhead —
+   spot-check the captured background output does NOT show
+   `MallocStackLogging` messages from non-game helper PIDs (bc/sleep/
+   date/tail/sed) the way `malloclog1`'s did. If it does, `GAME_EXTRA_ENV`
+   isn't actually scoping correctly — stop and re-diagnose before
+   drawing any conclusion from the crash-or-not outcome.
+3. Discriminating outcome: does it crash? If yes — since `malloc_history`
+   is unreachable — the ONLY postmortem evidence available is the
+   existing crash handler's stderr dump already captured in `run.log`
+   (`[CRASH][siginfo] si_addr=...`, `[CRASH][mcontext] ...` register
+   file, `backtrace_symbols_fd`). Compare `si_addr` against the
+   `MallocScribble=1` pattern (`0x55` bytes) — if the faulting address or
+   a nearby read resolves to scribbled memory, that's a positive
+   identification of a use-after-free without needing `malloc_history` at
+   all. If it doesn't crash, this is a null result requiring a decision
+   per iron rule 8 (this would be soak #2 of this specific tooling
+   attempt with a clean environment — one more clean null is the
+   3-strike budget, not yet exhausted, but getting close; if it doesn't
+   crash, weigh whether malloc debug tooling itself (even correctly
+   scoped) perturbs the race enough to matter, vs. plain non-determinism).
 
 ## Do NOT do this iteration
 
-- Do NOT re-run `campose15` or touch the old `[campose-entry]` instrument
-  (iron rule 8 budget spent, unchanged).
-- Do NOT re-run `metalresize1` — that result stands (0 fires, hypothesis
-  refuted). Do not re-litigate it without new information.
-- Do NOT combine `MallocStackLogging=1` and `MTL_DEBUG_LAYER=1` in the
-  same soak (see above — confounds timing-sensitive results).
+- Do NOT attempt `malloc_history`/`atos`/`leaks`/reading
+  `~/Library/Logs/DiagnosticReports/` — both confirmed unreachable in
+  this sandbox this session, not worth re-testing without an environment
+  change.
+- Do NOT re-run `malloclog1` (confounded, superseded by `malloclog2`) or
+  `metalresize1`/`campose15` (results stand, don't re-litigate).
+- Do NOT combine `MTL_DEBUG_LAYER=1` with `MallocStackLogging=1` in the
+  same soak — separate follow-up only if `malloclog2` doesn't pan out.
 - Do NOT implement any speculative fix — no concrete bad-write site has
-  been identified yet; there is nothing to fix.
+  been identified yet.
 
-## Environment notes (carried forward, still current as of s240)
+## Environment notes (carried forward, still current as of s241)
 
-- **Permission gate CONFIRMED CLEARED through s240** — trust it.
+- **Permission gate CONFIRMED CLEARED through s241** — trust it, with
+  the two new exceptions above (`DiagnosticReports` dir access,
+  `malloc_history`/`atos`/`leaks` commands — both blocked).
+- **`GAME_EXTRA_ENV` (new, s241)**: set this (space-separated
+  `VAR=val VAR2=val2` string) in a driver wrapper instead of `export`ing
+  vars you only want the GAME process to see — `run_mission_keys.sh`
+  passes it through `env ${=GAME_EXTRA_ENV}` at the launch line only.
+  Leave unset for anything that should reach the whole driver tree (like
+  the existing `ROGUESQ_LOG_*` vars, which are this codebase's own env
+  vars and don't affect helper subprocesses).
 - **Block-scope `extern "C"` linkage-specifications do not compile**
-  (C++17 requires namespace scope) — new finding this session, applies
-  to any future cross-TU declaration added inside a function body in
-  this codebase (`plume_metal.cpp` or elsewhere in `lib/rt64`).
+  (C++17 requires namespace scope) — applies to any future cross-TU
+  declaration added inside a function body in this codebase.
 - Bash cwd persists across tool calls within a session — an explicit
   `cd` changes it for ALL subsequent calls. Prefer absolute paths; issue
   `cd` as its own call, then the bare command as a second call.
 - `cmake --build` is safe to background; the game-soak launch script
   must stay SYNCHRONOUS/foreground-style — launch with
-  `run_in_background: true` (generous timeout, e.g. 330000-600000ms). A
-  completion notification arrives automatically; if the Stop hook fires
-  while the run is still in flight, block-wait with `TaskOutput`
-  (`block: true`, generous timeout) rather than re-launching.
+  `run_in_background: true` (generous timeout). A completion
+  notification arrives automatically; if the Stop hook fires while the
+  run is still in flight, block-wait with `TaskOutput` (`block: true`,
+  generous timeout) rather than re-launching.
+- **`TaskOutput` with `block: true` dumps the ENTIRE captured output
+  every call** (confirmed s241 — a ~460s soak with per-tick subprocess
+  noise produced a multi-hundred-KB dump well before completion). Prefer
+  checking `ps aux | grep -i roguesquadron` (cheap, tells you if the
+  process is still alive) and `grep`-ing small excerpts from the run's
+  own `run.log`/output file over re-calling `TaskOutput` repeatedly.
 - `/tmp` is not writable this session — write scratch/report files
   inside `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64` only.
 - Compound `cd ... && ...` commands and `git -C <path> <cmd>` get
@@ -124,12 +119,12 @@ trace at the actual over-release/bad-write, not a patch.
   `ROGUESQ_LOG_HEAPWALKER_GUARD`/`GUARD3`/`GUARD4`,
   `ROGUESQ_LOG_MESGQUEUE_GUARD`, `ROGUESQ_LOG_HEAPLISTDEQ_GUARD`,
   `ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`, `ROGUESQ_LOG_DL_PAYLOAD_STALE=1`
-  — keep these armed in the new soak so it's additive, not a fresh
+  — keep these armed in any new soak so it's additive, not a fresh
   unknown environment.
 - **This exact schedule (`schedulepush2`/`campose*` family) crash rate at
   the SELECT-CRAFT->mission transition is now 5/9 soaks crashed** vs 4/9
-  survived (updated by `metalresize1`'s clean run) — still roughly
-  even-odds, not "mostly survives."
+  survived (last updated by `metalresize1`; `malloclog1` is NOT counted,
+  confounded) — still roughly even-odds, not "mostly survives."
 - **`rs64_elapsed_seconds()`** (`src/main/rt64_render_context.cpp`,
   `extern "C"`) is the canonical shared wall-clock — declare
   `extern "C" double rs64_elapsed_seconds(void);` at NAMESPACE scope
@@ -158,11 +153,11 @@ trace at the actual over-release/bad-write, not a patch.
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget and the
-Read tool's 256 KB single-read limit (confirmed s195, still true s240 —
+Read tool's 256 KB single-read limit (confirmed s195, still true s241 —
 read it with `grep`/offset-limited `Read`, never a plain whole-file
-`Read`) — now larger still after s240's addition. Migrate durable
+`Read`) — flagged for 32+ sessions without action. Migrate durable
 mechanism/architecture material to `PROJECT-OVERVIEW.md` and prune
-superseded detail — flagged for 31+ sessions without action.
+superseded detail.
 
 `fixup_game_funcs.py`'s untracked, single-copy state in the `N64Recomp`
 sibling checkout has been flagged since s83, still not fixed (not this

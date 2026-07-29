@@ -24,7 +24,16 @@ if [[ ! -f rogue_squadron.z64 ]]; then
   exit 3
 fi
 
-./RogueSquadron64Recomp > "$OUTDIR/run.log" 2>&1 &
+# s241: GAME_EXTRA_ENV scopes extra env vars (e.g. Malloc* debug tooling)
+# to ONLY the game binary's own process, not this script's helper
+# subprocesses (bc/sleep/date/tail/sed/nested zsh) -- a plain `export`
+# in the calling wrapper leaks Malloc* vars to every libSystem-linked
+# helper process too, since malloc reads them from the environment
+# regardless of which binary it's linked into. Empty by default (unset),
+# so `env ${=GAME_EXTRA_ENV} ./RogueSquadron64Recomp` is identical to
+# the previous direct exec for every existing soak driver.
+GAME_EXTRA_ENV=${GAME_EXTRA_ENV:-}
+env ${=GAME_EXTRA_ENV} ./RogueSquadron64Recomp > "$OUTDIR/run.log" 2>&1 &
 PID=$!
 # s234: real UNIX-epoch process-start stamp, so the game's own t=%.1f
 # diagnostic fields (process-relative, rs64_elapsed_seconds()) can be

@@ -663,7 +663,47 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s240)
+## Next steps, in order of expected value (s241)
+
+-82. **(s241) Stood up Apple malloc debug tooling per s240's plan, but the
+    first soak (`malloclog1`) was CONFOUNDED and the "query `malloc_history`"
+    half of the plan is UNREACHABLE in this sandbox — fix landed, clean
+    re-soak (`malloclog2`) staged, not yet run.** Two negative environment
+    checks done BEFORE spending the soak: `~/Library/Logs/DiagnosticReports/`
+    is outside this session's allowed directories (direct tool block, not
+    inferred), and `malloc_history`/`atos`/`leaks` are not in the Bash
+    permission allowlist (`.claude/settings.json`) — an autonomous session
+    cannot grant the approval they'd need. **So even a crash under
+    `MallocStackLogging=1` cannot be post-mortem-analyzed with Apple's own
+    tools in this environment; do not re-attempt that path without either a
+    human granting access or the allowlist changing.** Separately, found and
+    fixed a real confound: the `malloclog1` wrapper `export`ed
+    `MallocNanoZone`/`MallocStackLogging`/`MallocScribble` at the script top
+    (same pattern as `ROGUESQ_LOG_*`), but unlike those, `Malloc*` vars are
+    read by every libSystem-linked process — the export leaked into every
+    helper subprocess `run_mission_keys.sh` spawns (`bc`/`sleep`/`date`/
+    `tail`/`sed`/nested `zsh`), confirmed by hundreds of `MallocStackLogging:
+    turning off...` lines from non-game PIDs in the captured output, heaviest
+    during the ~45s pre-phase-gate polling loop (iron-rule-2 territory: a
+    timing-sensitive cross-thread race, and ~15 extra subprocess spawns per
+    0.2s tick during setup is exactly the kind of perturbation that could
+    mask it by chance). **Fix**: `run_mission_keys.sh` now reads an optional
+    `GAME_EXTRA_ENV` string and does `env ${=GAME_EXTRA_ENV}
+    ./RogueSquadron64Recomp ...` at the launch line only, scoping extra env
+    vars to the game process without touching the driver's own helper
+    subprocesses; verified empty/unset `GAME_EXTRA_ENV` is byte-identical to
+    the previous direct exec (standalone `zsh -c` check) before trusting it,
+    so every prior soak driver is unaffected. The confounded `malloclog1` run
+    itself: `CRASH: 0` over the full soak (past the historical n=12420/
+    t≈131s trigger) — NOT read as evidence either way given the confound.
+    **Next step**: run `run_malloclog2.sh` (already staged, same schedule,
+    uses the fixed `GAME_EXTRA_ENV` scoping) for a clean test of whether
+    `MallocScribble=1` changes the crash's `si_addr` character (e.g. reads
+    landing in the `0x55...` scribble pattern would positively identify a
+    use-after-free) even without live `malloc_history` querying — the crash
+    handler's own stderr dump (register file + `si_addr` + backtrace,
+    already captured into `run.log`) is the only postmortem evidence channel
+    actually reachable here. Full detail: PORTING-STATE Session 241.
 
 -81. **(s240) Instrumented and soaked `MetalSwapChain::resize()` — the s239
     cross-thread `CAMetalLayer::setDrawableSize` race hypothesis is now

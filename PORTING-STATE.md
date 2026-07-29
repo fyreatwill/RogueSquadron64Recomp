@@ -22792,3 +22792,64 @@ rule.
 scope (`fixup_game_funcs.py` untracked sibling-checkout state,
 `CURRENT-TRUTH.md` over both size budgets — migration to
 `PROJECT-OVERVIEW.md` remains undone, now flagged for 31+ sessions).
+
+## Session 241 (2026-07-28)
+
+Did the tooling stand-up NEXT.md called for: soaked the game with Apple's
+malloc debug tooling armed (`MallocNanoZone=0 MallocStackLogging=1
+MallocScribble=1`) alongside the full `campose*`/guard set, same
+schedule as `metalresize1`, tag `malloclog1`.
+
+**Two independent sandbox-access checks, both negative, discovered
+before spending the soak**: `~/Library/Logs/DiagnosticReports/` is
+outside this session's allowed directories (`ls` on it is blocked
+outright — confirmed by direct tool block, not inferred), and
+`malloc_history`/`atos`/`leaks` are not in the Bash permission allowlist
+(`.claude/settings.json`), so they'd need an approval this autonomous
+session cannot grant. This means the "query `malloc_history` against the
+crashed/live PID" half of the NEXT.md plan is **not reachable in this
+environment at all**, independent of whether the soak crashes. Recorded
+here so the next iteration doesn't re-attempt the same blocked path.
+
+**Confound found and fixed before trusting the soak's result**: the
+`malloclog1` wrapper `export`ed the `Malloc*` vars at the top of the
+script, same pattern as the existing `ROGUESQ_LOG_*` vars. Unlike those,
+`Malloc*` vars are read by every libSystem-linked process, not just this
+codebase's own binary — so the export leaked into every helper
+subprocess `run_mission_keys.sh` spawns (`bc`, `sleep`, `date`, `tail`,
+`sed`, nested `zsh`). Confirmed directly in the captured output: hundreds
+of `MallocStackLogging: turning off stack logging...`/`can't turn off...
+because it was not enabled` lines from PIDs one-to-several past the
+actual game PID, each pair of `zsh`+helper spawn paying MSL setup/
+teardown overhead. This was heaviest during the ~45s pre-phase-gate VI-
+width polling loop (a `bc`+`date` call roughly every 0.2s), which is
+iron-rule-2 territory: this is a timing-sensitive cross-thread race, and
+added CPU churn from ~15 extra subprocess spawns per tick during setup
+is exactly the kind of perturbation that could mask it by chance.
+
+**Fix landed**: `run_mission_keys.sh` now reads an optional
+`GAME_EXTRA_ENV` string and passes it through `env ${=GAME_EXTRA_ENV}`
+immediately before the game binary launch line only, so extra env vars
+reach the game process without touching the driver script's own helper
+subprocesses. Empty/unset `GAME_EXTRA_ENV` is byte-identical to the
+previous direct exec (verified in isolation with a standalone `zsh -c`
+before trusting it in the real soak) — every prior soak driver that
+doesn't set it is unaffected. `run_malloclog2.sh` is staged as a ready-
+to-run copy using the fixed scoping, tag `malloclog2`.
+
+**Result of the confounded `malloclog1` run itself**: `CRASH: 0` over
+the full soak (reached VI width transitions through `t≈178.7s` per the
+last `[phase]` line, well past the historical n=12420/t≈131s trigger).
+Given the confound above, this is NOT read as a second data point for
+"malloc debug tooling makes the crash disappear" — it's simply
+inconclusive, same status as before this session. The clean re-soak
+(`malloclog2`) is the next step, not a repeat of this one.
+
+This session did not touch `lib/rt64`/`lib/N64ModernRuntime` (those
+submodules' pre-existing dirty state from prior sessions is untouched);
+no `submodule-patches/export.sh` needed.
+
+**Housekeeping**: same items flagged again, still not this session's
+scope (`fixup_game_funcs.py` untracked sibling-checkout state,
+`CURRENT-TRUTH.md` over both size budgets, now flagged for 32+
+sessions).
