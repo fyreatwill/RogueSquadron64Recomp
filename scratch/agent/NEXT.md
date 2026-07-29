@@ -1,86 +1,141 @@
-# NEXT work unit — continue the project-wide whack-a-mole static sweep
-# (140 candidates remain), or pivot to CURRENT-TRUTH housekeeping
+# NEXT work unit — a fresh, hot lead inside heapFreeListDequeue, OR
+# continue the project-wide whack-a-mole static sweep (139 candidates remain)
 
-## Where the investigation stands (s250)
+## Where the investigation stands (s251)
 
-s250 finished all 3 of `selectPostCrawlCraft`'s s249-flagged candidates
-(the function is now fully guarded) and confirmed a process bug worth
-remembering below. Landed:
+s251 finished all 3 of `reserveAndEmitDLEntry`'s flagged tail-walk
+candidates (the function is now fully guarded) and, more importantly,
+**found a fresh, uncatalogued, confirmed-hot crash site worth chasing
+directly next session.** Landed:
 
-1. Two new guard pairs in `fixup_game_funcs.py` (sibling `N64Recomp`
-   checkout): `funcs_30.c` 0x800CBDA8 (helper A) and 0x800CBDE4 (helper
-   B) — two near-identical inlined doubly-linked-list "insert at tail"
-   helpers, each guarded with TWO checks (GUARD1 before the self-ref
-   walk, GUARD2 before the peek-load of the freshly-walked pointer) since
-   the loop dereferences the SAME register twice back-to-back — a
-   single guard before the walk alone would leave the peek-load exposed.
-   This matches `renderUnlitMeshFaces`'s s219 GUARD/GUARD3 shape, NOT
-   `selectPostCrawlCraft`'s own s249 single-guard template (two
-   *different* aliased registers) — **read the whole loop body every
-   time; do not assume one guard shape fits all sites.**
-2. Build clean, patch report audited (saved to
-   `scratch/agent/s250_fixup_report.txt` — 201 lines, both new guards
-   `x1`, no anomalies beyond the pre-existing unrelated
-   `projectModelBoundsToScreen guard3 x2`).
-3. 2 soak attempts: `selectpostcrawlguard2` died pre-title-screen to the
-   unrelated, already-catalogued 23rd crash class (`waitForAnyAudioSlot`)
-   — uninformative, not counted against budget.
-   `selectpostcrawlguard3` crossed SELECT-CRAFT cleanly, ran the full
-   150s hold, **CRASH: 0** — but **zero guard fires of any kind**,
-   including the usual `heapwalker-guard4` positive control. This is a
-   weak single-sample null — do NOT treat it as "guards confirmed safe."
+1. Three new guards in `fixup_game_funcs.py` (sibling `N64Recomp`
+   checkout): `funcs_3.c` `reserveAndEmitDLEntry`'s 3 near-identical
+   "find insertion tail" loops (0x8000CBE8/0x8000CCE4/0x8000CDF0). Each
+   loop's self-ref walk (`ctx->r3 = MEM_W(ctx->r3, 0X0)`) is fed by a
+   pointer already range-checked by the existing s169 free-list-pop
+   guard, but the walk's own result was immediately peek-loaded
+   (`ctx->r2 = MEM_W(ctx->r3, 0X0)`) with **no guard of its own** — a
+   genuinely new, unvalidated dereference every iteration. Traced end to
+   end: unlike `selectPostCrawlCraft`'s s250 helpers, only **ONE** guard
+   per site closes this loop (not two) — the walk's input is always
+   already-safe (iteration 1 = the s169-validated entry pointer,
+   iteration N+1 = exactly the address this new guard validated one
+   iteration earlier). On failure, restores the pre-walk pointer and
+   jumps to the loop's own natural-termination label (same semantics as
+   its `r2==0` exit). New env var `ROGUESQ_LOG_DLENTRY_TAIL_GUARD`,
+   `site=0/1/2`.
+2. **Resolved (not fixed) a stale "worth a look" flag**:
+   `renderUnlitMeshFaces`'s separate line-5017 self-ref site is a FALSE
+   POSITIVE of the static finder (`find_unguarded_walks.py`'s naive
+   self-ref-load heuristic doesn't do control-flow analysis). Full trace:
+   the loop label has exactly one fallthrough entry (right after a check
+   that already dereferenced the same address) plus its own loop-back
+   goto (gated by the existing s219 guard validating the walked pointer
+   before allowing loop-back) — so the flagged line never executes a
+   genuinely new, unvalidated dereference. **No guard added, none
+   needed.** Lesson for the remaining candidates: before writing a guard,
+   check whether the flagged site is reached ONLY via paths that already
+   validated the same address (either a just-prior successful read of
+   the identical address, or an existing guard that dominates the
+   loop-back edge) — if so, it's a false positive, not a real gap.
+3. Build clean (patch report audited, saved to
+   `scratch/agent/s251_fixup_report.txt` — 204 lines; all 3 new guards
+   `x1`, no new anomalies — the same pre-existing multiplicities from
+   prior sessions, e.g. `projectModelBoundsToScreen guard3 x2`, nothing
+   new stacked).
+4. **1 soak** (`dlentrytailguard1`, `HOLD_S=150`): crossed the
+   SELECT-CRAFT transition cleanly (74.5s, established signature), died
+   ~1s into the hold to an **already-catalogued, unrelated** SIGBUS in
+   `heapFreeListDequeue` (`x0`/`x9`=`0x0000000300000000`, the RDRAM-base
+   whack-a-mole signature), backtrace: `heapFreeListDequeue(+13268) <-
+   submitSceneNodeRender(+28592) <- processSceneNode(+11828) <-
+   traverseSceneGraphRecursive(+1880) <- setupCameraMatrices(+28260) <-
+   static_5_800AAD9C <- static_5_800C6854 <- menuOverlayInit <-
+   mainGameLoop`. Confirmed unrelated to this session's edit (different
+   function, no call/data relationship to `reserveAndEmitDLEntry`). New
+   guards fired **0/3** (uninformative null — same caveat as s250: does
+   NOT disprove the fix, the render-tree walk simply never reached
+   `reserveAndEmitDLEntry` in the ~1s window before the unrelated crash).
+   `heapwalker-guard4` positive control fired once, confirming guard
+   infra was live.
 
-**Process bug found and worked around this session (not fixed in the
-script itself): `fixup_game_funcs.py` is NOT fully idempotent.** The s139
-`rs_malloc` entry-capture patch matches a literal function-prologue
-anchor that its own insertion doesn't consume, so re-running the script
-against already-patched `funcs_*.c` files silently stacks duplicate
-`static`/local declarations, which breaks the build with unrelated
-`redefinition of ...` errors in `funcs_0.c` (nothing to do with whatever
-you were actually working on — very confusing if you don't know this).
-**Invoke `fixup_game_funcs.py` EXACTLY ONCE per regen cycle.** If you
-need to inspect its report more than once, redirect the FIRST invocation
-to a file (e.g. `python3 fixup_game_funcs.py > report.txt 2>&1`) and grep
-the file — never re-run the script itself to answer a follow-up
-question about what it did.
+## The single highest-value next step: chase the new heapFreeListDequeue site
 
-## The two real remaining options
+This soak pinned down a **previously uncatalogued crash site inside
+`heapFreeListDequeue` itself** (`funcs_3.c`), at an offset (~13268-14832
+bytes into the function) that its OWN existing guard
+(`ROGUESQ_LOG_HEAPLISTDEQ_GUARD`, armed and confirmed live this run —
+did NOT fire, so it does not cover this particular deref) does not
+reach. Unlike `selectPostCrawlCraft` (never fired in 3 soaks) or this
+session's `reserveAndEmitDLEntry` guards (0/3, never exercised), this
+call path (`submitSceneNodeRender -> processSceneNode ->
+traverseSceneGraphRecursive -> setupCameraMatrices -> ... ->
+menuOverlayInit`) is **proven hot** — it's what's actually running when
+the process dies, moments after every recent SELECT-CRAFT-transition
+soak. Recommended next work unit:
 
-1. **Continue the static sweep** — 140 candidates remain (full list
-   below, `selectPostCrawlCraft` entry now fully removed — all 3 sites
-   done). Each needs the SAME rigor as s249/s250: read the whole loop
-   body (not just the flagged self-ref line), identify every register
-   that aliases the untrusted pointer (may be a different register, per
-   s249, or the SAME register re-read after a peek-load, per s250 — both
-   shapes exist in this codebase), find a safe bail target by reading
-   forward (a shared error-path goto if the function has an established
-   contract, or a plain `return;` for void-returning internal helpers
-   with no such contract), then patch + regen + build + audit the
-   patch-report multiplicity + (ideally) one soak. This is real,
-   valuable, `ADVANCED`-able work with unusually high leverage (this
-   family has cost 6+ sessions their actual experiments by pre-empting
-   soaks — see s89-93/s194/s216/s219-220/s248). Good next candidates,
-   roughly in order of plausible relevance to frequently-soaked call
-   paths (render/DL-emission functions, all in `funcs_3.c`/`funcs_4.c`,
-   are the same family as the already-fixed
-   `heapWalker`/`renderUnlitMeshFaces`/`submitSceneNodeRender`):
-   `renderLitMeshFaceGroup` (14 sites, `funcs_4.c`),
-   `renderLitTexturedMeshFaces` (11 sites, `funcs_3.c`),
-   `func_800AE3F0` (10 sites, `funcs_27.c`), `beginFrameDLChunk` /
-   `emitFrameRdpInitDl` (10 sites each, `funcs_3.c`).
-2. **`docs/CURRENT-TRUTH.md` housekeeping** — still ~407 KB+, flagged
-   41+ sessions, still not done. Per `ITERATION.md` this does NOT count
-   as `ADVANCED` on its own — pair it with a real change or expect to
-   file `SUBSTITUTED`.
+1. `grep -n "heapFreeListDequeue" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c`
+   to find the function, read its FULL body (it's large — the crash
+   offset is ~13-15KB in, so expect several hundred lines), and find the
+   existing `ROGUESQ_LOG_HEAPLISTDEQ_GUARD` site(s) for comparison.
+2. Use the crash PC (`heapFreeListDequeue+14832`, base
+   `0x102b9c000`, PC `0x102fb7804`) with `atos`/`nm` on the fresh
+   `build/RogueSquadron64Recomp` binary if the line offset alone isn't
+   enough to localize the exact C statement (offsets drift a little
+   between the pc-symbol line and the backtrace frame line — 14832 vs
+   13268 in this run's log, likely inlining/symbolication skew, not two
+   different bugs — confirm which is closer to the truth before trusting
+   either number blindly).
+3. Full-loop-body read (mandatory, per s249-s251's own repeated lesson)
+   to find the unguarded self-ref/peek-load pair the existing guard
+   doesn't dominate — do not assume the same single-guard-between-walk-
+   and-peek template fits without re-deriving it for this specific site's
+   register aliasing.
+4. Patch + single regen cycle + build + audit + soak with
+   `ROGUESQ_LOG_HEAPLISTDEQ_GUARD` (existing) and a new site-specific var
+   both armed, so a fire on the NEW guard vs. the OLD one distinguishes
+   which site actually took the hit.
 
-## Full candidate list (140 total, 3 fixed as of s250)
+This is higher expected value than continuing the blind static sweep
+right now, because it's the first candidate in several sessions with
+direct evidence (not just static pattern-matching) that it sits on a hot
+path.
+
+## Otherwise: continue the static sweep (139 candidates remain)
+
+If the `heapFreeListDequeue` lead is exhausted or blocked, fall back to
+the static sweep. Same rigor as every prior session: read the whole loop
+body (not just the flagged self-ref line), identify every register that
+aliases the untrusted pointer, check whether the site is a FALSE
+POSITIVE first (per this session's `renderUnlitMeshFaces` lesson — is it
+reached only via paths that already validated the same address?), find a
+safe bail target by reading forward, then patch + regen + build + audit
++ soak. Good next candidates, roughly in order of plausible relevance to
+frequently-soaked call paths (all in `funcs_3.c`/`funcs_4.c`, same family
+as the already-fixed `heapWalker`/`renderUnlitMeshFaces`/
+`submitSceneNodeRender`/`reserveAndEmitDLEntry` — and per s251's soak,
+this family is confirmed to execute on the hot path this session):
+`renderLitMeshFaceGroup` (14 sites, `funcs_4.c`),
+`renderLitTexturedMeshFaces` (11 sites, `funcs_3.c`),
+`func_800AE3F0` (10 sites, `funcs_27.c`), `beginFrameDLChunk` /
+`emitFrameRdpInitDl` (10 sites each, `funcs_3.c`).
+
+`docs/CURRENT-TRUTH.md` housekeeping — still ~407 KB+, flagged 41+
+sessions, still not done. Per `ITERATION.md` this does NOT count as
+`ADVANCED` on its own — pair it with a real change or expect to file
+`SUBSTITUTED`.
+
+## Full candidate list (139 total, 4 fixed as of s251, 1 false-positive resolved)
 
 Grouped by `(file, function)`. Format: `file: func -- N site(s) -- lines
 [selfref line numbers in funcs_*.c, sibling N64Recomp/RecompiledFuncs/]`.
 Re-derive with `python3 scratch/agent/find_unguarded_walks.py` if the
 sibling checkout changes (it regenerates `unguarded_walk_candidates.json`
-too). `selectPostCrawlCraft` is now fully done (all 3 sites, s249+s250)
-and removed from this list.
+too). `selectPostCrawlCraft` (s249+s250) and `reserveAndEmitDLEntry`
+(s251) are now fully done and removed from this list.
+`renderUnlitMeshFaces`'s single flagged site is a confirmed FALSE
+POSITIVE (s251, see above) and also removed — do not re-add it without a
+new trace showing the control flow changed.
 
 ```
 funcs_20.c: model_animation_offset_convert -- 1 -- [1947]
@@ -111,7 +166,6 @@ funcs_3.c: recordDeferredDrawRefC -- 1 -- [14388]
 funcs_3.c: recordDeferredDrawRefD -- 1 -- [14593]
 funcs_3.c: recordDeferredDrawRefVariant -- 1 -- [2241]
 funcs_3.c: renderLitTexturedMeshFaces -- 11 -- [22357, 22407, 22447, 22908, 23039, 23148, 23180, 23334, 23486, 23681, 23816]
-funcs_3.c: reserveAndEmitDLEntry -- 3 -- [14836, 15029, 15222]
 funcs_35.c: static_4_800B13E0 -- 8 -- [3551, 3711, 3853, 4035, 4248, 4408, 4579, 4724]
 funcs_35.c: static_4_800B3FB4 -- 1 -- [11851]
 funcs_35.c: static_4_800B40A0 -- 1 -- [12007]
@@ -120,16 +174,19 @@ funcs_4.c: drawSubtitleText -- 6 -- [16349, 16581, 16945, 17740, 18531, 19115]
 funcs_4.c: drawTextGlyphRect -- 1 -- [15740]
 funcs_4.c: renderFlatMeshFaceGroup -- 6 -- [3189, 3421, 3693, 4338, 4540, 4741]
 funcs_4.c: renderLitMeshFaceGroup -- 14 -- [8640, 8870, 9142, 9562, 10174, 10426, 10760, 10957, 11318, 11615, 11997, 12635, 12916, 13230]
-funcs_4.c: renderUnlitMeshFaces -- 1 -- [5017]
 funcs_4.c: setupCameraMatrices -- 3 -- [19722, 20792, 20981]
 funcs_43.c: static_5_800CBBB8 -- 1 -- [13142]
 funcs_43.c: static_5_800CBD88 -- 1 -- [13480]
 funcs_43.c: static_5_800CBDC4 -- 1 -- [13535]
 ```
 
-Note: `funcs_4.c: renderUnlitMeshFaces -- 1 -- [5017]` is a SEPARATE site
-from the one already guarded there (s219, address `0x80011CE0`) — not yet
-traced, worth a look since that function is already known-hot.
+Note: `funcs_4.c: setupCameraMatrices -- 3 -- [19722, 20792, 20981]` is an
+ancestor in this exact session's crash backtrace (it calls
+`traverseSceneGraphRecursive` which eventually reaches the crash) — NOT
+confirmed itself to contain an unguarded dereference that fired, but
+worth prioritizing given it's on a demonstrably hot path. Read fully
+before assuming its 3 flagged sites are real gaps (apply the s251
+false-positive lesson).
 
 Note: `funcs_43.c: static_5_800CBBB8/800CBD88/800CBDC4` are worth a
 second look — their line numbers/offsets are suspiciously close to
@@ -143,67 +200,62 @@ duplicate JSON entry before spending a session on it — re-derive via
 
 - Do NOT re-run `mtldebug1`..`mtldebug4`, `scissorfix1`, `malloclog1`,
   `malloclog2`, `metalresize1`, `selectpostcrawlguard1`,
-  `selectpostcrawlguard2`, `selectpostcrawlguard3` in place — superseded
-  tags. New soaks need new tags.
+  `selectpostcrawlguard2`, `selectpostcrawlguard3`, `dlentrytailguard1`
+  in place — superseded tags. New soaks need new tags.
 - Do NOT batch-apply guards from the JSON candidate list mechanically —
-  every site needs its own full-loop-body read first (s249 found a
-  two-aliased-register case, s250 found a same-register-peek-load case —
-  assume neither template is universal).
+  every site needs its own full-loop-body read first, AND a check for
+  whether it's a false positive (s251: `renderUnlitMeshFaces`'s line-5017
+  site looked identical to a real gap by the naive heuristic but wasn't).
 - Do NOT invoke `fixup_game_funcs.py` more than once per regen cycle
-  (see the process-bug note above) — it will silently stack duplicate
+  (see the s250 process-bug note) — it will silently stack duplicate
   declarations from the non-idempotent `rs_malloc` entry-capture patch
   and break the build with unrelated errors.
-- Do NOT cite `selectpostcrawlguard3`'s CRASH:0 as "these guards are
-  confirmed safe" — it had zero positive-control fires, so it's a weak
-  single-sample null, not a validated clean pass.
+- Do NOT cite `selectpostcrawlguard3`'s or `dlentrytailguard1`'s clean/
+  0-fire results as "these guards are confirmed safe" — both are weak,
+  single-sample nulls (the former had zero positive controls; the latter
+  had a positive control but the new guards themselves never got
+  exercised before an unrelated crash pre-empted the run).
 - Do NOT revive the NaN_CHECK-disable idea (CURRENT-TRUTH `-55`/`-56`) —
   already tried, A/B-tested, and reverted at s216 (`-57`).
 
-## Environment notes (carried forward, still current as of s250)
+## Environment notes (carried forward, still current as of s251)
 
-- **Permission gate CONFIRMED CLEARED through s250.**
+- **Permission gate CONFIRMED CLEARED through s251.**
 - **`GAME_EXTRA_ENV`** (`run_mission_keys.sh`, s241): space-separated
   `VAR=val VAR2=val2` string, scopes extra env vars to ONLY the game
   process.
 - **Env-gated logging pattern**: `static const bool s_X = [](){ const
   char *v = std::getenv("VAR_NAME"); return v && v[0] && v[0] != '0'; }();`
   then `if (s_X) { std::fprintf(stderr, ...); std::fflush(stderr); }`.
-- **Block-wait pattern, corrected this session**: launching the soak with
-  Bash `run_in_background: true` and then calling `ScheduleWakeup` does
-  NOT actually let you idle — the Stop-hook gate re-invokes immediately
-  on every turn-end attempt while `STATUS=WORKING`, regardless of the
-  scheduled wakeup time. To genuinely block, run a SECOND Bash call
-  (foreground, `run_in_background` omitted/false, generous `timeout` up
-  to 480000ms) that polls `until ! kill -0 <game_pid> 2>/dev/null; do
-  sleep N; done` — get the game's pid from the driver's first output line
-  (`pid NNNNN out=...`) or `ps aux | grep RogueSquadron64Recomp`. This
-  tool call itself blocks until the process exits, which is what actually
-  lets a soak run to completion within one iteration.
+- **Block-wait pattern**: launch the soak with Bash `run_in_background:
+  true`, read the driver's first output line for `pid NNNNN out=...`,
+  then run a SECOND Bash call (foreground, generous `timeout` up to
+  480000ms) that polls `until ! kill -0 <game_pid> 2>/dev/null; do sleep
+  N; done`. This tool call blocks until the process exits, letting a soak
+  run to completion within one iteration. (`ScheduleWakeup` does NOT
+  substitute for this — the Stop-hook gate re-invokes on every turn-end
+  attempt while `STATUS=WORKING` regardless of scheduled wakeup time.)
 - **`update_screen` counter rate is ~60/s** once past the title screen —
   useful for extrapolating wall-clock death time from the last `[vi]`
   line when the driver's own `wall=` figure undercounts.
 - `/tmp` is not writable this session — write scratch/report files
   inside `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64` only.
-  This also means you cannot `2>&1 | tee /tmp/...` or similar — redirect
-  directly to a path under one of those three checkouts.
 - Compound `cd ... && ...` and `git -C <path> <cmd>` get blocked/need
   extra approval — issue `cd` as its own Bash call first, and plain
-  `git status`/`git diff`/etc. (no `-C`) once cwd is already there. Even
-  `cmd; echo ...` (semicolon-chained) can get blocked as a compound op —
-  issue each command as its own Bash call when in doubt.
+  `git status`/`git diff`/etc. (no `-C`) once cwd is already there.
 - **Headless permission matching is a PREFIX match** — write
   `env PROBE_MODE=1 zsh run.sh`, not `PROBE_MODE=1 zsh run.sh`.
 - **`campose*` armed env-var set** (unchanged since `campose11`, now also
-  used by `selectpostcrawlguard2`/`3`):
+  used by `selectpostcrawlguard2`/`3`/`dlentrytailguard1`):
   `ROGUESQ_LOG_CAMPOSE`, `ROGUESQ_LOG_MAT3INV`,
   `ROGUESQ_LOG_UNLIT_MESH_TRACER`, `ROGUESQ_LOG_RENDERUNLIT_GUARD`,
   `ROGUESQ_LOG_HEAPWALKER_GUARD`/`GUARD3`/`GUARD4`,
   `ROGUESQ_LOG_MESGQUEUE_GUARD`, `ROGUESQ_LOG_HEAPLISTDEQ_GUARD`,
   `ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`, `ROGUESQ_LOG_DL_PAYLOAD_STALE=1`,
-  `ROGUESQ_LOG_SELECTPOSTCRAWL_GUARD=1` (s249) — plus the new
-  `ROGUESQ_LOG_SELECTPOSTCRAWL_INSGUARD_A1`/`A2`/`B1`/`B2=1` (s250). Keep
-  all armed in any new soak; see
-  `scratch/s73_post_a_scene/run_selectpostcrawlguard3.sh` for the full
+  `ROGUESQ_LOG_SELECTPOSTCRAWL_GUARD=1`,
+  `ROGUESQ_LOG_SELECTPOSTCRAWL_INSGUARD_A1`/`A2`/`B1`/`B2=1`, plus the
+  new `ROGUESQ_LOG_DLENTRY_TAIL_GUARD=1` (s251) — see
+  `scratch/s73_post_a_scene/run_dlentrytailguard1.sh` for the full
   current set (this file survives across sessions on disk even though
   `scratch/` is gitignored — copy it forward for new soaks; only
   `STATUS`/`OUTCOME`/`NEXT.md`/`run_mission_keys.sh` are git-tracked).
@@ -214,10 +266,9 @@ duplicate JSON entry before spending a session on it — re-derive via
   `funcs_*.c` that already exists on disk, so leftover files from a
   previous session silently stack duplicate patches. Always `rm`/delete
   all 45 `RecompiledFuncs/funcs_*.c` before `make_elf.py` →
-  `regen_n64recomp.sh` → `fixup_game_funcs.py` → `cmake --build`. NEW
-  this session: also never invoke `fixup_game_funcs.py` a second time
-  against the same already-patched output — see the process-bug note
-  above. Audit the fixup patch report (saved to a file on the ONE
+  `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`. Never invoke
+  `fixup_game_funcs.py` a second time against the same already-patched
+  output. Audit the fixup patch report (saved to a file on the ONE
   invocation) for anything other than the expected `xN` multiplicity
   before trusting the build.
 - **Verify "crash-free" visually**: MD5-checksum a spread of `hold_NN.png`
@@ -230,14 +281,15 @@ duplicate JSON entry before spending a session on it — re-derive via
 - The driver's own `CRASH: N` summary counts occurrences of the LITERAL
   STRING `[CRASH]` (many per crash) — grep `[CRASH] caught signal` for
   actual crash event counts. The driver's own end-of-run `--- summary ---`
-  block also prints `exit=2: N` (crash-exit count) — cross-check both.
+  block (in the launch-log, not `run.log`) also prints `exit=2: N`
+  (crash-exit count, lle-task level) — cross-check both, they measure
+  different things.
 - `scratch/agent/STATUS`/`OUTCOME` get reset at the START of each
   iteration by the harness — normal.
 - **`/scratch/` is wholesale gitignored** — only `STATUS`, `OUTCOME`,
   `NEXT.md`, and `run_mission_keys.sh` are tracked exceptions. Non-tracked
   scratch files (driver scripts, analysis scripts, logs) persist on disk
-  across sessions but are not in git history — don't assume they're safe
-  from an actual `git clean`/fresh-checkout scenario.
+  across sessions but are not in git history.
 - Verify a fresh binary before trusting a null result: `strings
   build/RogueSquadron64Recomp | grep '<your-new-tag>'` plus `ls -la
   build/RogueSquadron64Recomp` vs. the soak's start time.
@@ -245,18 +297,15 @@ duplicate JSON entry before spending a session on it — re-derive via
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget and the
-Read tool's 256 KB single-read limit (still ~407 KB+ / ~5950 lines,
+Read tool's 256 KB single-read limit (still ~407 KB+ / ~5980 lines,
 flagged 41+ sessions without action).
 
 `fixup_game_funcs.py`'s untracked, single-copy state in the `N64Recomp`
 sibling checkout has been flagged since s83, still not fixed (not this
 repo's commit scope) — worth surfacing to the user directly. Every guard
 in the whack-a-mole family, including this session's, lives there. Also
-worth surfacing: the script's non-idempotency bug found this session
-(s139's `rs_malloc` entry-capture patch) — a real latent footgun for
-anyone who invokes it more than once per regen, not fixed this session
-(would require reworking that one patch's anchor to consume/mark its own
-insertion point, out of scope for a single work unit).
+still not fixed: the script's non-idempotency bug found s250 (`rs_malloc`
+entry-capture patch stacks duplicate declarations on repeat invocation).
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` and
 `~/Documents/Tools/rogue_squadron64` are separate git checkouts with

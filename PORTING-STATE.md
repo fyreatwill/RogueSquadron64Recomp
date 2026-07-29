@@ -23719,3 +23719,150 @@ not needed.
 **Housekeeping**: `CURRENT-TRUTH.md` size still flagged, unaddressed
 again (picked the code-change option per `ITERATION.md`'s own incentive,
 same call s249 made). Other flagged items unchanged.
+
+## Session 251 (2026-07-28)
+
+**Continued the project-wide static sweep: guarded `reserveAndEmitDLEntry`'s
+3 flagged candidate sites (`funcs_3.c`, its 3 near-identical "find
+insertion tail" loops at 0x8000CBE8/0x8000CCE4/0x8000CDF0). Build clean,
+no regression. Soak (`dlentrytailguard1`) crossed the SELECT-CRAFT
+transition cleanly (74.5s, established signature) then died 1s into the
+hold to an already-catalogued, unrelated SIGBUS in `heapFreeListDequeue`
+(the RDRAM-base `x0/x9=0x300000000` whack-a-mole signature), reached via
+`submitSceneNodeRender <- processSceneNode <- traverseSceneGraphRecursive
+<- setupCameraMatrices <- ... <- menuOverlayInit` — confirming this
+render-tree-walk family (already flagged in NEXT.md as high-value,
+frequently-soaked) is genuinely hot, but pre-empting this session's own
+new guards before they got any exercise (0/0, uninformative null, same
+caveat as s250). New candidate found and NOT yet fixed: this exact
+`heapFreeListDequeue` crash site (offset ~13268-14832 bytes into the
+function, distinct from its own already-guarded site since
+`ROGUESQ_LOG_HEAPLISTDEQ_GUARD` was armed and didn't fire) — worth a
+targeted look next session. 139 candidate sites remain project-wide
+(down from 140).**
+
+**Chosen candidate and why**: NEXT.md's own "worth a look" flag on
+`renderUnlitMeshFaces`'s separate line-5017 site (distinct from the
+already-guarded s219 site at `0x80011CE0`) was resolved first, by full
+control-flow trace rather than by adding a guard — see "Resolved, not
+fixed" below. That freed the iteration to spend its real budget on one of
+NEXT.md's actual recommended next candidates. Picked
+`reserveAndEmitDLEntry` over the larger `renderLitMeshFaceGroup`(14)/
+`renderLitTexturedMeshFaces`(11)/`func_800AE3F0`(10) candidates because
+it's the SAME function already responsible for the historically-notorious
+14th whack-a-mole crash class (`reserveAndEmitDLEntry+6264`, first
+guarded s109, recurred as recently as s249's own soak) — guarding its
+*other* unguarded self-ref sites had a plausible chance of directly
+improving soak survivability, unlike `selectPostCrawlCraft`'s sites which
+have never once fired.
+
+**Resolved, not fixed: `renderUnlitMeshFaces`'s flagged line-5017 site is
+a false positive of the static finder's naive self-ref-load heuristic.**
+Full trace: the loop at `L_80011CDC` (`funcs_4.c`) has exactly one
+fallthrough entry (immediately after the `beq $v0,$zero` check at
+0x80011CD4, which itself already dereferenced the exact same address to
+compute that branch) plus its own loop-back `goto` (gated by the existing
+s219 guard, which validates the walked pointer before allowing loop-back).
+So the flagged self-ref walk at line 5017 either repeats an address
+already proven readable moments earlier (first entry) or repeats an
+address the s219 guard already validated one iteration prior (loop-back)
+— never a genuinely new, unvalidated dereference. No guard needed here;
+the candidate-finder script (`find_unguarded_walks.py`) cannot be trusted
+to distinguish "unguarded" from "dominated by an existing check or a
+prior successful read of the same address" — every future candidate in
+the list still needs this same full-trace treatment before either fixing
+it or ruling it out, per s249/s250's own rule.
+
+**Full-loop-body read of `reserveAndEmitDLEntry`'s 3 sites.** All 3 are
+byte-identical in shape (matching the 3x duplication already visible in
+the existing s169 free-list-pop guards at the same 3 call sites): pop a
+pointer off a global free list (already range-checked by s169's guard,
+`ROGUESQ_LOG_DLENTRY_POP_GUARD`), then walk it to find the list's tail --
+`ctx->r3 = MEM_W(ctx->r3, 0X0)` (self-ref walk) immediately followed by
+`ctx->r2 = MEM_W(ctx->r3, 0X0)` (peek-load of the SAME freshly-walked,
+un-range-checked `r3`), looping back while the peek is non-zero. Traced
+end to end: unlike `selectPostCrawlCraft`'s s250 helpers, only ONE guard
+is needed per site (not two) -- the walk's own input is always already
+safe (iteration 1 reads the s169-pop-guarded pointer; iteration N+1
+re-reads exactly the address this new guard validated one iteration
+earlier), so only the peek-load's dereference of the brand-new walked
+value is a genuinely unvalidated read. Guard inserted between walk and
+peek at all 3 sites: captures the pre-walk `r3`, performs the (unchanged)
+walk, range-checks the result (`0x80000000`-`0x80800000`, U32 truncation,
+same convention as every guard in this family since s99), and on failure
+restores `r3` to the pre-walk value and jumps to the loop's own existing
+natural-termination label (`L_8000CBF8`/`L_8000CCF4`/`L_8000CE00`) --
+reproducing exactly the `r2==0` "list ends here" semantics rather than
+inventing a new exit path. New env var `ROGUESQ_LOG_DLENTRY_TAIL_GUARD`,
+`site=0/1/2` distinguishes which of the 3 fired.
+
+**Build**: mandatory full regen (`make_elf.py` -> `N64Recomp` -> single
+`fixup_game_funcs.py` invocation, report saved to
+`scratch/agent/s251_fixup_report.txt`, 204 lines) -> `cmake --build`.
+Patch report audited: `reserveAndEmitDLEntry tail-walk guard site=0/1/2
+patched x1` each, exactly the expected multiplicity. The only anomalous
+multiplicities in the whole report (`projectModelBoundsToScreen guard3
+x2`, `musyxKeyOnVoice div-traps x8`, `submitSceneNodeRender GUARD2 x9`/
+`GUARD3 x8`, `audio gate x3`) are all pre-existing, already-documented
+from prior sessions -- confirmed nothing new stacked. `cmake --build`
+exit 0, only pre-existing `-Wformat`/`-Wpointer-sign` warnings. Binary
+verified fresh (`strings` shows the new `ROGUESQ_LOG_DLENTRY_TAIL_GUARD`
+tag and all 3 `[dlentry-tail-guard] site=N` format strings; mtime matches
+build completion).
+
+**Soak** (`run_dlentrytailguard1.sh`, tag `dlentrytailguard1`, full
+`selectpostcrawlguard3`-baseline env block plus the new
+`ROGUESQ_LOG_DLENTRY_TAIL_GUARD=1`, `HOLD_S=150`): reached `vi_width=1024`
+at 45.6s, crossed the established SELECT-CRAFT transition cleanly
+(`vi_width=512 (was 1024) origin=0x006AB400 at 74.5s update_screen
+#4434`), then died almost immediately into the hold (hold-iter 2,
+wall=1s) to `[CRASH] caught signal 10 (Bus error)`,
+`x0=x9=0x0000000300000000` (the RDRAM-base sentinel),
+`pc-symbol=heapFreeListDequeue+14832`, backtrace `heapFreeListDequeue
+(+13268) <- submitSceneNodeRender (+28592) <- processSceneNode (+11828)
+<- traverseSceneGraphRecursive (+1880) <- setupCameraMatrices (+28260)
+<- static_5_800AAD9C <- static_5_800C6854 <- menuOverlayInit <-
+mainGameLoop`. This is the already-catalogued "RDRAM-base + un-subtracted
+wild guest pointer" whack-a-mole family (10+ known sites since s89-93/
+s194/s219-220/s248), confirmed unrelated to this session's edit (different
+function entirely, no call or data relationship to
+`reserveAndEmitDLEntry`). `ROGUESQ_LOG_DLENTRY_TAIL_GUARD` fired **0**
+times (all 3 sites) -- the render-tree walk never reached
+`reserveAndEmitDLEntry` in the ~1s window between the transition and this
+unrelated crash. `heapwalker-guard4` (positive control) fired once,
+confirming guard infrastructure was live this run. This is an honest,
+weak-evidence null on the new guards (uninformative on whether these 3
+sites are hot; does not disprove the static finding) -- same caveat as
+s250, do not cite as "these 3 sites confirmed safe."
+
+**New finding, not yet fixed**: this run pins down a NEW, previously
+uncatalogued crash site inside `heapFreeListDequeue` itself
+(offset ~13268-14832 bytes in) that the function's own EXISTING guard
+(`ROGUESQ_LOG_HEAPLISTDEQ_GUARD`, armed this run) does not cover --
+confirms the render-tree-walk family
+(`submitSceneNodeRender`/`processSceneNode`/`traverseSceneGraphRecursive`)
+is genuinely hot on this call path (executes every hangar-scene frame via
+`menuOverlayInit`), unlike `selectPostCrawlCraft` which has never once
+fired across 3 soaks. Worth a dedicated look next session: read
+`heapFreeListDequeue`'s full body for a second unguarded self-ref/peek
+site the existing guard's placement doesn't dominate, following this
+session's and s249/s250's full-trace discipline.
+
+**Where the new code lives**: same as every prior guard in this family --
+`fixup_game_funcs.py` in the untracked sibling `~/Documents/Tools/
+N64Recomp` checkout (flagged since s83, not this repo's commit scope).
+Only the driver script (`scratch/s73_post_a_scene/
+run_dlentrytailguard1.sh`, gitignored except tracked exceptions) and this
+write-up are in `RogueSquadron64Recomp`'s own history.
+
+**Net effect**: 3 more real guards landed (all of `reserveAndEmitDLEntry`'s
+flagged candidates now fixed), 1 false-positive candidate resolved by
+trace (no guard needed), 1 new crash site pinpointed inside
+`heapFreeListDequeue` for next session, build clean, no regression. 139
+candidate sites remain project-wide (down from 140, plus the resolved
+`renderUnlitMeshFaces` false positive removed). No `lib/` edit this
+session -- `submodule-patches/export.sh` not needed.
+
+**Housekeeping**: `CURRENT-TRUTH.md` size still flagged, unaddressed again
+(picked the code-change option, same call s249/s250 made). Other flagged
+items unchanged.

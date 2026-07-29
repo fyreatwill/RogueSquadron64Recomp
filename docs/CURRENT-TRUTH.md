@@ -663,7 +663,43 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s250)
+## Next steps, in order of expected value (s251)
+
+-92. **(s251) Finished guarding all 3 of `reserveAndEmitDLEntry`'s flagged
+    tail-walk candidates (`funcs_3.c`, the 3 near-identical "find insertion
+    tail" loops at 0x8000CBE8/0x8000CCE4/0x8000CDF0) — the s169 free-list-
+    pop guards already validated each loop's ENTRY pointer, but the walk's
+    immediate peek-load of the freshly-walked (never-before-dereferenced)
+    result was unguarded; traced end to end and confirmed only ONE guard
+    per site is needed (not two, unlike `selectPostCrawlCraft`'s s250
+    helpers) since the walk's own input is always already-validated by
+    either the s169 guard (iteration 1) or this new guard one iteration
+    earlier (iteration N+1).** Also resolved (not fixed) NEXT.md's
+    "worth a look" flag on `renderUnlitMeshFaces`'s separate line-5017
+    site as a **false positive** of the static finder: full trace showed
+    that self-ref load always repeats an address either just proven
+    readable (first entry) or already validated by the existing s219
+    guard one iteration earlier — never a genuinely new dereference, no
+    guard needed. Build clean (patch report audited: all 3 new guards
+    `x1`, no duplicates; same pre-existing anomalies as every prior
+    session, nothing new stacked). **Soak** (`dlentrytailguard1`):
+    crossed SELECT-CRAFT cleanly (74.5s, established signature), died
+    ~1s into the hold to an **already-catalogued, unrelated** SIGBUS in
+    `heapFreeListDequeue` (RDRAM-base `x0/x9=0x300000000` whack-a-mole
+    signature) via `submitSceneNodeRender <- processSceneNode <-
+    traverseSceneGraphRecursive <- setupCameraMatrices <- ... <-
+    menuOverlayInit` — confirms this render-tree-walk family is
+    genuinely hot (unlike `selectPostCrawlCraft`, which has never once
+    fired). New guards fired **0/3** (uninformative null, same caveat as
+    s250 — does not disprove the fix, just wasn't exercised before the
+    unrelated crash). **New, not-yet-fixed finding**: a previously
+    uncatalogued crash site inside `heapFreeListDequeue` itself
+    (offset ~13268-14832 bytes in) that its OWN existing guard
+    (`ROGUESQ_LOG_HEAPLISTDEQ_GUARD`, armed and confirmed not the culprit)
+    does not cover — good next-session candidate, on a call path proven
+    hot this very run. 139 candidate sites remain project-wide (down
+    from 140, plus the resolved `renderUnlitMeshFaces` false positive
+    removed from the list). Full detail: PORTING-STATE Session 251.
 
 -91. **(s250) Finished guarding all 3 of `selectPostCrawlCraft`'s s249-flagged
     candidates (`funcs_30.c`, 0x800CBDA8 + 0x800CBDE4 — two near-identical
