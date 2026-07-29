@@ -24442,3 +24442,93 @@ posture as every prior session's guards, still out of this repo's commit
 scope. `CURRENT-TRUTH.md` size still flagged, unaddressed again (this
 session landed a real new tracer + soak, which stands on its own as
 `ADVANCED`).
+
+## Session 258 (2026-07-29) — closed the 2 gaps s257's own scan found in the `-0x25A4` hangar-bay-deref-guard family (G30/G31); soak shows real forward progress -- the game survives ~3860 more VI updates past the SELECT-CRAFT transition before hitting a NEW, deeper crash site in a different function chain, not the -0x25A4 family at all
+
+Per NEXT.md's plan, fanned out 5 parallel Explore agents (each reading a
+~1450-line slice of `static_5_800AB658`, funcs_40.c:7228-14468, the
+crashing hangar-menu function first named at s248) to find every
+pointer-shaped `MEM_W` load in the function that is dereferenced with no
+guard between load and use, matching the established
+`RENDERUNLIT_GUARD`/`HANGARLIST_GUARD` idiom. The scan surfaced ~20
+candidates total, but most were re-reads of an already-validated pointer
+within the same basic block (harmless duplicates, not real gaps). Two
+candidates stood out as a genuine gap in an *already-systematic* guard
+family: `fixup_game_funcs.py`'s `_hangarbay_deref_guard_sites` list (from
+s132) guards 26 `-0x25A4($sN)`-loaded array-element pointers in this
+function (sites G1-G29, one shared merge point), but a full-body read of
+the family's address range showed 2 more occurrences of the *exact same*
+load-then-scaled-index-add-then-dereference shape between G28
+(`0x800ADA2C`) and the G29 merge (`L_800ADB18`) that the s132 sweep
+missed: `0x800ADA88` and `0x800ADAD4` (funcs_40.c:14302-14305 and
+14348-14351, both reading `-0x25A4($s1)` then adding a scaled index and
+dereferencing `+0x4`). Added them as `G30`/`G31` to the existing site
+list (same guard-generator function, same `ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD`
+env var, same `L_hangarbay_guard_exit` label already present in this
+function) — a 3-line addition, not a new guard mechanism.
+
+Full regen → build → `strings`-verified (28 `hangar-bay-deref-guard`
+literals in the binary, up from 26, confirming both new sites compiled
+in) → soaked as `g30g31soak1` (`scratch/s73_post_a_scene/g30g31soak1/run.log`,
+~212 MB, 3,960,657 lines), full 150s hold window offered.
+
+**Result: G30/G31 got 0 fires (uninformative null on that specific
+question — this exact gap wasn't hit this run), but the run crashed at a
+NEW, deeper site, which is real evidence of forward progress.** The
+SELECT-CRAFT phase transition landed at the usual 74.9s
+(`update_screen #4460`); s257's run crashed almost immediately after that
+transition (`update_screen #4474`, ~14 ticks later). This run survived to
+`update_screen #8320` — roughly 3860 more VI updates — before crashing,
+still inside the same call chain
+(`mainGameLoop` ← `menuOverlayInit` ← `static_5_800C6854`
+(`runHangarMenuFromOverlay`) ← `static_5_800AAD9C`
+(`runHangarSelectionFrame`) ← `static_5_800AB658`), but this time at
+native offset **+61812** (not s257's +49104), reached through a
+*different* subroutine chain: `static_5_800AB658` calls
+`setupActorAnchorTransformType1` → `buildPositionAndCallTransformHelper`
+→ `evalCubicSplineAtTime`, which crashes on a Bus error dereferencing
+`x8+x9 = 0x300000000 + 0x7ffffff8 = 0x37ffffff8` — the same
+rdram-base-plus-wild-guest-pointer additive shape as every other
+occurrence in this bug family (item -49 and the whack-a-mole menu
+crashes), but a genuinely new, previously-uncatalogued crash site: nothing
+in this call chain (`setupActorAnchorTransformType1`,
+`buildPositionAndCallTransformHelper`, `evalCubicSplineAtTime`) has ever
+been guarded for a wild pointer before (only an unrelated div-by-zero
+guard exists in `evalCubicSplineAtTime`, from an earlier session,
+irrelevant to this Bus-error). `unlit-mesh-tracer` again had 0 hits
+(`renderUnlitMeshFaces` still never called — the game is still dying in
+the hangar menu before reaching gameplay rendering), so R7A/R7B_LOADED
+still have not had their positive-control opportunity.
+
+**Caveat on causality**: this is a single run, not a formal same-run A/B
+(iron rule 2 — no cross-run A/B on animating menu/scene state). The
+~4x-longer survival past the transition is suggestive that closing
+G30/G31 (or general run-to-run variance in the scripted stick input
+reaching a slightly different code path) let the game get further, but
+that is not proven with two independent lines of evidence yet — flagging
+as single-source per iron rule 4, not entering it as confirmed causality.
+
+**What this rules out**: the G30/G31 gap was not what was killing the
+last 2 soaks (s256/s257) — those both died via the exact `-0x25A4`
+pattern's neighborhood but, per this run's 0 fires, not through G30/G31
+specifically (they may have died through a call path that never reaches
+this function at all). **What this does not rule out**: whether G30/G31
+were real bugs on some other call path — they remain plausible,
+unconfirmed-by-fire fixes, kept in place since they match the exact idiom
+of the other 26 confirmed sites in the same family.
+
+**Next work unit**: guard the unguarded pointer dereference inside
+`evalCubicSplineAtTime` (or wherever in `buildPositionAndCallTransformHelper`
+/`setupActorAnchorTransformType1` the wild pointer first enters), using
+the same "read full function body, find the load-then-deref gap, copy the
+range-check idiom" method that worked for G30/G31 this session and every
+guard before it. See `scratch/agent/NEXT.md`.
+
+**Housekeeping**: no `lib/` edit this session (N64ModernRuntime/rt64
+submodule diffs pre-date this session, untouched) — `submodule-patches/
+export.sh` not needed. The `fixup_game_funcs.py` edit (G30/G31) is again
+uncommitted in the separate `N64Recomp` sibling checkout, same posture as
+every prior session's guards, still out of this repo's commit scope.
+`CURRENT-TRUTH.md` size still flagged, unaddressed again (this session
+landed a real new guard pair + soak with a genuine crash-site change,
+which stands on its own as `ADVANCED`).

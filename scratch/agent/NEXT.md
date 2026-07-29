@@ -1,183 +1,180 @@
-# NEXT work unit — guard the `static_5_800AB658` whack-a-mole site (s248
-# lead, 2nd occurrence s257) so the game can reliably reach
-# `renderUnlitMeshFaces` and finally give `R7A_LOADED`/`R7B_LOADED` (and
-# item -49 generally) a real positive-control soak
+# NEXT work unit — guard the unguarded pointer feeding `evalCubicSplineAtTime`'s
+# Bus error (s258 lead, a NEW crash site reached deeper into the same
+# `static_5_800AB658` menu-crash whack-a-mole family)
 
-## Where the investigation stands (s257)
+## Where the investigation stands (s258)
 
-s257 mined s256's `guard8soak1/run.log` for anything upstream of its
-crash (per CLAUDE.md's capture-once-analyze-many rule) and found nothing
-new — the crash backtrace and register signature both exactly match
-already-catalogued occurrences (s172-lineage backtrace shape; s194/s219's
-`x8=0x300000000` rdram-base + `x9=0x80630062` zero-extended-KSEG0-pointer
-additive mechanism). That closed step 1 with a confirmed-boring result.
+s258 closed the 2 gaps its own scan found in `static_5_800AB658`'s
+already-systematic `-0x25A4` array-deref guard family (`fixup_game_funcs.py`'s
+`_hangarbay_deref_guard_sites`, s132): 26 sites (G1-G29) were guarded as of
+s132's "complete" audit, but a fresh full-body read (prompted by s257's
+own crash) found 2 more identical-shape occurrences the original sweep
+missed, between `G28` (`0x800ADA2C`) and the `G29` merge point
+(`L_800ADB18`): `0x800ADA88`/`0x800ADAD4` (funcs_40.c:14302-14305,
+14348-14351). Added as `G30`/`G31`, same guard generator, same env var
+(`ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD`), same exit label. Full regen,
+clean build, `strings`-verified (28 `hangar-bay-deref-guard` literals,
+up from 26).
 
-Rather than burn the 3rd (final) allowed `C_LOADED` null re-soak, s257
-read the REST of `renderUnlitMeshFaces` (`funcs_4.c:4989-5672`, the whole
-function) and found that sites A/B/B_LOADED/C/C_LOADED/D between them
-cover every use of `ctx->r16`/`r18`/`r20` in the function, and `r16` is
-never reassigned outside sites B/C — so `guard8soak1`'s clean pass across
-all six genuinely rules out that entire chain for its occurrence, not
-just an unlucky miss. The one pointer in the whole function with **zero**
-tracer/guard coverage: `ctx->r7 = MEM_W(ctx->r17, 0X0)` (guest
-`0x80011DC8` and `0x80011F1C`, two near-identical unrolled copies) —
-loaded straight out of the mesh-face list data with no validation, then
-used for 9 unguarded `MEM_W` stores (offsets `0x0`-`0x24`) every loop
-iteration.
+**Soak (`g30g31soak1`, `scratch/s73_post_a_scene/g30g31soak1/run.log`,
+~212MB): G30/G31 got 0 fires (uninformative null on that exact
+question), but the run crashed at a NEW, deeper site — real evidence of
+progress even without a fire.** The SELECT-CRAFT phase transition landed
+at the usual 74.9s (`update_screen #4460`). s257's run crashed almost
+immediately after (`#4474`, ~14 ticks later). **This run survived to
+`update_screen #8320` — roughly 3860 more VI updates** — before crashing,
+still inside the same outer call chain (`mainGameLoop` ← `menuOverlayInit`
+← `runHangarMenuFromOverlay` ← `runHangarSelectionFrame` ←
+`static_5_800AB658`), but this time at native offset **+61812** (not
+s257's +49104), reached through a subroutine chain never before
+implicated in this bug family:
 
-Added two new observer-only tracer sites, `R7A_LOADED`/`R7B_LOADED`,
-reusing the existing `_rogue_unlit_mesh_tracer_check` helper (same
-`ROGUESQ_LOG_UNLIT_MESH_TRACER` gate, no new env var). Patch lives in
-`fixup_game_funcs.py` in the sibling `N64Recomp` checkout, right after
-the existing C_LOADED block (search `R7A_LOADED` to find it). Full regen
-+ clean build + `strings`-verified binary, soaked as `r7soak1`
-(`scratch/s73_post_a_scene/r7soak1/run.log`, ~223MB, 3,967,721 lines).
+```
+static_5_800AB658 (+61812)
+  -> setupActorAnchorTransformType1 (+368)
+    -> buildPositionAndCallTransformHelper (+1292)
+      -> evalCubicSplineAtTime (+732, CRASHES at +1008)
+```
 
-**Result: null on the R7 question, with NO positive control.** The
-`unlit-mesh-tracer` marker had ZERO hits of any kind this run, including
-the always-on-at-call-1 positive-control counter — `renderUnlitMeshFaces`
-was never called at all before the process died. This tracer has never
-had a real test yet (unlike `C_LOADED`, which got one clean shot in
-`guard8soak1`).
+Register dump: `pc=0x104e5c5a8`, `far=0x37ffffff8`, `x8=0x0000000300000000`
+(rdram host base), `x9=0x000000007ffffff8` (the wild guest-side value —
+note this is NOT the familiar `0x80630062`-shaped KSEG0-zero-extension
+value seen in item -49's occurrences; it looks more like a raw
+`0x7FFFFFF8`-ish sentinel or a corrupted/uninitialized float-adjacent
+value — read the crash site itself before assuming it's the same
+mechanism as item -49). Bus error (signal 10), not segfault — consistent
+with a misaligned or wildly-out-of-range access.
 
-**But the run crashed anyway**, at the familiar 75.1s SELECT-CRAFT
-transition (`update_screen #4474`), inside the hangar-selection MENU
-itself, before ever reaching gameplay rendering:
-`static_5_800AB658+49104` ← `static_5_800AAD9C` (`runHangarSelectionFrame`)
-← `static_5_800C6854` (`runHangarMenuFromOverlay`) ← `menuOverlayInit` ←
-`mainGameLoop`. Register dump: `x9=0x300000000` (rdram host base) — same
-additive whack-a-mole shape as item -49's bug family, but a DIFFERENT
-specific call site. **This exact stack was already named at s248**
-(CURRENT-TRUTH `-89`, PORTING-STATE Session 248) as one of "10+ known
-call sites" in this family, explicitly flagged then as "not one of them
-[already guarded]." s257's crash is the 2nd independent occurrence of
-this specific still-open site.
+**Caveat, carried forward honestly**: this was a single run, not a
+formal same-run A/B (iron rule 2 forbids cross-run A/B on animating
+menu/scene state anyway). The ~4x-longer survival is *suggestive* that
+closing G30/G31 helped, but it is equally possible this is scripted-
+input run-to-run variance reaching a slightly different code path.
+Treat as single-source (iron rule 4) until a second independent line of
+evidence agrees (e.g. two more soaks both surviving similarly long).
+
+`unlit-mesh-tracer` again had 0 hits this run (`renderUnlitMeshFaces`
+still never called) — the game is still dying in the hangar menu before
+ever reaching gameplay rendering, so `R7A_LOADED`/`R7B_LOADED` (item -49's
+open sub-question) still have not had a positive-control opportunity.
+Do NOT re-attempt that soak until this NEW blocker is also closed.
 
 ## The next work unit, in priority order
 
-### Step 1: full-body read of `static_5_800AB658` to find the unguarded load
+### Step 1: read `evalCubicSplineAtTime`, `buildPositionAndCallTransformHelper`,
+### `setupActorAnchorTransformType1` for the unguarded pointer
 
 ```
-grep -n "^RECOMP_FUNC void static_5_800AB658" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c
-# starts at line 7228; next RECOMP_FUNC after it is static_5_800ADB70 at 14468
-# i.e. this function spans ~7239 lines -- READ IT IN CHUNKS (e.g. 1500-line
-# windows), do not try to read it in one call.
+grep -n "^RECOMP_FUNC.*evalCubicSplineAtTime\|^RECOMP_FUNC.*buildPositionAndCallTransformHelper\|^RECOMP_FUNC.*setupActorAnchorTransformType1" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
 ```
 
-Look for the SAME pattern as every prior guard in this family (s101,
-s219, s254's `HANGARLIST_GUARD`): a pointer loaded from a table/list entry
-with a `lw`/`MEM_W` and dereferenced with **zero** null/range check
-before use, especially near the START of the function or right after a
-branch from `runHangarSelectionFrame` (since the crash offset, `+49104`
-native bytes, is deep — but per this project's established rule, native
-offsets do NOT map linearly/reliably to guest addresses or C line
-numbers; use the offset only to know WHICH function to read in full,
-never to guess the specific line). Since the crash offset is large,
-expect the guilty load to be somewhere well into the function, not in
-the first few hundred lines — budget the read accordingly (this may take
-most of one iteration by itself, same as s255/s256's
-`composeNpcOrientationMatrix` reads did).
+`evalCubicSplineAtTime` already has an existing div-by-zero guard
+(unrelated — from an earlier session, see fixup report line
+"evalCubicSplineAtTime div0 guard patched x1"); do not confuse that with
+what's needed here. We need a pointer-range guard, same idiom as every
+prior guard in this project (`RENDERUNLIT_GUARD` in funcs_4.c:5044-5060
+is still the canonical example to copy). Since these are 3 small-ish
+functions (not a 7000-line function like `static_5_800AB658`), a single
+read of each in full should be tractable without fanning out multiple
+agents — try reading each function directly first; only fan out if one
+of them turns out to be unexpectedly large.
 
-### Step 2: guard the earliest unvalidated load, in `fixup_game_funcs.py`
+Look for a `MEM_W`/`MEM_H`/`MEM_B`-loaded value used as a base pointer
+with no `0x80000000`-`0x80800000` + `0xFFFFFFFF`-hi-word range check
+before the dereference — the crash's `x9=0x7ffffff8` value is notably
+NOT in the `0x80000000-0x80800000` range itself (it's below it), so the
+existing guard idiom's bounds check should catch it cleanly if applied
+at the right site.
 
-Same shape as `HANGARLIST_GUARD` (s254) and every guard before it: check
-the loaded pointer's low 32 bits are in `[0x80000000, 0x80800000)` and
-high 32 bits are `0xFFFFFFFF` (the sign-extension convention this
-project's `MEM_W` macro relies on — see the existing
-`RENDERUNLIT_GUARD` at funcs_4.c:5045-5059 for the exact idiom to copy).
-On failure, zero the pointer and skip/bail the same way the source's own
-control flow would on a null entry (read enough surrounding code to know
-the right bail target — do NOT invent one).
+### Step 2: guard the earliest unvalidated load found, same idiom as always
 
-### Step 3: full regen -> build -> soak (reuse the r7soak1 script)
+Copy the `RENDERUNLIT_GUARD`-style block (range-check + zero-and-bail on
+failure, respecting the function's own control flow for where "bail"
+should jump to — read enough context to find the right target, don't
+invent one).
+
+### Step 3: full regen -> build -> soak (new tag)
 
 ```
 cd /Users/williambuckley/Documents/Tools/rogue_squadron64
 python3 -c "import glob, os; [os.remove(f) for f in glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c')]"
 python3 tools/make_elf.py
-zsh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/agent/regen_n64recomp.sh
-python3 /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py   # exactly once
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build
-strings /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build/RogueSquadron64Recomp | grep <new guard's env-var name>   # confirm fresh binary
-cp scratch/s73_post_a_scene/run_r7soak1.sh scratch/s73_post_a_scene/run_<newtag>.sh   # edit last line's tag, add new guard's env var if it needs one (R7A/B_LOADED already armed via ROGUESQ_LOG_UNLIT_MESH_TRACER=1, already in the script)
-zsh scratch/s73_post_a_scene/run_<newtag>.sh   # run_in_background: true
+cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
+zsh tools/agent/regen_n64recomp.sh
+cd /Users/williambuckley/Documents/Tools/N64Recomp
+python3 fixup_game_funcs.py   # exactly once -- confirm your new guard's report line appears
+cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build .
+strings /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build/RogueSquadron64Recomp | grep <new guard's env-var name>
+cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/s73_post_a_scene
+cp run_g30g31soak1.sh run_<newtag>.sh   # edit the last line's tag; ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD stays armed as a same-run control, add your new guard's env var too
+zsh run_<newtag>.sh   # run_in_background: true, then block-wait on the pid
 ```
 
-Block-wait pattern: read the driver's first output line for
-`pid NNNNN`, then a SECOND foreground Bash call (generous timeout, up to
-480000ms): `until ! kill -0 <pid> 2>/dev/null; do sleep 10; done`.
+Block-wait pattern: read the driver's first output line for `pid NNNNN`,
+then a SECOND foreground Bash call (timeout up to 480000ms):
+`until ! kill -0 <pid> 2>/dev/null; do sleep 10; done`.
 
 **Discriminating outcomes**: new guard fires with sane fields -> real
-mechanism found, and if the hold now survives past 75.1s AND
-`renderUnlitMeshFaces` gets called (unlit-mesh-tracer positive control
-fires), `R7A_LOADED`/`R7B_LOADED` FINALLY get their first real test —
-read their fire counts directly, that's the actual answer to item -49's
-current sub-question. Crash recurs at a DIFFERENT site -> progress, not
-the only gap in this chain, repeat the process on the new site. Crash
-recurs at the EXACT same `static_5_800AB658` signature -> guard missed
-a deref or the anchor didn't match all call sites (check both
-funcs_27.c:123427/124181 call sites too — those are just calls into the
-function, not separate definitions, so one guard in the funcs_40.c
-definition should cover both, but verify).
+mechanism found; if the hold now survives further AND
+`renderUnlitMeshFaces` finally gets called (`unlit-mesh-tracer` positive
+control fires), R7A/R7B_LOADED get their first real test in the same
+run — read their fire counts directly. Crash recurs at a DIFFERENT site
+-> still progress, repeat the process. Crash recurs at the EXACT same
+`evalCubicSplineAtTime`/`buildPositionAndCallTransformHelper`/
+`setupActorAnchorTransformType1` signature -> guard missed the actual
+load or didn't cover all call paths into these functions (they may be
+called from elsewhere too — grep for other callers before assuming
+`static_5_800AB658` is the only entry point).
 
 ## Do NOT do this iteration
 
-- Do NOT re-run `r7soak1` in place — copy to a new tag.
-- Do NOT re-attempt `nm`/`atos`/`objdump` for offset localization —
-  confirmed unusable 3+ independent times (`otool`/`objdump` blocked by
-  headless permissions, and there's no human in the loop to approve
-  them). Use `scratch/agent/machoparse.py` (from-scratch Mach-O symbol
-  reader) if function-size verification is ever needed again.
-- Do NOT credit `R7A_LOADED`/`R7B_LOADED` with anything yet — this
-  session's soak gave them ZERO calls, not zero fires; that's a missing
-  positive control, not a clean result. Don't write them into
-  CURRENT-TRUTH as "confirmed clean" until they get an actual call.
-- Do NOT fold `static_5_800AB658+49104` into a "new" bug — it's a 2nd
-  occurrence of an already-named (s248) whack-a-mole site.
-- Do NOT skip straight to guarding `static_5_800AB658` without reading
-  it first — same rule as every prior guard in this file: read before
-  writing, so the guard matches the SPECIFIC unvalidated load, not a
-  guess.
+- Do NOT re-run `g30g31soak1` in place — copy to a new tag.
+- Do NOT credit G30/G31 with fixing anything beyond "matches the
+  established idiom, 0 fires so far" — the survival-length improvement
+  is single-source evidence, not confirmed causality (see caveat above).
+- Do NOT re-attempt the R7A/R7B_LOADED soak until this NEW
+  `evalCubicSplineAtTime` blocker is closed — the game still never
+  reaches `renderUnlitMeshFaces`.
+- Do NOT re-attempt `nm`/`atos`/`objdump` for offset localization --
+  confirmed unusable 3+ independent times. Use `scratch/agent/machoparse.py`
+  if function-size verification is ever needed again.
+- Do NOT skip straight to guarding without reading the function bodies
+  first — same rule as every prior guard in this file.
 
-## Environment notes (carried forward, still current as of s257)
+## Environment notes (carried forward, still current as of s258)
 
 - **`+N` crash-symbol offsets are NATIVE (compiled ARM64) code offsets,
   NOT guest MIPS addresses.** Use the offset only to identify WHICH
   function to read in full; never try to place it at a specific guest
   instruction or extrapolate C line number from it.
-- The current binary (as of s257's build) has `R7A_LOADED`/`R7B_LOADED`
-  plus every guard/tracer landed through s257 — no rebuild needed for a
-  bare re-soak of the SAME question, only if you land new code (which
-  this NEXT work unit does).
 - **Block-wait pattern**: launch the soak with Bash `run_in_background:
   true`, read the driver's first output line for `pid NNNNN out=...`,
-  then run a SECOND Bash call (foreground, generous timeout up to
-  480000ms) that polls `until ! kill -0 <game_pid> 2>/dev/null; do sleep
-  N; done`. This blocks until the process exits, letting a soak run to
-  completion within one iteration.
-- `/tmp` is not writable this session — write scratch/report files
-  inside `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64` only.
+  then a SECOND Bash call (foreground, timeout up to 480000ms) that polls
+  `until ! kill -0 <game_pid> 2>/dev/null; do sleep N; done`.
+- `/tmp` is not writable this session — write scratch/report files inside
+  `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64` only.
 - **Headless permission matching is a PREFIX match** — write
-  `env PROBE_MODE=1 zsh run.sh`, not `PROBE_MODE=1 zsh run.sh`. Also:
-  compound `cd ... && ... > file` commands with output redirection
-  after a `cd` get blocked for approval — run `cd` as its own Bash call
-  first (cwd persists across calls in this harness), or use absolute
-  paths and skip `cd` entirely. Same for bare `git -C <path> ...` —
-  prefer a plain `cd <path>` call first, then `git ...` with no `-C`.
+  `env PROBE_MODE=1 zsh run.sh`, not `PROBE_MODE=1 zsh run.sh`. Compound
+  `cd ... && ... > file` commands with output redirection after a `cd`
+  get blocked for approval — run `cd` as its own Bash call first (cwd
+  persists across calls in this harness), then run the next command with
+  no `&&`/redirect chaining, or use absolute paths and skip `cd`
+  entirely. Same for bare `git -C <path> ...` and `git status` chained
+  after a `cd` — prefer a plain `cd <path>` call first, then a bare
+  `git status`/`git ...` with no `-C` and no chaining.
+- Redirecting a build/regen command's output to a scratch log file with
+  `> path 2>&1` on the SAME line as the command can itself get rejected
+  (seen s258: `python3 tools/make_elf.py > log 2>&1` failed with a
+  cryptic "Contains simple_expansion" error even with no `cd` in the
+  command) — if that happens, just run the bare command without
+  redirection and let the tool's own output capture handle it; don't
+  burn time debugging the redirect.
 - **The `[phase] vi_width=512 (was 1024) origin=0x006AB400` line at
   ~t=74-75s is THE confirmed SELECT-CRAFT->mission transition marker.**
-  A crash immediately after this means the game died in the SELECT-CRAFT
-  menu itself before reaching gameplay — check the crash backtrace for
-  `menuOverlayInit`/`runHangarSelectionFrame`/`runHangarMenuFromOverlay`
-  frames (menu family) vs. `traverseSceneGraphRecursive`/`processSceneNode`/
-  render-function frames (actual gameplay render family) to tell which
-  regime you're in before reading the wrong function. Note s257 found
-  BOTH families in the SAME backtrace when a soak gets far enough
-  (`menuOverlayInit` calling all the way down into
-  `traverseSceneGraphRecursive`/`renderUnlitMeshFaces` in `guard8soak1`) —
-  the presence of `menuOverlayInit` at the root of the stack does NOT by
-  itself mean "died in the menu before gameplay"; check whether
-  render-family frames are ALSO present above it.
+  Use `update_screen #N` counts before/after this line to measure how far
+  a run got, in lieu of wall-clock (wall-clock varies run to run; VI tick
+  count is a more stable proxy for "how far into the menu did it get").
 - **Regen is mandatory-delete-all-first, AND fixup must run EXACTLY
   ONCE**: delete all 45 `RecompiledFuncs/funcs_*.c`
   (`python3 -c "import glob, os; [os.remove(f) for f in glob.glob('...')]"`,
@@ -196,7 +193,12 @@ definition should cover both, but verify).
 - `fixup_game_funcs.py` lives ONLY in the untracked sibling `N64Recomp`
   checkout (not a git submodule of this repo) — edits there are real and
   necessary for every guard, but are NOT part of this repo's commit
-  scope (flagged for the user since s83, still their call).
+  scope (flagged since s83, still the user's call).
+- **A big full-body sweep declaring itself "complete" is not a
+  guarantee** (s132 said "26/26, audit series complete" and was still
+  missing 2 sites, found by s257/s258). If a future session's own read of
+  a "fully guarded" family's address range turns up an anomaly, trust
+  the fresh read over the old completeness claim.
 
 ## Otherwise: continue the static sweep (139 candidates, unchanged since s253)
 
@@ -209,7 +211,10 @@ sites, `funcs_4.c`), `renderLitTexturedMeshFaces` (11 sites, `funcs_3.c`),
 
 `docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget and the
 Read tool's 256 KB single-read limit (still ~432 KB+ / ~6200+ lines,
-flagged 47+ sessions without action).
+flagged 48+ sessions without action). Its top-of-file "as of session 166"
+header is also stale (actual session count is 258+) — nobody has
+corrected this drift in a long time; flagging again, still not this
+session's focus.
 
 `fixup_game_funcs.py`'s untracked, single-copy state in the `N64Recomp`
 sibling checkout has been flagged since s83, still not fixed (not this

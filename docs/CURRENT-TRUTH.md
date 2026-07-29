@@ -663,7 +663,38 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s257)
+## Next steps, in order of expected value (s258)
+
+-99. **(s258) Closed the 2 gaps s257's own plan found in the `-0x25A4`
+    hangar-bay-deref-guard family (`G30`/`G31`); soak shows real forward
+    progress even though the targeted guards got 0 fires.** Fanned out 5
+    parallel Explore agents over `static_5_800AB658` (funcs_40.c:7228-14468)
+    to find every unguarded pointer-shaped `MEM_W` load; found 2 gaps in
+    the already-systematic 26-site `-0x25A4` guard family (s132) between
+    `G28` (`0x800ADA2C`) and the `G29` merge: `0x800ADA88`/`0x800ADAD4`
+    (funcs_40.c:14302-14305, 14348-14351), same load-then-scaled-index-add-
+    then-deref shape as every other guarded site in the family. Added as
+    `G30`/`G31` (3-line addition to the existing site list, same guard
+    generator, same env var). Full regen, build, `strings`-verified (28
+    `hangar-bay-deref-guard` literals, up from 26). **Soak (`g30g31soak1`)
+    result: G30/G31 fired 0 times (uninformative null on that exact
+    question), but the run survived ~3860 more VI updates past the
+    SELECT-CRAFT transition (`update_screen #4460` to `#8320`, vs. s257's
+    `#4460` to `#4474`) before crashing at a NEW, deeper native offset
+    (`static_5_800AB658+61812`, not s257's `+49104`), reached through a
+    DIFFERENT subroutine chain never before implicated:
+    `setupActorAnchorTransformType1` → `buildPositionAndCallTransformHelper`
+    → `evalCubicSplineAtTime`, Bus error on the same rdram-base-plus-wild-
+    pointer additive shape (`x8=0x300000000`, `x9=0x7ffffff8`).** Flagging
+    the ~4x-longer survival as single-source evidence only (iron rule 4) --
+    not a formal same-run A/B, could be scripted-input variance rather than
+    G30/G31 causality. `unlit-mesh-tracer` still 0 hits (game still dies in
+    the menu before gameplay render), so R7A/R7B_LOADED still have no
+    positive-control opportunity. **Next step, highest value**: full read
+    of `evalCubicSplineAtTime`/`buildPositionAndCallTransformHelper`/
+    `setupActorAnchorTransformType1` for the unguarded pointer feeding this
+    new Bus error, guard it, rebuild, re-soak. Full detail: PORTING-STATE
+    Session 258.
 
 -98. **(s257) Mined s256's `guard8soak1` log fully (step 1, no build) --
     confirmed it re-proves an already-catalogued signature with nothing
@@ -4870,6 +4901,20 @@ and named it. Full detail: PORTING-STATE s143.
    handler itself falls back to nearest-symbol, not a blanket problem
    with every crash log — worth re-examining if a future "nearest-symbol"
    crash reappears. Full detail: PORTING-STATE s132.
+   Prior conclusion (s132, now superseded): "26 distinct unguarded
+   pointer-chase sites, all guarded — this `-0x25A4` family is fully
+   covered." This was believable because the sweep was a systematic
+   full-body read with an independent subagent cross-check (3 spot-checks
+   matched its table exactly) — but s257/s258's own full-body re-read of
+   the same address range (prompted by a fresh, unrelated crash in the
+   same function) found 2 more occurrences of the identical load-then-
+   deref shape (`0x800ADA88`/`0x800ADAD4`) that the original sweep missed
+   between sites G28 and the G29 merge. Now 28 sites (G1-G31). Takeaway
+   for future full-body sweeps in this codebase: "N/N patched, audited"
+   is not the same guarantee as "no more instances exist" — a second
+   independent read of the same range is worth doing before declaring a
+   family complete, especially right after this file's own git history
+   shows how easy an off-by-one-in-a-list miss is here.
    **s133 (root-cause the s132 `emitAllocatedDLCommand` crash):** source
    read found the EXACT SAME `findAndUnlinkSmallestEntry`-return +
    walk-loop idiom s123/s131 already fixed in `submitSceneNodeRender`,
