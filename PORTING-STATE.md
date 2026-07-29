@@ -22705,3 +22705,90 @@ scope (`lib/`, `fixup_game_funcs.py` untracked sibling-checkout state,
 session's addition, migration to `PROJECT-OVERVIEW.md` remains undone).
 No `lib/` edits made this session, so no `export.sh`/commit obligation
 triggered.
+
+## Session 240 (2026-07-28)
+
+Did the instrument + soak s239 called for, per NEXT.md: added a log
+line inside `MetalSwapChain::resize()` (`lib/rt64/src/contrib/plume/
+plume_metal.cpp:2092-2096`) that fires only when the drawable size
+actually changes (inside the existing `if (current != target)` branch),
+tagged `[metal-resize-entry] n=%d t=%.1f w=%u h=%u`, using a static
+`std::atomic<int>` call counter and `rs64_elapsed_seconds()` for the
+timestamp.
+
+**Build note**: the first attempt declared `extern "C" double
+rs64_elapsed_seconds(void);` at block scope, inside the `if` body — this
+does not compile: a linkage-specification (`extern "C" ...`) is only
+legal at namespace scope in standard C++17, not block/function scope
+(`error: expected unqualified-id` on the string literal, because the
+parser doesn't accept `extern "C"` as a local declaration form). Fixed
+by hoisting the declaration to file/namespace scope, immediately above
+`MetalSwapChain::resize()`. Confirmed the final binary actually links
+against `rt64_render_context.cpp`'s `extern "C" double
+rs64_elapsed_seconds(void)` (same `RogueSquadron64Recomp` executable
+target, not a separate shared library) — no cross-TU symbol issues.
+
+Ran one soak (`metalresize1`, `scratch/s73_post_a_scene/
+run_metalresize1.sh`, copied from `run_campose14.sh` with only the
+`RUNTAG` and header changed — the full `campose*`/heap-guard env-var set
+stayed armed so the new instrument was additive, not a fresh unknown
+environment). Confirmed build freshness before trusting a null result:
+`strings` on the just-built binary shows the `[metal-resize-entry]`
+format string present, and the binary's mtime (20:35) predates the soak
+launch, so this was not a stale-binary false negative.
+
+**Result: `[metal-resize-entry]` fired ZERO times in a 459-second run.**
+The run itself also had `CRASH: 0` — the first fully crash-free soak in
+this `campose*`/`schedulepush2` family (previously 5/8 crashed) — and it
+ran well past the historical n=12420/t≈131s trigger point (last
+`[vi] update_screen` at frame #34176, `t` well beyond 131s given the
+hold window alone ran 432s wall-clock) without incident.
+
+Traced why the counter never fires, rather than treating the zero as
+unexplained: `PresentQueue::threadLoop()` (`lib/rt64/src/hle/
+rt64_present_queue.cpp:872,889`) only calls `ext.swapChain->resize()`
+when `needsResize()` is true, which requires the swap chain's cached
+`width`/`height` to differ from the actual NSWindow content-view size
+(`MetalSwapChain::needsResize()`, `plume_metal.cpp:2105-2109`). Since no
+code path in `src/main/` ever resizes the host window (no
+`SDL_SetWindowSize` call anywhere — the same static-analysis finding
+s239 made), `needsResize()` never returns true after initial setup, so
+`resize()` — and therefore its drawable-size-change branch carrying the
+new log line — is never invoked in normal operation. This is a dynamic
+confirmation of s239's static finding, not just a repeat of it: two
+independent lines of evidence (static code read + zero-fire
+instrumentation) now agree that the cross-thread `setDrawableSize` race
+hypothesis from s238/s239 does not describe what actually happens in
+this build.
+
+**What this does and does not close**: this closes off ONE specific
+candidate mechanism for the s238 host-side QuartzCore SIGSEGV
+(`x_hash_table_remove_ptr`<-`CAMediaTimingInvalidate`<-`-[CALayer
+dealloc]`<-`CA::Transaction::commit`) — the cross-thread `CAMetalLayer::
+setDrawableSize` race. It does NOT mean that crash is fixed: nothing
+that affects the crash's actual mechanism was changed this session (only
+a diagnostic log line was added), and a single clean soak is fully
+consistent with the crash's already-documented non-determinism (3/8
+soaks survived historically per s238). Do not read `CRASH: 0` on this
+soak as evidence of a fix.
+
+**Next step**: per NEXT.md's pre-planned refutation branch, the search
+must widen beyond static-read candidate-hunting in `plume_metal.cpp`/
+`rt64_present_queue.cpp` (two static reads, s239 and by extension this
+session's confirmation, have not found the actual corruption site) to
+Apple's own runtime debug tooling: launch the process with
+`MallocNanoZone=0 MallocStackLogging=1` and/or `MTL_DEBUG_LAYER=1` to
+catch the actual bad release/over-release at the point it happens
+instead of at the delayed `-[CALayer dealloc]`. This is scoped as its
+own work unit (setting up and validating the tooling output format is
+non-trivial and shouldn't share a session with another blind soak).
+
+This session touched `lib/rt64` (the plume submodule) — ran
+`./submodule-patches/export.sh` and committed the refreshed
+`submodule-patches/rt64-plume.patch` in this same session per the hard
+rule.
+
+**Housekeeping**: same items flagged again, still not this session's
+scope (`fixup_game_funcs.py` untracked sibling-checkout state,
+`CURRENT-TRUTH.md` over both size budgets — migration to
+`PROJECT-OVERVIEW.md` remains undone, now flagged for 31+ sessions).

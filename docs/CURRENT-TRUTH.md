@@ -663,7 +663,44 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s239)
+## Next steps, in order of expected value (s240)
+
+-81. **(s240) Instrumented and soaked `MetalSwapChain::resize()` — the s239
+    cross-thread `CAMetalLayer::setDrawableSize` race hypothesis is now
+    REFUTED, with two independent lines of evidence.** Added a log line
+    (`[metal-resize-entry] n=%d t=%.1f w=%u h=%u`, `plume_metal.cpp:2092-2096`,
+    gated inside the existing `if (current drawable size != target size)`
+    branch, using `rs64_elapsed_seconds()` declared `extern "C"` at namespace
+    scope — a block-scope `extern "C"` linkage-specification is not legal
+    C++17 and failed to compile on the first attempt, fixed by hoisting the
+    declaration above `MetalSwapChain::resize()`) and ran one soak
+    (`metalresize1`, full `campose*`/guard env-var set armed, same schedule
+    as `campose12`-`14`). **Result: zero fires across a 459s run that
+    survived the SELECT-CRAFT->mission transition and the historical
+    n=12420/t≈131s crash trigger point entirely (`CRASH: 0` — first fully
+    crash-free soak in this family; previously 5/8 crashed).** Verified this
+    is not a dead/stale build: `strings` on the just-built binary confirms
+    the log format string is compiled in. Traced WHY it never fires:
+    `PresentQueue::threadLoop()` (`rt64_present_queue.cpp:872,889`) only
+    calls `swapChain->resize()` when `needsResize()` is true, which requires
+    the swap chain's cached `width`/`height` to differ from the actual
+    NSWindow content-view size — and confirms s239's static-analysis finding
+    (no `SDL_SetWindowSize`/window-resize call anywhere in `src/main/`) with
+    a dynamic result: the resize path is simply never exercised in this
+    build, not merely unlikely to race. Two independent lines of evidence
+    (static code read s239 + dynamic zero-fire instrumentation s240) agree,
+    clearing the iron-rule-4 bar. **This does not mean the host-CALayer
+    crash (s238, `x_hash_table_remove_ptr`<-`CAMediaTimingInvalidate`<-
+    `-[CALayer dealloc]`<-`CA::Transaction::commit`) is fixed** — nothing
+    was changed except adding a log line, and a clean soak is consistent
+    with the crash's already-known non-determinism (3/8 survived historically);
+    it only closes off ONE candidate mechanism. **Next step**: per NEXT.md's
+    pre-planned refutation branch, escalate to Apple's own allocation/layer
+    debug tooling (`MallocNanoZone=0 MallocStackLogging=1` and/or
+    `MTL_DEBUG_LAYER=1` at process launch) to catch the actual bad
+    release/corruption at the point it happens, rather than chasing more
+    candidate call sites by static read. Full detail: PORTING-STATE Session
+    240.
 
 -80. **(s239) Static read of `lib/rt64/src/contrib/plume/plume_metal.cpp` +
     `rt64_present_queue.cpp` for the s238 host-CALayer-crash hypothesis —

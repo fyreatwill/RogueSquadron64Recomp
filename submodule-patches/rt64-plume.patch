@@ -1,5 +1,5 @@
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..6029f37 100644
+index a5f30a3..a4c305c 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
 @@ -14,12 +14,76 @@
@@ -149,3 +149,23 @@ index a5f30a3..6029f37 100644
          if (residencySet != nullptr) {
              residencySet->endResidency();
              residencySet->release();
+@@ -1987,6 +2081,8 @@ namespace plume {
+         }
+     }
+ 
++    extern "C" double rs64_elapsed_seconds(void);
++
+     bool MetalSwapChain::resize() {
+         getWindowSize(width, height);
+ 
+@@ -1996,6 +2092,10 @@ namespace plume {
+ 
+         const CGSize drawableSize = CGSizeMake(width, height);
+         if (const CGSize current = layer->drawableSize(); !CGSizeEqualToSize(current, drawableSize)) {
++            static std::atomic<int> rs64ResizeEntryCount{0};
++            fprintf(stderr, "[metal-resize-entry] n=%d t=%.1f w=%u h=%u\n",
++                rs64ResizeEntryCount.fetch_add(1) + 1, rs64_elapsed_seconds(), width, height);
++
+             layer->setDrawableSize(drawableSize);
+ 
+             for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
