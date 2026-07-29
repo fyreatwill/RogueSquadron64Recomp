@@ -5003,7 +5003,7 @@ index 5a331aa..71db1f5 100644
  
                      // Transition the render targets in case the present queue will show them so it doesn't have to perform transitions.
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index b9cb1f5..77941ed 100644
+index b9cb1f5..b9ca247 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
 @@ -238,9 +238,24 @@ namespace RT64 {
@@ -5146,7 +5146,66 @@ index b9cb1f5..77941ed 100644
                  // ROGUESQ: skip draws with null colorTarget instead of
                  // asserting. Some workloads route instances through a
                  // rasterScene whose fbStorage has no allocated colorTarget
-@@ -679,6 +778,22 @@ namespace RT64 {
+@@ -657,6 +756,45 @@ namespace RT64 {
+                     continue;
+                 }
+ 
++                // ROGUESQ: convertFixedRect() (see near top of this file) never
++                // clips/scales RDP-native scissor coords against the actual
++                // bound target's dimensions, so a garbage-width target (e.g. a
++                // few-pixel-wide RenderTarget from a degenerate framebuffer)
++                // can receive a scissor rect that overflows it and trips the
++                // Metal "Set Scissor Rects Validation" assertion. Clamp the
++                // rect to the target's bounds instead of crashing.
++                RenderRect clampedScissor = triangles.scissor;
++                {
++                    const int32_t targetWidth = (int32_t)(fbStorage->colorTarget->width);
++                    const int32_t targetHeight = (int32_t)(fbStorage->colorTarget->height);
++                    const RenderRect original = clampedScissor;
++                    clampedScissor.left = std::max(clampedScissor.left, 0);
++                    clampedScissor.top = std::max(clampedScissor.top, 0);
++                    clampedScissor.right = std::min(clampedScissor.right, targetWidth);
++                    clampedScissor.bottom = std::min(clampedScissor.bottom, targetHeight);
++                    if (clampedScissor != original) {
++                        static const bool log_clamp = []{
++                            const char *e = std::getenv("RT64_LOG_SCISSOR_CLAMP");
++                            return e && *e && *e != '0';
++                        }();
++                        if (log_clamp) {
++                            static std::atomic<int> n_clamp{0};
++                            int n = ++n_clamp;
++                            if (n <= 5 || (n % 500) == 0) {
++                                std::fprintf(stderr,
++                                    "[scissor-clamp] clamped=%d orig=(%d,%d,%d,%d) target=%dx%d clamped_to=(%d,%d,%d,%d)\n",
++                                    n, original.left, original.top, original.right, original.bottom,
++                                    targetWidth, targetHeight,
++                                    clampedScissor.left, clampedScissor.top, clampedScissor.right, clampedScissor.bottom);
++                                std::fflush(stderr);
++                            }
++                        }
++                    }
++                    if (clampedScissor.isEmpty()) {
++                        continue;
++                    }
++                }
++
+                 // A new pass must be started if decals are required and something wrote to the depth buffer before this call.
+                 const interop::OtherMode otherMode = triangles.shaderDesc.otherMode;
+                 bool depthDecal = (otherMode.zMode() == ZMODE_DEC);
+@@ -668,9 +806,9 @@ namespace RT64 {
+                     switchToDepthWrite();
+                 }
+ 
+-                if (previousScissor != triangles.scissor) {
+-                    worker->commandList->setScissors(triangles.scissor);
+-                    previousScissor = triangles.scissor;
++                if (previousScissor != clampedScissor) {
++                    worker->commandList->setScissors(clampedScissor);
++                    previousScissor = clampedScissor;
+                 }
+ 
+                 if (previousPipeline != triangles.pipeline) {
+@@ -679,6 +817,22 @@ namespace RT64 {
                  }
                  
                  rasterParams.renderIndex = i;
@@ -5169,7 +5228,7 @@ index b9cb1f5..77941ed 100644
                  rasterParams.screenScale = triangles.screenScale;
                  rasterParams.screenOffset = triangles.screenOffset;
                  worker->commandList->setGraphicsPushConstants(0, &rasterParams);
-@@ -735,6 +850,32 @@ namespace RT64 {
+@@ -735,6 +889,32 @@ namespace RT64 {
                      break;
                  }
  
@@ -5202,7 +5261,7 @@ index b9cb1f5..77941ed 100644
                  const RenderRect *clearRects = rectCoversWholeTarget ? nullptr : &clearRect.rect;
                  uint32_t clearRectCount = rectCoversWholeTarget ? 0 : 1;
                  if (fbStorage->colorTarget != nullptr) {
-@@ -1462,6 +1603,15 @@ namespace RT64 {
+@@ -1462,6 +1642,15 @@ namespace RT64 {
          fbParams.horizontalMisalignment = p.horizontalMisalignment;
          framebufferCount++;
  

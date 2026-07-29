@@ -23183,3 +23183,78 @@ uncounted crash (not the SELECT-CRAFT->mission CALayer SIGSEGV family).
 scope (`fixup_game_funcs.py` untracked sibling-checkout state,
 `CURRENT-TRUTH.md` over both size budgets, now flagged for 36+
 sessions).
+
+## Session 246 (2026-07-28)
+
+Implemented and confirmed s245's preferred fix (b) for the scissor-rect
+out-of-bounds Metal SIGABRT (`Set Scissor Rects Validation`,
+`FramebufferRenderer::submitRasterScene`, render pass width=6).
+
+**Change** (`lib/rt64/src/render/rt64_framebuffer_renderer.cpp`,
+inside `submitRasterScene`, immediately after the existing
+empty-scissor skip at line 736-757): compute `clampedScissor` from
+`triangles.scissor`, clamped to `[0, fbStorage->colorTarget->width]` x
+`[0, fbStorage->colorTarget->height]`. If the clamp changes anything,
+optionally log via new env var `RT64_LOG_SCISSOR_CLAMP` (same
+`getenv`-cached-static-lambda pattern as `RT64_LOG_VI_ZERO_SIZE`). If
+the clamped rect is empty, `continue` (skip the draw call, same
+pattern as the empty-scissor case). The `setScissors`/`previousScissor`
+call site (formerly line 770-773) now uses `clampedScissor` instead of
+`triangles.scissor` throughout. `fbStorage->colorTarget` is guaranteed
+non-null at this point in the loop (the null-colorTarget case
+`continue`s earlier, line 691) — confirmed by reading the loop body,
+not assumed. `std::max`/`std::min` used without adding an `<algorithm>`
+include, matching existing usage elsewhere in the same file
+(lines 135-138, 417-418) that also omits it — evidently pulled in
+transitively.
+
+**Build**: clean (`DEVELOPER_DIR=... cmake --build build`), 4
+pre-existing unrelated warnings only (nlohmann json literal-operator
+deprecation, imgui non-trivial memset — both present before this
+change). Fresh binary verified via `strings build/RogueSquadron64Recomp
+| grep scissor-clamp` before soaking.
+
+**Soak** (`scissorfix1`, same `campose*`/schedulepush2 schedule and
+armed-var set as `mtldebug1`/`mtldebug2`, `GAME_EXTRA_ENV="MTL_DEBUG_LAYER=1
+RT64_LOG_VI_ZERO_SIZE=1 RT64_LOG_SCISSOR_CLAMP=1"`, HOLD_S=350, full
+run wall=471s): **CRASH: 0**. Two independent positive controls both
+fired, confirming the null result is real and not a "guard never
+reached" false negative:
+
+- `[scissor-clamp]` fired 5 times (log budget caps display at n<=5),
+  e.g. `orig=(0,0,511,339) target=161x181 clamped_to=(0,0,161,181)` and
+  `orig=(0,0,1022,678) target=322x362 clamped_to=(0,0,706,376)` —
+  confirms out-of-bounds scissor rects against small targets are a
+  RECURRING condition in this scene, not a one-off from s244's specific
+  run, and the new guard is intercepting them.
+- `[vi zero-size guard]` (s244's guard) fired twice — unrelated guard,
+  confirmed still armed and working, unrelated regression check.
+
+Zero occurrences of `Set Scissor Rects Validation` or any other Metal
+Validation assertion string in `run.log`. Zero `SIGSEGV`/`SIGABRT`/
+`CALayer` occurrences. The only "Validation" hit in the whole log is
+the expected startup banner `Metal API Validation Enabled`.
+
+**This closes the s243->s244->s245->s246 chain**: NaN-viewport SIGABRT
+(fixed s244) and scissor-rect-overflow SIGABRT (fixed this session)
+are both now guarded and soak-confirmed clean. Note the clamp targets
+seen this soak (161x181, 353x188, 1121x203, 322x362, 706x376) are
+NOT the width=6 target from s244/s245's original trace — this is a
+different run/scene instance of the same bug CLASS, which is expected
+and actually strengthens confidence that the fix is general rather
+than overfit to one specific crash instance.
+
+`lib/rt64` was edited — `./submodule-patches/export.sh` was run and
+`submodule-patches/rt64.patch` confirmed to carry the new
+`clampedScissor`/`scissor-clamp` lines (63 insertions, 4 deletions vs.
+prior patch) before committing.
+
+**Verdict on the family tally**: unchanged — this crash class is now
+fixed, not merged into the SELECT-CRAFT->mission CALayer SIGSEGV
+family tally (still a distinct, separately-tracked family, still 5/10
+crashed vs 5/10 survived as of `malloclog2`/s242).
+
+**Housekeeping**: same items flagged again, still not this session's
+scope (`fixup_game_funcs.py` untracked sibling-checkout state,
+`CURRENT-TRUTH.md` over both size budgets, now flagged for 37+
+sessions).

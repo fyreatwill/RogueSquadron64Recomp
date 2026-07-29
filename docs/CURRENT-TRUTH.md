@@ -663,9 +663,38 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s245)
+## Next steps, in order of expected value (s246)
 
--86. **(s245) Static-traced s244's new scissor-rect Metal SIGABRT to a
+-87. **(s246) Implemented + soak-confirmed s245's preferred fix (b) for
+    the scissor-rect out-of-bounds Metal SIGABRT — CLOSED, two
+    independent positive controls, CRASH: 0.** Added a clamp in
+    `FramebufferRenderer::submitRasterScene`
+    (`lib/rt64/src/render/rt64_framebuffer_renderer.cpp`, right after
+    the existing empty-scissor skip): `clampedScissor` is
+    `triangles.scissor` clamped to `[0, fbStorage->colorTarget->width]`
+    x `[0, ->height]`, logged via new `RT64_LOG_SCISSOR_CLAMP` when it
+    changes anything, and the draw is skipped (`continue`) if the
+    clamped rect is empty; `setScissors`/`previousScissor` now use
+    `clampedScissor` throughout. Re-soaked (`scissorfix1`, same
+    schedule/armed-vars as `mtldebug1`/`mtldebug2`, HOLD_S=350,
+    wall=471s): **CRASH: 0**, `[scissor-clamp]` fired 5x against
+    multiple different small targets (161x181, 353x188, 1121x203,
+    322x362, 706x376 — NOT the same width=6 target as s244/s245's
+    original trace, confirming this is a recurring bug CLASS, not a
+    one-off), `[vi zero-size guard]` (s244's fix) still fires clean (2x),
+    zero `Set Scissor Rects Validation` or any other Metal Validation
+    assertion in `run.log`, zero SIGSEGV/SIGABRT/CALayer occurrences.
+    `submodule-patches/export.sh` run, `rt64.patch` confirmed to carry
+    the new lines, committed same session (hard rule 9). **This closes
+    the s243->s244->s245->s246 chain** — both the NaN-viewport SIGABRT
+    (s244) and the scissor-overflow SIGABRT (s246) are now guarded and
+    soak-confirmed clean; the family tally (5/10 crashed vs 5/10
+    survived, CALayer SIGSEGV only) is unaffected — these were always a
+    separate, now-fixed crash class. Full detail: PORTING-STATE Session
+    246.
+
+-86. **(s245, SUPERSEDED by s246's fix landing — kept for mechanism
+    detail) Static-traced s244's new scissor-rect Metal SIGABRT to a
     confirmed mechanism — H2+H3 CONFIRMED, H1 refuted-and-refined, no
     soak needed to discriminate (two static code paths converge).**
     `render pass width(6)` is a REAL 6px-wide `RenderTarget`, correctly
