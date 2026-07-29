@@ -663,7 +663,37 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s249)
+## Next steps, in order of expected value (s250)
+
+-91. **(s250) Finished guarding all 3 of `selectPostCrawlCraft`'s s249-flagged
+    candidates (`funcs_30.c`, 0x800CBDA8 + 0x800CBDE4 — two near-identical
+    inlined doubly-linked-list "insert at tail" helpers): each got TWO
+    guards (walk + peek-load), matching `renderUnlitMeshFaces`'s s219
+    GUARD/GUARD3 shape, not `selectPostCrawlCraft`'s own single-guard
+    template — the loop dereferences the SAME register twice back-to-back
+    (self-ref walk, then an unvalidated peek-load of the freshly-walked
+    value), unlike s249's two-different-aliased-registers case. Bail is a
+    plain `return;` (void-returning internal helper, no error-code
+    contract to preserve).** Build clean (patch report audited: both new
+    guards `x1`, no duplicates; the only anomalous multiplicity in the
+    201-line report is the pre-existing, unrelated `projectModelBoundsToScreen
+    guard3 x2`). **2 soak attempts**: 1st (`selectpostcrawlguard2`) died
+    pre-title-screen to the already-catalogued, unrelated 23rd crash class
+    (`waitForAnyAudioSlot`/`menuOverlayInit`, first seen s165) — 0/0
+    positive controls, fully uninformative, not counted against budget.
+    2nd (`selectpostcrawlguard3`) crossed SELECT-CRAFT cleanly (74.9s) and
+    completed the full 150s hold with **CRASH: 0**, but got **zero guard
+    fires of any kind** (not even the usual `heapwalker-guard4` positive
+    control) — an honest single-sample null of **weak** evidentiary value;
+    do NOT cite as "guards confirmed safe" without a positive control in a
+    future run. **Process note for future sessions: `fixup_game_funcs.py`
+    is NOT fully idempotent** (the s139 `rs_malloc` entry-capture patch
+    stacks duplicate declarations on repeat invocations against the same
+    already-patched files) — invoke it exactly once per regen cycle, save
+    its report to a file, and grep the file rather than re-running the
+    script to answer follow-up questions about the report. 140 candidate
+    sites remain project-wide (down from 142). Full detail: PORTING-STATE
+    Session 250.
 
 -90. **(s249) Started the project-wide static sweep for the "RDRAM-base +
     un-subtracted wild pointer" whack-a-mole family (s248's option 1):

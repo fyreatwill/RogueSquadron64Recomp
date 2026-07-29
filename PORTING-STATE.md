@@ -23582,3 +23582,140 @@ batch-apply.
 again this session — picked the code-change option over housekeeping per
 `ITERATION.md`'s own incentive). Other flagged items (sibling-checkout
 untracked state, two unrelated dirty checkouts) unchanged.
+
+## Session 250 (2026-07-28)
+
+**Continued the s249 static sweep: guarded `selectPostCrawlCraft`'s other
+2 candidate sites (`funcs_30.c`, 0x800CBDA8 and 0x800CBDE4 — the "two
+near-identical inlined list-insert helpers" s249 flagged but didn't
+trace). Build clean, no regression. 2 soak attempts: 1st pre-empted
+pre-title-screen by an already-catalogued unrelated crash class (0/0
+positive controls, uninformative); 2nd survived the full run (`CRASH: 0`)
+but got zero positive-control fires of any kind — an honest single-sample
+null with weak evidentiary value, not a confirmed clean pass. 140
+candidate sites remain project-wide.**
+
+**Full-loop-body read (mandatory per s249's own finding) of both sites.**
+Both are byte-identical in shape: a doubly-linked-list "insert at tail"
+helper, list head read from an untrusted struct field
+(`MEM_W(ctx->r4, 0X20)` for helper A / `MEM_W(ctx->r4, 0X10)` for helper
+B), walked to find the tail via a loop at `L_800CBDA8` / `L_800CBDE4`:
+
+```
+L_800CBDA8:
+    ctx->r3 = MEM_W(ctx->r3, 0X0);   // flagged self-ref line (walk)
+    ctx->r2 = MEM_W(ctx->r3, 0X0);   // peek-load of the BRAND NEW r3
+    if (ctx->r2 != 0) goto L_800CBDA8;
+```
+
+This is a DIFFERENT shape from `selectPostCrawlCraft`'s own s249 guard
+(two *different* aliased registers derived from the same pointer). Here
+it's the *same* register (`r3`) dereferenced twice back-to-back: line 1
+reads the incoming (possibly-corrupt, carried from the previous
+iteration's own unvalidated walk) `r3`; line 2 immediately re-reads the
+value line 1 just produced, itself unvalidated. This matches
+`renderUnlitMeshFaces`'s s219 GUARD/GUARD3 combo shape (self-ref walk +
+peek-load of the freshly-walked pointer), not `selectPostCrawlCraft`'s
+own template — a guard only before line 1 would still leave line 2's
+peek exposed to whatever garbage line 1 just read. So each site got TWO
+guards this session (GUARD1 before the walk, GUARD2 between the walk and
+the peek), both using the established `0x80000000..0x80800000` lo-half /
+`0xFFFFFFFF` hi-half RDRAM-pointer sentinel check.
+
+**Bail target: plain `return;`**, not a goto to a shared exit label like
+s249's own guard used. Verified by reading forward: both sites' natural
+loop-exit path writes `MEM_W(0X0, ctx->r3) = ctx->r5` (append into the
+old tail's next field) then `MEM_W(0X4, ctx->r5) = ctx->r3` (new node's
+prev = old tail) before returning — both use the untrusted `r3` as an
+address or a stored value, so bailing into that path would just move the
+wild dereference/store rather than avoid it. These are void-returning
+internal helpers reached via `jal` (no `RECOMP_FUNC` boundary separates
+them from `selectPostCrawlCraft` — they're folded into the same block by
+the recomp naming heuristic) with no caller-visible error-code contract,
+so silently abandoning the insert on a corrupt list is the simplest bail
+this shape supports.
+
+**Self-inflicted process note, worth remembering**: re-ran
+`fixup_game_funcs.py` multiple times against the same already-patched
+`funcs_*.c` output while auditing its report (`grep`-filtering the same
+invocation repeatedly instead of saving one run's output to a file).
+Most patches in this script are naturally idempotent (guard patches key
+off an unguarded code *shape* that stops matching once patched), but at
+least one older patch (`s139`'s `rs_malloc` entry-capture — matches a
+literal function-prologue anchor that its own insertion doesn't consume)
+is **not** idempotent and silently stacked duplicate declarations
+(`redefinition of 's_rsmalloc_req_size'` etc.), breaking the build with
+unrelated errors in `funcs_0.c`. Fixed by a fully clean re-regen (delete
+all 45 `funcs_*.c` → `N64Recomp` → `fixup_game_funcs.py` **exactly
+once**, output redirected to a file for later inspection rather than
+re-invoked per question) and confirmed via `grep -c` on the resulting
+file, not by re-running the script again. **Lesson for future sessions:
+never invoke `fixup_game_funcs.py` more than once per regen cycle** —
+save its report to a file and grep the file, not the live invocation.
+
+**Build**: clean single-pass regen (see above). Patch report audited
+(saved to `scratch/agent/s250_fixup_report.txt`): `funcs_30.c:
+selectPostCrawlCraft helper A list-insert-walk guard (0x800CBDA8) patched
+x1` and `...helper B... (0x800CBDE4) patched x1` — both exactly the
+expected multiplicity, no duplicates. The only anomalous multiplicity in
+the whole 201-line report (`projectModelBoundsToScreen a3-pointer
+guard3... x2`) is pre-existing and unrelated (11th crash class, `funcs_
+15.c`), confirmed via `docs/CURRENT-TRUTH.md` cross-reference, not
+something this session introduced. `cmake --build` exit 0 (only
+pre-existing, unrelated `-Wformat`/`-Wpointer-sign` warnings). Binary
+verified fresh (mtime matches build completion; `strings` shows all 4 new
+guard tags: `selectpostcrawl-insguard-A1/A2/B1/B2`).
+
+**Soak attempt 1** (`run_selectpostcrawlguard2.sh`, tag
+`selectpostcrawlguard2`, full `campose11`-baseline env block plus the 4
+new `ROGUESQ_LOG_SELECTPOSTCRAWL_INSGUARD_{A,B}{1,2}=1` vars, `HOLD_S=
+150`): died **before reaching `vi_width=1024`** (the title-screen
+transition, ~45s in a healthy run) — `[CRASH] caught signal 11`,
+`x8=0x0000000300000000` (the RDRAM-base sentinel), PC symbolized
+`waitForAnyAudioSlot+244`, called from `menuOverlayInit+7100`. This is
+the already-catalogued **23rd crash class** (first seen s165, extensively
+chased s165-s167+, still-open/intermittent, entirely unrelated to
+`selectPostCrawlCraft` — no call or data relationship). Zero guard fires
+of any kind this run (not even a single positive control) — the process
+died before any relevant code path was reachable. Per the iron rule ("a
+null result without a same-run positive control is not a result"), this
+attempt is fully uninformative and was **not** counted toward the
+3-strikes budget rule (it's a known unrelated confound, not a repeat of
+the same non-discriminating hypothesis test).
+
+**Soak attempt 2** (`run_selectpostcrawlguard3.sh`, tag
+`selectpostcrawlguard3`, identical env block, new tag only): reached
+`vi_width=1024` cleanly at 45.1s, crossed the established SELECT-CRAFT
+transition at `vi_width=512 (was 1024) origin=0x006AB400 at 74.9s
+update_screen #4460` (matches the many-sessions-established signature),
+completed the full 150s hold plus `STICK_SCHEDULE` (`10:sr 25:sl 40:su
+95:start 100:a`), wall=218s. **`[CRASH] caught signal` count: 0.** But
+**zero guard fires of any kind across the entire ~1.3M-line run.log** —
+not the new guards, not `selectpostcrawl-guard` (s249), not
+`heapwalker-guard`/`guard4` (the usual positive control that fired 2x in
+s249's own `selectpostcrawlguard1` run on this exact `HOLD_S=150`
+recipe). This is an honest single-sample null with **weak** evidentiary
+value: the run genuinely didn't crash, but nothing confirms the
+instrumentation was live/reachable this run, so it cannot rule out "this
+particular scene/RNG state just didn't load/exercise anything
+guard-relevant" as the explanation. Labeled explicitly as
+**not a validated clean pass** — do not cite this as "guards confirmed
+safe" without a positive control in a future soak.
+
+**Where the new code lives**: same as every prior guard in this family —
+`fixup_game_funcs.py` in the untracked sibling `~/Documents/Tools/
+N64Recomp` checkout (flagged since s83, not this repo's commit scope).
+Only the driver scripts (`scratch/s73_post_a_scene/run_
+selectpostcrawlguard{2,3}.sh`, gitignored except tracked exceptions) and
+this write-up are in `RogueSquadron64Recomp`'s own history.
+
+**Net effect**: 2 more real guards landed (all 3 of `selectPostCrawlCraft`'s
+s249-flagged candidates are now fixed), build clean, no regression, no
+strong new evidence either way on whether these specific sites are hot.
+140 candidate sites remain project-wide (down from 142), catalogued in
+`NEXT.md`. No `lib/` edit this session — `submodule-patches/export.sh`
+not needed.
+
+**Housekeeping**: `CURRENT-TRUTH.md` size still flagged, unaddressed
+again (picked the code-change option per `ITERATION.md`'s own incentive,
+same call s249 made). Other flagged items unchanged.
