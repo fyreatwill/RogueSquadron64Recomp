@@ -22035,3 +22035,88 @@ session). `fixup_game_funcs.py`'s untracked state in the `N64Recomp` sibling
 checkout still not fixed (not this repo's scope, flagged since s83).
 `docs/CURRENT-TRUTH.md` still over both size budgets, still not migrated
 (flagged 27+ sessions).
+
+## Session 232 (2026-07-28)
+
+**Work unit**: NEXT.md's Option A — Probe B, DL-emission payload hash
+diagnostic, abandoning the epoch-diagnostic channel per s231's 0/4 result.
+Read `submitSceneNodeRender` (`funcs_4.c:6-3017`) and both `processSceneNode`
+cache-check sites (site A `:13881-13890`, site B `:14732-14751`) and found
+they converge on a single shared hit-path block at `L_80014FE8`
+(`funcs_4.c:13917-13987`): it loads a "content" object pointer (`$s0`,
+`node+0x8`) and a DL-pointer-shaped field on it (`$s0+0x34`, `$a1`/`ctx->r5`)
+which, if non-zero, gets pushed into the render-queue table alongside a
+fixed global and the outer node pointer — the existing s152
+scene-rq-counter diagnostic already logs that this fires, but never the
+queued content itself. Landed one new PATCH block
+(`_dl_payload_hash_patch` in `N64Recomp/fixup_game_funcs.py`, anchored on
+the unique `0x80014FE8: lw $a1, 0x34($s0)` line) that computes an FNV1a-style
+hash of up to 16 words (64 bytes) at the DL pointer's target when it's in
+valid guest RDRAM range (`0x80000000`-`0x80800000`), combined with the
+pointer value itself, gated behind a new `ROGUESQ_LOG_DL_PAYLOAD_HASH` env
+var. Heartbeat every 5000 calls, transition-log threshold `run>=2000` — s231's
+coarse-first values, applied from the start this time. Hypotheses written to
+NEXT.md before building (H1 stays-live / H2 frozen-cache-content / H3
+pointer-leaves-range / H4 wrong-site-null-result). Regenerated
+(`make_elf.py` -> `regen_n64recomp.sh` -> `fixup_game_funcs.py` once,
+confirmed `DL-emission payload hash diagnostic patched x1` in the fixup
+report and spot-checked the generated code) and rebuilt clean
+(`DEVELOPER_DIR=... cmake --build build -j8`, exit 0).
+
+**Soak (`campose7`, 1 of 2 budgeted attempts — stopped after 1, see below)**:
+copied from `campose3` (the clean, non-epoch-armed baseline), NOT
+`campose4`/`5`/`6`, deliberately leaving `ROGUESQ_LOG_RENDER_CACHE_EPOCH`
+unset — reasoning: campose1/campose3 both survived the SELECT-CRAFT->mission
+transition fine without the epoch diagnostic armed, while campose4/5/6 (epoch
+armed) are 4/4 dead at that exact transition for a cause s231 didn't fully
+resolve beyond "the transition itself is fragile" — arming it again here
+would have re-exposed this independent probe to that same unresolved risk
+for no benefit, since Probe B doesn't depend on the epoch var. Result:
+**clean run, CRASH: 0**, full 424s hold + 27s tail, self-SIGKILL at wall=451s
+as designed — the SELECT-CRAFT->mission transition (~73.7s per this run's
+own `[phase]` log) survived without incident, consistent with the
+campose1/campose3 baseline it was copied from.
+
+**Visual freeze**: MD5-checksummed all 350 `hold_NN.png` frames
+(`scratch/agent/checksum_campose7.py`) — last visual change at `hold_246`,
+frames 247-350 byte-identical. The known picture-freeze bug reproduced in
+this run too, as expected (orthogonal to this diagnostic).
+
+**DL-payload-hash data (`scratch/agent/correlate_campose7.py`)**: 70
+heartbeat samples, n=0 to n=345000, **zero `[dl-payload-transition]` events**
+— the per-call consecutive-run comparator as designed almost never reaches
+its `run>=2000` threshold, because `processSceneNode` visits many different
+content objects per frame, so consecutive calls essentially always differ by
+identity even when nothing is "stale" — this is a real design limitation
+found empirically, not a null result about the game. The heartbeat samples
+themselves are still informative: n=0-95000 (roughly the SELECT-CRAFT/
+mission-intro period, before and through the 73.7s transition) sample
+constantly-different content pointers in the `0x800Cxxxx`-`0x800Fxxxx`/
+`0x8025xxxx`-`0x801Exxxx` ranges, consistent with diverse dynamic 3D scene
+content. Starting around n=100000-115000 (well before the visually-observed
+freeze, which a rough linear extrapolation off this run's own `[phase]`
+timestamps places at roughly n=150000-160000 for `hold_246` — single-source,
+approximate) the sampled content pointers collapse to a small, repeating
+pool in the `0x80332xxx`-`0x80335xxx` range, and every recurrence of the same
+content pointer across the rest of the 345000-call run (spans up to
+~230000 calls / most of the run's remaining duration) produces the byte-
+identical hash every single time — e.g. content `0x80332BF8` hashes to
+`0x846DF5EA` at n=150000, 250000, 305000, AND 345000, no exceptions; same
+pattern for `0x80332D0C`, `0x80332FEC`, `0x80332DC4`, `0x80332CB0`,
+`0x80332C54`, `0x80332B9C`.
+
+**Conclusion — genuine signal, but ambiguous, not yet a finding**: this
+late-run "small fixed pool, always-identical hash" pattern is exactly what
+either (a) a stuck render cache feeding stale content site-wide, or (b)
+completely normal static HUD/menu/cockpit-overlay geometry that is SUPPOSED
+to be pixel-identical every frame, would both look like — this diagnostic's
+coarse global-heartbeat sampling cannot tell those apart, and the shift into
+the fixed pool starts well before the estimated visual-freeze n, which is
+more consistent with "gameplay HUD becomes dominant in the traversal order
+after mission start" than with a freeze-triggered event. **Do not report
+this as evidence of the render-cache-epoch bug** — it is not, on its own.
+
+**Housekeeping**: none done this session — same three items as s231
+(`lib/` dirty-but-uninvestigated, `fixup_game_funcs.py` untracked sibling
+state, `CURRENT-TRUTH.md` over-budget) still outstanding, still not this
+session's scope.

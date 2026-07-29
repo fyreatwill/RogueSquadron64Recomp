@@ -663,7 +663,40 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s231)
+## Next steps, in order of expected value (s232)
+
+-73. **(s232) Landed Probe B (DL-emission payload hash diagnostic) and ran
+    it clean — SELECT-CRAFT->mission transition survived (0 crashes) when
+    NOT arming the epoch diagnostic, confirming s231's framing — but the
+    payload-hash signal itself is ambiguous, not yet a finding.** New
+    diagnostic (`ROGUESQ_LOG_DL_PAYLOAD_HASH=1`, `funcs_4.c:13918`
+    `L_80014FE8`, the shared hit-path enqueue point for both cache-check
+    sites A/B) hashes up to 64 bytes at the enqueued DL pointer's target.
+    Soaked once (`campose7`, copied from the non-epoch-armed `campose3`
+    baseline, budget was 2 attempts but 1 sufficed — clean result, no need
+    for a retry): CRASH: 0, full 451s wall, picture-freeze reproduced as
+    expected (MD5-checksums, last visual change `hold_246`). Heartbeat data
+    (70 samples, n=0-345000, **zero transition events** — the per-call
+    consecutive-run comparator rarely fires because `processSceneNode`
+    visits many different content objects per frame, a real design
+    limitation) shows a pattern shift around n=100000-115000 (before the
+    ~n=150000-160000 estimated freeze point, single-source/approximate):
+    early samples are diverse/changing (`0x800Cxxxx`-`0x800Fxxxx` range,
+    consistent with dynamic 3D content); later samples collapse to a small
+    repeating pool (`0x80332xxx`-`0x80335xxx`) whose hashes NEVER change
+    across up to ~230000 calls of recurrence. **This is consistent with
+    either a stuck render cache OR completely normal static HUD/menu
+    geometry — cannot be told apart with this diagnostic's coarse global
+    heartbeat sampling, and the pattern starts before the estimated freeze
+    point, which favors the HUD explanation. Do not treat this as evidence
+    for the render-cache-epoch theory.** **Next step**: either (a)
+    determine which content-address ranges are HUD/UI vs 3D scene geometry
+    (grep static asset tables / cross-reference known draw-call sites) so a
+    future probe can target only-3D content, or (b) redesign to track a
+    small curated set of specific content pointers continuously (not
+    globally sampled) across the whole run to see whether a KNOWN-dynamic
+    pointer's hash ever goes constant. Full detail: PORTING-STATE Session
+    232.
 
 -72. **(s231) Refutes s230's "diagnostic I/O overhead" hypothesis with two
     independent attempts; the SELECT-CRAFT->mission VI transition (~73-74s)
