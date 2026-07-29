@@ -22452,3 +22452,77 @@ either; `fixup_game_funcs.py` untracked sibling-checkout state — edited
 this session but that checkout is outside this repo's commit scope, flagged
 per s83; `CURRENT-TRUTH.md` still far over both the ~35 KB budget and the
 Read tool's 256 KB limit, unmigrated for 30+ sessions).
+
+## Session 237 (2026-07-28)
+
+**Work unit** (from NEXT.md s236): re-soak the already-landed/validated
+`t=` `[campose-entry]` instrument, no code change — `campose13`, copied
+from `run_campose12.sh` with only the `campose12`->`campose13` string
+occurrences edited (RUNTAG in the header comment and the
+`run_mission_keys.sh` invocation line). Launched as a single synchronous
+background Bash call (`run_in_background: true`, 330000ms timeout),
+block-waited via `TaskOutput`.
+
+**Result: crashed again before the hold window** — the 2nd no-result soak
+of this instrument (still short of iron rule 8's 3-consecutive-no-result
+budget; this is the 2nd, not 3rd, iteration). 1 `hold_NN.png` frame
+captured (`hold_01.png`) — `game process gone at hold-iter 2`, `hold done
+wall=1s` — versus `campose12`'s 0 frames, i.e. `campose13` got marginally
+further into the hold window than `campose12` but still nowhere near the
+`hold_270`/470s freeze-frame region s235 needs. `CRASH: 35` in the
+driver's literal-string count, 1 actual `[CRASH] caught signal` event (same
+counting caveat as `campose12`, NEXT.md's documented gotcha).
+
+Crash signature: SIGBUS (signal 10), `si_addr=0x3c00b1382`,
+`[CRASH][pc-symbol] pc=0x105082c04 sym=static_5_800C6854+1044`. Native
+backtrace frames: `static_5_800C6854+944` <- `menuOverlayInit+3512` <-
+`mainGameLoop+2400` <- `mainBootstrapWorker+2032` <- `run_thread_function`
+<- thread-bootstrap plumbing. **This is a DIFFERENT crash site than
+`campose12`/`campose10`**: `campose12`'s crash resolved all the way down
+through `emitAllocatedDLCommand+6608` <- `submitSceneNodeRender+21576` <-
+`processSceneNode` <- `traverseSceneGraphRecursive` <-
+`setupCameraMatrices` before reaching the same `static_5_800C6854` <-
+`menuOverlayInit` <- `mainGameLoop` outer shell; `campose13`'s
+`[CRASH][pc-symbol]` line resolves the actual faulting PC directly to
+`static_5_800C6854+1044` itself, with no scene-render/camera-matrix frames
+between it and `menuOverlayInit` — i.e. this run never got as deep into the
+render/camera call chain before faulting. Different `si_addr`
+(`0x3c00b1382` vs `campose12`'s `0x380000000`, `campose10`'s
+`0x336000004`) too — three crashes, three different faulting addresses, no
+repeated address.
+
+**But the trigger point in game-time is strikingly consistent between the
+last two runs**: `campose13`'s last `[campose-entry]` line before the crash
+is `n=12420 t=131.3` — `campose12`'s last line was also **`n=12420
+t=130.8`**, the identical campose-call-count at crash, wall-clock only
+0.5s apart. (`campose10`, by contrast, crashed much earlier, ~t=74.5s —
+so this exact-n=12420 match is 2/2 on the two most recent runs, not
+established across all 3 crashed soaks.) Combined with the differing
+crash site/address, this reframes the "non-deterministic transition"
+characterization: the SELECT-CRAFT->mission transition may reach a
+consistent trigger point (same frame/call count, ~t=130-131s, at least in
+these 2 runs) where some memory state is already corrupted, but WHICH
+downstream read of that corrupted state actually faults — and where —
+varies run to run (heap-layout/thread-timing non-determinism deciding the
+victim access, not the trigger event itself). This is a refinement worth
+testing further, not yet a proven mechanism — 2 data points on the timing
+match, 3 different addresses on the site match.
+
+**Conclusion**: campose-vs-freeze correlation (the actual discriminating
+question from s235's NEXT.md) STILL has not run — 2 consecutive soaks of
+this instrument have now crashed before the hold window, both during the
+same fragile transition, with different-but-clustered crash signatures.
+Per NEXT.md's explicit instruction, this does not license a 3rd soak in
+this iteration — one more soak (`campose14`) is next iteration's work
+unit, and per iron rule 8, if `campose14` ALSO crashes before the hold
+window, that will be the 3rd consecutive no-result iteration on this
+specific hypothesis and the budget rule requires stepping back to a
+different approach (e.g., shortening the pre-hold schedule to spend less
+time in the fragile zone, or picking a different already-armed diagnostic
+that doesn't require crossing this transition) rather than a 4th blind
+soak.
+
+**Housekeeping**: same items flagged again, still not this session's scope
+(`lib/`, `fixup_game_funcs.py` untracked sibling-checkout state,
+`CURRENT-TRUTH.md` over both size budgets) — no new action taken, no
+`lib/` edits made.

@@ -1,78 +1,79 @@
-# NEXT work unit — re-soak campose12's already-landed `t=` instrument
-# (no code change) to try to reach the hold window and answer the
-# campose-vs-freeze correlation question
+# NEXT work unit — one more re-soak (`campose14`) of the already-landed
+# `t=` instrument; this is the LAST soak before iron rule 8's budget
+# forces a strategy change if it also fails to reach the hold window
 
 ## Where the investigation stands
 
-s236 added a `t=%.1f` field (shared `rs64_elapsed_seconds()` epoch, same
-idiom as the `dl-payload-*` PATCH block) to the `[campose-entry]` log line
-(`ROGUESQ_LOG_CAMPOSE`, guest `0x800178A8`, `fixup_game_funcs.py`) and
-regenerated clean. The validation soak (`campose12`, copied from
-`run_campose11.sh`, RUNTAG only changed) gave a split result:
+s236 added a `t=%.1f` field to `[campose-entry]` and positive-control
+validated it. Two soaks since then (`campose12` s236, `campose13` s237)
+have BOTH crashed during the SELECT-CRAFT->mission transition before
+reaching the hold window — the actual discriminating question (does the
+camera-pose stream also stall around t≈470.2s, s235's freeze frame,
+arguing for a game-logic freeze, vs. keep updating, arguing for a
+render-side-only bug) still has NOT been tested.
 
-- **Positive control confirmed**: `t=` fires and increases monotonically
-  on `[campose-entry]` lines — `t=0.9` (n=0) through `t=130.8` (n=12420),
-  210 lines total. The instrument itself works.
-- **But the run crashed during the SELECT-CRAFT->mission transition**
-  before reaching the hold window (0 `hold_NN.png` frames captured), so
-  the actual discriminating question — does the camera-pose stream also
-  stall around t≈470.2s (s235's freeze frame), arguing for a game-logic
-  freeze, or keep updating, arguing for a render-side-only bug — still has
-  NOT been tested. This is the exact same shape as s234's `campose10`
-  soak (instrument validated, crashed before the payoff).
+**New wrinkle from s237**: the two most recent crashes (`campose12`,
+`campose13`) have DIFFERENT crash sites/addresses (SIGBUS at
+`si_addr=0x380000000` vs `si_addr=0x3c00b1382`; `campose12`'s fault chain
+went deep into `emitAllocatedDLCommand`<-`submitSceneNodeRender`<-
+`processSceneNode`<-`traverseSceneGraphRecursive`<-`setupCameraMatrices`,
+`campose13`'s `[CRASH][pc-symbol]` resolved directly to
+`static_5_800C6854+1044` called from `menuOverlayInit` with no
+scene-render frames beneath it) — but an IDENTICAL campose call-count at
+crash time: both stopped at `[campose-entry] n=12420` (`t=130.8` vs
+`t=131.3`, 0.5s apart). `campose10`'s earlier crash (~t=74.5s) does NOT
+match this n/t, so it's 2/2 on recent runs, not 3/3 overall — a lead, not
+a proven mechanism.
 
-Crash signature (for reference, not a new bug — see "Do NOT" below): SIGBUS,
-`si_addr=0x380000000`, `emitAllocatedDLCommand+6608` <-
-`submitSceneNodeRender+21576` <- `processSceneNode` <-
-`traverseSceneGraphRecursive` <- `setupCameraMatrices`. Same call-chain
-family as `campose10`'s crash (`submitSceneNodeRender+31672`,
-`si_addr=0x336000004`, s234) — different exact offset/address, same
-transition-time scene-traversal instability, already documented
-non-deterministic (now 2/5 `campose*` soaks crashed here vs. 3/5 survived:
-`campose8`/`9`/`11` survived, `campose10`/`12` crashed).
-
-This is the 1st soak of this specific instrument (not yet a 3rd
-consecutive no-result iteration on this hypothesis — iron rule 8 does not
-yet call for abandoning it). Per the s234->s235 precedent, the next move is
-simply one more soak of the SAME already-validated instrument — no new
-code, no new diagnostic.
+This is the 2nd consecutive no-result soak of this specific instrument
+(iron rule 8 triggers at the 3rd). One more soak is still within budget.
 
 ## Do this iteration
 
 1. **Copy the driver, bump the tag only**: `cp
-   scratch/s73_post_a_scene/run_campose12.sh
-   scratch/s73_post_a_scene/run_campose13.sh`, then edit ONLY the
-   `campose12`->`campose13` string occurrences (the `zsh
-   run_mission_keys.sh campose12 5 12` line and the header comment). Do
-   NOT touch env vars, `STICK_SCHEDULE`, `HOLD_S`, or any other setting —
-   identical armed set to `campose11`/`campose12`.
+   scratch/s73_post_a_scene/run_campose13.sh
+   scratch/s73_post_a_scene/run_campose14.sh`, then edit ONLY the
+   `campose13`->`campose14` string occurrences (header comment + the `zsh
+   run_mission_keys.sh campose13 5 12` line). Do NOT touch env vars,
+   `STICK_SCHEDULE`, `HOLD_S`, or any other setting.
 2. **No rebuild needed** — the binary already has the validated `t=`
    instrument compiled in from s236. Launch directly:
-   `zsh run_campose13.sh` as a single SYNCHRONOUS (foreground) Bash call,
-   `run_in_background: true`, generous timeout (e.g. 330000ms), then
-   block-wait via `TaskOutput` (`block: true`, `timeout: 180000`, repeat if
-   it times out mid-run — s233-s236 all used this pattern successfully).
-3. **If it crashes again before the hold window** (plausible — this
-   transition is proven non-deterministic, not a coin flip guaranteed to
-   land in your favor): this becomes the 2nd no-result soak on this
-   instrument, still short of the 3-strikes budget rule. Write up the
-   crash signature (compare call-chain/offset against `campose10`/`12` —
-   same family or different?), and leave ONE more soak (`campose14`) as
-   next iteration's work unit. Do not spend a 3rd soak in the SAME
-   iteration — one soak is the per-iteration work unit.
+   `zsh run_campose14.sh` as a single Bash call with `run_in_background:
+   true`, generous timeout (e.g. 330000ms), then block-wait via
+   `TaskOutput` (`block: true`, `timeout: 180000`, repeat if it times out
+   mid-run).
+3. **If it crashes again before the hold window**: this IS the 3rd
+   consecutive no-result iteration on this hypothesis — iron rule 8 now
+   applies. Do NOT queue a `campose15` soak. Instead:
+   - Grep the crash signature (signal, `si_addr`, `[CRASH][pc-symbol]`,
+     native backtrace) and add it to the s237 comparison table (3 crashed
+     soaks now instead of 2 — does `n=12420` recur a 3rd time, or was that
+     a 2-run coincidence?).
+   - Write the hypothesis/evidence table into this file and pick ONE of:
+     (a) shorten `STICK_SCHEDULE`/reduce the pre-hold-window wait so less
+     wall-clock is spent inside the fragile transition before the hold
+     window's key events fire, since campose12/13 both died ~55-57s AFTER
+     the VI-width transition onset (~t=74.4s) rather than at onset itself
+     — moving the hold-window-critical action earlier might dodge the
+     ~t=130s fault window entirely; (b) pick a different already-armed
+     diagnostic that doesn't require surviving this transition at all
+     (e.g. something observable from a save-state or an earlier phase);
+     (c) treat the crash-family itself as the target and pick up the
+     unshipped NaN/unguarded-deref hardening proposed at CURRENT-TRUTH
+     -55/-56 so future soaks survive by construction rather than by luck.
+   - Do not silently re-attempt the same soak a 4th time.
 4. **If it survives to the hold window** (`CRASH: 0`-equivalent, i.e. no
    `[CRASH] caught signal` line, and `hold_NN.png` frames present up to
    `hold_350`): this is the payoff run.
    - Reuse `scratch/agent/checksum_campose11.py`'s pattern (swap directory
-     name to `campose13`) to find the freeze frame (the hash that locks
+     name to `campose14`) to find the freeze frame (the hash that locks
      permanently and never changes again through `hold_350`).
-   - Write `correlate_campose13.py`: parse the `t=` field off
+   - Write `correlate_campose14.py`: parse the `t=` field off
      `[campose-entry]` lines (NOT `[campose-abnormal]`, which has no `t=`
      field yet), convert via that run's own `proc_start_epoch.txt` to real
      elapsed seconds, and diff the LAST-CHANGING `[campose-entry]` value
-     (watch `m00`/`camptr`/`deref0` fields, same fields s224's original
-     camera-corruption probe tracked) against the freeze frame's real
-     elapsed time.
+     (watch `m00`/`camptr`/`deref0` fields) against the freeze frame's
+     real elapsed time.
    - Two possible readings: (a) campose values stop changing at/before the
      freeze time (mirrors s235's DL-payload result) → still consistent
      with a broader stall, camera-pose isn't the discriminator either →
@@ -85,8 +86,8 @@ code, no new diagnostic.
      piece, a real render-side bug distinct from Option A/B (already
      closed).
    - Write the answer into CURRENT-TRUTH regardless of which way it
-     points — this is the payoff for two iterations of instrument-building
-     work, do not let it go unrecorded.
+     points — this is the payoff for three iterations of instrument work,
+     do not let it go unrecorded.
 
 ## Do NOT do this iteration
 
@@ -95,25 +96,26 @@ code, no new diagnostic.
   `proc_start_epoch.txt` stamping in `run_mission_keys.sh` — all validated
   working as of s234/s236, not the open question.
 - Do not regenerate/rebuild unless you actually change generated code —
-  the s236 binary already has the instrument; `campose13` is a straight
+  the s236 binary already has the instrument; `campose14` is a straight
   re-run.
-- Do not re-run `campose8`/`9`/`10`/`11` unmodified — their budgets are
-  spent for what they were testing.
+- Do not re-run `campose8`/`9`/`10`/`11`/`12`/`13` unmodified — their
+  budgets are spent for what they were testing.
 - Do not reintroduce `ROGUESQ_LOG_RENDER_CACHE_EPOCH` — still closed, 0/4
   through SELECT-CRAFT (s229-s231), unrelated question.
-- Do not treat the SELECT-CRAFT->mission transition crash as a new bug to
-  fix — it's the same documented non-deterministic family
-  (CURRENT-TRUTH -71/-72/-75/-77), 2/5 `campose*` soaks so far. Fixing it
-  is a separate, larger investigation (the pre-existing NaN/unguarded-deref
-  crash-family fix proposed at CURRENT-TRUTH -55/-56, still unshipped) —
-  out of scope for this probe chain.
+- Do not treat the SELECT-CRAFT->mission transition crash as a single
+  simple bug to fix — 3 crashed soaks now show 3 different faulting
+  addresses/sites, so "fix the crash" is not yet a well-defined single
+  target. The pre-existing NaN/unguarded-deref crash-family fix proposed
+  at CURRENT-TRUTH -55/-56 is the closest existing lead if rule 8 forces a
+  pivot to hardening instead of another soak.
 - Do not dump entire raw log files into your own context — write short
   Python scripts or use targeted `grep`, per every prior session's method.
 
 ## Standard regen recipe (NOT needed this iteration — no code change)
 
-Only use this if `correlate_campose13.py`'s result motivates a NEW
-diagnostic (e.g. adding `t=` to another already-armed log line):
+Only use this if a NEW diagnostic is motivated (e.g. adding `t=` to
+another already-armed log line, or the rule-8 pivot requires a code
+change):
 
 1. `cd` into `N64Recomp` checkout, delete stale `RecompiledFuncs/funcs_*.c`:
    `python3 -c "import glob, os; [os.remove(f) for f in
@@ -129,9 +131,9 @@ diagnostic (e.g. adding `t=` to another already-armed log line):
 5. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
    build -j8`, safe to background (`run_in_background: true`).
 
-## Environment notes (carried forward, still current as of s236)
+## Environment notes (carried forward, still current as of s237)
 
-- **Permission gate CONFIRMED CLEARED s229-s236** — trust it.
+- **Permission gate CONFIRMED CLEARED s229-s237** — trust it.
 - Bash cwd persists across tool calls within a session — but an explicit
   `cd` changes it for ALL subsequent calls, and `cd` itself now sometimes
   requires separate approval when chained near a `git` call. Prefer
@@ -143,8 +145,8 @@ diagnostic (e.g. adding `t=` to another already-armed log line):
   timeout and get auto-backgrounded; this is expected.** Launch directly
   with `run_in_background: true` (generous `timeout`, e.g. 330000ms) and
   block-wait via `TaskOutput` (`block: true`, `timeout: 180000` — a
-  shorter first wait is fine, s236 confirmed a completion notification
-  still arrives if you don't re-poll).
+  shorter first wait is fine, s236/s237 both confirmed a completion
+  notification still arrives if you don't re-poll).
 - **`/tmp` is not writable this session** — write scratch/report files
   inside `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64` only.
 - Compound `cd ... && ...` commands (including with output redirection)
@@ -154,24 +156,25 @@ diagnostic (e.g. adding `t=` to another already-armed log line):
   call), then bare `git <cmd>` as a separate call.
 - **Headless permission matching is a PREFIX match** — write
   `env PROBE_MODE=1 zsh run.sh`, not `PROBE_MODE=1 zsh run.sh`.
-- **campose12's armed env-var set** (identical to `campose11`, keep all
-  when building `campose13` — copy `run_campose12.sh`):
+- **campose13's armed env-var set** (identical to `campose11`/`campose12`,
+  keep all when building `campose14` — copy `run_campose13.sh`):
   `ROGUESQ_LOG_CAMPOSE`, `ROGUESQ_LOG_MAT3INV`,
   `ROGUESQ_LOG_UNLIT_MESH_TRACER`, `ROGUESQ_LOG_RENDERUNLIT_GUARD`,
   `ROGUESQ_LOG_HEAPWALKER_GUARD`/`GUARD3`/`GUARD4`,
   `ROGUESQ_LOG_MESGQUEUE_GUARD`, `ROGUESQ_LOG_HEAPLISTDEQ_GUARD`,
   `ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`, `ROGUESQ_LOG_DL_PAYLOAD_STALE=1`.
 - **This exact schedule (`schedulepush2`/`campose*` family) is PROVEN
-  non-deterministic (s223, reconfirmed s233/s234/s236)**: transition
+  non-deterministic (s223, reconfirmed s233/s234/s236/s237)**: transition
   timing and crash-vs-survive both vary run to run with the identical
-  armed set/schedule (`campose8`/`9`/`11` survived; `campose10`/`12`
-  crashed at the same transition, `10` at ~t=74.5s, `12` at ~t=130s).
-  VI-width transition ONSET (1024->512) does look consistently timed
-  (~t=74.4-74.5s across `campose10`/`12`) even when the eventual crash
-  timing after onset differs — worth noting if a future session wants to
-  separate "transition onset" from "transition-triggered crash" as
-  distinct events. Any conclusion needs same-run evidence, not cross-run
-  comparison.
+  armed set/schedule (`campose8`/`9`/`11` survived; `campose10`/`12`/`13`
+  crashed). VI-width transition ONSET (1024->512) does look consistently
+  timed (~t=74.2-74.5s across `campose10`/`12`/`13`) even when the
+  eventual crash timing/site after onset differs. **New s237 observation**:
+  `campose12`/`campose13`'s crashes matched almost exactly on
+  campose-call-count at fault time (`n=12420` both), while their crash
+  sites/addresses differed — worth watching whether `campose14` also lands
+  near `n=12420` (3/3 would upgrade this from a lead to a real pattern) or
+  breaks the pattern (2/3, back to "no discernible pattern").
 - **`[campose-entry]` log line** (guest `0x800178A8`, funcs_4.c area) now
   HAS a `t=%.1f` field (s236, validated). Other fields: `n=` (call
   counter), `m00=`, `flag=`, `camptr=`, `deref0=`, `deref0_valid=`.
@@ -185,14 +188,14 @@ diagnostic (e.g. adding `t=` to another already-armed log line):
   again**: `sinfApprox` NaN `NAN_CHECK` assert (`funcs_5.c:6460`, signal
   6); various unguarded-deref SIGBUS sites across `funcs_*`/
   `mesgqueue.cpp` (signal 10) — see CURRENT-TRUTH -55/-56 and
-  PORTING-STATE Session 214/215. SIGBUS in `submitSceneNodeRender`/
-  `emitAllocatedDLCommand` (called from the
+  PORTING-STATE Session 214/215. SIGBUS in/near
   `setupCameraMatrices`->`traverseSceneGraphRecursive`->`processSceneNode`
-  chain) at the SELECT-CRAFT->mission transition is the same recurring
-  family, already documented, non-deterministic — 3/5 `campose*` soaks
+  or directly in `static_5_800C6854`<-`menuOverlayInit` at the
+  SELECT-CRAFT->mission transition is the same recurring FAMILY (fragile
+  transition, signal 10, no repeated exact site) — 3/6 `campose*` soaks
   with the `t=`-armed dl-payload/campose instrument have now SURVIVED it
-  (`campose8`, `campose9`, `campose11`), 2/5 crashed (`campose10`,
-  `campose12`).
+  (`campose8`, `campose9`, `campose11`), 3/6 crashed (`campose10`,
+  `campose12`, `campose13`), three different addresses.
 - **Verify "crash-free" visually**: MD5-checksum a spread of `hold_NN.png`
   (Python script, not shell loops). `scratch/agent/checksum_campose11.py`
   (s235) is mtime-aware — reuse this pattern for any future wall-clock
@@ -219,7 +222,7 @@ diagnostic (e.g. adding `t=` to another already-armed log line):
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget and the
-Read tool's 256 KB single-read limit (confirmed s195, still true s236 —
+Read tool's 256 KB single-read limit (confirmed s195, still true s237 —
 read it with `grep`/offset-limited `Read`, never a plain whole-file
 `Read`). Migrate durable mechanism/architecture material to
 `PROJECT-OVERVIEW.md` and prune superseded detail — flagged for 30+
@@ -227,10 +230,7 @@ sessions without action.
 
 `fixup_game_funcs.py`'s untracked, single-copy state in the `N64Recomp`
 sibling checkout has been flagged since s83, still not fixed (not this
-repo's commit scope) — worth surfacing to the user directly. s236 added
-another patch to this untracked file (the `[campose-entry]` `t=` field) —
-if this checkout is ever lost/reset, that edit (and every other session's
-edits) goes with it.
+repo's commit scope) — worth surfacing to the user directly.
 
 `/Users/williambuckley/Documents/Tools/N64Recomp` and
 `~/Documents/Tools/rogue_squadron64` are separate git checkouts with
@@ -238,13 +238,12 @@ long-standing uncommitted changes, unrelated to this repo's commit scope.
 Still flagged for the user, not committed autonomously.
 
 `lib/rt64` and `lib/N64ModernRuntime` both still show as modified in `git
-status` as of s236 — not investigated this session either (no lib/ edits
+status` as of s237 — not investigated this session either (no lib/ edits
 made, so no export.sh/commit obligation triggered). Still worth checking
 whether these are in-progress uncommitted patches vs. drift from
 `submodule-patches/*.patch` before assuming steady-state dirtiness.
 
 The pre-existing NaN/`NAN_CHECK` and unguarded-deref crash families have a
 proposed but unshipped fix (disable/soften `NAN_CHECK` aborts,
-CURRENT-TRUTH -55/-56, PORTING-STATE Session 215) — worth picking up if a
-future soak keeps dying to this family. Lower priority now that 3/5 recent
-`campose*` soaks have survived the SELECT-CRAFT transition.
+CURRENT-TRUTH -55/-56, PORTING-STATE Session 215) — worth picking up if
+`campose14` also crashes and rule 8 forces a pivot away from more soaking.

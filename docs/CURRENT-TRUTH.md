@@ -663,7 +663,37 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s236)
+## Next steps, in order of expected value (s237)
+
+-78. **(s237) Re-soaked the validated `[campose-entry]` `t=` instrument
+    (`campose13`, tag-bump-only copy of `run_campose12.sh`) — crashed again
+    before the hold window, the 2nd consecutive no-result soak, but with a
+    DIFFERENT crash signature than `campose12`/`campose10`.** SIGBUS,
+    `si_addr=0x3c00b1382`, `[CRASH][pc-symbol]` resolves directly to
+    `static_5_800C6854+1044` (called from `menuOverlayInit`<-`mainGameLoop`)
+    — no scene-render/camera-matrix frames beneath it, unlike `campose12`'s
+    crash which went `emitAllocatedDLCommand`<-`submitSceneNodeRender`<-
+    `processSceneNode`<-`traverseSceneGraphRecursive`<-`setupCameraMatrices`
+    before reaching the same outer shell. Three crashed soaks
+    (`campose10`/`12`/`13`), three different faulting addresses — no
+    repeated site. **But the trigger point in game-time matches almost
+    exactly between the two most recent runs**: `campose13`'s last
+    `[campose-entry]` line is `n=12420 t=131.3`, `campose12`'s was `n=12420
+    t=130.8` — identical call-count, 0.5s apart in wall-clock (`campose10`
+    crashed much earlier, ~t=74.5s, so this is 2/2 on recent runs, not 3/3).
+    Tentative refinement (2 data points, not yet a conclusion): the
+    transition may reach a consistent trigger point where some memory state
+    is already corrupted, with WHICH downstream read faults — and where —
+    varying run to run by heap/thread-timing non-determinism, rather than
+    the trigger event itself being randomly timed. **Next step**: one more
+    soak (`campose14`, tag-bump-only) — this is only the 2nd no-result
+    soak of this instrument, not yet the 3rd-consecutive-no-result budget
+    (iron rule 8). If `campose14` ALSO crashes before the hold window, that
+    IS the 3rd consecutive no-result iteration and the next session must
+    step back to a different approach (e.g. shorten the pre-hold schedule
+    to spend less time in the fragile zone, or pick a different
+    already-armed diagnostic that doesn't require crossing this transition)
+    rather than a 4th blind soak. Full detail: PORTING-STATE Session 237.
 
 -77. **(s236) Landed the `t=` wall-clock field on `[campose-entry]`
     (`ROGUESQ_LOG_CAMPOSE`, `0x800178A8`, `fixup_game_funcs.py`) that -76
