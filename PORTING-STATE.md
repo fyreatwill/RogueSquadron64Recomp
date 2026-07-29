@@ -22526,3 +22526,87 @@ soak.
 (`lib/`, `fixup_game_funcs.py` untracked sibling-checkout state,
 `CURRENT-TRUTH.md` over both size budgets) — no new action taken, no
 `lib/` edits made.
+
+## Session 238 (2026-07-28)
+
+**Work unit** (from NEXT.md s237): one more re-soak of the already-landed
+`t=` `[campose-entry]` instrument, no code change — `campose14`, copied
+from `run_campose13.sh` with only the `campose13`->`campose14` string
+occurrences edited (header comment + `run_mission_keys.sh` invocation
+line). Launched as a single synchronous background Bash call
+(`run_in_background: true`, 330000ms timeout), block-waited via
+`TaskOutput` after the Stop hook flagged the iteration as unfinished
+while it was still running.
+
+**Result: crashed again before the hold window's payoff region** — this
+IS the 3rd consecutive no-result soak of this instrument (`campose12`,
+`campose13`, `campose14` all crashed before reaching anywhere near the
+`hold_270`/470s freeze-frame region), so **iron rule 8's budget is now
+spent** — no `campose15`. 19 `hold_NN.png` frames captured
+(`hold_01`-`hold_19`), `game process gone at hold-iter 21` — further into
+the hold window than `campose12` (0 frames) or `campose13` (1 frame), but
+still only 21s into a 350s hold window.
+
+**Crash signature is NEW and different in kind, not just address**: signal
+11 (SIGSEGV, not the SIGBUS/signal-10 family seen in all prior crashed
+soaks), `si_addr=0x61cbf000000dc8` (a clearly-corrupted/non-canonical
+pointer, not a plausible guest address), `[CRASH][pc-symbol]
+pc=0x1967e1130 sym=x_hash_table_remove_ptr+72` — **inside Apple's
+QuartzCore framework, not guest game code**. Native backtrace:
+`x_hash_table_remove_ptr` <- `CAMediaTimingInvalidate` <- `-[CALayer
+dealloc]` <- `CA::Transaction::commit` <- `CA::Transaction::
+flush_as_runloop_observer` <- CoreFoundation run-loop observer callout <-
+`_DPSNextEvent`/`Cocoa_PumpEvents` (SDL3's event pump) <- `update_gfx` <-
+`recomp::start`. This is a HOST-side crash: a `CALayer` being
+deallocated during a deferred `CATransaction` flush (triggered from the
+SDL event pump inside `update_gfx`, called every frame) hits a corrupted
+internal hash table — consistent with a use-after-free or double-release
+of a `CALayer`/Metal-layer object somewhere in the renderer, not a guest
+NaN/unguarded-deref bug. This crash family is DISTINCT from the
+`static_5_800C6854`/`setupCameraMatrices`/`emitAllocatedDLCommand`
+guest-SIGBUS family documented across `campose10`/`12`/`13` and
+CURRENT-TRUTH -55/-56 — the existing "unshipped NaN/unguarded-deref
+hardening" proposal does NOT cover this crash mode.
+
+**But the trigger point in game-time converged even tighter, now 3/3**:
+`campose14`'s last `[campose-entry]` line before the crash is `n=12420
+t=131.7` — matching `campose13`'s `n=12420 t=131.3` and `campose12`'s
+`n=12420 t=130.8` almost exactly (spread of 0.9s / 0 call-count delta
+across all 3 crashed soaks, i.e. 3/3 now, upgraded from the 2/2 "lead"
+s237 flagged). This is no longer a coincidence-sized sample: whatever
+happens at campose-call n≈12420 (~t≈131s process wall-clock) is a
+real, reproducible trigger, independent of where that lands relative to
+the hold-window's own internal schedule (`campose12` crashed before the
+hold window ever started, `campose13` 1s into it, `campose14` 21s into
+it — so it is NOT keyed to a `STICK_SCHEDULE` action, ruling out the
+stick-input-triggers-it framing). The three downstream fault
+manifestations (2 different guest SIGBUS addresses + this session's host
+SIGSEGV) look like the SAME underlying corruption event surfacing at
+different consumption points depending on heap/thread-timing
+non-determinism, not three unrelated bugs that happen to cluster in time
+— consistent with a single memory-corruption write happening at a fixed
+point in the SELECT-CRAFT->mission transition, whose downstream fault
+(when/if one occurs at all — `campose8`/`9`/`11` never fault) depends on
+what gets allocated into or reads the corrupted region next.
+
+**Conclusion / rule-8 pivot**: per NEXT.md's explicit instruction, this
+is the 3rd consecutive no-result iteration on the "re-soak
+`[campose-entry]` `t=`" hypothesis — no `campose15`. The
+campose-vs-freeze correlation (does the camera stream stall at the
+470s visual-freeze frame) still has not run and is not the
+highest-value next probe anymore: this session's host-side `CALayer`
+crash reframes the whole SELECT-CRAFT->mission transition instability as
+a candidate renderer/Metal-layer memory-corruption bug rather than
+purely a guest-code fragility to route around. Next step written into
+NEXT.md: a static (non-soak) investigation of `lib/rt64`/
+`src/main/rt64_render_context.cpp` framebuffer/CAMetalLayer
+resize-teardown path around the VI-width transition (1024->512 at
+~t=74.2s, ~56s before the fault window) for a use-after-free or
+double-release of a `CALayer`, rather than another blind soak or the
+previously-proposed guest-side NaN/unguarded-deref hardening (which does
+not explain a host QuartzCore crash).
+
+**Housekeeping**: same items flagged again, still not this session's
+scope (`lib/`, `fixup_game_funcs.py` untracked sibling-checkout state,
+`CURRENT-TRUTH.md` over both size budgets) — no `lib/` edits made this
+session, so no `export.sh`/commit obligation triggered.

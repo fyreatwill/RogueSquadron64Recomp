@@ -663,7 +663,37 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s237)
+## Next steps, in order of expected value (s238)
+
+-79. **(s238) 3rd consecutive crashed `campose*` soak (`campose14`) —
+    iron rule 8 budget spent, no more blind re-soaks — but this crash is a
+    NEW kind: a HOST-side SIGSEGV inside Apple QuartzCore
+    (`x_hash_table_remove_ptr`<-`CAMediaTimingInvalidate`<-`-[CALayer
+    dealloc]`<-`CA::Transaction::commit`, reached via the SDL event pump
+    inside `update_gfx`), not the guest-code SIGBUS family seen in
+    `campose10`/`12`/`13`.** `si_addr=0x61cbf000000dc8` (non-canonical,
+    clearly-corrupted pointer) — consistent with a use-after-free/
+    double-release of a `CALayer`/Metal-layer object in the renderer, not
+    a guest NaN/unguarded-deref bug (CURRENT-TRUTH -55/-56's proposed
+    hardening does NOT cover this). **The trigger point is now 3/3
+    convergent, not a 2-point coincidence**: `campose12`/`13`/`14`'s last
+    `[campose-entry]` line before crashing is `n=12420` every time,
+    `t=130.8/131.3/131.7` (0.9s spread across 3 independent soaks) —
+    despite landing at wildly different points relative to the
+    hold-window's own schedule (`campose12`: before hold window started;
+    `campose13`: 1s in; `campose14`: 21s in), which rules out a
+    `STICK_SCHEDULE`-keyed trigger (e.g. a specific stick input causing
+    it) and points to something tied to wall-clock/frame-count since
+    process start (or since the VI-width transition at ~t=74.2s, ~56s
+    earlier) instead. Reads as one underlying memory-corruption event
+    with three different downstream fault manifestations depending on
+    non-deterministic heap/thread timing, not three unrelated bugs.
+    **Next step**: per iron rule 8, no `campose15` — pivot to a static
+    (non-soak) investigation of the `lib/rt64`/
+    `src/main/rt64_render_context.cpp` framebuffer/`CAMetalLayer`
+    resize-teardown path around the VI-width transition, looking for a
+    use-after-free or double-release of a `CALayer` object, rather than
+    another soak. Full detail: PORTING-STATE Session 238.
 
 -78. **(s237) Re-soaked the validated `[campose-entry]` `t=` instrument
     (`campose13`, tag-bump-only copy of `run_campose12.sh`) — crashed again
