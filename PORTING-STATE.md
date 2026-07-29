@@ -25005,3 +25005,123 @@ fix). `CURRENT-TRUTH.md` size still flagged, unaddressed again (still
 ~455KB; the pruning session flagged 3+ consecutive sessions ago is now 4+
 overdue — this session's budget went to the one build-soak-analyze cycle
 above, which produced a real, actionable finding on its own).
+
+## Session 263 (2026-07-29) — executed s196's 66-session-overdue prescription (full source-read of `submitSceneNodeRender` for the real 18th-crash-class mechanism); landed a correctly-targeted `DEQUEUE_GUARD` on a genuinely new, previously-unguarded gap, and the soak that carried it produced the longest crash-free survival (293s) in this whole investigation's history — but the new guard itself got 0 fires, so this is forward progress, not yet a confirmed fix
+
+Picked up NEXT.md's prescribed work unit directly: delegated the initial
+read of `submitSceneNodeRender` (`funcs_4.c:6-3043`, ~3038 lines) to a
+subagent, briefed to exclude the function's 5 already-instrumented guard
+families (`SCENE_NODE_LIST_GUARD`/`GUARD2`/`GUARD3`, the cache-guard, and
+the `MATLIST_GUARD1`/`2`/`3` families) and to look specifically for a
+pointer loaded from guest memory and dereferenced again shortly after with
+no null check, given the crash's fault address is guest `0x0` exactly. The
+agent returned 3 ranked candidates; the top one named `heapFreeListDequeue`
+directly as the function the loaded pointer flows into, matching the
+crash's own call-chain shape. Independently verified by reading
+`heapFreeListDequeue` itself (`funcs_3.c:15571`) rather than trusting the
+agent's read of the caller alone: the function unconditionally dereferences
+its first argument (`a0`, saved to `ctx->r19`) at native `0x8000D118`
+(`ctx->r2 = MEM_W(ctx->r19, 0X4)`) — every code path through the function
+reaches this line, and there is no null or range check on `a0` anywhere in
+its body, confirmed by reading start-to-finish. Both call sites in
+`submitSceneNodeRender` (`0x800104A8`, `0x80010CD8`) build that argument by
+freshly reloading the current list node's own `+0x4` field
+(`ctx->r4 = MEM_W(ctx->r17, 0X4)`) and pass it straight into the call with
+zero validation.
+
+**Why this is a genuinely new gap, not a re-discovery of an already-refuted
+one**: the existing `SCENE_NODE_LIST_GUARD`/`GUARD2`/`GUARD3` (s123/s131,
+0 fires across 4+ recurrences), the cache-guard (s197), and the
+`MATLIST_GUARD1`/`2`/`3` family (s136/s253) all validate the list-NODE
+pointer `$s1`/`ctx->r17` itself, catching a corrupted/garbage pointer —
+confirmed by direct read of `MATLIST_GUARD3`'s own code
+(`funcs_4.c:2391-2402`), which checks `ctx->r17` for range validity right
+after the loop-back walk. None of them touch the node's OWN `+0x4` field,
+which can be a legitimate, valid-range node's own field reading exactly
+NULL (e.g. "nothing queued to dequeue for this node") — a value every
+existing range check (`< 0x80000000u || >= 0x80800000u`) would in fact
+reject as "bad" too, but nothing was actually checking it before this
+session. This matches the crash's own repeatedly-observed fault address
+(`x0=x9=0x0000000300000000`, i.e. guest `0x0` exactly) precisely.
+
+Added `DEQUEUE_GUARD` (env var `ROGUESQ_LOG_SCENE_NODE_DEQUEUE_GUARD`,
+`N64Recomp/fixup_game_funcs.py`, inserted right after the existing
+cache-guard block, before the `MATLIST_GUARD1` comment): checks the
+about-to-become-`a0` value immediately before each of the 2 call sites,
+matched by their unique surrounding `jal`/`addu` address comments so the
+2 sites can't be confused with each other; on failure it logs (site=1 or
+site=2) and jumps to that site's own existing post-call reentry label
+(`after_7` / `after_17`) — the exact point normal execution reaches once
+the call returns, i.e. "nothing to dequeue for this node," no new code
+path invented.
+
+**Build**: full delete-all regen (`python3 -c "import glob, os; ..."` →
+`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`, all captured to
+`scratch/agent/s263_{make_elf,n64recomp,fixup,build}.log`). Fixup report:
+`DEQUEUE_GUARD patched x2` (exactly the 2 expected sites, confirmed by
+`grep -oE "patched x[0-9]+" | sort | uniq -c | grep -v " x1$"` — the only
+other non-`x1` multiplicities were the already-documented ones: GUARD2 x9,
+GUARD3 x8, audio gate x3, a3-pointer guard3 x2, MATLIST_GUARD3 x2). Clean
+`cmake --build build -j8` (0 errors, only the 46 pre-existing DDIV
+sign-conversion warnings). `strings build/RogueSquadron64Recomp | grep -c
+"ROGUESQ_LOG_SCENE_NODE_DEQUEUE_GUARD$"` = 1.
+
+**Soak (`dequeueguard1`, copied from `run_preloopguard1.sh` per NEXT.md's
+instruction, `+ROGUESQ_LOG_SCENE_NODE_DEQUEUE_GUARD=1`, `HOLD_S=240`): 3
+attempts.** 1st and 2nd died pre-title-screen (`process gone while waiting
+for phase`, before `vi_width=1024`) to `waitForAnyAudioSlot+244` — the
+already-catalogued, unrelated 23rd crash class (first seen s165). Per
+established project convention (e.g. s249: "died pre-title-screen to the
+already-catalogued, unrelated 23rd crash class — 0/0 positive controls,
+fully uninformative, not counted against budget"), these 2 attempts were
+discarded and re-run rather than analyzed further. **3rd attempt
+(`scratch/s73_post_a_scene/dequeueguard1/run.log`, 164M lines) survived
+the entire scripted run: `hold done wall=268s`, `done wall=293s`, driver
+killed a still-alive process — no `[CRASH]` line anywhere in the log, no
+`exit=2` at the driver level.** This is the longest survival in this
+entire investigation's history by a wide margin (previous best 143.1s,
+s261's `composeguard9`). All 3 phase transitions were reached in one run
+for the first time: `vi_width=1024` at 45.5s, `vi_width=512`
+(SELECT-CRAFT→mission) at 74.8s, and the rare `vi_width=640` 3rd
+transition at 142.9s (previously observed only once, s261).
+
+**However, `DEQUEUE_GUARD` itself fired 0 times** (`grep -c
+"scene-node-dequeue-guard"` = 0) — the null-field condition it guards
+against never actually arose this run, so this is a null result on the
+instrument itself, not a confirmed fix (iron rule 1). `renderUnlitMeshFaces`
+was STILL never called (`grep -c "unlit-mesh-tracer"` = 0, `renderunlit-guard`
+0 fires), so item -49's GUARD2 (s262) remains completely untested in either
+direction. **What this rules out / establishes**: (1) the specific
+`heapFreeListDequeue`-null-a0 mechanism this session targeted was NOT what
+caused this run to survive, since the guard never fired — so this is not
+yet a confirmed root-cause fix. (2) Whatever DID cause the prior 4
+occurrences of the 18th crash class did not recur this run — genuine
+forward-progress signal, but single-sample (iron rule 4 not yet satisfied):
+could be that this session's regen incidentally perturbed timing/memory
+layout enough to route around the real bug (as has happened before with
+unrelated guards in this same investigation), or the 18th class could
+simply be racy across runs the same way the 23rd class already is. (3) The
+`DEQUEUE_GUARD` fix itself remains a plausible, correctly-reasoned,
+verified-by-reading-the-callee candidate that should stay armed regardless
+— it costs nothing when inert and directly targets a real, confirmed
+(via source read) unconditional-deref bug in `heapFreeListDequeue`, even
+if it wasn't what this particular run needed.
+
+**Next work unit**: re-run `dequeueguard1` unchanged (no code edits) to get
+the 2nd independent data point iron rule 4 requires for the crash-free
+result. If it ALSO survives clean, promote "18th class no longer
+reproduces on this input path" to a real, two-source conclusion and shift
+priority to reaching `renderUnlitMeshFaces` for GUARD2's first real test.
+If it crashes again at the same `heapFreeListDequeue`/`submitSceneNodeRender`
+shape with `DEQUEUE_GUARD` still silent, the real site is still unfound —
+per budget rule 8 this would be the 2nd consecutive miss on this specific
+hypothesis, so reassess (write the hypothesis/evidence table into NEXT.md)
+rather than guessing at a 3rd site blind.
+
+**Housekeeping**: no `lib/` edit this session — `submodule-patches/
+export.sh` not needed. `fixup_game_funcs.py`'s `DEQUEUE_GUARD` edit is
+again uncommitted in the separate `N64Recomp` sibling checkout, same
+posture as every prior session's guards (established, accepted practice).
+`CURRENT-TRUTH.md` size still flagged, unaddressed again (still ~455KB,
+now growing further with this session's addition; the pruning session
+flagged 3+ consecutive sessions ago is now 5+ overdue).

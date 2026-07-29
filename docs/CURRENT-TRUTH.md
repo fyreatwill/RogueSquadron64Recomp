@@ -663,7 +663,80 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s262)
+## Next steps, in order of expected value (s263)
+
+-104. **(s263) Executed s196's 66-session-overdue prescription: source-read
+    `submitSceneNodeRender` in full for the real 18th-crash-class mechanism.
+    Delegated the initial read to a subagent (function spans funcs_4.c:6-3043,
+    briefed to exclude the 5 already-instrumented guard families and look for
+    a load-then-unchecked-deref matching the crash's guest-0x0 fault
+    address), then independently verified the top candidate by reading the
+    callee, `heapFreeListDequeue`, directly (`funcs_3.c:15571`).** Confirmed:
+    `heapFreeListDequeue` unconditionally dereferences its first argument
+    (`a0`, saved to `ctx->r19`) at native `0x8000D118`
+    (`ctx->r2 = MEM_W(ctx->r19, 0X4)`) — reached by every code path through
+    the function, zero null/range check anywhere in its body. Both call
+    sites in `submitSceneNodeRender` (`0x800104A8`, `0x80010CD8`) build that
+    argument by freshly reloading the CURRENT list node's own `+0x4` field
+    (`ctx->r4 = MEM_W(ctx->r17, 0X4)`) and pass it straight into the call
+    with zero validation. **This is a genuinely different gap than
+    GUARD/GUARD2/GUARD3/cache-guard (s123/s131/s197) or the MATLIST guards
+    (s136/s253)** — all of those validate the node pointer `$s1`/`ctx->r17`
+    itself (catching a corrupted/garbage pointer); none of them touch this
+    `+0x4` field, which can be a legitimate, valid-range node's own field
+    reading exactly NULL (e.g. "nothing queued for this node") — matching
+    the crash's own observed fault address of guest `0x0` exactly, something
+    none of the 5 prior guards would ever catch since they only fire on
+    out-of-range garbage, and this is an in-range node with a null field.
+    Added `DEQUEUE_GUARD` (`ROGUESQ_LOG_SCENE_NODE_DEQUEUE_GUARD`,
+    `fixup_game_funcs.py`, `N64Recomp/fixup_game_funcs.py`): checks the
+    about-to-become-`a0` value immediately before each of the 2 call sites;
+    on failure, skips the call and jumps to that site's own existing
+    post-call reentry label (`after_7` / `after_17`) — the same point normal
+    execution reaches once the call returns, i.e. "nothing to dequeue for
+    this node," no new code path. Full delete-all regen (output captured to
+    `scratch/agent/s263_{make_elf,n64recomp,fixup,build}.log`): fixup report
+    clean, `DEQUEUE_GUARD patched x2` (exactly the 2 expected sites, no
+    duplicates), every other family at its documented multiplicity, clean
+    `cmake --build build -j8` (0 errors, only the 46 pre-existing DDIV
+    warnings), `strings`-verified `ROGUESQ_LOG_SCENE_NODE_DEQUEUE_GUARD`
+    present exactly once.
+
+    **Soak (`dequeueguard1`, `scratch/s73_post_a_scene/dequeueguard1/run.log`):
+    3 attempts. 1st and 2nd died pre-title-screen to the already-catalogued,
+    unrelated 23rd crash class (`waitForAnyAudioSlot+244`, first seen s165)
+    — 0/0 positive controls, fully uninformative, not counted against
+    budget (established project convention, e.g. s249). 3rd attempt survived
+    the FULL 293s run (268s hold, all 5 scripted stick inputs delivered) with
+    ZERO crash of any kind** — driver killed a still-alive process at the end
+    of the hold window, not a crash. **This is the longest survival in this
+    entire investigation's history by a wide margin** (previous best ~143.1s,
+    s261's `composeguard9`). Phase transitions reached `vi_width=1024` at
+    45.5s, `vi_width=512` (SELECT-CRAFT→mission) at 74.8s, AND
+    `vi_width=640` at 142.9s (the rare 3rd transition, previously seen only
+    once, s261) — all three now cleared in one run. **However: `DEQUEUE_GUARD`
+    itself got 0 fires** — the null-field condition it guards against never
+    actually occurred this run, so this is a null result on the instrument
+    itself (iron rule 1: not a confirmed fix). `renderUnlitMeshFaces` was
+    STILL not called even once (0/0 on `unlit-mesh-tracer`), so item -49's
+    GUARD2 (s262) remains completely untested either way. **Single-sample
+    result (iron rule 4 not yet satisfied)** — the crash-free run is
+    genuinely positive evidence of forward progress (whatever caused the
+    prior 4 occurrences of the 18th class did not recur), but with the new
+    guard itself silent, it is not yet possible to say WHY the run was
+    clean: could be this session's regen incidentally perturbed timing/
+    layout enough to route around the bug (as has happened before with
+    unrelated guards in this family), or the 18th class could simply be
+    racy across runs like the 23rd class is. **Next work unit**: run
+    `dequeueguard1` a 2nd time (same script, no code changes) to get the
+    second independent data point iron rule 4 requires — if it ALSO survives
+    clean, promote "18th class no longer reproduces" to a real conclusion
+    and shift priority to getting a run that reaches `renderUnlitMeshFaces`
+    for GUARD2's first real test; if it crashes again at the same
+    `heapFreeListDequeue`/`submitSceneNodeRender` shape with `DEQUEUE_GUARD`
+    still silent, the real site is still unfound and per budget rule 8 this
+    would be the 2nd consecutive miss on this hypothesis — reassess rather
+    than adding a 3rd guard blind. Full detail: PORTING-STATE Session 263.
 
 -103. **(s262) Added `renderUnlitMeshFaces` GUARD2 for the pre-loop peek-load
     gap a subagent-assisted re-read found — but the soak that tested it never
