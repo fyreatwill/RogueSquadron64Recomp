@@ -663,7 +663,32 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s241)
+## Next steps, in order of expected value (s242)
+
+-83. **(s242) Ran the clean `malloclog2` re-soak — `CRASH: 0`, no crash to
+    analyze, and no `malloc`-related output at all appeared in `run.log`
+    even from the game process itself (MSL/scribble apparently print
+    nothing to stdout/stderr on this macOS version absent a
+    `malloc_history`-style query, which s241 already found unreachable in
+    this sandbox).** Positive control passed: the full captured driver
+    output had zero `malloc`/`turning off` lines from helper subprocesses
+    (vs. hundreds in `malloclog1`), confirming `GAME_EXTRA_ENV` scoping
+    worked. This is the first CLEAN null of the malloc-tooling attempt
+    (attempt #2 overall counting confounded `malloclog1`) — not yet the
+    iron-rule-8 3-strike budget, but with `malloc_history` unreachable
+    regardless of outcome and a crash here only ever yielding a crude
+    `si_addr` read (no allocation-site attribution), a 3rd malloc-tooling
+    soak looks lower-value than pivoting. **Updated family tally**
+    (SELECT-CRAFT->mission transition, `schedulepush2`/`campose*`
+    schedule): **5/10 crashed vs 5/10 survived** (was 5/9 vs 4/9,
+    `malloclog1` still excluded, `malloclog2` counted as survived) — still
+    even-odds, not "mostly survives". **Next step**: pivot to
+    `MTL_DEBUG_LAYER=1` (Apple's Metal API validation layer) instead of a
+    3rd malloc-scribble soak — it can print a specific API-misuse
+    diagnostic (e.g. use of a released `CAMetalLayer`/drawable) directly
+    at the point of the violation without needing to catch a live crash
+    first, which is a stronger discriminating instrument than eyeballing
+    `si_addr` after the fact. Full detail: PORTING-STATE Session 242.
 
 -82. **(s241) Stood up Apple malloc debug tooling per s240's plan, but the
     first soak (`malloclog1`) was CONFOUNDED and the "query `malloc_history`"

@@ -22853,3 +22853,60 @@ no `submodule-patches/export.sh` needed.
 scope (`fixup_game_funcs.py` untracked sibling-checkout state,
 `CURRENT-TRUTH.md` over both size budgets, now flagged for 32+
 sessions).
+
+## Session 242 (2026-07-28)
+
+Ran the clean re-soak (`malloclog2`) that s241 staged: same `campose*`/
+guard env-var set and `schedulepush2`/`campose*` schedule as
+`metalresig1`/`malloclog1`, `MallocNanoZone=0 MallocStackLogging=1
+MallocScribble=1` scoped to ONLY the game process via the s241
+`GAME_EXTRA_ENV` fix (not exported at the wrapper level this time).
+
+**Positive control passed before trusting the result**: grepped the
+soak's full captured output (driver stdout, not just `run.log`) for any
+`malloc`/`turning off` lines from non-game helper subprocesses — zero
+hits, unlike `malloclog1`'s hundreds. Confirms `GAME_EXTRA_ENV` scoping
+actually worked this time; the environment for this soak was clean.
+
+**Result: `CRASH: 0`.** Ran the full 350s hold window plus setup/grace
+(`done wall=465s`), reaching the SELECT-CRAFT->mission VI transition
+(`vi_width=512 (was 1024)` at `t=74.5s`, `update_screen #4428`) and
+passing the historical `n=12420`/`t≈131s` trigger point with no crash.
+`run.log` itself has zero `malloc`-related lines at all (not even from
+the game process) — `MallocStackLogging`/`MallocScribble` apparently
+don't print anything to stdout/stderr under normal operation on this
+macOS version unless a `malloc_history`-style query is made against the
+process, which (per s241) is unreachable in this sandbox. So this run
+produced no `si_addr`-vs-scribble-pattern comparison to make — there
+was no crash to analyze.
+
+**This is the first CLEAN null of the malloc-debug-tooling attempt**
+(`malloclog1` doesn't count, confounded). Per iron rule 8 this is
+attempt #2 overall (confounded #1 + clean #2), not yet the 3-strike
+budget, but the family's baseline crash rate is close to 50/50 (updated
+tally below), so a single clean run crashing or not crashing is weak
+evidence either way for "does malloc tooling suppress the race" versus
+"plain non-determinism". Given `malloc_history` is unreachable regardless
+of outcome, and a crash here would only yield a crude `si_addr` read (no
+real allocation-site attribution), the ROI of a 3rd malloc-tooling soak
+looks lower than pivoting to `MTL_DEBUG_LAYER=1`, Apple's Metal API
+validation layer — flagged in s241's NEXT.md as the natural next
+escalation "if `malloclog2` doesn't pan out", which it didn't. Unlike
+malloc scribbling, `MTL_DEBUG_LAYER=1` can print a specific API-misuse
+diagnostic (e.g. use of a released `CAMetalLayer`/drawable) directly at
+the point of the violation, without needing to get lucky and catch an
+actual crash first — plausibly higher information value per soak.
+
+**Updated family tally** (SELECT-CRAFT->mission transition,
+`schedulepush2`/`campose*` schedule): was 5/9 crashed vs 4/9 survived
+(malloclog1 excluded); adding `malloclog2` (survived): **5/10 crashed
+vs 5/10 survived** — still consistent with roughly even-odds
+non-determinism, not "mostly survives" or "mostly crashes".
+
+This session did not touch `lib/rt64`/`lib/N64ModernRuntime` (untouched
+from prior sessions); no `submodule-patches/export.sh` needed.
+
+**Housekeeping**: same items flagged again, still not this session's
+scope (`fixup_game_funcs.py` untracked sibling-checkout state,
+`CURRENT-TRUTH.md` over both size budgets, now flagged for 33+
+sessions).
