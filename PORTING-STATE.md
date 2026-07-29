@@ -23866,3 +23866,92 @@ session -- `submodule-patches/export.sh` not needed.
 **Housekeeping**: `CURRENT-TRUTH.md` size still flagged, unaddressed again
 (picked the code-change option, same call s249/s250 made). Other flagged
 items unchanged.
+
+## Session 252 (2026-07-28)
+
+Followed NEXT.md's prescribed work unit: chase the fresh, uncatalogued
+`heapFreeListDequeue` crash site s251 pinned down. Confirmed at the top
+of this session (2nd/3rd independent reconfirmation, after s207's two
+attempts) that `nm`/`atos` are still not usable in this headless
+environment -- both require approval that isn't granted non-interactively
+-- so offset-based localization of the crash PC is a dead end here, not a
+transient blocker. Struck it from future recommendations (see NEXT.md).
+
+Instead did the full-loop-body read NEXT.md's own rule demanded, this time
+for the ENTIRE ~1758-line function (all 4 copies of the free-list-search
+block, start to end, not just the loop), and it paid off: found a real,
+previously-uncatalogued gap that is NOT the self-referential-walk pattern
+the static finder looks for, so it was never in the 139-candidate list.
+Right after each of the function's 4 `findAndUnlinkSmallestEntry(rdram,
+ctx)` calls, the code does `ctx->r4 = <return value>; if (r4 == 0) skip;
+ctx->r2 = MEM_W(ctx->r4, 0X0);` -- i.e. it NULL-checks the returned entry
+pointer but then immediately dereferences r4's own offset-0 "next" field
+with no range check, ONE dereference before the existing s217 loop-back
+guard would ever run. If `findAndUnlinkSmallestEntry` ever returns a
+non-null but invalid pointer (the same "upstream-corrupted-but-nonzero"
+shape s217's own comment documents for this whole codebase's whack-a-mole
+family), this is where it would fault -- consistent with s251's own
+observation that the s217 guard was armed and confirmed live but never
+fired while the process still died inside this function.
+
+**Landed**: 4 new guards in `fixup_game_funcs.py` (sibling `N64Recomp`
+checkout), one per block (`0x8000D054`/`0x8000D18C`/`0x8000D2D8`/
+`0x8000D6A8`), each checking `ctx->r4` against the same
+0x80000000-0x80800000/hi==0xFFFFFFFF KSEG0 range used by every other guard
+in this family before the deref, and on failure setting `ctx->r3 =
+ADD32(ctx->r4, 0)` then jumping to the same label the existing "r2 == 0"
+path already uses -- byte-identical downstream behavior to a clean
+empty-next-field read, not a new code path. New env var
+`ROGUESQ_LOG_HEAPLISTDEQ_HEAD_GUARD`, `site=<addr>` distinguishes which of
+the 4 fired. Full delete-all-45 -> `make_elf.py` -> `N64Recomp` ->
+`fixup_game_funcs.py` (once) -> `cmake --build` regen cycle; patch report
+audited (`scratch/agent/s252_fixup_report.txt`, 208 lines) -- all 4 new
+guards `x1`, every pre-existing multiplicity unchanged from s251's
+baseline (no stacking). Binary verified fresh (`strings` shows 4 distinct
+`[heaplistdeq-head-guard] site=...` format strings, mtime matches build
+completion).
+
+**Soak** (`run_heaplistdeqhead1.sh`, tag `heaplistdeqhead1`, full
+`dlentrytailguard1`-baseline env block plus the new
+`ROGUESQ_LOG_HEAPLISTDEQ_HEAD_GUARD=1`, `HOLD_S=150`): reached
+`vi_width=1024` at 45.0s, crossed the SELECT-CRAFT transition, then died
+almost immediately into the hold (hold-iter 2, wall=1s) to `[CRASH]
+caught signal 10 (Bus error)`, `x0=x9=0x0000000300000000` (the same
+RDRAM-base sentinel), `pc-symbol=submitSceneNodeRender+18600` --
+**a different function than heapFreeListDequeue entirely**, same
+already-catalogued whack-a-mole family. Neither the new head-pointer
+guard nor the existing loop-back guard fired (0/4 and 0/4) --
+uninformative null, same caveat as every guard in this session's lineage:
+the render-tree walk never reached `heapFreeListDequeue`'s search code
+before dying elsewhere this run. `heapwalker-guard4` (positive control)
+fired once, confirming guard infrastructure was live.
+
+**What this does and doesn't establish**: the full-body read is now
+complete for `heapFreeListDequeue` -- every self-referential pointer-walk
+site (4 loop-back, now also 4 head-pointer) is guarded. This doesn't
+confirm the guards fix anything (0/4 fires, single soak) but it does
+rule out "there's one more site in this function using the known walk
+idiom" as an open question -- the function's walk surface is now fully
+covered by this guard family. The crash that DID occur this run
+(`submitSceneNodeRender+18600`) is a fresh lead for next session, same
+priority tier as s251's original `heapFreeListDequeue` lead was: proven
+hot (it's what's running when the process dies), not yet traced.
+
+**Where the new code lives**: same as every prior guard in this family --
+`fixup_game_funcs.py` in the untracked sibling `~/Documents/Tools/
+N64Recomp` checkout. Only the driver script (`scratch/s73_post_a_scene/
+run_heaplistdeqhead1.sh`, gitignored except tracked exceptions) and this
+write-up are in `RogueSquadron64Recomp`'s own history.
+
+**Net effect**: 4 new guards landed (closes the remaining gap in
+`heapFreeListDequeue`, which is now fully guarded on both known
+dereference classes), 1 environment fact reconfirmed (`nm`/`atos`
+unusable here, 3rd independent confirmation -- retire the
+offset-localization recommendation for good), 1 new hot lead pinpointed
+inside `submitSceneNodeRender` for next session, build clean, no
+regression. No `lib/` edit this session -- `submodule-patches/export.sh`
+not needed.
+
+**Housekeeping**: `CURRENT-TRUTH.md` size still flagged, unaddressed again
+(picked the code-change option, same call s249-s251 made). Other flagged
+items unchanged.

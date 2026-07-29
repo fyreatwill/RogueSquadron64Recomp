@@ -663,7 +663,44 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s251)
+## Next steps, in order of expected value (s252)
+
+-93. **(s252) Closed the `heapFreeListDequeue` lead NEXT.md flagged: full
+    ~1758-line read (this time genuinely start-to-end, not just the
+    guarded loop) found a real gap the static self-ref-walk finder can't
+    see. All 4 copies of the free-list-search block NULL-check
+    `findAndUnlinkSmallestEntry`'s return value (`r4`) but then
+    immediately dereference `r4`'s own offset-0 "next" field
+    (`ctx->r2 = MEM_W(ctx->r4, 0X0)`) with no range check — ONE
+    dereference earlier than the existing s217 loop-back guard, which
+    can't reach it. Added 4 new guards (`0x8000D054`/`0x8000D18C`/
+    `0x8000D2D8`/`0x8000D6A8`), same KSEG0-range check as every other
+    guard in this family, bailing to the same label the existing
+    "r2 == 0" path already uses (byte-identical downstream behavior).
+    Build clean (patch report audited, all 4 `x1`, no stacking).
+    **Soak** (`heaplistdeqhead1`): crossed SELECT-CRAFT cleanly, died
+    ~1s into hold to a **different, fresh** SIGBUS —
+    `submitSceneNodeRender+18600`, same `x0/x9=0x300000000` signature,
+    not `heapFreeListDequeue` at all. Both the new head-pointer guard and
+    the existing loop-back guard fired **0/4** each (uninformative null;
+    the render-tree walk never reached this function's search code
+    before dying elsewhere). `heapwalker-guard4` positive control fired
+    once. **`heapFreeListDequeue`'s pointer-walk surface is now fully
+    guarded** (4 loop-back + 4 head-pointer sites) — this rules out "one
+    more site in this function" as an open question, though the guards
+    themselves remain soak-unconfirmed (0/4 fires). **Also reconfirmed
+    (3rd independent time, after s207's two) that `nm`/`atos` are
+    unusable in this headless environment** — do not recommend
+    offset-based crash localization again; it is a permanent environment
+    limit, not a transient one. **New hot lead for next session**:
+    `submitSceneNodeRender+18600` — proven hot (it's what's running when
+    the process died this run), not yet traced; this function already
+    has 20+ guards from prior sessions (GUARD2 x9, GUARD3 x8, free-list-
+    walk guard, cached-free-list-head guard, material-batch-list
+    guard1/guard2, etc.) so a fresh full-body read is needed to find
+    which specific site this offset lands on before assuming it's a new
+    gap rather than a guard whose bail path itself has a residual issue.
+    Full detail: PORTING-STATE Session 252.
 
 -92. **(s251) Finished guarding all 3 of `reserveAndEmitDLEntry`'s flagged
     tail-walk candidates (`funcs_3.c`, the 3 near-identical "find insertion
