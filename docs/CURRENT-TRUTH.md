@@ -663,7 +663,51 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s252)
+## Next steps, in order of expected value (s253)
+
+-94. **(s253) Chased the s252 `submitSceneNodeRender+18600` lead.** First
+    corrected the lead's own premise: `+18600` is a NATIVE (compiled
+    ARM64) code offset, not a guest MIPS address -- the function's guest
+    range (`0x80010014`-`0x80011088`, confirmed by reading to the next
+    `RECOMP_FUNC` boundary) is only ~4212 bytes, nowhere near 18600, so
+    guest-address arithmetic on crash offsets is a dead end (`nm`/`atos`
+    would be needed to resolve it exactly, and that path stays
+    permanently closed per s207/s252). A full start-to-end read
+    (funcs_4.c:6-3017) confirmed the `findAndUnlinkSmallestEntry` idiom
+    (9 copies) is fully guarded (matches s131's own count exactly), but
+    found a SECOND self-ref-walk idiom (material-batch-list, s136's
+    `MATLIST_GUARD1`/`GUARD2`, 2 copies) has the exact "guard-first-load-
+    only" gap s131 already fixed once in the sibling idiom: the walked
+    pointer reloads itself (`ctx->r17 = MEM_W(ctx->r17, 0X0)` at
+    `0x800104B0`/`0x80010CE0`) and loops back to re-dereference
+    (`MEM_W(ctx->r17, 0X4)`) with zero re-validation -- s136's own comment
+    claiming the first-load guard "protects... the whole walk loop" was
+    wrong for iterations 2+. Added `MATLIST_GUARD3` (2 sites,
+    `fixup_game_funcs.py`, sibling `N64Recomp` checkout): zeroes the
+    reloaded pointer if non-zero-but-out-of-KSEG0-range, letting the
+    code's own pre-existing null-check branch take over unmodified (no
+    new control-flow path). Build clean, patch report audited (new guard
+    `x2`, all pre-existing `submitSceneNodeRender` guard multiplicities
+    unchanged from s252's baseline). **Soak** (`matlistguard3soak1`):
+    crossed SELECT-CRAFT at 74.7s (same schedule as every recent
+    session), then ran the FULL 150s hold + grace window with **zero
+    crashes** -- first fully clean hold since s248, every soak in
+    s249-s252 died within ~1s of hold start. **But** this is a WEAK
+    result: `MATLIST_GUARD3` fired 0/2, AND the `heapwalker-guard4`
+    known-firing positive control that confirmed guard infra was live in
+    every s249-s252 soak did NOT fire this run either -- per
+    `ITERATION.md` rule 1 this clean hold cannot yet be credited to the
+    fix; it may be a run that never reached the corruption-triggering
+    condition (the SELECT-CRAFT screen sat static the whole hold,
+    suggesting the scripted "a" press at hold_100 didn't transition into
+    a mission this run). **Next step, highest value: re-run
+    `matlistguard3soak1` (new tag) and confirm `heapwalker-guard4` (or
+    another known-firing control) actually fires before trusting the
+    clean result** -- if it fires and the run STILL stays clean, that's
+    the first real two-line-of-evidence signal this guard family (now
+    fully closed on both idioms) may be the fix; if it fires and the run
+    crashes anyway, we're back to hunting a third site. Full detail:
+    PORTING-STATE Session 253.
 
 -93. **(s252) Closed the `heapFreeListDequeue` lead NEXT.md flagged: full
     ~1758-line read (this time genuinely start-to-end, not just the

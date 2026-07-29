@@ -23955,3 +23955,97 @@ not needed.
 **Housekeeping**: `CURRENT-TRUTH.md` size still flagged, unaddressed again
 (picked the code-change option, same call s249-s251 made). Other flagged
 items unchanged.
+
+## Session 253 (chased the s252 `submitSceneNodeRender+18600` lead)
+
+**Correction to s252's own framing, found this session**: the `+18600`
+byte offset does NOT correspond to a guest MIPS address inside
+`submitSceneNodeRender`'s own body. The function's entry is
+`0x80010014` and its own last instruction is `0x80011088` (confirmed by
+reading to the next `RECOMP_FUNC` boundary, `renderFlatMeshFaceGroup` at
+`0x8001108C`) -- the whole function is only ~4212 bytes / ~1053
+instructions, nowhere near 18600. So `+18600` must be a NATIVE (compiled
+ARM64) code offset from the function's machine-code start, not a guest
+address -- confirms `nm`/`atos` really would be needed to resolve it
+exactly, and (per s207/s252) that path is permanently closed here. The
+crash symbol is still useful as "read this whole function," just not as
+"the bug is at instruction N."
+
+**What a full start-to-end read of `submitSceneNodeRender` (funcs_4.c:
+6-3017) found**: the `findAndUnlinkSmallestEntry` free-list-walk idiom
+(9 inlined copies, `GUARD`/`GUARD2`/`GUARD3`/cached-head guard from
+s123/s131/s197) is confirmed fully guarded -- all 9 call sites
+(lines 194-2749) are covered, matching s131's own count exactly, no gap.
+But a SECOND self-referential pointer-walk idiom, the material-batch-list
+loop (s136's `MATLIST_GUARD1`/`GUARD2`, 2 inlined copies at
+`0x80010308`/`0x80010A1C`), had the SAME "guard-the-first-load-only" gap
+s131 originally found and fixed in the sibling idiom: `MATLIST_GUARD1`/
+`GUARD2` validate the table lookup's result once, but the code then walks
+that pointer as its own "next" list (`ctx->r17 = MEM_W(ctx->r17, 0X0)` at
+`0x800104B0`/`0x80010CE0`) and loops back (`bne $s1,$zero,<loop top>`) to
+re-dereference it (`MEM_W(ctx->r17, 0X4)` at `L_8001049C`/`L_80010A2C`,
+feeding `heapFreeListDequeue`) with ZERO re-validation of the reloaded
+value. `MATLIST_GUARD1`/`GUARD2`'s own s136 comment claimed guarding the
+first load "protects... the whole walk loop" -- this session found that
+claim was wrong for iterations 2+, exactly the same mistake s123 made
+before s131 corrected it for the OTHER idiom.
+
+**Patched**: new `MATLIST_GUARD3` in `fixup_game_funcs.py` (sibling
+`N64Recomp` checkout), 2 sites (`0x800104B0`, `0x80010CE0`). Guard sits
+directly after the reload, before the pre-existing `if (r17 != 0)`
+branch: if the reloaded value is non-zero but outside KSEG0 range
+(0x80000000-0x80800000), it's zeroed so the SAME pre-existing null-check
+branch (already present for a genuine end-of-list) takes over unmodified
+-- no new control-flow path, byte-identical "list ended here" semantics.
+New env var `ROGUESQ_LOG_SCENE_MATLIST_GUARD3`, `site=1|2`.
+
+**Regen**: full delete-all-45 -> `make_elf.py` -> `N64Recomp` ->
+`fixup_game_funcs.py` (once) -> `cmake --build`. Patch report audited
+(`scratch/agent/s253_fixup_report.txt` not saved as a file due to a
+sandbox redirect restriction, but the live output was reviewed line by
+line): new guard shows `x2` (correct site count), every pre-existing
+`submitSceneNodeRender` guard multiplicity unchanged from s252's baseline
+(`GUARD2` x9, `GUARD3` x8, cached-head-guard x1, matlist guard1/guard2
+x1 each) -- no stacking. Build clean. Binary verified fresh (`strings`
+shows both new `[scene-matlist-guard3] ... site=1`/`site=2` format
+strings, mtime after build completion).
+
+**Soak** (`run_matlistguard3soak1.sh`, tag `matlistguard3soak1`, full
+`heaplistdeqhead1`-baseline env block plus
+`ROGUESQ_LOG_SCENE_MATLIST_GUARD3=1`, `HOLD_S=150`): reached
+`vi_width=512` (the SELECT-CRAFT marker) at 74.7s, same schedule as every
+recent session, then ran the ENTIRE 150s hold plus grace window (wall
+195s) with **zero crashes** (`CRASH: 0`, `exit=2: 0`) -- the driver had
+to kill the still-alive process at the end. This is the first fully
+clean hold in the s249-s253 lineage; every prior soak in this run of
+sessions died within ~1s of the hold starting. **However**, this is only
+a WEAK positive result: the new `MATLIST_GUARD3` fired 0/2, and critically
+the `heapwalker-guard4` known-firing positive control that confirmed
+guard infrastructure was live in s249-s252 did NOT fire this run either
+(absent from the full unique-log-tag census of this run's `run.log`).
+`campose-entry` (207 fires) and `scene-rq-counter-hb` (85 fires) confirm
+SOME instrumented code executed, but neither is the specific control this
+project's own rule 1 requires. Per `ITERATION.md` iron rule 1 ("a null
+result without a same-run positive control is not a result"), this run's
+clean-hold outcome **cannot yet be credited to the new guard** -- it may
+simply be a run that didn't reach the corruption-triggering condition at
+all (the SELECT-CRAFT screen appeared to sit statically the whole hold,
+`vi-fs-decision SKIP ... stalled=1` throughout, suggesting the "a" key at
+hold_100 didn't actually transition into a mission this run either).
+
+**Net effect**: 1 new, genuine gap found and closed (`MATLIST_GUARD3`,
+2 sites) via full-body read discipline, corrects a latent wrong claim in
+s136's own guard comment (guarding the first load does NOT protect a
+self-referential loop-back walk -- same lesson s131 already taught for
+the sibling idiom, apparently not cross-applied to this one until now).
+1 environment-math correction: `+N` crash offsets are NATIVE code offsets,
+not guest MIPS addresses -- do not attempt guest-address arithmetic on
+them in a future session, they will not land in the named function's own
+guest range. Soak result is a clean 150s hold but WITHOUT a same-run
+positive control firing -- report honestly as a weak/uninformative null
+per this project's own rule 1, not as confirmation the fix worked, even
+though it is the best (least-crashy) soak outcome since s248. No `lib/`
+edit this session -- `submodule-patches/export.sh` not needed.
+
+**Housekeeping**: `CURRENT-TRUTH.md` size still flagged, unaddressed
+again (picked the code-change option). Other flagged items unchanged.
