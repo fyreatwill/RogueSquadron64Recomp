@@ -663,7 +663,50 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s247)
+## Next steps, in order of expected value (s248)
+
+-89. **(s248) Corrected a stale NEXT.md premise (its "option 2," the
+    NaN_CHECK-disable pivot, was already tried+reverted at s216/-57, not
+    "unshipped" as claimed) and ran the 3rd consecutive MTL_DEBUG_LAYER=1
+    soak (`mtldebug4`) — inconclusive for the CALayer question a 3rd time,
+    triggering NEXT.md's own budget-rule-8 pivot condition.** `mtldebug4`
+    crossed the transition cleanly (74.5s, matches signature) and both
+    guards' positive controls fired (scissor-clamp 5x, vi-zero-size 2x),
+    but died at hold-iter 1 (wall=23s of a 350s hold) to an already-
+    catalogued, unrelated guest-side SIGBUS: `x0`/`x9`=`0x300000000` (the
+    RDRAM host-base constant) added to a raw wild pointer (`x10=
+    0x9b80c56b`), same family as s89-93/s194/s219-220's "RDRAM-base +
+    un-subtracted wild guest pointer" whack-a-mole (10+ known call sites
+    in the `menuOverlayInit`/`runHangarSelectionFrame` chain, several
+    already guarded, this exact stack — `static_5_800AB658+49104` ←
+    `static_5_800AAD9C` ← `static_5_800C6854` ← `menuOverlayInit` — not
+    one of them). `update_screen` counter (#8000 at death vs #4436 at the
+    74.5s transition, ~60/s observed rate) extrapolates to **t≈134s**,
+    inside the CALayer family's usual ~131s window — but different signal
+    (SIGBUS vs SIGSEGV) and stack (guest code vs `RT64`/`CAMetalLayer`),
+    so per established discipline timing overlap alone is NOT treated as
+    CALayer evidence. **Sub-tally unchanged at 2/2** (this run contributes
+    to neither side — neither survived past the window nor crashed to the
+    CALayer family). This is the 3rd consecutive non-discriminating
+    MTL_DEBUG_LAYER=1 iteration (mtldebug3=#2, mtldebug4=#3) — matches
+    s216's "6 consecutive sessions losing the race to a random unrelated
+    crash," and per NEXT.md's own stated rule-8 trigger, **plain-repeat
+    MTL_DEBUG_LAYER sampling on this recipe should STOP** until either the
+    recipe changes or the whack-a-mole family blocking it is addressed.
+    Separately: `-87`'s `NEXT.md`-successor cited CURRENT-TRUTH `-55`/`-56`
+    as a live "proposed but unshipped" NaN_CHECK-disable lead without
+    checking that both items' own headers say SUPERSEDED (by `-57`,
+    s216, which shipped+A/B-tested+reverted exactly that fix, and whose
+    own new lead was itself closed at s217) — corrected, that option is a
+    dead end, not a real fork. No `lib/`/`src/` edit this session (same
+    binary as `mtldebug3`, no new guard shipped — the whack-a-mole family
+    has too many already-known siblings to guard one more oppportunistically
+    without a plan). Reframed candidate for a future session (not started):
+    a project-wide static sweep for the "RDRAM-base-constant + un-`MEM_W`'d
+    wild pointer" idiom, instead of one-call-site-at-a-time guarding — this
+    family is now the single most common thing pre-empting soaks aimed at
+    any later question, not just this one. Full detail: PORTING-STATE
+    Session 248.
 
 -88. **(s247) Corrected a wrong s246 premise and added a 2nd clean
     `MTL_DEBUG_LAYER=1` family-tally data point past the SELECT-CRAFT->

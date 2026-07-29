@@ -1,115 +1,120 @@
-# NEXT work unit — decide: more MTL_DEBUG_LAYER=1 sampling on the CALayer
-# family, OR pivot to the guest-side NaN_CHECK fix, OR the CURRENT-TRUTH
-# size housekeeping (now genuinely overdue, not just flagged)
+# NEXT work unit — MTL_DEBUG_LAYER sampling is now paused (rule 8); pick
+# between the whack-a-mole static sweep and the overdue CURRENT-TRUTH
+# housekeeping
 
-## Where the investigation stands
+## Where the investigation stands (s248)
 
-s247 found and fixed a wrong premise from s246's `NEXT.md` (`scissorfix1`
-was claimed to not cross the SELECT-CRAFT->mission transition; it
-actually did, per its own `[phase]` log, and survived clean) and added a
-confirming 2nd soak (`mtldebug3`, identical schedule/env, new tag).
-**New sub-tally: 2/2 survived crossing the SELECT-CRAFT->mission
-transition under `MTL_DEBUG_LAYER=1` + both the s244 VI-zero-size guard
-and s246 scissor-clamp guard armed** — both runs `CRASH: 0`, zero
-SIGSEGV/SIGABRT/CALayer, both positive controls (`[scissor-clamp]` 5x,
-`[vi zero-size guard]` 2x) fired in both runs. This is kept SEPARATE
-from the older, pre-existing 5/10-vs-5/10 tally (`malloclog2`/s242 and
-earlier — gathered WITHOUT `MTL_DEBUG_LAYER=1` or either guard). Full
-detail: PORTING-STATE Session 247, CURRENT-TRUTH -88.
+s248 found s247's `NEXT.md` had a stale premise (its "option 2," the
+NaN_CHECK-disable pivot, was actually already tried, A/B-tested, and
+REVERTED at s216 — CURRENT-TRUTH `-57` — not "unshipped" as claimed; both
+`-55`/`-56` that were cited are themselves headed SUPERSEDED). That
+option is a dead end — do not revive it without a genuinely new angle.
 
-**n=2 is not a conclusion.** P(2/2 clean by chance, if the true survival
-rate is still ~50%) = 0.25 — a quarter of the time you'd see exactly this
-by luck. Do NOT write "MTL_DEBUG_LAYER=1 fixes/changes the family" into
-CURRENT-TRUTH yet; that needs either (a) enough more clean runs to make
-2/2-turned-N/N implausible under a 50% null (5/5 clean ≈ p=0.03 is a
-reasonable bar), or (b) a crash that DOES occur under the debug layer,
-which would let H1/H2/H3 from s246's `NEXT.md` actually discriminate
-(compare its stack/signal against the s238-242 CALayer SIGSEGV
-signature).
+s248 then ran the 3rd consecutive `MTL_DEBUG_LAYER=1` soak (`mtldebug4`)
+on the CALayer-SIGSEGV-family question. It crossed the SELECT-CRAFT->
+mission transition cleanly and both existing guards' positive controls
+fired, but died at hold-iter 1 (t≈134s, right around the CALayer family's
+usual ~131s window) to an unrelated, already-catalogued guest-side SIGBUS
+— the "RDRAM-base-constant (`0x300000000`) + un-subtracted wild guest
+pointer" whack-a-mole family (10+ known sites in the `menuOverlayInit`/
+`runHangarSelectionFrame` chain since s89-93/s194/s219-220). Timing
+overlap alone is not evidence of a shared cause (different signal:
+SIGBUS not SIGSEGV; different stack: guest code, not `RT64`/
+`CAMetalLayer`) — established discipline, not a new call. **Sub-tally
+stays 2/2** — this run doesn't move it either way.
 
-## Decide first, before running anything
+**This is the 3rd consecutive non-discriminating iteration on the
+MTL_DEBUG_LAYER hypothesis** (mtldebug3 = attempt 2, mtldebug4 = attempt
+3). Per this project's own rule 8 and per NEXT.md's own previously-stated
+trigger condition: **do NOT run a 4th plain-repeat MTL_DEBUG_LAYER soak
+on this recipe.** If you want to pursue the CALayer question again, it
+needs a genuinely different angle — e.g. first clearing the whack-a-mole
+family enough to reliably reach the t≈131s window, or picking a schedule
+variant not yet tried — not just another `mtldebugN` copy.
 
-This is a genuine 3-way fork — think about expected information value,
-not just "the next line of the old plan":
+## The two real remaining options
 
-1. **Continue MTL_DEBUG_LAYER=1 sampling** (3rd, 4th... soak, same
-   schedule/env as `mtldebug3`, new tag each time, ~475s wall each). Pro:
-   directly extends the n=2 tally toward statistical significance in
-   either direction. Con: budget rule 8 — this is soak attempt #2
-   (counting `mtldebug3` only; `scissorfix1` was incidental) in the
-   current session's run of this hypothesis; a 3rd/4th/5th consecutive
-   iteration with still-no-crash and still-inconclusive-n should trigger
-   rule 8 and force a pivot rather than open-ended sampling forever.
-2. **Pivot to the guest-side NaN/`NAN_CHECK` + unguarded-deref crash
-   family** (proposed but unshipped fix, CURRENT-TRUTH -55/-56,
-   PORTING-STATE Session 215 — `sinfApprox`/`funcs_5.c`, confirmed
-   DIFFERENT from all the HOST-side Metal-validation work s243-247).
-   This has a proposed fix sitting unshipped for 30+ sessions and no
-   known blocker — potentially higher value than more CALayer sampling.
-3. **`docs/CURRENT-TRUTH.md` housekeeping** — now ~406 KB / 5786+ lines,
-   flagged 38+ sessions, over both the ~35 KB CLAUDE.md budget and the
-   Read tool's 256 KB single-read limit (every session must
-   grep/offset-read it, never a plain `Read`). This is a `.claude/`
-   hard-rule violation, not just nice-to-have. Migrate durable
-   mechanism/architecture material (the superseded/-8x mechanism
-   write-ups older than ~10 entries back, once their conclusions are
-   fully captured in a compact form) to `PROJECT-OVERVIEW.md`, prune the
-   rest. This is real work (probably 2-3 iterations' worth, not one) —
-   don't half-do it in a rush at the end of an unrelated iteration.
+1. **Project-wide static sweep for the whack-a-mole family** (new
+   candidate, not started). The "RDRAM host-base constant
+   (`0x0000000300000000`) added directly to a raw, un-subtracted,
+   KSEG0-tagged guest pointer" idiom has now cost at least 6 sessions
+   worth of soaks their outcome (s89-93, s194, s216's `nancheckoff1`,
+   s219-220, s248) by pre-empting whatever the soak was actually trying
+   to test. Every fix shipped so far (heapWalker GUARD/GUARD3/GUARD4,
+   `renderUnlitMeshFaces`, `heapFreeListDequeue`) was found by manually
+   source-reading ONE function at a time after it happened to crash.
+   Nobody has yet tried the inverse: grep/read the recompiled `funcs_*.c`
+   sources (or the fixup script's own patch targets) for the general
+   *shape* of this bug — a raw `MEM_W`-style host-pointer arithmetic that
+   skips the sign-extend-then-KSEG0-subtract discipline — and guard
+   every instance found in one pass, the same way heapWalker's own
+   GUARD4 came from re-reading `heapWalker` end-to-end rather than
+   patching one more site. This is a real code change (counts as
+   ADVANCED) and has unusually high leverage: it's the thing most
+   often standing between ANY soak and the content further out.
+   First step, if picked: source-read (Explore agent, since this spans
+   many `funcs_*.c` files) for the exact idiom shape from the 3-4
+   already-fixed sites (`heapWalker`, `renderUnlitMeshFaces`,
+   `heapFreeListDequeue` — grep `fixup_game_funcs.py` for their patch
+   functions to get the precise byte pattern each one matches), then
+   grep the same shape project-wide before writing any new guard.
 
-No hard recommendation is written here on purpose — whichever the next
-iteration picks, name the choice and the reason in that session's
-PORTING-STATE entry, don't silently default to option 1 just because
-it's the literal continuation of s247's soak.
+2. **`docs/CURRENT-TRUTH.md` housekeeping** — now ~407 KB / 5850+ lines
+   (grew again this session), flagged 39+ sessions, still over both the
+   ~35 KB CLAUDE.md budget and the Read tool's 256 KB single-read limit.
+   Per `ITERATION.md`'s own OUTCOME contract, compressing/editing this
+   doc does NOT count as `ADVANCED` — so if you pick this, expect to
+   file the iteration as `SUBSTITUTED` (with a real `SUBSTITUTION.md`:
+   what stopped a soak/code-change work unit, THIS iteration's evidence
+   for it, and the falsifying experiment) or find a way to pair it with
+   a real experiment/change in the same session. Migrate durable
+   mechanism/architecture write-ups (superseded items older than ~15-20
+   entries back, once fully captured in compact form) to
+   `PROJECT-OVERVIEW.md`, prune the rest. Real work, probably 2-3
+   iterations, don't half-do it.
 
-## If continuing option 1 (more MTL_DEBUG_LAYER sampling)
-
-1. Copy `scratch/s73_post_a_scene/run_mtldebug3.sh` to a new tag (e.g.
-   `mtldebug4`), same `STICK_SCHEDULE`/`GAME_EXTRA_ENV`/armed-var set —
-   do not modify the schedule, it's confirmed to cross the transition.
-2. Run as a single foreground/background Bash call (background +
-   `TaskOutput` block=true works fine, ~475-480s wall, add margin).
-3. Grep `run.log` for `SIGSEGV`, `SIGABRT`, `CALayer`, `Validation`,
-   `scissor-clamp`, `vi zero-size guard`, and check `[phase]` for the
-   `vi_width=512 (was 1024)` transition line to confirm it crossed.
-4. Update the sub-tally (currently 2/2). If a crash DOES occur, compare
-   its signal/stack against the s238-242 CALayer SIGSEGV signature before
-   concluding anything — this is the actual H1/H2/H3 discriminator.
+No hard recommendation between these two on purpose — option 1 is higher
+expected value (real fix, unblocks future soaks) but is a genuine
+source-reading + guarding task, not a quick experiment; option 2 is
+overdue but explicitly doesn't count as advancing per the contract. Name
+the choice and reason in that session's PORTING-STATE entry.
 
 ## Do NOT do this iteration
 
+- Do NOT run `mtldebug5` (or any byte-identical-recipe MTL_DEBUG_LAYER
+  soak) — 3 consecutive non-discriminating results already, rule 8.
+- Do NOT revive the NaN_CHECK-disable idea (CURRENT-TRUTH `-55`/`-56`) —
+  already tried, A/B-tested, and reverted at s216 (`-57`). Not a fork.
 - Do NOT re-run `scissorfix1`, `mtldebug1`, `mtldebug2`, `mtldebug3`,
-  `malloclog1`, `malloclog2`, `metalresize1` in place — all superseded/
-  results stand, use a new tag if repeating the soak.
-- Do NOT re-open the scissor-rect or VI-NaN static traces (s243-246) —
-  both closed, soak-confirmed twice now (`scissorfix1` + `mtldebug3`).
-- Do NOT write a CALayer-family conclusion into CURRENT-TRUTH off n=2 —
-  see the statistics note above.
+  `mtldebug4`, `malloclog1`, `malloclog2`, `metalresize1` in place.
 
-## Environment notes (carried forward, still current as of s247)
+## Environment notes (carried forward, still current as of s248)
 
-- **Permission gate CONFIRMED CLEARED through s247.**
+- **Permission gate CONFIRMED CLEARED through s248.**
 - **`GAME_EXTRA_ENV`** (`run_mission_keys.sh`, s241): space-separated
   `VAR=val VAR2=val2` string, scopes extra env vars to ONLY the game
   process.
 - **Env-gated logging pattern**: `static const bool s_X = [](){ const
   char *v = std::getenv("VAR_NAME"); return v && v[0] && v[0] != '0'; }();`
   then `if (s_X) { std::fprintf(stderr, ...); std::fflush(stderr); }`.
-- **Block-wait pattern**: `TaskOutput` with `block: true` and a generous
-  timeout (300000-480000ms) against the background task ID. A single
-  480000ms wait was enough for `mtldebug3`'s 475s wall this session
-  (unlike s246's 471s soak, which needed a 2nd wait call) — but issue a
-  2nd block-wait if the first times out rather than assuming failure.
+- **Block-wait pattern**: launch the soak with Bash `run_in_background:
+  true`, then `TaskOutput` with `block: true` against the returned task
+  ID (400000-480000ms timeout) — this worked cleanly for `mtldebug4`
+  (23s wall, but the pattern handles the full 350s+ hold fine too, as
+  proven at `mtldebug3`).
+- **`update_screen` counter rate is ~60/s** once past the title screen in
+  this recording (confirmed again at `mtldebug4`: `#102`@2.3s to
+  `#4436`@74.5s ≈ 60.9/s) — useful for extrapolating wall-clock death
+  time from the last `[vi]` line when the driver's own `wall=` figure
+  undercounts (e.g. `mtldebug4` reported `wall=23s` for the whole script
+  but the counter shows death was really at process-wall-time ≈134s).
 - `/tmp` is not writable this session — write scratch/report files
   inside `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64` only.
 - Compound `cd ... && ...` and `git -C <path> <cmd>` get blocked/need
   extra approval — issue `cd` as its own Bash call first, and plain
   `git status`/`git diff`/etc. (no `-C`) once cwd is already there.
 - **Headless permission matching is a PREFIX match** — write
-  `env PROBE_MODE=1 zsh run.sh`, not `PROBE_MODE=1 zsh run.sh`. Also
-  applies to `cd dir && zsh script.sh > log 2>&1` patterns — split `cd`
-  into its own Bash call before a redirected command, or it's rejected
-  as an ambiguous compound.
+  `env PROBE_MODE=1 zsh run.sh`, not `PROBE_MODE=1 zsh run.sh`.
 - **`campose*` armed env-var set** (unchanged since `campose11`):
   `ROGUESQ_LOG_CAMPOSE`, `ROGUESQ_LOG_MAT3INV`,
   `ROGUESQ_LOG_UNLIT_MESH_TRACER`, `ROGUESQ_LOG_RENDERUNLIT_GUARD`,
@@ -118,12 +123,7 @@ it's the literal continuation of s247's soak.
   `ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`, `ROGUESQ_LOG_DL_PAYLOAD_STALE=1`
   — keep these armed in any new soak.
 - **The `[phase] vi_width=512 (was 1024) origin=0x006AB400` line at
-  ~t=74-75s is THE confirmed SELECT-CRAFT->mission transition marker** —
-  check for it explicitly in any new soak's `run.log` before trusting
-  that the soak actually reached the family's trigger point; don't just
-  assume the schedule worked because it's a copy of a known-good one
-  (s247 found a whole session's premise was wrong by skipping this
-  check).
+  ~t=74-75s is THE confirmed SELECT-CRAFT->mission transition marker.**
 - **`rs64_elapsed_seconds()`** (`src/main/rt64_render_context.cpp`,
   `extern "C"`) is the canonical shared wall-clock — declare
   `extern "C" double rs64_elapsed_seconds(void);` at NAMESPACE scope in
@@ -137,7 +137,8 @@ it's the literal continuation of s247's soak.
   `run.log` in place — copy the driver script to a new tag name per soak.
 - The driver's own `CRASH: N` summary counts occurrences of the LITERAL
   STRING `[CRASH]` (many per crash) — grep `[CRASH] caught signal` for
-  actual crash event counts.
+  actual crash event counts (confirmed again this session: `CRASH: 35`
+  displayed, actual count 1).
 - `scratch/agent/STATUS`/`OUTCOME` get reset at the START of each
   iteration by the harness — normal.
 - **`/scratch/` is wholesale gitignored** — only `STATUS`, `OUTCOME`,
@@ -149,10 +150,9 @@ it's the literal continuation of s247's soak.
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget and the
-Read tool's 256 KB single-read limit (now ~406 KB / 5786+ lines,
-confirmed still true s247) — flagged for 38+ sessions without action. See
-option 3 above; this needs to actually get scheduled as a work unit soon,
-not indefinitely re-flagged.
+Read tool's 256 KB single-read limit (now ~407 KB / 5850+ lines,
+confirmed still true s248) — flagged for 39+ sessions without action. See
+option 2 above.
 
 `fixup_game_funcs.py`'s untracked, single-copy state in the `N64Recomp`
 sibling checkout has been flagged since s83, still not fixed (not this
@@ -162,10 +162,3 @@ repo's commit scope) — worth surfacing to the user directly.
 `~/Documents/Tools/rogue_squadron64` are separate git checkouts with
 long-standing uncommitted changes, unrelated to this repo's commit scope.
 Still flagged for the user, not committed autonomously.
-
-The pre-existing NaN/`NAN_CHECK` and unguarded-deref crash families still
-have a proposed but unshipped fix (CURRENT-TRUTH -55/-56, PORTING-STATE
-Session 215) — GUEST-side recompiled-C-code assert family (`sinfApprox`,
-`funcs_5.c`), confirmed DIFFERENT from the HOST-side Metal-validation bugs
-(s243-247, all fixed/soak-confirmed). See option 2 above — this is a live
-candidate for the next work unit, not just a footnote.

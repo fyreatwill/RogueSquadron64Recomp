@@ -23340,3 +23340,123 @@ re-flagged indefinitely. `fixup_game_funcs.py` untracked sibling-checkout
 state (s83+) and the two unrelated dirty checkouts (`N64Recomp`,
 `rogue_squadron64`) still not this repo's commit scope, still worth
 surfacing to the user directly.
+
+## Session 248 (2026-07-28)
+
+**Two things this session: (1) corrected a stale premise in `NEXT.md`'s
+"option 2" before it could waste a work unit, (2) ran the planned option-1
+soak (`mtldebug4`), which reached approximately the CALayer family's usual
+timing window but was pre-empted by an already-catalogued, unrelated
+guest-side crash family — inconclusive for the CALayer question, and this
+is now the 3rd consecutive non-discriminating MTL_DEBUG_LAYER=1 iteration,
+triggering budget rule 8.**
+
+**Premise correction (before running anything)**: `NEXT.md`'s option 2
+("pivot to the guest-side NaN/`NAN_CHECK` fix... proposed but unshipped
+for 30+ sessions", citing CURRENT-TRUTH `-55`/`-56`) is WRONG. Reading
+`-55`/`-56` themselves shows both are explicitly headed "SUPERSEDED" —
+`-56`'s own heading reads "(s215, A/B-tested s216 above — NAN_CHECK
+reverted, see -57)". Item `-57` (s216) shows the exact fix NEXT.md
+proposed (flip `NAN_CHECK` to a no-op in the nested
+`lib/N64ModernRuntime/N64Recomp/include/recomp.h`) was already
+implemented, soaked (`nancheckoff1`), and confirmed to work mechanically
+(0 signal-6 NaN asserts) — but it was explicitly REFUTED as the dominant
+blocker (the process died even earlier, hold-iter 9, to a new signal-10
+SIGBUS in `heapFreeListDequeue`) and was REVERTED per its own stated bar
+("revert unless the result clearly justifies keeping it disabled").
+`NAN_CHECK` has been back ON since s216 (31 sessions before this one),
+not "unshipped" — s247's `NEXT.md` cited an item without checking whether
+it had itself been superseded by a later item. Also checked whether
+`-57`'s own new lead (`heapFreeListDequeue`'s upper-bits-`0x3` SIGBUS,
+flagged "not chased this session") was picked up later: yes — s217
+already source-read and guarded `heapFreeListDequeue` (4 sites). So
+option 2, as literally worded in `NEXT.md`, has no live unaddressed work
+behind it; it is a dead end, not a real 3rd fork.
+
+**Option 1 (continue `MTL_DEBUG_LAYER=1` sampling)**: ran `mtldebug4`
+(`scratch/s73_post_a_scene/run_mtldebug4.sh`), byte-identical
+schedule/env/guard set to `mtldebug3`/`scissorfix1`, new tag only.
+Binary verified current before soaking (`strings build/
+RogueSquadron64Recomp | grep RT64_LOG_SCISSOR_CLAMP` hit, binary mtime
+2026-07-28 21:42, no rebuild needed). Launched backgrounded, block-waited
+to completion (23s wall — far short of the 350s hold, meaning it died
+early).
+
+**Result**: driver summary `CRASH: 35` (literal-string count, not event
+count — `grep -c "\[CRASH\] caught signal"` gives the real figure: 1).
+`[phase]` confirms the SELECT-CRAFT->mission transition crossed cleanly
+at the established signature (`vi_width=512 (was 1024) origin=0x006AB400
+at 74.5s update_screen #4436`, matching `mtldebug3`'s `#4434` within 2
+counters). Both positive controls fired (`[scissor-clamp]` 5x, `[vi
+zero-size guard]` 2x — guards still live, same as the prior 2 clean
+runs). `run.log` has 0 `CALayer`, 0 `SIGSEGV`, only the expected 1
+`Validation` line (the `Metal API Validation Enabled` startup banner) —
+so this is NOT the CALayer SIGSEGV family and NOT a Metal-validation
+assertion. The actual crash: **signal 10 (SIGBUS)**, PC symbolized as
+`static_5_800AB658+49104`, stack `menuOverlayInit` → `static_5_800C6854`
+→ `static_5_800AAD9C` → `static_5_800AB658` (crash site) — pure
+guest-recompiled-code stack, no RT64/Metal frames at all. Register
+signature: `x0`/`x9`=`0x0000000300000000` (the RDRAM host-base constant,
+per s194/s219's established diagnosis), `x10`=`0x9b80c56b` (a wild value,
+not a clean KSEG0-tagged guest pointer), `far`=`x0+x10` exactly — the
+same well-catalogued "RDRAM-base constant added directly to a raw,
+un-subtracted wild guest pointer" family that s89-s93/s194/s219-220
+already found at 10+ distinct call sites in this exact
+`menuOverlayInit`/`runHangarSelectionFrame` chain (`updateHangarBayScene`,
+`updateAnimatedTextureStreaming`, `static_5_800B4048`,
+`projectModelBoundsToScreen`, etc. — a long-running whack-a-mole, several
+sites already guarded, several not). Not treated as a new independent bug
+needing its own fix given how many siblings in this same chain are
+already known; no new guard shipped this session.
+
+**Timing note**: `update_screen` counter reached `#8000` by the time of
+death (grepped the last `[vi]` line before the crash); at the
+established ~60 counts/sec rate in this recording (`#102`@2.3s to
+`#4436`@74.5s ≈ 60.9/s), `#8000` extrapolates to **t≈134s** — inside the
+s238-242 CALayer-family's usual `t≈131s` window. Per established
+discipline (s244: "timing overlap is not yet evidence of a shared
+cause"), this is NOT treated as CALayer-family evidence — different
+signal (SIGBUS vs SIGSEGV) and a completely different stack (guest code
+vs `RT64`/`CAMetalLayer` teardown) — but it does mean this soak got
+close enough in wall-clock time that the whack-a-mole family, not the
+CALayer family, is now the thing most often standing between a soak and
+that window.
+
+**Net effect on the tallies**: **no change** — sub-tally stays 2/2
+(`scissorfix1`, `mtldebug3`); this run neither survived past the window
+nor crashed to the CALayer family, so it contributes to neither side.
+This is the **3rd consecutive** MTL_DEBUG_LAYER=1 soak in this
+hypothesis-run (`mtldebug3`=attempt 2, `mtldebug4`=attempt 3 per
+`NEXT.md`'s own accounting) without extending the sub-tally past n=2 —
+matching s216's own observation of "6 consecutive sessions losing the
+race to a random unrelated crash." Per `NEXT.md`'s own stated rule 8
+trigger ("a 3rd/4th/5th consecutive iteration with still-no-crash and
+still-inconclusive-n should trigger rule 8 and force a pivot"): **STOP**
+plain-repeat MTL_DEBUG_LAYER sampling on this recipe now. A 4th soak
+without changing something (the recipe, or the whack-a-mole blocker)
+would be re-rolling dice, not advancing.
+
+No `lib/`/`src/` edit this session (soak + log analysis only, same
+binary as `mtldebug3`) — nothing to `export.sh` or commit from the
+submodules.
+
+**Reframed next-step candidate (not chased this session)**: the
+"RDRAM-base + un-subtracted wild guest pointer" whack-a-mole family is
+now the single thing most often pre-empting soaks aimed at *any* later
+question (CALayer family, mission content, etc.) — it has cost this
+session's option-1 attempt, and multiple sessions before it (s89-93,
+s194, s216's `nancheckoff1`, s219-220). Every fix so far has been
+one-call-site-at-a-time via manual source-read. A project-wide static
+sweep for the same idiom (any code path adding the RDRAM host-base
+constant directly to a value that was NOT produced via `MEM_W`'s
+sign-extend-then-KSEG0-subtract discipline) has never been attempted —
+this could plausibly close most of the family in one pass instead of one
+crash at a time, and is a real code change (would count as ADVANCED, per
+`ITERATION.md`'s "compressing/editing docs is not advancing" carve-out).
+Full detail this session only; not yet scoped into hypotheses/steps
+(that's the next iteration's job, see `NEXT.md`).
+
+**Housekeeping**: same items flagged again, still not this session's
+scope (see prior sessions for the running list — `CURRENT-TRUTH.md` size,
+`fixup_game_funcs.py` untracked sibling-checkout state, the two unrelated
+dirty checkouts). All still true, still not addressed.
