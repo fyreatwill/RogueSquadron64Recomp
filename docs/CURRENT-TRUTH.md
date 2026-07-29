@@ -663,7 +663,33 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s235)
+## Next steps, in order of expected value (s236)
+
+-77. **(s236) Landed the `t=` wall-clock field on `[campose-entry]`
+    (`ROGUESQ_LOG_CAMPOSE`, `0x800178A8`, `fixup_game_funcs.py`) that -76
+    called for, and positive-control-validated it** (`t=` fires and
+    increases monotonically, `t=0.9`→`t=130.8` across 210 lines in the
+    `campose12` soak) — **but that soak crashed during the SELECT-CRAFT->
+    mission transition before reaching the hold window**, so the actual
+    campose-vs-freeze correlation (does the camera-pose stream also stall
+    at t≈470s, arguing for a game-logic freeze, vs. keep updating, arguing
+    for a render-side-only bug) still has not run. Same shape as s234's
+    `campose10` result. Crash: SIGBUS, `si_addr=0x380000000`,
+    `emitAllocatedDLCommand+6608` <- `submitSceneNodeRender+21576` <-
+    `processSceneNode` <- `traverseSceneGraphRecursive` <-
+    `setupCameraMatrices` — same call-chain family as `campose10`'s crash
+    (different offset/address), consistent with the already-documented
+    non-deterministic instability at this transition (now 2/5 `campose*`
+    soaks crashed here vs. 3/5 survived). VI-width transition onset itself
+    is consistently timed (~t=74.4-74.5s across runs) but this run's actual
+    crash didn't happen until ~55s later (~t=130-131s) — onset timing looks
+    deterministic-ish, crash-after-onset timing does not. **Next step**:
+    one more soak (`campose13`, copy `run_campose12.sh`, RUNTAG only) —
+    this is only the 1st soak of this specific instrument, not yet a 3rd
+    consecutive no-result iteration (iron rule 8), so mirrors the
+    s234->s235 precedent (validate-soak crashed early -> payoff-soak next
+    iteration reached the hold window clean). Full detail: PORTING-STATE
+    Session 236.
 
 -76. **(s235) Ran the payoff soak (`campose11`) the wall-clock/`hold_N`
     bridge (s234) was built for. It survived to the hold window

@@ -22384,3 +22384,71 @@ either, so no `export.sh` obligation; `fixup_game_funcs.py` untracked
 sibling checkout state — unchanged this session, no new patch added;
 `CURRENT-TRUTH.md` still far over both the ~35 KB budget and the Read
 tool's 256 KB limit, unmigrated for 30+ sessions).
+
+## Session 236 (2026-07-28)
+
+**Work unit** (from NEXT.md s235): extend the `rs64_elapsed_seconds()` `t=`
+wall-clock bridge from the `[dl-payload-*]` lines to `[campose-entry]`
+(`ROGUESQ_LOG_CAMPOSE`, guest `0x800178A8`, `funcs_4.c`), so the
+camera-pose stream can be tested against the same t=470.2s picture-freeze
+point s235 established. Added `extern double rs64_elapsed_seconds(void);`
++ a `t=%.1f` field to the `[campose-entry]` fprintf in
+`fixup_game_funcs.py` (`N64Recomp` sibling checkout), same idiom as the
+`dl-payload-*` PATCH block. Regenerated clean (`make_elf.py` (45 funcs) ->
+`regen_n64recomp.sh` -> `fixup_game_funcs.py` x1, "setupCameraMatrices
+camera-pose diagnostic (0x800178A8) patched x1" in the report, spot-checked
+the field is present in the generated `funcs_4.c` -> `cmake --build`, 0
+errors, 46 pre-existing DDIV sign-compare warnings unrelated to this
+change).
+
+**Soak** (`campose12`, copied from `run_campose11.sh`, RUNTAG only
+changed, same armed env-var set): **positive control confirmed** — `t=`
+fires and increases monotonically on `[campose-entry]` lines (`t=0.9` at
+`n=0` through `t=130.8` at `n=12420`, 210 lines total) — the instrument
+itself works. **But the run crashed during the SELECT-CRAFT->mission
+transition before reaching the hold window** (`CRASH: 1` actual crash
+event — the driver's `grep -c '[CRASH]'` summary counts 35 because that
+string also appears in the multi-line stack-dump header/mcontext block, not
+35 separate crashes), so the actual campose-vs-freeze correlation this
+soak was meant to answer still has not run — same shape as s234's
+`campose10` result. 0 `hold_NN.png` frames captured (`game process gone at
+hold-iter 1`, `hold done wall=0s`).
+
+Crash signature: SIGBUS (signal 10), `si_addr=0x380000000`,
+`emitAllocatedDLCommand+6608` <- `submitSceneNodeRender+21576` <-
+`processSceneNode+11828` <- `traverseSceneGraphRecursive+1880` <-
+`setupCameraMatrices+28260` <- `static_5_800AAD9C` <- `static_5_800C6854`
+<- `menuOverlayInit` <- `mainGameLoop`. Same call-chain family as
+`campose10`'s crash (`submitSceneNodeRender+31672`, `si_addr=0x336000004`,
+s234) — different exact offset/faulting address but the same
+scene-traversal-during-transition code path, consistent with the
+already-documented non-deterministic instability at this transition
+(CURRENT-TRUTH -71/-72/-75; now 2/5 `campose*` soaks with this call-chain
+family have crashed here — `campose10`, `campose12` — versus 3/5 that
+survived — `campose8`, `campose9`, `campose11`). The `[phase]` log shows
+the VI-width transition itself (1024->512) firing at a consistent t=74.4s
+(matches `campose10`'s ~74.5s onset almost exactly), but the actual SIGBUS
+this run didn't happen until ~55s later, around t=130-131s (bounded by the
+last `[campose-entry]` at t=130.8s and a `[dl-payload-content-stale]` line
+at t=131.5s that logged from another thread after the crash handler had
+already started dumping — the transition-onset timing looks consistent
+run-to-run, but whether/when it actually crashes after onset does not).
+
+**Conclusion**: the new `t=` field on `[campose-entry]` is landed and
+validated (positive control passed), but the discriminating question from
+s235's NEXT.md (does the camera-pose stream also stall at t≈470s, arguing
+for a game-logic freeze, or keep updating, arguing for a render-side-only
+bug) is still open — this soak never reached the hold window to test it.
+Not a 3rd consecutive no-result iteration on this hypothesis (this is the
+1st soak of this specific instrument), so per iron rule 8 this does not yet
+call for abandoning the approach — one more soak (`campose13`, identical
+script/tag bump only) is the natural next step, mirroring the s234->s235
+precedent exactly (validate-soak crashed early -> payoff-soak next
+iteration reached the hold window clean).
+
+**Housekeeping**: same items flagged again, still not this session's scope
+(`lib/` dirty-but-uninvestigated — no `lib/` edits made this session
+either; `fixup_game_funcs.py` untracked sibling-checkout state — edited
+this session but that checkout is outside this repo's commit scope, flagged
+per s83; `CURRENT-TRUTH.md` still far over both the ~35 KB budget and the
+Read tool's 256 KB limit, unmigrated for 30+ sessions).
