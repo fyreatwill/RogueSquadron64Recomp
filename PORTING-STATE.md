@@ -24347,3 +24347,98 @@ every prior session's guards, still out of this repo's commit scope.
 `CURRENT-TRUTH.md` size still flagged, unaddressed again (this session did
 not do housekeeping — it landed a real fix + soak, which stands on its own
 as `ADVANCED`).
+
+## Session 257 (2026-07-29) — mined s256's own `guard8soak1` log (step 1, no build), found it fully re-confirms an already-catalogued signature with nothing new, then widened the tracer to a real, previously-uncovered gap instead of burning the 3rd allowed `C_LOADED` null; the re-soak itself came back null on that specific question (no positive control — `renderUnlitMeshFaces` never got called this run) but surfaced a fresh, already-catalogued whack-a-mole occurrence blocking progress even earlier
+
+**Step 1 (log-mining, no build)**: read `guard8soak1/run.log` around its
+single `renderUnlitMeshFaces` call (line ~4440808) instead of just
+grep-counting it. Confirmed via full-context read (not just grep): (a)
+exactly one call this run, matching s256's tally; (b) the crash backtrace
+(`renderUnlitMeshFaces` ← `processSceneNode` ← `traverseSceneGraphRecursive`
+← `setupCameraMatrices` ← `static_5_800C9BF0` ← `menuOverlayInit` ←
+`mainGameLoop`) is byte-identical in shape to the s172-lineage chain
+already catalogued at CURRENT-TRUTH `-73`/PORTING-STATE s172; (c) the
+register dump (`x8`/`x0`=`0x300000000` rdram host base, `x9`=`0x80630062`
+zero-extended KSEG0 guest pointer, sum = the exact `far`/`si_addr`
+`0x380630062`) is the same additive mechanism already proven at s194/s219
+(CURRENT-TRUTH `-58`ish, PORTING-STATE s216-220) — not a new discovery,
+a re-confirmation. **Conclusion: step 1 found nothing new** — the log
+had already been fully mined by grep-counting the 5 markers NEXT.md
+listed; there was no hidden signal left in it.
+
+**Redirected before spending the 3rd C_LOADED null**: per NEXT.md's own
+step-2 contingency ("either widen the tracer to a different site... "),
+read the REST of `renderUnlitMeshFaces` past the `C_LOADED` checkpoint
+(funcs_4.c:4989-5672, the whole function) instead of just re-running the
+same instrument a 3rd time. Found that sites A/B/B_LOADED/C/C_LOADED/D
+between them cover every use of `ctx->r16`/`r18`/`r20` in the function,
+and `ctx->r16` is never reassigned outside sites B/C — so a clean run
+across all six (as `guard8soak1` was) genuinely rules out the entire
+traced chain for that occurrence, not just an unlucky miss. The one
+pointer in the whole function with **zero** tracer/guard coverage:
+`ctx->r7 = MEM_W(ctx->r17, 0X0)` (guest `0x80011DC8` and `0x80011F1C`,
+two near-identical unrolled copies), loaded straight out of the mesh-face
+list data with no validation, then used for 9 unguarded `MEM_W` stores
+(offsets `0x0`-`0x24`) every loop iteration. Added two new observer-only
+tracer call sites (`R7A_LOADED`, `R7B_LOADED`) reusing the existing
+`_rogue_unlit_mesh_tracer_check` helper (no new env var — same
+`ROGUESQ_LOG_UNLIT_MESH_TRACER` gate), in `fixup_game_funcs.py` in the
+`N64Recomp` sibling checkout, right after the existing C_LOADED patch
+block. Full regen (`make_elf.py` → `regen_n64recomp.sh` → `fixup_game_funcs.py`,
+confirmed both new sites patched x1 each) → clean `cmake` build → verified
+via `strings` that the binary contains both new site-name literals before
+soaking.
+
+**Soak result (`r7soak1`, `HOLD_S=150`, same env/stick-schedule as
+`guard8soak1`)**: **null on the R7 question itself, with NO positive
+control** — `unlit-mesh-tracer` had ZERO hits of any kind this run,
+including the always-on positive-control call counter, meaning
+`renderUnlitMeshFaces` was never called at all before the process died.
+Per iron rule 1, this is worthless as evidence on the R7A/R7B_LOADED
+question specifically. **But the run did crash**, at the `vi_width=512`
+SELECT-CRAFT transition (75.1s, `update_screen #4474`, matches every
+prior transition signature) inside the hangar-selection MENU itself:
+`static_5_800AB658+49104` ← `static_5_800AAD9C` (`runHangarSelectionFrame`)
+← `static_5_800C6854` (`runHangarMenuFromOverlay`) ← `menuOverlayInit` ←
+`mainGameLoop`, register dump again showing the same `x9=0x300000000`
+rdram-base-plus-wild-guest-pointer additive shape. This exact stack was
+already named at s248 (CURRENT-TRUTH/PORTING-STATE s248) as one of "10+
+known call sites" in the same whack-a-mole family as item -49's bug,
+explicitly flagged then as "not one of them [already guarded]" — this
+session reproduces that same still-unguarded site, now a 2nd independent
+occurrence of it. `heapwalker-guard4` fired 3 times (n=0, bad_r3 values)
+in the final log lines right before the crash — an existing observer,
+unrelated to this session's new tracer, logged here for completeness but
+not yet correlated to this specific crash.
+
+**What this rules out**: "the log-mining step would find something new
+in an already-grep-counted log" (it did not — worth noting for future
+sessions tempted to skip step 1 anyway, since here it genuinely cost
+nothing and confirmed the null cheaply). **What this does NOT rule out**:
+whether R7A/R7B_LOADED would fire given a run that actually reaches
+`renderUnlitMeshFaces` — this widened tracer has never been given a
+positive-control opportunity yet, unlike C_LOADED which got one clean
+shot in `guard8soak1`.
+
+**Why re-soaking r7soak1 in place is not the next move**: the blocker
+isn't the R7 tracer's placement, it's that the SAME menu-crash-class
+whack-a-mole family (10+ sites, several guarded, `static_5_800AB658` not
+among them) that s254's `HANGARLIST_GUARD` fixed once for a *different*
+site is still open at *this* site, and it's killing runs before they ever
+reach gameplay rendering. Per the s254 precedent (find the earliest
+unguarded load in the crashing function, guard it, re-soak), the highest-
+value next step is a full-body read of `static_5_800AB658` (funcs_40.c,
+starts at line 7228; the sibling copies at funcs_27.c:123427/124181 are
+just call sites, not the definition) to find the specific unguarded
+pointer load driving this crash, guard it, rebuild, and re-soak — THEN
+the R7A/R7B_LOADED tracer gets its first real chance at a positive
+control.
+
+**Housekeeping**: no `lib/` edit this session (N64ModernRuntime/rt64
+submodule diffs pre-date this session, untouched) — `submodule-patches/
+export.sh` not needed. The `fixup_game_funcs.py` edit (R7A/R7B_LOADED) is
+again uncommitted in the separate `N64Recomp` sibling checkout, same
+posture as every prior session's guards, still out of this repo's commit
+scope. `CURRENT-TRUTH.md` size still flagged, unaddressed again (this
+session landed a real new tracer + soak, which stands on its own as
+`ADVANCED`).

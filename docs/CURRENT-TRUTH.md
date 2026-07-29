@@ -663,7 +663,50 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s256)
+## Next steps, in order of expected value (s257)
+
+-98. **(s257) Mined s256's `guard8soak1` log fully (step 1, no build) --
+    confirmed it re-proves an already-catalogued signature with nothing
+    new -- then widened the tracer to a genuinely uncovered site instead
+    of burning the 3rd allowed `C_LOADED` null; the re-soak came back null
+    on that question (no positive control this run) but surfaced a 2nd
+    occurrence of a different, already-catalogued whack-a-mole crash
+    blocking progress even earlier.** Full-context read (not just grep)
+    of `guard8soak1/run.log` around its one `renderUnlitMeshFaces` call
+    confirmed the crash backtrace and register signature
+    (`x8=0x300000000` rdram base + `x9=0x80630062` zero-extended KSEG0
+    pointer = `far=0x380630062`) are byte-identical to already-catalogued
+    occurrences (s172-lineage backtrace, s194/s219 additive mechanism) --
+    step 1 found nothing new. Per NEXT.md's own contingency, read the
+    REST of `renderUnlitMeshFaces` (funcs_4.c:4989-5672, full function)
+    instead of re-running `C_LOADED` a 3rd time: sites A/B/B_LOADED/C/
+    C_LOADED/D cover every use of `ctx->r16`/`r18`/`r20`, and `r16` is
+    never reassigned outside sites B/C, so `guard8soak1`'s clean pass
+    across all six genuinely rules out that whole chain for its
+    occurrence. Found the one pointer in the function with **zero**
+    coverage: `ctx->r7 = MEM_W(ctx->r17, 0X0)` (guest `0x80011DC8` /
+    `0x80011F1C`, two unrolled copies), loaded from the mesh-face list
+    data with no validation, then used for 9 unguarded `MEM_W` stores.
+    Added observer-only `R7A_LOADED`/`R7B_LOADED` tracer sites (reusing
+    the existing `_rogue_unlit_mesh_tracer_check` helper, no new env var),
+    full regen + clean build + binary-content verification, soaked as
+    `r7soak1`. **Result: null on the R7 question, NO positive control**
+    (`unlit-mesh-tracer` had zero hits including the always-on call
+    counter -- `renderUnlitMeshFaces` was never called this run), so this
+    tracer still hasn't had its first real test. **But informative
+    anyway**: the run crashed at the 75.1s SELECT-CRAFT transition inside
+    the hangar MENU itself, `static_5_800AB658+49104` ←
+    `runHangarSelectionFrame` ← `runHangarMenuFromOverlay` ←
+    `menuOverlayInit` -- a stack s248 already named as one of "10+ known
+    call sites" in the same RDRAM-base-plus-wild-guest-pointer whack-a-
+    mole family as item -49, explicitly flagged then as not yet guarded.
+    This is a 2nd independent occurrence of that exact still-open site.
+    **Next step, highest value**: full-body read of `static_5_800AB658`
+    (funcs_40.c:7228-14467) for the specific unguarded load driving this
+    crash, guard it (same "guard the earliest load" pattern as s254's
+    `HANGARLIST_GUARD`), rebuild, re-soak -- only then does
+    `R7A_LOADED`/`R7B_LOADED` get a real positive-control opportunity.
+    Full detail: PORTING-STATE Session 257.
 
 -97. **(s256) Closed the 8th `composeNpcOrientationMatrix` gap s255
     surfaced, with a real discriminating soak result.** Full start-to-end
@@ -2435,9 +2478,14 @@ cost three sessions before the recursive mutex.
 
 -49. **(s208, STATUS: `B_LOADED` (s209) answered via s254's own log, no new
     build — NOT out-of-bounds right after load on the crashing call; `C_LOADED`
-    (s255) widens to the loop-back reload but hasn't reached a valid soak yet
-    — see -96 above, blocked on a NEW `composeNpcOrientationMatrix` gap. 5th
-    occurrence confirmed s254, see -95 above — same `+792`/`0x380630062`
+    (s255/s256) both answered null with 0 fires but DID get a positive-control
+    call in s256 — rules out the entire traced r16/r18/r20 chain for that
+    occurrence. s257 widened to a new site (`R7A_LOADED`/`R7B_LOADED`,
+    funcs_4.c's only remaining uncovered pointer) but hasn't gotten a
+    positive-control soak yet — see -98 above, blocked on the SAME
+    whack-a-mole family's `static_5_800AB658` site (s248) killing runs
+    before they reach `renderUnlitMeshFaces` at all. 6th occurrence
+    confirmed s256, see -97 above — same `+792`/`0x380630062`
     signature exactly, plus a negative result on the "named symbol"
     explanation (grepped `symbol_files/*.txt` for `80630062`, 0 hits))
     `processSceneNode+8772`/`renderUnlitMeshFaces`
