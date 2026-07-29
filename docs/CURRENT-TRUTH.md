@@ -663,7 +663,42 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s266)
+## Next steps, in order of expected value (s267)
+
+-108. **(s267) Refuted the a0-argument hypothesis for the guest-`0x80000000`-family fault
+    inside `heapFreeListDequeue` via a same-run positive-control trace (167k fires,
+    last one immediately before a captured crash showed a sane in-range pointer,
+    not `0x80000000`), and armed a 2nd guest-PC breadcrumb (`BREADCRUMB2`) scoped to
+    that function's own body — but 3 follow-up soaks didn't reproduce this specific
+    crash.** Full detail: `PORTING-STATE` Session 267.
+
+    **Ruled out**: `DEQUEUE_GUARD`'s strict-less-than lower-bound gap is NOT the
+    mechanism — do not spend a future session tightening that bound expecting it to
+    fix this crash. The corruption is internal to `heapFreeListDequeue` (some field
+    it derefs itself, not its a0 argument).
+
+    **Next work unit**: re-run `scratch/s73_post_a_scene/run_dequeuearg1.sh` (env
+    `HOLD_S=<n>` to control duration; `ROGUESQ_LOG_DEQUEUE_ARG_TRACE` and
+    `BREADCRUMB2` are both already unconditionally armed in the build) enough times
+    to catch a `heapFreeListDequeue`-range crash again (budget several attempts —
+    this crash class has historically run ~20% hit rate, s265). When one lands,
+    `grep '\[CRASH\]\[last-guest-pc\]'` in the run log, then `grep` that address
+    (uppercase hex, e.g. `0x8000D2E4:`) in `N64Recomp/RecompiledFuncs/funcs_3.c` for
+    the exact source line inside `heapFreeListDequeue` — localization is now solved
+    outright for this function too, no more disassembly-correlation guesswork
+    needed (`s193_disasm.py`'s decoder didn't cover the actual crash instruction
+    this session, a register-offset STR variant). Add ONE guard at that exact
+    dereference, full regen + iron-rule-4 soak-verify.
+
+    **Also worth a look if budget remains**: this session incidentally caught 3
+    MORE crashes sharing either the "RDRAM-base-relative fault near `0x80000000`"
+    shape or `last-guest-pc=0x80011088` (submitSceneNodeRender's normal return —
+    meaning the crash is in code called AFTER it returns, same broader
+    scene-traversal chain: `processSceneNode` → `traverseSceneGraphRecursive` →
+    `setupCameraMatrices` → ...): `load_hmt_and_hob+3164`, `cvmsPoolAlloc+84`,
+    `processSceneNode+1184`. Unverified single-source observation — apply
+    `s264_symrange.py`-style range verification to each before treating any as a
+    real, non-misattributed class of its own.
 
 -107. **(s266) Re-soaked per s265's plan, caught a genuine `submitSceneNodeRender`-range
     crash (offset +47120, NOT the original +19268 target), localized it via
