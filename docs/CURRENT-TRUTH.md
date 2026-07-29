@@ -663,7 +663,31 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s265)
+## Next steps, in order of expected value (s266)
+
+-107. **(s266) Re-soaked per s265's plan, caught a genuine `submitSceneNodeRender`-range
+    crash (offset +47120, NOT the original +19268 target), localized it via
+    `[CRASH][last-guest-pc]=0x80010E40` to a 2nd, previously-unguarded occurrence
+    of s197's "cached free-list head" idiom, and landed `CACHE2_GUARD`
+    (`N64Recomp/fixup_game_funcs.py`) — 2 post-fix soaks show no recurrence of
+    this crash, but surfaced a DIFFERENT, higher-priority bug.**
+    Full detail: `PORTING-STATE` Session 266.
+
+    **New top priority**: soak attempt 2 post-fix crashed with
+    `[CRASH][pc-symbol] sym=heapFreeListDequeue+16188`, confirmed via
+    `s264_symrange.py` to genuinely fall inside `heapFreeListDequeue`'s own
+    address range (0-21608) — not a misattribution. Fault address is guest
+    `0x80000000` EXACTLY (not item -49's `0x80630062` — different bug, do not
+    conflate). `DEQUEUE_GUARD`'s range check
+    (`r4_lo < 0x80000000u || r4_lo >= 0x80800000u`) lets `0x80000000` through
+    silently (strict-less-than on the lower bound) — plausible explanation for
+    why `DEQUEUE_GUARD` has 0 fires across 3 soaks yet a crash still reaches
+    `heapFreeListDequeue`'s body. **Next work unit**: instrument
+    `heapFreeListDequeue` itself (funcs_3.c) to find which internal
+    pointer/field holds exactly `0x80000000` at fault time, confirm whether
+    that value is meant as this field's "empty/null" sentinel (in which case
+    tighten `DEQUEUE_GUARD`'s bound to also reject the exact boundary value),
+    then soak-verify per iron rule 4 before calling it fixed.
 
 -106. **(s265) Landed the "last-executed-guest-PC breadcrumb" instrument
     (`g_rs64_last_guest_pc`) s264 flagged as a generically-overdue

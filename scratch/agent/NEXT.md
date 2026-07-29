@@ -1,140 +1,125 @@
-# NEXT work unit — re-soak with the new guest-PC breadcrumb until a
-# `submitSceneNodeRender`-range crash recurs, then guard the exact line
-# `[CRASH][last-guest-pc]` points to.
+# NEXT work unit — trace the guest-`0x80000000` fault inside
+# `heapFreeListDequeue` and tighten `DEQUEUE_GUARD`'s boundary if it's the
+# cause.
 
-## Where the investigation stands (s265)
+## Where the investigation stands (s266)
 
-s265 built and landed the instrument s264 named as a "generically high
-value investment": `g_rs64_last_guest_pc`, a global stamped with the
-current guest MIPS address before every instruction in
-`submitSceneNodeRender` (every recompiled instruction already carries a
-`// 0xGUEST_ADDR: mnemonic` comment in `funcs_4.c`, so this is a 1:1
-address index for free). The SIGSEGV/SIGBUS handler in
-`RogueSquadron64Recomp/src/main/main.cpp` now prints
-`[CRASH][last-guest-pc] pc=0x........` on every crash.
+s266 executed s265's prescribed plan: re-ran `run_breadcrumb1.sh` until a
+`submitSceneNodeRender`-range crash recurred (hit on attempt 3 of 3), used
+`[CRASH][last-guest-pc]` to localize it to the EXACT source line
+(`funcs_4.c`, guest `0x80010E40`), identified it as a 2nd, previously
+unguarded occurrence of s197's "cached free-list head" idiom (s197 originally
+guarded only 1 of what may be several inlined copies — same under-scoping
+mistake s131 already caught once before for the sibling
+`findAndUnlinkSmallestEntry` idiom), and landed `CACHE2_GUARD`
+(`N64Recomp/fixup_game_funcs.py`). Full regen clean, build clean. 2 post-fix
+soaks: 1 clean, 1 crash — but the crash was a DIFFERENT bug, not a recurrence
+of what `CACHE2_GUARD` targets (0 fires of `CACHE2_GUARD` either soak). See
+`PORTING-STATE` Session 266 for full detail.
 
-**Build gotcha, important if you touch `recomp.h` again**: there are TWO
-copies. `~/Documents/Tools/N64Recomp/include/recomp.h` is the standalone
-codegen tool's own header (irrelevant to the actual game build).
-`RogueSquadron64Recomp/lib/N64ModernRuntime/N64Recomp/include/recomp.h`
-(inside the `N64ModernRuntime` submodule) is the one `CMakeLists.txt`
-actually points `RecompiledFuncs`'s include path at
-(`target_include_directories(RecompiledFuncs PRIVATE ...
-lib/N64ModernRuntime/N64Recomp/include ...)`, line ~96) — **this is the
-one that's load-bearing for compilation.** Editing only the standalone
-copy compiles fine through `N64Recomp`/`fixup_game_funcs.py` but fails
-`cmake --build` with "undeclared identifier" errors that don't obviously
-point back at `recomp.h` at all. Both copies were edited this session for
-consistency; if you add anything else to `recomp.h`, add it to BOTH, but
-remember only the `lib/` one matters for the actual binary.
+**The new, higher-priority finding**: soak 2 crashed with
+`[CRASH][pc-symbol] sym=heapFreeListDequeue+16188` — verified via
+`s264_symrange.py` (`cd RogueSquadron64Recomp && python3
+scratch/agent/s264_symrange.py` — note: this script hardcodes path
+`build/RogueSquadron64Recomp` and only ever reports symbols near
+`submitSceneNodeRender`/`heapFreeListDequeue` by name; for a NEW function
+you'll need to adapt the one-off inline-python approach used this session,
+see Session 266's write-up) that native offset 16188 genuinely falls inside
+`heapFreeListDequeue`'s own address range (0 to 21608, next symbol
+`_do_lwl`) — this is a REAL crash inside that function's body, not a
+misattribution (unlike the original `heapFreeListDequeue`-symbol crash s264
+refuted two sessions ago).
 
-**6 soaks with the breadcrumb armed** (`scratch/s73_post_a_scene/
-run_breadcrumb1.sh`, log at `scratch/s73_post_a_scene/breadcrumb1/
-run.log`, overwritten each run — see `PORTING-STATE.md` Session 265 for
-the full preserved crash text of all 6): 1 clean, 5 crashed, but in
-functions OTHER than `submitSceneNodeRender` every time
-(`tickTextureMaterialExpiry+612`, `__pthread_kill+8`,
-`unregisterServiceWorker+536`, `coalesceFreeHeapBlocks+2108`,
-`static_5_800AB658+49104`). In all 5, `[CRASH][last-guest-pc]=0x80011088`
-— confirmed via `grep "0x80011088" N64Recomp/RecompiledFuncs/funcs_4.c`
-to be the function's own LAST instruction (its return/epilogue, right
-before `renderFlatMeshFaceGroup` begins at line 4249). **The instrument
-works correctly** (plausible, source-verifiable, non-zero every time —
-satisfies iron rule 1's positive-control bar for the tool itself); it
-just didn't get the chance to prove itself on the actual target crash
-this session, because that crash didn't recur.
+The fault address is guest `0x80000000` EXACTLY (`si_addr=0x380000000` =
+RDRAM base `0x300000000` + `0x80000000` — cross-check any register dump
+against `x_n = 0x0000000080000000`, not the base pointer itself). This is
+**NOT** item -49's KSEG0-zero-extension bug (`CURRENT-TRUTH` item -49,
+`0x80630062`) — different exact value, different site, do not conflate.
 
-**Hit-rate math**: combined with s263 (1/3 attempts) and s264 (1/1), the
-target `submitSceneNodeRender+19268` crash has fired in 2 of 10 total
-soak attempts across 3 sessions (~20%). This session's other 4 crash
-symbols fired in 5 of 6 attempts — i.e., right now, OTHER bugs are far
-more likely to kill a soak first than this one is.
+**Working hypothesis (unverified)**: `DEQUEUE_GUARD`
+(`scratch/agent/fixup_game_funcs.py` — actually `N64Recomp/fixup_game_funcs.py`,
+search for `_dequeue_guard_patch`) checks
+`r4_lo < 0x80000000u || r4_lo >= 0x80800000u` before calling
+`heapFreeListDequeue`. That check treats `r4_lo == 0x80000000` as a VALID
+address (it's not strictly less than the lower bound), so if the actual
+corrupt/sentinel value flowing into this call is precisely the KSEG0 segment
+base (`0x80000000`) rather than literal guest `0x0`, it sails through
+`DEQUEUE_GUARD` silently — consistent with `DEQUEUE_GUARD` showing 0 fires
+across 3 independent soaks (s263, s264, s266) despite a crash still reaching
+`heapFreeListDequeue`'s body from one of its two guarded call sites (this
+soak's `[CRASH][last-guest-pc]=0x80010cdc` matches
+`DEQUEUE_GUARD` site 2's own delay-slot address, `0x80010CDC`, exactly).
 
 ## The next work unit
 
-**Option A (primary — do this first): just re-soak.** Run
-`zsh scratch/s73_post_a_scene/run_breadcrumb1.sh` (full path, background,
-`TaskOutput(block=true, timeout<=480000)` in the SAME turn — do not try
-to idle across a turn boundary, confirmed broken again in multiple prior
-sessions) several times — budget at least 4-5 attempts given the
-measured ~20% hit rate, more if time allows. After EACH run, check:
-
-```
-grep -n "CRASH\]\[pc-symbol\]\|CRASH\]\[last-guest-pc\]" \
-  scratch/s73_post_a_scene/breadcrumb1/run.log
-```
-
-- If `pc-symbol` says `submitSceneNodeRender+N` for some `N`: THIS is the
-  hit. Take `last-guest-pc`'s value (a guest hex address) and:
-  `grep -n "// 0xTHATADDR:" N64Recomp/RecompiledFuncs/funcs_4.c` to get
-  the exact source line number. Read a small window around that line
-  (targeted Read, not the whole function) — look for the STORE
-  (`MEM_W(reg, off) = value` on the LEFT of `=`, matching the crash's
-  actual faulting instruction being a store per s264) using a freshly
-  loaded, unvalidated register as the address, same idiom as every prior
-  guard in this chain. Add ONE guard (`fixup_game_funcs.py`, same
-  degrade-to-nearest-existing-label pattern as `DEQUEUE_GUARD`/GUARD2/
-  etc.), full delete-all regen, soak again. Discriminating outcomes: same
-  as always — guard fires with a sane caught value (likely fix, needs a
-  2nd soak per iron rule 4 before "confirmed"); guard silent but run
-  survives longer/dies elsewhere (real progress, follow the new crash);
-  guard silent and crash recurs at the exact same guest address (guard
-  missed the real value, re-read more carefully, budget rule 8 applies on
-  a 3rd miss).
-- If every attempt keeps landing elsewhere (as this session did): after
-  ~5 attempts with zero `submitSceneNodeRender`-range hits, STOP this
-  approach for the iteration (budget rule 8's spirit — not literally the
-  same hypothesis, but the same "keep trying the same experiment" pattern)
-  and switch to Option B.
-
-**Option B (if Option A goes 5+ soaks without a target hit): apply
-`s193_disasm.py`/`s264_symrange.py` to this session's 4 unresolved crash
-symbols.** For each of `tickTextureMaterialExpiry+612`,
-`unregisterServiceWorker+536`, `coalesceFreeHeapBlocks+2108`,
-`static_5_800AB658+49104` (skip `__pthread_kill+8` — that's a system
-library frame, not ours): confirm via `s264_symrange.py` whether the
-crash offset genuinely falls inside the named function's own address
-range (same check that caught s263's misattribution). Two of these
-(`unregisterServiceWorker`, `static_5_800AB658+49104`) died very early in
-their soaks (~0-4s into the hold window) — worth checking whether they're
-actually the SAME already-catalogued "23rd crash class"
-(`waitForAnyAudioSlot`-family audio abort, first seen s165, also hit
-twice by s263) recurring under a different ASLR-shifted nearest-symbol
-label, rather than a genuinely new bug each time. If any of these 4 turn
-out to be new, real, previously-unguarded bugs, they may be worth fixing
-even before the primary `submitSceneNodeRender` target, simply because
-they're firing far more often right now and crowding out every other
-investigation this soak schedule is used for.
+1. **Confirm the hypothesis before touching the guard.** Add a targeted,
+   scoped diagnostic inside `heapFreeListDequeue` (funcs_3.c, entry ~line
+   15571) that dumps every pointer/field dereferenced in its body alongside
+   its value, gated behind a new env var (same pattern as every other
+   `ROGUESQ_LOG_*` guard/tracer in this codebase) — or, cheaper: since
+   `DEQUEUE_GUARD` ALREADY checks `ctx->r4` (`a0`) at the call site and never
+   fires, add a SEPARATE, narrower log (not a guard, just an unconditional
+   `fprintf` gated by a new env var, e.g. `ROGUESQ_LOG_DEQUEUE_ARG_TRACE`)
+   that prints `ctx->r4`'s exact value at both `DEQUEUE_GUARD` sites
+   (`0x800104A8`/`0x80010CD8`) on EVERY call (not just failures) for one soak.
+   If `ctx->r4 == 0x80000000` shows up right before a crash, the hypothesis
+   is confirmed with a same-run positive control (the trace fires on every
+   call, satisfying iron rule 1). If `heapFreeListDequeue`'s OWN internal
+   pointer chase (not the a0 argument itself) is what holds `0x80000000`
+   instead, the trace will show a valid-looking a0 and the bug is deeper
+   inside the function — read the function body around offset 16188 (use
+   `s193_disasm.py` against the crash `pc` for the ARM64 side, or just read
+   `funcs_3.c` — same instruction-comment index applies) to find which
+   specific field this is.
+2. **Only after confirming**, fix at the actual gap: either tighten
+   `DEQUEUE_GUARD`'s lower bound (`<=0x80000000u` instead of `<0x80000000u`)
+   if the a0 argument itself is the culprit, or add a new guard inside
+   `heapFreeListDequeue`'s own body at the specific internal dereference if
+   it's a different pointer. Full delete-all regen (`make_elf.py` →
+   `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`), then soak-verify
+   per iron rule 4 (at least 2 independent runs with no recurrence, or a
+   clean guard-fire-and-recover).
+3. **If budget remains after that**: `CACHE2_GUARD` was scoped to the ONE
+   occurrence this session's crash hit (guest `0x80010E38`-`0x80010E40`).
+   Given the sibling `findAndUnlinkSmallestEntry` idiom turned out to be
+   inlined 9 times (s131's GUARD2/GUARD3), it's plausible the CACHE idiom is
+   ALSO inlined more than the 2 occurrences now guarded (s197's original +
+   this session's CACHE2). Worth a source-read of `submitSceneNodeRender`
+   grepping for the `lw $vX, 0x63B0($vX)` / `lw $vX, 0x0($vX)` pattern
+   (reload-global-then-deref) to count how many total copies exist, matching
+   the same generalization s131 did — but only if the guest-`0x80000000`
+   investigation above is resolved or budgeted out first (it's the actual
+   live crash blocker right now).
 
 ## Do NOT do this iteration
 
-- Do NOT treat the 4 differently-named crash symbols from s265 as 4
-  confirmed distinct bugs without running them through
-  `s193_disasm.py`/`s264_symrange.py` first — ASLR shifts `base=`
-  per-run, and at least 2 look like plausible nearest-symbol
-  misattributions over stripped code, same caveat as the existing
-  `[CRASH][pc-symbol]` comment in `main.cpp` already documents.
-- Do NOT cite `x0`/`x8`/`x9=0x0000000300000000` as crash-matching
-  evidence for ANYTHING — constant RDRAM base pointer (s219, item -60),
-  misled two sessions already (s216-218, s263). Use the OTHER operand
-  register instead.
+- Do NOT conflate the guest-`0x80000000` fault with item -49's
+  KSEG0-zero-extension bug (`0x80630062`) — different exact value, different
+  function, confirmed distinct.
+- Do NOT cite `x0`/`x8`/`x9`/`x11 = 0x0000000300000000` as crash-matching
+  evidence for ANYTHING — constant RDRAM base pointer (s219, item -60).
 - Do NOT re-touch `SCENE_NODE_LIST_GUARD`/`GUARD2`/`GUARD3`/cache-guard/
-  `MATLIST_GUARD1-3`/`COMPOSE_NPC_GUARD1-9`/`DEQUEUE_GUARD` — all
-  confirmed not the mechanism for the current open crash (`DEQUEUE_GUARD`
-  stays armed as hardening only, 0 fires across 3 soaks now).
+  `CACHE2_GUARD`/`MATLIST_GUARD1-3`/`COMPOSE_NPC_GUARD1-9` — all verified not
+  regressing and not the current blocker. `DEQUEUE_GUARD` may need its bound
+  tightened (see above) but don't touch it without first confirming via step
+  1's trace.
 - Do NOT idle across a Stop-hook turn boundary waiting on a background
   soak — block with `TaskOutput(task_id, block=true, timeout<=480000)` in
   the SAME turn.
-- Do NOT edit `~/Documents/Tools/N64Recomp/include/recomp.h` alone and
-  assume it's enough — the actual build uses the copy under
-  `lib/N64ModernRuntime/N64Recomp/include/recomp.h`. Edit both, or at
-  minimum the `lib/` one.
+- Do NOT assume `s264_symrange.py` takes command-line args — it doesn't; it
+  hardcodes `build/RogueSquadron64Recomp` as the path and only reports
+  `submitSceneNodeRender`/`heapFreeListDequeue` by name. For a new symbol,
+  either edit the script or write a one-off inline-python snippet (see
+  Session 266's write-up for a working template).
 
 ## Environment notes (carried forward, all still valid)
 
 - Regen commands: `make_elf.py` needs cwd `rogue_squadron64`, `N64Recomp`
-  needs cwd `N64Recomp`, `fixup_game_funcs.py` needs cwd `N64Recomp`,
-  `cmake --build` needs cwd `RogueSquadron64Recomp/build`.
+  needs cwd `N64Recomp`, `fixup_game_funcs.py` needs cwd `N64Recomp` (or an
+  absolute path — either works, but re-running the SAME already-patched
+  files a 2nd time in a row makes every regex match 0 and looks like a
+  regression when it's just non-idempotent re-application; always regen from
+  fresh `funcs_*.c` before checking match counts).
 - Delete `funcs_*.c` before regen via:
   `python3 -c "import glob, os; [os.remove(f) for f in glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c')]"`
   (`rm`/`find -delete` are sandbox-blocked).
@@ -145,14 +130,16 @@ investigation this soak schedule is used for.
   `TaskOutput(task_id, block=true, timeout<=480000)` synchronously in the
   same turn.
 - Soak driver scripts live under `scratch/s73_post_a_scene/`, NOT
-  `scratch/agent/`. Current-best baseline: `run_breadcrumb1.sh` (clone of
-  `run_dequeueguard1.sh`, same schedule, same guards armed, now also
-  carries the guest-PC breadcrumb — use this one going forward, it's a
-  strict superset).
+  `scratch/agent/`. Current-best baseline: `run_breadcrumb1.sh` — now also
+  arms `ROGUESQ_LOG_SCENE_NODE_CACHE_GUARD`/`ROGUESQ_LOG_SCENE_NODE_CACHE2_GUARD`.
 - `+N` crash-symbol offsets are NATIVE (ARM64) code offsets, verifiable
   with `s264_symrange.py` + `s193_disasm.py` (no `nm`/`atos`/`otool`/
   `lldb`/`dwarfdump` on this sandbox's Bash allowlist).
+- Redirecting shell output (`>`) only works to paths under one of the 3
+  session working directories (`RogueSquadron64Recomp`, `N64Recomp`,
+  `rogue_squadron64`) — `/tmp` is blocked. Use
+  `scratch/agent/*.log` for capturing tool output you want to grep later.
 - `CURRENT-TRUTH.md` is ~460KB+, ~13x the ~35KB target in CLAUDE.md. A
-  dedicated pruning session is now 7+ consecutive sessions overdue —
+  dedicated pruning session is now 8+ consecutive sessions overdue —
   still not this iteration's job unless the localization work above is a
   quick null with clear leftover budget.
