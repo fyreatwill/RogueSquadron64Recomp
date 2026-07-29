@@ -663,7 +663,84 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s263)
+## Next steps, in order of expected value (s264)
+
+-105. **(s264) Ran s263's prescribed 2nd `dequeueguard1` soak (iron rule 4) —
+    it crashed, not clean, and a NEW disassembly-based methodology proves the
+    crash is structurally unrelated to `heapFreeListDequeue`/`DEQUEUE_GUARD`
+    entirely, AND that s263's justification for the guard repeated a fallacy
+    `PORTING-STATE` Session 219 already refuted 44 sessions ago.** No code
+    changes this session (per NEXT.md's instruction: re-run unchanged unless
+    the re-run itself surfaces a new gap — it did, but precisely localizing
+    it is the next work unit, not a same-session rush).
+
+    **Soak result**: reached `vi_width=1024`@45.5s and `vi_width=512`@75.1s
+    (matching s263's clean run up to that point), then crashed ~3s into the
+    hold window (~78s total) — nowhere near s263's 293s clean survival.
+    `DEQUEUE_GUARD` (`scene-node-dequeue-guard`): 0 fires, same as s263 (now
+    0 fires across 2 independent soaks). All other guards/tracers silent too;
+    `renderUnlitMeshFaces` still never reached (0/0 on GUARD2's positive
+    control, 3rd straight session).
+
+    **Disassembly (new methodology)**: wrote `scratch/agent/s264_symrange.py`
+    (parses the Mach-O symbol table directly — no `nm`/`atos`/`otool` on this
+    sandbox's Bash allowlist) and re-ran the existing
+    `scratch/agent/s193_disasm.py` (a prior session's hand-rolled ARM64
+    load/store decoder, built for the same allowlist reason) against the
+    crash's `[CRASH][mcontext] pc=0x102fc4efc sym=submitSceneNodeRender+19268`.
+    **Confirmed the crash offset falls inside `submitSceneNodeRender`'s own
+    address range** (`0x1006b43b8` to the next symbol `renderFlatMeshFaceGroup`
+    at +37528) — NOT inside `heapFreeListDequeue`, which is a completely
+    separate, distant symbol (`0x1004180e8`). The guarded call sites were
+    never on the crashing path this run. The actual faulting instruction,
+    `0xb82a6928`, decodes to `STR w8, [x9, x10]` — register dump confirms
+    `si_addr = x9 + x10` exactly (`x9=0x0000000300000000`,
+    `x10=0x00000000f5f9f85c`).
+
+    **The signature correction**: `x0`/`x8`/`x9 = 0x0000000300000000` is the
+    process's constant RDRAM host base pointer (`recomp.h`'s `MEM_W` macro
+    always adds it) — present in EVERY faulting memory access in this binary,
+    proven by `PORTING-STATE` Session 219 (`CURRENT-TRUTH` item -60,
+    "Overturned conclusions", `:6268-6285`) and never a valid way to match one
+    crash to another. s263 (item -104, below) justified `DEQUEUE_GUARD` partly
+    on "matching the crash's own repeated `x0=x9=0x0000000300000000` (guest
+    0x0) fault signature" — this is the SAME fallacy s219 already named and
+    refuted, unnoticed by s263. This does not mean `heapFreeListDequeue`'s
+    unguarded `a0` deref (s263's source-read finding) is fake — it's still a
+    real, independently-justified bug worth guarding — but the claim that it
+    explains "the 18th crash class" was never actually supported by the
+    register evidence. Per s219's own distinguishing criterion (KSEG0-tag
+    shape `0x80xxxxxx` in the wild operand = item -49's specific bug;
+    anything else = a different bug): `x10=0xf5f9f85c` has top nibble `0xf`,
+    not `0x8` — this is neither `heapFreeListDequeue`'s bug nor item -49's,
+    but a **third, previously-uncatalogued site** in the broader "RDRAM-base
+    + wild 32-bit garbage operand" family s257 already named ("10+ known call
+    sites... not yet guarded").
+
+    **`DEQUEUE_GUARD` downgraded**: from "candidate fix for the 18th crash
+    class" to "independently-justified hardening, unconnected to any crash
+    observed so far" (0 fires across 2 soaks, and this soak's crash is now
+    proven to be in unrelated code). Per budget rule 8, this hypothesis has
+    had its 2 misses — do not spend a 3rd soak testing it as a fix for this
+    crash family.
+
+    **New reusable tooling**: `scratch/agent/s193_disasm.py` +
+    `scratch/agent/s264_symrange.py` together let any future session decode a
+    crash's actual faulting instruction and confirm/refute which native
+    function it's really in, directly from `[CRASH][mcontext] pc=...` — use
+    this FIRST on every future crash triage, before trusting the
+    `pc-symbol` line's offset at face value or re-reading source by eye.
+    **Next step, highest value**: map native offset
+    `submitSceneNodeRender+19268` back to the guest MIPS address / recompiled
+    C line (funcs_4.c) to find and guard this 3rd site — no direct
+    offset-to-line calibration exists yet; widen `s193_disasm.py`'s window
+    across the whole function and correlate branch/call density against the
+    source's `jal`/branch address comments. Separately worth scoping: a
+    cheap "last executed guest PC" breadcrumb (single global write per
+    translated block label) would obsolete this manual correlation for every
+    future crash — a generically high-value investment given 260+ sessions
+    of exactly this localization bottleneck. Full detail: PORTING-STATE
+    Session 264.
 
 -104. **(s263) Executed s196's 66-session-overdue prescription: source-read
     `submitSceneNodeRender` in full for the real 18th-crash-class mechanism.
