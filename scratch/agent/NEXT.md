@@ -1,87 +1,108 @@
-# NEXT work unit — disambiguate Probe B's payload-hash signal: HUD/static
-# content vs. genuinely stuck 3D scene content
+# NEXT work unit — add a wall-clock/hold_N bridge to the per-content
+# staleness tracker, then correlate staleness onset with the visual freeze
 
 ## Where the investigation stands
 
-s232 landed and soaked a new diagnostic (`ROGUESQ_LOG_DL_PAYLOAD_HASH=1`,
-`funcs_4.c:13918` `L_80014FE8`) that hashes the DL-pointer payload queued
-at `processSceneNode`'s shared cache-hit enqueue point. One clean soak
-(`campose7`, copied from the non-epoch-armed `campose3` baseline — CRASH: 0,
-451s wall, picture-freeze reproduced as expected at `hold_246`) produced
-real but AMBIGUOUS signal: heartbeat samples (every 5000 calls, n=0-345000)
-show diverse/changing content pointers early in the run
-(`0x800Cxxxx`-`0x800Fxxxx` range) shifting, around n=100000-115000, to a
-small fixed pool (`0x80332xxx`-`0x80335xxx`) whose hashes never change on
-recurrence, for the rest of the run. **This pattern is consistent with
-EITHER a stuck render cache OR normal static HUD/menu geometry that's
-supposed to be pixel-identical every frame — the diagnostic as built cannot
-tell these apart.** Two problems found empirically, both important for the
-next design:
+s233 closed off s232's Option B (the disputed `0x80332xxx`-`0x80335xxx`
+address pool is unambiguously runtime heap, ~1.8MB past every static ELF
+section — `scratch/agent/elf_segments.py` confirmed this against
+`rogue_squadron64/build/roguesquadron.elf`, no soak needed) and landed +
+soak-validated Option A: a 256-slot per-content-pointer staleness tracker
+(`ROGUESQ_LOG_DL_PAYLOAD_STALE=1`, same `funcs_4.c:13918`/`L_80014FE8`
+anchor as s232's `ROGUESQ_LOG_DL_PAYLOAD_HASH`, `fixup_game_funcs.py`).
 
-1. **Zero `[dl-payload-transition]` events fired in 345000 calls.** The
-   per-call consecutive-run comparator compares call N to call N-1, but
-   `processSceneNode` interleaves many different content objects per frame
-   — consecutive calls almost never touch the same content pointer twice in
-   a row, so the `run>=2000` threshold is essentially unreachable by
-   construction. This detector shape does not work for this call site; do
-   not reuse it unmodified.
-2. **No ground truth for which content-address ranges are HUD/UI vs. 3D
-   scene geometry.** Without that, "hash never changes" is not
-   interpretable — static HUD icons and a frozen 3D cache produce
-   identical-looking log lines.
+Two soaks (`campose8`, `campose9`, both `CRASH: 0`, both budgeted attempts
+used) reproduced a real signal: the SAME 13 content pointers
+(`0x800D1100` through `0x800FA1A4`) independently went genuinely stale
+(identical DL-payload hash across a >=10000-call gap) in BOTH runs — a
+two-independent-soak match. `campose9` (which ran further before its own
+freeze) additionally caught staleness in the previously-disputed
+`0x80332xxx` range, single-source only. **This is real progress but NOT
+yet a resolved finding** — it shows specific objects go and stay constant
+for a long time, which partially undercuts "just static HUD" for those 13
+objects (s232's own heartbeat called that address range "diverse/changing,
+dynamic 3D"), but does not by itself prove a stuck render cache, since
+"this object never changed for 10000+ calls" is also consistent with
+legitimate load-once-then-static content that simply took a while to first
+appear.
 
-Full data and the exact repeating content/hash pairs: PORTING-STATE Session
-232. Raw log: `scratch/s73_post_a_scene/campose7/run.log`. Analysis scripts:
-`scratch/agent/checksum_campose7.py` (visual freeze point),
-`scratch/agent/correlate_campose7.py` (phase-marker/heartbeat correlation).
+**The missing piece, identified this session**: there is no timestamp or
+`hold_N` bridge between the `dl-payload-*` log lines (keyed only by the
+processSceneNode call counter `n`) and the checksum-based visual-freeze
+frame (`hold_NN.png`, MD5'd offline). Without that bridge we can only
+guess at whether staleness onset happens AT, BEFORE, or well AFTER the
+frame where the picture actually stops changing — which is exactly the
+question that would discriminate "this is the freeze bug" from "this
+object was always going to settle here." Full data and exact addresses:
+PORTING-STATE Session 233. Raw logs: `scratch/s73_post_a_scene/campose8/
+run.log`, `scratch/s73_post_a_scene/campose9/run.log`. Analysis scripts:
+`scratch/agent/checksum_campose8.py`/`checksum_campose9.py` (visual freeze
+point), `scratch/agent/elf_segments.py` (static ELF section ranges, Option
+B's closing evidence).
 
-## Do this iteration — pick ONE
+There's also a second, unexplained open question from s233 (lower
+priority, don't chase this iteration unless the primary work below turns
+up nothing): `campose8`'s enqueue site went completely SILENT after
+n=54073 for the rest of the 449s run (no more `[dl-payload-*]` lines of
+any kind, while unrelated `[thr-resume]` diagnostics kept counting past
+n=170000), but `campose9`'s kept firing at high volume with zero new
+content to at least n=325000. Two qualitatively different post-freeze
+behaviors for the identical code path — not yet explained by the schedule's
+known non-determinism alone.
 
-### Option A (preferred): per-content-pointer tracking, not global heartbeat
+## Do this iteration
 
-Redesign the diagnostic to key its "has this changed" state off the content
-pointer itself, not off the previous call regardless of identity:
+1. **Add a wall-clock timestamp to the existing `dl-payload-*` PATCH block**
+   (`fixup_game_funcs.py`, same anchor as `ROGUESQ_LOG_DL_PAYLOAD_STALE`).
+   Find how the existing capture-tick screenshot loop timestamps `hold_NN`
+   frames (grep `run_mission_keys.sh`/`funcs_4.c` diagnostics for an
+   existing wall-clock read, e.g. `gettimeofday`/`clock()`/a frame counter
+   already threaded through `ctx` or a global) and reuse THE SAME clock —
+   do not invent a second, potentially-skewed one. Emit it on every
+   `[dl-payload-content-changed]`/`[dl-payload-content-stale]`/heartbeat
+   line, e.g. append ` t=%.1f` (seconds since process start, or whatever
+   base the screenshot loop uses — must be directly comparable to
+   `hold_NN`'s own timing, which starts counting at hold-window-start, not
+   process-start — so also emit or compute the hold-window-start offset
+   once, e.g. log a `[hold-window-start] t=...` line right when the hold
+   phase begins if that anchor exists in the launch script's env/log, or
+   derive it from the already-logged `[phase]` transition line's timestamp
+   the launch driver prints).
+2. Standard regen recipe (below). Budget 1 fresh soak (copy `campose9`'s
+   script to a new tag, e.g. `campose10`) — this is validating a NEW
+   diagnostic feature (timestamp emission), not re-running the same probe a
+   3rd time, so it's a fresh budget, but keep it to 1 attempt for THIS
+   validation pass; if it reveals something worth a second confirmatory
+   soak, that's a new, explicit budget decision for the iteration after.
+3. After the soak: MD5-checksum the frames (reuse the `checksum_campose8.py`
+   pattern) to get the visual-freeze timestamp/frame, then cross-reference
+   against the new `t=` field on the `[dl-payload-content-stale]` lines —
+   does staleness onset (first stale event, or the point where
+   `changed_count` stops increasing) happen AT/AFTER the freeze frame's
+   timestamp (supports the render-cache-stuck reading) or well BEFORE it
+   (supports "this content was always static, freeze is unrelated")?
+4. Write the answer into CURRENT-TRUTH regardless of which way it points —
+   a clean "before" result closes off the stuck-cache theory as
+   convincingly as an "at/after" result would open it up further.
 
-1. In the same PATCH block (or a new one at the same anchor,
-   `funcs_4.c:13918`), keep a small fixed-size hash table (e.g. 64-256
-   buckets, content-pointer-hashed index, open addressing or just
-   linear-probe-and-evict — budget-conscious, this runs every enqueue call)
-   mapping `content_ptr -> last_seen_hash`.
-2. On each call, look up the content pointer's previous hash (if tracked).
-   If different (or first-seen), that's live/changing — log a
-   `[dl-payload-content-changed]` line (rate-limit this, e.g. max once per
-   content pointer per N calls, to avoid the same I/O-volume mistake s230
-   made). If the SAME content pointer is seen again with the SAME hash
-   after a long span (e.g. >=10000 calls since last seen), that's the
-   actual "did this specific thing go stale" signal — log
-   `[dl-payload-content-stale]` with the gap length.
-3. This directly answers the real question without needing to know HUD vs.
-   3D ranges: if 3D scene content pointers are being revisited (which they
-   are, per s232's own data — e.g. `0x80332BF8` recurs many times) and
-   NEVER change hash even far apart in time, that's real evidence,
-   independent of whether it's HUD or not (HUD content pointers SHOULD
-   behave that way, so a mixed-bag table doesn't invalidate it — a helpful
-   secondary step is a smaller run without the mission/gameplay phase, e.g.
-   holding only through SELECT-CRAFT and never launching, if a schedule for
-   that exists or can be trivially built, to get a HUD-only baseline for
-   comparison — but do not build one from scratch this iteration, just
-   check if one already exists first).
-4. Standard regen recipe (below), soak on `campose3`'s clean baseline
-   again (COPY it, add the new var — leave `ROGUESQ_LOG_RENDER_CACHE_EPOCH`
-   unset, same reasoning as s232). Budget 2 attempts.
+## Do NOT do this iteration
 
-### Option B: classify the repeating address range directly from static data
-
-Before writing new C, check whether the `0x80332xxx`-`0x80335xxx` range
-that dominates post-transition heartbeats in `campose7` can be identified
-via existing tools — e.g. `machoparse.py` (used before for symbolizing
-crash PCs) or the linker map / symbol table from `make_elf.py`'s output,
-to see if these addresses fall inside a known HUD/UI asset table vs. a
-mission-geometry table. If this resolves quickly (say, under 30 minutes of
-investigation) it's cheaper than Option A and may fully resolve the
-ambiguity without another soak. Only spend one focused pass on this before
-falling back to Option A — do not turn it into an open-ended reverse-
-engineering session.
+- Do not re-run `campose8`/`campose9` unmodified — their data is already
+  extracted and budget-exhausted for the diagnostic as it currently exists
+  (no timestamp field). Only soak again once the timestamp is landed.
+- Do not chase the `campose8`-silent-vs-`campose9`-noisy discrepancy first
+  — it's real but lower priority than closing the timestamp gap, which
+  directly unblocks the HUD-vs-stuck-cache question this whole probe chain
+  (s229-s233) has been working toward. Only pivot to it if step 3 above
+  turns up nothing useful.
+- Do not reintroduce `ROGUESQ_LOG_RENDER_CACHE_EPOCH` — still closed, 0/4
+  through SELECT-CRAFT (s229-s231).
+- Do not dump entire raw log files into your own context — write short
+  Python scripts or use targeted `grep`, per every prior session's method.
+- Do not treat "13 pointers reproduced stale across 2 soaks" as proof of a
+  stuck cache in CURRENT-TRUTH — it's real and two-source, but the timing
+  correlation (this iteration's job) is what would actually prove or
+  disprove the causal link to the freeze.
 
 ## Standard regen recipe (unchanged)
 
@@ -99,28 +120,9 @@ engineering session.
 5. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
    build -j8`, safe to background (`run_in_background: true`).
 
-## Do NOT do this iteration
+## Environment notes (carried forward, still current as of s233)
 
-- Do not re-run `campose7` unmodified expecting different data — the run
-  was clean and the data is already extracted; re-running without a design
-  change just duplicates the same ambiguity.
-- Do not re-arm `ROGUESQ_LOG_RENDER_CACHE_EPOCH` for this probe's soaks —
-  s229-s231 already closed that channel (0/4 through SELECT-CRAFT); s232
-  deliberately avoided it and stayed clean. No need to reintroduce that
-  risk for an unrelated diagnostic.
-- Do not conclude the render-cache-epoch theory is confirmed OR refuted
-  from s232's data alone — it is genuinely ambiguous, said explicitly in
-  PORTING-STATE Session 232 and CURRENT-TRUTH -73. Only report a conclusion
-  once Option A or B actually discriminates HUD-static from stuck-3D.
-- Do not dump entire raw log files into your own context — write short
-  Python scripts (per s229-s232's method) or use targeted `grep`.
-- Do not start any new diagnostic's heartbeat interval at `%500` or a
-  transition-log threshold at `run>=50` — s231 showed these values are
-  cheap to get wrong and expensive to discover wrong. Start coarse.
-
-## Environment notes (carried forward, still current as of s232)
-
-- **Permission gate CONFIRMED CLEARED s229-s232** — trust it; all
+- **Permission gate CONFIRMED CLEARED s229-s233** — trust it; all
   `tools/*`/`build/*` commands ran normally again this session.
 - Bash cwd persists across tool calls within a session — but an explicit
   `cd` changes it for ALL subsequent calls. Prefer absolute paths or re-`pwd`
@@ -128,41 +130,44 @@ engineering session.
 - **`cmake --build` is safe to background**; the game-soak launch script
   must stay SYNCHRONOUS/foreground (sends scheduled keypresses, SIGKILLs
   itself at the end) — **but it WILL exceed the 400s default foreground Bash
-  timeout (HOLD_S=350 + setup/grace overhead runs ~450s total) and get
-  auto-backgrounded; this is expected, not a failure. Wait for it via a
-  small polling script (`kill -0 $PID` loop) rather than assuming a fixed
-  wait time** — s232 needed this exact pattern; write the wait loop to a
-  `.sh` file and run it with a generous Bash `timeout` (e.g. 330000ms)
-  rather than inlining `$PID`/`while` into a single Bash call (the
-  permission layer flags inline shell-expansion-heavy one-liners; a script
-  file dodges that).
-- **This exact schedule (`schedulepush2`/`campose*` family) is PROVEN
-  non-deterministic (s223)** — but s231 showed the SELECT-CRAFT->mission
-  transition specifically failed 4/4 with the epoch diagnostic armed,
-  while s232 (no epoch diagnostic) survived it cleanly on the first try,
-  same schedule otherwise — treat "epoch diagnostic armed" as the variable
-  that correlates with the crash, not the transition/schedule itself.
+  timeout (HOLD_S=350 + setup/grace overhead runs ~450-460s total) and get
+  auto-backgrounded; this is expected, not a failure. Launch it directly
+  with `run_in_background: true` (a generous `timeout`, e.g. 330000ms) and
+  block-wait on the returned task id with TaskOutput** — s233 used this
+  pattern successfully (TaskOutput with `block: true`, `timeout: 480000`,
+  then a shorter follow-up call once near-complete) rather than a manual
+  `kill -0` polling script.
 - **`/tmp` is not writable this session** — write scratch/report files
   inside `RogueSquadron64Recomp`/`N64Recomp`/`rogue_squadron64` only.
 - Compound `cd ... && ... > file` commands with output redirection get
   blocked by the permission layer ("Commands that change directories and
   write via output redirection require explicit approval") — issue the
   `cd` as its own Bash call first, then the redirecting command as a
-  separate call (cwd persists, per above).
+  separate call (cwd persists, per above). This also applies to plain
+  `cd dir && git ...` — even without redirection, a leading `cd` in a
+  compound command gets flagged; always split it into two calls.
 - **`git -C <path> <cmd>` does not match a `Bash(git <cmd>:*)` allow-rule**
   — `cd` first, then bare `git <cmd>`.
 - **Headless permission matching is a PREFIX match on the command
   string** — write `env PROBE_MODE=1 zsh run.sh`, not
   `PROBE_MODE=1 zsh run.sh`.
-- **campose3/campose7's armed env-var set** (keep all when building the
-  next soak script — copy `run_campose3.sh` or `run_campose7.sh`, both
-  clean non-epoch-armed baselines): `ROGUESQ_LOG_CAMPOSE`,
-  `ROGUESQ_LOG_MAT3INV`, `ROGUESQ_LOG_UNLIT_MESH_TRACER`,
-  `ROGUESQ_LOG_RENDERUNLIT_GUARD`, `ROGUESQ_LOG_HEAPWALKER_GUARD`/`GUARD3`/
-  `GUARD4`, `ROGUESQ_LOG_MESGQUEUE_GUARD`, `ROGUESQ_LOG_HEAPLISTDEQ_GUARD`,
-  `ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`, plus (from `campose7`)
-  `ROGUESQ_LOG_DL_PAYLOAD_HASH` if you want the existing diagnostic's
-  regression-check data alongside a new one.
+- **campose8/campose9's armed env-var set** (keep all when building the
+  next soak script — copy `run_campose8.sh` or `run_campose9.sh`):
+  `ROGUESQ_LOG_CAMPOSE`, `ROGUESQ_LOG_MAT3INV`,
+  `ROGUESQ_LOG_UNLIT_MESH_TRACER`, `ROGUESQ_LOG_RENDERUNLIT_GUARD`,
+  `ROGUESQ_LOG_HEAPWALKER_GUARD`/`GUARD3`/`GUARD4`,
+  `ROGUESQ_LOG_MESGQUEUE_GUARD`, `ROGUESQ_LOG_HEAPLISTDEQ_GUARD`,
+  `ROGUESQ_LOG_EMIT_DL_GUARD2`/`GUARD3`, plus
+  `ROGUESQ_LOG_DL_PAYLOAD_STALE=1` (new gate, independent of
+  `ROGUESQ_LOG_DL_PAYLOAD_HASH` — both can be armed together if you want
+  the s232 heartbeat/transition data alongside the new timestamp field).
+- **This exact schedule (`schedulepush2`/`campose*` family) is PROVEN
+  non-deterministic (s223), reconfirmed hard by s233**: `campose8`'s
+  SELECT-CRAFT->mission transition landed at 73.8s with freeze at
+  `hold_40`; `campose9`'s transition landed at 174.8s with freeze at
+  `hold_182` — same script, wildly different timing both times. Any
+  timing-based conclusion needs the SAME-RUN bridge this iteration is
+  building, not a cross-run comparison.
 - **Setup camera struct layout** (unchanged): `+0x0` nullable
   linked-node pointer; `+0x10/0x14/0x18/0x1C` integer viewport rect;
   `+0x20/0x24/0x28` perspective near/scale float scalars; `+0x2C` a 3x3
@@ -174,7 +179,8 @@ engineering session.
   `processSceneNode:13881-13890`/`:14732-14751`; both converge on the
   shared hit-path enqueue block `funcs_4.c:13917-13987` (`L_80014FE8`) —
   content pointer is `$s0`=`node+0x8`, DL-pointer-shaped field is
-  `$s0+0x34`=`$a1`/`ctx->r5` (s232's `ROGUESQ_LOG_DL_PAYLOAD_HASH` anchor).
+  `$s0+0x34`=`$a1`/`ctx->r5`. The per-content staleness tracker (s233) is
+  in the SAME PATCH block, gated by `ROGUESQ_LOG_DL_PAYLOAD_STALE`.
 - **`setupCameraMatrices` is `funcs_4.c:19142-21603`**, camera-pose
   diagnostic at guest `0x800178A8`, `ROGUESQ_LOG_CAMPOSE=1`, keep armed.
 - **Pre-existing crash-family sites, do not treat as new bugs if hit
@@ -205,10 +211,10 @@ engineering session.
 ## Housekeeping still flagged, still not done
 
 `docs/CURRENT-TRUTH.md` is past both the ~35 KB CLAUDE.md budget and the
-Read tool's 256 KB single-read limit (confirmed s195, still true s232 —
+Read tool's 256 KB single-read limit (confirmed s195, still true s233 —
 read it with `grep`/offset-limited `Read`, never a plain whole-file `Read`).
 Migrate durable mechanism/architecture material to `PROJECT-OVERVIEW.md` and
-prune superseded detail — flagged for 28+ sessions without action.
+prune superseded detail — flagged for 29+ sessions without action.
 
 `fixup_game_funcs.py`'s untracked, single-copy state in the `N64Recomp`
 sibling checkout has been flagged since s83, still not fixed (not this
@@ -220,7 +226,7 @@ long-standing uncommitted changes, unrelated to this repo's commit scope.
 Still flagged for the user, not committed autonomously.
 
 `lib/rt64` and `lib/N64ModernRuntime` both still show as modified in `git
-status` as of s232 — not investigated this session either (no lib/ edits
+status` as of s233 — not investigated this session either (no lib/ edits
 made, so no export.sh/commit obligation triggered). Still worth checking
 whether these are in-progress uncommitted patches vs. drift from
 `submodule-patches/*.patch` before assuming steady-state dirtiness.

@@ -22120,3 +22120,107 @@ this as evidence of the render-cache-epoch bug** — it is not, on its own.
 (`lib/` dirty-but-uninvestigated, `fixup_game_funcs.py` untracked sibling
 state, `CURRENT-TRUTH.md` over-budget) still outstanding, still not this
 session's scope.
+
+## Session 233 (2026-07-28)
+
+**Work unit**: NEXT.md's disambiguation task for s232's ambiguous Probe B
+signal. Tried Option B first (cheap, static-data classification), then fell
+back to Option A (per-content-pointer staleness tracker) as NEXT.md
+anticipated, and ran it to completion (2/2 budgeted soaks).
+
+**Option B (closed off, ~20 min, no soak needed)**: wrote
+`scratch/agent/elf_segments.py` (ELF32 big-endian program/section header
+parser, no `readelf` available on this Mac) and ran it against
+`rogue_squadron64/build/roguesquadron.elf`. Every static section
+(`.text`, `.ovl.mission/menu/cinematic`, all `.bss.*`) ends by
+`0x80154690`, matching the highest address in `symbol_files/*.txt`
+(`0x80154E7C`, inside `.bss`). The disputed `0x80332xxx`-`0x80335xxx` pool
+from s232 is roughly 1.8 MB past the end of ALL static/compiled-in data —
+it is unambiguously heap-allocated at runtime. Since both HUD assets and 3D
+scene geometry are loaded into the same heap with no static ground truth
+distinguishing them by address, **Option B cannot resolve the HUD-vs-stuck-
+cache ambiguity — closing this path, not just deferring it** (a genuine
+negative result, not an abandoned probe).
+
+**Option A landed**: extended the existing `ROGUESQ_LOG_DL_PAYLOAD_HASH`
+PATCH block (same anchor, `funcs_4.c:13918`/`L_80014FE8`,
+`fixup_game_funcs.py`) with a new independently-gated env var
+`ROGUESQ_LOG_DL_PAYLOAD_STALE=1`: a 256-slot, 4-way-linear-probe,
+evict-on-full hash table keyed by the CONTENT pointer (`ctx->r16`), tracking
+each content pointer's last-seen DL-payload hash and call index (`n`).
+`[dl-payload-content-changed]` fires when a revisited pointer's hash
+differs from last time (rate-limited: first 50 unconditional, then 1-per-
+2000 sampled — this doubles as the positive control); `[dl-payload-content-
+stale]` fires UNCONDITIONALLY when a revisited pointer's hash is IDENTICAL
+after a gap of >=10000 calls — the actual discriminating signal, keyed to
+the specific object, not call order. Standard regen recipe run once
+(`make_elf.py` -> `regen_n64recomp.sh` -> `fixup_game_funcs.py` — grepped
+report line `funcs_4.c: DL-emission payload hash diagnostic patched x1` and
+spot-checked the generated `.c` for the new `dl-payload-content-*` lines) ->
+`cmake --build` clean.
+
+**Soak 1/2 (`campose8`)**: copied from `campose7` (itself from `campose3`,
+non-epoch-armed baseline), only change `ROGUESQ_LOG_DL_PAYLOAD_STALE=1`
+(HASH var left unset this soak). **CRASH: 0**, wall=449s. Positive control
+fired (thousands of `[dl-payload-content-changed]` events early). But this
+run's own freeze point was atypical — `checksum_campose8.py` (MD5 over all
+350 `hold_NN.png`) shows last visual change at `hold_40`, far earlier than
+campose7's `hold_246` baseline, consistent with s223's already-documented
+schedule non-determinism. 13 `[dl-payload-content-stale]` events fired,
+clustered `n=49840`-`54073` (all content pointers `0x800D1100`-
+`0x800FA1A4`), and **the enqueue site's own call counter (`n`) stops
+incrementing entirely after that** — no further `[dl-payload-*]` lines of
+any kind for the rest of the 449s run, even though unrelated diagnostics
+(`[thr-resume]`) keep counting past n=170000 in the same log. This specific
+cache-hit-enqueue code path goes fully dormant post-freeze in this run, not
+just stale.
+
+**Soak 2/2 (`campose9`)**: identical script, `campose8`->`campose9`
+rename only. **CRASH: 0**, wall=461s. This run's transition landed even
+later (174.8s vs ~73.8s in `campose8`/`campose7`) and its own freeze point
+(`checksum_campose9.py`) was `hold_182` — yet again different from both
+priors, reconfirming the non-determinism. Here the enqueue site did NOT go
+silent: it kept firing at high volume to at least n=325000 (last heartbeat
+sample), but `changed_count` plateaus at 4260 by n=135000 and never
+increases again through n=325000 (190,000 more calls, zero new distinct
+content), and `stale_count` plateaus at 23 by the same point. **The same 13
+content pointers that went stale in `campose8` (`0x800D1100` through
+`0x800FA1A4`, byte-identical set) independently went stale again in
+`campose9`** — a genuine two-independent-soak reproduction, not a
+coincidence of one run. `campose9` additionally caught 10 more stale
+pointers `campose8` never reached, including three in the previously-
+disputed `0x80332xxx` range (`0x80332CB0`, `0x80332D0C`, `0x80332D68`,
+`0x80332F90`, `0x80332FEC`, `0x80333048`) — single-source only (one soak),
+flagged as such, not yet doubly confirmed.
+
+**Conclusion — genuine progress, still short of a resolved finding**: the
+per-content method is real and reproducible (13/13 pointers matched exactly
+across two independent, differently-timed soaks) — stronger evidence than
+s232's coarse heartbeat that specific objects' DL payloads go and stay
+constant for very long spans. This partially undercuts the "just static
+HUD" reading for THOSE 13 objects, since they sit in the range s232's
+heartbeat itself called "diverse/changing, consistent with dynamic 3D
+content" early in a run — but it is not proof of a stuck cache either,
+since address-range classification was itself only ever a single-run
+heuristic, not verified ground truth, and objects can legitimately load
+once and stay static without any bug. **Not entering this as a resolved
+conclusion in CURRENT-TRUTH** — see next steps. Two new open sub-questions
+this session surfaced, neither answered yet: (1) no timestamp/`hold_N`
+bridge exists between the `dl-payload` log lines (keyed by call-count `n`
+only) and the checksum-based visual-freeze frame, so staleness-onset can't
+yet be directly overlaid on the freeze frame within a single run; (2) why
+did the exact same code path go completely SILENT in `campose8` but keep
+firing at high volume in `campose9` — a qualitative difference not
+explained by "non-deterministic timing" alone and worth its own probe if it
+recurs.
+
+**Budget**: both of NEXT.md's pre-authorized attempts for this probe used
+(2/2). Per iron rule 8, do NOT run a 3rd `campose*` soak on this exact
+diagnostic unmodified — the next session should add the wall-clock/`hold_N`
+correlation (see NEXT.md) before soaking again.
+
+**Housekeeping**: same three items flagged again, still not this session's
+scope (`lib/` dirty-but-uninvestigated — confirmed again this session no
+`lib/` edits were made, so no `export.sh` obligation triggered;
+`fixup_game_funcs.py` untracked sibling state; `CURRENT-TRUTH.md` still
+373 KB, over both the ~35 KB budget and the Read tool's 256 KB limit).

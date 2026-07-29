@@ -663,7 +663,39 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s232)
+## Next steps, in order of expected value (s233)
+
+-74. **(s233) Closed off s232's Option B (static-data classification of the
+    disputed `0x80332xxx` address pool) as impossible — it's unambiguously
+    runtime heap, ~1.8MB past every static ELF section (max `0x80154690`,
+    `scratch/agent/elf_segments.py`) — and landed+soak-validated Option A (a
+    per-content-pointer staleness tracker, `ROGUESQ_LOG_DL_PAYLOAD_STALE=1`,
+    same `funcs_4.c:13918` anchor) across 2/2 budgeted soaks. Real,
+    reproducible signal: the exact same 13 content pointers
+    (`0x800D1100`-`0x800FA1A4`) independently went genuinely stale (identical
+    DL-payload hash across a >=10000-call gap) in both `campose8` and
+    `campose9` — a two-independent-soak match, not coincidence — partially
+    undercutting the "just static HUD" reading for those 13 specific objects
+    since s232's own heartbeat called that address range "diverse/changing,
+    consistent with dynamic 3D content." **Not yet a resolved finding**:
+    address-range classification was only ever a single-run heuristic, not
+    verified ground truth, so staleness alone doesn't prove a stuck cache
+    over legitimate load-once-then-static content. Two new open questions:
+    (1) no wall-clock/`hold_N` bridge exists yet between the `dl-payload`
+    log's call-count `n` and the checksum-based visual-freeze frame, so
+    staleness-onset can't be directly overlaid on the freeze frame within a
+    single run; (2) the exact same enqueue code path went completely SILENT
+    post-freeze in `campose8` (call counter `n` stops incrementing at
+    n=54073 while unrelated diagnostics keep counting past n=170000) but
+    kept firing at high volume with zero new content in `campose9` (to at
+    least n=325000) — a qualitative difference not yet explained. **Next
+    step**: add a `hold_N`/wall-clock timestamp to the `dl-payload-*` log
+    lines (e.g. read the same clock the capture-tick screenshot loop uses)
+    so a future soak can directly correlate staleness onset with the visual
+    freeze frame in one run, before drawing any HUD-vs-stuck-cache
+    conclusion. Per iron rule 8, this probe's soak budget (2/2) is used —
+    do NOT soak a 3rd time on this exact diagnostic unmodified. Full detail:
+    PORTING-STATE Session 233.
 
 -73. **(s232) Landed Probe B (DL-emission payload hash diagnostic) and ran
     it clean — SELECT-CRAFT->mission transition survived (0 crashes) when
