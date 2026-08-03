@@ -663,9 +663,104 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s269)
+## Next steps, in order of expected value (s270)
 
--110. **(s269) Landed `BREADCRUMB3` on `beginFrameDLChunk` per s268's plan — it didn't
+-111. **(s270) Landed `BREADCRUMB4` on `processSceneNode` per s269's plan — it did NOT
+    catch its own target in 2 soaks (0/2, breaking the 3/3 streak s267+s269 had
+    built up), but the 2nd soak instead caught a different, symrange-confirmed
+    real crash in `submitSceneNodeRender` (a 3rd unguarded copy of the
+    "cached free-list-head" idiom already fixed twice before). Landed and
+    soak-verified `CACHE3_GUARD` for it (2/2 clean re-soaks, no recurrence).**
+    Full detail: `PORTING-STATE` Session 270.
+
+    **`BREADCRUMB4`**: confirmed `processSceneNode` is in `funcs_4.c`
+    (`grep`), landed identically to `BREADCRUMB`/`BREADCRUMB2`/`BREADCRUMB3`
+    (same shared `g_rs64_last_guest_pc` global). Regen/build clean, patched
+    x422, all 3 pre-existing breadcrumbs unchanged (`BREADCRUMB` x1179,
+    `BREADCRUMB2` x724, `BREADCRUMB3` x995). **Caution for future sessions**:
+    this session accidentally ran `fixup_game_funcs.py` twice against the
+    same already-patched `funcs_*.c` files before building, which DUPLICATES
+    every breadcrumb insertion silently (regex matches the untouched comment
+    line again, doesn't error) — caught via `grep -c
+    "g_rs64_last_guest_pc = "` showing exactly 2x the expected count, fixed
+    by deleting `funcs_*.c` and regenerating from scratch before running
+    fixup exactly once. NEXT.md's existing warning about non-idempotence was
+    right; this reconfirms it operationally — always delete+regen before
+    every `fixup_game_funcs.py` invocation, never re-run fixup on its own
+    output.
+
+    **Soak 1** (`s270_bc4_soak1`): 1 crash, `sym=fscache_insert_and_retain+1192`
+    — a macOS system-library crash (`si_addr` not RDRAM-relative, no guest
+    connection), unrelated noise, not this investigation's family.
+
+    **Soak 2** (`s270_bc4_soak2`): 1 crash, `sym=submitSceneNodeRender+27676`,
+    `si_addr=0x383820004`, `si_code=1` (bus error/alignment). Symrange-confirmed
+    in-range (`addr=0x1006ba270 size=54536 reported_off=27676 IN_RANGE=True`).
+    `last-guest-pc=0x80010840` — traced to `funcs_4.c` line ~2154, `sw $zero,
+    0x4($v0)`: this is a **3rd, previously-unaudited occurrence** of the same
+    "reload persistent free-list cache-head global, deref it with zero
+    validation, write to head+4" idiom that s197's original guard and s266's
+    `CACHE2_GUARD` already fixed at two OTHER call sites sharing the same
+    global (`0x801163B0`) — this occurrence is at guest `0x80010828`-
+    `0x80010840`, distinct from both prior sites.
+
+    **Landed `CACHE3_GUARD`** (`N64Recomp/fixup_game_funcs.py`, identical
+    pattern to `CACHE2_GUARD`: range-check the reloaded head
+    `0x80000000<=v0<0x80800000` before the `+4` write, on failure reset the
+    global cache slot to 0 and jump to the merge point so the next call takes
+    the non-cached path, gated log behind `ROGUESQ_LOG_SCENE_NODE_CACHE3_GUARD`).
+    Regen clean (delete+regen-from-scratch this time, single fixup pass):
+    `CACHE3_GUARD` patched x1, all pre-existing guards/breadcrumbs unchanged
+    at documented multiplicities, build 0 errors.
+
+    **Soak-verified** (iron rule 4): 3 soak attempts. `verify1` ran a genuinely
+    long hold (109s, VI width transitioned 1024→512→640, much further into
+    the scene than any prior soak this session) and crashed in
+    `coalesceFreeHeapBlocks` (new, not-yet-catalogued site, not related to
+    `CACHE3_GUARD`) — no recurrence of the guarded crash. `verify2` crashed
+    before the phase-gate was even reached (`sym=waitForAnyAudioSlot+244`,
+    the already-catalogued 23rd crash class per s268) — unusable data point,
+    not a valid comparison. `verify3` crashed in `tickTextureMaterialExpiry`
+    (another new, not-yet-catalogued site) — again no recurrence. **Net: 2/2
+    valid soaks with zero recurrence of `submitSceneNodeRender+27676`** —
+    satisfies the ≥2-independent-clean-runs bar.
+
+    **Revises the `processSceneNode+1184` reproducibility claim**: s269 framed
+    it as 3/3 combined and "very likely to localize on the first or second
+    attempt." This session's 2 attempts both missed it (0/2), landing 3/5
+    combined across s267+s269+s270 instead. Still the single most-observed
+    fault in this investigation by absolute count, but the earlier "3/3"
+    framing overstated its reliability — treat as high-value but NOT
+    near-certain to reproduce on demand. `BREADCRUMB4` stays armed for
+    whenever it next recurs.
+
+    **New, not-yet-catalogued crash sites surfaced incidentally this
+    session** (neither breadcrumbed nor localized beyond nearest-symbol —
+    follow-up candidates, not yet investigated): `coalesceFreeHeapBlocks`
+    (heap-related, plausibly same broader family as `heapFreeListDequeue`),
+    `tickTextureMaterialExpiry` (unrelated subsystem). `fscache_insert_and_retain`
+    is a macOS system-library crash, not guest code — deprioritize, likely
+    unrelated to this investigation.
+
+    **Next work unit**: re-soak with `run_dequeuearg1.sh` (`BREADCRUMB4` is
+    armed and unconsumed) — either it catches `processSceneNode+1184` again
+    (localize exactly, add ONE targeted guard for the `+0x30` offset deref,
+    matching `CACHE3_GUARD`'s pattern), or it catches another crash in the
+    `coalesceFreeHeapBlocks`/`tickTextureMaterialExpiry` family, in which case
+    consider landing a `BREADCRUMB5` scoped to whichever one recurs before
+    chasing further blind soaks (same value proposition that produced
+    `BREADCRUMB2`/`3`/`4`: an un-instrumented function's `last-guest-pc` is
+    stale/uninformative, so localizing a recurring crash needs its own
+    breadcrumb).
+
+    **Housekeeping**: no `lib/` edits this session (all changes in the
+    standalone `N64Recomp/fixup_game_funcs.py`, untracked there per
+    established pattern). New soak logs under
+    `scratch/s73_post_a_scene/s270_{bc4_soak1,bc4_soak2,cache3_verify1,cache3_verify2,cache3_verify3}/`.
+    `CURRENT-TRUTH.md` size still flagged, now 12+ sessions overdue for a
+    pruning pass.
+
+-110. **(s269, superseded as top priority by s270 above) Landed `BREADCRUMB3` on `beginFrameDLChunk` per s268's plan — it didn't
     catch its own target in 2 soaks, but both soaks instead landed an EXACT,
     byte-identical crash in a different function, `processSceneNode+1184`
     (`si_addr=0x380000030`), that s267 had also hit once before unverified.
