@@ -663,7 +663,37 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s272)
+## Next steps, in order of expected value (s273)
+
+-114. **(s273) Re-soaked `BREADCRUMB5` per s272's plan — still 0/4 combined, no informative
+    hit ever on `reserveAndEmitDLEntry` itself. Soak 1 caught a brand-new symrange-confirmed
+    crash (`buildPositionAndCallTransformHelper+1356`, near-`0x80000000` family, `+0x10`
+    variant) — landed and armed `BREADCRUMB6` on it same session (real recompiled function,
+    unlike `inflate_fast`, so it can be breadcrumbed the normal way). `BREADCRUMB6`'s own 2
+    verify soaks went 0/2 too: one hit yet another new site (`static_5_800AB658+49104`,
+    different non-`0x80000000` fault shape), one ran fully clean and reached `vi_width=640`
+    (deeper than any recent soak).** Full detail: `PORTING-STATE` Session 273.
+
+    **`BREADCRUMB5`/`reserveAndEmitDLEntry`**: 0/2 this session, 0/4 combined across 2 full
+    sessions (s272+s273) with zero informative hits either time. Still armed, not yet at the
+    formal 3-strikes limit (rule 8 counts consecutive sessions on the SAME sub-hypothesis; this
+    is the 2nd), but the signal is weak — deprioritize below the newer candidates below.
+
+    **`BREADCRUMB6`/`buildPositionAndCallTransformHelper`**: 0/2 this session (its first),
+    armed and unconsumed. Analogous to `BREADCRUMB4`/`BREADCRUMB5`'s own early 0/2 starts.
+
+    **New candidates, in priority order for next session**:
+    1. `static_5_800AB658+49104` (s273, this session) — real recompiled function
+       (`N64Recomp/RecompiledFuncs/funcs_40.c:7242`), garbage-offset fault shape (NOT the
+       `0x80000000`-exact family), single observation, not yet breadcrumbed. Best next
+       candidate: same breadcrumb mechanism applies directly (normal guest function).
+    2. `emitAllocatedDLCommand+6608` (s271) — still only 1 observation, garbage-offset fault
+       shape, not yet breadcrumbed.
+    3. `inflate_fast`/zlib site (s272) — 1 observation, `si_addr=0x80000003`, needs a
+       different localization approach (system library call, not a guest function) — see
+       s272's writeup for the breadcrumb-the-caller vs stack-walk options.
+    4. Re-soak `BREADCRUMB5`/`BREADCRUMB6` once more each if nothing else looks better —
+       neither is at the 3-strikes limit yet, but both have weak signal so far.
 
 -113. **(s272) Landed `BREADCRUMB5` on `reserveAndEmitDLEntry` per s271's plan — 0/2
     this session, no informative hit on its own target. Soak 1 died pre-scene to the
