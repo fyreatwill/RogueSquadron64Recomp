@@ -663,7 +663,49 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s271)
+## Next steps, in order of expected value (s272)
+
+-113. **(s272) Landed `BREADCRUMB5` on `reserveAndEmitDLEntry` per s271's plan — 0/2
+    this session, no informative hit on its own target. Soak 1 died pre-scene to the
+    already-catalogued 23rd crash class (`waitForAnyAudioSlot`, unusable). Soak 2
+    reached the scene fine, then crashed inside `inflate_fast` (zlib, a system
+    library, not a recompiled guest function) with `si_addr=0x380000003` (guest
+    `0x80000003`, 3 bytes off the family's usual exact-`0x80000000` signature) — a
+    genuinely new, not-yet-catalogued, not-yet-localized site. `last-guest-pc` in
+    both soaks pointed into `beginFrameDLChunk` (not `reserveAndEmitDLEntry`), so it
+    was uninformative for this session's target either time.** Full detail:
+    `PORTING-STATE` Session 272.
+
+    **Process note (no functional impact, caught before building)**: ran
+    `fixup_game_funcs.py` twice in a row without regenerating `funcs_*.c` first —
+    the exact mistake `NEXT.md`'s "do not do this" section warns about, done by
+    re-running the script to grep its output more precisely instead of grepping the
+    already-saved log. Caught before building; did a clean delete+regen+single-pass
+    fixup and confirmed every patch (including `BREADCRUMB5` x224, `CACHE3_GUARD`/
+    `CACHE4_GUARD` x1 each) applied exactly once before compiling. **Lesson: grep
+    the saved fixup log file, never re-run the script just to re-inspect output.**
+
+    **Soak 1** (`s272_soak1`): `process gone while waiting for phase` — died before
+    VI width 1024, `sym=waitForAnyAudioSlot+244`, `si_addr=0x400141ad3`. Matches the
+    pre-catalogued 23rd crash class (first seen s165, known boot-time variance).
+    Unusable data point, no scene reached.
+
+    **Soak 2** (`s272_soak2`): reached the scene (`vi_width` 1024→512→640), crashed
+    at hold-iter ~11. `si_addr=0x380000003`, `sym=inflate_fast+5344` (zlib),
+    `last-guest-pc=0x8000b650` — confirmed via grep to belong to `beginFrameDLChunk`
+    (`funcs_3.c` line 8377+), not `reserveAndEmitDLEntry`, so uninformative for this
+    session's target and likely just stale (reflects wherever `beginFrameDLChunk`
+    last ran before control passed into zlib). Not chased this session (budget rule
+    8 — both planned soak attempts spent with no `reserveAndEmitDLEntry` data); the
+    call site is a system library, so localizing it would need a breadcrumb on
+    whichever guest function calls into decompression, or a stack-walk past
+    `inflate_fast`, rather than the usual `last-guest-pc`/idiom-grep approach.
+
+    **`BREADCRUMB5`/`reserveAndEmitDLEntry`**: 0/2 this session, still armed and
+    unconsumed. Analogous to `BREADCRUMB4`'s early 0/2 start (s270) before it
+    eventually helped localize an in-flight crash the following session — re-soaking
+    once more before reconsidering is reasonable, not yet at the 3-strikes budget
+    limit (iron rule 8) for this specific sub-hypothesis.
 
 -112. **(s271) Re-soaked per s270's plan — `BREADCRUMB4` still 0/2 (now 0/4 combined),
     but soak 1 caught a brand-new crash (`emitAllocatedDLCommand+6608`, different fault
