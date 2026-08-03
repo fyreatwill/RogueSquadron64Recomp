@@ -663,7 +663,71 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s270)
+## Next steps, in order of expected value (s271)
+
+-112. **(s271) Re-soaked per s270's plan — `BREADCRUMB4` still 0/2 (now 0/4 combined),
+    but soak 1 caught a brand-new crash (`emitAllocatedDLCommand+6608`, different fault
+    shape) and soak 2 finally caught and exactly localized `BREADCRUMB3`'s own
+    long-elusive target: guest `0x8000B03C` inside `beginFrameDLChunk` itself — a 4th
+    unguarded copy of the cached-free-list-head idiom, first occurrence found outside
+    `submitSceneNodeRender`. Landed and soak-verified `CACHE4_GUARD` (0/2 recurrence),
+    surfacing a 5th copy (`reserveAndEmitDLEntry+7160`, same exact-`0x80000000` family)
+    as the next follow-up candidate.** Full detail: `PORTING-STATE` Session 271.
+
+    **Soak 1** (`s271_soak1`): died hold-iter 1. `sym=emitAllocatedDLCommand+6608`,
+    symrange-confirmed in-range. `si_addr` = RDRAM base + `0xd2095209` (garbage offset,
+    NOT the `0x80000000`-exact family) — a genuinely different fault shape, noted but
+    not chased this session (budget rule 8).
+
+    **Soak 2** (`s271_soak2`): died hold-iter 7. `si_addr=0x380000000` exactly (guest
+    `0x80000000`), `sym=beginFrameDLChunk+21216`, symrange-confirmed in-range.
+    `last-guest-pc=0x8000b03c` was informative for the first time on this family —
+    `beginFrameDLChunk` is itself breadcrumbed (`BREADCRUMB3`) — and localized exactly
+    to `0x8000B03C: lw $v0, 0x0($v0)` in `funcs_3.c`: a 4th occurrence of the "reload
+    persistent free-list cache-head global (`0x801163B0`), deref with zero validation"
+    idiom already fixed 3x in `submitSceneNodeRender` (s197 original, `CACHE2_GUARD`
+    s266, `CACHE3_GUARD` s270) — but this is the FIRST occurrence in `beginFrameDLChunk`,
+    and matches s197's original deref-side shape (not `CACHE2`/`CACHE3`'s write-side
+    variant). Very likely `BREADCRUMB3`'s own original target (s268 first caught this
+    family in `beginFrameDLChunk` at native offset `+13420`, unlocalized; native offset
+    has since drifted to `+21216` as later guard insertions changed code layout, but
+    guest-side signature is identical) — treat as the same site now exactly localized,
+    not a new independent one.
+
+    **Landed `CACHE4_GUARD`** (`N64Recomp/fixup_game_funcs.py`, `funcs_3.c`): validates
+    the reloaded head before the `0x8000B03C` deref; on failure resets the persistent
+    cache global to 0 and jumps to `L_8000B050` (confirmed dead-`r2` merge point, same
+    as normal empty-cache handling). **Ordering gotcha**: unlike `CACHE2`/`CACHE3_GUARD`
+    (whose target function is never breadcrumbed), `CACHE4_GUARD`'s target
+    (`beginFrameDLChunk`) DOES get `BREADCRUMB3`'s blanket per-instruction breadcrumb
+    pass — and since patches apply sequentially against shared text and `CACHE4_GUARD`'s
+    block sits before `BREADCRUMB3`'s in file order, `CACHE4_GUARD`'s regex must match
+    the PRE-breadcrumb shape (no `g_rs64_last_guest_pc` lines) or it silently matches
+    zero times. Written correctly; confirmed post-regen (`funcs_3.c` breadcrumb count
+    still exactly 1719 = `BREADCRUMB2` x724 + `BREADCRUMB3` x995, `CACHE4_GUARD` x1, no
+    duplication). **If a future session adds a guard inside an already-breadcrumbed
+    function, check this ordering trap first** — omit breadcrumb lines from the regex
+    if the guard patch's file position precedes the breadcrumb patch's.
+
+    **Soak-verified**: 2/2 valid runs, 0/2 recurrence of the guarded crash. `verify1`
+    ran the full 240s hold+grace crash-free. `verify2` (after adding the missing
+    `ROGUESQ_LOG_SCENE_NODE_CACHE3_GUARD`/`CACHE4_GUARD` exports to
+    `run_dequeuearg1.sh`) crashed instead in a 5th, not-yet-guarded copy of the same
+    idiom: `reserveAndEmitDLEntry+7160`, symrange-confirmed, same exact-`0x80000000`
+    family. **Neither verify run's guard fire-log ever triggered** — the
+    corrupted-head condition was never exercised by either run, so this is "no
+    regression observed, mechanism-justified by code reading, NOT confirmed via a
+    same-run positive control" — same honest caveat level s270 accepted for
+    `CACHE3_GUARD`.
+
+    **`BREADCRUMB4`/`processSceneNode`**: still 0/2 this session, now 0/4 combined
+    (was 3/5 through s270). Stop citing the old "3/3, most reproducible" framing —
+    use the current combined tally.
+
+    **New, not-yet-catalogued sites**: `emitAllocatedDLCommand+6608` (different fault
+    shape, single observation) and `reserveAndEmitDLEntry+7160` (same `0x80000000`
+    family, single observation, best `BREADCRUMB5` candidate — plausibly a 5th cached
+    free-list-head-idiom copy given the DL-entry/DL-chunk code adjacency, unconfirmed).
 
 -111. **(s270) Landed `BREADCRUMB4` on `processSceneNode` per s269's plan — it did NOT
     catch its own target in 2 soaks (0/2, breaking the 3/3 streak s267+s269 had
