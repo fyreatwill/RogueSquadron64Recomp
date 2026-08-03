@@ -663,7 +663,40 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s276)
+## Next steps, in order of expected value (s277)
+
+-118. **(s277) Re-soaked `BREADCRUMB9`/`tickWrappingTimerAccumulatorList` per s276's plan, no
+    code change — soak 1 died PRE-SCENE to the identical `waitForAnyAudioSlot` boot crash a
+    3rd consecutive time (across s276+s277), but soak 2 broke the streak: reached the scene
+    and ran the full 240s hold plus grace completely crash-free.** This is the first soak
+    since `BREADCRUMB9` was landed that actually tested its own target for the full duration —
+    still 0 informative hits, but genuinely tested for the first time (2 sessions in, 4 soaks
+    total, only 1 a real attempt). Full detail: `PORTING-STATE` Session 277.
+
+    **Boot-crash streak reframed, not confirmed as a regression**: 3 pre-scene deaths in a row
+    (s276 soak1+soak2, s277 soak1) followed immediately by a clean soak refutes a simple
+    "boot crash frequency has risen" reading — a structural increase would be expected to
+    persist, not break on the very next attempt. More consistent with pre-existing
+    known-nondeterminism (since s165) with some run-to-run clustering. Single-session-pair
+    evidence (4 soaks); not enough to quantify the clustering either way.
+
+    **`BREADCRUMB9`/`tickWrappingTimerAccumulatorList`**: 0/2 this session (2nd session
+    overall), 0 informative hits across its only genuine test so far. Per budget rule 8, one
+    more session (its 3rd) at zero informative hits would hit the 3-strikes threshold — but
+    since only 1 of 4 soaks across both sessions was a real attempt on the hypothesis, a 3rd
+    re-soak next session is still the highest-information-value move, not a rule-8 violation.
+
+    **Backlog candidates, in priority order for next session**:
+    1. Re-soak `BREADCRUMB9`/`tickWrappingTimerAccumulatorList` once more (3rd session — if
+       this also produces no informative hit, treat as 3-strikes and stop re-soaking this
+       specific target; reassess strategy across the whole `BREADCRUMB5`-`BREADCRUMB9` family
+       rather than continuing to re-soak individually).
+    2. `inflate_fast`/zlib site (s272) — still only 1 observation, `si_addr=0x80000003`,
+       needs a different localization approach (system library call, not a guest function).
+    3. Re-soak `BREADCRUMB5`/`BREADCRUMB6`/`BREADCRUMB7`/`BREADCRUMB8` once more each if
+       nothing else looks better — none is at the 3-strikes limit yet, all have weak-to-zero
+       signal so far (`BREADCRUMB5` 0/4 combined, `BREADCRUMB6` 0/2, `BREADCRUMB7` 0/2,
+       `BREADCRUMB8` 0/2).
 
 -117. **(s276) Landed `BREADCRUMB9` on `tickWrappingTimerAccumulatorList` per s275's plan —
     0/2 this session (its first), no informative hit. BOTH soaks died PRE-SCENE to the
