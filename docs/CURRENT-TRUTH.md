@@ -663,7 +663,46 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s277)
+## Next steps, in order of expected value (s278)
+
+-119. **(s278) Re-soaked `BREADCRUMB9`/`tickWrappingTimerAccumulatorList` per s277's plan (its
+    3rd session) — BOTH soaks died PRE-SCENE to the identical `waitForAnyAudioSlot` boot crash,
+    0 informative hits, tripping the rule-8 3-strikes threshold. But a retrospective, numbers-
+    backed analysis across all 20 stored soak logs (s270-s278) found the pre-scene death rate
+    jumped from 21% (3/14, s270-275) to 83% (5/6, s276-278) — a split that lines up almost
+    exactly with `BREADCRUMB9`'s own landing at s276.** Full detail: `PORTING-STATE` Session 278.
+
+    **Reframing the top priority**: per budget rule 8, do NOT re-soak `BREADCRUMB9` a 4th
+    consecutive session — the family-wide re-soak strategy (`BREADCRUMB5`-`BREADCRUMB9`, 0
+    combined informative hits across ~9 sessions) has diminishing returns on its own. The new
+    highest-information-value question is whether `BREADCRUMB9`'s own per-instruction
+    instrumentation (104 patch sites in `tickWrappingTimerAccumulatorList`) is itself a
+    race-timing confound that increased pre-scene crash frequency — this investigation has
+    already documented the same class of confound twice (s93: `ROGUESQ_LOG_THREAD_RESUME`
+    silently changed which crash won a race; s160→s161: rebuild-to-rebuild race-winner
+    changes). Not yet proven; `tickWrappingTimerAccumulatorList` has only 4 call sites
+    (`funcs_27.c:108078`, `funcs_27.c:124149`, `funcs_32.c:2102`, `funcs_40.c:5834`, found via
+    grep, not yet read) and whether any run pre-scene (boot/menu) is unconfirmed.
+
+    **Backlog candidates, in priority order for next session**:
+    1. **Free, no-soak check first** (boring-first prior): source-read the 4
+       `tickWrappingTimerAccumulatorList` call sites above to confirm/refute whether any
+       execute during the pre-scene boot/menu phase — this is what would make the
+       instrumentation-confound hypothesis mechanically plausible at all.
+    2. If plausible, the discriminating soak: temporarily comment out just the `BREADCRUMB9`
+       block in `N64Recomp/fixup_game_funcs.py`, regen+rebuild, soak twice with everything
+       else unchanged. If the pre-scene death rate reverts toward the ~21% baseline (i.e. both
+       or most soaks reach the scene), that supports the confound hypothesis; if pre-scene
+       deaths persist at the ~83% rate even without `BREADCRUMB9`, that refutes it in favor of
+       coincidental clustering of the pre-existing nondeterministic crash. Re-arm `BREADCRUMB9`
+       afterward regardless of outcome (its own hypothesis about its target is still untested,
+       just deprioritized).
+    3. `inflate_fast`/zlib site (s272) — still only 1 observation, `si_addr=0x80000003`, needs
+       a different localization approach (system library call, not a guest function).
+    4. Re-soak `BREADCRUMB5`/`BREADCRUMB6`/`BREADCRUMB7`/`BREADCRUMB8` once more each if
+       nothing else looks better — none is at the 3-strikes limit yet, all have weak-to-zero
+       signal (`BREADCRUMB5` 0/4 combined, `BREADCRUMB6` 0/2, `BREADCRUMB7` 0/2, `BREADCRUMB8`
+       0/2).
 
 -118. **(s277) Re-soaked `BREADCRUMB9`/`tickWrappingTimerAccumulatorList` per s276's plan, no
     code change — soak 1 died PRE-SCENE to the identical `waitForAnyAudioSlot` boot crash a
