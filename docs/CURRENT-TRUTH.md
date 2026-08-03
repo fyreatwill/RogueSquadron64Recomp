@@ -663,7 +663,31 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s274)
+## Next steps, in order of expected value (s275)
+
+-116. **(s275) Landed `BREADCRUMB8` on `emitAllocatedDLCommand` per s274's plan — 0/2 this
+    session (its first), no informative hit on its own target. Soak 1 died at hold-iter 10
+    to a brand-new, symrange-confirmed crash (`tickWrappingTimerAccumulatorList+868`,
+    `si_addr` guest `0x20000004` — a fault shape not seen before: not the exact-`0x80000000`
+    family, not the large-garbage-offset family either). Soak 2 ran the entire 240s hold plus
+    grace completely crash-free.** Full detail: `PORTING-STATE` Session 275.
+
+    **`BREADCRUMB8`/`emitAllocatedDLCommand`**: 0/2 this session, armed and unconsumed.
+    Analogous to `BREADCRUMB4`-`BREADCRUMB7`'s own 0/2 starts — not a budget concern (1st
+    session, not 3rd consecutive).
+
+    **Backlog candidates, in priority order for next session**:
+    1. `tickWrappingTimerAccumulatorList+868` (s275, this session) — real recompiled function
+       (`N64Recomp/RecompiledFuncs/funcs_11.c`), single observation, novel fault shape
+       (`si_addr` guest `0x20000004`, i.e. `0x80000004` with bit 31 cleared — distinct from
+       both tracked families). Not yet breadcrumbed. Best next candidate: same breadcrumb
+       mechanism applies directly (normal guest function). Would become `BREADCRUMB9`.
+    2. `inflate_fast`/zlib site (s272) — still only 1 observation, `si_addr=0x80000003`,
+       needs a different localization approach (system library call, not a guest function).
+    3. Re-soak `BREADCRUMB5`/`BREADCRUMB6`/`BREADCRUMB7`/`BREADCRUMB8` once more each if
+       nothing else looks better — none is at the 3-strikes limit yet, all have weak-to-zero
+       signal so far (`BREADCRUMB5` 0/4 combined, `BREADCRUMB6` 0/2, `BREADCRUMB7` 0/2,
+       `BREADCRUMB8` 0/2).
 
 -115. **(s274) Landed `BREADCRUMB7` on `static_5_800AB658` per s273's plan — 0/2 this
     session (its first), no informative hit. Soak 1 ran the entire 240s hold plus grace
