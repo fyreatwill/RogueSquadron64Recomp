@@ -663,7 +663,59 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s280)
+## Next steps, in order of expected value (s281)
+
+-122. **(s281) Re-soaked `BREADCRUMB7`/`static_5_800AB658` per s280's plan (its 2nd session) —
+    0/2 this session, 0/4 combined (s274+s281), never informative on its own target. BUT both
+    soaks broke the s276-s280 elevated pre-scene-death streak, reaching the scene and dying
+    during the hold instead.** Full detail: `PORTING-STATE` Session 281.
+
+    No regen needed (binary/fixup-script timestamps matched, same build as s276-s280). Soak1
+    reached `vi_width=1024` at 45.5s, died 12s into the 240s hold (hold-iter 11) — crash
+    `sym=coalesceFreeHeapBlocks+2108`, an already-catalogued, not-yet-localized site (see line
+    ~1068 below and `PORTING-STATE` s264-era notes), `last-guest-pc=0x8000b650` (the recurring
+    stale `beginFrameDLChunk` value, uninformative here). Soak2 reached the scene and ran much
+    deeper — 152s into the hold (hold-iter 130), VI width progressing 1024→512→640 — before dying
+    to `sym=tickTextureMaterialExpiry+612`, also an already-catalogued site, same stale
+    `last-guest-pc`. Neither crash landed inside `static_5_800AB658` itself, and neither is a
+    brand-new site — both are members of the existing "not-yet-localized heap/texture-expiry"
+    family flagged since s264-s268.
+
+    **Pre-scene death-rate reversion**: 0/2 pre-scene deaths this session, vs. 7/8 = 87.5% across
+    s276-278+s280. Running total across s276-278+s280-281: **7/10 = 70%**, down from 87.5%. Same
+    binary as s276-s280 (no rebuild this session) — this weakens the framing that the elevated
+    rate is a stable property of the current build; more consistent with run-to-run scheduling
+    nondeterminism (small sample, still not fully explained). s279's mechanical refutation of the
+    `BREADCRUMB9` call-site-confound mechanism stands independently of this new data point.
+
+    `BREADCRUMB7` now joins `BREADCRUMB6` at 2 sessions tested / 0 combined informative hits — do
+    NOT re-soak either a 3rd session without a new angle (none identified for either).
+
+    **Whole-family status** (`BREADCRUMB5`-`BREADCRUMB9`, updated for s281):
+    - `BREADCRUMB5`/`reserveAndEmitDLEntry`: 0/4 (s272+s273), 2 sessions, never informative.
+    - `BREADCRUMB6`/`buildPositionAndCallTransformHelper`: 0/4 (s273+s280), 2 sessions, never
+      informative.
+    - `BREADCRUMB7`/`static_5_800AB658`: 0/4 (s274+s281), 2 sessions, never informative (NEW as
+      of this session).
+    - `BREADCRUMB8`/`emitAllocatedDLCommand`: 0/2 (s275), only 1 session — **the last remaining
+      untested-twice target.**
+    - `BREADCRUMB9`/`tickWrappingTimerAccumulatorList`: 0/2 genuine across 3 sessions (6 soaks),
+      3-strikes hit s278, confound angle closed s279. Do not re-soak.
+
+    **Backlog candidates, in priority order for next session:**
+    1. Re-soak `BREADCRUMB8`/`emitAllocatedDLCommand` (its 2nd session) — the last remaining
+       candidate at the "1 session tested" tier. If this ALSO returns 0/2 (0/4 combined), every
+       one of the 5 breadcrumbs will have exhausted its reasonable per-target budget (2 sessions
+       or 3-strikes) with 0 combined informative hits on any of their own targets.
+    2. If `BREADCRUMB8`'s 2nd session is also null: do NOT invent a 6th breadcrumb target without
+       a new mechanism. Either start the `inflate_fast`/zlib localization design (system-library
+       call, not a guest function — bigger lift, never attempted), or write a BLOCKED note to the
+       human recommending the breadcrumb-hunting strategy itself be reassessed — it has
+       surfaced 4+ new crash sites as a side effect but confirmed 0 of its own hypotheses across
+       what will be 6 target-sessions.
+    3. The pre-scene death-rate reversion (87.5%→70%) is worth a dedicated look only if it swings
+       again in either direction over the next session or two — not conclusively explained either
+       way yet, small sample (10 soaks).
 
 -121. **(s280) Re-soaked `BREADCRUMB6`/`buildPositionAndCallTransformHelper` per s279's plan (its
     2nd session) — BOTH soaks died PRE-SCENE to the identical `waitForAnyAudioSlot` boot crash
