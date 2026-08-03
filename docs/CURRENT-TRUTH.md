@@ -663,9 +663,57 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s268)
+## Next steps, in order of expected value (s269)
 
--109. **(s268) Ran s267's prescribed re-soak plan 3 more times (`run_dequeuearg1.sh`,
+-110. **(s269) Landed `BREADCRUMB3` on `beginFrameDLChunk` per s268's plan — it didn't
+    catch its own target in 2 soaks, but both soaks instead landed an EXACT,
+    byte-identical crash in a different function, `processSceneNode+1184`
+    (`si_addr=0x380000030`), that s267 had also hit once before unverified.
+    Combined across s267+s269 that's 3/3 observations of this crash, now
+    confirmed in-range — the most reproducible fault this whole investigation
+    has caught.** Full detail: `PORTING-STATE` Session 269.
+
+    **What happened**: `beginFrameDLChunk` is in `funcs_3.c` (confirmed via
+    `grep`). `BREADCRUMB`/`BREADCRUMB2` share one global
+    (`g_rs64_last_guest_pc`), confirmed by inspection before coding, so
+    `BREADCRUMB3` reused it with no `main.cpp` change. Regen/build clean, all
+    3 breadcrumbs at expected multiplicities (`BREADCRUMB` x1179, `BREADCRUMB2`
+    x724, `BREADCRUMB3` x995 new). Soak 1: crash at hold-iter 26,
+    `sym=processSceneNode+1184`, `si_addr=0x380000030` — same `0x80000000`-ish
+    family as the other two sites but offset by `0x30` (consistent with a
+    struct-field deref off a corrupted base pointer, not a bare null hit).
+    `last-guest-pc=0x8000B650` traced into `beginFrameDLChunk`'s own body —
+    proves `BREADCRUMB3` fired correctly, but is stale/uninformative for this
+    crash since `processSceneNode` isn't itself breadcrumbed. Soak 2:
+    byte-identical crash, same symbol, same offset, same fault address, same
+    stale breadcrumb value. Verified in-range via the s268_symrange2.py
+    symtab-walk method: `processSceneNode addr=0x1006ed098 size=18268
+    reported_off=1184 IN_RANGE=True`.
+
+    **Why this is the new top priority**: `processSceneNode+1184` /
+    `si_addr=0x380000030` has now recurred 3 times combined (s267 x1, s269
+    x2), all exact-identical — a far higher observed hit rate than
+    `beginFrameDLChunk` (1/3 total) or the original `heapFreeListDequeue`
+    target (0/6, parked per iron rule 8). `beginFrameDLChunk` itself did not
+    crash in either soak this session (0/2 this session, 1/3 combined) — its
+    breadcrumb stays armed but is no longer the best next move.
+
+    **Next work unit**: land `BREADCRUMB4` scoped to `processSceneNode`
+    (`funcs_4.c` — a different file than `beginFrameDLChunk`/
+    `heapFreeListDequeue`, confirm via `grep` first), same mechanism, reusing
+    `g_rs64_last_guest_pc` again (only one instrumented function runs at a
+    crash). Regen, re-soak with `run_dequeuearg1.sh` — given the 3/3 hit
+    rate, this should localize on the first or second attempt. When it lands,
+    `grep -n "0x<HEX>:"` in `funcs_4.c`, read the surrounding ~20 lines,
+    add ONE targeted guard (validate the pointer's RDRAM range before the
+    deref causing the `+0x30` offset access, matching the pattern of every
+    other guard in `fixup_game_funcs.py`), regen, soak-verify (iron rule 4,
+    ≥2 independent clean runs).
+
+    **Housekeeping**: no `lib/` edits this session. New soak logs under
+    `scratch/s73_post_a_scene/breadcrumb3_{1,2}/`.
+
+-109. **(s268, superseded as top priority by s269 above) Ran s267's prescribed re-soak plan 3 more times (`run_dequeuearg1.sh`,
     unmodified) — still 0 reproductions of the specific `heapFreeListDequeue`-range
     crash `BREADCRUMB2` targets (now 0/6 across s267+s268 combined), but caught a
     NEW crash site sharing the exact same "guest fault address `0x80000000`" shape
