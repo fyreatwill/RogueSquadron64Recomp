@@ -663,7 +663,49 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s281)
+## Next steps, in order of expected value (s282)
+
+-123. **(s282) Re-soaked `BREADCRUMB8`/`emitAllocatedDLCommand` per s281's plan (its 2nd session)
+    — soak1 hit an already-catalogued site, but soak2 crashed inside `static_5_800AB658` itself
+    (`BREADCRUMB7`'s own target), the FIRST informative hit across the whole `BREADCRUMB5`-`9`
+    family. Root-caused, fixed, rebuilt, and validated.** Full detail: `PORTING-STATE` Session 282.
+
+    **The hit**: soak2 crashed at `sym=static_5_800AB658+68992`, `last-guest-pc=0x800ACB04` — both
+    independently confirmed (grep + Mach-O symtab range walk) to be inside `static_5_800AB658`,
+    not a nearest-symbol misattribution (function spans 127760 bytes, offset 68992 well inside).
+    Source read found the mechanism: the existing `G8` guard (s132, part of the `static_5_800AB658`
+    whack-a-mole family, `G1`-`G31`) validates `ctx->r2` right before `0x800ACAF8: lw $v0, 0x8($v0)`
+    — but that instruction RELOADS `r2` from the checked address, and the reloaded value is never
+    re-validated before its OWN next dereference two instructions later at `0x800ACB04`, which is
+    exactly where the SIGBUS fired. A second-hop-dereference gap none of `G1`-`G31` covered.
+
+    **Fix landed**: `G32` added to `_hangarbay_deref_guard_sites` in
+    `N64Recomp/fixup_game_funcs.py` — validates the reloaded `ctx->r2` before the `0x800ACB04`
+    dereference, bails to the existing `L_hangarbay_guard_exit`. Full regen pipeline run
+    (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`), clean build, patch
+    report confirmed `G32 patched x1`. Two validation soaks (`s282_soak3/4`) both reached the scene
+    and neither reproduced the `static_5_800AB658+68992` crash — soak3 hit already-catalogued
+    `coalesceFreeHeapBlocks+2108`; soak4 hit a NEW site, `static_5_800A9270+948`
+    (`loadCutsceneAssetsByIndex`, range-verified in-bounds), same whack-a-mole family as the
+    existing `HANGARLIST_GUARD` (s254, guards a different offset `+668` in the same function).
+
+    **`BREADCRUMB8`/`emitAllocatedDLCommand` itself**: still 0/2 this session, 0/4 combined (2
+    sessions, s275+s282) — the hit landed on `BREADCRUMB7`'s target, not `BREADCRUMB8`'s own. Do
+    NOT re-soak `BREADCRUMB8` a 3rd session without a new angle (now tied with `BREADCRUMB6`/`7`).
+
+    **Backlog candidates, in priority order for next session:**
+    1. Source-read `static_5_800A9270` (`loadCutsceneAssetsByIndex`, `funcs_40.c:5314-5463`-ish,
+       offsets likely shifted since s254) to find the specific unguarded dereference at native
+       offset `+948` and land a guard — same recipe as `G32`/`HANGARLIST_GUARD`. This is now the
+       single highest-information-value probe: a concretely-reproduced, range-verified crash site
+       with a known function and known fix pattern, not a blind re-soak.
+    2. If that closes cleanly with budget left over: every one of the 5 breadcrumbs will be at or
+       past their per-target budget (2 sessions each, 0 combined hits on their OWN targets, though
+       the family AS A WHOLE has now produced one real fix via `G32`). Consider whether to keep
+       re-soaking individual breadcrumbs vs. shifting to the `inflate_fast`/zlib site (s272, still
+       only 1 observation, needs a different localization approach — system-library call, not a
+       guest function).
+    3. Do NOT invent a 6th breadcrumb target without a new mechanism.
 
 -122. **(s281) Re-soaked `BREADCRUMB7`/`static_5_800AB658` per s280's plan (its 2nd session) —
     0/2 this session, 0/4 combined (s274+s281), never informative on its own target. BUT both
