@@ -663,7 +663,40 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s279)
+## Next steps, in order of expected value (s280)
+
+-121. **(s280) Re-soaked `BREADCRUMB6`/`buildPositionAndCallTransformHelper` per s279's plan (its
+    2nd session) — BOTH soaks died PRE-SCENE to the identical `waitForAnyAudioSlot` boot crash
+    (`last-guest-pc=0x8000b650`, the recurring stale `beginFrameDLChunk` value), 0 informative
+    hits, no new crash site.** Full detail: `PORTING-STATE` Session 280.
+
+    `BREADCRUMB6` is now 0/4 combined across 2 sessions (s273+s280), never informative. Same
+    build/binary as s273-s279 (no regen needed — fixup script and binary timestamps matched).
+
+    **Pre-scene death-rate spike persists**: this session's 2/2 pre-scene deaths extend the
+    s276-s278 elevated-rate window (21%→83%) forward one more session despite s279's mechanical
+    refutation of the call-site confound — running total across s276-278+s280 (s279 had no soak)
+    is now 7/8 = 87.5% pre-scene, up slightly from 83%. Still single-source/small-sample; the
+    confound-via-call-site mechanism is refuted (s279) but the elevated rate itself remains real
+    and unexplained. Worth a dedicated look if it keeps climbing, per s279's note (binary
+    size/layout effects, or genuine pre-existing clustering finally being quantified).
+
+    **Backlog candidates, in priority order for next session**, per NEXT.md's own s279 guidance
+    (`BREADCRUMB6` now also 0/4, do not re-soak a 3rd session next):
+    1. Re-soak `BREADCRUMB7`/`static_5_800AB658` or `BREADCRUMB8`/`emitAllocatedDLCommand` (both
+       0/2, 1 session each, tied for least-recently-tested untested-twice targets now that
+       `BREADCRUMB6` has 2 sessions of data).
+    2. `inflate_fast`/zlib site (s272) — still only 1 observation, `si_addr=0x80000003`, needs a
+       different localization approach (system library call, not a guest function) — bigger lift,
+       deprioritized below #1 for that reason, but worth starting if breadcrumb re-soaks keep
+       returning 0.
+    3. If the whole family keeps returning 0 combined hits after a few more sessions, consider a
+       BLOCKED note to the human — now 6 targets (`BREADCRUMB5`-`BREADCRUMB9` plus `BREADCRUMB6`'s
+       2nd session) with 0 combined informative hits is a real signal the breadcrumb-hunting
+       approach itself may need a strategy change, even though it keeps surfacing new crash sites
+       as a side effect.
+    4. Consider a dedicated look at the pre-scene death-rate spike (now 87.5% over 8 soaks since
+       s276) with a fresh hypothesis — not the call-site mechanism (refuted s279).
 
 -120. **(s279) Ran s278's step 1 (free, no-soak source-read of `tickWrappingTimerAccumulatorList`'s 4
     call sites) — it REFUTES the `BREADCRUMB9` instrumentation-confound hypothesis mechanically, no

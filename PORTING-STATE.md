@@ -25470,3 +25470,21 @@ Cross-referenced all 4 names against `PORTING-STATE.md`/`CURRENT-TRUTH.md`'s exi
 **No new crash sites surfaced this session** — no soak was run (step 1's free check resolved the planned work unit without needing one).
 
 **Housekeeping**: no `lib/` edits this session (the pre-existing dirty submodule state was inspected, not modified — no `export.sh` needed). No code changes, no regen/rebuild. `CURRENT-TRUTH.md` size still flagged, now 20+ consecutive sessions overdue for a pruning pass — not this session's job (no leftover budget beyond the write-up; the source-read + cross-reference + write-up filled the session).
+
+## Session 280 (2026-08-03) — re-soaked `BREADCRUMB6`/`buildPositionAndCallTransformHelper` per s279's plan (its 2nd session) — 0/2, both pre-scene, no new crash site; pre-scene death rate climbs to 87.5% (7/8) over the s276-s280 window
+
+Read `docs/CURRENT-TRUTH.md` item -120 and `scratch/agent/NEXT.md` (s279's plan) first, per session rules. Found `scratch/agent/STATUS`=`WORKING` and `scratch/agent/OUTCOME` deleted (uncommitted) at session start, HEAD already at s279's commit (`9ec249a`) — normal loop-restart noise per NEXT.md's own carried-forward note, not unfinished work; confirmed via `git log` and moved on without further investigation.
+
+**Pre-soak check**: `grep -n "BREADCRUMB6" N64Recomp/fixup_game_funcs.py` confirmed the same patch block from s273 is still present/armed. Compared `build/RogueSquadron64Recomp` binary mtime against `N64Recomp/fixup_game_funcs.py` mtime — both Aug 3 12:59, i.e. the binary already reflects the current fixup script. Skipped regen per NEXT.md step 1's guidance ("no regen needed if unchanged").
+
+**Soak 1** (`s280_soak1`, `HOLD_S=240`): `process gone while waiting for phase` — died before `vi_width=1024`. `[CRASH][pc-symbol] sym=waitForAnyAudioSlot+244`, `[CRASH][last-guest-pc] pc=0x8000b650` (known-stale `beginFrameDLChunk` value) — exact match to the pre-catalogued 23rd crash class and to every prior session's pre-scene death in this family.
+
+**Soak 2** (`s280_soak2`): identical outcome — `process gone while waiting for phase`, `sym=waitForAnyAudioSlot+244`, `last-guest-pc=0x8000b650`. Same unusable boot crash class as soak 1.
+
+**Net for `BREADCRUMB6`/`buildPositionAndCallTransformHelper`**: 0/2 this session, 0/4 combined across its 2 sessions (s273+s280) — never informative on its own target. Per s279's pre-committed plan, this does NOT trigger a 3rd re-soak next session; next session should move to `BREADCRUMB7` or `BREADCRUMB8` instead (both 0/2, 1 session each).
+
+**Pre-scene death-rate tracking (continued from s278's retrospective quantification)**: this session's 2/2 pre-scene deaths extend the elevated-rate window. Running count across s276-s278 + s280 (s279 ran no soak): 7 pre-scene deaths / 8 soaks = **87.5%**, up from the 83% (5/6) reported at s278. This is additional evidence at the same elevated rate, using the SAME binary/build as s276-s279 (no rebuild this session) — so it is not independent confirmation of a NEW cause, just more samples from the existing (already-elevated, cause-undetermined) state. s279 mechanically refuted the specific call-site-confound mechanism for why `BREADCRUMB9`'s instrumentation would cause this; that refutation stands. The elevated rate itself remains real, unexplained, and worth a dedicated fresh-hypothesis look if it keeps climbing (per s279's suggestions: binary size/layout effects, or genuine pre-existing clustering finally being quantified with a larger sample) — not this session's job per budget rules (no new angle chased this iteration, matching the planned work unit).
+
+**No new crash sites surfaced this session** — both soaks hit the identical pre-catalogued boot crash, no novel fault shape.
+
+**Housekeeping**: no `lib/` edits this session (dirty submodule state inspected only, not modified — no `export.sh` needed). No code changes, no regen/rebuild. New soak logs under `scratch/s73_post_a_scene/s280_soak{1,2}/`. `CURRENT-TRUTH.md` size still flagged, now 21+ consecutive sessions overdue for a pruning pass — not this session's job (no leftover budget; soaks + retrospective tracking + write-up filled the session).
