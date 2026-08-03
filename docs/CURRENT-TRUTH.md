@@ -663,7 +663,44 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s278)
+## Next steps, in order of expected value (s279)
+
+-120. **(s279) Ran s278's step 1 (free, no-soak source-read of `tickWrappingTimerAccumulatorList`'s 4
+    call sites) — it REFUTES the `BREADCRUMB9` instrumentation-confound hypothesis mechanically, no
+    soak needed.** Full detail: `PORTING-STATE` Session 279.
+
+    All 4 call sites (`cinematicLoopBody`, `hangarInitialize`, `runInMissionFrame`,
+    `static_5_800AAD9C`/`runHangarSelectionFrame`) are documented and/or directly confirmed as
+    reachable only AFTER the title screen (post-`vi_width=1024`). Direct source read of
+    `menuOverlayInit` (`funcs_29.c:37672`, the function owning the actual pre-scene boot crash's
+    call chain) confirms its `tickMusyXIfActive`/`anyAudioSlotActive` calls — the path to the
+    crash — are unconditional near the top of the function (offsets 84/93), while its call
+    toward `runHangarSelectionFrame` (offset 331) is gated behind 3+ `if` branches that come
+    first in program order. The crash-causing path and `BREADCRUMB9`'s target path are mutually
+    exclusive within a frame; the crash always fires first. **Confound refuted for free — the
+    s276-s278 pre-scene-death-rate spike (21%→83%) is NOT explained by `BREADCRUMB9`'s
+    instrumentation via this mechanism.** Remains an unexplained correlation, still consistent
+    with pre-existing nondeterministic clustering (small sample).
+
+    **Whole-family status** (`BREADCRUMB5`-`BREADCRUMB9`): 0 combined informative hits on any
+    breadcrumb's OWN target across ~10 sessions, but the soaking process itself has surfaced 4
+    brand-new symrange-confirmed crash sites along the way (each becoming the next breadcrumb) —
+    the bottleneck is that no individual hypothesis has ever been confirmed, not that soaking is
+    valueless.
+
+    **Backlog candidates, in priority order for next session**:
+    1. Re-soak `BREADCRUMB6`/`buildPositionAndCallTransformHelper` (landed s273, only 1
+       session/2 soaks tested — least-recently-tested of the three untested-twice targets,
+       `BREADCRUMB6`/`7`/`8`, all tied at 0/2). NOT `BREADCRUMB9` again (3-strikes, s278).
+    2. `inflate_fast`/zlib site (s272) — still only 1 observation, `si_addr=0x80000003`, needs a
+       different localization approach (system library call, not a guest function) — bigger
+       lift than a straightforward re-soak, deprioritized below #1 for that reason.
+    3. Re-soak `BREADCRUMB5`/`BREADCRUMB7`/`BREADCRUMB8` once more each if `BREADCRUMB6` doesn't
+       pan out — none at the 3-strikes limit yet.
+    4. If the whole family keeps returning 0 combined hits after a few more sessions, consider a
+       BLOCKED note to the human — 5 targets with 0 combined informative hits is a real signal
+       the breadcrumb-hunting approach itself may need a strategy change, even though it keeps
+       surfacing new crash sites as a side effect.
 
 -119. **(s278) Re-soaked `BREADCRUMB9`/`tickWrappingTimerAccumulatorList` per s277's plan (its
     3rd session) — BOTH soaks died PRE-SCENE to the identical `waitForAnyAudioSlot` boot crash,

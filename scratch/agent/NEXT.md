@@ -1,126 +1,95 @@
-# NEXT work unit — test whether `BREADCRUMB9`'s instrumentation is a boot-crash confound
+# NEXT work unit — re-soak `BREADCRUMB6`/`buildPositionAndCallTransformHelper` (its 2nd session)
 
-## Where the investigation stands (s278)
+## Where the investigation stands (s279)
 
-s278 re-soaked `BREADCRUMB9` per s277's plan (its 3rd session). No code change. BOTH soaks
-died PRE-SCENE (`process gone while waiting for phase`, before `vi_width=1024`) to the
-identical pre-catalogued `waitForAnyAudioSlot` boot crash (23rd class, first seen s165):
-`si_addr=0x400141ad3`, `sym=waitForAnyAudioSlot+244`, `last-guest-pc=0x8000b650` (stale,
-uninformative) — an exact match to s276/s277's deaths. The soak's own
-`ROGUESQ_LOG_AUDIO_SLOT_ACTIVE_GUARD=1` fire-log recorded 0 hits in either soak (no positive
-control from that angle, consistent with s166's original finding).
+s279 ran s278's planned step 1 (free, no-soak source-read of `tickWrappingTimerAccumulatorList`'s
+4 call sites) to check whether `BREADCRUMB9`'s own instrumentation could be a boot-time race
+confound (the s276-s278 pre-scene-death-rate spike, 21%→83%, lined up with `BREADCRUMB9`'s
+landing). **Result: REFUTED, mechanically, for free — no soak was needed.**
 
-**0/2 this session, and this is `BREADCRUMB9`'s 3rd consecutive session with zero informative
-hits on its own target — per ITERATION.md budget rule 8, this trips the 3-strikes threshold.**
-Do NOT re-soak `BREADCRUMB9` again next session without a new angle.
+All 4 call sites (`cinematicLoopBody` `funcs_27.c:108078`, `hangarInitialize` `funcs_27.c:124149`,
+`runInMissionFrame` `funcs_32.c:2102`, `static_5_800AAD9C`/`runHangarSelectionFrame`
+`funcs_40.c:5834`) are reachable only AFTER the title screen (post-`vi_width=1024`) — confirmed
+both via cross-referencing ~10 prior sessions' documented call chains AND by directly reading
+`menuOverlayInit` (`funcs_29.c:37672`), the function that owns the ACTUAL pre-scene boot crash's
+call chain (`waitForAnyAudioSlot ← menuOverlayInit ← mainGameLoop+1532 ← mainBootstrapWorker`,
+23rd crash class, first seen s165). Inside `menuOverlayInit`: the calls that lead to the crash
+(`tickMusyXIfActive`/`anyAudioSlotActive`) are unconditional, at offsets 84/93 from the function
+start (i.e. right at the top, every frame). The call toward `BREADCRUMB9`'s target
+(`static_5_800C6854` → `runHangarSelectionFrame` → `tickWrappingTimerAccumulatorList`) sits at
+offset 331, gated behind 3+ `if` branches that come first in program order. **The crash-causing
+path and BREADCRUMB9's target path cannot both execute in the same frame during early boot — the
+crash always fires first.** So `BREADCRUMB9`'s instrumentation cannot be changing the boot
+crash's timing via its own target's execution path. The 21%→83% spike remains real but
+unexplained by this mechanism — still consistent with pre-existing nondeterministic clustering
+(small sample, 6 soaks in the high-rate window), just not proven either way, and not worth
+further chasing right now (see "Do NOT" section).
 
-**The actual finding this session**: a retrospective, no-soak-cost quantification across all
-20 stored soak logs (`scratch/s73_post_a_scene/s27{0..8}_soak*/run.log`, classified by whether
-each ever logged `vi_width=1024`) found:
-- s270-s275 (6 sessions, 14 soaks): 3 pre-scene deaths / 14 = **21%**
-- s276-s278 (3 sessions, 6 soaks): 5 pre-scene deaths / 6 = **83%**
-
-This split lines up almost exactly with `BREADCRUMB9` landing at s276. It is consistent with —
-but does NOT yet prove — the same "new instrumentation changes which bug wins a boot-time
-race" confound this investigation has already documented twice (s93:
-`ROGUESQ_LOG_THREAD_RESUME` silently changed which crash won a race; s160→s161:
-rebuild-to-rebuild race-winner changes). This is a genuinely new, numbers-backed hypothesis —
-stronger grounding than s277's "3-then-clean" read, which only had a 4-soak window and
-explicitly declined to conclude either way.
-
-Current armed-breadcrumb tally, all weak-to-zero signal on their OWN targets (unchanged, not
-this session's focus):
+**Whole-family status** (`BREADCRUMB5`-`BREADCRUMB9`, unchanged from s278 except the confound
+question is now resolved):
 - `BREADCRUMB5`/`reserveAndEmitDLEntry`: 0/4 combined (s272+s273), never informative.
-- `BREADCRUMB6`/`buildPositionAndCallTransformHelper`: 0/2 (s273), never informative.
+- `BREADCRUMB6`/`buildPositionAndCallTransformHelper`: 0/2 (s273), never informative. **2nd-most
+  overdue for a re-soak** (landed s273, only 1 session tested).
 - `BREADCRUMB7`/`static_5_800AB658`: 0/2 (s274), never informative.
 - `BREADCRUMB8`/`emitAllocatedDLCommand`: 0/2 (s275), never informative.
-- `BREADCRUMB9`/`tickWrappingTimerAccumulatorList`: 0/2 combined genuine tests across 3
-  sessions (6 soaks total, only 1 — s277 soak2 — a genuine full-duration test). 3-strikes hit.
+- `BREADCRUMB9`/`tickWrappingTimerAccumulatorList`: 0/2 combined genuine tests across 3 sessions
+  (6 soaks total). 3-strikes hit at s278 — do NOT re-soak again without a new angle (the confound
+  angle is now closed; no new angle currently identified).
+
+0 combined informative hits on any breadcrumb's OWN target across ~10 sessions — but the soaking
+process itself has surfaced 4 brand-new, symrange-confirmed crash sites along the way
+(`buildPositionAndCallTransformHelper`, `static_5_800AB658`, `emitAllocatedDLCommand`,
+`tickWrappingTimerAccumulatorList` itself), each becoming the next breadcrumb target. The
+bottleneck is that no individual hypothesis has ever been confirmed as the crash's actual cause —
+not that soaking has been valueless.
 
 ## The next work unit
 
-**Step 1 — free, no-soak check first (boring-first prior, do this before touching the build):**
-Source-read the 4 call sites of `tickWrappingTimerAccumulatorList` to confirm/refute whether
-any run during the pre-scene boot/menu phase (before the scene loads) — this is what would
-make the instrumentation-confound hypothesis mechanically plausible at all:
-```
-grep -n "tickWrappingTimerAccumulatorList" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c
-grep -n "tickWrappingTimerAccumulatorList" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_32.c
-grep -n "tickWrappingTimerAccumulatorList" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c
-```
-Call sites are at `funcs_27.c:108078`, `funcs_27.c:124149`, `funcs_32.c:2102`,
-`funcs_40.c:5834` (found via grep in s278, not yet read). For each, read ~30 lines up to find
-the enclosing `RECOMP_FUNC` and trace (via existing symbol-naming conventions / prior
-PORTING-STATE entries) whether that enclosing function is part of the boot/menu/title-screen
-path or only reachable once the scene is loaded. If none run pre-scene, the confound
-hypothesis is refuted for free and you should skip straight to step 3 (the family reassessment)
-rather than spending a soak on step 2.
+**Re-soak `BREADCRUMB6`/`buildPositionAndCallTransformHelper` (its 2nd session)**, chosen because
+it's the least-recently-tested of the three untested-twice targets (`BREADCRUMB6` landed s273,
+`BREADCRUMB7` s274, `BREADCRUMB8` s275 — all tied at 0/2, `BREADCRUMB6` is oldest).
 
-**Step 2 — if step 1 finds a plausible pre-scene call site, run the discriminating soak:**
-1. Comment out (do not delete) just the `BREADCRUMB9` block in
-   `N64Recomp/fixup_game_funcs.py` — it's appended after the `BREADCRUMB8` block, patched x104
-   last regen (`grep -n "BREADCRUMB9"` to find it exactly).
-2. Regen: delete `funcs_*.c`
-   (`python3 -c "import glob, os; [os.remove(f) for f in glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c')]"`),
-   `make_elf.py` (cwd `rogue_squadron64`) -> `N64Recomp` (cwd `N64Recomp`) ->
-   `fixup_game_funcs.py` (cwd `N64Recomp`, save report, grep it — do NOT re-run the script) ->
-   `cmake --build` (`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`). Confirm
-   `BREADCRUMB9` did NOT patch (0 occurrences) and all other breadcrumbs/guards are unchanged
-   at their documented counts (`BREADCRUMB5` x224, `BREADCRUMB6` x305, `BREADCRUMB7` x2643,
-   `BREADCRUMB8` x222, `CACHE3_GUARD` x1, `CACHE4_GUARD` x1).
-3. Soak twice, everything else unchanged:
-   `env HOLD_S=240 zsh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/s73_post_a_scene/run_dequeuearg1.sh s279_soak1`
-   then `s279_soak2` — launch each `run_in_background: true` from an absolute path, then
+1. Confirm `BREADCRUMB6` is still armed: `grep -n "BREADCRUMB6" /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` (expect the same patch block from s273, no regen needed if unchanged since then — check the build/binary timestamp or just re-run fixup+build if unsure rather than assume).
+2. Soak twice, `HOLD_S=240`, launch each `run_in_background: true` from an absolute path, then
    `TaskOutput(task_id, block=true, timeout<=480000)` in the SAME turn (cross-turn waiting does
-   not work under the Stop hook).
-4. **Discriminating outcomes**: if both/most soaks now reach the scene (pre-scene rate reverts
-   toward the ~21% baseline), that supports the instrumentation-confound hypothesis — treat
-   `BREADCRUMB9` (or the breadcrumb mechanism's overhead in general) as a suspect worth a
-   lighter-weight instrumentation approach. If pre-scene deaths persist at the ~83% rate even
-   WITHOUT `BREADCRUMB9` compiled in, that refutes the confound — re-arm `BREADCRUMB9`
-   afterward (uncomment, regen, rebuild) and fall back to step 3's family reassessment.
-5. Re-arm `BREADCRUMB9` after this test regardless of outcome (uncomment the block, regen,
-   rebuild) — its own hypothesis about crashes inside `tickWrappingTimerAccumulatorList` is
-   still untested with only 1 genuine soak, just deprioritized below this confound check.
+   not work under the Stop hook):
+   `env HOLD_S=240 zsh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/s73_post_a_scene/run_dequeuearg1.sh s280_soak1`
+   then `s280_soak2`.
+3. Check each soak: `grep -c "vi_width=1024" <run.log>` (0 = pre-scene death, unusable per the
+   now-refuted-confound baseline ~21% expected rate; >=1 = reached the scene, check for
+   `BREADCRUMB6`-specific crash hits and any brand-new symrange-confirmed crash site).
+4. **Discriminating outcome**: any hit inside `buildPositionAndCallTransformHelper` itself
+   confirms the hypothesis for the first time in this family — treat as a real finding, land a
+   guard, do NOT just note it and move on. A clean 0/2 (3rd session worth of data, but only
+   `BREADCRUMB6`'s 2nd session) is not yet 3-strikes — still legitimate to try once more after
+   this if nothing else looks better, per the family reassessment above.
+5. **If a genuinely new/different crash surfaces**: symrange-verify if plausible (Mach-O symtab
+   walk, see s273-s279's approach), note it for the backlog. Don't chase it this iteration unless
+   clearly highest-information-value (budget rule 8).
 
-**Step 3 — if step 1 refutes the confound, or step 2 isn't reached this session — family
-reassessment (do not skip this even if steps 1-2 consume the session):** write an explicit
-hypothesis/evidence table for the whole `BREADCRUMB5`-`BREADCRUMB9` family (0 combined
-informative hits across ~9 sessions) into the NEXT NEXT.md, and pick the highest-value probe
-from the remaining backlog:
-1. `inflate_fast`/zlib site (s272) — still only 1 observation, `si_addr=0x80000003`, needs a
-   different localization approach (system library call, not a guest function — the breadcrumb
-   mechanism doesn't apply directly).
-2. Re-soak `BREADCRUMB5`/`BREADCRUMB6`/`BREADCRUMB7`/`BREADCRUMB8` once more each if nothing
-   else looks better — none is at the 3-strikes limit yet, all have weak-to-zero signal
-   (`BREADCRUMB5` 0/4 combined, `BREADCRUMB6` 0/2, `BREADCRUMB7` 0/2, `BREADCRUMB8` 0/2).
-3. Consider a BLOCKED note to the human if no clear next angle presents itself — 5 targets
-   with 0 combined informative hits is a real signal that the breadcrumb-hunting approach
-   itself may have diminishing returns.
-
-**If a genuinely new/different crash surfaces during any soak this session**: symrange-verify
-if plausible (Mach-O symtab walk, see s273-s278's approach), don't chase it this iteration
-unless clearly highest-information-value (budget rule 8) — note it for the backlog instead.
+**If `BREADCRUMB6` also comes back 0/2 (0/4 combined total)**: do not re-soak it a 3rd session
+next time either — move to `BREADCRUMB7` or `BREADCRUMB8` (both also at 0/2, 1 session each), or
+consider starting the `inflate_fast`/zlib localization design (needs a different approach since
+it's a system-library call, not a guest function — bigger lift, hasn't been attempted yet).
 
 ## Do NOT do this iteration
 
-- Do NOT re-soak `BREADCRUMB9`'s own target a 4th consecutive session without a new angle —
-  it hit the rule-8 3-strikes threshold this session (s278). The confound test in step 2 is a
-  DIFFERENT hypothesis (about instrumentation overhead, not about the target function itself),
-  so it doesn't count as a 4th strike on the same sub-hypothesis — but don't use that as a
-  loophole to just re-soak with `BREADCRUMB9` still armed and call it something new.
-- Do NOT skip step 1 (the free source-read) and jump straight to a soak — if the 4 call sites
-  turn out to be scene-only (not boot/menu), the whole confound hypothesis is mechanically
-  impossible and a soak would be wasted budget.
-- Do NOT conclude the instrumentation-confound hypothesis is CONFIRMED from a single soak
-  pair even if step 2 supports it — this needs the two-source rule (one soak pair reverting
-  toward baseline is suggestive, not proof; consider a 2nd confirming pair before writing it
-  into CURRENT-TRUTH as settled).
-- Do NOT leave `BREADCRUMB9` permanently disabled if step 2 runs — re-arm it afterward
-  (uncomment, regen, rebuild) regardless of the outcome, per step 5.
-- Do NOT spend a 3rd consecutive session re-soaking `BREADCRUMB5`, `BREADCRUMB6`,
-  `BREADCRUMB7`, or `BREADCRUMB8` without a new angle — none is formally at the 3-strikes
-  limit yet, but all four have weak-to-zero signal.
+- Do NOT re-soak `BREADCRUMB9` again — it hit the rule-8 3-strikes threshold at s278, and s279
+  closed off the one new angle (the instrumentation-confound hypothesis) that would have
+  justified a 4th session. No new angle on `BREADCRUMB9` currently exists.
+- Do NOT re-open the instrumentation-confound investigation for `BREADCRUMB9` without a
+  genuinely new mechanism to test — s279's direct source read of `menuOverlayInit` is a solid,
+  first-hand mechanistic refutation (not just a documentation cross-reference), not a weak
+  inferential one.
+- Do NOT treat the 21%→83% pre-scene-death-rate spike (s276-s278) as fully explained — it's
+  still an open, unexplained correlation. Just don't attribute it to `BREADCRUMB9`'s
+  instrumentation via the call-site mechanism checked this session. If it recurs or worsens,
+  it's worth a fresh look with a different hypothesis (e.g. binary size/layout effects unrelated
+  to which specific function got instrumented, or genuine pre-existing clustering finally being
+  quantified with a larger sample).
+- Do NOT spend a 3rd consecutive session re-soaking `BREADCRUMB5`, `BREADCRUMB7`, or `BREADCRUMB8`
+  without a new angle — none is formally at the 3-strikes limit, but all have weak-to-zero
+  signal; prefer `BREADCRUMB6` first per the priority above.
 - Do NOT re-touch `DEQUEUE_GUARD`'s range-check bound — refuted (s267).
 - Do NOT conflate the `0x80000000`-exact-fault family (or its `+0x10` `processSceneNode`-`+0x30`,
   `emitAllocatedDLCommand`-garbage-offset, `inflate_fast`-`+3`, `static_5_800AB658`-garbage-
@@ -137,6 +106,10 @@ unless clearly highest-information-value (budget rule 8) — note it for the bac
 - Do NOT treat a long-running soak (e.g. an 8GB+ log, driver command appearing "stuck") as
   necessarily hung — check `ps -p <pid>` first; the game process may already be dead while the
   driver script is still crunching a large log for its summary.
+- Do NOT touch the `lib/N64ModernRuntime`/`lib/rt64` "-dirty" submodule state — it's the
+  long-standing baseline (months of uncommitted patches mirrored in `submodule-patches/`), not
+  new work. Only run `submodule-patches/export.sh` if YOU make new edits under `lib/` this
+  session.
 
 ## Environment notes (carried forward, all still valid)
 
@@ -150,15 +123,16 @@ unless clearly highest-information-value (budget rule 8) — note it for the bac
 - Compound shell commands using `cd` combined with `&&`/output-redirection require
   interactive approval and get denied under the loop's automation — issue `cd <dir>` as its
   OWN Bash call first (cwd persists across calls in this tool), then run the next command as a
-  separate call from that cwd.
+  separate call from that cwd. This also applies to `git -C <path> ...` and `git --git-dir=...
+  --work-tree=... ...` — both get flagged as needing approval even standalone; use a plain `cd`
+  (its own call) + `git status --short` (its own call, matches the `Bash(git status:*)`
+  allowlist) instead.
 - Shell `for VAR in ...; do ... done` loops and `$(...)` command substitution inside them get
   rejected by the sandbox ("Contains simple_expansion") even when individually each piece
-  would be fine — observed s278. Prefer a single `grep`/`ls` call with an explicit glob or
-  explicit file-list argument (grep accepts multiple files and reports per-file with `-c`/`-l`)
-  over a shell loop when scanning multiple files. If Python is needed, avoid reading huge
-  (multi-GB) log files fully into memory — use `grep -c`/`grep -l` for classification instead of
-  `open().read()`, which can time out (observed s278, a 20-file full-read job hit the 120s
-  timeout while `grep` on the same files was near-instant).
+  would be fine. Prefer a single `grep`/`ls` call with an explicit glob or explicit file-list
+  argument over a shell loop when scanning multiple files. If Python is needed, avoid reading
+  huge (multi-GB) log files fully into memory — use `grep -c`/`grep -l` for classification
+  instead of `open().read()`, which can time out.
 - Background launches do NOT inherit a prior foreground `cd` — always launch soak drivers by
   full absolute path when using `run_in_background: true`.
 - Cross-turn waiting does not work under the Stop hook — use `TaskOutput(task_id, block=true,
@@ -166,17 +140,14 @@ unless clearly highest-information-value (budget rule 8) — note it for the bac
 - Soak driver scripts live under `scratch/s73_post_a_scene/`, NOT `scratch/agent/`.
   Current-best baseline: `run_dequeuearg1.sh` (`HOLD_S` overridable via env, defaults to 240 if
   unset). `BREADCRUMB`-family entries do NOT carry their own `ROGUESQ_LOG_*` fire-log (only
-  guards do) — no `run_dequeuearg1.sh` edit needed when adding a new `BREADCRUMBn`. DO add a
-  log flag when landing a new GUARD.
+  guards do) — no `run_dequeuearg1.sh` edit needed when adding/testing a `BREADCRUMBn`.
 - Whether a soak reached the scene at all can be checked cheaply via `grep -c "vi_width=1024"
   <run.log>` (0 = pre-scene death, >=1 = reached it) — cheaper than relying on the driver's own
   stdout message (`process gone while waiting for phase`), which is NOT written into `run.log`
-  itself (only to the driver's own terminal output, which isn't persisted after the task
-  completes) — observed s278, `grep` on that phrase against `run.log` returns 0 hits even for
-  known pre-scene deaths.
+  itself.
 - `+N` crash-symbol offsets are NATIVE (ARM64) code offsets and SHIFT across sessions as
   guards/breadcrumbs are added. Verify range membership via the Mach-O symtab walk (inline
-  python, see s273-s278's approach: parse LC_SYMTAB, sort `(n_value, name)` pairs by DISTINCT
+  python, see s273-s279's approach: parse LC_SYMTAB, sort `(n_value, name)` pairs by DISTINCT
   address, find the exact-name entry, check the reported crash offset is less than the
   distance to the next DISTINCT address — duplicate symtab entries at the same address are
   common, dedupe by address before computing "next symbol" or the range check
@@ -185,9 +156,8 @@ unless clearly highest-information-value (budget rule 8) — note it for the bac
 - A crash's `[CRASH][last-guest-pc]` value is only informative if the crashing function is
   ITSELF breadcrumbed. Always grep the reported guest PC's hex label in the relevant
   `funcs_N.c` and find its enclosing `RECOMP_FUNC` before trusting it. `0x8000b650`
-  specifically is a recurring stale value belonging to `beginFrameDLChunk` (`funcs_3.c`), seen
-  in every session s272-s278 for crashes that happen elsewhere — do not treat it as
-  informative unless the crashing symbol IS `beginFrameDLChunk`.
+  specifically is a recurring stale value belonging to `beginFrameDLChunk` (`funcs_3.c`) — do
+  not treat it as informative unless the crashing symbol IS `beginFrameDLChunk`.
 - When adding a guard to a function that's ALSO covered by an existing breadcrumb's blanket
   per-instruction pass: check whether the guard patch's code block sits before or after the
   breadcrumb patch's block in `fixup_game_funcs.py`'s file order. A guard block positioned
@@ -197,9 +167,13 @@ unless clearly highest-information-value (budget rule 8) — note it for the bac
   directories — `/tmp` is blocked. Use `scratch/agent/*.log`.
 - `N64Recomp/fixup_game_funcs.py` is untracked by git in the standalone `N64Recomp` checkout —
   expected. Changes persist only via the live file on disk across sessions.
-- `git status --short` run from inside `RogueSquadron64Recomp/build` works without needing
-  `-C`/`cd` combined-command approval prompts; `git -C <path>` and `cd <dir> && git ...` both
-  require interactive approval.
-- `CURRENT-TRUTH.md` is far over the ~35KB target (measured s278: 493KB, ~14x over) — now 19+
-  consecutive sessions overdue for a pruning pass. Still not this iteration's job unless the
-  localization work above is a quick null with clear leftover budget.
+- `git status --short` run from inside `RogueSquadron64Recomp/build` (or any subdir, via a
+  plain `cd` + `git status` as two separate Bash calls) works without needing `-C`/`git
+  --git-dir` approval prompts.
+- `CURRENT-TRUTH.md` is far over the ~35KB target (measured s279: ~510KB, ~14.5x over) — now
+  20+ consecutive sessions overdue for a pruning pass. Still not this iteration's job unless
+  the localization work above is a quick null with clear leftover budget.
+- At session start, check `scratch/agent/STATUS`/`OUTCOME` for signs of an interrupted prior
+  iteration (e.g. `STATUS=WORKING` with `OUTCOME` deleted but HEAD already at the last commit) —
+  this is normal loop-restart noise, not unfinished work, as long as `git log` confirms the last
+  session's commit landed cleanly. Don't spend budget investigating it further once confirmed.
