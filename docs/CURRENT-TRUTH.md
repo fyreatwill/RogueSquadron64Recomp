@@ -663,7 +663,29 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s273)
+## Next steps, in order of expected value (s274)
+
+-115. **(s274) Landed `BREADCRUMB7` on `static_5_800AB658` per s273's plan — 0/2 this
+    session (its first), no informative hit. Soak 1 ran the entire 240s hold plus grace
+    crash-free (deepest soak this investigation has recorded). Soak 2 died pre-scene to
+    the pre-catalogued `waitForAnyAudioSlot` boot crash class (unusable, no scene
+    reached). No new crash sites surfaced — the first session since s270 where neither
+    soak caught a genuinely new site.** Full detail: `PORTING-STATE` Session 274.
+
+    **`BREADCRUMB7`/`static_5_800AB658`**: 0/2 this session, armed and unconsumed.
+    Analogous to `BREADCRUMB4`/`BREADCRUMB5`/`BREADCRUMB6`'s own 0/2 starts — not a
+    budget concern (1st session, not 3rd consecutive).
+
+    **Backlog candidates, unchanged from s273, still not tried**:
+    1. `emitAllocatedDLCommand+6608` (s271) — 1 observation, garbage-offset fault shape,
+       not yet breadcrumbed. Best next candidate if `BREADCRUMB7` needs a 2nd re-soak
+       session without a new hit — same breadcrumb mechanism applies directly.
+    2. `inflate_fast`/zlib site (s272) — 1 observation, `si_addr=0x80000003`, needs a
+       different localization approach (system library call, not a guest function).
+    3. Re-soak `BREADCRUMB5`/`BREADCRUMB6`/`BREADCRUMB7` once more each if nothing else
+       looks better — none is at the 3-strikes limit yet, all have weak-to-zero signal
+       so far (`BREADCRUMB5` 0/4 combined across 2 sessions, `BREADCRUMB6` 0/2,
+       `BREADCRUMB7` 0/2).
 
 -114. **(s273) Re-soaked `BREADCRUMB5` per s272's plan — still 0/4 combined, no informative
     hit ever on `reserveAndEmitDLEntry` itself. Soak 1 caught a brand-new symrange-confirmed
