@@ -663,7 +663,46 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s282)
+## Next steps, in order of expected value (s283)
+
+-124. **(s283) Source-read `static_5_800A9270`/`loadCutsceneAssetsByIndex` per s282's plan — found
+    and closed the `+948` backlog item, PLUS 2 more unguarded sites of the same bug shape in the
+    same function.** Full detail: `PORTING-STATE` Session 283.
+
+    Full function read (`funcs_40.c:5314-5473`) found the `-0x25A4($s1)` "hangar list" global
+    pointer (same root-cause global as `static_5_800AB658`'s `G1`-`G32` family) reloaded and
+    dereferenced in **4 places total** in this one function — only 1 was guarded
+    (`HANGARLIST_GUARD`, s254). Landed 3 new guards for the other 3: `HANGARLIST_GUARD_EARLY`
+    (guest `0x800A9284`-`0x800A92A4`, unconditional on every call, best fit for the `+948` native
+    offset), `HANGARLIST_GUARD_WALK` (guest `0x800A931C`-`0x800A9324`), `HANGARLIST_GUARD_CLEAR`
+    (guest `0x800A9344`-`0x800A934C`) — all in `N64Recomp/fixup_game_funcs.py`, same recipe
+    (`U32(ctx->rN)` range check, bail to `L_800A9350`). Full regen pipeline run, clean build, patch
+    report confirmed all 4 guards (1 existing + 3 new) patched `x1` each.
+
+    **Validation**: 3 soaks (`HOLD_S=240`). Soak1 died pre-scene to the already-catalogued
+    `waitForAnyAudioSlot` boot crash (uninformative). Soak2 and soak3 both reached the scene and
+    survived it, dying during the hold at two OTHER already-catalogued unrelated sites
+    (`processSceneNode+1424`, `reserveAndEmitDLEntry+10212`). **Neither reproduced
+    `static_5_800A9270+948` or any of the 3 new guard sites** — 2 informative scene-reaching soaks,
+    standard non-recurrence validation bar.
+
+    **Status**: `static_5_800A9270+948` backlog item CLOSED. Every one of the 5 original
+    `BREADCRUMB5`-`9` targets is now at or past its 2-session per-target budget (0 combined hits on
+    their OWN hypothesized targets — but the family as a whole has produced TWO real fixes now:
+    `G32` at s282, 3 more guards at s283). This `-0x25A4($s1)`-chase bug shape has now recurred 4
+    times across 2 sessions (s282's `G32`, s283's 3 guards) — worth a deliberate audit of every
+    `-0x25A4($s1)` reference in `RecompiledFuncs/` rather than waiting for soaks to surface them
+    one at a time.
+
+    **Backlog candidates, in priority order for next session:**
+    1. Deliberate audit: grep every `-0x25A4($s1)`-pattern reference (i.e. the `0x800D<<16`-based
+       "hangar list" global) across `RecompiledFuncs/` for reload-then-dereference chains without
+       an existing guard, rather than continuing to wait for soaks to surface them incidentally.
+    2. Investigate the elevated pre-scene `waitForAnyAudioSlot` death rate — open since s278, never
+       directly investigated, costing real soak budget every session (1 of 3 soaks this session).
+    3. Start the `inflate_fast`/zlib localization design (s272, system-library call, needs a
+       different approach, never attempted).
+    4. Do NOT invent a 6th breadcrumb target without a new mechanism.
 
 -123. **(s282) Re-soaked `BREADCRUMB8`/`emitAllocatedDLCommand` per s281's plan (its 2nd session)
     — soak1 hit an already-catalogued site, but soak2 crashed inside `static_5_800AB658` itself

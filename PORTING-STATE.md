@@ -25524,3 +25524,71 @@ Read `docs/CURRENT-TRUTH.md` item -120 and `scratch/agent/NEXT.md` (s279's plan)
 **Whole-family status** (updated): `BREADCRUMB7`/`static_5_800AB658` now has its FIRST combined informative hit (via `G32`, closing that specific crash) — no longer 0/N. `BREADCRUMB8`/`emitAllocatedDLCommand` itself: still 0/2 this session (0/4 combined, 2 sessions, s275+s282) — the hit landed on a DIFFERENT breadcrumb's target, so `BREADCRUMB8`'s own hypothesis remains unconfirmed and it now joins `BREADCRUMB6`/`BREADCRUMB7` at the 2-session mark with 0 hits on its OWN target specifically (do not re-soak a 3rd session without a new angle). `BREADCRUMB5` 0/4 (2 sessions), `BREADCRUMB9` 0/2 genuine (3-strikes, confound closed).
 
 **Housekeeping**: edit was to `N64Recomp/fixup_game_funcs.py` only — untracked in the standalone `N64Recomp` checkout, no `lib/` changes, no `export.sh` needed. No `lib/N64ModernRuntime`/`lib/rt64` edits this session (dirty submodule state inspected only). New soak logs under `scratch/s73_post_a_scene/s282_soak{1,2,3,4}/`. `CURRENT-TRUTH.md` still flagged oversized (23+ sessions overdue for pruning) — not this session's job (no leftover budget; the finding, fix, regen/rebuild, and 4 soaks filled the session).
+
+## Session 283 (2026-08-03) — source-read `static_5_800A9270`/`loadCutsceneAssetsByIndex` per s282's plan, closes the `+948` backlog item
+
+**What ran**: full source read of `static_5_800A9270` (`funcs_40.c:5314-5473`, ~160 lines, confirmed
+start-to-closing-brace) to localize s282 soak4's new crash site (`static_5_800A9270+948`, native
+ARM64 offset). The existing `HANGARLIST_GUARD` (s254) already guards ONE dereference of the
+function's `-0x25A4($s1)` "hangar list" global pointer (the identical root-cause global behind the
+whole `static_5_800AB658` `G1`-`G32` whack-a-mole family). The full read found the SAME global
+reloaded and dereferenced in **three more places in this one function**, none guarded:
+- `EARLY` (guest `0x800A9284`-`0x800A92A4`): the very first use in the function, unconditional on
+  every call — `ctx->r3 = MEM_W(r17,-0x25A4)` then `ADD32(r16,r3)` then dereferenced via
+  `MEM_HU(ctx->r3,0x40)`. Best fit for the `+948` offset under a linear guest→native mapping
+  (guest ~36% through the function vs. `HANGARLIST_GUARD`'s own site at guest ~58%, i.e. this site
+  executes and would fault BEFORE `HANGARLIST_GUARD`'s).
+- `WALK` (guest `0x800A931C`-`0x800A9324`, inside `L_800A931C`, reached from both branches of the
+  `HANGARLIST_GUARD`-protected block): an independent reload (not reusing the already-validated
+  register), dereferenced via `MEM_W(ctx->r3,0x4)`.
+- `CLEAR` (guest `0x800A9344`-`0x800A934C`, inside `L_800A9344`, the branch that skips
+  `L_800A92F0`/`L_800A931C` entirely): a third independent reload, dereferenced via
+  `MEM_B(0x271,ctx->r2)=0`.
+
+All three are mutually exclusive at runtime (different branch outcomes converge on the same
+epilogue `L_800A9350`) but share the identical bug shape as `HANGARLIST_GUARD`/`G32`. Landed all
+three as `HANGARLIST_GUARD_EARLY`/`_WALK`/`_CLEAR` in `N64Recomp/fixup_game_funcs.py`, same
+validated recipe (`U32(ctx->rN)` range check against `0x80000000`-`0x80800000`, bail to
+`L_800A9350`, optional `ROGUESQ_LOG_HANGARLIST_GUARD_{EARLY,WALK,CLEAR}` fire-counter). Ran the
+full regen pipeline (`make_elf.py` → delete `funcs_*.c` → `N64Recomp` → `fixup_game_funcs.py` →
+`cmake --build`); patch report confirmed all four guards (`HANGARLIST_GUARD` + the 3 new ones)
+patched exactly `x1` each, clean build (only pre-existing unrelated `DDIV` sign warnings).
+
+**Validation**: 3 soaks attempted (`HOLD_S=240`). Soak1 died pre-scene to the already-catalogued
+`waitForAnyAudioSlot` boot crash (the elevated-rate, unrelated issue tracked since s278) —
+uninformative, not counter-evidence (never reached the code path). Soak2 and soak3 both reached the
+scene and survived past it, dying during the hold at two OTHER already-catalogued, unrelated sites
+(`processSceneNode+1424`, `reserveAndEmitDLEntry+10212` — `BREADCRUMB5`'s target, still 0/N on its
+own hypothesis). **Neither soak reproduced `static_5_800A9270+948` or any of the 3 new guard
+sites** — 2 informative scene-reaching soaks, same non-recurrence validation bar used for
+`G30`/`G31`/`G32`/`HANGARLIST_GUARD`.
+
+**What this shows / rules out**: closes the `static_5_800A9270+948` backlog item from s282. Confirms
+the `-0x25A4($s1)` hangar-list global-pointer-chase bug shape recurs WITHIN a single function up to
+4 times (not just across functions as with `static_5_800AB658`'s `G1`-`G32`) — worth remembering
+when auditing any other function that touches this same global. Does NOT rule out further
+unguarded chases of this global elsewhere; not exhaustively searched beyond
+`static_5_800A9270`/`static_5_800AB658`.
+
+**Housekeeping**: edit was to `N64Recomp/fixup_game_funcs.py` only — untracked in the standalone
+`N64Recomp` checkout, no `lib/` changes, no `export.sh` needed. No `lib/N64ModernRuntime`/`lib/rt64`
+edits this session (dirty submodule state inspected only, unchanged from prior sessions' baseline).
+New soak logs under `scratch/agent/s283_soak{1,2,3}.log` (driver output) +
+`scratch/s73_post_a_scene/dequeuearg1/run.log` (overwritten per-run by the driver — soak1's crash
+detail captured in this entry from the log before it was overwritten by soak2/3).
+`CURRENT-TRUTH.md` still flagged oversized (24+ sessions overdue for pruning) — not this session's
+job (no leftover budget; the finding, fix, regen/rebuild, and 3 soaks filled the session).
+
+**Next steps**: with `static_5_800A9270+948` closed, every one of the 5 original `BREADCRUMB5`-`9`
+targets is now at or past its 2-session per-target budget (0 combined hits on their OWN specific
+hypothesized targets, though the family as a whole has now produced two real, validated fixes:
+`G32` at s282 and `HANGARLIST_GUARD_EARLY`/`_WALK`/`_CLEAR` at s283). Options for next session:
+- Look for further whack-a-mole sites in the `static_5_800AB658`/`static_5_800A9270` family — this
+  pattern has now recurred 4 times (s254 `HANGARLIST_GUARD`, s282 `G32`, s283's 3 new guards) — a
+  real, recurring pattern. Consider a deliberate audit of every `-0x25A4($s1)` reference across
+  `RecompiledFuncs/` rather than continuing to wait for soaks to surface them one at a time.
+- Start the `inflate_fast`/zlib localization design (system-library call, not a guest function —
+  needs a different approach, never attempted).
+- Investigate the elevated pre-scene `waitForAnyAudioSlot` death rate itself (open since s278,
+  never directly investigated — only observed as background noise across s278-283) — this is now
+  costing real soak budget every session (1 of 3 soaks this session alone).
