@@ -663,9 +663,76 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s267)
+## Next steps, in order of expected value (s268)
 
--108. **(s267) Refuted the a0-argument hypothesis for the guest-`0x80000000`-family fault
+-109. **(s268) Ran s267's prescribed re-soak plan 3 more times (`run_dequeuearg1.sh`,
+    unmodified) — still 0 reproductions of the specific `heapFreeListDequeue`-range
+    crash `BREADCRUMB2` targets (now 0/6 across s267+s268 combined), but caught a
+    NEW crash site sharing the exact same "guest fault address `0x80000000`" shape
+    in a DIFFERENT, never-before-catalogued function: `beginFrameDLChunk+13420`.**
+    Full detail: `PORTING-STATE` Session 268.
+
+    **The 3 attempts**: (1) died before the title screen even rendered
+    (`process gone while waiting for phase`) — `sym=waitForAnyAudioSlot+244`,
+    the already-catalogued 23rd crash class (first seen s165); no data on the
+    target. (2) reached the target scene and crashed ~6s into hold —
+    `[CRASH][pc-symbol] sym=beginFrameDLChunk+13420`, `si_addr=0x380000000`
+    (RDRAM-base `0x300000000` + guest `0x80000000` EXACTLY — byte-identical
+    fault-address shape to s266's original `heapFreeListDequeue+16188` find).
+    Verified in-range (offset 13420 of a 24232-byte function, next symbol
+    `initRenderStateArrays`) via a generalized symrange checker
+    (`scratch/agent/s268_symrange2.py`, adapted from a leftover
+    `s268_symrange.py` found on disk from an uncommitted/abandoned prior
+    session — see Housekeeping). (3) ran the full 240s hold + grace window
+    completely crash-free (had to be SIGKILLed at the end) — a clean 2nd
+    positive control.
+
+    **`heapFreeListDequeue` itself is NOT implicated in the new crash**:
+    `dequeue-arg-trace` fired 170,405 times in attempt 2's log and 196,352
+    times in attempt 3's, all plausible in-range guest pointers, with zero
+    correlation to either the crash (attempt 2) or absence of one (attempt
+    3) — `heapFreeListDequeue` keeps running correctly under heavy load
+    while a DIFFERENT function faults with the same address shape.
+
+    **Why this matters**: this is now the 2nd distinct function
+    (`heapFreeListDequeue` s266, `beginFrameDLChunk` s268) observed to fault
+    on a guest pointer of exactly `0x80000000` — the same shape recurring in
+    unrelated call sites is more consistent with one shared upstream
+    corruption source (something writes a raw KSEG0 segment-base value into
+    a field several different pieces of code later deref unchecked) than
+    with two independent unguarded-pointer bugs. Not yet proven (single
+    session, 2 data points) — do not treat as confirmed without a 3rd
+    independent site or a traced write-site.
+
+    **Next work unit**: `beginFrameDLChunk` is NOT currently breadcrumbed
+    (only `submitSceneNodeRender`/`BREADCRUMB` and `heapFreeListDequeue`/
+    `BREADCRUMB2` are), so `[CRASH][last-guest-pc]` for this crash just
+    showed `0x80011088` (submitSceneNodeRender's own return point — stale,
+    not informative for this function). Land `BREADCRUMB3` scoped to
+    `beginFrameDLChunk`'s body (identical mechanism to `BREADCRUMB`/
+    `BREADCRUMB2` in `N64Recomp/fixup_game_funcs.py`), regen, then re-soak
+    with `run_dequeuearg1.sh` — this site reproduced on the very 2nd
+    real-scene attempt this session (vs. 0/6 for the `heapFreeListDequeue`
+    target), so it may be a faster path to a confirmed, guardable crash than
+    continuing to chase `heapFreeListDequeue`'s specific offset. When a
+    `beginFrameDLChunk`-range crash lands with the new breadcrumb, localize
+    via `grep` in `funcs_*.c` (confirm which file first — not yet checked
+    this session) exactly as done for the other two functions, add ONE
+    guard, regen, soak-verify (iron rule 4).
+
+    **Housekeeping**: found `scratch/agent/s268_symrange.py` and
+    `s268_dequeuearg1_driver.log` already on disk at session start (dated
+    2026-07-29/30), evidence of a prior agent session that ran at least one
+    soak (result: `phase timeout (INCONCLUSIVE)`) but never reached the exit
+    contract — no PORTING-STATE entry, no commit, `git log` tops out at
+    s267. Per the "ledger is the only memory" rule, that work does not
+    count and was not relied on for anything except reusing the (correct,
+    working) symrange-checker code it left behind. If this pattern recurs
+    (leftover `scratch/agent/sNNN_*` files with no matching ledger entry),
+    treat it the same way: salvage reusable tooling, do not trust any
+    unlogged "finding" from it.
+
+-108. **(s267, superseded as top priority by s268 above) Refuted the a0-argument hypothesis for the guest-`0x80000000`-family fault
     inside `heapFreeListDequeue` via a same-run positive-control trace (167k fires,
     last one immediately before a captured crash showed a sane in-range pointer,
     not `0x80000000`), and armed a 2nd guest-PC breadcrumb (`BREADCRUMB2`) scoped to
