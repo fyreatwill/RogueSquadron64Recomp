@@ -663,7 +663,32 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s275)
+## Next steps, in order of expected value (s276)
+
+-117. **(s276) Landed `BREADCRUMB9` on `tickWrappingTimerAccumulatorList` per s275's plan —
+    0/2 this session (its first), no informative hit. BOTH soaks died PRE-SCENE to the
+    identical pre-catalogued `waitForAnyAudioSlot` boot crash (23rd class, first seen s165)
+    — the first session in this investigation where neither soak even reached the scene,
+    let alone tested the new breadcrumb's own target.** Full detail: `PORTING-STATE`
+    Session 276.
+
+    **`BREADCRUMB9`/`tickWrappingTimerAccumulatorList`**: 0/2 this session, armed and
+    unconsumed — but unlike `BREADCRUMB4`-`BREADCRUMB8`'s own first-session 0/2s (which
+    each got at least one soak into the scene), this session produced ZERO data of any
+    kind on the hypothesis. Single-session observation on the boot-crash's frequency —
+    do not conclude it has become more common (known-nondeterministic since s165, small
+    sample). Re-soaking `BREADCRUMB9` next session is the correct move: it is the first
+    real attempt to test the target, not a 2nd/3rd re-soak of a weak signal.
+
+    **Backlog candidates, in priority order for next session**:
+    1. Re-soak `BREADCRUMB9`/`tickWrappingTimerAccumulatorList` (highest priority — this
+       session produced no data on it at all, unlike every other breadcrumb's 1st session).
+    2. `inflate_fast`/zlib site (s272) — still only 1 observation, `si_addr=0x80000003`,
+       needs a different localization approach (system library call, not a guest function).
+    3. Re-soak `BREADCRUMB5`/`BREADCRUMB6`/`BREADCRUMB7`/`BREADCRUMB8` once more each if
+       nothing else looks better — none is at the 3-strikes limit yet, all have weak-to-zero
+       signal so far (`BREADCRUMB5` 0/4 combined, `BREADCRUMB6` 0/2, `BREADCRUMB7` 0/2,
+       `BREADCRUMB8` 0/2).
 
 -116. **(s275) Landed `BREADCRUMB8` on `emitAllocatedDLCommand` per s274's plan — 0/2 this
     session (its first), no informative hit on its own target. Soak 1 died at hold-iter 10
