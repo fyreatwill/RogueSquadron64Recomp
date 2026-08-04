@@ -12,11 +12,14 @@ Set after the 300-session review. Priority order for upcoming iterations:
    section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. **[s295/s296
    compacted 562,666→59,811 bytes; still above the 35 KB stretch target. Next pass: focus the
    "Current truth" env-var bullets and the Regeneration section (skimmed-only so far).]**
-2. **M5 audio de-stubbing**: design doc first (docs/M5-AUDIO-PLAN.md — survey every audio
-   stub/trap/gate in force, plan incremental de-stubbing with a validation soak per step), then
-   execute stepwise. Rationale: waitForAnyAudioSlot boot deaths, voice-array corruption, slot
-   reaping and MusyX DMA crash families are plausibly artifacts of the audio-disabled degenerate
-   paths — de-stubbing may dissolve classes now guarded one deref at a time.
+2. **M5 audio de-stubbing**: design doc DONE (s298, `docs/M5-AUDIO-PLAN.md`) — surveyed every audio
+   stub/trap/gate, found the stub is a single dispatch-table entry (`musyx_stub` for `M_AUDTASK` in
+   `src/main/main.cpp`), and planned a 6-step incremental de-stubbing sequence with a validation soak
+   per step. **Correction to the rationale line below**: the crash-family survey found only 1 of 4
+   documented audio-adjacent crash families has audio-stub-as-cause *confirmed* (and that one argues
+   for caution, not optimism — de-stubbing re-exposes a previously-fatal boot hang); 2 of 4 are
+   plausible-but-unconfirmed, 1 of 4 is confirmed unrelated. Execute the plan's step 1 (free
+   source-read, no code/soak) next.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -188,9 +191,22 @@ cost three sessions before the recursive mutex.
 ## Next steps, in order of expected value (s295)
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
-numbered -160 (top, newest/highest priority) counting up to -1 (bottom, oldest); relative
-order is unchanged from before the fix. The next new item takes -161 and is inserted at the
+numbered -161 (top, newest/highest priority) counting up to -1 (bottom, oldest); relative
+order is unchanged from before the fix. The next new item takes -162 and is inserted at the
 top.
+
+-161. **(s298)** Writes `docs/M5-AUDIO-PLAN.md` (design doc, priority-2 per the USER DIRECTIVE),
+    pivoting off `tickTextureMaterialExpiry-guard` per the loop's mandatory-pivot rule (3 straight
+    iterations, no `BREADCRUMB12` recurrence to react to, no maintenance trigger). Survey (3 parallel
+    read-only agents) found the audio stub is one dispatch-table entry (`musyx_stub` for `M_AUDTASK`,
+    `src/main/main.cpp:594-595`), the `dmem[]`-sharing design question is already solved by the s5
+    mutex, and the host SDL audio bridge is already fully functional — de-stubbing is narrower than
+    the goal-stack framing implied. Also found the crash-family payoff case is weaker/mixed: 1 of 4
+    documented audio-adjacent crash families confirmed stub-caused (and it argues for caution — the
+    fix was disabling audio harder, not less), 2 of 4 plausible-unconfirmed, 1 of 4 confirmed
+    unrelated. Landed a 6-step incremental de-stubbing sequence, each with its own validation soak;
+    step 1 (free source-read, no code/soak) is the next work unit. Full detail: `PORTING-STATE`
+    Session 298.
 
 -160. **(s297)** Lands `MATEXPIRY_GUARD` (`ctx->r16` KSEG0-range check) in `tickTextureMaterialExpiry`
     at the site/bail-target item -159 specified (`fixup_game_funcs.py`, after `BREADCRUMB12` to match

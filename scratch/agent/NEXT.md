@@ -1,126 +1,92 @@
-# NEXT work unit — s297's guard landed; watch for a 3rd `BREADCRUMB12` recurrence, otherwise resume the unguarded-walk sweep
+# NEXT work unit — execute step 1 of the M5 audio de-stubbing plan (free source-read, no code/soak)
 
-## What s297 did (context for this session, not a re-derivation prompt)
+## What s298 did (context, not a re-derivation prompt)
 
-Landed `MATEXPIRY_GUARD` (a `ctx->r16` KSEG0-range check, same template as `DEQUEUE_GUARD`/
-`CACHE4_GUARD`) in `tickTextureMaterialExpiry` at `N64Recomp/RecompiledFuncs/funcs_6.c`'s
-`L_80022094` label, bailing to `L_80022128` on failure. Patch lives in
-`N64Recomp/fixup_game_funcs.py`, placed AFTER the `BREADCRUMB12` block so its regex matches the
-POST-breadcrumb text shape. Regen/build clean; `BREADCRUMB12` still patches x83 (unchanged),
-`MATEXPIRY_GUARD` patches x1 (new). Also armed `ROGUESQ_LOG_MATEXPIRY_GUARD=1` in the shared soak
-driver (`scratch/s73_post_a_scene/run_dequeuearg1.sh`).
+Pivoted off the `tickTextureMaterialExpiry-guard` thread (loop's mandatory-pivot rule fired after 3
+straight iterations; no `BREADCRUMB12` recurrence arrived this session to react to). Wrote
+`docs/M5-AUDIO-PLAN.md` — the priority-2 design doc the USER DIRECTIVE (`docs/CURRENT-TRUTH.md` top)
+calls for. Read that doc's §1-§4 before starting this work unit; summary:
 
-**2 validation soaks (`HOLD_S=275`, named `s297_soak1`/`s297_soak2`): both clean, scene reached, 0
-crashes, 0 `[matexpiry-guard]` fires.** This is a WEAK NULL, not a confirmation — `BREADCRUMB12` has
-only fired twice in ~294 prior sessions (s293, s294), so 0/2 fires in 2 soaks is fully consistent
-with either "the guard works" or "the guard just wasn't exercised this time." Do not treat this as
-"fixed." Full detail: `PORTING-STATE.md` Session 297, `docs/CURRENT-TRUTH.md` item -160.
+- The audio stub is ONE function-pointer swap: `musyx_stub()` registered as the `M_AUDTASK` handler
+  in `src/main/main.cpp`'s `get_rsp_microcode()` (line ~594-595), returning `RspExitReason::Broke`
+  with zero ucode execution. `factor5_ucode_b` (recompiled MusyX ucode) is compiled/linked but
+  never dispatched.
+- The `dmem[]`-sharing concern is already solved by the s5 `g_lle_task_mutex` — no new
+  synchronization design needed.
+- The host SDL audio bridge (`ultramodern::audio_callbacks_t`, `SDL_QueueAudio` wiring, guest-facing
+  `osAi*` functions) is already fully functional — needs no work.
+- Crash-family payoff is weaker than the goal-stack's original framing: only 1 of 4 documented
+  audio-adjacent crash families is confirmed stub-caused, and reversing that one's fix (the gate-byte
+  force-zero) directly re-exposes a previously-fatal boot-time scheduler wedge unless the ucode now
+  genuinely completes tasks.
 
-## Top priority: decide based on whether a `BREADCRUMB12` recurrence shows up
+## This session's work unit: M5-AUDIO-PLAN.md §4 step 1
 
-`BREADCRUMB12` is still armed (it's a passive guest-PC breadcrumb, not gated by the new guard's env
-var) in every soak that uses the shared driver, so future soaks — including any queued via
-`scratch/agent/soak_queue/` — will keep silently collecting more observations even without a
-dedicated session.
+**Question to answer** (source-read only — no code change, no build, no soak, no game run):
 
-1. **If `scratch/agent/SOAK-RESULTS.md` or a future session's own soak shows `[CRASH][last-guest-pc]
-   pc=0x80022094` again** (i.e. `tickTextureMaterialExpiry` crashes again despite the guard): the
-   guard is wrong — either the bail target discards state some other part of the function still
-   needs, or the range check itself is passing a bad value through. Re-read the bail-path control
-   flow (`funcs_6.c` around `L_80022128`, the outer per-table-index loop continuation) rather than
-   just re-soaking. This would be the 3rd observation of the underlying crash and the 1st of the
-   guard failing to catch it — a real, actionable signal.
-2. **If a soak shows a `[matexpiry-guard]` fire log line** (requires `ROGUESQ_LOG_MATEXPIRY_GUARD=1`,
-   armed in the shared driver): the guard caught a real corrupted pointer. That's a genuine positive
-   observation — note it in the ledger as the first confirming evidence, no code change needed unless
-   the surrounding behavior looks wrong (e.g. visible visual/audio glitch from the skipped node).
-3. **If neither shows up this session** (most likely, given the historical ~1-in-~150-sessions hit
-   rate): do NOT spend a session waiting for it. Move to the fallback below.
+Does the guest game ever call `osSpTaskStartGo` for a real `M_AUDTASK` while the audio-engine-enable
+gate byte (`0x800A0F50`) reads 0 (its current forced-disabled state), or does the gate short-circuit
+audio task creation before it ever reaches the RSP task queue?
 
-## Fallback (and likely actual next work unit): resume the unguarded-walk sweep
+**Why this is the right next step**: it determines whether M5-AUDIO-PLAN.md's step 2 (swapping
+`musyx_stub` → `&factor5_ucode_b` in the dispatch switch, gate still forced off) is a **provable
+no-op** — a safe, low-risk first structural change — or **already changes behavior** the moment it
+lands, in which case step 2 needs its own soak scrutiny from the start rather than being treated as
+inert plumbing.
 
-`scratch/agent/find_unguarded_walks.py` generated `unguarded_walk_candidates.json` — 143 sites across
-43 functions. 3 of 43 are now addressed: `tickSongSequence` (s293, `BREADCRUMB13`), `stopSongByHandle`
-(s294, `BREADCRUMB14`), and `tickTextureMaterialExpiry` (s292/s297, `BREADCRUMB12` + now
-`MATEXPIRY_GUARD`). 1 explicitly deferred as out-of-scope: `func_800AE3F0` (funcs_27.c, ~18000 lines —
-do NOT pick this one, too large for a single session, likely overlaps the closed `-0x25A4` hangar
-audit). Pick the next unaddressed function from the JSON, source-read it fully before writing
-anything, and land a breadcrumb (same mechanism as BREADCRUMB10-14) scoped to that function. A
-`"status"` field added to each JSON entry (not yet done) would make "which functions are covered"
-an O(1) lookup instead of a fresh grep-and-cross-reference each session — worth doing if a session has
-spare budget before picking the next candidate.
+**How to do it**: trace forward from the 3 gate-byte read/write sites already catalogued
+(`initMusyXEngine`, `setDisplayMode`, `reapplyDisplayMode` — the same 3 sites
+`fixup_game_funcs.py:94-101` force-zeros) through `tickMusyXIfActive`/`musyxSynthFrame` (the
+per-VI-retrace audio tick, caller confirmed s101 to be `viRetraceHandlerThread`) to find where task
+submission either proceeds unconditionally or is gated on the enable byte. Source is
+`N64Recomp/RecompiledFuncs/funcs_*.c` (grep the function names above to find which numbered file each
+lives in — do NOT grep the whole tree blind, the survey agents already have file:line references in
+`docs/M5-AUDIO-PLAN.md` §1 to start from) and cross-reference against `PORTING-STATE.md`'s existing
+s101/s173 notes (s173 already flagged an unresolved observation that the enable flag appeared nonzero
+mid-run despite the force-zero patch — this session's read should either explain or flag that
+contradiction, not ignore it).
 
-## Strategic priority reminder (still in force, unchanged by s297)
+**Discriminating outcomes**:
+1. **Task submission is itself gated** (e.g. `tickMusyXIfActive` returns early / never calls
+   `osSpTaskStartGo` when the byte is 0): step 2 is provably inert. Proceed straight to landing it as
+   a trivial structural change, validate with 1 soak confirming zero behavior change (phase timeline,
+   crash rate identical), then move to step 3 (`waitForAnyAudioSlot` timeout guard) same session if
+   budget allows.
+2. **Tasks ARE submitted regardless of the gate** (the gate only affects downstream guest-side logic,
+   not RSP task creation): step 2 is a real first test of `factor5_ucode_b` executing at all. Plan the
+   step-2 soak with that expectation — watch for a hang or crash appearing for the first time right
+   after the swap, before the title screen, as the discriminator between "ucode itself is broken" vs.
+   "gate-byte reversal (step 4) is what's risky."
+3. **s173's contradiction resolves** (e.g. a different byte/offset was actually being read, or the
+   gate only affects a subset of the 3 call sites): note the correction in `docs/M5-AUDIO-PLAN.md` §1
+   and `PORTING-STATE.md` — this would change which of the 3 gate sites in step 4 needs which fix.
 
-Per the 2026-08-04 USER DIRECTIVE (`docs/CURRENT-TRUTH.md` top): Maintenance (Step 0) still overrides
-everything if `wc -c docs/CURRENT-TRUTH.md` prints >60000 at session start — check this FIRST. As of
-s297's commit it's 59,909 bytes, just under the trigger with a slim ~90-byte margin; a normal
-work-unit session's own Next-steps addition could easily push it back over 60,000 next time. If Step 0
-doesn't trigger, **M5 audio de-stubbing** (design doc `docs/M5-AUDIO-PLAN.md` first) is priority 2,
-ahead of any further M3 crash work, per the same directive — this has now been deferred across s292-
-s297 in favor of the `BREADCRUMB12`/guard thread; if this session doesn't have a live `BREADCRUMB12`
-recurrence to react to (see above), seriously consider starting the M5 design doc instead of jumping
-straight to the sweep fallback, since the sweep is explicitly priority 3 ("M3 crash work") in the
-directive's ordering.
+Write the finding into `docs/M5-AUDIO-PLAN.md` §1's "one open question" callout (replace it with the
+answer) and into this session's `PORTING-STATE.md` entry. If time/budget remains after this free
+step, proceed directly into step 2 per the plan — do not treat "wrote one source-read finding" alone
+as enough for `ADVANCED` if the session has budget left; step 2 is cheap (one line in
+`src/main/main.cpp`) and continuing the same thread in one session is preferable to a 1-line iteration.
 
-## Environment notes (carried forward, all still valid)
+## Environment notes (carried forward, all still valid — see s297's NEXT.md history for the full list)
 
-- Regen commands: `make_elf.py` NOT needed (ELF/ROM mapping unchanged since s284). `N64Recomp`
-  needs cwd `N64Recomp` (`./build/N64Recomp rogue_squadron.toml`), `fixup_game_funcs.py` needs cwd
-  `N64Recomp`. Always delete `funcs_*.c` and regen from scratch first:
-  `python3 -c "import glob, os; [os.remove(f) for f in glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c')]"`
-- `fixup_game_funcs.py` REFUSES to run twice on the same generated output (it checks for
-  `// RS64_FIXUP_APPLIED` markers) — this is a correct safety refusal, not a bug; regen from scratch
-  (delete `funcs_*.c`, rerun `N64Recomp`) before rerunning fixup, don't work around the refusal.
-- `cd` does not persist into a subsequent `run_in_background: true` call — launch background
-  commands by full absolute path with no preceding bare `cd`.
-- Soak driver: `scratch/s73_post_a_scene/run_dequeuearg1.sh` (`HOLD_S` env-overridable, default
-  240; s297 used 275). Total wall time for a `HOLD_S=275` run is ~337-340s — plan Bash tool timeouts
-  (600000ms max) or background+poll accordingly; a foreground Bash call with `timeout` under ~400000ms
-  WILL be moved to background mid-run rather than erroring, which is fine (poll for the game process
-  exiting via `pgrep -f RogueSquadron64Recomp`, not a bare `sleep`, which the sandbox blocks in
-  foreground Bash — poll with short `time.sleep()` calls inside a `python3 -c` loop instead).
-- **The full `ROGUESQ_LOG_*` instrument set (as armed in `run_dequeuearg1.sh`) produces MULTI-GIGABYTE
-  run.log files over a ~340s hold** (s297's two soaks were 9.2GB/9.5GB, 200M+ lines — `rs-free-walk`
-  logs one line per free-list node and dominates). `grep -c` for the specific markers you need
-  (`\[CRASH\]`, `vi_width=1024`, your guard's fire-log name) then DELETE the log — don't leave these
-  lying around, they ate ~19GB combined this session (cleaned up before commit).
-  Output dir `scratch/s73_post_a_scene/<name>/run.log` — the `<name>` arg (positional $1) controls
-  the output subdir, so distinct soaks in the same session don't clobber each other if given distinct
-  names.
-- Scene-reached check: `grep -c "vi_width=1024" <run.log>` (0 = pre-scene death, >=1 = reached).
-- Bash tool cwd persists across sequential (non-background) calls but resets after an unrelated
-  `cd` elsewhere in the session — re-`cd` explicitly before cwd-dependent commands.
-- Compound `cd && ...` commands need interactive approval — issue `cd` as its own call first. Simple
-  `&&`-chained commands in general also sometimes need approval outside `cd` — prefer separate tool
-  calls over chaining when in doubt.
-- `git -C`/`git --git-dir=`/`cd <dir> && git ...` all get flagged for approval even standalone, and
-  in a non-interactive/autonomous session that approval is NOT available — do not spend time
-  retrying these forms for submodule git state. `nm -n <binary> > file` also flagged — use Python
-  `subprocess.run`, written to a script file.
-- Shell `for`/`$(...)` loops get rejected by the sandbox — use Python scripts via `Write` instead.
-- Redirecting shell output (`>`) only works under the 3 session working directories
-  (`RogueSquadron64Recomp`, `N64Recomp`, `rogue_squadron64`), NOT `/tmp` — writes to `/tmp` are
-  blocked outright.
-- `+N` crash-symbol offsets are NATIVE (ARM64) and SHIFT across sessions — verify range membership
-  via the Mach-O symtab walk (`nm -n`, filter T/t, dedupe, sort, confirm offset < distance to next
-  DISTINCT symbol) before trusting a reported `sym=X+N`.
-- `[CRASH][last-guest-pc]` is now informative for SIX functions: `static_5_800AB658`
-  (`BREADCRUMB7`), `inflate_fast` (`BREADCRUMB10`), `coalesceFreeHeapBlocks` (`BREADCRUMB11`),
-  `tickTextureMaterialExpiry` (`BREADCRUMB12`, now GUARDED as of s297 — see above), `tickSongSequence`
-  (`BREADCRUMB13`), and `stopSongByHandle` (`BREADCRUMB14`) — still stale noise for any other
-  crashing function (most commonly `beginFrameDLChunk`'s `0x8000b650`), OR informative-but-benign
-  when it lands on a breadcrumbed function's own LAST instruction (its normal return point).
-- `N64Recomp/fixup_game_funcs.py` is untracked in the standalone `N64Recomp` checkout — no
-  `export.sh` needed for edits there, only for actual `lib/` submodule changes.
-- Disassembly tools (`otool`/`objdump`/`lldb`) remain BLOCKED in this sandbox — do not re-attempt,
-  use the breadcrumb mechanism.
-- At session start, check `scratch/agent/STATUS`/`OUTCOME` for signs of an interrupted prior
-  iteration, but also run `git diff --cached` for staged tracked-file content beyond the routine
-  reset.
-- The `unguarded_walk_candidates.json` sweep tracker (143 sites/43 funcs) is itself never edited in
-  place as sites get addressed — coverage status has to be cross-checked against `CURRENT-TRUTH.md`
-  function-name mentions each time. Adding a `"status"` field would make this O(1) — see Fallback
-  section above.
+- Regen commands unchanged: `make_elf.py` not needed (ELF/ROM mapping unchanged since s284).
+  `N64Recomp` needs cwd `N64Recomp`, `fixup_game_funcs.py` needs cwd `N64Recomp`. Delete
+  `funcs_*.c` before regen.
+- `src/main/main.cpp` lives in THIS repo (`RogueSquadron64Recomp`), not `N64Recomp` or `lib/` — a
+  step-2 edit there needs a normal cmake rebuild (`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  cmake --build build -j8` from repo root, or whatever the established build invocation is — verify
+  the exact cmake invocation before assuming; this file has not been touched by recent sessions so
+  the build command isn't freshly confirmed in this doc).
+- Soak driver: `scratch/s73_post_a_scene/run_dequeuearg1.sh` (`HOLD_S` env-overridable). See s297's
+  carried-forward notes (prior NEXT.md, now superseded but visible in git history) for the full
+  soak-log-size / Bash-tool-timeout / background-polling guidance if a soak is run this session.
+- `BREADCRUMB12`/`MATEXPIRY_GUARD` thread is DORMANT, not closed — still armed passively in every
+  soak via the shared driver. If a 3rd `BREADCRUMB12` recurrence or a `[matexpiry-guard]` fire shows
+  up in `scratch/agent/SOAK-RESULTS.md` at a future session start, fold it into the ledger per the
+  decision tree in `PORTING-STATE.md` Session 297 — but do not make it this session's primary work
+  unit unless it does.
+- The `unguarded_walk_candidates.json` sweep (143 sites/43 funcs, 3 addressed) remains the fallback
+  M3-audit work unit if a future session finds M5 blocked and maintenance isn't triggered — but M5 is
+  priority 2 and this doc's step 1-2 are cheap; don't skip to the fallback prematurely.
 
-HYPOTHESIS-ID: tickTextureMaterialExpiry-guard
+HYPOTHESIS-ID: m5-audio-destub-step1

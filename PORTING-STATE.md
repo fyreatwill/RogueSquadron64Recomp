@@ -26575,3 +26575,67 @@ exactly, no fallback to the unguarded-walk sweep was needed this session.
 block for funcs_6.c (untracked in the standalone `N64Recomp` checkout, no `export.sh` needed).
 `scratch/s73_post_a_scene/run_dequeuearg1.sh`: +1 line (`ROGUESQ_LOG_MATEXPIRY_GUARD=1`). No `lib/`
 changes this session.
+
+## Session 298 (2026-08-04) — pivots off the `tickTextureMaterialExpiry-guard` thread per the loop's mandatory-pivot rule; writes `docs/M5-AUDIO-PLAN.md`, the M5 audio de-stubbing design doc the USER DIRECTIVE names as priority 2
+
+The loop's rule-8 enforcement blocked a 4th consecutive iteration on `HYPOTHESIS-ID:
+tickTextureMaterialExpiry-guard` (s295-297 all ran it). `scratch/agent/SOAK-RESULTS.md` did not exist
+this session (no queued soaks ran between s297 and this iteration, so no new `BREADCRUMB12`
+recurrence data arrived to react to) and `docs/CURRENT-TRUTH.md` measured 59,909 bytes — under the
+60,000-byte Step-0 maintenance trigger, so this was not a maintenance iteration either. Per the
+2026-08-04 USER DIRECTIVE's priority order (maintenance, then M5 design doc, then M3 audits), with
+maintenance not triggered and no `BREADCRUMB12` recurrence to react to, this session started the M5
+design doc — `docs/M5-AUDIO-PLAN.md` did not exist yet, despite being deferred across s292-s297.
+
+Delegated the survey to 3 parallel read-only agents (no session budget spent reading whole files
+directly): (1) grepped `N64Recomp/fixup_game_funcs.py` + `rogue_squadron.toml` + this repo's
+`ROGUESQ_*` audio env vars; (2) grepped `lib/N64ModernRuntime` for RSP task dispatch, DMEM
+serialization, and SDL audio wiring; (3) grepped `PORTING-STATE.md`/`PROJECT-OVERVIEW.md` for the
+documented audio-adjacent crash history. Synthesized into `docs/M5-AUDIO-PLAN.md`.
+
+**Key findings that correct the goal-stack's framing** (full detail and citations in the new doc):
+1. The stub is a **single function-pointer swap** — `musyx_stub()` registered for `M_AUDTASK` in
+   `src/main/main.cpp`'s `get_rsp_microcode()` dispatch switch (`main.cpp:594-595`), returning
+   `RspExitReason::Broke` with zero ucode instructions executed. `factor5_ucode_b` (the recompiled
+   MusyX ucode) is compiled and linked but never dispatched — dead code, not broken code. Everything
+   else audio-related in `fixup_game_funcs.py` (the gate-byte force-zero, 8 div-by-zero traps, ~15
+   diagnostic loggers, the s147 race fix) is either downstream of this one stub or, in the s147 case,
+   independent of it entirely.
+2. The `dmem[]`-sharing question the M5 goal-stack entry posed as an open design question is **already
+   answered** by the s5 `g_lle_task_mutex`/`rs64_dmem_lock` mechanism — gfx and audio RSP execution
+   already fully serialize through one recursive mutex around the one shared `dmem[0x1000]`. No new
+   synchronization design is needed; only validation that it holds under real audio traffic.
+3. The host audio bridge (`ultramodern::audio_callbacks_t`, `SDL_OpenAudioDevice`/`SDL_QueueAudio` in
+   `main.cpp:622-638`, guest-facing `osAi*` functions in `librecomp/src/ai.cpp`) is **already fully
+   implemented and functional** — confirmed, not assumed. De-stubbing needs zero host-audio-side work.
+4. The crash-history survey found the goal-stack's rationale ("several recurring crash families are
+   plausibly artifacts of the audio-disabled degenerate paths") is weaker than stated: of 4 documented
+   audio-adjacent crash families, only 1 (the s1 boot-scheduler wedge) has audio-stub-as-root-cause
+   **confirmed** by the docs' own text — and that one was fixed by disabling audio *harder* (the
+   gate-byte patch), meaning de-stubbing directly re-exposes a previously-fatal hang unless the ucode
+   now genuinely completes tasks. 2 of 4 (`waitForAnyAudioSlot` SIGSEGV, the post-cutscene stall
+   hypothesis) are plausible-but-never-confirmed. 1 of 4 (the `voice+0x34` DMA race, s147) is confirmed
+   **unrelated** to the disable state.
+5. Separately flagged: `waitForAnyAudioSlot` (`fixup_game_funcs.py:2054-2119`) is a tight spin loop
+   with no timeout, currently benign only because the stub resolves it instantly — real audio timing
+   makes a genuine hang here more likely, worth a defensive bounded-timeout guard before real audio
+   traffic flows.
+
+**Plan landed in the doc**: a 6-step incremental sequence, each its own validation soak — (1) free
+source-read determining whether the guest ever submits a real `M_AUDTASK` while the gate byte reads 0
+(no code/soak); (2) swap the dispatch pointer only, gate still forced off (isolates "does the
+recompiled ucode itself run without crashing" from the gate question); (3) land the
+`waitForAnyAudioSlot` timeout guard as risk reduction; (4) reverse the 3 gate-byte sites one at a
+time, watching specifically for crash family #1's exact historical signature recurring; (5) once
+stable, the actual test of the goal-stack's rationale — soak-compare crash families #3/#4's rates
+against their documented baselines, using the already-built diagnostic env vars for a same-run
+positive control; (6) validate real (non-silent, non-garbage) PCM reaches SDL, not just that hangs
+stopped.
+
+**Rules out**: nothing new — this is a design/survey session, not an experiment. **Shows**: the M5
+de-stubbing surface is much narrower (one dispatch-table entry) and the crash-family payoff case
+weaker/more mixed than the goal-stack's phrasing implied — both corrections are now recorded so the
+next session executes step 1 with accurate expectations rather than re-deriving them.
+
+`docs/M5-AUDIO-PLAN.md`: new file (design doc, ~490 lines). No `lib/` changes this session — pure
+survey + doc.
