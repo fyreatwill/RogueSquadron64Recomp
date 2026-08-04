@@ -23,9 +23,9 @@ Priority order for upcoming iterations, set after the 300-session review:
    `initMusyXEngine`'s site reversed s302, but s306's reachability counter (2 soaks) found
    `initMusyXEngine` is never actually called — s302's validation is retroactively meaningless (see
    Overturned Conclusions), and gate=1 has still never been exercised by any soak. `setDisplayMode`'s
-   site attempted s303, s307, s310, and s311 (each with the prior session's diagnostics live): all 4
-   reproduced an identical deterministic full-boot hang (~39 RSP tasks/`rdpFs`, stuck at VI width 320),
-   re-reverted every session. s310's batched 4-site diagnostic (`ROGUESQ_LOG_AUDIOTICK_TRACE`) found
+   site attempted s303, s307, s310, s311, s312, and s313 (each with the prior session's diagnostics
+   live): all 6 reproduced an identical deterministic full-boot hang (~39 RSP tasks/`rdpFs`, stuck at VI
+   width 320), re-reverted every session. s310's batched 4-site diagnostic (`ROGUESQ_LOG_AUDIOTICK_TRACE`) found
    `viRetraceHandlerThread`'s own loop, the VI-retrace 4-slot callback table, and `musyxSynthFrame`'s own
    entry all keep firing well past the tick-19/20 point where 3 gate-consumer functions
    (`update3DAudioFrame`/`tickAllActiveSongs`/`tickAudioSequencerFrame`) and RSP `M_AUDTASK` submission
@@ -42,9 +42,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    ALWAYS "skip" in this window, and — the bigger finding — `update3DAudioFrame`'s own gate (a single raw
    byte read, independent of the countdown maze) stays constant nonzero through call 39, in direct tension
    with the s307-s311 "3 gate-consumer functions stop at call 19/20" conclusion. Traced the tension to an
-   unwidened flat `n<20` print cap (no modulo resample) in the diagnostic that produced that conclusion —
-   **contested, not yet overturned**; next work unit widens that cap to measure directly. Full narrative:
-   Next-steps item -172 below. `reapplyDisplayMode`'s site remains untouched.
+   unwidened flat `n<20` print cap (no modulo resample) in the diagnostic that produced that conclusion.
+   s313 widened those caps to the resampled `n<40||n%128==0` convention and re-soaked (7th reversal):
+   **CONFIRMED, OVERTURNED (not just contested)** — `update3DAudioFrame` fires all 40/40 times (matching
+   the hard-stop boundary, not 19/20); `tickAllActiveSongs`/`tickAudioSequencerFrame`/
+   `tickAllAudioChannels` stop 3 calls earlier at 37/37 (a real but different, smaller stop point); only
+   RSP `M_AUDTASK` submission (`[audtask-dispatch]`, already resampled since s310) genuinely stops at
+   20/20. See Overturned Conclusions. `setDisplayMode`'s site re-reverted, baseline restored. Full
+   narrative: Next-steps item -173 below. `reapplyDisplayMode`'s site remains untouched.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -217,7 +222,32 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -172 (s312); the next new item takes -173 and is inserted at the top.
+oldest). Current top is -173 (s313); the next new item takes -174 and is inserted at the top.
+
+-173. **(s313) M5 audio de-stubbing: widened-cap soak REFUTES the "3 gate-consumer functions stop at
+    call 19/20" conclusion — see Overturned Conclusions.** Executed s312's work unit: widened the flat
+    `n<20` print cap to `n<40||(n%128)==0` in `_reach_entry_patch`/`_reach_exit_block` (covers
+    `[reach-update3d-entry/exit]`/`[reach-allsongs-entry/exit]`/`[reach-audioseq-exit]`) and
+    `_tick_audio_seq_patch`/`_tick_all_audio_channels_patch` (`[tick-audio-seq]`/`[tick-all-audio-channels]`),
+    regenerated, reversed `setDisplayMode`'s gate site a 7th time, ran one full soak
+    (`run_step313widecap.sh`, `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_INITMUSYX_REACH=1`), read
+    the result, re-reverted the site same session. **Direct measurement, no longer inferred**:
+    `[reach-update3d-entry/exit]` fire all **40/40** times (`n=0..39`), matching `[synth-entry]`/
+    `[musyx-gate1]`/`[audio-gate-raw]`'s own 40/40 counts exactly — `update3DAudioFrame` runs all the way
+    to the hard-stop boundary (RSP task-runner's last dispatch, task #39), **not** stopping at call
+    19/20. `[reach-allsongs-entry/exit]`/`[reach-audioseq-exit]`/`[tick-audio-seq]`/
+    `[tick-all-audio-channels]` (`tickAllActiveSongs`/`tickAudioSequencerFrame`/`tickAllAudioChannels`)
+    stop 3 calls earlier, at **37/37** (`n=0..36`) — a real, smaller, previously-unmeasured stop point,
+    also not 19/20. Only `[audtask-dispatch]` (RSP `M_AUDTASK` submission) genuinely stops at 20/20
+    (`n=0..19`) — that diagnostic already used the resampled convention since s310/s311, so its count was
+    never in question. The "soft stop at 19/20" framing is REFUTED for all 3 gate-consumer functions; it
+    was an artifact of the unwidened flat cap, exactly as s312 suspected. New open question: why does
+    `M_AUDTASK` submission (call 20) diverge from its own 2 upstream ticker functions
+    (`tickAllActiveSongs`/`tickAudioSequencerFrame`, call 37) and from `update3DAudioFrame` (call 40) —
+    3 different stop points on what was believed to be one gated chain. `setDisplayMode`'s site
+    re-reverted to force-zero same session (baseline restored, verified rebuilt); the widened caps kept,
+    armed-but-inert by default (`ROGUESQ_LOG_INITMUSYX_REACH`/`ROGUESQ_LOG_VOICE_TRIGGER_CHAIN`). Full
+    detail: `PORTING-STATE` Session 313.
 
 -172. **(s312) M5 audio de-stubbing: source-read of `musyxSynthFrame` finds `update3DAudioFrame`'s own
     gate is a single stateless byte read (not the countdown maze); a fresh, resampled measurement of that
@@ -507,6 +537,16 @@ conclusions are among the oldest in the file, not the newest.
   stalls, not one shared cause. Believable: both counters hit round, similarly-small numbers (39 and 19)
   in the same log and both are followed by "scheduler churn with no new work," which reads as
   simultaneous unless the actual line numbers and thread-identity sets are diffed. PORTING-STATE 309.
+- **(s307/s310/s311→s313)** "the 3 gate-consumer functions (`update3DAudioFrame`/`tickAllActiveSongs`/
+  `tickAudioSequencerFrame`) and RSP `M_AUDTASK` submission all stop together at call #19/20 (a SOFT
+  stop)" — a widened-cap soak (s313) with a resampled `n<40||n%128==0` print guard (replacing the flat
+  `n<20` cap that produced this conclusion) found `update3DAudioFrame` actually fires all 40/40 times,
+  matching the hard-stop boundary; `tickAllActiveSongs`/`tickAudioSequencerFrame`/`tickAllAudioChannels`
+  stop 3 calls earlier at 37/37; only `M_AUDTASK` submission itself genuinely stops at 20/20. Not one
+  shared stop point, three different ones. Believable: the flat `n<20` cap was landed (s306/s107) before
+  the modulo-resample convention existed (introduced s310/s311 for exactly this ambiguity) and nobody
+  had gone back to retrofit the older diagnostics; a log truncated at exactly 20 lines is indistinguishable
+  from a real stop without a resample. PORTING-STATE 313.
 
 ### Dead ends — labelled as such in the log, do not retry
 

@@ -27656,3 +27656,88 @@ same `n<40||n%128==0` convention) for `[reach-update3d-entry/exit]`/`[reach-alls
 `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN` if not already resampled — check first), re-reverse `setDisplayMode`'s
 site a 7th time, one full 600s soak — directly measures the true call counts past 20 and settles
 whether the "soft stop" is real or a cap artifact.
+
+## Session 313 (2026-08-04) — M5 audio: widened-cap soak REFUTES the "3 gate-consumer functions stop at call 19/20" conclusion (s307/s310/s311) -- OVERTURNED, see CURRENT-TRUTH
+
+Executed s312's NEXT.md work unit exactly: widen the flat `n<20` print caps in the `GATE3_REACH`
+diagnostic family and `tick-audio-seq`/`tick-all-audio-channels` to the resampled `n<40||(n%128)==0`
+convention already proven out for `[musyx-gate1]`/`[audio-gate-raw]`/`[audtask-dispatch]`/the 4
+AUDIOTICK_TRACE tags, then re-run the exact same reversal-plus-soak recipe and read the true call
+counts directly instead of inferring them from where a flat print cap stopped printing.
+
+**Edits (`N64Recomp/fixup_game_funcs.py`, not git-tracked in this repo)**: 4 sites, each `if (X_n < 20)`
+→ `if (X_n < 40 || (X_n % 128) == 0)`:
+- `_reach_entry_patch`/`_reach_exit_block` helpers (~line 7913-7943) — the single shared implementation
+  behind all 5 `GATE3_REACH` call sites (`[reach-init-musyx]`, `[reach-update3d-entry/exit]`,
+  `[reach-allsongs-entry/exit]`, `[reach-audioseq-exit]`), so one edit widened all 5 at once.
+- `_tick_audio_seq_patch` (~line 2006, `[tick-audio-seq]`, s107, `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN`).
+- `_tick_all_audio_channels_patch` (~line 2035, `[tick-all-audio-channels]`, same flag) — widened
+  preemptively per the batch-instrumentation rule, wasn't yet cited in the active hypothesis but cheap
+  to include in the same regen.
+
+Regenerated (`RecompiledFuncs/*.c` cleared, `N64Recomp rogue_squadron.toml` re-run — 45 files, 0 errors
+— then `fixup_game_funcs.py`; report confirmed all 5 `GATE3_REACH` sites + `tickAudioSequencerFrame`
+entry/exit + `tickAllAudioChannels` entry each patched exactly x1, "audio gate patched x2" confirming
+both `setDisplayMode`/`reapplyDisplayMode` force-zero sites were at baseline post-regen). Hand-reversed
+`setDisplayMode`'s site a 7th time directly in `RecompiledFuncs/funcs_23.c` (`MEM_B(0XF50, ctx->r1) = 0`
+→ `= ctx->r2`), rebuilt clean, ran one full soak (new recipe `scratch/s73_post_a_scene/run_step313widecap.sh`,
+copied from s312's `run_step312rawgate.sh`, same env-var set — `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` and
+`ROGUESQ_LOG_INITMUSYX_REACH=1` both armed). The soak reproduced the same deterministic full-boot hang
+(`run_mission_keys.sh`'s 600s phase-timeout exit 5/INCONCLUSIVE — expected, not a tooling failure; game
+process confirmed dead via `pgrep` before and after), log captured: `step313widecap/run.log`, 744723
+bytes.
+
+**Result — direct, decisive, no longer inferred**:
+
+| tag | call count this soak |
+|---|---|
+| `[synth-entry]` (musyxSynthFrame itself) | 40/40 (n=0-39) |
+| `[musyx-gate1]` (taken_skip=1 all 40) | 40/40 (n=0-39) |
+| `[audio-gate-raw]` (byte@0x800A0F50) | 40/40 (n=0-39) |
+| `[reach-update3d-entry]` / `[reach-update3d-exit]` | **40/40 (n=0-39)** |
+| `[reach-allsongs-entry]` / `[reach-allsongs-exit]` | **37/37 (n=0-36)** |
+| `[reach-audioseq-exit]` | **37/37 (n=0-36)** |
+| `[tick-audio-seq]` (tickAudioSequencerFrame) | **37/37 (n=0-36)** |
+| `[tick-all-audio-channels]` | **37/37 (n=0-36)** |
+| `[audtask-dispatch]` (RSP M_AUDTASK submission) | 20/20 (n=0-19, already resampled since s310) |
+| `[runner]` last task exit | task #39 (40 tasks total, the established hard-stop boundary) |
+
+`update3DAudioFrame` (`[reach-update3d-*]`) fires all 40 times, in exact lockstep with `musyxSynthFrame`'s
+own entry, `[musyx-gate1]`, and `[audio-gate-raw]` — it runs all the way to the hard-stop boundary, **not**
+stopping at call 19/20 as s307/s310/s311 concluded. `tickAllActiveSongs`/`tickAudioSequencerFrame`/
+`tickAllAudioChannels` stop 3 calls earlier, at 37 — a real, previously-unmeasured stop point, but also not
+19/20. Only RSP `M_AUDTASK` submission itself (`[audtask-dispatch]`) genuinely stops at 20 — that
+diagnostic's count was never in question (already resampled since s310/s311).
+
+**This overturns the s307/s310/s311 "3 gate-consumer functions stop together at call 19/20" conclusion.**
+It was an artifact of the flat, unwidened `n<20` print cap in `GATE3_REACH`/`[tick-audio-seq]`
+(landed s306/s107, before the modulo-resample convention existed) — exactly the mechanism s312 flagged as
+contested but hadn't yet directly measured. Moved to CURRENT-TRUTH's Overturned Conclusions with why it
+was believable (a log truncated at exactly 20 lines reads identically to a genuine stop without a
+resampled cap to distinguish them).
+
+**New open question, replacing the old one**: why does RSP `M_AUDTASK` submission (stops at call 20)
+diverge from BOTH of its own two upstream ticker functions (`tickAllActiveSongs`/`tickAudioSequencerFrame`,
+stop at call 37) AND from `update3DAudioFrame` (runs to call 40)? Three different stop points on what was
+believed to be one gated chain, not one shared mechanism. The `M_AUDTASK`-submission stop at 20 is now the
+narrowest, most information-dense unknown: it happens roughly halfway between the other two boundaries (37
+and 40), inside or downstream of `tickAudioSequencerFrame`/`tickAllAudioChannels`'s own bodies (which keep
+being entered/exited normally 17 more times after `M_AUDTASK` submission stops) — the actual submission
+call/condition inside those functions (or a 3rd function between them and the RSP task queue) has not yet
+been instrumented directly.
+
+**Reverted same session**: `setDisplayMode`'s site re-reverted to force-zero in
+`RecompiledFuncs/funcs_23.c` (7th reversal cycle), rebuilt clean (0 errors), baseline restored. Widened
+caps kept in `fixup_game_funcs.py`, armed-but-inert by default (env-gated,
+`ROGUESQ_LOG_INITMUSYX_REACH`/`ROGUESQ_LOG_VOICE_TRIGGER_CHAIN`). No `lib/` changes this session (all
+patching lives in the `N64Recomp` checkout's `fixup_game_funcs.py`, not git-tracked in this repo); no
+`submodule-patches/export.sh` needed.
+
+Next work unit (NEXT.md): instrument the actual `M_AUDTASK` submission call/condition inside
+`tickAudioSequencerFrame`/`tickAllAudioChannels` (or whatever sits between them and RSP queue submission)
+directly, to find why it stops at call 20 while its own callers keep running to call 37 — narrows the
+search from "which of 3 functions" to "which specific line inside 2 already-confirmed-still-running
+functions."
+
+`docs/CURRENT-TRUTH.md` is now 60051 bytes (>60000) — the next iteration's Step 0 will trigger a
+MAINTENANCE pass; flagged in NEXT.md.
