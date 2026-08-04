@@ -663,7 +663,54 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s290)
+## Next steps, in order of expected value (s291)
+
+-132. **(s291) Lands `BREADCRUMB11` scoped to `coalesceFreeHeapBlocks`, closing a 21-session-old
+    unaddressed backlog item (`coalesceFreeHeapBlocks+2108`, first flagged s270/item -111 as a
+    not-yet-investigated candidate, never picked up while `BREADCRUMB5`-`BREADCRUMB9` all went to
+    other functions) — no guard landed (would be unvalidatable blind, same reasoning as
+    `inflate_fast`/`BREADCRUMB10`).** Full detail: `PORTING-STATE` Session 291.
+
+    Per NEXT.md's instruction to read the backlog below item -124 fresh (unreviewed since before
+    s283), an Explore-agent scan found `coalesceFreeHeapBlocks+2108` as the oldest genuinely
+    unaddressed thread: flagged s270, still recurring uninvestigated in soak logs through s281/s282,
+    not in the Overturned-conclusions or Dead-ends sections. Confirmed via `nm -n` symtab walk (native
+    ARM64 binary) that the reported `+2108` offset falls inside `coalesceFreeHeapBlocks`'s ~4768-byte
+    native symbol range (`0x10004d0c0`-`0x10004e360`, next distinct symbol `_do_lwl`), not a
+    neighboring symbol — the offset is real, not stale. Source read
+    (`N64Recomp/RecompiledFuncs/funcs_0.c:4332-4804`, a heap free-list coalescing routine) found no
+    recompiler translation defect — fits the uniform every-`MEM_*`-access-unguarded baseline every
+    `RECOMP_FUNC` shares, same as `inflate_fast`'s s290 finding. Ranked unguarded-pointer candidates
+    if/when this recurs, most-directly-caller-controlled first: `ctx->r18` (raw caller `$a2`,
+    free-list walk start, first deref `funcs_0.c:4598`) > `ctx->r16` (raw caller `$a3`, new-block
+    header fields, `funcs_0.c:4626-4632`) > `ctx->r19` (raw caller `$a1`, array-base walk pointer,
+    `funcs_0.c:4647`) > the global free-list-head walk chain (`funcs_0.c:4338` rooted, walked via
+    internal next-offset arithmetic, lowest rank — derives from validated global state, not raw
+    input).
+
+    **Instrument landed**: `BREADCRUMB11` (`N64Recomp/fixup_game_funcs.py`, same
+    `g_rs64_last_guest_pc` mechanism as `BREADCRUMB`-`BREADCRUMB10`), 201 sites patched, scoped to
+    `coalesceFreeHeapBlocks`'s body only. Disassembly tools (otool/objdump/lldb) remain blocked in
+    this sandbox, so the native offset can't be correlated to an exact instruction directly — same
+    constraint that motivated the breadcrumb approach originally (item -106, s265). This is a
+    wait-for-recurrence instrument, not a closed item.
+
+    **Regen + build + 2 validation soaks** (iron rule 4): clean regen/build, no new warnings. Soak 1:
+    scene reached (45.6s), died at hold-iter 7 (~52s in) to `rs_free ← rebuildActiveDisplayObjectList`
+    — the long-tracked "shared-heap-corruption family" crash (first seen s164/s167, catalogued through
+    s183+), **not** `coalesceFreeHeapBlocks`, **not** a regression from this session's change (confirmed
+    via `[CRASH][pc-symbol]` naming `rebuildActiveDisplayObjectList+660` directly, an already-catalogued
+    class unrelated to this session's edit). Soak 2: scene reached (45.4s), held the full 275s hold
+    window, `CRASH: 0` — clean. Two independent lines of evidence agree the build is stable and
+    `BREADCRUMB11` introduced no new instability.
+
+    **Next work unit**: same as `inflate_fast` — do not guess a guard site blind. If
+    `coalesceFreeHeapBlocks` recurs in any future soak, `[CRASH][last-guest-pc]` will for the first
+    time point at the actual faulting instruction; cross-reference against the 4 ranked candidates
+    above. If several sessions pass with no recurrence, treat like `waitForAnyAudioSlot`'s low-rate
+    periods — not worth further dedicated investigation — and pull the next unit from
+    `tickTextureMaterialExpiry` (same s270 backlog, still fully unaddressed, `funcs_6.c:12135-12333`)
+    or continue reading the pre-s283 backlog below item -124.
 
 -131. **(s290) Full source read of `inflate_fast` finds no unique translation bug — it's a uniformly
     unguarded function like every other RECOMP_FUNC, no recompiler-introduced defect. RECOGNIZES the
@@ -1464,10 +1511,11 @@ cost three sessions before the recursive mutex.
     **New, not-yet-catalogued crash sites surfaced incidentally this
     session** (neither breadcrumbed nor localized beyond nearest-symbol —
     follow-up candidates, not yet investigated): `coalesceFreeHeapBlocks`
-    (heap-related, plausibly same broader family as `heapFreeListDequeue`),
-    `tickTextureMaterialExpiry` (unrelated subsystem). `fscache_insert_and_retain`
-    is a macOS system-library crash, not guest code — deprioritize, likely
-    unrelated to this investigation.
+    (heap-related, plausibly same broader family as `heapFreeListDequeue`) —
+    **addressed s291, item -132, `BREADCRUMB11` landed** —,
+    `tickTextureMaterialExpiry` (unrelated subsystem, still unaddressed).
+    `fscache_insert_and_retain` is a macOS system-library crash, not guest
+    code — deprioritize, likely unrelated to this investigation.
 
     **Next work unit**: re-soak with `run_dequeuearg1.sh` (`BREADCRUMB4` is
     armed and unconsumed) — either it catches `processSceneNode+1184` again

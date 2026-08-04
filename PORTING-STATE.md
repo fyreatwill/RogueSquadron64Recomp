@@ -26198,3 +26198,92 @@ routine soaking pass with no recurrence, treat this the same way `waitForAnyAudi
 its low-rate periods: not worth further dedicated investigation, and pull the next work unit from
 `docs/CURRENT-TRUTH.md`'s "Next steps" list below item -124 (the pre-`-0x25A4`-lineage backlog,
 unreviewed this session — read it fresh rather than assuming its ordering is still current).
+
+## Session 291 (2026-08-04) — reads the pre-s283 backlog per s290's own plan, finds `coalesceFreeHeapBlocks+2108` as a 21-session-old unaddressed thread, source-reads it, and lands `BREADCRUMB11` (no guard, wait-for-recurrence instrument, same reasoning as `inflate_fast`/`BREADCRUMB10`)
+
+Read `docs/CURRENT-TRUTH.md` (item -131) and `scratch/agent/NEXT.md` (s290's plan) first, per session
+rules. `scratch/agent/STATUS`=`WORKING`/`OUTCOME` deleted at session start, `lib/N64ModernRuntime`/
+`lib/rt64` showing `-dirty` — the same long-standing baseline noted by 7+ prior sessions, not
+re-investigated per NEXT.md's own explicit instruction. `CURRENT-TRUTH.md` is 543KB (7721 lines),
+well over the ~35KB session-rules target — noted, not addressed this session (no leftover budget; the
+picked work unit was not a quick null).
+
+**What ran**: NEXT.md's steps 1-3 — since items -131 through -125 (the `-0x25A4`/`waitForAnyAudioSlot`/
+`inflate_fast` trilogy) were all closed or correctly instrumented-and-waiting, this session's job was
+to read the "Next steps" backlog below item -124 fresh (unreviewed since before s283) and pick one
+work unit. Delegated the scan to an Explore agent rather than reading thousands of lines directly:
+it walked downward from item -124 (line 913) through progressively older numbered entries, checking
+each candidate's stated "next target" against whether it was actually picked up by the following
+entry, and cross-checked candidates against the Overturned-conclusions (~7339) and Dead-ends (~7615)
+sections.
+
+**Finding**: `coalesceFreeHeapBlocks+2108` — first flagged as a "not-yet-catalogued crash site,
+follow-up candidate, not yet investigated" at s270 (item -111, `CURRENT-TRUTH.md:1464-1481`, alongside
+`tickTextureMaterialExpiry`) — was never picked up. `BREADCRUMB5` through `BREADCRUMB9` (landed s272,
+s273, s274, s275, s276) all went to *other* functions (`reserveAndEmitDLEntry`,
+`buildPositionAndCallTransformHelper`, `static_5_800AB658`, `emitAllocatedDLCommand`,
+`tickWrappingTimerAccumulatorList`), while `coalesceFreeHeapBlocks+2108` kept recurring
+uninvestigated in soak logs at s281 (`CURRENT-TRUTH.md:1001`) and s282 (`:972`) — still open 21
+sessions after first being flagged. Not present in Overturned-conclusions or Dead-ends — a genuinely
+live, unaddressed thread, not a stale one.
+
+**Range-membership verification**: NEXT.md's carried-forward caveat ("+N crash-symbol offsets are
+NATIVE ARM64 and SHIFT across sessions") required confirming the reported `+2108` still falls inside
+this function before trusting it. `nm -n build/RogueSquadron64Recomp` (via Python `subprocess.run`,
+written to a script file per the multi-line-`python3 -c` restriction) found `_coalesceFreeHeapBlocks`
+at `0x10004d0c0`, next distinct symbol `_do_lwl` at `0x10004e360` — a 4768-byte (0x12a0) native range,
+`2108 < 4768`, confirmed within range. (The guest MIPS function itself is only ~692 bytes per its
+embedded instruction-address comments, `0x800022F8`-`0x8000255C` — the 4768-byte native figure is
+compiled-ARM64 expansion, not a discrepancy; MEM_* macro calls and branch-delay-slot handling reliably
+inflate translated code size well beyond the original MIPS instruction count.)
+
+**Source-read finding (no positive-find, matches `inflate_fast`'s s290 pattern)**: delegated a full
+source read of `coalesceFreeHeapBlocks` (`N64Recomp/RecompiledFuncs/funcs_0.c:4332-4804`, a heap
+free-list coalescing routine — merges adjacent free blocks) to an Explore agent. No recompiler
+translation defect found — every `MEM_*` access is unguarded, the uniform baseline every `RECOMP_FUNC`
+shares before a guard is added, branch-likely (`bnel`) delay-slot handling via the `skip_0`/`skip_1`
+goto pattern is correct. Ranked unguarded-pointer candidates for if/when this recurs, most-directly-
+caller-controlled first: `ctx->r18` (raw caller `$a2`, free-list walk start, first deref
+`funcs_0.c:4598`) > `ctx->r16` (raw caller `$a3`, new-block header fields, `funcs_0.c:4626-4632`) >
+`ctx->r19` (raw caller `$a1`, array-base walk pointer, `funcs_0.c:4647`) > the global free-list-head
+walk chain (`funcs_0.c:4338` rooted, walked via internal next-offset arithmetic — lowest rank, derives
+from validated global state rather than raw input).
+
+**Instrument landed**: `BREADCRUMB11`, `N64Recomp/fixup_game_funcs.py`, same established
+per-instruction `g_rs64_last_guest_pc` write mechanism as `BREADCRUMB`-`BREADCRUMB10`, scoped to
+`coalesceFreeHeapBlocks`'s body only (201 comment-line sites patched, confirmed via the fixup script's
+own report line). No guard landed — disassembly tools (otool/objdump/lldb) remain blocked in this
+sandbox (confirmed s194/item -43, still true), so the native `+2108` offset cannot be correlated to an
+exact instruction directly; guessing a guard site without knowing which pointer faults would not be
+validatable (this investigation's own rule: no positive control possible for a rare, not-yet-localized
+crash). The breadcrumb exists purely to localize the *next* occurrence, exactly the same reasoning and
+mechanism as `inflate_fast`/`BREADCRUMB10` (s290).
+
+**Regen + build + validation (iron rule 4, 2 independent soaks)**: full pipeline (delete `funcs_*.c` →
+`N64Recomp` → `fixup_game_funcs.py` → `cmake --build`, `DEVELOPER_DIR` set for Metal), clean build
+(only pre-existing, unrelated `DDIV`/`-Wpointer-sign` warnings in `funcs_8.c`, no new warnings from
+this change). Soak 1 (`run_dequeuearg1.sh`, 240s hold): scene reached (`vi_width=1024` at 45.6s), died
+at hold-iter 7 (~52s in) — but to `rs_free ← rebuildActiveDisplayObjectList`
+(`[CRASH][pc-symbol] rebuildActiveDisplayObjectList+660`), the long-tracked "shared-heap-corruption
+family" crash first seen s164/s167 and catalogued through s183+, si_addr in the large-garbage-offset
+family (`0x37f240014`), not the near-exact-`0x80000000` family `coalesceFreeHeapBlocks` is being
+watched for. Confirmed unrelated to this session's change, not a regression. Soak 2: scene reached
+(45.4s), held the full 275s hold window, `CRASH: 0` — clean. Two independent soaks agree: the build is
+stable and `BREADCRUMB11` introduced no new instability. Neither soak happened to hit
+`coalesceFreeHeapBlocks` itself (expected — this specific crash has fired only once ever, at s270,
+same low base rate as `inflate_fast`'s single s272 observation).
+
+**Housekeeping**: no `lib/` edits this session (the fixup-script edit is in the standalone `N64Recomp`
+checkout, confirmed untracked there — no `export.sh` needed, matching s290's precedent).
+`hangarInitialize`, `playerSnowSpeederInit`, `waitForAnyAudioSlot`, and `inflate_fast`/`BREADCRUMB10`
+lineages remain untouched and correctly left alone this session, per NEXT.md's explicit instruction.
+`CURRENT-TRUTH.md` remains oversized — not addressed, no leftover budget.
+
+**Next steps**: no forced action — `BREADCRUMB11` is a wait-for-recurrence instrument, not a fix.
+Continue normal soak-testing cadence; if `coalesceFreeHeapBlocks` crashes again, `[CRASH][last-guest-pc]`
+plus a register dump at that PC will identify the zero-valued pointer directly (cross-reference against
+the 4 ranked candidates above), and a standard range-check guard can be landed and validated the normal
+way. If several more sessions pass with no recurrence, treat it like `waitForAnyAudioSlot`'s low-rate
+periods — not worth further dedicated investigation — and move to `tickTextureMaterialExpiry` (the
+other s270-flagged, still fully unaddressed candidate, `funcs_6.c:12135-12333`) or continue reading the
+pre-s283 backlog below the new item -124 pointer.
