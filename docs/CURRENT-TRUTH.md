@@ -23,17 +23,19 @@ Priority order for upcoming iterations, set after the 300-session review:
    `initMusyXEngine`'s site reversed s302, but s306's reachability counter (2 soaks) found
    `initMusyXEngine` is never actually called — s302's validation is retroactively meaningless (see
    Overturned Conclusions), and gate=1 has still never been exercised by any soak. `setDisplayMode`'s
-   site attempted s303 and again s307 (with s306's gate-consumer tags live): both reproduced an
-   identical deterministic full-boot hang (39 RSP tasks, stuck at VI width 320), re-reverted both
-   sessions. s307 localized the hang away from the 3 gate-consumer functions themselves (all 3 complete
-   20 clean iterations) but its "lockstep"/"shared upstream resource" framing was **overturned s309**
-   (see Overturned Conclusions): source-reading `main.cpp` found the audio-tick counter and the RSP-task
-   counter are on entirely separate code paths, and re-reading the same log line-by-line shows they stop
-   at different points — audio ticks stop at tick #19, RSP tasks keep dispatching another 18 tasks (with
-   the scheduler provably still healthy throughout) before a *separate*, later full-scheduler wedge hits
-   at task #39. Next work unit: identify which scheduler-visible thread drives the audio tick and whether
-   it's still being scheduled-but-silent after tick #19, or stops being queued outright.
-   `reapplyDisplayMode`'s site remains untouched. Full narrative: Next-steps items -169..-161 below.
+   site attempted s303, s307, and again s310 (each with the prior session's diagnostics live): all 3
+   reproduced an identical deterministic full-boot hang (~39 RSP tasks/`rdpFs`, stuck at VI width 320),
+   re-reverted every session. s310's batched 4-site diagnostic (`ROGUESQ_LOG_AUDIOTICK_TRACE`)
+   **REFUTES H1** (the audio-driving thread stops being woken): `viRetraceHandlerThread`'s own loop,
+   the VI-retrace 4-slot callback table (which holds `musyxSynthFrame`'s address continuously from VI
+   tick ~3 onward), and `musyxSynthFrame`'s own entry all keep firing for 40+ iterations, well past the
+   tick-19/20 point where the audio-tick counters (`[audtask-dispatch]`/`[musyx-gate1]`/`[reach-*]`) stop
+   producing output. Also refutes H4 (a full unreaped audio-task queue) — no `M_AUDTASK`-specific
+   bounded queue exists anywhere in the runtime (confirmed by source-read, `sp.cpp`/`mesgqueue.cpp`/
+   `events.cpp`). The freeze is narrowed to something internal to `musyxSynthFrame` or a callee on its
+   "run" branch, between confirmed-reached entry and the confirmed-stopped RSP task submission —
+   H2/H3 territory. Full narrative: Overturned Conclusions and Next-steps item -170 below.
+   `reapplyDisplayMode`'s site remains untouched. Full narrative: Next-steps items -170..-161 below.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -206,7 +208,27 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -169 (s309); the next new item takes -170 and is inserted at the top.
+oldest). Current top is -170 (s310); the next new item takes -171 and is inserted at the top.
+
+-170. **(s310) M5 audio de-stubbing: batched diagnostic REFUTES H1 and H4, localizes the tick-19 stall
+    to inside `musyxSynthFrame`/a callee.** Source-read found the real invocation mechanism a literal-text
+    grep missed: `viRetraceHandlerThread` (`funcs_4.c:29441`) drives `musyxSynthFrame` via an INDIRECT
+    call — a 4-slot VI-retrace callback table walk (`funcs_4.c:29975-30007`, base `0x8011A8A4`), not a
+    direct textual call; `musyxSynthFrame` separately self-registers into that table via a one-time call
+    through a DMEM-mixer callback pointer at `0x801499D4` (installed by `initN64RspMixer`). Landed a
+    4-site diagnostic (`ROGUESQ_LOG_AUDIOTICK_TRACE`: `[vi-cb-loop]`, `[vi-cb-slot]`, `[synth-entry]`,
+    `[synth-rearm-ptr]`) plus a 4th reversal of `setDisplayMode`'s gate site to reproduce the freeze in
+    one soak. Result: the freeze reproduced identically (VI stuck at 320, `rdpFs` pinned at 39) but all
+    4 new diagnostics show `viRetraceHandlerThread`'s loop, the callback-table slot holding
+    `musyxSynthFrame`'s address, and `musyxSynthFrame`'s own entry ALL keep firing 40+ times, well past
+    the tick-19/20 point where the audio-tick counters stop — **refuting H1** (the driving thread/chain
+    stops being invoked) at the outer level. Combined with an independent source-read finding no
+    `M_AUDTASK`-specific bounded queue exists anywhere in the runtime, **H4 is also refuted**. The freeze
+    is narrowed to something inside `musyxSynthFrame` (or a callee it reaches on the "run" branch) that
+    changes starting at tick ~20 — H2/H3 territory; the existing `[musyx-gate1]` countdown/period print
+    was uninformative (constant across its own 20-sample cap, which can't show a change at tick 20).
+    `setDisplayMode`'s site re-reverted to force-zero same session (baseline restored, verified rebuilt);
+    the 4 new diagnostics kept, armed-but-inert by default. Full detail: `PORTING-STATE` Session 310.
 
 -169. **(s309) M5 audio de-stubbing: source-read overturns s307's "lockstep" claim — see Overturned
     Conclusions.** `main.cpp` source-confirms the `[runner]` (RSP-task) and `[audtask-dispatch]`

@@ -27380,3 +27380,91 @@ unit of its own).
 `docs/CURRENT-TRUTH.md`: s307's "lockstep" claim moved to Overturned Conclusions with why it was
 believable; USER DIRECTIVE item 2 and Next-steps item -168..-160 updated to the corrected two-stall
 framing.
+
+## Session 310 (2026-08-04) — M5 audio: batched diagnostic REFUTES H1 (audio-driving thread stops being woken); localizes the tick-19 stall to inside musyxSynthFrame/a callee, not the invocation chain
+
+Step 0 check: `wc -c docs/CURRENT-TRUTH.md` = 48,651, under the 60,000-byte trigger — not a maintenance
+session. Ran the Step 1-3 work unit NEXT.md laid out: a source-read to find the real musyxSynthFrame
+invocation mechanism, a batched 4-site diagnostic, and one soak.
+
+**Source-read (before building anything).** An Explore agent's grep for a literal `musyxSynthFrame(rdram`
+call found none anywhere in `RecompiledFuncs/*.c` — appearing to confirm NEXT.md's H1/H2 framing was
+built on a bad assumption (that `viRetraceHandlerThread` calls `musyxSynthFrame` directly). A follow-up
+grep for `LOOKUP_FUNC` calls inside `viRetraceHandlerThread`'s loop body (`funcs_4.c:29441-30012`) found
+one, at `funcs_4.c:29993` — an **indirect** call the literal-text grep couldn't see. It's a 4-slot
+VI-retrace callback table walk (base `ctx->r16`, computed `0x8012<<16 + -0x575C = 0x8011A8A4`,
+`funcs_4.c:29975-30007`): each of 4 slots is loaded and, if non-null, invoked via `jalr`. This reconciles
+with CURRENT-TRUTH item -15's s101 finding ("`musyxSynthFrame`, a per-VI-retrace audio tick, via
+`viRetraceHandlerThread`") that the s309 literal-grep-only check would have overturned incorrectly.
+Separately, `musyxSynthFrame` itself (`funcs_24.c:3146`) reads a function pointer from `0x801499D4` (one
+of the "DMEM-mixer callback function pointers" `initN64RspMixer` installs, per
+`symbol_files/main_overlay.txt:245`) and calls it, passing its own address (`0x8009123C`) as an argument
+(`funcs_24.c:4493-4508`) — address arithmetic (`0x800919D0` falls between `musyxSynthFrame`'s start
+`0x8009123C` and `initN64RspMixer`'s start `0x8009189C`) confirms this is still inside `musyxSynthFrame`,
+despite an earlier Explore-agent misreading of the function's end boundary.
+
+**The batched diagnostic** (`fixup_game_funcs.py`, one new env var `ROGUESQ_LOG_AUDIOTICK_TRACE`, 4 sites,
+sampled `n<40||n%128==0` or `n<160||n%512==0` so silence past the cap is never ambiguous within that
+window): `[vi-cb-loop]` at `viRetraceHandlerThread`'s loop-top label (before the blocking `osRecvMesg`);
+`[vi-cb-slot]` at each of the 4 callback-table slot reads (base + pointer value); `[synth-entry]` at
+`musyxSynthFrame`'s own entry; `[synth-rearm-ptr]` at the DMEM-mixer callback-pointer read. Combined with
+a 4th reversal of `setDisplayMode`'s gate-byte site (`0x8008EB40`, matching s303/s307's prior 2 attempts)
+to reproduce the tick-19 freeze in the same soak.
+
+**Result — the freeze reproduced a 4th time, identically** (VI stuck at width 320, `rdpFs` pinned at 39,
+600s phase timeout, `PROBE_KEYS_FROM_PHASE` never reached VI 1024). Against that freeze, all 4 new
+diagnostics fired cleanly (positive control: each counter incremented and printed, proving the instrument
+works) and painted a clear, discriminating picture:
+- `[vi-cb-loop]`: 40/40 possible prints (0-39), i.e. `viRetraceHandlerThread`'s own loop-top keeps being
+  reached for at least 40 iterations — well past the point (tick 19-20) where `[audtask-dispatch]`/
+  `[musyx-gate1]` stop producing output.
+- `[vi-cb-slot]`: slot `0x8011A8A8` reads `0x00000000` for VI-retrace iterations 1-2, then
+  `0x8009123C` (`musyxSynthFrame`'s own address) continuously from iteration 3 through at least iteration
+  11 (last printed sample, `n=44` of 4-per-tick) — the callback-table slot holding `musyxSynthFrame`
+  stays populated and keeps being `jalr`'d every single VI retrace, no interruption observed.
+- `[synth-entry]`: 40/40 possible prints — `musyxSynthFrame`'s own entry is reliably re-invoked at least
+  40 times, i.e. it is **not** the invocation chain that stops.
+- `[synth-rearm-ptr]`: fired exactly **once**, in the run's early lines — read together with
+  `[vi-cb-slot]`'s slot-population timing (the slot goes from 0 to `musyxSynthFrame`'s address between VI
+  ticks 2 and 3), this is best explained as a **one-time self-registration** into the VI-retrace callback
+  table (call once, register self, thereafter the table drives all subsequent ticks) rather than a
+  per-tick "self-re-arm" — resolves an open question from this session's own source-read, not a bug
+  signal.
+
+**This REFUTES H1** (NEXT.md's hypothesis that the audio-driving thread stops being woken, or that its
+registration is dropped from the scheduler/callback table) at the outer-invocation level, definitively:
+`musyxSynthFrame` is called on every VI retrace, indefinitely, through and past the tick-19/20 freeze
+point. Combined with the earlier Explore-agent's finding that no `M_AUDTASK`-specific bounded queue/ring
+exists anywhere in `sp.cpp`/`mesgqueue.cpp`/`events.cpp` (only an unbounded `moodycamel::
+BlockingConcurrentQueue`), **H4 (full unreaped queue) is also refuted** — there's no fixed-depth
+structure to fill. The freeze is therefore internal to `musyxSynthFrame` or a callee reached on its "run"
+branch, between the entry point (confirmed still reached) and the eventual RSP `M_AUDTASK` submission
+(confirmed, via `[audtask-dispatch]`'s own design — an unconditional counter with `n%256` resampling, so
+its silence past `n=19` is not a print-budget artifact — to have genuinely stopped) — this is H2/H3
+territory. `[musyx-gate1]`'s existing countdown/period print (`ROGUESQ_LOG_VOICE_TRIGGER_CHAIN`, already
+armed, no new build needed) showed `countdown=0, period=16777216` unchanged across all 20 of its own
+capped samples (ticks 0-19) — uninformative for this question (the gate trivially always evaluates true
+in the observed window) and, being capped at `n<20`, cannot show whether it changes starting at tick 20,
+which is now the key open question.
+
+**Strengthens, does not overturn, s309's two-stall framing**: `[vi-cb-loop]`/`[vi-cb-slot]`/
+`[synth-entry]` all hit their own unsampled cap (`n<40`) at n=39, coincident with the graphics-task/`fs`
+wedge point (`fs=39` in this run's tail, matching s307/s309's task #39) — plausibly meaning these threads
+too eventually succumb to problem (B)'s later full-scheduler wedge, just after continuing healthily
+through problem (A)'s tick-19 stall. Not confirmed (the caps make n=40-127 ambiguous), but consistent.
+
+**Reverted same session**: `setDisplayMode`'s gate-byte site is force-zeroed again (baseline restored,
+`fixup_game_funcs.py`'s "audio gate patched x2" confirms both sites), rebuilt, verified — the crash-free
+baseline is intact. The 4 new diagnostics are **kept**, armed-but-inert by default
+(`ROGUESQ_LOG_AUDIOTICK_TRACE` unset), matching the established practice for `[musyx-gate1]`/`[reach-*]`
+from s300/s306.
+
+**No `lib/` changes this session** — all patching was in `N64Recomp/fixup_game_funcs.py` (not
+git-tracked in that checkout) and the game rebuilt cleanly from it; no `submodule-patches/export.sh`
+needed.
+
+Next work unit (NEXT.md): narrow the H2/H3 branch inside `musyxSynthFrame` that changes starting at tick
+~20 — raise `[musyx-gate1]`'s cap (or add a new sampled instrument at the same site) to see whether the
+countdown/period values ever change past tick 19, and/or trace the actual `M_AUDTASK`-submission call
+site (inside `tickAudioSequencerFrame`/`tickMusyXIfActive` or deeper) with its own tick-scoped counter to
+find exactly which internal branch diverges.

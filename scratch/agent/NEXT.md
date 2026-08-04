@@ -1,129 +1,115 @@
-# NEXT work unit — identify which scheduler thread drives the audio tick, and whether it's silent-but-scheduled or dropped
+# NEXT work unit — find the internal musyxSynthFrame branch that changes at tick ~20
 
-(Written s309. See docs/CURRENT-TRUTH.md item -169 for the summary and `PORTING-STATE` Session 309 for
+(Written s310. See docs/CURRENT-TRUTH.md item -170 for the summary and `PORTING-STATE` Session 310 for
 the full write-up.)
 
-## Context — s309 overturned s307's "lockstep" framing
+## Context — s310 refuted H1 and H4, narrowed the freeze to inside musyxSynthFrame
 
-s307 claimed the RSP-task freeze (stuck at task #39) and the audio-tick freeze (stuck at tick #19) were
-the same event, driven by one shared upstream resource. s309 (pure source-read, no soak) found this is
-**wrong**: `src/main/main.cpp:485`'s `[runner]` print lives inside `factor5_gfx_runner`, which
-`get_rsp_microcode` (line 581) returns **only** for `M_GFXTASK`. `M_AUDTASK` dispatch is a fully separate
-branch of that switch (lines 594-626) with its own counter, `[audtask-dispatch]` (line 620) — no shared
-runner between the two task types.
+s309 (pure source-read) found the RSP-task freeze (task #39) and the audio-tick freeze (tick #19) are two
+separate, sequential stalls, not one shared event. s310 built a batched 4-site diagnostic
+(`ROGUESQ_LOG_AUDIOTICK_TRACE`) and ran ONE soak (setDisplayMode's gate site reversed a 4th time to
+reproduce the freeze, same recipe as s303/s307). Result — a clean, discriminating, positive-controlled
+finding:
 
-Re-reading s307's saved log (`scratch/s73_post_a_scene/step307reach/run.log`, still the correct log to
-use — do NOT re-soak yet) with that fact in hand: audio ticks (`[audtask-dispatch]`/`[reach-allsongs-*]`/
-`[reach-audioseq-*]`) permanently stop at tick `n=19`, **log line 3013**. RSP graphics tasks then keep
-dispatching cleanly for **18 more tasks** (#22 through #39, ending line 4943) — a real, non-trivial
-stretch: 1550 `[sched-queue]`/`[sched-check]`/`[sched-runnext]` lines in that window, cycling the *same 7
-distinct thread pointers* that were active before the audio stall (diffed the `popped_thr=`/`self_thr=`
-sets in `[1857,3013)` vs `[3013,4943)` — identical, plus one incidental new thread). The scheduler does
-NOT go fully silent until *after* task #39 (line 4958 onward: 0 further `[sched-*]` lines in the
-remaining 2467 log lines) — a real, separate, later full-scheduler wedge.
+- `[vi-cb-loop]` (viRetraceHandlerThread's own loop-top) fired 40/40 possible times — the thread's own
+  loop keeps running well past tick 19/20.
+- `[vi-cb-slot]` (the 4-slot VI-retrace callback table read) shows slot `0x8011A8A8` holds
+  `musyxSynthFrame`'s address (`0x8009123C`) continuously from VI-tick ~3 onward, through the last sample
+  (tick ~11 of the un-sampled window) — the table entry never goes null, never changes.
+- `[synth-entry]` (musyxSynthFrame's own entry) fired 40/40 possible times — the function itself keeps
+  being called, indefinitely, past the freeze point.
+- `[synth-rearm-ptr]` (the DMEM-mixer callback-pointer read `musyxSynthFrame` uses to register itself
+  into the VI-retrace table) fired exactly ONCE, early — read together with `[vi-cb-slot]`'s timing, this
+  looks like a one-time self-registration, not a bug.
 
-**Two distinct problems, not one:**
-- **(A) Audio-tick-producer stall** at tick 19→20, while the rest of the scheduler keeps running fine.
-  This is the M5-relevant one — the thing actually blocking gate-byte reversal validation.
-- **(B) Full cooperative-scheduler wedge**, later, coincident with RSP task #39. Possibly the same class
-  of bug as the already-documented "post-leave graphics-task-submission stall" (much later game phase,
-  `docs/CURRENT-TRUTH.md`'s Current-truth timeline) but that's an untested hypothesis, not a finding —
-  don't conflate the two without evidence. **Parked, not this session's target.**
+**Conclusion: H1 is refuted.** The outer invocation chain (VI retrace → 4-slot callback table →
+`musyxSynthFrame` entry) never stops, never drops, never goes silent. Whatever is skipping
+`update3DAudioFrame`/`tickAllActiveSongs`/`tickAudioSequencerFrame`/the RSP `M_AUDTASK` submission after
+tick ~19-20 must be **inside** `musyxSynthFrame` (or a callee it reaches on the branch that runs those
+calls) — an internal state variable or control-flow gate that changes starting around the 20th call, even
+though the function keeps being entered normally every time.
 
-One dead-end already eliminated: an initial thread-set diff across the *whole* log (not scoped to
-steady-state) showed thread `0x30010d3d0` present pre-3013 and absent post-3013 — looked like "the audio
-thread stopped being scheduled," but it last appears at line 174, hundreds of lines before the *first*
-RSP task even starts (line 775). It's an early-boot thread, unrelated. Scoping the diff to steady-state
-ticking (`[1857,3013)`) showed no thread disappears at all when audio stops — so the simple "audio
-thread's own scheduler entry vanishes" theory (call it H1-simple) doesn't hold *in the trivial form*; the
-audio-driving thread (whichever of the 7 it is) is very plausibly still being scheduled after tick #19,
-just not reaching the print. This needs a dedicated instrument to settle — the existing log cannot
-identify *which* of the 7 thread pointers is the audio producer, so it cannot show what that specific
-thread is doing after tick #19.
+**H4 is also refuted** (separately, by source-read): no `M_AUDTASK`-specific fixed-depth queue/ring/depth
+counter exists anywhere in `sp.cpp`, `mesgqueue.cpp`, or `events.cpp` — the only audio-task queueing is
+an unbounded `moodycamel::BlockingConcurrentQueue` in `events.cpp:132`. There's no fixed-depth structure
+to fill, so "H4: a full unreaped queue" cannot be the mechanism.
+
+This leaves **H2 (a new internal gate)** and **H3 (blocks inside musyxSynthFrame before reaching the 3
+already-cleared functions)** as the live candidates, effectively converged into one question: **what
+inside musyxSynthFrame changes between call #19 and call #20?**
+
+One known instrument is uninformative on this exact question: `[musyx-gate1]`
+(`ROGUESQ_LOG_VOICE_TRIGGER_CHAIN`, `funcs_24.c:3560`, already armed by the soak recipe, no new build
+needed to re-arm it) prints a countdown/period pair — in s310's log it read `countdown=0, period=16777216`
+identically across all 20 of its own capped samples (ticks 0-19). This shows the gate trivially evaluates
+"run" every time in the observed window, but its `n<20` cap makes it impossible to tell whether the value
+changes starting at tick 20 — exactly the question that matters now.
 
 ## The work unit
 
-**Step 1 — form the hypothesis table before building anything** (do this first, revise below if a
-different source-read surfaces a better split):
+**Step 1 — raise the ceiling on what's already known, cheaply, before adding anything new.** Two options,
+pick based on Step 2's needs (they're not mutually exclusive, but do the minimum that answers the
+question — don't build more than one batch):
 
-| # | Hypothesis | Discriminating signal |
-|---|---|---|
-| H1 | The thread that runs `viRetraceHandlerThread`/`musyxSynthFrame` stops being woken at all (its wakeup source — a VI-retrace event, message queue, or semaphore post — stops firing) after the 20th tick. | That thread's pointer stops appearing in `[sched-queue]` (never re-queued) after tick #19, while still being visible in `sched-check` as a "head" comparison target maybe, but never popped/run again. |
-| H2 | The thread keeps running on schedule, but a **control-flow gate inside `viRetraceHandlerThread` itself** (a loop-iteration counter, a different condition than the 3 already-cleared gate-consumer functions) stops it from reaching `musyxSynthFrame`/the tick chain after the 20th call — the thread does other work or spins harmlessly. | A new counter placed at `viRetraceHandlerThread`'s own loop-top (not inside `musyxSynthFrame`) keeps incrementing past 20 even though the tick-chain prints stop. |
-| H3 | The thread reaches `musyxSynthFrame` on schedule but blocks *inside* it, before reaching `update3DAudioFrame`/`tickAllActiveSongs`/`tickAudioSequencerFrame` (a wait/semaphore/mutex not yet examined, upstream of the 3 already-cleared functions). | The new loop-top counter (from H2's instrument) also freezes at the same call as the tick-chain — i.e., the *thread itself* stalls, but inside `musyxSynthFrame`, not before it. |
-| H4 | The 20-tick cap is a real, intentional guest-side limit (e.g., an audio-task ring/queue of fixed depth 20 whose consumer never drains) — not a "stall" at all but a full queue with no reaper. | A queue/ring depth or occupancy counter (if one exists in the audio task submission path) reads exactly 20/20 (full) at the freeze point, in a positive-controlled way (show it draining below 20 during the first 20 ticks). |
+- **Option A (preferred, smallest change):** in `fixup_game_funcs.py`, find `[musyx-gate1]`'s existing
+  patch (search `musyx_gate1`, `funcs_24.c:3560`-area) and widen its print condition from `n < 20` to
+  `n < 40 || (n % 128) == 0` (matching s310's own sampling convention) — this alone might show whether
+  `countdown`/`period` ever change past tick 19, with zero new anchors needed (same site, same env var,
+  just a wider cap). If the values stay `countdown=0, period=16777216` even through tick 39, that RULES
+  OUT this specific gate as the mechanism and narrows the search to a DIFFERENT internal branch (see
+  Option B). If the values change, that IS the mechanism — read what code sets `period` and trace why it
+  changes.
+- **Option B (if Option A's gate stays constant):** trace the actual `M_AUDTASK` RSP-submission call
+  site. `[audtask-dispatch]` (main.cpp:594-626, `get_rsp_microcode`'s `M_AUDTASK` branch) fires when the
+  guest calls the OSTask-submission API (`sp.cpp`'s `M_AUDTASK` branch → `ultramodern::submit_rsp_task`).
+  Find what recompiled guest function calls that submission API for audio (likely inside
+  `tickAudioSequencerFrame`/`tickMusyXIfActive` or a callee several levels deeper — NOT confirmed yet,
+  needs its own source-read/grep for the RSP-task-start libultra call, e.g. `osSpTaskStart`/similar, in
+  `funcs_23.c`/`funcs_24.c`/`funcs_25.c`). Add ONE tick-scoped counter at that exact call site (matching
+  s310's `n<40||n%128==0` convention) to see directly whether it's reached on every `musyxSynthFrame`
+  call, or stops being reached starting at #20 — this settles H2 vs H3 precisely (H2: some earlier gate
+  skips the whole "run" branch and this counter also stops; H3: this specific call is what blocks/never
+  returns, i.e. this counter's OWN entry might still fire but something after it hangs — distinguish by
+  adding both an entry AND exit tag at that call, same as s306's `_reach_entry_patch`/`_reach_exit_block`
+  helpers already in the file).
 
-**Step 2 — design ONE diagnostic that discriminates all four**, batched into a single build+soak (per
-CLAUDE.md's "one build carrying every counter you will want" rule — do not spend a build-run cycle per
-counter):
-- A print at `viRetraceHandlerThread`'s own loop top (thread-identifying: include `std::this_thread`'s
-  id or the raw host thread pointer if accessible from the recompiled-function context — check how
-  `[sched-queue]`'s `thr=0x...` value is obtained in `lib/N64ModernRuntime/ultramodern/src/scheduling.cpp`
-  or `threads.cpp` and reuse the same accessor) — this settles H1 vs H2/H3 (does the loop itself keep
-  ticking past 20, and does its thread pointer match one of the 7 already seen in `[sched-*]`), and
-  distinguish H2 from H3.
-- If a queue/ring depth for `M_AUDTASK` submission exists (grep `librecomp/src/sp.cpp` /
-  `mesgqueue.cpp` for the audio task queue), a same-run occupancy counter — settles H4 independent of
-  the others (a positive control: show occupancy varying 0-19 during the healthy first 20 ticks, then
-  pinned at a cap afterward, vs. never hitting the cap).
-
-**Step 3 — batch into `fixup_game_funcs.py`/the relevant `lib/` source (with `export.sh` + commit in the
-same session if `lib/` is touched, per the hard rule), soak with a copy of
-`scratch/s73_post_a_scene/run_step307reach.sh`, read the result, and update the hypothesis table.**
-Revert the fixup-script diagnostic same session once read, per the established one-site-per-session
-discipline — the `lib/`-side instrument (if any) can stay if it's inert/no-op by default.
-
-## Expected discriminating outcomes
-
-- H1 confirmed alone → look at whatever's supposed to re-queue that thread (a VI-retrace producer or
-  message-queue post that itself might be starved — possibly still tracing back to problem (B)'s later
-  full wedge, i.e., maybe the SAME wakeup-chain component fails twice, once partially (just this thread)
-  then totally (everything) 18 tasks later — this would be a genuine, evidenced link between (A) and (B),
-  not an assumed one).
-- H2 confirmed alone → the newly-changed gate is inside `viRetraceHandlerThread`'s own body, distinct
-  from the 3 already-cleared functions; source-read that function next.
-- H3 confirmed alone → something inside `musyxSynthFrame` upstream of the 3 cleared functions blocks;
-  source-read `musyxSynthFrame`'s own body (not just its 3 known callees) next.
-- H4 confirmed alone → this isn't a stall, it's a full unreaped queue; find the consumer side and why it
-  stopped draining (likely converges back toward H1/H3's territory, or opens a genuinely new 5th
-  hypothesis about the queue reaper itself).
-- More than one could be true; the point of the batched diagnostic is to not have to guess which before
-  building.
+**Step 2 — batch whichever option (or both, if cheap) into ONE fixup_game_funcs.py edit + regen + build,
+combined with the same setDisplayMode gate-site reversal used by s303/s307/s310 to reproduce the freeze,
+soak once, read the result, update the hypothesis table below, revert setDisplayMode's site again
+same session** (per the established discipline — it's not safe to ship reversed; it deterministically
+hangs boot). The 4 s310 diagnostics can stay armed (`ROGUESQ_LOG_AUDIOTICK_TRACE=1`, already in the
+`run_step310audiotrace.sh` recipe) alongside whatever's new — free confirmation that this session's
+findings still hold.
 
 ## Environment notes (carried forward, all still valid)
 
 - Regen order: `fixup_game_funcs.py` edit → clear `N64Recomp/RecompiledFuncs/*.c` (python3 glob-delete;
   plain `rm`/`find -delete` are blocked in this sandbox) → `N64Recomp/build/N64Recomp
-  rogue_squadron.toml` (cwd = `N64Recomp` checkout) → `python3 fixup_game_funcs.py` (run exactly once,
-  refuses a 2nd run via its own SENTINEL check) → `DEVELOPER_DIR=/Applications/Xcode.app/Contents/
-  Developer cmake --build build -j8` (cwd = this repo root). `make_elf.py` not needed unless
-  source/symbol mapping changed.
-- If the diagnostic requires touching `lib/N64ModernRuntime` (e.g. to expose a thread-identifying
-  accessor from `scheduling.cpp`/`threads.cpp` to the recompiled-function context), run
-  `./submodule-patches/export.sh` and commit the refreshed patches in the SAME session — required by the
-  hard rule, not optional.
-- `N64Recomp/fixup_game_funcs.py` is NOT git-tracked in that checkout — durable record is this project's
-  own `PORTING-STATE.md`/`CURRENT-TRUTH.md` plus the physical file on disk.
-- Soak driver template: `scratch/s73_post_a_scene/run_step307reach.sh` (s307's recipe) — copy it, don't
-  hand-roll a new script; only the fixup-script/lib-side edit changes between sessions.
+  rogue_squadron.toml` (cwd = `N64Recomp` checkout; redirect stdout to a file INSIDE one of the 3 allowed
+  dirs, not `/tmp` — it's blocked) → `python3 fixup_game_funcs.py` (run exactly once, refuses a 2nd run
+  via its own SENTINEL check) → `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
+  build -j8` (cwd = this repo root). `make_elf.py` not needed unless source/symbol mapping changed.
+- Soak driver template: `scratch/s73_post_a_scene/run_step310audiotrace.sh` (s310's recipe, itself copied
+  from s307's `run_step307reach.sh`) — copy it, don't hand-roll a new script; bump the output-dir name
+  (last line's `${1:-...}` default) and the header comment; only the fixup-script/lib-side edit changes
+  between sessions. `ROGUESQ_LOG_AUDIOTICK_TRACE=1` and `ROGUESQ_LOG_INITMUSYX_REACH=1` are both already
+  armed in it.
 - **Waiting on a soak**: launch via Bash with `run_in_background: true`, then use `TaskOutput` with
   `block: true` and a generous `timeout` (up to 480000ms) — do NOT foreground-poll with a bare `sleep`
-  loop or hand-rolled `pgrep` polling.
+  loop or hand-rolled `pgrep` polling. `run_mission_keys.sh` has its own internal 600s phase-timeout that
+  exits nonzero (`INCONCLUSIVE`) on the deterministic hang — that's the EXPECTED outcome when the gate
+  site is reversed, not a soak-tooling failure; the game process is killed automatically on that path
+  (verified s310: no manual SIGKILL needed after the script's own timeout fired).
 - **One game run at a time** — confirm `pgrep -f "build/RogueSquadron64Recomp"` is empty before
-  launching (the more specific pattern avoids the s307 false-positive on `tail -f` commands whose path
-  string happens to contain the binary name).
-- `scratch/s73_post_a_scene/step307reach/run.log` is the log this session (s309) re-analyzed — it already
-  has everything needed for the thread-set diffing described above if a future session wants to re-verify
-  before building; no need to re-derive the 7-thread-pointer sets from scratch, they're recorded here and
-  in PORTING-STATE Session 309.
+  launching.
+- `scratch/s73_post_a_scene/step310audiotrace/run.log` is s310's saved log (738016 bytes, 7666 lines) —
+  has the raw `[vi-cb-loop]`/`[vi-cb-slot]`/`[synth-entry]`/`[synth-rearm-ptr]` data referenced above if a
+  future session wants to re-verify before building; grep line numbers are cited in PORTING-STATE Session
+  310.
 - The `unguarded_walk_candidates.json` sweep (143 sites/43 funcs, 3 addressed) remains the fallback
   M3-audit work unit if a future session finds M5 blocked and maintenance isn't triggered.
 
-HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (same slug, s303-309 — still the active
-investigation thread, now correctly split into problem (A) audio-tick-stall and (B) full-scheduler-wedge
-sub-threads with (A) as the live target. s306/s307 each produced discriminating results (resetting the
-iron-rule-8 no-progress counter); s309 is ALSO a discriminating result (overturns s307's own
-interpretation via source-read, no soak needed) — does not trigger the "3 iterations, no result" stop
-condition. The next session should treat itself as continuing the same slug but should aim to actually
-run the Step 2/3 batched soak above, since 2 sessions in a row (s307, s309) have now landed results
-without a new soak.
+HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (same slug, s303-310 — still the active
+investigation thread. s306/s307/s309/s310 have each produced a discriminating result in sequence —
+resetting the iron-rule-8 no-progress counter every time; this is real, converging progress (H1 and H4
+now refuted, H2/H3 the only remaining candidates), not a stall. Continue the same slug next session.)
