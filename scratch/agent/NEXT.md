@@ -1,5 +1,13 @@
 # NEXT work unit — land the tickTextureMaterialExpiry guard (fully specified, no investigation needed)
 
+## Note: s295 was a MAINTENANCE iteration (Step 0), not a pivot away from this work unit
+
+`docs/CURRENT-TRUTH.md` was compacted 562,666→120,975 bytes (7,959→1,267 lines) and its
+triple-colliding Next-steps numbering was fixed into one sequence. The item describing this work
+unit's origin (`tickTextureMaterialExpiry` crossing the two-observation confirmation bar) is now
+`-159` in `CURRENT-TRUTH.md` (was `-135`) — same content, renumbered only. Nothing below this note
+changed; the guard work is still the fully-specified next unit, do it next.
+
 ## Top priority: land and validate the `ctx->r16` guard in `tickTextureMaterialExpiry`
 
 `tickTextureMaterialExpiry`'s crash (`BREADCRUMB12`, armed s292) has now fired at the **identical
@@ -143,3 +151,5 @@ time), land a breadcrumb if a guard can't be validated blind.
   spare budget could add a `"status"` field to each JSON entry to make this lookup O(1) instead of
   a fresh grep-and-cross-reference every time — not urgent, but would save real time if the sweep
   continues for many more sessions.
+
+HYPOTHESIS-ID: tickTextureMaterialExpiry-guard

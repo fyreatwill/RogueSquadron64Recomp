@@ -162,6 +162,14 @@ N64Recomp and RSPRecomp both emit code that is *almost* right:
   what `fixup_game_funcs.py` exists for.
 - **Generated-code hand edits do not survive regeneration.** Diagnostics in `build/factor5_ucode/*.c`
   survive a cmake build but not an RSPRecomp run; anything in `RecompiledFuncs` is wiped entirely.
+- **A guard on a pointer's *result* does not protect the pointer used to reach it, or any further
+  pointer read out of the validated structure ("second-hop" derefs).** Recurred independently three
+  times in the `-0x25A4` hangar-list-pointer audit (sessions 282, 284, 285) across two different
+  functions: an existing bounds check on a reloaded value left the *reload itself*, or a field read
+  one hop further into the now-validated struct, completely unguarded. When auditing or guarding a
+  chain of dereferences, check every reload's own resulting address before its own first
+  dereference — do not assume a downstream guard on a value loaded further along the chain covers
+  it.
 
 ### 4.6 Missing protocol events, papered over downstream
 
