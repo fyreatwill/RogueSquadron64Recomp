@@ -1,99 +1,114 @@
-# NEXT work unit — re-reverse setDisplayMode's gate-byte site, with the 3
-# gate-consumer entry/exit tags already armed, to localize s303's hang
+# NEXT work unit — trace why RSP task #40 never arrives after task #39's clean exit
 
-(Written s306, a hypothesis-execution iteration — see docs/CURRENT-TRUTH.md item -167 for the full
-write-up and `PORTING-STATE` Session 306 for full detail.)
+(Written s307. See docs/CURRENT-TRUTH.md item -168 for the full write-up and `PORTING-STATE` Session 307
+for full detail.)
+
+## Note: this session may be a MAINTENANCE iteration instead
+
+`docs/CURRENT-TRUTH.md` is now 60,540 bytes — over the Step-0 60,000-byte trigger. If Step 0 fires,
+compact CURRENT-TRUTH first (see tools/agent/ITERATION.md's Maintenance section) and treat this file as
+the work unit for whichever session picks up M5 audio next, not necessarily this one.
 
 ## Context
 
-s306 settled the open question s304 raised: a same-run-positive-controlled entry counter
-(`ROGUESQ_LOG_INITMUSYX_REACH`), run across 2 soaks (one full-length 300s, zero crashes; one cut short
-by an unrelated, already-catalogued crash), found `initMusyXEngine` is **never called** anywhere in the
-current recompiled game — 0 fires across both soaks, while the positive control
-(`resetMusyXEngineState`, called independently from `setDisplayMode`/`reapplyDisplayMode`) fired 2 and 7
-times respectively, confirming the logging plumbing itself works. This retroactively invalidates s302's
-"clean" validation of reversing `initMusyXEngine`'s gate-byte site — that reversed write never executed
-in either of s302's soaks, so its cleanliness reflects dead code, not a proven-safe gate=1 state.
+s307 re-reversed `setDisplayMode`'s gate-byte site (`0x8008EB40`) a 3rd time (1st: s303, black-box,
+re-reverted. 2nd: s307 itself, with s306's 3 gate-consumer entry/exit tags live). The soak reproduced
+the same deterministic hang a 3rd time (VI stuck at width 320, exactly 39 RSP tasks, no crash, 600s
+window, never reaches title) — but this time with localization data: `update3DAudioFrame`,
+`tickAllActiveSongs`, and `tickAudioSequencerFrame` all completed 20 clean entry/exit pairs (`n=0..19`)
+before the freeze. **None of the 3 previously-suspected functions hangs internally.**
 
-**Net effect**: gate=1 has still never been exercised by any soak conducted to date. s303's reversal of
-`setDisplayMode`'s site (`0x8008EB40`) remains the only attempt that ever put a nonzero value in the
-gate byte during a real run, and it produced a deterministic full-boot hang (2/2 soaks, VI stuck at
-width 320 the entire 600s window, exactly 39 RSP tasks both times). s303 re-reverted the same session
-without localizing which of the 3 gate-consumer functions (`update3DAudioFrame`, `tickAllActiveSongs`,
-`tickAudioSequencerFrame` — the only 3 functions `musyxSynthFrame` gates on this byte, per s300 item
--162) the hang actually lands in, if any of them at all.
+Cross-referencing the RSP task log (`[runner] task #N exit=1`, emitted from
+`src/main/main.cpp:485`, the shared factor5_ucode task runner that dispatches BOTH graphics DL tasks and
+audio ucode tasks through one path — this explains why a graphics-side counter and an audio-tick counter
+freeze together): task #39 is the last one ever logged; task #40 never arrives, for the rest of the
+600s window. The audio-tick freeze (stuck at `n=19`, 20th iteration never starts) and the RSP-task freeze
+(stuck at task #39) land at the same point in the log, both followed by pure scheduler churn
+(`[sched-queue]`/`[sched-check]`/`[sched-runnext]` lines cycling with no new work item ever appearing).
+The VI/present thread does NOT freeze — `update_screen #N` and `vi-fs-decision #N` keep climbing (past
+`#36000` by 600s) — it just perpetually skips presentation because `rdpFs` (RSP task-dispatch count)
+never advances past 39.
 
-s306 batched in exactly the instrument needed to answer that localization question, ready and armed but
-never yet exercised under gate=1 (since the baseline it soaked was gate=0 throughout, per
-`initMusyXEngine` being dead code): `[reach-update3d-entry]`/`[reach-update3d-exit]`,
-`[reach-allsongs-entry]`/`[reach-allsongs-exit]`, `[reach-audioseq-exit]` (entry already covered by the
-pre-existing s107 `[tick-audio-seq]` under `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN`), all gated by
-`ROGUESQ_LOG_INITMUSYX_REACH=1`.
+**Revised hypothesis**: a shared upstream resource — most likely something in the coop-scheduler
+thread-wakeup chain, or a producer thread that's supposed to feed the next RSP task (audio or graphics)
+into the queue — stops delivering work after a fixed small count. This is NOT explained by a bug inside
+any of the 3 audio-gate-consumer functions; they're cleared as suspects. s307 reverted the fixup change
+same session (one-site-per-session discipline) — baseline is back to s306's validated state
+(`initMusyXEngine`'s dead-code site alone reversed, both `setDisplayMode` and `reapplyDisplayMode`
+force-zeroed).
 
 ## The work unit
 
-**Step 1 — re-reverse `setDisplayMode`'s gate-byte force-zero site**, same edit s303 made and then
-undid: split the regex in `fixup_game_funcs.py` so `setDisplayMode`'s force-zero patch is skipped
-(`initMusyXEngine`'s stays reversed too — it's a no-op either way since it's dead code, no need to
-re-revert it back; `reapplyDisplayMode`'s stays force-zeroed, unchanged, per the plan's one-site-per-
-session design). Regen: clear `RecompiledFuncs/`, `N64Recomp rogue_squadron.toml`,
-`python3 fixup_game_funcs.py`, `cmake --build build -j8`.
+**Step 1 — source-read, no build/soak yet.** Using s307's saved log
+(`scratch/s73_post_a_scene/step307reach/run.log` — do NOT re-soak yet, this log already has everything
+needed for a first pass), work out what's supposed to happen right after `[runner] task #39 exit=1`:
+- What guest code is expected to submit the next task (audio ucode task or graphics DL task — check
+  whether task #40 would have been audio or graphics by looking at the alternating `dl_ptr` pattern in
+  the last several `[runner]` lines: `0x80720318`/`0x80720108` alternate — is task #40 expected to keep
+  that alternation, and does either address correspond to an audio-side or graphics-side DL buffer?).
+- Read `src/main/main.cpp` around the `[runner]` line (currently ~line 485) upward to find what enqueues
+  a task into this runner and what would need to happen (thread wakeup, semaphore, message queue) for a
+  40th one to be dispatched. Cross-reference against the `[sched-queue]`/`[sched-check]`/`[sched-runnext]`
+  churn visible after task #39 in the log — is the scheduler stuck cycling between the SAME small set of
+  threads forever (a real wedge, e.g. a thread that never yields what it's supposed to) or does it
+  eventually queue a new thread that then does nothing (a different, more specific stall)?
+- Identify the guest function whose 20th call would have produced the next audio ucode task (probably
+  something musyxSynthFrame calls downstream of the 3 already-cleared gate-consumer functions, or a
+  separate producer entirely) and read what it does that could block.
 
-**Step 2 — soak with everything armed.** Copy `scratch/s73_post_a_scene/run_step5reach1.sh` (this
-session's already-validated recipe, carries `ROGUESQ_LOG_INITMUSYX_REACH=1` plus the full passive
-diagnostic set) — no new env vars needed, everything required is already armed. Expect the same
-deterministic hang s303 saw (VI stuck at 320, 2 minutes should be enough to confirm the signature
-recurs — don't wait the full 600s if the phase log shows the same 2-lines-total stuck-at-320 pattern
-within the first 60-90s).
+**Step 2 — form 2-4 concrete hypotheses** about the specific blocking condition (e.g.: "thread X is
+waiting on a semaphore that thread Y is supposed to post, but Y's post site is unreached because gate=1
+changes control flow inside a 4th function not yet examined", or "the RSP task queue has a fixed-size
+ring buffer whose consumer stopped draining"), and design the ONE diagnostic tag that discriminates
+between them — do not add a diagnostic without first knowing what each possible reading would prove (the
+iron-rule-8 discipline that's kept this thread converging session over session).
 
-**Step 3 — read the log for which of the 3 functions logged entry but not exit.**
-- If NONE of the 3 log even entry: the hang is not inside any of them — it's somewhere else entirely,
-  either inside `initAudioSubsystem` itself or one of the reset-sequence calls `setDisplayMode` makes
-  unconditionally regardless of the gate patch (per s304's structural finding: `setDisplayMode`
-  sandwiches `resetSongSubsystemCounter`→...→`reset3DAudioLists` between its own entry-zero and
-  tail-re-enable of the gate byte — the hang could be in that reset sequence, not downstream of the
-  gate at all). Next step: source-read that reset sequence.
-- If exactly one of the 3 logs entry but never exit: that function is the hang site — dig into its body
-  next (source-read what happens after its logged entry point, guest-instruction by guest-instruction,
-  same method as s304's `setDisplayMode`/`initMusyXEngine` source-read).
-- If one or more log both entry AND exit cleanly: those functions are NOT the hang site; narrows the
-  remaining candidates.
+**Step 3 — if a new diagnostic is warranted**, batch it into `fixup_game_funcs.py` alongside a fresh
+`setDisplayMode` reversal (this will be the 3rd such reversal attempt with new instrumentation, expect
+the same hang — that's fine, it's a controlled, reproducible experiment now, not a surprise), soak with
+`scratch/s73_post_a_scene/run_step307reach.sh` (or a copy — s307's recipe carries everything needed) and
+read the result. Revert the fixup same session per the established discipline once the soak completes.
 
 ## Expected discriminating outcomes
 
-Each of the 3 outcomes above points to a different next investigation (dig into the reset sequence vs.
-dig into a specific gated function's body vs. narrow further) — this is a genuine localization step, not
-a repeat of s303's undifferentiated black-box reversal.
+Depends on what Step 1's source-read finds — write the actual hypothesis table into a revised NEXT.md
+before building anything, per the iteration contract's "before building anything" rule.
 
 ## Environment notes (carried forward, all still valid)
 
-- Regen order: `fixup_game_funcs.py` edit → clear `N64Recomp/RecompiledFuncs/*.c` (python3 glob-delete,
+- Regen order: `fixup_game_funcs.py` edit → clear `N64Recomp/RecompiledFuncs/*.c` (python3 glob-delete;
   plain `rm`/`find -delete` are blocked in this sandbox) → `N64Recomp/build/N64Recomp
   rogue_squadron.toml` (cwd = `N64Recomp` checkout) → `python3 fixup_game_funcs.py` (run exactly once,
   refuses a 2nd run via its own SENTINEL check) → `DEVELOPER_DIR=/Applications/Xcode.app/Contents/
   Developer cmake --build build -j8` (cwd = this repo root). `make_elf.py` not needed unless
-  source/symbol mapping changed (it didn't).
+  source/symbol mapping changed (it didn't in s307).
 - `N64Recomp/fixup_game_funcs.py` is NOT git-tracked in that checkout — durable record is this project's
   own `PORTING-STATE.md`/`CURRENT-TRUTH.md` plus the physical file on disk.
-- Soak driver template: `scratch/s73_post_a_scene/run_step5reach1.sh` (s306's recipe, copy it — don't
-  hand-roll a new script; only the fixup-script edit changes between this session and the next, the
-  soak env vars needed are already all armed).
+- Soak driver template: `scratch/s73_post_a_scene/run_step307reach.sh` (s307's recipe, identical env to
+  s306's `run_step5reach1.sh` — copy either, don't hand-roll a new script; only the fixup-script edit
+  changes between sessions).
 - **Waiting on a soak**: launch via Bash with `run_in_background: true`, then use `TaskOutput` with
   `block: true` and a generous `timeout` (up to 480000ms) to wait for completion — do NOT foreground-
-  poll with a bare `sleep` loop (blocked in this harness) or hand-rolled `pgrep` polling loops (noisy,
-  unnecessary — the background task auto-notifies on completion).
-- **One game run at a time** — confirm `pgrep -f "\./RogueSquadron64Recomp"` is empty before launching.
-- `[phase]` line count is a fast triage signal: 2-3 lines total stuck at width 320 (s303's/s306-soak1's
-  signature) means a hang or an early crash — check `[CRASH]` presence to distinguish; many lines
-  advancing through 640→1024 means normal progress toward title.
+  poll with a bare `sleep` loop (blocked in this harness) or hand-rolled `pgrep` polling loops.
+- **One game run at a time** — confirm `pgrep -f "build/RogueSquadron64Recomp"` is empty before
+  launching (NOTE: `pgrep -f "\./RogueSquadron64Recomp"` false-positives on unrelated processes whose
+  command line happens to contain that path string, e.g. `tail -f .../loop.log` on a path under this
+  repo — matched a stray `tail -f` in s307, cost a few minutes of investigation; use the more specific
+  `build/RogueSquadron64Recomp` pattern instead).
+- `[phase]` line count is a fast triage signal: 2 lines total stuck at width 320 (s303's/s307's
+  signature) means this specific hang; many lines advancing through 640→1024 means normal progress.
+  `[runner] task #N` stopping permanently mid-run (grep the log for the highest N reached, confirm no
+  higher N appears later) is now the more precise signal for this specific hang than the phase-line count
+  alone.
 - The `unguarded_walk_candidates.json` sweep (143 sites/43 funcs, 3 addressed) remains the fallback
   M3-audit work unit if a future session finds M5 blocked and maintenance isn't triggered.
 
-HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (same slug as s303-305 — still the active
+HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (same slug as s303-307 — still the active
 investigation thread. s303 = iteration 1 (black-box reversal, hung). s304 = iteration 2 (source-read,
-refuted 2 hypotheses, surfaced the reachability question). s305 = mandated MAINTENANCE, does not count.
-s306 = iteration 3 — and unlike a stalled iteration, it DID produce a discriminating result (reachability
-settled, a prior conclusion overturned), so per iron rule 8 this does not trigger the "3 iterations, no
-result → stop" condition; it's fresh ground, not a repeat. The work unit above (re-reverse + localize via
-the newly-armed tags) is the next genuinely new probe on this thread, effectively resetting the
-no-progress counter since real information keeps landing each iteration.
+refuted 2 hypotheses). s305 = mandated MAINTENANCE, does not count. s306 = iteration 3 (reachability
+settled, prior conclusion overturned — a genuine discriminating result, resetting the no-progress
+counter per iron rule 8). s307 = iteration 4 — ALSO produced a discriminating result (localized the hang
+away from the 3 gate-consumer functions to the shared RSP-task/audio-tick freeze point), so this again
+does not trigger the "3 iterations, no result" stop condition — real information keeps landing each
+session on this thread. The work unit above (source-read what should produce task #40) is the next
+genuinely new probe, not a repeat.

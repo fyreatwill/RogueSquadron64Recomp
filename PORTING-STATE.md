@@ -27210,3 +27210,64 @@ Next work unit (NEXT.md): re-reverse `setDisplayMode`'s gate-byte site (`0x8008E
 session's 3 gate-consumer tags and `ROGUESQ_LOG_INITMUSYX_REACH` already armed — soak, and read which (if
 any) of `update3DAudioFrame`/`tickAllActiveSongs`/`tickAudioSequencerFrame` logs entry but never logs
 exit, localizing the hang site instead of repeating s303's undifferentiated black-box reversal.
+
+## Session 307 (2026-08-04) — executes s306's plan: re-reverses `setDisplayMode`'s gate-byte site a 2nd time with the 3 gate-consumer entry/exit tags live, localizes s303's hang to *between* iterations, not inside any of the 3 suspected functions
+
+M5-AUDIO-PLAN.md step 4, 3rd attempt at `setDisplayMode`'s site (`0x8008EB40`). `fixup_game_funcs.py`'s
+force-zero regex was split so it matches only `0x8008EC88` (`reapplyDisplayMode`, left force-zeroed,
+unattempted) and no longer matches `0x8008EB40` — `initMusyXEngine`'s site stays reversed too (unchanged
+no-op, per s306: dead code). Regen (`RecompiledFuncs/` cleared, `N64Recomp`, `fixup_game_funcs.py`,
+`cmake --build`) succeeded cleanly; verified in the generated source that `0x8008EB40` writes its natural
+value while `0x8008EC88` still force-zeroes.
+
+**Soak** (`step307reach`, copy of s306's `run_step5reach1.sh` recipe, all s306-armed reach tags plus the
+full passive diagnostic set, `HOLD_S=240`, 600s hard cap): **reproduces s303's hang a 3rd time** — `[phase]
+vi_width=` logs exactly 2 lines total (`0` then `320`, both at t=0.6s), stuck there for the entire 600s
+window, phase-timeout INCONCLUSIVE per the driver's own watchdog, game SIGKILLed cleanly (no game process
+left running afterward). Same signature as s303: never reaches title, no crash (`CRASH` grep: none),
+matches exactly.
+
+**Localization result — the new information this session adds over s303's black-box reversal**: all 3
+gate-consumer tags fired repeatedly and CLEANLY through 20 iterations before the freeze:
+`reach-update3d-entry`/`-exit` 20/20, `reach-allsongs-entry`/`-exit` 20/20, `reach-audioseq-exit` 20 (all
+`n=0..19`, every entry matched by an exit, no partial/dangling iteration). `reach-init-musyx` 0 fires
+(consistent with s306 — still dead code), `reach-reset-musyx-CONTROL` fired once early (positive control
+holds). **None of the 3 previously-suspected functions is where the hang lives** — each one runs to
+completion 20 times over. Cross-referencing against the RSP task log in the same run: `[runner] task #N
+exit=1` climbs cleanly to `task #39` (matching s303's "exactly 39 RSP tasks" finding) and then stops
+forever — no `task #40` ever appears, for the rest of the 600s window. The audio-tick freeze (stuck at
+`n=19`, 20th iteration never starts) and the RSP-task freeze (stuck at task #39, no task #40) land at
+the *same point* in the run (task #39's log line and the last `n=19` audio-tick lines are within ~1900
+log lines / a few hundred ms of each other, both followed by pure scheduler churn — `[sched-queue]`/
+`[sched-check]`/`[sched-runnext]` lines with no new work items — through the rest of the window). The VI
+thread itself does NOT freeze — `update_screen #N` and `vi-fs-decision #N` counters keep climbing (up to
+`#36000`+ by the end), just perpetually skipping presentation because `rdpFs` never advances past 39.
+
+**Revised hypothesis**: the hang is not inside `update3DAudioFrame`, `tickAllActiveSongs`, or
+`tickAudioSequencerFrame` — it's a shared upstream resource (most likely a producer thread or
+coop-scheduler dependency common to both the audio-tick loop and RSP task submission) that stops
+delivering new work after a fixed small count (~20 audio ticks / 39 RSP tasks), consistent with the
+existing patch comment's own description ("spin-wait wedges coop scheduler"). This reframes the next
+investigation: not "which of the 3 gated functions hangs" (all 3 are now cleared) but "what produces RSP
+task #40 / the 20th audio tick, and why does it stop arriving." Single-source (one soak this session) —
+matches s303's independently-obtained "39 RSP tasks" number exactly (2nd soak of the same underlying
+signature, different session, different instrumentation), which is corroborating but not yet a
+same-session 2nd control soak of this specific localization result.
+
+**Reverted same session**: per the established one-site-per-session discipline (s303's precedent), the
+`fixup_game_funcs.py` regex was restored to match both `0x8008EB40` and `0x8008EC88` again (force-zero
+both), regenerated, and rebuilt — verified both addresses write `= 0` in the generated source again.
+Baseline restored to exactly s306's validated state (only `initMusyXEngine`'s dead-code site reversed).
+
+**Rules out**: "hang is inside one specific gated function's body" (all 3 completed 20 clean
+entry/exit pairs). **Confirms**: s303's/this session's hang is deterministic, reproduces a 3rd time with
+identical shape (39 RSP tasks, 2 phase lines, no crash), and the RSP-task-dispatch freeze is the more
+precise signal to chase than the 3 gate-consumer functions (now cleared as suspects).
+
+Next work unit (NEXT.md): trace what's supposed to produce RSP task #40 after task #39 exits — likely
+means source-reading the task-submission producer (probably `musyxSynthFrame`'s caller or a
+DL-emission path feeding the RSP task queue) and/or the scheduler thread-priority/wakeup logic around the
+point task #39 finishes, rather than digging further into the 3 audio functions themselves.
+
+`docs/CURRENT-TRUTH.md`: new item -168 (this session), M5 Next-steps paragraph updated, `fixup_game_funcs.py`
+comment block updated to record the 3rd reversal/re-revert cycle.

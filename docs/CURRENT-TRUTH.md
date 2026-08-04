@@ -21,10 +21,13 @@ Priority order for upcoming iterations, set after the 300-session review:
    `initMusyXEngine`'s site reversed s302, but s306's reachability counter (2 soaks) found
    `initMusyXEngine` is never actually called — s302's validation is retroactively meaningless (see
    Overturned Conclusions), and gate=1 has still never been exercised by any soak. `setDisplayMode`'s
-   site attempted s303, produced a deterministic full-boot hang, re-reverted same session. Next work
-   unit: re-reverse `setDisplayMode`'s site with s306's 3 gate-consumer entry/exit tags already armed,
-   to localize the hang instead of a black-box reversal. `reapplyDisplayMode`'s site remains untouched.
-   Full narrative: Next-steps items -167..-161 below.
+   site attempted s303 and again s307 (with s306's gate-consumer tags live): both reproduced an
+   identical deterministic full-boot hang (39 RSP tasks, stuck at VI width 320), re-reverted both
+   sessions. s307 localized the hang away from the 3 gate-consumer functions themselves (all 3 complete
+   20 clean iterations) to a shared upstream resource that stops delivering work to both the audio-tick
+   loop and RSP task dispatch after task #39/tick #19. Next work unit: trace what's supposed to produce
+   RSP task #40 — the task-submission producer and/or scheduler wakeup logic, not the 3 gated functions.
+   `reapplyDisplayMode`'s site remains untouched. Full narrative: Next-steps items -168..-161 below.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -197,7 +200,29 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -167 (s306); the next new item takes -168 and is inserted at the top.
+oldest). Current top is -168 (s307); the next new item takes -169 and is inserted at the top.
+
+-168. **(s307)** Re-reverses `setDisplayMode`'s gate-byte site (`0x8008EB40`) a 3rd time, this time
+    with the s306-armed 3-function entry/exit tags live. **Soak reproduces s303's hang a 3rd time**
+    (identical signature: `[phase]` stuck at 2 lines/width 320 the whole 600s window, exactly 39 RSP
+    tasks, no crash, never reaches title). **Localizes the hang away from the 3 previously-suspected
+    functions**: `update3DAudioFrame`, `tickAllActiveSongs`, and `tickAudioSequencerFrame` all fire 20
+    clean entry/exit pairs (`n=0..19`, no dangling entries) before the freeze — none of them hangs
+    internally. Cross-referencing the RSP task log: `[runner] task #N exit=1` climbs cleanly to `task
+    #39` and then never produces `task #40` for the rest of the run; the audio-tick freeze (stuck at
+    `n=19`) and the RSP-task freeze (stuck at task #39) land at the same point, both followed by pure
+    scheduler churn (`[sched-queue]`/`[sched-check]`/`[sched-runnext]` with no new work) — the VI thread
+    itself doesn't freeze (`update_screen #N` keeps climbing past #36000), it just perpetually skips
+    presentation because `rdpFs` never advances past 39. **Revised hypothesis**: a shared upstream
+    resource common to both the audio-tick loop and RSP task submission (likely a coop-scheduler
+    dependency) stops delivering new work after a fixed small count — not a bug inside any of the 3
+    gated functions. Reverted same session (one-site-per-session discipline): `fixup_game_funcs.py`'s
+    regex restored to force-zero both `0x8008EB40` and `0x8008EC88` again, regenerated, rebuilt,
+    verified in generated source. Single-source (one soak this session) but the "39 RSP tasks" number
+    matches s303's independently-obtained soaks exactly — corroborating, not yet a same-session repeat
+    of this specific localization. Next work unit (NEXT.md): trace what's supposed to produce RSP task
+    #40 after task #39 exits — the task-submission producer and/or scheduler wakeup logic around that
+    point, not the 3 gated functions (now cleared). Full detail: `PORTING-STATE` Session 307.
 
 -167. **(s306)** Settles the s304-raised open question with a same-run-positive-controlled entry
     counter (`fixup_game_funcs.py`, env `ROGUESQ_LOG_INITMUSYX_REACH`): **`initMusyXEngine` is
