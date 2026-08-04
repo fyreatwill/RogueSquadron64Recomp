@@ -26,10 +26,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    site attempted s303 and again s307 (with s306's gate-consumer tags live): both reproduced an
    identical deterministic full-boot hang (39 RSP tasks, stuck at VI width 320), re-reverted both
    sessions. s307 localized the hang away from the 3 gate-consumer functions themselves (all 3 complete
-   20 clean iterations) to a shared upstream resource that stops delivering work to both the audio-tick
-   loop and RSP task dispatch after task #39/tick #19. Next work unit: trace what's supposed to produce
-   RSP task #40 — the task-submission producer and/or scheduler wakeup logic, not the 3 gated functions.
-   `reapplyDisplayMode`'s site remains untouched. Full narrative: Next-steps items -168..-161 below.
+   20 clean iterations) but its "lockstep"/"shared upstream resource" framing was **overturned s309**
+   (see Overturned Conclusions): source-reading `main.cpp` found the audio-tick counter and the RSP-task
+   counter are on entirely separate code paths, and re-reading the same log line-by-line shows they stop
+   at different points — audio ticks stop at tick #19, RSP tasks keep dispatching another 18 tasks (with
+   the scheduler provably still healthy throughout) before a *separate*, later full-scheduler wedge hits
+   at task #39. Next work unit: identify which scheduler-visible thread drives the audio tick and whether
+   it's still being scheduled-but-silent after tick #19, or stops being queued outright.
+   `reapplyDisplayMode`'s site remains untouched. Full narrative: Next-steps items -169..-161 below.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -202,7 +206,19 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -168 (s307); the next new item takes -169 and is inserted at the top.
+oldest). Current top is -169 (s309); the next new item takes -170 and is inserted at the top.
+
+-169. **(s309) M5 audio de-stubbing: source-read overturns s307's "lockstep" claim — see Overturned
+    Conclusions.** `main.cpp` source-confirms the `[runner]` (RSP-task) and `[audtask-dispatch]`
+    (audio-tick) counters are separate code paths (`factor5_gfx_runner` for `M_GFXTASK` only; a distinct
+    branch for `M_AUDTASK`), and re-reading s307's own log shows they stop at different points, not
+    together — audio ticks stop at tick #19 while 18 more RSP tasks dispatch cleanly with the scheduler
+    provably still healthy (1550 sched-log lines, same 7 threads cycling), before a separate, later
+    full-scheduler wedge hits at RSP task #39. No soak run this session (pure source-read of an existing
+    log, per the work unit's own instruction). Next work unit: a thread-identity diagnostic to find which
+    of the 7 scheduler-visible threads drives the audio tick, and whether it's scheduled-but-silent after
+    tick #19 (points at a gate/branch inside `viRetraceHandlerThread`/`musyxSynthFrame`) or stops being
+    queued outright (points at whatever wakes that thread). Full detail: `PORTING-STATE` Session 309.
 
 -168..-160. **(s297-307) M5 audio de-stubbing step 4: gate-byte reversal investigation — IN PROGRESS**
     (active thread, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`). Condensed narrative
@@ -403,6 +419,17 @@ conclusions are among the oldest in the file, not the newest.
   were clean (0 crashes matching family #1, real ucode dispatch confirmed throughout) — nothing in
   their own signal suggested the reversed line hadn't run; only a dedicated reachability instrument
   could show that. Gate=1 has still never been exercised by any soak to date. PORTING-STATE 306.
+- **(s307→s309)** "the RSP-task freeze and the audio-tick freeze land at the same point (task #39/tick
+  #19), pointing to one shared upstream resource that stops feeding both" — a source-read of
+  `main.cpp` found the two counters live on entirely separate code paths (`[runner]` inside
+  `factor5_gfx_runner`, `M_GFXTASK`-only; `[audtask-dispatch]` a distinct `M_AUDTASK` branch, never
+  routed through the former), and re-reading s307's own log by line number (not just by tick/task count)
+  shows audio ticks stop at line 3013 while RSP tasks keep dispatching cleanly for 18 more tasks through
+  line 4943, with 1550 scheduler log lines proving the cooperative scheduler stays healthy throughout
+  that gap — only *after* task #39 does scheduling activity stop entirely. Two sequential, distinct
+  stalls, not one shared cause. Believable: both counters hit round, similarly-small numbers (39 and 19)
+  in the same log and both are followed by "scheduler churn with no new work," which reads as
+  simultaneous unless the actual line numbers and thread-identity sets are diffed. PORTING-STATE 309.
 
 ### Dead ends — labelled as such in the log, do not retry
 

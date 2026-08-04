@@ -27305,3 +27305,78 @@ intact, per the maintenance contract's carve-out.
 **Not touched:** the active M5 audio investigation (`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`,
 NEXT.md unchanged in substance) — next session picks up exactly where s307 left off: trace why RSP task
 #40 never arrives after task #39's clean exit.
+
+## Session 309 (2026-08-04) — M5 audio: source-read REFUTES s307's "audio-tick and RSP-task freezes are in lockstep" claim; the two are separate stalls, not one
+
+Step 0 check: `wc -c docs/CURRENT-TRUTH.md` = 46,006, under the 60,000-byte trigger — not a maintenance
+session. Per NEXT.md, this session ran Step 1 of the trace-task-#40 work unit: a source-read of
+`src/main/main.cpp` cross-referenced against s307's already-captured log
+(`scratch/s73_post_a_scene/step307reach/run.log`), no new build or soak (per the work unit's own
+"no build/soak yet" instruction).
+
+**What the source read found.** `src/main/main.cpp:485`'s `[runner] task #%d …` print lives inside
+`factor5_gfx_runner` (line 192), which `get_rsp_microcode` (line 581) returns **only** for
+`M_GFXTASK`. `M_AUDTASK` dispatch is a completely separate branch of that same switch (line 594-626)
+with its own counter, `[audtask-dispatch] n=%u …` (line 620) — a distinct code path that never touches
+`factor5_gfx_runner` or its `[runner]` print. NEXT.md's and s307's framing — "the shared factor5_ucode
+task runner that dispatches BOTH graphics DL tasks and audio ucode tasks through one path" — is **wrong
+by source inspection**: there is no shared runner between the two task types; only the RSP-microcode
+*dispatch table* is shared, and it branches immediately.
+
+**What re-reading the log with that fact in hand found.** Cross-referencing line numbers, not just
+task/tick counts: `[audtask-dispatch]`/`[reach-allsongs-*]`/`[reach-audioseq-*]` (the audio-tick chain)
+permanently stop at `n=19` at **log line 3013**, which lands between graphics tasks #21 and #22 (`[runner]
+task #22` is at line 3069). Graphics tasks then keep dispatching cleanly for **18 more tasks** (#22
+through #39, ending line 4943) — roughly 1900 more log lines / a meaningfully later point in wall time.
+In the window between the audio stop (line 3013) and the graphics stop (line 4943), the cooperative
+scheduler is provably still alive and healthy: 1550 `[sched-queue]`/`[sched-check]`/`[sched-runnext]`
+lines, cycling the **same 7 distinct thread pointers** that were cycling before the audio stall (verified
+by diffing `popped_thr=`/`self_thr=` sets in the windows `[1857,3013)` vs `[3013,4943)` — identical set,
+plus one incidental new thread). Only *after* task #39 (from line 4958 onward) does scheduler activity
+stop completely — 0 further `[sched-*]` lines in the remaining 2467 log lines, a genuine full-scheduler
+wedge, but a **separate, later** event from the audio stall, not the same moment.
+
+**This refutes s307's core claim** ("task #39 is the last one ever dispatched, in lockstep with the
+audio-tick freeze… both followed by pure scheduler churn with no new work") and the "shared upstream
+resource… stops feeding both audio ticks and RSP tasks after a fixed count" hypothesis it produced. The
+two freezes are sequential and mechanistically distinct: (A) an isolated audio-tick-producer stall at
+tick 19→20, happening while the rest of the scheduler runs normally for a further ~18 graphics-task
+cycles: 18 real, non-trivial live thread-swap events, not an idle gap, so this isn't a
+timing-window artifact. (B) a full cooperative-scheduler wedge (all thread swapping stops) that happens
+later, coincident with graphics task #39. Only (A) is directly relevant to M5 (it's the audio-tick loop
+freezing); (B) may be an unrelated, more general bug — possibly the same class as the already-documented
+"post-leave graphics-task-submission stall" (`docs/CURRENT-TRUTH.md`'s Current-truth timeline, ~90-115s
+post-leave-SELECT-YOUR-CRAFT) but that is an untested hypothesis, not a finding — the post-leave stall
+happens at a much later game phase under different conditions.
+
+**One earlier false lead ruled out in the process**: an initial diff of `popped_thr=`/`self_thr=` thread
+sets across the *entire* pre-3013 log vs the post-3013 log showed a thread (`0x30010d3d0`) present before
+and absent after, which looked like a promising "the audio thread stopped being scheduled" signal (H1)
+— but it last appears at line 174, hundreds of lines before the *first* RSP task even starts (line 775),
+so it's an early-boot thread unrelated to the steady-state audio-tick loop, not evidence of anything.
+Narrowing the comparison window to steady-state ticking (`[1857,3013)`) before comparing showed no thread
+disappears at all — refuting H1 in its simple form (the audio-driving thread is not being dropped from
+scheduling outright; it's plausibly still scheduled but silently not reaching the tick print, or the
+print condition/gate itself changed). No same-run positive control existed for this specific
+thread-identity claim either way — it needs a dedicated instrument (below), not more staring at existing
+logs.
+
+**Rules out**: the "shared task runner"/"lockstep" framing from s307 (source-level fact, not inference).
+**Confirms**: s307's raw numbers (39 RSP tasks, audio ticks stuck at n=19, no crash, 600s) are all still
+accurate as *measurements* — only the "these are the same event" interpretation was wrong.
+
+**No code changed, no soak run** — pure source-read + re-analysis of an existing log, per the work unit's
+Step 1 instruction. `initMusyXEngine`'s site remains the only gate-byte reversal live;
+`setDisplayMode`/`reapplyDisplayMode` still force-zero every call (baseline unchanged from s306/s308).
+
+Next work unit (NEXT.md): a dedicated diagnostic to identify which of the 7 scheduler-visible thread
+pointers drives the audio tick, and whether it keeps getting scheduled-and-silent (points at a
+newly-changed gate/branch inside `viRetraceHandlerThread`/`musyxSynthFrame` itself) or stops being queued
+(points at whatever wakes that thread — a VI-retrace event source). This is the Step 2/3 continuation of
+the same `trace task #40` work unit, now correctly scoped to the audio-side stall specifically (problem
+B, the later full-scheduler wedge, is parked as a separate, lower-priority observation, not yet a work
+unit of its own).
+
+`docs/CURRENT-TRUTH.md`: s307's "lockstep" claim moved to Overturned Conclusions with why it was
+believable; USER DIRECTIVE item 2 and Next-steps item -168..-160 updated to the corrected two-stall
+framing.
