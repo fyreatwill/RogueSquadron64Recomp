@@ -663,7 +663,46 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s285)
+## Next steps, in order of expected value (s286)
+
+-127. **(s286) Classified `hangarInitialize` chunk 2 (124187-124999) — proved by byte-for-byte diff
+    + function-scoped goto-reachability check that it is entirely unreachable duplicate dead code
+    (a copy of `static_5_800AAD9C`'s already-fully-guarded body), needing 0 new guards. Also
+    pre-verified chunk 3 is very likely the same pattern (duplicate of `static_5_800AB1C8`), and
+    found a 3rd function (`playerSnowSpeederInit`) independently duplicating the same address
+    range.** Full detail: `PORTING-STATE` Session 286.
+
+    Chunk 2's 2 raw `-0x25A4` hits (far below chunk-1's 38 — hit density is NOT uniform across the
+    function, as NEXT.md warned) sit inside a region bounded start-to-end by unconditional
+    `return;` statements, diffed instruction-for-instruction against `static_5_800AAD9C`'s real
+    definition (`funcs_40.c:5544-6382`): 319/319 match, 0 mismatches. A goto-reachability check
+    (every label defined in the region, grepped for `goto` references from outside it, filtered by
+    which C function each reference actually belongs to — C `goto`/labels are function-scoped)
+    found no genuine jump into the region from live `hangarInitialize` code; the only same-named-
+    label hits belong to a separate function, `playerSnowSpeederInit` (`funcs_27.c:~144145`), which
+    independently redefines the same labels for its own body. This confirms — rather than just
+    asserts, as prior sessions' in-code comments did — that `fixup_game_funcs.py`'s existing
+    `funcs_40.c`-only file-scoping for this address range's guards (`s100`/`s131`/`s132`) is
+    correct: `hangarInitialize`'s copy is genuinely dead, not a second live surface needing its own
+    guards. **No fixup-script changes, no regen, no rebuild, no soak this session** — nothing to
+    guard, nothing changed.
+
+    The same 2-check methodology applied to chunk 3 (`124999-125808` vs. `static_5_800AB1C8`,
+    `funcs_40.c:6388-7405`, already fully guarded 10/10 sites) found 322/323 matching instructions
+    (the 1-line delta is a known trailing-repeat-after-`return;` artifact, not a real mismatch) and
+    the same reachability shape — strongly predicting chunk 3 is ALSO fully dead. This was NOT
+    chunk 3's official classification (no guards landed, no rule against attempting chunk 3+ was
+    broken) — it is a lookahead check to save next session real time, not a substitute for
+    re-confirming it.
+
+    **Standing methodological addition for all remaining `hangarInitialize` chunks**: before
+    spending per-site classification effort on any chunk, check whether it is bounded by
+    `return;`-to-`return;` and byte-identical to another already-audited `funcs_40.c` function's
+    body first (comment-stream diff + function-scoped goto-reachability). Chunk 4 (`125808-132609`,
+    ~6800 lines, the largest remaining chunk) should NOT be assumed to be uniformly live audit
+    surface — it may contain further dead-duplicate sub-regions from the same overlay-address-reuse
+    pattern, now confirmed present at least 3 times (`hangarInitialize`, `playerSnowSpeederInit`,
+    and whichever other function(s) remain to be found).
 
 -126. **(s285) Completed `hangarInitialize` chunk-1 (queued by s284/an interrupted prior session)
     and found+fixed a THIRD instance of the "second-hop" blind spot, this time in

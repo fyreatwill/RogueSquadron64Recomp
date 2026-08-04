@@ -25795,3 +25795,72 @@ note this now skips over the inline-duplicated `static_5_800AAD9C` copy immediat
 already guarded separately) is the next work unit. Apply the same rigor: exact chunk boundaries
 verified by grep (not estimated), full raw-hit-count reconciliation before trusting any
 sub-summary, and explicit third-hop/second-hop checking on every `-0x25A4` reload found.
+
+## Session 286 (2026-08-03) — classifies `hangarInitialize` chunk 2, proves it is entirely unreachable duplicate dead code requiring zero new guards, and pre-verifies chunk 3 is the same pattern
+
+**The work unit**: classify and guard `hangarInitialize` chunk 2 (`funcs_27.c` lines 124187-124999,
+the second of the function's 4 grep-verified `return;`-bounded chunks per s285). Grepped the exact
+`-0X25A4` hit lines in range: only 2 (`124664`, `124767`) — far below chunk-1's 38, confirming
+NEXT.md's warning that hit density is not uniform across the function.
+
+**What the 2 hits actually are**: both sit inside a byte-for-byte duplicate of `static_5_800AAD9C`'s
+own body. Verified this directly rather than trusting NEXT.md's inherited description: extracted
+every `// 0xADDR: mnemonic` comment line from `funcs_27.c:124190-124997` and from
+`static_5_800AAD9C`'s real definition (`funcs_40.c:5544-6382`) and diffed them — 319 instructions
+each side, **0 mismatches**. The region is bounded by an unconditional `return;` at its start
+(line 124187, hangarInitialize's own true chunk-1 epilogue) and another `return;` at its end (line
+124999, immediately followed by `0x800AB1C8: addiu $sp,$sp,-0x78` — `static_5_800AB1C8`'s own
+prologue, i.e. chunk 3 begins there). Confirmed reachability separately: extracted all 18 labels
+defined inside the region and grepped the WHOLE FILE for `goto` references to those label names
+from outside the region — found 2 (`L_800AB158`, `L_800AB0C4`), but both belong to a **third,
+unrelated function**, `playerSnowSpeederInit` (`funcs_27.c:144145`), which independently redefines
+the same label names for its own body (C `goto` is function-scoped, so this is same-name collision,
+not a real cross-function jump) — confirmed via `grep -n "^L_800AB158:"` showing two definition
+sites (124924 inside the chunk-2 region, 145218 inside `playerSnowSpeederInit`). No genuine `goto`
+from live `hangarInitialize` code reaches into this region. **Conclusion: chunk 2's 2 raw hits are
+unreachable dead code, not live surface** — 0 write, 0 safe, 0 unguarded-live, 2 dead. This matches
+the project's own established design: `fixup_game_funcs.py`'s guards for this exact address range
+(`composeNpcOrientationMatrix`/`s100`, the `_hangarbay_deref_guard_sites` family/`s132`) are already
+deliberately `if p.name == "funcs_40.c"`-scoped, with in-code comments since s100/s131/s132
+explicitly noting `funcs_27.c`'s `hangarInitialize` shares this guest address range — so this
+session's finding is a rigorous confirmation of a previously-asserted-but-not-directly-proven
+design decision, not a new policy.
+
+**No fixup-script changes, no regen, no rebuild, no soak needed this session** — there is nothing
+to guard and no code changed.
+
+**Pre-verification of chunk 3 (informational only — NOT this session's classification target, no
+guards landed, no rule broken)**: ran the identical byte-diff + reachability methodology against
+`funcs_27.c:124999-125808` vs. `static_5_800AB1C8`'s real body (`funcs_40.c:6388-7405`, already
+fully guarded 10/10 sites per s284). Result: 322/323 aligned instructions match exactly (the 1-line
+delta is the same known trailing-repeat-after-`return;` codegen artifact seen at every chunk
+boundary, not a real mismatch) — chunk 3 is very likely ALSO a byte-identical duplicate of an
+already-fully-guarded function. Reachability check found the same false-positive shape: 2 `goto`s
+to chunk-3-region label names, both again inside `playerSnowSpeederInit`, not real jumps into
+`hangarInitialize`. **Prediction for next session, not yet acted on**: chunk 3 likely needs a quick
+confirmation pass (re-run the same two checks, re-verify with fresh eyes) rather than a slow
+per-site classification — but do NOT skip the verification, only skip re-deriving it from scratch.
+
+**New discovery, out of scope this session**: `playerSnowSpeederInit` (`funcs_27.c`, starts ~line
+144145) independently contains its OWN duplicate of at least this same guest address range
+(confirmed via the two same-named-label collisions above) — a **third** occurrence of the
+"overlay address-range reuse produces byte-identical duplicate dead code" pattern, previously only
+known for `hangarInitialize`. Not audited this session. If a future session needs to touch
+`playerSnowSpeederInit`, check it for its own `-0x25A4` hits and apply the same
+dead-code-verification methodology before assuming any hits found there are live.
+
+**What this shows / rules out**: chunk 2 of `hangarInitialize`'s `-0x25A4` audit is CLOSED with 0
+new guards (a genuine, verified negative result, not a skipped/deferred one). The chunking plan's
+per-chunk hit-count assumption (uniform density) is confirmed false — chunks can be entirely dead
+duplicate territory. The methodology used here (comment-stream diff + function-scoped goto-reachability
+check) is now the standard tool for distinguishing "hangarInitialize's own live code" from "another
+overlay's function duplicated into this address range" and should be applied to chunks 3-5 before
+any further per-site classification effort is spent on them.
+
+**Next steps**: run the same 2-check methodology on chunk 3 (`funcs_27.c:124999-125808`) to confirm
+the prediction above, then move to chunk 4 (`125808-132609`, ~6800 lines, by far the largest
+remaining chunk — will need its own sub-chunking once its live/dead boundary is known) or chunk 5
+(`132609-133573`). If chunk 3 confirms dead, consider whether the SAME address-range-collision
+duplication also explains large parts of chunk 4 before assuming its ~6800 lines are all live
+audit surface — check for `return;`-bounded regions matching other `funcs_40.c` function bodies
+first, rather than assuming uniform live-code density.

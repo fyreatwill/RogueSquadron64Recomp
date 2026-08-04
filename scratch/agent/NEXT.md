@@ -1,95 +1,68 @@
-# NEXT work unit — `hangarInitialize` chunk 2 (lines 124187-124999)
-# continuing the chunked `-0x25A4($s1)` audit from s285
+# NEXT work unit — confirm `hangarInitialize` chunk 3 is dead code, then move to chunk 4
+# continuing the chunked `-0x25A4($s1)` audit from s285/s286
 
-## Where the investigation stands (s285)
+## Where the investigation stands (s286)
 
-s285 completed `hangarInitialize` chunk-1 (`funcs_27.c` lines 119804-124186, the function's true
-first epilogue) — picked up from an interrupted prior session that had already done the
-classification and guard-landing but never validated or committed. Full detail: `PORTING-STATE`
-Session 285, `CURRENT-TRUTH` item -126.
+s286 classified `hangarInitialize` chunk 2 (`funcs_27.c` lines 124187-124999) and found it is
+**entirely unreachable duplicate dead code** — a byte-for-byte copy of `static_5_800AAD9C`'s
+already-fully-guarded body (`funcs_40.c:5544-6382`), needing 0 new guards. Full detail:
+`PORTING-STATE` Session 286, `CURRENT-TRUTH` item -127.
 
-**What happened**: verified the interrupted session's classification via a dedicated
-reconciliation pass (38 raw hits = 1 write + 11 safe + 26 guarded, all accounted for — the
-original summary's "9 safe" was undercounted by 2, a documentation slip not a coverage gap).
-Validation soak2 crashed inside `static_5_800A9270` (a function s283/s284 believed "fully
-guarded, 4/4") at a NEW site — direct source re-read found a genuine unguarded dereference (guest
-`0x800A92FC`, the existing `HANGARLIST_GUARD` checks the dereference's result, not the pointer
-that produced it). Fixed as `S285_A9270_R4`. 2 more soaks (2 informative, scene-reaching) did not
-reproduce it or fire the new guard.
-
-**Confirmed function structure** (from a direct `return;` grep, not estimated): `hangarInitialize`
-spans `funcs_27.c` lines 119804-133573, with exactly 4 `return;` epilogues inside it, at lines
-**124187** (chunk-1's end, done), **124999**, **125808**, **132609** — plus the function's own
-final close at 133573. This gives 4 remaining chunks:
-- Chunk 2: 124187-124999 (~800 lines) — **this session's target**
-- Chunk 3: 124999-125808 (~800 lines)
-- Chunk 4: 125808-132609 (~6800 lines, by far the largest — will need its own sub-chunking)
-- Chunk 5: 132609-133573 (~1000 lines)
-
-Do NOT reuse the old estimates from s284 (`~123792, ~124604, ~125413, ~132214, ~133175`) — they
-were off by 300-800 lines each; the boundaries above are grep-verified against the actual file.
-
-**Also confirmed**: immediately after the chunk-1 epilogue (`after_80:` / line ~124160-124187),
-the disassembly contains an inline-duplicated copy of `static_5_800AAD9C`'s own body (guest
-`0x800AAD9C` follows contiguously after `hangarInitialize`'s `jr $ra` at `0x800AAD98` in the
-original ROM). `static_5_800AAD9C` is a SEPARATE function (`funcs_40.c:5530`), already fully
-guarded (2/2, s284). **When you grep chunk 2 for `-0X25A4` hits, do NOT re-classify anything that
-is actually this inline-duplicated `static_5_800AAD9C` body** — cross-check any hit near the
-chunk-2 start against `static_5_800AAD9C`'s own guest-address range (roughly `0x800AAD9C` onward)
-before treating it as new `hangarInitialize` surface. If chunk 2's start (guest-address-wise)
-overlaps this duplicated region, skip it (it's already covered by `static_5_800AAD9C`'s own
-guards) and start real classification wherever `hangarInitialize`'s own unique code resumes.
+**The methodology that found this** (now the standard tool — use it on chunk 3 before any
+per-site classification):
+1. Extract every `// 0xADDR: mnemonic` comment line from the candidate region and from the
+   suspected already-audited `funcs_40.c` function's real body. Diff them position-by-position
+   (not a line diff of the whole file — extract just the comment stream first, ignoring the
+   `ctx->...` C statement lines, which can differ trivially in whitespace/temp-var naming even
+   when the underlying instruction is identical).
+2. Check the region is bounded by an unconditional `return;` at both its start and end (proof nothing
+   falls through into it and it doesn't fall through past its own end into a genuinely different
+   function).
+3. Extract every `L_<addr>:` label defined inside the region. Grep the WHOLE FILE for
+   `goto L_<addr>;` references to those exact label names, then for each hit determine which
+   actual C function it lives in (scan backward for the nearest `RECOMP_FUNC void <name>(` before
+   that line — **do not just match by label name across the file**, C `goto`/labels are
+   function-scoped, so a same-named label in an unrelated function is a false positive, not a real
+   cross-function jump). Only a hit whose containing function matches the region's own function is
+   a real reachability concern.
+4. If steps 1-3 all confirm (byte-identical diff, return-bounded, no genuine external goto), the
+   region is dead code from an overlay address-range collision — 0 new guards needed, full stop.
+   Do NOT invent guards for unreachable code.
 
 ## The next work unit
 
-**Classify and guard chunk 2: lines 124187-124999 of `funcs_27.c`.**
+**Confirm chunk 3 (`funcs_27.c:124999-125808`) using the methodology above**, checking it against
+`static_5_800AB1C8`'s real body (`funcs_40.c:6388-7405`, already fully guarded 10/10 sites per
+s284). s286 already ran a preliminary version of this check (322/323 aligned instructions matched,
+1-line delta being the same known trailing-repeat-after-`return;` codegen artifact seen at every
+chunk boundary) and found the same reachability shape (2 same-named-label `goto`s, both inside the
+unrelated function `playerSnowSpeederInit`, not real hits) — but this was NOT run as chunk 3's
+official session work, so re-run it properly and treat it as this session's actual classification,
+not a rubber stamp. If it confirms dead (expected), chunk 3 is CLOSED with 0 new guards, no
+regen/rebuild/soak needed (nothing changes), and you should have real budget left over — proceed to
+scope chunk 4 (`125808-132609`, ~6800 lines) using the SAME methodology before assuming it's
+uniformly live: check whether chunk 4 itself contains further `return;`-bounded dead-duplicate
+sub-regions (there is no guarantee the whole ~6800 lines is genuine `hangarInitialize` audit
+surface — the density-uniformity assumption has already been proven false twice now).
 
-1. Get the exact `-0X25A4` hit line numbers in this chunk:
-   `grep -n "0X25A4" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c`
-   filtered to `$1>=124187 && $1<=124999`. Count them exactly — do not assume a proportional
-   share of the function's 103 total hits; chunk 1 alone (only ~30% of the function's line count)
-   held 38 of the ~110+ actual hits once inline-duplication and the corrected boundary are
-   accounted for, so hit density is NOT uniform across the function.
-2. Before delegating classification, check whether any of this chunk's start overlaps the
-   inline-duplicated `static_5_800AAD9C` body described above (read the first ~50 lines of the
-   chunk and check the guest addresses in the `//0x...` comments against `0x800AAD9C`+; if they're
-   still below `0x800AAD9C`, you're still in the duplicate region — skip forward to where
-   `hangarInitialize`'s own unique code resumes, likely marked by a new distinct guest address
-   range not matching `static_5_800AAD9C`'s or `static_5_800AB1C8`'s known ranges).
-3. Delegate classification to a background/foreground agent: give it the file, the line range, the
-   exact hit line numbers, the GUARDED/UNGUARDED-DEREF/SAFE criteria, and explicitly require it to
-   check the **third-hop-capable pattern found 3 times now** (s282 `G32`, s284 `SECONDHOP`, s285
-   `R4`): for every `-0x25A4` reload, trace whether the IMMEDIATELY-COMPUTED address from that
-   reload is dereferenced before its OWN check — do not accept "a later guard checks a value
-   loaded further downstream" as sufficient coverage for an earlier, unchecked dereference in the
-   same chain.
-4. After classification, get an INDEPENDENT reconciliation pass (a second agent or your own
-   direct check) confirming raw-hit-count == (write + safe + guarded), the same check that caught
-   the interrupted session's 2-site undercount in chunk 1. Do not skip this — it already found a
-   real (small) discrepancy once.
-5. Verify anchor-pattern uniqueness within `funcs_27.c` (`text.count(anchor) == 1`) BEFORE
-   splicing into `fixup_game_funcs.py`.
-6. Batch every genuinely unguarded site in this chunk into one fixup-script edit.
-7. Regen: delete `funcs_*.c`, run `N64Recomp`, run `fixup_game_funcs.py` **exactly once** (s285's
-   own mistake this session: re-ran fixup on an already-patched file and stacked a duplicate guard
-   — caught before building via an anchor-count check, but avoid repeating it — always regenerate
-   fresh from `N64Recomp` between any two fixup runs, never run fixup twice in a row).
-8. Build, then validate with 2-3 soaks (`HOLD_S=240`, `run_in_background: true` +
-   `TaskOutput(block=true, timeout<=480000)` in the same turn). If a soak's wrapper script hangs in
-   its post-hold summary/screenshot phase (seen once this session, ~15 min hang spawning repeated
-   `run_mission_keys.sh`, unrelated to game state — the raw `run.log` already had the complete
-   answer with no further activity), check `run.log` directly for `[CRASH][pc-symbol]` and
-   `vi_width=1024` rather than waiting indefinitely on the wrapper; SIGKILL the stuck wrapper tree
-   once the raw log confirms the outcome.
+If chunk 3 does NOT confirm dead (i.e., the diff finds real mismatches, meaning it's genuinely
+`hangarInitialize`'s own live code, not a duplicate), fall back to the original per-site
+classification process used for chunk 1: grep exact `-0X25A4` hit lines, classify each as
+WRITE/SAFE/GUARDED/UNGUARDED, delegate to an agent if the count is large, get an independent
+reconciliation pass, land guards in `N64Recomp/fixup_game_funcs.py`, regen+rebuild+soak. Do not
+assume dead-code without actually running the checks — s286's preliminary check is a strong prior,
+not a substitute for this session's own verification.
 
 ## Do NOT do this iteration
 
-- Do NOT attempt chunk 3, 4, or 5 — one chunk per session, per the established rule.
+- Do NOT attempt chunk 4 or 5's actual classification unless chunk 3 confirms dead AND you have
+  real budget left over AND you scope chunk 4's own dead/live boundary first (per above) — don't
+  jump straight into per-site classification of a 6800-line chunk assuming it's all live.
 - Do NOT re-touch `static_5_800AAD9C`, `static_5_800AB1C8`, `static_5_800ADB70`, `static_5_800AB658`
-  (`G1`-`G32`/`BREADCRUMB5`-`9`), or chunk-1's `S285_H1_*` guards — all validated this session or
-  earlier.
-- Do NOT assume `static_5_800A9270` is now fully closed just because `R4` is fixed — it has missed
-  sites twice (s284, s285); if it crashes again, treat it as informative, not noise.
+  (`G1`-`G32`/`BREADCRUMB5`-`9`), `static_5_800A9270` (`R4`/`SECONDHOP`/etc.), or chunk-1's
+  `S285_H1_*` guards — all validated in prior sessions.
+- Do NOT assume `static_5_800A9270` is fully closed just because `R4` is fixed — it has missed
+  sites 3 times now (s284, s285); if it crashes again, treat it as informative, not noise.
 - Do NOT treat `processSceneNode`, `reserveAndEmitDLEntry`, `coalesceFreeHeapBlocks`, or
   `waitForAnyAudioSlot` crashes as new findings — all already catalogued.
 - Do NOT cite `x0`/`x8`/`x9`/`x10`/`x11`/`x12` = constant RDRAM-base-pointer-looking values as
@@ -97,6 +70,9 @@ guards) and start real classification wherever `hangarInitialize`'s own unique c
 - Do NOT run `fixup_game_funcs.py` twice without a fresh `N64Recomp` regen in between.
 - Do NOT idle across a Stop-hook turn boundary waiting on a background soak — block with
   `TaskOutput(task_id, block=true, timeout<=480000)` in the SAME turn.
+- Do NOT audit `playerSnowSpeederInit` this session — it's a newly-discovered candidate (s286,
+  independently duplicates at least part of the same address range) but is out of scope until
+  the `hangarInitialize` chunking is finished or explicitly reprioritized.
 
 ## Environment notes (carried forward, all still valid)
 
@@ -109,8 +85,11 @@ guards) and start real classification wherever `hangarInitialize`'s own unique c
 - Bash tool cwd persists across sequential (non-background) calls but resets after an unrelated
   `cd` elsewhere in the session — re-`cd` explicitly before cwd-dependent commands.
 - Compound `cd && ...` commands need interactive approval — issue `cd` as its own call first.
-- `git -C`/`git --git-dir=` get flagged even standalone — use plain `cd` + `git status --short` as
-  separate calls. `nm -n <binary> > file` also flagged — use Python `subprocess.run`.
+- `git -C`/`git --git-dir=`/`cd <dir> && git ...` all get flagged for approval even standalone (this
+  session confirmed both forms prompt) — if you need submodule git state, expect an approval
+  prompt, or use `git diff -- lib/<submodule>` from the repo root (shows the gitlink pointer/dirty
+  flag without entering the submodule). `nm -n <binary> > file` also flagged — use Python
+  `subprocess.run`.
 - Shell `for`/`$(...)` loops get rejected by the sandbox — use Python scripts via `Write` instead.
 - Multi-line `python3 -c "..."` with embedded `#`/newlines gets flagged — write to a file and run
   `python3 /path/to/script.py`.
@@ -125,13 +104,13 @@ guards) and start real classification wherever `hangarInitialize`'s own unique c
 - Redirecting shell output (`>`) only works under the 3 session working directories, not `/tmp`.
 - `N64Recomp/fixup_game_funcs.py` is untracked in the standalone `N64Recomp` checkout — no
   `export.sh` needed for edits there, only for actual `lib/` submodule changes.
-- `CURRENT-TRUTH.md` is far over the ~35KB target (26+ sessions overdue) — not this iteration's
-  job unless the chunk-2 audit is a quick null with clear leftover budget.
+- `CURRENT-TRUTH.md` is far over the ~35KB target (27+ sessions overdue) — not this iteration's
+  job unless the chunk-3 confirmation is a quick null with clear leftover budget.
 - At session start, check `scratch/agent/STATUS`/`OUTCOME` for signs of an interrupted prior
-  iteration — this session (s285) found real, valuable half-finished work this way (an entire
-  chunk-1 classification+guard+partial-soak already done in `fixup_game_funcs.py` and
-  `scratch/agent/s285_sites.py`/`s285_verify.py`). Always check whether uncommitted work already
-  exists in `N64Recomp/fixup_game_funcs.py` (diff against what `PORTING-STATE`'s last committed
-  session describes) before starting fresh classification from scratch.
+  iteration before assuming a `WORKING`/missing-`OUTCOME` state means recovery work is needed — s286
+  found this state was just the loop's normal per-iteration bootstrap (committed ~2.5 minutes
+  earlier), not an interrupted session. Only treat it as recovery-worthy if there's actual
+  uncommitted diff evidence (e.g. `git status`/`git diff` on `fixup_game_funcs.py` or other tracked
+  work files) beyond the routine `STATUS`/`OUTCOME` reset.
 - The pre-scene `waitForAnyAudioSlot` boot crash remains elevated-rate and unexplained since s278
   — still never directly investigated, only observed as background noise.
