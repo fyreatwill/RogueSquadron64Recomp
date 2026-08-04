@@ -1,5 +1,13 @@
 # NEXT work unit — execute step 1 of the M5 audio de-stubbing plan (free source-read, no code/soak)
 
+## s299 was a MAINTENANCE detour — this plan is UNCHANGED and still the next work unit
+
+`docs/CURRENT-TRUTH.md` measured 61,293 bytes at s299's session start, over the 60,000-byte Step-0
+maintenance trigger, so s299 was a MAINTENANCE iteration (3rd compaction pass, 61,293→47,105 bytes,
+693→550 lines — full detail: `PORTING-STATE` Session 299). No experiment ran. Everything below is
+s298's plan, unmodified; read it and execute step 1 now unless `docs/CURRENT-TRUTH.md` is again over
+60,000 bytes (re-run `wc -c < docs/CURRENT-TRUTH.md` per ITERATION.md Step 0 before anything else).
+
 ## What s298 did (context, not a re-derivation prompt)
 
 Pivoted off the `tickTextureMaterialExpiry-guard` thread (loop's mandatory-pivot rule fired after 3

@@ -10,8 +10,15 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## L
 Set after the 300-session review. Priority order for upcoming iterations:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
    section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. **[s295/s296
-   compacted 562,666→59,811 bytes; still above the 35 KB stretch target. Next pass: focus the
-   "Current truth" env-var bullets and the Regeneration section (skimmed-only so far).]**
+   compacted 562,666→59,811 bytes. s299 (3rd pass) took it 61,293→47,105 bytes (693→550 lines, -143
+   lines / -23.2% bytes — short of the 200-line auto-qualify bar, noted honestly): grouped the s267-294
+   breadcrumb-chase and s102-149 audio-corruption Next-steps items into era paragraphs (established
+   precedent), rewrote the entire "Overturned conclusions"/"Dead ends" sections in the terser
+   one-line-per-claim style "Method traps" already uses below them, condensed the -14..-1 parked-item
+   tail, and fixed 2 dead cross-references to a numbering scheme ("item 0"/"item 0b") that no longer
+   exists. Still above the 35 KB stretch target — remaining candidates: the "Current truth" env-var/
+   timeline prose and the Regeneration section's Standing warnings, both left mostly intact this pass
+   as operationally load-bearing (used every iteration for phase-gating and build commands).]**
 2. **M5 audio de-stubbing**: design doc DONE (s298, `docs/M5-AUDIO-PLAN.md`) — surveyed every audio
    stub/trap/gate, found the stub is a single dispatch-table entry (`musyx_stub` for `M_AUDTASK` in
    `src/main/main.cpp`), and planned a 6-step incremental de-stubbing sequence with a validation soak
@@ -28,7 +35,7 @@ matching (the BREADCRUMB10+ slice idiom) to the ~100 file-scoped-only guard patc
 fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment.
 
 
-## Current truth (as of session 295)
+## Current truth (as of session 295; unchanged and reviewed through s298)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -217,82 +224,32 @@ top.
     (confirms) or crashes at the same PC anyway (refutes — re-read the bail path). `PORTING-STATE`
     Session 297.
 
--159. **(s294)** Resumes the abandoned s249-251 project-wide unguarded-walk sweep; source-reads and
-    breadcrumbs `stopSongByHandle` (`BREADCRUMB14`, 180 sites, `funcs_25.c:4390-4818`) -- no unique
-    translation bug, same uniform unguarded-`RECOMP_FUNC` baseline as every prior candidate.
-    **Headline result**: catches `tickTextureMaterialExpiry`'s (`BREADCRUMB12`) SECOND recurrence at
-    the IDENTICAL guest PC as s293's soak (`0x80022094`, `funcs_6.c:12207`, a 2-byte read of
-    `ctx->r16+0x8`) -- crossing the two-independent-observations confirmation bar, which s297 (item
-    -160 above) used to land the guard. Full detail: `PORTING-STATE` Session 294.
-
--158. **(s293)** Lands `BREADCRUMB13` scoped to `tickSongSequence` (`funcs_25.c:4878-5317`),
-    closing a 119-session-old unaddressed backlog item (s174) -- no unique translation bug. Bonus:
-    this session's own validation soak caught the FIRST recurrence of `tickTextureMaterialExpiry`
-    (`BREADCRUMB12`) at `funcs_6.c:12207` -- 1 of the 2 observations `BREADCRUMB12`'s now-ready guard
-    rests on (see item above). Full detail: `PORTING-STATE` Session 293.
-
--157. **(s292)** Lands `BREADCRUMB12` scoped to `tickTextureMaterialExpiry`
-    (`funcs_6.c:12135-12332`), closing the last fully-unaddressed s270 backlog item (first flagged
-    s157) -- no unique translation bug, no raw caller-controlled pointer (every deref traces to an
-    internally-walked global table + linked-list chain); sole candidate `ctx->r16`. Full detail:
-    `PORTING-STATE` Session 292.
-
--156. **(s291)** Lands `BREADCRUMB11` scoped to `coalesceFreeHeapBlocks`
-    (`funcs_0.c:4332-4804`), closing a 21-session-old backlog item (s270) -- no unique translation
-    bug. Full detail: `PORTING-STATE` Session 291.
-
--155. **(s290)** Full source read of `inflate_fast` (`funcs_7.c:13553-14116`) finds no
-    unique translation bug. **Key finding**: the recompiler's `MEM_B`/`MEM_BU` macros turn a register
-    holding exactly 0 into `rdram + 0x80000003` -- the s272 crash's `si_addr=0x380000003` is the SAME
-    long-tracked near-`0x80000000` null-pointer signature guarded ~15 times elsewhere since ~s130, not
-    a novel zlib bug. Lands `BREADCRUMB10` scoped to `inflate_fast`; no guard (unvalidatable blind, 1
-    observation ever). Full detail: `PORTING-STATE` Session 290.
-
--154. **(s289) CLOSES the elevated pre-scene `waitForAnyAudioSlot` death-rate backlog item (open since s278) as a non-finding — the elevated rate was real but confined to a 4-session window (s276-278, s280: 7/8 = 87.5%) that had already fully reverted by s281, a full session before the `-0x25A4` audit lineage (s282-288) even began.** Full detail: `PORTING-STATE` Session 289.
-
--153. **(s288) CLOSES the `-0x25A4($s1)` hangar-list-pointer audit lineage (s283-288) entirely — `playerSnowSpeederInit` has ZERO `-0x25A4` hits, and its apparent 3-function label overlap (flagged by s286/287 as a possible dead-duplicate signal) is REFUTED: it is genuinely live, continuously-translated code that merely shares virtual address space with `static_5_800AAD9C`/`static_5_800AB1C8`/`static_5_800AB658`, not a text/byte copy of any of them.** Full detail: `PORTING-STATE` Session 288.
-
--152. **(s287) CLOSES the entire `hangarInitialize` `-0x25A4` audit — chunks 3, 4, and 5 (the remaining ~89% of the function, 124187-133572) all confirmed dead unreachable duplicate code via the chunk-2 methodology, 0 new guards needed anywhere.** Full detail: `PORTING-STATE` Session 287.
-
--151. **(s286) Classified `hangarInitialize` chunk 2 (124187-124999) — proved by byte-for-byte diff + function-scoped goto-reachability check that it is entirely unreachable duplicate dead code (a copy of `static_5_800AAD9C`'s already-fully-guarded body), needing 0 new guards.** Full detail: `PORTING-STATE` Session 286.
-
--150. **(s285) Completed `hangarInitialize` chunk-1 (queued by s284/an interrupted prior session) and found+fixed a THIRD instance of the "second-hop" blind spot, this time in `static_5_800A9270` — correcting -125's "4/4, fully guarded" claim below.** Full detail: `PORTING-STATE` Session 285.
-
--149. **(s284, "4/4 fully guarded" claim for `static_5_800A9270` corrected by -126 above — 5/5 known sites now, not provably exhaustive) Deliberate grep-based audit of every `-0x25A4($s1)` hangar-list global-pointer reference across `RecompiledFuncs/*.c`, per s283's plan — found the audit scope was far larger than the 4 incidentally-discovered sites, landed 29 new guards across 3 functions, and found + fixed a live crash the new guards exposed.** Full detail: `PORTING-STATE` Session 284.
-
--148. **(s283) Source-read `static_5_800A9270`/`loadCutsceneAssetsByIndex` per s282's plan — found and closed the `+948` backlog item, PLUS 2 more unguarded sites of the same bug shape in the same function.** Full detail: `PORTING-STATE` Session 283.
-
--147. **(s282) Re-soaked `BREADCRUMB8`/`emitAllocatedDLCommand` per s281's plan (its 2nd session) — soak1 hit an already-catalogued site, but soak2 crashed inside `static_5_800AB658` itself (`BREADCRUMB7`'s own target), the FIRST informative hit across the whole `BREADCRUMB5`-`9` family.** Full detail: `PORTING-STATE` Session 282.
-
--146. **(s281) Re-soaked `BREADCRUMB7`/`static_5_800AB658` per s280's plan (its 2nd session) — 0/2 this session, 0/4 combined (s274+s281), never informative on its own target.** Full detail: `PORTING-STATE` Session 281.
-
--145. **(s280) Re-soaked `BREADCRUMB6`/`buildPositionAndCallTransformHelper` per s279's plan (its 2nd session) — BOTH soaks died PRE-SCENE to the identical `waitForAnyAudioSlot` boot crash (`last-guest-pc=0x8000b650`, the recurring stale `beginFrameDLChunk` value), 0 informative hits, no new crash site.** Full detail: `PORTING-STATE` Session 280.
-
--144. **(s279) Ran s278's step 1 (free, no-soak source-read of `tickWrappingTimerAccumulatorList`'s 4 call sites) — it REFUTES the `BREADCRUMB9` instrumentation-confound hypothesis mechanically, no soak needed.** Full detail: `PORTING-STATE` Session 279.
-
--143. **(s278) Re-soaked `BREADCRUMB9`/`tickWrappingTimerAccumulatorList` per s277's plan (its 3rd session) — BOTH soaks died PRE-SCENE to the identical `waitForAnyAudioSlot` boot crash, 0 informative hits, tripping the rule-8 3-strikes threshold.** Full detail: `PORTING-STATE` Session 278.
-
--142. **(s277) Re-soaked `BREADCRUMB9`/`tickWrappingTimerAccumulatorList` per s276's plan, no code change — soak 1 died PRE-SCENE to the identical `waitForAnyAudioSlot` boot crash a 3rd consecutive time (across s276+s277), but soak 2 broke the streak: reached the scene and ran the full 240s hold plus grace completely crash-free.** Full detail: `PORTING-STATE` Session 277.
-
--141. **(s276) Landed `BREADCRUMB9` on `tickWrappingTimerAccumulatorList` per s275's plan — 0/2 this session (its first), no informative hit.** Full detail: `PORTING-STATE` Session 276.
-
--140. **(s275) Landed `BREADCRUMB8` on `emitAllocatedDLCommand` per s274's plan — 0/2 this session (its first), no informative hit on its own target.** Full detail: `PORTING-STATE` Session 275.
-
--139. **(s274) Landed `BREADCRUMB7` on `static_5_800AB658` per s273's plan — 0/2 this session (its first), no informative hit. Soak 1 ran the entire 240s hold plus grace crash-free (deepest soak this investigation has recorded).** Full detail: `PORTING-STATE` Session 274.
-
--138. **(s273) Re-soaked `BREADCRUMB5` per s272's plan — still 0/4 combined, no informative hit ever on `reserveAndEmitDLEntry` itself.** Full detail: `PORTING-STATE` Session 273.
-
--137. **(s272) Landed `BREADCRUMB5` on `reserveAndEmitDLEntry` per s271's plan — 0/2 this session, no informative hit on its own target.** Full detail: `PORTING-STATE` Session 272.
-
--136. **(s271) Re-soaked per s270's plan — `BREADCRUMB4` still 0/2 (now 0/4 combined), but soak 1 caught a brand-new crash (`emitAllocatedDLCommand+6608`, different fault shape) and soak 2 finally caught and exactly localized `BREADCRUMB3`'s own long-elusive target: guest `0x8000B03C` inside `beginFrameDLChunk` itself — a 4th unguarded copy of the cached-free-list-head idiom, first occurrence found outside `submitSceneNodeRender`.** Full detail: `PORTING-STATE` Session 271.
-
--135. **(s270) Landed `BREADCRUMB4` on `processSceneNode` per s269's plan — it did NOT catch its own target in 2 soaks (0/2, breaking the 3/3 streak s267+s269 had built up), but the 2nd soak instead caught a different, symrange-confirmed real crash in `submitSceneNodeRender` (a 3rd unguarded copy of the "cached free-list-head" idiom already fixed twice before).** Full detail: `PORTING-STATE` Session 270.
-
--134. **(s269, superseded as top priority by s270 above) Landed `BREADCRUMB3` on `beginFrameDLChunk` per s268's plan — it didn't catch its own target in 2 soaks, but both soaks instead landed an EXACT, byte-identical crash in a different function, `processSceneNode+1184` (`si_addr=0x380000030`), that s267 had also hit once before unverified.** Full detail: `PORTING-STATE` Session 269.
-
--133. **(s268, superseded as top priority by s269 above) Ran s267's prescribed re-soak plan 3 more times (`run_dequeuearg1.sh`, unmodified) — still 0 reproductions of the specific `heapFreeListDequeue`-range crash `BREADCRUMB2` targets (now 0/6 across s267+s268 combined), but caught a NEW crash site sharing the exact same "guest fault address `0x80000000`" shape in a DIFFERENT, never-before-catalogued function: `beginFrameDLChunk+13420`.** Full detail: `PORTING-STATE` Session 268.
-
--132. **(s267, superseded as top priority by s268 above) Refuted the a0-argument hypothesis for the guest-`0x80000000`-family fault inside `heapFreeListDequeue` via a same-run positive-control trace (167k fires, last one immediately before a captured crash showed a sane in-range pointer, not `0x80000000`), and armed a 2nd guest-PC breadcrumb (`BREADCRUMB2`) scoped to that function's own body — but 3 follow-up soaks didn't reproduce this specific crash.** Full detail: `PORTING-STATE` Session 267.
+-159..-132. **(s267-294) Breadcrumb whack-a-mole B2-B14 plus the `-0x25A4` hangar-list-pointer audit
+    lineage — CLOSED.** Starting from a refuted a0-argument hypothesis for a guest-`0x80000000`-family
+    fault inside `heapFreeListDequeue` (s267, confirmed via same-run positive control), single-function
+    breadcrumbs `BREADCRUMB2`-`9` chased the "cached free-list-head" idiom across `beginFrameDLChunk`,
+    `processSceneNode`, `submitSceneNodeRender`, `reserveAndEmitDLEntry`, `static_5_800AB658`,
+    `emitAllocatedDLCommand`, and `tickWrappingTimerAccumulatorList` (s268-282) — most soaks caught the
+    idiom recurring in a DIFFERENT already-known function rather than their own target (e.g. s269/270/271
+    each landed on a fresh unguarded copy elsewhere), and a 3-session PRE-SCENE `waitForAnyAudioSlot`
+    boot-crash streak on `BREADCRUMB9` (s277-280, tripping the rule-8 3-strikes threshold) turned out to
+    be a transient 4-session window (s276-278, s280: 7/8 = 87.5%) already fully reverted by s281, CLOSED
+    as a non-finding s289. s283-288 then ran a deliberate grep-based audit of every `-0x25A4($s1)`
+    hangar-list-pointer site across `RecompiledFuncs/*.c` — far more sites than the incidental
+    discoveries, landing 29 guards across 3 functions (s284) including a fix for a live crash the new
+    guards exposed, finding a 3rd "second-hop" blind-spot instance in `static_5_800A9270` (s285),
+    classifying all of `hangarInitialize`'s remaining chunks as dead/unreachable duplicate code
+    (s286-287), and closing the whole lineage s288 (the apparent `playerSnowSpeederInit` overlap was
+    REFUTED — genuinely live code that merely shares address space with 3 already-guarded functions, not
+    a copy of any of them). Separately, s289-294 resumed the abandoned s249-251 project-wide
+    unguarded-walk static sweep (`find_unguarded_walks.py`, 143 sites/43 functions), landing
+    `BREADCRUMB10`-`14` on `inflate_fast`, `coalesceFreeHeapBlocks`, `tickTextureMaterialExpiry`,
+    `tickSongSequence`, and `stopSongByHandle` — no unique translation bug in any of them (the
+    `inflate_fast` s272 crash was the same long-tracked `MEM_B`/`MEM_BU` null→`0x80000003` signature
+    guarded ~15 times elsewhere), but s293/294's soaks caught `tickTextureMaterialExpiry`'s
+    (`BREADCRUMB12`) two independent recurrences at the identical guest PC (`0x80022094`,
+    `funcs_6.c:12207`), crossing the confirmation bar s297 (item -160 above) used to land
+    `MATEXPIRY_GUARD`. Full detail: `PORTING-STATE` Sessions 267-294.
 
 -131. **(s266) Re-soaked per s265's plan, caught a genuine `submitSceneNodeRender`-range crash (offset +47120, NOT the original +19268 target), localized it via `[CRASH][last-guest-pc]=0x80010E40` to a 2nd, previously-unguarded occurrence of s197's "cached free-list head" idiom, and landed `CACHE2_GUARD` (`N64Recomp/fixup_game_funcs.py`) — 2 post-fix soaks show no recurrence of this crash, but surfaced a DIFFERENT, higher-priority bug.** Full detail: `PORTING-STATE` Session 266.
 
@@ -304,40 +261,26 @@ top.
 
 -84..-26. **(s150-219) The long `heapWalker`/`renderUnlitMeshFaces`/`composeNpcOrientationMatrix`/`heapFreeListDequeue` whack-a-mole guard-gap chase.** ~70 sessions landing one unguarded-pointer-chase guard at a time, converging on 2 durable lessons: the literal `0x0000000300000000` at x0/x8 across 3 unrelated crash sites is this process's constant RDRAM host base pointer, not corrupted data (s219, see Overturned Conclusions); the real wild operand is the *other* register, with a KSEG0-tag signature recurring in `renderUnlitMeshFaces` specifically. Also settled: "single Start leaves SELECT YOUR CRAFT into hangar-flight" **OVERTURNED s150** (mission-entry unanswered again); the s162 post-leave cutscene stall is the s79/80 FULL_SYNC-loss class recurring, capable of at least one recovery (s153/154); a `[thr-resume]`-adjacent scheduler silent-drop mechanism (s180-187) got a defensive guard that produced the first fully crash-free full-length soak in that lineage (s187). Full detail: PORTING-STATE Sessions 150-219.
 
--25. **CLOSED (s147, reconfirmed s148):** the count-then-pointer-store race in
-    `allocateSongChannelArray` (Thread B's root cause) is fixed and verified -- relocated the early
-    `voiceCount` write to run after the pointer-store block. 3 independent verification soaks
-    (`countracefix1-3`) all clean: 0/13 corrupted `[voice-active-gate-nz]` reads post-fix (vs. 5
-    pre-fix), 0/3 `do_rom_read` recurrences (vs. 9 prior) -- first fully crash-free soaks for this
-    shape since s83. **s149 bonus finding**: "what input leaves SELECT YOUR CRAFT" is not actually
-    open -- the leave transition fires correctly (invisible to VI-phase tracking); the real open
-    question was always what the post-leave scene is and surviving its first ~2s, where the wider
-    hangar-tick crash family keeps landing. Full detail: `PORTING-STATE` Sessions 147-149.
-
--24. **CLOSED (s135): `emitAllocatedDLCommand` soak hypothesis parked, 3-attempt
-    budget exhausted per rule 8.** s133 -> environment-side Apple-Metal SIGSEGV; s134 -> 18th-class
-    recurrence; s135 -> the separately-tracked `do_rom_read`/`piDmaWorker` corruption SIGSEGV. Guards
-    `emit-dl-guard2`/`3` never fired (0/0 all 3 attempts) but both stay in the code (real fixes,
-    independent of this question). Full detail: `PORTING-STATE` Session 135.
-
--23. **PARKED at 2/3 (s136-s137): `submitSceneNodeRender` material-batch-list guard
-    (`MATLIST_GUARD1`/`GUARD2`).** Two soaks, both 0/0 on the new guards (uncontrolled null both
-    times), both dying to the tracked `do_rom_read`/`piDmaWorker` corruption race. Both guards stay in
-    the code regardless. Full detail: `PORTING-STATE` Sessions 136-137.
-
--22. **CLOSED (s147, see item above): Thread B, the audio-corruption pivot (`voice+0x0`/`+0x34`),
-    longest-running open thread -- fix landed and verified.** Path to the fix (s138-146): ruled out a
-    static ROM string table (s138) and adjacent-heap aliasing (s139-141); named the real allocation
-    as `allocateSongChannelArray`'s own 2nd alloc, one slot of a per-tick-toggled double-buffered
-    pointer table (s141-143); found `musyxMixActiveVoices`'s unchecked-cursor write (s144, not proven
-    the direct writer); s145 found the real mechanism (see item -19 above and PORTING-STATE Sessions
-    138-147 for the fix narrative).
-
--21. **s139: landed the `rs_malloc`/`rs_free` range-overlap measurement that
-    narrowed Thread B's candidate allocations from the whole heap to 3 named boot-time pointers**
-    (superseded by s141's more precise identification -- see item above). Confirmed the voice array's
-    per-slot stride is 136 bytes and that observed corruption hits are past the array's actual
-    malloc'd length, not just past an abstract count. Full detail: `PORTING-STATE` Session 139.
+-25..-21. **(s133-149) Audio-array corruption (Thread B) — CLOSED, plus two side threads parked at
+    exhausted rule-8 budget.** Real mechanism (non-atomic `voiceCount`-write-before-pointer-store race
+    in `allocateSongChannelArray`) found s145, FIXED and verified s147/148: 3 independent verification
+    soaks all clean — 0/13 corrupted `[voice-active-gate-nz]` reads post-fix (vs. 5 pre-fix), 0/3
+    `do_rom_read` recurrences (vs. 9 prior) — first fully crash-free soaks for this shape since s83.
+    **s149 bonus**: "what input leaves SELECT YOUR CRAFT" was never actually open — the leave
+    transition fires correctly (invisible to VI-phase tracking); the real open question was always the
+    post-leave scene and surviving its first ~2s, where the wider hangar-tick crash family kept
+    landing. Path to the fix (s138-146): ruled out a static ROM string table (s138) and adjacent-heap
+    aliasing (s139-141, via an `rs_malloc`/`rs_free` range-overlap measurement that also confirmed the
+    voice array's per-slot stride is 136 bytes); named the real allocation as
+    `allocateSongChannelArray`'s own 2nd alloc, one slot of a per-tick-toggled double-buffered pointer
+    table (s141-143); found `musyxMixActiveVoices`'s unchecked-cursor write (s144, not proven the
+    direct writer) before s145 found the real mechanism. Two side threads exhausted their rule-8
+    budget without resolving, guards left in code regardless: `emitAllocatedDLCommand` soak hypothesis
+    (s133-135: hit an environment-side Apple-Metal SIGSEGV, an 18th-class recurrence, then the
+    separately-tracked `do_rom_read`/`piDmaWorker` corruption SIGSEGV — `emit-dl-guard2`/`3` never
+    fired, 0/0 all 3 attempts); `submitSceneNodeRender`'s `MATLIST_GUARD1`/`GUARD2` (s136-137, parked
+    at 2/3, both 0/0 on the new guards, both dying to the `do_rom_read` race). Full detail:
+    `PORTING-STATE` Sessions 133-149.
 
 -20. **Regen-pipeline reliability bug (s120, confirmed intermittent not deterministic).** Root cause:
     `N64Recomp` skips rewriting any `RecompiledFuncs/funcs_*.c` file that already exists on disk, so
@@ -347,35 +290,25 @@ top.
     still unknown. **Standing rule**: audit the patch report for anything other than the expected `xN`
     count after every `fixup_game_funcs.py` run. Full detail: `PORTING-STATE` Sessions 120, 121, 126.
 
--19. **M3 Thread A/B saga (s116-s135), CLOSED -- superseded by the s147/148 fix above.** Two parallel
-    threads, both resolved: **Thread A** (re-audit of every already-guarded hangar-tick crash class
-    for a *second* unguarded pointer-chase site) ran s126-132 across 8 functions, found 6/8 had a
-    genuine second gap (all guarded); biggest hit was `updateHangarBayScene`'s `-0x25A4` family, 26
-    more sites guarded in one sweep (s132), later fully closed by the s282-288 audit lineage.
-    **Thread B** (`voice+0x0`/`+0x34` audio-array corruption) chased across s116-145 through several
-    reframings before the real mechanism (non-atomic `voiceCount`-write-before-pointer-store race)
-    was found s145 and fixed/verified s147/148 (see item above); refuted along the way: stale
-    `rs_malloc` memory, an OOB scan index, an RSP-ucode write, a computed-offset guest-C store, and an
-    adjacent-heap-allocation aliasing theory. **Methodology lesson:** comparing two instruments' log
-    lines by *file order* across threads is not a valid proxy for real time order -- cross-thread log
-    correlation needs a shared sequence number. Full detail: `PORTING-STATE` Sessions 116-135.
-
--18. **M3 Thread B, early phase (s102-s113) -- superseded by the s145/147/148 resolution above.**
-    Traced the corrupted MusyX DMA-batch `devAddr` field backward through 5 functions across 6
-    sessions before landing on the real writer: `submitDmaRequestBatch`/`musyxSynthFrame` cleared
-    (s102) -> `acquireSampleStreamBlock` refuted (s103, never entered) -> `fillSampleStreamRange`
-    identified as the writer, computing `devAddr` from `voice+0x34` (s103) -> that field's allocator
-    (`initSampleStreamBlockCache`) cleared, its inputs already corrupted at entry (s104) -> traced to
-    a shared struct field read in `musyxRenderVoiceSamples` -> `musyxInitVoiceFromSample` identified
-    as the sole writer of that offset anywhere in the tree (s105, s111 exhaustive grep). The
-    call-chain-ancestry angle (s105-110) was a 5-session dead end, eventually retired. Full detail:
-    `PORTING-STATE` Sessions 102-113.
-
--17. **Tooling (s102, root-caused more precisely s120 -- see item above):
-    `fixup_game_funcs.py` is not idempotent** -- re-running it without a full ELF regen between runs
-    inserts a second copy of every already-applied patch. Harmless (duplicate guards are dead code,
-    first copy's `goto` always wins) but bloats generated files. Full detail: `PORTING-STATE` Session
-    102.
+-19..-17. **(s102-135) Thread A/B saga leading to the s145/147/148 fix above, plus the regen-pipeline
+    root cause.** Thread A (s126-132): re-audited every already-guarded hangar-tick crash class for a
+    2nd unguarded pointer-chase site — 6/8 had a genuine gap (all guarded); biggest hit
+    `updateHangarBayScene`'s `-0x25A4` family (26 sites, s132), later fully closed by the s282-288
+    audit lineage. Thread B (s116-145): chased the `voice+0x0`/`+0x34` corruption through several
+    reframings; refuted along the way: stale `rs_malloc` memory, an OOB scan index, an RSP-ucode
+    write, a computed-offset guest-C store, an adjacent-heap-allocation aliasing theory. Earlier
+    (s102-113): traced the corrupted MusyX DMA-batch `devAddr` field backward through 5 functions
+    across 6 sessions (`submitDmaRequestBatch`/`musyxSynthFrame` cleared → `acquireSampleStreamBlock`
+    refuted, never entered → `fillSampleStreamRange` identified as writer, computing `devAddr` from
+    `voice+0x34` → that field's allocator `initSampleStreamBlockCache` cleared, inputs already
+    corrupted at entry → traced to `musyxRenderVoiceSamples` → `musyxInitVoiceFromSample` identified as
+    the sole writer of that offset anywhere in the tree, s105/s111 exhaustive grep); the
+    call-chain-ancestry angle (s105-110) was a 5-session dead end. **Methodology lesson**: comparing
+    two instruments' log lines by *file order* across threads is not a valid proxy for real time
+    order — cross-thread log correlation needs a shared sequence number. **Tooling** (s102,
+    root-caused precisely by item -20 above): `fixup_game_funcs.py` is not idempotent — re-running it
+    without a full ELF regen between runs inserts a second copy of every already-applied patch
+    (harmless, but bloats generated files). Full detail: `PORTING-STATE` Sessions 102-135.
 
 -16. **M3 hangar-tick-family guard program (s99-s110): 8 crash classes guarded** (16th/12th/11th/
     14th/17th/18th/9th/10th -- see the crash catalog below), all with clean negative controls, same
@@ -410,61 +343,44 @@ top.
     functions -- already folded into the table above. Full detail: `PORTING-STATE` Sessions 93-110,
     124-132, 159, 195-196.
 
--14. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert.**
+-14. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert.** (Crash classes 9/10 —
+    `updateAnimatedTextureStreaming`/`static_5_800B4048` SIGBUSes — CLOSED s124/s125, tracked only in
+    the crash catalog table at item -15 above.)
 
--13. **M3 — characterize the 10th crash class, SIGBUS in
-   `static_5_800B4048` (s90): CLOSED, guarded s125.** See crash catalog
-   and item 0 above.
+-11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89).** 3 consecutive non-recurrences since
+    s88's correctly-targeted instrument, against 8 prior crashing soaks. Not worth a dedicated soak;
+    if it recurs incidentally, `ROGUESQ_LOG_ANIM_CB=1` is still live and ready to read.
 
--12. **M3 — characterize the 9th crash class, `updateAnimatedTextureStreaming`
-   SIGBUS (s89): CLOSED, guarded s124.** See crash catalog and item 0b above.
+-10. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside
+    `Metal.framework`'s `MTLCompilerFSCache`, no source on our side). Still one data point.
 
--11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89).** 3
-   consecutive non-recurrences since s88 landed the correct instrument
-   (s88, animcb2, animcb3) against 8 total crashing soaks since s83. Do
-   not spend a dedicated soak chasing this further; if it recurs
-   incidentally during a soak run for a different reason, the
-   `ROGUESQ_LOG_ANIM_CB=1` instrument is still live and ready to read.
+-9. **M3 — confirm the s83 spline div0 guard actually engages.** 0/5 fires so far (still 0 after
+    s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive
+    control yet.
 
--10. **M3 — check the Metal-shader-compiler SIGSEGV's reproducibility** (s83
-   spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no
-   source on our side). Still only one data point.
+-8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd,
+    `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a
+    shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
 
--9. **M3 — confirm the s83 spline div0 guard actually engages.** 0/5 fires
-   so far (still 0 after s88/s89/s90); real fix by code inspection (genuine
-   0/0 IEEE division) but no same-run positive control yet.
+-7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once earlier items clear: `PROBE_MODE=start_only
+    HOLD_S=60` marks 10/25/40, document the phase timeline. Gate already keeps black off; residual S1
+    `fs` freeze (~3769-3872 plateau) may still stall animation.
 
--8. **M3 — characterize `frameStartReset` SIGBUS.** Demoted from "dominant blocker" after s85 (0
-   recurrences s86-90, 5 soaks); recurred s108 (2nd), recurred again s156 (3rd, `+532`) at a call
-   chain byte-identical to `composeNpcOrientationMatrix`'s own chain — raising a shared-dispatcher
-   hypothesis. Worth attention now (3 occurrences); no located faulting instruction in any of the 3.
+-6. **M4 — confirm the s53 missing-func fix at runtime** (s54 applied + built it; only the game-run
+    check remains). Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` should go 3→0. Not
+    load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
 
--7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once items 1–4 are clear:
-   `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40; document phase timeline.
-   Gate already keeps black off; residual S1 `fs` freeze (~3769–3872 plateau,
-   s82/s85/s88/s89/s90) may still stall animation — if stick marks show no
-   pose change on a frozen frame, next is S1 FULL_SYNC for hangar-flight
-   tasks (not leave-key, not wild-FB).
-
--6. **M4 — confirm the s53 missing-func fix at runtime (s54 applied + built it; only the game-run
-   check remains).** Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` 3→0.
-   Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
-
--5. Past the first sustained mission hold: expect further new failure classes (mission overlay
-   DMA → missing-func / UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture
-   corruption). Each new failure is its own work unit.
-
--4. **Doc housekeeping** — superseded by the USER DIRECTIVE maintenance item at the top of this file;
-   do not act on this stale s55-58 framing.
+-5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA →
+    missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption). Each
+    new failure is its own work unit.
 
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
-   carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user
-   before committing there.
+    carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user
+    before committing there.
 
--2. **Band-row coverage history** (settled): s41–s49. s40's `col`-write probe fails its control.
+-2. **Band-row coverage history** (settled, s41-49): s40's `col`-write probe fails its control.
 
--1. **GPU->CPU present PNG** via `NativeTarget::copyToRAM` -- a convenience, not a
-    blocker.
+-1. **GPU->CPU present PNG** via `NativeTarget::copyToRAM` -- a convenience, not a blocker.
 
 **Done, do not redo:**
 - Optimise the ucode vector path -- s38 found it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
@@ -530,129 +446,75 @@ Standing warnings:
   Python decoders need `scratch/venv/bin/python` (PIL is gone from system python, s18).
 - `regress.sh` preflight must not write probe images as `.*` hidden names: `screencapture` refuses
   final path components starting with `.` (exit 0, no file) and falsely reports visual=denied (s26).
-- ~~Screen Recording permission is intermittent~~ — **overturned s32.** Capture and synthetic input
-  both work: 74/74 `screencapture -l` succeeded across a full undriven run (73 with content, all
-  phases), the game's CGWindow id was **stable** at one value for the whole run, and a driven run
-  reached the hangar (512 origin 0x6AB400 at 56.0 s) off `winctl` keys. `could not create image from
-  window` means the **window id is wrong**, not that permission is missing — check the id before
-  blaming TCC (`winctl find <pid>`; `winctl list` is not a subcommand and prints nothing).
-  `winctl trusted` reports Accessibility state directly.
-- `winctl activate` (activateWithOptions:) is a cooperative request modern macOS **ignores while
-  another app holds focus** — keys then get dropped with `trusted`=yes and the run silently follows
-  the undriven route (s45; also the real cause of the session-25 failures regress.sh blamed on "no
-  GUI session"). probe.sh/regress.sh now raise via System Events `set frontmost` (`raise_game()`);
-  keep using them rather than winctl directly for driven runs.
+- ~~Screen Recording permission is intermittent~~ — **overturned s32**: capture and synthetic input
+  both work (74/74 `screencapture -l` succeeded, stable CGWindow id). `could not create image from
+  window` means the **window id is wrong**, not missing permission — check via `winctl find <pid>`
+  (`winctl trusted` reports Accessibility state; `winctl list` is not a subcommand).
+- `winctl activate` is a cooperative request modern macOS **ignores while another app holds focus** —
+  keys then drop silently with `trusted`=yes (s45; the real cause of the old "no GUI session"
+  failures). `probe.sh`/`regress.sh` raise via System Events `set frontmost` (`raise_game()`) instead
+  — use them rather than `winctl` directly for driven runs.
 
 ## Overturned conclusions — do not act on these
-
-- **Claim (s222):** "no soak has ever reached mesh-heavy content" -- the post-`SELECT YOUR CRAFT`
-  freeze happens within ~4s of leaving the menu on EVERY soak, independent of schedule. **Overturned
-  (refined) by s223:** a byte-for-byte re-run of the same script reached real space-combat mesh
-  content and the opening crawl before freezing -- the freeze itself is real and still reproduces (now
-  on a flat ground-color fill rather than a torn polygon), but "every soak, no exceptions" was a
-  4-soak sample-size artifact; reaching further content is possible, apparently non-deterministically,
-  on byte-identical scripted input. Full detail: PORTING-STATE Session 223.
-
-- **Claim (s216-218):** the identical corrupt literal `0x0000000300000000` seen at `x0`/`x8` in three
-  crash dumps (`heapFreeListDequeue`, `heapWalker`, `renderUnlitMeshFaces`) is a single shared
-  corruption source being WRITTEN somewhere ("three-source-confirmed"). **Overturned by s219:** that
-  register is this process's constant, unchanging native RDRAM host base pointer, present in every
-  `MEM_W`-style fault by construction -- not corrupted data with a write site. The actually-wild
-  operand is the *other* register, which really does differ across sightings: byte-identical
-  `0x80630062` at 3 of them (all the same never-fixed `renderUnlitMeshFaces` bug recurring, not 3
-  independent bugs) vs. a no-KSEG0-tag value at the 4th (`heapWalker`, a separate bug). Believable
-  because the shared constant really is byte-identical across sessions months apart. Full detail:
-  PORTING-STATE Session 219.
-
-- **Claim (s75/s76):** a single Start press from SELECT YOUR CRAFT leaves the menu into a distinct
-  "hangar-flight" scene (an airborne X-wing outside the hangar). **Overturned by s150:** dense capture
-  across the same transition, cross-checked against an independent prior run (two sources), shows the
-  "airborne X-wing" frames are the *same* craft-select hangar 3D scene under a progressively
-  closer/lower camera angle with escalating render corruption, not a new environment -- confirmed by a
-  third, code-level check (the session's crash backtraces entirely through known hangar-menu
-  functions, none of them mission-overlay code). Believable because the HUD text disappears and a
-  tilted ship silhouette against stars reads as "flying." **Reopens "what leaves SELECT YOUR CRAFT
-  into a mission" as unanswered.** Full detail: PORTING-STATE Session 150.
 
 `## LLE stabilization session 2 (2026-07-12)` sits out of order in the log, between s7 and s8: its
 conclusions are among the oldest in the file, not the newest.
 
-**Build/pixel-getting era (s2-s31), grouped -- all resolved, general mechanisms live in
-PROJECT-OVERVIEW §4.1/4.2/4.6:** roughly 15 distinct claims from the earliest sessions were each
-overturned within 1-2 sessions of being made and are compressed here rather than kept individually --
-misidentifying Z-buffers as colour buffers (s5-8), texrect output as invisible (s7-8), geometry ops as
-RDP-emitting-nothing (s8-9, real bug was a function-local ring high-water mark), `DPC_WRAP`/framebuffer-
-pair-cap as the fix for Metal exhaustion when the real cause was missing FULL_SYNC (s9-11, see
-PROJECT-OVERVIEW §4.6), `PRIM_ALPHA_FF` as necessary for text (s9), a black-screen regression that was
-a sampling artifact (s9), hangar/title texture dumps misattributed to the wrong phase (s12-16), the
-line-mask/palette-bank-15/dxt theories of the floor band (s13-15, M1's real cause came later at
-s44-49), fog-color "attribution" of flat 512-phase rendering (s18), S=0 triangles misattributed to the
-wrong phase (s18), stale-TMEM-at-draw-time misread as "no RGBA32 ever loads" (s18-19, PROJECT-OVERVIEW
-§4.1), and the 1024-phase black screen misattributed to zero-shade rather than present-starvation
-(s19-21). Full detail: PORTING-STATE Sessions 2-31.
-
-- **Claim (s62/s63):** the M3 render-once-then-freeze bug is CPU-side -- RSP task submission stays
-  healthy through the freeze, ruling out an RSP infinite loop. **Overturned by s64:** that read came
-  from a 1-in-32 throttled sample with near-zero odds of landing on the crashing trailing tasks; an
-  unsampled histogram showed 100% of tasks from #3141 on exit `ImemOverrun` on real triangle content.
-  Full detail: PORTING-STATE Session 64.
-- **Claim (s64/s66):** the freeze-phase ImemOverrun is the end-of-IMEM `bgez $2, L_0000`
-  perspective-divide branch; self-restarting it should un-freeze mission tasks. **Overturned by s67:**
-  the self-restart instrument fired 0 times while tasks kept exiting anyway. **s68-69 found the real
-  site:** `CLIP_1FBC` -> `L_1650` hard exit; reconnecting `goto L_1650` dropped the exit population to
-  0 and unfroze `fs`. Full detail: PORTING-STATE Sessions 64-69.
-- **Claims (s23/s28/s30), grouped:** the hangar's remaining dimness (s23) and the multi-hue floor band
-  (s28/s30) were each attributed to the wrong mechanism -- a magnitude-only shade census that erased
-  sign (overturned s25), residual-metric artifacts that only touched part of the sampled population
-  (overturned s31). Real cause of the band: M1, s44-49 (PROJECT-OVERVIEW §3).
-- **Claims (s46), grouped:** "no complete clip overlay exists raw in the ROM" and "~40 window
-  entries/task arrive via a non-`L_1298` `jr`, so routing may be unsafe" -- both overturned s47 (the
-  overlay images are byte-identical to ROM `+0xC00`; a stray census conflated fall-through label hits
-  with real dispatch arrivals). Full detail: PORTING-STATE Session 47.
-- **Claim (s12-s47):** the 512-wide origin-0x6AB400 scene is the "main-menu hangar." **Overturned by
-  s48** -- mechanism at "scene-identity correction" above; proven by wall-structure identity between
-  s41's control frames and s48's full render. Believable because the partial render looked coherent
-  for 36 sessions and nothing looked *missing* until the missing half rendered.
-- **Claim (s47):** the briefing room presents from origin 0x656400, SELECT LEVEL from 0x696100, and
-  the clip fix changed menu timing. **Overturned by s48:** all wrong -- war room / SELECT LEVEL both
-  present from 0x6AB400, the 0x696100 lines sit in an unrelated pre-title phase, timing is unchanged.
-- **(s70-s82), grouped -- the post-`a` SIGBUS/black-screen self-correction chain, all now resolved by
-  the s84 UAF fix and s82 sane-width gate (see "Root causes found and fixed" above):** ~9 claims each
-  corrected the previous session's framing before the real mechanisms landed -- UAF theories for the
-  post-`a` SIGBUS (s70->71->72, real cause: RT64 depth writeback clobbering live OSThread memory,
-  fixed s72), what survives past it (mission garbage vs. the actual destination SELECT YOUR CRAFT,
-  s70-73), how many Start presses leave the menu (s74 vs s75, a snapshot-naming bug), and four
-  theories for what stalled `fs`/present post-leave (s77-82) before the real fix (sane-width gate,
-  s82) collapsed the black duty-cycle to 0. Full detail: PORTING-STATE Sessions 70-82.
-- **Claim (s87):** the 8th crash class is self-recursion via `advancePlayerAnimationPhase`'s own
-  indirect call reading a stale pointer. **Overturned by s88:** that call site belongs to a different,
-  unreached function; a correctly-targeted instrument showed constant, shallow stack depth across
-  3296 calls -- no recursion at all. Full detail: PORTING-STATE Session 88.
+- **(s222→s223)** "no soak reaches mesh-heavy content" — a 4-soak sample-size artifact; a re-run
+  reached space-combat content before freezing. The freeze itself is real, still reproduces (now a
+  flat fill, not a torn polygon). PORTING-STATE 223.
+- **(s216-218→s219)** "shared corrupt literal `0x0000000300000000` at x0/x8, WRITTEN somewhere" — that
+  register is the process's constant RDRAM host base pointer, present by construction in every
+  `MEM_W` fault, not written corruption; the wild operand is the *other* register (byte-identical at 3
+  sightings, all the same `renderUnlitMeshFaces` bug, vs. an unrelated 4th `heapWalker` bug).
+  Believable: byte-identical across sessions months apart. PORTING-STATE 219.
+- **(s75/76→s150)** "single Start from SELECT YOUR CRAFT leaves into a distinct hangar-flight scene" —
+  dense capture + an independent prior run + a code-level check (crash backtraces stay entirely in
+  hangar-menu code) show it's the same craft-select scene under a corrupting camera move. Believable:
+  HUD disappears, tilted silhouette against stars reads as "flying." Reopens "what leaves SELECT YOUR
+  CRAFT" as unanswered. PORTING-STATE 150.
+- **(s2-31→various, ~15 claims, grouped)** Build/pixel-getting era, each overturned within 1-2
+  sessions: Z-buffers misread as colour buffers; texrect output called invisible; RDP "emitting
+  nothing" (real bug: a function-local ring high-water mark); `DPC_WRAP`/fbpair-cap misdiagnosed for
+  missing FULL_SYNC (PROJECT-OVERVIEW §4.6); `PRIM_ALPHA_FF` called necessary for text; a
+  sampling-artifact black-screen; misattributed texture dumps, floor-band line-mask/palette/dxt
+  theories (M1's real cause: s44-49), fog-color attribution, S=0-triangle phase, stale-TMEM-at-draw
+  (§4.1), and 1024-phase black screen (present-starvation, not zero-shade). PORTING-STATE 2-31.
+- **(s62-69, grouped)** "RSP task submission stays healthy through the freeze" — a 1-in-32 throttled
+  sample missed the crashing tail; an unsampled histogram showed 100% `ImemOverrun` exits.
+  "Self-restarting the end-of-IMEM perspective-divide branch un-freezes tasks" — the instrument fired
+  0 times; the real site was `CLIP_1FBC`→`L_1650` (reconnecting `goto L_1650` unfroze `fs`).
+  PORTING-STATE 62-69.
+- **(s12-48, grouped — real causes already stated in "Current truth" above)** "0x6AB400 is the
+  main-menu hangar" (believable: the partial render looked coherent for 36 sessions); stray
+  briefing-room/SELECT-LEVEL origin+timing claims; hangar dimness/floor-band misattributed to a
+  magnitude-erasing shade census / a residual-metric artifact (real cause: M1 s44-49); "no complete
+  clip overlay in ROM" / "routing may be unsafe" (a stray census conflated fall-through hits with real
+  dispatch). All overturned s47/s48. PORTING-STATE 12-48.
+- **(s70-82, ~9 claims, grouped)** The post-`a` SIGBUS/black-screen self-correction chain — UAF
+  theories, what survives past it, Start-press counting, `fs`/present-stall theories — all resolved by
+  the s84 UAF fix and s82 sane-width gate. PORTING-STATE 70-82.
+- **(s87→s88)** "8th crash class is self-recursion in `advancePlayerAnimationPhase`" — that call site
+  belongs to a different, unreached function; an instrument showed constant stack depth across 3296
+  calls, no recursion. PORTING-STATE 88.
 
 ### Dead ends — labelled as such in the log, do not retry
 
-- `RDP_ADDRESS_MASK` 0xFFFFFF → 0x7FFFFF (`rt64_rdp.h`, s3): 0x800000..0xFFFFFF are legitimate RT64
-  extended-RDRAM handles; masking aliases them onto low memory and moved the crash earlier.
-- Chunk-replay hack in `dma_rdram_to_dmem` (s3): the ucode legitimately reads trig values right after
-  a swap; 29 unhandled vs ~5.
-- Widening the DMA shadow to cover 0x37658 (s3): that content difference is legit dynamic data, not
-  shadowable corruption.
-- Blanket ucode-image shadow `shadow2` (s4): the engine legitimately rewrites two ucode addresses;
-  serving them stale gave 109 unhandled / 35 send_dl against a 256 baseline.
-- `ROGUESQ_RING_RESYNC=1` (s4): no measurable change -- aimed at a flush overflow that never existed.
-- `dmem[0x153]=0xFF` to force a segment reload (s2b): made failures worse (6 exit=3 vs 2-4).
-- Bulk moves of unmapped symbols out of `symbol_files/main_overlay.txt` (s9): each inserted symbol
-  **splits** the enclosing function in that section -- the duplicate-address truncation bug in reverse
-  (PROJECT-OVERVIEW §4.5) -- producing a SIGBUS. Use `tools/overlay_symbol_probe.py <0xADDR>
-  [mission|menu|cinematic]` first, one validated batch at a time.
-- Present-side snap-down and `findMostRecentContaining` fallbacks (s9): neither fallback ever fired.
-- `ROGUESQ_VIEW_RDRAM=1` (s9): the game window never appears; the mode is broken in this fork.
-- `ROGUESQ_WRAP_DEDUP=1` (s10): removes ~33000 redundant submissions but the run still hit the same
-  Metal assert.
+- **(s2b-s4, grouped)** `RDP_ADDRESS_MASK`→0x7FFFFF (aliased legitimate extended-RDRAM handles onto
+  low memory); a chunk-replay hack in `dma_rdram_to_dmem` (legit trig reads right after a swap);
+  widening the DMA shadow to 0x37658 (legit dynamic data); blanket ucode-image shadow `shadow2` (2
+  addresses are legitimately rewritten); `ROGUESQ_RING_RESYNC=1` (no measurable change);
+  `dmem[0x153]=0xFF` forced segment reload (made failures worse).
+- Bulk moves of unmapped symbols out of `main_overlay.txt` (s9): splits the enclosing function
+  (PROJECT-OVERVIEW §4.5), producing a SIGBUS. Use `tools/overlay_symbol_probe.py <0xADDR>` first, one
+  validated batch at a time.
+- Present-side snap-down / `findMostRecentContaining` fallbacks (s9): neither ever fired.
+- `ROGUESQ_VIEW_RDRAM=1` (s9): the game window never appears; broken in this fork.
+- `ROGUESQ_WRAP_DEDUP=1` (s10): removes ~33000 redundant submissions but the same Metal assert still
+  hits.
 - `ROGUESQ_FORCE_PAL15=1` (s14): clears the floor band but corrupts ceiling banners sharing pal=15.
-- **Claim (s85):** the `do_rom_read` corrupted `physical_addr` is nondeterministic garbage.
-  **Overturned by s91:** the exact same DMA call recurred byte-for-byte 3 times across 3 sessions --
-  a race would not reproduce identically. Reclassified as deterministic, reproducible.
+- **(s85→s91)** "`do_rom_read` corrupted `physical_addr` is nondeterministic garbage" — the exact same
+  DMA call recurred byte-for-byte 3 times across 3 sessions; reclassified deterministic, reproducible.
 
 ## Method traps
 

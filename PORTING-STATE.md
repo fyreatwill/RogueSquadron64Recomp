@@ -26639,3 +26639,65 @@ next session executes step 1 with accurate expectations rather than re-deriving 
 
 `docs/M5-AUDIO-PLAN.md`: new file (design doc, ~490 lines). No `lib/` changes this session — pure
 survey + doc.
+
+## Session 299 (2026-08-04) — MAINTENANCE: 3rd compaction pass on `docs/CURRENT-TRUTH.md`, 61,293→47,105 bytes / 693→550 lines, plus 2 dead-cross-reference fixes
+
+Session start: `docs/CURRENT-TRUTH.md` measured 61,293 bytes — over the 60,000-byte Step-0 maintenance
+trigger, so this was a MAINTENANCE iteration per `tools/agent/ITERATION.md`. No experiments run, per
+the Step-0 instruction not to. This is the 3rd compaction pass (after s295's 562,666→120,975 and
+s296's 120,975→59,786; both since regrown past the 60,000-byte trigger from routine iteration entries
+appended at the top of the Next-steps list).
+
+**What ran**: read the full file (2 Read calls to cover all 693 lines), then a sequence of targeted
+`Edit` calls:
+1. Grouped Next-steps items -159 through -132 (28 individual entries, s267-294's breadcrumb
+   whack-a-mole B2-B14 plus the `-0x25A4` hangar-list-pointer audit lineage) into one era paragraph,
+   matching the established grouping style already used for older items (-129..-114, -113..-85,
+   -84..-26 were already single paragraphs from prior passes).
+2. Grouped items -25 through -17 (the audio-array-corruption/Thread-A-B saga, s102-149) into two era
+   paragraphs (-25..-21 and -19..-17), keeping item -20 (the still-actionable regen-pipeline standing
+   rule) standalone between them.
+3. **Fixed 2 dead cross-references**: items -13 and -12 pointed at "item 0" and "item 0b above" — a
+   numbering scheme that no longer exists after s295's renumbering fix. Both items were also fully
+   duplicated by the crash-catalog table at item -15. Deleted both, replaced with a 2-line parenthetical
+   pointing at the table.
+4. Deleted item -4, an inert self-referential note ("superseded... do not act on this stale framing")
+   that no longer served any purpose.
+5. Condensed items -14 through -1 (10 short parked items) into tighter 1-3 line entries each, cutting
+   restated context without losing the substance.
+6. **Rewrote the entire "Overturned conclusions" and "Dead ends" sections** in the terse
+   one-line-per-claim style the "Method traps" section (immediately below them in the same file)
+   already uses — each claim keeps its correction and "why believable" reasoning (the section's actual
+   preventive purpose) in 3-6 lines instead of the previous 5-13. Also merged 3 groups of related
+   individual claims that were previously separate bullets: the M3 freeze/`ImemOverrun` chase
+   (s62-69), the scene-identity/hangar-band claims (s12-48), and the early LLE-session dead ends
+   (s2b-s4).
+7. Merged the Screen-Recording-permission and `winctl activate` bullets in the Regeneration section's
+   Standing warnings into tighter form.
+8. Updated the stale "as of session 295" headline to note it was reviewed through s298 without new
+   verification (no facts changed, only a transparency note), and rewrote the USER DIRECTIVE's
+   maintenance-status bracket with the final before/after numbers.
+
+**Deliberately left alone this pass** (judged operationally load-bearing — used every iteration for
+phase-gating and build commands, not narrative fat): the "Current truth" section's env-var
+default-on/off/deleted lists and the 3 VI-phase timeline tables; the Regeneration pipeline's 4-step
+command sequence and most of its Standing warnings; the crash-catalog table (actively cross-referenced
+from 3 other places in the same file, including the Goal-stack M3 entry).
+
+**Result**: `docs/CURRENT-TRUTH.md` 61,293→47,105 bytes (-23.2%), 693→550 lines (-143 lines). This
+clears the 60,000-byte Step-0 trigger with a comfortable margin (was cleared by only 187 bytes after
+s296; now cleared by 12,895) but falls short of the exit contract's ">=200 net lines" auto-qualify
+threshold for MAINTENANCE, noted honestly rather than padded to look bigger. Still above the ~35 KB
+stretch target — the two sections named above as "deliberately left alone" are the most promising
+remaining targets for a future pass, but cutting them risks losing information the loop actually
+consults every iteration (phase-gating VI widths, env var defaults, exact build commands), unlike the
+narrative backlog history that was this pass's target.
+
+**Rules out**: nothing (no experiment this session). **Shows**: a 3rd compaction pass still finds real,
+non-narrative fat in a doc that's already been compacted twice — specifically, era-grouping candidates
+accumulate every ~30-40 sessions as routine Next-steps entries get appended faster than they're
+grouped, and a doc-formatting inconsistency (verbose Overturned-conclusions prose next to a terser
+Method-traps section making the same kind of point) had gone unnoticed across 2 prior passes.
+
+No code, `lib/`, or tool changes this session — pure doc maintenance, no `lib/` submodule edits so no
+`submodule-patches/export.sh` needed.
