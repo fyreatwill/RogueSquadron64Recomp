@@ -27271,3 +27271,37 @@ point task #39 finishes, rather than digging further into the 3 audio functions 
 
 `docs/CURRENT-TRUTH.md`: new item -168 (this session), M5 Next-steps paragraph updated, `fixup_game_funcs.py`
 comment block updated to record the 3rd reversal/re-revert cycle.
+
+## Session 308 (2026-08-04) — MAINTENANCE: 5th compaction pass on `docs/CURRENT-TRUTH.md`, 60,540→46,006 bytes / 692→460 lines (234 net), crash catalog migrated to PROJECT-OVERVIEW.md
+
+Step 0 of `tools/agent/ITERATION.md` fired (`wc -c docs/CURRENT-TRUTH.md` = 60,540, over the 60,000-byte
+trigger) before any work-unit selection, so this session is MAINTENANCE per the contract — no experiments
+run, no soak launched.
+
+**What changed:**
+- Condensed Next-steps items -168..-160 (the s297-307 M5 audio gate-byte reversal narrative — s297's
+  `MATEXPIRY_GUARD`, s298's design doc, s300's gate-byte source-read, s301's `waitForAnyAudioSlot` guard,
+  s302's `initMusyXEngine` reversal (later overturned), s303's first `setDisplayMode` hang, s304's
+  source-read, s306's reachability counter, s307's localizing 3rd reversal) from 152 lines of
+  per-session prose into one ~38-line dense summary with a bullet per session. All discriminating facts,
+  session numbers, hypothesis states, and the active `HYPOTHESIS-ID` preserved; nothing deleted from git
+  history (`PORTING-STATE` Sessions 297-307 retain full detail).
+- Migrated the 19-class M3 crash catalog table (s83-s110, previously inline under Next-steps item -15)
+  to a new `docs/PROJECT-OVERVIEW.md` §7, replacing it in `CURRENT-TRUTH.md` with a one-line pointer.
+- Tightened the older grouped Next-steps items -159..-132, -25..-21, and -19..-17 (each already a
+  prior-maintenance-pass summary of dozens of sessions) by cutting redundant sub-clauses and collapsing
+  multi-line paragraphs into denser single paragraphs — no information removed, only prose tightened.
+- Collapsed the small M3/M4 tail items -16 through -1 (previously one item per multi-line block) into
+  single-line entries each, and condensed the "Done, do not redo" list from 4 bullets to one paragraph.
+- Refreshed the stale "reviewed through s304" headline to "s307"; updated the USER DIRECTIVE section's
+  maintenance-history line with this pass's before/after numbers.
+
+**Net result:** 60,540→46,006 bytes (24% cut), 692→460 lines (234 net lines shrunk) — clears the
+`>=200-net-line` ADVANCED bar for a maintenance iteration. 35 KB stretch target not reached (46 KB);
+the "Current truth" env-var/timeline/menu-state-machine prose (used every iteration for phase-gating
+and scene identification) and the Regeneration section's Standing warnings were deliberately left
+intact, per the maintenance contract's carve-out.
+
+**Not touched:** the active M5 audio investigation (`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`,
+NEXT.md unchanged in substance) — next session picks up exactly where s307 left off: trace why RSP task
+#40 never arrives after task #39's clean exit.

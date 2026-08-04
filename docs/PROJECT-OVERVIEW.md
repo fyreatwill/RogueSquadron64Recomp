@@ -242,3 +242,28 @@ silently when absent. Both are worth verifying explicitly at the start of any vi
 A caution on the last one: distinct-colour count *drops* for some strictly-good changes — removing a
 black wedge removes its high-contrast edges — so use a defect-specific measure when testing something
 that removes an artifact.
+
+## 7. M3 crash-class catalog (s83–s110), migrated from CURRENT-TRUTH.md s307 maintenance pass
+
+19 classes found chasing the `submitDmaRequestBatch` indirect-caller window (caller identified s101:
+`musyxSynthFrame` via `viRetraceHandlerThread`, not the mission/DL path every earlier session assumed —
+refuted dead ends, do not reopen: `ra=0x00000000` as a corruption signature, "dump the OSIoMesg at mb,"
+consumer index desync, "the boot call loops more than once"). "Guarded" = landed with a clean negative
+control, treat as closed unless noted. All guards use the same `U32()`-truncated-bounds-check-then-
+`goto`-real-epilogue template. Thread A (PORTING-STATE Sessions 126-132) later found a *second*
+unguarded site in 6 of the 8 guarded functions — already folded into the table. Full detail:
+`PORTING-STATE` Sessions 93-110, 124-132, 159, 195-196.
+
+| # | site | status |
+|---|---|---|
+| 9 | `updateAnimatedTextureStreaming` (funcs_11.c) | guarded s124, 2nd gap found+closed s127 |
+| 10 | `static_5_800B4048` | guarded s125, 2nd gap found+closed s127 |
+| 11 | `projectModelBoundsToScreen` | guarded s101, 2 more args found+guarded s128 |
+| 12 | `composeNpcOrientationMatrix` | guarded s100, 2nd independent loop found+guarded s126 |
+| 13 | RT64-internal, `reinterpretTileRecord` assert | guarded s196 after a 2nd occurrence (s195) |
+| 14 | `reserveAndEmitDLEntry` | guarded s109, confirmed clean s129 |
+| 15 | RT64-internal, `loadDrawState` zero-sample assert | root-caused RT64-internal (s159), guarded |
+| 16 | `activateAnimationKeyframe` | guarded s99, confirmed clean s130 |
+| 17 | fault inside `updateHangarBayScene` itself (5 sites) | guarded s110 |
+| 18 | `submitSceneNodeRender` free-list walk | guarded s123, 9 inlined copies found+reopened s131, root-caused as the `-0x25A4` family and closed via the s282-288 audit lineage |
+| 19 | RT64-internal SIGSEGV, `MetalFramebuffer` ctor via `createTileCopyRecord` | 1 occurrence, not source-read, not recurred |

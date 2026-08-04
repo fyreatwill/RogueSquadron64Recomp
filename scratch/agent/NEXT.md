@@ -1,13 +1,15 @@
 # NEXT work unit — trace why RSP task #40 never arrives after task #39's clean exit
 
-(Written s307. See docs/CURRENT-TRUTH.md item -168 for the full write-up and `PORTING-STATE` Session 307
-for full detail.)
+(Written s307. See docs/CURRENT-TRUTH.md item -168..-160 for the full write-up and `PORTING-STATE`
+Session 307 for full detail.)
 
-## Note: this session may be a MAINTENANCE iteration instead
+## Note: s308 was MAINTENANCE, this work unit is unchanged and now live
 
-`docs/CURRENT-TRUTH.md` is now 60,540 bytes — over the Step-0 60,000-byte trigger. If Step 0 fires,
-compact CURRENT-TRUTH first (see tools/agent/ITERATION.md's Maintenance section) and treat this file as
-the work unit for whichever session picks up M5 audio next, not necessarily this one.
+Step 0 fired at s308 (`docs/CURRENT-TRUTH.md` was 60,540 bytes, over the 60,000-byte trigger): that
+session compacted CURRENT-TRUTH (60,540→46,006 bytes, 692→460 lines) and migrated the M3 crash catalog
+to `docs/PROJECT-OVERVIEW.md` §7, but did NOT touch the M5 audio investigation or run any soak — this
+work unit (below) is exactly what s307 left, and is now the live plan for whichever session picks up M5
+audio next.
 
 ## Context
 

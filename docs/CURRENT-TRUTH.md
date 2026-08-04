@@ -10,11 +10,13 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## L
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
    section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Compaction history:
-   s295/296 (562,666→59,811 bytes), s299 (61,293→47,105), s305 (this pass — collapsed this section's
-   duplication of the Next-steps items -166..-161 narrative below into a pointer). 35 KB remains a
-   stretch target, not a hard floor — the "Current truth" env-var/timeline prose and the Regeneration
-   section's Standing warnings stay intact deliberately; both are used every iteration for phase-gating
-   and build commands.
+   s295/296 (562,666→59,811 bytes), s299 (61,293→47,105), s305 (62,103→54,550), s308 (this pass —
+   60,540→45,772 bytes, 692→458 lines, 234 net: condensed the s297-307 Next-steps items -168..-160 into
+   one dense summary, migrated the s83-s110 crash catalog table to `docs/PROJECT-OVERVIEW.md` §7, and
+   tightened the older -159..-132/-25..-21/-19..-17 grouped items and the small M3/M4 tail items -16..-1).
+   35 KB remains a stretch target, not a hard floor — the "Current truth" env-var/timeline prose and the
+   Regeneration section's Standing warnings stay intact deliberately; both are used every iteration for
+   phase-gating and build commands.
 2. **M5 audio de-stubbing**: design doc DONE (s298, `docs/M5-AUDIO-PLAN.md`) — a 6-step incremental
    de-stubbing sequence, one validation soak per step. Steps 1-3 DONE and validated clean (s300/301).
    Step 4 (reversing each of the 3 audio-gate-byte force-zero sites, one per session) is IN PROGRESS:
@@ -36,7 +38,7 @@ matching (the BREADCRUMB10+ slice idiom) to the ~100 file-scoped-only guard patc
 fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment.
 
 
-## Current truth (as of session 295; unchanged and reviewed through s304)
+## Current truth (as of session 295; unchanged and reviewed through s307)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -202,185 +204,46 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
 oldest). Current top is -168 (s307); the next new item takes -169 and is inserted at the top.
 
--168. **(s307)** Re-reverses `setDisplayMode`'s gate-byte site (`0x8008EB40`) a 3rd time, this time
-    with the s306-armed 3-function entry/exit tags live. **Soak reproduces s303's hang a 3rd time**
-    (identical signature: `[phase]` stuck at 2 lines/width 320 the whole 600s window, exactly 39 RSP
-    tasks, no crash, never reaches title). **Localizes the hang away from the 3 previously-suspected
-    functions**: `update3DAudioFrame`, `tickAllActiveSongs`, and `tickAudioSequencerFrame` all fire 20
-    clean entry/exit pairs (`n=0..19`, no dangling entries) before the freeze — none of them hangs
-    internally. Cross-referencing the RSP task log: `[runner] task #N exit=1` climbs cleanly to `task
-    #39` and then never produces `task #40` for the rest of the run; the audio-tick freeze (stuck at
-    `n=19`) and the RSP-task freeze (stuck at task #39) land at the same point, both followed by pure
-    scheduler churn (`[sched-queue]`/`[sched-check]`/`[sched-runnext]` with no new work) — the VI thread
-    itself doesn't freeze (`update_screen #N` keeps climbing past #36000), it just perpetually skips
-    presentation because `rdpFs` never advances past 39. **Revised hypothesis**: a shared upstream
-    resource common to both the audio-tick loop and RSP task submission (likely a coop-scheduler
-    dependency) stops delivering new work after a fixed small count — not a bug inside any of the 3
-    gated functions. Reverted same session (one-site-per-session discipline): `fixup_game_funcs.py`'s
-    regex restored to force-zero both `0x8008EB40` and `0x8008EC88` again, regenerated, rebuilt,
-    verified in generated source. Single-source (one soak this session) but the "39 RSP tasks" number
-    matches s303's independently-obtained soaks exactly — corroborating, not yet a same-session repeat
-    of this specific localization. Next work unit (NEXT.md): trace what's supposed to produce RSP task
-    #40 after task #39 exits — the task-submission producer and/or scheduler wakeup logic around that
-    point, not the 3 gated functions (now cleared). Full detail: `PORTING-STATE` Session 307.
+-168..-160. **(s297-307) M5 audio de-stubbing step 4: gate-byte reversal investigation — IN PROGRESS**
+    (active thread, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`). Condensed narrative
+    also at USER DIRECTIVE item 2 above; full session detail: `PORTING-STATE` Sessions 297-307.
+    - s297: lands `MATEXPIRY_GUARD` on `tickTextureMaterialExpiry`; 2 soaks clean, 0/2 fires (weak
+      null, unconfirmed-not-refuted).
+    - s298: writes `docs/M5-AUDIO-PLAN.md` — 6-step incremental audio de-stub sequence, one validation
+      soak per step.
+    - s300: source-reads the gate byte (`0x800A0F50`) — its only consumer, `musyxSynthFrame`, skips 3
+      ancillary functions (`update3DAudioFrame`/`tickAllActiveSongs`/`tickAudioSequencerFrame`) at
+      gate=0; lands an always-on `[audtask-dispatch]` counter proving real ucode task submission runs
+      continuously regardless of the gate.
+    - s301: lands a bounded-timeout guard on `waitForAnyAudioSlot`, 0/3 fires across 3 soaks — inert
+      safety net, ready for the reversal.
+    - s302: reverses `initMusyXEngine`'s gate site (`0x8008E9F8`); 2 soaks, 0/2 family #1 recurrence —
+      **later OVERTURNED s306**: the function is dead code, never called, so this validated nothing
+      (see Overturned Conclusions).
+    - s303: reverses `setDisplayMode`'s gate site (`0x8008EB40`); **2/2 soaks hang identically** — VI
+      stuck at width 320, exactly 39 RSP tasks, never reaches title, no crash. Re-reverted same
+      session.
+    - s304: source-read refutes both anticipated hypotheses (wrong value; call-frequency) — both sites
+      write the same simple constant, both are boot-once. Surfaces the toggle-structure difference
+      (setDisplayMode zeros-then-resets the gate around its own call) and flags `initMusyXEngine`
+      reachability as single-source-unconfirmed (0 grep hits anywhere outside its own body).
+    - s306: same-run-positive-controlled reachability counter (2 soaks, one a clean 300s full hold)
+      **confirms `initMusyXEngine` is never called** — retroactively invalidates s302's validation;
+      arms 3 gate-consumer entry/exit tags for the next reversal attempt.
+    - s307: re-reverses `setDisplayMode`'s site a 3rd time with s306's tags live — **reproduces the
+      hang a 3rd time but localizes it**: all 3 previously-suspected functions complete 20 clean
+      entry/exit pairs before the freeze, clearing them as the hang site. Cross-referencing the RSP
+      task-runner log: task #39 is the last ever dispatched, in lockstep with the audio-tick freeze
+      (stuck at n=19) — both followed by pure scheduler churn with no new work. Points to a shared
+      upstream resource (likely the coop-scheduler wakeup chain), not the 3 gated functions. Reverted
+      same session.
+    - **Current state**: `initMusyXEngine`'s site alone reversed (validated as a dead-code no-op, not
+      a real gate=1 test); `setDisplayMode`/`reapplyDisplayMode` still force-zero every call. Gate=1
+      has never been exercised by any soak to date. Next work unit (NEXT.md): trace why RSP task #40
+      never arrives after task #39's clean exit — the task-submission producer and/or scheduler
+      wakeup logic, not the 3 gated functions (now cleared).
 
--167. **(s306)** Settles the s304-raised open question with a same-run-positive-controlled entry
-    counter (`fixup_game_funcs.py`, env `ROGUESQ_LOG_INITMUSYX_REACH`): **`initMusyXEngine` is
-    genuinely never called in the current recompiled game — reachability REFUTED, with 2 independent
-    soaks confirming a clean, controlled null.** Soak 1 (`step5reach1`, died early to crash family #3's
-    known `waitForAnyAudioSlot` pre-title SIGSEGV signature, unrelated to this change — zero
-    `[audio-drain-enter]` lines, matching the exact s301-documented signature, not a new regression):
-    `[reach-init-musyx]` 0 fires, `[reach-reset-musyx-CONTROL]` 2 fires. Soak 2 (`step5reach1b`, full
-    boot → title → SELECT YOUR CRAFT → complete 240s hold with the full stick schedule, **0 crashes**,
-    300s total): `[reach-init-musyx]` 0 fires across the entire run, `[reach-reset-musyx-CONTROL]` 7
-    fires (`n=0..6`) — confirms the logging/`getenv` plumbing itself works throughout (positive control
-    holds in both runs), so the null on `initMusyXEngine` is real, not a broken instrument. The 3
-    gate-consumer tags batched in the same patch (`[reach-update3d-entry/exit]`,
-    `[reach-allsongs-entry/exit]`, `[reach-audioseq-exit]`) also never fired in either soak — fully
-    explained by the still-unchanged baseline (`setDisplayMode`/`reapplyDisplayMode` still force-zero
-    the gate byte every call, per s303's revert), not new information on its own, but now armed and
-    ready for the next site-reversal soak. **This retroactively invalidates s302's validation** (item
-    -164 below, also flagged under Overturned Conclusions): s302 reversed `initMusyXEngine`'s gate-byte
-    site and reported "0/2 family #1 recurrence" as evidence the reversal was safe, but since
-    `initMusyXEngine` never executes, that reversed code path was never exercised in either of s302's
-    soaks — the clean result reflects dead code, not a validated gate=1 state. **Net effect on the M5
-    plan**: gate=1 has *still* never been exercised in any soak to date; s303's `setDisplayMode` hang
-    remains the only time it was ever attempted, and remains the sole evidence about what happens when
-    it is. Next work unit (NEXT.md): re-reverse `setDisplayMode`'s site (`0x8008EB40`) with the 3
-    gate-consumer tags and `ROGUESQ_LOG_INITMUSYX_REACH` already armed, soak, and read which (if any) of
-    `update3DAudioFrame`/`tickAllActiveSongs`/`tickAudioSequencerFrame` logs entry but never logs exit —
-    localizes the hang instead of re-running s303's undifferentiated black-box reversal. Full detail:
-    `PORTING-STATE` Session 306.
-
--166. **(s304)** Source-read (no build/soak): traces what `setDisplayMode`/`initMusyXEngine` compute
-    into `$v0` before their gate-byte writes. **Refutes both of s303's anticipated hypotheses**: both
-    sites write the identical simple constant `1` (no computed/branch-dependent value), and
-    `setDisplayMode` has exactly one call site (`mainBootstrapWorker`, no retry/loop) — boot-once, same
-    shape as `initMusyXEngine`. (`reapplyDisplayMode` genuinely is hot — called every video frame from
-    `runVideoFrameTick` — but that's irrelevant to explaining s303's `setDisplayMode`-specific hang.)
-    **New structural fact**: `setDisplayMode`/`reapplyDisplayMode` each contain their own entry-time
-    zero-write to the gate byte, sandwiching the full MusyX-reset call sequence
-    (`resetSongSubsystemCounter`→...→`reset3DAudioLists`, gated by `initAudioSubsystem`) between a
-    disable and re-enable — a 0→1 toggle across the call. `initMusyXEngine`'s site has no such toggle;
-    it's a plain unconditional "set to 1 once." **Leading revised hypothesis**: per s300 (item -162),
-    the gate's only consumer (`musyxSynthFrame`) skips 3 ancillary functions (`update3DAudioFrame`,
-    `tickAllActiveSongs`, `tickAudioSequencerFrame`) at gate=0 and calls them at gate=1 — never
-    exercised in any validated soak to date. s303 assumed gate=1 was already safely exercised via
-    s302's `initMusyXEngine` reversal, but an exhaustive text-grep of `RecompiledFuncs/*.c` found
-    **zero references anywhere to `initMusyXEngine`** (`0x8008E940`) outside its own body — no `jal`,
-    no absolute-pointer construction — i.e. no evidence it's ever called. (A raw ROM byte-scan for the
-    address was also run but is invalidated by its own negative control — `jal` encodes a shifted
-    26-bit field, not an absolute address, so the scan can't distinguish dead code from
-    jal-only-reached code; discarded, not cited.) **Single-source** — doesn't rule out an ELF
-    relocation/overlay mechanism outside `RecompiledFuncs/`. If `initMusyXEngine` is truly unreached,
-    s302's validation never exercised gate=1 at all, and s303's hang would be the *first* real gate=1
-    ever hit — promoting "first-ever execution of the 3 skipped functions" to the leading hang
-    explanation. Next work unit (NEXT.md): a same-run-positive-controlled entry counter on
-    `initMusyXEngine`, batched with entry/exit tags on the 3 gate-consumer functions. Full detail:
-    `PORTING-STATE` Session 304.
-
--165. **(s303)** M5-AUDIO-PLAN.md step 4's 2nd slice: reverses `setDisplayMode`'s gate-byte force-zero
-    site (`0x8008EB40`). 2 validation soaks: **2/2 identical deterministic full boot hangs** — VI width
-    stuck at 320 the whole 600s window, exactly 39 RSP tasks both soaks, never reaching title. Not
-    family #1's signature and not `waitForAnyAudioSlot`'s drain loop (never entered) — a different,
-    unlocalized stall mechanism, but unambiguously caused by this site's reversal (this exact signature
-    never appeared in s300-302's soaks). **Re-reverted same session**, restoring exactly s302's
-    validated state (`initMusyXEngine` alone reversed) — confirmed via direct inspection, no re-soak
-    needed. Confirms the plan's own risk flag that `setDisplayMode` is a hotter, non-interchangeable
-    path vs. the boot-once `initMusyXEngine` site — **do not retry without a source-level read** of
-    what `setDisplayMode` computes into `$v0` before the write (s304, item -166, answers this).
-    `reapplyDisplayMode`'s site remains untouched and untested — treat as its own open question, not
-    an inheritor of either sibling's risk profile. Full detail: `PORTING-STATE` Session 303.
-
--164. **(s302)** M5-AUDIO-PLAN.md step 4: reverses `initMusyXEngine`'s gate-byte force-zero site
-    (`0x8008E9F8`) — splits the 3-way regex in `fixup_game_funcs.py` so only `setDisplayMode`/
-    `reapplyDisplayMode` still force-zero; the guest's own real init-success write now takes effect.
-    Confirmed via patch-count (`x2`, was `x3`) and direct inspection. 2 validation soaks: both reached
-    SELECT YOUR CRAFT then died within the first hold-iter (~75s) to pre-existing, unrelated crash
-    classes (RDRAM-host-base/`reserveAndEmitDLEntry`; `evalCubicSplineAtTime` NaN div0, s83) —
-    **0/2 family #1 recurrence** (both deaths are outright crashes, not hangs, so can't be family #1
-    by construction) and `WAITFORSLOT_GUARD` fired 0/2. `[audtask-dispatch]` confirms real ucode
-    dispatch ran continuously to the crash point in both. Neither soak reached the 240s hold window —
-    both crash classes predate this session and capped run length, same limitation s301 hit. Per the
-    plan's one-site-per-session design, next work unit was `setDisplayMode`'s site (item -165 above).
-    Full detail: `PORTING-STATE` Session 302.
-
--163. **(s301)** M5-AUDIO-PLAN.md step 3: lands the `waitForAnyAudioSlot` bounded-timeout guard
-    (`fixup_game_funcs.py`) — once `g_audio_drain_iters` reaches 500,000 (overridable via
-    `ROGUESQ_WAITFORSLOT_GUARD_CAP`), falls through instead of looping, fires logged via
-    `ROGUESQ_LOG_WAITFORSLOT_GUARD`. Safe by construction — the next original instruction
-    unconditionally reassigns the touched register on every path, so the guard only changes whether
-    the loop takes one more lap. 3 validation soaks (`ROGUESQ_AUDIO_UCODE=1` armed): guard fire count
-    **0/3** across 7 legitimate calls (each converged in 1 iteration); 2/3 soaks died to pre-existing,
-    unrelated crash classes (crash family #3's own pre-title SIGSEGV signature once — confirmed not a
-    legitimate call, zero entry-diagnostic lines despite the crash PC resolving inside the function;
-    and the s300-control-soak RDRAM-host-base signature once, unrelated to audio). Confirms the guard
-    is a correctly inert safety net — ready for step 4. Full detail: `PORTING-STATE` Session 301.
-
--162. **(s300)** M5-AUDIO-PLAN.md steps 1-2. Step 1 (source-read): traced `musyxSynthFrame`'s 5 reads
-    of the audio-enable gate byte (`0x800A0F50`) and found the gate only skips 3 narrow ancillary
-    functions (`update3DAudioFrame`, `tickAllActiveSongs`, `tickAudioSequencerFrame`) inside its
-    per-VI-retrace tick — not task submission. Also resolved the s173 "gate byte appeared nonzero"
-    contradiction: a full-tree grep found exactly one site that can ever write nonzero
-    (`initMusyXEngine`, force-zeroed by `fixup_game_funcs.py`) — if s173's inference was accurate, the
-    only explanation left is a wild/corrupting write, flagged for crash family #3
-    (`waitForAnyAudioSlot`). Step 2: landed `factor5_ucode_b` behind a new `ROGUESQ_AUDIO_UCODE` env
-    toggle (default off) plus an always-on `[audtask-dispatch]` counter giving **ground-truth
-    confirmation** `M_AUDTASK` dispatches continuously from boot regardless of the gate or toggle (the
-    `musyx-dma-call`/`voice-trigger-chain` instruments step 1 expected to use actually measure PI-DMA
-    sample streaming, not task submission, and fired 0 times — would have been a false null without
-    this counter). 2 soaks with the toggle on: 0 crashes, ~1,500+ real ucode dispatches, title→menu→
-    hold. 1 control soak (toggle off) crashed to a pre-existing unrelated class — confirms baseline
-    nonzero crash rate, not a regression. Full detail: `PORTING-STATE` Session 300.
-
--161. **(s298)** Writes `docs/M5-AUDIO-PLAN.md` (design doc, priority-2 per the USER DIRECTIVE),
-    pivoting off `tickTextureMaterialExpiry-guard` per the loop's mandatory-pivot rule (3 straight
-    iterations, no `BREADCRUMB12` recurrence to react to, no maintenance trigger). Survey (3 parallel
-    read-only agents) found the audio stub is one dispatch-table entry (`musyx_stub` for `M_AUDTASK`,
-    `src/main/main.cpp:594-595`), the `dmem[]`-sharing design question is already solved by the s5
-    mutex, and the host SDL audio bridge is already fully functional — de-stubbing is narrower than
-    the goal-stack framing implied. Also found the crash-family payoff case is weaker/mixed: 1 of 4
-    documented audio-adjacent crash families confirmed stub-caused (and it argues for caution — the
-    fix was disabling audio harder, not less), 2 of 4 plausible-unconfirmed, 1 of 4 confirmed
-    unrelated. Landed a 6-step incremental de-stubbing sequence, each with its own validation soak;
-    step 1 (free source-read, no code/soak) is the next work unit. Full detail: `PORTING-STATE`
-    Session 298.
-
--160. **(s297)** Lands `MATEXPIRY_GUARD` (`ctx->r16` KSEG0-range check) in `tickTextureMaterialExpiry`
-    at the site/bail-target item -159 specified (`fixup_game_funcs.py`, after `BREADCRUMB12` to match
-    its POST-breadcrumb shape). Regen/build clean (`BREADCRUMB12` still x83, guard x1 new, 46-warning
-    baseline unchanged). 2 validation soaks (`HOLD_S=275`): both clean, 0 crashes, 0 guard fires — a
-    **weak null** (only 2 `BREADCRUMB12` recurrences across ~294 sessions, so 0/2 fits either
-    outcome), not confirmation. Unconfirmed-but-not-refuted until a 3rd recurrence fires the guard
-    (confirms) or crashes at the same PC anyway (refutes — re-read the bail path). `PORTING-STATE`
-    Session 297.
-
--159..-132. **(s267-294) Breadcrumb whack-a-mole B2-B14 plus the `-0x25A4` hangar-list-pointer audit
-    lineage — CLOSED.** Starting from a refuted a0-argument hypothesis for a guest-`0x80000000`-family
-    fault inside `heapFreeListDequeue` (s267, confirmed via same-run positive control), single-function
-    breadcrumbs `BREADCRUMB2`-`9` chased the "cached free-list-head" idiom across `beginFrameDLChunk`,
-    `processSceneNode`, `submitSceneNodeRender`, `reserveAndEmitDLEntry`, `static_5_800AB658`,
-    `emitAllocatedDLCommand`, and `tickWrappingTimerAccumulatorList` (s268-282) — most soaks caught the
-    idiom recurring in a DIFFERENT already-known function rather than their own target (e.g. s269/270/271
-    each landed on a fresh unguarded copy elsewhere), and a 3-session PRE-SCENE `waitForAnyAudioSlot`
-    boot-crash streak on `BREADCRUMB9` (s277-280, tripping the rule-8 3-strikes threshold) turned out to
-    be a transient 4-session window (s276-278, s280: 7/8 = 87.5%) already fully reverted by s281, CLOSED
-    as a non-finding s289. s283-288 then ran a deliberate grep-based audit of every `-0x25A4($s1)`
-    hangar-list-pointer site across `RecompiledFuncs/*.c` — far more sites than the incidental
-    discoveries, landing 29 guards across 3 functions (s284) including a fix for a live crash the new
-    guards exposed, finding a 3rd "second-hop" blind-spot instance in `static_5_800A9270` (s285),
-    classifying all of `hangarInitialize`'s remaining chunks as dead/unreachable duplicate code
-    (s286-287), and closing the whole lineage s288 (the apparent `playerSnowSpeederInit` overlap was
-    REFUTED — genuinely live code that merely shares address space with 3 already-guarded functions, not
-    a copy of any of them). Separately, s289-294 resumed the abandoned s249-251 project-wide
-    unguarded-walk static sweep (`find_unguarded_walks.py`, 143 sites/43 functions), landing
-    `BREADCRUMB10`-`14` on `inflate_fast`, `coalesceFreeHeapBlocks`, `tickTextureMaterialExpiry`,
-    `tickSongSequence`, and `stopSongByHandle` — no unique translation bug in any of them (the
-    `inflate_fast` s272 crash was the same long-tracked `MEM_B`/`MEM_BU` null→`0x80000003` signature
-    guarded ~15 times elsewhere), but s293/294's soaks caught `tickTextureMaterialExpiry`'s
-    (`BREADCRUMB12`) two independent recurrences at the identical guest PC (`0x80022094`,
-    `funcs_6.c:12207`), crossing the confirmation bar s297 (item -160 above) used to land
-    `MATEXPIRY_GUARD`. Full detail: `PORTING-STATE` Sessions 267-294.
+-159..-132. **(s267-294) Breadcrumb whack-a-mole B2-B14 plus the `-0x25A4` hangar-list-pointer audit lineage — CLOSED.** From a refuted a0-argument hypothesis for a guest-`0x80000000`-family fault inside `heapFreeListDequeue` (s267), single-function breadcrumbs `BREADCRUMB2`-`9` chased the "cached free-list-head" idiom across 7 functions (s268-282; most soaks caught it recurring in a different already-known function than their own target); a 3-session `BREADCRUMB9` PRE-SCENE `waitForAnyAudioSlot` boot-crash streak (s277-280) turned out to be a transient window, CLOSED as a non-finding s289. s283-288 then ran a deliberate grep-based audit of every `-0x25A4($s1)` hangar-list-pointer site, landing 29 guards across 3 functions (s284), a 3rd "second-hop" instance (s285), classifying `hangarInitialize`'s remaining chunks as dead code (s286-287), and closing the lineage s288 (a suspected `playerSnowSpeederInit` overlap was REFUTED — live code merely sharing address space, not a copy). Separately s289-294 resumed the abandoned s249-251 project-wide unguarded-walk sweep (`find_unguarded_walks.py`, 143 sites/43 functions), landing `BREADCRUMB10`-`14` on 5 functions — no unique bug in most, but s293/294 caught `tickTextureMaterialExpiry`'s (`BREADCRUMB12`) two recurrences at the identical guest PC, crossing the confirmation bar s297 used to land `MATEXPIRY_GUARD`. Full detail: `PORTING-STATE` Sessions 267-294.
 
 -130..-131. **(s265-266)** Landed the "last-executed-guest-PC breadcrumb" instrument (`g_rs64_last_guest_pc`, s264's flagged investment), verified it works; the originally-targeted `submitSceneNodeRender+19268` crash didn't recur in 6 soaks (s265). A re-soak per the same plan then caught a genuine different-offset crash (+47120), localized via the new breadcrumb to a 2nd previously-unguarded occurrence of s197's "cached free-list head" idiom, landing `CACHE2_GUARD` (s266) — 2 post-fix soaks clean, but surfaced a different, higher-priority bug. Full detail: `PORTING-STATE` Sessions 265-266.
 
@@ -390,26 +253,7 @@ oldest). Current top is -168 (s307); the next new item takes -169 and is inserte
 
 -84..-26. **(s150-219) The long `heapWalker`/`renderUnlitMeshFaces`/`composeNpcOrientationMatrix`/`heapFreeListDequeue` whack-a-mole guard-gap chase.** ~70 sessions landing one unguarded-pointer-chase guard at a time, converging on 2 durable lessons: the literal `0x0000000300000000` at x0/x8 across 3 unrelated crash sites is this process's constant RDRAM host base pointer, not corrupted data (s219, see Overturned Conclusions); the real wild operand is the *other* register, with a KSEG0-tag signature recurring in `renderUnlitMeshFaces` specifically. Also settled: "single Start leaves SELECT YOUR CRAFT into hangar-flight" **OVERTURNED s150** (mission-entry unanswered again); the s162 post-leave cutscene stall is the s79/80 FULL_SYNC-loss class recurring, capable of at least one recovery (s153/154); a `[thr-resume]`-adjacent scheduler silent-drop mechanism (s180-187) got a defensive guard that produced the first fully crash-free full-length soak in that lineage (s187). Full detail: PORTING-STATE Sessions 150-219.
 
--25..-21. **(s133-149) Audio-array corruption (Thread B) — CLOSED, plus two side threads parked at
-    exhausted rule-8 budget.** Real mechanism (non-atomic `voiceCount`-write-before-pointer-store race
-    in `allocateSongChannelArray`) found s145, FIXED and verified s147/148: 3 independent verification
-    soaks all clean — 0/13 corrupted `[voice-active-gate-nz]` reads post-fix (vs. 5 pre-fix), 0/3
-    `do_rom_read` recurrences (vs. 9 prior) — first fully crash-free soaks for this shape since s83.
-    **s149 bonus**: "what input leaves SELECT YOUR CRAFT" was never actually open — the leave
-    transition fires correctly (invisible to VI-phase tracking); the real open question was always the
-    post-leave scene and surviving its first ~2s, where the wider hangar-tick crash family kept
-    landing. Path to the fix (s138-146): ruled out a static ROM string table (s138) and adjacent-heap
-    aliasing (s139-141, via an `rs_malloc`/`rs_free` range-overlap measurement that also confirmed the
-    voice array's per-slot stride is 136 bytes); named the real allocation as
-    `allocateSongChannelArray`'s own 2nd alloc, one slot of a per-tick-toggled double-buffered pointer
-    table (s141-143); found `musyxMixActiveVoices`'s unchecked-cursor write (s144, not proven the
-    direct writer) before s145 found the real mechanism. Two side threads exhausted their rule-8
-    budget without resolving, guards left in code regardless: `emitAllocatedDLCommand` soak hypothesis
-    (s133-135: hit an environment-side Apple-Metal SIGSEGV, an 18th-class recurrence, then the
-    separately-tracked `do_rom_read`/`piDmaWorker` corruption SIGSEGV — `emit-dl-guard2`/`3` never
-    fired, 0/0 all 3 attempts); `submitSceneNodeRender`'s `MATLIST_GUARD1`/`GUARD2` (s136-137, parked
-    at 2/3, both 0/0 on the new guards, both dying to the `do_rom_read` race). Full detail:
-    `PORTING-STATE` Sessions 133-149.
+-25..-21. **(s133-149) Audio-array corruption (Thread B) — CLOSED, plus two side threads parked at exhausted rule-8 budget.** Real mechanism (non-atomic `voiceCount`-write-before-pointer-store race in `allocateSongChannelArray`) found s145, FIXED and verified s147/148: 3 independent verification soaks all clean — 0/13 corrupted `[voice-active-gate-nz]` reads post-fix (vs. 5 pre-fix), 0/3 `do_rom_read` recurrences (vs. 9 prior), first fully crash-free soaks for this shape since s83. **s149 bonus**: "what input leaves SELECT YOUR CRAFT" was never actually open — the leave transition fires correctly (invisible to VI-phase tracking); the real open question was always surviving the post-leave scene's first ~2s. Path to the fix (s138-146): ruled out a static ROM string table and adjacent-heap aliasing (confirmed voice-array stride is 136 bytes); traced to `allocateSongChannelArray`'s own 2nd alloc, a per-tick-toggled double-buffered pointer table (s141-143), via `musyxMixActiveVoices`'s unchecked-cursor write (s144) before s145 found the race. Two side threads exhausted rule-8 budget without resolving (guards left in code): `emitAllocatedDLCommand` (s133-135, `emit-dl-guard2`/`3` 0/0 all 3 attempts, both deaths unrelated pre-existing classes); `submitSceneNodeRender`'s `MATLIST_GUARD1`/`GUARD2` (s136-137, parked at 2/3, both 0/0, both dying to the `do_rom_read` race). Full detail: `PORTING-STATE` Sessions 133-149.
 
 -20. **Regen-pipeline reliability bug (s120, confirmed intermittent not deterministic).** Root cause:
     `N64Recomp` skips rewriting any `RecompiledFuncs/funcs_*.c` file that already exists on disk, so
@@ -419,110 +263,35 @@ oldest). Current top is -168 (s307); the next new item takes -169 and is inserte
     still unknown. **Standing rule**: audit the patch report for anything other than the expected `xN`
     count after every `fixup_game_funcs.py` run. Full detail: `PORTING-STATE` Sessions 120, 121, 126.
 
--19..-17. **(s102-135) Thread A/B saga leading to the s145/147/148 fix above, plus the regen-pipeline
-    root cause.** Thread A (s126-132): re-audited every already-guarded hangar-tick crash class for a
-    2nd unguarded pointer-chase site — 6/8 had a genuine gap (all guarded); biggest hit
-    `updateHangarBayScene`'s `-0x25A4` family (26 sites, s132), later fully closed by the s282-288
-    audit lineage. Thread B (s116-145): chased the `voice+0x0`/`+0x34` corruption through several
-    reframings; refuted along the way: stale `rs_malloc` memory, an OOB scan index, an RSP-ucode
-    write, a computed-offset guest-C store, an adjacent-heap-allocation aliasing theory. Earlier
-    (s102-113): traced the corrupted MusyX DMA-batch `devAddr` field backward through 5 functions
-    across 6 sessions (`submitDmaRequestBatch`/`musyxSynthFrame` cleared → `acquireSampleStreamBlock`
-    refuted, never entered → `fillSampleStreamRange` identified as writer, computing `devAddr` from
-    `voice+0x34` → that field's allocator `initSampleStreamBlockCache` cleared, inputs already
-    corrupted at entry → traced to `musyxRenderVoiceSamples` → `musyxInitVoiceFromSample` identified as
-    the sole writer of that offset anywhere in the tree, s105/s111 exhaustive grep); the
-    call-chain-ancestry angle (s105-110) was a 5-session dead end. **Methodology lesson**: comparing
-    two instruments' log lines by *file order* across threads is not a valid proxy for real time
-    order — cross-thread log correlation needs a shared sequence number. **Tooling** (s102,
-    root-caused precisely by item -20 above): `fixup_game_funcs.py` is not idempotent — re-running it
-    without a full ELF regen between runs inserts a second copy of every already-applied patch
-    (harmless, but bloats generated files). Full detail: `PORTING-STATE` Sessions 102-135.
+-19..-17. **(s102-135) Thread A/B saga leading to the s145/147/148 fix above, plus the regen-pipeline root cause.** Thread A (s126-132): re-audited every already-guarded hangar-tick crash class for a 2nd unguarded pointer-chase site — 6/8 had a genuine gap; biggest hit `updateHangarBayScene`'s `-0x25A4` family (26 sites, s132), later fully closed by the s282-288 audit lineage. Thread B (s116-145): chased the `voice+0x0`/`+0x34` corruption through several reframings (refuted: stale `rs_malloc` memory, an OOB scan index, an RSP-ucode write, a computed-offset guest-C store, adjacent-heap aliasing). Earlier (s102-113): traced the corrupted MusyX DMA-batch `devAddr` field backward across 6 sessions/5 functions to `musyxInitVoiceFromSample`, the sole writer of that offset anywhere in the tree (s105/s111 exhaustive grep); the call-chain-ancestry angle (s105-110) was a 5-session dead end. **Methodology lesson**: comparing instruments' log lines by *file order* across threads is not a valid proxy for real time order — cross-thread correlation needs a shared sequence number. **Tooling** (s102, root-caused precisely by item -20 above): `fixup_game_funcs.py` is not idempotent — re-running it without a full ELF regen inserts a second copy of every already-applied patch. Full detail: `PORTING-STATE` Sessions 102-135.
 
--16. **M3 hangar-tick-family guard program (s99-s110): 8 crash classes guarded** (16th/12th/11th/
-    14th/17th/18th/9th/10th -- see the crash catalog below), all with clean negative controls, same
-    `U32()`-truncated-bounds-check-then-`goto`-real-epilogue template used by every guard since. s101
-    and s110 are two independent soaks that survived the entire family with zero crashes, reaching the
-    ~140s DMA-corruption window alive. Full detail: `PORTING-STATE` Sessions 99-101, 109-110.
+-16. **M3 hangar-tick-family guard program (s99-s110): 8 crash classes guarded** (16th/12th/11th/14th/17th/18th/9th/10th — see crash catalog, `docs/PROJECT-OVERVIEW.md` §7), all with clean negative controls, same `U32()`-truncated-bounds-check-then-`goto`-real-epilogue template used by every guard since. s101 and s110 survived the entire family with zero crashes, reaching the ~140s DMA-corruption window alive. Full detail: `PORTING-STATE` Sessions 99-101, 109-110.
 
--15. **M3 -- find the indirect caller of `submitDmaRequestBatch`: CLOSED (s101).** The caller is
-    `musyxSynthFrame` (`funcs_24.c:3095`, a per-VI-retrace audio tick) via `viRetraceHandlerThread` --
-    not the mission/DL code path every earlier session assumed. Refuted dead ends, do not reopen:
-    `ra=0x00000000` as a corruption signature, "dump the OSIoMesg at mb," consumer index desync, "the
-    boot call loops more than once."
+-15. **M3 -- find the indirect caller of `submitDmaRequestBatch`: CLOSED (s101).** The caller is `musyxSynthFrame` (`funcs_24.c:3095`, a per-VI-retrace audio tick) via `viRetraceHandlerThread` — not the mission/DL code path every earlier session assumed. Refuted dead ends, do not reopen: `ra=0x00000000` as a corruption signature, "dump the OSIoMesg at mb," consumer index desync, "the boot call loops more than once." Crash catalog (19 classes, s83-s110): `docs/PROJECT-OVERVIEW.md` §7 — all guarded/closed except #19 (1 occurrence, never recurred). Full detail: `PORTING-STATE` Sessions 93-110, 124-132, 159, 195-196.
 
-    **Crash catalog** (19 classes found chasing this window, s83-s110; "guarded" = landed with a clean
-    negative control, treat as closed unless noted):
+-14. **M3 — `queueGPUUploadTMEM` zero-size assert.** Crash classes 9/10 (`updateAnimatedTextureStreaming`/`static_5_800B4048` SIGBUSes) CLOSED s124/s125, tracked in the crash catalog only.
 
-    | # | site | status |
-    |---|---|---|
-    | 9 | `updateAnimatedTextureStreaming` (funcs_11.c) | guarded s124, 2nd gap found+closed s127 |
-    | 10 | `static_5_800B4048` | guarded s125, 2nd gap found+closed s127 |
-    | 11 | `projectModelBoundsToScreen` | guarded s101, 2 more args found+guarded s128 |
-    | 12 | `composeNpcOrientationMatrix` | guarded s100, 2nd independent loop found+guarded s126 |
-    | 13 | RT64-internal, `reinterpretTileRecord` assert | guarded s196 after a 2nd occurrence (s195) |
-    | 14 | `reserveAndEmitDLEntry` | guarded s109, confirmed clean s129 |
-    | 15 | RT64-internal, `loadDrawState` zero-sample assert | root-caused RT64-internal (s159), guarded |
-    | 16 | `activateAnimationKeyframe` | guarded s99, confirmed clean s130 |
-    | 17 | fault inside `updateHangarBayScene` itself (5 sites) | guarded s110 |
-    | 18 | `submitSceneNodeRender` free-list walk | guarded s123, 9 inlined copies found+reopened s131, root-caused as the `-0x25A4` family and closed via the s282-288 audit lineage |
-    | 19 | RT64-internal SIGSEGV, `MetalFramebuffer` ctor via `createTileCopyRecord` | 1 occurrence, not source-read, not recurred |
+-11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89).** 3 consecutive non-recurrences since s88's correctly-targeted instrument, against 8 prior crashing soaks. `ROGUESQ_LOG_ANIM_CB=1` still live if it recurs.
 
-    Thread A (s126-132, see item above) later found a *second* unguarded site in 6 of the 8 guarded
-    functions -- already folded into the table above. Full detail: `PORTING-STATE` Sessions 93-110,
-    124-132, 159, 195-196.
+-10. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side). Still one data point.
 
--14. **M3 — root-cause/fix the `queueGPUUploadTMEM` zero-size assert.** (Crash classes 9/10 —
-    `updateAnimatedTextureStreaming`/`static_5_800B4048` SIGBUSes — CLOSED s124/s125, tracked only in
-    the crash catalog table at item -15 above.)
+-9. **M3 — confirm the s83 spline div0 guard actually engages.** 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 
--11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89).** 3 consecutive non-recurrences since
-    s88's correctly-targeted instrument, against 8 prior crashing soaks. Not worth a dedicated soak;
-    if it recurs incidentally, `ROGUESQ_LOG_ANIM_CB=1` is still live and ready to read.
+-8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
 
--10. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside
-    `Metal.framework`'s `MTLCompilerFSCache`, no source on our side). Still one data point.
+-7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once earlier items clear: `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40, document the phase timeline. Gate already keeps black off; residual S1 `fs` freeze (~3769-3872 plateau) may still stall animation.
 
--9. **M3 — confirm the s83 spline div0 guard actually engages.** 0/5 fires so far (still 0 after
-    s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive
-    control yet.
+-6. **M4 — confirm the s53 missing-func fix at runtime** (s54 applied + built it; only the game-run check remains). Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` should go 3→0. Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
 
--8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd,
-    `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a
-    shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
+-5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption). Each new failure is its own work unit.
 
--7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once earlier items clear: `PROBE_MODE=start_only
-    HOLD_S=60` marks 10/25/40, document the phase timeline. Gate already keeps black off; residual S1
-    `fs` freeze (~3769-3872 plateau) may still stall animation.
-
--6. **M4 — confirm the s53 missing-func fix at runtime** (s54 applied + built it; only the game-run
-    check remains). Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` should go 3→0. Not
-    load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
-
--5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA →
-    missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption). Each
-    new failure is its own work unit.
-
--3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64`
-    carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user
-    before committing there.
+-3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user before committing there.
 
 -2. **Band-row coverage history** (settled, s41-49): s40's `col`-write probe fails its control.
 
 -1. **GPU->CPU present PNG** via `NativeTarget::copyToRAM` -- a convenience, not a blocker.
 
-**Done, do not redo:**
-- Optimise the ucode vector path -- s38 found it was `-O0`; `-O2` gave 41x. SIMD/RSPRecomp vector work
-  is unnecessary at 4.5ms/task without a new measurement justifying it.
-- Confirm the ucode-performance bottleneck (s37) - find why DL submission collapses (s36) - census the
-  RDP stream (s35) - localise the draw loss (s33/s34).
-- Coverage attribution (`LOG_BBOX`) and load/render format mismatch (`LOG_UPLOAD`) -- every draw
-  covering the band is I4 with `tlut=0`, from I4 loads.
-- The s27-s31 I4-decode line (`FIX_DXT_I`, `I4_SHADE_MONO`, `SHADE_ONLY_MONO`, restricted
-  `FLATTEN_I4`) -- aimed at a texture that does not paint those pixels.
-
-(The s92-95 session-by-session DMA-caller narrative that used to live here is folded into the crash
-catalog and DMA-caller finding above -- not duplicated.)
+**Done, do not redo:** optimising the ucode vector path (s38: `-O0`→`-O2` gave 41x; SIMD/RSPRecomp vector work unnecessary at 4.5ms/task without new justification); the ucode-performance-bottleneck→DL-submission-collapse→RDP-census→draw-loss chain (s33-s37); coverage attribution/format-mismatch analysis (`LOG_BBOX`/`LOG_UPLOAD` — every band draw is I4 `tlut=0`); the s27-s31 I4-decode line (`FIX_DXT_I`, `I4_SHADE_MONO`, `SHADE_ONLY_MONO`, restricted `FLATTEN_I4`) — aimed at a texture that doesn't paint those pixels.
 
 ## Regeneration and build pipeline
 
