@@ -1,8 +1,11 @@
 # NEXT work unit — settle whether `initMusyXEngine` is ever reached, batched with the 3
 # gate-consumer function tags
 
-## Context (read `docs/CURRENT-TRUTH.md` item -166 and `PORTING-STATE` Session 304 — condensed
-## pointer, not a re-derivation)
+(Rewritten s305, a MAINTENANCE iteration — CURRENT-TRUTH.md compaction only, no experiment ran. This
+work unit is unchanged from s304's plan; see docs/CURRENT-TRUTH.md item -166 for the compacted writeup
+and `PORTING-STATE` Session 304 for full detail.)
+
+## Context
 
 s304's source-read refuted both of s303's anticipated hypotheses for why reversing `setDisplayMode`'s
 gate-byte force-zero site (`0x8008EB40`) deterministically hangs boot (2/2 soaks, VI stuck at width 320,
@@ -41,10 +44,11 @@ so they cost nothing this soak but save a build-run cycle for whichever next ste
 
 **Step 3 — soak the CURRENT baseline, do NOT touch `setDisplayMode`'s site this session.** Current
 baseline = `initMusyXEngine` reversed (real write, per s302), `setDisplayMode`/`reapplyDisplayMode`
-still force-zeroed (per s303's revert, unchanged since). Soak template:
-`scratch/s73_post_a_scene/run_step4gate2.sh` (s302's already-validated recipe) — add the new env var(s)
-for the new instruments, keep everything else identical. One soak, boot→title→hold, same
-`ROGUESQ_AUDIO_UCODE=1` arming as prior soaks in this thread.
+still force-zeroed (per s303's revert, unchanged since, and unchanged by s305's maintenance pass, which
+touched only CURRENT-TRUTH.md). Soak template: `scratch/s73_post_a_scene/run_step4gate2.sh` (s302's
+already-validated recipe) — add the new env var(s) for the new instruments, keep everything else
+identical. One soak, boot→title→hold, same `ROGUESQ_AUDIO_UCODE=1` arming as prior soaks in this
+thread.
 
 ## Expected discriminating outcomes
 
@@ -93,7 +97,9 @@ for the new instruments, keep everything else identical. One soak, boot→title�
   M3-audit work unit if a future session finds M5 blocked and maintenance isn't triggered.
 
 HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (iteration 3 on this slug — s303 created it,
-s304 was iteration 2 (pure source-read, no pivot), this write-up is iteration 3's plan. Per iron rule 8,
-a 4th consecutive iteration on this exact slug would need a pivot preamble if it produces no
-discriminating result — the step-1/step-2 counter soak above IS designed to discriminate, so this
-should not trigger that.)
+s304 was iteration 2 (pure source-read, no pivot), s304's write-up (this file, untouched in substance by
+s305's maintenance pass) is iteration 3's plan, still pending execution. Per iron rule 8, a 4th
+consecutive iteration on this exact slug would need a pivot preamble if it produces no discriminating
+result — the step-1/step-2 counter soak above IS designed to discriminate, so executing it next should
+not trigger that; s305 does not count against the budget since it was a mandated maintenance iteration,
+not a hypothesis iteration.)
