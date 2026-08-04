@@ -26103,3 +26103,98 @@ audit, same recipe as every other crash site in this investigation: read `inflat
 look for the standard unguarded-dereference shape, and breadcrumb/guard it the normal way. Only 1
 crash observation on record (s272 soak1, `si_addr=0x80000003`, native `inflate_fast+5344`) — start
 with the source read to find candidate unguarded sites before landing any guard.
+
+## Session 290 (2026-08-04) — full source read of `inflate_fast` finds no unique translation bug (uniform-unguarded baseline, same as every RECOMP_FUNC), RECOGNIZES the s272 crash's `si_addr` as the SAME long-tracked near-`0x80000000` null-pointer signature (not a novel zlib bug), and lands `BREADCRUMB10` scoped to the function per s289's own reassessment plan
+
+Read `docs/CURRENT-TRUTH.md` items -130/-129 and `scratch/agent/NEXT.md` (s289's plan) first, per
+session rules. `scratch/agent/STATUS`=`WORKING`/`OUTCOME` deleted at session start with
+`lib/N64ModernRuntime`/`lib/rt64` showing `-dirty` — the same long-standing baseline noted by 6 prior
+sessions (s279-s285, s289), not investigated further per NEXT.md's own explicit instruction not to
+re-verify this each session.
+
+**What ran**: NEXT.md's steps 1-2 in full — a complete line-by-line source read of `inflate_fast`
+(`N64Recomp/RecompiledFuncs/funcs_7.c:13553-14116`, all 563 lines, function bounded by the next
+`RECOMP_FUNC` at line 14117) plus its caller context: the `inflate_fast` call site inside
+`inflate_blocks` (`funcs_7.c:12336-12351`, the args it loads and passes) and one of the two
+`inflate_recomp` call sites in the higher-level streaming-buffer wrapper (`funcs_1.c:2262-2267`,
+`:2420-2428` — both structurally identical, a double-buffered read-ahead cache calling
+`inflate_recomp` on alternating half-buffers, nothing unusual in either).
+
+**Source-read finding (step 1, negative)**: `inflate_fast` is a faithful, complete instruction-for-
+instruction port of the classic (K&M-era) zlib `inflate_fast` core decompression loop — literal
+decode, length/distance Huffman table walks, and the final LZ77 copy loop, all present and matching
+the expected control flow. Every `MEM_W`/`MEM_B`/`MEM_BU`/`MEM_H` access in the function is
+translated straight from the original MIPS load/store with **no bounds or range check of any kind**
+— but this is true of every `RECOMP_FUNC` in this codebase before a guard is added; nothing about
+this function's *translation* stands out as buggy or different from ~15 other already-catalogued
+crash sites in this same investigation (s130-s289). No recompiler-introduced defect found.
+
+**Caller-argument finding (step 2)**: traced the 4 register arguments `inflate_fast` receives from
+`inflate_blocks`'s call site (`funcs_7.c:12336-12347`): `bl`/`bd` (single bytes, bit-length values,
+loaded from `$s1+0x10`/`+0x11`) are safe (used only to index a small fixed `inflate_mask[]` constant
+table, never dereferenced as pointers); `tl`/`td` (the literal/length and distance Huffman decode
+table base pointers, loaded from `$s1+0x14`/`+0x18`) are guest RDRAM pointers **used directly and
+immediately as the dereferenced base for every symbol decoded in the hot loop, with no address-range
+check on either at the call site or on entry to `inflate_fast`**. The other two structurally-trusted
+pointers — `z` (z_streamp, loaded from the caller's own stack slot, `ctx->r15`/`$t7` internally) and
+`s` (`inflate_blocks_statef*`, `ctx->r24`/`$t8` internally) — are the "self" state objects nearly
+every zlib call trusts implicitly; less specific to this function, but equally unguarded.
+
+**Reframing the s272 observation (the actual finding this session, corrects s272's framing)**: s272's
+crash record reads `si_addr=0x380000003` (RDRAM base + guest `0x80000003`), and s272's own write-up
+already flagged this as "3 bytes past the exact-`0x80000000` signature this whole investigation has
+been tracking" — but that observation was never followed up because s272-s288 all believed
+`inflate_fast` was a system-library call needing a different localization approach (s289 corrected
+that belief). Working the arithmetic through this codebase's actual `MEM_B`/`MEM_BU` macros
+(`N64Recomp/include/recomp.h:101-108`, which XOR the byte offset with 3 for MIPS big-endian byte
+addressing *before* subtracting the `0x80000000` RDRAM base): a **register holding exactly 0** fed
+into any `MEM_B`/`MEM_BU` access with an offset whose low 2 bits are 0 produces precisely
+`rdram + 0x80000003` — an exact match for the observed fault, with no need to invoke a large garbaged
+64-bit value or an exotic offset. **This means the s272 crash is not a novel zlib bug at all — it is
+the same "guest struct field left at 0/uninitialized where a valid `~0x80000000`-range RDRAM pointer
+was expected" signature this investigation has guarded roughly 15 times elsewhere since ~s130** (the
+`-0x25A4` family, the `G1`-`G32` family, `tickWrappingTimerAccumulatorList`'s `0x80000004`,
+`buildPositionAndCallTransformHelper`'s `0x80000010`, etc. — all small positive offsets from an exact
+`0x80000000` base). The most likely candidates for the zero-valued register, per the caller-argument
+trace above, are `tl`/`td` (if `huft_build` failed to populate the caller's Huffman-table fields before
+this call) or one of the several `MEM_BU(reg, ...)` accesses inside the copy loop where `reg` is `p`
+(input pointer, `ctx->r12`) or `q` (output pointer, `ctx->r11`) — but this is not yet confirmed,
+only newly plausible; the existing evidence (a single, years-old crash record with a stale
+`last-guest-pc`) cannot distinguish between these candidates.
+
+**Instrument landed**: `BREADCRUMB10`, `N64Recomp/fixup_game_funcs.py`, same established
+per-instruction `g_rs64_last_guest_pc` write mechanism as `BREADCRUMB`-`BREADCRUMB9`, scoped to
+`inflate_fast`'s body only (250 comment-line sites patched, confirmed via the fixup-script's own
+report line and a direct grep of the regenerated `funcs_7.c`). No guard was landed — with only 1
+crash observation ever and no confirmation of *which* register was zero, guessing a guard site blind
+would not be validatable (this investigation's own rule: a null result needs a same-run positive
+control, and there is no way to force this specific rare crash on demand). The breadcrumb exists
+purely to localize the *next* occurrence: when it next fires, `[CRASH][last-guest-pc]` will for the
+first time point at the actual `inflate_fast` instruction executing at the moment of the fault
+(rather than the stale `beginFrameDLChunk` value s272/s273 both observed), which combined with a
+register dump should identify which of `tl`/`td`/`p`/`q` (or another candidate) was zero.
+
+**Regen + build + validation soak**: full pipeline (delete `funcs_*.c` → `N64Recomp` → `fixup_game_funcs.py`
+→ `cmake --build`, `DEVELOPER_DIR` set for Metal), clean build (only pre-existing, unrelated
+`DDIV`/`-Wpointer-sign` warnings in `funcs_8.c`, no new warnings from this change). One 240s soak
+(`scratch/s73_post_a_scene/run_dequeuearg1.sh`) run post-build to confirm no regression: scene reached
+(`vi_width=1024` at 45.7s), held the full 291s hold window, `CRASH: 0` — clean run, no crash of any
+kind (expected, given the base rate: this specific bug has fired once in the investigation's entire
+history). This is not a positive control for the breadcrumb itself (impossible for a 1-observation-
+ever bug) — it only confirms the new instrumentation didn't destabilize the build.
+
+**Housekeeping**: no `lib/` edits (the fixup-script edit is in the standalone `N64Recomp` checkout,
+confirmed untracked there per NEXT.md's carried-forward note — no `export.sh` needed). `hangarInitialize`,
+`playerSnowSpeederInit`, and `waitForAnyAudioSlot` lineages remain closed (s288/s289) and were not
+touched or re-opened this session. `CURRENT-TRUTH.md` still oversized (31+ sessions overdue for
+pruning) — not this session's job, no leftover budget beyond the source read + instrument.
+
+**Next steps**: no forced action — this is a wait-for-recurrence instrument, not a fix. Continue
+normal soak-testing cadence with `BREADCRUMB10` now live; if/when `inflate_fast` crashes again,
+`[CRASH][last-guest-pc]` plus a register dump at that PC will identify the zero-valued pointer
+directly, and a standard range-check guard (bailing to `inflate_fast`'s own return at
+`L_800290AC`/function end) can be landed and validated the normal way. If several more sessions of
+routine soaking pass with no recurrence, treat this the same way `waitForAnyAudioSlot` was treated in
+its low-rate periods: not worth further dedicated investigation, and pull the next work unit from
+`docs/CURRENT-TRUTH.md`'s "Next steps" list below item -124 (the pre-`-0x25A4`-lineage backlog,
+unreviewed this session — read it fresh rather than assuming its ordering is still current).

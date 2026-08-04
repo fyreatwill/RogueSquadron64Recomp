@@ -1,87 +1,59 @@
-# NEXT work unit — start the `inflate_fast`/zlib investigation (s272, never attempted)
+# NEXT work unit — read the backlog below CURRENT-TRUTH item -124 fresh (unreviewed since before s283)
 
-Both standing backlog items are now CLOSED: the `-0x25A4($s1)` hangar-list-pointer audit lineage
-(s283-288, `CURRENT-TRUTH` item -129) and the elevated pre-scene `waitForAnyAudioSlot` death-rate
-investigation (s289, `CURRENT-TRUTH` item -130, closed as a non-finding — the rate reverted 8
-sessions ago and has stayed reverted). Do not re-open either without a NEW discriminating signal.
+## Status of the last 3 backlog items (all closed or instrumented-and-waiting)
 
-## Where the investigation stands (s289)
+- `-0x25A4` hangar-list-pointer audit lineage (s283-288, `CURRENT-TRUTH` item -129): CLOSED.
+- Elevated pre-scene `waitForAnyAudioSlot` death rate (s289, item -130): CLOSED as a non-finding.
+- `inflate_fast`/zlib investigation (s290, item -131): **NOT closed, but not actionable right now
+  either.** Full source read found no unique translation bug. The single s272 crash observation
+  (`si_addr=0x380000003`) was re-framed as the SAME "near-exact-`0x80000000`, small positive offset"
+  null-pointer signature this investigation has guarded ~15 times elsewhere — i.e., a familiar bug
+  shape, not a novel zlib bug — but there's still only 1 observation ever, with no way to force it to
+  recur on demand. `BREADCRUMB10` (`fixup_game_funcs.py`, `g_rs64_last_guest_pc`, same mechanism as
+  `BREADCRUMB`-`BREADCRUMB9`) is now live and scoped to `inflate_fast`'s body — the next time this
+  crash fires (in ANY soak, not a dedicated one), `[CRASH][last-guest-pc]` will for the first time
+  point at the actual faulting `inflate_fast` instruction instead of the stale `beginFrameDLChunk`
+  value s272/s273 both saw. **Do not design a guard blind** — wait for the breadcrumb to actually
+  catch an occurrence, then read the guest PC it reports (grep `funcs_7.c` for that address) to see
+  which register/access it corresponds to, cross-reference against the 4 candidate pointers below,
+  and land a guard only once you know which one was zero. Full detail: `PORTING-STATE` Session 290,
+  `CURRENT-TRUTH` item -131.
 
-s289 quantified the `waitForAnyAudioSlot` pre-scene death rate across s281-288 (offline analysis,
-no soaks spent): 2 pre-scene deaths / 16 soaks = 12.5%, LOWER than the original pre-elevation
-baseline (21%, s270-275). The "elevated since s278" framing was accurate when written but the
-elevated window (s276-278+280, 87.5%) had already fully reverted by s281 — closed as a non-finding.
-Full detail: `PORTING-STATE` Session 289, `CURRENT-TRUTH` item -130.
+  **Candidate zero-valued pointers, if/when it recurs** (ranked by how directly caller-controlled they
+  are, most first): `tl`/`td` (Huffman table bases, loaded by `inflate_blocks` from `$s1+0x14`/`+0x18`
+  with no range check, `funcs_7.c:12344`/`:12347`) > `p`/`q` (input/output byte pointers inside the
+  copy loop, `ctx->r12`/`ctx->r11`) > `z`/`s` (the z_streamp and blocks-state "self" pointers, less
+  likely to ever be zero since they're the same struct on every call).
 
-**Free bonus finding from s289, changes the shape of this work unit**: `inflate_fast` is NOT a
-system-library call, contrary to every prior mention in `CURRENT-TRUTH.md` since s272 (an unverified
-assumption that propagated for 17 sessions without being checked). It's a full `RECOMP_FUNC` with
-guest-MIPS-address comments (`N64Recomp/RecompiledFuncs/funcs_7.c:13553`) — the original N64 game
-embeds its own compiled zlib. `funcs_1.c`, `funcs_7.c`, and `funcs_34.c` all contain `inflate*`
-`RECOMP_FUNC`s (`inflateInit_`, `inflate_recomp`, `inflate_blocks`, `inflate_fast`, `inflate_flush`,
-etc. — grep `inflate` across `RecompiledFuncs/*.c` for the full list). **This means the standard
-breadcrumb/guard-patch recipe used throughout s254-288 for every other crash site applies directly
-here** — no novel host-hook/wrap instrumentation design needed, despite what every older
-`CURRENT-TRUTH.md` mention of this item implies.
+## What this session's iteration should actually be
 
-## What's already known (do not re-derive, build on it)
+Since `inflate_fast` is now a wait-for-recurrence instrument (not a task with concrete next actions),
+**do NOT spend this iteration staring at it**. Instead:
 
-- Only 1 crash observation on record: s272 soak2, `si_addr=0x380000003`, native
-  `sym=inflate_fast+5344`. `last-guest-pc` at the time of that crash was stale (pointed at
-  `beginFrameDLChunk`, confirmed via grep — uninformative, don't re-cite it as if it were the crash
-  site). Full detail: `CURRENT-TRUTH` item around line ~1271 (s272 write-up), `PORTING-STATE`
-  Session 272.
-- `inflate_fast` is called from `inflate_blocks` (`funcs_7.c:12351`). `inflate_recomp` (the
-  top-level entry point, `funcs_1.c:2267`/`:2428`) calls into the `inflate_blocks`/`inflate_fast`
-  chain — these 2 call sites in `funcs_1.c` are the guest-code callers into the whole zlib chain,
-  worth checking what THEY pass in (buffer pointers, sizes) since a bad caller-supplied argument
-  reaching an unguarded zlib-internal dereference fits this investigation's dominant bug shape
-  (unguarded pointer chase from a caller-controlled value) just as well as an internal zlib bug
-  would.
-- `si_addr=0x380000003` (low, non-RDRAM-looking address) is consistent with an uninitialized or
-  garbage pointer/length value reaching a dereference or array index — the same "unguarded
-  pointer/index, no `0x80000000`-`0x80800000` range check" shape behind every guard landed in this
-  investigation since s130-ish. Don't assume this without verifying though — actually read the code
-  around the crash offset first.
-
-## Steps
-
-1. **Source-read `inflate_fast`** (`N64Recomp/RecompiledFuncs/funcs_7.c:13553`, get the actual
-   current line count via `grep -n "^RECOMP_FUNC" funcs_7.c` for the next function's start to bound
-   it) for the standard unguarded-dereference shape (a pointer or index reaching a `MEM_*` access
-   with no preceding `0x80000000`-`0x80800000`-style range check, or an unchecked array/buffer
-   index). This function is large (zlib's core decompression loop) — expect it to take real reading
-   time; don't rush past sections.
-2. Also read the 2 `funcs_1.c` call sites (`:2267`, `:2428`, inside `inflate_recomp`) and the
-   `inflate_blocks` call site (`funcs_7.c:12351`) for what they pass into the chain — a bad argument
-   from the caller is as plausible a root cause as an internal zlib bug.
-3. If a genuinely unguarded dereference is found: land a guard in `N64Recomp/fixup_game_funcs.py`
-   using the same established recipe (`U32(ctx->rN)` range check, bail to the function's own
-   epilogue — find it by reading to the closing brace, same as every guard landed s130-288), verify
-   the anchor regex is unique in its file before patching, full regen pipeline
-   (`make_elf.py` → delete `funcs_*.c` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`), then
-   2-3 soaks for non-recurrence validation (this crash is rare — only 1 observation ever — so
-   non-recurrence over a couple of soaks is the same validation bar used throughout this
-   investigation, not a strict positive-control requirement given the low base rate).
-4. If the source-read finds nothing obviously wrong (zlib is well-tested upstream code; the bug may
-   be in how the recompiler translated it, or in caller-supplied bad state rather than zlib itself),
-   that's a legitimate outcome — write up what was checked and ruled out, and reassess: possibly a
-   breadcrumb (last-guest-pc tracking, same mechanism as `BREADCRUMB5`-`9`) scoped to `inflate_fast`
-   specifically would help localize a 2nd observation before attempting a fix blind.
+1. Read `docs/CURRENT-TRUTH.md`'s "Next steps, in order of expected value" section starting right
+   AFTER item -124 (i.e., skip past the entire `-0x25A4`/`waitForAnyAudioSlot`/`inflate_fast` trilogy,
+   items -125 through -131, which are all now either closed or instrumented-and-waiting) and read
+   what's queued below that — this has not been reviewed fresh since before s283 (over 7 sessions),
+   so treat its stated priority ordering as possibly stale, not gospel. `grep -n "^-1[0-9][0-9]\." or
+   "^-9[0-9]\."` (or similar) to find the next few numbered items quickly rather than reading
+   thousands of lines linearly.
+2. Cross-check whatever item you find against the "Overturned conclusions" section
+   (`CURRENT-TRUTH.md:7339`) and the "Dead ends" section (`:7615`) before committing to it — some
+   older backlog items may already be superseded without their own "Next steps" entry having been
+   updated to say so.
+3. Pick ONE work unit from there per the normal rules (2-4 hypotheses, discriminating measurement,
+   batch instrumentation).
 
 ## Do NOT do this iteration
 
-- Do NOT re-open the `-0x25A4($s1)` audit lineage or the `waitForAnyAudioSlot` elevated-rate
-  investigation without a NEW discriminating signal — both closed (s288, s289 respectively).
-- Do NOT assume `inflate_fast` needs a host-side hook/wrap approach — it's recompiled guest code,
-  confirmed by s289's direct source read. If you find yourself designing a host intercept, stop and
-  re-read `funcs_7.c:13553` first.
-- Do NOT treat `processSceneNode`, `reserveAndEmitDLEntry`, `coalesceFreeHeapBlocks`,
-  `tickTextureMaterialExpiry` crashes as new findings — all already catalogued, unrelated crash
-  families.
+- Do NOT re-open `-0x25A4`, `waitForAnyAudioSlot`, or attempt to guess-guard `inflate_fast` blind —
+  all three are either closed or correctly waiting on new evidence, not actionable right now.
 - Do NOT run `fixup_game_funcs.py` twice without a fresh `N64Recomp` regen in between.
 - Do NOT idle across a Stop-hook turn boundary waiting on a background soak — block with
   `TaskOutput(task_id, block=true, timeout<=480000)` in the SAME turn.
+- Do NOT treat a soak that happens to hit `inflate_fast`'s new breadcrumb as a wasted run even if it
+  doesn't crash there — the breadcrumb has zero cost when it doesn't fire, so ordinary soaking for
+  whatever NEW work unit you pick this session is "free" extra exposure for `inflate_fast` too.
 
 ## Environment notes (carried forward, all still valid)
 
@@ -95,7 +67,7 @@ here** — no novel host-hook/wrap instrumentation design needed, despite what e
   `cd` elsewhere in the session — re-`cd` explicitly before cwd-dependent commands.
 - Compound `cd && ...` commands need interactive approval — issue `cd` as its own call first.
 - `git -C`/`git --git-dir=`/`cd <dir> && git ...` all get flagged for approval even standalone, and
-  in a non-interactive/autonomous session that approval is NOT available (confirmed s289: both
+  in a non-interactive/autonomous session that approval is NOT available (confirmed s289/s290: both
   forms blocked outright, no prompt resolvable) — do not spend time retrying these forms for
   submodule git state; treat the dirty-submodule baseline as already-established fact from prior
   sessions' direct confirmations (s279, s280, s282, s284, s285) instead of re-attempting to verify
@@ -113,12 +85,13 @@ here** — no novel host-hook/wrap instrumentation design needed, despite what e
 - `+N` crash-symbol offsets are NATIVE (ARM64) and SHIFT across sessions — verify range membership
   via the Mach-O symtab walk (`nm -n`, filter T/t, dedupe, sort, confirm offset < distance to next
   DISTINCT symbol) before trusting a reported `sym=X+N`.
-- `[CRASH][last-guest-pc]` is only informative for `static_5_800AB658` (the only breadcrumbed
-  function, `BREADCRUMB7`) — stale noise for any other crashing function.
+- `[CRASH][last-guest-pc]` is now informative for TWO functions: `static_5_800AB658` (`BREADCRUMB7`)
+  and, as of s290, `inflate_fast` (`BREADCRUMB10`) — still stale noise for any other crashing
+  function.
 - `N64Recomp/fixup_game_funcs.py` is untracked in the standalone `N64Recomp` checkout — no
   `export.sh` needed for edits there, only for actual `lib/` submodule changes.
-- `CURRENT-TRUTH.md` is far over the ~35KB target (30+ sessions overdue) — not this iteration's job
-  unless the `inflate_fast` investigation is a quick null with clear leftover budget.
+- `CURRENT-TRUTH.md` is far over the ~35KB target (31+ sessions overdue) — not this iteration's job
+  unless the picked work unit is a quick null with clear leftover budget.
 - At session start, check `scratch/agent/STATUS`/`OUTCOME` for signs of an interrupted prior
   iteration before assuming a `WORKING`/missing-`OUTCOME` state means recovery work is needed — this
   has repeatedly turned out to be just the loop's normal per-iteration bootstrap, not an interrupted

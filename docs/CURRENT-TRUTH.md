@@ -663,7 +663,45 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s289)
+## Next steps, in order of expected value (s290)
+
+-131. **(s290) Full source read of `inflate_fast` finds no unique translation bug — it's a uniformly
+    unguarded function like every other RECOMP_FUNC, no recompiler-introduced defect. RECOGNIZES the
+    s272 crash's `si_addr=0x380000003` as the SAME long-tracked "near-exact-`0x80000000`, small
+    positive offset" null-pointer signature this investigation has guarded ~15 times elsewhere since
+    ~s130 — NOT a novel zlib bug as s272-s288 assumed. Lands `BREADCRUMB10` scoped to `inflate_fast`
+    to localize the next occurrence; no guard landed (would be unvalidatable blind — 1 observation
+    ever, no positive control possible for a rare crash).** Full detail: `PORTING-STATE` Session 290.
+
+    Source-read (`funcs_7.c:13553-14116`, all 563 lines) plus caller-argument trace (`inflate_blocks`'s
+    call site, `funcs_7.c:12336-12351`, and the `inflate_recomp` call sites in `funcs_1.c:2267`/`2428`)
+    found nothing translation-specific to flag: every `MEM_*` access is unguarded, exactly like every
+    other `RECOMP_FUNC` before a guard is added. The two standout **caller-supplied, unchecked**
+    pointers are `tl`/`td` (Huffman literal/length and distance decode-table bases, loaded by
+    `inflate_blocks` from `$s1+0x14`/`+0x18` with no range check, then dereferenced on every symbol
+    decode) — plausible candidates for the s272 fault but not confirmed.
+
+    **The actual finding**: working through this codebase's `MEM_B`/`MEM_BU` macros
+    (`recomp.h:101-108`, which XOR the byte offset with 3 for MIPS big-endian addressing before
+    subtracting the RDRAM base), a register holding exactly **0** fed into any `MEM_B`/`MEM_BU`
+    access produces precisely `rdram + 0x80000003` — an exact match for s272's `si_addr`, no exotic
+    garbage value needed. This means the s272 crash is the familiar "guest struct field left at
+    0/uninitialized where a `~0x80000000`-range RDRAM pointer was expected" bug class (the
+    `-0x25A4`/`G1`-`G32` family, `tickWrappingTimerAccumulatorList`'s `0x80000004`,
+    `buildPositionAndCallTransformHelper`'s `0x80000010`, etc.), not something unique to zlib. It was
+    never recognized as such because s272-s288 believed `inflate_fast` needed a different
+    (system-library) localization approach — a belief s289 already refuted, this session confirms the
+    practical consequence of that refutation.
+
+    **Status**: `BREADCRUMB10` is live (`fixup_game_funcs.py`, 250 sites patched, same
+    `g_rs64_last_guest_pc` global as `BREADCRUMB`-`BREADCRUMB9`), regen+build clean, 1 validation soak
+    (0 crashes, confirms no regression — not a positive control, impossible for a 1-observation-ever
+    bug). **This is a wait-for-recurrence instrument, not a closed item** — do not mark it closed
+    until either a 2nd occurrence is caught and localized, or enough sessions of routine soaking pass
+    with no recurrence to treat it like `waitForAnyAudioSlot`'s low-rate periods (not worth further
+    dedicated investigation). **Next work unit**: if `inflate_fast` doesn't recur within a session or
+    two, read this file's "Next steps" list below item -124 fresh (unreviewed this session, ordering
+    may be stale) rather than assuming there's nothing left to do.
 
 -130. **(s289) CLOSES the elevated pre-scene `waitForAnyAudioSlot` death-rate backlog item (open
     since s278) as a non-finding — the elevated rate was real but confined to a 4-session window
