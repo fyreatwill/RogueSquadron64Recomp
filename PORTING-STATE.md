@@ -27855,3 +27855,77 @@ that `M_AUDTASK` is confirmed not to be part of that particular puzzle.
 HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (unchanged — this is the 9th session
 producing a discriminating result in this lineage: s303/s306/s307/s309/s310/s311/s312/s313/s315, s314
 was maintenance and doesn't count). Continue same slug next session.
+
+## Session 316 (2026-08-04)
+
+M5 audio de-stubbing, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`, continuing item -174's
+open question: why do `tickAllActiveSongs`/`tickAudioSequencerFrame`/`tickAllAudioChannels` stop 3 calls
+before `update3DAudioFrame`/`M_AUDTASK` submission/the RSP task-runner (37 vs 40)?
+
+**Step 1 (sanity check per NEXT.md's own instructions, cheap, no build):** grepped
+`fixup_game_funcs.py`'s patch definitions for the 4 tags in play (`reach-allsongs`, `reach-audioseq`,
+`tick-audio-seq`, `tick-all-audio-channels`). Confirmed these instrument exactly 3 distinct functions —
+`tickAllActiveSongs` (entry+exit via `reach-allsongs-*`), `tickAudioSequencerFrame` (entry via
+`tick-audio-seq`, exit via `reach-audioseq-exit` — same function, two tags, not two functions), and
+`tickAllAudioChannels` (entry via `tick-all-audio-channels`). No labeling artifact; the 37-vs-40 gap is
+real and needs a mechanism, not a relabeling.
+
+**Step 2 (source-read + interleaved log analysis, per NEXT.md, before building anything new):** grepped
+the s315 log (`scratch/s73_post_a_scene/step315audtaskcap/run.log`) for all 3 tick-producer tags plus
+`update3DAudioFrame`/`audtask-dispatch`/`[runner] task #N`, sorted by line number. Confirmed the
+tick-producer group's last cycle is n=36 (37th call), while `update3DAudioFrame`/`audtask-dispatch`
+continue to n=39 and the RSP task-runner's last dispatch is task #39 — the same hard-stop boundary
+established in s315 (`rdpFs=39` pinned for the rest of the 35000+-line VI-frame tail of the log). Source-
+read `musyxSynthFrame` in `RecompiledFuncs/funcs_24.c`: found exactly 3 call sites to
+`tickAudioSequencerFrame`/`tickAllActiveSongs`, each a near-identical countdown/period gate (s107's "3
+near-identical gate copies") — decrement a shared countdown at `G_BASE-0x68EC`, and only on hitting
+exactly 0 (i.e. pre-decrement value 1) reload it from a period at `G_BASE-0x68E8` and fire both calls.
+Grep-confirmed these 3 sites (`RecompiledFuncs/funcs_24.c`, gate1 ~0x80091474, gate2 ~0x80091534, gate3
+~0x800915E8) are the ONLY static call sites to `tickAudioSequencerFrame` anywhere in `RecompiledFuncs/*.c`
+(`tickAllAudioChannels` is a separate unconditional call made from inside `tickAudioSequencerFrame`
+itself, not a 4th outer caller). Only gate1 had ever been instrumented (s108, cap widened s311,
+taken-outcome logic added s312) — 4 sessions measured its raw countdown/period inputs (constant
+`0`/`16777216`) but never checked whether the branch it guards is ever actually *taken* as a call.
+
+**New instrument:** added `[musyx-gate2]`/`[musyx-gate3]` to `fixup_game_funcs.py`, identical diagnostic
+convention to `[musyx-gate1]` (`n<40||(n%128)==0` cap, logs countdown/period/`taken_skip`), placed at
+gate2's and gate3's own pre-decrement countdown reads. Regenerated (`N64Recomp` → `fixup_game_funcs.py`
+→ cmake build), confirmed the patch report showed exactly `x1` for each. Hand-reversed `setDisplayMode`'s
+gate-byte site (0x8008EB40) a 9th time to match s315's run conditions (gate=1, `reapplyDisplayMode` stays
+force-zeroed), rebuilt, ran one soak (`run_step316gate23.sh`, copied from s315's template, all passive
+breadcrumbs armed including `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1`). Soak hit the expected deterministic
+600s phase-timeout (exit 5, INCONCLUSIVE by design — the game process was killed automatically, confirmed
+`pgrep` empty before and after).
+
+**Direct measurement — none of the 3 known gates ever fires the call.** `[musyx-gate1]`: 40/40 samples,
+`countdown=0 period=16777216 taken_skip=1` on every single one (unchanged from s311/s312/s315).
+`[musyx-gate2]`: only 4 samples exist in the entire 600s log (n=0,1,2,3 — the loop containing gate2's
+read is reached only 4 times total, then never again), all 4 `taken_skip=1`. `[musyx-gate3]`: **0
+samples** — the code path containing gate3's read is never reached once in the whole run. Meanwhile
+`[reach-allsongs-entry]` independently counted **37** real calls to `tickAllActiveSongs` in the same log.
+This is a direct contradiction: the only 3 known static call sites, sampled exhaustively (40+4+0=44
+total samples, covering every time execution reached any of the 3 gate reads), account for **zero** taken
+calls, yet the function they exclusively guard fired 37 times. Verified this isn't a branch-polarity
+misreading by re-deriving the MIPS control flow by hand from the disassembly comments a second time
+(`bne $v0,$zero,skip` after decrement — skip iff post-decrement != 0 iff pre-decrement countdown != 1);
+the logic is consistent with 4 prior sessions' interpretation of gate1's own branch.
+
+**Conclusion: the s107-era 3-gate-copy model for what fires the tick-producer functions is unconfirmed
+and likely incomplete.** Two explanations survive: an unlocated indirect/function-pointer call site (a
+textual grep of `RecompiledFuncs/*.c` would miss this — s310 found exactly this pattern one level up, for
+`musyxSynthFrame`'s own invocation via a 4-slot VI-retrace callback table, not a direct call), or a subtle
+addressing/polarity error specific to gate2/gate3 despite matching gate1's known-working pattern
+byte-for-byte. Next session: log `ctx->r31` (`$ra`) at `tickAudioSequencerFrame`'s own entry and compare
+against the 3 known call sites' return addresses (0x800914A4/0x80091568/0x8009161C) — this directly
+answers "which of the 3 sites, if any, is the true origin" without relying on the countdown-gate model at
+all, mirroring the diagnostic class that resolved s310's indirect-call mystery.
+
+`setDisplayMode`'s site re-reverted, baseline restored and rebuilt (confirmed `MEM_B(0XF50, ctx->r1) = 0;`
+in `RecompiledFuncs/funcs_23.c` before ending session). `lib/N64ModernRuntime`/`lib/rt64` dirty status in
+`git status` is pre-existing, unrelated to this session — all edits this session were in the standalone
+`~/Documents/Tools/N64Recomp` checkout (`fixup_game_funcs.py`, `RecompiledFuncs/funcs_23.c`/`funcs_24.c`),
+never inside `lib/`, so no `submodule-patches/export.sh` is needed.
+
+HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (unchanged — this is the 10th session producing
+a discriminating result in this lineage: s303/s306/s307/s309/s310/s311/s312/s313/s315/s316, s314 was
+maintenance and doesn't count). Continue same slug next session with the `$ra`-at-entry diagnostic.

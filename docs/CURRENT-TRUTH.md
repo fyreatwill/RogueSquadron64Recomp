@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    Overturned Conclusions entries). 35 KB remains a stretch target, not a hard floor — the "Current
    truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
    deliberately; both are used every iteration for phase-gating and build commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 8 times (s303-315), each reproducing an identical deterministic full-boot hang and narrowing it further. Current state (s315, direct measurement): **two** distinct stop points, not three (s313) or one shared "soft stop" (earlier sessions) — full detail Next-steps item -174.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 9 times (s303-316), each reproducing an identical deterministic full-boot hang and narrowing it further. Current state (s316, direct measurement): the 3-gate-copy model for what actually fires the tick-producer functions is now contradicted by direct instrumentation — full detail Next-steps item -175.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,7 +148,32 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -174 (s315); the next new item takes -175 and is inserted at the top.
+oldest). Current top is -175 (s316); the next new item takes -176 and is inserted at the top.
+
+-175. **(s316) M5 audio de-stubbing: the 3-gate-copy model for what fires the tick-producer functions
+    is unconfirmed — direct instrumentation of gate2/gate3 contradicts it.** Item -174 asked why
+    `tickAllActiveSongs`/`tickAudioSequencerFrame`/`tickAllAudioChannels` stop 3 calls before everything
+    else (37 vs 40). Step 1 sanity check (grepped `fixup_game_funcs.py`'s patch definitions) confirmed
+    these ARE 3 genuinely distinct functions, not a double-counted call site — no labeling artifact.
+    Step 2 (source-read + interleaved log analysis) found the 3 near-identical countdown gates inside
+    `musyxSynthFrame` (`funcs_24.c`, reads at ~0x80091474/0x80091534/0x800915E8, all sharing ONE
+    countdown at `G_BASE-0x68EC`) are the only static call sites to `tickAudioSequencerFrame`/
+    `tickAllActiveSongs` anywhere in `RecompiledFuncs/*.c` (grep-confirmed exhaustive). Only gate1 had
+    ever been instrumented (s108, cap widened s311, taken-outcome added s312) — 4 sessions measured its
+    raw countdown/period inputs but never checked whether it ever actually took the "call" branch.
+    Added the identical diagnostic to gate2 and gate3 (`[musyx-gate2]`/`[musyx-gate3]`), one soak
+    (`setDisplayMode`'s site reversed a 9th time to match s315's run conditions, re-reverted same
+    session). **Result: none of the 3 gates ever takes the "call" branch.** gate1: 40/40 samples,
+    `taken_skip=1` every time. gate2: only 4 of its containing loop's iterations are ever reached at all
+    (n=0..3, then the loop stops being entered) — all 4 `taken_skip=1`. gate3: **0 samples, its
+    containing code path is never reached once** in the whole 600s run. Yet `tickAllActiveSongs`'s own
+    independent entry counter confirms 37 real calls happened in the same run/log. Direct contradiction:
+    the only known call sites, sampled exhaustively, account for zero of the 37 observed calls. Two
+    explanations survive: (a) an unlocated indirect/function-pointer call site (a textual grep would
+    miss this — s310 found exactly this pattern one level up, for `musyxSynthFrame`'s own invocation via
+    a VI-retrace callback table), or (b) a subtle addressing/polarity error in the gate model despite it
+    matching the disassembly pattern exactly. `setDisplayMode`'s site reverted, baseline restored and
+    rebuilt. Full detail: `PORTING-STATE` Session 316.
 
 -174. **(s315) M5 audio de-stubbing: `[audtask-dispatch]` REFUTES its own "M_AUDTASK submission stops
     at call 20/20" conclusion — see Overturned Conclusions.** Before source-reading
@@ -399,6 +424,16 @@ Standing warnings:
   and had every reason to believe the remaining tag was already resampled (`docs/CURRENT-TRUTH.md`
   s313's own item -173 explicitly called it "already resampled since s310/s311" without re-checking the
   source). 2 stop points (37/37 and 40/40), not 3. PORTING-STATE 315.
+- **(s107/s108→s316)** "the 3 near-identical countdown/period gate copies inside `musyxSynthFrame` are
+  the mechanism that fires `tickAllActiveSongs`/`tickAudioSequencerFrame`" — never validated with a
+  positive control across 4 sessions (s108/s311/s312 all measured gate1's raw countdown/period inputs
+  without ever observing it take the "call" branch). s316 instrumented the other 2 copies the same way:
+  gate1 40/40 samples `taken_skip=1`, gate2 only 4/40 iterations ever reached (all `taken_skip=1`), gate3
+  0 samples (never reached). None of the 3 known gates ever fires the call in this run, yet
+  `tickAllActiveSongs` independently logs 37 real calls. The true call site is still unidentified.
+  Believable: the disassembly pattern (decrement, reload-on-zero, conditional call) matched exactly, and
+  raw-input constancy looked like sufficient evidence without checking the branch outcome itself.
+  PORTING-STATE 316.
 
 ### Dead ends — labelled as such in the log, do not retry
 
