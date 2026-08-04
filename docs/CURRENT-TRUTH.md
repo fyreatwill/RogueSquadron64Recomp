@@ -23,19 +23,24 @@ Priority order for upcoming iterations, set after the 300-session review:
    `initMusyXEngine`'s site reversed s302, but s306's reachability counter (2 soaks) found
    `initMusyXEngine` is never actually called — s302's validation is retroactively meaningless (see
    Overturned Conclusions), and gate=1 has still never been exercised by any soak. `setDisplayMode`'s
-   site attempted s303, s307, and again s310 (each with the prior session's diagnostics live): all 3
+   site attempted s303, s307, s310, and s311 (each with the prior session's diagnostics live): all 4
    reproduced an identical deterministic full-boot hang (~39 RSP tasks/`rdpFs`, stuck at VI width 320),
-   re-reverted every session. s310's batched 4-site diagnostic (`ROGUESQ_LOG_AUDIOTICK_TRACE`)
-   **REFUTES H1** (the audio-driving thread stops being woken): `viRetraceHandlerThread`'s own loop,
-   the VI-retrace 4-slot callback table (which holds `musyxSynthFrame`'s address continuously from VI
-   tick ~3 onward), and `musyxSynthFrame`'s own entry all keep firing for 40+ iterations, well past the
-   tick-19/20 point where the audio-tick counters (`[audtask-dispatch]`/`[musyx-gate1]`/`[reach-*]`) stop
-   producing output. Also refutes H4 (a full unreaped audio-task queue) — no `M_AUDTASK`-specific
-   bounded queue exists anywhere in the runtime (confirmed by source-read, `sp.cpp`/`mesgqueue.cpp`/
-   `events.cpp`). The freeze is narrowed to something internal to `musyxSynthFrame` or a callee on its
-   "run" branch, between confirmed-reached entry and the confirmed-stopped RSP task submission —
-   H2/H3 territory. Full narrative: Overturned Conclusions and Next-steps item -170 below.
-   `reapplyDisplayMode`'s site remains untouched. Full narrative: Next-steps items -170..-161 below.
+   re-reverted every session. s310's batched 4-site diagnostic (`ROGUESQ_LOG_AUDIOTICK_TRACE`) found
+   `viRetraceHandlerThread`'s own loop, the VI-retrace 4-slot callback table, and `musyxSynthFrame`'s own
+   entry all keep firing well past the tick-19/20 point where 3 gate-consumer functions
+   (`update3DAudioFrame`/`tickAllActiveSongs`/`tickAudioSequencerFrame`) and RSP `M_AUDTASK` submission
+   stop — refuting H1 (driving thread stops being woken) and H4 (full unreaped queue, source-confirmed
+   no such queue exists). s311 ran the same reversal a 5th time with a full 10-minute capture and matched
+   sample caps across every diagnostic, and found **two distinct, sequential freeze boundaries**, not
+   one: a SOFT stop at call #19/20 (only the 3 gate-consumer functions + `M_AUDTASK` submission stop;
+   `musyxSynthFrame`'s own entry and its `[musyx-gate1]` countdown/period read — confirmed constant,
+   ruling out that gate's raw inputs as the cause — keep executing normally for ~20 more calls), then a
+   HARD stop at call #39/40 (everything, including `viRetraceHandlerThread`'s own loop, stops
+   simultaneously with the RSP task-runner's last dispatch, task #39 — the same event s307/s309 called
+   "the later full-scheduler wedge," now dated against the audio-tick diagnostics too). Next work unit:
+   instrument the branch/compare immediately after `[musyx-gate1]`'s read point (or the 2 other
+   near-identical gate copies s107 found but s311 didn't touch) to find what diverges at call #19.
+   Full narrative: Next-steps item -171 below. `reapplyDisplayMode`'s site remains untouched.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -208,7 +213,28 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -170 (s310); the next new item takes -171 and is inserted at the top.
+oldest). Current top is -171 (s311); the next new item takes -172 and is inserted at the top.
+
+-171. **(s311) M5 audio de-stubbing: NEXT.md Option A executed — rules out `[musyx-gate1]`'s raw
+    countdown/period inputs as the tick-19 divergence, and an unplanned full-length capture finds a
+    2ND, later freeze boundary at call #39/40.** Widened `[musyx-gate1]`'s sample cap from a flat
+    `n<20` (capped exactly at the freeze point) to `n<40||(n%128)==0`, matching s310's own diagnostics'
+    convention, and reversed `setDisplayMode`'s gate site a 5th time to exercise it. Result: the gate's
+    countdown/period values stay constant (`0`/`16777216`) across all 40 samples — **rules out Option
+    A's hypothesis** (this specific read point does not change at tick 20). But because this soak ran
+    the FULL 600s phase-timeout with every diagnostic's cap wide enough to show continued activity via
+    its own modulo resample, the previously-ambiguous silence past each cap is now decisive: the 3
+    gate-consumer functions (`update3DAudioFrame`/`tickAllActiveSongs`/`tickAudioSequencerFrame`) and
+    RSP `M_AUDTASK` submission stop together at call #19/20 (a SOFT stop — `musyxSynthFrame`'s own
+    entry and gate1 read keep running normally for ~20 more calls), then EVERYTHING — including
+    `viRetraceHandlerThread`'s own loop-top and the VI-retrace callback-table slot read — stops
+    simultaneously at call #39/40, in lockstep with the RSP task-runner's last dispatch (task #39,
+    matching s307/s309's independently-dated "later full-scheduler wedge," now tied to the same event
+    on the audio-tick side too). Narrows the next work unit to the branch/compare immediately after
+    `[musyx-gate1]`'s read point (not the raw inputs, now ruled out), or the 2 other near-identical
+    gate copies s107 found but this session didn't instrument. `setDisplayMode`'s site re-reverted to
+    force-zero same session (baseline restored, verified rebuilt); the widened `[musyx-gate1]` cap kept,
+    armed-but-inert by default. Full detail: `PORTING-STATE` Session 311.
 
 -170. **(s310) M5 audio de-stubbing: batched diagnostic REFUTES H1 and H4, localizes the tick-19 stall
     to inside `musyxSynthFrame`/a callee.** Source-read found the real invocation mechanism a literal-text

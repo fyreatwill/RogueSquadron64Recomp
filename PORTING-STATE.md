@@ -27468,3 +27468,92 @@ Next work unit (NEXT.md): narrow the H2/H3 branch inside `musyxSynthFrame` that 
 countdown/period values ever change past tick 19, and/or trace the actual `M_AUDTASK`-submission call
 site (inside `tickAudioSequencerFrame`/`tickMusyXIfActive` or deeper) with its own tick-scoped counter to
 find exactly which internal branch diverges.
+
+## Session 311 (2026-08-04) — M5 audio: NEXT.md Option A executed — widened `[musyx-gate1]`'s sample cap
+finds the gate's raw countdown/period inputs never change, but a full 10-minute soak with matched caps
+across every s310 diagnostic uncovers a 2ND, later freeze boundary s310's shorter capture couldn't see
+
+**Work unit**: NEXT.md's Option A (widen `[musyx-gate1]`'s sample cap from a flat `n<20` — which capped
+exactly at the freeze point, hiding whether the countdown/period values change past tick 19 — to the same
+`n<40||(n%128)==0` convention s310's 4 `AUDIOTICK_TRACE` diagnostics already used). Edited
+`fixup_game_funcs.py`'s existing `_musyx_gate1_patch`, cleared `RecompiledFuncs/`, regenerated
+(`N64Recomp` → `fixup_game_funcs.py`), and — to actually exercise the gate=1 branch this diagnostic reads
+— reversed `setDisplayMode`'s gate-byte site (`0x8008EB40`) a 5th time (matching s303/s307/s310's prior 3
+attempts, each re-reverted same session), leaving `reapplyDisplayMode`'s site (`0x8008EC88`) force-zeroed
+throughout. Built clean, ran one soak (`scratch/s73_post_a_scene/run_step311gate1cap.sh`, copied from
+s310's `run_step310audiotrace.sh` template) with `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` and
+`ROGUESQ_LOG_AUDIOTICK_TRACE=1` both armed (already in the template). The soak ran its own internal 600s
+phase timeout waiting for VI width 1024 (never arrived — expected outcome for a reversed gate site) and
+self-terminated (exit 5/INCONCLUSIVE, game process confirmed dead afterward, no manual SIGKILL needed).
+
+**Result 1 (Option A's own question, answered negatively)**: `[musyx-gate1]` fired 40/40 possible times
+(n=0-39) with `countdown=0 period=16777216` on every single sample, byte-identical to s310's earlier
+20-sample read. **This rules out Option A's hypothesis** — the gate's raw countdown/period inputs, read
+fresh right before the decrement-and-compare, do not change between call #19 and call #39; whatever
+diverges at tick ~20 is not visible at this specific read point.
+
+**Result 2 (an unplanned but decisive discriminating finding)**: because this soak ran the FULL 600s
+phase-timeout (~10 minutes) with every relevant diagnostic's sample cap high enough to show continued
+activity via its own `%128`/`%256`/`%512` modulo resampling if such activity existed, the log's silence
+past each cap is no longer ambiguous the way s310 flagged it ("the caps make n=40-127 ambiguous, plausibly
+meaning these threads too eventually succumb to the later full-scheduler wedge... not confirmed"). This
+session confirms it:
+- `[audtask-dispatch]` (RSP `M_AUDTASK` submission, `main.cpp`, own cap `n<20||n%256==0`): exactly 20
+  fires (n=0-19), no further output through the full 10-minute window — genuinely stops, not a cap
+  artifact (the `%256` resample had ample time to fire again if dispatch continued).
+- The 3 gate-consumer reach tags (`ROGUESQ_LOG_INITMUSYX_REACH`, s306): `[reach-update3d-entry/exit]`,
+  `[reach-allsongs-entry/exit]`, `[reach-audioseq-exit]` all exactly 20/20 — matches `[audtask-dispatch]`
+  precisely, confirming these 3 functions (`update3DAudioFrame`/`tickAllActiveSongs`/
+  `tickAudioSequencerFrame`) and the RSP submission stop together at the same call, call #19 (20th call).
+- `[vi-cb-loop]`, `[synth-entry]` (cap `n<40||n%128==0`): exactly 40 fires each (n=0-39), no `n=128`
+  resample despite 10 minutes elapsed — `viRetraceHandlerThread`'s own loop-top and `musyxSynthFrame`'s
+  own entry keep firing **past** the tick-19/20 boundary (confirming s310's H1 refutation still holds at
+  that boundary) but THEN also stop, later, at call #39.
+- `[vi-cb-slot]` (cap `n<160||n%512==0`, 4 slot-reads per VI-retrace iteration): exactly 160 fires, no
+  `n=512` resample — same story, 4×40 = stops at the same iteration #39.
+- `[runner]` (RSP task-runner, unrelated pre-existing counter): exactly 39 fires — the last dispatched
+  task is #39, matching s307's and s309's independent finding from a different soak's log, now reproduced
+  in-run alongside the audio-tick diagnostics for the first time.
+- The log's tail (final ~700 lines) is pure `[vi]`/`[vi-fs-decision]`/`[pe gate]`/`[threadPresent]`
+  scheduler churn, `rdpFs=39` and VI width 320 pinned, unchanging for the rest of the 10-minute window —
+  the by-now-familiar terminal idle pattern, confirmed to start exactly where the above counters go
+  silent.
+
+**Revises (does not overturn) s310's framing into two distinct, sequential freeze boundaries**, closing
+the "ambiguous cap" gap s310 flagged:
+1. **SOFT stop, call #19/20**: only the 3 gate-consumer functions (`update3DAudioFrame`/
+   `tickAllActiveSongs`/`tickAudioSequencerFrame`) and the RSP `M_AUDTASK` submission they lead to stop
+   being reached. `musyxSynthFrame`'s own entry and its `[musyx-gate1]` countdown/period read (which sits
+   architecturally BETWEEN the entry and these 3 calls) keep executing normally and unchanged for another
+   ~20 calls — meaning the actual branch/compare that decides whether to take the "run" path (not the raw
+   countdown/period inputs, which this diagnostic already rules out) is the thing that silently starts
+   returning "skip" at call #19, and it is NOT the first of the 3 near-identical gate copies this session
+   instrumented (s107 found 3 total; only the 1st is patched).
+2. **HARD stop, call #39/40**: everything remaining — `musyxSynthFrame`'s own entry, its gate1 read,
+   `viRetraceHandlerThread`'s own loop-top, the VI-retrace callback-table slot read, and the RSP
+   task-runner — all stop simultaneously. This is the same event s307/s309 called "the later full-
+   scheduler wedge" (task #39) and had provisionally separated from the audio-tick stall; this session
+   shows the audio-instrumentation side of that SAME event for the first time, tying the two threads'
+   final stop together at one locus rather than leaving it as two independently-dated events.
+
+**Narrows the next work unit precisely**: the call #19/20 soft-stop's mechanism is now pinned to
+"somewhere between `[musyx-gate1]`'s read point and the 3 gate-consumer calls" — i.e. NEXT.md's Option B
+(trace the actual branch/compare after the gate1 read, or check the 2nd/3rd near-identical gate copies
+s107 found but this session didn't instrument) rather than a broader "anywhere in `musyxSynthFrame` or a
+callee" search. The call #39/40 hard-stop remains a separate, lower-priority question (a full coop-
+scheduler wedge, previously parked by s307/s309 as "later," now dated precisely against the audio-tick
+diagnostics too) — not this session's target.
+
+**Reverted same session**: `setDisplayMode`'s gate-byte site is force-zeroed again (`fixup_game_funcs.py`
+regex restored to the combined `0x8008E(?:B40|C88)` form, "audio gate patched x2" confirms both sites),
+regenerated, rebuilt clean — the crash-free baseline is intact. The widened `[musyx-gate1]` cap is
+**kept** (harmless, inert unless `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1`), matching s310's practice for its 4
+diagnostics.
+
+**No `lib/` changes this session** — all patching was in `N64Recomp/fixup_game_funcs.py` (not git-tracked
+in that checkout); no `submodule-patches/export.sh` needed.
+
+Next work unit (NEXT.md): instrument the actual branch/compare immediately after `[musyx-gate1]`'s read
+point (not just the raw countdown/period values, which are now ruled out) to see what diverges starting
+call #19 — candidates are the decrement-and-compare outcome itself, or one of the 2 other near-identical
+gate copies s107 found inside `musyxSynthFrame` that this session's patch does not touch.
