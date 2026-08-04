@@ -663,7 +663,40 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s286)
+## Next steps, in order of expected value (s287)
+
+-128. **(s287) CLOSES the entire `hangarInitialize` `-0x25A4` audit — chunks 3, 4, and 5 (the
+    remaining ~89% of the function, 124187-133572) all confirmed dead unreachable duplicate code
+    via the chunk-2 methodology, 0 new guards needed anywhere.** Full detail: `PORTING-STATE`
+    Session 287.
+
+    Chunk 3 (124999-125808) duplicates `static_5_800AB1C8` (322/322 match). Chunk 4
+    (125808-132609, ~6800 lines, one single monolithic block with zero internal `return;`
+    boundaries) duplicates `static_5_800AB658` (2642/2642 match) — the function behind the
+    `BREADCRUMB7`-`9`/`G1`-`G32` guard family; corroborated by chunk 1's own live code directly
+    *calling* `static_5_800AB658` at `funcs_27.c:123793`/`:124576`, proving the `funcs_40.c` copy is
+    canonical. Chunk 5 (132610-133572, the function's true tail) duplicates `static_5_800ADB70`
+    (378/378 match). All three passed the full 3-check proof (comment-stream diff,
+    return-boundedness, function-scoped goto-reachability — 0 genuine external jumps into any
+    chunk from live `hangarInitialize` code in any case).
+
+    **hangarInitialize is now fully classified**: chunk 1 (119804-124186) is real, already guarded
+    (s285, 28 guards). Chunks 2-5 (124187-133572) are entirely dead duplicates of 4 functions
+    already guarded elsewhere in `funcs_40.c` — exactly the 4 functions every prior `-0x25A4` audit
+    session (s282-285) touched, closing the loop on the overlay-collision theory. s284 estimated
+    5-7 future sessions of per-site classification for this function; the dead-code methodology
+    closed it in one session with 0 regen/rebuild/soak (nothing in generated-code behavior
+    changes).
+
+    **Key lesson**: raw `-0x25A4` hit density is NOT a reliable live/dead signal — chunk 4's density
+    (64/6802) was higher than live chunk 1's (38/4400) despite being entirely dead. Always run the
+    full 3-check proof, never infer from density alone.
+
+    **Next target**: `playerSnowSpeederInit` (`funcs_27.c` ~line 144145) — was explicitly
+    out-of-scope while `hangarInitialize` chunking was open (now closed). It independently reuses
+    label names from ALL of chunks 2/3/4's address ranges (not just one, per s286's narrower
+    finding), suggesting it may sit in the same overlay-reuse range and be mostly/entirely another
+    dead duplicate. Run the dead-code methodology on it FIRST before any per-site classification.
 
 -127. **(s286) Classified `hangarInitialize` chunk 2 (124187-124999) — proved by byte-for-byte diff
     + function-scoped goto-reachability check that it is entirely unreachable duplicate dead code

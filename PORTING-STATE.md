@@ -25864,3 +25864,77 @@ remaining chunk — will need its own sub-chunking once its live/dead boundary i
 duplication also explains large parts of chunk 4 before assuming its ~6800 lines are all live
 audit surface — check for `return;`-bounded regions matching other `funcs_40.c` function bodies
 first, rather than assuming uniform live-code density.
+
+## Session 287 (2026-08-03) — closes the entire `hangarInitialize` audit: chunks 3, 4, and 5 all confirmed dead duplicate code, 0 new guards needed for any of them
+
+Continued the chunked `-0x25A4($s1)` audit of `hangarInitialize` (`funcs_27.c:119804-133573`) from
+s285/s286, using the comment-stream-diff + return-boundedness + function-scoped goto-reachability
+methodology s286 established on chunk 2. Ran it, via delegated agents, on all three remaining
+chunks in sequence and confirmed every one is dead:
+
+**Chunk 3** (`funcs_27.c:124999-125808`, 809 lines) vs `static_5_800AB1C8` (`funcs_40.c:6388-7405`,
+already fully guarded 10/10 sites, s284): 322/322 comment lines match after trimming the one
+expected trailing-delay-slot boundary artifact per side (0 mismatches). Cleanly `return;`-bounded
+at both ends (`funcs_27.c:124999`/`:125808`). 16 in-range labels, 20 `goto` hits: 18 self-contained
+inside the chunk, 2 false positives from `playerSnowSpeederInit` reusing the same label names in
+its own function scope (function-scoped goto/labels — not real jumps). This formalizes the
+lookahead check s286 ran informally but explicitly did not treat as an official classification.
+
+**Chunk 4** (`funcs_27.c:125808-132609`, 6802 lines — the largest remaining chunk) turned out to be
+a SINGLE monolithic dead-duplicate block, not several smaller ones: zero internal `return;`
+boundaries, one continuous +4-stepping instruction-address stream from `0x800AB654` to
+`0x800ADB6C`. Matched against `static_5_800AB658` (`funcs_40.c:7407-17332` — the function behind
+the `BREADCRUMB7`-`9`/`G1`-`G32` guard family, s282 and earlier). 2642/2642 comment lines match
+after trimming one boundary artifact per side (0 mismatches). Confirmed `return;`-bounded with no
+other `return;` inside the range. 125 in-range labels, 188 goto hits: 172 self-contained, 16 false
+positives (`playerSnowSpeederInit` x10, `computeCutsceneScreenScale` x3,
+`applyNamedEffectParameterDefaults` x2, `func_800AD380` x1 — all different functions reusing label
+names), **0 genuine external jumps into the chunk from live `hangarInitialize` code**. Corroborating
+evidence: `static_5_800AB658` is directly *called* (not inlined) from chunk 1's own live code at
+`funcs_27.c:123793` and `:124576`, confirming the `funcs_40.c` copy is canonical and the inline
+copy is the dead artifact. Raw `-0x25A4` density here (64 hits/6802 lines) was actually HIGHER than
+chunk 1's (38/4400) — density alone is not a reliable live/dead signal, the rigorous 3-check proof
+is required regardless of hit density.
+
+**Chunk 5** (`funcs_27.c:132610-133572`, the function's true tail, immediately followed by
+`computeAngleToTargetFromTransform` at line 133573) matched `static_5_800ADB70`
+(`funcs_40.c:17332-18590`, already fully guarded 21/21 sites, s284). 378/378 comment lines match
+exactly (0 mismatches). `return;`-bounded (opens at `:132609`, `hangarInitialize` itself closes at
+`:133572`). 24 in-range labels; every goto targeting a chunk-5 label originates from within chunk 5
+itself; the two `switch` jump tables elsewhere in `hangarInitialize` (lines 123574, 126922) only
+target addresses below `0x800AD23C`, well short of chunk 5's `0x800ADB70` start — no computed-jump
+path reaches it either.
+
+**What this closes**: the ENTIRE `hangarInitialize` function (13,769 lines, 103 raw `-0x25A4` hits
+across all chunks) is now fully classified. Chunk 1 (119804-124186) is real live code, already
+audited and guarded (s285, 28 guards). Chunks 2-5 (124187-133572, ~9500 lines, the remaining ~89%
+of the function) are ALL dead unreachable duplicates of functions already guarded elsewhere in
+`funcs_40.c` (`static_5_800AAD9C`, `static_5_800AB1C8`, `static_5_800AB658`, `static_5_800ADB70` —
+notably these are exactly the 4 functions covered by every prior `-0x25A4` audit session, s282-285,
+confirming the overlay-collision theory end-to-end). s284 estimated this audit would take 5-7
+future sessions of per-site classification; the dead-code-detection methodology closed the entire
+remaining surface in one session with zero new guards, zero regen, zero rebuild, zero soak needed
+(nothing in the generated code's behavior changes — dead code stays dead).
+
+**No fixup-script changes, no regen, no rebuild, no soak this session** — pure investigation,
+confirmed via delegated read-only agents, no source files edited.
+
+**What this shows / rules out**: the "chunked audit, assume uniform live density" plan from s284 was
+the wrong model — hit density (64/6802 in chunk 4, higher than chunk 1's own density) is NOT a
+reliable live/dead signal, only the full 3-check proof is. The overlay address-range collision
+pattern that produces these duplicates is now confirmed to affect at least 2 known functions
+(`hangarInitialize`, fully mapped this session) plus a 3rd, `playerSnowSpeederInit`, which
+independently reuses labels from ALL THREE of chunks 2/3/4's address ranges (not just one, as s286's
+narrower finding suggested) — strongly suggesting `playerSnowSpeederInit` sits in the very same
+overlay-reuse address range as the whole `hangarInitialize` chunks 2-5 span, not just a fragment of
+it.
+
+**Next steps**: `playerSnowSpeederInit` (`funcs_27.c`, starts ~line 144145) is now the natural next
+target — it was explicitly out-of-scope while `hangarInitialize`'s chunking was open, and that
+condition is now satisfied. Before any per-site `-0x25A4` classification there, run the same
+dead-code-detection methodology first (it may turn out to be mostly/entirely another dead duplicate
+of the same already-guarded `funcs_40.c` functions, given how extensively it already reuses their
+label names). If it turns out to be genuinely live, it becomes a normal per-site grep-and-classify
+audit like chunk 1 was. Other standing backlog items, unblocked and still open: the elevated
+pre-scene `waitForAnyAudioSlot` death rate (open since s278, never directly investigated), and the
+`inflate_fast`/zlib localization design (s272, never attempted).
