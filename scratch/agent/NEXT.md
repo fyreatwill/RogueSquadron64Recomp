@@ -1,79 +1,88 @@
-# NEXT work unit — tickSongSequence closed to armed; pick the sweep or campose8/9 next
+# NEXT work unit — land the tickTextureMaterialExpiry guard (fully specified, no investigation needed)
 
-## Status of the last 6 backlog items
+## Top priority: land and validate the `ctx->r16` guard in `tickTextureMaterialExpiry`
 
-- `-0x25A4` hangar-list-pointer audit lineage (s283-288, `CURRENT-TRUTH` item -129): CLOSED.
-- Elevated pre-scene `waitForAnyAudioSlot` death rate (s289, item -130): CLOSED as a non-finding.
-- `inflate_fast`/zlib investigation (s290, item -131): **NOT closed, wait-for-recurrence.**
-  `BREADCRUMB10` is live, scoped to `inflate_fast`. Do not touch until it recurs.
-- `coalesceFreeHeapBlocks+2108` investigation (s291, item -132): **NOT closed, wait-for-recurrence.**
-  `BREADCRUMB11` is live, scoped to `coalesceFreeHeapBlocks`.
-- `tickTextureMaterialExpiry` investigation (s292/s293, item -133/-134): **NOT closed,
-  wait-for-recurrence, but now has ONE real data point.** `BREADCRUMB12` is live. s293's soak 2
-  caught an actual recurrence: `[CRASH][last-guest-pc]=0x80022094`, confirmed inside
-  `tickTextureMaterialExpiry`'s guest range at `funcs_6.c:12207` (`lhu $v1, 0x8($s0)`, dereferences
-  `ctx->r16`, the walked list-node pointer — matches s292's #1-ranked candidate exactly). **This is
-  1 observation, not the 2-independent-observations bar** — do NOT land a guard off this alone. If
-  a 2nd recurrence lands at or near the same guest PC, that's the trigger to guard `ctx->r16` at
-  that offset.
-- `tickSongSequence` investigation (s293, item -134): **NOT closed, wait-for-recurrence.**
-  `BREADCRUMB13` is live, scoped to `tickSongSequence`. Ranked candidates if it recurs: `ctx->r18`
-  (`funcs_25.c:5018`, computed table-entry pointer) > `ctx->r16` (`funcs_25.c:5019/5039/5051/5071`,
-  walked list-node pointer).
+`tickTextureMaterialExpiry`'s crash (`BREADCRUMB12`, armed s292) has now fired at the **identical
+guest PC** in two independent sessions: s293's soak 2 and s294's soak 1, both `[CRASH][last-guest-pc]
+pc=0x80022094`. This crosses the two-independent-observations confirmation bar. This is no longer a
+"wait for recurrence" item — it's ready to guard.
 
-**All five of the s270-era-and-older "not yet investigated" single-function candidates are now
-closed or armed wait-for-recurrence instruments.** Do NOT spend this iteration on any of them
-unless `[CRASH][last-guest-pc]` lands inside one during ordinary soaking for a DIFFERENT work unit
-(free bonus signal, not a reason to go looking) — except `tickTextureMaterialExpiry`, which DOES
-warrant a look if `[CRASH][last-guest-pc]` fires again inside its range (see above: this would be
-observation #2, crossing the confirmation bar).
+**Site**: `N64Recomp/RecompiledFuncs/funcs_6.c:12207` — `lhu $v1, 0x8($s0)`
+(`ctx->r3 = MEM_HU(ctx->r16, 0X8)` or equivalent in the generated C; check the exact current line
+number after the next regen, since native/guest-side line numbers can drift slightly between
+sessions — grep for `0x80022094` to relocate it if the line shifted). This is a 2-byte unsigned read
+of offset `0x8` off `ctx->r16`, the walked list-node pointer.
 
-## What this session's iteration should actually be
+**Fix template**: same KSEG0-range check every other guard in this project uses (reject if
+`ctx->r16 < 0x80000000u || ctx->r16 >= 0x80800000u`, or whatever the established bound constant is in
+`fixup_game_funcs.py` — grep for `DEQUEUE_GUARD` or `CACHE4_GUARD` for the exact boilerplate to copy).
+On failure, bail to whatever the function's existing null/empty-list handling does one node earlier —
+read `funcs_6.c:12135-12332` (the function s292 already fully read) to find the correct bail target;
+do NOT invent a new control-flow path.
 
-Two candidates surfaced by s293's Explore-agent backlog scan, both below `CURRENT-TRUTH` item
--124, neither in Overturned Conclusions or Dead Ends:
+**Do this session, in order**:
+1. Re-read `funcs_6.c:12135-12332` (or wherever the function currently lives after regen) to confirm
+   the guard site and bail target are still accurate — the s292 read is the source of truth, but
+   confirm line numbers before writing the patch.
+2. Add the guard to `N64Recomp/fixup_game_funcs.py`, same file/pattern as `CACHE4_GUARD`/
+   `DEQUEUE_GUARD`. Check the ordering gotcha documented in `CURRENT-TRUTH.md` (~line 1520-1533):
+   since `tickTextureMaterialExpiry` IS breadcrumbed (`BREADCRUMB12`), a new guard block whose file
+   position precedes the breadcrumb regex must match the PRE-breadcrumb shape (no
+   `g_rs64_last_guest_pc` lines) or it silently matches zero times.
+3. Regen (delete `funcs_*.c`, `N64Recomp`, `fixup_game_funcs.py`), confirm the patch report shows
+   the new guard `x1` and `BREADCRUMB12` still patches its prior count (83) unchanged.
+4. Build clean, confirm no new warnings beyond the 46-warning baseline.
+5. **2 validation soaks** (iron rule 4, `HOLD_S=275`, `scratch/s73_post_a_scene/run_dequeuearg1.sh`).
+   Discriminating outcome: if the guard fires (a fire-log entry, if one is wired up — check whether
+   this guard family logs fires the way `DEQUEUE_GUARD`/`CACHE_GUARD` do) AND the run stays clean past
+   where the crash previously happened, that's real evidence the guard works. If 0/2 fires (crash
+   didn't recur at all, ~consistent with its historical ~rare hit rate), that's a weak null — do not
+   over-claim "fixed," just note it's unconfirmed-but-not-refuted, same honest framing s270/s271 used
+   for their 0-fire soaks.
+6. If a 3rd soak in a row shows the OLD crash symbol still firing at the SAME guest PC even with the
+   guard installed, the guard is wrong (bail target or range check is broken) — do not just re-soak
+   hoping it clears; go back and re-read the bail-path control flow.
 
-1. **The abandoned s249-251 project-wide unguarded-walk sweep.** `scratch/agent/find_unguarded_walks.py`
-   generated `scratch/agent/unguarded_walk_candidates.json` — 143 sites across 43 functions,
-   worked down to 139 by s251 (`CURRENT-TRUTH` item -92, line ~2509), then abandoned when the
-   project pivoted to individual crash-lead chasing starting s253 (item -94). This is a
-   **multi-session campaign**, not a single work unit — if picked, the right-sized first step is
-   NOT "guard all 139," it's: read the JSON, pick the single highest-risk/most-caller-controlled
-   site (or a small batch), source-read it the same way s289-293 did for single functions. Treat
-   resuming the countdown as the actual deliverable, not finishing it in one session.
-2. **The `campose8`/`campose9` soak discrepancy** (item -74, s233, `CURRENT-TRUTH` line ~3115) —
-   a "silent vs. still-firing-with-no-new-content" difference between two display-list-payload
-   staleness soaks, flagged as unexplained and never revisited after the s249 pivot. This one is
-   narrower in scope than the sweep (a single open question about 2 specific old soak logs, not an
-   open-ended campaign) — may be the better pick if this session wants a bounded null/positive
-   result rather than opening a new multi-session thread. Read `PORTING-STATE` Session 233 for the
-   original soak details before deciding whether the raw logs (`scratch/agent/campose8*`/`campose9*`
-   if they still exist, or the soak driver that produced them) are even still available to compare.
+## Fallback if the guard proves harder than expected (budget rule 8: 3 strikes)
 
-Pick ONE. If neither pans out cleanly in one iteration, fall back to `unguarded_walk_candidates.json`
-site #1 (whatever the JSON currently ranks first) as a concrete, boring, single-function default —
-same recipe as `tickSongSequence`: source-read, determine caller-controlled vs. internally-derived
-pointers, land a breadcrumb (BREADCRUMB14) if a guard can't be validated blind.
+If 3 consecutive attempts at the guard (wrong bail target, patch doesn't match, etc.) don't converge,
+stop and fall back to the sweep instead: resume `unguarded_walk_candidates.json` (`scratch/agent/
+find_unguarded_walks.py` generated it, 143 sites/43 funcs). 2 of 43 functions are now addressed
+(`tickSongSequence` s293, `stopSongByHandle` s294), 1 explicitly deferred as out-of-scope
+(`func_800AE3F0`, funcs_27.c, ~18000 lines — do NOT pick this one, it's too large for a single
+session and likely overlaps the closed `-0x25A4` hangar audit). Pick the next untouched function by
+the same recipe: source-read, check for a translation bug (there won't be one, same baseline every
+time), land a breadcrumb if a guard can't be validated blind.
+
+## Status of all armed breadcrumbs (as of s294)
+
+- `BREADCRUMB10`/`inflate_fast`: 0 recurrences since s290. Still wait-for-recurrence.
+- `BREADCRUMB11`/`coalesceFreeHeapBlocks`: 0 recurrences since s291. Still wait-for-recurrence.
+- `BREADCRUMB12`/`tickTextureMaterialExpiry`: **2 recurrences (s293, s294), SAME guest PC
+  `0x80022094` both times — confirmed, ready to guard (see above).**
+- `BREADCRUMB13`/`tickSongSequence`: 0 recurrences since s293. Still wait-for-recurrence.
+- `BREADCRUMB14`/`stopSongByHandle`: 0 recurrences since s294 (this session). Still
+  wait-for-recurrence.
 
 ## Do NOT do this iteration
 
 - Do NOT re-open `-0x25A4`, `waitForAnyAudioSlot`, `inflate_fast`, `coalesceFreeHeapBlocks`,
-  `tickSongSequence`, or `tickTextureMaterialExpiry` (unless it gets a 2nd recurrence — see above).
+  `tickSongSequence`, or `stopSongByHandle` unless one of them gets its OWN 2nd recurrence at a
+  matching guest PC (same bar `tickTextureMaterialExpiry` just crossed).
+- Do NOT pick `func_800AE3F0` from the sweep (~18000 lines, out of single-session scope, likely
+  overlaps the closed `-0x25A4` hangar audit — already checked and rejected s294).
 - Do NOT run `fixup_game_funcs.py` twice without a fresh `N64Recomp` regen in between.
-- Do NOT idle across a Stop-hook turn boundary waiting on a background soak — block with
-  `TaskOutput(task_id, block=true, timeout<=480000)` in the SAME turn, re-block if still running.
-  Check `ps aux` and log growth between polls to confirm progress, not a hang.
-- Do NOT treat a soak that hits an ALREADY-CATALOGUED, unrelated crash family as a failed
-  validation — check the `[CRASH][pc-symbol]` name against `CURRENT-TRUTH.md` before assuming any
-  crash is a regression. s293's soak 2 hit `tickTextureMaterialExpiry` (a DIFFERENT, already-armed
-  breadcrumb, not that session's own `tickSongSequence` change) and it was correctly treated as a
-  bonus signal, not a regression.
-- Do NOT treat a soak that happens to hit any of the 5 armed breadcrumbs' scoped functions as
-  wasted even if it doesn't crash there — all 5 have zero cost when they don't fire.
+- Do NOT idle across a Stop-hook turn boundary waiting on a background soak — the background bash
+  task auto-notifies on completion; do not call `ScheduleWakeup` for it (that tool is for `/loop`
+  dynamic-pacing mode, not for waiting on a task the harness already tracks) and do not end the turn
+  with unfinished exit-contract steps just because a soak is still running — the Stop hook will
+  reject it. If a soak is genuinely still running when you'd otherwise stop, keep working (write up
+  what's done so far, prep the next command) rather than ending the turn.
+- Do NOT treat a soak that hits an ALREADY-CATALOGUED, unrelated crash family as a failed validation
+  — check the `[CRASH][pc-symbol]` name against `CURRENT-TRUTH.md` before assuming any crash is a
+  regression. `__pthread_kill+8`/SIGABRT is one such already-catalogued unrelated class (s265).
 - Do NOT commit staged work you did not verify — always run `git diff --cached` first even if it
   looks like routine bootstrap noise.
-- Do NOT open the project-wide sweep (option 1 above) expecting to close it in one session — it is
-  139 sites; treat any single-session progress on it as a partial contribution, not a completion.
 
 ## Environment notes (carried forward, all still valid)
 
@@ -85,7 +94,9 @@ pointers, land a breadcrumb (BREADCRUMB14) if a guard can't be validated blind.
   commands by full absolute path with no preceding bare `cd`.
 - Bash tool cwd persists across sequential (non-background) calls but resets after an unrelated
   `cd` elsewhere in the session — re-`cd` explicitly before cwd-dependent commands.
-- Compound `cd && ...` commands need interactive approval — issue `cd` as its own call first.
+- Compound `cd && ...` commands need interactive approval — issue `cd` as its own call first. Simple
+  `&&`-chained commands in general (e.g. `grep ... && python3 ...`) also sometimes need approval even
+  outside `cd` — prefer separate tool calls over chaining when in doubt.
 - `git -C`/`git --git-dir=`/`cd <dir> && git ...` all get flagged for approval even standalone, and
   in a non-interactive/autonomous session that approval is NOT available — do not spend time
   retrying these forms for submodule git state; treat the dirty-submodule baseline as already-
@@ -99,22 +110,36 @@ pointers, land a breadcrumb (BREADCRUMB14) if a guard can't be validated blind.
 - Soak driver: `scratch/s73_post_a_scene/run_dequeuearg1.sh` (`HOLD_S` env-overridable, default
   240). Output dir `scratch/s73_post_a_scene/<name>/run.log` — the `<name>` arg (positional $1)
   controls the output subdir, so distinct soaks in the same session don't clobber each other if
-  given distinct names (s293 used `s293_soak1`/`s293_soak2`).
+  given distinct names (s294 used `s294_soak1`/`s294_soak2`).
 - Scene-reached check: `grep -c "vi_width=1024" <run.log>` (0 = pre-scene death, >=1 = reached).
 - `+N` crash-symbol offsets are NATIVE (ARM64) and SHIFT across sessions — verify range membership
   via the Mach-O symtab walk (`nm -n`, filter T/t, dedupe, sort, confirm offset < distance to next
   DISTINCT symbol) before trusting a reported `sym=X+N`.
-- `[CRASH][last-guest-pc]` is now informative for FIVE functions: `static_5_800AB658`
+- `[CRASH][last-guest-pc]` is now informative for SIX functions: `static_5_800AB658`
   (`BREADCRUMB7`), `inflate_fast` (`BREADCRUMB10`), `coalesceFreeHeapBlocks` (`BREADCRUMB11`),
-  `tickTextureMaterialExpiry` (`BREADCRUMB12`, now with 1 real data point — see above), and
-  `tickSongSequence` (`BREADCRUMB13`, s293) — still stale noise for any other crashing function
-  (most commonly `beginFrameDLChunk`'s `0x8000b650`).
+  `tickTextureMaterialExpiry` (`BREADCRUMB12`, now CONFIRMED with 2 matching data points — see
+  above), `tickSongSequence` (`BREADCRUMB13`), and `stopSongByHandle` (`BREADCRUMB14`, s294) —
+  still stale noise for any other crashing function (most commonly `beginFrameDLChunk`'s
+  `0x8000b650`), OR informative-but-benign when it lands on a breadcrumbed function's own LAST
+  instruction (its normal return point — confirms the function ran to completion, not a fault
+  inside it; s265 established this for `submitSceneNodeRender`, s294 reconfirmed it for
+  `tickTextureMaterialExpiry`).
 - `N64Recomp/fixup_game_funcs.py` is untracked in the standalone `N64Recomp` checkout — no
   `export.sh` needed for edits there, only for actual `lib/` submodule changes.
 - Disassembly tools (`otool`/`objdump`/`lldb`) remain BLOCKED in this sandbox — do not re-attempt,
   use the breadcrumb mechanism.
-- `CURRENT-TRUTH.md` is far over the ~35KB target (34+ sessions overdue) — not this iteration's
-  job unless the picked work unit is a quick null with clear leftover budget.
+- `CURRENT-TRUTH.md` is far over the ~35KB target (35+ sessions overdue) — not this iteration's
+  job unless the picked work unit is a quick null with clear leftover budget. Given `CURRENT-TRUTH.md`
+  is now ~8000 lines and growing every session, a future session with spare budget should seriously
+  consider a compression pass (migrate durable material to `PROJECT-OVERVIEW.md`, prune superseded
+  detail) rather than deferring again — this note has now carried forward unaddressed for over 30
+  sessions.
 - At session start, check `scratch/agent/STATUS`/`OUTCOME` for signs of an interrupted prior
   iteration, but also run `git diff --cached` for staged tracked-file content beyond the routine
-  reset (s292 found a genuine case of this from s291; s293 found nothing to recover).
+  reset.
+- The `unguarded_walk_candidates.json` sweep tracker (143 sites/43 funcs) is itself never edited in
+  place as sites get addressed — coverage status has to be cross-checked against `CURRENT-TRUTH.md`
+  function-name mentions each time, as this and the two prior sessions did. A future session with
+  spare budget could add a `"status"` field to each JSON entry to make this lookup O(1) instead of
+  a fresh grep-and-cross-reference every time — not urgent, but would save real time if the sweep
+  continues for many more sessions.

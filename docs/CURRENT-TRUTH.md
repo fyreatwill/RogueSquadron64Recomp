@@ -663,7 +663,66 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s293)
+## Next steps, in order of expected value (s294)
+
+-135. **(s294) Resumes the abandoned s249-251 project-wide unguarded-walk sweep, source-reads and
+    breadcrumbs `stopSongByHandle` (`BREADCRUMB14`) — no unique translation bug, same uniform
+    unguarded-RECOMP_FUNC baseline as every prior candidate — AND catches `tickTextureMaterialExpiry`'s
+    SECOND recurrence at the IDENTICAL guest PC as s293's soak (`0x80022094`, `funcs_6.c:12207`,
+    `ctx->r16` at offset `0x8`), crossing the two-independent-observations bar for landing a guard
+    there.** Full detail: `PORTING-STATE` Session 294.
+
+    Picked from `NEXT.md`'s two options: the `campose8`/`campose9` soak discrepancy (item -74) was
+    dropped because its raw logs no longer exist on disk (`scratch/agent/campose8*`/`campose9*`
+    missing), leaving the unguarded-walk sweep. Grouped the sweep's 143 JSON sites by function (43
+    distinct), cross-checked against `CURRENT-TRUTH` for prior coverage (`selectPostCrawlCraft`,
+    `renderUnlitMeshFaces`, `reserveAndEmitDLEntry` closed s249-251; `tickSongSequence` closed s293).
+    The largest untouched candidate, `func_800AE3F0` (funcs_27.c, 10 sites), turned out to span
+    ~18,000 lines (the last function in the file, adjacent to `hangarInitializeShipShadowHob`) — out
+    of single-session scope and likely overlapping the already-closed `-0x25A4` hangar audit; dropped
+    it in favor of `stopSongByHandle` (funcs_25.c:4390-4818, ~430 lines, 2 flagged sites, zero prior
+    mentions) — same file/subsystem as `tickSongSequence`, name implies a caller-supplied handle.
+
+    Source read: the incoming handle (raw caller `$a0`) is masked and linear-scanned against the SAME
+    8-entry global table `tickSongSequence` uses (base `-0x6600`, stride `0xEF8`) for a free slot,
+    same conditional-count-as-index arithmetic as `BREADCRUMB13`. On a match, two internal free-list
+    walks (`+0xE78`/`+0xE7C`, calling `stopVoicesByHandle` per node) are gated by the computed
+    table-entry pointer. The 2 sites the static finder actually flagged are narrower: `ctx->r3` at
+    `funcs_25.c:4630`/`4690`, inside a separate pair of loops that walk those same two lists to their
+    TAIL and splice the freed node onto a shared global free list at `-0x2A3C`-base+`0x29C4` — same
+    "walk to non-null tail, no range check" idiom already characterized in the `heapFreeListDequeue`
+    family (s252-253). No recompiler translation defect. Ranked candidates if this recurs: `ctx->r3`
+    (tail-walk pointer, `funcs_25.c:4630`/`4690`) > `ctx->r16` (`+0xE78`/`+0xE7C` walk pointer,
+    `funcs_25.c:4541/4552/4573/4584`).
+
+    **Instrument landed**: `BREADCRUMB14` (`N64Recomp/fixup_game_funcs.py`, same
+    `g_rs64_last_guest_pc` mechanism as `BREADCRUMB10`-`13`), 180 sites patched, scoped to
+    `stopSongByHandle`'s body only. Wait-for-recurrence instrument, not a closed item.
+
+    **Regen + build + 2 validation soaks** (iron rule 4): clean regen (180 sites patched,
+    `BREADCRUMB10`-`13` unchanged at 250/201/83/185 — no ordering regression), clean build (46
+    warnings, baseline). Soak 1: scene reached (45.7s), died hold-iter 36 to
+    `sym=tickTextureMaterialExpiry+936`, `last-guest-pc=0x80022094` — **the exact same guest PC as
+    s293's soak 2** (`funcs_6.c:12207`, `lhu $v1, 0x8($s0)`), confirmed unrelated to this session's
+    own change by symbol name. Soak 2: scene reached (45.2s), died hold-iter 41 to `sym=__pthread_kill+8`
+    (SIGABRT, signal 6) — an already-catalogued, unrelated crash class first documented s265;
+    `last-guest-pc=0x80022160` confirmed to be `tickTextureMaterialExpiry`'s own LAST instruction
+    (`funcs_6.c:12408/12412`, its normal return point) — that function ran to completion normally.
+    Neither soak shows any evidence of a `stopSongByHandle` regression.
+
+    **Headline result**: `tickTextureMaterialExpiry`'s crash has now fired at the IDENTICAL guest PC
+    in two independent sessions (s293 soak 2, s294 soak 1) — crossing the two-observation
+    confirmation bar. NOT acted on this session (kept to single-work-unit budget — a second guard
+    would need its own regen/build/soak cycle and would muddy attribution of this session's soak
+    results). **This is now the top-priority next work unit**: guard `ctx->r16`/`$s0` before the
+    `lhu $v1, 0x8($s0)` load at `funcs_6.c:12207` (2-byte read of node offset `0x8`), same
+    KSEG0-range-check template as every other guard in this project — fully specified, ready to
+    implement without further investigation.
+
+    **Next work unit for the backlog generally**: the sweep has now had 2 candidates addressed
+    (`tickSongSequence` s293, `stopSongByHandle` s294) and 1 explicitly deferred as out-of-scope
+    (`func_800AE3F0`, ~18000 lines) out of 43 functions — remains a valid fallback once the
+    `tickTextureMaterialExpiry` guard above is landed and validated.
 
 -134. **(s293) Lands `BREADCRUMB13` scoped to `tickSongSequence`, closing a 119-session-old
     unaddressed backlog item (item -26, first flagged s174 as "not guarded this session, next
