@@ -663,9 +663,34 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s284)
+## Next steps, in order of expected value (s285)
 
--125. **(s284) Deliberate grep-based audit of every `-0x25A4($s1)` hangar-list global-pointer
+-126. **(s285) Completed `hangarInitialize` chunk-1 (queued by s284/an interrupted prior session)
+    and found+fixed a THIRD instance of the "second-hop" blind spot, this time in
+    `static_5_800A9270` — correcting -125's "4/4, fully guarded" claim below.** Full detail:
+    `PORTING-STATE` Session 285.
+
+    Chunk-1 (`funcs_27.c` lines 119804-124186, the function's true first epilogue — NOT line
+    123792 as -125 estimated; that was ~400 lines short) has 38 raw `-0x25A4` hits: 1 write + 11
+    safe + 26 guarded (28 guards landed, 2 sites split across branch paths). All validated via a
+    dedicated reconciliation pass, not trusted from the original classification's summary alone
+    (which undercounted its own SAFE bucket by 2 — a documentation slip, not a missed guard).
+
+    **`static_5_800A9270` is NOT fully closed** despite -125's claim: soak testing this session's
+    build crashed inside it at a new native offset, and a direct re-read found a genuine unguarded
+    dereference at guest `0x800A92FC` — a reload of the `-0x25A4` global at `0x800A92F0` is used to
+    compute an address (`r4`) that gets dereferenced before any check; the nearby `HANGARLIST_GUARD`
+    checks the dereference's RESULT, not the pointer that produced it. Fixed as `S285_A9270_R4`
+    (bail `L_800A9350`). 2 informative post-fix soaks did not reproduce it or fire the guard.
+
+    **Standing methodological requirement for all remaining `hangarInitialize` chunks**: this
+    "validate the loaded value, not the pointer that reached it" shape has now recurred 3 times
+    (s282 `G32`, s284 `SECONDHOP`, this session `R4`) across 2 functions in 3 sessions. Every
+    `-0x25A4` reload's own resulting address must be checked before ITS OWN first dereference —
+    do not assume a downstream guard on a value loaded further along the chain covers it.
+
+-125. **(s284, "4/4 fully guarded" claim for `static_5_800A9270` corrected by -126 above — 5/5
+    known sites now, not provably exhaustive) Deliberate grep-based audit of every `-0x25A4($s1)` hangar-list global-pointer
     reference across `RecompiledFuncs/*.c`, per s283's plan — found the audit scope was far larger
     than the 4 incidentally-discovered sites, landed 29 new guards across 3 functions, and found +
     fixed a live crash the new guards exposed.** Full detail: `PORTING-STATE` Session 284.

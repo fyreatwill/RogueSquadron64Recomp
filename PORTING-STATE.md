@@ -25692,3 +25692,106 @@ explicitly check for the second-hop pattern within each chunk, not just raw `-0x
 regen/build/validate with 2-3 soaks before moving to the next chunk (do not batch multiple
 chunks' regens together — one build-run cycle per chunk, per the "capture once, analyze many" rule
 applied per-chunk since chunks are large enough to be their own work units).
+
+## Session 285 (2026-08-03) — completes an interrupted prior session's `hangarInitialize` chunk-1 audit, finds+fixes an additional real bug in the supposedly-closed `static_5_800A9270`
+
+**What ran**: session start found `scratch/agent/STATUS=WORKING` with `OUTCOME` deleted and no
+matching commit — evidence of an interrupted prior iteration (informally "s285a"). Investigation
+(not a fresh restart) confirmed: `N64Recomp/fixup_game_funcs.py` already contained a complete,
+fully-reasoned classification+guard section for `hangarInitialize`'s first chunk (per s284's plan,
+lines 119802-123792 as originally scoped), `funcs_27.c` had already been regenerated with those 26
+guards (28 `goto`s counting 2 branch-split sites) applied cleanly (verified: each site's anchor
+matched exactly once, no stacking), the binary had already been rebuilt, and one soak
+(`s285_soak1.log`, timestamp 19:23, after the regen at 18:52) had already run — reaching the scene
+and surviving the full 240s hold. The interrupted session stopped there, before further soaks or
+any of the exit-contract docs/commit.
+
+**Boundary correction**: the interrupted session's own comment claimed the chunk's first epilogue
+was at "line 123792" (s284's rough estimate). A fresh grep for the actual `return;` statements in
+`funcs_27.c` found the true first epilogue at line 124187 (label `after_80`, guest `0x800AAD68`-
+`0x800AAD98`), ~400 lines later than assumed. Immediately after that epilogue's `return;`, the
+disassembly duplicates an inline copy of `static_5_800AAD9C`'s own body (guest address 0x800AAD9C
+follows contiguously in ROM right after this chunk's `jr $ra`/`0x800AAD98`) — the recompiler
+apparently continued disassembling past the return because some in-chunk branch/fallthrough landed
+there; this is cosmetic duplication of an already-separately-guarded function (`static_5_800AAD9C`,
+guarded 2/2 since s284) and not a new audit surface. The interrupted session's actual guard work,
+despite the stale boundary comment, correctly covered the FULL true chunk (verified below) — the
+comment was just wrong about where the chunk ended, not the classification itself.
+
+**Coverage verification**: a fresh raw `grep -n "0X25A4"` over the corrected chunk range
+(119804-124186) found **38** distinct-address hit lines, not the 35 the interrupted session's own
+summary comment claimed (1 write + 9 safe + 26 unguarded-raw-lines feeding 28 guards). Rather than
+trust either count blindly, delegated a dedicated verification pass (not fresh classification) to a
+subagent: traced all 38 guest addresses against the interrupted session's `s285_sites.py` guard
+list. Result: **1 WRITE + 11 SAFE + 26 GUARDED = 38, zero missed sites** — the interrupted
+session's SAFE bucket was undercounted by exactly 2 (an 8-entry `switch`-driven call-argument block
+at guest `0x800AAA7C`-`0x800AAAF4`, all funneling into one `play3DSoundEvent` call, apparently only
+partially tallied). Documentation error, not a coverage gap — closes the chunk-1 classification
+question cleanly.
+
+**New finding, independent of the above**: validation soak2 (post-rebuild) crashed inside
+`static_5_800A9270` at native `+1552` — confirmed genuinely within that symbol's own address range
+via a Mach-O symtab walk (`start=0x100730c84`, `size=3352`, next symbol `static_5_800AAD9C`, not a
+nearest-symbol misattribution). This function was declared "fully audited and validated
+non-recurring as of s284" in `NEXT.md`'s do-not-touch list — but this is new, direct evidence
+against that belief. Rather than rely on the crash alone, re-read the function's full source
+(`funcs_40.c:5314-5529`, only 216 lines) and found a genuine, provable bug distinct from s284's
+`S284_A9270_SECONDHOP` fix: at guest `0x800A92F8`, `ctx->r4` is computed as `r16 + r2`, where `r2`
+was just reloaded from the `-0x25A4` global two instructions earlier (`0x800A92F0`) with NO guard
+on this particular reload. `r4` is then dereferenced completely unguarded at `0x800A92FC`
+(`ctx->r3 = MEM_W(ctx->r4, 0X4)`). The only guard on this path (`HANGARLIST_GUARD`, s254) sits
+*after* this dereference and checks `r3` — the VALUE the dereference produced — not `r4`, the
+pointer that was actually dereferenced to produce it. This is the third confirmed instance of the
+"validate the loaded value, not the pointer that reached it" blind spot (after s282's `G32` and
+s284's `SECONDHOP`), found this time by direct code reading rather than by chasing an exact
+address-ratio match to the crash (soak3, run immediately after, did NOT reproduce this crash —
+consistent with this whole bug family's established low, state-dependent firing rate; the fix
+rests on the source-level proof, not on reproduction).
+
+**The patch**: landed `S285_A9270_R4` in `N64Recomp/fixup_game_funcs.py` (anchor: the `r4 =
+ADD32(r16, r2)` computation at guest `0x800A92F8`, guard immediately after, bail `L_800A9350`, this
+function's existing epilogue already used by all its other guards). Verified the anchor's
+uniqueness in `funcs_40.c` before patching. **Process note (own mistake, corrected in-session)**:
+after adding this patch, ran `fixup_game_funcs.py` a second time without first deleting and
+regenerating `funcs_*.c` — this stacked a duplicate copy of the new guard (confirmed via anchor/
+comment-count check). Caught before building; deleted `funcs_*.c`, regenerated fresh via
+`N64Recomp`, ran `fixup_game_funcs.py` exactly once, confirmed single clean application of both the
+`S285_A9270_R4` guard and the (unrelated) `hangarInitialize` chunk-1 guards, then rebuilt.
+
+**Validation**: 3 soaks post-`R4`-fix rebuild (`HOLD_S=240` each). Soak1: reached the scene,
+survived the FULL 240s hold + grace with **zero crashes** (confirmed directly from `run.log`, not
+from the wrapper script's summary — the wrapper hung in its post-hold screenshot/summary phase for
+this one run, spawning repeated `run_mission_keys.sh` subprocesses for ~15 minutes with no further
+game activity in `run.log`; killed the stuck wrapper tree with SIGKILL once the actual result was
+already confirmed from the raw log — this looks like one-off driver flakiness unrelated to the
+patch, not seen in any prior session's soaks, worth a note if it recurs). Soak2: died pre-scene to
+the already-catalogued `waitForAnyAudioSlot` boot crash (uninformative). Soak3: reached the scene,
+survived the hold, died to the already-catalogued `processSceneNode+1424` (unrelated). **2
+informative scene-reaching soaks (soak1, soak3), neither reproduced the `static_5_800A9270+1552`
+crash or fired the new `S285_A9270_R4` guard** — standard non-recurrence validation bar met.
+
+**What this shows / rules out**: closes `hangarInitialize` chunk-1 (119804-124186, 38 raw hits: 1
+write + 11 safe + 26 guarded, all validated) — the first of an estimated 4-6 remaining chunks for
+this function. Also closes a previously-missed bug in `static_5_800A9270`, meaning that function's
+"fully audited, 4/4 sites, validated non-recurring" status from s283/s284 was PREMATURE — it is now
+5/5 known dereference-chain sites guarded (`HANGARLIST_GUARD`, `_EARLY`, `_WALK`, `_CLEAR`,
+`SECONDHOP`, `R4`), still not provably exhaustive given this function's own history of missed
+sites twice now. The recurring "validate the loaded value, not the pointer that reached it"
+pattern has now been found independently 3 times (s282 `G32`, s284 `SECONDHOP`, this session `R4`)
+across 2 functions in 3 sessions — strong enough evidence to treat it as a standing methodological
+requirement for every remaining `hangarInitialize` chunk, not just an occasional special case:
+every `-0x25A4` reload's IMMEDIATE resulting address must be checked before ITS OWN first
+dereference, not just checking values loaded further downstream.
+
+**Housekeeping**: all edits to `N64Recomp/fixup_game_funcs.py` (untracked in the standalone
+`N64Recomp` checkout, no `lib/` changes, no `export.sh` needed). Scratch artifacts from both the
+interrupted prior session and this one live under `scratch/agent/` (`s285_sites.py`,
+`s285_verify.py`, `s285_soak1.log`, `s285b_soak1-3.log`, `check_hits.py`,
+`symtab_check_soak2.py`) — kept for reference. `CURRENT-TRUTH.md` still oversized (26+ sessions
+overdue for pruning) — not this session's job, no leftover budget after the R4 investigation.
+
+**Next steps**: `hangarInitialize` chunk 2 (from the true chunk-1 boundary at line 124187 onward —
+note this now skips over the inline-duplicated `static_5_800AAD9C` copy immediately following,
+already guarded separately) is the next work unit. Apply the same rigor: exact chunk boundaries
+verified by grep (not estimated), full raw-hit-count reconciliation before trusting any
+sub-summary, and explicit third-hop/second-hop checking on every `-0x25A4` reload found.
