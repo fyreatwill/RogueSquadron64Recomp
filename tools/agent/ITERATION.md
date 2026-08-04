@@ -6,8 +6,36 @@ no memory of previous iterations; the docs are your memory.
 ## Read first, in this order — nothing else
 1. docs/CURRENT-TRUTH.md   (state, config, next steps, superseded conclusions)
 2. scratch/agent/NEXT.md   (the single next work unit, if it exists)
-Do NOT read PORTING-STATE.md except to grep for a specific fact; it is 43
-sessions long and roughly two dozen of its conclusions are superseded.
+3. scratch/agent/SOAK-RESULTS.md  (tail -20 — verdicts from queued soaks the
+   loop ran between iterations; fold new ones into the ledger like any run)
+Do NOT read PORTING-STATE.md except to grep for a specific fact; it is 290+
+sessions long and dozens of its conclusions are superseded.
+
+## Step 0 — maintenance check (before choosing a work unit)
+Run: `wc -c < docs/CURRENT-TRUTH.md`. If it prints more than 60000, THIS
+iteration is a MAINTENANCE iteration: compact docs/CURRENT-TRUTH.md toward its
+~35 KB cap — migrate durable material to docs/PROJECT-OVERVIEW.md, prune/merge
+superseded and closed Next-steps items, renumber the backlog into ONE monotonic
+sequence (it has had three colliding "-1/-2/…" sequences), and refresh the
+stale "as of session N" headline. Git history preserves everything you delete.
+A net shrink of >=200 lines counts as ADVANCED (the Stop gate knows this). Do
+NOT run experiments in a maintenance iteration.
+
+## Strategic priority (user directive, 2026-08-04)
+When choosing the work unit, this order overrides Next-steps ordering:
+1. Maintenance, when Step 0 triggers it.
+2. **M5 audio de-stubbing.** First a design doc (docs/M5-AUDIO-PLAN.md):
+   survey every audio stub/trap/gate currently in force, then plan an
+   incremental de-stubbing sequence with a validation soak per step. Then
+   execute it step by step. Rationale: several recurring crash families
+   (waitForAnyAudioSlot boot deaths, voice-array corruption, slot reaping,
+   MusyX DMA) are plausibly artifacts of the audio-disabled degenerate paths —
+   de-stubbing may dissolve whole classes now being guarded one deref at a time.
+3. M3 crash work — ONLY as systematic idiom-class audits (the s282–s288
+   `-0x25A4` model: grep-enumerate a whole idiom class, classify every site,
+   guard or prove dead, close the class). No reactive single-crash chases.
+   Wait-for-recurrence breadcrumbs are passive: enqueue their soaks (see Soak
+   queue below) and move on.
 
 ## Do exactly one work unit
 A work unit is ONE experiment or ONE bounded change, chosen from the top of
@@ -52,13 +80,29 @@ CURRENT-TRUTH "Next steps" (or NEXT.md if present). Before building anything:
    `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake ...` is
    allowlisted verbatim and works either way.
 
+## Soak queue — never spend a session babysitting a repeat soak
+A soak that only re-runs an existing recipe belongs to the loop, not to you.
+- Enqueue: write a SELF-CONTAINED script to scratch/agent/soak_queue/<name>.sh.
+  It runs from the repo root, must launch the game itself, watchdog itself,
+  SIGKILL the game, and exit nonzero on a crash. Arm ALL passive
+  breadcrumb/instrument env vars in every recipe unless the experiment needs
+  isolation — passive instruments are free, and rotating one per soak wasted
+  10 sessions (s272–s281, 0/20 hits).
+- The loop runs up to 2 queued recipes between iterations (600 s hard cap
+  each, then SIGKILL of the whole process group), appends one verdict line per
+  run to scratch/agent/SOAK-RESULTS.md, and moves the recipe to
+  soak_queue/done/. Full logs land in scratch/agent/soak_results/.
+- Consume: read the new SOAK-RESULTS.md lines at session start (read list #3)
+  and fold them into the ledger like any other run evidence.
+
 ## Declare your outcome honestly (the Stop hook checks this)
 Write ONE of these words to `scratch/agent/OUTCOME`:
 
 - `ADVANCED` — you ran the planned work unit and it produced a result, or you
   landed a real change (code, instrument, script, patch, or a NEW document).
-  Editing existing docs is not advancing. Compressing CURRENT-TRUTH is not
-  advancing.
+  Editing existing docs is not advancing — with ONE exception: in a triggered
+  MAINTENANCE iteration (Step 0), compacting CURRENT-TRUTH by >=200 net lines
+  IS advancing.
 - `SUBSTITUTED` — the planned work unit could NOT be run, so you did something
   else. This is legitimate ONCE. It is not a way to keep the loop fed.
 - `BLOCKED` — you need a human. Write `scratch/agent/BLOCKED.md`.
@@ -87,7 +131,11 @@ Before you may stop, ALL of:
 2. Update docs/CURRENT-TRUTH.md: next-steps reordered; any overturned
    conclusion moved to the superseded section WITH why it was believable.
 3. Rewrite scratch/agent/NEXT.md for the next iteration: the single next work
-   unit, exact commands, expected discriminating outcomes.
+   unit, exact commands, expected discriminating outcomes — and a line
+   `HYPOTHESIS-ID: <slug>` naming the active investigation thread. Keep the
+   slug while pursuing the same hypothesis; change it when you pivot or close
+   it. The loop enforces iron rule 8 with it: 3 consecutive iterations on one
+   slug force a pivot preamble, a 4th blocks the loop.
 4. git add -A && git commit (message: "iter: <one-line finding>").
 5. Write scratch/agent/STATUS: DONE (work unit finished), or BLOCKED (also
    write scratch/agent/BLOCKED.md: what you need, from whom, and what you

@@ -6,7 +6,9 @@
 # become sleeps, not handoffs.
 #
 # Env: ITER_CAP (default 40), SLEEP_ON_LIMIT (default 1800s), MAX_LIMIT_WAITS (12),
-#      LOOP_MODEL (default sonnet), MAX_NO_CONTRACT (default 2)
+#      LOOP_MODEL (default sonnet), MAX_NO_CONTRACT (default 2),
+#      SLEEP_ON_ERROR (120s) / MAX_ERR_RETRIES (4) for nonzero-rc-without-limit-wording,
+#      SOAKS_BETWEEN_ITERS (2) / SOAK_TIMEOUT (600s) for the queued-soak runner
 set -u
 cd "$(dirname "$0")/../.."
 AG=scratch/agent
@@ -16,6 +18,10 @@ SLEEP_ON_LIMIT="${SLEEP_ON_LIMIT:-1800}"
 MAX_LIMIT_WAITS="${MAX_LIMIT_WAITS:-12}"
 MAX_NO_CONTRACT="${MAX_NO_CONTRACT:-2}"
 MAX_SUBSTITUTED="${MAX_SUBSTITUTED:-2}"
+SLEEP_ON_ERROR="${SLEEP_ON_ERROR:-120}"
+MAX_ERR_RETRIES="${MAX_ERR_RETRIES:-4}"
+SOAKS_BETWEEN_ITERS="${SOAKS_BETWEEN_ITERS:-2}"
+SOAK_TIMEOUT="${SOAK_TIMEOUT:-600}"
 
 # Choose the model EXPLICITLY. Without this the loop silently inherits whatever
 # `model` sits in ~/.claude/settings.json — which on 2026-07-26 was "fable", the
@@ -32,12 +38,57 @@ notify_blocked() {
   log "BLOCKED - fix it, delete $AG/BLOCKED.md, rerun."
 }
 
+# Queued soaks: a repeat soak needs wall-clock, not a paid session. Iterations
+# enqueue self-contained recipes into scratch/agent/soak_queue/; the loop runs
+# up to SOAKS_BETWEEN_ITERS of them between iterations, appends one verdict
+# line each to scratch/agent/SOAK-RESULTS.md, and the next session consumes
+# the verdicts (35 sessions of the first 300 were babysat re-soaks).
+# Each recipe runs in its own process group so the watchdog kill reaps the
+# game too; recipes still must SIGKILL their own game on the clean path.
+run_soak_queue() {
+  local qdir="$AG/soak_queue" rdir="$AG/soak_results" ran=0
+  [ -d "$qdir" ] || return 0
+  mkdir -p "$rdir" "$qdir/done"
+  local recipe
+  for recipe in "$qdir"/*.sh; do
+    [ -e "$recipe" ] || return 0
+    [ "$ran" -ge "$SOAKS_BETWEEN_ITERS" ] && return 0
+    local name ts slog pid wd rc t0 dur
+    name="$(basename "$recipe" .sh)"
+    ts="$(date +%Y%m%d-%H%M%S)"
+    slog="$rdir/${name}_${ts}.log"
+    log "soak $name starting (cap ${SOAK_TIMEOUT}s) -> $slog"
+    t0=$SECONDS
+    perl -e 'setpgrp(0,0); exec @ARGV' /bin/bash "$recipe" >"$slog" 2>&1 &
+    pid=$!
+    ( sleep "$SOAK_TIMEOUT" && kill -9 -- -"$pid" 2>/dev/null ) &
+    wd=$!
+    rc=0; wait "$pid" 2>/dev/null || rc=$?
+    kill "$wd" 2>/dev/null; wait "$wd" 2>/dev/null
+    dur=$((SECONDS - t0))
+    printf '%s | %s | rc=%s | %ss | %s\n' "$ts" "$name" "$rc" "$dur" "$slog" >> "$AG/SOAK-RESULTS.md"
+    mv "$recipe" "$qdir/done/${name}_${ts}.sh"
+    log "soak $name finished rc=$rc after ${dur}s"
+    ran=$((ran+1))
+  done
+}
+
 log "run starting $(date) — $(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh --describe) cap=$ITER_CAP"
 
 n=0
 waits=0
+errs=0
 nocontract=0
 subs=0
+
+# Rule-8 (3-strikes) enforcement: consecutive iterations on one HYPOTHESIS-ID
+# (read from NEXT.md after each iteration). State lives OUTSIDE the repo so the
+# metered agent cannot reset it, and in a file so it survives loop restarts
+# (32 observed in the first 300 sessions).
+HYPSTATE="${TMPDIR:-/tmp}/.rs64-hyp-state"
+prev_hyp=""; hyp_count=0
+[ -f "$HYPSTATE" ] && read -r prev_hyp hyp_count < "$HYPSTATE" 2>/dev/null
+case "${hyp_count:-0}" in ''|*[!0-9]*) hyp_count=0 ;; esac
 while [ "$n" -lt "$ITER_CAP" ]; do
 
   if [ -f "$AG/BLOCKED.md" ]; then
@@ -59,7 +110,15 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   echo 0 > "$AG/.stop_blocks"
   git rev-parse HEAD > "$AG/ITER_START_HEAD" 2>/dev/null
 
-  out="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh tools/agent/ITERATION.md)"
+  # A rule-8 forced pivot (written after 3 consecutive iterations on one
+  # HYPOTHESIS-ID) rides in as a preamble on the standard prompt.
+  prompt_file=tools/agent/ITERATION.md
+  if [ -s "$AG/PIVOT.md" ]; then
+    cat "$AG/PIVOT.md" tools/agent/ITERATION.md > "$AG/ITERATION_WITH_PIVOT.md"
+    prompt_file="$AG/ITERATION_WITH_PIVOT.md"
+    log "rule-8 pivot preamble active this iteration"
+  fi
+  out="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$prompt_file")"
   rc=$?
   printf '%s\n' "$out" >> "$AG/loop.log"
 
@@ -172,20 +231,39 @@ else:
     exit 2
   fi
 
-  if [ $rc -ne 0 ] || printf '%s' "$errtxt" | grep -qiE 'usage limit|session limit|rate.?limit|overloaded|resets at'; then
+  if printf '%s' "$errtxt" | grep -qiE 'usage limit|session limit|rate.?limit|overloaded|resets at'; then
     waits=$((waits+1))
     if [ "$waits" -gt "$MAX_LIMIT_WAITS" ]; then
-      { echo "# Loop gave up after $waits consecutive limit/error waits, $(date)"; echo;
+      { echo "# Loop gave up after $waits consecutive limit waits, $(date)"; echo;
         echo "Last claude output (rc=$rc):"; printf '%s\n' "$out" | tail -40; } > "$AG/BLOCKED.md"
       notify_blocked
       exit 2
     fi
-    log "limit or error (rc=$rc), wait $waits/$MAX_LIMIT_WAITS - sleeping ${SLEEP_ON_LIMIT}s"
+    log "limit (rc=$rc), wait $waits/$MAX_LIMIT_WAITS - sleeping ${SLEEP_ON_LIMIT}s"
     n=$((n-1))          # a window we never got to work in does not burn an iteration
     sleep "$SLEEP_ON_LIMIT"
     continue
   fi
+  # A nonzero exit with NO limit wording is a crash / config / network failure,
+  # not a quota window: 30-minute sleeps here could burn 6h on something a
+  # short retry either clears (dropped connection) or can never clear (broken
+  # config, which should surface to the human fast).
+  if [ $rc -ne 0 ]; then
+    errs=$((errs+1))
+    if [ "$errs" -ge "$MAX_ERR_RETRIES" ]; then
+      { echo "# $errs consecutive runner errors with no limit wording, $(date)"; echo;
+        echo "Not sleeping on these: likely a crash, config, or network failure."
+        echo "Last output (rc=$rc):"; printf '%s\n' "$out" | tail -40; } > "$AG/BLOCKED.md"
+      notify_blocked
+      exit 2
+    fi
+    log "runner error (rc=$rc, no limit wording), wait $errs/$MAX_ERR_RETRIES - sleeping ${SLEEP_ON_ERROR}s"
+    n=$((n-1))
+    sleep "$SLEEP_ON_ERROR"
+    continue
+  fi
   waits=0
+  errs=0
 
   # Post-hoc contract check, for EVERY runner. Claude's Stop hook already
   # pushed it to meet this before returning; codex and grok never saw a hook,
@@ -283,5 +361,38 @@ else:
   else
     subs=0
   fi
+
+  # --- rule-8 enforcement: consecutive iterations on one hypothesis ----------
+  # The gate guarantees NEXT.md carries a HYPOTHESIS-ID line; 3 consecutive
+  # iterations on one slug get a mandatory-pivot preamble, a 4th blocks. The
+  # count deliberately ignores OUTCOME: closing or pivoting changes the slug.
+  hyp="$(grep -m1 '^HYPOTHESIS-ID:' "$AG/NEXT.md" 2>/dev/null \
+         | sed 's/^HYPOTHESIS-ID:[[:space:]]*//' | tr -cd 'A-Za-z0-9._-')"
+  rm -f "$AG/PIVOT.md" "$AG/ITERATION_WITH_PIVOT.md"
+  if [ -n "$hyp" ]; then
+    if [ "$hyp" = "$prev_hyp" ]; then hyp_count=$((hyp_count+1)); else hyp_count=1; fi
+    prev_hyp="$hyp"
+    printf '%s %s\n' "$prev_hyp" "$hyp_count" > "$HYPSTATE"
+    if [ "$hyp_count" -ge 4 ]; then
+      { echo "# Rule 8: 4 consecutive iterations on HYPOTHESIS-ID '$hyp', $(date)"; echo;
+        echo "Three iterations plus a forced-pivot preamble did not move it. Re-scope"
+        echo "the work unit in scratch/agent/NEXT.md (or change the hypothesis), then"
+        echo "delete this file and rerun."; } > "$AG/BLOCKED.md"
+      notify_blocked
+      exit 2
+    fi
+    if [ "$hyp_count" -ge 3 ]; then
+      log "rule-8: hypothesis '$hyp' at $hyp_count consecutive iterations - writing pivot preamble"
+      { echo "## MANDATORY PIVOT (rule 8, loop-enforced)"
+        echo "The last $hyp_count iterations all ran HYPOTHESIS-ID '$hyp' without closing it."
+        echo "Do NOT run another iteration of the same approach. Either (a) switch to a"
+        echo "different work unit (new HYPOTHESIS-ID), or (b) design the single"
+        echo "highest-information discriminating probe for '$hyp', run THAT, and close or"
+        echo "pivot on its result. A 4th consecutive iteration on '$hyp' blocks the loop."
+        echo; } > "$AG/PIVOT.md"
+    fi
+  fi
+
+  run_soak_queue
 done
 log "iteration cap ($ITER_CAP) reached $(date)"

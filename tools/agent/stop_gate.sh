@@ -103,11 +103,28 @@ touched="$(git diff --name-only ${range:-HEAD~1..HEAD} 2>/dev/null)"
 if ! printf '%s\n' "$touched" | grep -q '^PORTING-STATE\.md$'; then
   block "Exit contract unmet: this iteration's commits do not touch PORTING-STATE.md. Append a dated session entry: what ran, what it showed, what it rules out — including failed experiments. Then commit."
 fi
+# Touching the file is not the same as adding an entry: require a NEW session
+# heading in the added lines (name-only membership passed on cosmetic edits).
+if ! git diff ${range:-HEAD~1..HEAD} -- PORTING-STATE.md 2>/dev/null | grep -q '^+## Session '; then
+  block "Exit contract unmet: the PORTING-STATE.md change adds no new '## Session N (date) — ...' heading. Append a dated session entry (what ran, what it showed, what it rules out — including failed experiments), then commit."
+fi
 if ! printf '%s\n' "$touched" | grep -q '^docs/CURRENT-TRUTH\.md$'; then
   block "Exit contract unmet: this iteration's commits do not touch docs/CURRENT-TRUTH.md. Update it: reorder Next steps, and move any overturned conclusion into the superseded section with why it was believable. Then commit."
 fi
 
 [ -s "$AG/NEXT.md" ] || block "Exit contract unmet: scratch/agent/NEXT.md is missing or empty. Write the single next work unit for the following iteration: hypotheses, exact commands, and the discriminating outcomes."
+
+# NEXT.md must be THIS iteration's plan, not a stale leftover — the exit
+# contract says "rewrite", but non-emptiness alone let stale plans pass (and a
+# stale plan cost s248 a whole option built on an item closed 31 sessions
+# earlier).
+if [ -f "$AG/ITER_START_MARK" ] && [ "$AG/NEXT.md" -ot "$AG/ITER_START_MARK" ]; then
+  block "Exit contract unmet: scratch/agent/NEXT.md predates this iteration. Rewrite it now: the single next work unit, exact commands, expected discriminating outcomes, and its 'HYPOTHESIS-ID: <slug>' line."
+fi
+# Rule 8 needs machine-readable hypothesis identity: loop.sh counts consecutive
+# iterations per slug and forces a pivot at 3, blocks at 4.
+grep -q '^HYPOTHESIS-ID:' "$AG/NEXT.md" 2>/dev/null \
+  || block "Exit contract unmet: scratch/agent/NEXT.md has no 'HYPOTHESIS-ID: <slug>' line. Add one naming the active investigation thread — keep the slug while pursuing the same hypothesis, change it when you pivot. The loop enforces iron rule 8 (3-strikes) with it."
 
 # --- OUTCOME: distinguish progress from ledger churn -------------------------
 # Sessions 51-59 satisfied every other condition here while advancing nothing:
@@ -130,18 +147,35 @@ if [ "$outcome" = "ADVANCED" ]; then
   substantive="$(git diff --name-status ${range:-HEAD~1..HEAD} 2>/dev/null \
     | awk '$1 ~ /^A/ { print "new:" $2; next }
            $2 != "PORTING-STATE.md" && $2 !~ /^docs\// { print "chg:" $2 }' | head -3)"
+  # Sanctioned maintenance (2026-08-04): a real compaction of CURRENT-TRUTH
+  # counts as ADVANCED. Measured as net lines REMOVED across the iteration's
+  # commits — adds and removes in the same range cancel, so padding then
+  # trimming in one iteration nets to the truth.
+  if [ -z "$substantive" ]; then
+    shrink="$(git diff --numstat ${range:-HEAD~1..HEAD} -- docs/CURRENT-TRUTH.md 2>/dev/null \
+      | awk '{ print $2 - $1 }')"
+    case "$shrink" in ''|*[!0-9]*) shrink=0 ;; esac
+    [ "$shrink" -ge 200 ] && substantive="maint:CURRENT-TRUTH -${shrink} lines"
+  fi
   # An experiment iteration can legitimately commit only docs: its real output
-  # is captures under gitignored scratch/. s48 closed M1 that way. So doc-only
-  # commits still count as ADVANCED if the iteration actually produced run
-  # artifacts — files under scratch/ newer than the iteration's start mark,
-  # excluding the agent's own bookkeeping, which changes every time regardless.
+  # is captures under gitignored scratch/. s48 closed M1 that way. But an
+  # UNCITED scratch file is indistinguishable from `echo x > scratch/x.txt`,
+  # so run artifacts count only when the session entry names them.
   if [ -z "$substantive" ] && [ -f "$AG/ITER_START_MARK" ]; then
-    substantive="$(find scratch -type f -newer "$AG/ITER_START_MARK" \
-                     -not -path 'scratch/agent/*' 2>/dev/null | head -1)"
+    ps_added="$(git diff ${range:-HEAD~1..HEAD} -- PORTING-STATE.md 2>/dev/null | grep '^+' || true)"
+    while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      if printf '%s\n' "$ps_added" | grep -qF "$(basename "$f")"; then
+        substantive="artifact:$f"
+        break
+      fi
+    done <<ARTIFACTS
+$(find scratch -type f -newer "$AG/ITER_START_MARK" -not -path 'scratch/agent/*' 2>/dev/null | head -50)
+ARTIFACTS
   fi
 
   if [ -z "$substantive" ]; then
-    block "OUTCOME says ADVANCED but this iteration only MODIFIED existing documentation (PORTING-STATE.md / docs/) and produced no run artifacts under scratch/. Editing the ledger is how you record progress, not how you make it. Either land the real change (code, instrument, tool, patch, or a new document) or actually run the experiment now, in this iteration — or set OUTCOME=SUBSTITUTED and write SUBSTITUTION.md explaining why the work unit could not run."
+    block "OUTCOME says ADVANCED but this iteration only MODIFIED existing documentation (PORTING-STATE.md / docs/) and produced no cited run artifacts under scratch/. Editing the ledger is how you record progress, not how you make it. Either land a real change (code, instrument, tool, patch, a NEW document, or — in a triggered maintenance iteration — a >=200-net-line CURRENT-TRUTH compaction), or run the experiment now and cite its scratch/ artifact BY FILENAME in the PORTING-STATE.md session entry — or set OUTCOME=SUBSTITUTED and write SUBSTITUTION.md explaining why the work unit could not run."
   fi
 fi
 

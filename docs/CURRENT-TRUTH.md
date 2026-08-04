@@ -6,6 +6,23 @@ the four layers fit together, and the hurdle classes that have cost the most tim
 Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## LLE session N` headings,
 `s10`–`s32` = the `## Session N` headings.
 
+## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
+Set after the 300-session review. Priority order for upcoming iterations:
+1. **Maintenance** (Step 0 of ITERATION.md now triggers it): this file is ~15x over its 35 KB cap
+   and this headline is ~125 sessions stale. Compact per the Maintenance section of
+   tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED.
+2. **M5 audio de-stubbing**: design doc first (docs/M5-AUDIO-PLAN.md — survey every audio
+   stub/trap/gate in force, plan incremental de-stubbing with a validation soak per step), then
+   execute stepwise. Rationale: waitForAnyAudioSlot boot deaths, voice-array corruption, slot
+   reaping and MusyX DMA crash families are plausibly artifacts of the audio-disabled degenerate
+   paths — de-stubbing may dissolve classes now guarded one deref at a time.
+3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
+   reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
+   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
+Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped
+matching (the BREADCRUMB10+ slice idiom) to the ~100 file-scoped-only guard patches in
+fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment.
+
 ## Current truth (as of session 166)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
