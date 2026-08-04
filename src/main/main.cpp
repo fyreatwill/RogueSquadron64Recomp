@@ -615,8 +615,18 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
             // [musyx-dma-call] hits -- that instrument turned out to be the
             // PI-DMA sample-streaming path, not RSP task submission, so it
             // doesn't settle the question either way). Always-on, cheap.
+            // s315: the original `n<20 || n%256==0` cap is the SAME unwidened
+            // flat-cap bug s312/s313 found and fixed in the other M5 audio
+            // diagnostics (reach-*/tick-audio-seq/musyx-gate1) -- it produces
+            // exactly 20 print lines whether the counter truly stops at 20 or
+            // keeps incrementing silently until n=256, which a ~40-call
+            // freeze would never reach. The "[audtask-dispatch] stops at
+            // 20/20" conclusion (s307-313, CURRENT-TRUTH item -173) was
+            // resting on this same illusion, unverified. Widened to the
+            // established n<40||(n%128)==0 resample convention so this is a
+            // direct measurement, not an assumption.
             static uint32_t s_audtask_n = 0;
-            if (s_audtask_n < 20 || (s_audtask_n % 256) == 0) {
+            if (s_audtask_n < 40 || (s_audtask_n % 128) == 0) {
                 fprintf(stderr, "[audtask-dispatch] n=%u real_ucode=%d\n",
                         s_audtask_n, s_use_real_audio_ucode);
             }

@@ -27793,3 +27793,65 @@ de-stubbing work unit queued in NEXT.md before this session (instrument the `M_A
 call/condition inside `tickAudioSequencerFrame`/`tickAllAudioChannels`) is untouched and is the next
 non-maintenance session's work unit, unchanged from before this pass — this session only touched
 documentation structure, never the investigation's content or conclusions.
+
+## Session 315 (2026-08-04) — M5 audio: [audtask-dispatch] REFUTES its own "M_AUDTASK submission stops at call 20/20" conclusion (s307-313, CURRENT-TRUTH item -173) -- OVERTURNED, direct measurement finds 40/40
+
+**Work unit**: item -173's remaining open question was why RSP `M_AUDTASK` submission
+(`[audtask-dispatch]`) stops at call 20 while its own two upstream callers
+(`tickAudioSequencerFrame`/`tickAllAudioChannels`, confirmed still entering/exiting normally) keep
+running to call 37. Before source-reading those two functions to hunt a gate/condition (the planned
+step 1), checked the instrument itself first, per the boring-first-explanation prior — the exact class
+of bug s312/s313 found in 4 *other* M5 audio diagnostics this same investigation thread.
+
+**Finding**: `get_rsp_microcode()`'s `M_AUDTASK` case in `src/main/main.cpp` (not
+`fixup_game_funcs.py` — this counter lives in the native runtime, at the RSP-scheduler's task-dispatch
+point, downstream of the game code) prints `[audtask-dispatch]` under `if (s_audtask_n < 20 ||
+(s_audtask_n % 256) == 0)`. This is the SAME unwidened flat-cap pattern (n<20, no modulo resample
+until 256) that s312 found in `[reach-update3d-*]`/`[reach-allsongs-*]`/`[reach-audioseq-exit]` and
+that s313's widened-cap soak refuted. A log that stops at exactly 20 lines under this cap is
+indistinguishable from "kept incrementing silently to 37+ without ever reprinting" (256 is far beyond
+the ~40-call hard-stop boundary this investigation has repeatedly found) — so the "M_AUDTASK stops at
+20/20" conclusion the whole s307-313 lineage rested on was never actually measured past n=19.
+
+**Fix and measurement**: widened the cap to the established `n<40||(n%128)==0` convention (one-line
+change, `src/main/main.cpp`), rebuilt via `cmake --build build -j8` (native code, no N64Recomp regen
+needed), reversed `setDisplayMode`'s gate site an 8th time (`RecompiledFuncs/funcs_23.c`, direct hand-
+edit as in every prior reversal this lineage — not a `fixup_game_funcs.py` regex change), ran one soak
+(`scratch/s73_post_a_scene/run_step315audtaskcap.sh`, copied from s313's `run_step313widecap.sh`
+template, all passive breadcrumbs armed, `HOLD_S=240`, `ROGUESQ_AUDIO_UCODE=1`). Soak reached the same
+deterministic boot hang as every prior reversal (VI stuck at 320, `rdpFs`=39, `[vi-fs-decision]`
+stalled) — exit 5 (INCONCLUSIVE) from the driver's own phase-timeout, expected and correct for this
+soak design, not a failure.
+
+**Result** (`scratch/s73_post_a_scene/step315audtaskcap/run.log`, 745 KB):
+
+| tag | true call count (this session) | s313's count |
+|---|---|---|
+| `[audtask-dispatch]` (`M_AUDTASK` submission) | **40/40** (n=0..39) | 20/20 (unwidened cap) |
+| `[reach-update3d-entry/exit]` (`update3DAudioFrame`) | 40/40 (unchanged) | 40/40 |
+| `[reach-allsongs-entry]`/`[reach-audioseq-exit]`/`[tick-audio-seq]`/`[tick-all-audio-channels]` | 37/37 (unchanged) | 37/37 |
+| `[runner] task #N` (RSP task-runner) | last dispatch task #39 (unchanged) | task #39 |
+
+`M_AUDTASK` submission does **not** diverge from `update3DAudioFrame` or the RSP task-runner — all
+three stop together at the same hard boundary (call/task ~39-40). The "3 distinct stop points"
+conclusion from item -173 is now **2 distinct stop points**: a 37/37 stop (the 3 tick-producer
+functions) and a 40/40 hard stop (everything else, matching the RSP task-runner's own last dispatch).
+This dissolves the specific open question item -173 posed ("why does M_AUDTASK diverge from its own 2
+upstream tickers") — it doesn't diverge; the apparent divergence was the print-cap artifact. The real,
+still-open question is unchanged in kind but simpler: why do `tickAllActiveSongs`/
+`tickAudioSequencerFrame`/`tickAllAudioChannels` stop 3 calls **before** everything else (37 vs 40),
+not why `M_AUDTASK` stops 17 calls before them (it doesn't).
+
+**Cleanup**: `setDisplayMode`'s gate site reverted to `= 0` (back to force-zeroed baseline),
+`cmake --build build -j8` rerun to restore a safe (non-hung) binary. Confirmed `pgrep -f
+"build/RogueSquadron64Recomp"` empty before and after. The widened `[audtask-dispatch]` cap in
+`src/main/main.cpp` is kept armed-but-cheap (same convention as the other M5 audio diagnostics) —
+committed as a real code change in this repo (not `lib/`, no submodule-patch export needed).
+
+**Rules out**: the s307-313 "3 distinct stop points" framing as currently stated (item -173). Does
+NOT yet answer why the 3 tick-producer functions stop 3 calls early — that remains open, narrower now
+that `M_AUDTASK` is confirmed not to be part of that particular puzzle.
+
+HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (unchanged — this is the 9th session
+producing a discriminating result in this lineage: s303/s306/s307/s309/s310/s311/s312/s313/s315, s314
+was maintenance and doesn't count). Continue same slug next session.

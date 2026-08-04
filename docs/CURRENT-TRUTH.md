@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    Overturned Conclusions entries). 35 KB remains a stretch target, not a hard floor — the "Current
    truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
    deliberately; both are used every iteration for phase-gating and build commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 7 times (s303-313), each reproducing an identical deterministic full-boot hang and narrowing it further. Current state (s313, direct measurement): three distinct stop points, not one shared "soft stop" as earlier sessions believed — full detail Next-steps item -173.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 8 times (s303-315), each reproducing an identical deterministic full-boot hang and narrowing it further. Current state (s315, direct measurement): **two** distinct stop points, not three (s313) or one shared "soft stop" (earlier sessions) — full detail Next-steps item -174.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,10 +148,32 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -173 (s313); the next new item takes -174 and is inserted at the top.
+oldest). Current top is -174 (s315); the next new item takes -175 and is inserted at the top.
+
+-174. **(s315) M5 audio de-stubbing: `[audtask-dispatch]` REFUTES its own "M_AUDTASK submission stops
+    at call 20/20" conclusion — see Overturned Conclusions.** Before source-reading
+    `tickAudioSequencerFrame`/`tickAllAudioChannels` to hunt the gate item -173 asked for, checked the
+    instrument first: `get_rsp_microcode()`'s `M_AUDTASK` case in `src/main/main.cpp` (native runtime
+    code, not `fixup_game_funcs.py`) had the exact same unwidened flat-cap bug (`n<20 ||
+    n%256==0`) s312/s313 found and fixed in 4 *other* M5 audio diagnostics — a log stopping at exactly
+    20 lines was indistinguishable from "really stopped" vs. "kept incrementing silently until n=256,"
+    and the ~40-call hard-stop boundary this investigation keeps finding never reaches 256. Widened to
+    the established `n<40||(n%128)==0` convention, reversed `setDisplayMode`'s site an 8th time, ran
+    one soak. **Direct measurement**: `[audtask-dispatch]` fires **40/40** (n=0..39), matching
+    `update3DAudioFrame` (`[reach-update3d-*]`, also 40/40) and the RSP task-runner's own last dispatch
+    (task #39) — not 20/20. `tickAllActiveSongs`/`tickAudioSequencerFrame`/`tickAllAudioChannels`
+    unchanged at **37/37**. **Result: 2 distinct stop points, not 3** — a 37/37 stop (the 3
+    tick-producer functions) and a 40/40 hard stop (`update3DAudioFrame`, `M_AUDTASK` submission, and
+    the RSP task-runner together). `M_AUDTASK` submission was never diverging from its own upstream
+    callers; that was the same print-cap illusion. Open question narrowed, not answered: why do the 3
+    tick-producer functions stop 3 calls before everything else (37 vs 40)? `setDisplayMode`'s site
+    reverted, baseline restored and rebuilt. Full detail: `PORTING-STATE` Session 315.
 
 -173. **(s313) M5 audio de-stubbing: widened-cap soak REFUTES the "3 gate-consumer functions stop at
-    call 19/20" conclusion — see Overturned Conclusions.** Widened the flat `n<20` print caps on
+    call 19/20" conclusion — see Overturned Conclusions. Superseded by item -174 (s315): the
+    `[audtask-dispatch]` count in this item's own table was itself unwidened and wrong (20/20, actually
+    40/40) — kept for the update3DAudioFrame/tick-producer numbers, which s315 confirmed unchanged.**
+    Widened the flat `n<20` print caps on
     `[reach-update3d-entry/exit]`/`[reach-allsongs-entry/exit]`/`[reach-audioseq-exit]`/
     `[tick-audio-seq]`/`[tick-all-audio-channels]` to the resampled `n<40||(n%128)==0` convention,
     reversed `setDisplayMode`'s gate site a 7th time, ran one soak, re-reverted same session. **Direct
@@ -367,6 +389,16 @@ Standing warnings:
   one. Believable: the flat `n<20` cap predates the modulo-resample convention (s310/s311) and nobody
   retrofitted it; a log truncated at exactly 20 lines is indistinguishable from a real stop without a
   resample. PORTING-STATE 313.
+- **(s313→s315)** "`M_AUDTASK` submission genuinely stops at call 20/20" — `[audtask-dispatch]`
+  (`src/main/main.cpp`, the RSP-scheduler dispatch point, not a `fixup_game_funcs.py` patch) had the
+  identical unwidened `n<20||n%256==0` flat cap s313 had just finished fixing in 4 *other* diagnostics,
+  missed because it lives in native runtime code rather than the recompiled-game-code patch file where
+  the others live. A widened-cap soak (s315) found it actually fires 40/40, matching
+  `update3DAudioFrame` and the RSP task-runner's own last dispatch — not diverging from its callers at
+  all. Believable: s313 had just fixed the exact same bug pattern elsewhere in the same investigation
+  and had every reason to believe the remaining tag was already resampled (`docs/CURRENT-TRUTH.md`
+  s313's own item -173 explicitly called it "already resampled since s310/s311" without re-checking the
+  source). 2 stop points (37/37 and 40/40), not 3. PORTING-STATE 315.
 
 ### Dead ends — labelled as such in the log, do not retry
 
