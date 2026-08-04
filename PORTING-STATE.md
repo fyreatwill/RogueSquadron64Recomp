@@ -27054,3 +27054,55 @@ still force-zeroed — no site touched this session) before re-attempting `setDi
 
 No `lib/` changes this session (read-only against `N64Recomp/RecompiledFuncs/funcs_23.c` and
 `funcs_0.c`, both regenerated files, no source edits). No build, no soak.
+
+## Session 305 (2026-08-04) — MAINTENANCE: 4th compaction pass on `docs/CURRENT-TRUTH.md`, 62,103→54,550 bytes / 707→630 lines, plus a stale-numbering-convention fix
+
+Session start: `docs/CURRENT-TRUTH.md` measured 62,103 bytes — over the 60,000-byte Step-0 maintenance
+trigger, so this was a MAINTENANCE iteration per `tools/agent/ITERATION.md`. No experiments run, per
+the Step-0 instruction not to. This is the 4th compaction pass (after s295/296's 562,666→59,811 and
+s299's 61,293→47,105; regrown past the trigger again by s300-304's 6 M5-audio session entries, each
+appended in full narrative to the top of the Next-steps list).
+
+**What ran**: read the full file, then targeted `Edit` calls:
+1. **Cut the USER DIRECTIVE section's M5-audio bullet** (item 2) from a full step-by-step narrative
+   duplicating items -166..-161 below it, down to a short status pointer — the two sections had been
+   saying the same thing twice in full, the single biggest duplication in the file.
+2. **Compacted the 6 most-recent Next-steps items** (-166 through -161, s298-304's M5-audio-de-stubbing
+   session write-ups) by 35-45% each, keeping every fact load-bearing for the active investigation
+   (hypotheses tested, refuted, confirmed; exact addresses; soak counts; the single-source caveat on
+   s304's "`initMusyXEngine` may be dead code" finding) while cutting restated context and redundant
+   phrasing.
+3. Merged items -131 and -130 (s265/s266, already closed, already short) into one `-130..-131` entry
+   matching the grouping convention used everywhere else in the list.
+4. **Fixed a stale cross-reference bug**: the "Numbering convention" paragraph still said the top item
+   was "-163" with "the next new item takes -165" — both wrong since s302/303/304 added -164/-165/-166
+   without updating this paragraph. Replaced with a description that doesn't hardcode a number that
+   drifts every session, plus the current concrete state (top is -166, next is -167).
+5. Updated the stale "as of session 295" headline to note review through s304 (was s298).
+
+**Deliberately left alone this pass** (same reasoning as s299): the "Current truth" section's env-var
+default-on/off/deleted lists and VI-phase timeline tables; the Regeneration pipeline's command sequence
+and Standing warnings; the crash-catalog table; the already-condensed Overturned-conclusions/Dead-ends/
+Method-traps sections (rewritten to their current terse style in s299, no further easy cuts found); the
+older grouped Next-steps items (-159..-132 and older) — already single era paragraphs from prior passes,
+diminishing returns on further compression without losing the reference value of specific session
+numbers and addresses future audits grep for.
+
+**Result**: `docs/CURRENT-TRUTH.md` 62,103→54,550 bytes (-12.2%), 707→630 lines (-77 lines). Clears the
+60,000-byte Step-0 trigger with a 5,450-byte margin. Falls short of the exit contract's ">=200 net
+lines" auto-qualify threshold for MAINTENANCE (same shortfall shape as s299 — noted honestly, not
+padded). Still above the ~35 KB stretch target; the sections named above as "deliberately left alone"
+remain the most promising future targets, same as s299 flagged, because they're either operationally
+load-bearing (consulted every iteration) or already near-optimally terse.
+
+**Rules out**: nothing (no experiment this session). **Shows**: the file regrows past the 60,000-byte
+trigger roughly every 5-6 sessions once an active investigation (M5 audio de-stubbing) is appending a
+full session write-up to the top of Next-steps every iteration — the recurring maintenance cost of a
+long-running single-thread investigation, distinct from the s299 finding (backlog-grouping fat
+accumulating from routine unrelated entries). A directive-section/Next-steps duplication pattern (item 1
+above) hadn't been named as a source of bloat in either prior compaction pass, worth checking for again
+on future passes when an active investigation is mid-stream.
+
+No `lib/` changes this session (pure doc edit). No build, no soak. M5-audio's active work unit
+(NEXT.md: settle `initMusyXEngine` reachability with a same-run-positive-controlled entry counter,
+batched with the 3 gate-consumer function tags) is unchanged and remains the next session's work.
