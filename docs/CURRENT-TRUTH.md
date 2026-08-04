@@ -8,15 +8,10 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## L
 
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Set after the 300-session review. Priority order for upcoming iterations:
-1. **Maintenance** (Step 0 of ITERATION.md now triggers it): this file is ~15x over its 35 KB cap
-   and this headline is ~125 sessions stale. Compact per the Maintenance section of
-   tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. **[s295: compacted
-   562,666→120,975 bytes, 7,959→1,267 lines — cleared the emergency 60,000-byte Step-0 trigger but
-   not the 35 KB stretch target. s296 (this pass): compacted further, 120,975→59,811
-   bytes, 1,267→674 lines — now under the 60,000-byte Step-0 trigger with margin,
-   still above the 35 KB stretch target (M3 Next-steps and Overturned Conclusions still carry the
-   most compressible remaining prose). A 3rd maintenance pass, focused on the "Current truth" env-var
-   bullets and the Regeneration section, could plausibly close the remaining gap to 35 KB.]**
+1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. **[s295/s296
+   compacted 562,666→59,811 bytes; still above the 35 KB stretch target. Next pass: focus the
+   "Current truth" env-var bullets and the Regeneration section (skimmed-only so far).]**
 2. **M5 audio de-stubbing**: design doc first (docs/M5-AUDIO-PLAN.md — survey every audio
    stub/trap/gate in force, plan incremental de-stubbing with a validation soak per step), then
    execute stepwise. Rationale: waitForAnyAudioSlot boot deaths, voice-array corruption, slot
@@ -193,19 +188,26 @@ cost three sessions before the recursive mutex.
 ## Next steps, in order of expected value (s295)
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
-numbered -159 (top, newest/highest priority) counting up to -1 (bottom, oldest); relative
-order is unchanged from before the fix. The next new item takes -160 and is inserted at the
+numbered -160 (top, newest/highest priority) counting up to -1 (bottom, oldest); relative
+order is unchanged from before the fix. The next new item takes -161 and is inserted at the
 top.
+
+-160. **(s297)** Lands `MATEXPIRY_GUARD` (`ctx->r16` KSEG0-range check) in `tickTextureMaterialExpiry`
+    at the site/bail-target item -159 specified (`fixup_game_funcs.py`, after `BREADCRUMB12` to match
+    its POST-breadcrumb shape). Regen/build clean (`BREADCRUMB12` still x83, guard x1 new, 46-warning
+    baseline unchanged). 2 validation soaks (`HOLD_S=275`): both clean, 0 crashes, 0 guard fires — a
+    **weak null** (only 2 `BREADCRUMB12` recurrences across ~294 sessions, so 0/2 fits either
+    outcome), not confirmation. Unconfirmed-but-not-refuted until a 3rd recurrence fires the guard
+    (confirms) or crashes at the same PC anyway (refutes — re-read the bail path). `PORTING-STATE`
+    Session 297.
 
 -159. **(s294)** Resumes the abandoned s249-251 project-wide unguarded-walk sweep; source-reads and
     breadcrumbs `stopSongByHandle` (`BREADCRUMB14`, 180 sites, `funcs_25.c:4390-4818`) -- no unique
     translation bug, same uniform unguarded-`RECOMP_FUNC` baseline as every prior candidate.
     **Headline result**: catches `tickTextureMaterialExpiry`'s (`BREADCRUMB12`) SECOND recurrence at
     the IDENTICAL guest PC as s293's soak (`0x80022094`, `funcs_6.c:12207`, a 2-byte read of
-    `ctx->r16+0x8`) -- crossing the two-independent-observations confirmation bar. **This is now the
-    fully-specified top-priority next work unit -- see `scratch/agent/NEXT.md` for the exact guard
-    site, fix template, and validation plan; do not re-derive it here.** Full detail: `PORTING-STATE`
-    Session 294.
+    `ctx->r16+0x8`) -- crossing the two-independent-observations confirmation bar, which s297 (item
+    -160 above) used to land the guard. Full detail: `PORTING-STATE` Session 294.
 
 -158. **(s293)** Lands `BREADCRUMB13` scoped to `tickSongSequence` (`funcs_25.c:4878-5317`),
     closing a 119-session-old unaddressed backlog item (s174) -- no unique translation bug. Bonus:

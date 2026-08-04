@@ -26518,3 +26518,60 @@ paragraph). `scratch/agent/NEXT.md`: maintenance note updated only, guard work u
 `HYPOTHESIS-ID: tickTextureMaterialExpiry-guard` unchanged. Still deferred: the ~35KB stretch target
 (next candidates: Current-truth env-var bullets, Regeneration section) — noted honestly in both the
 USER DIRECTIVE bracket in `CURRENT-TRUTH.md` and here, not claimed as done.
+
+## Session 297 (2026-08-04) — lands and validates the `ctx->r16` guard (`MATEXPIRY_GUARD`) in `tickTextureMaterialExpiry`, per `scratch/agent/NEXT.md`'s fully-specified work unit
+
+`docs/CURRENT-TRUTH.md` measured at 59,786 bytes at session start — under the 60,000-byte Step-0
+maintenance trigger, so this ran as a normal work-unit iteration, not maintenance.
+
+Re-read `N64Recomp/RecompiledFuncs/funcs_6.c:12135-12332` (the current build's already-regenerated,
+already-breadcrumbed copy) to confirm the guard site and bail target `scratch/agent/NEXT.md` specified
+were still accurate before writing anything. Confirmed: `L_80022094` is the single loop label both
+entry paths (the initial fallthrough after the outer null check, and the `0x80022120` loop-back edge)
+pass through before the first dereference of `ctx->r16` (`lhu $v1, 0x8($s0)`, the exact crash PC from
+both s293/s294 recurrences); `L_80022128` is the function's own pre-existing "this table entry's walk
+is done, advance to the next table index" reentry point, reached today whenever the "next" pointer
+(`ctx->r19`, loaded from each node's own offset-0 field and reassigned into `ctx->r16` every loop-back)
+is exactly NULL — the natural bail target for a corrupted-but-nonzero "next" pointer too.
+
+Added `MATEXPIRY_GUARD` to `N64Recomp/fixup_game_funcs.py`, same KSEG0-range-check /
+`ROGUESQ_LOG_*`-gated-fprintf template as `DEQUEUE_GUARD`/`CACHE4_GUARD`/the 18th-class free-list-walk
+guard: rejects `ctx->r16` outside `[0x80000000, 0x80800000)` (`U32()`-truncated first, per s99's
+false-positive lesson) and `goto`s `L_80022128` on failure. Placed the new patch block AFTER the
+existing `BREADCRUMB12` block in file order (not before) so its regex matches the POST-breadcrumb
+text shape (with `g_rs64_last_guest_pc` lines already present) — the ordering gotcha `NEXT.md` flagged
+for this specific function. Also armed `ROGUESQ_LOG_MATEXPIRY_GUARD=1` in the shared soak driver
+(`scratch/s73_post_a_scene/run_dequeuearg1.sh`), following the "arm all passive instruments" rule.
+
+Regenerated clean: `make_elf.py` skipped (ELF/ROM mapping unchanged since s284, per carried-forward
+note), `N64Recomp` run fresh after deleting `funcs_*.c`, then `fixup_game_funcs.py` — patch report
+confirmed `BREADCRUMB12` still patched x83 (unchanged) and the new `MATEXPIRY_GUARD` patched x1 (exact
+expected count, one guard site). Build clean (`DEVELOPER_DIR=... cmake --build .`), 46 warnings — the
+documented baseline, no new ones.
+
+Ran the 2 validation soaks iron rule 4 requires (`HOLD_S=275`,
+`scratch/s73_post_a_scene/run_dequeuearg1.sh`, named `s297_soak1`/`s297_soak2` to avoid clobbering).
+Both: scene reached (`vi_width=1024` present), 0 crashes (`grep -c "\[CRASH\]"` = 0 in both logs,
+matching the driver's own `exit=2: 0` summary line each run), 0 `[matexpiry-guard]` fire lines in
+either log. Both logs were multi-GB (~9.2GB/9.5GB, hundreds of millions of lines — the full
+`ROGUESQ_LOG_*` instrument set including per-node `rs-free-walk` logging is extremely verbose over a
+~340s hold) and were deleted after extracting the grep counts needed; nothing else in them was
+germane to this guard.
+
+**Rules out**: nothing new — this was landing a specified fix, not an experiment with competing
+hypotheses.
+
+**Shows**: (1) the guard installs and regenerates cleanly at the exact site/bail-target `NEXT.md`
+specified, with the file-ordering gotcha (guard block placed after `BREADCRUMB12`, matching its
+POST-breadcrumb shape) working as documented — the patch-count check (`x83` unchanged, `x1` new)
+confirms neither collided; (2) 0/2 fires is a **weak null**, exactly the outcome `NEXT.md` pre-
+registered as "unconfirmed-but-not-refuted" given `BREADCRUMB12`'s historically rare hit rate (2
+recurrences total across ~294 prior sessions before this one) — this does NOT confirm the guard works,
+it only confirms it doesn't crash or regress anything over 2 clean soaks; (3) per iron rule 8 / the
+budget rule, since this was a first attempt (not a 3rd strike) and the guard matched the fix template
+exactly, no fallback to the unguarded-walk sweep was needed this session.
+
+`N64Recomp/fixup_game_funcs.py`: +1 guard block (`MATEXPIRY_GUARD`), placed after the `BREADCRUMB12`
+block for funcs_6.c (untracked in the standalone `N64Recomp` checkout, no `export.sh` needed).
+`scratch/s73_post_a_scene/run_dequeuearg1.sh`: +1 line (`ROGUESQ_LOG_MATEXPIRY_GUARD=1`). No `lib/`
+changes this session.
