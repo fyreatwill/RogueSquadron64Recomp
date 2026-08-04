@@ -1,106 +1,103 @@
-# NEXT work unit — find what diverges right after [musyx-gate1]'s read point at call #19/20
+# NEXT work unit — widen the GATE3_REACH/tick-audio-seq flat print caps and re-measure
 
-(Written s311. See docs/CURRENT-TRUTH.md item -171 for the summary and `PORTING-STATE` Session 311 for
+(Written s312. See docs/CURRENT-TRUTH.md item -172 for the summary and `PORTING-STATE` Session 312 for
 the full write-up.)
 
-## Context — s311 ruled out Option A, found two DISTINCT freeze boundaries (soft #19/20, hard #39/40)
+## Context — s312 found a fresh contradiction with the s307-s311 "soft stop at call 19/20" framing
 
-s310 built 4 new diagnostics (`ROGUESQ_LOG_AUDIOTICK_TRACE`) and found `musyxSynthFrame`'s own entry, the
-VI-retrace callback-table slot, and `viRetraceHandlerThread`'s own loop all keep firing well past the
-tick-19/20 point where audio-tick counters stop — refuting H1 (driving thread stops being woken) and H4
-(full unreaped queue). s311 executed NEXT.md's Option A: widened `[musyx-gate1]`'s (the countdown/period
-read inside `musyxSynthFrame`, right before the decrement-and-compare that gates the "run" branch) sample
-cap from a flat `n<20` to `n<40||(n%128)==0`, and re-reversed `setDisplayMode`'s gate site a 5th time to
-exercise it, running the soak for the FULL 600s phase-timeout this time (vs. s310's shorter capture).
+s311 ruled out NEXT.md's Option A (musyx-gate1's raw countdown/period inputs never change through call
+39). s312 executed Option A's sibling lead 1 (read the actual decrement-and-compare after `[musyx-gate1]`'s
+load) via a full source-read of `musyxSynthFrame` (`funcs_24.c:3146` onward), which turned up two things:
 
-**Result 1 — Option A's own question, answered NO**: `[musyx-gate1]` fired 40/40 times, `countdown=0
-period=16777216` on every sample, byte-identical throughout. The gate's raw inputs do not change between
-call #19 and call #39. Whatever causes the freeze is NOT visible at this exact read point.
+1. **`[musyx-gate1]`'s own branch is provably, and now runtime-confirmedly, ALWAYS "skip"** in this
+   window — `taken_skip=1` on all 40/40 samples this session (a new field added to the existing
+   diagnostic, derived from `countdown!=1`). It cannot be the mechanism gating anything at call 19,
+   because it never takes the "run" path at all across the full window.
+2. **`update3DAudioFrame` (1 of the "3 gate-consumer functions") is gated by a completely separate,
+   simpler mechanism than the countdown maze**: a single raw-byte read of `0x800A0F50` near
+   `musyxSynthFrame`'s top (`funcs_24.c:3242-3259`), no countdown/period, no other condition between the
+   read and the call. A new diagnostic (`[audio-gate-raw]`) logging that byte fresh every call found it
+   **constant at 1 across all 40/40 samples (n=0-39)** — meaning `update3DAudioFrame`'s call MUST be
+   happening on every one of `musyxSynthFrame`'s 40 confirmed entries in this window.
 
-**Result 2 — an unplanned but decisive finding**: because every diagnostic's cap was wide enough this
-session to show continued activity via its own modulo resample (`%128`/`%256`/`%512`) if it existed, and
-none of them ever printed past their FIRST cap window despite a full 10-minute run, the picture is now
-unambiguous:
-- **SOFT stop at call #19/20**: `[audtask-dispatch]` (RSP `M_AUDTASK` submission) and all 3 gate-consumer
-  reach tags (`update3DAudioFrame`/`tickAllActiveSongs`/`tickAudioSequencerFrame` entry+exit) stop
-  together, exactly 20 fires each. `musyxSynthFrame`'s own entry and its `[musyx-gate1]` read (which sits
-  BETWEEN the entry and these 3 calls, architecturally) keep running normally for ~20 MORE calls after
-  this — meaning the actual branch/compare decision (not the raw countdown/period inputs) is what starts
-  silently choosing "skip" at call #19.
-- **HARD stop at call #39/40**: `[vi-cb-loop]`, `[vi-cb-slot]`, `[synth-entry]` (musyxSynthFrame's own
-  entry) ALL stop simultaneously, in lockstep with the RSP task-runner's own last dispatch (`[runner]`
-  task #39) — this is the same event s307/s309 called "the later full-scheduler wedge," now tied
-  precisely to the audio-tick side for the first time. `viRetraceHandlerThread`'s own loop-top stopping
-  here means this is a genuine full coop-scheduler wedge, not an audio-specific bug.
-
-These are two SEPARATE mechanisms. The call #19/20 soft stop is the M5-relevant one (it's specifically
-about audio task dispatch skipping); the call #39/40 hard stop is the same "later full-scheduler wedge"
-s307/s309 already parked as a lower-priority, harder problem. Stay focused on #19/20.
+This is in direct tension with the s307/s310/s311 conclusion that `update3DAudioFrame` (and
+`tickAllActiveSongs`/`tickAudioSequencerFrame`) "stop firing at call 19/20" — that conclusion rests on
+`[reach-update3d-entry/exit]`/`[reach-allsongs-entry/exit]`/`[reach-audioseq-exit]`
+(`ROGUESQ_LOG_INITMUSYX_REACH`, s306) and `[tick-audio-seq]` (`ROGUESQ_LOG_VOICE_TRIGGER_CHAIN`, s107).
+**Both diagnostic families use a flat `if (n < 20) { print }` guard with NO modulo resample** — unlike
+`[musyx-gate1]`/`[audio-gate-raw]`/`[audtask-dispatch]`/the 4 AUDIOTICK_TRACE tags, which all got a
+`n%K==0` resample specifically so silence-past-cap is decisive (s310/s311's own fix for this exact class
+of ambiguity). A log showing exactly 20 lines from the flat-cap family is consistent with either "really
+stopped at 20" or "kept being called, print just stopped at line 20" — indistinguishable from the log
+alone. Given `update3DAudioFrame`'s OWN gate byte stays nonzero through call 39 (a fresh, resampled,
+decisive measurement), "kept being called" is now the better-supported reading for at least that one
+function — but not yet DIRECTLY measured. **Flagged contested, not yet overturned in CURRENT-TRUTH.**
 
 ## The work unit
 
-**Narrow the branch/compare right after `[musyx-gate1]`'s read**, now that the raw countdown/period
-inputs are ruled out. Two concrete leads, pick based on a quick source-read first (don't build blind):
+**Widen the flat `n<20` print caps to the established `n<40||(n%128)==0` convention** (or a numerically
+equivalent resample) for every tag in this family, so the same soak that reproduces the freeze also
+directly measures whether these functions' TRUE call counts stop at 20 or continue:
 
-1. **Read the actual decrement-and-compare code** immediately following the already-instrumented load at
-   `funcs_24.c` (guest `0x80091470-0x80091478`, anchor already in `fixup_game_funcs.py`'s
-   `_musyx_gate1_patch`). The print happens BEFORE the compare; read what MIPS instructions follow in the
-   generated C to see what the branch condition actually is (likely a `bnez`/`beqz` on the loaded
-   countdown, or a compound condition involving another register/global not currently logged). Add ONE
-   new diagnostic immediately AFTER the compare (not just before) that logs whether the "run" branch was
-   actually taken, keyed to the same call counter so it lines up directly against `[musyx-gate1]`'s own
-   `n=` values — this directly answers "does the compare start returning false at n=19 even though
-   countdown/period stay 0/16777216."
-2. **s107 found 3 near-identical gate copies inside `musyxSynthFrame`** (funcs_24.c) guarding calls to
-   `tickAllActiveSongs`/`tickAudioSequencerFrame`; only the FIRST is currently instrumented
-   (`_musyx_gate1_patch`). If lead 1's compare-outcome diagnostic shows the FIRST gate's compare still
-   evaluates "run" at call #19 (i.e. the 1st gate isn't the skip point), check the 2ND and 3RD copies —
-   one of them may be the actual site whose compare (or whose own state, not yet read at all) diverges.
-   Add matching read-before-compare AND compare-outcome diagnostics to those 2 copies, same n<40||n%128
-   convention, same env var (`ROGUESQ_LOG_VOICE_TRIGGER_CHAIN`) so they land in the same soak/log as
-   `[musyx-gate1]`.
+1. `fixup_game_funcs.py`, `_reach_entry_patch`/`_reach_exit_block` helpers (~line 7913-7943, used by
+   `[reach-update3d-entry]`/`[reach-update3d-exit]`/`[reach-allsongs-entry]`/`[reach-allsongs-exit]`/
+   `[reach-audioseq-exit]`): change `if ({varname}_n < 20)` to `if ({varname}_n < 40 || ({varname}_n % 128)
+   == 0)`. This is a single shared-helper edit, applies to all 5 call sites at once — do not hand-edit
+   each site.
+2. `_tick_audio_seq_patch` (~line 1999-2012, `[tick-audio-seq]`, s107, `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN`):
+   same widening, `if (s_tick_audio_seq_n < 20)` → `if (s_tick_audio_seq_n < 40 || (s_tick_audio_seq_n %
+   128) == 0)`.
+3. Optionally also widen `_tick_all_audio_channels_patch` (~line 2028, `[tick-all-audio-channels]`) while
+   in the area — same bug class, not yet cited in the active hypothesis but cheap to fix now per the
+   batch-instrumentation rule (avoids a 3rd build-run cycle if it turns out relevant).
 
-**Batch whichever lead(s) into ONE `fixup_game_funcs.py` edit + regen + build**, combined with
-`setDisplayMode`'s gate-byte site reversal (6th time) to exercise gate=1 and reproduce the freeze, one
-soak, read the result, update the hypothesis table, **revert `setDisplayMode`'s site again same session**
-(per the established discipline — not safe to ship reversed, deterministically hangs boot). Run the FULL
-soak to completion (600s phase-timeout) like s311 did, not a short capture — s310's shorter capture is
-what made the call #39/40 boundary look ambiguous in the first place; a short capture on this new
-diagnostic risks the same false ambiguity.
+Regen (`fixup_game_funcs.py` edit → clear `N64Recomp/RecompiledFuncs/*.c` → `N64Recomp/build/N64Recomp
+rogue_squadron.toml` → `python3 fixup_game_funcs.py` → `cmake --build build -j8`), re-reverse
+`setDisplayMode`'s gate-byte site a 7th time (`reapplyDisplayMode` stays force-zero), one full 600s soak
+(`ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_INITMUSYX_REACH=1` both already armed in the
+`run_step312rawgate.sh` template — copy it, bump the name), read the result, **revert `setDisplayMode`'s
+site again same session** (mandatory, not safe to ship reversed — deterministic boot hang).
 
-## Environment notes (carried forward, all still valid)
+**Discriminating outcomes**:
+- If `[reach-update3d-entry]` (etc.) print PAST n=20 (i.e. n=20, 21, ... appear, or a `n%128==0` line
+  fires later) → the "soft stop at 19/20" conclusion is REFUTED for these functions; move it to
+  Overturned Conclusions and reopen the search for why `[audtask-dispatch]` (independently, genuinely,
+  resampled-confirmed) still stops at call 20 — likely a break further downstream in the chain from these
+  3 functions to actual RSP `M_AUDTASK` submission, or a 4th function not yet on the gate-consumer list.
+- If they stay silent past n=20 despite the widened cap (no `n=20+` lines, no `n%128==0` echo) → the
+  original "soft stop" conclusion CONFIRMED with a 2nd, decisive line of evidence — the tension with
+  `[audio-gate-raw]`'s constant-1 byte then needs its own explanation (e.g. a per-call condition INSIDE
+  `update3DAudioFrame` itself, past its own entry, that this session's diagnostics don't reach — would
+  need the entry tag itself confirmed still capped-not-stopped first, which this soak settles either way).
 
-- Regen order: `fixup_game_funcs.py` edit → clear `N64Recomp/RecompiledFuncs/*.c` (python3 glob-delete;
-  plain `rm`/`find -delete` are blocked in this sandbox) → `N64Recomp/build/N64Recomp
-  rogue_squadron.toml` (cwd = `N64Recomp` checkout; redirect stdout to a file INSIDE one of the 3 allowed
-  dirs, not `/tmp` — it's blocked) → `python3 fixup_game_funcs.py` (run exactly once, refuses a 2nd run
-  via its own SENTINEL check) → `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
-  build -j8` (cwd = this repo root). `make_elf.py` not needed unless source/symbol mapping changed.
-- Soak driver template: `scratch/s73_post_a_scene/run_step311gate1cap.sh` (s311's recipe, copied from
-  s310's `run_step310audiotrace.sh`) — copy it, don't hand-roll a new script; bump the output-dir name
-  (last line's `${1:-...}` default) and the header comment; only the fixup-script/lib-side edit changes
-  between sessions. `ROGUESQ_LOG_AUDIOTICK_TRACE=1` and `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` are both
-  already armed in it.
-- **Waiting on a soak**: launch via Bash with `run_in_background: true` (avoid `cd` combined with output
-  redirection in the same compound command — use absolute paths and no `cd` instead, or split into
-  separate Bash calls; both triggered approval prompts this session), then use `TaskOutput` with
-  `block: true` and a generous `timeout` (up to 480000ms) — do NOT foreground-poll with a bare `sleep`
-  loop or hand-rolled `pgrep` polling. `run_mission_keys.sh` has its own internal 600s phase-timeout that
-  exits nonzero (`INCONCLUSIVE`, exit 5) on the deterministic hang — that's the EXPECTED outcome when the
-  gate site is reversed, not a soak-tooling failure; the game process is killed automatically on that
-  path (verified again s311: no manual SIGKILL needed).
-- **One game run at a time** — confirm `pgrep -f "build/RogueSquadron64Recomp"` is empty before
-  launching.
-- `scratch/s73_post_a_scene/step311gate1cap/run.log` is s311's saved log (738943 bytes, 7686 lines);
-  `scratch/agent/s311_gate1_lines.txt` and `scratch/agent/s311_reach_tags.txt` have the pre-extracted
-  `[musyx-gate1]`/`[reach-*]` lines if a future session wants to re-verify before building.
+## Environment notes (carried forward, all still valid — see s311/s312 NEXT.md history for detail)
+
+- Regen order and gotchas: `fixup_game_funcs.py` edit → clear `RecompiledFuncs/*.c` (python3 glob-delete)
+  → `N64Recomp/build/N64Recomp rogue_squadron.toml` (cd into `N64Recomp` checkout FIRST as its own bare
+  `cd` command, THEN run the binary with output redirection in a SEPARATE Bash call — combining `cd` and
+  a redirect in one compound command triggers a permission prompt in this sandbox) → `python3
+  fixup_game_funcs.py` (once; audit the patch report for the expected `xN` counts, especially "audio gate
+  patched x1" while reversed / "x2" once reverted) → `cmake --build build -j8` (cwd = this repo root,
+  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` prefix, this exact form is allowlisted
+  verbatim). `make_elf.py` not needed unless source/symbol mapping changed.
+- Soak driver template: `scratch/s73_post_a_scene/run_step312rawgate.sh` (s312's recipe, copied from
+  s311's `run_step311gate1cap.sh`) — copy it, don't hand-roll a new script; bump the output-dir name
+  (last line's `${1:-...}` default) and the header comment. `ROGUESQ_LOG_AUDIOTICK_TRACE=1`,
+  `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1`, and `ROGUESQ_LOG_INITMUSYX_REACH=1` are all already armed in it.
+- Launch the soak via Bash with `run_in_background: true`, then `TaskOutput` with `block: true` and
+  `timeout` up to 600000ms — do NOT foreground-poll. `run_mission_keys.sh`'s own 600s phase-timeout exits
+  nonzero (exit 5, `INCONCLUSIVE`) on the expected deterministic hang — that's success for this soak
+  design, not a tooling failure; the game process is killed automatically on that path. Confirm
+  `pgrep -f "build/RogueSquadron64Recomp"` is empty before AND after.
 - `/tmp` is blocked for redirects — use a path inside this repo, `N64Recomp`, or `rogue_squadron64`
   instead.
-- The `unguarded_walk_candidates.json` sweep (143 sites/43 funcs, 3 addressed) remains the fallback
-  M3-audit work unit if a future session finds M5 blocked and maintenance isn't triggered.
+- `scratch/s73_post_a_scene/step312rawgate/run.log` is s312's saved log (740610 bytes) if a future
+  session wants to re-verify `[audio-gate-raw]`/`[musyx-gate1] taken_skip`/`[reach-*]` counts before
+  building.
 
-HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (same slug, s303-311 — still the active
-investigation thread. s306/s307/s309/s310/s311 have each produced a discriminating result in sequence —
-resetting the iron-rule-8 no-progress counter every time; this is real, converging progress (H1/H4
-refuted, Option A's specific hypothesis ruled out, two distinct freeze boundaries now precisely dated),
-not a stall. Continue the same slug next session.)
+HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (same slug, s303-312 — still the active
+investigation thread. Each of s306/s307/s309/s310/s311/s312 has produced a discriminating result in
+sequence — resetting the iron-rule-8 no-progress counter every time; this is real, converging progress
+(H1/H4 refuted, Option A ruled out, two freeze boundaries dated, and now a methodological gap found in
+the diagnostic underlying the "soft stop" framing itself), not a stall. Continue the same slug next
+session.)

@@ -27557,3 +27557,102 @@ Next work unit (NEXT.md): instrument the actual branch/compare immediately after
 point (not just the raw countdown/period values, which are now ruled out) to see what diverges starting
 call #19 — candidates are the decrement-and-compare outcome itself, or one of the 2 other near-identical
 gate copies s107 found inside `musyxSynthFrame` that this session's patch does not touch.
+
+## Session 312 (2026-08-04) — M5 audio: source-read of musyxSynthFrame finds update3DAudioFrame's own gate is a single stateless byte read (not the countdown maze); a fresh, resampled measurement of that byte contradicts the s307-s311 "3 gate-consumer functions stop at call 19/20" framing and exposes an unwidened print-cap in the diagnostic that produced it
+
+**Work unit**: NEXT.md's lead 1 ("read the actual decrement-and-compare code immediately following
+`[musyx-gate1]`'s load, add a diagnostic logging whether the run branch was taken"). Before building
+blind, did the source-read NEXT.md asked for first — read the full body of `musyxSynthFrame`
+(`funcs_24.c:3146-4670`+) by hand, not just the already-instrumented `[musyx-gate1]` anchor.
+
+**What the source-read found, beyond what NEXT.md's lead 1 anticipated**:
+1. `[musyx-gate1]`'s guarded branch (guest `0x80091484`, `bne $v0,$zero,L_800914B0`) is a simple
+   decrement-then-compare-to-zero: `taken(skip) = (countdown_pre_decrement != 1)`. Since s311 already
+   found `countdown` reads a constant `0` on every sample, this branch is **provably always "skip"**
+   (0 != 1) — algebraically derivable from s311's own data without a new build. Confirmed at runtime
+   this session anyway (see below) rather than trusted blind.
+2. `[musyx-gate1]`, and the 2 other near-identical gate copies s107 found (funcs_24.c:3714, 3841), all
+   read/write the SAME shared global pair (`-0x68EC` countdown / `-0x68E8` period) — a single shared
+   resource across all 3 copies, not 3 independent counters as the "near-identical gate copies" framing
+   might suggest.
+3. **`update3DAudioFrame` (the 1st of the "3 gate-consumer functions") is NOT gated by this countdown
+   maze at all.** It has its own, much simpler, independent gate near the top of `musyxSynthFrame`
+   (`funcs_24.c:3242-3259`, guest `0x800912A8-0x800912BC`): read the raw byte at `0x800A0F50` (the
+   SAME byte `setDisplayMode`/`reapplyDisplayMode`/`initMusyXEngine` force-zero) once, and call
+   `update3DAudioFrame` unconditionally if it's nonzero — no countdown, no period, no other condition
+   in between the read and the call (source-confirmed by direct reading of the generated C, not
+   inferred). This makes `update3DAudioFrame`'s call frequency a **direct, single-variable proxy** for
+   the raw gate byte's value across time, independent of the gate1/2/3 maze entirely.
+
+**Diagnostics landed** (`fixup_game_funcs.py`, `funcs_24.c` only, both under the existing
+`ROGUESQ_LOG_VOICE_TRIGGER_CHAIN` env var so they land in the same soak/log as `[musyx-gate1]` per
+NEXT.md's own convention):
+- `[audio-gate-raw]`: logs the raw `0x800A0F50` byte value fresh at `0x800912AC`, before
+  `update3DAudioFrame`'s call-or-skip branch. Sample cap `n<40||(n%128)==0` (s310/s311's convention).
+- `[musyx-gate1]` extended in place: now also prints `taken_skip=(countdown!=1)`, a direct runtime
+  read of the branch outcome instead of requiring the reader to derive it from `countdown`/`period`.
+
+**Soak**: `scratch/s73_post_a_scene/run_step312rawgate.sh` (copied from s311's template per NEXT.md),
+`setDisplayMode`'s gate-byte site reversed a 6th time (`reapplyDisplayMode` stays force-zero), full
+600s phase-timeout, `INCONCLUSIVE` exit 5 as expected (the now-familiar deterministic boot hang —
+tooling working correctly, not a soak failure). Log: `scratch/s73_post_a_scene/step312rawgate/run.log`
+(740610 bytes).
+
+**Result 1 — `[musyx-gate1]`'s branch outcome, runtime-confirmed**: `taken_skip=1` on all 40/40
+samples (n=0-39), zero exceptions. Matches the algebraic prediction from s311's data exactly. Gate1's
+own copy of the countdown-divider **never takes the "run" path** in this entire window — it cannot be
+the mechanism gating `tickAllActiveSongs`/`tickAudioSequencerFrame`'s calls at all, contrary to the
+implicit assumption behind instrumenting it as "the" gate (s107's naming; s108's original diagnostic).
+
+**Result 2 — decisive, and in tension with 4 prior sessions' framing**: `[audio-gate-raw]` shows
+`byte=1` on **all 40/40 samples (n=0-39)**, constant, no `byte=0` ever observed. Since
+`update3DAudioFrame`'s call is gated on nothing else, this byte staying nonzero through call 39 means
+`update3DAudioFrame` **must** be getting called on every one of `musyxSynthFrame`'s 40 confirmed
+entries (`[synth-entry]`, also 40/40 this soak) — there is no code path between the byte read and the
+call that could suppress it while the byte stays 1.
+
+This directly contradicts the s307/s310/s311 conclusion (repeated verbatim in this file's own s311
+entry above) that `update3DAudioFrame` "fires exactly 20 times (n=0-19), no further output through the
+full 10-minute window." Tracing why: that conclusion rests on `[reach-update3d-entry/exit]`
+(`ROGUESQ_LOG_INITMUSYX_REACH`, landed s306, `_reach_entry_patch`/`_reach_exit_block` helpers in
+`fixup_game_funcs.py`). Reading those helpers' own code (not just their output) found the actual print
+guard: `if (n < 20) { fprintf(...); } n++;` — the counter increments unconditionally but **only prints
+while n<20, with no modulo resample** (unlike `[musyx-gate1]`/`[audio-gate-raw]`/`[audtask-dispatch]`/
+the 4 AUDIOTICK_TRACE tags, which all got a `n%K==0` resample specifically to close this exact gap,
+s310/s311). A log showing exactly 20 lines from this instrument is **consistent with either** "the
+function was called exactly 20 times" **or** "the function kept being called but the print stopped
+printing at line 20" — the two are indistinguishable from this diagnostic's own output. s307-s311 read
+it as the former; this session's fresh, resampled, independent measurement of the byte that gates the
+call points at the latter for at least `update3DAudioFrame`.
+
+**Does this overturn s307-s311's finding?** Not yet fully — flagged as **contested, not overturned**,
+because the direct measurement (true call count of `update3DAudioFrame`/`tickAllActiveSongs`/
+`tickAudioSequencerFrame` past n=20) hasn't been taken; only the *indirect* contradiction (their
+governing byte staying nonzero) has. It's possible the byte stays 1 while some OTHER, not-yet-found
+condition inside `update3DAudioFrame` itself causes a stop after entry (though that would require the
+entry diagnostic, which fires before any internal logic, to also stop — which the flat-cap ambiguity
+prevents distinguishing). The clean, decisive next step is mechanical: apply the same `n<40||n%128==0`
+widening already proven out twice this session (and twice before, s310/s311) to the `GATE3_REACH`
+diagnostic family (`_reach_entry_patch`/`_reach_exit_block`, `fixup_game_funcs.py` ~line 7913) and
+re-run one soak — this directly settles whether the true call counts stop at 20 or continue past it,
+with no new hypotheses required.
+
+**If the widened cap shows continued calls past 20**: the entire "soft stop at call 19/20" causal
+story (s307's original localization, repeated and built on through s311) would need to move to
+"Overturned conclusions" — `[audtask-dispatch]`'s genuine stop (independently resampled, still solid)
+would then need a different explanation than "the 3 gate-consumer functions stop feeding it," e.g. a
+break further downstream in the chain from `tickAllActiveSongs`/`tickAudioSequencerFrame` to actual
+RSP `M_AUDTASK` submission, or in a 4th function not yet on any gate-consumer list.
+
+**Reverted same session**: `setDisplayMode`'s gate-byte site force-zeroed again (`fixup_game_funcs.py`
+regex restored to `0x8008E(?:B40|C88)`, "audio gate patched x2" confirms both sites), regenerated,
+rebuilt clean (0 errors) — crash-free baseline intact. Both new diagnostics kept, armed-but-inert by
+default (env-gated). No `lib/` changes this session (all patching in the `N64Recomp` checkout's
+`fixup_game_funcs.py`, not git-tracked there); no `submodule-patches/export.sh` needed.
+
+Next work unit (NEXT.md): widen `GATE3_REACH`'s print cap (`_reach_entry_patch`/`_reach_exit_block`,
+same `n<40||n%128==0` convention) for `[reach-update3d-entry/exit]`/`[reach-allsongs-entry/exit]`/
+`[reach-audioseq-exit]` (and the matching `tickAudioSequencerFrame` entry tag under
+`ROGUESQ_LOG_VOICE_TRIGGER_CHAIN` if not already resampled — check first), re-reverse `setDisplayMode`'s
+site a 7th time, one full 600s soak — directly measures the true call counts past 20 and settles
+whether the "soft stop" is real or a cap artifact.

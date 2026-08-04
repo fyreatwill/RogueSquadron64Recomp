@@ -37,10 +37,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    ruling out that gate's raw inputs as the cause — keep executing normally for ~20 more calls), then a
    HARD stop at call #39/40 (everything, including `viRetraceHandlerThread`'s own loop, stops
    simultaneously with the RSP task-runner's last dispatch, task #39 — the same event s307/s309 called
-   "the later full-scheduler wedge," now dated against the audio-tick diagnostics too). Next work unit:
-   instrument the branch/compare immediately after `[musyx-gate1]`'s read point (or the 2 other
-   near-identical gate copies s107 found but s311 didn't touch) to find what diverges at call #19.
-   Full narrative: Next-steps item -171 below. `reapplyDisplayMode`'s site remains untouched.
+   "the later full-scheduler wedge," now dated against the audio-tick diagnostics too). s312 executed the
+   follow-up source-read and found `[musyx-gate1]`'s own branch is provably (now runtime-confirmed)
+   ALWAYS "skip" in this window, and — the bigger finding — `update3DAudioFrame`'s own gate (a single raw
+   byte read, independent of the countdown maze) stays constant nonzero through call 39, in direct tension
+   with the s307-s311 "3 gate-consumer functions stop at call 19/20" conclusion. Traced the tension to an
+   unwidened flat `n<20` print cap (no modulo resample) in the diagnostic that produced that conclusion —
+   **contested, not yet overturned**; next work unit widens that cap to measure directly. Full narrative:
+   Next-steps item -172 below. `reapplyDisplayMode`'s site remains untouched.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -213,7 +217,32 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -171 (s311); the next new item takes -172 and is inserted at the top.
+oldest). Current top is -172 (s312); the next new item takes -173 and is inserted at the top.
+
+-172. **(s312) M5 audio de-stubbing: source-read of `musyxSynthFrame` finds `update3DAudioFrame`'s own
+    gate is a single stateless byte read (not the countdown maze); a fresh, resampled measurement of that
+    byte contradicts the s307-s311 "3 gate-consumer functions stop at call 19/20" framing.** Executed
+    NEXT.md's lead 1 (read the actual decrement-and-compare after `[musyx-gate1]`'s load) via a full
+    hand-read of `musyxSynthFrame` (`funcs_24.c:3146`+). Found: (1) `[musyx-gate1]`'s branch is a simple
+    decrement-then-compare-to-zero, provably (and now runtime-confirmed, `taken_skip=1` on 40/40 samples)
+    ALWAYS "skip" in this window — it cannot be gating anything at call 19; (2) `update3DAudioFrame` (1 of
+    the "3 gate-consumer functions") is NOT gated by the countdown maze at all — it has its own,
+    independent single-byte gate (`0x800A0F50`, the same byte `setDisplayMode`/`reapplyDisplayMode`/
+    `initMusyXEngine` force-zero) with nothing else between the read and the call. A new `[audio-gate-raw]`
+    diagnostic logging that byte fresh every call found it **constant at 1 across all 40/40 samples**,
+    meaning `update3DAudioFrame`'s call must be happening on every one of `musyxSynthFrame`'s 40 confirmed
+    entries — directly contradicting the s307/s310/s311 conclusion that it "stops at call 19/20." Traced
+    the contradiction to its source: that conclusion rests on `[reach-update3d-entry/exit]` and siblings
+    (`ROGUESQ_LOG_INITMUSYX_REACH`, s306) and `[tick-audio-seq]` (s107), which use a flat `if (n<20) print`
+    guard with **no modulo resample** — unlike every diagnostic landed since s310 specifically to close
+    this exact ambiguity. A log showing exactly 20 lines from this family is consistent with either "really
+    stopped" or "kept running, print just capped" — indistinguishable without a resample. **Flagged
+    contested, not overturned**: the true call counts past n=20 haven't been directly measured yet. Next
+    work unit: widen the flat caps (`_reach_entry_patch`/`_reach_exit_block`/`_tick_audio_seq_patch`,
+    same `n<40||n%128==0` convention already proven twice this session) and re-soak — settles it directly.
+    `setDisplayMode`'s site re-reverted to force-zero same session (baseline restored, verified rebuilt);
+    both new diagnostics (`[audio-gate-raw]`, `[musyx-gate1] taken_skip`) kept, armed-but-inert by default.
+    Full detail: `PORTING-STATE` Session 312.
 
 -171. **(s311) M5 audio de-stubbing: NEXT.md Option A executed — rules out `[musyx-gate1]`'s raw
     countdown/period inputs as the tick-19 divergence, and an unplanned full-length capture finds a
