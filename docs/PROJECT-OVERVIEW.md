@@ -129,6 +129,13 @@ More sessions were lost to bad measurement than to bad code. Every variety showe
   the probe it guarded had no visible effect whatsoever.
 - **Capture harnesses that outlive the process**, photographing the window underneath and reporting
   it as content.
+- **A downstream instrument measures a downstream fact.** `ROGUESQ_LOG_MUSYX_DMA_CALL`/
+  `_VOICE_TRIGGER_CHAIN` were armed to test whether an RSP task type was ever dispatched, but both
+  sit on a data-gated consequence of dispatch (a PI-DMA sample-streaming call that only fires with
+  real song/voice state) rather than dispatch itself — 0 hits read as "never dispatched" when the
+  true answer was "dispatched every frame, but with no songs registered yet." A mechanism-independent
+  counter placed at the actual dispatch site (s300) gave the real answer in one soak. Trust an
+  instrument only as close to the mechanism under test as it can be placed.
 
 **The rule that emerged:** a null result is worthless until the instrument has passed a positive
 control — mark *everything*, and confirm the screen changes — and a counter is not a control.

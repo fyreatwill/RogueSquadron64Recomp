@@ -26701,3 +26701,95 @@ Method-traps section making the same kind of point) had gone unnoticed across 2 
 
 No code, `lib/`, or tool changes this session — pure doc maintenance, no `lib/` submodule edits so no
 `submodule-patches/export.sh` needed.
+
+## Session 300 (2026-08-04) — executes M5-AUDIO-PLAN.md steps 1-2: resolves the gate/task-submission question and lands the recompiled MusyX ucode behind a validated, default-off env toggle
+
+`docs/CURRENT-TRUTH.md` measured 47,574 bytes at session start, under the 60,000-byte Step-0
+maintenance trigger — proceeded straight to the top-priority work unit (M5, priority 2 per the USER
+DIRECTIVE), continuing the thread `scratch/agent/NEXT.md` left as step 1 of the s298 plan.
+
+### Step 1 — source-read (free, no code/soak)
+
+Traced the audio-enable gate byte (`0x800A0F50`) forward through its 2 relevant readers in
+`N64Recomp/RecompiledFuncs/`:
+
+- `tickMusyXIfActive` (`funcs_23.c:6785`, called from ~15 gameplay sites across
+  `funcs_15/28/29/30/40/41/42/43.c`): a single `beq $v0,$zero,L_8008DA3C` at the top fully
+  short-circuits the function when the gate reads 0, skipping `factor5MutexAcquire`,
+  `tickActiveSongs`, `tickAndReap3DAudioVoices`, `stopAllSynthVoices`, `factor5MutexRelease` entirely
+  — this is where songs/voices would normally get registered.
+- `musyxSynthFrame` (`funcs_24.c:3146`) — the **separate** per-VI-retrace tick (caller confirmed s101
+  to be `viRetraceHandlerThread`, independent of `tickMusyXIfActive`) — reads the same gate byte 5
+  times in its body but only ever uses it to skip narrow slices: `update3DAudioFrame` (1 check) and,
+  inside the per-voice loop, `tickAllActiveSongs`/`tickAudioSequencerFrame` (a 2nd read of the same
+  byte, re-checked once per voice). The voice-mixing call (`musyxMixActiveVoices`) and a DMA-batch
+  call (`LOOKUP_FUNC(ctx->r3)`, confirmed by the s102 diagnostic comment at that exact site to be
+  `submitDmaRequestBatch`) sit on the unconditional path after the gate checks.
+- Corroborating structural evidence: crash family #1 (M5-AUDIO-PLAN.md §3) — the *original incomplete*
+  stub caused a boot-time scheduler wedge (`waitForMusyXAudioTaskDone` spinning on a countdown only
+  real ucode execution decrements). That hang could only happen if the RSP audio-task pipeline already
+  ran every frame regardless of the gate; the existence of that historical crash family is itself
+  independent proof `M_AUDTASK` submission isn't gate-suppressed.
+
+**s173 contradiction also resolved**: item -19's `PORTING-STATE` Session 173 entry inferred the gate
+byte was "nonzero mid-run" from a crash backtrace passing through `tickMusyXIfActive`'s body (only
+reachable past the gate check). A full-tree grep of every store to offset `0xF50` off base `0x800A`
+found exactly **one** site that ever writes something other than a hardcoded literal 0:
+`initMusyXEngine` (`funcs_23.c:9537`, `sb $v0,...` where `$v0=1` on init success) — the exact site
+`N64Recomp/fixup_game_funcs.py:94-101`'s regex force-zeros. `setDisplayMode`, `reapplyDisplayMode`,
+`shutdownMusyXEngine`, `musyxNoopStub` each contain their own native `sb $zero,0xF50($at)` (hardcoded
+0, no patch needed). So under the patch nothing in the recompiled guest code can legitimately set that
+byte nonzero — if s173's inference was accurate, the only remaining explanations are (a) the patch
+wasn't applied in that build, or (b) a wild/corrupting write clobbered ordinary BSS at that address
+(this project's dominant crash theme). Not investigated further — flagged in `docs/M5-AUDIO-PLAN.md`
+§1 for whoever next works crash family #3.
+
+**Conclusion**: `M_AUDTASK` submission is NOT suppressed by the gate. Step 2 is not a provable no-op
+— it's a live first exercise of `factor5_ucode_b`.
+
+### Step 2 — dispatch swap + validation soaks
+
+Landed `factor5_ucode_b` behind a new env toggle rather than an unconditional swap (`src/main/main.cpp`
+`get_rsp_microcode()`'s `M_AUDTASK` case, ~line 594): `ROGUESQ_AUDIO_UCODE` (any non-`0` value) selects
+the recompiled ucode; unset/`0` keeps `musyx_stub`, so default behavior is unchanged pending a human
+decision to flip it on. Also added an always-on `[audtask-dispatch]` counter (first 20 dispatches then
+every 256th) as a ground-truth check independent of the higher-level audio instruments.
+
+That counter turned out to be necessary, not just belt-and-suspenders: the first validation soak (86s
+wall, `ROGUESQ_AUDIO_UCODE=1`, all ~15 audio diagnostic env vars armed per the plan) ran clean — title
+reached 45.1s, full key/stick sequence, 60s hold, 0 `[CRASH]` — but `ROGUESQ_LOG_MUSYX_DMA_CALL` and
+`ROGUESQ_LOG_VOICE_TRIGGER_CHAIN` both logged **zero** hits. Rather than read that as "the ucode path
+wasn't exercised" (a false-null risk explicitly against Iron Rule 1), traced further: those instruments
+sit on `submitDmaRequestBatch`, the **PI-DMA sample-streaming path** (gated on real song/voice state,
+which never gets populated since `tickMusyXIfActive` is fully short-circuited) — a different mechanism
+from RSP task submission entirely, a distinction step 1's source trace had conflated. Added the direct
+`[audtask-dispatch]` counter, rebuilt, re-soaked:
+
+- **Control** (`ROGUESQ_AUDIO_UCODE` unset, `HOLD_S=15`): `real_ucode=0` confirmed from `n=0` at
+  process boot — settles that `M_AUDTASK` dispatch is unconditional and immediate, independent of any
+  toggle. Died mid-hold to a **pre-existing, unrelated** crash: `reserveAndEmitDLEntry` +
+  `submitSceneNodeRender` chain, `x0=0x0000000300000000` (the known constant RDRAM host-base pointer,
+  see Overturned Conclusions s219) — a scene-graph-traversal crash, nothing to do with audio. Confirms
+  the unmodified baseline has nonzero crash rate too; not caused by this session's change.
+- **Treatment** (`ROGUESQ_AUDIO_UCODE=1`, `HOLD_S=15`): `real_ucode=1` confirmed firing continuously
+  from `n=0`, dispatch count into the hundreds within the run. Clean through title (44.8s) → 3xStart →
+  a → probe → 15s hold with stick pulses → grace: **0 `[CRASH]`**, `exit=2: 0`, `UnhandledJump: 0`,
+  `missing-func: 0`.
+
+**Net across both treatment soaks**: ~1,500+ combined `M_AUDTASK`→`factor5_ucode_b` dispatches, 0
+crashes, 0 hangs, title screen reached within the historical 45s baseline both times. `factor5_ucode_b`
+itself is not observably broken under real dispatch load through boot/title/menu. This is 2 clean
+runs, not the "multiple soaks, rate comparison" bar the plan's step 5 sets for crash-family questions
+— sufficient for step 2's narrower "does the ucode itself crash/hang" check only.
+
+**Rules out**: step 2 causing an immediate crash or pre-title hang (2/2 clean). **Shows**: the gate
+byte's effect is narrower than either the goal-stack's framing or a naive reading of step 1's own
+instrument choices suggested — it gates *guest-side bookkeeping* (song/voice registration), not RSP
+task submission, which the SDK-level scheduler runs unconditionally every frame regardless of audio
+content. **Method-trap generalization for `docs/PROJECT-OVERVIEW.md` §4.1** (instruments-that-lie):
+an env-gated diagnostic firing 0 times is not evidence the code path was unreached until a
+mechanism-independent counter confirms it — `musyx-dma-call`/`voice-trigger-chain` measured a
+downstream, data-gated consequence, not the RSP-level fact being tested.
+
+No `lib/` changes this session (`src/main/main.cpp` is this repo's own tree, not a submodule) — no
+`submodule-patches/export.sh` needed.

@@ -25,8 +25,13 @@ Set after the 300-session review. Priority order for upcoming iterations:
    per step. **Correction to the rationale line below**: the crash-family survey found only 1 of 4
    documented audio-adjacent crash families has audio-stub-as-cause *confirmed* (and that one argues
    for caution, not optimism — de-stubbing re-exposes a previously-fatal boot hang); 2 of 4 are
-   plausible-but-unconfirmed, 1 of 4 is confirmed unrelated. Execute the plan's step 1 (free
-   source-read, no code/soak) next.
+   plausible-but-unconfirmed, 1 of 4 is confirmed unrelated. **Steps 1-2 DONE (s300)**: step 1's
+   source-read plus a ground-truth dispatch counter both confirm `M_AUDTASK` is submitted continuously
+   from boot regardless of the gate byte; step 2 landed `factor5_ucode_b` behind a new
+   `ROGUESQ_AUDIO_UCODE` env toggle (default off, `musyx_stub` unchanged) and 2 soaks with it on ran
+   clean (0 crashes, title+menu+hold, ~1,500+ real ucode dispatches). Execute step 3 next (the
+   `waitForAnyAudioSlot` bounded-timeout guard, independent risk reduction before step 4's gate
+   reversal).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -201,6 +206,30 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered -161 (top, newest/highest priority) counting up to -1 (bottom, oldest); relative
 order is unchanged from before the fix. The next new item takes -162 and is inserted at the
 top.
+
+-162. **(s300)** Executes M5-AUDIO-PLAN.md steps 1-2. Step 1 (source-read): traced
+    `tickMusyXIfActive`/`musyxSynthFrame`'s 5 reads of the audio-enable gate byte (`0x800A0F50`,
+    `N64Recomp/RecompiledFuncs/funcs_23.c:6785`/`funcs_24.c:3146`) and found the gate only skips
+    narrow ancillary bookkeeping (`update3DAudioFrame`, `tickAllActiveSongs`,
+    `tickAudioSequencerFrame`) inside `musyxSynthFrame`'s per-VI-retrace tick — not task submission.
+    Also resolved the s173 "gate byte appeared nonzero" contradiction (item -19 lineage): a full-tree
+    grep of every store to that address found exactly one site that can ever write nonzero
+    (`initMusyXEngine`, already force-zeroed by `fixup_game_funcs.py`); if s173's inference was
+    accurate, the only remaining explanation is a wild/corrupting write, not an unpatched legitimate
+    write path — flagged for whoever next touches crash family #3 (`waitForAnyAudioSlot`). Step 2:
+    landed `factor5_ucode_b` behind a new `ROGUESQ_AUDIO_UCODE` env toggle (default off) in
+    `get_rsp_microcode()`'s `M_AUDTASK` case (`src/main/main.cpp:594-620`), plus an always-on
+    `[audtask-dispatch]` counter that gave **ground-truth confirmation** `M_AUDTASK` dispatches
+    continuously from process boot (`n=0`) regardless of the gate or the new toggle — corroborating
+    step 1 more directly than the source trace alone (the `musyx-dma-call`/`voice-trigger-chain`
+    instruments step 1 expected to use turned out to measure PI-DMA sample streaming, not RSP task
+    submission, and fired 0 times — would have read as a false null without the counter). 2 soaks
+    with the toggle on (86s and 33s wall, title→menu→hold): 0 `[CRASH]`, 0 `UnhandledJumpTarget`, 0
+    `[missing-func]`, across ~1,500+ real `factor5_ucode_b` dispatches. 1 control soak (toggle off,
+    default path) crashed to a pre-existing, unrelated crash class
+    (`reserveAndEmitDLEntry`/`submitSceneNodeRender`, the known `x0=0x0000000300000000` RDRAM-base
+    signature) — confirms the baseline has nonzero crash rate too; not a regression from this
+    session's change. Full detail: `PORTING-STATE` Session 300.
 
 -161. **(s298)** Writes `docs/M5-AUDIO-PLAN.md` (design doc, priority-2 per the USER DIRECTIVE),
     pivoting off `tickTextureMaterialExpiry-guard` per the loop's mandatory-pivot rule (3 straight
