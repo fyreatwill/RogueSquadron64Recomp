@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    Overturned Conclusions entries). 35 KB remains a stretch target, not a hard floor — the "Current
    truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
    deliberately; both are used every iteration for phase-gating and build commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 9 times (s303-316), each reproducing an identical deterministic full-boot hang and narrowing it further. Current state (s316, direct measurement): the 3-gate-copy model for what actually fires the tick-producer functions is now contradicted by direct instrumentation — full detail Next-steps item -175.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 10 times (s303-317), each reproducing an identical deterministic full-boot hang and narrowing it further. Current state (s317, direct measurement): the "4th/indirect call site" hypothesis is REFUTED (exhaustive grep — only 3 direct call sites exist, no others); a previously-unknown 4th WRITE site to the shared gate countdown was found instead — full detail Next-steps item -176.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,7 +148,29 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -175 (s316); the next new item takes -176 and is inserted at the top.
+oldest). Current top is -176 (s317); the next new item takes -177 and is inserted at the top.
+
+-176. **(s317) M5 audio de-stubbing: "4th call site" hypothesis REFUTED; found an unlocated 4th WRITE
+    site to the shared gate countdown instead.** Continuing item -175's work unit (find the true call
+    site producing the 37 real calls). Logged `ctx->r31` ($ra) at `tickAudioSequencerFrame`'s entry —
+    result uninformative: this recompiler translates direct `jal`s to plain C calls and never writes
+    `ctx->r31` at the call site, so `ra=0x0` on all 37 samples reflects stale context state, not a real
+    caller address (a general lesson for future indirect-call hunts: `ctx->r31` only means something
+    right after code that explicitly sets it, e.g. stack-restore or an indirect-call trampoline).
+    Redesigned cheaply (no new build): exhaustive textual grep across ALL of `RecompiledFuncs/*.c` for
+    both direct calls and any data reference to `tickAudioSequencerFrame`'s guest address (0x8008D960)
+    found exactly the same 3 known call sites, zero others — **definitively refutes the "4th/indirect
+    call site" hypothesis** carried from s316 (unlike `musyxSynthFrame`'s own s310 indirect-invocation
+    finding, this function truly has no other entry point). Source-read instead found a previously-
+    unknown 4th WRITE to the shared countdown/period pair (`G_BASE-0x68EC`/`-0x68E8`) at
+    `funcs_24.c:4706`/`4710` (guest 0x80091A84/0x80091A8C, inside `initN64RspMixer`,
+    `funcs_24.c:4367`), using a different source register (`ctx->r3`) from all 6 known gate writes
+    (`ctx->r2`) — confirmed a genuinely separate code path. Sets BOTH countdown and period to the same
+    computed value (float-derived via `mfc1`+bit-math). Not yet confirmed as per-frame (an init-time
+    function wouldn't by itself explain gate1's countdown reading exactly 0 on all 40 samples in one
+    run — would need a per-frame or per-call reset). `funcs_32.c:29181` also references `-0x68EC`
+    (address computation, unclassified as read/write, unexamined). `setDisplayMode`'s site re-reverted,
+    baseline restored and rebuilt. Full detail: `PORTING-STATE` Session 317.
 
 -175. **(s316) M5 audio de-stubbing: the 3-gate-copy model for what fires the tick-producer functions
     is unconfirmed — direct instrumentation of gate2/gate3 contradicts it.** Item -174 asked why

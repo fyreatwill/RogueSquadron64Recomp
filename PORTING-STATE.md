@@ -27929,3 +27929,76 @@ never inside `lib/`, so no `submodule-patches/export.sh` is needed.
 HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (unchanged — this is the 10th session producing
 a discriminating result in this lineage: s303/s306/s307/s309/s310/s311/s312/s313/s315/s316, s314 was
 maintenance and doesn't count). Continue same slug next session with the `$ra`-at-entry diagnostic.
+
+## Session 317 (2026-08-04)
+
+M5 audio de-stubbing, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`, continuing s316's
+work unit: find the TRUE call site(s) producing the 37 real calls to
+`tickAllActiveSongs`/`tickAudioSequencerFrame` s316 found unaccounted for by all 3 known gate copies.
+
+**Step 1 (per NEXT.md): logged `ctx->r31` ($ra) at `tickAudioSequencerFrame`'s own entry.** Extended the
+existing `_tick_audio_seq_patch` in `fixup_game_funcs.py` (cheaper than a new patch, as instructed) to
+also print `ra=0x%08X` from `ctx->r31`. Regenerated (`N64Recomp` -> `fixup_game_funcs.py` -> cmake build,
+patch report confirmed `x1`), hand-reversed `setDisplayMode`'s gate-byte site (0x8008EB40) a 10th time to
+match s315/s316 run conditions, ran one soak (`run_step317ratrace.sh`, copied from s316's template). Soak
+hit the expected deterministic 600s phase-timeout (exit 5, INCONCLUSIVE by design, `pgrep` empty before
+and after).
+
+**Result: all 37 samples read `ra=0x00000000`.** Initially looked like it might discriminate against the
+3 known gate return addresses (0x800914A4/0x80091568/0x8009161C) -- none matched, all zero. **But this is
+an instrument-design flaw, not a real result.** Source-read of the actual call sites
+(`RecompiledFuncs/funcs_24.c:3629/3778/3920`, e.g. `tickAudioSequencerFrame(rdram, ctx);` immediately
+following the `// 0x800914A4: jal 0x8008D960` comment) confirms this recompiler translates direct `jal`s
+into **plain C function calls** -- it never writes `ctx->r31` at the call site itself. `ctx->r31` only
+carries real return-address information for *indirect* calls (function-pointer dispatch through a lookup
+table), never for the plain-`jal`-translated calls all 3 known gates use. So `ra=0` at
+`tickAudioSequencerFrame`'s entry is simply whatever stale value `ctx->r31` held from an earlier,
+unrelated context -- it cannot distinguish "which of the 3 gates called this" and the test as designed
+could never have discriminated the hypotheses. Logging this honestly rather than over-claiming: this
+result is **uninformative**, not a null result about the mechanism.
+
+**Step 2 (redesigned cheaply, no new build): exhaustively grepped for a 4th call site.** Since the $ra
+approach couldn't work, fell back to pure text search across ALL of `RecompiledFuncs/*.c` (not just
+`funcs_24.c`) for both direct calls (`tickAudioSequencerFrame(rdram`) and any reference to its guest
+address (`8008D960`, for an indirect/function-pointer dispatch pattern à la s310's `musyxSynthFrame`
+finding). Result: **exactly the same 3 direct call sites system-wide, zero indirect/data-load references
+anywhere.** This DEFINITIVELY REFUTES the "4th, unlocated call site" hypothesis carried forward from
+s316 -- there is no other way into `tickAudioSequencerFrame` in the entire recompiled codebase, direct or
+indirect. Whatever produces the 37 real calls MUST originate from one of the 3 known gates; s316's
+"all 3 gates show 0 taken calls" measurement must itself have a flaw or missing piece, not a missing site.
+
+**Step 3 (source-read, no build): found a 4th, previously-unknown WRITE site to the shared countdown.**
+The 3 known gates share one countdown/period pair at `G_BASE-0x68EC`/`G_BASE-0x68E8`; s316 documented 6
+writes total (2 per gate: decrement-and-store, reload-from-period). Grepped ALL writes to `-0X68EC`
+across `RecompiledFuncs/*.c` and found a 7th: `funcs_24.c:4706`/`4710`
+(`MEM_W(-0X68E8/-0X68EC, ctx->r1) = ctx->r3;`, guest 0x80091A84/0x80091A8C), using `ctx->r3` -- a
+DIFFERENT source register from all 6 known gate writes (which all use `ctx->r2`), confirming this is a
+genuinely separate code path, not a duplicate detection. This write sets BOTH the countdown AND its
+period to the SAME computed value (`ctx->r3`, derived from an `mfc1`-then-bit-math sequence starting at
+0x80091A68 -- looks like a float-to-fixed-point rate/divisor conversion). Located the containing function:
+`initN64RspMixer` (starts `funcs_24.c:4367`) -- an init-time function, not obviously a per-frame call, so
+it does not by itself explain gate1's countdown reading exactly 0 on all 40 samples in one run (that would
+need a per-frame or per-call reset). Also noted `funcs_32.c:29181` computes an address using `-0X68EC`
+(`ctx->r4 = ADD32(ctx->r4, -0X68EC)`) -- not yet classified as a read or write, unexamined this session.
+
+`setDisplayMode`'s site re-reverted, baseline restored and rebuilt (confirmed
+`MEM_B(0XF50, ctx->r1) = 0;` in `RecompiledFuncs/funcs_23.c:9788` before ending session, `cmake --build`
+clean). All edits this session were in the standalone `~/Documents/Tools/N64Recomp` checkout
+(`fixup_game_funcs.py`, `RecompiledFuncs/funcs_23.c`/`funcs_24.c`), never inside `lib/`, so no
+`submodule-patches/export.sh` needed. `lib/N64ModernRuntime`/`lib/rt64` dirty status in `git status` is
+pre-existing, unrelated to this session.
+
+**Rules learned (worth remembering for future indirect-call-hunting sessions):** `ctx->r31` in this
+recompiler's codegen is NOT a general-purpose "log the caller" instrument -- it's only meaningful right
+after code that explicitly assigns it (stack-restore sequences, or indirect-call trampolines that compute
+a real return address). For any function reached exclusively via direct `jal`s (the common case), logging
+`ctx->r31` at entry tells you nothing about which call site fired; the correct technique is either (a) a
+distinct sentinel write at each call site read back inside the callee, or (b) exhaustive textual/data-flow
+search for the guest address, which is what actually discriminated the "4th call site" hypothesis here.
+
+`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang` (unchanged -- this is the 11th session
+producing a discriminating result in this lineage: s303/s306/s307/s309/s310/s311/s312/s313/s315/s316/s317,
+s314 was maintenance and doesn't count). Continue same slug next session: instrument `initN64RspMixer`'s
+call count and the `ctx->r3` value it writes into the shared countdown/period pair, to test whether this
+write (or another still-unlocated one) is what's resetting the countdown before gate1 can ever accumulate
+to 1.
