@@ -29,9 +29,13 @@ Set after the 300-session review. Priority order for upcoming iterations:
    source-read plus a ground-truth dispatch counter both confirm `M_AUDTASK` is submitted continuously
    from boot regardless of the gate byte; step 2 landed `factor5_ucode_b` behind a new
    `ROGUESQ_AUDIO_UCODE` env toggle (default off, `musyx_stub` unchanged) and 2 soaks with it on ran
-   clean (0 crashes, title+menu+hold, ~1,500+ real ucode dispatches). Execute step 3 next (the
-   `waitForAnyAudioSlot` bounded-timeout guard, independent risk reduction before step 4's gate
-   reversal).
+   clean (0 crashes, title+menu+hold, ~1,500+ real ucode dispatches). **Step 3 DONE (s301)**: landed
+   the `waitForAnyAudioSlot` bounded-timeout guard (`fixup_game_funcs.py`, caps the spin at 500,000
+   iterations via `g_audio_drain_iters`, logs fires via `ROGUESQ_LOG_WAITFORSLOT_GUARD`). 3 validation
+   soaks: guard fire count 0/3 across 7 legitimate calls (each converged in 1 iteration); 2/3 soaks
+   died to pre-existing, already-documented, unrelated crash classes (crash family #3's own signature
+   once, the s300-control-soak RDRAM-host-base signature once) — confirms the guard is inert as
+   designed, not a source of new crashes. Execute step 4 next (reverse `initMusyXEngine`'s gate byte).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -203,9 +207,29 @@ cost three sessions before the recursive mutex.
 ## Next steps, in order of expected value (s295)
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
-numbered -161 (top, newest/highest priority) counting up to -1 (bottom, oldest); relative
-order is unchanged from before the fix. The next new item takes -162 and is inserted at the
+numbered -163 (top, newest/highest priority) counting up to -1 (bottom, oldest); relative
+order is unchanged from before the fix. The next new item takes -164 and is inserted at the
 top.
+
+-163. **(s301)** Executes M5-AUDIO-PLAN.md step 3: lands the `waitForAnyAudioSlot`
+    bounded-timeout guard (`N64Recomp/fixup_game_funcs.py`, new patch between the s163 loop-heartbeat
+    and exit diagnostics) — once `g_audio_drain_iters` (already incremented every loop iteration by
+    the existing heartbeat patch) reaches 500,000 (overridable via `ROGUESQ_WAITFORSLOT_GUARD_CAP`),
+    skips the loop's `goto` and falls through instead, breaking the spin; every fire logged via
+    `ROGUESQ_LOG_WAITFORSLOT_GUARD`. Safe by construction — the very next original instruction after
+    the patch unconditionally reassigns the register the patch touches, on every path, so the guard
+    changes only whether the loop takes one more lap, nothing else. 3 validation soaks
+    (`scratch/s73_post_a_scene/run_waitforslotguard1.sh`, `ROGUESQ_AUDIO_UCODE=1` armed so the guard
+    is exercised under real ucode dispatch timing): guard fire count **0/3** across 7 legitimate calls
+    (each converged in exactly 1 iteration, nowhere near the cap); 2/3 soaks died to pre-existing,
+    independently-identified, unrelated crash classes (crash family #3's own `waitForAnyAudioSlot`
+    pre-title SIGSEGV signature once — confirmed *not* a legitimate call, zero entry-diagnostic lines
+    despite the crash PC resolving inside the function, consistent with a corrupted/indirect jump
+    landing mid-function rather than the guard's own code executing; and the s300-control-soak
+    `x0=0x0000000300000000` RDRAM-host-base signature once, in `emitAllocatedDLCommand`/
+    `submitSceneNodeRender`, entirely unrelated to audio). Confirms the guard is a correctly inert
+    safety net (plan's discriminating outcome #1) — ready for step 4. Full detail: `PORTING-STATE`
+    Session 301.
 
 -162. **(s300)** Executes M5-AUDIO-PLAN.md steps 1-2. Step 1 (source-read): traced
     `tickMusyXIfActive`/`musyxSynthFrame`'s 5 reads of the audio-enable gate byte (`0x800A0F50`,

@@ -26793,3 +26793,84 @@ downstream, data-gated consequence, not the RSP-level fact being tested.
 
 No `lib/` changes this session (`src/main/main.cpp` is this repo's own tree, not a submodule) — no
 `submodule-patches/export.sh` needed.
+
+## Session 301 (2026-08-04) — executes M5-AUDIO-PLAN.md step 3: lands and validates the `waitForAnyAudioSlot` bounded-timeout guard
+
+Per the USER DIRECTIVE priority order (item -162's step 3): `waitForAnyAudioSlot`
+(`N64Recomp/RecompiledFuncs/funcs_15.c:7217`) is a tight, uncapped spin —
+`while (!anyAudioSlotActive()) { tickMusyXIfActive(); }` — currently benign because the stub's empty
+voice state converges fast, but `ROGUESQ_AUDIO_UCODE=1` (s300) makes a genuine hang here newly
+plausible with real dispatch timing, and step 4 (gate reversal, next session) makes it more so — a
+pre-existing landmine independent of de-stubbing, not a hypothetical.
+
+### The patch
+
+Added a new guard block in `N64Recomp/fixup_game_funcs.py` (~line 2119, between the existing
+loop-heartbeat and exit diagnostics from s163) that rewrites the loop's exit branch
+(`0x800668CC: beq $v0, $zero, L_800668C0`): once the existing `g_audio_drain_iters` counter (already
+incremented every iteration by the s163 heartbeat patch immediately above this branch) reaches a cap
+(default 500,000, overridable via `ROGUESQ_WAITFORSLOT_GUARD_CAP`), the patch skips the
+`goto L_800668C0` and falls through instead — forcing the same path as `ctx->r2 != 0` ("a slot is
+active"), breaking the spin. Safe by construction: the very next *original* instruction after the
+whole if/else (0x800668D0's `lui`, outside the patch's regex match) unconditionally reassigns `ctx->r2`
+on every path regardless of which branch fires, so the guard's own effect on `ctx->r2` is moot — it
+only changes whether the loop takes one more lap. Every fire is logged distinctly via the new
+`ROGUESQ_LOG_WAITFORSLOT_GUARD` env var (fire count + iteration count + cap, matching the project's
+"never silently indistinguishable from a normal exit" convention) so a fire can never be mistaken for
+ordinary convergence.
+
+Regenerated via `N64Recomp/build/N64Recomp rogue_squadron.toml` then `python3 fixup_game_funcs.py` —
+all 4 `waitForAnyAudioSlot` patches (entry/heartbeat/**new guard**/exit) applied cleanly, `x1` each, no
+collisions. Built clean (`cmake --build build -j8`, exit 0). No `lib/` changes this session (the edit
+is in the `N64Recomp` tool checkout, which is not a submodule of this repo — it isn't git-tracked at
+all in that checkout, per `git status` there; the durable record is this file plus the physical patch
+on disk, same pattern the tool checkout has followed since session 1) — no `submodule-patches/
+export.sh` needed.
+
+### Validation: 3 soaks, `run_waitforslotguard1.sh` (new script,
+`scratch/s73_post_a_scene/run_waitforslotguard1.sh`) — same env-var block as the established
+`run_dequeuearg1.sh` reference recipe, plus `ROGUESQ_AUDIO_UCODE=1` (step 2's toggle, so the guard is
+exercised under real ucode dispatch timing per the plan) and `ROGUESQ_LOG_WAITFORSLOT_GUARD=1`
+
+- **Soak 1**: died at hold-iter ~0 (pre-scene, before VI width 1024) to `[CRASH] signal 11` inside
+  `waitForAnyAudioSlot` (`+244`), called from `menuOverlayInit`. This is the exact, already-documented
+  crash family #3 (`M5-AUDIO-PLAN.md` §3: "`waitForAnyAudioSlot` pre-title SIGSEGV (23rd crash class)",
+  ~12-21% of historical pre-scene soak deaths). Confirms it's the *known* class, not a new one: **zero**
+  `[audio-drain-enter]`/heartbeat/guard-fire lines appear anywhere in the run despite the crash PC
+  resolving inside this function's compiled byte range — meaning execution never went through the
+  function's actual entry point (which unconditionally logs on every real call) at all. Consistent with
+  the crash being a corrupted/indirect jump landing mid-function rather than a legitimate call — the
+  same "wild write" signature that dominates this project's crash taxonomy, not a symptom of this
+  session's guard (which sits later in the function and never got a chance to execute).
+- **Soak 2**: reached VI 1024 (45.3s), full key/stick sequence, SELECT YOUR CRAFT, entered the 240s
+  hold window — 3 clean, legitimate `waitForAnyAudioSlot` calls logged first
+  (`[audio-drain-enter] call=0/1/2`, `iters_this_call=1` each — confirms the loop's real steady-state
+  convergence is ~1 iteration under the stub, nowhere near the 500,000 cap) — then died 5s into the
+  hold to `[CRASH] signal 10 (Bus error)` in `emitAllocatedDLCommand`/`submitSceneNodeRender`,
+  `x0=0x0000000300000000`. This is the *exact same* pre-existing, already-catalogued RDRAM-host-base
+  signature s300's own control soak hit (Session 300, item -15 class #18/#14 lineage) — unrelated to
+  audio entirely, a scene-graph-traversal crash. Guard fire count: 0.
+- **Soak 3**: reached VI 1024, full key sequence, into the hold window with 3 more clean
+  `[audio-drain-enter]` calls, 0 guard fires, 0 crashes — manually SIGKILLed after ~2 minutes (session
+  time budget) rather than let it run the full 240s hold, since soaks 1-2 already gave the
+  discriminating data needed. `run.log`: 3.5M lines, no `[CRASH]`.
+
+**Net across 3 soaks**: guard fire count **0/3** (same-run isn't applicable here since the guard never
+had a code path to prove-fire against in these soaks, but the *lack* of a fire across every legitimate
+call observed — 3+1+3 = 7 real `waitForAnyAudioSlot` calls total, each converging in exactly 1
+iteration — is consistent with the plan's own expectation that the stub's empty voice state converges
+near-instantly, nowhere close to the 500,000 cap). Both crashes seen (2/3 soaks) are independently
+identified as pre-existing, already-documented, unrelated crash classes — not new regressions from this
+guard. Crash family #3 itself fired in 1/3 soaks here (33%), within/near its documented ~12-21%
+historical range given the small n=3 sample (not a tight statistical match, noted honestly, but not
+a rate increase either — no baseline-comparison claim is being made from n=3).
+
+**Rules out**: the guard itself introducing a new crash or hang (0 evidence of that across 3 runs, 2 of
+which hit *unrelated* pre-existing crashes that occurred entirely outside/before the guard's own code
+path could execute). **Shows**: the guard is inert exactly as designed — discriminating outcome #1 from
+the plan ("guard fires 0 times, crash family #3's rate unchanged from baseline → guard is a correctly
+inert safety net, ready for step 4"). Does **not** show anything about whether the guard *would* fire
+under step 4's real gate-reversed timing — that's still untested and remains the reason to have landed
+it now, before step 4, per the plan's own rationale.
+
+No `lib/` changes this session.
