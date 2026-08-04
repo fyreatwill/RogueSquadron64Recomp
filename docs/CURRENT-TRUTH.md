@@ -18,12 +18,13 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: design doc DONE (s298, `docs/M5-AUDIO-PLAN.md`) — a 6-step incremental
    de-stubbing sequence, one validation soak per step. Steps 1-3 DONE and validated clean (s300/301).
    Step 4 (reversing each of the 3 audio-gate-byte force-zero sites, one per session) is IN PROGRESS:
-   `initMusyXEngine`'s site reversed and validated s302; `setDisplayMode`'s site attempted s303,
-   produced a deterministic full-boot hang, re-reverted same session — **do not retry it** until
-   NEXT.md's reachability-counter work unit resolves the open question s304 surfaced (was
-   `initMusyXEngine`'s s302 "clean" validation even exercising gate=1, or is `initMusyXEngine` unreached
-   code?). `reapplyDisplayMode`'s site remains untouched. Full narrative: Next-steps items -166..-161
-   below.
+   `initMusyXEngine`'s site reversed s302, but s306's reachability counter (2 soaks) found
+   `initMusyXEngine` is never actually called — s302's validation is retroactively meaningless (see
+   Overturned Conclusions), and gate=1 has still never been exercised by any soak. `setDisplayMode`'s
+   site attempted s303, produced a deterministic full-boot hang, re-reverted same session. Next work
+   unit: re-reverse `setDisplayMode`'s site with s306's 3 gate-consumer entry/exit tags already armed,
+   to localize the hang instead of a black-box reversal. `reapplyDisplayMode`'s site remains untouched.
+   Full narrative: Next-steps items -167..-161 below.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -196,7 +197,35 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -166 (s304); the next new item takes -167 and is inserted at the top.
+oldest). Current top is -167 (s306); the next new item takes -168 and is inserted at the top.
+
+-167. **(s306)** Settles the s304-raised open question with a same-run-positive-controlled entry
+    counter (`fixup_game_funcs.py`, env `ROGUESQ_LOG_INITMUSYX_REACH`): **`initMusyXEngine` is
+    genuinely never called in the current recompiled game — reachability REFUTED, with 2 independent
+    soaks confirming a clean, controlled null.** Soak 1 (`step5reach1`, died early to crash family #3's
+    known `waitForAnyAudioSlot` pre-title SIGSEGV signature, unrelated to this change — zero
+    `[audio-drain-enter]` lines, matching the exact s301-documented signature, not a new regression):
+    `[reach-init-musyx]` 0 fires, `[reach-reset-musyx-CONTROL]` 2 fires. Soak 2 (`step5reach1b`, full
+    boot → title → SELECT YOUR CRAFT → complete 240s hold with the full stick schedule, **0 crashes**,
+    300s total): `[reach-init-musyx]` 0 fires across the entire run, `[reach-reset-musyx-CONTROL]` 7
+    fires (`n=0..6`) — confirms the logging/`getenv` plumbing itself works throughout (positive control
+    holds in both runs), so the null on `initMusyXEngine` is real, not a broken instrument. The 3
+    gate-consumer tags batched in the same patch (`[reach-update3d-entry/exit]`,
+    `[reach-allsongs-entry/exit]`, `[reach-audioseq-exit]`) also never fired in either soak — fully
+    explained by the still-unchanged baseline (`setDisplayMode`/`reapplyDisplayMode` still force-zero
+    the gate byte every call, per s303's revert), not new information on its own, but now armed and
+    ready for the next site-reversal soak. **This retroactively invalidates s302's validation** (item
+    -164 below, also flagged under Overturned Conclusions): s302 reversed `initMusyXEngine`'s gate-byte
+    site and reported "0/2 family #1 recurrence" as evidence the reversal was safe, but since
+    `initMusyXEngine` never executes, that reversed code path was never exercised in either of s302's
+    soaks — the clean result reflects dead code, not a validated gate=1 state. **Net effect on the M5
+    plan**: gate=1 has *still* never been exercised in any soak to date; s303's `setDisplayMode` hang
+    remains the only time it was ever attempted, and remains the sole evidence about what happens when
+    it is. Next work unit (NEXT.md): re-reverse `setDisplayMode`'s site (`0x8008EB40`) with the 3
+    gate-consumer tags and `ROGUESQ_LOG_INITMUSYX_REACH` already armed, soak, and read which (if any) of
+    `update3DAudioFrame`/`tickAllActiveSongs`/`tickAudioSequencerFrame` logs entry but never logs exit —
+    localizes the hang instead of re-running s303's undifferentiated black-box reversal. Full detail:
+    `PORTING-STATE` Session 306.
 
 -166. **(s304)** Source-read (no build/soak): traces what `setDisplayMode`/`initMusyXEngine` compute
     into `$v0` before their gate-byte writes. **Refutes both of s303's anticipated hypotheses**: both
@@ -573,6 +602,13 @@ conclusions are among the oldest in the file, not the newest.
 - **(s87→s88)** "8th crash class is self-recursion in `advancePlayerAnimationPhase`" — that call site
   belongs to a different, unreached function; an instrument showed constant stack depth across 3296
   calls, no recursion. PORTING-STATE 88.
+- **(s302→s306)** "reversing `initMusyXEngine`'s gate-byte force-zero site validated safely (0/2 family
+  #1 recurrence over 2 soaks)" — a same-run-positive-controlled entry counter (2 soaks) found
+  `initMusyXEngine` is never called at all; the reversed write never executed in either s302 soak, so
+  their clean result reflects dead code, not a validated gate=1 state. Believable: the soaks genuinely
+  were clean (0 crashes matching family #1, real ucode dispatch confirmed throughout) — nothing in
+  their own signal suggested the reversed line hadn't run; only a dedicated reachability instrument
+  could show that. Gate=1 has still never been exercised by any soak to date. PORTING-STATE 306.
 
 ### Dead ends — labelled as such in the log, do not retry
 

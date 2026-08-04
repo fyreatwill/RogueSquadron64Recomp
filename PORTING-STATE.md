@@ -27106,3 +27106,107 @@ on future passes when an active investigation is mid-stream.
 No `lib/` changes this session (pure doc edit). No build, no soak. M5-audio's active work unit
 (NEXT.md: settle `initMusyXEngine` reachability with a same-run-positive-controlled entry counter,
 batched with the 3 gate-consumer function tags) is unchanged and remains the next session's work.
+
+## Session 306 (2026-08-04) — settles the s304 reachability question: `initMusyXEngine` is never called, s302's gate-reversal validation was retroactively meaningless
+
+Executes NEXT.md's step-1/step-2 work unit exactly as planned: a same-run-positive-controlled entry
+counter on `initMusyXEngine`, batched with entry/exit tags on the 3 functions `musyxSynthFrame` gates on
+the audio-enable byte (per s300 item -162: `update3DAudioFrame`, `tickAllActiveSongs`,
+`tickAudioSequencerFrame`).
+
+**Instrument** (`fixup_game_funcs.py`, `N64Recomp` checkout, ~180 new lines): one shared env gate,
+`ROGUESQ_LOG_INITMUSYX_REACH`, arms 6 new counters —
+- `[reach-init-musyx]` — `initMusyXEngine` entry (THE TEST). Anchored on the function's unique
+  signature + boilerplate (`funcs_23.c`), same pattern as the existing s106/s107 entry-diagnostic
+  patches.
+- `[reach-reset-musyx-CONTROL]` — `resetMusyXEngineState` entry (THE POSITIVE CONTROL). This function is
+  called unconditionally from 3 sites: inside `initMusyXEngine` itself, and independently from both
+  `setDisplayMode` and `reapplyDisplayMode` (both confirmed called at/after boot regardless of the gate
+  patches). If the logging plumbing itself were broken, this control would also read 0 — distinguishing
+  a broken instrument from a genuine null on `initMusyXEngine` alone.
+- `[reach-update3d-entry]` / `[reach-update3d-exit]` — `update3DAudioFrame` (`funcs_26.c`). Exit tag
+  anchored on the function's confirmed-unique single `return;` statement (verified via grep: exactly one
+  `return;` in the function's line range, reached by every internal control-flow path via label
+  fallthrough — no early-return could bypass it), further anchored by the following function's unique
+  signature to guarantee the regex only matches this one occurrence.
+- `[reach-allsongs-entry]` / `[reach-allsongs-exit]` — `tickAllActiveSongs` (`funcs_25.c`), same
+  single-return-anchor pattern.
+- `[reach-audioseq-exit]` — `tickAudioSequencerFrame` (`funcs_23.c`) exit only; entry is already covered
+  by the pre-existing s107 `[tick-audio-seq]` diagnostic under `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN` (already
+  armed in the soak recipe), so no duplicate entry counter was added.
+
+All 6 patches applied cleanly (`x1` each, no collisions) against a freshly cleared/regenerated
+`RecompiledFuncs/` (`N64Recomp rogue_squadron.toml` then `fixup_game_funcs.py`; `make_elf.py` skipped —
+no source/symbol-mapping change). Clean `cmake --build build -j8` (only pre-existing warnings, exit 0).
+No `lib/` changes this session (edit is in the `N64Recomp` tool checkout, not git-tracked there, same as
+every prior fixup-script session) — no `submodule-patches/export.sh` needed.
+
+### Validation: 2 soaks (new script `scratch/s73_post_a_scene/run_step5reach1.sh`, copied from s302's
+`run_step4gate2.sh` template with `ROGUESQ_LOG_INITMUSYX_REACH=1` added, everything else unchanged —
+current baseline unchanged: `initMusyXEngine`'s gate-byte site still reversed per s302,
+`setDisplayMode`/`reapplyDisplayMode` still force-zeroed per s303's revert)
+
+- **Soak 1** (`step5reach1`): died within ~120s, before VI width reached 1024, to `[CRASH] signal 11` in
+  `waitForAnyAudioSlot+244`, called from `menuOverlayInit`. Cross-checked against the already-catalogued
+  crash family #3 signature (s301, item -163: "`waitForAnyAudioSlot` pre-title SIGSEGV, ~12-21% of
+  historical pre-scene soak deaths") — exact match: zero `[audio-drain-enter]` lines anywhere in the run
+  despite the crash PC resolving inside the function's compiled byte range (confirmed via `grep -c
+  audio-drain`, 0 hits), meaning execution never went through the function's real entry point — same
+  "corrupted/indirect jump landing mid-function" signature s301 documented, not a new regression from
+  this session's log-only instrumentation. `WAITFORSLOT_GUARD` fired 0 times (consistent — this crash
+  never reaches the guarded loop). `[audtask-dispatch]` fired 21 times with `real_ucode=1` throughout,
+  confirming real ucode dispatch ran up to the crash point. **Reach counters at crash time**:
+  `[reach-init-musyx]` 0 fires, `[reach-reset-musyx-CONTROL]` 2 fires (`n=0`, `n=1`) — the positive
+  control held (plumbing works) while the test counter stayed at zero, even though boot had already
+  progressed past `setDisplayMode`'s boot-once call and into at least one `reapplyDisplayMode` video-frame
+  tick (inferred from the control firing twice) before the unrelated crash cut the run short.
+- **Soak 2** (`step5reach1b`): full length — reached VI width 1024 at 45.6s, through the full key/stick
+  sequence (start, sr, sl, su, start, a), SELECT YOUR CRAFT stable, the complete 240s hold window with
+  all 5 scheduled stick inputs, then a clean scripted shutdown at wall=300s. **Zero crashes** (`CRASH: 0`
+  in the run summary), 5,900 LLE tasks dispatched, `fs max: 3994`, last phase line at 145.2s still
+  advancing normally (`vi_width=640`, `update_screen #8680`). `[audtask-dispatch]` fired 59 times.
+  **Reach counters across the entire 300s run**: `[reach-init-musyx]` **0 fires** — none, across boot,
+  title, craft-select, and the full hold window with repeated stick/button presses that would plausibly
+  trigger any lazy/on-demand audio-subsystem re-init if one existed. `[reach-reset-musyx-CONTROL]` **7
+  fires** (`n=0` through `n=6`) — the positive control held throughout the entire run, confirming the
+  logging/`getenv` plumbing genuinely works for the full 300s, not just briefly. The 3 gate-consumer tags
+  (`reach-update3d-*`, `reach-allsongs-*`, `reach-audioseq-exit`) also never fired in this soak — fully
+  explained by the unchanged baseline (gate byte still force-zeroed by `setDisplayMode`/
+  `reapplyDisplayMode` every call), not new information by itself, but the instrument is now confirmed
+  working and in place for the next site-reversal soak.
+
+**Net across 2 soaks**: `[reach-init-musyx]` **0/2 soaks, 0 fires total** (one soak ran the full 300s,
+the other ran ~120s before an independently-explained, already-catalogued unrelated crash) vs.
+`[reach-reset-musyx-CONTROL]` firing in both soaks (2 and 7 times respectively) — a clean, controlled,
+twice-reproduced null. Per iron rule 4 (two independent lines of evidence), this is no longer
+single-source: two soaks, one of them a full-length crash-free run, both agree.
+
+**Rules out**: a broken logging instrument (the positive control fired in both runs, including
+throughout a full 300s run). A "just hasn't happened yet in this particular soak" explanation (soak 2 ran
+the complete boot→hold sequence with no crash and still 0 fires). **Confirms**: `initMusyXEngine` is
+genuinely unreached code in the current recompiled game — no code path anywhere in `RecompiledFuncs/`
+calls it, matching s304's text-grep finding but now with runtime confirmation instead of a static-only
+single source.
+
+**Retroactively invalidates s302's validation** (CURRENT-TRUTH item -164, also added to Overturned
+Conclusions this session): s302 reversed `initMusyXEngine`'s gate-byte force-zero site and reported "0/2
+family #1 recurrence" across 2 soaks as evidence the reversal was safe under real gate=1 conditions.
+Since `initMusyXEngine` never executes, the reversed write never actually ran in either of those soaks —
+their clean result reflects dead code, not a validated gate=1 state. The soaks genuinely were clean and
+nothing in their own signal suggested this; only a dedicated reachability instrument could show it.
+
+**Net effect on the M5 plan**: gate=1 has *still* never been exercised by any soak conducted so far.
+s303's `setDisplayMode` reversal (which produced a deterministic full-boot hang, same session
+re-reverted) remains the only attempt that ever put a nonzero value in the gate byte during a real run —
+and remains the sole evidence for what happens when it is. The 3 gate-consumer entry/exit tags landed
+this session are now armed and waiting for that next attempt.
+
+Updated `docs/CURRENT-TRUTH.md`: new item -167 (this session), USER DIRECTIVE section's M5 paragraph
+updated to reflect the overturned validation, new Overturned Conclusions entry for s302's item -164.
+File size 54,550 → 58,063 bytes (+3,513) — still under the 60,000-byte Step-0 maintenance trigger, but
+close enough (1,937-byte margin) that the next M5 session write-up will likely cross it.
+
+Next work unit (NEXT.md): re-reverse `setDisplayMode`'s gate-byte site (`0x8008EB40`) with this
+session's 3 gate-consumer tags and `ROGUESQ_LOG_INITMUSYX_REACH` already armed — soak, and read which (if
+any) of `update3DAudioFrame`/`tickAllActiveSongs`/`tickAudioSequencerFrame` logs entry but never logs
+exit, localizing the hang site instead of repeating s303's undifferentiated black-box reversal.
