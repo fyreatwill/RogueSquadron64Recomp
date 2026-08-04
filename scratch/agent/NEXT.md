@@ -1,82 +1,83 @@
-# NEXT work unit — M5-AUDIO-PLAN.md step 4: reverse `initMusyXEngine`'s gate-byte site
+# NEXT work unit — M5-AUDIO-PLAN.md step 4 (continued): reverse `setDisplayMode`'s gate-byte site
 
-## Context (read `docs/M5-AUDIO-PLAN.md` §4 step 4, and §1 for the 3 gate-byte sites — condensed
+## Context (read `docs/M5-AUDIO-PLAN.md` §4 step 4, and CURRENT-TRUTH Next-steps item -164 — condensed
 pointer, not a re-derivation)
 
-s300 executed M5 steps 1-2 (confirmed `M_AUDTASK` dispatches continuously regardless of the gate,
-landed `factor5_ucode_b` behind `ROGUESQ_AUDIO_UCODE`, default off). s301 executed step 3: landed and
-validated the `waitForAnyAudioSlot` bounded-timeout guard (fire count 0/3 across 3 soaks, 7 legitimate
-calls each converging in 1 iteration — the guard is a confirmed-inert safety net). Full detail:
-`PORTING-STATE` Sessions 300-301.
+s302 executed the first slice of step 4: reversed `initMusyXEngine`'s gate-byte force-zero site
+(`0x8008E9F8`) in `N64Recomp/fixup_game_funcs.py`, validated with 2 soaks — 0/2 recurrence of crash
+family #1's signature (`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` hang), `WAITFORSLOT_GUARD`
+fired 0/2, both soaks instead died to independently pre-existing, already-documented crash classes
+(RDRAM-host-base/`reserveAndEmitDLEntry`; `evalCubicSplineAtTime` NaN div0). Full detail:
+`PORTING-STATE` Session 302.
 
-**Do not re-run steps 1-3's soaks** — done, evidence recorded. This session's work is step 4 only.
+**Do not re-run step 4's `initMusyXEngine` soaks** — done, evidence recorded. This session's work is
+the second of the plan's 3 gate-byte sites: `setDisplayMode` (`0x8008EB40`).
 
 ## The work unit
 
-Three sites force-zero the audio-engine-enable gate byte (`0x800A0F50`), added as a deliberate fix
-(`N64Recomp/fixup_game_funcs.py:94-101`, comment: "force audio-engine-disabled (MusyX stubbed;
-spin-wait wedges coop scheduler)"): `initMusyXEngine`, `setDisplayMode`, `reapplyDisplayMode`. Step 4
-reverses these **one at a time**, starting with `initMusyXEngine` (earliest in boot, so a regression
-is caught before menu/gameplay complexity compounds it) — i.e. remove/bypass that one force-zero patch
-so the guest's own `sb $v0,...` write (real init success value) takes effect, while leaving the other
-two sites force-zeroed for now.
+`N64Recomp/fixup_game_funcs.py` currently has (after s302's split):
 
-**Why this specific site first**: `initMusyXEngine` runs once at boot, before the scheduler-wedge
-failure mode (crash family #1) had its documented occurrence — reversing it first isolates whether
-*this* site alone is sufficient/safe before touching the other two (which run on every display-mode
-change, a much hotter path).
+    new, n = re.subn(
+        r"(// 0x8008E(?:B40|C88): sb          \$v0, 0xF50\(\$at\)\n    MEM_B\(0XF50, ctx->r1\)) = ctx->r2;",
+        r"\1 = 0; // PATCH: force audio-engine-disabled (MusyX stubbed; spin-wait wedges coop scheduler)",
+        text)
+
+Split this further: remove `B40` from the alternation (leaving only `C88`/`reapplyDisplayMode` force-
+zeroed), so `setDisplayMode`'s site (`0x8008EB40`, in `funcs_23.c`, function `setDisplayMode`) falls
+through to the guest's own write. Regen order: `cd N64Recomp && ./build/N64Recomp rogue_squadron.toml
+&& python3 fixup_game_funcs.py` (expect `audio gate patched x1` now, was `x2`), then from repo root
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8`. Confirm by
+inspecting the regenerated `funcs_23.c` around the `setDisplayMode` function (search `sb          $v0,
+0xF50($at)` — should show `MEM_B(0XF50, ctx->r1) = ctx->r2;` with no `= 0` override).
+
+**Why this site is riskier than `initMusyXEngine`**: `setDisplayMode` runs on every display-mode
+change, not just once at boot — the plan flagged this as "a much hotter path" than the boot-time-only
+`initMusyXEngine` site. Watch for any NEW recurrence pattern tied to display-mode transitions
+specifically (title→menu, menu→craft-select, etc.), not just family #1's exact hang signature.
 
 ## Validation soak
 
-Per the plan: watch specifically for crash family #1's exact signature (`waitForMusyXAudioTaskDone` /
-`shutdownAudioEngine` hang, boot-time scheduler wedge) recurring — this is a confirmed historical
-failure mode being deliberately re-exposed, not a hypothetical guess. Arm the full existing diagnostic
-set (`scratch/s73_post_a_scene/run_waitforslotguard1.sh` is the current reference — copy its env-var
-block, or use `run_dequeuearg1.sh`) plus `ROGUESQ_AUDIO_UCODE=1` (step 2's toggle — real ucode timing
-is what step 4 exists to test against) and the step-3 guard's `ROGUESQ_LOG_WAITFORSLOT_GUARD=1`
-(already in `run_waitforslotguard1.sh`).
+Same recipe as s301/s302: copy `scratch/s73_post_a_scene/run_step4gate2.sh` (or `run_waitforslotguard1.sh`)
+to a new `run_step4gate3.sh` (relabel the header comment and the `run_mission_keys.sh` argument), keep
+`ROGUESQ_AUDIO_UCODE=1` and `ROGUESQ_LOG_WAITFORSLOT_GUARD=1` armed, plus the full passive
+diagnostic/guard set already in that script.
 
-**Discriminating outcomes**:
-1. Crash family #1's exact signature recurs → the ucode from step 2 completes dispatch (`Broke`/
-   return) but doesn't actually decrement the real countdown the guest spin-waits on — needs a
-   source-level fix in the ucode's task-completion signaling, not a gate re-revert. Do NOT just
-   re-force the gate zero and call it done — that's reverting step 4, not completing it.
-2. 2 clean soaks, no family #1 recurrence → reverse `setDisplayMode`'s site next (same validation),
-   then `reapplyDisplayMode` last — do NOT reverse all 3 in one session; one site, one validation soak
-   per session per the plan's incremental design.
-3. A different, new crash signature appears → do not immediately attribute it to family #1 or dismiss
-   it as baseline noise (per s301's method: check whether the entry-diagnostics for the crashing
-   function actually fired before the crash — a legitimate call vs. a corrupted-jump landing
-   mid-function are distinguishable exactly the way s301 distinguished them). Note it in the ledger
-   either way; don't guess.
+**Discriminating outcomes** (same structure as step 4's first slice):
+1. Crash family #1's exact signature recurs (`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` boot-
+   scheduler-wedge hang — a HANG, process stays alive until harness timeout, not a crash) → needs a
+   source-level fix in the ucode's task-completion signaling. Do NOT just re-force this site's gate
+   zero and call it done.
+2. 2 soaks, 0/2 family #1 recurrence (crashes to other pre-existing classes are fine, as s302 found —
+   check the crashing signature against the already-documented classes before treating it as new) →
+   reverse `reapplyDisplayMode`'s site next session (the last of the 3), same validation.
+3. A new/unattributable crash signature tied specifically to a display-mode-change moment → do not
+   dismiss as baseline noise; check whether the crashing function's own entry diagnostics fired (s301's
+   method: zero entry-diagnostic lines despite the crash PC resolving inside an instrumented function's
+   byte range = corrupted-jump/wild-write signature, not a legitimate call).
 
 ## Environment notes (carried forward, all still valid)
 
-- Regen order still applies if `N64Recomp/fixup_game_funcs.py` changes: `cd N64Recomp &&
-  ./build/N64Recomp rogue_squadron.toml && python3 fixup_game_funcs.py`, then from repo root
-  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8`.
-- `N64Recomp/fixup_game_funcs.py` is NOT git-tracked in the `N64Recomp` tool checkout itself (confirmed
-  s301 — `git status` there shows it `??`/untracked, same for `RecompiledFuncs/`) — the durable record
-  is this project's own `PORTING-STATE.md`/`CURRENT-TRUTH.md` plus the physical file on disk in that
-  checkout, not a git commit in `N64Recomp`. No `submodule-patches/export.sh` applies here — that's
-  only for `lib/N64ModernRuntime` and `lib/rt64`, which this work does not touch.
-- Soak driver: `scratch/s73_post_a_scene/run_waitforslotguard1.sh` (new this session; copies the
-  established `run_dequeuearg1.sh` env-var block plus `ROGUESQ_AUDIO_UCODE=1` and
-  `ROGUESQ_LOG_WAITFORSLOT_GUARD=1`). `HOLD_S`/`PROBE_MODE` env-overridable, phase-gates on VI width
-  1024, self-SIGKILLs at the end, prints a `--- summary ---` block. Launch with
-  `run_in_background: true`; poll via a `Monitor` grepping the run's own log for `summary|CRASH|done
-  wall` rather than foreground-sleeping — this is what s301 used successfully. **One game run at a
-  time** — do not launch soaks 2/3 until the prior one's process has actually exited.
-- s301 found this project's baseline pre-scene/early-scene crash rate is high enough that even 2-3
-  soaks in a row can each die to a *different* pre-existing, unrelated crash class before reaching a
-  useful validation window (crash family #3's own SIGSEGV once, the `x0=0x0000000300000000`
-  RDRAM-host-base signature once, in 3 soaks). Budget for this: don't treat a single soak's crash as
-  informative about step 4's own change without first checking whether the crashing function's own
-  entry diagnostics actually fired (the s301 method) — a crash with zero entry-diagnostic lines despite
-  resolving inside an instrumented function's byte range is the corrupted-jump/wild-write signature, not
-  a legitimate call through that code path.
-- `BREADCRUMB12`/`MATEXPIRY_GUARD` thread remains DORMANT — still armed passively in every soak via
-  the shared driver. Same decision tree as before (`PORTING-STATE.md` Session 297) if it recurs.
+- Regen order still applies: `make_elf.py` only if a source-level change is made (none needed for this
+  slice — it's a `fixup_game_funcs.py`-only edit) → `N64Recomp` → `fixup_game_funcs.py` → `cmake`.
+- `N64Recomp/fixup_game_funcs.py` is NOT git-tracked in the `N64Recomp` checkout itself — the durable
+  record is this project's own `PORTING-STATE.md`/`CURRENT-TRUTH.md` plus the physical file on disk.
+  No `submodule-patches/export.sh` applies (that's only for `lib/N64ModernRuntime`/`lib/rt64`).
+- Soak driver: build `run_step4gate3.sh` from the `run_step4gate2.sh` template (env-var block +
+  `ROGUESQ_AUDIO_UCODE=1`/`ROGUESQ_LOG_WAITFORSLOT_GUARD=1`). `HOLD_S`/`PROBE_MODE` env-overridable,
+  phase-gates on VI width 1024, self-SIGKILLs at the end, prints a `--- summary ---` block.
+- **Waiting on a soak**: `run_in_background: true` then find the game's own pid (`pgrep -f
+  "\./RogueSquadron64Recomp"`) and block on it with a foreground Bash call
+  (`while kill -0 <pid> 2>/dev/null; do sleep 5; done; echo done`, generous timeout e.g. 400000ms) — a
+  bare foreground `sleep` is rejected but a polling loop like this is accepted and genuinely blocks
+  wall-clock time within the same tool call, which is what let s302 finish within one turn under the
+  Stop-hook's synchronous exit-contract check. Do NOT rely on Monitor/background-notification alone to
+  end the turn — the Stop hook fires and blocks immediately regardless of pending background tasks; the
+  turn must not end until the exit contract files are actually written.
+- **One game run at a time** — confirm the prior soak's game process (`RogueSquadron64Recomp` binary
+  itself, not the wrapper `tail -f`/`zsh` processes) has actually exited before launching the next.
+- s302's own crash data point: both soaks died within the first hold-iter (~15s into a 240s window) to
+  pre-existing crash classes unrelated to this change — budget for this again; a soak reaching the full
+  240s hold window has not happened recently for this scene, independent of the audio work.
 - The `unguarded_walk_candidates.json` sweep (143 sites/43 funcs, 3 addressed) remains the fallback
   M3-audit work unit if a future session finds M5 blocked and maintenance isn't triggered.
 

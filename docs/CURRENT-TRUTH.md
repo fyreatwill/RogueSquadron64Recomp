@@ -35,7 +35,13 @@ Set after the 300-session review. Priority order for upcoming iterations:
    soaks: guard fire count 0/3 across 7 legitimate calls (each converged in 1 iteration); 2/3 soaks
    died to pre-existing, already-documented, unrelated crash classes (crash family #3's own signature
    once, the s300-control-soak RDRAM-host-base signature once) — confirms the guard is inert as
-   designed, not a source of new crashes. Execute step 4 next (reverse `initMusyXEngine`'s gate byte).
+   designed, not a source of new crashes. **Step 4 (`initMusyXEngine` site) DONE (s302)**: split the
+   3-way force-zero regex so only `initMusyXEngine`'s site (`0x8008E9F8`) falls through to the guest's
+   real write, leaving `setDisplayMode`/`reapplyDisplayMode` force-zeroed. 2 validation soaks: 0/2
+   family #1 recurrence (both crashes are outright deaths, not hangs, so cannot be family #1 by
+   construction), both dying instead to independently pre-existing crash classes (RDRAM-host-base/
+   `reserveAndEmitDLEntry`; `evalCubicSplineAtTime` NaN div0, s83). Execute step 4's next site
+   (`setDisplayMode`) next, per the plan's one-site-per-session design.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -210,6 +216,25 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered -163 (top, newest/highest priority) counting up to -1 (bottom, oldest); relative
 order is unchanged from before the fix. The next new item takes -164 and is inserted at the
 top.
+
+-164. **(s302)** Executes M5-AUDIO-PLAN.md step 4: reverses `initMusyXEngine`'s gate-byte force-zero
+    site. `N64Recomp/fixup_game_funcs.py`'s single combined regex (alternation `9F8|B40|C88` matching
+    all 3 gate-byte write sites) was split so only `B40|C88` (`setDisplayMode`/`reapplyDisplayMode`)
+    still force-zero; `initMusyXEngine`'s site (`0x8008E9F8`) now lets the guest's own `sb $v0,...`
+    write (real init-success value) take effect. Confirmed via patch-count (`x2`, was `x3`) and direct
+    inspection of regenerated `funcs_23.c:9536`. Full regen clean (no source change, so `make_elf.py`
+    untouched). 2 validation soaks (`scratch/s73_post_a_scene/run_step4gate{1,2}.sh`, same recipe as
+    s301's `run_waitforslotguard1.sh`): both reached SELECT YOUR CRAFT then died within the first
+    hold-iter (~75s) — soak 1 to the pre-existing RDRAM-host-base/`reserveAndEmitDLEntry` signature
+    (s300/s301), soak 2 to the pre-existing `evalCubicSplineAtTime` NaN div0 assert (s83). **0/2 family
+    #1 recurrence** (`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` strings: zero occurrences in
+    either ~228 MB log; both deaths are outright crashes, not hangs, so cannot be family #1's signature
+    by construction) and `WAITFORSLOT_GUARD` fired 0/2. `[audtask-dispatch]` confirms real ucode
+    dispatch (`real_ucode=1`) ran continuously to the crash point in both (50/50). Neither soak reached
+    the 240s hold window itself — both pre-existing crash classes predate this session and left no
+    room for a longer clean run, same limitation s301 hit at step 3. Per the plan's one-site-per-session
+    design, next work unit is `setDisplayMode`'s site (`0x8008EB40`), same validation. Full detail:
+    `PORTING-STATE` Session 302.
 
 -163. **(s301)** Executes M5-AUDIO-PLAN.md step 3: lands the `waitForAnyAudioSlot`
     bounded-timeout guard (`N64Recomp/fixup_game_funcs.py`, new patch between the s163 loop-heartbeat
@@ -461,9 +486,10 @@ Game functions (s1) — all four steps, in order:
    - real functions with cross-function branches (shared asm tails: `lvj_checkComplexObjectives`,
      `audioCompandS16`, `applyVoiceDelayFilter`, `__OSGlobalIntMask`) → each bad goto becomes
      `__builtin_trap()`; a runtime SIGTRAP means one of those was taken
-   - audio-engine gate stores → 0 in `funcs_23.c` (`initMusyXEngine`, `setDisplayMode`,
-     `reapplyDisplayMode`; gate byte 0x800A0F50) — without this the scheduler wedges in
-     `waitForMusyXAudioTaskDone`
+   - audio-engine gate stores → 0 in `funcs_23.c` for `setDisplayMode`/`reapplyDisplayMode` only (gate
+     byte 0x800A0F50) — without this the scheduler wedges in `waitForMusyXAudioTaskDone`.
+     `initMusyXEngine`'s own site was reversed s302 (M5 step 4); the guest's real write takes effect
+     there now, validated 0/2 family #1 recurrence over 2 soaks
    - the `jr $t9` return idiom in `funcs_4.c` (`convertMat3x4ToN64Mtx`, 0x80018D80) → plain `return`
      instead of `LOOKUP_FUNC(ctx->r25)`
    - `musyxKeyOnVoice` `break 6/7` div-by-zero guards → early `return`, keyed on the exact `do_break`

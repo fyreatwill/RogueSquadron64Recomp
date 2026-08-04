@@ -26874,3 +26874,58 @@ under step 4's real gate-reversed timing — that's still untested and remains t
 it now, before step 4, per the plan's own rationale.
 
 No `lib/` changes this session.
+
+## Session 302 (2026-08-04) — executes M5-AUDIO-PLAN.md step 4: reverses `initMusyXEngine`'s gate-byte force-zero site, 2 validation soaks show 0/2 recurrence of crash family #1's signature
+
+**Work unit**: per the plan's step 4 and s301's ordering (`initMusyXEngine` first — earliest in boot,
+isolates whether this one site alone is safe before touching the two hotter-path sites), removed the
+force-zero override at `initMusyXEngine`'s specific gate-byte write. The single combined regex in
+`N64Recomp/fixup_game_funcs.py` that force-zeroed all 3 sites (`0x8008E9F8`/`initMusyXEngine`,
+`0x8008EB40`/`setDisplayMode`, `0x8008EC88`/`reapplyDisplayMode`) via one alternation pattern was split:
+the alternation now matches only `B40|C88`, so `initMusyXEngine`'s site falls through unpatched and the
+guest's own `sb $v0,...` write (real init-success value) takes effect there, while `setDisplayMode` and
+`reapplyDisplayMode` remain force-zeroed, unchanged. Confirmed via patch-count (`audio gate patched x2`,
+was `x3`) and direct inspection of the regenerated `funcs_23.c:9536` (`MEM_B(0XF50, ctx->r1) = ctx->r2;`
+with no `= 0` override, vs. the other two sites still showing the override). Full regen ran clean
+(`make_elf.py` untouched — no source-level change — `N64Recomp` → `fixup_game_funcs.py` → cmake build,
+0 errors, only the pre-existing 46-warning baseline).
+
+**Validation — 2 soaks**, same recipe as s301's `run_waitforslotguard1.sh` (`ROGUESQ_AUDIO_UCODE=1` for
+step 2's real ucode timing, `ROGUESQ_LOG_WAITFORSLOT_GUARD=1` for step 3's guard fire-counter, full
+passive diagnostic set), new scripts `scratch/s73_post_a_scene/run_step4gate{1,2}.sh`:
+
+- **Soak 1** (`step4gate1`): reached title→SELECT GAME→war room→SELECT YOUR CRAFT, died at hold-iter 1
+  (~75s post-phase). `[CRASH][pc-symbol]` resolves to `reserveAndEmitDLEntry+10212`, mcontext
+  `x9=0x0000000300000000` — the RDRAM-host-base signature s301/s300 already documented as a
+  pre-existing, unrelated crash class (same family the s300 control soak hit).
+- **Soak 2** (`step4gate2`): same path, died at the same hold-iter-1 point (~75s). Signal 6 (SIGABRT via
+  `__pthread_kill`), preceded in the log by `Assertion failed: (ctx->f28.fl == ctx->f28.fl), function
+  evalCubicSplineAtTime, file funcs_4.c, line 27524` — the NaN-producing spline-eval div0 already
+  root-caused s83 and separately guarded (`EVALSPLINE_GUARD`, a different unguarded path in the same
+  function); `EVALSPLINE_GUARD` itself did not fire (0 count), consistent with this being the
+  known-but-not-fully-closed div0 shape rather than a new bug. `last-guest-pc=0x80065ac4`.
+
+**Discriminating result**: both soaks' `[audtask-dispatch]` counter fired 50 times each with
+`real_ucode=1` throughout (audio ucode dispatching continuously up to the crash point, as steps 1-2
+established); `WAITFORSLOT_GUARD` fired **0/2** in both; **neither soak's crash signature matches
+family #1** (`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` boot-time scheduler-wedge hang) — those
+symbol strings appear **zero times** in either soak's ~228 MB log, and critically both crashes are
+outright process deaths (SIGSEGV, SIGABRT), not hangs, so they cannot be family #1's signature by
+construction (a hang would leave the process alive until the harness's own timeout/SIGKILL, not "game
+process gone" at hold-iter 1). Both crashing signatures are independently pre-existing and
+already-documented in this ledger (RDRAM-host-base/`reserveAndEmitDLEntry`: s300/s301; `evalCubicSplineAtTime`
+NaN div0: s83, PROJECT-OVERVIEW). Per the plan's own precedent (s301 accepted 2/3 soaks dying to
+unrelated pre-existing crash classes as still validating its own discriminating signal), this is
+sufficient: **step 4's `initMusyXEngine` reversal produced 0/2 family #1 recurrences and 0/2 new/
+unattributable crash signatures** — the change is validated as safe by the same standard s301 used.
+
+**What this does NOT show**: neither soak survived into the 240s hold window at all (both died within
+the first hold-iter, ~15s into a 240s window) — so this validates "initMusyXEngine's reversal doesn't
+*cause* family #1" but not "the game is stable for 240s with this change"; the pre-existing baseline
+crash rate (both these classes predate this session entirely) means a longer clean run was never on the
+table with only 2 soaks, exactly as s301 found for step 3. Per the plan's explicit incremental design
+("one site, one validation soak per session"), do **not** reverse `setDisplayMode` or
+`reapplyDisplayMode` this session — that's the next work unit.
+
+No `lib/` changes this session (fixup edit lives in `N64Recomp/fixup_game_funcs.py`, tracked only in
+this project's own ledger per s301's note — not a git-tracked file in that checkout).
