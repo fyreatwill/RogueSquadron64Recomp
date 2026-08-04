@@ -1,13 +1,13 @@
-# NEXT work unit — MAINTENANCE FIRST, then instrument the M_AUDTASK-submission call itself
+# NEXT work unit — instrument the M_AUDTASK-submission call itself
 
-## Step 0 will trigger MAINTENANCE this session
+## Maintenance done (s314) — this is now the live work unit
 
-`docs/CURRENT-TRUTH.md` is 60051 bytes as of s313's edits (>60000 threshold). Per
-`tools/agent/ITERATION.md` Step 0, the next iteration's FIRST job is a maintenance pass: compact toward
-~35 KB, migrate durable material to `docs/PROJECT-OVERVIEW.md`, prune/merge superseded items, renumber
-the Next-steps backlog into one monotonic sequence (currently ends at -173), refresh the stale "as of
-session N" headline. Do NOT run the audio experiment below in a maintenance iteration — do maintenance
-ONLY that session, then pick up this work unit the session after.
+s314 was a MAINTENANCE iteration (Step 0 triggered at 60,051 bytes): `docs/CURRENT-TRUTH.md` compacted
+to 34,745 bytes / 397 lines (207 net lines removed), two sections migrated to `docs/PROJECT-OVERVIEW.md`
+(§8 instrument-specific method traps, §9 closed investigation lineages). Full detail: PORTING-STATE
+Session 314. Step 0 will not trigger again until CURRENT-TRUTH grows back past 60,000 bytes (currently
+~34.7 KB, plenty of headroom). Do not re-run maintenance this session — proceed straight to the work
+unit below.
 
 ## Context — s313 overturned the "3 gate-consumer functions stop at call 19/20" conclusion
 
@@ -22,15 +22,15 @@ result from one soak:
 | RSP `M_AUDTASK` submission (`[audtask-dispatch]`, already resampled since s310) | **20/20** — unchanged |
 
 The old "all 3 gate-consumer functions + M_AUDTASK submission stop together at 19/20" framing is
-OVERTURNED (moved to CURRENT-TRUTH's Overturned Conclusions, s313 entry). There isn't one shared stop
-point — there are three. Full detail: `docs/CURRENT-TRUTH.md` Next-steps item -173, `PORTING-STATE`
-Session 313.
+OVERTURNED (CURRENT-TRUTH Overturned Conclusions, s313 entry). There isn't one shared stop point —
+there are three. Full detail: `docs/CURRENT-TRUTH.md` Next-steps item -173, `PORTING-STATE` Session
+313.
 
-## The work unit (AFTER maintenance)
+## The work unit
 
 **Find why `M_AUDTASK` submission stops at call 20 while `tickAudioSequencerFrame`/`tickAllAudioChannels`
 (its own callers, confirmed by s313 to still be entering/exiting normally) keep running 17 more calls
-to 37.** This is now the narrowest, most information-dense unknown — the submission call itself, or
+to 37.** This is the narrowest, most information-dense unknown — the submission call itself, or
 whatever gates it, lives somewhere inside or downstream of 2 functions already confirmed reachable at
 that point, not "somewhere in 3 unknown functions."
 
@@ -97,4 +97,6 @@ sequence — resetting the iron-rule-8 no-progress counter every time; this is r
 (H1/H4 refuted, Option A ruled out, two freeze boundaries dated, the "soft stop at 19/20" conclusion
 directly measured and overturned, and the unknown narrowed from "3 functions" to "1 specific call/gate
 inside 2 confirmed-still-running functions"), not a stall. Continue the same slug next non-maintenance
-session.)
+session. s314 (this maintenance pass) did not touch this thread's content at all, only its ledger
+location/prose — the count of "sessions on this slug with no discriminating result" for iron rule 8
+purposes should NOT include s314.)

@@ -27741,3 +27741,55 @@ functions."
 
 `docs/CURRENT-TRUTH.md` is now 60051 bytes (>60000) — the next iteration's Step 0 will trigger a
 MAINTENANCE pass; flagged in NEXT.md.
+
+## Session 314 (2026-08-04) — MAINTENANCE: CURRENT-TRUTH.md compacted 60,051→34,745 bytes (605→397 lines, 207 net), migrated two sections to PROJECT-OVERVIEW.md
+
+Step 0 of `tools/agent/ITERATION.md` triggered: `docs/CURRENT-TRUTH.md` was 60,051 bytes (>60,000), so
+this iteration was maintenance-only per the contract — no experiment run.
+
+**What ran**: a real compaction pass, not just editing. Actions, in order:
+
+1. Condensed the s309-312 Next-steps items (formerly -172, -171, -170, -169, four separate detailed
+   entries) into one merged range item `-172..-169`, since each step's individual conclusion is now
+   superseded by s313's direct measurement (item -173) — kept the key facts (what each session found,
+   ruled out, or refuted) but cut the narrative duplication with item -173 and the USER DIRECTIVE.
+2. Condensed the USER DIRECTIVE section's item 2 (M5 audio de-stubbing) from a full session-by-session
+   narrative duplicating item -173 down to a short pointer paragraph.
+3. Condensed the `-168..-160` (s297-307) Next-steps item from a 9-bullet sub-list (38 lines) to one
+   dense paragraph, since it's now lead-up history to s313's settled conclusion, not an open question.
+4. Tightened item -173 itself (the current, most-relevant conclusion) — cut redundant phrasing while
+   keeping every cited number (40/40, 37/37, 20/20) and the open question it raises.
+5. **Migrated durable material to `docs/PROJECT-OVERVIEW.md`** rather than deleting it:
+   - New §9 "Closed investigation lineages (s99–s294)": the full one-paragraph-per-lineage summaries
+     for 9 CLOSED whack-a-mole/audit threads that used to occupy Next-steps items -159 through -14
+     (excluding -20, the still-standing regen-pipeline rule, which stayed in CURRENT-TRUTH). These are
+     fully closed with no outstanding action; CURRENT-TRUTH now carries one pointer item
+     (`-159..-14 (excluding -20, kept below)`) instead of 10 separate multi-hundred-word entries.
+   - New §8 "Instrument-specific method traps": the "not yet generalized in PROJECT-OVERVIEW" bullet
+     list from CURRENT-TRUTH's Method Traps section (crash-free-soak-isn't-evidence, orphaned
+     background soaks, sparse-screenshot false regressions, etc.) — these were explicitly flagged in
+     the source as durable-but-not-yet-migrated; migrating and pointer-replacing them is exactly what
+     the maintenance contract asks for. (Caught and fixed a mid-session slip: the first pass added this
+     content to PROJECT-OVERVIEW but forgot to delete the CURRENT-TRUTH copy — verified and corrected
+     before finishing.)
+6. Tightened the Goal-stack M3/M4 milestone descriptions (removed detail duplicated in
+   PROJECT-OVERVIEW §3/§7/§9 and Next-steps item -6), the menu-state-machine/scene-identity/remaining-
+   defects/stability prose block (condensed ~47 lines to ~22, all facts preserved, pointers to
+   PROJECT-OVERVIEW added where mechanisms live there), and the last 3 Overturned Conclusions entries
+   (s302→s306, s307→s309, s307/s310/s311→s313 — tightened prose, kept every number and the "believable"
+   rationale for each).
+7. Refreshed the stale "reviewed through s307" headline to s313; refreshed the compaction-history line
+   in the USER DIRECTIVE section with this session's before/after numbers.
+
+**Result**: `docs/CURRENT-TRUTH.md` 60,051→34,745 bytes, 605→397 lines. Net line shrink measured via
+`git diff --numstat`: 137 added, 344 deleted = **207 net lines removed**, clearing the >=200-net-line
+threshold the Stop hook checks for a maintenance-iteration ADVANCED claim. `docs/PROJECT-OVERVIEW.md`
+grew from 269→390 lines (18,377→29,093 bytes) to hold the migrated material — nothing was deleted
+outright; everything either stayed in CURRENT-TRUTH (still-active or standing-rule content) or moved
+to PROJECT-OVERVIEW (closed/durable content), per the maintenance contract's own instruction.
+
+**What this doesn't do**: no experiment ran, no code changed, no new investigation. The M5 audio
+de-stubbing work unit queued in NEXT.md before this session (instrument the `M_AUDTASK`-submission
+call/condition inside `tickAudioSequencerFrame`/`tickAllAudioChannels`) is untouched and is the next
+non-maintenance session's work unit, unchanged from before this pass — this session only touched
+documentation structure, never the investigation's content or conclusions.

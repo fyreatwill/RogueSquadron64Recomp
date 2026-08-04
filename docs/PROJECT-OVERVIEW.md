@@ -267,3 +267,124 @@ unguarded site in 6 of the 8 guarded functions — already folded into the table
 | 17 | fault inside `updateHangarBayScene` itself (5 sites) | guarded s110 |
 | 18 | `submitSceneNodeRender` free-list walk | guarded s123, 9 inlined copies found+reopened s131, root-caused as the `-0x25A4` family and closed via the s282-288 audit lineage |
 | 19 | RT64-internal SIGSEGV, `MetalFramebuffer` ctor via `createTileCopyRecord` | 1 occurrence, not source-read, not recurred |
+
+## 8. Instrument-specific method traps, migrated from CURRENT-TRUTH.md s314 maintenance pass
+
+Not yet generalized into §4 above — specific to this codebase's instruments, kept for whoever
+next writes a soak diagnostic:
+
+- A "crash-free, full hold survived" soak is not evidence the game did anything for that hold —
+  MD5-checksum the `hold_NN.png` series before trusting a diagnostic null; s222's soak logged 991
+  `[vi-fs-decision] FIRE` events and ran its full 350s hold with 0 crashes while the actual on-screen
+  picture was byte-identical from `hold_04.png` onward, frozen the entire time.
+- Launching a soak with `run_in_background=true` and then ending the turn before it finishes risks
+  the harness reaping the whole process tree mid-run (s222 found exactly this: an orphaned soak,
+  no crash logged, process gone, ~40 min stale). For soaks that fit the tool timeout, launch
+  synchronously (foreground, no `&`) instead — it cannot be orphaned by a premature turn-end.
+- Sparse one-shot screenshots land on genuine inter-screen transitions and read as a regression;
+  always burst-sample (28 frames at 0.15 s: 27/28 with content, where 4 one-shots showed black) (s9).
+- Validate a suppression instrument before believing a null result: `ROGUESQ_SUPPRESS_SHIFT=1`
+  re-runs any suppression mode as a +80 px displacement so you can see it reach the screen (s18).
+- The `[seq]` and `[full-hist]` walkers in `dpc_bridge` advance a fixed 8 bytes per command, so
+  triangles (32–48 bytes) desync them into thousands of bogus SETCIMG addresses (`LOG_SEQ` also caps
+  at 6000). Once geometry flows use `ROGUESQ_LOG_RDPHIST`, which uses RT64's own command lengths
+  (s9/s11/s19).
+- Histogram-drain timing misleads: the runner histogram showed 0 RDP bytes for a task the dispatch
+  tracer proved had processed its full DL (s2b).
+- Five frames per run does not average out camera motion, so even aggregate `pixel_stats.py` metrics
+  are confounded when runs sample different moments (s18).
+
+## 9. Closed investigation lineages (s99–s294), migrated from CURRENT-TRUTH.md s314 maintenance pass
+
+Full detail for all of these lives in `PORTING-STATE.md` at the session ranges cited; this is the
+one-paragraph-per-lineage summary that used to sit in `CURRENT-TRUTH.md`'s Next-steps list as items
+-159 through -14 (excluding -20, the still-standing regen-pipeline rule, which stayed in
+CURRENT-TRUTH). None of these are open work — they're kept so a future session doesn't re-open a
+question already answered.
+
+- **`composeNpcOrientationMatrix` whack-a-mole (s99–s261) — CLOSED.** Nine guards over 161 sessions
+  before the real signature was found: a recurring "KSEG0 pointer + rdram-base, no `MEM_W`
+  subtraction" bug in `renderUnlitMeshFaces`, closed for good s261 (`COMPOSE_NPC_GUARD9`, first-ever
+  live call into `renderUnlitMeshFaces`, survived to VI-update #8552/143.1s vs. a prior best ~75s).
+  Along the way: `setLookupEntryField5ByKey` needed two guards not one (s260); `evalCubicSplineAtTime`
+  had an unguarded pointer (s259); the last 2 `-0x25A4` hangar-bay-deref gaps closed (s258);
+  `submitSceneNodeRender` finally got a complete source read (s263) after 66 sessions unaddressed.
+  s249-251 opened a project-wide static sweep for this "RDRAM-base + un-subtracted wild pointer"
+  family (`scratch/agent/find_unguarded_walks.py`, 143 sites/43 functions); it landed 2 guarded
+  functions then sat abandoned 43 sessions until s294 resumed it (below).
+- **Breadcrumb whack-a-mole B2-B14 + the `-0x25A4` hangar-list-pointer audit lineage (s265–s294) —
+  CLOSED.** A refuted a0-argument hypothesis for a guest-`0x80000000`-family fault inside
+  `heapFreeListDequeue` (s267) led single-function breadcrumbs `BREADCRUMB2`-`9` to chase the "cached
+  free-list-head" idiom across 7 functions (s268-282); a 3-session `BREADCRUMB9` PRE-SCENE
+  `waitForAnyAudioSlot` boot-crash streak (s277-280) turned out to be a transient window, CLOSED as a
+  non-finding s289. The "last-executed-guest-PC breadcrumb" instrument (`g_rs64_last_guest_pc`, s264)
+  then localized a different-offset crash (+47120) to a 2nd unguarded occurrence of the same "cached
+  free-list head" idiom, landing `CACHE2_GUARD` (s266). s283-288 ran a deliberate grep-based audit of
+  every `-0x25A4($s1)` hangar-list-pointer site, landing 29 guards across 3 functions (s284), a 3rd
+  "second-hop" instance (s285), classifying `hangarInitialize`'s remaining chunks as dead code
+  (s286-287), and closing the lineage s288 (a suspected `playerSnowSpeederInit` overlap was
+  REFUTED — live code merely sharing address space, not a copy). s289-294 resumed the abandoned
+  s249-251 project-wide unguarded-walk sweep, landing `BREADCRUMB10`-`14` on 5 functions; s293/294
+  caught `tickTextureMaterialExpiry`'s (`BREADCRUMB12`) two recurrences at the identical guest PC,
+  crossing the confirmation bar s297 used to land `MATEXPIRY_GUARD`.
+- **Three interleaved threads, s220–s248: Metal-crash fixes, the CALayer/campose SIGSEGV hunt, the
+  freeze/scene-graph investigation.** Two Metal-side crashes CLOSED with positive controls: the
+  scissor-rect OOB SIGABRT (s246) and the `fbSize()==0` viewport-NaN SIGABRT via a VI-draw skip guard
+  (s244). The host QuartzCore/CALayer SIGSEGV hunt (`campose*`, s234-248) landed a wall-clock bridge
+  and a validated instrument but exhausted its rule-8 budget at s248 still inconclusive — best
+  remaining lead: a cross-thread `CAMetalLayer` property mutation (PORTING-STATE Session 239). The
+  post-SELECT-CRAFT freeze investigation (s220-226) proved the frozen picture (torn polygon → flat
+  fill, non-deterministic even on identical scripted input) sits downstream of a healthy scene-graph
+  traversal and a still-climbing RDP full-sync counter, not a stuck camera or frozen pointer. The
+  DL-payload-staleness probe (s230-233) stayed ambiguous; a Bash-allowlist bug (`Bash(<dir>/:*)` rules
+  silently not matching, s227-228) blocked 2 sessions before resolving s229.
+- **The long `heapWalker`/`renderUnlitMeshFaces`/`composeNpcOrientationMatrix`/`heapFreeListDequeue`
+  whack-a-mole guard-gap chase (s150–s219).** ~70 sessions landing one unguarded-pointer-chase guard
+  at a time, converging on 2 durable lessons: the literal `0x0000000300000000` at x0/x8 across 3
+  unrelated crash sites is this process's constant RDRAM host base pointer, not corrupted data (s219,
+  see CURRENT-TRUTH Overturned Conclusions); the real wild operand is the *other* register, with a
+  KSEG0-tag signature recurring in `renderUnlitMeshFaces` specifically. Also settled: "single Start
+  leaves SELECT YOUR CRAFT into hangar-flight" OVERTURNED s150 (mission-entry unanswered again); the
+  s162 post-leave cutscene stall is the s79/80 FULL_SYNC-loss class recurring, capable of at least one
+  recovery (s153/154); a `[thr-resume]`-adjacent scheduler silent-drop mechanism (s180-187) got a
+  defensive guard that produced the first fully crash-free full-length soak in that lineage (s187).
+- **Audio-array corruption, Thread B (s133–s149) — CLOSED**, plus two side threads parked at
+  exhausted rule-8 budget. Real mechanism (non-atomic `voiceCount`-write-before-pointer-store race in
+  `allocateSongChannelArray`) found s145, fixed and verified s147/148: 3 independent verification
+  soaks all clean — 0/13 corrupted `[voice-active-gate-nz]` reads post-fix (vs. 5 pre-fix), 0/3
+  `do_rom_read` recurrences (vs. 9 prior), first fully crash-free soaks for this shape since s83. Path
+  to the fix (s138-146): ruled out a static ROM string table and adjacent-heap aliasing (confirmed
+  voice-array stride is 136 bytes); traced to `allocateSongChannelArray`'s own 2nd alloc, a
+  per-tick-toggled double-buffered pointer table (s141-143), via `musyxMixActiveVoices`'s
+  unchecked-cursor write (s144) before s145 found the race. s149 bonus: "what input leaves SELECT
+  YOUR CRAFT" was never actually open — the leave transition fires correctly (invisible to VI-phase
+  tracking); the real open question was always surviving the post-leave scene's first ~2s. Two side
+  threads exhausted rule-8 budget without resolving (guards left in code, both dying to the
+  `do_rom_read` race): `emitAllocatedDLCommand` (s133-135, `emit-dl-guard2`/`3`, 0/0 all 3 attempts);
+  `submitSceneNodeRender`'s `MATLIST_GUARD1`/`GUARD2` (s136-137, parked at 2/3, both 0/0).
+- **Thread A/B saga (s102–s135) leading to the audio-corruption fix above, plus the regen-pipeline
+  root cause (CURRENT-TRUTH item -20).** Thread A (s126-132): re-audited every already-guarded
+  hangar-tick crash class for a 2nd unguarded pointer-chase site — 6/8 had a genuine gap; biggest hit
+  `updateHangarBayScene`'s `-0x25A4` family (26 sites, s132), later fully closed by the s282-288 audit
+  lineage. Thread B (s116-145): chased the `voice+0x0`/`+0x34` corruption through several reframings
+  (refuted: stale `rs_malloc` memory, an OOB scan index, an RSP-ucode write, a computed-offset guest-C
+  store, adjacent-heap aliasing). Earlier (s102-113): traced the corrupted MusyX DMA-batch `devAddr`
+  field backward across 6 sessions/5 functions to `musyxInitVoiceFromSample`, the sole writer of that
+  offset anywhere in the tree (s105/s111 exhaustive grep); the call-chain-ancestry angle (s105-110)
+  was a 5-session dead end. Methodology lesson: comparing instruments' log lines by *file order*
+  across threads is not a valid proxy for real time order — cross-thread correlation needs a shared
+  sequence number. Tooling (s102, root-caused precisely by CURRENT-TRUTH item -20): `fixup_game_funcs.py`
+  is not idempotent — re-running it without a full ELF regen inserts a second copy of every
+  already-applied patch.
+- **M3 hangar-tick-family guard program (s99-s110): 8 crash classes guarded** (16th/12th/11th/14th/
+  17th/18th/9th/10th — see the §7 crash catalog above), all with clean negative controls, same
+  `U32()`-truncated-bounds-check-then-`goto`-real-epilogue template used by every guard since. s101
+  and s110 survived the entire family with zero crashes, reaching the ~140s DMA-corruption window
+  alive.
+- **Find the indirect caller of `submitDmaRequestBatch` — CLOSED (s101).** The caller is
+  `musyxSynthFrame` (`funcs_24.c:3095`, a per-VI-retrace audio tick) via `viRetraceHandlerThread` —
+  not the mission/DL code path every earlier session assumed. Refuted dead ends, do not reopen:
+  `ra=0x00000000` as a corruption signature, "dump the OSIoMesg at mb," consumer index desync, "the
+  boot call loops more than once."
+- **`queueGPUUploadTMEM` zero-size assert.** Crash classes 9/10 (`updateAnimatedTextureStreaming`/
+  `static_5_800B4048` SIGBUSes) CLOSED s124/s125, tracked in the §7 crash catalog only.
