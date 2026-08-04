@@ -28002,3 +28002,89 @@ s314 was maintenance and doesn't count). Continue same slug next session: instru
 call count and the `ctx->r3` value it writes into the shared countdown/period pair, to test whether this
 write (or another still-unlocated one) is what's resetting the countdown before gate1 can ever accumulate
 to 1.
+
+## Session 318 (2026-08-04) — M5 audio: gate1/2/3's "never take the call branch" reading was a diagnostic TOCTOU race, not a game-logic fact -- OVERTURNED, direct measurement finds gate1 calls 19/40, gate2 calls 4/4
+
+`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`, continuing item -176's (s317) two open
+leads. Picked up from a previous iteration's interrupted state (`scratch/agent/STATUS=WORKING`,
+`OUTCOME` missing) -- confirmed no game process was running and `setDisplayMode`'s patched site was
+already at baseline (force-zero) before starting, so nothing unsafe was left in place.
+
+**Step 1 (pure grep/read, no build): closed both of s317's open leads.** `initN64RspMixer`'s 4th write
+to the shared countdown (`G_BASE-0x68EC`) has exactly 2 call sites in the whole codebase, both inside
+`initAudioSubsystem`/`reapplyAudioConfig`. `initAudioSubsystem` is called once from `setDisplayMode`
+(itself called once, from `mainBootstrapWorker` -- boot-time only). `reapplyAudioConfig` is called once
+from `reapplyDisplayMode`, which IS called from inside `runVideoFrameTick` (the per-frame video-tick
+function) but behind 3 nested conditionals gated on a dirty-flag byte at `-0x2DEF` that `mainBootstrapWorker`
+initializes to 0 at boot -- not an unconditional per-frame call. **Ruled out as a per-frame reset
+mechanism.** `funcs_32.c:29181`'s `-0x68EC` reference turned out to be `lui $a0,0x800B; addiu
+$a0,$a0,-0x68EC` -- a completely different base register computing an unrelated game-object pointer
+argument for `dealDamagetoDatItem`, a coincidental hex-literal match, not a real reference to the audio
+countdown at all. A full re-grep of every `0x68EC`/`0X68EC` occurrence in `RecompiledFuncs/*.c`,
+filtered for the actual `lui $at,0x8015`/`-0x68EC($at)` addressing pattern the gates use, confirms
+exactly 7 real touches exist: the 6 known gate reads/writes plus `initN64RspMixer`'s. **No 8th write
+site exists.**
+
+**Step 2 (source-read): found the actual break -- the gate diagnostics themselves have a
+time-of-check-to-time-of-use bug.** Re-reading gate1's diagnostic block in `fixup_game_funcs.py`
+line-by-line: the real branch decision uses `ctx->r2`, loaded once at the gate's entry
+(`ctx->r2 = MEM_W(ctx->r2, -0X68EC)`), then decremented and compared (`if (--ctx->r2 != 0) skip; else
+call;`). The diagnostic's `taken_skip` field, however, is computed from a SEPARATE, freshly-issued
+`MEM_W(-0X68EC, 0X80150000)` re-read a few statements later -- NOT `ctx->r2`. gate1/gate2/gate3 all
+read-modify-write this exact same shared word, and genuinely run under the coop scheduler's real
+concurrency (confirmed multi-thread execution is a running theme across this whole M5 lineage, e.g.
+s310's VI-retrace-callback finding). If another gate's write lands between the diagnostic's own read
+and the real load that already happened, `taken_skip` can show a stale/wrong value that has nothing to
+do with the actual branch outcome.
+
+**Instrumented the fix and confirmed by direct measurement.** Added `ctx->r2` (the true pre-decrement
+register value) as a new `reg=` field alongside the existing fresh re-read in all 3 gates
+(`fixup_game_funcs.py` `_musyx_gate{1,2,3}_patch`), reversed `setDisplayMode`'s site (the `(?:B40|C88)`
+alternation regex temporarily narrowed to `C88` only, matching prior sessions' "reverse setDisplayMode
+only, keep reapplyDisplayMode force-zeroed" convention), regenerated
+(`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py`, confirmed `audio gate patched x1` and all 3
+`gate-N countdown/period diagnostic patched x1` in the fixup report), rebuilt, one soak
+(`scratch/s73_post_a_scene/run_step318gateregdivergence.sh`, copied from s317's template, same
+env/breadcrumb set, `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` already armed). Soak hit the expected
+deterministic phase-timeout (exit 5, INCONCLUSIVE, VI stuck waiting for width 1024) -- the known,
+accepted outcome for this reversed-site recipe, not a tooling failure; game process confirmed dead
+before and after.
+
+**Result, read directly from the log**: gate1's fresh re-read (`countdown=`) shows constant `0` across
+all 40 samples, exactly matching every prior session's reading. The new `reg=` field, however,
+alternates `2,1,2,1,2,1,...` -- 19 of the 40 samples have `reg=1`, meaning the REAL branch
+(`if (--reg != 0) skip; else call;`) took the **call** path on those 19 iterations. gate2 (only 4 of its
+containing loop's iterations ever reached, per s316) shows `reg=1` on ALL 4 -- all 4 real invocations
+call. gate3 remains 0 samples reached (a reachability fact, unaffected by this bug, unchanged from
+s316). **The "0/40 always skip" conclusion that s313/s315/s316 all built on was entirely a diagnostic
+artifact of the re-read racing against the other gates' concurrent writes -- gate1 and gate2 genuinely
+DO call `tickAllActiveSongs`/`tickAudioSequencerFrame` on a regular basis.** This resolves the "37 real
+calls vs. 0 measured call-branch takes" contradiction (CURRENT-TRUTH item -175) that blocked 3
+consecutive sessions: there was no missing call site and no missing write site to find, because the
+premise that motivated searching for either was itself false.
+
+`setDisplayMode`'s site re-reverted (the alternation regex restored to `(?:B40|C88)`), regenerated,
+rebuilt clean; confirmed `audio gate patched x2` in the fixup report and
+`MEM_B(0XF50, ctx->r1) = 0;` present at both `funcs_23.c:9788` (setDisplayMode) and its
+reapplyDisplayMode counterpart before ending session. All edits this session were in the standalone
+`~/Documents/Tools/N64Recomp` checkout (`fixup_game_funcs.py`) and `~/Documents/Tools/rogue_squadron64`
+(regenerated ELF only, no source edits) -- never inside this repo's `lib/`, so no
+`submodule-patches/export.sh` needed. `lib/N64ModernRuntime`/`lib/rt64` dirty status in `git status` is
+pre-existing, unrelated to this session.
+
+**Rule learned (general, worth remembering for future diagnostic design in this codebase):** when a
+diagnostic needs to report "what branch will this code take," it must reuse the SAME register/value the
+real branch logic already loaded, not issue a second independent read of the same memory location --
+especially for any shared/global state touched from more than one call site under this project's
+cooperative-threading model. A second read is not equivalent to the first even when they're only a few
+C statements apart; anything else with write access can land between them. This is now a standing check
+for reviewing any of this lineage's existing diagnostics that log shared (not call-local) state.
+
+`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang` (unchanged -- 12th session producing a
+discriminating result: s303/s306/s307/s309/s310/s311/s312/s313/s315/s316/s317/s318, s314 was
+maintenance and doesn't count). Next session: with the "gates never call" premise gone, re-derive why
+the 3 tick-producer functions (`tickAllActiveSongs`/`tickAudioSequencerFrame`/`tickAllAudioChannels`)
+still stop 3 calls short of the 40/40 hard-stop boundary (item -173's open question) -- now worth
+re-examining directly against gate1+gate2's own call-branch counts in the SAME soak (not yet compared
+in this session; this soak's window differs from the one that produced the original "37" figure, so a
+direct comparison needs a fresh same-run measurement, not a cross-run one per iron rule 2).

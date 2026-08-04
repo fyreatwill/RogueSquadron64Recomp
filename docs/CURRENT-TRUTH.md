@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    Overturned Conclusions entries). 35 KB remains a stretch target, not a hard floor — the "Current
    truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
    deliberately; both are used every iteration for phase-gating and build commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 10 times (s303-317), each reproducing an identical deterministic full-boot hang and narrowing it further. Current state (s317, direct measurement): the "4th/indirect call site" hypothesis is REFUTED (exhaustive grep — only 3 direct call sites exist, no others); a previously-unknown 4th WRITE site to the shared gate countdown was found instead — full detail Next-steps item -176.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 11 times (s303-318), each reproducing an identical deterministic full-boot hang and narrowing it further. Current state (s318, direct measurement): item -175's "gates never call" conclusion was a diagnostic TOCTOU-race bug, now fixed and OVERTURNED — gate1/gate2 DO take the call branch regularly. Full detail Next-steps item -177.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,7 +148,40 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -176 (s317); the next new item takes -177 and is inserted at the top.
+oldest). Current top is -177 (s318); the next new item takes -178 and is inserted at the top.
+
+-177. **(s318) M5 audio de-stubbing: item -175's "gate1/2/3 never take the call branch" conclusion was a
+    DIAGNOSTIC BUG (TOCTOU race), not a game-logic fact — OVERTURNED, see Overturned Conclusions.**
+    Two closed leads first (both pure grep/read, no build): (1) `initN64RspMixer`'s 4th write to the
+    shared countdown (item -176) is NOT per-frame — its only 2 call sites are inside
+    `initAudioSubsystem`/`reapplyAudioConfig`, called from `setDisplayMode` (boot-once, from
+    `mainBootstrapWorker`) and `reapplyDisplayMode` (gated behind a dirty-flag check inside
+    `runVideoFrameTick`, not unconditional-per-frame) — ruled out as the reset mechanism. (2)
+    `funcs_32.c:29181`'s `-0x68EC` reference is a coincidental hex match on a totally different base
+    register (`lui $a0,0x800B`, an unrelated game-object pointer for `dealDamagetoDatItem`) — not an
+    8th write site; exhaustive re-grep confirms exactly 7 real touches to `G_BASE-0x68EC` exist (6 gate
+    reads/writes + `initN64RspMixer`'s), no others.
+    The actual break: source-reading gate1's diagnostic block (`fixup_game_funcs.py`) found its
+    `taken_skip` field is computed from a **fresh, separate `MEM_W` re-read** of the shared countdown,
+    distinct from `ctx->r2` (the register the REAL branch decision actually uses, loaded one statement
+    earlier and never touched by the diagnostic). Since gate1/gate2/gate3 all read-modify-write the
+    SAME shared word and genuinely run under the coop scheduler's concurrency, the diagnostic's own
+    re-read can race against another gate's concurrent write, making `taken_skip` diverge from the true
+    outcome. Instrumented `ctx->r2` (the true pre-decrement value) alongside the existing re-read in all
+    3 gates, reversed `setDisplayMode`'s site, one soak. **Confirmed directly**: gate1's fresh re-read
+    (`countdown`) reads constant `0` across all 40 samples (matching every prior session's reading) while
+    the true register value (`reg`) alternates `2,1,2,1,...` — 19/40 samples have `reg=1`, which means
+    the real branch (`if (--reg != 0) skip; else call;`) takes the **call** path on those 19. gate2: all
+    4 of its reached samples have `reg=1` — all 4 real invocations call. gate3: still 0 samples reached
+    (unaffected by this bug — a reachability finding, not a race). **The "0/40 always skip" reading was
+    entirely a diagnostic artifact; gate1 and gate2 do call `tickAllActiveSongs`/`tickAudioSequencerFrame`
+    regularly**, resolving the "37 real calls vs. 0 measured call branches" contradiction that blocked
+    s313-317. `setDisplayMode`'s site re-reverted, baseline restored and rebuilt (verified: `audio gate
+    patched x2` in the fixup report, both force-zero sites present in source). Open follow-up: quantify
+    gate1+gate2's combined call rate against the independently-measured 37/run figure (different soak
+    windows, not a direct comparison yet) and re-derive why the 3 tick-producer functions still stop 3
+    calls before the 40/40 hard-stop boundary (item -173) now that the "always skip" premise is gone.
+    Full detail: `PORTING-STATE` Session 318.
 
 -176. **(s317) M5 audio de-stubbing: "4th call site" hypothesis REFUTED; found an unlocated 4th WRITE
     site to the shared gate countdown instead.** Continuing item -175's work unit (find the true call
@@ -379,6 +412,15 @@ Standing warnings:
 
 `## LLE stabilization session 2 (2026-07-12)` sits out of order in the log, between s7 and s8: its conclusions are among the oldest in the file, not the newest.
 
+- **(s316→s318)** "none of gate1/gate2/gate3 ever takes the 'call' branch (0/40, 4/40-all-skip,
+  0/40-unreached)" — the `taken_skip` diagnostic field read a fresh, separate `MEM_W` re-read of the
+  shared countdown instead of the register (`ctx->r2`) the real branch decision uses; since all 3 gates
+  race on that one shared word, the re-read could (and did) diverge from the true value. Direct
+  measurement of `ctx->r2` alongside the old field showed gate1 takes "call" on 19/40 samples and gate2
+  on 4/4 — the opposite of "always skip." Believable: the diagnostic pattern (read once for the real
+  branch, re-read again for the print) is easy to write without noticing it reintroduces a race the
+  first read didn't have; 3 sessions (s313/s315/s316) built increasingly precise instruments on the
+  false premise instead of questioning the read pattern itself. PORTING-STATE 318.
 - **(s222→s223)** "no soak reaches mesh-heavy content" — a 4-soak sample-size artifact; a re-run
   reached space-combat content before freezing. The freeze itself is real, still reproduces (now a
   flat fill, not a torn polygon). PORTING-STATE 223.
