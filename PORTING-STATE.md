@@ -25592,3 +25592,103 @@ hypothesized targets, though the family as a whole has now produced two real, va
 - Investigate the elevated pre-scene `waitForAnyAudioSlot` death rate itself (open since s278,
   never directly investigated — only observed as background noise across s278-283) — this is now
   costing real soak budget every session (1 of 3 soaks this session alone).
+
+## Session 284 (2026-08-03) — deliberate `-0x25A4($s1)` grep audit per s283's plan, 29 new guards across 3 functions, one live crash found+fixed via soak
+
+**What ran**: per s283's plan, grepped every `-0X25A4` occurrence across `RecompiledFuncs/*.c`
+(`grep -rn "\-0X25A4" .../RecompiledFuncs/*.c`) instead of continuing to wait for soaks to surface
+sites incidentally. Found 173 hits across 3 files (`funcs_19.c` x1, `funcs_27.c` x103,
+`funcs_40.c` x69). Before trusting the offset match, traced each hit's feeding `lui` value (not
+just the `-0x25A4` offset) — this caught a false positive: `npcShieldGeneratorUpdate`
+(`funcs_19.c`) loads its `-0x25A4` offset off a base set via `lui $at, 0x8004`, a completely
+different address than the hangar-list global's `lui $s1, 0x800D` — same offset, unrelated global
+(a float constant table, not a pointer). The other 172 hits all confirmed `lui`-`0x800D`.
+
+Per-function breakdown of the 172 confirmed hits: `hangarInitialize` (`funcs_27.c`) 103,
+`static_5_800AB658` 32 (the pre-existing `G1`-`G32` whack-a-mole family), `static_5_800ADB70` 21,
+`static_5_800AB1C8` 10, `static_5_800A9270` 4 (fully guarded last session), `static_5_800AAD9C` 2.
+`static_5_800AB658` (32/32) and `static_5_800A9270` (4/4) were already fully covered. The other 3
+`funcs_40.c` functions had NEVER been audited — delegated 3 parallel classification passes
+(one per function) plus a scoping-only sample of `hangarInitialize` to background agents, each
+reading the full function body and, for every hit, tracing whether the loaded pointer (or a value
+derived from it) reaches a dereference with no preceding `0x80000000`-`0x80800000` range check.
+
+Results: `static_5_800AAD9C` (2 hits) — both unguarded, identical shape (two near-duplicate scan
+loops). `static_5_800AB1C8` (10 hits) — 4 already guarded (pre-existing sites 1/3/4/5), 1 safe
+(loaded value only ever used as a call argument, never dereferenced in this function), 5 unguarded
+(sites 6-10) — two of the five (6 and 10) are a "second-hop" variant: the EXISTING guard at that
+site validates the *value loaded from* the dereference, not the pointer used to *reach* it, so the
+first-level dereference itself was still exposed. `static_5_800ADB70` (21 hits) — all 21
+unguarded, no bounds checks anywhere in the function; the 21 sites collapse into ~9 recurring
+2-4-line shapes (load, add loop-index, dereference one or more fields), all converging on the same
+single epilogue `L_800AE060`. Total: 28 genuinely unguarded sites across the 3 functions.
+
+`hangarInitialize` (`funcs_27.c`, lines 119802-133178, 13,376 lines) was scoped ONLY, not touched
+this session — a 22-site sample (spread start/middle/end) found 21 unguarded, 1 safe (the write
+that initializes the global itself), 0 already-guarded; the function has only 5 true epilogues
+(returns) across its span plus 244 branch-target labels (not exit points); estimated 5-7 future
+sessions to fully classify+guard at the same per-site rigor used here, given the sheer size.
+
+**The patch**: exact source context for every one of the 28 sites was extracted programmatically
+(a small script walking backward from each dereference line to its immediately-preceding pointer
+computation) and each anchor regex's uniqueness within `funcs_40.c` was verified via a dry-run
+match count (all 28 matched exactly once) BEFORE splicing into `fixup_game_funcs.py` — avoiding
+the risk of a shared/duplicated anchor text silently patching the wrong location. Landed 28 new
+guards (`S284_AAD9C_1`/`_2`, `S284_AB1C8_6`/`_7`/`_8`/`_9`/`_10`, `S284_ADB70_1`-`_21`), same
+established recipe (`U32(ctx->rN)` range check, bail to each function's own confirmed epilogue
+label — `L_800AB1A4` for AAD9C, `L_800AB618` for AB1C8, `L_800AE060` for ADB70, all found by
+reading each function to its closing brace). Full regen pipeline, clean build, patch report
+confirmed all 28 patched `x1` each alongside every pre-existing guard (G1-G32, HANGARLIST_GUARD
+family) — no stacking/collisions.
+
+**Soak1 (post-28-guard build) crashed, informatively**: reached the scene, then SIGBUS inside
+`static_5_800A9270` (native `+1176`, called from `static_5_800AAD9C+4188` — both offsets confirmed
+within their own symbols' own ranges via a Mach-O symtab walk, not a nearest-symbol
+misattribution). This function was supposedly fully guarded (4/4 sites, s283) — full re-read
+confirmed all 4 of its own `-0x25A4` loads ARE still correctly guarded, but found a NEW,
+previously-unnoticed bug one hop further downstream: at guest `0x800A92BC`, `ctx->r5` is loaded
+from the ALREADY-VALIDATED hangar-list entry's own `+0x4` field (a "next"/child pointer read out
+of the list structure), then dereferenced two instructions later at guest `0x800A92C4`
+(`ctx->r7 = MEM_W(ctx->r5, 0x0)`) with NO validation of its own — the identical "second-hop" shape
+as s282's `G32` fix (validating a value's *source* doesn't validate a *pointer read from* that
+source). Guest-relative offset from function start (`0x54`, ~35% through) reasonably matches the
+native crash-offset ratio (`1176/3048`, ~39%) combined with the exact call-chain match. Landed
+`S284_A9270_SECONDHOP` (bail `L_800A9350`, this function's pre-existing epilogue, already used by
+all its other guards). Required a full delete-and-regenerate of `funcs_*.c` before re-running
+`fixup_game_funcs.py` (never re-run fixup on an already-patched file — it re-matches the
+unconsumed original anchor text and stacks a duplicate guard). Clean rebuild.
+
+**Re-validation**: soak2 and soak3 (`HOLD_S=240` each) both reached the scene and survived past
+it, dying during the hold at two OTHER already-catalogued, unrelated sites
+(`processSceneNode+1424`, `reserveAndEmitDLEntry+10056`). Neither reproduced the second-hop crash
+and no `s284`/`hangarlist` guard fired in either log — 2 informative scene-reaching soaks, same
+non-recurrence bar used throughout this whack-a-mole family.
+
+**What this shows / rules out**: closes the deliberate-audit thread for the 3 previously-unaudited
+`funcs_40.c` functions — 29/29 now-known unguarded `-0x25A4`-family sites in those 3 functions are
+guarded and validated non-recurring (28 from the audit + 1 second-hop found chasing the audit's
+own soak). Does NOT close the investigation overall: `hangarInitialize` (103 hits, ~102 likely
+unguarded per the sample) remains the largest unaudited surface by a wide margin. The second-hop
+pattern (found independently at `G32` s282 and here s284) recurring in two unrelated functions two
+sessions apart suggests it is a systematic blind spot of the "validate the loaded value, not the
+pointer that reached it" style of audit — worth explicitly checking for in any future pass over
+`hangarInitialize`, not just the raw `-0x25A4` reload sites.
+
+**Housekeeping**: all edits this session were to `N64Recomp/fixup_game_funcs.py` (untracked in the
+standalone `N64Recomp` checkout, no `lib/` changes, no `export.sh` needed). No
+`lib/N64ModernRuntime`/`lib/rt64` edits (dirty submodule state inspected only, unchanged baseline).
+Scratch scripts for this session's site-extraction/verification live under `scratch/agent/`
+(`classify_25a4.py`, `extract_sites.py`, `gen_s284_patch.py`, `verify_uniqueness.py`,
+`symtab_check.py` — kept for reference, not cleaned up). `CURRENT-TRUTH.md` still flagged oversized
+(25+ sessions overdue for pruning) — not this session's job, no leftover budget.
+
+**Next steps**: `hangarInitialize` (`funcs_27.c`, 103 hits) is the clear highest-value next target
+— same bug family, same established fix recipe, by far the largest remaining unaudited surface.
+Given its size (13,376 lines), it needs to be broken into chunks across multiple future sessions
+(the scoping pass found only 5 true epilogues across the function, at lines ~123792, ~124604,
+~125413, ~132214, ~133175 — natural chunk boundaries for per-session scope). Each future session
+should: (1) classify+guard one epilogue-bounded chunk at the same per-site rigor used here, (2)
+explicitly check for the second-hop pattern within each chunk, not just raw `-0x25A4` reloads, (3)
+regen/build/validate with 2-3 soaks before moving to the next chunk (do not batch multiple
+chunks' regens together — one build-run cycle per chunk, per the "capture once, analyze many" rule
+applied per-chunk since chunks are large enough to be their own work units).

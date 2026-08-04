@@ -663,7 +663,57 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s283)
+## Next steps, in order of expected value (s284)
+
+-125. **(s284) Deliberate grep-based audit of every `-0x25A4($s1)` hangar-list global-pointer
+    reference across `RecompiledFuncs/*.c`, per s283's plan — found the audit scope was far larger
+    than the 4 incidentally-discovered sites, landed 29 new guards across 3 functions, and found +
+    fixed a live crash the new guards exposed.** Full detail: `PORTING-STATE` Session 284.
+
+    **The audit**: grepped every `-0X25A4` occurrence in `RecompiledFuncs/*.c` (173 hits across 3
+    files) and traced each hit's feeding `lui` value (not just the offset) to confirm it's really
+    the same global — this caught 1 FALSE POSITIVE (`npcShieldGeneratorUpdate`, base `lui 0x8004`,
+    a completely different global that happens to share the same low-order offset). Of the
+    remaining 172 confirmed hits: `static_5_800A9270` (4/4) and `static_5_800AB658` (32/32 via the
+    pre-existing `G1`-`G32` family) were already fully guarded. Three functions in `funcs_40.c` had
+    NEVER been audited: `static_5_800AAD9C` (2 hits, both unguarded), `static_5_800AB1C8` (10 hits,
+    5 already guarded/1 safe/5 unguarded — the unguarded 5 include 2 "second-hop" cases where an
+    existing guard validated the *result* of a dereference but not the pointer used to *reach* it),
+    `static_5_800ADB70` (21 hits, all unguarded). `hangarInitialize` (`funcs_27.c`, 103 hits in a
+    single 13,376-line function) was scoped but NOT touched — a 22-site sample found ~102 of 103
+    look unguarded with the same shape, but the function is too large to classify+patch with
+    per-site rigor in one session; estimated 5-7 future sessions to fully audit.
+
+    **The patch**: 28 new guards (`S284_AAD9C_1`/`_2`, `S284_AB1C8_6`/`_7`/`_8`/`_9`/`_10`,
+    `S284_ADB70_1`-`_21`) landed in `N64Recomp/fixup_game_funcs.py`, same established recipe
+    (`U32(ctx->rN)` range check against `0x80000000`-`0x80800000`, bail to each function's own
+    confirmed epilogue label: `L_800AB1A4` for AAD9C, `L_800AB618` for AB1C8, `L_800AE060` for
+    ADB70). Full regen pipeline, clean build, patch report confirmed all 28 patched `x1` each.
+
+    **Soak1 (post-28-guard build) crashed** — inside `static_5_800A9270` (native `+1176`, called
+    from `static_5_800AAD9C+4188`, both offsets confirmed within their own symbols' ranges via
+    Mach-O symtab walk). Full re-read of `static_5_800A9270` confirmed all 4 of its own `-0x25A4`
+    loads were still correctly guarded (s283's work intact) — but found a NEW bug one hop further
+    downstream: `ctx->r5`, loaded from the validated hangar-list entry's own `+0x4` field (guest
+    `0x800A92BC`), is dereferenced two instructions later (guest `0x800A92C4`) with NO validation
+    of its own — the same "second-hop" shape as s282's `G32` fix. Guest-relative offset (`0x54`,
+    ~35% through the function) is a reasonable match for the native crash-offset ratio (~39%),
+    combined with the exact call-chain match. Landed `S284_A9270_SECONDHOP` (bail `L_800A9350`,
+    this function's pre-existing epilogue), full regen+rebuild, clean.
+
+    **Re-validation**: soak2 and soak3 (both `HOLD_S=240`) both reached the scene and survived it,
+    dying during the hold at two OTHER already-catalogued unrelated sites (`processSceneNode+1424`,
+    `reserveAndEmitDLEntry+10056`). Neither reproduced the second-hop crash or fired any
+    `s284`/`hangarlist` guard — 2 informative scene-reaching soaks, standard non-recurrence bar.
+
+    **Status**: this closes the deliberate-audit thread for the 3 previously-unaudited `funcs_40.c`
+    functions (29/29 unguarded sites now guarded, all validated non-recurring). `hangarInitialize`
+    (103 hits) is the clear next highest-value target — same bug family, same fix recipe, by far
+    the largest remaining unaudited surface. **Methodological note for that future audit**: watch
+    specifically for the "second-hop" pattern found here and at `G32` — an existing guard on the
+    *result* of a dereference does not protect the pointer used to *reach* that dereference, and
+    does not protect any *further* pointer read out of the validated structure. Two independent
+    findings of this same blind spot in two sessions suggests it is systematic, not incidental.
 
 -124. **(s283) Source-read `static_5_800A9270`/`loadCutsceneAssetsByIndex` per s282's plan — found
     and closed the `+948` backlog item, PLUS 2 more unguarded sites of the same bug shape in the
