@@ -25938,3 +25938,66 @@ label names). If it turns out to be genuinely live, it becomes a normal per-site
 audit like chunk 1 was. Other standing backlog items, unblocked and still open: the elevated
 pre-scene `waitForAnyAudioSlot` death rate (open since s278, never directly investigated), and the
 `inflate_fast`/zlib localization design (s272, never attempted).
+
+## Session 288 (2026-08-03) — classifies `playerSnowSpeederInit`: REFUTES the s286/287 "may be a dead duplicate" hypothesis and closes the `-0x25A4` hangar-list audit lineage with a clean 0-hit result
+
+Ran the dead-code-detection methodology (s286/287) on `playerSnowSpeederInit` (`funcs_27.c:144145-150543`,
+6399 lines, guest range `0x800AAAE0`-`0x800ACD98`) per s287's plan, since it independently reused
+label names from all three of `hangarInitialize` chunks 2/3/4's address ranges
+(`static_5_800AAD9C`/`static_5_800AB1C8`/`static_5_800AB658`).
+
+**Step 0 (before the 3-check proof): grepped for `-0x25A4($s1)` / `25A4` anywhere in the function's
+line range — zero hits.** Verified twice: once against an extracted copy of the function body, once
+directly against `funcs_27.c` with an `awk` line-range filter, same result. This alone closes the
+audit target — there is nothing to guard here regardless of the function's live/dead status.
+
+**Ran the classification anyway, since NEXT.md explicitly required verifying rather than assuming**:
+the "may be a dead duplicate" hypothesis is **REFUTED**, not confirmed.
+- Extracted every `// 0xADDR:` comment line (2552 of them) and checked address monotonicity across
+  the whole function: **zero decreases, only expected delay-slot repeats** — the guest address
+  stream is a single continuous non-decreasing run from `0x800AAAE0` to `0x800ACD98`, the shape of
+  genuinely continuous translated code, not a live-prologue-then-spliced-in-duplicate-chunk pattern
+  (which is what `hangarInitialize`'s dead chunks looked like — a big backward/discontinuous jump at
+  the chunk boundary).
+- Directly compared the instruction at each of the three addresses where `playerSnowSpeederInit`'s
+  comment stream crosses a known-duplicated function's start address, against that function's own
+  real first instruction:
+  - `0x800AAD9C`: `playerSnowSpeederInit` has `ori $v0, $zero, 0xFFFF`; `static_5_800AAD9C`'s real
+    first instruction is `addiu $sp, $sp, -0x30`. **Different.**
+  - `0x800AB1C8`: `playerSnowSpeederInit` has `lw $a1, 0x0($s2)`, continuing a live instruction
+    stream (previous line is `lui $a0, 0x8011` feeding an unrelated computation) — not a function
+    prologue at all.
+  - `0x800AB658`: `playerSnowSpeederInit` has `lwc1 $f0, 0x50($s0)`; `static_5_800AB658`'s real
+    first instruction is `addiu $sp, $sp, -0x100`. **Different.**
+
+A single diverging instruction at a byte-for-byte comparison anchor is sufficient to disprove
+duplication (the same standard s286/287 used to *confirm* duplication elsewhere — exact match
+required). All three anchors diverge. Combined with the whole-function address monotonicity, this
+is decisive: `playerSnowSpeederInit` is real, continuously-translated, live code across its entire
+span — it is NOT a dead duplicate of `static_5_800AAD9C`/`static_5_800AB1C8`/`static_5_800AB658`.
+
+**What actually explains the s286/287 label-name overlap**: `playerSnowSpeederInit` occupies the
+same *virtual* guest-address range as these three `funcs_40.c` functions (they're loaded via a
+different overlay context), so its `L_<addr>:` labels share numeric names with theirs by pure
+address coincidence — not because it contains a text/byte copy of their bodies. This is the same
+overlay-address-reuse phenomenon behind `hangarInitialize`'s dead chunks, but manifesting
+differently here: coincidental address/label overlap between two *live* functions from different
+overlays, not a live function containing a dead copy of another's bytes.
+
+**No fixup-script changes, no regen, no rebuild, no soak this session** — a source-read-only
+investigation, 0 guards needed (there is nothing at the `-0x25A4` offset to guard), confirmed by two
+independent checks (grep-based hit count, direct line-range grep against the original file).
+
+**What this closes**: this was the last function flagged by the `-0x25A4($s1)` hangar-list-pointer
+audit lineage (s282-287) as a candidate for further work. With `playerSnowSpeederInit` confirmed to
+have zero hits, the entire audit lineage that began at s283 (deliberate grep across
+`RecompiledFuncs/*.c`) is now closed: every function it touched or flagged is either fully guarded
+(`static_5_800A9270`, `static_5_800AAD9C`, `static_5_800AB1C8`, `static_5_800AB658`,
+`static_5_800ADB70`, `hangarInitialize` chunk 1) or confirmed to need no guards at all
+(`hangarInitialize` chunks 2-5, `playerSnowSpeederInit`).
+
+**Next steps**: no further `-0x25A4` work is queued. Move to the standing backlog, unblocked and
+still open: the elevated pre-scene `waitForAnyAudioSlot` death rate (open since s278, never directly
+investigated — recommended default, since it's the older of the two open items and may explain a
+chunk of soak non-reproducibility across recent sessions), or the `inflate_fast`/zlib localization
+design (s272, never attempted, needs a different approach since it's a system-library call).

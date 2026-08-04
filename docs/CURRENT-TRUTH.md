@@ -663,7 +663,36 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s287)
+## Next steps, in order of expected value (s288)
+
+-129. **(s288) CLOSES the `-0x25A4($s1)` hangar-list-pointer audit lineage (s283-288) entirely —
+    `playerSnowSpeederInit` has ZERO `-0x25A4` hits, and its apparent 3-function label overlap
+    (flagged by s286/287 as a possible dead-duplicate signal) is REFUTED: it is genuinely live,
+    continuously-translated code that merely shares virtual address space with
+    `static_5_800AAD9C`/`static_5_800AB1C8`/`static_5_800AB658`, not a text/byte copy of any of
+    them.** Full detail: `PORTING-STATE` Session 288.
+
+    Zero `-0x25A4`/`25A4` hits anywhere in `playerSnowSpeederInit` (`funcs_27.c:144145-150543`),
+    confirmed two independent ways (extracted-copy grep, direct line-range grep on the source file)
+    — closes the audit target regardless of live/dead status. Ran the dead-code-detection
+    methodology anyway per NEXT.md's explicit "verify, don't assume" instruction: whole-function
+    guest-address monotonicity (2552 address comments, 0 decreases — a single continuous
+    translated run, not a live-prologue-then-spliced-duplicate shape) plus 3 direct instruction
+    comparisons at the addresses where its label stream crosses `static_5_800AAD9C`/`_800AB1C8`/
+    `_800AB658`'s own start addresses — all 3 diverge from those functions' real first instructions.
+    One diverging instruction at a byte-comparison anchor disproves duplication (same standard used
+    to *confirm* duplication for `hangarInitialize`'s chunks); 3/3 anchors diverge here.
+
+    **Explains the s286/287 label overlap**: shared *virtual* guest-address space between two live
+    functions loaded via different overlay contexts, not a dead function containing a byte-copy of
+    a live one's body — a variant of the overlay-address-reuse phenomenon behind `hangarInitialize`'s
+    actual dead chunks, not an instance of it.
+
+    **Status**: every function touched or flagged by the s283-288 audit lineage is now either fully
+    guarded or confirmed to need no guards. No further `-0x25A4` work is queued. **Next targets**:
+    the standing backlog — elevated pre-scene `waitForAnyAudioSlot` death rate (open since s278,
+    never directly investigated; recommended default) or the `inflate_fast`/zlib localization design
+    (s272, never attempted).
 
 -128. **(s287) CLOSES the entire `hangarInitialize` `-0x25A4` audit — chunks 3, 4, and 5 (the
     remaining ~89% of the function, 124187-133572) all confirmed dead unreachable duplicate code
