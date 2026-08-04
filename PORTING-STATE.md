@@ -26435,3 +26435,86 @@ Did not reach the ~35KB stretch target: the sections required to stay near-verba
 **Shows**: (1) the `docs/CURRENT-TRUTH.md` bloat was structural, not organic — one section (Next-steps) duplicating another document (PORTING-STATE.md) almost line-for-line, compressible ~9x without fact loss once that duplication is recognized; (2) the file can still not realistically hit a 35KB hard cap while also carrying ~159 distinct historical backlog items even at one line each — a future maintenance session should consider whether items older than some threshold (e.g. past item -100, sessions before ~s200) can be dropped from `CURRENT-TRUTH.md` entirely (not merely compressed) now that `PORTING-STATE.md` is the sole source for them and none of that range is still "next steps" by any reasonable reading; (3) delegating a large, well-specified single-file rewrite to a subagent and verifying the diff afterward is a workable pattern for this class of maintenance task — worth reusing next time the file needs another pass.
 
 `docs/CURRENT-TRUTH.md`: compacted per the above (7,959→1,267 lines). `docs/PROJECT-OVERVIEW.md`: +8 lines (one migrated lesson). `scratch/agent/NEXT.md`: unchanged in substance — the `tickTextureMaterialExpiry` guard remains the fully-specified next work unit (see NEXT.md itself), only a note added that the Next-steps item it references is now numbered `-159` (was `-135`) post-renumbering.
+
+
+## Session 296 (2026-08-04) — MAINTENANCE: 2nd compaction pass on `docs/CURRENT-TRUTH.md`, 120,975→59,786 bytes / 1,267→674 lines
+
+Bootstrap: Step 0 of `tools/agent/ITERATION.md` triggered again — `docs/CURRENT-TRUTH.md` had
+regrown/settled at 121,349 bytes, over the 60,000-byte emergency trigger (s295's pass had cleared it
+once but the file was still ~2x over at the start of this session; s295's own commit had landed at
+120,975 bytes and one session's worth of drift since then plus rounding brought it to 121,349). Per
+the 2026-08-04 USER DIRECTIVE, maintenance is priority 1. `scratch/agent/OUTCOME` was found deleted
+and `scratch/agent/STATUS` at `WORKING` — a leftover from an interrupted prior iteration; nothing to
+recover for a pure maintenance pass, overwritten as part of this session's own exit contract.
+
+Read the full file (1,271 lines) directly rather than delegating to a subagent this time, and worked
+section by section per the ITERATION.md maintenance technique:
+- **Goal stack, M3 entry**: the single worst offender flagged by the task brief — a ~108-line inline
+  session-by-session chronicle (s50-s97) crammed into one bolded run-on paragraph, duplicating detail
+  already in the Next-steps list and PORTING-STATE. Compressed to a 6-line status summary (milestone
+  status, the 4 major fixes as one-liners, a pointer to the crash-catalog table and grouped Next-steps
+  era entries, and the unchanged done-when criteria).
+- **Next-steps list**: kept items -159 through -130 (the current active investigation thread —
+  BREADCRUMB10-14, the `-0x25A4` audit closure, `tickTextureMaterialExpiry`) with their one-paragraph
+  summaries essentially intact, per the maintenance brief's explicit instruction not to touch this
+  range. Collapsed items -129 through -26 (103 items, sessions ~150-264) into 3 grouped era-summary
+  entries by natural narrative arc: `-129..-114` (the `composeNpcOrientationMatrix` whack-a-mole
+  closure + genesis of the s249-251 unguarded-walk static sweep — the sweep `-159` above resumes),
+  `-113..-85` (three interleaved threads: Metal-crash fixes/CALayer-campose hunt/freeze investigation,
+  s220-248), and `-84..-26` (the long `heapWalker`/`renderUnlitMeshFaces`/`composeNpcOrientationMatrix`
+  /`heapFreeListDequeue` whack-a-mole guard-gap chase, s150-219, converging on the KSEG0/rdram-base-
+  constant lessons already captured under Overturned Conclusions). Items -25 through -1 plus "Done, do
+  not redo" were left substantially in place (already terse, heavily cross-referenced foundational
+  content — the crash-catalog table at item -15, the Thread A/B saga at -19/-18) but lightly trimmed
+  for redundant clauses.
+- **Overturned Conclusions**: kept the 3 most-likely-to-recur claims (s222/223 mesh-content
+  non-determinism, s216-219 KSEG0/rdram-base constant, s75/150 hangar-flight scene identity) plus the
+  s12-48 scene-identity and s47 origin-routing entries (both actively cross-referenced from "Current
+  truth" above) essentially intact but trimmed. Grouped ~15 distinct early-build-era claims (s2-s31:
+  colour-buffer/texrect/geometry-op/DPC_WRAP/PRIM_ALPHA/floor-band/fog-color/S=0-triangle/stale-TMEM/
+  1024-black-screen misattributions) into one paragraph pointing to PROJECT-OVERVIEW §4.1/4.2/4.6 for
+  the general mechanisms. Grouped the s70-s82 post-`a` SIGBUS/black-screen 9-claim self-correction
+  chain into one paragraph (all already resolved by the s82 sane-width gate / s84 UAF fix summarized
+  under "Root causes found and fixed"). Compressed the s62-69 CPU-side-freeze/ImemOverrun pipeline
+  lessons and the s23/28/30 shade-census claims into shorter individual entries. Dead ends and Method
+  traps sections left materially unchanged (already compact, per the maintenance brief).
+- **Migrated to `docs/PROJECT-OVERVIEW.md`** (new paragraph after "Fixing the hangar band" in §3): the
+  full mechanism detail for the s76-147 M3 crash chase (5 memorable root causes: last-drawn wild-FB
+  black screen, `evalCubicSplineAtTime` NaN div0, OSThread UAF SIGBUS, the `do_rom_read`/`piDmaWorker`
+  DMA-corruption race, and the still-open TMEM-zero assert; plus the ~20 hangar-tick-family unguarded-
+  pointer-chase classes and their `-0x25A4` sub-family closure) — this was previously only in
+  CURRENT-TRUTH's "Root causes found and fixed" bullet list, which now just indexes fix session
+  numbers and points here. `PROJECT-OVERVIEW.md` grew 14,314→15,743 bytes (221→237 lines), still well
+  under its ~20-25KB ceiling.
+
+Verified sizes with `wc -c`/`wc -l` after each major edit rather than only at the end, iterating
+compression passes (env-var bullet list tightened, M4 goal-stack detail trimmed, item -22/-25
+tightened, Menu-state-machine/Remaining-visual-defects/Stability paragraphs tightened) until the file
+cleared 60,000 bytes with a real margin (59,786) rather than landing exactly on the boundary.
+
+Updated `scratch/agent/NEXT.md`'s maintenance note (only that note — the `tickTextureMaterialExpiry`
+guard work unit and `HYPOTHESIS-ID: tickTextureMaterialExpiry-guard` are unchanged) to record both
+maintenance passes and correct a now-stale environment note that still described the file as
+"~8000 lines and growing."
+
+**Rules out**: nothing (no experiment run this session; Step 0 mandates maintenance-only, no builds/
+soaks — none were run).
+
+**Shows**: (1) a single maintenance pass does not need to be "all-or-nothing" between emergency-clear
+and 35KB-stretch-target — a second, more surgical pass (grouping era-summaries instead of just
+trimming prose, plus migrating durable mechanism detail to PROJECT-OVERVIEW.md) can clear the harder
+60,000-byte trigger with real margin without gutting load-bearing content; (2) tracking byte/line
+counts incrementally after each section edit (rather than one big rewrite + a single final check) made
+it possible to stop exactly when the target was met instead of over- or under-shooting; (3) the file
+is STILL above the ~35KB stretch target (59,786 vs. ~35,840) — a 3rd pass, if picked up, should focus
+on the "Current truth" section's env-var bullet list and the Regeneration-and-build-pipeline section
+(both skimmed-only this pass per the maintenance brief, both still fairly dense) rather than
+Next-steps/Overturned-Conclusions, which are now close to as compressed as they can get without
+losing the active-investigation-thread detail the brief explicitly protected.
+
+`docs/CURRENT-TRUTH.md`: 121,349→59,786 bytes (674 lines, down from 1,271 -- a 597-line, ~51% byte
+net cut). `docs/PROJECT-OVERVIEW.md`: 14,314→15,743 bytes (+16 lines, the migrated M3-crash-chase
+paragraph). `scratch/agent/NEXT.md`: maintenance note updated only, guard work unit and
+`HYPOTHESIS-ID: tickTextureMaterialExpiry-guard` unchanged. Still deferred: the ~35KB stretch target
+(next candidates: Current-truth env-var bullets, Regeneration section) — noted honestly in both the
+USER DIRECTIVE bracket in `CURRENT-TRUTH.md` and here, not claimed as done.

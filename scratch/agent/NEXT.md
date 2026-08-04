@@ -1,11 +1,15 @@
 # NEXT work unit — land the tickTextureMaterialExpiry guard (fully specified, no investigation needed)
 
-## Note: s295 was a MAINTENANCE iteration (Step 0), not a pivot away from this work unit
+## Note: s295 AND s296 were both MAINTENANCE iterations (Step 0), not a pivot away from this work unit
 
-`docs/CURRENT-TRUTH.md` was compacted 562,666→120,975 bytes (7,959→1,267 lines) and its
-triple-colliding Next-steps numbering was fixed into one sequence. The item describing this work
-unit's origin (`tickTextureMaterialExpiry` crossing the two-observation confirmation bar) is now
-`-159` in `CURRENT-TRUTH.md` (was `-135`) — same content, renumbered only. Nothing below this note
+`docs/CURRENT-TRUTH.md` was compacted 562,666→120,975 bytes (7,959→1,267 lines) at s295 (fixing its
+triple-colliding Next-steps numbering into one sequence), then compacted again 120,975→59,786 bytes
+(1,267→674 lines) at s296 — grouping older Next-steps/Overturned-Conclusions entries into
+era-summaries and migrating the M3 crash-chase mechanism detail to `docs/PROJECT-OVERVIEW.md` §3.
+Both passes are pure documentation compaction; no session-numbering or item content changed as a
+result. The item describing this work unit's origin (`tickTextureMaterialExpiry` crossing the
+two-observation confirmation bar) is still `-159` in `CURRENT-TRUTH.md`, kept verbatim (s296 kept
+items -159 through -130 intact per its own maintenance instructions). Nothing below this note
 changed; the guard work is still the fully-specified next unit, do it next.
 
 ## Top priority: land and validate the `ctx->r16` guard in `tickTextureMaterialExpiry`
@@ -136,12 +140,11 @@ time), land a breadcrumb if a guard can't be validated blind.
   `export.sh` needed for edits there, only for actual `lib/` submodule changes.
 - Disassembly tools (`otool`/`objdump`/`lldb`) remain BLOCKED in this sandbox — do not re-attempt,
   use the breadcrumb mechanism.
-- `CURRENT-TRUTH.md` is far over the ~35KB target (35+ sessions overdue) — not this iteration's
-  job unless the picked work unit is a quick null with clear leftover budget. Given `CURRENT-TRUTH.md`
-  is now ~8000 lines and growing every session, a future session with spare budget should seriously
-  consider a compression pass (migrate durable material to `PROJECT-OVERVIEW.md`, prune superseded
-  detail) rather than deferring again — this note has now carried forward unaddressed for over 30
-  sessions.
+- `CURRENT-TRUTH.md` was compacted twice (s295, s296) and is now 674 lines / ~59.8KB — under the
+  60,000-byte Step-0 maintenance trigger but still above the ~35KB stretch target. Not this
+  iteration's job unless the picked work unit is a quick null with clear leftover budget; a 3rd
+  maintenance pass (see the USER DIRECTIVE bracket at the top of `CURRENT-TRUTH.md` for where s296
+  left off) can wait until Step 0 actually re-fires.
 - At session start, check `scratch/agent/STATUS`/`OUTCOME` for signs of an interrupted prior
   iteration, but also run `git diff --cached` for staged tracked-file content beyond the routine
   reset.

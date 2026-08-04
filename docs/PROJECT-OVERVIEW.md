@@ -88,6 +88,22 @@ cull-census-identity violations). Overlays 12/44 still take the old broken path 
 splice recipe applies if they ever matter. Full detail: PORTING-STATE s44–s49; day-to-day state in
 `CURRENT-TRUTH.md` M1/M2.
 
+**Chasing M3 crashes (s76–s147).** Getting past AVAILABLE CRAFT into a stable SELECT YOUR CRAFT menu,
+then surviving long enough to reach a mission, meant working through roughly 20 distinct crash
+classes one guest function at a time. The five worth remembering as mechanisms: RT64 presenting a
+wild last-drawn framebuffer on black screens (mode-3, width 1..257 — fixed by an always-on
+sane-width gate, s82); a div-by-zero on a zero-width keyframe interval in `evalCubicSplineAtTime`
+(s83); an OSThread UAF SIGBUS from scheduler thread-context reuse (found s70–72, fixed s84); the
+single longest-running M3 thread, `do_rom_read`/`piDmaWorker` DMA corruption, root-caused after ~30
+sessions to a non-atomic `voiceCount`-write-before-pointer-store race in `allocateSongChannelArray`
+letting the concurrently-scanning audio thread read a stale array (fixed s147/148); and a still-open
+TMEM-zero-dimension RT64 assert in `queueGPUUploadTMEM`, stopgap-guarded s192. The remaining ~20
+"hangar-tick-family" classes all shared one shape — an unguarded pointer-chase in a single guest
+function — and were closed one guard at a time (8 in the original s99–110 pass, a 2nd gap in 6 of
+those 8 found by a s126–132 re-audit, and the biggest recurring sub-family, the `-0x25A4`
+hangar-list-pointer chain, fully closed by the s282–288 systematic audit lineage). Full per-class
+catalog and day-to-day state: `CURRENT-TRUTH.md`.
+
 ## 4. The recurring hurdles
 
 These are the patterns that cost the most time, in rough order of total damage.
