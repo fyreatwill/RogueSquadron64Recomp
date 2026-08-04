@@ -40,8 +40,18 @@ Set after the 300-session review. Priority order for upcoming iterations:
    real write, leaving `setDisplayMode`/`reapplyDisplayMode` force-zeroed. 2 validation soaks: 0/2
    family #1 recurrence (both crashes are outright deaths, not hangs, so cannot be family #1 by
    construction), both dying instead to independently pre-existing crash classes (RDRAM-host-base/
-   `reserveAndEmitDLEntry`; `evalCubicSplineAtTime` NaN div0, s83). Execute step 4's next site
-   (`setDisplayMode`) next, per the plan's one-site-per-session design.
+   `reserveAndEmitDLEntry`; `evalCubicSplineAtTime` NaN div0, s83). **`setDisplayMode` site attempted
+   and RE-REVERTED (s303)**: reversing it too (`0x8008EB40`) produced 2/2 identical deterministic full
+   boot hangs -- VI width stuck at 320 the entire 600s window, exactly 39 RSP tasks total both soaks,
+   never reaching title. Does not match family #1's exact string signature and `waitForAnyAudioSlot`'s
+   drain loop was never entered (0 lines both soaks) -- a different, unlocalized stall mechanism.
+   Reverted back to force-zero same session; baseline restored to exactly s302's validated state
+   (`initMusyXEngine` alone reversed). **Do not retry `setDisplayMode`'s site** without a source-level
+   read of what value it actually computes into `$v0` before the write (open question: is it the same
+   kind of constant "real value" `initMusyXEngine` writes, or something context-dependent that a naive
+   pass-through corrupts?) -- next work unit. `reapplyDisplayMode`'s site remains untouched, unattempted;
+   do not assume it is safer than `setDisplayMode` just because it's a different call site -- the whole
+   finding here is that these 3 identical-instruction-pattern sites are NOT interchangeable.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -214,8 +224,32 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered -163 (top, newest/highest priority) counting up to -1 (bottom, oldest); relative
-order is unchanged from before the fix. The next new item takes -164 and is inserted at the
+order is unchanged from before the fix. The next new item takes -165 and is inserted at the
 top.
+
+-165. **(s303)** Executes M5-AUDIO-PLAN.md step 4's 2nd slice: reverses `setDisplayMode`'s gate-byte
+    force-zero site (`0x8008EB40`, `N64Recomp/fixup_game_funcs.py`, splitting the regex s302 left as
+    `B40|C88` down to `C88` only). Regen/build clean (`audio gate patched x1`, confirmed via direct
+    inspection). 2 validation soaks (`scratch/s73_post_a_scene/run_step4gate3.sh`, same recipe as
+    s302's `run_step4gate2.sh`): **2/2 identical deterministic full boot hangs** — `[phase]` shows only
+    2 transitions the whole 600s run (`vi_width=0→320` at 0.6s), VI width never advances past 320
+    (never reaches title), `[runner] task #N` count exactly **39** both soaks, both exiting "phase
+    timeout (INCONCLUSIVE)" at the 600s cap. Not family #1's exact string signature (0 occurrences of
+    `waitForMusyXAudioTaskDone`/`shutdownAudioEngine`) and not `waitForAnyAudioSlot`'s drain loop
+    (`ROGUESQ_LOG_AUDIO_DRAIN` logged 0 lines both soaks, meaning that loop was never entered) — a
+    different, currently-unlocalized stall mechanism, but unambiguously caused by this site's reversal
+    (this exact 39-task/stuck-at-320 signature never appeared in s300-302's soaks, all of which reached
+    title/SELECT YOUR CRAFT). **Re-reverted same session** — patch-count back to `x2`, regenerated
+    `funcs_23.c` re-inspected to confirm `0x8008EB40`/`0x8008EC88` both show the force-zero override
+    again while `0x8008E9F8` (`initMusyXEngine`) still shows the guest's real write, unchanged from
+    s302. No re-soak needed (this exact combination is s302's already-validated state — a pure
+    restoration, not a new configuration). **Confirms the plan's own risk flag that `setDisplayMode` is
+    a hotter, non-interchangeable path** vs. the boot-once `initMusyXEngine` site — do not retry this
+    site without a source-level read of what `setDisplayMode` actually computes into `$v0` before the
+    write (open question: constant "real value" like `initMusyXEngine`, or something context-dependent
+    that a naive pass-through corrupts?). `reapplyDisplayMode`'s site remains untouched — do not assume
+    it inherits `setDisplayMode`'s risk OR `initMusyXEngine`'s safety; treat it as its own open question.
+    Full detail: `PORTING-STATE` Session 303.
 
 -164. **(s302)** Executes M5-AUDIO-PLAN.md step 4: reverses `initMusyXEngine`'s gate-byte force-zero
     site. `N64Recomp/fixup_game_funcs.py`'s single combined regex (alternation `9F8|B40|C88` matching

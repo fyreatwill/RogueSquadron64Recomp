@@ -1,84 +1,80 @@
-# NEXT work unit — M5-AUDIO-PLAN.md step 4 (continued): reverse `setDisplayMode`'s gate-byte site
+# NEXT work unit — source-read: what does `setDisplayMode` write to the audio gate byte?
 
-## Context (read `docs/M5-AUDIO-PLAN.md` §4 step 4, and CURRENT-TRUTH Next-steps item -164 — condensed
-pointer, not a re-derivation)
+## Context (read `docs/M5-AUDIO-PLAN.md` §4 step 4, and CURRENT-TRUTH Next-steps item -165 —
+condensed pointer, not a re-derivation)
 
-s302 executed the first slice of step 4: reversed `initMusyXEngine`'s gate-byte force-zero site
-(`0x8008E9F8`) in `N64Recomp/fixup_game_funcs.py`, validated with 2 soaks — 0/2 recurrence of crash
-family #1's signature (`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` hang), `WAITFORSLOT_GUARD`
-fired 0/2, both soaks instead died to independently pre-existing, already-documented crash classes
-(RDRAM-host-base/`reserveAndEmitDLEntry`; `evalCubicSplineAtTime` NaN div0). Full detail:
-`PORTING-STATE` Session 302.
+s303 attempted the 2nd slice of M5-AUDIO-PLAN.md step 4: reversed `setDisplayMode`'s gate-byte
+force-zero site (`0x8008EB40`, `N64Recomp/fixup_game_funcs.py`). 2/2 validation soaks reproduced an
+**identical deterministic full boot hang**: VI width stuck at 320 (never reaches title) for the
+entire 600s window, exactly 39 RSP tasks executed both times. This does NOT match family #1's known
+string signature and does NOT go through `waitForAnyAudioSlot`'s drain loop (0 log lines both soaks
+— that loop was never entered) — it's a different, currently unlocalized stall, but unambiguously
+caused by this specific site's reversal (this signature never appeared in any of s300-302's soaks).
+**Re-reverted same session** — the committed baseline is back to exactly s302's validated state
+(`initMusyXEngine` alone reversed, `setDisplayMode`/`reapplyDisplayMode` both force-zeroed again).
+Full detail: `PORTING-STATE` Session 303.
 
-**Do not re-run step 4's `initMusyXEngine` soaks** — done, evidence recorded. This session's work is
-the second of the plan's 3 gate-byte sites: `setDisplayMode` (`0x8008EB40`).
+**Do not re-attempt reversing `setDisplayMode`'s site blind** — that's proven to hang. This session's
+work is a FREE source-read (no build/soak) to find out WHY, before touching either remaining site.
 
 ## The work unit
 
-`N64Recomp/fixup_game_funcs.py` currently has (after s302's split):
+Read `N64Recomp/RecompiledFuncs/funcs_23.c` around `setDisplayMode` (currently regenerated with the
+force-zero patch active — search for `0x8008EB40: sb          $v0, 0xF50($at)`, currently shows
+`MEM_B(0XF50, ctx->r1) = 0; // PATCH: force audio-engine-disabled`). Trace backward from that line to
+find where `ctx->r2` (`$v0`) is computed in `setDisplayMode` — is it:
+- a fixed immediate (`li $v0, N` for a constant N, same shape as `initMusyXEngine`'s write, which
+  s302 confirmed is "the real init-success value")? If so, the hang is NOT explained by "wrong value
+  written" and the mechanism must be call-frequency-related (setDisplayMode is called more than once,
+  vs. initMusyXEngine's boot-once call) — pivot to instrumenting call count / gate-byte value over
+  time instead.
+- a computed/branch-dependent value (e.g. derived from a display-mode-change success/failure code, or
+  copied from some other register that has nothing semantically to do with "audio enabled")? If so,
+  this write was likely never intended as a general-purpose "audio enable" toggle at this call site —
+  the shared address `0x800A0F50` may be doing double duty, and letting this specific write through
+  could be writing garbage/wrong-state into the gate byte, which downstream audio-tick code (already
+  identified in s300: `update3DAudioFrame`, `tickAllActiveSongs`, `tickAudioSequencerFrame` inside
+  `musyxSynthFrame`) may not handle gracefully.
 
-    new, n = re.subn(
-        r"(// 0x8008E(?:B40|C88): sb          \$v0, 0xF50\(\$at\)\n    MEM_B\(0XF50, ctx->r1\)) = ctx->r2;",
-        r"\1 = 0; // PATCH: force audio-engine-disabled (MusyX stubbed; spin-wait wedges coop scheduler)",
-        text)
+Also do the same read for `initMusyXEngine`'s already-reversed site (`0x8008E9F8`) as a comparison
+baseline — confirm textually that its $v0 source really is a simple constant, to sharpen the contrast.
 
-Split this further: remove `B40` from the alternation (leaving only `C88`/`reapplyDisplayMode` force-
-zeroed), so `setDisplayMode`'s site (`0x8008EB40`, in `funcs_23.c`, function `setDisplayMode`) falls
-through to the guest's own write. Regen order: `cd N64Recomp && ./build/N64Recomp rogue_squadron.toml
-&& python3 fixup_game_funcs.py` (expect `audio gate patched x1` now, was `x2`), then from repo root
-`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8`. Confirm by
-inspecting the regenerated `funcs_23.c` around the `setDisplayMode` function (search `sb          $v0,
-0xF50($at)` — should show `MEM_B(0XF50, ctx->r1) = ctx->r2;` with no `= 0` override).
+**Do NOT build or soak this session unless the source-read produces a concrete new hypothesis worth
+testing** — if it does, that becomes next session's build+soak work unit (name it explicitly in the
+next NEXT.md write-up, don't just re-try the same reversal).
 
-**Why this site is riskier than `initMusyXEngine`**: `setDisplayMode` runs on every display-mode
-change, not just once at boot — the plan flagged this as "a much hotter path" than the boot-time-only
-`initMusyXEngine` site. Watch for any NEW recurrence pattern tied to display-mode transitions
-specifically (title→menu, menu→craft-select, etc.), not just family #1's exact hang signature.
+## Fallback if the source-read is inconclusive or setDisplayMode's write also turns out to be a
+simple constant (i.e. "wrong value" is refuted)
 
-## Validation soak
-
-Same recipe as s301/s302: copy `scratch/s73_post_a_scene/run_step4gate2.sh` (or `run_waitforslotguard1.sh`)
-to a new `run_step4gate3.sh` (relabel the header comment and the `run_mission_keys.sh` argument), keep
-`ROGUESQ_AUDIO_UCODE=1` and `ROGUESQ_LOG_WAITFORSLOT_GUARD=1` armed, plus the full passive
-diagnostic/guard set already in that script.
-
-**Discriminating outcomes** (same structure as step 4's first slice):
-1. Crash family #1's exact signature recurs (`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` boot-
-   scheduler-wedge hang — a HANG, process stays alive until harness timeout, not a crash) → needs a
-   source-level fix in the ucode's task-completion signaling. Do NOT just re-force this site's gate
-   zero and call it done.
-2. 2 soaks, 0/2 family #1 recurrence (crashes to other pre-existing classes are fine, as s302 found —
-   check the crashing signature against the already-documented classes before treating it as new) →
-   reverse `reapplyDisplayMode`'s site next session (the last of the 3), same validation.
-3. A new/unattributable crash signature tied specifically to a display-mode-change moment → do not
-   dismiss as baseline noise; check whether the crashing function's own entry diagnostics fired (s301's
-   method: zero entry-diagnostic lines despite the crash PC resolving inside an instrumented function's
-   byte range = corrupted-jump/wild-write signature, not a legitimate call).
+Pivot to instrumenting: how many times is `setDisplayMode` called during the boot→title window, and
+what does the gate byte actually read as immediately before the hang's onset (task #39, i.e. within
+the first ~5-10 real RSP tasks)? A repeated ON/OFF toggle racing with `musyxSynthFrame`'s per-VI-tick
+read could produce a livelock-shaped slowdown (not a true infinite loop, hence the 39 tasks over 600s
+rather than exactly 0) without ever entering `waitForAnyAudioSlot` at all. This would need one cheap
+counter (`ROGUESQ_LOG_...` env-gated, gate-byte value + call-site tag logged once per
+`setDisplayMode`/`musyxSynthFrame`-gate-read pair) — batch it into the same build as whatever the
+source-read suggests, per the "one build carrying every counter" rule.
 
 ## Environment notes (carried forward, all still valid)
 
-- Regen order still applies: `make_elf.py` only if a source-level change is made (none needed for this
-  slice — it's a `fixup_game_funcs.py`-only edit) → `N64Recomp` → `fixup_game_funcs.py` → `cmake`.
+- Regen order still applies: `make_elf.py` only if a source-level change is made → `N64Recomp` →
+  `fixup_game_funcs.py` → `cmake`. This session's work is read-only against the regenerated
+  `funcs_23.c` — no regen needed unless a new instrument gets added (see fallback above).
 - `N64Recomp/fixup_game_funcs.py` is NOT git-tracked in the `N64Recomp` checkout itself — the durable
   record is this project's own `PORTING-STATE.md`/`CURRENT-TRUTH.md` plus the physical file on disk.
-  No `submodule-patches/export.sh` applies (that's only for `lib/N64ModernRuntime`/`lib/rt64`).
-- Soak driver: build `run_step4gate3.sh` from the `run_step4gate2.sh` template (env-var block +
-  `ROGUESQ_AUDIO_UCODE=1`/`ROGUESQ_LOG_WAITFORSLOT_GUARD=1`). `HOLD_S`/`PROBE_MODE` env-overridable,
-  phase-gates on VI width 1024, self-SIGKILLs at the end, prints a `--- summary ---` block.
-- **Waiting on a soak**: `run_in_background: true` then find the game's own pid (`pgrep -f
-  "\./RogueSquadron64Recomp"`) and block on it with a foreground Bash call
-  (`while kill -0 <pid> 2>/dev/null; do sleep 5; done; echo done`, generous timeout e.g. 400000ms) — a
-  bare foreground `sleep` is rejected but a polling loop like this is accepted and genuinely blocks
-  wall-clock time within the same tool call, which is what let s302 finish within one turn under the
-  Stop-hook's synchronous exit-contract check. Do NOT rely on Monitor/background-notification alone to
-  end the turn — the Stop hook fires and blocks immediately regardless of pending background tasks; the
-  turn must not end until the exit contract files are actually written.
-- **One game run at a time** — confirm the prior soak's game process (`RogueSquadron64Recomp` binary
-  itself, not the wrapper `tail -f`/`zsh` processes) has actually exited before launching the next.
-- s302's own crash data point: both soaks died within the first hold-iter (~15s into a 240s window) to
-  pre-existing crash classes unrelated to this change — budget for this again; a soak reaching the full
-  240s hold window has not happened recently for this scene, independent of the audio work.
+- Soak driver template if a build+soak becomes warranted: `scratch/s73_post_a_scene/run_step4gate3.sh`
+  (already exists from s303, reusable as-is if the change under test doesn't need new env vars).
+- **Waiting on a soak**: `run_in_background: true` for the game launch, then poll the actual game pid
+  (`pgrep -f "\./RogueSquadron64Recomp"`) with a foreground polling-loop script (not a bare `sleep`) —
+  see `scratch/agent/wait_step4gate3_1b.sh` for a reusable 580s-budget polling template. A single Bash
+  tool call caps at 600000ms, so a 600s phase-timeout soak needs the polling script's own internal
+  budget to stay under that, or a 2nd Bash call to finish waiting.
+- **One game run at a time** — confirm `pgrep -f "\./RogueSquadron64Recomp"` is empty before launching
+  the next soak.
+- `[phase]` line count is a fast triage signal: 2 lines total (stuck at width=320 forever) means a
+  s303-style hang; many lines advancing through 640→1024 means normal progress. Check this FIRST
+  before reading the rest of a soak's ~700KB+ log.
 - The `unguarded_walk_candidates.json` sweep (143 sites/43 funcs, 3 addressed) remains the fallback
   M3-audit work unit if a future session finds M5 blocked and maintenance isn't triggered.
 
-HYPOTHESIS-ID: m5-audio-destub-step4
+HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang

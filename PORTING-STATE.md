@@ -26929,3 +26929,61 @@ table with only 2 soaks, exactly as s301 found for step 3. Per the plan's explic
 
 No `lib/` changes this session (fixup edit lives in `N64Recomp/fixup_game_funcs.py`, tracked only in
 this project's own ledger per s301's note — not a git-tracked file in that checkout).
+
+## Session 303 (2026-08-04) — executes M5-AUDIO-PLAN.md step 4's 2nd slice: reverses `setDisplayMode`'s gate-byte force-zero site, 2/2 soaks reproduce a deterministic full boot hang, RE-REVERTED same session
+
+**Work unit**: per the plan's step 4 ordering and s302's own recommendation ("next work unit is
+`setDisplayMode`'s site, per the plan's one-site-per-session design"), removed the force-zero override
+at `setDisplayMode`'s gate-byte write (`0x8008EB40`). `N64Recomp/fixup_game_funcs.py`'s regex (already
+split by s302 to `B40|C88`) was split further to `C88` only, so `setDisplayMode`'s site falls through
+to the guest's own `sb $v0,...` write alongside `initMusyXEngine`'s (s302), leaving only
+`reapplyDisplayMode` (`0x8008EC88`) force-zeroed. Confirmed via patch-count (`audio gate patched x1`,
+was `x2`) and direct inspection of the regenerated `funcs_23.c:9754` (`MEM_B(0XF50, ctx->r1) =
+ctx->r2;`, no override). Full regen ran clean (`N64Recomp` → `fixup_game_funcs.py` → cmake build, 0
+errors, 46-warning baseline unchanged).
+
+**Validation — 2 soaks**, same recipe as s302's `run_step4gate2.sh` (`ROGUESQ_AUDIO_UCODE=1`,
+`ROGUESQ_LOG_WAITFORSLOT_GUARD=1`, full passive diagnostic set), new script
+`scratch/s73_post_a_scene/run_step4gate3.sh`:
+
+- **Soak 1** (`step4gate3_1`): ran the full 600s phase-gate timeout, exit "phase timeout
+  (INCONCLUSIVE)". `[phase]` log shows exactly 2 phase transitions the entire run — `vi_width=0→320` at
+  0.6s — and **never advances past VI width 320** (the boot/attribution phase) for the remaining ~599s.
+  `[runner] task #N` count: **39 total** RSP tasks executed in 600 wall-clock seconds (normally hundreds
+  to low thousands by the time title screen is reached, per s300-302's soaks reaching SELECT YOUR CRAFT
+  within ~75s). Process stayed alive the whole time — a genuine hang, not a crash.
+- **Soak 2** (`step4gate3_2`): byte-for-byte identical signature — 2 phase transitions, stuck at VI 320,
+  exactly **39** `[runner] task` lines, same `rdpFs=39` counter value at the same log position as soak
+  1. Same "phase timeout (INCONCLUSIVE)" exit.
+
+**Discriminating result**: this does **not** match family #1's exact string signature
+(`waitForMusyXAudioTaskDone`/`shutdownAudioEngine`: 0 occurrences in either log) and `WAITFORSLOT_GUARD`
+fired 0/2 — but `ROGUESQ_LOG_AUDIO_DRAIN` also logged **0 lines** in both soaks, meaning
+`waitForAnyAudioSlot`'s drain loop was never even entered. The hang mechanism is therefore NOT the
+specific loop step 3's guard targets; it is a different, currently-unlocalized stall that fully
+correlates with `setDisplayMode`'s gate-byte reversal (this exact signature — 39 tasks, stuck at VI
+320 — did not appear in any of s300-302's soaks, all of which reached title/SELECT YOUR CRAFT). 2/2
+soaks reproduced it identically, which is as strong a same-session positive-control-equivalent as this
+investigation gets without a 3rd confirmatory run. This is exactly the scenario the plan's own risk note
+flagged going in: "`setDisplayMode` runs on every display-mode change, not just once at boot — a much
+hotter path than the boot-time-only `initMusyXEngine` site."
+
+**Action taken**: reverted `setDisplayMode`'s site back to force-zero this same session (patch-count
+back to `audio gate patched x2`, confirmed by re-inspecting the regenerated `funcs_23.c` — `0x8008EB40`
+and `0x8008EC88` both show the `= 0` override again, `0x8008E9F8` still shows the guest's real write,
+unchanged from s302). Full regen + rebuild clean. **Baseline restored to exactly s302's validated
+state** (`initMusyXEngine` alone reversed) — no re-soak run this session since that combination is
+already validated by s302's 2 soaks; the revert is a pure restoration, not a new configuration.
+
+**What this rules out / does not show**: rules out "all 3 gate-byte sites are safe to reverse
+uniformly" — they are not; the sites are not interchangeable despite writing the identical instruction
+pattern to the identical address. Does **not** identify the actual hang mechanism — the gate byte
+being genuinely nonzero was already exercised for ~75s in s302's soaks (via `initMusyXEngine`'s
+reversal alone) without incident, so "the ancillary bookkeeping functions run for the first time" is
+not sufficient explanation by itself; something specific to *how* `setDisplayMode` writes this byte (a
+different computed value than `initMusyXEngine`'s? called repeatedly rather than once?) is the open
+question. **Do not retry this site** without a source-level read of what `setDisplayMode` actually
+computes into `$v0` immediately before the `sb` at `0x8008EB40` — next work unit.
+
+No `lib/` changes this session (fixup edit lives in `N64Recomp/fixup_game_funcs.py`, tracked only in
+this project's own ledger, not a git-tracked file in that checkout).
