@@ -663,7 +663,55 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s291)
+## Next steps, in order of expected value (s292)
+
+-133. **(s292) Lands `BREADCRUMB12` scoped to `tickTextureMaterialExpiry`, closing the last
+    fully-unaddressed s270 backlog item (`tickTextureMaterialExpiry`, item -111, first flagged
+    s157 and again s270, never source-read) — no guard landed (same reasoning as `inflate_fast`/
+    `coalesceFreeHeapBlocks`: unvalidatable blind with only 2 historical flags, ~135 sessions
+    apart).** Full detail: `PORTING-STATE` Session 292.
+
+    First recovered a genuine gap from the prior session: s291's full session (source read,
+    `BREADCRUMB11`, 2 validation soaks) was staged but never committed before the loop turn ended
+    — verified it was real, complete, coherent work (not a routine bootstrap artifact) via
+    `git diff --cached`, then committed it as-is before starting this session's own work
+    (`26e286c`).
+
+    Source read (`N64Recomp/RecompiledFuncs/funcs_6.c:12135-12332`, a texture-material
+    free-list-recycling tick routine — walks a fixed global table of per-slot linked lists,
+    expires entries whose age counter exceeds `0x708` (1800 ticks), frees expired nodes via
+    `heapFreeListInsert`, and unlinks/recycles them onto an internal free list) found no
+    recompiler translation defect — same uniform every-`MEM_*`-access-unguarded baseline as every
+    other `RECOMP_FUNC`. **Notably different shape from `inflate_fast`/`coalesceFreeHeapBlocks`**:
+    this function takes no meaningful caller arguments (only `rdram`/`ctx` boilerplate) — every
+    pointer dereferenced is internally derived, rooted at a fixed global table (`-0x7100`) and
+    walked via each node's own next-pointer field. There is no raw-caller-register candidate at
+    all; the sole candidate if this recurs is `ctx->r16` (the walked node pointer, first deref
+    `funcs_6.c:12174`).
+
+    **Instrument landed**: `BREADCRUMB12` (`N64Recomp/fixup_game_funcs.py`, same
+    `g_rs64_last_guest_pc` mechanism as `BREADCRUMB`-`BREADCRUMB11`), 83 sites patched, scoped to
+    `tickTextureMaterialExpiry`'s body only. Wait-for-recurrence instrument, not a closed item.
+
+    **Regen + build + 2 validation soaks** (iron rule 4): clean regen/build, no new warnings (46,
+    same baseline). Soak 1: scene reached (46.1s), died 6s into the 275s hold to
+    `sym=cvmsPoolAlloc+496` — an already-catalogued "RDRAM-base-relative near-`0x80000000`" fault
+    family (first flagged as `cvmsPoolAlloc+84` at line ~1683, unrelated scene-traversal chain),
+    `last-guest-pc=0x8000b650` confirmed via grep to be the long-tracked stale `beginFrameDLChunk`
+    value (`BREADCRUMB3`), **not** inside `tickTextureMaterialExpiry` — not a regression from this
+    session's change. Soak 2: scene reached (45.3s), held the full 275s hold window, `CRASH: 0` —
+    clean. Two independent lines of evidence agree the build is stable and `BREADCRUMB12`
+    introduced no new instability.
+
+    **Next work unit**: same as `inflate_fast`/`coalesceFreeHeapBlocks` — do not guess a guard
+    site blind. If `tickTextureMaterialExpiry` recurs in any future soak, `[CRASH][last-guest-pc]`
+    will for the first time point at the actual faulting instruction; cross-reference against
+    `ctx->r16` above (the only candidate). All three s270-era backlog items
+    (`-0x25A4`/`waitForAnyAudioSlot`, `inflate_fast`, `coalesceFreeHeapBlocks`,
+    `tickTextureMaterialExpiry`) are now either closed or armed wait-for-recurrence instruments —
+    the next session should read the pre-s283 backlog below item -124 fresh (unreviewed since
+    before s283, same as s291's own instruction, still not acted on since s291 picked
+    `coalesceFreeHeapBlocks` instead) for the next genuinely new work unit.
 
 -132. **(s291) Lands `BREADCRUMB11` scoped to `coalesceFreeHeapBlocks`, closing a 21-session-old
     unaddressed backlog item (`coalesceFreeHeapBlocks+2108`, first flagged s270/item -111 as a
@@ -1513,7 +1561,8 @@ cost three sessions before the recursive mutex.
     follow-up candidates, not yet investigated): `coalesceFreeHeapBlocks`
     (heap-related, plausibly same broader family as `heapFreeListDequeue`) —
     **addressed s291, item -132, `BREADCRUMB11` landed** —,
-    `tickTextureMaterialExpiry` (unrelated subsystem, still unaddressed).
+    `tickTextureMaterialExpiry` (unrelated subsystem — **addressed s292, item -133,
+    `BREADCRUMB12` landed**).
     `fscache_insert_and_retain` is a macOS system-library crash, not guest
     code — deprioritize, likely unrelated to this investigation.
 

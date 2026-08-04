@@ -26287,3 +26287,81 @@ way. If several more sessions pass with no recurrence, treat it like `waitForAny
 periods — not worth further dedicated investigation — and move to `tickTextureMaterialExpiry` (the
 other s270-flagged, still fully unaddressed candidate, `funcs_6.c:12135-12333`) or continue reading the
 pre-s283 backlog below the new item -124 pointer.
+
+## Session 292 (2026-08-04) — recovers s291's uncommitted work, then source-reads and breadcrumbs `tickTextureMaterialExpiry` (BREADCRUMB12), closing the last fully-unaddressed s270 backlog item
+
+Read `docs/CURRENT-TRUTH.md` (item -132) and `scratch/agent/NEXT.md` (s291's plan) first, per session
+rules.
+
+**Recovery step**: `git status` at session start showed `PORTING-STATE.md`, `docs/CURRENT-TRUTH.md`,
+and `scratch/agent/NEXT.md` already STAGED (in the index) with a full, coherent s291 session's worth of
+changes — not the routine per-iteration `STATUS`/`OUTCOME` bootstrap reset NEXT.md warns not to
+over-react to. `git diff --cached` on all three confirmed this was genuine completed, validated work
+(source read, `BREADCRUMB11` landed, 2 clean validation soaks) that never got `git commit`'d before the
+prior loop turn ended — a real interrupted-session recovery case, not a false alarm. Committed it as-is
+(`26e286c`) before starting this session's own work, rather than re-deriving or discarding it.
+
+**What ran**: per NEXT.md's option 1, took `tickTextureMaterialExpiry` — the other s270-flagged (item
+-111), never-source-read candidate, last mentioned s157/s270/s281 (crash symbol
+`tickTextureMaterialExpiry+612` observed s281 but never localized beyond nearest-symbol).
+
+**Source read** (`N64Recomp/RecompiledFuncs/funcs_6.c:12135-12332`, read directly — short enough at
+~200 lines not to need delegation): a tick routine that walks a fixed global table of per-slot linked
+lists of texture-material nodes, ages each node's counter (offset 8, `u16`), and once the counter
+exceeds `0x708` (1800 ticks) frees the node's resource via `heapFreeListInsert` and unlinks/recycles the
+node itself onto an internal free list (doubly-linked-list push-front at global `-0x7108`). No
+recompiler translation defect found — same uniform every-`MEM_*`-access-unguarded baseline every
+`RECOMP_FUNC` shares. **Distinct from `inflate_fast`/`coalesceFreeHeapBlocks`**: this function takes no
+caller arguments beyond `rdram`/`ctx` boilerplate — it's called on an internal tick, not with
+caller-supplied pointers. Every pointer dereferenced traces back to a fixed global table
+(`funcs_6.c:12174`, rooted at `-0x7100`) walked via each node's own next-pointer field
+(`funcs_6.c:12189/12248/12285`). No raw-caller-register candidate exists at all; the sole candidate if
+this recurs is `ctx->r16` (the walked node pointer, first deref `funcs_6.c:12174`).
+
+**Instrument landed**: `BREADCRUMB12` (`N64Recomp/fixup_game_funcs.py`, appended after `BREADCRUMB11`'s
+block, same `g_rs64_last_guest_pc` mechanism, same per-instruction blanket-regex template), scoped to
+`tickTextureMaterialExpiry`'s body only, 83 sites patched (confirmed via the `fixup_game_funcs.py`
+report line). No guard landed — same reasoning as `inflate_fast`/`coalesceFreeHeapBlocks`: with only 2
+historical flags ~135 sessions apart, a guard would be unvalidatable blind.
+
+**Regen + build**: `funcs_*.c` deleted and regenerated from scratch (`N64Recomp/build/N64Recomp
+rogue_squadron.toml`, cwd `N64Recomp`), `fixup_game_funcs.py` run once (report confirmed all 12
+breadcrumbs plus every prior hand guard patched, `BREADCRUMB12 x83` among them), `cmake --build build`
+clean, 46 warnings (same pre-existing baseline, no new ones).
+
+**2 validation soaks** (iron rule 4, `scratch/s73_post_a_scene/run_dequeuearg1.sh`, `HOLD_S=275`):
+- Soak 1: scene reached (`vi_width=1024` at 46.1s), died 6s into the hold. Raw crash record
+  (`scratch/s73_post_a_scene/dequeuearg1/run.log`): `sym=cvmsPoolAlloc+496`,
+  `si_addr=0x880083b0847000f` (garbage/wild address, not a small near-`0x80000000` offset),
+  `last-guest-pc=0x8000b650` — confirmed via grep against `CURRENT-TRUTH.md` to be the long-tracked
+  stale `beginFrameDLChunk` value (`BREADCRUMB3`), not informative for this crash and NOT inside
+  `tickTextureMaterialExpiry`'s guest address range (`0x80022048`+). `cvmsPoolAlloc+84`/`+496` is an
+  already-catalogued "RDRAM-base-relative near-`0x80000000`" fault family first flagged in this
+  investigation's earlier sessions (`CURRENT-TRUTH.md` ~line 1683) — unrelated to this session's edit,
+  not a regression.
+- Soak 2: scene reached (`vi_width=1024` at 45.3s), held the FULL 275s hold window plus grace window,
+  `CRASH: 0` — clean. (Note: the summary-computation tail of this soak's driver script took roughly 5
+  `TaskOutput` re-blocks of 480s/300s each to finish printing `CRASH: N` — longer than s291's ~4-poll
+  precedent but the same known slow-`grep -c`-over-large-log behavior, not a hang; process activity was
+  confirmed via `ps aux` and incremental log growth between polls before re-blocking each time.)
+
+Two independent lines of evidence (a clean full-hold soak, plus a crash soak whose fault is confirmed
+unrelated by symbol name and address shape) agree the build is stable and `BREADCRUMB12` introduced no
+new instability.
+
+**What this rules out**: `tickTextureMaterialExpiry` does NOT have a recompiler-introduced translation
+defect distinguishable from any other `RECOMP_FUNC`. It does NOT have a raw-caller-controlled pointer
+argument — unlike `inflate_fast`/`coalesceFreeHeapBlocks`, every dereferenced pointer in this function
+is internally derived from global table + linked-list-walk state, which is consistent with why it has
+only been flagged twice (s157, s281) in ~292 sessions rather than recurring often.
+
+**Docs updated**: `docs/CURRENT-TRUTH.md` — new item -133 (s292) at the top of "Next steps"; the item
+-111 (s270) backlog entry's "`tickTextureMaterialExpiry` (unrelated subsystem, still unaddressed)" note
+updated to point at -133. `scratch/agent/NEXT.md` rewritten for the next session: all four s270-era
+backlog items (`-0x25A4`, `waitForAnyAudioSlot`, `inflate_fast`, `coalesceFreeHeapBlocks`,
+`tickTextureMaterialExpiry`) are now closed or armed wait-for-recurrence instruments — next session
+should read the pre-s283 backlog below item -124 fresh, the same instruction s291 was given but did not
+act on (it picked `coalesceFreeHeapBlocks` instead, which was itself part of that same backlog).
+
+`CURRENT-TRUTH.md` remains far over the ~35KB target (now 33+ sessions overdue) — not addressed this
+session, no leftover budget (the picked work unit was not a quick null).
