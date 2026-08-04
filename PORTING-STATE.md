@@ -26987,3 +26987,70 @@ computes into `$v0` immediately before the `sb` at `0x8008EB40` — next work un
 
 No `lib/` changes this session (fixup edit lives in `N64Recomp/fixup_game_funcs.py`, tracked only in
 this project's own ledger, not a git-tracked file in that checkout).
+
+## Session 304 (2026-08-04) — source-read of `setDisplayMode` vs `initMusyXEngine`'s gate-byte writes: refutes "wrong value"/naive call-frequency, surfaces a new toggle structure and an unconfirmed "`initMusyXEngine` may be dead code" side-finding
+
+**Work unit**: per s303's explicit next-step ("do not retry `setDisplayMode`'s site blind... a FREE
+source-read, no build/soak"), read `N64Recomp/RecompiledFuncs/funcs_23.c` around all three gate-byte
+write sites (`initMusyXEngine` `0x8008E9F8`, `setDisplayMode` `0x8008EB40`, `reapplyDisplayMode`
+`0x8008EC88`) and traced backward to where each site's `$v0` is computed, plus grepped for callers.
+
+**Branch 1 (wrong value written) — REFUTED.** `setDisplayMode`'s write source is
+`0x8008EB38: addiu $v0, $zero, 0x1` — a simple immediate constant, textually identical in shape to
+`initMusyXEngine`'s already-reversed site (also `addiu $v0, $zero, 0x1`). `reapplyDisplayMode`'s site
+is the same pattern. No computed/branch-dependent value anywhere at any of the three write sites — all
+three write the literal constant `1`.
+
+**Branch 2 (call-frequency) — refuted for `setDisplayMode` specifically.** Grepped every
+`RecompiledFuncs/*.c` file for a direct `jal` to `setDisplayMode`'s entry (`0x8008EA14`): exactly one
+hit, in `mainBootstrapWorker` (`funcs_0.c:486`), no loop or retry wrapping it — a straight-line
+boot-once call, same shape as `initMusyXEngine`. (`reapplyDisplayMode`'s entry `0x8008EB5C` **is**
+called every video frame, from `runVideoFrameTick` — a real call-frequency difference — but that's a
+different, still-untouched site and doesn't explain s303's `setDisplayMode`-specific hang.)
+
+**New structural fact, not anticipated by either branch**: `setDisplayMode` (and `reapplyDisplayMode`)
+each contain their *own* entry-time unconditional zero-write to the same gate byte
+(`0x8008EA34: sb $zero, 0xF50($at)`, executed before anything else in the function), sandwiching the
+full MusyX-reset call sequence — `resetSongSubsystemCounter` → `initSongSequencerPools` →
+`resetMusyXEngineState` → `clearStreamedVoiceFlags` → `reset3DAudioLists`, gated by an earlier call to
+`initAudioSubsystem` (an early-return branch skips the whole reset-and-reenable tail if
+`initAudioSubsystem` fails) — between a disable and the tail re-enable. This is a genuine 0→1 toggle
+across a single call. `initMusyXEngine`'s site has no entry zero at all — it runs the same reset
+sequence once and unconditionally sets the gate to 1 at the very end, no toggle.
+
+**Leading revised hypothesis, cross-referencing s300 (item -162)**: the gate byte's only known consumer
+is `musyxSynthFrame`'s per-VI-retrace tick, which — when gate=1 — additionally calls 3 functions that
+are fully skipped when gate=0: `update3DAudioFrame`, `tickAllActiveSongs`, `tickAudioSequencerFrame`.
+These have never executed in any soak validated to date. s303's writeup dismissed "first-ever execution
+of these 3 functions" as sufficient explanation, reasoning gate=1 was "already exercised for ~75s in
+s302's soaks... without incident" via `initMusyXEngine`'s reversal. **This session's grep puts that
+premise in question**: an exhaustive text search of every `RecompiledFuncs/*.c` file for (a) a direct
+`jal` to `initMusyXEngine`'s address (`0x8008E940`) and (b) any `lui`/`addiu` hi/lo pair constructing
+that address as an absolute pointer (the pattern this codebase's own `LOOKUP_FUNC` indirect-dispatch
+idiom would use) found **zero references anywhere outside `initMusyXEngine`'s own function body**. A
+supplementary raw-byte scan of the 16 MB ROM (`rs64.n64.us.1.0.z64`) for the literal 4-byte address,
+looking for a function-pointer-table entry, also found zero hits — but this check **failed its own
+negative control**: `setDisplayMode`, confirmed reachable via `jal` (see above), *also* scores 0
+raw-byte ROM hits, because MIPS `jal` encodes a shifted 26-bit target field, not an absolute 32-bit
+address, so a raw-byte scan cannot distinguish "unreferenced" from "reached only via `jal`, like every
+other function in this file." That check is discarded, not counted as evidence, per the "positive
+control before trusting a null" rule.
+
+**What survives**: single-source (text-grep only) evidence that `initMusyXEngine` may never be called
+by anything currently in `RecompiledFuncs/`. Not yet promoted to a conclusion — doesn't rule out an ELF
+relocation/overlay mechanism the grep wouldn't catch. If true, it would mean s302's "clean" 2-soak
+validation never actually exercised gate=1 at all, `setDisplayMode`'s s303 reversal was the *first* real
+gate=1 the recompiled game has ever hit, and "first-ever execution of the 3 previously-skipped
+functions" becomes the leading (not ruled-out) explanation for the hang, rather than something specific
+to `setDisplayMode`'s own write.
+
+**Next work unit** (build+soak, next session): add a cheap entry counter/log to `initMusyXEngine`
+(settles reachability — needs its own same-run positive control, e.g. a matching counter on a
+known-always-called neighbor like `resetMusyXEngineState`, to rule out "logging itself is broken" as
+the null explanation) batched with entry/exit tags on `update3DAudioFrame`/`tickAllActiveSongs`/
+`tickAudioSequencerFrame` (ready for whichever branch the reachability result points to). Soak the
+*current* baseline first (`initMusyXEngine` reversed per s302, `setDisplayMode`/`reapplyDisplayMode`
+still force-zeroed — no site touched this session) before re-attempting `setDisplayMode`'s reversal.
+
+No `lib/` changes this session (read-only against `N64Recomp/RecompiledFuncs/funcs_23.c` and
+`funcs_0.c`, both regenerated files, no source edits). No build, no soak.

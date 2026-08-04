@@ -227,6 +227,46 @@ numbered -163 (top, newest/highest priority) counting up to -1 (bottom, oldest);
 order is unchanged from before the fix. The next new item takes -165 and is inserted at the
 top.
 
+-166. **(s304)** Source-read (no build/soak, as s303 specified): traces what `setDisplayMode` and
+    `initMusyXEngine` actually compute into `$v0` before their respective gate-byte writes.
+    **Refutes** the "wrong value written" hypothesis (s303's first open question) — both
+    `setDisplayMode` (`0x8008EB38: addiu $v0,$zero,0x1`) and `reapplyDisplayMode` (mirrored) write the
+    *identical* simple immediate constant `1` as `initMusyXEngine`'s already-reversed site; no computed/
+    branch-dependent value anywhere. **Also refutes the naive call-frequency pivot** for `setDisplayMode`
+    specifically: a full-tree grep of every `RecompiledFuncs/*.c` file found exactly one direct `jal` to
+    its entry (`0x8008EA14`), from `mainBootstrapWorker`, no retry/loop — boot-once, same shape as
+    `initMusyXEngine`. (`reapplyDisplayMode` is genuinely different — called every video frame from
+    `runVideoFrameTick` — but that's irrelevant to explaining s303's `setDisplayMode`-specific hang.)
+    **New structural fact neither of s303's two branches anticipated**: `setDisplayMode` (and
+    `reapplyDisplayMode`) each contain their *own* entry-time unconditional zero-write to the same gate
+    byte (`0x8008EA34`), sandwiching the full MusyX-reset call sequence
+    (`resetSongSubsystemCounter`→`initSongSequencerPools`→`resetMusyXEngineState`→
+    `clearStreamedVoiceFlags`→`reset3DAudioLists`, plus a call to `initAudioSubsystem` gating the whole
+    success path) between a disable and a re-enable — a 0→1 toggle across the single call.
+    `initMusyXEngine`'s site has no such entry zero; it is a simple unconditional "set to 1 once" with no
+    toggle. **Leading revised hypothesis**: per s300 (item -162), the gate's only consumer
+    (`musyxSynthFrame`, per-VI-retrace) skips 3 ancillary functions (`update3DAudioFrame`,
+    `tickAllActiveSongs`, `tickAudioSequencerFrame`) whenever gate=0, and calls them whenever gate=1 —
+    these have *never* executed in any validated soak to date. s303's writeup assumed this was already
+    ruled out ("the gate byte being genuinely nonzero was already exercised for ~75s in s302's soaks...
+    without incident") — **but that assumption itself is now in question**: an exhaustive text-grep of
+    every `RecompiledFuncs/*.c` file for both a direct `jal` to `initMusyXEngine` (`0x8008E940`) and for
+    any `lui`/`addiu` absolute-pointer construction of that address found **zero references anywhere
+    outside its own function body** — i.e. no evidence `initMusyXEngine` is ever called at all. (A raw
+    16 MB ROM byte-scan for the literal address as a possible function-pointer-table entry was also run,
+    but is **invalidated by its own negative control** — `setDisplayMode`, confirmed reachable via `jal`,
+    also scores 0 raw-byte hits, since `jal` target-encodes a shifted 26-bit field, not an absolute
+    32-bit address, so the scan cannot distinguish "dead" from "jal-only-reached." This check is
+    discarded, not cited as evidence.) **Single-source, not yet a conclusion** — the text-grep alone
+    doesn't rule out an ELF relocation/overlay mechanism outside what's captured in `RecompiledFuncs/`.
+    If `initMusyXEngine` is truly unreached, s302's "clean" validation never actually exercised gate=1,
+    and `setDisplayMode`'s reversal in s303 would be the *first* real gate=1 the game has ever hit —
+    which would make "first-ever execution of the 3 previously-skipped functions" the leading, not
+    ruled-out, explanation for the hang. Next work unit: a cheap entry counter on `initMusyXEngine`
+    (settles reachability with a same-run positive control) batched with entry/exit tags on the 3
+    gate-consumer functions (ready for whichever branch fires next). Full detail: `PORTING-STATE`
+    Session 304.
+
 -165. **(s303)** Executes M5-AUDIO-PLAN.md step 4's 2nd slice: reverses `setDisplayMode`'s gate-byte
     force-zero site (`0x8008EB40`, `N64Recomp/fixup_game_funcs.py`, splitting the regex s302 left as
     `B40|C88` down to `C88` only). Regen/build clean (`audio gate patched x1`, confirmed via direct
