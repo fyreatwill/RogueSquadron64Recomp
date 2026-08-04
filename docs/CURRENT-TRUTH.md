@@ -663,7 +663,38 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s288)
+## Next steps, in order of expected value (s289)
+
+-130. **(s289) CLOSES the elevated pre-scene `waitForAnyAudioSlot` death-rate backlog item (open
+    since s278) as a non-finding — the elevated rate was real but confined to a 4-session window
+    (s276-278, s280: 7/8 = 87.5%) that had already fully reverted by s281, a full session before the
+    `-0x25A4` audit lineage (s282-288) even began.** Full detail: `PORTING-STATE` Session 289.
+
+    Quantified every soak in s281-288 (offline, no new soaks run): s281-285 (the only sessions with
+    soaks in this window) = 2 pre-scene deaths / 16 soaks = **12.5%**, LOWER than the original
+    pre-elevation s270-275 baseline (3/14 = 21%), not just reverted to it. Two independent lines of
+    evidence agree the elevated rate was transient clustering, not a persistent regression: s279's
+    mechanical refutation (the `BREADCRUMB9` instrumentation's own call sites cannot execute
+    pre-scene, ruling out that specific confound) and this session's numbers (the rate reverted with
+    the identical binary/build persisting from s280 into s281 — no landed fix touched
+    `waitForAnyAudioSlot`/`menuOverlayInit` in between). Satisfies NEXT.md's own pre-committed
+    closure condition ("if it turns out to be 1-2 occurrences... close it as a non-finding").
+
+    **Does NOT mean the underlying crash is fixed** — the 23rd crash class (`waitForAnyAudioSlot`,
+    first seen s165) still fires occasionally (2/16 most recently); it's just no longer at a rate
+    that justifies dedicated investigation. Re-open with a fresh quantification if the rate spikes
+    again — do not trust this session's numbers indefinitely.
+
+    **Next target**: with both standing backlog items now closed (`-0x25A4` audit s288, this item
+    s289), the only remaining queued work is the `inflate_fast`/zlib investigation (s272, never
+    attempted, only 1 observation on record). **Correction to every prior mention in this file**:
+    `inflate_fast` is NOT a system-library call — it's a full `RECOMP_FUNC` with guest-MIPS-address
+    comments (`funcs_7.c:13553`), i.e. the original N64 game embeds its own compiled zlib
+    (`inflateInit_`/`inflate_recomp`/`inflate_blocks`/`inflate_fast`/`inflate_flush` etc. across
+    `funcs_1.c`/`funcs_7.c`/`funcs_34.c`, all genuinely recompiled guest code). The normal
+    breadcrumb/guard-patch recipe used throughout s254-288 applies directly — no novel host-hook
+    design needed. First step: source-read `inflate_fast` and its callers in `inflate_recomp`
+    (`funcs_1.c:2267`/`:2428`) for the standard unguarded-dereference shape.
 
 -129. **(s288) CLOSES the `-0x25A4($s1)` hangar-list-pointer audit lineage (s283-288) entirely —
     `playerSnowSpeederInit` has ZERO `-0x25A4` hits, and its apparent 3-function label overlap

@@ -1,79 +1,84 @@
-# NEXT work unit — investigate the elevated pre-scene `waitForAnyAudioSlot` death rate (open since s278)
+# NEXT work unit — start the `inflate_fast`/zlib investigation (s272, never attempted)
 
-The `-0x25A4($s1)` hangar-list-pointer audit lineage (s283-288) is now **fully CLOSED** — every
-function it touched or flagged is either guarded or confirmed to need no guards
-(`playerSnowSpeederInit` closed s288 with 0 hits, refuting the s286/287 "may be a dead duplicate"
-guess). Do not re-open it without a NEW discriminating signal (e.g. a soak crash at a fresh,
-symtab-verified `-0x25A4`-adjacent site).
+Both standing backlog items are now CLOSED: the `-0x25A4($s1)` hangar-list-pointer audit lineage
+(s283-288, `CURRENT-TRUTH` item -129) and the elevated pre-scene `waitForAnyAudioSlot` death-rate
+investigation (s289, `CURRENT-TRUTH` item -130, closed as a non-finding — the rate reverted 8
+sessions ago and has stayed reverted). Do not re-open either without a NEW discriminating signal.
 
-## Where the investigation stands (s288)
+## Where the investigation stands (s289)
 
-s288 classified `playerSnowSpeederInit` (`funcs_27.c:144145-150543`): zero `-0x25A4` hits anywhere
-in it (verified 2 independent ways), and proved — via whole-function guest-address monotonicity (0
-decreases across 2552 address comments) plus 3 direct instruction-divergence checks at the 3
-addresses where its labels overlap `static_5_800AAD9C`/`_800AB1C8`/`_800AB658`'s own start
-addresses — that it is genuinely live, continuously-translated code, NOT a dead duplicate. The
-label-name overlap that triggered the original suspicion (s286/287) is just coincidental shared
-virtual-address space between two live functions from different overlay contexts. Full detail:
-`PORTING-STATE` Session 288, `CURRENT-TRUTH` item -129.
+s289 quantified the `waitForAnyAudioSlot` pre-scene death rate across s281-288 (offline analysis,
+no soaks spent): 2 pre-scene deaths / 16 soaks = 12.5%, LOWER than the original pre-elevation
+baseline (21%, s270-275). The "elevated since s278" framing was accurate when written but the
+elevated window (s276-278+280, 87.5%) had already fully reverted by s281 — closed as a non-finding.
+Full detail: `PORTING-STATE` Session 289, `CURRENT-TRUTH` item -130.
 
-## The next work unit
+**Free bonus finding from s289, changes the shape of this work unit**: `inflate_fast` is NOT a
+system-library call, contrary to every prior mention in `CURRENT-TRUTH.md` since s272 (an unverified
+assumption that propagated for 17 sessions without being checked). It's a full `RECOMP_FUNC` with
+guest-MIPS-address comments (`N64Recomp/RecompiledFuncs/funcs_7.c:13553`) — the original N64 game
+embeds its own compiled zlib. `funcs_1.c`, `funcs_7.c`, and `funcs_34.c` all contain `inflate*`
+`RECOMP_FUNC`s (`inflateInit_`, `inflate_recomp`, `inflate_blocks`, `inflate_fast`, `inflate_flush`,
+etc. — grep `inflate` across `RecompiledFuncs/*.c` for the full list). **This means the standard
+breadcrumb/guard-patch recipe used throughout s254-288 for every other crash site applies directly
+here** — no novel host-hook/wrap instrumentation design needed, despite what every older
+`CURRENT-TRUTH.md` mention of this item implies.
 
-**Investigate the elevated pre-scene `waitForAnyAudioSlot` death rate.** This has been costing real
-soak budget for many sessions now (e.g. s283: 1 of 3 soaks; recur throughout s284-288's soak logs)
-without ever being the DIRECT target of a session — always background noise next to some other
-function's audit. It was flagged as backlog priority #2 as far back as s283/-124 and is now the
-top open item.
+## What's already known (do not re-derive, build on it)
 
-**What's already known** (do not re-derive, build on it):
-- This is the "23rd crash class", first catalogued s165: SIGSEGV in/near `waitForAnyAudioSlot`,
-  called from `menuOverlayInit`, very early (pre-title, task #267 in the s165 occurrence, ~1.7s in).
-- s166 source-read `isAudioSlotActive` (`funcs_24.c:5788`) and found+guarded a concrete unguarded
-  pointer dereference (base pointer from a fixed global slot, indexed, no null-check — the family's
-  dominant shape in this codebase). Landed the guard, but the validating soak never exercised
-  `waitForAnyAudioSlot` under failure conditions (4 calls, all resolved cleanly) — **0/0, no
-  positive control, cannot attribute the clean run to the guard**. Full detail: `CURRENT-TRUTH`
-  item -18, `PORTING-STATE` s166.
-- Since s278 the death rate at this site has been "elevated" per NEXT.md's own carried-forward note
-  (line 134 of the prior revision) but this claim itself has never been quantified THIS session —
-  treat "elevated since s278" as an unverified prior, not a fact, until you count it directly (see
-  step 1 below — numbers, not adjectives, per the investigation-method rules).
+- Only 1 crash observation on record: s272 soak2, `si_addr=0x380000003`, native
+  `sym=inflate_fast+5344`. `last-guest-pc` at the time of that crash was stale (pointed at
+  `beginFrameDLChunk`, confirmed via grep — uninformative, don't re-cite it as if it were the crash
+  site). Full detail: `CURRENT-TRUTH` item around line ~1271 (s272 write-up), `PORTING-STATE`
+  Session 272.
+- `inflate_fast` is called from `inflate_blocks` (`funcs_7.c:12351`). `inflate_recomp` (the
+  top-level entry point, `funcs_1.c:2267`/`:2428`) calls into the `inflate_blocks`/`inflate_fast`
+  chain — these 2 call sites in `funcs_1.c` are the guest-code callers into the whole zlib chain,
+  worth checking what THEY pass in (buffer pointers, sizes) since a bad caller-supplied argument
+  reaching an unguarded zlib-internal dereference fits this investigation's dominant bug shape
+  (unguarded pointer chase from a caller-controlled value) just as well as an internal zlib bug
+  would.
+- `si_addr=0x380000003` (low, non-RDRAM-looking address) is consistent with an uninitialized or
+  garbage pointer/length value reaching a dereference or array index — the same "unguarded
+  pointer/index, no `0x80000000`-`0x80800000` range check" shape behind every guard landed in this
+  investigation since s130-ish. Don't assume this without verifying though — actually read the code
+  around the crash offset first.
 
-**Steps:**
-1. **Quantify first.** Grep the soak logs already on disk from s283-288 (`scratch/s73_post_a_scene/
-   dequeuearg1/run.log` gets overwritten each run, so use whatever crash-report artifacts or
-   session write-ups in `PORTING-STATE.md` Sessions 278-288 recorded the crash symbol/site for each
-   soak). Build a real numerator/denominator: N pre-scene `waitForAnyAudioSlot` deaths out of M total
-   soaks across s278-288. Do not proceed to instrumentation until you have this number — it is the
-   single most likely thing to change the plan (if it turns out to be 1-2 occurrences, "elevated"
-   was noise and this backlog item should be closed as a non-finding).
-2. If the rate holds up as genuinely elevated, source-read the CURRENT call chain into
-   `waitForAnyAudioSlot` from `menuOverlayInit` (and check whether other call sites exist now — s165
-   flagged "`waitForAnyAudioSlot` is reachable from more places than mapped" and this was never
-   resolved) and check whether the s166 `isAudioSlotActive` guard (`funcs_24.c:5788`) is still
-   present/intact and whether it's the right shape for whatever the CURRENT crash offset is — native
-   ARM64 offsets drift across sessions/rebuilds, so re-verify via the Mach-O symtab walk (`nm -n`,
-   filter T/t) before trusting any `sym=waitForAnyAudioSlot+N` from an old log.
-3. If a genuinely new unguarded dereference is found, this becomes a standard fix-and-validate
-   cycle: land the guard in `N64Recomp/fixup_game_funcs.py`, full regen pipeline, clean build, and
-   get a soak that gives the guard an actual positive-control opportunity (i.e. one that would have
-   hit the old crash site and instead fires the new guard) — not just another clean run with 0/0.
+## Steps
 
-**If this turns out to be a non-finding** (rate isn't actually elevated, or no new unguarded site is
-found after a reasonable source-read), close it and move to the other standing backlog item: the
-`inflate_fast`/zlib localization design (s272, never attempted — needs a different approach since
-it's a system-library call, not a guest-code guard).
+1. **Source-read `inflate_fast`** (`N64Recomp/RecompiledFuncs/funcs_7.c:13553`, get the actual
+   current line count via `grep -n "^RECOMP_FUNC" funcs_7.c` for the next function's start to bound
+   it) for the standard unguarded-dereference shape (a pointer or index reaching a `MEM_*` access
+   with no preceding `0x80000000`-`0x80800000`-style range check, or an unchecked array/buffer
+   index). This function is large (zlib's core decompression loop) — expect it to take real reading
+   time; don't rush past sections.
+2. Also read the 2 `funcs_1.c` call sites (`:2267`, `:2428`, inside `inflate_recomp`) and the
+   `inflate_blocks` call site (`funcs_7.c:12351`) for what they pass into the chain — a bad argument
+   from the caller is as plausible a root cause as an internal zlib bug.
+3. If a genuinely unguarded dereference is found: land a guard in `N64Recomp/fixup_game_funcs.py`
+   using the same established recipe (`U32(ctx->rN)` range check, bail to the function's own
+   epilogue — find it by reading to the closing brace, same as every guard landed s130-288), verify
+   the anchor regex is unique in its file before patching, full regen pipeline
+   (`make_elf.py` → delete `funcs_*.c` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`), then
+   2-3 soaks for non-recurrence validation (this crash is rare — only 1 observation ever — so
+   non-recurrence over a couple of soaks is the same validation bar used throughout this
+   investigation, not a strict positive-control requirement given the low base rate).
+4. If the source-read finds nothing obviously wrong (zlib is well-tested upstream code; the bug may
+   be in how the recompiler translated it, or in caller-supplied bad state rather than zlib itself),
+   that's a legitimate outcome — write up what was checked and ruled out, and reassess: possibly a
+   breadcrumb (last-guest-pc tracking, same mechanism as `BREADCRUMB5`-`9`) scoped to `inflate_fast`
+   specifically would help localize a 2nd observation before attempting a fix blind.
 
 ## Do NOT do this iteration
 
-- Do NOT re-open the `-0x25A4($s1)` audit lineage (`hangarInitialize` any chunk,
-  `static_5_800AAD9C`/`_800AB1C8`/`_800AB658`/`_800ADB70`, `static_5_800A9270`,
-  `playerSnowSpeederInit`) without a NEW discriminating signal — all closed/validated as of s288.
-- Do NOT treat "elevated since s278" as already-proven — count it first (step 1).
-- Do NOT cite `x0`/`x8`/`x9`/`x10`/`x11`/`x12` = constant RDRAM-base-pointer-looking values as
-  crash-matching evidence for ANYTHING.
-- Do NOT treat `processSceneNode`, `reserveAndEmitDLEntry`, `coalesceFreeHeapBlocks` crashes as new
-  findings — all already catalogued.
+- Do NOT re-open the `-0x25A4($s1)` audit lineage or the `waitForAnyAudioSlot` elevated-rate
+  investigation without a NEW discriminating signal — both closed (s288, s289 respectively).
+- Do NOT assume `inflate_fast` needs a host-side hook/wrap approach — it's recompiled guest code,
+  confirmed by s289's direct source read. If you find yourself designing a host intercept, stop and
+  re-read `funcs_7.c:13553` first.
+- Do NOT treat `processSceneNode`, `reserveAndEmitDLEntry`, `coalesceFreeHeapBlocks`,
+  `tickTextureMaterialExpiry` crashes as new findings — all already catalogued, unrelated crash
+  families.
 - Do NOT run `fixup_game_funcs.py` twice without a fresh `N64Recomp` regen in between.
 - Do NOT idle across a Stop-hook turn boundary waiting on a background soak — block with
   `TaskOutput(task_id, block=true, timeout<=480000)` in the SAME turn.
@@ -89,10 +94,12 @@ it's a system-library call, not a guest-code guard).
 - Bash tool cwd persists across sequential (non-background) calls but resets after an unrelated
   `cd` elsewhere in the session — re-`cd` explicitly before cwd-dependent commands.
 - Compound `cd && ...` commands need interactive approval — issue `cd` as its own call first.
-- `git -C`/`git --git-dir=`/`cd <dir> && git ...` all get flagged for approval even standalone — if
-  you need submodule git state, expect an approval prompt, or use `git diff -- lib/<submodule>` from
-  the repo root (shows the gitlink pointer/dirty flag without entering the submodule). `nm -n
-  <binary> > file` also flagged — use Python `subprocess.run`.
+- `git -C`/`git --git-dir=`/`cd <dir> && git ...` all get flagged for approval even standalone, and
+  in a non-interactive/autonomous session that approval is NOT available (confirmed s289: both
+  forms blocked outright, no prompt resolvable) — do not spend time retrying these forms for
+  submodule git state; treat the dirty-submodule baseline as already-established fact from prior
+  sessions' direct confirmations (s279, s280, s282, s284, s285) instead of re-attempting to verify
+  it each session. `nm -n <binary> > file` also flagged — use Python `subprocess.run`.
 - Shell `for`/`$(...)` loops get rejected by the sandbox — use Python scripts via `Write` instead.
 - Multi-line `python3 -c "..."` with embedded `#`/newlines gets flagged — write to a file and run
   `python3 /path/to/script.py`.
@@ -111,10 +118,11 @@ it's a system-library call, not a guest-code guard).
 - `N64Recomp/fixup_game_funcs.py` is untracked in the standalone `N64Recomp` checkout — no
   `export.sh` needed for edits there, only for actual `lib/` submodule changes.
 - `CURRENT-TRUTH.md` is far over the ~35KB target (30+ sessions overdue) — not this iteration's job
-  unless the `waitForAnyAudioSlot` investigation is a quick null with clear leftover budget.
+  unless the `inflate_fast` investigation is a quick null with clear leftover budget.
 - At session start, check `scratch/agent/STATUS`/`OUTCOME` for signs of an interrupted prior
   iteration before assuming a `WORKING`/missing-`OUTCOME` state means recovery work is needed — this
-  has repeatedly (s286/287/288) turned out to be just the loop's normal per-iteration bootstrap, not
-  an interrupted session. Only treat it as recovery-worthy if there's actual uncommitted diff
-  evidence (e.g. `git status`/`git diff` on `fixup_game_funcs.py` or other tracked work files) beyond
-  the routine `STATUS`/`OUTCOME` reset.
+  has repeatedly turned out to be just the loop's normal per-iteration bootstrap, not an interrupted
+  session. Only treat it as recovery-worthy if there's actual uncommitted diff evidence (e.g.
+  `git status`/`git diff` on `fixup_game_funcs.py` or other tracked work files) beyond the routine
+  `STATUS`/`OUTCOME` reset. The `lib/N64ModernRuntime`/`lib/rt64` "-dirty" gitlink markers are the
+  same long-standing baseline every session has seen — not new, not worth re-verifying each time.

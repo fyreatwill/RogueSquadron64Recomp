@@ -26001,3 +26001,105 @@ still open: the elevated pre-scene `waitForAnyAudioSlot` death rate (open since 
 investigated — recommended default, since it's the older of the two open items and may explain a
 chunk of soak non-reproducibility across recent sessions), or the `inflate_fast`/zlib localization
 design (s272, never attempted, needs a different approach since it's a system-library call).
+
+## Session 289 (2026-08-03) — quantifies the pre-scene `waitForAnyAudioSlot` death rate per NEXT.md's step 1, and CLOSES it as a non-finding: the "elevated since s278" claim was true only for a 3-session window that already reverted 8 sessions ago and has stayed reverted since
+
+Read `docs/CURRENT-TRUTH.md` item -129 and `scratch/agent/NEXT.md` (s288's plan) first, per session
+rules. `scratch/agent/STATUS`=`WORKING`/`OUTCOME` deleted at session start with `lib/N64ModernRuntime`
+and `lib/rt64` showing as `-dirty` — per NEXT.md's own carried-forward note (confirmed again s279/
+s280/s282/s284/s285) this is the long-standing baseline dirty-submodule state, not new edits; no
+tracked-file diff evidence beyond the routine `STATUS`/`OUTCOME` reset, so treated as normal
+loop-restart noise, not investigated further (attempting `git -C lib/... status` for direct
+confirmation required interactive approval unavailable in this session — did not block on it since
+the existing written precedent from 4 prior sessions already establishes the baseline).
+
+**What ran**: per NEXT.md step 1 ("quantify first... do not proceed to instrumentation until you have
+this number"), mined every session write-up s281-s288 in this file for soak outcomes (pre-scene death
+to `waitForAnyAudioSlot` vs. scene-reached), extending s278's original retrospective quantification
+(s270-278) and s281's own running-total update (s276-278+280-281: 7/10=70%) forward through the full
+audit lineage that occupied s282-288. No new soaks run — this is a pure archival/offline analysis
+work unit, explicitly the cheapest possible way to answer the question per the investigation-method
+rule ("capture once, analyze many... prefer offline re-analysis over a new build-run cycle").
+
+**Per-session soak tally, s281-288** (pre-scene deaths / total soaks, sourced directly from each
+session's own write-up in this file):
+- s281: 0/2 (both reached the scene — the session that broke the s276-280 streak)
+- s282: 0/4 (all 4 reached the scene)
+- s283: 1/3 (soak1 pre-scene; soak2/3 reached the scene)
+- s284: 0/3 (all 3 reached the scene)
+- s285: 1/4 (1 interrupted-session soak + 3 post-fix soaks; soak2 of the post-fix batch was pre-scene, the other 3 reached the scene)
+- s286: 0/0 (dead-code proof only, no soak run)
+- s287: 0/0 (dead-code proof only, no soak run)
+- s288: 0/0 (0-hit classification, no soak run)
+
+**Total s281-285 (the only sessions with soaks in this window): 2 pre-scene deaths / 16 soaks = 12.5%.**
+
+**The full three-window picture**:
+- s270-275 (original baseline, 6 sessions): 3/14 = 21%
+- s276-278 + s280 (the actual elevated window, 4 sessions): 7/8 = 87.5%
+- s281-285 (this session's new count, 5 sessions): 2/16 = **12.5%** — LOWER than the original
+  pre-elevation baseline, not just reverted to it.
+
+**Conclusion — this is a non-finding, closing the backlog item.** The "elevated since s278" framing
+carried in `NEXT.md` since s278 was accurate when written but is now 8 sessions stale: the elevated
+rate was real but confined to a 4-session window (s276-278, s280) and had already fully reverted by
+s281 — a full session before this window's own top-level driving investigation (the `-0x25A4` audit
+lineage, s282-288) even began. None of that intervening work (G32, HANGARLIST_GUARD family, chunk
+audits) touched `waitForAnyAudioSlot`, `menuOverlayInit`, or any code on that call chain — the
+reversion happened with the identical binary/build state persisting from s280 into s281 (per s281's
+own note: "Same binary/build as s276-s280 (no rebuild)"), so the drop cannot be attributed to any
+landed fix. This matches s279's mechanical refutation of the `BREADCRUMB9`-instrumentation-confound
+hypothesis (that investigation's call sites cannot execute pre-scene, so they can't be timing-shifting
+this crash) and s281's own "ordinary run-to-run scheduling nondeterminism" hypothesis — both point at
+transient clustering of a long-standing (s165), never-fully-fixed boot-time race, not a persistent
+regression introduced at s276. Two independent lines of evidence now agree: the mechanical refutation
+(s279) and the numbers-backed reversion-and-stay-reverted pattern (this session) both point away from
+"elevated, needs a targeted fix" and toward "was a small-sample clustering artifact, already resolved
+itself."
+
+**Why this satisfies NEXT.md's explicit closure condition**: NEXT.md step 1 said "if it turns out to
+be 1-2 occurrences, 'elevated' was noise and this backlog item should be closed as a non-finding." The
+literal count in the post-elevation window is 2 occurrences out of 16 soaks (12.5%, below the original
+21% baseline) — functionally the same outcome the plan anticipated, just measured over a slightly
+longer post-reversion window rather than a raw small-N. Per NEXT.md's own "If this turns out to be a
+non-finding" instruction: **closing this backlog item**, moving to the other standing item
+(`inflate_fast`/zlib localization design, s272, never attempted).
+
+**What this does NOT establish**: the underlying `waitForAnyAudioSlot`/`menuOverlayInit` boot-time
+race itself (23rd crash class, first seen s165) is NOT fixed or further localized — it still fires
+occasionally (2/16 most recently), just not at an elevated rate that justifies further dedicated
+investigation right now. If the rate spikes again in a future session, re-open with a fresh
+quantification rather than trusting this session's numbers indefinitely (per the investigation-method
+rule against citing "confirmed N times before" as an unrefuted-forever fact).
+
+**Free bonus correction, scoping the next work unit**: with leftover budget, checked the standing
+assumption (carried since s272, repeated at every mention in `CURRENT-TRUTH.md`) that `inflate_fast`
+is "a system-library call, not a guest function," implying it needs a novel host-side hook/wrap
+instrumentation approach. Grepped `N64Recomp/RecompiledFuncs/*.c` for `inflate` and read the actual
+`inflate_fast` definition (`funcs_7.c:13553`): **it is a full `RECOMP_FUNC` with guest-MIPS-address
+comments** (`0x80028D60` etc.), i.e. genuinely recompiled guest code — the original N64 game embeds
+its own compiled zlib (`funcs_1.c`/`funcs_7.c`/`funcs_34.c` all contain `inflate*` `RECOMP_FUNC`s:
+`inflateInit_`, `inflate_recomp`, `inflate_blocks`, `inflate_fast`, `inflate_flush`, etc. — a full
+zlib inflate implementation, not a stub or host intercept). **This REFUTES the "needs a different
+approach" premise carried since s272**: `inflate_fast` can be instrumented with the exact same
+breadcrumb/guard-patch recipe (`fixup_game_funcs.py` regex-anchored patch, same as `BREADCRUMB5`-`9`
+and the `-0x25A4` guard family) used throughout s254-288, no novel host-hook design needed. This was
+an unverified assumption repeated across ~15 `CURRENT-TRUTH.md` mentions (lines 998/1037/1079/1112/
+1137/1161/1183/1214/1254 etc.) without ever being checked against the actual generated source — worth
+noting as a lesson: an assumption written once (s272) and never re-verified propagated as fact for 17
+sessions.
+
+**Housekeeping**: no code changes, no `lib/` edits (dirty submodule state inspected only, consistent
+with the established baseline — no `export.sh` needed), no regen/build/soak this session (pure
+archival analysis, as planned). `CURRENT-TRUTH.md` still oversized (30+ sessions overdue for pruning)
+— not this session's job, no leftover budget beyond the quantification + write-up.
+
+**Next steps**: start the `inflate_fast`/zlib investigation (s272, never attempted) — the only
+remaining standing backlog item now that both the `-0x25A4` audit lineage (closed s288) and the
+`waitForAnyAudioSlot` elevated-rate investigation (closed this session) are resolved. Per the
+correction above, this is NOT a system-library-hook design problem — it's a normal guest-function
+audit, same recipe as every other crash site in this investigation: read `inflate_fast`
+(`funcs_7.c:13553`) and its 2 call sites in `inflate_recomp` (`funcs_1.c:2267`/`:2428`) end to end,
+look for the standard unguarded-dereference shape, and breadcrumb/guard it the normal way. Only 1
+crash observation on record (s272 soak1, `si_addr=0x80000003`, native `inflate_fast+5344`) — start
+with the source read to find candidate unguarded sites before landing any guard.
