@@ -663,7 +663,72 @@ serialization built in s5), what bridges RSP audio output to SDL, and what the a
 reversal implies. **Gate M5 behind M2**: audio re-enters exactly the shared-state territory that
 cost three sessions before the recursive mutex.
 
-## Next steps, in order of expected value (s292)
+## Next steps, in order of expected value (s293)
+
+-134. **(s293) Lands `BREADCRUMB13` scoped to `tickSongSequence`, closing a 119-session-old
+    unaddressed backlog item (item -26, first flagged s174 as "not guarded this session, next
+    candidate if needed" during the `tickAndReap3DAudioVoices`/`waitForAnyAudioSlot` audit-crash
+    chase, never picked up since) — AND captures the first-ever real recurrence of
+    `tickTextureMaterialExpiry` (`BREADCRUMB12`, armed s292) as a free bonus signal from this
+    session's own validation soaking.** Full detail: `PORTING-STATE` Session 293.
+
+    Picked via the same Explore-agent backlog scan s291/s292 used: delegated a scan of "Next
+    steps" below item -124 for the oldest genuinely unaddressed thread, cross-checked against
+    Overturned Conclusions and Dead Ends. Top candidate by scope was the abandoned s249-251
+    project-wide unguarded-walk sweep (`unguarded_walk_candidates.json`, 139 sites, uncounted
+    since s251) but `tickSongSequence` (item -26, s174) is chronologically older and single-
+    function-scoped, matching this session's budget — picked it over the sweep.
+
+    Source read (`N64Recomp/RecompiledFuncs/funcs_25.c:4878-5317`, a song-sequence-slot lookup +
+    stop-voices tick routine) found no recompiler translation defect — same uniform every-
+    `MEM_*`-access-unguarded baseline as every other `RECOMP_FUNC`. **Notable shape**: the
+    function's incoming argument (raw caller `$a0`, saved to `ctx->r17`/`s1` at entry) is masked
+    and linear-scanned against an 8-entry global table (base `-0x6600`, stride `0xEF8`); the match
+    index accumulates in `ctx->r4`/`a0` as a *conditional* count across the scan, not a direct copy
+    of the true loop index, so the resulting index can reach `8` — one past the last valid slot —
+    if the matching entry is the 8th one scanned and every preceding entry also incremented the
+    count. That index (reloaded at `funcs_25.c:4950`) multiplies by `0xEF8` to form `ctx->r18`/`s2`
+    (`funcs_25.c:5010-5011`), the table-entry address the two previously-unguarded list walks
+    dereference (`funcs_25.c:5018-5046`, `5050-5077`). This OOB-index shape is inherent to the
+    original game's compiled logic, faithfully preserved by the mechanical translation — not a
+    recompiler-introduced bug. Ranked candidates if this recurs: `ctx->r18` (computed table-entry
+    pointer, first deref `funcs_25.c:5018`) > `ctx->r16` (walked list-node pointer loaded from it,
+    `funcs_25.c:5019/5039/5051/5071`).
+
+    **Instrument landed**: `BREADCRUMB13` (`N64Recomp/fixup_game_funcs.py`, same
+    `g_rs64_last_guest_pc` mechanism as `BREADCRUMB10`-`BREADCRUMB12`), 185 sites patched, scoped
+    to `tickSongSequence`'s body only. Wait-for-recurrence instrument, not a closed item — no
+    guard landed (unvalidatable blind off zero prior recurrences, same reasoning as the three
+    prior breadcrumbs).
+
+    **Regen + build + 2 validation soaks** (iron rule 4): clean regen (185 sites patched, plus
+    `BREADCRUMB10`/`11`/`12` still patching their prior counts unchanged — no ordering
+    regression), clean build (46 warnings, same baseline). Soak 1: scene reached, held the full
+    275s hold window, `CRASH: 0` — clean. Soak 2: scene reached, died ~6s into the hold to
+    `sym=tickTextureMaterialExpiry+936` — **this is the bonus finding**: `[CRASH][last-guest-pc]
+    pc=0x80022094` is, for the first time since `BREADCRUMB12` was armed (s292), an actual
+    localized guest address, and it falls inside `tickTextureMaterialExpiry`'s guest range
+    (`0x80022048`-`0x8002210C`) at `funcs_6.c:12207` (`lhu $v1, 0x8($s0)`) — confirming s292's
+    ranked candidate `ctx->r16` (the walked node pointer) as the actual faulting deref, not
+    `ctx->r18`/`s2` or any other candidate. Confirmed unrelated to this session's own
+    `tickSongSequence` change via the `[CRASH][pc-symbol]` name (different function entirely).
+    Two independent lines of evidence (1 clean full hold + 1 crash cross-checked against a
+    different, already-armed breadcrumb) agree `BREADCRUMB13` introduced no new instability.
+
+    **Next work unit for `tickTextureMaterialExpiry`**: this is now a single real data point
+    (`ctx->r16` at `funcs_6.c:12207`, a `lhu` 2-byte read of node offset `0x8`) — per iron rule 1
+    (a null result needs a positive control; by extension a single positive observation isn't yet
+    two independent lines of evidence), do NOT land a guard off this one hit alone. Best next
+    move: keep soaking (any soak for any future work unit is free exposure, per the standing
+    breadcrumb policy) and wait for a 2nd `tickTextureMaterialExpiry` recurrence to confirm
+    `ctx->r16` before guarding.
+
+    **Next work unit for the backlog generally**: `tickSongSequence` (item -26) is now closed to
+    "armed wait-for-recurrence," matching `BREADCRUMB10`-`12`'s status. The abandoned s249-251
+    project-wide unguarded-walk sweep (`unguarded_walk_candidates.json`, 139 sites, last touched
+    s251) is the next-oldest unaddressed thread below item -124 and was this session's runner-up —
+    a good candidate for the next session if it wants a change of pace from the single-function
+    source-read-and-breadcrumb pattern.
 
 -133. **(s292) Lands `BREADCRUMB12` scoped to `tickTextureMaterialExpiry`, closing the last
     fully-unaddressed s270 backlog item (`tickTextureMaterialExpiry`, item -111, first flagged
