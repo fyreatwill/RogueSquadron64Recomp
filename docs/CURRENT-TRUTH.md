@@ -40,11 +40,15 @@ Priority order for upcoming iterations, set after the 300-session review:
    self-contained cutscene frame-pump, not a function invoked 1152+ times by an outer caller. The
    loop's only exit gate, `static_6_800AF550`, reads a per-actor timer struct and two float thresholds
    with **no reference to any audio global** -- source-level evidence (not yet conclusive) that this
-   whole stall thread may not actually be an M5/audio issue at all -- see item -193. Baseline (both
-   force-zero gate sites) restored at every session's end. Next work unit: instrument
-   `static_6_800AF550`'s branch outcome and its struct/threshold values in one soak to settle whether
-   the exit condition is ever satisfiable, which will also settle whether this thread belongs under
-   M5 at all -- see item -193.
+   whole stall thread may not actually be an M5/audio issue at all -- see item -193. **s337 ran the
+   runtime instrument (closing item -193's 3rd-of-3 iteration): the delta-time input advances normally
+   (refutes "frozen clock"), but a global pointer the exit gate depends on stays NULL for ~89% of the
+   run, only going non-null in the final 7 calls -- at which point the debounce completes and the
+   real exit signal (`return 1`) fires exactly once. The graphics-task stall does NOT clear
+   afterward** (same `stalled=1 pairs=0` VI signature persists to the log's end) -- surfacing a new,
+   more promising lead: `cinematicLoopBody`'s loop calls `submitGfxFrame` directly every iteration
+   (s336), entirely apart from the `runVideoFrameTick`-callers chase s333-s336 were pursuing; see
+   item -194. Baseline (both force-zero gate sites) restored at every session's end.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -176,7 +180,45 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -193 (s336); the next new item takes -194 and is inserted at the top.
+oldest). Current top is -194 (s337); the next new item takes -195 and is inserted at the top.
+
+-194. **(s337) M5 audio de-stubbing: runtime instrument on `static_6_800AF550` finds the delta-time
+    input advances normally (refutes "frozen OS clock"), but the real blocker is a per-actor pointer
+    that stays NULL for ~89% of the run -- and even after the real exit signal fires once, the
+    VI=640 graphics-task stall does not clear.** Closed the 3rd-of-3 (final, iron rule 8) iteration
+    on `HYPOTHESIS-ID m5-audio-destub-cinematicloopbody-divergent-callees`. Added 3 diagnostics to
+    `fixup_game_funcs.py` (untracked, N64Recomp repo), gated behind `ROGUESQ_LOG_CUTSCENETIMER_REACH=1`:
+    `[cutscenetimer-entry]` (entry count, `a2`/delta-time as float, whether global pointer
+    `0x800B0934` is null), `[cutscenetimer-debounce]` (the global debounce byte at `0x800B0938` after
+    each increment -- a plain global, not a per-actor struct offset as NEXT.md loosely paraphrased),
+    `[cutscenetimer-exit]` (fires only at the function's one real `return 1` site). Soaked with the
+    gate narrowed to reverse `reapplyDisplayMode`'s site only, `ROGUESQ_LOG_MAINGAMELOOP_REACH=1`
+    armed alongside for correlation with s334's `[cutscenedispatch-entry]`, `HOLD_S=600`. Reproduced
+    the same VI=640 `stalled=1 pairs=0` stall; 0 crashes across 1.28M log lines. **Results** (positive
+    control satisfied, all 3 fired): `a2` was 0.0167-0.0333 (a normal per-frame delta) across the
+    *entire* run, never frozen -- directly refutes "OS clock not advancing." But `ptr_null=1` for
+    every logged entry from n=1 through n=1024 (the overwhelming majority of 1152 total calls) -- the
+    real accumulation/threshold logic never ran for virtually the whole stall, because the global
+    pointer at `0x800B0934` stayed null; only at the very last entry (n=1152) did it go non-null.
+    The debounce counter then fired 7 times in one tight consecutive burst right at the log's tail
+    (count=1..7, no gaps), and `[cutscenetimer-exit]` fired exactly once immediately after -- the real
+    "exit now" signal genuinely fired during this soak. **But `[vi-fs-decision]` kept logging
+    `stalled=1 pairs=0` at the identical VI address for all ~4283 remaining log lines through the
+    log's end** -- no stall-clearing effect visible in the runtime remaining after the exit fired.
+    This lands on NEXT.md's own 3rd discriminating-outcome bucket: the exit signal fired but the
+    downstream symptom didn't resolve, meaning either `cinematicLoopBody` doesn't actually respond to
+    this return value the way s336 inferred, there wasn't enough post-exit runtime (~5s) to see the
+    effect, or -- the most promising unchased lead -- **`cinematicLoopBody`'s loop calls
+    `submitGfxFrame` directly every iteration (s336), a completely separate graphics-producer path
+    from the whole `runVideoFrameTick`-callers investigation s333-s336 were chasing**; if
+    `submitGfxFrame` is the real per-frame producer for this phase, the entire mainGameLoop/
+    cutsceneDispatchSlotsByFlag/static_6_800A9ABC reachability chase may have been chasing an
+    irrelevant call chain, and the real question is why `submitGfxFrame`'s output never reaches
+    `[vi-fs-decision]`'s pairing logic (`pairs=0`) despite 1152+ calls. No `lib/` touched. Gate
+    reverted to full force-zero baseline (`audio gate patched x2` reconfirmed) and rebuilt clean.
+    `HYPOTHESIS-ID` retired at its 3-iteration budget (iron rule 8); pivots to
+    `m5-audio-destub-submitgfxframe-vi-fs-decoupling` for the next iteration. Full detail:
+    `PORTING-STATE` Session 337.
 
 -193. **(s336) M5 audio de-stubbing: source-level proof that `cinematicLoopBody` contains its own
     internal per-frame goto-loop — explains the `static_6_800A9ABC`-once vs `cutsceneDispatchSlotsByFlag`

@@ -1,78 +1,78 @@
 # NEXT work unit
 
-## s336 closed the divergent-callee-count question with a source proof — start here
+## s337 closed the cinematicLoopBody-exit-gate question — start here
 
-s336 (`HYPOTHESIS-ID m5-audio-destub-cinematicloopbody-divergent-callees`, 2nd of up to 3 iterations,
-CURRENT-TRUTH item -193, full detail `PORTING-STATE` Session 336) read `cinematicLoopBody`'s full body
-(`funcs_27.c:106842`–`108530`) before touching any instrumentation, per NEXT.md's own prescribed step
-1 — and the read alone answered the open question, so no new soak was needed (same pattern as s335).
+s337 (`HYPOTHESIS-ID m5-audio-destub-cinematicloopbody-divergent-callees`, 3rd of 3 iterations, iron
+rule 8 budget exhausted, CURRENT-TRUTH item -194, full detail `PORTING-STATE` Session 337) ran the
+runtime instrument NEXT.md's step 1 asked for: 3 diagnostics on `static_6_800AF550`
+(`ROGUESQ_LOG_CUTSCENETIMER_REACH=1`), soaked with `ROGUESQ_LOG_MAINGAMELOOP_REACH=1` armed alongside.
 
-**Finding**: `cinematicLoopBody` contains its own internal per-frame `goto`-loop — an unconditional
-`j L_800A6024` at `funcs_27.c:108258` lands back at `funcs_27.c:107269` (`L_800A6024`), a point AFTER
-the `static_6_800A9ABC` setup call (`107079`) but BEFORE the `cutsceneDispatchSlotsByFlag` call
-(`107938`). Every loop pass calls `cutsceneDispatchSlotsByFlag` and `submitGfxFrame` (`108253`) and
-jumps straight back to the top; `static_6_800A9ABC`, sitting before the loop's entry point, never
-re-fires. This is exactly hypothesis 1 from s335's NEXT.md (self-looping function), confirmed, and
-refutes hypothesis 2 (repeated invocation by an outer caller). `cinematicLoopBody`'s own two call
-sites (`funcs_44.c:4825`, `funcs_27.c:156405` — duplicate overlay copies of the same wrapper,
-`static_6_800AE518`) are plain non-looping tail calls with fixed args, consistent with "invoked once
-to start a cutscene, then this internal loop pumps every frame until its own exit condition fires."
+**Findings**: the delta-time input (`a2`) advances normally the entire run (0.0167-0.0333, never
+frozen) — refutes "OS clock not advancing." But the global pointer at `0x800B0934` the function
+depends on stayed **NULL for ~89% of the run** (n=1 through n=1024 of 1152 total calls) — the real
+threshold/debounce logic never ran for virtually the whole stall. Only at the very last logged call
+(n=1152) did the pointer go non-null; the debounce counter then completed in one tight 7-call burst
+right at the log's tail, and the function's one real "exit" signal (`return 1`) fired exactly once.
+**But `[vi-fs-decision]` kept logging `stalled=1 pairs=0` at the identical VI address for the ~4283
+remaining log lines through the log's end** — the exit firing did not visibly clear the graphics-task
+stall this whole investigation was opened to explain.
 
-## New question: is the loop's exit gate audio-related at all, or was this thread mis-filed under M5?
+## New question: is `cinematicLoopBody`'s exit gate even relevant to the VI=640 stall at all?
 
-The loop's only exit (`funcs_27.c:107342`, `goto L_800A64BC`) is gated by `static_6_800AF550`
-(`funcs_44.c:6187`) returning nonzero. Read it in full: it compares an accumulated float against two
-threshold constants (`0x800A5D70`/`0x800A5D74`) and force-exits after a 7-iteration debounce. Traced
-its `a2` input (`$f20`, set at the loop's top from the PRECEDING call's return) back through
-`static_6_800AF360` (`funcs_44.c:5792`) to `timeSnapshotFiller` — a real OS-clock delta-time snapshot
-call. **Three function-levels deep, zero audio-subsystem references anywhere in the chain traced so
-far.** This is source-level evidence — not yet proven at runtime — that the `reapplyDisplayMode`
-VI=640 stall this whole s327-336 arc has been chasing under the "M5 audio de-stubbing" strategic
-priority may have nothing to do with audio: it may be a plain cutscene-duration timer that never gets
-satisfied (a long/legitimate cutscene, or a duration-table bug), independent of the audio-gate work.
+s336 already established that `cinematicLoopBody`'s internal loop calls **`submitGfxFrame` directly,
+every iteration** (`funcs_27.c:108253`) — a completely separate graphics-producer call from the whole
+`runVideoFrameTick`-callers chase s333-s336 spent 4 sessions on. If `submitGfxFrame` is the actual
+per-frame graphics-task producer during this phase (not `runVideoFrameTick` via any of its 5 callers),
+then the entire `mainGameLoop`/`cutsceneDispatchSlotsByFlag`/`static_6_800A9ABC` reachability
+investigation may have been chasing an irrelevant call chain from the start, and the real question is
+narrower and more direct: **is `submitGfxFrame` actually being called 1152+ times as `cinematicLoopBody`'s
+loop count implies, and if so, why does `[vi-fs-decision]`'s `pairs` counter stay at 0 the whole time?**
+
+`HYPOTHESIS-ID: m5-audio-destub-submitgfxframe-vi-fs-decoupling` (new, 1st iteration).
 
 ## The work unit
 
-1. **Instrument `static_6_800AF550` and correlate with the loop's own iteration counter, in ONE soak**
-   (batch every counter — iron rule "batch instrumentation"):
-   - Entry/return counter on `static_6_800AF550` itself: log its return value (`ctx->r2` at the two
-     `jr $ra` sites, `funcs_44.c:6268` returns via fallthrough=1/exit, `6325` (`L_800AF604`)
-     returns=0/continue) each call, modulo-sampled like prior sessions' vars.
-   - Log the `a2` argument (`ctx->r6`, the delta-time float bits) at entry — reinterpret as float when
-     analyzing offline.
-   - Log the debounce counter (struct-offset `0x938` off the pointer loaded from global `0x800B0934`)
-     and whether it's advancing or stuck.
-   - Reuse `ROGUESQ_LOG_MAINGAMELOOP_REACH`-style var naming or open a new one
-     (`ROGUESQ_LOG_CUTSCENETIMER_REACH=1`) — whichever is a natural fit once you look at how the
-     existing macro is wired in `fixup_game_funcs.py`. Always use `lambda m: (...)` for `re.subn`
-     replacements (s333's caught bug — a plain string substitution double-escapes).
-2. Same soak setup as s329/s332/s333/s334/s335: gate narrowed to reverse `reapplyDisplayMode`'s site
-   only, `scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, `env HOLD_S=600 <VARS> zsh
-   scratch/s73_post_a_scene/run_s327waitpump.sh <label>` (the `env` prefix is required — see project
-   rule 10). Positive control: confirm the new counter(s) actually fire at least once early in the run
-   before trusting a "stuck" reading late in the run (iron rule 1).
-3. **Discriminating outcomes**:
-   - If `a2`/delta-time is consistently near-zero across the 1152+ loop iterations → the timer truly
-     isn't advancing, which reopens the audio-relevance question (what's holding
-     `timeSnapshotFiller`'s snapshot still — possibly an OS-timer service normally driven by an
-     interrupt/thread the audio stub also short-circuits; investigate that specific mechanism next).
-   - If `a2`/delta-time IS advancing normally but the debounce counter or threshold comparison never
-     triggers exit → this is a plain gameplay/duration-table bug, unrelated to M5 — recommend
-     re-filing this thread out of the "M5 audio de-stubbing" strategic priority (item 2) into M3-class
-     crash/hang idiom work (item 3), or its own tracked item, at the next iteration boundary. This is a
-     judgment call worth surfacing to the user rather than silently reclassifying.
-   - If the debounce counter DOES reach 7 and `static_6_800AF550` DOES return nonzero at some point
-     during the 600s soak, but `cutsceneDispatchSlotsByFlag`'s count still climbs past that point →
-     something else is wrong (the loop isn't actually exiting on the gate signal as read) — treat as a
-     new open question, don't force-fit it into either bucket above.
-4. Whichever outcome, close it in the same iteration (update CURRENT-TRUTH item -193 / add a new item)
-   — this is the 3rd iteration on `HYPOTHESIS-ID m5-audio-destub-cinematicloopbody-divergent-callees`
-   if run next, which is the iron-rule-8 budget ceiling: if this iteration doesn't produce a
-   discriminating result, STOP experimenting on this thread and go BLOCKED or pivot explicitly.
-5. Revert to the full force-zero baseline (`audio gate patched x2`) and rebuild clean before ending,
-   per every prior session's convention.
+1. **Source-read first, per every session's convention in this arc** (do NOT soak before this):
+   - Read `submitGfxFrame`'s full body (find it via `grep -rn "submitGfxFrame" RecompiledFuncs/*.c`
+     in `/Users/williambuckley/Documents/Tools/N64Recomp` — it's called from `cinematicLoopBody`
+     at `funcs_27.c:108253`, per s336; find its definition and read it in full).
+   - Find what `submitGfxFrame` writes to: does it enqueue a graphics task the same way
+     `runVideoFrameTick`'s real producer path does (`lib/rt64/src/hle/rt64_state.cpp:2945`,
+     `ultramodern/src/events.cpp:576-592`, per s330's trace), or via a completely different path?
+   - Find what `[vi-fs-decision]`'s `pairs` counter actually counts (grep `rt64_state.cpp` /
+     wherever `[vi-fs-decision]` is logged from — likely native C++ runtime code, not
+     `fixup_game_funcs.py` patch territory, per s313/s315's precedent of finding relevant logic
+     outside the game-code patch file). Does `submitGfxFrame`'s output route through whatever
+     produces a "pair," or does it use some other mechanism the pairing logic doesn't recognize?
+   - **Discriminating question this read should answer**: does `submitGfxFrame`'s call path
+     plausibly reach the same graphics-task queue `[vi-fs-decision]` is monitoring? If yes, the
+     mystery deepens (calls should produce pairs but don't — needs a runtime instrument next). If
+     no — if `submitGfxFrame` writes to some other buffer/mechanism entirely — that may fully
+     explain `pairs=0` without needing a new soak (same pattern as s335/s336's source-only closes).
+2. If the source-read doesn't fully resolve it, instrument (batch every counter in one soak, per the
+   iron rule): an entry/call counter on `submitGfxFrame` itself, plus whatever field/counter its body
+   writes to that should influence `[vi-fs-decision]`'s `pairs` value. Reuse
+   `ROGUESQ_LOG_CUTSCENETIMER_REACH`'s naming convention or open a new var
+   (`ROGUESQ_LOG_SUBMITGFXFRAME_REACH=1`) — always `lambda m: (...)` for `re.subn` replacements.
+3. Same soak setup as every session in this arc if a new soak is needed: gate narrowed to reverse
+   `reapplyDisplayMode`'s site only (`0x8008E(?:B40|C88)` -> `0x8008EB40`-only),
+   `scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, `env HOLD_S=600 <VARS> zsh
+   scratch/s73_post_a_scene/run_s327waitpump.sh <label>` (`env` prefix required, project rule 10).
+   Positive control: confirm new counters fire early before trusting a late "stuck" reading.
+4. Whichever outcome, close it in the same iteration — this is the 1st of up to 3 iterations on the
+   new `HYPOTHESIS-ID`.
+5. Revert to the full force-zero baseline (`audio gate patched x2`) and rebuild clean before ending.
 
-## Environment notes (carried forward — see s327-336 for full detail)
+## Maintenance flag
+
+`docs/CURRENT-TRUTH.md` is now ~61.8 KB (over the 60,000-byte Step-0 trigger) after this session's
+item -194 addition. **The next iteration is a MAINTENANCE iteration per ITERATION.md Step 0** — compact
+before picking up the submitGfxFrame work unit above. Good compaction targets: items -160..-193 (the
+26-session M5 gate-byte-reversal arc, s297-336) are prime candidates to fold into 2-3 paragraphs the
+way s330/s336 already partially did; the "Overturned conclusions" and "Dead ends" sections are stable
+and lower-value to touch.
+
+## Environment notes (carried forward — see s327-337 for full detail)
 
 - Regen paths: `/Users/williambuckley/Documents/Tools/N64Recomp` (`fixup_game_funcs.py`, untracked).
   Delete `RecompiledFuncs/*.c` before every `N64Recomp` run:
@@ -82,26 +82,23 @@ satisfied (a long/legitimate cutscene, or a duration-table bug), independent of 
   `env HOLD_S=600 <VARS> zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>` (the `env` prefix
   is required — see project rule 10, a bare `VAR=1 zsh ...` is denied by the permission
   prefix-matcher). Run it via Bash `run_in_background: true`. Get the PID from the launch output
-  (`pid <PID> out=...`), then block in a SEPARATE foreground Bash call:
+  (`pid <PID> out=...`), then block in a SEPARATE foreground Bash call polling `os.kill(pid, 0)` or
   `while kill -0 <PID> 2>/dev/null; do sleep 5; done` with a timeout comfortably over 600s. Log lands
   at `scratch/s73_post_a_scene/<label>/run.log` — grep it, don't read it directly (past logs have run
   tens of MB / over a million lines).
-- **Existing logs are reusable evidence** — s335 and s336 both answered open questions by re-reading
-  source or re-grepping already-captured logs instead of re-running a soak. Check
-  `scratch/s73_post_a_scene/<recent label>/run.log` for a relevant counter before spending a new
-  build-run cycle — but note s334's existing log did NOT arm any `static_6_800AF550`-adjacent counter,
-  so THIS question does need a new soak.
-- Output redirection quirks this session: bare `python3 script.py > file 2>&1` as a single Bash call
-  gets flagged "Contains simple_expansion" or requires approval in compound form — safest pattern is
-  `cd <dir>` as its own standalone Bash call (no compound `cd x && ...`), then the redirected command
-  as a separate call with an absolute output path inside an allowed working directory.
-- `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8` — allowlisted
+- **Existing logs are reusable evidence** — s335, s336, and s337 (partially) all answered questions by
+  re-reading source or re-grepping already-captured logs instead of always re-running a soak. Check
+  `scratch/s73_post_a_scene/s337cutscenetimer/run.log` for a relevant counter before spending a new
+  build-run cycle, though note it doesn't have any `submitGfxFrame`-specific counter armed, so this
+  question will likely need a new soak once the source-read narrows what to instrument.
+- Multiple Bash calls this session hit compound-command approval friction (`cd x && cmd`,
+  `VAR=1 cmd 2>&1 | tail`, etc.) — safest pattern is a standalone `cd <dir>` as its own Bash call
+  (working directory persists across calls), then the actual command as a separate call with an
+  absolute path where needed.
+- `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build <path> -j8` — allowlisted
   verbatim.
-- Multi-directory `cd a && git ...` or `cd a && <cmd>` compound Bash calls get flagged for approval
-  this session — use `git -C <path> ...` instead, or a standalone `cd` as its own call.
 - Scratch files outside the three allowed working directories (e.g. `/tmp/...`) are blocked by the
   sandbox — write throwaway analysis scripts under `scratch/` in this repo instead.
 
-HYPOTHESIS-ID: m5-audio-destub-cinematicloopbody-divergent-callees (2nd iteration — same thread as
-s335's pivot, closed its own divergent-callee-count question this session, opened a new sub-question
-about whether the exit-gate's timer is audio-dependent).
+HYPOTHESIS-ID: m5-audio-destub-submitgfxframe-vi-fs-decoupling (new, 1st iteration — pivoted from
+m5-audio-destub-cinematicloopbody-divergent-callees, which s337 closed at its 3-iteration budget).

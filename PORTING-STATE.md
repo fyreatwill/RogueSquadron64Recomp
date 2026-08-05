@@ -29436,3 +29436,76 @@ can settle which.
 `static_6_800AF550`'s return value and its `a2` input (or `timeSnapshotFiller`'s raw output) alongside
 the loop's own iteration counter, in one soak, which is a continuation of the same thread, not a new
 one.
+
+## Session 337 (2026-08-04) — M5 audio: runtime instrument on `static_6_800AF550` finds the delta-time input IS advancing normally (refutes "frozen OS clock"), but the real blocker is a per-actor pointer that stays NULL for ~89% of the run — and the exit signal firing once does NOT clear the VI=640 graphics-task stall. Closes the 3rd-of-3 iteration on `HYPOTHESIS-ID m5-audio-destub-cinematicloopbody-divergent-callees`, per iron rule 8.
+
+Followed NEXT.md's prescribed work unit: added 3 diagnostics to `fixup_game_funcs.py` (untracked,
+`/Users/williambuckley/Documents/Tools/N64Recomp`), all gated behind one new env var
+`ROGUESQ_LOG_CUTSCENETIMER_REACH=1` (default off):
+- `[cutscenetimer-entry]`: entry count, `a2` (the delta-time argument, `ctx->r6`) reinterpreted as
+  float, and whether the global pointer at `0x800B0934` is null this call.
+- `[cutscenetimer-debounce]`: the global debounce byte at `0x800B0938` immediately after each
+  increment (corrected from NEXT.md's looser paraphrase during the source-read needed to place the
+  patch precisely: it's a plain global byte, not an offset off a per-actor struct pointer).
+- `[cutscenetimer-exit]`: fires only at the function's one real "return 1" site (taken when the
+  debounce byte reaches 7) — the sole nonzero-return / true loop-exit-signal path; every other path,
+  including the null-pointer early-out, funnels through the shared `L_800AF604` label, which
+  unconditionally forces the return value to 0 right before returning, regardless of what led there.
+
+All 3 use the standard cap idiom (40 unconditional, then modulo-128 sampled) except
+`[cutscenetimer-exit]`, which also got the cap for safety once the source-read revealed it could in
+principle fire on every subsequent call once the debounce byte passes 7 (it never increments back down
+within this function). Soaked with the gate narrowed to reverse `reapplyDisplayMode`'s site only
+(`0x8008E(?:B40|C88)` narrowed to `0x8008EB40`-only, same setup as every prior session in this arc),
+`ROGUESQ_LOG_CUTSCENETIMER_REACH=1` and `ROGUESQ_LOG_MAINGAMELOOP_REACH=1` armed together for
+same-run correlation with s334's `[cutscenedispatch-entry]`, `HOLD_S=600`,
+`scratch/s73_post_a_scene/run_s327waitpump.sh s337cutscenetimer`. Reproduced the same VI=640
+`stalled=1 pairs=0` symptom; 0 crashes/asserts across 1,281,235 log lines; the driver process exited
+(watchdog, not a crash) at ~595s.
+
+**Results** (positive control satisfied — all 3 diagnostics fired, confirming reachability, per iron
+rule 1):
+- `[cutscenetimer-entry]` fired 49 times (n=1..1152, sampled). `a2` was **0.0167–0.0333 across the
+  entire run** — a normal per-frame delta-time value, never zero or frozen. This directly **refutes**
+  the "OS clock/timer not advancing" branch of NEXT.md's discriminating-outcomes list.
+- **`ptr_null=1` for every logged entry from n=1 through n=1024** (the overwhelming majority of the
+  run) — the global pointer at `0x800B0934` was null for virtually this whole stall, meaning
+  `static_6_800AF550`'s real threshold/accumulation logic never even ran; every one of those calls took
+  the trivial null-pointer early return (return 0, keep looping) without touching the debounce counter
+  at all. Only at the very last logged entry, **n=1152, did `ptr_null` flip to 0**.
+- `[cutscenetimer-debounce]` fired only 7 times total, **all in a tight consecutive burst right at the
+  tail of the log** (raw lines 1272564–1276951, count=1 through count=7 with no gaps) — i.e. the
+  instant the pointer went non-null, the accumulated value was already past threshold1 and the debounce
+  counter ran to completion in 7 back-to-back calls.
+- `[cutscenetimer-exit]` fired **exactly once**, at line 1276952 — immediately after debounce reached
+  7. The real "loop should exit now" signal genuinely fired during this soak.
+- **But the stall did not clear.** `[vi-fs-decision]` continued logging `stalled=1 pairs=0` at the
+  identical VI address (`vi=0x00695C00`, width 640) for all ~4283 remaining log lines through the log's
+  end (line 1,281,235) — no VI-width transition, no `pairs>0`, no change in the stall signature at all
+  after the exit fired.
+
+**Interpretation**: this both closes and reopens the thread. It closes the "is the exit gate
+audio-related" question net-negative for a 4th time (the delta-time chain really is a plain
+non-audio per-frame clock, now runtime-confirmed, not just source-inferred) — but it does **not**
+support "this is a simple long/buggy-duration cutscene timer" either, because the mechanism holding it
+up almost the entire run is a **null pointer**, not a slow-accumulating threshold. And critically, this
+result lands on NEXT.md's own 3rd discriminating-outcome bucket almost exactly: the debounce reached 7
+and the function returned nonzero during the soak, but the downstream graphics-task-submission
+stall — the entire reason this thread was ever opened — did not resolve. Either (a) `cinematicLoopBody`
+does not actually respond to `static_6_800AF550`'s return value as inferred (s336's control-flow read
+may be missing something), (b) 600s total / ~5s of post-exit runtime was not enough for the effect to
+propagate, or (c) — the most interesting possibility, surfaced but not chased this session (out of
+`HYPOTHESIS-ID` budget per iron rule 8) — **`cinematicLoopBody`'s loop has its own direct graphics
+producer, `submitGfxFrame` (called every iteration per s336, `funcs_27.c:108253`), entirely separate
+from the whole `runVideoFrameTick`-callers investigation s333-s336 were chasing.** If `submitGfxFrame`
+is the real per-frame producer for this phase, then everything upstream of it (mainGameLoop,
+`cutsceneDispatchSlotsByFlag`'s dead call site, `static_6_800A9ABC`) may be irrelevant to the VI=640
+stall, and the actual question becomes why `submitGfxFrame`'s output isn't reaching the
+`[vi-fs-decision]` pairing logic (`pairs=0`) even while it's presumably being called 1152+ times.
+
+No `lib/` touched. Gate reverted to full force-zero baseline (`audio gate patched x2` reconfirmed) and
+rebuilt clean before ending. `HYPOTHESIS-ID` retired
+(`m5-audio-destub-cinematicloopbody-divergent-callees`, closed at its 3-iteration budget per iron rule
+8) — pivots to `m5-audio-destub-submitgfxframe-vi-fs-decoupling` for the next iteration, which should
+first source-read `submitGfxFrame` (does it write to whatever `[vi-fs-decision]`'s `pairs` counter
+reads?) before any new soak, reusing this session's own log if a relevant counter is already present.
