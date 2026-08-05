@@ -23,9 +23,13 @@ Priority order for upcoming iterations, set after the 300-session review:
    `reapplyDisplayMode`'s site (the 3rd/last gate) hits a DIFFERENT, unrelated permanent VI=640
    graphics-task stall (s329), still UNSOLVED: s330's candidate mechanism (a 2nd, unpatched spin loop
    inside `waitForMusyXAudioTaskDone`) was runtime-REFUTED by s332's diagnostic (fired once, flag
-   already 0, never blocks) -- see item -189. Baseline (both sites force-zeroed) restored at every
-   session's end. Next work unit: a reachability probe at `reapplyDisplayMode`'s call site and guard
-   -- see item -189.
+   already 0, never blocks) -- see item -189. s333's reachability probe found the stall sits an
+   entire call-frame further upstream than anything traced so far: `runVideoFrameTick` itself (not
+   just the `reapplyDisplayMode` call inside it) stops being invoked after exactly 2 calls, for the
+   full ~598s remainder of the soak -- see item -190. Baseline (both sites force-zeroed) restored at
+   every session's end. Next work unit: instrument `mainGameLoop` (the top-priority candidate caller,
+   2 of 5 `runVideoFrameTick` call sites) to find what the game thread does between call #2 and the
+   call #3 that never comes -- see item -190.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -157,7 +161,36 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -189 (s332); the next new item takes -190 and is inserted at the top.
+oldest). Current top is -190 (s333); the next new item takes -191 and is inserted at the top.
+
+-190. **(s333) M5 audio de-stubbing: reapplyDisplayMode reachability probe finds the stall an entire
+    call-frame further upstream than anything traced so far -- `runVideoFrameTick` itself stops being
+    invoked after exactly 2 calls, for the full ~598s remainder of the soak.** Closed
+    `HYPOTHESIS-ID m5-audio-destub-reapplydisplaymode-reachability` in 1 iteration with a clean
+    discriminating result. Added 4 diagnostics (`ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1`, default off):
+    `[frametick-top]` (unconditional counter at `runVideoFrameTick`'s own top, `funcs_0.c:1459`),
+    `[reapplydisplaymode-callsite]` (the sole call site, `funcs_0.c:1752`), `[reapplydisplaymode-entry]`/
+    `[reapplydisplaymode-exit]` (the function's own top and its sole convergence label `L_8008EC90`).
+    Soaked with the gate B40-only narrowed (reapplyDisplayMode's site reversed, same setup s329/s332
+    used) and reproduced the same VI=640 `stalled=1 pairs=0` symptom. **Result: all 4 diagnostics fire
+    exactly twice (n=1, n=2) then never again for ~598s** -- refutes "guard never trips" (it trips
+    twice) and "reapplyDisplayMode's body hangs internally" (entry/exit counts match exactly, the
+    function returns cleanly both times) outright, and sharpens "stall is downstream/elsewhere" past
+    what was anticipated: `[frametick-top]` stopping in lockstep with the `reapplyDisplayMode`-specific
+    counters means the entire `runVideoFrameTick` function -- not just the call inside it -- stops
+    being invoked by its own caller. Audio stays alive throughout (`synth=957` at the log's last line),
+    confirming independent-OS-threads a 4th time. Grepped all 5 `runVideoFrameTick` call sites in the
+    tree: 2 in `mainGameLoop` (`funcs_8.c:21562`/`21717`, top-priority candidate), 1 each in
+    `menuOverlayInit`, `cutsceneDispatchSlotsByFlag`, `static_6_800A9ABC` -- not yet determined which
+    fires in this soak's phase. Also caught and fixed a real `fixup_game_funcs.py` authoring bug before
+    it shipped: a plain-string (non-lambda) `re.subn` replacement gets its own `\n` escapes
+    double-processed by the `re` module's template engine, corrupting an `fprintf` format string into
+    a literal embedded newline (repro'd standalone: `re.sub("hello","X\\nY","hello world")` ->
+    `'X\nY world'`) -- fixed by switching to a lambda replacement, matching every other diagnostic's
+    established convention in that file. Gate reverted to full force-zero baseline (`audio gate patched
+    x2` reconfirmed) and rebuilt clean before ending. `HYPOTHESIS-ID` pivoted to
+    `m5-audio-destub-mainGameLoop-upstream-stall` for the next probe. No `lib/` touched. Full detail:
+    `PORTING-STATE` Session 333.
 
 -189. **(s332) M5 audio de-stubbing: RUNTIME-REFUTES item -188's `waitForMusyXAudioTaskDone`
     2nd-spin-loop hypothesis -- the diagnostic fired exactly once with flag=0 (falls through

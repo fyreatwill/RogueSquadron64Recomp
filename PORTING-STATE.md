@@ -29090,3 +29090,97 @@ before ending the session, per every prior session's convention. The 3 new diagn
 tree permanently, armed-but-inert by default (`ROGUESQ_LOG_WAITMUSYX_SPIN2` unset). No `lib/` touched.
 `HYPOTHESIS-ID` retired (closed, refuted) — next iteration opens a new one for the
 `reapplyDisplayMode`-reachability probe (see `scratch/agent/NEXT.md`).
+
+## Session 333 (2026-08-04) — M5 audio: reapplyDisplayMode reachability probe finds the real stall is upstream of everything traced so far — `runVideoFrameTick` itself (not just `reapplyDisplayMode`) stops being invoked after exactly 2 calls, for the full 600s soak
+
+Ran the 1st of 3 budgeted iterations on `HYPOTHESIS-ID m5-audio-destub-reapplydisplaymode-reachability`
+(opened s332 after the `waitForMusyXAudioTaskDone` 2nd-spin-loop hypothesis was runtime-REFUTED — see
+Session 332). NEXT.md's own 3-hypothesis framing: (1) `reapplyDisplayMode`'s 3-condition guard
+(`funcs_0.c:1703-1731`) never trips, so the call site is never reached; (2) the guard trips and the
+call happens, but `reapplyDisplayMode`'s own body (`funcs_23.c:9805-10097`) hangs internally (entry
+fires, exit never does); (3) the function runs to completion every frame with no internal hang and the
+stall is genuinely downstream/elsewhere.
+
+**Diagnostics added** (`fixup_game_funcs.py`, N64Recomp repo, untracked; all gated behind one env var
+`ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1`, default off, hard-capped at 40 prints per site plus a coarse
+`n%128` sample after that): `[frametick-top]` — an unconditional counter at `runVideoFrameTick`'s own
+top (`funcs_0.c:1459`), added as the OPTIONAL 3rd instrument NEXT.md suggested, an independent
+same-run reference for "is the game thread still ticking frames at all"; `[reapplydisplaymode-
+callsite]` at the sole call site (`funcs_0.c:1752`, confirmed via grep the only
+`reapplyDisplayMode(rdram, ctx);` text anywhere in the tree); `[reapplydisplaymode-entry]`/
+`[reapplydisplaymode-exit]` at the function's own top and its sole convergence label
+(`L_8008EC90`, confirmed the only label of that name and the only `return;` inside the function's own
+9805-10023 span — both the early-return-on-invalid-mode path and the normal fall-through funnel
+through it).
+
+**A real bug caught before it shipped**: the first build attempt failed to compile
+(`funcs_0.c:1775: error: expected expression`) — the callsite patch's `fprintf` format string had lost
+its `\n` escape, leaving a literal newline inside the C string literal. Root cause, confirmed with a
+standalone repro: `re.subn(pattern, repl_string, text)` with a plain-string (non-callable) `repl`
+argument runs the *replacement* through Python's `re` module's own backslash-escape reprocessing —
+`"\\n"` (which Python's own string-literal parser already decodes to the 2 characters backslash+n)
+gets re-interpreted a *second* time by `re.sub`'s template engine and collapsed into an actual newline
+byte. `re.sub("hello", "X\\nY", "hello world")` reproduces it standalone: `'X\nY world'` (real newline,
+not literal backslash-n). The other 3 new diagnostics were unaffected because they used a `lambda`
+replacement (whose return value `re.sub` uses verbatim, no reprocessing) — matching the established
+convention every prior session's diagnostics in this file already followed, which is exactly why this
+had never surfaced before. Fixed by converting the callsite patch to a lambda too; rebuilt clean.
+
+**Regen** (`make_elf.py`→`N64Recomp`→`fixup_game_funcs.py`→cmake, `RecompiledFuncs/*.c` deleted first)
+confirmed clean patch counts both before and after the lambda fix: `[frametick-top]`/
+`[reapplydisplaymode-callsite]`/`[reapplydisplaymode-entry]`/`[reapplydisplaymode-exit]` all `x1`,
+`audio gate patched x1` (B40-only narrowed — `setDisplayMode`'s site stays force-zeroed,
+`reapplyDisplayMode`'s site reversed, same setup s329/s332 used to reach this stall).
+
+**Soak** (`run_s327waitpump.sh s333_reach`, `HOLD_S=600`, `ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1`):
+reproduced the same VI=640 permanent graphics-task-submission stall as s329/s332 (`[vi-fs-decision]
+stalled=1 pairs=0` from early on, ~36000 cycles logged with zero further content change), phase-timeout
+INCONCLUSIVE at 600s, 0 crash/assert/`UnhandledJumpTarget` markers across 1,283,390 log lines.
+
+**The discriminating result — all 4 diagnostics fire exactly twice (n=1, n=2) and then never again for
+the remaining ~598s**: `[frametick-top]`, `[reapplydisplaymode-callsite]`,
+`[reapplydisplaymode-entry]`, and `[reapplydisplaymode-exit]` all stop in lockstep at n=2. This
+refutes hypothesis 1 outright (the guard DOES trip, twice) and hypothesis 2 outright (entry and exit
+counts match exactly at every observed n — the function returns cleanly both times it's called, no
+internal hang). But it also sharpens hypothesis 3 well past what NEXT.md anticipated: the discriminator
+for H3 assumed the call site would fire *steadily* if the stall were downstream/elsewhere. It doesn't
+— `[frametick-top]`, the unconditional top-of-`runVideoFrameTick` counter, stops at the same n=2 as the
+`reapplyDisplayMode`-specific counters. That means `runVideoFrameTick` — the entire per-video-frame
+game-thread tick function, not merely the `reapplyDisplayMode` call inside it — is invoked exactly
+twice and then never called again by whatever calls it, for the full remaining ~598 seconds. Audio
+stays alive throughout (`synth=957` by the log's last `[vi-fs-decision]` line, confirming the
+independent-OS-threads finding from s330 a 4th time) while the game thread's own per-frame producer
+goes completely silent after call #2.
+
+**This relocates the stall an entire call-frame further upstream than any prior session in this
+investigation reached**: not inside `reapplyDisplayMode`'s body (s330's leading hypothesis, refuted
+s332), not inside `waitForMusyXAudioTaskDone`'s 2nd spin loop (refuted s332), not even inside
+`runVideoFrameTick`'s own per-frame logic downstream of the `reapplyDisplayMode` call (the framing
+NEXT.md's hypothesis 3 assumed) — the game thread stops returning to `runVideoFrameTick` at all,
+meaning whatever calls it is where the real block lives. Grepped every `runVideoFrameTick(rdram,
+ctx);` call site across the whole `RecompiledFuncs` tree: 5 total, 2 inside `mainGameLoop`
+(`funcs_8.c:21562`/`21717`, the clear top-priority candidate — a per-frame game loop function calling
+the per-frame tick function is exactly the shape expected), 1 each inside `menuOverlayInit`
+(`funcs_29.c:37895`), `cutsceneDispatchSlotsByFlag` (`funcs_27.c:118107`), and `static_6_800A9ABC`
+(`funcs_43.c:20961`). Not yet determined which of the 5 is actually exercised in this soak's phase, or
+what `mainGameLoop` (if it's the one) does between iterations that could block.
+
+**Also notable, not yet chased**: this VI=640/`stalled=1 pairs=0` symptom closely resembles the
+`~+90-115s post-leave` "graphics-task-submission stall" already documented in `docs/CURRENT-TRUTH.md`'s
+phase timeline (staggered subsystem shutdown, s176-183, s180's `[thr-resume-skip]` scheduler-event
+candidate mechanism weakened but not refuted by s183) — an unconfirmed, flagged-for-later possibility
+that this M5 investigation has been reproducing the SAME underlying stall via a different trigger path
+(the `reapplyDisplayMode` gate reversal), not a new one specific to audio de-stubbing. Do not act on
+this without a same-run comparison; it is a hypothesis, not a finding.
+
+**Verdict: HYPOTHESIS-ID `m5-audio-destub-reapplydisplaymode-reachability` CLOSED (all 3 original
+hypotheses settled, 1 iteration, clean discriminating result).** Pivoting to
+`m5-audio-destub-mainGameLoop-upstream-stall` for the next probe: instrument `mainGameLoop`'s own loop
+body (an unconditional per-iteration counter, plus entry/exit markers around whatever runs immediately
+before and after each of its 2 `runVideoFrameTick` call sites) to find what the game thread is doing
+during the ~598s between call #2 and call #3-that-never-comes. See `scratch/agent/NEXT.md`.
+
+Gate reverted to the full force-zero baseline (`audio gate patched x2` reconfirmed) and rebuilt clean
+before ending the session, per every prior session's convention. All 4 new diagnostics stay in the
+tree permanently, armed-but-inert by default (`ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH` unset). No `lib/`
+touched.
