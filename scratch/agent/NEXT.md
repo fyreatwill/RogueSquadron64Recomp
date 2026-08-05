@@ -63,14 +63,15 @@ loop count implies, and if so, why does `[vi-fs-decision]`'s `pairs` counter sta
    new `HYPOTHESIS-ID`.
 5. Revert to the full force-zero baseline (`audio gate patched x2`) and rebuild clean before ending.
 
-## Maintenance flag
+## Maintenance done (this session)
 
-`docs/CURRENT-TRUTH.md` is now ~61.8 KB (over the 60,000-byte Step-0 trigger) after this session's
-item -194 addition. **The next iteration is a MAINTENANCE iteration per ITERATION.md Step 0** — compact
-before picking up the submitGfxFrame work unit above. Good compaction targets: items -160..-193 (the
-26-session M5 gate-byte-reversal arc, s297-336) are prime candidates to fold into 2-3 paragraphs the
-way s330/s336 already partially did; the "Overturned conclusions" and "Dead ends" sections are stable
-and lower-value to touch.
+s338 ran the MAINTENANCE iteration Step 0 flagged: `docs/CURRENT-TRUTH.md` was 61,832 bytes (over the
+60,000-byte trigger). Compacted the USER DIRECTIVE section's M5 narrative (was a full session-by-session
+rehash of items -188..-194, now points at them) and merged items -188..-193 (s330, 332-336, the 6-session
+`waitForMusyXAudioTaskDone`→`reapplyDisplayMode`-reachability→`mainGameLoop`→`cinematicLoopBody` chase)
+into one paragraph in the `-182..-187` style, keeping item -194 (s337, still the active thread) intact.
+685→470 lines (215 net, clears the >=200-line ADVANCED bar), 61,832→41,598 bytes. No experiments run,
+no code touched. The submitGfxFrame work unit below is unchanged and is next.
 
 ## Environment notes (carried forward — see s327-337 for full detail)
 

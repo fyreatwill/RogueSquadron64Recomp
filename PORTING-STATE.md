@@ -29509,3 +29509,47 @@ rebuilt clean before ending. `HYPOTHESIS-ID` retired
 8) — pivots to `m5-audio-destub-submitgfxframe-vi-fs-decoupling` for the next iteration, which should
 first source-read `submitGfxFrame` (does it write to whatever `[vi-fs-decision]`'s `pairs` counter
 reads?) before any new soak, reusing this session's own log if a relevant counter is already present.
+
+## Session 338 (2026-08-05) — MAINTENANCE: `docs/CURRENT-TRUTH.md` compaction (Step 0 triggered at 61,832 bytes). No experiments run.
+
+`tools/agent/ITERATION.md` Step 0 fired: `wc -c < docs/CURRENT-TRUTH.md` printed 61,832, over the
+60,000-byte trigger, so this iteration was a MAINTENANCE iteration per the standing rule — no soak,
+no code change, no `HYPOTHESIS-ID` work.
+
+**What was compacted**: the file had grown back from 459 lines (post-s330's own compaction pass) to 685
+lines over sessions s332-s337, because each of those 6 sessions on the `reapplyDisplayMode` VI=640
+stall chase (`waitForMusyXAudioTaskDone` spin-loop hypothesis → 4 reachability probes → the
+source-proven `cinematicLoopBody` internal loop) added its own full-length item to Next-steps, the same
+growth pattern s330 had already compacted once for the *previous* 26-session arc (items -160..-187).
+Two edits:
+
+1. **USER DIRECTIVE section** (top of file): the M5 priority paragraph had grown into a full
+   session-by-session rehash of items -188 through -194 (34 lines) duplicating content already fully
+   detailed in the Next-steps items below it. Replaced with a short current-state summary plus a
+   pointer to item -194 and its `HYPOTHESIS-ID` (~10 lines). Also trimmed the "Compaction history"
+   line to one summary sentence (full detail is in git log regardless).
+2. **Next-steps items -188 through -193** (s330, s332-s336, the `waitForMusyXAudioTaskDone`
+   spin-loop → `reapplyDisplayMode` reachability → `mainGameLoop` upstream → `cinematicLoopBody`
+   divergent-callees chase): merged into a single `-188..-193` range item in the same style s330
+   already used for `-182..-187` and `-160..-181`, preserving the `HYPOTHESIS-ID` progression and every
+   load-bearing finding (the refuted spin-loop, the 2-call `runVideoFrameTick` stop, `mainGameLoop`
+   parking after 1 pass, the dead-code call site, the internal `goto`-loop, the audio-free exit-gate
+   trace) but dropping repeated scene-setting and soak-mechanics prose. Item -194 (s337, still the
+   active thread NEXT.md continues from) was kept as its own item, lightly trimmed, not merged — it's
+   the thread the next work unit picks up.
+
+**Result**: 685 → 470 lines (215 net reduction, clears the >=200-line ADVANCED bar), 61,832 → 41,598
+bytes. Verified no dangling item-number cross-references after the merge (`-188` through `-193` are
+still individually referenced from within the `-182..-187` item below them, and remain valid as members
+of the new `-188..-193` range). File tail (Overturned conclusions, Dead ends, Method traps,
+Regeneration pipeline) untouched, per ITERATION.md's guidance that these sections are stable and
+lower-value to compact. 35 KB stretch target not fully reached (41.6 KB) but well clear of the 60 KB
+trigger; per the standing rule this is acceptable ("not a hard floor").
+
+Updated `scratch/agent/NEXT.md`'s maintenance-flag section to reflect the compaction is done; the
+submitGfxFrame work unit it already specified (source-read `submitGfxFrame`, `HYPOTHESIS-ID
+m5-audio-destub-submitgfxframe-vi-fs-decoupling`) is unchanged and is the next iteration's work.
+
+No `lib/` touched. `docs/CURRENT-TRUTH.md`'s "Next steps" numbering convention (current top -194,
+next new item takes -195) is unaffected — no items were added or renumbered, only merged downward in
+the existing range-item style.

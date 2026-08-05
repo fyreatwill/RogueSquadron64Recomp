@@ -7,48 +7,20 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## L
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
-   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Compaction history
-   (full detail per-session in git log): s295/296-s308 took 562,666→45,772 bytes over 4 passes; s314
-   (605→397 lines, 207 net) condensed items -172..-169; s324 (668→458 lines, 210 net) condensed the
-   s313-322 gate1/2/3 arc, items -173..-181; s330 (668→459 lines, 209 net) condensed the s323-329
-   fix/confirm arc (items -182..-187) and the s297-322 runway (items -160..-181) into two paragraphs.
-   35 KB remains a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and
-   the Regeneration section's Standing warnings stay intact deliberately; both are used every
-   iteration for phase-gating and build commands.
-2. **M5 audio de-stubbing**: design doc + steps 1-3 DONE (s298/300/301). Step 4 (reversing the 3
-   force-zero audio-gate sites) IN PROGRESS -- `setDisplayMode`'s site reversed/re-reverted 17 times
-   (s303-328). The 14-call-gap/37-vs-40 measurement question and the `setDisplayMode` VI=320 hang are
-   both CLOSED, the latter's fix VALIDATED 3/3 soaks (s327/328) -- see item -182..-187. Promoting the
-   reversal to the shipped default is an open, explicitly-flagged decision, NOT made.
-   `reapplyDisplayMode`'s site (the 3rd/last gate) hits a DIFFERENT, unrelated permanent VI=640
-   graphics-task stall (s329), still UNSOLVED: s330's candidate mechanism (a 2nd, unpatched spin loop
-   inside `waitForMusyXAudioTaskDone`) was runtime-REFUTED by s332's diagnostic (fired once, flag
-   already 0, never blocks) -- see item -189. s333's reachability probe found the stall sits an
-   entire call-frame further upstream than anything traced so far: `runVideoFrameTick` itself (not
-   just the `reapplyDisplayMode` call inside it) stops being invoked after exactly 2 calls, for the
-   full ~598s remainder of the soak -- see item -190. s334 found which of the 5 candidate callers is
-   actually active: NOT `mainGameLoop` (parks after exactly 1 loop-top pass, refuting that hypothesis)
-   but `cutsceneDispatchSlotsByFlag`, which cycles continuously (1152+ calls) for virtually the entire
-   stall window -- see item -191. **s335 closed that thread with a source-level proof, no new soak
-   needed**: `cutsceneDispatchSlotsByFlag`'s apparent `runVideoFrameTick` call site
-   (`funcs_27.c:118121`) is UNREACHABLE DEAD CODE -- `N64Recomp` duplicated `static_6_800A9ABC`'s body
-   into its address range past an unconditional `return`, with no incoming label; the climbing 1152+
-   call count was a red herring, never actually a `runVideoFrameTick` caller -- see item -192. **s336
-   closed that thread too, again with a pure source-read, no soak**: `cinematicLoopBody` contains its
-   own internal per-frame `goto`-loop (unconditional `j L_800A6024` at `funcs_27.c:108258`, landing
-   after the `static_6_800A9ABC` call but before the `cutsceneDispatchSlotsByFlag` call) -- it's a
-   self-contained cutscene frame-pump, not a function invoked 1152+ times by an outer caller. The
-   loop's only exit gate, `static_6_800AF550`, reads a per-actor timer struct and two float thresholds
-   with **no reference to any audio global** -- source-level evidence (not yet conclusive) that this
-   whole stall thread may not actually be an M5/audio issue at all -- see item -193. **s337 ran the
-   runtime instrument (closing item -193's 3rd-of-3 iteration): the delta-time input advances normally
-   (refutes "frozen clock"), but a global pointer the exit gate depends on stays NULL for ~89% of the
-   run, only going non-null in the final 7 calls -- at which point the debounce completes and the
-   real exit signal (`return 1`) fires exactly once. The graphics-task stall does NOT clear
-   afterward** (same `stalled=1 pairs=0` VI signature persists to the log's end) -- surfacing a new,
-   more promising lead: `cinematicLoopBody`'s loop calls `submitGfxFrame` directly every iteration
-   (s336), entirely apart from the `runVideoFrameTick`-callers chase s333-s336 were pursuing; see
-   item -194. Baseline (both force-zero gate sites) restored at every session's end.
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. History: s295-330
+   ran 5 passes, most recently 668→459 lines (s330); full per-session detail in git log. 35 KB remains
+   a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and the
+   Regeneration section's Standing warnings stay intact deliberately; both are used every iteration.
+2. **M5 audio de-stubbing**: design doc + steps 1-3 DONE (s298/300/301). Step 4's `setDisplayMode`
+   VI=320 hang is CLOSED and fix-validated (item -182..-187); promoting that reversal to the shipped
+   default remains an open, unmade decision. `reapplyDisplayMode`'s site (3rd/last gate) hits a
+   DIFFERENT, still-UNSOLVED permanent VI=640 graphics-task stall (s329) -- 7 sessions of reachability
+   chasing (s330-337, item -188..-194) ruled out the obvious audio-adjacent mechanisms and traced the
+   stall into `cinematicLoopBody`'s internal cutscene loop, whose exit gate has NO audio-subsystem
+   reference and whose one real exit signal fired without clearing the stall. Current open question
+   (item -194, `HYPOTHESIS-ID m5-audio-destub-submitgfxframe-vi-fs-decoupling`): does
+   `cinematicLoopBody`'s direct `submitGfxFrame` call -- not `runVideoFrameTick` -- decouple from
+   `[vi-fs-decision]`'s `pairs=0` reading? Baseline (both force-zero gate sites) restored every session.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -183,249 +155,62 @@ numbered highest-magnitude-negative (top, newest/highest priority) counting up t
 oldest). Current top is -194 (s337); the next new item takes -195 and is inserted at the top.
 
 -194. **(s337) M5 audio de-stubbing: runtime instrument on `static_6_800AF550` finds the delta-time
-    input advances normally (refutes "frozen OS clock"), but the real blocker is a per-actor pointer
+    input advances normally (refutes "frozen OS clock"), but the real blocker is a global pointer
     that stays NULL for ~89% of the run -- and even after the real exit signal fires once, the
     VI=640 graphics-task stall does not clear.** Closed the 3rd-of-3 (final, iron rule 8) iteration
     on `HYPOTHESIS-ID m5-audio-destub-cinematicloopbody-divergent-callees`. Added 3 diagnostics to
-    `fixup_game_funcs.py` (untracked, N64Recomp repo), gated behind `ROGUESQ_LOG_CUTSCENETIMER_REACH=1`:
-    `[cutscenetimer-entry]` (entry count, `a2`/delta-time as float, whether global pointer
-    `0x800B0934` is null), `[cutscenetimer-debounce]` (the global debounce byte at `0x800B0938` after
-    each increment -- a plain global, not a per-actor struct offset as NEXT.md loosely paraphrased),
-    `[cutscenetimer-exit]` (fires only at the function's one real `return 1` site). Soaked with the
-    gate narrowed to reverse `reapplyDisplayMode`'s site only, `ROGUESQ_LOG_MAINGAMELOOP_REACH=1`
-    armed alongside for correlation with s334's `[cutscenedispatch-entry]`, `HOLD_S=600`. Reproduced
-    the same VI=640 `stalled=1 pairs=0` stall; 0 crashes across 1.28M log lines. **Results** (positive
-    control satisfied, all 3 fired): `a2` was 0.0167-0.0333 (a normal per-frame delta) across the
-    *entire* run, never frozen -- directly refutes "OS clock not advancing." But `ptr_null=1` for
-    every logged entry from n=1 through n=1024 (the overwhelming majority of 1152 total calls) -- the
-    real accumulation/threshold logic never ran for virtually the whole stall, because the global
-    pointer at `0x800B0934` stayed null; only at the very last entry (n=1152) did it go non-null.
-    The debounce counter then fired 7 times in one tight consecutive burst right at the log's tail
-    (count=1..7, no gaps), and `[cutscenetimer-exit]` fired exactly once immediately after -- the real
-    "exit now" signal genuinely fired during this soak. **But `[vi-fs-decision]` kept logging
-    `stalled=1 pairs=0` at the identical VI address for all ~4283 remaining log lines through the
-    log's end** -- no stall-clearing effect visible in the runtime remaining after the exit fired.
-    This lands on NEXT.md's own 3rd discriminating-outcome bucket: the exit signal fired but the
-    downstream symptom didn't resolve, meaning either `cinematicLoopBody` doesn't actually respond to
-    this return value the way s336 inferred, there wasn't enough post-exit runtime (~5s) to see the
-    effect, or -- the most promising unchased lead -- **`cinematicLoopBody`'s loop calls
-    `submitGfxFrame` directly every iteration (s336), a completely separate graphics-producer path
-    from the whole `runVideoFrameTick`-callers investigation s333-s336 were chasing**; if
-    `submitGfxFrame` is the real per-frame producer for this phase, the entire mainGameLoop/
-    cutsceneDispatchSlotsByFlag/static_6_800A9ABC reachability chase may have been chasing an
-    irrelevant call chain, and the real question is why `submitGfxFrame`'s output never reaches
-    `[vi-fs-decision]`'s pairing logic (`pairs=0`) despite 1152+ calls. No `lib/` touched. Gate
-    reverted to full force-zero baseline (`audio gate patched x2` reconfirmed) and rebuilt clean.
-    `HYPOTHESIS-ID` retired at its 3-iteration budget (iron rule 8); pivots to
-    `m5-audio-destub-submitgfxframe-vi-fs-decoupling` for the next iteration. Full detail:
-    `PORTING-STATE` Session 337.
+    `fixup_game_funcs.py` (untracked, N64Recomp repo, gated `ROGUESQ_LOG_CUTSCENETIMER_REACH=1`):
+    entry (`a2`/delta-time, whether global pointer `0x800B0934` is null), debounce (the global byte at
+    `0x800B0938`), and exit (the function's one real `return 1` site). Soaked with `reapplyDisplayMode`'s
+    gate reversed, `ROGUESQ_LOG_MAINGAMELOOP_REACH=1` armed alongside for correlation with s334's
+    `[cutscenedispatch-entry]`, `HOLD_S=600`; reproduced the stall, 0 crashes across 1.28M log lines.
+    **Results** (positive control satisfied, all 3 fired): `a2` was 0.0167-0.0333 (a normal per-frame
+    delta) across the *entire* run, never frozen -- refutes "OS clock not advancing." But `ptr_null=1`
+    for every logged entry from n=1 through n=1024 of 1152 total -- the real threshold/debounce logic
+    never ran for virtually the whole stall, because the pointer stayed null; only at the last entry
+    (n=1152) did it go non-null, the debounce counter then completed in one tight 7-call burst, and
+    the exit signal (`return 1`) fired exactly once. **But `[vi-fs-decision]` kept logging
+    `stalled=1 pairs=0` for all ~4283 remaining log lines through the log's end** -- no stall-clearing
+    effect visible after the exit fired. Most promising unchased lead: `cinematicLoopBody`'s internal
+    loop calls `submitGfxFrame` directly every iteration (s336), a completely separate graphics-producer
+    path from the whole `runVideoFrameTick`-callers chase s333-s336 pursued -- if `submitGfxFrame` is
+    the real per-frame producer here, that whole chase targeted an irrelevant call chain, and the real
+    question is why its output never reaches `[vi-fs-decision]`'s pairing logic (`pairs=0`) despite
+    1152+ calls. No `lib/` touched. Gate reverted to baseline, rebuilt clean. `HYPOTHESIS-ID` retired
+    at budget; pivots to `m5-audio-destub-submitgfxframe-vi-fs-decoupling`. Full detail: `PORTING-STATE`
+    Session 337.
 
--193. **(s336) M5 audio de-stubbing: source-level proof that `cinematicLoopBody` contains its own
-    internal per-frame goto-loop — explains the `static_6_800A9ABC`-once vs `cutsceneDispatchSlotsByFlag`
-    -1152+ divergence WITHOUT a new soak, and surfaces a fact that argues the whole stall may not be
-    audio-related at all.** 1st iteration of `HYPOTHESIS-ID
-    m5-audio-destub-cinematicloopbody-divergent-callees`. Read `cinematicLoopBody`'s full body
-    (`funcs_27.c:106842`–`108530`, ~1700 lines) per NEXT.md step 1, extracted every label and every
-    `goto` in that span with a throwaway script (`scratch/s336_cinematicloopbody/analyze.py`, not
-    committed — reproducible from the grep commands in this session's log), and searched for backward
-    jumps (target line < source line). Found exactly one backward jump inside the function:
-    `funcs_27.c:108258`'s `j L_800A6024` (an **unconditional** MIPS `j`, not a conditional branch) —
-    lands at `funcs_27.c:107269`, which is AFTER the `static_6_800A9ABC` call site (`107079`) but
-    BEFORE the `cutsceneDispatchSlotsByFlag` call site (`107938`). This is a real internal loop: each
-    pass through `L_800A6024`...`108258` calls `cutsceneDispatchSlotsByFlag` and `submitGfxFrame`
-    (`108253`) and then jumps straight back to the top, never re-executing anything before `107269` —
-    including the one-shot `static_6_800A9ABC` setup call. **This alone answers the s335 open
-    question**: `cinematicLoopBody` is NOT invoked repeatedly by an outer caller taking different paths
-    (hypothesis 2, refuted) — it loops internally (hypothesis 1, confirmed). Both of its own call sites
-    (`funcs_44.c:4825`, `funcs_27.c:156405` — themselves duplicate overlay copies of the same wrapper,
-    byte-identical disassembly, same overlay-duplication artifact family as s335's finding) are plain
-    non-looping tail calls with fixed args (`a0=3, a1=2`), consistent with "invoked once to kick off a
-    cutscene, then `cinematicLoopBody`'s own loop pumps every subsequent frame until its internal exit
-    condition fires." The loop's only exit (`funcs_27.c:107342`'s `goto L_800A64BC`, landing just past
-    the loop) is gated by `static_6_800AF550` (`funcs_44.c:6187`) returning nonzero. **Read that gate
-    function in full** (it's short, ~140 lines): it dereferences a per-actor/track struct pointer from
-    global `0x800B0934`, compares a computed float (`tableConst[a2] * a2-as-float + struct-byte[0x2F]`)
-    against two float constants at `0x800A5D70`/`0x800A5D74`, and — on the "not yet past threshold"
-    path — increments a debounce counter at struct-offset `0x938` and force-exits once that counter
-    reaches 7. **Nothing in this function's body references any audio-subsystem global, register, or
-    MusyX/audio-task structure** — it reads as a plain elapsed-time/threshold gameplay timer, not an
-    audio-completion gate. Pushed one level further: `static_6_800AF550`'s `a2` input traces back
-    through `$f20` (set at the loop's top from the PRECEDING call's return, `static_6_800AF360`,
-    `funcs_44.c:5792`) to `timeSnapshotFiller` — a real OS-clock delta-time snapshot call, not
-    anything audio-adjacent. **Three function-levels deep, zero audio-subsystem references anywhere in
-    the traced chain.** This is source-level evidence (not yet exhaustively proven — didn't verify the
-    snapshot is actually advancing at runtime) that the VI=640 `reapplyDisplayMode` stall's root
-    blocker may have **nothing to do with M5 audio de-stubbing** — it may be a plain cutscene-timer
-    condition (long/buggy duration table) that never gets satisfied, filed under the wrong strategic
-    priority. Flagging, not yet reclassifying — the next step is a targeted instrument on
-    `static_6_800AF550`/`timeSnapshotFiller`'s runtime values to settle it. No code changed, no
-    diagnostics added, no soak run, no `lib/` touched — a source-proof-only session, same method as
-    s335. Full detail: `PORTING-STATE` Session 336.
-
--192. **(s335) M5 audio de-stubbing: source-level proof that `cutsceneDispatchSlotsByFlag`'s apparent
-    `runVideoFrameTick` call site is UNREACHABLE DEAD CODE — closes item -191's open question without
-    a new soak, by re-analyzing s334's own already-captured log.** 3rd (final, per iron rule 8) of 3
-    iterations on `HYPOTHESIS-ID m5-audio-destub-mainGameLoop-upstream-stall`, closed with a real
-    discriminating result. Followed NEXT.md's step 1 (source-read `cutsceneDispatchSlotsByFlag`'s
-    body before instrumenting) and never needed step 2: `funcs_27.c:117878` is a `return;` ending the
-    function's real, reachable body; everything from `funcs_27.c:117879` through the
-    `runVideoFrameTick` call at `funcs_27.c:118121` to the function's textual close at
-    `funcs_27.c:119817` has NO incoming label or goto from outside that span (verified by grepping
-    every label definition and every goto targeting one in the file, and by grepping the whole tree
-    for any indirect/jump-table reference to that address range — none found). The only other
-    reference to that address is `funcs_27.c:107076`'s `jal 0x800A9ABC`, the real call site — but it
-    calls a **separately defined function**, `static_6_800A9ABC` (`funcs_43.c:20718`), not
-    `cutsceneDispatchSlotsByFlag`: `N64Recomp` duplicated `static_6_800A9ABC`'s disassembly into the
-    tail of `cutsceneDispatchSlotsByFlag`'s address range without a real function boundary — dead but
-    syntactically valid C. `static_6_800A9ABC`'s own body has no gate skipping its
-    `runVideoFrameTick` call (unconditional once entered); its one caller is `cinematicLoopBody`
-    (`funcs_27.c:106842`, at `funcs_27.c:107079`). Re-pulled s334's own 77 MB log
-    (`scratch/s73_post_a_scene/s334_maingameloop/run.log`, not re-run — "capture once, analyze many")
-    and grepped both counters directly: `[static6-800a9abc-entry]` fires exactly once (n=1) in the
-    whole run; `[cutscenedispatch-entry]` climbs to 1152 in the SAME run. **Verdict**:
-    `cutsceneDispatchSlotsByFlag`'s climbing call count was always a red herring for "who reaches
-    `runVideoFrameTick`" — a recompiler function-splitting artifact, not a live caller; the code
-    inside it can never fire, full stop, independent of runtime state. Combined with s333
-    (`[frametick-top]` fires exactly twice total in its own run) and s334 (`mainGameLoop`'s loop-top
-    fires once, `static_6_800A9ABC` fires once), the current best-supported (but cross-run-inferred,
-    not directly measured — iron rule 2) picture is that `mainGameLoop`'s single loop-top pass
-    accounts for both of `runVideoFrameTick`'s calls via its own 2 call sites. **New question**:
-    `cinematicLoopBody` is the common caller of both `static_6_800A9ABC` (fires once) and
-    `cutsceneDispatchSlotsByFlag` (fires 1152+ times) — 860 source lines apart, no loop wrapping
-    either call individually (not yet checked whether a loop wraps the whole span, or whether
-    `cinematicLoopBody` itself is what mainGameLoop's now-parked loop used to drive repeatedly). No
-    code changed, no diagnostics added, no soak run, no `lib/` touched — a source-proof-only session.
-    `HYPOTHESIS-ID` pivots to `m5-audio-destub-cinematicloopbody-divergent-callees`. Full detail:
-    `PORTING-STATE` Session 335.
-
--191. **(s334) M5 audio de-stubbing: mainGameLoop-upstream probe finds mainGameLoop parks after
-    exactly ONE loop-top pass; cutsceneDispatchSlotsByFlag becomes the actively-cycling caller for
-    virtually the entire rest of the 600s soak.** 1st of 3 iterations on `HYPOTHESIS-ID
-    m5-audio-destub-mainGameLoop-upstream-stall`. Added 5 diagnostics
-    (`ROGUESQ_LOG_MAINGAMELOOP_REACH=1`, default off): `[maingameloop-loop]` (unconditional
-    per-iteration counter at the one label, `L_8003E04C`, every backward branch in `mainGameLoop`'s
-    goto/label state machine funnels through), `[maingameloop-entry]`, and entry counters on the other
-    3 candidate `runVideoFrameTick` callers found by s333's grep -- `[menuoverlayinit-entry]`,
-    `[cutscenedispatch-entry]`, `[static6-800a9abc-entry]`. Soaked with the gate narrowed to reverse
-    `reapplyDisplayMode`'s site only (same setup s329/s332/s333 used) and reproduced the same VI=640
-    `stalled=1 pairs=0` symptom. **Result**: `[maingameloop-entry]`/`[maingameloop-loop]` both fire
-    exactly ONCE (n=1) near the very start of the run (before the VI=640 transition) and never again --
-    refutes hypothesis 1 (mainGameLoop does NOT keep iterating its own loop normally). Of the other 3,
-    `[cutscenedispatch-entry]` is the one that climbs continuously -- starting ~147s into the run and
-    reaching at least n=1152 by the log's end (modulo-128-sampled) -- confirming hypothesis 2:
-    `cutsceneDispatchSlotsByFlag`, not `mainGameLoop`, is the actively-cycling caller during this
-    stall. (`menuOverlayInit` fired a 2nd time at the very end of the log, ~2400 lines before cutoff --
-    flagged, not chased.) Also caught and fixed a wording bug in NEXT.md's own step 3 before running
-    it: "narrow to `0x8008EC88`-only" was backwards -- the regex needed to match `0x8008EB40` (leaving
-    `reapplyDisplayMode` reversed), confirmed against PORTING-STATE Session 329's explicit prior
-    statement of the same setup. Gate reverted to full force-zero baseline (`audio gate patched x2`
-    reconfirmed) and rebuilt clean before ending. **Open question for the next iteration**: does
-    `cutsceneDispatchSlotsByFlag`'s own `runVideoFrameTick` call site (`funcs_27.c:118107`) ever fire
-    across its 1152+ calls? This run didn't arm `ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH` (the
-    `[frametick-top]` var) alongside the new var, so there's no same-run correlation yet -- next
-    iteration should arm both together. `HYPOTHESIS-ID` unchanged (same thread, narrowed target). No
-    `lib/` touched. Full detail: `PORTING-STATE` Session 334.
-
--190. **(s333) M5 audio de-stubbing: reapplyDisplayMode reachability probe finds the stall an entire
-    call-frame further upstream than anything traced so far -- `runVideoFrameTick` itself stops being
-    invoked after exactly 2 calls, for the full ~598s remainder of the soak.** Closed
-    `HYPOTHESIS-ID m5-audio-destub-reapplydisplaymode-reachability` in 1 iteration with a clean
-    discriminating result. Added 4 diagnostics (`ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1`, default off):
-    `[frametick-top]` (unconditional counter at `runVideoFrameTick`'s own top, `funcs_0.c:1459`),
-    `[reapplydisplaymode-callsite]` (the sole call site, `funcs_0.c:1752`), `[reapplydisplaymode-entry]`/
-    `[reapplydisplaymode-exit]` (the function's own top and its sole convergence label `L_8008EC90`).
-    Soaked with the gate B40-only narrowed (reapplyDisplayMode's site reversed, same setup s329/s332
-    used) and reproduced the same VI=640 `stalled=1 pairs=0` symptom. **Result: all 4 diagnostics fire
-    exactly twice (n=1, n=2) then never again for ~598s** -- refutes "guard never trips" (it trips
-    twice) and "reapplyDisplayMode's body hangs internally" (entry/exit counts match exactly, the
-    function returns cleanly both times) outright, and sharpens "stall is downstream/elsewhere" past
-    what was anticipated: `[frametick-top]` stopping in lockstep with the `reapplyDisplayMode`-specific
-    counters means the entire `runVideoFrameTick` function -- not just the call inside it -- stops
-    being invoked by its own caller. Audio stays alive throughout (`synth=957` at the log's last line),
-    confirming independent-OS-threads a 4th time. Grepped all 5 `runVideoFrameTick` call sites in the
-    tree: 2 in `mainGameLoop` (`funcs_8.c:21562`/`21717`, top-priority candidate), 1 each in
-    `menuOverlayInit`, `cutsceneDispatchSlotsByFlag`, `static_6_800A9ABC` -- not yet determined which
-    fires in this soak's phase. Also caught and fixed a real `fixup_game_funcs.py` authoring bug before
-    it shipped: a plain-string (non-lambda) `re.subn` replacement gets its own `\n` escapes
-    double-processed by the `re` module's template engine, corrupting an `fprintf` format string into
-    a literal embedded newline (repro'd standalone: `re.sub("hello","X\\nY","hello world")` ->
-    `'X\nY world'`) -- fixed by switching to a lambda replacement, matching every other diagnostic's
-    established convention in that file. Gate reverted to full force-zero baseline (`audio gate patched
-    x2` reconfirmed) and rebuilt clean before ending. `HYPOTHESIS-ID` pivoted to
-    `m5-audio-destub-mainGameLoop-upstream-stall` for the next probe. No `lib/` touched. Full detail:
-    `PORTING-STATE` Session 333.
-
--189. **(s332) M5 audio de-stubbing: RUNTIME-REFUTES item -188's `waitForMusyXAudioTaskDone`
-    2nd-spin-loop hypothesis -- the diagnostic fired exactly once with flag=0 (falls through
-    immediately, never blocks), while the VI=640 graphics-task stall persisted the full 600s with
-    audio (arm/clear cycling >=40x each, DMA-ring reaching n=4979) staying fully alive throughout.**
-    Ran the 2nd of 3 budgeted iterations on `HYPOTHESIS-ID m5-audio-destub-waitformusyx-secondspin-
-    hang`: added 3 hard-capped, env-gated diagnostics (`ROGUESQ_LOG_WAITMUSYX_SPIN2=1`, default off)
-    at the 2nd spin loop itself and its flag's arm/clear sites, per iron rule 1 (no fix before a
-    runtime positive/negative control). Source re-verification before instrumenting found 2 new facts
-    item -188 didn't catalogue: the same spin idiom is duplicated byte-for-byte in `shutdownAudioEngine`
-    (a twin loop on the same flag, different label -- the diagnostic's regex matched both
-    automatically), and the flag has a 3rd static site, a previously-uncatalogued INIT-time clear in
-    an unrelated function (`funcs_23.c` ~`0x8008F490`), out of scope this session. Soaked with
-    `reapplyDisplayMode`'s gate reversed (mirroring s329's setup exactly): reproduced the VI=640 stall
-    at 2.2s (vs s329's 2.3s), 0 crashes/asserts across 1.28M log lines, driver timeout at 600s
-    (INCONCLUSIVE, matching s329). The diagnostic fired once, at line 78273 (well after the stall
-    onset), value `flag=0` -- the loop's exit condition (`flag != 0` keeps spinning) means it fell
-    through on the very first check and never re-entered for the remaining ~590s. **Verdict: HYPOTHESIS
-    REFUTED, CLOSED.** s330's source trace was sound as far as it went (the loop is real, unpatched,
-    reachable) but the runtime condition it needed (stuck-nonzero or too-fast-to-sample-oscillating)
-    does not occur -- this loop cannot be the stall mechanism. Root cause of the actual VI=640
-    graphics-task stall is still open. Per s330's own 3rd hypothesis (the only one consistent with this
-    result): the next probe is a fire-once reachability marker at `reapplyDisplayMode`'s call site
-    (`funcs_0.c:1752`) and its 3-condition guard (`funcs_0.c:1703-1731`) -- does `runVideoFrameTick`'s
-    graphics-task-producing path even get reached during this soak's timeline, or does the real stall
-    live somewhere further upstream in the per-frame tick that neither item -188 nor -189 has traced
-    yet? Gate reverted to the full force-zero baseline (`audio gate patched x2` reconfirmed) and
-    rebuilt clean before ending. The 3 new diagnostics stay in the tree permanently, armed-but-inert.
-    No `lib/` touched. `HYPOTHESIS-ID` retired (closed, refuted); next iteration opens a new one for
-    the reachability probe. Full detail: `PORTING-STATE` Session 332.
-
--188. **(s330) M5 audio de-stubbing: pure source-read finds a SECOND, unpatched spin loop inside
-    `waitForMusyXAudioTaskDone` — a strong, address-level-verified candidate mechanism for the
-    `reapplyDisplayMode` VI=640 stall, not yet runtime-confirmed.** Followed NEXT.md's prescribed
-    first step: source-read `reapplyDisplayMode`'s call site and body before any new soak (the s326
-    precedent). Delegated the multi-file trace, then personally spot-verified every load-bearing
-    citation byte-for-byte. **Key findings**: (1) `reapplyDisplayMode`'s call
-    (`funcs_0.c:1752`) is gated by 3 conditions re-evaluated every frame, and its own body
-    (`funcs_23.c:9805-10097`) writes none of them — unlike `setDisplayMode`'s true one-shot boot
-    call, it can and does re-trigger every frame once the guard trips. (2) No graphics-task call
-    exists textually inside `runVideoFrameTick` (`funcs_0.c:1459-1913`, grepped clean) — the real
-    producer is native C++ on a separate `gfx_thread` (`lib/rt64/src/hle/rt64_state.cpp:2945`,
-    `ultramodern/src/events.cpp:576-592`); a game-thread hang starves it by preventing the single CPU
-    thread from ever returning to later per-frame code, not via a direct call. (3) `musyxNoopStub`
-    (`funcs_23.c:10098-10171`) calls `waitForMusyXAudioTaskDone` when the gate byte is nonzero, then
-    self-clears the gate. (4) **The new finding**: `waitForMusyXAudioTaskDone`'s on-disk body
-    (`funcs_24.c:5433-5648`) has the s327 pump-fix loop correctly bounded
-    (`funcs_24.c:5456-5477`, caps at 64), but a SECOND, entirely separate spin loop later in the same
-    function (`funcs_24.c:5540-5550`, `while (MEM_BU(0x8014974C) != 0) {}`) has no bound and was
-    never touched by s327's fix. Verified personally: the flag is armed inside `musyxSynthFrame`
-    right before an indirect call (`funcs_24.c:3991-3992`), and only clearable from that same
-    function's own top-of-function logic (`funcs_24.c:3285-3315`), itself gated behind a blocking
-    `osRecvMesg_recomp`. Grepped `fixup_game_funcs.py` personally: the pump-fix regex only matches
-    the `-0x6676` countdown pattern; the only other reference to the `-0x68B4` flag is an unrelated,
-    default-off diagnostic that doesn't touch wait/clear logic — this second loop is unpatched in
-    every build configuration. (5) `rs64_dmem_lock` wraps an explicitly recursive mutex
-    (`lib/N64ModernRuntime/librecomp/src/main.cpp:185-190`), refuting a same-thread-relock
-    self-deadlock via that lock; separately, `gfx_thread`/`task_thread`/`vi_thread` are genuinely
-    independent OS threads (`events.cpp:590-634`), supporting why audio diagnostics kept firing
-    throughout s329's 600s stall even with the game thread wedged. **Best-supported, NOT yet closed,
-    hypothesis**: the game thread's own pump-triggered `musyxSynthFrame` call arms the DMA-busy flag,
-    then falls into the unpatched 2nd loop, which can only clear via `musyxSynthFrame`'s
-    message-gated top-of-function logic — plausibly never resolving, or resolving only in a narrow
-    race window a tight busy-spin rarely samples. Does NOT yet explain why `setDisplayMode`'s 3/3
-    clean soaks never hit this same path despite an identical `musyxNoopStub` call at boot — leading
-    (unconfirmed) explanation is `reapplyDisplayMode`'s every-frame re-trigger compounding the odds.
-    No code changed, no `lib/` touched. `HYPOTHESIS-ID` pivoted from
-    `m5-audio-destub-step4-reapplydisplaymode-reversal` (closed as discovery-phase; discriminating
-    soak was s329) to `m5-audio-destub-waitformusyx-secondspin-hang` (1st of 3 iterations). Next work
-    unit: a thread-tagged diagnostic at the 2nd loop's entry/exit and the flag's arm/clear sites,
-    soaked once, BEFORE attempting any fix — a runtime positive/negative control, per iron rule 1.
-    Full detail: `PORTING-STATE` Session 330.
+-188..-193. **(s330, 332-336) M5 audio de-stubbing: the VI=640 `reapplyDisplayMode` stall chase from
+    the `waitForMusyXAudioTaskDone` spin-loop hypothesis through 4 reachability probes to a
+    source-proven internal cutscene loop, ending at item -194's still-open exit-gate question.**
+    `HYPOTHESIS-ID` progression: `...waitformusyx-secondspin-hang` (closed s332, refuted) →
+    `...reapplydisplaymode-reachability` (closed s333) → `...mainGameLoop-upstream-stall` (closed
+    s334→s335 in 3 iterations) → `...cinematicloopbody-divergent-callees` (closed s336→s337, item
+    -194). s330 source-read found a second, unpatched spin loop inside `waitForMusyXAudioTaskDone`
+    (`funcs_24.c:5540-5550`, unbounded, missed by s327's pump-fix) as a candidate mechanism. s332
+    runtime-REFUTED it: the diagnostic fired once with `flag=0`, fell through immediately, while the
+    stall persisted the full 600s with audio (arm/clear cycling, DMA ring reaching n=4979) staying
+    fully alive. s333 found the stall a call-frame further upstream: `runVideoFrameTick` itself stops
+    being invoked after exactly 2 calls for the ~598s remainder (grepped all 5 of its call sites:
+    2 in `mainGameLoop`, 1 each in `menuOverlayInit`, `cutsceneDispatchSlotsByFlag`,
+    `static_6_800A9ABC`). s334 found `mainGameLoop` parks after exactly ONE loop-top pass (refuting it
+    as the stalled caller), while `cutsceneDispatchSlotsByFlag` cycles continuously (1152+ calls) for
+    virtually the whole stall window. s335 source-proved that apparent `runVideoFrameTick` call site
+    inside `cutsceneDispatchSlotsByFlag` (`funcs_27.c:118121`) is UNREACHABLE DEAD CODE -- an
+    `N64Recomp` function-splitting artifact duplicating `static_6_800A9ABC`'s body past an
+    unconditional `return`, with no incoming label; the climbing call count was a red herring, never a
+    real caller. s336 source-proved `cinematicLoopBody` contains its own internal per-frame `goto`-loop
+    (`funcs_27.c:108258`, unconditional `j`) that explains the divergence without a new caller -- it
+    calls `cutsceneDispatchSlotsByFlag` and `submitGfxFrame` directly every pass and self-loops,
+    exiting only via `static_6_800AF550`, a per-actor timer/threshold gate with NO audio-subsystem
+    reference anywhere in its 3-level-deep traced input chain (`timeSnapshotFiller`) -- first evidence
+    this stall thread may not be an M5/audio issue at all. `rs64_dmem_lock` (s330) is confirmed a
+    recursive mutex and `gfx_thread`/`task_thread`/`vi_thread` are genuinely independent OS threads
+    (`lib/N64ModernRuntime/librecomp/src/main.cpp:185-190`, `ultramodern/src/events.cpp:590-634`),
+    explaining why audio diagnostics kept firing throughout every stall in this arc even with the game
+    thread wedged. Gate reverted to the full force-zero baseline and rebuilt clean after every session
+    (`audio gate patched x2` reconfirmed each time); no `lib/` touched in any of the 6 sessions. Full
+    detail: `PORTING-STATE` Sessions 330, 332-336.
 
 -182..-187. **(s323-329) M5 audio de-stubbing step 4: gate-byte reversal + spin-loop chase — the arc
     from the 37-vs-40 measurement question through the fix, its confirmation, and the 3rd gate site's
