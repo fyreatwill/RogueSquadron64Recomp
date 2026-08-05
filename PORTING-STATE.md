@@ -28707,3 +28707,71 @@ the change). No `lib/N64ModernRuntime`/`lib/rt64` edits, no `export.sh` needed. 
 soaks next session — note it needs the gate reversed at BUILD time first, so it cannot go in
 `scratch/agent/soak_queue/` as-is; the loop's queue mechanism runs against a static build and
 cannot re-run the regen pipeline).
+
+## Session 328 (2026-08-04) — M5 audio: CLOSES `m5-audio-destub-step5-confirm-waitpump-fix` — 2 confirmatory soaks both clear the VI=320 hang (3/3 combined with s327), one crashes to an already-catalogued unrelated site, the other survives the entire 240s hold with zero crashes
+
+Continuation of s327: re-reversed `setDisplayMode`'s gate-byte site (`N64Recomp/fixup_game_funcs.py`
+regex narrowed from the `(?:B40|C88)` alternation to `0x8008EC88`-only, the same edit as s327/s325/
+s323/s320/s319 — 17th reversal of this site). Full regen (`make_elf.py` unchanged since s327, so
+skipped; `RecompiledFuncs/*.c` deleted, `N64Recomp` re-run, `fixup_game_funcs.py` confirmed
+`audio gate patched x1` / `audio-wait spin pump patched x2`, clean `cmake --build`).
+
+**Soak s328a** (`run_s327waitpump.sh s328a`): VI reached 1024 (title) at 45.5s — matching untouched
+baseline timing, same as s327. Progressed through the full menu chain into SELECT YOUR CRAFT's hold
+window (`[keys]` schedule fired identically to s327). Died at hold-iter 5 (~5s into the 240s hold) —
+much earlier than s327's iter 28 — to `SIGBUS`, `[CRASH][pc-symbol] initVec4TripletFromArgs+68`,
+`[CRASH][siginfo] si_addr=0x380000028` (RDRAM host base `0x300000000` + guest offset `0x80000028`),
+`[CRASH][last-guest-pc] pc=0x80065e94`, which symbol-maps (via `funcs_15.c`) into
+`buildPositionAndCallTransformHelper`. **This is NOT a new crash class**: it's the exact "near-
+`0x80000000`" pointer family from the s272-s288 idiom-class investigation (grep confirms
+`buildPositionAndCallTransformHelper+1356`/`si_addr=0x380000010` was landed as `BREADCRUMB6` in
+Session 273, re-soaked 0/2 in Session 280 — same function, a `+0x28` variant of the same family
+instead of the `+0x10`/`+0x30` variants already on file). `[synth-entry]`/`musyx` diagnostics WERE
+firing continuously right up to the crash (audio now runs live in the background throughout the
+hold, unlike s327's crash where nothing audio-related fired nearby) — but this is ambient, not
+causal: no `[audio-wait-pump]` stall/deadlock signature, and the crash's own signature (near-
+`0x80000000` deref in an unrelated transform-helper function) matches a family already documented as
+recurring across totally unrelated investigation threads since Session 273, well before this audio
+work started.
+
+**Soak s328b** (`run_s327waitpump.sh s328b`): VI reached 1024 at 45.4s (baseline timing again),
+identical menu-chain progression, then **survived the ENTIRE 240s hold window with zero `[CRASH]`
+markers anywhere in the 178M-line log** — `hold done wall=274s`, `done wall=300s`, process still
+alive at the end and had to be SIGKILLed by the driver's own cleanup (expected termination per the
+script design, not a fault). The cleanest run of this entire 25+-session investigation thread: full
+boot → title → menu chain → craft-select hold, no hang, no crash, real audio processing live
+throughout.
+
+**What this shows**: `m5-audio-destub-step4-setdisplaymode-vi320-hang` is now validated 3/3 —
+s327 + s328a + s328b all cleared the VI=320 deadlock with the gate reversed and the spin-pump fix in
+place; 0/25+ prior reversals ever did. This meets the M5 plan's own "two clean soaks" bar for calling
+the VI=320 hang closed (both s328 soaks cleared it; s328b in particular completed with no crash of
+any kind). The two downstream crashes observed across all 3 soaks (`processSceneNode+1424` in s327,
+`buildPositionAndCallTransformHelper`'s near-`0x80000000` family in s328a) are BOTH independently
+pre-catalogued, unrelated background crash classes with prior sightings predating this audio work —
+neither correlates with an audio diagnostic at the crash site itself.
+
+**Open, explicitly-flagged decision (not made this session)**: whether to promote the gate reversal
+(`setDisplayMode`'s `0x8008EB40` site) to the new shipped default, now that the hang it was blocking
+on is closed. Arguments for: 3/3 clean VI=320 clears, real audio now runs instead of the degenerate
+stub path, no audio-attributable crash across 3 soaks. Arguments against: still only 3 soaks total
+(vs. dozens of soaks the current force-zero baseline has accumulated); promoting changes default
+runtime behavior (audio now genuinely active) which could interact with downstream systems in ways
+not yet exercised; the two crash classes hit are unroot-caused, so the process still doesn't reach
+gameplay cleanly regardless of which gate state ships. Recommend: treat as a human decision point,
+not something this session decides unilaterally — flagging in CURRENT-TRUTH for explicit
+consideration next session or by the user.
+
+**Housekeeping**: reverted `setDisplayMode`'s site back to force-zero (regex renarrowed to the full
+`(?:B40|C88)` alternation) before ending the session, per every prior session's convention on this
+gate and NEXT.md's own instruction (the promotion decision above wasn't made, so the revert default
+applies). Confirmed `audio gate patched x2`, rebuilt clean. Only code edit was to
+`N64Recomp/fixup_game_funcs.py` (untracked standalone checkout, no commit needed there). No
+`lib/N64ModernRuntime`/`lib/rt64` edits, no `export.sh` needed.
+
+**Next steps**: (1) surface the promotion decision above to the user/next session explicitly; (2) if
+promoted, the next M5 step is auditing whether any OTHER audio stub/gate in `docs/M5-AUDIO-PLAN.md`'s
+inventory is now safe to de-stub given the spin-pump mechanism is understood; (3) if not promoted,
+M5 step 4 (`setDisplayMode`'s gate) is functionally done — pivot to the plan's next stub in sequence.
+`processSceneNode+1424` and the near-`0x80000000` family both remain legitimate M3 systematic-audit
+candidates (per standing M5-above-M3 priority, only after M5's open decision above is resolved).

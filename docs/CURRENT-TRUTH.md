@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    target, not a hard floor — the "Current truth" env-var/timeline prose and the Regeneration section's
    Standing warnings stay intact deliberately; both are used every iteration for phase-gating and build
    commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 16 times so far (s303-327). **The 14-call-gap AND the 37-vs-40 gap are CLOSED** (`m5-audio-destub-step4-tick37-vs-hardstop40`, s303-325 — sampling-cap illusion in gate1's diagnostic print cap, item -183). **The VI=320 hang is CLOSED — mechanism traced (s326) and fix CONFIRMED on 1/1 soaks (s327)**: `waitForMusyXAudioTaskDone`/`shutdownAudioEngine`'s spin loops now call `musyxSynthFrame` directly instead of blocking on a countdown only that call can decrement — VI progressed cleanly through title and the full menu chain into SELECT YOUR CRAFT for the first time ever with the gate reversed, before dying to the already-catalogued, unrelated `processSceneNode+1424` crash (item -185). Baseline reverted to force-zero (both sites) at session end pending a 2nd confirmatory soak; the fix code stays in the tree (inert when gate=0). `HYPOTHESIS-ID: m5-audio-destub-step5-confirm-waitpump-fix`. Next work unit: re-reverse `setDisplayMode`'s site, rebuild, run 1-2 more `HOLD_S=240` soaks with `scratch/s73_post_a_scene/run_s327waitpump.sh` to clear the "two clean soaks" validation bar.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 17 times so far (s303-328). **The 14-call-gap AND the 37-vs-40 gap are CLOSED** (`m5-audio-destub-step4-tick37-vs-hardstop40`, s303-325 — sampling-cap illusion in gate1's diagnostic print cap, item -183). **The VI=320 hang is CLOSED AND FIX VALIDATED 3/3 SOAKS (s327+s328)**: `waitForMusyXAudioTaskDone`/`shutdownAudioEngine`'s spin loops now call `musyxSynthFrame` directly instead of blocking on a countdown only that call can decrement — all 3 soaks with the gate reversed cleared VI=320 and progressed through the full menu chain into SELECT YOUR CRAFT; one soak (s328b) completed the entire 240s hold with ZERO crashes. The other 2 died to already-catalogued, unrelated background crash classes (`processSceneNode+1424` in s327, the near-`0x80000000` family in `buildPositionAndCallTransformHelper` in s328a — item -186), neither correlating with an audio diagnostic at the crash site. This meets the M5 plan's own "two clean soaks" validation bar. Baseline reverted to force-zero (both sites) at session end — **promoting the reversal to the shipped default is an open, explicitly-flagged decision, not yet made** (see item -186 for the tradeoffs). `HYPOTHESIS-ID: m5-audio-destub-step5-confirm-waitpump-fix` — CLOSED this session. Next work unit: get an explicit decision on the promotion question, then either continue the M5 stub inventory (if promoted) or move to the next stub in `docs/M5-AUDIO-PLAN.md`'s sequence (if not).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,7 +148,37 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -185 (s327); the next new item takes -186 and is inserted at the top.
+oldest). Current top is -186 (s328); the next new item takes -187 and is inserted at the top.
+
+-186. **(s328) M5 audio de-stubbing: CLOSES `m5-audio-destub-step5-confirm-waitpump-fix` — 2
+    confirmatory soaks both clear the VI=320 hang (3/3 combined with s327); one dies to an
+    already-catalogued unrelated crash, the other survives the entire 240s hold with zero crashes.**
+    Re-reversed `setDisplayMode`'s site (17th reversal), regen+build, `audio gate patched x1`
+    confirmed. **s328a**: VI hit 1024 at 45.5s (baseline timing), full menu chain into SELECT YOUR
+    CRAFT, died hold-iter 5 to `SIGBUS` in `buildPositionAndCallTransformHelper`
+    (`si_addr=0x380000028` = RDRAM base + guest `0x80000028`) — the SAME near-`0x80000000` pointer
+    family landed as `BREADCRUMB6` in Session 273 (a `+0x28` variant of the already-seen `+0x10`/
+    `+0x30` variants), re-soaked 0/2 in Session 280, predating this audio work entirely.
+    `[synth-entry]`/`musyx` diagnostics were firing continuously up to the crash (audio now runs live
+    throughout the hold — ambient, not causal; no `[audio-wait-pump]` stall signature). **s328b**:
+    VI hit 1024 at 45.4s, identical menu progression, then survived the FULL 240s hold —
+    `hold done wall=274s`, zero `[CRASH]` markers in the 178M-line log, process still alive at the
+    end (SIGKILLed by the driver's own expected cleanup). The cleanest run of the entire 25+-session
+    investigation thread. **Both soaks cleared VI=320** — 3/3 combined with s327, meeting the M5
+    plan's own "two clean soaks" bar. The two downstream crashes seen across all 3 soaks
+    (`processSceneNode+1424` s327, near-`0x80000000`/`buildPositionAndCallTransformHelper` s328a) are
+    BOTH independently pre-catalogued background crash classes with sightings predating this audio
+    work, neither correlating with an audio diagnostic at the crash site. **Open, explicitly-flagged
+    decision (NOT made this session)**: whether to promote the gate reversal to the shipped default.
+    For: 3/3 clean VI=320 clears, real audio now active, no audio-attributable crash in 3 soaks.
+    Against: only 3 soaks total vs. dozens on the current baseline; promoting changes default runtime
+    behavior in ways not yet exercised downstream; both crash classes hit remain unroot-caused
+    either way, so gameplay isn't reached cleanly regardless of gate state. **Reverted to force-zero**
+    (`audio gate patched x2` confirmed, rebuilt) before ending, per the no-unilateral-promotion call
+    above. `HYPOTHESIS-ID: m5-audio-destub-step5-confirm-waitpump-fix` — CLOSED. Next work unit:
+    surface the promotion decision to the user; if promoted, audit `docs/M5-AUDIO-PLAN.md`'s
+    remaining stub inventory for what's now safe to de-stub; if not, M5 step 4 is functionally done
+    and the next stub in the plan's sequence is up. Full detail: `PORTING-STATE` Session 328.
 
 -185. **(s327) M5 audio de-stubbing: the spin-loop pump fix WORKS — VI progresses cleanly past 320
     through title and the full menu chain into SELECT YOUR CRAFT for the first time ever with the

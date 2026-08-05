@@ -1,84 +1,89 @@
-# NEXT work unit — re-reverse setDisplayMode's gate, rebuild, run 1-2 more confirmatory soaks
+# NEXT work unit — M5 step 4, 3rd gate site: reverse `reapplyDisplayMode` (0x8008EC88)
 
-## Status note (s327): the fix WORKS on 1/1 soaks — this is now a confirmation-soak task, not more design
+## Status note (s328): `setDisplayMode`'s site is CLOSED at 3/3 clean VI=320 soaks — this unit moves to the plan's next site
 
-s327 landed and validated (once) the fix NEXT.md asked for: `waitForMusyXAudioTaskDone`/
-`shutdownAudioEngine`'s spin loops (patched in `N64Recomp/fixup_game_funcs.py`, untracked, no `lib/`
-change) now call `musyxSynthFrame` directly instead of blocking on a countdown only that call could
-decrement. With `setDisplayMode`'s gate-byte site reversed, the soak reached VI=1024 (title) at the
-untouched baseline timing (45.6s) and progressed through the ENTIRE menu chain into SELECT YOUR
-CRAFT's 240s hold — something no prior session in this 25-session, 15-reversal investigation had ever
-achieved (every prior reversal hung dead at exactly VI=320). Full trace/result:
-`docs/CURRENT-TRUTH.md` item -185, `PORTING-STATE.md` Session 327.
+s328 ran the 2 confirmatory soaks NEXT.md asked for. Both cleared the VI=320 hang (VI reached 1024 at
+baseline timing ~45.5s, full menu chain into SELECT YOUR CRAFT) — 3/3 combined with s327. One soak
+(s328a) died hold-iter 5 to the already-catalogued, unrelated near-`0x80000000` pointer family in
+`buildPositionAndCallTransformHelper` (`BREADCRUMB6`, first landed Session 273); the other (s328b)
+survived the ENTIRE 240s hold with zero crashes — the cleanest run of this whole investigation.
+`m5-audio-destub-step5-confirm-waitpump-fix` is CLOSED. Full detail: `docs/CURRENT-TRUTH.md` item
+-186, `PORTING-STATE.md` Session 328. `setDisplayMode`'s site (`0x8008EB40`) was reverted back to
+force-zero before s328 ended, matching every prior session's convention.
 
-**The soak did NOT complete perfectly clean**: it died at hold-iter 28 (~32s into the hold) to
-`SIGBUS` in `processSceneNode+1424`. This is important context, not a blocker — grep
-`PORTING-STATE.md` for `processSceneNode+1424` and you'll find 3 PRIOR sightings (Sessions
-~281-285), every one already logged as "already-catalogued, unrelated," recurring in this exact
-scene under this exact `HOLD_S=240` soak shape, in totally unrelated investigation threads that
-never touched audio. No audio diagnostic (`[synth-entry]`, `[musyx-*]`, `[audio-wait-pump*]`) fired
-anywhere near the crash. Treat it as a pre-existing background crash class the soak simply lived
-long enough to hit, not evidence against the fix — but this is still only ONE soak, and the M5 plan's
-own bar is "two clean soaks... without crash-family #1's signature recurring."
+**Open, explicitly-flagged decision NOT made yet**: whether to promote `setDisplayMode`'s gate
+reversal to the shipped default now that its hang is closed. This is a human call (tradeoffs
+written up in CURRENT-TRUTH item -186) — do NOT decide this unilaterally this iteration. It does
+NOT block the work below, which is orthogonal: testing the 3rd and last gate site per
+`docs/M5-AUDIO-PLAN.md` §4 step 4's own designed sequence ("reverse `setDisplayMode`'s site next...
+then `reapplyDisplayMode` last").
 
-**The gate is currently back at the safe baseline** (both `setDisplayMode`/`reapplyDisplayMode`
-force-zeroed, `audio gate patched x2` confirmed, rebuilt) — s327 reverted it before ending, matching
-every prior session's convention. The spin-pump code fix itself stays in the tree permanently (inert
-when the gate is 0, since `musyxNoopStub`'s own gate-byte check short-circuits before ever reaching
-the spin) — no action needed there, it does not need to be re-applied.
+## Hypotheses (pick the discriminating soak)
 
-## The work unit — re-reverse, rebuild, soak twice more
+1. **`reapplyDisplayMode`'s gate reversal is safe the same way `setDisplayMode`'s was** — same
+   VI=320-class hang mechanism (spin-wait on `waitForMusyXAudioTaskDone`/`shutdownAudioEngine`), same
+   fix already in the tree (inert until this gate flips), should clear cleanly the same way.
+2. **`reapplyDisplayMode` is different** — s304 found it's a HOT PER-FRAME path (called every frame,
+   unlike `setDisplayMode` which is a one-shot mode-change call) — reversing it could re-expose the
+   same wedge mechanism far more frequently, or a distinct one (per-frame call volume stresses the
+   spin-pump fix's 64-pump bound differently than a one-shot call would).
+3. **Both gates need to be reversed together** for correct audio behavior (e.g., some downstream
+   consumer expects both real-write paths active) — reversing `reapplyDisplayMode` alone with
+   `setDisplayMode` still force-zeroed could produce a NEW, third failure mode neither prior
+   investigation thread has seen.
 
-1. In `N64Recomp/fixup_game_funcs.py`, narrow the audio-gate store regex from
-   `r"(// 0x8008E(?:B40|C88): sb ..."` to `r"(// 0x8008EC88: sb ..."` (C88-only — same exact edit as
-   s327, s325, s323, s320, s319; search for `0x8008E(?:B40|C88)` in the file to find the line).
-2. Full regen pipeline, in order: `make_elf.py` -> clear `RecompiledFuncs/*.c` -> `N64Recomp` ->
-   `fixup_game_funcs.py` -> `cmake --build`. Confirm the patch report shows `audio gate patched x1`
-   (not x2) and `audio-wait spin pump patched x2` (the fix code should already be there from s327 —
-   if the report doesn't show it, the fixup edit was lost; re-check the file).
-3. Run `zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>` (background, `TaskOutput` block
-   with up to 600000ms timeout — do NOT foreground-poll) TWICE, with different labels. Confirm
-   `pgrep -f "build/RogueSquadron64Recomp"` is empty before AND after each run.
-4. For each soak, check: does VI reach 1024 (title, ~45.6s)? Does it progress into SELECT YOUR CRAFT?
-   If it crashes, is the crash `processSceneNode+1424` again (consistent with s327, strengthens the
-   "pre-existing unrelated background crash" reading) or something else (would need investigation —
-   check whether it correlates with any `[synth]`/`[musyx]`/`[audio-wait-pump]` diagnostic firing
-   near the crash line, the same check s327 did)?
-5. **If both soaks clear the VI=320 hang** (regardless of what they eventually die to further along):
-   the `m5-audio-destub-step4-setdisplaymode-vi320-hang` fix is FULLY validated per the M5 plan's own
-   bar. At that point it's a legitimate question (write it down, don't just act on it) whether to
-   promote the reversed gate to the new shipped default — that's a bigger call than fits in "the same
-   work unit," flag it for explicit consideration rather than deciding unilaterally mid-soak-review.
-   **If either soak hangs again at exactly VI=320**: this falsifies s327's fix — re-open the
-   mechanism investigation, do NOT just re-run.
-6. Revert the gate back to force-zero (`(?:B40|C88)` alternation) before ending the session, same as
-   every session on this hypothesis so far, UNLESS step 5's both-clean result leads to an explicit
-   decision (documented, not implicit) to promote it.
+**Discriminating measurement**: same `HOLD_S=240` soak recipe as s327/s328, gate narrowed to
+`0x8008EB40`-only this time (the mirror-image edit — exempt B40/setDisplayMode from the force-zero
+match, leave C88/reapplyDisplayMode force-zeroed). Does VI still reach 1024 at baseline timing
+(~45.5s)? Does the process progress through the menu chain? What (if anything) does it eventually
+crash to, and does that crash correlate with an audio diagnostic at the crash site (discriminates
+hypothesis 2/3 from a clean pass matching hypothesis 1)?
 
-## Environment notes (carried forward, still valid)
+## The work unit
 
-- Regen paths for game-code patches: `/Users/williambuckley/Documents/Tools/N64Recomp`
-  (`fixup_game_funcs.py`, untracked/uncommitted loose file — NOT git-tracked in that repo, so no
-  N64Recomp-side commit is needed after edits there; only THIS repo's ledger records what changed).
-  Regen order: `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake`, in that exact order.
-  `N64Recomp` skips files that already exist on disk, so `RecompiledFuncs/*.c` MUST be deleted before
-  every `N64Recomp` run: `python3 -c "import glob, os; [os.remove(f) for f in
-  glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/*.c')]"`. `cd` into
-  `N64Recomp` FIRST as its own bare `cd` command, THEN run `./build/N64Recomp rogue_squadron.toml`;
-  redirecting its output to a file under `/tmp` is blocked by the sandbox (triggers a "Contains
-  simple_expansion" denial) — either pipe through `| tail -N` directly, or redirect to a file inside
-  a repo directory instead.
-- Soak driver: `scratch/s73_post_a_scene/run_s327waitpump.sh` (self-contained, reusable — do NOT put
-  it in `scratch/agent/soak_queue/`, it needs the gate reversed at BUILD time first and the queue
-  mechanism only runs against a static build, it cannot re-run the regen pipeline). Invoke as
-  `zsh run_s327waitpump.sh <label>` from `scratch/s73_post_a_scene`. Launch via Bash with
-  `run_in_background: true`, then `TaskOutput` with `block: true` and `timeout` up to 600000ms — do
-  NOT foreground-poll. The actual console log lands at `scratch/s73_post_a_scene/<label>/run.log`
-  (large, several million lines with the full breadcrumb set armed — grep for `\[CRASH\]`,
-  `\[phase\]`, `\[synth-entry\]`, `audio-wait-pump` rather than reading it directly).
-- `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8` from this repo's
-  root — allowlisted verbatim, works as a single command.
+1. In `N64Recomp/fixup_game_funcs.py` (search for `0x8008E(?:B40|C88)` to find the line, ~line 197),
+   change the audio-gate store regex from the baseline `r"(// 0x8008E(?:B40|C88): sb ..."` (both
+   sites patched) to `r"(// 0x8008EB40: sb ..."` (B40-only). This leaves `reapplyDisplayMode`'s
+   `0x8008EC88` site UNPATCHED (reversed/live) while `setDisplayMode`'s `0x8008EB40` stays
+   force-zeroed. **This is the mirror image of the s327/s328 edit — do not accidentally repeat the
+   C88-only edit, that tests the wrong site this time.**
+2. Full regen: delete `RecompiledFuncs/*.c` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`
+   (`make_elf.py` unchanged since s328, safe to skip per s328's own precedent). Confirm patch report
+   shows `audio gate patched x1`, then VERIFY which site by grepping regen'd `funcs_23.c` for
+   `0x8008EB40`/`0x8008EC88`: C88's line should show the `= 0; // PATCH:` comment, B40's should NOT
+   (plain generated code) — don't trust the count alone, confirm the site, a script mistake here
+   would silently test the wrong hypothesis.
+3. Run `zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>` (background, `TaskOutput` with up
+   to 600000ms timeout, do NOT foreground-poll) ONCE first (single soak, not 2 — new site, same "1
+   soak first, 2 confirmatory if informative" cadence s327 used for setDisplayMode). Confirm
+   `pgrep -f "build/RogueSquadron64Recomp"` is empty before AND after.
+4. Check: does VI reach 1024? Progress into SELECT YOUR CRAFT? What crash (if any), and does it
+   correlate with an audio diagnostic at the site (same check s327/s328 used)? If `TaskOutput`'s
+   block times out waiting on the driver script's own summary tail on a long clean run, use
+   `grep -c "\[CRASH\] caught" <label>/run.log` directly instead of waiting further (s328b's summary
+   generation lagged well behind the actual clean-run result on a 178M-line log).
+5. If clean/comparable to setDisplayMode's result: this closes step 4 of the M5 plan (all 3 gate
+   sites individually validated as reversible without reintroducing the historical hang). Write that
+   up as a new hypothesis-close; flag (don't decide) whether to promote reapplyDisplayMode's gate too.
+   If it hangs or crashes differently: genuinely new information — reapplyDisplayMode's per-frame
+   call volume may need its own fix, distinct from the spin-pump patch already in the tree. Do not
+   assume the existing fix covers it without evidence.
+6. Revert to full force-zero baseline (`0x8008E(?:B40|C88)` alternation) before ending, same
+   convention as every prior session on this thread, regardless of outcome.
 
-HYPOTHESIS-ID: m5-audio-destub-step5-confirm-waitpump-fix (1st of budgeted 3 iterations — s327's own
-soak was the discriminating result that closed the PRIOR hypothesis; this is a fresh thread
-confirming the fix generalizes, not a stalled repeat.)
+## Environment notes (carried forward, still valid — see s327/s328 for full detail)
+
+- Regen paths: `/Users/williambuckley/Documents/Tools/N64Recomp` (`fixup_game_funcs.py`, untracked).
+  Order: `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake`. `RecompiledFuncs/*.c` MUST
+  be deleted before every `N64Recomp` run (it skips existing files):
+  `python3 -c "import glob, os; [os.remove(f) for f in
+  glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/*.c')]"`.
+- Soak driver: `scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, invoked from
+  `scratch/s73_post_a_scene`, launched via Bash `run_in_background: true` then `TaskOutput` blocking
+  up to 600000ms. Log lands at `scratch/s73_post_a_scene/<label>/run.log` (large — grep for
+  `\[CRASH\]`, `\[phase\]`, `\[synth-entry\]`, `audio-wait-pump`, do not read directly).
+- `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8` — allowlisted
+  verbatim.
+
+HYPOTHESIS-ID: m5-audio-destub-step4-reapplydisplaymode-reversal (1st iteration — fresh thread, prior
+hypothesis `m5-audio-destub-step5-confirm-waitpump-fix` closed s328).
