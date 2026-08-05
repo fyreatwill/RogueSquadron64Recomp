@@ -26,10 +26,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    already 0, never blocks) -- see item -189. s333's reachability probe found the stall sits an
    entire call-frame further upstream than anything traced so far: `runVideoFrameTick` itself (not
    just the `reapplyDisplayMode` call inside it) stops being invoked after exactly 2 calls, for the
-   full ~598s remainder of the soak -- see item -190. Baseline (both sites force-zeroed) restored at
-   every session's end. Next work unit: instrument `mainGameLoop` (the top-priority candidate caller,
-   2 of 5 `runVideoFrameTick` call sites) to find what the game thread does between call #2 and the
-   call #3 that never comes -- see item -190.
+   full ~598s remainder of the soak -- see item -190. s334 found which of the 5 candidate callers is
+   actually active: NOT `mainGameLoop` (parks after exactly 1 loop-top pass, refuting that hypothesis)
+   but `cutsceneDispatchSlotsByFlag`, which cycles continuously (1152+ calls) for virtually the entire
+   stall window -- see item -191. Baseline (both sites force-zeroed) restored at every session's end.
+   Next work unit: arm `ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH` (for `[frametick-top]`) together with
+   `ROGUESQ_LOG_MAINGAMELOOP_REACH` (for `[cutscenedispatch-entry]`) in the SAME soak, to learn whether
+   `cutsceneDispatchSlotsByFlag`'s own `runVideoFrameTick` call site (`funcs_27.c:118107`) ever fires
+   across its 1152+ calls -- see item -191.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -161,7 +165,35 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -190 (s333); the next new item takes -191 and is inserted at the top.
+oldest). Current top is -191 (s334); the next new item takes -192 and is inserted at the top.
+
+-191. **(s334) M5 audio de-stubbing: mainGameLoop-upstream probe finds mainGameLoop parks after
+    exactly ONE loop-top pass; cutsceneDispatchSlotsByFlag becomes the actively-cycling caller for
+    virtually the entire rest of the 600s soak.** 1st of 3 iterations on `HYPOTHESIS-ID
+    m5-audio-destub-mainGameLoop-upstream-stall`. Added 5 diagnostics
+    (`ROGUESQ_LOG_MAINGAMELOOP_REACH=1`, default off): `[maingameloop-loop]` (unconditional
+    per-iteration counter at the one label, `L_8003E04C`, every backward branch in `mainGameLoop`'s
+    goto/label state machine funnels through), `[maingameloop-entry]`, and entry counters on the other
+    3 candidate `runVideoFrameTick` callers found by s333's grep -- `[menuoverlayinit-entry]`,
+    `[cutscenedispatch-entry]`, `[static6-800a9abc-entry]`. Soaked with the gate narrowed to reverse
+    `reapplyDisplayMode`'s site only (same setup s329/s332/s333 used) and reproduced the same VI=640
+    `stalled=1 pairs=0` symptom. **Result**: `[maingameloop-entry]`/`[maingameloop-loop]` both fire
+    exactly ONCE (n=1) near the very start of the run (before the VI=640 transition) and never again --
+    refutes hypothesis 1 (mainGameLoop does NOT keep iterating its own loop normally). Of the other 3,
+    `[cutscenedispatch-entry]` is the one that climbs continuously -- starting ~147s into the run and
+    reaching at least n=1152 by the log's end (modulo-128-sampled) -- confirming hypothesis 2:
+    `cutsceneDispatchSlotsByFlag`, not `mainGameLoop`, is the actively-cycling caller during this
+    stall. (`menuOverlayInit` fired a 2nd time at the very end of the log, ~2400 lines before cutoff --
+    flagged, not chased.) Also caught and fixed a wording bug in NEXT.md's own step 3 before running
+    it: "narrow to `0x8008EC88`-only" was backwards -- the regex needed to match `0x8008EB40` (leaving
+    `reapplyDisplayMode` reversed), confirmed against PORTING-STATE Session 329's explicit prior
+    statement of the same setup. Gate reverted to full force-zero baseline (`audio gate patched x2`
+    reconfirmed) and rebuilt clean before ending. **Open question for the next iteration**: does
+    `cutsceneDispatchSlotsByFlag`'s own `runVideoFrameTick` call site (`funcs_27.c:118107`) ever fire
+    across its 1152+ calls? This run didn't arm `ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH` (the
+    `[frametick-top]` var) alongside the new var, so there's no same-run correlation yet -- next
+    iteration should arm both together. `HYPOTHESIS-ID` unchanged (same thread, narrowed target). No
+    `lib/` touched. Full detail: `PORTING-STATE` Session 334.
 
 -190. **(s333) M5 audio de-stubbing: reapplyDisplayMode reachability probe finds the stall an entire
     call-frame further upstream than anything traced so far -- `runVideoFrameTick` itself stops being

@@ -29184,3 +29184,87 @@ Gate reverted to the full force-zero baseline (`audio gate patched x2` reconfirm
 before ending the session, per every prior session's convention. All 4 new diagnostics stay in the
 tree permanently, armed-but-inert by default (`ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH` unset). No `lib/`
 touched.
+
+## Session 334 (2026-08-04) — M5 audio: mainGameLoop-upstream probe finds mainGameLoop parks after exactly ONE loop-top pass, while cutsceneDispatchSlotsByFlag becomes the actively-cycling caller for the rest of the 600s soak
+
+**Work unit**: NEXT.md's s333-opened thread — of the 5 static `runVideoFrameTick(rdram, ctx);` call
+sites in the whole `RecompiledFuncs` tree, find which caller is actually active during the
+reapplyDisplayMode-reversed VI=640 graphics-task stall, and what it does between call #2 (the last
+confirmed `runVideoFrameTick` invocation, s333) and the call #3 that never comes.
+
+**Read `mainGameLoop`'s body first** (`funcs_8.c:21008-22131`) before instrumenting: it is not a
+simple `while`, but a coop-scheduler-style function with a large internal goto/label state machine (a
+dispatch `switch` on cases 0-5 at `funcs_8.c:21822-21827` selecting between game states). Every
+backward branch in the function targets either label `L_8003E048` (which falls straight through, no
+intervening branch, into `L_8003E04C` two instructions later) or `L_8003E04C` directly — so
+`L_8003E04C` is the single point every iteration, however it got there, passes through; confirmed the
+only `L_8003E04C:` text in the file. This is the loop-top instrumentation point.
+
+**Diagnostics added** (`fixup_game_funcs.py`, N64Recomp repo, untracked; all gated behind one new env
+var `ROGUESQ_LOG_MAINGAMELOOP_REACH=1`, hard-capped 40 prints + modulo-128 sample after, same
+convention as every prior M5 reachability probe): `[maingameloop-loop]` (unconditional per-iteration
+counter at `L_8003E04C`), `[maingameloop-entry]` (mainGameLoop's own top), and entry counters on the
+other 3 candidate callers — `[menuoverlayinit-entry]` (`funcs_29.c`), `[cutscenedispatch-entry]`
+(`funcs_27.c`), `[static6-800a9abc-entry]` (`funcs_43.c`). Regenerated (`make_elf.py` unchanged since
+s327, so skipped — `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`, `RecompiledFuncs/*.c`
+deleted first), narrowed the audio-gate store regex to `0x8008EB40`-only (leaves `setDisplayMode`'s
+site force-zeroed, `reapplyDisplayMode`'s site reversed — same setup as s329/s332/s333; confirmed
+`audio gate patched x1` and all 5 new diagnostics patched x1 each in the fixup report), clean build (0
+compile errors, only the pre-existing pointer-sign warnings).
+
+**NEXT.md correction, caught before running**: NEXT.md's step 3 literally said "0x8008EC88-only
+match" for narrowing the gate regex to reapplyDisplayMode's site alone — this is backwards. Per
+PORTING-STATE Session 329's explicit statement ("narrowed from the baseline alternation to
+`0x8008EB40`-only — this leaves `setDisplayMode`'s site force-zeroed ... while `reapplyDisplayMode`'s
+[site] reversed") and Session 328's contrasting case (narrowed to `C88`-only specifically to test
+`setDisplayMode` instead, leaving `reapplyDisplayMode` force-zeroed), the "X-only" naming denotes
+which site STAYS matched/force-zeroed, not which one is under test — to test `reapplyDisplayMode` the
+regex must match `0x8008EB40` only. Used the correct regex; NEXT.md's wording was a slip, corrected in
+the fixup-file comment for future sessions.
+
+**Result** — one 600s soak (`scratch/s73_post_a_scene/run_s327waitpump.sh s334_maingameloop`), same
+INCONCLUSIVE phase-timeout symptom as s329/s332/s333 (`[phase]` shows only 2 real transitions,
+VI 0→320 at 0.6s then VI 320→640 at 2.2s, then never another for the full 1,285,835-line/600s log).
+The 5 new counters give a clean, discriminating answer:
+
+| tag | fires | last/only line(s) |
+|---|---|---|
+| `[maingameloop-entry]` | 1 (n=1) | line 694 |
+| `[maingameloop-loop]` | 1 (n=1) | line 5139 |
+| `[menuoverlayinit-entry]` | 2 (n=1, n=2) | line 5140 (early); line 1283446 (essentially the last ~2400 lines of the log) |
+| `[static6-800a9abc-entry]` | 1 (n=1) | line 78567 |
+| `[cutscenedispatch-entry]` | continuous, n=1..40 explicit then modulo-128 samples through **n=1152** | first at line 321596, last sampled at line 1277422 — i.e. climbing for essentially the entire remainder of the 600s run |
+
+This **refutes hypothesis 1**: `mainGameLoop`'s own loop-top counter does NOT show the s333
+"n=2-then-silent" pattern reached a 2nd time from inside its own iteration — it shows "n=1-then-
+silent-forever". `mainGameLoop` is entered once (line 694), reaches its own loop-top exactly once
+(line 5139, which sits *before* the VI=640 phase transition at line 5654 — consistent with both of
+s333's `[frametick-top]` fires happening sequentially within this single pass, not across separate
+loop iterations as originally framed), and then never returns to `L_8003E04C` again for the rest of
+the 600s. This **confirms hypothesis 2**: `mainGameLoop` is NOT the active per-frame driver during the
+stall. `cutsceneDispatchSlotsByFlag` is — its entry counter starts around line 321596 (~147s of
+2140 lines/s log throughput into the run, well after the VI=640 transition and mainGameLoop's single
+pass) and then climbs continuously and rapidly (roughly one call per ~600-700 log lines) all the way
+to at least its 1152nd call by the log's end, dwarfing every other candidate. `menuOverlayInit`'s lone
+2nd fire at the very end of the log (line 1283446, within ~2400 lines of the 600s cutoff) is noted but
+not chased this session — could be an artifact of the phase-timeout's own shutdown/teardown path
+rather than a live game-state signal; flag for next session if it recurs.
+
+**Open question, NOT yet answered this session**: does `cutsceneDispatchSlotsByFlag`'s own
+`runVideoFrameTick` call site (`funcs_27.c:118107`) actually fire on any of its ~1152+ calls? This run
+did not arm `ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH` (the var gating `[frametick-top]`/
+`[reapplydisplaymode-callsite]`) alongside the new `ROGUESQ_LOG_MAINGAMELOOP_REACH` var, so there is
+no same-run correlation yet between `cutsceneDispatchSlotsByFlag`'s climbing entry count and whether
+`runVideoFrameTick` ever fires again after s333's call #2. If `[frametick-top]` stays frozen at n=2
+while `[cutscenedispatch-entry]` keeps climbing, that proves the block is a conditional/branch INSIDE
+`cutsceneDispatchSlotsByFlag` specifically (NEXT.md's hypothesis 3 sub-case) rather than upstream of
+it. This is the next iteration's discriminating probe — see `scratch/agent/NEXT.md`.
+
+**Verdict: HYPOTHESIS-ID `m5-audio-destub-mainGameLoop-upstream-stall` stays open, 1st of 3
+iterations (opened at the end of s333)** — narrows from "which of the 5 callers is active" (answered:
+`cutsceneDispatchSlotsByFlag`) to "does that caller's own `runVideoFrameTick` call site ever fire".
+
+Gate reverted to the full force-zero baseline (`audio gate patched x2` reconfirmed) and rebuilt clean
+before ending the session, per every prior session's convention. All 5 new diagnostics stay in the
+tree permanently, armed-but-inert by default (`ROGUESQ_LOG_MAINGAMELOOP_REACH` unset). No `lib/`
+touched.
