@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    Overturned Conclusions entries). 35 KB remains a stretch target, not a hard floor — the "Current
    truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
    deliberately; both are used every iteration for phase-gating and build commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 13 times (s303-320), each reproducing an identical deterministic full-boot hang and narrowing it further. Current state (s320, direct same-run measurement): `musyxSynthFrame`'s own entry count tracks gate1's `n` counter 1:1 (both 40/40) — rules out a diagnostic sampling artifact and confirms a still-unlocated 3rd call mechanism to `tickAllActiveSongs`/`tickAudioSequencerFrame` beyond gate1/gate2. Full detail Next-steps item -179.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 13 times so far (s303-320); s321 was pure grep/read, no reversal needed. Current state (s321, exhaustive grep, positive-controlled): the recompiled source has structurally NO 4th call site to `tickAllActiveSongs`/`tickAudioSequencerFrame` — not direct, not a full-address or split-halfword data reference. The 14-call gap between gate1+gate2's measured real-call rate and the tick-producer functions' own entry counts is NOT an undiscovered static/simple-indirect call site. Full detail Next-steps item -180.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,7 +148,36 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -179 (s320); the next new item takes -180 and is inserted at the top.
+oldest). Current top is -180 (s321); the next new item takes -181 and is inserted at the top.
+
+-180. **(s321) M5 audio de-stubbing: exhaustive, positive-controlled grep finds ZERO 4th call site to
+    either tick-producer function — no direct call, no full-address data reference, no split-halfword
+    address construction.** Item -179 confirmed a real 14-call gap and left the search for a 3rd call
+    mechanism as the open question. Got both guest addresses fresh (never assumed): `tickAudioSequencerFrame
+    = 0x8008D960` (confirms s317), `tickAllActiveSongs = 0x80096D08` (**newly confirmed — s317 never
+    grepped this one specifically**). Pure grep/read, no build/soak. **Step 1**: direct-call grep across
+    all `RecompiledFuncs/*.c` for both function names finds exactly the 6 known call lines (gate1/2/3,
+    each calling both functions once) — nothing else. **Step 2**: full-address grep (`0x8008D960`/
+    `0x80096D08`) finds only the 3 known `jal`-target disassembly comments per function plus each
+    function's own entry-point comment — zero data references anywhere. **Step 3**: split low-halfword
+    grep, validated against a KNOWN positive control first (musyxSynthFrame's own s310 self-rearm
+    mechanism, confirmed built via `ctx->r4 = ADD32(ctx->r4, 0X123C)` at `funcs_24.c:4569` — exactly the
+    predicted split-address pattern). Applied to the 2 target functions' low halfwords: `0xD960` — zero
+    hits anywhere; `0x6D08` — 5 hits, all unrelated `lwc1` float stack loads (same coincidental-hex-match
+    class as s317's `-0x68EC` false positive). Clean, positive-controlled miss. **Step 4**: re-read
+    gate1's actual generated code — confirmed both target-function calls are sequential and unconditional
+    within the "taken" branch, no internal divergence possible; the "gate calls both together" premise
+    (s319) is structurally accurate, not the gap's source. **Step 5**: ruled out a shared-counter
+    double-count bug — the 5 tick-producer diagnostics each use their own separate static counter.
+    **Result: the gap is not an undiscovered static or simple-indirect call site** — textually, none
+    exists. Two possibilities remain, neither resolvable by grep: (a) a fully dynamic indirect call
+    (28,388 `LOOKUP_FUNC` sites exist total, grep-counted — infeasible to trace by hand one-by-one), or
+    (b) gate3's persistent "0/40 reached, containing code path never entered" measurement is itself
+    unreliable, the way gate1/2/3's `taken_skip` field was until s318 found it read a stale re-read
+    instead of the real branch's register. (b) is the cheaper next check: source-read gate3's *containing*
+    conditional (not just its already-instrumented body) for a s318-class read/branch mismatch. No source
+    edit, no reversal, no soak this session — baseline (both audio-gate force-zero sites intact) unchanged
+    from s320's end state. Full detail: `PORTING-STATE` Session 321.
 
 -179. **(s320) M5 audio de-stubbing: `musyxSynthFrame`'s own entry count tracks gate1's `n` counter
     1:1 (both 40/40, same run) — RULES OUT the sampling-artifact explanation for item -178's 14-call

@@ -28214,3 +28214,81 @@ maintenance and doesn't count). Next session: exhaustive grep for every static c
 reference to `tickAllActiveSongs`'s and `tickAudioSequencerFrame`'s guest addresses across
 `RecompiledFuncs/*.c`, plus a check for indirect/function-pointer dispatch (the s310 pattern) -- this is
 pure grep/read, no build or soak needed, and directly targets the now-confirmed 3rd call mechanism.
+
+## Session 321 (2026-08-04) — M5 audio: exhaustive grep finds ZERO 4th call site to either tick-producer function, by any textual mechanism (direct call, full-address data reference, or split-halfword address construction) — extends and strengthens s317's finding, which had only ever covered `tickAudioSequencerFrame`
+
+Pure grep/read work unit, no build/soak, per item -179's own next-step plan. Got both guest addresses
+first (never assume, re-grep per NEXT.md's instruction): `tickAudioSequencerFrame = 0x8008D960`
+(`main_overlay.txt:415`, confirms s317's figure) and `tickAllActiveSongs = 0x80096D08`
+(`main_overlay.txt:3313`, **never independently confirmed before — s317 only grepped
+`tickAudioSequencerFrame`**).
+
+**Step 1 — direct-call grep, both functions, full `RecompiledFuncs/*.c` tree.** `grep -rn
+"tickAllActiveSongs\|tickAudioSequencerFrame"` finds exactly 6 call-site lines: gate1
+(`funcs_24.c:3622`/`3630`), gate2 (`:3772`/`:3780`), gate3 (`:3915`/`:3923`) — each gate calls both
+functions once. No other literal call anywhere. This is the first time `tickAllActiveSongs` specifically
+has been grepped this way (s317 covered only `tickAudioSequencerFrame`); result for the new function
+matches: 3 sites, all already known.
+
+**Step 2 — full-address data-reference grep, both functions.** `grep -rn "0x8008D960\|0x80096D08"`
+finds only the 3 known `jal` disassembly-comment lines per function (marking a *caller's* branch target)
+plus each function's own entry-point disassembly comment (`funcs_23.c:6679`, `funcs_25.c:8542` — the
+address labeling the function's *own* first instruction, not a reference to it elsewhere). Zero data
+references (table entries, argument-passing constants, struct initializers) anywhere.
+
+**Step 3 — split low-halfword grep, validated against a KNOWN positive control first.** Since MIPS
+materializes a 32-bit address via `lui`(hi)+`ori`/`addiu`(lo), a reference built from a *different* base
+register (not the address's own canonical hi-half) would never show the full 32-bit literal — only the
+low halfword. Before trusting a null result on this axis, validated the method against the ALREADY-KNOWN
+s310 indirect mechanism: `musyxSynthFrame`'s self-re-arm callback passes its OWN address (`0x8009123C`)
+as an argument via `$a0 = $a0(hi-loaded elsewhere) + 0x123C` — confirmed present at `funcs_24.c:4569`
+(`ctx->r4 = ADD32(ctx->r4, 0X123C)`) and 2 more sites, exactly the split-halfword pattern predicted. The
+grep method works. Applied the same search to the 2 tick-producer functions' low halfwords: `0xD960`
+(tickAudioSequencerFrame) — **zero hits anywhere in RecompiledFuncs**. `0x6D08`
+(tickAllActiveSongs) — 5 hits, all `lwc1 $fN, ±0x6D08($at/$r1)` float stack loads (base = stack pointer,
+unrelated) — the same coincidental-hex-match false-positive class s317 already established for
+`funcs_32.c:29181`'s `-0x68EC` match. Clean miss on both, positive-controlled.
+
+**Step 4 — disassembly re-verification of the "gate calls both together" premise (s319's assumption).**
+Read gate1's actual generated code (`funcs_24.c:3619-3630`): after the `taken`-branch write to the
+shared countdown, the calls to `tickAllActiveSongs` then `tickAudioSequencerFrame` are **sequential,
+unconditional, with no intervening branch** — every "call" branch take invokes both exactly once, no
+internal divergence possible. The premise is confirmed accurate, not the source of the 14-call gap.
+
+**Step 5 (cheap side-check) — ruled out a shared-counter double-count bug.** The 5 tick-producer
+diagnostics (`[reach-allsongs-entry]`/`[reach-allsongs-exit]`/`[reach-audioseq-exit]`/
+`[tick-audio-seq]`/`[tick-all-audio-channels]`) each use their OWN separate static counter variable
+(`s_reach_allsongs_entry`, `s_reach_allsongs_exit`, etc., confirmed by name in `fixup_game_funcs.py`) —
+not a shared counter that could be incremented twice per real event. Ruled out as an explanation for the
+37-vs-23 gap.
+
+**Result: the literal source code contains structurally NO 4th call site** — not a direct call, not a
+data-referenced address (full or split), and the 3 known sites are confirmed to call both target
+functions together unconditionally exactly as assumed. This is a stronger, positive-controlled version
+of s317's conclusion, now covering both functions and the split-address-construction axis s317 never
+checked. The ~14-call gap (23-24 measured "real" gate takes vs. 37-38 measured tick-producer entries)
+therefore is NOT explained by an undiscovered static or simple-indirect call site in the recompiled game
+code. Two possibilities remain, both requiring a different investigative approach than text search: (a)
+an indirect call resolved through a data structure whose address is computed via a fully dynamic
+expression (not a literal split-halfword pair) — would require runtime data-flow tracing, infeasible to
+audit exhaustively by hand (28,388 `LOOKUP_FUNC` call sites exist across `RecompiledFuncs/*.c`,
+`grep -c` confirmed, ruling out a manual per-site trace as a viable single-session method); or (b) the
+gate3 "0/40 reached, never enters its containing code path" measurement is itself unreliable in a way
+not yet identified — gate3 contributes 0 to every session's combined-real-call tally, but if its
+containing conditional is misread the same way s318 found gate1/2/3's `taken_skip` field misread the
+branch outcome (reading a re-fetch instead of the register the real branch uses), gate3 could in fact be
+reached and calling in ways the current instrument can't see. (b) is cheaper to check next: source-read
+gate3's *containing* conditional structure (not just its own body, already instrumented) to see whether
+its entry guard could itself diverge from the real control flow the way gate1's branch outcome did.
+
+No build, no soak, no source edit this session — all read/grep against the already-current baseline
+(`RecompiledFuncs/*.c` in `~/Documents/Tools/N64Recomp`, both audio-gate force-zero sites still intact,
+unchanged from s320's end state). `fixup_game_funcs.py` untouched. No `submodule-patches/export.sh`
+needed (no `lib/` edits).
+
+`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang` (unchanged — 15th session producing a
+discriminating result: s303/s306/s307/s309/s310/s311/s312/s313/s315/s316/s317/s318/s319/s320/s321, s314
+was maintenance and doesn't count). Next session: source-read gate3's containing conditional/guard
+structure (not just its already-instrumented body) for a s318-class read/branch mismatch that could
+explain its persistent 0/40-reached measurement despite 2 sibling gates and now a confirmed absence of
+any other call site.
