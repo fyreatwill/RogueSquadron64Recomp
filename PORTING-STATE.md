@@ -30455,3 +30455,60 @@ outside the `lib/`/submodule-patches system).
 continues (2nd iteration) — next check is whether `s350_drainmeshguard_verify1/2` show the guard firing
 and/or `drainMeshReleaseQueue` dropping out of the crash-symbol rotation. Parent
 `m5-audio-destub-step5-crashrate-comparison` is at 1 more iteration before the 3-strike budget rule.
+
+## Session 351 (2026-08-05): s350's read guard's own sibling write-through-v1 site confirmed live on its FIRST verify soak — guarded it too, landing a 2nd fix in the same drainMeshReleaseQueue tail-scan idiom
+
+**Drained the 2 queued `s350_drainmeshguard_verify1/2.sh` soaks** (both had already been run and moved
+to `soak_queue/done/` by the loop between iterations; consumed via `SOAK-RESULTS.md` + the saved logs,
+no re-run needed):
+
+- `verify1`: **CRASH**, `pc-symbol=drainMeshReleaseQueue+1580`, `last-guest-pc=0x800081c4`. Critically,
+  `guard_fire_n=1` with `bad_v1=0x00010001` in the SAME run — the s350 read guard at `0x800081AC` fired
+  (positive control: the invalid-v1 case is real and is being hit), correctly bailed the read, but the
+  crash happened anyway two lines later. This is the exact scenario the s350 fixup comment already
+  flagged as a known gap: the read guard sets `ctx->r2=0` to end the loop but does NOT repair `ctx->r3`
+  (v1) itself — it's still the same corrupted pointer, and the function unconditionally writes through
+  it at `0x800081C4` (`MEM_W(0X0, ctx->r3) = ctx->r2`) right after the loop exits, regardless of how it
+  exited.
+- `verify2`: **CRASH**, `pc-symbol=static_5_800AAD9C+5140`, `guard_fire_n=0` — a 4th distinct symbol,
+  further supporting the diffuse-storm framing for the parent hypothesis; not informative for this
+  guard question.
+
+**This is the discriminating result the iteration needed**: 1 of 2 verify soaks reproduced a crash in the
+SAME function, at the SAME logical idiom (tail-scan-then-use-v1), immediately downstream of a guard that
+demonstrably fired correctly in that same run. Not scatter, not a clean pass — a precise, source-provable
+sibling bug in the exact site the previous session's own comment had already identified as unguarded.
+
+**Guarded the write-through-v1 site** (`fixup_game_funcs.py`, same repo/session shape as s350): wrapped
+both compiler-duplicated occurrences of the `0x800081C4` write (one indent-agnostic regex, `\1` captures
+either the if-block's or the fallthrough's indentation — both are byte-identical modulo indent) in a
+range check on `ctx->r3`; on invalid, skips the write entirely (no-op — the freelist relink that would
+have happened doesn't, same minimal-behavior-change bail as s350's read guard). New diagnostic tag
+`[drain-mesh-write-guard]`, same env var (`ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD`, already armed by default
+in `run_s327waitpump.sh` — no wiring change needed). Did NOT touch the sibling `0x800081C8` write
+(`MEM_W(0X4, ctx->r2) = ctx->r3`) — there `ctx->r2` (the freelist-head global) is the address operand,
+not the corrupted v1, so it's a different idiom with no confirmed crash yet.
+
+**Full regen + rebuild clean**: `make_elf.py` → clean; `N64Recomp` (after deleting stale
+`RecompiledFuncs/*.c`) → clean; `fixup_game_funcs.py` → `funcs_3.c: drainMeshReleaseQueue tail-scan
+write-through-v1 guard patched x2` (both occurrences); `cmake --build` → clean, only the pre-existing
+unrelated `DDIV` sign-conversion warnings in `funcs_8.c`. Queued `s351_drainmeshwriteguard_verify1/2.sh`
+(same `run_s327waitpump.sh` template, `HOLD_S=240`, reports both `read_guard_fire_n` and
+`write_guard_fire_n` separately) for the loop to drain next.
+
+**Net picture, updated**: across the whole cluster (12 prior soaks + this session's 2 = 14),
+`drainMeshReleaseQueue` remains the single most-hit function, now confirmed across 3 distinct
+sub-mechanisms in one dense tail-scan idiom (`+600` unlocalized, `+960`/read-guarded, `+1580`/now
+write-guarded) — still not ONE fixable bug, but a genuinely dense unguarded-pointer-chase function
+worth full auditing rather than one-site-at-a-time whack-a-mole, if a 3rd distinct offset surfaces after
+this guard lands. `lib/` not touched (`fixup_game_funcs.py` lives in the separate, untracked-in-its-own-
+repo `~/Documents/Tools/N64Recomp/fixup_game_funcs.py` — confirmed via `git status`/`git ls-files` this
+session: that whole tool repo is outside `RogueSquadron64Recomp`'s `lib/`/submodule-patches system,
+same as s348/349/350 noted).
+
+**HYPOTHESIS-ID**: `m5-audio-destub-drainmesh-breadcrumb` — this was iteration 3 (opened s349, continued
+s350, this session). Per iron rule 8 it must discriminate or force a pivot; it discriminated (found and
+fixed a genuine, source-confirmed 2nd bug at a site the prior session had already flagged as a gap) —
+treating this as CLOSED with a landed fix, same pattern as s348→`m5-audio-destub-contentguard-verify`.
+New thread: `m5-audio-destub-drainmesh-writeguard-verify`, to consume `s351_drainmeshwriteguard_verify1/2`
+next session. Parent `m5-audio-destub-step5-crashrate-comparison` (item -203) stays open, still diffuse.

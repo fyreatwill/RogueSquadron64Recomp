@@ -15,14 +15,16 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: design doc + steps 1-3 DONE (s298/300/301). Step 4 (`setDisplayMode`
    VI=320 hang, `reapplyDisplayMode` gate) is CLOSED and fix-validated — title-reach confirmed 3/3 as
    of s343 (item -199). Step 5 (crash-family #3/#4 rate comparison) is OPEN, `HYPOTHESIS-ID
-   m5-audio-destub-step5-crashrate-comparison`, still diffuse-not-concentrated as of s350 (item -206):
-   across 8 `m5step5v3_rate_*` + 4 verify soaks, crashes scatter across 6+ distinct symbols, with
-   `drainMeshReleaseQueue` the single most-hit function (3/12) but at 2 different exact offsets, not
-   one. s350 guarded the one precisely-localized `drainMeshReleaseQueue` site (item -206); verify soaks
-   queued. `m5-audio-destub-contentguard-verify` thread CLOSED s350 (item -206): 0/4 repeat of
-   `processSceneNode+1424` since item -204's guard landed, guard confirmed alive via positive control.
-   1 more iteration on the parent step-5 hypothesis before the 3-strike budget
-   rule forces a pivot check.
+   m5-audio-destub-step5-crashrate-comparison`, still diffuse-not-concentrated as of s351 (item -207):
+   across 14 soaks (8 `m5step5v3_rate_*` + 6 verify), `drainMeshReleaseQueue` is the single most-hit
+   function but at 3 different sub-mechanisms in one tail-scan idiom (`+600` unlocalized, `+960`
+   read-guarded s350, `+1580` write-guarded s351), the rest scattering across 5+ other symbols. s351
+   guarded the write-through-v1 sibling site the s350 verify soak's FIRST attempt reproduced (with the
+   s350 read guard confirmed firing in the same run) — `m5-audio-destub-drainmesh-breadcrumb` CLOSED
+   with a 2nd landed fix; new thread `m5-audio-destub-drainmesh-writeguard-verify` to consume
+   `s351_drainmeshwriteguard_verify1/2` next session. `m5-audio-destub-contentguard-verify` thread
+   CLOSED s350: 0/4 repeat of `processSceneNode+1424` since item -204's guard landed. 1 more iteration
+   on the parent step-5 hypothesis before the 3-strike budget rule forces a pivot check.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -152,7 +154,36 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -206 (s350); the next new item takes -207 and is inserted at the top.
+oldest). Current top is -207 (s351); the next new item takes -208 and is inserted at the top.
+
+-207. **(s351) s350's `drainMeshReleaseQueue` read guard fired correctly on its own FIRST verify soak
+    but the crash happened anyway 2 lines downstream, at the exact write-through-v1 sibling site the
+    s350 comment had already flagged as unguarded — guarded it too, landing a 2nd fix.** Drained
+    `s350_drainmeshguard_verify1/2.sh` (both already run+moved to `soak_queue/done/` by the loop between
+    iterations). `verify1`: CRASH, `pc-symbol=drainMeshReleaseQueue+1580`, `last-guest-pc=0x800081c4`,
+    AND `guard_fire_n=1` (`bad_v1=0x00010001`) in the same run — the read guard at `0x800081AC` fired
+    (positive control satisfied), correctly bailed the read (`ctx->r2=0`), but did not repair `ctx->r3`
+    (v1) itself, and the function unconditionally writes through that same corrupted pointer 2 lines
+    later (`0x800081C4`: `MEM_W(0X0, ctx->r3) = ctx->r2`) regardless of loop-exit reason — precisely the
+    gap the s350 fixup comment named but left unguarded pending a confirmed hit. `verify2`: CRASH at a
+    4th distinct symbol (`static_5_800AAD9C+5140`, `guard_fire_n=0`) — further diffuse-storm evidence,
+    not informative for this guard. This is the discriminating result iteration 3 of
+    `m5-audio-destub-drainmesh-breadcrumb` needed: not scatter, a precise source-provable sibling bug at
+    a site already named as the next candidate. Guarded both compiler-duplicated occurrences of the
+    `0x800081C4` write (`fixup_game_funcs.py`, one indent-agnostic regex) with the same range-check-
+    and-bail shape, on invalid `v1` skipping the write entirely (no-op). New diagnostic tag
+    `[drain-mesh-write-guard]`, reuses the already-armed `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` env var —
+    no wiring change needed. Deliberately left the sibling `0x800081C8` write unguarded (its address
+    operand is `ctx->r2`, the freelist-head global, not the corrupted v1 — different idiom, no confirmed
+    crash there). Full regen + rebuild clean (`patched x2`). Queued
+    `s351_drainmeshwriteguard_verify1/2.sh`. Net across 14 soaks: `drainMeshReleaseQueue` still the
+    single most-hit function, now at 3 confirmed sub-mechanisms in one dense tail-scan idiom (2
+    guarded), the rest still scattered — parent step-5 hypothesis (item -203) stays diffuse-not-
+    concentrated, unchanged. `lib/` not touched — confirmed via `git status`/`git ls-files` this session
+    that the whole `~/Documents/Tools/N64Recomp` tool repo (where `fixup_game_funcs.py` lives,
+    untracked) sits outside `RogueSquadron64Recomp`'s `lib/`/submodule-patches system entirely. Full
+    detail: `PORTING-STATE` Session 351. `HYPOTHESIS-ID m5-audio-destub-drainmesh-breadcrumb` CLOSED
+    (landed fix); new thread `m5-audio-destub-drainmesh-writeguard-verify`.
 
 -206. **(s350) Drained both s349 queues, refuted the `+600` single-exact-repeat framing, found a 2nd
     precise `drainMeshReleaseQueue` crash site via BREADCRUMB15, guarded it, closed the
