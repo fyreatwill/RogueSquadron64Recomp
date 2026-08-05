@@ -249,12 +249,18 @@ soaks with both reversed simultaneously (s340bothgates/s340bothgates2, HOLD_S=60
 markers, no VI=320 hang, the already-characterized benign VI=640 `pairs=0` plateau in both). See
 CURRENT-TRUTH item -196 / PORTING-STATE Session 340.
 
-Execute **step 5** next: soak through pre-title/title/menu phases and compare crash families #3
-(`waitForAnyAudioSlot` SIGSEGV, historical ~12-21%) and #4 (post-cutscene stall) rates against their
-documented historical baselines, now that gate promotion is real and permanent rather than a
-per-session toggle. This needs multiple soaks (rate comparison, not pass/fail) — budget accordingly,
-don't treat 1-2 clean runs as confirmation per the standing 0/2-is-a-weak-null lesson from the
-`MATEXPIRY_GUARD` thread. `ROGUESQ_AUDIO_UCODE=1` should stay armed in these soaks (step 2's toggle,
-not yet made default) so the comparison runs under the same real-dispatch condition step 2 validated,
-not the degenerate stub
-path.
+**Step 5 is IN PROGRESS (s341)**: confirmed the build already carries the s340 gate promotion (no
+rebuild needed), then queued a 6-run soak batch (`scratch/agent/soak_queue/m5step5_rate_1..6.sh`)
+rather than spending a session babysitting repeat soaks — each recipe runs the existing
+`run_s327waitpump.sh` driver (already arms `ROGUESQ_AUDIO_UCODE=1` and the
+`_VOICE_ACTIVE_GATE`/`_VOICE_TRIGGER_CHAIN`/`_AUDIO_DRAIN` instruments as the same-run positive
+control) at `HOLD_S=300` and exits nonzero iff a `[CRASH]` marker fired anywhere in the run (catches
+family #3 directly; family #4 is a stall, not a crash marker, so its full log's tail `vi_width`/
+`[vi-fs-decision]` lines need reading by hand, not just the recipe's rc). The loop runs 2 recipes at
+a time between iterations, appending one verdict line each to `scratch/agent/SOAK-RESULTS.md`; full
+logs land in `scratch/agent/soak_results/`. **Next iteration**: once verdicts/logs exist for some or
+all 6 runs, compare the observed family #3/#4 hit rate against the ~12-21% / "every soak died
+earlier" baselines above — this needs multiple soaks (rate comparison, not pass/fail), don't treat
+1-2 clean runs as confirmation per the standing 0/2-is-a-weak-null lesson from the
+`MATEXPIRY_GUARD` thread. If 6 isn't enough for a confident rate read, queue more of the same recipe
+rather than switching approach. See CURRENT-TRUTH item -197 / PORTING-STATE Session 341.

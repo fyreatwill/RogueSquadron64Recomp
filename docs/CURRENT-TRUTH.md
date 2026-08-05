@@ -23,7 +23,10 @@ Priority order for upcoming iterations, set after the 300-session review:
    prologue is ordinary). **s340 made the promotion decision**: both `setDisplayMode` and
    `reapplyDisplayMode` gate reversals are now the PERMANENT shipped default (2/2 clean soaks with
    both reversed simultaneously, never tried together before this session). Step 4 is closed; step 5
-   (crash-family #3/#4 rate comparison against historical baselines) is next.
+   (crash-family #3/#4 rate comparison against historical baselines) is IN PROGRESS (s341): a 6-run
+   soak batch is queued to `scratch/agent/soak_queue/m5step5_rate_*.sh` for the loop to run 2 at a
+   time between iterations -- next iteration reads `scratch/agent/SOAK-RESULTS.md` plus the full logs
+   in `scratch/agent/soak_results/` and folds the verdicts into the rate comparison.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -155,7 +158,30 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -196 (s340); the next new item takes -197 and is inserted at the top.
+oldest). Current top is -197 (s341); the next new item takes -198 and is inserted at the top.
+
+-197. **(s341) M5 audio de-stubbing step 5: queued a 6-run soak batch to measure crash-family
+    #3/#4 rates under the now-permanent gate promotion, rather than spending the session babysitting
+    repeat soaks.** Confirmed the s340 gate promotion is baked into the current build (both
+    `MEM_B(...) = ADD32(0, 0X1)` writes present at `0x8008EB40`/`0x8008EC88` in
+    `N64Recomp/RecompiledFuncs/funcs_23.c`, and `build/RogueSquadron64Recomp`'s mtime matches the
+    regen, so no rebuild was needed). Step 5 needs a *rate* comparison (not pass/fail) against the
+    historical baselines (`docs/M5-AUDIO-PLAN.md` §3: family #3 `waitForAnyAudioSlot` pre-title
+    SIGSEGV ~12-21% of pre-scene soak deaths; family #4 post-cutscene stall, historically "every soak
+    died earlier" before reaching it) -- both baselines predate any gate reversal, confirmed by
+    re-reading §3's table before treating any rate change as s340-caused. Wrote 6 self-contained
+    recipes (`scratch/agent/soak_queue/m5step5_rate_1..6.sh`) that each invoke the existing
+    `run_s327waitpump.sh` driver (already arms `ROGUESQ_AUDIO_UCODE=1` plus every
+    `_VOICE_ACTIVE_GATE`/`_VOICE_TRIGGER_CHAIN`/`_AUDIO_DRAIN` instrument step 5 calls for as a
+    same-run positive control) with `HOLD_S=300` -- sized from s340's observed ~780s total wall at
+    `HOLD_S=600` (~180s fixed overhead + HOLD_S) to fit under the loop's 600s per-recipe hard cap with
+    margin. Each recipe greps its own `run.log` for `[CRASH]` (the process's own SIGSEGV/SIGBUS
+    handler output, confirmed to land in the redirected log) and exits 1 if any fired, 0 otherwise --
+    catches family #3 (a crash) directly; family #4 (a stall, not a crash marker) needs the full log's
+    tail `vi_width`/`[vi-fs-decision]` lines read by hand, rc alone can't distinguish it, so the next
+    iteration must open the full logs in `scratch/agent/soak_results/`, not just the one-line verdicts
+    in `SOAK-RESULTS.md`. No soak run yet this session (queued only); no `lib/` touched. Full detail:
+    `PORTING-STATE` Session 341.
 
 -196. **(s340) M5 audio de-stubbing: promoted BOTH `setDisplayMode`'s and `reapplyDisplayMode`'s
     gate-byte reversals to the PERMANENT shipped default, closing M5-AUDIO-PLAN step 4.** Discriminating

@@ -29708,3 +29708,61 @@ the `MATEXPIRY_GUARD` thread.
 No `lib/` touched (the gate patch lives in `fixup_game_funcs.py`, N64Recomp repo, a separate
 untracked file — no `submodule-patches/export.sh` needed). `HYPOTHESIS-ID
 m5-audio-destub-gate-promotion-decision` CLOSED, 1st iteration, full resolution.
+
+## Session 341 (2026-08-05) — M5 audio step 5: queued a 6-run soak batch for the crash-family #3/#4 rate comparison, rather than babysitting repeat soaks
+
+`HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison`, 1st iteration. Picked up where s340 left
+off: with both real gate-byte sites (`setDisplayMode`, `reapplyDisplayMode`) now permanently reversed
+as the shipped default, M5-AUDIO-PLAN step 5 asks whether crash families #3 (`waitForAnyAudioSlot`
+pre-title SIGSEGV, historical ~12-21% of pre-scene soak deaths) and #4 (post-cutscene stall,
+historically "every soak died earlier" before reaching it) change rate now that the guest game code
+genuinely believes audio is enabled end-to-end. Re-read `docs/M5-AUDIO-PLAN.md` §3 first and confirmed
+both baselines predate any gate reversal at all (not just this session's promotion), so any rate
+change observed going forward is fairly attributable to the destub arc as a whole.
+
+**Verified no rebuild was needed**: grepped `N64Recomp/RecompiledFuncs/funcs_23.c` at both gate sites
+(`0x8008EB40`, `0x8008EC88`) and confirmed both still show the `ADD32(0, 0X1)` / raw `MEM_B` store
+(the reversed form s340 promoted), and `build/RogueSquadron64Recomp`'s mtime (08:55:35) matches the
+regen's mtime exactly — the binary running in `build/` already carries the gate promotion.
+
+**This is a rate-comparison question, not a pass/fail one** — the standing 0/2-is-a-weak-null lesson
+from the `MATEXPIRY_GUARD` thread applies directly, and the historical baseline itself is a range
+(~12-21%), so a handful of clean soaks proves nothing on its own. Per `tools/agent/ITERATION.md`'s
+soak-queue mechanism ("a repeat soak needs wall-clock, not a paid session"), queued a batch of 6
+self-contained recipes instead of running them inline:
+
+- `scratch/agent/soak_queue/m5step5_rate_1.sh` through `_6.sh`, each invoking the existing
+  `scratch/s73_post_a_scene/run_s327waitpump.sh` driver (unmodified — it already arms
+  `ROGUESQ_AUDIO_UCODE=1` plus the full `_VOICE_ACTIVE_GATE`/`_VOICE_TRIGGER_CHAIN`/`_AUDIO_DRAIN`
+  instrument set step 5 calls for as a same-run positive control that real voice/slot activity is
+  occurring) with a distinct label (`m5step5rate1`..`6`) and `HOLD_S=300`.
+- `HOLD_S=300` was sized from s340's own observed wall-clock: its `HOLD_S=600` soaks were polled with
+  a 780s timeout and completed within it, implying ~180s of fixed overhead (boot, title-reach,
+  `STICK_SCHEDULE` navigation, `STABLE_S`, grace window) outside the hold itself. `HOLD_S=300` puts
+  total wall time at roughly 480s, leaving ~120s of margin under the loop's 600s hard per-recipe cap
+  (`tools/agent/loop.sh`'s `SOAK_TIMEOUT`), which SIGKILLs the whole process group if exceeded.
+- Each recipe is fully self-contained per the soak-queue contract: launches the game itself, lets
+  `run_mission_keys.sh` SIGKILL it on every exit path (phase timeout, process-gone during boot —
+  the exact shape a family #3 pre-title SIGSEGV would take, since a dead PID during the "waiting for
+  VI width 1024" phase-gate returns exit 4 immediately — or the normal end-of-grace-window kill), then
+  greps the resulting `run.log` for `[CRASH]` (confirmed this string is the process's own
+  SIGSEGV/SIGBUS handler output in `src/main/main.cpp`, and that stderr is redirected into `run.log`
+  by `run_mission_keys.sh`, so it's a valid crash detector regardless of which phase the crash occurs
+  in) and exits 1 if any fired, 0 otherwise.
+- Deliberately did NOT try to detect family #4 (a stall, not a crash marker) via the recipe's exit
+  code — a stall produces no distinguishing rc from a clean run at this granularity. Documented in
+  both the recipe comments and this entry that the next iteration must open the full per-run logs in
+  `scratch/agent/soak_results/` (not just the one-line `rc`/duration verdicts in `SOAK-RESULTS.md`)
+  and check the tail `[phase] vi_width=`/`[vi-fs-decision]` lines for a stuck counter to assess family
+  #4, the same technique s339/s340 already used to characterize the (benign, non-audio) VI=640
+  `pairs=0` plateau.
+
+**No soak run this session** — the loop's `run_soak_queue` (2 recipes per between-iteration slot,
+sequential, one game process at a time) will consume these over the next few iterations and append
+verdicts to `scratch/agent/SOAK-RESULTS.md`. `docs/CURRENT-TRUTH.md` (item -197) and
+`docs/M5-AUDIO-PLAN.md`'s "Next work unit" section both updated to point the next iteration at reading
+those verdicts/logs and folding them into the family #3/#4 rate comparison; if 6 runs isn't enough for
+a confident read, queue more of the same recipe rather than switching approach. No `lib/` touched.
+
+`HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison` remains OPEN, 1st iteration (queuing the
+instrument, not yet a discriminating result — that arrives once the queue drains).
