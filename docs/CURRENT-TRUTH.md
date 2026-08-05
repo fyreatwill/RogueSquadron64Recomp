@@ -148,7 +148,31 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -203 (s347); the next new item takes -204 and is inserted at the top.
+oldest). Current top is -204 (s348); the next new item takes -205 and is inserted at the top.
+
+-204. **(s348) processSceneNode's repeat crash (2/6, exact host+guest PC match) was an unguarded
+    "content pointer" one field removed from the already-guarded node pointer — GUARDED, not just
+    catalogued.** Drained `m5step5v3_rate_5` (CLEAN) and `_rate_6` (CRASH, `pc-symbol=processSceneNode+1424`,
+    `last-guest-pc=0x80014FDC` — byte-identical to `rate_3`'s crash, item -203). This crossed NEXT.md's
+    declared "2+ hits" escalation threshold, the first symbol in the whole v3 batch to do so. Source-read
+    `funcs_4.c` at the guest PC: the crash is `MEM_W(ctx->r16, 0X30)` where `ctx->r16` was loaded from
+    `MEM_W(ctx->r17, 0X8)` — a field of the scene-node pointer that s190's existing entry guard (which
+    validates `ctx->r17` itself) never checks. Found a second load site of the same field on the
+    sibling-loop continuation path (guest `0x800153F8`) feeding the same downstream derefs. Added two
+    `fixup_game_funcs.py` guards (same shape as s190's, bail to the function's own `L_80015528` exit,
+    env-gated under `ROGUESQ_LOG_SCENE_NODE_CONTENT_GUARD`), full regen + rebuild clean. Hit and fixed a
+    real pipeline-ordering trap while landing this: the first attempt placed the patch BEFORE the
+    BREADCRUMB4 pass whose output its anchor depended on, so it silently matched 0 times — moved it to
+    run after BREADCRUMB4, confirmed `patched x1` both sites and guard text present in output. One
+    inline validation soak crashed on an unrelated, first-ever-seen boot-time death
+    (`musyxSynthFrame+4652`, before title, not informative for this guard). Queued
+    `s348_contentguard_verify2/3.sh` + re-queued `m5step5v3_rate_7/8.sh` for the loop to drain.
+    **Not yet confirmed empirically** — no soak has shown the guard firing or the crash's absence yet;
+    that's the immediate next-session check. `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison`
+    closes with a landed fix (not another inconclusive tally); new thread
+    `m5-audio-destub-contentguard-verify`. `lib/` not touched (both edited files are outside the
+    submodule-patches system — see PORTING-STATE Session 348 for why). Full detail: `PORTING-STATE`
+    Session 348.
 
 -203. **(s347) M5 step 5 crash-rate comparison, first real batch (n=4): 3/4 runs crashed but at
     THREE DIFFERENT symbols — refutes "allocOrEvictMaterialNode is a new concentrated family #5",

@@ -30235,3 +30235,75 @@ M5 status line refreshed. `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-compari
 passive fold-in, neither counted toward the budget-rule-8 strike count per s346's own note). One more
 iteration on this same slug is allowed before Iron Rule 8's pivot-preamble requirement kicks in.
 `lib/` not touched this session, no `export.sh` needed.
+
+## Session 348 (2026-08-05) — M5 audio: drained rate_5/6, found the exact-repeat discriminating result, source-read and GUARDED processSceneNode's unguarded content pointer
+
+Drained `m5step5v3_rate_5` (CLEAN, `crash_markers=0`) and `_rate_6` (CRASH) from the soak queue.
+`rate_6`'s crash was the discriminating result this whole batch was designed to find: `last_pc_symbol=processSceneNode+1424` AND `last_guest_pc=0x80014FDC` — BOTH fields byte-identical to `rate_3`'s
+crash from s347. Not just the same function (which `processSceneNode` has hit at 2 other offsets
+historically, `+6668`/`+7640` per s151/152) but the exact same instruction twice: the strongest repeat
+match in the whole 6-run v3 sample, and the first symbol in this comparison to cross NEXT.md's declared
+"2+ hits" escalation threshold. Updated tally: overall crash rate now 4/6 (67%, down from the earlier
+3/4 estimate but still not zero); family #3 (`waitForAnyAudioSlot`)/#4 (post-cutscene stall) still 0/6;
+`processSceneNode+1424` now 2/6, `allocOrEvictMaterialNode+944` and `trackResourceListWithMappingTables+1192`
+stay singletons.
+
+Per NEXT.md's own escalation plan, source-read `processSceneNode` in
+`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c` around guest PC `0x80014FDC` (grepped the
+breadcrumb comment, unique hit at the time). The crash instruction is `ctx->r2 = MEM_W(ctx->r16, 0X30)`
+— a dereference of `ctx->r16`, which was loaded two instructions earlier (guest `0x80014FD0`) via
+`ctx->r16 = MEM_W(ctx->r17, 0X8)`: a "content" pointer read out of a FIELD of the scene-node pointer
+(`ctx->r17`). s190's existing guard (item -190-ish, "processSceneNode node-pointer validity guard")
+validates `ctx->r17` itself at function entry but never checks the field loaded out of it — so a
+corrupt/stale content-pointer field flows straight into an unguarded deref, explaining a fixed,
+repeatable crash address rather than a stack-depth-dependent or nondeterministic one. Grepped for the
+same load idiom elsewhere in the function and found a second site (guest `0x800153F8`, funcs_4.c:16493-6)
+on the sibling-loop continuation path, which jumps back into the SAME shared block (`L_80014FE8`) that
+dereferences the SAME `ctx->r16` again at `+0x34`/`+0x38` — same idiom, second site, not a separate bug.
+
+**Landed a fix**, following the s282-s288 idiom-class-closure model the user directive names for M3
+work: added `fixup_game_funcs.py` patches guarding BOTH load sites (mirrors s190's guard shape exactly
+— range-check `[0x80000000, 0x80800000)`, bail to the function's existing `L_80015528` exit/sentinel,
+env-gated diagnostic logging under `ROGUESQ_LOG_SCENE_NODE_CONTENT_GUARD`). Hit and fixed a real
+methodology trap while writing this: my first attempt placed the new patch code physically BEFORE the
+"processSceneNode guest-PC breadcrumb (BREADCRUMB4)" patch in the script, whose anchor text requires
+the `g_rs64_last_guest_pc = 0x80014FD0u;` line that BREADCRUMB4 itself inserts — since pristine
+N64Recomp output doesn't have that line yet at that point in the pipeline, the regex silently matched
+zero times (`re.subn` returning `n=0`, no error, no report line) and the "fix" was pure no-op. Caught
+it only by diffing report output against expectation and adding temporary debug prints; moved the new
+patch block to run immediately AFTER BREADCRUMB4 in script order, confirmed both sites now report
+`patched x1` and the guard text is physically present in the regenerated `funcs_4.c` (lines ~15191 and
+~16512). Full regen (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`) completed
+clean, no new warnings/errors beyond pre-existing unrelated ones (DDIV sign-conversion noise in
+`funcs_8.c`, present before this session).
+
+Ran one validation soak inline (`s348_contentguard_verify1`, `ROGUESQ_LOG_SCENE_NODE_CONTENT_GUARD=1`
+armed via `run_s327waitpump.sh`): crashed at an unrelated, previously-uncatalogued-in-soak-results site
+(`musyxSynthFrame+4652`) BEFORE reaching the title screen at all (`title_reached` empty, `keys_lines=0`,
+`runlog_bytes=42896` — tiny vs. the normal 50-70MB band, consistent with a very early boot-time death).
+Not informative for the guard question either way — the run never got far enough into gameplay to
+exercise `processSceneNode`'s crashing path, so this is neither a confirmation nor a refutation, just a
+single new boot-time flake to note (first `musyxSynthFrame` hit anywhere in `scratch/agent/soak_results/`
+history; audio-subsystem-adjacent, plausibly related to the already-named "`waitForAnyAudioSlot` boot
+deaths" family in M5-AUDIO-PLAN but not confirmed as the same mechanism — single data point, treat as
+uncatalogued until it recurs). Queued 2 more validation soaks (`s348_contentguard_verify2/3.sh`) to the
+soak queue for the loop to drain — the loop's usual 2-per-iteration cadence should have both landed by
+next session. Also re-queued `m5step5v3_rate_7/8.sh` (unchanged, still pending from s347, not yet
+drained) so the underlying crash-rate comparison keeps extending in parallel.
+
+**What this does and doesn't establish**: this closes one real, previously-unguarded null/invalid-
+pointer-dereference idiom class inside `processSceneNode` (2 sites, same shape as s190's existing
+guard), backed by the single most repeatable evidence this whole M5-step-5 comparison has produced
+(exact host+guest PC match, 2/6). It does NOT yet confirm the guard eliminates the crash in practice —
+that needs the queued verify2/3 soaks (or further drips) to show either (a) the guard firing
+(`[scene-node-content-guard]` log lines, confirming the corrupt-pointer hypothesis empirically, not just
+via static source-read) or (b) `processSceneNode+1424`/`0x80014FDC` simply never recurring again across
+several more runs. `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison` — this closes out that
+investigation's 3rd counted iteration with a real, landed fix rather than another inconclusive
+tally-update, which resets the Iron-Rule-8 strike count (a landed change, not a repeat of the same
+null-result pattern). New thread for next session: `m5-audio-destub-contentguard-verify` — did the
+guard actually stop the repeat crash, and does it ever log a hit (confirming the mechanism, not just
+plausibility). `lib/` not touched this session (both edited files — `fixup_game_funcs.py` in the
+separate `N64Recomp` repo, and `run_s327waitpump.sh` in this repo's `scratch/` — are outside the
+`lib/`/submodule-patches system; `fixup_game_funcs.py` is explicitly untracked by project convention,
+CLAUDE.md/NEXT.md's own "regen paths" note), no `export.sh` needed.

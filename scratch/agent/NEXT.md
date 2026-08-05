@@ -1,54 +1,71 @@
 # NEXT work unit
 
-## s347 drained rate_3/4 and found the discriminating result: 3/4 crashes, 3 DIFFERENT symbols
+## s348 landed a real fix: processSceneNode's repeat crash (2/6, exact PC match) is now guarded
 
-Landed data on the m5step5v3 template (n=4): `rate_1` CRASH `allocOrEvictMaterialNode+944`, `rate_2`
-CLEAN, `rate_3` CRASH `processSceneNode+1424`, `rate_4` CRASH `trackResourceListWithMappingTables+1192`.
-Zero repeats of any single symbol; zero hits on family #3 (`waitForAnyAudioSlot`) or family #4
-(post-cutscene stall) specifically, despite a 75% overall crash rate in the 4-run sample. This refutes
-"de-stubbing produced one new concentrated family #5" (`allocOrEvictMaterialNode` didn't recur) and
-supports "de-stubbing quieted #3/#4 specifically but the background crash rate in this window is still
-high, just diffused across other (mostly already-catalogued or singleton) sites." Full writeup:
-`docs/CURRENT-TRUTH.md` item -203, `PORTING-STATE` Session 347.
+`m5step5v3_rate_5` (CLEAN) and `_rate_6` (CRASH) landed. `rate_6` hit the discriminating result this
+whole batch was designed to find: `pc-symbol=processSceneNode+1424` AND `last-guest-pc=0x80014FDC`,
+BOTH fields byte-identical to `rate_3`'s crash (s347) — the first symbol in the comparison to cross
+NEXT.md's own "2+ hits" escalation threshold. Source-read `funcs_4.c` at that guest PC and found an
+unguarded "content pointer" (`ctx->r16`, loaded from `MEM_W(ctx->r17, 0X8)` — a FIELD of the already-
+node-pointer-guarded `ctx->r17`) dereferenced with zero validation, at two load sites in the function
+(entry `0x80014FD0`, loop-continuation `0x800153F8`). Added guards at both, mirroring the existing
+s190 guard's shape exactly (range-check, bail to `L_80015528`, env-gated diagnostic under
+`ROGUESQ_LOG_SCENE_NODE_CONTENT_GUARD`). Full regen + rebuild clean. Full writeup: `docs/CURRENT-TRUTH.md`
+item -204, `PORTING-STATE` Session 348.
 
-## The work unit: drain m5step5v3_rate_5..8, extend the sample, watch for symbol recurrence
+**Methodology trap hit and fixed this session, worth remembering**: `fixup_game_funcs.py`'s ~150
+patches run in SCRIPT ORDER against one accumulating `text` variable per file, not against a final
+fully-breadcrumbed view. A patch whose regex anchor includes a `g_rs64_last_guest_pc = 0x...u;` line
+(which is INSERTED by a later BREADCRUMB-family pass, not present in pristine N64Recomp output) must
+be placed AFTER that breadcrumb pass in the script, or `re.subn` silently returns `n=0` with no error
+and no report line — a completely silent no-op. Always check the printed report list for your new
+patch's own line after a "successful" (no-Python-error) fixup run; a missing report line at ANY point
+in this script means the match failed, regardless of exit code.
 
-**Step 1**: `tail -10 scratch/agent/SOAK-RESULTS.md` for `m5step5v3_rate_5` through `_8` (the loop
-drains up to 2 per iteration between iterations — likely only 2 of the 4 will have landed by next
-read; that's fine, work with what's there). For each landed verdict:
-- Confirm `runlog_bytes` stayed in the 50-70 MB band (5th/6th/7th/8th confirmation the s345 fix holds
-  — flag any regression as itself a surprising, checkable finding).
-- Check `last_pc_symbol`. The single most information-dense outcome to watch for: does ANY symbol
-  from this batch match `allocOrEvictMaterialNode+944`, `processSceneNode` (any offset), or
-  `trackResourceListWithMappingTables+1192` from rate_1/3/4? A repeat of any one of these — especially
-  `processSceneNode`, which already has 3 distinct prior-session offsets (`+6668`, `+7640`, `+1424`)
-  suggesting it may be a recurring ambiguous-attribution family rather than 3 unrelated singletons —
-  would be the first real family candidate in this whole comparison.
+## The work unit: drain the 2 queued content-guard verify soaks + m5step5v3_rate_7/8, check for a repeat
 
-**Step 2 — update the tally**: after step 1, you'll have 6-8 total data points across rate_1 through
-rate_8. Recompute: overall crash rate (currently 3/4 = 75%), rate of family #3/#4 specifically
-(currently 0/4), and whether any symbol now has ≥2 hits (currently 0 symbols do). If a symbol reaches
-2+ hits, that's the discriminating threshold to escalate to a source-read (same technique s343 used
-for `tickWrappingTimerAccumulatorList`'s `break 7` trap): grep
-`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c` for the function, read around the byte offset,
-classify as OOB index / null deref / div-mod trap, same triage categories as every other cataloged
-family.
+**Step 1**: `tail -10 scratch/agent/SOAK-RESULTS.md`. Up to 4 recipes are queued
+(`s348_contentguard_verify2.sh`, `_verify3.sh`, `m5step5v3_rate_7.sh`, `_rate_8.sh`); the loop drains up
+to 2 per iteration between iterations, so 2-4 may have landed by next read.
 
-**Step 3 — budget-rule check**: this will be the 3rd iteration on `HYPOTHESIS-ID
-m5-audio-destub-step5-crashrate-comparison` counting from s347 (s345/s346 don't count, per their own
-notes). If this iteration produces another inconclusive "different symbol each time" result with no
-2+-hit family, Iron Rule 8 requires a pivot preamble on the 4th: write the hypothesis/evidence table
-explicitly into this file, and consider whether the highest-information-value next move is (a) a much
-larger batch (8-16 more soaks) to get a real per-family rate at this sample size instead of drip-
-feeding 4 at a time, or (b) closing step 5 as "post-title crash rate in this window is diffuse/
-long-tailed, no dominant family found in first 8-run sample" and moving to M3 idiom-class audits per
-the user directive's priority-3 fallback.
+**Step 2 — for each `s348_contentguard_verify*` result**, check three things:
+- `guard_fire_n` (grepped `[scene-node-content-guard]` count in the run log) — if >0, the guard fired,
+  which EMPIRICALLY confirms the corrupt-content-pointer hypothesis (not just the static source-read).
+  Print `guard_fire_sample` too and read what `bad_content`/`node` values it caught.
+- `last_pc_symbol` on any crash — if it's `processSceneNode+1424` / `last-guest-pc=0x80014FDC` AGAIN,
+  the guard did NOT close this site (check the regex actually matched in the build that ran — grep the
+  built binary's own regen log, or just re-check `grep -c 'content-pointer validity guard' funcs_4.c`
+  in `~/Documents/Tools/N64Recomp/RecompiledFuncs/` if still present — should show 2 hits). Any OTHER
+  crash symbol is an unrelated pre-existing family, not a guard failure.
+- `title_reached` / `keys_lines` — confirm the run actually exercised gameplay (unlike s348's own
+  inline verify1, which crashed at `musyxSynthFrame+4652` before title and was uninformative for this
+  question — if a queued verify also dies pre-title, it's similarly uninformative, note it and don't
+  over-read it as either a confirm or refute).
 
-HYPOTHESIS-ID: m5-audio-destub-step5-crashrate-comparison (3rd iteration counting from s347; the NEXT
-iteration after this one is the 4th and would trigger Iron Rule 8's block if still inconclusive with
-no pivot preamble written).
+**Step 3 — for each `m5step5v3_rate_7/8` result**: same as s347/s348's method — check `last_pc_symbol`
+against the 3 now-tracked symbols (`allocOrEvictMaterialNode+944` 1/6, `processSceneNode+1424` 2/6 NOW
+GUARDED, `trackResourceListWithMappingTables+1192` 1/6) and update the tally. Since `processSceneNode`
+should no longer crash at `+1424` post-guard, a rate_7/8 hit there would itself be a signal the guard
+build wasn't actually running (check binary timestamp/regen freshness first — boring explanation
+before exotic).
 
-## Environment notes (carried forward — see s327-347 for full detail)
+**Step 4 — decide next move based on what lands**:
+- Guard fires at least once + no `processSceneNode+1424` repeat across all landed data → promote item
+  -204 from "not yet confirmed" to confirmed-effective in `CURRENT-TRUTH.md`, and consider whether
+  `trackResourceListWithMappingTables+1192` (the other singleton) is worth the same idiom-class-audit
+  treatment next, OR whether M5 step 5's crash-rate comparison is now well-enough characterized to
+  close and move to M3 idiom-class audits per the user directive's priority-3 fallback.
+  `HYPOTHESIS-ID m5-audio-destub-contentguard-verify` — 1st iteration if this is the session that
+  checks it.
+- Guard never fires and no repeat → still consistent with the fix (maybe the corrupting write that
+  produces the bad content pointer is itself rare/nondeterministic) but weaker evidence; queue 2-3 more
+  verify soaks rather than concluding either way from n=2-4.
+- `processSceneNode+1424` DOES repeat post-guard → the regex match location may be wrong (guards
+  compile+link but don't dominate the actual faulting path — re-check with a debugger-level trace or
+  re-verify the guard's placement relative to the crash instruction in the rebuilt `funcs_4.c`) — this
+  would be a real, reportable methodology finding, not just "try again."
+
+## Environment notes (carried forward — see s327-348 for full detail)
 
 - Regen paths: `/Users/williambuckley/Documents/Tools/N64Recomp` (`fixup_game_funcs.py`, untracked).
   Delete `RecompiledFuncs/*.c` before every `N64Recomp` run:
@@ -58,36 +75,35 @@ no pivot preamble written).
   `cd ~/Documents/Tools/N64Recomp && ./build/N64Recomp rogue_squadron.toml` ->
   `python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py` ->
   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
-  /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build -j8`.
+  /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build -j8`. Note: `cd a && cmd` style
+  compound commands sometimes require explicit approval this session (permission-matching quirk, not
+  a project rule) — running each step as its own single command avoids the prompt.
+- **New this session**: `fixup_game_funcs.py` patches whose regex anchor depends on
+  `g_rs64_last_guest_pc = 0x...u;` lines MUST be placed after the relevant BREADCRUMB-family pass for
+  that function in script order — those lines don't exist in pristine N64Recomp output, they're
+  inserted by the breadcrumb patches themselves. Always confirm your new patch's report line actually
+  printed after a run.
 - Current gate state (unchanged since s343): fixup regex at `fixup_game_funcs.py` ~line 263 is
   `r"0x8008E(?:C88)"` — matches ONLY `reapplyDisplayMode` (`0x8008EC88`, force-zeroed);
-  `setDisplayMode` (`0x8008EB40`) stays unmatched/reversed. Verify via `funcs_23.c: audio gate patched
-  x1` in the fixup report. No rebuild needed for this work unit unless step 2 lands a guard.
+  `setDisplayMode` (`0x8008EB40`) stays unmatched/reversed.
 - Soak driver: `scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, invoked with
   `env HOLD_S=<n> zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>` (`env` prefix required —
-  project rule 10 / CLAUDE.md). It arms EVERY diagnostic env var unconditionally EXCEPT the 4
-  heap-walker vars (s345 fix — `ROGUESQ_LOG_RS_MALLOC_WALK`/`_GUARD`/`ROGUESQ_LOG_RS_FREE_WALK`/`_GUARD`
-  now default to 1 but are overridable by pre-exporting 0). Log lands at
-  `scratch/s73_post_a_scene/<label>/run.log` — grep it, don't read it directly; check `runlog_bytes`
-  before trusting a soak's post-processing to have actually finished. **`[keys]` lines land in the
-  LAUNCHER's stdout/stderr (`scratch/agent/soak_results/<label>_launcher.log`), NOT in the game's own
-  `run.log`.**
-- `[vi-fs-decision]` is an always-on native instrument (`lib/rt64/src/hle/rt64_state.cpp`), not
-  env-gated — free in every soak, no arming needed.
+  project rule 10 / CLAUDE.md). Now arms `ROGUESQ_LOG_SCENE_NODE_CONTENT_GUARD=1` (new this session,
+  next to the existing `ROGUESQ_LOG_SCENE_NODE_PTR_GUARD`/`_DEPTH_GUARD`) alongside every other
+  diagnostic var, EXCEPT the 4 heap-walker vars (still default-overridable per s345's fix). Log lands
+  at `scratch/s73_post_a_scene/<label>/run.log` — grep it, don't read it directly; check `runlog_bytes`
+  before trusting a soak's post-processing to have actually finished.
 - `[CRASH][pc-symbol]` (host PC via `dladdr`, precise) and `[CRASH][last-guest-pc]` (a separately
-  tracked guest checkpoint, `g_rs64_last_guest_pc`, updated at recompiled-function/jump boundaries —
-  NOT necessarily the guest instruction under the exact host crash PC) answer different questions by
-  design (`src/main/main.cpp:1740-1786`, s206). A mismatch between them across a crash is expected, not
-  itself evidence of an instrument bug — always trust `pc-symbol` for "what function crashed."
-- Any soak recipe testing for a SPECIFIC crash must check `last-guest-pc`/`pc-symbol` against that
-  crash's own signature, not just "did `[CRASH]` fire" — RS64 has ~20+ independent, already-catalogued
-  crash families that can fire nondeterministically at any point (s344's method-trap finding,
-  `docs/CURRENT-TRUTH.md` Method traps section). `processSceneNode` specifically has at least 3
-  distinct documented crash offsets across sessions (`+6668`, `+7640` pre-s295; `+1424` s347) and is
-  flagged in its own s151 write-up as possibly nearest-symbol-misattribution-prone at large offsets —
-  treat a `processSceneNode` hit at ANY offset as the same suspect family until proven otherwise, not
-  as a fresh singleton each time.
-- `rc=137` (SIGKILL at the loop's 600s hard cap) does NOT necessarily mean the GAME hung — it can mean
-  the RECIPE's own post-processing didn't finish in time (s345's finding). Always check the launcher
-  log's own `done wall=Ns` line and the run.log's byte size before reading a 600s timeout as a game-side
-  stall.
+  tracked guest checkpoint) answer different questions by design — always trust `pc-symbol` for "what
+  function crashed," and a MATCH on both together (as `rate_3`/`rate_6` showed) is unusually strong
+  evidence of a real, fixed-address repeat bug, not misattribution noise.
+- `processSceneNode` has now hit 4 distinct offsets across sessions (`+6668`/`+7640` pre-s295, `+1424`
+  s347/s348 — now guarded at 2 load sites). Treat ANY future `processSceneNode` hit at a DIFFERENT
+  offset as a still-open, separate site in this large (~1100-line) function, not automatically covered
+  by this session's fix.
+- `rc=137`/launcher timeouts don't necessarily mean a game-side hang — check the launcher log's own
+  `done wall=Ns` line and `run.log` byte size before reading a timeout as a stall.
+
+HYPOTHESIS-ID: m5-audio-destub-contentguard-verify (1st iteration — new thread opened s348 after the
+prior slug `m5-audio-destub-step5-crashrate-comparison` closed with a landed fix, not another
+inconclusive tally-update).
