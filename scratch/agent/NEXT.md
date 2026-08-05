@@ -48,7 +48,7 @@ the run, else 0. The loop runs up to 2 of these between iterations, appending on
    instead (e.g. the sanctioned fixup_game_funcs.py BREADCRUMB10+ backport mentioned in
    CURRENT-TRUTH's USER DIRECTIVE item 30) while the queue drains in the background across iterations.
 
-`HYPOTHESIS-ID: m5-audio-destub-step5-crashrate-comparison` (2nd iteration if this is picked up
+HYPOTHESIS-ID: m5-audio-destub-step5-crashrate-comparison (2nd iteration if this is picked up
 again without new soak data since s341; unchanged from s341 — same investigation thread, no pivot).
 
 ## Environment notes (carried forward — see s327-341 for full detail)
