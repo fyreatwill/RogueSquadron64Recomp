@@ -29648,3 +29648,63 @@ per this arc's established source-read-first convention. Gate state unchanged (b
 not re-tested this session — no code path was modified). `HYPOTHESIS-ID
 m5-audio-destub-submitgfxframe-vi-fs-decoupling` CLOSED, 1st iteration, full resolution, two
 independent evidence sources.
+
+## Session 340 (2026-08-05) — M5 audio: promoted BOTH `setDisplayMode`'s and `reapplyDisplayMode`'s gate-byte reversals to the PERMANENT shipped default (2/2 clean soaks with both reversed simultaneously), closing M5-AUDIO-PLAN step 4
+
+`HYPOTHESIS-ID m5-audio-destub-gate-promotion-decision`, 1st and only iteration needed. Picked up
+item -195's (s339) recommendation directly: with the whole s329-s339 VI=640 `pairs=0` reachability
+chase now fully resolved as benign/non-audio, the next M5 work unit is the promotion decision itself
+— item -182..-187 had left it explicitly open every session since s328.
+
+**Competing hypotheses (from `scratch/agent/NEXT.md`)**:
+- H1: both gates can be promoted together safely — the only known failure modes (VI=320
+  `waitForMusyXAudioTaskDone` hang, fixed s327/s328; the VI=640 `pairs=0` reading, shown benign s339)
+  are both closed, so a soak with BOTH gates reversed simultaneously should be clean.
+- H2: `setDisplayMode`'s reversal is safe alone but combining it with `reapplyDisplayMode`'s reversal
+  surfaces a NEW interaction not seen when either is tested in isolation — this whole arc (s303-s339)
+  never soaked both reversed at once; every soak reversed at most 1 of the 2.
+- H3: promoting either gate regresses something unrelated to the VI=640/VI=320 thread (a visual
+  defect, not a hang) — would need a driven capture to catch, out of scope for a crash-free soak.
+
+**Discriminating measurement**: reverse both `setDisplayMode` (`0x8008EB40`) and `reapplyDisplayMode`
+(`0x8008EC88`) gate-byte sites simultaneously in `fixup_game_funcs.py` (N64Recomp repo, untracked) —
+the regex that force-zeros both was narrowed to match neither address. Regenerated
+(`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`), confirmed via the generated
+`funcs_23.c`: both `0x8008EB40` and `0x8008EC88` sites show the raw `MEM_B(0XF50, ctx->r1) =
+ctx->r2;` store, unpatched. Build clean, no errors.
+
+Ran 2 soaks (`scratch/s73_post_a_scene/run_s327waitpump.sh`, `HOLD_S=600` each, full diagnostic set
+armed plus this arc's tracking instruments — `ROGUESQ_LOG_MAINGAMELOOP_REACH`,
+`ROGUESQ_LOG_CUTSCENETIMER_REACH`, `ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH`):
+
+- `s340bothgates`: VI transitions 0→320→640 by 2.2s (per `[phase] vi_width=` log lines), no VI=320
+  hang. Ran the full 600s hold (script's own "wait for VI=1024" phase-gate timed out at 600s, exit
+  code 5 = INCONCLUSIVE on that specific gate, NOT a crash — the game process itself never died).
+  Zero crash/SIGSEGV/SIGTRAP/fatal/abort markers in the whole 1.28M-line log. `[vi-fs-decision]` ends
+  at `pairs=0 stalled=1 synth=957 rdpFs=465` — audio (`synth`) and RDP full-sync (`rdpFs`) counters
+  both nonzero and still incrementing at the log's tail. `[static6-800a9abc-entry]`=1 (matches item
+  -195's exact prediction). `[dma-ring-consumer]` reaches n=4999, still active at the tail.
+- `s340bothgates2`: identical pattern — VI 0→320→640 by 2.2s, zero crash markers, `[vi-fs-decision]`
+  ends at `pairs=0 stalled=1 synth=956 rdpFs=468`, `[static6-800a9abc-entry]`=1,
+  `[dma-ring-consumer]` reaches n=5008.
+
+**Result**: H1 CONFIRMED, H2 REFUTED. Both runs reproduce exactly the already-characterized benign
+VI=640 plateau (item -195/s339) with no new failure signature from combining the two reversals — no
+VI=320 regression (the s327 `musyxSynthFrame` pump fix holds under combined reversal), no crash, no
+new stall reading distinct from either site's already-known behavior. This is 2/2 clean, meeting
+M5-AUDIO-PLAN's "two clean soaks" bar (the same bar s328 used to validate `setDisplayMode` alone).
+H3 (a visual regression) is NOT ruled out by a crash-free soak — would need a follow-up driven
+capture, out of scope for this work unit, flagged in `docs/M5-AUDIO-PLAN.md` as unaddressed.
+
+**Action taken**: promoted the reversal to the PERMANENT shipped default (not a session-scoped soak
+state, unlike every prior reversal in this arc). `fixup_game_funcs.py`'s gate regex now permanently
+matches neither `0x8008EB40` nor `0x8008EC88` — every regen leaves both sites unpatched going
+forward. `docs/M5-AUDIO-PLAN.md`'s "Next work unit" section updated: step 4 marked DONE, step 5
+(crash-family #3 `waitForAnyAudioSlot` SIGSEGV and #4 post-cutscene-stall rate comparison against
+historical baselines, ~12-21% and "every soak died earlier" respectively) is next — needs multiple
+soaks for a rate comparison, not a single pass/fail, per the standing 0/2-is-a-weak-null lesson from
+the `MATEXPIRY_GUARD` thread.
+
+No `lib/` touched (the gate patch lives in `fixup_game_funcs.py`, N64Recomp repo, a separate
+untracked file — no `submodule-patches/export.sh` needed). `HYPOTHESIS-ID
+m5-audio-destub-gate-promotion-decision` CLOSED, 1st iteration, full resolution.

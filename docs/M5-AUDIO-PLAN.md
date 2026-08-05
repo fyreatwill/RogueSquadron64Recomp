@@ -240,11 +240,21 @@ expect would otherwise pass every crash-rate check above while still producing s
 
 ## Next work unit
 
-Steps 1-2 are DONE (s300, see §4). Execute **step 3** next: land the `waitForAnyAudioSlot`
-bounded-timeout guard (§3's landmine, `fixup_game_funcs.py:2054-2119`) — independent of gate state,
-a pure risk-reduction change ahead of step 4's gate-byte reversal. Validation soak needs the guard's
-own fire-counter to stay at 0 in a normal soak (same-run positive control that it isn't firing
-spuriously) while confirming the existing pre-scene death rate is otherwise unaffected.
-`ROGUESQ_AUDIO_UCODE=1` should stay armed in that soak (step 2's toggle, not yet made default) so the
-guard gets exercised under the same real-dispatch condition step 2 validated, not the degenerate stub
+Steps 1-3 are DONE (s300 for 1-2, see §4; the `waitForAnyAudioSlot` bounded-timeout guard for 3,
+landed and validated in the s297-322 arc). **Step 4 is now DONE (s340)**: of the 3 gate-byte sites,
+`initMusyXEngine`'s was found to be dead code (s306, never actually called — reversing it validates
+nothing) and the other 2 (`setDisplayMode`, `reapplyDisplayMode`) are now BOTH permanently reversed
+as the shipped default (`fixup_game_funcs.py`, N64Recomp repo, untracked) after 2 clean confirmatory
+soaks with both reversed simultaneously (s340bothgates/s340bothgates2, HOLD_S=600 each, zero crash
+markers, no VI=320 hang, the already-characterized benign VI=640 `pairs=0` plateau in both). See
+CURRENT-TRUTH item -196 / PORTING-STATE Session 340.
+
+Execute **step 5** next: soak through pre-title/title/menu phases and compare crash families #3
+(`waitForAnyAudioSlot` SIGSEGV, historical ~12-21%) and #4 (post-cutscene stall) rates against their
+documented historical baselines, now that gate promotion is real and permanent rather than a
+per-session toggle. This needs multiple soaks (rate comparison, not pass/fail) — budget accordingly,
+don't treat 1-2 clean runs as confirmation per the standing 0/2-is-a-weak-null lesson from the
+`MATEXPIRY_GUARD` thread. `ROGUESQ_AUDIO_UCODE=1` should stay armed in these soaks (step 2's toggle,
+not yet made default) so the comparison runs under the same real-dispatch condition step 2 validated,
+not the degenerate stub
 path.

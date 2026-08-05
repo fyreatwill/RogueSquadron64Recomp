@@ -11,17 +11,19 @@ Priority order for upcoming iterations, set after the 300-session review:
    ran 5 passes, most recently 668→459 lines (s330); full per-session detail in git log. 35 KB remains
    a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and the
    Regeneration section's Standing warnings stay intact deliberately; both are used every iteration.
-2. **M5 audio de-stubbing**: design doc + steps 1-3 DONE (s298/300/301). Step 4's `setDisplayMode`
-   VI=320 hang is CLOSED and fix-validated (item -182..-187). `reapplyDisplayMode`'s site (3rd/last
-   gate) hit a DIFFERENT VI=640 `pairs=0` graphics-task-stall READING (s329) -- 9 sessions of
-   reachability chasing (s330-339, item -188..-195) fully resolved it s339: `cinematicLoopBody`'s
-   per-frame self-loop runs the whole scene correctly (audio, buffer-arbiter, cutscene dispatch all
-   alive) but only calls the one function chain that emits `SET_COLOR_IMAGE` (`runVideoFrameTick`'s
-   chain) ONCE, in its pre-loop setup -- so `[vi-fs-decision]`'s `pairs` counter faithfully reads 0
-   for the rest of the scene. Not a hang, not audio-adjacent, very likely not a bug at all (a
-   locked-camera cutscene reusing one RDP-state prologue is ordinary). **Promoting BOTH gate
-   reversals (`setDisplayMode` and now plausibly `reapplyDisplayMode`) to the shipped default is the
-   next M5 decision point** -- no longer blocked by an unexplained stall.
+2. **M5 audio de-stubbing**: design doc + steps 1-4 DONE (s298/300/301, item -196). Step 4's
+   `setDisplayMode` VI=320 hang is CLOSED and fix-validated (item -182..-187). `reapplyDisplayMode`'s
+   site (3rd/last real gate; `initMusyXEngine`'s is dead code, s306) hit a DIFFERENT VI=640 `pairs=0`
+   graphics-task-stall READING (s329) -- 9 sessions of reachability chasing (s330-339, item -188..-195)
+   fully resolved it s339: `cinematicLoopBody`'s per-frame self-loop runs the whole scene correctly
+   (audio, buffer-arbiter, cutscene dispatch all alive) but only calls the one function chain that
+   emits `SET_COLOR_IMAGE` (`runVideoFrameTick`'s chain) ONCE, in its pre-loop setup -- so
+   `[vi-fs-decision]`'s `pairs` counter faithfully reads 0 for the rest of the scene. Not a hang, not
+   audio-adjacent, very likely not a bug at all (a locked-camera cutscene reusing one RDP-state
+   prologue is ordinary). **s340 made the promotion decision**: both `setDisplayMode` and
+   `reapplyDisplayMode` gate reversals are now the PERMANENT shipped default (2/2 clean soaks with
+   both reversed simultaneously, never tried together before this session). Step 4 is closed; step 5
+   (crash-family #3/#4 rate comparison against historical baselines) is next.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -153,7 +155,28 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -195 (s339); the next new item takes -196 and is inserted at the top.
+oldest). Current top is -196 (s340); the next new item takes -197 and is inserted at the top.
+
+-196. **(s340) M5 audio de-stubbing: promoted BOTH `setDisplayMode`'s and `reapplyDisplayMode`'s
+    gate-byte reversals to the PERMANENT shipped default, closing M5-AUDIO-PLAN step 4.** Discriminating
+    soak item -195 recommended: reverse both real gate sites (`initMusyXEngine`'s is dead code, s306 --
+    only 2 of the 3 nominal sites are reachable) SIMULTANEOUSLY, something no prior session in the whole
+    s297-339 arc had tried (every soak reversed at most 1 of 2, always re-reverting to the force-zero
+    baseline at session end because the promotion decision was explicitly left open). Ran 2 soaks
+    (`s340bothgates`, `s340bothgates2`, `HOLD_S=600` each, full diagnostic set armed including
+    `ROGUESQ_LOG_MAINGAMELOOP_REACH`/`_CUTSCENETIMER_REACH`/`_REAPPLYDISPLAYMODE_REACH`): both clean,
+    meeting M5-AUDIO-PLAN's "two clean soaks" bar (the same bar s328 used for `setDisplayMode` alone).
+    Both runs: VI transitions 0->320->640 within ~2.2s (no VI=320 hang -- the s327 `musyxSynthFrame`
+    pump fix holds under combined reversal), zero crash markers for the full 600s, then the
+    already-characterized benign VI=640 `pairs=0` plateau (item -195: `cinematicLoopBody` genuinely
+    alive -- `[static6-800a9abc-entry]`=1 both runs, DMA ring reaching n=4999/5008, audio synth counter
+    956-957). H1 (both gates safe together) CONFIRMED; H2 (a new interaction only visible combined)
+    REFUTED -- no failure signature distinct from either site's already-known behavior. Edited
+    `fixup_game_funcs.py`'s gate regex (N64Recomp repo, untracked) to PERMANENTLY match neither address
+    -- this is now the shipped default, not a per-session toggle; `docs/M5-AUDIO-PLAN.md`'s "Next work
+    unit" section updated to mark step 4 DONE and point at step 5 (crash-family #3/#4 rate comparison
+    vs. historical baselines, needs multiple soaks not a single pass/fail). No `lib/` touched. Full
+    detail: `PORTING-STATE` Session 340.
 
 -195. **(s339) M5 audio de-stubbing: source-proves `submitGfxFrame` structurally cannot produce a
     `FramebufferPair`, and that `cinematicLoopBody`'s self-loop calls the real `SET_COLOR_IMAGE`
