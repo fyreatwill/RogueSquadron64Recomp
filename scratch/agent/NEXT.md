@@ -1,72 +1,59 @@
 # NEXT work unit
 
-## s342 found `reapplyDisplayMode`'s gate reversal blocks title-screen reach entirely — read this first
+## s343 confirmed title-reach is restored, but found a NEW crash in `tickWrappingTimerAccumulatorList` one stage later — read this first
 
-s342 (`HYPOTHESIS-ID m5-audio-destub-reapplydisplaymode-title-block`, 1st iteration, CURRENT-TRUTH item
--198, full detail `PORTING-STATE` Session 342) found, by hand-reading the raw logs of the queued step-5
-soak batch plus s340's own raw logs, that **every soak with `reapplyDisplayMode`'s gate reversed — alone
-(s329) or combined with `setDisplayMode`'s (s340x2, s341x2) — has never reached the title screen: 0/5
-across 3 sessions spanning weeks.** `setDisplayMode` reversed ALONE reaches title fine (45.4s baseline,
-`scratch/s73_post_a_scene/step4gate2.log`). This means s340's "2/2 clean soaks" promotion-decision
-validation never actually exercised menu navigation, craft select, or mission launch — only ~600s of
-idling at the pre-title attribution/logo screen (0 `[keys]` lines in both its raw logs, confirmed s342).
-M5-AUDIO-PLAN step 5 (crash-family #3/#4 rate comparison) cannot be measured while this holds — both
-target families are defined relative to phases (pre-title death rate, post-cutscene stall) this build
-cannot reach.
+s343 (`HYPOTHESIS-ID m5-audio-destub-reapplydisplaymode-title-block`, CLOSED — confirmed, not
+refuted) reverted `reapplyDisplayMode`'s gate back to force-zero (kept `setDisplayMode`'s reversal)
+per s342's plan. **HA confirmed**: `phase width=1024 reached after 45.5s` (matches the 44.6-46.2s
+baseline), 4 `[keys]` presses fired — title/menu genuinely reached for the first time since s328.
+But the very next soak stage (12s "wait for SELECT YOUR CRAFT stable" window) died: signal 6
+(abort), 36 `[CRASH]` lines, `last-guest-pc=0x80054744` — a compiler `break 7` div-by-zero trap
+inside `tickWrappingTimerAccumulatorList` (a.k.a. `BREADCRUMB9`, PORTING-STATE s272-291), a
+DIFFERENT signature from that function's previously-catalogued `0x80000004` near-null-pointer crash.
+Full mechanism trace and root cause: `PORTING-STATE` Session 343, `docs/CURRENT-TRUTH.md` item -199.
 
-## The work unit: revert `reapplyDisplayMode`'s gate to force-zero, rebuild, re-validate title-reach
+**The open question**: this soak's gate config is byte-identical to s328's `step4gate2` baseline
+(0/2 crashes across 2 soaks) — confirmed via direct `funcs_23.c` comparison. Single-source (1
+observation this session). Two queued confirmation soaks
+(`scratch/agent/soak_queue/s343_tickwrap_divzero_confirm{1,2}.sh`) should have run by now — **read
+`scratch/agent/SOAK-RESULTS.md`'s tail for their verdicts before doing anything else.**
 
-**Competing hypotheses**:
-- HA: `reapplyDisplayMode`'s reversal is the sole cause — reverting ONLY its gate (keeping
-  `setDisplayMode`'s reversal) restores title-reach to the ~45s baseline, matching `setDisplayMode`-alone
-  behavior (`step4gate2`). This is the expected outcome given the clean 3-way isolation s342 already
-  did (baseline OK, setDisplayMode-alone OK, reapplyDisplayMode-involved 0/5 OK).
-- HB: reverting doesn't fully restore title-reach — some OTHER change since s328 (not the gate itself)
-  is responsible, or there's a second, independent regression. Would falsify HA and reopen the search.
-- HC: title-reach is restored, but a NEW failure appears further into the menu/mission-launch sequence
-  once title is reachable again — the "H3: visual/behavioral regression not caught by a crash-free soak"
-  possibility s340 flagged as unaddressed (`docs/M5-AUDIO-PLAN.md`), now actually testable for the
-  first time since title was never reached before.
+## The work unit: fold in the confirmation verdicts, then branch
 
-**Discriminating measurement**: does `phase width=1024 reached after ~N s` appear in the soak's own
-launcher-log output (or equivalently, does `grep -c '\[keys\]' run.log` go from 0 to nonzero) within a
-timeframe comparable to the 44.6-46.2s historical baseline? That single fact splits HA from HB. Getting
-that far also gives HC a first chance to surface (any new crash/stall AFTER title, during menu nav or
-mission launch, that wasn't previously observable because title was unreachable).
+**Step 1** (always do this first): `tail -10 scratch/agent/SOAK-RESULTS.md`, then read the full logs
+at `scratch/agent/soak_results/s343confirm{1,2}_*.log` (`grep -a 'VERDICT\|crash_markers\|last_guest_pc'`
+on each). Fold the verdicts into `docs/CURRENT-TRUTH.md` item -199 and this file's hypothesis
+regardless of outcome.
 
-**Steps**:
-1. Edit `~/Documents/Tools/N64Recomp/fixup_game_funcs.py`'s audio-gate regex (currently
-   `r"0x8008E(?:NONE)"`, matching neither address — see the comment block above it, ~line 262) to match
-   `0x8008EC88` only (`reapplyDisplayMode`'s address), so it gets force-zeroed again while
-   `0x8008EB40` (`setDisplayMode`) stays unpatched/reversed. Follow the exact pattern s303/s307/s329
-   used for single-site narrowing (grep those session comments in the same file for the regex form).
-2. Regen: delete `RecompiledFuncs/*.c` first, then `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py`
-   -> `cmake --build` (full paths/commands in the Environment notes below). Confirm via the fixup
-   report (`audio gate patched x1`, not x2) and by grepping the regenerated `funcs_23.c` directly for
-   both addresses — `0x8008EC88` should show the force-zero patch, `0x8008EB40` should show the raw
-   `= ctx->r2;` write.
-3. Run ONE soak: `env HOLD_S=240 zsh scratch/s73_post_a_scene/run_s327waitpump.sh s342revert` (inline,
-   not queued — this is a genuine new experiment needing a fresh look, not a repeat recipe). Read the
-   launcher's own stdout for `phase width=1024 reached after Ns` (success) vs. `phase timeout
-   (INCONCLUSIVE)` (HB, falsified). Cross-check `grep -c '\[keys\]' scratch/s73_post_a_scene/s342revert/run.log`
-   — should be nonzero (4 schedule presses minimum) if title was reached.
-4. If HA confirms (title reached, comparable timing): this closes the immediate blocker. Update
-   CURRENT-TRUTH: `setDisplayMode`'s reversal remains the validated permanent default;
-   `reapplyDisplayMode`'s reversal is NOT promoted (back to force-zero, this time genuinely tested
-   against the "does the game still work" bar, not just "does it crash while idling pre-title"). Then
-   step 5 (family #3/#4 rate comparison) can resume — but write FRESH soak recipes rather than reusing
-   `soak_queue/cancelled/m5step5_rate_*.sh` (their `STICK_SCHEDULE`/`HOLD_S` values were sized for a
-   phase this config can now actually reach, but the recipes' own post-processing logic needs the
-   inner phase-gate timeout to leave real margin under the loop's 600s hard cap — the cancelled recipes
-   never got there because title was unreachable, not because the margin math was checked).
-5. If HB or HC: follow wherever the evidence leads; do not assume `reapplyDisplayMode` was the only
-   variable without checking the diff between `step4gate2`'s era (s328) and now (build/harness drift is
-   the boring-first check per Iron Rule 5).
+**Branch A — both confirmations CRASH_DETECTED (2/2, now 3/3 combined with s343revert)**: this is a
+real, reliably-reproducing regression, not the s328-baseline nondeterminism explanation. Land a guard
+mirroring the established idiom (`fixup_game_funcs.py:939-949`, `musyxKeyOnVoice`'s break-6/7 → early
+`return`; `evalCubicSplineAtTime`'s zero-width-interval → `f4.fl=0`): match
+`do_break\(2147829572\);` in `tickWrappingTimerAccumulatorList`'s body and replace with a bail that
+sets `hi = 0` (the `divu` remainder, consumed at `L_80054748: mfhi $v1`) then falls through to
+`L_80054748`, instead of aborting — read `funcs_11.c:15310-15360` again first to confirm `hi`'s
+downstream use before picking a substitute value; don't guess blind on a single crash observation
+without also checking what `hi=0` does to the caller (this may need per-call-site testing, since the
+comment at `main_overlay.txt:2031` says 3 callers in `funcs_11/32/33`). Regen, rebuild, one soak
+past the SELECT YOUR CRAFT stabilization window to confirm the crash is gone and craft-select/mission
+launch now progress further than ever reached in this arc.
 
-HYPOTHESIS-ID: m5-audio-destub-reapplydisplaymode-title-block (1st iteration; new thread, pivoted from
-the now-superseded m5-audio-destub-step5-crashrate-comparison).
+**Branch B — both confirmations CLEAN (0/2)**: this crash is a rare flake (1/3 hit rate), similar to
+`BREADCRUMB9`'s own historically low hit rate on its other signature — not worth a blind guard. Return
+to M5-AUDIO-PLAN step 5 (crash-family #3/#4 rate comparison, `docs/M5-AUDIO-PLAN.md` §3) now that
+title-reach is genuinely restored. Write FRESH soak recipes (do not resurrect
+`soak_queue/cancelled/m5step5_rate_3..6.sh` — their `STICK_SCHEDULE`/`HOLD_S` values need re-checking
+now that the phase they target is actually reachable) sized so the inner phase-gate timeout leaves
+real margin under the loop's 600s hard cap.
 
-## Environment notes (carried forward — see s327-342 for full detail)
+**Branch C — mixed (1/2)**: treat as still-open: queue one more confirmation before deciding between
+A and B (odd tie-breaks in a 2-observation sample aren't enough per Iron Rule 4 — need a 3rd before
+concluding either way).
+
+HYPOTHESIS-ID: m5-audio-destub-tickwrap-divzero-craftselect (1st iteration; new thread, pivoted from
+the now-CLOSED m5-audio-destub-reapplydisplaymode-title-block).
+
+## Environment notes (carried forward — see s327-343 for full detail)
 
 - Regen paths: `/Users/williambuckley/Documents/Tools/N64Recomp` (`fixup_game_funcs.py`, untracked).
   Delete `RecompiledFuncs/*.c` before every `N64Recomp` run:
@@ -77,22 +64,19 @@ the now-superseded m5-audio-destub-step5-crashrate-comparison).
   `python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py` ->
   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
   /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build -j8`.
+- Current gate state (as of s343, unchanged unless Branch A is taken): fixup regex at
+  `fixup_game_funcs.py` ~line 263 is `r"0x8008E(?:C88)"` — matches ONLY `reapplyDisplayMode`
+  (`0x8008EC88`, force-zeroed); `setDisplayMode` (`0x8008EB40`) stays unmatched/reversed. Verify via
+  `funcs_23.c: audio gate patched x1` in the fixup report and a direct grep of the regenerated
+  `funcs_23.c` for both addresses.
 - Soak driver: `scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, invoked with
   `env HOLD_S=<n> <VARS> zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>` (the `env` prefix
-  is required — see project rule 10 / CLAUDE.md). It wraps `run_mission_keys.sh`, whose own
-  wait-for-`VI=1024` phase gate (lines 69-77) has a HARDCODED 600s internal timeout independent of
-  `HOLD_S` — if reused for a queued soak_queue recipe, remember the loop's own 600s hard cap will race
-  it and usually win (see `soak_queue/cancelled/README.md`), so an inline one-off run (this work unit)
-  or a generous manual timeout is safer than queuing until title-reach is re-confirmed.
-  Log lands at `scratch/s73_post_a_scene/<label>/run.log` — grep it, don't read it directly
-  (multi-MB/million-line files). `proc_start_epoch.txt` in the same dir gives the real UNIX start
-  time for cross-referencing against the log's own mtime to get wall-clock duration.
+  is required — see project rule 10 / CLAUDE.md). Log lands at
+  `scratch/s73_post_a_scene/<label>/run.log` — grep it, don't read it directly (multi-MB files).
+  `run_mission_keys.sh`'s wait-for-`VI=1024` phase gate has a HARDCODED 600s internal timeout
+  independent of `HOLD_S`, separate from the loop's own 600s hard cap on queued recipes — size queued
+  `HOLD_S` values with real margin under both.
 - `[vi-fs-decision]` is an always-on native instrument (`lib/rt64/src/hle/rt64_state.cpp`), not
   env-gated — free in every soak, no arming needed.
-- Scratch files outside the three allowed working directories (e.g. `/tmp/...`) are blocked by the
-  sandbox — write throwaway analysis/poll scripts under `scratch/` in this repo instead.
 - `bash -n <script>` was denied by this session's permission gate even as a pure syntax check — if
   linting a soak-queue recipe, visual review is the workaround.
-- Some `bash` heredoc/multi-command blocks trip a sandbox "Contains simple_expansion" or "Contains
-  command_substitution" false-positive on nested `$()`/`${}` even in read-only commands — split into
-  separate single-purpose `Bash` calls rather than one large script block if this happens (s342).

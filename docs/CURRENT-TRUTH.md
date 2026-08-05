@@ -12,17 +12,19 @@ Priority order for upcoming iterations, set after the 300-session review:
    a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and the
    Regeneration section's Standing warnings stay intact deliberately; both are used every iteration.
 2. **M5 audio de-stubbing**: design doc + steps 1-3 DONE (s298/300/301, item -196 corrected below).
-   Step 4's `setDisplayMode` VI=320 hang is CLOSED and fix-validated (item -182..-187), and reaches
-   title/menu/mission-launch normally (45.4s baseline, `step4gate2` log). `reapplyDisplayMode`'s site
-   (3rd/last real gate; `initMusyXEngine`'s is dead code, s306) **deterministically prevents the game
-   from ever reaching the title screen — 0/5 soaks across s329/s340/s341** (item -198, s342): the
-   VI=640 `pairs=0` plateau (s330-339's "benign locked-camera cutscene" characterization, item -195)
-   actually onsets immediately post-logo, pre-title, not after menu navigation into a mission cutscene
-   as that framing implied — s340's own "2/2 clean soaks" promotion validation never left the pre-title
-   boot screen either (0 keys pressed in either soak, confirmed s342 from the raw logs). **Step 4 is
-   NOT actually closed for `reapplyDisplayMode`; step 5 cannot be measured while its gate stays
-   reversed.** Next work unit (s342, `scratch/agent/NEXT.md`): revert `reapplyDisplayMode`'s gate back
-   to force-zero (keep `setDisplayMode`'s reversal), re-validate title-reach is restored.
+   Step 4's `setDisplayMode` VI=320 hang is CLOSED and fix-validated (item -182..-187). `reapplyDisplayMode`'s
+   site (3rd/last real gate; `initMusyXEngine`'s is dead code, s306) previously **deterministically
+   prevented the game from ever reaching the title screen — 0/5 soaks across s329/s340/s341** (item -198,
+   s342). **s343 reverted `reapplyDisplayMode`'s gate back to force-zero (kept `setDisplayMode`'s
+   reversal) and title-reach IS restored** (45.5s, matches the 44.6-46.2s baseline) — but the very next
+   soak stage (12s "wait for SELECT YOUR CRAFT stable") hit a NEW crash: a compiler `break 7` div-by-zero
+   trap inside `tickWrappingTimerAccumulatorList` (a.k.a. `BREADCRUMB9`, a DIFFERENT signature from its
+   previously-catalogued `0x80000004` near-null-pointer crash), 1/1 this session, in a build byte-
+   identical to s328's 0/2-crash `step4gate2` baseline (item -199, s343). Single-source; 2 confirmation
+   soaks queued (`scratch/agent/soak_queue/s343_tickwrap_divzero_confirm{1,2}.sh`). Next work unit
+   (s343, `scratch/agent/NEXT.md`): fold those verdicts in, then either land a `do_break(2147829572)`
+   guard (same idiom as `musyxKeyOnVoice`'s break-6/7 guards) if it reproduces, or resume step 5's
+   crash-family rate comparison if it doesn't.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -154,7 +156,37 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -198 (s342); the next new item takes -199 and is inserted at the top.
+oldest). Current top is -199 (s343); the next new item takes -200 and is inserted at the top.
+
+-199. **(s343) M5 audio de-stubbing: reverted `reapplyDisplayMode`'s gate to force-zero, title-reach
+    restored (HA confirmed) — but a NEW crash surfaced one stage later, in the SELECT YOUR CRAFT
+    stabilization window, never reachable before.** Regen'd with the fixup regex narrowed to
+    `0x8008EC88`-only (force-zeroing `reapplyDisplayMode`; `0x8008EB40`/`setDisplayMode` stays
+    unmatched/reversed) — confirmed via `funcs_23.c` grep, both addresses show the expected patch
+    state. One inline soak (`s343revert`, `HOLD_S=240`): `phase width=1024 reached after 45.5s`
+    (matches the 44.6-46.2s historical baseline), 4 `[keys]` schedule presses fired (title/menu
+    genuinely reached, unlike every s329/s340/s341 soak). Then, during the 12s post-title
+    "wait for SELECT YOUR CRAFT stable" window, the process died: signal 6 (abort), 36 `[CRASH]`
+    lines, `last-guest-pc=0x80054744` — inside `tickWrappingTimerAccumulatorList`
+    (`funcs_11.c:15057`), a.k.a. `BREADCRUMB9` (PORTING-STATE s272-291, `coalesceFreeHeapBlocks`-
+    adjacent crash-family work). The PC is a compiler-inserted MIPS `break 7` div-by-zero trap
+    (`divu $zero, $v1, $v0` at `0x80054738`/`0x8005473C`, then `break 7` at `0x80054744` when
+    `$v0==0`; `do_break(2147829572)` — the argument is just the PC itself, not a semantic code) —
+    **a DIFFERENT signature from `BREADCRUMB9`'s previously-catalogued `0x80000004` near-null-
+    pointer crash** (PORTING-STATE ~26156); si_addr for this crash is `__pthread_kill`'s own address
+    (abort, not SIGSEGV), confirming it's the div-trap path, not the null-pointer one. Some entry in
+    the wrapping-timer list at `MEM[0x80137C84]` has a zero threshold halfword (`lh $v0, 0x0($s0)` at
+    `0x80054734`). **This is byte-identical gate config to s328's `step4gate2` baseline (0/2 crashes
+    across 2 soaks)** — confirmed via direct `funcs_23.c` diff this session — so either (a) this is a
+    nondeterministic timing race in menu-overlay setup order that s328's 2 soaks didn't hit, or (b) ~15
+    intervening sessions' unrelated code changes since s328 introduced or exposed it. Single-source (1
+    crash observation); 2 confirmation soaks of the identical current build queued
+    (`scratch/agent/soak_queue/s343_tickwrap_divzero_confirm{1,2}.sh`) rather than spending this
+    session babysitting repeats. `HYPOTHESIS-ID m5-audio-destub-reapplydisplaymode-title-block`
+    CLOSED (HA confirmed — title-reach fully restored by the single-site revert); new thread
+    `m5-audio-destub-tickwrap-divzero-craftselect`. `lib/` not touched (fixup edit is in the
+    standalone untracked `N64Recomp` checkout, `export.sh` not needed). Full detail:
+    `PORTING-STATE` Session 343.
 
 -198. **(s342) M5 audio de-stubbing: `reapplyDisplayMode`'s gate reversal deterministically blocks
     the game from EVER reaching the title screen (0/5 relevant soaks) — supersedes item -197's step-5

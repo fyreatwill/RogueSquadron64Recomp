@@ -29845,3 +29845,88 @@ is ultimately benign.
 No `lib/` touched. `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison` CLOSED (superseded — the
 recipe it was measuring against cannot produce the intended comparison); new thread opened:
 `m5-audio-destub-reapplydisplaymode-title-block`.
+
+## Session 343 (2026-08-05) — M5 audio: reverted `reapplyDisplayMode`'s gate to force-zero per s342's plan, title-reach IS restored (HA confirmed) — but a NEW crash surfaces one stage later, in the SELECT YOUR CRAFT stabilization window never previously reachable
+
+Read `docs/CURRENT-TRUTH.md` (item -198) and `scratch/agent/NEXT.md` (s342's plan) first, per session
+rules. `docs/CURRENT-TRUTH.md` was 49941 bytes, under the 60000 maintenance trigger — normal work-unit
+iteration. `scratch/agent/SOAK-RESULTS.md` tail showed `m5step5_rate_1/2` both `rc=137` (600s hard-cap
+kills, consistent with s342's finding that title is unreachable under the pre-revert gate state — no
+new information, both recipes' remaining siblings already cancelled by s342).
+
+**What ran**: NEXT.md's exact plan. Edited `~/Documents/Tools/N64Recomp/fixup_game_funcs.py`'s audio-gate
+regex from `r"0x8008E(?:NONE)"` (matches neither address — s340's "both force-zero" shipped default) to
+`r"0x8008E(?:C88)"` (matches `reapplyDisplayMode`'s site only, force-zeroing it again; `setDisplayMode`'s
+`0x8008EB40` site stays unmatched, i.e. reversed). Full regen: deleted `RecompiledFuncs/*.c` (45 files),
+`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` (report: `funcs_23.c: audio gate patched x1`,
+confirming single-site match as intended) → `cmake --build -j8` (clean build, only the pre-existing
+`DDIV`/`-Wpointer-sign` warnings in `funcs_8.c`, no new warnings). Direct `funcs_23.c` grep confirmed the
+patch state: `0x8008EC88` shows `MEM_B(0XF50, ctx->r1) = 0; // PATCH: force audio-engine-disabled`;
+`0x8008EB40` shows the raw `MEM_B(0XF50, ctx->r1) = ctx->r2;` (reversed, unpatched).
+
+Ran ONE inline soak (`env HOLD_S=240 zsh scratch/s73_post_a_scene/run_s327waitpump.sh s343revert`, not
+queued — per NEXT.md's own instruction, this needed a fresh look, not a repeat recipe):
+
+- `phase width=1024 reached after 45.5s` — matches the 44.6-46.2s historical baseline (`step4gate2`,
+  s328) almost exactly. **HA confirmed**: reverting `reapplyDisplayMode`'s site alone (keeping
+  `setDisplayMode`'s reversal) restores title-reach.
+- 4 `[keys]` schedule presses fired (`start` at 3s/25s/40s, `a` at 60s) — genuine menu navigation
+  happened, something ZERO of the 5 soaks in item -198 (s329/s340×2/s341×2) ever achieved.
+- Then, during the scripted 12s "wait for SELECT YOUR CRAFT stable" window (post-title, post-craft-
+  select-navigation), the game process died. `grep -ac '\[CRASH\]'` on the run log: **36** (baseline
+  `step4gate2.log`: **0**). The crash record: `signal 6 (Abort trap: 6)`, `si_addr=0x18c6a85e8`
+  (`__pthread_kill+8` — i.e. an `abort()` call, NOT a SIGSEGV/near-null-pointer fault),
+  `last-guest-pc=0x80054744`.
+
+**Root cause, traced to source**: `0x80054744` sits inside `tickWrappingTimerAccumulatorList`
+(`N64Recomp/RecompiledFuncs/funcs_11.c:15057`, function starts at `0x80054650`) — **this is
+`BREADCRUMB9`** (landed s276, per `main_overlay.txt:2031` and grep of PORTING-STATE history
+s270-s291: "3 callers in funcs_11/32/33... per-entry timer accumulator update with wrap-around").
+Reading the exact instruction sequence around the crash PC (`funcs_11.c:15316-15347`): `divu $zero,
+$v1, $v0` at `0x80054738` (dividing by `$v0`, loaded via `lh $v0, 0x0($s0)` at `0x80054734` — a
+halfword "threshold" field read from the current list entry), then `bne $v0, $zero, L_80054748`
+(skip the trap if the divisor is nonzero) — since `$v0==0` here, execution falls through to the
+compiler-inserted `break 7` at `0x80054744`, which the runtime's `do_break()` turns into `abort()`.
+`do_break`'s argument, `2147829572`, is not a semantic error code — it's the guest PC itself
+(`0x80000000 + 0x54744 = 2147829572`, confirmed by direct arithmetic) — a MIPS N64 compiler idiom
+this codebase already recognizes and guards elsewhere for `musyxKeyOnVoice` (8 sites,
+`fixup_game_funcs.py:939-949`, `do_break` constants `2148076780..2148077008` → early `return`) and
+`evalCubicSplineAtTime` (1 site, zero-width-interval guard → `f4.fl=0` instead of trapping).
+
+**This is a genuinely NEW crash signature for `tickWrappingTimerAccumulatorList`, distinct from its
+already-catalogued one.** PORTING-STATE ~26156 (s289/s290 era) documents `BREADCRUMB9`'s known crash
+as `si_addr≈0x80000004` — a near-null-pointer dereference (part of the `-0x25A4`/`G1`-`G32` family of
+"a register holding exactly 0 fed into a small-offset `MEM_B`/`MEM_BU` access" bugs). Today's crash has
+`si_addr=__pthread_kill`'s address (an `abort()` call site, confirmed via the backtrace: frames 4-5 are
+`abort`/`err` from `libsystem_c.dylib`) — a completely different failure mode (compiler div-by-zero trap,
+not a memory fault) in the same function. The two are not the same bug re-surfacing; this is a second,
+independent defect in `tickWrappingTimerAccumulatorList`'s entry-processing loop.
+
+**Open question — reproducibility**: this soak's gate configuration is **byte-identical** to s328's
+`step4gate2` baseline (`setDisplayMode` reversed alone, `reapplyDisplayMode` force-zero) — confirmed via
+direct `funcs_23.c` comparison, both addresses match exactly what this session's regen produced.
+`step4gate2.log` (s328) shows **0** `[CRASH]` lines across its full run (title reach, craft-select
+navigation, and the same 12s stabilization window this session's crash hit). Two explanations, not yet
+distinguished: (a) this is a nondeterministic timing race in menu-overlay/craft-select setup order
+(plausible — `tickWrappingTimerAccumulatorList`'s callers are gated behind multiple `if` branches per
+s279's source-read of `menuOverlayInit`, so which entries are populated by the time this function runs
+could vary run to run); or (b) one of the ~15 intervening sessions' unrelated code changes since s328
+(other M3 idiom-class guards, other fixup-script edits) introduced or newly exposed this. This is
+single-source (1 crash observation) — Iron Rule 4 requires a second independent line of evidence before
+this enters "current truth" as a confirmed regression.
+
+**What this does NOT mean**: it does NOT reopen the reapplyDisplayMode question — HA is cleanly
+confirmed, title-reach is restored, and the crash occurs in a completely different function
+(`tickWrappingTimerAccumulatorList`, part of the menu-overlay code path) with no connection traced to
+either gate site. `HYPOTHESIS-ID m5-audio-destub-reapplydisplaymode-title-block` CLOSED (confirmed, not
+refuted). New thread: `m5-audio-destub-tickwrap-divzero-craftselect`.
+
+**Queued for the loop** (not spent this session babysitting repeats):
+`scratch/agent/soak_queue/s343_tickwrap_divzero_confirm{1,2}.sh` — 2 more soaks of the identical,
+already-built current binary (no code change), same driver/HOLD_S=240, to establish whether this
+crash is a reliable hit under this exact config or a rare flake (matching BREADCRUMB9's own historically
+low hit rate on its OTHER signature).
+
+No `lib/` touched (fixup edit lives in the standalone untracked `N64Recomp` checkout, `export.sh` not
+needed). `HYPOTHESIS-ID m5-audio-destub-reapplydisplaymode-title-block` CLOSED (confirmed via this
+session's soak); new thread `m5-audio-destub-tickwrap-divzero-craftselect`, 1st iteration.
