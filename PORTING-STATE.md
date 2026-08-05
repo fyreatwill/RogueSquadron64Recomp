@@ -28775,3 +28775,98 @@ inventory is now safe to de-stub given the spin-pump mechanism is understood; (3
 M5 step 4 (`setDisplayMode`'s gate) is functionally done — pivot to the plan's next stub in sequence.
 `processSceneNode+1424` and the near-`0x80000000` family both remain legitimate M3 systematic-audit
 candidates (per standing M5-above-M3 priority, only after M5's open decision above is resolved).
+
+## Session 329 (2026-08-04) — M5 audio: `reapplyDisplayMode`'s gate reversal is NOT safe the same way `setDisplayMode`'s was — it produces a genuinely NEW failure mode, an immediate permanent graphics-task-submission stall at VI=640, with audio staying fully alive throughout
+
+Continued M5 step 4 per `docs/M5-AUDIO-PLAN.md`'s own designed sequence: with `setDisplayMode`'s
+site (s327/s328, item -186/-185) closed and reverted to baseline, this session tested the 3rd and
+last gate site, `reapplyDisplayMode` (`0x8008EC88`), per NEXT.md's exact plan.
+
+**Setup**: mirror-image edit of the s303-328 pattern. In `N64Recomp/fixup_game_funcs.py` the audio-gate
+store regex was narrowed from the baseline `0x8008E(?:B40|C88)` alternation to `0x8008EB40`-only —
+this leaves `setDisplayMode`'s site force-zeroed (unchanged from baseline) while `reapplyDisplayMode`'s
+site is left UNPATCHED (its real write, `= ctx->r2`, executes). Full regen (`RecompiledFuncs/*.c`
+deleted first, `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`); confirmed `audio gate patched
+x1`, then verified by grepping the regenerated `funcs_23.c` directly: line 9787 (`0x8008EB40`) shows
+`= 0; // PATCH:...` (force-zeroed, correct), line 10006 (`0x8008EC88`) shows the plain `= ctx->r2;`
+(unpatched/reversed, correct) — confirmed the right site was under test, not the count alone.
+
+**Soak**: ran `scratch/s73_post_a_scene/run_s327waitpump.sh s329reapply` once (same recipe s327/s328
+used, `HOLD_S=240`, full breadcrumb/instrument set armed), launched backgrounded, monitored via
+`TaskOutput` up to 600000ms. Result: `phase timeout (INCONCLUSIVE)` — the driver's own 600s wait for
+VI=1024 (title) expired without ever seeing it. `pgrep -f "build/RogueSquadron64Recomp"` was empty
+both before and after (process no longer running by the time the driver's own timeout/cleanup fired).
+
+**Analysis of `run.log`** (1,282,036 lines): only 3 `[phase]` VI-transition lines exist in the ENTIRE
+log — `vi_width=0` at 0.6s, `vi_width=320` at 0.7s (both matching the untouched baseline boot timing),
+and `vi_width=640` at 2.3s (the attribution/logo phase, also baseline timing) — and then **nothing**.
+No 4th transition, no VI=1024. `[vi-fs-decision]` first shows `stalled=1 pairs=0` at line 5654 (update
+counter `#101`, i.e. immediately after the VI=640 transition) and every single sampled line for the
+rest of the log — thousands of them, tracked update-screen counters climbing past `#35968`/`#36000`
+by the log's end — repeats the identical `stalled=1 pairs=0 ... rdpFs=470 ... synth=954` shape: the
+graphics-task producer stopped submitting new render-task pairs permanently, right after the VI=640
+transition, and never recovered for the full ~600s run.
+
+**Critically, this is not the classic audio-caused freeze.** `grep -c "\[CRASH\] caught"` = 0 (no
+crash). Both `[synth-entry]` (first at line 754, last at line 1265472 — 81 total) and `[audtask-dispatch]`
+(first at line 931, last at line 1240996 — 60 total, `real_ucode=1` on every one) fire from near the
+very start of the log to within ~1% of its very last line — the audio subsystem, MusyX ucode
+dispatch, and the VI-retrace-driven `musyxSynthFrame` call chain all keep running live for the entire
+duration. `[dma-ring-caller]`'s resolved native backtraces (the s101 instrument) repeatedly show
+`musyxSynthFrame → viRetraceHandlerThread` still actively issuing real DMA-ring calls right up to the
+log's tail. `[audio-wait-pump]` (the s327 spin-pump diagnostic) fired only once total — a single
+harmless bounded-fallthrough, not a repeating stall signature. This rules out a reprise of
+`setDisplayMode`'s VI=320 spin-wait deadlock mechanism (`waitForMusyXAudioTaskDone`/
+`shutdownAudioEngine` blocking on an undecrementable countdown) — that mechanism, if triggered, would
+have frozen the WHOLE process including the audio thread itself; here the audio thread demonstrably
+keeps making forward progress the entire time while only the graphics-task submission path is stuck.
+
+**Discriminates the 3 hypotheses in NEXT.md**: this refutes H1 ("`reapplyDisplayMode`'s gate reversal
+is safe the same way `setDisplayMode`'s was — same mechanism, should clear cleanly") outright — the
+symptom is neither the same (VI=320 vs VI=640) nor absent (a real permanent stall, not a clean pass).
+It's consistent with H2 (`reapplyDisplayMode` is different — s304's finding that it's a hot per-frame
+path, unlike `setDisplayMode`'s one-shot boot call, means reversing it plausibly stresses a different
+part of the system, here the graphics-task pipeline rather than the audio spin-wait) — though the
+*specific* mechanism connecting a hot-path audio-gate reversal to an early graphics-task stall is not
+yet traced; this session establishes the *symptom*, not yet the *cause*. H3 (both gates need
+reversing together) is neither confirmed nor refuted by this single-gate test — untested this
+session.
+
+**Note on prior art**: `docs/CURRENT-TRUTH.md`'s "Current truth" timeline documents an unrelated,
+already-known "graphics-task-submission stall" pattern (`[vi-fs-decision] stalled=1 pairs=0`, RDP `fs`
+frozen) that occurs much later in the game (~90-115s after leaving the SELECT YOUR CRAFT menu,
+s176-183, unresolved). The `[vi-fs-decision]` diagnostic signature here is textually identical, but
+the onset timing is categorically different — at 2.3s, before ever reaching the title screen, versus
+deep into post-menu navigation. Whether these are the same underlying mechanism (a graphics-task
+producer that stops being invoked, for whatever root cause, whenever certain preconditions hold) or
+two distinct bugs sharing a diagnostic shape is an open question for a future session — flagging, not
+concluding, since only one soak's worth of evidence exists for the s329 timing and no comparison
+instrumentation was run this session to test that specific question.
+
+**Housekeeping**: reverted `reapplyDisplayMode`'s site back to force-zero (regex renarrowed to the
+full `(?:B40|C88)` alternation) before ending, matching every prior session's convention on this
+gate. Confirmed `audio gate patched x2`, rebuilt clean. Only code edit was to
+`N64Recomp/fixup_game_funcs.py` (untracked standalone checkout in the sibling `N64Recomp` repo, no
+commit needed there). No `lib/N64ModernRuntime`/`lib/rt64` edits, no `export.sh` needed.
+
+**HYPOTHESIS-ID**: `m5-audio-destub-step4-reapplydisplaymode-reversal` — 1st of 3 budgeted iterations,
+genuinely new information from a single informative soak (matching the s326/s327 precedent that a
+single soak can close/inform a hypothesis when its result is unambiguous — this one was: 0 crashes, 0
+title, a clean and total stall from 2.3s to the 600s timeout). NOT closed — the *symptom* is now
+characterized but the *root cause* (why reversing a hot-per-frame audio gate stalls the graphics-task
+producer specifically at the VI=640→1024 transition, with audio itself unaffected) is not yet traced.
+
+**Next steps**: root-cause the VI=640 graphics-stall mechanism — likely candidates: (a) source-read
+`reapplyDisplayMode`'s full body (structurally identical to `setDisplayMode` per s326, but called
+every frame instead of once) to see what it does differently on 2nd+ calls once un-gated; (b) check
+whether the graphics-task producer and `reapplyDisplayMode` share a resource (mutex, `dmem[]`
+serialization per the CLAUDE.md-documented shared-state boundary) that a per-frame real-write path
+could contend differently than a one-shot boot call would; (c) a targeted instrument on the
+graphics-task producer's own entry/skip decision (why does it start skipping at exactly the VI=640
+transition) rather than more soaks of the same recipe, since the symptom is already fully
+characterized and reproducible in 1/1. All 3 gate sites have now been individually reversal-tested at
+least once (`initMusyXEngine`: s302, dead code per s306; `setDisplayMode`: s303-328, hang closed and
+fixed; `reapplyDisplayMode`: this session, new distinct hang found) — M5 step 4's "test each site"
+phase is complete; what remains is root-causing and fixing this 3rd site's distinct failure before any
+promotion decision can even be considered for it (unlike `setDisplayMode`, which has a validated fix
+in the tree).

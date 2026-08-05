@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    target, not a hard floor — the "Current truth" env-var/timeline prose and the Regeneration section's
    Standing warnings stay intact deliberately; both are used every iteration for phase-gating and build
    commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 17 times so far (s303-328). **The 14-call-gap AND the 37-vs-40 gap are CLOSED** (`m5-audio-destub-step4-tick37-vs-hardstop40`, s303-325 — sampling-cap illusion in gate1's diagnostic print cap, item -183). **The VI=320 hang is CLOSED AND FIX VALIDATED 3/3 SOAKS (s327+s328)**: `waitForMusyXAudioTaskDone`/`shutdownAudioEngine`'s spin loops now call `musyxSynthFrame` directly instead of blocking on a countdown only that call can decrement — all 3 soaks with the gate reversed cleared VI=320 and progressed through the full menu chain into SELECT YOUR CRAFT; one soak (s328b) completed the entire 240s hold with ZERO crashes. The other 2 died to already-catalogued, unrelated background crash classes (`processSceneNode+1424` in s327, the near-`0x80000000` family in `buildPositionAndCallTransformHelper` in s328a — item -186), neither correlating with an audio diagnostic at the crash site. This meets the M5 plan's own "two clean soaks" validation bar. Baseline reverted to force-zero (both sites) at session end — **promoting the reversal to the shipped default is an open, explicitly-flagged decision, not yet made** (see item -186 for the tradeoffs). `HYPOTHESIS-ID: m5-audio-destub-step5-confirm-waitpump-fix` — CLOSED this session. Next work unit: get an explicit decision on the promotion question, then either continue the M5 stub inventory (if promoted) or move to the next stub in `docs/M5-AUDIO-PLAN.md`'s sequence (if not).
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 17 times so far (s303-328). **The 14-call-gap AND the 37-vs-40 gap are CLOSED** (`m5-audio-destub-step4-tick37-vs-hardstop40`, s303-325 — sampling-cap illusion in gate1's diagnostic print cap, item -183). **The VI=320 hang on `setDisplayMode`'s site is CLOSED AND FIX VALIDATED 3/3 SOAKS (s327+s328)**: `waitForMusyXAudioTaskDone`/`shutdownAudioEngine`'s spin loops now call `musyxSynthFrame` directly instead of blocking on a countdown only that call can decrement — all 3 soaks with the gate reversed cleared VI=320 and progressed through the full menu chain into SELECT YOUR CRAFT; one soak (s328b) completed the entire 240s hold with ZERO crashes. The other 2 died to already-catalogued, unrelated background crash classes (`processSceneNode+1424` in s327, the near-`0x80000000` family in `buildPositionAndCallTransformHelper` in s328a — item -186), neither correlating with an audio diagnostic at the crash site. This meets the M5 plan's own "two clean soaks" validation bar. **`reapplyDisplayMode`'s site (the 3rd/last gate) has a DIFFERENT, NOT-YET-ROOT-CAUSED failure (s329, item -187)**: 1/1 soak found a permanent graphics-task-submission stall at VI=640 (never reaches title) for the full 600s, while audio itself stays fully alive throughout — not a reprise of `setDisplayMode`'s spin-wait mechanism, root cause open. Baseline (both sites force-zeroed) restored at every session's end — **promoting `setDisplayMode`'s reversal to the shipped default is an open, explicitly-flagged decision, not yet made** (see item -186 for the tradeoffs); `reapplyDisplayMode`'s site cannot even be considered for promotion until its new stall is root-caused and fixed. `HYPOTHESIS-ID: m5-audio-destub-step4-reapplydisplaymode-reversal` — 1st of 3 iterations, symptom characterized, cause open. Next work unit: root-cause the VI=640 graphics-task stall (see item -187 for candidate mechanisms) — do not assume it needs the same spin-pump fix as `setDisplayMode` without evidence.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,7 +148,44 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -186 (s328); the next new item takes -187 and is inserted at the top.
+oldest). Current top is -187 (s329); the next new item takes -188 and is inserted at the top.
+
+-187. **(s329) M5 audio de-stubbing: `reapplyDisplayMode`'s gate reversal is NOT safe the same way
+    `setDisplayMode`'s was — a genuinely NEW failure mode, an immediate permanent graphics-task-
+    submission stall at VI=640, with audio staying fully alive throughout.** Mirror-image edit of
+    the s303-328 pattern: narrowed the gate regex to `0x8008EB40`-only, leaving `setDisplayMode`
+    force-zeroed (baseline) and `reapplyDisplayMode`'s site (`0x8008EC88`) reversed/live. Confirmed
+    via direct grep of the regenerated `funcs_23.c` (not just the `x1` patch count) that the correct
+    site was under test. Ran ONE soak (`scratch/s73_post_a_scene/run_s327waitpump.sh`, `HOLD_S=240`,
+    full instrument set armed) — `phase timeout (INCONCLUSIVE)` at the driver's 600s cap. Log
+    analysis (1.28M lines): only 3 `[phase]` VI-transitions ever fire — 0→320 (0.7s, baseline
+    timing), 320→640 (2.3s, baseline timing) — then **nothing**; VI never reaches 1024 (title).
+    `[vi-fs-decision]` shows `stalled=1 pairs=0` continuously from immediately after the 640
+    transition (line 5654, update-screen `#101`) to the log's end (`#36000`+), a permanent
+    graphics-task-producer stall lasting the entire ~600s run. **Not a rerun of `setDisplayMode`'s
+    spin-wait deadlock**: 0 `[CRASH]` markers; `[synth-entry]` (81 fires) and `[audtask-dispatch]`
+    (60 fires, `real_ucode=1` every time) both span from near the log's start to within ~1% of its
+    last line — audio, MusyX dispatch, and VI-retrace-driven `musyxSynthFrame` all keep running live
+    the whole time; `[dma-ring-caller]` backtraces confirm real DMA-ring calls from
+    `musyxSynthFrame`→`viRetraceHandlerThread` right up to the tail; `[audio-wait-pump]` fired once,
+    harmlessly (not a repeating stall). If `setDisplayMode`'s deadlock had recurred it would have
+    frozen the audio thread too — it didn't, so this is a different mechanism. Discriminates NEXT.md's
+    3 hypotheses: refutes H1 ("same mechanism, should clear cleanly" — symptom is neither the same
+    VI-count nor a clean pass); consistent with, but doesn't yet prove, H2 (`reapplyDisplayMode`'s
+    hot-per-frame nature stresses something the graphics-task pipeline depends on, distinct from
+    `setDisplayMode`'s one-shot audio spin-wait); H3 untested this session. Textually resembles
+    the already-documented, unresolved "graphics-task-submission stall" pattern in this doc's
+    "Current truth" timeline (`[vi-fs-decision] stalled=1 pairs=0`, s176-183) but at a categorically
+    different onset (2.3s pre-title vs. ~90-115s post-menu-navigation) — same diagnostic shape, open
+    question whether same root mechanism, not investigated this session. Reverted to full force-zero
+    baseline (`audio gate patched x2` confirmed, rebuilt) before ending. Only `N64Recomp/fixup_game_funcs.py`
+    (untracked sibling repo) touched; no `lib/` edits, no `export.sh` needed. `HYPOTHESIS-ID:
+    m5-audio-destub-step4-reapplydisplaymode-reversal` — 1st of 3 iterations; symptom fully
+    characterized and reproducible 1/1, root cause NOT yet traced. Next work unit: source-read
+    `reapplyDisplayMode`'s full body (structurally near-identical to `setDisplayMode` per s326, but
+    called every frame) for what differs on repeated calls once un-gated, and/or a targeted instrument
+    on why the graphics-task producer starts skipping at exactly the VI=640 transition. Full detail:
+    `PORTING-STATE` Session 329.
 
 -186. **(s328) M5 audio de-stubbing: CLOSES `m5-audio-destub-step5-confirm-waitpump-fix` — 2
     confirmatory soaks both clear the VI=320 hang (3/3 combined with s327); one dies to an
