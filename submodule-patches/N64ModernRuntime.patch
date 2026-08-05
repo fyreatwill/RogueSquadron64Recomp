@@ -145,7 +145,7 @@ index b0d6bef..bb3352d 100644
          RSP_MEM_B(i, dmem_addr) = MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000));
      }
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
-index 8c8e5d1..6953c5e 100644
+index 8c8e5d1..a5e66af 100644
 --- a/librecomp/src/overlays.cpp
 +++ b/librecomp/src/overlays.cpp
 @@ -4,6 +4,7 @@
@@ -198,7 +198,7 @@ index 8c8e5d1..6953c5e 100644
  extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
      for (auto it = loaded_sections.begin(); it != loaded_sections.end();) {
          const auto& section = sections_info.code_sections[it->section_table_index];
-@@ -361,9 +386,58 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
+@@ -361,9 +386,121 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
      return get_func_by_section_index_function_offset(find_section_it->second, func_offset);
  }
  
@@ -238,8 +238,71 @@ index 8c8e5d1..6953c5e 100644
 +    fflush(stderr);
 +}
 +
++// ROGUESQ: s323 (M5 audio de-stubbing, HYPOTHESIS-ID
++// m5-audio-destub-step4-tick37-vs-hardstop40) — same rs64_log_dma_ring_caller
++// pattern (s101 precedent), retargeted at tickAllActiveSongs (0x80096D08) and
++// tickAudioSequencerFrame (0x8008D960). s317/s321 exhaustively grepped
++// RecompiledFuncs/*.c and found only the 3 known direct call sites
++// (musyxSynthFrame's gate1/2/3) reference either address — but s319/s320
++// measured those 3 gates' combined real "call" branch rate (~23-24/run) well
++// short of these functions' own entry-diagnostic counts (37-38/run), a gap
++// unexplained by any static/simple-indirect call site. Only a fully dynamic
++// indirect call (through LOOKUP_FUNC/get_function, invisible to text grep)
++// remains as an explanation. If either address is EVER resolved here, this
++// fires and the backtrace names the true caller directly, closing both the
++// s316-322 "14-call gap" and this session's "37-vs-40 gap" investigations at
++// once. A clean zero-hit run (with the dma-ring-caller positive control from
++// the SAME mechanism still firing on submitDmaRequestBatch) would instead
++// prove NO indirect call exists either, meaning the real driver is a 4th
++// direct call site current grep patterns still miss, or the gate1/2/3
++// "taken" branch measurement itself has an unnoticed sign/condition error.
++static void rs64_log_tickfunc_caller(int32_t addr) {
++    constexpr int32_t k_tick_all_active_songs = 0x80096D08;
++    constexpr int32_t k_tick_audio_sequencer_frame = 0x8008D960;
++    // s323 same-run positive control: musyxSynthFrame (0x8009123C) is
++    // independently confirmed (s310) to be invoked via a genuinely indirect
++    // LOOKUP_FUNC call (a 4-slot VI-retrace callback table), and its own
++    // entry diagnostic ([musyx-gate1]'s n / [synth-entry]) reliably reaches
++    // 40/40 in this exact boot-hang phase (s320). If get_function() is EVER
++    // exercised for an indirect call in this run at all, this fires -- a
++    // silent 0-hit on the 2 real targets alongside a live count here means
++    // the null result is real, not an artifact of this phase never reaching
++    // any indirect-call code path.
++    constexpr int32_t k_musyx_synth_frame = 0x8009123C;
++    if (addr == k_musyx_synth_frame) {
++        static const bool enabled = []{
++            const char* e = std::getenv("ROGUESQ_LOG_TICKFUNC_CALLER");
++            return e && *e && *e != '0';
++        }();
++        if (enabled) {
++            static int n = 0;
++            if (n < 40 || (n % 128) == 0) {
++                fprintf(stderr, "[tickfunc-caller-control] musyxSynthFrame resolved n=%d\n", n);
++            }
++            n++;
++        }
++        return;
++    }
++    if (addr != k_tick_all_active_songs && addr != k_tick_audio_sequencer_frame) {
++        return;
++    }
++    static const bool enabled = []{
++        const char* e = std::getenv("ROGUESQ_LOG_TICKFUNC_CALLER");
++        return e && *e && *e != '0';
++    }();
++    if (!enabled) {
++        return;
++    }
++    void* frames[8];
++    int n = backtrace(frames, 8);
++    fprintf(stderr, "[tickfunc-caller] resolved 0x%08X, native backtrace (%d frames):\n", addr, n);
++    backtrace_symbols_fd(frames, n, fileno(stderr));
++    fflush(stderr);
++}
++
  extern "C" recomp_func_t * get_function(int32_t addr) {
 +    rs64_log_dma_ring_caller(addr);
++    rs64_log_tickfunc_caller(addr);
      auto func_find = func_map.find(addr);
      if (func_find == func_map.end()) {
 +        static const bool stub_missing = []{

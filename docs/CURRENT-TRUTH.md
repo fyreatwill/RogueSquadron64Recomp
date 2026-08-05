@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    Overturned Conclusions entries). 35 KB remains a stretch target, not a hard floor — the "Current
    truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
    deliberately; both are used every iteration for phase-gating and build commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 13 times so far (s303-320); s321-322 were pure grep/read, no reversal needed. **The 14-call-gap sub-investigation (`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`, s303-321) is now CLOSED**: s321 found no 4th textual call site (grep-exhaustive), and s322 found gate3's containing reachability guard is real, unclobbered control flow, not an s318-class diagnostic bug — both testable explanations for the 14-call gap are exhausted; the only survivor (a fully dynamic indirect call among 28,388 sites) needs a different tool than text search. **Pivoted to a fresher, unexplored gap** (item -181): why the 3 tick-producer functions stop 3 calls short (37/37) of the hard-freeze boundary (`update3DAudioFrame`/`M_AUDTASK`/RSP-runner, all 40/40). Full detail Next-steps item -181.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 14 times so far (s303-323); s321-322 were pure grep/read, no reversal needed. **The 14-call-gap sub-investigation (`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`, s303-321) is CLOSED** — s321 found no 4th textual call site, s322 found gate3's reachability guard is real unclobbered control flow, and **s323 added a runtime instrument (not text search) that found a positive-controlled ZERO indirect calls to either tick-producer function**, definitively ruling out the last surviving explanation too. **The successor thread (`HYPOTHESIS-ID: m5-audio-destub-step4-tick37-vs-hardstop40`, item -182) is now the live one**: with NO other call path possible (grep-exhaustive + runtime-confirmed), the "37 vs 40" gap is now a proven arithmetic inconsistency in the gate1/2/3 "taken"/reachability measurement itself, not an unlocated call site. Full detail Next-steps item -182.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,7 +148,45 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -181 (s322); the next new item takes -182 and is inserted at the top.
+oldest). Current top is -182 (s323); the next new item takes -183 and is inserted at the top.
+
+-182. **(s323) M5 audio de-stubbing: source-read refutes the "internal early-return" framing, then a NEW
+    runtime instrument (not text grep) finds a positive-controlled ZERO indirect calls to either
+    tick-producer function — the 37-vs-40 gap is now a proven arithmetic inconsistency in gate1/2/3's own
+    measurement, not an unlocated call site.** Two steps. (1) Source-read all 3 tick-producer functions'
+    full bodies (`tickAllAudioChannels`, `tickAudioSequencerFrame` in `funcs_23.c`; `tickAllActiveSongs`
+    in `funcs_25.c`) and confirmed by direct grep each has exactly ONE `return;` statement, reached by
+    every internal branch via label fallthrough — no early-return path exists, and their entry diagnostics
+    fire unconditionally at function top, before any internal gate logic. This proves the "37" stop is a
+    caller-side fact (the function simply isn't invoked a 38th time), refuting NEXT.md's working premise
+    that the stop "must be inside them or their direct callees" — that premise conflated gate1's own
+    reachability count (40/40) with gate1 actually taking its "call" branch (~19/40). (2) Rather than
+    resume the already-exhausted text-grep chase, built a NEW tool: `rs64_log_tickfunc_caller`
+    (`lib/N64ModernRuntime/librecomp/src/overlays.cpp`), the same `get_function()`-hook pattern as the s101
+    `rs64_log_dma_ring_caller` precedent, targeting `tickAllActiveSongs` (0x80096D08) and
+    `tickAudioSequencerFrame` (0x8008D960) — this catches a fully dynamic indirect call at runtime, which
+    no text search could ever find. First soak's null (0/0) had no live positive control in the same run
+    (the existing s101 dma-ring-caller control never fired either, plausibly because that DMA code path
+    isn't reached before this boot-hang phase's freeze) — added a second, in-phase positive control
+    (`musyxSynthFrame`, 0x8009123C, independently known indirect-called via a VI-retrace callback table,
+    s310) and re-soaked. **Result, same run: the positive control fires 40/40 (proves the hook mechanism
+    genuinely works in this exact phase) while the 2 real targets fire 0/0 — despite 37 real entries into
+    those same functions logged in the same run** (`[tick-audio-seq]`/`[tick-all-audio-channels]`/
+    `[reach-allsongs-entry]` all 37). Combined with s317/s321's exhaustive text grep, this now rules out
+    BOTH explanations item -180 left open (no missed static site, text-confirmed; no dynamic indirect
+    call either, now runtime-confirmed with a positive control — strictly stronger than s321's text-only
+    negative). **The only 3 places in the whole codebase that can call these functions are gate1/gate2/
+    gate3 inside `musyxSynthFrame` — full stop — yet their independently-measured combined "call" rate
+    (~23-24) cannot mathematically reconcile with the functions' own measured entry count (37).** This is
+    no longer an unlocated-call-site mystery; it's a proven arithmetic inconsistency in the gate1/2/3
+    "taken"/reachability measurement itself. Leading candidates for next session: an unnoticed sign/
+    condition error in gate2's "taken" determination (only 4/4 *reached* iterations were ever sampled —
+    the reached-count itself may undercount), or a placement bug in gate3's reachability counter distinct
+    from the TOCTOU bug s318 already fixed (s322 proved gate3's *guard register* is unclobbered, but never
+    checked whether the diagnostic *print's own placement* could miss real entries into gate3's loop
+    body). `setDisplayMode`'s site reversed a 14th time (soak), re-reverted, baseline restored and
+    rebuilt (`audio gate patched x2` confirmed). `lib/` edits exported via `submodule-patches/export.sh`.
+    Full detail: `PORTING-STATE` Session 323.
 
 -181. **(s322) M5 audio de-stubbing: gate3's containing reachability guard is REAL, unclobbered control
     flow — CLOSES hypothesis (b), and with it the entire 14-call-gap sub-investigation (items

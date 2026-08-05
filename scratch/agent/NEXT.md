@@ -1,97 +1,107 @@
-# NEXT work unit — why do the 3 tick-producer functions stop 3 calls short (37/37) of the shared 40/40 hard-freeze boundary?
+# NEXT work unit — gate1/2/3's measured "taken"/reachability rate (~23-24) can't reconcile with the tick-producer functions' own measured entry count (37); find the measurement error
 
-## Context — s322 closed the 14-call-gap sub-investigation; this is a fresher, unrelated gap
+## Context — s323 proved there is no unlocated call site, static or dynamic
 
-s321 (exhaustive grep) and s322 (gate3 reachability source-read) together exhausted both testable
-explanations for the "14-call gap" (gate1+gate2's measured real-call rate, 23-24, vs. the tick-producer
-functions' own measured entry count, 37-38): no undiscovered static/simple-indirect call site exists
-(s321), and gate3's persistent 0/40-reached is real game-state-dependent control flow, not a diagnostic
-bug (s322). The only surviving explanation for that specific gap — a fully dynamic indirect call among
-28,388 `LOOKUP_FUNC` sites — needs runtime call-site logging keyed on target address, not text search;
-out of scope for a bounded session with current tooling. **Do not resume that specific gap-chase.**
+s317/s321 (exhaustive text grep) and s323 (a NEW runtime instrument, positive-controlled) together prove
+the ONLY 3 places in the entire codebase that can call `tickAllActiveSongs`/`tickAudioSequencerFrame` are
+gate1/gate2/gate3 inside `musyxSynthFrame` (`funcs_24.c`). s323's instrument
+(`rs64_log_tickfunc_caller` in `lib/N64ModernRuntime/librecomp/src/overlays.cpp`, env
+`ROGUESQ_LOG_TICKFUNC_CALLER`) hooks `get_function()` — the resolution point for every `LOOKUP_FUNC`
+indirect call in the recompiled code — and found ZERO hits on either target address in a run where a
+live positive control (musyxSynthFrame's own known-indirect invocation) fired 40/40 in the same log. This
+closes the "unlocated call site" framing that drove sessions s303-322 for good.
 
-Separately, item -174 (s315) found and left open a DIFFERENT, smaller, never-directly-investigated gap:
-in the same soak runs, `[reach-update3d-entry/exit]` (`update3DAudioFrame`), `[audtask-dispatch]`
-(`M_AUDTASK` RSP-task submission, `src/main/main.cpp:581-636`), and the RSP task-runner's own last
-dispatch (`[runner] task #39`) all hit **40/40** together — a genuine hard-freeze boundary. But
-`tickAllActiveSongs`/`tickAudioSequencerFrame`/`tickAllAudioChannels` (the SAME 3 functions the gate1/2/3
-investigation was chasing) stop **37/37**, three calls before everything else. s315 measured this
-directly and moved on without investigating WHY. No session since has looked at it — it predates and is
-independent of the gate1/2/3/14-call-gap thread. This is the new work unit.
+**The problem now**: gate1's measured "taken" (call) branch rate is ~19/40, gate2's is ~4/4 (all its
+*reached* iterations take the call), gate3 is 0/40 reached at all — combined ~23-24 real call events per
+run. But the tick-producer functions' own entry diagnostics ([tick-audio-seq]/[reach-allsongs-entry]/
+etc.) independently measure **37** real entries in the SAME run. Since s323 proved no other call
+mechanism exists, gate1+gate2+gate3's combined real call count MUST equal 37 exactly — meaning the
+measurement of "taken"/"reached" itself is undercounting by ~13-14, somewhere in gate1, gate2, or gate3.
 
 ## The work unit — pure source-read first, build+soak only if source-read doesn't resolve it
 
-1. **Source-read the 3 tick-producer functions' own bodies** (`tickAllActiveSongs` at guest address
-   `0x80096D08`, `tickAudioSequencerFrame` at `0x8008D960`, and `tickAllAudioChannels` — find its guest
-   address via `grep -n "tickAllAudioChannels" RecompiledFuncs/*.c | grep RECOMP_FUNC` in
-   `~/Documents/Tools/N64Recomp`) for any EARLY-RETURN or conditional-skip path near their end — a
-   branch that could make the exit-side diagnostic fire fewer times than the entry-side one, or that
-   could make them stop being called at all after some internal state changes on call ~38.
-2. **Check whether the existing entry/exit diagnostics themselves have any asymmetry** — `[reach-
-   allsongs-entry]` vs `[reach-allsongs-exit]` vs `[reach-audioseq-exit]` (search `fixup_game_funcs.py`
-   for these names) — do entry and exit both stop at 37, or does one stop earlier/later than the other
-   (which would point at an internal early-return rather than the caller simply stopping)?
-3. **Check what's different about calls 38-40 specifically** — since `update3DAudioFrame` and
-   `M_AUDTASK` dispatch both continue to 40, whatever stops the tick-producers must be inside them or
-   their direct callees, not further upstream (their caller — gate1/2 — clearly keeps running, since
-   gate1's own diagnostic reaches 40 per s320). Read gate1's calling convention once more
-   (`funcs_24.c:3619-3632`, already read s321/s322) for anything that could make the CALL itself become
-   a no-op after call 37 while gate1's own `n` counter keeps incrementing (e.g. a countdown/flag inside
-   the tick-producer functions themselves that causes them to self-skip past some threshold).
-4. **If source-read doesn't find an obvious internal early-return or self-gating threshold**, this needs
-   a build+soak: add one more field to the ALREADY-armed `[reach-allsongs-entry/exit]` etc. diagnostics
-   (or a fresh minimal counter) logging some piece of internal state at calls 35-40 specifically (e.g. a
-   sample index, a channel-active count, whatever the source-read step above surfaces as the likeliest
-   internal gate) to catch the state right before/at the point they stop. Reuse the existing
-   `n<40||(n%128)==0` sampling convention. This DOES need `setDisplayMode`'s site reversed (a 14th time)
-   to exercise the real call path — follow the same revert-same-session discipline as every prior
-   session in this thread.
+1. **Re-read gate2's reachability logic specifically** (`fixup_game_funcs.py`'s `_musyx_gate2_patch`,
+   `funcs_24.c` around guest 0x80091534). Only 4-5 of gate2's containing-loop iterations were EVER
+   sampled as "reached" in any prior soak (s316-320) — check whether gate2's own outer loop bound (the
+   `<0x10` comparison against a fixed constant, per item -181's s322 trace) could itself be gated by a
+   register that's read STALE relative to gate1's loop having already advanced the shared voice cursor
+   (`r19`) — i.e. a s318-class TOCTOU on the REACHABILITY count itself (not the taken_skip field, which
+   s318 already fixed), where gate2's diagnostic's own entry point is placed somewhere that undercounts
+   real loop iterations.
+2. **Re-read gate3's diagnostic PLACEMENT specifically** — s322 proved gate3's *guard register* (`ctx->r20`)
+   is unclobbered and its narrow reachability window is real game-state-dependent control flow. But s322
+   did NOT check whether the diagnostic PRINT STATEMENT itself sits at the right point to catch every
+   entry into gate3's loop BODY (as opposed to just gate3's entry guard) — if gate3's loop can be entered
+   and iterate multiple times per outer call, and the diagnostic only samples once per outer call (not
+   once per inner iteration), that would systematically undercount. Compare against gate1's own diagnostic
+   placement (known-correct, cross-validated 1:1 against musyxSynthFrame's own entry count in s320) for a
+   structural difference.
+3. **Check whether "taken" undercounts multi-call events** — re-verify (don't just cite s321's finding)
+   that a single "taken" branch really invokes tickAllActiveSongs/tickAudioSequencerFrame exactly ONCE,
+   not inside a loop that could invoke it multiple times per "taken" sample, for gate2 and gate3
+   specifically (s321 checked this for gate1's call site only).
+4. **If source-read doesn't find the discrepancy**, this needs a build+soak: add a per-gate call COUNTER
+   (not just a 40-sample-capped diagnostic) that increments unconditionally every time each gate's real
+   call branch is taken, with no sampling cap, and print the FINAL total at process exit or every 128
+   calls — compare the 3 gates' summed total directly against the tick-producer functions' own summed
+   entry count in one soak. This directly tests whether under-sampling (the `n<40||(n%128)==0` cap
+   itself, applied differently to "reached" vs "taken" counters) is hiding additional real events, the
+   same bug class already found and fixed 3 times in this investigation (s312/s313/s315) — check this
+   FIRST, cheaply, since it is the single most likely explanation and requires no new game-state
+   understanding, only re-reading the exact patch definitions.
 
 ## Expected discriminating outcomes
 
-- If step 1-3 finds an internal early-return/self-gating condition in one of the 3 functions: that's the
-  answer — no build needed, write it up, and consider whether it explains the whole 37-vs-40 gap or only
-  narrows it further.
-- If step 4's soak shows the SAME internal state value (e.g. a countdown reaching 0, a flag going false)
-  right at call 37-38 across the 3 functions but NOT in `update3DAudioFrame`/`M_AUDTASK`: strong
-  candidate for a shared resource specific to the tick-producers (distinct from the shared coop-scheduler
-  resource s307 already identified for the LARGER 40-call freeze).
-- If nothing distinguishes call 37 from call 36 or 38 in any sampled state: the gap may be a sampling/
-  ordering artifact of the diagnostics themselves rather than a real game-state event — check the
-  print-cap convention on all 5 relevant diagnostics once more for a s312/s313/s315-class unwidened-cap
-  bug (the SAME bug class has now been found and fixed 3 times in this investigation; a 4th instance
-  would not be surprising and should be checked FIRST, cheaply, before any new instrumentation).
+- If gate2 or gate3's diagnostic placement is found to systematically undercount real loop iterations
+  (steps 1-2): that's the answer, no build needed — write it up, and consider whether fixing the count
+  reconciles combined-gates-taken with tick-producer-entries exactly (37) as a confirming cross-check.
+- If step 3 finds a per-taken-event multi-call loop in gate2 or gate3's call site: that's the answer.
+- If none of steps 1-3 finds an obvious placement/sampling bug, step 4's soak either (a) shows the 3
+  gates' real totals DO sum to 37 once uncapped (confirming a sampling-cap illusion, the 4th instance of
+  the same bug class), or (b) still falls short of 37 even uncapped — which would be a genuinely new,
+  harder mystery (worth a fresh hypothesis-id at that point, not a continuation of this one).
 
-## Environment notes (carried forward from s321/s322, still valid)
+## Environment notes (carried forward from s321/s322/s323, still valid)
 
 - Regen paths for game-code patches are in `/Users/williambuckley/Documents/Tools/N64Recomp`
   (`fixup_game_funcs.py`, `RecompiledFuncs/*.c`, `build/N64Recomp`, `rogue_squadron.toml`), NOT this
-  repo. `[audtask-dispatch]` lives in THIS repo's `src/main/main.cpp:581-636` (native runtime code, not
-  a `RecompiledFuncs` patch) — edits there need a normal rebuild, no `N64Recomp` regen, no
-  `submodule-patches/export.sh` (it's not under `lib/`).
-- If a build/soak turns out to be needed (step 4): regen order is `make_elf.py` -> `N64Recomp` ->
+  repo. The new `rs64_log_tickfunc_caller` hook lives in THIS repo's
+  `lib/N64ModernRuntime/librecomp/src/overlays.cpp` (a `lib/` submodule) — any further edits there need
+  `submodule-patches/export.sh` + a commit in the SAME session or they are lost at the next reset.
+- If a build/soak turns out to be needed: regen order is `make_elf.py` -> `N64Recomp` ->
   `fixup_game_funcs.py` -> `cmake`, in that exact order (`N64Recomp` skips files that already exist on
   disk — item -20 — so `RecompiledFuncs/*.c` MUST be deleted before every `N64Recomp` run). `cd` into
   `N64Recomp` FIRST as its own bare `cd` command, THEN run `./build/N64Recomp rogue_squadron.toml` with
-  output redirection in a SEPARATE Bash call.
+  output redirection in a SEPARATE Bash call. `/tmp` is blocked for redirects — don't redirect there.
 - To reverse ONLY `setDisplayMode`'s site (not `reapplyDisplayMode`'s): narrow the shared regex in
-  `fixup_game_funcs.py` (~line 173) from `0x8008E(?:B40|C88)` to `0x8008EB40` only. MUST restore the
-  full `(?:B40|C88)` alternation before ending session, verified via `audio gate patched x2` in the
-  fixup report.
+  `fixup_game_funcs.py` (~line 173-174) from `0x8008E(?:B40|C88)` to `0x8008EC88` ONLY (this leaves B40 —
+  setDisplayMode — unmatched/unpatched, i.e. reversed; C88 stays force-zeroed). **The prior NEXT.md text
+  describing this as "narrow to B40 only" was WRONG** — verified directly against the code and its own
+  session-history comments (s319/s320/s323 all narrow to C88-only) this session; trust the code, not a
+  paraphrase. MUST restore the full `(?:B40|C88)` alternation before ending session, verified via
+  `audio gate patched x2` in the fixup report.
+- A NULL result needs a SAME-RUN positive control (iron rule 1) — the existing `[dma-ring-caller]`
+  positive control (`ROGUESQ_LOG_DMA_CALLER=1`) does NOT reliably fire in this boot-hang phase (0/0 in
+  s323's first soak); use `[tickfunc-caller-control]` (musyxSynthFrame via `ROGUESQ_LOG_TICKFUNC_CALLER=1`,
+  already wired, fires 40/40 in this exact phase) instead if this hook is reused.
 - `python3 -c "import glob, os; [os.remove(f) for f in glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/*.c')]"`
   clears RecompiledFuncs (use the ABSOLUTE path).
 - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8` from this repo's
   root — allowlisted verbatim, works as a single command.
-- Soak driver template: `scratch/s73_post_a_scene/run_step320synthentryvsgate1.sh` (newest; copy it,
-  don't hand-roll). Invoke as `zsh run_foo.sh`, not `./run_foo.sh`. `cd` into `scratch/s73_post_a_scene`
-  first as its own bare command. Launch via Bash with `run_in_background: true`, then `TaskOutput` with
-  `block: true` and `timeout` up to 600000ms — do NOT foreground-poll. Confirm `pgrep -f
-  "build/RogueSquadron64Recomp"` is empty before AND after.
-- `/tmp` is blocked for redirects — use a path inside this repo, `N64Recomp`, or `rogue_squadron64`.
+- Soak driver template: `scratch/s73_post_a_scene/run_step323tickfunccaller.sh` (newest; copy it, don't
+  hand-roll — it already arms `ROGUESQ_LOG_TICKFUNC_CALLER`/`ROGUESQ_LOG_DMA_CALLER` alongside the full
+  established breadcrumb set). Invoke as `zsh run_foo.sh <label>`, not `./run_foo.sh`. `cd` into
+  `scratch/s73_post_a_scene` first as its own bare command. Launch via Bash with `run_in_background: true`,
+  then `TaskOutput` with `block: true` and `timeout` up to 600000ms — do NOT foreground-poll. Confirm
+  `pgrep -f "build/RogueSquadron64Recomp"` is empty before AND after. Expect `phase timeout (INCONCLUSIVE)`
+  after ~600s — this config (setDisplayMode reversed) reliably hangs at VI=320/rdpFs=39 before reaching
+  the 1024-width title screen; this is the EXPECTED, established behavior for this soak recipe, not a
+  run failure — the log data before the freeze is what matters.
 - Multi-operation Bash commands combining `cd`+redirect, or `export VAR=...` chained with other
   commands, trigger permission prompts — issue `cd` as its own bare command, run each `export`/command
   separately.
 
-HYPOTHESIS-ID: m5-audio-destub-step4-tick37-vs-hardstop40 (NEW — s322 pivoted here from
-`m5-audio-destub-step4-setdisplaymode-hang`'s now-exhausted 14-call-gap sub-thread; see CURRENT-TRUTH
-item -181 and the closed note on item -180's parent hypothesis-id).
+HYPOTHESIS-ID: m5-audio-destub-step4-tick37-vs-hardstop40 (2nd iteration on this id — s323 closed the
+"unlocated call site" framing definitively; this iteration narrows to the gate1/2/3 measurement itself.
+Per iron rule 8, if a 3rd consecutive iteration on this id produces no discriminating result, pivot or go
+BLOCKED with a specific question next time.)

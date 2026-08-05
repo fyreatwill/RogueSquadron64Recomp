@@ -28371,3 +28371,83 @@ No source edit, no build, no soak this session — pure read against the already
 (`RecompiledFuncs/funcs_24.c`, both audio-gate force-zero sites intact, unchanged from s321's end state).
 `fixup_game_funcs.py` and `src/main/main.cpp` untouched. No `submodule-patches/export.sh` needed (no
 `lib/` edits).
+
+## Session 323 (2026-08-04) — M5 audio de-stubbing: source-read closes the "internal early-return" branch of the tick37-vs-hardstop40 hypothesis, then a NEW runtime instrument (not text grep) finds a positive-controlled ZERO indirect calls to either tick-producer function
+
+`HYPOTHESIS-ID: m5-audio-destub-step4-tick37-vs-hardstop40` (s322's pivot target).
+
+**Step 1 — source-read (NEXT.md steps 1-2), no build needed.** Read the full bodies of all 3
+tick-producer functions: `tickAllAudioChannels` (`funcs_23.c:4061-6664`), `tickAudioSequencerFrame`
+(`funcs_23.c:6665-6795`), `tickAllActiveSongs` (`funcs_25.c:8528-9131`). Confirmed by direct grep
+(`grep -c '^\s*return;'`) each has **exactly ONE `return;` statement**, at the very end, reached by every
+internal branch via label fallthrough/goto (e.g. `tickAudioSequencerFrame`'s internal `beq $a0,$zero`
+gate, taken or not, always converges at the shared `L_8008D9F0` label before the single return) —
+independently re-confirming a claim `fixup_game_funcs.py`'s s306 comment already made but this session
+verified fresh by direct grep rather than citation. Also confirmed the entry diagnostics (`[tick-audio-seq]`,
+`[tick-all-audio-channels]`, `[reach-allsongs-entry]`) are inserted at the literal top of each function,
+before ANY internal gate logic — unconditional on function entry. **Conclusion: no internal early-return
+mechanism exists that could explain an entry/exit asymmetry, and — more importantly — since entry itself
+is unconditional, the "37" stop is proven to be a fact about how many times the function is CALLED, not
+something happening inside it.** This directly refutes NEXT.md's own working premise ("whatever stops the
+tick-producers must be inside them or their direct callees, not further upstream") — that premise conflated
+gate1's own reachability count (40/40, confirmed s320) with gate1 actually taking its "call" branch
+(only ~19/40, per s318). The stop is upstream, in whatever mechanism drives calls to these functions — the
+same, not-fully-identified mechanism the "14-call gap" investigation (items -180/-181) was chasing before
+s322 called it exhausted by text tools.
+
+**Step 2 — built a NEW runtime instrument instead of resuming the abandoned grep-only chase.** Found an
+existing, precedented pattern for exactly this need: `rs64_log_dma_ring_caller` in
+`lib/N64ModernRuntime/librecomp/src/overlays.cpp` (s101 precedent, closed lineage) hooks `get_function()` —
+the ONE place every `LOOKUP_FUNC`/indirect call in the recompiled code resolves through — and fires a
+native backtrace when the resolved address matches a specific target. Added `rs64_log_tickfunc_caller`
+using the identical pattern, targeting `tickAllActiveSongs` (0x80096D08) and `tickAudioSequencerFrame`
+(0x8008D960), gated behind a new `ROGUESQ_LOG_TICKFUNC_CALLER` env var. This is a genuinely different tool
+from s317/s321's exhaustive text grep — it catches a fully dynamic indirect call at runtime, which no
+static text search could ever find (item -180's explanation (a), left untested by text tools since it's
+untestable by text tools).
+
+**Same-run positive control, added after the first soak came back a 0/0 uninformative null (iron rule 1):**
+the first soak (`setDisplayMode`'s site reversed a 14th time, narrowed regex to `C88`-only per the
+established convention) found `[tickfunc-caller]`=0 hits — but ALSO `[dma-ring-caller]`=0 hits, meaning
+the existing s101 positive control never fired either (the boot-hang phase this soak reaches, VI stuck at
+320/rdpFs=39, plausibly never exercises `submitDmaRequestBatch`'s indirect call site, which lives in a
+DMA-ring code path not reached before the freeze). A null with no live positive control in the same run is
+worthless per iron rule 1. Added a SECOND, in-phase positive control instead: `musyxSynthFrame`
+(0x8009123C) is independently known (s310) to be invoked via a genuinely indirect `LOOKUP_FUNC` call (a
+4-slot VI-retrace callback table) and its own entry count reliably reaches 40/40 in this exact boot-hang
+phase (s320) — added a matching counter inside `rs64_log_tickfunc_caller` for that address. Rebuilt,
+`submodule-patches/export.sh` run (both edits are under `lib/N64ModernRuntime`), re-soaked (same env,
+same `setDisplayMode` reversal).
+
+**Result, same run:** `[tickfunc-caller-control]` (musyxSynthFrame resolved via `get_function()`) fires
+**40/40** — proves the hook mechanism genuinely exercises and fires correctly in this exact run/phase for
+a KNOWN indirect call. `[tickfunc-caller]` (the 2 real targets) fires **0/0** — in the SAME run where
+`[tick-audio-seq]`/`[tick-all-audio-channels]`/`[reach-allsongs-entry]` all independently confirm **37**
+real entries into these functions, and `[musyx-gate1]`/`[musyx-gate2]`/`[musyx-gate3]` show their usual
+40/4/0 reachability pattern. **Clean, positive-controlled, definitive result: NO indirect call path exists
+to either tick-producer function — zero, not merely undetected.**
+
+**What this proves and what it reopens.** Combined with s317/s321's exhaustive text grep (no undiscovered
+static/simple-indirect call site exists either), this now RULES OUT both surviving explanations item -180
+left open for the 14-call gap: not a missed static call site (s321, text-confirmed), and now not a dynamic
+indirect call either (this session, runtime-confirmed with a positive control — a strictly stronger claim
+than s321's text-only negative). **The only 3 places in the entire codebase that can call these functions
+are gate1/gate2/gate3 inside `musyxSynthFrame` — full stop.** But their independently-measured combined
+real "call" branch rate (gate1 ~19/40 + gate2 ~4/4 reached, gate3 0/40 reached = ~23-24) cannot
+mathematically reconcile with the functions' own measured entry count of 37 if those 3 sites are truly the
+ONLY calling mechanism. **This is no longer an "unlocated call site" mystery — it is now a proven
+arithmetic inconsistency in the gate1/2/3 "taken"/reachability measurement itself.** The likeliest
+remaining candidates: an unnoticed sign/condition error in the `taken_skip`/`reg` "call" determination for
+gate2 (only 4/4 *reached* iterations were ever sampled — the reached-count itself, not just the taken
+fraction, may be undercounting), or a placement bug in gate3's reachability counter analogous to (but
+distinct from) the TOCTOU bug s318 fixed for `taken_skip` — s322's source-trace proved gate3's *guard
+register* is unclobbered, but did not rule out the *diagnostic print's own placement* missing real entries
+into gate3's loop body.
+
+`setDisplayMode`'s site (0x8008EB40) reversed a 14th time this session (soak), re-reverted same session —
+confirmed restored (`audio gate patched x2`, both sites force-zeroed) and rebuilt clean.
+`submodule-patches/export.sh` run after the `lib/` edits (997→1021 lines in `N64ModernRuntime.patch`).
+New soak driver: `scratch/s73_post_a_scene/run_step323tickfunccaller.sh`. Full logs:
+`scratch/s73_post_a_scene/step320synthentryvsgate1/run.log` (first soak, no positive control, superseded)
+and `scratch/s73_post_a_scene/step323tickfunccaller2/run.log` (second soak, positive-controlled, the
+result cited above).
