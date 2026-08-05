@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    target, not a hard floor — the "Current truth" env-var/timeline prose and the Regeneration section's
    Standing warnings stay intact deliberately; both are used every iteration for phase-gating and build
    commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 15 times so far (s303-325). **The 14-call-gap AND the 37-vs-40 gap are CLOSED** (`m5-audio-destub-step4-tick37-vs-hardstop40`, s303-325 — sampling-cap illusion in gate1's diagnostic print cap, item -183). **`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-vi320-hang` (s326): the VI=320 hang mechanism is now fully traced, source-read only, no soak needed** — `runVideoFrameTick` (the per-VI-frame tick driver, `funcs_0.c:1459`) calls `musyxNoopStub` first thing every frame; once the gate byte is reversed, `musyxNoopStub` takes its "audio active" branch into `waitForMusyXAudioTaskDone`, which busy-spins with zero yield instructions on a countdown that only an unreached `musyxSynthFrame` call can decrement — so the VI-tick function itself deadlocks on its first line of work, freezing VI at whatever count it last reached. Confirms the exact risk `docs/M5-AUDIO-PLAN.md` §3/§4 already predicted ("needs a source-level fix in the ucode's task-completion signaling, not a gate re-revert"). Full detail item -184. Next work unit: patch the spin loop to pump real M_AUDTASK dispatch inline instead of waiting on an undecrementable countdown, then soak for VI progression past 320.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 16 times so far (s303-327). **The 14-call-gap AND the 37-vs-40 gap are CLOSED** (`m5-audio-destub-step4-tick37-vs-hardstop40`, s303-325 — sampling-cap illusion in gate1's diagnostic print cap, item -183). **The VI=320 hang is CLOSED — mechanism traced (s326) and fix CONFIRMED on 1/1 soaks (s327)**: `waitForMusyXAudioTaskDone`/`shutdownAudioEngine`'s spin loops now call `musyxSynthFrame` directly instead of blocking on a countdown only that call can decrement — VI progressed cleanly through title and the full menu chain into SELECT YOUR CRAFT for the first time ever with the gate reversed, before dying to the already-catalogued, unrelated `processSceneNode+1424` crash (item -185). Baseline reverted to force-zero (both sites) at session end pending a 2nd confirmatory soak; the fix code stays in the tree (inert when gate=0). `HYPOTHESIS-ID: m5-audio-destub-step5-confirm-waitpump-fix`. Next work unit: re-reverse `setDisplayMode`'s site, rebuild, run 1-2 more `HOLD_S=240` soaks with `scratch/s73_post_a_scene/run_s327waitpump.sh` to clear the "two clean soaks" validation bar.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,7 +148,41 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -184 (s326); the next new item takes -185 and is inserted at the top.
+oldest). Current top is -185 (s327); the next new item takes -186 and is inserted at the top.
+
+-185. **(s327) M5 audio de-stubbing: the spin-loop pump fix WORKS — VI progresses cleanly past 320
+    through title and the full menu chain into SELECT YOUR CRAFT for the first time ever with the
+    gate reversed; the eventual crash is the already-catalogued, unrelated `processSceneNode+1424`,
+    not a new audio regression.** Patched `waitForMusyXAudioTaskDone`/`shutdownAudioEngine`'s spin
+    loops (`N64Recomp/fixup_game_funcs.py`, untracked, no `lib/` change) to call `musyxSynthFrame`
+    directly (bounded to 64 pumps, falls through regardless, free `[audio-wait-pump-stall]`
+    diagnostic on non-drain) instead of blocking on the countdown only that same call decrements —
+    exactly item -184's prescribed next step. Verified safe first: `musyxSynthFrame`'s own body has
+    no call, direct or indirect, back into either spin function (no recursion risk), and both
+    callers' post-loop code reloads every register fresh from memory before use (clobbering via the
+    call is harmless). Full regen+build, `setDisplayMode`'s site (`0x8008EB40`) reversed
+    (`audio gate patched x1`), `audio-wait spin pump patched x2` confirmed. **Soak result**: VI hit
+    1024 (title) at 45.6s — the untouched baseline timing, vs. 15/15 prior reversals hanging dead at
+    320. The driven schedule then carried the process through the entire menu chain into SELECT YOUR
+    CRAFT's 240s hold — genuinely new territory. `[synth-entry]` fired 236 times (VI-retrace path
+    kept driving audio normally post-pump); `[audio-wait-pump-stall]` fired once, at the very first
+    call, handled cleanly by the bounded fallthrough (no hang). At hold-iter 28 (~32s into the hold,
+    well before the 95s leave-schedule), `SIGBUS` in `processSceneNode+1424`
+    (`far`=RDRAM-base+`~0x80000030`) — grepped 3 PRIOR sightings of this exact offset in
+    `PORTING-STATE.md` (Sessions ~281-285, the `hangarInitialize` hangar-list-pointer audit family),
+    every one explicitly logged as "already-catalogued, unrelated," recurring in the same scene under
+    the same `HOLD_S=240` soak shape. No audio diagnostic fired anywhere near the crash. **Hypothesis
+    `m5-audio-destub-step4-setdisplaymode-vi320-hang` is CLOSED**, fix confirmed on 1/1 soaks — but
+    NOT yet promoted to the shipped default (only one soak run, and that soak didn't complete
+    end-to-end clean); reverted `setDisplayMode`'s site back to force-zero (`audio gate patched x2`
+    confirmed, rebuilt) before ending, matching every prior session's convention on this gate. The
+    spin-pump code patch itself stays in the tree permanently (inert when gate=0). New
+    `HYPOTHESIS-ID: m5-audio-destub-step5-confirm-waitpump-fix` (fresh 3-iteration budget — this
+    session's soak was the discriminating result that closed the prior hypothesis, not a stalled
+    repeat of it). Next work unit: re-reverse, rebuild, run 1-2 more soaks with
+    `scratch/s73_post_a_scene/run_s327waitpump.sh` to clear the M5 plan's "two clean soaks" bar; a
+    separate, lower-priority M3 candidate now exists (`processSceneNode+1424` root-cause, 4 sightings
+    across 2 unrelated investigation threads). Full detail: `PORTING-STATE` Session 327.
 
 -184. **(s326) M5 audio de-stubbing: pure source-read fully traces the `setDisplayMode` VI=320 hang to a
     concrete mechanism — `runVideoFrameTick` calls `musyxNoopStub` first thing every frame, which spins

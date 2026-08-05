@@ -28620,3 +28620,90 @@ mechanism question NEXT.md set out to answer is closed.
 `HYPOTHESIS-ID` unchanged (`m5-audio-destub-step4-setdisplaymode-vi320-hang`, 1st of budgeted 3
 iterations — this session was pure source-read as NEXT.md prescribed, no soak spent). No code changed
 this session (read-only investigation); nothing under `lib/` touched, no `export.sh` needed.
+
+## Session 327 (2026-08-04) — M5 audio: the spin-loop pump fix WORKS — VI progresses cleanly past 320 through title, the whole menu chain, and into SELECT YOUR CRAFT for the first time ever with the gate reversed; the eventual crash is the already-catalogued, unrelated `processSceneNode+1424`, not a new audio regression
+
+2nd of the `m5-audio-destub-step4-setdisplaymode-vi320-hang` hypothesis's 3 budgeted iterations —
+s326 was pure source-read, this session spent the first soak on it.
+
+**The fix**: per s326's mechanism trace (`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` busy-spin
+on a halfword countdown at RAM `0x8014998A` that only `musyxSynthFrame`'s own tail can decrement, and
+`musyxSynthFrame` is normally reached only via the VI-retrace callback table — a path the deadlocked
+spin itself blocks from ever running), patched both spin loops in
+`N64Recomp/fixup_game_funcs.py` (untracked loose file, no `lib/` changes, no `export.sh` needed) to
+call `musyxSynthFrame(rdram, ctx)` directly from inside the spin, bounded to 64 pumps, instead of
+blocking on a producer they themselves prevent from running. Verified safe before writing the patch:
+grepped `musyxSynthFrame`'s own body (3146-4224 in `funcs_24.c`) for any call, direct or indirect,
+back into `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` — none exists, so no recursion risk; and
+confirmed the loop-exit code in both callers immediately reloads every register it uses fresh from
+memory (`ctx->r2 = MEM_W(...)` etc.) before use, so clobbering caller-saved registers via the
+`musyxSynthFrame` call is harmless. A free diagnostic (`[audio-wait-pump-stall]`) fires if 64 pumps
+don't drain the countdown to 0 — the loop still falls through regardless (matching NEXT.md's
+"pump ... falls through regardless of whether the countdown ever reaches 0" spec) rather than
+re-deadlocking. `ROGUESQ_AUDIO_WAIT_NOPUMP=1` restores the pre-s327 blind-spin (deadlock) behavior
+for A/B, though this session never needed it.
+
+**Regen + build**: full pipeline (`make_elf.py` → clear `RecompiledFuncs/*.c` → `N64Recomp` →
+`fixup_game_funcs.py` → `cmake --build`). Narrowed the audio-gate store regex to `C88`-only (same
+procedure as all 15 prior reversal sessions) so `setDisplayMode`'s site (`0x8008EB40`) took the real
+guest write (gate=1) while `reapplyDisplayMode`'s (`0x8008EC88`) stayed force-zeroed. Patch report
+confirmed `audio gate patched x1` and the new `audio-wait spin pump patched x2`. Clean build, only
+pre-existing unrelated `DDIV` sign warnings.
+
+**Soak** (`scratch/s73_post_a_scene/run_s327waitpump.sh`, `ROGUESQ_AUDIO_UCODE=1` plus the full
+passive-breadcrumb set, `PROBE_MODE=start_only`, `HOLD_S=240`, driven start/start/start/a into
+SELECT YOUR CRAFT): **VI reached 1024 (title) at 45.6s — exactly the untouched baseline timing** (vs.
+15/15 prior reversals hanging dead at VI=320 in every session s303-325). The driven key schedule then
+carried the process through the full menu chain (SELECT GAME → war room/SELECT LEVEL → AVAILABLE
+CRAFT → SELECT YOUR CRAFT) and into the 240s hold — genuinely new territory, since gate=1 had never
+survived past the boot hang before. `[synth-entry]` (musyxSynthFrame's own entry diagnostic) fired
+236 times over the run, confirming the VI-retrace path kept driving audio normally once past the
+initial pump; `[audio-wait-pump-stall]` fired exactly once, at the very first call (countdown still
+at its seeded seed value after 64 pumps — plausibly the pre-boot mixer loop having nothing to
+iterate over yet) — the bounded fallthrough handled it cleanly, no hang. `musyx-dma-call` (the s102
+diagnostic) never fired (0), consistent with the DMA-submission branch's count register being 0 in
+this window (not exercised, not a bug — the same `musyxSynthFrame` tail runs its decrement either
+way per s327's/s326's read of the branch structure).
+
+**The crash**: at hold-iter 28 (~32s into the 240s hold, well before the 95s `start`-press schedule
+that leaves the scene), the process died to `SIGBUS`, `[CRASH][pc-symbol] processSceneNode+1424`,
+`far=0x380000030` (RDRAM host base `0x300000000` + guest offset `~0x80000030`). **This offset is
+NOT new** — grep of this file finds `processSceneNode+1424` mentioned 3 times already (Sessions
+~281-285, the `hangarInitialize`/`static_5_800A9270` hangar-list-pointer audit family), every time
+explicitly logged as "the already-catalogued, unrelated `processSceneNode+1424`" crash recurring
+during an unrelated `HOLD_S=240` SELECT-YOUR-CRAFT soak. This is the SAME site, same scene, same hold
+window, same crash signature — a pre-existing, unguarded, intermittent crash class that this session
+simply reached for the first time with audio active, not something the audio fix introduced. No
+`[synth]`/`[musyx]`/`[audio-wait-pump]` diagnostic fired anywhere near the crash (last diagnostics
+before it were unrelated `[rs-free-walk]`/`[sched-check]` lines from the heap walker), giving no
+positive signal tying the crash to audio at all.
+
+**What this shows**: the `m5-audio-destub-step4-setdisplaymode-vi320-hang` hypothesis is **CLOSED,
+fix confirmed on 1/1 soaks** — the specific VI=320 deadlock this thread chased since s303 no longer
+happens; VI now progresses through the entire menu chain with real audio processing live, something
+no prior session in this 15-reversal, 25-session investigation ever achieved. **Not yet promoted to
+the shipped default**: only one soak has run with the gate reversed, versus the M5 plan's own
+"two clean soaks" validation bar, and the crash observed (while explained as a pre-existing,
+unrelated site) means this soak did not itself complete cleanly end-to-end — so per every prior
+session's convention on this exact gate, **reverted `setDisplayMode`'s site back to force-zero**
+(regex renarrowed to the full `(?:B40|C88)` alternation, confirmed `audio gate patched x2`, rebuilt)
+before ending the session. The spin-loop pump code patch itself stays in the tree permanently — it's
+inert whenever the gate is 0 (musyxNoopStub's own gate-byte check short-circuits before ever reaching
+the spin), so it carries no risk to the current shipped baseline.
+
+**What remains open**: (1) confirm the fix holds over 1-2 more soaks with the gate reversed the same
+way, to clear the M5 plan's own validation bar and consider promoting the reversal to the new
+default; (2) `processSceneNode+1424` itself remains unroot-caused across all 4 sightings now
+(3 previous + this one) — a legitimate M3 systematic-audit candidate once M5's own next step is
+settled, per the standing strategic priority ordering (M5 above M3). New `HYPOTHESIS-ID`:
+`m5-audio-destub-step5-confirm-waitpump-fix` (1st of a fresh 3-iteration budget — this session's
+soak was itself the discriminating result that closed the prior hypothesis, so the counter resets
+here rather than carrying over).
+
+**Housekeeping**: the only code edits this session were to `N64Recomp/fixup_game_funcs.py`
+(untracked in that standalone checkout — no commit needed there, only this file's ledger records
+the change). No `lib/N64ModernRuntime`/`lib/rt64` edits, no `export.sh` needed. New soak driver:
+`scratch/s73_post_a_scene/run_s327waitpump.sh` (self-contained, reusable for the confirmatory
+soaks next session — note it needs the gate reversed at BUILD time first, so it cannot go in
+`scratch/agent/soak_queue/` as-is; the loop's queue mechanism runs against a static build and
+cannot re-run the regen pipeline).
