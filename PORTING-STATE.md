@@ -28485,3 +28485,63 @@ stay intact, per s314's precedent, since both are read every iteration) but comf
 — every claim, hypothesis, and next-step ordering is preserved, only the s313-322 prose is compressed.
 `scratch/agent/NEXT.md` (the live `m5-audio-destub-step4-tick37-vs-hardstop40` work unit, 2nd iteration
 on that hypothesis-id) is untouched and remains the next work unit for the following iteration.
+
+## Session 325 (2026-08-04) — M5 audio: CLOSES `m5-audio-destub-step4-tick37-vs-hardstop40` — the "37 vs 40" / 14-call gap was a 4th instance of the sampling-cap-illusion bug, not a measurement error or an unlocated call site
+
+Executed NEXT.md's step 4 (the "if source-read doesn't find the discrepancy" build+soak), after steps
+1-3's source-read found nothing: gate2/gate3's diagnostic placement matches gate1's structurally (all 3
+inserted at the identical pre-decrement `ctx->r2` read point, same file, same convention — no s318-class
+placement asymmetry), and none of the 3 call sites sit inside a loop that could invoke
+`tickAllActiveSongs`/`tickAudioSequencerFrame` more than once per "taken" sample (each is a single direct
+call, confirmed by reading `funcs_24.c` around all 3 sites).
+
+**The experiment**: widened gate1/gate2/gate3's diagnostic print cap in `fixup_game_funcs.py` (N64Recomp
+repo, untracked/uncommitted loose file — not a git-tracked dependency of this repo) from `n<40` to
+`n<4096`, so every real invocation gets logged instead of only the first 40. Regenerated
+(`N64Recomp`→`fixup_game_funcs.py`→`cmake`) with `setDisplayMode`'s gate-byte site narrowed to
+C88-only-reversed (matching s317/s320/s323's exact soak condition, `audio gate patched x1` confirmed in
+the fixup report), ran ONE soak (`scratch/s73_post_a_scene/run_step325widecap.sh`,
+`step325widecap/run.log`, phase-timeout INCONCLUSIVE at 600s as expected — this config reliably hangs
+before title, not a run failure).
+
+**Result** (uncapped, full-run counts): gate1 fired 71 times total (not 40 — the old cap was silently
+truncating 31 real invocations), with `reg==1` (real call) on 33 of them. Gate2 fired 4 times, all 4
+calls. Gate3 fired 0 times. **33+4+0 = 37, an EXACT match** to the tick-producer functions' own
+independent entry-diagnostic count (`reach-allsongs-entry`/`tick-audio-seq`, both 37/37) in the SAME
+run. Two independent, structurally unrelated measurement mechanisms (branch-register sampling at the 3
+gate sites vs. unconditional entry counters inside the called functions themselves) now agree exactly —
+satisfies the two-independent-lines-of-evidence bar directly.
+
+**What this overturns**: every session from s312 through s324 treated gate1's diagnostic cap (`n<40`)
+as if it captured gate1's FULL invocation count for a soak this short, because no run had ever printed a
+line past `n=39` (the `n%128==0` fallback never fired since gate1 never reached `n=128`) — that silence
+read as "gate1 only fires 40 times," not as "the cap is hiding everything past 40." The true count (71)
+sits between the two round numbers (40, 128) that every prior session's own convention would have
+sampled at, which is exactly why 8+ sessions of reg-based hand-analysis on the first-40-only window
+(19/40 for gate1 in s318's log, later runs matching or close) never reached 37 — they were correct
+arithmetic on incomplete data, not wrong arithmetic on complete data. This is the same "sampling cap
+masquerading as a hard stop" bug class already found and fixed 3 times previously in this exact
+investigation (s312/s313/s315, all in `M_AUDTASK`/tick-producer diagnostics, never previously in the
+gate1/2/3 diagnostics themselves) — a 4th instance, in a 4th diagnostic, closes the loop on the whole
+bug class within this call chain.
+
+**Restored the default state before ending**: `setDisplayMode`'s gate-byte site regex renarrowed back
+to the full `(?:B40|C88)` alternation (both force-zeroed, `audio gate patched x2` confirmed), regenerated
+and rebuilt again so the repo sits in its normal buildable default. The widened `n<4096` sample cap on
+gate1/2/3's diagnostics was left in place permanently (strictly more informative, same convention already
+used elsewhere, no cost when the env var is unset).
+
+**What remains genuinely open**: this closes the call-count *mystery*, not the underlying M5 step 4
+task. `setDisplayMode`'s site still cannot be landed permanently — reversing it (even alone, gate byte
+only) reliably hangs the process at VI=320/rdpFs=39 before ever reaching the title screen (VI=1024),
+which is the actual blocker for M5 step 4 (per `docs/M5-AUDIO-PLAN.md` §4 step 4: "reverse ONE gate-byte
+site at a time... If it doesn't recur after 2 clean soaks: reverse setDisplayMode's site next"). Nobody
+has yet root-caused *why* that specific reversal stalls VI progression — the last 15 reversal/re-revert
+cycles (s303-325) were all in service of instrumenting the call-count side-question, not the hang
+itself. That's the natural next hypothesis, given a new id below.
+
+No overturned conclusions in `docs/CURRENT-TRUTH.md`'s existing catalog (the "37 vs 40 gap" itself was
+never a formally-recorded overturned conclusion, just an open Next-steps item — it closes as answered,
+not retracted). No code under `lib/` touched this session (only `N64Recomp/fixup_game_funcs.py`, an
+untracked loose file in a sibling tool directory, not a submodule of this repo) — no
+`submodule-patches/export.sh` needed.

@@ -16,13 +16,13 @@ Priority order for upcoming iterations, set after the 300-session review:
    target, not a hard floor — the "Current truth" env-var/timeline prose and the Regeneration section's
    Standing warnings stay intact deliberately; both are used every iteration for phase-gating and build
    commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 14 times so far (s303-323); s321-322 were pure grep/read, no reversal needed. **The 14-call-gap sub-investigation (`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`, s303-321) is CLOSED** — s321 found no 4th textual call site, s322 found gate3's reachability guard is real unclobbered control flow, and **s323 added a runtime instrument (not text search) that found a positive-controlled ZERO indirect calls to either tick-producer function**, definitively ruling out the last surviving explanation too. **The successor thread (`HYPOTHESIS-ID: m5-audio-destub-step4-tick37-vs-hardstop40`, item -182) is now the live one**: with NO other call path possible (grep-exhaustive + runtime-confirmed), the "37 vs 40" gap is now a proven arithmetic inconsistency in the gate1/2/3 "taken"/reachability measurement itself, not an unlocated call site. Full detail Next-steps item -182.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 15 times so far (s303-325); s321-322 were pure grep/read, no reversal needed. **The 14-call-gap AND the 37-vs-40 gap are now BOTH CLOSED (`HYPOTHESIS-ID: m5-audio-destub-step4-tick37-vs-hardstop40`, s303-325)**: s325 found the gap was a 4th instance of a sampling-cap illusion — gate1's diagnostic print cap (`n<40`) was silently hiding 31 real invocations past `n=39`; widening it to `n<4096` in the same soak found gate1 fires 71 times total (33 real calls), gate2 4/4, gate3 0 — summing to exactly 37, matching the tick-producer functions' own independent entry count in the same run. Full detail Next-steps item -183. **The successor thread is now `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-vi320-hang`**: the call-count mystery is solved, but the actual M5 step 4 blocker remains — reversing `setDisplayMode`'s gate-byte site still reliably hangs the process at VI=320/rdpFs=39 before ever reaching the title screen (VI=1024), and nobody has yet root-caused *why*. That's the next work unit.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
 Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the ~100 file-scoped-only guard patches in fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment.
 
-## Current truth (established by session 295; unchanged, reviewed through s324)
+## Current truth (established by session 295; unchanged, reviewed through s325)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -148,7 +148,37 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -182 (s323); the next new item takes -183 and is inserted at the top.
+oldest). Current top is -183 (s325); the next new item takes -184 and is inserted at the top.
+
+-183. **(s325) M5 audio de-stubbing: CLOSES the tick37-vs-hardstop40 hypothesis — the "37 vs 40"/14-call
+    gap was a 4th instance of the sampling-cap-illusion bug, not a measurement error or an unlocated call
+    site.** NEXT.md's steps 1-3 (source-read) found nothing: gate2/gate3's diagnostics are structurally
+    identical to gate1's (same pre-decrement `ctx->r2` read point, same file/convention), and none of the
+    3 call sites sit inside a multi-call loop. Step 4's build+soak: widened gate1/2/3's diagnostic print
+    cap in `fixup_game_funcs.py` (N64Recomp repo, untracked loose file) from `n<40` to `n<4096`, so every
+    real invocation prints instead of only the first 40. Regenerated with `setDisplayMode`'s site
+    narrowed to C88-only-reversed (`audio gate patched x1`, matching s317/s320/s323's exact condition),
+    ran ONE soak (phase-timeout INCONCLUSIVE at 600s, expected). **Result**: gate1 fired 71 times total
+    (not 40 — the old cap was silently truncating 31 real invocations), 33 of them real calls (`reg==1`);
+    gate2 fired 4 times, all calls; gate3 fired 0 times. **33+4+0 = 37, an EXACT match** to the
+    tick-producer functions' own independent entry count (`reach-allsongs-entry`/`tick-audio-seq`, both
+    37/37) in the SAME run — two structurally unrelated measurement mechanisms now agree exactly,
+    satisfying the two-independent-lines-of-evidence bar. This overturns 8+ sessions' (s312-324) implicit
+    assumption that gate1's `n<40` cap captured its full invocation count for a soak this short — no run
+    had ever printed past `n=39` (the `n%128==0` fallback never fired, since gate1 never reached `n=128`),
+    so the silence read as "gate1 only fires 40 times" rather than "the cap hides everything past 40."
+    Same bug class already found and fixed 3 times previously in this investigation (s312/s313/s315, in
+    the `M_AUDTASK`/tick-producer diagnostics) — a 4th instance, in a 4th diagnostic, closes the class
+    within this call chain. Restored default state before ending (`setDisplayMode`'s regex renarrowed
+    back to the full `(?:B40|C88)` alternation, `audio gate patched x2` confirmed, rebuilt); the widened
+    `n<4096` cap was kept permanently (strictly more informative, no cost when unset). **What remains
+    open**: this closes the call-count mystery, not the underlying M5 step 4 task — `setDisplayMode`'s
+    site still cannot be landed permanently because reversing it reliably hangs the process at
+    VI=320/rdpFs=39 before reaching title (VI=1024); nobody has root-caused *why* yet (the last 15
+    reversal cycles, s303-325, all served the call-count side-question, never the hang itself). New
+    hypothesis-id for that: `m5-audio-destub-step4-setdisplaymode-vi320-hang`. No `lib/` code touched
+    (only the untracked N64Recomp sibling-repo fixup script) — no `submodule-patches/export.sh` needed.
+    Full detail: `PORTING-STATE` Session 325.
 
 -182. **(s323) M5 audio de-stubbing: source-read refutes the "internal early-return" framing, then a NEW
     runtime instrument (not text grep) finds a positive-controlled ZERO indirect calls to either
