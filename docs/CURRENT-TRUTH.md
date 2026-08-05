@@ -28,9 +28,10 @@ Priority order for upcoming iterations, set after the 300-session review:
    three. s362 (item -217) drained the s360 verify pair (0/2 informative for either thread — both
    crashed off-target before reaching either guarded function) and resolved the recurring
    "does the soak queue drain in order?" question (yes, plain alphabetical = chronological, source-
-   confirmed). Thread A now 0/4 informative since its s358 fix, re-queued with a fresh pair. Thread B's
-   s361 fix awaits its first verify pair (queued, not yet drained). See NEXT.md for both open threads'
-   current status and next steps.
+   confirmed). s363 (item -218) drained Thread B's own `s361` pair: a genuinely NEW crash surface —
+   the tail-scan loops' HEAD pointer (not the already-guarded tail cursor) had an identical unguarded
+   priming-read/clear-write idiom repeated 5 times, now guarded. Thread A still 0/4 informative since
+   its s358 fix, re-queued pair still pending. See NEXT.md for both open threads' current status.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -160,7 +161,37 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -217 (s362); the next new item takes -218 and is inserted at the top.
+oldest). Current top is -218 (s363); the next new item takes -219 and is inserted at the top.
+
+-218. **(s363) Thread B's `s361` pair finally drained (unread by s362 -- landed in `SOAK-RESULTS.md`
+    between s362's own session and this one): `verify1` crashed at
+    `pc-symbol=drainMeshReleaseQueue+796`, `last-guest-pc=0x8000819C`, with ALL FIVE tail-scan loop
+    guards' read+write fire counters at 1 AND `ring_fire_n=1` in the SAME run -- i.e. genuinely NOT
+    inside any of the five already-guarded tail-scan loops (`verify2` was off-target, unrelated
+    `guMtxF2L` crash, all drain-mesh counters 0, ordinary diffuse background noise). Source-read
+    (`funcs_3.c:1737-1739`) found 0x8000819C is a "priming read" -- `ctx->r2 = MEM_W(ctx->r4, 0X0)`,
+    checking whether the head node's first field is already NULL before each tail-scan loop begins,
+    dereferencing the HEAD pointer (`a0`/`ctx->r4`, checked only for non-NULL, never validity) rather
+    than the tail-scan cursor (`v1`/`ctx->r3`) the existing 5 loop guards already protect. Re-reading
+    the WHOLE function with this idiom in mind (same discipline s361 used) found the identical
+    unguarded priming read repeated once per loop -- all 5: 0x8000819C, 0x800081F0, 0x80008238,
+    0x80008298, 0x800082E8 -- each followed later by an unconditional WRITE through the SAME head
+    pointer (`MEM_W(0X4, ctx->r4) = 0` at 0x800081D4/0x80008228/0x80008270/0x800082D0/0x80008320,
+    reachable on every path except the "already NULL" skip) -- the identical read-guard-without-
+    write-guard gap the s350->s350b/s357->s359 gotcha warns about, but for a parallel pointer the
+    idiom-class audit's tail-scan-only search pattern did not cover. Added both a read guard (bail:
+    treat as empty, `ctx->r2=0`, same short-circuit the real NULL case already takes) and a write
+    guard (bail: skip the clear-write) at all 5 sites in one pass, tags
+    `[drain-mesh-head{1..5}-guard]` / `[drain-mesh-head{1..5}-clear-guard]`, reusing
+    `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` (armed by default in `run_s327waitpump.sh`, so every already-
+    queued and future soak picks these up with no recipe changes). Full regen (`make_elf.py` ->
+    `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`) clean; patch report showed `x1` for each
+    of the 10 new sites; regenerated `funcs_3.c` confirmed single-line for all 10 (grep for
+    `drain-mesh-head` returns exactly 10 tag lines, 2 per loop). `lib/` not touched (fixup lives in the
+    untracked `~/Documents/Tools/N64Recomp` tool repo). Queued
+    `s363_drainmeshheadguard_verify1/2.sh` -- these are BRAND-NEW instruments with no prior fire
+    history, so even a single fire is a positive control; decision tree is in the recipe header. Full
+    detail: `PORTING-STATE` Session 363.
 
 -217. **(s362) Drained the stale `s360` verify pair (0/2 informative for either open thread, both
     off-target), resolved the 3-session-recurring "does the soak queue drain in order?" question by

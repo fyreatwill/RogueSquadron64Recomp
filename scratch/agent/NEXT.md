@@ -1,53 +1,61 @@
 # NEXT work unit
 
-## s362: drained the stale `s360` verify pair (0/2 informative for either open thread — both crashed
-## off-target before reaching either guarded function), resolved the 3-session-recurring "does the soak
-## queue drain in order?" confusion by reading `tools/agent/loop.sh` source (answer: yes, plain
-## alphabetical glob order = chronological order for `sNNN_..._verifyM.sh` names, no bug — the apparent
-## skipping was pure queue-depth arithmetic), and re-queued Thread A with a fresh isolated pair. No code
-## changed this session (nothing to source-prove: both drained crashes were off-target, already-
-## catalogued diffuse-background-population hits, not new evidence for either thread).
-
-Full detail: `PORTING-STATE` Session 362, `docs/CURRENT-TRUTH.md` item -217.
+## s363: Thread B's own `s361` verify pair drained (was unread by s362 — a one-session-narrower
+## repeat of the s360/s361/s362 stale-doc pattern). `verify1` crashed at
+## `pc-symbol=drainMeshReleaseQueue+796`, `last-guest-pc=0x8000819C`, with ALL 10 existing tail-scan
+## guards (5 loops × read+write) plus `ring_fire_n` firing at least once earlier in the SAME run —
+## i.e. genuinely outside all 5 already-guarded loops. Source-read found an unguarded "priming read"
+## through the loop's HEAD pointer (`a0`/`ctx->r4`, distinct from the already-guarded tail-scan cursor
+## `v1`/`ctx->r3`) repeated identically before each of the 5 loops, paired with an unguarded
+## clear-write through the same pointer later in each loop's exit path — 10 new unguarded sites total.
+## Guarded all 10 in `fixup_game_funcs.py`, regen+rebuild clean, queued
+## `s363_drainmeshheadguard_verify1/2.sh`. Full detail: `PORTING-STATE` Session 363,
+## `docs/CURRENT-TRUTH.md` item -218.
 
 ## Two open threads
+
+**Thread B: `m5-audio-destub-linkedlist-corruption-source` (iteration 8, s363 landed new evidence +
+a real fix — the 5 head-pointer guard pairs — its OWN verify pair not yet drained).**
+- `s363_drainmeshheadguard_verify1/2.sh` queued in `scratch/agent/soak_queue/`, sorted to drain AFTER
+  Thread A's still-pending `s362_...` pair (alphabetical = chronological FIFO, confirmed s362).
+- **These are BRAND-NEW instruments with zero prior fire history** — unlike the tail-scan guards
+  (which have fired routinely for sessions), any single fire of `head{n}_guard` or
+  `head{n}_clear_guard` (n=1..5) is itself informative, not just a "didn't matter" null.
+- **Decision tree when this pair drains** (full detail also in the recipe header):
+  - `head{n}_guard_fire_n>=1` OR `head{n}_clear_guard_fire_n>=1` for ANY n: first-ever positive
+    control for the new guards — confirms the head-pointer dereference is a genuinely reachable
+    corruption surface, not a speculative fix. Note WHICH n fired (loop1 through loop5) — worth
+    tracking whether it's always the same loop or scattered, same question the tail-scan loops'
+    5-way spread already raised.
+  - Crash still at `pc-symbol=drainMeshReleaseQueue+796` / `last-guest-pc=0x8000819C` with ALL head
+    guards at 0: the regex substitution didn't actually match what's running — re-check the
+    regenerated `funcs_3.c` for the literal patched text (grep for `drain-mesh-head1-guard`).
+  - Crash moved to a DIFFERENT `drainMeshReleaseQueue` offset, with a head guard's fire_n>=1: guard
+    engaged but didn't fully close the gap — re-read for a further sibling the same way
+    s350->s350b/s357->s359/this session's own discovery were found. Given the priming-read/
+    clear-write pair is now closed for all 5 loops, a further gap would mean a THIRD dereference
+    through the head pointer somewhere, or a genuinely new idiom.
+  - Crash moved OUTSIDE `drainMeshReleaseQueue` entirely, or run is CLEAN: promising, but per the
+    project's own evidentiary bar needs 2-3 more non-recurrence soaks before calling this thread
+    closed — queue another pair using the same recipe template.
+  - Cross-check `last_pc_symbol`/`last-guest-pc` against Thread A's `coalesceFreeHeapBlocks` question
+    and the background-noise catalogue below before discarding an off-target result as uninformative
+    (the recurring s360/s361/s362 "off-target-but-discriminating" pattern).
 
 **Thread A: `m5-audio-destub-coalesce-heap-guard-verify` (iteration 5, re-queued s362, still 0/4
 informative for its OWN question across all 4 soaks since the s358 bail-target fix).**
 - `s362_coalesceheapbailfix_reverify1/2.sh` queued in `scratch/agent/soak_queue/`, sorted to drain
-  AFTER Thread B's pair (see below). Full instrument set (all 5 drain-mesh loop tags + coalesce +
-  ring), `HOLD_S=240`. No code changed — pure re-roll to buy more independent attempts at landing
-  inside `coalesceFreeHeapBlocks` at all.
-- **Decision tree when this pair drains** (unchanged from s358's original, reproduced in the recipe
-  header): `coalesce_guard_fire_n=0` again → still off-target, re-queue again (thread's own hit rate on
-  its target function appears low, not a red flag by itself). `coalesce_guard_fire_n>=1` AND
+  BEFORE Thread B's new `s363_...` pair (alphabetical sort: `s362` < `s363`).
+- **Decision tree when this pair drains** (unchanged from s358/s362's original, reproduced here):
+  `coalesce_guard_fire_n=0` again → still off-target, re-queue again (this thread's own hit rate on
+  its target function appears genuinely low, not a red flag by itself — 4 sessions of misses on a
+  narrow single-function target isn't surprising given the drain-mesh threads keep landing hits on a
+  much larger, more-frequently-executed function instead). `coalesce_guard_fire_n>=1` AND
   `last_pc_symbol=coalesceFreeHeapBlocks+1052` / `last-guest-pc=0x80002358` → the s358 bail-target fix
   did NOT work, re-read the regenerated source. `coalesce_guard_fire_n>=1` and crash elsewhere (or
-  clean) → fix confirmed, needs 1-2 more non-recurrence soaks to close. `coalesce_guard_fire_n>=1` at a
-  NEW `coalesceFreeHeapBlocks` offset → a further unguarded site, same idiom, source-read and guard it.
-
-**Thread B: `m5-audio-destub-linkedlist-corruption-source` (iteration 7 — s361's 5-guard idiom-class
-audit, STILL awaiting its own first verify pair).**
-- `s361_drainmeshidiomaudit_verify1/2.sh` still queued in `scratch/agent/soak_queue/`, sorted to drain
-  BEFORE Thread A's pair (both threads' recipes obey the now-confirmed alphabetical=chronological FIFO
-  order — no action needed to enforce this, just don't rename Thread B's files to sort later).
-- **Decision tree once it drains** (unchanged from s361's own header): check `last_pc_symbol`/
-  `last-guest-pc` against:
-  - `drainMeshReleaseQueue+5740` / `0x80008260` (loop3 write site, s361's fix): `loop3_write_guard_
-    fire_n>=1` AND still lands here = fix did NOT take, re-check `funcs_3.c`. Fires AND lands elsewhere
-    (or clean) = fix confirmed, needs 2-3 more non-recurrence soaks.
-  - Any `drain-mesh-loop4-*` or `drain-mesh-loop5-*` tag firing at all (even on an otherwise-clean run):
-    first-ever evidence those two loops are reachable by the same corruption — was completely unknown
-    before s361, worth its own investigation thread if it happens.
-  - A crash at a brand-new offset inside `drainMeshReleaseQueue`, past all 5 guard pairs: genuinely
-    surprising at this point — would mean a 6th site, or (more likely) a legitimately different bug.
-    Re-read the function once more before assuming another sibling gap.
-  - `ring_fire_n>=1`: compare `iter_at_bail`/`v1[0]` against the `iter_at_bail=1, v1[0]=0x00010001`
-    baseline (6-7 sightings so far) — another match keeps strengthening the
-    single-deterministic-corruption-source reading from item -208.
-  - **Also check against Thread A's question and against the diffuse-background-population symbols
-    below** — a crash that's off-target for Thread B's own question may still be informative for
-    something else (the s360/s361/s362 recurring "off-target-but-discriminating" pattern).
+  clean) → fix confirmed, needs 1-2 more non-recurrence soaks to close. `coalesce_guard_fire_n>=1` at
+  a NEW `coalesceFreeHeapBlocks` offset → a further unguarded site, same idiom, source-read and guard
+  it.
 
 ## Third, deliberately-not-chased thread (background noise, do not escalate reactively)
 
@@ -57,9 +65,8 @@ per the strategic directive's "no reactive single-crash chases" outside the acti
 - `trackResourceListWithMappingTables+1192` — s347 `rate_4` + s362's `s360_..._verify1`.
 - `unregisterServiceWorker+536` — Session 265 + s362's `s360_..._verify2`.
 If EITHER gets a 3rd independent hit in a future soak (any recipe — all soaks report `pc-symbol`),
-that crosses from "background noise" into "worth running `s264_symrange.py`/`s193_disasm.py` to
-confirm whether it's really host-library code or a misattributed guest function" — until then, leave
-alone; chasing n=2 singletons here would be exactly the discouraged whack-a-mole pattern.
+that crosses into "worth running `s264_symrange.py`/`s193_disasm.py` to confirm whether it's really
+host-library code or a misattributed guest function" — until then, leave alone.
 
 ## Notes carried forward
 - `[CRASH][pc-symbol]` (host PC via `dladdr`, precise) and `[CRASH][last-guest-pc]` (guest checkpoint,
@@ -82,39 +89,48 @@ alone; chasing n=2 singletons here would be exactly the discouraged whack-a-mole
 - **Guard-bail-target gotcha (s358)**: when adding a range-check-and-bail guard that substitutes a
   synthetic value, verify which CONTROL PATH that value actually sends execution down -- a backward
   branch's target label in a loop can be the loop's re-entry point, not an exit.
-- **Read-guard/write-guard sibling gotcha (s350->s350b, recurred s357->s359, s361 for loop3)**: a guard
-  that only protects a READ through a corrupted pointer and bails by zeroing a DIFFERENT register (the
-  loop-continuation value) does NOT repair the pointer itself. If that same pointer is used again
-  UNGUARDED later in the function -- especially in a WRITE, which has no "just return a synthetic value"
-  option -- the crash simply moves there. When a function contains MULTIPLE instances of the same idiom
-  (this function has 5), a read-guard-only fix for one instance doesn't imply the others are safe — read
-  the WHOLE function once a pattern repeats twice, not just the one crash site.
+- **Read-guard/write-guard sibling gotcha (s350->s350b, recurred s357->s359/s361, now s363 for a
+  DIFFERENT pointer)**: a guard that only protects a READ through a corrupted pointer and bails by
+  zeroing a DIFFERENT register (the loop-continuation value) does NOT repair the pointer itself. If
+  that same pointer is used again UNGUARDED later — especially in a WRITE, which has no "just return
+  a synthetic value" option — the crash simply moves there. s363 found this gotcha applies BEYOND the
+  original tail-scan cursor: `drainMeshReleaseQueue` has a SECOND pointer family (the head pointer,
+  `ctx->r4`) with the exact same priming-read/clear-write pair, once per loop, that the original
+  idiom-class audit's search pattern didn't cover because it wasn't part of the loop body syntax.
+  **When defining an "idiom class" to audit, grep for the DATA-FLOW pattern (any place a
+  checked-non-NULL-but-unvalidated pointer gets dereferenced), not just one syntactic shape
+  (e.g. "loop that follows v1=*v1") — a function can host the same risk through more than one
+  register/pointer.**
 - **Off-target-but-discriminating gotcha (s360, recurred s361, s362)**: a soak recipe's own decision
   tree can call a result "inconclusive" for the question it was queued to answer while the SAME log is
-  highly informative for a DIFFERENT open thread (or, per s362, for a THIRD deliberately-parked
-  background-noise catalogue) -- always check `last_pc_symbol`/`last-guest-pc` against ALL open threads'
-  target sites AND the background-noise catalogue, not just the recipe's own named target, before
-  discarding a run as uninformative.
+  highly informative for a DIFFERENT open thread (or a THIRD deliberately-parked background-noise
+  catalogue) -- always check `last_pc_symbol`/`last-guest-pc` against ALL open threads' target sites AND
+  the background-noise catalogue, not just the recipe's own named target, before discarding a run as
+  uninformative.
+- **Stale-NEXT.md gotcha (recurred s360→s361→s362→s363, one session narrower each time)**: NEXT.md can
+  describe a queued pair as "not yet drained" when `SOAK-RESULTS.md`'s actual tail already shows it
+  landed — always cross-check the two at session start rather than trusting NEXT.md's own claim about
+  queue state. This has now happened 4 sessions running; consider adding an explicit
+  `grep SOAK-RESULTS.md` step to the session-start checklist itself rather than relying on memory of
+  this note.
 - **Guard fire_n=0 is itself informative, not just "guard didn't matter" (s361)**: when a guarded loop's
   read guard shows 0 fires in a run that crashed just past that loop, don't assume the loop is
   irrelevant — check whether a SHORT-CIRCUIT path around the guarded loop body exists that bypasses the
   guard's own instrumentation entirely while still feeding an unvalidated pointer to code further down.
 - **Soak-queue drain order (resolved s362)**: `tools/agent/loop.sh`'s `run_soak_queue()` drains
-  `"$qdir"/*.sh` via bash's default lexicographic glob expansion — i.e. alphabetical, which equals
-  chronological for the `sNNN_..._verifyM.sh` naming convention. Not a bug; apparent "skipping" was
-  always just queue-depth (2 drain per gap) vs. arrival rate (~2/session/thread) arithmetic. Naming a
-  new recipe with an earlier session number than its actual queuing session will queue-jump it ahead of
-  genuinely-older pending recipes — do this deliberately or not at all (s362 named Thread A's re-queue
-  `s362_...` specifically so it would NOT queue-jump Thread B's already-pending `s361_...` pair).
+  `"$qdir"/*.sh` via bash's default lexicographic glob expansion — alphabetical = chronological for the
+  `sNNN_..._verifyM.sh` naming convention. Naming a new recipe with an earlier session number than its
+  actual queuing session will queue-jump it ahead of genuinely-older pending recipes — do this
+  deliberately or not at all.
 
-## Queued this session (s362, ready for the loop)
+## Queued this session (s363, ready for the loop)
 
-`s361_drainmeshidiomaudit_verify1/2.sh` (Thread B, queued s361, drains FIRST alphabetically) and
-`s362_coalesceheapbailfix_reverify1/2.sh` (Thread A, queued this session, drains SECOND) — 4 recipes
-total pending, loop drains up to 2 per gap, so expect Thread B's pair to drain next gap and Thread A's
+`s362_coalesceheapbailfix_reverify1/2.sh` (Thread A, queued s362, drains FIRST alphabetically) and
+`s363_drainmeshheadguard_verify1/2.sh` (Thread B, queued this session, drains SECOND) — 4 recipes
+total pending, loop drains up to 2 per gap, so expect Thread A's pair to drain next gap and Thread B's
 the gap after.
 
-HYPOTHESIS-ID: m5-audio-destub-linkedlist-corruption-source (iteration 7, unchanged from s361 — no new
-evidence landed for Thread B this session, its own verify pair still hasn't drained). Parallel/still-
-open: m5-audio-destub-coalesce-heap-guard-verify (iteration 5, re-queued this session after 4 sessions
-at 0/4 informative).
+HYPOTHESIS-ID: m5-audio-destub-linkedlist-corruption-source (iteration 8 — s363 landed new evidence
+and a real fix this session, unlike s362's null result; pivoting the slug's iteration count forward
+since real progress was made). Parallel/still-open: m5-audio-destub-coalesce-heap-guard-verify
+(iteration 5, unchanged this session, its re-queued pair still pending).

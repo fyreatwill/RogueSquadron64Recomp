@@ -31322,3 +31322,89 @@ cycle (nothing to rebuild against). `HYPOTHESIS-ID` stays `m5-audio-destub-linke
 (iteration 7, unchanged from s361 — Thread B's own verify pair still hasn't drained, no new evidence to
 act on for it this session). Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) is iteration 5, now
 re-queued rather than left stale.
+
+
+## Session 363 (2026-08-05): drained Thread B's own `s361` verify pair — found the tail-scan loops' HEAD pointer (not the already-guarded tail cursor) has an identical unguarded priming-read/clear-write idiom repeated 5 times, guarded all 10 new sites in one pass
+
+Read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, and the `SOAK-RESULTS.md` tail per the
+iteration contract. `wc -c` on `CURRENT-TRUTH.md` read 59340 bytes (under the 60000 maintenance
+trigger), so this was a normal work-unit iteration, not maintenance.
+
+**Discovery**: NEXT.md (written by s362) still said Thread B's `s361_drainmeshidiomaudit_verify1/2.sh`
+pair "hasn't drained yet" — but `SOAK-RESULTS.md`'s actual tail showed both entries already landed
+(`20260805-154513` and `20260805-154925`, both `rc=1`), unread by s362's own session (a stale-doc gap
+one session narrower than the pattern s360→s361→s362 kept re-discovering). Read both logs directly:
+
+- `verify1`: `CRASH_DETECTED` at `pc-symbol=drainMeshReleaseQueue+796`,
+  `last-guest-pc=0x8000819C`, with `read_guard_fire_n=1 write_guard_fire_n=1 loop2_guard_fire_n=1
+  loop2_write_guard_fire_n=1 loop3_guard_fire_n=1 loop3_write_guard_fire_n=1 loop4_guard_fire_n=1
+  loop4_write_guard_fire_n=1 loop5_guard_fire_n=1 loop5_write_guard_fire_n=1 ring_fire_n=1` — every
+  single one of the 10 existing tail-scan guards (all 5 loops, read+write) fired at least once earlier
+  in the SAME run, plus the ring buffer. This crash is definitively NOT inside any of the five
+  already-guarded loops — it's somewhere else in the function entirely.
+- `verify2`: off-target, unrelated `guMtxF2L+1020` crash with every drain-mesh counter at 0 — ordinary
+  diffuse background noise, not informative for this thread.
+
+**Source-read** (`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:1737-1739`, cross-checked
+against the guest-PC breadcrumbs `g_rs64_last_guest_pc = 0x8000819Cu` immediately preceding the crash
+line): 0x8000819C is `ctx->r2 = MEM_W(ctx->r4, 0X0)` — a "priming read" that runs once, immediately
+before each tail-scan loop begins, to check whether the list's head node's first field is already
+NULL. It dereferences `ctx->r4` (`a0`, the HEAD pointer — loaded from a fixed table slot indexed by
+the outer loop counter, checked only for non-NULL via a `beq $a0,$zero` a few lines earlier, never for
+range validity). This is a DIFFERENT register than `ctx->r3`/`v1`, the tail-scan cursor the existing 5
+loop guards already protect — the idiom-class audit's search pattern (`s361`, "keep following v1=*v1
+until NULL") never covered it because it isn't part of the loop body at all.
+
+Re-read the ENTIRE function again with this new idiom in mind (same "read the whole function once a
+pattern repeats twice" discipline s361 itself used) and found the identical unguarded priming read
+repeated once per loop, all 5, byte-identical shape:
+
+| loop | priming read PC | clear-write PC |
+|------|-----------------|-----------------|
+| 1 | 0x8000819C | 0x800081D4 |
+| 2 | 0x800081F0 | 0x80008228 |
+| 3 | 0x80008238 | 0x80008270 |
+| 4 | 0x80008298 | 0x800082D0 |
+| 5 | 0x800082E8 | 0x80008320 |
+
+Each priming read is paired with a later unconditional WRITE through the same head pointer —
+`MEM_W(0X4, ctx->r4) = 0` — reachable on every code path except the very first "head==NULL, skip
+entirely" branch. This is the identical read-guard-without-write-guard gap the ledger's
+s350→s350b / s357→s359 gotcha warns about ("a guard that only protects a READ... does NOT repair the
+pointer itself... crash simply moves"), except for a parallel pointer (`ctx->r4`, not `ctx->r3`) that
+the prior audit's idiom definition didn't include.
+
+**Fix**: added both a read guard and a write guard at all 5 sites in one pass in
+`~/Documents/Tools/N64Recomp/fixup_game_funcs.py` (10 new `re.subn` patches total, generated
+programmatically over a `(loop_n, read_pc, write_pc)` table to avoid hand-duplicating the same
+20-line guard block 10 times). Read guard bail: `ctx->r2 = 0` — the same short-circuit the real
+NULL-head case already takes (treats the list as already-empty, skips the loop). Write guard bail:
+skip the clear-write entirely. New tags `[drain-mesh-head{1..5}-guard]` /
+`[drain-mesh-head{1..5}-clear-guard]`, reusing the existing `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` env
+var (already armed by default in `run_s327waitpump.sh`, so every soak recipe — old and new — picks
+these up with zero recipe changes).
+
+**Regen**: full 4-step pipeline (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` →
+`cmake --build`), with the mandatory delete-all-45-`funcs_*.c`-before-`N64Recomp` step (the
+regen-reliability gotcha) done via flat absolute-path `rm -f` calls. Patch report showed `x1` for
+each of the 10 new sites; regenerated `funcs_3.c` grep for `drain-mesh-head` returned exactly 10 tag
+lines (2 per loop, all single-line, `re.subn`'s lambda-callback discipline followed). Build clean
+(46 pre-existing unrelated `-Wpointer-sign` warnings, same as every prior session, no new warnings or
+errors). `lib/` not touched — `fixup_game_funcs.py` lives in the untracked
+`~/Documents/Tools/N64Recomp` tool repo, not this repo's `lib/` submodules, so no `export.sh` /
+submodule-patch commit was needed (same as every prior drainMeshReleaseQueue session).
+
+**Queued** `s363_drainmeshheadguard_verify1/2.sh` in `scratch/agent/soak_queue/` — these 10 new guard
+tags have NO prior fire history at all (brand-new instruments), so even a single fire in the drained
+run is itself a positive control, distinct from the tail-scan guards' now-routine fire pattern. Full
+decision tree is in the recipe header: any `head{n}_guard` or `head{n}_clear_guard` fire confirms the
+head-pointer dereference is a real reachable crash surface; a repeat crash at the exact same
+`+796`/`0x8000819C` site with all head guards still at 0 means the regex didn't match; a crash
+elsewhere in `drainMeshReleaseQueue` with a head guard's fire_n≥1 means a further sibling gap exists
+(same escalation ladder as every guard before it).
+
+Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) unchanged this session — its `s362_...`
+re-queued pair is still pending, sorted to drain after this session's `s363_...` pair.
+
+`HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` (iteration 8 — Thread B landed
+new, informative evidence and a real fix this session, unlike s362's null result).
