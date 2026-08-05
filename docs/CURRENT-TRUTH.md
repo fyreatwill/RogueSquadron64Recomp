@@ -29,11 +29,15 @@ Priority order for upcoming iterations, set after the 300-session review:
    full ~598s remainder of the soak -- see item -190. s334 found which of the 5 candidate callers is
    actually active: NOT `mainGameLoop` (parks after exactly 1 loop-top pass, refuting that hypothesis)
    but `cutsceneDispatchSlotsByFlag`, which cycles continuously (1152+ calls) for virtually the entire
-   stall window -- see item -191. Baseline (both sites force-zeroed) restored at every session's end.
-   Next work unit: arm `ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH` (for `[frametick-top]`) together with
-   `ROGUESQ_LOG_MAINGAMELOOP_REACH` (for `[cutscenedispatch-entry]`) in the SAME soak, to learn whether
-   `cutsceneDispatchSlotsByFlag`'s own `runVideoFrameTick` call site (`funcs_27.c:118107`) ever fires
-   across its 1152+ calls -- see item -191.
+   stall window -- see item -191. **s335 closed that thread with a source-level proof, no new soak
+   needed**: `cutsceneDispatchSlotsByFlag`'s apparent `runVideoFrameTick` call site
+   (`funcs_27.c:118121`) is UNREACHABLE DEAD CODE -- `N64Recomp` duplicated `static_6_800A9ABC`'s body
+   into its address range past an unconditional `return`, with no incoming label; the climbing 1152+
+   call count was a red herring, never actually a `runVideoFrameTick` caller -- see item -192. Baseline
+   (both sites force-zeroed) restored at every session's end. Next work unit: read `cinematicLoopBody`
+   (`funcs_27.c:106842`, the common caller of both `static_6_800A9ABC` and
+   `cutsceneDispatchSlotsByFlag`) and its own caller to find what makes it invoke one callee 1152+
+   times and the other once -- see item -192.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -165,7 +169,43 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -191 (s334); the next new item takes -192 and is inserted at the top.
+oldest). Current top is -192 (s335); the next new item takes -193 and is inserted at the top.
+
+-192. **(s335) M5 audio de-stubbing: source-level proof that `cutsceneDispatchSlotsByFlag`'s apparent
+    `runVideoFrameTick` call site is UNREACHABLE DEAD CODE — closes item -191's open question without
+    a new soak, by re-analyzing s334's own already-captured log.** 3rd (final, per iron rule 8) of 3
+    iterations on `HYPOTHESIS-ID m5-audio-destub-mainGameLoop-upstream-stall`, closed with a real
+    discriminating result. Followed NEXT.md's step 1 (source-read `cutsceneDispatchSlotsByFlag`'s
+    body before instrumenting) and never needed step 2: `funcs_27.c:117878` is a `return;` ending the
+    function's real, reachable body; everything from `funcs_27.c:117879` through the
+    `runVideoFrameTick` call at `funcs_27.c:118121` to the function's textual close at
+    `funcs_27.c:119817` has NO incoming label or goto from outside that span (verified by grepping
+    every label definition and every goto targeting one in the file, and by grepping the whole tree
+    for any indirect/jump-table reference to that address range — none found). The only other
+    reference to that address is `funcs_27.c:107076`'s `jal 0x800A9ABC`, the real call site — but it
+    calls a **separately defined function**, `static_6_800A9ABC` (`funcs_43.c:20718`), not
+    `cutsceneDispatchSlotsByFlag`: `N64Recomp` duplicated `static_6_800A9ABC`'s disassembly into the
+    tail of `cutsceneDispatchSlotsByFlag`'s address range without a real function boundary — dead but
+    syntactically valid C. `static_6_800A9ABC`'s own body has no gate skipping its
+    `runVideoFrameTick` call (unconditional once entered); its one caller is `cinematicLoopBody`
+    (`funcs_27.c:106842`, at `funcs_27.c:107079`). Re-pulled s334's own 77 MB log
+    (`scratch/s73_post_a_scene/s334_maingameloop/run.log`, not re-run — "capture once, analyze many")
+    and grepped both counters directly: `[static6-800a9abc-entry]` fires exactly once (n=1) in the
+    whole run; `[cutscenedispatch-entry]` climbs to 1152 in the SAME run. **Verdict**:
+    `cutsceneDispatchSlotsByFlag`'s climbing call count was always a red herring for "who reaches
+    `runVideoFrameTick`" — a recompiler function-splitting artifact, not a live caller; the code
+    inside it can never fire, full stop, independent of runtime state. Combined with s333
+    (`[frametick-top]` fires exactly twice total in its own run) and s334 (`mainGameLoop`'s loop-top
+    fires once, `static_6_800A9ABC` fires once), the current best-supported (but cross-run-inferred,
+    not directly measured — iron rule 2) picture is that `mainGameLoop`'s single loop-top pass
+    accounts for both of `runVideoFrameTick`'s calls via its own 2 call sites. **New question**:
+    `cinematicLoopBody` is the common caller of both `static_6_800A9ABC` (fires once) and
+    `cutsceneDispatchSlotsByFlag` (fires 1152+ times) — 860 source lines apart, no loop wrapping
+    either call individually (not yet checked whether a loop wraps the whole span, or whether
+    `cinematicLoopBody` itself is what mainGameLoop's now-parked loop used to drive repeatedly). No
+    code changed, no diagnostics added, no soak run, no `lib/` touched — a source-proof-only session.
+    `HYPOTHESIS-ID` pivots to `m5-audio-destub-cinematicloopbody-divergent-callees`. Full detail:
+    `PORTING-STATE` Session 335.
 
 -191. **(s334) M5 audio de-stubbing: mainGameLoop-upstream probe finds mainGameLoop parks after
     exactly ONE loop-top pass; cutsceneDispatchSlotsByFlag becomes the actively-cycling caller for
