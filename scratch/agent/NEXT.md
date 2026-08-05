@@ -1,5 +1,16 @@
 # NEXT work unit — gate1/2/3's measured "taken"/reachability rate (~23-24) can't reconcile with the tick-producer functions' own measured entry count (37); find the measurement error
 
+## Status note (s324): carried forward unchanged — s324 was a MAINTENANCE iteration
+
+s324 was a `docs/CURRENT-TRUTH.md` maintenance pass (Step 0 of `tools/agent/ITERATION.md` triggered at
+61,410 bytes); no experiment ran against this hypothesis and nothing below changed. The compaction folded
+the s313-322 narrative into a single Next-steps item (now `-173..-181` in `docs/CURRENT-TRUTH.md`) but
+touched no facts, no numbers, no conclusions — everything cited below (s317/s320/s321/s322/s323 findings)
+is still accurate and still keyed to those session numbers. This work unit is exactly what s323 left
+queued. Per iron rule 8, a maintenance-only iteration does not consume one of the 3 allowed consecutive
+iterations on a hypothesis-id — the next iteration that actually runs an experiment against this id is
+still the 2nd, not the 3rd.
+
 ## Context — s323 proved there is no unlocated call site, static or dynamic
 
 s317/s321 (exhaustive text grep) and s323 (a NEW runtime instrument, positive-controlled) together prove
@@ -23,7 +34,7 @@ measurement of "taken"/"reached" itself is undercounting by ~13-14, somewhere in
 1. **Re-read gate2's reachability logic specifically** (`fixup_game_funcs.py`'s `_musyx_gate2_patch`,
    `funcs_24.c` around guest 0x80091534). Only 4-5 of gate2's containing-loop iterations were EVER
    sampled as "reached" in any prior soak (s316-320) — check whether gate2's own outer loop bound (the
-   `<0x10` comparison against a fixed constant, per item -181's s322 trace) could itself be gated by a
+   `<0x10` comparison against a fixed constant, per s322's trace) could itself be gated by a
    register that's read STALE relative to gate1's loop having already advanced the shared voice cursor
    (`r19`) — i.e. a s318-class TOCTOU on the REACHABILITY count itself (not the taken_skip field, which
    s318 already fixed), where gate2's diagnostic's own entry point is placed somewhere that undercounts
@@ -77,9 +88,9 @@ measurement of "taken"/"reached" itself is undercounting by ~13-14, somewhere in
   `fixup_game_funcs.py` (~line 173-174) from `0x8008E(?:B40|C88)` to `0x8008EC88` ONLY (this leaves B40 —
   setDisplayMode — unmatched/unpatched, i.e. reversed; C88 stays force-zeroed). **The prior NEXT.md text
   describing this as "narrow to B40 only" was WRONG** — verified directly against the code and its own
-  session-history comments (s319/s320/s323 all narrow to C88-only) this session; trust the code, not a
-  paraphrase. MUST restore the full `(?:B40|C88)` alternation before ending session, verified via
-  `audio gate patched x2` in the fixup report.
+  session-history comments (s319/s320/s323 all narrow to C88-only); trust the code, not a paraphrase.
+  MUST restore the full `(?:B40|C88)` alternation before ending session, verified via `audio gate patched
+  x2` in the fixup report.
 - A NULL result needs a SAME-RUN positive control (iron rule 1) — the existing `[dma-ring-caller]`
   positive control (`ROGUESQ_LOG_DMA_CALLER=1`) does NOT reliably fire in this boot-hang phase (0/0 in
   s323's first soak); use `[tickfunc-caller-control]` (musyxSynthFrame via `ROGUESQ_LOG_TICKFUNC_CALLER=1`,
@@ -101,7 +112,7 @@ measurement of "taken"/"reached" itself is undercounting by ~13-14, somewhere in
   commands, trigger permission prompts — issue `cd` as its own bare command, run each `export`/command
   separately.
 
-HYPOTHESIS-ID: m5-audio-destub-step4-tick37-vs-hardstop40 (2nd iteration on this id — s323 closed the
-"unlocated call site" framing definitively; this iteration narrows to the gate1/2/3 measurement itself.
-Per iron rule 8, if a 3rd consecutive iteration on this id produces no discriminating result, pivot or go
-BLOCKED with a specific question next time.)
+HYPOTHESIS-ID: m5-audio-destub-step4-tick37-vs-hardstop40 (still 2nd EXPERIMENTAL iteration on this id —
+s323 opened it and closed the "unlocated call site" framing; s324 was maintenance-only and does not count
+against the budget. Per iron rule 8, if a 3rd consecutive iteration that actually experiments on this id
+produces no discriminating result, pivot or go BLOCKED with a specific question next time.)
