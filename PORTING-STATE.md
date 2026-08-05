@@ -31146,3 +31146,100 @@ contradicted by this session's findings, just still unconfirmed. The `bad_v1=0x0
 is now confirmed present across 3 distinct guard sites spanning all 3 known loops in this function, 6-7
 independent sightings total, continuing to strengthen (not yet prove) the single-deterministic-
 corruption-source reading from item -208.
+
+## Session 361 (2026-08-05): Stale `s359` pair drained with a 4th `drainMeshReleaseQueue` crash site — pivoted to the pre-committed systematic idiom-class audit instead of one more reactive guard, found TWO never-before-guarded sibling loops, fixed all 5 gaps in one pass
+
+Session start: read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, and `scratch/agent/SOAK-RESULTS.md`
+tail. Found `s359_drainmeshloop2writeguard_verify1/2` — queued s359, flagged "still undrained" as of
+s360's own NEXT.md — had drained between s360's session end and this session's start (the loop processed
+them ahead of s360's own freshly-queued `s360_drainmeshloop3guard_verify1/2`, still sitting in the queue
+untouched). Per the "off-target-but-discriminating" gotcha s360 itself flagged, checked `verify1`'s data
+against every open thread's target sites, not just its own recipe's named question.
+
+`verify1`: `runlog_bytes=92628174`, `crash_markers=37`, reached title at 45.0s. Guard summary:
+`coalesce_guard_fire_n=0 read_guard_fire_n=1 write_guard_fire_n=1 loop2_guard_fire_n=1
+loop2_write_guard_fire_n=1 ring_fire_n=1` (all loop1/loop2 guards fired earlier in the run — strong
+positive control). CRASH at `pc-symbol=drainMeshReleaseQueue+5740`, `last-guest-pc=0x80008260` — a NEW
+site, downstream of BOTH the just-landed s360 loop3 read guard (`0x80008248`) and the flagged-not-yet-hit
+sibling read (`0x80008244`). Direct grep of the raw log for `[drain-mesh-loop3-guard]` found **zero**
+fires in this run — the loop3 READ guard (s360) did not intercept anything, so this is NOT the
+read-guard-bails-without-repairing-v1 gap; it is a fresh site. `verify2` crashed off-target in
+`__pthread_kill+8` with all guard fire counts at 0 — a watchdog-kill artifact, not informative.
+
+**Source-read** (`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:1669-2297`, the ENTIRE
+`drainMeshReleaseQueue` function start-to-end, not just the crash site) found `0x80008260` is
+`MEM_W(0X0, ctx->r3) = ctx->r2` — unconditional, no guard — the write immediately following loop3's exit
+(`L_80008254`), reachable both via loop3's normal walk-to-end AND via a short-circuit path that skips the
+walk entirely when the first list node's content field is already zero (in which case `ctx->r3` is set
+directly from the never-validated outer array-walk pointer and never touches the read guard at all). This
+is the exact same write-through-v1 sibling gap `s350`→`s350b` and `s357`→`s359` already found and fixed
+for loops 1 and 2 — this time for loop3, and it explains why the loop3 read guard showed 0 fires: the
+short-circuit path bypasses it entirely.
+
+**Per NEXT.md's own pre-committed trigger** ("if a 4th site turns up, that's the trigger to stop
+whack-a-moling individual sites and instead grep-enumerate every `lw...;lw...` pair in this function's
+disassembly in one pass — the s282-s288 `-0x25A4` idiom-class-audit model") — read the complete function
+top to bottom instead of patching one more site reactively. Found the function contains **FIVE**
+structurally identical tail-scan loops total, not three:
+
+| loop | read site | read guard | write site | write guard (before this session) |
+|---|---|---|---|---|
+| 1 | `0x800081A8/0x800081AC` | s350 | `0x800081C4` | s350b |
+| 2 | `0x800081FC/0x80008200` | s357 | `0x80008218` | s359 |
+| 3 | `0x80008244/0x80008248` | s360 | `0x80008260` | **none — this session's crash site** |
+| 4 | `0x800082A4/0x800082A8` | **none** | `0x800082C0` | **none** |
+| 5 | `0x800082F4/0x800082F8` | **none** | `0x80008310` | **none** |
+
+Loops 4 and 5 (`0x800082A4`/`0x800082F4`) had **no guard whatsoever** — landmines nobody had crashed into
+yet, byte-for-byte the same unbounded "keep following `v1=*v1` until the node's first field is NULL"
+idiom as the other three, walking two more fields (`0x2B48`, `0x2B44`) of the same per-iteration record.
+Each loop's own "sibling write" one instruction pair further down (`MEM_W(0X4, ctx->r2) = ctx->r3`, e.g.
+`0x800081C8`/`0x8000821C`/`0x80008264`/`0x800082C4`/`0x80008314`) was confirmed safe and left unguarded —
+its address operand is `ctx->r2` (a global freelist-head table entry read at a fixed offset a few lines
+earlier), not the corrupted `v1` — same reasoning `s350b` established and every subsequent write-guard
+has reused without incident.
+
+**Fix**: added all 5 missing guards in one pass (`~/Documents/Tools/N64Recomp/fixup_game_funcs.py`), same
+minimal-behavior-change bail idiom as every existing drain-mesh guard (read guards synthesize `v0=0`, the
+"legitimately-NULL-first-field, stop walking" value; write guards no-op the write on an out-of-range
+`v1`), all reusing `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` (already armed by default in
+`run_s327waitpump.sh`, so every already-queued soak picks these up with zero recipe changes):
+- `[drain-mesh-loop3-write-guard]` at `0x80008260` (closes this session's confirmed crash site)
+- `[drain-mesh-loop4-guard]` (read, `0x800082A8`) + `[drain-mesh-loop4-write-guard]` (`0x800082C0`)
+- `[drain-mesh-loop5-guard]` (read, `0x800082F8`) + `[drain-mesh-loop5-write-guard]` (`0x80008310`)
+
+Full regen (deleted all 45 `RecompiledFuncs/funcs_*.c` via flat `rm -f` calls → `make_elf.py` →
+`N64Recomp` → `fixup_game_funcs.py` → `cmake --build`, mandated order). Patch report confirmed all 5 new
+patches applied `x1`/`x2` as expected (write-guard regexes match both compiler-duplicated branch arms,
+same shape as every prior write guard; read-guard regexes match the single contiguous instruction pair).
+Direct grep of the regenerated `funcs_3.c` confirmed exact expected counts for every drain-mesh tag,
+including all 5 pre-existing guards still intact. Full build completed clean (only pre-existing `DDIV`
+sign-mismatch warnings, no new errors). `lib/` not touched — `fixup_game_funcs.py` lives in the untracked
+`~/Documents/Tools/N64Recomp` tool repo, outside this repo's `lib/`/submodule-patches system, same as
+every prior M5 session.
+
+**Build-sanity smoke test** (not a full verify soak — a 60s-hold inline run to catch an obvious
+regression before spending a queued soak cycle on it): reached title at 45.7s, progressed through
+SELECT YOUR CRAFT into the outdoor VI=512 phase at 75.2s, then crashed at an unrelated, already-known
+crash family (`pc-symbol=static_5_800A9270+1576`, the hangar-select list-insert function guarded by the
+separate s284 idiom-class audit) — confirms the build is not broken by this session's patch (no crash
+inside `drainMeshReleaseQueue` at all in this run) without spending a real analysis cycle on it. All new
+guards' fire counts were 0 in this short run, as expected — not enough runtime to be informative either
+way, purely a compile/link/boot sanity check.
+
+**Queued** `s361_drainmeshidiomaudit_verify1/2.sh` (`scratch/agent/soak_queue/`, `HOLD_S=240`, reports
+every drain-mesh guard tag including all 5 new ones). `s360_drainmeshloop3guard_verify1/2.sh` are STILL
+queued/undrained from last session (the loop appears to be draining Thread B's OLDER recipes first,
+worth checking file-mtime/alphabetical ordering if this keeps happening) — 4 recipes total pending.
+
+**Decision**: does not close the thread. This session executed the audit NEXT.md itself pre-committed to
+as the trigger condition, closing what is very likely the entire idiom class in one function in one
+pass rather than continuing to whack-a-mole one crash at a time (the s282-s288 `-0x25A4` model the
+strategic directive prefers). `HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source`
+(iteration 7). Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) remains untouched this session,
+still 0/2 informative for its own question. The `bad_v1=0x00010001` poisoned value's positive controls
+(loop1/loop2 guards firing) continue to show up in the same run that hit the new site, still consistent
+with (not yet proof of) the single-deterministic-corruption-source reading from item -208. If loop4 or
+loop5's brand-new guards ever fire in a future soak, that would be the first evidence those two loops are
+also reachable by whatever is corrupting this function's pointer chains — worth flagging even on an
+otherwise-clean run.
