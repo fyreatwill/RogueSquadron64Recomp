@@ -415,3 +415,70 @@ question already answered.
   boot call loops more than once."
 - **`queueGPUUploadTMEM` zero-size assert.** Crash classes 9/10 (`updateAnimatedTextureStreaming`/
   `static_5_800B4048` SIGBUSes) CLOSED s124/s125, tracked in the §7 crash catalog only.
+
+## 10. M5 audio: gate-promotion, step-5 crash-rate comparison, and the drainMeshReleaseQueue tail-scan
+cluster (s339–353), migrated from CURRENT-TRUTH.md s355 maintenance pass
+
+Full raw detail for all of these lives in `PORTING-STATE.md` at the session ranges cited. This section
+folds what used to be CURRENT-TRUTH.md Next-steps items -195 through -209 (excluding -208, which stayed
+live because it's the evidentiary basis for the still-open `m5-audio-destub-linkedlist-corruption-source`
+thread — see CURRENT-TRUTH item -208). None of the four sub-arcs below is open work.
+
+- **VI=640 `pairs=0` stall resolution (s339) — CLOSED, was CURRENT-TRUTH item -195.** Source-proved
+  `submitGfxFrame`'s full callee set structurally cannot produce a `FramebufferPair` (no
+  `setupCameraMatrices`/`emitFrameRdpInitDl`/`runVideoFrameTick`/`advanceVideoFrame` in it — only
+  buffer-arbiter/SP-task-producer bookkeeping), and that `cinematicLoopBody`'s internal self-loop calls
+  the real `SET_COLOR_IMAGE` producer (`runVideoFrameTick`) exactly ONCE, not per-iteration — confirmed
+  at runtime (`[static6-800a9abc-entry]` fires once per soak). Not a stall: a locked-camera cutscene
+  reusing one RDP-state prologue is ordinary; `[vi-fs-decision]`'s `pairs=0` reading for the rest of the
+  scene is the expected, correct behavior. This closed the 41-session s297-337 gate-reversal/VI=640-stall
+  arc (§9 above).
+- **Audio-gate promotion arc (s340-344).** s340 promoted BOTH `setDisplayMode`'s and
+  `reapplyDisplayMode`'s gate-byte reversals to the permanent shipped default, on a validation basis
+  later found invalid (see CURRENT-TRUTH Overturned Conclusions — the "validating" soaks never actually
+  left the pre-title screen). s342 found `reapplyDisplayMode`'s reversal specifically, in isolation,
+  deterministically blocks title-reach: 0/5 relevant soaks across 3 sessions ever left the pre-title
+  screen with that gate reversed. s343 reverted just that one gate back to force-zero (keeping
+  `setDisplayMode`'s reversal), restoring title-reach — but surfaced a NEW crash one stage later, in the
+  post-title SELECT YOUR CRAFT stabilization window: a compiler-inserted `break 7` div-by-zero trap
+  inside `tickWrappingTimerAccumulatorList` (`last-guest-pc=0x80054744`), a different signature from that
+  function's previously-catalogued near-null-pointer crash. s344 confirmed title-reach 3/3 but the
+  div-by-zero recurred only 1/3 — PARKED (`m5-audio-destub-tickwrap-divzero-craftselect`), not guarded;
+  reopens if a future soak reproduces that exact guest PC. **Current gate state (unchanged since s343,
+  still true as of s354):** the fixup regex at `fixup_game_funcs.py` ~line 263 is `r"0x8008E(?:C88)"` —
+  matches ONLY `reapplyDisplayMode` (`0x8008EC88`, force-zeroed); `setDisplayMode`'s `0x8008EB40` stays
+  reversed.
+- **Step-5 crash-rate-comparison methodology arc (s341, s344-347) — CLOSED s352, superseded by the
+  bimodal-timing reframe (CURRENT-TRUTH item -208).** Designed to measure crash-family #3
+  (`waitForAnyAudioSlot` boot deaths) and #4 (post-cutscene stall) recurrence rates post-de-stub. Hit
+  and fixed 2 methodology bugs first: a `[keys]`-log-file misattribution making 2 fully-driven soaks
+  misreport as undriven (s344), and an unbounded per-list-node log blowup (`ROGUESQ_LOG_RS_FREE_WALK`/
+  `_MALLOC_WALK`) ballooning `run.log` to 8+ GB and hitting the loop's 600s hard-cap as a false crash
+  signature (s345, root mechanism — why that specific run — stayed open, same log-line-per-node family
+  Session 209/210 had already root-caused for an unrelated bug). Once fixed, a 4-run batch (s346-347)
+  found the post-title crash rate high (~75%, 3/4) but DIFFUSE, not concentrated: 3 different crash
+  symbols across 3 runs, 0/4 hits on families #3 or #4 specifically. Net conclusion: de-stubbing didn't
+  reduce the post-title crash rate, it diffused it away from #3/#4 into the ~20+-family background noise
+  already present. `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison` closed s352 when the
+  16-soak offline re-analysis (CURRENT-TRUTH item -208) found the timing wasn't actually diffuse, just
+  the symbols.
+- **`drainMeshReleaseQueue` tail-scan cluster (s348-351, s353) — 3 distinct crash sites GUARDED within
+  one function's dense, entirely-unguarded singly-linked-list tail-scan idiom (`funcs_3.c:1669+`).**
+  s348 (`HYPOTHESIS-ID m5-audio-destub-contentguard-verify`, opened+closed) found and guarded an
+  unguarded "content pointer" field one hop from `processSceneNode`'s already-guarded node pointer
+  (2 sites, `funcs_4.c`); non-recurrence validated 0/4 across s350's follow-up soaks, though s352 later
+  found this guard's firing signature (`node=0x80183ECC`, thousands of steady-state hits per run) is
+  benign — see CURRENT-TRUTH Overturned Conclusions. s349-350 (`HYPOTHESIS-ID
+  m5-audio-destub-drainmesh-breadcrumb`) added `BREADCRUMB15` to localize an exact-file-offset-repeat
+  crash (`+600`, 2/2), which turned out NOT to be the guarded bug — the breadcrumb instead found a 2nd,
+  different unguarded read site (`0x800081AC`, `v1 = *v1; v0 = *v1` with no validity check) via an
+  incidental hit, guarded it. s351 (`HYPOTHESIS-ID m5-audio-destub-drainmesh-writeguard-verify`, opened
+  s351+closed s352 with the fix landed) found the s350 read guard fired correctly (positive control) but
+  the crash moved 2 lines downstream to a write-through-the-same-corrupted-pointer sibling site the s350
+  comment had already flagged as unguarded — guarded that too. s353 landed a ring-buffer breadcrumb
+  (step 1 of the `bad_v1` linked-list-corruption-source lead opened by item -208) recording every list
+  node walked, not just the final bad one — its first verify pair came back 0/2 informative (both
+  crashes landed outside `drainMeshReleaseQueue` entirely, one of them independently useful — see
+  CURRENT-TRUTH item -210). All 3 guards use the same range-check-and-bail shape as the rest of the
+  `-0x25A4`/BREADCRUMB2-14 family (§9): on an out-of-range pointer, synthesize the value the following
+  guest logic would see from a legitimately-absent/cleared case instead of dereferencing.

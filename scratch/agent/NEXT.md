@@ -1,41 +1,35 @@
 # NEXT work unit
 
-## s354 landed: guarded a NEW independently-repeating crash site (coalesceFreeHeapBlocks+3452), 1 of 2 verify soaks drained (CLEAN, not yet a positive control)
+## s355 was a MAINTENANCE iteration (Step 0 triggered at 62,502 bytes) — no new soak data, no experiments run. Folded in: Thread A's `verify2` had already drained CLEAN before this session started.
 
-Full detail: `docs/CURRENT-TRUTH.md` item -210, `PORTING-STATE` Session 354. Short version: s353's
-ring-buffer instrument got 0/2 fires because neither `s353_ringbuffer_verify1/2` crash landed inside
-`drainMeshReleaseQueue` at all — not informative for the linked-list-node question, exactly the caveat
-NEXT.md itself flagged in advance. But `verify2`'s crash (`coalesceFreeHeapBlocks+3452`,
-`last-guest-pc=0x80002434`) turned out to be a byte-identical repeat of `s351_drainmeshwriteguard_verify2`
-from an independent session — 2/2 exact match, same evidentiary strength as item -208's `bad_v1` finding.
-Source-read confirmed an unvalidated pointer-plus-offset heap-block walk (`funcs_0.c:4664-4673`); added
-a range-check-and-bail guard at `0x80002434` (`~/Documents/Tools/N64Recomp/fixup_game_funcs.py`,
-funcs_0.c-scoped, same idiom as s350/s350b). Full regen+build clean (`patched x1`). Queued
-`s354_coalesceheapguard_verify1/2.sh`; `verify1` already drained this session (CLEAN, full hold, guard
-never triggered — confirms no regression, not proof the guard catches anything). `verify2` still queued.
+Full detail: `PORTING-STATE` Session 355. Compacted `docs/CURRENT-TRUTH.md` 701→476 lines (225 net,
+clears the >=200 ADVANCED bar), migrated the closed s339-353 M5 sub-arcs to a new
+`docs/PROJECT-OVERVIEW.md` §10. Also picked up `s354_coalesceheapguard_verify2`'s result from
+`SOAK-RESULTS.md` (it had drained via the queue before this session, not by this session): **CLEAN**,
+423s, full hold, 0 crashes — same shape as `verify1`. **Thread A is now 2/2 clean**, 0/2 for the guard
+actually firing. Nothing else changed factually; both threads below are exactly where s354 left them.
 
 ## Two open threads — pick the higher-information-value one first
 
-**Thread A: `m5-audio-destub-coalesce-heap-guard-verify` (NEW, iteration 1 of actual data).** Does the
-new `[coalesce-heap-guard]` fire on a crashing run, and does `coalesceFreeHeapBlocks+3452` stop
-recurring? This is the freshly-landed guard — highest information value right now since it's untested
-against a real crash.
-- **Step 1**: check `scratch/agent/soak_queue/` for `s354_coalesceheapguard_verify2.sh`. If still
-  present (not moved to `done/`), the loop hasn't drained it yet — drain it yourself:
-  `zsh scratch/agent/soak_queue/s354_coalesceheapguard_verify2.sh` (NOT `bash` — see Environment notes).
-- **Step 2**: read the result. If it CRASHES with `pc-symbol=coalesceFreeHeapBlocks+3452` again and
-  `coalesce_guard_fire_n=0`: the guard's regex/anchor missed this occurrence — treat as a null
+**Thread A: `m5-audio-destub-coalesce-heap-guard-verify` (iteration 2 — 2/2 clean, 0/2 fires).** Does
+the new `[coalesce-heap-guard]` fire on a crashing run, and does `coalesceFreeHeapBlocks+3452` stop
+recurring? Both `s354_coalesceheapguard_verify1/2` came back CLEAN (full hold, 0 crashes, guard armed
+but never exercised) — per Step 2c below, that's weak-but-still-incomplete evidence; 2 more runs needed
+before calling it validated-by-non-recurrence.
+- **Step 1**: write `scratch/agent/soak_queue/s355_coalesceheapguard_verify3.sh` and `_verify4.sh`
+  (copy `s354_coalesceheapguard_verify2_20260805-134849.sh` from `soak_queue/done/` as the template —
+  same env vars, `HOLD_S=240`) and let the loop drain them (do NOT run inline — this is exactly the
+  "don't babysit a repeat soak" case the project rules call out).
+- **Step 2**: next session reads the result. If EITHER crashes with `pc-symbol=coalesceFreeHeapBlocks+3452`
+  again and `coalesce_guard_fire_n=0`: the guard's regex/anchor missed that occurrence — treat as a null
   instrument bug, re-check the regex against the freshly regenerated `funcs_0.c` around guest PC
-  `0x80002434` (compiler duplication is possible even though s354's grep found only 1 occurrence in that
-  build — re-verify on the CURRENT regenerated source before assuming the guard is broken).
-- **Step 2b**: if it CRASHES elsewhere with `coalesce_guard_fire_n>=1`: guard confirmed alive
+  `0x80002434` (re-verify on the CURRENT regenerated source before assuming the guard is broken).
+- **Step 2b**: if either CRASHES elsewhere with `coalesce_guard_fire_n>=1`: guard confirmed alive
   (positive control satisfied), crash relocated downstream — same "guard works, crash moves" pattern as
   s350/s351. Not evidence of failure; expected shape for a guard on a symptom rather than the corruption
   origin.
-- **Step 2c**: if CLEAN: 2nd clean run in a row (verify1 was also clean) — weak evidence the guard's
-  presence + no regression holds, but still 0/2 for the guard actually firing. Queue 2 more
-  (`verify3/4`) before concluding the guard is validated-by-non-recurrence (same bar item -204's
-  contentguard used: needs multiple non-recurrences, not one).
+- **Step 2c**: if BOTH come back CLEAN too (4/4 clean, 0/4 fires): treat as validated-by-non-recurrence
+  (same bar the s348 contentguard used — see `docs/PROJECT-OVERVIEW.md` §10) and close this thread.
 
 **Thread B: `m5-audio-destub-linkedlist-corruption-source` (iteration 3 — 2 of iron rule 8's 3 strikes
 used, 1 more before mandatory pivot).** The original `drainMeshReleaseQueue` tail-scan question — is
@@ -46,11 +40,11 @@ iteration's Thread B soaks ALSO come back 0-informative (crash outside drainMesh
 that's the 3-strike trigger — write the hypothesis/evidence table into this file and pivot**, per iron
 rule 8. Do not spend a 4th iteration chasing the same off-target problem.
 
-**Recommendation**: run Thread A first (freshly landed, untested, highest information value, and can be
-drained from the already-queued `verify2` immediately — no new build needed). If time remains, queue
-Thread B's `verify3/4` recipes for the loop rather than running them inline (matches the "don't babysit
-a repeat soak" rule — this session already deviated once by running `s354...verify1` inline for an
-early smoke test; that pattern should not repeat every session).
+**Recommendation**: queue BOTH threads' next soak pairs for the loop this iteration (4 recipes total,
+`s355_coalesceheapguard_verify3/4.sh` + `s355_ringbuffer_verify3/4.sh`) rather than running any inline —
+neither thread needs a new build, both just need more soak data, and the loop drains up to 2 queued
+recipes between iterations anyway. Read both pairs' results next session and resolve whichever thread
+has data first.
 
 ## Environment notes (carried forward — see s327-354 for full detail)
 
@@ -100,7 +94,15 @@ early smoke test; that pattern should not repeat every session).
   PID; the run's own watchdog/hold timing had likely already finished naturally by the time the kill
   landed. Trust the recipe's own printed VERDICT/launcher_rc over assumptions about what a kill did.
 
-HYPOTHESIS-ID: m5-audio-destub-coalesce-heap-guard-verify (NEW, iteration 1 — opened + guard landed
-s354). Parallel/still-open: m5-audio-destub-linkedlist-corruption-source (iteration 3 of 3 available
-before iron rule 8's mandatory pivot check — opened s352, instrument landed s353, 0/2-informative
-reading s354).
+## Queued this session (s355, ready for the loop — nothing run yet)
+
+`s355_coalesceheapguard_verify3/4.sh` (Thread A, `HOLD_S=240`) and `s355_ringbuffer_verify3/4.sh`
+(Thread B, `HOLD_S=240`), all 4 in `scratch/agent/soak_queue/`. The loop drains up to 2 per gap between
+iterations — expect at most 2 of the 4 to have results by next session; read whichever pair drained via
+`SOAK-RESULTS.md` and resolve that thread first.
+
+HYPOTHESIS-ID: m5-audio-destub-coalesce-heap-guard-verify (iteration 2 — 2/2 clean so far, `verify3/4`
+queued s355). Parallel/still-open: m5-audio-destub-linkedlist-corruption-source (iteration 3 of 3
+available before iron rule 8's mandatory pivot check — opened s352, instrument landed s353,
+0/2-informative reading s354, `verify3/4` queued s355 as this thread's LAST soak pair before the
+mandatory pivot).

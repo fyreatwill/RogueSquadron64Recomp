@@ -30719,3 +30719,61 @@ it stayed uninformative this round through no fault of the instrument. New paral
 `m5-audio-destub-coalesce-heap-guard-verify`, tracking whether the new guard fires and/or the
 `coalesceFreeHeapBlocks+3452` crash signature stops recurring. `lib/` not touched — confirmed via `git
 status`, same as every prior M5 session.
+
+## Session 355 (2026-08-05): MAINTENANCE — Step 0 triggered at 62,502 bytes; compacted CURRENT-TRUTH.md 701→476 lines (225 net lines removed), migrated the closed s339-353 M5 gate-promotion/step5-rate-comparison/drainMeshReleaseQueue-tail-scan arc to a new PROJECT-OVERVIEW.md §10.
+
+`wc -c docs/CURRENT-TRUTH.md` read 62,502 bytes at session start, over the 60,000-byte Step-0 threshold in
+`tools/agent/ITERATION.md` — this iteration is a MAINTENANCE iteration per the contract, no experiments
+run. SOAK-RESULTS.md was checked first (folded no new data — s354's `verify1`/`verify2` coalesce-heap-guard
+soaks had already drained CLEAN/CLEAN before this session started, per the prior session's own summary;
+nothing new to fold into the ledger).
+
+Read the full CURRENT-TRUTH.md (701 lines) and PROJECT-OVERVIEW.md (417 lines) to plan the compaction. The
+bulk of CURRENT-TRUTH's Next-steps section was 15 dense, session-by-session paragraphs (items -195 through
+-209, s339-353) covering four now-CLOSED/superseded sub-arcs of the M5 audio investigation: (1) the s339
+VI=640 `pairs=0` stall source-proof; (2) the s340-344 audio-gate promotion/reversion arc (promote both
+gates → find `reapplyDisplayMode`'s reversal blocks title-reach 0/5 → revert it → title-reach restored,
+new tickwrap div-by-zero surfaces, parked); (3) the s341/344-347 step-5 crash-rate-comparison methodology
+arc (2 recipe bugs fixed, then a 4-run batch found the post-title crash rate diffuse-not-concentrated); (4)
+the s348-351/353 `drainMeshReleaseQueue` tail-scan cluster (3 crash sites found and guarded in one dense
+unguarded-linked-list function, closing 2 verify threads). None of these are open work — the still-active
+threads (`m5-audio-destub-linkedlist-corruption-source` from item -208/s352, and
+`m5-audio-destub-coalesce-heap-guard-verify` from item -210/s354) were left untouched at full detail since
+they're what the next iteration actually needs.
+
+**Migration**: added a new `## 10. M5 audio: gate-promotion, step-5 crash-rate comparison, and the
+drainMeshReleaseQueue tail-scan cluster (s339–353)` section to `docs/PROJECT-OVERVIEW.md` (matching the
+existing §9's one-paragraph-per-sub-arc style, full detail preserved, all four sub-arcs covered with their
+key numbers/mechanisms intact — e.g. the exact bimodal-timing windows and `bad_v1=0x00010001` byte-identical
+evidence stay findable via item -208, which was kept in CURRENT-TRUTH rather than folded, since it's the
+still-open thread's evidentiary basis).
+
+**Compaction**: replaced CURRENT-TRUTH.md items -209 through -195 (excluding -208, which stays as its own
+entry per the existing "-159..-14 (excluding -20, kept below)" precedent already in the file) with one
+folded summary paragraph pointing at the new PROJECT-OVERVIEW §10, following the same pattern the file
+already uses for the older -160..-194 M5 arc. Fixed 4 now-dangling cross-references elsewhere in the file
+(the -160..-194 entry's two mentions of "item -195", and 2 mentions in the Overturned Conclusions section
+referencing items -195/-204) to point at the new folded range and/or PROJECT-OVERVIEW §10 instead. Also
+rewrote the USER DIRECTIVE section (removed stale references to items -199/-203/-204 which no longer exist
+as standalone entries, pointed readers at NEXT.md for current thread status instead) and refreshed the
+stale "reviewed through s332" headline to "s355". Found and fixed one more stale item-204 reference in
+`scratch/agent/NEXT.md` while auditing cross-references.
+
+**Result**: `git diff --numstat -- docs/CURRENT-TRUTH.md` shows 48 insertions/273 deletions, a net shrink
+of 225 lines — clears the >=200-net-line ADVANCED bar for a triggered maintenance iteration.
+`docs/CURRENT-TRUTH.md` is now 476 lines / 42,233 bytes (still above the 35 KB stretch target but well
+under the 60,000-byte trigger; per the file's own front matter, 35 KB is "a stretch target, not a hard
+floor"). `docs/PROJECT-OVERVIEW.md` grew 417→484 lines to hold the migrated content — nothing was deleted,
+only moved and (in CURRENT-TRUTH) compressed. No overturned conclusions this session; no experiments run
+(by design — Step 0 rule). Next iteration should resume the two open M5 threads NEXT.md already documents:
+`m5-audio-destub-coalesce-heap-guard-verify` (Thread A, item -210 — 2/2 clean verify soaks so far, needs
+`verify3/4` per Step 2c before validated-by-non-recurrence) and `m5-audio-destub-linkedlist-corruption-source`
+(Thread B, item -208 — 0/2 informative data points, at iteration 3 of 3 before iron rule 8's mandatory
+pivot check).
+
+Bonus (zero-cost, no build/run needed): queued 4 soak recipes for the loop to drain between iterations —
+`s355_coalesceheapguard_verify3/4.sh` (Thread A, continuing the `m5-audio-destub-coalesce-heap-guard-verify`
+2/2-clean-so-far series per NEXT.md's own Step 2c) and `s355_ringbuffer_verify3/4.sh` (Thread B,
+`m5-audio-destub-linkedlist-corruption-source`'s 3rd-and-last soak pair before iron rule 8's mandatory
+pivot check). Not run this session — writing/queueing a recipe is not "running an experiment," and Step 0
+explicitly bars experiments in a triggered maintenance iteration.

@@ -9,32 +9,25 @@ Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
    section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. History: s295-330
    ran 5 passes (668→459 lines by s330); s346 ran a 6th (670→~470 lines) migrating the closed s297-337
-   M5 gate-reversal arc to PROJECT-OVERVIEW §9. Full per-session detail in git log. 35 KB remains a
-   stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and the Regeneration
-   section's Standing warnings stay intact deliberately; both are used every iteration.
-2. **M5 audio de-stubbing**: design doc + steps 1-3 DONE (s298/300/301). Step 4 (`setDisplayMode`
-   VI=320 hang, `reapplyDisplayMode` gate) is CLOSED and fix-validated — title-reach confirmed 3/3 as
-   of s343 (item -199). Step 5 (crash-family #3/#4 rate comparison) is OPEN, `HYPOTHESIS-ID
-   m5-audio-destub-step5-crashrate-comparison` (item -203) — the 3-strike pivot check landed s352 (item
-   -208): crash SYMBOL scatter across 16 soaks is real (10 distinct downstream symbols) but crash
-   TIMING is bimodal, not diffuse (two deterministic post-VI-transition windows). `m5-audio-destub-
-   drainmesh-writeguard-verify` CLOSED (superseded, no more single-site verify soaks); `m5-audio-destub-
-   contentguard-verify` thread CLOSED s350: 0/4 repeat of `processSceneNode+1424` since item -204's
-   guard landed, and s352 found its `[scene-node-content-guard]` firings are steady-state/benign, not
-   corruption evidence. `m5-audio-destub-linkedlist-corruption-source` (opened s352 on the
-   `drainMeshReleaseQueue` `bad_v1=0x00010001` lead) landed its ring-buffer instrument s353 but got 0/2
-   fires on its own verify pair — s354 found the OFF-TARGET reason: neither crash landed in
-   `drainMeshReleaseQueue` at all, and one of them (`coalesceFreeHeapBlocks+3452`, guest-pc=0x80002434)
-   is itself a byte-identical 2/2 repeat against an independent earlier session — same evidentiary
-   strength as the `bad_v1` finding, in a different function. s354 (item -210) source-proved and guarded
-   that site; 2 verify soaks queued (1 already drained, CLEAN — no crash, not yet a positive control for
-   the new guard). See NEXT.md for both open threads.
+   M5 gate-reversal arc to PROJECT-OVERVIEW §9; s355 ran a 7th migrating the closed s339-353 M5
+   gate-promotion/step5-rate/drainMeshReleaseQueue-tail-scan arc to PROJECT-OVERVIEW §10. Full
+   per-session detail in git log. 35 KB remains a stretch target, not a hard floor -- the "Current
+   truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
+   deliberately; both are used every iteration.
+2. **M5 audio de-stubbing**: design doc + steps 1-4 DONE — title-reach restored and confirmed 3/3
+   (s343-344, full arc: PROJECT-OVERVIEW §10). Step 5 (crash-family rate comparison) found the
+   post-title crash rate diffuse-not-concentrated by symbol, then s352 (item -208) reframed it: crash
+   TIMING is bimodal, not diffuse (two deterministic post-VI-transition windows), and one guard value
+   (`bad_v1=0x00010001`) reproduces byte-identically across independent sessions — opened
+   `m5-audio-destub-linkedlist-corruption-source`, still OPEN. s354 (item -210) opened a parallel
+   thread, `m5-audio-destub-coalesce-heap-guard-verify`, on a 2nd independently-repeating crash site
+   found and guarded along the way. See NEXT.md for both open threads' current status and next steps.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
 Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the ~100 file-scoped-only guard patches in fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment.
 
-## Current truth (established by session 295; unchanged, reviewed through s332)
+## Current truth (established by session 295; unchanged, reviewed through s355)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -193,21 +186,30 @@ oldest). Current top is -210 (s354); the next new item takes -211 and is inserte
     this repo's `lib/`/submodule-patches system, same as every prior M5 session). Full detail:
     `PORTING-STATE` Session 354.
 
--209. **(s353) Landed the ring-buffer breadcrumb `m5-audio-destub-linkedlist-corruption-source`'s step 1
-    designed — records every `v1` walked in `drainMeshReleaseQueue`'s tail-scan, dumps on bail. No data
-    yet, pure instrumentation.** Added 3 patches to `fixup_game_funcs.py` (all `funcs_3.c`,
-    `drainMeshReleaseQueue`-scoped): a function-entry reset of 3 new function-level statics
-    (`s_drain_mesh_ring[8]`, `_ring_idx`, `_ring_iter`); a capture at the existing `0x800081A8` advance
-    site (`v1 = v1->next`) that records the just-advanced `v1` into the ring buffer with no per-iteration
-    `fprintf` (iron rule 3 — avoids s345's exact per-node-log mistake); and one `fprintf` added inside the
-    EXISTING s350 read-guard's bail branch, firing once per bail: `[drain-mesh-ring] idx=N v1[0..7]=...
-    iter_at_bail=M`. Reuses `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` (already armed by default) — no new env
-    var. Full regen + build clean, all 3 patches confirmed `patched x1` and present in the regenerated
-    source. Queued `s353_ringbuffer_verify1/2.sh` (`HOLD_S=240`, same template as s349-s351's verify
-    recipes) for the loop to drain. **The discriminating measurement is still pending**: does
-    `iter_at_bail` (and the ring buffer's position of the poisoned value) stay consistent across the 2
-    verify runs (supports H1/H2, a structural bug) or vary (supports H3/H4, state-dependent)? `lib/` not
-    touched. Full detail: `PORTING-STATE` Session 353.
+-209..-195 (excluding -208, kept below). **Fifteen sessions (s339-353, excl. s352) covering the M5
+    gate-promotion, step-5 crash-rate-comparison, and `drainMeshReleaseQueue` tail-scan-cluster arcs —
+    all CLOSED/superseded, folded here.** (1) VI=640 `pairs=0` stall resolution (s339): source-proved
+    `submitGfxFrame` cannot produce a `FramebufferPair` and `cinematicLoopBody`'s self-loop calls the
+    real `SET_COLOR_IMAGE` producer exactly once — not a stall, an ordinary one-time RDP-state prologue.
+    (2) Audio-gate promotion arc (s340-344): promoted both audio gates to permanent default (s340, on a
+    since-overturned validation basis — see Overturned Conclusions); found `reapplyDisplayMode`'s
+    reversal alone deterministically blocks title-reach, 0/5 (s342); reverted just that gate, restoring
+    title-reach (confirmed 3/3 by s344) but surfacing a new `tickWrappingTimerAccumulatorList`
+    div-by-zero in the post-title window, PARKED at 1/3 recurrence
+    (`m5-audio-destub-tickwrap-divzero-craftselect`, reopens on `last-guest-pc=0x80054744`). Current
+    gate state unchanged since s343: fixup regex matches ONLY `reapplyDisplayMode` (`0x8008EC88`,
+    force-zeroed); `setDisplayMode` (`0x8008EB40`) stays reversed. (3) Step-5 crash-rate-comparison
+    methodology arc (s341, s344-347): fixed 2 methodology bugs (a `[keys]`-log misattribution, an
+    unbounded per-node log blowup), then a 4-run batch found the post-title crash rate high (~75%) but
+    diffuse across symbols, 0/4 hits on the two named target families — closed s352, superseded by item
+    -208's bimodal-timing reframe. (4) `drainMeshReleaseQueue` tail-scan cluster (s348-351, s353): found
+    and GUARDED 3 distinct crash sites within one function's dense unguarded linked-list tail-scan idiom
+    (`processSceneNode`'s content-pointer field s348; a 2nd read site via BREADCRUMB15 s349-350; a
+    write-through-v1 sibling site s351); landed a ring-buffer breadcrumb instrument s353 (0/2
+    informative on its own verify pair, folded into item -210). The `[scene-node-content-guard]` guard
+    from (4) is now known steady-state-benign, not corruption evidence — see Overturned Conclusions.
+    Full detail: `docs/PROJECT-OVERVIEW.md` §10; raw detail `PORTING-STATE` Sessions 339-353 (excl.
+    352).
 
 -208. **(s352) Parent step-5 hypothesis's mandated pivot iteration: crash SYMBOL scatter is real, but
     crash TIMING is bimodal (two deterministic VI-transition windows) and one guard value reproduces
@@ -241,244 +243,16 @@ oldest). Current top is -210 (s354); the next new item takes -211 and is inserte
     be independent bugs sharing only the same activity-burst trigger window; that's the open
     discriminator. Full detail: `PORTING-STATE` Session 352.
 
--207. **(s351) s350's `drainMeshReleaseQueue` read guard fired correctly on its own FIRST verify soak
-    but the crash happened anyway 2 lines downstream, at the exact write-through-v1 sibling site the
-    s350 comment had already flagged as unguarded — guarded it too, landing a 2nd fix.** Drained
-    `s350_drainmeshguard_verify1/2.sh` (both already run+moved to `soak_queue/done/` by the loop between
-    iterations). `verify1`: CRASH, `pc-symbol=drainMeshReleaseQueue+1580`, `last-guest-pc=0x800081c4`,
-    AND `guard_fire_n=1` (`bad_v1=0x00010001`) in the same run — the read guard at `0x800081AC` fired
-    (positive control satisfied), correctly bailed the read (`ctx->r2=0`), but did not repair `ctx->r3`
-    (v1) itself, and the function unconditionally writes through that same corrupted pointer 2 lines
-    later (`0x800081C4`: `MEM_W(0X0, ctx->r3) = ctx->r2`) regardless of loop-exit reason — precisely the
-    gap the s350 fixup comment named but left unguarded pending a confirmed hit. `verify2`: CRASH at a
-    4th distinct symbol (`static_5_800AAD9C+5140`, `guard_fire_n=0`) — further diffuse-storm evidence,
-    not informative for this guard. This is the discriminating result iteration 3 of
-    `m5-audio-destub-drainmesh-breadcrumb` needed: not scatter, a precise source-provable sibling bug at
-    a site already named as the next candidate. Guarded both compiler-duplicated occurrences of the
-    `0x800081C4` write (`fixup_game_funcs.py`, one indent-agnostic regex) with the same range-check-
-    and-bail shape, on invalid `v1` skipping the write entirely (no-op). New diagnostic tag
-    `[drain-mesh-write-guard]`, reuses the already-armed `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` env var —
-    no wiring change needed. Deliberately left the sibling `0x800081C8` write unguarded (its address
-    operand is `ctx->r2`, the freelist-head global, not the corrupted v1 — different idiom, no confirmed
-    crash there). Full regen + rebuild clean (`patched x2`). Queued
-    `s351_drainmeshwriteguard_verify1/2.sh`. Net across 14 soaks: `drainMeshReleaseQueue` still the
-    single most-hit function, now at 3 confirmed sub-mechanisms in one dense tail-scan idiom (2
-    guarded), the rest still scattered — parent step-5 hypothesis (item -203) stays diffuse-not-
-    concentrated, unchanged. `lib/` not touched — confirmed via `git status`/`git ls-files` this session
-    that the whole `~/Documents/Tools/N64Recomp` tool repo (where `fixup_game_funcs.py` lives,
-    untracked) sits outside `RogueSquadron64Recomp`'s `lib/`/submodule-patches system entirely. Full
-    detail: `PORTING-STATE` Session 351. `HYPOTHESIS-ID m5-audio-destub-drainmesh-breadcrumb` CLOSED
-    (landed fix); new thread `m5-audio-destub-drainmesh-writeguard-verify`.
-
--206. **(s350) Drained both s349 queues, refuted the `+600` single-exact-repeat framing, found a 2nd
-    precise `drainMeshReleaseQueue` crash site via BREADCRUMB15, guarded it, closed the
-    `contentguard-verify` thread.** Ran `s349_drainmeshbreadcrumb_verify1/2.sh` (queued s349, drained
-    inline this session — `zsh`, not `bash`, is the allowlisted interpreter for `soak_queue/*.sh`):
-    NEITHER reproduced `drainMeshReleaseQueue+600` — verify1 crashed at `reserveAndEmitDLEntry+10212`,
-    verify2 at `heapFreeListInsert+72` (both symbol-distance-confirmed genuine via a new
-    `scratch/agent/check_symtab3.py`, not misattribution). This is the discriminating result: item
-    -205's "2/2 exact repeat" did NOT survive 2 more attempts (0/2), refuting "single fixed-PC bug at
-    `+600`". Meanwhile the loop had already drained `s348_contentguard_verify2/3.sh` (item -205's other
-    open thread) between iterations: `verify2` crashed at `drainMeshReleaseQueue+960` — a THIRD hit in
-    this function, at a DIFFERENT offset than `+600` — with `last-guest-pc=0x800081ac` now PRECISE
-    (BREADCRUMB15 was already live for this build). Source-read (`funcs_3.c:1746-1758`) identified the
-    exact crash: a tail-scan loop `v1 = *v1; v0 = *v1` (guest `0x800081A8`/`0x800081AC`) walking a
-    linked list with NO validity check on `v1` before either dereference — a second, distinct unguarded
-    site in the same "dense unguarded linked-list" function item -205 already characterized. Added a
-    range-check-and-bail guard at `0x800081AC` (`fixup_game_funcs.py`, same s190/s348 shape: env-gated
-    `[drain-mesh-tail-guard]` diagnostic, `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` — now armed by default in
-    `run_s327waitpump.sh` — bails to `ctx->r2=0`, i.e. treats an invalid `v1` as natural list-end rather
-    than crashing). Full regen + rebuild clean (`patched x1` for the guard, `x149` for BREADCRUMB15).
-    Queued `s350_drainmeshguard_verify1/2.sh`. Net tally across this cluster: 3/12 recent crashes land
-    somewhere in `drainMeshReleaseQueue` (now at 2 confirmed distinct offsets, one guarded), the
-    remainder scattered across 5+ other symbols — still the diffuse-not-concentrated shape from item
-    -203, not a single fixable bug. Also closed `HYPOTHESIS-ID m5-audio-destub-contentguard-verify`:
-    `verify2`/`verify3` gave 0/2 more `processSceneNode+1424` repeats (0/4 total since item -204's
-    guard), and `verify2`'s `guard_fire_sample` (`n=0,1,2`, `bad_content=0x0` every time) confirms the
-    guard executes normally (positive control satisfied) even though it never observed a bad value in
-    these runs — treat item -204's guard as validated-by-non-recurrence, not proven-by-interception.
-    `verify3` crashed at a host libc symbol (`__pthread_kill+8`, likely an `abort()`/allocator-detected
-    corruption path) — different class, not informative for the guard question. `lib/` not touched.
-    Full detail: `PORTING-STATE` Session 350.
-
--205. **(s349) Found a NEW exact-repeat crash, `drainMeshReleaseQueue+600` (2/2, deterministic file-
-    offset match across different ASLR bases) — confirmed real via symbol-table distance (not
-    nearest-symbol ambiguity), added BREADCRUMB15 to localize the exact guest PC on the next hit.**
-    Drained `m5step5v3_rate_7` (CRASH) and `_rate_8` (CRASH); neither hit `processSceneNode+1424`
-    (0/2 repeat post-item -204's guard, weak-but-consistent, not yet "confirmed"), but both hit
-    `drainMeshReleaseQueue+600` — same file offset (`0x3fbcc4`) both times despite different bases.
-    `nm -n` distance check (`scratch/agent/check_symtab2.py`): `drainMeshReleaseQueue` to next symbol
-    `enqueueMeshForDeferredRelease` is 3672 bytes (`0xe58`) — `+600` is genuinely inside this
-    function's own body, ruling out misattribution. `last-guest-pc` (`0x8000B650`) was a red herring:
-    it's `beginFrameDLChunk`'s own return instruction (BREADCRUMB3's target) — stale, because all 10
-    prior `BREADCRUMB*` passes share ONE `g_rs64_last_guest_pc` global and `drainMeshReleaseQueue`
-    itself was never instrumented. Added `BREADCRUMB15` (same blanket per-instruction-comment pattern
-    as BREADCRUMB3/10-14) to `fixup_game_funcs.py`, targeting `drainMeshReleaseQueue`'s body in
-    `funcs_3.c` (dense, entirely unguarded linked-list free/coalesce routine, `funcs_3.c:1669+`). Full
-    regen + rebuild clean (`patched x149`). Queued `s349_drainmeshbreadcrumb_verify1/2.sh`. Content-
-    guard verify soaks (`s348_contentguard_verify2/3.sh`) had NOT yet been drained by the loop this
-    session — that check stays open. `HYPOTHESIS-ID m5-audio-destub-contentguard-verify` stays open;
-    new parallel thread `m5-audio-destub-drainmesh-breadcrumb`. `lib/` not touched. Full detail:
-    `PORTING-STATE` Session 349.
-
--204. **(s348) processSceneNode's repeat crash (2/6, exact host+guest PC match) was an unguarded
-    "content pointer" one field removed from the already-guarded node pointer — GUARDED, not just
-    catalogued.** Drained `m5step5v3_rate_5` (CLEAN) and `_rate_6` (CRASH, `pc-symbol=processSceneNode+1424`,
-    `last-guest-pc=0x80014FDC` — byte-identical to `rate_3`'s crash, item -203). This crossed NEXT.md's
-    declared "2+ hits" escalation threshold, the first symbol in the whole v3 batch to do so. Source-read
-    `funcs_4.c` at the guest PC: the crash is `MEM_W(ctx->r16, 0X30)` where `ctx->r16` was loaded from
-    `MEM_W(ctx->r17, 0X8)` — a field of the scene-node pointer that s190's existing entry guard (which
-    validates `ctx->r17` itself) never checks. Found a second load site of the same field on the
-    sibling-loop continuation path (guest `0x800153F8`) feeding the same downstream derefs. Added two
-    `fixup_game_funcs.py` guards (same shape as s190's, bail to the function's own `L_80015528` exit,
-    env-gated under `ROGUESQ_LOG_SCENE_NODE_CONTENT_GUARD`), full regen + rebuild clean. Hit and fixed a
-    real pipeline-ordering trap while landing this: the first attempt placed the patch BEFORE the
-    BREADCRUMB4 pass whose output its anchor depended on, so it silently matched 0 times — moved it to
-    run after BREADCRUMB4, confirmed `patched x1` both sites and guard text present in output. One
-    inline validation soak crashed on an unrelated, first-ever-seen boot-time death
-    (`musyxSynthFrame+4652`, before title, not informative for this guard). Queued
-    `s348_contentguard_verify2/3.sh` + re-queued `m5step5v3_rate_7/8.sh` for the loop to drain.
-    **Not yet confirmed empirically** — no soak has shown the guard firing or the crash's absence yet;
-    that's the immediate next-session check. `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison`
-    closes with a landed fix (not another inconclusive tally); new thread
-    `m5-audio-destub-contentguard-verify`. `lib/` not touched (both edited files are outside the
-    submodule-patches system — see PORTING-STATE Session 348 for why). Full detail: `PORTING-STATE`
-    Session 348.
-
--203. **(s347) M5 step 5 crash-rate comparison, first real batch (n=4): 3/4 runs crashed but at
-    THREE DIFFERENT symbols — refutes "allocOrEvictMaterialNode is a new concentrated family #5",
-    supports "post-title window has a high (~75%) but diffuse crash rate, with family #3/#4
-    specifically absent."** Drained `m5step5v3_rate_3` (CRASH, `pc-symbol=processSceneNode+1424`,
-    `runlog_bytes=68.6MB`) and `_rate_4` (CRASH, `pc-symbol=trackResourceListWithMappingTables+1192`,
-    `runlog_bytes=55.9MB`) — both in the normal band, s345's fix holds. Neither matches item -202's
-    `allocOrEvictMaterialNode+944` (0/3 repeat since rate_1) — that stays a single, still-uncatalogued
-    data point, does not meet the bar for a guard. `processSceneNode` is itself a KNOWN
-    misattribution-prone multi-offset crash site (PORTING-STATE s151/152 documented `+6668`/`+7640`
-    crashes there before; `+1424` is a 3rd offset, likely the same nearest-symbol-ambiguity family, not
-    a new bug). `trackResourceListWithMappingTables+1192` has no prior crash citation anywhere in
-    `docs/`/`PORTING-STATE.md` (only a 2024-era unrelated duplicate-symbol-name mention) — genuinely
-    new, but a singleton like `allocOrEvictMaterialNode`, so not (yet) a family either. Net across the
-    4-run v3 batch: 0/4 hit family #3 (`waitForAnyAudioSlot`) or family #4 (post-cutscene stall)
-    specifically — the two named families this comparison was designed to rate — while 3/4 crashed on
-    something else entirely, each a different symbol. This splits the competing hypotheses: it refutes
-    "de-stubbing concentrated risk into one new bug" and is consistent with "de-stubbing didn't reduce
-    the post-title crash rate, just diffused it away from #3/#4 into whatever ~20+-family background
-    noise was already there." n=4 is still small (confirmed by design: each crash a *different* symbol
-    means no single-family rate is estimable yet). Queued `m5step5v3_rate_5..8.sh` (same template) to
-    extend the sample before drawing a firmer conclusion. `HYPOTHESIS-ID
-    m5-audio-destub-step5-crashrate-comparison` — 2nd iteration of the actual experiment (methodology
-    fixed s345, maintenance s346), 1 more iteration before the 3-strike budget rule triggers a pivot
-    check. `lib/` not touched. Full detail: `PORTING-STATE` Session 347.
-
--202. **(s346) MAINTENANCE pass + 2 folded-in soak verdicts: s345's log-blowup fix CONFIRMED working,
-    and one of the 2 real data points hit an uncatalogued crash — `allocOrEvictMaterialNode+944`,
-    single data point, not yet evidence (superseded by item -203: still 1/4 as of s347, no repeat).**
-    Compacted CURRENT-TRUTH 670→470 lines (Step 0 triggered at
-    60,543 bytes). `m5step5v3_rate_1` (rc=1) and `_rate_2` (rc=0) landed via the soak queue:
-    `runlog_bytes` back to the normal 57-62 MB band (positive control for the `${VAR:-1}` fix passed).
-    `rate_2` clean (full 240s hold, benign `pairs=0` plateau); `rate_1` crashed ~10-12s into the hold
-    at `last-guest-pc=0x80010b7c`/`pc-symbol=allocOrEvictMaterialNode+944` — grepped `docs/` and
-    `PORTING-STATE.md`, zero prior hits, no match to any already-catalogued post-title signature.
-    Queued `m5step5v3_rate_3/4.sh` (not run — maintenance iteration). Full detail: `PORTING-STATE`
-    Session 346.
-
--201. **(s345) The `m5step5v2_rate_1/2` soaks' `rc=137` was a recipe artifact, not crash-family
-    #3/#4 signal — fix confirmed working by item -202.** Both hit the loop's 600s hard-cap despite
-    their own launcher logs showing the driven scenario completed cleanly at ~301s wall. Root cause:
-    `run.log` ballooned to 8.2-8.7 GB (vs. 76-233 MB normal) because
-    `ROGUESQ_LOG_RS_FREE_WALK`/`_MALLOC_WALK` log once PER LIST NODE walked (unlike every other
-    `ROGUESQ_LOG_*` var) — the SAME family Session 209/210 already root-caused for an unrelated bug
-    hunt, so it's state/timing-dependent, not a fixed cost; root mechanism (why THIS run) stays open.
-    **Fix landed**: `run_s327waitpump.sh`'s 4 heap-walker log vars now default-overridable
-    (`${VAR:-1}`) so a recipe can opt out without forking the driver. Cancelled the 2 unrun
-    `m5step5v2_rate_3/4` recipes; queued corrected `m5step5v3_rate_1/2.sh` (4 vars opted to 0, logs
-    `runlog_bytes`/`rs_free_walk_lines`). Deleted the two 8+ GB run.logs after extracting the
-    discriminating samples. `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison` — pure
-    recipe-methodology repair this session, 0 data points toward the rate question. Full detail:
-    `PORTING-STATE` Session 345.
-
--200. **(s344) M5 audio de-stubbing: neither queued confirmation soak reproduces the
-    `tickWrappingTimerAccumulatorList` div-by-zero from item -199 — parked, not guarded.** `confirm1`
-    is genuinely clean: `CRASH: 0` for the full 307s including the hold window, and (despite a
-    `[keys]`-log-file recipe bug misreporting `keys_lines=0`) actually drove the full schedule and
-    reached title at 45.5s. `confirm2` hit an unrelated, already-catalogued
-    `emitAllocatedDLCommand`/`submitSceneNodeRender` SIGBUS (`last-guest-pc=0x80008928`), NOT the
-    target div-by-zero — confirmed by symtab walk + source grep. Net: title-reach now confirmed 3/3
-    (strengthening item -199); the div-by-zero itself is 1/3 total — doesn't meet the bar for a guard,
-    doesn't read as a clean flake either. `HYPOTHESIS-ID m5-audio-destub-tickwrap-divzero-craftselect`
-    PARKED (recurs if a future soak reproduces `last-guest-pc=0x80054744` specifically). Reopened
-    M5-AUDIO-PLAN step 5 (crash-family #3/#4 rate comparison) with 4 methodology-corrected recipes
-    (`m5step5v2_rate_1..4.sh`, `HOLD_S=240`) that fix the `[keys]`-log-file bug and print
-    `last-guest-pc`/`pc-symbol` on every crash (generalized in Method Traps below). Full detail:
-    `PORTING-STATE` Session 344.
-
--199. **(s343) M5 audio de-stubbing: reverted `reapplyDisplayMode`'s gate to force-zero, title-reach
-    restored — but a NEW crash surfaced one stage later, in the SELECT YOUR CRAFT stabilization
-    window, never reachable before.** Regen'd with the fixup regex narrowed to `0x8008EC88`-only
-    (`setDisplayMode`'s `0x8008EB40` stays reversed). One soak: title reached at 45.5s (matches the
-    44.6-46.2s baseline), full `[keys]` schedule fired. Then, during the 12s post-title stabilization
-    window, the process died: signal 6 (abort), `last-guest-pc=0x80054744` inside
-    `tickWrappingTimerAccumulatorList` (`BREADCRUMB9`'s function) — a compiler-inserted `break 7`
-    div-by-zero trap, a DIFFERENT signature from `BREADCRUMB9`'s previously-catalogued `0x80000004`
-    near-null-pointer crash. Byte-identical gate config to s328's clean baseline (0/2 crashes) — either
-    a nondeterministic race s328 didn't hit, or ~15 intervening sessions exposed it. Single-source;
-    confirmation soaks queued (folded in by item -200). `HYPOTHESIS-ID
-    m5-audio-destub-reapplydisplaymode-title-block` CLOSED (title-reach restored); new thread
-    `m5-audio-destub-tickwrap-divzero-craftselect`. `lib/` not touched. Full detail: `PORTING-STATE`
-    Session 343.
-
--198. **(s342) M5 audio de-stubbing: `reapplyDisplayMode`'s gate reversal deterministically blocks
-    the game from EVER reaching the title screen (0/5 relevant soaks) — supersedes item -197's plan,
-    weakens item -196's promotion (see Overturned Conclusions).** The 2 `m5step5_rate_1/2` soaks and
-    s340/s341's own soaks all showed the same signature: 0 `[keys]` presses, the game never leaves the
-    pre-title screen — despite s340's write-up describing a full driven hold (mechanically impossible:
-    `run_mission_keys.sh`'s wait-for-VI=1024 gate self-times-out first). Isolated to
-    `reapplyDisplayMode` specifically: baseline and `setDisplayMode`-alone both reach title normally;
-    every soak with `reapplyDisplayMode`'s gate reversed has NEVER reached title, 0/5 across 3
-    sessions. **Recommendation** (executed s343, item -199): revert `reapplyDisplayMode`'s gate to
-    force-zero, keep `setDisplayMode`'s reversal. `HYPOTHESIS-ID
-    m5-audio-destub-step5-crashrate-comparison` CLOSED (superseded); new thread
-    `m5-audio-destub-reapplydisplaymode-title-block`. Full detail: `PORTING-STATE` Session 342.
-
--197. **(s341) M5 audio de-stubbing step 5: queued a 6-run soak batch to measure crash-family #3/#4
-    rates — superseded by item -198's finding that the underlying gate config never reaches title at
-    all.** Wrote 6 self-contained recipes (`m5step5_rate_1..6.sh`, `HOLD_S=300`) against the
-    then-current both-gates-reversed build; no soak run this session. Full detail: `PORTING-STATE`
-    Session 341.
-
--196. **(s340) M5 audio de-stubbing: promoted BOTH `setDisplayMode`'s and `reapplyDisplayMode`'s
-    gate-byte reversals to the PERMANENT shipped default — the promotion's original validation basis
-    was later found invalid (s342, see Overturned Conclusions), but the promotion itself was never
-    reverted and is still the current gate state as of s345.** 2 soaks were believed to validate
-    combining both reversals; s342 found neither soak had actually left the pre-title screen. Edited
-    `fixup_game_funcs.py`'s gate regex (N64Recomp repo, untracked) to permanently match neither
-    audio-gate address. `M5-AUDIO-PLAN.md` step 4 marked DONE, pointing at step 5 (crash-family #3/#4
-    rate comparison, still open as of item -201). Full detail: `PORTING-STATE` Session 340.
-
--195. **(s339) M5 audio de-stubbing: source-proves `submitGfxFrame` structurally cannot produce a
-    `FramebufferPair`, and that `cinematicLoopBody`'s self-loop calls the real `SET_COLOR_IMAGE`
-    producer (`runVideoFrameTick`) exactly ONCE — not per-iteration — resolving the s329-s338 VI=640
-    `pairs=0` chase (item -160..-194 below) in 1 iteration, no new soak.** `submitGfxFrame`'s full
-    callee set has no `setupCameraMatrices`/`emitFrameRdpInitDl`/`runVideoFrameTick`/
-    `advanceVideoFrame` — only buffer-arbiter/SP-task-producer bookkeeping. Confirmed at runtime:
-    `[static6-800a9abc-entry]` fires exactly once for a ~600s soak, matching s333's raw
-    "`runVideoFrameTick` stops after exactly 2 calls" (1 from `mainGameLoop` + 1 here = 2).
-    Conclusion: nothing is actually stalled — the self-loop runs correctly the whole time; it just
-    never re-emits `SET_COLOR_IMAGE` after its one-time pre-loop RDP-state setup, so
-    `[vi-fs-decision]`'s `pairs` counter faithfully reads 0 for the rest of the scene (very likely not
-    a bug — a locked-camera cutscene reusing one RDP-state prologue is ordinary). Full detail:
-    `PORTING-STATE` Session 339.
-
 -160..-194. **(s297-337) M5 audio de-stubbing: the full gate-byte-reversal and VI=640-stall
     measurement-chasing arc, 41 sessions of instrumentation each superseded by the next, closed by
-    item -195's source proof.** Chased a "missing call count" through 2 diagnostic-cap bugs to a
-    false 14-call gap (closed s325: the gap was the bug itself), found and fixed the `setDisplayMode`
+    item -209..-195's (s339) source proof.** Chased a "missing call count" through 2 diagnostic-cap bugs
+    to a false 14-call gap (closed s325: the gap was the bug itself), found and fixed the `setDisplayMode`
     VI=320 hang (a spin loop starved of `musyxSynthFrame` pumps, s326/327, confirmed 3/3 s328), then
     chased `reapplyDisplayMode`'s VI=640 stall through 5 reachability probes to `cinematicLoopBody`'s
-    internal self-loop, resolved by item -195. Along the way: `initMusyXEngine`'s gate found to be
-    dead code, never called (s306, see Overturned Conclusions). Full paragraph migrated to
-    `docs/PROJECT-OVERVIEW.md` §9 (s346 maintenance pass); full raw detail: `PORTING-STATE` Sessions
-    297-337.
+    internal self-loop, resolved s339 (see item -209..-195 and PROJECT-OVERVIEW §10). Along the way:
+    `initMusyXEngine`'s gate found to be dead code, never called (s306, see Overturned Conclusions).
+    Full paragraph migrated to `docs/PROJECT-OVERVIEW.md` §9 (s346 maintenance pass); full raw detail:
+    `PORTING-STATE` Sessions 297-337.
 
 -159..-14 (excluding -20, kept below). **Ten closed investigation lineages (nine from s314, plus
     the s297-337 M5 gate-reversal arc folded in s346), s99-s337 — all CLOSED, no outstanding action.**
@@ -589,7 +363,7 @@ Standing warnings:
   (`0x80183ECC`) with the SAME zeroed content, thousands of times per run, harmlessly, across 3
   independent sessions — a steady-state signature (legitimately-empty/placeholder node revisited every
   frame), not a corruption signature. Believable: it's a real guard catching a real out-of-range read,
-  and 0/4 crash-repeat since it landed (item -204) looked like validated-by-non-recurrence; the n=0-vs-
+  and 0/4 crash-repeat since it landed (item -209..-195 range, s348) looked like validated-by-non-recurrence; the n=0-vs-
   n=1957+ distinction (one-shot-before-crash vs. steady-state-thousands-of-hits) just hadn't been
   checked against the OTHER guards' firing shape until s352 compared them side by side. Does not
   overturn the guard's correctness (it still needs to stay in place), only its evidentiary weight for
@@ -601,8 +375,9 @@ Standing warnings:
   cannot reach its `SCHEDULE`/`HOLD_S` logic without first seeing VI=1024, which never happened.
   Believable: the soaks genuinely were crash-free for the full 600s with audio/DMA/voice counters
   visibly live throughout (a real same-run positive control) — it just never occurred to check whether
-  the `[keys]` schedule had actually fired. The underlying `pairs=0` mechanism (item -195's source
-  trace) is not overturned, only its context: it onsets pre-title, not mid-mission-cutscene, and is
+  the `[keys]` schedule had actually fired. The underlying `pairs=0` mechanism (item -209..-195 range,
+  s339's source trace, PROJECT-OVERVIEW §10) is not overturned, only its context: it onsets pre-title,
+  not mid-mission-cutscene, and is
   specific to `reapplyDisplayMode`'s gate site, not `setDisplayMode`'s. PORTING-STATE 339, 340, 342.
 - **(s107/108→s316→s318)** Two linked overturns in the gate1/2/3 tick-producer mechanism chase: (1)
   "the 3 near-identical countdown/period gates fire `tickAllActiveSongs`/`tickAudioSequencerFrame`" was
