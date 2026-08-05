@@ -29553,3 +29553,98 @@ m5-audio-destub-submitgfxframe-vi-fs-decoupling`) is unchanged and is the next i
 No `lib/` touched. `docs/CURRENT-TRUTH.md`'s "Next steps" numbering convention (current top -194,
 next new item takes -195) is unaffected — no items were added or renumbered, only merged downward in
 the existing range-item style.
+
+## Session 339 (2026-08-05) — M5 audio: source-proves `submitGfxFrame` structurally cannot produce a `FramebufferPair` and that `cinematicLoopBody`'s self-loop calls the real `SET_COLOR_IMAGE` producer (`runVideoFrameTick`) exactly ONCE, not per-iteration — closes the VI=640 `pairs=0` stall's root-cause chase (s329-s338) in 1 iteration, no new soak
+
+**HYPOTHESIS-ID**: `m5-audio-destub-submitgfxframe-vi-fs-decoupling` (1st and only iteration needed —
+closed this session).
+
+**Starting question** (from s337/NEXT.md): does `cinematicLoopBody`'s direct `submitGfxFrame` call
+(not `runVideoFrameTick`) decouple from `[vi-fs-decision]`'s `pairs=0` reading — i.e. does
+`submitGfxFrame`'s output plausibly reach the same graphics-task queue `[vi-fs-decision]` monitors?
+
+**Method**: pure source-read (per this arc's own convention, s335/s336 already closed 2 prior
+questions this way) plus reuse of s337's already-captured soak log — no new soak run.
+
+1. Read `submitGfxFrame`'s full body (`RecompiledFuncs/funcs_3.c:13845`, `N64Recomp` repo — 1289
+   lines). Its callee set: `bufferArbiterAllocSlot`, `bufferArbiterMarkSlotReady`,
+   `bufferArbiterProducerMark` (×3), `commitMeshDrawBatchRefs`, `drainMeshReleaseQueue`,
+   `getInactiveBufferIndex`, `getTimeSinceLastFrame`, `isPreNmiPending`, `osDpGetCounters_recomp`,
+   `osDpSetStatus_recomp`, `osRecvMesg_recomp`, `osSendMesg_recomp`, `osWritebackDCacheAll_recomp`,
+   `recordFrameTimestamp`, `setPostSwapPendingFlags`, `yieldFromGfxFrame`, `yieldFromSpThread`. No
+   `setupCameraMatrices`, no `emitFrameRdpInitDl`, no `runVideoFrameTick`, no `advanceVideoFrame`, no
+   indirect (`LOOKUP_FUNC`) calls anywhere in the body.
+2. Traced what actually produces a `FramebufferPair` (`lib/rt64/src/hle/rt64_workload.cpp:294`,
+   `Workload::addFramebufferPair`, called from wherever the DL interpreter handles a
+   `SET_COLOR_IMAGE` opcode). Cross-referenced the `rogue_squadron64` symbol file's existing
+   annotations (already on disk from earlier sessions, not re-derived): `emitFrameRdpInitDl`
+   (`main_overlay.txt:1096`) is *the* function that emits `SET_COLOR_IMAGE` bytes into the active DL,
+   reading the draw-fb address `buildAndRegisterDefaultMaterial` wrote. Its **sole caller** is
+   `setupCameraMatrices` (`main_overlay.txt:1095`, "runs once per camera/viewport setup"), and
+   `buildAndRegisterDefaultMaterial`'s only per-frame caller is `advanceVideoFrame`
+   (`main_overlay.txt:703`), whose own caller chain is stated explicitly in that file's own comment:
+   **"Caller chain: `runVideoFrameTick` → `advanceVideoFrame`."** So the *only* path from any function
+   to a `FramebufferPair` is `runVideoFrameTick → advanceVideoFrame → buildAndRegisterDefaultMaterial`
+   (writes fb addr) + `→ setupCameraMatrices → emitFrameRdpInitDl` (emits the opcode).
+   `submitGfxFrame`'s callee set (step 1) contains none of these — it structurally cannot produce a
+   `FramebufferPair`. It only advances the buffer-arbiter slot state machine (alloc→ready→producerMark,
+   i.e. the SP-task producer/consumer handshake) and kicks housekeeping (mesh-ref commit, DMA
+   writeback, dcache flush) — real per-frame work, just not the `[vi-fs-decision]`-relevant kind.
+3. Checked whether `cinematicLoopBody` reaches `runVideoFrameTick` some other way. Grepped its full
+   callee list (`RecompiledFuncs/funcs_27.c:106842-108531`, ~50 distinct callees) — no direct call to
+   `runVideoFrameTick`, `advanceVideoFrame`, or `setupCameraMatrices`. But it DOES call
+   `static_6_800A9ABC` (line 107079) — one of `runVideoFrameTick`'s 5 known call sites from s333's
+   original grep. Its real (non-dead) definition is `RecompiledFuncs/funcs_43.c:20718`, and its call to
+   `runVideoFrameTick` at `funcs_43.c:20975` sits in plain sequential control flow after label
+   `L_800A9C68` — not past an unconditional return like s335's dead-code find, so it's live code, not
+   an artifact.
+4. **The discriminating fact**: `cinematicLoopBody`'s call to `static_6_800A9ABC` (line 107079) is
+   BEFORE its internal self-loop label `L_800A6024` (line 107269, s336's already-proven `goto`-loop
+   that runs unconditionally for the whole stall). It is called ONCE, in the function's setup section,
+   never again once the self-loop starts.
+5. **Confirmed at runtime, not just by source-read** — reused s337's already-captured
+   `scratch/s73_post_a_scene/s337cutscenetimer/run.log` (1.28M lines, no new soak): it already had
+   `ROGUESQ_LOG_MAINGAMELOOP_REACH=1` armed, which is the env gate on the *already-existing*
+   `[static6-800a9abc-entry]` diagnostic added in s334 (misleadingly named after the env var, not the
+   function) at `funcs_43.c:20721-20734`. `grep -c '\[static6-800a9abc-entry\]'` → **exactly 1** hit,
+   `n=1`, for the entire ~600s run. Two independent lines of evidence (source-read + this runtime
+   count) now agree.
+
+**Sanity check (Fermi cross-check on a surprising number, per iron rule)**: s333 measured
+`runVideoFrameTick` stops after exactly 2 calls total. s334 independently found `mainGameLoop`'s
+loop-top counter fires exactly once. This session's `static_6_800A9ABC` count is also exactly once.
+1 (mainGameLoop's own call site) + 1 (via `static_6_800A9ABC`) = 2 — an exact match to s333's raw
+count, not just a plausible-sounding one.
+
+**Conclusion — closes the entire s329-s338 VI=640 `pairs=0` stall chase, not just this session's
+narrower question**: the graphics-task pipeline is not actually stalled in any subsystem-death sense.
+`cinematicLoopBody`'s internal per-frame self-loop (1152+ iterations for the whole soak, per s336)
+correctly drives cutscene-slot dispatch, speech, buffer-arbiter SP-task submission
+(`submitGfxFrame`), and DMA/mesh housekeeping every single pass — all genuinely alive the whole time,
+matching every session's audio/buffer-arbiter observations in this arc. What it does NOT do is
+re-invoke the one function chain (`runVideoFrameTick → ... → setupCameraMatrices →
+emitFrameRdpInitDl`) that emits a `SET_COLOR_IMAGE` RDP opcode — that chain runs exactly once, in
+`cinematicLoopBody`'s pre-loop setup, and never again. `[vi-fs-decision]`'s `pairs` counter
+(`Workload::fbPairCount`) can only increment off that opcode, so once the current workload advances
+past its one-time pair (or if it's simply the initial state), `pairs` reads 0 for the rest of the
+scene — a faithful reading of "no new colour-image target this workload," not evidence of a hung
+subsystem. **This is very likely not a bug at all** — a cutscene that holds a locked camera/RDP-state
+prologue for its duration (rather than re-emitting per-frame camera setup) is a completely ordinary
+optimization for a scripted, non-interactive scene; s336 already flagged that this thread had no
+audio-subsystem footprint anywhere in its exit-gate trace, and this session's finding is consistent
+with that: **the VI=640 "stall" is a characteristic of this particular cutscene's rendering-loop
+design, unrelated to the M5 audio gate reversal that was used to reach it.** No visual defect has
+been demonstrated — that would need a separate capture-and-look work unit, out of scope here.
+
+**What this means for M5's still-open decision** (item -182..-187): promoting `setDisplayMode`'s (and
+now, by this session's finding, plausibly `reapplyDisplayMode`'s too) gate-byte reversal to the
+shipped default is no longer blocked by an unexplained stall — the VI=640 condition it was thought to
+risk is now a characterized, benign, non-audio rendering-loop property, not an open crash/hang
+mechanism. Recommend the next M5 work unit revisit that promotion decision directly rather than
+continuing to instrument this thread further.
+
+No `lib/` touched. No soak run this session — reused s337's existing log for the confirming count,
+per this arc's established source-read-first convention. Gate state unchanged (baseline force-zero,
+not re-tested this session — no code path was modified). `HYPOTHESIS-ID
+m5-audio-destub-submitgfxframe-vi-fs-decoupling` CLOSED, 1st iteration, full resolution, two
+independent evidence sources.

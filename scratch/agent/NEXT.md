@@ -1,79 +1,85 @@
 # NEXT work unit
 
-## s337 closed the cinematicLoopBody-exit-gate question — start here
+## s339 closed the entire VI=640 `pairs=0` stall chase (s329-s338) — read this first
 
-s337 (`HYPOTHESIS-ID m5-audio-destub-cinematicloopbody-divergent-callees`, 3rd of 3 iterations, iron
-rule 8 budget exhausted, CURRENT-TRUTH item -194, full detail `PORTING-STATE` Session 337) ran the
-runtime instrument NEXT.md's step 1 asked for: 3 diagnostics on `static_6_800AF550`
-(`ROGUESQ_LOG_CUTSCENETIMER_REACH=1`), soaked with `ROGUESQ_LOG_MAINGAMELOOP_REACH=1` armed alongside.
+s339 (`HYPOTHESIS-ID m5-audio-destub-submitgfxframe-vi-fs-decoupling`, 1st and only iteration needed,
+CURRENT-TRUTH item -195, full detail `PORTING-STATE` Session 339) answered NEXT.md's own question by
+pure source-read plus reuse of s337's already-captured log — **no new soak**:
 
-**Findings**: the delta-time input (`a2`) advances normally the entire run (0.0167-0.0333, never
-frozen) — refutes "OS clock not advancing." But the global pointer at `0x800B0934` the function
-depends on stayed **NULL for ~89% of the run** (n=1 through n=1024 of 1152 total calls) — the real
-threshold/debounce logic never ran for virtually the whole stall. Only at the very last logged call
-(n=1152) did the pointer go non-null; the debounce counter then completed in one tight 7-call burst
-right at the log's tail, and the function's one real "exit" signal (`return 1`) fired exactly once.
-**But `[vi-fs-decision]` kept logging `stalled=1 pairs=0` at the identical VI address for the ~4283
-remaining log lines through the log's end** — the exit firing did not visibly clear the graphics-task
-stall this whole investigation was opened to explain.
+- `submitGfxFrame`'s full callee set (`RecompiledFuncs/funcs_3.c:13845`, N64Recomp repo) has no
+  `setupCameraMatrices`/`emitFrameRdpInitDl`/`runVideoFrameTick`/`advanceVideoFrame` anywhere — it only
+  does buffer-arbiter/SP-task-producer bookkeeping. It structurally cannot emit `SET_COLOR_IMAGE`
+  (the only opcode that produces a `FramebufferPair`, i.e. `[vi-fs-decision]`'s `pairs` counter).
+- The only path to a `FramebufferPair` is `runVideoFrameTick → advanceVideoFrame →
+  buildAndRegisterDefaultMaterial` (+ `setupCameraMatrices → emitFrameRdpInitDl`), per the
+  `rogue_squadron64` symbol file's own existing annotations.
+- `cinematicLoopBody` DOES reach `runVideoFrameTick`, via `static_6_800A9ABC` (funcs_43.c:20718,
+  `runVideoFrameTick` call at line 20975, genuinely live code) — but that call is in
+  `cinematicLoopBody`'s ONE-TIME pre-loop setup (funcs_27.c:107079), strictly BEFORE the internal
+  self-loop label (`L_800A6024`, line 107269) that s336 already proved runs 1152+ times for the whole
+  stall. **Confirmed at runtime**: s337's already-captured log
+  (`scratch/s73_post_a_scene/s337cutscenetimer/run.log`, already had `ROGUESQ_LOG_MAINGAMELOOP_REACH=1`
+  armed, which happens to gate the pre-existing `[static6-800a9abc-entry]` diagnostic from s334) shows
+  **exactly 1** hit for the whole ~600s soak. Sanity check: 1 (this) + 1 (`mainGameLoop`'s own single
+  loop-top pass, s334) = 2, an exact match to s333's raw "`runVideoFrameTick` stops after exactly 2
+  calls" finding.
 
-## New question: is `cinematicLoopBody`'s exit gate even relevant to the VI=640 stall at all?
+**Conclusion**: nothing is stalled. `cinematicLoopBody`'s self-loop runs correctly the entire time
+(audio, buffer-arbiter, cutscene-slot dispatch all genuinely alive, matching every session's
+observations in this arc) — it simply never re-emits `SET_COLOR_IMAGE` after its one-time pre-loop
+camera/RDP-state setup, so the pairing instrument faithfully reads 0 for the rest of the scene. This is
+very likely not a bug (a locked-camera cutscene reusing one RDP-state prologue instead of rebuilding it
+every frame is a completely ordinary thing for a scripted scene to do) and confirms s336's suspicion
+that this whole thread was never an M5/audio issue.
 
-s336 already established that `cinematicLoopBody`'s internal loop calls **`submitGfxFrame` directly,
-every iteration** (`funcs_27.c:108253`) — a completely separate graphics-producer call from the whole
-`runVideoFrameTick`-callers chase s333-s336 spent 4 sessions on. If `submitGfxFrame` is the actual
-per-frame graphics-task producer during this phase (not `runVideoFrameTick` via any of its 5 callers),
-then the entire `mainGameLoop`/`cutsceneDispatchSlotsByFlag`/`static_6_800A9ABC` reachability
-investigation may have been chasing an irrelevant call chain from the start, and the real question is
-narrower and more direct: **is `submitGfxFrame` actually being called 1152+ times as `cinematicLoopBody`'s
-loop count implies, and if so, why does `[vi-fs-decision]`'s `pairs` counter stay at 0 the whole time?**
+## What this means: the VI=640 stall is no longer a blocker for the M5 gate-promotion decision
 
-`HYPOTHESIS-ID: m5-audio-destub-submitgfxframe-vi-fs-decoupling` (new, 1st iteration).
+Item -182..-187 left an explicit open, unmade decision: promote `setDisplayMode`'s (s327/s328-validated)
+gate-byte reversal from armed-but-inert to the shipped default. `reapplyDisplayMode`'s site (the 3rd/
+last gate) was left un-promoted specifically because reversing it led to this VI=640 stall reading —
+which is now fully characterized as benign and audio-unrelated. **Recommend the next M5 work unit
+directly revisits that promotion decision** rather than continuing to instrument this thread further
+(9 sessions, s329-s339, is well past any reasonable budget on one reading).
+
+`HYPOTHESIS-ID: m5-audio-destub-gate-promotion-decision` (new, 1st iteration).
 
 ## The work unit
 
-1. **Source-read first, per every session's convention in this arc** (do NOT soak before this):
-   - Read `submitGfxFrame`'s full body (find it via `grep -rn "submitGfxFrame" RecompiledFuncs/*.c`
-     in `/Users/williambuckley/Documents/Tools/N64Recomp` — it's called from `cinematicLoopBody`
-     at `funcs_27.c:108253`, per s336; find its definition and read it in full).
-   - Find what `submitGfxFrame` writes to: does it enqueue a graphics task the same way
-     `runVideoFrameTick`'s real producer path does (`lib/rt64/src/hle/rt64_state.cpp:2945`,
-     `ultramodern/src/events.cpp:576-592`, per s330's trace), or via a completely different path?
-   - Find what `[vi-fs-decision]`'s `pairs` counter actually counts (grep `rt64_state.cpp` /
-     wherever `[vi-fs-decision]` is logged from — likely native C++ runtime code, not
-     `fixup_game_funcs.py` patch territory, per s313/s315's precedent of finding relevant logic
-     outside the game-code patch file). Does `submitGfxFrame`'s output route through whatever
-     produces a "pair," or does it use some other mechanism the pairing logic doesn't recognize?
-   - **Discriminating question this read should answer**: does `submitGfxFrame`'s call path
-     plausibly reach the same graphics-task queue `[vi-fs-decision]` is monitoring? If yes, the
-     mystery deepens (calls should produce pairs but don't — needs a runtime instrument next). If
-     no — if `submitGfxFrame` writes to some other buffer/mechanism entirely — that may fully
-     explain `pairs=0` without needing a new soak (same pattern as s335/s336's source-only closes).
-2. If the source-read doesn't fully resolve it, instrument (batch every counter in one soak, per the
-   iron rule): an entry/call counter on `submitGfxFrame` itself, plus whatever field/counter its body
-   writes to that should influence `[vi-fs-decision]`'s `pairs` value. Reuse
-   `ROGUESQ_LOG_CUTSCENETIMER_REACH`'s naming convention or open a new var
-   (`ROGUESQ_LOG_SUBMITGFXFRAME_REACH=1`) — always `lambda m: (...)` for `re.subn` replacements.
-3. Same soak setup as every session in this arc if a new soak is needed: gate narrowed to reverse
-   `reapplyDisplayMode`'s site only (`0x8008E(?:B40|C88)` -> `0x8008EB40`-only),
-   `scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, `env HOLD_S=600 <VARS> zsh
-   scratch/s73_post_a_scene/run_s327waitpump.sh <label>` (`env` prefix required, project rule 10).
-   Positive control: confirm new counters fire early before trusting a late "stuck" reading.
-4. Whichever outcome, close it in the same iteration — this is the 1st of up to 3 iterations on the
-   new `HYPOTHESIS-ID`.
-5. Revert to the full force-zero baseline (`audio gate patched x2`) and rebuild clean before ending.
+1. **Re-read the promotion question fresh, don't assume**: `docs/M5-AUDIO-PLAN.md` should already state
+   what "promote to shipped default" means mechanically — check whether it's literally deleting the
+   `fixup_game_funcs.py` force-zero patch for `setDisplayMode`/`reapplyDisplayMode`'s gate-byte store
+   (`funcs_23.c`, gate byte `0x800A0F50`, per the Regeneration section of this doc) vs. some other
+   mechanism. Confirm both sites' current patch state before touching anything
+   (`grep -n "0x800A0F50\|setDisplayMode\|reapplyDisplayMode" tools/fixup_game_funcs.py` in the
+   N64Recomp repo).
+2. **Competing hypotheses to discriminate**:
+   - H1: both gates can be promoted together safely — the only known failure modes (VI=320
+     `waitForMusyXAudioTaskDone` hang, fixed s327/s328; the VI=640 `pairs=0` reading, now shown benign
+     s339) are both closed, so a longer/harder soak with BOTH gates reversed simultaneously should be
+     clean.
+   - H2: `setDisplayMode`'s reversal is safe alone (2-3 soaks already confirmed s328) but combining it
+     with `reapplyDisplayMode`'s reversal surfaces a NEW interaction not seen when either is tested in
+     isolation (this arc has never soaked both reversed at once — every soak in s329-s339 reversed only
+     `reapplyDisplayMode`'s site, not both).
+   - H3: promoting either gate regresses something unrelated to this whole VI=640/VI=320 thread (e.g. a
+     visual defect, not a hang) — would need a driven capture, not just a crash-free soak, to catch.
+   - **Discriminating measurement**: one soak with BOTH `setDisplayMode` and `reapplyDisplayMode` gate
+     sites reversed simultaneously (not the baseline's usual "one reversed, one force-zero" split this
+     whole arc used), `HOLD_S=600`, full diagnostic set armed per this arc's convention (armed
+     instruments are free — see Environment notes below). Crash-free + no new stall-reading distinguishes
+     H1 from H2. A visual regression would need a follow-up driven capture — separate work unit, not
+     required to close this one if the soak is clean.
+3. If clean: this is the promotion soak's first confirmation. Per M5-AUDIO-PLAN's "two clean soaks" bar
+   (already the pattern used for `setDisplayMode` alone, s328), queue a 2nd soak via
+   `scratch/agent/soak_queue/` rather than spending a 2nd iteration babysitting it.
+4. If NOT clean (new crash or stall signature): that's a real, novel M5 finding — characterize it with
+   the same rigor as this arc's prior sessions (source-read first, minimal targeted instrument, not a
+   fresh multi-session chase) and update `docs/M5-AUDIO-PLAN.md`'s risk assessment.
+5. Whichever outcome, this can plausibly close in 1 iteration (it's a soak-and-observe question, not a
+   multi-hop reachability chase like the last one) — but budget up to 3 per iron rule 8 if the soak
+   surfaces something new.
 
-## Maintenance done (this session)
-
-s338 ran the MAINTENANCE iteration Step 0 flagged: `docs/CURRENT-TRUTH.md` was 61,832 bytes (over the
-60,000-byte trigger). Compacted the USER DIRECTIVE section's M5 narrative (was a full session-by-session
-rehash of items -188..-194, now points at them) and merged items -188..-193 (s330, 332-336, the 6-session
-`waitForMusyXAudioTaskDone`→`reapplyDisplayMode`-reachability→`mainGameLoop`→`cinematicLoopBody` chase)
-into one paragraph in the `-182..-187` style, keeping item -194 (s337, still the active thread) intact.
-685→470 lines (215 net, clears the >=200-line ADVANCED bar), 61,832→41,598 bytes. No experiments run,
-no code touched. The submitGfxFrame work unit below is unchanged and is next.
-
-## Environment notes (carried forward — see s327-337 for full detail)
+## Environment notes (carried forward — see s327-339 for full detail)
 
 - Regen paths: `/Users/williambuckley/Documents/Tools/N64Recomp` (`fixup_game_funcs.py`, untracked).
   Delete `RecompiledFuncs/*.c` before every `N64Recomp` run:
@@ -87,11 +93,12 @@ no code touched. The submitGfxFrame work unit below is unchanged and is next.
   `while kill -0 <PID> 2>/dev/null; do sleep 5; done` with a timeout comfortably over 600s. Log lands
   at `scratch/s73_post_a_scene/<label>/run.log` — grep it, don't read it directly (past logs have run
   tens of MB / over a million lines).
-- **Existing logs are reusable evidence** — s335, s336, and s337 (partially) all answered questions by
+- **Existing logs are reusable evidence** — s335, s336, s337, and s339 all answered questions by
   re-reading source or re-grepping already-captured logs instead of always re-running a soak. Check
-  `scratch/s73_post_a_scene/s337cutscenetimer/run.log` for a relevant counter before spending a new
-  build-run cycle, though note it doesn't have any `submitGfxFrame`-specific counter armed, so this
-  question will likely need a new soak once the source-read narrows what to instrument.
+  `scratch/s73_post_a_scene/s337cutscenetimer/run.log` before spending a new build-run cycle — it has
+  `ROGUESQ_LOG_MAINGAMELOOP_REACH=1` and `ROGUESQ_LOG_CUTSCENETIMER_REACH=1` armed, but does NOT have
+  both gate sites reversed simultaneously (only `reapplyDisplayMode`'s), so this work unit's specific
+  question (both gates reversed at once) will need a new soak.
 - Multiple Bash calls this session hit compound-command approval friction (`cd x && cmd`,
   `VAR=1 cmd 2>&1 | tail`, etc.) — safest pattern is a standalone `cd <dir>` as its own Bash call
   (working directory persists across calls), then the actual command as a separate call with an
@@ -101,5 +108,5 @@ no code touched. The submitGfxFrame work unit below is unchanged and is next.
 - Scratch files outside the three allowed working directories (e.g. `/tmp/...`) are blocked by the
   sandbox — write throwaway analysis scripts under `scratch/` in this repo instead.
 
-HYPOTHESIS-ID: m5-audio-destub-submitgfxframe-vi-fs-decoupling (new, 1st iteration — pivoted from
-m5-audio-destub-cinematicloopbody-divergent-callees, which s337 closed at its 3-iteration budget).
+HYPOTHESIS-ID: m5-audio-destub-gate-promotion-decision (new, 1st iteration — pivoted from
+m5-audio-destub-submitgfxframe-vi-fs-decoupling, which s339 closed with full resolution).

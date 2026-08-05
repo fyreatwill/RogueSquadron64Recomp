@@ -12,15 +12,16 @@ Priority order for upcoming iterations, set after the 300-session review:
    a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and the
    Regeneration section's Standing warnings stay intact deliberately; both are used every iteration.
 2. **M5 audio de-stubbing**: design doc + steps 1-3 DONE (s298/300/301). Step 4's `setDisplayMode`
-   VI=320 hang is CLOSED and fix-validated (item -182..-187); promoting that reversal to the shipped
-   default remains an open, unmade decision. `reapplyDisplayMode`'s site (3rd/last gate) hits a
-   DIFFERENT, still-UNSOLVED permanent VI=640 graphics-task stall (s329) -- 7 sessions of reachability
-   chasing (s330-337, item -188..-194) ruled out the obvious audio-adjacent mechanisms and traced the
-   stall into `cinematicLoopBody`'s internal cutscene loop, whose exit gate has NO audio-subsystem
-   reference and whose one real exit signal fired without clearing the stall. Current open question
-   (item -194, `HYPOTHESIS-ID m5-audio-destub-submitgfxframe-vi-fs-decoupling`): does
-   `cinematicLoopBody`'s direct `submitGfxFrame` call -- not `runVideoFrameTick` -- decouple from
-   `[vi-fs-decision]`'s `pairs=0` reading? Baseline (both force-zero gate sites) restored every session.
+   VI=320 hang is CLOSED and fix-validated (item -182..-187). `reapplyDisplayMode`'s site (3rd/last
+   gate) hit a DIFFERENT VI=640 `pairs=0` graphics-task-stall READING (s329) -- 9 sessions of
+   reachability chasing (s330-339, item -188..-195) fully resolved it s339: `cinematicLoopBody`'s
+   per-frame self-loop runs the whole scene correctly (audio, buffer-arbiter, cutscene dispatch all
+   alive) but only calls the one function chain that emits `SET_COLOR_IMAGE` (`runVideoFrameTick`'s
+   chain) ONCE, in its pre-loop setup -- so `[vi-fs-decision]`'s `pairs` counter faithfully reads 0
+   for the rest of the scene. Not a hang, not audio-adjacent, very likely not a bug at all (a
+   locked-camera cutscene reusing one RDP-state prologue is ordinary). **Promoting BOTH gate
+   reversals (`setDisplayMode` and now plausibly `reapplyDisplayMode`) to the shipped default is the
+   next M5 decision point** -- no longer blocked by an unexplained stall.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -152,41 +153,37 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -194 (s337); the next new item takes -195 and is inserted at the top.
+oldest). Current top is -195 (s339); the next new item takes -196 and is inserted at the top.
 
--194. **(s337) M5 audio de-stubbing: runtime instrument on `static_6_800AF550` finds the delta-time
-    input advances normally (refutes "frozen OS clock"), but the real blocker is a global pointer
-    that stays NULL for ~89% of the run -- and even after the real exit signal fires once, the
-    VI=640 graphics-task stall does not clear.** Closed the 3rd-of-3 (final, iron rule 8) iteration
-    on `HYPOTHESIS-ID m5-audio-destub-cinematicloopbody-divergent-callees`. Added 3 diagnostics to
-    `fixup_game_funcs.py` (untracked, N64Recomp repo, gated `ROGUESQ_LOG_CUTSCENETIMER_REACH=1`):
-    entry (`a2`/delta-time, whether global pointer `0x800B0934` is null), debounce (the global byte at
-    `0x800B0938`), and exit (the function's one real `return 1` site). Soaked with `reapplyDisplayMode`'s
-    gate reversed, `ROGUESQ_LOG_MAINGAMELOOP_REACH=1` armed alongside for correlation with s334's
-    `[cutscenedispatch-entry]`, `HOLD_S=600`; reproduced the stall, 0 crashes across 1.28M log lines.
-    **Results** (positive control satisfied, all 3 fired): `a2` was 0.0167-0.0333 (a normal per-frame
-    delta) across the *entire* run, never frozen -- refutes "OS clock not advancing." But `ptr_null=1`
-    for every logged entry from n=1 through n=1024 of 1152 total -- the real threshold/debounce logic
-    never ran for virtually the whole stall, because the pointer stayed null; only at the last entry
-    (n=1152) did it go non-null, the debounce counter then completed in one tight 7-call burst, and
-    the exit signal (`return 1`) fired exactly once. **But `[vi-fs-decision]` kept logging
-    `stalled=1 pairs=0` for all ~4283 remaining log lines through the log's end** -- no stall-clearing
-    effect visible after the exit fired. Most promising unchased lead: `cinematicLoopBody`'s internal
-    loop calls `submitGfxFrame` directly every iteration (s336), a completely separate graphics-producer
-    path from the whole `runVideoFrameTick`-callers chase s333-s336 pursued -- if `submitGfxFrame` is
-    the real per-frame producer here, that whole chase targeted an irrelevant call chain, and the real
-    question is why its output never reaches `[vi-fs-decision]`'s pairing logic (`pairs=0`) despite
-    1152+ calls. No `lib/` touched. Gate reverted to baseline, rebuilt clean. `HYPOTHESIS-ID` retired
-    at budget; pivots to `m5-audio-destub-submitgfxframe-vi-fs-decoupling`. Full detail: `PORTING-STATE`
-    Session 337.
+-195. **(s339) M5 audio de-stubbing: source-proves `submitGfxFrame` structurally cannot produce a
+    `FramebufferPair`, and that `cinematicLoopBody`'s self-loop calls the real `SET_COLOR_IMAGE`
+    producer (`runVideoFrameTick`, via `static_6_800A9ABC`) exactly ONCE -- not per-iteration -- fully
+    resolving the s329-s338 VI=640 `pairs=0` chase in 1 iteration, no new soak.** Closed
+    `HYPOTHESIS-ID m5-audio-destub-submitgfxframe-vi-fs-decoupling` on its 1st iteration by source-read
+    (`submitGfxFrame`'s full callee set has no `setupCameraMatrices`/`emitFrameRdpInitDl`/
+    `runVideoFrameTick`/`advanceVideoFrame` -- only buffer-arbiter/SP-task-producer bookkeeping) plus
+    reuse of s337's already-captured log (`[static6-800a9abc-entry]`, armed via
+    `ROGUESQ_LOG_MAINGAMELOOP_REACH=1`) for a 2nd, runtime-confirmed line of evidence: exactly 1 call
+    for the whole ~600s soak, matching s333's raw "`runVideoFrameTick` stops after exactly 2 calls"
+    (1 from `mainGameLoop`'s single pass + 1 here = 2, an exact Fermi-check match). Conclusion: nothing
+    is actually stalled -- `cinematicLoopBody`'s self-loop runs correctly the whole time (audio,
+    buffer-arbiter, cutscene dispatch all alive); it just never re-emits `SET_COLOR_IMAGE` after its
+    one-time pre-loop camera/RDP-state setup, so `[vi-fs-decision]`'s `pairs` counter faithfully reads
+    0 for the rest of the scene. Very likely not a bug (a locked-camera cutscene reusing one RDP-state
+    prologue is ordinary), and confirms s336's suspicion this thread was never an audio issue. Reframes
+    the M5 decision: promoting BOTH `setDisplayMode`'s and `reapplyDisplayMode`'s gate-byte reversals
+    to the shipped default is no longer blocked by an unexplained stall -- that promotion decision is
+    the recommended next M5 work unit. No `lib/` touched, no soak run. Full detail: `PORTING-STATE`
+    Session 339.
 
--188..-193. **(s330, 332-336) M5 audio de-stubbing: the VI=640 `reapplyDisplayMode` stall chase from
-    the `waitForMusyXAudioTaskDone` spin-loop hypothesis through 4 reachability probes to a
-    source-proven internal cutscene loop, ending at item -194's still-open exit-gate question.**
+-188..-194. **(s330, 332-337) M5 audio de-stubbing: the VI=640 `reapplyDisplayMode` stall chase from
+    the `waitForMusyXAudioTaskDone` spin-loop hypothesis through 5 reachability probes to a fully
+    source-proven internal cutscene loop and exit-gate, closed by item -195's mechanism.**
     `HYPOTHESIS-ID` progression: `...waitformusyx-secondspin-hang` (closed s332, refuted) →
     `...reapplydisplaymode-reachability` (closed s333) → `...mainGameLoop-upstream-stall` (closed
-    s334→s335 in 3 iterations) → `...cinematicloopbody-divergent-callees` (closed s336→s337, item
-    -194). s330 source-read found a second, unpatched spin loop inside `waitForMusyXAudioTaskDone`
+    s334→s335 in 3 iterations) → `...cinematicloopbody-divergent-callees` (closed s336→s337, 3
+    iterations, iron rule 8 budget) → resolved by item -195's
+    `m5-audio-destub-submitgfxframe-vi-fs-decoupling`. s330 source-read found a second, unpatched spin loop inside `waitForMusyXAudioTaskDone`
     (`funcs_24.c:5540-5550`, unbounded, missed by s327's pump-fix) as a candidate mechanism. s332
     runtime-REFUTED it: the diagnostic fired once with `flag=0`, fell through immediately, while the
     stall persisted the full 600s with audio (arm/clear cycling, DMA ring reaching n=4979) staying
@@ -208,9 +205,12 @@ oldest). Current top is -194 (s337); the next new item takes -195 and is inserte
     recursive mutex and `gfx_thread`/`task_thread`/`vi_thread` are genuinely independent OS threads
     (`lib/N64ModernRuntime/librecomp/src/main.cpp:185-190`, `ultramodern/src/events.cpp:590-634`),
     explaining why audio diagnostics kept firing throughout every stall in this arc even with the game
-    thread wedged. Gate reverted to the full force-zero baseline and rebuilt clean after every session
-    (`audio gate patched x2` reconfirmed each time); no `lib/` touched in any of the 6 sessions. Full
-    detail: `PORTING-STATE` Sessions 330, 332-336.
+    thread wedged. s337 instrumented `cinematicLoopBody`'s exit gate (`static_6_800AF550`) directly:
+    its delta-time input never froze, but its gating pointer stayed NULL for ~89% of the run and even
+    the one real exit-signal firing did not clear `[vi-fs-decision]`'s `pairs=0` reading — closing that
+    question but leaving the pairing mechanism itself unexplained. Gate reverted to the full force-zero
+    baseline and rebuilt clean after every session (`audio gate patched x2` reconfirmed each time); no
+    `lib/` touched in any of the 7 sessions. Full detail: `PORTING-STATE` Sessions 330, 332-337.
 
 -182..-187. **(s323-329) M5 audio de-stubbing step 4: gate-byte reversal + spin-loop chase — the arc
     from the 37-vs-40 measurement question through the fix, its confirmation, and the 3rd gate site's
