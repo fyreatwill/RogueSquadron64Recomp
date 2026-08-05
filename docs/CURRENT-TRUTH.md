@@ -21,8 +21,11 @@ Priority order for upcoming iterations, set after the 300-session review:
    (`bad_v1=0x00010001`) reproduces byte-identically across independent sessions — opened
    `m5-audio-destub-linkedlist-corruption-source`, still OPEN. s354 (item -210) opened a parallel
    thread, `m5-audio-destub-coalesce-heap-guard-verify`, on a 2nd independently-repeating crash site
-   found and guarded along the way. Both threads landed fixes s357/s358 (items -212/-213), each now
-   awaiting its own first verify pair. See NEXT.md for both open threads' current status and next steps.
+   found and guarded along the way. Threads landed fixes s357/s358/s359 (items -212/-213/-214). Thread
+   B's s359 fix (item -214) is a repeat of the s350→s350b read-guard/write-guard-sibling pattern one
+   loop over, still awaiting its own first verify pair; Thread A's s358 fix's verify pair is still
+   undrained (2 gaps skipped as of s359). See NEXT.md for both open threads' current status and next
+   steps.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -152,7 +155,31 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -213 (s358); the next new item takes -214 and is inserted at the top.
+oldest). Current top is -214 (s359); the next new item takes -215 and is inserted at the top.
+
+-214. **(s359) Thread B's `verify1/2` drained with a discriminating result — the s357 loop2 READ guard's
+    own uncovered sibling WRITE site crashed, an exact repeat of the s350→s350b read-guard/write-guard
+    gap one loop over.** `s357_drainmeshloop2guard_verify1` crashed at `pc-symbol=drainMeshReleaseQueue+3752`,
+    `last-guest-pc=0x80008218`, with `loop2_guard_fire_n=1` (the s357 read guard fired earlier in the same
+    run — positive control) and both first-loop guards (`read_guard_fire_n=1`, `write_guard_fire_n=1`) also
+    firing. The ring-buffer breadcrumb's dump showed `iter_at_bail=1, v1[0]=0x00010001` — the SAME
+    byte-identical poisoned value item -208/s354/s357 found, a 4th independent session/build reproducing
+    it at the same walk position. `verify2` crashed off-target (`findLookupEntryByKey+1864`,
+    `loop2_guard_fire_n=0`), not informative either way. Source-read
+    (`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c` ~1888-1934) found the s357 loop2 read guard's
+    bail zeroes `ctx->r2` (the loop-continuation value) but does NOT repair `ctx->r3` (`v1`) — four
+    instructions later (`0x8000820C`-`0x80008218`, a compiler-duplicated branch-arm pair like every other
+    guarded site in this function) the function unconditionally writes THROUGH that same unrepaired `v1`
+    (`MEM_W(0X0, ctx->r3) = ctx->r2;`), byte-for-byte the same gap s350's read guard had before s350b fixed
+    it for the function's FIRST tail-scan loop — never mirrored when s357 added the loop2 read guard.
+    **Fix**: new range-check-and-bail guard at `0x80008218` (`fixup_game_funcs.py`, new site, sibling to
+    s350b's pattern), skips the write on invalid `v1` (no-op, same minimal-behavior-change bail every
+    drain-mesh guard uses). Left the following `0x8000821C` write untouched (address operand is the
+    freelist-head global, not the corrupted `v1`, same reasoning s350b used for `0x800081C8`). New tag
+    `[drain-mesh-loop2-write-guard]`, reuses `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD`. Full regen + rebuild
+    clean, patch report `x1` (2 compiler-duplicated occurrences confirmed, both single-line). Queued
+    `s359_drainmeshloop2writeguard_verify1/2.sh`. Thread A's `s358_coalesceheapbailfix_verify1/2.sh` still
+    undrained (2 gaps skipped as of this session). Full detail: `PORTING-STATE` Session 359.
 
 -213. **(s358) Thread A's `verify5/6` drained with a discriminating result — the s354 guard's OWN bail
     path was buggy (it re-entered the loop with a still-wild pointer instead of stopping it); source-proved

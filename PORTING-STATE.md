@@ -31000,3 +31000,72 @@ discriminating run iron rule 8 was watching for. `HYPOTHESIS-ID` stays
 not a pivot). Both M5 threads (A: coalesce-heap-guard, B: drainmesh-loop2-guard) now have exactly one
 freshly-landed fix each awaiting its own first verify pair — next session should read whichever pair
 drains first (or both, if the loop gets to all 4 before the next iteration).
+
+## Session 359 (2026-08-05): Thread B's `s357_drainmeshloop2guard_verify1/2` drained with a discriminating
+result — the s357 loop2 READ guard's own uncovered sibling WRITE site crashed, exactly the s350→s350b
+pattern repeated one loop over. Source-proved and guarded it. Thread A's `s358_coalesceheapbailfix_verify1/2`
+still undrained.
+
+Read list at session start: `docs/CURRENT-TRUTH.md` item -213 (NEXT.md pointed here), `scratch/agent/NEXT.md`,
+`scratch/agent/SOAK-RESULTS.md` tail. Both threads' queued recipes had drained since s358: Thread B's
+`s357_drainmeshloop2guard_verify1/2` were new data; Thread A's `s358_coalesceheapbailfix_verify1/2` were
+still sitting in `scratch/agent/soak_queue/`, undrained by the loop as of this session's start — picked
+Thread B since it had informative data ready.
+
+`s357_drainmeshloop2guard_verify1`: `launcher_rc=0`, title reached at 45.3s, then CRASH at
+`pc-symbol=drainMeshReleaseQueue+3752` (`last-guest-pc=0x80008218`), with `loop2_guard_fire_n=1` (the
+s357 read guard fired earlier in the SAME run — positive control) and `read_guard_fire_n=1`,
+`write_guard_fire_n=1` (both first-loop guards also fired — everything upstream working as designed) AND
+`ring_fire_n=1` — the ring-buffer breadcrumb's dump showed `iter_at_bail=1, v1[0]=0x00010001`, the SAME
+byte-identical poisoned value item -208/s354/s357 already found, now a 4th independent session/build
+reproducing it at the same walk position. `s357_drainmeshloop2guard_verify2`: CRASH at
+`pc-symbol=findLookupEntryByKey+1864` (`last-guest-pc=0x800ad0dc`), `loop2_guard_fire_n=0` — off-target,
+unrelated function, not informative for this guard either way.
+
+**verify1's crash offset (+3752, guest PC `0x80008218`) is a NEW site inside `drainMeshReleaseQueue`,
+downstream of the s357 guard, with the guard's own positive control confirmed firing in the same run** —
+the same "guard fired, crash still happened in the same function, further along" shape s350→s350b's
+sibling-site chain established. Source-read
+(`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c` ~1888-1934, `drainMeshReleaseQueue`): the s357
+loop2 read guard (at guest `0x80008200`) protects the loop's list-walk READ, but on bail only zeroes
+`ctx->r2` (the loop-continuation value) to end the loop — it does NOT repair `ctx->r3` (`v1`), which stays
+the same invalid pointer. Four instructions later (guest `0x8000820C`-`0x80008218`, a pair of
+compiler-duplicated branch arms exactly like every other guarded site in this function), the function
+unconditionally executes `MEM_W(0X0, ctx->r3) = ctx->r2;` — a write straight through the still-unrepaired
+`v1`. This is byte-for-byte the same gap s350's read guard had before s350b fixed it for the function's
+FIRST tail-scan loop (`0x800081AC` → `0x800081C4`), just never mirrored when s357 added the loop2 read
+guard. `verify1`'s crash lands exactly there.
+
+**Fix** (`~/Documents/Tools/N64Recomp/fixup_game_funcs.py`, new patch site, sibling to s350b's pattern):
+added a range-check-and-bail guard at guest `0x80008218`, guarding both compiler-duplicated occurrences
+of the write via one indent-agnostic regex (mirrors s350b's `\1`-indent capture exactly). On invalid
+`v1`, skips the write entirely (no-op — same minimal-behavior-change bail every other drain-mesh guard
+uses). Left the following `0x8000821C` write (`MEM_W(0X4, ctx->r2) = ctx->r3`) untouched — there
+`ctx->r2` (the freelist-head global) is the address operand, not the corrupted `v1`, same reasoning
+s350b used to leave the analogous `0x800081C8` write alone pending its own confirmed hit. New diagnostic
+tag `[drain-mesh-loop2-write-guard]`, reuses the existing `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` env var
+(already armed by default in `run_s327waitpump.sh`).
+
+Full regen (deleted all 45 `RecompiledFuncs/funcs_*.c` individually via flat `rm -f` per the item -20
+sandbox gotcha → `make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`, mandated order).
+Patch report showed a clean `drainMeshReleaseQueue 2nd tail-scan loop write-through-v1 guard patched x1`;
+confirmed the regenerated source has exactly 2 occurrences of the guard body (one per compiler-duplicated
+branch arm, both single-line, no `\n`-escaping corruption) by direct grep/read. Full build completed
+clean (`Built target RogueSquadron64Recomp`, only pre-existing `DDIV` sign-mismatch warnings, no new
+errors/warnings). `lib/` not touched — `fixup_game_funcs.py` lives in the untracked
+`~/Documents/Tools/N64Recomp` tool repo, outside this repo's `lib/`/submodule-patches system, same as
+every prior M5 session.
+
+**Queued** `s359_drainmeshloop2writeguard_verify1/2.sh` (`scratch/agent/soak_queue/`, `HOLD_S=240`, same
+recipe/env shape as every prior verify pair, adds a `loop2_write_guard_fire_n` counter). Thread A's
+`s358_coalesceheapbailfix_verify1/2.sh` are STILL undrained — the loop has now had two full gaps without
+reaching them; not itself alarming (the loop drains up to 2 per gap and Thread B's pair happened to come
+up first both times), but worth noting if a 3rd gap also skips them.
+
+**Decision**: does not close Thread B's iteration — this is the SAME pattern as s350→s350b (read guard
+first, its uncovered write-through sibling found and fixed one session later), now recurring one loop
+over. `HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` (iteration 5: another
+source-proved fix landed on informative data, not a pivot). The 4th independent `bad_v1=0x00010001`
+sighting (now at 2 distinct guard sites across 2 distinct loops, all in the same function) continues to
+strengthen the "one deterministic corruption source feeding both loops' pointer chains" reading from item
+-208, still not proven (still needs a common-upstream-write finding to fully close that question).
