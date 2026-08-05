@@ -30777,3 +30777,60 @@ Bonus (zero-cost, no build/run needed): queued 4 soak recipes for the loop to dr
 `m5-audio-destub-linkedlist-corruption-source`'s 3rd-and-last soak pair before iron rule 8's mandatory
 pivot check). Not run this session — writing/queueing a recipe is not "running an experiment," and Step 0
 explicitly bars experiments in a triggered maintenance iteration.
+
+## Session 356 (2026-08-05): Thread A's `verify3/4` both drained and both CRASHED, but neither hit `coalesceFreeHeapBlocks` — one is a brand-new, never-before-catalogued host-libc crash signature (`_platform_memmove+96`); the other is the already-known `musyxSynthFrame+4652` boot-time family. Neither confirms nor refutes the guard; queued a 3rd verify pair. Thread B's soaks (`s355_ringbuffer_verify3/4.sh`) had not yet drained by session start — no new data for Thread B this session.
+
+`wc -c < docs/CURRENT-TRUTH.md` = 42,233 bytes — under the 60,000-byte Step 0 trigger, no maintenance
+iteration this session.
+
+**Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) data read**: `s355_coalesceheapguard_verify3`
+(`scratch/agent/soak_results/s355_coalesceheapguard_verify3_20260805-140632.log`) ran 259s, reached title
+at 44.9s, then crashed ~214s later at `pc-symbol=_platform_memmove+96` (host libSystem symbol,
+`base=0x18c6ea000`) with `coalesce_guard_fire_n=0`, `read_guard_fire_n=0`, `write_guard_fire_n=0`,
+`ring_fire_n=0`. Grepped `PORTING-STATE.md`/`docs/CURRENT-TRUTH.md`/`docs/PROJECT-OVERVIEW.md` for
+`platform_memmove`: **zero prior hits** — this is a genuinely new crash signature, not a previously-seen
+one under a new label. `s355_coalesceheapguard_verify4` ran only 1s (`launcher_rc=4`, `runlog_bytes=42081`,
+no `title_reached` line at all) and crashed at `pc-symbol=musyxSynthFrame+4652` — the same symbol
+`s348_contentguard_verify1` hit and already noted as "unrelated boot-time crash... never reached title,
+not informative." Both runs share an identical `last-guest-pc=0x8000834c` checkpoint, which — per NEXT.md's own note that
+all BREADCRUMB passes share one `g_rs64_last_guest_pc` global and only breadcrumbed functions
+(`drainMeshReleaseQueue`, `coalesceFreeHeapBlocks`) update it precisely — is almost certainly a stale
+early-boot checkpoint common to both runs, not a meaningful crash-site indicator for either.
+
+**Reading against NEXT.md's Step 2/2b/2c decision tree**: none of the three literal branches fire. Step 2
+(target crash recurs with `fire_n=0`) needs `pc-symbol=coalesceFreeHeapBlocks+3452` — neither run shows
+that. Step 2b (target crash relocates downstream with `fire_n>=1`) needs the guard to have fired — it
+didn't in either run. Step 2c (4/4 clean) needs both clean — neither is. This is the same "off-target
+crash, not a null result" shape Thread B hit with `s353_ringbuffer_verify1/2` (item -210): a crash
+happened, but not one that exercises the code path under test. Net tally across all 4 Thread A runs to
+date: 2 genuinely clean full-hold soaks (verify1/2) + 2 off-target crashes that never reached
+`coalesceFreeHeapBlocks` (verify3/4) = **0/4 target-crash recurrences, 0/4 guard fires, but only 3 of the
+4 runs were long enough to count as a meaningful test** (verify4's 1-second boot-time death gives the
+guarded code path no real chance to execute). Treating verify4 as non-informative rather than "clean,"
+Thread A stands at 3 meaningful non-recurrences, one short of the 4-meaningful-run bar `s348`'s
+content-guard closure used.
+
+**Decision**: did not close Thread A (bar not yet met) and did not force a pivot (iron rule 8's 3-strike
+count is at 2 real work sessions for this hypothesis-slug — s354 opened it, s355 was a declared
+MAINTENANCE no-experiment session and does not count, this session is the 2nd). Queued
+`s356_coalesceheapguard_verify5/6.sh` (`scratch/agent/soak_queue/`, same recipe/env/`HOLD_S=240` as prior
+verify pairs) to get one more meaningful data point toward the 4-non-recurrence bar or catch the guard
+actually firing. Did not touch Thread B this session — its queued soaks (`s355_ringbuffer_verify3/4.sh`)
+had not yet drained by session start (still present in `scratch/agent/soak_queue/`, not `done/`), so there
+was no new data to analyze there; left as-is for the loop to drain.
+
+**New backlog note, not investigated this session** (single data point, n=1, correctly NOT chased per the
+project's "no reactive single-crash chases" rule): `_platform_memmove+96` is a novel crash signature. It
+occurred ~214s into a run that had already passed the title screen cleanly, i.e. well into the same
+post-title crash-storm window the M5 step-5/Thread-B work has been probing. A wild/corrupt length or
+pointer reaching a libc `memmove` is a plausible downstream symptom of the same heap/linked-list corruption
+Thread B is chasing (a corrupted size or pointer field feeding a copy operation), but this is a hypothesis
+from one occurrence, not a finding — needs a 2nd independent hit before it's worth a dedicated thread. If
+`s356_coalesceheapguard_verify5/6` (or any future M5 soak) hits `_platform_memmove` again, that is the
+signal to open a 3rd thread.
+
+**Result**: no code/instrument change this session (Thread A's guard from s354 is unchanged); 2 new soak
+recipes queued; no experiments run inline (both meaningful threads are in "waiting on queued soak data"
+state — Thread A got data but inconclusive, Thread B has none yet). `docs/CURRENT-TRUTH.md` item -210
+updated with this session's tally; `scratch/agent/NEXT.md` rewritten with the updated decision state for
+both threads.

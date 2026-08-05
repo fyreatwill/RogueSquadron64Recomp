@@ -151,7 +151,32 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -210 (s354); the next new item takes -211 and is inserted at the top.
+oldest). Current top is -211 (s356); the next new item takes -212 and is inserted at the top.
+
+-211. **(s356) Thread A's `verify3/4` both drained and both CRASHED, but neither hit
+    `coalesceFreeHeapBlocks` — inconclusive for the guard question, and one is a brand-new crash
+    signature never seen before in this project.** `s355_coalesceheapguard_verify3` ran 259s, reached
+    title at 44.9s, then crashed ~214s later at `pc-symbol=_platform_memmove+96` (a host libSystem
+    symbol) with `coalesce_guard_fire_n=0`; grepping the whole doc set for "platform_memmove" found
+    zero prior hits — genuinely novel, not a previously-seen crash under a new label.
+    `s355_coalesceheapguard_verify4` crashed in under 1s (before `title_reached` even printed) at
+    `musyxSynthFrame+4652`, the same symbol `s348_contentguard_verify1` hit and already noted as an
+    unrelated boot-time family, too short to exercise the guarded code path at all. Neither run matches
+    any of NEXT.md's Step 2/2b/2c branches (target-crash-recurs, guard-fires-crash-relocates, or
+    4/4-clean) — same "off-target crash, not a null result" shape Thread B hit with
+    `s353_ringbuffer_verify1/2`. Tally across all 4 Thread A runs: 2 clean full-hold soaks (verify1/2) +
+    2 off-target crashes (verify3/4, one of which — verify4 — is too short to count as a meaningful
+    test) = 3 meaningful non-recurrences, one short of the 4-meaningful-run bar the s348 content-guard
+    closure used. Did not close the thread or force a pivot (iron rule 8: 2 real work sessions on this
+    slug so far, s355 was a declared no-experiment MAINTENANCE session and doesn't count). Queued
+    `s356_coalesceheapguard_verify5/6.sh`. Thread B's `s355_ringbuffer_verify3/4.sh` had not yet drained
+    by this session's start — no new Thread B data this session, left queued for the loop.
+    **New backlog note, correctly NOT chased this session** (n=1, "no reactive single-crash chases"):
+    `_platform_memmove+96` fired well into the same post-title crash-storm window Thread B probes — a
+    wild pointer/length reaching `memmove` is a plausible downstream symptom of the same
+    heap/linked-list corruption Thread B is chasing, but this is a hypothesis from one occurrence, not
+    a finding. A 2nd independent hit on this symbol (from any future M5 soak) is the trigger to open a
+    3rd thread. Full detail: `PORTING-STATE` Session 356.
 
 -210. **(s354) s353's ring-buffer verify soaks landed 0/2 fires — both crashes missed
     `drainMeshReleaseQueue` entirely — but one of them was an independent byte-identical repeat of a
