@@ -28970,3 +28970,57 @@ the flag does reach 0 but the spin somehow still doesn't exit, the mechanism nee
 after that positive/negative control should a fix (bounding loop 2 the same way s327 bounded loop 1)
 be attempted and soaked — jumping straight to a fix without runtime confirmation would repeat the
 mistake iron rule 1 exists to prevent.
+
+## Session 331 (2026-08-04) — MAINTENANCE: compacts `docs/CURRENT-TRUTH.md` 63,161→40,424 bytes (668→459 lines, 209 net line shrink) — condenses the s323-329 fix/confirm arc and merges the s297-322 measurement-chasing runway into two summary paragraphs
+
+Step 0 of `tools/agent/ITERATION.md` triggered: `wc -c docs/CURRENT-TRUTH.md` read 63,161, over the
+60,000-byte threshold (s330 pushed it there by adding item -188 without a compensating trim, per
+NEXT.md's own forecast). This session ran no experiment, per the Maintenance section's explicit
+instruction.
+
+**What was condensed.** Two adjacent stretches of the Next-steps ladder, both entirely composed of
+now-superseded stepping-stones in the M5 audio de-stubbing step-4 investigation:
+
+- Items -182 through -187 (s323, s325, s326, s327, s328, s329 — 6 separate full session write-ups,
+  204 lines) were folded into one summary paragraph (item -182..-187, ~26 lines) covering: s323's
+  positive-controlled runtime instrument reframing the "37-vs-40" question as a measurement
+  arithmetic inconsistency; s325 closing it (a 4th instance of the sampling-cap-illusion bug, gate
+  counts summing exactly to 37); s326's pure-source-read trace of the `setDisplayMode` VI=320 hang
+  mechanism; s327 landing and validating the spin-loop pump fix (1/1 soak clean past VI=320); s328
+  closing the hypothesis with 2 more confirmatory soaks (3/3 combined, meets the M5 plan's own
+  "two clean soaks" bar); s329 finding `reapplyDisplayMode`'s site has a categorically different,
+  unrelated VI=640 graphics-task stall. Every load-bearing fact (hypothesis-id chain, soak
+  counts/verdicts, the promotion-decision-not-made status, the crash-family attributions) was
+  preserved; only the session-by-session narrative scaffolding was cut.
+- Items -160 through -181 (s297-322, three already-once-condensed blocks from prior maintenance
+  passes — s314 condensed -172..-169, s324 condensed -173..-181, but -160..-168 had never been
+  touched — 65 lines total across 3 items) were merged into one further-condensed paragraph
+  (item -160..-181, ~24 lines) covering the full 26-session runway: the initial instrumentation
+  build-out (s297-301), the `initMusyXEngine` dead-code false start and its s306 overturn, the
+  `setDisplayMode`/`reapplyDisplayMode` gate-site hang reproductions (s303/307), the tick-producer
+  invocation-mechanism find via indirect VI-retrace callback (s310), the soft/hard stop-point
+  framing and its print-cap-artifact correction (s311-315), and the gate1/2/3 TOCTOU diagnostic bug
+  found and fixed at s318. No unique fact was dropped — every claim in the merged paragraph already
+  existed in one of the three source blocks it replaces; full narrative detail remains in
+  `PORTING-STATE` Sessions 297-322 (unchanged, this file is append-only).
+
+Also refreshed: the `USER DIRECTIVE` item 2 (M5 status) paragraph, previously a single 2,742-character
+line duplicating item -188's full detail, was cut to a ~10-line summary that just orients on current
+status and points at item -182..-187 and item -188 for the record; the "established by session 295 …
+reviewed through s325" headline was bumped to "reviewed through s330"; the maintenance-history log in
+`USER DIRECTIVE` item 1 gained this session's entry.
+
+**Result**: `docs/CURRENT-TRUTH.md` 668→459 lines (209 net line shrink, clears the stop-gate's
+>=200-line ADVANCED bar), 63,161→40,424 bytes. Did not reach the 35 KB stretch target (deliberately —
+the "Current truth" env-var/timeline prose and the Regeneration section's Standing warnings were left
+untouched per that section's own instruction, since both are used every iteration for phase-gating and
+build commands); a future maintenance pass could still trim the "Overturned conclusions" section,
+which was not touched this session and is now the largest remaining block relative to its
+information density.
+
+No code changed, no `lib/` touched, no soak run (Maintenance iterations explicitly skip experiments).
+`scratch/agent/NEXT.md` rewritten to drop the now-satisfied maintenance-check preamble and note this
+session did not spend a hypothesis-budget iteration on `m5-audio-destub-waitformusyx-secondspin-hang`
+(still 1 of 3 spent, at s330 — next iteration is the 2nd). Next work unit: proceed straight to the
+runtime-confirmation diagnostic for the `waitForMusyXAudioTaskDone` 2nd-spin-loop hypothesis, per
+`scratch/agent/NEXT.md`.

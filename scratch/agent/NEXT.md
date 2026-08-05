@@ -1,12 +1,16 @@
 # NEXT work unit
 
-## Maintenance check first
-`docs/CURRENT-TRUTH.md` is now 63,161 bytes (over the 60,000-byte Step-0 trigger after s330's
-addition). **The next iteration almost certainly opens as a MAINTENANCE iteration** — compact toward
-~35 KB per `tools/agent/ITERATION.md`'s Maintenance section before doing anything else. Do not run the
-M5 work below until Step 0's check says otherwise.
+## s331 was a MAINTENANCE iteration — done, not blocking this one
 
-## If not a maintenance iteration: runtime-confirm the `waitForMusyXAudioTaskDone` 2nd-spin-loop hypothesis
+s331 compacted `docs/CURRENT-TRUTH.md` from 63,161→40,424 bytes (668→459 lines, 209 net line
+shrink — clears the >=200 ADVANCED bar). It condensed items -182..-187 (the s323-329 fix/confirm arc)
+and merged items -160..-181 (the s297-322 measurement-chasing runway) into two summary paragraphs,
+migrating no unique facts — full detail remains in `PORTING-STATE` Sessions 297-329. `docs/
+CURRENT-TRUTH.md` is now well under the 60,000-byte Step-0 trigger; **this iteration should proceed
+straight to the M5 work below**, no maintenance check needed first (Step 0 will still gate it, but the
+byte count should read well clear).
+
+## Runtime-confirm the `waitForMusyXAudioTaskDone` 2nd-spin-loop hypothesis (2nd of 3 budgeted iterations)
 
 ### Status note (s330): strong candidate mechanism found via source-read, NOT runtime-confirmed
 
@@ -88,5 +92,6 @@ narrow condition makes loop 2 hang.
 - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8` — allowlisted
   verbatim.
 
-HYPOTHESIS-ID: m5-audio-destub-waitformusyx-secondspin-hang (1st of 3 iterations — s330 was the
-source-read that identified the candidate mechanism; this iteration is the runtime-confirmation step).
+HYPOTHESIS-ID: m5-audio-destub-waitformusyx-secondspin-hang (2nd of 3 iterations — s330 was the
+source-read that identified the candidate mechanism [1st]; s331 was a maintenance iteration and did
+not spend a hypothesis iteration on this thread; this iteration is the runtime-confirmation step).
