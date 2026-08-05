@@ -29024,3 +29024,69 @@ session did not spend a hypothesis-budget iteration on `m5-audio-destub-waitform
 (still 1 of 3 spent, at s330 — next iteration is the 2nd). Next work unit: proceed straight to the
 runtime-confirmation diagnostic for the `waitForMusyXAudioTaskDone` 2nd-spin-loop hypothesis, per
 `scratch/agent/NEXT.md`.
+
+## Session 332 (2026-08-04) — M5 audio: RUNTIME-REFUTES the `waitForMusyXAudioTaskDone` 2nd-spin-loop hypothesis — the diagnostic fired exactly once with flag=0 (the loop exits immediately, never blocks), while the graphics-task stall persists for the entire 600s soak with audio (arm/clear/DMA-ring) staying fully alive
+
+Ran the 2nd (of 3 budgeted) iteration on `HYPOTHESIS-ID m5-audio-destub-waitformusyx-secondspin-hang`,
+per s330/NEXT.md's plan: a targeted, hard-capped, env-gated diagnostic at the 2nd spin loop and its
+flag's arm/clear sites, soaked once with `reapplyDisplayMode`'s gate reversed (baseline mirror of
+s329's setup), BEFORE attempting any fix — the runtime positive/negative control iron rule 1 requires.
+
+**Source re-verification before instrumenting** (byte-checked against live `RecompiledFuncs` output,
+not just s330's citations): confirmed the 2nd spin loop's exact address range (`funcs_24.c:5540-5550`,
+label `L_80091F34`, flag at RAM `0x8014974C` / `G_BASE-0x68B4`) and found TWO new facts s330 didn't
+catalogue: (1) the identical idiom is duplicated byte-for-byte inside `shutdownAudioEngine` (a twin
+loop, label `L_80091DC4`, same flag) — the regex written for this session's diagnostic is generic on
+the label backreference so it patched both (`x2`) automatically; (2) the flag has a 3rd static site
+beyond the ARM (`musyxSynthFrame`, ~`0x80091680`, always writes literal 1) and RUNTIME clear
+(`musyxSynthFrame`'s own top-of-function logic, ~`0x800912F8`, gated behind a blocking
+`osRecvMesg_recomp`) s330 named: a previously-uncatalogued INIT-time clear in a different function
+entirely (`funcs_23.c` ~`0x8008F490`, right after an `osCreateMesgQueue_recomp` call) — out of scope
+for this session's 3 planned sites, not instrumented.
+
+**Diagnostics added** (`fixup_game_funcs.py`, N64Recomp repo, untracked; all gated behind a single env
+var `ROGUESQ_LOG_WAITMUSYX_SPIN2=1`, default off, hard-capped at 40 total prints per site since the
+spin can iterate unboundedly if genuinely stuck): `[waitmusyx-spin2]` at the loop itself (fires
+unconditionally on its first iteration, then roughly every 2M iterations after, logging the flag's
+live value — designed to distinguish "never reached" from "constant-stuck" from "oscillating"),
+`[waitmusyx-spin2-arm]`, `[waitmusyx-spin2-clear]`. Regenerated (`make_elf.py`→`N64Recomp`→
+`fixup_game_funcs.py`→cmake, `RecompiledFuncs/*.c` deleted first) and confirmed clean patch counts
+(`audio gate patched x1` [B40-only narrowed, same as s329], `[waitmusyx-spin2] patched x2`,
+arm/clear `x1` each) and a clean build before soaking.
+
+**Soak** (`run_s327waitpump.sh s332waitmusyxspin2`, `HOLD_S=600`, `ROGUESQ_LOG_WAITMUSYX_SPIN2=1`):
+reproduced s329's exact symptom — VI reaches 640 at 2.2s (vs s329's 2.3s), then a permanent
+graphics-task-submission stall (`[vi-fs-decision] stalled=1 pairs=0` from shortly after onward, ~36000
+`update_screen` calls logged with zero further content change), driver exits 5 (phase-timeout
+INCONCLUSIVE) at 600s. 0 crash/assert/`UnhandledJumpTarget`/`missing-func` markers in the whole
+1,284,261-line log.
+
+**The discriminating result**: `[waitmusyx-spin2] label=L_80091F34 iter=1 flag=0 thr=3` — fires
+**exactly once**, at line 78273 (well after the VI=640 transition at line 5652), with the flag already
+**0** on that single check. Since the loop's exit condition is "flag != 0 → keep spinning," flag=0 on
+entry means the loop falls through immediately — it does not spin at all in this run, let alone block
+for the remaining ~590s. Meanwhile `[waitmusyx-spin2-arm]`/`[waitmusyx-spin2-clear]` both hit their
+40-print caps (so >=40 arm/clear cycles each), `[synth-entry]`=81, `[audtask-dispatch]`=60, and
+`[dma-ring-consumer]` reaches n=4979 near the very end of the log — audio genuinely never stops for
+the whole 600s, confirming (a 3rd time, independently) s329's "audio stays fully alive" finding, and
+now proving specifically that this 2nd spin loop is not the site where that aliveness comes at the
+cost of the game thread blocking.
+
+**Verdict: HYPOTHESIS-ID `m5-audio-destub-waitformusyx-secondspin-hang` REFUTED, CLOSED.** The 2nd
+spin loop inside `waitForMusyXAudioTaskDone` (and its twin in `shutdownAudioEngine`) is reached
+exactly once during the entire stall and does not block — it cannot be `reapplyDisplayMode`'s VI=640
+graphics-task-submission stall mechanism. s330's source-read chain was sound as far as it went (the
+loop is real, unpatched, and reachable) but the runtime data it never had access to shows the
+narrow condition it needed (flag stuck nonzero, or oscillating too fast to sample) simply doesn't
+occur in practice. Root cause of the actual stall is still open. Per s330's own H3 fallback plan
+(the only one of the 3 original hypotheses this result is consistent with): the next probe is a
+fire-once marker at `reapplyDisplayMode`'s call site (`funcs_0.c:1752`) and its 3-condition guard
+(`funcs_0.c:1703-1731`) to check whether `reapplyDisplayMode` (and therefore `runVideoFrameTick`'s
+graphics-task-producing path) is even reached at all during this soak's timeline, or whether the
+real stall is somewhere else in the per-frame tick entirely, upstream of everything s330/s332 traced.
+
+Gate reverted to the full force-zero baseline (`audio gate patched x2` reconfirmed) and rebuilt clean
+before ending the session, per every prior session's convention. The 3 new diagnostics stay in the
+tree permanently, armed-but-inert by default (`ROGUESQ_LOG_WAITMUSYX_SPIN2` unset). No `lib/` touched.
+`HYPOTHESIS-ID` retired (closed, refuted) — next iteration opens a new one for the
+`reapplyDisplayMode`-reachability probe (see `scratch/agent/NEXT.md`).

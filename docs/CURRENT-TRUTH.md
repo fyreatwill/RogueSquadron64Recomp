@@ -21,17 +21,17 @@ Priority order for upcoming iterations, set after the 300-session review:
    both CLOSED, the latter's fix VALIDATED 3/3 soaks (s327/328) -- see item -182..-187. Promoting the
    reversal to the shipped default is an open, explicitly-flagged decision, NOT made.
    `reapplyDisplayMode`'s site (the 3rd/last gate) hits a DIFFERENT, unrelated permanent VI=640
-   graphics-task stall (s329); s330 source-read a strong candidate mechanism -- a 2nd, unpatched spin
-   loop inside `waitForMusyXAudioTaskDone` -- NOT yet runtime-confirmed. `HYPOTHESIS-ID:
-   m5-audio-destub-waitformusyx-secondspin-hang` (1st of 3 iterations). Baseline (both sites
-   force-zeroed) restored at every session's end. Next work unit: a targeted diagnostic at the 2nd
-   spin loop and the flag's arm/clear sites -- see item -188.
+   graphics-task stall (s329), still UNSOLVED: s330's candidate mechanism (a 2nd, unpatched spin loop
+   inside `waitForMusyXAudioTaskDone`) was runtime-REFUTED by s332's diagnostic (fired once, flag
+   already 0, never blocks) -- see item -189. Baseline (both sites force-zeroed) restored at every
+   session's end. Next work unit: a reachability probe at `reapplyDisplayMode`'s call site and guard
+   -- see item -189.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
 Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the ~100 file-scoped-only guard patches in fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment.
 
-## Current truth (established by session 295; unchanged, reviewed through s330)
+## Current truth (established by session 295; unchanged, reviewed through s332)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -157,7 +157,37 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -188 (s330); the next new item takes -189 and is inserted at the top.
+oldest). Current top is -189 (s332); the next new item takes -190 and is inserted at the top.
+
+-189. **(s332) M5 audio de-stubbing: RUNTIME-REFUTES item -188's `waitForMusyXAudioTaskDone`
+    2nd-spin-loop hypothesis -- the diagnostic fired exactly once with flag=0 (falls through
+    immediately, never blocks), while the VI=640 graphics-task stall persisted the full 600s with
+    audio (arm/clear cycling >=40x each, DMA-ring reaching n=4979) staying fully alive throughout.**
+    Ran the 2nd of 3 budgeted iterations on `HYPOTHESIS-ID m5-audio-destub-waitformusyx-secondspin-
+    hang`: added 3 hard-capped, env-gated diagnostics (`ROGUESQ_LOG_WAITMUSYX_SPIN2=1`, default off)
+    at the 2nd spin loop itself and its flag's arm/clear sites, per iron rule 1 (no fix before a
+    runtime positive/negative control). Source re-verification before instrumenting found 2 new facts
+    item -188 didn't catalogue: the same spin idiom is duplicated byte-for-byte in `shutdownAudioEngine`
+    (a twin loop on the same flag, different label -- the diagnostic's regex matched both
+    automatically), and the flag has a 3rd static site, a previously-uncatalogued INIT-time clear in
+    an unrelated function (`funcs_23.c` ~`0x8008F490`), out of scope this session. Soaked with
+    `reapplyDisplayMode`'s gate reversed (mirroring s329's setup exactly): reproduced the VI=640 stall
+    at 2.2s (vs s329's 2.3s), 0 crashes/asserts across 1.28M log lines, driver timeout at 600s
+    (INCONCLUSIVE, matching s329). The diagnostic fired once, at line 78273 (well after the stall
+    onset), value `flag=0` -- the loop's exit condition (`flag != 0` keeps spinning) means it fell
+    through on the very first check and never re-entered for the remaining ~590s. **Verdict: HYPOTHESIS
+    REFUTED, CLOSED.** s330's source trace was sound as far as it went (the loop is real, unpatched,
+    reachable) but the runtime condition it needed (stuck-nonzero or too-fast-to-sample-oscillating)
+    does not occur -- this loop cannot be the stall mechanism. Root cause of the actual VI=640
+    graphics-task stall is still open. Per s330's own 3rd hypothesis (the only one consistent with this
+    result): the next probe is a fire-once reachability marker at `reapplyDisplayMode`'s call site
+    (`funcs_0.c:1752`) and its 3-condition guard (`funcs_0.c:1703-1731`) -- does `runVideoFrameTick`'s
+    graphics-task-producing path even get reached during this soak's timeline, or does the real stall
+    live somewhere further upstream in the per-frame tick that neither item -188 nor -189 has traced
+    yet? Gate reverted to the full force-zero baseline (`audio gate patched x2` reconfirmed) and
+    rebuilt clean before ending. The 3 new diagnostics stay in the tree permanently, armed-but-inert.
+    No `lib/` touched. `HYPOTHESIS-ID` retired (closed, refuted); next iteration opens a new one for
+    the reachability probe. Full detail: `PORTING-STATE` Session 332.
 
 -188. **(s330) M5 audio de-stubbing: pure source-read finds a SECOND, unpatched spin loop inside
     `waitForMusyXAudioTaskDone` — a strong, address-level-verified candidate mechanism for the
