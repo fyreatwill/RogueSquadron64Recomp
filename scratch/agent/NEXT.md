@@ -1,97 +1,92 @@
-# NEXT work unit — root-cause the `reapplyDisplayMode` VI=640 graphics-task stall
+# NEXT work unit
 
-## Status note (s329): new failure mode found, symptom characterized, cause NOT yet traced
+## Maintenance check first
+`docs/CURRENT-TRUTH.md` is now 63,161 bytes (over the 60,000-byte Step-0 trigger after s330's
+addition). **The next iteration almost certainly opens as a MAINTENANCE iteration** — compact toward
+~35 KB per `tools/agent/ITERATION.md`'s Maintenance section before doing anything else. Do not run the
+M5 work below until Step 0's check says otherwise.
 
-s329 tested the 3rd/last M5 gate site (`reapplyDisplayMode`, `0x8008EC88`) with `setDisplayMode`
-still force-zeroed (the mirror image of every s303-328 test). Result: **not** a rerun of
-`setDisplayMode`'s VI=320 spin-wait deadlock. Instead, VI reaches 640 at 2.3s (baseline timing) and
-then the graphics-task pipeline stalls **permanently** for the entire 600s soak —
-`[vi-fs-decision] stalled=1 pairs=0` continuously from right after the 640 transition to the log's
-end, never another `[phase]` VI change, never title (1024). Audio stays fully alive the whole time
-(`[synth-entry]`/`[audtask-dispatch]` both fire end-to-end, `[dma-ring-caller]` backtraces show live
-`musyxSynthFrame` DMA calls to the last log lines) — ruling out a repeat of the classic mechanism.
-Full detail: `docs/CURRENT-TRUTH.md` item -187, `PORTING-STATE.md` Session 329. Gate reverted to
-full force-zero baseline before s329 ended, per convention.
+## If not a maintenance iteration: runtime-confirm the `waitForMusyXAudioTaskDone` 2nd-spin-loop hypothesis
 
-**This is genuinely new information, not yet root-caused.** Do not assume the s327 spin-pump fix
-(built for `setDisplayMode`'s mechanism) applies here without evidence — the symptom is different in
-kind (a graphics-task stall with audio unaffected, vs. a process-wide spin-wait freeze).
+### Status note (s330): strong candidate mechanism found via source-read, NOT runtime-confirmed
+
+s330 traced `waitForMusyXAudioTaskDone`'s on-disk body end to end and found the s327 pump-fix
+(`funcs_24.c:5456-5477`) only bounds ONE of TWO spin loops in that function. A second, unpatched loop
+at `funcs_24.c:5540-5550` (`while (MEM_BU(0x8014974C) != 0) {}`) has no bound, no pump call, no
+diagnostic. The flag it spins on is armed inside `musyxSynthFrame` right before an indirect call
+(`funcs_24.c:3991-3992`) and only clearable by that same function's own top-of-function logic
+(`funcs_24.c:3285-3315`), itself gated behind a blocking `osRecvMesg_recomp`. Personally
+byte-for-byte verified (not just the delegating subagent's claim) — see `PORTING-STATE` Session 330
+and `docs/CURRENT-TRUTH.md` item -188 for full citations.
+
+**This is NOT yet a closed hypothesis.** No runtime observation was collected — nobody has confirmed
+the game thread is actually parked at this loop during an actual stall, nor observed the flag's real
+value there. It also does not yet explain why `setDisplayMode`'s 3/3 clean s327/s328 soaks never hit
+this same code path despite an identical `musyxNoopStub`→`waitForMusyXAudioTaskDone` call at boot —
+the leading (unconfirmed) explanation is that `reapplyDisplayMode` is NOT self-clearing and re-triggers
+every frame (unlike `setDisplayMode`'s true one-shot call), compounding the odds of hitting whatever
+narrow condition makes loop 2 hang.
 
 ## Hypotheses (pick the discriminating probe)
 
-1. **`reapplyDisplayMode`'s per-frame call volume corrupts or exhausts a resource the graphics-task
-   producer depends on** — e.g. the shared `dmem[]` serialization (`rs64_dmem_lock/unlock`,
-   `lib/N64ModernRuntime/librecomp/src/rsp.cpp`, s5) that gfx and audio RSP tasks both go through;
-   a real per-frame audio write path un-gated for the first time could contend for this lock
-   differently than a one-shot boot call ever did.
-2. **`reapplyDisplayMode` itself does something on repeated (2nd+) calls that `setDisplayMode` never
-   does on its single call** — s326 found the two functions structurally near-identical (same
-   sequence of `initAudioSubsystem`/`resetSongSubsystemCounter`/etc. calls, same gate-byte
-   bookend), but `reapplyDisplayMode` is called every frame (s304) — its 2nd+ invocations may
-   re-run an init sequence that isn't idempotent, corrupting state the graphics side reads.
-3. **Coincidence of timing, not causation from the gate reversal at all** — the s176-183
-   already-documented, unresolved "graphics-task-submission stall" (`[vi-fs-decision] stalled=1
-   pairs=0`, same diagnostic shape) could share a root cause unrelated to audio gating, and s329's
-   soak just happened to trigger it earlier than usual. Weakened by: that documented stall's onset
-   is ~90-115s post-menu-navigation in every prior sighting, vs. 2.3s here — a large, unexplained
-   timing gap this hypothesis would need to account for.
-
-**Discriminating measurement**: source-read `reapplyDisplayMode`'s full body first (cheap, no
-build/soak) — same technique s326 used to fully explain `setDisplayMode`'s hang from text alone.
-Compare its call sequence and any *2nd-call-specific* branches against `setDisplayMode`'s (which s326
-already fully documented at `funcs_23.c:9586-9804`). Also check: is `reapplyDisplayMode`'s caller
-inside or near the graphics-task producer's own call chain (would explain contention directly), or
-in a wholly separate thread (points toward hypothesis 1's shared-lock theory instead)?
+1. **True unconditional deadlock**: once armed, the `0x8014974C` flag genuinely never reaches 0 again
+   from the game thread's perspective in this configuration (e.g. the message the clear-path needs
+   depends on something the frozen game thread itself would otherwise deliver — a real circular
+   dependency). Discriminator: log the flag's value once per iteration of the spin (rate-limited) —
+   if it holds at a fixed nonzero value indefinitely, this is confirmed.
+2. **Racy-but-technically-clearable**: the background audio thread's own `musyxSynthFrame` calls DO
+   periodically clear the flag, but the unsynchronized busy-spin (`MEM_BU`, no yield/atomics) almost
+   never samples the brief cleared window before the background thread re-arms it on its next call.
+   Discriminator: same flag-value log — if it's seen oscillating 0/1 rapidly but the spin still never
+   exits, this is confirmed instead of hypothesis 1.
+3. **Not this loop at all** — the real stall is somewhere else entirely and this 600s soak's game
+   thread was never actually parked here. Discriminator: a PC/call-stack marker at loop entry
+   (`funcs_24.c:5540`) that fires once and is checked for presence in the log — if it never fires,
+   this hypothesis wins and the s330 trace needs to be revisited for a wrong-turn earlier in the
+   chain (most likely: `reapplyDisplayMode`'s 3-condition guard at `funcs_0.c:1703-1731` never
+   actually trips true in this soak's timeline, so `runVideoFrameTick` never even reaches its call).
 
 ## The work unit
 
-1. Read `reapplyDisplayMode`'s full body in `RecompiledFuncs/funcs_23.c:9805-10023` (already located
-   by s326's trace — no regen needed, current baseline build already has this un-annotated text).
-   Note every call it makes, in order, and diff against `setDisplayMode`'s body (`9586-9804`,
-   s326's summary: `initAudioSubsystem`, `resetSongSubsystemCounter`, `initSongSequencerPools`,
-   `resetMusyXEngineState`, `clearStreamedVoiceFlags`, `reset3DAudioLists`, gate byte set to 1 at
-   the end).
-2. Find `reapplyDisplayMode`'s caller(s) via grep for its address (`0x8008EBxx`-ish range boundary —
-   confirm exact entry address first) across `funcs_*.c`, and check whether that caller is inside
-   the same per-VI-frame tick path as `runVideoFrameTick` (s326 found `runVideoFrameTick` is
-   `musyxNoopStub`'s only caller — check if it's ALSO `reapplyDisplayMode`'s caller, or a sibling
-   function in the same per-frame chain).
-3. Check the shared `dmem[]`/RSP-task-lock mechanism (`lib/N64ModernRuntime/librecomp/src/rsp.cpp`,
-   `rs64_dmem_lock`/`rs64_dmem_unlock`, s5) for anything `reapplyDisplayMode`'s newly-live call chain
-   could hold across a yield point that the graphics-task producer also needs — this is the
-   concrete mechanism hypothesis 1 predicts; confirm or refute by inspection before any new soak.
-4. If source-reading identifies a concrete mechanism: propose the fix (likely in
-   `N64Recomp/fixup_game_funcs.py`, following the s327 spin-pump-fix pattern of patching the
-   problematic call/wait site rather than reverting the gate), then soak once to confirm, following
-   the established "1 soak first, 2 confirmatory if informative" cadence.
-5. If source-reading is inconclusive: the next informative probe is a NEW diagnostic at the
-   graphics-task producer's own skip-decision site (why does it start returning `pairs=0` at exactly
-   the VI=640 transition) — this is more informative than another soak of the same recipe, since the
-   symptom is already reproducible 1/1 and well-characterized; another soak without new
-   instrumentation would not discriminate between the 3 hypotheses above.
-6. Whatever code changes result, revert the audio-gate regex back to the full `(?:B40|C88)`
-   alternation (force-zero baseline) before ending the session, confirm `audio gate patched x2`,
-   rebuild — same convention as every prior session on this gate, UNLESS a fix is found and
-   confirmed clean (in which case document that explicitly and treat promotion as its own decision
-   point, same as `setDisplayMode`'s open promotion question).
+1. Add a diagnostic (`N64Recomp/fixup_game_funcs.py`, following the established
+   `[audio-wait-pump-stall]`/`[synth-entry]` convention — env-gated, rate-limited to ~20-40 prints,
+   thread-tagged if cheap via `pthread_self()`/`std::this_thread::get_id()`):
+   - one fire at entry to the 2nd spin loop (`funcs_24.c:5540`, before the `L_80091F34:` label) —
+     confirms hypothesis 3 is false if it fires at all.
+   - a rate-limited periodic print of the flag's value (`MEM_BU(..., -0x68B4)`) while inside that
+     loop — distinguishes hypothesis 1 (constant nonzero) from hypothesis 2 (oscillating).
+   - a fire at the flag's clear site (`funcs_24.c:3300`, right after `osRecvMesg_recomp` returns and
+     before the clear-store) and at the arm site (`funcs_24.c:3991`) — to see which thread/context is
+     doing the arming/clearing while the game thread is (or isn't) stuck.
+2. Regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → cmake — delete `RecompiledFuncs/*.c`
+   first, N64Recomp skips existing files), narrow the gate regex to `reapplyDisplayMode`'s site only
+   (`0x8008EC88`-ish, matching s329's exact narrowing — confirm via `funcs_23.c` grep, not just the
+   patch-count report), rebuild.
+3. Soak once with `scratch/s73_post_a_scene/run_s327waitpump.sh` (or equivalent — same driver as
+   s327-329), armed with the new diagnostics. Expect: phase-timeout INCONCLUSIVE at 600s again (same
+   symptom), but now with the new diagnostics either firing (confirms mechanism, tells you which of
+   H1/H2) or not firing (refutes it, forces a return to step-by-step tracing from
+   `reapplyDisplayMode`'s guard condition instead).
+4. If confirmed (H1 or H2): propose and apply a bound/fallthrough fix on the 2nd loop, mirroring
+   s327's pattern exactly (bounded pump/wait count, diagnostic on non-drain, falls through
+   regardless), then soak once more to confirm clean VI progression past 640 to title. Do NOT
+   promote either gate site to the shipped default without an explicit, separately-flagged decision —
+   revert to full force-zero baseline before ending regardless of outcome.
+5. If refuted (H3): the diagnostic silence itself is the result — pivot the hypothesis-id and
+   redo the guard-condition trace from `funcs_0.c:1703-1731`, this time confirming via a runtime
+   fire-once marker whether `reapplyDisplayMode` is even reached in this soak's timeline at all.
 
-## Environment notes (carried forward — see s327/s328/s329 for full detail)
+## Environment notes (carried forward — see s327-330 for full detail)
 
 - Regen paths: `/Users/williambuckley/Documents/Tools/N64Recomp` (`fixup_game_funcs.py`, untracked).
-  Order: `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake`. `RecompiledFuncs/*.c` MUST
-  be deleted before every `N64Recomp` run (it skips existing files):
+  Delete `RecompiledFuncs/*.c` before every `N64Recomp` run:
   `python3 -c "import glob, os; [os.remove(f) for f in
   glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/*.c')]"`.
 - Soak driver: `scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, invoked from
   `scratch/s73_post_a_scene`, launched via Bash `run_in_background: true` then `TaskOutput` blocking
-  up to 600000ms. Log lands at `scratch/s73_post_a_scene/<label>/run.log` (large — grep for
-  `\[CRASH\]`, `\[phase\]`, `\[synth-entry\]`, `\[vi-fs-decision\]`, do not read directly).
+  up to 600000ms. Log lands at `scratch/s73_post_a_scene/<label>/run.log` — grep, don't read directly.
 - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8` — allowlisted
   verbatim.
-- `docs/CURRENT-TRUTH.md` is at 58,714 bytes — very close to the 60,000-byte Step-0 maintenance
-  trigger. The NEXT iteration after this one will very likely open as a MAINTENANCE iteration; don't
-  be surprised if Step 0 fires before this work unit even starts.
 
-HYPOTHESIS-ID: m5-audio-destub-step4-reapplydisplaymode-reversal (2nd iteration — 1st iteration
-[s329] was the discriminating soak that found the new failure mode; this iteration is the
-root-cause trace).
+HYPOTHESIS-ID: m5-audio-destub-waitformusyx-secondspin-hang (1st of 3 iterations — s330 was the
+source-read that identified the candidate mechanism; this iteration is the runtime-confirmation step).

@@ -28870,3 +28870,103 @@ fixed; `reapplyDisplayMode`: this session, new distinct hang found) — M5 step 
 phase is complete; what remains is root-causing and fixing this 3rd site's distinct failure before any
 promotion decision can even be considered for it (unlike `setDisplayMode`, which has a validated fix
 in the tree).
+
+## Session 330 (2026-08-04) — M5 audio: pure source-read finds a SECOND, unpatched spin loop inside `waitForMusyXAudioTaskDone` — a strong, address-level-verified candidate mechanism for the `reapplyDisplayMode` VI=640 stall, not yet runtime-confirmed
+
+Exactly the NEXT.md-prescribed first step from s329: source-read `reapplyDisplayMode`'s call site and
+body before any new soak (the s326 precedent — pure text tracing fully explained the `setDisplayMode`
+hang without a build/run). Delegated the multi-file trace to a subagent, then personally spot-verified
+every load-bearing citation byte-for-byte against the on-disk generated source before accepting it.
+
+**Step 1 — the call-site guard.** `reapplyDisplayMode`'s call inside `runVideoFrameTick`
+(`funcs_0.c:1752`) is gated by 3 ANDed conditions, all re-evaluated every frame: `advanceVideoFrame()`
+returns nonzero (`funcs_0.c:1703-1706`), byte `0x8010D211` nonzero (`1713-1721`), and byte
+`*(s2+4)` nonzero (`1725-1731`). `reapplyDisplayMode`'s own body (`funcs_23.c:9805-10097`) writes
+neither gating location — it is **not self-clearing**, meaning once the guard trips true, nothing in
+this function stops it firing again next frame. This directly explains why `reapplyDisplayMode`
+diverges from `setDisplayMode` (a genuine one-shot boot call, per s326): `reapplyDisplayMode` can be
+invoked repeatedly, once per frame, indefinitely — turning any single-invocation bug into a
+recurring/compounding one.
+
+**Step 2 — no graphics-task call inside `runVideoFrameTick` itself.** Grepped the full function body
+(`funcs_0.c:1459-1913`) for `submit|Task|Dpc|Rsp|Dispatch|graphics|gfx` — zero matches. The real
+graphics-task producer (`[vi-fs-decision]`) lives in native C++ (`lib/rt64/src/hle/rt64_state.cpp:2945`,
+fed by `ultramodern::submit_rsp_task`'s `M_GFXTASK` branch, `ultramodern/src/events.cpp:576-582`),
+consumed by a dedicated `gfx_thread` (`events.cpp:592`) — architecturally separate from the CPU/game
+thread that runs `runVideoFrameTick`. The mechanism by which a game-thread hang starves this producer
+isn't a direct call inside `runVideoFrameTick` — it's that the single CPU thread, once wedged inside
+`runVideoFrameTick`, can never return to run whatever later per-frame code (outside this function)
+would call `submit_rsp_task` again. Consistent with `[vi-fs-decision] stalled=1 pairs=0` holding
+forever once the game thread hangs.
+
+**Step 3-4 — `musyxNoopStub`/`waitForMusyXAudioTaskDone`, and the NEW finding.**
+`musyxNoopStub` (`funcs_23.c:10098-10171`) branches purely on gate byte `0x800A0F50`: if nonzero, it
+calls `waitForMusyXAudioTaskDone` unconditionally (`10118`), then clears the gate byte back to 0
+before returning (`10156-10159`) — so a triggered call self-clears the OUTER gate (meaning the "does
+this hang" question resets every frame based on whether `reapplyDisplayMode` re-armed
+`0x800A0F50` again that frame). Read `waitForMusyXAudioTaskDone`'s CURRENT on-disk body
+(`funcs_24.c:5433-5648`, i.e. as regenerated with s327's pump-fix applied) end to end. The s327 pump
+loop is present and correctly bounded (`funcs_24.c:5456-5477`, caps at 64 `musyxSynthFrame` pumps,
+always falls through). **But the function has a SECOND spin loop, later in the same body, that s327
+never touched**: `funcs_24.c:5540-5550`, a raw `while (MEM_BU(0x8014974C) != 0) {}` with no bound, no
+`musyxSynthFrame` call, no diagnostic. Personally verified byte-for-byte (not just trusting the
+subagent): the flag it spins on is armed inside `musyxSynthFrame` right before an indirect call
+(`funcs_24.c:3991-3992`, `MEM_B(-0X68B4, ...) = ctx->r2` immediately before `jalr $v1`), and is only
+clearable from `musyxSynthFrame`'s OWN top-of-function logic (`funcs_24.c:3285-3315`), which itself
+blocks on `osRecvMesg_recomp` before writing the clear. Grepped `fixup_game_funcs.py` (spot-checked
+personally, not just the subagent's claim): the pump-fix regex only matches the `-0x6676` countdown
+pattern (lines 244-245); the only other reference to `-0x68B4` anywhere in the file is an unrelated,
+default-off diagnostic (`[musyx-dma-call]`, lines 1778-1792) that doesn't touch the wait or clear
+logic. **This second loop is unpatched and un-instrumented in every build configuration**, not
+specific to this test.
+
+**Step 5-6 — lock/thread architecture, refuting one candidate mechanism, supporting another.**
+`rs64_dmem_lock`/`rs64_dmem_unlock` (`lib/N64ModernRuntime/librecomp/src/main.cpp:185-190`) wrap a
+`std::recursive_mutex` — **explicitly recursive**, so same-thread re-entry (e.g. a nested
+`musyxSynthFrame` call from inside `waitForMusyXAudioTaskDone`'s pump loop) is well-defined and
+non-blocking by design. This refutes a same-thread-relock self-deadlock via that specific mutex.
+Separately, `ultramodern::init_events` (`events.cpp:590-634`) spins up architecturally independent
+real OS threads for `gfx_thread`, `task_thread` (audio/non-GFX SP tasks), and `vi_thread` — this
+supports why `[synth-entry]`/`[audtask-dispatch]` keep firing (81/60 times respectively per s329's
+log) throughout the 600s stall even while the game thread is provably wedged: `musyxSynthFrame`'s
+other invocation path (the VI-retrace callback table, per prior sessions) most plausibly runs on one
+of these separate threads, not the frozen one — though which exact thread was not directly traced
+this session (see "still open" below).
+
+**Best-supported (not yet closed) hypothesis**: the game thread, once inside `runVideoFrameTick` →
+`musyxNoopStub` → `waitForMusyXAudioTaskDone`, calls `musyxSynthFrame` via the s327 pump (arming the
+`0x8014974C` DMA-busy flag near that call's own end), then falls through to the unpatched second spin
+loop (`funcs_24.c:5540`), which can only unblock if the flag reads 0 — and the only code that clears
+it is `musyxSynthFrame`'s own top-of-function logic, gated behind a blocking `osRecvMesg_recomp`. If
+this genuinely never resolves (a true deadlock) or resolves only in a narrow, unsynchronized race
+window that a tight busy-spin essentially never samples in practice, either explains a stall lasting
+the observed 600s. **This does NOT yet explain why `setDisplayMode`'s 3/3 clean soaks (s327/s328)
+never hit this same second loop** despite going through the identical `musyxNoopStub` →
+`waitForMusyXAudioTaskDone` → pump path at least once at boot — the leading candidate explanation is
+`reapplyDisplayMode`'s non-self-clearing, every-frame re-trigger (step 1) compounding the odds of
+hitting whatever narrow condition makes loop 2 hang, where `setDisplayMode`'s single one-shot
+invocation might statistically avoid it — but this is NOT confirmed, only plausible. Labeled
+explicitly as a well-evidenced, address-level-traced CANDIDATE mechanism, not a closed hypothesis: no
+runtime observation (no new diagnostic, no soak) was collected this session to confirm the game
+thread is actually parked at `funcs_24.c:5540` (PC `0x80091F34`) during an actual stall, nor to
+observe the flag's real value/behavior at that moment. Two independent lines of evidence: my own
+direct verification of every load-bearing citation matches the subagent's independent read of the
+same source — both agree, but both derive from the SAME source text, so this is single-source
+evidence in the "two independent lines" sense; a runtime trace would be the second, genuinely
+independent line.
+
+No code changed this session (pure source-read, matching the s326 precedent); nothing under `lib/`
+touched, no `export.sh` needed. `HYPOTHESIS-ID` pivoted from
+`m5-audio-destub-step4-reapplydisplaymode-reversal` (closed as a discovery-phase slug — its
+discriminating soak was s329) to `m5-audio-destub-waitformusyx-secondspin-hang` (1st of 3 budgeted
+iterations) to track this specific, now well-characterized candidate mechanism.
+
+**Next steps**: add a targeted diagnostic (not yet a fix) at `funcs_24.c:5540`'s loop entry/exit and
+at both the arm site (`funcs_24.c:3991`) and clear site (`funcs_24.c:3300`) of the `0x8014974C` flag,
+tagged with a thread identifier, then re-run `reapplyDisplayMode`'s reversed-gate soak — this
+discriminates cleanly: if the game thread's diagnostic shows it parked at the loop entry for the rest
+of the run while the flag never reads 0 on that thread's own samples, the mechanism is confirmed; if
+the flag does reach 0 but the spin somehow still doesn't exit, the mechanism needs revision. Only
+after that positive/negative control should a fix (bounding loop 2 the same way s327 bounded loop 1)
+be attempted and soaked — jumping straight to a fix without runtime confirmation would repeat the
+mistake iron rule 1 exists to prevent.

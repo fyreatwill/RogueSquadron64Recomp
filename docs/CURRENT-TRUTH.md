@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    target, not a hard floor — the "Current truth" env-var/timeline prose and the Regeneration section's
    Standing warnings stay intact deliberately; both are used every iteration for phase-gating and build
    commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 17 times so far (s303-328). **The 14-call-gap AND the 37-vs-40 gap are CLOSED** (`m5-audio-destub-step4-tick37-vs-hardstop40`, s303-325 — sampling-cap illusion in gate1's diagnostic print cap, item -183). **The VI=320 hang on `setDisplayMode`'s site is CLOSED AND FIX VALIDATED 3/3 SOAKS (s327+s328)**: `waitForMusyXAudioTaskDone`/`shutdownAudioEngine`'s spin loops now call `musyxSynthFrame` directly instead of blocking on a countdown only that call can decrement — all 3 soaks with the gate reversed cleared VI=320 and progressed through the full menu chain into SELECT YOUR CRAFT; one soak (s328b) completed the entire 240s hold with ZERO crashes. The other 2 died to already-catalogued, unrelated background crash classes (`processSceneNode+1424` in s327, the near-`0x80000000` family in `buildPositionAndCallTransformHelper` in s328a — item -186), neither correlating with an audio diagnostic at the crash site. This meets the M5 plan's own "two clean soaks" validation bar. **`reapplyDisplayMode`'s site (the 3rd/last gate) has a DIFFERENT, NOT-YET-ROOT-CAUSED failure (s329, item -187)**: 1/1 soak found a permanent graphics-task-submission stall at VI=640 (never reaches title) for the full 600s, while audio itself stays fully alive throughout — not a reprise of `setDisplayMode`'s spin-wait mechanism, root cause open. Baseline (both sites force-zeroed) restored at every session's end — **promoting `setDisplayMode`'s reversal to the shipped default is an open, explicitly-flagged decision, not yet made** (see item -186 for the tradeoffs); `reapplyDisplayMode`'s site cannot even be considered for promotion until its new stall is root-caused and fixed. `HYPOTHESIS-ID: m5-audio-destub-step4-reapplydisplaymode-reversal` — 1st of 3 iterations, symptom characterized, cause open. Next work unit: root-cause the VI=640 graphics-task stall (see item -187 for candidate mechanisms) — do not assume it needs the same spin-pump fix as `setDisplayMode` without evidence.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 17 times so far (s303-328). **The 14-call-gap AND the 37-vs-40 gap are CLOSED** (`m5-audio-destub-step4-tick37-vs-hardstop40`, s303-325 — sampling-cap illusion in gate1's diagnostic print cap, item -183). **The VI=320 hang on `setDisplayMode`'s site is CLOSED AND FIX VALIDATED 3/3 SOAKS (s327+s328)**: `waitForMusyXAudioTaskDone`/`shutdownAudioEngine`'s spin loops now call `musyxSynthFrame` directly instead of blocking on a countdown only that call can decrement — all 3 soaks with the gate reversed cleared VI=320 and progressed through the full menu chain into SELECT YOUR CRAFT; one soak (s328b) completed the entire 240s hold with ZERO crashes. The other 2 died to already-catalogued, unrelated background crash classes (`processSceneNode+1424` in s327, the near-`0x80000000` family in `buildPositionAndCallTransformHelper` in s328a — item -186), neither correlating with an audio diagnostic at the crash site. This meets the M5 plan's own "two clean soaks" validation bar. **`reapplyDisplayMode`'s site (the 3rd/last gate) has a DIFFERENT, NOT-YET-ROOT-CAUSED failure (s329, item -187)**: 1/1 soak found a permanent graphics-task-submission stall at VI=640 (never reaches title) for the full 600s, while audio itself stays fully alive throughout — not a reprise of `setDisplayMode`'s spin-wait mechanism. **s330 (item -188) source-read a strong, address-level-verified CANDIDATE mechanism, not yet runtime-confirmed**: `waitForMusyXAudioTaskDone` has a SECOND spin loop (`funcs_24.c:5540`) that the s327 pump-fix never touched — it blocks on a DMA-busy flag (`0x8014974C`) only `musyxSynthFrame`'s own top-of-function logic can clear, gated behind a blocking message receive. `reapplyDisplayMode` is not self-clearing and re-triggers every frame (unlike `setDisplayMode`'s one-shot boot call), the leading (unconfirmed) explanation for why only this site hits it. Baseline (both sites force-zeroed) restored at every session's end — **promoting `setDisplayMode`'s reversal to the shipped default is an open, explicitly-flagged decision, not yet made** (see item -186 for the tradeoffs); `reapplyDisplayMode`'s site cannot even be considered for promotion until its new stall is root-caused and fixed. `HYPOTHESIS-ID: m5-audio-destub-waitformusyx-secondspin-hang` — 1st of 3 iterations, candidate mechanism identified via source-read, NOT runtime-confirmed. Next work unit: a targeted diagnostic (thread-tagged) at the second spin loop and the flag's arm/clear sites, soaked once, before attempting any fix — see item -188.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,7 +148,49 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -187 (s329); the next new item takes -188 and is inserted at the top.
+oldest). Current top is -188 (s330); the next new item takes -189 and is inserted at the top.
+
+-188. **(s330) M5 audio de-stubbing: pure source-read finds a SECOND, unpatched spin loop inside
+    `waitForMusyXAudioTaskDone` — a strong, address-level-verified candidate mechanism for the
+    `reapplyDisplayMode` VI=640 stall, not yet runtime-confirmed.** Followed NEXT.md's prescribed
+    first step: source-read `reapplyDisplayMode`'s call site and body before any new soak (the s326
+    precedent). Delegated the multi-file trace, then personally spot-verified every load-bearing
+    citation byte-for-byte. **Key findings**: (1) `reapplyDisplayMode`'s call
+    (`funcs_0.c:1752`) is gated by 3 conditions re-evaluated every frame, and its own body
+    (`funcs_23.c:9805-10097`) writes none of them — unlike `setDisplayMode`'s true one-shot boot
+    call, it can and does re-trigger every frame once the guard trips. (2) No graphics-task call
+    exists textually inside `runVideoFrameTick` (`funcs_0.c:1459-1913`, grepped clean) — the real
+    producer is native C++ on a separate `gfx_thread` (`lib/rt64/src/hle/rt64_state.cpp:2945`,
+    `ultramodern/src/events.cpp:576-592`); a game-thread hang starves it by preventing the single CPU
+    thread from ever returning to later per-frame code, not via a direct call. (3) `musyxNoopStub`
+    (`funcs_23.c:10098-10171`) calls `waitForMusyXAudioTaskDone` when the gate byte is nonzero, then
+    self-clears the gate. (4) **The new finding**: `waitForMusyXAudioTaskDone`'s on-disk body
+    (`funcs_24.c:5433-5648`) has the s327 pump-fix loop correctly bounded
+    (`funcs_24.c:5456-5477`, caps at 64), but a SECOND, entirely separate spin loop later in the same
+    function (`funcs_24.c:5540-5550`, `while (MEM_BU(0x8014974C) != 0) {}`) has no bound and was
+    never touched by s327's fix. Verified personally: the flag is armed inside `musyxSynthFrame`
+    right before an indirect call (`funcs_24.c:3991-3992`), and only clearable from that same
+    function's own top-of-function logic (`funcs_24.c:3285-3315`), itself gated behind a blocking
+    `osRecvMesg_recomp`. Grepped `fixup_game_funcs.py` personally: the pump-fix regex only matches
+    the `-0x6676` countdown pattern; the only other reference to the `-0x68B4` flag is an unrelated,
+    default-off diagnostic that doesn't touch wait/clear logic — this second loop is unpatched in
+    every build configuration. (5) `rs64_dmem_lock` wraps an explicitly recursive mutex
+    (`lib/N64ModernRuntime/librecomp/src/main.cpp:185-190`), refuting a same-thread-relock
+    self-deadlock via that lock; separately, `gfx_thread`/`task_thread`/`vi_thread` are genuinely
+    independent OS threads (`events.cpp:590-634`), supporting why audio diagnostics kept firing
+    throughout s329's 600s stall even with the game thread wedged. **Best-supported, NOT yet closed,
+    hypothesis**: the game thread's own pump-triggered `musyxSynthFrame` call arms the DMA-busy flag,
+    then falls into the unpatched 2nd loop, which can only clear via `musyxSynthFrame`'s
+    message-gated top-of-function logic — plausibly never resolving, or resolving only in a narrow
+    race window a tight busy-spin rarely samples. Does NOT yet explain why `setDisplayMode`'s 3/3
+    clean soaks never hit this same path despite an identical `musyxNoopStub` call at boot — leading
+    (unconfirmed) explanation is `reapplyDisplayMode`'s every-frame re-trigger compounding the odds.
+    No code changed, no `lib/` touched. `HYPOTHESIS-ID` pivoted from
+    `m5-audio-destub-step4-reapplydisplaymode-reversal` (closed as discovery-phase; discriminating
+    soak was s329) to `m5-audio-destub-waitformusyx-secondspin-hang` (1st of 3 iterations). Next work
+    unit: a thread-tagged diagnostic at the 2nd loop's entry/exit and the flag's arm/clear sites,
+    soaked once, BEFORE attempting any fix — a runtime positive/negative control, per iron rule 1.
+    Full detail: `PORTING-STATE` Session 330.
 
 -187. **(s329) M5 audio de-stubbing: `reapplyDisplayMode`'s gate reversal is NOT safe the same way
     `setDisplayMode`'s was — a genuinely NEW failure mode, an immediate permanent graphics-task-
