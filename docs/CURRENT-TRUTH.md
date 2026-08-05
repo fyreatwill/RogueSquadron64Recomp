@@ -16,15 +16,18 @@ Priority order for upcoming iterations, set after the 300-session review:
    site (3rd/last real gate; `initMusyXEngine`'s is dead code, s306) previously **deterministically
    prevented the game from ever reaching the title screen — 0/5 soaks across s329/s340/s341** (item -198,
    s342). **s343 reverted `reapplyDisplayMode`'s gate back to force-zero (kept `setDisplayMode`'s
-   reversal) and title-reach IS restored** (45.5s, matches the 44.6-46.2s baseline) — but the very next
-   soak stage (12s "wait for SELECT YOUR CRAFT stable") hit a NEW crash: a compiler `break 7` div-by-zero
-   trap inside `tickWrappingTimerAccumulatorList` (a.k.a. `BREADCRUMB9`, a DIFFERENT signature from its
-   previously-catalogued `0x80000004` near-null-pointer crash), 1/1 this session, in a build byte-
-   identical to s328's 0/2-crash `step4gate2` baseline (item -199, s343). Single-source; 2 confirmation
-   soaks queued (`scratch/agent/soak_queue/s343_tickwrap_divzero_confirm{1,2}.sh`). Next work unit
-   (s343, `scratch/agent/NEXT.md`): fold those verdicts in, then either land a `do_break(2147829572)`
-   guard (same idiom as `musyxKeyOnVoice`'s break-6/7 guards) if it reproduces, or resume step 5's
-   crash-family rate comparison if it doesn't.
+   reversal); title-reach is now confirmed 3/3 across independent soaks** (s343revert/confirm1/confirm2,
+   all ~45.5s, matches the 44.6-46.2s baseline). The `tickWrappingTimerAccumulatorList` div-by-zero
+   crash s343 found (a DIFFERENT signature from `BREADCRUMB9`'s previously-catalogued `0x80000004`
+   near-null-pointer crash) did **not** reproduce in either of 2 confirmation soaks — one ran fully
+   clean through the whole hold window, the other hit an unrelated, already-catalogued
+   `emitAllocatedDLCommand`/`submitSceneNodeRender` SIGBUS instead (item -200, s344): **1/3 total,
+   PARKED not guarded** (insufficient evidence per Iron Rule 4). s344 reopened M5-AUDIO-PLAN step 5
+   (crash-family #3/#4 rate comparison) with 4 fresh, methodology-corrected soak recipes
+   (`scratch/agent/soak_queue/m5step5v2_rate_1..4.sh`) now that title-reach is robust. Next work unit
+   (s344, `scratch/agent/NEXT.md`): fold in those verdicts as they land; watch for `last-guest-pc=
+   0x80054744` recurring (would reopen the div-by-zero guard question) and separately tally
+   crash-family #3/#4 rates against the historical ~12-21%/"every soak died earlier" baselines.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -156,7 +159,39 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -199 (s343); the next new item takes -200 and is inserted at the top.
+oldest). Current top is -200 (s344); the next new item takes -201 and is inserted at the top.
+
+-200. **(s344) M5 audio de-stubbing: neither queued confirmation soak reproduces the
+    `tickWrappingTimerAccumulatorList` div-by-zero from item -199 — parked, not guarded; found and fixed
+    a soak-recipe methodology bug; reopened M5-AUDIO-PLAN step 5 with 4 fresh recipes.** Read the 2
+    queued verdicts (`s343_tickwrap_divzero_confirm1` rc=0, `confirm2` rc=1) and, per Iron Rule 4, the
+    full raw logs before trusting the recipes' own naive "any `[CRASH]` = confirmed" reading.
+    **confirm2's crash is NOT the target bug**: `last-guest-pc=0x80008928` traces (Mach-O symtab walk +
+    `funcs_3.c` grep, independently confirmed) to `emitAllocatedDLCommand`, not
+    `tickWrappingTimerAccumulatorList` — full record shows `signal 10 (Bus error)`,
+    `si_addr=0x348187680` (RDRAM host-base + a corrupted offset), backtrace through
+    `submitSceneNodeRender`/`processSceneNode`/`setupCameraMatrices` — the SAME already-catalogued
+    pre-existing SIGBUS family Session 301's control soak hit, unrelated to the `break 7` div-by-zero
+    trap (`0x80054744`) this soak was meant to confirm. **confirm1 is genuinely clean**: `CRASH: 0` for
+    the full 307s wall including the entire scheduled stick-input hold window — and, contrary to its own
+    self-reported `keys_lines=0`, both confirmations actually drove the full key/stick schedule and
+    reached title at 45.5s; the `keys_lines=0` reading was a recipe bug (`[keys]` lines are emitted by
+    the launcher driver into its own `*_launcher.log`, never into the game's `run.log`, which is what
+    the recipe grepped). **Net: title-reach now confirmed 3/3** across independent soaks (strengthening
+    item -199); **the div-by-zero crash itself is 1/3 total, not 2/2 or even a clean 0/2** — does not
+    meet the bar to land a guard, and does not cleanly read as "just a rare flake" either since one of
+    the two confirmation attempts never actually passed through the crash's time window uneventfully (it
+    died to something else first). `HYPOTHESIS-ID m5-audio-destub-tickwrap-divzero-craftselect` PARKED
+    (recurs if a future soak reproduces `last-guest-pc=0x80054744` specifically). Reopened
+    M5-AUDIO-PLAN step 5 (crash-family #3/#4 rate comparison) with 4 methodology-corrected recipes
+    (`scratch/agent/soak_queue/m5step5v2_rate_1..4.sh`, `HOLD_S=240`, current gate config unchanged —
+    no rebuild needed): fixes the `[keys]`-log-file bug and prints `last-guest-pc`/`pc-symbol` on every
+    crash so future readers can tell which family fired without re-opening a 200+ MB log.
+    **Method-trap, generalizes beyond this recipe**: a soak verdict of "did any `[CRASH]` marker fire"
+    is only informative once compared against the target signature's own `last-guest-pc`/`pc-symbol` —
+    RS64 has ~20+ independent, already-catalogued, nondeterministically-firing crash families, so a bare
+    presence check will false-positive-confirm an unrelated bug at a nontrivial rate. Full detail:
+    `PORTING-STATE` Session 344.
 
 -199. **(s343) M5 audio de-stubbing: reverted `reapplyDisplayMode`'s gate to force-zero, title-reach
     restored (HA confirmed) — but a NEW crash surfaced one stage later, in the SELECT YOUR CRAFT
@@ -588,3 +623,10 @@ Not yet generalized in PROJECT-OVERVIEW: instrument-specific traps (crash-free-s
 orphaned background soaks, sparse-screenshot false regressions, unvalidated suppression instruments,
 `dpc_bridge` walker desync, histogram-drain timing, camera motion confounding aggregates) migrated to
 `docs/PROJECT-OVERVIEW.md` §8 (s314 maintenance pass).
+- **crash-signature blindness (s344)**: a soak-recipe verdict of "did any `[CRASH]` marker fire" is not
+  evidence for a SPECIFIC target crash unless `last-guest-pc`/`pc-symbol` is checked against it — RS64
+  has ~20+ independent, already-catalogued, nondeterministically-firing crash families, so a bare
+  presence check will false-positive-confirm the wrong bug. Same session also found a `[keys]`-log-file
+  bug (grepping the game's `run.log` for driver-emitted `[keys]` lines, which only ever land in the
+  launcher's own log) that made 2 real, fully key/stick-driven soaks misreport as having driven no
+  input at all. Item -200.

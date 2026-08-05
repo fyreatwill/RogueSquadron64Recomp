@@ -29930,3 +29930,76 @@ low hit rate on its OTHER signature).
 No `lib/` touched (fixup edit lives in the standalone untracked `N64Recomp` checkout, `export.sh` not
 needed). `HYPOTHESIS-ID m5-audio-destub-reapplydisplaymode-title-block` CLOSED (confirmed via this
 session's soak); new thread `m5-audio-destub-tickwrap-divzero-craftselect`, 1st iteration.
+
+## Session 344 (2026-08-05) — folded in the 2 queued `tickwrap-divzero` confirmation soaks: neither reproduces the target crash; found and fixed a soak-recipe methodology bug that made both look uninformative when they weren't; reopened M5-AUDIO-PLAN step 5 with 4 fresh, corrected soak recipes
+
+Read `docs/CURRENT-TRUTH.md` item -199 and `scratch/agent/NEXT.md` (s343's plan) first, per session
+rules. Step 1: read the queued verdicts. `scratch/agent/SOAK-RESULTS.md` showed
+`s343_tickwrap_divzero_confirm1 rc=0` (445s) and `..._confirm2 rc=1` (157s) — on the recipes' own
+naive "any `[CRASH]` marker = CRASH_DETECTED" logic this reads as `1/2`, i.e. Branch C ("mixed,
+queue a 3rd") from s343's plan. Read the full raw logs (`scratch/s73_post_a_scene/s343confirm{1,2}/
+run.log`, both still on disk, ~230 MB each — greped, not read directly) before accepting that at
+face value, per Iron Rule 4.
+
+**Finding 1 — confirm2's crash is NOT the target bug.** `last-guest-pc=0x80008928`; an independent
+Explore-agent trace (Mach-O symtab walk + `funcs_3.c` grep) placed this inside `emitAllocatedDLCommand`
+(`0x80008688`-based), not `tickWrappingTimerAccumulatorList` (`funcs_11.c`, a completely different
+function). The full crash record confirms it: `[CRASH] caught signal 10 (Bus error)`,
+`si_addr=0x348187680` (RDRAM host-base `0x300000000` + a corrupted guest offset), native backtrace
+`emitAllocatedDLCommand -> submitSceneNodeRender (x2, recursive) -> processSceneNode ->
+traverseSceneGraphRecursive -> setupCameraMatrices -> ... -> menuOverlayInit -> mainGameLoop`. This is
+the SAME already-catalogued, pre-existing `emitAllocatedDLCommand`/`submitSceneNodeRender` SIGBUS
+family Session 301's own control soak hit (`x0=0x0000000300000000` RDRAM-base pattern), completely
+unrelated to `tickWrappingTimerAccumulatorList`'s div-by-zero (`last-guest-pc=0x80054744` in s343's
+original crash, a `break 7` trap, not a bus error). The recipe's blanket "did any `[CRASH]` marker
+fire" check cannot distinguish RS64's many independent, nondeterministically-firing crash families
+from the one specific bug under test — a genuine confirm-recipe methodology gap, not just this one
+instance. **Net for the target signature: confirm2 does NOT confirm it.**
+
+**Finding 2 — confirm1 is genuinely clean, and further, both confirmations reached title AND drove
+the full key/stick schedule, contrary to their own self-reported `keys_lines=0`.** Both recipes grep
+`[keys]` out of the GAME's own `run.log` — but `[keys]` lines are emitted by the launcher driver
+(`run_mission_keys.sh`) into its own separate `<label>_launcher.log`, never into the game's log. That
+field was always going to read 0, a false negative baked into the recipe template (inherited from the
+`s343_tickwrap_divzero_confirm{1,2}.sh` recipes, not present in earlier `m5step5_rate_*` recipes which
+never printed a keys count at all). Reading the actual launcher logs
+(`scratch/agent/soak_results/s343confirm{1,2}_launcher.log`) shows both runs: `phase width=1024
+reached after 45.5s` (title, matching s343revert's own 45.5s and the 44.6-46.2s historical baseline)
+then the full `[keys] start/start/start/a` pre-hold sequence and (confirm1 only, since confirm2 died
+first) the `[keys] stick sr/sl/su/start/a` hold-window sequence. **confirm1 ran completely clean**
+(`CRASH: 0`) through the full 307s wall-clock window including every scheduled stick input — the
+single strongest clean data point yet for this build. **Title-reach is now confirmed 3/3** across
+independent runs (s343revert, confirm1, confirm2), not the 1/1 item -199 had — a real strengthening of
+that claim, not just a repeat.
+
+**Net tally for `m5-audio-destub-tickwrap-divzero-craftselect`**: 3 total attempts on this exact gate
+config, 1 crash matching the target signature (s343revert), 1 fully clean run through the entire hold
+window (confirm1), 1 crash of an unrelated pre-existing family before reaching the hold window
+(confirm2, mis-flagged by the recipe as a same-bug confirmation). This does **not** meet Branch A's
+"both confirmations CRASH_DETECTED, same signature" bar for landing a guard (0/2 real confirmations of
+the div-by-zero specifically) — closer to Branch B's framing (rare, single-source occurrence, 1/3
+overall, similar to `BREADCRUMB9`'s own historically low hit rate on its other signature) but not a
+clean 0/2 either, since confirm2's unrelated crash means only 1 of the 2 queued soaks actually reached
+and passed through the crash's own time window uneventfully. **Verdict: insufficient evidence to guard
+blind; park the hypothesis, do not land a speculative fix on a single observation.**
+`HYPOTHESIS-ID m5-audio-destub-tickwrap-divzero-craftselect` PARKED (not closed — recurs if a future
+soak reproduces `last-guest-pc=0x80054744` inside `tickWrappingTimerAccumulatorList` specifically).
+
+**Follow-up work landed this session**: reopened M5-AUDIO-PLAN step 5 (crash-family #3/#4 rate
+comparison vs. historical baselines) now that title-reach is genuinely and robustly confirmed. The
+original `m5step5_rate_1..6` batch (s341, cancelled s342) is void — it ran while
+`reapplyDisplayMode`'s gate was still reversed, which never reached title. Wrote 4 fresh recipes
+(`scratch/agent/soak_queue/m5step5v2_rate_1..4.sh`) on the CURRENT gate config (`reapplyDisplayMode`
+force-zero, `setDisplayMode` reversed — unchanged since s343, no rebuild needed), each fixing both
+methodology gaps found above: `KEYS_N` now greps the launcher log (not the game's `run.log`), and every
+verdict prints `last-guest-pc` + the native `pc-symbol` line so a future reader can tell which crash
+family fired without re-opening a 200+ MB log by hand. `HOLD_S=240` (matches confirm1/2, observed total
+wall ~307s, comfortable margin under the loop's 600s hard cap). No `lib/` touched, no soak run this
+session (queued only — the loop drains up to 2 per iteration).
+
+**Method-trap note (generalizes beyond this one recipe)**: any soak-queue recipe whose verdict is "did
+a `[CRASH]` marker fire" is only informative if the crash's `last-guest-pc`/`pc-symbol` is also checked
+against the specific target signature — RS64 has many independent, nondeterministically-firing,
+already-catalogued crash families (this project has closed ~20+ of them), so a naive presence check
+will false-positive-confirm an unrelated bug at a nontrivial rate. Worth an audit pass over existing
+soak_queue templates for the same gap if this recurs.
