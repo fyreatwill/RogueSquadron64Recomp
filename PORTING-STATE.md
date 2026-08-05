@@ -30307,3 +30307,71 @@ plausibility). `lib/` not touched this session (both edited files — `fixup_gam
 separate `N64Recomp` repo, and `run_s327waitpump.sh` in this repo's `scratch/` — are outside the
 `lib/`/submodule-patches system; `fixup_game_funcs.py` is explicitly untracked by project convention,
 CLAUDE.md/NEXT.md's own "regen paths" note), no `export.sh` needed.
+
+## Session 349 (2026-08-05): drained m5step5v3_rate_7/8, found a NEW exact-repeat crash (drainMeshReleaseQueue+600, 2/2, deterministic file-offset match), confirmed it's a real un-instrumented site (not nearest-symbol ambiguity), added BREADCRUMB15
+
+Continuing the `m5-audio-destub-contentguard-verify` work unit from NEXT.md: drain the queued soaks and
+check for repeats. `s348_contentguard_verify2/3.sh` had NOT yet been drained by the loop as of this
+session start (still sitting in `scratch/agent/soak_queue/`, not `done/`) — nothing to fold in for the
+content-guard question yet, that check stays open for next session. `m5step5v3_rate_7` (rc=1) and
+`_rate_8` (rc=1) HAD landed.
+
+Both hit `title_reached` normally (45.2s / 44.7s, matching the 44-46s baseline) then crashed ~100s into
+the post-title hold. Checked `last_pc_symbol` against the guard from item -204 first: neither is
+`processSceneNode+1424` — 0/2 repeat post-guard, weak-but-consistent support that s348's fix holds
+(still small n, not yet promoted to "confirmed"). But both landed on a symbol never seen before in this
+whole comparison: `drainMeshReleaseQueue+600` — and BOTH runs hit the EXACT SAME symbol at the EXACT
+SAME offset (`+600`), with different ASLR bases (`base=0x100370000` vs `base=0x104560000`) but identical
+resulting file offsets (`0x3fbcc4` both times, computed as `pc - base`). This is the same "2+ hits,
+exact match" escalation signature that promoted `processSceneNode+1424` from singleton to guarded bug in
+s347/s348 — a new, real candidate, not background noise.
+
+**First checked whether this is another instance of the KNOWN `processSceneNode`-style nearest-symbol-
+ambiguity artifact** (item -203's documented caveat: `dladdr` reports the nearest PRECEDING exported
+symbol, which can misattribute a crash in an unexported/static neighbor to the wrong named function).
+Wrote `scratch/agent/check_symtab2.py` (same pattern as the existing `check_symtab.py` helper) to walk
+`nm -n build/RogueSquadron64Recomp`'s sorted `T`/`t` symbol table and measure the distance from
+`drainMeshReleaseQueue`'s address to the next distinct symbol. Result: `drainMeshReleaseQueue` at
+`0x1003fba6c`, next symbol `enqueueMeshForDeferredRelease` at `0x1003fc8c4` — 3672 bytes (`0xe58`) apart.
+The crash offset (`+600`/`0x258`) is well inside that range, so `+600` genuinely lands inside
+`drainMeshReleaseQueue`'s own compiled body — **this crash is NOT a nearest-symbol misattribution**, it's
+a real, deterministic fault inside the function `dladdr` says it's inside.
+
+**Second, checked why `last-guest-pc` (`0x8000B650`) didn't look like it belonged to
+`drainMeshReleaseQueue` at all** — source-read `funcs_3.c` and found `0x8000B650` is actually
+`beginFrameDLChunk`'s own `jr $ra` return instruction, a completely different, unrelated function. Grep
+of `fixup_game_funcs.py` explained it immediately: `beginFrameDLChunk` already carries a guest-PC
+breadcrumb (`BREADCRUMB3`, s269) that stamps the SAME shared `g_rs64_last_guest_pc` global used by every
+other `BREADCRUMB*` pass (10 functions total as of s349: `submitSceneNodeRender`, `heapFreeListDequeue`,
+`beginFrameDLChunk`, `processSceneNode`, `reserveAndEmitDLEntry`,
+`buildPositionAndCallTransformHelper`, `static_5_800AB658`, a function slice (BREADCRUMB8-10),
+`tickSongSequence`, `stopSongByHandle`) — one global, shared across all of them by design ("only one of
+these functions is ever executing at the moment of a crash" per every prior BREADCRUMB comment).
+`drainMeshReleaseQueue` was NOT one of the ten, so the global just held whatever the last-executed
+breadcrumbed function happened to stamp before `drainMeshReleaseQueue` ran and crashed — a stale
+checkpoint, not a bug in the breadcrumb mechanism itself, just a genuinely uninstrumented function.
+
+**Landed BREADCRUMB15**: added a new `fixup_game_funcs.py` patch (same blanket per-instruction-comment
+regex substitution as BREADCRUMB3/10-14) targeting `drainMeshReleaseQueue`'s body in `funcs_3.c`, so any
+future crash inside it reports its OWN precise guest PC instead of a stale neighbor's. Full regen
+(`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`) completed clean: fixup report
+line confirmed `funcs_3.c: drainMeshReleaseQueue guest-PC breadcrumb (BREADCRUMB15) patched x149`, build
+finished with only the pre-existing unrelated `DDIV` sign-conversion warnings in `funcs_8.c` (same as
+every prior session). Queued 2 verify soaks (`s349_drainmeshbreadcrumb_verify1/2.sh`, same
+`run_s327waitpump.sh` template as the `m5step5v3` batch, `HOLD_S=240`, heap-walker logs opted off) for the
+loop to drain next.
+
+**What this does and doesn't establish**: `drainMeshReleaseQueue` now has a genuinely new, 2/2-repeatable
+crash signature, confirmed real (not misattribution) via symbol-table distance, but the exact faulting
+guest instruction/MEM access is still unknown — the function is a dense, entirely unguarded linked-list
+free/coalesce routine (`funcs_3.c:1669+`, several `MEM_W`/`MEM_HU` loads per list-walk iteration, no
+existing breadcrumb or guard before this session), and `+600` host bytes doesn't map cleanly enough to a
+single guest instruction to guess blind (unlike `processSceneNode`'s case, where the breadcrumb already
+existed and pinpointed the exact line immediately). BREADCRUMB15 exists to answer that on the next hit,
+not to guess a guard site now — same rationale as BREADCRUMB14's `stopSongByHandle` precedent. This is a
+genuinely new open thread, not yet closed. `HYPOTHESIS-ID m5-audio-destub-contentguard-verify` stays open
+(content-guard question) — `m5-audio-destub-drainmesh-breadcrumb` opens as a second, parallel thread for
+this new site; both are queued via the soak system and don't require picking one over the other next
+session. `lib/` not touched — both edited files (`fixup_game_funcs.py` in the separate `N64Recomp` repo,
+`check_symtab2.py`/soak recipes in this repo's `scratch/`) are outside the `lib/`/submodule-patches
+system.

@@ -148,7 +148,27 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -204 (s348); the next new item takes -205 and is inserted at the top.
+oldest). Current top is -205 (s349); the next new item takes -206 and is inserted at the top.
+
+-205. **(s349) Found a NEW exact-repeat crash, `drainMeshReleaseQueue+600` (2/2, deterministic file-
+    offset match across different ASLR bases) — confirmed real via symbol-table distance (not
+    nearest-symbol ambiguity), added BREADCRUMB15 to localize the exact guest PC on the next hit.**
+    Drained `m5step5v3_rate_7` (CRASH) and `_rate_8` (CRASH); neither hit `processSceneNode+1424`
+    (0/2 repeat post-item -204's guard, weak-but-consistent, not yet "confirmed"), but both hit
+    `drainMeshReleaseQueue+600` — same file offset (`0x3fbcc4`) both times despite different bases.
+    `nm -n` distance check (`scratch/agent/check_symtab2.py`): `drainMeshReleaseQueue` to next symbol
+    `enqueueMeshForDeferredRelease` is 3672 bytes (`0xe58`) — `+600` is genuinely inside this
+    function's own body, ruling out misattribution. `last-guest-pc` (`0x8000B650`) was a red herring:
+    it's `beginFrameDLChunk`'s own return instruction (BREADCRUMB3's target) — stale, because all 10
+    prior `BREADCRUMB*` passes share ONE `g_rs64_last_guest_pc` global and `drainMeshReleaseQueue`
+    itself was never instrumented. Added `BREADCRUMB15` (same blanket per-instruction-comment pattern
+    as BREADCRUMB3/10-14) to `fixup_game_funcs.py`, targeting `drainMeshReleaseQueue`'s body in
+    `funcs_3.c` (dense, entirely unguarded linked-list free/coalesce routine, `funcs_3.c:1669+`). Full
+    regen + rebuild clean (`patched x149`). Queued `s349_drainmeshbreadcrumb_verify1/2.sh`. Content-
+    guard verify soaks (`s348_contentguard_verify2/3.sh`) had NOT yet been drained by the loop this
+    session — that check stays open. `HYPOTHESIS-ID m5-audio-destub-contentguard-verify` stays open;
+    new parallel thread `m5-audio-destub-drainmesh-breadcrumb`. `lib/` not touched. Full detail:
+    `PORTING-STATE` Session 349.
 
 -204. **(s348) processSceneNode's repeat crash (2/6, exact host+guest PC match) was an unguarded
     "content pointer" one field removed from the already-guarded node pointer — GUARDED, not just
