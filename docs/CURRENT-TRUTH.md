@@ -17,12 +17,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    deliberately; both are used every iteration.
 2. **M5 audio de-stubbing**: design doc + steps 1-4 DONE — title-reach restored and confirmed 3/3
    (s343-344, full arc: PROJECT-OVERVIEW §10). Step 5 opened two parallel OPEN threads, both still
-   active: `m5-audio-destub-linkedlist-corruption-source` (`drainMeshReleaseQueue` tail-scan family —
-   5 structurally identical loops found and guarded s354-363, byte-identical poisoned value
-   `bad_v1=0x00010001` the strongest lead) and `m5-audio-destub-coalesce-heap-guard-verify`
-   (`coalesceFreeHeapBlocks`, guarded s354, bail-target bug fixed s358, 0/4 target-crashes since,
-   nearing its closure bar per item -219). Detail: Next-steps items -219, -218, -217..-210 (folded);
-   live status/decision trees: NEXT.md.
+   active: `m5-audio-destub-linkedlist-corruption-source` (`drainMeshReleaseQueue` — three distinct
+   unguarded pointer families found across the same 5 structurally identical loops: tail-scan cursor
+   and head pointer both guarded s350-363, a THIRD "global-tail" write-through pointer found and
+   guarded s365 after s363's own guards positive-controlled and the crash moved to a new offset;
+   byte-identical poisoned value `bad_v1=0x00010001` the strongest lead) and
+   `m5-audio-destub-coalesce-heap-guard-verify` (`coalesceFreeHeapBlocks`, guarded s354, bail-target
+   bug fixed s358, 0/4 target-crashes since s364, nearing its closure bar per item -219). Detail:
+   Next-steps items -220, -219, -218, -217..-210 (folded); live status/decision trees: NEXT.md.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -150,7 +152,27 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -219 (s364); the next new item takes -220 and is inserted at the top.
+oldest). Current top is -220 (s365); the next new item takes -221 and is inserted at the top.
+
+-220. **(s365) Thread B's `s363` head-guard pair drained 2/2 byte-identical at a NEW
+    `drainMeshReleaseQueue` offset with the s363 head guards positive-controlled for the first
+    time — found and guarded a THIRD unguarded pointer family in the same function.** Both
+    `s363_drainmeshheadguard_verify1/2` crashed at `pc-symbol=drainMeshReleaseQueue+5564`,
+    `last-guest-pc=0x8000821C`, with `head1_guard_fire_n=1`, `head1_clear_guard_fire_n=1`,
+    `head2_guard_fire_n=1` (the brand-new s363 head-pointer guards' first-ever fires — genuine
+    positive control) AND all 5 tail-cursor guard pairs plus `ring_fire_n=1` also firing in the
+    same run — every previously-known unguarded site ran at least once, crash genuinely moved past
+    all of them. Source-read (`funcs_3.c:2001-2003`) found `MEM_W(0X4, ctx->r2) = ctx->r3` at the
+    crash PC: `ctx->r2` is a "previous tail" pointer loaded once per loop from a fixed global table
+    slot and checked only for `!= 0` before this write dereferences it — the same
+    checked-non-NULL-but-unvalidated-pointer idiom as the tail-cursor and head-pointer families,
+    now on a THIRD register. Found the identical site repeated once per loop, all five unguarded
+    (loop1 `0x800081C8`, loop2 `0x8000821C` = crash site, loop3 `0x80008264`, loop4 `0x800082C4`,
+    loop5 `0x80008314`); guarded all 5 in one pass (`[drain-mesh-loop{1..5}-tailptr-guard]`, reuses
+    `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD`). Full regen+rebuild clean, patch report `x1` per site,
+    idempotency-confirmed on a 2nd fixup run (0 additional matches). Queued
+    `s365_drainmeshtailptrguard_verify1/2.sh`, drains after Thread A's still-pending `s364_...`
+    pair. Full detail: `PORTING-STATE` Session 365.
 
 -219. **(s364, MAINTENANCE) 8th compaction pass (689→489 lines, folding the closed s354-362
     guard-hunting arc into item -217..-210) plus Thread A's `s362` reverify pair drained while at it.**

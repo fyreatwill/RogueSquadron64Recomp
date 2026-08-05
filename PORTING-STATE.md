@@ -31455,3 +31455,63 @@ this session's newly-queued `s364_...` pair (alphabetical: `s363` < `s364`).
 
 `HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` (iteration 8, unchanged — no new
 Thread B evidence this session; this was a maintenance iteration, not a pivot).
+
+## Session 365 (2026-08-05): Thread B's `s363` head-guard pair drained 2/2 byte-identical at a NEW `drainMeshReleaseQueue` offset with the new head guards positive-controlled — found and guarded a THIRD pointer family, a "global-tail" write-through repeated once per loop across all five
+
+Session-start check (per the ledger's now-standing NEXT.md-cross-check gotcha) found `SOAK-RESULTS.md`
+already had Thread B's own `s363_drainmeshheadguard_verify1/2` pair drained — NEXT.md still called it
+"still pending, not yet drained." Read both logs directly (they had not been read since draining):
+
+- `s363_...verify1` and `s363_...verify2` CRASHED byte-identically: `pc-symbol=drainMeshReleaseQueue+
+  5564`, `last-guest-pc=0x8000821C`, in BOTH runs. Both runs also show `head1_guard_fire_n=1`,
+  `head1_clear_guard_fire_n=1`, `head2_guard_fire_n=1` — the brand-new head-pointer guards added s363
+  fired for the first time ever, a genuine positive control — AND every one of the 5 tail-cursor
+  read+write guard pairs plus `ring_fire_n=1` also fired earlier in the SAME run. So every previously
+  known unguarded site in this function ran at least once, and the crash is at a site outside all of
+  them: real forward progress, not a repeat.
+
+Source-read (`funcs_3.c:1997-2003`, N64Recomp checkout) at the crash guest PC found:
+```
+// 0x8000821C: sw          $v1, 0x4($v0)
+MEM_W(0X4, ctx->r2) = ctx->r3;
+```
+`ctx->r2` here is loaded a few instructions earlier from a fixed global table slot (`lw $v0, 0x63B0
+($v0)` off a `lui $v0, 0x8011` base — the same "previous tail" global each loop reads once before
+appending) and checked ONLY for `!= 0` (`beq $v0, $zero, ...`) before this write dereferences it at
+offset +4 — the identical checked-non-NULL-but-unvalidated-pointer idiom the ledger's
+read-guard/write-guard-sibling gotcha describes, now discovered on a THIRD register/pointer family in
+this function (distinct from the tail-scan cursor `v1`/`ctx->r3` and the head pointer `a0`/`ctx->r4`,
+both already guarded). Reading the whole function again with this idiom in mind (same discipline as
+the s361/s363 audits) found the SAME site repeated exactly once per loop, all five previously
+unguarded: loop1 @ `0x800081C8`, loop2 @ `0x8000821C` (the crash site), loop3 @ `0x80008264`, loop4 @
+`0x800082C4`, loop5 @ `0x80008314` — confirmed by grepping every `0x63B0` lw/sw pair in the function
+(5 read/write pairs, matching the already-known 5-loop structure exactly).
+
+Guarded all 5 sites in one pass, same pattern as the existing write-through-v1 guards (on invalid
+`ctx->r2`, skip the write and log; on valid `ctx->r2`, perform it unchanged). New tags
+`[drain-mesh-loop{1..5}-tailptr-guard]`, reusing `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` (already armed by
+default in the soak recipe, so every guard in the function — tail-scan, head-pointer, and now
+tailptr — fires in the same run). Patch added to `tools/fixup_game_funcs.py` (N64Recomp checkout)
+right before the `coalesceFreeHeapBlocks` guard section, following the exact loop-driven-over-a-site-
+list style the s363 head-pointer patch established. Full regen (`make_elf.py` → `N64Recomp` →
+`fixup_game_funcs.py` → `cmake --build`) clean; patch report showed `x1` for each of the 5 new sites
+individually, and a second fixup run (idempotency check) showed 0 additional matches — confirmed
+single-line insertions in the regenerated `funcs_3.c`, no duplication. `lib/` untouched this session,
+no `export.sh` needed.
+
+Queued `s365_drainmeshtailptrguard_verify1/2.sh` (same full-instrument-set recipe template as
+`s363_...`, extended with the 5 new `tailptr{n}_guard_fire_n` counters) — sorted to drain AFTER
+Thread A's still-pending `s364_coalesceheapbailfix_reverify1/2.sh` pair (alphabetical: `s364` <
+`s365`). Decision tree for when it drains is written into the recipe header and NEXT.md: any
+`tailptr{n}_guard_fire_n>=1` is the guards' own positive control; a crash still at
+`drainMeshReleaseQueue+5564`/`0x8000821C` with all tailptr guards at 0 means the regex substitution
+didn't actually match; a crash moved to a new offset with a tailptr guard firing means a further
+sibling gap remains; a crash moved outside the function or a clean run needs 2-3 more
+non-recurrence soaks before this specific site can be called closed.
+
+Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) unchanged this session — its own
+`s364_coalesceheapbailfix_reverify1/2.sh` pair (queued s364) is still pending, not yet drained per
+`SOAK-RESULTS.md`'s tail, and sorts to drain BEFORE this session's new `s365_...` pair.
+
+`HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` (iteration 9 — genuine new
+evidence and a genuine new guard landed this session, unlike s364's maintenance pass).
