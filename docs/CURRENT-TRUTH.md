@@ -25,10 +25,11 @@ Priority order for upcoming iterations, set after the 300-session review:
    (items -212/-213/-214/-215/-216): `drainMeshReleaseQueue` contains FIVE structurally identical
    tail-scan loops (found by s361's full-function idiom-class audit, not three as previously believed);
    all 5 now have both read and write guards, `bad_v1=0x00010001` sighted 6-7 times across the first
-   three. Thread A's s358 fix's verify pair drained s360 but stayed off-target for its own question
-   (`coalesce_guard_fire_n=0` both times) — still 0/2 informative, unclosed. Thread B's s361 fix
-   (loop3's missing write guard + loops 4/5's entirely-missing guards) awaits its first verify pair;
-   s360's own verify pair is STILL undrained 2 sessions later. See NEXT.md for both open threads'
+   three. s362 (item -217) drained the s360 verify pair (0/2 informative for either thread — both
+   crashed off-target before reaching either guarded function) and resolved the recurring
+   "does the soak queue drain in order?" question (yes, plain alphabetical = chronological, source-
+   confirmed). Thread A now 0/4 informative since its s358 fix, re-queued with a fresh pair. Thread B's
+   s361 fix awaits its first verify pair (queued, not yet drained). See NEXT.md for both open threads'
    current status and next steps.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
@@ -159,7 +160,36 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -216 (s361); the next new item takes -217 and is inserted at the top.
+oldest). Current top is -217 (s362); the next new item takes -218 and is inserted at the top.
+
+-217. **(s362) Drained the stale `s360` verify pair (0/2 informative for either open thread, both
+    off-target), resolved the 3-session-recurring "does the soak queue drain in order?" question by
+    reading `loop.sh` source, and re-queued Thread A.** `s360_drainmeshloop3guard_verify1/2.sh` had
+    already drained (in `SOAK-RESULTS.md`'s tail, unread by s361) — both crashed with EVERY guard fire
+    counter at 0 (coalesce, read/write, loop2/loop3 guard+write) and `ring_fire_n=0`, meaning neither
+    run reached either drainMeshReleaseQueue's guarded loops (Thread B) or `coalesceFreeHeapBlocks`
+    (Thread A) at all. `last-guest-pc` in both was the long-catalogued STALE `beginFrameDLChunk`
+    checkpoint (uninformative on its own), but `pc-symbol` was informative for a 3rd, deliberately-not-
+    chased thread: `verify1` hit `trackResourceListWithMappingTables+1192`, an EXACT repeat of s347's
+    singleton `rate_4` finding — now n=2, crossing the same "2+ exact hits" bar that escalated
+    `processSceneNode+1424` to a guard in s348, but NOT escalated here (see below). `verify2` hit
+    `unregisterServiceWorker+536`, an exact repeat of a Session 265 sighting already flagged with a
+    standing "likely nearest-symbol misattribution over stripped system-library code, unverified"
+    caveat. Both symbol names read as Apple system-framework exports with no plausible tie to game
+    code — recorded as 2 more sightings of the s347/s352-named "diffuse background crash population,"
+    not chased (matches the strategic directive's "no reactive single-crash chases" for anything
+    outside the active M5 threads). **Queue-order question resolved**: `tools/agent/loop.sh`'s
+    `run_soak_queue()` uses a bare `for recipe in "$qdir"/*.sh` glob — bash expands globs
+    lexicographically by default, and every recipe is named `sNNN_..._verifyM.sh`, so alphabetical
+    order IS chronological order; there is no reordering bug. The s359/s360/s361-observed "skipping"
+    was pure queue-depth arithmetic (2 recipes drain per gap, both threads have queued ~2/session, so
+    backlog depth has hovered 2-4 deep) — confirmed by this session's own math (s360's pair, queued
+    session 360, drained exactly 2 sessions later, consistent with a 4-deep backlog). **Thread A
+    re-queued**: per s361's own flagged next step, queued `s362_coalesceheapbailfix_reverify1/2.sh`
+    (Thread A now 0/4 informative across 4 soaks since its s358 fix, no code changed, pure re-roll),
+    deliberately named/ordered to sort AFTER Thread B's still-pending, higher-momentum
+    `s361_drainmeshidiomaudit_verify1/2.sh` so the fresher pair drains first. No code changed this
+    session, no `lib/` touch, no regen/build cycle. Full detail: `PORTING-STATE` Session 362.
 
 -216. **(s361) Stale `s359` pair drained with a 4th `drainMeshReleaseQueue` crash site; pivoted to the
     pre-committed systematic idiom-class audit instead of one more reactive guard — found the function

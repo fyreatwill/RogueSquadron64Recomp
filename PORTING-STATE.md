@@ -31243,3 +31243,82 @@ with (not yet proof of) the single-deterministic-corruption-source reading from 
 loop5's brand-new guards ever fire in a future soak, that would be the first evidence those two loops are
 also reachable by whatever is corrupting this function's pointer chains — worth flagging even on an
 otherwise-clean run.
+
+## Session 362 (2026-08-05): drained the stale `s360` verify pair, resolved the recurring soak-queue-ordering confusion by reading `loop.sh`, folded 2 more diffuse-background-population sightings into the ledger, and re-queued Thread A
+
+**Housekeeping first**: `wc -c docs/CURRENT-TRUTH.md` = 56,470 bytes, under the 60,000-byte maintenance
+trigger — not a maintenance iteration.
+
+**Drained data**: `s360_drainmeshloop3guard_verify1/2.sh` (queued s360, flagged "still undrained" in
+both s360's and s361's own NEXT.md writeups) had in fact drained in the gap between s361 and this
+session — both entries were already in `scratch/agent/SOAK-RESULTS.md`'s tail, just never read/folded
+in. Both logs:
+- `verify1`: `coalesce_guard_fire_n=0 read_guard_fire_n=0 write_guard_fire_n=0 loop2_guard_fire_n=0
+  loop2_write_guard_fire_n=0 loop3_guard_fire_n=0 ring_fire_n=0`. `title_reached` at 44.8s. Crash:
+  `last-guest-pc=0x8000b650` (the long-catalogued STALE `beginFrameDLChunk` checkpoint value, per the
+  s272-282/s347 precedent — not informative about where the crash actually happened), `pc-symbol=
+  trackResourceListWithMappingTables+1192`.
+- `verify2`: identical all-zero guard-fire line, `title_reached` at 44.8s. Crash:
+  `last-guest-pc=0x8000834c`, `pc-symbol=unregisterServiceWorker+536`.
+
+**Both crashes are OFF-TARGET for every open thread's own question** — neither drainMeshReleaseQueue's
+5 tail-scan-loop guards (Thread B) nor the coalesce-heap bail guard (Thread A) ever fired, meaning
+neither run reached either guarded function at all before dying. Consistent with s360/s361's own
+predicted "off-target-but-discriminating" shape, checked against ALL open threads per that standing
+method trap — neither thread gets a data point from this pair, but the crash symbols themselves are
+informative for a THIRD, older, deliberately-not-chased thread:
+
+- `trackResourceListWithMappingTables+1192` — **exact symbol+offset repeat of s347's `rate_4`**
+  (PORTING-STATE ~line 30148), which at the time was a singleton (n=1) explicitly flagged as "not
+  (yet) a family." This is now n=2, crossing the same "2+ exact hits" bar s348 used to escalate
+  `processSceneNode+1424` from singleton to guarded fix. Not escalated this session (see below).
+- `unregisterServiceWorker+536` — **exact symbol+offset repeat of a much older sighting, Session 265**
+  (PORTING-STATE ~line 25169), where it was already flagged with the standing caveat: "look like
+  plausible nearest-preceding-symbol misattributions over stripped/unnamed [system-library] code...
+  do not treat as a confirmed distinct bug without [`s264_symrange.py`] verification" — that
+  verification was never run, then or now.
+
+**Decision: not chased this session.** Both symbol names read as Apple system-framework exports
+(`trackResourceListWithMappingTables`, `unregisterServiceWorker` — WebKit/CFNetwork-shaped names with
+no plausible connection to N64 game code) reached via `dladdr`'s nearest-preceding-symbol fallback over
+unnamed/stripped code, exactly the pattern the s265 caveat already named. Per the strategic directive
+("M3 crash work only as systematic idiom-class audits... no reactive single-crash chases") and this
+being background noise incidental to an M5 soak rather than the active M5 thread itself, escalating a
+new investigation here would be exactly the discouraged pattern. Recorded as 2 more sightings of the
+"diffuse background crash population" s347/s352 already named; if `s264_symrange.py` disambiguation
+ever becomes the top-of-backlog item, both symbols now have 2 independent hits to work from instead of
+1.
+
+**Resolved a 3-session-recurring point of confusion**: s359, s360, and s361 each separately flagged
+"worth checking whether the loop's queue-drain order is FIFO/mtime/alphabetical" after watching an
+older-queued recipe apparently sit untouched while newer ones queued and drained around it. Read
+`tools/agent/loop.sh`'s `run_soak_queue()` (line 53): `for recipe in "$qdir"/*.sh` — a bare glob, which
+bash expands in **lexicographic (alphabetical) order** by default, no special-casing. Since every
+recipe is named `sNNN_..._verifyM.sh` with a zero-padded-by-construction session number, alphabetical
+order IS chronological order for this whole file population — there is no bug and no non-FIFO
+reordering. The apparent "skipping" was pure queue-depth arithmetic: `SOAKS_BETWEEN_ITERS` drains at
+most 2 recipes per inter-session gap, and both threads have been queuing 2 fresh recipes most sessions,
+so the pending count has hovered at 2-4 for a while — an older recipe genuinely waits 1-2 extra gaps
+whenever a newer session adds more before the backlog clears, nothing more. Confirmed by this session's
+own observation: s360's pair (queued session 360) drained in the gap immediately before session 362,
+exactly 2 sessions later, consistent with a 4-deep backlog draining 2-at-a-time.
+
+**Thread A re-queued**: per s361's NEXT.md's own flagged next step ("worth deliberately queuing a
+fresh, isolated `s358_coalesceheapbailfix_verify3/4.sh` next session if no incidental hit shows up"),
+and no incidental hit showed up this session either (`coalesce_guard_fire_n=0` in both of this
+session's drained logs too) — Thread A is now 0/4 informative across 4 total soaks since the s358
+bail-target fix landed, spanning 4 sessions untouched by design (each soak just isn't landing inside
+`coalesceFreeHeapBlocks` at all). Queued `s362_coalesceheapbailfix_reverify1/2.sh` (full instrument set
+cloned from s361's most-complete template, all 5 drain-mesh loop tags plus coalesce/ring — no code
+changed, this is a pure re-roll to buy more independent attempts). Deliberately named `s362_...`
+(session that queued it) rather than `s358_...verify3/4` to (a) avoid colliding with the already-`done/`
+`s358_..._verify1/2.sh` filenames and (b) sort alphabetically AFTER the still-pending
+`s361_drainmeshidiomaudit_verify1/2.sh`, so Thread B's fresher, higher-momentum pair (testing this
+session's actual landed code — the 5-guard idiom-class audit) drains first per the now-confirmed
+alphabetical FIFO order, instead of queue-jumping ahead of it.
+
+**No code changed this session** — no `lib/` touch, no `export.sh` needed, no regen/build/smoke-test
+cycle (nothing to rebuild against). `HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source`
+(iteration 7, unchanged from s361 — Thread B's own verify pair still hasn't drained, no new evidence to
+act on for it this session). Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) is iteration 5, now
+re-queued rather than left stale.
