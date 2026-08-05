@@ -31408,3 +31408,50 @@ re-queued pair is still pending, sorted to drain after this session's `s363_...`
 
 `HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` (iteration 8 — Thread B landed
 new, informative evidence and a real fix this session, unlike s362's null result).
+
+## Session 364 (2026-08-05): MAINTENANCE — 8th CURRENT-TRUTH compaction pass (689→489 lines), folded the closed s354-362 guard-hunting arc into one summary item; drained Thread A's `s362` reverify pair while at it
+
+**Step 0 triggered**: `docs/CURRENT-TRUTH.md` was 62,206 bytes at session start, over the 60,000-byte
+maintenance threshold. Per ITERATION.md this iteration ran maintenance instead of a new experiment.
+
+**Compaction**: folded the nine session-by-session Next-steps items covering the s354-362 M5 Thread
+A/B guard-hunting arc (items -217 through -210, ~205 lines of per-session blow-by-blow detail) into
+one consolidated summary paragraph, matching the same folding pattern used by the s295-330/s346/s355
+maintenance passes for earlier closed arcs. Kept s363's finding (item -218) as its own entry since it's
+the most recent and still directly actionable. Trimmed the USER DIRECTIVE section's M5 history recap
+(previously re-stated per-session detail already covered by the Next-steps items) down to a 2-line
+pointer at the two open threads' current status, referencing NEXT.md for live decision trees instead
+of duplicating them. Removed 2 stray double-blank-lines. Net: 689→489 lines (200-line shrink, meets
+the >=200-line ADVANCED bar), 62,206→~43,700 bytes (still above the 35 KB stretch target but a real
+step toward it — no information lost, PORTING-STATE.md and the folded items' "Full detail: PORTING-
+STATE Session N" pointers remain the source of full per-session record).
+
+**While reading the ledger for the compaction, found `SOAK-RESULTS.md`'s tail already had `s362`'s own
+Thread A reverify pair drained** (queued s362, ran during the s363→s364 loop gap, unread by s363 since
+it queued Thread B's `s363_...` pair to drain AFTER it):
+- `s362_coalesceheapbailfix_reverify1`: CLEAN, full 432s hold, 0 crash markers, every guard fire
+  counter (coalesce, all 5 drain-mesh tail-scan read/write pairs, all 5 head-pointer pairs) at 0.
+- `s362_coalesceheapbailfix_reverify2`: CRASH at `pc-symbol=fscache_insert_and_retain+1192`,
+  `last-guest-pc=0x8000b650` (the long-catalogued stale `beginFrameDLChunk` checkpoint, uninformative
+  on its own). `fscache_insert_and_retain` is the same Metal shader-compiler system-library crash
+  already catalogued at CURRENT-TRUTH item -10 (`docs/PROJECT-OVERVIEW.md`/PORTING-STATE s270) — not
+  guest code, not new evidence, off-target-but-known noise rather than a fresh background-noise
+  sighting.
+
+Tally: Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) has now run 4 soaks since the s358
+bail-target fix (`s358_verify1/2` + `s362_reverify1/2`) with ZERO crashes at its own target function
+(1 clean full hold, 3 off-target/known-noise crashes) — nearing its own stated closure bar ("needs
+1-2 more non-recurrence soaks to close") but not yet explicitly closed; that call is left for the
+next iteration doing real M5 work rather than folded into this maintenance pass. Re-queued
+`s364_coalesceheapbailfix_reverify1/2.sh`
+(same recipe template as s362's pair, updated to include the s363 head-pointer guard counters so
+every current instrument is armed) so the loop keeps feeding data toward that bar. No code changed
+this session, no `lib/` touch, no regen/build cycle — pure ledger maintenance plus soak-result
+consumption.
+
+Thread B (`m5-audio-destub-linkedlist-corruption-source`) unchanged this session — its own
+`s363_drainmeshheadguard_verify1/2.sh` pair (queued s363) is still pending, sorted to drain BEFORE
+this session's newly-queued `s364_...` pair (alphabetical: `s363` < `s364`).
+
+`HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` (iteration 8, unchanged — no new
+Thread B evidence this session; this was a maintenance iteration, not a pivot).
