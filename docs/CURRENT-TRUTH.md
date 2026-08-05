@@ -25,7 +25,8 @@ Priority order for upcoming iterations, set after the 300-session review:
    source` targets the `bad_v1` lead directly (see NEXT.md). `m5-audio-destub-contentguard-verify`
    thread CLOSED s350: 0/4 repeat of `processSceneNode+1424` since item -204's guard landed, and s352
    found its `[scene-node-content-guard]` firings are steady-state/benign (same node, thousands of
-   harmless hits/run), not corruption evidence.
+   harmless hits/run), not corruption evidence. s353 (item -209) landed the ring-buffer breadcrumb the
+   `linkedlist-corruption-source` thread's step 1 designed; 2 verify soaks queued, no data yet.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -155,7 +156,23 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -208 (s352); the next new item takes -209 and is inserted at the top.
+oldest). Current top is -209 (s353); the next new item takes -210 and is inserted at the top.
+
+-209. **(s353) Landed the ring-buffer breadcrumb `m5-audio-destub-linkedlist-corruption-source`'s step 1
+    designed — records every `v1` walked in `drainMeshReleaseQueue`'s tail-scan, dumps on bail. No data
+    yet, pure instrumentation.** Added 3 patches to `fixup_game_funcs.py` (all `funcs_3.c`,
+    `drainMeshReleaseQueue`-scoped): a function-entry reset of 3 new function-level statics
+    (`s_drain_mesh_ring[8]`, `_ring_idx`, `_ring_iter`); a capture at the existing `0x800081A8` advance
+    site (`v1 = v1->next`) that records the just-advanced `v1` into the ring buffer with no per-iteration
+    `fprintf` (iron rule 3 — avoids s345's exact per-node-log mistake); and one `fprintf` added inside the
+    EXISTING s350 read-guard's bail branch, firing once per bail: `[drain-mesh-ring] idx=N v1[0..7]=...
+    iter_at_bail=M`. Reuses `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` (already armed by default) — no new env
+    var. Full regen + build clean, all 3 patches confirmed `patched x1` and present in the regenerated
+    source. Queued `s353_ringbuffer_verify1/2.sh` (`HOLD_S=240`, same template as s349-s351's verify
+    recipes) for the loop to drain. **The discriminating measurement is still pending**: does
+    `iter_at_bail` (and the ring buffer's position of the poisoned value) stay consistent across the 2
+    verify runs (supports H1/H2, a structural bug) or vary (supports H3/H4, state-dependent)? `lib/` not
+    touched. Full detail: `PORTING-STATE` Session 353.
 
 -208. **(s352) Parent step-5 hypothesis's mandated pivot iteration: crash SYMBOL scatter is real, but
     crash TIMING is bimodal (two deterministic VI-transition windows) and one guard value reproduces

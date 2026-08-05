@@ -30605,3 +30605,49 @@ work was entirely offline re-analysis of already-captured data, per the "capture
 rule; this counts as the session's work unit (a real experiment: does crash timing/value correlate
 across independent runs, discriminating "diffuse random storm" from "bimodal deterministic trigger with
 diffuse consumers") producing an actionable result, not busywork.
+
+## Session 353 (2026-08-05): implemented and landed the s352-designed ring-buffer breadcrumb for `drainMeshReleaseQueue`'s tail-scan, queued 2 verify soaks — no data yet, this session is pure instrumentation.
+
+`HYPOTHESIS-ID m5-audio-destub-linkedlist-corruption-source`, iteration 1. NEXT.md's step 1: does the
+poisoned `v1` value (`bad_v1=0x00010001`, byte-identical across 2 independent sessions/builds per item
+-208) appear at a CONSISTENT walk position/iteration count within the tail-scan across independent
+crashing runs? Consistent position discriminates toward H1 (stale/prematurely-freed list node at a fixed
+list depth) or H2 (fencepost walking off a legitimately-short list into a heap-block header); varying
+position discriminates toward H3 (independent bugs sharing only an activity-burst trigger window) or H4
+(an unrelated upstream free).
+
+Implemented in `~/Documents/Tools/N64Recomp/fixup_game_funcs.py` (3 new/edited regex patches, all scoped
+to `funcs_3.c`'s `drainMeshReleaseQueue`):
+1. Function-entry reset: 3 new function-level statics (`s_drain_mesh_ring[8]`, `_ring_idx`, `_ring_iter`)
+   declared and explicitly zeroed at the top of the function body, so a bail on call N never dumps stale
+   ring contents from call N-1 (zero-initialized-once-at-program-start static semantics alone would NOT
+   give this — needed the explicit reset).
+2. Capture site at `0x800081A8` (where `v1` advances to `v1->next` every loop iteration, per s350's
+   source-read of the idiom): records the just-advanced `v1` into the ring buffer (`idx % 8`) and
+   increments both the ring index and the uncapped per-call iteration counter. No `fprintf` here —
+   iron rule 3 log-budget discipline, deliberately avoiding the exact per-iteration-fprintf mistake s345
+   root-caused for `ROGUESQ_LOG_RS_FREE_WALK`/`_MALLOC_WALK` (8.2-8.7 GB logs from a single soak).
+3. Dump site: added one `fprintf` inside the EXISTING s350 read-guard's bail branch (fires once, only
+   when the guard actually bails on an out-of-range `v1`), printing `[drain-mesh-ring] idx=N
+   v1[0..7]=... iter_at_bail=M`. Reuses the existing `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` env var
+   (already armed by default in `run_s327waitpump.sh`) — no new wiring, no new env var.
+
+Full regen (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> cmake) clean: all 3 new patches
+reported `patched x1`, confirmed present in the regenerated `RecompiledFuncs/funcs_3.c` (grepped for
+`s353`/`drain_mesh_ring`/`drain-mesh-ring` — all 3 sites present at the expected lines). Build clean, no
+new warnings beyond the pre-existing 46 (same DDIV sign-mismatch noise as every prior build). `lib/` not
+touched — confirmed via `git status`, same as every prior M5 session (the whole `~/Documents/Tools/
+N64Recomp` tool repo sits outside this repo's `lib/`/submodule-patches system).
+
+Queued `s353_ringbuffer_verify1.sh` / `s353_ringbuffer_verify2.sh` (`scratch/agent/soak_queue/`,
+`HOLD_S=240`, same `run_s327waitpump.sh` template as every s349-s351 verify recipe) for the loop to
+drain between iterations. Each reports `ring_fire_n`/`ring_sample` alongside the existing
+`read_guard_fire_n`/`write_guard_fire_n`/`last_pc_symbol` fields. No soak run this session — the
+positive control (does `[drain-mesh-ring]` fire at all, confirming the instrument works) and the actual
+discriminating comparison (is `iter_at_bail` consistent across the 2 verify runs, and ideally a 3rd
+historical crash if one can be back-computed) are both next-session work, contingent on the loop
+draining these 2 recipes first.
+
+No `lib/` changes this session. `HYPOTHESIS-ID m5-audio-destub-linkedlist-corruption-source` stays open,
+iteration 1 (this session was pure instrumentation-landing, not yet a data point — budget per iron rule
+8 starts counting from the first soak that actually reports a `[drain-mesh-ring]` firing, next session).

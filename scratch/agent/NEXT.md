@@ -1,75 +1,63 @@
 # NEXT work unit
 
-## s352 landed: parent step-5 hypothesis's mandated pivot — timing is bimodal, one guard value
-## reproduces byte-identically across sessions, drainmesh-writeguard-verify thread CLOSED
+## s353 landed: ring-buffer breadcrumb for drainMeshReleaseQueue's tail-scan, 2 verify soaks queued
 
-Full detail: `docs/CURRENT-TRUTH.md` item -208, `PORTING-STATE` Session 352. Short version: drained
-`s351_drainmeshwriteguard_verify1/2` (4th distinct `drainMeshReleaseQueue` offset + an entirely
-different function, `coalesceFreeHeapBlocks`) — taken alone, more scatter. Per NEXT.md's pre-committed
-plan (this was the parent hypothesis's last iteration before the 3-strike pivot), went further and
-re-analyzed all 16 accumulated step-5 soak logs offline (no new builds). Found crash TIMING clusters
-into exactly two deterministic post-VI-transition windows (~74s, ~143s) despite 10 distinct crash
-symbols, and the `[drain-mesh-tail-guard]`/`[drain-mesh-write-guard]` diagnostic's intercepted value
-`bad_v1=0x00010001` is byte-identical across 2 independent sessions/builds (`s350_verify1`,
-`s351_verify1`) at a one-shot guard site — strong evidence of a deterministic, reproducible bug (not
-random heap noise). `m5-audio-destub-drainmesh-writeguard-verify` CLOSED, superseded. New thread:
-`m5-audio-destub-linkedlist-corruption-source`.
+Full detail: `docs/CURRENT-TRUTH.md` item -209, `PORTING-STATE` Session 353. Short version: added a
+bounded 8-entry ring buffer + per-call iteration counter to `drainMeshReleaseQueue`'s tail-scan
+(`~/Documents/Tools/N64Recomp/fixup_game_funcs.py`, `funcs_3.c`-scoped), recording every `v1` value
+walked and dumping the last 8 (plus the iteration count at bail time) once, on the existing s350
+read-guard's bail path: `[drain-mesh-ring] idx=N v1[0..7]=... iter_at_bail=M`. Reuses
+`ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` (already armed by default in `run_s327waitpump.sh`), no new env
+var. Full regen + build clean, patches confirmed present in the regenerated source. Queued
+`s353_ringbuffer_verify1.sh` / `s353_ringbuffer_verify2.sh` (`scratch/agent/soak_queue/`, `HOLD_S=240`)
+for the loop to drain between iterations — **no soak has run yet as of this writing**.
 
-## The work unit: localize WHERE in the list-walk the `0x00010001` poison appears
+## The work unit: read the ring-buffer dumps, answer the discriminating question
 
-**Hypotheses** (competing, not yet split):
-- **H1 — stale/prematurely-freed list node, fixed position.** The queue node at a consistent walk
-  index (e.g. always the Nth node from the head, or always immediately after a specific
-  enqueue/dequeue call in the ~143s activity burst) gets freed elsewhere without being unlinked from
-  this queue, and the tail-scan walks into freed memory that now reads back as `0x00010001`.
-- **H2 — allocator/heap-header confusion, not a list bug.** `0x00010001` looks plausibly like a
-  packed 16+16 heap-block-header field (size/flags = 1,1) rather than a real corrupted pointer — i.e.
-  the tail-scan may be walking past the END of a legitimately-short list into the NEXT heap block's
-  header, a fencepost/off-by-one rather than a dangling node. (`coalesceFreeHeapBlocks` showing up as
-  a crash symbol in the SAME bucket is circumstantial support for this — it's the allocator's own
-  free-list coalescer.)
-- **H3 — no shared root cause; the two windows are just the script's two activity bursts.** Every
-  bucket-2 crash symbol (processSceneNode, `drainMeshReleaseQueue`'s 4 offsets, coalesceFreeHeapBlocks)
-  is an independent pre-existing bug, and each burst of pointer-chasing activity simply gives each bug
-  its one chance per soak to fire. The `bad_v1` value-match would then need to be coincidence (~1-in-4B
-  by chance for 2 independent hits — weak but not zero, since if H2 is true the value ISN'T random, it's
-  a deterministic heap-header constant, which would make an "identical value" observation compatible
-  with H3 too).
-- **H4 — upstream free from an unrelated (possibly audio-adjacent) subsystem.** Some other M5-related
-  deallocation path frees a node this queue still references. Would need caller-side tracing, not just
-  tail-scan-side, to confirm.
+**Step 0 — check the soak queue first.** `scratch/agent/soak_queue/` should be empty of
+`s353_ringbuffer_verify*` (moved to `done/` once drained) and `scratch/agent/SOAK-RESULTS.md` should
+have 2 new lines for them. If the loop hasn't drained them yet (both `.sh` files still sitting in
+`soak_queue/`, not `done/`), drain them yourself this iteration (`zsh scratch/agent/soak_queue/
+s353_ringbuffer_verify1.sh`, then `_verify2.sh` — NOT `bash`, only `zsh:*` is allowlisted; see
+Environment notes below for what manual draining also requires: saving output, appending to
+SOAK-RESULTS.md, moving the `.sh` to `done/`).
 
-**The discriminating measurement**: does the poisoned node appear at a CONSISTENT walk position/index
-within the tail-scan across independent crashing runs? Consistent position discriminates toward
-H1/H2 (a structural bug, position-dependent); inconsistent/varying position discriminates toward
-H3/H4 (state-dependent, not purely structural).
+**Step 1 — read both `run.log`s for `[drain-mesh-ring]` lines.** Path:
+`scratch/s73_post_a_scene/s353ringbufferverify1/run.log` and `.../s353ringbufferverify2/run.log`. Grep
+for `\[drain-mesh-ring\]` (positive control: does the diagnostic fire at all — if 0 fires in a run that
+DID crash with `last_pc_symbol` matching `drainMeshReleaseQueue`, the ring dump itself has a bug, treat
+as a null instrument, not a null result). If a run's crash landed somewhere OTHER than
+`drainMeshReleaseQueue`, `[drain-mesh-ring]` legitimately won't fire that run — not informative for
+this question, same caveat as every prior verify soak in this cluster.
 
-**Step 1 — implement a bounded ring-buffer breadcrumb.** In `~/Documents/Tools/N64Recomp/
-fixup_game_funcs.py`, extend the existing `drainMeshReleaseQueue` guard machinery (search
-`0x800081AC`/`0x800081C4` anchors, same function as s350/s351's guards) to record the last 8 `v1`
-values walked PLUS a per-call loop-iteration counter into a small static ring buffer (no fprintf per
-iteration — that would blow the log budget per iron rule 3). On the guard's bail path (invalid v1
-detected), dump the ring buffer once: `[drain-mesh-ring] idx=N v1[0..7]=... iter_at_bail=M`. This is a
-new diagnostic, not a behavior change — same env-var-gated shape as the existing guards
-(`ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD`, already armed by default in `run_s327waitpump.sh`).
+**Step 2 — compare `iter_at_bail` across the 2 (or more, if any older raw logs from s350/s351 happen to
+have compatible data — they won't, the ring buffer is new this session) crashing runs where it fired.**
+- **Consistent** (same `iter_at_bail`, or same value at the same ring `idx` position): supports H1
+  (stale/prematurely-freed list node at a fixed list depth) or H2 (fencepost walking off a
+  legitimately-short list into the next heap block's header — distinguish H1 vs H2 by checking whether
+  `v1[idx-1]` i.e. the last GOOD entry before the bad one looks like a plausible list-node address vs.
+  whether the bad `0x00010001` value itself looks like a packed heap-block-header field, per item -208's
+  original H2 framing). Next step: source-read what's allocated/freed/enqueued at that specific walk
+  depth — trace the `enqueueMeshForDeferredRelease`/dequeue call sites (`funcs_3.c`, adjacent to
+  `drainMeshReleaseQueue`) for whatever happens at iteration N of a call.
+- **Inconsistent** (different `iter_at_bail` values, no shared pattern): supports H3 (independent bugs
+  sharing only the ~74s/~143s activity-burst trigger window, per item -208's timing finding) or H4 (an
+  unrelated upstream free). Next step: escalate to caller-side tracing — what calls
+  `drainMeshReleaseQueue`, and what runs immediately before it in the relevant window, per the existing
+  `[dma-ring-consumer]`/`[vi-fs-decision]` breadcrumbs already in these logs (no new instrumentation
+  needed to start that trace, just re-reading with those tags in mind).
 
-**Step 2 — full regen + rebuild** (see Environment notes below), queue 2 verify soaks
-(`s352_ringbuffer_verify1/2.sh`, `HOLD_S=240`, same `run_s327waitpump.sh` template as s350/s351's
-recipes — copy `s351_drainmeshwriteguard_verify1.sh` and rename).
+**Step 3 — write the conclusion into CURRENT-TRUTH regardless of which way it splits.** Iron rule 4 (two
+independent lines of evidence) applies: 2 verify runs each showing a `[drain-mesh-ring]` fire is the
+minimum bar, not a settled conclusion — if only 1 fires, this iteration produces a single-source
+data point, label it as such and queue 2 more `s353_ringbuffer_verify3/4.sh` (same template, just bump
+the label) before concluding either way.
 
-**Step 3 — read the ring-buffer dumps.** If `iter_at_bail` (or the position of the poisoned value
-within the ring) is the SAME across both verify runs (and matches a 3rd historical run if one can be
-found in the existing raw logs — check if s350/s351's crash logs already have enough context to
-back-compute iteration count, e.g. via any existing loop counter breadcrumb): H1/H2 supported, next
-step is finding what's allocated/freed at that exact position (source-read the enqueue/dequeue call
-sites feeding this queue). If it varies materially: H3/H4 supported, escalate to caller-side tracing
-(who calls `drainMeshReleaseQueue`, and what runs immediately before it in the ~143s window per the
-existing `[dma-ring-consumer]`/`[vi-fs-decision]` breadcrumbs already in these logs).
+**Budget**: this is iteration 2 of `m5-audio-destub-linkedlist-corruption-source` (s352 opened it,
+s353 landed the instrument, this iteration reads the first data). Fresh per iron rule 8 — 2 more
+iterations available on this slug before a mandatory pivot check.
 
-**Budget**: this is iteration 1 of `m5-audio-destub-linkedlist-corruption-source`. Fresh budget per
-iron rule 8.
-
-## Environment notes (carried forward — see s327-352 for full detail)
+## Environment notes (carried forward — see s327-353 for full detail)
 
 - Regen paths: `/Users/williambuckley/Documents/Tools/N64Recomp` (`fixup_game_funcs.py`, untracked,
   confirmed outside this repo's `lib/`/submodule-patches system). Delete `RecompiledFuncs/*.c` before
@@ -97,10 +85,9 @@ iron rule 8.
   (BREADCRUMB15, s349) is fully instrumented — its `last-guest-pc` is always precise.
 - The raw `run.log` under `scratch/s73_post_a_scene/<label>/run.log` (not just the
   `scratch/agent/soak_results/*.log` summary) is where per-line diagnostic tags like
-  `[drain-mesh-tail-guard]`/`[scene-node-content-guard]`/`[phase] vi_width=...` actually live — the
-  summary logs only capture the LAST few lines of each. Grep the raw log directly for full history
-  (e.g. every `[phase] vi_width=` line, or a value's full firing count) — s352 found this necessary to
-  confirm the VI-transition timing and the guard value cross-session matches.
+  `[drain-mesh-ring]`/`[drain-mesh-tail-guard]`/`[drain-mesh-write-guard]`/`[phase] vi_width=...`
+  actually live — the summary logs only capture the LAST few lines of each. Grep the raw log directly
+  for full history.
 - Soak driver: `scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, invoked with
   `env HOLD_S=<n> zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>` (`env` prefix required —
   project rule 10 / CLAUDE.md). Log lands at `scratch/s73_post_a_scene/<label>/run.log`.
@@ -112,6 +99,6 @@ iron rule 8.
   `r"0x8008E(?:C88)"` — matches ONLY `reapplyDisplayMode` (`0x8008EC88`, force-zeroed);
   `setDisplayMode` (`0x8008EB40`) stays unmatched/reversed.
 
-HYPOTHESIS-ID: m5-audio-destub-linkedlist-corruption-source (iteration 1 — opened s352). Parent step-5
-hypothesis (item -203) pivot check completed s352 (item -208); this new thread is its direct successor,
-not on the parent's old budget.
+HYPOTHESIS-ID: m5-audio-destub-linkedlist-corruption-source (iteration 2 — opened s352, instrument
+landed s353). Parent step-5 hypothesis (item -203) pivot check completed s352 (item -208); this thread
+is its direct successor, not on the parent's old budget.
