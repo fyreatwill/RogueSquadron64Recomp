@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    target, not a hard floor — the "Current truth" env-var/timeline prose and the Regeneration section's
    Standing warnings stay intact deliberately; both are used every iteration for phase-gating and build
    commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 15 times so far (s303-325); s321-322 were pure grep/read, no reversal needed. **The 14-call-gap AND the 37-vs-40 gap are now BOTH CLOSED (`HYPOTHESIS-ID: m5-audio-destub-step4-tick37-vs-hardstop40`, s303-325)**: s325 found the gap was a 4th instance of a sampling-cap illusion — gate1's diagnostic print cap (`n<40`) was silently hiding 31 real invocations past `n=39`; widening it to `n<4096` in the same soak found gate1 fires 71 times total (33 real calls), gate2 4/4, gate3 0 — summing to exactly 37, matching the tick-producer functions' own independent entry count in the same run. Full detail Next-steps item -183. **The successor thread is now `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-vi320-hang`**: the call-count mystery is solved, but the actual M5 step 4 blocker remains — reversing `setDisplayMode`'s gate-byte site still reliably hangs the process at VI=320/rdpFs=39 before ever reaching the title screen (VI=1024), and nobody has yet root-caused *why*. That's the next work unit.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 15 times so far (s303-325). **The 14-call-gap AND the 37-vs-40 gap are CLOSED** (`m5-audio-destub-step4-tick37-vs-hardstop40`, s303-325 — sampling-cap illusion in gate1's diagnostic print cap, item -183). **`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-vi320-hang` (s326): the VI=320 hang mechanism is now fully traced, source-read only, no soak needed** — `runVideoFrameTick` (the per-VI-frame tick driver, `funcs_0.c:1459`) calls `musyxNoopStub` first thing every frame; once the gate byte is reversed, `musyxNoopStub` takes its "audio active" branch into `waitForMusyXAudioTaskDone`, which busy-spins with zero yield instructions on a countdown that only an unreached `musyxSynthFrame` call can decrement — so the VI-tick function itself deadlocks on its first line of work, freezing VI at whatever count it last reached. Confirms the exact risk `docs/M5-AUDIO-PLAN.md` §3/§4 already predicted ("needs a source-level fix in the ucode's task-completion signaling, not a gate re-revert"). Full detail item -184. Next work unit: patch the spin loop to pump real M_AUDTASK dispatch inline instead of waiting on an undecrementable countdown, then soak for VI progression past 320.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,7 +148,43 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -183 (s325); the next new item takes -184 and is inserted at the top.
+oldest). Current top is -184 (s326); the next new item takes -185 and is inserted at the top.
+
+-184. **(s326) M5 audio de-stubbing: pure source-read fully traces the `setDisplayMode` VI=320 hang to a
+    concrete mechanism — `runVideoFrameTick` calls `musyxNoopStub` first thing every frame, which spins
+    forever on a countdown only an unreached `musyxSynthFrame` call can decrement.** Ran NEXT.md's
+    suggested first step exactly as written — read `setDisplayMode`'s full body — and it explained the
+    hang without any build or soak. `setDisplayMode`/`reapplyDisplayMode` (`funcs_23.c:9586-9804`,
+    `9805-10023`) are structurally identical: each unconditionally zeroes the gate byte at entry (an
+    existing, un-patched store), runs a chain of real audio-setup calls (`initAudioSubsystem`,
+    `resetSongSubsystemCounter`, `initSongSequencerPools`, `resetMusyXEngineState`,
+    `clearStreamedVoiceFlags`, `reset3DAudioLists`), then only at the very end sets the gate byte back to
+    1 — the two patched sites are that final re-enable store, nothing more. Traced the consumer chain
+    address-by-address: `musyxNoopStub` (`funcs_23.c:10098`) reads the gate byte and, if nonzero, calls
+    `waitForMusyXAudioTaskDone` (`funcs_24.c:5425`), which seeds a countdown at RAM `0x8014998A` to
+    `0x10` and busy-spins (`funcs_24.c:5448-5461`, confirmed zero `jal`/yield instructions in the loop
+    body) waiting for it to reach 0. `shutdownAudioEngine` (`funcs_24.c:5143`) has the byte-for-byte
+    identical pattern on the same address. Exhaustively grepped this RAM offset across every
+    `funcs_*.c`: **3 total references** — the two seed sites above, and exactly **one decrement site**,
+    inside `musyxSynthFrame`, which subtracts a DMA-batch count right after calling
+    `submitDmaRequestBatch` (a real, unstubbed routine). Call-site tracing closes the loop:
+    `setDisplayMode`'s only caller is boot-bootstrap code (`funcs_0.c:291-537`); `musyxNoopStub`'s only
+    caller is **`runVideoFrameTick`** (`funcs_0.c:1459`) — as the literal first call in that function's
+    body, right after its prologue. **Mechanism**: once the gate byte is reversed, the very next
+    `runVideoFrameTick` — the per-VI-frame tick driver itself — calls `musyxNoopStub`, which now takes
+    the "audio active" branch into a spin that can never make progress (its own loop can't invoke the
+    only decrementer), so the VI-tick function itself deadlocks on its first line of work. This is not a
+    new bug — it's exactly the risk `docs/M5-AUDIO-PLAN.md` §3 row 1 / §4 step 4 (lines 121, 199-201)
+    already named as "the single highest-risk regression of this whole plan" and predicted almost
+    verbatim ("needs a source-level fix in the ucode's task-completion signaling, not a gate re-revert")
+    — this session turns that prediction into a fully address-level trace; 15 prior reversal sessions
+    (s303-325) hit this hang without reading past the gate-byte store to see what runs downstream. **Next
+    work unit**: patch `waitForMusyXAudioTaskDone`/`shutdownAudioEngine`'s spin loop to pump real
+    M_AUDTASK dispatch (confirmed live and crash-free by s300 step 2) inline each iteration instead of
+    waiting on an undecrementable countdown, then soak for VI progression past 320 to title (VI=1024).
+    `HYPOTHESIS-ID` unchanged (`m5-audio-destub-step4-setdisplaymode-vi320-hang`, 1st of 3 budgeted
+    iterations — pure source-read, no soak spent). No code changed this session; nothing under `lib/`
+    touched. Full detail: `PORTING-STATE` Session 326.
 
 -183. **(s325) M5 audio de-stubbing: CLOSES the tick37-vs-hardstop40 hypothesis — the "37 vs 40"/14-call
     gap was a 4th instance of the sampling-cap-illusion bug, not a measurement error or an unlocated call

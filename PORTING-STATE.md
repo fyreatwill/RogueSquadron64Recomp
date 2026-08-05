@@ -28545,3 +28545,78 @@ never a formally-recorded overturned conclusion, just an open Next-steps item �
 not retracted). No code under `lib/` touched this session (only `N64Recomp/fixup_game_funcs.py`, an
 untracked loose file in a sibling tool directory, not a submodule of this repo) — no
 `submodule-patches/export.sh` needed.
+
+## Session 326 (2026-08-04) — M5 audio: pure source-read fully traces the `setDisplayMode` VI=320 hang to a concrete mechanism — `runVideoFrameTick` calls `musyxNoopStub` first thing every frame, which spins forever in `waitForMusyXAudioTaskDone` on a countdown only a not-yet-reached `musyxSynthFrame` call can decrement
+
+Ran NEXT.md's suggested first step exactly as written ("read `setDisplayMode`'s full body... this alone
+may explain the VI=320 hang without needing a new instrumented soak — try it first") and it did. No
+build, no soak, no code change this session — pure static read across
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c`, `funcs_23.c`, `funcs_24.c`.
+
+**What `setDisplayMode`/`reapplyDisplayMode` actually do, un-patched** (both are structurally identical
+— read both in full, `funcs_23.c:9586-9804` and `9805-10023`): each **unconditionally zeroes the gate
+byte (`0x800A0F50`) at entry** (an existing, un-patched store — `0x8008EA34`/`0x8008EB7C`), then calls a
+chain of real audio-setup functions (`initAudioSubsystem`/`reapplyAudioConfig`, `resetSongSubsystemCounter`,
+zeroes several buffers, `initSongSequencerPools`, `resetMusyXEngineState`, `clearStreamedVoiceFlags`,
+`reset3DAudioLists`), and **only at the very end sets the gate byte back to 1** (`0x8008EB40`/`0x8008EC88`
+— the two patched sites). So the patch's actual effect is narrow and precisely what its own comment says:
+it's the *only* thing preventing these two functions from re-enabling the audio-engine-active flag after
+doing real setup work. Reversing it doesn't change what runs *inside* these two functions at all — both
+already run their full real body every time regardless of patch state — it only changes what every
+*other* gate-byte reader sees afterward.
+
+**The consumer chain that actually hangs, fully traced address-by-address**:
+- `musyxNoopStub` (`funcs_23.c:10098`, guest `0x8008ED00`) reads the gate byte; if nonzero, calls
+  `waitForMusyXAudioTaskDone` (`funcs_24.c:5425`, guest `0x80091EB0`).
+- `waitForMusyXAudioTaskDone` seeds a 16-bit countdown at RAM `0x8014998A` (`0x8015<<16 - 0x6676`) to
+  `0x10`, then busy-spins (`L_80091ED0`, `funcs_24.c:5448-5461`) `while (countdown != 0)`. The loop body
+  is `lui`/`lhu`/`sll`/`bgtz`/`nop` only — **zero `jal`/yield instructions**, confirmed by reading every
+  line of the loop. `shutdownAudioEngine` (`funcs_24.c:5143`, guest `0x80091D40`, called from
+  `shutdownMusyXEngine` when gate≠0) has the byte-for-byte identical seed-then-spin pattern at
+  `funcs_24.c:5166-5178` on the *same* countdown address.
+- Exhaustively grepped this exact RAM offset (`0X6676`) across every `funcs_*.c` in the whole
+  `RecompiledFuncs` tree: **3 total references, all in `funcs_24.c`** — the two seed-sites above, and
+  exactly **one decrement site**, inside `musyxSynthFrame` (`funcs_23.c` — actually `funcs_24.c` around
+  line 4020-4034, the same function containing the already-known `tickAllActiveSongs`/
+  `tickAudioSequencerFrame` calls from the closed s325 hypothesis), which subtracts a DMA-batch count
+  from the countdown right after a `jalr` to `submitDmaRequestBatch` (`funcs_1.c:6157`, guest
+  `0x8000569C`, a real — not stubbed — low-level DMA-batch submission routine). No other write to this
+  address exists anywhere in the recompiled game code; this is exhaustive, not sampled.
+- **Call-site tracing closes the loop**: `setDisplayMode`'s only static caller is `funcs_0.c:486`
+  (guest `0x80000D8C`), inside the function spanning `funcs_0.c:291-537` (boot-bootstrap code — calls
+  `osStopThread`/`loadDebugAssets`/`osCreateMesgQueue`/`osRecvMesg`/`osInvalICache`/`initSiQueue`/
+  `installPeriodicCallback` before reaching `setDisplayMode`; none of those touch `musyxSynthFrame` or
+  the countdown). `musyxNoopStub`'s only static caller is `funcs_0.c:1488` (guest `0x80001388`), inside
+  **`runVideoFrameTick`** (`funcs_0.c:1459`) — as literally the first real call in that function's body,
+  right after its register-save prologue. `shutdownMusyXEngine` has **no callers at all** (dead code via
+  direct `jal`; only reachable indirectly if ever).
+
+**The mechanism, end to end**: with the gate-byte patch reversed, `setDisplayMode` returns with the byte
+= 1. The very next time `runVideoFrameTick` — the per-VI-frame tick driver itself — runs, its first
+action is `musyxNoopStub`, which now takes the "audio active" branch into `waitForMusyXAudioTaskDone`,
+which seeds the countdown to 16 and spins with no yield instruction anywhere in its loop, waiting for a
+`musyxSynthFrame` invocation (the only possible decrementer) that can never run *from inside this spin* —
+and since `runVideoFrameTick` never returns, VI progression itself (whatever drives it) stalls exactly
+where the run stops advancing. This isn't an indirect scheduler-adjacent side effect; **the per-frame VI
+tick function is directly the one deadlocking**, which is why the process freezes at a fixed VI count
+(320) rather than degrading or crashing.
+
+**This is not a new bug** — it's exactly the risk `docs/M5-AUDIO-PLAN.md` §3 row 1 and §4 step 4
+(lines 121, 199-201) already named as "the single highest-risk regression of this whole plan" and
+predicted almost verbatim: *"needs a source-level fix in the ucode's task-completion signaling, not a
+gate re-revert."* This session's contribution is turning that prediction into a fully address-level
+mechanism trace (previously it was inherited only from the original patch-author's code comment,
+un-reverified) — 15 sessions of reversal soaks (s303-325) hit this hang without anyone reading past the
+gate-byte store itself to see what actually happens downstream.
+
+**What remains open, concretely, for the next iteration**: the fix direction the plan already named —
+make forward progress possible during the spin, e.g. by making `waitForMusyXAudioTaskDone`/
+`shutdownAudioEngine`'s loop body explicitly pump/call the real M_AUDTASK dispatch (confirmed live and
+crash-free by s300's step 2 soaks) inline every iteration instead of waiting on a countdown nothing
+decrements from within the spin, then soak to see whether VI progresses past 320 to title (VI=1024)
+with `setDisplayMode`'s site reversed. This is a source patch + soak, not further source-reading — the
+mechanism question NEXT.md set out to answer is closed.
+
+`HYPOTHESIS-ID` unchanged (`m5-audio-destub-step4-setdisplaymode-vi320-hang`, 1st of budgeted 3
+iterations — this session was pure source-read as NEXT.md prescribed, no soak spent). No code changed
+this session (read-only investigation); nothing under `lib/` touched, no `export.sh` needed.
