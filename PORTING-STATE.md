@@ -30071,3 +30071,46 @@ the loop's own drained verdicts being uninterpretable. 2nd iteration on this hyp
 reopen (methodology, not yet a 3rd repeat of the same experiment — budget rule 8 unaffected). Next session
 should read `m5step5v3_rate_1/2`'s verdicts (drained by the loop) and, if `runlog_bytes` is back in the
 normal 76-233 MB band, proceed with step 5's actual classification work per NEXT.md.
+
+## Session 346 (2026-08-05) — MAINTENANCE: compacted `docs/CURRENT-TRUTH.md` 670→464 lines (60,543→~40,100 bytes), migrating the closed s297-337 M5 gate-reversal arc to `docs/PROJECT-OVERVIEW.md` §9; folded in the 2 already-landed `m5step5v3_rate_1/2` soak verdicts, which confirm s345's log-blowup fix and surface a possibly-new crash signature
+
+Step 0 of `tools/agent/ITERATION.md` triggered (`wc -c docs/CURRENT-TRUTH.md` = 60,543, over the 60,000
+threshold), so this session ran the maintenance pass instead of the queued M5 step-5 experimental work.
+
+**Compaction**: `docs/CURRENT-TRUTH.md` was carrying 3 fully-superseded Next-steps ranges (items
+-160..-181, -182..-187, -188..-194 — 86 lines / 8.5 KB) documenting the closed s297-337 M5
+audio-gate-byte-reversal and VI=640-stall measurement-chasing arc (41 sessions, fully resolved by item
+-195's s339 source proof). Migrated the full one-paragraph-per-lineage detail to
+`docs/PROJECT-OVERVIEW.md` §9 (joining the existing 9-lineage summary from the s314 maintenance pass,
+now retitled to cover s99-s337), and replaced the 3 ranges with a single ~10-line summary item
+(`-160..-194`) in CURRENT-TRUTH, matching §9's own established style. Also compressed the 4 most recent
+Next-steps items (-198 through -201, still active/current) by tightening prose without dropping any
+discriminating fact, trimmed several already-terse "Overturned conclusions" entries further, and folded
+redundant M5-status prose out of the USER DIRECTIVE header (item 2), which had been substantially
+duplicating what items -195 through -201 already say in full. Net: 670→464 lines (206 lines, exceeds
+the 200-line ADVANCED bar), 60,543→~40,100 bytes (34% reduction; short of the 35 KB stretch target but
+that's explicitly not a hard floor). Renumbering: no gaps introduced, `-201` unchanged as current top,
+`-202` still the next slot. No experiments run this session (Step 0 mandates this).
+
+**Folded in 2 new soak verdicts** (both landed via the loop's between-iteration soak queue, read per the
+"Consume" contract in ITERATION.md, not a session-run experiment): `m5step5v3_rate_1` (rc=1, wall≈156s)
+and `m5step5v3_rate_2` (rc=0, wall≈420s), both from the `${VAR:-1}`-fixed driver s345 landed. **Positive
+control passed**: both `runlog_bytes` back in the normal band (57.2 MB / 62.1 MB, vs. the 8.2-8.7 GB
+`rc=137` blowup s345 diagnosed and fixed) — confirms the s345 fix works, no more recipe-artifact
+`rc=137`. `rate_2` is clean: title reached 44.8s, ran the full 240s hold with 0 crash markers, landed in
+the already-characterized benign `pairs=0/stalled=1` VI=640-ish plateau (origin 0x6AB400, vi=0x656000 —
+matches the documented menu VI pair). `rate_1` is NOT clean: title reached 45.2s, the scheduled `[keys]`
+schedule fired through `hold_10` (the first scheduled stick input, `sr` at +10s into the hold window),
+then the process died — `last-guest-pc=0x80010b7c`, `pc-symbol=allocOrEvictMaterialNode+944`
+(`funcs_6.c`), 36 `[CRASH]` lines, launcher log shows "game process gone at hold-iter 12" (i.e., within
+~12s of hold start). **This PC/symbol does not match any previously-catalogued crash signature** — not
+`tickWrappingTimerAccumulatorList`'s div-by-zero (`0x80054744`), not the `emitAllocatedDLCommand`/
+`submitSceneNodeRender` SIGBUS family (`0x80008928`-adjacent), not `waitForAnyAudioSlot` (which per
+M5-AUDIO-PLAN §3 kills pre-title, and this crash is well past title). Grepped `docs/` and
+`PORTING-STATE.md` for `allocOrEvictMaterialNode` and the PC — zero prior hits. Single data point; per
+Iron Rule 4 this is NOT yet evidence of a new crash family, only a candidate. Queued 2 more soaks on the
+identical v3 template (`scratch/agent/soak_queue/m5step5v3_rate_3.sh`/`_4.sh`) to build toward both a
+real crash-family #3/#4 rate estimate and a confirmation/non-recurrence read on
+`allocOrEvictMaterialNode` — not run this session (maintenance iteration, no experiments). `HYPOTHESIS-ID
+m5-audio-destub-step5-crashrate-comparison` still open: 1 crash (uncatalogued signature) + 1 clean out of
+2 real (non-artifact) data points so far, well short of a rate conclusion. `lib/` not touched.

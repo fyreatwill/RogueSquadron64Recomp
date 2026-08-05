@@ -294,7 +294,7 @@ next writes a soak diagnostic:
 - Five frames per run does not average out camera motion, so even aggregate `pixel_stats.py` metrics
   are confounded when runs sample different moments (s18).
 
-## 9. Closed investigation lineages (s99–s294), migrated from CURRENT-TRUTH.md s314 maintenance pass
+## 9. Closed investigation lineages (s99–s337), migrated from CURRENT-TRUTH.md s314/s346 maintenance passes
 
 Full detail for all of these lives in `PORTING-STATE.md` at the session ranges cited; this is the
 one-paragraph-per-lineage summary that used to sit in `CURRENT-TRUTH.md`'s Next-steps list as items
@@ -302,6 +302,33 @@ one-paragraph-per-lineage summary that used to sit in `CURRENT-TRUTH.md`'s Next-
 CURRENT-TRUTH). None of these are open work — they're kept so a future session doesn't re-open a
 question already answered.
 
+- **M5 audio gate-byte-reversal and VI=640-stall measurement chase (s297–s337) — CLOSED, superseded
+  by CURRENT-TRUTH item -195's source proof.** 41 sessions of instrumentation, each step's premise
+  overturned by the next. s297-301 built the investigation runway (`M5-AUDIO-PLAN.md`, a source read
+  of the audio-engine gate byte at `0x800A0F50`, an `[audtask-dispatch]` counter, a bounded-timeout
+  guard on `waitForAnyAudioSlot`). s302 reversed `initMusyXEngine`'s gate site — later found to be
+  dead code, never called (s306, see CURRENT-TRUTH Overturned Conclusions). s303-322 chased the 3
+  `musyxSynthFrame` countdown/period gates' ("gate1/2/3") "taken" reachability through 2 distinct
+  diagnostic bugs — an unwidened print cap silently truncating counts past n=40 (hit 4 times across 4
+  different diagnostics) and a TOCTOU re-read of a shared countdown word instead of the register the
+  real branch decision uses — before s325 closed it: the apparent "14 missing calls" gap was itself
+  the print-cap bug; the corrected combined count exactly matches the tick-producer functions' own
+  37-call total. s323-329 (M5-AUDIO-PLAN step 4) source-traced the `setDisplayMode` VI=320 hang to an
+  unpumped `musyxSynthFrame` spin loop inside `waitForMusyXAudioTaskDone`, landed a bounded pump fix,
+  and confirmed it clean 3/3 soaks (s327/328) — then found `reapplyDisplayMode`'s site (the 3rd/last
+  gate) caused a NEW, unrelated permanent graphics-task-submission stall at VI=640. s330-337 chased
+  that stall through 5 reachability probes — a 2nd unpatched spin loop inside
+  `waitForMusyXAudioTaskDone` (runtime-refuted), `runVideoFrameTick`'s full call-site set (one call
+  site found to be unreachable dead code, a false lead), `mainGameLoop` parking after one pass — down
+  to `cinematicLoopBody`'s own internal per-frame self-loop and its `static_6_800AF550` exit gate,
+  closed when item -195 (s339) source-proved `submitGfxFrame` structurally cannot produce a
+  `FramebufferPair` and the self-loop's one-time RDP-state prologue is ordinary locked-camera cutscene
+  behavior, not a stall. Confirmed along the way: `rs64_dmem_lock` is a genuine recursive mutex, and
+  the render/task/vi threads are genuinely independent OS threads — explaining why audio diagnostics
+  kept firing throughout every stall in this arc even with the game thread wedged.
+  `setDisplayMode`'s gate was reversed and re-reverted every session until s340 promoted both gates to
+  the permanent shipped default (CURRENT-TRUTH item -196). Full detail: `PORTING-STATE` Sessions
+  297-337.
 - **`composeNpcOrientationMatrix` whack-a-mole (s99–s261) — CLOSED.** Nine guards over 161 sessions
   before the real signature was found: a recurring "KSEG0 pointer + rdram-base, no `MEM_W`
   subtraction" bug in `renderUnlitMeshFaces`, closed for good s261 (`COMPOSE_NPC_GUARD9`, first-ever
