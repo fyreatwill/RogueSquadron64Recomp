@@ -1,55 +1,54 @@
 # NEXT work unit
 
-## s346 was a MAINTENANCE iteration (Step 0 triggered) — read this first
+## s347 drained rate_3/4 and found the discriminating result: 3/4 crashes, 3 DIFFERENT symbols
 
-`docs/CURRENT-TRUTH.md` hit 60,543 bytes, over the 60,000 threshold, so s346 compacted it
-(670→470 lines) instead of running an experiment. The closed s297-337 M5 gate-reversal/VI=640-stall
-investigation arc (3 Next-steps ranges, 86 lines) migrated to `docs/PROJECT-OVERVIEW.md` §9. While
-reading SOAK-RESULTS.md for the maintenance pass, 2 new verdicts had already landed
-(`m5step5v3_rate_1/2`, queued by s345): both confirm s345's `${VAR:-1}` log-blowup fix works
-(`runlog_bytes` back to 57-62 MB, no more `rc=137` artifacts), but `rate_1` crashed at
-`last-guest-pc=0x80010b7c`, `pc-symbol=allocOrEvictMaterialNode+944` — NOT a match for any
-already-catalogued crash signature (checked against `tickWrappingTimerAccumulatorList`'s div-by-zero,
-the `emitAllocatedDLCommand`/`submitSceneNodeRender` SIGBUS family, and `waitForAnyAudioSlot`). `rate_2`
-ran clean the full 240s hold. s346 queued 2 more soaks on the identical template
-(`scratch/agent/soak_queue/m5step5v3_rate_3.sh`/`_4.sh`) but did not run them (maintenance iteration).
-Full detail: `docs/CURRENT-TRUTH.md` item -202, `PORTING-STATE` Session 346.
+Landed data on the m5step5v3 template (n=4): `rate_1` CRASH `allocOrEvictMaterialNode+944`, `rate_2`
+CLEAN, `rate_3` CRASH `processSceneNode+1424`, `rate_4` CRASH `trackResourceListWithMappingTables+1192`.
+Zero repeats of any single symbol; zero hits on family #3 (`waitForAnyAudioSlot`) or family #4
+(post-cutscene stall) specifically, despite a 75% overall crash rate in the 4-run sample. This refutes
+"de-stubbing produced one new concentrated family #5" (`allocOrEvictMaterialNode` didn't recur) and
+supports "de-stubbing quieted #3/#4 specifically but the background crash rate in this window is still
+high, just diffused across other (mostly already-catalogued or singleton) sites." Full writeup:
+`docs/CURRENT-TRUTH.md` item -203, `PORTING-STATE` Session 347.
 
-## The work unit: drain m5step5v3_rate_3/4, classify allocOrEvictMaterialNode, continue the rate count
+## The work unit: drain m5step5v3_rate_5..8, extend the sample, watch for symbol recurrence
 
-**Step 1**: `tail -10 scratch/agent/SOAK-RESULTS.md` for `m5step5v3_rate_3`/`_4` verdicts (the loop
-drains up to 2 queued recipes between iterations — these may already be in). For each:
-- Confirm `runlog_bytes` stayed in the normal 50-70 MB band (if it didn't, the s345 fix regressed —
-  that would itself be a surprising, checkable finding).
-- Check `last_pc_symbol`. If it says `allocOrEvictMaterialNode+944` again, that's 2/4 — a real
-  candidate crash family, not a fluke; read the full verdict log
-  (`scratch/agent/soak_results/m5step5v3_rate_{3,4}_*.log`) and the matching `*_launcher.log` for
-  exactly which stick input preceded it (rate_1's crash landed right at hold_10, the first scheduled
-  stick press — check if that recurs). If it's a DIFFERENT symbol, or clean, note it as-is; don't force
-  a pattern out of 2-4 points.
+**Step 1**: `tail -10 scratch/agent/SOAK-RESULTS.md` for `m5step5v3_rate_5` through `_8` (the loop
+drains up to 2 per iteration between iterations — likely only 2 of the 4 will have landed by next
+read; that's fine, work with what's there). For each landed verdict:
+- Confirm `runlog_bytes` stayed in the 50-70 MB band (5th/6th/7th/8th confirmation the s345 fix holds
+  — flag any regression as itself a surprising, checkable finding).
+- Check `last_pc_symbol`. The single most information-dense outcome to watch for: does ANY symbol
+  from this batch match `allocOrEvictMaterialNode+944`, `processSceneNode` (any offset), or
+  `trackResourceListWithMappingTables+1192` from rate_1/3/4? A repeat of any one of these — especially
+  `processSceneNode`, which already has 3 distinct prior-session offsets (`+6668`, `+7640`, `+1424`)
+  suggesting it may be a recurring ambiguous-attribution family rather than 3 unrelated singletons —
+  would be the first real family candidate in this whole comparison.
 
-**Step 2 — source-read `allocOrEvictMaterialNode` if it recurs (≥2/4 hits)**: grep
-`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_6.c` for the function, read it around the +944 byte
-offset (compare against the function's disassembled structure — same technique s343 used for
-`tickWrappingTimerAccumulatorList`'s `break 7` trap: find what conditional/pointer-deref sits at that
-exact offset). Name says "alloc or evict a material node" — a plausible fit for a hangar/craft-select
-scene doing per-frame material-slot churn; check whether this looks like an OOB array index, a null
-deref, or a div/mod trap, same triage categories as every other crash family in the catalog.
+**Step 2 — update the tally**: after step 1, you'll have 6-8 total data points across rate_1 through
+rate_8. Recompute: overall crash rate (currently 3/4 = 75%), rate of family #3/#4 specifically
+(currently 0/4), and whether any symbol now has ≥2 hits (currently 0 symbols do). If a symbol reaches
+2+ hits, that's the discriminating threshold to escalate to a source-read (same technique s343 used
+for `tickWrappingTimerAccumulatorList`'s `break 7` trap): grep
+`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c` for the function, read around the byte offset,
+classify as OOB index / null deref / div-mod trap, same triage categories as every other cataloged
+family.
 
-**Step 3 — tally the rate**: after step 1/2, you'll have 4 real (non-artifact) data points total from
-the v3 family (`rate_1` crash, `rate_2` clean, `rate_3`/`_4` TBD). Compare against M5-AUDIO-PLAN §3's
-historical baselines (family #3 `waitForAnyAudioSlot` ~12-21% pre-title SIGSEGV rate; family #4
-post-cutscene stall, historically "every soak died earlier"). If `allocOrEvictMaterialNode` is
-confirmed recurring, it may be a NEW family #5 rather than #3/#4 — note that distinction explicitly,
-don't fold it into the #3/#4 count. 4 points is still a small sample; write 2-4 more `m5step5v3_rate_N`
-recipes (same template) before concluding a rate, per M5-AUDIO-PLAN's explicit warning against
-over-reading small samples.
+**Step 3 — budget-rule check**: this will be the 3rd iteration on `HYPOTHESIS-ID
+m5-audio-destub-step5-crashrate-comparison` counting from s347 (s345/s346 don't count, per their own
+notes). If this iteration produces another inconclusive "different symbol each time" result with no
+2+-hit family, Iron Rule 8 requires a pivot preamble on the 4th: write the hypothesis/evidence table
+explicitly into this file, and consider whether the highest-information-value next move is (a) a much
+larger batch (8-16 more soaks) to get a real per-family rate at this sample size instead of drip-
+feeding 4 at a time, or (b) closing step 5 as "post-title crash rate in this window is diffuse/
+long-tailed, no dominant family found in first 8-run sample" and moving to M3 idiom-class audits per
+the user directive's priority-3 fallback.
 
-HYPOTHESIS-ID: m5-audio-destub-step5-crashrate-comparison (4th iteration since s344's reopen — s345 was
-methodology repair, s346 was maintenance + passive fold-in, neither counts as a repeat of the same
-experiment for budget rule 8; this next iteration IS the experiment, watch the 3-strike rule from here).
+HYPOTHESIS-ID: m5-audio-destub-step5-crashrate-comparison (3rd iteration counting from s347; the NEXT
+iteration after this one is the 4th and would trigger Iron Rule 8's block if still inconclusive with
+no pivot preamble written).
 
-## Environment notes (carried forward — see s327-346 for full detail)
+## Environment notes (carried forward — see s327-347 for full detail)
 
 - Regen paths: `/Users/williambuckley/Documents/Tools/N64Recomp` (`fixup_game_funcs.py`, untracked).
   Delete `RecompiledFuncs/*.c` before every `N64Recomp` run:
@@ -75,10 +74,19 @@ experiment for budget rule 8; this next iteration IS the experiment, watch the 3
   `run.log`.**
 - `[vi-fs-decision]` is an always-on native instrument (`lib/rt64/src/hle/rt64_state.cpp`), not
   env-gated — free in every soak, no arming needed.
+- `[CRASH][pc-symbol]` (host PC via `dladdr`, precise) and `[CRASH][last-guest-pc]` (a separately
+  tracked guest checkpoint, `g_rs64_last_guest_pc`, updated at recompiled-function/jump boundaries —
+  NOT necessarily the guest instruction under the exact host crash PC) answer different questions by
+  design (`src/main/main.cpp:1740-1786`, s206). A mismatch between them across a crash is expected, not
+  itself evidence of an instrument bug — always trust `pc-symbol` for "what function crashed."
 - Any soak recipe testing for a SPECIFIC crash must check `last-guest-pc`/`pc-symbol` against that
   crash's own signature, not just "did `[CRASH]` fire" — RS64 has ~20+ independent, already-catalogued
   crash families that can fire nondeterministically at any point (s344's method-trap finding,
-  `docs/CURRENT-TRUTH.md` Method traps section).
+  `docs/CURRENT-TRUTH.md` Method traps section). `processSceneNode` specifically has at least 3
+  distinct documented crash offsets across sessions (`+6668`, `+7640` pre-s295; `+1424` s347) and is
+  flagged in its own s151 write-up as possibly nearest-symbol-misattribution-prone at large offsets —
+  treat a `processSceneNode` hit at ANY offset as the same suspect family until proven otherwise, not
+  as a fresh singleton each time.
 - `rc=137` (SIGKILL at the loop's 600s hard cap) does NOT necessarily mean the GAME hung — it can mean
   the RECIPE's own post-processing didn't finish in time (s345's finding). Always check the launcher
   log's own `done wall=Ns` line and the run.log's byte size before reading a 600s timeout as a game-side

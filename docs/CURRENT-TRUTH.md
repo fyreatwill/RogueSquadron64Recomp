@@ -15,9 +15,10 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: design doc + steps 1-3 DONE (s298/300/301). Step 4 (`setDisplayMode`
    VI=320 hang, `reapplyDisplayMode` gate) is CLOSED and fix-validated — title-reach confirmed 3/3 as
    of s343 (item -199). Step 5 (crash-family #3/#4 rate comparison) is OPEN, `HYPOTHESIS-ID
-   m5-audio-destub-step5-crashrate-comparison`, 0 real data points as of s345 (item -201) — see
-   Next-steps items -195 through -201 for the full current state and the queued
-   `m5step5v3_rate_1/2.sh` recipes' verdicts as they land.
+   m5-audio-destub-step5-crashrate-comparison`, 4 real data points as of s347 (item -203): 0/4 hit
+   family #3/#4 specifically, but 3/4 crashed on 3 DIFFERENT other symbols — diffuse, not concentrated.
+   `m5step5v3_rate_5..8.sh` queued to extend the sample; 1 more iteration before the 3-strike budget
+   rule forces a pivot check.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -147,19 +148,44 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -202 (s346); the next new item takes -203 and is inserted at the top.
+oldest). Current top is -203 (s347); the next new item takes -204 and is inserted at the top.
+
+-203. **(s347) M5 step 5 crash-rate comparison, first real batch (n=4): 3/4 runs crashed but at
+    THREE DIFFERENT symbols — refutes "allocOrEvictMaterialNode is a new concentrated family #5",
+    supports "post-title window has a high (~75%) but diffuse crash rate, with family #3/#4
+    specifically absent."** Drained `m5step5v3_rate_3` (CRASH, `pc-symbol=processSceneNode+1424`,
+    `runlog_bytes=68.6MB`) and `_rate_4` (CRASH, `pc-symbol=trackResourceListWithMappingTables+1192`,
+    `runlog_bytes=55.9MB`) — both in the normal band, s345's fix holds. Neither matches item -202's
+    `allocOrEvictMaterialNode+944` (0/3 repeat since rate_1) — that stays a single, still-uncatalogued
+    data point, does not meet the bar for a guard. `processSceneNode` is itself a KNOWN
+    misattribution-prone multi-offset crash site (PORTING-STATE s151/152 documented `+6668`/`+7640`
+    crashes there before; `+1424` is a 3rd offset, likely the same nearest-symbol-ambiguity family, not
+    a new bug). `trackResourceListWithMappingTables+1192` has no prior crash citation anywhere in
+    `docs/`/`PORTING-STATE.md` (only a 2024-era unrelated duplicate-symbol-name mention) — genuinely
+    new, but a singleton like `allocOrEvictMaterialNode`, so not (yet) a family either. Net across the
+    4-run v3 batch: 0/4 hit family #3 (`waitForAnyAudioSlot`) or family #4 (post-cutscene stall)
+    specifically — the two named families this comparison was designed to rate — while 3/4 crashed on
+    something else entirely, each a different symbol. This splits the competing hypotheses: it refutes
+    "de-stubbing concentrated risk into one new bug" and is consistent with "de-stubbing didn't reduce
+    the post-title crash rate, just diffused it away from #3/#4 into whatever ~20+-family background
+    noise was already there." n=4 is still small (confirmed by design: each crash a *different* symbol
+    means no single-family rate is estimable yet). Queued `m5step5v3_rate_5..8.sh` (same template) to
+    extend the sample before drawing a firmer conclusion. `HYPOTHESIS-ID
+    m5-audio-destub-step5-crashrate-comparison` — 2nd iteration of the actual experiment (methodology
+    fixed s345, maintenance s346), 1 more iteration before the 3-strike budget rule triggers a pivot
+    check. `lib/` not touched. Full detail: `PORTING-STATE` Session 347.
 
 -202. **(s346) MAINTENANCE pass + 2 folded-in soak verdicts: s345's log-blowup fix CONFIRMED working,
     and one of the 2 real data points hit an uncatalogued crash — `allocOrEvictMaterialNode+944`,
-    single data point, not yet evidence.** Compacted CURRENT-TRUTH 670→470 lines (Step 0 triggered at
+    single data point, not yet evidence (superseded by item -203: still 1/4 as of s347, no repeat).**
+    Compacted CURRENT-TRUTH 670→470 lines (Step 0 triggered at
     60,543 bytes). `m5step5v3_rate_1` (rc=1) and `_rate_2` (rc=0) landed via the soak queue:
     `runlog_bytes` back to the normal 57-62 MB band (positive control for the `${VAR:-1}` fix passed).
     `rate_2` clean (full 240s hold, benign `pairs=0` plateau); `rate_1` crashed ~10-12s into the hold
     at `last-guest-pc=0x80010b7c`/`pc-symbol=allocOrEvictMaterialNode+944` — grepped `docs/` and
     `PORTING-STATE.md`, zero prior hits, no match to any already-catalogued post-title signature.
-    Queued `m5step5v3_rate_3/4.sh` (not run — maintenance iteration). `HYPOTHESIS-ID
-    m5-audio-destub-step5-crashrate-comparison` still open: 1 crash (uncatalogued) + 1 clean of 2 real
-    data points. `lib/` not touched. Full detail: `PORTING-STATE` Session 346.
+    Queued `m5step5v3_rate_3/4.sh` (not run — maintenance iteration). Full detail: `PORTING-STATE`
+    Session 346.
 
 -201. **(s345) The `m5step5v2_rate_1/2` soaks' `rc=137` was a recipe artifact, not crash-family
     #3/#4 signal — fix confirmed working by item -202.** Both hit the loop's 600s hard-cap despite

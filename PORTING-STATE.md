@@ -30114,3 +30114,124 @@ real crash-family #3/#4 rate estimate and a confirmation/non-recurrence read on
 `allocOrEvictMaterialNode` — not run this session (maintenance iteration, no experiments). `HYPOTHESIS-ID
 m5-audio-destub-step5-crashrate-comparison` still open: 1 crash (uncatalogued signature) + 1 clean out of
 2 real (non-artifact) data points so far, well short of a rate conclusion. `lib/` not touched.
+
+## Session 347 (2026-08-05) — M5 audio de-stubbing step 5: drained m5step5v3_rate_3/4 and found the discriminating result the whole batch was designed to produce — 3/4 crashes hit 3 DIFFERENT symbols, none a repeat of allocOrEvictMaterialNode, and 0/4 matched family #3 or #4 specifically
+
+**Read first**: `docs/CURRENT-TRUTH.md` item -203 (this session), item -202 (s346, the entry this
+supersedes-in-part). `scratch/agent/NEXT.md` as left by s346 named the exact discriminating check:
+does `allocOrEvictMaterialNode+944` recur across `rate_3`/`_4`?
+
+### What ran
+
+Nothing new was launched this session — s346's maintenance pass had already queued
+`m5step5v3_rate_3.sh`/`_4.sh` (same template as `rate_1/2`, `HOLD_S=240`, 4 heap-walker log vars
+opted to 0), and the loop's `run_soak_queue` drained both between s346 and s347 (2 runs, matching
+`SOAKS_BETWEEN_ITERS`). This session's work was reading the landed verdicts and the discriminating
+analysis, not producing new soak data.
+
+### What the 2 landed verdicts showed
+
+`scratch/agent/soak_results/m5step5v3_rate_3_20260805-113315.log`:
+```
+label=m5step5v3rate3 launcher_rc=0 runlog_bytes=68593452 crash_markers=37 rs_free_walk_lines=0 keys_lines(launcher)=7
+title_reached: phase width=1024 reached after 45.2s
+last_guest_pc: pc=0x80014fdc
+last_pc_symbol: pc=0x104bca844 sym=processSceneNode+1424 base=0x1044d4000
+VERDICT: CRASH_DETECTED
+```
+
+`scratch/agent/soak_results/m5step5v3_rate_4_20260805-113608.log`:
+```
+label=m5step5v3rate4 launcher_rc=0 runlog_bytes=55868627 crash_markers=36 rs_free_walk_lines=0 keys_lines(launcher)=5
+title_reached: phase width=1024 reached after 44.7s
+last_guest_pc: pc=0x8000b650
+last_pc_symbol: pc=0x10018c88c sym=trackResourceListWithMappingTables+1192 base=0x1000a4000
+VERDICT: CRASH_DETECTED
+```
+
+Both `runlog_bytes` (68.6 MB, 55.9 MB) sit in the normal 50-70 MB band — s345's `${VAR:-1}`
+log-blowup fix continues to hold, 4/4 for the v3 template now. `title_reached` fired at 44.7-45.2s in
+both, matching the 44.6-46.2s baseline.
+
+### The discriminating check: does allocOrEvictMaterialNode recur?
+
+No. `rate_1`'s crash (item -202) was `allocOrEvictMaterialNode+944`. `rate_3` is
+`processSceneNode+1424`. `rate_4` is `trackResourceListWithMappingTables+1192`. Three crashes, three
+different symbols — zero repeats of any single symbol across the whole 4-run batch (`rate_2` was the
+only clean run). This directly answers s346's open question: `allocOrEvictMaterialNode` is NOT a
+recurring family. It stays a single, uncatalogued data point (1/4), below the bar for a guard.
+
+### Are the other two symbols already-catalogued?
+
+Checked both against `docs/` and `PORTING-STATE.md` via grep before writing this up (Iron Rule 4 —
+two independent lines before anything enters the ledger as a conclusion; here the two lines are "not
+a repeat of rate_1" and "cross-checked against the existing crash catalog"):
+
+- `processSceneNode` is a KNOWN misattribution-prone, multi-offset crash site: Session 151/152
+  documents crashes at `processSceneNode+7640` (s151, called it possibly self-recursion or nearest-
+  symbol misattribution given the byte offset dwarfing the function's expected small per-node body)
+  and references `+6668` elsewhere (Session ~145-150 range). `+1424` this session is a 3rd distinct
+  offset at the same symbol. Read together with s151's own caveat about nearest-symbol
+  misattribution being plausible at large offsets, the most parsimonious read is that
+  `processSceneNode`'s three different crash offsets across sessions are the SAME underlying
+  ambiguous-attribution family recurring at different apparent byte offsets, not three separate bugs
+  — but this is not proven, only consistent with the existing caveat.
+- `trackResourceListWithMappingTables+1192` has NO prior crash citation anywhere in the ledger. The
+  only existing mention (PORTING-STATE ~line 108, an old symbol-table session) is an unrelated
+  duplicate-symbol-address bug fixed long ago, not a crash report. This is a genuinely new site, but
+  — like `allocOrEvictMaterialNode` — a singleton with n=1, not (yet) a family.
+
+### A note on why last-guest-pc and pc-symbol looked inconsistent (not a bug, resolved by reading the source)
+
+`rate_4`'s `last-guest-pc=0x8000b650` doesn't fall inside `trackResourceListWithMappingTables`'s own
+guest address range (`0x800538B0`+), which looked at first like a symbolization bug worth
+investigating. Reading `src/main/main.cpp:1740-1786` resolved it without new instrumentation:
+`[CRASH][pc-symbol]` is `dladdr()` on the HOST crash PC (`ss.__pc`, precise, chosen at s206
+specifically to avoid `backtrace_symbols`' frame-pointer-walk misattribution) while
+`[CRASH][last-guest-pc]` is a separately-tracked checkpoint variable (`g_rs64_last_guest_pc`), updated
+at guest recompiled-function/jump boundaries, not necessarily the guest instruction underlying the
+exact host-crash PC. The two fields answer different questions by design; a mismatch between them is
+expected, not evidence of a bug in the instrument.
+
+### Tally and what it discriminates
+
+4 real (non-artifact) data points on the m5step5v3 template: `rate_1` CRASH
+(`allocOrEvictMaterialNode+944`), `rate_2` CLEAN, `rate_3` CRASH (`processSceneNode+1424`), `rate_4`
+CRASH (`trackResourceListWithMappingTables+1192`). 3/4 (75%) crashed; 0/4 crashed at the SAME symbol
+as another run; 0/4 matched the historically-named family #3 (`waitForAnyAudioSlot`) or family #4
+(post-cutscene "every soak died earlier" stall) signatures specifically — the two families this whole
+step-5 comparison was designed to rate.
+
+This splits the competing hypotheses cleanly:
+- H1 "de-stubbing concentrated the risk into one new bug (`allocOrEvictMaterialNode`, candidate family
+  #5)" — REFUTED. 0/3 recurrence after rate_1.
+- H2 "de-stubbing didn't reduce the post-title crash rate at all, it just moved which symbol shows up
+  — family #3/#4 specifically go quiet but the background ~20+-family crash population is still live
+  and still fires at a similar overall rate" — SUPPORTED by this batch (0/4 on #3/#4, but 3/4 on
+  something).
+- H3 "de-stubbing measurably reduced the OVERALL crash rate in this window, #3/#4 or not" — cannot be
+  evaluated from this batch alone; would need a comparable pre-de-stub baseline crash rate for this
+  exact post-title/craft-select window (the existing family #3/#4 baselines are for different
+  windows/mechanisms, not directly comparable to a same-window all-cause rate).
+
+n=4 is still small — precisely BECAUSE each crash is a different symbol, no single-family rate is
+yet estimable, matching M5-AUDIO-PLAN's explicit warning against over-reading small samples. Queued
+`scratch/agent/soak_queue/m5step5v3_rate_5.sh` through `_8.sh` (identical template) to extend the
+sample before drawing a firmer conclusion on H2 vs H3.
+
+### What this does NOT show
+
+Does not show `processSceneNode` or `trackResourceListWithMappingTables` are new families requiring a
+guard (each n=1, same standard applied to `allocOrEvictMaterialNode`). Does not show the overall
+crash rate changed vs. pre-de-stub baseline (no comparable same-window baseline rate exists yet to
+compare against — a gap worth closing if the rate_5-8 batch keeps landing high). Does not change
+title-reach status (4/4 title-reach across this whole v3 batch, unaffected).
+
+### Housekeeping
+
+`docs/CURRENT-TRUTH.md` item -203 added (supersedes item -202's still-open status), USER DIRECTIVE
+M5 status line refreshed. `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison` — this is the
+2nd iteration of the actual experiment proper (s345 was methodology repair, s346 was maintenance +
+passive fold-in, neither counted toward the budget-rule-8 strike count per s346's own note). One more
+iteration on this same slug is allowed before Iron Rule 8's pivot-preamble requirement kicks in.
+`lib/` not touched this session, no `export.sh` needed.
