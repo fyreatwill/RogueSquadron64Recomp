@@ -159,7 +159,45 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -200 (s344); the next new item takes -201 and is inserted at the top.
+oldest). Current top is -201 (s345); the next new item takes -202 and is inserted at the top.
+
+-201. **(s345) The `m5step5v2_rate_1/2` soaks' `rc=137` was a recipe artifact — a known,
+    already-catalogued self-inflicted logging blowup (PORTING-STATE Session 209/210), not evidence of
+    crash-family #3/#4.** Both queued step-5 recipes hit the loop's 600s hard-cap despite their own
+    launcher logs showing the driven scenario (title reach, full `[keys]`/stick schedule through the
+    240s hold) completed cleanly at ~301s wall (`done wall=301s`, `game process still alive; killing` —
+    a normal launcher-initiated shutdown, not a game-side hang). The recipe's own post-launcher `grep`
+    passes over `run.log` never finished before the watchdog fired: `run.log` had ballooned to 8.2-8.7 GB
+    (vs. the 76-233 MB every other recipe in this family produces for a similar-duration run), with
+    `[rs-free-walk]` lines alone accounting for ~45% of a 200 MB sample of it — matching, almost
+    exactly, the 44-82% `[rs-free-walk]` share and ~40-55x volume blowup Session 209/210 already
+    root-caused and fixed for an unrelated bug hunt: `ROGUESQ_LOG_RS_FREE_WALK`/
+    `ROGUESQ_LOG_RS_MALLOC_WALK` log once PER LIST NODE walked (not once per call, unlike every other
+    `ROGUESQ_LOG_*` var in `run_s327waitpump.sh`), so on any run where the walker gets invoked enough
+    (e.g. once per tick through a long hold window against a free list that only grows) the resulting
+    fprintf volume itself burns enough real wall-clock to starve — and, worse, to outlast the loop's
+    watchdog budget for — the actual soak. Session 209/210 saw the SAME family (233 MB → 210 MB **lines**,
+    a ~47x jump) with byte-identical instrumentation between runs, so this is state/timing-dependent, not
+    purely a fixed instrumentation cost — `confirm1`/`confirm2` (s343/s344, same script family, same
+    `HOLD_S`) stayed in the normal 76-233 MB band while `m5step5v2_rate_1/2` didn't, despite no code or
+    config change between them. Root mechanism (why THIS run's free-list walk ran away) is still open;
+    what's closed is that the resulting `rc=137` is not itself game-side signal.
+    **Fix landed**: `run_s327waitpump.sh`'s 4 heap-walker log vars (`ROGUESQ_LOG_RS_MALLOC_WALK`,
+    `_GUARD`, `ROGUESQ_LOG_RS_FREE_WALK`, `_GUARD`) now use the `${VAR:-1}` pattern (matches the
+    pre-existing idiom already used for `ROGUESQ_LOG_THREAD_RESUME`) — default behavior unchanged (still
+    armed unless a recipe pre-exports 0), so every existing/queued recipe in this family is unaffected,
+    but a new recipe chasing a non-heap-walker signal can opt out without forking the whole 148-line
+    shared driver. `m5step5v2_rate_3/4` (queued, not yet run) were cancelled rather than run unmodified —
+    they would have reproduced the same artifact and wasted 2 more 600s slots for zero information
+    (`scratch/agent/soak_queue/cancelled/README.md` has the full note). Queued the corrected 3rd-generation
+    recipes (`m5step5v3_rate_1/2.sh`) with the 4 vars opted to 0 and a `runlog_bytes`/`rs_free_walk_lines`
+    field in the verdict so any future recurrence is visible without re-deriving it from file sizes by
+    hand. **Deleted** the two 8+ GB `run.log`s after extracting the discriminating samples above (disk
+    was at 84% used; not archived — regenerable by rerunning the cancelled recipes if ever needed, though
+    they wouldn't reproduce a NEW `rc=137` under the fixed driver's `_v3` default anyway). `HYPOTHESIS-ID
+    m5-audio-destub-step5-crashrate-comparison` still open, still 0 real data points toward the actual
+    crash-family #3/#4 rate question — this session was pure recipe-methodology repair, 2nd iteration on
+    this ID since reopen. Full detail: `PORTING-STATE` Session 345.
 
 -200. **(s344) M5 audio de-stubbing: neither queued confirmation soak reproduces the
     `tickWrappingTimerAccumulatorList` div-by-zero from item -199 — parked, not guarded; found and fixed

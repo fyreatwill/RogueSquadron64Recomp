@@ -1,55 +1,53 @@
 # NEXT work unit
 
-## s344 folded in the tickwrap-divzero confirmations (1/3 total, PARKED not guarded) and reopened M5-AUDIO-PLAN step 5 — read this first
+## s345 fixed the soak driver — read this first
 
-s343 found a NEW crash (`tickWrappingTimerAccumulatorList` div-by-zero, `last-guest-pc=0x80054744`) one
-soak stage past the restored title screen. s344 read the 2 queued confirmation soaks' FULL raw logs
-(not just the recipes' own naive "any `[CRASH]` = confirmed" summary) and found: confirm2's crash was a
-completely DIFFERENT, already-catalogued, unrelated bug (`emitAllocatedDLCommand`/`submitSceneNodeRender`
-SIGBUS family, `last-guest-pc=0x80008928`, x0=RDRAM-host-base pattern) — not a real confirmation.
-confirm1 ran fully clean through the entire hold window. **Net: 1/3 total observations of the specific
-div-by-zero signature** — not enough to land a guard (needs 2/2 matching), not a clean 0/2 either.
-`HYPOTHESIS-ID m5-audio-destub-tickwrap-divzero-craftselect` is PARKED, not closed: if a future soak's
-`last-guest-pc` is `0x80054744` again, reopen it and this time land the guard (idiom:
-`fixup_game_funcs.py:939-949`, match `do_break\(2147829572\);` in `tickWrappingTimerAccumulatorList`,
-bail setting `hi=0` before `L_80054748: mfhi $v1` — read `funcs_11.c:15310-15360` first to confirm `hi`'s
-downstream use, and check `main_overlay.txt:2031`'s note about 3 callers across `funcs_11/32/33`).
+s344's `m5step5v2_rate_1/2` both came back `rc=137` (SIGKILL at the loop's 600s hard cap), which
+NEXT.md's own plan would have read as crash-family #3/#4 evidence. It wasn't: both launcher logs show
+the driven scenario (title reach at ~45.8s, full `[keys]`/stick schedule through the 240s hold,
+`done wall=301-302s`) completed cleanly — the SIGKILL landed on the recipe's OWN post-launcher `grep`
+passes over an 8.2-8.7 GB `run.log` (vs. 76-233 MB for every earlier recipe in this family), which
+never finished before the watchdog fired. Root cause: a known, already-catalogued self-inflicted
+logging blowup (PORTING-STATE Session 209/210) — `ROGUESQ_LOG_RS_FREE_WALK`/`ROGUESQ_LOG_RS_MALLOC_WALK`
+log once PER LIST NODE walked, not once per call, and `[rs-free-walk]` was 44.7% of a 200 MB sample of
+this run's log, matching Session 209/210's 44-82% range and ~47x blowup almost exactly. Fixed
+`scratch/s73_post_a_scene/run_s327waitpump.sh` (the shared driver) to make those 4 vars
+default-overridable (`${VAR:-1}`, behavior-preserving for every other recipe) and queued
+`m5step5v3_rate_1/2.sh` with them opted to 0. Cancelled `m5step5v2_rate_3/4.sh` unrun (would have
+reproduced the same artifact). Full detail: `docs/CURRENT-TRUTH.md` item -201, `PORTING-STATE` Session 345.
 
-s344 ALSO found and fixed a soak-recipe methodology bug: `[keys]` lines are emitted by the launcher
-driver (`run_mission_keys.sh`) into its own `*_launcher.log`, never into the game's `run.log` — the
-`s343_tickwrap_divzero_confirm{1,2}.sh` recipes grepped the wrong file, so both self-reported
-`keys_lines=0` despite actually having driven the FULL key/stick schedule (confirmed by reading the
-launcher logs directly). **Title-reach is now confirmed 3/3** across independent soaks
-(s343revert/confirm1/confirm2), not 1/1 — a real strengthening, not just a repeat. Full detail:
-`docs/CURRENT-TRUTH.md` item -200, `PORTING-STATE` Session 344.
+## The work unit: drain m5step5v3_rate_1/2, confirm the fix, then resume step-5 classification
 
-## The work unit: drain the 4 queued step-5 recipes, then tally crash-family #3/#4 rates
+**Step 1**: `tail -10 scratch/agent/SOAK-RESULTS.md` for `m5step5v3_rate_1/2` verdicts (the loop drains
+up to 2 queued recipes between iterations, so these may already be in). For each, read the printed
+`runlog_bytes` field FIRST — this is the fix's own positive control:
+- If `runlog_bytes` is back in the 76-233 MB band (roughly 80,000,000-250,000,000) and `rs_free_walk_lines`
+  is low relative to total lines, the fix worked — proceed to Step 2 (real classification work) below.
+- If `runlog_bytes` is still in the multi-GB range despite `ROGUESQ_LOG_RS_FREE_WALK`/`_GUARD`/
+  `ROGUESQ_LOG_RS_MALLOC_WALK`/`_GUARD` being set to 0 in the recipe, the fix didn't fully address the
+  blowup (maybe a 5th log var is the real dominant cost, maybe the `${VAR:-1}` edit has a bug) — read
+  `scratch/s73_post_a_scene/run_s327waitpump.sh` lines ~107-118 to verify the edit took, then sample the
+  new run.log's line-tag distribution the same way this session did (`head -c 200000000 <file> | grep -ac
+  '\[TAG\]'` for whatever tag dominates) to find the NEW top offender.
+- If `rc=137` again but `runlog_bytes` is normal-sized this time, that's a genuine game-side stall
+  (family #4 candidate) for the first time this batch — treat as real signal, not artifact.
 
-**Step 1** (always do this first): `tail -10 scratch/agent/SOAK-RESULTS.md` — the loop drains up to 2
-queued recipes between iterations, so some or all of `m5step5v2_rate_1..4` may already have verdicts.
-For EACH one, read the printed `last_guest_pc`/`last_pc_symbol`/`title_reached` fields (now included in
-every verdict, no need to re-open the raw log) — this recipe generation fixes both bugs s344 found, so
-trust its own field reporting Instead of re-deriving it from scratch.
+**Step 2 — classify each crash by family** (per `docs/M5-AUDIO-PLAN.md` §3, unchanged from s344's plan):
+family #3 is `waitForAnyAudioSlot` pre-title SIGSEGV (check `pc-symbol`, note whether `title_reached`
+printed — family #3 kills BEFORE title). Family #4 is the post-cutscene stall (check the tail
+`[vi-fs-decision]` line for `pairs=0 stalled=1` persisting on an otherwise-clean-looking run). Any OTHER
+`pc-symbol` is background noise from an unrelated, already-catalogued family — note it, don't fold it in.
 
-**Step 2 — classify each crash by family, don't just tally rc**: per `docs/M5-AUDIO-PLAN.md` §3,
-crash-family #3 is `waitForAnyAudioSlot` pre-title SIGSEGV (historical ~12-21% of pre-scene soak
-deaths — check `pc-symbol` for `waitForAnyAudioSlot`, and note whether `title_reached` was ever printed:
-family #3 kills BEFORE title). Family #4 is the post-cutscene stall (not a crash marker at all — check
-the tail `vi_width`/`[vi-fs-decision]` lines for `pairs=0 stalled=1` persisting to the end of a clean-rc
-run). Any OTHER `pc-symbol` (like s344's `emitAllocatedDLCommand` hit) is background noise from an
-unrelated, already-catalogued family — note it, don't fold it into either family's rate.
+**Step 3 — decide if this is enough for a rate comparison**: 2 fresh data points plus whatever came before
+is still a small sample against the ~12-21% historical family #3 base rate. If `m5step5v3_rate_1/2` give a
+clean signal, write 2-4 more recipes (`m5step5v3_rate_3..6.sh`, same template, same env overrides) before
+concluding anything, per M5-AUDIO-PLAN's own explicit warning against treating 1-2 runs as conclusive.
 
-**Step 3 — decide if 4 soaks is enough for a rate comparison**: M5-AUDIO-PLAN step 5 explicitly warns
-against treating 1-2 clean runs as conclusive. If the 4 queued recipes give a clear signal (e.g. 0/4
-family #3, 0/4 family #4-stall) that's still a small sample against ~12-21% historical family #3 base
-rate — write 2-4 MORE recipes (`m5step5v2_rate_5..8.sh`, same template) before concluding a rate change,
-per budget rule 8 (this is a NEW hypothesis-id iteration count, not a continuation of the parked
-divzero thread — don't conflate the two when checking the 3-strikes rule).
+HYPOTHESIS-ID: m5-audio-destub-step5-crashrate-comparison (3rd iteration since s344's reopen — s345 was
+methodology repair, not a repeat of the same experiment; if step 2/3 above also comes back
+inconclusive/uninformative, that's the 3rd strike and budget rule 8 requires a pivot preamble next time).
 
-HYPOTHESIS-ID: m5-audio-destub-step5-crashrate-comparison (REOPENED s344, 1st iteration since reopen;
-originally opened s341, voided by s342's title-unreachability finding, now viable again).
-
-## Environment notes (carried forward — see s327-344 for full detail)
+## Environment notes (carried forward — see s327-345 for full detail)
 
 - Regen paths: `/Users/williambuckley/Documents/Tools/N64Recomp` (`fixup_game_funcs.py`, untracked).
   Delete `RecompiledFuncs/*.c` before every `N64Recomp` run:
@@ -63,18 +61,25 @@ originally opened s341, voided by s342's title-unreachability finding, now viabl
 - Current gate state (unchanged since s343): fixup regex at `fixup_game_funcs.py` ~line 263 is
   `r"0x8008E(?:C88)"` — matches ONLY `reapplyDisplayMode` (`0x8008EC88`, force-zeroed);
   `setDisplayMode` (`0x8008EB40`) stays unmatched/reversed. Verify via `funcs_23.c: audio gate patched
-  x1` in the fixup report. No rebuild needed for the queued `m5step5v2_rate_*` recipes.
+  x1` in the fixup report. No rebuild needed for the queued `m5step5v3_rate_*` recipes (no code change,
+  only the shared driver script's env-var defaults changed).
 - Soak driver: `scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, invoked with
   `env HOLD_S=<n> zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>` (`env` prefix required —
-  project rule 10 / CLAUDE.md). It arms EVERY diagnostic env var unconditionally already — no extra
-  vars needed. Log lands at `scratch/s73_post_a_scene/<label>/run.log` — grep it, don't read it
-  directly (200+ MB files). **`[keys]` lines land in the LAUNCHER's stdout/stderr
+  project rule 10 / CLAUDE.md). It arms EVERY diagnostic env var unconditionally EXCEPT the 4
+  heap-walker vars (s345 fix — `ROGUESQ_LOG_RS_MALLOC_WALK`/`_GUARD`/`ROGUESQ_LOG_RS_FREE_WALK`/`_GUARD`
+  now default to 1 but are overridable by pre-exporting 0, unlike every other var in the file). Log
+  lands at `scratch/s73_post_a_scene/<label>/run.log` — grep it, don't read it directly (can be 76-233
+  MB normally; check `runlog_bytes` before trusting a soak's post-processing to have actually finished
+  if a recipe doesn't print that field). **`[keys]` lines land in the LAUNCHER's stdout/stderr
   (`scratch/agent/soak_results/<label>_launcher.log` for queued recipes), NOT in the game's own
-  `run.log` — grep the right file** (s344's fix; the `m5step5v2_rate_*.sh` recipes already do this
-  correctly).
+  `run.log`.**
 - `[vi-fs-decision]` is an always-on native instrument (`lib/rt64/src/hle/rt64_state.cpp`), not
   env-gated — free in every soak, no arming needed.
 - Any soak recipe testing for a SPECIFIC crash must check `last-guest-pc`/`pc-symbol` against that
   crash's own signature, not just "did `[CRASH]` fire" — RS64 has ~20+ independent, already-catalogued
   crash families that can fire nondeterministically at any point (s344's method-trap finding,
   `docs/CURRENT-TRUTH.md` Method traps section).
+- **New method-trap (s345)**: `rc=137` (SIGKILL at the loop's 600s hard cap) does NOT necessarily mean
+  the GAME hung — it can mean the RECIPE's own post-processing (sequential greps over a huge log)
+  didn't finish in time. Always check the launcher log's own `done wall=Ns` line and the run.log's byte
+  size before reading a 600s timeout as a game-side stall.

@@ -30003,3 +30003,71 @@ against the specific target signature — RS64 has many independent, nondetermin
 already-catalogued crash families (this project has closed ~20+ of them), so a naive presence check
 will false-positive-confirm an unrelated bug at a nontrivial rate. Worth an audit pass over existing
 soak_queue templates for the same gap if this recurs.
+
+## Session 345 (2026-08-05) — the `m5step5v2_rate_1/2` `rc=137` verdicts were a recipe artifact (a known self-inflicted `[rs-free-walk]` logging blowup, PORTING-STATE Session 209/210), not crash-family #3/#4 signal; fixed the shared soak driver and cancelled/reissued the affected recipes
+
+**Read list**: `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md` (s344's writeup), `scratch/agent/SOAK-RESULTS.md`
+tail. Both `m5step5v2_rate_1/2` (the 2 recipes s344 queued, drained by the loop between iterations)
+came back `rc=137 | 600s` — a SIGKILL at the loop's hard cap. NEXT.md's own step 2/3 plan expected this
+outcome to mean either crash-family #3 (`waitForAnyAudioSlot` pre-title SIGSEGV) or family #4 (the
+post-cutscene stall); this session found it was neither.
+
+**Investigation.** Both recipes' verdict `.log` files (`scratch/agent/soak_results/m5step5v2_rate_{1,2}_*.log`)
+were EMPTY — the recipe's own `echo "VERDICT: ..."` lines never ran, meaning the whole process (launcher +
+post-processing) was killed before reaching them, not merely that the game hung. Read the launcher logs
+instead (`m5step5v2rate{1,2}_launcher.log`): both show a completely normal run — `phase width=1024 reached
+after 45.7-45.9s` (title), the full `[keys]`/stick schedule through the 240s hold, `hold done wall=275s`,
+`done wall=301-302s`, `game process still alive; killing` (the launcher's own routine post-hold kill, not
+a hang), then a clean `--- summary ---` block. **The game-side scenario the recipe was driving completed
+in ~301s, well inside the 600s budget** — the SIGKILL landed on something AFTER that.
+
+Checked `run.log` size for both: `m5step5v2rate1/run.log` = 8.2 GB, `m5step5v2rate2/run.log` = 7.9 GB.
+Every other recipe in this family (`m5step5rate1/2` at ~76 MB, `s343confirm1/2` at ~228-233 MB) produced
+1-2 orders of magnitude less. The recipe's post-launcher step is 6 sequential `grep -a` passes over
+`run.log` — on an 8+ GB file that never finished before the external 600s watchdog fired, which is why
+the verdict `.log`s were empty: the recipe itself was still grepping when it got killed.
+
+**Why the log blew up**: sampled the first 200 MB of `m5step5v2rate1/run.log` — 1,610,567 of 3,603,801
+lines (44.7%) are `[rs-free-walk]`. Grepped `PORTING-STATE.md` for that tag and found this EXACT failure
+mode already root-caused in Sessions 209-210 (2026-07-28, `unlitmeshtracer4/5/6`): `ROGUESQ_LOG_RS_FREE_WALK`
+and `ROGUESQ_LOG_RS_MALLOC_WALK` log once PER LIST NODE walked, not once per call like every other
+`ROGUESQ_LOG_*` var — Session 209 saw a 47x line-count blowup (4.49M → 210M lines) between two runs of the
+SAME script with byte-identical instrumentation, and Session 210 confirmed by elimination (stripped all but
+one `ROGUESQ_LOG_*` var, log volume dropped ~1470x, real game-tick progress resumed) that the volume itself
+was costing enough real fprintf wall-clock to starve actual game-logic progress — not a new behavioral
+regression, self-inflicted over-instrumentation. This session's numbers land in the same band: `[rs-free-walk]`
+share (44.7%) matches Session 209/210's observed 44-82% range, and the ~40-55x size blowup (76-233 MB → 7.9-8.2 GB)
+matches their ~47x line-count blowup almost exactly.
+
+**Open sub-question, not resolved this session**: WHY did this run's walk run away while `s343confirm1/2`
+(same script family, same `HOLD_S=240`, run 20 minutes earlier, no code or config change in between) stayed
+in the normal 76-233 MB band? Session 209/210's own evidence was that the walker's cost scales with however
+many times it gets invoked against however long the free list has grown — consistent with a timing/state-
+dependent trigger rather than a fixed per-run cost, but this session did not isolate what specifically
+differed between the two soaks. Flagged as open, not blocking: the actionable finding (rc=137 here is a
+recipe artifact) does not depend on resolving it.
+
+**Fix landed** (`scratch/s73_post_a_scene/run_s327waitpump.sh`, not `lib/`, no `export.sh` needed): the 4
+heap-walker log vars (`ROGUESQ_LOG_RS_MALLOC_WALK`, `_GUARD`, `ROGUESQ_LOG_RS_FREE_WALK`, `_GUARD`) now use
+the `${VAR:-1}` default-expansion pattern already used elsewhere in the same file for
+`ROGUESQ_LOG_THREAD_RESUME` — every existing recipe that doesn't pre-export these sees identical behavior
+(still armed, default 1), but a recipe can now opt them to 0 without forking the 148-line shared driver.
+Queued `m5step5v3_rate_1/2.sh` (3rd generation of this recipe family) with the 4 vars set to 0 and 2 new
+verdict fields (`runlog_bytes`, `rs_free_walk_lines`) so a recurrence is visible without re-deriving file
+sizes by hand. Cancelled `m5step5v2_rate_3/4.sh` (queued, never run) rather than running them unmodified —
+they would have reproduced the identical artifact and wasted 2 more 600s loop slots for zero information
+(`scratch/agent/soak_queue/cancelled/README.md` updated with the full note, matching the existing
+`m5step5_rate_3..6` cancellation precedent from s342).
+
+**Housekeeping**: deleted both 8+ GB `run.log`s (`scratch/s73_post_a_scene/m5step5v2rate{1,2}/`) after
+extracting the samples above — disk was at 84% used (149 GiB free) before cleanup, 82% (166 GiB free)
+after. Not archived; regenerable by rerunning the cancelled v2 recipes if ever needed, though under the
+now-fixed driver's unchanged default they'd very likely reproduce the same blowup again (the fix requires
+a recipe to opt in, which the cancelled v2 recipes don't).
+
+**Net**: `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison` gained 0 real data points toward the
+actual crash-family #3/#4 rate question this session — this was pure recipe-methodology repair, forced by
+the loop's own drained verdicts being uninterpretable. 2nd iteration on this hypothesis-id since s344's
+reopen (methodology, not yet a 3rd repeat of the same experiment — budget rule 8 unaffected). Next session
+should read `m5step5v3_rate_1/2`'s verdicts (drained by the loop) and, if `runlog_bytes` is back in the
+normal 76-233 MB band, proceed with step 5's actual classification work per NEXT.md.
