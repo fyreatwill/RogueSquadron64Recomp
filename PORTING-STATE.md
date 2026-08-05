@@ -28451,3 +28451,37 @@ New soak driver: `scratch/s73_post_a_scene/run_step323tickfunccaller.sh`. Full l
 `scratch/s73_post_a_scene/step320synthentryvsgate1/run.log` (first soak, no positive control, superseded)
 and `scratch/s73_post_a_scene/step323tickfunccaller2/run.log` (second soak, positive-controlled, the
 result cited above).
+
+## Session 324 (2026-08-04) — MAINTENANCE: `docs/CURRENT-TRUTH.md` compaction, 61,410→41,590 bytes, 668→458 lines (210 net)
+
+Step 0 of `tools/agent/ITERATION.md` triggered (file was 61,410 bytes, over the 60,000-byte maintenance
+threshold). No experiment run this session, per the maintenance-iteration rule.
+
+Condensed the s313-322 gate1/2/3 "taken"/reachability measurement chase — Next-steps items -173 through
+-181 (9 separate per-session entries, ~230 lines) — into a single item `-173..-181` (~24 lines)
+summarizing the chronological arc: s313's widened-cap soak finding 3 apparent stop points → s315
+correcting one of those counts → s316 finding none of the 3 gates ever takes "call" → s317's refuted
+4th-call-site hypothesis and unlocated 4th write → s318's TOCTOU diagnostic-bug fix (the actual
+turning point) → s319-320 quantifying the real ~14-call gap and ruling out a sampling artifact → s321's
+exhaustive grep finding no textual 3rd/4th call site → s322 closing the gate3-reachability explanation,
+which set up s323's runtime instrument (item -182, kept intact and untouched — it's the live thread).
+This mirrors the same treatment already applied to items -172..-169 (s314 maintenance pass) and
+-168..-160 (s314 or earlier) — narrative detail collapses into one paragraph once a sub-investigation
+closes, keeping only the mechanism and the pivot point.
+
+Also condensed 6 Overturned Conclusions entries from the same investigation arc (s107/108→s316→s318,
+s307→s309→s313→s315, s302→s306) into 3 tighter entries — same events, same "why it was believable"
+lessons, less numeric repetition (the numbers now live once, in the consolidated Next-steps item).
+Trimmed the USER DIRECTIVE's compaction-history bullet to the last 2 entries instead of accumulating one
+line per maintenance pass indefinitely (git log has the rest). Refreshed the stale "as of session 295"
+headline on the Current-truth section to "reviewed through s324." Fixed one dangling cross-reference
+(item -182's own text cited "item -180," which no longer exists as a standalone item post-merge; repointed
+to "s321 (item -173..-181)").
+
+No overturned conclusions, no code changes, no soak. Net result: 41,590 bytes — still above the 35 KB
+stretch target (deliberately: the env-var/timeline prose and Regeneration section's Standing warnings
+stay intact, per s314's precedent, since both are read every iteration) but comfortably past the
+200-net-line ADVANCED threshold (210 lines). `docs/CURRENT-TRUTH.md` is otherwise semantically unchanged
+— every claim, hypothesis, and next-step ordering is preserved, only the s313-322 prose is compressed.
+`scratch/agent/NEXT.md` (the live `m5-audio-destub-step4-tick37-vs-hardstop40` work unit, 2nd iteration
+on that hypothesis-id) is untouched and remains the next work unit for the following iteration.
