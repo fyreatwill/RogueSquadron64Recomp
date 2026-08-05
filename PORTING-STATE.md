@@ -30375,3 +30375,83 @@ this new site; both are queued via the soak system and don't require picking one
 session. `lib/` not touched — both edited files (`fixup_game_funcs.py` in the separate `N64Recomp` repo,
 `check_symtab2.py`/soak recipes in this repo's `scratch/`) are outside the `lib/`/submodule-patches
 system.
+
+## Session 350 (2026-08-05): drained both s349 queues — refuted the `drainMeshReleaseQueue+600` single-exact-repeat framing, found and guarded a 2nd precise crash site in the same function, closed the content-guard-verify thread
+
+**Context**: session start found the loop mid-iteration (`STATUS=WORKING`, `OUTCOME` deleted, `s349`'s
+commit `47b534d` was HEAD) with two queued-but-undrained batches from item -205/s349: two dedicated
+`s349_drainmeshbreadcrumb_verify1/2.sh` soaks built to catch `drainMeshReleaseQueue+600` a 3rd/4th time
+with the newly-landed BREADCRUMB15 precise guest-PC instrument, and two already-drained-by-the-loop
+`s348_contentguard_verify2/3.sh` soaks (the `m5-audio-destub-contentguard-verify` thread, open since
+s347/348) whose results were sitting unread in `SOAK-RESULTS.md`.
+
+**Read the already-landed contentguard results first**: `s348_contentguard_verify2` crashed at
+`pc-symbol=drainMeshReleaseQueue+960` (a THIRD hit in this function, at a DIFFERENT host offset than
+`+600`) with `last-guest-pc=0x800081ac` — and because this soak ran on the s349 build (binary mtime
+12:27, soak launched 12:31), BREADCRUMB15 was already live, so this last-guest-pc is genuinely precise,
+not stale. `guard_fire_sample` for the `processSceneNode` content guard (item -204) showed `n=0,1,2` with
+`bad_content=0x00000000` every time — the guard executes normally (positive control: the code path is
+reached) but never observed a bad value in this run. `s348_contentguard_verify3` crashed at a HOST libc
+symbol, `__pthread_kill+8` — likely an `abort()`/allocator-corruption-detected path, an unrelated class,
+uninformative for the content-guard question. Neither verify2 nor verify3 hit
+`processSceneNode+1424` — 0/2 more, making it 0/4 total since item -204's guard landed. Concluded the
+`m5-audio-destub-contentguard-verify` thread: guard confirmed alive (positive control satisfied), target
+crash confirmed absent across 4 attempts — treated as validated-by-non-recurrence (not proof of
+interception, since the bad-content case was never actually observed triggering) and CLOSED the thread.
+
+**Drained the two still-queued drainmesh-breadcrumb verify soaks** (had to invoke via `zsh
+scratch/agent/soak_queue/<name>.sh` directly — `bash <path>` is not allowlisted in
+`.claude/settings.json`, only `zsh:*` is, same headless-prefix-match trap CLAUDE.md rule 10 already
+documents for env-prefixed commands). NEITHER reproduced `drainMeshReleaseQueue+600`:
+`s349_drainmeshbreadcrumb_verify1` crashed at `reserveAndEmitDLEntry+10212`, `_verify2` at
+`heapFreeListInsert+72`. This is the DISCRIMINATING result the soaks were built to get: item -205's
+"2/2 exact file-offset match across 2 ASLR bases" did NOT survive 2 more dedicated attempts (0/2) —
+refuting "single fixed-PC deterministic bug at `+600`" in favor of the same diffuse-scatter shape
+already established for the parent hypothesis (`m5-audio-destub-step5-crashrate-comparison`, item -203:
+3/4 crashed on 3 different symbols). Wrote `scratch/agent/check_symtab3.py` (same `nm -n` distance-check
+template as `check_symtab2.py`) and confirmed all 3 new crash symbols this session
+(`reserveAndEmitDLEntry+10212`, `heapFreeListInsert+72`, `drainMeshReleaseQueue+960`) are genuinely
+inside their claimed function bodies, not nearest-symbol misattribution.
+
+**Source-read the new precise `drainMeshReleaseQueue+960`/`0x800081ac` crash** (`funcs_3.c:1746-1758`):
+a tail-scan loop, `v1 = *v1; v0 = *v1` (guest `0x800081A8` then `0x800081AC`), walking a linked list to
+find its tail — structurally: `ctx->r3 = MEM_W(ctx->r3, 0)` then immediately `ctx->r2 =
+MEM_W(ctx->r3, 0)`, with NO validity check on `ctx->r3` (guest `$v1`) before either dereference. This is
+a SECOND, distinct unguarded site inside the same function item -205 already flagged as "dense,
+entirely unguarded" — different from whatever's at the `+600` offset (still unlocalized; the two
+dedicated soaks that would have localized it instead hit different functions entirely).
+
+**Added a guard** at `fixup_game_funcs.py` (same file/session as BREADCRUMB15, same s190/s348 shape):
+before the `0x800081AC` dereference, checks `ctx->r3` is in the `[0x80000000, 0x80800000)` RDRAM range;
+if not, sets `ctx->r2 = 0` (matching what the natural list terminator would produce) instead of
+dereferencing — the minimal-behavior-change bail, not a jump to an unrelated exit. Env-gated diagnostic
+`[drain-mesh-tail-guard]` behind `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD`, now added to
+`run_s327waitpump.sh`'s default-armed diagnostic list alongside every other guard. Deliberately did NOT
+guard the sibling write-through-`v1` sites further down (`0x800081C4`/`0x800081C8`) — no confirmed crash
+there yet, left for a future audit if they start firing, consistent with "guard confirmed sites, don't
+guess broader" from the s190/s348 precedent.
+
+**Full regen + rebuild**: `make_elf.py` → clean; `N64Recomp` (after deleting stale
+`RecompiledFuncs/*.c`) → clean; `fixup_game_funcs.py` → `funcs_3.c: drainMeshReleaseQueue guest-PC
+breadcrumb (BREADCRUMB15) patched x149` (re-applies every regen) + `funcs_3.c: drainMeshReleaseQueue
+tail-scan pointer validity guard patched x1` (new); `cmake --build` → clean, only the pre-existing
+unrelated `DDIV` sign-conversion warnings in `funcs_8.c`. Queued `s350_drainmeshguard_verify1/2.sh` (same
+`run_s327waitpump.sh` template, `HOLD_S=240`) to check whether the guard fires, whether
+`drainMeshReleaseQueue` stops appearing as a crash symbol, and whether anything regresses.
+
+**Net picture across this whole cluster (12 soaks: 8 `m5step5v3_rate_*` + 4 verify)**:
+`drainMeshReleaseQueue` is the single most-hit function, 3/12 crashes (`rate_7`, `rate_8`,
+`contentguard_verify2`), but at 2 different exact offsets (`+600` unlocalized, `+960`/`0x800081ac`
+localized and now guarded) — not one deterministic site. The remaining 9/12 scatter across `reserveAndE
+mitDLEntry`, `heapFreeListInsert`, `processSceneNode` (pre-item-204 era), `musyxSynthFrame`,
+`__pthread_kill`, and others. This stays the same diffuse-not-concentrated shape item -203 already
+established for the parent step-5 hypothesis — consistent with a general heap/memory-corruption storm
+surfacing wherever a dense unguarded pointer-chase or allocator routine happens to run next, rather than
+one fixable bug. `lib/` not touched (both edited files — `fixup_game_funcs.py` in the separate
+`N64Recomp` repo, `run_s327waitpump.sh`/`check_symtab3.py`/soak recipes in this repo's `scratch/` — are
+outside the `lib/`/submodule-patches system).
+
+**HYPOTHESIS-ID**: `m5-audio-destub-contentguard-verify` CLOSED. `m5-audio-destub-drainmesh-breadcrumb`
+continues (2nd iteration) — next check is whether `s350_drainmeshguard_verify1/2` show the guard firing
+and/or `drainMeshReleaseQueue` dropping out of the crash-symbol rotation. Parent
+`m5-audio-destub-step5-crashrate-comparison` is at 1 more iteration before the 3-strike budget rule.

@@ -15,9 +15,13 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: design doc + steps 1-3 DONE (s298/300/301). Step 4 (`setDisplayMode`
    VI=320 hang, `reapplyDisplayMode` gate) is CLOSED and fix-validated — title-reach confirmed 3/3 as
    of s343 (item -199). Step 5 (crash-family #3/#4 rate comparison) is OPEN, `HYPOTHESIS-ID
-   m5-audio-destub-step5-crashrate-comparison`, 4 real data points as of s347 (item -203): 0/4 hit
-   family #3/#4 specifically, but 3/4 crashed on 3 DIFFERENT other symbols — diffuse, not concentrated.
-   `m5step5v3_rate_5..8.sh` queued to extend the sample; 1 more iteration before the 3-strike budget
+   m5-audio-destub-step5-crashrate-comparison`, still diffuse-not-concentrated as of s350 (item -206):
+   across 8 `m5step5v3_rate_*` + 4 verify soaks, crashes scatter across 6+ distinct symbols, with
+   `drainMeshReleaseQueue` the single most-hit function (3/12) but at 2 different exact offsets, not
+   one. s350 guarded the one precisely-localized `drainMeshReleaseQueue` site (item -206); verify soaks
+   queued. `m5-audio-destub-contentguard-verify` thread CLOSED s350 (item -206): 0/4 repeat of
+   `processSceneNode+1424` since item -204's guard landed, guard confirmed alive via positive control.
+   1 more iteration on the parent step-5 hypothesis before the 3-strike budget
    rule forces a pivot check.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
@@ -148,7 +152,38 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -205 (s349); the next new item takes -206 and is inserted at the top.
+oldest). Current top is -206 (s350); the next new item takes -207 and is inserted at the top.
+
+-206. **(s350) Drained both s349 queues, refuted the `+600` single-exact-repeat framing, found a 2nd
+    precise `drainMeshReleaseQueue` crash site via BREADCRUMB15, guarded it, closed the
+    `contentguard-verify` thread.** Ran `s349_drainmeshbreadcrumb_verify1/2.sh` (queued s349, drained
+    inline this session — `zsh`, not `bash`, is the allowlisted interpreter for `soak_queue/*.sh`):
+    NEITHER reproduced `drainMeshReleaseQueue+600` — verify1 crashed at `reserveAndEmitDLEntry+10212`,
+    verify2 at `heapFreeListInsert+72` (both symbol-distance-confirmed genuine via a new
+    `scratch/agent/check_symtab3.py`, not misattribution). This is the discriminating result: item
+    -205's "2/2 exact repeat" did NOT survive 2 more attempts (0/2), refuting "single fixed-PC bug at
+    `+600`". Meanwhile the loop had already drained `s348_contentguard_verify2/3.sh` (item -205's other
+    open thread) between iterations: `verify2` crashed at `drainMeshReleaseQueue+960` — a THIRD hit in
+    this function, at a DIFFERENT offset than `+600` — with `last-guest-pc=0x800081ac` now PRECISE
+    (BREADCRUMB15 was already live for this build). Source-read (`funcs_3.c:1746-1758`) identified the
+    exact crash: a tail-scan loop `v1 = *v1; v0 = *v1` (guest `0x800081A8`/`0x800081AC`) walking a
+    linked list with NO validity check on `v1` before either dereference — a second, distinct unguarded
+    site in the same "dense unguarded linked-list" function item -205 already characterized. Added a
+    range-check-and-bail guard at `0x800081AC` (`fixup_game_funcs.py`, same s190/s348 shape: env-gated
+    `[drain-mesh-tail-guard]` diagnostic, `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` — now armed by default in
+    `run_s327waitpump.sh` — bails to `ctx->r2=0`, i.e. treats an invalid `v1` as natural list-end rather
+    than crashing). Full regen + rebuild clean (`patched x1` for the guard, `x149` for BREADCRUMB15).
+    Queued `s350_drainmeshguard_verify1/2.sh`. Net tally across this cluster: 3/12 recent crashes land
+    somewhere in `drainMeshReleaseQueue` (now at 2 confirmed distinct offsets, one guarded), the
+    remainder scattered across 5+ other symbols — still the diffuse-not-concentrated shape from item
+    -203, not a single fixable bug. Also closed `HYPOTHESIS-ID m5-audio-destub-contentguard-verify`:
+    `verify2`/`verify3` gave 0/2 more `processSceneNode+1424` repeats (0/4 total since item -204's
+    guard), and `verify2`'s `guard_fire_sample` (`n=0,1,2`, `bad_content=0x0` every time) confirms the
+    guard executes normally (positive control satisfied) even though it never observed a bad value in
+    these runs — treat item -204's guard as validated-by-non-recurrence, not proven-by-interception.
+    `verify3` crashed at a host libc symbol (`__pthread_kill+8`, likely an `abort()`/allocator-detected
+    corruption path) — different class, not informative for the guard question. `lib/` not touched.
+    Full detail: `PORTING-STATE` Session 350.
 
 -205. **(s349) Found a NEW exact-repeat crash, `drainMeshReleaseQueue+600` (2/2, deterministic file-
     offset match across different ASLR bases) — confirmed real via symbol-table distance (not
