@@ -21,7 +21,8 @@ Priority order for upcoming iterations, set after the 300-session review:
    (`bad_v1=0x00010001`) reproduces byte-identically across independent sessions — opened
    `m5-audio-destub-linkedlist-corruption-source`, still OPEN. s354 (item -210) opened a parallel
    thread, `m5-audio-destub-coalesce-heap-guard-verify`, on a 2nd independently-repeating crash site
-   found and guarded along the way. See NEXT.md for both open threads' current status and next steps.
+   found and guarded along the way. Both threads landed fixes s357/s358 (items -212/-213), each now
+   awaiting its own first verify pair. See NEXT.md for both open threads' current status and next steps.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -151,7 +152,29 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -212 (s357); the next new item takes -213 and is inserted at the top.
+oldest). Current top is -213 (s358); the next new item takes -214 and is inserted at the top.
+
+-213. **(s358) Thread A's `verify5/6` drained with a discriminating result — the s354 guard's OWN bail
+    path was buggy (it re-entered the loop with a still-wild pointer instead of stopping it); source-proved
+    and fixed the guard's bail target.** `s356_coalesceheapguard_verify5` crashed at
+    `pc-symbol=coalesceFreeHeapBlocks+1052`, `last-guest-pc=0x80002358`, WITH `coalesce_guard_fire_n=1` (the
+    guard fired earlier in the run — positive control) yet the run still crashed inside the same function at
+    a different offset than the guarded site (`+3452`). Source-read
+    (`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c:4360-4701`) found the s354 guard's bail
+    (`ctx->r3 = 0` on out-of-range `v0`) was itself wrong: that value makes the branch immediately after go
+    TO `L_80002358`, which is the coalesce loop's **entry** label, not an exit — so the bail re-enters the
+    loop carrying the still-wild pointer (`ctx->r8 = v0 + 0x10`, set unconditionally in the branch's MIPS
+    delay slot) straight into an unconditional dereference at the top of the loop. The guard's own comment
+    had this backwards (believed `L_80002358` was "genuinely stopped," when it's actually the loop's start).
+    The real exit is `L_80002444` (branch NOT taken, `ctx->r3 != 0` — "next block in use, stop coalescing"),
+    confirmed safe by reading the rest of the function: `ctx->r8` is never read again between `L_80002444`
+    and its next fresh reassignment later in the function. **Fix**: `ctx->r3 = 0` → `ctx->r3 = 0x8` in the
+    existing guard (not a new guard site), same tag/env var. `verify6` crashed off-target
+    (`loadCraftShadowTextures+1068`, `coalesce_guard_fire_n=0`), not informative either way. Full regen +
+    rebuild clean, patch report `x1`, regenerated source confirmed single-line. Queued
+    `s358_coalesceheapbailfix_verify1/2.sh`. Thread B's `s357_drainmeshloop2guard_verify1/2.sh` still queued,
+    undrained since last session. 4 recipes total pending across both threads. Full detail: `PORTING-STATE`
+    Session 358.
 
 -212. **(s357) Thread B finally landed informative data — a crash INSIDE `drainMeshReleaseQueue`, past
     both existing guards, at an exact `last-guest-pc=0x80008200` repeat of s351's finding — source-proved

@@ -30922,3 +30922,81 @@ investigation, now with a landed fix rather than a pivot) — this is iteration 
 instrument s353, 0/2-informative s354, undrained-wait s356, informative+fix this session), so per-slug
 budget resets are irrelevant here since the session produced a discriminating, ADVANCING result rather
 than another null reading.
+
+## Session 358 (2026-08-05): Thread A's `verify5/6` drained with a discriminating result — the s354
+guard's own bail path was buggy, sending the coalesce-heap walk BACK INTO the loop with a still-wild
+pointer instead of stopping it. Source-proved and fixed the guard's bail target; queued a 4th verify pair.
+
+Session start: read `docs/CURRENT-TRUTH.md` (47,505 bytes, under the 60,000-byte Step 0 maintenance
+trigger — no maintenance needed), `scratch/agent/NEXT.md`, and the tail of
+`scratch/agent/SOAK-RESULTS.md`. Found `s356_coalesceheapguard_verify5/6.sh` (Thread A,
+`m5-audio-destub-coalesce-heap-guard-verify`) had drained since s357's session start but not yet been
+read; Thread B's `s357_drainmeshloop2guard_verify1/2.sh` were still sitting in `scratch/agent/soak_queue/`
+(unstarted by the loop). Read both Thread A logs.
+
+`verify5`: `launcher_rc=0`, title reached at 45.0s, then **CRASH** at `pc-symbol=coalesceFreeHeapBlocks+1052`
+(`last-guest-pc=0x80002358`) with `coalesce_guard_fire_n=1` — the s354 guard's bail path fired earlier in
+the same run (positive control: the guard IS reachable and IS engaging), yet the run still crashed inside
+the SAME function, at a DIFFERENT offset than the originally-guarded site (`+3452`/`0x80002434`). This is
+the exact "guard confirmed alive, crash relocated downstream" pattern that drove every prior
+drain-mesh-family guard addition — a discriminating, informative result, not a null reading.
+
+`verify6`: `launcher_rc=0`, title reached at 44.8s, then CRASH at `pc-symbol=loadCraftShadowTextures+1068`
+(`last-guest-pc=0x800290d4`), `coalesce_guard_fire_n=0` — off-target, unrelated crash family, not
+informative for this guard either way (5th meaningful Thread A run overall, 4th non-recurrence at the
+original `+3452` site).
+
+**Source-read** (`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c:4360-4701`, the full
+`coalesceFreeHeapBlocks` function): found the s354 guard's own design was flawed. The guard's comment
+claimed forcing `ctx->r3 = 0` on an out-of-range `v0` "sends control to L_80002358 exactly as if the
+coalesce loop had genuinely stopped here" — this is false. `ctx->r3 = 0` makes the immediately-following
+`andi $v1,$v1,0x8` / `beq $v1,$zero,L_80002358` pair take the branch TO `L_80002358`, which is the loop's
+**entry** label, not an exit. Taking that branch re-enters the loop body carrying `ctx->r8 = v0 + 0x10`
+(computed unconditionally in the branch's delay slot, `0x80002440`, regardless of which way the branch
+goes — MIPS delay-slot semantics) straight into `L_80002358: lhu $v0, 0x0($t0)` (guest `0x80002358`), an
+unconditional dereference of that same wild pointer. This exactly explains `verify5`: the guard fired
+(bail path engaged, `v0` correctly detected as out-of-range) but the very next loop iteration crashed one
+instruction into re-entering the loop, at a host offset (`+1052`) upstream of the original guarded site
+(`+3452`) because it's now the loop's TOP rather than its tail-check.
+
+The real "loop genuinely stopped" exit is `L_80002444` — reached when the branch is NOT taken, i.e. when
+`ctx->r3 != 0` (flag bit `0x8` set: the game's own "next block in use, stop coalescing here" signal).
+Confirmed by reading the rest of the function (`funcs_0.c` ~4702-4865, through to the function's next
+loop and `ctx->r8` reassignment): `ctx->r8` is never read again anywhere between `L_80002444` and the
+point where it's freshly reassigned (`ctx->r8 = ADD32(ctx->r4, 0x10)`, an unrelated second loop over a
+different base register) — so forcing the "in use" branch on an invalid `v0` is safe: it drops the wild
+pointer without ever dereferencing it again, matching the "treat unreachable state as a safe stop" idiom
+every other guard in this project already uses, just applied to the correct branch this time.
+
+**Fix** (`~/Documents/Tools/N64Recomp/fixup_game_funcs.py`, same guard site as s354, not a new guard):
+changed the bail assignment from `ctx->r3 = 0;` to `ctx->r3 = 0x8;` (any nonzero value survives the
+`andi ...,0x8` mask the same way the real "in use" flag bit would). Rewrote the patch's header comment to
+document the bug and the fix. Same env-gated diagnostic tag `[coalesce-heap-guard]`, same var
+`ROGUESQ_LOG_COALESCE_HEAP_GUARD` (already armed by default in `run_s327waitpump.sh`) — no new tag/env
+var needed since this corrects the existing guard's behavior rather than adding a new site.
+
+Full regen (delete all `RecompiledFuncs/funcs_*.c` → `make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`
+→ `cmake --build`, exactly the mandated order — the delete step matters per item -20's regen-reliability
+rule: `N64Recomp` skips rewriting files that already exist on disk, so without deleting first the stale
+pre-fix `funcs_0.c` from s357 would have silently survived). Patch report showed a clean
+`coalesceFreeHeapBlocks next-block-header read guard (bail-target fix) patched x1`; confirmed the
+regenerated source has `ctx->r3 = 0x8;` on a single line (grepped for it directly — same verification
+practice s357 adopted after its `\n`-escaping bug). Full build completed clean (`Built target
+RogueSquadron64Recomp`, only pre-existing `DDIV`/`DMULT` sign-mismatch warnings, no new errors/warnings).
+
+**`lib/` not touched** — `fixup_game_funcs.py` lives in the untracked `~/Documents/Tools/N64Recomp` tool
+repo, outside this repo's `lib/`/submodule-patches system, same as every prior M5 session.
+
+**Queued** `s358_coalesceheapbailfix_verify1/2.sh` (`scratch/agent/soak_queue/`, `HOLD_S=240`, same
+recipe/env shape as every prior verify pair, tracks `coalesce_guard_fire_n` and cross-checks
+`last_pc_symbol` against the fixed offset). Thread B's `s357_drainmeshloop2guard_verify1/2.sh` are still
+queued, undrained since last session (the loop had not yet run them by this session's start) — 4 recipes
+total now pending across both threads; the loop drains up to 2 per gap.
+
+**Decision**: this closes Thread A's iteration-3 uncertainty (3-of-4-meaningful-non-recurrences, "1 short
+of the bar") with a landed, source-proved fix rather than a forced pivot — `verify5` was the
+discriminating run iron rule 8 was watching for. `HYPOTHESIS-ID` stays
+`m5-audio-destub-coalesce-heap-guard-verify` (iteration 4: same slug, a fix landed on informative data,
+not a pivot). Both M5 threads (A: coalesce-heap-guard, B: drainmesh-loop2-guard) now have exactly one
+freshly-landed fix each awaiting its own first verify pair — next session should read whichever pair
+drains first (or both, if the loop gets to all 4 before the next iteration).
