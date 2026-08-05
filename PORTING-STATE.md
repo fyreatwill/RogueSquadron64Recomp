@@ -31069,3 +31069,80 @@ source-proved fix landed on informative data, not a pivot). The 4th independent 
 sighting (now at 2 distinct guard sites across 2 distinct loops, all in the same function) continues to
 strengthen the "one deterministic corruption source feeding both loops' pointer chains" reading from item
 -208, still not proven (still needs a common-upstream-write finding to fully close that question).
+
+## Session 360 (2026-08-05): Thread A's long-overdue `s358_coalesceheapbailfix_verify1/2` drained with a
+discriminating result for Thread B — both crashed off-target for Thread A's own question but at an exact,
+byte-identical NEW site inside `drainMeshReleaseQueue`, in both independent runs — a THIRD unguarded
+tail-scan loop in the same function, source-proved and guarded.
+
+Read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, `scratch/agent/SOAK-RESULTS.md` per the iteration
+contract. `wc -c docs/CURRENT-TRUTH.md` = 52245, under the 60000-byte maintenance trigger — not a
+maintenance iteration. NEXT.md's two open threads: Thread A (`s358_coalesceheapbailfix_verify1/2.sh`,
+queued s358, still undrained as of s359's write-up — 2 gaps skipped) and Thread B
+(`s359_drainmeshloop2writeguard_verify1/2.sh`, freshly queued s359). `SOAK-RESULTS.md`'s tail showed
+Thread A's pair had finally drained *between* s359 and this session's start (loop-queued runs, timestamps
+20260805-150012/150419, both `rc=1`).
+
+**Read both logs.** `s358_coalesceheapbailfix_verify1`: `coalesce_guard_fire_n=0` (off-target for Thread
+A's own question — inconclusive either way per the recipe's own decision tree), CRASH at
+`pc-symbol=drainMeshReleaseQueue+5016` (`last-guest-pc=0x80008248`), with `read_guard_fire_n=1`,
+`write_guard_fire_n=1` (loop1's guards fired earlier in the run — positive control) and `ring_fire_n=1`
+(`iter_at_bail=1, v1[0]=0x00010001` — the same byte-identical poisoned value item -208 first found).
+`s358_coalesceheapbailfix_verify2`: identical shape — same `coalesce_guard_fire_n=0`, same
+`pc-symbol=drainMeshReleaseQueue+5016`, same `last-guest-pc=0x80008248`, same ring dump
+(`iter_at_bail=1, v1[0]=0x00010001`). Two independent sessions/builds crashing byte-identically at a NEW
+offset never seen before, past BOTH loop1 and loop2's already-confirmed-firing guards — same evidentiary
+bar item -208/s354 used ("2 independent exact repeats = guard it now, don't wait for a 3rd"), and now a
+6th/7th independent sighting of the `bad_v1=0x00010001` poisoned value.
+
+**Source-read** (`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c` ~2004-2012, `drainMeshReleaseQueue`):
+found a THIRD, structurally identical unguarded tail-scan loop, nested inside an outer loop that walks an
+array of list-head slots (`ctx->r5`/`$a1`, stride 4, bound `ctx->r9`/`$t1`):
+```
+L_80008244: v1 = *v1 (0x80008244); v0 = *v1 (0x80008248); if (v0 != 0) goto L_80008244;
+```
+— the exact same "keep following `v1 = *v1` until the node it lands on has a NULL first field" idiom as
+loop1 (`0x800081AC`) and loop2 (`0x800081FC`), no bounds check on `v1` anywhere. The crash lands on the
+SECOND read (`0x80008248`, `v0 = *v1`) after `v1` was already re-derefed once at `0x80008244` — same
+"first read succeeds and corrupts v1 further, second read through it crashes" shape as every other
+guarded site in this function.
+
+**Fix** (`~/Documents/Tools/N64Recomp/fixup_game_funcs.py`, new patch site, sibling to s357's loop2 read
+guard pattern): added a range-check-and-bail guard at guest `0x80008248` — on invalid `v1`, synthesizes
+`v0=0`, the value the following `bne $v0,$zero` check would see from a legitimately-NULL-first-field node
+("treat this unreachable node as the list's tail and stop walking"), same minimal-behavior-change bail
+every drain-mesh guard uses. Left the sibling `0x80008244` read (`v1 = *v1`, using the pre-update `v1`)
+UNGUARDED and flagged in the comment as a known gap pending its own confirmed hit — same 2-step
+read-guard-first practice as loop1 (s350→s350b) and loop2 (s357→s359). New diagnostic tag
+`[drain-mesh-loop3-guard]`, reuses the existing `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` env var (already
+armed by default in `run_s327waitpump.sh`).
+
+Full regen (deleted all 45 `RecompiledFuncs/funcs_*.c` individually via flat `rm -f` calls per the item
+-20 sandbox gotcha → `make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`, mandated
+order — this session initially ran `N64Recomp` without first deleting the stale files, caught it before
+`fixup_game_funcs.py`, and redid the delete+regen properly). Patch report showed a clean
+`drainMeshReleaseQueue 3rd tail-scan loop read guard patched x1`; confirmed the regenerated source has
+exactly one occurrence of the guard body (single-line, no `\n`-escaping corruption) by direct grep, and
+confirmed all prior drain-mesh guards (loop1 read/write, loop2 read/write) are still present (12 sentinel
+matches). Full build completed clean (`Built target RogueSquadron64Recomp`, only pre-existing `DDIV`
+sign-mismatch warnings, no new errors/warnings). `lib/` not touched — `fixup_game_funcs.py` lives in the
+untracked `~/Documents/Tools/N64Recomp` tool repo, outside this repo's `lib/`/submodule-patches system,
+same as every prior M5 session.
+
+**Queued** `s360_drainmeshloop3guard_verify1/2.sh` (`scratch/agent/soak_queue/`, `HOLD_S=240`, same
+recipe/env shape as every prior verify pair, adds `loop3_guard_fire_n` and `loop2_write_guard_fire_n`
+counters). Thread B's `s359_drainmeshloop2writeguard_verify1/2.sh` are still queued/undrained from last
+session — 4 recipes total pending across both threads again, loop drains up to 2 per gap.
+
+**Decision**: does not close either thread. This is a THIRD occurrence of the exact same
+read-then-read-through-unguarded-v1 idiom in one function, now three loops deep
+(loop1 s350→s350b, loop2 s357→s359, loop3 this session) — strengthening the reading that
+`drainMeshReleaseQueue`'s tail-scan idiom is systematically unguarded everywhere it appears, not a
+one-off. `HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` (iteration 6: another
+source-proved fix landed on informative data). Thread A (`m5-audio-destub-coalesce-heap-guard-verify`)
+remains open and still 0/2 informative for its OWN question (both its verify soaks crashed off-target,
+`coalesce_guard_fire_n=0` in both) — needs its own future non-off-target soak to close; not itself
+contradicted by this session's findings, just still unconfirmed. The `bad_v1=0x00010001` poisoned value
+is now confirmed present across 3 distinct guard sites spanning all 3 known loops in this function, 6-7
+independent sightings total, continuing to strengthen (not yet prove) the single-deterministic-
+corruption-source reading from item -208.

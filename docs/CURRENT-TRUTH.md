@@ -21,11 +21,12 @@ Priority order for upcoming iterations, set after the 300-session review:
    (`bad_v1=0x00010001`) reproduces byte-identically across independent sessions — opened
    `m5-audio-destub-linkedlist-corruption-source`, still OPEN. s354 (item -210) opened a parallel
    thread, `m5-audio-destub-coalesce-heap-guard-verify`, on a 2nd independently-repeating crash site
-   found and guarded along the way. Threads landed fixes s357/s358/s359 (items -212/-213/-214). Thread
-   B's s359 fix (item -214) is a repeat of the s350→s350b read-guard/write-guard-sibling pattern one
-   loop over, still awaiting its own first verify pair; Thread A's s358 fix's verify pair is still
-   undrained (2 gaps skipped as of s359). See NEXT.md for both open threads' current status and next
-   steps.
+   found and guarded along the way. Threads landed fixes s357/s358/s359/s360 (items -212/-213/-214/-215):
+   `drainMeshReleaseQueue` now has THREE guarded tail-scan loops (s350/s350b, s357/s359, s360), all the
+   same unguarded-linked-list-walk idiom, `bad_v1=0x00010001` sighted 6-7 times across all three. Thread
+   A's s358 fix's verify pair drained s360 but stayed off-target for its own question
+   (`coalesce_guard_fire_n=0` both times) — still 0/2 informative, unclosed. Thread B's s359 fix still
+   awaits its own first verify pair. See NEXT.md for both open threads' current status and next steps.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -155,7 +156,25 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -214 (s359); the next new item takes -215 and is inserted at the top.
+oldest). Current top is -215 (s360); the next new item takes -216 and is inserted at the top.
+
+-215. **(s360) Thread A's long-overdue `verify1/2` drained with a discriminating result for Thread B, not
+    Thread A — both crashed off-target for the coalesce-guard question but byte-identically at a NEW site
+    inside `drainMeshReleaseQueue`, a THIRD unguarded tail-scan loop in the same function.**
+    `s358_coalesceheapbailfix_verify1/2` (queued s358, undrained through 2 full gaps) drained between s359
+    and this session. Both: `coalesce_guard_fire_n=0` (off-target for Thread A, inconclusive for its own
+    question), CRASH at `pc-symbol=drainMeshReleaseQueue+5016` / `last-guest-pc=0x80008248`, with loop1's
+    guards confirmed firing (positive control) and `ring_fire_n=1` showing the same `iter_at_bail=1,
+    v1[0]=0x00010001` poisoned value item -208 first found — a 6th/7th independent sighting. Source-read
+    (`funcs_3.c` ~2004-2012) found a third, structurally identical unguarded tail-scan loop
+    (`0x80008244`/`0x80008248`, nested inside an outer loop walking an array of list-head slots), same
+    read-v1-then-read-through-unguarded-v1 idiom as loop1 and loop2. Guarded the confirmed site
+    (`0x80008248`) in `fixup_game_funcs.py` (new tag `[drain-mesh-loop3-guard]`, reuses
+    `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD`); `0x80008244` itself flagged, not guarded, pending its own
+    confirmed hit (same 2-step practice as loop1/loop2). Full regen + rebuild clean, patch report `x1`,
+    confirmed single-line in regenerated source, all 4 prior drain-mesh guards still present. Queued
+    `s360_drainmeshloop3guard_verify1/2.sh`. Thread B's `s359_drainmeshloop2writeguard_verify1/2.sh` still
+    undrained. Full detail: `PORTING-STATE` Session 360.
 
 -214. **(s359) Thread B's `verify1/2` drained with a discriminating result — the s357 loop2 READ guard's
     own uncovered sibling WRITE site crashed, an exact repeat of the s350→s350b read-guard/write-guard
