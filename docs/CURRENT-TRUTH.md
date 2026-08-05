@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    Overturned Conclusions entries). 35 KB remains a stretch target, not a hard floor — the "Current
    truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
    deliberately; both are used every iteration for phase-gating and build commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 13 times so far (s303-320); s321 was pure grep/read, no reversal needed. Current state (s321, exhaustive grep, positive-controlled): the recompiled source has structurally NO 4th call site to `tickAllActiveSongs`/`tickAudioSequencerFrame` — not direct, not a full-address or split-halfword data reference. The 14-call gap between gate1+gate2's measured real-call rate and the tick-producer functions' own entry counts is NOT an undiscovered static/simple-indirect call site. Full detail Next-steps item -180.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS. `setDisplayMode`'s site reversed/re-reverted 13 times so far (s303-320); s321-322 were pure grep/read, no reversal needed. **The 14-call-gap sub-investigation (`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`, s303-321) is now CLOSED**: s321 found no 4th textual call site (grep-exhaustive), and s322 found gate3's containing reachability guard is real, unclobbered control flow, not an s318-class diagnostic bug — both testable explanations for the 14-call gap are exhausted; the only survivor (a fully dynamic indirect call among 28,388 sites) needs a different tool than text search. **Pivoted to a fresher, unexplored gap** (item -181): why the 3 tick-producer functions stop 3 calls short (37/37) of the hard-freeze boundary (`update3DAudioFrame`/`M_AUDTASK`/RSP-runner, all 40/40). Full detail Next-steps item -181.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,7 +148,31 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -180 (s321); the next new item takes -181 and is inserted at the top.
+oldest). Current top is -181 (s322); the next new item takes -182 and is inserted at the top.
+
+-181. **(s322) M5 audio de-stubbing: gate3's containing reachability guard is REAL, unclobbered control
+    flow — CLOSES hypothesis (b), and with it the entire 14-call-gap sub-investigation (items
+    -180..-175).** Traced every branch/goto target across the full 3-gate cascade (`funcs_24.c:3519`-
+    `3927`), not just the already-instrumented gate bodies. Found the 3 gates are NOT symmetric
+    independent checks: **gate1's loop, once entered, has both its exit paths jump directly to the
+    function's shared FINAL label — bypassing gate2 and gate3 entirely for that call, by construction.**
+    Gate2's loop, in contrast, flows onward into gate3's setup on both its own exits. Gate3's guard reads
+    `ctx->r20` (`N`, the same register gate1's entry guard set up ~280 lines earlier) — confirmed
+    unclobbered (zero writes to r20 in that whole span, only reads) — so it is provably NOT a stale
+    re-read of shared memory like gate1/2/3's `taken_skip` field was before s318's fix; it's the literal
+    register the real branch tests. Gate3 is reachable only through a narrow-but-real window (gate1's
+    guard fails, `N!=0`, gate2's own guard succeeds, and the shared voice-index cursor hasn't caught up
+    to the voice count by gate3's own check) — its persistent 0/40-reached is a real fact about tested
+    game state, not a measurement bug. **Both explanations this investigation could test for the 14-call
+    gap (item -180's grep, this item's reachability read) are now exhausted** — the sole survivor (a
+    fully dynamic indirect call among 28,388 sites) needs runtime call-site logging, not text search.
+    **Pivoted the hypothesis-id**: item -174 (s315) left a fresher, smaller, never-directly-investigated
+    gap open — the 3 tick-producer functions stop 3 calls short (37/37) of the hard-freeze boundary
+    shared by `update3DAudioFrame`/`M_AUDTASK` dispatch (`src/main/main.cpp:581-636`, already
+    always-on)/the RSP task-runner (all 40/40) — arguably closer to the actual boot-hang mechanism since
+    40 is exactly where everything, including the RSP task runner, freezes. New `HYPOTHESIS-ID:
+    m5-audio-destub-step4-tick37-vs-hardstop40` in `scratch/agent/NEXT.md`. No build/soak/reversal this
+    session — pure read against the unchanged s321 baseline. Full detail: `PORTING-STATE` Session 322.
 
 -180. **(s321) M5 audio de-stubbing: exhaustive, positive-controlled grep finds ZERO 4th call site to
     either tick-producer function — no direct call, no full-address data reference, no split-halfword

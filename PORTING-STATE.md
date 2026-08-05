@@ -28292,3 +28292,82 @@ was maintenance and doesn't count). Next session: source-read gate3's containing
 structure (not just its already-instrumented body) for a s318-class read/branch mismatch that could
 explain its persistent 0/40-reached measurement despite 2 sibling gates and now a confirmed absence of
 any other call site.
+
+## Session 322 (2026-08-04) — M5 audio: gate3's containing reachability guard is REAL control flow, not an s318-class diagnostic bug — closes hypothesis (b), leaving only the untractable "fully dynamic indirect call" as the surviving 14-call-gap explanation; pivots the hypothesis-id to the fresher, unexplored 37-vs-40 gap
+
+Continued `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. Item -180 (s321) left one
+cheap, read-only check outstanding: whether gate3's persistent "0/40 reached, containing code path never
+entered" measurement is itself unreliable the way gate1/2/3's `taken_skip` field was until s318 found it
+read a stale re-fetch of shared memory instead of the register (`ctx->r2`) the real branch actually uses.
+Pure source-read against the already-current `RecompiledFuncs/funcs_24.c` (`~/Documents/Tools/N64Recomp`
+checkout) — no build, no soak, no reversal.
+
+**Method.** Read the full ~280-line span covering all three gates' setup, loop bodies, and every branch
+target from `funcs_24.c:3519` (start of the enclosing loop nest) through `funcs_24.c:3927` (gate3's loop
+continuation past its diagnostic block), tracing every `goto`/branch target by hand rather than just the
+already-instrumented bodies s313-s321 had examined.
+
+**Finding — the three gates are NOT three independent, symmetric checks; they form a cascade with
+asymmetric bypass behavior:**
+
+- **Gate1's entry guard** (`funcs_24.c:3524-3534`): `MEM_HU(-0x6678) < N` (N = a passed-in threshold,
+  loaded into `s4`/`ctx->r20`). If false, jump directly to `L_800914E8` (gate2's setup) — normal
+  cascade. If true, enter gate1's loop with `r19=0` (`s3`, a voice-index cursor shared by all three
+  gates), `r16=MEM_HU(-0x6678)`, `r20=N` (unchanged for the rest of the function).
+- **Gate1's loop, BOTH exit paths, go around gate2/gate3 entirely.** The outer per-iteration check
+  (`L_80091444`, `funcs_24.c:3546-3560`: `r19 < MEM_HU(-0x68B2)`, a DIFFERENT address from the entry
+  guard's) exits to `L_80091654` — the function's single shared FINAL label, past gate3's own loop — when
+  false. The inner counter check (`after_11`, `funcs_24.c:3659-3668`: `r16 < r20(N)`) does the same.
+  Every exit from gate1's loop, once entered, lands at the final label. **Structural consequence: any
+  call where gate1's guard succeeds and its loop runs can never reach gate2 or gate3 in that same
+  call, by direct jump — not by chance, by construction.**
+- **Gate2's entry guard** (`L_800914E8`, `funcs_24.c:3677-3688`): rereads the SAME `-0x6678` address
+  gate1's entry guard used, but against a fixed constant `0x10` instead of `N`. If false, converge at
+  `L_800915A4` (gate3's setup region). If true, enter gate2's loop.
+- **Gate2's loop, BOTH exit paths, flow onward toward gate3's setup** (`L_800915A0`/`L_800915A4`) —
+  unlike gate1's, neither of gate2's exits (`L_80091504` top check on the same `-0x68B2` address vs.
+  `r19`, or the inner `r16 < 0x10` check at `after_14`) targets the final label directly.
+- **Gate3's setup** (`funcs_24.c:3821-3838`): reads `r20 & 0xFFFF` — i.e. `N`, the SAME register gate1's
+  entry guard set up and NEVER rewritten since (confirmed: `grep -c "r20"` across the whole
+  `funcs_24.c:3546`-`3822` span finds only 3 occurrences, all reads, zero writes). If `N==0`, skip
+  gate3's loop entirely (final label). Otherwise enter gate3's loop, which has its own `r19 <
+  MEM_HU(-0x68B2)` top check (same address/register gate1's inner check used, but `r19` was never reset
+  since gate1's `r19=0` — it only carries the cumulative count of voices gate1+gate2's loops already
+  processed).
+
+**Verdict: no s318-class mismatch exists.** `ctx->r20` at gate3's guard is not a diagnostic proxy reading
+stale shared memory — it *is* the literal register the real recompiled branch tests (this is generated
+code executing the actual branch, not an instrument observing it from outside), and it is provably
+unclobbered since gate1's setup. There is no register/memory divergence to find. Gate3's reachability is
+governed by real game/voice-count state: **it is reachable ONLY when gate1's entry guard fails (so its
+bypass-to-final-label never triggers) AND `N != 0` AND gate2's own `<0x10` guard succeeds AND the shared
+voice cursor (`r19`, already advanced by up to 16 iterations from gate2's own loop) hasn't caught up to
+`MEM_HU(-0x68B2)` by the time gate3's own top check runs.** That window is narrow but not empty — gate3's
+observed 0/40-always across every soak since s313 is a real fact about the tested game state/scene, not a
+measurement bug.
+
+**This closes hypothesis (b) exactly as s321 closed hypothesis (a).** Both proposed explanations this
+investigation could test via source-read for the 14-call gap (gate1+gate2's measured real-call rate,
+23-24, vs. the tick-producer functions' own measured entry count, 37-38) are now exhausted. The only
+surviving explanation — a fully dynamic indirect call resolved through a runtime-computed pointer chain,
+among 28,388 `LOOKUP_FUNC(ctx->rN)` call sites — is explicitly not tractable by grep/read-only
+methodology (per s321) and would need a different tool entirely (e.g. runtime call-site logging keyed on
+the target function's address, not text search).
+
+**Pivot.** Per NEXT.md's own pre-declared fallback and iron rule 8 (this closes the 16th consecutive
+session on this exact hypothesis-id, all read/grep avenues now exhausted), this session identifies a
+FRESHER, unexplored lead to pivot to instead of continuing to chase the untractable dynamic-call
+explanation: item -174 (s315) already found and left open a DIFFERENT, smaller gap that this
+investigation's -175..-180 branch never actually addressed — the 3 tick-producer functions
+(`tickAllActiveSongs`/`tickAudioSequencerFrame`/`tickAllAudioChannels`) stop 3 calls short (37/37) of
+the hard-freeze boundary shared by `update3DAudioFrame`, `M_AUDTASK` RSP-task submission (`[audtask-
+dispatch]`, already widened and always-on in `src/main/main.cpp:581-636`, no `lib/` edit needed), and
+the RSP task-runner's own last dispatch, all of which hit 40/40 together. That "37-vs-40" gap has had
+ZERO dedicated investigation sessions (vs. the 14-call gap's 16) and is arguably closer to the actual
+boot-hang mechanism, since 40 is exactly the point everything — including the RSP task runner — freezes.
+New `HYPOTHESIS-ID` and work unit in `scratch/agent/NEXT.md`.
+
+No source edit, no build, no soak this session — pure read against the already-current baseline
+(`RecompiledFuncs/funcs_24.c`, both audio-gate force-zero sites intact, unchanged from s321's end state).
+`fixup_game_funcs.py` and `src/main/main.cpp` untouched. No `submodule-patches/export.sh` needed (no
+`lib/` edits).
