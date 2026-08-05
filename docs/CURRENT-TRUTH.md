@@ -15,16 +15,17 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: design doc + steps 1-3 DONE (s298/300/301). Step 4 (`setDisplayMode`
    VI=320 hang, `reapplyDisplayMode` gate) is CLOSED and fix-validated — title-reach confirmed 3/3 as
    of s343 (item -199). Step 5 (crash-family #3/#4 rate comparison) is OPEN, `HYPOTHESIS-ID
-   m5-audio-destub-step5-crashrate-comparison`, still diffuse-not-concentrated as of s351 (item -207):
-   across 14 soaks (8 `m5step5v3_rate_*` + 6 verify), `drainMeshReleaseQueue` is the single most-hit
-   function but at 3 different sub-mechanisms in one tail-scan idiom (`+600` unlocalized, `+960`
-   read-guarded s350, `+1580` write-guarded s351), the rest scattering across 5+ other symbols. s351
-   guarded the write-through-v1 sibling site the s350 verify soak's FIRST attempt reproduced (with the
-   s350 read guard confirmed firing in the same run) — `m5-audio-destub-drainmesh-breadcrumb` CLOSED
-   with a 2nd landed fix; new thread `m5-audio-destub-drainmesh-writeguard-verify` to consume
-   `s351_drainmeshwriteguard_verify1/2` next session. `m5-audio-destub-contentguard-verify` thread
-   CLOSED s350: 0/4 repeat of `processSceneNode+1424` since item -204's guard landed. 1 more iteration
-   on the parent step-5 hypothesis before the 3-strike budget rule forces a pivot check.
+   m5-audio-destub-step5-crashrate-comparison` (item -203) — the 3-strike pivot check landed s352 (item
+   -208): crash SYMBOL scatter across 16 soaks is real (10 distinct downstream symbols) but crash
+   TIMING is bimodal, not diffuse (two deterministic post-VI-transition windows), and the
+   `drainMeshReleaseQueue` tail-scan's `bad_v1=0x00010001` corrupted-pointer value reproduces
+   byte-identically across 2 independent sessions — reframed toward a specific dangling-list-node lead
+   rather than a generic memory storm. `m5-audio-destub-drainmesh-writeguard-verify` CLOSED
+   (superseded, no more single-site verify soaks); new thread `m5-audio-destub-linkedlist-corruption-
+   source` targets the `bad_v1` lead directly (see NEXT.md). `m5-audio-destub-contentguard-verify`
+   thread CLOSED s350: 0/4 repeat of `processSceneNode+1424` since item -204's guard landed, and s352
+   found its `[scene-node-content-guard]` firings are steady-state/benign (same node, thousands of
+   harmless hits/run), not corruption evidence.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -154,7 +155,39 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -207 (s351); the next new item takes -208 and is inserted at the top.
+oldest). Current top is -208 (s352); the next new item takes -209 and is inserted at the top.
+
+-208. **(s352) Parent step-5 hypothesis's mandated pivot iteration: crash SYMBOL scatter is real, but
+    crash TIMING is bimodal (two deterministic VI-transition windows) and one guard value reproduces
+    byte-identically across independent sessions — reframes "diffuse storm" toward a narrower target.**
+    Drained `s351_drainmeshwriteguard_verify1/2`: `verify1` CRASH at a 4th distinct `drainMeshReleaseQueue`
+    offset (`+2864`) with BOTH the s350 read guard AND s351 write guard confirmed firing in the same run
+    (positive control twice over — crash simply moved further downstream again); `verify2` CRASH at
+    `coalesceFreeHeapBlocks+3452`, a heap-allocator routine entirely outside the function, neither guard
+    fired. Taken alone, more scatter. **Went further given NEXT.md pre-committed this as the parent
+    hypothesis's last iteration before the 3-strike pivot**: re-analyzed all 16 accumulated step-5 soak
+    logs offline (zero new builds/runs, pure re-read of already-captured logs, "capture once analyze
+    many"). Found (1) every crash's last-passed `[phase] vi_width` transition falls into exactly one of
+    two narrow post-transition windows (~74s: `1024→512`; ~143s: `512→640`) despite hitting 10 distinct
+    downstream symbols across the two — timing is NOT diffuse even though symbols are, and CLEAN runs
+    passing through both windows unharmed show reaching a window is necessary-not-sufficient; (2) the
+    `[drain-mesh-tail-guard]`/`[drain-mesh-write-guard]` diagnostic's intercepted value, `bad_v1=
+    0x00010001`, is byte-identical across 2 independent sessions/builds (`s350_verify1`, `s351_verify1`)
+    at a one-shot (`n=0`) guard site — ~1-in-4-billion odds of coincidence for random heap garbage,
+    strong evidence of a deterministic, reproducible bug (source-read confirms the tail-scan is a plain
+    singly-linked-list walk, `funcs_3.c:1734-1766`, consistent with a stale/prematurely-freed list node).
+    A 3rd finding, `[scene-node-content-guard]` firing at the identical `node=0x80183ECC` thousands of
+    times per run harmlessly across 3 sessions, is the OPPOSITE signature (steady-state, not corruption)
+    — demoted from "proves a bug" to "proves a benign always-empty placeholder node," see Overturned
+    Conclusions. **`m5-audio-destub-drainmesh-writeguard-verify` (iteration 1) CLOSED, superseded** — no
+    more single-site downstream-consumer verify soaks planned. New thread `m5-audio-destub-linkedlist-
+    corruption-source`, targeting the `bad_v1=0x00010001` lead: next probe logs every `v1` walked (not
+    just the final bad one) for the tail-scan's first N iterations in a fresh run, to see whether the
+    poisoned node appears at a consistent list position/consumer call — would localize the corrupting
+    write/free without a full memory watch. NOT yet proven that every bucket-2 crash (processSceneNode,
+    coalesceFreeHeapBlocks, `drainMeshReleaseQueue`'s 4 offsets) shares this one root cause — could still
+    be independent bugs sharing only the same activity-burst trigger window; that's the open
+    discriminator. Full detail: `PORTING-STATE` Session 352.
 
 -207. **(s351) s350's `drainMeshReleaseQueue` read guard fired correctly on its own FIRST verify soak
     but the crash happened anyway 2 lines downstream, at the exact write-through-v1 sibling site the
@@ -499,6 +532,16 @@ Standing warnings:
 
 `## LLE stabilization session 2 (2026-07-12)` sits out of order in the log, between s7 and s8: its conclusions are among the oldest in the file, not the newest.
 
+- **(s348/350→s352)** "`[scene-node-content-guard]` firing is evidence of the same corruption class as
+  the other step-5 guards" — s352's raw-log re-read found this guard fires at the SAME node address
+  (`0x80183ECC`) with the SAME zeroed content, thousands of times per run, harmlessly, across 3
+  independent sessions — a steady-state signature (legitimately-empty/placeholder node revisited every
+  frame), not a corruption signature. Believable: it's a real guard catching a real out-of-range read,
+  and 0/4 crash-repeat since it landed (item -204) looked like validated-by-non-recurrence; the n=0-vs-
+  n=1957+ distinction (one-shot-before-crash vs. steady-state-thousands-of-hits) just hadn't been
+  checked against the OTHER guards' firing shape until s352 compared them side by side. Does not
+  overturn the guard's correctness (it still needs to stay in place), only its evidentiary weight for
+  the step-5 corruption-source hunt. PORTING-STATE 348, 350, 352; CURRENT-TRUTH item -208.
 - **(s339→s340→s342)** "The VI=640 `pairs=0` plateau is a benign, locked-camera mission cutscene" (s339)
   and "s340's 2/2 clean soaks validate promoting both audio gate reversals together" (s340) — s342
   found both soaks (and s341's 2 follow-ups) never left the pre-title attribution/logo screen: 0

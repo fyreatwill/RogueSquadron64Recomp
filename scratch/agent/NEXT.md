@@ -1,64 +1,79 @@
 # NEXT work unit
 
-## s351 landed: guarded the write-through-v1 sibling of s350's read guard (2nd landed fix
-## in `drainMeshReleaseQueue`'s tail-scan idiom)
+## s352 landed: parent step-5 hypothesis's mandated pivot — timing is bimodal, one guard value
+## reproduces byte-identically across sessions, drainmesh-writeguard-verify thread CLOSED
 
-Full detail: `docs/CURRENT-TRUTH.md` item -207, `PORTING-STATE` Session 351. Short version:
+Full detail: `docs/CURRENT-TRUTH.md` item -208, `PORTING-STATE` Session 352. Short version: drained
+`s351_drainmeshwriteguard_verify1/2` (4th distinct `drainMeshReleaseQueue` offset + an entirely
+different function, `coalesceFreeHeapBlocks`) — taken alone, more scatter. Per NEXT.md's pre-committed
+plan (this was the parent hypothesis's last iteration before the 3-strike pivot), went further and
+re-analyzed all 16 accumulated step-5 soak logs offline (no new builds). Found crash TIMING clusters
+into exactly two deterministic post-VI-transition windows (~74s, ~143s) despite 10 distinct crash
+symbols, and the `[drain-mesh-tail-guard]`/`[drain-mesh-write-guard]` diagnostic's intercepted value
+`bad_v1=0x00010001` is byte-identical across 2 independent sessions/builds (`s350_verify1`,
+`s351_verify1`) at a one-shot guard site — strong evidence of a deterministic, reproducible bug (not
+random heap noise). `m5-audio-destub-drainmesh-writeguard-verify` CLOSED, superseded. New thread:
+`m5-audio-destub-linkedlist-corruption-source`.
 
-- Drained `s350_drainmeshguard_verify1/2.sh` (loop had already run + moved them to `soak_queue/done/`).
-  `verify1`: CRASH at `drainMeshReleaseQueue+1580`, `last-guest-pc=0x800081c4`, **with the s350 read
-  guard confirmed firing in the same run** (`guard_fire_n=1`, `bad_v1=0x00010001`) — the read guard
-  bailed correctly but didn't repair `ctx->r3` (v1) itself, and the function unconditionally writes
-  through that same pointer 2 lines later. `verify2`: CRASH at a 4th distinct symbol
-  (`static_5_800AAD9C+5140`), not informative for this guard.
-- Guarded the write-through-v1 site (`~/Documents/Tools/N64Recomp/fixup_game_funcs.py`, both
-  compiler-duplicated `0x800081C4` occurrences, one indent-agnostic regex). New tag
-  `[drain-mesh-write-guard]`, reuses the already-armed `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` env var.
-  Full regen + rebuild clean (`patched x2`). Queued `s351_drainmeshwriteguard_verify1/2.sh`.
-- `HYPOTHESIS-ID m5-audio-destub-drainmesh-breadcrumb` CLOSED (2nd landed fix, same pattern as
-  s348→`m5-audio-destub-contentguard-verify`). New thread:
-  `m5-audio-destub-drainmesh-writeguard-verify`.
+## The work unit: localize WHERE in the list-walk the `0x00010001` poison appears
 
-## The work unit: drain `s351_drainmeshwriteguard_verify1/2`, read whichever landed
+**Hypotheses** (competing, not yet split):
+- **H1 — stale/prematurely-freed list node, fixed position.** The queue node at a consistent walk
+  index (e.g. always the Nth node from the head, or always immediately after a specific
+  enqueue/dequeue call in the ~143s activity burst) gets freed elsewhere without being unlinked from
+  this queue, and the tail-scan walks into freed memory that now reads back as `0x00010001`.
+- **H2 — allocator/heap-header confusion, not a list bug.** `0x00010001` looks plausibly like a
+  packed 16+16 heap-block-header field (size/flags = 1,1) rather than a real corrupted pointer — i.e.
+  the tail-scan may be walking past the END of a legitimately-short list into the NEXT heap block's
+  header, a fencepost/off-by-one rather than a dangling node. (`coalesceFreeHeapBlocks` showing up as
+  a crash symbol in the SAME bucket is circumstantial support for this — it's the allocator's own
+  free-list coalescer.)
+- **H3 — no shared root cause; the two windows are just the script's two activity bursts.** Every
+  bucket-2 crash symbol (processSceneNode, `drainMeshReleaseQueue`'s 4 offsets, coalesceFreeHeapBlocks)
+  is an independent pre-existing bug, and each burst of pointer-chasing activity simply gives each bug
+  its one chance per soak to fire. The `bad_v1` value-match would then need to be coincidence (~1-in-4B
+  by chance for 2 independent hits — weak but not zero, since if H2 is true the value ISN'T random, it's
+  a deterministic heap-header constant, which would make an "identical value" observation compatible
+  with H3 too).
+- **H4 — upstream free from an unrelated (possibly audio-adjacent) subsystem.** Some other M5-related
+  deallocation path frees a node this queue still references. Would need caller-side tracing, not just
+  tail-scan-side, to confirm.
 
-**Step 1**: `tail -10 scratch/agent/SOAK-RESULTS.md`. The loop drains up to 2 recipes between
-iterations, so both may already be done, or run them yourself the same way (`zsh
-scratch/agent/soak_queue/s351_drainmeshwriteguard_verify1.sh` — NOT `bash`, it isn't allowlisted).
+**The discriminating measurement**: does the poisoned node appear at a CONSISTENT walk position/index
+within the tail-scan across independent crashing runs? Consistent position discriminates toward
+H1/H2 (a structural bug, position-dependent); inconsistent/varying position discriminates toward
+H3/H4 (state-dependent, not purely structural).
 
-**Step 2 — read each result**:
-- `write_guard_fire_n` > 0: the write guard is firing (positive control — the invalid-v1-at-write-site
-  case is real). Check `[drain-mesh-write-guard]` log lines for `bad_v1` values — same value/small
-  range repeatedly is a lead on the corruption source; scattered is more consistent with generic
-  memory-storm noise.
-- `crash_markers=0` (CLEAN) in both: weak evidence this closes the site; n=2 is thin given the parent
-  hypothesis's known high crash-symbol variance — note it, don't over-claim.
-- Still crashes at a NEW `drainMeshReleaseQueue` offset (e.g. the still-unguarded `0x800081C8`
-  `MEM_W(0X4,ctx->r2)=ctx->r3` sibling, where `ctx->r2` not `ctx->r3` is the address operand — different
-  idiom, would need its own guard if `ctx->r2` itself turns out corrupted): that's the next site to
-  localize/guard — BREADCRUMB15 already covers the whole function, so `last-guest-pc` will be precise
-  immediately.
-- Crashes elsewhere entirely (a 5th distinct symbol): further supports the diffuse-storm framing. At
-  that point, per s350/s351's own escalation note, the higher-value move shifts from guarding individual
-  sites to a heap-corruption-storm audit of the parent hypothesis (item -203) — is there a common
-  upstream root cause (e.g. a use-after-free or buffer overrun elsewhere writing garbage into whatever
-  memory `drainMeshReleaseQueue`/other dense pointer-chase functions happen to walk next)? This is a
-  legitimate pivot per the M5-AUDIO-PLAN step-5 checkpoint, not a rule violation.
+**Step 1 — implement a bounded ring-buffer breadcrumb.** In `~/Documents/Tools/N64Recomp/
+fixup_game_funcs.py`, extend the existing `drainMeshReleaseQueue` guard machinery (search
+`0x800081AC`/`0x800081C4` anchors, same function as s350/s351's guards) to record the last 8 `v1`
+values walked PLUS a per-call loop-iteration counter into a small static ring buffer (no fprintf per
+iteration — that would blow the log budget per iron rule 3). On the guard's bail path (invalid v1
+detected), dump the ring buffer once: `[drain-mesh-ring] idx=N v1[0..7]=... iter_at_bail=M`. This is a
+new diagnostic, not a behavior change — same env-var-gated shape as the existing guards
+(`ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD`, already armed by default in `run_s327waitpump.sh`).
 
-**Step 3 — budget check**: this is iteration 1 of the NEW thread `m5-audio-destub-drainmesh-writeguard-
-verify` (the prior thread closed with a landed fix, budget resets). If this iteration's result doesn't
-discriminate cleanly (more scatter, no clean signal), that's fine for iteration 1 — queue one more
-verify round. Only escalate to the pivot/BLOCKED path if this becomes iteration 3 with still no signal.
+**Step 2 — full regen + rebuild** (see Environment notes below), queue 2 verify soaks
+(`s352_ringbuffer_verify1/2.sh`, `HOLD_S=240`, same `run_s327waitpump.sh` template as s350/s351's
+recipes — copy `s351_drainmeshwriteguard_verify1.sh` and rename).
 
-Separately, the PARENT hypothesis `m5-audio-destub-step5-crashrate-comparison` (item -203) is on its
-own budget: this next iteration is its LAST before the 3-strike rule forces a pivot check on it too — if
-whichever thread you work still reads as diffuse-not-concentrated afterward, write up the
-heap-corruption-storm-audit reframing explicitly rather than queuing another single-site verify round.
+**Step 3 — read the ring-buffer dumps.** If `iter_at_bail` (or the position of the poisoned value
+within the ring) is the SAME across both verify runs (and matches a 3rd historical run if one can be
+found in the existing raw logs — check if s350/s351's crash logs already have enough context to
+back-compute iteration count, e.g. via any existing loop counter breadcrumb): H1/H2 supported, next
+step is finding what's allocated/freed at that exact position (source-read the enqueue/dequeue call
+sites feeding this queue). If it varies materially: H3/H4 supported, escalate to caller-side tracing
+(who calls `drainMeshReleaseQueue`, and what runs immediately before it in the ~143s window per the
+existing `[dma-ring-consumer]`/`[vi-fs-decision]` breadcrumbs already in these logs).
 
-## Environment notes (carried forward — see s327-351 for full detail)
+**Budget**: this is iteration 1 of `m5-audio-destub-linkedlist-corruption-source`. Fresh budget per
+iron rule 8.
 
-- Regen paths: `/Users/williambuckley/Documents/Tools/N64Recomp` (`fixup_game_funcs.py`, untracked, and
-  confirmed s351 to sit entirely outside this repo's `lib/`/submodule-patches system). Delete
-  `RecompiledFuncs/*.c` before every `N64Recomp` run:
+## Environment notes (carried forward — see s327-352 for full detail)
+
+- Regen paths: `/Users/williambuckley/Documents/Tools/N64Recomp` (`fixup_game_funcs.py`, untracked,
+  confirmed outside this repo's `lib/`/submodule-patches system). Delete `RecompiledFuncs/*.c` before
+  every `N64Recomp` run:
   `python3 -c "import glob, os; [os.remove(f) for f in
   glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/*.c')]"`.
 - Full regen order: `cd ~/Documents/Tools/rogue_squadron64 && python3 tools/make_elf.py` ->
@@ -67,34 +82,36 @@ heap-corruption-storm-audit reframing explicitly rather than queuing another sin
   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
   /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build -j8`. Run each step as its own
   single command (compound `cd a && cmd` sometimes needs manual approval this session).
-- `soak_queue/*.sh` recipes must be invoked as `zsh scratch/agent/soak_queue/<name>.sh` if you need to
-  drain one yourself — `bash <path>` is NOT allowlisted even though the recipe files start with a
-  `#!/bin/bash` shebang; only `zsh:*` is in the allow rules. If you drain a recipe manually, also
-  manually do what `run_soak_queue()` normally does: save output to
-  `scratch/agent/soak_results/<name>_<timestamp>.log`, append a line to `SOAK-RESULTS.md`, move the
-  `.sh` to `soak_queue/done/`.
+- `soak_queue/*.sh` recipes must be invoked as `zsh scratch/agent/soak_queue/<name>.sh` if drained
+  manually — `bash <path>` is NOT allowlisted even though the recipe files start with a `#!/bin/bash`
+  shebang; only `zsh:*` is in the allow rules. If drained manually, also manually do what
+  `run_soak_queue()` normally does: save output to `scratch/agent/soak_results/<name>_<timestamp>.log`,
+  append a line to `SOAK-RESULTS.md`, move the `.sh` to `soak_queue/done/`.
+- `for f in ...; do ... done` shell loops over globbed filenames have been triggering a sandbox
+  rejection ("Contains simple_expansion") this session — prefer a `python3 - <<'EOF' ... EOF` heredoc
+  with `glob.glob`/explicit path lists for any multi-file batch read/grep instead of a bash for-loop.
 - `nm` itself needs explicit interactive approval — `python3 -c "..."` wrapping `subprocess.run(['nm',
   ...])` IS allowed. `scratch/agent/check_symtab3.py` is the latest template for "is this crash symbol
   genuine or nearest-symbol misattribution."
 - **All BREADCRUMB* passes share ONE `g_rs64_last_guest_pc` global.** `drainMeshReleaseQueue`
-  (BREADCRUMB15, s349) is fully instrumented — its `last-guest-pc` is always precise. If a crash's
-  `last-guest-pc` doesn't look like it belongs to the crashing `pc-symbol` function, check first whether
-  that function is even breadcrumbed.
-- `run_s327waitpump.sh` arms `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD=1` by default (s350), which now covers
-  BOTH `[drain-mesh-tail-guard]` (read site, s350) and `[drain-mesh-write-guard]` (write site, s351) —
-  one env var, two diagnostic tags.
+  (BREADCRUMB15, s349) is fully instrumented — its `last-guest-pc` is always precise.
+- The raw `run.log` under `scratch/s73_post_a_scene/<label>/run.log` (not just the
+  `scratch/agent/soak_results/*.log` summary) is where per-line diagnostic tags like
+  `[drain-mesh-tail-guard]`/`[scene-node-content-guard]`/`[phase] vi_width=...` actually live — the
+  summary logs only capture the LAST few lines of each. Grep the raw log directly for full history
+  (e.g. every `[phase] vi_width=` line, or a value's full firing count) — s352 found this necessary to
+  confirm the VI-transition timing and the guard value cross-session matches.
+- Soak driver: `scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, invoked with
+  `env HOLD_S=<n> zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>` (`env` prefix required —
+  project rule 10 / CLAUDE.md). Log lands at `scratch/s73_post_a_scene/<label>/run.log`.
+- `[CRASH][pc-symbol]` (host PC via `dladdr`, precise) and `[CRASH][last-guest-pc]` (guest checkpoint,
+  only meaningful if the crashing function is breadcrumbed) answer different questions by design.
+- `rc=137`/launcher timeouts don't necessarily mean a game-side hang — check the launcher log's own
+  `done wall=Ns` line and `run.log` byte size before reading a timeout as a stall.
 - Current gate state (unchanged since s343): fixup regex at `fixup_game_funcs.py` ~line 263 is
   `r"0x8008E(?:C88)"` — matches ONLY `reapplyDisplayMode` (`0x8008EC88`, force-zeroed);
   `setDisplayMode` (`0x8008EB40`) stays unmatched/reversed.
-- Soak driver: `scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, invoked with
-  `env HOLD_S=<n> zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>` (`env` prefix required —
-  project rule 10 / CLAUDE.md). Log lands at `scratch/s73_post_a_scene/<label>/run.log` — grep it,
-  don't read it directly.
-- `[CRASH][pc-symbol]` (host PC via `dladdr`, precise, always trust for "what function crashed") and
-  `[CRASH][last-guest-pc]` (a separately tracked guest checkpoint, only meaningful if the crashing
-  function is breadcrumbed) answer different questions by design.
-- `rc=137`/launcher timeouts don't necessarily mean a game-side hang — check the launcher log's own
-  `done wall=Ns` line and `run.log` byte size before reading a timeout as a stall.
 
-HYPOTHESIS-ID: m5-audio-destub-drainmesh-writeguard-verify (iteration 1 — opened s351). Parent:
-m5-audio-destub-step5-crashrate-comparison (item -203, on its LAST iteration before the 3-strike rule).
+HYPOTHESIS-ID: m5-audio-destub-linkedlist-corruption-source (iteration 1 — opened s352). Parent step-5
+hypothesis (item -203) pivot check completed s352 (item -208); this new thread is its direct successor,
+not on the parent's old budget.

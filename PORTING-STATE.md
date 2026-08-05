@@ -30512,3 +30512,96 @@ fixed a genuine, source-confirmed 2nd bug at a site the prior session had alread
 treating this as CLOSED with a landed fix, same pattern as s348→`m5-audio-destub-contentguard-verify`.
 New thread: `m5-audio-destub-drainmesh-writeguard-verify`, to consume `s351_drainmeshwriteguard_verify1/2`
 next session. Parent `m5-audio-destub-step5-crashrate-comparison` (item -203) stays open, still diffuse.
+
+## Session 352 (2026-08-05): drained s351's verify pair, then re-analyzed all 16 accumulated step-5 soak logs offline — crash TIMING is bimodal (two deterministic VI-transition windows), and two guard diagnostics reproduce byte-identical corrupted values/addresses across independent sessions. Pivoting off per-site whack-a-mole.
+
+**Drained `s351_drainmeshwriteguard_verify1/2`** (both already run + moved to `soak_queue/done/` by the
+loop): `verify1` **CRASH**, `pc-symbol=drainMeshReleaseQueue+2864`, `last-guest-pc=0x80008200` — a
+**4th distinct offset** in the function, downstream of both s350's read guard AND s351's write guard,
+which BOTH fired in this same run (`read_guard_fire_n=1`, `write_guard_fire_n=1` — positive control:
+both guards are real and hit, the crash simply moved further down the tail-scan again). `verify2`
+**CRASH**, `pc-symbol=coalesceFreeHeapBlocks+3452` (a heap-allocator free-list-coalescing routine —
+outside `drainMeshReleaseQueue` entirely), neither guard fired. Taken alone this is the 6th+ distinct
+crash symbol for the parent hypothesis and reads as more diffuse-storm scatter — the surface reading
+NEXT.md predicted for a 3rd-consecutive-null-signal iteration.
+
+**Went further given this was explicitly the parent hypothesis's last iteration before the 3-strike
+pivot check (per s351's NEXT.md).** Re-analyzed ALL 16 accumulated step-5 soak logs so far (8
+`m5step5v3_rate_1..8` + `s348/349/350/351` verify pairs/triples) offline — zero new builds/runs, pure
+re-reads of already-captured `scratch/agent/soak_results/*.log` summaries plus the underlying
+`scratch/s73_post_a_scene/<label>/run.log` raw captures, per the standing "capture once, analyze many"
+rule. Two findings neither individual session had connected:
+
+1. **Crash timing is bimodal, not uniform, across the whole soak duration.** Every soak logs `[phase]
+   vi_width=...` transitions at near-identical elapsed times regardless of outcome (scripted/deterministic
+   input timing): `0.5s`→`2.2s`→`~45s` (title, `1024`)→`~74s` (`512`, "was 1024")→`~143s` (`640`, "was
+   512"). Bucketing all 16 crashes by which VI transition they last passed:
+   - **Bucket 1 (~55-62 MB runlog, dies shortly after the ~74s transition, never reaches the ~143s
+     one)**: `rate_1` (allocOrEvictMaterialNode+944), `rate_4` (trackResourceListWithMappingTables+1192),
+     `s349_verify1` (reserveAndEmitDLEntry+10212), `s349_verify2` (heapFreeListInsert+72),
+     `s348_verify3` (`__pthread_kill+8`), `s350_verify2` (static_5_800AAD9C+5140) — 6 crashes, 6
+     different symbols, all in one narrow post-transition window. `rate_2` (CLEAN) also stops at this
+     same transition without crashing.
+   - **Bucket 2 (~68-98 MB runlog, reaches the ~143-148s transition)**: `rate_3`/`rate_6`
+     (processSceneNode+1424, exact repeat), `rate_7`/`rate_8` (drainMeshReleaseQueue+600, exact repeat),
+     `s348_verify2` (drainMeshReleaseQueue+960), `s350_verify1` (drainMeshReleaseQueue+1580),
+     `s351_verify1` (drainMeshReleaseQueue+2864), `s351_verify2` (coalesceFreeHeapBlocks+3452) — 8
+     crashes, 4 distinct symbol families, all in the window right after the SECOND transition. `rate_5`
+     (CLEAN) also reaches this transition without crashing.
+   Confirmed directly (not just inferred from runlog_bytes) by re-grepping the raw `run.log` for
+   `s351_verify1`/`s351_verify2`: their actual last `[phase] vi_width=...` lines are `147.6s` and
+   `142.7s` respectively — both bucket 2, matching the byte-size proxy exactly. So **crash symbol is
+   diffuse (matches "many downstream consumers"), but crash TIMING is not** — every crash observed so
+   far falls into one of exactly two narrow post-transition windows, and CLEAN runs demonstrate reaching
+   a window is necessary but not sufficient for a crash (weaker form: could also be "these are simply
+   the two bursts of pointer-chasing activity in the script, so ANY pre-existing bug sprinkled through
+   the run would surface there" — not yet fully discriminated from "one shared corruption event per
+   window", see below).
+2. **Two of the guard diagnostics reproduce byte-identical values across independent sessions/builds.**
+   Re-grepped the raw `run.log` captures (not just summaries) for `[scene-node-content-guard]` and
+   `[drain-mesh-tail-guard]`/`[drain-mesh-write-guard]` lines:
+   - `[scene-node-content-guard]` fires at the **identical node address `node=0x80183ECC`**, identical
+     `bad_content=0x00000000`, identical `ra=0x00000000`, across 3 independent sessions'
+     runs(`s348_verify2`, `s350_verify1`, `s351_verify1`) — but at high `n` (~1957-1963 by the time the
+     log tail was captured), i.e. it has already fired **thousands of times harmlessly** in each run
+     before that point. This shape (same address, same zero content, fires every frame for thousands of
+     frames without ever crashing) reads as a **legitimately-empty/placeholder scene node the walker
+     revisits every frame** (plausibly stub/disabled content given the M5 audio-destub context), not
+     corruption — worth demoting from "guard proves a bug" to "guard proves a steady-state harmless
+     condition" in the ledger.
+   - `[drain-mesh-tail-guard]`/`[drain-mesh-write-guard]` fire with the **identical garbage value
+     `bad_v1=0x00010001`** across 2 independent sessions (`s350_verify1`, `s351_verify1`), but at `n=0`
+     — fires exactly ONCE per run, immediately before the eventual crash. A specific 32-bit value
+     recurring byte-for-byte across independent builds/runs at a one-shot (not steady-state) guard site
+     is much stronger evidence of a **deterministic, reproducible bug** than generic heap-corruption
+     noise would produce (odds of two independent random-garbage reads matching are ~1 in 4 billion).
+     Source-read (`funcs_3.c:1734-1766`, guest `0x800081A0-0x800081B0`) confirms the tail-scan is a
+     plain singly-linked-list walk (`v1 = *v1` each loop iteration, checking `*v1 != 0`) — a
+     stale/prematurely-freed list node (rather than a struct-offset/type-confusion bug) is the most
+     consistent read of a fixed garbage value recurring at the same walk position across runs.
+
+**Net read**: the parent hypothesis's "diffuse-not-concentrated" framing (item -207) is **partially
+superseded, not fully**: crash *symbol* diversity was real and is NOT explained away by this finding,
+but the *timing* bimodality and the `bad_v1=0x00010001` value-identity are two new, independent,
+stronger-than-symbol-scatter signals that point toward a narrower, more specific target than "generic
+memory storm" — namely, whatever writes/frees the `drainMeshReleaseQueue` list node that later reads
+back as `0x00010001`, likely in or shortly after the ~143s post-transition activity burst. This is NOT
+yet proven to be the SAME root cause behind every bucket-2 crash (processSceneNode/coalesceFreeHeapBlocks
+could still be independent bugs sharing only the same activity-burst trigger window) — flagging this
+explicitly as the open discriminator for next session, not claiming it solved.
+
+**Pivot per NEXT.md's pre-committed plan**: this was the parent hypothesis's (`m5-audio-destub-
+step5-crashrate-comparison`, item -203) last iteration before the 3-strike rule. Per the plan written in
+s351, writing up the reframing now rather than queuing another single-site verify round.
+`m5-audio-destub-drainmesh-writeguard-verify` (iteration 1) CLOSED — superseded by this reframing, no
+more downstream-site verify soaks planned for now. New thread: `m5-audio-destub-linkedlist-corruption-
+source`, targeting the `bad_v1=0x00010001` lead specifically (see NEXT.md for the designed next probe:
+log every `v1` walked, not just the final bad one, for the first N iterations of the tail-scan in a
+fresh run, to see whether the poisoned node consistently appears at the same list position/consumer
+call, which would let the corrupting write/free be localized without a full memory watch).
+
+No `lib/` changes this session (pure log analysis + doc writes). No new build/soak run — the discriminating
+work was entirely offline re-analysis of already-captured data, per the "capture once, analyze many"
+rule; this counts as the session's work unit (a real experiment: does crash timing/value correlate
+across independent runs, discriminating "diffuse random storm" from "bimodal deterministic trigger with
+diffuse consumers") producing an actionable result, not busywork.
