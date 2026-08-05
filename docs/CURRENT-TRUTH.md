@@ -151,7 +151,38 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -211 (s356); the next new item takes -212 and is inserted at the top.
+oldest). Current top is -212 (s357); the next new item takes -213 and is inserted at the top.
+
+-212. **(s357) Thread B finally landed informative data — a crash INSIDE `drainMeshReleaseQueue`, past
+    both existing guards, at an exact `last-guest-pc=0x80008200` repeat of s351's finding — source-proved
+    a 2nd unguarded tail-scan loop in the same function and guarded it.** `s355_ringbuffer_verify3/4.sh`
+    (queued s355, undrained through s356) drained by this session's start. `verify3` crashed in <1s at
+    the known `musyxSynthFrame+4652` boot-time family, non-informative. `verify4` ran a full 247s,
+    reached title at 44.9s, then crashed at `pc-symbol=drainMeshReleaseQueue+3140`,
+    `last-guest-pc=0x80008200`, with `read_guard_fire_n=1`, `write_guard_fire_n=1` (both s350/s350b
+    guards fired earlier in the same run — positive control) AND `ring_fire_n=1` — the ring-buffer
+    breadcrumb's first-ever informative fire (0/3 prior runs). Its dump (`iter_at_bail=1,
+    v1[0]=0x00010001`) shows the poisoned value item -208 found is present at the very FIRST list node
+    examined — a 3rd independent session/build reproducing that exact value at that exact walk position.
+    Cross-checked `last-guest-pc=0x80008200` against history: `s351_drainmeshwriteguard_verify1`
+    (Session 352) crashed at the SAME checkpoint (`drainMeshReleaseQueue+2864`, different host offset,
+    same guest PC) — an independent exact repeat. Source-read (`funcs_3.c` ~1848-1900) found the guest
+    PC sits inside a SECOND, entirely separate unguarded tail-scan loop (`0x800081FC`/`0x80008200`,
+    walking a `ctx->r4`-rooted list, distinct from the `ctx->r3` chain s350/s350b already guard) — same
+    unguarded-linked-list-walk idiom, no bounds check anywhere. Guarded the confirmed site (`0x80008200`)
+    in `fixup_game_funcs.py` (new tag `[drain-mesh-loop2-guard]`, reuses
+    `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD`, same minimal-behavior-change bail as every other drain-mesh
+    guard); `0x800081FC` itself flagged, not guarded, pending its own confirmed hit (same practice as
+    s350→s350b). Hit and fixed one implementation bug along the way: a plain-string `re.subn` replacement
+    let Python's `re` module's backslash-escape processing turn a literal `\n` into a real embedded
+    newline, breaking the generated C (fixed by switching to a lambda replacement, matching every other
+    multi-line patch in the file). Full regen + rebuild clean, patch report showed a clean `x1`
+    application. `lib/` not touched (tool lives in the untracked `~/Documents/Tools/N64Recomp` repo).
+    Queued `s357_drainmeshloop2guard_verify1/2.sh`. Thread A's `s356_coalesceheapguard_verify5/6.sh`
+    still queued/undrained — 4 recipes total pending, loop drains up to 2 per gap. Not closing the thread
+    yet: only 1 informative ring sample exists (need a 2nd to compare `iter_at_bail` consistency, the
+    original discriminator), and the new guard needs its own verify soaks. Full detail: `PORTING-STATE`
+    Session 357.
 
 -211. **(s356) Thread A's `verify3/4` both drained and both CRASHED, but neither hit
     `coalesceFreeHeapBlocks` — inconclusive for the guard question, and one is a brand-new crash

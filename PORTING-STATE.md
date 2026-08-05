@@ -30834,3 +30834,91 @@ recipes queued; no experiments run inline (both meaningful threads are in "waiti
 state — Thread A got data but inconclusive, Thread B has none yet). `docs/CURRENT-TRUTH.md` item -210
 updated with this session's tally; `scratch/agent/NEXT.md` rewritten with the updated decision state for
 both threads.
+
+## Session 357 (2026-08-05): Thread B finally landed informative data — a crash INSIDE `drainMeshReleaseQueue`, past both existing guards, at an exact `last-guest-pc` repeat of s351's finding. Source-read found a SECOND unguarded tail-scan loop in the same function and guarded it; regen+build clean; 2 verify soaks queued.
+
+`wc -c < docs/CURRENT-TRUTH.md` = 44,562 bytes — under the 60,000-byte Step 0 trigger, no maintenance
+iteration this session.
+
+**Thread B (`m5-audio-destub-linkedlist-corruption-source`) data read**: `s355_ringbuffer_verify3/4.sh`
+(queued s355, still undrained as of s356) had drained by this session's start.
+`s355_ringbuffer_verify3` (`scratch/agent/soak_results/s355_ringbuffer_verify3_20260805-141607.log`)
+crashed in under 1s at `pc-symbol=musyxSynthFrame+4652` — the same boot-time crash family noted in items
+-209/-211, `ring_fire_n=0`, too short to be informative for Thread B's question. `s355_ringbuffer_verify4`
+(`scratch/agent/soak_results/s355_ringbuffer_verify4_20260805-141608.log`) ran a full 247s, reached title
+at 44.9s, then **CRASHED INSIDE `drainMeshReleaseQueue`** at `pc-symbol=drainMeshReleaseQueue+3140`,
+`last-guest-pc=0x80008200`, with `read_guard_fire_n=1` AND `write_guard_fire_n=1` (both s350/s350b guards
+fired earlier in the same run — positive control, confirms this is not those guards' own bug
+re-surfacing) AND `ring_fire_n=1` — the ring-buffer breadcrumb's FIRST-EVER informative fire since it
+landed s353 (prior verify pairs s353_verify1/2 and this same s355_verify3 all missed
+`drainMeshReleaseQueue` entirely, 0/3 until this run). The `[drain-mesh-ring]` dump:
+`idx=1 v1[0..7]=0x00010001,0x8072B160,... iter_at_bail=1` — the very FIRST list node the tail-scan
+examined this run was already the byte-identical poisoned value `0x00010001` item -208 first found (at a
+guard site, `n=0`) and item -210 confirmed unrelated to `coalesceFreeHeapBlocks`. This is now a **3rd
+independent session/build** producing that exact value at that exact walk position (s350_verify1,
+s351_verify1, now s355_verify4/read via s357) — strengthens the "structural, not state-dependent" reading
+item -208 favored, though this ring sample is from the FIRST loop's walk (the one s350/s350b already
+guard), not proof about the second loop below.
+
+**Cross-checked `last-guest-pc=0x80008200` against soak history**: grepped `PORTING-STATE.md` and found
+`s351_drainmeshwriteguard_verify1` (Session 352) crashed at `pc-symbol=drainMeshReleaseQueue+2864`,
+**also** `last-guest-pc=0x80008200` — an exact independent repeat of the checkpoint, with the SAME
+positive-control signature (both guards fired, crash moved further downstream). Different host-offset
+(+2864 vs +3140) is consistent with both crashes landing at the same guest instruction inside a tight
+loop (loop-iteration count differs run to run, so the exact host PC within the loop body's repeated
+compiled code differs) rather than two different bugs.
+
+**Source-read** (`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c` ~1848-1900, guest range
+0x800081DC-0x80008210): found the guest PC 0x80008200 sits inside a SECOND, entirely separate unguarded
+linked-list tail-scan loop in this same function, walking a list rooted at `ctx->r4`/`$a0` (NOT the
+`ctx->r3`/`$v1` chain the existing s350/s350b guards protect):
+```
+L_800081FC: v1 = *v1 (0x800081FC, MEM_W(ctx->r3,0)); v0 = *v1 (0x80008200, MEM_W(ctx->r3,0));
+            if (v0 != 0) goto L_800081FC;
+```
+i.e. "keep following `v1 = *v1` until the node it lands on has a NULL first field" — same
+unguarded-linked-list-walk idiom as the loop s350 already guards, no bounds check anywhere. The confirmed
+crash site is 0x80008200 (dereferencing the pointer `0x800081FC` just loaded into v1); 0x800081FC itself
+(dereferencing the pre-update v1) has not yet been observed to fault and is flagged, not guarded, same
+"confirmed site first, sibling pending its own hit" practice as s350→s350b.
+
+**Fix**: added a range-check-and-bail guard at 0x80008200 (`~/Documents/Tools/N64Recomp/fixup_game_funcs.py`,
+new patch block "drainMeshReleaseQueue 2nd tail-scan loop read guard (s357)"), reusing the existing
+`ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD` env var (already armed by default in `run_s327waitpump.sh`) under a
+new diagnostic tag `[drain-mesh-loop2-guard]`. On invalid v1, synthesizes `v0=0` — the value the
+following `bne $v0,$zero` check would see from a legitimately-NULL-first-field node, i.e. "treat this
+unreachable node as the list's tail and stop walking" — same minimal-behavior-change bail idiom as every
+other drain-mesh guard.
+
+**Hit one implementation bug applying this**: the first attempt used a plain Python string as the
+`re.subn` replacement (rather than a lambda), and Python's `re` module processes backslash escapes
+(`\n`, `\t`, etc.) in plain-string replacements — the fprintf format string's literal `\n` became an
+actual embedded newline in the generated `funcs_3.c`, breaking the C string literal across two lines and
+failing the build (`error: expected expression` at the `fprintf` call). Fixed by switching to a lambda
+callback for the replacement, matching every other multi-line patch in this file (which all already use
+lambdas for exactly this reason — confirmed by re-reading the s350b write-through-guard patch immediately
+above this one in the file). Re-ran the full regen (delete `funcs_*.c` → `N64Recomp` → `fixup_game_funcs.py`
+→ `cmake --build`); patch report showed a clean single application (`drainMeshReleaseQueue 2nd tail-scan
+loop read guard patched x1`), confirmed in the regenerated source (single-line fprintf, no stray
+newline), and the full build completed clean (`Built target RogueSquadron64Recomp`, only pre-existing
+`DDIV`/`DMULT` sign-mismatch warnings, no new errors).
+
+**`lib/` not touched** — `fixup_game_funcs.py` lives in the untracked `~/Documents/Tools/N64Recomp` tool
+repo, outside this repo's `lib/`/submodule-patches system, same as every prior M5 drain-mesh session.
+
+**Queued** `s357_drainmeshloop2guard_verify1/2.sh` (`scratch/agent/soak_queue/`, `HOLD_S=240`, same
+recipe/env as prior verify pairs, tracks a new `loop2_guard_fire_n` counter alongside the existing
+guard/ring counters) — first verify pair for the new guard. Thread A's `s356_coalesceheapguard_verify5/6.sh`
+are still queued and undrained; loop drains up to 2 recipes per gap, so both threads' pairs are now queued
+(4 recipes total).
+
+**Decision**: Thread B is no longer 0/2-informative — this session got its first informative ring-buffer
+data point AND landed a source-proved, evidence-backed fix, the strongest outcome the discriminating
+question in NEXT.md could produce. Not closing the thread yet: only 1 informative ring sample exists so
+far (need a 2nd to actually compare `iter_at_bail` consistency across informative runs, the original
+discriminator), and the new loop2 guard itself needs its own verify soaks before this can be called
+validated. `HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` (this is the same
+investigation, now with a landed fix rather than a pivot) — this is iteration 4 for the slug (opened s352,
+instrument s353, 0/2-informative s354, undrained-wait s356, informative+fix this session), so per-slug
+budget resets are irrelevant here since the session produced a discriminating, ADVANCING result rather
+than another null reading.
