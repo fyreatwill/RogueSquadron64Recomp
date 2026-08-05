@@ -1,100 +1,98 @@
-# NEXT work unit — is gate1/gate2's `n` counter 1:1 with musyxSynthFrame calls, or undercounting?
+# NEXT work unit — find the 3rd call mechanism to tickAllActiveSongs/tickAudioSequencerFrame
 
-## Context — s319 found a real, same-run 14-call gap, not a diagnostic bug this time
+## Context — s320 closed the sampling-artifact explanation; a real 3rd call site is now confirmed to exist
 
-s318 fixed a real diagnostic bug (a stale re-read racing against the true branch register) and found
-gate1/gate2 genuinely DO take the "call" branch that invokes `tickAllActiveSongs`/`tickAudioSequencerFrame`
-— but its own numbers (gate1 19/40, gate2 4/4) came from a different soak window than the
-independently-measured "37 real calls" figure, so it was never a direct, same-run comparison.
+s319 found a real, same-run 14-call gap: gate1+gate2's own measured "call" branch takes (24) fell short
+of the tick-producer functions' own measured call count (38). Two explanations survived: (a) gate1/gate2
+are each entered more than once per `musyxSynthFrame` call and their own `n` counters don't distinguish
+that (a sampling artifact), or (b) a genuinely separate, unlocated 3rd call mechanism exists.
 
-**s319 ran that direct comparison and found a real gap.** Same soak, same log: gate1 fired "call" (the
-`reg=1` outcome, s318's true-register field) on 19/40 samples, gate2 on 5/5 reached samples, gate3 still
-0 reached — combined **24** real call-branch takes. In the exact same log, the tick-producer functions'
-own independent entry counters (`[reach-allsongs-entry/exit]`, `[tick-audio-seq]`,
-`[tick-all-audio-channels]`) all read **38**. Since each gate's "call" branch invokes BOTH
-`tickAllActiveSongs` and `tickAudioSequencerFrame` together (confirmed from the patch source in
-`fixup_game_funcs.py`), 24 gate-side events should produce at most 24 calls to each function if
-gate1+gate2 (gate3 confirmed inert) are the only drivers. They don't — a genuine 14-call, same-run gap.
-Full detail: PORTING-STATE Session 319, CURRENT-TRUTH item -178.
+**s320 ran the discriminating measurement and killed (a).** Same soak, same log: `[synth-entry]`
+(`musyxSynthFrame`'s own entry counter, already armed since s310) fired 40/40 samples; `[musyx-gate1]`'s
+own `n` counter ALSO reached 40/40 in the identical log — the two track together exactly, 1:1. Gate1 is
+not being entered more than once per call; its `n` counter is a faithful count of `musyxSynthFrame`
+invocations. Combined with gate1 (19 real calls) + gate2 (4/4 reached, all real) = 23, vs. the
+tick-producer functions' own 37/37 — the ~14-call gap is real, not a sampling illusion.
+Full detail: PORTING-STATE Session 320, CURRENT-TRUTH item -179.
 
-**Do not re-litigate whether the s318 diagnostic-bug fix was correct — it was, and is not in question
-here.** This is a new, smaller, more specific question sitting on top of a now-trusted instrument.
+**Do not re-litigate whether gate1's `n` is 1:1 with `musyxSynthFrame` calls — s320 settled that
+directly.** The active question now is narrower and purely structural: **where is the 3rd call site (or
+sites) that invoke `tickAllActiveSongs`/`tickAudioSequencerFrame` beyond gate1 and gate2?**
 
 ## The work unit
 
-**Determine whether gate1's `n` counter increments exactly once per `musyxSynthFrame` invocation, or
-more than once per call — this splits the two surviving explanations without any new instrumentation.**
+**Exhaustive grep across `RecompiledFuncs/*.c` for every call site and data reference to
+`tickAllActiveSongs`'s and `tickAudioSequencerFrame`'s guest addresses, plus a check for an
+indirect/function-pointer dispatch pattern. This is pure grep/read — no build, no soak, no regen.**
 
-1. `musyxSynthFrame`'s own entry count is already logged by the s310 `AUDIOTICK_TRACE` diagnostics
-   (`ROGUESQ_LOG_AUDIOTICK_TRACE=1`, already armed in the soak template) under a `[synth-entry]` tag —
-   confirm the exact tag name first with `grep -n "synth-entry" /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-   before assuming the exact string.
-2. Reverse `setDisplayMode`'s site a 13th time (same convention: narrow the `(?:B40|C88)` alternation
-   regex in `fixup_game_funcs.py` to `C88` only), regen (`make_elf.py` -> `N64Recomp` ->
-   `fixup_game_funcs.py`, confirm `audio gate patched x1`), rebuild, one soak. Copy
-   `scratch/s73_post_a_scene/run_step319gatevstickcounter.sh` (do not hand-roll — same env/breadcrumb
-   set, all still valid).
-3. In the resulting log, count `[synth-entry]`'s final sample count against gate1's own `n` final value
-   (both should reach ~38-40 if 1:1, per the established hard-stop boundary). If they track together
-   (both landing at the same count, e.g. both ~38-40), gate1's `n` IS 1:1 with `musyxSynthFrame` calls —
-   that rules out explanation (a) (gate1 entered multiple times per call) and points at (b): a genuinely
-   separate, still-unlocated 3rd call mechanism to `tickAllActiveSongs`/`tickAudioSequencerFrame` beyond
-   gate1/2 exists somewhere else in the codebase (worth a fresh exhaustive grep for other call sites or
-   an indirect-dispatch pattern, following the s310 method that found `musyxSynthFrame`'s own
-   VI-retrace-callback invocation). If `[synth-entry]` significantly outpaces gate1's `n` (e.g.
-   `[synth-entry]` reaches 40 while gate1's `n` caps out well below), that's a print-cap or sampling
-   artifact in gate1's own diagnostic worth fixing directly (explanation (a)).
-4. Revert `setDisplayMode`'s site (mandatory — restore `(?:B40|C88)`), regen, rebuild, confirm
-   `audio gate patched x2` in the fixup report and `MEM_B(0XF50, ctx->r1) = 0;` present at both known
-   sites (`funcs_23.c:9787` and `funcs_23.c:10006`) before ending session.
+1. Get the guest addresses of `tickAllActiveSongs` and `tickAudioSequencerFrame` from
+   `fixup_game_funcs.py`'s comments near the `_musyx_gate{1,2,3}_patch` definitions (s317 already
+   recorded `tickAudioSequencerFrame`'s address as `0x8008D960` — confirm it's still accurate, and find
+   `tickAllActiveSongs`'s address the same way; do not assume, re-grep).
+2. Grep `RecompiledFuncs/*.c` for both the literal function names (direct C calls the recompiler emits
+   as plain calls) AND the hex guest addresses (data references, LUI/ORI address-construction pairs,
+   anything that could feed an indirect call). s317 already did this exact grep for
+   `tickAudioSequencerFrame` alone and found only the 3 known gate sites — but that grep predated
+   knowing there's a real, confirmed gap to explain (s319/s320). Re-run it, and this time also do the
+   same grep for `tickAllActiveSongs`'s address — s317 never grepped that one specifically, only
+   `tickAudioSequencerFrame`.
+3. If the exhaustive text grep again finds nothing beyond the 2 known gates, pivot to the s310 precedent:
+   `musyxSynthFrame`'s own invocation turned out to be indirect, through a 4-slot VI-retrace callback
+   table, invisible to a literal-text grep for the function name. Check whether either tick-producer
+   function's address appears anywhere as a stored function-pointer value (e.g. in a callback table,
+   dispatch array, or struct field initializer) rather than as a direct `jal`.
+4. If a 3rd call site is found: source-read it to understand its trigger condition (is it gated? is it
+   per-frame, per-event, conditional?) and log the guest address + calling function name into
+   CURRENT-TRUTH. If none is found even with the function-pointer check, the discriminating question
+   shifts again — consider whether `tickAllActiveSongs` and `tickAudioSequencerFrame` are themselves
+   called from within EACH OTHER or from a shared subroutine neither gate patch's comment currently
+   documents (re-read the actual disassembly around each known gate site, not just the patch comment,
+   to make sure the "gate calls both functions together" premise from s319 is itself still accurate).
 
-**Discriminating outcome**: 1:1 tracking closes explanation (a) and reopens the search for a 3rd call
-site with a much narrower, well-defined question ("what else calls these 2 functions, beyond the 2
-known gates"). A gap between `[synth-entry]` and gate1's `n` instead means the undercount is purely an
-artifact of gate1's own sampling, fixable directly without any further search.
+**Discriminating outcome**: a 3rd static or indirect call site found = the mechanism is real and
+locatable, ready for its own follow-up (characterize its trigger condition). A clean exhaustive miss on
+both direct-call and function-pointer greps = the "gate calls both functions together" premise itself
+needs re-verification against the disassembly, since a real 14-call gap has now been confirmed twice
+(s319, s320) and cannot be sampling noise.
 
-## Environment notes (carried forward, all still valid; s319 additions marked)
+## Environment notes (carried forward, all still valid)
 
 - Regen paths for game-code patches are in `/Users/williambuckley/Documents/Tools/N64Recomp`
   (`fixup_game_funcs.py`, `RecompiledFuncs/*.c`, `build/N64Recomp`, `rogue_squadron.toml`), NOT this
   repo (`~/Documents/Tools/RogueSquadron64Recomp`). This is a SEPARATE checkout from
   `lib/N64ModernRuntime`'s nested `N64Recomp` submodule — edits here do NOT need
   `submodule-patches/export.sh`. Only edits actually inside this repo's `lib/` need that.
-- To reverse ONLY `setDisplayMode`'s site (not `reapplyDisplayMode`'s), narrow the shared regex in
-  `fixup_game_funcs.py` (~line 172, s319) from `0x8008E(?:B40|C88)` to `0x8008EC88` only — this keeps
-  `reapplyDisplayMode` force-zeroed (the hot per-frame path, still out of scope) while letting
-  `setDisplayMode`'s own single boot-time call write its real, non-patched value. MUST restore the full
-  `(?:B40|C88)` alternation before ending session, verified via `audio gate patched x2` in the fixup
-  report (x1 means only one site is currently patched — a bug, not baseline).
-- `cd` into `N64Recomp` FIRST as its own bare `cd` command, THEN run `./build/N64Recomp
-  rogue_squadron.toml` with output redirection in a SEPARATE Bash call — combining `cd` and a redirect
-  in one compound command triggers a permission prompt in this sandbox. Same for any cd+redirect combo.
+- This work unit is pure grep/read against the ALREADY-CURRENT `RecompiledFuncs/*.c` (baseline state,
+  both audio-gate sites force-zeroed) — no regen, no rebuild, no soak needed at all for steps 1-3. Only
+  if a follow-up characterization needs a soak should the setDisplayMode-reversal dance be repeated.
+- If a build/soak does turn out to be needed: regen order is `make_elf.py` -> `N64Recomp` ->
+  `fixup_game_funcs.py` -> `cmake`, in that exact order (`N64Recomp` skips files that already exist on
+  disk — item -20 — so `RecompiledFuncs/*.c` MUST be deleted before every `N64Recomp` run, not after).
+  `cd` into `N64Recomp` FIRST as its own bare `cd` command, THEN run `./build/N64Recomp
+  rogue_squadron.toml` with output redirection in a SEPARATE Bash call.
+- To reverse ONLY `setDisplayMode`'s site (not `reapplyDisplayMode`'s) if a future soak needs it: narrow
+  the shared regex in `fixup_game_funcs.py` (~line 174, s320) from `0x8008E(?:B40|C88)` to
+  `0x8008EC88` only. MUST restore the full `(?:B40|C88)` alternation before ending session, verified via
+  `audio gate patched x2` in the fixup report.
 - `python3 -c "import glob, os; [os.remove(f) for f in glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/*.c')]"`
   clears RecompiledFuncs (use the ABSOLUTE path).
 - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8` from this repo's
   root — allowlisted verbatim, works as a single command.
-- **s319**: invoking a soak driver script directly as `./run_foo.sh` gets denied (no matching allow
-  pattern for a bare `./run_*.sh`); invoke it as `zsh run_foo.sh` instead (`Bash(zsh:*)` is allowlisted).
-  `cd` into `scratch/s73_post_a_scene` first as its own bare command.
-- Soak driver template: `scratch/s73_post_a_scene/run_step319gatevstickcounter.sh` (now the newest;
-  copy it, don't hand-roll — same breadcrumb set as the whole s310-319 lineage, `reg=` fields live).
-- Launch the soak via Bash with `run_in_background: true`, then `TaskOutput` with `block: true` and
-  `timeout` up to 600000ms — do NOT foreground-poll. The soak's own 600s phase-timeout exits nonzero
-  (exit 5, INCONCLUSIVE) on the expected deterministic hang — that's success for this soak design, not
-  a tooling failure; the game process is killed automatically. Confirm
-  `pgrep -f "build/RogueSquadron64Recomp"` is empty before AND after.
+- Soak driver template if needed: `scratch/s73_post_a_scene/run_step320synthentryvsgate1.sh` (newest;
+  copy it, don't hand-roll). Invoke as `zsh run_foo.sh`, not `./run_foo.sh` (bare `./run_*.sh` gets
+  denied). `cd` into `scratch/s73_post_a_scene` first as its own bare command. Launch via Bash with
+  `run_in_background: true`, then `TaskOutput` with `block: true` and `timeout` up to 600000ms — do NOT
+  foreground-poll. Exit 5 (INCONCLUSIVE, phase timeout) is the EXPECTED outcome for the
+  setDisplayMode-reversed hang, not a tooling failure. Confirm `pgrep -f "build/RogueSquadron64Recomp"`
+  is empty before AND after.
 - `/tmp` is blocked for redirects — use a path inside this repo, `N64Recomp`, or `rogue_squadron64`
   instead.
-- **s318 rule, general**: any diagnostic reporting "what branch will this code take" must reuse the SAME
-  register/value the real branch logic loaded, never a second independent read of the same memory
-  location, especially for shared/global state under this project's real cooperative-threading
-  concurrency.
-- `scratch/s73_post_a_scene/step319gatevstickcounter/run.log` (~750 KB) is this session's saved log,
-  containing the `reg=`/entry-counter data if a future session wants to re-verify before building
-  anything new.
+- Multi-operation Bash commands combining `cd`+redirect, or `export VAR=...` chained with other
+  commands, trigger permission prompts in this sandbox — issue `cd` as its own bare command, and run
+  each `export`/command separately rather than chaining with `&&` or newlines in one call.
 
-HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (same slug, s303-319 — still the active
-investigation thread. 13 of these sessions have each produced a discriminating result in sequence
-(s303/s306/s307/s309/s310/s311/s312/s313/s315/s316/s317/s318/s319), resetting the iron-rule-8
+HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang (same slug, s303-320 — still the active
+investigation thread. 14 of these sessions have each produced a discriminating result in sequence
+(s303/s306/s307/s309/s310/s311/s312/s313/s315/s316/s317/s318/s319/s320), resetting the iron-rule-8
 no-progress counter every time; s314 (maintenance) doesn't count. Continue the same slug next
 non-maintenance session.)

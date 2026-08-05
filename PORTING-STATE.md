@@ -28160,3 +28160,57 @@ maintenance and doesn't count). Next session: check whether gate1's `n` counter 
 once per `musyxSynthFrame` call or more often, using the already-armed `[synth-entry]` tag from the s310
 `AUDIOTICK_TRACE` diagnostics in the same soak -- resolves explanation (a) vs (b) above without any new
 instrumentation, just a soak with both live together.
+
+## Session 320 (2026-08-04) — M5 audio: gate1's `n` counter tracks `musyxSynthFrame`'s own entry count 1:1, same run -- RULES OUT the sampling-artifact explanation, CONFIRMS a still-unlocated 3rd call mechanism
+
+Continuing item -178's own open follow-up (s319): does gate1's `n` counter increment once per
+`musyxSynthFrame` invocation (ruling explanation (a), a diagnostic sampling artifact, in or out), or does
+`musyxSynthFrame` get called more often than gate1's `n` reflects? Confirmed the exact tag name first
+(`grep -n "synth-entry" fixup_game_funcs.py` -> `[synth-entry]`, armed since s310's `AUDIOTICK_TRACE`
+diagnostics, already present in the soak template, no new instrumentation needed). Reversed
+`setDisplayMode`'s site a 13th time (same convention: narrowed the shared `(?:B40|C88)` alternation
+regex in `fixup_game_funcs.py` to `0x8008EC88` only, keeping `reapplyDisplayMode`'s site force-zeroed),
+regenerated (confirmed `audio gate patched x1` in the fixup report -- only 1 of 2 sites patched, meaning
+`setDisplayMode`'s own write executes for real), rebuilt clean, one soak
+(`scratch/s73_post_a_scene/run_step320synthentryvsgate1.sh`, copied from s319's template, same
+env/breadcrumb set).
+
+**Direct, same-run measurement**: `[synth-entry]` fires 40/40 samples (n=0..39, matching the established
+hard-stop boundary). `[musyx-gate1]`'s own `n` counter ALSO reaches exactly 40/40 samples (n=0..39) in
+the identical log. **The two counters track together, 1:1** -- gate1's `n` is not undercounting relative
+to `musyxSynthFrame`'s true entry rate; every `musyxSynthFrame` call corresponds to exactly one gate1
+evaluation, no more. This directly rules out explanation (a) (gate1 evaluated more than once per call,
+with the diagnostic's own `n` not distinguishing that). Positive control intact: gate1's `reg` field
+still alternates `2,1,2,1,...` (19/40 samples `reg=1`, i.e. 19 real "call" branch takes this run, close
+to s319's 19/40 -- run-to-run noise, not a broken instrument). Full picture from the same log: gate1 19
+real calls + gate2 4/4 reached-and-all-`reg=1` = 23 combined real calls; the tick-producer functions'
+own independent entry counters (`[reach-allsongs-entry/exit]`, `[tick-audio-seq]`,
+`[tick-all-audio-channels]`) all read 37/37 -- a 14-call gap, consistent with s319's 24-vs-38 finding
+(both land at ~14, the small run-to-run count variance already flagged as expected noise). gate3
+remains 0/0, still unreached.
+
+**Result: explanation (b) is now the sole surviving explanation.** A genuinely separate, still-unlocated
+3rd call mechanism to `tickAllActiveSongs`/`tickAudioSequencerFrame` exists beyond gate1 and gate2 --
+not a sampling artifact in either gate's own diagnostic. This reopens the search for that 3rd site with
+a much narrower, well-defined question than any prior session in this lineage: an exhaustive grep for
+every static call site and any data reference to `tickAllActiveSongs`'s and `tickAudioSequencerFrame`'s
+guest addresses across all of `RecompiledFuncs/*.c` (the same method s317 used to definitively rule out
+a 4th call site for `tickAudioSequencerFrame` alone, but that grep predates knowing there IS a real gap
+to explain -- worth re-running now with that motivation, and worth also checking for an indirect/
+function-pointer dispatch pattern, since s310 found exactly that pattern one level up for
+`musyxSynthFrame`'s own invocation).
+
+`setDisplayMode`'s site re-reverted (alternation regex restored to `(?:B40|C88)`), regenerated, rebuilt
+clean; confirmed `audio gate patched x2` in the fixup report and `MEM_B(0XF50, ctx->r1) = 0;` present at
+both `funcs_23.c:9787` (setDisplayMode) and `funcs_23.c:10006` (reapplyDisplayMode) before ending
+session. All edits this session were in the standalone `~/Documents/Tools/N64Recomp` checkout
+(`fixup_game_funcs.py`) and `~/Documents/Tools/rogue_squadron64` (regenerated ELF only, no source edits)
+-- never inside this repo's `lib/`, so no `submodule-patches/export.sh` needed. `lib/N64ModernRuntime`/
+`lib/rt64` dirty status in `git status` is pre-existing, unrelated to this session.
+
+`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang` (unchanged -- 14th session producing a
+discriminating result: s303/s306/s307/s309/s310/s311/s312/s313/s315/s316/s317/s318/s319/s320, s314 was
+maintenance and doesn't count). Next session: exhaustive grep for every static call site and any data
+reference to `tickAllActiveSongs`'s and `tickAudioSequencerFrame`'s guest addresses across
+`RecompiledFuncs/*.c`, plus a check for indirect/function-pointer dispatch (the s310 pattern) -- this is
+pure grep/read, no build or soak needed, and directly targets the now-confirmed 3rd call mechanism.
