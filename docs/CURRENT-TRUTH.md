@@ -16,7 +16,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    Overturned Conclusions entries). 35 KB remains a stretch target, not a hard floor — the "Current
    truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
    deliberately; both are used every iteration for phase-gating and build commands.
-2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 11 times (s303-318), each reproducing an identical deterministic full-boot hang and narrowing it further. Current state (s318, direct measurement): item -175's "gates never call" conclusion was a diagnostic TOCTOU-race bug, now fixed and OVERTURNED — gate1/gate2 DO take the call branch regularly. Full detail Next-steps item -177.
+2. **M5 audio de-stubbing**: design doc DONE (s298), steps 1-3 DONE (s300/301). Step 4 (reversing the 3 audio-gate-byte force-zero sites) IN PROGRESS, `HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang`. `setDisplayMode`'s site reversed/re-reverted 12 times (s303-319), each reproducing an identical deterministic full-boot hang and narrowing it further. Current state (s319, direct same-run measurement): gate1+gate2's real call-branch rate (24) falls well short of the tick-producer functions' own measured call count (38) — a genuine, unexplained 14-call gap, distinct from s318's now-fixed diagnostic bug. Full detail Next-steps item -178.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -148,7 +148,32 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -177 (s318); the next new item takes -178 and is inserted at the top.
+oldest). Current top is -178 (s319); the next new item takes -179 and is inserted at the top.
+
+-178. **(s319) M5 audio de-stubbing: gate1+gate2's real call rate (24) does NOT fully explain the
+    tick-producer functions' own measured call count (38), in the SAME soak — a real, still-unexplained
+    gap, not the diagnostic-bug artifact s318 fixed.** Closed item -177's own open follow-up (compare
+    gate1+gate2's true call rate against the independently-measured 37/run figure — s318 could not do
+    this directly because its own numbers came from a different soak window). Reversed `setDisplayMode`'s
+    site a 12th time (same convention: narrow `(?:B40|C88)` to `C88` only), one soak with gate1/2/3's
+    `reg=` fields (s318's fix) and the tick-producer entry counters live together. **Direct measurement,
+    same run**: gate1 19/40 samples `reg=1` (real "call"), gate2 5/5 reached samples all `reg=1`, gate3
+    still 0 reached — combined 24 real call-branch takes. In the same log, `[reach-allsongs-entry/exit]`
+    = 38/38, `[tick-audio-seq]` = 38, `[tick-all-audio-channels]` = 38 (close variance of the previously-
+    cited 37, expected run-to-run noise) — NOT 24. Since each gate's "call" branch invokes BOTH
+    `tickAllActiveSongs` and `tickAudioSequencerFrame` together (confirmed from the patch source), 24
+    gate-side events should produce at most 24 calls to each function if gate1+gate2 (gate3 inert) are
+    the only drivers — but the functions' own counters show 38, a genuine 14-call same-run gap. Positive
+    control intact: gate1 produced a genuine mix of `reg=1`/`reg=2` (not constant), confirming the fixed
+    instrument is live, not silently broken. Two explanations survive, narrower than pre-s318: (a) gate1
+    and/or gate2 are entered more than once per `musyxSynthFrame` call and the diagnostic's own `n`
+    counter isn't distinguishing that (unverified — the `n<40||n%128==0` cap has not been cross-checked
+    against `musyxSynthFrame`'s own entry count in the same run), or (b) a still-unlocated 3rd call
+    mechanism beyond gate1/2 exists. Next step: log `musyxSynthFrame`'s own entry count (`[synth-entry]`,
+    already armed from s310's `AUDIOTICK_TRACE` diagnostics) alongside gate1's `n` in one soak — if
+    `[synth-entry]` outpaces gate1's `n` 1:many, that's (a); if they track 1:1, that points at (b).
+    `setDisplayMode`'s site re-reverted, baseline restored and rebuilt (`audio gate patched x2`
+    confirmed, both force-zero sites present in source). Full detail: `PORTING-STATE` Session 319.
 
 -177. **(s318) M5 audio de-stubbing: item -175's "gate1/2/3 never take the call branch" conclusion was a
     DIAGNOSTIC BUG (TOCTOU race), not a game-logic fact — OVERTURNED, see Overturned Conclusions.**

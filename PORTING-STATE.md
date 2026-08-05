@@ -28088,3 +28088,75 @@ still stop 3 calls short of the 40/40 hard-stop boundary (item -173's open quest
 re-examining directly against gate1+gate2's own call-branch counts in the SAME soak (not yet compared
 in this session; this soak's window differs from the one that produced the original "37" figure, so a
 direct comparison needs a fresh same-run measurement, not a cross-run one per iron rule 2).
+
+## Session 319 (2026-08-04) — M5 audio: direct same-run comparison finds gate1+gate2's real call rate (24) falls well short of the tick-producer functions' own entry count (38) -- a genuine, unexplained gap, not a diagnostic artifact
+
+Continuing item -177's own open follow-up: quantify gate1+gate2's combined call rate (now trustworthy
+after s318's `reg=` fix) against the tick-producer functions' own entry counters, **in the same soak**
+(s318 explicitly could not do this -- its "19/40 and 4/4" figures came from a different soak window than
+the independently-measured "37 real calls" figure).
+
+Reversed `setDisplayMode`'s site a 12th time (narrowed the `(?:B40|C88)` alternation regex in
+`fixup_game_funcs.py` to `C88` only, same convention as every prior session in this lineage), confirmed
+`audio gate patched x1` in the fixup report, regenerated (`make_elf.py` -> `N64Recomp` ->
+`fixup_game_funcs.py`) and rebuilt. Copied s318's soak template to
+`scratch/s73_post_a_scene/run_step319gatevstickcounter.sh` (identical env/breadcrumb set, `reg=` fields
+already live in all 3 gates, `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1` already armed) and ran one soak. Hit
+the expected deterministic phase-timeout (exit 5, INCONCLUSIVE, VI stuck waiting for width 1024) -- the
+accepted outcome for this reversed-site recipe; game process confirmed dead before and after.
+
+**Result, all counted directly from the single resulting log
+(`scratch/s73_post_a_scene/step319gatevstickcounter/run.log`)**:
+- gate1: 40/40 samples (n=0..39, full coverage of the run's musyxSynthFrame invocations). `reg=1` (real
+  "call" branch, per s318's fix) on **19/40** -- matches s318's own 19/40 reading closely (same
+  mechanism, different soak, consistent).
+- gate2: 5/5 reached samples, ALL `reg=1` (real "call"). (s316/s318 measured 4/4 in earlier soaks; 5 here
+  is ordinary run-to-run variance in exactly when gate2's containing loop stops being entered, not a new
+  finding.)
+- gate3: 0 samples reached, unchanged (still a reachability fact, not a race).
+- Combined gate1+gate2 real "call" events this run: **19 + 5 = 24**.
+- In the SAME log, the tick-producer functions' own independent entry/exit counters:
+  `[reach-allsongs-entry]`/`[reach-allsongs-exit]` = 38/38, `[tick-audio-seq]` = 38,
+  `[tick-all-audio-channels]` = 38. `[audtask-dispatch]`/`[reach-update3d-entry]`/
+  `[reach-update3d-exit]` all hit the established 40/40 hard-stop boundary, unchanged.
+
+**24 (gate1+gate2's own measured call-branch takes) vs. 38 (the tick-producer functions' own measured
+call count), in the exact same run.** Per the source (`fixup_game_funcs.py` `_musyx_gate{1,2}_patch`
+comments), each gate's "call" branch invokes BOTH `tickAllActiveSongs` and `tickAudioSequencerFrame`
+together, so 24 gate-side call events should produce at most 24 calls to each of those functions if
+gate1+gate2 (with gate3 confirmed inert) are the only drivers -- but the functions' own counters show 38.
+**This is a real, same-run 14-call gap, not the diagnostic-bug artifact s318 fixed** (that bug produced
+an impossible 0-vs-37 contradiction; this is a smaller, plausible-but-still-unexplained undercount from
+an instrument now confirmed accurate on its own terms). Positive control intact throughout: gate1
+produced a genuine mix of `reg=1`/`reg=2` outcomes (not constant), confirming the fixed instrument is
+live and sensitive, not silently broken.
+
+**This closes item -177's own open follow-up with a real answer (not "closes the investigation" --
+opens a narrower one): gate1+gate2's directly measured call rate does NOT fully explain the tick-producer
+functions' 37-38 real calls.** Two explanations survive, both narrower than before s318 (down from "some
+unknown number of unlocated call/write sites" to exactly these two): (a) gate1 and/or gate2 are each
+being entered MORE THAN ONCE per underlying trigger this diagnostic isn't counting separately (e.g. a
+per-call sample-cap artifact this session didn't fully rule out for gate1 -- its `n<40||n%128==0` cap
+means only the first 40 raw evaluations are visible; if gate1 is evaluated more than once per
+musyxSynthFrame call, the true call rate could be higher than what 40 samples capture), or (b) there is
+still a genuinely separate, as-yet-unlocated 3rd call-branch mechanism contributing calls beyond gate1/2
+(gate3 ruled out, but the file may have other structures not yet grepped for this specific call pair).
+Distinguishing these needs measuring whether gate1's `n` counter increments once per `musyxSynthFrame`
+call or more often (e.g. logging `musyxSynthFrame`'s own entry count alongside gate1's `n` in the same
+run, already-armed `[synth-entry]` tag from the s310 `AUDIOTICK_TRACE` diagnostics should do this without
+new instrumentation).
+
+`setDisplayMode`'s site re-reverted (alternation regex restored to `(?:B40|C88)`), regenerated, rebuilt
+clean; confirmed `audio gate patched x2` in the fixup report and `MEM_B(0XF50, ctx->r1) = 0;` present at
+both `funcs_23.c:9787` (setDisplayMode) and `funcs_23.c:10006` (reapplyDisplayMode) before ending
+session. All edits this session were in the standalone `~/Documents/Tools/N64Recomp` checkout
+(`fixup_game_funcs.py`) and `~/Documents/Tools/rogue_squadron64` (regenerated ELF only, no source edits)
+-- never inside this repo's `lib/`, so no `submodule-patches/export.sh` needed. `lib/N64ModernRuntime`/
+`lib/rt64` dirty status in `git status` is pre-existing, unrelated to this session.
+
+`HYPOTHESIS-ID: m5-audio-destub-step4-setdisplaymode-hang` (unchanged -- 13th session producing a
+discriminating result: s303/s306/s307/s309/s310/s311/s312/s313/s315/s316/s317/s318/s319, s314 was
+maintenance and doesn't count). Next session: check whether gate1's `n` counter (and gate2's) increments
+once per `musyxSynthFrame` call or more often, using the already-armed `[synth-entry]` tag from the s310
+`AUDIOTICK_TRACE` diagnostics in the same soak -- resolves explanation (a) vs (b) above without any new
+instrumentation, just a soak with both live together.
