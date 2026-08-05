@@ -17,16 +17,18 @@ Priority order for upcoming iterations, set after the 300-session review:
    of s343 (item -199). Step 5 (crash-family #3/#4 rate comparison) is OPEN, `HYPOTHESIS-ID
    m5-audio-destub-step5-crashrate-comparison` (item -203) — the 3-strike pivot check landed s352 (item
    -208): crash SYMBOL scatter across 16 soaks is real (10 distinct downstream symbols) but crash
-   TIMING is bimodal, not diffuse (two deterministic post-VI-transition windows), and the
-   `drainMeshReleaseQueue` tail-scan's `bad_v1=0x00010001` corrupted-pointer value reproduces
-   byte-identically across 2 independent sessions — reframed toward a specific dangling-list-node lead
-   rather than a generic memory storm. `m5-audio-destub-drainmesh-writeguard-verify` CLOSED
-   (superseded, no more single-site verify soaks); new thread `m5-audio-destub-linkedlist-corruption-
-   source` targets the `bad_v1` lead directly (see NEXT.md). `m5-audio-destub-contentguard-verify`
-   thread CLOSED s350: 0/4 repeat of `processSceneNode+1424` since item -204's guard landed, and s352
-   found its `[scene-node-content-guard]` firings are steady-state/benign (same node, thousands of
-   harmless hits/run), not corruption evidence. s353 (item -209) landed the ring-buffer breadcrumb the
-   `linkedlist-corruption-source` thread's step 1 designed; 2 verify soaks queued, no data yet.
+   TIMING is bimodal, not diffuse (two deterministic post-VI-transition windows). `m5-audio-destub-
+   drainmesh-writeguard-verify` CLOSED (superseded, no more single-site verify soaks); `m5-audio-destub-
+   contentguard-verify` thread CLOSED s350: 0/4 repeat of `processSceneNode+1424` since item -204's
+   guard landed, and s352 found its `[scene-node-content-guard]` firings are steady-state/benign, not
+   corruption evidence. `m5-audio-destub-linkedlist-corruption-source` (opened s352 on the
+   `drainMeshReleaseQueue` `bad_v1=0x00010001` lead) landed its ring-buffer instrument s353 but got 0/2
+   fires on its own verify pair — s354 found the OFF-TARGET reason: neither crash landed in
+   `drainMeshReleaseQueue` at all, and one of them (`coalesceFreeHeapBlocks+3452`, guest-pc=0x80002434)
+   is itself a byte-identical 2/2 repeat against an independent earlier session — same evidentiary
+   strength as the `bad_v1` finding, in a different function. s354 (item -210) source-proved and guarded
+   that site; 2 verify soaks queued (1 already drained, CLEAN — no crash, not yet a positive control for
+   the new guard). See NEXT.md for both open threads.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -156,7 +158,40 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -209 (s353); the next new item takes -210 and is inserted at the top.
+oldest). Current top is -210 (s354); the next new item takes -211 and is inserted at the top.
+
+-210. **(s354) s353's ring-buffer verify soaks landed 0/2 fires — both crashes missed
+    `drainMeshReleaseQueue` entirely — but one of them was an independent byte-identical repeat of a
+    DIFFERENT function's crash site (`coalesceFreeHeapBlocks+3452`), source-proved and guarded.**
+    `s353_ringbuffer_verify1/2` (drained by the loop, already recorded in SOAK-RESULTS.md before this
+    session) both crashed with `read_guard_fire_n=0`, `write_guard_fire_n=0`, `ring_fire_n=0` — the
+    ring-buffer instrument never had a chance to prove itself either way (per NEXT.md's own caveat: a
+    crash outside `drainMeshReleaseQueue` legitimately produces 0 ring fires, not a null result).
+    `verify1` crashed at `submitSceneNodeRender+27524`; `verify2` at `coalesceFreeHeapBlocks+3452`
+    (`last-guest-pc=0x80002434`) — and cross-checking against s351's soak history found
+    `s351_drainmeshwriteguard_verify2` crashed at the EXACT SAME symbol+offset AND the exact same
+    `last-guest-pc=0x80002434`, from an independent session/build. Two independent byte-identical hits
+    at one PC is the same evidentiary bar item -208 used for the `bad_v1=0x00010001` finding. Source-read
+    (`funcs_0.c:4664-4673`, `~/Documents/Tools/N64Recomp/RecompiledFuncs`): `coalesceFreeHeapBlocks`
+    walks the heap's block list by computing `v0 = t0 + MEM_W(t0, 0x4)` (current block's own pointer
+    plus its own size field) to find the next physical block, then reads that next block's flag
+    halfword at `MEM_HU(v0, 0x10)` with NO bounds check on `v0` — if `t0`'s size field is corrupt
+    (plausibly from an unrelated earlier heap-corruption event), `v0` goes wild and this read is the
+    crash. Added a range-check-and-bail guard at `0x80002434` (`fixup_game_funcs.py`, same
+    idiom/range/bail shape as s350/s350b: on out-of-range `v0`, synthesizes the zero the following
+    `andi`/`beq` pair would see from a legitimately-clear flag bit — same minimal-behavior-change
+    philosophy, "treat unreachable next-block as not-free"). New diagnostic tag
+    `[coalesce-heap-guard]`, new env var `ROGUESQ_LOG_COALESCE_HEAP_GUARD`, armed by default in
+    `run_s327waitpump.sh`. Full regen + rebuild clean (`patched x1`, confirmed in regenerated source).
+    Queued `s354_coalesceheapguard_verify1/2.sh`; drained `verify1` this session (ran inline, not via
+    queue watchdog — CLEAN, full 240s+ hold, 0 crashes, guard never triggered since no crash occurred —
+    confirms no regression, is NOT a positive control for the guard firing). `verify2` still queued.
+    `m5-audio-destub-linkedlist-corruption-source` stays open at 0/2 informative data points for its
+    original question (needs 2 more crashing-inside-drainMeshReleaseQueue soaks); new parallel thread
+    `m5-audio-destub-coalesce-heap-guard-verify` opened for the new guard's own verification. `lib/` not
+    touched (fixup_game_funcs.py lives in the untracked `~/Documents/Tools/N64Recomp` tool repo, outside
+    this repo's `lib/`/submodule-patches system, same as every prior M5 session). Full detail:
+    `PORTING-STATE` Session 354.
 
 -209. **(s353) Landed the ring-buffer breadcrumb `m5-audio-destub-linkedlist-corruption-source`'s step 1
     designed — records every `v1` walked in `drainMeshReleaseQueue`'s tail-scan, dumps on bail. No data

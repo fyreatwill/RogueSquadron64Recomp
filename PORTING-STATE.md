@@ -30651,3 +30651,71 @@ draining these 2 recipes first.
 No `lib/` changes this session. `HYPOTHESIS-ID m5-audio-destub-linkedlist-corruption-source` stays open,
 iteration 1 (this session was pure instrumentation-landing, not yet a data point — budget per iron rule
 8 starts counting from the first soak that actually reports a `[drain-mesh-ring]` firing, next session).
+
+## Session 354 (2026-08-05): s353's ring-buffer instrument landed 0/2 fires (off-target, not a null result), but the same reading surfaced an independent byte-identical repeat crash at a DIFFERENT function's site — source-proved and guarded it.
+
+`HYPOTHESIS-ID m5-audio-destub-linkedlist-corruption-source`, iteration 2 (data-reading iteration per
+NEXT.md's plan). Read both `s353_ringbuffer_verify1/2.sh` results (already drained by the loop before
+this session, recorded in `SOAK-RESULTS.md`): `read_guard_fire_n=0`, `write_guard_fire_n=0`,
+`ring_fire_n=0` in BOTH runs. Confirmed via raw-log grep (`scratch/s73_post_a_scene/s353ringbufferverify1
+2/run.log`, `python3` heredoc per the for-loop sandbox-rejection workaround noted in NEXT.md) that
+neither `[drain-mesh-ring]`, `[drain-mesh-tail-guard]`, nor `[drain-mesh-write-guard]` appear anywhere in
+either log — 0 occurrences, not a parsing gap. Both crashes' `pc-symbol` confirms why: `verify1` hit
+`submitSceneNodeRender+27524`, `verify2` hit `coalesceFreeHeapBlocks+3452` — neither is
+`drainMeshReleaseQueue`, so the tail-scan (and thus the ring buffer inside it) never ran this call at
+all. This matches NEXT.md's own pre-registered caveat exactly ("if a run's crash landed somewhere OTHER
+than `drainMeshReleaseQueue`, `[drain-mesh-ring]` legitimately won't fire that run — not informative for
+this question") — 0/2 stays 0/2 informative data points for the linked-list-node question, not a
+refutation of anything, just inconclusive-by-off-target.
+
+Went further per the investigation-method discipline (order work by information value, not just what
+was pre-planned): cross-checked `verify2`'s `coalesceFreeHeapBlocks+3452` / `last-guest-pc=0x80002434`
+against the full soak history in `SOAK-RESULTS.md` and found `s351_drainmeshwriteguard_verify2`
+(recorded item -208, s352) crashed at the IDENTICAL symbol+offset with the IDENTICAL `last-guest-pc`.
+Two independent sessions/builds, same exact guest PC — the same strength of evidence (byte-identical
+across 2 independent runs) item -208 used to declare the `bad_v1=0x00010001` finding "strong evidence of
+a deterministic, reproducible bug," now applying to a completely different function, with both
+`drainMeshReleaseQueue` guards confirmed NOT firing in either crashing run (ruling out "this is the same
+bug just relocated downstream by the earlier guards").
+
+Source-read `coalesceFreeHeapBlocks` at guest PC `0x80002434`
+(`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c:4664-4673`, confirmed against the function's
+disassembly comments): the function walks the heap's physical block chain by computing `v0 = t0 +
+MEM_W(t0, 0x4)` — the current block pointer (`t0`, `ctx->r8`) plus that block's OWN size field — to
+locate the next physical block, then immediately reads a 16-bit flags field at `MEM_HU(v0, 0x10)` with
+no validity check on `v0` first. If `t0`'s size field is itself corrupt (plausibly from an unrelated,
+earlier heap-corruption event elsewhere — this function doesn't need to be the ORIGIN of the corruption,
+just the first place that dereferences its downstream consequence), `v0` becomes a wild pointer and this
+read is the crash. This is architecturally the same failure shape as every guard landed in this cluster
+since s190: an unvalidated pointer-plus-offset walk over heap/list structures with no bounds check before
+dereference.
+
+Added a guard at `0x80002434` in `fixup_game_funcs.py` (funcs_0.c-scoped, same range-check-and-bail
+idiom and `0x80000000`-`0x80800000` RDRAM bound as every prior guard in this cluster): on out-of-range
+`v0`, synthesizes `ctx->r3 = 0` — the same zero the immediately-following `andi $v1,$v1,0x8` / `beq`
+pair would see from a legitimately-clear flag bit, sending control to `L_80002358` exactly as if the
+next block had genuinely tested "not free." Minimal-behavior-change bail, identical philosophy to
+s350/s350b. New diagnostic tag `[coalesce-heap-guard]`, new env var `ROGUESQ_LOG_COALESCE_HEAP_GUARD`
+(armed by default in `run_s327waitpump.sh` alongside the existing drain-mesh guards).
+
+Full regen (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> cmake) clean: new guard reported
+`patched x1`, confirmed the only occurrence of guest PC `0x80002434` in the regenerated `funcs_0.c`
+(single site, not compiler-duplicated, unlike the drain-mesh write guard's two arms). Build clean, same
+46 pre-existing DDIV sign-mismatch warnings as every prior build, no new ones. `lib/` not touched.
+
+Queued `s354_coalesceheapguard_verify1.sh` / `_verify2.sh` (same `HOLD_S=240` template, both instrument
+sets armed). Drained `verify1` this session (ran inline via a backgrounded `zsh` invocation to get a
+same-session smoke test before committing, not through the queue watchdog — logged as
+`s354_coalesceheapguard_verify1` in `SOAK-RESULTS.md` with a note explaining the non-queue provenance):
+CLEAN, full 240s+ hold completed, `launcher_rc=0`, 0 crash markers, all 4 guard/ring counters at 0 (the
+new guard never got a chance to fire since nothing crashed this run). This confirms the new guard
+introduces no regression on a clean run, but is explicitly NOT a positive control for the guard actually
+catching an out-of-range `v0` — that still needs a crashing run. `verify2` stays queued for the loop.
+
+Net: `m5-audio-destub-linkedlist-corruption-source`'s original question (the `drainMeshReleaseQueue`
+tail-scan's poisoned-node position) is still at 0/2 informative data points and needs 2 more
+crashing-inside-the-function soaks before it can be answered either way — not abandoning it, just noting
+it stayed uninformative this round through no fault of the instrument. New parallel thread opened:
+`m5-audio-destub-coalesce-heap-guard-verify`, tracking whether the new guard fires and/or the
+`coalesceFreeHeapBlocks+3452` crash signature stops recurring. `lib/` not touched — confirmed via `git
+status`, same as every prior M5 session.
