@@ -16,15 +16,15 @@ Priority order for upcoming iterations, set after the 300-session review:
    truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
    deliberately; both are used every iteration.
 2. **M5 audio de-stubbing**: design doc + steps 1-4 DONE — title-reach restored and confirmed 3/3
-   (s343-344, full arc: PROJECT-OVERVIEW §10). Step 5 opened two parallel OPEN threads, both still
-   active: `m5-audio-destub-linkedlist-corruption-source` (`drainMeshReleaseQueue` — three distinct
-   unguarded pointer families found across the same 5 structurally identical loops: tail-scan cursor
-   and head pointer both guarded s350-363, a THIRD "global-tail" write-through pointer found and
-   guarded s365 after s363's own guards positive-controlled and the crash moved to a new offset;
-   byte-identical poisoned value `bad_v1=0x00010001` the strongest lead) and
+   (s343-344, full arc: PROJECT-OVERVIEW §10). Step 5 opened two parallel threads:
+   `m5-audio-destub-linkedlist-corruption-source` (`drainMeshReleaseQueue`, still ACTIVE — three
+   distinct unguarded pointer families found across the same 5 structurally identical loops: tail-scan
+   cursor, head pointer, and a "global-tail" write-through, all guarded s350-365; a s366 proactive
+   idiom-class audit found no further gap, exhaustive pending the still-queued `s365` verify pair's
+   empirical confirmation; byte-identical poisoned value `bad_v1=0x00010001` the strongest lead) and
    `m5-audio-destub-coalesce-heap-guard-verify` (`coalesceFreeHeapBlocks`, guarded s354, bail-target
-   bug fixed s358, 0/4 target-crashes since s364, nearing its closure bar per item -219). Detail:
-   Next-steps items -220, -219, -218, -217..-210 (folded); live status/decision trees: NEXT.md.
+   bug fixed s358, **CLOSED s366** — 6/6 non-recurrence soaks post-fix including one clean full-hold).
+   Detail: Next-steps items -221..-210 (folded); live status/decision trees: NEXT.md.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -152,7 +152,30 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -220 (s365); the next new item takes -221 and is inserted at the top.
+oldest). Current top is -221 (s366); the next new item takes -222 and is inserted at the top.
+
+-221. **(s366) Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) CLOSED — 6/6 non-recurrence
+    soaks post-s358-fix, including one clean full-hold — plus a proactive idiom-class audit found
+    `drainMeshReleaseQueue`'s guard coverage exhaustive, plus a new background-noise entry.** Session-
+    start check found `s364_coalesceheapbailfix_reverify1/2` had already drained (the stale-NEXT.md
+    gotcha, 7th recurrence). Both crashed off-target (`coalesce_guard_fire_n=0` both), same
+    `pc-symbol=heapWalker+1696`/`last-guest-pc=0x8000834c` byte-identical in both runs — a brand-new
+    symbol (0 prior mentions), cataloged as background noise (n=2, guest code, do not chase until a
+    3rd hit) rather than investigated reactively. Source cross-check found `0x8000834c` is
+    `drainMeshReleaseQueue`'s OWN final checkpoint (the `nop` right before `return`) — the function
+    completed and returned normally in both runs; the crash is genuinely downstream, inside
+    `heapWalker`, unrelated to either open M5 thread's guards. **Closed Thread A**: tally is now 6
+    soaks post-s358-fix (`s358_verify1/2`, `s362_reverify1/2`, `s364_reverify1/2`), zero
+    `coalesceFreeHeapBlocks` hits, meeting the closure bar set at item -219. Separately, ran a
+    proactive full-function idiom-class audit of `drainMeshReleaseQueue` (Directive #3's model,
+    applied to Thread B's own "is coverage exhaustive?" question while its `s365` verify pair is still
+    queued): cross-referenced every table-/list-loaded-pointer dereference against the 3 known
+    families × 5 loops (25 explicit guard blocks); found one syntactically-bare read per loop (the
+    loop-back "advance cursor" read, e.g. `funcs_3.c:1768` for loop 1) but hand-verified it is
+    memory-safe by loop invariant — the pointer is always pre-validated (by the head guard on first
+    entry, or by the previous iteration's own tail-scan guard) before this line executes. **No new
+    unguarded family found; coverage reads as exhaustive**, pending the still-queued `s365` pair's own
+    empirical confirmation. No code changed. Full detail: `PORTING-STATE` Session 366.
 
 -220. **(s365) Thread B's `s363` head-guard pair drained 2/2 byte-identical at a NEW
     `drainMeshReleaseQueue` offset with the s363 head guards positive-controlled for the first

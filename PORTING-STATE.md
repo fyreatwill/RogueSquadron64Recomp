@@ -31515,3 +31515,69 @@ Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) unchanged this session �
 
 `HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` (iteration 9 — genuine new
 evidence and a genuine new guard landed this session, unlike s364's maintenance pass).
+
+## Session 366 (2026-08-05): Thread A CLOSED (coalesceFreeHeapBlocks bail-target fix holds, 6/6 non-recurrence) + a proactive idiom-class audit found drainMeshReleaseQueue's guard coverage is exhaustive + a new background-noise entry (heapWalker+1696, guest code, n=2)
+
+Session-start mechanical check (`grep -c` each NEXT.md-claimed-pending recipe against
+`SOAK-RESULTS.md`) found `s364_coalesceheapbailfix_reverify1/2` had ALREADY DRAINED — NEXT.md said
+"still pending." The sixth consecutive session this exact gotcha has recurred (s360-s365 noted it
+before); read both logs directly.
+
+**Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) result and closure.** Both `s364` runs
+CRASHED, `coalesce_guard_fire_n=0` in both — off-target for `coalesceFreeHeapBlocks` itself, same as
+every soak since the s358 bail-target fix. Running tally is now 6 soaks post-fix
+(`s358_verify1/2`, `s362_reverify1/2`, `s364_reverify1/2`), ZERO hits on `coalesceFreeHeapBlocks`,
+including one full 432s clean hold (`s362_reverify1`). This meets the decision tree's own bar ("6
+consecutive non-recurrence soaks since the s358 fix... strongly consider explicitly CLOSING this
+thread") set two sessions ago. **Closing `m5-audio-destub-coalesce-heap-guard-verify` here**: the
+s358 bail-target fix (redirecting the guard's synthetic-value branch from the loop's re-entry label
+to its real exit label) is taken as confirmed correct by sustained non-recurrence; no further soaks
+queued for this thread. If `coalesceFreeHeapBlocks+1052`/`0x80002358` ever recurs in the future, that
+would reopen the question of whether the fix regressed (e.g. a reverted patch), but there is no
+standing reason to expect that.
+
+**New background-noise entry: `heapWalker+1696`.** Both `s364` crashes landed at the SAME host
+symbol, `pc-symbol=heapWalker+1696`, with the SAME `last-guest-pc=0x8000834c` in both runs —
+byte-identical 2/2, a first-ever sighting (`grep -c "heapWalker+1696" PORTING-STATE.md` = 0 before
+this session). Cross-referencing `0x8000834c` against `drainMeshReleaseQueue`'s own source
+(`funcs_3.c:2600-2603`) found it is literally that function's OWN final checkpoint — the `nop`
+immediately before `return`, i.e. `drainMeshReleaseQueue` completed and returned NORMALLY in both
+runs; the crash happened downstream, inside `heapWalker`, which apparently has no `g_rs64_last_guest_
+pc` breadcrumb of its own between its entry and the crash point (so the guest-PC marker never
+advances past drainMeshReleaseQueue's exit even though execution has moved on). Unlike the two
+existing background-noise entries (`trackResourceListWithMappingTables+1192`,
+`unregisterServiceWorker+536`, both Apple-framework `dladdr` fallbacks), `heapWalker` is guest code —
+part of the old s150-219 whack-a-mole chase, but at a genuinely NEW offset not covered by any guard
+from that closed lineage. Per the strategic directive's "no reactive single-crash chases" rule and
+the established n=2-before-escalation convention, this is cataloged but NOT investigated further this
+session; a 3rd independent hit crosses into "worth a dedicated audit."
+
+**Proactive idiom-class audit of `drainMeshReleaseQueue` (while Thread B's own `s365` pair is still
+queued, not yet drained).** Directive #3's model applied to Thread B's own question ("is guard
+coverage now exhaustive?", flagged as the next natural check in `s365`'s own decision tree): dispatched
+a full re-read of the function (`funcs_3.c:1669-2603`) cross-referencing every `MEM_W`/`MEM_H`/`MEM_B`
+dereference of a table-/list-loaded pointer against the 5 existing guard families (tail-scan read,
+tail-scan write, head-pointer priming read, head-pointer clear write, global-tail write — 25 explicit
+PATCH blocks, 5 families × 5 loops). Found one syntactically bare dereference per loop (the loop-back
+"advance cursor" read, e.g. `ctx->r3 = MEM_W(ctx->r3, 0)` at `funcs_3.c:1768` for loop 1, mirrored at
+1941/2101/2282/2448 for loops 2-5) with no adjacent guard block. Verified by hand (not just the
+audit's own claim) that this is NOT a genuine gap: by loop invariant, `ctx->r3` at this line is always
+either the just-validated head pointer (first pass, gated by the head-priming guard's `ctx->r2 != 0`
+branch, which only takes the loop-entry path when the head deref itself succeeded) or the value that
+just passed the s350 tail-scan guard's range check in the previous iteration (the guard only permits
+looping back via `bne $v0,$zero,L_...` when `ctx->r2` — computed from an in-range `ctx->r3` — is
+nonzero). Either entry path guarantees `ctx->r3` is in-range before this line executes, so the
+dereference is memory-safe despite the missing local guard. **No new unguarded pointer family found —
+the 3-family × 5-loop guard coverage the ledger has been building since s350 is exhaustive for this
+idiom**, pending the `s365` pair's own empirical confirmation (still queued). This strengthens, but
+does not by itself close, Thread B: an exhaustive static audit plus the pair's expected result
+(guards firing, crash moving outside the function or a clean run) would be the two-source
+confirmation the ledger requires before calling Thread B closed too.
+
+No code changed this session (audit-only + a closure decision); `lib/` untouched, no `export.sh`
+needed. Thread B (`m5-audio-destub-linkedlist-corruption-source`) unchanged: `s365_
+drainmeshtailptrguard_verify1/2.sh` still queued, sorts next now that Thread A's queue entries are
+gone.
+
+`HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` — Thread A is a sibling thread
+under the same M5 Step 5 umbrella, not the primary slug; its closure doesn't change the active thread.
