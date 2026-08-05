@@ -29766,3 +29766,82 @@ a confident read, queue more of the same recipe rather than switching approach. 
 
 `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison` remains OPEN, 1st iteration (queuing the
 instrument, not yet a discriminating result — that arrives once the queue drains).
+
+## Session 342 (2026-08-05) — M5 audio step 5 verdicts, not a rate comparison: `reapplyDisplayMode`'s gate reversal deterministically blocks the game from ever reaching the title screen (0/5 relevant soaks), which also means s340's own promotion-decision soaks never exercised menu/craft-select/mission-launch at all
+
+Picked up `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison`'s "fold the queued soak batch's
+verdicts into the ledger" work unit per `scratch/agent/NEXT.md`. 2 of the 6 queued recipes had run
+(`m5step5_rate_1`, `m5step5_rate_2`, both `rc=137` — the loop's own 600s hard-cap SIGKILL, per
+`scratch/agent/SOAK-RESULTS.md`). Reading the raw logs by hand (as NEXT.md's step 2 requires for any
+rc) surfaced something bigger than a crash-rate data point.
+
+**What the logs actually show, both recipes**: exactly 3 `[phase] vi_width=` lines each — `0` at 0.6s,
+`320` at 0.6s, `640` at 2.3s — and then **nothing** for the remaining ~597s. `grep -c '\[keys\]'` = 0
+in both `run.log`s. `proc_start_epoch.txt` vs. the log's own mtime gives a 599s lifetime for both —
+i.e. the process ran essentially the full 600s loop cap and was killed mid-run, never having pressed a
+single key. `[vi-fs-decision]`, `[dma-ring-consumer]`, `[voice-active-gate-hb]`, `[voice-cursor-hb]`
+all keep incrementing right to the tail in both logs (audio/DMA/voice subsystems genuinely alive, not
+frozen) — so this is the already-catalogued "VI=640 `pairs=0`" plateau (item -195), not a new hang
+mechanism. The new information is WHEN it starts: immediately after the attribution/logo transition at
+2.3s, i.e. **before the title screen is ever reached**, not after 45+ seconds of menu navigation into a
+mission cutscene as the "locked-camera cutscene" framing in item -195/CURRENT-TRUTH implied.
+
+**Cross-check against s340's own raw logs** (`scratch/s73_post_a_scene/s340bothgates`,
+`s340bothgates2`, both still on disk): identical signature — 3 `[phase]` lines (0/320/640, ~2.2-2.3s),
+0 `[keys]` lines, ~601s process lifetime in both. This directly contradicts s340's own PORTING-STATE
+write-up ("Ran the full 600s hold... with `STICK_SCHEDULE`" implying the `10:sr 25:sl 40:su 95:start
+100:a` stick schedule fired) — mechanically that can't have happened: `run_mission_keys.sh`'s
+wait-for-`VI=1024` gate (`scratch/s73_post_a_scene/run_mission_keys.sh:69-77`) runs to its OWN internal
+600s timeout and `kill -9`s the game (exit 5, INCONCLUSIVE) *before* the `SCHEDULE`/`HOLD_S`/
+`STICK_SCHEDULE` logic (lines 80-191) is ever reached — that logic is strictly downstream of breaking
+out of the wait loop via `VI==1024`, which never happened. s340's write-up itself even says "script's
+own wait for VI=1024 phase-gate timed out at 600s" in the same paragraph as "ran the full 600s hold" —
+an internal contradiction that went unnoticed because both describe the same 600s wall-clock window,
+just different (mutually exclusive) parts of the script. **Net: none of s340's, s341's, or this
+session's 4 soaks with `reapplyDisplayMode`'s gate reversed ever pressed a key, reached title, or
+touched a menu, craft-select, or mission-launch code path.** The "2/2 clean soaks, H1 confirmed" bar
+s340 used to promote the reversal to the permanent shipped default was met only for "no crash while
+idling at the pre-title boot-logo screen for 600s" — a much narrower claim than the record states.
+
+**Isolating the regression to `reapplyDisplayMode` specifically** — checked the historical contrast
+case: `scratch/s73_post_a_scene/step4gate2.log` (s328-era, `setDisplayMode`'s gate reversed ALONE,
+`reapplyDisplayMode` still force-zeroed) reaches `phase width=1024 reached after 45.4s`, then fires
+`[keys] start/start/start/a` on schedule and proceeds into the hold phase normally — matching the
+pre-M5 baseline timeline (`docs/CURRENT-TRUTH.md`'s unattended-timeline table, title at ~46.5s) and
+several other pre-M5 historical repro logs (s37/s61/s68/s73-era: 44.6-46.2s, `grep -rn "phase width=1024
+reached" scratch/`). s329 (item -182..-187, `reapplyDisplayMode`'s site reversed ALONE, `setDisplayMode`
+still force-zeroed) already found and documented this exact same signature — 3 `[phase]` lines, stall
+at VI=640 immediately post-logo, `phase timeout (INCONCLUSIVE)` — but that finding got folded into the
+multi-session s330-339 "VI=640 `pairs=0`" reachability chase and ultimately reframed by s339 as a
+"locked-camera cutscene reusing one RDP-state prologue... very likely not a bug at all" (item -195),
+language that reads as describing an in-game mission cutscene, not the pre-title boot-logo sequence.
+Combined: **baseline (both gates force-zero) reaches title fine; `setDisplayMode` reversed alone
+reaches title fine (45.4s); `reapplyDisplayMode` reversed — alone (s329) or combined with
+`setDisplayMode` (s340×2, s341×2) — has NEVER reached title, 0/5 soaks across 3 different sessions
+spanning weeks.** This isolates the regression cleanly to `reapplyDisplayMode`'s gate site, independent
+of `setDisplayMode`'s state.
+
+**What this changes**: M5-AUDIO-PLAN step 5 (family #3/#4 crash-rate comparison) cannot be measured by
+the queued recipe or by any soak using this driver as long as `reapplyDisplayMode`'s gate stays
+reversed — both target families are defined relative to pre-title/title/menu/post-cutscene phases this
+build cannot reach. Cancelled the remaining 4 queued recipes
+(`scratch/agent/soak_queue/m5step5_rate_3..6.sh` → moved to `soak_queue/cancelled/`, see that
+directory's `README.md`) rather than burning 4 more 600s loop cycles reproducing an already-deterministic
+result. This is NOT a new crash and NOT necessarily new information mechanistically (s329 saw the same
+signature 12 sessions ago) — what's new is (a) confirming it still reproduces, unchanged, under the
+now-permanent combined-gate build, (b) the direct s340-raw-log cross-check proving the promotion
+decision's own validation never left the pre-title screen, and (c) the clean 3-way isolation
+(baseline/setDisplayMode-alone reach title; reapplyDisplayMode-involved never does) that wasn't
+assembled anywhere in one place before.
+
+**Recommendation for next work unit** (written into `scratch/agent/NEXT.md`): revert
+`reapplyDisplayMode`'s gate site back to force-zero (keep `setDisplayMode`'s reversal, which IS
+validated through title/menu/mission-launch) — i.e. partially un-promote s340's decision — then
+re-validate that title-reach is restored. This is a risk-reduction move: the reversal currently blocks
+even reaching the title screen, so there is no way to make progress on step 5 (or on M5 at all, past
+`setDisplayMode`) while it stays in place, whether or not the underlying `[vi-fs-decision]` mechanism
+is ultimately benign.
+
+No `lib/` touched. `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison` CLOSED (superseded — the
+recipe it was measuring against cannot produce the intended comparison); new thread opened:
+`m5-audio-destub-reapplydisplaymode-title-block`.

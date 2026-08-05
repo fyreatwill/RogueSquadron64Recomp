@@ -11,22 +11,18 @@ Priority order for upcoming iterations, set after the 300-session review:
    ran 5 passes, most recently 668→459 lines (s330); full per-session detail in git log. 35 KB remains
    a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and the
    Regeneration section's Standing warnings stay intact deliberately; both are used every iteration.
-2. **M5 audio de-stubbing**: design doc + steps 1-4 DONE (s298/300/301, item -196). Step 4's
-   `setDisplayMode` VI=320 hang is CLOSED and fix-validated (item -182..-187). `reapplyDisplayMode`'s
-   site (3rd/last real gate; `initMusyXEngine`'s is dead code, s306) hit a DIFFERENT VI=640 `pairs=0`
-   graphics-task-stall READING (s329) -- 9 sessions of reachability chasing (s330-339, item -188..-195)
-   fully resolved it s339: `cinematicLoopBody`'s per-frame self-loop runs the whole scene correctly
-   (audio, buffer-arbiter, cutscene dispatch all alive) but only calls the one function chain that
-   emits `SET_COLOR_IMAGE` (`runVideoFrameTick`'s chain) ONCE, in its pre-loop setup -- so
-   `[vi-fs-decision]`'s `pairs` counter faithfully reads 0 for the rest of the scene. Not a hang, not
-   audio-adjacent, very likely not a bug at all (a locked-camera cutscene reusing one RDP-state
-   prologue is ordinary). **s340 made the promotion decision**: both `setDisplayMode` and
-   `reapplyDisplayMode` gate reversals are now the PERMANENT shipped default (2/2 clean soaks with
-   both reversed simultaneously, never tried together before this session). Step 4 is closed; step 5
-   (crash-family #3/#4 rate comparison against historical baselines) is IN PROGRESS (s341): a 6-run
-   soak batch is queued to `scratch/agent/soak_queue/m5step5_rate_*.sh` for the loop to run 2 at a
-   time between iterations -- next iteration reads `scratch/agent/SOAK-RESULTS.md` plus the full logs
-   in `scratch/agent/soak_results/` and folds the verdicts into the rate comparison.
+2. **M5 audio de-stubbing**: design doc + steps 1-3 DONE (s298/300/301, item -196 corrected below).
+   Step 4's `setDisplayMode` VI=320 hang is CLOSED and fix-validated (item -182..-187), and reaches
+   title/menu/mission-launch normally (45.4s baseline, `step4gate2` log). `reapplyDisplayMode`'s site
+   (3rd/last real gate; `initMusyXEngine`'s is dead code, s306) **deterministically prevents the game
+   from ever reaching the title screen — 0/5 soaks across s329/s340/s341** (item -198, s342): the
+   VI=640 `pairs=0` plateau (s330-339's "benign locked-camera cutscene" characterization, item -195)
+   actually onsets immediately post-logo, pre-title, not after menu navigation into a mission cutscene
+   as that framing implied — s340's own "2/2 clean soaks" promotion validation never left the pre-title
+   boot screen either (0 keys pressed in either soak, confirmed s342 from the raw logs). **Step 4 is
+   NOT actually closed for `reapplyDisplayMode`; step 5 cannot be measured while its gate stays
+   reversed.** Next work unit (s342, `scratch/agent/NEXT.md`): revert `reapplyDisplayMode`'s gate back
+   to force-zero (keep `setDisplayMode`'s reversal), re-validate title-reach is restored.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -158,7 +154,37 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -197 (s341); the next new item takes -198 and is inserted at the top.
+oldest). Current top is -198 (s342); the next new item takes -199 and is inserted at the top.
+
+-198. **(s342) M5 audio de-stubbing: `reapplyDisplayMode`'s gate reversal deterministically blocks
+    the game from EVER reaching the title screen (0/5 relevant soaks) — supersedes item -197's step-5
+    rate-comparison plan and weakens item -196's promotion validation.** Picked up item -197's "fold
+    the soak batch's verdicts into the ledger" work unit; the raw logs of the 2 completed recipes
+    (`m5step5_rate_1/2`, both `rc=137`) showed only 3 `[phase] vi_width=` lines each (0->320->640 by
+    2.3s) and ZERO `[keys]` presses across the full ~599s run — the game never leaves the pre-title
+    attribution/logo screen, let alone reaches a menu or launches a mission. Cross-checked s340's own
+    raw logs (`s340bothgates`/`s340bothgates2`, still on disk): identical signature, 0 keys, ~601s
+    lifetime — **s340's promotion-decision soaks never left the pre-title screen either**, despite the
+    PORTING-STATE write-up describing "ran the full 600s hold... with `STICK_SCHEDULE`" (mechanically
+    impossible: `run_mission_keys.sh`'s wait-for-VI=1024 gate self-times-out and kills the game before
+    the `SCHEDULE`/`HOLD_S` logic is ever reached). Isolated the regression to `reapplyDisplayMode`
+    specifically: baseline (both gates force-zero) and `setDisplayMode` reversed ALONE (s328's
+    `step4gate2` log) both reach title normally (45.4s, then menu keys fire on schedule); every soak
+    with `reapplyDisplayMode`'s gate reversed — alone (s329) or combined with `setDisplayMode` (s340x2,
+    s341x2) — has NEVER reached title, 0/5 across 3 sessions spanning weeks. The underlying
+    `[vi-fs-decision] pairs=0` mechanism itself is unchanged from item -195's source-level explanation
+    (`cinematicLoopBody`'s self-loop calling `runVideoFrameTick`'s chain once) — what's new is that its
+    ONSET is pre-title (immediately post-logo, ~2.3s), not mid-mission-cutscene as the "locked-camera
+    cutscene" framing implied, so it blocks title-screen advancement entirely rather than merely
+    freezing one already-reached cutscene frame. Cancelled the remaining 4 queued
+    `m5step5_rate_3..6.sh` recipes (moved to `scratch/agent/soak_queue/cancelled/`) rather than burn 4
+    more 600s loop cycles reproducing a now-deterministic result. **Recommendation**: revert
+    `reapplyDisplayMode`'s gate to force-zero (keep `setDisplayMode`'s reversal, validated through
+    title/menu/mission-launch), re-validate title-reach is restored — this is risk reduction, not a
+    re-open of the "is the plateau benign" question, since no further M5 progress is measurable while
+    title is unreachable. `HYPOTHESIS-ID m5-audio-destub-step5-crashrate-comparison` CLOSED (superseded);
+    new thread `m5-audio-destub-reapplydisplaymode-title-block`. No `lib/` touched, no soak run (log
+    analysis only). Full detail: `PORTING-STATE` Session 342.
 
 -197. **(s341) M5 audio de-stubbing step 5: queued a 6-run soak batch to measure crash-family
     #3/#4 rates under the now-permanent gate promotion, rather than spending the session babysitting
@@ -418,6 +444,19 @@ Standing warnings:
 
 `## LLE stabilization session 2 (2026-07-12)` sits out of order in the log, between s7 and s8: its conclusions are among the oldest in the file, not the newest.
 
+- **(s339→s340→s342)** "The VI=640 `pairs=0` plateau is a benign, locked-camera mission cutscene" (s339)
+  and "s340's 2/2 clean soaks validate promoting both audio gate reversals together" (s340) — s342
+  found both soaks (and s341's 2 follow-ups) never left the pre-title attribution/logo screen: 0
+  `[keys]` lines in all 4 raw logs, and `run_mission_keys.sh`'s wait-for-VI=1024 gate mechanically
+  cannot reach its `SCHEDULE`/`HOLD_S` logic without first seeing VI=1024, which never happened. "Ran
+  the full 600s hold... with `STICK_SCHEDULE`" in s340's own write-up was a self-contradiction (its own
+  next sentence says the wait-for-1024 gate timed out) that went unnoticed because both describe the
+  same 600s wall-clock window. Believable: the soaks genuinely were crash-free for the full 600s with
+  audio/DMA/voice counters visibly live throughout (a real same-run positive control) — it just never
+  occurred to check whether the `[keys]` schedule that was *supposed* to drive menu navigation had
+  actually fired. The underlying `pairs=0` mechanism (item -195's source trace) is not overturned, only
+  its context: it onsets pre-title, not mid-mission-cutscene, and (isolated s342) is specific to
+  `reapplyDisplayMode`'s gate site, not `setDisplayMode`'s. PORTING-STATE 339, 340, 342.
 - **(s107/108→s316→s318)** Two linked overturns in the gate1/2/3 tick-producer mechanism chase: (1)
   "the 3 near-identical countdown/period gates inside `musyxSynthFrame` fire `tickAllActiveSongs`/
   `tickAudioSequencerFrame`" was never validated with a positive control across 4 sessions (s108/s311/

@@ -243,24 +243,28 @@ expect would otherwise pass every crash-rate check above while still producing s
 Steps 1-3 are DONE (s300 for 1-2, see §4; the `waitForAnyAudioSlot` bounded-timeout guard for 3,
 landed and validated in the s297-322 arc). **Step 4 is now DONE (s340)**: of the 3 gate-byte sites,
 `initMusyXEngine`'s was found to be dead code (s306, never actually called — reversing it validates
-nothing) and the other 2 (`setDisplayMode`, `reapplyDisplayMode`) are now BOTH permanently reversed
-as the shipped default (`fixup_game_funcs.py`, N64Recomp repo, untracked) after 2 clean confirmatory
-soaks with both reversed simultaneously (s340bothgates/s340bothgates2, HOLD_S=600 each, zero crash
-markers, no VI=320 hang, the already-characterized benign VI=640 `pairs=0` plateau in both). See
-CURRENT-TRUTH item -196 / PORTING-STATE Session 340.
+nothing) and the other 2 (`setDisplayMode`, `reapplyDisplayMode`) were both made permanently reversed
+as the shipped default (`fixup_game_funcs.py`, N64Recomp repo, untracked) after 2 apparently-clean
+confirmatory soaks with both reversed simultaneously (s340bothgates/s340bothgates2, HOLD_S=600 each,
+zero crash markers). See CURRENT-TRUTH item -196 / PORTING-STATE Session 340 — **but see the s342
+correction immediately below before trusting that validation.**
 
-**Step 5 is IN PROGRESS (s341)**: confirmed the build already carries the s340 gate promotion (no
-rebuild needed), then queued a 6-run soak batch (`scratch/agent/soak_queue/m5step5_rate_1..6.sh`)
-rather than spending a session babysitting repeat soaks — each recipe runs the existing
-`run_s327waitpump.sh` driver (already arms `ROGUESQ_AUDIO_UCODE=1` and the
-`_VOICE_ACTIVE_GATE`/`_VOICE_TRIGGER_CHAIN`/`_AUDIO_DRAIN` instruments as the same-run positive
-control) at `HOLD_S=300` and exits nonzero iff a `[CRASH]` marker fired anywhere in the run (catches
-family #3 directly; family #4 is a stall, not a crash marker, so its full log's tail `vi_width`/
-`[vi-fs-decision]` lines need reading by hand, not just the recipe's rc). The loop runs 2 recipes at
-a time between iterations, appending one verdict line each to `scratch/agent/SOAK-RESULTS.md`; full
-logs land in `scratch/agent/soak_results/`. **Next iteration**: once verdicts/logs exist for some or
-all 6 runs, compare the observed family #3/#4 hit rate against the ~12-21% / "every soak died
-earlier" baselines above — this needs multiple soaks (rate comparison, not pass/fail), don't treat
-1-2 clean runs as confirmation per the standing 0/2-is-a-weak-null lesson from the
-`MATEXPIRY_GUARD` thread. If 6 isn't enough for a confident rate read, queue more of the same recipe
-rather than switching approach. See CURRENT-TRUTH item -197 / PORTING-STATE Session 341.
+**Step 5 is BLOCKED, not in progress (s342 correction of s341)**: s341 queued a 6-run soak batch
+(`scratch/agent/soak_queue/m5step5_rate_1..6.sh`) to measure step 5's crash-family rate; reading the
+raw logs of the first 2 completed recipes by hand (s342) found the game never reaches the title screen
+at all — 0 `[keys]` presses, only 3 `[phase] vi_width=` lines (0->320->640 by 2.3s) in ~599s of runtime.
+Cross-checking s340's own raw logs found the IDENTICAL signature: **s340's "2/2 clean soaks" promotion
+validation never left the pre-title boot-logo screen either** — no menu navigation, no craft select, no
+mission launch, in either soak. Isolated the cause to `reapplyDisplayMode`'s gate specifically:
+`setDisplayMode` reversed alone (s328's `step4gate2` log) reaches title normally at 45.4s and proceeds
+into the menu; every soak with `reapplyDisplayMode`'s gate reversed (alone, s329, or combined, s340x2/
+s341x2) has NEVER reached title — 0/5 across 3 sessions. The `[vi-fs-decision] pairs=0` plateau this
+whole arc characterized as a "benign locked-camera cutscene" (s339, item -195) actually onsets
+pre-title, immediately post-logo — it blocks title-screen advancement entirely, not just one already-
+reached cutscene frame. Cancelled the remaining `m5step5_rate_3..6.sh` recipes (moved to
+`scratch/agent/soak_queue/cancelled/`) since step 5's family #3/#4 rate comparison is defined relative
+to phases (pre-title death rate, post-cutscene stall) this build cannot reach while the gate stays
+reversed. **Recommended next step (not yet done)**: revert `reapplyDisplayMode`'s gate to force-zero
+(keep `setDisplayMode`'s reversal — the only one actually validated through title/menu/mission-launch),
+rebuild, re-validate title-reach is restored to the ~45s baseline. Step 5 can only resume once title is
+reachable again. See CURRENT-TRUTH item -198 / PORTING-STATE Session 342.
