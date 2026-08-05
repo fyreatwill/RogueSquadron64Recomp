@@ -33,11 +33,18 @@ Priority order for upcoming iterations, set after the 300-session review:
    needed**: `cutsceneDispatchSlotsByFlag`'s apparent `runVideoFrameTick` call site
    (`funcs_27.c:118121`) is UNREACHABLE DEAD CODE -- `N64Recomp` duplicated `static_6_800A9ABC`'s body
    into its address range past an unconditional `return`, with no incoming label; the climbing 1152+
-   call count was a red herring, never actually a `runVideoFrameTick` caller -- see item -192. Baseline
-   (both sites force-zeroed) restored at every session's end. Next work unit: read `cinematicLoopBody`
-   (`funcs_27.c:106842`, the common caller of both `static_6_800A9ABC` and
-   `cutsceneDispatchSlotsByFlag`) and its own caller to find what makes it invoke one callee 1152+
-   times and the other once -- see item -192.
+   call count was a red herring, never actually a `runVideoFrameTick` caller -- see item -192. **s336
+   closed that thread too, again with a pure source-read, no soak**: `cinematicLoopBody` contains its
+   own internal per-frame `goto`-loop (unconditional `j L_800A6024` at `funcs_27.c:108258`, landing
+   after the `static_6_800A9ABC` call but before the `cutsceneDispatchSlotsByFlag` call) -- it's a
+   self-contained cutscene frame-pump, not a function invoked 1152+ times by an outer caller. The
+   loop's only exit gate, `static_6_800AF550`, reads a per-actor timer struct and two float thresholds
+   with **no reference to any audio global** -- source-level evidence (not yet conclusive) that this
+   whole stall thread may not actually be an M5/audio issue at all -- see item -193. Baseline (both
+   force-zero gate sites) restored at every session's end. Next work unit: instrument
+   `static_6_800AF550`'s branch outcome and its struct/threshold values in one soak to settle whether
+   the exit condition is ever satisfiable, which will also settle whether this thread belongs under
+   M5 at all -- see item -193.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -169,7 +176,49 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -192 (s335); the next new item takes -193 and is inserted at the top.
+oldest). Current top is -193 (s336); the next new item takes -194 and is inserted at the top.
+
+-193. **(s336) M5 audio de-stubbing: source-level proof that `cinematicLoopBody` contains its own
+    internal per-frame goto-loop — explains the `static_6_800A9ABC`-once vs `cutsceneDispatchSlotsByFlag`
+    -1152+ divergence WITHOUT a new soak, and surfaces a fact that argues the whole stall may not be
+    audio-related at all.** 1st iteration of `HYPOTHESIS-ID
+    m5-audio-destub-cinematicloopbody-divergent-callees`. Read `cinematicLoopBody`'s full body
+    (`funcs_27.c:106842`–`108530`, ~1700 lines) per NEXT.md step 1, extracted every label and every
+    `goto` in that span with a throwaway script (`scratch/s336_cinematicloopbody/analyze.py`, not
+    committed — reproducible from the grep commands in this session's log), and searched for backward
+    jumps (target line < source line). Found exactly one backward jump inside the function:
+    `funcs_27.c:108258`'s `j L_800A6024` (an **unconditional** MIPS `j`, not a conditional branch) —
+    lands at `funcs_27.c:107269`, which is AFTER the `static_6_800A9ABC` call site (`107079`) but
+    BEFORE the `cutsceneDispatchSlotsByFlag` call site (`107938`). This is a real internal loop: each
+    pass through `L_800A6024`...`108258` calls `cutsceneDispatchSlotsByFlag` and `submitGfxFrame`
+    (`108253`) and then jumps straight back to the top, never re-executing anything before `107269` —
+    including the one-shot `static_6_800A9ABC` setup call. **This alone answers the s335 open
+    question**: `cinematicLoopBody` is NOT invoked repeatedly by an outer caller taking different paths
+    (hypothesis 2, refuted) — it loops internally (hypothesis 1, confirmed). Both of its own call sites
+    (`funcs_44.c:4825`, `funcs_27.c:156405` — themselves duplicate overlay copies of the same wrapper,
+    byte-identical disassembly, same overlay-duplication artifact family as s335's finding) are plain
+    non-looping tail calls with fixed args (`a0=3, a1=2`), consistent with "invoked once to kick off a
+    cutscene, then `cinematicLoopBody`'s own loop pumps every subsequent frame until its internal exit
+    condition fires." The loop's only exit (`funcs_27.c:107342`'s `goto L_800A64BC`, landing just past
+    the loop) is gated by `static_6_800AF550` (`funcs_44.c:6187`) returning nonzero. **Read that gate
+    function in full** (it's short, ~140 lines): it dereferences a per-actor/track struct pointer from
+    global `0x800B0934`, compares a computed float (`tableConst[a2] * a2-as-float + struct-byte[0x2F]`)
+    against two float constants at `0x800A5D70`/`0x800A5D74`, and — on the "not yet past threshold"
+    path — increments a debounce counter at struct-offset `0x938` and force-exits once that counter
+    reaches 7. **Nothing in this function's body references any audio-subsystem global, register, or
+    MusyX/audio-task structure** — it reads as a plain elapsed-time/threshold gameplay timer, not an
+    audio-completion gate. Pushed one level further: `static_6_800AF550`'s `a2` input traces back
+    through `$f20` (set at the loop's top from the PRECEDING call's return, `static_6_800AF360`,
+    `funcs_44.c:5792`) to `timeSnapshotFiller` — a real OS-clock delta-time snapshot call, not
+    anything audio-adjacent. **Three function-levels deep, zero audio-subsystem references anywhere in
+    the traced chain.** This is source-level evidence (not yet exhaustively proven — didn't verify the
+    snapshot is actually advancing at runtime) that the VI=640 `reapplyDisplayMode` stall's root
+    blocker may have **nothing to do with M5 audio de-stubbing** — it may be a plain cutscene-timer
+    condition (long/buggy duration table) that never gets satisfied, filed under the wrong strategic
+    priority. Flagging, not yet reclassifying — the next step is a targeted instrument on
+    `static_6_800AF550`/`timeSnapshotFiller`'s runtime values to settle it. No code changed, no
+    diagnostics added, no soak run, no `lib/` touched — a source-proof-only session, same method as
+    s335. Full detail: `PORTING-STATE` Session 336.
 
 -192. **(s335) M5 audio de-stubbing: source-level proof that `cutsceneDispatchSlotsByFlag`'s apparent
     `runVideoFrameTick` call site is UNREACHABLE DEAD CODE — closes item -191's open question without
