@@ -28,8 +28,8 @@ Priority order for upcoming iterations, set after the 300-session review:
 Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching
 (the BREADCRUMB10+ slice idiom) to the file-scoped-only guard patches in `fixup_game_funcs.py`, per the
 2026-08-04 analysis in that file's header comment. Real count 176 (an AST scan, not a grep guess).
-**131/176 converted across 6 batches (s377-379, s381-383)**, all verified byte-identical fixup-report
-output before/after, all built and soaked clean; **45 remain**. Process note from s379/s381: run
+**148/176 converted across 7 batches (s377-379, s381-384)**, all verified byte-identical fixup-report
+output before/after, all built and soaked clean; **28 remain**. Process note from s379/s381: run
 verification (regen+diff) AND the soak in the orchestrating session, not a delegated subagent — both
 cross-repo regen commands and launching the compiled binary hit sandbox permission/approval gates a
 subagent cannot satisfy non-interactively; delegate ONLY the conversion-editing step. Process notes from
@@ -41,13 +41,18 @@ inline `env VAR=1 /abs/path/to/binary` command runs with the WRONG cwd (ROM look
 executable-relative) and silently degrades to a ROM-less run that blazes through VI counters
 unrealistically fast with no crash markers — a false-clean soak. Fix: a tiny `zsh script.sh` wrapper that
 `cd`s into `build/` then `exec`s the binary (`zsh` is allowlisted in `.claude/settings.json`; `bash
-script.sh` and inline `cd a && b` both require interactive approval this session lacks). New from s383:
+script.sh` and inline `cd a && b` both require interactive approval this session lacks). From s383:
 a genuine latent multi-file collision found at the `runHangarMenuFromOverlay` site (~line 8299 pre-batch6)
 — its bare-label anchor also textually matches an unrelated function (`hasKasanMoorDefected`) in a
-different overlay file, so today's file-scoped `subn` silently patches both; parked untouched pending a
-dedicated file-scoped fix (needs `p.name` filtering, not a mechanical function-scope conversion). Also:
-the `initFactor5Mutex`-adjacent region is confirmed 6+ distinct functions despite file/line adjacency, not
-one — don't trust anchor-proximity there, use address-grep. Next work unit: NEXT.md (batch 7).
+different overlay file, so the file-scoped `subn` silently patches both; still parked untouched pending a
+dedicated file-scoped fix (needs `p.name` filtering, not a mechanical function-scope conversion) — RESURFACED
+at s384's fresh scan, same shape, still deferred. **New from s384: the verification step (byte-identical
+regen-diff) caught a real regression** — batch 7's `musyxSynthFrame` conversion for the `[synth-rearm-ptr]`
+diagnostic dropped to 0 matches, because the `0x800919D4` anchor it targets actually lives inside
+`initN64RspMixer` (the next function over), not `musyxSynthFrame` as an old s101-era design comment
+claimed. Reverted that one site to file-scoped (matching its proven-correct original behavior); the
+initN64RspMixer-vs-musyxSynthFrame question is a separate follow-up, not folded into this backport. Next
+work unit: NEXT.md (batch 8).
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -171,7 +176,22 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -235 (s383); the next new item takes -236 and is inserted at the top.
+oldest). Current top is -236 (s384); the next new item takes -237 and is inserted at the top.
+
+-236. **(s384) batch 7/N: 17 more converted (148/176 total), plus verification caught a real
+    regression.** Target: 9 functions across 8 files (`musyxSynthFrame`, `initFactor5Mutex`,
+    `update3DAudioFrame`, `tickAllActiveSongs`, `viRetraceHandlerThread`, `waitForPostSwapAck`,
+    `updateAnimatedTextureStreaming`, `static_5_800B4048`, `selectPostCrawlCraft`), identified by a
+    delegated read-only Explore agent from the fresh 45-site scan. The byte-identical regen-diff check
+    (not a formality this time) found one real drop: `musyxSynthFrame`'s `[synth-rearm-ptr]` diagnostic
+    went from 1 match to 0, because its `0x800919D4` anchor actually lives inside `initN64RspMixer` (the
+    next function over), not `musyxSynthFrame` as an old s101-era design comment assumed — scoping to the
+    wrong function silently dropped the patch. Reverted that one site to file-scoped (its original,
+    proven-correct form), converted 17 (not 18) sites this batch. Re-verified byte-identical after the
+    fix; build clean; soak clean (0 crash markers, VI reached the full 0→320→640→1024 timeline at 45.6s,
+    matching batch 6 almost exactly). **28 remain.** The `runHangarMenuFromOverlay`/`hasKasanMoorDefected`
+    collision resurfaced at this iteration's fresh line numbers, still parked. Full detail: `PORTING-STATE`
+    Session 384; next work unit: NEXT.md (batch 8).
 
 -235. **(s383) batch 6/N: 21 more converted (131/176 total).** Target cluster: 4 functions in
     `funcs_4.c` (`processSceneNode` ×10, `renderUnlitMeshFaces` ×7, `drawSubtitleText` ×2,

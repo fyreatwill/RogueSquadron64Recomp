@@ -32688,3 +32688,77 @@ running total 131 of 176 converted, 45 remain; plus a genuine latent-collision f
 (`runHangarMenuFromOverlay`/`hasKasanMoorDefected`) parked for a dedicated fix, and confirmation that the
 `initFactor5Mutex`-adjacent region is 6+ distinct functions, not one, correcting a prior session's
 mis-scan).
+
+## Session 384 (2026-08-06) — sanctioned tooling: fixup_game_funcs.py backport batch 7/N (17 more converted, 148/176 total) + a real regression caught by the batch's own verification step
+
+Continuation of the fixup_game_funcs.py function-scope-match backport (s377-379, s381-383 prior batches).
+45 remained after batch 6, confirmed by re-running `scratch_batch3/scan_filescoped.py` cold (45 sites,
+line numbers listed).
+
+Delegated the identification pass (per s382's process finding) to a read-only Explore subagent: gave it
+all 45 site line numbers, asked it to grep each site's MIPS address in `RecompiledFuncs/funcs_*.c`, walk
+up to the enclosing `RECOMP_FUNC` anchor, and flag excluded classes / multi-function-loop sites /
+unresolved collisions. It returned a full 45-row table: 6 sites confirmed excluded (the `$zero` sweep, the
+C88 hand patch, the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair ×2, the `_s284_deref_guard_sites`
+4-function loop, and — as flagged as a real possibility in s383's writeup — the `~line 8299` collision
+RESURFACED at this iteration's fresh line numbers (`L_800C68AC:` still matches both `hasKasanMoorDefected`
+in funcs_29.c and `static_5_800C6854` in funcs_43.c; still parked, still needs a dedicated `p.name`-filter
+fix, not touched). The remaining 39 sites grouped into 30 distinct functions; recommended batch: 9
+functions / 18 line-entries (22 actual patch sites once the two multi-pattern loops are counted) spanning
+8 files — `musyxSynthFrame` + `initFactor5Mutex` (funcs_24.c), `update3DAudioFrame` (funcs_26.c),
+`tickAllActiveSongs` (funcs_25.c), `viRetraceHandlerThread` (funcs_4.c), `waitForPostSwapAck` (funcs_5.c),
+`updateAnimatedTextureStreaming` (funcs_11.c), `static_5_800B4048` (funcs_41.c), `selectPostCrawlCraft`
+(funcs_30.c).
+
+Delegated ONLY the conversion-editing step to a second subagent (general-purpose, default model), same
+division of labor as prior batches. Backup taken first:
+`fixup_game_funcs.py.pre-scope-backport-backup-batch7`. AST scan after edits: 27 remaining (45 − 18,
+matching the reported 9×2 sites).
+
+**Verification (orchestrating session) caught a real regression, not just a formality this time.** Cleared
+`RecompiledFuncs/`, regenerated via `make_elf.py` + `N64Recomp` once with the pre-batch7 backup script
+(pass A) and once with the batch-7-converted live script (pass B). The fixup-report `diff` was NOT empty:
+one line missing from pass B — `funcs_24.c: [synth-rearm-ptr] DMEM-mixer re-arm pointer diagnostic patched
+x1`. Root cause, confirmed by a standalone script re-deriving the same `func_re`-boundary slice the fixup
+script itself uses: the `0x800919D4` anchor this patch matches on occurs exactly once in `funcs_24.c`, and
+it falls INSIDE `initN64RspMixer` (the function immediately following `musyxSynthFrame`), not inside
+`musyxSynthFrame` as the batch-7 conversion (and, it turns out, the ORIGINAL s101-era design comment near
+CURRENT-TRUTH's audio-tick-trace block) both assumed. Scoping the patch to `musyxSynthFrame`'s body
+therefore silently dropped it to 0 matches — exactly the file-scope-vs-function-scope fragility class this
+whole backport exists to catch, this time catching a pre-existing DOCUMENTATION error (not a fresh mistake
+introduced by the conversion mechanics) rather than a mechanical conversion bug. Fix: reverted that one
+site to its original file-scoped form (byte-identical to pre-batch7 behavior), left it OUT of this batch's
+17-site total, and left an inline comment explaining the discrepancy for whoever investigates the
+initN64RspMixer-vs-musyxSynthFrame question properly. Re-ran the full diff after the fix: both the
+fixup-report diff and the `diff -rq` full-tree diff came back empty (byte-identical). AST scan: 28
+remaining (45 − 17).
+
+Build: `cmake --build . -j8` succeeded clean (only the pre-existing harmless `DDIV`/`DMULT`
+sign-conversion warnings, no new warnings or errors).
+
+Soak (orchestrating session, `scratch_batch7/run_soak.sh` wrapper): no ROM placeholder message in the log
+head, confirming correct launch cwd. 0 crash markers (`UnhandledJumpTarget`/`[defer-drop]`/`[dmem-race]`/
+`Assertion`/SIGSEGV/SIGBUS/SIGTRAP/CRASH` all grep to 0, 12568 log lines). VI width traversed the full
+`0→320→640→1024` timeline (1024 reached at 45.6s, update_screen #2703, matching batch 6's 45.6s almost
+exactly) and ran steady at 1024 for another ~35-40s with growing `dpc-fwd`/task/`threadPresent` counters
+before a clean SIGKILL (PID found via `ps aux`, matches s383's process note).
+
+Excluded site-classes (the `0x8008EC88` audio-gate hand patch; the
+`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair; the whole-file `$zero` sweep at line ~55; the
+`_s284_deref_guard_sites` multi-function loop; the `runHangarMenuFromOverlay`/`hasKasanMoorDefected`
+collision site; the single `synth-rearm-ptr` site reverted this session) confirmed untouched/reverted —
+matches expectations.
+
+Minor process note: the conversion subagent copied the `# (scoped, s383 backport)` comment tag verbatim
+from the existing example conversions it was pattern-matching against, instead of using this session's own
+number — cosmetic only (doesn't affect behavior, all 17 new conversions verified byte-identical), but
+future batches' conversion prompts should explicitly say "use the CURRENT session number in any new
+comment tag, don't copy an old one" to avoid the provenance trail drifting.
+
+**Running total: 131 + 17 = 148 of 176 converted (confirmed by scan: 28 remain).**
+
+Outcome: ADVANCED (real code change: 17 more patch sites hardened against the file-scope fragility class,
+running total 148 of 176 converted, 28 remain; PLUS this session's verification step did its actual job —
+caught a genuine regression before it reached a build, root-caused it to a pre-existing documentation error
+about which function owns the `0x800919D4` DMEM-mixer-callback-pointer read, and left that specific site
+safely reverted and flagged rather than either silently shipping the drop or guessing a fix).
