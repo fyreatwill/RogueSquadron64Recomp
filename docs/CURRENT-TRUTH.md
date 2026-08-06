@@ -7,29 +7,25 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## L
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
-   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Eleven passes so far
-   (s295-330 x5, s346, s355, s364, s371, s380, s391) kept the file oscillating around the cap as new
-   session detail accrues; s391 migrated the closed s377-388 fixup-backport arc to PROJECT-OVERVIEW §13.
-   Full per-pass detail in git log. 35 KB remains a stretch target, not a hard floor -- the "Current
-   truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Twelve passes so far
+   (s295-330 x5, s346, s355, s364, s371, s380, s391, s398) kept the file oscillating around the cap as
+   new session detail accrues; s398 migrated the closed s389-397 idiom-audit arc to PROJECT-OVERVIEW
+   §14. Full per-pass detail in git log. 35 KB remains a stretch target, not a hard floor -- the
+   "Current truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
    deliberately; both are used every iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
    §10-§12). Next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
-   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. **The `-0x25A4` family
-   itself is fully closed (s283-s396)**, and s397's codebase-wide frequency scan for a next family (two
-   independently-refined passes) found none of comparable magnitude — see item -247. **This method is
-   exhausted for now; leaving pure-idiom-audit mode for M3 needs human reconfirmation** (a different
-   discovery tool, or falling back to M4/reopening M5).
+   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. **The `-0x25A4`
+   family itself is fully closed (s283-s396)**, and s397's codebase-wide frequency scan for a next
+   family found none of comparable magnitude — see item -239..-247. **This method is exhausted for now;
+   leaving pure-idiom-audit mode for M3 needs human reconfirmation** (a different discovery tool, or
+   falling back to M4/reopening M5).
 
-Sanctioned tooling work unit: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the
-file-scoped-only guard patches in `fixup_game_funcs.py`. **CLOSED OUT as of s386**, and its two follow-up
-items (the `runHangarMenuFromOverlay`/`hasKasanMoorDefected` collision, the `musyxSynthFrame`/
-`initN64RspMixer` scope question) both resolved s387/s388 — **no live work remains on this thread.**
-168/176 sites converted across 9 batches (s377-386); 8 confirmed permanent design exclusions. Full
-batch-by-batch detail, process lessons, and the exclusion-site breakdown: `docs/PROJECT-OVERVIEW.md`
-§13.
+Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
+in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
+below and `docs/PROJECT-OVERVIEW.md` §13.
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -154,242 +150,56 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
 oldest). Current top is -247 (s397); the next new item takes -248 and is inserted at the top.
 
--247. **(s397) M3 idiom-class audit: `S285_H1_8` stale-guard cleanup landed; codebase-wide scan for the
-    next `-0x25A4`-scale idiom class finds NONE — a well-evidenced negative result, per NEXT.md's own
-    contingency, and the M3 systematic-idiom-audit model needs human input to proceed further.** Step 1:
-    deleted the leftover `S285_H1_8` guard tuple in `fixup_game_funcs.py` (checked a stale register,
-    never guarded the real dereference — `S395_SWEEP_1` already covers it correctly; s395/s396 carry-over
-    cleanup). Verified via regen+build (clean, fixup report confirms the isolated intended diff). Soak
-    verification was **inconclusive but not a regression**: 4 attempts across the session, none reached a
-    same-run positive control ([hangar-loop]) for reasons unrelated to the change — 2 hit pre-existing
-    log-storm pathologies (`ROGUESQ_LOG_SCHED`, `RS_FREE_WALK`, both previously catalogued by s345/s395),
-    1 had too-short a hold for the percentage-scheduled title→hangar keys, 1 completed cleanly (0 crashes,
-    full 280s hold, all keys fired at the correct offsets) but the game never left the title/craft-select
-    screen — the project's own already-documented input-delivery flakiness (s150's unresolved "Single
-    Start" note), not new. The change is still verified safe by construction: a pure deletion that can
-    only widen surviving code paths, and the one dereference at that address is protected by
-    `S395_SWEEP_1`, untouched here and already soak-verified by s395 with a full positive control. Step 2:
-    ran (and twice bug-fixed) a static classifier tracing `MEM_*` negative-displacement loads' base
-    registers back to their origin, to distinguish the mundane `lui`-addressed static-global idiom (which
-    dominates the raw frequency ranking — `-0x5824`/`-0x23A8`, the two next-highest-frequency
-    displacements after `-0x25A4` itself, are 100% this, confirmed by direct source read) from the actual
-    `-0x25A4` shape (a pointer reloaded from a global slot, then dereferenced). **Result: zero candidates
-    of comparable magnitude anywhere in the codebase** — the method (frequency scan) NEXT.md prescribed is
-    exhausted for now, though the classifier has an acknowledged blind spot (can't trace across
-    label/branch crossings, so it can't even reprove the known `-0x25A4` family this way). Also confirmed
-    the `[mesgqueue-guard]` lead (s395/s396 carry-over) is a single C++-runtime guard site, not a
-    guest-code idiom class — out of scope for this model. **Recommends the human weigh in**: M3 needs
-    either a different (CFG-aware) discovery tool or a return to crash-driven discovery (requires
-    reconfirming the user directive's pure-idiom-audit constraint), vs M4 (parked correctness items, never
-    picked up) vs reopening M5 (closed, needs a new lead). Full detail: `PORTING-STATE` Session 397.
-
--246. **(s396) M3 idiom-class audit: `funcs_40.c`/`funcs_19.c` swept — CLOSES the entire `-0x25A4`
-    hangar-list-pointer idiom-class audit (s283-s396) with 0 new guards needed.** Completed s394's
-    3-file sweep-remainder plan (`funcs_27.c` closed s395). Delegated a full per-site classification to
-    a subagent, same methodology as s395 (direct source reads, cross-referenced against every existing
-    guard family's literal anchor text — not a mechanical script). **Result: 69/69 raw `-0x25A4` hits in
-    `funcs_40.c` fully accounted for — 65 COVERED (by `guard1`-`8`, `HANGARLIST_GUARD*`,
-    `_s284_deref_guard_sites`, `G1`-`G32`), 4 SAFE (call-arg-only, never dereferenced), 0 NEEDS-GUARD, 0
-    UNCLEAR.** `funcs_19.c`'s single raw hit (`npcShieldGeneratorUpdate`) is an unrelated coincidence —
-    different `lui` base (`0x8004` vs the family's `0x800A`/`0x800D`), loaded into a float register and
-    used only as a `DIV_S` divisor, never a pointer; already noted as a false positive by s284's own
-    comment, re-confirmed here. **Two independent lines of evidence** for the null result: the
-    subagent's per-site reads, and an independent post-hoc check (`grep -c -- "-0X25A4"` = 69/1 matching
-    exactly; every function's COVERED+SAFE count sums exactly to its own raw-hit count with no slack).
-    No code change, regen, build, or soak needed — the 0-NEEDS-GUARD classification was itself the
-    complete result. **Net: all three files that ever showed a raw `-0x25A4` hit in this family
-    (`funcs_27.c`, `funcs_40.c`, `funcs_19.c`) are now confirmed fully covered or confirmed-safe, closing
-    this idiom-class thread.** Two carry-over observations remain unactioned, not part of this audit: (1)
-    `S285_H1_8`'s leftover stale-register guard (funcs_27.c, harmless, small cleanup); (2) the
-    `[mesgqueue-guard]` tight retry loop against a permanently-bad `mq_=0x1D0` pointer (unrelated
-    subsystem, plausible low-severity bug worth a dedicated look). Full detail: `PORTING-STATE` Session
-    396. **Next M3 idiom-class work needs a genuinely NEW idiom class** — this one is done.
-
--245. **(s395) M3 idiom-class audit: `funcs_27.c` sweep-remainder closed (Step 1 of s394's plan) —
-    found and fixed a SECOND, independent instance of the s392-class "stale register" guard-placement
-    bug, this time in the much older s285 chunk-1 family.** Delegated a fresh per-site classification of
-    all 102 raw `-0x25A4` loads in `hangarInitialize` to a subagent (verify existing coverage; classify
-    every uncovered site NEEDS-GUARD / SAFE / UNCLEAR, matching every prior chunk's methodology). Result:
-    86 already correctly covered, 15 confirmed SAFE (call-arg-only, never dereferenced), 1 genuine
-    NEEDS-GUARD site — and a bonus finding, independently verified by direct source read: the existing
-    `S285_H1_8` guard (file line ~122483, from s285, predates the s394 anchor-placement lesson) checks
-    `ctx->r4` at a point where r4 still holds a STALE value left over from a different, unrelated combine
-    65 lines earlier (`S285_H1_6`'s own combine) — not the fresh value this site's own raw
-    `-0x25A4($s4)` reload produces three lines later, which is then dereferenced completely unguarded
-    (`MEM_W(0X24, ctx->r4) = 0;`). Same bug CLASS as item -243/-244, different session/chunk of origin,
-    never caught because (like chunk 3a) nobody armed `ROGUESQ_LOG_S285_GUARD` with a positive control
-    during s285's own soaks. Fix: added ONE new guard (`S395_SWEEP_1` in `fixup_game_funcs.py`, bail
-    `S285_H1_BAIL`) anchored correctly — right after the real combine (`ctx->r4 = ADD32(ctx->r17,
-    ctx->r3)`), immediately before the dereference — leaving the old broken `S285_H1_8` guard in place
-    unchanged (harmless dead-weight: it may occasionally cause a spurious early-bail if the *stale* r4
-    happens to look invalid, but does not itself under-protect anything now that the real dereference is
-    covered). Removing/relocating `S285_H1_8` is a separate, deliberately deferred cleanup — not done
-    this session to keep the diff minimal and well-scoped. **Verified**: regen diff shows ONLY
-    `funcs_27.c` changed, 14 lines added / 0 removed (exactly one new guard block, matching the predicted
-    shape for a pure addition). Build clean. 4 soaks (see PORTING-STATE Session 395 for full detail):
-    **verify1** (armed `ROGUESQ_LOG_S395_SWEEP_GUARD=1`, default env) — scene reached (574
-    `[hangar-loop]` lines as positive control), 0 crashes, full 280s+ hold, `[s395-sweep-guard]` fired 0
-    times (plausible null result — the site's pointer was valid throughout this run). **verify2/verify2b**
-    (default env, retried after cleanup) each hit a PRE-EXISTING, apparently non-deterministic
-    high-volume logging pathology unrelated to this fix and unrelated to `hangarInitialize`: unbounded
-    `RS_FREE_WALK` per-node logging (10GB before being killed) and a `[mesgqueue-guard]` diagnostic
-    firing in a tight retry loop (7GB, `bad_total` counter reached ~38 million) — both pre-existing
-    footguns (the former already flagged by s345's own comment in `run_s327waitpump.sh`; the latter a
-    NEW observation, logged below, not actioned this session). **verify2c/verify3** (same env but with
-    those two log sources disabled to avoid the storm) avoided it but — apparently because disabling
-    `ROGUESQ_LOG_SCHED` shifted frame timing enough to miss the fixed-time title-screen key schedule —
-    never advanced past VI width=1024 (title), so never exercised `hangarInitialize` at all; still 0
-    crashes over their full ~330s runs. **verify4** (default env retry) hit an unrelated early-boot crash
-    in `musyxSynthFrame` (`last-guest-pc=0x8000834c`, well outside `hangarInitialize`'s
-    `0x800AA6D8`-`0x800AE084` range) before even reaching the title phase — not previously catalogued by
-    this exact symbol name, consistent with the project's long-documented audio-subsystem boot
-    intermittency. **Net: 0 crashes attributable to the new guard or the touched code region across all
-    4 attempts**; one fully valid scene-reached run with a same-run positive control is the primary
-    evidence, the other three are crash-free-but-inconclusive-or-unrelated secondary confirmation.
-    Two NEW observations logged for a future session (not this session's scope, M3 priority is systematic
-    audits only): (1) the leftover `S285_H1_8` stale-guard cleanup; (2) the `[mesgqueue-guard]` tight
-    retry-loop — a message-queue send apparently retries forever against a permanently-bad `mq_=0x1D0`
-    pointer rather than giving up, worth a look since it could be a genuine (if rare) hang-adjacent bug in
-    its own subsystem, unrelated to `-0x25A4`. Remaining sweep work per s394's original plan: `funcs_40.c`
-    (69 raw hits vs 67 markers, ~2 candidates) and `funcs_19.c`'s 1 float-register outlier — both still
-    unaudited, next session's work unit.
-
--244. **(s394) FIXED item -243: all 29 of s392's chunk-3a guards rebuilt with correct anchor placement,
-    verified.** Wrote a fresh extraction/verification script (`ast.literal_eval` on the live
-    `_s392_h3a_sites` table, no hand-transcription) that for each site located its raw `-0x25A4` load in
-    the current `funcs_27.c`, confirmed the load's destination register matched the tuple's `reg`, then
-    scanned forward for the first genuine `MEM_*` dereference (27/29 sites) or, where no in-line
-    dereference exists before an unconditional jump (`S392_H3A_26`, whose load feeds a shared
-    control-flow join at `L_800ADB18` with `S392_H3A_25`'s own separate path), scanned through the
-    `goto` line instead — still correctly placing the guard right after the fresh load with nothing able
-    to clobber the register in between. All 29 new anchors verified unique on the first pass. Applied via
-    Option A (in-place rewrite of the 29 tuples, same site names/`reg`/`bail_label`, only anchor text
-    changed) — diff reads as "fixed," not "replaced." **Verified**: regen diff shows ONLY `funcs_27.c`
-    changed, 58 lines removed / 58 added (net zero, same total line count before/after) — a pure
-    2-line-earlier REPLACEMENT of each guard block's position, not an addition, exactly the predicted
-    shape for a placement fix. Build clean (only pre-existing `funcs_8.c` sign-conversion warnings). 3
-    soaks: **verify1** (armed with `ROGUESQ_LOG_S392_H3A_GUARD=1` via a throwaway wrapper script, deleted
-    after use) hit 1 crash at the already-catalogued `trackResourceListWithMappingTables+1228`/
-    `0x80065e94` "Apple dladdr fallback" background-noise family (far outside `hangarInitialize`'s
-    `0x800AA6D8`-`0x800AE084` range) — **`[s392-h3a-guard]` fired 0 times**, the discriminating result,
-    with a same-run positive control (824 `[hangar-loop]` lines, ~86s held at the hangar/craft-select
-    scene before the unrelated crash) ruling out "guarded code never ran" as an explanation for the null
-    fire count. **verify2** (unarmed) hit 1 crash at `allocateDisplayListBuffer+880`/`0x80015544`, traced
-    via guest-address cross-reference to `funcs_4.c` — unrelated. **verify3** (unarmed) fully clean, full
-    280s+ hold survived, 0 crashes. Net: 29/29 sites' placement corrected and reverified, 0 regressions
-    attributable across all 3 soaks. Also ran (but did not act on) a Step-5 raw-count sweep: `funcs_27.c`
-    102 raw `-0x25A4` hits vs 89 existing guard markers (~13 possibly still unguarded), `funcs_40.c` 69
-    vs 67 (~2 possibly unguarded), `funcs_19.c` 1 unrelated hit — rough counts only, no per-site
-    classification yet; that's the next work unit. Full detail: `PORTING-STATE` Session 394.
-
--243. **(s393, FIXED s394 — see item -244) URGENT: fix s392's chunk-3a guard-placement bug (all 29 sites
-    check a STALE register, not the freshly-reloaded pointer) before any further `-0x25A4` audit work.**
-    Discovered while closing out
-    chunk 3b (item -242): `_s392_h3a_sites` in `fixup_game_funcs.py` builds every one of its 29 anchors
-    starting WITH the raw `-0x25A4($s1)` load's own comment+code line, and `text.replace(anchor, guard +
-    anchor, 1)` inserts the guard BEFORE that anchor — so all 29 checks run before the load executes,
-    testing whatever was in that register from the PRECEDING instruction, not the value the load is about
-    to produce. Chunks 1/2/3b (s285/s390/s393) built their anchors to start AFTER the raw load instead
-    (confirmed by direct inspection: 0/29 chunk-3a sites match that shape, all chunk-1/2/3b sites do) —
-    this is chunk-3a-specific, not systemic to the whole audit. Traced two sites by hand (`S392_H3A_1`,
-    `S392_H3A_11`): both check a register that was just set by a small byte-index load (`lbu`/`MEM_BU`,
-    0-255 range) two lines earlier — always fails the `0x80000000..0x80800000` KSEG0 check, so those sites'
-    guards **unconditionally bail every time that code path runs**, silently skipping real per-hangar-item
-    processing rather than protecting against a rare bad pointer. Not yet counted how many of the 29 share
-    this "stale value is definitely not a pointer" shape vs. "stale value coincidentally looks like a valid
-    KSEG0 pointer and passes through" (the latter is arguably worse — zero actual protection, looks green).
-    Invisible to s392's own 3-soak verification because `ROGUESQ_LOG_S392_H3A_GUARD` was never armed by any
-    soak recipe — an always-firing silent-bail bug produces no observable signal in "clean build + no new
-    crash," only in the gated fire-count log nobody turned on. Fix: rebuild all 29 anchors to start AFTER
-    their raw load (same discipline as chunks 1/2/3b), re-verify each as a unique substring, regen, build,
-    soak — same protocol as any other chunk, scoped as its OWN work unit (not folded into a new chunk).
-    Full mechanism: `PORTING-STATE` Session 393.
-
--242. **(s393) M3 idiom-class audit: `hangarInitialize` "chunk 3b" (the function's own tail, LAST chunk),
-    21 sites guarded — `hangarInitialize`'s `-0x25A4($s1)` placement coverage is now complete end-to-end
-    (chunks 1/s285 + 2/s390 + 3a/s392 + 3b/s393), though see item -243 above: chunk 3a's guards need a
-    placement fix before that coverage claim is actually sound. Bail target `L_800AE060`, the function's
-    own real epilogue — already a live `goto` target from the loop's "zero iterations" fast path, no
-    synthetic label needed. Anchors built to start AFTER each raw load (the correct placement, verified
-    against item -243's bug). Verified: byte-identical-except-intended-diff regen (only `funcs_27.c`, 294
-    added / 0 removed = 14 × 21); build clean; 3 soaks, all 3 hit a crash but each at an already-catalogued,
-    unrelated address far outside `hangarInitialize`'s range (`0x8000b650` staleness per item -239,
-    `coalesceFreeHeapBlocks+2016`, `emitAllocatedDLCommand+9632`) — 0 fires attributable to the new guards.
-    A full-codebase sweep for `-0x25A4` sites outside `hangarInitialize` (the original "close the class"
-    plan) is deferred behind item -243's fix. Full detail: `PORTING-STATE` Session 393.
-
--241. **(s392) M3 idiom-class audit: `hangarInitialize` "chunk 3a" of the `-0x25A4` hangar-list-pointer
-    family, 29 sites guarded.** Continued s390's chunk 2 (unchanged since s391's maintenance pass). Split
-    the 53 remaining raw hits at the function's own next internal `return;` (line 132777): chunk 3a
-    (lines 125940-132777, 32 raw hits, 29 guarded + 3 confirmed SAFE) this session, chunk 3b (21 hits,
-    132777-133742) next. Classification delegated to a subagent, anchors re-extracted programmatically
-    from source (not hand-transcribed) and uniqueness-verified before patching. Bail target: existing
-    label `L_800ADB2C`, reused (already a live `goto` target from within the sub-block, though unlike
-    prior chunks it runs a few more real calls before returning rather than sitting immediately
-    pre-return — still an already-exercised normal-flow path, not synthetic). Verified: byte-identical-
-    except-intended-diff regen (only `funcs_27.c`, 377 added / 0 removed lines = 13 × 29 guards); build
-    clean; 3 sequential soaks — 1 fully clean 280s hold (title reached, keys driven), 2 hit already-
-    catalogued unrelated crash families (`coalesceFreeHeapBlocks+4424` = closed s354-366 Thread A;
-    `submitSceneNodeRender+27524`, likely a nearest-symbol misattribution) — neither in `funcs_27.c`, 0
-    fires attributable to the new guards or the `-0x25A4` family. Full detail: `PORTING-STATE` Session
-    392; next work unit: NEXT.md — chunk 3b, the function's final ~21 sites, self-evidently unfinished.
-
--240. **(s390) M3 idiom-class audit: `hangarInitialize` "chunk 2" of the `-0x25A4` hangar-list-pointer
-    family, 11 sites guarded.** The s389 soak population was fully mined; queued 3 fresh unbiased soaks
-    (`scratch/agent/soak_queue/s390_freshpop1/2/3.sh`) and, per NEXT.md's fallback, swept every numbered
-    guard family in `fixup_game_funcs.py`. Found the `HANGARLIST_GUARD`/s283-285 `-0x25A4($s1/s4/s5)`
-    global-pointer family is **self-documented as incomplete**: s284 deliberately parked `hangarInitialize`
-    (funcs_27.c, 103/172 raw hits, a single 13,770-line function) as its own multi-session item; s285
-    patched only a first "chunk" (lines 119818-124175, `S285_H1_BAIL`) — 65 sites, lines 124175-133587,
-    remained unguarded. Guarded the next two bounded sub-blocks (chunk 2a: 124202-125013; chunk 2b:
-    125014-125822), each ending at its own natural epilogue — reused existing labels `L_800AB1A4`/
-    `L_800AB618`, no new labels needed. 11 NEEDS-GUARD sites + 1 confirmed-SAFE (call-arg only, never
-    dereferenced). Verified: byte-identical-except-intended-diff regen (only `funcs_27.c` touched, diff
-    was exactly the 11 insertions); build clean; 3 soaks, none crashed inside/downstream of the new
-    guards or in the `-0x25A4` family (one hit the already-closed heapWalker-GUARD5 noise address
-    `0x8000834c`). 0 guard fires (proactive fix). ~54 raw `-0x25A4` hits remain past line 125822 (chunk
-    3+). Full detail: `PORTING-STATE` Session 390.
-
--239. **(s389) M3 idiom-class audit: "Lookup" struct-family unguarded table-base-pointer dereference, 4
-    sites guarded.** First systematic M3 audit since the backport thread closed. A recurring
-    `[CRASH][last-guest-pc]=0x800ad0dc` (`pc-symbol=findLookupEntryByKey+1864`) turned out to be a WRONG
-    nearest-symbol attribution — real site is inside `hangarInitialize`, not a hash-table dereference
-    (same failure mode as the catalogued `0x8000b650` staleness). Pivoted: `findLookupEntryByKey` and 3
-    siblings (`removeLookupTableEntry`, `getLookupEntryField5`, `relocateLookupEntryToNewKey`, all
-    `funcs_14.c`/`funcs_15.c`) share the unguarded table-base-pointer idiom already fixed for sibling
-    `setLookupEntryField5ByKey` (s260, `SETLOOKUP_TABLE_GUARD`) — guarded all 4 reusing the exact s260
-    KSEG0-range+hi-word check. Verified: byte-identical-except-intended-diff regen; build clean; 3 soaks
-    (2 died to already-catalogued unrelated crash families, 1 fully clean 304s hold, full VI timeline), 0
-    guard fires (proactive fix). Full detail: `PORTING-STATE` Session 389.
+-239..-247. **(s389-397) M3 idiom-class audit resumption: `hangarInitialize`'s `-0x25A4`
+    hangar-list-pointer family fully CLOSED, plus the "Lookup" struct-family (s389), TWO independent
+    guard-placement bugs found+fixed, and a codebase-wide frequency scan for the next comparable idiom
+    class — negative result, closing the pure-idiom-audit method for now.** s389 guarded the Lookup
+    table-base-pointer family (4 sites). s390/s392/s393 chunked `hangarInitialize`'s 103 raw `-0x25A4`
+    hits into guarded sub-blocks (chunks 2/3a/3b, 61 sites) after s285's chunk-1-only coverage was found
+    self-documented-incomplete. s393 discovered chunk 3a's 29 guards all checked a STALE
+    pre-load register instead of the freshly-reloaded pointer (anchors built to start BEFORE the raw
+    load, not after) — invisible to soak verification because the fire-count diagnostic was never
+    armed; s394 fixed all 29 with a re-extracted, uniqueness-verified anchor set (net-zero-line regen
+    diff, soak-confirmed 0 fires with a same-run positive control). s395 found a SECOND, independent
+    instance of the same bug class in the much older s285 chunk-1 family (`S285_H1_8` checking a
+    65-lines-stale register) — added a correctly-anchored replacement guard (`S395_SWEEP_1`), left the
+    broken original in place as harmless dead weight. s396 swept the two remaining files
+    (`funcs_40.c`/`funcs_19.c`, 70 raw hits): 0 NEEDS-GUARD, closing the entire family (s283-396) with
+    two independent lines of evidence (subagent per-site read + independent grep-count cross-check).
+    s397 deleted the leftover `S285_H1_8` dead guard (safe by construction; soak verification
+    inconclusive for reasons unrelated to the change) and ran a static base-register-origin classifier
+    across the whole codebase for the next `-0x25A4`-scale idiom class: **zero candidates of comparable
+    magnitude found** — the two next-highest-frequency displacements are both the mundane
+    `lui`-addressed static-global idiom, confirmed by direct source read, not pointer chases. **Net: the
+    `-0x25A4` family is fully closed; the frequency-scan discovery method is exhausted; M3
+    idiom-audit-only mode needs human input to proceed** (a CFG-aware discovery tool, a return to
+    crash-driven discovery, or a fallback to M4/M5 — see USER DIRECTIVE above). The queued soak
+    `s397_h1_8removal_verify2` returned `NO_POSITIVE_CONTROL` (hangar scene not reached) — inconclusive,
+    doesn't change the safe-by-construction verdict. Full detail: `docs/PROJECT-OVERVIEW.md` §14; raw:
+    `PORTING-STATE` Sessions 389-397.
 
 -231..-238. **(s377-386) Fixup function-scope backport, batches 1-9: 176 file-scoped guard patches
     identified (AST scan), 168 converted to function-scope, 8 confirmed permanent design exclusions.
-    CLOSED OUT s386.** Per-batch functions, sizes, and process lessons (the sandbox-permission
-    delegation rules, the `musyxSynthFrame`/`initN64RspMixer` scope-misattribution catch, the
-    `runHangarMenuFromOverlay`/`hasKasanMoorDefected` collision, the address-not-name exclusion-list
-    lesson): `docs/PROJECT-OVERVIEW.md` §13. Final site-by-site exclusion breakdown and the two s387/
-    s388 follow-up fixes: the Sanctioned tooling paragraph above. Full raw detail: `PORTING-STATE`
-    Sessions 377-386.
+    CLOSED OUT s386.** Per-batch functions, sizes, process lessons (sandbox-permission delegation
+    rules, the `musyxSynthFrame`/`initN64RspMixer` scope-misattribution catch, the
+    `runHangarMenuFromOverlay`/`hasKasanMoorDefected` collision, address-not-name exclusion lesson):
+    `docs/PROJECT-OVERVIEW.md` §13. Exclusion breakdown + s387/s388 follow-ups: Sanctioned tooling
+    paragraph above. Raw: `PORTING-STATE` Sessions 377-386.
 
 -226..-230. **(s371, s373-376) M5 Step 6 (PCM sanity-check) and the C88-reversed pre-title-hang/
-    VI-trigger investigation — all CLOSED.** s371 answered Step 6: real PCM is 100% silent even under
-    genuine RSP-dispatched real ucode (13,832 logged `[pcm-sanity]` calls, 0 non-zero — a
-    positive-controlled result), and found+fixed a real host-bridge bug en route (`queue_samples`
-    silently dropped half of every buffer's bytes — see Overturned Conclusions). s373 root-caused WHY:
-    `reapplyDisplayMode` unconditionally re-zeros the audio-tick gate every video frame and never
-    durably re-enables it, because its own re-enable site is the same `0x8008EC88` address
-    `fixup_game_funcs.py` force-zeros to keep title-reach working — so voice population never gets a
-    window to run; the ucode mixing exact zeros is correct behavior on empty input, not a mixing bug.
-    s374 found a plausible single-token-mutex-deadlock candidate for why reversing that gate hangs
-    pre-title; s375's build+soak REFUTED it cleanly (9131/9131 balanced mutex acquire/release, never
-    blocks) — `HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang` CLOSED: there is no hang, C88-reversed
-    just never re-triggers the VI 640→1024 transition. s376's source-only pass discriminated three
-    candidate trigger mechanisms (reset-branch divergence, shared-mutable-state collision, real
-    completion-condition wait) and REFUTED all three cleanly — `HYPOTHESIS-ID
-    m5-audio-vi640to1024-trigger-site` CLOSED by elimination, not solved (the remaining diffuse
-    frame-timing fallback wasn't worth a build cycle, since real audio stays silent regardless per
-    s373). **No M5 audio thread remains open as of s376** — next M5 work needs a genuinely new lead.
-    Full detail: `docs/PROJECT-OVERVIEW.md` §12; raw detail `PORTING-STATE` Sessions 371, 373-376.
+    VI-trigger investigation — all CLOSED.** s371: real PCM is 100% silent even under genuine
+    RSP-dispatched real ucode (13,832 `[pcm-sanity]` calls, 0 non-zero, positive-controlled), and fixed
+    a real host-bridge bug en route (`queue_samples` dropped half of every buffer — Overturned
+    Conclusions). s373: `reapplyDisplayMode` unconditionally re-zeros the audio-tick gate every frame
+    and never durably re-enables it (same `0x8008EC88` address the fixup force-zeros for title-reach),
+    so voice population never runs — mixing exact zeros is correct on empty input, not a mixing bug.
+    s374's mutex-deadlock candidate for why reversing that gate hangs pre-title was REFUTED s375
+    (9131/9131 balanced, never blocks — `HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang` CLOSED: no
+    hang, the gate just never re-triggers VI 640→1024). s376 REFUTED all 3 candidate trigger mechanisms
+    for that transition (`HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site` CLOSED by elimination — not
+    worth chasing further since real audio stays silent regardless per s373). **No M5 audio thread
+    remains open as of s376.** Full detail: `docs/PROJECT-OVERVIEW.md` §12; raw: `PORTING-STATE`
+    Sessions 371, 373-376.
 
 -225..-210. **(s354-370) M5 Step 5 guard-hunting arc — Thread A (`coalesceFreeHeapBlocks`), Thread B
     (`drainMeshReleaseQueue` linked-list corruption), and a heapWalker background-noise site (GUARD5)
@@ -535,32 +345,26 @@ Standing warnings:
 `## LLE stabilization session 2 (2026-07-12)` sits out of order in the log, between s7 and s8: its conclusions are among the oldest in the file, not the newest.
 
 - **(s348/350→s352)** "`[scene-node-content-guard]` firing is evidence of the same corruption class as
-  the other step-5 guards" — s352's raw-log re-read found this guard fires at the SAME node address
-  (`0x80183ECC`) with the SAME zeroed content, thousands of times per run, harmlessly, across 3
-  independent sessions — a steady-state signature (legitimately-empty/placeholder node revisited every
-  frame), not a corruption signature. Believable: it's a real guard catching a real out-of-range read,
-  and 0/4 crash-repeat since it landed (item -209..-195 range, s348) looked like validated-by-non-recurrence; the n=0-vs-
-  n=1957+ distinction (one-shot-before-crash vs. steady-state-thousands-of-hits) just hadn't been
-  checked against the OTHER guards' firing shape until s352 compared them side by side. Does not
-  overturn the guard's correctness (it still needs to stay in place), only its evidentiary weight for
-  the step-5 corruption-source hunt. PORTING-STATE 348, 350, 352; CURRENT-TRUTH item -209..-195.
-- **(s339→s340→s342)** "The VI=640 `pairs=0` plateau is a benign, locked-camera mission cutscene" (s339)
-  and "s340's 2/2 clean soaks validate promoting both audio gate reversals together" (s340) — s342
-  found both soaks (and s341's 2 follow-ups) never left the pre-title attribution/logo screen (0
-  `[keys]` lines in all 4 raw logs). Believable: the soaks genuinely were crash-free with audio/DMA
-  counters visibly live (a real positive control) — nobody checked whether the `[keys]` schedule had
-  actually fired. The underlying `pairs=0` mechanism (PROJECT-OVERVIEW §10) is not overturned, only its
-  context: pre-title, not mid-cutscene, specific to `reapplyDisplayMode`'s gate. PORTING-STATE 339, 340, 342.
-- **(s107/108→s316→s318)** Two linked overturns in the gate1/2/3 tick-producer mechanism chase: (1)
-  "the 3 near-identical countdown/period gates fire `tickAllActiveSongs`/`tickAudioSequencerFrame`" was
-  never validated with a positive control across 4 sessions (s108/s311/s312 measured only gate1's raw
-  inputs, never its branch outcome) — s316 instrumented all 3 and found NONE ever takes "call,"
-  contradicting the functions' own 37-call count. (2) That "never calls" reading was itself overturned
-  by s318: the diagnostic re-read the shared countdown fresh (`MEM_W`) instead of the register
-  (`ctx->r2`) the real branch decision uses, racing against the true value. Direct measurement of
-  `ctx->r2` showed gate1 takes "call" on 19/40 and gate2 on 4/4. Believable both times: the disassembly
-  pattern matched exactly, and the read-once-for-branch/re-read-once-for-print pattern is easy to write
-  without noticing it reintroduces a race. PORTING-STATE 316, 318.
+  the other step-5 guards" — s352's raw-log re-read found it fires at the SAME node address
+  (`0x80183ECC`) with the SAME zeroed content, thousands of times per run harmlessly across 3 sessions
+  — a steady-state signature, not corruption; the n=0-vs-n=1957+ firing-shape distinction just hadn't
+  been checked against the other guards until s352 compared them side by side. Guard stays in place;
+  only its evidentiary weight for the corruption hunt is overturned. PORTING-STATE 348, 350, 352.
+- **(s339→s340→s342)** "The VI=640 `pairs=0` plateau is a benign, locked-camera mission cutscene" and
+  "s340's 2/2 clean soaks validate promoting both audio gate reversals" — s342 found those soaks never
+  left the pre-title attribution/logo screen (0 `[keys]` lines in all 4 raw logs): crash-free with
+  audio/DMA counters visibly live looked like a real positive control, but nobody checked the `[keys]`
+  schedule had fired. The `pairs=0` mechanism itself (PROJECT-OVERVIEW §10) stands; only its context
+  (pre-title, not mid-cutscene) is corrected. PORTING-STATE 339, 340, 342.
+- **(s107/108→s316→s318)** Two linked overturns in the gate1/2/3 tick-producer chase: (1) "the 3
+  near-identical countdown/period gates fire `tickAllActiveSongs`/`tickAudioSequencerFrame`" was never
+  positive-controlled across 4 sessions (only gate1's raw inputs were measured, never its branch
+  outcome) — s316 instrumented all 3, found NONE ever takes "call," contradicting the 37-call count. (2)
+  That itself was overturned by s318: the diagnostic re-read the shared countdown fresh instead of the
+  register (`ctx->r2`) the real branch uses, racing the true value — direct `ctx->r2` measurement showed
+  gate1 calls 19/40, gate2 4/4. Believable both times: matching disassembly, and a
+  read-once-for-branch/re-read-for-print pattern easy to write without reintroducing a race.
+  PORTING-STATE 316, 318.
 - **(s222→s223)** "no soak reaches mesh-heavy content" — a 4-soak sample-size artifact; a re-run
   reached space-combat content before freezing. The freeze itself is real, still reproduces (now a
   flat fill, not a torn polygon). PORTING-STATE 223.
@@ -573,13 +377,13 @@ Standing warnings:
   dense capture + an independent prior run + a code-level check (crash backtraces stay entirely in
   hangar-menu code) show it's the same craft-select scene under a corrupting camera move. Reopens
   "what leaves SELECT YOUR CRAFT" as unanswered. PORTING-STATE 150.
-- **(s2-31→various, ~15 claims, grouped)** Build/pixel-getting era, each overturned within 1-2
-  sessions: Z-buffers misread as colour buffers; texrect output called invisible; RDP "emitting
-  nothing" (real bug: a function-local ring high-water mark); `DPC_WRAP`/fbpair-cap misdiagnosed for
-  missing FULL_SYNC (PROJECT-OVERVIEW §4.6); `PRIM_ALPHA_FF` called necessary for text; a
-  sampling-artifact black-screen; misattributed texture dumps, floor-band line-mask/palette/dxt
-  theories (M1's real cause: s44-49), fog-color attribution, S=0-triangle phase, stale-TMEM-at-draw
-  (§4.1), and 1024-phase black screen (present-starvation, not zero-shade). PORTING-STATE 2-31.
+- **(s2-31→various, ~15 claims, grouped)** Build/pixel-getting era, each overturned within 1-2 sessions:
+  Z-buffers misread as colour buffers; texrect output called invisible; RDP "emitting nothing" (real
+  bug: a function-local ring high-water mark); `DPC_WRAP`/fbpair-cap misdiagnosed for missing FULL_SYNC
+  (§4.6); `PRIM_ALPHA_FF` called necessary for text; a sampling-artifact black-screen; misattributed
+  texture dumps, floor-band line-mask/palette/dxt theories (M1's real cause: s44-49), fog-color
+  attribution, S=0-triangle phase, stale-TMEM-at-draw (§4.1), 1024-phase black screen
+  (present-starvation, not zero-shade). PORTING-STATE 2-31.
 - **(s62-69, grouped)** "RSP task submission stays healthy through the freeze" — a 1-in-32 throttled
   sample missed the crashing tail; an unsampled histogram showed 100% `ImemOverrun` exits.
   "Self-restarting the end-of-IMEM perspective-divide branch un-freezes tasks" — instrument fired 0
@@ -599,34 +403,31 @@ Standing warnings:
   recurrence)" — a positive-controlled entry counter found `initMusyXEngine` is never called at all;
   the clean result reflects dead code, not a validated gate=1 state. Gate=1 still never exercised by
   any soak. PORTING-STATE 306.
-- **(s307→s309→s313→s315)** A chain of "stop points converge" claims in the audio-tick investigation,
-  each overturned by a closer same-run measurement: "the RSP-task freeze and audio-tick freeze land at
-  the same point, one shared upstream resource" (s307) — source-read found separate code paths (s309).
-  "The 3 tick-producers and RSP `M_AUDTASK` all stop together at call #19/20" (s307/310/311) — a
-  widened print-cap soak found `update3DAudioFrame` fires 40/40 (the real hard-stop boundary), the
-  tick-producers stop 3 calls earlier at 37/37, and only `M_AUDTASK` genuinely stopped at 20/20 (s313) —
-  which then turned out to be its own unwidened flat-cap diagnostic bug; widening found it also fires
-  40/40 (s315). Net: 2 real stop points (37/37, 40/40), not 1 or 3. Believable each time: similar small
-  round numbers read as simultaneous unless line numbers are diffed. PORTING-STATE 309, 313, 315.
-- **(M5-AUDIO-PLAN.md §4→s371)** "The host bridge (`queue_samples`/`SDL_QueueAudio` wiring) is already
-  fully implemented and functional" — a source read found `queue_samples`'s parameter is a sample count
-  but was passed straight through as `SDL_QueueAudio`'s byte length with no `*sizeof(int16_t)`
-  conversion, silently dropping the back half of every PCM buffer since this bridge was written.
-  Believable: the wiring compiles/links/calls cleanly end-to-end, so eyeballing the call graph reads as
-  "functional" — the defect is a unit mismatch one level down, only visible by checking actual values.
-  Fixed s371 (`src/main/main.cpp`; mechanism detail: PROJECT-OVERVIEW §12). PORTING-STATE 371.
+- **(s307→s309→s313→s315)** A chain of "audio-tick stop points converge" claims, each overturned by a
+  closer same-run measurement: shared-upstream-resource theory (s307) refuted by source-read (s309);
+  "3 tick-producers + RSP `M_AUDTASK` all stop together at #19/20" (s307/310/311) refined by a widened
+  print-cap soak to 2 real stop points, not 1 or 3 (`update3DAudioFrame` 40/40, tick-producers 37/37,
+  `M_AUDTASK`'s 20/20 was its own unwidened diagnostic bug, also 40/40 once widened, s313/s315).
+  Believable each time: similar small round numbers read as simultaneous unless line numbers are
+  diffed. PORTING-STATE 309, 313, 315.
+- **(M5-AUDIO-PLAN.md §4→s371)** "The host audio bridge is already fully implemented and functional" —
+  a source read found `queue_samples`'s sample-count parameter was passed straight through as
+  `SDL_QueueAudio`'s byte length with no `*sizeof(int16_t)` conversion, silently dropping the back half
+  of every PCM buffer. Believable: the wiring compiles/links/calls cleanly, so eyeballing the call graph
+  reads as functional — the defect is a unit mismatch one level down. Fixed s371 (`src/main/main.cpp`;
+  PROJECT-OVERVIEW §12). PORTING-STATE 371.
 
 ### Dead ends — labelled as such in the log, do not retry
 
-- **(s2b-s4, grouped)** `RDP_ADDRESS_MASK`→0x7FFFFF (aliased legitimate extended-RDRAM handles onto
-  low memory); a chunk-replay hack in `dma_rdram_to_dmem` (legit trig reads right after a swap);
-  widening the DMA shadow to 0x37658 (legit dynamic data); blanket ucode-image shadow `shadow2` (2
-  addresses are legitimately rewritten); `ROGUESQ_RING_RESYNC=1` (no measurable change);
-  `dmem[0x153]=0xFF` forced segment reload (made failures worse).
-- Bulk moves of unmapped symbols out of `main_overlay.txt` (s9): splits the enclosing function
-  (PROJECT-OVERVIEW §4.5), producing a SIGBUS. Use `tools/overlay_symbol_probe.py <0xADDR>` first, one
-  validated batch at a time.
-- Present-side snap-down/`findMostRecentContaining` fallbacks (s9, neither ever fired); `ROGUESQ_VIEW_RDRAM=1` (s9, window never appears, broken in this fork); `ROGUESQ_WRAP_DEDUP=1` (s10, removes ~33000 redundant submissions, same Metal assert still hits); `ROGUESQ_FORCE_PAL15=1` (s14, clears floor band but corrupts ceiling banners sharing pal=15).
+- **(s2b-s4, grouped)** `RDP_ADDRESS_MASK`→0x7FFFFF (aliased legit extended-RDRAM handles onto low
+  memory); `dma_rdram_to_dmem` chunk-replay hack (legit trig reads after a swap); widened DMA shadow
+  0x37658 (legit dynamic data); blanket ucode shadow `shadow2` (2 legit rewrites); `ROGUESQ_RING_RESYNC`
+  (no effect); `dmem[0x153]=0xFF` forced reload (made failures worse).
+- Bulk `main_overlay.txt` symbol moves (s9): splits the enclosing function (§4.5), SIGBUS — use
+  `tools/overlay_symbol_probe.py <0xADDR>` first, one batch at a time. Present-side snap-down/
+  `findMostRecentContaining` (s9, neither fired); `ROGUESQ_VIEW_RDRAM=1` (s9, window never appears,
+  broken in this fork); `ROGUESQ_WRAP_DEDUP=1` (s10, ~33000 fewer submissions, same assert still hits);
+  `ROGUESQ_FORCE_PAL15=1` (s14, clears floor band, corrupts ceiling banners sharing pal=15).
 - **(s85→s91)** "`do_rom_read` corrupted `physical_addr` is nondeterministic garbage" — the exact same
   DMA call recurred byte-for-byte 3 times across 3 sessions; reclassified deterministic, reproducible.
 
@@ -639,10 +440,9 @@ specific instance in PORTING-STATE:
 - §4.3 cross-run comparison: knob effects/nulls manufactured by camera drift, "7.30%" constant misread as an effect (s18); phase timing varies tens of seconds run-to-run, gate on `PROBE_PHASE_WIDTH`/`PROBE_KEYS_FROM_PHASE=1` not a stopwatch (s17 → s18/s23).
 - §4.6 missing protocol events: pair/buffer/wrap counters measured instead of FULL_SYNC arrivals (s11).
 
-Not yet generalized in PROJECT-OVERVIEW: instrument-specific traps (crash-free-soak-isn't-evidence,
-orphaned background soaks, sparse-screenshot false regressions, unvalidated suppression instruments,
-`dpc_bridge` walker desync, histogram-drain timing, camera motion confounding aggregates) migrated to
-`docs/PROJECT-OVERVIEW.md` §8 (s314 maintenance pass).
+Other instrument-specific traps (crash-free-soak-isn't-evidence, orphaned background soaks,
+sparse-screenshot false regressions, unvalidated suppression instruments, `dpc_bridge` walker desync,
+histogram-drain timing, camera motion confounding aggregates): `docs/PROJECT-OVERVIEW.md` §8.
 - **crash-signature blindness (s344)**: a soak-recipe verdict of "did any `[CRASH]` marker fire" is not
   evidence for a SPECIFIC target crash unless `last-guest-pc`/`pc-symbol` is checked against it — RS64
   has ~20+ independent, already-catalogued, nondeterministically-firing crash families, so a bare

@@ -677,3 +677,116 @@ permanent); (8) `musyxSynthFrame`'s `synth-rearm-ptr` diagnostic — **fixed s38
 converted the patch to function-scope on its real owner. Every batch and both follow-up fixes were
 verified via the byte-identical-regen-diff protocol and a clean build+soak. Full raw detail:
 `PORTING-STATE.md` Sessions 377–388.
+
+## 14. M3 idiom-class audit resumption (s389–397): `hangarInitialize`'s `-0x25A4` chunks, two
+independent guard-placement bugs, family closure, and the frequency-scan dead end — migrated from
+CURRENT-TRUTH.md s398 maintenance pass
+
+First systematic M3 audit since the backport thread (§13) closed.
+
+- **s389 — "Lookup" struct-family, 4 sites guarded.** A recurring `[CRASH][last-guest-pc]=0x800ad0dc`
+  (`pc-symbol=findLookupEntryByKey+1864`) turned out to be a wrong nearest-symbol attribution — the
+  real site is inside `hangarInitialize`, not a hash-table dereference (same failure mode as the
+  catalogued `0x8000b650` staleness). Pivoted onto `findLookupEntryByKey` and 3 siblings
+  (`removeLookupTableEntry`, `getLookupEntryField5`, `relocateLookupEntryToNewKey`, `funcs_14.c`/
+  `funcs_15.c`), which share the unguarded table-base-pointer idiom already fixed for sibling
+  `setLookupEntryField5ByKey` (s260, `SETLOOKUP_TABLE_GUARD`) — guarded all 4 reusing the exact s260
+  KSEG0-range+hi-word check. Verified: byte-identical-except-intended-diff regen; build clean; 3 soaks
+  (2 died to already-catalogued unrelated crash families, 1 fully clean 304s hold), 0 guard fires
+  (proactive fix, no positive control needed for a pure addition).
+- **s390 — `hangarInitialize` chunk 2, 11 sites.** The `HANGARLIST_GUARD`/s283-285 `-0x25A4($s1/s4/s5)`
+  global-pointer family turned out to be self-documented as incomplete: s284 parked `hangarInitialize`
+  (`funcs_27.c`, 103/172 raw hits, a single 13,770-line function) as its own multi-session item; s285
+  patched only a first "chunk" (lines 119818-124175), leaving 65 sites (124175-133587) unguarded.
+  Guarded two bounded sub-blocks (chunk 2a: 124202-125013; chunk 2b: 125014-125822), reusing existing
+  labels `L_800AB1A4`/`L_800AB618` as bail targets — 11 NEEDS-GUARD + 1 confirmed-SAFE (call-arg only).
+  Verified: byte-identical-except-intended-diff regen; build clean; 3 soaks, 0 fires in the
+  `-0x25A4` family. ~54 raw hits remained past line 125822 (chunk 3+).
+- **s392 — chunk 3a, 29 sites.** Split the 53 remaining raw hits at the function's own next internal
+  `return;` (line 132777): chunk 3a (125940-132777, 32 raw hits, 29 guarded + 3 SAFE) this session,
+  chunk 3b next. Bail target: existing label `L_800ADB2C`. Verified via byte-identical-except-
+  intended-diff regen (377 added / 0 removed = 13×29); build clean; 3 soaks, 0 fires attributable.
+  **Later found to contain a placement bug — see s393/s394 below.**
+- **s393 — chunk 3b (LAST chunk), 21 sites; also discovered chunk 3a's guard-placement bug.**
+  `hangarInitialize`'s `-0x25A4($s1)` coverage now spans chunks 1(s285)/2(s390)/3a(s392)/3b(s393),
+  though chunk 3a's own coverage claim was unsound (see next item). Bail target `L_800AE060`
+  (function's real epilogue, already a live `goto` target). Anchors built to start AFTER each raw
+  load — the correct placement. Verified: byte-identical-except-intended-diff regen (294 added / 0
+  removed = 14×21); build clean; 3 soaks, all 3 hit already-catalogued unrelated crashes, 0
+  attributable fires. **While closing this out, found**: `_s392_h3a_sites` in `fixup_game_funcs.py`
+  builds every one of its 29 anchors starting WITH the raw `-0x25A4($s1)` load's own comment+code
+  line, and `text.replace(anchor, guard + anchor, 1)` inserts the guard BEFORE that anchor — so all 29
+  checks run before the load executes, testing whatever was in that register from the PRECEDING
+  instruction, not the value the load is about to produce. Chunks 1/2/3b built their anchors to start
+  AFTER the raw load instead (confirmed by direct inspection: 0/29 chunk-3a sites match that shape,
+  all chunk-1/2/3b sites do) — chunk-3a-specific, not systemic. Two hand-traced sites (`S392_H3A_1`,
+  `S392_H3A_11`) both check a register just set by a small byte-index load (`lbu`/`MEM_BU`, 0-255
+  range) two lines earlier — always fails the KSEG0 check, so those sites' guards unconditionally bail
+  every time that path runs, silently skipping real per-hangar-item processing rather than protecting
+  against a rare bad pointer. Invisible to s392's own soaks because `ROGUESQ_LOG_S392_H3A_GUARD` was
+  never armed by any recipe.
+- **s394 — FIXED the chunk-3a placement bug, all 29 sites.** Wrote a fresh extraction/verification
+  script (`ast.literal_eval` on the live `_s392_h3a_sites` table, no hand-transcription) that for each
+  site located its raw load, confirmed the destination register matched, then scanned forward for the
+  first genuine dereference (27/29 sites) or, where no in-line dereference exists before an
+  unconditional jump (`S392_H3A_26`, feeding a shared control-flow join with `S392_H3A_25`), scanned
+  through the `goto` line instead. All 29 new anchors verified unique. Applied via in-place rewrite
+  (same site names/`reg`/`bail_label`, only anchor text changed). Verified: regen diff shows ONLY
+  `funcs_27.c` changed, 58 removed / 58 added (net zero) — a pure 2-line-earlier replacement, exactly
+  the predicted shape. Build clean. 3 soaks: verify1 (armed `ROGUESQ_LOG_S392_H3A_GUARD=1`) hit an
+  unrelated crash far outside `hangarInitialize`'s range with **0 guard fires**, and a same-run
+  positive control (824 `[hangar-loop]` lines, ~86s held at the scene) ruling out "guarded code never
+  ran"; verify2/verify3 unarmed, one unrelated crash, one fully clean 280s+ hold. Also ran a raw-count
+  sweep (not yet classified): `funcs_27.c` 102 raw hits vs 89 markers (~13 candidates), `funcs_40.c` 69
+  vs 67 (~2), `funcs_19.c` 1 unrelated hit.
+- **s395 — `funcs_27.c` sweep-remainder closed; found a SECOND, independent instance of the same bug
+  class, in the much older s285 chunk-1 family.** Delegated a fresh per-site classification of all 102
+  raw hits to a subagent: 86 already correctly covered, 15 confirmed SAFE, 1 genuine NEEDS-GUARD site
+  — plus a bonus finding, independently verified by direct source read: the existing `S285_H1_8` guard
+  (from s285, predates the s394 anchor-placement lesson) checks `ctx->r4` at a point where r4 still
+  holds a STALE value left over from a different, unrelated combine 65 lines earlier, not the fresh
+  value this site's own raw reload produces three lines later, which is then dereferenced completely
+  unguarded. Fix: added ONE new guard (`S395_SWEEP_1`, bail `S285_H1_BAIL`) anchored correctly right
+  after the real combine, immediately before the dereference — left the old broken `S285_H1_8` guard
+  in place unchanged (harmless dead-weight; cleanup deferred, later done s397). Verified: regen diff
+  shows ONLY `funcs_27.c` changed, 14 added / 0 removed (one new guard block). Build clean. 4 soaks:
+  verify1 (armed, default env) reached the scene (574 `[hangar-loop]` positive control), 0 crashes,
+  full 280s+ hold, `[s395-sweep-guard]` fired 0 times (plausible null — pointer valid throughout);
+  verify2/verify2b hit a pre-existing unrelated log-storm pathology (unbounded `RS_FREE_WALK` logging,
+  and a `[mesgqueue-guard]` tight retry loop against a permanently-bad `mq_=0x1D0` pointer — new
+  observation, unactioned); verify2c/verify3 (log sources disabled) never advanced past the title
+  screen (apparently disabling `ROGUESQ_LOG_SCHED` shifted frame timing enough to miss the fixed-time
+  key schedule), 0 crashes over ~330s; verify4 hit an unrelated early-boot `musyxSynthFrame` crash
+  before reaching the title phase. Net: 0 crashes attributable across all 4 attempts; one fully valid
+  scene-reached run with a positive control is the primary evidence.
+- **s396 — `funcs_40.c`/`funcs_19.c` swept, CLOSES the entire `-0x25A4` hangar-list-pointer family
+  (s283-396).** Delegated a full per-site classification to a subagent (direct source reads,
+  cross-referenced against every existing guard family's anchor text). Result: 69/69 raw hits in
+  `funcs_40.c` fully accounted for — 65 COVERED, 4 SAFE (call-arg-only), 0 NEEDS-GUARD, 0 UNCLEAR.
+  `funcs_19.c`'s single raw hit (`npcShieldGeneratorUpdate`) is an unrelated coincidence — different
+  `lui` base, loaded into a float register, used only as a `DIV_S` divisor, never a pointer (already
+  noted as a false positive by s284's own comment). Two independent lines of evidence: the subagent's
+  per-site reads, and an independent post-hoc `grep -c` count matching exactly. No code change needed
+  — the 0-NEEDS-GUARD classification was itself the complete result.
+- **s397 — cleanup + codebase-wide frequency scan for the next idiom class: negative result, family
+  audit CLOSED.** Step 1: deleted the leftover `S285_H1_8` stale-register guard (harmless dead code,
+  `S395_SWEEP_1` already covers the real dereference correctly) — verified via regen+build (clean,
+  isolated diff), soak verification inconclusive (4 attempts, none reached a positive control for
+  reasons unrelated to the change) but safe by construction (pure deletion). Step 2: ran (and twice
+  bug-fixed) a static classifier tracing `MEM_*` negative-displacement loads' base registers back to
+  their origin, to distinguish the mundane `lui`-addressed static-global idiom (which dominates the
+  raw frequency ranking — `-0x5824`/`-0x23A8`, the two next-highest-frequency displacements, are 100%
+  this, confirmed by direct source read) from the actual `-0x25A4` shape (a pointer reloaded from a
+  global slot, then dereferenced). **Result: zero candidates of comparable magnitude anywhere in the
+  codebase.** The classifier has an acknowledged blind spot (can't trace across label/branch
+  crossings, so it can't even reprove the known `-0x25A4` family this way). Also confirmed the
+  `[mesgqueue-guard]` lead (s395/396 carry-over) is a single C++-runtime guard site, not a guest-code
+  idiom class — out of scope for this model.
+
+**Net as of s397: the `-0x25A4` hangar-list-pointer family is fully closed (168 sites across chunks
+1-3b + the funcs_40/19 sweep); the frequency-scan method for finding the next comparable idiom class
+is exhausted; M3 idiom-audit-only mode needs human input to proceed (a CFG-aware discovery tool, a
+return to crash-driven discovery, or a fallback to M4/M5).** s398's queued soak
+`s397_h1_8removal_verify2` returned `NO_POSITIVE_CONTROL` (hangar scene not reached) — inconclusive,
+doesn't change the safe-by-construction verdict already recorded for the s397 deletion. Full raw
+detail: `PORTING-STATE.md` Sessions 389–397.

@@ -33815,3 +33815,52 @@ see `docs/CURRENT-TRUTH.md` item -247 and the updated USER DIRECTIVE note.
 Outcome: ADVANCED (Step 1 landed a real, isolated, source/regen/build-verified cleanup; Step 2 produced a
 well-evidenced negative discriminating result closing out the "frequency-scan for the next idiom class"
 avenue, per NEXT.md's own contingency).
+
+## Session 398 (2026-08-06) — MAINTENANCE: CURRENT-TRUTH compacted 60,119→40,131 bytes (net -200 lines);
+migrated the closed s389-397 idiom-audit arc to PROJECT-OVERVIEW.md §14; folded s397's soak verdict
+
+Step 0 of ITERATION.md fired: `wc -c docs/CURRENT-TRUTH.md` printed 60,119 bytes, over the 60,000
+maintenance trigger. This iteration was MAINTENANCE only — no experiment run.
+
+**What ran**: read the full CURRENT-TRUTH.md (653 lines) and identified the largest compactable block:
+items -239 through -247 (s389-397), the "M3 idiom-class audit resumption" arc — nine sessions'-worth of
+dense session-by-session write-up covering the `hangarInitialize` `-0x25A4` chunk work (chunks 2/3a/3b),
+the Lookup struct-family guard (s389), two independent guard-placement bugs found+fixed (s393/394,
+s395), the family closure (s396), and s397's cleanup + codebase-wide frequency-scan dead end. This arc
+is fully CLOSED (per its own text: "M3 idiom-audit-only mode needs human input to proceed"), matching
+the exact pattern used by every prior maintenance pass (s339-397's closed M5 arcs migrated to
+PROJECT-OVERVIEW §§9-13) — closed, fully-detailed arcs belong in PROJECT-OVERVIEW as reference material,
+CURRENT-TRUTH keeps only a compact pointer.
+
+Migrated the full ~196-line block verbatim (lightly reformatted as bullet-per-session) into a new
+`docs/PROJECT-OVERVIEW.md` §14, and replaced it in CURRENT-TRUTH with a single ~27-line combined item
+(`-239..-247`) covering the same content at pointer density, referencing PROJECT-OVERVIEW §14 for full
+detail and PORTING-STATE Sessions 389-397 for raw detail. Also tightened several already-short entries
+elsewhere (the Sanctioned-tooling paragraph in USER DIRECTIVE, several Overturned-conclusions bullets,
+the Dead-ends section, the Method-traps section, and items -226..-230/-231..-238) to close the remaining
+gap to the 200-net-line ADVANCED threshold — none of these lost any citation, mechanism, or session tag,
+only redundant phrasing. Fixed a stale cross-reference (USER DIRECTIVE pointed at the now-renumbered
+item -247; corrected to -239..-247) and updated the maintenance-pass count/history line.
+
+**Also folded in** the queued soak verdict that landed between iterations: `s397_h1_8removal_verify2`
+(`scratch/agent/SOAK-RESULTS.md`, `20260806-120424 | s397_h1_8removal_verify2 | rc=2 | 495s`) returned
+`NO_POSITIVE_CONTROL` — `[hangar-loop]` never fired, hangar scene not reached this run, launcher exit
+0, 0 crash markers. Inconclusive (5th soak attempt on this cleanup, none has yet reached a positive
+control), but doesn't change the safe-by-construction verdict already recorded for the s397
+`S285_H1_8` deletion (pure deletion, the one dereference at that address is covered by `S395_SWEEP_1`
+which IS soak-verified with a positive control). Noted in both PROJECT-OVERVIEW §14 and the compacted
+CURRENT-TRUTH item.
+
+**Result**: `docs/CURRENT-TRUTH.md` 60,119 → 40,131 bytes (`wc -c`), 653 → 452 lines. `git diff
+--numstat -- docs/CURRENT-TRUTH.md` at commit time: 111 lines added, 311 removed — net -200 lines,
+meeting the ADVANCED threshold exactly (still above the 35 KB stretch target, but a real ~33% cut).
+`docs/PROJECT-OVERVIEW.md` grew correspondingly (55,220 → 65,633 bytes) — expected and fine, it has no
+size cap; it's the durable-reference destination.
+
+No experiment run this iteration (Step 0 mandates maintenance-only, no code/instrument/soak work). The
+M3 strategic question flagged by s397 — idiom-audit-only mode needs human input to proceed past the
+`-0x25A4` family closure — remains open and unaffected by this maintenance pass; it's still the correct
+next non-maintenance work unit's framing.
+
+Outcome: ADVANCED (maintenance pass, net -200 lines in `docs/CURRENT-TRUTH.md`, meets the Step-0
+maintenance ADVANCED criterion; also landed a new PROJECT-OVERVIEW.md §14 reference section).
