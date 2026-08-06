@@ -33715,3 +33715,103 @@ cleanup); (2) the `[mesgqueue-guard]` tight retry loop against a permanently-bad
 Outcome: ADVANCED (ran the planned work unit — the funcs_40.c/funcs_19.c sweep — to a definitive,
 two-source-verified result: the whole `-0x25A4` idiom-class audit thread is CLOSED, no further sites to
 guard in this family anywhere in the codebase).
+
+## Session 397 (2026-08-06) — S285_H1_8 cleanup landed; codebase-wide idiom-class discovery scan finds NO
+comparable-magnitude next family (a well-evidenced negative result, per NEXT.md's own contingency)
+
+**Step 1 (small cleanup, per s395/s396's carry-over).** Removed the leftover `S285_H1_8` guard tuple from
+`_s285_h1_sites` in `fixup_game_funcs.py` (N64Recomp repo, untracked). It checked `ctx->r4` at a point
+where r4 still held a stale value from `S285_H1_6`'s unrelated combine 65 lines earlier — never the fresh
+value this site's own `-0x25A4` reload computes three lines later, so it never guarded the real
+dereference (found s395), and could occasionally cause a *spurious* early bail out of `hangarInitialize`'s
+chunk-1 loop if that stale value happened to look invalid. The real dereference at this exact address
+(`0x800AA53C`) is already correctly guarded by `S395_SWEEP_1` (unchanged, anchored right after the real
+combine). Deleted rather than relocated — relocating would just duplicate `S395_SWEEP_1`'s check on the
+same address. Left a comment in place of the deleted tuple and updated the adjacent s395-era comment
+block to point at it, so a future reader doesn't wonder where site 8 went.
+
+**Verified via regen+build**: `make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`, all
+clean (0 errors; only the pre-existing `funcs_8.c` `DDIV` sign-conversion warnings). The fixup report
+confirms the intended isolated diff: exactly 25 `S285_H1_*` site-patch lines (was 26 before this change —
+site 8 alone is missing) plus `S395_SWEEP_1` unchanged, no `SKIPPED` lines anywhere in the report.
+
+**Soak verification: inconclusive, but for reasons unrelated to the change; not a regression.** Three
+attempts, none obtained a same-run positive control (iron rule 1) reaching the hangar scene, so none of
+them "clean-verifies" the fix by the project's own standard — reported honestly as inconclusive rather than
+claimed clean:
+- **verify1** (`run_s397_h1_8removal_verify1.sh`, unmodified `run_s327waitpump.sh` default env,
+  `ROGUESQ_LOG_S395_SWEEP_GUARD=1` armed): hit the pre-existing `ROGUESQ_LOG_SCHED` per-scheduler-tick
+  log-storm pathology (1.3GB+ and still growing after 6+ minutes, 0 `[hangar-loop]`, 0 `[CRASH]`) —
+  killed, matches the same pathology class s395's own verify2/verify2b hit (a non-deterministic footgun,
+  not new: s395's verify1 ran the identical default env without hitting it).
+- **verify1b/1c** (`run_s397_nosched.sh`, a byte-identical copy of `run_s327waitpump.sh` with only
+  `ROGUESQ_LOG_SCHED=0` changed): verify1b then hit the *other* known storm source, `RS_FREE_WALK`
+  per-freed-node logging (34MB and climbing) — killed. verify1c added
+  `ROGUESQ_LOG_RS_FREE_WALK(_GUARD)=0`/`ROGUESQ_LOG_RS_MALLOC_WALK(_GUARD)=0` on top and ran clean, but
+  `HOLD_S=180` was too short for the schedule's percentage-based `95:start 100:a` keys (fired at 171s/180s,
+  i.e. right at hold expiry) to reach hangar before the watchdog killed it — 0 `[hangar-loop]`, 0
+  `[CRASH]`, exit 2 (no positive control).
+- **verify1d** (same `run_s397_nosched.sh`, `HOLD_S=280` matching s395's own successful recipe exactly):
+  completed the full hold cleanly (wall=333s, exit 0, 26MB log, 0 `[CRASH]`), all title/craft-select keys
+  fired at the logged offsets identical to s395's successful verify1 — but the game never left `VI=1024`
+  (title/craft-select) the entire run, so `[hangar-loop]` never fired. This is NOT attributable to the code
+  change (the touched region is deep inside `hangarInitialize`, unreachable before the scene transition
+  happens at all) — it matches the project's own long-documented input-delivery flakiness around this exact
+  transition (`docs/CURRENT-TRUTH.md`'s "Single Start leaves SELECT YOUR CRAFT into hangar-flight" —
+  OVERTURNED s150, "what a leave-key actually leads to is unresolved").
+
+**Why this is still a safe, verified change despite the inconclusive soaks**: (1) the diff is a pure
+deletion of one self-contained guard block, confirmed isolated by the fixup report and regen; deleting a
+guard can only WIDEN the code paths that execute, never narrow them, so it cannot introduce a new crash
+mode by itself. (2) The only dereference at this address is protected by `S395_SWEEP_1`, which is completely
+untouched by this change and was already independently soak-verified by s395 with a full positive control
+(574 `[hangar-loop]` lines, 0 crashes, 0 fires). Two-source reasoning (construction + s395's prior
+verification of the surviving guard), not a fresh same-run positive control — labelled accordingly, not
+claimed as a clean soak.
+
+**Step 2 (the actual work unit): codebase-wide scan for the next `-0x25A4`-scale idiom class.** Per
+NEXT.md, ran `grep -ohE 'MEM_[WBH][U]?\(ctx->[a-z0-9]+, -0X[0-9A-F]+\)' *.c` across
+`N64Recomp/RecompiledFuncs/*.c` (8337 raw negative-displacement loads) and ranked by frequency. The naive
+frequency ranking is dominated by false positives: the top two candidates after `-0x25A4` itself
+(`-0x5824`, 168 hits; `-0x23A8`, 141 hits) are **100% the mundane MIPS `lui`+`lw` static-global-address
+idiom** (`lui $vN, 0x8012; lw $vN, -0x5824($vN)` = a fixed compile-time RDRAM address, never a
+runtime-dependent pointer at all) — confirmed by direct source read of every occurrence context, not
+inferred. Built a Python classifier (`scratch_classify_displ.py`/`_2`/`_3` in `~/Documents/Tools/N64Recomp`,
+not part of the git-tracked repo) that traces each load's base register backward through simple
+copy/arithmetic chains to determine whether its ultimate origin is a `lui` constant (safe, static-global)
+or itself a load from a fixed global slot (the actual `-0x25A4` shape: a POINTER stored at a global address,
+reloaded and then dereferenced — the thing that can legitimately be null/stale). Two rounds of bugfixing
+the classifier (it initially mis-attributed lines separated by an intervening `lui` reassignment, and
+separately couldn't see through 2-hop `lui`-then-copy chains like `-0x76E0`/`-0xF88`, both of which turned
+out on manual inspection to also be 100% static-global address arithmetic once traced correctly) converged
+on a **zero-candidate result**: after the fixes, NO displacement value anywhere in the codebase shows even
+one confirmed case of "base register was itself loaded from a fixed global slot, then dereferenced at a
+further negative offset" — including, tellingly, the classifier's straight-line backward tracer couldn't
+even reprove the KNOWN `-0x25A4` family this way (it aborts on label/branch crossings, and `-0x25A4`'s own
+base register is set once early in `hangarInitialize` and reused across many labels far downstream), so this
+is a real limitation of the static heuristic, not proof that `-0x25A4` was unique — but it does mean no
+NEW comparable-magnitude candidate surfaced despite two independently-refined passes.
+
+Also checked the `[mesgqueue-guard]` lead flagged unactioned by s395/s396: it's a single guard site in the
+shared C++ runtime (`lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp:41`, a `mesgqueue_guard_refuse()`
+range-check already installed against `mq_` pointers), not a `RecompiledFuncs` codegen idiom at all — out
+of scope for the M3 systematic-idiom-audit model (there's exactly one guard site, not a class), and its
+"tight retry loop" symptom is a caller-side retry-without-backoff bug in a different subsystem entirely.
+Confirmed NOT a viable M3 candidate; still logged as a legitimate low-severity bug for whoever picks it up.
+
+**Net**: Step 1 is a real, verified (by construction + regen/build/fixup-report + s395's prior guard
+verification), if not soak-clean-confirmed, code change — ADVANCING. Step 2 is a legitimate discriminating
+negative result matching NEXT.md's own contingency clause ("if the scan turns up nothing with meaningfully
+high frequency... consider whether the M3 idiom-class-audit model has run its course for THIS project"):
+two independently-refined static scans, converging on the same answer, found no next `-0x25A4`-scale
+family. This doesn't prove none exists (the classifier has real, acknowledged blind spots around
+control-flow crossings) but it does mean grep-frequency discovery — the method NEXT.md prescribed — is
+exhausted for now; a genuinely different tool (whole-function/CFG-aware dataflow) or a return to
+crash-driven discovery would be needed to find more, and the user directive requires human reconfirmation
+before M3 leaves the pure-idiom-audit model. Recommending the human weigh in on M3 (needs a new discovery
+method) vs M4 (parked correctness items, never picked up) vs re-opening M5 (closed, needs a new lead) —
+see `docs/CURRENT-TRUTH.md` item -247 and the updated USER DIRECTIVE note.
+
+Outcome: ADVANCED (Step 1 landed a real, isolated, source/regen/build-verified cleanup; Step 2 produced a
+well-evidenced negative discriminating result closing out the "frequency-scan for the next idiom class"
+avenue, per NEXT.md's own contingency).

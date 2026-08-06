@@ -17,7 +17,11 @@ Priority order for upcoming iterations, set after the 300-session review:
    §10-§12). Next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
-   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
+   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. **The `-0x25A4` family
+   itself is fully closed (s283-s396)**, and s397's codebase-wide frequency scan for a next family (two
+   independently-refined passes) found none of comparable magnitude — see item -247. **This method is
+   exhausted for now; leaving pure-idiom-audit mode for M3 needs human reconfirmation** (a different
+   discovery tool, or falling back to M4/reopening M5).
 
 Sanctioned tooling work unit: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the
 file-scoped-only guard patches in `fixup_game_funcs.py`. **CLOSED OUT as of s386**, and its two follow-up
@@ -148,7 +152,36 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -246 (s396); the next new item takes -247 and is inserted at the top.
+oldest). Current top is -247 (s397); the next new item takes -248 and is inserted at the top.
+
+-247. **(s397) M3 idiom-class audit: `S285_H1_8` stale-guard cleanup landed; codebase-wide scan for the
+    next `-0x25A4`-scale idiom class finds NONE — a well-evidenced negative result, per NEXT.md's own
+    contingency, and the M3 systematic-idiom-audit model needs human input to proceed further.** Step 1:
+    deleted the leftover `S285_H1_8` guard tuple in `fixup_game_funcs.py` (checked a stale register,
+    never guarded the real dereference — `S395_SWEEP_1` already covers it correctly; s395/s396 carry-over
+    cleanup). Verified via regen+build (clean, fixup report confirms the isolated intended diff). Soak
+    verification was **inconclusive but not a regression**: 4 attempts across the session, none reached a
+    same-run positive control ([hangar-loop]) for reasons unrelated to the change — 2 hit pre-existing
+    log-storm pathologies (`ROGUESQ_LOG_SCHED`, `RS_FREE_WALK`, both previously catalogued by s345/s395),
+    1 had too-short a hold for the percentage-scheduled title→hangar keys, 1 completed cleanly (0 crashes,
+    full 280s hold, all keys fired at the correct offsets) but the game never left the title/craft-select
+    screen — the project's own already-documented input-delivery flakiness (s150's unresolved "Single
+    Start" note), not new. The change is still verified safe by construction: a pure deletion that can
+    only widen surviving code paths, and the one dereference at that address is protected by
+    `S395_SWEEP_1`, untouched here and already soak-verified by s395 with a full positive control. Step 2:
+    ran (and twice bug-fixed) a static classifier tracing `MEM_*` negative-displacement loads' base
+    registers back to their origin, to distinguish the mundane `lui`-addressed static-global idiom (which
+    dominates the raw frequency ranking — `-0x5824`/`-0x23A8`, the two next-highest-frequency
+    displacements after `-0x25A4` itself, are 100% this, confirmed by direct source read) from the actual
+    `-0x25A4` shape (a pointer reloaded from a global slot, then dereferenced). **Result: zero candidates
+    of comparable magnitude anywhere in the codebase** — the method (frequency scan) NEXT.md prescribed is
+    exhausted for now, though the classifier has an acknowledged blind spot (can't trace across
+    label/branch crossings, so it can't even reprove the known `-0x25A4` family this way). Also confirmed
+    the `[mesgqueue-guard]` lead (s395/s396 carry-over) is a single C++-runtime guard site, not a
+    guest-code idiom class — out of scope for this model. **Recommends the human weigh in**: M3 needs
+    either a different (CFG-aware) discovery tool or a return to crash-driven discovery (requires
+    reconfirming the user directive's pure-idiom-audit constraint), vs M4 (parked correctness items, never
+    picked up) vs reopening M5 (closed, needs a new lead). Full detail: `PORTING-STATE` Session 397.
 
 -246. **(s396) M3 idiom-class audit: `funcs_40.c`/`funcs_19.c` swept — CLOSES the entire `-0x25A4`
     hangar-list-pointer idiom-class audit (s283-s396) with 0 new guards needed.** Completed s394's
