@@ -1,23 +1,24 @@
 # NEXT work unit
 
+## s372 was MAINTENANCE (Step 0 triggered at 61,918 bytes) — no experiment ran; the s371 work unit
+## below is UNCHANGED and still the next thing to actually run.
+
+`docs/CURRENT-TRUTH.md` is now 42,407 bytes / 478 lines (was 61,918 / 692) after folding the
+now-fully-closed s354-370 M5 Step 5 guard-hunting arc (Thread A, Thread B, heapWalker GUARD5) into
+`docs/PROJECT-OVERVIEW.md` §11. See `PORTING-STATE.md` Session 372 for the full compaction summary.
+This did not touch the actual investigation state below — pick it up exactly where s371 left it.
+
 ## s371: M5 Step 6 ANSWERED (real PCM is 100% silent) — trace WHY next, or pivot
 
 Step 6's question ("does real PCM reach SDL, not just does the guest stop hanging") now has a real
-answer: **no** — see `docs/CURRENT-TRUTH.md` item -226 and `docs/M5-AUDIO-PLAN.md` §4. Along the
-way, found and fixed a genuine, previously-undetected bug: `queue_samples`
+answer: **no** — see `docs/CURRENT-TRUTH.md` Next-steps item -226 and `docs/M5-AUDIO-PLAN.md` §4.
+Along the way, found and fixed a genuine, previously-undetected bug: `queue_samples`
 (`src/main/main.cpp:677-`) was silently dropping half the bytes of every PCM buffer handed to
 `SDL_QueueAudio` (byte-count/sample-count unit mismatch, present since this bridge was written).
 Fixed. Added `ROGUESQ_LOG_PCM_SANITY`. Two soaks (13,832 total logged calls, 13,825 of them under
 confirmed genuine RSP-dispatched `real_ucode=1`) found **100% of samples are exactly zero** — the
 ucode dispatches and completes without crashing but the actual audio content never becomes
 non-silent.
-
-## Also worth a mention before picking the next unit
-
-`docs/CURRENT-TRUTH.md` is now 61,918 bytes (>60,000). **Step 0 of ITERATION.md will trigger a
-MAINTENANCE iteration next time** — compact toward ~35 KB, migrate durable material to
-PROJECT-OVERVIEW.md, renumber Next-steps into one sequence. Do this BEFORE picking a new
-experiment if Step 0 says so; don't skip it because s371 just added a big new item.
 
 ## Competing hypotheses for "why is PCM silent" (the natural Step 6 follow-on)
 
@@ -55,9 +56,10 @@ open thread, that's a legitimate call for the next iteration to make explicitly,
 
 ## Iteration budget
 
-This is iteration 1 of a fresh sub-question under the same HYPOTHESIS-ID (the parent question was
-answered, this is its natural follow-on, not a stalled retry) — full budget (3 iterations before a
-mandatory pivot preamble) available.
+s372 was maintenance, not an experiment iteration — it does not consume a slot against the
+3-iteration budget on this hypothesis thread. The next iteration that actually RUNS the Step 6
+"why" experiment is iteration 2 of this thread (s371 was iteration 1: it answered the parent
+question and opened this follow-on, but did not yet attempt the follow-on itself).
 
 HYPOTHESIS-ID: m5-audio-destub-step6-pcm-sanity (iteration 2 — Step 6's original question answered
 s371; this continues into "why is it silent" under the same thread since it's a direct follow-on,

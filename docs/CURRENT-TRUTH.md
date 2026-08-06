@@ -11,37 +11,28 @@ Priority order for upcoming iterations, set after the 300-session review:
    ran 5 passes (668→459 lines by s330); s346 ran a 6th (670→~470 lines) migrating the closed s297-337
    M5 gate-reversal arc to PROJECT-OVERVIEW §9; s355 ran a 7th migrating the closed s339-353 M5
    gate-promotion/step5-rate/drainMeshReleaseQueue-tail-scan arc to PROJECT-OVERVIEW §10; s364 ran an
-   8th (689→~480 lines) folding the closed s354-362 guard-hunting arc into one summary item. Full
-   per-session detail in git log. 35 KB remains a stretch target, not a hard floor -- the "Current
-   truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
-   deliberately; both are used every iteration.
+   8th (689→~480 lines) folding the closed s354-362 guard-hunting arc into one summary item; s371 ran a
+   9th (692→~487 lines) migrating the now-fully-closed s354-370 M5 Step 5 guard-hunting arc (Thread A,
+   Thread B, heapWalker GUARD5) to PROJECT-OVERVIEW §11. Full per-session detail in git log. 35 KB
+   remains a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and the
+   Regeneration section's Standing warnings stay intact deliberately; both are used every iteration.
 2. **M5 audio de-stubbing**: design doc + steps 1-4 DONE — title-reach restored and confirmed 3/3
-   (s343-344, full arc: PROJECT-OVERVIEW §10). Step 5's two parallel threads are now **both CLOSED**:
-   `m5-audio-destub-coalesce-heap-guard-verify` (`coalesceFreeHeapBlocks`, guarded s354, bail-target
-   bug fixed s358, **CLOSED s366** — 6/6 non-recurrence soaks post-fix including one clean full-hold)
-   and `m5-audio-destub-linkedlist-corruption-source` (`drainMeshReleaseQueue`, three unguarded
-   pointer families found and guarded s350-365, s366 static exhaustiveness audit found no further
-   gap, **CLOSED s368** — `s367_verify3/4` both completed the function normally (guards fired,
-   confirmed live, but no crash inside it) with 3-for-3 post-guard soaks now crash-free inside the
-   function). `heapWalker+1696`'s 5th unguarded site (guarded s369 as GUARD5) also **CLOSED s370**
-   — its `s369_heapwalkerguard5_verify1/2` pair drained 2/2 non-recurrence (one full 302s clean
-   hold with `guard5_fire_n=0`, one crash at an unrelated symbol `findLookupEntryByKey+1864` with
-   `guard5_fire_n=0`). **No M5 Step 5 or escalated-background-noise threads remain open** — next M5
-   work is **Step 6, PCM sanity-check** (`M5-AUDIO-PLAN.md` §4) — **ANSWERED s371: real PCM is
-   100% silent.** Fixed a real host-bridge bug found en route (`queue_samples` was silently
-   dropping half of every buffer's bytes to `SDL_QueueAudio` — see Overturned conclusions) and added
-   `ROGUESQ_LOG_PCM_SANITY`; two soaks logged 13,832 total calls (7 via the s327 direct-pump path,
-   13,825 via genuine RSP-dispatched `real_ucode=1`) and **every single sampled call was
-   all-zero** — hypothesis 2 (silent-but-not-crashing) confirmed, not merely plausible. Next M5
-   work: trace WHY the real ucode's mix/synthesis produces all-zero output (voice array never
-   populated? mixing gated off? wrong buffer read?). Detail: Next-steps item -226; live
-   status/decision trees: NEXT.md.
+   (s343-344, full arc: PROJECT-OVERVIEW §10). Step 5 (both threads plus a heapWalker background-noise
+   site) is **fully CLOSED** as of s370 — full detail: PROJECT-OVERVIEW §11. Step 6 (PCM sanity-check,
+   `M5-AUDIO-PLAN.md` §4) is **ANSWERED s371: real PCM is 100% silent.** Fixed a real host-bridge bug
+   found en route (`queue_samples` was silently dropping half of every buffer's bytes to
+   `SDL_QueueAudio` — see Overturned conclusions) and added `ROGUESQ_LOG_PCM_SANITY`; two soaks logged
+   13,832 total calls (7 via the s327 direct-pump path, 13,825 via genuine RSP-dispatched
+   `real_ucode=1`) and **every single sampled call was all-zero** — hypothesis 2
+   (silent-but-not-crashing) confirmed, not merely plausible. Next M5 work: trace WHY the real ucode's
+   mix/synthesis produces all-zero output (voice array never populated? mixing gated off? wrong buffer
+   read?). Detail: Next-steps item -226; live status/decision trees: NEXT.md.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
 Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the ~100 file-scoped-only guard patches in fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment.
 
-## Current truth (established by session 295; unchanged, reviewed through s355)
+## Current truth (established by session 295; unchanged, reviewed through s372)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -191,208 +182,34 @@ oldest). Current top is -226 (s371); the next new item takes -227 and is inserte
     `real_ucode=1`-dispatch confirmation in the same run) — not a null result. Full detail:
     `PORTING-STATE` Session 371.
 
--225. **(s370) `heapwalker-guard5-site` CLOSED — `s369_heapwalkerguard5_verify1/2` drained 2/2
-    non-recurrence; pivoting to M5 Step 6 (PCM sanity-check).** `verify2`: crashed at
-    `findLookupEntryByKey+1864` (`last-guest-pc=0x800ad0dc`), not `heapWalker+1696`/`0x8000834c`;
-    `guard5_fire_n=0`; `title_reached` at 45.7s — a clean non-recurrence data point. `verify1`: its
-    SOAK-RESULTS.md line recorded `rc=137` (the loop's 600s hard-cap SIGKILL) with a 0-byte wrapper
-    log, but the launcher log and raw `run.log` (which persist independently of the wrapper)
-    recovered the full picture: `phase width=1024 reached after 45.6s`, full 240s hold with all
-    scheduled input, `hold done wall=276s`, `done wall=302s`, then the launcher's own `game process
-    still alive; killing` — a complete, crash-free hold, not a hang. The wrapper's own `rc=137`
-    was caused by an 8.7 GB `run.log` (vs. `verify2`'s ordinary 248 MB) — millions of
-    `[rs-free-walk] node=0x80429C.. flags=0x0 size=0` lines, a **pre-existing, previously-
-    documented** phenomenon (heap free-list walking dominates log volume during/after a subsystem
-    stall, PORTING-STATE Sessions 176-183), not new evidence — that pushed the wrapper's own
-    grep/kill handling past the outer 600s cap before it could print its verdict.
-    `grep -ac '[CRASH]'`/`'[heapwalker-guard5]'` on the raw log both = 0. **New soak-tooling
-    lesson**: an `rc=137`/empty-log SOAK-RESULTS.md line is not automatically uninformative — check
-    the launcher log and raw run.log directly before discarding the run. Net: both runs are
-    non-recurrence data points (decision tree item 2 from s369's NEXT.md) → thread **CLOSED**.
-    GUARD5 stays armed by default (free instrument; 0 fires in 2 runs isn't proof it's
-    unreachable). **No M5 Step 5 or escalated-background-noise threads remain open.** Scouted (read
-    -only, no code changed) the M5 Step 6 insertion point: `queue_samples(int16_t* samples, size_t
-    num_bytes)` at `src/main/main.cpp:677-681`, reached via `ultramodern::queue_audio_buffer`
-    (`lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36`, called from `osAiSetNextBuffer_recomp`
-    at `lib/N64ModernRuntime/librecomp/src/ai.cpp:18-21`); confirmed by grep that no existing
-    instrument sits on this path (the existing `[audtask-dispatch]` counter at `main.cpp:607-634`
-    is the RSP task-dispatch side, a different mechanism). Full detail: `PORTING-STATE` Session 370.
+-225..-210. **(s354-370) M5 Step 5 guard-hunting arc — Thread A (`coalesceFreeHeapBlocks`), Thread B
+    (`drainMeshReleaseQueue` linked-list corruption), and a heapWalker background-noise site (GUARD5)
+    all CLOSED.** Full blow-by-blow (every guard site, fire count, and soak-tooling lesson): `docs/
+    PROJECT-OVERVIEW.md` §11; raw detail `PORTING-STATE` Sessions 354-370. One-paragraph summary:
+    Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) opened s354 on an independent
+    `coalesceFreeHeapBlocks+3452` repeat; s358 found the guard's own bail target re-entered the loop
+    instead of exiting it, fixed; closed s366 with 6/6 non-recurrence soaks post-fix. Thread B
+    (`m5-audio-destub-linkedlist-corruption-source`) opened on s352's `bad_v1=0x00010001` lead
+    (byte-identical across 2 sessions, ~1-in-4-billion coincidence odds) and found THREE distinct
+    unguarded pointer families across `drainMeshReleaseQueue`'s five structurally identical tail-scan
+    loops (tail-cursor read+write pairs s354-361; head-pointer read+clear-write pairs s363; a third
+    "previous tail" family s365), plus a s366 full-function audit confirming coverage exhaustive;
+    closed s368 with `s367`'s verify pair both crashing OUTSIDE the function after it completed and
+    returned normally, every guard family positive-controlled (fired) in the same runs. A heapWalker
+    background-noise crash surfaced by those soaks (`heapWalker+1696`, `last-guest-pc=0x8000834c` —
+    coincidentally `drainMeshReleaseQueue`'s own return checkpoint, not a link between the bugs)
+    reached n=4 by s368, crossing the catalog's 3rd-hit confirmation trigger; s368-369 binary-analysis
+    (hand-extending `s193_disasm.py`, `otool`/`nm`/`objdump`/`dwarfdump` still sandbox-blocked) mapped
+    it to guest address `0x80007A3C` + 4 unrolled siblings, the same unvalidated-pointer idiom already
+    guarded 4x elsewhere in `heapWalker` — guarded as GUARD5, closed s370 with 2/2 non-recurrence (one
+    full clean 302s hold recovered from raw logs after an 8.7 GB `run.log` defeated the soak wrapper's
+    own timeout — new lesson: an `rc=137`/empty-wrapper-log verdict is not automatically
+    uninformative, check the raw launcher/run.log before discarding). **Net as of s370: no M5 Step 5
+    or escalated-background-noise threads remain open** — next M5 work is Step 6 (item -226).
 
--224. **(s369) heapWalker GUARD5 landed — guest address for the escalated `heapWalker+1696` crash
-    found and guarded, 5 sites; first empirical verification still outstanding.** `otool`/`nm`/
-    `objdump`/`dwarfdump` all still sandbox-blocked; extended `scratch/agent/s193_disasm.py`'s
-    hand-rolled decoder with a register-offset LDR/STR case to hand-decode the crash instruction:
-    `STR W8,[X9,X10]` (item -223's `X5` base was a hand-math slip — the extended decoder's own
-    output corrects it to `X9`) fed by `LDR X8,[X8,#24]` / `LDR X10,[X10,#16]`. First ruled out
-    symbol misattribution (heapWalker's compiled size is ~10 KB, a 14x expansion from its ~800-byte
-    guest range — `+1696` is genuinely inside the function, not spilled into the next symbol via
-    missing size info). Cross-checked the two loads against `recomp_context`'s field layout (`gpr
-    r0,r1,r2,...`, `gpr`=`uint64_t` → r2 at +16, r3 at +24): **not** a raw-pointer chase as item
-    -223 first suspected — plain `ctx->r2`/`ctx->r3` struct reads (X8/X10 transiently held the
-    `ctx` pointer, clobbered by the load result). Source cross-check (Explore-agent sweep of every
-    `MEM_W(...)=...;` store in the function's 671-line body) landed on `MEM_W(0X4, ctx->r2) =
-    ctx->r3;` (guest `0x80007A3C` + 4 unrolled siblings at `0x80007A98`/`AF4`/`B50`/`BAC`) — the
-    exact instruction bytes repeat 3x in a 96-byte disasm window, matching heapWalker's established
-    5x-loop-unrolling signature. `ctx->r2` there is freshly read from a fixed global table slot two
-    lines earlier and checked only for `!= 0`, never range-validated before being dereferenced as a
-    write target — same idiom as guards 1/3/4, new register (the sibling write on the same two
-    lines, through the already-guard4-validated `ctx->r3`, needs no new guard). Guarded all 5 sites
-    (`ROGUESQ_LOG_HEAPWALKER_GUARD5`, `[heapwalker-guard5]`, now armed by default in
-    `run_s327waitpump.sh`). Full regen+rebuild clean (delete `funcs_*.c` → `N64Recomp` →
-    `fixup_game_funcs.py` → `cmake --build`; patch report `x1` per site for all 5, 20 total
-    heapWalker guard lines across guard/guard3/guard4/guard5 combined, idempotency-refusal
-    confirmed on a 2nd fixup run, no build errors). Queued `s369_heapwalkerguard5_verify1/2.sh`
-    (HOLD_S=240) — awaiting first empirical result. No `lib/` touch (only `fixup_game_funcs.py`,
-    untracked in N64Recomp's own repo like the other 24+ accumulated guard patches, plus gitignored
-    `scratch/` tooling). Full detail: `PORTING-STATE` Session 369.
-
--223. **(s368) Thread B (`m5-audio-destub-linkedlist-corruption-source`) CLOSED — `s367`
-    `verify3/4` drained, both crash OUTSIDE `drainMeshReleaseQueue` after it completed normally;
-    `heapWalker+1696` now n=4 and crosses its own escalation bar.** Session-start mechanical check
-    found `s367_drainmeshtailptrguard_verify3/4` had already drained. Both runs: `title_reached`
-    ~45s, **identical** guard-fire pattern (`tailptr2/3/4/5_guard_fire_n>=1`, all `head1-5`/
-    `head{n}_clear` guards fire 1-2x, all `loop2-5`/`loop{n}_write` guards fire 1-3x, `read_guard`/
-    `write_guard`/`ring_fire` all >=1) — the **first-ever positive control** that these guard
-    families fire under real gameplay, not just in theory. Despite that, both crashed at
-    `pc-symbol=heapWalker+1696`, `last-guest-pc=0x8000834c` — exactly `drainMeshReleaseQueue`'s own
-    final checkpoint (the `nop` before `return`, per item -221), confirming the function completed
-    and returned normally in both runs; the crash is genuinely downstream and unrelated. **Closing
-    argument**: `heapWalker+1696`/`0x8000834c` already hit twice in `s364` (item -221), which ran
-    *before* the tailptr guards existed (added s365) — the guards cannot have caused a crash that
-    predates them, ruling out the "skip-on-invalid-write papers over corruption that resurfaces
-    downstream" hypothesis for this specific pair. Combined with `s365_verify1` (fully clean, zero
-    guard fires, full hold) and s366's static exhaustiveness audit, `drainMeshReleaseQueue` has now
-    gone 3-for-3 post-tailptr-guard soaks with zero crashes *inside* the function, and the guard
-    families are confirmed live (not dead code). **Thread B closes.** Both open M5 Step 5 threads
-    (A: item -221, B: here) are now closed — no M5 Step 5 threads remain open; next M5 work is
-    either Step 6 (PCM sanity-check, `M5-AUDIO-PLAN.md` §4) or re-scoping per that doc, NOT another
-    `drainMeshReleaseQueue` probe. Separately: `heapWalker+1696` is now n=4 (2×`s364` + 2×`s367`,
-    all four byte-identical `last-guest-pc=0x8000834c`), crossing the catalogue's own "3rd
-    independent hit -> worth `s264_symrange.py`/`s193_disasm.py` confirmation" trigger. Ran that
-    confirmation this session (free, binary-analysis only, no build/soak): `s193_disasm.py` decoded
-    the crash instruction at `heapWalker`'s ARM64 offset +1696 as `STR W8,[X5,X10]` (32-bit indexed
-    store, `Rn=X5` base + `Rm=X10` index, no shift) fed by two prior loads (`LDR X8,[X8,#24]` at
-    -28, `LDR X10,[X10,#16]` at -16) — an indexed heap-table write through two chained pointer
-    dereferences, the same "unvalidated pointer used as both index-source and write-target" idiom
-    already guarded 4x elsewhere in `heapWalker` (GUARD1-4, s157-s218) but at a **different, not
-    -yet-identified site** (this offset doesn't match any of the existing `_heapwalker_guard*_sites`
-    address lists in `fixup_game_funcs.py`). Not yet mapped back to a guest MIPS address/line — that
-    mapping (find the `RECOMP_FUNC` boundary for `heapWalker` in `funcs_3.c`, locate the `MEM_W`
-    matching this store pattern, cross-check against the 4 existing guard-site address lists) is the
-    queued next work unit. No code changed, no soak queued. Full detail: `PORTING-STATE` Session 368.
-
--222. **(s367) Thread B's `s365` pair drained: ONE genuine non-recurrence (full 446s clean hold,
-    every guard fire counter 0) plus one uninformative pre-title crash — one non-recurrence data
-    point toward the two needed to close the thread.** `verify1`: CLEAN, ran the full 446s hold,
-    `title_reached` at 45.2s, and for the first time in this whole arc EVERY guard fire counter was
-    0 across the board — coalesce, read/write, loop2-5, head1-5 (+clears), tailptr1-5, ring — nothing
-    intercepted anything and the process still held. `verify2`: crashed in under 5s, `title_reached`
-    blank (never reached the title screen at all), at `pc-symbol=musyxSynthFrame+4652` — an unrelated
-    pre-title audio-boot crash in a different subsystem entirely, not a `drainMeshReleaseQueue`
-    recurrence. Its `last-guest-pc=0x8000834c` coincidentally matches the s366
-    `heapWalker+1696` background-noise checkpoint value, but source-checked that this is a global
-    "last breadcrumb hit" variable that persists across calls — a coincidence of which breadcrumb
-    last wrote it before an unrelated early crash, not evidence linking the two. Per the standing
-    "crash under ~5s that never reaches title_reached is not a meaningful test" rule, `verify2` does
-    not count toward the non-recurrence tally. Net: 1 of the 2 non-recurrence soaks NEXT.md's
-    closure bar calls for (static exhaustiveness audit, s366, already done; empirical non-recurrence
-    now at 1/2). Queued `s367_drainmeshtailptrguard_verify3/4.sh` for the second data point — same
-    recipe, all current guard instruments armed. No code changed. Full detail: `PORTING-STATE`
-    Session 367.
-
--221. **(s366) Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) CLOSED — 6/6 non-recurrence
-    soaks post-s358-fix, including one clean full-hold — plus a proactive idiom-class audit found
-    `drainMeshReleaseQueue`'s guard coverage exhaustive, plus a new background-noise entry.** Session-
-    start check found `s364_coalesceheapbailfix_reverify1/2` had already drained (the stale-NEXT.md
-    gotcha, 7th recurrence). Both crashed off-target (`coalesce_guard_fire_n=0` both), same
-    `pc-symbol=heapWalker+1696`/`last-guest-pc=0x8000834c` byte-identical in both runs — a brand-new
-    symbol (0 prior mentions), cataloged as background noise (n=2, guest code, do not chase until a
-    3rd hit) rather than investigated reactively. Source cross-check found `0x8000834c` is
-    `drainMeshReleaseQueue`'s OWN final checkpoint (the `nop` right before `return`) — the function
-    completed and returned normally in both runs; the crash is genuinely downstream, inside
-    `heapWalker`, unrelated to either open M5 thread's guards. **Closed Thread A**: tally is now 6
-    soaks post-s358-fix (`s358_verify1/2`, `s362_reverify1/2`, `s364_reverify1/2`), zero
-    `coalesceFreeHeapBlocks` hits, meeting the closure bar set at item -219. Separately, ran a
-    proactive full-function idiom-class audit of `drainMeshReleaseQueue` (Directive #3's model,
-    applied to Thread B's own "is coverage exhaustive?" question while its `s365` verify pair is still
-    queued): cross-referenced every table-/list-loaded-pointer dereference against the 3 known
-    families × 5 loops (25 explicit guard blocks); found one syntactically-bare read per loop (the
-    loop-back "advance cursor" read, e.g. `funcs_3.c:1768` for loop 1) but hand-verified it is
-    memory-safe by loop invariant — the pointer is always pre-validated (by the head guard on first
-    entry, or by the previous iteration's own tail-scan guard) before this line executes. **No new
-    unguarded family found; coverage reads as exhaustive**, pending the still-queued `s365` pair's own
-    empirical confirmation. No code changed. Full detail: `PORTING-STATE` Session 366.
-
--220. **(s365) Thread B's `s363` head-guard pair drained 2/2 byte-identical at a NEW
-    `drainMeshReleaseQueue` offset with the s363 head guards positive-controlled for the first
-    time — found and guarded a THIRD unguarded pointer family in the same function.** Both
-    `s363_drainmeshheadguard_verify1/2` crashed at `pc-symbol=drainMeshReleaseQueue+5564`,
-    `last-guest-pc=0x8000821C`, with `head1_guard_fire_n=1`, `head1_clear_guard_fire_n=1`,
-    `head2_guard_fire_n=1` (the brand-new s363 head-pointer guards' first-ever fires — genuine
-    positive control) AND all 5 tail-cursor guard pairs plus `ring_fire_n=1` also firing in the
-    same run — every previously-known unguarded site ran at least once, crash genuinely moved past
-    all of them. Source-read (`funcs_3.c:2001-2003`) found `MEM_W(0X4, ctx->r2) = ctx->r3` at the
-    crash PC: `ctx->r2` is a "previous tail" pointer loaded once per loop from a fixed global table
-    slot and checked only for `!= 0` before this write dereferences it — the same
-    checked-non-NULL-but-unvalidated-pointer idiom as the tail-cursor and head-pointer families,
-    now on a THIRD register. Found the identical site repeated once per loop, all five unguarded
-    (loop1 `0x800081C8`, loop2 `0x8000821C` = crash site, loop3 `0x80008264`, loop4 `0x800082C4`,
-    loop5 `0x80008314`); guarded all 5 in one pass (`[drain-mesh-loop{1..5}-tailptr-guard]`, reuses
-    `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD`). Full regen+rebuild clean, patch report `x1` per site,
-    idempotency-confirmed on a 2nd fixup run (0 additional matches). Queued
-    `s365_drainmeshtailptrguard_verify1/2.sh`, drains after Thread A's still-pending `s364_...`
-    pair. Full detail: `PORTING-STATE` Session 365.
-
--219. **(s364, MAINTENANCE) 8th compaction pass (689→489 lines, folding the closed s354-362
-    guard-hunting arc into item -217..-210) plus Thread A's `s362` reverify pair drained while at it.**
-    `reverify1` CLEAN (432s full hold, 0 crashes, every guard fire counter 0); `reverify2` crashed at
-    the long-catalogued `fscache_insert_and_retain+1192` (Metal shader-compiler system crash, item -10,
-    not guest code), also every guard fire counter 0 — off-target-but-known noise, not new evidence.
-    Thread A now has zero target-function crashes across 4 soaks since the s358 bail-target fix (1
-    clean full hold, 3 off-target/known-noise) — approaching but not yet at its own closure bar. Re-queued
-    `s364_coalesceheapbailfix_reverify1/2.sh` (same template, all current guard counters including the
-    s363 head-pointer instruments). No code changed, no `lib/` touch.
-
--218. **(s363) Thread B's `s361` pair drained: the tail-scan loops' HEAD pointer (not the
-    already-guarded tail cursor) carries the SAME read-guard/write-guard idiom, unguarded, once per
-    loop.** `verify1` crashed at `drainMeshReleaseQueue+796` (`last-guest-pc=0x8000819C`) with all 10
-    existing tail-cursor guards (5 loops × read+write) AND `ring_fire_n=1` already fired in the same
-    run — genuinely outside every previously-guarded site. Source-read found an unguarded "priming
-    read" through the loop's HEAD pointer (`a0`/`ctx->r4`, checked only for non-NULL) before each of
-    the 5 loops, paired with an unconditional clear-write through the same pointer later — 10 new
-    unguarded sites (5 read + 5 write), the same read-guard-without-write-guard gap as the
-    s350→s350b/s357→s359 gotcha, on a parallel pointer the original idiom-class audit didn't cover (not
-    part of the loop-body syntax). Guarded all 10 in one pass (`[drain-mesh-head{1..5}-guard]` /
-    `[drain-mesh-head{1..5}-clear-guard]`, reuses `ROGUESQ_LOG_DRAIN_MESH_TAIL_GUARD`). Full
-    regen+rebuild clean, patch report `x1` per site, all 10 confirmed single-line in regenerated
-    source. Queued `s363_drainmeshheadguard_verify1/2.sh` — brand-new instruments, zero prior fire
-    history, so even one fire is a positive control. Full detail: `PORTING-STATE` Session 363.
-
--217..-210. **(s354-362) M5 Thread A/B guard-hunting arc — folded, superseded by s363's head-pointer
-    finding (item -218); Thread A's own question still open.** Thread A
-    (`m5-audio-destub-coalesce-heap-guard-verify`): opened s354 on an independent
-    `coalesceFreeHeapBlocks+3452` repeat, guarded with a range-check-and-bail; s358 found the guard's
-    OWN bail target was wrong (`ctx->r3=0` sent execution to `L_80002358`, the coalesce loop's ENTRY
-    label, not an exit — re-entering the loop with the still-wild pointer instead of stopping it),
-    fixed to `L_80002444` (the real exit); re-verified 0/4 informative for its own question since (all
-    4 crashed off-target), re-queued each time. Thread B
-    (`m5-audio-destub-linkedlist-corruption-source`): a progressive idiom-class audit of
-    `drainMeshReleaseQueue` found FIVE structurally identical tail-scan loops (not three, as first
-    believed) across s354/357/359/360/361, each guarded with a read+write pair after repeatedly hitting
-    the same read-guard-without-write-guard gap (s350→s350b, recurred s357→s359 one loop over, s360
-    found a 3rd loop, s361's full-function audit found the last two); a ring-buffer breadcrumb (s353)
-    intercepted `bad_v1=0x00010001` byte-identical across independent sessions/builds — the strongest
-    single lead, 6-7 sightings by s360. s362 resolved the 3-session-recurring "does the soak queue
-    drain in order?" question (confirmed: plain alphabetical glob = chronological, no bug — apparent
-    skips were queue-depth arithmetic) and flagged two background-noise crash symbols now at n=2 each
-    (`trackResourceListWithMappingTables+1192`, `unregisterServiceWorker+536`), both reading as Apple
-    system-framework `dladdr` fallbacks — deliberately not escalated per the "no reactive single-crash
-    chases" directive (a 3rd independent hit is the escalation trigger). Full detail: `PORTING-STATE`
-    Sessions 354-362.
-
--209..-195 (excluding -208, kept below). **Fifteen sessions (s339-353, excl. s352) covering the M5
-    gate-promotion, step-5 crash-rate-comparison, and `drainMeshReleaseQueue` tail-scan-cluster arcs —
-    all CLOSED/superseded, folded here.** (1) VI=640 `pairs=0` stall resolution (s339): source-proved
+-209..-195. **Sixteen sessions (s339-353) covering the M5 gate-promotion, step-5 crash-rate-comparison,
+    and `drainMeshReleaseQueue` tail-scan-cluster arcs — all CLOSED/superseded, folded here.**
+    (1) VI=640 `pairs=0` stall resolution (s339): source-proved
     `submitGfxFrame` cannot produce a `FramebufferPair` and `cinematicLoopBody`'s self-loop calls the
     real `SET_COLOR_IMAGE` producer exactly once — not a stall, an ordinary one-time RDP-state prologue.
     (2) Audio-gate promotion arc (s340-344): promoted both audio gates to permanent default (s340, on a
@@ -405,47 +222,17 @@ oldest). Current top is -226 (s371); the next new item takes -227 and is inserte
     force-zeroed); `setDisplayMode` (`0x8008EB40`) stays reversed. (3) Step-5 crash-rate-comparison
     methodology arc (s341, s344-347): fixed 2 methodology bugs (a `[keys]`-log misattribution, an
     unbounded per-node log blowup), then a 4-run batch found the post-title crash rate high (~75%) but
-    diffuse across symbols, 0/4 hits on the two named target families — closed s352, superseded by item
-    -208's bimodal-timing reframe. (4) `drainMeshReleaseQueue` tail-scan cluster (s348-351, s353): found
-    and GUARDED 3 distinct crash sites within one function's dense unguarded linked-list tail-scan idiom
-    (`processSceneNode`'s content-pointer field s348; a 2nd read site via BREADCRUMB15 s349-350; a
-    write-through-v1 sibling site s351); landed a ring-buffer breadcrumb instrument s353 (0/2
-    informative on its own verify pair, folded into item -210). The `[scene-node-content-guard]` guard
+    diffuse across symbols, 0/4 hits on the two named target families — closed s352, when a 16-log
+    offline re-analysis found the crash TIMING (not symbols) was bimodal (two deterministic
+    VI-transition windows) and a corrupted-pointer value (`bad_v1=0x00010001`) reproduced
+    byte-identically across 2 independent sessions/builds (~1-in-4-billion coincidence odds) — this
+    became Thread B's origin lead, see item -225..-210. (4) `drainMeshReleaseQueue` tail-scan cluster
+    (s348-351, s353): found and GUARDED 3 distinct crash sites within one function's dense unguarded
+    linked-list tail-scan idiom (`processSceneNode`'s content-pointer field s348; a 2nd read site via
+    BREADCRUMB15 s349-350; a write-through-v1 sibling site s351); landed a ring-buffer breadcrumb
+    instrument s353 (0/2 informative on its own verify pair). The `[scene-node-content-guard]` guard
     from (4) is now known steady-state-benign, not corruption evidence — see Overturned Conclusions.
-    Full detail: `docs/PROJECT-OVERVIEW.md` §10; raw detail `PORTING-STATE` Sessions 339-353 (excl.
-    352).
-
--208. **(s352) Parent step-5 hypothesis's mandated pivot iteration: crash SYMBOL scatter is real, but
-    crash TIMING is bimodal (two deterministic VI-transition windows) and one guard value reproduces
-    byte-identically across independent sessions — reframes "diffuse storm" toward a narrower target.**
-    Drained `s351_drainmeshwriteguard_verify1/2`: `verify1` CRASH at a 4th distinct `drainMeshReleaseQueue`
-    offset (`+2864`) with BOTH the s350 read guard AND s351 write guard confirmed firing in the same run
-    (positive control twice over — crash simply moved further downstream again); `verify2` CRASH at
-    `coalesceFreeHeapBlocks+3452`, a heap-allocator routine entirely outside the function, neither guard
-    fired. Taken alone, more scatter. **Went further given NEXT.md pre-committed this as the parent
-    hypothesis's last iteration before the 3-strike pivot**: re-analyzed all 16 accumulated step-5 soak
-    logs offline (zero new builds/runs, pure re-read of already-captured logs, "capture once analyze
-    many"). Found (1) every crash's last-passed `[phase] vi_width` transition falls into exactly one of
-    two narrow post-transition windows (~74s: `1024→512`; ~143s: `512→640`) despite hitting 10 distinct
-    downstream symbols across the two — timing is NOT diffuse even though symbols are, and CLEAN runs
-    passing through both windows unharmed show reaching a window is necessary-not-sufficient; (2) the
-    `[drain-mesh-tail-guard]`/`[drain-mesh-write-guard]` diagnostic's intercepted value, `bad_v1=
-    0x00010001`, is byte-identical across 2 independent sessions/builds (`s350_verify1`, `s351_verify1`)
-    at a one-shot (`n=0`) guard site — ~1-in-4-billion odds of coincidence for random heap garbage,
-    strong evidence of a deterministic, reproducible bug (source-read confirms the tail-scan is a plain
-    singly-linked-list walk, `funcs_3.c:1734-1766`, consistent with a stale/prematurely-freed list node).
-    A 3rd finding, `[scene-node-content-guard]` firing at the identical `node=0x80183ECC` thousands of
-    times per run harmlessly across 3 sessions, is the OPPOSITE signature (steady-state, not corruption)
-    — demoted from "proves a bug" to "proves a benign always-empty placeholder node," see Overturned
-    Conclusions. **`m5-audio-destub-drainmesh-writeguard-verify` (iteration 1) CLOSED, superseded** — no
-    more single-site downstream-consumer verify soaks planned. New thread `m5-audio-destub-linkedlist-
-    corruption-source`, targeting the `bad_v1=0x00010001` lead: next probe logs every `v1` walked (not
-    just the final bad one) for the tail-scan's first N iterations in a fresh run, to see whether the
-    poisoned node appears at a consistent list position/consumer call — would localize the corrupting
-    write/free without a full memory watch. NOT yet proven that every bucket-2 crash (processSceneNode,
-    coalesceFreeHeapBlocks, `drainMeshReleaseQueue`'s 4 offsets) shares this one root cause — could still
-    be independent bugs sharing only the same activity-burst trigger window; that's the open
-    discriminator. Full detail: `PORTING-STATE` Session 352.
+    Full detail: `docs/PROJECT-OVERVIEW.md` §10; raw detail `PORTING-STATE` Sessions 339-353.
 
 -160..-194. **(s297-337) M5 audio de-stubbing: the full gate-byte-reversal and VI=640-stall
     measurement-chasing arc, 41 sessions of instrumentation each superseded by the next, closed by
@@ -571,7 +358,7 @@ Standing warnings:
   n=1957+ distinction (one-shot-before-crash vs. steady-state-thousands-of-hits) just hadn't been
   checked against the OTHER guards' firing shape until s352 compared them side by side. Does not
   overturn the guard's correctness (it still needs to stay in place), only its evidentiary weight for
-  the step-5 corruption-source hunt. PORTING-STATE 348, 350, 352; CURRENT-TRUTH item -208.
+  the step-5 corruption-source hunt. PORTING-STATE 348, 350, 352; CURRENT-TRUTH item -209..-195.
 - **(s339→s340→s342)** "The VI=640 `pairs=0` plateau is a benign, locked-camera mission cutscene" (s339)
   and "s340's 2/2 clean soaks validate promoting both audio gate reversals together" (s340) — s342
   found both soaks (and s341's 2 follow-ups) never left the pre-title attribution/logo screen: 0

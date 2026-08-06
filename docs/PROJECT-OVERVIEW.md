@@ -476,9 +476,75 @@ thread — see CURRENT-TRUTH item -208). None of the four sub-arcs below is open
   s351+closed s352 with the fix landed) found the s350 read guard fired correctly (positive control) but
   the crash moved 2 lines downstream to a write-through-the-same-corrupted-pointer sibling site the s350
   comment had already flagged as unguarded — guarded that too. s353 landed a ring-buffer breadcrumb
-  (step 1 of the `bad_v1` linked-list-corruption-source lead opened by item -208) recording every list
+  (step 1 of the `bad_v1` linked-list-corruption-source lead, see §11 below) recording every list
   node walked, not just the final bad one — its first verify pair came back 0/2 informative (both
-  crashes landed outside `drainMeshReleaseQueue` entirely, one of them independently useful — see
-  CURRENT-TRUTH item -210). All 3 guards use the same range-check-and-bail shape as the rest of the
+  crashes landed outside `drainMeshReleaseQueue` entirely, one of them independently useful — see §11).
+  All 3 guards use the same range-check-and-bail shape as the rest of the
   `-0x25A4`/BREADCRUMB2-14 family (§9): on an out-of-range pointer, synthesize the value the following
   guest logic would see from a legitimately-absent/cleared case instead of dereferencing.
+
+## 11. M5 Step 5 guard-hunting arc: Thread A / Thread B / heapWalker GUARD5, all CLOSED (s354–370),
+migrated from CURRENT-TRUTH.md s371 maintenance pass
+
+Full raw detail in `PORTING-STATE.md` at the session numbers cited. This section folds what used to be
+CURRENT-TRUTH.md Next-steps items -210 through -225 (nine items, including one already-folded
+sub-range) plus item -208's `bad_v1` lead, which was Thread B's origin. Both named threads, plus a
+heapWalker background-noise site the arc's own soaks surfaced, are now closed — no M5 Step 5 work is
+open. Next M5 work after this arc is Step 6 (PCM sanity-check), tracked live in CURRENT-TRUTH.
+
+- **Thread A — `m5-audio-destub-coalesce-heap-guard-verify` (`coalesceFreeHeapBlocks`), CLOSED s366.**
+  Opened s354 on an independent `coalesceFreeHeapBlocks+3452` repeat; guarded with a range-check-and-
+  bail. s358 found the guard's own bail target was wrong: `ctx->r3=0` sent execution to
+  `L_80002358`, the coalesce loop's ENTRY label, not an exit — re-entering the loop with the still-
+  wild pointer instead of stopping it; fixed to the real exit, `L_80002444`. Closed with 6 soaks
+  post-fix (`s358_verify1/2`, `s362_reverify1/2`, `s364_reverify1/2`) all showing zero
+  `coalesceFreeHeapBlocks` hits, including one clean full 432s hold.
+- **Thread B — `m5-audio-destub-linkedlist-corruption-source` (`drainMeshReleaseQueue`), CLOSED s368.**
+  Opened on s352's `bad_v1=0x00010001` lead: a diagnostic value byte-identical across 2 independent
+  sessions/builds at a one-shot guard site (~1-in-4-billion coincidence odds), source-confirmed as a
+  plain singly-linked-list tail-scan (`funcs_3.c:1734-1766`) consistent with a stale/prematurely-freed
+  list node. The function turned out to have FIVE structurally identical tail-scan loops (not three,
+  as first believed), each carrying the same "checked non-NULL, never range-validated before
+  dereference" idiom on THREE separate pointer families, found progressively:
+  1. **Tail-cursor read+write pairs** (s354/357/359/360/361): the original lead; found and guarded one
+     loop at a time after repeatedly hitting the same read-guard-without-write-guard gap (guard the
+     read, the crash moves 2 lines downstream to an unguarded write through the same pointer) —
+     recurred s350→s350b, s357→s359, until s361's full-function audit found the last two loops at once.
+  2. **Head-pointer read+clear-write pairs** (s363, 10 new sites): a parallel "priming read" through
+     each loop's HEAD pointer (`a0`/`ctx->r4`, checked only non-NULL) before the tail-scan, paired with
+     an unconditional clear-write later — the same idiom on a pointer the original tail-cursor audit
+     didn't cover (not part of the loop-body syntax it was scanning).
+  3. **A third "previous tail" pointer family** (s365, 5 sites): `MEM_W(0X4, ctx->r2) = ctx->r3` — a
+     pointer loaded once per loop from a fixed global table slot and checked only `!= 0`.
+  s366 ran a proactive full-function idiom-class audit (cross-referencing every table-/list-loaded-
+  pointer dereference against all 3 families × 5 loops = 25 explicit guard blocks) and found one
+  syntactically-bare read per loop (the loop-back "advance cursor" read) but hand-verified each is
+  memory-safe by loop invariant — no further unguarded family found, coverage reads as exhaustive.
+  Closed s368: `s367_verify3/4` both crashed OUTSIDE the function, at `pc-symbol=heapWalker+1696`
+  (`last-guest-pc=0x8000834c`, `drainMeshReleaseQueue`'s own final checkpoint — the `nop` right before
+  `return`), confirming the function completed and returned normally in both runs, with every guard
+  family (tail-cursor, head-pointer, third-family) confirmed firing at least once in the same runs —
+  a genuine positive control, not silence. 3-for-3 soaks crash-free *inside* the function since full
+  coverage landed.
+- **heapWalker+1696 background noise → GUARD5, CLOSED s370.** First seen as off-target noise during
+  Thread A/B soaks (`last-guest-pc=0x8000834c`, the exact PC `drainMeshReleaseQueue` returns through —
+  a coincidence of which breadcrumb last wrote a shared "last hit" global, not a link between the two
+  bugs). Reached n=4 independent hits by s368 (2×`s364`, 2×`s367`), crossing the catalog's own "3rd
+  independent hit → binary-analysis confirmation" trigger. s368's `s193_disasm.py` pass decoded the
+  crash instruction as an indexed store (`STR W8,[X5,X10]`) fed by two chained pointer loads — the same
+  "unvalidated pointer used as both index-source and write-target" idiom already guarded 4x elsewhere
+  in `heapWalker` (GUARD1-4, s157-218), but at a not-yet-mapped 5th site. `otool`/`nm`/`objdump`/
+  `dwarfdump` stayed sandbox-blocked throughout, so s369 hand-extended `s193_disasm.py`'s decoder with
+  a register-offset LDR/STR case to map the site to source: guest address `0x80007A3C` plus 4 unrolled
+  siblings (`0x80007A98`/`AF4`/`B50`/`BAC`, heapWalker's established 5x-loop-unrolling signature) — a
+  fixed global table slot read and checked only `!= 0`, then dereferenced as a write target via
+  `MEM_W(0X4, ctx->r2) = ctx->r3`. Guarded all 5 as GUARD5. Closed with `s369_heapwalkerguard5_verify1/2`
+  draining 2/2 non-recurrence: `verify2` crashed at an unrelated symbol with `guard5_fire_n=0`;
+  `verify1`'s SOAK-RESULTS.md line recorded `rc=137` (the loop's 600s hard-cap) with a 0-byte wrapper
+  log, but the launcher/raw `run.log` (which persist independently) recovered a complete, crash-free
+  302s hold with `guard5_fire_n=0` — the wrapper itself was defeated by an 8.7 GB `run.log` (millions
+  of pre-existing `[rs-free-walk]` heap-walk lines, not new evidence) that pushed its grep/kill handling
+  past the outer cap before it could print a verdict. **Soak-tooling lesson**: an `rc=137`/empty-
+  wrapper-log SOAK-RESULTS.md line is not automatically uninformative — check the launcher log and raw
+  `run.log` directly before discarding the run.
+- **Net as of s370**: no M5 Step 5 threads and no escalated background-noise threads remain open.

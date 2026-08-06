@@ -31903,3 +31903,43 @@ callback. This is the first real answer, either way, to "does audio actually pla
 next work is source-tracing why the real ucode's mix/synthesis path produces all-zero output
 (voice array never populated? mixing gated off? wrong buffer being read?), OR pivoting per the
 strategic priority order if this is judged sufficient to close Step 6 as "answered: no, not yet."
+
+## Session 372 (2026-08-05) — MAINTENANCE: 9th compaction pass, folding the now-fully-closed s354-370 M5 Step 5 guard-hunting arc
+
+`wc -c docs/CURRENT-TRUTH.md` read 61,918 bytes at session start, over the 60,000-byte Step 0
+trigger — this iteration is a MAINTENANCE iteration per `tools/agent/ITERATION.md`, no experiments
+run.
+
+**What ran.** Migrated the full s354-370 M5 Step 5 guard-hunting arc — Thread A
+(`m5-audio-destub-coalesce-heap-guard-verify`, `coalesceFreeHeapBlocks`, closed s366), Thread B
+(`m5-audio-destub-linkedlist-corruption-source`, `drainMeshReleaseQueue`, closed s368), and the
+heapWalker GUARD5 background-noise site (closed s370) — from CURRENT-TRUTH.md's Next-steps items
+-210 through -225 (nine items, one of which was itself an already-folded sub-range from a prior
+pass) into a new `docs/PROJECT-OVERVIEW.md` §11, at full sub-bullet detail (every guard family, fire
+count, and the s369 soak-tooling lesson about `rc=137`/empty-wrapper-log verdicts not being
+automatically uninformative). CURRENT-TRUTH.md now carries one folded summary paragraph
+(item -225..-210) plus a pointer to PROJECT-OVERVIEW §11. Also folded item -208 (the s352 bimodal-
+timing/`bad_v1` finding, Thread B's origin lead — no longer needed as a standalone item now that
+Thread B is closed) into the existing `-209..-195` folded paragraph, removing that item's "excluding
+-208, kept below" carve-out (a pre-existing numbering wart), and fixed three stale cross-references
+to the removed item numbers (Overturned Conclusions' scene-node-content-guard entry, and two
+`item -210`/`item -209..-195 range` pointers). Trimmed the USER DIRECTIVE headline's M5 status
+paragraph (item 2) to reference PROJECT-OVERVIEW §11 instead of re-stating the full Thread A/B/GUARD5
+detail inline, and added this pass to item 1's compaction history.
+
+**What it showed.** `docs/CURRENT-TRUTH.md`: 692 → 478 lines (61,918 → 42,407 bytes), a net shrink of
+214 lines — clears the ADVANCED bar (>=200 net lines) for a maintenance iteration. `docs/
+PROJECT-OVERVIEW.md`: 484 → 550 lines (the new §11), still well under any size concern for that file.
+No content was deleted, only relocated and compressed — `git diff --stat` shows 123 insertions / 270
+deletions across the two files, i.e. real compression, not just moved bytes. 35 KB remains a stretch
+target, not a hard floor, per the standing note; 42.4 KB after this pass is in the same range as the
+s364 pass's post-compaction size (~480 lines) before the file grew again over the s365-371 arc, which
+is expected — this doc regrows every few sessions as new investigation lands and gets folded down
+again at the next maintenance trigger.
+
+**What it rules out.** Nothing experimentally — this is a pure documentation-compaction pass, no code
+touched, no soak run, no `lib/` edit.
+
+`HYPOTHESIS-ID` unchanged: no experiment ran this iteration, so the active thread
+(`m5-audio-destub-step6-pcm-sanity`, iteration 2, per NEXT.md before this pass) carries forward
+untouched to the next iteration.
