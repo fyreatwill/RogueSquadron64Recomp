@@ -25,11 +25,12 @@ Priority order for upcoming iterations, set after the 300-session review:
    confirmed live, but no crash inside it) with 3-for-3 post-guard soaks now crash-free inside the
    function). **No M5 Step 5 threads remain open** — next M5 work is Step 6 (PCM sanity-check,
    `M5-AUDIO-PLAN.md` §4) or a re-scope, not another `drainMeshReleaseQueue` probe. Separately,
-   `heapWalker+1696` (an old, previously-guarded-4x function, GUARD1-4 s157-s218) surfaced a 5th,
-   not-yet-identified unguarded site — n=4 hits, byte-identical, crosses the background-noise
-   catalogue's escalation bar; `s193_disasm.py` confirmation done s368 (an indexed-store idiom, see
-   item -223), guest-address mapping is the queued next work unit.
-   Detail: Next-steps items -223..-210 (folded); live status/decision trees: NEXT.md.
+   `heapWalker+1696` (an old, previously-guarded-4x function, GUARD1-4 s157-s218) surfaced a 5th
+   unguarded site, n=4 hits byte-identical, crossing the background-noise catalogue's escalation
+   bar — **s369 mapped it to a guest address and landed GUARD5** (`MEM_W(0X4, ctx->r2) = ctx->r3`,
+   5 sites, freshly-read-but-unvalidated global table-head pointer); first empirical verification
+   pair (`s369_heapwalkerguard5_verify1/2`) is queued, not yet drained.
+   Detail: Next-steps items -224..-210 (folded); live status/decision trees: NEXT.md.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -157,7 +158,35 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -223 (s368); the next new item takes -224 and is inserted at the top.
+oldest). Current top is -224 (s369); the next new item takes -225 and is inserted at the top.
+
+-224. **(s369) heapWalker GUARD5 landed — guest address for the escalated `heapWalker+1696` crash
+    found and guarded, 5 sites; first empirical verification still outstanding.** `otool`/`nm`/
+    `objdump`/`dwarfdump` all still sandbox-blocked; extended `scratch/agent/s193_disasm.py`'s
+    hand-rolled decoder with a register-offset LDR/STR case to hand-decode the crash instruction:
+    `STR W8,[X9,X10]` (item -223's `X5` base was a hand-math slip — the extended decoder's own
+    output corrects it to `X9`) fed by `LDR X8,[X8,#24]` / `LDR X10,[X10,#16]`. First ruled out
+    symbol misattribution (heapWalker's compiled size is ~10 KB, a 14x expansion from its ~800-byte
+    guest range — `+1696` is genuinely inside the function, not spilled into the next symbol via
+    missing size info). Cross-checked the two loads against `recomp_context`'s field layout (`gpr
+    r0,r1,r2,...`, `gpr`=`uint64_t` → r2 at +16, r3 at +24): **not** a raw-pointer chase as item
+    -223 first suspected — plain `ctx->r2`/`ctx->r3` struct reads (X8/X10 transiently held the
+    `ctx` pointer, clobbered by the load result). Source cross-check (Explore-agent sweep of every
+    `MEM_W(...)=...;` store in the function's 671-line body) landed on `MEM_W(0X4, ctx->r2) =
+    ctx->r3;` (guest `0x80007A3C` + 4 unrolled siblings at `0x80007A98`/`AF4`/`B50`/`BAC`) — the
+    exact instruction bytes repeat 3x in a 96-byte disasm window, matching heapWalker's established
+    5x-loop-unrolling signature. `ctx->r2` there is freshly read from a fixed global table slot two
+    lines earlier and checked only for `!= 0`, never range-validated before being dereferenced as a
+    write target — same idiom as guards 1/3/4, new register (the sibling write on the same two
+    lines, through the already-guard4-validated `ctx->r3`, needs no new guard). Guarded all 5 sites
+    (`ROGUESQ_LOG_HEAPWALKER_GUARD5`, `[heapwalker-guard5]`, now armed by default in
+    `run_s327waitpump.sh`). Full regen+rebuild clean (delete `funcs_*.c` → `N64Recomp` →
+    `fixup_game_funcs.py` → `cmake --build`; patch report `x1` per site for all 5, 20 total
+    heapWalker guard lines across guard/guard3/guard4/guard5 combined, idempotency-refusal
+    confirmed on a 2nd fixup run, no build errors). Queued `s369_heapwalkerguard5_verify1/2.sh`
+    (HOLD_S=240) — awaiting first empirical result. No `lib/` touch (only `fixup_game_funcs.py`,
+    untracked in N64Recomp's own repo like the other 24+ accumulated guard patches, plus gitignored
+    `scratch/` tooling). Full detail: `PORTING-STATE` Session 369.
 
 -223. **(s368) Thread B (`m5-audio-destub-linkedlist-corruption-source`) CLOSED — `s367`
     `verify3/4` drained, both crash OUTSIDE `drainMeshReleaseQueue` after it completed normally;

@@ -31691,3 +31691,86 @@ No code changed this session (soak-triage + docs + free binary analysis only); `
 
 `HYPOTHESIS-ID` changes to `heapwalker-guard5-site` (new thread; both M5 Step 5 threads that
 `m5-audio-destub-linkedlist-corruption-source` covered are now closed).
+
+## Session 369 (2026-08-05) — heapWalker GUARD5 landed: guest address for
+the escalated `heapWalker+1696` crash identified and guarded
+
+**Ran the queued Thread 1 work unit from NEXT.md**: map `heapWalker+1696`
+(n=4, byte-identical `last-guest-pc=0x8000834c` across s364/s367/s368) to a
+guest MIPS address and add a 5th guard.
+
+**Tooling first**: `otool`/`nm`/`objdump`/`dwarfdump` are all still blocked
+by the sandbox's command allowlist (confirmed again this session — this is
+the same standing limitation `s193_disasm.py`'s docstring already noted).
+Extended `scratch/agent/s193_disasm.py`'s hand-rolled ARM64 decoder with a
+register-offset LDR/STR case (it previously only covered immediate-offset
+forms) — a real, reusable tool improvement, verified by manual bit-decode of
+the crash instruction before trusting the new decoder's own output.
+
+**Ruled out symbol misattribution first** (the discriminating check before
+trusting the `+1696` offset at all): compared `heapWalker`'s vmaddr against
+the next symbol (`countDisplayListChunks`) in the Mach-O symbol table — a
+10012-byte gap, so `+1696` is genuinely inside `heapWalker`'s own compiled
+code, not spilled into a neighboring function via missing symbol-size info.
+Also notable on its own: `heapWalker` compiles to ~10 KB / ~2500 ARM64
+instructions from ~800 bytes / ~175 MIPS instructions of guest code (a ~14x
+expansion) — explains why naive percentage-position interpolation between
+ARM64 offset and guest address would have been unreliable.
+
+**Decoded the crash instruction**: `0xb82a6928` at `heapWalker+1696` is
+`STR W8,[X9,X10]` (32-bit register-offset store), immediately preceded by
+`LDR X8,[X8,#24]` (-28) and `LDR X10,[X10,#16]` (-16). The exact instruction
+bytes repeat 3x within a 96-byte disassembly window — matching heapWalker's
+known 5x-loop-unrolling signature from the guard1/3/4 work (s157-s218).
+
+**Cross-checked against `recomp_context`'s layout** (`include/recomp.h`:
+`gpr r0, r1, r2, r3, ...` with `gpr` = `uint64_t`, so field offsets are
+r0=0, r1=8, r2=16, r3=24): offset #16 = `ctx->r2`, offset #24 = `ctx->r3`.
+This means the two preceding loads are NOT a raw-pointer chase (the first
+hypothesis from s368's writeup) but plain `ctx->r2`/`ctx->r3` struct reads —
+X8/X10 transiently held the `ctx` pointer, clobbered by the load result.
+
+**Source cross-check** (Explore-agent sweep of every `MEM_W(...) = ...;`
+store in `heapWalker`'s 671-line body, `funcs_3.c:99-770`) found exactly one
+match for "store the ctx->r3 value through ctx->r2 as the address, offset
++4": `MEM_W(0X4, ctx->r2) = ctx->r3;`, occurring once per unrolled loop at
+guest `0x80007A3C/0x80007A98/0x80007AF4/0x80007B50/0x80007BAC`. `ctx->r2`
+here is freshly loaded from a fixed global table slot two lines earlier
+(`ctx->r2 = MEM_W(ctx->r2, 0X63B0)`) and checked only for `!= 0` (the
+surrounding `if (ctx->r2 == 0) {...; goto skip;}` gate that decides whether
+the SECOND write executes at all) — never range-validated before being
+dereferenced as a write address. Exactly the same checked-non-NULL-but-
+unvalidated-pointer idiom as guards 1/3/4, on a new register (ctx->r2, not
+the ctx->r3 list-walk cursor guards 3/4 already cover). The sibling write on
+the same two lines, `MEM_W(0X0, ctx->r3) = ctx->r2;`, does NOT need a new
+guard — ctx->r3 there is the value guard4 just validated two statements
+earlier and unmodified since.
+
+**Guarded all 5 sites** (`fixup_game_funcs.py`, `_heapwalker_guard5_sites`,
+env var `ROGUESQ_LOG_HEAPWALKER_GUARD5`, `[heapwalker-guard5]` log tag),
+same range-check-and-skip pattern as guards 3/4, reusing guard4's per-loop
+exit labels (verified as real exits, not loop re-entries, per the s358
+bail-target gotcha — they're literally the immediately-following label in
+each unrolled copy). Full regen pipeline run clean: deleted all
+`RecompiledFuncs/funcs_*.c`, reran `N64Recomp`, reran `fixup_game_funcs.py`
+(patch report showed `x1` per site for all 5, plus the pre-existing
+guard/guard3/guard4 patches reapplying correctly — 20 total heapWalker guard
+lines patched this run), confirmed the idempotency guard refuses a 2nd run
+(`REFUSING to run — funcs_0.c already carries // RS64_FIXUP_APPLIED`),
+rebuilt with `cmake --build . -j8` clean (only pre-existing warnings, no
+errors). Armed `ROGUESQ_LOG_HEAPWALKER_GUARD5=1` by default in
+`scratch/s73_post_a_scene/run_s327waitpump.sh` alongside guards 1/3/4 so all
+future soaks pick it up automatically. Queued
+`s369_heapwalkerguard5_verify1/2.sh` (HOLD_S=240).
+
+No `lib/` touch this session — the only tree-affecting changes are
+`fixup_game_funcs.py` (untracked in N64Recomp's own repo, same as the
+existing 24+ guard patches accumulated there over 300+ sessions — a known,
+accepted, pre-existing gap in this project's version-control coverage, not
+something this session introduced or is in scope to fix) and
+`scratch/agent/s193_disasm.py` / `scratch/s73_post_a_scene/run_s327waitpump.sh`
+(both gitignored working-tree state under `/scratch/`, same as all prior
+soak-recipe/analysis-tool sessions).
+
+`HYPOTHESIS-ID` stays `heapwalker-guard5-site` (iteration 2 — guard landed,
+awaiting its first empirical verification pair).
