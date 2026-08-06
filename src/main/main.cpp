@@ -674,9 +674,46 @@ static void set_frequency(uint32_t freq) {
     SDL_PauseAudioDevice(audio_device, 0);
 }
 
-static void queue_samples(int16_t* samples, size_t num_bytes) {
+static void queue_samples(int16_t* samples, size_t num_samples) {
+    // s371 (M5-AUDIO-PLAN.md Step 6): this parameter was named `num_bytes` but
+    // is actually a SAMPLE count -- ultramodern::queue_audio_buffer
+    // (lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36) computes
+    // `sample_count = byte_count / sizeof(int16_t)` and passes THAT in.
+    // SDL_QueueAudio's `len` is a byte count, not a sample count. The
+    // previous code passed the raw sample count straight through as the byte
+    // length, so every single call queued only HALF the correct number of
+    // bytes to SDL -- the back half of every audio buffer's PCM data was
+    // silently dropped, unconditionally, independent of whether the ucode
+    // upstream produced correct content. M5-AUDIO-PLAN.md Step 6 described
+    // this host bridge as "already fully implemented and functional,
+    // confirmed by the runtime survey, not assumed" -- that claim is
+    // overturned (docs/CURRENT-TRUTH.md superseded section, this session).
     if (audio_device) {
-        SDL_QueueAudio(audio_device, samples, (Uint32)num_bytes);
+        SDL_QueueAudio(audio_device, samples, (Uint32)(num_samples * sizeof(int16_t)));
+    }
+
+    // ROGUESQ_LOG_PCM_SANITY (M5-AUDIO-PLAN.md Step 6): independent of the
+    // byte-count fix above, does the real ucode (ROGUESQ_AUDIO_UCODE=1)
+    // actually hand this callback non-silent PCM? First ~20 calls, then every
+    // 256th (matches the [audtask-dispatch] resample convention fixed s315).
+    static int s_log_pcm_sanity = -1;
+    if (s_log_pcm_sanity < 0) {
+        const char* e = getenv("ROGUESQ_LOG_PCM_SANITY");
+        s_log_pcm_sanity = (e && e[0] && e[0] != '0') ? 1 : 0;
+    }
+    if (s_log_pcm_sanity) {
+        static uint32_t s_pcm_n = 0;
+        static uint32_t s_pcm_allzero_calls = 0;
+        bool all_zero = true;
+        for (size_t i = 0; i < num_samples; i++) {
+            if (samples[i] != 0) { all_zero = false; break; }
+        }
+        if (all_zero) s_pcm_allzero_calls++;
+        if (s_pcm_n < 20 || (s_pcm_n % 256) == 0) {
+            fprintf(stderr, "[pcm-sanity] n=%u num_samples=%zu all_zero=%d allzero_calls=%u total_calls=%u\n",
+                    s_pcm_n, num_samples, all_zero ? 1 : 0, s_pcm_allzero_calls, s_pcm_n + 1);
+        }
+        s_pcm_n++;
     }
 }
 

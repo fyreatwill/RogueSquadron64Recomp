@@ -1,86 +1,64 @@
 # NEXT work unit
 
-## s370: `heapwalker-guard5-site` CLOSED (2/2 non-recurrence) — pivot to M5 Step 6
+## s371: M5 Step 6 ANSWERED (real PCM is 100% silent) — trace WHY next, or pivot
 
-s369's GUARD5 verify pair drained and both are non-recurrence data points (full detail:
-CURRENT-TRUTH item -225, PORTING-STATE Session 370). `heapWalker+1696`/`0x8000834c` is no longer
-an open thread. **No M5 Step 5 or escalated-background-noise threads remain open.** Per the
-standing directive (`docs/CURRENT-TRUTH.md` USER DIRECTIVE §2) and `docs/M5-AUDIO-PLAN.md` §4,
-the next M5 work is **Step 6 — validate real PCM reaches SDL, not just that the guest stopped
-hanging.**
+Step 6's question ("does real PCM reach SDL, not just does the guest stop hanging") now has a real
+answer: **no** — see `docs/CURRENT-TRUTH.md` item -226 and `docs/M5-AUDIO-PLAN.md` §4. Along the
+way, found and fixed a genuine, previously-undetected bug: `queue_samples`
+(`src/main/main.cpp:677-`) was silently dropping half the bytes of every PCM buffer handed to
+`SDL_QueueAudio` (byte-count/sample-count unit mismatch, present since this bridge was written).
+Fixed. Added `ROGUESQ_LOG_PCM_SANITY`. Two soaks (13,832 total logged calls, 13,825 of them under
+confirmed genuine RSP-dispatched `real_ucode=1`) found **100% of samples are exactly zero** — the
+ucode dispatches and completes without crashing but the actual audio content never becomes
+non-silent.
 
-## Competing hypotheses for Step 6
+## Also worth a mention before picking the next unit
 
-1. **PCM is fine** — the ucode (`factor5_ucode_b`, dispatched under `ROGUESQ_AUDIO_UCODE=1` since
-   step 2) produces real, non-silent samples and `queue_samples`/`SDL_QueueAudio` pass them through
-   correctly. Expected discriminating result: a non-zero-sample counter shows a healthy fraction of
-   non-silent buffers once past boot.
-2. **Silent-but-not-crashing** — the ucode completes and the pipeline never crashes (already
-   confirmed by step 2/step 5's clean soaks), but the buffers `queue_samples` receives are all-zero
-   (silence) because of a format mismatch, an unfed voice-mixing step, or the ucode short-circuiting
-   its own PCM-generation path even while "completing" the task cleanly. Expected result: the
-   silent-buffer counter stays ~100% even well past boot/menu.
-3. **Garbage-but-not-crashing** — buffers are non-zero but not coherent audio (e.g. uninitialized
-   RDRAM, wrong stride/channel interleave). A simple non-zero check alone can't fully distinguish
-   this from hypothesis 1 — if the sanity counter comes back "non-silent," treat that as
-   necessary-not-sufficient and note explicitly that only a real listen-test (not automatable here)
-   would fully confirm coherent audio, not just non-zero content.
+`docs/CURRENT-TRUTH.md` is now 61,918 bytes (>60,000). **Step 0 of ITERATION.md will trigger a
+MAINTENANCE iteration next time** — compact toward ~35 KB, migrate durable material to
+PROJECT-OVERVIEW.md, renumber Next-steps into one sequence. Do this BEFORE picking a new
+experiment if Step 0 says so; don't skip it because s371 just added a big new item.
 
-**Discriminating measurement**: an env-gated counter in `queue_samples` (`src/main/main.cpp:677`)
-that iterates the `int16_t* samples` buffer for the first N calls (and every Mth call after) and
-logs whether every sample in that call was exactly zero, plus a running "all-zero calls / total
-calls" ratio. This alone splits hypothesis 2 from {1, 3}. It cannot by itself split 1 from 3 (that
-needs either statistical variance/spectral checks or a real listen — out of scope for this pass;
-note the limitation rather than over-claim).
+## Competing hypotheses for "why is PCM silent" (the natural Step 6 follow-on)
 
-## Insertion point (scouted s370, read-only, no code changed yet)
+1. **Voice array never populated** — the ucode's mixing step reads a voice/channel array that
+   nothing upstream (note-on / envelope triggering, `initVoiceSample` etc.) is actually filling in
+   under this LLE-only, no-audio-enable-gate execution path, so it correctly mixes "nothing" into
+   silence. Expected discriminating signal: a counter on whatever loop/array `musyxSynthFrame`
+   reads per-voice (or its RSP-side equivalent in `factor5_ucode_b`) shows 0 active voices the
+   whole run, even during the SELECT YOUR CRAFT / hangar phase.
+2. **Mixing gated off** — a global "audio enabled"/mix-active flag (distinct from the gate-byte
+   sites already reversed in Steps 2-4) still short-circuits the mix step to write zeros
+   unconditionally, independent of voice content. Expected signal: same 0-voices-active counter as
+   #1 would NOT distinguish this from #1 alone — need a second check, e.g. whether the mix loop body
+   executes its accumulate/write instructions at all vs. skipping straight to a memset-style zero
+   fill.
+3. **Wrong buffer/stride being read at some pipeline stage** — the ucode writes real, non-zero PCM
+   to ONE buffer/offset, but `osAiSetNextBuffer`/`queue_samples` reads from a different one (stale
+   pointer, off-by-one double-buffer index, DMEM segment mismatch). Expected signal: a raw dump of
+   the FULL DMEM/ucode-output audio buffer immediately after `factor5_ucode_b` returns, compared
+   against what `queue_samples` receives — if the ucode's own output buffer is non-zero but
+   `queue_samples`'s copy is zero, this is confirmed and #1/#2 are ruled out.
 
-- `queue_samples(int16_t* samples, size_t num_bytes)` — `src/main/main.cpp:677-681`. Note: despite
-  the parameter name, `ultramodern::queue_audio_buffer` (`lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36`)
-  actually passes a **sample count**, not a byte count, into this parameter (`sample_count =
-  byte_count / sizeof(int16_t)` computed there) — confirm this before writing the iteration bound,
-  or the counter will read out of bounds or under-scan.
-- Call chain: `osAiSetNextBuffer_recomp` (`lib/N64ModernRuntime/librecomp/src/ai.cpp:18-21`) →
-  `ultramodern::queue_audio_buffer` (`audio.cpp:25-36`) → `audio_callbacks.queue_samples` →
-  `main.cpp:677-681`'s concrete `queue_samples`, registered at `main.cpp:1842`.
-- No existing instrument sits on this path (verified by grep this session). The existing
-  `[audtask-dispatch]` counter (`main.cpp:607-634`) is the RSP task-DISPATCH side (a different
-  mechanism, already confirmed firing continuously since s300) — do not confuse the two or treat
-  dispatch activity as evidence about sample content.
-- **This is a `src/` edit, not a `lib/` edit** — `queue_samples` lives in this repo's own
-  `src/main/main.cpp`, not the `lib/N64ModernRuntime` submodule. No `submodule-patches/export.sh`
-  needed for this specific change (only if the session also happens to touch anything under
-  `lib/`).
+**Discriminating measurement**: needs source-tracing `factor5_ucode_b`'s task body (or its
+recompiled MIPS source, whichever is more direct) to find (a) where/whether it reads a per-voice
+active-list before mixing, and (b) whether the accumulate step is skipped or genuinely runs on all-
+zero inputs. This is a source-read-first work unit (per the standing "batch instrumentation" rule,
+don't build a counter blind) — read before instrumenting.
 
-## Concrete plan for next iteration
+## Alternative: declare Step 6 sufficiently answered and pivot
 
-1. Read `src/main/main.cpp:670-690` (the `queue_samples` function and its immediate context) and
-   `lib/N64ModernRuntime/ultramodern/src/audio.cpp:20-40` to confirm the sample-vs-byte-count
-   question above before writing anything.
-2. Add an env-gated counter (`ROGUESQ_LOG_PCM_SANITY` or similar; follow the existing
-   `getenv`-check + static counter convention already used for `[audtask-dispatch]` at
-   `main.cpp:607-634`): for the first ~20 calls then every 256th (matching the existing sampling
-   convention), scan the buffer, log `[pcm-sanity] n=<call#> samples=<count> all_zero=<0|1>
-   nonzero_n=<count>`, and maintain a running `all_zero_calls`/`total_calls` ratio printed
-   periodically.
-3. Build (`cd build && cmake --build . -j8`, no regen pipeline needed — this is host-side C++, not
-   guest recompiled code).
-4. Run ONE soak with `ROGUESQ_AUDIO_UCODE=1` (required — this is the step-2 toggle that makes the
-   real ucode dispatch instead of the stub) + the new sanity env var + all current guard/positive-
-   control instruments armed (per `run_s327waitpump.sh`'s defaults), `HOLD_S=120` is enough for a
-   first pass (this is a per-call-content check, not a rare-crash-recurrence hunt — don't over-
-   budget wall time on it).
-5. Positive control requirement (iron rule 1): the counter must show SOME calls logged (proves the
-   instrument fires at all) before its all-zero ratio means anything. If `queue_samples` is never
-   called even with `ROGUESQ_AUDIO_UCODE=1`, that's itself a finding (either the ucode isn't
-   actually driving `osAiSetNextBuffer`, or step 2's earlier "M_AUDTASK dispatches from n=0" doesn't
-   imply "queue_samples gets called" — check that assumption explicitly, don't take it on faith
-   from the step-2 writeup).
-6. Read the decision split: all-zero ratio near 100% after boot → hypothesis 2 (silent-but-not-
-   crashing), write it up as the closer to M5 Step 6's original question and note that this is the
-   FIRST of the 4 M5 crash families' "audio content actually plays" question ever gets a real
-   answer either way. All-zero ratio near 0% → hypothesis 1/3, note the "non-zero ≠ verified
-   coherent" caveat explicitly rather than declaring victory.
+Per the strategic priority order, M5 audio de-stubbing is priority 2 (after maintenance) — Step 6
+itself is now empirically answered (silent, not garbage, not crashing). If the "why" investigation
+above is judged lower-value than returning to M3 idiom-class audits (priority 3) or another M5
+open thread, that's a legitimate call for the next iteration to make explicitly, not by default.
 
-HYPOTHESIS-ID: m5-audio-destub-step6-pcm-sanity (iteration 1 — new thread, pivoted from the closed
-heapwalker-guard5-site thread this session).
+## Iteration budget
+
+This is iteration 1 of a fresh sub-question under the same HYPOTHESIS-ID (the parent question was
+answered, this is its natural follow-on, not a stalled retry) — full budget (3 iterations before a
+mandatory pivot preamble) available.
+
+HYPOTHESIS-ID: m5-audio-destub-step6-pcm-sanity (iteration 2 — Step 6's original question answered
+s371; this continues into "why is it silent" under the same thread since it's a direct follow-on,
+not a new hypothesis).

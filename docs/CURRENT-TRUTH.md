@@ -27,12 +27,15 @@ Priority order for upcoming iterations, set after the 300-session review:
    — its `s369_heapwalkerguard5_verify1/2` pair drained 2/2 non-recurrence (one full 302s clean
    hold with `guard5_fire_n=0`, one crash at an unrelated symbol `findLookupEntryByKey+1864` with
    `guard5_fire_n=0`). **No M5 Step 5 or escalated-background-noise threads remain open** — next M5
-   work is **Step 6, PCM sanity-check** (`M5-AUDIO-PLAN.md` §4): insertion point scouted s370, no
-   code landed yet — `queue_samples(int16_t*, size_t)` at `src/main/main.cpp:677-681`, reached via
-   `ultramodern::queue_audio_buffer` (`lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36`) from
-   `osAiSetNextBuffer_recomp` (`lib/N64ModernRuntime/librecomp/src/ai.cpp:18-21`); no existing
-   instrument on this path. Detail: Next-steps items -225..-210 (folded); live status/decision
-   trees: NEXT.md.
+   work is **Step 6, PCM sanity-check** (`M5-AUDIO-PLAN.md` §4) — **ANSWERED s371: real PCM is
+   100% silent.** Fixed a real host-bridge bug found en route (`queue_samples` was silently
+   dropping half of every buffer's bytes to `SDL_QueueAudio` — see Overturned conclusions) and added
+   `ROGUESQ_LOG_PCM_SANITY`; two soaks logged 13,832 total calls (7 via the s327 direct-pump path,
+   13,825 via genuine RSP-dispatched `real_ucode=1`) and **every single sampled call was
+   all-zero** — hypothesis 2 (silent-but-not-crashing) confirmed, not merely plausible. Next M5
+   work: trace WHY the real ucode's mix/synthesis produces all-zero output (voice array never
+   populated? mixing gated off? wrong buffer read?). Detail: Next-steps item -226; live
+   status/decision trees: NEXT.md.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -160,7 +163,33 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -225 (s370); the next new item takes -226 and is inserted at the top.
+oldest). Current top is -226 (s371); the next new item takes -227 and is inserted at the top.
+
+-226. **(s371) M5 Step 6 ANSWERED: real PCM is 100% silent even under genuine RSP-dispatched
+    real ucode; found and fixed a real, previously-undetected host-bridge bug along the way.**
+    Before writing the planned sanity counter, confirmed NEXT.md's own open question (sample vs.
+    byte count) by reading `queue_samples` (`src/main/main.cpp:677-681`) against
+    `ultramodern::queue_audio_buffer` (`lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36`)
+    together — found the callback's parameter was named/treated as a byte count but actually
+    receives a SAMPLE count, and the old code passed it straight to `SDL_QueueAudio`'s byte-length
+    argument with no `*sizeof(int16_t)` conversion: every call queued only HALF the correct number
+    of bytes, silently dropping the back half of every PCM buffer, unconditionally, since this
+    bridge was written. Fixed (multiply by `sizeof(int16_t)`); overturns M5-AUDIO-PLAN.md §4's
+    claim that this bridge was "already fully implemented and functional" (see Overturned
+    conclusions). Added `ROGUESQ_LOG_PCM_SANITY` (`[pcm-sanity]`) in the same edit/build. Two soaks:
+    `verify1` crashed pre-title via the s327 emergency direct-pump path (7 `[pcm-sanity]` calls, all
+    `all_zero=1`; its crash signature is byte-for-byte the already-cataloged s367
+    `musyxSynthFrame+4652`/`0x8000834c` background noise, confirming the fix introduced no new
+    crash). `verify2` reached title (45.6s) and ran ~84s into a 120s hold under GENUINE
+    RSP-dispatched real ucode (`[audtask-dispatch]` confirms `real_ucode=1` actively firing) before
+    an unrelated crash (`trackResourceListWithMappingTables+1228`, very likely the same "Apple
+    `dladdr` fallback" background-noise family already at n=2 with a 4-byte-different offset,
+    logged as a data point for the next M3 audit, not chased) — logging 13,825 `[pcm-sanity]` calls,
+    **100% all-zero**, sampled every 256th per the standing convention. Net across both runs:
+    13,832 total logged calls, 0 non-zero. **Hypothesis 2 (silent-but-not-crashing) CONFIRMED**, a
+    positive-controlled result (thousands of instrument fires plus an independent
+    `real_ucode=1`-dispatch confirmation in the same run) — not a null result. Full detail:
+    `PORTING-STATE` Session 371.
 
 -225. **(s370) `heapwalker-guard5-site` CLOSED — `s369_heapwalkerguard5_verify1/2` drained 2/2
     non-recurrence; pivoting to M5 Step 6 (PCM sanity-check).** `verify2`: crashed at
@@ -614,6 +643,17 @@ Standing warnings:
   also fires 40/40 (s315). Net: 2 real stop points (37/37 and 40/40), not 1 or 3. Believable each time:
   similar small round numbers read as simultaneous unless line numbers are diffed. PORTING-STATE 309,
   313, 315.
+- **(M5-AUDIO-PLAN.md §4→s371)** "The host bridge (`queue_samples`/`SDL_QueueAudio` wiring) is
+  already fully implemented and functional... nothing needs to be built here" — a source read found
+  a real bug: `queue_samples`'s parameter was named/treated as a byte count but
+  `ultramodern::queue_audio_buffer` actually passes a sample count, and the old code passed it
+  straight through as `SDL_QueueAudio`'s byte length with no `*sizeof(int16_t)` conversion — every
+  call queued only half the correct number of bytes, silently dropping the back half of every PCM
+  buffer, since this bridge was written. Believable: the wiring genuinely compiles, links, and calls
+  through cleanly end-to-end, so eyeballing the call graph reads as "functional" — the defect is a
+  unit-mismatch one level down, only visible by checking the actual value each side produces/expects,
+  not by tracing that a call happens. Fixed s371 (`src/main/main.cpp`'s `queue_samples`). PORTING-STATE
+  371.
 
 ### Dead ends — labelled as such in the log, do not retry
 

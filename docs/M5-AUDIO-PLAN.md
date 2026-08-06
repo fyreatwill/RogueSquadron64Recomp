@@ -212,14 +212,18 @@ is actually occurring, not just that the crash rate moved for an unrelated reaso
 multiple soaks (rate comparison, not a single pass/fail) — budget accordingly, don't treat 1-2 clean
 runs as confirmation per the standing 0/2-is-a-weak-null lesson from the `MATEXPIRY_GUARD` thread.
 
-**Step 6 — validate real PCM reaches SDL, not just that the guest stopped hanging.** The host bridge
-(`ultramodern::audio_callbacks_t`, `audio.cpp`'s `queue_samples`/`SDL_QueueAudio` wiring in
-`main.cpp:622-638`) is already fully implemented and functional — confirmed by the runtime survey,
-not assumed. Nothing needs to be built here. The check needed is a sanity counter (e.g.
-non-zero-sample-rate or a simple checksum logged from `queue_samples`) proving the buffers
-`osAiSetNextBuffer` hands over actually contain non-silent, non-garbage data once the ucode is live
-— a format mismatch between `factor5_ucode_b`'s output and what `osAiSetNextBuffer`/`queue_samples`
-expect would otherwise pass every crash-rate check above while still producing silence or noise.
+**Step 6 — validate real PCM reaches SDL, not just that the guest stopped hanging.** ANSWERED s371:
+NO, not yet — see `docs/CURRENT-TRUTH.md` item -226 and Overturned conclusions. This section's
+original claim that the host bridge (`ultramodern::audio_callbacks_t`, `audio.cpp`'s
+`queue_samples`/`SDL_QueueAudio` wiring) was "already fully implemented and functional... nothing
+needs to be built here" was WRONG — it had a real unit-mismatch bug (silently dropped half the
+bytes of every PCM buffer), now fixed. With that fixed and a sanity counter
+(`ROGUESQ_LOG_PCM_SANITY`) added, two soaks (13,832 total logged calls, including 13,825 under
+genuine RSP-dispatched `real_ucode=1`) found **100% of samples reaching `queue_samples` are
+exactly zero** — the real ucode dispatches and completes without crashing but produces no audible
+content. Next open question (not yet investigated): why — is the voice array never populated, is
+mixing gated off somewhere between task dispatch and `musyxSynthFrame`'s output, or is the wrong
+buffer being read/written at some stage of the pipeline?
 
 ## 5. Summary of what this doc changes vs. the existing goal-stack framing
 
@@ -230,9 +234,11 @@ expect would otherwise pass every crash-rate check above while still producing s
 - The `dmem[]` sharing question the goal stack posed as open is already answered by the existing s5
   mutex — no new design work needed there, only validation that it holds up under real audio
   traffic (implicitly covered by every soak above).
-- The host SDL/`ultramodern` audio-output bridge is already fully built and functional — it does not
-  need any work as part of this plan. Only the RSP-side ucode dispatch and the guest-side enable gate
-  need touching.
+- ~~The host SDL/`ultramodern` audio-output bridge is already fully built and functional — it does
+  not need any work as part of this plan.~~ **WRONG, overturned s371**: it had a real bug (silently
+  dropped half the bytes of every PCM buffer to `SDL_QueueAudio`), now fixed — see Step 6 above and
+  `docs/CURRENT-TRUTH.md`'s Overturned conclusions. The RSP-side ucode dispatch and guest-side
+  enable gate weren't the only things needing touching after all.
 - The expected payoff for M3 crash-family dissolution is weaker than the goal-stack's phrasing
   implied: 1 of 4 documented audio-adjacent crash families is confirmed related to the stub, and that
   one argues for caution (a historical fatal hang gets re-exposed), not for an easy win. 2 of 4 are

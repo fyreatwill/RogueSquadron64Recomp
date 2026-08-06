@@ -31833,3 +31833,73 @@ this arc still needs one per the standing rule).
 
 No code changed this session; no soak queued (the analysis consumed already-completed soaks, no
 new build/run needed). `HYPOTHESIS-ID` pivots to `m5-audio-destub-step6-pcm-sanity` (iteration 1).
+
+## Session 371 (2026-08-05) — M5 Step 6: found and fixed a real host-bridge byte-count bug; PCM confirmed 100% silent (hypothesis 2 CONFIRMED) even under genuine RSP-dispatched real ucode
+
+Before writing the planned `ROGUESQ_LOG_PCM_SANITY` counter, NEXT.md's own prerequisite ("confirm
+the sample-vs-byte-count question before writing the iteration bound") required reading
+`src/main/main.cpp:677-681` and `lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36` together.
+That read found a real, previously-undetected bug, independent of any runtime measurement:
+`ultramodern::queue_audio_buffer` computes `sample_count = byte_count / sizeof(int16_t)` and
+passes that **sample count** into the `queue_samples` callback — but the callback's parameter was
+named (and treated as) `num_bytes`, and the old code passed it straight through as
+`SDL_QueueAudio`'s byte-length argument with no conversion. `SDL_QueueAudio`'s `len` parameter is
+a byte count, not a sample count, so every single call queued only **half** the correct number of
+bytes to SDL — the back half of every PCM buffer's bytes was silently dropped, unconditionally,
+since the day this bridge was written, independent of whether the ucode upstream produces correct
+content. `M5-AUDIO-PLAN.md` §4 Step 6 explicitly described this host bridge as "already fully
+implemented and functional... confirmed by the runtime survey, not assumed" — **that claim is
+overturned** (see `docs/CURRENT-TRUTH.md` superseded section). Fixed in the same edit: renamed the
+parameter to `num_samples` and multiply by `sizeof(int16_t)` before calling `SDL_QueueAudio`.
+Added `ROGUESQ_LOG_PCM_SANITY` (`[pcm-sanity]`) alongside it in the same function/build (batch
+instrumentation rule — one build, one run for everything this step needs). `src/main/main.cpp`
+only, no `lib/` touch, no regen pipeline needed (host-side C++, not recompiled guest code).
+
+Ran two soaks with the new build (`ROGUESQ_AUDIO_UCODE=1` + `ROGUESQ_LOG_PCM_SANITY=1`, HOLD_S=120,
+`run_s327waitpump.sh` baseline, all standing guards armed):
+
+- **verify1**: crashed pre-title (`title_reached` blank), `[pcm-sanity]` fired 7 times via the
+  s327 emergency direct-`musyxSynthFrame`-pump path (`audtask_n=0` — real RSP `M_AUDTASK` dispatch
+  never happened before the crash), all 7 calls `all_zero=1`. Crash signature
+  `pc-symbol=musyxSynthFrame+4652`, `last-guest-pc=0x8000834c` — checked against the ledger before
+  treating this as new: this is **byte-for-byte the same** pre-title crash already documented at
+  CURRENT-TRUTH item -222 (s367 `verify2`), already explained there as a coincidental "last
+  breadcrumb hit" global overwritten by an unrelated early crash, and already excluded from
+  counting under the standing "crash under ~5s that never reaches title_reached is not a
+  meaningful test" rule. Confirms this session's fix did **not** introduce a new pre-title crash —
+  it's the same pre-existing background noise.
+- **verify2**: `title_reached` at 45.6s (normal), ran ~84s into the 120s hold before an unrelated
+  crash (`pc-symbol=trackResourceListWithMappingTables+1228`, `last-guest-pc=0x80065e94`) —
+  `[pcm-sanity]` fired **13,825 times** over the run via genuine RSP-dispatched real ucode
+  (`[audtask-dispatch]` confirms `real_ucode=1` firing 147 times sampled, i.e. real M_AUDTASK
+  submission actively occurring, not just the emergency pump). Every single sampled call (n=0..19,
+  then every 256th through n=13824 per the standing resample convention) was `all_zero=1` — **zero
+  non-zero calls observed anywhere** in either run. `trackResourceListWithMappingTables+1228` is
+  very likely the same "Apple system-framework `dladdr` fallback" background-noise family already
+  cataloged at CURRENT-TRUTH (`+1192`, n=2 before this run, alongside `unregisterServiceWorker
+  +536`) — the few-byte offset shift is consistent with this session's binary changing layout, not
+  a different code location. That family's own escalation rule ("a 3rd independent hit is the
+  trigger") is arguably now met (n=3), but per the standing "no reactive single-crash chases"
+  directive this is being cataloged as a data point for the next M3 idiom-class audit, not chased
+  this iteration.
+
+**Step 6 verdict: Hypothesis 2 (silent-but-not-crashing) CONFIRMED, not merely plausible.** Across
+both the emergency-pump path (7 calls) and the genuine RSP-task-dispatched real-ucode path (13,825
+calls, `real_ucode=1` independently confirmed active in the same run), 100% of sampled PCM buffers
+handed to `queue_samples` were exactly all-zero. This is a positive-controlled result (the
+instrument fired thousands of times, and `audtask-dispatch` independently confirms real ucode
+dispatch was genuinely occurring, not just completing a no-op) — not a null result lacking a
+control. The "exactly zero, not merely near-zero" pattern across 13,825+ samples favors hypothesis
+2 (silent) over hypothesis 3 (garbage/incoherent-but-nonzero) specifically, though sampling every
+256th call rather than every call means a rare non-zero call between samples can't be fully ruled
+out — noted as a limitation, not overclaimed. Net: the real MusyX ucode, even when genuinely
+RSP-dispatched (not just kept from hanging via the s327 pump), completes without crashing but
+produces no audible content at all — the actual voice-mixing/synthesis step is either never being
+fed real voice data, or short-circuits to silence somewhere between task dispatch and this
+callback. This is the first real answer, either way, to "does audio actually play" for any of the
+4 original M5 crash families.
+
+`HYPOTHESIS-ID` stays `m5-audio-destub-step6-pcm-sanity` (iteration 2 next, if pursued further) —
+next work is source-tracing why the real ucode's mix/synthesis path produces all-zero output
+(voice array never populated? mixing gated off? wrong buffer being read?), OR pivoting per the
+strategic priority order if this is judged sufficient to close Step 6 as "answered: no, not yet."
