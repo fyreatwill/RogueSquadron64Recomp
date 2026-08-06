@@ -26,7 +26,10 @@ Priority order for upcoming iterations, set after the 300-session review:
    Overturned conclusions) and added `ROGUESQ_LOG_PCM_SANITY`; two soaks logged 13,832 total calls (7
    via the s327 direct-pump path, 13,825 via genuine RSP-dispatched `real_ucode=1`) and **every single
    sampled call was all-zero** — hypothesis 2 (silent-but-not-crashing) confirmed, not merely
-   plausible. Detail: Next-steps item -227; live status/decision trees: NEXT.md.
+   plausible. s374 reopened (Option A) WHY reversing the C88 site causes the pre-title hang: a
+   bounded source-only pass found a specific, previously-undocumented single-token-mutex-deadlock
+   candidate (`HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang`, iteration 1) — not yet build-soak
+   confirmed. Detail: Next-steps item -228; live status/decision trees: NEXT.md.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -154,7 +157,41 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -227 (s373); the next new item takes -228 and is inserted at the top.
+oldest). Current top is -228 (s374); the next new item takes -229 and is inserted at the top.
+
+-228. **(s374) M5 pre-title-hang mechanism, OPTION A first pass: found a specific, previously-
+    undocumented single-token-mutex-deadlock candidate — not yet build-soak confirmed.**
+    `HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang`, iteration 1/3 of its budget. Source-only pass
+    (per NEXT.md's own instruction not to build blind): `waitForAnyAudioSlot`
+    (`N64Recomp/RecompiledFuncs/funcs_15.c:7217`) is called from `cinematicLoopBody`'s
+    gate-independent, timer-triggered cutscene-teardown block (`funcs_27.c:108288`) — squarely
+    inside the pre-title boot window. Under gate=1 (the C88-reversed state under test), its
+    per-iteration `tickMusyXIfActive` call reaches `factor5MutexAcquire` for the first time ever,
+    blocking on `osRecvMesg_recomp` against a single-token queue (`initFactor5Mutex`,
+    `funcs_24.c:5703-5745`, `count=1`) that is unconditionally destroyed and recreated EVERY VIDEO
+    FRAME by `reapplyAudioConfig`→`initFactor5Mutex` (`funcs_24.c:5070`), itself called every frame
+    from `reapplyDisplayMode`→`runVideoFrameTick` (already established s373). Under gate=0
+    (baseline) this per-frame churn is inert; under gate=1 it's live for the first time in the
+    project's history — a live queue-recreation race against a blocking receive. The existing
+    `waitForAnyAudioSlot` 500000-iteration safety guard (s301) is structurally unable to catch this:
+    it only checks after a full loop-body iteration completes, and one blocking `osRecvMesg_recomp`
+    means the loop never completes even a second iteration. Explains the s342 log signature (VI
+    stuck at 640, but `[voice-active-gate-hb]`/`[voice-cursor-hb]` heartbeats kept incrementing for
+    the full 600s) because those heartbeats live in `musyxMixActiveVoices`
+    (`funcs_24.c:2477`), on the separate, gate-independent, VI-retrace-driven `musyxSynthFrame`
+    path — not on `waitForAnyAudioSlot`'s call chain, so a deadlock there wouldn't stop them.
+    **Not yet resolved from source**: whether `runVideoFrameTick` and `cinematicLoopBody` run on the
+    same cooperative thread context (i.e. whether the race is even physically reachable), and how
+    the OS-thread scheduler (`lib/N64ModernRuntime`) behaves when a message queue is recreated while
+    a receiver may be blocked on it. Also still open: item -227's original "what specifically drives
+    VI 640→1024 in the gate=0 baseline" — no such site was located in the traced call chains; may be
+    moot if the deadlock is confirmed (any main-thread deadlock blocks downstream progression
+    regardless of the specific trigger), stays as fallback if the deadlock trace comes back negative.
+    Next step (already specified): env-gated enter/exit+timestamp logging around
+    `factor5MutexAcquire`/`Release`/`initFactor5Mutex`, specifically bracketing the
+    `osRecvMesg_recomp` call at `funcs_24.c:5781`; one build, one C88-reversed soak; check whether
+    the log freezes mid-`osRecvMesg_recomp` at the exact moment VI sticks at 640 — the discriminating
+    measurement. Full detail: `PORTING-STATE` Session 374; exact commands: NEXT.md.
 
 -227. **(s373) M5 Step 6 "why is PCM silent" ANSWERED via source trace, no new soak needed:
     voice population is structurally blocked by the same gate the boot-hang fix requires.**

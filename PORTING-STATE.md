@@ -32017,3 +32017,77 @@ repositories (`RogueSquadron64Recomp/docs/*`, `N64Recomp/RecompiledFuncs/funcs_2
 its question ("why is PCM silent") has a source-grounded answer. See NEXT.md for the follow-on
 decision (reopen the C88-hang mechanism vs. pivot to M3 idiom-class audits per the strategic
 priority order).
+
+## Session 374 (2026-08-05) — M5 audio: picked Option A (reopen the C88 pre-title hang mechanism), bounded source-only first pass found a new, specific, previously-undocumented candidate mechanism — no build/soak this session per NEXT.md's own instruction
+
+Explicit decision from s373's NEXT.md fork: took **Option A** (reopen the C88-hang mechanism), not
+Option B (pivot to M3). Rationale: NEXT.md specified a bounded, source-read-only FIRST probe before
+any build, with an explicit fallback to Option B "if [it] doesn't quickly narrow the field." It did
+narrow the field — see below — so continuing on Option A is the correct call, not a default.
+`HYPOTHESIS-ID: m5-audio-destub-c88-pretitle-hang`, iteration 1 of its budget.
+
+**Method**: grepped every caller of `tickMusyXIfActive`/`tickActiveSongs`/`tickAndReap3DAudioVoices`
+and of `waitForAnyAudioSlot` (the function CURRENT-TRUTH's M5 rationale already names as a recurring
+crash family — "waitForAnyAudioSlot boot deaths") directly, then delegated the deep multi-file
+call-chain trace to an Explore subagent scoped to 3 discriminating questions (own the same method
+s304 used for the VI=320 hang, applied to the pre-title hang). Spot-checked the subagent's two
+most load-bearing citations myself before trusting them (both confirmed, see below).
+
+**Finding**: `waitForAnyAudioSlot` (`N64Recomp/RecompiledFuncs/funcs_15.c:7217`) is called from
+`cinematicLoopBody`'s cutscene-teardown block (`funcs_27.c:108288`, confirmed independently — the
+call sits right after a `static_6_800AF60C`/`static_6_800AF550` timer-threshold check, gate-byte-
+independent, so this path fires deterministically once the intro cutscene's timer expires, squarely
+inside the pre-title boot window). Its per-iteration body calls `tickMusyXIfActive`, and under
+gate=1 (the reversed state under test) this reaches `factor5MutexAcquire` for the first time ever —
+which blocks on `osRecvMesg_recomp` against a **single-token** (`osCreateMesgQueue_recomp(...,
+count=1)`) message queue set up by `initFactor5Mutex` (`funcs_24.c:5703-5745`, confirmed
+independently: `osCreateMesgQueue_recomp` at `0x80091FE4` with `count=1` at `0x80091FE8`, followed by
+one `osSendMesg_recomp` at `0x80091FF4`). That exact same queue is **destroyed and recreated every
+single video frame**, unconditionally, by `reapplyAudioConfig` calling `initFactor5Mutex` again
+(`funcs_24.c:5070`, confirmed independently: `0x80091CAC jal 0x80091FC4` = `initFactor5Mutex`) —
+and `reapplyAudioConfig` is itself called every frame from `reapplyDisplayMode`
+(`funcs_23.c:9805`), which is called every frame from `runVideoFrameTick` (`funcs_0.c:1459/1780`,
+already established s373). Under gate=0 (current baseline) this per-frame queue churn is completely
+inert because `tickMusyXIfActive` never reaches `factor5MutexAcquire`. Under gate=1 it is live for
+the first time in the project's history. The existing `waitForAnyAudioSlot` safety guard (s301,
+`ROGUESQ_WAITFORSLOT_GUARD_CAP`, default 500000 loop iterations) is structurally unable to catch
+this: it only increments/checks after a FULL loop-body iteration completes, and a single blocking
+`osRecvMesg_recomp` call means the loop never completes even one more iteration to trip the counter.
+
+**Why other subsystems keep ticking while this would hang (explains the s342 log signature)**: the
+`[voice-active-gate-hb]`/`[voice-cursor-hb]` heartbeats that stayed live for the full 600s in the
+s340bothgates/s342 logs live inside `musyxMixActiveVoices` (`funcs_24.c:2477`), which is on the
+separate, gate-independent, VI-retrace-driven `musyxSynthFrame` path (already established
+unconditional, `M5-AUDIO-PLAN.md` §1) — not on `waitForAnyAudioSlot`'s call chain. A deadlock
+specific to whatever thread runs `cinematicLoopBody`→`waitForAnyAudioSlot` would not stop that
+other path's heartbeats, matching the observed "VI stuck at 640, `pairs=0`, but audio/DMA counters
+still incrementing" signature exactly.
+
+**What this does NOT resolve** (same subagent's own honest caveat, and correct): whether
+`runVideoFrameTick` and `cinematicLoopBody` execute on the same cooperative "thread" context (making
+the queue-recreation race actually reachable — this determines if the mechanism is even physically
+possible, not just plausible on paper), and how `osRecvMesg_recomp`/`osCreateMesgQueue_recomp` in the
+ultramodern/librecomp OS-thread scheduler behave when a queue is recreated while a receiver may be
+blocked on it. Neither is visible from the recompiled-C source alone — this is a genuine "source
+pass narrowed the field, now needs build+soak" outcome, not a false dead end. Also unresolved: item
+-227's original Q2 (what specifically drives the VI 640→1024 transition in the gate=0 baseline) —
+no display-mode/VI-width-1024 write or intro-state-machine gate was found in the traced call chains;
+this may not matter if the mutex-deadlock mechanism above is confirmed (a deadlocked thread would
+prevent ANY downstream progression regardless of what the specific 640→1024 trigger is), but stays
+open as a fallback explanation if the deadlock trace comes back negative.
+
+**Next step (already specified, not vague)**: add env-gated enter/exit + timestamp logging around
+`factor5MutexAcquire`/`factor5MutexRelease`/`initFactor5Mutex` (mirroring the existing
+`[audio-drain-*]` instrument style at `funcs_15.c:7220-7226`), specifically logging immediately
+before/after the `osRecvMesg_recomp` call inside `factor5MutexAcquire` (`funcs_24.c:5781`), one
+build carrying this plus the queue-recreation site in `initFactor5Mutex`, one soak reproducing the
+C88-reversed pre-title hang, check whether the log freezes mid-`osRecvMesg_recomp` at the exact
+wall-clock moment VI sticks at 640. This is the DISCRIMINATING measurement: if it freezes there,
+mechanism confirmed; if the log keeps moving past that point while VI is still stuck, this mechanism
+is refuted and Q2 (the still-unlocated 640→1024 trigger) becomes the only remaining thread — full
+detail and exact commands in NEXT.md.
+
+Not chased further this session per NEXT.md's own instruction ("do NOT build blind before this
+source pass") — this session used the pass to decide whether Option A was worth continuing, and it
+was; the build+soak itself is the next iteration's work unit, not this one's. `docs/CURRENT-TRUTH.md`
+item -228 records this; NEXT.md rewritten with exact commands and expected outcomes.
