@@ -32889,3 +32889,50 @@ idiom-class audits (M5 has no open thread as of s376).
 
 Outcome: ADVANCED (final 4 patch sites converted, running total 168 of 176, backport task fully closed out —
 verification found no regression, soak clean with a genuine positive-control VI-phase timeline).
+
+## Session 387 (2026-08-06) — post-backport follow-up: `runHangarMenuFromOverlay`/`hasKasanMoorDefected` collision fix (Option A from s386's NEXT.md)
+
+Picked Option A of the two live follow-up items named at s386 close-out (smallest, well-scoped). The
+file-scoped patch at `fixup_game_funcs.py` (the `L_800C68AC:` bare-label `re.subn`, originally the s179
+`runHangarMenuFromOverlay` loop-iteration diagnostic) had no `p.name` guard, so it silently patched both
+files where that label text occurs: `funcs_43.c` (`static_5_800C6854`, the real `runHangarMenuFromOverlay`,
+confirmed by its `RECOMP_FUNC` symbol name) and `funcs_29.c` (`hasKasanMoorDefected`, an unrelated function
+in a different overlay file that happens to reuse the identical local-label text `L_800C68AC` at its own
+equivalent code offset). Confirmed the collision empirically before touching anything: a clean baseline
+regen (cleared `RecompiledFuncs/`, `make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`) produced the report
+line `funcs_29.c: runHangarMenuFromOverlay loop-iteration diagnostic patched x1` alongside the correct
+`funcs_43.c` line — i.e. `hasKasanMoorDefected` really was getting the diagnostic spliced into its body
+under a misleading comment naming the wrong function.
+
+Fix: added `if p.name == "funcs_43.c" else (text, 0)` to the `re.subn` call, restricting the patch to the
+file `runHangarMenuFromOverlay` actually lives in.
+
+Verification (same protocol as every backport batch): backed up `fixup_game_funcs.py`, cleared
+`RecompiledFuncs/`, regenerated (before, unedited script) → `fixup_report_before.txt` + a full SHA-256 tree
+snapshot of all 45 `.c` files; applied the edit; cleared `RecompiledFuncs/` again, regenerated (after) →
+`fixup_report_after.txt` + a second tree snapshot. `diff` on the two reports: exactly one line removed
+(`funcs_29.c`'s spurious match), nothing else changed. `diff` on the two tree snapshots: exactly one file's
+hash changed (`funcs_29.c`); `funcs_43.c` and all other 43 files byte-identical. This is precisely the
+targeted fix with no collateral scope creep — the discriminating measurement named in this option's plan
+came out exactly as predicted.
+
+Build: `cmake --build -j8` clean (same pre-existing DDIV/DMULT sign-conversion warnings as always, no new
+ones).
+
+Soak: launched via a `cd`-into-`build/`-then-exec wrapper script (the s382-established fix for the cwd
+false-clean bug), backgrounded 120s, SIGKILLed. 0 crash markers over 17,375 log lines; VI reached the full
+0→320→640→1024→640→512 phase timeline (all 5 widths observed, including the reverse transitions back down
+that s386's run didn't show — read as normal run-to-run variance in this window, not a regression signal,
+since it's a later, unrelated phase than anything this patch touches).
+
+No `lib/` files were touched this session (the edit lives entirely in the standalone `~/Documents/Tools/
+N64Recomp` tool checkout, which is untracked by git there — the established pattern for every prior backport
+batch too), so `submodule-patches/export.sh` does not apply and was not run.
+
+`docs/CURRENT-TRUTH.md` updated: this follow-up item marked done and removed from the live list; only the
+`musyxSynthFrame`/`initN64RspMixer` ownership question remains open. Next work unit: that question (Option
+B), or move to M3 idiom-class audit work (Option C) if Option B is deferred.
+
+Outcome: ADVANCED (fixed a real silent multi-file collision bug in sanctioned tooling; verified via
+byte-identical-except-the-one-intended-line regen-diff on both the report and the full tree; build + soak
+clean with a genuine VI-phase-timeline positive control).

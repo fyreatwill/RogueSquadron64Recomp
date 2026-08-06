@@ -56,15 +56,19 @@ value.
 `reapplyDisplayMode` audio-gate hand patch (deliberately volatile/experimental, file-scoped on purpose);
 (3-4) the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair (deliberately dual-target); (5) the
 `_s284_deref_guard_sites` multi-function guard loop (deliberately multi-function); (6) the
-`runHangarMenuFromOverlay`/`hasKasanMoorDefected` bare-label collision (needs a dedicated `p.name`-filter
-fix, not this idiom — live follow-up item below); (7) `tickAudioSequencerFrame`'s exit diagnostic (match
-text spans past this function's own body into the next function's signature, can't be body-scoped without
-breaking it); (8) `musyxSynthFrame`'s `synth-rearm-ptr` diagnostic (real anchor lives inside
-`initN64RspMixer`, not this function — live follow-up item below, ownership question unresolved).
+`runHangarMenuFromOverlay`/`hasKasanMoorDefected` bare-label collision (FIXED s387, see below — this was a
+real bug, not by-design, so it's out of the exclusion set now that it's fixed); (7)
+`tickAudioSequencerFrame`'s exit diagnostic (match text spans past this function's own body into the next
+function's signature, can't be body-scoped without breaking it); (8) `musyxSynthFrame`'s `synth-rearm-ptr`
+diagnostic (real anchor lives inside `initN64RspMixer`, not this function — live follow-up item below,
+ownership question unresolved).
 
-Two follow-up items remain, each its own small future work unit, not part of this closed backport:
-- **`runHangarMenuFromOverlay`/`hasKasanMoorDefected` collision fix**: add `p.name` filtering to that one
-  file-scoped patch so it only matches the overlay file the intended function actually lives in.
+(s387) `runHangarMenuFromOverlay`/`hasKasanMoorDefected` collision: fixed. Added `p.name == "funcs_43.c"`
+to the `L_800C68AC:` bare-label patch so it only fires in `runHangarMenuFromOverlay`'s real home file,
+not `hasKasanMoorDefected`'s (a different overlay function that happened to reuse the same local-label
+text). Byte-identical regen-diff confirmed exactly one file changed (`funcs_29.c` lost the spurious
+match, `funcs_43.c` unaffected); build+soak clean (0 crash markers, full VI phase timeline). One follow-up
+item remains live:
 - **`musyxSynthFrame`/`initN64RspMixer` `synth-rearm-ptr` ownership question**: does the
   `ROGUESQ_LOG_AUDIOTICK_TRACE`-gated diagnostic at `0x800919D4` genuinely belong in `initN64RspMixer`
   instead of `musyxSynthFrame`? Not urgent (diagnostic isn't armed in any soak recipe).
