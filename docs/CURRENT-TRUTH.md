@@ -110,9 +110,9 @@ FIXED (M1 closed s48; `SHADE_WRAP` s25; ImemOverrun s69 + depth-writeback SIGBUS
 Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regression sweep. 0
 `UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
-~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403+s405+s406+s407
-have fixed 105 of the corrected 778-candidate count (672 remain, 1 permanently excluded as known-bad,
-item -249). Post-`a` process now soaks well past 65s without death.
+~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403+s405+s406+s407+
+s408+s410 have fixed 185 of the corrected 778-candidate count (613 remain per a fresh regen, 1
+permanently excluded as known-bad, item -249). Post-`a` process now soaks well past 65s without death.
 
 ## Goal stack — work strictly top-down
 
@@ -139,10 +139,11 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249..-257, IN PROGRESS: 145/778 done
-s400-s408, 653 remain per a fresh regen (648 actionable, 4 known-skip, 1 known-bad), largest M4 item
+`main_overlay.txt` phantom-overlay-function family (item -249..-257, IN PROGRESS: 185/778 done
+s400-s410, 613 remain per a fresh regen (608 actionable, 4 known-skip, 1 known-bad), largest M4 item
 open — s404-s407 found, bisected, and fully resolved a 20-name crash batch down to one genuinely-buggy
-function (parked); s408 resumed ordinary bulk relocation post-closure, two more clean n=20 batches).
+function (parked); s408 and s410 each resumed ordinary bulk relocation post-closure with two more clean
+n=20 batches).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -157,10 +158,10 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
 oldest). Current top is -257 (s408); the next new item takes -258 and is inserted at the top.
 
--249..-257. **(s400-408) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
+-249..-257. **(s400-410) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
     proven, a batch-size regression found+fixed, a genuine crash bisected to one confirmed-bad
-    function, ordinary bulk relocation now resumed. 145/778 done, 653 remain (648 actionable, 4
-    known-skip, 1 known-bad) as of s408.** s400 landed batch 1 (20/801) and proved the tooling
+    function, ordinary bulk relocation now resumed. 185/778 done, 613 remain (608 actionable, 4
+    known-skip, 1 known-bad) as of s410.** s400 landed batch 1 (20/801) and proved the tooling
     (`s400_probe_batch.py`/`s400_apply_batch.py`, positive-control via `make_elf.py`'s
     unmapped-functions-skipped counter). s401 attempted the full ~774-item remainder in one sweep: it
     linked, but caused a new deterministic title-screen SIGBUS; reverted, and root-caused the
@@ -176,9 +177,11 @@ oldest). Current top is -257 (s408); the next new item takes -258 and is inserte
     `initPlayerCraftTrailBuffers`, now recorded in `scratch/agent/m4_known_bad.txt`, permanently
     parked, do NOT re-attempt without a dedicated root-cause session — and relocating the other 19
     clean, closing the crash-bisection sub-thread entirely. s408 resumed ordinary bulk relocation
-    post-closure with 2 more clean n=20 batches, reaching 145/778. `HYPOTHESIS-ID:
-    m4-main-overlay-phantom-functions` (iteration 15 as of s408; exact next-batch recipe in
-    `scratch/agent/NEXT.md`). Full per-session detail: `PORTING-STATE` Sessions 400-408.
+    post-closure with 2 more clean n=20 batches, reaching 145/778. s410 continued the same cadence with
+    2 more clean n=20 batches (0 ambiguous, 0 crashes, both live-verified to `lastW=640`), reaching
+    185/778 (613 remain per a fresh regen). `HYPOTHESIS-ID: m4-main-overlay-phantom-functions`
+    (iteration 16 as of s410; exact next-batch recipe in `scratch/agent/NEXT.md`). Full per-session
+    detail: `PORTING-STATE` Sessions 400-410.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
     (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by

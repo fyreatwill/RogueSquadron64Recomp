@@ -34597,3 +34597,43 @@ paragraph removed since that maintenance is now done.
 Outcome: ADVANCED (a documentation-compaction maintenance pass with a 231-net-line shrink, exceeding the
 contract's >=200-line ADVANCED threshold; no experiment attempted, none was in scope for this iteration
 type).
+
+## Session 410 (2026-08-06) — M4 item -249 bulk relocation, two more clean n=20 batches (+40, 185/778
+done per running tally; fresh regen after this session shows 613 remain).
+
+Step 0 check: `wc -c docs/CURRENT-TRUTH.md` printed 39,696 bytes, under the 60,000 maintenance trigger —
+ordinary work-unit iteration, continuing the M4 item -249 bulk-relocation cadence from `scratch/agent/NEXT.md`.
+
+Regenerated the candidate list fresh per the s404/s408 bookkeeping lesson
+(`python3 scratch/agent/s408_gen_candidates.py`): 653 candidates, matching s408's ending count exactly (no
+drift this time). Filtered out the 4 `m4_known_skip.txt` names and the 1 `m4_known_bad.txt` name
+(`initPlayerCraftTrailBuffers`), leaving 648 actionable candidates in file order.
+
+**Batch 1** (`sayAnotherVictoryRogueSquadron_v0x230` .. `say2LastGroupScannedHereCome_v0x17`, 20 names):
+probed 19 CONFIRMED + 1 WEAK, 0 ambiguous/none — applied to `mission_overlay.txt`. Positive control:
+`unmapped functions skipped` 658→638 (exactly −20). Regenerated (RecompiledFuncs cleared first per the
+item -20 standing rule) → N64Recomp → fixup (0 errors) → build (rc=0, 0 `error:` lines). `nm`-confirmed
+20/20 names present with count=1. Live-verify: `zsh tools/probe.sh scratch/agent/s410_verify1 45 2` with
+`PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1` — reached `phase width=512` at 88.7s,
+continued to `lastW=640`, exit 0, 0 crash markers (`CRASH`/`SIGBUS`/`SIGSEGV`/`UnhandledJumpTarget`/
+`dmem-race`/`defer-drop`/`assert`), only the same 1 known pre-existing `[missing-func] 0x800FB9E4`. Clean.
+
+**Batch 2** (`say2SirWeveFoundSomeSeeker_v0x299` .. `playPairedDialogue_0x246_0x0ED`, 20 names): probed
+20/20 CONFIRMED, 0 ambiguous/none — applied to `mission_overlay.txt`. Positive control: `unmapped
+functions skipped` 638→618 (exactly −20). Same regen/build/nm-confirm/live-verify sequence: reached
+`phase width=512` at 88.7s, continued to `lastW=640`, exit 0, 0 crash markers, only the same 1 known
+pre-existing `[missing-func]`. Clean.
+
+**Two consecutive clean batches — the documented stopping point for one iteration.** Final repo state:
+`unmapped functions skipped` = 618.
+
+**Item -249 tally: 185/778 done (was 145/778 after s408).** A fresh post-session regen shows 613
+func-only candidates remaining (4 known-skip + 1 known-bad + 608 actionable) — 185+613=798 vs. the
+original 778 baseline continues the same pre-existing "N remain" drift documented s404/s408/s409 (not a
+new bug this session; the fresh-regen count itself, 653→613, exactly matches the 40 relocations applied,
+so the drift is in the original 778 baseline/bookkeeping, not in this session's arithmetic).
+
+Sibling-repo symbol-file edits (`main_overlay.txt`/`mission_overlay.txt`) are uncommitted per the
+standing item -3 rule (ask the user before committing there).
+
+Outcome: ADVANCED (40 real relocations landed across two independently live-verified batches).
