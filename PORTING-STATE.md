@@ -31581,3 +31581,54 @@ gone.
 
 `HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` — Thread A is a sibling thread
 under the same M5 Step 5 umbrella, not the primary slug; its closure doesn't change the active thread.
+
+## Session 367 (2026-08-05): Drained Thread B's `s365` verify pair — 1 genuine non-recurrence (full clean hold, all guards 0) plus 1 uninformative pre-title crash; queued a second pair for the closure bar's 2nd data point
+
+Session-start mechanical check (per the now-standing gotcha): `grep -c s365_drainmeshtailptrguard
+scratch/agent/SOAK-RESULTS.md` showed 2 — the `s365_drainmeshtailptrguard_verify1/2` pair queued at
+the end of s365/s366 had already drained. Read both logs directly rather than trusting NEXT.md's
+"still queued" claim.
+
+`s365_drainmeshtailptrguard_verify1` (launcher_rc=0, 446s, rc=0): CLEAN. `title_reached` fired at
+45.2s (a genuine post-title test). Every single guard fire counter in the run — `coalesce_guard_fire_n`,
+`read_guard_fire_n`, `write_guard_fire_n`, all five `loopN_guard_fire_n`/`loopN_write_guard_fire_n`,
+all five `headN_guard_fire_n`/`headN_clear_guard_fire_n`, all five `tailptrN_guard_fire_n`, and
+`ring_fire_n` — read 0. This is the first run in the entire s350-367 guard-hunting arc where NOTHING
+fired at all and the process still held for the full duration: not just "the crash moved past this
+guard," but "no guard's condition was ever even met." Consistent with (does not yet prove) the
+s366 static-exhaustiveness finding: if the 3-family × 5-loop coverage really is exhaustive, a clean
+run with zero fires is exactly what a non-corrupted execution should look like.
+
+`s365_drainmeshtailptrguard_verify2` (launcher_rc=4, rc=1, ~1s): crashed almost immediately.
+`title_reached` is blank — the run never got past the pre-title boot window (title reach normally
+happens ~45s in), so per the standing "a crash under ~5s that never reaches title_reached is not a
+meaningful test of any post-title-window instrument" rule this is NOT a non-recurrence data point
+either way; it doesn't confirm or refute anything about `drainMeshReleaseQueue`. Crash detail for the
+record: `last-guest-pc=0x8000834c`, `pc-symbol=musyxSynthFrame+4652`. The guest-pc value is the same
+one flagged in s366 as the new `heapWalker+1696` background-noise entry's checkpoint — worth a
+deliberate check to avoid a false pattern-match. Source context: `0x8000834c` is
+`drainMeshReleaseQueue`'s own final checkpoint write (the `nop` immediately before `return`,
+per s366's cross-check), which is a *global* "last breadcrumb hit" location — it holds whatever value
+was last written to it by *any* call to that function, and does not get reset between runs/calls. The
+actual crash this time is in `musyxSynthFrame`, an audio ucode-frame-processing routine, during the
+pre-title boot window — a completely different subsystem than `drainMeshReleaseQueue`/`heapWalker`,
+almost certainly one of the audio-boot-death family the M5 directive already names
+("waitForAnyAudioSlot boot deaths ... MusyX DMA"). The shared guest-pc value is coincidental — an
+artifact of the checkpoint variable's persistence, not evidence linking the two crash families.
+Recorded as informational only; not added to the background-noise catalogue (that catalogue tracks
+guest-code crash *symbols*, and this one already has an unambiguous symbol of its own,
+`musyxSynthFrame+4652`, unrelated to the tracked entries).
+
+Net for Thread B's closure bar (set at item -221/NEXT.md: static exhaustiveness audit, done s366, plus
+TWO empirical non-recurrence soaks): 1 of 2 non-recurrence soaks now banked (`verify1`). Queued
+`s367_drainmeshtailptrguard_verify3.sh` and `s367_drainmeshtailptrguard_verify4.sh` (same recipe —
+`HOLD_S=240`, all current guard instruments armed) to the soak queue for the second data point. If
+both come back clean/outside-the-function (and reach title), Thread B closes next session on two
+independent lines of evidence (static + empirical) per the decision tree already written into
+NEXT.md. If a tailptr/head/loop guard fires for the first time, that's a positive control instead and
+the thread stays open with new evidence to chase.
+
+No code changed this session (soak-triage + queue-only); `lib/` untouched, no `export.sh` needed.
+
+`HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` (iteration 11) — Thread B is the
+active thread; Thread A stays closed (s366).

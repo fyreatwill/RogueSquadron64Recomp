@@ -20,11 +20,13 @@ Priority order for upcoming iterations, set after the 300-session review:
    `m5-audio-destub-linkedlist-corruption-source` (`drainMeshReleaseQueue`, still ACTIVE — three
    distinct unguarded pointer families found across the same 5 structurally identical loops: tail-scan
    cursor, head pointer, and a "global-tail" write-through, all guarded s350-365; a s366 proactive
-   idiom-class audit found no further gap, exhaustive pending the still-queued `s365` verify pair's
-   empirical confirmation; byte-identical poisoned value `bad_v1=0x00010001` the strongest lead) and
+   idiom-class audit found no further gap, and s367 drained the s365 verify pair with 1 genuine
+   non-recurrence (full clean hold, all guards 0) — 1 of the 2 non-recurrence soaks needed to close,
+   a second pair (`s367_..._verify3/4`) now queued; byte-identical poisoned value `bad_v1=0x00010001`
+   the strongest lead) and
    `m5-audio-destub-coalesce-heap-guard-verify` (`coalesceFreeHeapBlocks`, guarded s354, bail-target
    bug fixed s358, **CLOSED s366** — 6/6 non-recurrence soaks post-fix including one clean full-hold).
-   Detail: Next-steps items -221..-210 (folded); live status/decision trees: NEXT.md.
+   Detail: Next-steps items -222..-210 (folded); live status/decision trees: NEXT.md.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -152,7 +154,26 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -221 (s366); the next new item takes -222 and is inserted at the top.
+oldest). Current top is -222 (s367); the next new item takes -223 and is inserted at the top.
+
+-222. **(s367) Thread B's `s365` pair drained: ONE genuine non-recurrence (full 446s clean hold,
+    every guard fire counter 0) plus one uninformative pre-title crash — one non-recurrence data
+    point toward the two needed to close the thread.** `verify1`: CLEAN, ran the full 446s hold,
+    `title_reached` at 45.2s, and for the first time in this whole arc EVERY guard fire counter was
+    0 across the board — coalesce, read/write, loop2-5, head1-5 (+clears), tailptr1-5, ring — nothing
+    intercepted anything and the process still held. `verify2`: crashed in under 5s, `title_reached`
+    blank (never reached the title screen at all), at `pc-symbol=musyxSynthFrame+4652` — an unrelated
+    pre-title audio-boot crash in a different subsystem entirely, not a `drainMeshReleaseQueue`
+    recurrence. Its `last-guest-pc=0x8000834c` coincidentally matches the s366
+    `heapWalker+1696` background-noise checkpoint value, but source-checked that this is a global
+    "last breadcrumb hit" variable that persists across calls — a coincidence of which breadcrumb
+    last wrote it before an unrelated early crash, not evidence linking the two. Per the standing
+    "crash under ~5s that never reaches title_reached is not a meaningful test" rule, `verify2` does
+    not count toward the non-recurrence tally. Net: 1 of the 2 non-recurrence soaks NEXT.md's
+    closure bar calls for (static exhaustiveness audit, s366, already done; empirical non-recurrence
+    now at 1/2). Queued `s367_drainmeshtailptrguard_verify3/4.sh` for the second data point — same
+    recipe, all current guard instruments armed. No code changed. Full detail: `PORTING-STATE`
+    Session 367.
 
 -221. **(s366) Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) CLOSED — 6/6 non-recurrence
     soaks post-s358-fix, including one clean full-hold — plus a proactive idiom-class audit found
