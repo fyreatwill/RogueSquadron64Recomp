@@ -43,7 +43,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
-Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the file-scoped-only guard patches in fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment. **IN PROGRESS as of s377**: real count is 176 (an AST scan, not a grep guess), not the "~100"/docstring's "~150" estimates; batch 1 converted 23, verified byte-identical fixup-report output before/after (strongest available proof of no behavior change), built and soaked clean. ~152 remain — next batch starts current line ~1519, detail and re-scan technique in NEXT.md.
+Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the file-scoped-only guard patches in fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment. **IN PROGRESS as of s378**: real count is 176 (an AST scan, not a grep guess). Batch 1 (s377) converted 23, batch 2 (s378) converted 21 more (44 total), both verified byte-identical fixup-report output before/after (strongest available proof of no behavior change), both built and soaked clean. **132 remain** — next batch targets the `funcs_3.c` drain-mesh/heap-walker guard cluster (the largest remaining block), re-scan technique in NEXT.md.
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -167,7 +167,28 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -231 (s377); the next new item takes -232 and is inserted at the top.
+oldest). Current top is -232 (s378); the next new item takes -233 and is inserted at the top.
+
+-232. **(s378) fixup_game_funcs.py function-scope-match backport, batch 2/N: 21 more of 153
+    remaining file-scoped patches converted (44/176 total), verified byte-identical output,
+    built+soaked clean.** Same methodology as batch 1, delegated to one self-contained subagent.
+    Re-ran the AST scan against current line numbers (they shift every batch): confirmed **153**
+    file-scoped sites remained pre-batch (176 − 23, exact arithmetic match — CURRENT-TRUTH's "~152"
+    was a rounding, not a discrepancy). Converted 21 sites across 8 functions: `reserveAndEmitDLEntry`
+    (2 sites), `activateAnimationKeyframe`, `composeNpcOrientationMatrix`/`static_5_800AB1C8` (9
+    sites), `projectModelBoundsToScreen` (3 sites), `updateHangarBayScene`/`static_5_800AB658` (3
+    sites), `musyxSynthFrame`, `acquireSampleStreamBlock`, `fillSampleStreamRange`. **Verification**:
+    two fresh `RecompiledFuncs/` regens (original-backed-up script vs. converted script) produced
+    byte-identical patch reports and a zero-diff `diff -rq` across all 48 output files — no latent
+    cross-function collision in this batch either. Build clean. ~100s soak clean (0 crash markers),
+    VI progressed the FULL 0→320→640→1024→640→512 phase timeline (unlike batch 1's single 70s sample
+    which stuck at 320 — this batch's fuller progression is a small additional data point that s377's
+    stuck-at-320 reading was ordinary run-to-run timing variance, not a refactor regression, per
+    Method traps §4.3). Excluded site-classes (`0x8008EC88` audio gate;
+    `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair) confirmed untouched via diff. **132
+    remain**; next batch's clear target is the `funcs_3.c` drain-mesh/heap-walker guard cluster (the
+    single largest remaining block — the hangar/reserve-list clusters batch 1+2 targeted are now
+    mostly drawn down). Full detail: `PORTING-STATE` Session 378; next work unit: NEXT.md (batch 3).
 
 -231. **(s377) fixup_game_funcs.py function-scope-match backport, batch 1/N: 23 of 176 file-scoped
     patches converted, verified byte-identical output, built+soaked clean.** Executed the sanctioned

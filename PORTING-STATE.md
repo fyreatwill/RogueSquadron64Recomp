@@ -32304,3 +32304,67 @@ the built binary); `fixup_baseline_report.txt`/`fixup_converted_report.txt` left
 
 Outcome: ADVANCED (real code change: 23 patch sites hardened against a documented fragility class,
 plus the actual inventory count this task previously only guessed at).
+
+## Session 378 (2026-08-06) — sanctioned tooling: fixup_game_funcs.py function-scope-match backport, batch 2/N (21 more of 153 remaining file-scoped patches converted)
+
+Continuation of s377's sanctioned tooling item, same methodology, delegated to one self-contained
+subagent per s377's own recommendation (it worked well for a task this mechanical and line-count-
+heavy). Step 1: re-ran the AST scan (`ast.parse`, filter `Call` nodes with `.attr == "subn"`
+referencing the bare `text` variable) against the current file rather than trusting s377's stale
+line numbers — found **153** file-scoped sites, exactly matching the arithmetic (176 total − 23
+converted by batch 1 = 153; CURRENT-TRUTH's "~152" estimate was a rounding of this same number, not
+a discrepancy).
+
+**Converted this batch: 21 sites across 8 target functions** — `reserveAndEmitDLEntry` (funcs_3.c,
+2 sites: free-list-pop guard loop, tail-walk guard loop), `activateAnimationKeyframe` (funcs_14.c, 1
+site), `composeNpcOrientationMatrix`/real symbol `static_5_800AB1C8` (funcs_40.c, 9 sites, guards
+1-9), `projectModelBoundsToScreen` (funcs_15.c, 3 sites, arg-pointer guards 1-3),
+`updateHangarBayScene`/real symbol `static_5_800AB658` (funcs_40.c, 3 sites: epilogue label,
+guard-sites A-E loop, deref-guard G1-G32 loop), `musyxSynthFrame` (funcs_24.c, 1 site, DMA-batch call
+diagnostic), `acquireSampleStreamBlock` (funcs_23.c, 1 site), `fillSampleStreamRange` (funcs_23.c, 1
+site). Same idiom as batch 1: locate the target function's `RECOMP_FUNC void <Name>(...)` signature,
+slice `body_start`/`body_end`, apply the identical unmodified regex pattern+replacement to `body`
+instead of whole-file `text`, reassemble.
+
+**Verification: byte-identical.** Two fresh `RecompiledFuncs/` regens (original pre-batch-2-backed-up
+script vs. converted script), full pipeline both times (`make_elf.py` -> `N64Recomp` -> deleted
+stale `RecompiledFuncs/*.c` -> `N64Recomp` again -> `fixup_game_funcs.py`, per item -20's standing
+rule against stale-file patch-stacking). Both the stdout patch-report logs and a full `diff -rq`
+across all 48 `RecompiledFuncs/*.c` files showed **zero differences** — every converted anchor was
+genuinely already unique per-function in this batch too, no latent cross-function collision.
+
+**Build**: `cmake --build . -j8` clean, 0 new errors (only the same 46 pre-existing `-Wpointer-sign`
+warnings already present before this session).
+
+**Soak**: ~100s run, standard `ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1
+ROGUESQ_STUB_MISSING_FUNCS=1` recipe, killed with SIGKILL (`kill -9`) per project convention. Zero
+crash markers (`[CRASH]`, `UnhandledJumpTarget`, assert, SIGSEGV/SIGBUS/SIGABRT all grep to 0). VI
+width progressed 0 -> 320 -> 640 -> 1024 -> 640 -> 512 (reached frame #1888, steady `[present-1024]`
+rendering at time of kill) — notably a FULLER phase-timeline traversal than s377's own 70s soak
+(which stayed stuck at VI=320 the whole window, flagged then as unlikely-regression given the
+byte-identical proof). This session's soak reaching the full 320->640->1024->640->512 progression is
+a small additional data point supporting that s377 read: the earlier stuck-at-320 result was indeed
+ordinary run-to-run timing variance (Method traps §4.3), not a symptom of the refactor, since the
+same class of edit (batch 2, same idiom, same script family) now shows normal phase progression.
+
+**Excluded site-classes confirmed untouched**: diffed all `0x8008EC88` /
+`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` occurrences between the pre-batch-2 backup and the
+final converted file — only line-number shifts from this batch's insertions elsewhere in the file,
+zero content changes to either excluded class.
+
+**Remaining**: **132 file-scoped patches** (153 − 21, confirmed by the subagent's own post-batch
+re-scan, not just arithmetic). No new clusters surfaced beyond what s377 already flagged; the
+`funcs_3.c` drain-mesh/heap-walker guard cluster (the single largest remaining block) is now the
+clear next target since this batch drew down most of the hangar/reserve-list cluster s377 flagged
+first.
+
+**Files touched**: `~/Documents/Tools/N64Recomp/fixup_game_funcs.py` (21 more patches converted,
+verified, built, soaked — untracked in its own repo, no git action needed there per existing project
+convention, confirmed still `??` before editing); `fixup_game_funcs.py.pre-scope-backport-backup-
+batch2` left in place as this batch's audit-trail backup (mirrors s377's own
+`.pre-scope-backport-backup` naming, just suffixed per-batch); `RecompiledFuncs/*.c` regenerated
+fresh to match the built binary. No commits made in N64Recomp (not a tracked concern per this
+project's convention for that sibling tool repo); nothing under `lib/` touched.
+
+Outcome: ADVANCED (real code change: 21 more patch sites hardened against the documented file-scope
+fragility class, running total 44 of 176 converted, 132 remain).
