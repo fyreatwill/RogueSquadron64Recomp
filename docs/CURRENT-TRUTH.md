@@ -109,9 +109,9 @@ FIXED (M1 closed s48; `SHADE_WRAP` s25; ImemOverrun s69 + depth-writeback SIGBUS
 Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regression sweep. 0
 `UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
-~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403 have fixed 86 of
-the corrected 778-candidate count (692 remain, item -249). Post-`a` process now soaks well past 65s
-without death.
+~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403+s405+s406 have
+fixed 101 of the corrected 778-candidate count (677 remain, item -249). Post-`a` process now soaks
+well past 65s without death.
 
 ## Goal stack — work strictly top-down
 
@@ -138,10 +138,11 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 96/778 done
-s400+s402+s403+s405, ~682 real remain, largest M4 item open — s404 found+reverted a 20-name
-regression, s405 bisected it: half landed clean [+10], half narrowed to a 10-name suspect set and
-parked, see items -253/-254).
+`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 101/778 done
+s400+s402+s403+s405+s406, ~677 real remain, largest M4 item open — s404 found+reverted a 20-name
+regression, s405 bisected it to a 10-name suspect set, s406 bisected that 10 into two 5s: one landed
+clean [+5], one still crashes and is narrowed further, parked pending n=2/3 bisection — see items
+-253/-254/-255).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -154,7 +155,30 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -254 (s405); the next new item takes -255 and is inserted at the top.
+oldest). Current top is -255 (s406); the next new item takes -256 and is inserted at the top.
+
+-255. **(s406) M4 item -249: bisected s405's 10-name crash suspect set at n=5 — quarter 1 landed
+    clean, quarter 2 reproduced the crash byte-identically and is narrowed further. 101/778 done, 677
+    remain.** Split the 10 (`submitCameraTrackedObjectToRender` ... `loadEffectModelInstancePool`,
+    all still in `main_overlay.txt` from s405's revert) into two file-order quarters of 5.
+    **Quarter 1** (`submitCameraTrackedObjectToRender`, `emitEffectParticlesAlongPath`,
+    `getEffectModelPoolHandle`, `beginCameraViewTransition`, `requestCameraSnapToTrackedAnchor`) —
+    applied, regenerated (positive control: unmapped-functions-skipped 707→702), rebuilt clean (295
+    warnings, same as s405 baseline), `nm`-confirmed, live-verified: 0 crashes, reached
+    `vi_width=512`→`640` (88.5s, 19 frames captured, `lastW=640` in the tail of the log) — **stays
+    applied (+5 real progress)**. **Quarter 2** (`beginCameraTrackedTransition`,
+    `advanceCameraTransitionOnCue`, `isCameraTransitionIdle`, `initPlayerCraftTrailBuffers`,
+    `loadEffectModelInstancePool`) applied on top (positive control: 702→697), rebuilt clean, all 10
+    names `nm`-confirmed present, live-verified: **crashed 2.1s after reaching `vi_width=512`**,
+    byte-identical to s404/s405's fault (`playerXwingInit+2068`, `last-guest-pc=0x80011088`) — proves
+    the culprit is inside this 5, and (by quarter 1's independent clean verify) NOT in the other 5.
+    Quarter 2 was surgically reverted back to `main_overlay.txt` (marked `s406:`,
+    `scratch/agent/s406_revert_q2.py`) and parked for a further n=2/3 bisection; rebuilt+regenerated
+    with quarter 1 alone applied to leave the repo in a clean, buildable, matching-source state
+    (positive control confirmed back to 702, same 295 warnings). `HYPOTHESIS-ID:
+    m4-main-overlay-phantom-functions` (iteration 12 — a third consecutive discriminating result under
+    this slug across s404-s406, genuine narrowing, no stall). Full detail: `PORTING-STATE` Session
+    406.
 
 -254. **(s405) M4 item -249: bisected s404's 20-name crash batch — isolated the culprit to the first
     10, landed the clean second 10. 96/778 done, ~682 remain.** Split the batch

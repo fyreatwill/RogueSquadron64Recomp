@@ -34385,3 +34385,55 @@ before committing there).
 
 Outcome: ADVANCED (a real discriminating bisection result — half of the previously-reverted batch is
 now landed as +10 real progress, and the crash is narrowed from a 20-name to a 10-name suspect set).
+
+## Session 406 (2026-08-06) — M4 item -249: bisected s405's 10-name crash suspect set at n=5, quarter 1 clean, quarter 2 narrowed further (+5, 101/778 done)
+
+Continued the bisection thread from s405's writeup (`HYPOTHESIS-ID: m4-main-overlay-phantom-functions`,
+iteration 12). s405 had isolated a 10-name suspect set (`submitCameraTrackedObjectToRender` ...
+`loadEffectModelInstancePool`) that reproduces a deterministic `playerXwingInit+2068` Bus error
+(`last-guest-pc=0x80011088`) when relocated together, and reverted all 10 back to `main_overlay.txt`
+pending an n=5 split. Verified at session start that all 10 names were present in `main_overlay.txt`
+(lines 3603-3612), matching s405's end-of-session state exactly (no drift).
+
+**Quarter 1** (`submitCameraTrackedObjectToRender 0x800add5c`, `emitEffectParticlesAlongPath
+0x800adf2c`, `getEffectModelPoolHandle 0x800ae280`, `beginCameraViewTransition 0x800ae290`,
+`requestCameraSnapToTrackedAnchor 0x800ae320`) — moved main→mission via `s400_apply_batch.py`,
+regenerated (`make_elf.py`: unmapped-functions-skipped 707→702, exactly −5, positive control), ran
+N64Recomp + `fixup_game_funcs.py` (both rc=0), full `cmake --build` (rc=0, 295 warnings — identical
+count to s405's `s405_half2_build.log` baseline, no new warnings), `nm`-confirmed all 5 names present
+in the binary. Live-verify (`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1
+ROGUESQ_STUB_MISSING_FUNCS=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1
+tools/probe.sh ... 45 2`): reached `vi_width=512` at 88.5s, captured 19 frames over the following
+43.8s with no gap, log tail shows `lastW=640` (the 640-phase transition happened within the capture
+window), 0 crash/Bus-error/SIGBUS lines in `run.log`. Clean — quarter 1 **stays applied**.
+
+**Quarter 2** (`beginCameraTrackedTransition 0x800ae358`, `advanceCameraTransitionOnCue 0x800ae390`,
+`isCameraTransitionIdle 0x800ae3bc`, `initPlayerCraftTrailBuffers 0x800ae3f0`,
+`loadEffectModelInstancePool 0x800ae138`) applied on top of quarter 1 (make_elf.py: 702→697, exactly
+−5, positive control), full regen+rebuild (rc=0, still 295 warnings), all 10 of the original suspect
+set `nm`-confirmed present. Live-verify: `phase width=512 reached after 88.5s`, then `process gone at
+2.1s after 1 frames`. `run.log` shows `[CRASH] caught signal 10 (Bus error: 10)`,
+`[CRASH][pc-symbol] pc=... sym=playerXwingInit+2068`, `[CRASH][last-guest-pc] pc=0x80011088` — **the
+exact same fault as s404 and s405's half 1**, byte-identical symbol, offset, and guest PC. This proves
+the culprit is inside quarter 2's 5 names, and — because quarter 1 was independently live-verified
+clean in isolation — proves it is NOT in quarter 1's 5.
+
+Reverted quarter 2 surgically (`scratch/agent/s406_revert_q2.py`, name-matched removal from
+`mission_overlay.txt` + re-append to `main_overlay.txt` with an `s406:` marker comment, same pattern as
+s405's `s405_revert_half1.py`) — refuses to run if any name is missing from `mission_overlay.txt`, so
+it doubles as a consistency check. Re-ran the full regen+build with quarter 1 alone applied
+(make_elf.py confirmed back to exactly 702 skipped, same 295 warnings, rc=0 throughout) to leave the
+repo in a clean, buildable, source-matching state for the next session — this build was not
+re-live-verified (quarter 1 alone was already confirmed clean earlier this session; rebuilding was
+purely to restore a consistent binary-matches-source state, not a new experiment).
+
+Net: item -249 moves from 96/778 done to **101/778 done, 677 remain**. Quarter 2 (5 names) is parked
+in `main_overlay.txt` marked `s406:`, ready for an n=2/3 split next iteration — see
+`scratch/agent/NEXT.md`. `HYPOTHESIS-ID: m4-main-overlay-phantom-functions`, iteration 12 (a third
+consecutive discriminating result across s404-s406 under this slug — genuine narrowing progress, iron
+rule 8 does not trigger a pivot). Sibling-repo symbol-file changes (`main_overlay.txt`,
+`mission_overlay.txt`) are uncommitted per the standing item -3 rule (ask the user before committing
+there).
+
+Outcome: ADVANCED (a real discriminating bisection result — half of s405's suspect set is now landed
+as +5 real progress, and the crash is narrowed from a 10-name to a 5-name suspect set).
