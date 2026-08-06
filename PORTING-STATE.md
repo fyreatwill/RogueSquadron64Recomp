@@ -33864,3 +33864,120 @@ next non-maintenance work unit's framing.
 
 Outcome: ADVANCED (maintenance pass, net -200 lines in `docs/CURRENT-TRUTH.md`, meets the Step-0
 maintenance ADVANCED criterion; also landed a new PROJECT-OVERVIEW.md §14 reference section).
+
+## Session 399 (2026-08-06) — M4 item -6 CLOSED: the s54 "fix" was dead on arrival (shadowed by a duplicate in `main_overlay.txt`); real root cause found and fixed, plus a MUCH bigger latent sibling bug discovered (~801 more phantom overlay functions)
+
+### What ran
+Not a maintenance iteration (`docs/CURRENT-TRUTH.md` was 40,131 bytes, under the 60,000 trigger).
+Per s398/NEXT.md's own recommendation (M3 idiom-audit exhausted, human input pending), picked up
+the listed M4 fallback candidate: item -6, "confirm the s53/s54 missing-func fix at runtime."
+
+**Step 1 — reproduce s49/s54's exact scenario.** Ran the documented undriven (`PROBE_KEYS` unset)
+probe, phase-gated to VI=512 (`PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1`),
+same env block as CURRENT-TRUTH's "Current truth" config. Reached VI=512 origin `0x00690400` at
+89.2s — matches the documented outdoor-scene timeline exactly. Result (`s399_missingfunc_verify1`):
+**all 3 of s49's original addresses still fire**, byte-identical to s49:
+```
+[missing-func] 0x800C7120 (stubbed)
+[missing-func] 0x800FBD48 (stubbed)
+[missing-func] 0x800FB190 (stubbed)
+```
+Other counters clean (0 UnhandledJumpTarget/dmem-race/defer-drop/assert, 4857 `[lle task]`) — this
+serves as the same-run positive control: the phase was genuinely reached and the code path that
+calls these 3 functions genuinely ran, so a "fixed" build should show 0 here, not silence-by-never-
+reaching-the-code.
+
+**Step 2 — root-cause why s54's applied fix never took.** s54 added the 3 missing symbol names to
+`rogue_squadron64/symbol_files/mission_overlay.txt`, copying formatting "from the existing
+main_overlay.txt entries at lines 3059/3175/3608" — that phrase in s54's own log was the tell,
+re-read this session: **those 3 names already existed at those exact addresses in
+`main_overlay.txt`**, not just as a formatting reference. `tools/make_elf.py`'s `parse_symbols`
+reads files in a fixed order (`main_overlay.txt` first) and dedupes by name with first-file-wins
+(`if name not in syms: syms[name] = ...`) — so `mission_overlay.txt`'s copies were always shadowed,
+dead on arrival. Worse, `main_overlay.txt`'s entries carry `src_file=main_overlay.txt`, and
+`vram_to_shndx` routes that source through the **`.text`-range check** (`0x80000440`-`0x800A5130`),
+not the mission-overlay range (`0x800A5130`-`0x8010B6D0`) — all 3 addresses are `>= 0x800A5130`, so
+they fail that check and get silently dropped as "phantom functions" (`make_elf.py`'s own
+`skipped_funcs` counter). **Confirmed with `strings build/roguesquadron.elf`: none of the 3 names
+were present in the ELF at all**, and a repo-wide grep of all of N64Recomp (RecompiledFuncs and
+everything else) found the names literally nowhere — s54's "build verified" claim only proved the
+regen pipeline ran without error, not that these addresses became real code; the sanity check
+(`strings`/grep on the actual output) was never done at s54.
+
+**Step 3 — the real fix.** Deleted the 3 duplicate lines from `main_overlay.txt` (they were 100%
+dead weight: already being silently dropped, contributing nothing) so `mission_overlay.txt`'s
+correctly-scoped copies resolve unshadowed. Ran the full regen pipeline in the mandated order,
+this time also following the item -20 standing rule properly (deleted all `RecompiledFuncs/funcs_*.c`
+before regen — s399's first pass skipped this and got lucky; redone clean to not bank on luck):
+1. `make_elf.py`: `Loaded 3768 symbols, 2965 emitted, 803 unmapped functions skipped` (was ~806
+   skipped before the 3-line removal). `strings build/roguesquadron.elf` now shows all 3 names.
+2. `N64Recomp rogue_squadron.toml` (after deleting all `funcs_*.c`): 0 errors, only pre-existing
+   `[Info]` tail-call/indirect-call noise. `grep -rl` for the 3 names now hits `funcs_29.c`/`funcs_32.c`.
+3. `fixup_game_funcs.py`: report shape matches s389's baseline (same patch families/counts for
+   unrelated existing guards), 0 errors/tracebacks.
+4. `cmake --build -j8`: exit clean, `[100%] Built target RogueSquadron64Recomp`, only pre-existing
+   warning classes (DDIV sign-compare, SDL2 dylib version, indirect-tail-call `[Info]` noise).
+
+**Step 4 — verify.** Re-ran the identical undriven phase-gated probe twice more:
+- `s399_missingfunc_verify2`: reached VI=512 origin `0x00690400` at 89.4s (same as verify1), then
+  (with `PROBE_LEAVE_OK=1`) continued on to VI=640 at 118.4s. **0 of the 3 target addresses fired.**
+  4854 `[lle task]`, 0 UnhandledJumpTarget/dmem-race/defer-drop/assert — same healthy shape as
+  verify1's pre-fix run, ruling out "the phase just wasn't reached this time" as an alternative
+  explanation for the null result.
+- One NEW single `[missing-func] 0x800FB9E4 (stubbed)` fired in verify2 (a different address,
+  `endMissionCleanup`) — checked immediately: **it is the exact same bug class**, found only in
+  `main_overlay.txt` (`0x800FB9E4`, comment "(234L) main-loop child") with no entry in any overlay
+  symbol file. This is not a regression of this fix; see Step 5.
+
+**Two independent runs, target addresses 3/3 → 0/3, phase-matched, same-run positive control
+present in both (verify1's own 3/3 firing proves the instrument and the code path both work;
+verify2's `endMissionCleanup` hit proves the same for the post-fix build). M4 item -6: CONFIRMED
+FIXED and CLOSED.**
+
+**Step 5 — the `endMissionCleanup` hit exposed a much bigger latent sibling bug.** Audited
+`main_overlay.txt` for the general shape of this bug: symbol entries whose address is `>=
+0x800A5130` (outside `.text`, inside the shared mission/menu/cinematic overlay VRAM window) get
+silently dropped as phantom functions by `make_elf.py`, **regardless of whether they have a
+duplicate elsewhere**. Count (post this session's 3-line fix): `make_elf.py` reports **803 unmapped
+functions skipped**. Cross-referencing against `mission_overlay.txt`/`menu_overlay.txt`/
+`cinematic_overlay.txt`: **0 of the 803 have a correct duplicate in any overlay file** (the 3 this
+session fixed were the only ones that did, and they're now fixed) — **all ~801-803 remaining are
+"orphaned": their address is known (from old `main_overlay.txt`/splat-era cataloging) but there is
+no working symbol anywhere for them.** Examples: `postLevelSaveInit` (0x800C06D0),
+`slotEffectHandlerDispatch` (0x800A71B8), `cinematicInitializer` (0x800AF408),
+`cinematicStageAdvancer`, `cinematicDeactivator`, `cinematicComputeDt`, `cinematicInterpRatio`,
+`isCinematicActive`, `endMissionCleanup` (this session's find) — a wide mix of mission and cinematic
+overlay functions. **These cannot be fixed the same trivial way** (delete-duplicate): each one needs
+its correct owning overlay determined (mission vs. menu vs. cinematic — they share one VRAM range,
+loaded at different times) before it can be relocated to the right symbol file, which is exactly the
+kind of bulk `main_overlay.txt` surgery s9 already tried and hit a dead end on ("splits the enclosing
+function", SIGBUS) — s9's own lesson says use `tools/overlay_symbol_probe.py <0xADDR>` one at a time,
+not in bulk. **Not attempted this session** (out of this iteration's bounded scope); queued as the
+new top Next-steps item. This plausibly explains CURRENT-TRUTH's own prediction at item -5 ("past the
+first sustained mission hold: expect further failure classes... mission overlay DMA →
+missing-func/UnhandledJumpTarget") — 801+ never-resolvable mission/cinematic functions sitting
+directly in that code's path is a large, concrete, ready-made explanation, found proactively instead
+of reactively.
+
+### Files changed
+- `rogue_squadron64/symbol_files/main_overlay.txt` (sibling repo, **uncommitted** per CURRENT-TRUTH
+  item -3 / CLAUDE.md's sibling-repo rule — ask the user before committing there): removed 3
+  duplicate lines (`requestMissionTransitionMode`, `clearMissionObjectiveFlagsAndEnterPhaseSix`,
+  `getConfigFloatPair`), all previously-dead-weight phantom entries.
+- This repo: no source changes (`build/` is gitignored); new scratch logs
+  (`scratch/agent/s399_*.log`), new soak recipe
+  `scratch/agent/soak_queue/s399_missingfunc_verify3.sh` (3rd confirmation run, queued for the loop),
+  docs updated (this entry, CURRENT-TRUTH, NEXT.md).
+
+### Verdict
+M4 item -6: **DONE.** Root cause identified with full mechanism (file-parse-order dedup + range-based
+section routing dropping the shadowed entries), fixed, and verified 2/2 post-fix runs with a
+same-run positive control in both the pre-fix and post-fix run. New item opened, larger in scope:
+**~801-803 further phantom overlay-range functions in `main_overlay.txt`, 0 with any working
+duplicate, need per-address overlay attribution via `overlay_symbol_probe.py` before relocation** —
+this is a new, well-scoped, high-value investigation thread, NOT attempted this session.
+`HYPOTHESIS-ID: m4-main-overlay-phantom-functions` (see NEXT.md).
+
+Outcome: ADVANCED (real fix, root-caused and verified at runtime with 2 independent positive-
+controlled soaks; a 3rd confirmation soak queued; a new, larger, well-evidenced lead opened for
+the next iteration).

@@ -107,9 +107,10 @@ FIXED (M1 closed s48; `SHADE_WRAP` s25; ImemOverrun s69 + depth-writeback SIGBUS
 `docs/PROJECT-OVERVIEW.md` §3.
 
 Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regression sweep. 0
-`UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` clean in every
-soaked phase to date except s49's undriven outdoor-512 stretch (3 addresses, M4 item -6). Post-`a`
-process now soaks well past 65s without death.
+`UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
+outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
+~801-803 further phantom overlay-range functions in `main_overlay.txt` still latent (item -248, not
+yet fixed). Post-`a` process now soaks well past 65s without death.
 
 ## Goal stack — work strictly top-down
 
@@ -135,7 +136,8 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
-consume it; the 3 `[missing-func]` addresses (item -6, runtime confirmation outstanding).
+consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-803-function
+`main_overlay.txt` phantom-overlay-function family (item -248, new, largest M4 item now open).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -148,7 +150,41 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -247 (s397); the next new item takes -248 and is inserted at the top.
+oldest). Current top is -248 (s399); the next new item takes -249 and is inserted at the top.
+
+-248. **(s399) NEW, top priority: `main_overlay.txt` phantom-overlay-function family, ~801-803
+    functions, root cause known, fix approach NOT yet attempted.** While closing item -6 (below),
+    found `main_overlay.txt` contains hundreds of symbol entries whose address falls inside the
+    shared mission/menu/cinematic overlay VRAM window (`0x800A5130`-`0x8010B6D0`) rather than
+    `.text`'s range -- `tools/make_elf.py`'s `vram_to_shndx` routes any `main_overlay.txt`-sourced
+    symbol through the `.text`/`.entry` range check regardless of its actual address, so these are
+    silently dropped as "phantom functions" every regen (`make_elf.py`'s own `skipped_funcs` counter:
+    803 as of s399). Cross-referenced against `mission_overlay.txt`/`menu_overlay.txt`/
+    `cinematic_overlay.txt`: **zero of the 803 have a correct duplicate anywhere else** -- unlike
+    item -6's 3 addresses, these have no ready-made fix; each needs its true owning overlay
+    (mission vs. menu vs. cinematic -- they share one VRAM range, loaded at different times)
+    determined before it can be relocated to the right symbol file. `endMissionCleanup`
+    (`0x800FB9E4`) was caught firing `[missing-func]` live in s399's own verification soak, proving
+    this is not theoretical. **s9's own dead-end lesson applies directly**: bulk `main_overlay.txt`
+    symbol moves "split the enclosing function" and caused SIGBUS; use
+    `tools/overlay_symbol_probe.py <0xADDR>` one address (or one small validated batch) at a time,
+    never in bulk. Plausibly explains CURRENT-TRUTH's own item -5 prediction ("past the first
+    sustained mission hold, expect missing-func/UnhandledJumpTarget from mission overlay code") --
+    found proactively here rather than reactively later. `HYPOTHESIS-ID:
+    m4-main-overlay-phantom-functions`. Full detail: `PORTING-STATE` Session 399.
+
+-6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
+    (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by
+    pre-existing duplicate entries at the same addresses in `main_overlay.txt`, which
+    `make_elf.py` parses first (name-dedup, first-file-wins) and which then get dropped as phantom
+    functions because `main_overlay.txt`-sourced symbols are range-checked against `.text`, not the
+    overlay window (same mechanism as item -248 above -- this was the first-discovered instance of
+    that family). Root-caused this session via `strings build/roguesquadron.elf` (names absent) and
+    a repo-wide grep of N64Recomp's output (names nowhere), which s54 never checked. Fixed by
+    deleting the 3 duplicate lines from `main_overlay.txt`; verified 2/2 post-fix runs (target
+    addresses 0/3, matching phase reached, same-run positive control both pre- and post-fix). A 3rd
+    confirmation soak is queued (`s399_missingfunc_verify3.sh`). Full detail: `PORTING-STATE`
+    Session 399.
 
 -239..-247. **(s389-397) M3 idiom-class audit resumption: `hangarInitialize`'s `-0x25A4`
     hangar-list-pointer family fully CLOSED, plus the "Lookup" struct-family (s389), TWO independent
@@ -272,9 +308,8 @@ oldest). Current top is -247 (s397); the next new item takes -248 and is inserte
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
 -7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once earlier items clear: `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40, document the phase timeline. Gate already keeps black off; residual S1 `fs` freeze (~3769-3872 plateau) may still stall animation.
--6. **M4 — confirm the s53 missing-func fix at runtime** (s54 applied + built it; only the game-run check remains). Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` should go 3→0. Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
--5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption). Each new failure is its own work unit.
--3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user before committing there.
+-5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
+-3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition and s399's `main_overlay.txt` 3-line deletion (the actual fix). Ask the user before committing there.
 -2/-1. **Band-row coverage history** (settled, s41-49): s40's `col`-write probe fails its control. **GPU->CPU present PNG** via `NativeTarget::copyToRAM` -- a convenience, not a blocker.
 
 **Done, do not redo:** optimising the ucode vector path (s38: `-O0`→`-O2` gave 41x; SIMD/RSPRecomp vector work unnecessary at 4.5ms/task without new justification); the ucode-performance-bottleneck→DL-submission-collapse→RDP-census→draw-loss chain (s33-s37); coverage attribution/format-mismatch analysis (`LOG_BBOX`/`LOG_UPLOAD` — every band draw is I4 `tlut=0`); the s27-s31 I4-decode line (`FIX_DXT_I`, `I4_SHADE_MONO`, `SHADE_ONLY_MONO`, restricted `FLATTEN_I4`) — aimed at a texture that doesn't paint those pixels.
@@ -344,6 +379,16 @@ Standing warnings:
 
 `## LLE stabilization session 2 (2026-07-12)` sits out of order in the log, between s7 and s8: its conclusions are among the oldest in the file, not the newest.
 
+- **(s54→s399)** "The M4 missing-func fix is applied and build-verified, only the runtime check is
+  outstanding" — s54's fix (adding 3 names to `mission_overlay.txt`) was dead on arrival: the same 3
+  names already existed at the same addresses in `main_overlay.txt`, which `make_elf.py` parses
+  first and dedupes by name (first-file-wins), and which then get silently dropped as phantom
+  functions (range-checked against `.text`, not the overlay window). s54's "build succeeded"
+  observation was real but didn't prove what it was believed to prove — nobody checked `strings
+  build/roguesquadron.elf` or grepped the recompiler's own output for the 3 names, which would have
+  shown they were absent. Believable for 345 sessions because build success is consistent with both
+  "fixed" and "silently still broken." Root-caused and actually fixed s399; also surfaced a much
+  larger version of the same bug class (~801-803 more addresses, item -248). PORTING-STATE 399.
 - **(s348/350→s352)** "`[scene-node-content-guard]` firing is evidence of the same corruption class as
   the other step-5 guards" — s352's raw-log re-read found it fires at the SAME node address
   (`0x80183ECC`) with the SAME zeroed content, thousands of times per run harmlessly across 3 sessions
