@@ -1,46 +1,38 @@
 # NEXT work unit
 
-## s399 recap
+## s400 recap
 
-Not a maintenance iteration (`docs/CURRENT-TRUTH.md` was 40,131 bytes). Per s398's own
-recommendation, picked up the M4 fallback candidate: item -6, "confirm the s53/s54 missing-func fix
-at runtime."
+Not a maintenance iteration (CURRENT-TRUTH was 44,180 bytes at session start). Picked up item -248
+(renumbered -249 this session) per NEXT.md's plan: the `main_overlay.txt` phantom-overlay-function
+family, batch 1.
 
-**Result: the s54 "fix" was never real.** s54 added the 3 missing symbol names to
-`mission_overlay.txt`, but they already existed at the same addresses in `main_overlay.txt` (copied
-"from the existing main_overlay.txt entries" per s54's own log — that phrase undersold what it meant).
-`make_elf.py` parses `main_overlay.txt` first and dedupes by name, so the `mission_overlay.txt`
-copies were always shadowed; `main_overlay.txt`-sourced symbols get range-checked against `.text`
-(not the overlay window), so the shadowing copies get silently dropped as phantom functions.
-`strings build/roguesquadron.elf` (which s54 never ran) showed the 3 names absent, full stop.
+**What happened**: re-derived the 801-candidate list, probed the first 20 with
+`tools/overlay_symbol_probe.py` (checks function-start prologue signature against all 3 overlays).
+Result: 13 CONFIRMED (strict prologue match), 7 WEAK (jr-$ra-before match only), **0 AMBIGUOUS, 0
+NONE** — every one of the 20 resolved to exactly one destination overlay (10 mission, 7 cinematic, 3
+menu). Cross-checked a sample against `RecompiledFuncs/*.c` JAL callers — all live/reachable, not
+dead code. Moved all 20 to their correct overlay file, deleted from `main_overlay.txt`. Regenerated
+the full pipeline (`make_elf.py`'s own `skipped_funcs` counter dropped 803→783, exactly the 20
+moved), rebuilt clean, then verified two independent ways: `strings roguesquadron.elf` shows all
+20/20 names now present (the "build succeeded" trap from s54/s399 — checked anyway), and a live
+driven run hit **0/20** `[missing-func]` for the batch, with a positive control (reached VI=512) and
+0 new instability. Only 1 other `[missing-func]` fired (`0x800FB9E4`/`endMissionCleanup`, the same
+known not-yet-fixed address s399 saw). Full detail: `PORTING-STATE` Session 400,
+`docs/CURRENT-TRUTH.md` item -249.
 
-**Fixed s399**: deleted the 3 dead-weight duplicate lines from `main_overlay.txt` (sibling repo,
-uncommitted per the sibling-repo rule), regenerated the full pipeline (deleted all `funcs_*.c` first
-per item -20's standing rule, then `make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake
-build`, all clean), and verified 2/2 post-fix runs: the 3 target addresses fire 0/3 (were 3/3
-pre-fix in the same-session control run), same VI=512/origin-0x00690400 phase reached both times,
-0 other stability-counter regressions. **M4 item -6: CLOSED.**
+**Batch tooling is reusable as-is**: `scratch/agent/s400_probe_batch.py` (probe + classify) and
+`scratch/agent/s400_apply_batch.py` (move + regen-ready) both take a plain `name addr` list file and
+need no changes for the next batch — just point them at the next slice of candidates.
 
-**Bigger finding, NOT yet fixed**: the same bug class affects **~801-803 more functions** in
-`main_overlay.txt` (make_elf.py's own `skipped_funcs` count) — a 4th address of this exact family
-(`endMissionCleanup`, 0x800FB9E4) fired live during s399's own verification soak. Unlike the 3 just
-fixed, **none of the 803 have a correct duplicate anywhere else** — each needs its true owning
-overlay (mission/menu/cinematic — they share one VRAM range) determined before relocation. s9
-already tried bulk `main_overlay.txt` moves and hit a dead end (splits the enclosing function,
-SIGBUS) — the standing lesson is `tools/overlay_symbol_probe.py <0xADDR>`, one address (or one
-small validated batch) at a time. Full detail: `docs/CURRENT-TRUTH.md` item -248,
-`PORTING-STATE` Session 399.
+**781 candidates remain.**
 
-## Next work unit: start the `main_overlay.txt` phantom-function fix (item -248)
+## Next work unit: batch 2 (and consider scaling batch size up)
 
-**HYPOTHESIS-ID: m4-main-overlay-phantom-functions** (new thread, iteration 1 under this slug).
+**HYPOTHESIS-ID: m4-main-overlay-phantom-functions** (same thread, iteration 2 under this slug).
 
-This is a big backlog (~803 functions), so the work unit is NOT "fix them all" — it's the first
-probe batch, following s9's one-at-a-time-or-small-validated-batch lesson exactly.
-
-### Step 1 — get the full candidate list with addresses
+### Step 1 — regenerate the candidate list (it shrinks as batches land)
 ```
-cd ~/Documents/Tools/rogue_squadron64/symbol_files && python3 -c "
+cd rogue_squadron64/symbol_files && python3 -c "
 import re
 SYM_RE = re.compile(r'^(\w+)\s*=\s*(0x[0-9A-Fa-f]+)\s*;(.*)\$')
 overlay_start = 0x800A5130
@@ -63,46 +55,48 @@ for line in open('main_overlay.txt', encoding='utf-8'):
         print(name, hex(vram))
 "
 ```
-This reproduces the ~801-803-entry list. Save it to `scratch/agent/s400_phantom_candidates.txt`.
+Should print ~781. Take the NEXT slice (skip the 20 already done — they're no longer candidates
+since they're now in their destination files, so this just works). Save to
+`scratch/agent/s401_batch2.txt` (or reuse `s400_probe_batch.py`'s batch-file convention).
 
-### Step 2 — determine true overlay ownership for a small first batch (10-20 addresses)
-Use `tools/overlay_symbol_probe.py <0xADDR>` (per s9's lesson) on the first 10-20 candidates to
-determine which overlay (mission/menu/cinematic) each address actually belongs to. Do NOT guess
-from the function name alone (`cinematicX`-named functions are a reasonable prior but not proof —
-verify).
+### Step 2 — decide batch size: 20 (repeat s400's size) or scale up (40-60)?
+s400's batch of 20 had 0 ambiguous/unresolved candidates — better than the "one at a time" caution
+s9's bulk-move dead end implied. Before committing to a bigger batch, do a quick gut-check: probe
+40-60 addresses (Step 2 script from s400, just point at a bigger slice) and look at the AMBIGUOUS/
+NONE rate. If it stays near 0%, apply the whole probed batch in one shot (same apply script, no
+changes needed). If AMBIGUOUS/NONE starts showing up meaningfully (e.g. >10-15%), fall back to
+applying only the CONFIRMED+WEAK subset and leave the rest for individual follow-up (don't guess).
 
-### Step 3 — competing hypotheses / discriminating measurement
-- H1: most candidates are genuinely mission-overlay functions that were simply never migrated when
-  `mission_overlay.txt` was split out (predicts: `overlay_symbol_probe.py` confirms mission-overlay
-  residency for the large majority).
-- H2: candidates are a mix across all 3 overlays roughly proportional to each overlay's size
-  (predicts: probe results split across mission/menu/cinematic without one dominating).
-- H3: some candidates are actually dead/unreferenced code (never called by anything reachable) and
-  fixing them will show 0 runtime effect (predicts: cross-referencing JAL callers in RecompiledFuncs
-  finds no caller for a subset).
-Discriminator: the probe script's overlay-residency answer for the first batch, cross-referenced
-with a JAL-caller grep in the current `RecompiledFuncs/*.c` for each candidate name/address.
+### Step 3 — apply, regen, build, verify (identical to s400)
+1. `python3 scratch/agent/s400_apply_batch.py <results_file>` (already refuses on unresolved tags)
+2. Delete `N64Recomp/RecompiledFuncs/funcs_*.c` (item -20's standing rule)
+3. `make_elf.py` -> check `skipped_funcs` dropped by exactly the batch size (positive control #1)
+4. `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build . -j8`, all clean
+5. `strings roguesquadron.elf | grep <batch names>` -> all present (positive control #2, the s54/s399
+   lesson)
+6. One live driven run (`tools/probe.sh`, `ROGUESQ_STUB_MISSING_FUNCS=1`, `PROBE_PHASE_WIDTH=512`,
+   `PROBE_LEAVE_OK=1`) -> 0/<batch size> `[missing-func]` fires for the batch's addresses, positive
+   control (VI=512 reached), 0 new UnhandledJumpTarget/dmem-race/defer-drop/assert.
+7. Queue a 2nd confirmation soak to `scratch/agent/soak_queue/` (same shape as
+   `s400_batch1_verify.sh` — copy and retarget the address list).
 
-### Step 4 — apply and validate the first batch
-Move the batch's entries (with `overlay_symbol_probe.py`-confirmed addresses) into the correct
-overlay symbol file, delete them from `main_overlay.txt`, regen (delete `funcs_*.c` first!), build,
-and soak — watch specifically for `[missing-func]` on the batch's addresses going to 0, AND for any
-NEW UnhandledJumpTarget/SIGBUS (the s9 failure mode) as the batch's positive/negative control pair.
-
-### Fallback if this is BLOCKED or too slow to start this iteration
-The M3 idiom-audit-exhausted question from s397/s398 is still separately open (needs human
-reconfirmation per the USER DIRECTIVE) — this item -248 line of work is a legitimate, self-directed
-M4 item that doesn't need that reconfirmation, so prefer it over going BLOCKED.
+### Fallback if BLOCKED
+If a batch surfaces an AMBIGUOUS case that genuinely can't be resolved by the probe script (e.g. a
+function-start signature present in 2 overlays at the same address — plausible since all 3 share one
+VRAM window), do NOT guess: leave that one address in `main_overlay.txt`, apply only the resolved
+rest of the batch, and note the unresolved address(es) for a dedicated follow-up (maybe needs a
+same-scene-loaded-overlay cross-check instead of a static disassembly check).
 
 ## Soak queue
 
-`scratch/agent/soak_queue/s399_missingfunc_verify3.sh` — 3rd confirmation run of the s399 fix (2/2
-already passed live this session; this is belt-and-suspenders, not blocking). Runs itself, exits
-nonzero only if one of the 3 originally-target addresses regresses.
+`scratch/agent/soak_queue/s400_batch1_verify.sh` — 2nd confirmation run of s400's batch-1 fix (1/1
+already passed live this session). Runs itself, exits nonzero if any of the 20 batch-1 addresses
+regress.
 
 ## Iteration budget
 
-HYPOTHESIS-ID: m4-main-overlay-phantom-functions (new, iteration 1). The old
-`m3-idiom-audit-next-family` slug is parked, not closed — it still needs human input per s397/s398
-(CFG-aware tool / crash-driven fallback / explicit M3-mode-exit approval), unaffected by this
-session's M4 work.
+HYPOTHESIS-ID: m4-main-overlay-phantom-functions (iteration 2 of this slug — s400 was iteration 1).
+Plenty of room before iron rule 8's 3-consecutive-iteration budget check kicks in; this is a large,
+well-understood, repetitive backlog, not a stuck investigation — each batch is a fresh discriminating
+result (does relocation clear the address from `[missing-func]`), not a repeat of the same
+inconclusive probe.

@@ -109,8 +109,8 @@ FIXED (M1 closed s48; `SHADE_WRAP` s25; ImemOverrun s69 + depth-writeback SIGBUS
 Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regression sweep. 0
 `UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
-~801-803 further phantom overlay-range functions in `main_overlay.txt` still latent (item -248, not
-yet fixed). Post-`a` process now soaks well past 65s without death.
+~801-803 further phantom overlay-range functions in `main_overlay.txt`, s400 fixed the first 20
+(781 remain, item -249). Post-`a` process now soaks well past 65s without death.
 
 ## Goal stack — work strictly top-down
 
@@ -136,8 +136,9 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
-consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-803-function
-`main_overlay.txt` phantom-overlay-function family (item -248, new, largest M4 item now open).
+consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
+`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 20/801 done s400, 781
+remain, largest M4 item open).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -150,41 +151,40 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -248 (s399); the next new item takes -249 and is inserted at the top.
+oldest). Current top is -249 (s400); the next new item takes -250 and is inserted at the top.
 
--248. **(s399) NEW, top priority: `main_overlay.txt` phantom-overlay-function family, ~801-803
-    functions, root cause known, fix approach NOT yet attempted.** While closing item -6 (below),
-    found `main_overlay.txt` contains hundreds of symbol entries whose address falls inside the
-    shared mission/menu/cinematic overlay VRAM window (`0x800A5130`-`0x8010B6D0`) rather than
-    `.text`'s range -- `tools/make_elf.py`'s `vram_to_shndx` routes any `main_overlay.txt`-sourced
-    symbol through the `.text`/`.entry` range check regardless of its actual address, so these are
-    silently dropped as "phantom functions" every regen (`make_elf.py`'s own `skipped_funcs` counter:
-    803 as of s399). Cross-referenced against `mission_overlay.txt`/`menu_overlay.txt`/
-    `cinematic_overlay.txt`: **zero of the 803 have a correct duplicate anywhere else** -- unlike
-    item -6's 3 addresses, these have no ready-made fix; each needs its true owning overlay
-    (mission vs. menu vs. cinematic -- they share one VRAM range, loaded at different times)
-    determined before it can be relocated to the right symbol file. `endMissionCleanup`
-    (`0x800FB9E4`) was caught firing `[missing-func]` live in s399's own verification soak, proving
-    this is not theoretical. **s9's own dead-end lesson applies directly**: bulk `main_overlay.txt`
-    symbol moves "split the enclosing function" and caused SIGBUS; use
-    `tools/overlay_symbol_probe.py <0xADDR>` one address (or one small validated batch) at a time,
-    never in bulk. Plausibly explains CURRENT-TRUTH's own item -5 prediction ("past the first
-    sustained mission hold, expect missing-func/UnhandledJumpTarget from mission overlay code") --
-    found proactively here rather than reactively later. `HYPOTHESIS-ID:
-    m4-main-overlay-phantom-functions`. Full detail: `PORTING-STATE` Session 399.
+-249. **(s400) IN PROGRESS: `main_overlay.txt` phantom-overlay-function family, batch 1 of ~40 done
+    (20/801), tooling proven, continue with the next batch.** Probed the first 20 of item -248's
+    candidates with `tools/overlay_symbol_probe.py` (unmodified s9-era tool): **0 ambiguous, 0
+    unresolved** -- every candidate matched exactly one destination overlay (13 strict-prologue
+    CONFIRMED, 7 weaker jr-$ra-only WEAK; split 10 mission/7 cinematic/3 menu, a real cross-overlay
+    mix). Cross-checked JAL callers in `RecompiledFuncs` for a sample -- all live/reachable, not dead
+    code. Moved all 20 to their correct overlay file, deleted from `main_overlay.txt`. Regenerated
+    (`make_elf.py`'s `skipped_funcs` 803→783, exactly the 20 moved -- first positive control),
+    rebuilt clean, and verified two ways: `strings roguesquadron.elf` shows all 20/20 names now
+    present (the s54/s399 "build success != actually fixed" check), and a live driven run hit 0/20
+    `[missing-func]` fires for the batch (positive control: reached VI=512; only
+    `endMissionCleanup`/`0x800FB9E4` fired, a known separate not-yet-fixed address, 0 new
+    instability). Batch-apply tooling (`scratch/agent/s400_probe_batch.py` +
+    `s400_apply_batch.py`) is reusable as-is for the next batch -- **just re-point the candidate-list
+    slice**. **~781 candidates remain.** s400 recommends trying a larger batch (40-60) next time,
+    since n=20 had zero ambiguous cases -- s9's "one at a time" caution may be more conservative than
+    this particular symbol family needs, but confirm that holds before scaling up much further.
+    `HYPOTHESIS-ID: m4-main-overlay-phantom-functions`. Full detail: `PORTING-STATE` Sessions
+    399-400.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
     (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by
     pre-existing duplicate entries at the same addresses in `main_overlay.txt`, which
     `make_elf.py` parses first (name-dedup, first-file-wins) and which then get dropped as phantom
     functions because `main_overlay.txt`-sourced symbols are range-checked against `.text`, not the
-    overlay window (same mechanism as item -248 above -- this was the first-discovered instance of
+    overlay window (same mechanism as item -249 above -- this was the first-discovered instance of
     that family). Root-caused this session via `strings build/roguesquadron.elf` (names absent) and
     a repo-wide grep of N64Recomp's output (names nowhere), which s54 never checked. Fixed by
-    deleting the 3 duplicate lines from `main_overlay.txt`; verified 2/2 post-fix runs (target
-    addresses 0/3, matching phase reached, same-run positive control both pre- and post-fix). A 3rd
-    confirmation soak is queued (`s399_missingfunc_verify3.sh`). Full detail: `PORTING-STATE`
-    Session 399.
+    deleting the 3 duplicate lines from `main_overlay.txt`; verified 3/3 post-fix runs now (2/2 s399
+    live + s399's queued `s399_missingfunc_verify3.sh` PASSED, rc=0, s400 SOAK-RESULTS) -- target
+    addresses 0/3 every time, matching phase reached, same-run positive control. Full detail:
+    `PORTING-STATE` Session 399.
 
 -239..-247. **(s389-397) M3 idiom-class audit resumption: `hangarInitialize`'s `-0x25A4`
     hangar-list-pointer family fully CLOSED, plus the "Lookup" struct-family (s389), TWO independent

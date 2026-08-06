@@ -33981,3 +33981,78 @@ this is a new, well-scoped, high-value investigation thread, NOT attempted this 
 Outcome: ADVANCED (real fix, root-caused and verified at runtime with 2 independent positive-
 controlled soaks; a 3rd confirmation soak queued; a new, larger, well-evidenced lead opened for
 the next iteration).
+
+## Session 400 (2026-08-06) — M4 item -248 batch 1: 20 of ~801 `main_overlay.txt` phantom functions probed, relocated, regen'd, built, and runtime-verified (0/20 firing)
+
+`HYPOTHESIS-ID: m4-main-overlay-phantom-functions`, iteration 1. Not a maintenance iteration
+(CURRENT-TRUTH was 44,180 bytes at session start). Followed NEXT.md's plan exactly.
+
+**Step 1 — candidate list.** Re-ran the item -248 filter script against
+`rogue_squadron64/symbol_files/main_overlay.txt`: **801 candidates** (addresses `>= 0x800A5130`
+with no matching name in `mission_overlay.txt`/`menu_overlay.txt`/`cinematic_overlay.txt`) —
+matches s399's estimate. Saved to `scratch/agent/s400_phantom_candidates.txt`.
+
+**Step 2 — probe batch 1 (first 20 candidates).** Wrote `scratch/agent/s400_probe_batch.py` to run
+`tools/overlay_symbol_probe.py` (unmodified, s9-era tool) against each candidate address across all
+3 overlays and classify: CONFIRMED (strict `addiu $sp,$sp,-N` prologue match, exactly one overlay),
+WEAK (only a preceding `jr $ra` match, exactly one overlay), AMBIGUOUS (more than one overlay
+matches), or NONE (no overlay matches at all). Result for the first 20: **13 CONFIRMED, 7 WEAK, 0
+AMBIGUOUS, 0 NONE** — every single candidate in this batch resolved to exactly one destination
+overlay. Split: 10 mission, 7 cinematic, 3 menu — a real mix across overlays (partially supports
+NEXT.md's H2, doesn't support H1's "mission dominates" prediction, though n=20 is too small to
+settle H1 vs H2 definitively for the whole 801).
+
+**H3 check (dead code) — refuted for this batch.** Grepped `N64Recomp/RecompiledFuncs/*.c` for a
+sample of the batch's addresses (`0x800C06D0`, `0x800A71B8`, `0x800AF408`, `0x800FB6C0`,
+`0x800F1870`): all have live JAL callers in the current generated code. These are reachable,
+executed functions, not dead weight — the fix has real runtime value.
+
+**Step 3 — apply.** Wrote `scratch/agent/s400_apply_batch.py`: refuses to run if any candidate in
+the batch has an unresolved (AMBIGUOUS/NONE) tag, otherwise moves each entry's exact original line
+text from `main_overlay.txt` to its probe-confirmed destination overlay file. Ran it on the 20-entry
+batch: menu +3, cinematic +7, mission +10, main_overlay.txt −20. Sibling repo diff (uncommitted per
+CURRENT-TRUTH item -3): `main_overlay.txt`, `mission_overlay.txt`, `menu_overlay.txt`,
+`cinematic_overlay.txt` all modified.
+
+**Step 4 — regen, build, verify.**
+- `make_elf.py`: `skipped_funcs` counter **803 → 783**, exactly the 20 relocated — first positive
+  control (the tool's own accounting agrees with the edit).
+- `N64Recomp` (after deleting all `RecompiledFuncs/funcs_*.c` per item -20's standing rule): clean,
+  0 errors.
+- `fixup_game_funcs.py`: clean, 0 warnings/errors, all expected patch patterns applied.
+- `cmake --build . -j8`: clean, 0 errors (46 pre-existing sign-conversion warnings, unrelated).
+- **Static check** (the s54/s399 lesson — build success alone proves nothing): `strings
+  rogue_squadron64/build/roguesquadron.elf | grep <20 names>` — **all 20/20 present** in the ELF
+  symbol table (would have been absent before the fix, same as s54's silently-dead "fix").
+- **Runtime check**: one live driven run (`tools/probe.sh`, `ROGUESQ_STUB_MISSING_FUNCS=1`,
+  `PROBE_PHASE_WIDTH=512`/`PROBE_LEAVE_OK=1`, same recipe as s399's verify soaks). Positive control:
+  reached `[phase] vi_width=512` (1/1). **0/20 of this batch's target addresses fired
+  `[missing-func]`.** Exactly 1 other `[missing-func]` hit: `0x800FB9E4` (`endMissionCleanup`) — the
+  same address s399 saw, part of the remaining ~781/783 not-yet-fixed family, not a regression. 0
+  `UnhandledJumpTarget`/`dmem-race`/`defer-drop`/`assert` — no new instability introduced.
+
+**Queued**: `scratch/agent/soak_queue/s400_batch1_verify.sh` — same recipe, 2nd confirmation run,
+self-contained, runs itself via the loop.
+
+### Files changed
+- `rogue_squadron64/symbol_files/{main,mission,menu,cinematic}_overlay.txt` (sibling repo,
+  **uncommitted** per item -3 — ask the user before committing there): 20 entries moved from
+  `main_overlay.txt` to their correct overlay file.
+- This repo: no source changes (`build/` gitignored); new scratch tooling
+  (`scratch/agent/s400_probe_batch.py`, `scratch/agent/s400_apply_batch.py`, reusable for future
+  batches of this same item), new soak recipe, docs updated.
+
+### Verdict
+M4 item -248, batch 1 of ~40 (at 20/batch): **DONE, verified.** 20/801 relocated and confirmed clean
+at both the ELF-symbol-table level and at runtime with a positive-controlled soak. ~781 candidates
+remain — this is a large, repetitive, low-risk-per-item backlog now that the probe/apply/verify
+tooling exists and is proven; a future iteration could reasonably scale batch size up (the probe
+script had 0 ambiguous/unresolved results in n=20, suggesting the "each needs individual attention"
+worry from s9/s399 may be lighter than feared for this particular symbol family — the WEAK-tier
+functions in particular are all simple few-instruction leaf getters/setters, easy to sanity-read).
+Recommend the next iteration try a larger batch (40-60) if this pattern holds, to make faster
+progress against the ~781 remaining.
+
+Outcome: ADVANCED (real code fix — 20 more functions now correctly resolve instead of being
+silently dropped — regenerated, rebuilt, and verified at both the static-symbol and runtime level
+with a same-run positive control; reusable batch tooling written for the ~781-item remainder).
