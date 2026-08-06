@@ -34056,3 +34056,91 @@ progress against the ~781 remaining.
 Outcome: ADVANCED (real code fix — 20 more functions now correctly resolve instead of being
 silently dropped — regenerated, rebuilt, and verified at both the static-symbol and runtime level
 with a same-run positive control; reusable batch tooling written for the ~781-item remainder).
+
+## Session 401 (2026-08-06) — M4 item -249 batch 2 attempted at scale, discovered and reverted a real regression, root-caused it to stale CMake glob (not the symbol-relocation mechanism itself), landed a durable CMakeLists.txt fix
+
+### What ran
+Continued item -249 (the ~781-remaining `main_overlay.txt` phantom-overlay-function family) per
+`scratch/agent/NEXT.md`'s plan: took a batch of 60 (double s400's size, per NEXT.md's suggestion to
+gut-check scaling up), probed with `tools/overlay_symbol_probe.py` — 49 CONFIRMED, 11 WEAK, 0
+ambiguous, 0 unresolved. Applied, regenerated, and hit an **undefined-symbol link failure**
+(`static_6_800AEBD0` etc., 7 symbols) — cross-overlay callers (already-real cinematic functions)
+reaching into still-phantom neighbors. Traced this to the SAME item -249 family (just outside the
+60-item slice) and resolved it by probing+relocating the containing address range (7, then 66, then
+16 more) — each round's fix triggered a NEW round of undefined symbols in a different address range,
+cascading through progressively larger candidate slices. Rather than keep whack-a-moling small
+patches, swept the ENTIRE remaining candidate list at once (629 items) and applied all 625 that
+probed unambiguous (0 truly AMBIGUOUS, 3 NONE — one of which, `gCutsceneAssetPaths`, was a
+misclassified DATA symbol that had slipped through the candidate-generation script's `is_data`
+filter, a script-lesson for next time: the filter didn't catch lowercase-`g`-prefixed globals).
+
+Total this session before the regression was found: **774 relocations** (60 + 7 + 16 + 66 + 625).
+
+### The regression
+After the full 774-item batch, the build produced a NEW cascade of ~150 undefined symbols
+(`lv3_*`/`lv9_*`/`say2*`/`fake_func_*` mission-dialogue names) that turned out to be a **false alarm**:
+these were never actually missing — `cmake --build` alone was linking against a **stale file list**.
+N64Recomp splits `RecompiledFuncs/funcs_*.c` by function count, and this session's huge regen grew the
+count enough to spawn `funcs_45.c`..`funcs_50.c` (51 files total, up from 45); `CMakeLists.txt`'s
+`file(GLOB RECOMP_C_SOURCES ...)` (no `CONFIGURE_DEPENDS`) only re-scans the directory at `cmake`
+*configure* time, so `cmake --build` alone never picked up the new files and the linker legitimately
+couldn't find their symbols. A fresh `cmake -S . -B build` reconfigure resolved this instantly and the
+build went link-clean.
+
+Once linked, a **live driven run crashed** (SIGBUS) at the title screen, before reaching the target
+VI=512 phase — a genuine new regression, not the CMake staleness issue. Backtrace: `mainGameLoop` →
+`menuOverlayInit` (pre-existing, not touched this session) → `menuControllerInput` →
+`buildScaledFormatTextElement` (both newly relocated, in the 625-item batch), dereferencing a wild
+pointer near guest address `0x8000005E`. Removing just these two names from `menu_overlay.txt` and
+putting them back in `main_overlay.txt` did **not** fix it — the identical crash recurred with
+N64Recomp auto-synthesized `static_5_800B47D0`/`static_5_800B3AFC` names, proving the crash isn't
+gated by the symbol-file bookkeeping: some other newly-real function in the batch causes N64Recomp's
+disassembly-driven function-boundary walk to reach and compile this code regardless of an explicit
+name. This is the same underlying mechanism as the s9 dead end ("bulk main_overlay.txt symbol moves
+splits the enclosing function") — a large single-shot batch can re-slice function boundaries for
+already-existing, unrelated functions, not just the newly-named ones.
+
+### Resolution: full revert to the s400 baseline
+Given no budget this iteration to isolate which specific relocation(s) among 774 triggered the
+re-slice, **reverted the entire batch** (all 774, surgically — matched by name+address, not a blanket
+`git checkout` which would have destroyed unrelated pre-existing uncommitted work in the
+`rogue_squadron64` sibling repo per item -3) back to `main_overlay.txt`. Verified via
+`make_elf.py`'s `unmapped functions skipped` counter: exactly 783 (the s400 baseline), regenerated,
+rebuilt clean, and **live-verified**: reached `[phase] vi_width=512` after 88.7s, 19 frames captured,
+1 `[missing-func]` (the known `endMissionCleanup`/`0x800FB9E4`, same as every prior session), 0
+crashes/asserts/UnhandledJumpTarget/dmem-race — identical to s400's clean result.
+
+### Durable fix landed (independent of the M4 batch question)
+The stale-CMake-glob issue is a real, generally-applicable bug that will recur on any future regen
+that changes the `RecompiledFuncs` file count, regardless of batch size or which M-milestone is being
+worked. Fixed `CMakeLists.txt`'s two `file(GLOB ...)` calls to add `CONFIGURE_DEPENDS`, so
+`cmake --build` alone always picks up newly-split files without a full reconfigure. Verified: clean
+reconfigure + clean build after the fix.
+
+### Files changed
+- `CMakeLists.txt` (this repo): added `CONFIGURE_DEPENDS` to the two `RecompiledFuncs` glob calls —
+  **committed**.
+- `rogue_squadron64/symbol_files/{main,mission,menu,cinematic}_overlay.txt` (sibling repo,
+  **uncommitted** per item -3): net change is a no-op relative to session start (774 relocations
+  applied then fully reverted) plus explanatory comments on the revert; not byte-identical (reverted
+  entries landed at file end under a new comment block, not their original position) but functionally
+  equivalent. Not committed — ask the user first, per standing rule.
+- This repo: new scratch tooling reused from s400 unmodified
+  (`scratch/agent/s400_probe_batch.py`/`s400_apply_batch.py`), new investigation artifacts under
+  `scratch/agent/s401_*` (candidate lists, probe results, build/regen logs) kept for the next
+  iteration's bisection.
+
+### Verdict
+M4 item -249 is **back at s400's checkpoint (20/801 done, 781 remain)** — no net regression, no net
+progress on the phantom-function count, but two real findings banked: (1) large single-shot batches
+(774, or likely anything well past s400's n=20) risk the s9 function-boundary-resplitting dead end
+even when every individual candidate probes unambiguous — batch SIZE is an independent risk factor
+from per-candidate ambiguity, and this needs bisection (probably back down near n=20-40, with a
+mandatory live-run verify after EACH batch before accumulating further batches, not just a build-clean
+check) to find the actual safe threshold; (2) the CMake stale-glob issue is now durably fixed and
+won't cost future sessions confusion again.
+
+Outcome: ADVANCED (landed a real, verified, committed fix — the CMakeLists.txt CONFIGURE_DEPENDS fix
+— plus a well-evidenced negative result on the M4 batch-size question, averting a session-402
+repeat of the same regression from scratch; net M4 progress is flat but the ledger is more informed
+than it was, and the sibling repo's working tree is restored to a verified-clean state).

@@ -1,36 +1,48 @@
 # NEXT work unit
 
-## s400 recap
+## s401 recap
 
-Not a maintenance iteration (CURRENT-TRUTH was 44,180 bytes at session start). Picked up item -248
-(renumbered -249 this session) per NEXT.md's plan: the `main_overlay.txt` phantom-overlay-function
-family, batch 1.
+Not a maintenance iteration (CURRENT-TRUTH was 44,113 bytes at session start). Continued item -249
+(the `main_overlay.txt` phantom-overlay-function family, 781 remaining after s400's batch 1) per the
+previous NEXT.md's plan, but at a much larger scale than intended — ended up applying 774 relocations
+in one session (60 + 7 + 16 + 66 + 625, each round triggered by chasing undefined-symbol link errors
+into the next address range) before a live driven run hit a **new, deterministic SIGBUS** at the title
+screen (`menuOverlayInit`→`menuControllerInput`→`buildScaledFormatTextElement`, wild pointer near
+guest `0x8000005E`). Reverting just the two crashing names did NOT stop the crash — N64Recomp still
+auto-synthesized the same code as `static_5_...`, proving the batch's SIZE (re-slicing function
+boundaries for unrelated, already-existing functions) caused it, not any single bad candidate — the
+same mechanism as the s9 dead end. **Surgically reverted all 774 relocations** back to
+`main_overlay.txt` (matched by name+address, not a blanket revert, to protect unrelated pre-existing
+uncommitted sibling-repo work). Verified the revert restored s400's exact checkpoint: `make_elf.py`
+skipped-func counter back to 783, live run reaches VI=512 clean (88.7s, 0 crashes, 1 known
+`[missing-func]`). **Net M4 progress this session: flat (still 20/801 done, 781 remain)** — see item
+-250 in CURRENT-TRUTH for full detail.
 
-**What happened**: re-derived the 801-candidate list, probed the first 20 with
-`tools/overlay_symbol_probe.py` (checks function-start prologue signature against all 3 overlays).
-Result: 13 CONFIRMED (strict prologue match), 7 WEAK (jr-$ra-before match only), **0 AMBIGUOUS, 0
-NONE** — every one of the 20 resolved to exactly one destination overlay (10 mission, 7 cinematic, 3
-menu). Cross-checked a sample against `RecompiledFuncs/*.c` JAL callers — all live/reachable, not
-dead code. Moved all 20 to their correct overlay file, deleted from `main_overlay.txt`. Regenerated
-the full pipeline (`make_elf.py`'s own `skipped_funcs` counter dropped 803→783, exactly the 20
-moved), rebuilt clean, then verified two independent ways: `strings roguesquadron.elf` shows all
-20/20 names now present (the "build succeeded" trap from s54/s399 — checked anyway), and a live
-driven run hit **0/20** `[missing-func]` for the batch, with a positive control (reached VI=512) and
-0 new instability. Only 1 other `[missing-func]` fired (`0x800FB9E4`/`endMissionCleanup`, the same
-known not-yet-fixed address s399 saw). Full detail: `PORTING-STATE` Session 400,
-`docs/CURRENT-TRUTH.md` item -249.
+Separately, landed and committed a real, durable, unrelated fix: `CMakeLists.txt`'s two
+`file(GLOB RECOMP_C_SOURCES/RECOMP_CXX_SOURCES ...)` calls now have `CONFIGURE_DEPENDS`, so a plain
+`cmake --build` no longer silently links against a stale file list when a regen changes the
+`RecompiledFuncs/funcs_*.c` file count (this cost most of s401's debugging time before being
+root-caused as a config-staleness issue, not a real missing-symbol problem).
 
-**Batch tooling is reusable as-is**: `scratch/agent/s400_probe_batch.py` (probe + classify) and
-`scratch/agent/s400_apply_batch.py` (move + regen-ready) both take a plain `name addr` list file and
-need no changes for the next batch — just point them at the next slice of candidates.
+## Next work unit: item -249 batch 2, RETRY at a much smaller scale
 
-**781 candidates remain.**
+**HYPOTHESIS-ID: m4-main-overlay-phantom-functions** (same thread, iteration 4 under this slug — s400
+was iteration 1, s401 was iterations 2-3 combined into one session; per iron rule 8 this next attempt
+needs a pivot preamble since we're now at 3+ iterations on the same slug with no NET discriminating
+progress — the preamble is: s401 already found the discriminating result (batch size, not candidate
+ambiguity, is the risk factor), so this iteration's job is to find the actual safe threshold, not to
+repeat the same experiment).
 
-## Next work unit: batch 2 (and consider scaling batch size up)
+### The core lesson: verify live, per batch, BEFORE accumulating the next one
 
-**HYPOTHESIS-ID: m4-main-overlay-phantom-functions** (same thread, iteration 2 under this slug).
+s400's batch of 20 was independently live-verified (reached VI=512 clean) before anyone touched
+anything else. s401's mistake was chaining FIVE batches (60, 7, 16, 66, 625) back-to-back based only
+on "build succeeded" before ever running the game — by the time a live run finally happened, it was
+impossible to tell which of the 774 relocations was responsible. **Do not repeat this.** Each batch
+this iteration must reach a live VI=512 positive-controlled run, clean, before the next batch is even
+selected.
 
-### Step 1 — regenerate the candidate list (it shrinks as batches land)
+### Step 1 — regenerate the candidate list (should print 781, matching s400's count)
 ```
 cd rogue_squadron64/symbol_files && python3 -c "
 import re
@@ -48,55 +60,65 @@ for line in open('main_overlay.txt', encoding='utf-8'):
     if not m: continue
     name, addr_s, comment = m.groups()
     if 'defined:false' in comment: continue
-    is_data = (('type:' in comment and 'type:func' not in comment) or 'size:' in comment or 'name_end:' in comment or name.startswith('D_') or name.startswith('junk_'))
+    is_data = (('type:' in comment and 'type:func' not in comment) or 'size:' in comment or 'name_end:' in comment or name.startswith('D_') or name.startswith('junk_') or (name.startswith('g') and len(name) > 1 and name[1].isupper()))
     if is_data: continue
     vram = int(addr_s,16)
     if vram >= overlay_start and name not in other:
         print(name, hex(vram))
 "
 ```
-Should print ~781. Take the NEXT slice (skip the 20 already done — they're no longer candidates
-since they're now in their destination files, so this just works). Save to
-`scratch/agent/s401_batch2.txt` (or reuse `s400_probe_batch.py`'s batch-file convention).
+Note the added `is_data` clause vs s400/s401's version — excludes lowercase-`g`-prefixed globals
+(s401 found `gCutsceneAssetPaths` had slipped through as a false function-candidate; verify with
+`tools/overlay_symbol_probe.py <addr>` if a `g`-prefixed name shows a NONE verdict — it's probably
+data, not an unresolved function).
 
-### Step 2 — decide batch size: 20 (repeat s400's size) or scale up (40-60)?
-s400's batch of 20 had 0 ambiguous/unresolved candidates — better than the "one at a time" caution
-s9's bulk-move dead end implied. Before committing to a bigger batch, do a quick gut-check: probe
-40-60 addresses (Step 2 script from s400, just point at a bigger slice) and look at the AMBIGUOUS/
-NONE rate. If it stays near 0%, apply the whole probed batch in one shot (same apply script, no
-changes needed). If AMBIGUOUS/NONE starts showing up meaningfully (e.g. >10-15%), fall back to
-applying only the CONFIRMED+WEAK subset and leave the rest for individual follow-up (don't guess).
+### Step 2 — take a SMALL batch (n=20, matching s400's proven-safe size — do NOT scale up this time)
+Probe with `scratch/agent/s400_probe_batch.py` (unmodified, reusable). Apply only if 0 truly
+AMBIGUOUS (multi-YES or multi-maybe) — WEAK (single maybe) is fine, NONE gets left for follow-up.
 
-### Step 3 — apply, regen, build, verify (identical to s400)
-1. `python3 scratch/agent/s400_apply_batch.py <results_file>` (already refuses on unresolved tags)
-2. Delete `N64Recomp/RecompiledFuncs/funcs_*.c` (item -20's standing rule)
-3. `make_elf.py` -> check `skipped_funcs` dropped by exactly the batch size (positive control #1)
-4. `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build . -j8`, all clean
-5. `strings roguesquadron.elf | grep <batch names>` -> all present (positive control #2, the s54/s399
-   lesson)
-6. One live driven run (`tools/probe.sh`, `ROGUESQ_STUB_MISSING_FUNCS=1`, `PROBE_PHASE_WIDTH=512`,
-   `PROBE_LEAVE_OK=1`) -> 0/<batch size> `[missing-func]` fires for the batch's addresses, positive
-   control (VI=512 reached), 0 new UnhandledJumpTarget/dmem-race/defer-drop/assert.
-7. Queue a 2nd confirmation soak to `scratch/agent/soak_queue/` (same shape as
-   `s400_batch1_verify.sh` — copy and retarget the address list).
+### Step 3 — apply, regen, build
+1. `python3 scratch/agent/s400_apply_batch.py <results_file>`
+2. Delete `N64Recomp/RecompiledFuncs/funcs_*.c` (item -20's standing rule — use
+   `python3 -c "import glob,os; [os.remove(f) for f in glob.glob('.../funcs_*.c')]"`, `rm -f` with a
+   glob is blocked by the harness)
+3. `make_elf.py` → check `unmapped functions skipped` dropped by exactly the batch size
+4. `N64Recomp` → `fixup_game_funcs.py`
+5. **`cmake -S . -B build` (full reconfigure, not just `--build`)** — no longer strictly required
+   after s401's `CONFIGURE_DEPENDS` fix, but cheap (~1-2s) and removes one whole class of false
+   "undefined symbol" scares if the fix has any gap. Then `cmake --build build -j8`.
+6. If the build fails with undefined `static_N_ADDR` symbols: this means the batch's relocated
+   function(s) call into a still-phantom NEIGHBOR not in the batch. s401 handled this by chasing the
+   address range and applying more — **this time, prefer reverting the batch instead** unless the
+   extra neighbor set is also small (single digits). Getting pulled into a large chase is exactly how
+   s401 ended up at 774 in one shot.
+
+### Step 4 — MANDATORY live verify BEFORE the next batch
+`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1
+PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 zsh tools/probe.sh <outdir> 45 2`
+— PASS = `[phase] vi_width=512` reached, 0 new `[missing-func]` for this batch's addresses, 0
+crash/assert/UnhandledJumpTarget/dmem-race. If it crashes: revert this batch immediately (same
+name+address matching approach s401 used), do NOT try to patch around it in the same iteration unless
+the fix is obvious and single-site.
+
+### Step 5 — repeat Steps 2-4 for a second n=20 batch ONLY if step 4 passed clean
+This establishes whether n=20 is reliably safe (2 clean batches in a row) before ever considering
+scaling up again. Do not scale batch size up this iteration regardless of how clean these look — that
+call needs its own dedicated iteration with a clear head, not a rider on unwinding s401's mess.
 
 ### Fallback if BLOCKED
-If a batch surfaces an AMBIGUOUS case that genuinely can't be resolved by the probe script (e.g. a
-function-start signature present in 2 overlays at the same address — plausible since all 3 share one
-VRAM window), do NOT guess: leave that one address in `main_overlay.txt`, apply only the resolved
-rest of the batch, and note the unresolved address(es) for a dedicated follow-up (maybe needs a
-same-scene-loaded-overlay cross-check instead of a static disassembly check).
+If even n=20 batches start showing the s401 failure mode (undefined-symbol cascades needing >10
+extra addresses, or a live crash), STOP and go BLOCKED — the s9/s401 function-boundary-resplitting
+mechanism may need a static analysis tool (e.g. checking whether a candidate's disassembly range
+overlaps ANY already-real function's body) rather than more manual batching, which is a human-input
+question per the M3-idiom-audit precedent's "needs human input" pattern.
 
 ## Soak queue
 
-`scratch/agent/soak_queue/s400_batch1_verify.sh` — 2nd confirmation run of s400's batch-1 fix (1/1
-already passed live this session). Runs itself, exits nonzero if any of the 20 batch-1 addresses
-regress.
+None currently queued for this item (s400's `s400_batch1_verify.sh` already ran and passed; no new
+soak makes sense to queue until a new batch actually lands and needs a 2nd confirmation run).
 
 ## Iteration budget
 
-HYPOTHESIS-ID: m4-main-overlay-phantom-functions (iteration 2 of this slug — s400 was iteration 1).
-Plenty of room before iron rule 8's 3-consecutive-iteration budget check kicks in; this is a large,
-well-understood, repetitive backlog, not a stuck investigation — each batch is a fresh discriminating
-result (does relocation clear the address from `[missing-func]`), not a repeat of the same
-inconclusive probe.
+HYPOTHESIS-ID: m4-main-overlay-phantom-functions, iteration 4. Per iron rule 8, this iteration MUST
+either produce a new discriminating result (a safe batch size found, live-verified) or go BLOCKED with
+the specific fallback above — no more open-ended scaling experiments without a live-verify gate.

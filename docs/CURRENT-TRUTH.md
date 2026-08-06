@@ -151,10 +151,40 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -249 (s400); the next new item takes -250 and is inserted at the top.
+oldest). Current top is -250 (s401); the next new item takes -251 and is inserted at the top.
 
--249. **(s400) IN PROGRESS: `main_overlay.txt` phantom-overlay-function family, batch 1 of ~40 done
-    (20/801), tooling proven, continue with the next batch.** Probed the first 20 of item -248's
+-250. **(s401) M4 item -249's batch 2 attempt at scale (774 relocations) FOUND and REVERTED a real
+    regression; item -249 is back at exactly s400's checkpoint (20/801 done, 781 remain), no net
+    progress on the phantom-function count but two banked findings.** Probed+applied a 60-item batch
+    (0 ambiguous), which cascaded into progressively larger undefined-symbol link failures as
+    already-real cinematic/menu functions turned out to call into still-phantom neighbors just outside
+    the slice — chased this through 7, then 66, then 16, then finally swept and applied the ENTIRE
+    remaining 625-item candidate list to make the link succeed (0 truly ambiguous of 629 candidates
+    checked; 3 NONE excluded, one of which was `gCutsceneAssetPaths`, a DATA symbol that slipped past
+    the candidate script's `is_data` filter — lesson: extend that filter for lowercase-`g`-prefixed
+    globals). After linking, a live driven run hit a **new, deterministic SIGBUS** at the title screen
+    (`menuOverlayInit`→`menuControllerInput`→`buildScaledFormatTextElement`, wild pointer near guest
+    `0x8000005E`) — reverting just those two names did NOT stop the crash (N64Recomp still
+    auto-synthesized the same code under `static_5_...` names), proving the crash is caused by
+    function-boundary re-slicing from the batch's SIZE, not from any single bad candidate — the same
+    mechanism as the s9 dead end ("bulk symbol moves split the enclosing function"). Surgically
+    reverted all 774 of this session's relocations (matched by name+address, not a blanket
+    `git checkout`, to avoid destroying unrelated pre-existing uncommitted sibling-repo work per item
+    -3) back to `main_overlay.txt`; verified via `make_elf.py`'s skipped-func counter returning to
+    exactly 783, then a live re-run reaching VI=512 clean (88.7s, 0 crashes, 1 known
+    `[missing-func]`) — byte-for-byte the same result as s400. Separately, root-caused and landed a
+    **durable, unrelated fix**: `cmake --build` alone after a regen that changes the
+    `RecompiledFuncs/funcs_*.c` file count silently links against a stale file list (plain
+    `file(GLOB)` only re-scans at configure time) — added `CONFIGURE_DEPENDS` to `CMakeLists.txt`'s
+    two glob calls, committed. **Next iteration should retry item -249 with a much smaller batch
+    (~20-40, near s400's proven size) and a mandatory live-run verify after EACH batch before
+    accumulating further batches** — do not repeat the "sweep everything, verify once at the end"
+    approach. `HYPOTHESIS-ID: m4-main-overlay-phantom-functions` (same thread, iteration 3). Full
+    detail: `PORTING-STATE` Session 401.
+
+-249. **(s400) DONE, checkpoint: `main_overlay.txt` phantom-overlay-function family, batch 1 of ~40 done
+    (20/801), tooling proven — s401 attempted to continue at a larger scale and had to revert (see
+    item -250 above); the checkpoint below is still the current state.** Probed the first 20 of item -248's
     candidates with `tools/overlay_symbol_probe.py` (unmodified s9-era tool): **0 ambiguous, 0
     unresolved** -- every candidate matched exactly one destination overlay (13 strict-prologue
     CONFIRMED, 7 weaker jr-$ra-only WEAK; split 10 mission/7 cinematic/3 menu, a real cross-overlay

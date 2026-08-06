@@ -96,8 +96,17 @@ target_include_directories(RecompiledFuncs PRIVATE
     ${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/N64Recomp/include
 )
 
-file(GLOB RECOMP_C_SOURCES   ${RECOMP_FUNCS_DIR}/*.c)
-file(GLOB RECOMP_CXX_SOURCES ${RECOMP_FUNCS_DIR}/*.cpp)
+# CONFIGURE_DEPENDS: N64Recomp splits funcs_*.c into more files as the
+# generated function count grows (s401 -- a large enough regen spawned
+# funcs_45.c..funcs_50.c mid-session). A plain file(GLOB) only re-scans the
+# directory at configure time, so `cmake --build` alone after such a regen
+# silently links against a stale file list and produces spurious "undefined
+# symbol" link errors for functions that in fact exist on disk. This costs a
+# `cmake -S . -B build` reconfigure (not just --build) after any regen that
+# changes the RecompiledFuncs file count; CONFIGURE_DEPENDS makes CMake
+# re-glob automatically instead.
+file(GLOB RECOMP_C_SOURCES   CONFIGURE_DEPENDS ${RECOMP_FUNCS_DIR}/*.c)
+file(GLOB RECOMP_CXX_SOURCES CONFIGURE_DEPENDS ${RECOMP_FUNCS_DIR}/*.cpp)
 target_sources(RecompiledFuncs PRIVATE ${RECOMP_C_SOURCES} ${RECOMP_CXX_SOURCES})
 
 # ---- Patches (Zelda-style override layer) ----
