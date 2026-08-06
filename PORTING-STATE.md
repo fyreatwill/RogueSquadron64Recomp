@@ -34257,3 +34257,83 @@ disassembly read whenever someone has a reason to resolve it, not another automa
 
 Outcome: ADVANCED (34 real phantom-overlay-function relocations landed and live-verified, 2/2 clean
 batches with per-batch positive controls, continuing the discipline established s402).
+
+## Session 404 (2026-08-06) — M4 item -249: found, confirmed, and reverted a real regression (batch of 20 crashes `playerXwingInit`); also found and fixed a candidate-count bookkeeping bug
+
+### Bookkeeping bug found first
+Regenerating the candidate list with the unchanged script printed **712**, not the **692** NEXT.md
+expected from s403's checkpoint. Root cause: the candidate-generation script has no memory of prior
+probe verdicts. NONE/AMBIGUOUS-verdict names are never relocated, so they stay in `main_overlay.txt`
+and keep re-appearing at the front of every future regenerated list — s400-s403's `778−86=692` mental
+model assumed pure subtraction, silently ignoring the ~4 names (`initObjectAnimAndDetail`,
+`computeTrackedObjectWorldAnchor`, `claimSongSlotForCurrentHandle`, `handleCraftSelectInput`) that
+have now been re-probed as NONE/AMBIGUOUS 2-3 times each across sessions without being excluded from
+the count. Wrote a persistent skip-list, `scratch/agent/m4_known_skip.txt`, so future sessions filter
+these out before slicing instead of rediscovering the drift. After filtering, 708 real candidates
+remained; taking the next 20 of those is what produced the regenerated-count-vs-doc mismatch.
+
+### Batch attempt: 20 candidates, all mission, clean regen+build, but the live-verify caught a crash
+Took the next 20 (post-filter) candidates in file order — all resolved single-owner `mission` (10
+CONFIRMED, 10 WEAK, 0 NONE, 0 AMBIGUOUS). Applied, regenerated (`make_elf.py`'s `unmapped functions
+skipped`: 717→697, exactly −20, positive control), rebuilt clean (0 new warnings/errors — same
+baseline `-Wformat`/`-Wtautological-compare`/`-Wpointer-sign` noise as every prior session), and
+confirmed all 20 names present via `nm` on the built binary.
+
+The **mandatory live-verify** (the load-bearing rule) then hit a **new deterministic crash**: Bus
+error in `playerXwingInit+2068` (`last-guest-pc=0x80011088`), firing right after `[phase]
+vi_width=512` was reached at 89.2s (matching the clean baseline's timing exactly up to that point).
+Backtrace: `playerXwingInit ← playerXwingUpdate ← slotDispatcherIter ← spawnNpcOfType ←
+choosePlayerCraftAssets ← initMission ← mainGameLoop` — none of the 20 relocated names appear
+anywhere in it. Fault register `x0=0x0000000300000000` is the RDRAM host-base pointer present by
+construction in every guest memory access (the s216-218→s219 overturned-conclusion signature, not
+evidence of write-corruption by itself); `si_addr=0x3800000fa` resolves to guest address
+`0x800000FA`, consistent with a near-null pointer plus a small offset being dereferenced.
+
+**Differential test (no rebuild needed — cheaper than a blind revert):** re-ran the identical
+`probe.sh` command on the SAME unchanged binary. Crashed again, byte-identically — same native pc,
+same `last-guest-pc=0x80011088`, same `playerXwingInit+2068` offset. **2/2 reproductions with the
+batch applied.** Cross-checked against the 4 most recent verify runs from s402/s403 (different
+batches applied, all reached the exact same `vi_width=512`@~89.2-89.3s checkpoint) — every one of
+them continued cleanly on to `vi_width=640`@~118.1-118.3s with 0 crashes. **0/4 crashed at this point
+historically; 2/2 crashed with this specific batch.**
+
+### Revert and re-confirm
+Per NEXT.md's standing rule ("if it crashes: revert this batch immediately... do not patch around it
+same-iteration"), surgically reverted all 20 entries (name+address matched via a new
+`scratch/agent/s404_revert.py`, not a blanket `git checkout`) from `mission_overlay.txt` back to
+`main_overlay.txt`. Regenerated (`unmapped functions skipped` back to 717, confirming exact parity
+with s403's checkpoint), rebuilt clean, and **re-ran the live-verify on the reverted checkpoint**:
+reached `vi_width=512` at 89.4s and continued cleanly to `vi_width=640` at 118.3s — 0
+crashes/asserts/UnhandledJumpTarget/dmem-race/SIGBUS, matching the 4 historical clean baselines
+almost to the decisecond. **This is now 5/5 clean runs at this checkpoint without the batch, vs 2/2
+crashing with it** — strong (not fully exhaustive; only 1 same-session negative control) evidence the
+regression is real and batch-caused, though which of the 20 specific names is the culprit is not yet
+isolated (none appear in the crash backtrace directly, so if real this is downstream/indirect
+corruption, consistent with the codebase's established delayed-manifestation-corruption pattern).
+
+Confirmed sibling-repo symbol files are back to exact parity with s403's checkpoint: candidate count
+712 (matches pre-batch), 0 residual `s404` markers in `mission_overlay.txt`, exactly 1 in
+`main_overlay.txt` (the revert's own explanatory comment). Killed the live game process with SIGKILL
+per standing rule.
+
+### Verdict
+**Item -249 net progress: unchanged at 86/778 done, 692 real remaining (708 pre-filter minus this
+session's un-landed 20-name attempt held at 20 for later bisection — see below).** No new relocations
+landed this session, but a real regression was found, confirmed via a differential test, and reverted
+before it could land — exactly what the mandatory-live-verify discipline exists to catch.
+`HYPOTHESIS-ID: m4-main-overlay-phantom-functions` (iteration 9 — a discriminating result again, not
+a stall; iron rule 8 does not trigger).
+
+### Files changed
+- `rogue_squadron64/symbol_files/{main,mission}_overlay.txt` (sibling repo, **uncommitted** per
+  item -3): net zero — 20 entries moved to `mission_overlay.txt` then moved back, restoring the exact
+  s403 checkpoint content (confirmed by candidate-count parity, not just line-count).
+- This repo: `scratch/agent/s404_*` (candidate/batch/probe/apply/revert scripts, build+regen+verify
+  logs, two live-verify run captures — the crashing one and the reverted-checkpoint clean one),
+  `scratch/agent/m4_known_skip.txt` (new, persistent NONE/AMBIGUOUS skip-list),
+  `scratch/agent/s404_crash_batch_needs_bisection.txt` (new — the 20 held-back names + full writeup,
+  for next iteration's bisection).
+
+Outcome: ADVANCED (found, differentially confirmed, and reverted a real regression before it landed
+— a genuine result even though the relocation count didn't move; also found and fixed a real
+candidate-count bookkeeping bug that was silently drifting the "N remain" figure since s400).

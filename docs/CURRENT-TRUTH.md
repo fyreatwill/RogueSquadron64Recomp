@@ -139,7 +139,8 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
 `main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 86/778 done s400+s402+s403,
-692 remain, largest M4 item open).
+692 real remain per s404's corrected count, largest M4 item open — s404 found+reverted a real
+regression, see item -253).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -152,7 +153,30 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -252 (s403); the next new item takes -253 and is inserted at the top.
+oldest). Current top is -253 (s404); the next new item takes -254 and is inserted at the top.
+
+-253. **(s404) M4 item -249: found, differentially confirmed, and reverted a real regression before
+    it landed — item -249 stays at 86/778 done, no relocation-count movement, but a real result.**
+    Also fixed a candidate-count bookkeeping bug: the candidate-generation script has no memory of
+    prior probe verdicts, so NONE/AMBIGUOUS names (re-probed 2-3x across s400-s403 without being
+    excluded) keep re-appearing at the front of every future regenerated list, silently drifting the
+    "N remain" figure away from the docs' pure-subtraction estimate (778−86=692 vs the true
+    regenerated 712) — fixed with a new persistent skip-list, `scratch/agent/m4_known_skip.txt`.
+    After filtering, took the next 20 real candidates (all single-owner `mission`, 10 CONFIRMED + 10
+    WEAK, 0 NONE/AMBIGUOUS); applied, regenerated (positive control: `unmapped functions skipped`
+    717→697, exactly −20), rebuilt clean, all 20 names `nm`-confirmed present. The **mandatory
+    live-verify** then caught a new deterministic crash — Bus error in `playerXwingInit+2068`
+    (`last-guest-pc=0x80011088`), firing right after `vi_width=512` was reached (89.2s); none of the
+    20 relocated names appear in the crash backtrace. A same-binary repeat run reproduced it
+    byte-identically (2/2), while the 4 most recent historical verify runs (different batches, same
+    checkpoint) were 0/4 crashed. Reverted the batch surgically (name+address matched, not a blanket
+    checkout), rebuilt, and re-verified: the reverted checkpoint reached `vi_width=512`→`640` cleanly
+    (89.4s→118.3s, 0 crashes) — a 5th consistent clean data point at that checkpoint, vs 2/2 crashing
+    with the batch. Strong (not fully exhaustive — 1 same-session negative control) evidence the
+    regression is real and batch-caused; which of the 20 specific names is the culprit is NOT yet
+    isolated (bisection deferred — see `scratch/agent/s404_crash_batch_needs_bisection.txt` and
+    NEXT.md). `HYPOTHESIS-ID: m4-main-overlay-phantom-functions` (iteration 9 — a discriminating
+    result, not a stall). Full detail: `PORTING-STATE` Session 404.
 
 -252. **(s403) M4 item -249 continued at n=20: two more clean live-verified batches, 34 more
     relocations, 86/778 done, 692 remain.** Regenerated the candidate list (same script, `is_data`
