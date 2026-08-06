@@ -32822,3 +32822,70 @@ this session's Explore agent, singleton-file, no clustering benefit, deferred to
 Outcome: ADVANCED (16 more patch sites hardened against the file-scope fragility class, running total 164 of
 176 converted, 12 remain — most of which are intentional exclusions rather than untouched debt; verification
 found no regression this batch, a clean run after s384's genuine catch).
+
+## Session 386 (2026-08-06) — sanctioned tooling: fixup_game_funcs.py backport batch 9/N (final 4 converted, 168/176 total, backport CLOSED OUT)
+
+Continuation and closeout of the fixup_game_funcs.py function-scope-match backport (s377-379, s381-385 prior
+batches). Started this iteration from s385's NEXT.md, which named 3 genuinely-untriaged singleton sites as
+batch 9 candidates (`mat3x3InverseInto`, `tickTextureMaterialExpiry`, `coalesceFreeHeapBlocks`) against a
+claimed "9 confirmed intentional exclusions" out of 12 remaining sites.
+
+Identification: re-ran `scratch_batch3/scan_filescoped.py` fresh (12 sites confirmed, same count as s385 left
+it) and read the actual code context at all 12 line numbers directly in the orchestrating session rather than
+trusting s385's named list at face value — small enough count (12) that a dedicated Explore agent wasn't
+needed for identification. This turned up a discrepancy: s385's "9 confirmed intentional exclusions" list only
+actually named 8 distinct lines when enumerated (55, 269, 346, 428, 5560, 8647, 11833, 11996), leaving 4
+untriaged sites, not 3 — `loadCraftShadowTextures` (line ~7884, funcs_16.c table-index guard) had been missed
+entirely from the prior session's follow-up-candidate list. Lesson: line-number-based triage lists drift
+between batches (line numbers shift as each batch's conversions add code), so a claimed "N remain untriaged"
+count from a previous session's NEXT.md should be re-derived from a fresh scan + content read, not trusted as
+a rolled-forward fact.
+
+Verified all 4 candidate sites' anchors sit cleanly inside their named target function's own body span before
+delegating any edit, by grepping each function's `RECOMP_FUNC` header and the next one in the corresponding
+generated `RecompiledFuncs/*.c` file and confirming the anchor address/label falls strictly between them:
+- `loadCraftShadowTextures` (funcs_16.c): function spans lines 13007-13229, anchor `0x8006B744` at 13036, exit
+  target `L_8006B81C` at 13205 — both inside.
+- `mat3x3InverseInto` (funcs_5.c): function spans lines 7208-7738, anchor `0x8001C7E4` at 7326 — inside.
+- `tickTextureMaterialExpiry` (funcs_6.c): function spans lines 12137-12431, anchor `0x80022094` at 12222, exit
+  target `L_80022128` at 12375 — both inside.
+- `coalesceFreeHeapBlocks` (funcs_0.c): function spans lines 4360-5048, anchor `0x80002434` at 4671 — inside.
+
+None exhibited the `tickAudioSequencerFrame`/`musyxSynthFrame`-style cross-function-boundary problem from prior
+batches, so all 4 were clean fits for the idiom. Delegated only the mechanical conversion-editing step to a
+general-purpose subagent (same idiom: `func_start_m` search, `func_re`-bounded body slice, `re.subn` against
+the slice, splice back), backed up first to `fixup_game_funcs.py.pre-scope-backport-backup-batch9`. All 4
+converted; subagent's own syntax check (`ast.parse`) passed.
+
+Verification (orchestrating session, not delegated): cleared `RecompiledFuncs/`, regenerated via `make_elf.py`
++ `N64Recomp`, ran the PRE-batch9 backup script → `report_before.txt` (375 lines) + tree snapshot; cleared and
+regenerated again, ran the POST-batch9 script → `report_after.txt` (375 lines). `diff report_before.txt
+report_after.txt` and `diff -rq RecompiledFuncs-before RecompiledFuncs` — **both empty, byte-identical**. No
+regression. `scan_filescoped.py` confirms 12→8 remaining (exactly 4 fewer, matches the batch's converted
+count), and the 8 remaining lines match the previously-identified permanent-exclusion set exactly.
+
+Build: `cmake --build -j8` clean (same pre-existing DDIV/DMULT sign-conversion warnings as every prior batch,
+no new warnings).
+
+Soak: launched via a self-contained `zsh` cwd-wrapper script (`cd`s into `build/` then `exec`s the binary,
+matching the s382-established fix for the false-clean-soak cwd bug), backgrounded, watched 120s, SIGKILL. 0
+crash markers over 17,355 log lines; VI reached the full 0→320→512→640→1024 phase timeline (all 5 widths
+observed) before SIGKILL — a real, healthy run, not a false-clean.
+
+**Running total: 168/176 converted, 8 remain — backport CLOSED OUT.** All 8 remaining sites are confirmed
+permanent design exclusions, not backlog: the whole-file `$zero`-write sweep (~2700 sites, needs the blanket
+transform by design), the `0x8008EC88` `reapplyDisplayMode` audio-gate hand patch (deliberately volatile), the
+`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` dual-target pair, the `_s284_deref_guard_sites`
+multi-function guard loop, the `runHangarMenuFromOverlay`/`hasKasanMoorDefected` bare-label collision (needs a
+`p.name`-filter fix, not this idiom), `tickAudioSequencerFrame`'s exit diagnostic (match text spans past its
+own function body into the next function's signature), and `musyxSynthFrame`'s `synth-rearm-ptr` diagnostic
+(real anchor lives inside `initN64RspMixer`, ownership unresolved). The last two of those are live follow-up
+items, tracked in CURRENT-TRUTH, not part of this now-closed task.
+
+`docs/CURRENT-TRUTH.md` updated: Sanctioned-tooling paragraph rewritten to declare the backport CLOSED OUT
+with the final site-by-site breakdown and the two follow-up items; new Next-steps item -238 added at the top.
+Next work unit per the strategic-priority order: pick up one of the two follow-up items, or move to M3
+idiom-class audits (M5 has no open thread as of s376).
+
+Outcome: ADVANCED (final 4 patch sites converted, running total 168 of 176, backport task fully closed out —
+verification found no regression, soak clean with a genuine positive-control VI-phase timeline).
