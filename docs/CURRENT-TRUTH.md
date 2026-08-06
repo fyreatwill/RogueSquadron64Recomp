@@ -23,14 +23,16 @@ Priority order for upcoming iterations, set after the 300-session review:
    pointer families found and guarded s350-365, s366 static exhaustiveness audit found no further
    gap, **CLOSED s368** — `s367_verify3/4` both completed the function normally (guards fired,
    confirmed live, but no crash inside it) with 3-for-3 post-guard soaks now crash-free inside the
-   function). **No M5 Step 5 threads remain open** — next M5 work is Step 6 (PCM sanity-check,
-   `M5-AUDIO-PLAN.md` §4) or a re-scope, not another `drainMeshReleaseQueue` probe. Separately,
-   `heapWalker+1696` (an old, previously-guarded-4x function, GUARD1-4 s157-s218) surfaced a 5th
-   unguarded site, n=4 hits byte-identical, crossing the background-noise catalogue's escalation
-   bar — **s369 mapped it to a guest address and landed GUARD5** (`MEM_W(0X4, ctx->r2) = ctx->r3`,
-   5 sites, freshly-read-but-unvalidated global table-head pointer); first empirical verification
-   pair (`s369_heapwalkerguard5_verify1/2`) is queued, not yet drained.
-   Detail: Next-steps items -224..-210 (folded); live status/decision trees: NEXT.md.
+   function). `heapWalker+1696`'s 5th unguarded site (guarded s369 as GUARD5) also **CLOSED s370**
+   — its `s369_heapwalkerguard5_verify1/2` pair drained 2/2 non-recurrence (one full 302s clean
+   hold with `guard5_fire_n=0`, one crash at an unrelated symbol `findLookupEntryByKey+1864` with
+   `guard5_fire_n=0`). **No M5 Step 5 or escalated-background-noise threads remain open** — next M5
+   work is **Step 6, PCM sanity-check** (`M5-AUDIO-PLAN.md` §4): insertion point scouted s370, no
+   code landed yet — `queue_samples(int16_t*, size_t)` at `src/main/main.cpp:677-681`, reached via
+   `ultramodern::queue_audio_buffer` (`lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36`) from
+   `osAiSetNextBuffer_recomp` (`lib/N64ModernRuntime/librecomp/src/ai.cpp:18-21`); no existing
+   instrument on this path. Detail: Next-steps items -225..-210 (folded); live status/decision
+   trees: NEXT.md.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -158,7 +160,34 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -224 (s369); the next new item takes -225 and is inserted at the top.
+oldest). Current top is -225 (s370); the next new item takes -226 and is inserted at the top.
+
+-225. **(s370) `heapwalker-guard5-site` CLOSED — `s369_heapwalkerguard5_verify1/2` drained 2/2
+    non-recurrence; pivoting to M5 Step 6 (PCM sanity-check).** `verify2`: crashed at
+    `findLookupEntryByKey+1864` (`last-guest-pc=0x800ad0dc`), not `heapWalker+1696`/`0x8000834c`;
+    `guard5_fire_n=0`; `title_reached` at 45.7s — a clean non-recurrence data point. `verify1`: its
+    SOAK-RESULTS.md line recorded `rc=137` (the loop's 600s hard-cap SIGKILL) with a 0-byte wrapper
+    log, but the launcher log and raw `run.log` (which persist independently of the wrapper)
+    recovered the full picture: `phase width=1024 reached after 45.6s`, full 240s hold with all
+    scheduled input, `hold done wall=276s`, `done wall=302s`, then the launcher's own `game process
+    still alive; killing` — a complete, crash-free hold, not a hang. The wrapper's own `rc=137`
+    was caused by an 8.7 GB `run.log` (vs. `verify2`'s ordinary 248 MB) — millions of
+    `[rs-free-walk] node=0x80429C.. flags=0x0 size=0` lines, a **pre-existing, previously-
+    documented** phenomenon (heap free-list walking dominates log volume during/after a subsystem
+    stall, PORTING-STATE Sessions 176-183), not new evidence — that pushed the wrapper's own
+    grep/kill handling past the outer 600s cap before it could print its verdict.
+    `grep -ac '[CRASH]'`/`'[heapwalker-guard5]'` on the raw log both = 0. **New soak-tooling
+    lesson**: an `rc=137`/empty-log SOAK-RESULTS.md line is not automatically uninformative — check
+    the launcher log and raw run.log directly before discarding the run. Net: both runs are
+    non-recurrence data points (decision tree item 2 from s369's NEXT.md) → thread **CLOSED**.
+    GUARD5 stays armed by default (free instrument; 0 fires in 2 runs isn't proof it's
+    unreachable). **No M5 Step 5 or escalated-background-noise threads remain open.** Scouted (read
+    -only, no code changed) the M5 Step 6 insertion point: `queue_samples(int16_t* samples, size_t
+    num_bytes)` at `src/main/main.cpp:677-681`, reached via `ultramodern::queue_audio_buffer`
+    (`lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36`, called from `osAiSetNextBuffer_recomp`
+    at `lib/N64ModernRuntime/librecomp/src/ai.cpp:18-21`); confirmed by grep that no existing
+    instrument sits on this path (the existing `[audtask-dispatch]` counter at `main.cpp:607-634`
+    is the RSP task-dispatch side, a different mechanism). Full detail: `PORTING-STATE` Session 370.
 
 -224. **(s369) heapWalker GUARD5 landed — guest address for the escalated `heapWalker+1696` crash
     found and guarded, 5 sites; first empirical verification still outstanding.** `otool`/`nm`/

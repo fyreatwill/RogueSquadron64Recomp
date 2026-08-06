@@ -1,152 +1,86 @@
 # NEXT work unit
 
-## s369: heapWalker GUARD5 landed — first empirical verification is the next iteration's job
+## s370: `heapwalker-guard5-site` CLOSED (2/2 non-recurrence) — pivot to M5 Step 6
 
-s368 left `heapWalker+1696` (n=4, byte-identical `last-guest-pc=0x8000834c`) as an escalated,
-not-yet-identified 5th unguarded site in `heapWalker`. This session mapped it to a guest address and
-landed the guard. Summary (full detail: CURRENT-TRUTH item -224, PORTING-STATE Session 369):
+s369's GUARD5 verify pair drained and both are non-recurrence data points (full detail:
+CURRENT-TRUTH item -225, PORTING-STATE Session 370). `heapWalker+1696`/`0x8000834c` is no longer
+an open thread. **No M5 Step 5 or escalated-background-noise threads remain open.** Per the
+standing directive (`docs/CURRENT-TRUTH.md` USER DIRECTIVE §2) and `docs/M5-AUDIO-PLAN.md` §4,
+the next M5 work is **Step 6 — validate real PCM reaches SDL, not just that the guest stopped
+hanging.**
 
-- `otool`/`nm`/`objdump`/`dwarfdump` are all still sandbox-blocked (reconfirmed this session) — kept
-  using the hand-rolled `scratch/agent/s193_disasm.py`, extended with a register-offset LDR/STR
-  decoder case (it previously only covered immediate-offset forms).
-- Ruled out symbol misattribution first (heapWalker's compiled size is ~10 KB / ~2500 ARM64 instrs
-  vs ~800 bytes / ~175 MIPS instrs of guest code — `+1696` is genuinely inside the function).
-- Decoded the crash instruction: `STR W8,[X9,X10]` fed by `LDR X8,[X8,#24]` / `LDR X10,[X10,#16]`.
-  Cross-checked against `recomp_context`'s field layout (`gpr r0,r1,r2,...`, `gpr`=`uint64_t` → r2 at
-  +16, r3 at +24) — these are plain `ctx->r2`/`ctx->r3` struct reads, NOT a raw-pointer chase (item
-  -223's original characterization was a plausible but wrong first read).
-- Source cross-check landed on `MEM_W(0X4, ctx->r2) = ctx->r3;` (guest `0x80007A3C` + 4 unrolled
-  siblings), where `ctx->r2` is a freshly-read global table-head pointer checked only for `!= 0`,
-  never range-validated — same idiom as guards 1/3/4, new register.
-- Guarded all 5 sites (`ROGUESQ_LOG_HEAPWALKER_GUARD5`), armed by default in
-  `scratch/s73_post_a_scene/run_s327waitpump.sh`. Full regen+rebuild clean, patch report `x1` per
-  site, idempotency-refusal confirmed on a 2nd fixup run.
-- Queued `s369_heapwalkerguard5_verify1.sh` / `s369_heapwalkerguard5_verify2.sh` (HOLD_S=240) — the
-  loop should drain these before the next iteration starts.
+## Competing hypotheses for Step 6
 
-## Next iteration: drain the s369 pair and read the decision tree
+1. **PCM is fine** — the ucode (`factor5_ucode_b`, dispatched under `ROGUESQ_AUDIO_UCODE=1` since
+   step 2) produces real, non-silent samples and `queue_samples`/`SDL_QueueAudio` pass them through
+   correctly. Expected discriminating result: a non-zero-sample counter shows a healthy fraction of
+   non-silent buffers once past boot.
+2. **Silent-but-not-crashing** — the ucode completes and the pipeline never crashes (already
+   confirmed by step 2/step 5's clean soaks), but the buffers `queue_samples` receives are all-zero
+   (silence) because of a format mismatch, an unfed voice-mixing step, or the ucode short-circuiting
+   its own PCM-generation path even while "completing" the task cleanly. Expected result: the
+   silent-buffer counter stays ~100% even well past boot/menu.
+3. **Garbage-but-not-crashing** — buffers are non-zero but not coherent audio (e.g. uninitialized
+   RDRAM, wrong stride/channel interleave). A simple non-zero check alone can't fully distinguish
+   this from hypothesis 1 — if the sanity counter comes back "non-silent," treat that as
+   necessary-not-sufficient and note explicitly that only a real listen-test (not automatable here)
+   would fully confirm coherent audio, not just non-zero content.
 
-**Mechanical check first** (the stale-NEXT.md gotcha has recurred 9+ sessions running):
-`grep -c 's369_heapwalkerguard5' scratch/agent/SOAK-RESULTS.md` — if it already shows 2 lines, the
-pair has drained; read the actual logs before assuming anything below is still pending.
+**Discriminating measurement**: an env-gated counter in `queue_samples` (`src/main/main.cpp:677`)
+that iterates the `int16_t* samples` buffer for the first N calls (and every Mth call after) and
+logs whether every sample in that call was exactly zero, plus a running "all-zero calls / total
+calls" ratio. This alone splits hypothesis 2 from {1, 3}. It cannot by itself split 1 from 3 (that
+needs either statistical variance/spectral checks or a real listen — out of scope for this pass;
+note the limitation rather than over-claim).
 
-Once `s369_heapwalkerguard5_verify1/2` results are in, apply this decision tree (also embedded in
-the soak scripts themselves, `scratch/agent/soak_queue/done/s369_heapwalkerguard5_verify*.sh` after
-they drain):
+## Insertion point (scouted s370, read-only, no code changed yet)
 
-1. **`guard5_fire_n>=1` in either run**: first-ever positive control for the new instrument — the
-   site is real and reachable. This alone does NOT confirm it's THE crash cause; check whether a
-   crash still occurred in the SAME run despite the fire (would mean this guard papered over one
-   write but the corruption source is upstream/elsewhere, or a 6th site exists).
-2. **Both clean, OR both crash at a symbol/guest-pc other than `heapWalker+1696`/`0x8000834c`, with
-   `title_reached` set (a real hold, not a <5s pre-title crash)**: 2 non-recurrence data points. Per
-   this whole M5 saga's standing closure bar, that's enough to call this thread CLOSED — write the
-   closure into CURRENT-TRUTH, fold into the M5 status summary, and move to whichever of Step 6 (PCM
-   sanity-check) or a re-scope per `M5-AUDIO-PLAN.md` §4 is next.
-3. **Still crashing at `heapWalker+1696`/`0x8000834c` with `guard5_fire_n=0` in both runs**: the guard
-   regex likely didn't match the literal patched text, or the site identification is wrong. Re-grep
-   `RecompiledFuncs/funcs_3.c` for `GUARD5` first (mechanical, free) before revisiting the source
-   analysis.
-4. **Still crashing at the same signature WITH `guard5_fire_n>=1` in the SAME run**: the guard fired
-   but the crash persisted at the identical checkpoint. Don't jump straight to "6th site" — first
-   check whether the fire correlates with the crash timing or is unrelated background activity
-   (compare against any clean run's guard5 fire count once available).
-5. A `<5s` pre-title crash (`title_reached` blank) is not informative for this thread's tally per the
-   standing rule — re-queue rather than count it.
+- `queue_samples(int16_t* samples, size_t num_bytes)` — `src/main/main.cpp:677-681`. Note: despite
+  the parameter name, `ultramodern::queue_audio_buffer` (`lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36`)
+  actually passes a **sample count**, not a byte count, into this parameter (`sample_count =
+  byte_count / sizeof(int16_t)` computed there) — confirm this before writing the iteration bound,
+  or the counter will read out of bounds or under-scan.
+- Call chain: `osAiSetNextBuffer_recomp` (`lib/N64ModernRuntime/librecomp/src/ai.cpp:18-21`) →
+  `ultramodern::queue_audio_buffer` (`audio.cpp:25-36`) → `audio_callbacks.queue_samples` →
+  `main.cpp:677-681`'s concrete `queue_samples`, registered at `main.cpp:1842`.
+- No existing instrument sits on this path (verified by grep this session). The existing
+  `[audtask-dispatch]` counter (`main.cpp:607-634`) is the RSP task-DISPATCH side (a different
+  mechanism, already confirmed firing continuously since s300) — do not confuse the two or treat
+  dispatch activity as evidence about sample content.
+- **This is a `src/` edit, not a `lib/` edit** — `queue_samples` lives in this repo's own
+  `src/main/main.cpp`, not the `lib/N64ModernRuntime` submodule. No `submodule-patches/export.sh`
+  needed for this specific change (only if the session also happens to touch anything under
+  `lib/`).
 
-## Background-noise catalogue (do NOT escalate reactively — 3rd independent hit is the trigger)
+## Concrete plan for next iteration
 
-- `trackResourceListWithMappingTables+1192` — n=2 (s347, s362). Apple-framework `dladdr` fallback,
-  host code.
-- `unregisterServiceWorker+536` — n=2 (Session 265, s362). Apple-framework `dladdr` fallback, host
-  code.
-- `fscache_insert_and_retain+1192` — KNOWN Metal shader-compiler system crash (item -10, s270).
-- `heapWalker+1696` — was ESCALATED s368 at n=4; guarded s369; now this thread's own open question
-  (see decision tree above), not generic background noise.
-- `musyxSynthFrame+4652` — n=1 (s367), pre-title (<5s), unrelated audio-boot subsystem.
+1. Read `src/main/main.cpp:670-690` (the `queue_samples` function and its immediate context) and
+   `lib/N64ModernRuntime/ultramodern/src/audio.cpp:20-40` to confirm the sample-vs-byte-count
+   question above before writing anything.
+2. Add an env-gated counter (`ROGUESQ_LOG_PCM_SANITY` or similar; follow the existing
+   `getenv`-check + static counter convention already used for `[audtask-dispatch]` at
+   `main.cpp:607-634`): for the first ~20 calls then every 256th (matching the existing sampling
+   convention), scan the buffer, log `[pcm-sanity] n=<call#> samples=<count> all_zero=<0|1>
+   nonzero_n=<count>`, and maintain a running `all_zero_calls`/`total_calls` ratio printed
+   periodically.
+3. Build (`cd build && cmake --build . -j8`, no regen pipeline needed — this is host-side C++, not
+   guest recompiled code).
+4. Run ONE soak with `ROGUESQ_AUDIO_UCODE=1` (required — this is the step-2 toggle that makes the
+   real ucode dispatch instead of the stub) + the new sanity env var + all current guard/positive-
+   control instruments armed (per `run_s327waitpump.sh`'s defaults), `HOLD_S=120` is enough for a
+   first pass (this is a per-call-content check, not a rare-crash-recurrence hunt — don't over-
+   budget wall time on it).
+5. Positive control requirement (iron rule 1): the counter must show SOME calls logged (proves the
+   instrument fires at all) before its all-zero ratio means anything. If `queue_samples` is never
+   called even with `ROGUESQ_AUDIO_UCODE=1`, that's itself a finding (either the ucode isn't
+   actually driving `osAiSetNextBuffer`, or step 2's earlier "M_AUDTASK dispatches from n=0" doesn't
+   imply "queue_samples gets called" — check that assumption explicitly, don't take it on faith
+   from the step-2 writeup).
+6. Read the decision split: all-zero ratio near 100% after boot → hypothesis 2 (silent-but-not-
+   crashing), write it up as the closer to M5 Step 6's original question and note that this is the
+   FIRST of the 4 M5 crash families' "audio content actually plays" question ever gets a real
+   answer either way. All-zero ratio near 0% → hypothesis 1/3, note the "non-zero ≠ verified
+   coherent" caveat explicitly rather than declaring victory.
 
-## Notes carried forward (all still current)
-
-- `[CRASH][pc-symbol]` (host PC via `dladdr`, precise) and `[CRASH][last-guest-pc]` (guest
-  checkpoint, only meaningful if the crashing function is breadcrumbed) answer different questions —
-  a stale-but-valid `last-guest-pc` from a function that already returned can look like it implicates
-  that function when it doesn't. Always check `pc-symbol` before trusting a `last-guest-pc` match.
-- Current gate state (unchanged since s343): fixup regex at `fixup_game_funcs.py` ~line 263 is
-  `r"0x8008E(?:C88)"` — matches ONLY `reapplyDisplayMode` (force-zeroed); `setDisplayMode` stays
-  unmatched/reversed.
-- A crash under ~5s that never reaches `title_reached` is NOT a meaningful test of any post-title
-  instrument — don't count it toward a non-recurrence tally.
-- **Regen-reliability gotcha (item -20)**: `N64Recomp` skips rewriting any `RecompiledFuncs/funcs_*.c`
-  that already exists on disk — ALWAYS delete all `funcs_*.c` before re-running `N64Recomp`. Use
-  absolute-path flat `rm -f` calls (no glob, no cd, no compound for/xargs) per the sandbox matcher;
-  a single `rm -f path1 path2 ...` with many literal absolute-path arguments IS allowed (confirmed
-  s369) even though it lists 15 paths at once — it's one command, not a compound one.
-- **`fixup_game_funcs.py`'s own idempotency guard (confirmed s369)**: refuses a 2nd run once
-  `funcs_0.c` carries `// RS64_FIXUP_APPLIED`, exiting 1 with an explicit message. That's the correct,
-  expected outcome on a 2nd invocation without a fresh `N64Recomp` regen first — not a bug to chase.
-- **Sandbox tool-access gotcha (reconfirmed s369)**: `otool`, `nm`, `objdump`, `dwarfdump` all require
-  approval that can't be granted non-interactively — any ARM64↔guest-address mapping work has to go
-  through `scratch/agent/s193_disasm.py`'s hand-rolled Mach-O symbol table reader + instruction
-  decoder (now covers immediate-offset AND register-offset LDR/STR/LDP/STP/exclusive forms).
-- **Implementation gotcha**: `re.subn`'s plain-string `repl` gets backslash-escape-processed by `re`
-  — ALWAYS use a lambda callback for multi-line replacement text; verify by grepping the regenerated
-  `.c` for the new text on one line.
-- **Guard-bail-target gotcha (s358)**: a synthetic-value guard's branch target can be a loop's
-  re-entry label, not an exit — verify the CONTROL PATH, not just that a branch exists.
-- **Read-guard/write-guard sibling gotcha**: a guard on a READ through a corrupted pointer does not
-  repair the pointer — if reused UNGUARDED later (especially a WRITE), the crash moves there. When
-  defining an idiom class, grep for the DATA-FLOW pattern, not just one syntactic shape.
-- **`MEM_W` macro signature (confirmed s369, `include/recomp.h:95-96`)**: `MEM_W(offset, reg)` =
-  `*(int32_t*)(rdram + ((reg)+(offset)) - 0xFFFFFFFF80000000)`. Both arguments are ADDED (order-
-  independent). In generator-produced code the offset arg is ALWAYS a compile-time hex literal (from
-  the MIPS instruction's 16-bit immediate field) — a register/computed expression as the offset only
-  appears in hand-written diagnostic PATCH blocks (e.g. `funcs_24.c`'s musyx-dma diagnostic), never
-  in normal recompiler output. Don't expect to grep for "MEM_W(ctx->rX, ctx->rY)" as a discriminator
-  — it won't exist outside hand-written patches.
-- **`recomp_context` field layout (confirmed s369, `include/recomp.h:414-418`)**: `gpr r0, r1, r2,
-  r3, ...` with `gpr` = `uint64_t` (8 bytes each) — so struct byte offsets are r0=0, r1=8, r2=16,
-  r3=24, r4=32, etc. Useful any time a hand-decoded ARM64 load shows a small (`<256`-ish) immediate
-  self-dereference offset near a `ctx`-adjacent register — check this table before assuming it's a
-  guest-memory pointer chase.
-- **Off-target-but-discriminating gotcha**: a soak's own "inconclusive" verdict for its target
-  question can still be highly informative for a DIFFERENT open thread or the background-noise
-  catalogue — always cross-check `last_pc_symbol`/`last-guest-pc` against ALL open threads.
-- **Stale-NEXT.md gotcha (recurred TEN sessions running, s360-s369)**: NEXT.md can claim a queued
-  pair is "still pending" when `SOAK-RESULTS.md` already shows it drained. Mechanical check every
-  session: `grep -c '<recipe-basename>' scratch/agent/SOAK-RESULTS.md`.
-- **Guard fire_n=0 is itself informative, not just "didn't matter" (s361)**: check for short-circuit
-  paths around a guarded loop body that bypass the guard's own instrumentation while still feeding an
-  unvalidated pointer downstream.
-- **Same-checkpoint-value ≠ same crash (s367)**: `last-guest-pc` breadcrumb variables are global and
-  persist across calls/runs; two crashes sharing the same value can be unrelated subsystems if their
-  `pc-symbol` differs. Always check `pc-symbol` before trusting a shared guest-pc as a pattern match.
-- **Guard-fired-but-function-completed-normally (s368)**: a guard family can fire on literally every
-  run (deterministic, not sporadic corruption) while the guarded function still returns normally —
-  firing proves the guard is exercised (positive control) but does NOT by itself mean the guarded
-  function is still crashing. Check whether the function's OWN return checkpoint was reached before
-  concluding a guard-fire run is evidence of an open problem in that function.
-- **Timeline-based causation check (s368, generalizable)**: when a downstream crash coincides with a
-  guard change, check whether the SAME crash signature already existed in soaks that predate the
-  guard — if so, the guard can be ruled out as the cause without further instrumentation.
-- **Symbol-boundary sanity check (s369, new, generalizable)**: before trusting any hand-decoded
-  "function+offset" crash address, compare that symbol's vmaddr against the NEXT symbol's vmaddr in
-  the Mach-O symbol table (`scratch/agent/s193_disasm.py`'s `find_segments_and_syms`, query both
-  names) — if the offset exceeds the gap, the address may actually be inside a different, adjacent
-  function with no size info to catch the misattribution. Cheap, should be the first check whenever
-  hand-decoding a large offset into a small-looking source function.
-- **Self-dereferencing-load ambiguity (s369, new, generalizable)**: a hand-decoded `LDR Xn,[Xn,#K]`
-  near a crash site is NOT automatically a guest-memory pointer chase — it can just as easily be an
-  ordinary `ctx->rN` struct-field read if `Xn` transiently held the `ctx` pointer. Check the small
-  immediate `K` against `recomp_context`'s known field-offset table (above) before assuming the more
-  exotic "corrupted pointer chased through its own fields" interpretation.
-- **Soak-queue drain order (resolved s362)**: `tools/agent/loop.sh` drains `"$qdir"/*.sh` via bash's
-  default lexicographic glob — alphabetical = chronological for `sNNN_..._verifyM.sh` naming.
-
-## Queued, ready for the loop
-
-`s369_heapwalkerguard5_verify1.sh` and `s369_heapwalkerguard5_verify2.sh` in
-`scratch/agent/soak_queue/` — both HOLD_S=240, all current guard instruments (including the new
-GUARD5) armed by default via `run_s327waitpump.sh`.
-
-HYPOTHESIS-ID: heapwalker-guard5-site (iteration 2 — guard landed s369, awaiting first empirical
-verification).
+HYPOTHESIS-ID: m5-audio-destub-step6-pcm-sanity (iteration 1 — new thread, pivoted from the closed
+heapwalker-guard5-site thread this session).

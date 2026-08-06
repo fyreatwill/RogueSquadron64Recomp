@@ -31774,3 +31774,62 @@ soak-recipe/analysis-tool sessions).
 
 `HYPOTHESIS-ID` stays `heapwalker-guard5-site` (iteration 2 — guard landed,
 awaiting its first empirical verification pair).
+
+## Session 370 (2026-08-05) — `heapwalker-guard5-site` CLOSED (2/2 non-recurrence); pivoting to M5 Step 6 (PCM sanity-check)
+
+Session-start mechanical check: `s369_heapwalkerguard5_verify1/2` had already drained
+(`grep -c s369_heapwalkerguard5 scratch/agent/SOAK-RESULTS.md` → 2). Read both results.
+
+**`verify2`**: straightforward — `CRASH_DETECTED`, but at `pc-symbol=findLookupEntryByKey+1864`
+(`last-guest-pc=0x800ad0dc`), NOT `heapWalker+1696`/`0x8000834c`; `guard5_fire_n=0`;
+`title_reached` at 45.7s (a real hold, not a pre-title crash). A clean non-recurrence data point
+for this thread — the crash moved to an unrelated symbol entirely.
+
+**`verify1`**: the SOAK-RESULTS.md line recorded `rc=137` (SIGKILL), `600s` (the loop's hard cap),
+and the soak script's own stdout log was **0 bytes** — the wrapper never got to print its verdict
+line before the outer harness killed the whole process group. Rather than write this off as
+uninformative, read the launcher log and raw run.log directly (they persist independently of
+whether the wrapper script finished):
+- Launcher log (`scratch/agent/soak_results/s369heapwalkerguard5verify1_launcher.log`) shows a
+  **normal, complete run**: `phase width=1024 reached after 45.6s`, full 240s hold with all
+  scheduled stick/key presses, `hold done wall=276s`, `done wall=302s`, then `game process still
+  alive; killing` — the launcher's own kill, not a crash. The game held clean for the entire
+  session.
+- The raw `run.log` itself is **8.7 GB** (`scratch/s73_post_a_scene/s369heapwalkerguard5verify1/run.log`),
+  vs. `verify2`'s ordinary 248 MB. `grep -ac '[CRASH]'` on it: **0**. `grep -ac
+  '[heapwalker-guard5]'`: **0**. Tailing it shows the reason for the size: millions of
+  `[rs-free-walk] node=0x80429C.. flags=0x0 size=0` lines with node addresses incrementing
+  linearly by exactly `0x10` — this is a **pre-existing, previously-documented** phenomenon (first
+  characterized around PORTING-STATE Sessions 176-183 and 17028/17225-ish: heap free-list walking
+  dominates the log volume during/after a subsystem stall), not new evidence of anything. What's
+  new this session is purely a **soak-tooling gotcha**: the outer 600s hard cap can fire mid-`grep`
+  on an outsized run.log (or during a slow kill of a process with huge buffered I/O), producing an
+  `rc=137`/empty-log SOAK-RESULTS.md line that looks uninformative but actually has full data
+  recoverable from the launcher log + raw run.log directly. Worth remembering next time a wrapper
+  times out: **check the raw run.log before discarding the run as uninformative.**
+
+Net: `verify1` = full 302s clean hold, 0 crashes, 0 guard5 fires, title_reached real. `verify2` =
+crash at a different symbol than the target, 0 guard5 fires, title_reached real. Both are genuine
+non-recurrence data points per the decision tree NEXT.md set at s369 (item 2: "both clean, OR both
+crash at a symbol/guest-pc other than heapWalker+1696/0x8000834c, with title_reached set ... 2
+non-recurrence data points ... enough to call this thread CLOSED"). **`heapwalker-guard5-site`
+CLOSED.** GUARD5 stays armed by default (free instrument, no reason to remove); `guard5_fire_n=0`
+in both runs means it hasn't caught anything yet, but it's a 2-run sample, not proof the site is
+unreachable — leave it live and let future soaks accumulate data passively.
+
+**Consequence for the M5 goal stack**: with this thread closed, there are no open M5 Step 5
+threads AND no open "background-noise escalation" threads. Per the standing directive
+(`docs/CURRENT-TRUTH.md`'s USER DIRECTIVE §2) and `docs/M5-AUDIO-PLAN.md`'s own sequencing, the
+next M5 work is **Step 6 — validate real PCM reaches SDL, not just that the guest stopped
+hanging** (§4 of that doc). Scouted the insertion point this session (read-only, no code changed):
+the sample-queue chokepoint is `queue_samples(int16_t* samples, size_t num_bytes)` at
+`src/main/main.cpp:677-681`, reached via `ultramodern::queue_audio_buffer` (`lib/N64ModernRuntime/
+ultramodern/src/audio.cpp:25-36`) from `osAiSetNextBuffer_recomp` (`lib/N64ModernRuntime/
+librecomp/src/ai.cpp:18-21`). No existing instrument sits on this path (verified by grep — the
+existing `[audtask-dispatch]` counter at `main.cpp:607-634` is the RSP task-dispatch side, a
+different mechanism entirely). This is a `src/main/main.cpp` edit, not a `lib/` edit — no
+submodule-patch export needed for it specifically (though any incidental `lib/` touch elsewhere
+this arc still needs one per the standing rule).
+
+No code changed this session; no soak queued (the analysis consumed already-completed soaks, no
+new build/run needed). `HYPOTHESIS-ID` pivots to `m5-audio-destub-step6-pcm-sanity` (iteration 1).
