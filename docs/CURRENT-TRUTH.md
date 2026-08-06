@@ -111,11 +111,11 @@ Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regress
 `UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
 ~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403+s405+s406+s407+
-s408+s410+s411 have fixed 235 of the corrected 778-candidate count (563 remain per a fresh regen, 1
-permanently excluded as known-bad, item -249). s411 also resolved the long-standing
-`[missing-func] 0x800FB9E4` baseline (was `endMissionCleanup`, a phantom-overlay victim of this same
-family) — every clean live-verify from here should show 0 `[missing-func]` lines, not 1. Post-`a`
-process now soaks well past 65s without death.
+s408+s410+s411+s412 have fixed 335 of the corrected 778-candidate count (463 remain per a fresh regen, 1
+permanently excluded as known-bad, a 2nd suspect 25-name group pending sub-bisection, item -249). s411
+resolved the long-standing `[missing-func] 0x800FB9E4` baseline (was `endMissionCleanup`, a
+phantom-overlay victim of this same family) — every clean live-verify from here should show 0
+`[missing-func]` lines, not 1. Post-`a` process now soaks well past 65s without death.
 
 ## Goal stack — work strictly top-down
 
@@ -142,12 +142,14 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249..-257, IN PROGRESS: 235/778 done
-s400-s411, 563 remain per a fresh regen (558 actionable, 4 known-skip, 1 known-bad), largest M4 item
-open — s404-s407 found, bisected, and fully resolved a 20-name crash batch down to one genuinely-buggy
-function (parked); s408 and s410 each resumed ordinary bulk relocation post-closure with two more clean
-n=20 batches; s411 ran the loop-mandated discriminating probe on batch size — n=50 landed clean, single
-data point, cadence to be raised further next iteration).
+`main_overlay.txt` phantom-overlay-function family (item -249..-258, IN PROGRESS: 335/778 done
+s400-s412, 463 remain per a fresh regen (458 actionable, 4 known-skip, 1 known-bad, plus a 2nd
+25-name suspect group pending sub-bisection), largest M4 item open — s404-s407 found, bisected, and
+fully resolved a 20-name crash batch down to one genuinely-buggy function (parked); s408 and s410 each
+resumed ordinary bulk relocation post-closure with two more clean n=20 batches; s411 ran the
+loop-mandated discriminating probe on batch size — n=50 landed clean; s412 scaled to n=75 (clean) then
+n=100 (crashed), bisected the crash to a 25-name suspect group with a repeatable signature, settled the
+steady-state cadence at n=75).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -162,10 +164,10 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
 oldest). Current top is -257 (s408); the next new item takes -258 and is inserted at the top.
 
--249..-257. **(s400-411) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
-    proven, a genuine single-function crash bisected and parked, ordinary n=20 bulk relocation resumed,
-    then a loop-mandated discriminating probe showed n=20 was not actually a hard ceiling. 235/778
-    done, 563 remain (558 actionable, 4 known-skip, 1 known-bad) as of s411.** s400 landed batch 1
+-249..-258. **(s400-412) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
+    proven, two genuine single-function-family crashes bisected and parked, cadence scaled from n=20 to
+    a confirmed-safe n=75. 335/778 done, 463 remain (458 actionable pending q2 sub-bisection, 4
+    known-skip, 1 known-bad) as of s412.** s400 landed batch 1
     (20/801) and proved the tooling (`s400_probe_batch.py`/`s400_apply_batch.py`, positive-control via
     `make_elf.py`'s unmapped-functions-skipped counter). s401 attempted the full ~774-item remainder in
     one sweep: it linked, but caused a new deterministic title-screen SIGBUS; reverted without
@@ -194,9 +196,21 @@ oldest). Current top is -257 (s408); the next new item takes -258 and is inserte
     included `endMissionCleanup`, the function at that exact address). This is single-source (one n=50
     trial) but directly refutes treating n=20 as a hard structural ceiling — s401's original 774-item
     failure predates the CMake fix and is now more plausibly explained by cross-overlay cascade
-    dependencies and/or an unbisected bad function, not pure batch size.** Next iteration pivots to a
-    NEW hypothesis-id and scales the cadence further (try n=75-100), per this session's close-or-pivot
-    result — see `scratch/agent/NEXT.md`. Full per-session detail: `PORTING-STATE` Sessions 400-411.
+    dependencies and/or an unbisected bad function, not pure batch size.** s412 continued the
+    `m4-item249-cadence-scaleup` thread: n=75 landed clean (55 CONFIRMED + 20 WEAK, live-verified to
+    `lastW=640`), but the very next n=100 batch **crashed** (Bus error, `slotDispatcherIter` family,
+    `mainGameLoop→initMission→spawnHudNpc→spawnNpcOfType→slotDispatcherIter→initHudStruct`). Reverted
+    and bisected on top of the clean n=75 baseline (s405-407 halves playbook): the 100-name batch's
+    first half (n=50) still crashed; its first quarter (n=25) came back clean; its second quarter (n=25,
+    "q2") crashed with the byte-identical signature (`slotDispatcherIter+1404`,
+    `last-guest-pc=0x80065e94`) as the n=50 half — two independent bisection branches converging on the
+    same 25-name group is strong evidence this is a specific bad function (or small set), the same
+    pattern as s404-407's `initPlayerCraftTrailBuffers`, not a batch-size resplitting artifact. Final
+    state: batch-1 (75) + q1 (25) = 100 net new clean relocations landed and live-verified; q2's 25
+    names (`scratch/agent/s412_bisect_q2.txt`) are set aside, NOT yet in `m4_known_bad.txt`, pending an
+    eighth-split (12/13) sub-bisection next session. **Cadence settled at n=75 as the confirmed-safe
+    steady-state** until q2's specific bad function(s) are isolated. Full per-session detail:
+    `PORTING-STATE` Sessions 400-412.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
     (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by

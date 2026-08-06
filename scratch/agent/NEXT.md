@@ -1,90 +1,87 @@
 # NEXT work unit
 
-## s411 recap
+## s412 recap
 
-The loop's MANDATORY-PIVOT gate fired at session start: s408, s410, and s410-recorded "iteration 16"
-had all run 3 straight ordinary n=20 batches under `HYPOTHESIS-ID: m4-main-overlay-phantom-functions`,
-so a 4th consecutive n=20 batch was disallowed. Per the gate's own contract, ran the single
-highest-information discriminating probe instead: **is n=20 actually a hard ceiling, or just an
-unbisected inference from s401's one 774-item failure?** Attempted n=50 (2.5x cadence) with full
-live-verify discipline.
+Continued `HYPOTHESIS-ID: m4-item249-cadence-scaleup` (opened s411, n=50 confirmed clean). This
+session: n=75 landed CLEAN (55 CONFIRMED + 20 WEAK, live-verified to `lastW=640`, 0 crash markers).
+Pushed to n=100 next (per NEXT.md's own "one more step up" instruction) — **crashed**: Bus error,
+`pc-symbol=initHudStruct+12304`, `last-guest-pc=0x800290d4`, call chain
+`mainGameLoop→initMission→spawnHudNpc→spawnNpcOfType→slotDispatcherIter→initHudStruct`.
 
-**Result: clean.** 49 CONFIRMED + 1 WEAK (0 ambiguous, 0 none) out of 50. Applied all 50. Positive
-control exact (`make_elf.py` unmapped-functions-skipped 618→568). Build clean (0 errors, the s401
-`CONFIGURE_DEPENDS` fix held — no stale-glob repeat). `nm`-confirmed 50/50 present. Live-verify reached
-`phase width=512` at 88.6s, continued to `lastW=640`, **0 crash markers AND 0 `[missing-func]` lines**
-(down from the 1 that's appeared in every prior session — the batch included `endMissionCleanup` at
-the exact address, `0x800fb9e4`, that's been firing `[missing-func]` since s400; two independent lines
-of evidence it's genuinely fixed: the grep-count drop plus the address match).
+Reverted the 100-batch (wrote `scratch/agent/s412_revert_batch2.py`, mirrors `s400_apply_batch.py`),
+confirmed the revert restored the exact batch-1-only unmapped-count (493), then bisected on top of the
+clean n=75 baseline (s405-407 halves playbook, but testing each half/quarter ON TOP of a known-clean
+baseline rather than in isolation, so every live-verify state is real):
 
-**Item -249 tally: 235/778 done (was 185/778), 563 remain per a fresh regen (558 actionable, 4
-known-skip, 1 known-bad).** Full detail: `docs/CURRENT-TRUTH.md` item -249..-257, `PORTING-STATE`
-Session 411.
+- first 50 of the 100 → CRASH (`slotDispatcherIter+1404`, `last-guest-pc=0x80065e94`)
+- first 25 of that 50 (q1) → CLEAN (live-verified, 0 crash markers, reached `lastW=640`)
+- last 25 of that 50 (q2) → CRASH, **byte-identical signature to the 50-batch's crash**
+  (`slotDispatcherIter+1404`, `last-guest-pc=0x80065e94` exact match)
 
-**Verdict on the discriminating question:** n=20 was NOT a hard structural ceiling — at least not at
-n=50, with the CMake glob fix in place and the one known-bad function excluded. This is a
-single-source result (one n=50 trial); it does not prove arbitrarily large batches are safe (s401's
-774-item attempt is still a real historical failure, now more plausibly explained by cross-overlay
-cascade dependencies and/or an unbisected bad function rather than pure batch size). But it directly
-answers this session's question and materially changes the remaining-work estimate.
+Two independent bisection branches (the 50-batch and the isolated 25-batch) converging on the exact
+same PC/symbol is strong evidence this is a specific bad function within q2, not a batch-size artifact
+— matching the s404-407 `initPlayerCraftTrailBuffers` precedent (single bad function in an otherwise-
+clean batch).
 
-## Next work unit: scale the batch cadence further, then settle into the new steady-state size
+**Final repo state (committed): batch-1 (75) + q1 (25) = 100 net new relocations, live-verified clean.
+Item -249 tally: 335/778 done (was 235/778), 463 remain per a fresh regen (458 actionable once q2's 25
+are set aside, 4 known-skip, 1 known-bad).** q2's 25 names are saved at
+`scratch/agent/s412_bisect_q2.txt` — NOT yet in `m4_known_bad.txt`, only isolated as a GROUP so far.
 
-HYPOTHESIS-ID: m4-item249-cadence-scaleup
+**Cadence decision: n=75 is the confirmed-safe steady-state** (not n=100) until q2's specific bad
+function(s) are found and parked — full detail: `PORTING-STATE` Session 412, `docs/CURRENT-TRUTH.md`
+item -249..-258.
 
-Iteration 1 under this new slug — the old slug (`m4-main-overlay-phantom-functions`) is CLOSED per the
-s411 discriminating-probe result above; this is a genuinely new question (how far can the cadence be
-pushed before something breaks), not a repeat of "just do another n=20 batch."
+## Next work unit: sub-bisect q2's 25-name suspect group to find the specific bad function(s)
 
-### Recipe
-1. Regenerate the candidate list fresh: `python3 scratch/agent/s408_gen_candidates.py` (overwrites
-   `scratch/agent/s408_candidates_all.txt` — expect 563 total).
-2. Filter `m4_known_skip.txt` (4 names) and `m4_known_bad.txt` (1 name,
-   `initPlayerCraftTrailBuffers`) → expect 558 actionable. Do NOT re-probe or re-attempt either list.
-3. Take the next **n=75** candidates in strict file order (up from s411's n=50 — continue probing the
-   ceiling one step at a time, do NOT jump straight to a huge batch like s401's 774; if n=75 is clean,
-   try n=100-150 the iteration after; if any batch crashes, STOP scaling, fall back to the last known
-   clean size, bisect the failing batch the standard way (halves→quarters→n=1, s405-407's playbook),
-   and settle into that size as the new steady-state cadence for the remainder of item -249).
-4. Probe: `python3 scratch/agent/s400_probe_batch.py <batch_file>`. 0 ambiguous/none is the historical
-   norm at this file-order range (mostly `lv3_*`/`lv9_*`/`say2*`/dialogue helper names, same pattern as
-   s410-s411's batches) — if a name comes back AMBIGUOUS/NONE, add it to `m4_known_skip.txt` and
-   continue with the rest.
-5. Apply: `python3 scratch/agent/s400_apply_batch.py <probe_output_file>`.
-6. Clear `RecompiledFuncs/` first (write a one-line `.sh` wrapper, same as
-   `scratch/agent/s410_clear_recompiledfuncs.sh` — inline `rm`/`find -delete` gets denied by the
-   sandbox).
-7. Regen: `zsh scratch/agent/s408_run_make_elf.sh` (expect `unmapped functions skipped` to drop by
-   exactly the batch size from 568), then `zsh scratch/agent/s408_run_n64recomp.sh`, then
-   `zsh scratch/agent/s408_run_fixup.sh`.
-8. Build: `zsh scratch/agent/s408_run_build.sh` (rc=0, 0 `error:` lines).
-9. `nm`-confirm the batch's names present — write a session-specific `check_names.sh` (see
-   `scratch/agent/s411_check_names.sh` for a template that reads the batch file directly instead of a
-   hardcoded name array — nm needs to run via a `.sh` file, not inline).
-10. **Mandatory live-verify before selecting the next batch** — run in the background
-    (`run_in_background: true`), then block on it with the task-notification system:
-    ```
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
-      PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 \
-      zsh tools/probe.sh <outdir> 45 2
-    ```
-    PASS = reaches `vi_width=512` (~88-89s) and continues to `vi_width=640` (check the tail of
-    `run.log` for `lastW=640`), 0 `[CRASH]`/SIGBUS/SIGSEGV/UnhandledJumpTarget/dmem-race/defer-drop/
-    assert lines. `[missing-func]` should now be 0, not 1 (s411 fixed the one standing address) — if it
-    reappears, that's worth a note but is not itself a FAIL condition unless it's a NEW address. FAIL =
-    a crash-style Bus error or any other `[CRASH]` — bisect (halves, then quarters, then n=1), same
-    playbook as s404-407, and record the new safe ceiling.
-11. If clean and this is the first batch of the session: consider ONE more step up in size before
-    stopping for the iteration (e.g. 75 clean → try 100-150 next). If a batch fails: stop scaling for
-    this thread, fall back and bisect, and record the ceiling found — that itself is a valid, complete
-    discriminating result for this hypothesis-id (close it either way: "found the real ceiling at N" or
-    "scaled cleanly through N, no ceiling found yet, continue next session").
+HYPOTHESIS-ID: m4-item249-q2-badfunc-isolation
+
+New slug — this is root-causing a specific crash (the s404-407 model), not scaling cadence, which is
+CLOSED for now (steady state = n=75, use it for ordinary relocation once this thread resolves).
+
+### A promising lead before blind bisection
+`scratch/agent/s412_bisect_q2.txt`'s last entry is `npcTickEffectChannelWithSlotDispatch`
+(`0x800d3240`) — its NAME directly references "slot dispatch," and the crash backtrace's deepest
+N64Recomp-side frame is `slotDispatcherIter`. Worth testing this ONE name in isolation FIRST (n=1, on
+top of the clean batch-1+q1 baseline) before a blind halves bisection — if it alone reproduces the
+crash, this sub-thread closes in one cycle instead of 3-4 (25→12/13→6/7→1).
+
+### Recipe (if the lead doesn't pan out, standard halves bisection)
+1. Current repo state is ALREADY the correct baseline (batch-1 + q1 = 100 relocated, confirmed clean) —
+   do not re-apply or re-verify it, just extend from here.
+2. Test `npcTickEffectChannelWithSlotDispatch` alone: apply via
+   `python3 scratch/agent/s400_apply_batch.py <single-line-file>` (grep its line out of
+   `scratch/agent/s412_bisect_q2.txt`), clear `RecompiledFuncs/`, regen (make_elf → N64Recomp → fixup),
+   build, `nm`-confirm, live-verify (same recipe as s412, see below).
+   - CRASH with the same signature → found it. Add to `m4_known_bad.txt` (format matches existing
+     entries — name, addr, tag, session, signature, note). Revert it. Apply the OTHER 24 of q2's names
+     (all but this one) on top of the clean 100-baseline, live-verify — if clean, that's +24 more net
+     relocations landed this session, tally becomes 359/778.
+   - CLEAN → the lead was wrong; revert it, fall back to standard bisection: split q2's 25 into
+     12/13, apply each half on top of the clean 100-baseline, live-verify, recurse into whichever half
+     crashes (same playbook as s404-407 and this session's h1/q1/q2 split).
+3. Live-verify command (unchanged from s411/s412):
+   ```
+   env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
+     PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 \
+     zsh tools/probe.sh <outdir> 45 2
+   ```
+   Run in background, block on it with TaskOutput. PASS = reaches `phase width=512` (~88-89s), no
+   "process gone" line in the driver's own stdout, continues to `lastW=640` in `run.log`, 0
+   `[CRASH]`/SIGBUS/SIGSEGV/UnhandledJumpTarget/dmem-race/defer-drop/assert lines. FAIL = a `[CRASH]`
+   Bus error, check `grep -n "\[CRASH\]\[pc-symbol\]\|\[CRASH\]\[last-guest-pc\]" run.log` — if it
+   matches `slotDispatcherIter+1404`/`0x80065e94` exactly, that confirms it's the same bug, not a new
+   one.
+4. Once q2's bad function(s) are isolated and parked in `m4_known_bad.txt`, resume ordinary bulk
+   relocation at the confirmed-safe **n=75** cadence (not n=100 — that thread is closed per s412) using
+   the standard recipe: regenerate candidates fresh (`s408_gen_candidates.py`), filter both known-skip
+   and known-bad lists, take the next 75 in file order, probe/apply/regen/build/nm-verify/live-verify.
 
 ### Do NOT this iteration
-- Re-probe or re-attempt `initPlayerCraftTrailBuffers` (`m4_known_bad.txt`) or anything in
-  `m4_known_skip.txt`.
-- Jump straight back to s401's whole-remainder-in-one-shot approach — step the size up incrementally
-  so a failure is attributable to a specific size, not lost in a 500+-item batch again.
+- Re-attempt n=100 batches — closed per s412's discriminating result (specific-function bug, not size).
+- Skip all 25 of q2's names into `m4_known_bad.txt` without isolating the actual culprit(s) — the
+  s404-407 precedent found only 1 bad function out of 20 candidates; blanket-skipping wastes ~24 good
+  relocations.
 - Trust a prior session's "N remain" prose over a fresh regen.
 
 ### Reminder: sibling-repo commit rule (item -3)

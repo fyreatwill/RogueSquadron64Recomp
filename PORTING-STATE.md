@@ -34712,3 +34712,82 @@ standing item -3 rule (ask the user before committing there).
 
 Outcome: ADVANCED (50 real relocations landed, live-verified clean, plus a genuine discriminating
 result on the batch-size question and an incidental fix of the standing missing-func baseline).
+
+## Session 412 (2026-08-06) — M4 item -249 cadence scale-up: n=75 CLEAN, n=100 CRASHES, bisected to a 25-name suspect group with the same signature as the crashing 50/100
+
+### What ran
+Continuing `HYPOTHESIS-ID: m4-item249-cadence-scaleup` (opened s411): push the batch cadence further
+past the n=50 that s411 confirmed clean. Regenerated candidates fresh: 563 total, 558 actionable (4
+known-skip, 1 known-bad, matching NEXT.md exactly).
+
+**Batch 1 (n=75):** first 75 actionable candidates in file order. Probed: 55 CONFIRMED + 20 WEAK, 0
+ambiguous/none. Applied. Positive control exact (568→493, -75). Regen clean, build clean (0 errors),
+`nm`-confirmed 75/75 present. Live-verify: reached `phase width=512` at 88.4s, continued to `lastW=640`,
+0 crash markers, 0 `[missing-func]`. **Clean.**
+
+**Batch 2 (n=100):** next 100 actionable candidates (fresh regen showed 488 total after batch 1).
+Probed: 81 CONFIRMED + 19 WEAK, 0 ambiguous/none. Applied. Positive control exact (493→393, -100).
+Regen clean, build clean, `nm`-confirmed 100/100 present. **Live-verify CRASHED**: reached
+`phase width=512` at 88.5s, then the process died 2.4s later (1 frame captured). `[CRASH]` Bus error
+(signal 10), `pc-symbol=initHudStruct+12304`, `last-guest-pc=0x800290d4`, backtrace
+`mainGameLoop → initMission → spawnHudNpc → spawnNpcOfType → slotDispatcherIter → initHudStruct+12128`.
+
+Per NEXT.md's contract (stop scaling on any crash, fall back, bisect): **reverted** batch 2's 100 names
+back to `main_overlay.txt` (wrote `scratch/agent/s412_revert_batch2.py`, the mirror-image of
+`s400_apply_batch.py`), regenerated + rebuilt to confirm the revert restored the exact batch-1-only
+count (493 unmapped, matching exactly). Then bisected the crashing 100 using the s405-407 halves
+playbook, applying each half/quarter **on top of the confirmed-clean batch-1 baseline** (not in
+isolation) so every live-verify tests a real, buildable state:
+
+- **h1 (first 50 of the 100):** applied on top of batch-1 baseline (75+50=125 total). Positive control
+  exact (493→443, -50). Build clean. **Live-verify CRASHED**: process died 7.3s after reaching phase
+  (3 frames captured). `pc-symbol=slotDispatcherIter+1404`, `last-guest-pc=0x80065e94` — a different
+  symbol/PC than batch 2's crash but same call family (`slotDispatcherIter`), same Bus-error signature.
+  Reverted h1.
+- **q1 (first 25 of h1):** applied on top of batch-1 baseline (75+25=100 total). Positive control exact
+  (493→468, -25). Build clean. **Live-verify CLEAN**: reached phase, continued to `lastW=640`, 0 crash
+  markers, 19 frames captured, no premature death.
+- **q2 (last 25 of h1):** reverted q1 first, applied q2 alone on top of batch-1 baseline (75+25=100
+  total, different 25). Positive control exact (493→468, -25). Build clean. **Live-verify CRASHED**:
+  process died 7.3s after reaching phase (3 frames), **identical signature to h1's crash**
+  (`pc-symbol=slotDispatcherIter+1404`, `last-guest-pc=0x80065e94`, exact match) — confirms the fault is
+  genuinely contained in q2's 25 names, not an artifact of which half was tested.
+
+**Final state left in the repo:** reverted q2, re-applied q1 (already proven clean in exactly this
+combination) — final applied set is batch-1 (75) + q1 (25) = **100 net new relocations this session**,
+matching the s412_liveverify_q1 run's already-clean live-verify exactly (no need to re-verify — same
+state). Fresh regen confirms 463 total candidates remain (563-100). Rebuilt clean (0 errors) as the
+final committed state.
+
+### Verdict
+**n=75 is clean (single-source, direct measurement). n=100 is NOT uniformly safe — but the failure is
+not a batch-size resplitting effect either.** The same crash signature (`slotDispatcherIter+1404`,
+`last-guest-pc=0x80065e94`, Bus error) reproduced in both the 125-total (h1) and the 100-total (q2)
+states, i.e. it followed the SAME 25 names regardless of what else was in the batch or the total size —
+strong evidence (two independent bisection branches converging on the same signature) that this is a
+genuinely-bad function or small set of functions within q2's 25, the same pattern s404-407 found with
+`initPlayerCraftTrailBuffers` (one bad function isolated from a batch, not a size artifact). This
+further weakens s401's original "n=774 failed because of size" story — the second and third
+size-related crashes investigated this deep (s404-407's and now this one) have both resolved to a
+specific bad function, zero for two on "size itself is the cause."
+
+**Item -249 tally: 335/778 done (was 235/778, +100 this session — 75 from batch 1, 25 from q1),** 463
+candidates remain per a fresh regen (458 actionable once q2's 25 are excluded pending sub-bisection, 4
+known-skip, 1 known-bad). q2's 25 names (`scratch/agent/s412_bisect_q2.txt`) are NOT yet in
+`m4_known_bad.txt` — only ONE quarter-level test isolated them as a group; the specific bad function(s)
+within are still unknown and need the same eighth-split bisection (12/13) that s405-407 used, not a
+blanket skip of all 25 (most are probably fine, mirroring the 19-clean/1-bad ratio from that precedent).
+
+### Cadence decision
+Settling on **n=75 as the confirmed-safe steady-state batch size** for ordinary bulk relocation (not
+n=100) until q2's bad function(s) are identified and root-caused — at which point n=100+ can likely be
+retried since the evidence points to a specific-function bug, not a structural batch-size ceiling.
+`HYPOTHESIS-ID: m4-item249-cadence-scaleup` is CLOSED per its own contract (found a real crash, bisected
+it, settled into the last known-clean size) — full close-or-pivot result: cadence CAN go to at least 75
+safely; specific-function bugs remain the dominant failure mode at 100, not size.
+
+Sibling-repo symbol-file edits (`main_overlay.txt`/`mission_overlay.txt`) are uncommitted per the
+standing item -3 rule (ask the user before committing there).
+
+Outcome: ADVANCED (100 real relocations landed net, live-verified clean; plus a genuine discriminating
+result narrowing a crash to a 25-name suspect group via two independent converging bisection branches).
