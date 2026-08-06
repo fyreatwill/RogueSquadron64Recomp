@@ -7,81 +7,25 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## L
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
-   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Nine passes so far
-   (s295-330 x5, s346, s355, s364, s371) kept the file oscillating around the cap as new session detail
-   accrues; this is the tenth (s380), migrating the closed s371/s373-376 M5 Step 6/C88-investigation
-   arc to PROJECT-OVERVIEW §12. Full per-pass detail in git log. 35 KB remains a stretch target, not a
-   hard floor -- the "Current truth" env-var/timeline prose and the Regeneration section's Standing
-   warnings stay intact deliberately; both are used every iteration.
-2. **M5 audio de-stubbing**: design doc + steps 1-5 DONE and fully CLOSED (full arc: PROJECT-OVERVIEW
-   §10, §11). Step 6 (PCM sanity-check) is ANSWERED: real PCM is 100% silent, root-caused to the same
-   C88 force-zero patch that keeps title-reach working; a genuine host-bridge byte-count bug found en
-   route is fixed (`queue_samples`, see Overturned Conclusions). The follow-on investigation into WHY
-   reversing that gate hangs pre-title, and what drives the VI 640→1024 transition under it, ran to
-   completion and closed by elimination, not by a fix — full arc: PROJECT-OVERVIEW §12. **No M5 audio
-   thread remains open as of s376** — next M5 work needs a genuinely new lead. Current work unit is the
-   sanctioned tooling item below instead (NEXT.md).
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Eleven passes so far
+   (s295-330 x5, s346, s355, s364, s371, s380, s391) kept the file oscillating around the cap as new
+   session detail accrues; s391 migrated the closed s377-388 fixup-backport arc to PROJECT-OVERVIEW §13.
+   Full per-pass detail in git log. 35 KB remains a stretch target, not a hard floor -- the "Current
+   truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
+   deliberately; both are used every iteration.
+2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
+   §10-§12). Next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
 
 Sanctioned tooling work unit: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the
-file-scoped-only guard patches in `fixup_game_funcs.py`, per the 2026-08-04 analysis in that file's header
-comment. **CLOSED OUT as of s386.** Real count 176 (an AST scan, not a grep guess). **168/176 converted
-across 9 batches (s377-379, s381-386)**, all verified byte-identical fixup-report output before/after, all
-built and soaked clean. The remaining **8 sites are confirmed permanent exclusions by design**, not
-backlog — none fit the function-scope idiom, for reasons specific to each (listed below). This task will
-not resurface as a recurring work unit; only the two follow-up items named below remain live. Process
-notes accumulated across the run: (s379/s381) run verification (regen+diff) AND the soak in the
-orchestrating session, not a delegated subagent — both cross-repo regen commands and launching the
-compiled binary hit sandbox permission/approval gates a subagent cannot satisfy non-interactively;
-delegate ONLY the conversion-editing step. (s382) once remaining sites stop being one big single-file
-cluster, delegate the "which target function does this site belong to" identification pass to a read-only
-Explore/general-purpose agent; but for small counts (≤4 sites, as in the closing batch), doing the
-identification directly in the orchestrating session is faster and just as safe. Launching the compiled
-binary needs a tiny `zsh script.sh` wrapper that `cd`s into `build/` then `exec`s the binary — an inline
-`env VAR=1 /abs/path/to/binary` runs with the wrong cwd and silently degrades to a ROM-less false-clean
-soak. (s384) the byte-identical regen-diff check is not a formality — it caught a real scope
-mis-attribution once (`musyxSynthFrame`'s `[synth-rearm-ptr]` diagnostic actually belongs to
-`initN64RspMixer`). (s385) standing exclusion lists given to an identification agent must be by
-address/anchor, not just function name, or the agent can't recognize an excluded site named only in prose.
-(s386) triage lists drift as line numbers shift between batches — a re-scan can undercount how many sites
-are genuinely untriaged; this session's fresh identification found 4 untriaged singleton sites where
-s385's list said 3 (`loadCraftShadowTextures` had been missed), so always re-derive the candidate list from
-a fresh `scan_filescoped.py` + line-content read rather than trusting a prior session's named list at face
-value.
-
-**Final state of the 8 sites originally called permanently-excluded**: (1) the whole-file `$zero`-write
-comment-out sweep (~2700 sites, by design — every occurrence needs the same blanket transform); (2) the
-`0x8008EC88` `reapplyDisplayMode` audio-gate hand patch (deliberately volatile/experimental, file-scoped
-on purpose); (3-4) the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair (deliberately dual-target);
-(5) the `_s284_deref_guard_sites` multi-function guard loop (deliberately multi-function); (6) the
-`runHangarMenuFromOverlay`/`hasKasanMoorDefected` bare-label collision (FIXED s387 — this was a real bug,
-not by-design, so it's out of the exclusion set); (7) `tickAudioSequencerFrame`'s exit diagnostic (match
-text spans past this function's own body into the next function's signature, can't be body-scoped without
-breaking it — genuinely permanent); (8) `musyxSynthFrame`'s `synth-rearm-ptr` diagnostic, now FIXED s388 —
-converted to function-scope on its real owner `initN64RspMixer` (see below). **Both follow-up items from
-s387 are now resolved; the backport thread has no remaining live work.**
-
-(s387) `runHangarMenuFromOverlay`/`hasKasanMoorDefected` collision: fixed. Added `p.name == "funcs_43.c"`
-to the `L_800C68AC:` bare-label patch so it only fires in `runHangarMenuFromOverlay`'s real home file,
-not `hasKasanMoorDefected`'s (a different overlay function that happened to reuse the same local-label
-text). Byte-identical regen-diff confirmed exactly one file changed (`funcs_29.c` lost the spurious
-match, `funcs_43.c` unaffected); build+soak clean (0 crash markers, full VI phase timeline).
-
-(s388) `musyxSynthFrame`/`initN64RspMixer` `synth-rearm-ptr` ownership question: resolved. Confirmed
-directly against the generated `funcs_24.c` (`grep -n` for both `RECOMP_FUNC` signatures and the
-`0x800919D4` anchor): `initN64RspMixer` starts at the line immediately before the anchor with no
-intervening function boundary, and `musyxSynthFrame`'s own body ends well before it — the anchor is
-unambiguously inside `initN64RspMixer`, confirming s384's finding. Converted the patch from file-scope
-(`p.name == "funcs_24.c"`) to function-scope on `initN64RspMixer` (both functions already live in the
-same file, so this is a defensive/correctness improvement against a hypothetical future duplicate anchor
-elsewhere in the file, not a behavior change). Byte-identical regen-diff confirmed: 374-line fixup report
-identical, full 45-file `RecompiledFuncs/` tree SHA-256 identical before/after — the site is unambiguous
-(sole occurrence of the anchor text in the file) so tightening its scope changes nothing about the
-generated code. Build clean; soak clean (0 crash markers over 15,750 log lines, healthy VI/present
-progression as positive control — `present-1024`/`w=512` markers firing continuously, VI update counter
-reached #6528+ over 110s).
+file-scoped-only guard patches in `fixup_game_funcs.py`. **CLOSED OUT as of s386**, and its two follow-up
+items (the `runHangarMenuFromOverlay`/`hasKasanMoorDefected` collision, the `musyxSynthFrame`/
+`initN64RspMixer` scope question) both resolved s387/s388 — **no live work remains on this thread.**
+168/176 sites converted across 9 batches (s377-386); 8 confirmed permanent design exclusions. Full
+batch-by-batch detail, process lessons, and the exclusion-site breakdown: `docs/PROJECT-OVERVIEW.md`
+§13.
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -191,8 +135,7 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
-consume it; the 3 `[missing-func]` addresses in the undriven outdoor-512 stretch (root-caused and
-fixed s53/54, see Next-steps item -6, **runtime confirmation still outstanding**).
+consume it; the 3 `[missing-func]` addresses (item -6, runtime confirmation outstanding).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -209,181 +152,41 @@ oldest). Current top is -240 (s390); the next new item takes -241 and is inserte
 
 -240. **(s390) M3 idiom-class audit: `hangarInitialize` "chunk 2" of the `-0x25A4` hangar-list-pointer
     family, 11 sites guarded.** The s389 soak population was fully mined; queued 3 fresh unbiased soaks
-    (`scratch/agent/soak_queue/s390_freshpop1/2/3.sh`) for a future cycle and, per NEXT.md's fallback,
-    delegated an Explore-agent sweep of every numbered guard family in `fixup_game_funcs.py`. Found the
-    `HANGARLIST_GUARD`/s283-285 `-0x25A4($s1/s4/s5)` global-pointer family is **self-documented as
-    incomplete**: s284's own comment says `hangarInitialize` (funcs_27.c, 103 of 172 raw hits, a single
-    13,770-line function) was deliberately parked as its own multi-session item; s285 patched only a first
-    "chunk" (lines 119818-124175, `S285_H1_BAIL`) and no chunk 2 was ever written — 65 sites remained
-    completely unguarded, lines 124175-133587. Scoped this session to the next two bounded internal
-    sub-blocks (chunk 2a: lines 124202-125013; chunk 2b: 125014-125822), each ending at its own natural
-    `return;`/epilogue — reused both existing epilogue labels (`L_800AB1A4`, `L_800AB618`) directly, no new
-    labels needed. Delegated classification (2 Explore-agent passes) found 11 NEEDS-GUARD sites + 1
-    confirmed-SAFE (pointer only passed as a call arg, never dereferenced); hand-verified the trickiest
-    sites myself directly against the generated source before writing the patch (all matched, no
-    corrections). Verified: byte-identical-except-intended-diff regen protocol (only `funcs_27.c` touched,
-    diff was exactly the 11 guard-block insertions); build clean; 3 soaks, none crashed inside or
-    downstream of the new guards or shared a guest-address family with the `-0x25A4` idiom (one hit the
-    exact already-closed heapWalker-GUARD5 background-noise address, `0x8000834c`; the other two hit
-    addresses outside `hangarInitialize` entirely, not previously catalogued but structurally unrelated).
-    0 guard fires across all 3 runs (proactive/defensive fix, matching every prior guard in this family).
-    ~54 raw `-0x25A4` hits remain in `hangarInitialize` past line 125822 (a future chunk 3+). Full detail:
-    `PORTING-STATE` Session 390; next work unit: NEXT.md — continue the SAME class (chunk 3, not a new
-    candidate), since it's self-evidently unfinished and the sibling-audit-sweep cost is already paid.
+    (`scratch/agent/soak_queue/s390_freshpop1/2/3.sh`) and, per NEXT.md's fallback, swept every numbered
+    guard family in `fixup_game_funcs.py`. Found the `HANGARLIST_GUARD`/s283-285 `-0x25A4($s1/s4/s5)`
+    global-pointer family is **self-documented as incomplete**: s284 deliberately parked `hangarInitialize`
+    (funcs_27.c, 103/172 raw hits, a single 13,770-line function) as its own multi-session item; s285
+    patched only a first "chunk" (lines 119818-124175, `S285_H1_BAIL`) — 65 sites, lines 124175-133587,
+    remained unguarded. Guarded the next two bounded sub-blocks (chunk 2a: 124202-125013; chunk 2b:
+    125014-125822), each ending at its own natural epilogue — reused existing labels `L_800AB1A4`/
+    `L_800AB618`, no new labels needed. 11 NEEDS-GUARD sites + 1 confirmed-SAFE (call-arg only, never
+    dereferenced). Verified: byte-identical-except-intended-diff regen (only `funcs_27.c` touched, diff
+    was exactly the 11 insertions); build clean; 3 soaks, none crashed inside/downstream of the new
+    guards or in the `-0x25A4` family (one hit the already-closed heapWalker-GUARD5 noise address
+    `0x8000834c`). 0 guard fires (proactive fix). ~54 raw `-0x25A4` hits remain past line 125822 (chunk
+    3+). Full detail: `PORTING-STATE` Session 390; next work unit: NEXT.md — continue the SAME class
+    (chunk 3), self-evidently unfinished.
 
 -239. **(s389) M3 idiom-class audit: "Lookup" struct-family unguarded table-base-pointer dereference, 4
-    sites guarded.** First systematic M3 audit since the backport thread closed. Candidate search (tally
-    of `[CRASH][last-guest-pc]` across ~24 recent soaks) surfaced `0x800ad0dc`
-    (`pc-symbol=findLookupEntryByKey+1864`) recurring at n=2, independently dismissed twice before
-    (s359, s370) as "off-target" noise for other threads. Investigation found the pc-symbol attribution
-    itself was WRONG: the address is not in `findLookupEntryByKey` at all (guest range
-    `0x800642A0-0x800643C0`) but inside `hangarInitialize`/`static_5_800AB658` (real symbol
-    `updateHangarBayScene`), a huge already-heavily-patched function, at a fixed-global store fed by a
-    possibly-upstream-corrupted register — not a hash-table dereference, and not safely fixable without
-    much deeper root-causing of that function's own patch history. **Same failure mode as the
-    long-catalogued `0x8000b650` staleness** (nearest-symbol misattribution), just not previously flagged
-    for this address — worth remembering if `findLookupEntryByKey+1864` recurs again. Pivoted within the
-    same work unit: `findLookupEntryByKey` and 2 siblings (`removeLookupTableEntry`,
-    `getLookupEntryField5`, `relocateLookupEntryToNewKey` — all `funcs_14.c`/`funcs_15.c`) share the
-    identical unguarded idiom already fixed for their sibling `setLookupEntryField5ByKey` (s260,
-    `SETLOOKUP_TABLE_GUARD`): a table-base pointer loaded from the struct's offset 0, dereferenced via
-    `index*8+base` with no range check. `destroyLookupTable` checked and confirmed out of class (only
-    passes the pointer to `rs_free`, never dereferences it directly). Guarded all 4 remaining sites
-    reusing the exact s260 KSEG0-range+hi-word check, bail semantics matched to each function's own
-    control flow (plain `return`/`ctx->r2=0; return`/`goto` to the real epilogue for the one function with
-    a stack frame). Verified: byte-identical-except-intended-diff regen protocol (only `funcs_14.c`/
-    `funcs_15.c` touched, diff was exactly the 4 guard-block insertions); build clean; 3 soaks (2 died to
-    already-catalogued unrelated crash families — `coalesceFreeHeapBlocks+4424` and the
-    `waitForAnyAudioSlot` boot-crash class — 1 fully clean, 304s hold, full `0→320→640→1024→512→640` VI
-    timeline). 0 guard fires across all 3 runs (proactive/defensive fix, not a response to reproducing
-    corruption — the sibling function's own guard had already proven this idiom dangerous once). Full
-    detail: `PORTING-STATE` Session 389; next work unit: NEXT.md — pick a fresh idiom-class candidate the
-    same way (the current soak_results population is now fully mined for this cycle).
+    sites guarded.** First systematic M3 audit since the backport thread closed. A recurring
+    `[CRASH][last-guest-pc]=0x800ad0dc` (`pc-symbol=findLookupEntryByKey+1864`) turned out to be a WRONG
+    nearest-symbol attribution — real site is inside `hangarInitialize`, not a hash-table dereference
+    (same failure mode as the catalogued `0x8000b650` staleness). Pivoted: `findLookupEntryByKey` and 3
+    siblings (`removeLookupTableEntry`, `getLookupEntryField5`, `relocateLookupEntryToNewKey`, all
+    `funcs_14.c`/`funcs_15.c`) share the unguarded table-base-pointer idiom already fixed for sibling
+    `setLookupEntryField5ByKey` (s260, `SETLOOKUP_TABLE_GUARD`) — guarded all 4 reusing the exact s260
+    KSEG0-range+hi-word check. Verified: byte-identical-except-intended-diff regen; build clean; 3 soaks
+    (2 died to already-catalogued unrelated crash families, 1 fully clean 304s hold, full VI timeline), 0
+    guard fires (proactive fix). Full detail: `PORTING-STATE` Session 389.
 
--238. **(s386) batch 9/N: final 4 sites converted (168/176 total), backport CLOSED OUT.** Target:
-    `loadCraftShadowTextures` (funcs_16.c, table-index guard), `mat3x3InverseInto` (funcs_5.c, det/inverse
-    diagnostic), `tickTextureMaterialExpiry` (funcs_6.c, MATEXPIRY_GUARD node-walk pointer guard),
-    `coalesceFreeHeapBlocks` (funcs_0.c, next-block-header read guard). Fresh `scan_filescoped.py` re-scan
-    found these were the true remaining untriaged set — s385's list said only 3 untriaged sites
-    (`mat3x3InverseInto`, `tickTextureMaterialExpiry`, `coalesceFreeHeapBlocks`), but a 4th
-    (`loadCraftShadowTextures`) had been missed; the "9 confirmed intentional exclusions" count in s385's
-    NEXT.md was also off by one (actually 8). All 4 sites' anchors verified to sit cleanly inside their
-    named function's own body span (checked against `RECOMP_FUNC` boundaries in the generated
-    `RecompiledFuncs/*.c`, no cross-function spillover) before delegating the conversion edit to a
-    subagent; all 4 converted without needing to fall back to file-scoped. Byte-identical regen-diff
-    verified clean (fixup-report and full `RecompiledFuncs/` tree both diff empty before/after). Build
-    clean. Soak clean: 0 crash markers over 17,355 log lines across 120s, VI reached the full
-    0→320→512→640→1024 phase timeline. Post-batch re-scan confirms exactly **8 file-scoped sites remain,
-    all matching the previously-identified permanent-exclusion list** — the backport is done; see the
-    Sanctioned tooling paragraph above for the final site-by-site breakdown and the two live follow-up
-    items. Full detail: `PORTING-STATE` Session 386; next work unit: pick up one of the two follow-up
-    items, or move to M3 idiom-class audits per the standing strategic-priority order (M5 has no open
-    thread as of s376).
-
--237. **(s385) batch 8/N: 16 more converted (164/176 total), no regression this batch.** Target: 17
-    sites across 15 functions in 8 files (funcs_1/4/14/15/23/24/26.c — `convertMat3x4ToN64Mtx`,
-    `submitDmaRequestBatch`, `piDmaWorker`, `setupSongRenderBuffers`, `buildSongDecodeBufferRing`,
-    `musyxMixActiveVoices`, `isAudioSlotActive`, `tickAndReap3DAudioVoices`, `factor5MutexAcquire`,
-    `factor5MutexRelease`, `setupCameraMatrices`, `traverseSceneGraphRecursive`, `activateAnimationKeyframe`,
-    `setLookupEntryField5ByKey`, `initMusyXEngine`, `resetMusyXEngineState`), identified by a delegated
-    read-only Explore agent from the fresh 28-site scan; 1 of the 17 (`tickAudioSequencerFrame`'s exit
-    diagnostic) was correctly declined by the conversion subagent because its match text spans into the next
-    function's signature line and can't be body-scoped without breaking it — left file-scoped, matching this
-    backport's standing rule. Byte-identical regen-diff verified clean this time (unlike s384, no regression
-    found). Build clean; soak clean (0 crash markers over 10,757 log lines, VI reached the full
-    0→320→640→1024 timeline at 45.5s, matching batch 7's 45.6s closely, held at 1024 for ~1500 further frames
-    before SIGKILL). **New process finding**: the Explore agent's recommended batch included the volatile
-    `0x8008EC88` `reapplyDisplayMode` audio-gate hand patch — a standing exclusion, but the agent wasn't given
-    it by address, only by function name for other exclusions, so it didn't recognize this one; caught by the
-    orchestrating session reading the patch's own comment before delegating conversion. Lesson: give
-    standing-exclusion lists to identification agents by address/anchor, not just function name. **12
-    remain**, most now understood to be intentional design exclusions rather than untouched backlog. Full
-    detail: `PORTING-STATE` Session 385; next work unit: NEXT.md (batch 9, or close-out review).
-
--236. **(s384) batch 7/N: 17 more converted (148/176 total), plus verification caught a real
-    regression.** Target: 9 functions across 8 files (`musyxSynthFrame`, `initFactor5Mutex`,
-    `update3DAudioFrame`, `tickAllActiveSongs`, `viRetraceHandlerThread`, `waitForPostSwapAck`,
-    `updateAnimatedTextureStreaming`, `static_5_800B4048`, `selectPostCrawlCraft`), identified by a
-    delegated read-only Explore agent from the fresh 45-site scan. The byte-identical regen-diff check
-    (not a formality this time) found one real drop: `musyxSynthFrame`'s `[synth-rearm-ptr]` diagnostic
-    went from 1 match to 0, because its `0x800919D4` anchor actually lives inside `initN64RspMixer` (the
-    next function over), not `musyxSynthFrame` as an old s101-era design comment assumed — scoping to the
-    wrong function silently dropped the patch. Reverted that one site to file-scoped (its original,
-    proven-correct form), converted 17 (not 18) sites this batch. Re-verified byte-identical after the
-    fix; build clean; soak clean (0 crash markers, VI reached the full 0→320→640→1024 timeline at 45.6s,
-    matching batch 6 almost exactly). **28 remain.** The `runHangarMenuFromOverlay`/`hasKasanMoorDefected`
-    collision resurfaced at this iteration's fresh line numbers, still parked. Full detail: `PORTING-STATE`
-    Session 384; next work unit: NEXT.md (batch 8).
-
--235. **(s383) batch 6/N: 21 more converted (131/176 total).** Target cluster: 4 functions in
-    `funcs_4.c` (`processSceneNode` ×10, `renderUnlitMeshFaces` ×7, `drawSubtitleText` ×2,
-    `evalCubicSplineAtTime` ×2), identified by a delegated read-only Explore agent from the fresh 66-site
-    scan. Byte-identical regen-diff verified (375-line report and full tree both zero-diff); build clean;
-    soak clean (0 crash markers, VI reached the full 0→320→640→1024 timeline in 45.6s). **New finding**: a
-    genuine latent multi-file collision at the `runHangarMenuFromOverlay` site (~line 8299) — its bare
-    label anchor also matches an unrelated function (`hasKasanMoorDefected`) in a different overlay file,
-    so today's file-scoped patch silently double-targets; parked untouched, needs a dedicated `p.name`-
-    filtering fix, not a function-scope conversion. Also confirmed the `initFactor5Mutex`-adjacent region
-    is 6+ distinct functions despite line/file adjacency (correcting a prior session's proximity-based
-    mis-scan). **45 remain**. Full detail: `PORTING-STATE` Session 383; next work unit: NEXT.md (batch 7).
-
--234. **(s381) batch 4/N: 21 more converted (89/176 total).** Target cluster: the musyx/audio-heap
-    instrumentation block in `funcs_23.c` (`musyxInitVoiceFromSample`, voice-slot-ptr init,
-    `tickAudioChannel`, `serviceVoicePoolFrame`, `tickAudioSeq`, `tickAllAudioChannels`, 3 `musyxGate`
-    counters, `musyxRawgate`, audio-drain call/iters, `streamNodeInit`, `voiceAttackEntry`,
-    `voiceActiveGate`, `songArrayAlloc`, song-count-write-early, shutdown-audio-free, rs-malloc
-    asset-alloc). Byte-identical regen-diff verified (375-line report and full tree both zero-diff);
-    build clean; ~130s soak clean (0 crash markers, VI traversed the FULL 0→320→512→640→1024 timeline).
-    **New process finding**: unlike batches 1-3, the delegated subagent could not complete VERIFICATION
-    either this time (not just the soak) — every cross-repo regen command (`make_elf.py`, even a bare
-    `rm -f RecompiledFuncs/funcs_*.c`) hit a hard sandbox permission denial distinct from s379's
-    binary-launch gate. Orchestrating session took over verification+build+soak directly. **Standing
-    rule updated**: delegate ONLY the conversion-editing step to a subagent; run regen-diff
-    verification, build, and soak all in the orchestrating session. **87 remain**, no single
-    obviously-largest cluster left (scattered 1-5-site sub-clusters) — batch 5 re-scans cold. Full
-    detail: `PORTING-STATE` Session 381; next work unit: NEXT.md (batch 5).
-
--233. **(s379) batch 3/N: 24 more converted
-    (68/176 total), entire `funcs_3.c` drain-mesh/heap-walker cluster now fully converted.**
-    Delegated convert+verify+build to a subagent. Verification method, established batch 1 and reused
-    unchanged every batch since: regen `RecompiledFuncs/` fresh twice (pre-batch backup script vs.
-    converted script), diff both the patch report and the output tree — byte-identical/zero-diff means
-    no latent cross-function anchor collision, the one failure mode worth stopping for. Converted:
-    `beginFrameDLChunk` (1), `emitAllocatedDLCommand` (2), `heapWalker` (4), `heapFreeListDequeue` (2),
-    `drainMeshReleaseQueue` (15). Build clean. **Soak process note**: the subagent could not launch the
-    compiled binary itself — every attempt hit the harness's interactive-approval gate from its
-    non-interactive sandbox, a clean blocked-before-start state. The orchestrating session ran the
-    soak directly instead: ~110s, 0 crash markers, VI traversed the FULL 0→320→512→640→1024 timeline.
-    **Standing rule for batch 4+: run the soak step in the orchestrating session, not a delegated
-    subagent.** Excluded site-classes (`0x8008EC88` audio gate; `waitForMusyXAudioTaskDone`/
-    `shutdownAudioEngine` pair) confirmed untouched. **108 remain**, no single obviously-largest
-    cluster left — re-scan cold and pick whatever groups cleanly. Full detail: `PORTING-STATE`
-    Session 379; next work unit: NEXT.md (batch 4).
-
--232. **(s378) batch 2/N: 21 more converted (44/176 total).** Same delegated methodology and
-    byte-identical-regen-diff verification as batch 3 above. Converted across 8 functions:
-    `reserveAndEmitDLEntry` (2), `activateAnimationKeyframe`, `composeNpcOrientationMatrix`/
-    `static_5_800AB1C8` (9), `projectModelBoundsToScreen` (3), `updateHangarBayScene`/
-    `static_5_800AB658` (3), `musyxSynthFrame`, `acquireSampleStreamBlock`, `fillSampleStreamRange`.
-    Build clean; ~100s soak clean, VI progressed the FULL 0→320→640→1024→640→512 timeline (evidence
-    batch 1's stuck-at-320 soak was ordinary run-to-run timing variance, not a regression — Method
-    traps §4.3). Excluded site-classes confirmed untouched via diff. **132 remain**; next batch's
-    clear target was the `funcs_3.c` drain-mesh/heap-walker cluster (drawn down by batch 3 above).
-    Full detail: `PORTING-STATE` Session 378.
-
--231. **(s377) batch 1/N: 23 of 176 file-scoped patches converted** (real count from an AST scan of
-    `re.subn(..., text, ...)` call sites, not a grep guess — vs. the docstring's prior "~150"
-    estimate). Converted to the BREADCRUMB10-15 function-scoped idiom: `musyxSynthFrame`,
-    `runVideoFrameTick`, `reapplyDisplayMode`, `mainGameLoop`, `menuOverlayInit`,
-    `cutsceneDispatchSlotsByFlag`, two `static_N_0xADDR` functions, `musyxKeyOnVoice` (8),
-    `evalCubicSplineAtTime`, `advancePlayerAnimationPhase`, `updateAnimatedTextureStreaming`, two more
-    `static_N` diagnostics, `reserveAndEmitDLEntry` (3). Established the byte-identical-regen-diff
-    verification method reused every batch since; build clean, ~70s soak clean (0 crash markers; VI
-    stayed at 320, later batches showed this was ordinary timing variance, not a regression — Method
-    traps §4.3). Two site-classes deliberately left file-scoped: the volatile `0x8008EC88` audio-gate
-    hand patch, and the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair (shared regex is
-    intentionally dual-target, not a mis-scoped single anchor). Full detail: `PORTING-STATE`
-    Session 377.
+-231..-238. **(s377-386) Fixup function-scope backport, batches 1-9: 176 file-scoped guard patches
+    identified (AST scan), 168 converted to function-scope, 8 confirmed permanent design exclusions.
+    CLOSED OUT s386.** Per-batch functions, sizes, and process lessons (the sandbox-permission
+    delegation rules, the `musyxSynthFrame`/`initN64RspMixer` scope-misattribution catch, the
+    `runHangarMenuFromOverlay`/`hasKasanMoorDefected` collision, the address-not-name exclusion-list
+    lesson): `docs/PROJECT-OVERVIEW.md` §13. Final site-by-site exclusion breakdown and the two s387/
+    s388 follow-up fixes: the Sanctioned tooling paragraph above. Full raw detail: `PORTING-STATE`
+    Sessions 377-386.
 
 -226..-230. **(s371, s373-376) M5 Step 6 (PCM sanity-check) and the C88-reversed pre-title-hang/
     VI-trigger investigation — all CLOSED.** s371 answered Step 6: real PCM is 100% silent even under
@@ -473,15 +276,13 @@ oldest). Current top is -240 (s390); the next new item takes -241 and is inserte
     count after every `fixup_game_funcs.py` run. Full detail: `PORTING-STATE` Sessions 120, 121, 126.
 
 -11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89).** 3 consecutive non-recurrences since s88's correctly-targeted instrument, against 8 prior crashing soaks. `ROGUESQ_LOG_ANIM_CB=1` still live if it recurs.
--10. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side). Still one data point.
--9. **M3 — confirm the s83 spline div0 guard actually engages.** 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
+-10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
 -7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once earlier items clear: `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40, document the phase timeline. Gate already keeps black off; residual S1 `fs` freeze (~3769-3872 plateau) may still stall animation.
 -6. **M4 — confirm the s53 missing-func fix at runtime** (s54 applied + built it; only the game-run check remains). Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` should go 3→0. Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user before committing there.
--2. **Band-row coverage history** (settled, s41-49): s40's `col`-write probe fails its control.
--1. **GPU->CPU present PNG** via `NativeTarget::copyToRAM` -- a convenience, not a blocker.
+-2/-1. **Band-row coverage history** (settled, s41-49): s40's `col`-write probe fails its control. **GPU->CPU present PNG** via `NativeTarget::copyToRAM` -- a convenience, not a blocker.
 
 **Done, do not redo:** optimising the ucode vector path (s38: `-O0`→`-O2` gave 41x; SIMD/RSPRecomp vector work unnecessary at 4.5ms/task without new justification); the ucode-performance-bottleneck→DL-submission-collapse→RDP-census→draw-loss chain (s33-s37); coverage attribution/format-mismatch analysis (`LOG_BBOX`/`LOG_UPLOAD` — every band draw is I4 `tlut=0`); the s27-s31 I4-decode line (`FIX_DXT_I`, `I4_SHADE_MONO`, `SHADE_ONLY_MONO`, restricted `FLATTEN_I4`) — aimed at a texture that doesn't paint those pixels.
 

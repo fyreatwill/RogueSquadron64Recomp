@@ -606,3 +606,74 @@ the next M5 work needs a genuinely new lead, not a continuation of any thread in
   produce working audio. `HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site` CLOSED by elimination, not
   solved. Reopens only on a specific new reason to believe the C88-reversed path would unblock real
   audio.
+
+## 13. Fixup function-scope backport (s377–388), CLOSED OUT s386, migrated from CURRENT-TRUTH.md s391
+maintenance pass
+
+Sanctioned-tooling work unit, not M3/M5: backport the BREADCRUMB10+ function-scoped-match idiom onto
+the file-scoped-only guard patches in `fixup_game_funcs.py`. Real count from an AST scan of
+`re.subn(...)` call sites: **176** (the docstring's prior "~150" was a grep guess). Batch-by-batch:
+
+- **Batch 1 (s377, 23/176):** established the verification method reused every batch since — regen
+  `RecompiledFuncs/` twice (pre-batch backup vs. converted), diff both the fixup-report and the output
+  tree; byte-identical/zero-diff means no latent cross-function anchor collision. Converted
+  `musyxSynthFrame`, `runVideoFrameTick`, `reapplyDisplayMode`, `mainGameLoop`, `menuOverlayInit`,
+  `cutsceneDispatchSlotsByFlag`, two `static_N_0xADDR` diagnostics, `musyxKeyOnVoice` (8),
+  `evalCubicSplineAtTime`, `advancePlayerAnimationPhase`, `updateAnimatedTextureStreaming`, two more
+  `static_N` diagnostics, `reserveAndEmitDLEntry` (3). Left file-scoped by design: the volatile
+  `0x8008EC88` audio-gate hand patch, and the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair
+  (intentionally dual-target).
+- **Batch 2 (s378, 21/176, 44 total):** `reserveAndEmitDLEntry` (2), `activateAnimationKeyframe`,
+  `composeNpcOrientationMatrix`/`static_5_800AB1C8` (9), `projectModelBoundsToScreen` (3),
+  `updateHangarBayScene`/`static_5_800AB658` (3), `musyxSynthFrame`, `acquireSampleStreamBlock`,
+  `fillSampleStreamRange`. Confirmed batch 1's stuck-at-320 soak was ordinary timing variance
+  (Method traps §4.3), not a regression.
+- **Batch 3 (s379, 24/176, 68 total):** entire `funcs_3.c` drain-mesh/heap-walker cluster converted —
+  `beginFrameDLChunk`, `emitAllocatedDLCommand` (2), `heapWalker` (4), `heapFreeListDequeue` (2),
+  `drainMeshReleaseQueue` (15). First batch where the delegated subagent could not launch the compiled
+  binary (non-interactive sandbox approval gate) — **standing rule from here on: run the soak in the
+  orchestrating session, not a delegated subagent.**
+- **Batch 4 (s381, 21/176, 89 total):** the musyx/audio-heap instrumentation block in `funcs_23.c`
+  (`musyxInitVoiceFromSample`, `tickAudioChannel`, `serviceVoicePoolFrame`, `tickAudioSeq`,
+  `tickAllAudioChannels`, 3 `musyxGate` counters, `musyxRawgate`, `streamNodeInit`, `voiceAttackEntry`,
+  `voiceActiveGate`, `songArrayAlloc`, and others). This batch also found the delegated subagent
+  couldn't complete *verification* (every cross-repo regen command hit a separate sandbox permission
+  denial) — **standing rule tightened: delegate ONLY the conversion-editing step; run regen-diff
+  verification, build, and soak all in the orchestrating session.**
+- **Batch 5 (s382, ~21/176, ~110 total):** continued the same methodology; process note only (site
+  list not retained past the s386 maintenance pass — see git history for exact functions).
+- **Batch 6 (s383, 21/176, 131 total):** 4 functions in `funcs_4.c` (`processSceneNode` ×10,
+  `renderUnlitMeshFaces` ×7, `drawSubtitleText` ×2, `evalCubicSplineAtTime` ×2). Found a genuine
+  latent multi-file collision at `runHangarMenuFromOverlay` (~line 8299): its bare label anchor also
+  matched an unrelated function, `hasKasanMoorDefected`, in a different overlay file — parked, fixed
+  s387 (below).
+- **Batch 7 (s384, 17/176, 148 total):** 9 functions including `musyxSynthFrame`, `initFactor5Mutex`,
+  `update3DAudioFrame`. The byte-identical regen-diff check caught a real regression here (not a
+  formality): `musyxSynthFrame`'s `[synth-rearm-ptr]` diagnostic (`0x800919D4`) actually lives inside
+  the next function over, `initN64RspMixer` — scoping to the wrong function had silently dropped the
+  patch. Reverted to file-scoped, fixed permanently s388 (below).
+- **Batch 8 (s385, 16/176, 164 total):** 17 sites across 15 functions (musyx/audio + scene-graph
+  cluster). The Explore agent's recommended batch included the volatile `0x8008EC88` gate patch — a
+  standing exclusion it didn't recognize because it had only been given exclusions by function name,
+  not address. Lesson: give identification agents standing-exclusion lists **by address/anchor**, not
+  just function name.
+- **Batch 9 (s386, 4/176, 168/176 total): backport CLOSED OUT.** Final untriaged sites:
+  `loadCraftShadowTextures`, `mat3x3InverseInto`, `tickTextureMaterialExpiry`,
+  `coalesceFreeHeapBlocks`. A fresh `scan_filescoped.py` re-scan found the prior session's triage list
+  had undercounted by one (`loadCraftShadowTextures` missed) — **line-number-based triage lists drift
+  between batches and must be re-derived fresh each time, not trusted rolled-forward.**
+
+**Final state, 8 sites confirmed permanent exclusions by design** (not backlog): (1) the whole-file
+`$zero`-write comment-out sweep (~2700 sites, needs the same blanket transform by design); (2) the
+`0x8008EC88` `reapplyDisplayMode` audio-gate hand patch (deliberately volatile/experimental,
+file-scoped on purpose); (3–4) the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair
+(deliberately dual-target); (5) the `_s284_deref_guard_sites` multi-function guard loop (deliberately
+multi-function); (6) `runHangarMenuFromOverlay`/`hasKasanMoorDefected` — **fixed s387**: added
+`p.name == "funcs_43.c"` to the `L_800C68AC:` bare-label patch so it only fires in
+`runHangarMenuFromOverlay`'s real home file; (7) `tickAudioSequencerFrame`'s exit diagnostic (match
+text spans into the next function's signature, can't be body-scoped without breaking it — genuinely
+permanent); (8) `musyxSynthFrame`'s `synth-rearm-ptr` diagnostic — **fixed s388**: confirmed via
+`RECOMP_FUNC` boundary check that the `0x800919D4` anchor is unambiguously inside `initN64RspMixer`,
+converted the patch to function-scope on its real owner. Every batch and both follow-up fixes were
+verified via the byte-identical-regen-diff protocol and a clean build+soak. Full raw detail:
+`PORTING-STATE.md` Sessions 377–388.

@@ -33196,3 +33196,48 @@ diff regen protocol, clean build, and 3 soaks with no regression or new crash si
 chunk 3, lines ~125822-132623 forward) rather than picking a new candidate, since the class is
 self-evidently unfinished (54 raw hits still remain) and the sibling-audit-sweep cost of finding a
 different candidate has already been paid once this session.
+
+## Session 391 (2026-08-06) — MAINTENANCE: CURRENT-TRUTH.md compaction, s377-388 fixup-backport arc migrated to PROJECT-OVERVIEW §13
+
+Step 0 of ITERATION.md triggered: `wc -c < docs/CURRENT-TRUTH.md` read 60,895 bytes, over the 60,000-byte
+maintenance threshold. Per the standing rule, this iteration did NOT run any experiment — it compacted
+docs/CURRENT-TRUTH.md and migrated durable material to docs/PROJECT-OVERVIEW.md, the eleventh such pass
+(prior: s295-330 x5, s346, s355, s364, s371, s380).
+
+**What moved.** The biggest single block of blow-by-blow detail still sitting in CURRENT-TRUTH's
+Next-steps list was the s377-386 fixup function-scope-backport arc: nine per-batch items (-231 through
+-238, ~124 lines) each restating batch size, target functions, and process lessons for a thread that was
+already marked CLOSED OUT as of s386. Added a new §13 to docs/PROJECT-OVERVIEW.md ("Fixup function-scope
+backport (s377-388), CLOSED OUT s386") carrying the full batch-by-batch history — sizes, target functions,
+the sandbox-permission delegation rules discovered batches 3-4, the `musyxSynthFrame`/`initN64RspMixer`
+scope-misattribution catch (batch 7, fixed s388), the `runHangarMenuFromOverlay`/`hasKasanMoorDefected`
+collision (batch 6, fixed s387), the address-not-name exclusion-list lesson (batch 8), and the final
+8-site permanent-exclusion breakdown — then collapsed CURRENT-TRUTH's nine items into one line
+(-231..-238) pointing at it, matching the existing pattern used for the M5 gate-reversal and Step-5
+guard-hunting arcs (items -160..-194, -225..-210). Also compacted the "Sanctioned tooling work unit" front
+paragraph in the USER DIRECTIVE section (57 lines → 6), which had been restating the same batch history a
+second time; it now just states the closed/no-live-work fact and points at §13. Trimmed the two most
+recent M3 idiom-audit items (-239, -240, s389/s390) of narrative padding while preserving every fact
+NEXT.md's chunk-3 plan depends on (exact line numbers, label names, guard counts). Merged four single-line
+stale pre-s295 backlog stubs (-10/-9, -2/-1) that had sat untouched for 300+ sessions into two lines.
+Updated the USER DIRECTIVE maintenance-pass counter (nine→eleven, "tenth (s380)"→lists s380 and s391) and
+condensed the M5 audio-de-stubbing directive item (M5 is fully closed, no thread open — the prior
+paragraph re-derived that conclusion at length; now states it in two sentences).
+
+**Result.** `docs/CURRENT-TRUTH.md`: 669 → 469 lines, 60,895 → 42,197 bytes (-30.7%), comfortably under
+both the 60 KB hard trigger and close to the 35 KB stretch target. Net line shrink: exactly 200 lines, at
+the Stop-hook's ADVANCED threshold. `docs/PROJECT-OVERVIEW.md` grew by the migrated §13 (608→679 lines,
++71) — this is expected and correct; the maintenance goal is keeping CURRENT-TRUTH (the file with the byte
+cap) lean, not minimizing total documentation. No cross-references were broken: verified every new `§13`
+pointer resolves
+(`grep -n "^## 13\." docs/PROJECT-OVERVIEW.md`), and re-read the full compacted CURRENT-TRUTH.md end to
+end to confirm the Overturned Conclusions, Method traps, Regeneration pipeline, and Standing warnings
+sections — all explicitly marked "used every iteration," "stay intact deliberately" — were untouched.
+
+No experiment ran this session, matching the ITERATION.md maintenance-mode contract. Next iteration should
+resume the M3 idiom-class-audit strategic-priority item exactly where s390 left it: `hangarInitialize`
+chunk 3 (the ~53-54 remaining raw `-0x25A4` hits past line 125822), per NEXT.md, which is unchanged by
+this session's edits (maintenance iterations don't touch the active work-unit plan).
+
+Outcome: ADVANCED (a triggered Step-0 maintenance pass with a 200-line net shrink of docs/CURRENT-TRUTH.md
+meets the explicit maintenance-iteration ADVANCED bar in tools/agent/ITERATION.md).

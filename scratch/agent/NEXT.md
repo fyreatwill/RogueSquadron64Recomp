@@ -1,5 +1,13 @@
 # NEXT work unit
 
+## s391 note
+
+s391 was a triggered MAINTENANCE iteration (Step 0 of ITERATION.md: CURRENT-TRUTH.md was 60,895 bytes,
+over the 60,000-byte cap). It did NOT touch this work-unit plan — compacted CURRENT-TRUTH.md (669→469
+lines, 60,895→42,197 bytes) by migrating the closed s377-388 fixup-backport batch history to
+`docs/PROJECT-OVERVIEW.md` §13. `hangarInitialize` chunk 3 (below) is still the correct next work unit,
+unchanged from what s390 left. Full detail: `PORTING-STATE.md` Session 391.
+
 ## s390 recap
 
 Continued the M3 idiom-class-audit strategic-priority item (fresh work mode opened s389). The s389
