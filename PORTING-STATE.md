@@ -34144,3 +34144,65 @@ Outcome: ADVANCED (landed a real, verified, committed fix — the CMakeLists.txt
 — plus a well-evidenced negative result on the M4 batch-size question, averting a session-402
 repeat of the same regression from scratch; net M4 progress is flat but the ledger is more informed
 than it was, and the sibling repo's working tree is restored to a verified-clean state).
+
+## Session 402 (2026-08-06) — M4 item -249 batch 2 RETRY at n=16 (per s401's fallback plan): two clean batches, 32/778 done, safe-size hypothesis holds so far
+
+### What ran
+Per `scratch/agent/NEXT.md`'s plan: retried item -249 at a much smaller, s400-matched scale (n≈20)
+with a **mandatory live-verify gate after every single batch**, instead of s401's chain-five-batches-
+then-verify-once mistake.
+
+Regenerated the candidate list with the improved `is_data` filter (excludes lowercase-`g`-prefixed
+globals, the `gCutsceneAssetPaths` lesson from s401): **778** candidates, down from s400/s401's 781 (3
+fewer — the filter fix working as intended, confirmed by spot-checking none of the 3 excluded names
+showed a function verdict).
+
+**Batch 1 (first 20 candidates in file order):** probed with `tools/overlay_symbol_probe.py` via
+`s400_probe_batch.py` — 9 CONFIRMED, 7 WEAK, 3 NONE, **1 AMBIGUOUS** (`handleCraftSelectInput`,
+multi-maybe across menu/cinematic — left for follow-up, not applied). Notably this batch's file-order
+position included **`menuControllerInput`/`buildScaledFormatTextElement`** — the exact two names
+implicated in s401's title-screen SIGBUS (they were still sitting in `main_overlay.txt` after s401's
+full revert, so the fresh candidate scan surfaced them again). Applied the 16 CONFIRMED+WEAK entries
+(excluding the 3 NONE and 1 AMBIGUOUS), regenerated (`make_elf.py`'s `unmapped functions skipped`:
+783→767, exactly -16, first positive control), rebuilt clean (`cmake -S . -B build` reconfigure +
+`cmake --build`, no undefined symbols), verified all 16 names present via `nm` on the final macOS
+binary (the s54/s399/s401 "build success != actually fixed" check). **Live-verified**: `probe.sh`
+phase-gated run reached `[phase] vi_width=512` at 88.4s (matches the established 88.7s/88.4s clean
+baseline), 19 frames captured, 0 crashes/asserts/UnhandledJumpTarget/dmem-race/SIGBUS, only the 1
+pre-existing known `[missing-func]` (`endMissionCleanup`/`0x800FB9E4`). **This is strong evidence for
+s401's conclusion that batch SIZE (not the identity of `menuControllerInput`/
+`buildScaledFormatTextElement`) caused the s401 crash** — those exact two functions relocated cleanly
+in a small batch.
+
+**Batch 2 (next 20 candidates after batch 1's removal, 762 remaining):** same procedure — 14
+CONFIRMED, 2 WEAK, 3 NONE, 1 AMBIGUOUS (`handleCraftSelectInput` again — it's a genuinely persistent
+multi-maybe, not batch-dependent; stays on the follow-up list). Applied 16 CONFIRMED+WEAK,
+`make_elf.py` count 767→751 (exactly -16, second positive control), rebuilt clean, all 16 names
+confirmed present via `nm`. **Live-verified**: `[phase] vi_width=512` at 89.3s, 0
+crashes/asserts/UnhandledJumpTarget/dmem-race/SIGBUS, same single known `[missing-func]`.
+
+### Verdict
+**Two independent clean n=16 batches in a row, each individually live-verified before the next was
+even selected — the discriminating result this iteration's budget rule (iron rule 8) required.**
+n≈16-20 is confirmed safe for this family, matching s400's original batch size and consistent with
+s401's finding that size (not per-candidate ambiguity) is the risk factor: n=16 with 2 batches (32
+relocations total, including the two names from s401's crash) produced 0 regressions, while s401's
+single n=774 batch produced one. This does NOT establish where the safe ceiling actually is between
+16 and 774 — per NEXT.md's explicit instruction, this iteration deliberately did not scale batch size
+up to probe that boundary, leaving it for a dedicated iteration.
+
+**Item -249 net progress: 20 (s400) + 32 (s402) = 52/778 done, 746 remain** (778 is the corrected
+baseline after the `is_data` filter fix; not directly comparable to the pre-s402 "781 remain" figure).
+`handleCraftSelectInput` (0x800af6ac) is now confirmed persistently AMBIGUOUS across 2 independent
+probes (menu maybe + cinematic maybe both times) — worth a manual disassembly read next time it comes
+up rather than another probe attempt, since re-probing won't resolve a structurally ambiguous case.
+
+### Files changed
+- `rogue_squadron64/symbol_files/{main,mission,menu}_overlay.txt` (sibling repo, **uncommitted** per
+  item -3): 32 entries moved from `main_overlay.txt` to `menu_overlay.txt` (2) and `mission_overlay.txt`
+  (30). Not committed — ask the user first, per standing rule.
+- This repo: `scratch/agent/s402_*` candidate lists, probe/apply batch files, verify run logs+frames,
+  reused `s400_probe_batch.py`/`s400_apply_batch.py` unmodified.
+
+Outcome: ADVANCED (32 real phantom-overlay-function relocations landed and live-verified, 2/2 clean
+batches with per-batch positive controls — the exact discipline s401 skipped).

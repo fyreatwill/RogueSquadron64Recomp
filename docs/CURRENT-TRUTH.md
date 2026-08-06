@@ -109,8 +109,9 @@ FIXED (M1 closed s48; `SHADE_WRAP` s25; ImemOverrun s69 + depth-writeback SIGBUS
 Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regression sweep. 0
 `UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
-~801-803 further phantom overlay-range functions in `main_overlay.txt`, s400 fixed the first 20
-(781 remain, item -249). Post-`a` process now soaks well past 65s without death.
+~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402 have fixed 52 of
+the corrected 778-candidate count (746 remain, item -249). Post-`a` process now soaks well past 65s
+without death.
 
 ## Goal stack — work strictly top-down
 
@@ -137,8 +138,8 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 20/801 done s400, 781
-remain, largest M4 item open).
+`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 52/778 done s400+s402,
+746 remain, largest M4 item open).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -151,7 +152,27 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -250 (s401); the next new item takes -251 and is inserted at the top.
+oldest). Current top is -251 (s402); the next new item takes -252 and is inserted at the top.
+
+-251. **(s402) M4 item -249 batch 2 RETRY at n=16 (per s401's fallback plan): two clean batches, 32
+    more relocations landed, 52/778 done, 746 remain.** Regenerated the candidate list with the
+    `is_data` filter fix (excludes lowercase-`g`-prefixed globals — s401's `gCutsceneAssetPaths`
+    lesson): 778 candidates (781 minus the 3 the fix now correctly excludes). Took two independent
+    n=20 batches in strict file order, each probed (0 truly AMBIGUOUS applied — 1 persistent
+    AMBIGUOUS, `handleCraftSelectInput`/`0x800af6ac`, structurally multi-maybe across menu/cinematic
+    both times it came up, left for a manual disassembly read rather than more probing), applied (16
+    CONFIRMED+WEAK each, NONE/AMBIGUOUS deferred), regenerated+rebuilt clean, names confirmed present
+    via `nm` on the final binary, and **live-verified individually before the next batch was even
+    selected** — `[phase] vi_width=512` reached (88.4s, 89.3s; matches the 88.7s clean baseline), 0
+    crashes/asserts/UnhandledJumpTarget/dmem-race/SIGBUS in either run, only the 1 known
+    pre-existing `[missing-func]`. Batch 1 happened to include `menuControllerInput` and
+    `buildScaledFormatTextElement` — the exact two names implicated in s401's title-screen SIGBUS —
+    and it relocated cleanly, reinforcing s401's conclusion that batch **size**, not those symbols'
+    identity, caused that crash. **Does not yet establish the actual safe ceiling between 16 and
+    774** — deliberately not probed this iteration per NEXT.md's instruction to keep the size
+    question separate from this iteration's per-batch-verify discipline check. `HYPOTHESIS-ID:
+    m4-main-overlay-phantom-functions` (iteration 5, first genuinely positive/incremental result
+    since s400). Full detail: `PORTING-STATE` Session 402.
 
 -250. **(s401) M4 item -249's batch 2 attempt at scale (774 relocations) FOUND and REVERTED a real
     regression; item -249 is back at exactly s400's checkpoint (20/801 done, 781 remain), no net
