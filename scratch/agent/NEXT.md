@@ -1,85 +1,77 @@
 # NEXT work unit
 
-## s406 recap
+## s407 recap
 
-Continued the bisection of s405's 10-name crash suspect set (`submitCameraTrackedObjectToRender` ...
-`loadEffectModelInstancePool`, all parked in `main_overlay.txt` from s405's revert) per that session's
-Option A plan, split into two file-order quarters of 5.
+Finished bisecting s406's quarter-2 5-name crash suspect set (`beginCameraTrackedTransition`,
+`advanceCameraTransitionOnCue`, `isCameraTransitionIdle`, `initPlayerCraftTrailBuffers`,
+`loadEffectModelInstancePool`). Split A (first 3) landed clean (+3). Split B (last 2) crashed
+together; bisected at n=1 down to a single genuinely-buggy function: **`initPlayerCraftTrailBuffers`**
+alone reproduces the byte-identical `playerXwingInit+2068`/`last-guest-pc=0x80011088` crash.
+`loadEffectModelInstancePool` tested alone and is clean (+1). Final: 4 of the 5 relocated, 1
+permanently excluded via new `scratch/agent/m4_known_bad.txt`.
 
-**Quarter 1** — `submitCameraTrackedObjectToRender`, `emitEffectParticlesAlongPath`,
-`getEffectModelPoolHandle`, `beginCameraViewTransition`, `requestCameraSnapToTrackedAnchor` — applied,
-regen'd (positive control: unmapped-functions-skipped 707→702), rebuilt clean (295 warnings, matches
-baseline), `nm`-confirmed, live-verified: **0 crashes**, reached `vi_width=512`→`640` (88.5s, matching
-clean baseline). **This quarter stays applied** — item -249 is now at **101/778 done, ~677 remain**.
+**Item -249 tally: 105/778 done, 672 remain, 1 permanently excluded.** Full detail:
+`docs/CURRENT-TRUTH.md` item -256, `PORTING-STATE` Session 407.
 
-**Quarter 2** — `beginCameraTrackedTransition`, `advanceCameraTransitionOnCue`, `isCameraTransitionIdle`,
-`initPlayerCraftTrailBuffers`, `loadEffectModelInstancePool` — applied on top (702→697), rebuilt clean,
-all 10 `nm`-confirmed present, live-verified: **reproduced the s404/s405 crash byte-identically**
-(`playerXwingInit+2068`, `last-guest-pc=0x80011088`, crash 2.1s after reaching `vi_width=512`). The
-culprit is somewhere in this 5. Quarter 2 was surgically reverted (`scratch/agent/s406_revert_q2.py`)
-back to `main_overlay.txt` (marked `s406:`), and the repo was rebuilt with quarter 1 alone applied to
-leave a clean, buildable, source-matching state (positive control re-confirmed: back to 702, 295
-warnings, rc=0). Full detail: `docs/CURRENT-TRUTH.md` item -255, `PORTING-STATE` Session 406.
+The s404-originated 20-name-batch crash thread is now FULLY CLOSED — 19/20 confirmed safe and
+relocated, 1 real bug isolated and parked. This is the first time this hypothesis thread bisected all
+the way to n=1 and found a genuinely buggy single function rather than a batch-size/boundary-slicing
+artifact — worth keeping in mind for future crashes in this family: don't assume every M4
+item -249 crash is a re-slicing artifact: it might be a real translation or dependency-ordering bug in
+one specific function.
 
-## Next work unit: continue bisecting quarter 2 (5 names) at n=2/3
+## Next work unit: fresh n=20 slice of the main candidate list
 
-**HYPOTHESIS-ID: m4-main-overlay-phantom-functions** (iteration 13 under this slug — iterations 9-12
-were all genuine discriminating results, no stall, iron rule 8 does not trigger a pivot).
+**HYPOTHESIS-ID: m4-main-overlay-phantom-functions** (iteration 14 under this slug — iterations 9-13
+were all genuine discriminating results, no stall; this pivots back to bulk relocation now that the
+crashing thread from s404 is fully resolved, exactly as the standing plan anticipated).
 
-The 5 crash-implicated names, currently in `main_overlay.txt` marked `s406:`:
-```
-beginCameraTrackedTransition   0x800ae358   CONFIRMED:mission
-advanceCameraTransitionOnCue   0x800ae390   WEAK:mission
-isCameraTransitionIdle         0x800ae3bc   WEAK:mission
---- split A ends (3) ---
-initPlayerCraftTrailBuffers    0x800ae3f0   CONFIRMED:mission
-loadEffectModelInstancePool    0x800ae138   CONFIRMED:mission
---- split B ends (2) ---
-```
-(Tags carried over from `scratch/agent/s404_batch1_apply.txt` — no need to re-probe destinations.)
-5 names is small enough that per-name isolation (n=1, 5 separate apply+build+verify cycles) may
-actually be *faster* than another binary split, since each cycle is only ~2-3 minutes. Consider going
-straight to n=1 this iteration instead of a 3/2 split, if time allows — either is a valid discriminating
-design.
+The s404-s407 crash-batch bisection thread is closed. Resume the ordinary per-batch-verify workflow
+(s400/s402/s403 recipe) on the remaining ~672 real candidates.
 
-### Recipe (same as s405/s406, repeat for each split)
-1. Write a `scratch/agent/s407_a_apply.txt`-style file (name/addr/tag, 3 columns — see
-   `scratch/agent/s400_apply_batch.py`'s expected format) with just that split's names.
-2. `python3 scratch/agent/s400_apply_batch.py <file>` — moves them main→mission.
-3. Regen: `cd rogue_squadron64 && python3 tools/make_elf.py` (expect unmapped-functions-skipped to
-   drop by exactly the split size from 702), then `cd N64Recomp && ./build/N64Recomp
+### Recipe
+1. Regenerate the candidate list with `tools/overlay_symbol_probe.py`'s usual scan (the `is_data`
+   filter from s402, per the standing lesson about lowercase-`g`-prefixed globals). **Exclude every
+   name in `scratch/agent/m4_known_skip.txt` (persistently NONE/AMBIGUOUS) AND every name in
+   `scratch/agent/m4_known_bad.txt` (crashes on relocation — currently just
+   `initPlayerCraftTrailBuffers`)** — do not re-probe or re-attempt either list without a dedicated new
+   investigation thread for that specific name.
+2. Take the next ~20 candidates in strict file order (skipping both exclusion lists), probe them with
+   `tools/overlay_symbol_probe.py` (0 ambiguous is the historical norm for this family — if a name comes
+   back AMBIGUOUS, add it to `m4_known_skip.txt` and move on, don't re-probe in the same session).
+3. Apply the CONFIRMED+WEAK verdicts via `scratch/agent/s400_apply_batch.py` (format: `name addr
+   TAG` per line, TAG = `CONFIRMED:<overlay>` or `WEAK:<overlay>`).
+4. Regen: `cd rogue_squadron64 && python3 tools/make_elf.py` (expect `unmapped functions skipped` to
+   drop by exactly the batch size from 698), then `cd N64Recomp && ./build/N64Recomp
    rogue_squadron.toml`, then `python3 N64Recomp/fixup_game_funcs.py`.
-4. Build: `cmake -S . -B build && cmake --build build -j8` (rc=0, still 295 warnings, no new ones).
-5. `nm`-confirm the split's names present (pattern: see `scratch/agent/s406_check_names.sh`).
-6. Live-verify:
+5. Build: `cmake --build build -j8` (rc=0, no new warnings beyond the 295 baseline).
+6. `nm`-confirm the batch's names present (pattern: `scratch/agent/s407_check_names.sh` as a template
+   — regenerate the `names=(...)` array for the new batch).
+7. **Mandatory live-verify before selecting the next batch** — do not accumulate unverified batches
+   (s401's dead-end lesson):
    ```
    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
      PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 \
      zsh tools/probe.sh <outdir> 45 2
    ```
-   PASS = reaches `vi_width=512` (~88.5s) and continues to `vi_width=640` with 0 crashes, `run.log` has
-   no `[CRASH]`/`Bus error` lines. FAIL = `playerXwingInit+2068` Bus error firing within a few seconds
-   of the 512 reach (matches s404/s405/s406's signature exactly — watch `process gone at Ns after N
-   frames` in the probe.sh output, it fires around 2s after phase-reach).
-7. If a split crashes and it's down to a single name: STOP relocating it. Add it to a new
-   `scratch/agent/m4_known_bad.txt` (parallel to `m4_known_skip.txt`, but semantically distinct — this
-   one caused a live crash, not an ambiguous probe) with a one-line note pointing at this session's
-   writeup, and move on to a fresh n=20 slice of the main candidate list (item -249 continues from
-   677 remaining, skipping this one known-bad name going forward). If a split of >1 crashes, keep
-   bisecting narrower until a single name is isolated.
-8. If a split is clean: leave it applied, apply the next split on top and repeat, same logic as
-   s405/s406 (each independently-verified-clean split doesn't need re-checking once the full set is
-   isolated to the crashing remainder).
-9. Once isolated: rebuild with only the proven-safe names applied (not the known-bad one) to leave the
-   repo in a clean, buildable, matching-source state before ending the session — same as s406 did.
+   Run this **in the background** (`run_in_background: true` on the Bash call) — it takes ~90-120s to
+   reach phase width=512 alone, comfortably over the 120s foreground timeout. PASS = reaches
+   `vi_width=512` (~88-89s) and continues to `vi_width=640`, 0 `[CRASH]` lines in `run.log`. FAIL =
+   `playerXwingInit+2068`-style Bus error (or any other `[CRASH]`) firing within a few seconds of the
+   512 reach — if this happens, bisect the batch the same way s405/s406/s407 did (halves, then
+   quarters, then n=1) rather than reverting-and-guessing.
+8. If clean: leave applied, take the next ~20-slice batch, repeat. Two consecutive clean batches with
+   no crash is a reasonable stopping point for one iteration (matches s402/s403's pace of ~2
+   batches/iteration).
 
 ### Do NOT this iteration
-- Re-apply all 5 of quarter 2 at once without finishing the split.
-- Move on to a fresh n=20 slice of the main candidate list before this thread is resolved, UNLESS a
-  single culprit name has just been isolated (see step 7) — then it's fine and expected to pivot back
-  to bulk relocation with the bad name on the new skip/bad list.
-- Patch around `playerXwingInit` without first isolating which name causes the corruption — per the
-  standing rule, revert-then-investigate, not patch-same-iteration.
+- Re-probe or re-attempt `initPlayerCraftTrailBuffers` (in `m4_known_bad.txt`) or anything in
+  `m4_known_skip.txt`.
+- Batch beyond ~20-40 without an intervening live-verify (s401's "swept everything, verified once at
+  the end" dead end).
+- Try to root-cause WHY `initPlayerCraftTrailBuffers`'s real code crashes — that's a separate,
+  dedicated investigation thread if it's ever picked up (not blocking further item -249 progress since
+  it's now permanently excluded).
 
 ### Reminder: sibling-repo commit rule (item -3)
 Every batch's symbol-file edits land in `~/Documents/Tools/rogue_squadron64/symbol_files/*.txt`, a
@@ -88,11 +80,19 @@ first. This repo's commit only covers `scratch/agent/*` and the docs.
 
 ## Soak queue
 
-None currently queued — each bisection step gets its own live-verify run inline (they're phase-gated
-and cheap enough, ~2-3 minutes each including build).
+None currently queued — each batch's live-verify is inline (phase-gated, ~2-3 min including build).
 
 ## Iteration budget
 
-HYPOTHESIS-ID: m4-main-overlay-phantom-functions, iteration 13. Four consecutive discriminating
-results (s404 iteration 9, s405 iterations 10-11, s406 iteration 12) — this is genuine narrowing
-progress on a real regression, not a stall. Continue the n=2/3 (or n=1) bisection of the final 5.
+HYPOTHESIS-ID: m4-main-overlay-phantom-functions, iteration 14. Five consecutive discriminating
+results (s404 iteration 9 through s407 iteration 13), the crash-batch sub-thread that opened at s404 is
+now fully closed. This iteration resumes ordinary bulk relocation, not bisection — a genuinely
+different (and lower-risk) operation, so the "3 consecutive iterations on one hypothesis" budget rule
+should be read as reset by this closure, not violated by continuing under the same top-level
+HYPOTHESIS-ID (the slug names the overall item -249 effort, not just the crash sub-thread).
+
+## Maintenance note
+
+`docs/CURRENT-TRUTH.md` is at ~58.8 KB after this session's edit (cap is ~60 KB, Step 0 trigger). The
+next iteration that finds it over 60000 bytes via `wc -c` should run a MAINTENANCE pass before any
+further M4 work — likely close soon given the pace of item -249 session entries.

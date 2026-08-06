@@ -109,9 +109,9 @@ FIXED (M1 closed s48; `SHADE_WRAP` s25; ImemOverrun s69 + depth-writeback SIGBUS
 Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regression sweep. 0
 `UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
-~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403+s405+s406 have
-fixed 101 of the corrected 778-candidate count (677 remain, item -249). Post-`a` process now soaks
-well past 65s without death.
+~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403+s405+s406+s407
+have fixed 105 of the corrected 778-candidate count (672 remain, 1 permanently excluded as known-bad,
+item -249). Post-`a` process now soaks well past 65s without death.
 
 ## Goal stack — work strictly top-down
 
@@ -138,11 +138,11 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 101/778 done
-s400+s402+s403+s405+s406, ~677 real remain, largest M4 item open — s404 found+reverted a 20-name
-regression, s405 bisected it to a 10-name suspect set, s406 bisected that 10 into two 5s: one landed
-clean [+5], one still crashes and is narrowed further, parked pending n=2/3 bisection — see items
--253/-254/-255).
+`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 105/778 done
+s400+s402+s403+s405+s406+s407, 672 remain, 1 permanently excluded as known-bad, largest M4 item open —
+s404 found+reverted a 20-name regression, s405 bisected it to a 10-name suspect set, s406 bisected that
+10 into two 5s (one landed clean [+5], one still crashed), s407 fully resolved the crashing 5 down to a
+single genuinely-buggy name — see items -253/-254/-255/-256).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -155,7 +155,34 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -255 (s406); the next new item takes -256 and is inserted at the top.
+oldest). Current top is -256 (s407); the next new item takes -257 and is inserted at the top.
+
+-256. **(s407) M4 item -249: finished bisecting s406's quarter-2 5-name crash suspect set — isolated a
+    single genuinely-buggy function, `initPlayerCraftTrailBuffers`, and landed the other 4 clean. 105/778
+    done, 672 remain, 1 permanently excluded.** Split the 5 (`beginCameraTrackedTransition`,
+    `advanceCameraTransitionOnCue`, `isCameraTransitionIdle`, `initPlayerCraftTrailBuffers`,
+    `loadEffectModelInstancePool`) into split A (first 3) and split B (last 2). **Split A** applied,
+    regen'd (positive control: unmapped-functions-skipped 702→699), rebuilt clean, `nm`-confirmed,
+    live-verified: 0 crashes, reached `vi_width=512`→`640` (88.4s) — stays applied (+3). **Split B**
+    applied on top (699→697), rebuilt, live-verified: reproduced the s404/s405/s406 crash byte-identically
+    (`playerXwingInit+2068`, `last-guest-pc=0x80011088`, process died ~2.4s after reaching `vi_width=512`)
+    — culprit is in this 2. Reverted split B, then bisected it at **n=1**: `initPlayerCraftTrailBuffers`
+    applied ALONE reproduced the identical crash signature (byte-identical PC/symbol/last-guest-pc,
+    process died at 2.4s after 1 frame) — proves this single function's real recompiled code (not a
+    symbol-boundary/batch-size artifact) is sufficient to trigger the fault on its own, a genuinely new
+    finding for this hypothesis thread (every prior crash in this arc was multi-name and never bisected
+    below n=5). `loadEffectModelInstancePool` applied alone (with `initPlayerCraftTrailBuffers` reverted)
+    was independently live-verified clean (0 crashes, `vi_width=512`→`640`, 19 frames) — stays applied
+    (+1). Final repo state: 4 of quarter-2's 5 names relocated (3 from split A + `loadEffectModelInstancePool`),
+    `initPlayerCraftTrailBuffers` reverted to `main_overlay.txt` and recorded in new
+    `scratch/agent/m4_known_bad.txt` (parallel to `m4_known_skip.txt`, but for names that crash on
+    relocation rather than probe as ambiguous) — do NOT re-attempt without a dedicated root-cause
+    session. **This closes the s404-originated 20-name crash-batch bisection thread entirely**: of the
+    original 20, 19 are now confirmed safe and relocated (10 from s405's half-2 + s406's quarter-1 5 +
+    s407's 4), 1 (`initPlayerCraftTrailBuffers`) is a real, isolated, permanently-parked bug.
+    `HYPOTHESIS-ID: m4-main-overlay-phantom-functions` (iteration 13 — a 5th consecutive discriminating
+    result under this slug, no stall, and the thread is now fully resolved rather than merely narrowed).
+    Full detail: `PORTING-STATE` Session 407.
 
 -255. **(s406) M4 item -249: bisected s405's 10-name crash suspect set at n=5 — quarter 1 landed
     clean, quarter 2 reproduced the crash byte-identically and is narrowed further. 101/778 done, 677

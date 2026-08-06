@@ -34437,3 +34437,72 @@ there).
 
 Outcome: ADVANCED (a real discriminating bisection result — half of s405's suspect set is now landed
 as +5 real progress, and the crash is narrowed from a 10-name to a 5-name suspect set).
+
+## Session 407 (2026-08-06)
+
+Continued NEXT.md's plan: finish bisecting s406's quarter-2 5-name crash suspect set
+(`beginCameraTrackedTransition`, `advanceCameraTransitionOnCue`, `isCameraTransitionIdle`,
+`initPlayerCraftTrailBuffers`, `loadEffectModelInstancePool`), all parked in `main_overlay.txt` marked
+`s406:`. Repo state at session start already matched s406's clean checkpoint (`nm`-verified via
+`scratch/agent/s406_check_names.sh`: the 5 quarter-1 names present, all 5 quarter-2 names absent);
+`STATUS` was left at `WORKING` with `OUTCOME` deleted from a prior interrupted attempt, but no
+uncommitted work was lost — the checkpoint on disk was byte-for-byte s406's final state.
+
+**Split A** (first 3 file-order: `beginCameraTrackedTransition`, `advanceCameraTransitionOnCue`,
+`isCameraTransitionIdle`) applied via `scratch/agent/s400_apply_batch.py`, regenerated (positive
+control: `unmapped functions skipped` 702→699, exactly -3), rebuilt clean (no new warnings), `nm`-
+confirmed present, live-verified: `probe.sh` reached `phase width=512 reached after 88.4s`, run.log
+shows `threadPresent viW=640` and 0 `[CRASH]` lines — clean. **Split A stays applied.**
+
+**Split B** (last 2: `initPlayerCraftTrailBuffers`, `loadEffectModelInstancePool`) applied on top
+(699→697), rebuilt, `nm`-confirmed both present, live-verified: `probe.sh` reported `phase width=512
+reached after 88.4s` then `process gone while waiting for width 512` — run.log's `[CRASH]` block is
+byte-identical to s404/s405/s406's fault: `pc-symbol=playerXwingInit+2068`,
+`last-guest-pc=0x80011088`, same backtrace (`playerXwingInit`→`playerXwingUpdate`→`slotDispatcherIter`
+→`spawnNpcOfType`→`choosePlayerCraftAssets`→`initMission`→`mainGameLoop`), same wild-pointer register
+pattern (`x0=0x0000000300000000`, `si_addr=0x3800000fa`). Culprit is in this 2.
+
+Reverted split B (`scratch/agent/s407_revert.py`, a new generic revert helper parallel to
+`s406_revert_q2.py`) and bisected at **n=1** — a step further than any prior session in this thread had
+gone:
+
+- `initPlayerCraftTrailBuffers` applied ALONE (697→698 after the earlier revert put it back to 699, i.e.
+  -1): regenerated, rebuilt, `nm`-confirmed only this name present, live-verified: `probe.sh` reported
+  `phase width=512 reached after 88.6s` then `process gone at 2.4s after 1 frames` — run.log's crash
+  block is again byte-identical (`playerXwingInit+2068`, `last-guest-pc=0x80011088`, same backtrace and
+  register pattern, just different ASLR base addresses as expected). **This single name, alone, is
+  sufficient to reproduce the fault.** This is a materially different finding than every prior crash in
+  this hypothesis thread (s401's 774-batch regression, s404's 20-name batch, s405's 10-name half): those
+  were all attributed to batch-size/function-boundary re-slicing artifacts (the s9 "bulk symbol moves
+  split the enclosing function" mechanism) and never bisected below 5+ names. At n=1 there is no boundary
+  ambiguity left — `initPlayerCraftTrailBuffers`'s own real recompiled code, once it actually executes
+  instead of being no-op'd by `ROGUESQ_STUB_MISSING_FUNCS`, is what corrupts state that later
+  bus-errors `playerXwingInit`. Whether the bug is in the recompiler's translation of this specific
+  function or in an unmet ordering/data dependency on another still-phantom-stubbed function was NOT
+  investigated further this session (out of scope for the bisection work unit; would need its own
+  root-cause thread).
+- `loadEffectModelInstancePool` applied ALONE (with `initPlayerCraftTrailBuffers` reverted back to
+  `main_overlay.txt`, marked known-bad): regenerated (positive control confirmed: dropped back to 698),
+  rebuilt, `nm`-confirmed only this name present, live-verified: `probe.sh` captured **19 frames**, 0
+  `[CRASH]` lines, run.log shows `threadPresent viW=640` — clean. **Stays applied.**
+
+Final repo state (matches what's on disk and in the last successful build): of the original quarter-2
+5, 4 are now relocated (split A's 3 + `loadEffectModelInstancePool`), 1
+(`initPlayerCraftTrailBuffers`) is reverted to `main_overlay.txt` and recorded in new
+`scratch/agent/m4_known_bad.txt` — a permanent exclusion list parallel to `m4_known_skip.txt`, but
+semantically distinct (this one causes a live, reproducible crash on relocation, not an ambiguous probe
+verdict). `unmapped functions skipped` = 698 in the final build, matching all of quarter-1 (5, s406) +
+split A (3, s407) + `loadEffectModelInstancePool` (1, s407) relocated, `initPlayerCraftTrailBuffers`
+excluded.
+
+**Item -249 tally: 105/778 done (was 101/778 after s406), 672 remain, 1 permanently excluded.** This
+closes the entire s404-originated 20-name-batch crash investigation: of the original 20, 19 are
+confirmed safe and relocated across s405/s406/s407, and the 1 real bug is isolated, documented, and
+parked rather than being an open unknown blocking further batches.
+
+Sibling-repo symbol-file edits (`main_overlay.txt`/`mission_overlay.txt`) are uncommitted per the
+standing item -3 rule (ask the user before committing there).
+
+Outcome: ADVANCED (a genuine discriminating result — bisection resolved fully, isolating a real bug to
+a single named function rather than merely narrowing a suspect set further, and landed 4 more real
+relocations).
