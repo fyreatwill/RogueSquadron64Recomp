@@ -28,31 +28,41 @@ Priority order for upcoming iterations, set after the 300-session review:
 Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching
 (the BREADCRUMB10+ slice idiom) to the file-scoped-only guard patches in `fixup_game_funcs.py`, per the
 2026-08-04 analysis in that file's header comment. Real count 176 (an AST scan, not a grep guess).
-**148/176 converted across 7 batches (s377-379, s381-384)**, all verified byte-identical fixup-report
-output before/after, all built and soaked clean; **28 remain**. Process note from s379/s381: run
-verification (regen+diff) AND the soak in the orchestrating session, not a delegated subagent — both
-cross-repo regen commands and launching the compiled binary hit sandbox permission/approval gates a
-subagent cannot satisfy non-interactively; delegate ONLY the conversion-editing step. Process notes from
-s382: (1) once remaining sites stop being one big single-file cluster, delegate the "which target
-function does this site belong to" identification pass itself to a read-only Explore/general-purpose
-agent (grep the address, walk up to the enclosing `RECOMP_FUNC`) rather than reading the raw context dump
-in the orchestrating session. (2) Launching the compiled binary via `Bash run_in_background` with an
-inline `env VAR=1 /abs/path/to/binary` command runs with the WRONG cwd (ROM lookup is cwd-relative, not
-executable-relative) and silently degrades to a ROM-less run that blazes through VI counters
-unrealistically fast with no crash markers — a false-clean soak. Fix: a tiny `zsh script.sh` wrapper that
-`cd`s into `build/` then `exec`s the binary (`zsh` is allowlisted in `.claude/settings.json`; `bash
-script.sh` and inline `cd a && b` both require interactive approval this session lacks). From s383:
-a genuine latent multi-file collision found at the `runHangarMenuFromOverlay` site (~line 8299 pre-batch6)
-— its bare-label anchor also textually matches an unrelated function (`hasKasanMoorDefected`) in a
-different overlay file, so the file-scoped `subn` silently patches both; still parked untouched pending a
-dedicated file-scoped fix (needs `p.name` filtering, not a mechanical function-scope conversion) — RESURFACED
-at s384's fresh scan, same shape, still deferred. **New from s384: the verification step (byte-identical
-regen-diff) caught a real regression** — batch 7's `musyxSynthFrame` conversion for the `[synth-rearm-ptr]`
-diagnostic dropped to 0 matches, because the `0x800919D4` anchor it targets actually lives inside
-`initN64RspMixer` (the next function over), not `musyxSynthFrame` as an old s101-era design comment
-claimed. Reverted that one site to file-scoped (matching its proven-correct original behavior); the
-initN64RspMixer-vs-musyxSynthFrame question is a separate follow-up, not folded into this backport. Next
-work unit: NEXT.md (batch 8).
+**164/176 converted across 8 batches (s377-379, s381-385)**, all verified byte-identical fixup-report
+output before/after, all built and soaked clean; **12 remain**, most of which are intentional exclusions
+(see below), not untouched debt. Process note from s379/s381: run verification (regen+diff) AND the soak
+in the orchestrating session, not a delegated subagent — both cross-repo regen commands and launching the
+compiled binary hit sandbox permission/approval gates a subagent cannot satisfy non-interactively;
+delegate ONLY the conversion-editing step. Process notes from s382: (1) once remaining sites stop being
+one big single-file cluster, delegate the "which target function does this site belong to" identification
+pass itself to a read-only Explore/general-purpose agent (grep the address, walk up to the enclosing
+`RECOMP_FUNC`) rather than reading the raw context dump in the orchestrating session. (2) Launching the
+compiled binary via `Bash run_in_background` with an inline `env VAR=1 /abs/path/to/binary` command runs
+with the WRONG cwd (ROM lookup is cwd-relative, not executable-relative) and silently degrades to a
+ROM-less run that blazes through VI counters unrealistically fast with no crash markers — a false-clean
+soak. Fix: a tiny `zsh script.sh` wrapper that `cd`s into `build/` then `exec`s the binary (`zsh` is
+allowlisted in `.claude/settings.json`; `bash script.sh` and inline `cd a && b` both require interactive
+approval this session lacks). From s383: a genuine latent multi-file collision found at the
+`runHangarMenuFromOverlay` site — its bare-label anchor also textually matches an unrelated function
+(`hasKasanMoorDefected`) in a different overlay file, so the file-scoped `subn` silently patches both;
+still parked untouched pending a dedicated fix (needs `p.name` filtering, not a mechanical function-scope
+conversion). From s384: the verification step (byte-identical regen-diff) caught a real regression —
+batch 7's `musyxSynthFrame` conversion for the `[synth-rearm-ptr]` diagnostic dropped to 0 matches, because
+the `0x800919D4` anchor it targets actually lives inside `initN64RspMixer` (the next function over), not
+`musyxSynthFrame` as an old s101-era design comment claimed; reverted that one site to file-scoped. **New
+from s385**: when delegating identification to an Explore agent, standing exclusions must be given by
+*address/anchor*, not just function name — the agent's recommended batch included the volatile
+`0x8008EC88` audio-engine-gate hand patch (targets `reapplyDisplayMode`) because the exclusion list it was
+given named `musyxSynthFrame`/`runHangarMenuFromOverlay` by name but the gate site only by a prior
+paragraph's prose, not by address; caught by the orchestrating session reading the patch comment directly
+before delegating conversion, dropped from the batch before it ever reached a subagent. **12 remaining
+sites, mostly intentional**: whole-file `$zero` sweep, the `0x8008EC88` gate, the
+`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair, the `_s284_deref_guard_sites` loop, the
+`runHangarMenuFromOverlay` collision, `musyxSynthFrame`'s `synth-rearm-ptr` site, `tickAudioSequencerFrame`'s
+exit diagnostic (s385: its match text spans into the next function's signature, can't be body-scoped without
+breaking it), plus 3 singleton-file sites not yet triaged (`mat3x3InverseInto`, `tickTextureMaterialExpiry`,
+`coalesceFreeHeapBlocks`). Next work unit: NEXT.md (batch 9, or close out the backport — most of what's left
+resists this idiom by design).
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -176,7 +186,27 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -236 (s384); the next new item takes -237 and is inserted at the top.
+oldest). Current top is -237 (s385); the next new item takes -238 and is inserted at the top.
+
+-237. **(s385) batch 8/N: 16 more converted (164/176 total), no regression this batch.** Target: 17
+    sites across 15 functions in 8 files (funcs_1/4/14/15/23/24/26.c — `convertMat3x4ToN64Mtx`,
+    `submitDmaRequestBatch`, `piDmaWorker`, `setupSongRenderBuffers`, `buildSongDecodeBufferRing`,
+    `musyxMixActiveVoices`, `isAudioSlotActive`, `tickAndReap3DAudioVoices`, `factor5MutexAcquire`,
+    `factor5MutexRelease`, `setupCameraMatrices`, `traverseSceneGraphRecursive`, `activateAnimationKeyframe`,
+    `setLookupEntryField5ByKey`, `initMusyXEngine`, `resetMusyXEngineState`), identified by a delegated
+    read-only Explore agent from the fresh 28-site scan; 1 of the 17 (`tickAudioSequencerFrame`'s exit
+    diagnostic) was correctly declined by the conversion subagent because its match text spans into the next
+    function's signature line and can't be body-scoped without breaking it — left file-scoped, matching this
+    backport's standing rule. Byte-identical regen-diff verified clean this time (unlike s384, no regression
+    found). Build clean; soak clean (0 crash markers over 10,757 log lines, VI reached the full
+    0→320→640→1024 timeline at 45.5s, matching batch 7's 45.6s closely, held at 1024 for ~1500 further frames
+    before SIGKILL). **New process finding**: the Explore agent's recommended batch included the volatile
+    `0x8008EC88` `reapplyDisplayMode` audio-gate hand patch — a standing exclusion, but the agent wasn't given
+    it by address, only by function name for other exclusions, so it didn't recognize this one; caught by the
+    orchestrating session reading the patch's own comment before delegating conversion. Lesson: give
+    standing-exclusion lists to identification agents by address/anchor, not just function name. **12
+    remain**, most now understood to be intentional design exclusions rather than untouched backlog. Full
+    detail: `PORTING-STATE` Session 385; next work unit: NEXT.md (batch 9, or close-out review).
 
 -236. **(s384) batch 7/N: 17 more converted (148/176 total), plus verification caught a real
     regression.** Target: 9 functions across 8 files (`musyxSynthFrame`, `initFactor5Mutex`,

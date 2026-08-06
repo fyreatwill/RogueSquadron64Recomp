@@ -32762,3 +32762,63 @@ running total 148 of 176 converted, 28 remain; PLUS this session's verification 
 caught a genuine regression before it reached a build, root-caused it to a pre-existing documentation error
 about which function owns the `0x800919D4` DMEM-mixer-callback-pointer read, and left that specific site
 safely reverted and flagged rather than either silently shipping the drop or guessing a fix).
+
+## Session 385 (2026-08-06) — sanctioned tooling: fixup_game_funcs.py backport batch 8/N (16 more converted, 164/176 total)
+
+Continuation of the fixup_game_funcs.py function-scope-match backport (s377-379, s381-384 prior batches).
+
+Identification: `scratch_batch3/scan_filescoped.py` re-scanned fresh, found 28 remaining bare-`text` file-scoped
+sites (line numbers shift every batch). Delegated identification to a read-only Explore agent, giving it the
+28 line numbers plus the standing exclusion list (whole-file `$zero` sweep, `waitForMusyXAudioTaskDone`/
+`shutdownAudioEngine` dual-target pair, `_s284_deref_guard_sites` multi-function loop, `runHangarMenuFromOverlay`
+collision, `musyxSynthFrame`/`initN64RspMixer` `synth-rearm-ptr` site). It mapped 22 of 28 to single target
+functions with body-span confirmation and recommended an 18-site batch. **Orchestrating-session catch**: one of
+its 18 recommended sites (line 269, target `reapplyDisplayMode`, addr `0x8008EC88`) is the volatile
+audio-engine-gate hand patch — explicitly excluded in NEXT.md's standing exclusion list, but not named by
+address in the identification prompt, so the Explore agent didn't recognize it. Confirmed by reading the patch
+comment directly (the "force audio-engine-disabled" PATCH block) before delegating conversion, and dropped it
+from the batch — a reminder that standing exclusion lists need to be given by *address/anchor*, not just
+function name, when delegating identification.
+
+Converted (16 of 17 attempted, delegated to a general-purpose subagent, conversion-only — same idiom as prior
+batches, template = the `acquireSampleStreamBlock` s378 conversion): `convertMat3x4ToN64Mtx` (funcs_4.c),
+`submitDmaRequestBatch` + `piDmaWorker` (funcs_1.c), `setupSongRenderBuffers` + `buildSongDecodeBufferRing` +
+`initMusyXEngine` + `resetMusyXEngineState` + `tickAudioSequencerFrame`-entry (already scoped, untouched) +
+`musyxMixActiveVoices` + `isAudioSlotActive` + `factor5MutexAcquire` + `factor5MutexRelease` (funcs_23.c/
+funcs_24.c cluster), `tickAndReap3DAudioVoices` (funcs_26.c), `setupCameraMatrices` +
+`traverseSceneGraphRecursive` (funcs_4.c), `activateAnimationKeyframe` (funcs_14.c), `setLookupEntryField5ByKey`
+(funcs_15.c). **Skipped, left file-scoped**: `tickAudioSequencerFrame`'s exit diagnostic (funcs_23.c,
+`0x8008D9F8`-adjacent) — its own pattern's capture group extends past the function's own body boundary into the
+next function's (`tickMusyXIfActive`) signature line, so a body-scoped slice would silently break the match;
+the subagent correctly declined to force it through and left it in original working form, per this backport's
+standing rule (don't force a mismatched conversion).
+
+Verification (orchestrating session, not delegated): cleared `RecompiledFuncs/`, regenerated via
+`make_elf.py` + `N64Recomp`, ran the PRE-batch8 backup script → `report_before.txt` + tree snapshot; cleared
+and regenerated again, ran the POST-batch8 script → `report_after.txt`. `diff report_before.txt
+report_after.txt` and `diff -rq RecompiledFuncs-before RecompiledFuncs` — **both empty, byte-identical**. No
+regression this batch (unlike s384's `musyxSynthFrame` catch). `scan_filescoped.py` confirms 28→12 remaining
+(exactly 16 fewer, matches the batch's converted count).
+
+Build: `cmake --build -j8` clean (same pre-existing DDIV/DMULT sign-conversion warnings as every prior batch,
+no new warnings).
+
+Soak: launched via the s382-established `zsh` cwd-wrapper script (not a bare inline command), monitored with
+the Monitor tool grepping for the ROM-placeholder sanity string, VI width transitions, and the standing crash-
+marker set. Confirmed real ROM launch (no placeholder). VI reached the full 0→320→640→1024 timeline at 45.5s —
+matching batch 7's 45.6s almost exactly, a second independent confirmation this batch didn't disturb runtime
+behavior. Held at width=1024 for ~1500 further `update_screen` events (~4200 total) with 0 crash markers across
+10,757 log lines before SIGKILL. `ps aux | grep -i roguesquadron` found the real game PID (9694, not the shell
+wrapper); killed cleanly (exit 137, expected for SIGKILL).
+
+**Running total: 164/176 converted, 12 remain.** Remaining sites, all previously-confirmed intentional
+leave-alones plus a handful not yet triaged: line 55 (`$zero` sweep), 269 (`reapplyDisplayMode` audio gate),
+346/428 (`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair), ~5560 (`_s284_deref_guard_sites` loop), ~8647
+(`runHangarMenuFromOverlay` collision), ~11833 (`tickAudioSequencerFrame` exit, this session's skip), ~11996
+(`musyxSynthFrame` `synth-rearm-ptr`), plus 3 not yet identified this session (`mat3x3InverseInto` funcs_5.c,
+`tickTextureMaterialExpiry` funcs_6.c, `coalesceFreeHeapBlocks` funcs_0.c — named as follow-up candidates by
+this session's Explore agent, singleton-file, no clustering benefit, deferred to batch 9 or later).
+
+Outcome: ADVANCED (16 more patch sites hardened against the file-scope fragility class, running total 164 of
+176 converted, 12 remain — most of which are intentional exclusions rather than untouched debt; verification
+found no regression this batch, a clean run after s384's genuine catch).
