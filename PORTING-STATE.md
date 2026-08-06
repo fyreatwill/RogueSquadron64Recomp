@@ -31632,3 +31632,62 @@ No code changed this session (soak-triage + queue-only); `lib/` untouched, no `e
 
 `HYPOTHESIS-ID` stays `m5-audio-destub-linkedlist-corruption-source` (iteration 11) — Thread B is the
 active thread; Thread A stays closed (s366).
+
+## Session 368 (2026-08-05) — Thread B CLOSED, heapWalker+1696 crosses escalation bar
+
+Session-start mechanical check (`grep -c s367_drainmeshtailptrguard scratch/agent/SOAK-RESULTS.md`)
+found the `s367_verify3/4` pair, queued at the end of s367, had already drained. Read both logs
+directly rather than trusting NEXT.md's "still pending" claim (the stale-NEXT.md gotcha, now
+recurred nine sessions running, s360-s368).
+
+Both runs: `title_reached` at 45.1s/44.8s (both reached title, so both count), and — for the first
+time in the whole s350-368 arc — an **identical, non-zero** guard-fire pattern across every guard
+family: `tailptr2/3/4/5_guard_fire_n>=1` (tailptr1=0 both), all `head1-5_guard_fire_n`/
+`head{n}_clear_guard_fire_n` = 1 or 2 (identical between the two runs), all `loop2-5_guard_fire_n`
+(=1) / `loop{n}_write_guard_fire_n` (=2 or 3, identical), `read_guard_fire_n=1`,
+`write_guard_fire_n=2`, `ring_fire_n=1`. This is the first-ever positive control that these guard
+families — six sessions' worth of drainMeshReleaseQueue guarding, s350-365 — actually fire under
+real gameplay load, not just in theory; every one of them had previously either never fired in a
+non-crashing run or only fired as a same-run positive control on ITS OWN crash.
+
+Despite that, both runs crashed at `pc-symbol=heapWalker+1696`, `last-guest-pc=0x8000834c`. Per item
+-221 (s366), `0x8000834c` is `drainMeshReleaseQueue`'s own final checkpoint — the `nop` immediately
+before `return` — so both runs prove the function completed and returned normally; the crash is
+downstream in an unrelated function.
+
+**Closing Thread B.** The discriminating check: `heapWalker+1696`/`0x8000834c` already hit twice in
+`s364` (item -221), which ran *before* the tailptr guards were added (s365) — so the guards cannot
+be the cause of a crash that predates their existence, which rules out the "guard skips a write,
+corruption resurfaces downstream" hypothesis (the read-guard/write-guard-sibling gotcha) for this
+specific pair. Combined with `s365_verify1` (fully clean, zero guard fires, 446s hold, no crash) and
+s366's static exhaustiveness audit (no further unguarded pointer family by source inspection),
+`drainMeshReleaseQueue` is now 3-for-3 post-tailptr-guard soaks with zero crashes inside the function,
+and the guard families are now confirmed live rather than dead code. Two independent lines of
+evidence (static audit + empirical non-recurrence) are complete. Both M5 Step 5 threads (A: item
+-221, closed s366; B: here) are now closed — no M5 Step 5 threads remain open.
+
+**heapWalker+1696 escalation.** This crash is now n=4 (2×s364 + 2×s367/s368), all four byte-identical
+on `last-guest-pc`/`pc-symbol`, crossing the background-noise catalogue's own "3rd independent hit"
+trigger for `s264_symrange.py`/`s193_disasm.py` confirmation. Ran that confirmation this session —
+free, pure binary analysis against the already-built `build/RogueSquadron64Recomp`, no new build or
+soak needed:
+
+    python3 scratch/agent/s193_disasm.py build/RogueSquadron64Recomp heapWalker 1696 40
+
+decoded the crash instruction as `STR W8,[X5,X10]` (32-bit indexed store, base register X5 + index
+register X10, no shift) — fed by two chained pointer dereferences in the preceding instructions
+(`LDR X8,[X8,#24]` at offset -28, `LDR X10,[X10,#16]` at offset -16). This is the same "chase an
+unvalidated pointer through one load, then use the loaded value as an index/target for a further
+write" idiom already guarded 4 times elsewhere in `heapWalker` (GUARD1-4, sessions s157-s218,
+`fixup_game_funcs.py` `_heapwalker_guard*_sites` lists) — but this offset does not match any address
+in those four existing site lists, so it's a 5th, previously-unguarded site in the same function.
+Not yet mapped back to a guest MIPS address or `funcs_3.c` line (that requires finding `heapWalker`'s
+`RECOMP_FUNC` boundary and locating the matching `MEM_W` pattern by hand, since `nm`/`otool` aren't
+on the sandbox's Bash allowlist and only the hand-rolled `s193_disasm.py`/`s264_symrange.py` scripts
+are available) — that mapping is the queued next work unit.
+
+No code changed this session (soak-triage + docs + free binary analysis only); `lib/` untouched, no
+`export.sh` needed.
+
+`HYPOTHESIS-ID` changes to `heapwalker-guard5-site` (new thread; both M5 Step 5 threads that
+`m5-audio-destub-linkedlist-corruption-source` covered are now closed).
