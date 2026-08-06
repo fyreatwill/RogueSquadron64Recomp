@@ -25,9 +25,11 @@ session's "N remain" prose for the starting count.
 
 ## Next work unit: continue the n=20 bulk-relocation cadence
 
-**HYPOTHESIS-ID: m4-main-overlay-phantom-functions** (iteration 15 under this slug — ordinary bulk
-relocation, not bisection; iteration count restarted its "budget" framing at s408 per the standing note
-that the crash-sub-thread closure resets rule-8 bookkeeping for this slug).
+HYPOTHESIS-ID: m4-main-overlay-phantom-functions
+
+Iteration 15 under this slug — ordinary bulk relocation, not bisection; iteration count restarted its
+"budget" framing at s408 per the standing note that the crash-sub-thread closure resets rule-8
+bookkeeping for this slug.
 
 ### Recipe
 1. Regenerate the candidate list fresh: `python3 scratch/agent/s408_gen_candidates.py` (writes
