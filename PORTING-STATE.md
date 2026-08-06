@@ -32164,3 +32164,63 @@ removes — as the sole remaining thread, no longer a fallback behind a deadlock
 `HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site` opened for the next iteration, source-only first
 pass per the same "don't build blind" convention. `docs/CURRENT-TRUTH.md` item -229 records this in
 full; NEXT.md rewritten with the next work unit's hypotheses and exact starting points.
+
+## Session 376 (2026-08-05)
+
+Ran NEXT.md's own designated work unit: the source-only trace of what drives the VI 640→1024
+transition, discriminating H1 (reset-branch divergence), H2 (shared-mutable-state collision), H3
+(real completion-condition wait) — `HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site`, iteration 1 of
+3. Delegated to a sub-agent scoped to read-only grep/read over `N64Recomp/RecompiledFuncs/`, no
+build, no run.
+
+**H1 REFUTED**: `reapplyAudioConfig` (`funcs_24.c:5046-5168`) has exactly one return path and it's
+hard-coded `ctx->r2 = ADD32(0, 0)` (line 5148-5149) — always 0, no reference to the gate byte
+`0x800A0F50` anywhere in its body. The caller's branch on that return value (`funcs_23.c:9888-9891`)
+is therefore never taken either way; the full song/voice/stream reset block runs unconditionally
+regardless of gate state. Gate liveness cannot change this function's return value because nothing
+in it reads the gate.
+
+**H2 REFUTED**: `tickActiveSongs` (`funcs_25.c:5744-5800`) writes only to its own stack frame plus
+the song array at `-0x6600($8015)`, confined to `funcs_25.c`. `tickAndReap3DAudioVoices`
+(`funcs_26.c:4194-4354`) writes the 3D-voice-list head global `0x80153414` (`funcs_26.c:4296`) plus
+per-voice struct fields off that pointer. Grepped the scene-transition chain (`funcs_0.c`
+`runVideoFrameTick`, `funcs_3.c` `submitGfxFrame`/`emitFrameRdpInitDl`, `funcs_4.c`
+`advanceVideoFrame`, `funcs_23.c` `reapplyDisplayMode`) for both addresses — zero genuine hits (a
+couple of substring matches turned out to be unrelated instruction addresses with different
+upper-immediate bases). Write and read sets are disjoint.
+
+**H3 REFUTED**: grepped all of `RecompiledFuncs/` for `0xF50`/`800A0F50` (~65 hits across
+`funcs_21/22/23/24/25/26.c`), classified every hit by containing function — all are the
+already-known MusyX guard-and-return idiom (`musyxSynthFrame`, `tickMusyXIfActive`,
+`anyAudioSlotActive`, `isMusyXActive`, `syncMusyXIfActive`, `runMusyXTaskLocked`,
+`getMusyXStateTableIfActive`, voice/song setters, `shutdownMusyXEngine`, `initMusyXEngine`,
+`setDisplayMode`/`reapplyDisplayMode`). None of these gate-derived helpers are referenced anywhere in
+`funcs_0.c`/`funcs_3.c`/`funcs_4.c` (confirmed by direct grep, zero hits) — no external poll/wait
+site exists outside the already-documented `waitForAnyAudioSlot`/mutex chain.
+
+**Net**: all three hypotheses cleanly refute from source alone — no single guarded call site or
+shared-memory collision explains why reversing C88 blocks the VI 640→1024 transition. This reaches
+H4 (red herring / diffuse frame-timing effect) by elimination: if genuinely-live per-frame MusyX
+processing changes overall frame cost/ordering rather than touching one identifiable site, no amount
+of further source reading finds it — it would need a build+soak with a frame-timing histogram at the
+real VI-swap emitter, and even then the signal is inherently harder to attribute than a single write.
+
+**Decision** (per NEXT.md's own pre-planned fork: "decide between H4 (broader instrumentation) or
+pivoting fully to M3 per the strategic-priority fallback"): pivoting away from this specific thread
+rather than spending a build cycle on H4. Rationale: the practical audio question this thread was
+chasing is already answered independently — s373 root-caused that PCM stays 100% silent under the
+*working* (C88 force-zeroed) baseline regardless, because voices structurally never populate. So
+even if H4 were confirmed and the VI-transition trigger found and fixed, reaching title with C88
+genuinely reversed would not by itself produce working audio — the voice-population block is gated
+elsewhere (item -227). Sinking a broad, hard-to-attribute timing-instrumentation build into a path
+that wouldn't dissolve the real audio-silence problem even if it worked is poor information value
+per the effort-calibration principle. `HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site` CLOSED
+(answered-by-elimination, not solved) — the C88-reversed experimental path is set aside, not
+reopened, without a specific new reason to believe it would unblock real audio.
+
+Next work unit chosen: the sanctioned tooling item flagged in CURRENT-TRUTH's USER DIRECTIVE section
+— backport the BREADCRUMB10+ function-scoped-match idiom to the ~100 older file-scoped-only guard
+patches in `fixup_game_funcs.py` (2026-08-04 header-comment analysis in that file). Concrete, bounded,
+pre-approved as counting toward ADVANCED, and reduces exposure to the exact regen-fragility class
+item -20 already found once (anchor collisions after overlay re-chunking) — does not require picking
+a new blind crash lead. Full next-step detail: `scratch/agent/NEXT.md`.

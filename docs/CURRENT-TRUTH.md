@@ -31,8 +31,15 @@ Priority order for upcoming iterations, set after the 300-session review:
    candidate. s375's build+soak REFUTED it cleanly (9131/9131 balanced mutex acquire/release, never
    blocks) — `HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang` CLOSED. There is no hang/deadlock;
    C88-reversed simply never re-triggers the VI 640→1024 framebuffer-swap transition, the same open
-   question item -227 originally posed (item -229). Detail: Next-steps item -229; live status/decision
-   trees: NEXT.md (`HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site`).
+   question item -227 originally posed (item -229). s376's source-only pass discriminated H1/H2/H3
+   for the follow-on `HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site` and REFUTED all three cleanly
+   (item -230) — **CLOSED by elimination, not solved**: the remaining H4 (diffuse frame-timing effect,
+   no single site) was judged not worth a build cycle, since s373 already showed real audio stays
+   100% silent even in the *working* baseline regardless of this thread's outcome. This experimental
+   C88-reversed path is set aside pending a specific new reason to reopen it. **No M5 audio thread
+   remains open as of s376** — next M5 work needs a genuinely new lead, not a continuation of the
+   C88-reversal investigation. Detail: Next-steps items -229/-230; next work unit: NEXT.md
+   (fixup_game_funcs.py function-scope backport, tooling).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -160,7 +167,30 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -229 (s375); the next new item takes -230 and is inserted at the top.
+oldest). Current top is -230 (s376); the next new item takes -231 and is inserted at the top.
+
+-230. **(s376) M5 VI-640→1024-trigger source-only pass: H1/H2/H3 all REFUTED cleanly; `HYPOTHESIS-ID
+    m5-audio-vi640to1024-trigger-site` CLOSED by elimination.** Ran NEXT.md's own designated
+    discriminating pass (grep/read only, no build) over `N64Recomp/RecompiledFuncs/`. **H1
+    (reset-branch divergence) REFUTED**: `reapplyAudioConfig` (`funcs_24.c:5046-5168`) has exactly
+    one return path, hard-coded `ctx->r2 = ADD32(0, 0)` (line 5148-5149) — always 0, no reference to
+    the gate byte anywhere in its body, so gate liveness cannot change which branch the caller takes.
+    **H2 (shared-mutable-state collision) REFUTED**: `tickActiveSongs`'s (`funcs_25.c:5744-5800`) and
+    `tickAndReap3DAudioVoices`'s (`funcs_26.c:4194-4354`, writes `0x80153414` at line 4296) write
+    targets are disjoint from every address read in the scene-transition chain
+    (`runVideoFrameTick`/`submitGfxFrame`/`emitFrameRdpInitDl`/`advanceVideoFrame`/
+    `reapplyDisplayMode`) — zero genuine hits on a direct grep. **H3 (real completion-condition wait)
+    REFUTED**: all ~65 hits on the gate byte across `funcs_21-26.c` classify as the already-known
+    MusyX guard-and-return idiom; none of the gate-derived helper functions are referenced anywhere
+    in `funcs_0.c`/`funcs_3.c`/`funcs_4.c` — no external poll site exists. **Decision**: rather than
+    spend a build+soak on the diffuse H4 fallback (frame-timing/ordering effect, no single
+    identifiable site — inherently hard to attribute even if confirmed), the thread is set aside:
+    s373 already showed real audio (PCM) stays 100% silent in the *working* (C88 force-zeroed)
+    baseline regardless, because voice population is gated elsewhere (item -227) — so even a
+    confirmed H4 fix would not by itself produce working audio. Reopens only on a specific new
+    reason to believe the C88-reversed path would unblock real audio. Full detail: `PORTING-STATE`
+    Session 376; next work unit: NEXT.md (fixup_game_funcs.py function-scope-match backport, the
+    sanctioned tooling item — not a hypothesis chase).
 
 -229. **(s375) M5 pre-title-hang mechanism, OPTION A build+soak: REFUTED. `HYPOTHESIS-ID
     m5-audio-destub-c88-pretitle-hang` CLOSED.** Executed item -228's own discriminating measurement:
