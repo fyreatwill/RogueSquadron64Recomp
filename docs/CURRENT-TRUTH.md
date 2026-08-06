@@ -138,11 +138,11 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 105/778 done
-s400+s402+s403+s405+s406+s407, 672 remain, 1 permanently excluded as known-bad, largest M4 item open —
-s404 found+reverted a 20-name regression, s405 bisected it to a 10-name suspect set, s406 bisected that
-10 into two 5s (one landed clean [+5], one still crashed), s407 fully resolved the crashing 5 down to a
-single genuinely-buggy name — see items -253/-254/-255/-256).
+`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 145/778 done
+s400+s402+s403+s405+s406+s407+s408, 653 remain per a fresh regen (648 actionable, 4 known-skip, 1
+known-bad), largest M4 item open — s404-s407 found, bisected, and fully resolved a 20-name crash batch
+down to one genuinely-buggy function (parked); s408 resumed ordinary bulk relocation post-closure, two
+more clean n=20 batches — see items -253..-257).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -155,7 +155,27 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -256 (s407); the next new item takes -257 and is inserted at the top.
+oldest). Current top is -257 (s408); the next new item takes -258 and is inserted at the top.
+
+-257. **(s408) M4 item -249: resumed ordinary bulk relocation now that the s404-s407 crash-batch thread
+    is closed — two more clean, independently live-verified n=20 batches, 40 relocations, 145/778
+    done.** Wrote `scratch/agent/s408_gen_candidates.py`, a persisted version of the candidate-list
+    generator every prior session re-typed inline (s402's is_data + lowercase-`g`-global filter). A
+    fresh regen at session start returned 693 candidates, not the docs' pure-subtraction estimate of
+    672 — the same bookkeeping-drift lesson s404 already flagged, at smaller scale; treated the fresh
+    count as ground truth. **Batch 1** (`initActorFromSpawnTemplate`...`sayLukeGoingMakeHovertrainEscape_v0xE4`,
+    20 names, all single-owner `mission`, 0 ambiguous): applied, regenerated (positive control:
+    unmapped-functions-skipped 698→678), rebuilt clean, `nm`-confirmed 20/20, live-verified in the
+    background — reached `vi_width=512` (88.2s), continued to 640, 0 crashes, only the 1 known
+    pre-existing `[missing-func]` — stays applied. **Batch 2**
+    (`sayStickObjectives_v0x11F`...`sayMoreFightersInboundSevenDecimal_v0x1EB`, 20 names, same
+    verdict profile): positive control 678→658, rebuilt clean, `nm`-confirmed 20/20, live-verified —
+    88.6s to `vi_width=512`, continued to 640, 0 crashes — stays applied. Two consecutive clean
+    batches is the documented per-iteration stopping point. **A fresh post-session regen shows 653
+    func-only candidates remaining (648 actionable after excluding 4 known-skip + 1 known-bad) — this
+    is the number future sessions should cite, not a pure-subtraction estimate.** `HYPOTHESIS-ID:
+    m4-main-overlay-phantom-functions` (iteration 14, ordinary bulk relocation resumed post-crash-closure,
+    a discriminating result). Full detail: `PORTING-STATE` Session 408.
 
 -256. **(s407) M4 item -249: finished bisecting s406's quarter-2 5-name crash suspect set — isolated a
     single genuinely-buggy function, `initPlayerCraftTrailBuffers`, and landed the other 4 clean. 105/778

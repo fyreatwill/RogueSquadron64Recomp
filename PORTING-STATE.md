@@ -34506,3 +34506,52 @@ standing item -3 rule (ask the user before committing there).
 Outcome: ADVANCED (a genuine discriminating result — bisection resolved fully, isolating a real bug to
 a single named function rather than merely narrowing a suspect set further, and landed 4 more real
 relocations).
+
+## Session 408 (2026-08-06) — M4 item -249: resumed ordinary bulk relocation after the crash-batch thread closed, two more clean live-verified n=20 batches, 40 more relocations, 145/778 done
+
+`HYPOTHESIS-ID: m4-main-overlay-phantom-functions`, iteration 14 (per NEXT.md's framing: the crash-batch
+sub-thread that ran s404-s407 is fully closed, so this iteration resumed ordinary per-batch-verify bulk
+relocation — the standard s400/s402/s403 recipe, not bisection).
+
+No persisted candidate-list generator script existed (every prior session re-typed the same `python3 -c
+"..."` inline snippet) — wrote it once as `scratch/agent/s408_gen_candidates.py` so future sessions don't
+have to re-derive it from `loop.log`. Same filter as s402's fix (excludes `defined:false`, data-typed
+comments, `D_`/`junk_`-prefixed names, and lowercase-`g`-prefixed globals), reading `main_overlay.txt`
+against the union of `mission_overlay.txt`/`menu_overlay.txt`/`cinematic_overlay.txt`.
+
+**Fresh regen at session start returned 693 candidates**, not the 672 the docs' pure-subtraction estimate
+(778−105−1) implied — a smaller instance of the same bookkeeping drift s404 already documented (the
+"known remain" figure silently diverges from a true regenerated count session over session). Treated the
+freshly regenerated count as ground truth per that standing lesson, filtered out
+`scratch/agent/m4_known_skip.txt` (4 names) and `m4_known_bad.txt` (1 name, `initPlayerCraftTrailBuffers`)
+before slicing.
+
+**Batch 1** (`initActorFromSpawnTemplate` ... `sayLukeGoingMakeHovertrainEscape_v0xE4`, 20 names, all
+single-owner `mission`, 0 ambiguous): probed, applied via `s400_apply_batch.py`, regenerated
+(`make_elf.py`'s `unmapped functions skipped` 698→678, exactly −20 — positive control), rebuilt clean (0
+errors), `nm`-confirmed 20/20 present, live-verified in the background:
+`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1
+PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 zsh tools/probe.sh <outdir> 45 2` — reached
+`phase width=512` at 88.2s, continued to `lastW=640` in the tail, 0 `[CRASH]`/SIGBUS/SIGSEGV/
+UnhandledJumpTarget/dmem-race/defer-drop/assert lines, only the 1 known pre-existing
+`[missing-func] 0x800FB9E4`. **Stays applied (+20).**
+
+**Batch 2** (`sayStickObjectives_v0x11F` ... `sayMoreFightersInboundSevenDecimal_v0x1EB`, 20 names, all
+single-owner `mission`, 0 ambiguous): same recipe, positive control 678→658 (exactly −20), rebuilt clean,
+`nm`-confirmed 20/20 present, live-verified: reached `phase width=512` at 88.6s, continued to `lastW=640`,
+0 crashes, only the same 1 known pre-existing `[missing-func]`. **Stays applied (+20).**
+
+**Two consecutive clean batches — the documented stopping point for one iteration** (matches
+s402/s403's pace). Final repo state: `unmapped functions skipped` = 658.
+
+**Item -249 tally: 145/778 done (was 105/778 after s407).** A fresh post-session regen shows 653
+func-only candidates remaining in `main_overlay.txt` (4 known-skip + 1 known-bad + 648 actionable) —
+this is the authoritative live count; NEXT.md's future "N remain" prose should cite a fresh regen, not
+pure subtraction, per the s404/s408 drift lesson.
+
+Sibling-repo symbol-file edits (`main_overlay.txt`/`mission_overlay.txt`) are uncommitted per the
+standing item -3 rule (ask the user before committing there).
+
+Outcome: ADVANCED (40 real relocations landed across two independently live-verified batches, plus a
+durable tooling fix — the candidate-list generator is now a persisted script instead of a re-typed
+inline snippet).
