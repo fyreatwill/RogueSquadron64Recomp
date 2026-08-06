@@ -109,8 +109,8 @@ FIXED (M1 closed s48; `SHADE_WRAP` s25; ImemOverrun s69 + depth-writeback SIGBUS
 Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regression sweep. 0
 `UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
-~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402 have fixed 52 of
-the corrected 778-candidate count (746 remain, item -249). Post-`a` process now soaks well past 65s
+~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403 have fixed 86 of
+the corrected 778-candidate count (692 remain, item -249). Post-`a` process now soaks well past 65s
 without death.
 
 ## Goal stack — work strictly top-down
@@ -138,8 +138,8 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 52/778 done s400+s402,
-746 remain, largest M4 item open).
+`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 86/778 done s400+s402+s403,
+692 remain, largest M4 item open).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -152,7 +152,23 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -251 (s402); the next new item takes -252 and is inserted at the top.
+oldest). Current top is -252 (s403); the next new item takes -253 and is inserted at the top.
+
+-252. **(s403) M4 item -249 continued at n=20: two more clean live-verified batches, 34 more
+    relocations, 86/778 done, 692 remain.** Regenerated the candidate list (same script, `is_data`
+    filter): 746 candidates, matching s402's checkpoint exactly. Took two independent n=20 batches in
+    strict file order (skipping the persistently-AMBIGUOUS `handleCraftSelectInput` both times, per
+    standing instruction not to re-probe it), each: probed (17 CONFIRMED all-`mission`/3 NONE/0
+    AMBIGUOUS both batches — the cleanest verdict distribution yet for this item), applied the 17
+    CONFIRMED, regenerated (`make_elf.py`'s `unmapped functions skipped` dropped by exactly 17 each
+    time — positive control, 751→734→717), rebuilt clean (full reconfigure + build, 0 new
+    warnings/errors), names confirmed present via `nm` on the final binary, and **live-verified before
+    the next batch was even selected**: both runs reached `phase width=512` (88.7s/88.6s, matching the
+    88.7s clean baseline), 0 crashes/asserts/UnhandledJumpTarget/dmem-race/SIGBUS, only the 1 known
+    pre-existing `[missing-func]`. **5th and 6th consecutive clean batches under the mandatory-verify
+    discipline since s401's CMakeLists.txt fix, 0 regressions.** No batch-size scaling attempted
+    (deliberately deferred, per s402's instruction). `HYPOTHESIS-ID: m4-main-overlay-phantom-functions`
+    (iteration 7). Full detail: `PORTING-STATE` Session 403.
 
 -251. **(s402) M4 item -249 batch 2 RETRY at n=16 (per s401's fallback plan): two clean batches, 32
     more relocations landed, 52/778 done, 746 remain.** Regenerated the candidate list with the

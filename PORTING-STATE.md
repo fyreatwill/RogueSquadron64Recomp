@@ -34206,3 +34206,54 @@ up rather than another probe attempt, since re-probing won't resolve a structura
 
 Outcome: ADVANCED (32 real phantom-overlay-function relocations landed and live-verified, 2/2 clean
 batches with per-batch positive controls — the exact discipline s401 skipped).
+
+## Session 403 (2026-08-06) — M4 item -249 continued at n=20, two more clean live-verified batches, 34 more relocations, 86/778 done, 692 remain
+
+### What ran
+Continuation of `HYPOTHESIS-ID: m4-main-overlay-phantom-functions` per NEXT.md's s402 handoff: same
+n≈20-per-batch, mandatory-live-verify-before-next-batch discipline, no batch-size scaling attempted
+(deliberately deferred to its own iteration, per s402's instruction).
+
+Regenerated the candidate list with the same `is_data`-filter script: **746** candidates, matching
+s402's checkpoint exactly (positive confirmation the candidate-list regen is deterministic and the
+752/778/746 bookkeeping across sessions is consistent).
+
+**Batch 1** (first 20 candidates in file order, skipping the persistently-AMBIGUOUS
+`handleCraftSelectInput` per NEXT.md's standing instruction not to re-probe it): probed via
+`s400_probe_batch.py` — **17 CONFIRMED (all `mission`), 3 NONE, 0 AMBIGUOUS** — the cleanest verdict
+distribution of any batch so far in this item. Applied the 17 CONFIRMED, regenerated
+(`make_elf.py`'s `unmapped functions skipped`: 751→734, exactly -17, positive control), rebuilt clean
+(full `cmake -S . -B build` reconfigure + `cmake --build -j8`, 0 new warnings/errors), all 17 names
+confirmed present via `nm` on the final macOS binary. **Live-verified**: `probe.sh` phase-gated run
+reached `[phase] vi_width=512`/`phase width=512 reached` at 88.7s (exactly matches the established
+clean baseline), 19 frames captured, 0 crashes/asserts/UnhandledJumpTarget/dmem-race/SIGBUS, only the
+1 known pre-existing `[missing-func]` (`endMissionCleanup`/`0x800FB9E4`).
+
+**Batch 2** (next 20 candidates after batch 1's removal, 729 remaining, again skipping
+`handleCraftSelectInput`): same procedure — **17 CONFIRMED (all `mission`), 3 NONE, 0 AMBIGUOUS**.
+Applied 17, `make_elf.py` count 734→717 (exactly -17, second positive control), rebuilt clean, all 17
+names confirmed present via `nm`. **Live-verified**: phase width=512 reached at 88.6s, 0
+crashes/asserts/UnhandledJumpTarget/dmem-race/SIGBUS, same single known `[missing-func]`.
+
+### Verdict
+**Two more independent clean n≈20 batches, each individually live-verified before the next was even
+selected — 3rd and 4th consecutive clean batches under this discipline (s400's implicit batch +
+s402's two explicit batches + these two = 5 clean batches in a row, 0 regressions since s401's
+CMakeLists.txt fix).** Both batches this session landed 100% in `mission_overlay.txt` (0 menu, 0
+cinematic) — file-order locality in `main_overlay.txt` groups mission-overlay-owned names together at
+this point in the list, not evidence of anything structural, just a reminder the batches aren't
+randomly distributed across destination overlays.
+
+**Item -249 net progress: 52 (s400+s402) + 34 (s403) = 86/778 done, 692 remain.** `handleCraftSelectInput`
+(0x800af6ac) was skipped again without re-probing per standing instruction — still needs a manual
+disassembly read whenever someone has a reason to resolve it, not another automated probe.
+
+### Files changed
+- `rogue_squadron64/symbol_files/{main,mission}_overlay.txt` (sibling repo, **uncommitted** per
+  item -3): 34 entries moved from `main_overlay.txt` to `mission_overlay.txt` (all 34 — both batches
+  were 100% mission-owned). Not committed — ask the user first, per standing rule.
+- This repo: `scratch/agent/s403_*` candidate lists, probe/apply batch files, verify run logs+frames,
+  reused `s400_probe_batch.py`/`s400_apply_batch.py` unmodified.
+
+Outcome: ADVANCED (34 real phantom-overlay-function relocations landed and live-verified, 2/2 clean
+batches with per-batch positive controls, continuing the discipline established s402).
