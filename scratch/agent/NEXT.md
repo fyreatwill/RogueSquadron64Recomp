@@ -1,69 +1,96 @@
 # NEXT work unit
 
-## s389 recap
+## s390 recap
 
-Picked up the M3 idiom-class-audit strategic-priority item fresh (no live thread was open). Candidate
-search tallied `[CRASH][last-guest-pc]` across ~24 recent soaks in `scratch/agent/soak_results/*.log` and
-found `0x800ad0dc` (`pc-symbol=findLookupEntryByKey+1864`) recurring at n=2, previously dismissed twice
-(s359, s370) as off-target noise for unrelated threads. Investigation (delegated to a read-only Explore
-agent) found the pc-symbol attribution itself was wrong — the address is actually inside
-`hangarInitialize`/`static_5_800AB658`, a large already-heavily-patched function, at a fixed-global store,
-not a hash-table dereference (same failure mode as the long-catalogued `0x8000b650` staleness). Pivoted:
-`findLookupEntryByKey` and 2 siblings share the exact unguarded table-base-pointer idiom already fixed for
-their sibling `setLookupEntryField5ByKey` (s260). Enumerated the whole "Lookup" struct-family (6
-functions: 2 pre-guarded/out-of-class, 4 newly guarded this session), applied guards reusing the s260
-KSEG0-range+hi-word template with per-function bail semantics matched to each one's own control flow,
-verified via the standard byte-identical-except-intended-diff regen protocol + clean build + 3 soaks (2
-hit unrelated already-catalogued crash families, 1 fully clean 304s hold with the full VI phase timeline).
-0 guard fires in any soak — a proactive/defensive fix, not a response to reproducing corruption. Full
-detail: `PORTING-STATE.md` Session 389, `docs/CURRENT-TRUTH.md` item -239.
+Continued the M3 idiom-class-audit strategic-priority item (fresh work mode opened s389). The s389
+soak population was fully mined; queued 3 fresh unbiased soaks (`scratch/agent/soak_queue/s390_freshpop1/2/3.sh`)
+for a future candidate-tally cycle, then followed NEXT.md's own fallback: delegated a read-only
+Explore-agent sweep of every numbered guard family in `fixup_game_funcs.py` looking for the
+Lookup-family shape (a struct/pointer idiom guarded on one function, unguarded on siblings). Found the
+`HANGARLIST_GUARD`/s283-285 `-0x25A4($s1/s4/s5)` hangar-list global-pointer family is
+**self-documented as incomplete**: s284's own comment says `hangarInitialize` (funcs_27.c, 103 of 172
+raw hits, a single 13,770-line function spanning lines 119818-133587 pre-this-session) was deliberately
+parked as its own multi-session item, and s285 patched only a first "chunk" (lines 119818-124175,
+`S285_H1_BAIL`) — no chunk 2 was ever written. Guarded 11 more sites across two bounded sub-blocks
+("chunk 2a" lines 124202-125013, "chunk 2b" 125014-125822 pre-session line numbers), reusing both
+sub-blocks' own existing epilogue labels (`L_800AB1A4`, `L_800AB618`) directly — no new labels needed.
+Verified via the standard byte-identical-except-intended-diff regen protocol (only `funcs_27.c` touched,
+diff was exactly the 11 guard-block insertions), clean build, 3 soaks (none crashed inside or downstream
+of the new guards or shared a guest-address family with the `-0x25A4` idiom; one hit the exact
+already-closed heapWalker-GUARD5 background-noise address `0x8000834c`). 0 guard fires across all 3 runs
+(proactive/defensive fix, matching every prior guard in this family). Full detail: `PORTING-STATE.md`
+Session 390; `docs/CURRENT-TRUTH.md` item -240.
 
-## This iteration's work unit: M3 idiom-class audit, next cycle
+## This iteration's work unit: `hangarInitialize` chunk 3 (continue the SAME class, not a new candidate)
 
-Per the standing strategic-priority order (M5 fully closed s376; sanctioned tooling backport fully closed
-s386-388; this session's Lookup-family idiom class now closed too), the next work unit is another **fresh**
-M3 systematic idiom-class audit, same model as s282-288 and s389: grep-enumerate a whole idiom class,
-classify every site, guard or prove dead, close the class. Do NOT reactively chase a single breadcrumb.
+Per the standing strategic-priority order, continue the M3 idiom-class audit. **Do NOT pick a new idiom
+class this iteration** — `hangarInitialize`'s `-0x25A4` coverage is self-evidently unfinished (confirmed
+count: **53 raw `-0X25A4` hits remain**, from the current end of chunk 2b through the function's own end)
+and the sibling-audit-sweep cost of finding a fresh candidate was already paid last session. Continuing
+the same class is strictly cheaper this cycle.
 
-### Step 1 — find a live candidate (do this first, it's cheap)
+### Step 1 — re-confirm current boundaries fresh (line numbers below are PRE-this-session; re-derive,
+don't trust blindly — the s386 lesson: line numbers drift)
 
-s389 fully mined the `soak_results/*.log` population that existed at its start (the s355-369 M5 Step 5
-guard-hunting arc's own verify pairs, plus the s379/s386/s388 manual batch-verification soaks). That
-population is now exhausted for this purpose — every recurring `last-guest-pc` in it has been triaged
-(either already-catalogued/closed, confirmed stale-symbol noise, or turned into this session's fix).
-Before repeating the same tally:
+In `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c` (already has s390's 11
+guards applied as of this NEXT.md being written):
+- Chunk 2b's epilogue label `L_800AB618:` is at (pre-session) line 125940 — confirm with
+  `grep -n "^L_800AB618:" RecompiledFuncs/funcs_27.c`.
+- `hangarInitialize`'s own closing boundary is the next `RECOMP_FUNC` (`computeAngleToTargetFromTransform`),
+  at (pre-session) line 133742 — confirm with `grep -n "^RECOMP_FUNC" RecompiledFuncs/funcs_27.c` and take
+  the first hit past `hangarInitialize`'s own start (line 119818).
+- Confirmed via `awk 'NR>125940 && NR<133733 && /0X25A4/' RecompiledFuncs/funcs_27.c | wc -l` → **53**
+  raw hits in that span, all currently unguarded (0 `GUARD` matches in the same span).
 
-1. Check whether the loop's soak queue has drained any NEW recipes since s389 started (this session queued
-   none itself, but the loop may have run something else in the gap) — `tail -20
-   scratch/agent/SOAK-RESULTS.md` and diff against what this NEXT.md already knows about.
-2. If nothing new: queue a few fresh general-purpose soaks (not a targeted verify pair for a specific
-   guard — a broad, unbiased soak_queue/*.sh recipe with a long `HOLD_S` and every standing guard env var
-    armed, same shape as `run_s327waitpump.sh`) to generate NEW crash population to tally, since the old
-   population is drained. 2-4 recipes, `HOLD_S=300`+, is enough to get a fresh sample without spending a
-   whole session babysitting them — the loop drains up to 2 per gap.
-3. Once fresh data exists (this session's queued soaks, or whatever the loop already ran), tally
-   `last-guest-pc` recurrence the same way s389 did, remembering the `0x8000b650`
-   (`beginFrameDLChunk`-stale) and now `0x800ad0dc` (`findLookupEntryByKey`-stale,
-   really-`hangarInitialize`) lessons: a pc-symbol name is NOT reliable evidence of which function a crash
-   is really in — always confirm against the generated source's own `RECOMP_FUNC`/`// 0x...` address
-   comments before trusting a symbol name, especially for any address that hasn't been confirmed in-range
-   before.
-4. Pick ONE idiom class with the most evidence density as this session's target, or — if the soak
-   population stays too thin/scattered to identify one — fall back to a proactive sweep: pick a struct
-   family or function cluster already known to share an idiom (grep `fixup_game_funcs.py` for existing
-   guard clusters — `HANGARLIST_GUARD`, `SCENE_NODE_CACHE`, `COMPOSE_NPC_GUARD` families, etc. — and check
-   each family's OWN sibling functions for the same unguarded pattern, the same move that worked this
-   session for the Lookup family).
+### Step 2 — chunk it the same way s285/s390 did
 
-### Step 2 — grep-enumerate and classify
+This span (~7800 lines, 53 sites) is comparable in size to s390's chunk 2a+2b combined but larger — don't
+try to do it all in one iteration if the internal epilogue structure doesn't cooperate. Read forward from
+the chunk-2b exit label to find the function's internal `return;`/epilogue points (a quick scan during
+s390 flagged approximate internal boundaries near guest addresses corresponding to source lines ~132623
+and ~133584 pre-session — NOT yet confirmed, re-derive with `grep -n "return;" RecompiledFuncs/funcs_27.c`
+restricted to the 125940-133742 range). Pick ONE bounded sub-chunk (chunk 3a) ending at the nearest such
+epilogue, same size discipline as every prior chunk (s285's chunk 1 was 28 sites; s390's chunk 2a+2b was
+11) — don't force all 53 into one patch if the natural boundaries don't group that way.
 
-Follow the s282-288/s389 model: grep the full idiom pattern across all of `RecompiledFuncs/`, produce one
-line per site with file/function/address, classify each as (a) already guarded, (b) needs a guard, (c)
-provably dead code, or (d) needs more investigation. Enumerate the WHOLE class before writing any patch,
-then batch the guards into one patch set with one regen-diff-build-soak verification cycle.
+### Step 3 — classify and patch, same model
+
+For chunk 3a: delegate a read-only Explore-agent classification pass (or do it directly if the site count
+is small, ≤10) following the exact template used for s390's chunk 2a/2b (see this session's prompts in
+the transcript, or `fixup_game_funcs.py`'s `_s390_h2_guard_text`/`_s390_h2_sites` as the format reference).
+For each `-0X25A4` reload in range: NEEDS-GUARD if immediately dereferenced with no check, SAFE if only
+compared/passed as a call arg, NEEDS-MORE-CONTEXT if ambiguous. Hand-verify at least the trickiest 2-3
+sites directly against the generated source before writing the patch (s390's lesson: cheap insurance,
+catches convention drift). Write the guard block reusing the established KSEG0-range check template
+(`0x80000000..0x80800000`, checked on the raw just-reloaded register). Prefer reusing an existing nearby
+epilogue label over inserting a new one, same as every chunk so far — check with `grep -n
+"goto L_<candidate>"` that it's reachable only from within the target sub-block before reusing it.
+
+### Step 4 — verify
+
+Same protocol every session since s377: Python `shutil.copytree` backup (NOT `cp -R`/`tar` directly — the
+sandbox's cp-with-flags safety gate blocks both even though they're separately allowlisted; this was
+re-confirmed s390), delete `funcs_*.c`, regen via `N64Recomp` + updated `fixup_game_funcs.py`, `filecmp`
+diff the full tree against the backup (expect ONLY `funcs_27.c` to differ, and only by the intended guard
+insertions), build, 3 soaks (`HOLD_S=280`, `zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, run
+each via `Bash` with `run_in_background: true` + `TaskOutput` block — do NOT try to background via shell
+`&`, the harness blocks multi-operation compound commands). New guard fire-counts are expected to be 0
+(proactive fix) — don't treat 0 as a failure, only a NEW crash signature *inside* the newly-guarded
+sub-block would be concerning.
+
+### Fallback if chunk 3 boundaries turn out awkward (span too large/unbounded, or previous scoping was
+wrong)
+
+Check `scratch/agent/SOAK-RESULTS.md` for the queued `s390_freshpop1/2/3.sh` results first — if the loop
+has drained them since this NEXT.md was written, they may have surfaced a completely different, more
+urgent candidate via the standard `[CRASH][last-guest-pc]` tally method (s389's Step 3). Weigh a strong
+new candidate against continuing `hangarInitialize` chunk 3 on evidence, not just on "continue what's
+already open" inertia.
 
 ## Iteration budget
 
-HYPOTHESIS-ID: m3-idiom-audit-fresh (unchanged — this is iteration 2 of the standing M3-idiom-class-audit
-work mode; the slug tracks the audit MODE, not a single class, since each closed class hands off to the
-next one under the same strategic-priority item).
+HYPOTHESIS-ID: m3-idiom-audit-fresh (unchanged — this is iteration 3 of the standing M3-idiom-class-audit
+work mode; the slug tracks the audit MODE, not a single class. Note: this iteration and s390 are
+technically the SAME idiom class (`hangarInitialize`'s `-0x25A4` family) continued across 2 sessions —
+that's fine and expected, matching how s283-288's `-0x25A4` audit and the s377-386 backport both spanned
+many sessions under one slug).

@@ -205,7 +205,31 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -239 (s389); the next new item takes -240 and is inserted at the top.
+oldest). Current top is -240 (s390); the next new item takes -241 and is inserted at the top.
+
+-240. **(s390) M3 idiom-class audit: `hangarInitialize` "chunk 2" of the `-0x25A4` hangar-list-pointer
+    family, 11 sites guarded.** The s389 soak population was fully mined; queued 3 fresh unbiased soaks
+    (`scratch/agent/soak_queue/s390_freshpop1/2/3.sh`) for a future cycle and, per NEXT.md's fallback,
+    delegated an Explore-agent sweep of every numbered guard family in `fixup_game_funcs.py`. Found the
+    `HANGARLIST_GUARD`/s283-285 `-0x25A4($s1/s4/s5)` global-pointer family is **self-documented as
+    incomplete**: s284's own comment says `hangarInitialize` (funcs_27.c, 103 of 172 raw hits, a single
+    13,770-line function) was deliberately parked as its own multi-session item; s285 patched only a first
+    "chunk" (lines 119818-124175, `S285_H1_BAIL`) and no chunk 2 was ever written — 65 sites remained
+    completely unguarded, lines 124175-133587. Scoped this session to the next two bounded internal
+    sub-blocks (chunk 2a: lines 124202-125013; chunk 2b: 125014-125822), each ending at its own natural
+    `return;`/epilogue — reused both existing epilogue labels (`L_800AB1A4`, `L_800AB618`) directly, no new
+    labels needed. Delegated classification (2 Explore-agent passes) found 11 NEEDS-GUARD sites + 1
+    confirmed-SAFE (pointer only passed as a call arg, never dereferenced); hand-verified the trickiest
+    sites myself directly against the generated source before writing the patch (all matched, no
+    corrections). Verified: byte-identical-except-intended-diff regen protocol (only `funcs_27.c` touched,
+    diff was exactly the 11 guard-block insertions); build clean; 3 soaks, none crashed inside or
+    downstream of the new guards or shared a guest-address family with the `-0x25A4` idiom (one hit the
+    exact already-closed heapWalker-GUARD5 background-noise address, `0x8000834c`; the other two hit
+    addresses outside `hangarInitialize` entirely, not previously catalogued but structurally unrelated).
+    0 guard fires across all 3 runs (proactive/defensive fix, matching every prior guard in this family).
+    ~54 raw `-0x25A4` hits remain in `hangarInitialize` past line 125822 (a future chunk 3+). Full detail:
+    `PORTING-STATE` Session 390; next work unit: NEXT.md — continue the SAME class (chunk 3, not a new
+    candidate), since it's self-evidently unfinished and the sibling-audit-sweep cost is already paid.
 
 -239. **(s389) M3 idiom-class audit: "Lookup" struct-family unguarded table-base-pointer dereference, 4
     sites guarded.** First systematic M3 audit since the backport thread closed. Candidate search (tally
