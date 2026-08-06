@@ -32995,3 +32995,111 @@ just re-asserting the prior session's inference; converted the site to function-
 correctness; verified via byte-identical regen-diff on both the report and the full 45-file tree; build +
 soak clean with a genuine VI-progression positive control). HYPOTHESIS-ID `post-backport-followups` is now
 CLOSED — both items resolved, thread has no more work.
+
+## Session 389 (2026-08-06) — M3 idiom-class audit: "Lookup" struct-family unguarded table-base-pointer dereference, 4 sites guarded (new `HYPOTHESIS-ID m3-idiom-audit-fresh`, iteration 1)
+
+Read list at session start: `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md` (per s388's plan: find a
+live recurring candidate from the raw soak logs first, since `SOAK-RESULTS.md`'s own tail has been quiet
+since s369), `scratch/agent/SOAK-RESULTS.md` tail.
+
+**Step 1 — candidate search.** Tallied `[CRASH][last-guest-pc]` across the last ~24 informative soak
+runs in `scratch/agent/soak_results/*.log` (s355-s369, the M5 Step 5 guard-hunting arc's own verify
+pairs). Two addresses recurred at n=2 independent of that arc's own targets: `0x8000b650` (already
+long-catalogued as a STALE `beginFrameDLChunk` checkpoint value that resolves to a different, unrelated
+host symbol almost every hit — confirmed noise, not a candidate) and `0x800ad0dc`
+(`pc-symbol=findLookupEntryByKey+1864`, hit at s359 and again at s370, both times dismissed in-session as
+"off-target" for whichever OTHER guard thread was being verified, never itself investigated).
+`0x8000834c` (heapWalker+1696) recurred 6x, but all 6 hits pre-date s369's GUARD5 fix landing — consistent
+with, not contradicting, that thread's closure. Picked `0x800ad0dc`/`findLookupEntryByKey` as this
+session's candidate.
+
+**Step 2 — investigation (delegated to a read-only Explore agent).** The premise was wrong twice over:
+(1) the pc-symbol arithmetic itself doesn't check out (`0x800ad0dc - 0x748 = 0x800aC994`, not the
+`0x800aC974` a naive reading might suggest), and (2) more importantly, `findLookupEntryByKey`'s real
+guest range (from the generated source's own `// 0x...` address comments) is `0x800642A0-0x800643C0` —
+`0x800ad0dc` isn't in it. The address actually falls inside `hangarInitialize`/`static_5_800AB658`
+(`funcs_27.c`/`funcs_40.c`, two byte-identical copies of the same giant, already-heavily-patched
+"whack-a-mole" function, real symbol `updateHangarBayScene`), at a fixed-global store instruction
+(`MEM_W(-0x292C, ctx->r2) = ctx->r3` at a compiler-known address `0x800D0000-0x292C`) fed by a `ctx->r2`
+that may be corrupted upstream elsewhere in that same function — not a hash-table dereference at all, and
+not safely fixable in one session without much deeper root-causing of that function's own long patch
+history. **The `findLookupEntryByKey+1864` pc-symbol label was simply a wrong nearest-symbol
+attribution** — same failure mode as the long-catalogued `0x8000b650` staleness, just not previously
+flagged for this specific address.
+
+**Pivot, still inside the same idiom-audit unit**: the investigation also found that `findLookupEntryByKey`
+itself, and three siblings in the same "Lookup" struct-family (`funcs_14.c`/`funcs_15.c`:
+`removeLookupTableEntry`, `getLookupEntryField5`, `relocateLookupEntryToNewKey`), share the **exact same
+unguarded idiom** already fixed for their sibling `setLookupEntryField5ByKey` back in s260
+(`SETLOOKUP_TABLE_GUARD`): load a table-base pointer from offset 0 of the passed-in lookup-table struct
+(`ctx->rX = MEM_W(ctx->rY, 0X0)`), then dereference `index*8 + base` with zero null/range check. This is a
+clean, well-scoped, well-precedented idiom class — exactly the s282-288 audit model — so the work unit
+became: enumerate the class, confirm each site's shape by direct source read, guard the unguarded ones
+using the proven s260 template, prove the excluded site out of scope, verify.
+
+**Enumeration/classification** (direct source read against `RecompiledFuncs/funcs_14.c`/`funcs_15.c`,
+confirmed via `RECOMP_FUNC` boundaries):
+- `findLookupEntryByKey` (`funcs_14.c:8231-8421`) — table-base read at `0x800642B0` into `ctx->r4`,
+  dereferenced at `0x800642C4`. **Unguarded.**
+- `removeLookupTableEntry` (`funcs_14.c:8422-8557`) — table-base read at `0x800643DC` into `ctx->r7`,
+  dereferenced at `0x800643F0`. **Unguarded.**
+- `getLookupEntryField5` (`funcs_15.c:7-69`) — table-base read at `0x80064668` into `ctx->r4` (overwrites
+  the struct-arg register in place), dereferenced at `0x8006467C`. **Unguarded.**
+- `setLookupEntryField5ByKey` (`funcs_15.c:70-145`) — table-base read at `0x800646BC`. **Already guarded**
+  (s260, `SETLOOKUP_TABLE_GUARD`).
+- `relocateLookupEntryToNewKey` (`funcs_15.c:146-...`) — table-base read at `0x8006472C` into `ctx->r3`,
+  dereferenced at `0x80064738`; a 2nd, independent read of the same struct field at `0x80064774` further
+  down, made unreachable once the first read's guard bails (the struct's offset-0 field is never written
+  by any of these functions within a single call, so every reload in the same call yields the identical
+  value — guarding the FIRST read and bailing early is sufficient coverage without needing a guard at
+  every reload site). **Unguarded.**
+- `destroyLookupTable` (`funcs_14.c:8857-8896`) — loads the table pointer but only passes it to `rs_free`;
+  never dereferences it via the `index*8+base` idiom. **Confirmed out of class, correctly excluded.**
+
+**Fix** (`fixup_game_funcs.py`, N64Recomp repo, untracked as always — see the standing note): 4 new guard
+patches, reusing s260's exact KSEG0-range (`0x80000000..0x80800000`) + hi-word (`0xFFFFFFFF`) check.
+Bail semantics matched each function's own existing control flow rather than a blanket pattern: plain
+`return;` for the two void functions with no stack frame (`findLookupEntryByKey`,
+`removeLookupTableEntry`); `ctx->r2 = 0; return;` for `getLookupEntryField5` (mirrors its own real
+"not found" default path); `goto L_800647C4;` for `relocateLookupEntryToNewKey`, which — unlike the other
+three — has a real stack frame (`sp -= 0x28`, saves `$s0-$s3`/`$ra` at entry), so a bare early `return`
+would have left the guest stack unbalanced and corrupted the caller's next register-restore; its own
+epilogue label was reused instead. Each guard gets its own env-gated diagnostic
+(`ROGUESQ_LOG_{FIND,REMOVE,GET,RELOCATE}LOOKUP_TABLE_GUARD`), matching the project-wide convention. Armed
+all 4 by default in `scratch/s73_post_a_scene/run_s327waitpump.sh` alongside the existing SETLOOKUP guards
+(gitignored file, no commit needed).
+
+**Verification.** Backed up the current (already-fixup-applied) `RecompiledFuncs/` tree, deleted just
+`funcs_14.c`/`funcs_15.c`, regenerated them fresh from `N64Recomp` (unpatched), re-ran the updated
+`fixup_game_funcs.py` against the full tree, and diffed both the fixup report and the full 45-file tree
+against the pre-session baseline. Fixup report showed exactly the 4 new lines expected
+(`findLookupEntryByKey table-base pointer guard (0x800642B0) patched x1`, etc.) alongside every
+pre-existing patch unchanged; the full-tree diff touched exactly `funcs_14.c` and `funcs_15.c`, and within
+those files the diff was exactly the 4 intended guard-block insertions, byte for byte, nothing else moved.
+Build (`cmake --build . -j8`) clean, reached 100%, no new warnings from the added code. Ran 3 soaks
+(`HOLD_S=240`, same recipe/env shape as every other verify batch): verify1 crashed at `hold-iter 11`
+(~12s into the hold) at the already-catalogued `coalesceFreeHeapBlocks+4424` family (last-guest-pc
+`0x8000247c`, unrelated to the lookup functions); verify2 died pre-title (`process gone while waiting for
+phase`, exit code 4 — the known `waitForAnyAudioSlot`-class boot crash, last-guest-pc `0x8000834c`, also
+unrelated and not even a scene-reached run); verify3 was fully clean — 304s wall hold, VI traversed the
+full `0→320→640→1024→512→640` phase timeline (title → war room → craft-select → transition, 6097 LLE
+tasks), 0 crash markers, process still alive at kill. None of the 3 runs crashed inside or downstream of
+any of the 4 newly-guarded functions, and none produced a new, not-previously-catalogued crash signature —
+both failures are pre-existing, independently-tracked crash families unrelated to this patch. All 4 new
+guard fire-counts were 0 across all 3 runs (including the clean 304s run that reached craft-select, where
+`activateAnimationKeyframe`'s existing calls into this same struct family run routinely) — a null result
+for the guards firing, but not informative against the fix itself: this was always a proactive/defensive
+closure of a known-dangerous idiom (proven dangerous once already, for the sibling function), not a
+response to an actively-reproducing corruption in this family. No `lib/` touch this session.
+
+Outcome: ADVANCED (a real code change landed: 4 new guard patches closing a well-scoped, precedented
+unguarded-pointer-dereference idiom class across the "Lookup" struct-family, matching the M3
+idiom-class-audit model; verified via the standard byte-identical-except-intended-diff regen protocol,
+clean build, and 3 soaks with no regression). Also corrected a live misattribution: the recurring
+`findLookupEntryByKey+1864`/`0x800ad0dc` pc-symbol reading that had been dismissed twice as "off-target"
+noise is now understood to be a wrong nearest-symbol attribution for a site inside
+`hangarInitialize`/`static_5_800AB658`, not a real hit on `findLookupEntryByKey` — worth remembering next
+time that symbol name surfaces in a soak log. HYPOTHESIS-ID `m3-idiom-audit-fresh` stays open (this class
+is closed, but the audit model itself continues as the standing strategic-priority-3 work mode) — next
+session should pick a fresh idiom-class candidate the same way (Step 1 of this session's NEXT.md), since
+the current soak_results population has now been fully mined for this cycle.

@@ -205,7 +205,36 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -238 (s386); the next new item takes -239 and is inserted at the top.
+oldest). Current top is -239 (s389); the next new item takes -240 and is inserted at the top.
+
+-239. **(s389) M3 idiom-class audit: "Lookup" struct-family unguarded table-base-pointer dereference, 4
+    sites guarded.** First systematic M3 audit since the backport thread closed. Candidate search (tally
+    of `[CRASH][last-guest-pc]` across ~24 recent soaks) surfaced `0x800ad0dc`
+    (`pc-symbol=findLookupEntryByKey+1864`) recurring at n=2, independently dismissed twice before
+    (s359, s370) as "off-target" noise for other threads. Investigation found the pc-symbol attribution
+    itself was WRONG: the address is not in `findLookupEntryByKey` at all (guest range
+    `0x800642A0-0x800643C0`) but inside `hangarInitialize`/`static_5_800AB658` (real symbol
+    `updateHangarBayScene`), a huge already-heavily-patched function, at a fixed-global store fed by a
+    possibly-upstream-corrupted register — not a hash-table dereference, and not safely fixable without
+    much deeper root-causing of that function's own patch history. **Same failure mode as the
+    long-catalogued `0x8000b650` staleness** (nearest-symbol misattribution), just not previously flagged
+    for this address — worth remembering if `findLookupEntryByKey+1864` recurs again. Pivoted within the
+    same work unit: `findLookupEntryByKey` and 2 siblings (`removeLookupTableEntry`,
+    `getLookupEntryField5`, `relocateLookupEntryToNewKey` — all `funcs_14.c`/`funcs_15.c`) share the
+    identical unguarded idiom already fixed for their sibling `setLookupEntryField5ByKey` (s260,
+    `SETLOOKUP_TABLE_GUARD`): a table-base pointer loaded from the struct's offset 0, dereferenced via
+    `index*8+base` with no range check. `destroyLookupTable` checked and confirmed out of class (only
+    passes the pointer to `rs_free`, never dereferences it directly). Guarded all 4 remaining sites
+    reusing the exact s260 KSEG0-range+hi-word check, bail semantics matched to each function's own
+    control flow (plain `return`/`ctx->r2=0; return`/`goto` to the real epilogue for the one function with
+    a stack frame). Verified: byte-identical-except-intended-diff regen protocol (only `funcs_14.c`/
+    `funcs_15.c` touched, diff was exactly the 4 guard-block insertions); build clean; 3 soaks (2 died to
+    already-catalogued unrelated crash families — `coalesceFreeHeapBlocks+4424` and the
+    `waitForAnyAudioSlot` boot-crash class — 1 fully clean, 304s hold, full `0→320→640→1024→512→640` VI
+    timeline). 0 guard fires across all 3 runs (proactive/defensive fix, not a response to reproducing
+    corruption — the sibling function's own guard had already proven this idiom dangerous once). Full
+    detail: `PORTING-STATE` Session 389; next work unit: NEXT.md — pick a fresh idiom-class candidate the
+    same way (the current soak_results population is now fully mined for this cycle).
 
 -238. **(s386) batch 9/N: final 4 sites converted (168/176 total), backport CLOSED OUT.** Target:
     `loadCraftShadowTextures` (funcs_16.c, table-index guard), `mat3x3InverseInto` (funcs_5.c, det/inverse
