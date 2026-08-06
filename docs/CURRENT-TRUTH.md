@@ -7,12 +7,13 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## L
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
-   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Twelve passes so far
-   (s295-330 x5, s346, s355, s364, s371, s380, s391, s398) kept the file oscillating around the cap as
-   new session detail accrues; s398 migrated the closed s389-397 idiom-audit arc to PROJECT-OVERVIEW
-   §14. Full per-pass detail in git log. 35 KB remains a stretch target, not a hard floor -- the
-   "Current truth" env-var/timeline prose and the Regeneration section's Standing warnings stay intact
-   deliberately; both are used every iteration.
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Thirteen passes so
+   far (s295-330 x5, s346, s355, s364, s371, s380, s391, s398, s409) kept the file oscillating around
+   the cap as new session detail accrues; s398 migrated the closed s389-397 idiom-audit arc to
+   PROJECT-OVERVIEW §14; s409 collapsed the s400-408 M4 item -249 bulk-relocation saga (9 items,
+   ~195 lines) into one summary paragraph. Full per-pass detail in git log. 35 KB remains a stretch
+   target, not a hard floor -- the "Current truth" env-var/timeline prose and the Regeneration
+   section's Standing warnings stay intact deliberately; both are used every iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
    §10-§12). Next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
@@ -138,11 +139,10 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 145/778 done
-s400+s402+s403+s405+s406+s407+s408, 653 remain per a fresh regen (648 actionable, 4 known-skip, 1
-known-bad), largest M4 item open — s404-s407 found, bisected, and fully resolved a 20-name crash batch
-down to one genuinely-buggy function (parked); s408 resumed ordinary bulk relocation post-closure, two
-more clean n=20 batches — see items -253..-257).
+`main_overlay.txt` phantom-overlay-function family (item -249..-257, IN PROGRESS: 145/778 done
+s400-s408, 653 remain per a fresh regen (648 actionable, 4 known-skip, 1 known-bad), largest M4 item
+open — s404-s407 found, bisected, and fully resolved a 20-name crash batch down to one genuinely-buggy
+function (parked); s408 resumed ordinary bulk relocation post-closure, two more clean n=20 batches).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -157,200 +157,28 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
 oldest). Current top is -257 (s408); the next new item takes -258 and is inserted at the top.
 
--257. **(s408) M4 item -249: resumed ordinary bulk relocation now that the s404-s407 crash-batch thread
-    is closed — two more clean, independently live-verified n=20 batches, 40 relocations, 145/778
-    done.** Wrote `scratch/agent/s408_gen_candidates.py`, a persisted version of the candidate-list
-    generator every prior session re-typed inline (s402's is_data + lowercase-`g`-global filter). A
-    fresh regen at session start returned 693 candidates, not the docs' pure-subtraction estimate of
-    672 — the same bookkeeping-drift lesson s404 already flagged, at smaller scale; treated the fresh
-    count as ground truth. **Batch 1** (`initActorFromSpawnTemplate`...`sayLukeGoingMakeHovertrainEscape_v0xE4`,
-    20 names, all single-owner `mission`, 0 ambiguous): applied, regenerated (positive control:
-    unmapped-functions-skipped 698→678), rebuilt clean, `nm`-confirmed 20/20, live-verified in the
-    background — reached `vi_width=512` (88.2s), continued to 640, 0 crashes, only the 1 known
-    pre-existing `[missing-func]` — stays applied. **Batch 2**
-    (`sayStickObjectives_v0x11F`...`sayMoreFightersInboundSevenDecimal_v0x1EB`, 20 names, same
-    verdict profile): positive control 678→658, rebuilt clean, `nm`-confirmed 20/20, live-verified —
-    88.6s to `vi_width=512`, continued to 640, 0 crashes — stays applied. Two consecutive clean
-    batches is the documented per-iteration stopping point. **A fresh post-session regen shows 653
-    func-only candidates remaining (648 actionable after excluding 4 known-skip + 1 known-bad) — this
-    is the number future sessions should cite, not a pure-subtraction estimate.** `HYPOTHESIS-ID:
-    m4-main-overlay-phantom-functions` (iteration 14, ordinary bulk relocation resumed post-crash-closure,
-    a discriminating result). Full detail: `PORTING-STATE` Session 408.
-
--256. **(s407) M4 item -249: finished bisecting s406's quarter-2 5-name crash suspect set — isolated a
-    single genuinely-buggy function, `initPlayerCraftTrailBuffers`, and landed the other 4 clean. 105/778
-    done, 672 remain, 1 permanently excluded.** Split the 5 (`beginCameraTrackedTransition`,
-    `advanceCameraTransitionOnCue`, `isCameraTransitionIdle`, `initPlayerCraftTrailBuffers`,
-    `loadEffectModelInstancePool`) into split A (first 3) and split B (last 2). **Split A** applied,
-    regen'd (positive control: unmapped-functions-skipped 702→699), rebuilt clean, `nm`-confirmed,
-    live-verified: 0 crashes, reached `vi_width=512`→`640` (88.4s) — stays applied (+3). **Split B**
-    applied on top (699→697), rebuilt, live-verified: reproduced the s404/s405/s406 crash byte-identically
-    (`playerXwingInit+2068`, `last-guest-pc=0x80011088`, process died ~2.4s after reaching `vi_width=512`)
-    — culprit is in this 2. Reverted split B, then bisected it at **n=1**: `initPlayerCraftTrailBuffers`
-    applied ALONE reproduced the identical crash signature (byte-identical PC/symbol/last-guest-pc,
-    process died at 2.4s after 1 frame) — proves this single function's real recompiled code (not a
-    symbol-boundary/batch-size artifact) is sufficient to trigger the fault on its own, a genuinely new
-    finding for this hypothesis thread (every prior crash in this arc was multi-name and never bisected
-    below n=5). `loadEffectModelInstancePool` applied alone (with `initPlayerCraftTrailBuffers` reverted)
-    was independently live-verified clean (0 crashes, `vi_width=512`→`640`, 19 frames) — stays applied
-    (+1). Final repo state: 4 of quarter-2's 5 names relocated (3 from split A + `loadEffectModelInstancePool`),
-    `initPlayerCraftTrailBuffers` reverted to `main_overlay.txt` and recorded in new
-    `scratch/agent/m4_known_bad.txt` (parallel to `m4_known_skip.txt`, but for names that crash on
-    relocation rather than probe as ambiguous) — do NOT re-attempt without a dedicated root-cause
-    session. **This closes the s404-originated 20-name crash-batch bisection thread entirely**: of the
-    original 20, 19 are now confirmed safe and relocated (10 from s405's half-2 + s406's quarter-1 5 +
-    s407's 4), 1 (`initPlayerCraftTrailBuffers`) is a real, isolated, permanently-parked bug.
-    `HYPOTHESIS-ID: m4-main-overlay-phantom-functions` (iteration 13 — a 5th consecutive discriminating
-    result under this slug, no stall, and the thread is now fully resolved rather than merely narrowed).
-    Full detail: `PORTING-STATE` Session 407.
-
--255. **(s406) M4 item -249: bisected s405's 10-name crash suspect set at n=5 — quarter 1 landed
-    clean, quarter 2 reproduced the crash byte-identically and is narrowed further. 101/778 done, 677
-    remain.** Split the 10 (`submitCameraTrackedObjectToRender` ... `loadEffectModelInstancePool`,
-    all still in `main_overlay.txt` from s405's revert) into two file-order quarters of 5.
-    **Quarter 1** (`submitCameraTrackedObjectToRender`, `emitEffectParticlesAlongPath`,
-    `getEffectModelPoolHandle`, `beginCameraViewTransition`, `requestCameraSnapToTrackedAnchor`) —
-    applied, regenerated (positive control: unmapped-functions-skipped 707→702), rebuilt clean (295
-    warnings, same as s405 baseline), `nm`-confirmed, live-verified: 0 crashes, reached
-    `vi_width=512`→`640` (88.5s, 19 frames captured, `lastW=640` in the tail of the log) — **stays
-    applied (+5 real progress)**. **Quarter 2** (`beginCameraTrackedTransition`,
-    `advanceCameraTransitionOnCue`, `isCameraTransitionIdle`, `initPlayerCraftTrailBuffers`,
-    `loadEffectModelInstancePool`) applied on top (positive control: 702→697), rebuilt clean, all 10
-    names `nm`-confirmed present, live-verified: **crashed 2.1s after reaching `vi_width=512`**,
-    byte-identical to s404/s405's fault (`playerXwingInit+2068`, `last-guest-pc=0x80011088`) — proves
-    the culprit is inside this 5, and (by quarter 1's independent clean verify) NOT in the other 5.
-    Quarter 2 was surgically reverted back to `main_overlay.txt` (marked `s406:`,
-    `scratch/agent/s406_revert_q2.py`) and parked for a further n=2/3 bisection; rebuilt+regenerated
-    with quarter 1 alone applied to leave the repo in a clean, buildable, matching-source state
-    (positive control confirmed back to 702, same 295 warnings). `HYPOTHESIS-ID:
-    m4-main-overlay-phantom-functions` (iteration 12 — a third consecutive discriminating result under
-    this slug across s404-s406, genuine narrowing, no stall). Full detail: `PORTING-STATE` Session
-    406.
-
--254. **(s405) M4 item -249: bisected s404's 20-name crash batch — isolated the culprit to the first
-    10, landed the clean second 10. 96/778 done, ~682 remain.** Split the batch
-    (`scratch/agent/s404_crash_batch_needs_bisection.txt`) into two file-order halves of 10 from
-    s404's clean revert checkpoint. **Half 1** (`submitCameraTrackedObjectToRender` ...
-    `loadEffectModelInstancePool`) reproduced the exact s404 crash byte-identically — same
-    `playerXwingInit+2068`, same `last-guest-pc=0x80011088`, same fault address, same ~89.2s timing —
-    isolating the culprit to this 10-name subset. **Half 2** (`freeEffectModelInstancePool` ...
-    `findNearestNpcWithinRange`) regenerated clean (positive control: unmapped-functions-skipped
-    717→707), rebuilt clean, `nm`-confirmed, and live-verified with 0 crashes, reaching
-    `vi_width=512`→`640` (89.2s→118.1s) matching the clean baseline almost exactly, only the 1 known
-    pre-existing `[missing-func]`. Half 2 stays applied (+10 real progress); half 1 was surgically
-    reverted back to `main_overlay.txt` (marked `s405:`) and parked for a further n=5 bisection round
-    — same recipe, not yet run this session. `HYPOTHESIS-ID: m4-main-overlay-phantom-functions`
-    (iteration 11 — a second consecutive discriminating result under this slug, not a stall). Full
-    detail: `PORTING-STATE` Session 405.
-
--253. **(s404) M4 item -249: found, differentially confirmed, and reverted a real regression before
-    it landed — item -249 stays at 86/778 done, no relocation-count movement, but a real result.**
-    Also fixed a candidate-count bookkeeping bug: the candidate-generation script has no memory of
-    prior probe verdicts, so NONE/AMBIGUOUS names (re-probed 2-3x across s400-s403 without being
-    excluded) keep re-appearing at the front of every future regenerated list, silently drifting the
-    "N remain" figure away from the docs' pure-subtraction estimate (778−86=692 vs the true
-    regenerated 712) — fixed with a new persistent skip-list, `scratch/agent/m4_known_skip.txt`.
-    After filtering, took the next 20 real candidates (all single-owner `mission`, 10 CONFIRMED + 10
-    WEAK, 0 NONE/AMBIGUOUS); applied, regenerated (positive control: `unmapped functions skipped`
-    717→697, exactly −20), rebuilt clean, all 20 names `nm`-confirmed present. The **mandatory
-    live-verify** then caught a new deterministic crash — Bus error in `playerXwingInit+2068`
-    (`last-guest-pc=0x80011088`), firing right after `vi_width=512` was reached (89.2s); none of the
-    20 relocated names appear in the crash backtrace. A same-binary repeat run reproduced it
-    byte-identically (2/2), while the 4 most recent historical verify runs (different batches, same
-    checkpoint) were 0/4 crashed. Reverted the batch surgically (name+address matched, not a blanket
-    checkout), rebuilt, and re-verified: the reverted checkpoint reached `vi_width=512`→`640` cleanly
-    (89.4s→118.3s, 0 crashes) — a 5th consistent clean data point at that checkpoint, vs 2/2 crashing
-    with the batch. Strong (not fully exhaustive — 1 same-session negative control) evidence the
-    regression is real and batch-caused; which of the 20 specific names is the culprit is NOT yet
-    isolated (bisection deferred — see `scratch/agent/s404_crash_batch_needs_bisection.txt` and
-    NEXT.md). `HYPOTHESIS-ID: m4-main-overlay-phantom-functions` (iteration 9 — a discriminating
-    result, not a stall). Full detail: `PORTING-STATE` Session 404.
-
--252. **(s403) M4 item -249 continued at n=20: two more clean live-verified batches, 34 more
-    relocations, 86/778 done, 692 remain.** Regenerated the candidate list (same script, `is_data`
-    filter): 746 candidates, matching s402's checkpoint exactly. Took two independent n=20 batches in
-    strict file order (skipping the persistently-AMBIGUOUS `handleCraftSelectInput` both times, per
-    standing instruction not to re-probe it), each: probed (17 CONFIRMED all-`mission`/3 NONE/0
-    AMBIGUOUS both batches — the cleanest verdict distribution yet for this item), applied the 17
-    CONFIRMED, regenerated (`make_elf.py`'s `unmapped functions skipped` dropped by exactly 17 each
-    time — positive control, 751→734→717), rebuilt clean (full reconfigure + build, 0 new
-    warnings/errors), names confirmed present via `nm` on the final binary, and **live-verified before
-    the next batch was even selected**: both runs reached `phase width=512` (88.7s/88.6s, matching the
-    88.7s clean baseline), 0 crashes/asserts/UnhandledJumpTarget/dmem-race/SIGBUS, only the 1 known
-    pre-existing `[missing-func]`. **5th and 6th consecutive clean batches under the mandatory-verify
-    discipline since s401's CMakeLists.txt fix, 0 regressions.** No batch-size scaling attempted
-    (deliberately deferred, per s402's instruction). `HYPOTHESIS-ID: m4-main-overlay-phantom-functions`
-    (iteration 7). Full detail: `PORTING-STATE` Session 403.
-
--251. **(s402) M4 item -249 batch 2 RETRY at n=16 (per s401's fallback plan): two clean batches, 32
-    more relocations landed, 52/778 done, 746 remain.** Regenerated the candidate list with the
-    `is_data` filter fix (excludes lowercase-`g`-prefixed globals — s401's `gCutsceneAssetPaths`
-    lesson): 778 candidates (781 minus the 3 the fix now correctly excludes). Took two independent
-    n=20 batches in strict file order, each probed (0 truly AMBIGUOUS applied — 1 persistent
-    AMBIGUOUS, `handleCraftSelectInput`/`0x800af6ac`, structurally multi-maybe across menu/cinematic
-    both times it came up, left for a manual disassembly read rather than more probing), applied (16
-    CONFIRMED+WEAK each, NONE/AMBIGUOUS deferred), regenerated+rebuilt clean, names confirmed present
-    via `nm` on the final binary, and **live-verified individually before the next batch was even
-    selected** — `[phase] vi_width=512` reached (88.4s, 89.3s; matches the 88.7s clean baseline), 0
-    crashes/asserts/UnhandledJumpTarget/dmem-race/SIGBUS in either run, only the 1 known
-    pre-existing `[missing-func]`. Batch 1 happened to include `menuControllerInput` and
-    `buildScaledFormatTextElement` — the exact two names implicated in s401's title-screen SIGBUS —
-    and it relocated cleanly, reinforcing s401's conclusion that batch **size**, not those symbols'
-    identity, caused that crash. **Does not yet establish the actual safe ceiling between 16 and
-    774** — deliberately not probed this iteration per NEXT.md's instruction to keep the size
-    question separate from this iteration's per-batch-verify discipline check. `HYPOTHESIS-ID:
-    m4-main-overlay-phantom-functions` (iteration 5, first genuinely positive/incremental result
-    since s400). Full detail: `PORTING-STATE` Session 402.
-
--250. **(s401) M4 item -249's batch 2 attempt at scale (774 relocations) FOUND and REVERTED a real
-    regression; item -249 is back at exactly s400's checkpoint (20/801 done, 781 remain), no net
-    progress on the phantom-function count but two banked findings.** Probed+applied a 60-item batch
-    (0 ambiguous), which cascaded into progressively larger undefined-symbol link failures as
-    already-real cinematic/menu functions turned out to call into still-phantom neighbors just outside
-    the slice — chased this through 7, then 66, then 16, then finally swept and applied the ENTIRE
-    remaining 625-item candidate list to make the link succeed (0 truly ambiguous of 629 candidates
-    checked; 3 NONE excluded, one of which was `gCutsceneAssetPaths`, a DATA symbol that slipped past
-    the candidate script's `is_data` filter — lesson: extend that filter for lowercase-`g`-prefixed
-    globals). After linking, a live driven run hit a **new, deterministic SIGBUS** at the title screen
-    (`menuOverlayInit`→`menuControllerInput`→`buildScaledFormatTextElement`, wild pointer near guest
-    `0x8000005E`) — reverting just those two names did NOT stop the crash (N64Recomp still
-    auto-synthesized the same code under `static_5_...` names), proving the crash is caused by
-    function-boundary re-slicing from the batch's SIZE, not from any single bad candidate — the same
-    mechanism as the s9 dead end ("bulk symbol moves split the enclosing function"). Surgically
-    reverted all 774 of this session's relocations (matched by name+address, not a blanket
-    `git checkout`, to avoid destroying unrelated pre-existing uncommitted sibling-repo work per item
-    -3) back to `main_overlay.txt`; verified via `make_elf.py`'s skipped-func counter returning to
-    exactly 783, then a live re-run reaching VI=512 clean (88.7s, 0 crashes, 1 known
-    `[missing-func]`) — byte-for-byte the same result as s400. Separately, root-caused and landed a
-    **durable, unrelated fix**: `cmake --build` alone after a regen that changes the
-    `RecompiledFuncs/funcs_*.c` file count silently links against a stale file list (plain
-    `file(GLOB)` only re-scans at configure time) — added `CONFIGURE_DEPENDS` to `CMakeLists.txt`'s
-    two glob calls, committed. **Next iteration should retry item -249 with a much smaller batch
-    (~20-40, near s400's proven size) and a mandatory live-run verify after EACH batch before
-    accumulating further batches** — do not repeat the "sweep everything, verify once at the end"
-    approach. `HYPOTHESIS-ID: m4-main-overlay-phantom-functions` (same thread, iteration 3). Full
-    detail: `PORTING-STATE` Session 401.
-
--249. **(s400) DONE, checkpoint: `main_overlay.txt` phantom-overlay-function family, batch 1 of ~40 done
-    (20/801), tooling proven — s401 attempted to continue at a larger scale and had to revert (see
-    item -250 above); the checkpoint below is still the current state.** Probed the first 20 of item -248's
-    candidates with `tools/overlay_symbol_probe.py` (unmodified s9-era tool): **0 ambiguous, 0
-    unresolved** -- every candidate matched exactly one destination overlay (13 strict-prologue
-    CONFIRMED, 7 weaker jr-$ra-only WEAK; split 10 mission/7 cinematic/3 menu, a real cross-overlay
-    mix). Cross-checked JAL callers in `RecompiledFuncs` for a sample -- all live/reachable, not dead
-    code. Moved all 20 to their correct overlay file, deleted from `main_overlay.txt`. Regenerated
-    (`make_elf.py`'s `skipped_funcs` 803→783, exactly the 20 moved -- first positive control),
-    rebuilt clean, and verified two ways: `strings roguesquadron.elf` shows all 20/20 names now
-    present (the s54/s399 "build success != actually fixed" check), and a live driven run hit 0/20
-    `[missing-func]` fires for the batch (positive control: reached VI=512; only
-    `endMissionCleanup`/`0x800FB9E4` fired, a known separate not-yet-fixed address, 0 new
-    instability). Batch-apply tooling (`scratch/agent/s400_probe_batch.py` +
-    `s400_apply_batch.py`) is reusable as-is for the next batch -- **just re-point the candidate-list
-    slice**. **~781 candidates remain.** s400 recommends trying a larger batch (40-60) next time,
-    since n=20 had zero ambiguous cases -- s9's "one at a time" caution may be more conservative than
-    this particular symbol family needs, but confirm that holds before scaling up much further.
-    `HYPOTHESIS-ID: m4-main-overlay-phantom-functions`. Full detail: `PORTING-STATE` Sessions
-    399-400.
+-249..-257. **(s400-408) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
+    proven, a batch-size regression found+fixed, a genuine crash bisected to one confirmed-bad
+    function, ordinary bulk relocation now resumed. 145/778 done, 653 remain (648 actionable, 4
+    known-skip, 1 known-bad) as of s408.** s400 landed batch 1 (20/801) and proved the tooling
+    (`s400_probe_batch.py`/`s400_apply_batch.py`, positive-control via `make_elf.py`'s
+    unmapped-functions-skipped counter). s401 attempted the full ~774-item remainder in one sweep: it
+    linked, but caused a new deterministic title-screen SIGBUS; reverted, and root-caused the
+    mechanism as batch-SIZE-driven function-boundary re-slicing (same class as the s9 dead end), not
+    any single bad name — established the "n≈20, live-verify every batch" discipline used ever since.
+    Also fixed an unrelated but durable `CMakeLists.txt` bug found en route (missing
+    `CONFIGURE_DEPENDS` on the `funcs_*.c` glob was silently building against a stale file list after
+    a regen). s402 retried at n=16-20 under the tightened discipline (2 clean batches) and introduced
+    `scratch/agent/m4_known_skip.txt` for names that persistently probe NONE/AMBIGUOUS. s403 landed 2
+    more clean n=20 batches (86/778). s404 hit a genuine regression at n=20 (`playerXwingInit+2068`
+    Bus error, reproduced 2/2, absent on revert 5/5) and deferred bisection rather than guessing which
+    of the 20 names was at fault. s405-s407 bisected it (20→10→5→1), isolating one real bug —
+    `initPlayerCraftTrailBuffers`, now recorded in `scratch/agent/m4_known_bad.txt`, permanently
+    parked, do NOT re-attempt without a dedicated root-cause session — and relocating the other 19
+    clean, closing the crash-bisection sub-thread entirely. s408 resumed ordinary bulk relocation
+    post-closure with 2 more clean n=20 batches, reaching 145/778. `HYPOTHESIS-ID:
+    m4-main-overlay-phantom-functions` (iteration 15 as of s408; exact next-batch recipe in
+    `scratch/agent/NEXT.md`). Full per-session detail: `PORTING-STATE` Sessions 400-408.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
     (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by
@@ -401,70 +229,12 @@ oldest). Current top is -257 (s408); the next new item takes -258 and is inserte
     `docs/PROJECT-OVERVIEW.md` §13. Exclusion breakdown + s387/s388 follow-ups: Sanctioned tooling
     paragraph above. Raw: `PORTING-STATE` Sessions 377-386.
 
--226..-230. **(s371, s373-376) M5 Step 6 (PCM sanity-check) and the C88-reversed pre-title-hang/
-    VI-trigger investigation — all CLOSED.** s371: real PCM is 100% silent even under genuine
-    RSP-dispatched real ucode (13,832 `[pcm-sanity]` calls, 0 non-zero, positive-controlled), and fixed
-    a real host-bridge bug en route (`queue_samples` dropped half of every buffer — Overturned
-    Conclusions). s373: `reapplyDisplayMode` unconditionally re-zeros the audio-tick gate every frame
-    and never durably re-enables it (same `0x8008EC88` address the fixup force-zeros for title-reach),
-    so voice population never runs — mixing exact zeros is correct on empty input, not a mixing bug.
-    s374's mutex-deadlock candidate for why reversing that gate hangs pre-title was REFUTED s375
-    (9131/9131 balanced, never blocks — `HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang` CLOSED: no
-    hang, the gate just never re-triggers VI 640→1024). s376 REFUTED all 3 candidate trigger mechanisms
-    for that transition (`HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site` CLOSED by elimination — not
-    worth chasing further since real audio stays silent regardless per s373). **No M5 audio thread
-    remains open as of s376.** Full detail: `docs/PROJECT-OVERVIEW.md` §12; raw: `PORTING-STATE`
-    Sessions 371, 373-376.
-
--225..-210. **(s354-370) M5 Step 5 guard-hunting arc — Thread A (`coalesceFreeHeapBlocks`), Thread B
-    (`drainMeshReleaseQueue` linked-list corruption), and a heapWalker background-noise site (GUARD5)
-    all CLOSED.** Full blow-by-blow (every guard site, fire count, and soak-tooling lesson): `docs/
-    PROJECT-OVERVIEW.md` §11; raw detail `PORTING-STATE` Sessions 354-370. One-paragraph summary:
-    Thread A (`m5-audio-destub-coalesce-heap-guard-verify`) opened s354 on an independent
-    `coalesceFreeHeapBlocks+3452` repeat; s358 found the guard's own bail target re-entered the loop
-    instead of exiting it, fixed; closed s366 with 6/6 non-recurrence soaks post-fix. Thread B
-    (`m5-audio-destub-linkedlist-corruption-source`) opened on s352's `bad_v1=0x00010001` lead
-    (byte-identical across 2 sessions, ~1-in-4-billion coincidence odds) and found THREE distinct
-    unguarded pointer families across `drainMeshReleaseQueue`'s five structurally identical tail-scan
-    loops (tail-cursor read+write pairs s354-361; head-pointer read+clear-write pairs s363; a third
-    "previous tail" family s365), plus a s366 full-function audit confirming coverage exhaustive;
-    closed s368 with `s367`'s verify pair both crashing OUTSIDE the function after it completed and
-    returned normally, every guard family positive-controlled (fired) in the same runs. A heapWalker
-    background-noise crash surfaced by those soaks (`heapWalker+1696`, `last-guest-pc=0x8000834c` —
-    coincidentally `drainMeshReleaseQueue`'s own return checkpoint, not a link between the bugs)
-    reached n=4 by s368, crossing the catalog's 3rd-hit confirmation trigger; s368-369 binary-analysis
-    (hand-extending `s193_disasm.py`, `otool`/`nm`/`objdump`/`dwarfdump` still sandbox-blocked) mapped
-    it to guest address `0x80007A3C` + 4 unrolled siblings, the same unvalidated-pointer idiom already
-    guarded 4x elsewhere in `heapWalker` — guarded as GUARD5, closed s370 with 2/2 non-recurrence (one
-    full clean 302s hold recovered from raw logs after an 8.7 GB `run.log` defeated the soak wrapper's
-    own timeout — new lesson: an `rc=137`/empty-wrapper-log verdict is not automatically
-    uninformative, check the raw launcher/run.log before discarding). **Net as of s370: no M5 Step 5
-    or escalated-background-noise threads remain open** — next M5 work was Step 6, since closed
-    (item -226..-230).
-
--209..-195. **Sixteen sessions (s339-353), M5 gate-promotion/step-5-crash-rate/drainMeshReleaseQueue
-    tail-scan arcs — all CLOSED/superseded.** VI=640 `pairs=0` stall resolved as an ordinary one-time
-    RDP-state prologue, not a stall (s339). Both audio gates were briefly promoted to default (s340, on
-    a since-overturned validation basis — Overturned Conclusions), then `reapplyDisplayMode`'s reversal
-    alone was found to deterministically block title-reach (0/5, s342) and reverted, restoring
-    title-reach (3/3, s344) but surfacing a `tickWrappingTimerAccumulatorList` div-by-zero PARKED at 1/3
-    recurrence (`m5-audio-destub-tickwrap-divzero-craftselect`, reopens on
-    `last-guest-pc=0x80054744`). **Current gate state, unchanged since s343**: fixup regex force-zeros
-    ONLY `reapplyDisplayMode` (`0x8008EC88`); `setDisplayMode` (`0x8008EB40`) stays reversed. A
-    crash-rate-comparison methodology arc (s341-352) found the post-title crash rate diffuse across
-    symbols until a re-analysis showed the TIMING was bimodal and a corrupted pointer
-    (`bad_v1=0x00010001`) reproduced byte-identically across 2 sessions — became Thread B's origin lead
-    (item -225..-210). `drainMeshReleaseQueue` tail-scan cluster (s348-353): 3 crash sites GUARDED; the
-    `[scene-node-content-guard]` from this is now known steady-state-benign, not corruption evidence
-    (Overturned Conclusions). Full detail: PROJECT-OVERVIEW §10; raw: `PORTING-STATE` Sessions 339-353.
-
--160..-194. **(s297-337) M5 audio de-stubbing: the full gate-byte-reversal/VI=640-stall arc, 41
-    sessions of instrumentation each superseded by the next, closed by item -209..-195's (s339) source
-    proof.** Chased a false "missing call count" (closed s325: the gap was the diagnostic-cap bug
-    itself), fixed the `setDisplayMode` VI=320 hang (s326-328), then resolved `reapplyDisplayMode`'s
-    VI=640 stall via `cinematicLoopBody`'s internal self-loop (s339). `initMusyXEngine`'s gate found
-    dead code, never called (s306, Overturned Conclusions). Full detail: PROJECT-OVERVIEW §9; raw:
-    `PORTING-STATE` Sessions 297-337.
+-160..-230. **(s297-376) M5 audio de-stubbing arcs — gate-byte-reversal/VI=640-stall (41 sessions,
+    s297-337), Step 5 guard-hunting (Thread A `coalesceFreeHeapBlocks`, Thread B
+    `drainMeshReleaseQueue` linked-list corruption, heapWalker GUARD5, s354-370), gate-promotion/
+    crash-rate-comparison (s339-353), and Step 6 PCM-sanity + C88 pre-title-hang/VI-trigger (s371,
+    s373-376) — ALL CLOSED, no outstanding M5 thread.** Every mechanism, guard site, and soak-tooling
+    lesson: `docs/PROJECT-OVERVIEW.md` §9-§12; raw: `PORTING-STATE` Sessions 297-376.
 
 -159..-14 (excluding -20, kept below). **Ten closed investigation lineages (nine from s314, plus
     the s297-337 M5 gate-reversal arc folded in s346), s99-s337 — all CLOSED, no outstanding action.**
@@ -472,7 +242,7 @@ oldest). Current top is -257 (s408); the next new item takes -258 and is inserte
     `heapFreeListDequeue`, `-0x25A4` hangar-list-pointer family, breadcrumbs B2-B14), the
     audio-array-corruption race fix (s145/147/148), the `submitDmaRequestBatch` indirect-caller find
     (s101), the CALayer/campose SIGSEGV hunt, the regen-pipeline-idempotency root cause, and the M5
-    audio gate/VI=640-stall chase (item -160..-194 above). One-paragraph-per-lineage summaries:
+    audio gate/VI=640-stall chase (item -160..-230 above). One-paragraph-per-lineage summaries:
     `docs/PROJECT-OVERVIEW.md` §9; full raw detail: `PORTING-STATE` Sessions 99-337.
 
 -20. **Regen-pipeline reliability bug (s120, confirmed intermittent not deterministic).** Root cause:

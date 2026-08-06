@@ -34555,3 +34555,45 @@ standing item -3 rule (ask the user before committing there).
 Outcome: ADVANCED (40 real relocations landed across two independently live-verified batches, plus a
 durable tooling fix — the candidate-list generator is now a persisted script instead of a re-typed
 inline snippet).
+
+## Session 409 (2026-08-06) — MAINTENANCE: CURRENT-TRUTH compacted 60,639→39,696 bytes (net -231 lines);
+collapsed the s400-408 M4 item -249 bulk-relocation saga and the s297-376 M5 audio de-stubbing arcs into
+compact pointer paragraphs.
+
+Step 0 of ITERATION.md fired: `wc -c docs/CURRENT-TRUTH.md` printed 60,639 bytes, over the 60,000
+maintenance trigger (s408's own NEXT.md had already flagged this as the next iteration's first task).
+This iteration was MAINTENANCE only — no experiment run.
+
+**What ran**: read the full CURRENT-TRUTH.md (677 lines) and identified the largest compactable block —
+items -257 through -249 (s408 down to s400), the "M4 item -249 phantom-overlay-function relocation" saga:
+nine sessions' worth of session-by-session write-up (~195 lines) covering the initial batch, the s401
+batch-size regression and its CMakeLists.txt CONFIGURE_DEPENDS fix, the m4_known_skip.txt tooling, six
+more clean n=20 batches across s402-s403 and s408, and the s404-s407 crash-bisection sub-thread that
+isolated `initPlayerCraftTrailBuffers` as a genuinely bad function (now in m4_known_bad.txt). Collapsed
+into a single `-249..-257` item (~22 lines) preserving every session's headline finding, all counts
+(145/778 done, 653 remain), and the HYPOTHESIS-ID — full raw detail remains in `PORTING-STATE` Sessions
+400-408, unchanged and un-touched by this pass (per the project convention that PORTING-STATE, not
+PROJECT-OVERVIEW, is the durable ledger for arcs still in progress).
+
+Since that alone (677→504 lines, -173) fell short of the 200-net-line ADVANCED bar, also collapsed four
+already-fully-closed M5 items (-226..-230 Step 6 PCM-sanity/C88 chase, -225..-210 Step 5 guard-hunting,
+-209..-195 gate-promotion/crash-rate-comparison, -160..-194 the 41-session gate-byte-reversal arc — all
+already cross-referenced into `docs/PROJECT-OVERVIEW.md` §9-§12, so no information was lost by trimming
+CURRENT-TRUTH's own copy) into one `-160..-230` pointer paragraph. Net: 677→446 lines (-231, past the
+threshold), 60,639→39,696 bytes (close to the ~35 KB stretch target). Fixed the two stale cross-references
+this created (item -159..-14's "item -160..-194 above" pointer, and M4's goal-stack summary's "-253..-257"
+pointer) and bumped the USER DIRECTIVE maintenance-pass history line (twelve passes → thirteen, added s409).
+Did not touch the "Current truth" env-var/timeline prose or the Regeneration section's Standing warnings
+(both explicitly protected — used every iteration) — that means the "reviewed through s372" headline is
+still stale; left alone since freshening it would require re-verifying the whole prose block, out of
+scope for a mechanical compaction pass.
+
+No queued soaks landed between iterations this time (`scratch/agent/SOAK-RESULTS.md` tail unchanged since
+s408's own read — last new line was `s400_batch1_verify`, already folded into the ledger by s400/s402+).
+`scratch/agent/NEXT.md`'s M4 bulk-relocation recipe (n=20 batches, mandatory live-verify each) is
+unaffected by this pass and carries forward unchanged as the next work unit, with its own maintenance-note
+paragraph removed since that maintenance is now done.
+
+Outcome: ADVANCED (a documentation-compaction maintenance pass with a 231-net-line shrink, exceeding the
+contract's >=200-line ADVANCED threshold; no experiment attempted, none was in scope for this iteration
+type).

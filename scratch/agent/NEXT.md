@@ -84,9 +84,8 @@ None currently queued — each batch's live-verify is inline (phase-gated, ~90-1
 
 ## Maintenance note
 
-`docs/CURRENT-TRUTH.md` is at ~61 KB after this session's edit — **over the 60000-byte Step-0 trigger**.
-The next iteration MUST run `wc -c < docs/CURRENT-TRUTH.md` first per ITERATION.md Step 0, and if still
-over 60000, run a MAINTENANCE pass before any further M4 work (compact toward ~35 KB, migrate durable
-material to PROJECT-OVERVIEW.md, renumber the backlog into one monotonic sequence — items -253 through
--257 are prime candidates to compress into a single summarized paragraph the way -239..-247 and
--231..-238 already are).
+s409 was a MAINTENANCE iteration (Step 0 triggered at 60,639 bytes): collapsed items -257..-249
+(the s400-408 M4 saga) and four closed M5 items into two compact pointer paragraphs — 677→446 lines,
+60,639→39,696 bytes. `docs/CURRENT-TRUTH.md` is now under the 60000-byte trigger again; no maintenance
+action needed at the start of the next iteration unless it has grown back over the cap. Full detail:
+`PORTING-STATE` Session 409.
