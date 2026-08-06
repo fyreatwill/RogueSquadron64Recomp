@@ -32621,3 +32621,70 @@ Outcome: ADVANCED (real code change: 21 more patch sites hardened against the fi
 class, running total 110 of 176 converted, 66 remain; plus two process-methodology findings — delegating
 the target-function-identification pass itself once clusters get small, and the cwd-relative ROM lookup
 trap when launching the binary via an inline absolute-path background command).
+
+## Session 383 (2026-08-06) — sanctioned tooling: fixup_game_funcs.py backport batch 6/N (21 more converted, 131/176 total)
+
+Continuation of the fixup_game_funcs.py function-scope-match backport (s377-379, s381-382 prior batches).
+66 remained after batch 5, confirmed by re-running `scratch_batch3/scan_filescoped.py` cold (66 sites,
+line numbers listed).
+
+Delegated the identification pass (per s382's process finding) to a read-only Explore subagent: gave it
+all 66 site line numbers, asked it to grep each site's MIPS address in `RecompiledFuncs/funcs_*.c`, walk
+up to the enclosing `RECOMP_FUNC` anchor, and flag excluded classes / multi-function-loop sites / unresolved
+collisions. It returned a full 66-row table plus a recommended batch: `processSceneNode` (funcs_4.c, 10
+sites) + `renderUnlitMeshFaces` (funcs_4.c, 7 sites) + `drawSubtitleText` (funcs_4.c, 2 sites) +
+`evalCubicSplineAtTime` (funcs_4.c, 2 sites) = 21 sites, all in the same source file. It also surfaced two
+things worth keeping for future batches: (1) line ~8299 (`runHangarMenuFromOverlay`) is a genuine latent
+collision — the bare label anchor its pattern matches also textually occurs in an unrelated function
+(`hasKasanMoorDefected`, funcs_29.c) in a different overlay, so one `subn` call currently patches two
+files; left untouched, needs explicit file-scoping before it can convert safely. (2) the
+`initFactor5Mutex`-adjacent region (lines 7930-8006, 11163-11357) is NOT one function as a prior session's
+naive proximity scan assumed — it's 6+ distinct functions (`initFactor5Mutex`, `factor5MutexAcquire`,
+`factor5MutexRelease`, `initMusyXEngine`, `resetMusyXEngineState`, `update3DAudioFrame`,
+`tickAllActiveSongs`, `tickAudioSequencerFrame`, `viRetraceHandlerThread`, `musyxSynthFrame`) despite file
+adjacency — address-grep, not anchor-proximity, is required there; left for a future batch since none of
+these clusters alone exceeded ~2-4 sites.
+
+Delegated ONLY the conversion-editing step to a second subagent (general-purpose, default model), same
+division of labor as prior batches: convert the 21 sites' `re.subn(pattern, repl, text)` calls to slice a
+function-scoped `body` first, reusing the established brace-matching idiom already in the file. Backup
+taken first: `fixup_game_funcs.py.pre-scope-backport-backup-batch6`. One site in the
+`renderUnlitMeshFaces` group needed a widened slice starting at the function's own signature line (a
+tracer-helper injection that prepends a helper function before `RECOMP_FUNC`, not purely inside the body)
+— handled correctly by the subagent, confirmed by the verification pass below. AST scan after edits: 45
+remaining file-scoped sites (66 − 21, exact); `py_compile` clean.
+
+Verification (orchestrating session): cleared `RecompiledFuncs/`, regenerated via `make_elf.py` +
+`N64Recomp` once with the pre-batch6 backup script (pass A) and once with the converted live script (pass
+B). `diff` on the two fixup patch reports: empty (byte-identical, 375 lines each). `diff -rq` on the two
+`RecompiledFuncs` output trees: empty (zero-diff). No latent cross-function anchor collisions in this
+batch's 21 sites.
+
+Build: `cmake --build . -j8` succeeded clean (only the pre-existing harmless `DDIV`/`DMULT`
+sign-conversion warnings, no new warnings or errors).
+
+Soak (orchestrating session, `scratch_batch6/run_soak.sh` wrapper per s382's cwd-relative-ROM-lookup
+fix): no ROM placeholder message in the log head, confirming correct launch cwd. 0 crash markers
+(`UnhandledJumpTarget`/`[defer-drop]`/`[dmem-race]`/`Assertion`/SIGSEGV/SIGBUS/SIGTRAP/CRASH` all grep to
+0). VI width traversed the full `0→320→640→1024` timeline (1024 reached at 45.6s, update_screen #2701)
+and ran steady at 1024 for another ~40s with growing `dpc-fwd`/task counters before a clean SIGKILL (PID
+found via `ps aux`, not `pgrep`, since the pattern match against the wrapper-launched process needed the
+literal binary name). Same as s382, this run again did NOT log an explicit `width=512` line for the
+intermediate resolution stage (0 matches) — now 2/2 batches in a row without it, still read as timing
+variance rather than a regression since none of this batch's 4 target functions
+(`processSceneNode`/`renderUnlitMeshFaces`/`drawSubtitleText`/`evalCubicSplineAtTime`) touch VI/resolution
+logic and both runs were otherwise fully healthy; if a batch ever DOES touch VI logic and also lacks this
+line, that would be the discriminating signal to escalate.
+
+Excluded site-classes (the `0x8008EC88` audio-gate hand patch; the
+`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair; the whole-file `$zero` sweep at line ~55; the
+`_s284_deref_guard_sites` multi-function loop; the `runHangarMenuFromOverlay` overlay-collision site)
+confirmed untouched — not present in this batch's target range.
+
+**Running total: 110 + 21 = 131 of 176 converted (confirmed by scan: 45 remain).**
+
+Outcome: ADVANCED (real code change: 21 more patch sites hardened against the file-scope fragility class,
+running total 131 of 176 converted, 45 remain; plus a genuine latent-collision finding at line ~8299
+(`runHangarMenuFromOverlay`/`hasKasanMoorDefected`) parked for a dedicated fix, and confirmation that the
+`initFactor5Mutex`-adjacent region is 6+ distinct functions, not one, correcting a prior session's
+mis-scan).

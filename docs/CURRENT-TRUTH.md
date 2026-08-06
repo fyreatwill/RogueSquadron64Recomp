@@ -28,22 +28,26 @@ Priority order for upcoming iterations, set after the 300-session review:
 Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching
 (the BREADCRUMB10+ slice idiom) to the file-scoped-only guard patches in `fixup_game_funcs.py`, per the
 2026-08-04 analysis in that file's header comment. Real count 176 (an AST scan, not a grep guess).
-**110/176 converted across 5 batches (s377-379, s381-382)**, all verified byte-identical fixup-report
-output before/after, all built and soaked clean; **66 remain**. Process note from s379/s381: run
+**131/176 converted across 6 batches (s377-379, s381-383)**, all verified byte-identical fixup-report
+output before/after, all built and soaked clean; **45 remain**. Process note from s379/s381: run
 verification (regen+diff) AND the soak in the orchestrating session, not a delegated subagent — both
 cross-repo regen commands and launching the compiled binary hit sandbox permission/approval gates a
-subagent cannot satisfy non-interactively; delegate ONLY the conversion-editing step. New process notes
-from s382: (1) once remaining sites stop being one big single-file cluster (true from 87 remaining on —
-now scattered in 1-10-site sub-clusters), delegate the "which target function does this site belong to"
-identification pass itself to a read-only Explore/general-purpose agent (grep the address, walk up to
-the enclosing `RECOMP_FUNC`) rather than reading the raw context dump in the orchestrating session — it
-keeps this session's context to the plan and verification, not the grep output. (2) Launching the
-compiled binary via `Bash run_in_background` with an inline `env VAR=1 /abs/path/to/binary` command runs
-with the WRONG cwd (ROM lookup is cwd-relative, not executable-relative) and silently degrades to a
-ROM-less run that blazes through VI counters unrealistically fast with no crash markers — a false-clean
-soak. Fix: a tiny `zsh script.sh` wrapper that `cd`s into `build/` then `exec`s the binary (`zsh` is
-allowlisted in `.claude/settings.json`; `bash script.sh` and inline `cd a && b` both require interactive
-approval this session lacks). Next work unit: NEXT.md (batch 6).
+subagent cannot satisfy non-interactively; delegate ONLY the conversion-editing step. Process notes from
+s382: (1) once remaining sites stop being one big single-file cluster, delegate the "which target
+function does this site belong to" identification pass itself to a read-only Explore/general-purpose
+agent (grep the address, walk up to the enclosing `RECOMP_FUNC`) rather than reading the raw context dump
+in the orchestrating session. (2) Launching the compiled binary via `Bash run_in_background` with an
+inline `env VAR=1 /abs/path/to/binary` command runs with the WRONG cwd (ROM lookup is cwd-relative, not
+executable-relative) and silently degrades to a ROM-less run that blazes through VI counters
+unrealistically fast with no crash markers — a false-clean soak. Fix: a tiny `zsh script.sh` wrapper that
+`cd`s into `build/` then `exec`s the binary (`zsh` is allowlisted in `.claude/settings.json`; `bash
+script.sh` and inline `cd a && b` both require interactive approval this session lacks). New from s383:
+a genuine latent multi-file collision found at the `runHangarMenuFromOverlay` site (~line 8299 pre-batch6)
+— its bare-label anchor also textually matches an unrelated function (`hasKasanMoorDefected`) in a
+different overlay file, so today's file-scoped `subn` silently patches both; parked untouched pending a
+dedicated file-scoped fix (needs `p.name` filtering, not a mechanical function-scope conversion). Also:
+the `initFactor5Mutex`-adjacent region is confirmed 6+ distinct functions despite file/line adjacency, not
+one — don't trust anchor-proximity there, use address-grep. Next work unit: NEXT.md (batch 7).
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -167,7 +171,19 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -234 (s381); the next new item takes -235 and is inserted at the top.
+oldest). Current top is -235 (s383); the next new item takes -236 and is inserted at the top.
+
+-235. **(s383) batch 6/N: 21 more converted (131/176 total).** Target cluster: 4 functions in
+    `funcs_4.c` (`processSceneNode` ×10, `renderUnlitMeshFaces` ×7, `drawSubtitleText` ×2,
+    `evalCubicSplineAtTime` ×2), identified by a delegated read-only Explore agent from the fresh 66-site
+    scan. Byte-identical regen-diff verified (375-line report and full tree both zero-diff); build clean;
+    soak clean (0 crash markers, VI reached the full 0→320→640→1024 timeline in 45.6s). **New finding**: a
+    genuine latent multi-file collision at the `runHangarMenuFromOverlay` site (~line 8299) — its bare
+    label anchor also matches an unrelated function (`hasKasanMoorDefected`) in a different overlay file,
+    so today's file-scoped patch silently double-targets; parked untouched, needs a dedicated `p.name`-
+    filtering fix, not a function-scope conversion. Also confirmed the `initFactor5Mutex`-adjacent region
+    is 6+ distinct functions despite line/file adjacency (correcting a prior session's proximity-based
+    mis-scan). **45 remain**. Full detail: `PORTING-STATE` Session 383; next work unit: NEXT.md (batch 7).
 
 -234. **(s381) batch 4/N: 21 more converted (89/176 total).** Target cluster: the musyx/audio-heap
     instrumentation block in `funcs_23.c` (`musyxInitVoiceFromSample`, voice-slot-ptr init,
