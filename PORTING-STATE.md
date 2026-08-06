@@ -33241,3 +33241,86 @@ this session's edits (maintenance iterations don't touch the active work-unit pl
 
 Outcome: ADVANCED (a triggered Step-0 maintenance pass with a 200-line net shrink of docs/CURRENT-TRUTH.md
 meets the explicit maintenance-iteration ADVANCED bar in tools/agent/ITERATION.md).
+
+## Session 392 (2026-08-06) — M3 idiom-class audit: `hangarInitialize` "chunk 3a" of the `-0x25A4` hangar-list-pointer family, 29 sites guarded (`HYPOTHESIS-ID m3-idiom-audit-fresh`, iteration 4)
+
+Continued the standing M3 idiom-class-audit strategic-priority item, same class as s390 (`hangarInitialize`'s
+unguarded `-0x25A4($sN)` hangar-list global-pointer-reload idiom, funcs_27.c), per s391's unchanged NEXT.md
+plan. s390 left 53 raw `-0X25A4` hits unguarded past its chunk 2b exit label `L_800AB618` (line 125940)
+through the function's own end (`RECOMP_FUNC computeAngleToTargetFromTransform` at line 133742).
+
+**Step 1 (re-confirm boundaries).** Both boundary line numbers matched NEXT.md's pre-session numbers exactly
+(no drift this session, unlike some prior chunks) — `L_800AB618` still at 125940, the function's next
+`RECOMP_FUNC` still at 133742, 53 raw `-0X25A4` hits confirmed in that span via the standard `awk` count, 0
+`GUARD` matches (fully unguarded). Found the function's only internal `return;` statements in this remaining
+span are at lines 125976 (immediately following, not a useful boundary), 132777, and 133738 — i.e. the
+natural full-epilogue split points are sparse; most internal control flow uses `goto` to shared labels that
+fall through to one of these two returns, not their own independent returns. Split the 53-site remainder at
+the 132777 `return;`: 32 raw hits in lines 125940-132777 ("chunk 3a", this session), 21 in 132777-133742
+("chunk 3b", left for next session).
+
+**Step 2/3 (classify).** Delegated the read-and-classify pass for chunk 3a's 32 raw hits to a general-purpose
+subagent (self-contained prompt: exact file/line range, the reload/dereference pattern to look for, the
+NEEDS-GUARD/SAFE criteria, and instructions to extract verbatim anchor text with a programmatic
+uniqueness check). Result: 29 NEEDS-GUARD, 3 confirmed SAFE (reload chained via `ADD32` then passed only as
+a call argument to `static_5_800AE3EC`/`lerpVec3`\[x2\], never dereferenced in this function — guest
+addresses 0x800ACA7C, 0x800ACF54, 0x800ACF98). One site (agent-flagged "ambiguous," guest addr 0x800ADA50)
+turned out to share a control-flow join at label `L_800ADB18` with another site (guest addr 0x800ADB10) —
+resolved without special-casing: since each of the two paths gets its own guard immediately at its OWN
+reload (before the register reaches the shared label), no joint handling at the label itself is needed. Did
+NOT hand-transcribe the agent's markdown anchors into the patch (transcription-error risk on 29 multi-line
+blocks) — instead re-extracted every anchor programmatically straight from the live source file using the
+agent-reported guest-address pairs as slice boundaries, then verified each of the 29 extracted anchors is
+still a unique substring of the 13,800-line file via a direct Python `str.count()` check before writing
+any patch code. All 29 confirmed unique on the first pass.
+
+**Bail target.** Reused an existing label, `L_800ADB2C`, rather than inserting a new one — already a live
+`goto` target from 4 sites within this same sub-block (confirmed via grep, none from outside chunk 3a) that
+leads to the function's own normal-flow teardown: a few more real calls
+(`releaseSceneObjectMeshTree`/`beginSceneRenderFrame`/`requestViFeatureChange`) then register restore and
+`return`. Unlike chunk 2's bail labels (which sat immediately pre-return), this one runs a few more function
+calls first — but it's an already-exercised normal control-flow path in the original decompiled code, not a
+synthetic exit, matching the established "reuse an existing nearby label" discipline from every prior chunk.
+
+**Patch mechanics.** Same guard shape as every prior `-0x25A4` site in this family (raw KSEG0-range check
+`0x80000000..0x80800000` on the just-reloaded register, `goto` bail on failure, opt-in
+`ROGUESQ_LOG_S392_H3A_GUARD` diagnostic). Added `_s392_h3a_guard_text`/`_s392_h3a_sites` to
+`fixup_game_funcs.py` (N64Recomp repo, untracked — same as every prior chunk). Wrote the 328-line patch
+block to a scratch file first and syntax-checked it standalone (`ast.parse`) before splicing it into
+`fixup_game_funcs.py` at the same insertion point every prior chunk used (immediately after the s390 block,
+before the `updateAnimatedTextureStreaming` comment) — avoided several sandbox string-escaping filter
+trips (nested f-string braces, embedded `#` after newlines in a `bash -c` argument) by routing the
+guard-text-function source through the `Write` tool instead of a `bash -c`/heredoc, which is worth noting
+for any future session hitting the same filters on a similar multi-brace f-string patch block.
+
+**Verify.** Standard protocol: Python `shutil.copytree` backup, delete `funcs_*.c`, regen (`make_elf.py` →
+`N64Recomp` → `fixup_game_funcs.py`), diff the regenerated tree against the backup. Fixup report: all 29
+sites patched `x1` (no `SKIPPED`/duplicate-match lines). Diff: only `funcs_27.c` differs, 377 added lines /
+0 removed (13 lines × 29 guards), confirmed byte-identical-except-intended-diff. Build clean (only
+preexisting unrelated warnings). 3 soaks, `HOLD_S=280`,
+`zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, run sequentially (not parallel — "one game run
+at a time"):
+  - verify1: 0 `[CRASH]` markers over the full 280s hold; title reached at 45.8s; 10 `[keys]` lines fired
+    (driven, not idle) — a clean positive-controlled run.
+  - verify2: 36 `[CRASH]`-tagged lines, but only ONE distinct crash event
+    (`last-guest-pc=0x8000247c`, `pc-symbol=coalesceFreeHeapBlocks+4424`) — the already-closed s354-366
+    Thread-A heap-coalesce guard family (`funcs_0.c`, nowhere near `funcs_27.c`/`hangarInitialize`),
+    36 lines being the crash's own multi-line dump, not 36 separate crashes. Crash landed at 149.8s, well
+    past hangarInitialize's own execution window.
+  - verify3: same pattern, ONE distinct crash event (`last-guest-pc=0x80010830`,
+    `pc-symbol=submitSceneNodeRender+27524`) — a 27KB symbol offset is itself suspicious (likely a
+    nearest-symbol misattribution, same failure mode s389 found for a different address), and regardless
+    not in `funcs_27.c` and not near any of this session's 29 guarded addresses (which span
+    0x800AB7D4-0x800ADB1C).
+  - 0 guard fires across all 3 runs (the new `ROGUESQ_LOG_S392_H3A_GUARD` diagnostic wasn't armed by
+    `run_s327waitpump.sh`, matching s390's own soak precedent for this recipe — the guard still functions
+    defensively regardless of the log var, it only gates the `fprintf` diagnostic). No crash in any run
+    attributed to the guarded span or to `hangarInitialize` at all — proactive/defensive fix, consistent
+    with every prior chunk in this family.
+
+**Net:** 29/32 sites in chunk 3a guarded (3 confirmed SAFE, 0 skipped). 21 raw `-0X25A4` hits remain in
+chunk 3b (lines 132777-133742, the function's own tail past this session's cut point) for a future session.
+`docs/CURRENT-TRUTH.md` item -241 records this; NEXT.md rewritten for chunk 3b.
+
+Outcome: ADVANCED (real code change: 29 new guard sites landed, verified via the standard regen-diff-build-
+soak protocol, 0 regressions attributable to the change across 3 soaks).

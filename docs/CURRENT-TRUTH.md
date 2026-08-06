@@ -148,7 +148,23 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -240 (s390); the next new item takes -241 and is inserted at the top.
+oldest). Current top is -241 (s392); the next new item takes -242 and is inserted at the top.
+
+-241. **(s392) M3 idiom-class audit: `hangarInitialize` "chunk 3a" of the `-0x25A4` hangar-list-pointer
+    family, 29 sites guarded.** Continued s390's chunk 2 (unchanged since s391's maintenance pass). Split
+    the 53 remaining raw hits at the function's own next internal `return;` (line 132777): chunk 3a
+    (lines 125940-132777, 32 raw hits, 29 guarded + 3 confirmed SAFE) this session, chunk 3b (21 hits,
+    132777-133742) next. Classification delegated to a subagent, anchors re-extracted programmatically
+    from source (not hand-transcribed) and uniqueness-verified before patching. Bail target: existing
+    label `L_800ADB2C`, reused (already a live `goto` target from within the sub-block, though unlike
+    prior chunks it runs a few more real calls before returning rather than sitting immediately
+    pre-return — still an already-exercised normal-flow path, not synthetic). Verified: byte-identical-
+    except-intended-diff regen (only `funcs_27.c`, 377 added / 0 removed lines = 13 × 29 guards); build
+    clean; 3 sequential soaks — 1 fully clean 280s hold (title reached, keys driven), 2 hit already-
+    catalogued unrelated crash families (`coalesceFreeHeapBlocks+4424` = closed s354-366 Thread A;
+    `submitSceneNodeRender+27524`, likely a nearest-symbol misattribution) — neither in `funcs_27.c`, 0
+    fires attributable to the new guards or the `-0x25A4` family. Full detail: `PORTING-STATE` Session
+    392; next work unit: NEXT.md — chunk 3b, the function's final ~21 sites, self-evidently unfinished.
 
 -240. **(s390) M3 idiom-class audit: `hangarInitialize` "chunk 2" of the `-0x25A4` hangar-list-pointer
     family, 11 sites guarded.** The s389 soak population was fully mined; queued 3 fresh unbiased soaks
@@ -164,8 +180,7 @@ oldest). Current top is -240 (s390); the next new item takes -241 and is inserte
     was exactly the 11 insertions); build clean; 3 soaks, none crashed inside/downstream of the new
     guards or in the `-0x25A4` family (one hit the already-closed heapWalker-GUARD5 noise address
     `0x8000834c`). 0 guard fires (proactive fix). ~54 raw `-0x25A4` hits remain past line 125822 (chunk
-    3+). Full detail: `PORTING-STATE` Session 390; next work unit: NEXT.md — continue the SAME class
-    (chunk 3), self-evidently unfinished.
+    3+). Full detail: `PORTING-STATE` Session 390.
 
 -239. **(s389) M3 idiom-class audit: "Lookup" struct-family unguarded table-base-pointer dereference, 4
     sites guarded.** First systematic M3 audit since the backport thread closed. A recurring
