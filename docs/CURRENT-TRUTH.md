@@ -148,7 +148,56 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -244 (s394); the next new item takes -245 and is inserted at the top.
+oldest). Current top is -245 (s395); the next new item takes -246 and is inserted at the top.
+
+-245. **(s395) M3 idiom-class audit: `funcs_27.c` sweep-remainder closed (Step 1 of s394's plan) —
+    found and fixed a SECOND, independent instance of the s392-class "stale register" guard-placement
+    bug, this time in the much older s285 chunk-1 family.** Delegated a fresh per-site classification of
+    all 102 raw `-0x25A4` loads in `hangarInitialize` to a subagent (verify existing coverage; classify
+    every uncovered site NEEDS-GUARD / SAFE / UNCLEAR, matching every prior chunk's methodology). Result:
+    86 already correctly covered, 15 confirmed SAFE (call-arg-only, never dereferenced), 1 genuine
+    NEEDS-GUARD site — and a bonus finding, independently verified by direct source read: the existing
+    `S285_H1_8` guard (file line ~122483, from s285, predates the s394 anchor-placement lesson) checks
+    `ctx->r4` at a point where r4 still holds a STALE value left over from a different, unrelated combine
+    65 lines earlier (`S285_H1_6`'s own combine) — not the fresh value this site's own raw
+    `-0x25A4($s4)` reload produces three lines later, which is then dereferenced completely unguarded
+    (`MEM_W(0X24, ctx->r4) = 0;`). Same bug CLASS as item -243/-244, different session/chunk of origin,
+    never caught because (like chunk 3a) nobody armed `ROGUESQ_LOG_S285_GUARD` with a positive control
+    during s285's own soaks. Fix: added ONE new guard (`S395_SWEEP_1` in `fixup_game_funcs.py`, bail
+    `S285_H1_BAIL`) anchored correctly — right after the real combine (`ctx->r4 = ADD32(ctx->r17,
+    ctx->r3)`), immediately before the dereference — leaving the old broken `S285_H1_8` guard in place
+    unchanged (harmless dead-weight: it may occasionally cause a spurious early-bail if the *stale* r4
+    happens to look invalid, but does not itself under-protect anything now that the real dereference is
+    covered). Removing/relocating `S285_H1_8` is a separate, deliberately deferred cleanup — not done
+    this session to keep the diff minimal and well-scoped. **Verified**: regen diff shows ONLY
+    `funcs_27.c` changed, 14 lines added / 0 removed (exactly one new guard block, matching the predicted
+    shape for a pure addition). Build clean. 4 soaks (see PORTING-STATE Session 395 for full detail):
+    **verify1** (armed `ROGUESQ_LOG_S395_SWEEP_GUARD=1`, default env) — scene reached (574
+    `[hangar-loop]` lines as positive control), 0 crashes, full 280s+ hold, `[s395-sweep-guard]` fired 0
+    times (plausible null result — the site's pointer was valid throughout this run). **verify2/verify2b**
+    (default env, retried after cleanup) each hit a PRE-EXISTING, apparently non-deterministic
+    high-volume logging pathology unrelated to this fix and unrelated to `hangarInitialize`: unbounded
+    `RS_FREE_WALK` per-node logging (10GB before being killed) and a `[mesgqueue-guard]` diagnostic
+    firing in a tight retry loop (7GB, `bad_total` counter reached ~38 million) — both pre-existing
+    footguns (the former already flagged by s345's own comment in `run_s327waitpump.sh`; the latter a
+    NEW observation, logged below, not actioned this session). **verify2c/verify3** (same env but with
+    those two log sources disabled to avoid the storm) avoided it but — apparently because disabling
+    `ROGUESQ_LOG_SCHED` shifted frame timing enough to miss the fixed-time title-screen key schedule —
+    never advanced past VI width=1024 (title), so never exercised `hangarInitialize` at all; still 0
+    crashes over their full ~330s runs. **verify4** (default env retry) hit an unrelated early-boot crash
+    in `musyxSynthFrame` (`last-guest-pc=0x8000834c`, well outside `hangarInitialize`'s
+    `0x800AA6D8`-`0x800AE084` range) before even reaching the title phase — not previously catalogued by
+    this exact symbol name, consistent with the project's long-documented audio-subsystem boot
+    intermittency. **Net: 0 crashes attributable to the new guard or the touched code region across all
+    4 attempts**; one fully valid scene-reached run with a same-run positive control is the primary
+    evidence, the other three are crash-free-but-inconclusive-or-unrelated secondary confirmation.
+    Two NEW observations logged for a future session (not this session's scope, M3 priority is systematic
+    audits only): (1) the leftover `S285_H1_8` stale-guard cleanup; (2) the `[mesgqueue-guard]` tight
+    retry-loop — a message-queue send apparently retries forever against a permanently-bad `mq_=0x1D0`
+    pointer rather than giving up, worth a look since it could be a genuine (if rare) hang-adjacent bug in
+    its own subsystem, unrelated to `-0x25A4`. Remaining sweep work per s394's original plan: `funcs_40.c`
+    (69 raw hits vs 67 markers, ~2 candidates) and `funcs_19.c`'s 1 float-register outlier — both still
+    unaudited, next session's work unit.
 
 -244. **(s394) FIXED item -243: all 29 of s392's chunk-3a guards rebuilt with correct anchor placement,
     verified.** Wrote a fresh extraction/verification script (`ast.literal_eval` on the live

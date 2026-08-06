@@ -33522,3 +33522,141 @@ next work unit.
 Outcome: ADVANCED (the guard-placement correctness bug from item -243 is fixed and verified across all 29
 sites; the armed diagnostic soak directly confirms the fix's expected behavior with a same-run positive
 control, closing out the audit's chunk-3a defect for good).
+
+## Session 395 (2026-08-06) — M3 idiom-class audit: `funcs_27.c` sweep-remainder closed; found+fixed a
+second, independent instance of the s392-class stale-register guard-placement bug (this time in s285's
+chunk-1 family)
+
+Continuing NEXT.md's Step 1 (get an accurate per-site classification of `hangarInitialize`'s remaining
+raw `-0x25A4` loads in `funcs_27.c`, after s394 fixed chunk 3a's placement bug). Step 0 maintenance check:
+`wc -c docs/CURRENT-TRUTH.md` = 49859, under the 60000 trigger, so this was a normal work-unit iteration.
+
+**Mechanical scan attempts, and why they were unreliable.** Wrote two Python scripts to enumerate raw
+`ctx->rN = MEM_W(ctx->rM, -0X25A4);` sites and cross-reference against existing guard blocks. The first
+(proximity-window: bound each site's search window by the NEXT raw site) produced false positives —
+e.g. line 122414 (`S285_H1_6`'s own raw load) was flagged "uncovered" purely because a second raw load 2
+lines later (`S285_H1_7`) truncated the search window before reaching `S285_H1_6`'s own guard 5 lines
+further down. The second (register-name-matching within a fixed 150-line window, no lookahead regex)
+still produced noisy results (16 vs 19 "uncovered" candidates depending on window shape) because a
+hand-rolled regex negative-lookahead (`(?!...)`) was defeated by `\s*` backtracking — a classic regex
+footgun, not a logic error in the intended check. Neither mechanical pass was trustworthy enough to act
+on directly; this matches NEXT.md's own prediction ("Recommended: delegate this classification pass to a
+subagent") and is why the actual classification below was delegated rather than hand-tuned further.
+
+**Delegated classification.** One `general-purpose` subagent given the exact guard-block shape, the
+s394 anchor-placement lesson (anchor must start AFTER the raw load / ADD32 combine, never at the raw
+load's own two lines — repeating that mistake is exactly what caused item -243), and the three-way
+classification protocol (NEEDS-GUARD / SAFE / UNCLEAR) used by every prior chunk. It read real source
+with `sed` for each of the 102 raw sites (not just grep context) and returned:
+- 86 already correctly covered by an existing guard checking the same register before any dereference.
+- 15 confirmed SAFE — the reloaded pointer is combined and used ONLY as a function-call argument, never
+  dereferenced via `MEM_*` in this function (matches the s390-chunk-2 precedent of confirmed-SAFE
+  call-arg-only sites).
+- 1 genuine NEEDS-GUARD site (`S395_SWEEP_1`, line 122478 in the pre-patch file: `ctx->r3 = MEM_W(ctx->r20,
+  -0X25A4);`, combined at line 122498 into `ctx->r4 = ADD32(ctx->r17, ctx->r3)`, dereferenced unguarded
+  two lines later at `MEM_W(0X24, ctx->r4) = 0;`).
+- 0 UNCLEAR.
+
+**Bonus finding, independently re-verified by direct `Read` before acting on it.** The subagent flagged
+that the reason `S395_SWEEP_1`'s dereference was unguarded is more interesting than a simple gap: an
+EXISTING guard, `S285_H1_8` (from s285, chunk 1, file line ~122483), sits right at that spot and LOOKS
+like it should cover this — but it checks `ctx->r4` at line 122486, and at that point `ctx->r4` still
+holds the value left over from a completely different, unrelated combine 65 lines earlier
+(`S285_H1_6`'s own `ctx->r4 = ADD32(ctx->r17, ctx->r4)` at line 122418). The FRESH `r4` this site actually
+needs to guard gets computed at line 122498 (from the raw-loaded `r3`, not the stale `r4`), twelve lines
+AFTER `S285_H1_8`'s check already ran, and is dereferenced two lines after that with no guard at all. I
+read lines 122470-122520 directly (not just trusting the subagent's report) and confirmed this by hand:
+`S285_H1_8` is checking the wrong variable's stale value, and the real dereference at line 122500 is
+genuinely unguarded. This is the SAME bug class item -243/-244 fixed (a guard anchored before the value
+it's meant to check is actually computed) — but a different session's chunk (s285, not s392), and it was
+never caught for the same underlying reason: nobody armed `ROGUESQ_LOG_S285_GUARD` with a positive
+control in a soak that would have shown the guard firing on a value that was never the real one at risk.
+
+**Fix applied.** Added ONE new guard-site family to `fixup_game_funcs.py` (`_s395_sweep_sites`, matching
+the exact structure of every prior chunk's `_sXXX_..._sites` list and guard-text function): `S395_SWEEP_1`,
+register `r4`, bail label `S285_H1_BAIL` (the existing chunk-1 bail label, already reachable from this
+exact code region — every other `S285_H1_*` guard already `goto`s it, so no new label needed). Anchor
+starts at the line immediately after the real combine (`// 0x800AA53C: addu $a0, $s1, $v1` /
+`ctx->r4 = ADD32(ctx->r17, ctx->r3);`) through the dereference itself (`MEM_W(0X24, ctx->r4) = 0;`),
+following s394's now-standard placement discipline from the start. Verified the anchor is a unique
+substring (`text.count(anchor) == 1`) before relying on it. Deliberately left the old, broken `S285_H1_8`
+guard untouched — it's dead weight (checks the wrong register, may occasionally cause a spurious early
+bail if the STALE r4 happens to look invalid, but no longer under-protects anything now that the real
+dereference has its own guard) — removing/relocating it is a separate cleanup, out of scope for this
+session's diff.
+
+**Regen + build.** `shutil.copytree` backup of `RecompiledFuncs/`, deleted all `funcs_*.c`, ran
+`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` (report confirmed `funcs_27.c: s395 hangar-list deref
+guard site S395_SWEEP_1 patched x1`). Diff against the backup: ONLY `funcs_27.c` changed, 14 lines added /
+0 removed — exactly one new guard block, matching the predicted shape for a pure addition (not a
+replacement, unlike s394's fix). `cmake --build . -j8` clean (only the pre-existing `funcs_8.c`
+`DDIV`/pointer-sign warnings, unrelated).
+
+**Soaks — 4 runs, more than the usual 3, because two hit pre-existing unrelated pathologies that needed
+working around.**
+
+- **verify1** (`HOLD_S=280`, default `run_s327waitpump.sh` env, armed with
+  `ROGUESQ_LOG_S395_SWEEP_GUARD=1`): phase reached VI=1024 at 45.8s, all title/craft-select keys landed,
+  full 280s hold completed (wall=352s). Same-run positive control: 574 `[hangar-loop]` lines confirm
+  `hangarInitialize`'s own loop — and by extension this code region — ran repeatedly throughout the hold
+  (same convention s394 used for its own 0-fire verification). `[s395-sweep-guard]` fired 0 times — a
+  plausible null result (the reloaded pointer was valid every time this run reached the site), not a
+  vacuous one, given the positive control. `[CRASH]` count: 0.
+- **verify2** (default env, unarmed): the game process was genuinely still alive and actively
+  scheduling/rendering (interleaved `[sched-check]`/`[vi]` lines throughout), but `RS_FREE_WALK`'s
+  per-freed-node logging (already flagged as a footgun by s345's own comment in
+  `run_s327waitpump.sh`, defaulted ON unless a recipe opts out) produced 168,800,439 `[rs-free-walk]`
+  lines / 10.1 GB before the driver's own end-of-hold `kill -9` landed. No `[CRASH]` marker anywhere in
+  the log. Deleted the log to reclaim disk (10GB) rather than analyze further — not useful signal, not a
+  regression (RS_FREE_WALK's volume is pre-existing and orthogonal to this fix).
+- **verify2b** (same as verify2 but with `ROGUESQ_LOG_RS_MALLOC_WALK=0 ROGUESQ_LOG_RS_FREE_WALK=0`
+  added to avoid that specific footgun): hit a DIFFERENT pre-existing high-volume pathology instead — a
+  `[mesgqueue-guard]` diagnostic (`do_send refused mq_=0x000001D0 (out of KSEG0 range)`) firing in an
+  extremely tight loop interleaved 1:1 with `[sched-check]` lines, `bad_total` counter reaching ~38
+  million before the capture hit a size limit. This is a NEW observation — not previously documented in
+  CURRENT-TRUTH under this name — and looks like a genuine (if low-severity, since VI/scheduler kept
+  progressing normally throughout) bug in its own right: a message-queue send against a permanently-bad
+  pointer that never gives up retrying, rather than bailing after N attempts. Logged for a future session;
+  out of scope for the `-0x25A4` audit. Deleted the 7GB log, reclaimed disk.
+- **verify2c** (verify2b's leaner env, retried): avoided both storms (213MB log, reasonable), full 280s+
+  hold completed (wall=332s), `[CRASH]` count 0 — but `[phase]` history shows it never advanced past
+  VI=1024 (title): the fixed-time key-press schedule (`3:start 25:start 40:start 60:a`) apparently missed
+  its window, most plausibly because disabling `ROGUESQ_LOG_SCHED` (a per-scheduler-tick diagnostic)
+  shifted frame timing enough to desync the stopwatch-based key schedule from the actual UI state. 0
+  `[hangar-loop]` lines confirms `hangarInitialize` was never entered this run — crash-free but
+  inconclusive for this specific fix.
+- **verify3** (identical env to verify2c, retried hoping for scene-reach): same outcome as verify2c —
+  full hold, 0 crashes, `[phase]` history identical (stalled at VI=1024, title), 0 `[hangar-loop]` lines.
+  Confirms verify2c's outcome wasn't a one-off; the leaner env is unreliable for actually reaching the
+  target scene, consistent with CLAUDE.md's own "no cross-run A/B on animating scenes, phase-gate not
+  stopwatch" caution — my env change was itself an uncontrolled timing perturbation.
+- **verify4** (back to default env, matching verify1, retried once more for a second scene-reaching data
+  point): crashed BEFORE reaching the phase-1024 gate at all — `process gone while waiting for phase`
+  (exit code 4). The crash log shows a SIGSEGV in `musyxSynthFrame` (`pc-symbol=musyxSynthFrame+4652`,
+  `last-guest-pc=0x8000834c`) during early boot, well outside `hangarInitialize`'s
+  `0x800AA6D8`-`0x800AE084` range and before any hangar/craft-select code could possibly run. Not
+  previously catalogued under this exact symbol in CURRENT-TRUTH, but consistent in shape with the
+  project's long-documented audio-subsystem boot-time intermittency (the M5 arc, PROJECT-OVERVIEW
+  §10-§12) — an early-boot audio crash unrelated to this session's fix.
+
+**Net verdict:** 0 crashes attributable to the new guard or the fixed code region across all 4 attempts.
+verify1 is the primary, fully valid evidence (scene reached, positive-controlled, 0 fires, 0 crashes).
+verify2/verify2b are new-but-unrelated observations (logged, not actioned). verify2c/verify3 are
+crash-free-but-inconclusive (didn't reach the target scene). verify4 hit an unrelated pre-existing crash
+family. All processes SIGKILLed and oversized logs (verify2: 10GB, verify2b: 7GB) deleted to reclaim disk
+(126GB free confirmed afterward); verify2c/verify3/verify4's smaller logs (213MB/213MB/64KB) left in place
+under `scratch/s73_post_a_scene/`.
+
+Remaining sweep work per s394's original plan, unchanged: `funcs_40.c` (69 raw `-0x25A4` hits vs 67
+existing guard markers, ~2 candidates) and `funcs_19.c`'s 1 float-register outlier are still unaudited —
+next session's work unit, using the SAME delegated-classification methodology validated this session (the
+mechanical-script-only approach is not reliable enough on its own; delegate the actual per-site read).
+
+Two new observations logged for a future session (not actioned here — M3 priority is systematic audits
+only, no reactive single-issue chases): (1) `S285_H1_8`'s leftover stale-register guard should eventually
+be removed or relocated (harmless today, but doesn't need to exist); (2) the `[mesgqueue-guard]` tight
+retry-loop against a permanently-bad `mq_=0x1D0` pointer is worth a dedicated look in its own right.
+
+Outcome: ADVANCED (a new, previously-undiscovered instance of the item -243/-244 bug class found, fixed,
+and verified via the established regen-diff-build-soak protocol; the funcs_27.c leg of s394's
+sweep-remainder plan is now fully closed).
