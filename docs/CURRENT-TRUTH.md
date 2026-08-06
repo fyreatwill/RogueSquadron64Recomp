@@ -148,10 +148,39 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -243 (s393); the next new item takes -244 and is inserted at the top.
+oldest). Current top is -244 (s394); the next new item takes -245 and is inserted at the top.
 
--243. **(s393) URGENT: fix s392's chunk-3a guard-placement bug (all 29 sites check a STALE register, not
-    the freshly-reloaded pointer) before any further `-0x25A4` audit work.** Discovered while closing out
+-244. **(s394) FIXED item -243: all 29 of s392's chunk-3a guards rebuilt with correct anchor placement,
+    verified.** Wrote a fresh extraction/verification script (`ast.literal_eval` on the live
+    `_s392_h3a_sites` table, no hand-transcription) that for each site located its raw `-0x25A4` load in
+    the current `funcs_27.c`, confirmed the load's destination register matched the tuple's `reg`, then
+    scanned forward for the first genuine `MEM_*` dereference (27/29 sites) or, where no in-line
+    dereference exists before an unconditional jump (`S392_H3A_26`, whose load feeds a shared
+    control-flow join at `L_800ADB18` with `S392_H3A_25`'s own separate path), scanned through the
+    `goto` line instead — still correctly placing the guard right after the fresh load with nothing able
+    to clobber the register in between. All 29 new anchors verified unique on the first pass. Applied via
+    Option A (in-place rewrite of the 29 tuples, same site names/`reg`/`bail_label`, only anchor text
+    changed) — diff reads as "fixed," not "replaced." **Verified**: regen diff shows ONLY `funcs_27.c`
+    changed, 58 lines removed / 58 added (net zero, same total line count before/after) — a pure
+    2-line-earlier REPLACEMENT of each guard block's position, not an addition, exactly the predicted
+    shape for a placement fix. Build clean (only pre-existing `funcs_8.c` sign-conversion warnings). 3
+    soaks: **verify1** (armed with `ROGUESQ_LOG_S392_H3A_GUARD=1` via a throwaway wrapper script, deleted
+    after use) hit 1 crash at the already-catalogued `trackResourceListWithMappingTables+1228`/
+    `0x80065e94` "Apple dladdr fallback" background-noise family (far outside `hangarInitialize`'s
+    `0x800AA6D8`-`0x800AE084` range) — **`[s392-h3a-guard]` fired 0 times**, the discriminating result,
+    with a same-run positive control (824 `[hangar-loop]` lines, ~86s held at the hangar/craft-select
+    scene before the unrelated crash) ruling out "guarded code never ran" as an explanation for the null
+    fire count. **verify2** (unarmed) hit 1 crash at `allocateDisplayListBuffer+880`/`0x80015544`, traced
+    via guest-address cross-reference to `funcs_4.c` — unrelated. **verify3** (unarmed) fully clean, full
+    280s+ hold survived, 0 crashes. Net: 29/29 sites' placement corrected and reverified, 0 regressions
+    attributable across all 3 soaks. Also ran (but did not act on) a Step-5 raw-count sweep: `funcs_27.c`
+    102 raw `-0x25A4` hits vs 89 existing guard markers (~13 possibly still unguarded), `funcs_40.c` 69
+    vs 67 (~2 possibly unguarded), `funcs_19.c` 1 unrelated hit — rough counts only, no per-site
+    classification yet; that's the next work unit. Full detail: `PORTING-STATE` Session 394.
+
+-243. **(s393, FIXED s394 — see item -244) URGENT: fix s392's chunk-3a guard-placement bug (all 29 sites
+    check a STALE register, not the freshly-reloaded pointer) before any further `-0x25A4` audit work.**
+    Discovered while closing out
     chunk 3b (item -242): `_s392_h3a_sites` in `fixup_game_funcs.py` builds every one of its 29 anchors
     starting WITH the raw `-0x25A4($s1)` load's own comment+code line, and `text.replace(anchor, guard +
     anchor, 1)` inserts the guard BEFORE that anchor — so all 29 checks run before the load executes,

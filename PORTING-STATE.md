@@ -33429,3 +33429,96 @@ Outcome: ADVANCED (chunk 3b landed: 21 new guard sites, correctly placed, verifi
 diff-build-soak protocol, 0 regressions attributable across 3 soaks — plus a real, previously-undetected
 correctness bug found and documented in prior work, itself a result per the iteration contract's "a
 documented dead end is a result" clause).
+
+## Session 394 (2026-08-06) — FIX: s392's chunk-3a guard-placement bug, all 29 sites rebuilt with correct
+anchors (`HYPOTHESIS-ID m3-idiom-audit-fresh`, iteration 6)
+
+Top-priority item per s393's NEXT.md: item -243's guard-placement bug (all 29 `_s392_h3a_sites` in
+`fixup_game_funcs.py` checked a STALE register because their anchor started WITH the raw `-0x25A4($sN)`
+load, so `text.replace(anchor, guard_text + anchor, 1)` spliced the guard BEFORE that load ran).
+
+**Fix mechanism.** Wrote a fresh Python script (no prior script reused, per the task's own anti-hand-
+transcription discipline) that, for each of the 29 site tuples: (1) parsed the live `_s392_h3a_sites`
+list out of `fixup_game_funcs.py` via `ast.literal_eval` rather than hand-copying; (2) located that
+site's already-applied (buggy) guard block in the current `RecompiledFuncs/funcs_27.c` by its own
+`s392, SITE_NAME` marker comment, found the raw `-0x25A4` load immediately following the guard's closing
+brace, and verified the load's destination register matches the tuple's `reg` field (29/29 matched); (3)
+scanned forward from the line after the raw load, collecting lines until either a genuine `MEM_*`
+dereference appeared (27/29 sites) or an unconditional `goto` line was hit first (1 site, `S392_H3A_26`
+— see below); (4) verified the new anchor is a unique substring (`text.count() == 1`) of the current
+file. All 29 new anchors passed on the first pass, no failures, no hand-fixing needed.
+
+**The one non-trivial site.** `S392_H3A_26`'s raw load (`0x800ADA50`, guest addr, `funcs_27.c`) is
+immediately followed by an unconditional `j L_800ADB18` to a shared control-flow join with
+`S392_H3A_25`'s own separate path (both feed the same downstream `ADD32`+`lw` dereference at
+`L_800ADB18`, 0x800ADB18-0x800ADB1C) — no in-line combine/dereference exists to scan forward to before
+control leaves this block. New anchor for this one site covers through the `goto L_800ADB18;` line
+instead of a `MEM_*` line; this still correctly places the guard immediately after the raw load and
+before the value is used (nothing clobbers the register between load and jump), matching the same
+"guard right after the fresh load" placement discipline as every other site — a legitimate boundary case
+of the same algorithm, not a special-cased exception to it.
+
+**Applied via Option A** (in-place rewrite of the 29 tuples — same site names, same `reg`/`bail_label`
+values for all 29 sites confirmed unchanged, only anchor text changed, `_s392_h3a_guard_text` function
+untouched) per the task's stated preference; the diff read as a clean "fixed," not "replaced." Added an
+explanatory comment block above the site table cross-referencing this session and CURRENT-TRUTH item
+-243.
+
+**Verify.** Standard protocol: Python `shutil.copytree` backup of `RecompiledFuncs/` (sibling dir inside
+the N64Recomp repo root, deleted after diffing), delete all 45 `funcs_*.c` files (explicit absolute
+paths — glob/`find -delete` blocked by sandbox policy), regen (`make_elf.py` → `N64Recomp` →
+`fixup_game_funcs.py` — the fixup script's own report confirmed all 29 `S392_H3A_N` sites patched x1,
+no SKIPPED entries; a second accidental fixup invocation was caught and blocked by the permission system
+before it ran, avoiding the s120 regen-pipeline-idempotency trap). Diff against the backup: **only
+`funcs_27.c` differs**, 58 lines removed / 58 added (net zero, same total line count before/after,
+179176 lines both) — exactly the shape of 29 guard-block placements each moving 2 lines earlier in the
+file (the raw load's 2 lines now sit BEFORE the guard instead of after it), a REPLACEMENT not an
+ADDITION, matching the task's predicted diff shape precisely. Spot-checked the actual regenerated source
+for `S392_H3A_1` and `S392_H3A_26`: both show the guard block now sitting immediately AFTER
+`ctx->r3 = MEM_W(...)`, not before it. Build: clean (`cmake --build . -j8`,
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`), only the pre-existing unrelated
+sign-conversion warnings in `funcs_8.c` (`DDIV` uint64_t/int64_t pointer-sign mismatches), same as every
+prior chunk.
+
+**3 sequential soaks**, `HOLD_S=280`, `zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, launched
+one at a time via backgrounded `Bash` and polled (not `&`, never parallel):
+
+- **verify1 (armed)**: ran via a throwaway wrapper (`scratch/agent/run_s394_armed.sh`, deleted after use)
+  that additionally exported `ROGUESQ_LOG_S392_H3A_GUARD=1` — the one diagnostic that would have caught
+  the original bug. 1 crash at hold-iter 86 (~86s into the 280s hold): `pc-symbol=
+  trackResourceListWithMappingTables+1228`, `last-guest-pc=0x80065e94` — matches the already-catalogued
+  "Apple system-framework `dladdr` fallback" background-noise family (PORTING-STATE ~L31855-31882,
+  `+1192`/`+1228` offset variants across multiple sessions), far outside `hangarInitialize`'s
+  `0x800AA6D8`-`0x800AE084` range. **`[s392-h3a-guard]` fired 0 times** across the whole run — the
+  discriminating result. Confirmed this wasn't a vacuous null result: 824 `[hangar-loop]` lines logged
+  (`ROGUESQ_LOG_HANGAR_LOOP=1`, armed by the base recipe) plus the run reaching and holding at "SELECT
+  YOUR CRAFT" (hangar/craft-select scene) for 86s before the unrelated crash — hangar-domain code was
+  genuinely active, so 0 fires is real evidence the fixed guards behave like every other guard in this
+  family (proactive, not constantly bailing), not evidence the guarded code just never ran.
+- **verify2**: unarmed (standard recipe). 1 crash at hold-iter 53: `pc-symbol=
+  allocateDisplayListBuffer+880`, `last-guest-pc=0x80015544`. Traced via the `// 0x<addr>:` comment
+  cross-reference method (not just eyeballing the range) — `0x80015544` lands inside `funcs_4.c`, a
+  completely different file from `hangarInitialize` (`funcs_27.c`); confirmed unrelated.
+- **verify3**: unarmed. **Fully clean** — hold completed its full 280s+ (wall=327s including
+  overhead), 0 crashes (`CRASH: 0` in the driver's own summary), process had to be manually killed at
+  the end (expected — full hold survived).
+
+**Net for this fix:** 29/29 sites' guard placement corrected and reverified; 0 regressions attributable
+to the fix across all 3 soaks; the one diagnostic capable of directly observing the old bug (armed for
+verify1) shows the fixed behavior (0 fires) with a same-run positive control (genuine hangar-domain
+execution) ruling out the "guarded code never ran" false-negative. Rules out: the s392/s393
+guard-placement class of bug recurring anywhere in this specific 29-site table; does NOT rule out similar
+placement bugs existing in other, not-yet-audited guard families (out of this session's scope).
+
+**Step 5 sweep count** (per NEXT.md's "after this lands" instruction, count only, no new guarding this
+session): raw `grep -c "MEM_W(ctx->r[0-9]*, -0X25A4)"` across `RecompiledFuncs/*.c` — `funcs_27.c`: 102
+raw hits vs 89 existing `PATCH: unguarded -0x25A4...` guard markers (~13 possibly still unguarded, not
+yet classified site-by-site); `funcs_40.c`: 69 raw hits vs 67 guard/HANGARLIST_GUARD markers (~2 possibly
+unguarded); `funcs_19.c`: 1 raw hit, unrelated context (loads directly into a float register, `ctx->f28`,
+not part of this audit's hangar-list-pointer idiom). This is a rough raw-count sweep only — no per-site
+classification (guarded vs. genuinely unguarded vs. SAFE-call-arg-only) was done this session; that's the
+next work unit.
+
+Outcome: ADVANCED (the guard-placement correctness bug from item -243 is fixed and verified across all 29
+sites; the armed diagnostic soak directly confirms the fix's expected behavior with a same-run positive
+control, closing out the audit's chunk-3a defect for good).

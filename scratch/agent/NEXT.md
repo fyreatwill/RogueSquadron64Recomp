@@ -1,113 +1,98 @@
 # NEXT work unit
 
-## s393 recap
+## s394 recap
 
-Finished `hangarInitialize` chunk 3b (21 sites, the function's own tail, LAST chunk of the planned
-audit) — correctly placed, verified, 0 regressions across 3 soaks (each soak did hit a crash, but every
-one at an already-catalogued address far outside `hangarInitialize`: `0x8000b650` staleness per
-CURRENT-TRUTH item -239, `coalesceFreeHeapBlocks+2016`, `emitAllocatedDLCommand+9632`).
+Fixed the TOP-priority item from s393's NEXT.md: all 29 of s392's chunk-3a `_s392_h3a_sites` guards
+(`hangarInitialize`, `funcs_27.c`) had their anchor built starting WITH the raw `-0x25A4($sN)` load's own
+line, so the guard was spliced in BEFORE that load ran and checked a stale register instead of the
+freshly-loaded pointer. Wrote a fresh Python extraction/verification script (parsed the live
+`_s392_h3a_sites` table via `ast.literal_eval`, located each site's raw load in the current `funcs_27.c`
+by its own marker comment, scanned forward for the first genuine `MEM_*` dereference — or, for one site
+(`S392_H3A_26`) whose load feeds a shared control-flow join with no in-line dereference, scanned through
+the `goto` line instead) and rewrote all 29 tuples in place (Option A, same site names/`reg`/`bail_label`,
+only anchor text changed). Verified: regen diff shows ONLY `funcs_27.c` changed, 58 removed / 58 added
+(net zero — a pure placement fix, not new coverage). Build clean. 3 soaks: verify1 (armed with
+`ROGUESQ_LOG_S392_H3A_GUARD=1`) hit an already-catalogued unrelated crash
+(`trackResourceListWithMappingTables+1228`) but **`[s392-h3a-guard]` fired 0 times** with a same-run
+positive control (824 `[hangar-loop]` lines, hangar/craft-select scene actively held) confirming the fix
+works as expected; verify2 (unarmed) hit an unrelated crash (`allocateDisplayListBuffer+880`, traced to
+`funcs_4.c`); verify3 (unarmed) fully clean, 0 crashes. Full detail: `PORTING-STATE` Session 394;
+`docs/CURRENT-TRUTH.md` item -244 (item -243 marked FIXED).
 
-Then, per NEXT.md's own "after chunk 3b lands, sweep the rest before declaring the class closed"
-instruction, found something much more important than leftover surface: **all 29 of s392's chunk-3a
-guards (previous session) check the WRONG register** — a placement bug, not a new crash. The anchor
-text for every one of those 29 sites starts WITH the raw `-0x25A4($s1)` load's own line, and the guard
-is spliced in via `text.replace(anchor, guard + anchor, 1)`, i.e. BEFORE that load runs. So every
-chunk-3a guard checks whatever was in that register from the PRECEDING instruction — not the freshly-
-loaded pointer it's supposed to validate. Two sites traced by hand (`S392_H3A_1`, `S392_H3A_11`) both
-had a small byte-index value in that register at check time (set by an `lbu`/`MEM_BU` two lines earlier)
-— always fails the KSEG0 bounds check, so those two sites' guards **unconditionally bail every time**,
-silently skipping real hangar-item processing instead of protecting against a rare bad pointer. This was
-invisible to s392's own soak verification because `ROGUESQ_LOG_S392_H3A_GUARD` was never armed by any
-soak recipe — the only way this bug could show up (a live fire-count) was gated behind an env var nobody
-set. Full mechanism and the chunk-1/2/3b vs chunk-3a anchor-shape comparison that found it:
-`PORTING-STATE` Session 393; `docs/CURRENT-TRUTH.md` item -243.
+Also ran (did not act on) a rough Step-5 sweep count: `funcs_27.c` has 102 raw `-0x25A4` hits vs 89
+existing guard markers (~13 possibly still unguarded); `funcs_40.c` has 69 raw hits vs 67 markers (~2
+possibly unguarded); `funcs_19.c` has 1 unrelated raw hit (loads directly into a float register, not
+part of this idiom family). These are RAW grep counts only — no per-site classification (genuinely
+unguarded vs. already covered by a differently-shaped guard vs. confirmed-SAFE call-arg-only) was done.
 
-## This iteration's work unit: fix s392's chunk-3a guard placement (all 29 sites)
+## This iteration's work unit: classify and guard the Step-5 sweep remainder
 
-This is now the TOP priority — ahead of any new idiom-class chunk or codebase-wide `-0x25A4` sweep,
-because it's a correctness regression in already-shipped work, not new uncovered surface. Do NOT start a
-"chunk 4" or expand the audit to other functions until this is fixed and verified.
+The guard-placement correctness bug (item -243) is now closed. The deferred "sweep the rest of
+`funcs_27.c`/`RecompiledFuncs/*.c` for unguarded `-0x25A4` sites outside the already-audited chunks" plan
+from chunk 3b's own completion is now meaningful (before s394's fix, counting chunk 3a's sites as
+"covered" would have been misleading — they weren't actually validating anything).
 
-### Step 1 — reconstruct all 29 anchors correctly
+### Step 1 — get an accurate per-site count in `funcs_27.c` (hangarInitialize)
 
-In `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`, find `_s392_h3a_sites` (search
-`_s392_h3a_sites = [`). For EACH of the 29 tuples:
+s394's raw count (102 hits, 89 markers, ~13 unaccounted) is NOT a reliable "sites needing a guard" count
+— a single guard block can sit near multiple raw loads, and some raw loads may already be covered by an
+existing guard's downstream reach even without a 1:1 marker. Write a script that:
+1. Finds every raw `MEM_W(ctx->r\d+, -0X25A4)` occurrence in the current `funcs_27.c` with its line
+   number and preceding/following context (~10 lines each side).
+2. For each, checks whether it already sits immediately after a `{ // PATCH: unguarded -0x25A4 ... }`
+   guard block (already covered — skip) or not (candidate for a NEW site).
+3. For each NEW candidate, classify the same way every prior chunk did: does the loaded register feed an
+   `ADD32`/`SUB32` combine (or get used directly) that reaches a genuine `MEM_*` dereference before any
+   intervening call/return/branch that would make it moot? If yes: NEEDS-GUARD. If it's only ever passed
+   as a call argument and never dereferenced in this function: confirmed SAFE (matching the precedent
+   from s392's own 3 SAFE sites).
 
-1. Note the site name, `reg`, bail label (`L_800ADB2C` for all of them), and the guest PC address in the
-   anchor's first comment line (e.g. `S392_H3A_1` → `0x800AB7D4`).
-2. In the CURRENT `funcs_27.c` (post-chunk-3b, so line numbers have shifted — locate by the `0x800ABxxx`
-   guest-address comment, not by line number), find that exact raw `-0x25A4($sN)` load. It currently sits
-   right after the (buggy) guard block that was spliced in before it — the guard block's own comment says
-   `s392, S392_H3A_N`, making each one easy to find via `grep -n "S392_H3A_N\b"`.
-3. Build a NEW anchor that starts AFTER the raw load line (matching chunks 1/2/3b's correct model): the
-   anchor should begin at whatever instruction combines the just-loaded register into a further address
-   (usually an `ADD32`/`SUB32` line), continue through the first genuine `MEM_*` dereference of the
-   resulting address (not just further arithmetic — same "scan forward for the real deref" discipline
-   chunk 3b's script used), and `reg` should be the register holding the FRESH raw-loaded value at the
-   point right before that combine (verify it isn't clobbered between the load and the combine, same check
-   chunk 3b's script did).
-4. Verify each new anchor is a unique substring of the CURRENT (already chunk-3b-patched) `funcs_27.c` via
-   `str.count() == 1` before writing anything.
+Recommended: delegate this classification pass to a subagent if the candidate count is large (matching
+the precedent set by s392's own delegation for a similar-sized batch), keeping this session's own budget
+for the guard-writing + regen + verify cycle.
 
-Recommended approach: reuse/adapt chunk 3b's extraction script (see `PORTING-STATE` Session 393 for the
-exact technique — locate raw load, scan forward for the ADD32/SUB32 combine referencing that register,
-then scan forward again for the first real dereference of the combine's destination register) rather than
-hand-transcribing 29 anchors. This is the same lesson s392/s393 already learned about anchor transcription
-risk, just applied to a repair instead of a fresh chunk.
+### Step 2 — same for `funcs_40.c` (the `updateHangarBayScene`/`static_5_800A9270` family)
 
-### Step 2 — apply the fix
+69 raw hits vs 67 existing markers (`G1`-`G32`, `HANGARLIST_GUARD*`, `S284_*`, `S285_A9270_R4` etc. —
+see `fixup_game_funcs.py` around line 5225+ and the G1-G32 site list). Same classify-then-guard approach;
+this file's existing guard families are numerous and may already close more of the gap than the raw
+count suggests — check carefully before assuming ~2 new sites are needed.
 
-Two options, pick whichever is cleaner once you see the actual diff shape:
-- **Option A (in-place fix):** rewrite the 29 tuples in `_s392_h3a_sites` directly with the corrected
-  anchors/regs, keep the site names (`S392_H3A_N`) and function name (`_s392_h3a_guard_text`) unchanged
-  so the diff is minimal and git history reads as "fixed," not "replaced."
-- **Option B (supersede):** leave `_s392_h3a_sites` as dead/unused (or delete it) and add a new
-  `_s393_h3a_fix_sites` table with corrected placement, re-using the same bail label. Only do this if
-  Option A's edit turns out messier than a clean replacement (e.g. if the old buggy guard blocks need to
-  be REMOVED from the source, not just have new ones added alongside them — check this first, since
-  leaving the old always-bailing guards in place AND adding new correct ones would just mean the new ones
-  never get reached).
+### Step 3 — `funcs_19.c`'s 1 outlier
 
-**Important:** the OLD buggy guard blocks are already baked into `funcs_27.c` via the fixup script (they
-regenerate every time `fixup_game_funcs.py` runs). Fixing the site table alone regenerates the SAME buggy
-placement unless the old anchor-matching logic is actually replaced, not supplemented. Read the existing
-`if p.name == "funcs_27.c": for site, reg, bail_label, anchor in _s392_h3a_sites: ...` loop carefully
-before choosing Option A or B.
+Single raw hit, loads directly into `ctx->f28.u32l` (a float register) rather than following the
+`$sN`-base-pointer-then-ADD32-combine idiom this whole audit has targeted. Check whether it's actually
+part of the same hangar-list-pointer family (unlikely, given the float destination) or an unrelated
+`-0x25A4`-offset load that happens to share the same displacement by coincidence — do not assume it's in
+scope without checking the surrounding function's identity and purpose first.
 
-### Step 3 — verify
+### Step 4 — apply guards + verify
 
-Same protocol as every prior chunk: `shutil.copytree` backup (place it as a sibling directory inside the
-N64Recomp repo root, e.g. `RecompiledFuncs_s394_backup` — `/tmp` is outside this session's allowed
-working directories, delete the backup after diffing), delete `funcs_*.c` (all 45 files — glob patterns
-and `find -delete` are blocked by the write-tool/sandbox policy; delete via explicit absolute paths in
-batches, or check for a working `rm -f` in this session first), regen (`make_elf.py` → `N64Recomp` →
-`fixup_game_funcs.py`), diff the regenerated tree against the backup (expect ONLY `funcs_27.c` to differ,
-by an amount consistent with 29 guard-block replacements, not additions — the raw byte delta will differ
-from prior chunks since this is a fix, not new coverage). Build clean. 3 sequential soaks (`HOLD_S=280`,
-`zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, one at a time via background `Bash` +
-`TaskOutput block:true`, never parallel). Check `last-guest-pc`/`pc-symbol` on any crash against
-`hangarInitialize`'s own range (`0x800AA6D8`-`0x800AE084`, `funcs_27.c`) before treating it as unrelated —
-same crash-signature-blindness discipline as every prior chunk.
-
-**Discriminating measurement for this fix specifically:** consider arming
-`ROGUESQ_LOG_S392_H3A_GUARD=1` for at least one of the 3 soaks (the recipe doesn't set it by default —
-add `export ROGUESQ_LOG_S392_H3A_GUARD=1` to a throwaway copy of the run script, or set it inline before
-invoking) to directly observe whether the fixed guards fire 0 times (expected — proactive fix, matching
-every other guard in this family) vs. the OLD buggy guards which would have fired constantly. This is the
-one soak variable that would have caught the original bug and is worth spending on the fix's own
-verification.
-
-### After this lands
-
-Resume the deferred "sweep the rest of `funcs_27.c` and `RecompiledFuncs/*.c` for any other unguarded
-`-0x25A4` sites outside `hangarInitialize`" plan from chunk 3b's own completion — NOW it's meaningful,
-since before this fix a "0 remaining raw hits" count would have been misleading (it would count chunk 3a's
-sites as "covered" when they weren't actually validating anything).
+Same protocol as every prior chunk: build anchors starting AFTER the raw load (through the first genuine
+`MEM_*` dereference — apply s394's now-corrected discipline from the start this time, no risk of
+repeating the chunk-3a mistake), verify uniqueness, `shutil.copytree` backup, delete all `funcs_*.c`,
+regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`), diff (expect ONLY the touched files to
+change, by an amount matching new ADDITIONS this time, not a placement fix), build clean, 3 sequential
+soaks (`HOLD_S=280`, `run_s327waitpump.sh`, one at a time via backgrounded `Bash` polled directly — do
+NOT rely on passive notification-only waiting for background game-process tasks; poll the run.log/output
+file at intervals, per this session's own lesson). Check `last-guest-pc`/`pc-symbol` on any crash against
+BOTH `hangarInitialize`'s range (`0x800AA6D8`-`0x800AE084`, `funcs_27.c`) AND `funcs_40.c`'s hangar
+functions before treating it as unrelated.
 
 ## Iteration budget
 
-HYPOTHESIS-ID: m3-idiom-audit-fresh (unchanged — this fix is still real work under the same audit-mode
-slug; s389, s390, s392, s393 are all under it, this makes iteration 6). Loop.sh's rule-8 counter may force
-a pivot preamble — if so, the guard-placement fix landing IS a legitimate close of "chunk 3a" as an
-investigation (it corrects and completes that chunk's own work), satisfying a forced pivot without
-abandoning real progress, same reasoning s393's own NEXT.md used for chunk 3b.
+HYPOTHESIS-ID: m3-idiom-audit-fresh (unchanged — this is the natural continuation of the same audit
+thread; s389, s390, s392, s393, s394 are all under it, this makes iteration 7). If loop.sh's rule-8
+counter forces a pivot preamble, note that s394's guard-placement fix landing IS itself a legitimate,
+complete close of the chunk-3a defect (not a repeat of prior work) — the same reasoning s393 and s394's
+own NEXT.md predecessors used.
+
+## Process lesson from s394 (apply this session)
+
+Background game-process soaks (`Bash` `run_in_background: true`) do NOT reliably deliver a
+"task complete" notification while your turn is idle/ended — poll the soak's `run.log` (or the
+background task's own output file) directly at intervals using short, individual `Bash` calls (or a
+`python3 -c "import time; time.sleep(N)"` loop for waiting, since raw shell `sleep` beyond a few seconds
+is blocked by this session's sandbox policy) rather than assuming a notification will arrive on its own.
+Only conclude/end a turn once the soak's actual completion marker (`--- done ---` in the log, or the
+driver's own `--- summary ---` block) has been directly observed via `Read`/`grep`.
