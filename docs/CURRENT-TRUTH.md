@@ -19,14 +19,14 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: design doc + steps 1-4 DONE — title-reach restored and confirmed 3/3
    (s343-344, full arc: PROJECT-OVERVIEW §10). Step 5 (both threads plus a heapWalker background-noise
    site) is **fully CLOSED** as of s370 — full detail: PROJECT-OVERVIEW §11. Step 6 (PCM sanity-check,
-   `M5-AUDIO-PLAN.md` §4) is **ANSWERED s371: real PCM is 100% silent.** Fixed a real host-bridge bug
-   found en route (`queue_samples` was silently dropping half of every buffer's bytes to
-   `SDL_QueueAudio` — see Overturned conclusions) and added `ROGUESQ_LOG_PCM_SANITY`; two soaks logged
-   13,832 total calls (7 via the s327 direct-pump path, 13,825 via genuine RSP-dispatched
-   `real_ucode=1`) and **every single sampled call was all-zero** — hypothesis 2
-   (silent-but-not-crashing) confirmed, not merely plausible. Next M5 work: trace WHY the real ucode's
-   mix/synthesis produces all-zero output (voice array never populated? mixing gated off? wrong buffer
-   read?). Detail: Next-steps item -226; live status/decision trees: NEXT.md.
+   `M5-AUDIO-PLAN.md` §4) is **ANSWERED s371: real PCM is 100% silent**, and s373 answered WHY:
+   **structurally impossible for voices to be populated**, root-caused to the same C88 force-zero
+   patch that s343 needs to keep title-reach working. Fixed a real host-bridge bug found en route
+   (`queue_samples` was silently dropping half of every buffer's bytes to `SDL_QueueAudio` — see
+   Overturned conclusions) and added `ROGUESQ_LOG_PCM_SANITY`; two soaks logged 13,832 total calls (7
+   via the s327 direct-pump path, 13,825 via genuine RSP-dispatched `real_ucode=1`) and **every single
+   sampled call was all-zero** — hypothesis 2 (silent-but-not-crashing) confirmed, not merely
+   plausible. Detail: Next-steps item -227; live status/decision trees: NEXT.md.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -154,7 +154,35 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -226 (s371); the next new item takes -227 and is inserted at the top.
+oldest). Current top is -227 (s373); the next new item takes -228 and is inserted at the top.
+
+-227. **(s373) M5 Step 6 "why is PCM silent" ANSWERED via source trace, no new soak needed:
+    voice population is structurally blocked by the same gate the boot-hang fix requires.**
+    Source-read `reapplyDisplayMode` (`N64Recomp/RecompiledFuncs/funcs_23.c:9805-10024`) end to end,
+    cross-referencing the already-documented s300/s304/s342-343 facts instead of re-deriving them:
+    (1) s300 established `tickMusyXIfActive` — the ONLY place `tickActiveSongs`/
+    `tickAndReap3DAudioVoices` (the functions that add/tick voices) get called — fully short-circuits
+    on a single `beq` when the gate byte at `0x800A0F50` reads 0. (2) This session's read of
+    `reapplyDisplayMode` confirms it unconditionally zeros that exact byte at function entry
+    (`0x8008EB7C: sb $zero,0xF50($at)`, line 9838) on EVERY call, and `reapplyDisplayMode` is called
+    every video frame (established s304, `runVideoFrameTick`). (3) The function then conditionally
+    (only when `reapplyAudioConfig` returns 0, the common case) runs a full song/voice/streaming reset
+    — `resetSongSubsystemCounter`, `initSongSequencerPools`, `resetMusyXEngineState`,
+    `clearStreamedVoiceFlags`, `reset3DAudioLists` (lines 9905-10009) — and would restore the gate to 1
+    at its tail (`0x8008EC88`, line 10020) — except that exact address is the site
+    `fixup_game_funcs.py` force-zeros (`MEM_B(0XF50,ctx->r1) = 0` instead of `= ctx->r2`), confirmed
+    still the current, required baseline (s343: reversing it is why title-reach broke 0/5 times,
+    s342). **Net: every single video frame this build re-disables audio, wipes any voice/song/stream
+    state that might have accumulated, and never durably re-enables the gate** — so
+    `tickMusyXIfActive`'s voice-population path never gets a real window to run. This is not a
+    separate bug from s371's all-zero-PCM finding; it's the same mechanism, traced one level further:
+    the RSP ucode was never even fed voices to mix, so producing exact zeros is the mix step behaving
+    correctly on empty input (**Hypothesis 1 confirmed; Hypotheses 2/3 — mixing internally gated off,
+    wrong buffer read — are now unnecessary to test**, since the ucode never receives real voice data
+    to begin with). **Not chased further this session**: WHY reversing the C88 site specifically
+    causes the pre-title hang was never root-caused even across the original 41-session s297-337
+    gate-reversal arc (closed on empirical revert, not mechanism) — reopening that is a large,
+    separate investigation, not a Step 6 follow-on; see NEXT.md for the explicit decision this opens.
 
 -226. **(s371) M5 Step 6 ANSWERED: real PCM is 100% silent even under genuine RSP-dispatched
     real ucode; found and fixed a real, previously-undetected host-bridge bug along the way.**

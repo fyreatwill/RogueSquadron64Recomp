@@ -221,9 +221,25 @@ bytes of every PCM buffer), now fixed. With that fixed and a sanity counter
 (`ROGUESQ_LOG_PCM_SANITY`) added, two soaks (13,832 total logged calls, including 13,825 under
 genuine RSP-dispatched `real_ucode=1`) found **100% of samples reaching `queue_samples` are
 exactly zero** — the real ucode dispatches and completes without crashing but produces no audible
-content. Next open question (not yet investigated): why — is the voice array never populated, is
-mixing gated off somewhere between task dispatch and `musyxSynthFrame`'s output, or is the wrong
-buffer being read/written at some stage of the pipeline?
+content.
+
+**WHY, answered s373 (source trace, no new soak) — item -227:** voice population is structurally
+blocked, not an ucode-internal mixing bug. `tickMusyXIfActive` (the only caller of
+`tickActiveSongs`/`tickAndReap3DAudioVoices`, s300) short-circuits whenever the gate byte at
+`0x800A0F50` reads 0. `reapplyDisplayMode` (`funcs_23.c:9805-10024`) runs every video frame (s304)
+and unconditionally zeros that byte at its own entry, then — whenever `reapplyAudioConfig` succeeds,
+the common case — runs a full song/voice/stream reset (`resetSongSubsystemCounter`,
+`initSongSequencerPools`, `resetMusyXEngineState`, `clearStreamedVoiceFlags`, `reset3DAudioLists`)
+and would restore the byte to 1 at its tail, except that tail write IS the exact site
+`fixup_game_funcs.py` force-zeros — required to stay force-zeroed (s343: reversing it broke
+title-reach 0/5 times). Net: every frame re-disables audio and wipes any accumulated voice/song
+state, so the gate never durably opens and voices are never added — the ucode faithfully mixes
+"nothing" into silence. **Hypothesis 1 (voice array never populated) confirmed; hypotheses 2
+(mixing internally gated off) and 3 (wrong buffer) are moot** — nothing reaches the ucode to mix or
+misroute in the first place. The only path to real audio output is resolving WHY reversing the C88
+site causes the pre-title hang (never root-caused across the original 41-session s297-337 arc,
+which reverted empirically without finding the mechanism) — a large, separate investigation, not a
+Step 6 follow-on. See `docs/CURRENT-TRUTH.md` item -227 and NEXT.md for the open decision.
 
 ## 5. Summary of what this doc changes vs. the existing goal-stack framing
 

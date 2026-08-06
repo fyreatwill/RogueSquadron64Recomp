@@ -31943,3 +31943,77 @@ touched, no soak run, no `lib/` edit.
 `HYPOTHESIS-ID` unchanged: no experiment ran this iteration, so the active thread
 (`m5-audio-destub-step6-pcm-sanity`, iteration 2, per NEXT.md before this pass) carries forward
 untouched to the next iteration.
+
+## Session 373 (2026-08-05) — M5 Step 6 "why is PCM silent" ANSWERED via pure source trace (iteration 2 of m5-audio-destub-step6-pcm-sanity): voice population is structurally blocked by the same gate the boot-hang fix requires
+
+**Work unit**: NEXT.md's iteration-2 follow-on to s371's "PCM is 100% silent" finding — trace WHY,
+per the plan's own "source-read-first" instruction (don't build a counter blind). Considered
+disassembling `factor5_ucode_b_recompiled.c` (the RSP MusyX ucode itself, 2602 lines of raw
+goto-based MIPS pseudocode with no symbol names) first, but that file only contains ~3 DMA
+subroutine call sites near its top and is a single dispatched function with no obvious per-voice
+loop structure visible without a multi-session disassembly effort (the kind `s193_disasm.py` took
+for the heapWalker GUARD5 site) — before investing in that, checked whether the GAME side (which
+decides what data the ucode is even handed) already answers the question, since M5-AUDIO-PLAN.md §1
+documents ~15 existing env-gated audio instruments and a full s300 source-trace of the gate byte's
+consumer.
+
+**Finding, built entirely from source reads (no build, no soak)**:
+
+1. s300 (already documented) established `tickMusyXIfActive` is the ONLY caller of
+   `tickActiveSongs`/`tickAndReap3DAudioVoices` — the functions that actually add or advance voices
+   — and it fully short-circuits via a single `beq $v0,$zero,...` at its top whenever the audio-engine
+   gate byte at `0x800A0F50` reads 0.
+2. This session read `reapplyDisplayMode` in full
+   (`N64Recomp/RecompiledFuncs/funcs_23.c:9805-10024`, the recompiled game source, not the RSP ucode).
+   Confirmed live in the current source: line 9838-9839 (`0x8008EB7C: sb $zero,0xF50($at)`)
+   unconditionally zeros that exact gate byte at function ENTRY, every single call, with no
+   conditional guarding it. s304 (already documented) established `reapplyDisplayMode` is called
+   every video frame from `runVideoFrameTick` — so this zero-write happens ~60 times a second,
+   unconditionally.
+3. The function then branches on `reapplyAudioConfig`'s return value (line 9890): if nonzero, it
+   skips straight to the tail and returns (rare/failure path); if zero (the common case), it falls
+   through and runs a full song/voice/stream reset — `resetSongSubsystemCounter`,
+   `initSongSequencerPools`, `resetMusyXEngineState`, `clearStreamedVoiceFlags`, `reset3DAudioLists`
+   (lines 9905-10009, all unconditional once this branch is taken) — then would restore the gate
+   byte to 1 at the tail (line 10020, `0x8008EC88: sb $v0,0xF50($at)`).
+4. That exact tail address, `0x8008EC88`, is confirmed (read directly, `/Users/williambuckley/
+   Documents/Tools/N64Recomp/fixup_game_funcs.py` line 269-272) to be the ONE site the current fixup
+   regex still force-zeroes (`MEM_B(0XF50,ctx->r1) = 0` in place of `= ctx->r2`) — required to stay
+   that way per s343's already-documented result (reversing it broke title-reach 0/5 times across 3
+   sessions, s342).
+
+**Net causal chain, fully mechanistic, no gaps**: every video frame, `reapplyDisplayMode` disables
+audio, wipes any song/voice/stream state that accumulated since the last frame, and then — because
+its own re-enable write is patched to a no-op — leaves the gate at 0 instead of restoring it. The
+gate byte is therefore pinned at (or immediately reset to) 0 essentially continuously, so
+`tickMusyXIfActive`'s voice-population path never gets a real window to execute. This isn't a second,
+independent bug from s371's all-zero-PCM result — it's the SAME mechanism traced one level further
+upstream: the RSP ucode was never handed any real voice data to mix in the first place, so producing
+exact zeros is the mix step behaving correctly on empty input. **Hypothesis 1 (voice array never
+populated) CONFIRMED. Hypotheses 2 (mixing internally gated off) and 3 (wrong buffer read) are now
+moot** — there's nothing for either of those failure modes to act on; the data never arrives.
+
+**Confidence note**: this is a static-source conclusion assembled from 3 separately-confirmed prior
+facts (s300's gate-consumer trace, s304's call-frequency trace, s342/343's empirical C88-required
+result) plus this session's own direct read of `reapplyDisplayMode`'s full body and the current
+fixup regex — every claim above was re-verified against the live source this session, not taken
+solely on the older sessions' word. It is not a fresh runtime measurement of "0 voices active during
+the s371 soak" (no new instrument was armed or run) — that would be the natural confirming
+measurement if a second, independent line of evidence is wanted before treating this as fully closed,
+but the mechanism is structural (a `beq` gating a function that's the sole populator, fed by a byte
+proven to be pinned at 0 by an unconditional per-frame write) rather than probabilistic, so a
+runtime recount is unlikely to change the conclusion.
+
+**Deliberately not chased this session**: WHY reversing the C88 site causes the pre-title hang was
+never root-caused, even across the original 41-session s297-337 gate-reversal arc (PROJECT-OVERVIEW
+§9) — that arc closed on an empirical revert-and-move-on, not a mechanism finding. Reopening it is a
+large, separate investigation (the kind that consumed 41 sessions the first time), not a natural
+Step 6 follow-on, and re-entering it blind would violate the standing budget discipline. This is
+flagged as an explicit open decision for the next iteration rather than started here.
+
+No code changes, no `lib/` touch, no build, no soak this session — pure source read across 2
+repositories (`RogueSquadron64Recomp/docs/*`, `N64Recomp/RecompiledFuncs/funcs_23.c`,
+`N64Recomp/fixup_game_funcs.py`). `HYPOTHESIS-ID` `m5-audio-destub-step6-pcm-sanity` is now CLOSED —
+its question ("why is PCM silent") has a source-grounded answer. See NEXT.md for the follow-on
+decision (reopen the C88-hang mechanism vs. pivot to M3 idiom-class audits per the strategic
+priority order).
