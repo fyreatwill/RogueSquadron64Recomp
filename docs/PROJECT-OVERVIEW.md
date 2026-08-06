@@ -548,3 +548,61 @@ open. Next M5 work after this arc is Step 6 (PCM sanity-check), tracked live in 
   wrapper-log SOAK-RESULTS.md line is not automatically uninformative — check the launcher log and raw
   `run.log` directly before discarding the run.
 - **Net as of s370**: no M5 Step 5 threads and no escalated background-noise threads remain open.
+
+## 12. M5 Step 6 (PCM sanity-check) and the C88-reversed pre-title-hang/VI-trigger investigation, both
+CLOSED (s371, s373–376), migrated from CURRENT-TRUTH.md s380 maintenance pass
+
+Full raw detail in `PORTING-STATE.md` at the session numbers cited. This section folds what used to be
+CURRENT-TRUTH.md Next-steps items -226 through -230. Net: no M5 audio thread remains open as of s376;
+the next M5 work needs a genuinely new lead, not a continuation of any thread in this section.
+
+- **Step 6 answered (s371): real PCM is 100% silent, even under genuine RSP-dispatched real ucode.**
+  Before adding the sanity counter, a source read of `queue_samples` (`src/main/main.cpp:677-681`)
+  against `ultramodern::queue_audio_buffer` (`lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36`)
+  found a real, previously-undetected host-bridge bug: the callback parameter is a SAMPLE count but the
+  old code passed it straight to `SDL_QueueAudio`'s byte-length argument with no `*sizeof(int16_t)`
+  conversion — every call queued only half the correct bytes, silently dropping the back half of every
+  PCM buffer since this bridge was written. Fixed (see CURRENT-TRUTH Overturned Conclusions for the
+  full mechanism). Added `ROGUESQ_LOG_PCM_SANITY`; two soaks logged 13,832 total calls (7 via the s327
+  direct-pump path, 13,825 via genuine RSP-dispatched `real_ucode=1`) and every single sampled call was
+  all-zero — Hypothesis 2 (silent-but-not-crashing) confirmed with a positive control, not a null
+  result.
+- **WHY it's silent, answered (s373): voice population is structurally blocked by the same gate that
+  keeps title-reach working.** Source-read `reapplyDisplayMode` (`funcs_23.c:9805-10024`) end to end:
+  it unconditionally zeros the audio-tick gate byte (`0x800A0F50`) at function entry, every video frame,
+  then would restore it to 1 at its tail (`0x8008EC88`) — except that exact address is the site
+  `fixup_game_funcs.py` force-zeros, the same patch s343 needs to keep title-reach working. Net: every
+  frame this build re-disables audio and wipes any voice/song/stream state, never durably re-enabling
+  the gate, so `tickMusyXIfActive`'s voice-population path never gets a real window to run — the ucode
+  mixing exact zeros is correct behavior on empty input, not a mixing bug.
+- **C88-reversed pre-title hang, mechanism search (s374, first pass) and REFUTAL (s375, build+soak).**
+  `HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang`. s374's source-only pass (no build) found a
+  plausible single-token-mutex-deadlock candidate: under gate=1 (C88 reversed), `waitForAnyAudioSlot`'s
+  per-iteration `tickMusyXIfActive` call would reach `factor5MutexAcquire` for the first time ever,
+  blocking on `osRecvMesg_recomp` against a single-token queue that `initFactor5Mutex` destroys and
+  recreates — a live queue-recreation race against a blocking receive, never exercised under gate=0.
+  s375 built the discriminating instrument (env-gated enter/exit tracing around
+  `initFactor5Mutex`/`factor5MutexAcquire`/`Release`) and ran a 180s C88-reversed soak: REFUTED
+  cleanly — `factor5MutexAcquire` entered and exited 9131/9131 times, perfectly balanced, continuing
+  steadily hundreds of seconds past the point where `vi_width=` sticks at 640. Bonus correction:
+  `initFactor5Mutex` fired only 6 times total in the 180s run, not "every video frame" as s374 assumed
+  (root cause of that discrepancy left unresolved, not chased further). **Net: there is no hang to
+  fix** — the process stays alive and fully responsive under C88-reversed, it just never re-triggers
+  the VI 640→1024 framebuffer-swap transition. `HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang`
+  CLOSED. Both the temporary C88 reversal and the trace instrumentation used for this soak were
+  reverted/left inert before commit.
+- **VI 640→1024 trigger site search (s376) — REFUTED all three candidate mechanisms by elimination.**
+  `HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site`. A source-only pass (grep/read, no build) over
+  `N64Recomp/RecompiledFuncs/`: **H1 (reset-branch divergence)** refuted — `reapplyAudioConfig` has
+  exactly one hard-coded return path, no reference to the gate byte anywhere in its body. **H2
+  (shared-mutable-state collision)** refuted — `tickActiveSongs`'s and `tickAndReap3DAudioVoices`'s
+  write targets are disjoint from every address read in the scene-transition call chain. **H3 (real
+  completion-condition wait)** refuted — all ~65 hits on the gate byte classify as the already-known
+  MusyX guard-and-return idiom, and none of the gate-derived helper functions are referenced anywhere
+  in the scene-transition files (no external poll site exists). Decision: rather than spend a build+soak
+  on the diffuse H4 fallback (frame-timing/ordering effect, no single identifiable site), the thread was
+  set aside — s373 already showed real audio (PCM) stays 100% silent in the *working* baseline
+  regardless, since voice population is gated elsewhere, so even a confirmed H4 fix would not by itself
+  produce working audio. `HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site` CLOSED by elimination, not
+  solved. Reopens only on a specific new reason to believe the C88-reversed path would unblock real
+  audio.

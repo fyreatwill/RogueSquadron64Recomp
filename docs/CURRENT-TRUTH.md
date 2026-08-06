@@ -7,43 +7,32 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## L
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
-   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. History: s295-330
-   ran 5 passes (668→459 lines by s330); s346 ran a 6th (670→~470 lines) migrating the closed s297-337
-   M5 gate-reversal arc to PROJECT-OVERVIEW §9; s355 ran a 7th migrating the closed s339-353 M5
-   gate-promotion/step5-rate/drainMeshReleaseQueue-tail-scan arc to PROJECT-OVERVIEW §10; s364 ran an
-   8th (689→~480 lines) folding the closed s354-362 guard-hunting arc into one summary item; s371 ran a
-   9th (692→~487 lines) migrating the now-fully-closed s354-370 M5 Step 5 guard-hunting arc (Thread A,
-   Thread B, heapWalker GUARD5) to PROJECT-OVERVIEW §11. Full per-session detail in git log. 35 KB
-   remains a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and the
-   Regeneration section's Standing warnings stay intact deliberately; both are used every iteration.
-2. **M5 audio de-stubbing**: design doc + steps 1-4 DONE — title-reach restored and confirmed 3/3
-   (s343-344, full arc: PROJECT-OVERVIEW §10). Step 5 (both threads plus a heapWalker background-noise
-   site) is **fully CLOSED** as of s370 — full detail: PROJECT-OVERVIEW §11. Step 6 (PCM sanity-check,
-   `M5-AUDIO-PLAN.md` §4) is **ANSWERED s371: real PCM is 100% silent**, and s373 answered WHY:
-   **structurally impossible for voices to be populated**, root-caused to the same C88 force-zero
-   patch that s343 needs to keep title-reach working. Fixed a real host-bridge bug found en route
-   (`queue_samples` was silently dropping half of every buffer's bytes to `SDL_QueueAudio` — see
-   Overturned conclusions) and added `ROGUESQ_LOG_PCM_SANITY`; two soaks logged 13,832 total calls (7
-   via the s327 direct-pump path, 13,825 via genuine RSP-dispatched `real_ucode=1`) and **every single
-   sampled call was all-zero** — hypothesis 2 (silent-but-not-crashing) confirmed, not merely
-   plausible. s374 reopened (Option A) WHY reversing the C88 site causes the pre-title hang: a
-   bounded source-only pass found a specific, previously-undocumented single-token-mutex-deadlock
-   candidate. s375's build+soak REFUTED it cleanly (9131/9131 balanced mutex acquire/release, never
-   blocks) — `HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang` CLOSED. There is no hang/deadlock;
-   C88-reversed simply never re-triggers the VI 640→1024 framebuffer-swap transition, the same open
-   question item -227 originally posed (item -229). s376's source-only pass discriminated H1/H2/H3
-   for the follow-on `HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site` and REFUTED all three cleanly
-   (item -230) — **CLOSED by elimination, not solved**: the remaining H4 (diffuse frame-timing effect,
-   no single site) was judged not worth a build cycle, since s373 already showed real audio stays
-   100% silent even in the *working* baseline regardless of this thread's outcome. This experimental
-   C88-reversed path is set aside pending a specific new reason to reopen it. **No M5 audio thread
-   remains open as of s376** — next M5 work needs a genuinely new lead, not a continuation of the
-   C88-reversal investigation. Detail: Next-steps items -229/-230; next work unit: NEXT.md
-   (fixup_game_funcs.py function-scope backport, tooling).
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Nine passes so far
+   (s295-330 x5, s346, s355, s364, s371) kept the file oscillating around the cap as new session detail
+   accrues; this is the tenth (s380), migrating the closed s371/s373-376 M5 Step 6/C88-investigation
+   arc to PROJECT-OVERVIEW §12. Full per-pass detail in git log. 35 KB remains a stretch target, not a
+   hard floor -- the "Current truth" env-var/timeline prose and the Regeneration section's Standing
+   warnings stay intact deliberately; both are used every iteration.
+2. **M5 audio de-stubbing**: design doc + steps 1-5 DONE and fully CLOSED (full arc: PROJECT-OVERVIEW
+   §10, §11). Step 6 (PCM sanity-check) is ANSWERED: real PCM is 100% silent, root-caused to the same
+   C88 force-zero patch that keeps title-reach working; a genuine host-bridge byte-count bug found en
+   route is fixed (`queue_samples`, see Overturned Conclusions). The follow-on investigation into WHY
+   reversing that gate hangs pre-title, and what drives the VI 640→1024 transition under it, ran to
+   completion and closed by elimination, not by a fix — full arc: PROJECT-OVERVIEW §12. **No M5 audio
+   thread remains open as of s376** — next M5 work needs a genuinely new lead. Current work unit is the
+   sanctioned tooling item below instead (NEXT.md).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
-Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the file-scoped-only guard patches in fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment. **IN PROGRESS as of s379**: real count is 176 (an AST scan, not a grep guess). Batch 1 (s377) converted 23, batch 2 (s378) converted 21 more, batch 3 (s379) converted 24 more — the entire `funcs_3.c` drain-mesh/heap-walker cluster (68 total), all verified byte-identical fixup-report output before/after (strongest available proof of no behavior change), all built and soaked clean. **108 remain**. Process note from s379: the soak step must run in the orchestrating session, not a delegated subagent — launching the compiled binary from a subagent's own sandbox hits an interactive-approval gate it cannot satisfy non-interactively.
+
+Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching
+(the BREADCRUMB10+ slice idiom) to the file-scoped-only guard patches in `fixup_game_funcs.py`, per the
+2026-08-04 analysis in that file's header comment. Real count 176 (an AST scan, not a grep guess).
+**68/176 converted across 3 batches (s377-379)**, all verified byte-identical fixup-report output
+before/after, all built and soaked clean; **108 remain**. Process note from s379: the soak step must
+run in the orchestrating session, not a delegated subagent — launching the compiled binary from a
+subagent's own sandbox hits an interactive-approval gate it cannot satisfy non-interactively. Next work
+unit: NEXT.md (batch 4).
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -169,223 +158,67 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
 oldest). Current top is -233 (s379); the next new item takes -234 and is inserted at the top.
 
--233. **(s379) fixup_game_funcs.py function-scope-match backport, batch 3/N: 24 more of 132
-    remaining file-scoped patches converted (68/176 total), verified byte-identical output,
-    built+soaked clean; entire `funcs_3.c` drain-mesh/heap-walker cluster now fully converted.**
-    Delegated to one self-contained subagent per the now-twice-validated pattern. Re-ran the AST
-    scan against current line numbers: confirmed 132 file-scoped sites remained pre-batch (153 −
-    batch 2's 21, exact match). Converted 24 sites, all in `funcs_3.c`, across 5 functions:
-    `beginFrameDLChunk` (1), `emitAllocatedDLCommand` (2), `heapWalker` (4),
-    `heapFreeListDequeue` (2), `drainMeshReleaseQueue` (15) — the single largest remaining block
-    s378 flagged, now fully drawn down. **Verification**: two fresh `RecompiledFuncs/` regens
-    (pre-batch-3-backed-up script vs. converted script) produced byte-identical patch reports and a
-    zero-diff `diff -rq` across the output trees — no latent cross-function collision. Build clean.
-    **Soak process note (new this session)**: the subagent could not launch the compiled game
-    binary itself — every attempt hit the harness's interactive-approval gate from its
-    non-interactive sandbox, a clean blocked-before-start state, not a crash. The orchestrating
-    session ran the soak directly instead: ~110s, zero crash markers across 15,717 log lines, VI
-    width traversed the FULL 0→320→512→640→1024 timeline in one run (fuller than either prior
-    batch's single soak). **Standing rule for batch 4+: run the soak step in the orchestrating
-    session, not a delegated subagent.** Excluded site-classes (`0x8008EC88` audio gate;
-    `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair) confirmed untouched. **108 remain**;
-    next batch has no single obviously-largest cluster left (the hangar/reserve-list and
-    drain-mesh/heap-walker clusters are both now drawn down) — re-run the AST scan cold and pick
-    whatever cluster groups cleanly. Full detail: `PORTING-STATE` Session 379; next work unit:
-    NEXT.md (batch 4).
+-233. **(s379) fixup_game_funcs.py function-scope-match backport, batch 3/N: 24 more converted
+    (68/176 total), entire `funcs_3.c` drain-mesh/heap-walker cluster now fully converted.**
+    Delegated convert+verify+build to a subagent. Verification method, established batch 1 and reused
+    unchanged every batch since: regen `RecompiledFuncs/` fresh twice (pre-batch backup script vs.
+    converted script), diff both the patch report and the output tree — byte-identical/zero-diff means
+    no latent cross-function anchor collision, the one failure mode worth stopping for. Converted:
+    `beginFrameDLChunk` (1), `emitAllocatedDLCommand` (2), `heapWalker` (4), `heapFreeListDequeue` (2),
+    `drainMeshReleaseQueue` (15). Build clean. **Soak process note**: the subagent could not launch the
+    compiled binary itself — every attempt hit the harness's interactive-approval gate from its
+    non-interactive sandbox, a clean blocked-before-start state. The orchestrating session ran the
+    soak directly instead: ~110s, 0 crash markers, VI traversed the FULL 0→320→512→640→1024 timeline.
+    **Standing rule for batch 4+: run the soak step in the orchestrating session, not a delegated
+    subagent.** Excluded site-classes (`0x8008EC88` audio gate; `waitForMusyXAudioTaskDone`/
+    `shutdownAudioEngine` pair) confirmed untouched. **108 remain**, no single obviously-largest
+    cluster left — re-scan cold and pick whatever groups cleanly. Full detail: `PORTING-STATE`
+    Session 379; next work unit: NEXT.md (batch 4).
 
--232. **(s378) fixup_game_funcs.py function-scope-match backport, batch 2/N: 21 more of 153
-    remaining file-scoped patches converted (44/176 total), verified byte-identical output,
-    built+soaked clean.** Same methodology as batch 1, delegated to one self-contained subagent.
-    Re-ran the AST scan against current line numbers (they shift every batch): confirmed **153**
-    file-scoped sites remained pre-batch (176 − 23, exact arithmetic match — CURRENT-TRUTH's "~152"
-    was a rounding, not a discrepancy). Converted 21 sites across 8 functions: `reserveAndEmitDLEntry`
-    (2 sites), `activateAnimationKeyframe`, `composeNpcOrientationMatrix`/`static_5_800AB1C8` (9
-    sites), `projectModelBoundsToScreen` (3 sites), `updateHangarBayScene`/`static_5_800AB658` (3
-    sites), `musyxSynthFrame`, `acquireSampleStreamBlock`, `fillSampleStreamRange`. **Verification**:
-    two fresh `RecompiledFuncs/` regens (original-backed-up script vs. converted script) produced
-    byte-identical patch reports and a zero-diff `diff -rq` across all 48 output files — no latent
-    cross-function collision in this batch either. Build clean. ~100s soak clean (0 crash markers),
-    VI progressed the FULL 0→320→640→1024→640→512 phase timeline (unlike batch 1's single 70s sample
-    which stuck at 320 — this batch's fuller progression is a small additional data point that s377's
-    stuck-at-320 reading was ordinary run-to-run timing variance, not a refactor regression, per
-    Method traps §4.3). Excluded site-classes (`0x8008EC88` audio gate;
-    `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair) confirmed untouched via diff. **132
-    remain**; next batch's clear target is the `funcs_3.c` drain-mesh/heap-walker guard cluster (the
-    single largest remaining block — the hangar/reserve-list clusters batch 1+2 targeted are now
-    mostly drawn down). Full detail: `PORTING-STATE` Session 378; next work unit: NEXT.md (batch 3).
+-232. **(s378) batch 2/N: 21 more converted (44/176 total).** Same delegated methodology and
+    byte-identical-regen-diff verification as batch 3 above. Converted across 8 functions:
+    `reserveAndEmitDLEntry` (2), `activateAnimationKeyframe`, `composeNpcOrientationMatrix`/
+    `static_5_800AB1C8` (9), `projectModelBoundsToScreen` (3), `updateHangarBayScene`/
+    `static_5_800AB658` (3), `musyxSynthFrame`, `acquireSampleStreamBlock`, `fillSampleStreamRange`.
+    Build clean; ~100s soak clean, VI progressed the FULL 0→320→640→1024→640→512 timeline (evidence
+    batch 1's stuck-at-320 soak was ordinary run-to-run timing variance, not a regression — Method
+    traps §4.3). Excluded site-classes confirmed untouched via diff. **132 remain**; next batch's
+    clear target was the `funcs_3.c` drain-mesh/heap-walker cluster (drawn down by batch 3 above).
+    Full detail: `PORTING-STATE` Session 378.
 
--231. **(s377) fixup_game_funcs.py function-scope-match backport, batch 1/N: 23 of 176 file-scoped
-    patches converted, verified byte-identical output, built+soaked clean.** Executed the sanctioned
-    tooling item (delegated to one self-contained subagent). An AST-based scan (not a grep guess)
-    found the real count of file-scoped `re.subn(..., text, ...)` sites: **176**, vs. the docstring's
-    "~150" and this doc's own prior "~100" estimate — neither had been verified before. Converted 23
-    (all pre-edit line <1250) to the BREADCRUMB10-15 function-scoped idiom: `musyxSynthFrame`,
+-231. **(s377) batch 1/N: 23 of 176 file-scoped patches converted** (real count from an AST scan of
+    `re.subn(..., text, ...)` call sites, not a grep guess — vs. the docstring's prior "~150"
+    estimate). Converted to the BREADCRUMB10-15 function-scoped idiom: `musyxSynthFrame`,
     `runVideoFrameTick`, `reapplyDisplayMode`, `mainGameLoop`, `menuOverlayInit`,
-    `cutsceneDispatchSlotsByFlag`, two `static_N_0xADDR` functions, `musyxKeyOnVoice` (8 sites),
+    `cutsceneDispatchSlotsByFlag`, two `static_N_0xADDR` functions, `musyxKeyOnVoice` (8),
     `evalCubicSplineAtTime`, `advancePlayerAnimationPhase`, `updateAnimatedTextureStreaming`, two more
-    `static_N` diagnostics, `reserveAndEmitDLEntry` (3 sites). **Verification**: regenerated
-    `RecompiledFuncs/` fresh twice — once fixed with the original script, once with the converted
-    script — and the two patch reports are **byte-identical, empty diff**, meaning every converted
-    anchor was genuinely already unique per-function (no latent cross-function collision this batch;
-    that would be the one failure mode worth stopping for, and it didn't occur). Build clean, ~70s
-    soak clean (0 crash markers) though VI stayed at 320 rather than reaching 640 in that window —
-    flagged, not treated as a regression, since the byte-identical-output proof means the emitted C
-    is functionally unchanged from before this session; single-sample timing variance is
-    well-precedented (Method traps §4.3) and not itself evidence of a defect. Two site-classes
-    deliberately left file-scoped with documented reasons (the volatile `0x8008EC88` audio-gate hand
-    patch; the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair whose shared regex is
-    intentionally dual-target, not a mis-scoped single anchor). **~152 remain**, next batch starts
-    ~line 1519 (pre-edit numbering, shifted ~+700 after this session): hangar/reserve-list clusters
-    (`funcs_40.c`/`funcs_15.c`/`funcs_23.c`/`funcs_24.c`) then the largest remaining block, the
-    `funcs_3.c` drain-mesh/heap-walker guard cluster. Re-scan technique (AST walk, filter `subn`
-    calls referencing bare `text`) regenerates the list on demand, no hand-maintained inventory
-    needed. Full detail: `PORTING-STATE` Session 377; next work unit: NEXT.md (batch 2).
+    `static_N` diagnostics, `reserveAndEmitDLEntry` (3). Established the byte-identical-regen-diff
+    verification method reused every batch since; build clean, ~70s soak clean (0 crash markers; VI
+    stayed at 320, later batches showed this was ordinary timing variance, not a regression — Method
+    traps §4.3). Two site-classes deliberately left file-scoped: the volatile `0x8008EC88` audio-gate
+    hand patch, and the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair (shared regex is
+    intentionally dual-target, not a mis-scoped single anchor). Full detail: `PORTING-STATE`
+    Session 377.
 
--230. **(s376) M5 VI-640→1024-trigger source-only pass: H1/H2/H3 all REFUTED cleanly; `HYPOTHESIS-ID
-    m5-audio-vi640to1024-trigger-site` CLOSED by elimination.** Ran NEXT.md's own designated
-    discriminating pass (grep/read only, no build) over `N64Recomp/RecompiledFuncs/`. **H1
-    (reset-branch divergence) REFUTED**: `reapplyAudioConfig` (`funcs_24.c:5046-5168`) has exactly
-    one return path, hard-coded `ctx->r2 = ADD32(0, 0)` (line 5148-5149) — always 0, no reference to
-    the gate byte anywhere in its body, so gate liveness cannot change which branch the caller takes.
-    **H2 (shared-mutable-state collision) REFUTED**: `tickActiveSongs`'s (`funcs_25.c:5744-5800`) and
-    `tickAndReap3DAudioVoices`'s (`funcs_26.c:4194-4354`, writes `0x80153414` at line 4296) write
-    targets are disjoint from every address read in the scene-transition chain
-    (`runVideoFrameTick`/`submitGfxFrame`/`emitFrameRdpInitDl`/`advanceVideoFrame`/
-    `reapplyDisplayMode`) — zero genuine hits on a direct grep. **H3 (real completion-condition wait)
-    REFUTED**: all ~65 hits on the gate byte across `funcs_21-26.c` classify as the already-known
-    MusyX guard-and-return idiom; none of the gate-derived helper functions are referenced anywhere
-    in `funcs_0.c`/`funcs_3.c`/`funcs_4.c` — no external poll site exists. **Decision**: rather than
-    spend a build+soak on the diffuse H4 fallback (frame-timing/ordering effect, no single
-    identifiable site — inherently hard to attribute even if confirmed), the thread is set aside:
-    s373 already showed real audio (PCM) stays 100% silent in the *working* (C88 force-zeroed)
-    baseline regardless, because voice population is gated elsewhere (item -227) — so even a
-    confirmed H4 fix would not by itself produce working audio. Reopens only on a specific new
-    reason to believe the C88-reversed path would unblock real audio. Full detail: `PORTING-STATE`
-    Session 376; next work unit: NEXT.md (fixup_game_funcs.py function-scope-match backport, the
-    sanctioned tooling item — not a hypothesis chase).
-
--229. **(s375) M5 pre-title-hang mechanism, OPTION A build+soak: REFUTED. `HYPOTHESIS-ID
-    m5-audio-destub-c88-pretitle-hang` CLOSED.** Executed item -228's own discriminating measurement:
-    added env-gated (`ROGUESQ_LOG_F5MUTEX=1`) enter/exit tracing around `initFactor5Mutex`'s
-    `osCreateMesgQueue_recomp`/`osSendMesg_recomp` and `factor5MutexAcquire`/`Release`'s
-    `osRecvMesg_recomp`/`osSendMesg_recomp` (`fixup_game_funcs.py`, `funcs_24.c`), reversed the C88
-    site for one local (uncommitted) build+soak, ran 180s. Result is unambiguous: `factor5MutexAcquire`
-    entered and exited **9131/9131** times (perfectly balanced, zero unmatched enters — never blocks),
-    continuing steadily for the full run, hundreds of seconds past the 2.2s mark where
-    `[phase] vi_width=` sticks at 640. This refutes the s374 mutex-deadlock mechanism outright: the
-    predicted freeze ("enter `osRecvMesg_recomp`, never exit, at the exact moment VI sticks") never
-    happens. **Bonus correction, itself worth recording**: `initFactor5Mutex` (the queue
-    destroy+recreate s374 called "unconditionally... EVERY VIDEO FRAME") fired only **6 times total**
-    across the whole 180s run (~7136 `update_screen` calls observed) — not thousands of times. The
-    "every video frame" claim (attributed to s373/s304's `reapplyDisplayMode`→`runVideoFrameTick`
-    chain) does not hold for `reapplyAudioConfig`/`initFactor5Mutex` specifically in this run's actual
-    control flow; `initFactor5Mutex` is called unconditionally as `reapplyAudioConfig`'s first
-    instruction (`funcs_24.c:5070`), so this means `reapplyAudioConfig` itself — not just
-    `initFactor5Mutex` — is not reached every frame post-stall. Root cause of that discrepancy is
-    UNRESOLVED (not chased further this session, in-budget for the one work unit); flagged as an open
-    question, not re-asserted as fact. **What actually happens under C88-reversed, confirmed again**:
-    the process stays alive and fully responsive (audio mutex subsystem cycling normally, no crash, no
-    stall) but VI genuinely never leaves 640 for the entire run — this is the SAME benign
-    `[vi-fs-decision] ... reason=pair=0` / `SET_COLOR_IMAGE`-never-re-emitted plateau s339/s340 already
-    characterized structurally (item -198/-199 lineage, PROJECT-OVERVIEW §10): `cinematicLoopBody`
-    genuinely alive, DMA ring progressing, `musyxSynthFrame` ticking — it just never re-triggers a new
-    framebuffer swap. C88-alone-reversed now stands at 0/6 title-reach (was 0/5 pre-s375). **Net: there
-    is no "hang" to fix — no deadlock, no wedge — C88-reversed is simply missing whatever triggers the
-    640→1024 VI transition, the SAME open question item -227 originally posed** ("what specifically
-    drives VI 640→1024 in the gate=0 baseline") — now the ONLY remaining thread, no longer a fallback
-    behind a deadlock theory. Both this soak's temporary C88 reversal and its trace instrumentation
-    were reverted/left inert respectively before commit: the fixup script's shipped default
-    (force-zero) was rebuilt and confirmed via a clean rebuild before this session's other doc/commit
-    work. Full detail: `PORTING-STATE` Session 375; next work unit: NEXT.md
-    (`HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site`, iteration 1).
-
--228. **(s374) M5 pre-title-hang mechanism, OPTION A first pass: found a specific, previously-
-    undocumented single-token-mutex-deadlock candidate — not yet build-soak confirmed.**
-    `HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang`, iteration 1/3 of its budget. Source-only pass
-    (per NEXT.md's own instruction not to build blind): `waitForAnyAudioSlot`
-    (`N64Recomp/RecompiledFuncs/funcs_15.c:7217`) is called from `cinematicLoopBody`'s
-    gate-independent, timer-triggered cutscene-teardown block (`funcs_27.c:108288`) — squarely
-    inside the pre-title boot window. Under gate=1 (the C88-reversed state under test), its
-    per-iteration `tickMusyXIfActive` call reaches `factor5MutexAcquire` for the first time ever,
-    blocking on `osRecvMesg_recomp` against a single-token queue (`initFactor5Mutex`,
-    `funcs_24.c:5703-5745`, `count=1`) that is unconditionally destroyed and recreated EVERY VIDEO
-    FRAME by `reapplyAudioConfig`→`initFactor5Mutex` (`funcs_24.c:5070`), itself called every frame
-    from `reapplyDisplayMode`→`runVideoFrameTick` (already established s373). Under gate=0
-    (baseline) this per-frame churn is inert; under gate=1 it's live for the first time in the
-    project's history — a live queue-recreation race against a blocking receive. The existing
-    `waitForAnyAudioSlot` 500000-iteration safety guard (s301) is structurally unable to catch this:
-    it only checks after a full loop-body iteration completes, and one blocking `osRecvMesg_recomp`
-    means the loop never completes even a second iteration. Explains the s342 log signature (VI
-    stuck at 640, but `[voice-active-gate-hb]`/`[voice-cursor-hb]` heartbeats kept incrementing for
-    the full 600s) because those heartbeats live in `musyxMixActiveVoices`
-    (`funcs_24.c:2477`), on the separate, gate-independent, VI-retrace-driven `musyxSynthFrame`
-    path — not on `waitForAnyAudioSlot`'s call chain, so a deadlock there wouldn't stop them.
-    **Not yet resolved from source**: whether `runVideoFrameTick` and `cinematicLoopBody` run on the
-    same cooperative thread context (i.e. whether the race is even physically reachable), and how
-    the OS-thread scheduler (`lib/N64ModernRuntime`) behaves when a message queue is recreated while
-    a receiver may be blocked on it. Also still open: item -227's original "what specifically drives
-    VI 640→1024 in the gate=0 baseline" — no such site was located in the traced call chains; may be
-    moot if the deadlock is confirmed (any main-thread deadlock blocks downstream progression
-    regardless of the specific trigger), stays as fallback if the deadlock trace comes back negative.
-    Next step (already specified): env-gated enter/exit+timestamp logging around
-    `factor5MutexAcquire`/`Release`/`initFactor5Mutex`, specifically bracketing the
-    `osRecvMesg_recomp` call at `funcs_24.c:5781`; one build, one C88-reversed soak; check whether
-    the log freezes mid-`osRecvMesg_recomp` at the exact moment VI sticks at 640 — the discriminating
-    measurement. Full detail: `PORTING-STATE` Session 374; exact commands: NEXT.md.
-
--227. **(s373) M5 Step 6 "why is PCM silent" ANSWERED via source trace, no new soak needed:
-    voice population is structurally blocked by the same gate the boot-hang fix requires.**
-    Source-read `reapplyDisplayMode` (`N64Recomp/RecompiledFuncs/funcs_23.c:9805-10024`) end to end,
-    cross-referencing the already-documented s300/s304/s342-343 facts instead of re-deriving them:
-    (1) s300 established `tickMusyXIfActive` — the ONLY place `tickActiveSongs`/
-    `tickAndReap3DAudioVoices` (the functions that add/tick voices) get called — fully short-circuits
-    on a single `beq` when the gate byte at `0x800A0F50` reads 0. (2) This session's read of
-    `reapplyDisplayMode` confirms it unconditionally zeros that exact byte at function entry
-    (`0x8008EB7C: sb $zero,0xF50($at)`, line 9838) on EVERY call, and `reapplyDisplayMode` is called
-    every video frame (established s304, `runVideoFrameTick`). (3) The function then conditionally
-    (only when `reapplyAudioConfig` returns 0, the common case) runs a full song/voice/streaming reset
-    — `resetSongSubsystemCounter`, `initSongSequencerPools`, `resetMusyXEngineState`,
-    `clearStreamedVoiceFlags`, `reset3DAudioLists` (lines 9905-10009) — and would restore the gate to 1
-    at its tail (`0x8008EC88`, line 10020) — except that exact address is the site
-    `fixup_game_funcs.py` force-zeros (`MEM_B(0XF50,ctx->r1) = 0` instead of `= ctx->r2`), confirmed
-    still the current, required baseline (s343: reversing it is why title-reach broke 0/5 times,
-    s342). **Net: every single video frame this build re-disables audio, wipes any voice/song/stream
-    state that might have accumulated, and never durably re-enables the gate** — so
-    `tickMusyXIfActive`'s voice-population path never gets a real window to run. This is not a
-    separate bug from s371's all-zero-PCM finding; it's the same mechanism, traced one level further:
-    the RSP ucode was never even fed voices to mix, so producing exact zeros is the mix step behaving
-    correctly on empty input (**Hypothesis 1 confirmed; Hypotheses 2/3 — mixing internally gated off,
-    wrong buffer read — are now unnecessary to test**, since the ucode never receives real voice data
-    to begin with). **Not chased further this session**: WHY reversing the C88 site specifically
-    causes the pre-title hang was never root-caused even across the original 41-session s297-337
-    gate-reversal arc (closed on empirical revert, not mechanism) — reopening that is a large,
-    separate investigation, not a Step 6 follow-on; see NEXT.md for the explicit decision this opens.
-
--226. **(s371) M5 Step 6 ANSWERED: real PCM is 100% silent even under genuine RSP-dispatched
-    real ucode; found and fixed a real, previously-undetected host-bridge bug along the way.**
-    Before writing the planned sanity counter, confirmed NEXT.md's own open question (sample vs.
-    byte count) by reading `queue_samples` (`src/main/main.cpp:677-681`) against
-    `ultramodern::queue_audio_buffer` (`lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36`)
-    together — found the callback's parameter was named/treated as a byte count but actually
-    receives a SAMPLE count, and the old code passed it straight to `SDL_QueueAudio`'s byte-length
-    argument with no `*sizeof(int16_t)` conversion: every call queued only HALF the correct number
-    of bytes, silently dropping the back half of every PCM buffer, unconditionally, since this
-    bridge was written. Fixed (multiply by `sizeof(int16_t)`); overturns M5-AUDIO-PLAN.md §4's
-    claim that this bridge was "already fully implemented and functional" (see Overturned
-    conclusions). Added `ROGUESQ_LOG_PCM_SANITY` (`[pcm-sanity]`) in the same edit/build. Two soaks:
-    `verify1` crashed pre-title via the s327 emergency direct-pump path (7 `[pcm-sanity]` calls, all
-    `all_zero=1`; its crash signature is byte-for-byte the already-cataloged s367
-    `musyxSynthFrame+4652`/`0x8000834c` background noise, confirming the fix introduced no new
-    crash). `verify2` reached title (45.6s) and ran ~84s into a 120s hold under GENUINE
-    RSP-dispatched real ucode (`[audtask-dispatch]` confirms `real_ucode=1` actively firing) before
-    an unrelated crash (`trackResourceListWithMappingTables+1228`, very likely the same "Apple
-    `dladdr` fallback" background-noise family already at n=2 with a 4-byte-different offset,
-    logged as a data point for the next M3 audit, not chased) — logging 13,825 `[pcm-sanity]` calls,
-    **100% all-zero**, sampled every 256th per the standing convention. Net across both runs:
-    13,832 total logged calls, 0 non-zero. **Hypothesis 2 (silent-but-not-crashing) CONFIRMED**, a
-    positive-controlled result (thousands of instrument fires plus an independent
-    `real_ucode=1`-dispatch confirmation in the same run) — not a null result. Full detail:
-    `PORTING-STATE` Session 371.
+-226..-230. **(s371, s373-376) M5 Step 6 (PCM sanity-check) and the C88-reversed pre-title-hang/
+    VI-trigger investigation — all CLOSED.** s371 answered Step 6: real PCM is 100% silent even under
+    genuine RSP-dispatched real ucode (13,832 logged `[pcm-sanity]` calls, 0 non-zero — a
+    positive-controlled result), and found+fixed a real host-bridge bug en route (`queue_samples`
+    silently dropped half of every buffer's bytes — see Overturned Conclusions). s373 root-caused WHY:
+    `reapplyDisplayMode` unconditionally re-zeros the audio-tick gate every video frame and never
+    durably re-enables it, because its own re-enable site is the same `0x8008EC88` address
+    `fixup_game_funcs.py` force-zeros to keep title-reach working — so voice population never gets a
+    window to run; the ucode mixing exact zeros is correct behavior on empty input, not a mixing bug.
+    s374 found a plausible single-token-mutex-deadlock candidate for why reversing that gate hangs
+    pre-title; s375's build+soak REFUTED it cleanly (9131/9131 balanced mutex acquire/release, never
+    blocks) — `HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang` CLOSED: there is no hang, C88-reversed
+    just never re-triggers the VI 640→1024 transition. s376's source-only pass discriminated three
+    candidate trigger mechanisms (reset-branch divergence, shared-mutable-state collision, real
+    completion-condition wait) and REFUTED all three cleanly — `HYPOTHESIS-ID
+    m5-audio-vi640to1024-trigger-site` CLOSED by elimination, not solved (the remaining diffuse
+    frame-timing fallback wasn't worth a build cycle, since real audio stays silent regardless per
+    s373). **No M5 audio thread remains open as of s376** — next M5 work needs a genuinely new lead.
+    Full detail: `docs/PROJECT-OVERVIEW.md` §12; raw detail `PORTING-STATE` Sessions 371, 373-376.
 
 -225..-210. **(s354-370) M5 Step 5 guard-hunting arc — Thread A (`coalesceFreeHeapBlocks`), Thread B
     (`drainMeshReleaseQueue` linked-list corruption), and a heapWalker background-noise site (GUARD5)
@@ -410,44 +243,31 @@ oldest). Current top is -233 (s379); the next new item takes -234 and is inserte
     full clean 302s hold recovered from raw logs after an 8.7 GB `run.log` defeated the soak wrapper's
     own timeout — new lesson: an `rc=137`/empty-wrapper-log verdict is not automatically
     uninformative, check the raw launcher/run.log before discarding). **Net as of s370: no M5 Step 5
-    or escalated-background-noise threads remain open** — next M5 work is Step 6 (item -226).
+    or escalated-background-noise threads remain open** — next M5 work was Step 6, since closed
+    (item -226..-230).
 
--209..-195. **Sixteen sessions (s339-353) covering the M5 gate-promotion, step-5 crash-rate-comparison,
-    and `drainMeshReleaseQueue` tail-scan-cluster arcs — all CLOSED/superseded, folded here.**
-    (1) VI=640 `pairs=0` stall resolution (s339): source-proved
-    `submitGfxFrame` cannot produce a `FramebufferPair` and `cinematicLoopBody`'s self-loop calls the
-    real `SET_COLOR_IMAGE` producer exactly once — not a stall, an ordinary one-time RDP-state prologue.
-    (2) Audio-gate promotion arc (s340-344): promoted both audio gates to permanent default (s340, on a
-    since-overturned validation basis — see Overturned Conclusions); found `reapplyDisplayMode`'s
-    reversal alone deterministically blocks title-reach, 0/5 (s342); reverted just that gate, restoring
-    title-reach (confirmed 3/3 by s344) but surfacing a new `tickWrappingTimerAccumulatorList`
-    div-by-zero in the post-title window, PARKED at 1/3 recurrence
-    (`m5-audio-destub-tickwrap-divzero-craftselect`, reopens on `last-guest-pc=0x80054744`). Current
-    gate state unchanged since s343: fixup regex matches ONLY `reapplyDisplayMode` (`0x8008EC88`,
-    force-zeroed); `setDisplayMode` (`0x8008EB40`) stays reversed. (3) Step-5 crash-rate-comparison
-    methodology arc (s341, s344-347): fixed 2 methodology bugs (a `[keys]`-log misattribution, an
-    unbounded per-node log blowup), then a 4-run batch found the post-title crash rate high (~75%) but
-    diffuse across symbols, 0/4 hits on the two named target families — closed s352, when a 16-log
-    offline re-analysis found the crash TIMING (not symbols) was bimodal (two deterministic
-    VI-transition windows) and a corrupted-pointer value (`bad_v1=0x00010001`) reproduced
-    byte-identically across 2 independent sessions/builds (~1-in-4-billion coincidence odds) — this
-    became Thread B's origin lead, see item -225..-210. (4) `drainMeshReleaseQueue` tail-scan cluster
-    (s348-351, s353): found and GUARDED 3 distinct crash sites within one function's dense unguarded
-    linked-list tail-scan idiom (`processSceneNode`'s content-pointer field s348; a 2nd read site via
-    BREADCRUMB15 s349-350; a write-through-v1 sibling site s351); landed a ring-buffer breadcrumb
-    instrument s353 (0/2 informative on its own verify pair). The `[scene-node-content-guard]` guard
-    from (4) is now known steady-state-benign, not corruption evidence — see Overturned Conclusions.
-    Full detail: `docs/PROJECT-OVERVIEW.md` §10; raw detail `PORTING-STATE` Sessions 339-353.
+-209..-195. **Sixteen sessions (s339-353), M5 gate-promotion/step-5-crash-rate/drainMeshReleaseQueue
+    tail-scan arcs — all CLOSED/superseded.** VI=640 `pairs=0` stall resolved as an ordinary one-time
+    RDP-state prologue, not a stall (s339). Both audio gates were briefly promoted to default (s340, on
+    a since-overturned validation basis — Overturned Conclusions), then `reapplyDisplayMode`'s reversal
+    alone was found to deterministically block title-reach (0/5, s342) and reverted, restoring
+    title-reach (3/3, s344) but surfacing a `tickWrappingTimerAccumulatorList` div-by-zero PARKED at 1/3
+    recurrence (`m5-audio-destub-tickwrap-divzero-craftselect`, reopens on
+    `last-guest-pc=0x80054744`). **Current gate state, unchanged since s343**: fixup regex force-zeros
+    ONLY `reapplyDisplayMode` (`0x8008EC88`); `setDisplayMode` (`0x8008EB40`) stays reversed. A
+    crash-rate-comparison methodology arc (s341-352) found the post-title crash rate diffuse across
+    symbols until a re-analysis showed the TIMING was bimodal and a corrupted pointer
+    (`bad_v1=0x00010001`) reproduced byte-identically across 2 sessions — became Thread B's origin lead
+    (item -225..-210). `drainMeshReleaseQueue` tail-scan cluster (s348-353): 3 crash sites GUARDED; the
+    `[scene-node-content-guard]` from this is now known steady-state-benign, not corruption evidence
+    (Overturned Conclusions). Full detail: PROJECT-OVERVIEW §10; raw: `PORTING-STATE` Sessions 339-353.
 
--160..-194. **(s297-337) M5 audio de-stubbing: the full gate-byte-reversal and VI=640-stall
-    measurement-chasing arc, 41 sessions of instrumentation each superseded by the next, closed by
-    item -209..-195's (s339) source proof.** Chased a "missing call count" through 2 diagnostic-cap bugs
-    to a false 14-call gap (closed s325: the gap was the bug itself), found and fixed the `setDisplayMode`
-    VI=320 hang (a spin loop starved of `musyxSynthFrame` pumps, s326/327, confirmed 3/3 s328), then
-    chased `reapplyDisplayMode`'s VI=640 stall through 5 reachability probes to `cinematicLoopBody`'s
-    internal self-loop, resolved s339 (see item -209..-195 and PROJECT-OVERVIEW §10). Along the way:
-    `initMusyXEngine`'s gate found to be dead code, never called (s306, see Overturned Conclusions).
-    Full paragraph migrated to `docs/PROJECT-OVERVIEW.md` §9 (s346 maintenance pass); full raw detail:
+-160..-194. **(s297-337) M5 audio de-stubbing: the full gate-byte-reversal/VI=640-stall arc, 41
+    sessions of instrumentation each superseded by the next, closed by item -209..-195's (s339) source
+    proof.** Chased a false "missing call count" (closed s325: the gap was the diagnostic-cap bug
+    itself), fixed the `setDisplayMode` VI=320 hang (s326-328), then resolved `reapplyDisplayMode`'s
+    VI=640 stall via `cinematicLoopBody`'s internal self-loop (s339). `initMusyXEngine`'s gate found
+    dead code, never called (s306, Overturned Conclusions). Full detail: PROJECT-OVERVIEW §9; raw:
     `PORTING-STATE` Sessions 297-337.
 
 -159..-14 (excluding -20, kept below). **Ten closed investigation lineages (nine from s314, plus
@@ -468,23 +288,14 @@ oldest). Current top is -233 (s379); the next new item takes -234 and is inserte
     count after every `fixup_game_funcs.py` run. Full detail: `PORTING-STATE` Sessions 120, 121, 126.
 
 -11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89).** 3 consecutive non-recurrences since s88's correctly-targeted instrument, against 8 prior crashing soaks. `ROGUESQ_LOG_ANIM_CB=1` still live if it recurs.
-
 -10. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side). Still one data point.
-
 -9. **M3 — confirm the s83 spline div0 guard actually engages.** 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
-
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
-
 -7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once earlier items clear: `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40, document the phase timeline. Gate already keeps black off; residual S1 `fs` freeze (~3769-3872 plateau) may still stall animation.
-
 -6. **M4 — confirm the s53 missing-func fix at runtime** (s54 applied + built it; only the game-run check remains). Undriven outdoor-512 stretch; `grep -c "\[missing-func\]"` should go 3→0. Not load-gated (s60/s61). Full detail: PORTING-STATE s53, s54.
-
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption). Each new failure is its own work unit.
-
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits including s54's `mission_overlay.txt` fix. Ask the user before committing there.
-
 -2. **Band-row coverage history** (settled, s41-49): s40's `col`-write probe fails its control.
-
 -1. **GPU->CPU present PNG** via `NativeTarget::copyToRAM` -- a convenience, not a blocker.
 
 **Done, do not redo:** optimising the ucode vector path (s38: `-O0`→`-O2` gave 41x; SIMD/RSPRecomp vector work unnecessary at 4.5ms/task without new justification); the ucode-performance-bottleneck→DL-submission-collapse→RDP-census→draw-loss chain (s33-s37); coverage attribution/format-mismatch analysis (`LOG_BBOX`/`LOG_UPLOAD` — every band draw is I4 `tlut=0`); the s27-s31 I4-decode line (`FIX_DXT_I`, `I4_SHADE_MONO`, `SHADE_ONLY_MONO`, restricted `FLATTEN_I4`) — aimed at a texture that doesn't paint those pixels.
@@ -566,15 +377,11 @@ Standing warnings:
   the step-5 corruption-source hunt. PORTING-STATE 348, 350, 352; CURRENT-TRUTH item -209..-195.
 - **(s339→s340→s342)** "The VI=640 `pairs=0` plateau is a benign, locked-camera mission cutscene" (s339)
   and "s340's 2/2 clean soaks validate promoting both audio gate reversals together" (s340) — s342
-  found both soaks (and s341's 2 follow-ups) never left the pre-title attribution/logo screen: 0
-  `[keys]` lines in all 4 raw logs, and `run_mission_keys.sh`'s wait-for-VI=1024 gate mechanically
-  cannot reach its `SCHEDULE`/`HOLD_S` logic without first seeing VI=1024, which never happened.
-  Believable: the soaks genuinely were crash-free for the full 600s with audio/DMA/voice counters
-  visibly live throughout (a real same-run positive control) — it just never occurred to check whether
-  the `[keys]` schedule had actually fired. The underlying `pairs=0` mechanism (item -209..-195 range,
-  s339's source trace, PROJECT-OVERVIEW §10) is not overturned, only its context: it onsets pre-title,
-  not mid-mission-cutscene, and is
-  specific to `reapplyDisplayMode`'s gate site, not `setDisplayMode`'s. PORTING-STATE 339, 340, 342.
+  found both soaks (and s341's 2 follow-ups) never left the pre-title attribution/logo screen (0
+  `[keys]` lines in all 4 raw logs). Believable: the soaks genuinely were crash-free with audio/DMA
+  counters visibly live (a real positive control) — nobody checked whether the `[keys]` schedule had
+  actually fired. The underlying `pairs=0` mechanism (PROJECT-OVERVIEW §10) is not overturned, only its
+  context: pre-title, not mid-cutscene, specific to `reapplyDisplayMode`'s gate. PORTING-STATE 339, 340, 342.
 - **(s107/108→s316→s318)** Two linked overturns in the gate1/2/3 tick-producer mechanism chase: (1)
   "the 3 near-identical countdown/period gates fire `tickAllActiveSongs`/`tickAudioSequencerFrame`" was
   never validated with a positive control across 4 sessions (s108/s311/s312 measured only gate1's raw
@@ -625,27 +432,20 @@ Standing warnings:
   any soak. PORTING-STATE 306.
 - **(s307→s309→s313→s315)** A chain of "stop points converge" claims in the audio-tick investigation,
   each overturned by a closer same-run measurement: "the RSP-task freeze and audio-tick freeze land at
-  the same point (task #39/tick #19), one shared upstream resource" (s307) — `main.cpp` source-read
-  found separate code paths, audio ticks stopping 18 tasks/1930 log lines earlier (s309). "The 3
-  tick-producers and RSP `M_AUDTASK` all stop together at call #19/20 (a SOFT stop)" (s307/310/311) —
-  a widened print-cap soak found `update3DAudioFrame` fires 40/40 (the real hard-stop boundary), the
-  tick-producers stop 3 calls earlier at 37/37, and only `M_AUDTASK` genuinely stopped at 20/20 (s313).
-  Then "`M_AUDTASK` genuinely stops at 20/20" itself — its diagnostic lived outside the game-code patch
-  file and had the identical unwidened flat-cap bug s313 had just fixed elsewhere; widening found it
-  also fires 40/40 (s315). Net: 2 real stop points (37/37 and 40/40), not 1 or 3. Believable each time:
-  similar small round numbers read as simultaneous unless line numbers are diffed. PORTING-STATE 309,
-  313, 315.
-- **(M5-AUDIO-PLAN.md §4→s371)** "The host bridge (`queue_samples`/`SDL_QueueAudio` wiring) is
-  already fully implemented and functional... nothing needs to be built here" — a source read found
-  a real bug: `queue_samples`'s parameter was named/treated as a byte count but
-  `ultramodern::queue_audio_buffer` actually passes a sample count, and the old code passed it
-  straight through as `SDL_QueueAudio`'s byte length with no `*sizeof(int16_t)` conversion — every
-  call queued only half the correct number of bytes, silently dropping the back half of every PCM
-  buffer, since this bridge was written. Believable: the wiring genuinely compiles, links, and calls
-  through cleanly end-to-end, so eyeballing the call graph reads as "functional" — the defect is a
-  unit-mismatch one level down, only visible by checking the actual value each side produces/expects,
-  not by tracing that a call happens. Fixed s371 (`src/main/main.cpp`'s `queue_samples`). PORTING-STATE
-  371.
+  the same point, one shared upstream resource" (s307) — source-read found separate code paths (s309).
+  "The 3 tick-producers and RSP `M_AUDTASK` all stop together at call #19/20" (s307/310/311) — a
+  widened print-cap soak found `update3DAudioFrame` fires 40/40 (the real hard-stop boundary), the
+  tick-producers stop 3 calls earlier at 37/37, and only `M_AUDTASK` genuinely stopped at 20/20 (s313) —
+  which then turned out to be its own unwidened flat-cap diagnostic bug; widening found it also fires
+  40/40 (s315). Net: 2 real stop points (37/37, 40/40), not 1 or 3. Believable each time: similar small
+  round numbers read as simultaneous unless line numbers are diffed. PORTING-STATE 309, 313, 315.
+- **(M5-AUDIO-PLAN.md §4→s371)** "The host bridge (`queue_samples`/`SDL_QueueAudio` wiring) is already
+  fully implemented and functional" — a source read found `queue_samples`'s parameter is a sample count
+  but was passed straight through as `SDL_QueueAudio`'s byte length with no `*sizeof(int16_t)`
+  conversion, silently dropping the back half of every PCM buffer since this bridge was written.
+  Believable: the wiring compiles/links/calls cleanly end-to-end, so eyeballing the call graph reads as
+  "functional" — the defect is a unit mismatch one level down, only visible by checking actual values.
+  Fixed s371 (`src/main/main.cpp`; mechanism detail: PROJECT-OVERVIEW §12). PORTING-STATE 371.
 
 ### Dead ends — labelled as such in the log, do not retry
 

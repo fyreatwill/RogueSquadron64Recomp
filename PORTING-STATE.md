@@ -32441,3 +32441,56 @@ Worth stating explicitly in NEXT.md for batch 4 so it isn't rediscovered by tria
 Outcome: ADVANCED (real code change: 24 more patch sites hardened against the documented file-scope
 fragility class — the entire funcs_3.c drain-mesh/heap-walker cluster now fully converted — running
 total 68 of 176 converted, 108 remain).
+
+## Session 380 (2026-08-06) — MAINTENANCE: compacted CURRENT-TRUTH.md (684→483 lines, -201 net; 62,091→43,306 bytes)
+
+Step 0 of ITERATION.md triggered: `wc -c < docs/CURRENT-TRUTH.md` printed 62091, over the 60,000-byte
+threshold. This is the tenth maintenance pass (after s295-330's five, s346, s355, s364, s371).
+
+**What moved to docs/PROJECT-OVERVIEW.md (new §12)**: the full s371/s373-376 M5 Step 6
+(PCM-sanity-check) and C88-reversed pre-title-hang/VI-trigger-site investigation arc — previously
+CURRENT-TRUTH Next-steps items -226 through -230, roughly 150 lines of session-by-session detail.
+Replaced in CURRENT-TRUTH with a single combined item `-226..-230` (~19 lines) summarizing the net
+conclusions: Step 6 answered (PCM 100% silent, host-bridge byte-count bug found+fixed), WHY answered
+(voice population structurally blocked by the shared C88 gate), the pre-title-hang mutex-deadlock
+candidate REFUTED (`HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang` CLOSED), and the VI 640→1024
+trigger-site search REFUTED all three candidates by elimination (`HYPOTHESIS-ID
+m5-audio-vi640to1024-trigger-site` CLOSED). Same migrate-and-summarize pattern as every prior pass
+(§9, §10, §11 already hold the earlier closed arcs).
+
+**What was trimmed in place, no new PROJECT-OVERVIEW content**:
+- The USER DIRECTIVE section's item 1 (maintenance history) and item 2 (M5 status) — cut from ~40
+  lines of session-by-session narrative to ~17 lines of current-state summary with pointers to §10-12.
+- The sanctioned-tooling paragraph — cut redundant per-batch narrative already covered by items
+  -231/-232/-233 below it.
+- Next-steps items -233/-232/-231 (fixup_game_funcs.py backport batches 3/2/1) — each batch had
+  restated the shared verify-by-byte-identical-regen-diff methodology in full; consolidated to state
+  it once (batch 3, "reused unchanged every batch since") and cross-reference from 2 and 1. Net counts,
+  function lists, and soak results (the facts that matter for continuity into batch 4) are unchanged.
+- Items -209..-195 and -160..-194 (already-summarized closed arcs pointing to PROJECT-OVERVIEW §9/§10)
+  — tightened prose further, no information removed that wasn't already fully covered by the §9/§10
+  pointer targets.
+- Three Overturned Conclusions entries (`s339→s340→s342`, `s307→s309→s313→s315`,
+  `M5-AUDIO-PLAN.md §4→s371`) — trimmed redundant phrasing; the `s371` one now points to the new §12
+  for full mechanism detail instead of restating it.
+- Items -11 through -1 (ten single-line parked items) — removed the blank-line separator between each
+  (they're already one line of content each); no text changed.
+- Fixed one stale cross-reference: item -225..-210's closing line said "next M5 work is Step 6 (item
+  -226)" — item -226 no longer exists standalone (folded into -226..-230) and Step 6 is now closed, so
+  reworded to "next M5 work was Step 6, since closed (item -226..-230)".
+
+**Not touched, per the standing exception**: the "Current truth" section's env-var/timeline prose and
+the Regeneration section's Standing warnings — both used every iteration, explicitly exempted.
+
+**Verification**: read the full post-edit CURRENT-TRUTH.md end to end for coherence (no orphaned
+cross-references, no broken item numbering — the -234-next-slot convention and the -233 top item are
+unaffected by this pass since no new Next-steps item was added). `wc -l`/`wc -c` before/after:
+684→483 lines (-201, clears the 200-net-line ADVANCED threshold), 62091→43306 bytes. 35 KB remains a
+stretch target, not reached this pass, but well clear of the 60,000-byte trigger.
+
+No experiments run this session (maintenance iterations don't run experiments, per ITERATION.md). No
+soak needed or run (docs-only change).
+
+Outcome: ADVANCED (>=200-net-line CURRENT-TRUTH.md shrink, the explicit maintenance-iteration ADVANCED
+criterion). Next iteration resumes the sanctioned tooling work unit: fixup_game_funcs.py
+function-scope-match backport batch 4/N (108 remain).
