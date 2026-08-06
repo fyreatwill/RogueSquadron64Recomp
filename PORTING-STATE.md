@@ -32936,3 +32936,62 @@ B), or move to M3 idiom-class audit work (Option C) if Option B is deferred.
 Outcome: ADVANCED (fixed a real silent multi-file collision bug in sanctioned tooling; verified via
 byte-identical-except-the-one-intended-line regen-diff on both the report and the full tree; build + soak
 clean with a genuine VI-phase-timeline positive control).
+
+## Session 388 (2026-08-06) — post-backport follow-up: `musyxSynthFrame`/`initN64RspMixer` `synth-rearm-ptr` ownership question (Option B from s387's NEXT.md), CLOSED — resolved and converted to function-scope
+
+Picked up the last live follow-up item from the fixup-scope backport thread: does the
+`ROGUESQ_LOG_AUDIOTICK_TRACE`-gated `[synth-rearm-ptr]` diagnostic at `0x800919D4` genuinely belong to
+`initN64RspMixer` instead of `musyxSynthFrame`, as s384's byte-identical regen-diff catch suggested?
+
+Resolved directly against the generated code, not just the prior session's inference: `grep -n` for both
+`RECOMP_FUNC void musyxSynthFrame(...)` / `RECOMP_FUNC void initN64RspMixer(...)` signatures and the
+`0x800919D4` anchor in `~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c` shows `musyxSynthFrame`
+starts at line 3146, `initN64RspMixer` starts at line 4396, and the anchor comment sits at line 4580 — with
+no `RECOMP_FUNC` boundary between 4396 and 4580. The anchor is unambiguously inside `initN64RspMixer`,
+confirming s384's finding with a direct line-boundary check rather than trusting the earlier inference.
+
+Since this was a genuine, confirmed answer (not "not worth moving, low priority" per NEXT.md's option-A
+close-out path), converted the patch in `fixup_game_funcs.py` from file-scope (`p.name == "funcs_24.c"`,
+matched anywhere in the file) to function-scope on `initN64RspMixer`, using the same `func_start_m` /
+`next_func_m` / `func_re.search` body-boundary idiom as every other function-scoped patch in the script
+(mirrors the adjacent `[synth-entry]` patch's structure, just targeting the correct function this time).
+Both `musyxSynthFrame` and `initN64RspMixer` already live in the same file, so this doesn't fix a
+cross-file collision like s387's — it's a defensive correctness improvement against a hypothetical future
+duplicate `0x800919D4`-shaped anchor appearing elsewhere in `funcs_24.c`, consistent with why every other
+site in this backport was converted.
+
+Verification (same protocol as every backport batch, run in the orchestrating session, not delegated —
+both cross-repo regen commands and launching the compiled binary need sandbox-approval steps a subagent
+can't satisfy non-interactively): full `make_elf.py` → `N64Recomp` regen produced a fresh unpatched
+45-file `RecompiledFuncs/` baseline, copied aside. Ran the pre-edit script against a fresh copy of the
+baseline → 374-line fixup report + full-tree SHA-256; restored the baseline, ran the post-edit script
+against a second fresh copy → another 374-line report + tree hash. `diff` on the two reports: zero lines
+different. `diff` on the two 45-file tree-hash listings: zero lines different — the generated code is
+byte-identical either way, exactly as predicted, because the `0x800919D4` anchor is the sole occurrence of
+that text in the file, so narrowing the search window from "whole file" to "inside `initN64RspMixer`'s
+body" finds the same single match at the same location.
+
+Build: `cmake --build -j8` clean (same pre-existing DDIV/DMULT sign-conversion warnings as always, no new
+ones).
+
+Soak: `cd`-into-`build/`-then-exec wrapper script (s382-established, avoids the cwd false-clean bug),
+backgrounded 110s, SIGKILLed. 0 crash markers over 15,750 log lines. Positive control: `[present-1024]`
+and `w=512` markers fired continuously throughout, VI update counter (`#NNNN` in `[vi-fs-decision]`
+lines) reached #6528+ over the 110s window — confirms a genuinely running, progressing game state, not a
+false-clean early exit.
+
+No `lib/` files were touched (same as every prior backport-thread session — the edit lives entirely in the
+standalone `~/Documents/Tools/N64Recomp` tool checkout, untracked by git there), so
+`submodule-patches/export.sh` does not apply and was not run.
+
+`docs/CURRENT-TRUTH.md` updated: both s387 follow-up items are now resolved; the fixup-scope backport
+thread (closed at s386, follow-ups tracked s387-388) has no remaining live work. Next work unit: M3
+idiom-class audit (strategic-priority item 3) — a fresh scan of `scratch/agent/soak_results/*.log` for a
+live recurring crash-marker pattern is needed first, since `SOAK-RESULTS.md`'s queue has been quiet since
+s369 (s379/s386/s388 are manual batch-verification soaks, not idiom-hunting soaks).
+
+Outcome: ADVANCED (resolved a real open ownership question with a direct line-boundary measurement, not
+just re-asserting the prior session's inference; converted the site to function-scope for defensive
+correctness; verified via byte-identical regen-diff on both the report and the full 45-file tree; build +
+soak clean with a genuine VI-progression positive control). HYPOTHESIS-ID `post-backport-followups` is now
+CLOSED — both items resolved, thread has no more work.

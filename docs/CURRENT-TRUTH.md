@@ -51,27 +51,37 @@ s385's list said 3 (`loadCraftShadowTextures` had been missed), so always re-der
 a fresh `scan_filescoped.py` + line-content read rather than trusting a prior session's named list at face
 value.
 
-**Final state of the 8 permanently-excluded sites**: (1) the whole-file `$zero`-write comment-out sweep
-(~2700 sites, by design — every occurrence needs the same blanket transform); (2) the `0x8008EC88`
-`reapplyDisplayMode` audio-gate hand patch (deliberately volatile/experimental, file-scoped on purpose);
-(3-4) the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair (deliberately dual-target); (5) the
-`_s284_deref_guard_sites` multi-function guard loop (deliberately multi-function); (6) the
-`runHangarMenuFromOverlay`/`hasKasanMoorDefected` bare-label collision (FIXED s387, see below — this was a
-real bug, not by-design, so it's out of the exclusion set now that it's fixed); (7)
-`tickAudioSequencerFrame`'s exit diagnostic (match text spans past this function's own body into the next
-function's signature, can't be body-scoped without breaking it); (8) `musyxSynthFrame`'s `synth-rearm-ptr`
-diagnostic (real anchor lives inside `initN64RspMixer`, not this function — live follow-up item below,
-ownership question unresolved).
+**Final state of the 8 sites originally called permanently-excluded**: (1) the whole-file `$zero`-write
+comment-out sweep (~2700 sites, by design — every occurrence needs the same blanket transform); (2) the
+`0x8008EC88` `reapplyDisplayMode` audio-gate hand patch (deliberately volatile/experimental, file-scoped
+on purpose); (3-4) the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair (deliberately dual-target);
+(5) the `_s284_deref_guard_sites` multi-function guard loop (deliberately multi-function); (6) the
+`runHangarMenuFromOverlay`/`hasKasanMoorDefected` bare-label collision (FIXED s387 — this was a real bug,
+not by-design, so it's out of the exclusion set); (7) `tickAudioSequencerFrame`'s exit diagnostic (match
+text spans past this function's own body into the next function's signature, can't be body-scoped without
+breaking it — genuinely permanent); (8) `musyxSynthFrame`'s `synth-rearm-ptr` diagnostic, now FIXED s388 —
+converted to function-scope on its real owner `initN64RspMixer` (see below). **Both follow-up items from
+s387 are now resolved; the backport thread has no remaining live work.**
 
 (s387) `runHangarMenuFromOverlay`/`hasKasanMoorDefected` collision: fixed. Added `p.name == "funcs_43.c"`
 to the `L_800C68AC:` bare-label patch so it only fires in `runHangarMenuFromOverlay`'s real home file,
 not `hasKasanMoorDefected`'s (a different overlay function that happened to reuse the same local-label
 text). Byte-identical regen-diff confirmed exactly one file changed (`funcs_29.c` lost the spurious
-match, `funcs_43.c` unaffected); build+soak clean (0 crash markers, full VI phase timeline). One follow-up
-item remains live:
-- **`musyxSynthFrame`/`initN64RspMixer` `synth-rearm-ptr` ownership question**: does the
-  `ROGUESQ_LOG_AUDIOTICK_TRACE`-gated diagnostic at `0x800919D4` genuinely belong in `initN64RspMixer`
-  instead of `musyxSynthFrame`? Not urgent (diagnostic isn't armed in any soak recipe).
+match, `funcs_43.c` unaffected); build+soak clean (0 crash markers, full VI phase timeline).
+
+(s388) `musyxSynthFrame`/`initN64RspMixer` `synth-rearm-ptr` ownership question: resolved. Confirmed
+directly against the generated `funcs_24.c` (`grep -n` for both `RECOMP_FUNC` signatures and the
+`0x800919D4` anchor): `initN64RspMixer` starts at the line immediately before the anchor with no
+intervening function boundary, and `musyxSynthFrame`'s own body ends well before it — the anchor is
+unambiguously inside `initN64RspMixer`, confirming s384's finding. Converted the patch from file-scope
+(`p.name == "funcs_24.c"`) to function-scope on `initN64RspMixer` (both functions already live in the
+same file, so this is a defensive/correctness improvement against a hypothetical future duplicate anchor
+elsewhere in the file, not a behavior change). Byte-identical regen-diff confirmed: 374-line fixup report
+identical, full 45-file `RecompiledFuncs/` tree SHA-256 identical before/after — the site is unambiguous
+(sole occurrence of the anchor text in the file) so tightening its scope changes nothing about the
+generated code. Build clean; soak clean (0 crash markers over 15,750 log lines, healthy VI/present
+progression as positive control — `present-1024`/`w=512` markers firing continuously, VI update counter
+reached #6528+ over 110s).
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
