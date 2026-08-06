@@ -148,7 +148,29 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -245 (s395); the next new item takes -246 and is inserted at the top.
+oldest). Current top is -246 (s396); the next new item takes -247 and is inserted at the top.
+
+-246. **(s396) M3 idiom-class audit: `funcs_40.c`/`funcs_19.c` swept — CLOSES the entire `-0x25A4`
+    hangar-list-pointer idiom-class audit (s283-s396) with 0 new guards needed.** Completed s394's
+    3-file sweep-remainder plan (`funcs_27.c` closed s395). Delegated a full per-site classification to
+    a subagent, same methodology as s395 (direct source reads, cross-referenced against every existing
+    guard family's literal anchor text — not a mechanical script). **Result: 69/69 raw `-0x25A4` hits in
+    `funcs_40.c` fully accounted for — 65 COVERED (by `guard1`-`8`, `HANGARLIST_GUARD*`,
+    `_s284_deref_guard_sites`, `G1`-`G32`), 4 SAFE (call-arg-only, never dereferenced), 0 NEEDS-GUARD, 0
+    UNCLEAR.** `funcs_19.c`'s single raw hit (`npcShieldGeneratorUpdate`) is an unrelated coincidence —
+    different `lui` base (`0x8004` vs the family's `0x800A`/`0x800D`), loaded into a float register and
+    used only as a `DIV_S` divisor, never a pointer; already noted as a false positive by s284's own
+    comment, re-confirmed here. **Two independent lines of evidence** for the null result: the
+    subagent's per-site reads, and an independent post-hoc check (`grep -c -- "-0X25A4"` = 69/1 matching
+    exactly; every function's COVERED+SAFE count sums exactly to its own raw-hit count with no slack).
+    No code change, regen, build, or soak needed — the 0-NEEDS-GUARD classification was itself the
+    complete result. **Net: all three files that ever showed a raw `-0x25A4` hit in this family
+    (`funcs_27.c`, `funcs_40.c`, `funcs_19.c`) are now confirmed fully covered or confirmed-safe, closing
+    this idiom-class thread.** Two carry-over observations remain unactioned, not part of this audit: (1)
+    `S285_H1_8`'s leftover stale-register guard (funcs_27.c, harmless, small cleanup); (2) the
+    `[mesgqueue-guard]` tight retry loop against a permanently-bad `mq_=0x1D0` pointer (unrelated
+    subsystem, plausible low-severity bug worth a dedicated look). Full detail: `PORTING-STATE` Session
+    396. **Next M3 idiom-class work needs a genuinely NEW idiom class** — this one is done.
 
 -245. **(s395) M3 idiom-class audit: `funcs_27.c` sweep-remainder closed (Step 1 of s394's plan) —
     found and fixed a SECOND, independent instance of the s392-class "stale register" guard-placement

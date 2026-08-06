@@ -33660,3 +33660,58 @@ retry-loop against a permanently-bad `mq_=0x1D0` pointer is worth a dedicated lo
 Outcome: ADVANCED (a new, previously-undiscovered instance of the item -243/-244 bug class found, fixed,
 and verified via the established regen-diff-build-soak protocol; the funcs_27.c leg of s394's
 sweep-remainder plan is now fully closed).
+
+## Session 396 (2026-08-06) — M3 idiom-class audit: `funcs_40.c` and `funcs_19.c` swept, CLOSING the
+whole `-0x25A4` hangar-list-pointer idiom-class audit (s283-s396) with 0 new guards needed
+
+Continued s394's original 3-file sweep-remainder plan; `funcs_27.c` closed s395 (1 new site,
+`S395_SWEEP_1`, plus the S285_H1_8 stale-guard finding). Both remaining files, unaudited until now.
+
+Delegated a full per-site classification to a subagent (same methodology validated s395: don't trust a
+mechanical script, have the agent directly read source around every candidate and cross-reference against
+every existing guard family's literal anchor text). Brief covered: enumerate every raw `-0x25A4` hit in
+`funcs_40.c` and `funcs_19.c`, classify each COVERED / NEEDS-GUARD / SAFE / UNCLEAR against ALL existing
+guard families scoped to those files (`guard1`-`guard8`, `HANGARLIST_GUARD`/`_EARLY`/`_WALK`/`_CLEAR`,
+`_s284_deref_guard_sites` = `S284_AAD9C_1/2`, `S284_AB1C8_6-10`, `S284_ADB70_1-21`,
+`S284_A9270_SECONDHOP`, `S285_A9270_R4`, and the `G1`-`G32` family), and propose ready-to-paste guard
+tuples for anything genuinely uncovered.
+
+**Result: 69/69 raw hits in `funcs_40.c` fully accounted for — 65 COVERED, 4 SAFE, 0 NEEDS-GUARD, 0
+UNCLEAR.** Breakdown by enclosing function: `static_5_800A9270` (4 hits, all COVERED), `static_5_800AAD9C`
+(2 hits, all COVERED), `composeNpcOrientationMatrix`/`static_5_800AB1C8` (10 hits: 9 COVERED via
+`guard1`-`4` + `S284_AB1C8_6-10`, 1 SAFE — a call-arg-only pointer never dereferenced, `0x800AB2BC`),
+`updateHangarBayScene`/`static_5_800AB658` (32 hits: 29 COVERED via `G1`-`G31` minus 3 retired numbers
+`G7`/`G18`/`G19` — `G29` alone covers 2 raw hits via a shared merge label `L_800ADB18` — 3 SAFE, all
+call-arg-only, addresses `0x800ACA7C`/`0x800ACF54`/`0x800ACF98`, matching a prior s132 audit-comment
+classification of the same 3 addresses), `static_5_800ADB70` (21 hits, all COVERED via `S284_ADB70_1-21`).
+
+**`funcs_19.c`'s single raw hit is an UNRELATED coincidence, not the same family**: it's in
+`npcShieldGeneratorUpdate` (`0x800816BC: lwc1 $f28, -0x25A4($at)`), based on `lui $at, 0x8004` (a
+different 64KB region entirely from the family's `0x800A`/`0x800D`-lui hangar-list base), loaded via a
+float opcode into `ctx->f28.u32l` and used only as a `DIV_S` divisor two instructions later — never
+treated as a pointer. This exact site was already noted and dismissed as a false positive by s284's own
+comment in `fixup_game_funcs.py` (~line 5430); re-confirmed independently here by direct source read.
+
+**Two independent lines of evidence for the 0-NEEDS-GUARD result** (Iron rule 4): (1) the subagent's
+direct per-site source reads, cross-referenced against every existing guard family's literal anchor
+text; (2) my own independent verification after the subagent returned — `grep -c -- "-0X25A4"
+RecompiledFuncs/funcs_40.c` = 69 (exact match to the subagent's count, and to the prior rough sweep
+count), `funcs_19.c` = 1 raw hit (matches); and the per-function raw-hit counts the subagent reported sum
+exactly to 69 (4+2+10+32+21) with each function's COVERED+SAFE count also summing exactly to its own raw
+count (10=9+1, 32=29+3) — no arithmetic slack that would hide a missed or double-counted site. The `G`-
+guard family grep (`G1`-`G32` present except `G7`/`G18`/`G19`) matches the subagent's claimed retirements.
+
+**No code change, no regen, no build, no soak needed this session** — the discriminating result (0
+NEEDS-GUARD sites) was itself the answer, not a prelude to a patch. This **closes the entire `-0x25A4`
+hangar-list-pointer idiom-class audit** that opened s283/s284: all three files that ever showed a raw
+`-0x25A4` hit in this displacement family (`funcs_27.c` closed s395, `funcs_40.c`/`funcs_19.c` closed
+here) are now confirmed fully covered or confirmed-safe, site by site, with independent verification.
+
+Two carry-over observations from s395 remain unactioned (out of scope for this audit, logged for a future
+session): (1) `S285_H1_8`'s leftover stale-register guard (funcs_27.c, harmless dead-weight, small
+cleanup); (2) the `[mesgqueue-guard]` tight retry loop against a permanently-bad `mq_=0x1D0` pointer
+(unrelated subsystem, plausible low-severity bug in its own right).
+
+Outcome: ADVANCED (ran the planned work unit — the funcs_40.c/funcs_19.c sweep — to a definitive,
+two-source-verified result: the whole `-0x25A4` idiom-class audit thread is CLOSED, no further sites to
+guard in this family anywhere in the codebase).
