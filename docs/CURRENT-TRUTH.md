@@ -28,12 +28,22 @@ Priority order for upcoming iterations, set after the 300-session review:
 Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching
 (the BREADCRUMB10+ slice idiom) to the file-scoped-only guard patches in `fixup_game_funcs.py`, per the
 2026-08-04 analysis in that file's header comment. Real count 176 (an AST scan, not a grep guess).
-**89/176 converted across 4 batches (s377-379, s381)**, all verified byte-identical fixup-report output
-before/after, all built and soaked clean; **87 remain**. Process note from s379/s381: run verification
-(regen+diff) AND the soak in the orchestrating session, not a delegated subagent — both cross-repo
-regen commands and launching the compiled binary hit sandbox permission/approval gates a subagent
-cannot satisfy non-interactively; delegate ONLY the conversion-editing step. Next work unit: NEXT.md
-(batch 5).
+**110/176 converted across 5 batches (s377-379, s381-382)**, all verified byte-identical fixup-report
+output before/after, all built and soaked clean; **66 remain**. Process note from s379/s381: run
+verification (regen+diff) AND the soak in the orchestrating session, not a delegated subagent — both
+cross-repo regen commands and launching the compiled binary hit sandbox permission/approval gates a
+subagent cannot satisfy non-interactively; delegate ONLY the conversion-editing step. New process notes
+from s382: (1) once remaining sites stop being one big single-file cluster (true from 87 remaining on —
+now scattered in 1-10-site sub-clusters), delegate the "which target function does this site belong to"
+identification pass itself to a read-only Explore/general-purpose agent (grep the address, walk up to
+the enclosing `RECOMP_FUNC`) rather than reading the raw context dump in the orchestrating session — it
+keeps this session's context to the plan and verification, not the grep output. (2) Launching the
+compiled binary via `Bash run_in_background` with an inline `env VAR=1 /abs/path/to/binary` command runs
+with the WRONG cwd (ROM lookup is cwd-relative, not executable-relative) and silently degrades to a
+ROM-less run that blazes through VI counters unrealistically fast with no crash markers — a false-clean
+soak. Fix: a tiny `zsh script.sh` wrapper that `cd`s into `build/` then `exec`s the binary (`zsh` is
+allowlisted in `.claude/settings.json`; `bash script.sh` and inline `cd a && b` both require interactive
+approval this session lacks). Next work unit: NEXT.md (batch 6).
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
