@@ -1,70 +1,73 @@
 # NEXT work unit
 
-## s376 ran the designated source-only H1/H2/H3 pass — all three REFUTED, thread CLOSED
+## s377 ran batch 1/N of the sanctioned fixup_game_funcs.py function-scope-match backport
 
-Full write-up: `docs/CURRENT-TRUTH.md` item -230, `PORTING-STATE.md` Session 376. One-paragraph
-version: `HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site` (why C88-reversed never re-triggers the
-VI 640→1024 transition) is closed by elimination, not solved. H1 (reset-branch divergence) refutes
-because `reapplyAudioConfig` always returns 0 regardless of gate state (`funcs_24.c:5148-5149`). H2
-(shared-mutable-state collision) refutes because the tick functions' write targets
-(`funcs_25.c:5744-5800`, `funcs_26.c:4194-4354`/`0x80153414`) are disjoint from everything the
-scene-transition chain reads. H3 (external completion-wait) refutes because every one of the ~65
-gate-byte references across `funcs_21-26.c` is inside the already-known MusyX guard-and-return idiom
-— no poll site exists in `funcs_0.c`/`funcs_3.c`/`funcs_4.c`. Only H4 (diffuse frame-timing effect,
-no single site) remains, and it was judged not worth a build+soak: s373 already showed real audio
-stays 100% silent in the *working* baseline regardless, so even a confirmed H4 fix wouldn't produce
-working audio. **No M5 audio thread remains open** — reopening needs a genuinely new lead.
+Full write-up: `docs/CURRENT-TRUTH.md` item -231, `PORTING-STATE.md` Session 377. One-paragraph
+version: an AST-based scan (not a grep guess) found the real count of file-scoped `re.subn(...,
+text, ...)` patch sites in `~/Documents/Tools/N64Recomp/fixup_game_funcs.py`: **176**, not the
+docstring's "~150"/CURRENT-TRUTH's prior "~100" estimate. Converted 23 (all at pre-edit line <1250)
+to the BREADCRUMB10-15 function-scoped idiom, verified via two independent fresh `RecompiledFuncs/`
+regens (original script vs. converted script) producing **byte-identical patch reports** — the
+strongest available proof that no anchor was silently matching the wrong function and that this
+batch changed match SCOPE only, not behavior. Built clean, soaked clean (0 crash markers in ~70s,
+though VI didn't reach 640 in that window — flagged as unlikely-regression given the byte-identical
+proof, not chased further, single sample). **~152 patches remain.**
 
-## This iteration's work unit: fixup_game_funcs.py function-scope-match backport (sanctioned tooling)
+## This iteration's work unit: batch 2 of the same backport (continue the sanctioned tooling item)
 
-Per `docs/CURRENT-TRUTH.md`'s USER DIRECTIVE section: "Sanctioned tooling work unit, counts as
-ADVANCED whenever picked up: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to
-the ~100 file-scoped-only guard patches in fixup_game_funcs.py, per the 2026-08-04 analysis in that
-file's header comment." This is a bounded code-quality/robustness task, not a hypothesis chase — no
-HYPOTHESIS-ID budget applies in the usual sense, but one is still named below per the exit contract.
-
-### What "file-scoped" vs "function-scoped" means here
-Read the 2026-08-04 header-comment note in `~/Documents/Tools/N64Recomp/fixup_game_funcs.py` (top of
-file) and the newer BREADCRUMB10+ patches (search for `BREADCRUMB10` onward in that file) to see the
-function-scoped idiom in practice: those patches split the target `.c` file into per-function slices
-(via the existing `func_re`/`parts` splitting machinery already in the script, see the "split into
-functions, check goto/label consistency" block) and apply their regex anchor only within the named
-function's slice, so an identical anchor string appearing in a DIFFERENT function of the same file
-cannot be mismatched onto it. The ~100 older guard patches instead apply their regex directly against
-the whole file's text — safe today only because each anchor string has so far been unique
-file-wide, a property overlay re-chunking could break silently.
+Same task as batch 1, same methodology — just the next slice. Per s377's own recommendation, don't
+try to convert all ~152 remaining in one iteration; pick another bounded sub-batch (roughly 20-30
+sites), convert, verify, build, soak, and leave the rest for batch 3.
 
 ### Concrete steps
-1. In `fixup_game_funcs.py`, enumerate every older guard patch that matches file-scoped (search for
-   patches that call `re.subn`/`re.sub` directly against the whole-file `text` variable rather than a
-   per-function `body` slice — the BREADCRUMB10+ patches show the target pattern to convert to).
-2. For each, identify which named function it's anchored inside (should be discoverable from the
-   patch's own context/comment, or by finding which function's body contains the anchor string today).
-3. Convert each to the function-scoped idiom: locate the function's slice via the existing
-   `func_re`/`parts` splitting already in the script, apply the regex only within that slice, and
-   reassemble exactly as the BREADCRUMB10+ patches already do (copy their exact mechanism, don't
-   reinvent it).
-4. This is a mechanical, low-risk transform (same regex, narrower scope) but touches ~100 patch
-   call-sites — batch it: convert all of them in one pass, then ONE full regen
-   (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake`) to confirm the patch report
-   still shows the expected `xN` counts (per the item -20 standing rule: audit for anything other
-   than the expected count) and the build still succeeds.
-5. A short soak (not a full validation campaign — this is a refactor of the patching mechanism, not
-   game logic; the emitted C should be byte-identical in content, just differently scoped) confirming
-   no new crash class is sufficient. If any patch's expected count changes after the conversion, STOP
-   and investigate that one site specifically before continuing — a silently-changed count means the
-   scoping changed which occurrences get matched, which is exactly the bug class this backport exists
-   to prevent.
+1. Regenerate the current inventory (line numbers shifted since s377's edits — don't rely on old
+   line numbers). In `~/Documents/Tools/N64Recomp/`, run an AST-based scan: `ast.parse` over
+   `fixup_game_funcs.py`, walk for `Call` nodes with `.attr == "subn"` whose arguments reference the
+   bare `text` variable (not a `body`/`new_body` per-function slice). This is the exact technique
+   s377 used — do not hand-grep for `new, n = re.subn(` variable-name patterns again; the AST scan
+   is more reliable (it survived s377's own variable-naming inconsistencies).
+2. Pick ~20-30 sites for this batch. s377 flagged two visible clusters to start with: the
+   hangar/reserve-list patches in `funcs_40.c`/`funcs_15.c`/`funcs_23.c`/`funcs_24.c` (mostly
+   musyx/audio-tick diagnostics — the SAME family of functions batch 1 already touched, so context
+   from batch 1's conversions may transfer), then separately the `funcs_3.c` drain-mesh/heap-walker
+   guard cluster (the single largest remaining block, roughly current lines 5000-10400 pre-this-
+   session — will have shifted). Either cluster is a reasonable batch-2 target; pick whichever has
+   clearer per-patch target-function comments (easier to verify correctly).
+3. Before editing: confirm `git -C ~/Documents/Tools/N64Recomp status --short -- fixup_game_funcs.py`
+   still shows `??` (untracked), then back up:
+   `cp fixup_game_funcs.py fixup_game_funcs.py.pre-scope-backport-backup-batch2`.
+4. Convert each chosen site to the BREADCRUMB10-15 idiom exactly as s377 did: locate the target
+   function via a `func_start_m` regex search for its `RECOMP_FUNC void <Name>(...)` signature,
+   slice `body_start`/`body_end` via `func_re.search`, run the identical regex pattern and
+   replacement against `body` instead of `text`, reassemble. Do not change regex patterns or
+   replacement logic — scope-narrowing only.
+5. Verify with the SAME before/after methodology as batch 1 (this is the part that actually catches
+   bugs, don't skip it): regenerate fresh `RecompiledFuncs/` twice — once fixed with the
+   `.pre-scope-backport-backup-batch2` original, once with the converted live script — diff the two
+   patch reports. Every converted patch's `xN` count must match exactly. Any mismatch = a real latent
+   cross-function anchor collision (a genuine, valuable finding, not a bug in this refactor task) —
+   stop and document that one site specifically rather than steamrolling past it.
+6. One regen (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py`) -> `cmake --build . -j8` cycle
+   to confirm the build still succeeds.
+7. One short soak (~90-120s, standard `ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1
+   ROGUESQ_STUB_MISSING_FUNCS=1` recipe, SIGKILL not SIGTERM) confirming no new crash class — this is
+   a refactor of the patching mechanism, not game logic, so a light smoke test suffices, not a full
+   validation campaign.
+8. Two site-classes are correctly EXCLUDED from any batch, don't try to convert them: the
+   `0x8008EC88` audio-gate durable hand patch (no `p.name` guard, a separately-named mechanism, not
+   a "session-added guard/instrument patch"); the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine`
+   pair whose shared regex is intentionally dual-target by design.
 
 ### Expected outcome
-Either: all ~100 patches convert cleanly, patch-report counts are unchanged, one regen+build+short
-soak confirms no regression — write up as ADVANCED (tooling hardening landed). Or: converting
-surfaces a patch whose anchor is NOT actually unique per-function (a real latent bug the file-scoped
-form was masking) — that's also a valid, valuable result, write it up as such and guard/fix that one
-site same as any other guard patch.
+Same shape as batch 1: either clean conversion + byte-identical verification + clean build/soak
+(write up as ADVANCED, same as batch 1), or a genuine latent-collision finding at one specific site
+(also valuable, write up and guard that site). Consider delegating this whole batch to one
+self-contained subagent again, same as s377 — it worked well for a task this mechanical and
+line-count-heavy.
 
 ## Iteration budget
 
-HYPOTHESIS-ID: fixup-scope-backport (iteration 1 — this is a bounded tooling task, not expected to
-need a multi-iteration hypothesis budget; if it turns out to be larger than expected, split it into
-multiple bounded sub-batches across iterations rather than letting it sprawl).
+HYPOTHESIS-ID: fixup-scope-backport (iteration 2 of an open-ended bounded tooling task — not a
+hypothesis chase, so the usual 3-iteration pivot pressure doesn't apply in the same way; still keep
+naming it so the loop's bookkeeping stays consistent, and re-evaluate around iteration 4-5 whether
+this should be split further or is close enough to done to finish in one more pass).

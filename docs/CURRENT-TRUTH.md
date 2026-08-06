@@ -43,7 +43,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
-Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the ~100 file-scoped-only guard patches in fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment.
+Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the file-scoped-only guard patches in fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment. **IN PROGRESS as of s377**: real count is 176 (an AST scan, not a grep guess), not the "~100"/docstring's "~150" estimates; batch 1 converted 23, verified byte-identical fixup-report output before/after (strongest available proof of no behavior change), built and soaked clean. ~152 remain — next batch starts current line ~1519, detail and re-scan technique in NEXT.md.
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -167,7 +167,34 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -230 (s376); the next new item takes -231 and is inserted at the top.
+oldest). Current top is -231 (s377); the next new item takes -232 and is inserted at the top.
+
+-231. **(s377) fixup_game_funcs.py function-scope-match backport, batch 1/N: 23 of 176 file-scoped
+    patches converted, verified byte-identical output, built+soaked clean.** Executed the sanctioned
+    tooling item (delegated to one self-contained subagent). An AST-based scan (not a grep guess)
+    found the real count of file-scoped `re.subn(..., text, ...)` sites: **176**, vs. the docstring's
+    "~150" and this doc's own prior "~100" estimate — neither had been verified before. Converted 23
+    (all pre-edit line <1250) to the BREADCRUMB10-15 function-scoped idiom: `musyxSynthFrame`,
+    `runVideoFrameTick`, `reapplyDisplayMode`, `mainGameLoop`, `menuOverlayInit`,
+    `cutsceneDispatchSlotsByFlag`, two `static_N_0xADDR` functions, `musyxKeyOnVoice` (8 sites),
+    `evalCubicSplineAtTime`, `advancePlayerAnimationPhase`, `updateAnimatedTextureStreaming`, two more
+    `static_N` diagnostics, `reserveAndEmitDLEntry` (3 sites). **Verification**: regenerated
+    `RecompiledFuncs/` fresh twice — once fixed with the original script, once with the converted
+    script — and the two patch reports are **byte-identical, empty diff**, meaning every converted
+    anchor was genuinely already unique per-function (no latent cross-function collision this batch;
+    that would be the one failure mode worth stopping for, and it didn't occur). Build clean, ~70s
+    soak clean (0 crash markers) though VI stayed at 320 rather than reaching 640 in that window —
+    flagged, not treated as a regression, since the byte-identical-output proof means the emitted C
+    is functionally unchanged from before this session; single-sample timing variance is
+    well-precedented (Method traps §4.3) and not itself evidence of a defect. Two site-classes
+    deliberately left file-scoped with documented reasons (the volatile `0x8008EC88` audio-gate hand
+    patch; the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair whose shared regex is
+    intentionally dual-target, not a mis-scoped single anchor). **~152 remain**, next batch starts
+    ~line 1519 (pre-edit numbering, shifted ~+700 after this session): hangar/reserve-list clusters
+    (`funcs_40.c`/`funcs_15.c`/`funcs_23.c`/`funcs_24.c`) then the largest remaining block, the
+    `funcs_3.c` drain-mesh/heap-walker guard cluster. Re-scan technique (AST walk, filter `subn`
+    calls referencing bare `text`) regenerates the list on demand, no hand-maintained inventory
+    needed. Full detail: `PORTING-STATE` Session 377; next work unit: NEXT.md (batch 2).
 
 -230. **(s376) M5 VI-640→1024-trigger source-only pass: H1/H2/H3 all REFUTED cleanly; `HYPOTHESIS-ID
     m5-audio-vi640to1024-trigger-site` CLOSED by elimination.** Ran NEXT.md's own designated

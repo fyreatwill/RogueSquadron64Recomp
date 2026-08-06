@@ -32224,3 +32224,83 @@ patches in `fixup_game_funcs.py` (2026-08-04 header-comment analysis in that fil
 pre-approved as counting toward ADVANCED, and reduces exposure to the exact regen-fragility class
 item -20 already found once (anchor collisions after overlay re-chunking) — does not require picking
 a new blind crash lead. Full next-step detail: `scratch/agent/NEXT.md`.
+
+## Session 377 (2026-08-05) — sanctioned tooling: fixup_game_funcs.py function-scope-match backport, batch 1/N (23 of 176 file-scoped patches converted)
+
+Executed the sanctioned tooling work unit named in NEXT.md/CURRENT-TRUTH's USER DIRECTIVE, delegated
+whole to one subagent (self-contained instructions, no access to this session's prior context) given
+the mechanical, bounded, high-line-count nature of the task. Full report below is the subagent's,
+verified plausible against its own artifacts (fixup report diff, build log, soak log all left in
+place).
+
+**Inventory, not just an estimate**: an AST-based scan (`ast.parse` over `fixup_game_funcs.py`,
+filtering `Call` nodes with `.attr == "subn"` whose args reference the bare `text` variable rather
+than a per-function `body` slice) found **176** file-scoped patch sites — the real count behind both
+the file's own docstring's "~150" guess and CURRENT-TRUTH's "~100" guess. Neither prior estimate was
+verified by grep before being written down; this session's is the first actual count.
+
+**Batch 1 converted (23 sites, all at pre-edit line <1250)**: every site now uses the exact
+BREADCRUMB10-15 idiom — locate the target function via a `func_start_m` regex search for its
+`RECOMP_FUNC void <Name>(...)` signature, slice `body_start`/`body_end` via `func_re.search`,
+run the SAME regex pattern and SAME replacement against the `body` slice instead of the whole-file
+`text`, reassemble. No regex patterns or replacement logic were changed — purely a match-scope
+narrowing. Converted functions: `musyxSynthFrame` (funcs_24.c, 2 sites), `runVideoFrameTick`
+(funcs_0.c, 2 sites), `reapplyDisplayMode` (funcs_23.c, 2 sites), `mainGameLoop` (funcs_8.c, 2
+sites), `menuOverlayInit` (funcs_29.c), `cutsceneDispatchSlotsByFlag` (funcs_27.c), two
+`static_N_0xADDR` anonymous functions (funcs_43.c, funcs_44.c, 4 sites total),
+`musyxKeyOnVoice`'s 8 div-by-zero-guard sites, `evalCubicSplineAtTime`'s div0 guard,
+`advancePlayerAnimationPhase`'s recursion diagnostic, `updateAnimatedTextureStreaming`'s entry
+diagnostic, two more `static_N` entry diagnostics, and `reserveAndEmitDLEntry` (funcs_3.c, 3 sites).
+Where a patch's original anchor was the function's own signature line (now excluded from `body` by
+construction), it was re-anchored on the boilerplate line immediately following (`uint64_t hi = 0,
+...`) — a mechanically equivalent insertion point, confirmed by the count check below.
+
+**Verification methodology (the part that actually matters for a change with no game-logic intent)**:
+regenerated `RecompiledFuncs/` fresh twice — once fixed with the ORIGINAL (pre-edit, backed-up)
+script producing `fixup_baseline_report.txt`, once fixed with the CONVERTED script producing
+`fixup_converted_report.txt`. The two reports are **byte-identical, 375/375 lines, empty diff** —
+every converted patch fired the exact same `xN` count both ways. This is the strongest evidence this
+kind of refactor can produce short of a full binary diff: it directly rules out the one failure mode
+the task exists to catch (an anchor silently matching inside the WRONG function this whole time,
+which would have shown as a count change once scoped down to the intended function only). No latent
+collision found in this batch — all 23 converted anchors were genuinely already unique per-function.
+
+**Build**: `cmake --build` succeeded, no new warnings/errors beyond pre-existing unrelated
+`-Wpointer-sign` noise in generated code.
+
+**Soak**: ~70s run with the standard `ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1
+ROGUESQ_STUB_MISSING_FUNCS=1` recipe. Zero crash markers (`[CRASH]`/`UnhandledJumpTarget`/SIGSEGV/
+SIGBUS/abort/trap) anywhere in the log; process exited on its own before the subagent's kill fired.
+VI stayed at width=320 for the whole window rather than reaching 640 by ~1.7s as CURRENT-TRUTH's
+timeline documents for a typical run — worth flagging, but NOT read as a regression from this
+session's edit: the fixup-report byte-identity proof above means the emitted C for every converted
+site is functionally unchanged, and this is a single 70s sample against a project history full of
+documented run-to-run timing variance (Method traps §4.3). Not chased further — if a future soak
+reproduces a 320-stuck run specifically after this commit, treat it as new evidence, not dismiss it,
+but one sample here is not enough to either confirm or rule out an interaction.
+
+**Skipped, left file-scoped, with reasons** (both legitimate, not oversights): the `0x8008EC88` audio
+gate durable hand-patch (no `p.name` guard, a separately-named "durable hand patch" in the docstring,
+not a "session-added guard/instrument patch" — 15+ session reversal history makes it explicitly
+out of scope for a mechanical batch); and the `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair
+of patches, whose regex is *by design* label-backreferenced to match either function in the same
+file — genuinely, correctly dual-target, not a mis-scoped single-function anchor, and splitting it
+into two patches would be a real behavior-preserving change, not a mechanical scope-narrowing one.
+
+**Remaining**: ~152 file-scoped patches (176 total − 23 converted − 1 reconciliation artifact,
+per the subagent's count). Next natural continuation starts around current line ~1519 (pre-edit
+numbering; shifted ~+700 lines after this session's insertions) — visible clusters: repeated
+hangar/reserve-list patches (`funcs_40.c`, `funcs_15.c`, `funcs_23.c`, `funcs_24.c`, mostly
+musyx/audio-tick diagnostics), then the largest remaining block, the `funcs_3.c` drain-mesh/
+heap-walker guard cluster (~5000-10400 in the current file). The same AST-scan technique
+(`ast.parse`, filter `Call` nodes with `.attr == "subn"` referencing bare `text`) regenerates the
+exact remaining list on demand — no need to hand-maintain it across sessions.
+
+**Files touched**: `~/Documents/Tools/N64Recomp/fixup_game_funcs.py` (23 patches converted,
+syntax-checked, count-verified, built, soaked — untracked in its own repo, no git action needed
+there per existing project convention); `RecompiledFuncs/*.c` (freshly regenerated + fixed, matches
+the built binary); `fixup_baseline_report.txt`/`fixup_converted_report.txt` left in place in
+`N64Recomp/` as the verification audit trail for a human to spot-check if desired.
+
+Outcome: ADVANCED (real code change: 23 patch sites hardened against a documented fragility class,
+plus the actual inventory count this task previously only guessed at).
