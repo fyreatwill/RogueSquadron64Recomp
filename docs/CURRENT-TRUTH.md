@@ -138,9 +138,10 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 86/778 done s400+s402+s403,
-692 real remain per s404's corrected count, largest M4 item open — s404 found+reverted a real
-regression, see item -253).
+`main_overlay.txt` phantom-overlay-function family (item -249, IN PROGRESS: 96/778 done
+s400+s402+s403+s405, ~682 real remain, largest M4 item open — s404 found+reverted a 20-name
+regression, s405 bisected it: half landed clean [+10], half narrowed to a 10-name suspect set and
+parked, see items -253/-254).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -153,7 +154,23 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -253 (s404); the next new item takes -254 and is inserted at the top.
+oldest). Current top is -254 (s405); the next new item takes -255 and is inserted at the top.
+
+-254. **(s405) M4 item -249: bisected s404's 20-name crash batch — isolated the culprit to the first
+    10, landed the clean second 10. 96/778 done, ~682 remain.** Split the batch
+    (`scratch/agent/s404_crash_batch_needs_bisection.txt`) into two file-order halves of 10 from
+    s404's clean revert checkpoint. **Half 1** (`submitCameraTrackedObjectToRender` ...
+    `loadEffectModelInstancePool`) reproduced the exact s404 crash byte-identically — same
+    `playerXwingInit+2068`, same `last-guest-pc=0x80011088`, same fault address, same ~89.2s timing —
+    isolating the culprit to this 10-name subset. **Half 2** (`freeEffectModelInstancePool` ...
+    `findNearestNpcWithinRange`) regenerated clean (positive control: unmapped-functions-skipped
+    717→707), rebuilt clean, `nm`-confirmed, and live-verified with 0 crashes, reaching
+    `vi_width=512`→`640` (89.2s→118.1s) matching the clean baseline almost exactly, only the 1 known
+    pre-existing `[missing-func]`. Half 2 stays applied (+10 real progress); half 1 was surgically
+    reverted back to `main_overlay.txt` (marked `s405:`) and parked for a further n=5 bisection round
+    — same recipe, not yet run this session. `HYPOTHESIS-ID: m4-main-overlay-phantom-functions`
+    (iteration 11 — a second consecutive discriminating result under this slug, not a stall). Full
+    detail: `PORTING-STATE` Session 405.
 
 -253. **(s404) M4 item -249: found, differentially confirmed, and reverted a real regression before
     it landed — item -249 stays at 86/778 done, no relocation-count movement, but a real result.**

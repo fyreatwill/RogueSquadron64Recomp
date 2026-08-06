@@ -34337,3 +34337,51 @@ a stall; iron rule 8 does not trigger).
 Outcome: ADVANCED (found, differentially confirmed, and reverted a real regression before it landed
 — a genuine result even though the relocation count didn't move; also found and fixed a real
 candidate-count bookkeeping bug that was silently drifting the "N remain" figure since s400).
+
+## Session 405 (2026-08-06) — M4 item -249: bisected s404's 20-name crash batch, isolated the culprit to the first 10, landed the clean second 10 (+10, 96/778 done)
+
+### Plan
+Per s404's NEXT.md Option A: split the 20-name batch (`scratch/agent/s404_crash_batch_needs_bisection.txt`)
+into two file-order halves of 10, apply+regen+build+live-verify each independently, starting from the
+exact clean checkpoint s404 left behind (confirmed: all 20 names still present in `main_overlay.txt`,
+sibling-repo symbol-file diff unchanged from s403's checkpoint).
+
+### Half 1 (10 names) reproduces the crash byte-identically
+Applied `submitCameraTrackedObjectToRender`, `emitEffectParticlesAlongPath`, `getEffectModelPoolHandle`,
+`beginCameraViewTransition`, `requestCameraSnapToTrackedAnchor`, `beginCameraTrackedTransition`,
+`advanceCameraTransitionOnCue`, `isCameraTransitionIdle`, `initPlayerCraftTrailBuffers`,
+`loadEffectModelInstancePool` (file order, first half of the s404 batch). Regenerated (positive
+control: `unmapped functions skipped` 717→707, exactly −10), rebuilt clean (0 new warnings), all 10
+names `nm`-confirmed present. Live-verify (`probe.sh`, `PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180
+PROBE_LEAVE_OK=1`, 45s post-phase): reached `[phase] vi_width=512` at 89.2s, then **crashed** — Bus
+error in `playerXwingInit+2068`, `last-guest-pc=0x80011088`, `pc=0x104d22e2c`, `si_addr=0x3800000fa`,
+same backtrace (`playerXwingInit ← playerXwingUpdate ← slotDispatcherIter ← spawnNpcOfType ←
+choosePlayerCraftAssets ← initMission ← mainGameLoop`) — every field matches s404's original 20-name
+crash exactly. This isolates the culprit to this 10-name subset; the other 10 are now implicated as
+innocent (pending direct confirmation).
+
+### Half 2 (10 names) verified clean, landed
+Reverted half 1 (surgically, `scratch/agent/s405_revert_half1.py`, name+address matched — back to
+`main_overlay.txt`), then applied the second half: `freeEffectModelInstancePool`,
+`computeCraftSelectTurnFromInput`, `populateCutsceneSubtitleTextIds`, `playRandomCutsceneVoiceLine`,
+`integrateCraftVelocityAndCollide`, `playCutsceneObjectImpactSound`, `tickCutsceneObject`,
+`findNearestSceneObjectToPoint`, `resetEffectSequenceState`, `findNearestNpcWithinRange`. Regenerated
+(positive control: `unmapped functions skipped` 717→707 again, confirming the revert/re-apply net
+change is the same −10 magnitude either way), rebuilt clean, all 10 names `nm`-confirmed present.
+Live-verify: reached `[phase] vi_width=512` at 89.2s and continued cleanly to `vi_width=640` at 118.1s
+— **0 crashes**, only the 1 known pre-existing `[missing-func] 0x800FB9E4` (`endMissionCleanup`,
+already-documented, unrelated). Timing (89.2s→118.1s) matches the established clean baseline
+(89.4s→118.3s) almost exactly. **This half is confirmed safe and stays applied** — banks +10 onto
+item -249's done count: 86→96/778 done, ~682 remain.
+
+### Net for the session
+One clean discriminating bisection round: 20 names split into two 10s, one crashes byte-identically to
+the original batch, the other is clean and landed. Half 1 (the 10 crash-reproducing names) is reverted
+back to `main_overlay.txt`, marked with an `s405:` comment, and parked for the next bisection round
+(n=5, per the same recipe) — do NOT re-apply it as a whole; do not skip it into `m4_known_skip.txt`
+either, since it's a real function family (10 CONFIRMED/WEAK mission), just one that needs finer
+isolation. Sibling-repo symbol-file changes are uncommitted per the standing item -3 rule (ask the user
+before committing there).
+
+Outcome: ADVANCED (a real discriminating bisection result — half of the previously-reverted batch is
+now landed as +10 real progress, and the crash is narrowed from a 20-name to a 10-name suspect set).
