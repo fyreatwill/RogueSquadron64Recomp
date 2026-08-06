@@ -43,7 +43,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
-Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the file-scoped-only guard patches in fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment. **IN PROGRESS as of s378**: real count is 176 (an AST scan, not a grep guess). Batch 1 (s377) converted 23, batch 2 (s378) converted 21 more (44 total), both verified byte-identical fixup-report output before/after (strongest available proof of no behavior change), both built and soaked clean. **132 remain** — next batch targets the `funcs_3.c` drain-mesh/heap-walker guard cluster (the largest remaining block), re-scan technique in NEXT.md.
+Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching (the BREADCRUMB10+ slice idiom) to the file-scoped-only guard patches in fixup_game_funcs.py, per the 2026-08-04 analysis in that file's header comment. **IN PROGRESS as of s379**: real count is 176 (an AST scan, not a grep guess). Batch 1 (s377) converted 23, batch 2 (s378) converted 21 more, batch 3 (s379) converted 24 more — the entire `funcs_3.c` drain-mesh/heap-walker cluster (68 total), all verified byte-identical fixup-report output before/after (strongest available proof of no behavior change), all built and soaked clean. **108 remain**. Process note from s379: the soak step must run in the orchestrating session, not a delegated subagent — launching the compiled binary from a subagent's own sandbox hits an interactive-approval gate it cannot satisfy non-interactively.
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -167,7 +167,31 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -232 (s378); the next new item takes -233 and is inserted at the top.
+oldest). Current top is -233 (s379); the next new item takes -234 and is inserted at the top.
+
+-233. **(s379) fixup_game_funcs.py function-scope-match backport, batch 3/N: 24 more of 132
+    remaining file-scoped patches converted (68/176 total), verified byte-identical output,
+    built+soaked clean; entire `funcs_3.c` drain-mesh/heap-walker cluster now fully converted.**
+    Delegated to one self-contained subagent per the now-twice-validated pattern. Re-ran the AST
+    scan against current line numbers: confirmed 132 file-scoped sites remained pre-batch (153 −
+    batch 2's 21, exact match). Converted 24 sites, all in `funcs_3.c`, across 5 functions:
+    `beginFrameDLChunk` (1), `emitAllocatedDLCommand` (2), `heapWalker` (4),
+    `heapFreeListDequeue` (2), `drainMeshReleaseQueue` (15) — the single largest remaining block
+    s378 flagged, now fully drawn down. **Verification**: two fresh `RecompiledFuncs/` regens
+    (pre-batch-3-backed-up script vs. converted script) produced byte-identical patch reports and a
+    zero-diff `diff -rq` across the output trees — no latent cross-function collision. Build clean.
+    **Soak process note (new this session)**: the subagent could not launch the compiled game
+    binary itself — every attempt hit the harness's interactive-approval gate from its
+    non-interactive sandbox, a clean blocked-before-start state, not a crash. The orchestrating
+    session ran the soak directly instead: ~110s, zero crash markers across 15,717 log lines, VI
+    width traversed the FULL 0→320→512→640→1024 timeline in one run (fuller than either prior
+    batch's single soak). **Standing rule for batch 4+: run the soak step in the orchestrating
+    session, not a delegated subagent.** Excluded site-classes (`0x8008EC88` audio gate;
+    `waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair) confirmed untouched. **108 remain**;
+    next batch has no single obviously-largest cluster left (the hangar/reserve-list and
+    drain-mesh/heap-walker clusters are both now drawn down) — re-run the AST scan cold and pick
+    whatever cluster groups cleanly. Full detail: `PORTING-STATE` Session 379; next work unit:
+    NEXT.md (batch 4).
 
 -232. **(s378) fixup_game_funcs.py function-scope-match backport, batch 2/N: 21 more of 153
     remaining file-scoped patches converted (44/176 total), verified byte-identical output,
