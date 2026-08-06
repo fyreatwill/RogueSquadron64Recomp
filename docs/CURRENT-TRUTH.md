@@ -148,7 +148,42 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -241 (s392); the next new item takes -242 and is inserted at the top.
+oldest). Current top is -243 (s393); the next new item takes -244 and is inserted at the top.
+
+-243. **(s393) URGENT: fix s392's chunk-3a guard-placement bug (all 29 sites check a STALE register, not
+    the freshly-reloaded pointer) before any further `-0x25A4` audit work.** Discovered while closing out
+    chunk 3b (item -242): `_s392_h3a_sites` in `fixup_game_funcs.py` builds every one of its 29 anchors
+    starting WITH the raw `-0x25A4($s1)` load's own comment+code line, and `text.replace(anchor, guard +
+    anchor, 1)` inserts the guard BEFORE that anchor — so all 29 checks run before the load executes,
+    testing whatever was in that register from the PRECEDING instruction, not the value the load is about
+    to produce. Chunks 1/2/3b (s285/s390/s393) built their anchors to start AFTER the raw load instead
+    (confirmed by direct inspection: 0/29 chunk-3a sites match that shape, all chunk-1/2/3b sites do) —
+    this is chunk-3a-specific, not systemic to the whole audit. Traced two sites by hand (`S392_H3A_1`,
+    `S392_H3A_11`): both check a register that was just set by a small byte-index load (`lbu`/`MEM_BU`,
+    0-255 range) two lines earlier — always fails the `0x80000000..0x80800000` KSEG0 check, so those sites'
+    guards **unconditionally bail every time that code path runs**, silently skipping real per-hangar-item
+    processing rather than protecting against a rare bad pointer. Not yet counted how many of the 29 share
+    this "stale value is definitely not a pointer" shape vs. "stale value coincidentally looks like a valid
+    KSEG0 pointer and passes through" (the latter is arguably worse — zero actual protection, looks green).
+    Invisible to s392's own 3-soak verification because `ROGUESQ_LOG_S392_H3A_GUARD` was never armed by any
+    soak recipe — an always-firing silent-bail bug produces no observable signal in "clean build + no new
+    crash," only in the gated fire-count log nobody turned on. Fix: rebuild all 29 anchors to start AFTER
+    their raw load (same discipline as chunks 1/2/3b), re-verify each as a unique substring, regen, build,
+    soak — same protocol as any other chunk, scoped as its OWN work unit (not folded into a new chunk).
+    Full mechanism: `PORTING-STATE` Session 393.
+
+-242. **(s393) M3 idiom-class audit: `hangarInitialize` "chunk 3b" (the function's own tail, LAST chunk),
+    21 sites guarded — `hangarInitialize`'s `-0x25A4($s1)` placement coverage is now complete end-to-end
+    (chunks 1/s285 + 2/s390 + 3a/s392 + 3b/s393), though see item -243 above: chunk 3a's guards need a
+    placement fix before that coverage claim is actually sound. Bail target `L_800AE060`, the function's
+    own real epilogue — already a live `goto` target from the loop's "zero iterations" fast path, no
+    synthetic label needed. Anchors built to start AFTER each raw load (the correct placement, verified
+    against item -243's bug). Verified: byte-identical-except-intended-diff regen (only `funcs_27.c`, 294
+    added / 0 removed = 14 × 21); build clean; 3 soaks, all 3 hit a crash but each at an already-catalogued,
+    unrelated address far outside `hangarInitialize`'s range (`0x8000b650` staleness per item -239,
+    `coalesceFreeHeapBlocks+2016`, `emitAllocatedDLCommand+9632`) — 0 fires attributable to the new guards.
+    A full-codebase sweep for `-0x25A4` sites outside `hangarInitialize` (the original "close the class"
+    plan) is deferred behind item -243's fix. Full detail: `PORTING-STATE` Session 393.
 
 -241. **(s392) M3 idiom-class audit: `hangarInitialize` "chunk 3a" of the `-0x25A4` hangar-list-pointer
     family, 29 sites guarded.** Continued s390's chunk 2 (unchanged since s391's maintenance pass). Split

@@ -33324,3 +33324,108 @@ chunk 3b (lines 132777-133742, the function's own tail past this session's cut p
 
 Outcome: ADVANCED (real code change: 29 new guard sites landed, verified via the standard regen-diff-build-
 soak protocol, 0 regressions attributable to the change across 3 soaks).
+
+## Session 393 (2026-08-06) — M3 idiom-class audit: `hangarInitialize` "chunk 3b" (last chunk, 21 sites
+guarded, function's `-0x25A4($s1)` coverage complete) + a HIGH-PRIORITY guard-placement bug found in
+s392's chunk 3a (`HYPOTHESIS-ID m3-idiom-audit-fresh`, iteration 5)
+
+**Chunk 3b, the plan as written.** Re-derived boundaries fresh per NEXT.md's discipline (content-based,
+not raw line arithmetic): chunk 3a's own 377 inserted lines shifted `L_800ADB2C` from 132733 to 133110 and
+the chunk-3a/3b split `return;` from 132777 to 133154, both exactly matching the predicted shift. Confirmed
+21 raw `-0X25A4` hits in the new chunk-3b span (133154-134119, the function's own tail through its closing
+brace) — matches NEXT.md's prediction exactly.
+
+Classified directly (21 sites, under the ~session's judgment threshold for skipping subagent delegation).
+All 21 are genuine NEEDS-GUARD (no SAFE sites this chunk) — every raw `-0x25A4($s1)` reload in this span
+feeds an `ADD32` combine with `$s0`/`ctx->r16` (the per-hangar-item loop cursor) followed by a direct
+`MEM_*` dereference, confirmed by a small Python script that located each site's `ADD32` combine and then
+scanned forward for its first genuine dereference (not just further address arithmetic) rather than
+hand-transcribing. Anchors were built to begin AFTER the raw `-0x25A4` load line (not at the load itself)
+so the inserted check observes the freshly-reloaded pointer register, matching s390's documented-correct
+placement model — see the bug section below for why this distinction turned out to matter. All 21 anchors
+verified as unique substrings (`str.count() == 1`) before being written into `fixup_game_funcs.py`.
+
+Bail target: `L_800AE060`, the function's own real epilogue (register restore + `return;`) — already a
+live `goto` target from the loop's own "zero iterations" fast path (`beq $v0,$zero,L_800AE060` at
+0x800ADB9C, immediately above the loop) and the natural fallthrough after the last iteration. No synthetic
+label needed — the cleanest possible bail target found in this whole multi-session audit.
+
+**Verify.** Standard protocol: Python `shutil.copytree` backup (placed as a sibling dir inside the
+N64Recomp repo root since `/tmp` is outside the session's allowed working directories, deleted after
+diffing), delete `funcs_*.c` (45 files, `funcs_0.c`+`funcs_1..44.c` — had to delete via explicit absolute
+paths in batches of ~10-20; glob patterns and bare `rm -f funcs_*.c` are blocked by the write-tool/sandbox
+policy, `find -delete` is blocked outright as a "modifies files" compound command), regen (`make_elf.py` →
+`N64Recomp` → `fixup_game_funcs.py`), diff the regenerated tree against the backup. Fixup report: all 21
+sites patched (confirmed via direct grep on the regenerated file for the guard markers rather than
+re-running the fixup script a second time to re-print the report — re-running fixup on already-patched
+files risks the s120 regen-pipeline-idempotency bug, item -20). Diff: only `funcs_27.c` differs, 294 added
+lines / 0 removed (14 lines × 21 guards — one line more per guard than chunk 3a's 13, this template has an
+extra `guard_n++` statement), byte-identical-except-intended-diff confirmed. Build clean (only preexisting
+unrelated sign-conversion warnings in `funcs_8.c`). 3 soaks, `HOLD_S=280`,
+`zsh scratch/s73_post_a_scene/run_s327waitpump.sh <label>`, run sequentially via background `Bash` +
+blocking `TaskOutput` (not shell `&`):
+  - verify1: 1 crash event, `last-guest-pc=0x8000b650`, `pc-symbol=rebuildActiveDisplayObjectList+660` —
+    the exact address CURRENT-TRUTH item -239 (s389) already catalogued as a wrong-nearest-symbol-
+    attribution staleness case; nowhere near `funcs_27.c`.
+  - verify2: 1 crash event, `last-guest-pc=0x800023b0`, `pc-symbol=coalesceFreeHeapBlocks+2016` — the
+    already-closed s354-366 Thread-A heap-coalesce family, `funcs_0.c`.
+  - verify3: 1 crash event, `last-guest-pc=0x80008938`, `pc-symbol=emitAllocatedDLCommand+9632` — a low
+    `0x8000____` address, nowhere near `hangarInitialize`'s 0x800AA6D8-0x800AE084 range.
+  - 0 `[s393-h3b-guard]` fires across all 3 runs (diagnostic not armed by this soak recipe, matching every
+    prior chunk's precedent — the guards still function defensively regardless). 3/3 soaks hit a crash this
+    session (vs. s392's 1 clean / 2 crashed) — within the established variance of the ~20+ independent,
+    nondeterministically-firing background crash families; none of the 3 this session's `last-guest-pc`
+    values fall inside the newly-guarded span or `funcs_27.c` at all.
+
+**Net for chunk 3b:** 21/21 sites guarded, 0 SAFE, 0 skipped. `hangarInitialize`'s entire
+`-0x25A4($s1)`-reload-then-dereference *placement* is now covered end-to-end by SOME guard block front to
+back (chunks 1/s285, 2/s390, 3a/s392, 3b/s393) — but see below: "covered by a guard block" and "actually
+guarded correctly" turned out NOT to be the same claim for chunk 3a.
+
+**HIGH-PRIORITY finding: s392's chunk 3a (all 29 sites) checks the WRONG register — a guard-placement bug,
+not a new crash, but a silent correctness defect that has shipped undetected since s392.** Per NEXT.md's
+"after chunk 3b lands" instruction, swept the whole function for remaining raw `-0X25A4` hits before
+declaring the class closed. `awk` restricted to `MEM_W(ctx->r17, -0X25A4)` (the specific `$s1`-based
+reload, matching this whole audit's actual scope) over the full function span still found 30 raw hits —
+all landing inside chunk 3a's already-"guarded" 125940-132777 span, not new/missed sites. Traced one
+(`S392_H3A_11`, guest 0x800ACCA0) by hand: the guard's own `reg` parameter (`r3`) is the SAME register the
+raw `-0x25A4($s1)` load is about to write into, and the guard text is inserted via
+`text.replace(anchor, guard_text + anchor, 1)` — i.e. BEFORE the anchor, not after. For chunks 1/2/3b
+(s285/s390/s393) the anchor was deliberately built to START AFTER the raw load line, so the register being
+checked already holds the freshly-reloaded pointer by the time the check runs. **Chunk 3a's anchors instead
+start WITH the raw load's own comment+code line as anchor line 1** (confirmed by direct inspection of all
+29 `_s392_h3a_sites` tuples in `fixup_game_funcs.py` — 29/29 have this shape, 0/29 match the correct
+"anchor starts after the combine" pattern chunks 1/2/3b used). That means every chunk-3a guard checks
+whatever was in that register from the *previous* instruction, not the value the load is about to produce.
+
+Checked what that stale value actually is for two sites by reading their preceding source: `S392_H3A_11`'s
+`r3` was just set by `MEM_BU(ctx->r16, -0X291C)` two lines earlier (a small byte index used in a hash/
+multiply idiom, not a pointer); `S392_H3A_1`'s `r3` was set by a similar `lbu` byte load. A byte-range value
+(0-255) always fails the `0x80000000..0x80800000` KSEG0 bounds check, so both sites' guards
+**unconditionally take the bail branch every single time that code path executes** — not "protects against
+a rare bad pointer," but "always skips this code now." This would silently disable real per-hangar-item
+processing for however many of the 29 sites share this "stale value is a non-pointer" shape (not yet
+counted — needs a per-site check, some stale values might coincidentally look like valid KSEG0 pointers and
+pass through, which is arguably worse: a guard providing zero actual protection while looking green).
+
+Why 3 soaks with "0 fires attributable" (s392's own verification) didn't catch this: `ROGUESQ_LOG_S392_H3A_GUARD`
+was never armed by any soak recipe run so far (confirmed: `run_s327waitpump.sh` doesn't set it, matching
+every prior chunk's precedent of not expecting fire-count lines) — an always-firing bug is invisible to a
+soak whose only observable signal is "did a `[[s392-h3a-guard]]` line print," because that print is itself
+gated behind the same unarmed env var. The soaks' actual observable ("byte-identical-except-intended-diff
+regen, clean build, no NEW crash inside the guarded span") is not violated by this bug — an early `goto` to
+the function's real epilogue doesn't crash, it just silently skips code, which produces no signal in any
+instrument used so far. This is a `§4.1`-class instrument-that-lies trap (PROJECT-OVERVIEW), specifically
+"a counter/log gated behind an env var that no soak recipe arms is not evidence of absence."
+
+**Not fixed this session** — scope discipline: this is a distinct bug in PRIOR session's work, discovered
+as a side effect of this session's closing sweep, not this session's planned work unit. Fixing it properly
+needs the same anchor-reconstruction-and-reverify treatment as chunk 3b itself (rebuild all 29 anchors to
+start after their raw loads, re-verify uniqueness, regen, build, soak) — a full work unit of its own.
+Recorded as the new top-priority Next-steps item (ahead of any "chunk 4"/whole-codebase sweep, since this
+is a correctness regression in already-shipped work, not new uncovered surface).
+
+Outcome: ADVANCED (chunk 3b landed: 21 new guard sites, correctly placed, verified via the standard regen-
+diff-build-soak protocol, 0 regressions attributable across 3 soaks — plus a real, previously-undetected
+correctness bug found and documented in prior work, itself a result per the iteration contract's "a
+documented dead end is a result" clause).
