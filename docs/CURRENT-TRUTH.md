@@ -28,11 +28,12 @@ Priority order for upcoming iterations, set after the 300-session review:
 Sanctioned tooling work unit, counts as ADVANCED whenever picked up: backport function-scoped matching
 (the BREADCRUMB10+ slice idiom) to the file-scoped-only guard patches in `fixup_game_funcs.py`, per the
 2026-08-04 analysis in that file's header comment. Real count 176 (an AST scan, not a grep guess).
-**68/176 converted across 3 batches (s377-379)**, all verified byte-identical fixup-report output
-before/after, all built and soaked clean; **108 remain**. Process note from s379: the soak step must
-run in the orchestrating session, not a delegated subagent — launching the compiled binary from a
-subagent's own sandbox hits an interactive-approval gate it cannot satisfy non-interactively. Next work
-unit: NEXT.md (batch 4).
+**89/176 converted across 4 batches (s377-379, s381)**, all verified byte-identical fixup-report output
+before/after, all built and soaked clean; **87 remain**. Process note from s379/s381: run verification
+(regen+diff) AND the soak in the orchestrating session, not a delegated subagent — both cross-repo
+regen commands and launching the compiled binary hit sandbox permission/approval gates a subagent
+cannot satisfy non-interactively; delegate ONLY the conversion-editing step. Next work unit: NEXT.md
+(batch 5).
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -156,9 +157,25 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -233 (s379); the next new item takes -234 and is inserted at the top.
+oldest). Current top is -234 (s381); the next new item takes -235 and is inserted at the top.
 
--233. **(s379) fixup_game_funcs.py function-scope-match backport, batch 3/N: 24 more converted
+-234. **(s381) batch 4/N: 21 more converted (89/176 total).** Target cluster: the musyx/audio-heap
+    instrumentation block in `funcs_23.c` (`musyxInitVoiceFromSample`, voice-slot-ptr init,
+    `tickAudioChannel`, `serviceVoicePoolFrame`, `tickAudioSeq`, `tickAllAudioChannels`, 3 `musyxGate`
+    counters, `musyxRawgate`, audio-drain call/iters, `streamNodeInit`, `voiceAttackEntry`,
+    `voiceActiveGate`, `songArrayAlloc`, song-count-write-early, shutdown-audio-free, rs-malloc
+    asset-alloc). Byte-identical regen-diff verified (375-line report and full tree both zero-diff);
+    build clean; ~130s soak clean (0 crash markers, VI traversed the FULL 0→320→512→640→1024 timeline).
+    **New process finding**: unlike batches 1-3, the delegated subagent could not complete VERIFICATION
+    either this time (not just the soak) — every cross-repo regen command (`make_elf.py`, even a bare
+    `rm -f RecompiledFuncs/funcs_*.c`) hit a hard sandbox permission denial distinct from s379's
+    binary-launch gate. Orchestrating session took over verification+build+soak directly. **Standing
+    rule updated**: delegate ONLY the conversion-editing step to a subagent; run regen-diff
+    verification, build, and soak all in the orchestrating session. **87 remain**, no single
+    obviously-largest cluster left (scattered 1-5-site sub-clusters) — batch 5 re-scans cold. Full
+    detail: `PORTING-STATE` Session 381; next work unit: NEXT.md (batch 5).
+
+-233. **(s379) batch 3/N: 24 more converted
     (68/176 total), entire `funcs_3.c` drain-mesh/heap-walker cluster now fully converted.**
     Delegated convert+verify+build to a subagent. Verification method, established batch 1 and reused
     unchanged every batch since: regen `RecompiledFuncs/` fresh twice (pre-batch backup script vs.

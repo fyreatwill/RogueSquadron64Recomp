@@ -32494,3 +32494,56 @@ soak needed or run (docs-only change).
 Outcome: ADVANCED (>=200-net-line CURRENT-TRUTH.md shrink, the explicit maintenance-iteration ADVANCED
 criterion). Next iteration resumes the sanctioned tooling work unit: fixup_game_funcs.py
 function-scope-match backport batch 4/N (108 remain).
+
+## Session 381 (2026-08-06) — sanctioned tooling: fixup_game_funcs.py backport batch 4/N (21 more converted, 89/176 total)
+
+Continued the fixup_game_funcs.py function-scope-match backport (s377-379's methodology, s380 was a
+maintenance-only interruption). Target cluster this batch: the musyx/audio-heap instrumentation block
+in `funcs_23.c` spanning original lines 3088-4076 (21 sites) — `musyxInitVoiceFromSample`, a voice-slot
+pointer init, `tickAudioChannel`, `serviceVoicePoolFrame`, `tickAudioSeq`, `tickAllAudioChannels`, three
+`musyxGate` counters, `musyxRawgate`, audio-drain call/iters counters, `streamNodeInit`,
+`voiceAttackEntry`, `voiceActiveGate`, `songArrayAlloc`, a song-count-write-early diagnostic, a
+shutdown-audio-free diagnostic, and an rs-malloc asset-alloc diagnostic. Delegated the convert step to
+a subagent (same methodology as batches 1-3): it correctly converted all 21 sites (confirmed by
+re-running the AST scan: 108→87 remaining) and backed up the pre-batch script to
+`fixup_game_funcs.py.pre-scope-backport-backup-batch4`.
+
+**New process finding this session**: the subagent's own sandbox could not complete the
+byte-identical-regen-diff VERIFICATION step either — not just the soak step flagged in s379. Every
+compound Bash command crossing repo boundaries (`cd .../rogue_squadron64 && python3 tools/make_elf.py`,
+even a bare `rm -f RecompiledFuncs/funcs_*.c`) hit a hard permission denial in the subagent's sandbox,
+distinct from and in addition to s379's interactive-approval gate on launching the compiled binary.
+The orchestrating session took over verification, build, and soak directly once this was discovered.
+**Updated standing rule**: for this tooling task, delegate ONLY the conversion-editing step to a
+subagent; run verification (regen+diff), build, and soak all in the orchestrating session. Batches 1-3
+apparently got lucky that their subagents' sandboxes allowed the cross-repo regen commands, or nobody
+checked closely — this session is the first time it was blocked.
+
+Verification (orchestrating session, same methodology as batches 1-3): cleared `RecompiledFuncs/`,
+regenerated via `make_elf.py` + `N64Recomp` once with the pre-batch4 backup script (pass A) and once
+with the converted live script (pass B). `diff` on the two fixup patch reports: empty (byte-identical,
+375 lines each). `diff -rq` on the two `RecompiledFuncs` output trees: empty (zero-diff). No latent
+cross-function anchor collisions in this batch's 21 sites.
+
+Build: `cmake --build . -j8` in `RogueSquadron64Recomp/build` succeeded clean (only the pre-existing
+harmless `DDIV`/`DMULT` sign-conversion warnings already present in prior batches, no new warnings or
+errors).
+
+Soak: ran directly from `build/` (per the standing rule) with the standard recipe
+(`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1`), ~130s,
+SIGKILL. 0 crash markers (`UnhandledJumpTarget`/`[defer-drop]`/`[dmem-race]`/`Assertion`/SIGSEGV/SIGBUS/
+SIGTRAP/CRASH` all grep to 0). VI width traversed the full `0→320→512→640→1024` phase timeline,
+confirming normal progression through boot, attribution/logo, and title.
+
+Excluded site-classes (the `0x8008EC88` audio-gate hand patch; the
+`waitForMusyXAudioTaskDone`/`shutdownAudioEngine` pair) confirmed untouched — not present in this
+batch's target range.
+
+**Running total: 68 + 21 = 89 of 176 converted (confirmed by scan: 87 remain).** No single obviously-
+largest cluster left in the remaining 87 (spread across `funcs_23.c`/`funcs_24.c`/`funcs_4.c`/others in
+smaller sub-clusters of 1-5 sites each per the s380-era scan) — batch 5 will need to re-scan cold and
+pick whatever groups cleanly, same as s379 anticipated.
+
+Outcome: ADVANCED (real code change: 21 more patch sites hardened against the file-scope fragility
+class, running total 89 of 176 converted, 87 remain; plus a genuine process-methodology finding about
+subagent sandbox limits on cross-repo verification commands, not just binary launches).
