@@ -28,8 +28,11 @@ Priority order for upcoming iterations, set after the 300-session review:
    sampled call was all-zero** — hypothesis 2 (silent-but-not-crashing) confirmed, not merely
    plausible. s374 reopened (Option A) WHY reversing the C88 site causes the pre-title hang: a
    bounded source-only pass found a specific, previously-undocumented single-token-mutex-deadlock
-   candidate (`HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang`, iteration 1) — not yet build-soak
-   confirmed. Detail: Next-steps item -228; live status/decision trees: NEXT.md.
+   candidate. s375's build+soak REFUTED it cleanly (9131/9131 balanced mutex acquire/release, never
+   blocks) — `HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang` CLOSED. There is no hang/deadlock;
+   C88-reversed simply never re-triggers the VI 640→1024 framebuffer-swap transition, the same open
+   question item -227 originally posed (item -229). Detail: Next-steps item -229; live status/decision
+   trees: NEXT.md (`HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site`).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md.
@@ -157,7 +160,42 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -228 (s374); the next new item takes -229 and is inserted at the top.
+oldest). Current top is -229 (s375); the next new item takes -230 and is inserted at the top.
+
+-229. **(s375) M5 pre-title-hang mechanism, OPTION A build+soak: REFUTED. `HYPOTHESIS-ID
+    m5-audio-destub-c88-pretitle-hang` CLOSED.** Executed item -228's own discriminating measurement:
+    added env-gated (`ROGUESQ_LOG_F5MUTEX=1`) enter/exit tracing around `initFactor5Mutex`'s
+    `osCreateMesgQueue_recomp`/`osSendMesg_recomp` and `factor5MutexAcquire`/`Release`'s
+    `osRecvMesg_recomp`/`osSendMesg_recomp` (`fixup_game_funcs.py`, `funcs_24.c`), reversed the C88
+    site for one local (uncommitted) build+soak, ran 180s. Result is unambiguous: `factor5MutexAcquire`
+    entered and exited **9131/9131** times (perfectly balanced, zero unmatched enters — never blocks),
+    continuing steadily for the full run, hundreds of seconds past the 2.2s mark where
+    `[phase] vi_width=` sticks at 640. This refutes the s374 mutex-deadlock mechanism outright: the
+    predicted freeze ("enter `osRecvMesg_recomp`, never exit, at the exact moment VI sticks") never
+    happens. **Bonus correction, itself worth recording**: `initFactor5Mutex` (the queue
+    destroy+recreate s374 called "unconditionally... EVERY VIDEO FRAME") fired only **6 times total**
+    across the whole 180s run (~7136 `update_screen` calls observed) — not thousands of times. The
+    "every video frame" claim (attributed to s373/s304's `reapplyDisplayMode`→`runVideoFrameTick`
+    chain) does not hold for `reapplyAudioConfig`/`initFactor5Mutex` specifically in this run's actual
+    control flow; `initFactor5Mutex` is called unconditionally as `reapplyAudioConfig`'s first
+    instruction (`funcs_24.c:5070`), so this means `reapplyAudioConfig` itself — not just
+    `initFactor5Mutex` — is not reached every frame post-stall. Root cause of that discrepancy is
+    UNRESOLVED (not chased further this session, in-budget for the one work unit); flagged as an open
+    question, not re-asserted as fact. **What actually happens under C88-reversed, confirmed again**:
+    the process stays alive and fully responsive (audio mutex subsystem cycling normally, no crash, no
+    stall) but VI genuinely never leaves 640 for the entire run — this is the SAME benign
+    `[vi-fs-decision] ... reason=pair=0` / `SET_COLOR_IMAGE`-never-re-emitted plateau s339/s340 already
+    characterized structurally (item -198/-199 lineage, PROJECT-OVERVIEW §10): `cinematicLoopBody`
+    genuinely alive, DMA ring progressing, `musyxSynthFrame` ticking — it just never re-triggers a new
+    framebuffer swap. C88-alone-reversed now stands at 0/6 title-reach (was 0/5 pre-s375). **Net: there
+    is no "hang" to fix — no deadlock, no wedge — C88-reversed is simply missing whatever triggers the
+    640→1024 VI transition, the SAME open question item -227 originally posed** ("what specifically
+    drives VI 640→1024 in the gate=0 baseline") — now the ONLY remaining thread, no longer a fallback
+    behind a deadlock theory. Both this soak's temporary C88 reversal and its trace instrumentation
+    were reverted/left inert respectively before commit: the fixup script's shipped default
+    (force-zero) was rebuilt and confirmed via a clean rebuild before this session's other doc/commit
+    work. Full detail: `PORTING-STATE` Session 375; next work unit: NEXT.md
+    (`HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site`, iteration 1).
 
 -228. **(s374) M5 pre-title-hang mechanism, OPTION A first pass: found a specific, previously-
     undocumented single-token-mutex-deadlock candidate — not yet build-soak confirmed.**

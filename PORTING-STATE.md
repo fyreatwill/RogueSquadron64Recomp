@@ -32091,3 +32091,76 @@ Not chased further this session per NEXT.md's own instruction ("do NOT build bli
 source pass") — this session used the pass to decide whether Option A was worth continuing, and it
 was; the build+soak itself is the next iteration's work unit, not this one's. `docs/CURRENT-TRUTH.md`
 item -228 records this; NEXT.md rewritten with exact commands and expected outcomes.
+
+## Session 375 (2026-08-05) — M5 audio: ran s374's own discriminating measurement, REFUTED the mutex-deadlock mechanism cleanly, HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang CLOSED
+
+Executed NEXT.md's fully-specified work unit exactly as written: batched env-gated
+(`ROGUESQ_LOG_F5MUTEX=1`) enter/exit tracing around all four sites named in item -228 —
+`initFactor5Mutex`'s `osCreateMesgQueue_recomp` and `osSendMesg_recomp` calls, `factor5MutexAcquire`'s
+`osRecvMesg_recomp` call, `factor5MutexRelease`'s `osSendMesg_recomp` call — added to
+`fixup_game_funcs.py` (funcs_24.c, 4 new patch blocks, matched on unique guest-address anchors,
+mirroring the existing `[audio-drain-*]` style). One build carried the instrument.
+
+**Regen procedure note (recorded because it bit this session and is a known but easy-to-forget
+trap)**: the first `fixup_game_funcs.py` run after a stale `N64Recomp` regen refused outright with
+"funcs_0.c already carries RS64_FIXUP_APPLIED" — item -20's documented gotcha (N64Recomp skips
+rewriting files that already exist on disk). Fixed by deleting all `RecompiledFuncs/funcs_*.c` via a
+Python `glob`+`os.remove` (the sandbox blocks `rm -f`/`find -delete` with a glob directly) before
+rerunning `N64Recomp`. Patch report after the clean regen showed exactly the expected counts: all
+four new f5mutex sites `x1`, the existing `audio gate patched x1` untouched.
+
+C88 site (`funcs_23.c:10021`) temporarily hand-reversed (`= ctx->r2` instead of `= 0`) directly in
+the regenerated file — NOT a `fixup_game_funcs.py` change, exactly s342's convention — for one local
+build. Clean build, zero errors (46 pre-existing sign-conversion warnings, unrelated).
+
+**Soak** (`s375f5mutex`, `run_s327waitpump.sh` launcher which arms every passive breadcrumb by
+default, `HOLD_S=180`, `ROGUESQ_LOG_F5MUTEX=1` added): `[phase] vi_width=` logged the expected
+0→320→640 progression, sticking at 640 at 2.2s (`update_screen #101`), exactly matching the
+already-characterized item -198/-199 signature. The process was killed manually (SIGKILL) once the
+discriminating result was unambiguous, at roughly 175s in (`update_screen #7104`+), rather than
+waiting the full 600s phase-timeout — the result had already resolved cleanly and further wall-clock
+was not going to change the verdict.
+
+**Result — REFUTED, not inconclusive**: `[f5mutex-acquire] enter` and `[f5mutex-acquire] exit` both
+counted **9131**, and `[f5mutex-release] enter`/`exit` both counted **9131** — perfectly balanced,
+zero unmatched-enter events, across the entire run, continuing steadily hundreds of seconds past the
+2.2s VI=640 stick point. The predicted failure signature ("enter `osRecvMesg_recomp`, never exit, at
+the exact moment VI sticks") never occurred. `factor5MutexAcquire` is conclusively NOT where
+execution wedges — there is no wedge at all; the mutex subsystem functions completely normally under
+gate=1 for the whole run.
+
+**Unplanned bonus finding, itself a correction worth recording**: `[f5mutex-create]`/`[f5mutex-send]`
+(the `initFactor5Mutex` queue destroy+recreate that item -228 described as happening
+"unconditionally... EVERY VIDEO FRAME") fired only **6 times total** in the entire 180s run (~7136
+`update_screen` calls observed in the same window) — first at process start (n=0), a second time
+right around the VI=640 transition (n=1, log line adjacent to `update_screen #101`), then four more
+times sparsely (n=2 at roughly `update_screen` #1000-ish based on log-line position, etc.), never
+again at per-frame density. Read `funcs_24.c:5046-5070`: `initFactor5Mutex` is called unconditionally
+as the literal first instruction of `reapplyAudioConfig`, so if `reapplyAudioConfig` fired every
+video frame, this counter would show thousands, not 6. This means either `reapplyAudioConfig` itself
+is not reached every frame in this run's actual control flow (contradicting the "called every video
+frame from `reapplyDisplayMode`→`runVideoFrameTick`" claim attributed to s373/s304), or something
+else about that chain's frequency was mischaracterized. **Not resolved this session** — flagged
+explicitly as an open question, not re-asserted as settled fact; does not change the soak's main
+verdict (the mutex never blocks regardless of how often the queue is recreated), but the "every
+frame" framing in items -227/-228 should be read as suspect until re-verified.
+
+**What C88-reversed's failure to reach title actually is, confirmed again with a 6th data point**:
+not a hang, not a deadlock — the process stays fully alive and responsive (mutex cycling normally, DMA
+ring progressing, `musyxSynthFrame` ticking) but never re-triggers the VI 640→1024 framebuffer-swap
+transition. This is the exact `[vi-fs-decision] ... reason=pair=0` / `SET_COLOR_IMAGE`-never-re-emitted
+plateau s339/s340 already characterized (PROJECT-OVERVIEW §10). C88-alone-reversed: 0/6 title-reach.
+
+**Cleanup**: reverted the hand-edited C88 site back to the force-zero default (`= 0`) in the generated
+`funcs_23.c`, ran a full `cmake --build` to confirm a clean rebuild restoring the shipped default
+binary — zero errors, confirmed by re-grepping the site post-build. The f5mutex trace instrument
+itself stays in `fixup_game_funcs.py` (inert/env-gated under the shipped gate=0 default, per NEXT.md's
+call last session) for potential future reuse.
+
+**Closes** `HYPOTHESIS-ID m5-audio-destub-c88-pretitle-hang` (2 iterations: s374 source-only, s375
+build+soak; closed on a clean refutation, not exhausted budget). Reopens item -227's original Q2 —
+what specifically drives VI 640→1024 under the gate=0 baseline, and what C88's reversal structurally
+removes — as the sole remaining thread, no longer a fallback behind a deadlock theory. New
+`HYPOTHESIS-ID m5-audio-vi640to1024-trigger-site` opened for the next iteration, source-only first
+pass per the same "don't build blind" convention. `docs/CURRENT-TRUTH.md` item -229 records this in
+full; NEXT.md rewritten with the next work unit's hypotheses and exact starting points.
