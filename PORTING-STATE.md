@@ -39197,3 +39197,80 @@ updated; `NEXT.md` rewritten with a fresh HYPOTHESIS-ID.
 **Outcome: ADVANCED** (folded item -303's 2nd confirm soak, then closed a brand-new idiom-class
 bucket, item -304, with a clean build/live-verify and zero fires -- the first multi-file bucket
 tackled in this sub-arc, proving the method generalizes past single-file concentration).
+
+## Session 472 (2026-08-07): folded item -304's 2nd confirm soak (0 fires on the new guard and all 8
+siblings, `hangarbay-entry` n=31 -- matches the manual live-verify's n=34 closely, positive control
+holds; crashed on a NEW specific offset of the already-catalogued `heapFreeListDequeue` family,
+filed not chased); then classified `hi16=0x8011, offset=0x63d4` (170 sites, this sub-arc's largest
+bucket) and CLASSIFIED AND DEFERRED it as item -305 -- NOT a raw-pointer-guard candidate.
+
+**Folding item -304's 2nd confirm soak (`s471_materialarrayptr_confirm.sh`, queued s471).** The
+driver-level summary log only reported the crash line; the actual guard-fire counts live in the
+capture directory's own `run.log` (`scratch/agent/soak_results/s471_materialarrayptr_confirm_48061/
+run.log`, 40506 lines) -- grepped directly since `SOAK-RESULTS.md`'s one-line verdict doesn't carry
+per-tag counts. Result: 0 `material-array-ptr-guard` fires, 0 fires on all 8 pre-existing sibling
+guards (no regression), `hangarbay-entry` n=31 (positive control -- code path reached, matches the
+n=34 manual pass closely). Crashed at 107.4s on `pc-symbol=heapFreeListDequeue+31924`,
+`last-guest-pc=0x8000d738` -- the same already-catalogued `heapFreeListDequeue` crash family
+documented in `docs/PROJECT-OVERVIEW.md` (prior single-occurrence sightings at `+19316` and
+`+32596`), but a THIRD distinct byte offset, still unrelated to any guard tested. Filed, not chased.
+**Item -304 now has two independent null confirmations; fully CLOSED**, matching item -287's
+established true-negative baseline for this whole guard-idiom class.
+
+**This session's work unit: classify `hi16=0x8011, offset=0x63d4`** (170 `lw` reload sites, 4 files:
+`funcs_6.c`x75/`funcs_3.c`x44/`funcs_4.c`x30/`funcs_7.c`x21) -- the largest bucket attempted in this
+sub-arc, per `NEXT.md`'s Step 1.
+
+**Step 1 -- tool run, then a tool bug found and worked around.** First invocation of
+`scratch_s468_shapecheck_generic.py 8011 63d4` (N64Recomp repo) returned "total sites: 0" -- a false
+negative caused by passing the offset in lowercase (`63d4`); the tool builds its regex from the raw
+argv string without normalizing case, and the generated `RecompiledFuncs/*.c` files always emit
+uppercase hex literals (`0X63D4`), so the literal case must match. Re-ran with `8011 63D4`
+(uppercase) and got the expected 170 sites across the expected 4 files -- **note for future buckets:
+always pass the offset argument in uppercase hex to this tool, the case mismatch is a silent
+zero-result failure, not an error.** Cross-checked against a direct `grep -c` for the exact reload
+pattern per file: `funcs_6.c` 75, `funcs_3.c` 44, `funcs_4.c` 30, `funcs_7.c` 21 -- sums to 170,
+matching `NEXT.md`'s pre-recorded count exactly; 0 `sw` (write) sites found in any of the 4 files
+(single-direction bucket, no writer-exclusion needed even if it had turned out to be a guard
+candidate). A `funcs_33.c` match on the same offset literal turned out to be an unrelated `ADD32(...,
+0X63D4)` arithmetic use of the plain integer 0x63D4, not preceded by the `hi16=0x8011` lui pattern --
+correctly outside the tool's site list, confirmed by direct read.
+
+Of the 170 sites, the tool auto-classified only 2 as carrying dereference risk (`ADD32(...) ->
+WRITE_THROUGH`, `hit_deref=True`, both in `funcs_3.c`) and the remaining 168 as `UNRELATED` (its
+give-up bucket) spread across 11 different chain-depth groupings -- purely an artifact of how many
+statements intervened before the tool's local-window heuristic stopped looking, not a real behavioral
+distinction. Per the s470/471 lesson, `hit_deref=False` doesn't mean safe, so delegated a read-only
+classification pass (subagent, general-purpose) over a stratified 25-site sample (8 `funcs_6.c`, 7
+`funcs_3.c`, 6 `funcs_4.c`, 5 `funcs_7.c`, spanning as many of the 11 tool-reported chain-depth groups
+as possible) plus 2 more sites read directly by hand (`funcs_6.c:13451`, `funcs_6.c:17684`) to close
+gaps and cross-check the two tool-flagged "risk" sites.
+
+**Result: 26/27 manually-read sites are the identical `sltu`/`bne` "current DL pointer < buffer-end
+limit" bounds-check idiom** (`ctx->rN = ctx->rM < ctx->rN ? 1 : 0;` immediately after the reload, the
+boolean result feeding a branch) -- the reloaded global itself is COMPARED, never dereferenced,
+added-to, or stored through a pointer chain. The 1 outlier (`funcs_6.c:13451`) is a save/restore
+pattern: the reload is held live across an intervening call (`emitMaterialRenderStateDL`) then
+written straight back unchanged to the same global slot (`MEM_W(0X63D4, ctx->r1) = ctx->r19;` at
+`funcs_6.c:13542`, confirmed by direct read) -- also no local dereference. **The tool's own two
+`hit_deref=True` "risk" flags were false positives**: manually reading `funcs_3.c:3670`/`20486` (the
+`lui` line the tool anchors its report to, not the actual reload line 3 lines later) showed the
+`ADD32` it detected was an unrelated stack-pointer adjustment (`ctx->r29 = ADD32(ctx->r29, -0X20)`,
+the function prologue) a few lines after the reload, not an operation on the reloaded value itself --
+the reload's actual use at `funcs_3.c:3691` is the same `sltu` compare as every other site. Zero
+`RAW_POINTER_DEREF`, `RAW_POINTER_ADD_THEN_DEREF`, or `CALL_ARG` sites found in the sample.
+
+**Classified and DEFERRED as item -305, same disposition as item -302** (an integer/boolean-valued
+use, not a raw-pointer-guard candidate) -- guarding a comparison against 0 substitution would not
+prevent a crash (comparisons don't fault), and forcing the compare's outcome would be silently
+changing game logic (whether the DL buffer is treated as full) rather than hardening against a wild
+pointer. No code change; this closes the classification question for the whole bucket, not a partial
+result. `docs/CURRENT-TRUTH.md` Next-steps and the USER DIRECTIVE next-candidate pointer updated;
+`NEXT.md` rewritten pointing at the `hi16=0x8012, offset=-0x23a8` (141 sites) caution bucket next,
+per the standing fallback ordering.
+
+**Outcome: ADVANCED** (folded item -304's 2nd confirm soak to full closure; ran this session's
+planned Step 1 classification work unit to a definitive conclusion -- the largest bucket in the
+sub-arc is a comparison-only idiom, not a guard candidate, closing that question outright rather than
+leaving it open; also found and documented a real tool bug -- case-sensitive offset matching -- that
+would otherwise silently zero-result every future bucket passed in lowercase).

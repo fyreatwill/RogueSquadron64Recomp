@@ -19,15 +19,17 @@ Priority order for upcoming iterations, set after the 300-session review:
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Current active
    sub-arc: the s465 codebase-wide frequency scan of `lui+lw` global-reload idioms — see items
-   -298..-304 below for the closed-bucket chain and PROJECT-OVERVIEW §18 for full detail. **Next
-   candidate: `hi16=0x8011, offset=0x63d4`** (170 sites, 4 files: `funcs_6.c`x75/`funcs_3.c`x44/
-   `funcs_4.c`x30/`funcs_7.c`x21) — the largest unclaimed bucket in the s465 scan, confirmed genuinely
-   uncovered by any existing guard (grepped `fixup_game_funcs.py` for `0x63d4`/`0X63D4`/`801163D4`, 0
-   hits); budget extra session time, largest bucket attempted in this sub-arc so far. **Caution on the
-   2nd-ranked candidate** (`hi16=0x8012, offset=-0x23a8`, 141 sites) — do NOT treat as fresh: item
-   -296's `SIBLING_PTR_WRITE_GUARD` already covers 119 of these sites' DOWNSTREAM WRITE (not the
-   reload itself); the 141-vs-119 gap and whether the reload needs its own guard is unclassified —
-   needs its own careful audit, unlike every other bucket in this scan.
+   -298..-305 below for the closed/deferred-bucket chain and PROJECT-OVERVIEW §18 for full detail.
+   `hi16=0x8011, offset=0x63d4` (170 sites, the largest bucket in the scan) CLASSIFIED AND DEFERRED
+   s472 as item -305 — confirmed compare-only "DL pointer vs buffer limit" idiom, reload never
+   dereferenced, not a guard candidate (see item -305 below). **Next candidate: `hi16=0x8012,
+   offset=-0x23a8`** (141 sites) — **CAUTION, do NOT treat as fresh**: item -296's
+   `SIBLING_PTR_WRITE_GUARD` already covers 119 of these sites' DOWNSTREAM WRITE (not the reload
+   itself); the 141-vs-119 gap and whether the reload needs its own guard is unclassified — needs its
+   own careful audit, unlike every other bucket in this scan. If that proves intractable this
+   session, the next-ranked genuinely-fresh candidates are `hi16=0x8011, offset=-0x35e0` (23 sites, 9
+   files) or `hi16=0x8013, offset=0xb50` (21 sites, 11 files) — both far more scattered than anything
+   closed so far.
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -159,9 +161,28 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -304. The next NEW item takes -305.
+a range pointer. Highest allocated so far: -305. The next NEW item takes -306.
 
--298..-304. **(s463-471) Seven more M3 idiom-class audit buckets from the s465 codebase-wide
+-305. **(s472) M3 idiom-class audit: `hi16=0x8011, offset=0x63d4` global (`0x801163D4`, 12 bytes
+    from item -299's `DL_BUFFER_POOL_GUARD` global) — CLASSIFIED AND DEFERRED, not a guard
+    candidate.** The largest bucket in the s465 scan (170 `lw` reload sites, `funcs_6.c`x75/
+    `funcs_3.c`x44/`funcs_4.c`x30/`funcs_7.c`x21), 0 `sw` write sites. A stratified 27-site sample
+    (all 4 files, spanning every tool-reported chain-depth grouping) read directly showed 26/27 are
+    the identical `sltu`/`bne` "current DL pointer < buffer-end limit" bounds-check idiom — the
+    reload is COMPARED, never dereferenced or added-to; the 1 outlier is a save/restore (reload held
+    live across a call, written back unchanged to the same slot, also no local deref). The
+    classification tool's only 2 `hit_deref=True` flags in the whole bucket were confirmed FALSE
+    POSITIVES on direct read (the tool anchors its report to the `lui` line, and what it flagged as
+    `ADD32->WRITE_THROUGH` was an unrelated stack-pointer prologue adjustment a few lines later, not
+    an operation on the reloaded value). Same disposition as item -302: an integer/boolean-valued use
+    where guard-at-reload doesn't apply (a comparison can't fault on a stale value, and forcing the
+    outcome would silently change game logic rather than harden against a wild pointer). No code
+    change. **Tool bug found and documented**: `scratch_s468_shapecheck_generic.py` is
+    case-sensitive on its offset argument and returns a silent "total sites: 0" false negative if the
+    offset is passed in lowercase (generated code always emits uppercase hex literals) — always pass
+    uppercase for future buckets.
+
+-298..-304. **(s463-472) Eight more M3 idiom-class audit buckets from the s465 codebase-wide
     frequency scan, five CLOSED, one DEFERRED.** Item -298 (`DL_LIST_RESET_GUARD`, re-scoped ~111
     non-canonical `-0x5824` sites sharing item -291's global `0x8011A7DC`) CLOSED s464, 84/84 sites
     (27 folded into `DL_LIST_APPEND_GUARD` itself, 70 blanket-regex, 14 per-site literal-anchor).
@@ -223,7 +244,12 @@ a range pointer. Highest allocated so far: -304. The next NEW item takes -305.
     confirms 30 `material-array-ptr-guard` tag occurrences. Live-verify: 0 new-guard fires, 0 fires
     on all 8 siblings, `hangarbay-entry` n=34 (positive control); full 300s/250s-keys schedule
     survived with 0 `[CRASH]` markers at all — unlike most sessions in this sub-arc, this run hit no
-    crash of any kind. 2nd independent confirm soak queued (`s471_materialarrayptr_confirm.sh`).
+    crash of any kind. 2nd independent confirm soak (`s471_materialarrayptr_confirm.sh`) ran s472: 0
+    fires on the new guard and all 8 siblings, `hangarbay-entry` n=31 (matches the manual pass
+    closely); crashed on a 3rd distinct byte-offset of the already-catalogued `heapFreeListDequeue`
+    crash family (`+31924`, `last-guest-pc=0x8000d738`; prior sightings `+19316`/`+32596`), unrelated
+    to any guard tested, filed not chased. Item -304 fully CLOSED, both confirm passes null on the
+    new guard.
 
 -291..-297. **(s454-462) Three M3 idiom-class audits found via an s454 concurrent-process
     collision, all now CLOSED.** Item -291 (`DL_LIST_APPEND_GUARD`, global `0x8011A7DC`, 57 sites,
