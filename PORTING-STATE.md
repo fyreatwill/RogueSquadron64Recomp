@@ -34791,3 +34791,69 @@ standing item -3 rule (ask the user before committing there).
 
 Outcome: ADVANCED (100 real relocations landed net, live-verified clean; plus a genuine discriminating
 result narrowing a crash to a 25-name suspect group via two independent converging bisection branches).
+
+## Session 413 (2026-08-06) — M4 item -249 q2 sub-bisection CLOSED: isolated `transformCraftAnchorsApplySubFx3` as the bad function, relocated the other 24 cleanly (+24, 359/778)
+
+HYPOTHESIS-ID: m4-item249-q2-badfunc-isolation (closed this session)
+
+Continued directly from s412's handoff: q2 (25-name suspect group carved from the crashing n=100
+batch's second quarter) needed its specific bad function(s) isolated before ordinary bulk relocation
+could resume past n=75. Repo state at session start was already the correct baseline (batch-1 75 +
+q1 25 = 100 relocations, confirmed clean per s412).
+
+### The named lead, tested first
+NEXT.md flagged `npcTickEffectChannelWithSlotDispatch` (0x800D3240) as worth testing alone before a
+blind bisection — its name references "slot dispatch," matching the crash backtrace's deepest
+N64Recomp-side frame (`slotDispatcherIter`). Applied alone on top of the 100-baseline, full regen
+(make_elf → N64Recomp → fixup → cmake build), `nm`-confirmed present, live-verified: **CLEAN** — reached
+`phase width=512` at 88.4s, 19 frames captured, 0 `[CRASH]` lines, `lastW=640` throughout. The lead was
+wrong; reverted it and fell back to standard halves bisection on the remaining 24.
+
+### Halves bisection (mirrors the s404-407 / s412 playbook exactly)
+Every step: apply candidate set on top of the FIXED 100-relocation baseline (not cumulative with
+previously-tested-clean halves — each half is tested in isolation against the same baseline, matching
+s412's h1/h2/q1/q2 methodology), full regen, `nm`-verify, live-verify via
+`PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 zsh tools/probe.sh <outdir> 45 2`, revert
+before the next split.
+
+| Split | Names | Result |
+|---|---|---|
+| h1 (12) | first half of remaining 24 | CLEAN (19 frames, `lastW=640`, 0 crash markers) |
+| h2 (12) | second half | **CRASH** — `slotDispatcherIter+1404`, `last-guest-pc=0x80065e94` (exact match to s412's original signature) |
+| g1a (6) | first half of h2 | CLEAN (19 frames, 0 crash markers) |
+| g1b (6) | second half of h2 | **CRASH** — same exact signature |
+| 1a (1, `transformCraftAnchorsApplySubFx3`) | single name from g1b | **CRASH** — same exact signature, alone |
+
+`transformCraftAnchorsApplySubFx3` (0x800E71D0) reproduces the crash byte-identically at every
+bisection depth with nothing else relocated. This is sufficient proof per the s404-407/s412 precedent:
+a single bad function, not a batch-boundary or interaction effect. Recorded in `m4_known_bad.txt`.
+
+### Final validation and landing
+Reverted the single test, applied the other 24 of q2's 25 names (the 23 untested remainder plus the
+already-confirmed-clean `npcTickEffectChannelWithSlotDispatch`) as one batch on top of the 100-baseline,
+full regen, `nm`-confirmed all 24 present, live-verified: **CLEAN** — 19 frames, `lastW=640`, 0 crash
+markers of any kind (`[CRASH]`/SIGBUS/SIGSEGV/UnhandledJumpTarget/dmem-race/defer-drop/assert).
+
+**Landed this session: 100 (prior baseline, unchanged) + 24 (q2 minus the 1 bad function) = 124 total
+relocations in the repo, +24 net new vs s412's 335/778. Tally: 359/778 done, 439 remain (433 actionable,
+4 known-skip, 2 known-bad).**
+
+### Build/regen notes
+No new build issues. Standard pipeline (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake
+--build`) ran clean at every one of the 8 apply/revert cycles this session (1 lead test + 5 bisection
+levels + 1 final validation, all with a preceding `RecompiledFuncs/funcs_*.c` clear). `make_elf.py`'s
+unmapped-functions-skipped counter tracked the batch size at each step exactly as expected (positive
+control), e.g. 467→456 after the first 12 relocated, 444 at the final 124-relocated state.
+
+### What this closes and what's next
+`HYPOTHESIS-ID: m4-item249-q2-badfunc-isolation` is CLOSED — bad function found, parked, group resolved.
+Ordinary bulk relocation resumes at the confirmed-safe **n=75** cadence (settled s412, unaffected by this
+session) for the next work unit: regenerate candidates fresh (`s408_gen_candidates.py` or equivalent),
+filter both `m4_known_skip.txt` and `m4_known_bad.txt` (now 2 entries), take the next 75 in file order,
+probe/apply/regen/build/nm-verify/live-verify.
+
+Sibling-repo symbol-file edits (`main_overlay.txt`/`mission_overlay.txt`) are uncommitted per the
+standing item -3 rule (ask the user before committing there).
+
+Outcome: ADVANCED (24 real relocations landed net, live-verified clean; 1 bad function isolated via a
+clean 5-level halves bisection and permanently parked; the q2 sub-thread opened s412 is fully closed).

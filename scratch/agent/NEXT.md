@@ -1,88 +1,78 @@
 # NEXT work unit
 
-## s412 recap
+## s413 recap
 
-Continued `HYPOTHESIS-ID: m4-item249-cadence-scaleup` (opened s411, n=50 confirmed clean). This
-session: n=75 landed CLEAN (55 CONFIRMED + 20 WEAK, live-verified to `lastW=640`, 0 crash markers).
-Pushed to n=100 next (per NEXT.md's own "one more step up" instruction) — **crashed**: Bus error,
-`pc-symbol=initHudStruct+12304`, `last-guest-pc=0x800290d4`, call chain
-`mainGameLoop→initMission→spawnHudNpc→spawnNpcOfType→slotDispatcherIter→initHudStruct`.
+Closed `HYPOTHESIS-ID: m4-item249-q2-badfunc-isolation` (opened s412 for the 25-name suspect group
+carved from the crashing n=100 batch's second quarter). Tested the named lead
+(`npcTickEffectChannelWithSlotDispatch`, referencing "slot dispatch" like the crash's `slotDispatcherIter`
+frame) alone first — **CLEAN**, lead was wrong. Fell back to standard halves bisection on the remaining
+24, testing each split on top of the fixed 100-relocation baseline (batch-1 75 + q1 25, per s412):
 
-Reverted the 100-batch (wrote `scratch/agent/s412_revert_batch2.py`, mirrors `s400_apply_batch.py`),
-confirmed the revert restored the exact batch-1-only unmapped-count (493), then bisected on top of the
-clean n=75 baseline (s405-407 halves playbook, but testing each half/quarter ON TOP of a known-clean
-baseline rather than in isolation, so every live-verify state is real):
+- h1 (12) → CLEAN
+- h2 (12) → CRASH (`slotDispatcherIter+1404`, `last-guest-pc=0x80065e94`)
+- g1a (6, first half of h2) → CLEAN
+- g1b (6, second half of h2) → CRASH (same signature)
+- single name from g1b (`transformCraftAnchorsApplySubFx3`, 0x800E71D0) → **CRASH alone**, same exact
+  signature at every depth
 
-- first 50 of the 100 → CRASH (`slotDispatcherIter+1404`, `last-guest-pc=0x80065e94`)
-- first 25 of that 50 (q1) → CLEAN (live-verified, 0 crash markers, reached `lastW=640`)
-- last 25 of that 50 (q2) → CRASH, **byte-identical signature to the 50-batch's crash**
-  (`slotDispatcherIter+1404`, `last-guest-pc=0x80065e94` exact match)
+`transformCraftAnchorsApplySubFx3` reproduces the crash byte-identically with nothing else relocated —
+recorded in `scratch/agent/m4_known_bad.txt` (2nd entry). Reverted it, applied the other 24 of q2's 25
+names (including the false-lead, confirmed clean alone) as a group on top of the 100-baseline — live-
+verified CLEAN (19 frames, `lastW=640`, 0 crash markers).
 
-Two independent bisection branches (the 50-batch and the isolated 25-batch) converging on the exact
-same PC/symbol is strong evidence this is a specific bad function within q2, not a batch-size artifact
-— matching the s404-407 `initPlayerCraftTrailBuffers` precedent (single bad function in an otherwise-
-clean batch).
+**Landed this session: +24 net new relocations. Repo now has 124 relocations from the s412+s413 arc
+(100 + 24). Tally: 359/778 done (was 335/778), 439 remain (433 actionable, 4 known-skip, 2 known-bad).**
+Full detail: `PORTING-STATE` Session 413, `docs/CURRENT-TRUTH.md` item -249..-258.
 
-**Final repo state (committed): batch-1 (75) + q1 (25) = 100 net new relocations, live-verified clean.
-Item -249 tally: 335/778 done (was 235/778), 463 remain per a fresh regen (458 actionable once q2's 25
-are set aside, 4 known-skip, 1 known-bad).** q2's 25 names are saved at
-`scratch/agent/s412_bisect_q2.txt` — NOT yet in `m4_known_bad.txt`, only isolated as a GROUP so far.
+## Next work unit: resume ordinary bulk relocation at n=75 cadence
 
-**Cadence decision: n=75 is the confirmed-safe steady-state** (not n=100) until q2's specific bad
-function(s) are found and parked — full detail: `PORTING-STATE` Session 412, `docs/CURRENT-TRUTH.md`
-item -249..-258.
+HYPOTHESIS-ID: m4-item249-bulk-relocation-n75
 
-## Next work unit: sub-bisect q2's 25-name suspect group to find the specific bad function(s)
+New slug — the q2 bad-function isolation thread is CLOSED. This is back to ordinary bulk relocation,
+not root-causing, using the confirmed-safe n=75 cadence settled s412 (n=100 remains closed per s412's
+discriminating result — specific-function bugs are the dominant failure mode at that size, not batch
+size itself, but n=75 is still the validated steady-state until/unless a fresh discriminating probe
+justifies scaling further).
 
-HYPOTHESIS-ID: m4-item249-q2-badfunc-isolation
-
-New slug — this is root-causing a specific crash (the s404-407 model), not scaling cadence, which is
-CLOSED for now (steady state = n=75, use it for ordinary relocation once this thread resolves).
-
-### A promising lead before blind bisection
-`scratch/agent/s412_bisect_q2.txt`'s last entry is `npcTickEffectChannelWithSlotDispatch`
-(`0x800d3240`) — its NAME directly references "slot dispatch," and the crash backtrace's deepest
-N64Recomp-side frame is `slotDispatcherIter`. Worth testing this ONE name in isolation FIRST (n=1, on
-top of the clean batch-1+q1 baseline) before a blind halves bisection — if it alone reproduces the
-crash, this sub-thread closes in one cycle instead of 3-4 (25→12/13→6/7→1).
-
-### Recipe (if the lead doesn't pan out, standard halves bisection)
-1. Current repo state is ALREADY the correct baseline (batch-1 + q1 = 100 relocated, confirmed clean) —
-   do not re-apply or re-verify it, just extend from here.
-2. Test `npcTickEffectChannelWithSlotDispatch` alone: apply via
-   `python3 scratch/agent/s400_apply_batch.py <single-line-file>` (grep its line out of
-   `scratch/agent/s412_bisect_q2.txt`), clear `RecompiledFuncs/`, regen (make_elf → N64Recomp → fixup),
-   build, `nm`-confirm, live-verify (same recipe as s412, see below).
-   - CRASH with the same signature → found it. Add to `m4_known_bad.txt` (format matches existing
-     entries — name, addr, tag, session, signature, note). Revert it. Apply the OTHER 24 of q2's names
-     (all but this one) on top of the clean 100-baseline, live-verify — if clean, that's +24 more net
-     relocations landed this session, tally becomes 359/778.
-   - CLEAN → the lead was wrong; revert it, fall back to standard bisection: split q2's 25 into
-     12/13, apply each half on top of the clean 100-baseline, live-verify, recurse into whichever half
-     crashes (same playbook as s404-407 and this session's h1/q1/q2 split).
-3. Live-verify command (unchanged from s411/s412):
+### Recipe (unchanged from s408/s410/s412's ordinary-relocation steps)
+1. Regenerate the candidate list fresh — do NOT trust any prior session's "N remain" prose (iron rule).
+   Use whatever script s408-412 used to enumerate `main_overlay.txt` phantom-overlay candidates
+   (`scratch/agent/s408_gen_candidates.py` or equivalent — check `scratch/agent/s4*.py` for the exact
+   generator and probe classifier).
+2. Filter OUT both `scratch/agent/m4_known_skip.txt` (4 entries, NONE/AMBIGUOUS probe results) and
+   `scratch/agent/m4_known_bad.txt` (2 entries: `initPlayerCraftTrailBuffers`,
+   `transformCraftAnchorsApplySubFx3` — do NOT re-probe or re-attempt either without a dedicated
+   root-cause session).
+3. Take the next 75 candidates in file order (CONFIRMED or WEAK tag, single destination overlay).
+4. Apply via `python3 scratch/agent/s400_apply_batch.py <batch-file>` (moves entries from
+   `main_overlay.txt` to the destination overlay file).
+5. Clear `RecompiledFuncs/funcs_*.c` (`zsh scratch/agent/s410_clear_recompiledfuncs.sh` or equivalent),
+   regen: `make_elf.py` → `N64Recomp` (`zsh tools/agent/regen_n64recomp.sh`) → `fixup_game_funcs.py`.
+6. Build: `cd build && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j8`.
+7. `nm`-verify all names present in the built binary (positive control — every name must show up).
+8. Live-verify:
    ```
    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
      PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 \
      zsh tools/probe.sh <outdir> 45 2
    ```
-   Run in background, block on it with TaskOutput. PASS = reaches `phase width=512` (~88-89s), no
-   "process gone" line in the driver's own stdout, continues to `lastW=640` in `run.log`, 0
-   `[CRASH]`/SIGBUS/SIGSEGV/UnhandledJumpTarget/dmem-race/defer-drop/assert lines. FAIL = a `[CRASH]`
-   Bus error, check `grep -n "\[CRASH\]\[pc-symbol\]\|\[CRASH\]\[last-guest-pc\]" run.log` — if it
-   matches `slotDispatcherIter+1404`/`0x80065e94` exactly, that confirms it's the same bug, not a new
-   one.
-4. Once q2's bad function(s) are isolated and parked in `m4_known_bad.txt`, resume ordinary bulk
-   relocation at the confirmed-safe **n=75** cadence (not n=100 — that thread is closed per s412) using
-   the standard recipe: regenerate candidates fresh (`s408_gen_candidates.py`), filter both known-skip
-   and known-bad lists, take the next 75 in file order, probe/apply/regen/build/nm-verify/live-verify.
+   Run in background, block with TaskOutput. PASS = reaches `phase width=512` (~88-89s), no "process
+   gone" line, continues to `lastW=640` in `run.log`, 0 `[CRASH]`/SIGBUS/SIGSEGV/UnhandledJumpTarget/
+   dmem-race/defer-drop/assert lines. FAIL = a `[CRASH]` Bus error — check
+   `grep -n "\[CRASH\]\[pc-symbol\]\|\[CRASH\]\[last-guest-pc\]" run.log`; if the signature is new (not
+   `slotDispatcherIter+1404`/`0x80065e94` or `playerXwingInit+2068`/`0x80011088`), this is a THIRD bad
+   function/family — defer bisection to the next iteration rather than guessing, same as s404 and s412
+   did.
+9. If clean: commit the symbol-file moves are in the SEPARATE `rogue_squadron64` repo — do NOT commit
+   there autonomously (item -3 rule, ask the user first). This repo's commit only covers
+   `scratch/agent/*` and the docs.
 
 ### Do NOT this iteration
-- Re-attempt n=100 batches — closed per s412's discriminating result (specific-function bug, not size).
-- Skip all 25 of q2's names into `m4_known_bad.txt` without isolating the actual culprit(s) — the
-  s404-407 precedent found only 1 bad function out of 20 candidates; blanket-skipping wastes ~24 good
-  relocations.
-- Trust a prior session's "N remain" prose over a fresh regen.
+- Re-attempt n=100 — closed per s412's discriminating result.
+- Re-probe or re-relocate either of the 2 `m4_known_bad.txt` entries without a dedicated root-cause
+  session.
+- Trust a prior session's "N remain" prose over a fresh regen (`make_elf.py`'s own
+  unmapped-functions-skipped counter is the ground truth).
 
 ### Reminder: sibling-repo commit rule (item -3)
 Every batch's symbol-file edits land in `~/Documents/Tools/rogue_squadron64/symbol_files/*.txt`, a

@@ -111,8 +111,8 @@ Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regress
 `UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
 ~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403+s405+s406+s407+
-s408+s410+s411+s412 have fixed 335 of the corrected 778-candidate count (463 remain per a fresh regen, 1
-permanently excluded as known-bad, a 2nd suspect 25-name group pending sub-bisection, item -249). s411
+s408+s410+s411+s412+s413 have fixed 359 of the corrected 778-candidate count (439 remain, 2
+permanently excluded as known-bad, 4 known-skip, item -249). s411
 resolved the long-standing `[missing-func] 0x800FB9E4` baseline (was `endMissionCleanup`, a
 phantom-overlay victim of this same family) — every clean live-verify from here should show 0
 `[missing-func]` lines, not 1. Post-`a` process now soaks well past 65s without death.
@@ -142,14 +142,14 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249..-258, IN PROGRESS: 335/778 done
-s400-s412, 463 remain per a fresh regen (458 actionable, 4 known-skip, 1 known-bad, plus a 2nd
-25-name suspect group pending sub-bisection), largest M4 item open — s404-s407 found, bisected, and
-fully resolved a 20-name crash batch down to one genuinely-buggy function (parked); s408 and s410 each
-resumed ordinary bulk relocation post-closure with two more clean n=20 batches; s411 ran the
-loop-mandated discriminating probe on batch size — n=50 landed clean; s412 scaled to n=75 (clean) then
-n=100 (crashed), bisected the crash to a 25-name suspect group with a repeatable signature, settled the
-steady-state cadence at n=75).
+`main_overlay.txt` phantom-overlay-function family (item -249..-258, IN PROGRESS: 359/778 done
+s400-s413, 439 remain (433 actionable, 4 known-skip, 2 known-bad), largest M4 item open — s404-s407
+found, bisected, and fully resolved a 20-name crash batch down to one genuinely-buggy function (parked);
+s408 and s410 each resumed ordinary bulk relocation post-closure with two more clean n=20 batches; s411
+ran the loop-mandated discriminating probe on batch size — n=50 landed clean; s412 scaled to n=75
+(clean) then n=100 (crashed), bisected the crash to a 25-name suspect group with a repeatable
+signature, settled the steady-state cadence at n=75; s413 sub-bisected that 25-name group down to one
+bad function (`transformCraftAnchorsApplySubFx3`), parked it, and relocated the other 24 cleanly).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -164,10 +164,10 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
 oldest). Current top is -257 (s408); the next new item takes -258 and is inserted at the top.
 
--249..-258. **(s400-412) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
-    proven, two genuine single-function-family crashes bisected and parked, cadence scaled from n=20 to
-    a confirmed-safe n=75. 335/778 done, 463 remain (458 actionable pending q2 sub-bisection, 4
-    known-skip, 1 known-bad) as of s412.** s400 landed batch 1
+-249..-258. **(s400-413) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
+    proven, three genuine single-function-family crashes bisected and parked, cadence scaled from n=20 to
+    a confirmed-safe n=75. 359/778 done, 439 remain (433 actionable, 4 known-skip, 2 known-bad) as of
+    s413.** s400 landed batch 1
     (20/801) and proved the tooling (`s400_probe_batch.py`/`s400_apply_batch.py`, positive-control via
     `make_elf.py`'s unmapped-functions-skipped counter). s401 attempted the full ~774-item remainder in
     one sweep: it linked, but caused a new deterministic title-screen SIGBUS; reverted without
@@ -209,8 +209,17 @@ oldest). Current top is -257 (s408); the next new item takes -258 and is inserte
     state: batch-1 (75) + q1 (25) = 100 net new clean relocations landed and live-verified; q2's 25
     names (`scratch/agent/s412_bisect_q2.txt`) are set aside, NOT yet in `m4_known_bad.txt`, pending an
     eighth-split (12/13) sub-bisection next session. **Cadence settled at n=75 as the confirmed-safe
-    steady-state** until q2's specific bad function(s) are isolated. Full per-session detail:
-    `PORTING-STATE` Sessions 400-412.
+    steady-state** until q2's specific bad function(s) are isolated. **s413 closed the q2 sub-bisection:**
+    tested the promising named lead (`npcTickEffectChannelWithSlotDispatch`, referencing "slot dispatch"
+    like the crash's `slotDispatcherIter` frame) alone first — CLEAN, lead was wrong. Fell back to
+    standard halves bisection on the remaining 24: 12/12 (h1 clean, h2 crash) → 6/6 (g1a clean, g1b
+    crash) → 1/2 (single crashed alone) — isolated `transformCraftAnchorsApplySubFx3` (0x800E71D0),
+    reproducing the exact `slotDispatcherIter+1404`/`last-guest-pc=0x80065e94` signature alone, at every
+    bisection depth on top of the fixed 100-relocation baseline. Recorded in `m4_known_bad.txt`; the
+    other 24 q2 names (including the false-lead `npcTickEffectChannelWithSlotDispatch`) applied as a
+    group on top of the same baseline and live-verified clean (0 crash markers, `lastW=640`, 19 frames).
+    Net: +24 relocations this session (359/778 done), q2 thread fully closed. Cadence remains n=75 for
+    ordinary bulk relocation going forward. Full per-session detail: `PORTING-STATE` Sessions 400-413.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
     (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by
