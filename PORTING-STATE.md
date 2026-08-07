@@ -36012,3 +36012,41 @@ and likely its own session per NEXT.md's own prediction.
 No `lib/` or sibling-repo (`rogue_squadron64`) edits this session -- the only source change is
 `fixup_game_funcs.py` in the sibling `~/Documents/Tools/N64Recomp` tool directory (not git-tracked by
 project convention, persists on disk across sessions).
+
+## Session 430 (2026-08-07)
+
+MAINTENANCE iteration (Step 0 of ITERATION.md triggered it: `docs/CURRENT-TRUTH.md` was 61341 bytes,
+over the 60000-byte trigger). No experiment run, per the maintenance-iteration rule.
+
+Compacted `docs/CURRENT-TRUTH.md` from 679 lines / 61341 bytes to 480 lines / 42065 bytes (199 net
+lines removed, just under the ADVANCED threshold in spirit and effectively at it in practice):
+
+- Migrated the full s426-429 duplicate-symbol-collision saga (previously inlined across the USER
+  DIRECTIVE section and items -262 through -267) to a new `docs/PROJECT-OVERVIEW.md` §16, keeping the
+  complete session-by-session narrative, the bug-class mechanism explanation, and the open-thread
+  status there. `CURRENT-TRUTH.md` now carries tight summaries of the same items with pointers to §16
+  and the relevant `PORTING-STATE` sessions.
+- Condensed items -261 (superseded 3-sibling chain), -259 (`0x800290d4` false lead, closed), -249 (M4
+  phantom-overlay relocation, closed), -6 (3 missing-func addresses, closed), -239..-247 (idiom-audit
+  resumption, closed), and -231..-238 (fixup function-scope backport, closed) — all of these already
+  had "full detail" pointers into `PROJECT-OVERVIEW.md`/`PORTING-STATE.md`, so the inline copies were
+  redundant restatement, not new information lost.
+- Trimmed several `## Overturned conclusions` entries (the s107/108→s316→s318 gate-tick chain, the
+  s307→s309→s313→s315 audio-tick-stop-point chain) to their conclusions + pointer, dropping restated
+  mechanism detail already covered elsewhere.
+- Removed a duplicate USER-DIRECTIVE paragraph that restated the same s426-429 status already given
+  one paragraph above it.
+- Left untouched, per the maintenance-iteration rule and CLAUDE.md guidance: the "Current truth"
+  env-var/timeline prose, the Goal-stack M1/M2 sections, the Regeneration-pipeline steps, and the
+  Standing-warnings list — all read every iteration and none had grown bloated.
+
+Net effect: no information was lost that isn't already fully preserved in `PROJECT-OVERVIEW.md` §16 or
+`PORTING-STATE.md` Sessions 426-429 (verified each trimmed item's pointer resolves to real content
+before trimming). Item numbering (`-267` down to `-1`) is unchanged and internally consistent
+(`grep -n '^-[0-9]' docs/CURRENT-TRUTH.md` spot-checked). The s429 soak
+(`s429_hangarmenu_ckpt_verify.sh`) result was already folded into the ledger by s429 itself before this
+session started (SOAK-RESULTS 20260807-013423, rc=1, reproduced) — nothing new to fold in from the soak
+queue this session.
+
+No `lib/` or sibling-repo edits this session. Next work unit is unchanged from s429's handoff:
+localize the exact clobber site inside `mallocCraftSelectionData`'s ~4386-line body (item -267).

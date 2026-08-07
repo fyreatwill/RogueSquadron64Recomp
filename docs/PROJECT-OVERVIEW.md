@@ -897,3 +897,73 @@ structured and complete before trusting it — "completed" status alone does not
 finished.
 
 Full session-by-session raw detail: `PORTING-STATE.md` Sessions 400–421.
+
+## 16. Duplicate-symbol-name collisions in the overlay `.txt` files (s426–429, ongoing), migrated from
+CURRENT-TRUTH.md s429 maintenance pass
+
+**The bug class:** `menu_overlay.txt`/`main_overlay.txt`/`mission_overlay.txt` each occasionally
+register TWO different names at the IDENTICAL address (e.g. `func_800AEC60` and `initCraftSelectScreen`
+both at `0x800AEC60`). N64Recomp's function-boundary walker gives the real body to whichever name comes
+SECOND in its internal ordering and truncates the FIRST-listed duplicate to 1 instruction. Whichever
+name the call site actually resolves to (N64Recomp derives a JAL target's C name from whichever symbol
+remains registered at that address) determines whether the function runs its real body or a stub — so a
+call site can silently execute a 1-instruction no-op instead of ~1000+ real MIPS instructions, for
+however many sessions until someone happens to investigate that exact function. This is a third,
+previously-unrecognized shape of the same general "silently-dead code" family as the closed item -6 and
+item -249 (phantom-overlay-function) bugs, but those were caused by wrong overlay placement; this one is
+duplicate names WITHIN one file, invisible to `main_overlay.txt`'s cross-file dedup.
+
+**s426 discovery and first fix:** while root-causing a 3-sibling animation-channel crash chain (item
+-261, `startPlayerSlotAnimationChannelLooping`/`advancePlayerAnimationPhase`/
+`getPlayerAnimChannelEntryByIds`), traced all three to one never-called function, `initCraftSelectScreen`
+— its real ~1200-line body had been silently truncated to 1 instruction by the `func_800AEC60`
+duplicate. Deleted the stale placeholder line; the sole call site auto-followed to the real name with
+zero source edits. Live-verified via positive control: `[slot-anim-cache-write]` fired for the first
+time ever (the function actually ran), and cache-reads changed from a wild near-zero pointer to a sane
+heap pointer. The 3-sibling chain did not recur. This same session found **20 total instances of the
+duplicate-symbol-name pattern** across the three overlay files (1 fixed, 19 still open at the time) —
+including `hangarInitialize`/`mallocCraftSelectionData`, flagged as the single most consequential
+instance because it sits at the SAME address the entire closed s283-396 `-0x25A4` audit (item -239..-247)
+was built on, raising the open question of whether that whole closed audit guarded dead code.
+
+**The pattern since s426: each fix un-truncates a function that then executes for the first time ever,
+and its now-live body immediately surfaces the NEXT crash** one step later in the menu flow:
+
+- **s427** fixed the `hangarInitialize`/`mallocCraftSelectionData` pair (2nd confirmed instance of the
+  mechanism, same auto-follow-with-zero-edits behavior). Surfaced `runHangarMenuFromOverlay+800` SIGBUS
+  (item -265) with a NEW signature — an IEEE-754 float bit pattern (`~-1.0f`/`~+1.0f`) used as a pointer,
+  not this project's usual near-zero-integer wildness.
+- **s428** root-caused item -265: NOT a caller-passed wild value (an entry diagnostic showed the
+  function's own `$a0` argument, `ctx->r19`/`$s3`, is sane at entry) but register corruption — `$s3` is
+  MIPS callee-saved, so whichever of the function's three callees overwrites it without restoring it is
+  the actual defect. Top suspect: `mallocCraftSelectionData`, live for the first time thanks to s427's
+  fix. Guarded (KSEG0-range check) and live-verified the guard fires as its own positive control. The
+  guard exposed a further crash one step later still, `menuOverlayInit+3648` (item -266), reading the
+  same corrupted register back after return — reproduced 3x by s429 (s428 live, s428 soak, s429 live),
+  still blocked on locating the actual clobber site.
+- **s429** isolated the guilty callee within `runHangarMenuFromOverlay`'s three callees using three
+  throttled checkpoint diagnostics (`[hangarmenu-ckpt]`), one immediately after each callee returns:
+  `ctx->r19` reads sane (`0x80130B40`) right after `getAvailablePlayerCraftFlagsConsiderUnlocks`, is
+  already wild (`0x3F800000`, the exact `+1.0f` bit pattern s428 saw) immediately after
+  `mallocCraftSelectionData` returns, and stays unchanged through the one `runHangarSelectionFrame`
+  iteration that ran before the guard fired — a clean, single-run before/after boundary that confirms
+  `mallocCraftSelectionData` as the culprit and rules out (for this run) per-iteration drift as an
+  alternative. Confirmation soak (`s429_hangarmenu_ckpt_verify.sh`) ran and reproduced the same ordering
+  (SOAK-RESULTS 20260807-013423, rc=1) — 2nd independent evidence, no longer single-source.
+
+**Open thread (item -267):** find the exact instruction (a write, or a nested callee boundary one level
+deeper) inside `mallocCraftSelectionData`'s ~4386-line body — the largest guard-hunt target this project
+has attempted, by two orders of magnitude over the previous largest — where `$s3`/`ctx->r19` gets used as
+scratch without being restored before return. NEXT.md's s429 handoff lays out two strategies (direct
+source read if the write-site count is small; checkpoint bisection at the 25/50/75% marks otherwise) and
+flags checking whether the corruption happens inside a nested callee of `mallocCraftSelectionData` itself
+before committing to either.
+
+**Still open across the whole class:** 18 more duplicate-symbol pairs remain uninvestigated (4 more in
+`menu_overlay.txt`, look real/real; 2 in `main_overlay.txt`, look like harmless DATA-symbol aliases; 12
+in `mission_overlay.txt`, 11 matching the same high-confidence `func_0xADDR`/real-name pattern as the
+`initCraftSelectScreen` fix). Whether un-truncating `mallocCraftSelectionData` means the closed s283-396
+`-0x25A4` audit (item -239..-247) guarded dead code the whole time is still unresolved, now blocked
+behind item -267 rather than item -266.
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 426–429.

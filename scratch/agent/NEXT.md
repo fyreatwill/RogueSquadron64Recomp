@@ -2,7 +2,19 @@
 
 HYPOTHESIS-ID: s3-register-corruption-mallocCraftSelectionData-internal
 
-## What changed this session (s429) — read this before picking a thread
+## s430 was a MAINTENANCE iteration — no new experiment, work unit below is UNCHANGED from s429
+
+`docs/CURRENT-TRUTH.md` had grown past the 60000-byte trigger (61341 bytes); s430 compacted it to
+480 lines / 42065 bytes by migrating the full s426-429 duplicate-symbol saga to a new
+`docs/PROJECT-OVERVIEW.md` §16 and condensing several already-closed Next-steps items down to their
+conclusions + pointers. No information lost — everything trimmed already had a "full detail" pointer
+into PROJECT-OVERVIEW/PORTING-STATE that was verified to resolve before trimming. See PORTING-STATE
+Session 430 for the full account. The s429 confirmation soak was already folded into the ledger by
+s429 itself before this session started (SOAK-RESULTS 20260807-013423, rc=1, reproduced — item -267 is
+2nd-independent). The actual next work unit (below) is exactly what s429 left it as — this maintenance
+pass changed no code and ran no experiment.
+
+## What changed session s429 — read this before picking a thread
 
 Folded in the s428 confirmation soak (`s428_hangarmenu_guard_verify.sh`, ran between iterations,
 `SOAK-RESULTS.md` 20260807-012512: REPRODUCED, `rc=1`) — item -266 (`menuOverlayInit+3648` post-guard
