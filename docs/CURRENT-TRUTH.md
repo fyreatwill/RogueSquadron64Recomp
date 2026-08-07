@@ -38,9 +38,15 @@ caused and overturned — `atos` source-line symbolication (a strictly better te
 project's prior nearest-symbol attribution, see item -259 below) showed the six known-bad functions
 crash in five different real functions with no shared site; `last-guest-pc=0x800290d4` was only ever a
 sparse breadcrumb's last checkpoint (`inflate_fast`'s own clean return), not a fault location. No
-dedicated root-cause session is indicated there anymore. The only remaining un-acted candidate from
-s421's list is M3 DoD resumption (see Goal stack, M3) — still awaiting human reconfirmation before an
-autonomous session commits to it as the new standing direction.
+dedicated root-cause session is indicated there anymore. **s423 acted on the only remaining candidate**
+(M3 DoD resumption, per NEXT.md's own pre-authorization for a no-new-direction restart) and its first
+driven run surfaced a SEVENTH function converging on the same `0x800290d4` sink
+(`startPlayerSlotAnimationChannelLooping`, hit during ordinary menu progression at the war-room/SELECT
+LEVEL transition, one phase further than any prior soak reached) — not yet reproduction-confirmed (soak
+queued), but if it holds this reopens the "is `0x800290d4` worth a dedicated session" question with a
+different framing: it's now blocking M3 forward progress, not only an M4-relocation artifact. **Still
+awaiting human reconfirmation on strategic direction** — this new lead does not resolve that; see item
+-260.
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -151,8 +157,14 @@ step 2 below). Full detail: PORTING-STATE s49.
 reachable and stable; ~20 crash classes closed s50-s294 (mechanisms: `docs/PROJECT-OVERVIEW.md` §3
 arc + §9 closed lineages; per-class catalog: §7). "Single Start leaves SELECT YOUR CRAFT into
 hangar-flight" (s75) was **OVERTURNED s150** — same craft-select scene under a corrupting camera
-move; what a leave-key actually leads to is unresolved. *Done when:* 60s of in-mission rendering,
-craft visibly responds to synthetic input, stability counters 0, phase timeline covers the mission.
+move; what a leave-key actually leads to is unresolved. **s423 first-look DoD attempt**: an extended
+`PROBE_KEYS_FROM_PHASE=1` schedule meant to walk title→SELECT GAME→war room→AVAILABLE CRAFT→SELECT
+YOUR CRAFT→cutscene instead stalled at SELECT GAME for 134s (it "waits for input indefinitely" as
+already documented; rapid early presses did not register) before one later press finally advanced to
+the war-room/SELECT LEVEL screen — which then crashed ~1.3s later (SIGBUS, real PC
+`startPlayerSlotAnimationChannelLooping+456`, a 7th function converging on the `0x800290d4` sink, see
+item -260). Single-source; confirmation soak queued. *Done when:* 60s of in-mission rendering, craft
+visibly responds to synthetic input, stability counters 0, phase timeline covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
@@ -176,7 +188,32 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -259 (s422, CLOSED); the next new item takes -260.
+oldest). Current top is -260 (s423, OPEN — reproduction pending); the next new item takes -261.
+
+-260. **(s423) M3 DoD first-look calibration run — new furthest-reached crash frontier, single-source,
+    reproduction queued.** Acting on NEXT.md's pre-authorized fallback (no fresh human direction on the
+    USER DIRECTIVE), ran one driven run with an extended `PROBE_KEYS_FROM_PHASE=1` schedule intended to
+    walk from the title screen through SELECT GAME/war room/AVAILABLE CRAFT/SELECT YOUR CRAFT and into
+    the mission-intro cutscene, holding 150s+ past the documented leave point, with
+    `ROGUESQ_LOG_RUNNER=1` and the always-on `[vi-fs-decision]` diagnostic both live. **Did not reach
+    mission content or even AVAILABLE CRAFT — instead surfaced two new findings:** (1) SELECT GAME
+    genuinely "waits for input indefinitely" as already documented; rapid early presses (`3/7/11/15s`)
+    did not visibly register, only a much-later press (~100-130s) advanced the menu, 134s after title —
+    the old `"3:start 7:start"`-style rapid cadence does not carry to this screen. (2) The menu then
+    crashed ~1.3s after finally reaching the war-room/SELECT LEVEL screen (VI=512, origin `0x6AB400`) —
+    SIGBUS, `last-guest-pc=0x800290d4` (the s422-root-caused sparse `inflate_fast`-return breadcrumb, not
+    a fault location), real PC resolves via the crash dump's own `pc-symbol` line to
+    `startPlayerSlotAnimationChannelLooping+456` (backtrace `startSlotLoopAnimWithVoiceSync →
+    tickCraftSelectScreen → drawRadarIcon → menuOverlayInit → mainGameLoop`). **This function is NOT one
+    of the six `m4_known_bad.txt` phantom-relocation functions** — it's a SEVENTH convergence on the same
+    `0x800290d4` sink, and the first one hit during ordinary menu progression (not an M4 bisection
+    experiment), one phase further than any prior soak has reached. Not yet reproduction-confirmed (one
+    run only) — `scratch/agent/soak_queue/s423_m3dod_warroom_crash_confirm.sh` queued with the identical
+    schedule. No fix attempted (first-look/calibration session, not a root-cause session, per the USER
+    DIRECTIVE's no-reactive-chases constraint). If reproduction holds, this strengthens the case that the
+    `0x800290d4` sink is now an M3-blocking issue, not only an M4-relocation artifact family — relevant to
+    (but does not resolve) the still-open human-reconfirmation question above. Full detail: PORTING-STATE
+    Session 423.
 
 -259. **(s422) `0x800290d4` "six independent triggers" lead — INVESTIGATED AND CLOSED, not a bug.**
     The s421 close-out flagged this as the strongest concrete lead left after M4 item -249. Root-caused

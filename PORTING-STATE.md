@@ -35450,3 +35450,84 @@ Outcome: ADVANCED (a real investigation with a concrete, cross-run-corroborated,
 result that overturns a standing conclusion recorded across 21 prior sessions, plus a durable new
 diagnostic technique — `env atos` symbolication — validated and ready for reuse in any future crash
 triage in this project).
+
+## Session 423 (2026-08-06)
+
+Picked up NEXT.md's own pre-authorized fallback: the loop restarted with no fresh human direction on
+the USER DIRECTIVE (all three legs still closed/exhausted per s421/s422), and NEXT.md had explicitly
+sanctioned M3 DoD resumption as the one remaining un-acted candidate for exactly this situation. Ran
+the discriminating measurement NEXT.md specified: one driven run, `PROBE_KEYS_FROM_PHASE=1` gated on
+the title screen (VI=1024), an extended key schedule intended to walk title → SELECT GAME → war room →
+AVAILABLE CRAFT → SELECT YOUR CRAFT → leave → survive the mission-intro cutscene, held 150s+ past the
+documented leave point, with `ROGUESQ_LOG_RUNNER=1` and the always-on `[vi-fs-decision]` diagnostic both
+live in the same run (batch instrumentation, one run, no prior recipe existed for this so this was
+explicitly a calibration attempt).
+
+**Result: the run did not reach mission content, or even AVAILABLE CRAFT/SELECT YOUR CRAFT — it crashed
+one phase past the previous frontier, immediately upon finally landing at the war-room/SELECT LEVEL
+screen, on a NEW function not previously implicated in anything.**
+
+1. **Phase timeline observed**: `[phase]` lines show 0→320→640 (boot, by 2.5s) →1024 (title, 45.7s,
+   matching the documented ~46.7s baseline closely) → 512 (origin `0x006AB400`, the documented war-room/
+   SELECT LEVEL scene) at 179.8s absolute — 134.1s after title, not the few-seconds transition the
+   `"3:start 7:start"` cadence in `docs/CURRENT-TRUTH.md` implied. **Calibration finding**: SELECT GAME
+   genuinely "waits for input indefinitely" as already documented — my rapid early presses (`3:start
+   7:start 11:start 15:a`, all within 15s of phase entry, all while VI stayed at 1024 since title and
+   SELECT GAME share that width) did not visibly advance the menu; only a much later press (`100:start`
+   or `130:start`) actually registered, and the width changed to 512 about 4s after the `130:start`
+   press. Six scheduled presses were fired; at most one appears to have had any effect. Any future
+   attempt needs either much wider spacing between early presses or a different confirmation that a
+   press actually landed (the `[keys]` log line only proves the OS-level key event was posted, not that
+   the game's own input handler consumed it in the menu state it was aimed at).
+2. **Crash, ~1.3s after the 512-width phase line**: `[CRASH] caught signal 10 (Bus error)`,
+   `[CRASH][last-guest-pc] pc=0x800290d4` — **the exact same sparse-breadcrumb value s422 root-caused as
+   `inflate_fast`'s own clean return**, not a fault location. The crash dump's own built-in symbolication
+   (no `atos` needed this time, it was already in the log) resolves the real host PC to
+   `[CRASH][pc-symbol] pc=0x104430b14 sym=startPlayerSlotAnimationChannelLooping+456`, reached via
+   backtrace `startSlotLoopAnimWithVoiceSync → tickCraftSelectScreen → drawRadarIcon → menuOverlayInit →
+   mainGameLoop`. **`startPlayerSlotAnimationChannelLooping` (`0x80063070` in
+   `~/Documents/Tools/rogue_squadron64/symbol_files/main_overlay.txt:2389`) is NOT one of the six
+   `m4_known_bad.txt` functions** (those are: `allocObjectPoolNode`, `tickCraftMountedAnimationEffect`,
+   `stepObjectOrientationTowardTarget`, `updateHudHealthIndicator`, `buildFormatMessageGlyphBuffer`,
+   `plotRadarBlipColumn`) — this is a SEVENTH function converging on the same downstream
+   `0x800290d4`-breadcrumbed corruption sink, and unlike the other six it was hit during **ordinary menu
+   progression**, not an M4 phantom-relocation bisection experiment. That raises the stakes on the sink
+   s422 declined to root-cause: it is not only an M4 side-quest artifact, it is also the thing currently
+   blocking M3 DoD progress at the earliest post-title menu transition this project has driven to.
+3. **`[vi-fs-decision]` diagnostic**: fired 1371 times total, 1331 `stalled=1 pairs=0`/`skPair0`-style
+   `SKIP` events from as early as decision `#106` (2.5s into boot, the 640-width attribution phase) —
+   this is high-volume steady-state background noise, not a late-run freeze signal, consistent with the
+   s352 overturned-conclusion entry (firing ≠ corruption evidence). The crash-time snapshot line
+   (`[CRASH][vifs-snapshot] decisionN=10752 lastFireDecisionN=2652 decisionsSinceFire=8100
+   lastFireWasStalled=0 stalledNow=1`) shows the last REAL `[vi-fs-decision] FIRE` event was decision
+   #2652 (well before the 512-phase transition even began) and 8100 decisions had elapsed with no FIRE
+   by the time of the crash — a genuine long dry spell precedes the crash, but the run ended in a SIGBUS,
+   not a hang, so this does not confirm or extend the s176-183 `stalled=1 pairs=0` freeze mechanism;
+   it is at most a loosely-correlated observation, not independent replication.
+
+**Net read on the three competing hypotheses**: none cleanly wins. Mission content was NOT reached (H1
+not supported this run). The old graphics-stall hang mechanism did not recur in its documented form —
+this run crashed, it did not freeze (H2 neither confirmed nor refuted, and the crash makes it untestable
+this run). The input-pattern hypothesis (H3) is the best-supported: the assumed rapid `start`-press
+cadence from `docs/CURRENT-TRUTH.md`'s older SELECT-YOUR-CRAFT-era notes does not carry to SELECT GAME's
+"waits indefinitely" behavior — but the actual limiting factor turned out to be a genuinely new crash
+site, not a schedule-design defect per se.
+
+No fix attempted — consistent with the USER DIRECTIVE's "no reactive single-crash chases" constraint for
+M3, and this being a first-look calibration session, not a root-cause session. Queued a same-schedule
+confirmation soak (`scratch/agent/soak_queue/s423_m3dod_warroom_crash_confirm.sh`) for the loop to
+establish whether this reproduces before any dedicated investigation is justified — one data point is not
+a result. Full raw log preserved at
+`scratch/agent/soak_results/s423_m3dod_calibration/run.log` (32k lines).
+
+USER DIRECTIVE status: still needs human reconfirmation on strategic direction. New information for that
+decision: M3 DoD's very first driven attempt in this project surfaced a crash one phase earlier than any
+prior soak reached, converging on the same `0x800290d4` sink s422 declined to root-cause — this
+strengthens (does not by itself confirm, pending the queued reproduction) the case that sink deserves
+reconsideration as a dedicated M3-blocking target rather than only an M4-relocation artifact family, if
+M3 DoD is the direction chosen.
+
+Outcome: ADVANCED (ran the planned discriminating-measurement work unit, produced a real result — a new
+furthest-reached crash frontier, a durable menu-input-timing calibration finding, and a concrete new
+candidate function/site for the `0x800290d4` sink — even though none of the three hypotheses was cleanly
+confirmed; the finding itself is what NEXT.md's outcome table calls for reporting).
