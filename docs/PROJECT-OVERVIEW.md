@@ -1018,4 +1018,97 @@ same function at every one of item -263's 4 occurrences (s426, s433, s436, s437)
 previously connecting it to the breadcrumb-coverage gap. Next work unit: BREADCRUMB18 (or a checkpoint
 bisection, given the function's size) inside `updateHangarBayScene` itself.
 
-Full session-by-session raw detail: `PORTING-STATE.md` Sessions 426–438.
+**s439: BREADCRUMB18 added to `updateHangarBayScene` (funcs_28.c:10918-17722, ~6805 lines, 2643
+breadcrumb writes — the largest function this project has instrumented).** Regenerated/rebuilt clean, no
+regression to `GENERIC_CACHE_GUARD` (107)/`CACHE_HEAD_A1_GUARD` (7). Live-verify came back clean (0
+`[CRASH]`, 0 guard fires, full 298.5s/126-frame schedule) — a null result without a positive control,
+consistent with the established alternating clean/crash pattern. Confirmation soak queued.
+
+**s440: `updateHangarBayScene` entry counter (`ROGUESQ_LOG_HANGARBAY_ENTRY`) — the first same-run
+positive control for the BREADCRUMB18 thread.** Consumed s439's queued confirm soak first (2nd
+consecutive clean run; its 7503s wall-clock is most likely a macOS sleep-event pause, single-source, not
+independently confirmed). Added an entry counter rather than spend a 3rd identical confirm cycle; caught
+a real build bug along the way (`funcs_28.c` needed its first-ever `#include <stdio.h>` for `fprintf`).
+Live-verify: 3rd clean run, but this time with the missing control — `updateHangarBayScene` logged
+**~2900+ calls** in the single run, the first confirmation the function is a hot, constantly-executing
+path during exactly the schedule that keeps not reproducing item -263. Confirmation soak queued; a 3rd
+consecutive clean result there would hit iron rule 8's 3-strike budget on this hypothesis thread.
+
+**s441: three results in one session.** (1) Consuming s440's queued confirm soak crashed
+(`last-guest-pc=0x8000CE40`, `si_addr=0x38076a804`, the item -263 near-zero-pointer family) — but
+`[hangarbay-entry]` logged **zero calls** before the crash and the backtrace
+(`reserveAndEmitDLEntry <- submitSceneNodeRender <- ... <- runHangarSelectionFrame`) never goes near
+`updateHangarBayScene` at all, decisive same-run proof this occurrence was misattributed to item -263 by
+superficial signature match alone. (2) Root-caused the real mechanism: `GENERIC_CACHE_GUARD` validates a
+free-list HEAD pointer before dereferencing it, but the "next" pointer that deref reads back is never
+itself validated before being written back as the new head and dereferenced 4 bytes later
+(`0x8000CE40`) — a THIRD sibling of `GENERIC_CACHE_GUARD`/`CACHE_HEAD_A1_GUARD`. A scoped scan found
+105/107 `GENERIC_CACHE_GUARD` sites share this exact shape (the other 2 already covered by bespoke
+`CACHE2_GUARD`/`CACHE3_GUARD`); patched all 105 as `FREELIST_NEXT_GUARD`. Regenerated/rebuilt clean, no
+regression to the existing guard families; live-verify: process died at 109.9s on an entirely different,
+previously-uncatalogued crash — 0 fires across all 3 free-list guard families this run (null result, not
+yet a positive control). (3) That new crash (item -278, single occurrence): SIGSEGV inside the
+thread-scheduler/semaphore runtime, no game-code frames at all —
+`moodycamel::LightweightSemaphore::tryWait <- wait_for_resumed <- resume_thread_and_wait <-
+swap_to_thread <- check_running_queue <- pause_self <- idle_thread_handle`, wild 64-bit host pointer
+`si_addr=0x10fc0a00000060e3` (matches `x8`), `last-guest-pc` treated as stale/uninformative (idle
+thread, not the OS thread that last updated the shared guest-PC global). Signature doesn't match any
+prior family (SIGSEGV not SIGBUS, wild host pointer not near-zero guest pointer, zero game-code frames).
+**Downgrades item -263's confidence**: this session proved (same-run, mechanism-level) that at least one
+occurrence previously filed under item -263 was actually this new free-list-next bug. Confirmation soak
+queued (shared with item -278).
+
+**s441 net effect on item -263 (s426, recurred s433/436/437/440): RECLASSIFIED — PARKED, likely
+dissolved into the free-list-guard family, not independently confirmed to exist as a distinct bug.** All
+5 total occurrences (s426 through s440) share the same superficial signature (SIGBUS, wild near-zero
+`0x38000000x`-family pointer); none of them ever actually showed a fault instruction inside
+`updateHangarBayScene`'s own body — the s426-s438 "localization" chain (recounted above) was a sequence
+of breadcrumb-coverage-gap freezes that never reached an instruction inside the target function, right up
+until s440 finally got there with full coverage and found the fault was elsewhere entirely. The simplest
+explanation is that item -263 was never a distinct bug: it is the same `0x801163B0` free-list family
+recurring at different call sites that happen to route near `runHangarSelectionFrame`/
+`updateHangarBayScene` in the call graph. The single falsifying observation that would resurrect it as
+independent: a NEW occurrence where BREADCRUMB18 (full coverage, unregressed) reports a real address
+inside `updateHangarBayScene`'s own body.
+
+**s442: the queued `s441_freelistnext_confirm` soak's rc=1/0s "failure" was a SOAK-SCRIPT BUG, not a
+crash.** `SOAK-RESULTS 20260807-070416` showed rc=1 after 0s, log `cd: build: No such file or
+directory` — the script used four `..` to reach the repo root from `scratch/agent/soak_queue/` where
+three is correct, so it walked one level above the repo (into the parent `Tools/` directory, which has
+no `build/`) and exited before ever launching the game. Re-ran the identical schedule manually with the
+corrected path (300s budget): **CLEAN** — full schedule (126 frames to ~298s), 0 `[CRASH]`, 0 fires on
+all 3 free-list guard families (now zero same-run fires across every soak since s434 — the "does this
+guard mechanism even engage" doubt is still open), `[hangarbay-entry] n=2900` matching s440's baseline
+exactly. Item -278 did NOT recur (still a single, unconfirmed occurrence). Requeued a corrected confirm
+soak built on s440's more robust `REPO_ROOT`-variable + self-checking-log pattern. **Process lesson**: an
+`rc=1` soak result with near-zero duration and no `run.log` is a soak-harness bug signature, not a crash
+signature — check for that before reading it as a game crash.
+
+**s443: `[wait-resumed-dead-ctx]` — a diagnostic instrument in `wait_for_resumed()`
+(`lib/N64ModernRuntime/ultramodern/src/threads.cpp`) testing item -278's UAF hypothesis.** First
+confirmed via `nm -C` that `idle_thread_handle` (the item -278 backtrace's root frame) is a real N64
+guest function symbol, not an `atos`/`dladdr` misattribution — source-traced to
+`main_overlay.txt`/`funcs_0.c:2229`. Source-read `ultramodern`'s thread-swap handshake and found an
+asymmetry matching this project's "guard one deref, miss its sibling" idiom: `resume_thread_tagged`
+already UAF-guards the RESUME TARGET's context before signalling it, but `wait_for_resumed` derefs the
+CALLING thread's OWN context with no equivalent check — exactly where the s441 crash's
+`LightweightSemaphore::tryWait` frame sits. Added a diagnostic-only instrument (deliberately not a
+corrective guard: skipping a live thread's own wait isn't provably safe the way substituting a guest
+write is) — two atomic counters plus an unconditional `fprintf` only on the bad path. Host-only C++
+change, no regen pipeline needed; verified via `nm` and via grep of unchanged compiled `.c` output that
+none of the 3 free-list guard families regressed; `submodule-patches/export.sh` run and committed
+same-session. Live-verify: **0 `[wait-resumed-dead-ctx]` fires**, but the process crashed anyway at
+112.3s on yet another signature — not item -278, not any free-list family. SIGBUS,
+`si_addr=0x38022417e` (RDRAM host base + a plausible KSEG0-looking guest offset `0x8022417e`),
+`pc-symbol=tickWrappingTimerAccumulatorList+3888` (via `dladdr` on the actual fault PC register, not a
+breadcrumb global), `last-guest-pc=0x80054750` (+0x100 into the function, a different offset than the
+earlier s433 occurrence's epilogue address), backtrace `tickWrappingTimerAccumulatorList <-
+runHangarSelectionFrame+5396 <- runHangarMenuFromOverlay <- menuOverlayInit <- mainGameLoop <-
+mainBootstrapWorker` — a DIFFERENT call site into `tickWrappingTimerAccumulatorList` than item -263's
+saga ever traced (no `updateHangarBayScene` frame; `[hangarbay-entry]` kept incrementing normally to
+n=2600, unrelated). Does not resurrect item -263 (BREADCRUMB18 never reported an address inside
+`updateHangarBayScene`'s own body). Filed as a new, not-yet-investigated occurrence per the
+strategic-priority rule against reactive single-crash chases. Confirmation soak queued
+(`s443_waitresumed_confirm.sh`).
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 426–443.

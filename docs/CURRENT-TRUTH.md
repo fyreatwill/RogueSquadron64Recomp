@@ -7,12 +7,14 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## L
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
-   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Fifteen passes so
-   far (s295-330 x5, s346, s355, s364, s371, s380, s391, s398, s409, s429, s438) kept the file
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Sixteen passes so
+   far (s295-330 x5, s346, s355, s364, s371, s380, s391, s398, s409, s429, s438, s444) kept the file
    oscillating around the cap as new session detail accrues; s429/s438 migrated the s426-438
-   duplicate-symbol/breadcrumb saga to PROJECT-OVERVIEW §16. Full per-pass detail in git log. 35 KB
-   remains a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and the
-   Regeneration section's Standing warnings stay intact deliberately; both are used every iteration.
+   duplicate-symbol/breadcrumb saga to PROJECT-OVERVIEW §16, s444 migrated its s439-443 continuation
+   (items -274..-280 compacted to short pointers) — 696→494 lines (61.9KB→~42KB) in one pass. Full
+   per-pass detail in git log. 35 KB remains a stretch target, not a hard floor -- the "Current truth"
+   env-var/timeline prose and the Regeneration section's Standing warnings stay intact deliberately;
+   both are used every iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
    §10-§12). Next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
@@ -167,284 +169,83 @@ oldest). Current top is -280 (s443, a diagnostic instrument for item -278's UAF 
 the tickWrappingTimerAccumulatorList/runHangarSelectionFrame signature, filed not chased); the
 next new item takes -281.
 
--280. **(s443) `[wait-resumed-dead-ctx]` — an always-on diagnostic instrument in
-    `wait_for_resumed()` (`lib/N64ModernRuntime/ultramodern/src/threads.cpp`) testing item
-    -278's UAF hypothesis; 0 fires in its first live-verify, which crashed instead on a
-    different, unrelated signature.** Consumed `s442_freelistnext_confirm` first (SOAK-RESULTS
-    `20260807-071541`, rc=0, 347s): a 4th clean/null result on the free-list guard mechanism
-    (0 fires across all 3 families, still no positive control since s434) — per iron rule 8 and
-    `NEXT.md`'s own budget note, this closes further identical confirm-soak cycling on that
-    mechanism. Checked the M5 priority first: still DONE/CLOSED per the USER DIRECTIVE, no new
-    lead since s442. Picked up item -278 (the s441 single-occurrence SIGSEGV inside
-    `moodycamel::LightweightSemaphore::tryWait`, backtrace rooted in `idle_thread_handle`)
-    proactively instead of a fresh M3 idiom audit. First confirmed via `nm -C` on the built
-    binary that `idle_thread_handle` is a REAL function symbol (`T _idle_thread_handle` at a
-    stable host address) — source-traced to `rogue_squadron64/symbol_files/main_overlay.txt`
-    (`idle_thread_handle = 0x800017A0`) and `N64Recomp/RecompiledFuncs/funcs_0.c:2229`: it's the
-    genuine N64 guest idle-thread handler function, not an `atos`/`dladdr` misattribution —
-    strengthens (does not yet confirm) the s441 backtrace's face-value reading. Source-read
-    `ultramodern`'s thread-swap handshake (`scheduling.cpp` + `threads.cpp`) and found an
-    asymmetry matching this project's established "guard one deref, miss its sibling" idiom:
-    `resume_thread_tagged` already has an always-on UAF guard (`thr_live_contains`) on the
-    RESUME TARGET's `UltraThreadContext*` before signalling it, but `wait_for_resumed` derefs
-    the CALLING thread's OWN context (`cur_context`, captured in `resume_thread_and_wait`/
-    `run_next_thread_and_wait` before the wait) with no equivalent check — exactly where the
-    s441 crash's `LightweightSemaphore::tryWait` frame sits. Added a diagnostic-only instrument
-    (deliberately NOT a corrective guard: skipping a live thread's own wait is not
-    provably-safe the way substituting a guest write is, unlike `GENERIC_CACHE_GUARD`'s family)
-    — two atomic counters (`g_wait_resumed_n`, `g_wait_resumed_dead_ctx`) plus an immediate,
-    unconditional `fprintf`+`fflush` only on the bad path, mirroring `resume_thread_tagged`'s
-    existing pattern so a healthy run pays one atomic increment + one hash-set lookup per
-    thread swap, no log spam. Host-only C++ change (no regen pipeline needed): clean rebuild,
-    verified the new symbol via `nm`, verified no regression to `GENERIC_CACHE_GUARD`/
-    `CACHE_HEAD_A1_GUARD`/`FREELIST_NEXT_GUARD` site counts via grep of the (unchanged)
-    compiled `.c` output, `./submodule-patches/export.sh` run and committed same-session per
-    the standing `lib/` rule. Live-verified the standard schedule: **0
-    `[wait-resumed-dead-ctx]` fires** — but the process crashed at 112.3s anyway, on a
-    signature that is NOT item -278 and NOT any of the 3 free-list guard families (all 0 fires
-    this run too). The crash: SIGBUS, `si_addr=0x38022417e` (RDRAM host base `0x300000000` +
-    guest offset `0x8022417e` — a plausible KSEG0-looking guest address, not the free-list
-    family's near-zero `0x3800000xx` shape), `pc-symbol=tickWrappingTimerAccumulatorList+3888`
-    (resolved via `dladdr` on the actual hardware fault PC register, not a breadcrumb global —
-    a genuine host-code-location fact, not a misattribution artifact), `last-guest-pc=0x80054750`
-    (`tickWrappingTimerAccumulatorList`'s own guest range starts `0x80054650` per
-    `main_overlay.txt`, so this is +0x100/256 bytes in — a DIFFERENT offset than the earlier
-    s433 occurrence's `0x800547BC`, which was that function's epilogue), backtrace
-    `tickWrappingTimerAccumulatorList <- runHangarSelectionFrame+5396 <-
-    runHangarMenuFromOverlay <- menuOverlayInit <- mainGameLoop <- mainBootstrapWorker` — a
-    DIFFERENT call site into `tickWrappingTimerAccumulatorList` than item -263's saga ever
-    traced (no `updateHangarBayScene` frame at all; `[hangarbay-entry]` kept incrementing
-    normally to `n=2600` right up to the crash, unrelated). **Does not resurrect item -263**:
-    that item's specific resurrection condition (BREADCRUMB18 reporting a real address inside
-    `updateHangarBayScene`'s own body) was not met. Filed as a new, not-yet-investigated
-    occurrence — per the strategic-priority #3 rule against reactive single-crash chases, NOT
-    chased further this session. Confirmation soak queued:
-    `scratch/agent/soak_queue/s443_waitresumed_confirm.sh` (adds `wait-resumed-dead-ctx` fires
-    to the standard free-list-family grep summary).
+-280. **(s443) `[wait-resumed-dead-ctx]` UAF instrument in `wait_for_resumed()`
+    (`lib/N64ModernRuntime/ultramodern/src/threads.cpp`), testing item -278's UAF hypothesis: 0
+    fires, but the live-verify crashed anyway on a NEW, previously-uncatalogued
+    `tickWrappingTimerAccumulatorList`/`runHangarSelectionFrame` call-site signature (SIGBUS,
+    plausible KSEG0 guest offset) — different from item -263's saga (no `updateHangarBayScene`
+    frame) and from every free-list-guard family (0 fires there too). `idle_thread_handle`
+    confirmed via `nm -C` as a genuine guest symbol, not an `atos` misattribution — strengthens
+    but does not confirm item -278. Filed, not chased (strategic-priority #3). Confirmation soak
+    queued: `s443_waitresumed_confirm.sh`. Full detail: `docs/PROJECT-OVERVIEW.md` §16 (s443).
 
 -279. **(s442) The queued `s441_freelistnext_confirm` soak's rc=1/0s "failure" was a SOAK-SCRIPT
-    BUG, not a crash — diagnosed and corrected; the real confirmation run came back CLEAN.**
-    `SOAK-RESULTS` `20260807-070416` showed rc=1 after 0s with a one-line log: `cd: build: No such
-    file or directory`. Comparing the queued script (`scratch/agent/soak_queue/done/
-    s441_freelistnext_confirm_20260807-070416.sh`) against the known-working s440 pattern found the
-    cause: s441's script used `cd "$(dirname "$0")/../../../.."` (four `..`) where the correct
-    repo-root path from `scratch/agent/soak_queue/` is three `..`; the extra level walked one
-    directory above the repo root (into the parent `Tools/` directory, which has no `build/`), so
-    `cd build` failed immediately and the script exited before ever launching the game — a pure
-    off-by-one, not evidence about `FREELIST_NEXT_GUARD` or item -278. Re-ran the identical
-    schedule manually with the corrected path (`scratch/agent/soak_results/s442_freelistnext_manual`,
-    foregrounded via the harness's background-task mechanism, 300s budget): **CLEAN** — full
-    schedule (126 frames captured to ~298s), 0 `[CRASH]` markers, 0 fires on `generic-cache-guard`,
-    `cache-head-a1-guard`, or `freelist-next-guard` (all three free-list-guard families now have
-    literally zero same-run fires across every soak to date since s434 — the "does this guard
-    mechanism even engage" doubt is still open), and `[hangarbay-entry]` reached `n=2900` (matches
-    s440's ~2900 baseline for this schedule exactly, confirming `updateHangarBayScene`'s reachability
-    is stable and unrelated to the "0 calls" observation in item -277's crash). **Item -278 did NOT
-    recur** — still a single, unconfirmed occurrence. Net: a 4th clean/null data point on the
-    free-list guard mechanism (still no positive control), and one fewer occurrence for item -278's
-    thread. Requeued a corrected confirm soak (`s442_freelistnext_confirm.sh`, rewritten on s440's
-    more robust `REPO_ROOT`-variable + self-checking-log pattern, not s441's fragile inline relative
-    path) so the loop can keep collecting data without repeating the bug. **Process lesson**: an
-    `rc=1` soak result with a near-zero (`<5s`) duration and no `run.log` produced is a soak-harness
-    bug signature, not a crash signature — check for that before reading it as a game crash.
+    off-by-one bug (wrong `..` count reaching repo root from `soak_queue/`), not a crash.**
+    Corrected manual re-run came back CLEAN (0 crash, 0 fires on all 3 free-list guard families —
+    still no positive control since s434; `[hangarbay-entry] n=2900` matches s440's baseline).
+    Item -278 did not recur. Requeued a corrected `s442_freelistnext_confirm.sh` on s440's robust
+    `REPO_ROOT`-variable pattern. Process lesson: `rc=1` + near-zero duration + no `run.log` is a
+    soak-harness bug signature, check that before reading it as a game crash. Full detail:
+    `docs/PROJECT-OVERVIEW.md` §16 (s442).
 
 -278. **(s441, single occurrence) NEW crash class: SIGSEGV inside the thread-scheduler/semaphore
-    runtime, no game-code frames in the backtrace.** Surfaced during `s441_freelistnext_verify`
-    (see item -277 below) — after that fix's own live-verify ran clean on all 3 free-list guard
-    families (0 fires) and reached `[hangarbay-entry] n=1500+`, the process died at 109.9s with
-    `signal 11 (Segmentation fault: 11)`, `si_addr=0x10fc0a00000060e3` (a wild 64-bit host
-    address, matches `x8`), backtrace entirely inside the native runtime:
-    `moodycamel::LightweightSemaphore::tryWait` (`_ZNKSt3__113__atomic_baseIlLb0EE4loadEv`) <-
-    `wait_for_resumed` <- `resume_thread_and_wait` <- `swap_to_thread` <-
-    `check_running_queue` <- `pause_self` <- `idle_thread_handle`. `last-guest-pc=0x8000834c` is
-    almost certainly stale/uninformative here — this crash is on the idle/scheduler thread, not
-    necessarily the same OS thread that last updated the shared `g_rs64_last_guest_pc` global, so
-    it should NOT be read as a guest instruction address the way it is for the free-list family.
-    Signature does not match items -261/-263/-270/-272/-277 (SIGSEGV not SIGBUS; wild 64-bit host
-    pointer not a 0x38000000x near-zero guest pointer; no game-code frames at all). Single
-    occurrence, no positive control, not yet investigated — per iron rule 1 this is a lead, not a
-    result. **Next step if it recurs**: check whether `moodycamel::LightweightSemaphore`'s
-    internal state (a semaphore count / linked waiter list) was itself corrupted, or whether this
-    is a genuine race in `ultramodern`'s cooperative thread-swap implementation exposed by timing
-    differences from the `-j8` rebuild. Confirmation soak queued (shared with item -277):
-    `s441_freelistnext_confirm.sh`.
+    runtime, no game-code frames** — `LightweightSemaphore::tryWait <- wait_for_resumed <-
+    resume_thread_and_wait <- swap_to_thread <- check_running_queue <- pause_self <-
+    idle_thread_handle`, wild 64-bit host pointer. Signature matches no prior family. Single
+    occurrence, no positive control (iron rule 1: a lead, not a result). s443 added a diagnostic
+    instrument targeting this (0 fires so far, see item -280). Confirmation soak queued (shared
+    with item -277): `s441_freelistnext_confirm.sh`. Full detail: `docs/PROJECT-OVERVIEW.md` §16
+    (s441).
 
--277. **(s441) `FREELIST_NEXT_GUARD` — a THIRD sibling of `GENERIC_CACHE_GUARD` (s434, item
-    -270ish)/`CACHE_HEAD_A1_GUARD` (s436), root-causing and fixing the exact crash that consuming
-    s440's queued `s440_hangarbayentry_confirm` soak hit, and which turned out to have nothing to
-    do with item -263's believed locus.** That soak crashed (SOAK-RESULTS `20260807-064649`, rc=1,
-    `last-guest-pc=0x8000CE40`, `si_addr=0x38076a804` — the same near-zero family as items
-    -261/-263) — but `updateHangarBayScene`'s own entry counter (item -276's `[hangarbay-entry]`)
-    logged **zero calls** before the crash, and the backtrace (`reserveAndEmitDLEntry <-
-    submitSceneNodeRender <- ... <- runHangarSelectionFrame`) never goes near
-    `updateHangarBayScene` at all — decisive, same-run proof that this specific occurrence was
-    misattributed to item -263 by superficial signature match (SIGBUS, near-zero pointer) alone.
-    Source-read at `funcs_3.c:0x8000CE30` found the real mechanism: `GENERIC_CACHE_GUARD` already
-    validates the free-list HEAD pointer before dereferencing it (substituting 0 if out of range),
-    but the VALUE that deref reads back — the list's "next" pointer, guest-memory-controlled — is
-    never itself validated before being written back as the new head (safe, self-healing) and then
-    dereferenced 4 bytes later (`MEM_W(0X4, ctx->r2) = 0`, the guest `sw $zero, 0x4($v0)` at
-    `0x8000CE40`) — an unguarded write through a value that only had its ADDRESS-OF-ORIGIN
-    checked, not itself. A scoped scan of all 107 `GENERIC_CACHE_GUARD` sites
-    (`scratch/agent/s441_freelist_next_scan.py`-equivalent, done inline) found 105/107 share this
-    exact byte-identical shape (varying only in address/label text); the other 2
-    (`funcs_4.c` `0x8001083C`/`0x80010E3C`) are already independently covered by the pre-existing
-    bespoke `CACHE3_GUARD` (s270)/`CACHE2_GUARD` (s266). Patched all 105 with `FREELIST_NEXT_GUARD`
-    (`N64Recomp/fixup_game_funcs.py`) — same skip-the-write-on-bad-pointer semantics as
-    `CACHE_HEAD_A1_GUARD` (0 is not a safe substitute for a write address; the write's own value is
-    a hardcoded 0 so nothing downstream depends on it happening). Regenerated/rebuilt clean (0 new
-    warnings beyond the pre-existing DDIV set); verified via direct grep of compiled output: no
-    regression to `GENERIC_CACHE_GUARD` (107), `CACHE_HEAD_A1_GUARD` (7), `BREADCRUMB18`/
-    `HANGARBAY_ENTRY`; new guard present at exactly 105 sites (66 `funcs_3.c` + 39 `funcs_4.c`,
-    matching the dry-run scan count exactly). Live-verified same schedule: process died at 109.9s,
-    but on an entirely DIFFERENT, previously-uncatalogued crash (item -278) — 0 fires across all 3
-    free-list guard families this run (no bad pointer encountered, null result on this specific
-    mechanism, not yet a positive control). Confirmation soak queued: `s441_freelistnext_confirm.sh`.
-    **Downgrades item -263's confidence**: the crash this new guard fixes is proven (same-run,
-    mechanism-level) to be the actual cause of at least one occurrence previously filed under item
-    -263; see item -263 below for the reclassification.
+-277. **(s441) `FREELIST_NEXT_GUARD` — a THIRD sibling of `GENERIC_CACHE_GUARD`/
+    `CACHE_HEAD_A1_GUARD`: the free-list HEAD pointer is validated before deref, but the "next"
+    pointer it reads back is not, and gets written through unguarded 4 bytes later.** Fixed 105
+    sites. Root-caused AND fixed the exact crash item -276's confirm soak hit — and proved
+    (same-run, mechanism-level: `[hangarbay-entry]` logged 0 calls, backtrace never enters
+    `updateHangarBayScene`) that occurrence had been misattributed to item -263 by superficial
+    signature match alone. **Downgrades item -263's confidence** (see below). Live-verify after
+    the fix: 0 fires across all 3 free-list families (null result), crashed instead on the new
+    item -278. Full detail: `docs/PROJECT-OVERVIEW.md` §16 (s441).
 
 -276. **(s440) `updateHangarBayScene` entry counter (`ROGUESQ_LOG_HANGARBAY_ENTRY`) — the first
-    same-run positive control for item -275/-263's BREADCRUMB18 thread.** Consumed the queued
-    `s439_breadcrumb18_confirm` soak first: 2nd consecutive clean run (0 crash, 0 guard fires),
-    breaking the previously-strict alternating clean/crash pattern since s434. Its 7503s
-    wall-clock (vs. usual ~150-350s) is most likely a macOS sleep event pausing the loop mid-run
-    (steady frame/submit-count progression in the log shows the process itself ran normally,
-    single-source, not independently confirmed) — noted for awareness, doesn't change the verdict.
-    Rather than spend a 3rd identical confirm cycle, added an independent entry counter at the top
-    of `updateHangarBayScene` (`N64Recomp/fixup_game_funcs.py`, same signature-search-splice
-    approach as BREADCRUMB18) to test whether the function is even reached in these clean runs.
-    Regen/build caught a real bug: `funcs_28.c` had never used `fprintf`/`stderr` before, so the
-    first build failed (`use of undeclared identifier 'stderr'`); fixed with the same conditional
-    `#include <stdio.h>` pattern other file-specific patches use. Verified no regression to
-    `GENERIC_CACHE_GUARD` (107)/`CACHE_HEAD_A1_GUARD` (7); BREADCRUMB18 unchanged at 2643 writes.
-    Live-verified same schedule: 0 crash, 0 guard fires, 126 frames to 298.0s (3rd clean data
-    point) — but this time with the missing control: 34 throttled log lines show
-    `updateHangarBayScene` was called **~2900+ times** in the single run. This is the first
-    confirmation the target function is a hot, constantly-executing path during exactly the
-    schedule that keeps not reproducing item -263, meaningfully de-risking (not eliminating) the
-    "does the fault even pass through breadcrumbed code" doubt raised at item -275. Found and
-    documented an instrument caveat: the counter's `ra=`/`ctx->r31` field reads 0x00000000 always
-    — the call site (`funcs_28.c:5397`) is a direct C call, not a `jalr`, so the recompiler never
-    populates `ctx->r31` there; the field is uninformative noise for this specific call shape, not
-    a real return address. Confirmation soak queued: `s440_hangarbayentry_confirm.sh` — a 3rd
-    consecutive clean result there would hit iron rule 8's 3-strike budget on hypothesis-id
-    `item-263-updatehangarbayscene-localization`, forcing a pivot (top candidate: an ASAN-style
-    shadow/canary check around the suspected corruption, since the mechanism now demonstrably
-    passes through heavily-executed breadcrumbed code without faulting).
+    same-run positive control for the BREADCRUMB18 thread: ~2900 calls in a single clean run**,
+    confirming the function is hot/reachable during the schedule that kept not reproducing item
+    -263. Consuming its own confirm soak (s441) is what surfaced item -277's real mechanism —
+    see above. Full detail: `docs/PROJECT-OVERVIEW.md` §16 (s440).
 
--275. **(s439) BREADCRUMB18 added to `updateHangarBayScene` (funcs_28.c:10918-17722, ~6805 lines,
-    2643 breadcrumb writes) — item -263's work unit from item -274.** Regenerated/rebuilt clean (0
-    new warnings beyond the pre-existing `DDIV` sign-conversion set); verified no regression via
-    direct grep of the compiled `.c` output (fixup's stdout is silent/idempotent on a 2nd run, s437's
-    documented gotcha) — `GENERIC_CACHE_GUARD` still 107 sites, `CACHE_HEAD_A1_GUARD` still 7.
-    Live-verified with the full s427-438 schedule (all diagnostics armed): **0 `[CRASH]` markers, 0
-    `generic-cache-guard`/`cache-head-a1-guard` fires, 126 frames captured to 298.5s** — the full
-    300s schedule completed clean. Per iron rule 1 this is a null result without a positive control:
-    it does NOT confirm BREADCRUMB18 is correctly placed (it never got exercised at a fault), and
-    does not advance items -270/-272's still-missing guard-fire positive control either. Consistent
-    with the established alternating clean/crash pattern (s434 clean, s435 crash, s436 clean, s437
-    crash, s438(soak) crash, s439 clean) — one clean run is not evidence either way. Confirmation
-    soak queued: `s439_breadcrumb18_confirm.sh`. If item -263 recurs, BREADCRUMB18 should report a
-    real guest PC inside `updateHangarBayScene`'s own body for the first time; classify it against
-    known idiom families (0x801163B0-family, `-0x25A4` hangar-list, IEEE-754-as-pointer) before
-    writing any guard blind.
+-275. **(s439) BREADCRUMB18 added to `updateHangarBayScene`** (funcs_28.c:10918-17722, ~6805
+    lines, 2643 writes — the largest function this project has instrumented). Live-verify clean:
+    null result, no positive control yet (supplied by item -276 next session). Full detail:
+    `docs/PROJECT-OVERVIEW.md` §16 (s439).
 
--274. **(s438) Item -263 recurred a 4th time via the queued `s437_breadcrumb17_confirm` soak
-    (SOAK-RESULTS 20260807-035804, rc=1, 153s) — BREADCRUMB17 worked, but the new `last-guest-pc`
-    immediately hit the SAME misattribution mechanism one function deeper.** `last-guest-pc=0x800AAF94`
-    resolves (`tools/overlay_symbol_probe.py` + a sorted `menu_overlay.txt` symbol table) to +504 bytes
-    into `runHangarSelectionFrame` — confirmed by source: `funcs_28.c:5391-5396` is the breadcrumb write
-    immediately before the `jal` into `updateHangarBayScene`. A full grep of `updateHangarBayScene`'s
-    entire body (`funcs_28.c:10918-17722`, ~6805 lines — the largest function this project has ever
-    instrumented) found **zero** breadcrumb writes anywhere in it, so `last-guest-pc` froze at the call
-    site the instant execution entered this uninstrumented callee — the identical mechanism BREADCRUMB16
-    (item -271) and BREADCRUMB17 itself (item -273) were built to defeat, recurring one function deeper
-    because `updateHangarBayScene` was never on the allowlist either. Two independent signals now agree
-    on `updateHangarBayScene` as the locus even without an exact instruction: this call-site freeze, and
-    the host-side `atos` symbolication (`pc-symbol=updateHangarBayScene+43768`), which has named this
-    same function at all 4 of item -263's occurrences (s426, s433, s436, s437) without anyone previously
-    connecting it to the breadcrumb-coverage gap. No build/run cycle this session (analysis of already-
-    collected soak data only, per read-list #3). Next work unit: BREADCRUMB18 (or a checkpoint bisection,
-    given the function's unprecedented size) inside `updateHangarBayScene` itself. Full detail:
-    `docs/PROJECT-OVERVIEW.md` §16 (s438 update), `PORTING-STATE` Session 438.
+-274. **(s438) Item -263 recurred a 4th time; `last-guest-pc` froze at the call site into
+    `updateHangarBayScene` (zero breadcrumb coverage there) — same misattribution mechanism
+    BREADCRUMB16/17 were built to defeat, one function deeper.** Motivated BREADCRUMB18 (item
+    -275). Full detail: `docs/PROJECT-OVERVIEW.md` §16 (s438).
 
--263. **(s426, recurred s433/s436/s437/s440; s441 RECLASSIFIED — PARKED, likely dissolved into
-    item -277's family, not independently confirmed to exist as a distinct bug.** Originally framed
-    as a fault localized INSIDE `updateHangarBayScene`'s own body (item -274, s438: two independent
-    signals — a call-site breadcrumb freeze and `atos` symbolication naming that function at all 4
-    early occurrences — agreed on it as the locus). item -276 (s440) instrumented the function with
-    an entry counter to get a same-run positive control, then consuming that soak's own queued
-    confirm (`s440_hangarbayentry_confirm`) produced the first occurrence with FULL breadcrumb
-    coverage active — and it decisively did NOT localize inside `updateHangarBayScene`: the entry
-    counter logged **zero calls** before the crash, and the backtrace never goes near that function
-    (`reserveAndEmitDLEntry <- submitSceneNodeRender <- ... <- runHangarSelectionFrame`, a sibling
-    rendering path). s441 root-caused that occurrence's actual mechanism at the instruction level —
-    an unguarded free-list "next"-pointer write in `reserveAndEmitDLEntry` (item -277,
-    `FREELIST_NEXT_GUARD`) — and fixed it. **What this means for the other 4 pre-s440 occurrences**:
-    none of them ever showed a fault instruction inside `updateHangarBayScene`'s body either (all 5
-    total occurrences, s426 through s440, matched by the same superficial signature: SIGBUS, wild
-    near-zero `0x38000000x`-family pointer) — the s426-s438 "localization" chain was a sequence of
-    breadcrumb-coverage-gap freezes (BREADCRUMB16 then 17 then the call site into
-    `updateHangarBayScene`) that never actually reached an instruction inside the target function,
-    right up until s440 finally got there with full coverage and found the fault was elsewhere
-    entirely. The simplest explanation now is that item -263 was never a distinct bug: it is the
-    same recurring `0x801163B0` free-list family (items -270/-272/-277) recurring at different call
-    sites that all happen to route near `runHangarSelectionFrame`/`updateHangarBayScene` in the call
-    graph, most of which so far have crashed before or at a breadcrumb-coverage gap rather than
-    inside the instrumented function. **Do not spend further sessions chasing a fault inside
-    `updateHangarBayScene`'s body** without a NEW occurrence that BREADCRUMB18 (2643 breadcrumb
-    writes, full coverage, unregressed as of s441) actually reports a real address inside that
-    function — that is now the single falsifying observation that would resurrect this item as
-    independent. Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Sessions 426, 433, 436, 438, 441.
+-263. **(s426, recurred s433/436/437/440; s441 RECLASSIFIED — PARKED, likely dissolved into item
+    -277's free-list-guard family, not independently confirmed as a distinct bug.** None of its 5
+    occurrences ever showed a fault instruction inside `updateHangarBayScene`'s own body; the
+    s426-438 "localization" chain was a sequence of breadcrumb-coverage-gap freezes, and when s440
+    finally got full coverage there the fault was elsewhere entirely (item -277). **Falsifying
+    condition that would resurrect it**: a NEW occurrence where BREADCRUMB18 reports a real
+    address inside `updateHangarBayScene`'s own body. Full detail: `docs/PROJECT-OVERVIEW.md` §16
+    (s426-441).
 
 -268..-273. **(s432-437) Duplicate-symbol catalogue closed (18/18); the `0x801163B0` free-list-
-    cache-head-deref idiom swept at scale (107 sites, `GENERIC_CACHE_GUARD`) plus a 7-site `$a1`-register
-    sibling bug found and fixed (`CACHE_HEAD_A1_GUARD`); item -263 progressively localized through two
-    rounds of breadcrumb-coverage misattribution (BREADCRUMB16, BREADCRUMB17).** Batch-fixing the last of
-    18 catalogued duplicate-symbol pairs (s432/s433) unblocked the item -265/-266/-267 chain as a side
-    effect — likely because the truncated stub `runHangarMenuFromOverlay` had been calling left the next
-    callee, `mallocCraftSelectionData`, consuming never-computed garbage state rather than containing its
-    own bug (single-run, not independently confirmed). The live-verify that followed hit item -263's
-    original s426 signature again (2nd source), promoting it to the active frontier. s434's scan for
-    that crash's idiom (reload+deref of global `0x801163B0`, already bespoke-guarded 4 times before by
-    s197/s266/s270/s271, each reactively) found 107 more unguarded sites; one generic guard fixed them
-    all, live-verified over the deepest clean run in the saga but with 0 guard fires (no positive control
-    yet). Its confirmation soak crashed on a different bug, root-caused (s435) as a breadcrumb-coverage
-    misattribution — `last-guest-pc` froze at a caller's call site because the real callee,
-    `emitMaterialTexturedDL`, had zero breadcrumb writes across ~1258 lines (fixed: BREADCRUMB16,
-    byte-for-byte the same mechanism BREADCRUMB15's own s349 note already documented once). The NEXT
-    confirmation soak (s436) found a real, distinct bug: `reserveAndEmitDLEntry` reloads the same global
-    into two registers 4 instructions apart, one guarded (`$v0`) and one not (`$a1`, used as a raw
-    unvalidated write pointer); a scoped scan found 6 more of the same shape, all 7 fixed
-    (`CACHE_HEAD_A1_GUARD`). That soak then hit item -263 a 3rd time, still showing the ORIGINAL
-    misattribution (`0x800547BC` = `tickWrappingTimerAccumulatorList`'s own epilogue instruction, not a
-    memory access) — so s437 added BREADCRUMB17 to `runHangarSelectionFrame`, the only reachable one of
-    that function's 3 callers, to catch the real fault site. Items -270 (`GENERIC_CACHE_GUARD`) and -272
-    (`CACHE_HEAD_A1_GUARD`) both still lack a same-run positive control (0 fires across all observations
-    so far) despite 100% clean runs whenever reached — promising but unconfirmed. See item -274 for
-    where BREADCRUMB17 led. Full detail: `docs/PROJECT-OVERVIEW.md` §16, `PORTING-STATE` Sessions
-    432-437.
+    cache-head-deref idiom swept at scale (107 sites, `GENERIC_CACHE_GUARD`, plus a 7-site `$a1`
+    sibling, `CACHE_HEAD_A1_GUARD`); item -263 progressively localized through two rounds of
+    breadcrumb-coverage misattribution (BREADCRUMB16, BREADCRUMB17).** Full detail:
+    `docs/PROJECT-OVERVIEW.md` §16, `PORTING-STATE` Sessions 432-437.
 
--261..-267. **(s424-431) The `startPlayerSlotAnimationChannelLooping`-family crash chain: 3 siblings
-    guarded (item -261), then SUPERSEDED by the real root cause — a duplicate-symbol-name collision
-    truncating `initCraftSelectScreen`'s ~1200-line body to 1 instruction (item -262) — whose fix
-    un-truncated code that had never run before and triggered a cascade of 3 further crashes, one per
-    newly-live function.** s424/s425 guarded 2 of 3 siblings deref-ing a global (`0x800CDFAC`) whose only
-    writer had never run; s426 found why (the duplicate-symbol mechanism, generalized into item -264's
-    catalogue of 20 total instances) and fixed it with zero call-site edits (N64Recomp derives a JAL
-    target's C name from whichever symbol survives at that address). s427 fixed the 2nd instance
-    (`hangarInitialize`/`mallocCraftSelectionData`), which surfaced a NEW signature at
-    `runHangarMenuFromOverlay+800` (item -265): register corruption of `ctx->r19`/`$s3` (callee-saved,
-    sane at entry, wild after some callee), guarded s428 with its own positive control (the guard firing).
-    That guard exposed a further crash one step later reading the same corrupted register back
-    (`menuOverlayInit+3648`, item -266, reproduced 3x). s429/s431 isolated the corruption to
-    `mallocCraftSelectionData` via before/after checkpoints (2nd-independent confirmation, SOAK-RESULTS
-    20260807-013423), ruled out 30 of its 47 callees by static read, and reframed it (item -267) as a
-    stray write corrupting a stack slot rather than a missing register restore. **s433 update: item -267
-    did NOT recur** after item -269's catalogue-closing fix (a sibling duplicate-symbol stub in the same
-    caller) — plausibly because that stub's never-computed garbage state, not `mallocCraftSelectionData`
-    itself, was the real corruption source; single-run, not independently confirmed. Full detail:
+-261..-267. **(s424-431) The `startPlayerSlotAnimationChannelLooping`-family crash chain: 3
+    siblings guarded, then SUPERSEDED by the real root cause — a duplicate-symbol-name collision
+    truncating `initCraftSelectScreen`'s body to 1 instruction — whose fix un-truncated code that
+    had never run before and triggered a cascade of 3 further crashes, one per newly-live
+    function.** Isolated the last (item -267, a stray write in `mallocCraftSelectionData`) to a
+    47-callee search space; **s433 update: did NOT recur** after a sibling duplicate-symbol fix,
+    plausibly because the sibling's garbage state (not `mallocCraftSelectionData` itself) was the
+    real corruption source (single-run, not independently confirmed). Full detail:
     `docs/PROJECT-OVERVIEW.md` §16, `PORTING-STATE` Sessions 424-431.
 
 -259. **(s422) `0x800290d4` "six independent triggers" lead — INVESTIGATED AND CLOSED, not a bug.**

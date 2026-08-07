@@ -37032,3 +37032,27 @@ refreshed patch in this same session per the standing rule.
 **Outcome: ADVANCED** (landed a new instrument — code change, verified build, verified no regression,
 live-verified with a real discriminating result — de-risked the item -278 backtrace's credibility via
 `nm`, and surfaced/filed a new crash occurrence for the ledger).
+
+## Session 444 (2026-08-07)
+
+**MAINTENANCE iteration** (Step 0 of ITERATION.md: `docs/CURRENT-TRUTH.md` was 61895 bytes, over the
+60000-byte trigger). No experiments run this session, per the maintenance-iteration rule.
+
+Compacted `docs/CURRENT-TRUTH.md`'s Next-steps section: items -280 through -274 (the s439-443
+BREADCRUMB18/`updateHangarBayScene`-entry-counter/`FREELIST_NEXT_GUARD`/`wait-resumed-dead-ctx` thread,
+previously ~250 lines of full session narrative) and item -263's reclassification writeup (~28 lines)
+were compressed to short pointer summaries; the s439-443 full narrative was first migrated into
+`docs/PROJECT-OVERVIEW.md` §16 (which already covered s426-438) so no detail was lost, only
+de-duplicated — the same content had been living in both files since s429/s438's prior migrations.
+Items -268..-273 and -261..-267 (already-terse pointer blocks from earlier maintenance passes,
+covering s424-437, already fully detailed in §16) were trimmed further for the same reason.
+
+Net result: `docs/CURRENT-TRUTH.md` 696→496 lines (61895→42477 bytes), a 200-line net shrink — meets
+the >=200-line ADVANCED threshold exactly. 35 KB remains a stretch target, not reached (the file's
+still-live "Current truth" env-var/timeline prose and the Regeneration pipeline's Standing warnings
+were deliberately left untouched, per the standing maintenance-pass exception since s409). Updated the
+USER DIRECTIVE section's maintenance-pass count/history line (fifteen passes → sixteen, added s444).
+
+No code changes, no build/run cycle (per the maintenance-iteration rule against running experiments).
+`docs/PROJECT-OVERVIEW.md` grew by the migrated s439-443 detail (~85KB→~91KB) — that file has no size
+cap; CURRENT-TRUTH's cap is the one the loop enforces.
