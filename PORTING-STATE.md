@@ -36928,3 +36928,107 @@ item -279 and `scratch/agent/NEXT.md`'s Sandbox-lessons section.
 **Outcome: ADVANCED** (ran the planned work unit; it surfaced and root-caused a soak-authoring bug
 that would otherwise have silently corrupted the free-list-guard evidence record, fixed it, produced
 a genuine 4th clean/null data point via the corrected re-run, and requeued a corrected soak).
+
+## Session 443 (2026-08-07)
+
+Read-first: `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md` (hypothesis-id
+`item-277-freelistnextguard-confirm`), `scratch/agent/SOAK-RESULTS.md` tail. Step 0 maintenance
+check: `docs/CURRENT-TRUTH.md` was 56935 bytes, under the 60000-byte trigger — not a maintenance
+iteration (it now exceeds the trigger after this session's additions; s444 will be maintenance).
+
+**Step 1 per NEXT.md**: `SOAK-RESULTS` already had the `s442_freelistnext_confirm` line
+(`20260807-071541`, rc=0, 347s, real run — sanity-checked: not a near-zero-duration/no-run.log
+tooling-bug signature). Read its log: 0 `[CRASH]`, 0 fires on all 3 free-list guard families,
+`hangarbay-entry loglines=32`. This is the 4th consecutive clean/null result on the free-list guard
+mechanism specifically (5th counting every soak since s434) — per iron rule 8 and NEXT.md's own
+explicit budget note, did NOT queue a 6th identical confirm soak.
+
+**Work unit**: NEXT.md's branch-4 priority order — (a) checked `docs/CURRENT-TRUTH.md`'s USER
+DIRECTIVE for a fresh M5 lead: still DONE/CLOSED, none since s442. (b) Picked up item -278 (s441's
+single-occurrence SIGSEGV inside `moodycamel::LightweightSemaphore::tryWait`, backtrace rooted in
+`idle_thread_handle`, no game-code frames) proactively with a dedicated instrument, per NEXT.md's
+suggestion, rather than a fresh M3 idiom audit (option c).
+
+First de-risked the backtrace's credibility: `nm -C` on the built binary confirmed `_idle_thread_handle`
+is a real, stable-address function symbol — source-traced to `rogue_squadron64/symbol_files/main_overlay.txt`
+(`idle_thread_handle = 0x800017A0`) and `N64Recomp/RecompiledFuncs/funcs_0.c:2229`: the genuine N64
+guest idle-thread handler, not an `atos`/`dladdr` misattribution artifact (this project has a long
+history of exactly that failure mode — s422's `inflate_fast` overturn). Strengthens, does not yet
+confirm, the s441 backtrace's face-value reading.
+
+Source-read `ultramodern`'s cooperative thread-swap handshake
+(`lib/N64ModernRuntime/ultramodern/src/scheduling.cpp` + `threads.cpp`) end to end:
+`pause_self`→`check_running_queue`→`swap_to_thread`→`resume_thread_and_wait`→`wait_for_resumed`,
+matching the s441 backtrace exactly. Found an asymmetry matching this project's established "guard
+one deref, miss its sibling" idiom (the same shape as s441's own `FREELIST_NEXT_GUARD` find):
+`resume_thread_tagged` already has an always-on UAF guard (`thr_live_contains` against a tracked
+`g_live_ctx` set) on the RESUME TARGET's `UltraThreadContext*` before signalling it (the s83-class
+guard, item -8/-9's lineage) — but `wait_for_resumed` derefs the CALLING thread's OWN context
+(`cur_context`, captured by value in `resume_thread_and_wait`/`run_next_thread_and_wait` just before
+the wait call) with no equivalent liveness check. That's exactly where the s441 crash's
+`LightweightSemaphore::tryWait` frame sits.
+
+Added a DIAGNOSTIC-ONLY instrument, deliberately not a corrective guard (unlike the free-list
+family's "substitute a safe write" guards, skipping a live thread's own wait is not provably safe —
+we don't yet know whether "context not live" here would mean "safe to skip" or "already fatally
+inconsistent state", so changing behavior would risk masking a real bug rather than tolerating a
+provably-harmless one). `wait_for_resumed` in `lib/N64ModernRuntime/ultramodern/src/threads.cpp`:
+two new atomic counters (`g_wait_resumed_n`, `g_wait_resumed_dead_ctx`) plus an immediate,
+unconditional `fprintf`+`fflush` tagged `[wait-resumed-dead-ctx]` only on the bad (`!thr_live_contains`)
+path — mirrors `resume_thread_tagged`'s existing always-on-counter/gated-verbose-log pattern exactly,
+so a healthy run pays one atomic increment + one hash-set lookup per thread swap (a hot path) with
+no log-line cost. Host-only C++ change under `lib/` — no regen pipeline involved (`make_elf.py`/
+`N64Recomp`/`fixup_game_funcs.py` untouched). Clean `cmake --build . -j8` rebuild; verified the new
+symbols present via `nm -C` (`g_wait_resumed_n`/`g_wait_resumed_dead_ctx` both present as expected
+`b`-section statics); verified no regression to `GENERIC_CACHE_GUARD`/`CACHE_HEAD_A1_GUARD`/
+`FREELIST_NEXT_GUARD` site counts via grep of the (unregenerated, unchanged) compiled `.c` output.
+Ran `./submodule-patches/export.sh` (refreshed `N64ModernRuntime.patch`, +40/-11 lines) and will
+commit the refreshed patch in this same session per the standing `lib/`-edit rule.
+
+Live-verified with the standard s427-442 schedule (300s budget, all diagnostics armed, plus the new
+instrument). Result: **0 `[wait-resumed-dead-ctx]` fires** — but the process crashed anyway at 112.3s
+(47 frames captured, short of the ~126-frame full schedule), on a signature that is NEITHER item -278
+NOR any of the 3 free-list guard families (all 0 fires this run too, `hangarbay-entry` reached
+`n=2600` normally right up to the crash). The crash: SIGBUS, `si_addr=0x38022417e` (decomposes as
+RDRAM host base `0x300000000` — the same constant register noted in the s216-218→s219 overturned-
+conclusion entry — plus guest offset `0x8022417e`, a plausible KSEG0-looking guest address, notably
+NOT the free-list family's characteristic near-zero `0x3800000xx` shape), `pc-symbol=
+tickWrappingTimerAccumulatorList+3888` (resolved via `dladdr` reading the actual ARM64 hardware fault
+PC register — a genuine host-code-location fact, not a breadcrumb-global misattribution the way
+several earlier "PORTING-STATE" entries in this exact saga turned out to be), `last-guest-pc=
+0x80054750` (`tickWrappingTimerAccumulatorList`'s own guest range starts at `0x80054650` per
+`main_overlay.txt`, so this is +0x100/256 bytes into the function's body — a DIFFERENT offset from
+the s433 occurrence's `0x800547BC`, which landed at that function's epilogue instead), backtrace
+`tickWrappingTimerAccumulatorList ← runHangarSelectionFrame+5396 ← runHangarMenuFromOverlay ←
+menuOverlayInit ← mainGameLoop ← mainBootstrapWorker` — a DIFFERENT call site into
+`tickWrappingTimerAccumulatorList` than item -263's whole s426-441 saga ever traced (no
+`updateHangarBayScene` frame anywhere in this backtrace).
+
+**Does not resurrect item -263**: that item's specific, previously-documented resurrection condition
+(BREADCRUMB18 reporting a real address inside `updateHangarBayScene`'s own body) was not met here —
+this crash never goes near that function. Filed as a new, not-yet-investigated occurrence (see
+`docs/CURRENT-TRUTH.md` item -280) rather than chased this session, per the strategic-priority #3
+rule against reactive single-crash chases without a systematic idiom-class audit.
+
+Requeued a confirmation soak: `scratch/agent/soak_queue/s443_waitresumed_confirm.sh` (adds
+`wait-resumed-dead-ctx` fires to the standard free-list-family grep summary, s440/s442's
+self-checking-log pattern).
+
+**What this session establishes**: `idle_thread_handle` is confirmed a real guest function, not a
+symbolication artifact (de-risks item -278 as a real lead worth the instrument). The `wait_for_resumed`
+caller-context-UAF hypothesis has its first same-run test: 0/1 fires so far — a single null data
+point, not yet a positive-controlled ruling-out (iron rule 1), since this run's crash wasn't item
+-278's own signature recurring under the instrument.
+
+**What this session does NOT establish**: whether item -278 is reproducible at all (still single-
+source, unconfirmed after this run too); whether the new tickWrappingTimerAccumulatorList occurrence
+is a genuinely new bug or a continuation of item -263's parked family under a not-yet-traced 4th call
+site — deliberately left uninvestigated this session.
+
+**Housekeeping**: edited `lib/N64ModernRuntime/ultramodern/src/threads.cpp`; ran
+`./submodule-patches/export.sh` (refreshed `submodule-patches/N64ModernRuntime.patch`); committing the
+refreshed patch in this same session per the standing rule.
+
+**Outcome: ADVANCED** (landed a new instrument — code change, verified build, verified no regression,
+live-verified with a real discriminating result — de-risked the item -278 backtrace's credibility via
+`nm`, and surfaced/filed a new crash occurrence for the ledger).

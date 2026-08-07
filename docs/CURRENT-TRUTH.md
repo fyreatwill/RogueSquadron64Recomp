@@ -162,9 +162,65 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -279 (s442, a corrected confirmation soak for items -277/-278 —
-clean, still no positive control on the free-list guard family, item -278 did not recur);
-the next new item takes -280.
+oldest). Current top is -280 (s443, a diagnostic instrument for item -278's UAF hypothesis —
+0 fires so far, but its live-verify hit an unrelated, previously-uncatalogued recurrence of
+the tickWrappingTimerAccumulatorList/runHangarSelectionFrame signature, filed not chased); the
+next new item takes -281.
+
+-280. **(s443) `[wait-resumed-dead-ctx]` — an always-on diagnostic instrument in
+    `wait_for_resumed()` (`lib/N64ModernRuntime/ultramodern/src/threads.cpp`) testing item
+    -278's UAF hypothesis; 0 fires in its first live-verify, which crashed instead on a
+    different, unrelated signature.** Consumed `s442_freelistnext_confirm` first (SOAK-RESULTS
+    `20260807-071541`, rc=0, 347s): a 4th clean/null result on the free-list guard mechanism
+    (0 fires across all 3 families, still no positive control since s434) — per iron rule 8 and
+    `NEXT.md`'s own budget note, this closes further identical confirm-soak cycling on that
+    mechanism. Checked the M5 priority first: still DONE/CLOSED per the USER DIRECTIVE, no new
+    lead since s442. Picked up item -278 (the s441 single-occurrence SIGSEGV inside
+    `moodycamel::LightweightSemaphore::tryWait`, backtrace rooted in `idle_thread_handle`)
+    proactively instead of a fresh M3 idiom audit. First confirmed via `nm -C` on the built
+    binary that `idle_thread_handle` is a REAL function symbol (`T _idle_thread_handle` at a
+    stable host address) — source-traced to `rogue_squadron64/symbol_files/main_overlay.txt`
+    (`idle_thread_handle = 0x800017A0`) and `N64Recomp/RecompiledFuncs/funcs_0.c:2229`: it's the
+    genuine N64 guest idle-thread handler function, not an `atos`/`dladdr` misattribution —
+    strengthens (does not yet confirm) the s441 backtrace's face-value reading. Source-read
+    `ultramodern`'s thread-swap handshake (`scheduling.cpp` + `threads.cpp`) and found an
+    asymmetry matching this project's established "guard one deref, miss its sibling" idiom:
+    `resume_thread_tagged` already has an always-on UAF guard (`thr_live_contains`) on the
+    RESUME TARGET's `UltraThreadContext*` before signalling it, but `wait_for_resumed` derefs
+    the CALLING thread's OWN context (`cur_context`, captured in `resume_thread_and_wait`/
+    `run_next_thread_and_wait` before the wait) with no equivalent check — exactly where the
+    s441 crash's `LightweightSemaphore::tryWait` frame sits. Added a diagnostic-only instrument
+    (deliberately NOT a corrective guard: skipping a live thread's own wait is not
+    provably-safe the way substituting a guest write is, unlike `GENERIC_CACHE_GUARD`'s family)
+    — two atomic counters (`g_wait_resumed_n`, `g_wait_resumed_dead_ctx`) plus an immediate,
+    unconditional `fprintf`+`fflush` only on the bad path, mirroring `resume_thread_tagged`'s
+    existing pattern so a healthy run pays one atomic increment + one hash-set lookup per
+    thread swap, no log spam. Host-only C++ change (no regen pipeline needed): clean rebuild,
+    verified the new symbol via `nm`, verified no regression to `GENERIC_CACHE_GUARD`/
+    `CACHE_HEAD_A1_GUARD`/`FREELIST_NEXT_GUARD` site counts via grep of the (unchanged)
+    compiled `.c` output, `./submodule-patches/export.sh` run and committed same-session per
+    the standing `lib/` rule. Live-verified the standard schedule: **0
+    `[wait-resumed-dead-ctx]` fires** — but the process crashed at 112.3s anyway, on a
+    signature that is NOT item -278 and NOT any of the 3 free-list guard families (all 0 fires
+    this run too). The crash: SIGBUS, `si_addr=0x38022417e` (RDRAM host base `0x300000000` +
+    guest offset `0x8022417e` — a plausible KSEG0-looking guest address, not the free-list
+    family's near-zero `0x3800000xx` shape), `pc-symbol=tickWrappingTimerAccumulatorList+3888`
+    (resolved via `dladdr` on the actual hardware fault PC register, not a breadcrumb global —
+    a genuine host-code-location fact, not a misattribution artifact), `last-guest-pc=0x80054750`
+    (`tickWrappingTimerAccumulatorList`'s own guest range starts `0x80054650` per
+    `main_overlay.txt`, so this is +0x100/256 bytes in — a DIFFERENT offset than the earlier
+    s433 occurrence's `0x800547BC`, which was that function's epilogue), backtrace
+    `tickWrappingTimerAccumulatorList <- runHangarSelectionFrame+5396 <-
+    runHangarMenuFromOverlay <- menuOverlayInit <- mainGameLoop <- mainBootstrapWorker` — a
+    DIFFERENT call site into `tickWrappingTimerAccumulatorList` than item -263's saga ever
+    traced (no `updateHangarBayScene` frame at all; `[hangarbay-entry]` kept incrementing
+    normally to `n=2600` right up to the crash, unrelated). **Does not resurrect item -263**:
+    that item's specific resurrection condition (BREADCRUMB18 reporting a real address inside
+    `updateHangarBayScene`'s own body) was not met. Filed as a new, not-yet-investigated
+    occurrence — per the strategic-priority #3 rule against reactive single-crash chases, NOT
+    chased further this session. Confirmation soak queued:
+    `scratch/agent/soak_queue/s443_waitresumed_confirm.sh` (adds `wait-resumed-dead-ctx` fires
+    to the standard free-list-family grep summary).
 
 -279. **(s442) The queued `s441_freelistnext_confirm` soak's rc=1/0s "failure" was a SOAK-SCRIPT
     BUG, not a crash — diagnosed and corrected; the real confirmation run came back CLEAN.**
