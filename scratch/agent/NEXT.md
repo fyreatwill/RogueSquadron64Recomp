@@ -2,44 +2,57 @@
 
 HYPOTHESIS-ID: songtempo-table-guard-29c0
 
-## s456 close-out: item -291 (`DL_LIST_APPEND_GUARD`, 57 sites) is EXECUTED and CLOSED
+## s457 close-out: item -294 (next slice of item -292's `SONGTEMPO_TABLE_GUARD`) EXECUTED
 
-Built, live-verified, soaked clean: 0 `[CRASH]` across a full 300s schedule, 0
-`dl-list-append-guard` fires (matches the established 0-fires baseline for this whole guard-idiom
-family — not an open question), `hangarbay-entry` reached n=3000. Confirmation soak queued to
-`scratch/agent/soak_queue/s456_dl_list_append_confirm.sh`. Full detail: `docs/CURRENT-TRUTH.md`
-item -293, `PORTING-STATE.md` Session 456.
+`tickScheduledSongEvents` (5 sites) + `stepSongPitchBendLanes` (5 sites) built, live-verified,
+soaked-queued: 0 `songtempo-table-guard` fires, 0 `dl-list-append-guard` fires (both match
+established 0-fires baselines). 14/43 total sites of item -292 now fixed. Confirmation soak queued
+to `scratch/agent/soak_queue/s457_songtempo_readers_confirm.sh`. Full detail: `docs/CURRENT-TRUTH.md`
+item -294, `PORTING-STATE.md` Session 457.
 
-## Priority 1: finish item -292's `SONGTEMPO_TABLE_GUARD` (39 sites remaining)
+**Also folded in, filed not chased:** the live-verify crashed at 113.5s on an unrelated signature
+(`pc-symbol=heapFreeListDequeue+32596`/`submitSceneNodeRender+45220`, `last-guest-pc=0x8000d92c`,
+`hangarbay-entry` n=2600) — 2nd crash in 2 consecutive sessions inside `submitSceneNodeRender`'s
+call subtree at the identical `hangarbay-entry` n=2600 (previous one: item -291's own queued
+confirm soak, `pc-symbol=submitSceneNodeRender+29928`, `last-guest-pc=0x80010874`). Different
+`last-guest-pc` both times — per the crash-signature-blindness trap (item -200), do NOT assume
+these are the same bug without checking further; they're two independent single-occurrence data
+points in the same hot rendering call chain. Worth a dedicated audit if a 3rd occurrence lands.
+Not a discriminating measurement for anything currently in flight — no action needed unless it
+recurs.
 
-`updateSongTempoTickRate` (4/43 sites of the `0x29C0($reg)` → global `0x801529C0` MusyX
-song-track-pointer idiom) is DONE and verified (s455). The remaining 39 sites are the same idiom,
-in 5 more reader functions, all in `funcs_25.c`:
-- `tickScheduledSongEvents` (5 sites, ~200 lines)
-- `stepSongPitchBendLanes` (5 sites, ~279 lines)
-- `stepSongModulationLanes` (5 sites, ~283 lines)
-- `advanceSongRegion` (12 sites, ~539 lines)
-- `stepActiveSongTracks` (12 sites, ~744 lines)
+## Priority 1: finish item -292's `SONGTEMPO_TABLE_GUARD` (29 sites remaining)
 
-Do the two smallest (`tickScheduledSongEvents`, `stepSongPitchBendLanes`) next — same method as
-`updateSongTempoTickRate`: **read the whole function body first**, identify each site's real bail
-semantics (before-prologue → bare `return;`; inside an existing loop with its own exit label →
-reuse that label; past all loops, near the real epilogue → duplicate the epilogue) — do NOT
-templatize blindly, each function's control flow differs. The two largest (`advanceSongRegion`,
-`stepActiveSongTracks`) are unusually large and their tail sections showed an odd stack-frame
-mismatch on a first skim (prologue pushes more than the visible epilogue pops) — worth checking
-for the recompiler's cross-function shared-tail-merge behavior (seen elsewhere as
+`updateSongTempoTickRate` (4 sites), `tickScheduledSongEvents` (5 sites), `stepSongPitchBendLanes`
+(5 sites) — 14/43 total — are DONE and verified. The remaining 29 sites are the same idiom
+(`0x29C0($reg)` → global `0x801529C0`, MusyX song-track pointer), in 3 more reader functions, all
+in `funcs_25.c`:
+- `stepSongModulationLanes` (5 sites, ~283 lines, `funcs_25.c:3136-3419`)
+- `advanceSongRegion` (12 sites, ~539 lines, `funcs_25.c:3419-3958`)
+- `stepActiveSongTracks` (12 sites, ~744 lines, `funcs_25.c:1913-2657`)
+
+Do `stepSongModulationLanes` next — same method as the prior 3: **read the whole function body
+first**, identify each site's real bail semantics (before-prologue → bare `return;`; inside an
+existing loop with its own exit label or idiom → reuse that; past all loops, near the real
+epilogue → duplicate the epilogue) — do NOT templatize blindly. Per s455's original scan, this
+function shares `stepSongPitchBendLanes`'s per-lane outer-loop shape (same 0x24 stride / 0x900
+bound structure), so its bail semantics should closely mirror `spbl1`-`spbl5`'s "abandon this
+lane, advance to the next" pattern — but confirm by reading, don't assume.
+
+`advanceSongRegion` and `stepActiveSongTracks` are unusually large and their tail sections showed
+an odd stack-frame mismatch on a first skim (prologue pushes more than the visible epilogue pops)
+— worth checking for the recompiler's cross-function shared-tail-merge behavior (seen elsewhere as
 `lvj_checkComplexObjectives`/`audioCompandS16`/`__OSGlobalIntMask`, CLAUDE.md) before trusting a
 single simple bail-to-epilogue pattern; may need per-site individual verification rather than a
-uniform template.
+uniform template. Do these two last.
 
-Standard pipeline once patches are written: raw regen (`make_elf.py` → `N64Recomp` →
-`fixup_game_funcs.py` — audit the report counts against a direct grep, don't just trust the
-number) → `cmake --build` → `strings` sanity → live-verify (`tools/probe.sh`, full
-300s/250s-keys schedule, ALL passive guard env vars armed — copy the list from
-`scratch/agent/soak_queue/done/s454_songtempo_confirm...sh` or this session's
-`s456_dl_list_append_confirm.sh`, plus `ROGUESQ_LOG_SONGTEMPO_TABLE_GUARD=1`) → queue confirmation
-soak → exit contract.
+Standard pipeline once patches are written: verify regex anchors match exactly once each with a
+standalone Python probe BEFORE touching `fixup_game_funcs.py` (catches typos before spending a
+build cycle) → raw regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` — audit the report
+counts against a direct grep, don't just trust the number) → `cmake --build` → `strings` sanity →
+live-verify (`tools/probe.sh`, full 300s/250s-keys schedule, ALL passive guard env vars armed —
+copy the list from `scratch/agent/soak_queue/done/s454_songtempo_confirm...sh` or this session's
+`s457_songtempo_readers_confirm.sh`) → queue confirmation soak → exit contract.
 
 ## Confirmed non-issues, do not re-investigate
 
@@ -63,15 +76,11 @@ started.
 
 ## Process notes
 
-Before starting: `ps aux | grep loop.sh` and `tail -20 scratch/agent/loop.log`, cheaply, once — s454/
-s455 hit a real concurrent-process collision (both resolved, see CURRENT-TRUTH item -291/-292); a
-fresh collision is unlikely but check anyway rather than assume it can't recur. Also watch for a
-delegated subagent reflexively delegating further instead of executing (happened s454/s455 per
-NEXT.md's prior write-up) — if a subagent's report reads like a plan/promise rather than a
-completed result, check actual repo state (`git log`, file mtimes) before trusting it.
+Before starting: `ps aux | grep loop.sh` and `tail -20 scratch/agent/loop.log`, cheaply, once —
+s454/s455 hit a real concurrent-process collision (both resolved, see CURRENT-TRUTH item
+-291/-292); a fresh collision is unlikely but check anyway rather than assume it can't recur.
 
-The account hit its monthly Claude spend limit multiple times this session cycle (`loop.log` shows
-repeated `HARD CAP reached` / `api_error_status: 429` entries around 10:17–11:33 today) before this
-iteration's own invocation succeeded. This is an operational/billing condition, not a code issue —
-if a future iteration opens with an immediate 429, that's the same condition recurring, not a new
-bug to chase.
+The account hit its monthly Claude spend limit multiple times earlier this session cycle
+(`loop.log` shows repeated `HARD CAP reached` / `api_error_status: 429` entries) — if a future
+iteration opens with an immediate 429, that's the same operational/billing condition recurring,
+not a new bug to chase.

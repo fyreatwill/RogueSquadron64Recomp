@@ -38011,3 +38011,104 @@ pair, needs per-site treatment). Neither investigated further this session.
 
 **Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed -- 57/57
 `DL_LIST_APPEND_GUARD` sites -- closing out item -291's remaining execution work).
+
+## Session 457 (2026-08-07)
+
+**Read-list note first:** `scratch/agent/SOAK-RESULTS.md`'s newest line
+(`s456_dl_list_append_confirm`, `rc=3`, crashed at 108.7s) was consumed at the top of this
+session -- see the crash-observation writeup below, which folds it in alongside this session's own
+crash.
+
+**Work unit: item -292's next slice of `SONGTEMPO_TABLE_GUARD` -- `tickScheduledSongEvents` (5
+sites) and `stepSongPitchBendLanes` (5 sites), the two smallest of the 5 remaining reader
+functions, per NEXT.md.** Read both function bodies whole first (`funcs_25.c:2657-2856` and
+`:2857-3135`) rather than templating blindly, per the standing method:
+
+- `tickScheduledSongEvents` walks a singly-linked list of scheduled song events (`$s0`/r16,
+  next-pointer at node offset 0, loop head `L_80094DE0`, advance-to-next-node label
+  `L_80094EC0`, real exit+epilogue `L_80094ECC`). Site `tse1`'s load (0x80094DB8) happens BEFORE
+  the stack prologue runs (sp not yet adjusted, nothing saved) -- bare `return;` is stack-neutral,
+  identical to `updateSongTempoTickRate`'s own site 1. Sites `tse2`-`tse5` each reload the global
+  once per list node (one at the loop head, three more inside the per-node list-splice bookkeeping
+  further down) -- all four bail via `goto L_80094EC0`, abandoning this node's processing but
+  continuing the list walk, matching the function's own semantics rather than aborting the whole
+  tick pass.
+- `stepSongPitchBendLanes` is a per-lane outer loop (`$s2`/r18, stride 0x24, bound 0x900, head
+  `L_80094EFC`, continue-check `L_80095068`) wrapping a per-event inner loop (`$s0`/r16 constant
+  per lane, retry-until-flag inner head `L_80094F1C`). Site `spbl1` (outer-loop head, 0x80094F00)
+  reuses the game's OWN existing null-lane-skip idiom two instructions later
+  (`s2 += 0x24; goto L_80095068`, visible in the source's own `beql $v0,$zero,L_80095068`) as its
+  bail. Sites `spbl2`-`spbl5` (inside the inner loop's per-event processing for that same lane)
+  reuse the identical "abandon this lane, advance to the next" bail, since all four feed the same
+  per-lane bookkeeping the outer loop already tears down that way on its own natural exit path --
+  a uniform, safe choice rather than four different partial-unwind targets.
+
+**Verified anchor uniqueness before touching the fixup script:** a standalone regex probe against
+the live `RecompiledFuncs/funcs_25.c` confirmed all 10 new anchors match exactly once each (no
+`SystemExit`-triggering collisions). Implementation reuses the existing `SONGTEMPO_TABLE_GUARD`
+helper (`_make_songtempo_guard_patch`) and env var (`ROGUESQ_LOG_SONGTEMPO_TABLE_GUARD`) verbatim
+-- same guard family as `updateSongTempoTickRate`, just two more reader functions. Site labels are
+function-prefixed (`tse1`-`tse5`, `spbl1`-`spbl5`) purely for legible logs; the counters are
+function-local statics so bare-number reuse across functions was never a collision risk.
+
+**Pipeline executed cleanly:**
+1. `python3 tools/make_elf.py` (rogue_squadron64 repo) -> `./build/N64Recomp rogue_squadron.toml`
+   (N64Recomp repo) -- clean, only expected `[Info] Indirect tail call in ...` noise.
+2. `python3 fixup_game_funcs.py` -- report: `funcs_25.c: tickScheduledSongEvents
+   SONGTEMPO_TABLE_GUARD patched x5 (of 5 sites)` + `funcs_25.c: stepSongPitchBendLanes
+   SONGTEMPO_TABLE_GUARD patched x5 (of 5 sites)`, alongside the pre-existing `updateSongTempoTickRate
+   ... x4`. Audited directly: `grep -c "SONGTEMPO_TABLE_GUARD site="` and `grep -c
+   songtempo-table-guard` on `funcs_25.c` both returned 14 (4 + 5 + 5), exactly matching.
+3. `cmake --build . -j8` -- clean, only the pre-existing benign `DDIV` sign-conversion warnings in
+   `funcs_8.c` (unrelated, longstanding).
+4. `strings RogueSquadron64Recomp | grep -c songtempo-table-guard` -> 14, and all 14 distinct
+   format strings present (`tse1`-`tse5`, `spbl1`-`spbl5`, plus the original `1`-`4`).
+5. Live-verify: `tools/probe.sh`, full 300s/250s-keys schedule, all passive guard env vars armed
+   (including `ROGUESQ_LOG_DL_LIST_APPEND_GUARD=1`).
+
+**Live-verify result: crashed at 113.5s** -- `pc-symbol=heapFreeListDequeue+32596` (frame 3 return
+address `heapFreeListDequeue+22908`, called from `submitSceneNodeRender+45220`),
+`last-guest-pc=0x8000d92c`, backtrace `heapFreeListDequeue <- submitSceneNodeRender <-
+processSceneNode <- traverseSceneGraphRecursive <- setupCameraMatrices <- runHangarSelectionFrame
+<- runHangarMenuFromOverlay <- menuOverlayInit <- mainGameLoop`. **0 `songtempo-table-guard` fires,
+0 `dl-list-append-guard` fires** (both null results, consistent with every prior soak in these two
+guard families -- not an open question), `hangarbay-entry` reached n=2600 before the crash. No
+`funcs_25.c` song-tick frame anywhere in the backtrace, so this crash is definitively NOT caused by
+today's guard -- same "crash-signature blindness" discipline as item -200: presence of a crash
+alone proves nothing about which code caused it, the backtrace and `last-guest-pc` have to be
+checked, and here they point somewhere else entirely.
+
+**Crash observation, filed not chased:** this is the SECOND crash in two consecutive sessions
+inside `submitSceneNodeRender`'s call subtree, both at **identical** `hangarbay-entry` n=2600, on
+the same PROBE_KEYS schedule: Session 456's queued confirmation soak (`s456_dl_list_append_confirm`,
+consumed at the top of this session per the read-list) crashed at 108.7s
+(`pc-symbol=submitSceneNodeRender+29928`, `last-guest-pc=0x80010874`); this session's manual
+live-verify crashed at 113.5s (`pc-symbol=heapFreeListDequeue+32596` /
+`submitSceneNodeRender+45220`, `last-guest-pc=0x8000d92c`). The matching `hangarbay-entry` count
+just reflects the identical deterministic input schedule reaching the same simulated point in both
+runs, not necessarily the same instruction -- the two `last-guest-pc` values differ, so per the
+crash-signature-blindness method trap (item -200) these should NOT be assumed to be the same bug
+without checking, only flagged as two independent single-occurrence data points in the same
+already-large, frequently-executed rendering call chain (`submitSceneNodeRender`'s own idiom
+family was root-caused/closed via the s282-288 `-0x25A4` audit lineage, `PROJECT-OVERVIEW.md` line
+268 -- these are plausibly separate, still-open bugs elsewhere in the same hot path, not a
+recurrence of that closed family). Per the USER DIRECTIVE's M3 priority (systematic idiom-class
+audits only, no reactive single-crash chases), this is filed here for a future session to consider
+as an audit candidate (2 occurrences, same subtree, same schedule position -- worth a dedicated
+look if a 3rd occurrence lands) rather than chased now.
+
+**Confirmation soak queued:** `scratch/agent/soak_queue/s457_songtempo_readers_confirm.sh` (same
+env var list, same schedule).
+
+**Does NOT close item -292.** 14/43 `SONGTEMPO_TABLE_GUARD` sites now fixed
+(`updateSongTempoTickRate` 4 + `tickScheduledSongEvents` 5 + `stepSongPitchBendLanes` 5); 29 sites
+remain across 3 reader functions (`stepSongModulationLanes` 5, `advanceSongRegion` 12,
+`stepActiveSongTracks` 12). The latter two are still flagged from Session 455 as unusually large
+and a possible cross-function shared-tail-merge complication (`lvj_checkComplexObjectives`/
+`audioCompandS16`/`__OSGlobalIntMask` precedent) -- not yet read, still need their own full-body
+read before patching.
+
+**Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed -- 10 more
+`SONGTEMPO_TABLE_GUARD` sites across 2 functions -- continuing item -292's execution; also folded
+in and filed a new crash observation without chasing it, per the M3 priority's no-reactive-chase
+rule).
