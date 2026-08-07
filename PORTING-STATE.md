@@ -35066,3 +35066,63 @@ applied the s415 lesson this time — independently tested every deferred siblin
 done, which is exactly what caught the second bug — landed 73 net new relocations with same-run positive
 controls (nm presence/absence, unmapped-count deltas) and a 2/2 live-verify clean result; also closed a
 real data-loss gap by tracking the known-bad/known-skip ledger files in git).
+
+## Session 417 (2026-08-06) — M4 item -249 ordinary bulk relocation at n=75: fresh batch hit a crash, bisection found ONE bad function (`initHangarDisplayItemTimers`) sharing s407's `0x80011088` signature, not s415/s416's `0x800290d4` family; remaining 74 relocated cleanly (+74, 579/778)
+
+Resumed ordinary bulk relocation per s416's handoff recipe. Regenerated candidates fresh (293 total, 283
+actionable after filtering `m4_known_bad.txt` (6) + `m4_known_skip.txt` (4) — matched NEXT.md's estimate
+exactly), probed the next 75 (51 CONFIRMED + 24 WEAK, 0 NONE/AMBIGUOUS — every name resolved to exactly
+one destination overlay), applied (32 to mission, 43 to menu), regenerated, built, and live-verified.
+
+### Crash and positive control
+Live-verify crashed: `last-guest-pc=0x80011088`, `pc-symbol=slotDispatcherIter+1476`, 0 frames captured
+(died during the first capture window, ~0.9s after phase). Reverted the full 75 as a same-run positive
+control — `make_elf.py` unmapped-functions-skipped delta 223→298, exact ±75 — then rebuilt+live-verified
+the reverted baseline: clean, 19 frames, 0 `[CRASH]`, confirming the batch (not environment) was
+responsible.
+
+### Bisection
+Wrote three small reusable scripts this session (`scratch/agent/s417_revert.py` — generic revert for any
+named subset, generalizing s414's session-specific version; `scratch/agent/s417_apply_names.py` — filters
+the full probe-results file down to a named subset and applies it; `scratch/agent/s417_cycle.sh` — the
+full delete-funcs/make_elf/N64Recomp/fixup/build/live-verify/report-RESULT cycle in one shot, cutting each
+bisection round from ~8 manual tool calls to 1). Halves bisection, testing every deferred sibling
+independently from the start (not just after a second bug was found, as in s415/s416):
+75 → half-A(37, CRASH) / half-B(38, deferred) → A1(18, CRASH) / A2(19, deferred) →
+A1a(9, clean) / A1b(9, CRASH) → C1(5, CRASH) / C2(4, deferred) → D1(2, CRASH) / D2(3, deferred) →
+E1(`initHangarDisplayItemTimers`, **CRASH ALONE**) / E2(`tickHangarDisplayItemAnimations`, deferred).
+
+Every deferred sibling was independently tested before declaring done, per the s415/s416 lesson: E2 (1
+name) → clean. D2 (3 names) → clean. C2 (4 names) → clean. A2 (19 names) → clean. half-B (38 names) →
+clean. All five same-run controls passed (19 frames, 0 `[CRASH]` each). Unlike s415 and s416, which each
+turned up a second bad function hiding in an untested sibling, this batch had exactly one — the full
+sibling sweep came back clean across the board.
+
+### Signature note
+`initHangarDisplayItemTimers`'s crash signature (`last-guest-pc=0x80011088`) is NOT the `0x800290d4`
+family s415/s416 both hit (`allocObjectPoolNode`, `tickCraftMountedAnimationEffect`,
+`stepObjectOrientationTowardTarget`, `updateHudHealthIndicator`). It matches s407's
+`initPlayerCraftTrailBuffers` instead — a second, independently-recurring crash site with (so far) two
+functions converging on it. Both `0x80011088` and `0x800290d4` sit outside any relocated function's own
+body (core `.text`, below `overlay_start`), consistent with s414's read that these are downstream/indirect
+corruption sites reachable from multiple distinct newly-real functions, not per-function bugs. Two
+recurring sites now on record; still not investigated as a dedicated root-cause session (out of scope for
+ordinary bulk relocation per the M3 idiom-audit-only caveat, and this is M4 besides).
+
+### Final batch and live-verify
+Applied the 74-name clean batch (75 minus `initHangarDisplayItemTimers`), full regen+build, `nm`-verified
+all 74 present and the bad name absent from `libRecompiledFuncs.a`, **live-verified clean 2/2** (88.5s/88.6s
+to `phase width=512`, 19 frames each run, 0 `[CRASH]` lines both runs). Net: +74 relocations this session,
+**579/778 done** (was 505/778; true regenerated remaining count after this session's batch is 219, 218
+actionable after 7 known-bad + 4 known-skip).
+
+`initHangarDisplayItemTimers` (0x800C64B0) recorded in `scratch/agent/m4_known_bad.txt` with full
+bisection path. Sibling-repo symbol-file edits are uncommitted per the standing item -3 rule (ask the user
+before committing there). `HYPOTHESIS-ID` stays `m4-item249-bulk-relocation-n75` for the next ordinary
+bulk-relocation session.
+
+Outcome: ADVANCED (isolated one bad function via rigorous halves bisection with full sibling-sweep
+discipline applied from the start rather than reactively; landed 74 net new relocations with same-run
+positive controls (nm presence/absence, unmapped-count deltas) and a 2/2 live-verify clean result; also
+built three reusable bisection-automation scripts that materially sped up this session's rounds and remain
+available for the next).

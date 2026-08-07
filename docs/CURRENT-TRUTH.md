@@ -111,8 +111,8 @@ Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regress
 `UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
 ~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403+s405+s406+s407+
-s408+s410+s411+s412+s413+s415+s416 have fixed 505 of the corrected 778-candidate count (293 remain per a
-fresh regen, 283 actionable, 6 permanently excluded as known-bad, 4 known-skip, item -249). s411
+s408+s410+s411+s412+s413+s415+s416+s417 have fixed 579 of the corrected 778-candidate count (219 remain
+per a fresh regen, 218 actionable, 7 permanently excluded as known-bad, 4 known-skip, item -249). s411
 resolved the long-standing `[missing-func] 0x800FB9E4` baseline (was `endMissionCleanup`, a
 phantom-overlay victim of this same family) — every clean live-verify from here should show 0
 `[missing-func]` lines, not 1. Post-`a` process now soaks well past 65s without death.
@@ -174,10 +174,10 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
 oldest). Current top is -257 (s408); the next new item takes -258 and is inserted at the top.
 
--249..-258. **(s400-416) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
-    proven, SIX genuine bad-function crashes bisected and parked, cadence scaled from n=20 to a
-    confirmed-safe n=75-with-bisection-fallback. 505/778 done, 293 remain per a fresh regen (283
-    actionable, 4 known-skip, 6 known-bad) as of s416.** s400 landed batch 1
+-249..-258. **(s400-417) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
+    proven, SEVEN genuine bad-function crashes bisected and parked, cadence scaled from n=20 to a
+    confirmed-safe n=75-with-bisection-fallback. 579/778 done, 219 remain per a fresh regen (218
+    actionable, 4 known-skip, 7 known-bad) as of s417.** s400 landed batch 1
     (20/801) and proved the tooling (`s400_probe_batch.py`/`s400_apply_batch.py`, positive-control via
     `make_elf.py`'s unmapped-functions-skipped counter). s401 attempted the full ~774-item remainder in
     one sweep: it linked, but caused a new deterministic title-screen SIGBUS; reverted without
@@ -269,7 +269,18 @@ oldest). Current top is -257 (s408); the next new item takes -258 and is inserte
     functions) live-verified clean 2/2 (88.6s/88.7s to phase, 19 frames each, 0 crash markers,
     `lastW=640`), reaching 505/778. Also force-added `m4_known_bad.txt`/`m4_known_skip.txt` to git — both
     had been untracked since creation (s402/s407), a real gap against the "ledger is the only memory"
-    rule.** Full per-session detail: `PORTING-STATE` Sessions 400-416.
+    rule.** **s417 resumed ordinary bulk relocation at n=75, hit a FIFTH crash-causing signature —
+    `last-guest-pc=0x80011088`, NOT the `0x800290d4` family s415/s416 hit, but a match for s407's
+    `initPlayerCraftTrailBuffers` site instead (a second recurring crash address now on record).
+    Reverted as a same-run positive control (223↔298 unmapped-functions-skipped, exact ±75). This time
+    applied the sibling-independence discipline from the START of the bisection rather than reactively:
+    at every split, both branches were tested before moving on. Isolated exactly ONE bad function,
+    `initHangarDisplayItemTimers`, alone-crashing at n=1; all five deferred siblings (E2, D2, C2, A2,
+    half-B) came back clean when independently tested — no hidden second bug this time, unlike s415 and
+    s416. Final 74-name batch live-verified clean 2/2 (88.5s/88.6s to phase, 19 frames each, 0 crash
+    markers), reaching 579/778. Built three reusable bisection scripts
+    (`s417_revert.py`/`s417_apply_names.py`/`s417_cycle.sh`) that collapse each bisection round to one
+    command.** Full per-session detail: `PORTING-STATE` Sessions 400-417.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
     (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by
