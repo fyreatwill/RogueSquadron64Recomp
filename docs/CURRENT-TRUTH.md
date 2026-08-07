@@ -111,8 +111,8 @@ Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regress
 `UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
 ~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403+s405+s406+s407+
-s408+s410+s411+s412+s413+s415+s416+s417 have fixed 579 of the corrected 778-candidate count (219 remain
-per a fresh regen, 218 actionable, 7 permanently excluded as known-bad, 4 known-skip, item -249). s411
+s408+s410+s411+s412+s413+s415+s416+s417+s419 have fixed 652 of the corrected 778-candidate count (126
+remain per a fresh regen post-s419, 9 permanently excluded as known-bad, 4 known-skip, item -249). s411
 resolved the long-standing `[missing-func] 0x800FB9E4` baseline (was `endMissionCleanup`, a
 phantom-overlay victim of this same family) — every clean live-verify from here should show 0
 `[missing-func]` lines, not 1. Post-`a` process now soaks well past 65s without death.
@@ -142,24 +142,31 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249..-258, IN PROGRESS: 505/778 done
-s400-s416, 293 remain per a fresh regen (283 actionable, 4 known-skip, 6 known-bad), largest M4 item
-open — s404-s407 found, bisected, and fully resolved a 20-name crash batch down to one genuinely-buggy
-function (parked); s408 and s410 each resumed ordinary bulk relocation post-closure with two more clean
-n=20 batches; s411 ran the loop-mandated discriminating probe on batch size — n=50 landed clean; s412
-scaled to n=75 (clean) then n=100 (crashed), bisected the crash to a 25-name suspect group with a
-repeatable signature, settled the steady-state cadence at n=75; s413 sub-bisected that 25-name group
-down to one bad function (`transformCraftAnchorsApplySubFx3`), parked it, and relocated the other 24
-cleanly; s414 hit a fresh 75-name-batch crash and deferred bisection; s415 closed that bisection,
-finding TWO independent bad functions (`allocObjectPoolNode`, `tickCraftMountedAnimationEffect`) hiding
-in different branches of the same bisection tree, and relocated the other 73 cleanly; s416 resumed
-ordinary bulk relocation, hit a THIRD crash on a fresh 75-name batch, and — applying s415's own
-lesson from the start — independently tested every deferred sibling branch, finding TWO MORE bad
-functions (`stepObjectOrientationTowardTarget`, `updateHudHealthIndicator`), both sharing the exact
-same `last-guest-pc=0x800290d4` crash site as s415's pair (four functions now converge on that one
-core-`.text` address — plausibly one shared downstream corruption, not four unrelated bugs; unexplored),
-and relocated the other 73 cleanly. `m4_known_bad.txt`/`m4_known_skip.txt` were found untracked by git
-since their creation (s402/s407) and force-added this session — a real "ledger" gap now closed).
+`main_overlay.txt` phantom-overlay-function family (item -249..-258, IN PROGRESS: 652/778 done
+s400-s419, 126 remain per a fresh regen (post-s419), largest M4 item open — s404-s407 found, bisected,
+and fully resolved a 20-name crash batch down to one genuinely-buggy function (parked); s408 and s410
+each resumed ordinary bulk relocation post-closure with two more clean n=20 batches; s411 ran the
+loop-mandated discriminating probe on batch size — n=50 landed clean; s412 scaled to n=75 (clean) then
+n=100 (crashed), bisected the crash to a 25-name suspect group with a repeatable signature, settled the
+steady-state cadence at n=75; s413 sub-bisected that 25-name group down to one bad function
+(`transformCraftAnchorsApplySubFx3`), parked it, and relocated the other 24 cleanly; s414 hit a fresh
+75-name-batch crash and deferred bisection; s415 closed that bisection, finding TWO independent bad
+functions (`allocObjectPoolNode`, `tickCraftMountedAnimationEffect`) hiding in different branches of the
+same bisection tree, and relocated the other 73 cleanly; s416 resumed ordinary bulk relocation, hit a
+THIRD crash on a fresh 75-name batch, and — applying s415's own lesson from the start — independently
+tested every deferred sibling branch, finding TWO MORE bad functions
+(`stepObjectOrientationTowardTarget`, `updateHudHealthIndicator`), both sharing the exact same
+`last-guest-pc=0x800290d4` crash site as s415's pair; s417 hit a FIFTH crash-causing signature at a
+different site (`0x80011088`, matching s407's earlier `initPlayerCraftTrailBuffers`), isolated ONE bad
+function (`initHangarDisplayItemTimers`) with full sibling-independence discipline from the start; s419
+resumed at n=75 on a 100%-menu-tagged candidate pool and — unusually — BOTH halves of the 75-name batch
+crashed independently, each carrying its own bad function: `buildFormatMessageGlyphBuffer`
+(`0x800290d4`, fifth function on that site) and `buildLevelSelectTextTextures` (`0x8000b650`, a FOURTH
+independently-recurring crash site, distinct from `0x800290d4`, `0x80011088`, and s413's `0x80065e94`)
+— full sibling-independence bisection across both trees found exactly these two, relocated the other 73
+cleanly. `m4_known_bad.txt` now has 9 entries across 4 distinct downstream crash sites (`0x800290d4`
+x5, `0x80011088` x2, `0x80065e94` x1, `0x8000b650` x1) — the "one shared corruption sink" hypothesis is
+refined: at least 4 distinct sinks exist, not one, with `0x800290d4` by far the most repeated).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -300,7 +307,30 @@ oldest). Current top is -257 (s408); the next new item takes -258 and is inserte
     per-function bugs converging on 2 shared *downstream* crash sites (`0x800290d4`, `0x80011088`,
     neither inside any relocated function's own body), not a batch-composition or overlay-targeting
     problem — ordinary bulk relocation can resume next iteration exactly as before, no process change
-    indicated by this probe.** Full per-session detail: `PORTING-STATE` Sessions 400-418.
+    indicated by this probe.** **s419 resumed ordinary bulk relocation at n=75
+    (`HYPOTHESIS-ID: m4-item249-bulk-relocation-n75`): regenerated candidates fresh (219 total, 208
+    actionable after filtering 7 known-bad + 4 known-skip), probed the next 75 — this batch happened to
+    be 100% menu-tagged (0 mission), the opposite extreme from s412/s414/s416's all-mission pools,
+    incidentally reinforcing s418's "sampling artifact" conclusion — applied, and BOTH halves of the
+    halves-bisection independently crashed (an outcome not seen before in this item's history: s412,
+    s415, s416 each had exactly one crashing half at every split). Ran full sibling-independence
+    bisection on both trees to their conclusions: half-A (38 names, crash at `0x800290d4`) isolated to
+    `buildFormatMessageGlyphBuffer` alone — the FIFTH function now converging on that same crash site
+    (`allocObjectPoolNode`, `tickCraftMountedAnimationEffect`, `stepObjectOrientationTowardTarget`,
+    `updateHudHealthIndicator` from s415/s416, plus this one). Half-B (37 names, crash at a NEW site
+    `0x8000b650`) isolated to `buildLevelSelectTextTextures` alone — a fourth independently-recurring
+    crash site, distinct from `0x800290d4`, s407/s417's `0x80011088`, and s413's `0x80065e94`. Every
+    deferred sibling at every split level in both trees was independently tested before declaring done
+    (10 separate clean branches across the two trees, none skipped). Final 73-name batch (75 minus both
+    bad functions) live-verified clean 2/2 (88.5s/88.6s to phase, 20 frames each, 0 crash markers),
+    reaching 652/778.
+    Refines the "one shared corruption sink" reading from s414/s417/s418: `m4_known_bad.txt` now shows 9
+    bad functions across 4 distinct downstream crash sites (`0x800290d4` x5, `0x80011088` x2,
+    `0x80065e94` x1, `0x8000b650` x1), not one universal sink — a dedicated root-cause session on the
+    `0x800290d4` family specifically (5 independent trigger functions, by far the most repeated site) is
+    now a stronger candidate than continuing blind bulk relocation indefinitely, though not yet urgent
+    enough to pause the sanctioned fallback.** Full per-session detail: `PORTING-STATE` Sessions
+    400-419.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
     (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by

@@ -35195,3 +35195,61 @@ Outcome: ADVANCED (ran the mandated discriminating probe to closure — a clear 
 two independent lines of evidence (4 of 5 source sessions had zero-menu pools; the 5th's n=1 mission hit
 is statistically inconclusive alone), landing a documented negative result that rules out a plausible-
 sounding theory before it could cost a future session a root-cause detour).
+
+## Session 419 (2026-08-06)
+
+**M4 item -249, ordinary bulk relocation, n=75.** Regenerated candidates fresh: 219 total, 208
+actionable after filtering `m4_known_bad.txt` (7) + `m4_known_skip.txt` (4) — matched the doc's prior
+estimate. Probed the next 75 names (60 CONFIRMED, 15 WEAK, 0 NONE/AMBIGUOUS). Applied — this batch
+resolved 100% menu (0 mission-tagged), the opposite extreme from s412/s414/s416's all-mission pools.
+
+Live-verify crashed: `last-guest-pc=0x800290d4`, matching s415/s416's recurring family. Reverted the
+full 75 as a same-run positive control (`make_elf.py` unmapped-functions-skipped delta 224↔149, exact
+±75); rebuilt+live-verified the reverted baseline clean (19 frames, 0 crash markers) before bisecting.
+
+Halves-bisected 75 → half-A(38)/half-B(37). Half-A alone: CRASH (`0x800290d4`). Half-B alone,
+independently tested per the standing sibling-independence discipline: also CRASHED, but at a
+**different** signature (`0x8000b650`) — this had not happened before in this item's history (s412,
+s415, s416 each had exactly one crashing half at every split level).
+
+Bisected both trees to their conclusions:
+
+- Half-A (38, `0x800290d4`): A1(19,clean)/A2(19,crash) → A2a(10,clean)/A2b(9,crash) →
+  A2b1(5,clean)/A2b2(4,crash) → A2b2a(2,crash)/A2b2b(2,clean) →
+  playExitSoundAndToggleScreenMeshes(clean)/**buildFormatMessageGlyphBuffer(CRASH ALONE)**. Every
+  deferred sibling independently tested: A1, A2a, A2b1, playExitSoundAndToggleScreenMeshes,
+  processAndDisposeFormatMessage (the other B1a1x1 sibling), B1a1y (2), B1a2 (5), B1b (9), B2 (18) — all
+  CLEAN. `buildFormatMessageGlyphBuffer` is the FIFTH function now converging on `0x800290d4`
+  (`allocObjectPoolNode`, `tickCraftMountedAnimationEffect` from s415; `stepObjectOrientationTowardTarget`,
+  `updateHudHealthIndicator` from s416; plus this one).
+- Half-B (37, `0x8000b650`): B1(19,crash)/B2(18,clean) → B1a(10,crash)/B1b(9,clean) →
+  B1a1(5,crash)/B1a2(5,clean) → B1a1x(3,crash)/B1a1y(2,clean) →
+  B1a1x1(2,crash)/B1a1x2(processAndDisposeFormatMessage,clean) →
+  allocTextRenderTarget(clean)/**buildLevelSelectTextTextures(CRASH ALONE)**. `0x8000b650` is a NEW
+  crash site — not `0x800290d4`, not s407/s417's `0x80011088`, not s413's `0x80065e94` — a fourth
+  independently-recurring site now on record.
+
+Both bad functions isolated at n=1 alone, reproducing their respective signatures byte-identically.
+Applied the final 73-name batch (75 minus both), full regen+build, live-verified clean 2/2 (88.5s/88.6s
+to phase, 20 frames each run, 0 crash markers, `lastW=512`). **652/778 done** (was 579/778), +73 this
+session. Both bad functions recorded in `m4_known_bad.txt` (now 9 entries total).
+
+Notable: this is the first time in the item's history that BOTH halves of a batch independently crashed
+at DIFFERENT sites, rather than one clean half and one crashing half (or, per s415/s416, two bugs
+sharing one site). Refines the standing "one shared downstream corruption sink" reading (s414/s417/s418)
+into "at least 4 distinct sinks" (`0x800290d4` x5, `0x80011088` x2, `0x80065e94` x1, `0x8000b650` x1) —
+`0x800290d4`'s five independent trigger functions make it the strongest candidate for a dedicated
+root-cause session if ordinary bulk relocation keeps surfacing more hits there, though not urgent enough
+yet to interrupt the sanctioned bulk-relocation fallback.
+
+Built no new tooling this session — s417's `s417_cycle.sh`/`s417_apply_names.py`/`s417_revert.py` are
+fully generic and were reused as-is; only a small session-local `s419_apply_names.py` wrapper (points at
+this session's own probe-results file) was added, mirroring s417's `s417_apply_names.py` pattern.
+
+Next work unit: resume ordinary bulk relocation at n=75. 126 candidates remain per a fresh regen (117
+actionable after filtering 9 known-bad + 4 known-skip).
+
+Outcome: ADVANCED (73 relocations landed and live-verified clean 2/2; two genuine bad
+functions found, fully bisected with complete sibling coverage, and permanently parked in
+`m4_known_bad.txt`, closing the crash-bisection sub-thread and advancing the M4 -249 item toward
+closure).
