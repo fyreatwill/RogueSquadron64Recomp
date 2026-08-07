@@ -23,7 +23,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    same M3 DoD leg**: duplicate-symbol-name collisions in the overlay `.txt` files silently truncate
    real function bodies to 1-instruction stubs (a third shape of the closed item -6/-249 "phantom
    function" family). This supersedes needing separate human reconfirmation on "where to focus next"
-   for now — see item -267 (current top) and PROJECT-OVERVIEW §16 for the full session-by-session arc.
+   for now — see item -268 (current top) and PROJECT-OVERVIEW §16 for the full session-by-session arc.
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
@@ -162,9 +162,26 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -267 (s429/s431, OPEN — narrowed to `mallocCraftSelectionData`'s last
-~130-330 lines, reframed as stack-slot memory corruption, not a direct register clobber); the next new
-item takes -268.
+oldest). Current top is -268 (s432, ADVANCED — fixed 11 of item -264's 18 catalogued duplicate-symbol
+pairs in one batch); the next new item takes -269.
+
+-268. **(s432) Batch-fixed 11 of item -264's 18 catalogued `mission_overlay.txt` duplicate-symbol
+    pairs — all NPC slot handlers, same mechanism as items -262/-264, confirmed by direct code read
+    (11th-14th independent instance).** `func_800BF4A0`/`attached3DSoundEmitterNpcHandler`,
+    `func_800C7DC0`/`initNpcActorFromSpawnMessage`, `func_800CA270`/`initNpcActorVariant`,
+    `func_800CEF20`/`advanceAtStEffectPhaseSound`, `func_800D2CA0`/`npcInitWithMotionParams`,
+    `func_800D4ED0`/`npcInitChildLinkedToParent`, `func_800DD2D0`/`npcInitFullModel`,
+    `func_800DFB90`/`applyCraftAnimAndDetailParams`, `func_800E4480`/`resetCraftInstanceMotionState`,
+    `func_800E8A40`/`runDestructionPhaseSequence`, `func_800ECE10`/`datItemActorNpcHandler` — each
+    pair's generic `func_0xADDR` name (first-listed in `mission_overlay.txt`) compiled to a truncated
+    5-line stub while the real semantic name (second-listed) held the actual body, exactly like items
+    -262/-264. Deleted all 11 generic lines, regenerated, rebuilt clean. Live run reproduced the SAME
+    pre-existing item -267 crash (no regression to the menu/hangar flow) but did NOT positively
+    validate the fix — these are mission-only NPC handlers, unreachable by any probe schedule until
+    item -267 is fixed/guarded. Catalogue narrowed 18 -> 7 (4 `menu_overlay.txt` real/real, 2
+    `main_overlay.txt` data aliases, 1 `mission_overlay.txt` real/real `handleHUD`/`initHudStruct`),
+    all needing individual judgment calls, not batchable. Confirmation soak queued
+    (`s432_npchandler_batch_regression.sh`). Full detail: PORTING-STATE Session 432.
 
 -267. **(s429/s431) `$s3`/`ctx->r19` corruption for items -265/-266 ISOLATED to
     `mallocCraftSelectionData`, then NARROWED to its last ~130-330 lines, and REFRAMED as a stray write

@@ -36118,3 +36118,62 @@ reproduces (currently single-source).
 No `lib/` or sibling-repo edits this session. The only source change is `fixup_game_funcs.py` in the
 sibling `~/Documents/Tools/N64Recomp` tool directory (not git-tracked by project convention, persists on
 disk across sessions, per s429/s430's same note).
+
+## Session 432 (2026-08-07)
+
+**Mandatory pivot** (loop-enforced): s429/s430/s431 all ran the item -267 `mallocCraftSelectionData`
+stack-slot-corruption hypothesis without closing it — a 4th consecutive iteration on it would have
+blocked the loop. Per the pivot rule and the standing strategic priority ("M3 crash work only as
+systematic idiom-class audits, never reactive single-crash chases"), switched to a NEW hypothesis:
+closing out item -264's catalogue of 18 uninvestigated duplicate-symbol pairs, instead of continuing
+the item -267 single-crash bisection.
+
+**Work unit**: systematic classification + batch fix of the mechanically-identical subset of that
+catalogue. Of the 18 remaining pairs (4 in `menu_overlay.txt`, 2 in `main_overlay.txt`, 12 in
+`mission_overlay.txt`), 11 in `mission_overlay.txt` matched the exact `func_0xADDR`-generic-first /
+real-name-second shape already confirmed twice (items -262, -264): `func_800BF4A0`/
+`attached3DSoundEmitterNpcHandler`, `func_800C7DC0`/`initNpcActorFromSpawnMessage`, `func_800CA270`/
+`initNpcActorVariant`, `func_800CEF20`/`advanceAtStEffectPhaseSound`, `func_800D2CA0`/
+`npcInitWithMotionParams`, `func_800D4ED0`/`npcInitChildLinkedToParent`, `func_800DD2D0`/
+`npcInitFullModel`, `func_800DFB90`/`applyCraftAnimAndDetailParams`, `func_800E4480`/
+`resetCraftInstanceMotionState`, `func_800E8A40`/`runDestructionPhaseSequence`, `func_800ECE10`/
+`datItemActorNpcHandler`. Verified all 11 by direct code read of the generated `funcs_*.c` bodies
+before touching anything: every generic name compiles to an identical 5-line stub (`uint64_t hi=0,
+lo=0, result=0;` then falls straight through, no real work) immediately followed by the real-named
+function's actual body starting 6 lines later — the same N64Recomp function-boundary-walker
+truncation artifact as items -262/-264, now independently confirmed an 11th-through-14th time. The
+12th pair (`handleHUD`/`initHudStruct`) is real-name/real-name (ambiguous which to keep, like the 4
+remaining `menu_overlay.txt` pairs) — left uninvestigated, not part of this batch.
+
+**Fix**: deleted all 11 generic `func_0xADDR = 0x0xADDR;` lines from
+`~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` (kept the real semantic names,
+same direction as items -262/-264's fixes), each replaced with a short comment explaining the removal
+and pointing at the mechanism. Regenerated (`make_elf.py` -> delete `funcs_*.c` -> `N64Recomp` ->
+`fixup_game_funcs.py`, idempotency marker confirmed present exactly once, no double-patching) and
+rebuilt clean (46 pre-existing sign-conversion warnings, same as every prior session, 0 new
+warnings/errors). Notably, N64Recomp's own regen log now shows `Tail call in fake_func_800D2C98 to
+0x800D2CA0` — a tail-call reference successfully resolving to the address that's now solely owned by
+`npcInitWithMotionParams`, corroborating the fix mechanically took effect.
+
+**Live run** (same PROBE_KEYS schedule as s423-431): process died at 19.1s (8 frames) — the run
+reproduced the SAME pre-existing item -267 chain crash (`menuOverlayInit+3648` SIGBUS,
+`far=0x380000003`, same `[malloccraft-ckpt]`/`[hangarmenu-ckpt]` signature as s431's last run) with no
+new or different crash. **This confirms the batch fix does not regress the menu/hangar flow** — but it
+does NOT positively validate the fix's actual effect, since all 11 functions are NPC slot handlers
+(`project_npc_handler_protocol.md`) that only fire during mission gameplay with active NPC spawns, a
+phase this probe schedule never reaches (blocked behind the still-open item -267 chain, which crashes
+during craft-selection, well before any mission loads). Validating that the real handler bodies now
+run — and surfacing whatever downstream "first genuine execution" crashes they introduce, per the
+item -262/-264 precedent — is blocked on item -267 getting fixed or guarded first.
+
+**Net result**: item -264's catalogue narrowed from 18 to 7 uninvestigated pairs (4 `menu_overlay.txt`
+real/real, 2 `main_overlay.txt` data aliases, 1 `mission_overlay.txt` real/real `handleHUD`/
+`initHudStruct`) — all requiring individual per-pair judgment calls, not blind-batchable like this
+session's 11. New item -268 for this fix; item -267 remains open, unaffected, still the active blocker
+for the hangar/craft-select menu flow. Confirmation soak queued:
+`scratch/agent/soak_queue/s432_npchandler_batch_regression.sh`.
+
+Sibling-repo edit: `~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt` (11 lines
+deleted, replaced with explanatory comments). That repo is not git-tracked by this project's
+session-commit convention (last real commit predates this investigation entirely, June 2026) — left
+uncommitted there per established practice, same as every prior session's symbol-file edits.
