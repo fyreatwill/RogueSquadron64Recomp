@@ -2,115 +2,125 @@
 
 HYPOTHESIS-ID: item-301-scan-buckets
 
-## s467 CLOSED item -300 outright (`NODE_LIST_HEAD_GUARD`/`NODE_LIST_HEAD_WRITE_GUARD`, global
-`0x8011A4B8`, 20 read-guard + 10 write-guard sites) AND folded item -299's 2nd confirm soak
+## s468 summary: folded s467's 2nd confirm soak (clean, matches item -300's own result); classified
+and DEFERRED item -302 (`hi16=0x8013,offset=0x7CE4`, 45 sites/9 files — a small-integer-index idiom,
+not a pointer, structurally unsuited to this guard method); pivoted to and CLOSED item -301
+(`TEXDATA_TABLE_GUARD`, `hi16=0x8013,offset=-0x70F8`, 31/31 sites, `funcs_6.c` only)
 
-Full derivation, fix, build/live-verify results, and confirm-soak recipe:
-`docs/CURRENT-TRUTH.md` item -300, `PORTING-STATE.md` Session 467. Notable: this bucket turned out
-to be TWO distinct downstream shapes (a `FREELIST_NEXT_GUARD`-style conditional write needing only
-a read guard, and a `DL_LIST_RESET_GUARD`-style write-through-reload needing its own separate write
-guard) rather than the single reusable shape s466's writeup hoped for — caught by reading full
-per-site context up front instead of assuming uniformity from a short sample. Live-verify: **0
-`[CRASH]` across the ENTIRE 300s schedule** (all 10 key presses fired) — notably cleaner than most
-recent sessions' live-verify runs, which usually hit an unrelated background-noise crash partway
-through. 0 fires on both new guards (matches item -287's baseline), 0 regression on any sibling
-guard, `hangarbay-entry` n=33 (positive control). Confirmation soak queued:
-`scratch/agent/soak_queue/s467_nodelisthead_confirm.sh` (not yet run by the loop as of this write —
-check `scratch/agent/SOAK-RESULTS.md` tail next session and fold its verdict into the ledger before
-starting new work).
+Full derivation, fix, build/live-verify results, and confirm-soak recipe: `docs/CURRENT-TRUTH.md`
+items -301/-302, `PORTING-STATE.md` Session 468.
 
-Also folded this session: `s466_dlbufferpool_confirm`'s full `run.log` (not just the probe.sh
-one-line summary) — a 2nd independent confirmation of item -299's true-negative result (0 fires on
-all 4 sibling guards tested, crashed on the same already-catalogued `coalesceFreeHeapBlocks+4424`
-family, unrelated). No ledger change needed there, already correctly CLOSED.
+**The key transferable lesson from this session**: raw site COUNT is not the tractability signal for
+this idiom-class-audit method — SINGLE-FILE CONCENTRATION is. The #1-ranked bucket by count (45
+sites, 9 files) turned out to be a fundamentally different, harder idiom (small integer index, not a
+pointer, 17 distinct downstream shapes, most sites piping the value to a callee rather than
+dereferencing locally) and had to be deferred rather than force a speculative guard. The #2-ranked
+bucket (31 sites, but ALL in `funcs_6.c`) was a clean, one-session close — same "raw reload used as a
+pointer" risk shape as every prior success in this lineage (`DL_LIST_APPEND_GUARD`, `DL_LIST_RESET_
+GUARD`, `DL_BUFFER_POOL_GUARD`, `NODE_LIST_HEAD_GUARD`), even though the pointer had array-index
+arithmetic (idx*36 in this case) interposed before the actual dereference — that arithmetic doesn't
+matter to the guard design AT ALL, because the guard anchors on the reload itself, not on any
+downstream deref point. Reuse this signal when picking the next bucket: prefer `funcs_N.c`-only
+buckets over multi-file-spread ones of similar or even somewhat higher site count.
 
-## This session's top work unit: classify the next candidate bucket from s465's scan
+## This session's top work unit: classify `hi16=0x8013, offset=-0x7104` (29 sites, `funcs_6.c` only)
 
-With items -299 and -300 both closed, s465's scan (`scratch_s465_scan.py`, N64Recomp repo,
-untracked — re-run it fresh or re-read its saved output if still on disk) has NO more buckets in
-the tightly-concentrated `funcs_3.c`/`funcs_4.c`-only category that produced both of the last two
-closes. The remaining buckets are all more scattered (multiple files, including `funcs_6.c`-only
-populations this lineage hasn't touched before) — ranked by raw site count:
+Same file as this session's own close (`TEXDATA_TABLE_GUARD`) — plausibly a sibling texture-
+management idiom, and per the lesson above, single-file concentration makes this the most promising
+remaining candidate even though its raw count (29) is lower than `hi16=0x8012,offset=-0x5BBC`'s 30
+across 4 files.
 
-1. **`hi16=0x8013, offset=0x7CE4`** (45 sites, 9 files) — largest remaining bucket, but spread
-   across 9 files instead of the usual 2, so expect MORE shape diversity than items -299/-300, not
-   less. Budget for reading a large, spread sample (10+ sites across multiple files) before
-   assuming any single shape, per this session's own lesson.
-2. `hi16=0x8013, offset=-0x70F8` (31 sites, `funcs_6.c` ONLY) — a new file this lineage hasn't
-   examined before; worth checking whether `funcs_6.c`'s code (audio/sequencer adjacent, per
-   `SONGTEMPO_TABLE_GUARD`'s own `funcs_25.c` neighbor and `funcs_6.c`'s 3 already-excluded
-   `COMPARE_ONLY` sites from item -299's own scan) has a different idiom shape than the display-list
-   code funcs_3.c/funcs_4.c have shown so far.
-3. `hi16=0x8012, offset=-0x5BBC` (30, 4 files)
-4. `hi16=0x8013, offset=-0x7104` (29, `funcs_6.c` only)
-5. `hi16=0x8011, offset=-0x35E0` (23, 9 files)
-6. `hi16=0x8013, offset=0xB50` (21, 11 files)
+### Step 1: classify, using the now-reusable generic tools
 
-### Step 1: classify the top-ranked bucket's downstream use, READING FULL CONTEXT PER SITE
+`scratch_s468_shapecheck_generic.py` (N64Recomp repo, untracked) is already parameterized — run it
+directly, no need to write a new script first:
 
-Write `scratch_s468_classify_<offset>.py` (check the actual session number at start of work)
-modeled on `scratch_s467_classify_5b48.py` (N64Recomp repo, untracked). **This session's own
-discriminating lesson**: do NOT stop at a short (~14-line) sample window and assume the shape
-extends past it — item -300 needed 30+ lines of context to reveal a SECOND, structurally different
-write pattern hiding past an already-existing unrelated guard block. If the classify script's
-window doesn't reach a function's `return`/`jr $ra`, widen it until it does, for at least the first
-several sites of each file represented in the bucket.
+```
+cd ~/Documents/Tools/N64Recomp
+python3 scratch_s468_shapecheck_generic.py 8013 -7104
+```
 
-### Step 2: if a real deref/write-through-reload risk emerges, model the guard(s) directly on the
-now-3-deep precedent set
+This dumps the normalized instruction-chain shapes between the reload and the first local
+dereference (or a return/branch/20-instruction cap). Read the output and decide:
+- If the raw reload register is used DIRECTLY as a pointer (with or without index arithmetic before
+  the deref, like items -299/-300/-301) — regardless of how many distinct downstream chain shapes
+  exist — the guard-at-reload method applies cleanly. Write a per-offset classify script modeled on
+  `scratch_s468_classify_7ce4.py` if you want per-site line dumps too, but it's not strictly required
+  once the generic shapecheck output is read.
+- If the reload is instead a small integer INDEX immediately shifted/scaled before ANY pointer
+  arithmetic touches it (the item -302 shape) — defer, don't force a guard, and move to the next
+  bucket in the ranked list below.
+- Read at least 3-5 full sites directly from `RecompiledFuncs/funcs_6.c` (not just the tool's
+  truncated windows) to confirm real semantics before committing, same as this session's manual
+  `freeTextureDataSlot` read.
 
-- Read-only risk gating a conditional write (`if (rD != 0) { write; goto L; } goto skip; <dup>;
-  skip:`): `FREELIST_NEXT_GUARD` (s441) / item -300's read-guard half — force the deref result to
-  whichever value (0 or nonzero) makes the gating `if` skip the write.
-- Reload register used DIRECTLY as an unconditional write address later in the same function:
-  `DL_LIST_RESET_GUARD` (item -298) / item -300's write-guard half — skip the write entirely on an
-  invalid head (0 is not a safe write ADDRESS, unlike a safe READ substitute).
-- If a genuinely new third shape appears, don't force it into one of the above — write a new
-  targeted patch and document the new shape's structure explicitly in the same style as this
-  session's writeup.
+### Step 2: if a genuine raw-pointer risk, write and verify the regex BEFORE touching fixup_game_funcs.py
 
-### Step 3: patch, regen, build, live-verify, queue confirm soak — standard recipe
+Model `scratch_s468_test_regex_70f8.py` (N64Recomp repo, untracked) — swap the offset, confirm the
+match count equals the scan's reported site count, cross-check against independent raw-line-count
+greps for both the `lui` and the reload lines.
+
+### Step 3: design the substitute value
+
+If the reload's raw value flows into further arithmetic before any deref (like this session's `idx*
+36` pattern), 0 is NOT safe as a substitute — use `0x80000000u` (valid RDRAM base) instead, per this
+session's `TEXDATA_TABLE_GUARD` precedent. If the reload derefs IMMEDIATELY at offset 0 with no
+arithmetic (like `DL_BUFFER_POOL_GUARD`/`GENERIC_CACHE_GUARD`), 0 may be appropriate — check what the
+existing branch/control-flow structure around the deref expects before choosing.
+
+### Step 4: patch, regen, build, live-verify, queue confirm soak — standard recipe
 
 1. `cd ~/Documents/Tools/N64Recomp && python3 -c "import glob,os; [os.remove(f) for f in
-   glob.glob('RecompiledFuncs/funcs_*.c')]"` (Python `os.remove` over `glob`, NOT bare `rm -f`).
+   glob.glob('RecompiledFuncs/funcs_*.c')]"`
 2. `cd ~/Documents/Tools/rogue_squadron64 && python3 tools/make_elf.py`
 3. `cd ~/Documents/Tools/N64Recomp && ./build/N64Recomp rogue_squadron.toml`
-4. `python3 fixup_game_funcs.py` — audit the report for the expected site count(s) AND confirm
-   sibling guard counts are UNCHANGED: `DL_LIST_APPEND_GUARD` 84, `DL_LIST_RESET_GUARD` 84,
-   `SIBLING_PTR_WRITE_GUARD` 119, `DL_BUFFER_POOL_GUARD` 84, `NODE_LIST_HEAD_GUARD` 20,
-   `NODE_LIST_HEAD_WRITE_GUARD` 10 — a regression in any of these means the new regex accidentally
-   clobbered an existing guard's anchor text.
-5. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8` from the
-   RogueSquadron64Recomp repo root (or `cd build && cmake --build . -j8`).
+4. `python3 fixup_game_funcs.py` (run exactly ONCE per regen — running it twice on the same
+   already-patched files is a no-op but wastes time and risks masking a real anchor-drift bug; if
+   you need to re-check counts, grep the already-patched `RecompiledFuncs/*.c` files directly
+   instead of re-running the script). Audit the report for the expected new-guard count AND confirm
+   ALL 7 existing sibling guard counts are UNCHANGED via exact `getenv("ROGUESQ_LOG_<TAG>")`
+   occurrence counts (substring `grep -c` on the tag name alone double-counts, since each site's
+   block contains the tag string twice — once in the comment, once in the env var name):
+   `DL_LIST_APPEND_GUARD` 84, `DL_LIST_RESET_GUARD` 84, `SIBLING_PTR_WRITE_GUARD` 119,
+   `DL_BUFFER_POOL_GUARD` 84, `NODE_LIST_HEAD_GUARD` 20, `NODE_LIST_HEAD_WRITE_GUARD` 10,
+   `TEXDATA_TABLE_GUARD` 31 — a regression in any of these means the new regex clobbered an
+   existing guard's anchor text.
+5. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8` (from the
+   RogueSquadron64Recomp repo root).
 6. `strings build/RogueSquadron64Recomp | grep -c <new-tag>` — confirm it matches the site count.
 7. Live-verify from `build/`: arm ALL passive guard/breadcrumb env vars (copy the full list from
-   `scratch/agent/soak_queue/s467_nodelisthead_confirm.sh`) plus the new guard's own
+   `scratch/agent/soak_queue/s468_texdatatable_confirm.sh`) plus the new guard's own
    `ROGUESQ_LOG_<NEW_TAG>=1`, `PROBE_KEYS_FROM_PHASE=1`, full schedule, SIGKILL at teardown.
    Discriminating outcome: 0 new-guard fires expected (matches item -287's true-negative baseline)
-   PROVIDED `hangarbay-entry` (or equivalent) shows the code was actually reached (positive
-   control, iron rule 1).
-8. Write `scratch/agent/soak_queue/s468_<name>_confirm.sh` (self-contained, same shape as
-   `s467_nodelisthead_confirm.sh`) for the loop to run.
+   PROVIDED `hangarbay-entry` shows the code was actually reached (positive control, iron rule 1).
+8. Write `scratch/agent/soak_queue/s469_<name>_confirm.sh` (self-contained, same shape as
+   `s468_texdatatable_confirm.sh`) for the loop to run.
 
-## Fallback if the top bucket turns out unreasonably scattered/diverse for one session
+## Fallback if `-0x7104` turns out unsuited (index-not-pointer shape, like item -302)
 
-Move to the next bucket in the ranked list above. If NONE of the remaining 6 buckets close cleanly
-within budget (iron rule 8: 3 consecutive iterations on this slug without a close forces a pivot
-preamble), consider whether the scan's `count >= 20` threshold is now surfacing genuinely
-lower-value, more scattered idioms than the tightly-concentrated `funcs_3.c`/`funcs_4.c` core that
-produced every real finding so far — that would be a legitimate signal to close this scan-driven
-sub-arc and look for a different M3 discovery method, same as s397 did once before.
+Move to the next candidate: `hi16=0x8012, offset=-0x5BBC` (30 sites, 4 files) or `hi16=0x8011,
+offset=-0x35E0` (23 sites, 9 files) or `hi16=0x8013, offset=0xB50` (21 sites, 11 files) — all more
+scattered, budget extra time. If NONE close cleanly within budget (iron rule 8: 3 consecutive
+iterations on this slug without a close forces a pivot preamble, a 4th blocks), consider whether the
+scan's `count >= 20` threshold is now surfacing genuinely lower-value, harder-to-guard idioms than
+the `funcs_3.c`/`funcs_4.c`/`funcs_6.c` core that produced every real finding so far — a legitimate
+signal to close this scan-driven sub-arc.
 
 ## Soak queue status
 
-`scratch/agent/soak_queue/s467_nodelisthead_confirm.sh` is queued as of this session end (not yet
-run by the loop) — check `scratch/agent/SOAK-RESULTS.md` tail at the start of next session and fold
-its verdict into the ledger before starting new work, per the standing soak-queue consume step.
+`scratch/agent/soak_queue/s468_texdatatable_confirm.sh` is queued as of this session end (not yet run
+by the loop) — check `scratch/agent/SOAK-RESULTS.md` tail at the start of next session and fold its
+verdict into the ledger before starting new work.
 
 ## Discriminating instrument still live: watch for `sibling-ptr-write-guard` fires in
 `submitSceneNodeRender`
 
 Unchanged from prior sessions — 10 of item -296's 119 sites sit in `submitSceneNodeRender`, tied to
-a still-open 2-occurrence wait-for-recurrence breadcrumb. 0 fires across every soak so far including
-s467's (this session's own live-verify run also showed 0 for this guard). Passive, no action needed
-unless a soak result shows a fire.
+a still-open 2-occurrence wait-for-recurrence breadcrumb. 0 fires across every soak so far. Passive,
+no action needed unless a soak result shows a fire.
+
+## Maintenance note
+
+`docs/CURRENT-TRUTH.md` is now ~61.6 KB (over the 60000-byte Step 0 threshold) after this session's
+additions. Next session's Step 0 will trigger a MAINTENANCE iteration — that's expected and fine, not
+a problem to pre-empt now.

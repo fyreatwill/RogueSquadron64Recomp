@@ -27,13 +27,20 @@ Priority order for upcoming iterations, set after the 300-session review:
    across 6 reader functions, s454-462); item -298 (`DL_LIST_RESET_GUARD`, 84/84 sites — 70
    blanket-regex s463 + 14 per-site-literal-anchor s464, CLOSED s464); item -299
    (`DL_BUFFER_POOL_GUARD`, global `0x801163FC`, 84/84 sites, `funcs_3.c`x46/`funcs_4.c`x38,
-   CLOSED s466, 2nd independent confirm soak s467); and item -300 (`NODE_LIST_HEAD_GUARD`/
+   CLOSED s466, 2nd independent confirm soak s467); item -300 (`NODE_LIST_HEAD_GUARD`/
    `NODE_LIST_HEAD_WRITE_GUARD`, global `0x8011A4B8`, 20 read-guard + 10 write-guard sites,
    `funcs_3.c`/`funcs_4.c`, CLOSED s467 — the first bucket in this scan-driven sub-arc to turn out
    to be TWO distinct downstream shapes rather than one, caught by reading full per-site context
-   instead of a short sample window). **No next candidate identified yet — s465's scan surfaced
-   several other unexamined buckets (see item -300 below), the next session should classify the
-   top-ranked one.**
+   instead of a short sample window); and item -301 (`TEXDATA_TABLE_GUARD`, global at
+   hi16=0x8013/offset=-0x70F8, 31/31 sites, `funcs_6.c` only, CLOSED s468 — raw-reload-as-base-
+   pointer risk again, with array-index arithmetic before the deref; substitutes valid RDRAM base
+   `0x80000000u` rather than 0, since 0 would be unsafe once further index arithmetic is added).
+   Item -302 (hi16=0x8013/offset=0x7CE4, 45 sites/9 files) was classified s468 and DEFERRED, not
+   closed -- the reloaded global there is a small integer INDEX, not a pointer (17 distinct
+   downstream shapes, fewer than half reach a local deref), so no single shape-agnostic guard point
+   exists. **Next candidate: `hi16=0x8013, offset=-0x7104` (29 sites, `funcs_6.c` only) — promoted
+   ahead of the raw-count-higher `hi16=0x8012, offset=-0x5BBC` (30 sites, 4 files) because
+   single-file concentration, not site count, is the tractability signal items -301/-302 established.**
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
@@ -172,8 +179,62 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Highest number allocated so far is -300 (this item); items are never renumbered when
-compacted into a range pointer. The next NEW item takes -301.
+oldest). Highest number allocated so far is -302 (this item); items are never renumbered when
+compacted into a range pointer. The next NEW item takes -303.
+
+-302. **(s468) M3 idiom-class audit: `hi16=0x8013,offset=0x7CE4` bucket (45 sites, 9 files) —
+    CLASSIFIED AND DEFERRED, not closed.** s465's scan's #1-ranked remaining bucket after item -300
+    closed. `scratch_s468_classify_7ce4.py` + `scratch_s468_shapecheck_7ce4.py` (N64Recomp repo,
+    untracked, 40-line window per site, not the usual 14) found the reloaded global here is a small
+    INTEGER INDEX, not a base pointer — one site (`funcs_35.c:5232`, function `getSceneStatePtr`) is
+    a bare getter returning the raw reload value with zero arithmetic; every other site immediately
+    does `ctx->rL = S32(ctx->rL << 2)` (×4) then combines with a separately-loaded, per-site-varying
+    base register before dereferencing at a per-site-varying offset. 17 distinct normalized
+    instruction-chain shapes across the 45 sites; only 20/45 reach a local dereference within a
+    20-instruction window — the other 25 pass the index-derived value into a callee, so any real
+    deref (if one exists) is invisible to this scan. Unlike every prior close in this lineage (raw
+    reload IS the pointer, so guarding right after the reload is shape-agnostic regardless of
+    downstream), this bucket's actual risk surface — IF real — varies per site with no known-valid
+    index bound, so no single guard placement covers all sites without speculation. **Decision:
+    defer rather than force a guess.** No code change; not folded into the closed-arc list.
+
+-301. **(s468) M3 idiom-class audit: `TEXDATA_TABLE_GUARD`, global at `hi16=0x8013,offset=-0x70F8`,
+    `funcs_6.c` ONLY (texture-data-slot array base pointer). CLOSED s468, 31/31 sites.** The s465
+    scan's #2-ranked remaining bucket, pivoted to after item -302's bucket proved unsuited to this
+    method. Read `freeTextureDataSlot` (`funcs_6.c:2690`) directly: `sll $v0,$s0,3; addu
+    $v0,$v0,$s0; sll $v0,$v0,2` computes `idx*36` (a 36-byte struct stride) from an
+    externally-sourced index, then `addu $v0,$v0,$v1` adds THIS global's freshly-reloaded value as
+    the array BASE POINTER before dereferencing (`lhu $a0,0xC($v0)`, `lw $a1,0x10($v0)`, etc.) —
+    the same raw-reload-as-base-pointer risk as `DL_BUFFER_POOL_GUARD`/`NODE_LIST_HEAD_GUARD`, just
+    with index arithmetic interposed before the deref. `scratch_s468_shapecheck_generic.py`
+    (N64Recomp repo, untracked — parameterized triage tool for future buckets) found 13 distinct
+    downstream chain shapes, but since the risk is IN THE RELOAD ITSELF, the guard only needs to
+    anchor on the `lui`+`lw` reload pair, ignoring all 13 downstream shapes — confirmed 31/31 by
+    `scratch_s468_test_regex_70f8.py` against the actual on-disk text (cross-checked against
+    independent raw-line-count greps for both the `lui` and reload lines, all three agreeing at 31)
+    before touching `fixup_game_funcs.py`. **Guard design departs from precedent deliberately**:
+    `GENERIC_CACHE_GUARD`/`NODE_LIST_HEAD_GUARD` substitute 0 because those sites deref at a literal
+    0 offset with no further arithmetic (0 matches the game's own "empty list" semantics); 0 would
+    be actively WRONG here since every downstream chain adds `index*36+offset` arithmetic before
+    dereferencing (0 as a base → a guaranteed-invalid tiny address, MORE certain to crash than the
+    original wild value). `TEXDATA_TABLE_GUARD` substitutes `0x80000000u` (start of RDRAM, always
+    mapped) instead — any subsequent `index*36+offset` starting from a valid base stays inside the
+    8MB window for any plausible index, consistent with this lineage's scoping rule of fixing only
+    this global's own reload risk. Clean regen+build (`fixup_game_funcs.py` report: `TEXDATA_TABLE_
+    GUARD` ×31; sibling counts confirmed unchanged via exact `getenv("ROGUESQ_LOG_<TAG>")`
+    occurrence counts: `DL_LIST_APPEND_GUARD` 84, `DL_LIST_RESET_GUARD` 84, `SIBLING_PTR_WRITE_
+    GUARD` 119, `DL_BUFFER_POOL_GUARD` 84, `NODE_LIST_HEAD_GUARD` 20, `NODE_LIST_HEAD_WRITE_GUARD`
+    10 — none regressed); `strings` on the binary confirms 31 `texdata-table-guard` format strings.
+    Live-verify: 0 `texdata-table-guard` fires (matches item -287's true-negative baseline), 0 fires
+    on every sibling guard (no regression), `hangarbay-entry` n=32 (positive control). Crashed at
+    124.2s on `pc-symbol=loadCutsceneAssetsByIndex+1860`, `last-guest-pc=0x800ab068` — the SAME
+    already-catalogued function item -298's `s463_dllistguards_confirm` crashed in at the
+    byte-identical `+1860` offset (a function with multiple unguarded holes already fixed
+    piecemeal, `+668`/`+948`), just a different exact guest PC — unrelated to this guard, filed not
+    chased. Confirmation soak queued: `scratch/agent/soak_queue/s468_texdatatable_confirm.sh`.
+    **Next candidate**: `hi16=0x8013, offset=-0x7104` (29 sites, `funcs_6.c` only) — promoted ahead
+    of the raw-count-higher `hi16=0x8012, offset=-0x5BBC` (30, 4 files) on the strength of this
+    session's single-file-concentration tractability signal.
 
 -300. **(s467) M3 idiom-class audit: `NODE_LIST_HEAD_GUARD` (read) / `NODE_LIST_HEAD_WRITE_GUARD`
     (write), global `0x8011A4B8` (`hi16=0x8012,offset=-0x5B48`), `funcs_3.c`/`funcs_4.c`
@@ -208,14 +269,9 @@ compacted into a range pointer. The next NEW item takes -301.
     full schedule clean rather than hitting an unrelated background-noise crash partway through), 0
     fires on both new guards (matches item -287's established true-negative baseline), 0 fires on
     every sibling guard (no regression), `hangarbay-entry` n=33 (positive control). Confirmation
-    soak queued: `scratch/agent/soak_queue/s467_nodelisthead_confirm.sh`.
-    **Next candidate, not yet examined** (from s465's scan, ranked by concentration): the more
-    scattered buckets `hi16=0x8013,offset=0x7CE4` (45 sites, 9 files), `hi16=0x8013,offset=-0x70F8`
-    (31, `funcs_6.c` only), `hi16=0x8012,offset=-0x5BBC` (30, 4 files), `hi16=0x8013,offset=-0x7104`
-    (29, `funcs_6.c` only), `hi16=0x8011,offset=-0x35E0` (23, 9 files), `hi16=0x8013,offset=0xB50`
-    (21, 11 files). None are as tightly concentrated in the `funcs_3.c`/`funcs_4.c` lineage core as
-    items -299/-300 were, so budget extra time for shape classification before assuming a single
-    guard pattern applies.
+    soak queued: `scratch/agent/soak_queue/s467_nodelisthead_confirm.sh` — RUN s468, 2nd independent
+    confirmation: rc=0, 345s, 0 `[CRASH]`, 0 fires on both new guards + every sibling, `hangarbay-
+    entry` n=31. Next-candidate pointer superseded by items -301/-302 above (s468).
 
 -299. **(s465-467) M3 idiom-class audit: `DL_BUFFER_POOL_GUARD`, global `0x801163FC`
     (89 bytes past the `0x801163B0` free-list-cache-head global), `funcs_3.c`/`funcs_4.c`
