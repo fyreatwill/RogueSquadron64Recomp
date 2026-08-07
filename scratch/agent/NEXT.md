@@ -1,58 +1,81 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: songtempo-table-guard-29c0
+HYPOTHESIS-ID: dl-list-append-5824-noncanonical
 
-## s461 was a MAINTENANCE iteration (Step 0 triggered) — no experiment ran
+## s462 CLOSED item -292 (`SONGTEMPO_TABLE_GUARD`, 43/43 sites) — the last `stepActiveSongTracks`
+slice (12 sites) built/verified/soaked clean. Full derivation: `PORTING-STATE.md` Session 462,
+`docs/CURRENT-TRUTH.md` item -292. Confirmation soak queued:
+`scratch/agent/soak_queue/s462_stepactivesongtracks_confirm.sh`.
 
-`docs/CURRENT-TRUTH.md` was 62193 bytes (>60000). Compacted to 44423 bytes (713 -> 512 lines, net
--201 lines): migrated the full s454-460 session narrative (items -291/-292/-296) to
-`docs/PROJECT-OVERVIEW.md` §17, migrated item -290's writeup to §16, collapsed CURRENT-TRUTH.md's
--293/-294/-295/-297 entries into one range pointer, refreshed stale headline/tally lines. Also
-folded in the queued `s460_advancesongregion_confirm` soak result (rc=0, 346s, clean — 2nd
-independent confirmation of s460's `advanceSongRegion` fix). No code changed. Full writeup:
-`PORTING-STATE.md` Session 461.
+**No M3 idiom-class-audit thread is currently open.** Per the USER DIRECTIVE priority order
+(`docs/CURRENT-TRUTH.md`), the next work unit is a NEW idiom-class audit — competing options below,
+pick the first by default unless Step 0 or a fresher soak result changes the picture.
 
-## Priority 1 (this iteration): finish item -292 — `stepActiveSongTracks` (12 sites, the LAST
-remaining reader function)
+## Priority 1 (this iteration, default): open the `~111 non-canonical -0x5824` idiom-class audit
 
-Once this is done, item -292 CLOSES at 43/43 sites and this whole idiom-class audit is complete.
-Unchanged from the s460 handoff (nothing about the work plan changed this session, only the docs
-housekeeping around it):
+Background: item -291 (`DL_LIST_APPEND_GUARD`, CLOSED s456) swept 57 **canonical** `-0x5824($reg)`
+sites — a `lui`+`lw` pair with no intervening instructions, reg-to-reg — reaching global
+`0x8011A7DC`. When that item closed, the s454/456 scan also flagged ~111 **non-canonical** sites
+reaching the SAME global through the same `-0x5824` offset but via a non-adjacent load/deref pair
+(intervening code between the `lui` and the `lw`, or a different register chain) — these were
+explicitly out of scope for item -291's regex-based scan and have never been enumerated or
+assessed. This is a fresh idiom-class candidate, not a continuation of a closed item.
 
-- Location: `stepActiveSongTracks` in `N64Recomp/RecompiledFuncs/funcs_25.c` — the largest of the
-  6 reader functions (~744 lines). Find its start with:
-  `grep -n "RECOMP_FUNC void stepActiveSongTracks" ~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_25.c`
-- **Read the whole function body first** — do NOT assume a uniform template. Specifically check
-  for the recompiler's cross-function shared-tail-merge behavior (seen elsewhere as
-  `lvj_checkComplexObjectives`/`audioCompandS16`/`__OSGlobalIntMask`, CLAUDE.md) by comparing the
-  prologue's stack-frame size against what the apparent epilogue(s) pop — `advanceSongRegion`
-  turned out NOT to need this caution (ordinary single entry/exit) despite being flagged the same
-  way, so don't assume `stepActiveSongTracks` is clean just because its sibling was; verify it
-  directly.
-- Enumerate all 12 `0x29C0(` sites with a standalone Python scan (same method as every prior
-  slice — extract the function body via regex between `RECOMP_FUNC void stepActiveSongTracks` and
-  the next `RECOMP_FUNC`, then regex-match the 6-line `lui $reg,0x8015 / lw $reg,0x29C0($reg)`
-  pattern), confirm each site's raw text block is tree-wide-unique (`text.count(block) == 1`)
-  BEFORE touching `fixup_game_funcs.py`.
-- For each site, derive the bail target by reading the surrounding control flow: if a natural
-  "skip this unit of work" idiom already exists nearby (a null-check, a loop's own continue/exit
-  label), reuse it exactly — this has held for every site in every function so far. Only fall back
-  to duplicating the real epilogue for a site that loads BEFORE the prologue runs (stack-neutral)
-  or is genuinely past all loops with no other reachable label.
-- Add the new call to the existing `_patch_songtempo_reader(...)` helper in
-  `fixup_game_funcs.py` (already defined, reused by every slice since s457/s458/s460) — do not
-  duplicate the helper.
-- Standard pipeline: verify anchors → `make_elf.py` → delete stale `funcs_*.c` (Python
-  `os.remove`/glob, sandbox-safe — `rm -f RecompiledFuncs/funcs_*.c` gets denied by the sandbox's
-  glob-in-write-op restriction) → `N64Recomp` → `fixup_game_funcs.py` (audit report count against
-  a direct grep of `SONGTEMPO_TABLE_GUARD site=` — expect 43 total) → `cmake --build` (background,
-  ~2 min) → `strings` sanity (expect 43 distinct format strings) → live-verify (`tools/probe.sh`,
-  full 300s/250s-keys schedule, ALL passive guard env vars armed) → queue confirmation soak →
-  exit contract.
-- **Once this closes item -292**, the next M3 idiom-class audit candidate already flagged and
-  NOT started: the ~111 non-canonical `-0x5824` sites (same global as the closed item -291,
-  reached through a non-adjacent load/deref pair with intervening code) — see
-  `docs/PROJECT-OVERVIEW.md` §16 for what's already ruled out.
+**Before writing any patch code**, this iteration should be primarily a SCOPING pass:
+1. Grep-enumerate: find every `-0x5824(` occurrence across `RecompiledFuncs/funcs_*.c` (all
+   files, not just `funcs_3.c`/`funcs_4.c` — item -291's canonical sweep was scoped to those two
+   files only, so this non-canonical population may span more).
+   `grep -rn -- '-0x5824(' ~/Documents/Tools/N64Recomp/RecompiledFuncs/*.c | wc -l` first as a
+   sanity check against the "~111" estimate from s454/456 (that number was itself a rough count,
+   not verified) — if it's wildly different, re-derive before proceeding.
+2. Classify: for a sample of ~10-15 sites spread across different functions, read the surrounding
+   code to confirm they really do reach `0x8011A7DC` (not a coincidental same-offset access to an
+   unrelated struct field — offsets this small/common can collide across unrelated types, per the
+   CURRENT-TRUTH "confirmed non-issues" note about small/ubiquitous offsets). If a meaningful
+   fraction don't actually resolve to the same global, this may not be a coherent idiom class at
+   all — say so and pick a different candidate (see Priority 2 below) rather than forcing a weak
+   fit.
+3. If confirmed coherent: enumerate the full site list per-function (same standalone Python
+   regex-scan method as every closed item, `text.count(block) == 1` uniqueness check before
+   touching `fixup_game_funcs.py`), derive per-site bail targets by reading each site's local
+   control flow (reuse existing nearby skip idioms, per the established methodology — do not
+   templatize blindly across functions with different shapes).
+4. This will likely be MULTIPLE work units (111+ sites across possibly many functions) — do not
+   try to fix all of them in one iteration. Scope this iteration to: confirm the class is real,
+   enumerate it exactly, and fix the first 1-2 functions' worth of sites (mirroring how item -292
+   was worked in 6 incremental slices, one reader function per iteration).
+
+## Priority 2 (fallback, if Priority 1's scoping pass finds the class isn't coherent)
+
+Re-read `docs/PROJECT-OVERVIEW.md` §16-§17 for other flagged-but-not-started leads from the
+`static5-rename-orphan-sweep` and `SONGTEMPO_TABLE_GUARD` arcs. `BREADCRUMB7` (diagnostic, lowest
+priority per item -282..-289's own note) is the only other explicitly named leftover; there may be
+others worth a fresh frequency scan (the s389-397 codebase-wide idiom-frequency method, per
+`docs/PROJECT-OVERVIEW.md` §14, closed for lack of a hit at the time but not necessarily exhausted
+now that 3 more idiom classes have been swept since).
+
+## Discriminating instrument still live: watch for `sibling-ptr-write-guard` fires in
+`submitSceneNodeRender`
+
+10 of item -296's 119 `SIBLING_PTR_WRITE_GUARD` sites are in `submitSceneNodeRender`, the same
+function named in a still-open "wait-for-recurrence breadcrumb" (2 independent single-occurrence
+crashes, different `last-guest-pc` each time, not confirmed as one bug). 0 fires across every soak
+so far, including s462's. If any future soak shows a `sibling-ptr-write-guard` fire specifically at
+one of those 10 sites, that's new evidence worth immediate follow-up — the one exception to "don't
+chase breadcrumbs."
+
+## Incidental observation, not chased (s462)
+
+s462's live-verify saw one fire of the already-catalogued, unconditional `[hangarmenu-a0-guard]`
+diagnostic (item -265, s428) — pre-existing, unrelated to the songtempo work, matches its own
+documented "wild but harmless" firing pattern from its original s428 soak. Do not chase; it's not
+in scope for the current priority (M3 idiom-class audits only, no reactive single-crash chases).
+
+## Confirmed non-issues, do not re-investigate
+
+`-0x25C0($s0)` (56 sites) and `-0x76E0($s0)` (46 sites) are compile-time-constant-based
+counter/scalar accesses, not pointer dereferences. Small/ubiquitous offsets (`0x0`-`0x20`...)
+match hundreds of unrelated functions — too broad to be a distinct idiom class.
 
 ## Sandbox notes (unchanged, still true)
 
@@ -66,23 +89,20 @@ for f in glob.glob(os.path.expanduser('~/Documents/Tools/N64Recomp/RecompiledFun
 "
 ```
 Compound `cd X && command > file` Bash calls get denied. Prefer absolute paths passed directly to
-the tool instead of `cd &&`.
+the tool instead of `cd &&`. Piping/chaining `python3 fixup_game_funcs.py > file 2>&1` in a
+compound command with `cd` also gets denied — invoke the script with its absolute path directly
+(no `cd` needed, it resolves `RecompiledFuncs/` relative to its own `__file__`), and if you need
+the output captured, redirect to a path under one of the three allowed working directories, as a
+STANDALONE command (not chained with `&&`/`;` to another operation) — compound commands mixing
+`cd`, redirection, and a second command each add their own approval prompt.
 
-## Discriminating instrument still live: watch for `sibling-ptr-write-guard` fires in
-`submitSceneNodeRender`
-
-10 of item -296's 119 `SIBLING_PTR_WRITE_GUARD` sites are in `submitSceneNodeRender`, the same
-function named in a still-open "wait-for-recurrence breadcrumb" (2 independent single-occurrence
-crashes in its call subtree, different `last-guest-pc` each time, not confirmed as one bug). 0
-fires across every soak so far. If any future soak shows a `sibling-ptr-write-guard` fire
-specifically at one of those 10 sites, that's new evidence worth immediate follow-up — the one
-exception to "don't chase breadcrumbs."
-
-## Confirmed non-issues, do not re-investigate
-
-`-0x25C0($s0)` (56 sites) and `-0x76E0($s0)` (46 sites) are compile-time-constant-based
-counter/scalar accesses, not pointer dereferences. Small/ubiquitous offsets (`0x0`-`0x20`...)
-match hundreds of unrelated functions — too broad to be a distinct idiom class.
+**Regen ordering, single most consequential ordering mistake in this session:** run
+`N64Recomp` only AFTER deleting the stale `RecompiledFuncs/funcs_*.c` files, not before — item -20
+says `N64Recomp` skips rewriting any file that already exists on disk, so running it first (against
+files a previous fixup pass already patched) silently no-ops and your new patch never lands. If
+`grep -n "RS64_FIXUP_APPLIED" RecompiledFuncs/funcs_25.c` (or whichever file you're touching)
+already shows a hit BEFORE you've run `fixup_game_funcs.py` this session, the files are stale from
+a previous run — delete and regenerate before doing anything else.
 
 ## Process notes
 
@@ -90,12 +110,12 @@ Before starting: `ps aux | grep loop.sh` and `tail -20 scratch/agent/loop.log`, 
 
 `cmake --build` takes ~2 minutes — always launch it as a background Bash command
 (`run_in_background: true`) and continue other prep work, or wait for the notification, rather
-than foreground-polling. Same for `tools/probe.sh` live-verify runs (300s+): launch backgrounded.
-The Stop hook fires on every turn-end while `scratch/agent/STATUS` is `WORKING` regardless of any
-scheduled wakeup — ending the turn to wait for a background task does NOT work in this harness.
-Instead, block synchronously in the SAME turn with a foreground Bash call polling for the
-background process's exit (e.g. `while kill -0 $PID 2>/dev/null; do sleep 5; done`) — foreground
-`sleep` alone is blocked, but a poll loop containing `sleep` between checks is allowed.
+than foreground-polling. Same for `tools/probe.sh` live-verify runs (300s+): launch backgrounded,
+then use `TaskOutput` (or just let the `<task-notification>` land) to retrieve the result — do NOT
+write a manual `while kill -0 $PID` poll loop babysitting a `run_in_background: true` task; the
+harness already delivers exactly one completion notification for it. A manual poll loop is only
+useful for waiting on a process you did NOT launch via `run_in_background` (e.g. one spawned by a
+detached `&` inside a script).
 
 If a future iteration opens with an immediate 429, that's the account's monthly Claude spend limit
 recurring, not a new bug to chase.

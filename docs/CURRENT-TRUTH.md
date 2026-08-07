@@ -22,16 +22,18 @@ Priority order for upcoming iterations, set after the 300-session review:
    thread (18/18 pairs) and its s438-445 BREADCRUMB18/free-list-guard follow-on (items -261..-280,
    -263); that follow-on's own s445-451 fallout, the `static5-rename-orphan-sweep` (items -282..-290
    — s449 confirmed the whole guard idiom class is correct hardening, not a live crash source); item
-   -291 (`DL_LIST_APPEND_GUARD`, 57 sites, s454/456) and item -296 (`SIBLING_PTR_WRITE_GUARD`, 119
-   sites, s459). **Currently open, standing top-priority work unit: item -292**
-   (`SONGTEMPO_TABLE_GUARD`, MusyX song-track pointer, 31/43 sites fixed as of s460 — see below).
+   -291 (`DL_LIST_APPEND_GUARD`, 57 sites, s454/456); item -296 (`SIBLING_PTR_WRITE_GUARD`, 119
+   sites, s459); and item -292 (`SONGTEMPO_TABLE_GUARD`, 43/43 sites across 6 reader functions,
+   s454-462). **No open M3 idiom-class-audit thread currently** — next candidate (not started): the
+   ~111 non-canonical `-0x5824` sites (same global as the closed item -291, non-adjacent load/deref
+   pair) — see below.
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
 below and `docs/PROJECT-OVERVIEW.md` §13. M4's largest item (-249) and its `0x800290d4` follow-on
 (-259) are both CLOSED — see those items below for status.
 
-## Current truth (established by session 295; unchanged, reviewed through s460)
+## Current truth (established by session 295; unchanged, reviewed through s462)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -163,45 +165,42 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Highest number allocated so far is -297 (s454-460 arc, compacted below); items are never
-renumbered when compacted into a range pointer. Item -292 (12 sites remain in
-`stepActiveSongTracks`, `songtempo-table-guard-29c0`) is the standing open work unit. The next NEW
-item takes -298.
+oldest). Highest number allocated so far is -297 (s454-462 arc, compacted below); items are never
+renumbered when compacted into a range pointer. No item is currently the standing open work unit —
+the next M3 idiom-class-audit candidate (~111 non-canonical `-0x5824` sites) is not yet started.
+The next NEW item takes -298.
 
--291..-297. **(s454-460) Two M3 idiom-class audits found via an s454 concurrent-process
-    collision.** Item -291 (`DL_LIST_APPEND_GUARD`, `-0x5824($reg)` → global `0x8011A7DC`, 57
-    sites, `funcs_3.c`/`funcs_4.c`) found s454, CLOSED s456: 57/57 sites built/verified/soaked, 0
-    crash, 0 fires across a full 300s schedule (`hangarbay-entry` n=3000); its queued confirm soak
-    later crashed on an unrelated already-catalogued signature. Item -296
-    (`SIBLING_PTR_WRITE_GUARD`, `-0x23A8($reg)` → sibling global `0x8011DC58`, 119 sites, same two
-    files) found AND CLOSED same session s459 (the rule-8 mandatory pivot off item -292 below,
-    after 3 straight iterations without closing it): 119/119 sites, 0 `[CRASH]`, 0 fires across a
-    full schedule; 10 of its 119 sites sit in `submitSceneNodeRender`, now a discriminating
-    instrument for that function's still-open wait-for-recurrence breadcrumb (2 independent
-    single-occurrence crashes, different `last-guest-pc` each time, not confirmed as one bug) — 0
-    fires there so far. Item -292 itself
-    (below) advanced from 4/43 to 31/43 sites across s454/s457/s458/s460 in this same window. Full
-    session-by-session detail (per-site bail derivations, scan methodology, every soak result):
-    `docs/PROJECT-OVERVIEW.md` §17.
+-291..-297. **(s454-462) Three M3 idiom-class audits found via an s454 concurrent-process
+    collision, all now CLOSED.** Item -291 (`DL_LIST_APPEND_GUARD`, `-0x5824($reg)` → global
+    `0x8011A7DC`, 57 sites, `funcs_3.c`/`funcs_4.c`) found s454, CLOSED s456: 57/57 sites
+    built/verified/soaked, 0 crash, 0 fires across a full 300s schedule (`hangarbay-entry`
+    n=3000); its queued confirm soak later crashed on an unrelated already-catalogued signature.
+    Item -296 (`SIBLING_PTR_WRITE_GUARD`, `-0x23A8($reg)` → sibling global `0x8011DC58`, 119
+    sites, same two files) found AND CLOSED same session s459 (the rule-8 mandatory pivot off item
+    -292, after 3 straight iterations without closing it): 119/119 sites, 0 `[CRASH]`, 0 fires
+    across a full schedule; 10 of its 119 sites sit in `submitSceneNodeRender`, now a
+    discriminating instrument for that function's still-open wait-for-recurrence breadcrumb (2
+    independent single-occurrence crashes, different `last-guest-pc` each time, not confirmed as
+    one bug) — 0 fires there so far. Item -292 (`SONGTEMPO_TABLE_GUARD`, 43 sites across 6 reader
+    functions, `funcs_25.c`) advanced from 4/43 to 43/43 across s454/s457/s458/s460/s462 and
+    CLOSED s462 — see its own entry below. Full session-by-session detail (per-site bail
+    derivations, scan methodology, every soak result): `docs/PROJECT-OVERVIEW.md` §17.
 
--292. **(s455, ongoing) M3 idiom-class audit: `SONGTEMPO_TABLE_GUARD`, `0x29C0($reg)` → global
-    `0x801529C0`, the MusyX song-sequencer's "current song track" base pointer, `funcs_25.c`. 43
-    sites total, 31/43 fixed as of s460 — OPEN, standing top-priority work unit.** Same
-    uninitialized/stale-global-reload shape as the closed `-0x25A4` family: only one site
-    (`tickAllActiveSongs`) writes the global; 6 reader functions (43 sites) only ever read it with
-    no guarantee of prior initialization. **Fixed and soak-confirmed:** `updateSongTempoTickRate`
-    (4, s454), `tickScheduledSongEvents` (5, s457), `stepSongPitchBendLanes` (5, s457),
-    `stepSongModulationLanes` (5, s458), `advanceSongRegion` (12, s460) = 31/43. Every confirmation
-    soak so far has delivered the same null result (0 guard fires) matching item -287's
-    established baseline for this guard-idiom class — not an open question. **Remaining:**
-    `stepActiveSongTracks` (12 sites, ~744 lines, the largest reader function) — read its whole
-    body before patching (not a blind template copy); may involve the recompiler's cross-function
-    shared-tail-merge quirk (`lvj_checkComplexObjectives`/`audioCompandS16`/`__OSGlobalIntMask`)
-    even though the same risk did not materialize in `advanceSongRegion`. Once fixed, item -292
-    CLOSES at 43/43 — `scratch/agent/NEXT.md` carries the exact next-step commands. Per-site bail
-    method and full session detail: `docs/PROJECT-OVERVIEW.md` §17. NOT in scope for this item,
-    next idiom-class-audit candidate once it closes: ~111 non-canonical `-0x5824` sites (same
-    global as the closed item -291, non-adjacent load/deref pair).
+-292. **(s455-462) M3 idiom-class audit: `SONGTEMPO_TABLE_GUARD`, `0x29C0($reg)` → global
+    `0x801529C0`, the MusyX song-sequencer's "current song track" base pointer, `funcs_25.c`.
+    CLOSED s462, 43/43 sites.** Same uninitialized/stale-global-reload shape as the closed
+    `-0x25A4` family: only one site (`tickAllActiveSongs`) writes the global; 6 reader functions
+    (43 sites) only ever read it with no guarantee of prior initialization. Fixed and
+    soak-confirmed across all 6: `updateSongTempoTickRate` (4, s454), `tickScheduledSongEvents`
+    (5, s457), `stepSongPitchBendLanes` (5, s457), `stepSongModulationLanes` (5, s458),
+    `advanceSongRegion` (12, s460), `stepActiveSongTracks` (12, s462, the largest reader function
+    at ~744 lines — confirmed NOT affected by the recompiler's cross-function shared-tail-merge
+    quirk despite being flagged the same way). Every soak across the whole arc (s454-462)
+    delivered the same null result: 0 guard fires, matching item -287's established baseline for
+    this guard-idiom class. Per-site bail method and full session detail:
+    `docs/PROJECT-OVERVIEW.md` §17. Next idiom-class-audit candidate, not yet started: ~111
+    non-canonical `-0x5824` sites (same global as the closed item -291, non-adjacent load/deref
+    pair).
 
 -290. **(s453) `S392_H3A`/`S393_H3B` (50 sites, items -282..-289's own tracked remainder):
     INVESTIGATED AND CLOSED, no code change — all 50 sites already covered by earlier guard

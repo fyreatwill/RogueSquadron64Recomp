@@ -38400,3 +38400,87 @@ reader function) per `scratch/agent/NEXT.md` — this maintenance pass did not t
 **Outcome: ADVANCED** (maintenance iteration, >=200-net-line shrink of CURRENT-TRUTH.md per the
 Step 0 rule — no experiment was run, per the "do NOT run experiments in a maintenance iteration"
 instruction).
+
+## Session 462 (2026-08-07): item -292 CLOSES at 43/43 — `stepActiveSongTracks` (12 sites), the
+last remaining `SONGTEMPO_TABLE_GUARD` reader function
+
+`docs/CURRENT-TRUTH.md` was 44423 bytes (under the 60000-byte Step-0 threshold), so this iteration
+ran the standing work unit: item -292's final slice.
+
+**Read the whole function body first**, per NEXT.md's caution about the recompiler's cross-function
+shared-tail-merge quirk. Confirmed NOT present in `stepActiveSongTracks` (`funcs_25.c` 1913-2656,
+744 lines): a single prologue (`$sp -= 0x48`, saves `$ra`/`$s0`-`$s5` at fixed offsets) and a single
+epilogue (exactly one `jr $ra` in the whole body, immediately preceded by the matching restores) —
+same as `advanceSongRegion` turned out to be, despite both being flagged the same way.
+
+Standalone Python scan (regex over the extracted function body, same method as every prior slice)
+found exactly 12 `0x29C0($reg)` sites, matching NEXT.md's count; a tree-wide `text.count(block)`
+check confirmed every site's raw 4-line source block is unique across all of `RecompiledFuncs/`
+before touching `fixup_game_funcs.py`.
+
+Shape: an outer per-channel loop (`$s1`/r17, stride 0x24, bound 0x40 tracked in `$s4`/r20, head
+`L_80094988`, advance point `L_80094D84`, bound check `L_80094D7C`) wrapping a per-node "message"
+processing pass that walks a byte-stepped cursor field at the channel's own `0x570` offset (entry
+`L_800949C4`, per-node finalize/advance `L_80094D48`, recheck-cursor `L_80094D60`, channel-done
+`L_80094D78`).
+
+Per-site bail derivation (all reuse an existing label already on the function's own control-flow
+graph, no new labels added):
+- **ast1** (0x8009498C, loop head): the function's OWN very next instruction is a
+  `beql $v0,$zero,L_80094D7C` with `$s4 += 1` in its delay slot (the source's own "channel not
+  active" skip) — copied verbatim.
+- **ast2** (0x800949C8, `L_800949C4`, channel entry after the active-check passes): recomputes the
+  same slot pointer and immediately dereferences it with no check first — bails to `L_80094D78`
+  (the function's own "channel processing finished" label, reached elsewhere via an identical
+  zero-check on the same cursor field a few instructions earlier), letting that label's own logic
+  perform the `$s4 += 1` rather than duplicating it.
+- **ast3-ast9** (0x80094B20, 0x80094B48, 0x80094BC0, 0x80094C18, 0x80094C38, 0x80094C58,
+  0x80094CB4): all inside one contiguous "attach a queued message to this node" block
+  (0x80094B14-0x80094CE4) whose every exit — its own early-out (an unrelated sibling free-list-head
+  check at a different global, `0x29C4`, branches straight to `L_80094C40` when empty) and both of
+  its completed-processing paths — converges on `L_80094D48`; all seven reuse that convergence
+  target, abandoning only this node's message-attach work.
+- **ast10** (0x80094D1C, `L_80094D18`, the sibling "detach from list head" case): the reload is used
+  purely as a write target (`sw $v0,0xE78($v1)`); its immediate fallthrough, `L_80094D28`, is
+  provably independent of it (reloads a different, unguarded global) — bails there, skipping only
+  the single wild store.
+- **ast11** (0x80094D4C, `L_80094D48`, the cursor-advance step): its own immediate fallthrough,
+  `L_80094D60`, independently reloads and re-derives the identical pointer to recheck the cursor —
+  bails there rather than trusting this reload's result, letting that site's own independent guard
+  (ast12) handle safety.
+- **ast12** (0x80094D64, `L_80094D60`, the cursor recheck): can't safely evaluate the
+  loop-continuation condition with a bad reload, so the bail picks the SAFER of its two natural
+  outcomes — not looping back into more per-node derefs — falling to `L_80094D78`, the same target
+  the check's own "cursor is zero" case reaches.
+
+Standard pipeline, all clean: `make_elf.py` → deleted stale `funcs_*.c` (Python `os.remove`, per
+the sandbox note) → `N64Recomp` → `fixup_game_funcs.py` (no `SystemExit`, report confirmed
+`stepActiveSongTracks SONGTEMPO_TABLE_GUARD patched x12`, tree-wide grep confirmed 43/43 total
+`SONGTEMPO_TABLE_GUARD site=` lines) → `cmake --build` (clean, only pre-existing unrelated
+`-Wpointer-sign` warnings) → `strings` sanity (43 distinct `songtempo-table-guard` site tags in the
+built binary) → live-verify.
+
+**Live-verify** (`tools/probe.sh`, full 300s/`PROBE_KEYS_FROM_PHASE=1` schedule, every passive
+guard/breadcrumb env var armed): 0 `[CRASH]`, 0 `songtempo-table-guard` fires (matches the guard
+family's established baseline across all 5 prior confirmations — s454/457/458/460), 0
+`[missing-func]`, `hangarbay-entry` reached n=35 (this run's `PROBE_KEYS` schedule is the s460-style
+one, not the default `"3:start 7:start"` — a lower n here is a schedule artifact, not a regression
+signal, per the s448 precedent). One incidental fire of the already-catalogued, unconditional
+`[hangarmenu-a0-guard]` diagnostic (item -265, s428) — pre-existing, unrelated to this session's
+patch, not chased (matches its own documented "wild but harmless" firing pattern from s428's own
+soak). Confirmation soak queued: `scratch/agent/soak_queue/s462_stepactivesongtracks_confirm.sh`.
+
+**Item -292 CLOSES: 43/43 `SONGTEMPO_TABLE_GUARD` sites fixed across 6 reader functions**
+(`updateSongTempoTickRate` 4, `tickScheduledSongEvents` 5, `stepSongPitchBendLanes` 5,
+`stepSongModulationLanes` 5, `advanceSongRegion` 12, `stepActiveSongTracks` 12), plus the single
+writer site (`tickAllActiveSongs`) left untouched throughout. Every soak across the whole arc
+(s454-462) has returned the same null result: 0 fires, matching the same
+uninitialized/stale-global-reload shape as the earlier closed `-0x25A4` family — confirmed correct
+hardening, not a live crash source. This closes the last M3 idiom-class audit item queued under the
+USER DIRECTIVE's item-3 priority; the next candidate (not yet started) is the ~111 non-canonical
+`-0x5824` sites flagged when item -291 closed (same global as that closed item, reached through a
+non-adjacent load/deref pair with intervening code, per `docs/PROJECT-OVERVIEW.md` §16).
+
+**Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed — the last 12
+sites of the `SONGTEMPO_TABLE_GUARD` idiom-class audit, clean pipeline throughout, 0 fires on the
+guard itself, item -292 fully CLOSED).
