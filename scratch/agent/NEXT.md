@@ -1,79 +1,74 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: item-263-updatehangarbayscene-localization
+HYPOTHESIS-ID: item-277-freelistnextguard-confirm
 
-## What changed session s440
+## What changed session s441
 
-Consumed the queued `s439_breadcrumb18_confirm` soak first (SOAK-RESULTS `20260807-042458`, rc=0):
-a 2nd consecutive clean run for BREADCRUMB18 (0 `[CRASH]`, 0 guard fires), breaking the previously-
-strict alternating clean/crash pattern since s434. Its 7503s wall-clock is most likely a macOS sleep
-event pausing the loop mid-run (single-source, not confirmed, doesn't change the verdict — see
-PORTING-STATE Session 440).
+Read s440's queued `s440_hangarbayentry_confirm` soak result (SOAK-RESULTS `20260807-064649`,
+rc=1) — this was the mandatory discriminating probe for `item-263-updatehangarbayscene-localization`
+after 3 non-discriminating iterations. **It decisively did NOT localize inside
+`updateHangarBayScene`**: item -276's own entry counter logged **zero calls** before the crash, and
+the backtrace never enters that function at all (`reserveAndEmitDLEntry <- submitSceneNodeRender <-
+... <- runHangarSelectionFrame`, a sibling rendering path). Root-caused the actual mechanism at the
+instruction level: an unguarded free-list "next"-pointer write in `reserveAndEmitDLEntry`
+(`0x8000CE40`) — the value `GENERIC_CACHE_GUARD` (s434) reads back from a validated head pointer is
+itself never validated before being used as a write address 4 bytes later. Scoped-scanned all 107
+`GENERIC_CACHE_GUARD` sites: 105 share this exact shape (2 already covered by pre-existing bespoke
+`CACHE2_GUARD`/`CACHE3_GUARD`). Patched all 105 with `FREELIST_NEXT_GUARD`
+(`N64Recomp/fixup_game_funcs.py`). Regenerated/rebuilt clean, 0 regression to `GENERIC_CACHE_GUARD`
+(107)/`CACHE_HEAD_A1_GUARD` (7)/`BREADCRUMB18`/`HANGARBAY_ENTRY`.
 
-Rather than spend a 3rd identical confirm cycle, added a genuinely new instrument: an entry counter
-(`ROGUESQ_LOG_HANGARBAY_ENTRY`) at the top of `updateHangarBayScene`'s body
-(`N64Recomp/fixup_game_funcs.py`) — the first same-run positive control for the BREADCRUMB18 thread.
-Regen/build hit and fixed a real bug (`funcs_28.c` needed `#include <stdio.h>` added, first time that
-file uses `fprintf`). Live-verified: **0 crash, 0 guard fires, 126 frames/298.0s — but ~2900+ calls to
-`updateHangarBayScene` logged in the single run.** This is the first confirmation the target function
-is heavily executed during exactly the schedule that keeps not reproducing item -263, which
-meaningfully de-risks (not eliminates) the concern that the crash's mechanism might not pass through
-breadcrumbed code at all.
+Live-verify crashed again but on a **completely different, previously-uncatalogued** signature: a
+SIGSEGV inside the native thread-scheduler/semaphore runtime (`moodycamel::LightweightSemaphore::
+tryWait <- wait_for_resumed <- ... <- idle_thread_handle`), `si_addr=0x10fc0a00000060e3` (wild 64-bit
+HOST pointer, not the guest near-zero family), no game-code frames. Filed as item -278 — single
+occurrence, not yet investigated. 0 fires across all 3 free-list guard families this run (a null
+result on the targeted mechanism, not a regression — schedule reached `[hangarbay-entry] n=1500+`
+before this unrelated crash hit).
 
-**Instrument caveat**: the counter's `ra=`/`ctx->r31` field is always `0x00000000` — the call site
-(`funcs_28.c:5397`) is a direct C call, not `jalr`, so the recompiler never populates `ctx->r31` there.
-Don't read that field as a real return address if it shows up in a future log.
-
-Confirmation soak queued: `scratch/agent/soak_queue/s440_hangarbayentry_confirm.sh` (identical
-schedule, all 4 diagnostics armed including the new entry counter). Full detail: `docs/CURRENT-TRUTH.md`
-item -276, `PORTING-STATE` Session 440.
-
-## Budget status — read this before choosing an approach
-
-This is the **3rd consecutive iteration** on hypothesis-id `item-263-updatehangarbayscene-localization`
-counting s439+s440 as 2 prior non-discriminating iterations (both clean, no fault landed inside the
-breadcrumbed body yet). **Per iron rule 8, if `s440_hangarbayentry_confirm`'s result (see step 1 below)
-is ALSO clean with no new discriminating information, this iteration must pivot** — do not queue a 4th
-identical confirm cycle. Candidates for a pivot, in order of expected value:
-
-1. **ASAN-style shadow/canary check.** Rather than more breadcrumbs (a purely reactive per-instruction
-   trace), instrument the SUSPECTED corruption target directly. Item -263's crash signature is the
-   same wild near-zero-pointer family as item -261; if there's a specific struct/global whose corruption
-   is suspected (check PROJECT-OVERVIEW §16 for the exact crash address pattern across all 5
-   occurrences), add a periodic canary/checksum read on that memory region and log the FIRST frame it
-   goes bad — this could localize the corrupting WRITE instead of the later faulting READ, which is
-   what 18 breadcrumbs have been chasing without success.
-2. **A different M3 idiom-class audit**, per the USER DIRECTIVE's standing priority (systematic
-   idiom-class audits over reactive single-crash chases). Item -263 has consumed 5+ sessions on one
-   crash; if the ASAN/canary approach doesn't have an obvious next step, park item -263 as
-   "positive-control-strengthened, not yet root-caused" and pick a fresh idiom class to scan for.
-3. Re-read `docs/PROJECT-OVERVIEW.md` §16 end-to-end for anything about the 5 occurrences' exact crash
-   addresses/registers that hasn't been cross-compared yet — a discriminating pattern might already be
-   sitting in already-collected data (iron rule: capture once, analyze many).
+`item-263-updatehangarbayscene-localization` is now PARKED (see `docs/CURRENT-TRUTH.md` item -263):
+a full 5-for-5 track record of every occurrence either freezing at a breadcrumb-coverage gap or,
+with full coverage, never entering the function — the simplest explanation is it was never an
+independent bug, just the `0x801163B0` free-list family (items -270/-272/-277) recurring nearby in
+the call graph. Full detail: `docs/CURRENT-TRUTH.md` items -277/-278/-263, `PORTING-STATE` Session
+441.
 
 ## The work unit — read the queued soak result, then branch
 
-**Step 1: check `scratch/agent/SOAK-RESULTS.md` for the `s440_hangarbayentry_confirm` line.** Three
-outcomes:
+**Step 1: check `scratch/agent/SOAK-RESULTS.md` for the `s441_freelistnext_confirm` line.**
+The soak (`scratch/agent/soak_queue/s441_freelistnext_confirm.sh`) is self-contained, arms all 4
+diagnostic families (`GENERIC_CACHE_GUARD`, `CACHE_HEAD_A1_GUARD`, `FREELIST_NEXT_GUARD`,
+`HANGARBAY_ENTRY`), and doubles as a chance at a 2nd occurrence of item -278. Outcomes:
 
-1. **CRASHED with `last-guest-pc` INSIDE `updateHangarBayScene`'s own body** (an offset within
-   `funcs_28.c:10918-17722+`, not a caller's call site) — **this is the actual localization.** Read the
-   source at that address, classify against known idiom families (0x801163B0-family `GENERIC_CACHE_GUARD`,
-   `$a1`-sibling `CACHE_HEAD_A1_GUARD`, `-0x25A4` hangar-list, IEEE-754-as-pointer) before writing
-   anything blind. Check the entry-counter's `n=` value at crash time too — does the crash happen on a
-   suspiciously round or repeated `n` across occurrences (a state that only exists every Nth call)?
-2. **A guard fires** (`GENERIC_CACHE_GUARD`/`CACHE_HEAD_A1_GUARD`) — the still-missing positive control
-   for items -270/-272 (0 fires across 7+ combined observations). Confirm which guard, fold into ledger.
-3. **Clean a 3rd time** — per the Budget status section above, PIVOT this iteration. Do not queue a
-   4th confirm soak on the same hypothesis-id without an explicit pivot-preamble justification.
+1. **`[freelist-next-guard]` fires** — this is the still-missing positive control for the whole
+   `0x801163B0` free-list guard family (`GENERIC_CACHE_GUARD`/`CACHE_HEAD_A1_GUARD`/
+   `FREELIST_NEXT_GUARD` all currently have 0 same-run fires across every soak so far). Confirm
+   which site, fold into ledger — this closes the "does this guard mechanism even engage" doubt
+   that's been open since s434.
+2. **CRASHES again with the item -278 signature** (SIGSEGV, thread-scheduler/semaphore backtrace,
+   wild 64-bit host pointer) — a 2nd occurrence promotes item -278 from single-source lead to a real
+   thread. Read `PORTING-STATE` Session 441's full backtrace for the exact frames to compare against;
+   check whether `si_addr`/`x8`'s wild value repeats or differs (repeats would suggest a specific
+   corrupted static, differs would suggest a race/stack-corruption pattern instead).
+3. **CRASHES with the item -261/-263/-270/-272/-277 SIGBUS/near-zero-pointer signature** — check
+   `last-guest-pc` and the `[hangarbay-entry]`/`[freelist-next-guard]`/`[generic-cache-guard]`/
+   `[cache-head-a1-guard]` counters same-run. If `last-guest-pc` lands inside `updateHangarBayScene`'s
+   own body (`funcs_28.c:10918-17722`) for the FIRST time ever, that is the falsifying observation
+   that resurrects item -263 as independent — classify it against known idiom families before writing
+   anything.
+4. **Clean, full schedule, 0 fires everywhere** — 3rd clean-on-the-mechanism data point; note it and
+   move to a fresh work unit per the strategic priority (a new M3 idiom-class audit, or pick up item
+   -278 proactively with its own soak).
 
-**If SOAK-RESULTS doesn't yet have the `s440_hangarbayentry_confirm` line**: run it yourself in the
-foreground (same recipe as the script), OR treat outcome 3 above as already triggered and pivot.
+**If SOAK-RESULTS doesn't yet have the `s441_freelistnext_confirm` line**: run it yourself in the
+foreground, OR treat outcome 4 above as already triggered and pick a fresh work unit.
 
-Regen recipe (known-working s427-440): `make_elf.py` → delete `RecompiledFuncs/funcs_*.c` via the
-Python one-liner (NOT a shell glob) → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build . -j8`.
-Verify no regression by grepping the compiled `.c` output directly (fixup's own stdout is
-silent/idempotent on a 2nd run against already-patched files without a fresh `N64Recomp` pass first).
+Regen recipe (known-working s427-441): `cd rogue_squadron64 && python3 tools/make_elf.py` → delete
+`N64Recomp/RecompiledFuncs/funcs_*.c` via the Python one-liner (NOT a shell glob) → `cd N64Recomp &&
+./build/N64Recomp rogue_squadron.toml` → `python3 fixup_game_funcs.py` → `cd
+RogueSquadron64Recomp/build && cmake --build . -j8`. Verify no regression by grepping the compiled
+`.c` output directly (fixup's own stdout is silent/idempotent on a 2nd run against already-patched
+files without a fresh `N64Recomp` pass first).
 
 Live-verify command (exceeds the harness's 120s default Bash timeout, auto-backgrounds — launch it,
 then use `TaskOutput` with `block=true`, timeout ~330000ms):
@@ -81,7 +76,7 @@ then use `TaskOutput` with `block=true`, timeout ~330000ms):
 cd ~/Documents/Tools/RogueSquadron64Recomp/build && env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 \
     ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
     ROGUESQ_LOG_RUNNER=1 ROGUESQ_LOG_GENERIC_CACHE_GUARD=1 ROGUESQ_LOG_CACHE_HEAD_A1_GUARD=1 \
-    ROGUESQ_LOG_HANGARBAY_ENTRY=1 \
+    ROGUESQ_LOG_FREELIST_NEXT_GUARD=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 \
     PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
     PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" \
     zsh ../tools/probe.sh ../scratch/agent/soak_results/<name> 300 2
@@ -97,14 +92,16 @@ cd ~/Documents/Tools/RogueSquadron64Recomp/build && env ROGUESQ_LLE_FORCE=1 ROGU
   `funcs_*.c` before every regen (s436).
 - `fixup_game_funcs.py`'s stdout report is idempotent/silent for already-applied patches on a 2nd run
   without first deleting and re-running `N64Recomp` — grep the compiled `.c` output directly to verify
-  patch counts (s437, reconfirmed s439/s440).
+  patch counts (s437, reconfirmed s439/s440/s441).
 - A foreground probe.sh run at 300s exceeds the harness's 120s default Bash timeout and
-  auto-backgrounds; use `TaskOutput` with `block=true` and timeout ~330000ms (s437, s439, s440).
-- A file that has never used `fprintf`/`stderr` before needs its own `#include <stdio.h>` insertion in
-  the fixup patch (the same conditional-insert pattern other file-specific patches already use) — don't
-  assume every `RecompiledFuncs/*.c` file already has it (s440, `funcs_28.c`).
+  auto-backgrounds; use `TaskOutput` with `block=true` and timeout ~330000ms (s437, s439, s440, s441).
 - `N64Recomp/fixup_game_funcs.py` is untracked by git in that checkout by established, repeatedly-
-  confirmed pattern — no commit needed there, only in this repo (s439/s440 reconfirmed via `git status`).
-- Soak wall-clock can balloon far past its recipe's expected duration (7503s vs ~300s here) with no
-  process-level problem — check `run.log`'s own content (frame/submit-counter progression) before
-  assuming a hang; a real hang leaves the log stalled mid-progression, a sleep-paused run doesn't (s440).
+  confirmed pattern — no commit needed there, only in this repo (reconfirmed s441 via `git status`).
+- A regex-based patch matching against ALREADY-patched text (e.g. matching what an earlier patch in
+  the same script pass just inserted) works fine as long as the new patch is placed textually AFTER
+  the earlier one in `fixup_game_funcs.py` — patches run sequentially against the same in-memory
+  `text` string within one file's processing pass (s441, `FREELIST_NEXT_GUARD` matches
+  `GENERIC_CACHE_GUARD`'s own inserted guard block as an anchor).
+- Branch-likely (`bnel`) delay slots get emitted TWICE by the recompiler (once for the taken path,
+  once as the untaken fallthrough duplicate) — a guard on a delay-slot instruction must patch BOTH
+  syntactic copies or it only covers one control-flow edge (s441).

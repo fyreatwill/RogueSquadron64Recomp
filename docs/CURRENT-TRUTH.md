@@ -162,9 +162,65 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -276 (s440, ADVANCED — added an entry counter to `updateHangarBayScene`,
-the first same-run positive control for the BREADCRUMB18 thread: ~2900 calls, 0 crashes, in a
-single 300s run); the next new item takes -277.
+oldest). Current top is -278 (s441, single occurrence, UNCONFIRMED — a new SIGSEGV crash class
+in the thread-scheduler/semaphore runtime, unrelated to the 0x801163B0 free-list family);
+the next new item takes -279.
+
+-278. **(s441, single occurrence) NEW crash class: SIGSEGV inside the thread-scheduler/semaphore
+    runtime, no game-code frames in the backtrace.** Surfaced during `s441_freelistnext_verify`
+    (see item -277 below) — after that fix's own live-verify ran clean on all 3 free-list guard
+    families (0 fires) and reached `[hangarbay-entry] n=1500+`, the process died at 109.9s with
+    `signal 11 (Segmentation fault: 11)`, `si_addr=0x10fc0a00000060e3` (a wild 64-bit host
+    address, matches `x8`), backtrace entirely inside the native runtime:
+    `moodycamel::LightweightSemaphore::tryWait` (`_ZNKSt3__113__atomic_baseIlLb0EE4loadEv`) <-
+    `wait_for_resumed` <- `resume_thread_and_wait` <- `swap_to_thread` <-
+    `check_running_queue` <- `pause_self` <- `idle_thread_handle`. `last-guest-pc=0x8000834c` is
+    almost certainly stale/uninformative here — this crash is on the idle/scheduler thread, not
+    necessarily the same OS thread that last updated the shared `g_rs64_last_guest_pc` global, so
+    it should NOT be read as a guest instruction address the way it is for the free-list family.
+    Signature does not match items -261/-263/-270/-272/-277 (SIGSEGV not SIGBUS; wild 64-bit host
+    pointer not a 0x38000000x near-zero guest pointer; no game-code frames at all). Single
+    occurrence, no positive control, not yet investigated — per iron rule 1 this is a lead, not a
+    result. **Next step if it recurs**: check whether `moodycamel::LightweightSemaphore`'s
+    internal state (a semaphore count / linked waiter list) was itself corrupted, or whether this
+    is a genuine race in `ultramodern`'s cooperative thread-swap implementation exposed by timing
+    differences from the `-j8` rebuild. Confirmation soak queued (shared with item -277):
+    `s441_freelistnext_confirm.sh`.
+
+-277. **(s441) `FREELIST_NEXT_GUARD` — a THIRD sibling of `GENERIC_CACHE_GUARD` (s434, item
+    -270ish)/`CACHE_HEAD_A1_GUARD` (s436), root-causing and fixing the exact crash that consuming
+    s440's queued `s440_hangarbayentry_confirm` soak hit, and which turned out to have nothing to
+    do with item -263's believed locus.** That soak crashed (SOAK-RESULTS `20260807-064649`, rc=1,
+    `last-guest-pc=0x8000CE40`, `si_addr=0x38076a804` — the same near-zero family as items
+    -261/-263) — but `updateHangarBayScene`'s own entry counter (item -276's `[hangarbay-entry]`)
+    logged **zero calls** before the crash, and the backtrace (`reserveAndEmitDLEntry <-
+    submitSceneNodeRender <- ... <- runHangarSelectionFrame`) never goes near
+    `updateHangarBayScene` at all — decisive, same-run proof that this specific occurrence was
+    misattributed to item -263 by superficial signature match (SIGBUS, near-zero pointer) alone.
+    Source-read at `funcs_3.c:0x8000CE30` found the real mechanism: `GENERIC_CACHE_GUARD` already
+    validates the free-list HEAD pointer before dereferencing it (substituting 0 if out of range),
+    but the VALUE that deref reads back — the list's "next" pointer, guest-memory-controlled — is
+    never itself validated before being written back as the new head (safe, self-healing) and then
+    dereferenced 4 bytes later (`MEM_W(0X4, ctx->r2) = 0`, the guest `sw $zero, 0x4($v0)` at
+    `0x8000CE40`) — an unguarded write through a value that only had its ADDRESS-OF-ORIGIN
+    checked, not itself. A scoped scan of all 107 `GENERIC_CACHE_GUARD` sites
+    (`scratch/agent/s441_freelist_next_scan.py`-equivalent, done inline) found 105/107 share this
+    exact byte-identical shape (varying only in address/label text); the other 2
+    (`funcs_4.c` `0x8001083C`/`0x80010E3C`) are already independently covered by the pre-existing
+    bespoke `CACHE3_GUARD` (s270)/`CACHE2_GUARD` (s266). Patched all 105 with `FREELIST_NEXT_GUARD`
+    (`N64Recomp/fixup_game_funcs.py`) — same skip-the-write-on-bad-pointer semantics as
+    `CACHE_HEAD_A1_GUARD` (0 is not a safe substitute for a write address; the write's own value is
+    a hardcoded 0 so nothing downstream depends on it happening). Regenerated/rebuilt clean (0 new
+    warnings beyond the pre-existing DDIV set); verified via direct grep of compiled output: no
+    regression to `GENERIC_CACHE_GUARD` (107), `CACHE_HEAD_A1_GUARD` (7), `BREADCRUMB18`/
+    `HANGARBAY_ENTRY`; new guard present at exactly 105 sites (66 `funcs_3.c` + 39 `funcs_4.c`,
+    matching the dry-run scan count exactly). Live-verified same schedule: process died at 109.9s,
+    but on an entirely DIFFERENT, previously-uncatalogued crash (item -278) — 0 fires across all 3
+    free-list guard families this run (no bad pointer encountered, null result on this specific
+    mechanism, not yet a positive control). Confirmation soak queued: `s441_freelistnext_confirm.sh`.
+    **Downgrades item -263's confidence**: the crash this new guard fixes is proven (same-run,
+    mechanism-level) to be the actual cause of at least one occurrence previously filed under item
+    -263; see item -263 below for the reclassification.
 
 -276. **(s440) `updateHangarBayScene` entry counter (`ROGUESQ_LOG_HANGARBAY_ENTRY`) — the first
     same-run positive control for item -275/-263's BREADCRUMB18 thread.** Consumed the queued
@@ -231,16 +287,34 @@ single 300s run); the next new item takes -277.
     given the function's unprecedented size) inside `updateHangarBayScene` itself. Full detail:
     `docs/PROJECT-OVERVIEW.md` §16 (s438 update), `PORTING-STATE` Session 438.
 
--263. **(s426, recurred s433/s436/s437) `updateHangarBayScene`-region crash — 4 occurrences, now
-    localized to a call site INTO `updateHangarBayScene` itself, which has zero breadcrumb coverage
-    across its ~6800-line body (item -274, s438).** Same wild near-zero-pointer signature as item -261's
-    family. First 3 occurrences' `last-guest-pc=0x800547bc` was itself a misattribution — that address is
-    `tickWrappingTimerAccumulatorList`'s own epilogue instruction (`addiu $sp,$sp,0x40`, not a memory
-    access), frozen there because none of its 3 possible callers had breadcrumb coverage nearby. s437
-    added BREADCRUMB17 to the reachable caller (`runHangarSelectionFrame`) to fix that; the 4th
-    occurrence (s438, consuming the queued `s437_breadcrumb17_confirm` soak) shows BREADCRUMB17 worked
-    but hit the identical mechanism one function deeper — see item -274. Not yet root-caused at the
-    instruction level. Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Sessions 426, 433, 436, 438.
+-263. **(s426, recurred s433/s436/s437/s440; s441 RECLASSIFIED — PARKED, likely dissolved into
+    item -277's family, not independently confirmed to exist as a distinct bug.** Originally framed
+    as a fault localized INSIDE `updateHangarBayScene`'s own body (item -274, s438: two independent
+    signals — a call-site breadcrumb freeze and `atos` symbolication naming that function at all 4
+    early occurrences — agreed on it as the locus). item -276 (s440) instrumented the function with
+    an entry counter to get a same-run positive control, then consuming that soak's own queued
+    confirm (`s440_hangarbayentry_confirm`) produced the first occurrence with FULL breadcrumb
+    coverage active — and it decisively did NOT localize inside `updateHangarBayScene`: the entry
+    counter logged **zero calls** before the crash, and the backtrace never goes near that function
+    (`reserveAndEmitDLEntry <- submitSceneNodeRender <- ... <- runHangarSelectionFrame`, a sibling
+    rendering path). s441 root-caused that occurrence's actual mechanism at the instruction level —
+    an unguarded free-list "next"-pointer write in `reserveAndEmitDLEntry` (item -277,
+    `FREELIST_NEXT_GUARD`) — and fixed it. **What this means for the other 4 pre-s440 occurrences**:
+    none of them ever showed a fault instruction inside `updateHangarBayScene`'s body either (all 5
+    total occurrences, s426 through s440, matched by the same superficial signature: SIGBUS, wild
+    near-zero `0x38000000x`-family pointer) — the s426-s438 "localization" chain was a sequence of
+    breadcrumb-coverage-gap freezes (BREADCRUMB16 then 17 then the call site into
+    `updateHangarBayScene`) that never actually reached an instruction inside the target function,
+    right up until s440 finally got there with full coverage and found the fault was elsewhere
+    entirely. The simplest explanation now is that item -263 was never a distinct bug: it is the
+    same recurring `0x801163B0` free-list family (items -270/-272/-277) recurring at different call
+    sites that all happen to route near `runHangarSelectionFrame`/`updateHangarBayScene` in the call
+    graph, most of which so far have crashed before or at a breadcrumb-coverage gap rather than
+    inside the instrumented function. **Do not spend further sessions chasing a fault inside
+    `updateHangarBayScene`'s body** without a NEW occurrence that BREADCRUMB18 (2643 breadcrumb
+    writes, full coverage, unregressed as of s441) actually reports a real address inside that
+    function — that is now the single falsifying observation that would resurrect this item as
+    independent. Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Sessions 426, 433, 436, 438, 441.
 
 -268..-273. **(s432-437) Duplicate-symbol catalogue closed (18/18); the `0x801163B0` free-list-
     cache-head-deref idiom swept at scale (107 sites, `GENERIC_CACHE_GUARD`) plus a 7-site `$a1`-register

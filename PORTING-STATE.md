@@ -36776,3 +36776,102 @@ faulting) or write an explicit pivot-preamble justification for continuing.
 **Outcome: ADVANCED** (landed a new instrument — the `updateHangarBayScene` entry counter,
 the first same-run positive control for the BREADCRUMB18 thread — caught and fixed a real
 build bug it exposed, regenerated, rebuilt clean, and live-verified end-to-end).
+
+## Session 441 (2026-08-07)
+
+**Mandatory pivot preamble**: this is the 4th consecutive iteration touching hypothesis-id
+`item-263-updatehangarbayscene-localization` (s438/s439/s440 counted as 3 prior). Per the loop's
+enforced rule, this iteration either had to switch to a different work unit or design and run the
+single highest-information discriminating probe for that hypothesis and close/pivot on its result.
+**Step 1 satisfied the discriminating-probe path**: s440's queued `s440_hangarbayentry_confirm` soak
+had already completed (SOAK-RESULTS `20260807-064649`, rc=1) but had not yet been read/analyzed —
+reading it out was itself the discriminating probe NEXT.md called for.
+
+**The soak crashed, and it decisively did NOT localize inside `updateHangarBayScene`.**
+`last-guest-pc=0x8000CE40`, `si_addr=0x38076a804` (same near-zero `0x38000000x` family as items
+-261/-263), but item -276's own `[hangarbay-entry]` counter logged **zero calls** before the crash,
+and the native backtrace (`reserveAndEmitDLEntry <- submitSceneNodeRender <- processSceneNode <-
+traverseSceneGraphRecursive x2 <- setupCameraMatrices <- runHangarSelectionFrame <-
+runHangarMenuFromOverlay <- menuOverlayInit <- mainGameLoop`) never enters `updateHangarBayScene` —
+it goes down `runHangarSelectionFrame`'s scene-graph-rendering sibling path instead. Same-run,
+mechanism-level proof that this occurrence (and, by the same superficial-signature-match reasoning
+that grouped all 5, plausibly the other 4 as well) was misattributed to item -263's believed locus.
+
+**Root-caused the actual mechanism.** Source-read at `funcs_3.c` around `0x8000CE30`
+(`reserveAndEmitDLEntry`) found: `GENERIC_CACHE_GUARD` (s434) already validates the free-list HEAD
+pointer before dereferencing it (substituting 0 if the head address is out of KSEG0 RDRAM range).
+But the VALUE that deref reads — the linked list's "next" pointer, itself guest-memory content — is
+never validated before being written back as the new cache head (safe, self-healing empty-list
+semantics) and then dereferenced 4 bytes later: `MEM_W(0X4, ctx->r2) = 0` (guest `sw $zero, 0x4($v0)`
+at `0x8000CE40`, the `bnel` branch-likely delay slot). `GENERIC_CACHE_GUARD` checked the ADDRESS USED
+TO READ this value, not the value itself — a corrupted list node (garbage "next" pointer) sails
+straight through to this second, unguarded write.
+
+**Scoped scan (inline, not a separate script) of all 107 `GENERIC_CACHE_GUARD` sites** for the same
+shape (checking each site's following ~15 lines for `MEM_W(0X4, ctx->r2) = 0` in the branch-likely
+delay-slot idiom) found 105/107 match byte-for-byte, varying only in address/label text. The other 2
+(`funcs_4.c` `0x8001083C`/`0x80010E3C`) are already independently covered by the pre-existing bespoke
+`CACHE3_GUARD` (s270) / `CACHE2_GUARD` (s266) nested one level deeper — no gap there, fully accounted
+for.
+
+**Patched all 105 sites** with a new guard, `FREELIST_NEXT_GUARD` (`N64Recomp/fixup_game_funcs.py`,
+single generic regex pass matching post-`GENERIC_CACHE_GUARD`-patched text, same file-processing
+pass). Same skip-the-write-on-bad-pointer semantics as `CACHE_HEAD_A1_GUARD` (0 is not a safe
+substitute for a write ADDRESS; the write's own value is a hardcoded 0 so nothing downstream depends
+on it happening — confirmed by inspection, matches the precedent). The regex handles both syntactic
+copies of the branch-likely delay slot (taken-path + fallthrough duplicate) that the recompiler
+emits for a single guest instruction.
+
+**Regen/build**: `make_elf.py` (rogue_squadron64) → deleted `RecompiledFuncs/funcs_*.c` via the
+mandatory Python one-liner → `N64Recomp rogue_squadron.toml` → `fixup_game_funcs.py` → `cmake --build
+. -j8`. Fixup report: `funcs_3.c: free-list next-pointer write-through guard (FREELIST_NEXT_GUARD)
+patched x66`, `funcs_4.c: ... patched x39` (105 total, exactly matching the dry-run scan count).
+Build succeeded clean — 46 warnings, all the pre-existing DDIV sign-conversion set, 0 new. Verified
+via direct grep of compiled output: no regression to `GENERIC_CACHE_GUARD` (107: 66+41),
+`CACHE_HEAD_A1_GUARD` (7), `BREADCRUMB18`/`HANGARBAY_ENTRY` (both present, unchanged).
+
+**Live-verified, same s427-441 schedule, all diagnostics armed (now including
+`ROGUESQ_LOG_FREELIST_NEXT_GUARD`)**: the process died at 109.9s after 46 frames — but on a
+COMPLETELY DIFFERENT, previously-uncatalogued crash. `signal 11 (Segmentation fault: 11)`,
+`si_addr=0x10fc0a00000060e3` (a wild 64-bit HOST address, not the guest near-zero family),
+backtrace entirely inside the native thread-scheduler/semaphore runtime —
+`moodycamel::LightweightSemaphore::tryWait <- wait_for_resumed <- resume_thread_and_wait <-
+swap_to_thread <- check_running_queue <- pause_self <- idle_thread_handle` — with NO game-code
+frames at all. `last-guest-pc=0x8000834c` is almost certainly stale/uninformative for this one: the
+crash is on the idle/scheduler thread, a different OS thread than whichever last touched the shared
+`g_rs64_last_guest_pc` global. 0 fires across all 3 free-list guard families this run (no bad pointer
+encountered — a null result on the targeted mechanism specifically, not a regression; the run did
+reach `[hangarbay-entry] n=1500+` first, so the schedule was deep into normal execution when this
+unrelated crash hit). Filed as item -278: single occurrence, no positive control, not yet
+investigated — a lead, not a result, per iron rule 1. Confirmation soak queued (covers both items):
+`scratch/agent/soak_queue/s441_freelistnext_confirm.sh`.
+
+**Item -263 reclassified — PARKED.** Given that a full 5-for-5 track record now exists of every
+`updateHangarBayScene`-region-crash occurrence either freezing at a breadcrumb-coverage gap
+(s426-s438) or, now with full coverage, turning out to have never entered the function at all
+(s440/s441), the simplest explanation is that item -263 was never an independent bug — it is the
+same `0x801163B0` free-list family (items -270/-272/-277) recurring at call sites near
+`runHangarSelectionFrame` in the call graph. Parked rather than closed: the falsifying observation
+that would resurrect it as independent is a future occurrence where `BREADCRUMB18` (2643 writes,
+full coverage, unregressed) reports a real address INSIDE `updateHangarBayScene`'s own body. Do not
+spend further sessions chasing a fault inside that function without exactly that observation.
+
+**What this session rules out**: that item -263's s440 occurrence was caused by anything inside
+`updateHangarBayScene`'s body (decisive, same-run). That `GENERIC_CACHE_GUARD` alone was sufficient
+to close the `0x801163B0` free-list corruption family (it left a 105-site gap, now closed). That the
+project has only one active wild-pointer crash family left in the `runHangarSelectionFrame` region —
+item -278's discovery shows at least one more, structurally unrelated class exists.
+
+**What this session does NOT establish**: whether `FREELIST_NEXT_GUARD` actually closes off further
+recurrences of the free-list family (0 fires is a null result without its own positive control yet —
+confirmation soak queued). Whether item -278 is a real, reproducible bug or a one-off artifact of
+this specific run (single occurrence).
+
+**Housekeeping**: no `lib/` edits this session (all changes in the standalone
+`N64Recomp/fixup_game_funcs.py`, confirmed untracked (`??`) by git in that checkout via `git status`)
+— `submodule-patches/export.sh` not needed.
+
+**Outcome: ADVANCED** (landed a new, root-caused, systematically-scanned guard —
+`FREELIST_NEXT_GUARD`, 105 sites — that explains and fixes a real crash previously misattributed to
+item -263; regenerated, rebuilt clean, live-verified end-to-end; reclassified item -263 with a
+falsifiable parking criterion; discovered and filed a new crash class, item -278).
