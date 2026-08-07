@@ -36050,3 +36050,71 @@ queue this session.
 
 No `lib/` or sibling-repo edits this session. Next work unit is unchanged from s429's handoff:
 localize the exact clobber site inside `mallocCraftSelectionData`'s ~4386-line body (item -267).
+
+## Session 431 (2026-08-07)
+
+Work unit: NEXT.md's queued strategy 2 (bisect `mallocCraftSelectionData` with intermediate
+checkpoints) for item -267, refined with a cheap static pass first (NEXT.md's strategy 1) before
+committing to a build.
+
+**Static read, no build**: found `mallocCraftSelectionData`'s definition at `funcs_27.c:117206-121591`
+(4386 lines, confirming s429's count) and enumerated its 47 unique direct callees. Checked each for its
+own `ctx->r19` usage: 30 never touch it (ruled out immediately — they cannot be the direct clobberer),
+17 do, all with a balanced single save-at-entry/single-restore-at-exit pattern (no missing-restore
+early-return bug at the direct-callee level, unlike the item -261/-262 duplicate-symbol family). Traced
+`ctx->r19`'s own role inside the function: it's a hangar-list-pointer (`0x800D0000`-based), the SAME
+closed `-0x25A4` idiom family as items -239..-247/-262/-264, already carrying s285-family guards from
+the earlier function-scope backport (item -231..-238) — but those guards validate the *dereferenced
+result* (`ctx->r2`/`ctx->r3` after `MEM_W(ctx->r19, -0x25A4)`), never `ctx->r19` itself. The pointer is
+live through a bounded loop (`ctx->r18 < 0x9`, i.e. up to 9 iterations) calling
+`bsearchFactor5TableByU16Key`, `play3DSoundEvent`, and conditionally `updateHangarBayScene` /
+`allocAndSetupModelInstance` each pass — `updateHangarBayScene` (6804 lines, item -263's own
+independently-flagged crash target) stood out as the single largest, least-tested nested function in
+the whole call tree.
+
+**One build, one run**: added four throttled checkpoints (`fixup_game_funcs.py`, tag
+`[malloccraft-ckpt]`) bracketing the four loop calls via their existing `after_59:`/`after_60:`/
+`after_61:`/`after_62:` labels (function-local goto targets reused elsewhere in the file — substitutions
+scoped to the already-isolated function body text, same caution as s429's block). Regenerated
+(`make_elf.py` -> delete `funcs_*.c` -> `N64Recomp` -> `fixup_game_funcs.py`, all 4 new sub-patches plus
+the 3 pre-existing s429 sub-patches applied exactly once) and rebuilt clean. Live run with the same
+driven schedule as s423-429; process died at 19.0s (8 frames), same timing family. Raw log:
+
+```
+[malloccraft-ckpt] after_59(bsearchFactor5TableByU16Key) r19=0x800D0000 n=0
+[malloccraft-ckpt] after_60(play3DSoundEvent) r19=0x800D0000 n=0..7   (8 firings, all sane)
+[malloccraft-ckpt] after_61(updateHangarBayScene) r19=0x800D0000 n=0  (1 firing, sane)
+[malloccraft-ckpt] after_62(allocAndSetupModelInstance) r19=0x800D0000 n=0..6  (7 firings, all sane)
+[hangarmenu-ckpt] after_1(mallocCraftSelectionData) r19=0x3F800000 n=0   <- WILD, in the CALLER
+[CRASH] ... pc-symbol menuOverlayInit+3648, far=0x380000003 ...   (item -266's exact site, again)
+```
+
+**Discriminating result**: every internal checkpoint stayed sane (`0x800D0000`) through every logged
+loop pass; the value is only wild once execution reaches the caller. This narrows the ~4386-line search
+to the function's last ~130-330 lines (read directly this session, `funcs_27.c:121259-121591`): the
+tail past the last logged `after_62` (`loadFontAsset`, `loadCharTextureSet` x2,
+`resetPlayerSlotAllChannels` x2, `setMenuOverlayHeaderState`, `setPlayerSlotEntryRGB` x3,
+`getGameOrFrontText` x3, `setPlayerSlotAnimationFlag` x2, `startPlayerSlotAnimationChannelExt`,
+`hangarSetSecondaryWeaponDisplay`, ending at `S285_H1_BAIL`/the register-restore epilogue) — plus a
+possible extra, unlogged loop iteration (the loop condition allows up to 9 passes; `after_60` fired 8
+times but `after_62` only 7, suggesting the final pass diverged, most plausibly via one of the
+`S285_H1_22`..`S285_H1_26` guards bailing straight past the tail).
+
+**This also reframes the bug class.** `S285_H1_BAIL` jumps directly to the function's normal
+register-restore epilogue, which reads the saved-`$s3` stack slot (`ctx->r29+0xB4`) written once at
+function entry and never touched again by any traced code path (confirmed by grep: only 2 references to
+that exact stack offset in the whole function, the save and the restore). Since that slot's *address*
+never becomes wild, a wild *value* recovered from it at the epilogue can only mean something else wrote
+through a stray/OOB pointer that happens to alias that RDRAM address sometime during execution — this is
+a memory-corruption bug (a buffer overflow or similarly wild write elsewhere in the function or a nested
+callee), not a simple "forgot to restore the register" bug like the rest of this lineage (items
+-265/-266). Next work unit: a diagnostic that reads back `MEM_W(ctx->r29, 0XB4)` directly (independent
+of `ctx->r19`, which the function legitimately reassigns as scratch throughout) at a few points in the
+tail, to catch exactly when the stack slot itself flips — this targets the memory-corruption hypothesis
+directly instead of continuing register-only bisection. Queued a confirmation soak
+(`s431_malloccraft_ckpt_verify.sh`) checking the same last-checkpoint-sane/caller-checkpoint-wild pattern
+reproduces (currently single-source).
+
+No `lib/` or sibling-repo edits this session. The only source change is `fixup_game_funcs.py` in the
+sibling `~/Documents/Tools/N64Recomp` tool directory (not git-tracked by project convention, persists on
+disk across sessions, per s429/s430's same note).

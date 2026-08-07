@@ -162,18 +162,27 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -267 (s429, OPEN — guilty callee isolated to `mallocCraftSelectionData`, exact
-clobber site inside it not yet found); the next new item takes -268.
+oldest). Current top is -267 (s429/s431, OPEN — narrowed to `mallocCraftSelectionData`'s last
+~130-330 lines, reframed as stack-slot memory corruption, not a direct register clobber); the next new
+item takes -268.
 
--267. **(s429) Guilty callee for -265/-266's `$s3`/`ctx->r19` corruption ISOLATED:
-    `mallocCraftSelectionData`, not yet localized to an instruction.** Three checkpoint diagnostics
-    after `runHangarMenuFromOverlay`'s three callees show `ctx->r19` sane after callee 1, already wild
-    (`0x3F800000`) immediately after `mallocCraftSelectionData` (callee 2) returns, unchanged after
-    callee 3's one iteration — a clean before/after boundary. Confirmation soak reproduced the same
-    ordering (`s429_hangarmenu_ckpt_verify`, SOAK-RESULTS 20260807-013423, rc=1) — 2nd-independent, no
-    longer single-source. Next work unit: locate the exact write/nested-call site inside the function's
-    ~4386-line body (the largest guard-hunt target this project has attempted) where `$s3` is used as
-    scratch without a restore. Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Session 429.
+-267. **(s429/s431) `$s3`/`ctx->r19` corruption for items -265/-266 ISOLATED to
+    `mallocCraftSelectionData`, then NARROWED to its last ~130-330 lines, and REFRAMED as a stray write
+    corrupting a stack slot, not a direct register clobber.** s429: three checkpoints after
+    `runHangarMenuFromOverlay`'s three callees show `ctx->r19` sane after callee 1, already wild
+    (`0x3F800000`) immediately after `mallocCraftSelectionData` (callee 2) returns — confirmed
+    2nd-independently (`s429_hangarmenu_ckpt_verify`, SOAK-RESULTS 20260807-013423, rc=1). s431: a
+    static read ruled out 30 of the function's 47 direct callees (no `ctx->r19` reference) and found
+    the other 17 all balance their own save/restore; four new checkpoints bracketing its `-0x25A4`
+    hangar-list loop (`bsearchFactor5TableByU16Key`/`play3DSoundEvent`/`updateHangarBayScene`/
+    `allocAndSetupModelInstance`) stayed sane through every logged iteration — wild only once the
+    caller reads it back. Since the value is recovered from a stack slot (`ctx->r29+0xB4`) written once
+    at entry and never touched by any traced write, this is a stray/OOB write elsewhere aliasing that
+    RDRAM address, not a missing restore — the first bug in this lineage not shaped like items
+    -265/-266. Confirmation soak queued (`s431_malloccraft_ckpt_verify.sh`), single-source. Next work
+    unit: a diagnostic reading `MEM_W(ctx->r29, 0XB4)` directly at points in the function's last ~330
+    lines to catch when the stack slot itself flips. Full detail: PROJECT-OVERVIEW §16, PORTING-STATE
+    Sessions 429, 431.
 
 -266. **(s428/s429) `menuOverlayInit+3648` post-guard crash — reproduced 3x, blocked on item -267.**
     Reads the same corrupted `ctx->r19`/`$s3` register item -265's guard caught wild moments earlier in
