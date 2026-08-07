@@ -38484,3 +38484,94 @@ non-adjacent load/deref pair with intervening code, per `docs/PROJECT-OVERVIEW.m
 **Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed — the last 12
 sites of the `SONGTEMPO_TABLE_GUARD` idiom-class audit, clean pipeline throughout, 0 fires on the
 guard itself, item -292 fully CLOSED).
+
+## Session 463 (2026-08-07): re-scoped the ~111 non-canonical `-0x5824` population left over from
+item -291 — found it was 27 actually-canonical (breadcrumb-dialect gap, folded into
+`DL_LIST_APPEND_GUARD`) + 70 new-shape sites (CLOSED as item -298, `DL_LIST_RESET_GUARD`) + 14 still
+open
+
+**Housekeeping first**: read the queued `SOAK-RESULTS.md` line since s462 — the
+`s462_stepactivesongtracks_confirm` soak (`rc=3`, crashed at 109.1s) landed on `pc-symbol=
+memcpy_recomp+288`, `last-guest-pc=0x80054780`, inside `tickWrappingTimerAccumulatorList`
+(`funcs_11.c`) — a function with its own extensive, already-catalogued crash history (`BREADCRUMB9`,
+the s343 div-by-zero at `0x80054744`, the s426-441 epilogue-misattribution saga; `0x80054780` sits
+inside that same already-documented address range). No `funcs_25.c`/songtempo frame anywhere in the
+signature — unrelated to item -292's own patch, filed not chased, matching the exact pattern every
+other idiom-class-audit confirm soak has hit this arc (s449, s451).
+
+**Work unit** (per `scratch/agent/NEXT.md`'s Priority 1, the s454/456-flagged "~111 non-canonical
+`-0x5824` sites" scoping pass): `grep -rn -- '-0x5824(' ~/Documents/Tools/N64Recomp/RecompiledFuncs/
+*.c` found 177 raw occurrences (168 `lw` reloads/derefs across `funcs_3.c`+`funcs_4.c` only, plus 9
+`sw` writes-to-the-global-itself in `funcs_3.c`/`funcs_4.c`/`funcs_6.c` — out of scope, a different
+idiom, writing the global not reading it). Of the 168 `lw` sites, 57 were item -291's already-
+patched canonical `DL_LIST_APPEND_GUARD` sites, leaving exactly 111 — the estimate from s454/456
+held up exactly, not "wildly different", so no re-derivation needed per NEXT.md's own escape
+clause.
+
+A first classification pass (`scratch_s463_scan_5824.py`, then `scratch_s463_classify_5824.py`, both
+N64Recomp repo, untracked) found the initial reload/deref-only regex only matched 114/168 raw sites,
+not 168 — the gap turned out to be a SECOND breadcrumb dialect. Some functions in `funcs_3.c`/
+`funcs_4.c` carry full per-instruction `g_rs64_last_guest_pc` tracing (every instruction gets its own
+breadcrumb line), and that dialect places the breadcrumb BETWEEN a comment and its own ctx-> line —
+a slot item -291's original regex (and this session's first attempt) never tolerated; item -291's
+own regex only tolerated breadcrumbs BETWEEN two different instructions' blocks. Reading one example
+(`0x8000875C`/`0x80008774` in `funcs_3.c`, lines 3878-3921) by hand confirmed: `0x8000875C` is the
+canonical append shape verbatim, just in the dense-breadcrumb dialect; `0x80008774` (24 bytes later,
+same function) is a genuinely DIFFERENT shape — the reloaded global used directly as a write address
+with no intervening deref at all (`MEM_W(0X0, ctx->r4) = 0;` then `MEM_W(0X0, ctx->r2) = ctx->r4;`
+where `r2` is the reload).
+
+Classifying all 111 by this insight (`scratch_s463_classify_5824.py`) split them cleanly:
+- **27 sites** (20 `funcs_3.c`, 7 `funcs_4.c`): the canonical `DL_LIST_APPEND_GUARD` 6-instruction
+  append tail, dense-breadcrumb dialect, missed only because of the regex gap above.
+- **70 sites** (41 `funcs_3.c`, 29 `funcs_4.c`): a byte-identical "list-reset" shape — reload global
+  G, zero-init an unrelated "new node" register (a normal argument, not derived from G, not at risk),
+  then write that node straight into `*G` with G itself never validated. Verified end-to-end with the
+  reload register backreferenced through to the final write (`scratch_s463_verify_reset.py`) — not
+  sampled, checked for all 70.
+- **14 sites**: same list-reset shape but with 1-6 lines of unrelated intervening code (register
+  shuffling, unrelated loads) between the reload and the write pair — the same "needs a per-site
+  literal anchor, not a blanket regex" situation `SIBLING_PTR_WRITE_GUARD`/item -296 hit for its own
+  14/119 non-uniform sites. Left open this session (addresses are in the classify script's
+  `C_UNCLASSIFIED` bucket output, not yet transcribed to a standalone list file).
+
+**Fix, batch 1** (folded into `DL_LIST_APPEND_GUARD`): widened `fixup_game_funcs.py`'s existing
+`_dl_list_append_guard_re` with 6 new optional inside-instruction breadcrumb slots (`bc1i`-`bc6i`,
+one per anchor: `lui`, the `-0x5824` reload, and the 4 append-tail instructions), keeping the
+original 4 between-instruction slots (`bc2`-`bc5`) unchanged for backward compatibility with item
+-291's own convention. Verified the widened regex matches exactly the 27 missed sites (and zero
+others) before touching the real fixup file.
+
+**Fix, batch 2** (new item, `DL_LIST_RESET_GUARD`): added a second patch block for the 70-site
+list-reset shape, same file, same breadcrumb-tolerance treatment (inside-instruction slots on all 4
+anchors). Remediation: skip the write when the reloaded head is outside `[0x80000000, 0x80800000)`
+— identical "nothing downstream depends on it happening" precedent as `DL_LIST_APPEND_GUARD`/
+`SIBLING_PTR_WRITE_GUARD`/`FREELIST_NEXT_GUARD` (a field store has no in-function consumer of its
+own success). New env var `ROGUESQ_LOG_DL_LIST_RESET_GUARD`, new stderr tag
+`[dl-list-reset-guard]`.
+
+**Pipeline**: `make_elf.py` → deleted all 47 stale `funcs_*.c` (explicit filenames, not a glob — the
+sandbox blocks `rm` with a wildcard even standalone) → `N64Recomp` → `fixup_game_funcs.py` (report:
+`funcs_3.c: doubly-linked-list append guard (DL_LIST_APPEND_GUARD) patched x46`, `funcs_3.c:
+list-reset write-through guard (DL_LIST_RESET_GUARD) patched x41`, `funcs_4.c: ... patched x38`,
+`funcs_4.c: ... patched x29` — 46+38=84 matches 57+27 exactly, 41+29=70 matches exactly; a 2nd
+invocation correctly REFUSED with the standing "already carries `RS64_FIXUP_APPLIED`" idempotency
+guard, confirming no double-patch) → `cmake --build` (clean, only the pre-existing unrelated
+`-Wpointer-sign` `DDIV` warnings, same 46 as every prior regen).
+
+**Live-verify** (`tools/probe.sh`, full 300s/`PROBE_KEYS_FROM_PHASE=1` schedule, every passive
+guard/breadcrumb env var armed plus the new `ROGUESQ_LOG_DL_LIST_RESET_GUARD`): 0 `[CRASH]`, 0
+`dl-list-append-guard` fires, 0 `dl-list-reset-guard` fires, 0 `sibling-ptr-write-guard` fires, 0
+`songtempo-table-guard` fires — matches this whole guard-idiom class's established true-negative
+baseline (item -287). `hangarbay-entry` reached n=2700 (matches s451's clean-soak baseline).
+Confirmation soak queued: `scratch/agent/soak_queue/s463_dllistguards_confirm.sh`.
+
+**Item -291 extended (57→84/84 canonical sites) and item -298 opened+CLOSED for its own 70/70
+sites; 14 sites remain as item -298's own open remainder** — the smallest leftover slice of any
+idiom-class audit in this whole arc, a strong candidate to close outright next session with
+per-site literal anchors (same mechanical process as `SIBLING_PTR_WRITE_GUARD`'s own 118-of-119
+per-site batch).
+
+**Outcome: ADVANCED** (two real code fixes landed in one session — extended an existing guard to 27
+previously-missed sites via a regex-gap fix, and closed a freshly-discovered 70-site guard class
+outright — clean pipeline, clean live-verify, 0 fires on either guard, confirmation soak queued).

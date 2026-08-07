@@ -22,11 +22,11 @@ Priority order for upcoming iterations, set after the 300-session review:
    thread (18/18 pairs) and its s438-445 BREADCRUMB18/free-list-guard follow-on (items -261..-280,
    -263); that follow-on's own s445-451 fallout, the `static5-rename-orphan-sweep` (items -282..-290
    — s449 confirmed the whole guard idiom class is correct hardening, not a live crash source); item
-   -291 (`DL_LIST_APPEND_GUARD`, 57 sites, s454/456); item -296 (`SIBLING_PTR_WRITE_GUARD`, 119
-   sites, s459); and item -292 (`SONGTEMPO_TABLE_GUARD`, 43/43 sites across 6 reader functions,
-   s454-462). **No open M3 idiom-class-audit thread currently** — next candidate (not started): the
-   ~111 non-canonical `-0x5824` sites (same global as the closed item -291, non-adjacent load/deref
-   pair) — see below.
+   -291 (`DL_LIST_APPEND_GUARD`, 57→84 sites, s454/456, extended s463); item -296
+   (`SIBLING_PTR_WRITE_GUARD`, 119 sites, s459); item -292 (`SONGTEMPO_TABLE_GUARD`, 43/43 sites
+   across 6 reader functions, s454-462); and item -298 (`DL_LIST_RESET_GUARD`, 70 sites, s463).
+   **Open M3 idiom-class-audit thread: item -298's remaining 14 `-0x5824` sites** (intervening code
+   between reload and write, needs per-site literal-anchor treatment) — see below.
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
@@ -165,10 +165,36 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Highest number allocated so far is -297 (s454-462 arc, compacted below); items are never
-renumbered when compacted into a range pointer. No item is currently the standing open work unit —
-the next M3 idiom-class-audit candidate (~111 non-canonical `-0x5824` sites) is not yet started.
-The next NEW item takes -298.
+oldest). Highest number allocated so far is -298 (this item); items are never renumbered when
+compacted into a range pointer. The next NEW item takes -299.
+
+-298. **(s463) M3 idiom-class audit: re-scoped the ~111 non-canonical `-0x5824` population (same
+    global as item -291, `0x8011A7DC`) flagged at s454/456 — item -291's original scan was
+    regex-scoped too narrowly and silently missed a breadcrumb-dialect variant of its OWN canonical
+    shape. Programmatic re-classification (`scratch_s463_classify_5824.py`/
+    `scratch_s463_verify_reset.py`, N64Recomp repo, untracked) found the 111 split three ways: 27
+    were actually-canonical (missed because their function has full per-instruction
+    `g_rs64_last_guest_pc` tracing, a breadcrumb dialect that puts the breadcrumb between each
+    instruction's own comment and its ctx-> line, a slot item -291's regex never tolerated) — folded
+    into `DL_LIST_APPEND_GUARD` itself this session by widening its regex with matching inside-
+    instruction breadcrumb slots, now 84/84 canonical sites total (46 funcs_3.c, 38 funcs_4.c,
+    confirmed via a fresh regen + fixup, patch-count report matches exactly). 70 are a genuinely
+    different, byte-identical shape — CLOSED this session as a new item, `DL_LIST_RESET_GUARD`: the
+    reloaded global is used DIRECTLY as a write address (`MEM_W(0X0, ctx->rload) = ctx->rnode;`, no
+    intervening deref at all, structurally the same risk as `SIBLING_PTR_WRITE_GUARD`/item -296) —
+    41 funcs_3.c + 29 funcs_4.c, one blanket regex substitution (rload backreferenced end-to-end,
+    verified programmatically not sampled), same "skip the write" remediation precedent. Manual
+    live-verify (s463): clean full 300s schedule, 0 `[CRASH]`, 0 fires on `dl-list-append-guard`/
+    `dl-list-reset-guard`/`sibling-ptr-write-guard`/`songtempo-table-guard` (null result, matches
+    this whole guard-idiom class's established true-negative baseline per item -287),
+    `hangarbay-entry` reached n=2700 (matches prior clean-soak baselines). Confirmation soak queued:
+    `scratch/agent/soak_queue/s463_dllistguards_confirm.sh`. **Remaining open thread: 14 of the
+    original 111 sites have unrelated intervening code between the reload and the write pair (like
+    `SIBLING_PTR_WRITE_GUARD`'s own 4-24-line-gap sites) and need the same per-site literal-anchor
+    treatment, not a blanket regex** — addresses captured in `scratch_s463_classify_5824.py`'s
+    `C_UNCLASSIFIED` bucket output (not yet transcribed to a standalone list file). This is the
+    smallest remaining slice of any idiom-class audit to date — a good candidate for the next
+    session to close outright.
 
 -291..-297. **(s454-462) Three M3 idiom-class audits found via an s454 concurrent-process
     collision, all now CLOSED.** Item -291 (`DL_LIST_APPEND_GUARD`, `-0x5824($reg)` → global
