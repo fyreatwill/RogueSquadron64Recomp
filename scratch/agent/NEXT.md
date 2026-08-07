@@ -1,9 +1,12 @@
 # NEXT work unit
 
+HYPOTHESIS-ID: m4-item249-bulk-relocation-n75
+
 ## s415 recap
 
-`HYPOTHESIS-ID: m4-item249-s414batch-badfunc-isolation` (bisection of s414's 75-name crash batch, per
-its own handoff recipe). Confirmed the clean 359/778 baseline first (all 75 names present in
+Bisection of s414's 75-name crash batch (`HYPOTHESIS-ID` was `m4-item249-s414batch-badfunc-isolation`
+during this work, now closed and reverted to the ordinary-relocation slug above), per its own handoff
+recipe. Confirmed the clean 359/778 baseline first (all 75 names present in
 `main_overlay.txt`). Halves-bisected: 75 -> half-A(37,CRASH)/half-B(38,untested) -> A1(18,clean)/
 A2(19,crash) -> B1(9,clean)/B2(10,crash) -> C1(5,crash)/C2(5,untested) -> D1(2,clean)/D2(3,crash) ->
 E1(`resetObjectPoolListHead`,clean)/F1(`allocObjectPoolNode`,**CRASH ALONE**)/G1(`resetObjectContextPool`,clean).
@@ -31,8 +34,6 @@ round-trip this session; budget for it in future multi-bad-function bisections.
 Full detail: `PORTING-STATE` Session 415, `docs/CURRENT-TRUTH.md` item -249..-258.
 
 ## Next work unit: resume ordinary bulk relocation at n=75
-
-`HYPOTHESIS-ID: m4-item249-bulk-relocation-n75`
 
 Per s411/s412/s413's established cadence: n=75 is the confirmed-safe steady-state batch size for
 ordinary relocation (i.e. batches not already known to contain a bad function). 346 candidates remain
