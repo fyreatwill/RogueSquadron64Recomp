@@ -34982,3 +34982,87 @@ Outcome: ADVANCED (isolated two independently bad functions via rigorous halves 
 corrected a methodological gap mid-session when an assumed-clean sibling half turned out to hide a
 second bug, landed 73 net new relocations with a same-run positive control (nm presence/absence) and a
 2/2 live-verify clean result).
+
+## Session 416 (2026-08-06) — M4 item -249 ordinary bulk relocation at n=75: fresh batch hit a crash, bisection found TWO more independent bad functions (`stepObjectOrientationTowardTarget`, `updateHudHealthIndicator`), remaining 73 relocated cleanly (+73, 505/778)
+
+`HYPOTHESIS-ID: m4-item249-bulk-relocation-n75`. Resumed ordinary bulk relocation per s415's handoff
+recipe. Regenerated the candidate list fresh (`s414_gen_candidates.py`): 366 total, 358 actionable after
+filtering `m4_known_bad.txt` (4) and `m4_known_skip.txt` (4) — both counts drifted from the docs'
+"346 remain" naive-subtraction estimate, the same drift pattern `m4_known_skip.txt` already documents
+(lingering NONE/AMBIGUOUS-adjacent items and prior known-bad names stay in `main_overlay.txt`, so the
+true regenerated count runs ahead of `778 - done`). Took the next 75 names in file order.
+
+### Probe and first apply
+`s400_probe_batch.py`: 58 CONFIRMED + 17 WEAK, 0 NONE, 0 true AMBIGUOUS — all 75 resolved to exactly one
+destination overlay (mission, in every case). Applied via `s400_apply_batch.py`, full regen
+(`make_elf.py`: 371→296 unmapped-functions-skipped, exactly −75, the session's starting positive
+control — this is a different counter from the 366-total candidate count above, coincidentally close in
+magnitude), `N64Recomp` + `fixup_game_funcs.py` (both rc=0, patch counts matched prior sessions'
+baseline, no anomalies), full `cmake --build` (rc=0, 46 warnings, consistent with s415's baseline).
+`nm`-confirmed all 75 names present as real host symbols. Live-verify (`ROGUESQ_LLE_FORCE=1
+ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1
+ROGUESQ_STUB_MISSING_FUNCS=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1
+tools/probe.sh ... 45 2`): reached `phase width=512` at 88.5s, then **process gone at 2.5s after 1
+frame** — `[CRASH] caught signal 10 (Bus error: 10)`, `[CRASH][last-guest-pc] pc=0x800290d4`. Reproduced
+byte-identically on a 2nd run (same `last-guest-pc`). Reverted the full 75-name batch as a same-run
+positive control: `make_elf.py` unmapped-functions-skipped went 297→371, exactly +75; full regen+rebuild;
+live-verify reached phase and captured 19 clean frames, 0 `[CRASH]` — confirms the batch (not
+environment) is responsible, and that `0x800290d4` is the SAME crash site s414/s415 already isolated two
+bad functions against (`allocObjectPoolNode`, `tickCraftMountedAnimationEffect`) — a strong prior that
+this fresh batch likely contains at least one more function reaching that same downstream core-`.text`
+fault site.
+
+### Bisection — first bad function
+Halves bisection, applying the s415 lesson from the start (every sibling half gets independently tested,
+not assumed clean): 75 → half-A(37, CRASH) / half-B(38, deferred) → A1(18, clean) / A2(19, CRASH) →
+B1(9, clean) / B2(10, CRASH) → C1(5, CRASH) / C2(5, deferred) → D1(2, clean) / D2(3, CRASH) →
+E1(`getActiveHudInstanceTargetPosition`, clean) / E2(2, CRASH) →
+F1(`isHudSecondaryWeaponActive`, clean) / F2(`stepObjectOrientationTowardTarget`, **CRASH ALONE**,
+`last-guest-pc=0x800290d4` byte-identical). Every crash node's positive control was an exact `nm`
+unmapped-count delta matching the subset size at every step (e.g. 371−1=370 for each n=1 test).
+
+### The lesson fires again: a second bad function
+Applying "75 minus `stepObjectOrientationTowardTarget`" (74 names) as the expected-clean final batch
+**crashed again** — this time with 0 frames captured (died even before phase-relative capture began),
+same `last-guest-pc=0x800290d4`. This is exactly the s415 failure mode recurring: two branches of the
+bisection tree, C2 (5 names) and half-B (38 names), had never been independently tested — they'd only
+been set aside as bisection deferred to test the other sibling. Testing them: C2 alone → clean (5/5, 19
+frames, 0 crash). half-B alone → **CRASH**, same signature. Bisected half-B: 38 → G1(19, CRASH) /
+G2(19, deferred) → H1(9, clean) / H2(10, CRASH) → I1(5, CRASH) / I2(5, deferred) → J1(2, CRASH) /
+J2(3, deferred) → K1(`getDemoRecordedTimestep`, clean) / K2(`updateHudHealthIndicator`, **CRASH ALONE**,
+byte-identical `last-guest-pc=0x800290d4`).
+
+Both bad functions recorded in `scratch/agent/m4_known_bad.txt` with full bisection paths. Noted in the
+ledger entry: FOUR different functions now share this exact `last-guest-pc=0x800290d4` crash site across
+s415 and s416 (`allocObjectPoolNode`, `tickCraftMountedAnimationEffect`, `stepObjectOrientationTowardTarget`,
+`updateHudHealthIndicator`) — `0x800290d4` sits below `overlay_start` (`0x800A5130`), in core `.text`, not
+inside any of these functions' own bodies, reinforcing s414's read that the fault is an indirect/downstream
+corruption reachable from several distinct newly-real functions rather than four unrelated bugs. Worth a
+dedicated root-cause session if this address keeps recurring (not attempted this session — out of scope
+for ordinary bulk relocation, and iron rule 8 budget was already spent on this bisection).
+
+### Final batch and live-verify
+Applied the 73-name clean batch (75 minus both bad functions), full regen+build, `nm`-verified all 73
+present as real functions and both bad names (plus the pre-existing 4 from s415/s413/s407) absent,
+**live-verified clean 2/2** (88.6s/88.7s to `phase width=512`, 19 frames each run, 0 `[CRASH]` lines both
+runs, `lastW=640`). Net: +73 relocations this session, **505/778 done** (was 432/778; true regenerated
+remaining count 293, 283 actionable after 6 known-bad + 4 known-skip).
+
+### Housekeeping
+`scratch/agent/m4_known_bad.txt` and `scratch/agent/m4_known_skip.txt` were discovered to be UNTRACKED
+by git (matched the blanket `/scratch/` gitignore rule, never `git add -f`'d since their creation in
+s402/s407) — 12+ sessions of accumulated bisection knowledge was one `git clean`/fresh-checkout away from
+being silently lost, contradicting the "ledger is the only memory" rule. Force-added both this session;
+future `git add -A` will pick up their modifications normally now that they're tracked.
+
+### What this closes
+M4 item -249's s416-batch thread is fully closed: two more permanently-parked bad functions (6 total now
+across s407/s413/s415/s416), 73/75 landed. Sibling-repo symbol-file edits are uncommitted per the
+standing item -3 rule (ask the user before committing there). `HYPOTHESIS-ID` stays
+`m4-item249-bulk-relocation-n75` for the next ordinary bulk-relocation session.
+
+Outcome: ADVANCED (isolated two more independently bad functions via rigorous halves bisection, correctly
+applied the s415 lesson this time — independently tested every deferred sibling branch before declaring
+done, which is exactly what caught the second bug — landed 73 net new relocations with same-run positive
+controls (nm presence/absence, unmapped-count deltas) and a 2/2 live-verify clean result; also closed a
+real data-loss gap by tracking the known-bad/known-skip ledger files in git).

@@ -1,0 +1,16 @@
+# Persistent skip-list for item -249 (main_overlay.txt phantom-overlay-function family).
+# The candidate-generation script has no memory of prior probe verdicts: NONE and AMBIGUOUS
+# entries stay in main_overlay.txt (not relocated) and therefore keep re-appearing at the
+# FRONT of every future regenerated candidate list in file order. Without this list, every
+# iteration re-probes the same handful of already-resolved-unresolvable names for free,
+# wasting probe cycles and confusing the "N remain" arithmetic (discovered s404: the docs'
+# 778-86=692 pure-subtraction estimate silently diverged from the true regenerated count,
+# 712, by exactly the size of the lingering NONE items across s400-s403's batches).
+#
+# Format: one name per line, optional trailing comment after whitespace. Sessions that take
+# a candidate-list slice should filter these names out BEFORE slicing the next batch.
+
+initObjectAnimAndDetail          # NONE both times probed (s403 batch1, batch2): mission=no, menu/cinematic=outside
+computeTrackedObjectWorldAnchor  # NONE both times probed (s403 batch1, batch2): all three outside/no
+claimSongSlotForCurrentHandle    # NONE both times probed (s403 batch1, batch2): mission=no, menu/cinematic=outside
+handleCraftSelectInput           # AMBIGUOUS 2x (s401, s402): structurally multi-maybe menu/cinematic; needs manual disassembly read, not another probe
