@@ -35253,3 +35253,36 @@ Outcome: ADVANCED (73 relocations landed and live-verified clean 2/2; two genuin
 functions found, fully bisected with complete sibling coverage, and permanently parked in
 `m4_known_bad.txt`, closing the crash-bisection sub-thread and advancing the M4 -249 item toward
 closure).
+
+## Session 420 (2026-08-06)
+
+**M4 item -249, ordinary bulk relocation, n=75 — clean batch, no bisection needed.** Regenerated
+candidates fresh (`s414_gen_candidates.py`): 146 total, 133 actionable after filtering
+`m4_known_bad.txt` (9) + `m4_known_skip.txt` (4) by exact first-field match. Higher than NEXT.md's
+~117 estimate — the docs' running-count arithmetic has diverged from the true regenerated count before
+(s404) and isn't treated as authoritative; the fresh regen is.
+
+Probed the next 75 names (`s400_probe_batch.py` → `scratch/agent/s420_probe1.txt`): 57 CONFIRMED + 18
+WEAK, 0 NONE/AMBIGUOUS — same "no dead candidates" pattern every batch has shown since s402's skip-list
+was introduced. Applied via `s400_apply_batch.py` (54 entries to `menu_overlay.txt`, 21 to
+`cinematic_overlay.txt`, 75 removed from `main_overlay.txt`). Ran the full cycle
+(`s417_cycle.sh s420_batch1_verify1`): regen → N64Recomp → fixup → build → live-verify, phase-gated at
+`PROBE_PHASE_WIDTH=512`. **Clean**: phase reached at 88.3s, 20 frames captured, 0 `[CRASH]` markers.
+Ran a second independent live-verify (`s420_batch1_verify2`, 2/2 discipline) without touching the
+symbol files again: also clean, 88.7s to phase, 20 frames, 0 `[CRASH]` markers. Both logs checked for 0
+`[missing-func]` lines too (0/0) — consistent with s411's baseline fix still holding.
+
+No bisection was required this session — first clean-on-first-try 75-batch since s413's ordinary
+resumption (s414/s416/s417/s419 each hit a crash requiring bisection; s408/s410/s413's non-bisection
+portions were also clean but s412 crashed at n=100). Nothing to add to `m4_known_bad.txt` or
+`m4_known_skip.txt` this session.
+
+**652/778 → 727/778 done** (+75). Remaining per this session's fresh regen: 71 names still in
+`main_overlay.txt` (58 actionable, 13 permanently excluded: 9 known-bad + 4 known-skip). Next
+session's fresh regen should land in that neighborhood, not the stale 126 estimate.
+
+`0x800290d4` site count unchanged at 5 triggers (no new hits this session, batch had no crash at all) —
+the "6th trigger → pause for root-cause" trigger condition from s419's NEXT.md did not fire.
+
+Outcome: ADVANCED (75 relocations landed and live-verified clean 2/2, no new bad functions, M4 -249
+item continues toward closure — 727/778, 71 remain).

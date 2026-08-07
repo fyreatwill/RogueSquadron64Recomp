@@ -111,8 +111,9 @@ Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regress
 `UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
 ~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403+s405+s406+s407+
-s408+s410+s411+s412+s413+s415+s416+s417+s419 have fixed 652 of the corrected 778-candidate count (126
-remain per a fresh regen post-s419, 9 permanently excluded as known-bad, 4 known-skip, item -249). s411
+s408+s410+s411+s412+s413+s415+s416+s417+s419+s420 have fixed 727 of the corrected 778-candidate count
+(71 remain per a fresh regen post-s420, 58 actionable, 9 permanently excluded as known-bad, 4
+known-skip, item -249). s411
 resolved the long-standing `[missing-func] 0x800FB9E4` baseline (was `endMissionCleanup`, a
 phantom-overlay victim of this same family) — every clean live-verify from here should show 0
 `[missing-func]` lines, not 1. Post-`a` process now soaks well past 65s without death.
@@ -181,11 +182,11 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
 oldest). Current top is -257 (s408); the next new item takes -258 and is inserted at the top.
 
--249..-258. **(s400-418) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
-    proven, SEVEN genuine bad-function crashes bisected and parked, cadence scaled from n=20 to a
-    confirmed-safe n=75-with-bisection-fallback. 579/778 done, 219 remain per a fresh regen (218
-    actionable, 4 known-skip, 7 known-bad) as of s417. s418 (no-code discriminating-probe iteration,
-    see end of entry) refuted a mission-overlay-bias theory for the 7 bad functions; count unchanged.**
+-249..-258. **(s400-420) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
+    proven, NINE genuine bad-function crashes bisected and parked across 4 distinct downstream crash
+    sites, cadence scaled from n=20 to a confirmed-safe n=75-with-bisection-fallback. 727/778 done, 71
+    remain per a fresh regen (58 actionable, 4 known-skip, 9 known-bad) as of s420. s420 landed a clean
+    75-batch with no crash and no bisection needed — first fully-clean batch since s413's resumption.**
     s400 landed batch 1
     (20/801) and proved the tooling (`s400_probe_batch.py`/`s400_apply_batch.py`, positive-control via
     `make_elf.py`'s unmapped-functions-skipped counter). s401 attempted the full ~774-item remainder in
@@ -329,8 +330,16 @@ oldest). Current top is -257 (s408); the next new item takes -258 and is inserte
     `0x80065e94` x1, `0x8000b650` x1), not one universal sink — a dedicated root-cause session on the
     `0x800290d4` family specifically (5 independent trigger functions, by far the most repeated site) is
     now a stronger candidate than continuing blind bulk relocation indefinitely, though not yet urgent
-    enough to pause the sanctioned fallback.** Full per-session detail: `PORTING-STATE` Sessions
-    400-419.
+    enough to pause the sanctioned fallback.** **s420 resumed ordinary bulk relocation at n=75
+    (`HYPOTHESIS-ID: m4-item249-bulk-relocation-n75`): regenerated candidates fresh (146 total, 133
+    actionable after filtering 9 known-bad + 4 known-skip — higher than the stale 126/117 estimate,
+    confirming the docs' running arithmetic drifts from the true regenerated count, as previously found
+    s404), probed the next 75 (57 CONFIRMED + 18 WEAK, 0 NONE/AMBIGUOUS), applied, and — for the first
+    time since s413's ordinary-resumption era — the full 75-name batch live-verified clean on the FIRST
+    try, no crash, no bisection needed (88.3s/88.7s to phase across 2 independent verifies, 20 frames
+    each, 0 crash markers, 0 missing-func lines). Nothing added to `m4_known_bad.txt`/`m4_known_skip.txt`
+    this session. Reaching 727/778 (71 remain, 58 actionable). `0x800290d4`'s trigger count stayed at 5
+    (no crash this session to add a 6th).** Full per-session detail: `PORTING-STATE` Sessions 400-420.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
     (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by
