@@ -1111,4 +1111,84 @@ n=2600, unrelated). Does not resurrect item -263 (BREADCRUMB18 never reported an
 strategic-priority rule against reactive single-crash chases. Confirmation soak queued
 (`s443_waitresumed_confirm.sh`).
 
+### s445-451: `static5-rename-orphan-sweep` (HYPOTHESIS-ID `orphan-guard-completeness-closeout`) —
+codebase-wide fallout from the s427 duplicate-symbol fix, items -282..-289, migrated from
+CURRENT-TRUTH.md s451 maintenance pass
+
+**Root cause (established s446, item -284):** `hangarInitialize` never existed as a real function
+post-s427 — it was N64Recomp's PRE-fix merger of ~15 separate, now-correctly-named functions
+(`loadCutsceneAssetsByIndex`/`mallocCraftSelectionData`/`runHangarSelectionFrame`/
+`composeNpcOrientationMatrix`/`updateHangarBayScene`/`hangarTickCameraOrbit`/etc.) into one anonymous
+~13,770-line blob, and s427's duplicate-symbol fix (§16 above) split it back apart. EVERY pre-s427
+guard/patch hardcoded to the old anonymous `static_N_0xADDR` names or file locations was orphaned this
+way (confirmed 0 matches tree-wide for 11 old names) — a silent-regression risk distinct from, but
+caused by, the same s427 fix that closed the duplicate-symbol catalogue.
+
+**s445 (item -282, -281):** Opened a fresh M3 idiom-class audit, `GETDATITEM_GUARD`: `getDatItemByName`
+(funcs_10.c, guest `0x80047B70`) returns sentinel -1 on an empty hash bucket; 5 of 6 call sites
+dereferenced the raw return value unvalidated. Patched all 6 (one general regex, byte-identical idiom);
+regen/build/`strings` clean. Live-verify: 0 fires (1st soak), crashed on a new, unrelated class (item
+-281: `NAN_CHECK` assert in `transformVec3ByMat34`, `funcs_4.c:30007`, first-ever trip of this
+codebase-wide always-on `assert(val==val)` macro; single occurrence, filed not chased).
+
+**s446 (item -284):** Root-caused the orphaning as codebase-wide (above) and fixed 34 sites in one
+pass: `HANGARLIST_GUARD`+`EARLY`/`WALK`/`CLEAR` (4 sites, `funcs_27.c`) and the combined s284/s285
+deref-guard list (30 sites, `funcs_28.c`). Method (reused every subsequent session in this arc):
+standalone Python scan confirms each site's exact multi-line anchor matches exactly ONCE tree-wide
+before ungating; fixup script asserts (`SystemExit`) on any site matching >1 time. Live-verify: 0
+crashes, 0 fires, `[hangarbay-entry]` n=3000+ (reachability control).
+
+**s447 (item -285):** Found `tools/probe.sh` silently mislabeled crashed soaks as clean (`rc=0`) —
+the capture loop `break`s on game death and falls through to an implicit `exit 0` unless the caller
+self-checks `run.log`. This retroactively downgraded s445's and s446's "0 fires" results from
+confirmed-clean to "one inconclusive soak, still no positive control" (both soaks had actually crashed
+on unrelated pre-existing signatures). Fixed at the root: `probe.sh` now `exit 3`s on a detected
+`[CRASH]`; verified with a same-session positive control (against s446's crashed log) and negative
+control (against a genuinely clean log). Audited all 21 other `probe.sh`-calling recipes; 3 more
+lacked the self-check, 1 silently wrong (`s400`, rechecked genuinely clean), 2 already correctly
+nonzero via a different path.
+
+**s448 (item -286):** Fixed `S390_H2A`/`S390_H2B` (11 sites, `funcs_28.c`), orphaned the same way.
+Two new wrinkles beyond s446's method, both verified not assumed: overlay-duplicated code repeating
+the same guest addresses elsewhere in the file (full multi-line anchor, not bare address, kept
+matches unique) and two different functions in the same file defining the same-named label
+`L_800AB618:` (safe by C's per-function goto scoping, checked directly). 7/11 sites correctly no-op'd
+as redundant with already-active guards. Live-verify: 0 crashes, 0 fires (null result, no positive
+control yet).
+
+**s449 (item -287) — closed the whole arc's open ambiguity with a positive control.** Every confirm
+soak since s445 had logged 0 trips on the newly-ungated guards, ambiguous between "code never
+executes" and "pointer is genuinely always valid." Added unconditional REACHED counters (not just
+trip counters) to `GETDATITEM_GUARD` and `HANGARLIST_GUARD_EARLY`/`WALK`/`CLEAR`. Result:
+`HANGARLIST_GUARD_EARLY`/`WALK`/`CLEAR` reached 245000+ times combined with 0 trips — a strong
+positive control confirming true negative, not dead code; `GETDATITEM_GUARD` reached 5/6 sites (lower
+traffic, still refutes unreached). **Conclusion: this entire guard idiom class (`-0x25A4`/table-deref/
+free-list-cache-head) is confirmed correct hardening that is unlikely to ever fire under normal play —
+remaining orphan-sweep work is completeness debt-paydown, not a crash hunt.** Incidental crash on a
+new, unrelated signature (`heapFreeListDequeue+19316`, single occurrence, filed not chased).
+
+**s450 (item -288):** Fixed `G1`-`G32` (29 sites) plus a previously-unaccounted 5-site sibling family
+(`A`-`E`, an older s110 table-deref guard) and their shared `L_hangarbay_guard_exit` epilogue label —
+all three were doubly-orphaned (dead file gate AND dead function-name regex). Standalone scan found
+all 29 anchors unique tree-wide, refuting the old fixup comment's stale "also in funcs_27.c" warning.
+First build failed (`undeclared label`) because the epilogue-label block was independently orphaned
+too — fixed alongside once the dependency surfaced (a new lesson: check a patch's bare `goto LABEL`
+target for independent orphaning BEFORE ungating, or a missing-label build failure is the symptom).
+Live-verify: 0 fires (matches s449 baseline), crashed on the already-closed item -259 signature family.
+
+**s451 (item -289) — closes the `funcs_40.c`-gated orphan inventory except `BREADCRUMB7`.** Fixed 9
+further doubly-orphaned `composeNpcOrientationMatrix` guard sites ("guard1"-"guard9", an older,
+separate family from item -284's own 30-site fix for the same function). Applied s450's own
+lesson: checked the shared bail target `L_800AB618` for independent orphaning BEFORE ungating,
+found it already live via other already-ungated guards in the same file, so no shared-infrastructure
+fix was needed this time (a clean outcome on that check, unlike s450's). Live-verify: 0 fires (matches
+s449 baseline), crashed on the already-catalogued `BREADCRUMB6`/near-`0x80000000` "near-zero guest
+pointer" family (first seen s273, reconfirmed not-a-new-class as recently as s328a).
+
+**State entering s452:** only `S392_H3A`/`S393_H3B` (50 sites total) remains open in this arc, plus
+`BREADCRUMB7` (diagnostic, lowest priority, optional). `S392_H3A`'s bail label `L_800ADB2C` is known to
+sit INSIDE `updateHangarBayScene`'s own body — meaning some or all of these sites may already be
+covered by `GENERIC_CACHE_GUARD`'s blanket 107-site fix (item -270/-273); check for redundancy before
+patching, don't force full application. Exact plan: `scratch/agent/NEXT.md` as of s451.
+
 Full session-by-session raw detail: `PORTING-STATE.md` Sessions 426–443.

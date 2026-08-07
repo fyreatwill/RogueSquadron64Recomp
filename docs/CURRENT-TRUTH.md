@@ -11,8 +11,10 @@ Priority order for upcoming iterations, set after the 300-session review:
    far (s295-330 x5, s346, s355, s364, s371, s380, s391, s398, s409, s429, s438, s444) kept the file
    oscillating around the cap as new session detail accrues; s429/s438 migrated the s426-438
    duplicate-symbol/breadcrumb saga to PROJECT-OVERVIEW §16, s444 migrated its s439-443 continuation
-   (items -274..-280 compacted to short pointers) — 696→494 lines (61.9KB→~42KB) in one pass. Full
-   per-pass detail in git log. 35 KB remains a stretch target, not a hard floor -- the "Current truth"
+   (items -274..-280 compacted to short pointers), s451 migrated its s445-451 continuation (the
+   `static5-rename-orphan-sweep`/`orphan-guard-completeness-closeout` arc, items -282..-289
+   compacted to one range pointer). Full per-pass detail in git log. 35 KB remains a stretch
+   target, not a hard floor -- the "Current truth"
    env-var/timeline prose and the Regeneration section's Standing warnings stay intact deliberately;
    both are used every iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
@@ -20,19 +22,22 @@ Priority order for upcoming iterations, set after the 300-session review:
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. The original
-   `-0x25A4` family is closed (s283-396); its frequency-scan discovery method is exhausted for GENERAL
-   next-class discovery. **But s426-429 opened a live, higher-priority in-progress thread within the
-   same M3 DoD leg**: duplicate-symbol-name collisions in the overlay `.txt` files silently truncate
-   real function bodies to 1-instruction stubs (a third shape of the closed item -6/-249 "phantom
-   function" family). This supersedes needing separate human reconfirmation on "where to focus next"
-   for now — see item -274 (current top) and PROJECT-OVERVIEW §16 for the full session-by-session arc.
+   `-0x25A4` family is closed (s283-396). **The s426-429 duplicate-symbol-name thread (18/18 pairs) and
+   its s438-445 BREADCRUMB18/free-list-guard follow-on are both CLOSED** (items -261..-280, -263 —
+   see below). **Its s445-451 fallout, the `static5-rename-orphan-sweep` (every pre-s427 guard
+   hardcoded to a now-renamed function), is CLOSED except `S392_H3A`/`S393_H3B` (50 sites) and
+   `BREADCRUMB7`** (items -282..-289 below) — s449 confirmed this whole guard idiom class is correct
+   hardening, not a live crash source, so finishing it is completeness debt-paydown, not a crash hunt.
+   Current top work unit (`scratch/agent/NEXT.md`): `S392_H3A`/`S393_H3B`, or a fresh M3 idiom-class
+   audit if that starts feeling like diminishing returns. Full session-by-session arc: PROJECT-OVERVIEW
+   §16.
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
 below and `docs/PROJECT-OVERVIEW.md` §13. M4's largest item (-249) and its `0x800290d4` follow-on
 (-259) are both CLOSED — see those items below for status.
 
-## Current truth (established by session 295; unchanged, reviewed through s372)
+## Current truth (established by session 295; unchanged, reviewed through s451)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -167,277 +172,44 @@ numbered highest-magnitude-negative (top, newest/highest priority) counting up t
 oldest). Current top is -289 (s450, a new backlog item found incidentally — see below); the
 next new item takes -290.
 
--289. **(s451) 9 doubly-orphaned `composeNpcOrientationMatrix` guard sites ("guard1"-"guard9",
-    s100-s261-era, distinct from item -284's own 30-site s446 fix for the same function) — FIXED,
-    same method as items -284/-286/-288.** All 9 were gated on the dead file location `funcs_40.c`
-    AND a function-start regex for the dead old name `static_5_800AB1C8`, silently producing zero
-    report lines since s427. A raw pre-fixup regen + standalone Python scan confirmed all 9 anchors
-    match exactly once tree-wide, all inside `composeNpcOrientationMatrix`'s own body span in
-    `funcs_28.c`. The shared bail target (`L_800AB618`) was checked for independent orphaning
-    BEFORE ungating (s450's own lesson) — confirmed to be the function's real epilogue label,
-    already proven live/reachable by the already-ungated `S284_AB1C8_6`-`_10` and `S390_H2B` guards
-    elsewhere in the same file, so no shared-infrastructure fix was needed this time (unlike -288).
-    Ungated all 9 (dropped the filename+`func_start_m` scoping per the s446/s448/s450 precedent,
-    replaced with a direct `re.subn` on the whole file text plus a `SystemExit`-on-`n>1` hard
-    guard). Full regen/build clean, 0 new warnings; fixup report showed all 9 patches applied `x1`;
-    `strings` confirmed all 9 guard format strings present. Live-verify (full 300s/250s-key
-    schedule): 0 `compose-npc-orient-guard` fires (matches the item -287 established baseline, not
-    an open question), `hangarbay-entry` reached n=2700 (function reachable). Crashed at ~197s on
-    `si_addr=0x380000010`/`pc-symbol=buildPositionAndCallTransformHelper+1736`,
-    `last-guest-pc=0x80065acc` — this is the **already-catalogued `BREADCRUMB6`/near-`0x80000000`
-    "near-zero guest pointer" family** (first seen s273, explicitly re-confirmed "NOT a new crash
-    class" as recently as s328a), a byte-for-byte match to that family's signature and unrelated to
-    `composeNpcOrientationMatrix` or any guard tested this session — not chased (strategic priority
-    #3). Confirmation soak queued: `s451_composenpc9_confirm.sh`.
-    **This closes out the `funcs_40.c`-gated orphan inventory except `BREADCRUMB7`** (a diagnostic,
-    not a crash guard, lowest priority) — next session should move to `S392_H3A`/`S393_H3B` (50
-    sites, item -284's redundancy caveat still applies) or open a fresh M3 idiom-class audit if that
-    family starts feeling like diminishing returns. Full detail: `PORTING-STATE` Session 451.
+-282..-289. **(s445-451) `static5-rename-orphan-sweep`: the s427 duplicate-symbol fix (item
+    -261..-267) split a ~13,770-line anonymous merged blob back into ~15 real functions
+    (`hangarInitialize` never existed as a real function post-s427), orphaning every pre-s427
+    guard/patch hardcoded to the old `static_N_0xADDR` names or file locations. Root-caused and
+    fixed across 6 sessions: `GETDATITEM_GUARD` (6 sites), `HANGARLIST_GUARD` family (4 sites),
+    the combined s284/s285 deref-guard list (30 sites), `S390_H2A`/`S390_H2B` (11 sites),
+    `G1`-`G32` + a sibling `A`-`E` family (34 sites), and 9 further doubly-orphaned
+    `composeNpcOrientationMatrix` sites — 94 sites total, same method every time (standalone
+    Python scan confirms tree-wide anchor uniqueness before ungating, `SystemExit`-on->1-match
+    hard guard added). s449 closed the arc's central open question with a positive control:
+    unconditional REACHED counters showed the sibling `HANGARLIST_GUARD` family reached 245000+
+    times with 0 trips — a true negative, not dead code, so this whole guard idiom class
+    (`-0x25A4`/table-deref/free-list-cache-head) is confirmed correct hardening unlikely to ever
+    fire under normal play, not a live crash source. Incidentally: found+fixed a `tools/probe.sh`
+    false-negative bug (silently reported crashed soaks as clean, s447) and opened one new,
+    unrelated single-occurrence crash class (`NAN_CHECK` assert in `transformVec3ByMat34`, item
+    -281, filed not chased). **Closes the `funcs_40.c`-gated orphan inventory except
+    `S392_H3A`/`S393_H3B`** (50 sites, known `GENERIC_CACHE_GUARD`-redundancy wrinkle on
+    `L_800ADB2C` — check before patching) **and `BREADCRUMB7`** (diagnostic, lowest priority).
+    `S392_H3A`/`S393_H3B` is `scratch/agent/NEXT.md`'s current top work unit. Full detail:
+    `docs/PROJECT-OVERVIEW.md` §16 (s445-451); raw: `PORTING-STATE` Sessions 445-451.
 
--288. **(s450) `G1`-`G32` hangar-bay-scene `-0x25A4`/table-deref guard family — FIXED, same
-    method as items -284/-286.** 29 G-sites plus a previously-unaccounted 5-site sibling family
-    (`A`-`E`, an older s110 table-deref guard) and their shared `L_hangarbay_guard_exit`
-    epilogue label were ALL doubly-orphaned (gated to dead file `funcs_40.c` AND a dead
-    function-name regex `static_5_800AB658`) since s427 renamed/moved the function to
-    `updateHangarBayScene`/`funcs_28.c` — confirmed via a raw pre-fixup regen showing zero
-    `G1`-`G32` report lines, exactly as predicted. A standalone tree-wide scan
-    (`scratch/agent/s450_scan_g1g32.py`, extracts the live patch list via `exec` to avoid
-    transcription drift) found all 29 anchors unique tree-wide and inside the function's own
-    body, refuting the old fixup comment's stale "also in funcs_27.c" warning for the current
-    tree. First build attempt failed (`undeclared label 'L_hangarbay_guard_exit'`) because the
-    epilogue-label-inserting block and the A-E guard block were independently, identically
-    orphaned and hadn't been fixed yet — all three blocks fixed together once the dependency was
-    found. Full regen/build clean (35/35 patches `x1`, no collisions); `strings` confirmed all 34
-    guard format strings present. Live-verify: 0 fires on both families (matches the item -287
-    established baseline, not a fresh open question), `hangarbay-entry` n=32 (reachable),
-    crashed at 163.2s on the already-closed item -259 signature family
-    (`last-guest-pc=0x800290d4`, a 6th distinct misattributed native symbol — not chased).
-    Confirmation soak queued: `s450_g1g32_confirm.sh`. Full detail: `PORTING-STATE` Session 450.
-
--287. **(s449) CLOSED the `static5-rename-orphan-sweep` open question with a positive control:
-    items -282/-284/-286's persistent "0 guard-trips" was a confirmed TRUE NEGATIVE, not an
-    unreached-code artifact.** Every confirm soak since s445 logged 0 trips on the newly-ungated
-    guards, but the trip counters only increment on the bad-pointer branch — ambiguous between
-    "code never executes in these soaks" and "code executes constantly, pointer is genuinely
-    always valid." Added unconditional REACHED counters (print at n=1, then every 500/2000) to
-    `GETDATITEM_GUARD`'s 6 sites and `HANGARLIST_GUARD_EARLY`/`WALK`/`CLEAR`'s 3 sites (all
-    already-ungated, s445/s446), armed alongside every other guard-family env var, one 117s live
-    run (see below for why it was cut short). Result: **`HANGARLIST_GUARD_EARLY`/`WALK`/`CLEAR`
-    reached 123000/58500/64500 times respectively (245000+ total) with 0 trips — a strong,
-    statistically solid positive control confirming these are genuine true negatives, not dead
-    code.** `GETDATITEM_GUARD` reached 5 of its 6 sites (1 hit each, low-traffic call sites,
-    lower confidence but still refutes "unreached") with 0 trips. **Conclusion: the remaining
-    orphan-sweep families (`G1`-`G32`, `S392_H3A`/`S393_H3B`, `BREADCRUMB7`) should be finished
-    as pure completeness/hardening debt-paydown, not as a crash hunt — this class of guard is now
-    confirmed unlikely to ever fire under normal play.** Downgrades this thread's priority below a
-    fresh M3 idiom-class search (strategic priority #3 still wants the orphan class formally
-    closed, just without expecting it to explain any open crash). Regen/build clean (both changes
-    live in `fixup_game_funcs.py`, N64Recomp repo, not tracked in this repo's git — same as every
-    prior session's fixup edits); `strings` confirmed both new format strings' 9 sites present in
-    the binary before the run.
-    **Incidental: the run crashed at 117.4s/49 frames on a signature not seen before** —
-    `pc-symbol=heapFreeListDequeue+19316` (the huge offset is very likely nearest-symbol
-    misattribution, same shape as the cvmsPoolAlloc/coalesceFreeHeapBlocks family in items
-    -282/-285, not literally inside a 19KB function), `last-guest-pc=0x8000d534`, backtrace
-    through `menuOverlayInit <- mainGameLoop <- mainBootstrapWorker`. Single occurrence, no
-    positive control, unrelated call path to any guard tested this session — filed, not chased
-    (strategic priority #3). Full detail: `PORTING-STATE` Session 449.
-
--286. **(s448) `S390_H2A`/`S390_H2B` orphaned hangar-list `-0x25A4` guard family — FIXED, same
-    method as item -284's s446 fix.** 11 sites, file-scope-gated to `p.name == "funcs_27.c"`,
-    orphaned since s427 relocated their enclosing functions (`runHangarSelectionFrame`,
-    `composeNpcOrientationMatrix`) to `funcs_28.c`. A raw pre-fixup regen + standalone Python scan
-    (`scratch/agent/s448_scan_s390h2.py`) confirmed all 11 anchors match exactly once in
-    `funcs_28.c`, tree-wide. Two wrinkles beyond s446's precedent, both verified not assumed: (1)
-    `funcs_28.c` holds overlay-duplicated code repeating these same guest addresses 2-3× more with
-    unrelated disassembly — the anchors' full multi-line text (not the bare address) is what keeps
-    matches unique; (2) `funcs_28.c` has two DIFFERENT functions each defining their own
-    same-named label `L_800AB618:` (line 7210 in `composeEffectObjectTransformMatrix`, line 10558
-    in `composeNpcOrientationMatrix`) — safe by C's per-function goto-label scoping, confirmed by
-    checking all 9 chunk-2b sites and the line-10558 label instance fall within
-    `composeNpcOrientationMatrix`'s own span. 7 of the 11 sites (`S390_H2A_1`/`_2`,
-    `S390_H2B_5`-`_9`) textually overlap an already-active s284/s285 guard's shorter anchor prefix
-    and correctly no-op (redundant protection already in place, not lost coverage) — only
-    `S390_H2B_1`-`_4` actually applied (`x1` each, fixup-report- and `strings`-verified). Ungated
-    + added the `SystemExit`-on-`n>1` hard guard (s446 pattern). Regen/build clean, 0 new warnings.
-    Live-verify: full 300s/250s-key schedule, 0 crashes, 0 fires on any of the new or sibling guard
-    families (null result, no positive control yet — matches this whole audit's established low,
-    state-dependent firing rate). Confirmation soak queued: `s448_s390h2_confirm.sh`.
-    **s449 update: item -287's positive control (245000+ reaches, 0 trips on the sibling
-    HANGARLIST_GUARD_EARLY/WALK/CLEAR family) confirms this whole pattern — including this
-    item's own 0 fires — is a true negative, not a soak-coverage gap. Confirmation CLOSED, not
-    open: these guards are correct hardening, not live bug catches.**
-    **Incidentally, folding in the queued `s447_hangarlist_getdatitem_confirm` soak (read-list #3)
-    found it crashed** (`rc=3`, `probe.sh`'s own s447 fix correctly firing) **on a recurrence of the
-    already-catalogued 9th crash class (`updateAnimatedTextureStreaming` SIGBUS, s89/s124/s127),
-    not items -282/-284's target families.** Confirmed `updateAnimatedTextureStreaming`'s s124/s127
-    guards are NOT orphaned (still genuinely in `funcs_11.c` post-s427, checked directly against
-    the built object file) — but the crash's host offset (+3132 bytes, well past the guard region
-    near the function's top) suggests a 3rd unguarded deref site downstream, same shape as s127's
-    discovery of a 2nd gap after s124's first guard. Filed, not chased (strategic priority #3): env
-    vars to arm the existing 2 guards weren't set in that soak, so whether they fired first is
-    unknown. **Items -282/-284 remain at 0/0 fires, unconfirmed either way — 3 confirm-soaks in a
-    row have now crashed on unrelated signatures before stressing those code paths for long; this
-    is itself informative (both families are genuinely low-frequency, not soak-harness-broken)
-    but not yet a discriminating result.** Full detail: `PORTING-STATE` Session 448.
-
--285. **(s447) `tools/probe.sh` was silently mislabeling crashed soaks as clean (`rc=0`) — FIXED.**
-    Folding in the two newest `SOAK-RESULTS.md` lines (`s445_getdatitem_confirm`,
-    `s446_hangarlist_confirm`, both `rc=0`) per the standing read-list found both actually
-    crashed: `probe.sh`'s capture loop, on the game dying mid-capture, just `break`s and falls
-    through to an implicit `exit 0`, so any recipe script that (like both of these) calls
-    `probe.sh` directly without its own `run.log` self-check gets a false-clean verdict. Both
-    crashes are already-catalogued, unrelated, pre-existing signatures, not regressions: s445 hit
-    `sym=cvmsPoolAlloc+496` (byte-identical to a ~s73/s267 nearest-symbol-misattribution family),
-    s446 hit `sym=coalesceFreeHeapBlocks+3192` (same family as `BREADCRUMB11`, s264-era). **Neither
-    guard implicated — but this downgrades items -282 and -284 below from "confirmation soak
-    queued" to "one soak run, inconclusive, still 0/0 fires, still no positive control."** Fixed at
-    the root: `probe.sh` now checks `run.log` for `[CRASH]` after the capture loop and `exit 3`s
-    instead of falling through to 0 — every future caller gets accurate exit codes whether or not
-    its own recipe script self-checks (the s434-era per-script pattern had now silently failed
-    twice in a row). Verified with a same-session positive control (extracted check logic run
-    against `s446`'s crashed `run.log`: correctly reports the crash) and negative control (run
-    against `s442_freelistnext_manual`'s genuinely-clean `run.log`: correctly reports clean).
-    Audited the other 21 `probe.sh`-calling recipes in `soak_queue/done/`: 3 more
-    (`s400_batch1_verify`, `s429_hangarmenu_ckpt_verify`, `s431_malloccraft_ckpt_verify`) lack the
-    self-check; `s400` was checked and is genuinely crash-free (its `rc=0` was correct), the other
-    two already reported `rc=1` (a different, already-correctly-nonzero `probe.sh` exit path) so
-    are lower-priority, not chased further. Requeued a corrected combined confirm soak for items
-    -282 and -284: `scratch/agent/soak_queue/s447_hangarlist_getdatitem_confirm.sh`. Full detail:
-    `PORTING-STATE` Session 447.
-
--284. **(s446) ROOT-CAUSED item -283's orphaning as codebase-wide, not just 61 sites: `hangarInitialize`
-    never existed as a real function post-s427 — it was N64Recomp's PRE-fix merger of ~15 separate,
-    now-correctly-named functions (`loadCutsceneAssetsByIndex`/`mallocCraftSelectionData`/
-    `runHangarSelectionFrame`/`composeNpcOrientationMatrix`/`updateHangarBayScene`/
-    `hangarTickCameraOrbit`/etc.) into one anonymous ~13,770-line blob, and s427's duplicate-symbol
-    fix split it back apart. EVERY pre-s427 guard/patch hardcoded to the old anonymous
-    `static_N_0xADDR` names or file locations is orphaned this way, not just the s390-393 chunks:
-    confirmed 0 matches for `static_5_800A9270`/`static_5_800AAD9C`/`static_5_800AB1C8`/
-    `static_5_800AB658`/`static_5_800ADB70` (and 6 more addresses) ANYWHERE in the current
-    codebase — all 11 renamed, several also moved to a different `funcs_N.c` file entirely
-    (`grep -rn "RECOMP_FUNC void static_5_..."` returns nothing tree-wide). **Fixed and verified
-    34 of these sites this session**: `HANGARLIST_GUARD`+`EARLY`/`WALK`/`CLEAR` (4 sites,
-    `loadCutsceneAssetsByIndex`, now `funcs_27.c`) and the s284/s285 combined deref-guard list (30
-    sites spanning `runHangarSelectionFrame`/`composeNpcOrientationMatrix`/`hangarTickCameraOrbit`,
-    all now `funcs_28.c`). Method: for each site, confirmed via a standalone Python scan that its
-    exact 2-line anchor (comment + generated code) matches exactly ONCE across the whole
-    `RecompiledFuncs/` tree (34/34 unique, 0 collisions) before removing the old file/function-name
-    gate; the fixup script now asserts (`SystemExit`) if any site ever matches >1 time, rather than
-    silently over-patching — guards against the exact collision risk the old G1-G32 comment warns
-    about (see below). Full regen+build clean; fixup report showed all 34 sites `x1` (audited, no
-    unexpected counts); binary `strings` check confirmed all 34 guard format-strings present.
-    Live-verify: full 300s/250s-key schedule held with 0 crashes and 0 guard fires, `[hangarbay-entry]`
-    reached n=3000+ (reachability positive control, matches s440's baseline) — clean null result,
-    proactive-fix pattern (no positive control needed for a pure addition, s389 precedent).
-    **s447 update: the queued `s446_hangarlist_confirm.sh` soak actually crashed** (soak-harness
-    false-negative bug, item -285) **on an unrelated pre-existing signature
-    (`coalesceFreeHeapBlocks+3192`), not a regression — but this family's guards logged 0 fires,
-    so confirmation is still open, not closed.** Corrected re-queue: `s447_hangarlist_getdatitem_confirm.sh`.
-    **`S390_H2A`/`S390_H2B` FIXED s448 — see item -286. `G1`-`G32` (29 sites) plus a sibling A-E
-    table-deref family FIXED s450 — see item -288**, which also confirmed the old "also in
-    `funcs_27.c`" warning is stale for the current tree (0 collisions, full recheck not a sample).
-    Remaining orphaned, NOT fixed yet: `S392_H3A`/`S393_H3B`
-    (50 sites) — NOT yet uniqueness-checked, and item -284's own read found `S392_H3A`'s bail label
-    `L_800ADB2C` sits INSIDE `updateHangarBayScene`'s body (not a separate function) — meaning these
-    29 sites may guard derefs already covered by `GENERIC_CACHE_GUARD`'s blanket 107-site fix
-    (item -270/-273); check for redundancy before re-adding; `BREADCRUMB7` (diagnostic, target
-    `updateHangarBayScene`) — not checked; **item -289 (s450, new): 9 further doubly-orphaned sites
-    in an older, separate `composeNpcOrientationMatrix` guard family, distinct from this item's own
-    30-site fix** — same method applies. Full detail: `PORTING-STATE` Session 446, 450.
-
--282. **(s445) GETDATITEM_GUARD — a fresh M3 systematic idiom-class audit** (pivoted off item
-    -278 per budget, strategic-priority #3): `getDatItemByName` (funcs_10.c, guest `0x80047B70`)
-    returns sentinel -1 on an empty hash bucket; 5 of its 6 call sites dereferenced the raw
-    return value as a pointer with zero validation (3 sit directly beside the already-guarded
-    `S285_H1_6/7`/`S395_SWEEP_1` `-0x25A4` guards, protecting a sibling pointer at the same call
-    site — the established "guard covers one pointer, not another" shape recurring). The 6th
-    site is wrapper `getLevelDatItemByName`, whose 47 further callers all inherit the guarded
-    return value transitively. Patched via one general regex (all 6 sites, byte-identical
-    call+goto+label idiom); full regen+build clean; 6/6 guard statics verified present via `nm`/
-    `strings` on the built binary. Live-verify: 0 fires (1st soak, no positive control yet,
-    normal first-pass pattern), crashed instead on the unrelated new item -281. Confirmation
-    soak queued: `s445_getdatitem_confirm.sh`. **s447 update: that soak actually crashed**
-    (soak-harness false-negative bug, item -285) **on an unrelated pre-existing signature
-    (`cvmsPoolAlloc+496`, byte-identical to a ~s73/s267 nearest-symbol-misattribution family), not
-    a regression — but 0 fires means confirmation is still open, not closed.** Corrected re-queue
-    (shared with item -284): `s447_hangarlist_getdatitem_confirm.sh`. Full detail: `PORTING-STATE`
-    Session 445, 447.
-
--281. **(s445) NEW crash class: `NAN_CHECK` assert fires in `transformVec3ByMat34`**
-    (`Assertion failed: (ctx->f14.fl == ctx->f14.fl)`, funcs_4.c:30007, signal 6/abort,
-    `last-guest-pc=0x80065e94`). `NAN_CHECK` (`N64Recomp/include/recomp.h:396`) is an always-on
-    `assert(val==val)` inserted at nearly every float op codebase-wide — this is its first-ever
-    catalogued trip, on a NaN reaching a matrix multiply. Single occurrence, no positive control
-    (iron rule 1). Unrelated to item -282 (no shared call path); confirms that guard's null
-    result isn't itself suspicious. Filed, not chased (strategic-priority #3). Passively covered
-    by item -282's confirmation soak (no separate env var needed to arm `NAN_CHECK` — it's
-    unconditional). Full detail: `PORTING-STATE` Session 445.
-
--280. **(s443, s444, s445) `[wait-resumed-dead-ctx]` UAF instrument in `wait_for_resumed()`
-    (`lib/N64ModernRuntime/ultramodern/src/threads.cpp`), testing item -278's UAF hypothesis:
-    PARKED s445 — 2 consecutive null/clean confirm soaks (0 fires both times), and item -278's
-    own crash signature has not recurred across ~10 soaks since s441 introduced it. Per iron
-    rule 8 and this item's own stated pivot criteria, further identical confirm soaks have low
-    information value; parked (not closed) alongside item -263's siblings. Resurrection
-    condition unchanged: a NEW occurrence of item -278's own signature (SIGSEGV in
-    `LightweightSemaphore::tryWait`, wild 64-bit host pointer) under this instrument, fires>0 or
-    not. `idle_thread_handle` confirmed via `nm -C` as a genuine guest symbol, not an `atos`
-    misattribution — de-risks the backtrace's credibility even though the hypothesis itself is
-    parked. Full detail: `docs/PROJECT-OVERVIEW.md` §16 (s443), `PORTING-STATE` Sessions 443-445.
-
--279. **(s442) The queued `s441_freelistnext_confirm` soak's rc=1/0s "failure" was a SOAK-SCRIPT
-    off-by-one bug (wrong `..` count reaching repo root from `soak_queue/`), not a crash.**
-    Corrected manual re-run came back CLEAN (0 crash, 0 fires on all 3 free-list guard families —
-    still no positive control since s434; `[hangarbay-entry] n=2900` matches s440's baseline).
-    Item -278 did not recur. Requeued a corrected `s442_freelistnext_confirm.sh` on s440's robust
-    `REPO_ROOT`-variable pattern. Process lesson: `rc=1` + near-zero duration + no `run.log` is a
-    soak-harness bug signature, check that before reading it as a game crash. Full detail:
-    `docs/PROJECT-OVERVIEW.md` §16 (s442).
-
--278. **(s441, single occurrence) NEW crash class: SIGSEGV inside the thread-scheduler/semaphore
-    runtime, no game-code frames** — `LightweightSemaphore::tryWait <- wait_for_resumed <-
-    resume_thread_and_wait <- swap_to_thread <- check_running_queue <- pause_self <-
-    idle_thread_handle`, wild 64-bit host pointer. Signature matches no prior family. Single
-    occurrence, no positive control (iron rule 1: a lead, not a result). s443 added a diagnostic
-    instrument targeting this (0 fires so far, see item -280). Confirmation soak queued (shared
-    with item -277): `s441_freelistnext_confirm.sh`. Full detail: `docs/PROJECT-OVERVIEW.md` §16
-    (s441).
-
--277. **(s441) `FREELIST_NEXT_GUARD` — a THIRD sibling of `GENERIC_CACHE_GUARD`/
-    `CACHE_HEAD_A1_GUARD`: the free-list HEAD pointer is validated before deref, but the "next"
-    pointer it reads back is not, and gets written through unguarded 4 bytes later.** Fixed 105
-    sites. Root-caused AND fixed the exact crash item -276's confirm soak hit — and proved
-    (same-run, mechanism-level: `[hangarbay-entry]` logged 0 calls, backtrace never enters
-    `updateHangarBayScene`) that occurrence had been misattributed to item -263 by superficial
-    signature match alone. **Downgrades item -263's confidence** (see below). Live-verify after
-    the fix: 0 fires across all 3 free-list families (null result), crashed instead on the new
-    item -278. Full detail: `docs/PROJECT-OVERVIEW.md` §16 (s441).
-
--276. **(s440) `updateHangarBayScene` entry counter (`ROGUESQ_LOG_HANGARBAY_ENTRY`) — the first
-    same-run positive control for the BREADCRUMB18 thread: ~2900 calls in a single clean run**,
-    confirming the function is hot/reachable during the schedule that kept not reproducing item
-    -263. Consuming its own confirm soak (s441) is what surfaced item -277's real mechanism —
-    see above. Full detail: `docs/PROJECT-OVERVIEW.md` §16 (s440).
-
--275. **(s439) BREADCRUMB18 added to `updateHangarBayScene`** (funcs_28.c:10918-17722, ~6805
-    lines, 2643 writes — the largest function this project has instrumented). Live-verify clean:
-    null result, no positive control yet (supplied by item -276 next session). Full detail:
-    `docs/PROJECT-OVERVIEW.md` §16 (s439).
-
--274. **(s438) Item -263 recurred a 4th time; `last-guest-pc` froze at the call site into
-    `updateHangarBayScene` (zero breadcrumb coverage there) — same misattribution mechanism
-    BREADCRUMB16/17 were built to defeat, one function deeper.** Motivated BREADCRUMB18 (item
-    -275). Full detail: `docs/PROJECT-OVERVIEW.md` §16 (s438).
-
--263. **(s426, recurred s433/436/437/440; s441 RECLASSIFIED — PARKED, likely dissolved into item
-    -277's free-list-guard family, not independently confirmed as a distinct bug.** None of its 5
-    occurrences ever showed a fault instruction inside `updateHangarBayScene`'s own body; the
-    s426-438 "localization" chain was a sequence of breadcrumb-coverage-gap freezes, and when s440
-    finally got full coverage there the fault was elsewhere entirely (item -277). **Falsifying
-    condition that would resurrect it**: a NEW occurrence where BREADCRUMB18 reports a real
-    address inside `updateHangarBayScene`'s own body. Full detail: `docs/PROJECT-OVERVIEW.md` §16
-    (s426-441).
+-274..-280 (and -263). **(s438-445) BREADCRUMB18/free-list-guard arc, all resolved or parked.**
+    Item -263 (s426, recurred s433/436/437/440) RECLASSIFIED PARKED s441: none of its 5 occurrences
+    ever showed a fault inside `updateHangarBayScene`'s own body; adding full breadcrumb coverage
+    there (BREADCRUMB18, item -275, ~6805 lines/2643 writes, motivated by a 4th recurrence at s438,
+    item -274) let s441 prove the real mechanism was a THIRD free-list-cache-head sibling bug
+    (`FREELIST_NEXT_GUARD`, item -277: the HEAD pointer is validated before deref but the "next"
+    pointer read back from it is not; 105 sites fixed) misattributed to item -263 by superficial
+    signature match alone — an entry counter (item -276) supplied the same-run positive control
+    that made the misattribution provable. Falsifying condition unchanged: a NEW occurrence where
+    BREADCRUMB18 reports a real address inside `updateHangarBayScene`'s own body. The
+    `FREELIST_NEXT_GUARD` fix surfaced a new, unrelated single-occurrence crash class (item -278:
+    SIGSEGV in the thread-scheduler/semaphore runtime, no game-code frames); s442 found its confirm
+    soak's apparent "failure" was a soak-script off-by-one path bug, not a crash (item -279); s443's
+    `[wait-resumed-dead-ctx]` UAF diagnostic instrument (item -280) PARKED s445 after 2 clean
+    confirm soaks and ~10 soaks total without item -278 recurring. Full detail:
+    `docs/PROJECT-OVERVIEW.md` §16 (s438-445); raw: `PORTING-STATE` Sessions 438-445.
 
 -268..-273. **(s432-437) Duplicate-symbol catalogue closed (18/18); the `0x801163B0` free-list-
     cache-head-deref idiom swept at scale (107 sites, `GENERIC_CACHE_GUARD`, plus a 7-site `$a1`

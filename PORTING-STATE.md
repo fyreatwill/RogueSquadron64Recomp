@@ -37598,3 +37598,36 @@ only), down from 10 at session start.
 **Outcome: ADVANCED** (closed out the planned item -289 work unit end to end -- scan, goto-label
 check, fix, build, binary-verify, live-verify, confirm soak queued -- with 0 unexpected findings
 this session; the crash observed is pre-existing and already fully catalogued, not a new lead).
+
+## Session 452 (2026-08-07)
+
+**Trigger: Step 0 maintenance check fired** (`wc -c docs/CURRENT-TRUTH.md` = 61086, over the 60000-byte
+cap) — this ALSO satisfied the loop's mandatory-pivot rule (3 consecutive iterations, s449-451, had all
+run HYPOTHESIS-ID `orphan-guard-completeness-closeout` without closing it), since Step 0 runs before
+work-unit selection and a maintenance pass is a genuinely different activity, not a 4th iteration on the
+same hypothesis.
+
+**What ran:** the 17th maintenance pass. Migrated the full session-by-session detail of the s445-451
+`static5-rename-orphan-sweep` arc (items -282..-289: `GETDATITEM_GUARD`, `HANGARLIST_GUARD`,
+`S390_H2A`/`S390_H2B`, `G1`-`G32`+`A`-`E`, the 9 further `composeNpcOrientationMatrix` sites, the s449
+positive control, and the `probe.sh` false-negative fix) to `docs/PROJECT-OVERVIEW.md` §16, replacing
+it in `docs/CURRENT-TRUTH.md` with one condensed range-pointer paragraph — same pattern as prior passes'
+treatment of items -274..-280. Also condensed the already-once-compacted items -274..-280 (plus -263,
+the s438-445 BREADCRUMB18/free-list-guard arc) from 8 separate paragraphs into one range pointer, since
+their full detail already lived in PROJECT-OVERVIEW §16 from the s444 pass. Refreshed two stale
+cross-references: the "current truth reviewed through s372" headline (now s451) and the USER DIRECTIVE
+§3 paragraph, which still pointed at "item -274 (current top)" — a session-452-stale pointer left over
+from the s444 pass, now describing the actual current state (duplicate-symbol arc closed, orphan-sweep
+closed except `S392_H3A`/`S393_H3B` and `BREADCRUMB7`, current top work unit named explicitly).
+
+**Result:** `docs/CURRENT-TRUTH.md` 703→475 lines (61086→41233 bytes, a 228-net-line shrink — exceeds
+the >=200-line ADVANCED threshold with room to spare). `docs/PROJECT-OVERVIEW.md` grew by 80 lines to
+hold the migrated detail (net repo change: -252 lines). No conclusions changed, overturned, or lost —
+this is a pure compaction pass. Ran no experiments (correct for a maintenance iteration).
+
+**What this rules out:** nothing new — no experiment ran. What it establishes: `docs/CURRENT-TRUTH.md`
+is back under its byte cap with margin, and the `orphan-guard-completeness-closeout` HYPOTHESIS-ID's
+actual state (open only on `S392_H3A`/`S393_H3B`, 50 sites, `BREADCRUMB7` optional) is now stated once,
+accurately, instead of scattered across 8 verbose entries with some now-stale forward-references.
+
+**Outcome: ADVANCED** (maintenance pass, >=200 net line shrink, per the Step 0 contract).

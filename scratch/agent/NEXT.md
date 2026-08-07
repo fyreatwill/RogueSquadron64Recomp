@@ -2,6 +2,23 @@
 
 HYPOTHESIS-ID: orphan-guard-completeness-closeout
 
+## s452 note: this was a MAINTENANCE iteration, not a 4th hypothesis iteration
+
+Step 0's `wc -c docs/CURRENT-TRUTH.md` (61086 bytes) tripped the 60000-byte maintenance trigger, which
+runs before work-unit selection — so this satisfied the loop's mandatory-pivot rule for real (a
+maintenance pass is a different activity, not a repeat of `orphan-guard-completeness-closeout`) without
+needing to force a probe or an artificial pivot on the hypothesis itself. `docs/CURRENT-TRUTH.md`
+703→475 lines (61086→41233 bytes); the s445-451 orphan-sweep detail (items -282..-289) and the
+already-once-compacted s438-445 BREADCRUMB18/free-list-guard arc (items -274..-280, -263) both migrated
+to `docs/PROJECT-OVERVIEW.md` §16 as condensed range pointers. No conclusions changed. Full detail:
+`PORTING-STATE.md` Session 452.
+
+**This session's actual work unit is UNCHANGED from below — the S392_H3A/S393_H3B plan still stands.**
+If a NEXT maintenance trigger doesn't fire, resume there directly; do not re-read this note as new
+work. This IS iteration 4 on the hypothesis thread in the sense that the underlying question is still
+open — but iteration 4 was a maintenance pass, not a repeat probe, so the loop's pivot condition should
+re-arm fresh starting from the next iteration that actually touches `S392_H3A`/`S393_H3B`.
+
 ## What changed session s451
 
 Fixed item -289: the 9 doubly-orphaned `composeNpcOrientationMatrix` guard sites ("guard1"-"guard9",
