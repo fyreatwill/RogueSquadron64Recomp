@@ -38645,3 +38645,85 @@ this method since that scan was last run.
 **Outcome: ADVANCED** (a real code fix landed — 14 new per-site guards, clean pipeline, clean build,
 clean live-verify with 0 fires on any of the 3 idiom-class guards tested, crash on run was an
 unrelated already-closed family — confirmation soak queued, item -298 closed outright).
+
+## Session 465 (2026-08-07) — folded s463/s464 confirm soaks; ran a fresh codebase-wide idiom-class
+frequency scan (NEXT.md Option A), found+classified a new candidate: item -299, global `0x801163FC`
+
+**Ledger housekeeping first**: both queued confirm soaks from s463/s464 had run since last session.
+`s463_dllistguards_confirm`: crashed at 19.4s on `loadCutsceneAssetsByIndex+1860`
+(`last-guest-pc=0x800aafb8`) — a new offset inside a function already known to have multiple
+piecemeal-fixed unguarded holes (`+668`/`HANGARLIST_GUARD`/s254, `+948`/s283), single occurrence,
+filed not chased. `s464_dllistreset14_confirm`: crashed at 116.4s on `last-guest-pc=0x80065e94`
+(symbolized `initVec4TripletFromArgs+68` this run) — the same already-catalogued `NAN_CHECK`/
+misattributed-symbol-collision family first seen ~s327, recurs under many different `pc-symbol`
+labels at this exact guest PC. Neither relates to any of the 4 sibling guards (`dl-list-append`,
+`dl-list-reset`, `sibling-ptr-write`) tested by those soaks — both null results (0 fires on all 3)
+stand. Both soak scripts were already in `soak_queue/done/`; nothing left in the active queue.
+
+**Main work unit**: per the strategic-priority ladder (Maintenance -> M5 [closed, no new lead] -> M3
+idiom-class audits only), and per the prior session's NEXT.md Option A, re-ran the s454/s463
+discovery method but generalized: instead of tallying only the previously-known `-0x25A4`-family
+offsets, scanned for the WHOLE shared idiom shape — any `lui $reg,0x80XX` immediately followed by
+`lw $reg,OFFSET($reg)` reloading the same register — across all 50 `RecompiledFuncs/funcs_*.c`
+files, bucketed by `(hi16, offset)`. Script: `scratch_s465_scan.py` (N64Recomp repo root, untracked,
+same convention as `scratch_s454_scan.py`). 227 buckets found total.
+
+Built an exclude list from every offset literal appearing anywhere in `fixup_game_funcs.py`
+(covers guards whose remediation targets the DOWNSTREAM write/deref rather than the reload itself,
+e.g. `SIBLING_PTR_WRITE_GUARD`'s per-site literal anchors — those don't touch the bare reload line,
+so a naive "only exclude offsets literally patched at the reload site" list would have missed them).
+First pass had a case-sensitivity bug: the script's offset normalizer lowercases hex letters but the
+hand-written exclude set used the literal case from doc prose (`0x63B0`, `0x29C0`, etc.) — this
+false-positived the well-known, thoroughly-audited `0x63B0` (`GENERIC_CACHE_GUARD`'s own global,
+448 raw reload sites) and `0x29C0` (`SONGTEMPO_TABLE_GUARD`, 49 sites) as "new" in the first run.
+Caught immediately by the script's own reference sanity-check block (prints every excluded bucket it
+still finds, for visual cross-check against the exclude list) — fixed by lowercasing the exclude set
+before comparison, re-ran, all previously-known offsets now correctly excluded.
+
+Ranked candidates (count >= 20, offset not already covered, after the fix):
+`0x63D4`(170) > `-0x23A8`(141, this IS `SIBLING_PTR_WRITE_GUARD`'s own reload offset — not in the
+first grep-derived exclude list since that guard's remediation never touches the reload line itself,
+only the downstream write; confirmed by reading its actual patch code in `fixup_game_funcs.py`
+line ~14583, added to the exclude list by hand) > `0x63FC`(87) > `0x7CE4`(45) > `-0x70F8`(31) >
+`-0x5BBC`(30) > `-0x7104`(29) > `-0x35E0`(23) > `0xB50`(21) > `-0x5B48`(20).
+
+Sampled `0x63D4` first (170 sites, the single largest fresh bucket) by reading 2 example sites
+(`funcs_3.c:3610` `emitAllocatedDLCommand`, `funcs_3.c:5450` another site) — both use the reload as
+a COMPARISON operand (`sltu $v0,$v1,$v0` -> bounds check) gating a downstream write through a
+DIFFERENT, already-guarded pointer (`0x63B0`, protected by `SIBLING_PTR_WRITE_GUARD` at the exact
+site read). `0x63D4` is the buffer-end bound that PROTECTS the `0x63B0`/`-0x23A8` writes, not itself
+a deref target — a benign false-positive of the raw scan (matches the reload-idiom syntax, but not
+the "then unguarded deref/write through it" risk semantics). Ruled out.
+
+Moved to `0x63FC` (87 raw reload sites, `funcs_3.c`x46/`funcs_4.c`x38/`funcs_6.c`x3). Wrote a shape
+classifier (`scratch_s465_classify_63fc.py`) that reads each site's downstream code and tags it
+`DIRECT_WRITE`/`DEREF_READ`/`COMPARE_ONLY`/`OTHER`. Clean split: the 3 `funcs_6.c` sites are
+`COMPARE_ONLY` (same benign bounds-check role as `0x63D4`); the other 84 — exactly `funcs_3.c`46 +
+`funcs_4.c`38 — are `DIRECT_WRITE+DEREF_READ`. Read 5 sample sites spread across the population
+(`funcs_3.c:1181,3864,5637,26757`, `funcs_4.c:26030`) and found a consistent lazy-init idiom:
+`ctx->rL = MEM_W(ctx->rL,0X63FC)` (reload); `ctx->rD = MEM_W(ctx->rL,0X0)` (deref #1, unguarded);
+`if (ctx->rD != 0) goto Lalready;` else `MEM_W(0X0,ctx->rL) = ctx->rNew` (deref #2, unguarded WRITE)
+then `goto Ldone`. Both derefs use the raw, unvalidated reload as a base address — same structural
+risk as the closed `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD` family. The enclosing functions at
+the sampled sites (`allocateDisplayListBuffer`, `emitAllocatedDLCommand`) and the global's address
+(`0x801163FC`, 76 bytes past `0x801163B0`'s own free-list-cache-head) are consistent with this being
+a sibling DL-buffer-pool list head in the same struct region as every other guard in this lineage.
+
+**Not yet fixed.** Unlike `DL_LIST_APPEND_GUARD`'s straight-line 6-instruction tail, this idiom has
+a conditional branch between the two derefs, with a delay-slot instruction that is compiler-arbitrary
+per call site (only confirmed byte-identical STRUCTURE, not literal instruction, at the 5 sampled
+sites) — a full 84-site normalized-shape diff is needed before committing to a blanket-regex patch
+vs. a per-site literal-anchor patch (`SIBLING_PTR_WRITE_GUARD`'s own fallback when a blanket regex
+wasn't safe). Remediation design is decided (validate the reload; if invalid, force the "already
+initialized" branch rather than the "write" branch, to avoid deref'ing the invalid pointer either
+way) but not yet implemented. Full design, exact next steps, and the other 7 unexamined buckets (in
+priority order if this one turns out not cleanly patchable): `docs/CURRENT-TRUTH.md` item -299,
+`scratch/agent/NEXT.md`.
+
+**Outcome: ADVANCED** (two real scripts — `scratch_s465_scan.py`, `scratch_s465_classify_63fc.py`
+(N64Recomp repo, untracked) — ran the planned Option A discriminating scan and produced a positive
+result: a new, well-scoped, comparable idiom-class candidate with a confirmed real-risk shape,
+distinguished from 2 other candidate buckets that turned out benign on inspection. No code patch
+landed this session — the shape confirmation step surfaced a genuine open question (blanket-regex
+tractability across all 84 sites) that the next session should resolve before patching, per iron
+rule 1: don't commit to a remediation mechanism before the population is actually characterized.)
