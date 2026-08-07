@@ -34857,3 +34857,68 @@ standing item -3 rule (ask the user before committing there).
 
 Outcome: ADVANCED (24 real relocations landed net, live-verified clean; 1 bad function isolated via a
 clean 5-level halves bisection and permanently parked; the q2 sub-thread opened s412 is fully closed).
+
+## Session 414 (2026-08-06) — M4 item -249 ordinary bulk relocation at n=75: fresh 75-name batch hit a NEW, deterministic (2/2) crash outside the overlay window; reverted to the clean baseline, deferred bisection
+
+`HYPOTHESIS-ID: m4-item249-bulk-relocation-n75` (per s413's NEXT.md handoff). Regenerated the
+candidate list fresh (`s414_gen_candidates.py`, a straight copy of s408's script with paths retargeted):
+439 total candidates, exactly matching the docs' expected count — 433 after filtering the 4
+`m4_known_skip.txt` + 2 `m4_known_bad.txt` names, also matching exactly. Took the first 75 in file
+order, probed all 75 (`s400_probe_batch.py`): 57 CONFIRMED + 18 WEAK, all single-destination `mission`,
+0 NONE/AMBIGUOUS — no skip-list additions needed this session.
+
+### Apply, regen, build — all clean
+`s400_apply_batch.py` moved all 75 from `main_overlay.txt` to `mission_overlay.txt`. Cleared
+`RecompiledFuncs/funcs_*.c`, ran `make_elf.py` (369 unmapped functions skipped, down from the pre-batch
+count), `N64Recomp`, `fixup_game_funcs.py` — all produced the expected, unremarkable output (same
+`__OSGlobalIntMask`/`lvj_checkComplexObjectives` trap counts as every prior session). `cmake --build`
+succeeded with only the pre-existing `DDIV` sign-warning noise. `nm`-verify: all 75 names present in the
+built binary (positive control passed).
+
+### Live-verify: a NEW crash, reproduced 2/2
+First live-verify run reached `phase width=512` at 88.5s (normal), then the process died ~2.4s later
+after only 1 frame captured — `[CRASH] caught signal 10 (Bus error: 10)`,
+`[pc-symbol] pc=... sym=loadDatFile+21884`, `[last-guest-pc] pc=0x800290d4`. This signature matches
+neither known bad function (`initPlayerCraftTrailBuffers`'s `playerXwingInit+2068`/`0x80011088` nor
+`transformCraftAnchorsApplySubFx3`'s `slotDispatcherIter+1404`/`0x80065e94`) — a third crash-causing
+batch, per NEXT.md's contingency instruction to defer bisection rather than guess. A second identical
+live-verify run reproduced the exact same signature (`loadDatFile+21884`/`0x800290d4`) byte-for-byte —
+**deterministic, 2/2, not one of the nondeterministic background crash families**.
+
+Note on the symbol: `loadDatFile+21884` is a wildly implausible offset for a real function (loadDatFile
+is not a 21 KB function) — this is `nm`'s nearest-preceding-symbol fallback, meaning the true crash site
+is unsymbolized code laid out after `loadDatFile` in the binary. `last-guest-pc=0x800290d4` sits BELOW
+`overlay_start` (`0x800A5130`), i.e. in core `.text`, not in any of the 75 just-relocated overlay-window
+functions themselves — so if this batch is the cause (see below), the mechanism is indirect: one of the
+75 newly-real (no-longer-stubbed) functions must call into core code with bad state, not a direct fault
+inside the relocated function's own body. Exactly the s404/s412 pattern (relocating a phantom function
+converts a harmless no-op stub into real, previously-never-exercised code).
+
+### Same-run positive control: revert restores clean
+Reverted the batch (`s414_revert.py`, mirrors `s404_revert.py`'s surgical move-back), cleared
+`RecompiledFuncs`, full regen+build (clean, `make_elf.py` reported 444 unmapped — consistent with the
+75-smaller relocated set), live-verified once: **CLEAN** — 88.6s to `phase width=512`, 19 frames
+captured, 0 `[CRASH]` lines, `lastW=640` sustained to end of log. This is the same-run discriminating
+result the batch, not an unrelated background crash family or environment fluke, is responsible: crash
+present with the 75-batch applied (2/2), crash absent with it reverted (1/1) — the reverted state
+matches every prior session's established clean baseline exactly.
+
+### What this closes and what's next
+Repo state at end of session: back at the s413 baseline, 359/778 relocated, unchanged (this session's
+75-name batch was NOT landed — it caused a genuine, reproducible crash and was reverted). The 75-name
+candidate set is preserved at `scratch/agent/s414_crash_batch_needs_bisection.txt` for next session's
+halves bisection (same playbook as s404-407/s412-413: split, apply-on-top-of-clean-baseline, regen,
+build, nm-verify, live-verify, narrow toward the single bad function or small set responsible for the
+`loadDatFile+21884`/`0x800290d4` signature). `HYPOTHESIS-ID` changes to
+`m4-item249-s414batch-badfunc-isolation` for that thread; `m4-item249-bulk-relocation-n75` (ordinary
+relocation) resumes once it closes.
+
+Sibling-repo symbol-file edits (`main_overlay.txt`/`mission_overlay.txt`) are uncommitted per the
+standing item -3 rule (ask the user before committing there) — net state there is unchanged from s413
+(the batch was applied then fully reverted within this session).
+
+Outcome: ADVANCED (found and same-run-confirmed a new, deterministic, reproducible crash-causing batch
+via the standard apply/live-verify/revert/control discipline; a null result would have been worthless
+without the positive control, which this session ran — crash 2/2 with the batch, clean 1/1 without it;
+correctly deferred bisection rather than guessing which of 75 names is at fault, per NEXT.md's own
+contingency plan).

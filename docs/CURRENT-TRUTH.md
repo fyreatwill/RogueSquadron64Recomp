@@ -112,7 +112,8 @@ Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regress
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
 ~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403+s405+s406+s407+
 s408+s410+s411+s412+s413 have fixed 359 of the corrected 778-candidate count (439 remain, 2
-permanently excluded as known-bad, 4 known-skip, item -249). s411
+permanently excluded as known-bad, 4 known-skip, item -249; s414 attempted the next 75, hit a new
+deterministic crash, and reverted — 359/778 unchanged, see item -249 below). s411
 resolved the long-standing `[missing-func] 0x800FB9E4` baseline (was `endMissionCleanup`, a
 phantom-overlay victim of this same family) — every clean live-verify from here should show 0
 `[missing-func]` lines, not 1. Post-`a` process now soaks well past 65s without death.
@@ -164,10 +165,11 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
 oldest). Current top is -257 (s408); the next new item takes -258 and is inserted at the top.
 
--249..-258. **(s400-413) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
-    proven, three genuine single-function-family crashes bisected and parked, cadence scaled from n=20 to
-    a confirmed-safe n=75. 359/778 done, 439 remain (433 actionable, 4 known-skip, 2 known-bad) as of
-    s413.** s400 landed batch 1
+-249..-258. **(s400-414) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
+    proven, three genuine single-function-family crashes bisected/found (two parked, one — s414's —
+    pending bisection), cadence scaled from n=20 to a confirmed-safe n=75. 359/778 done, 439 remain (433
+    actionable, 4 known-skip, 2 known-bad) as of s414 — unchanged from s413, s414's attempted batch was
+    reverted.** s400 landed batch 1
     (20/801) and proved the tooling (`s400_probe_batch.py`/`s400_apply_batch.py`, positive-control via
     `make_elf.py`'s unmapped-functions-skipped counter). s401 attempted the full ~774-item remainder in
     one sweep: it linked, but caused a new deterministic title-screen SIGBUS; reverted without
@@ -219,7 +221,21 @@ oldest). Current top is -257 (s408); the next new item takes -258 and is inserte
     other 24 q2 names (including the false-lead `npcTickEffectChannelWithSlotDispatch`) applied as a
     group on top of the same baseline and live-verified clean (0 crash markers, `lastW=640`, 19 frames).
     Net: +24 relocations this session (359/778 done), q2 thread fully closed. Cadence remains n=75 for
-    ordinary bulk relocation going forward. Full per-session detail: `PORTING-STATE` Sessions 400-413.
+    ordinary bulk relocation going forward. **s414 resumed ordinary bulk relocation at n=75
+    (`HYPOTHESIS-ID: m4-item249-bulk-relocation-n75`): regenerated candidates fresh (439 total, 433
+    actionable — both counts exactly matched the docs' prior estimate), probed the next 75 (57
+    CONFIRMED + 18 WEAK, 0 NONE/AMBIGUOUS), applied, and hit a THIRD crash-causing signature —
+    `loadDatFile+21884`/`last-guest-pc=0x800290d4`, reproduced byte-identically 2/2 (deterministic, not
+    one of the ~20+ nondeterministic background families). Note: `0x800290d4` is below `overlay_start`
+    (`0x800A5130`) — the fault is in core `.text`, not inside any of the 75 relocated functions'
+    own bodies, so if this batch is the cause the mechanism is indirect (one of the newly-real functions
+    calling into core code with bad state), same class as s404/s412. Reverted the batch as a same-run
+    positive control: crash 2/2 with it applied, clean 1/1 (88.6s to phase, 19 frames, 0 crash markers)
+    with it reverted — confirms the batch (not environment/nondeterminism) is responsible. Per NEXT.md's
+    own contingency plan, deferred bisection rather than guessing which of 75 names is at fault. Repo
+    state end-of-session: back to 359/778 (unchanged from s413); the 75-name suspect set is preserved at
+    `scratch/agent/s414_crash_batch_needs_bisection.txt` for next session's halves bisection.** Full
+    per-session detail: `PORTING-STATE` Sessions 400-414.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
     (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by
