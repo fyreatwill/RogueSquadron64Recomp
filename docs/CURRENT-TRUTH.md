@@ -32,10 +32,15 @@ below and `docs/PROJECT-OVERVIEW.md` §13.
 CLOSED** — 0 actionable candidates remain, 784 relocated, 14 permanently excluded (10 known-bad + 4
 known-skip). **All three directive legs above are now closed or exhausted simultaneously** (M5 closed,
 M3 idiom-audit-only exhausted since s397, M4 -249 closed s421) — **this directive needs human
-reconfirmation on where to focus next.** A concrete candidate the s421 close-out surfaced: the
-`last-guest-pc=0x800290d4` crash site now has SIX independent trigger functions found via M4 bisection
-(see item -249 below) — the strongest available lead for a dedicated root-cause session if the next
-directive doesn't point elsewhere.
+reconfirmation on where to focus next.** **s422 CLOSED the one concrete follow-on lead s421 surfaced**:
+the apparent `last-guest-pc=0x800290d4` "six independent triggers, one shared sink" pattern was root-
+caused and overturned — `atos` source-line symbolication (a strictly better technique than this
+project's prior nearest-symbol attribution, see item -259 below) showed the six known-bad functions
+crash in five different real functions with no shared site; `last-guest-pc=0x800290d4` was only ever a
+sparse breadcrumb's last checkpoint (`inflate_fast`'s own clean return), not a fault location. No
+dedicated root-cause session is indicated there anymore. The only remaining un-acted candidate from
+s421's list is M3 DoD resumption (see Goal stack, M3) — still awaiting human reconfirmation before an
+autonomous session commits to it as the new standing direction.
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -155,9 +160,10 @@ consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the `main
 phantom-overlay-function family (item -249, **CLOSED s421**: 784 relocated across s400-s421, 14
 permanently excluded — 10 known-bad, 4 known-skip — 0 actionable remain; full session-by-session
 narrative in item -249's Next-steps entry below and `PORTING-STATE` sessions 400-421). Ten known-bad
-functions now span 4 distinct downstream crash sites (`0x800290d4` x6, `0x80011088` x2, `0x80065e94`
-x1, `0x8000b650` x1) — `0x800290d4`'s six independent triggers make it the standing top lead for a
-dedicated root-cause session (see USER DIRECTIVE above).
+functions all stay parked (safe, correct) in `main_overlay.txt`/`m4_known_bad.txt` regardless of crash
+site; **s422 found their apparent `0x800290d4` x6 clustering was a sparse-instrumentation artifact, not
+a shared bug** — `atos` source-line symbolication shows five different real crash functions behind it,
+no dedicated root-cause session indicated (item -259 below).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -170,9 +176,27 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -249 (s400-421, now CLOSED); the next new item takes -259 and is inserted at
-the top (s421 collapsed the item -249..-258 range, which had reserved through -258, back to a single
--249 entry on closure — the next fresh item should not reuse -250..-258).
+oldest). Current top is -259 (s422, CLOSED); the next new item takes -260.
+
+-259. **(s422) `0x800290d4` "six independent triggers" lead — INVESTIGATED AND CLOSED, not a bug.**
+    The s421 close-out flagged this as the strongest concrete lead left after M4 item -249. Root-caused
+    from already-captured crash logs: `0x800290d4` is `inflate_fast`'s own clean return (its `jr $ra`
+    delay-slot `nop`), and the `g_rs64_last_guest_pc` breadcrumb that reports it is sparse (8 of 50
+    `RecompiledFuncs/funcs_*.c` files, piecemeal BREADCRUMB1-14+ passes) — so the shared value only meant
+    all six known-bad functions passed through `inflate_fast`'s return at some point, not that they crash
+    at or near it. Applying `env atos -o build/RogueSquadron64Recomp -l <base> <pc>` (works via `env`;
+    resolves exact DWARF file:line, survives `-O2`, strictly better than this project's prior
+    nearest-symbol attribution — a durable technique win) to 5 of the 6 isolate-alone crash logs found
+    FIVE DIFFERENT real crash functions (`__osBlockSum`, `loadDatFile`, `menuControllerInput`,
+    `freeCutsceneResources`, `allocT16EffectContext`; the 6th resolves to `npcWaterCraftHandleDestruction`
+    with a distinct poison-byte signature). Audited `MEM_W`/`MEM_B`/`TO_PTR`, `do_rom_read`,
+    `load_overlays_by_start`/`load_overlay` end to end — all correctly perform the guest-KSEG0-tag
+    rebase; no shared translation or runtime bug found. **Conclusion: the six known-bad functions each
+    independently trip one of this project's own ~20+ already-catalogued nondeterministic corruption
+    families, newly exposed by executing for the first time (each pulls in a DAT/overlay decompression on
+    its way to a distinct, unrelated crash) — not one fixable shared mechanism.** No action changes (all
+    six stay parked in `main_overlay.txt`/`m4_known_bad.txt`, correct and safe); a dedicated
+    "`0x800290d4` root-cause session" is no longer indicated. Full detail: `PORTING-STATE` Session 422.
 
 -249. **(s400-421) M4 item -249: `main_overlay.txt` phantom-overlay-function relocation — CLOSED
     s421, no outstanding action.** 784 functions relocated to their correct overlay across 21 sessions;
@@ -330,6 +354,15 @@ Standing warnings:
   — use them rather than `winctl` directly for driven runs.
 
 ## Overturned conclusions — do not act on these
+
+- **(s400-421→s422)** "`0x800290d4`, six independent triggers, one shared downstream corruption
+  sink — the strongest available root-cause lead" — `last-guest-pc=0x800290d4` is `inflate_fast`'s own
+  clean return, reported by a sparse breadcrumb present in only 8/50 `RecompiledFuncs/funcs_*.c` files;
+  `atos`-based exact symbolication of 5 of the 6 crash logs found five different real crash functions,
+  not one. Believable for 21 sessions because the shared numeric value looked like a shared fault
+  address, and nobody had yet resolved `last-guest-pc` past the breadcrumb's own coarse granularity to
+  the actual host instruction. `m4_known_bad.txt`'s parking decision is unaffected (still correct);
+  only the "worth a dedicated session" framing is overturned. PORTING-STATE 422.
 
 `## LLE stabilization session 2 (2026-07-12)` sits out of order in the log, between s7 and s8: its conclusions are among the oldest in the file, not the newest.
 

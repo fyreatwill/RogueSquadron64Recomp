@@ -838,12 +838,22 @@ enforced) down to one or more specific bad functions, never a structural batch-s
 | `buildLevelSelectTextTextures` | s419 | `0x8000b650` |
 | `plotRadarBlipColumn` | s421 | `0x800290d4` |
 
-`0x800290d4` collected six independent triggers — by far the most-repeated site, and below
-`overlay_start` (`0x800A5130`) in core `.text`, not inside any of the ten functions' own bodies. This
-points at one or a few shared downstream corruption sinks reachable from many different newly-real
-call sites, not ten unrelated bugs — the standing top lead for a dedicated M3/M4 root-cause session
-once the project's next focus is set (see CURRENT-TRUTH's USER DIRECTIVE). `0x80011088` recurred
-twice (s407, s417); `0x80065e94` and `0x8000b650` each fired once.
+`0x800290d4` collected six independent triggers — by far the most-repeated `last-guest-pc` value, and
+below `overlay_start` (`0x800A5130`) in core `.text`, not inside any of the ten functions' own bodies.
+At the time this read as one or a few shared downstream corruption sinks reachable from many different
+newly-real call sites — **OVERTURNED s422**: `0x800290d4` is just `inflate_fast`'s own clean return
+(the `g_rs64_last_guest_pc` breadcrumb that reports it is sparse, present in only 8/50
+`RecompiledFuncs/funcs_*.c` files, so the shared value only means all six passed through that return at
+some point, not that they crash there or near it). `atos`-based symbolication
+(`env atos -o build/RogueSquadron64Recomp -l <base> <pc>`, exact DWARF file:line, strictly better than
+this project's prior nearest-symbol attribution) applied to 5 of the 6 isolate-alone crash logs found
+FIVE DIFFERENT real crash functions (`__osBlockSum`, `loadDatFile`, `menuControllerInput`,
+`freeCutsceneResources`, `allocT16EffectContext`; the 6th, `npcWaterCraftHandleDestruction`, shows a
+distinct poison-byte signature). Conclusion: the six known-bad functions each independently trip one of
+this project's ~20+ already-catalogued nondeterministic corruption families, not one shared,
+dedicated-session-worthy bug. Full detail: `PORTING-STATE` Session 422; `CURRENT-TRUTH` item -259.
+`0x80011088` recurred twice (s407, s417); `0x80065e94` and `0x8000b650` each fired once — these three
+sites were not part of s422's re-investigation.
 
 **The sibling-independence lesson (burned in s415, re-confirmed s416/s419/s421):** the first few
 bisections assumed a sibling branch was clean once the other branch reproduced the crash. s415 found

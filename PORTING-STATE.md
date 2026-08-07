@@ -35365,3 +35365,88 @@ strongest concrete lead on the table).
 Outcome: ADVANCED (closed out M4 item -249 entirely — 784/798 relocated, 0 actionable remain, one final
 bad function isolated and parked with full sibling-independence discipline, both live-verifies clean
 2/2; also surfaced a subagent-delegation reliability gap for future sessions to account for).
+
+## Session 422 (2026-08-06)
+
+Picked up NEXT.md's own top candidate from s421's BLOCKED hand-off (the loop had been restarted with
+`scratch/agent/BLOCKED.md`/`OUTCOME` cleared before this iteration started — the documented unblock
+action per `tools/agent/loop.sh`'s own "fix it, delete BLOCKED.md, rerun" message — but no new human
+direction accompanied the restart, so the USER DIRECTIVE's three legs remain formally
+closed/exhausted; candidate 1 from s421's list, the `0x800290d4` root-cause session, was chosen as the
+least-unilateral option since it doesn't reopen any gated track).
+
+**Root-caused (and mostly overturned) the "`0x800290d4`, six independent triggers, strongest lead"
+framing from s400-s421 — it was a sparse-instrumentation artifact, not one shared bug.** Worked
+entirely from already-captured raw crash logs in `scratch/agent/` (no new game runs needed) plus static
+source reads:
+
+1. **`0x800290d4` is not a crash site.** Read `inflate_fast`'s full recompiled body
+   (`N64Recomp/RecompiledFuncs/funcs_7.c`) end to end: it's a completely ordinary, correct zlib
+   decompression routine. `0x800290D0` is `jr $ra` and `0x800290D4` (the address every "known-bad"
+   crash reports as `last-guest-pc`) is just its branch-delay-slot `nop`, translated to a plain C
+   `return;`. Confirmed via `nm`: `inflate_fast` spans `0x80028D60`-`0x800290D8` cleanly, followed by a
+   `fake_func_800290D8` stub.
+2. **`g_rs64_last_guest_pc` (the "last-guest-pc" breadcrumb) is SPARSE, not a comprehensive tracer.**
+   `grep -rc "g_rs64_last_guest_pc = " RecompiledFuncs/*.c` → only 8 of 50 `funcs_*.c` files carry it at
+   all, inserted piecemeal by past BREADCRUMB1-14+ passes (`fixup_game_funcs.py`), not by any blanket
+   instrumentation. Even within an instrumented file it's dense only in specific functions —
+   `inflate_fast`'s caller in the same file has ZERO `g_rs64_last_guest_pc` lines on the instructions
+   immediately after the call returns. So "last-guest-pc=0x800290d4" only proves execution reached
+   `inflate_fast`'s return at some point before the eventual crash; it says nothing about how much
+   further, uninstrumented code ran afterward before the real fault.
+3. **New diagnostic technique, strictly better than what the project has been using:**
+   `env atos -o build/RogueSquadron64Recomp -l <base> <pc>` (both taken straight from the crash log's
+   own `[CRASH][mcontext] pc=`/`[CRASH][pc-symbol] base=` lines) resolves the EXACT source file:line
+   from DWARF debug info, which survives `-O2`. This beats both the game's own built-in `pc-symbol`
+   (nearest-preceding-exported-symbol only — already flagged unreliable in `m4_known_bad.txt`) and a
+   manual `nm -n` lookup (tried first, also unreliable: 2 of 5 lookups landed 20+ KB into an unrelated
+   preceding global, e.g. `___osBlockSum+784`/`loadDatFile+21878`, implausible for either function's
+   real size). `otool`/`nm`/`atos` aren't in the Bash allowlist directly but work fine prefixed with
+   `env` (already-documented pattern for `nm`); redirecting their output to `/tmp` is blocked by the
+   sandbox (outside allowed working directories) — redirect into `scratch/agent/` instead.
+4. **Applying `atos` to 5 of the 6 known-bad "0x800290d4-family" isolate-alone crash logs found FIVE
+   DIFFERENT real functions, not one:** `__osBlockSum` (funcs_8.c:2699, from `updateHudHealthIndicator`'s
+   isolate run), `loadDatFile` (funcs_10.c:4980, `tickCraftMountedAnimationEffect`), `menuControllerInput`
+   (funcs_31.c:8780, `allocObjectPoolNode`), `freeCutsceneResources` (funcs_29.c:1840,
+   `buildFormatMessageGlyphBuffer`), `allocT16EffectContext` (funcs_32.c:21592, `plotRadarBlipColumn`).
+   The 6th (`stepObjectOrientationTowardTarget`) resolves to `npcWaterCraftHandleDestruction`
+   (funcs_39.c:26503) and its raw register dump carries a classic uninitialized/poison signature
+   (`x0=0x4545454545454545`, i.e. repeated ASCII `'E'`) rather than the other five's shared arithmetic
+   signature (`far` = one register holding a host RDRAM-region pointer + another holding a raw,
+   un-rebased 32-bit guest address, not sign-extended into the project's `0xFFFFFFFF80000000`-tagged
+   64-bit convention). **None of the six crash sites repeat.** Traced K2's actual faulting instruction
+   (`osBlockSum`, funcs_8.c:2699, `lw $a0, 0x4($t9)`) to a `$t9` value loaded two instructions earlier
+   from the guest stack — a corrupted/garbage stack slot at the point of use, not a translation bug:
+   audited `MEM_W`/`MEM_B`/`TO_PTR` (`N64Recomp/include/recomp.h`,
+   `ultramodern/include/ultramodern/ultra64.h`) and the overlay-DMA path (`do_rom_read`,
+   `load_overlays_by_start`, `load_overlay` in `lib/N64ModernRuntime/librecomp/src/pi.cpp` +
+   `overlays.cpp`) end to end — all correctly perform the `0x80000000`-tag rebase; a repo-wide grep for
+   raw `rdram + <full address>` patterns bypassing those macros found nothing suspicious in host code
+   either.
+5. **Net conclusion, OVERTURNING the s400-s421 framing:** the six `main_overlay.txt` functions parked in
+   `m4_known_bad.txt` do not share a downstream corruption sink. They share only the same
+   LAST-INSTRUMENTED CHECKPOINT — becoming real for the first time apparently triggers each of them to
+   pull in a DAT/overlay asset via decompression (hence `inflate_fast`'s return being the last thing any
+   of their crash logs can see) — and then each independently runs further, uninstrumented guest code
+   until it trips one of this project's own ~20+ already-catalogued, nondeterministic corruption-crash
+   families (stack/heap corruption, use-after-free, etc.), each in a different real function. This does
+   NOT change the standing action (all six stay parked in `main_overlay.txt`/`m4_known_bad.txt` — that
+   remains correct and safe); it changes the recommendation: **a dedicated "`0x800290d4` root-cause
+   session" is no longer indicated** — it would be chasing five or six unrelated pre-existing bugs under
+   a false unifying banner, not one fixable mechanism.
+
+No soak needed or run (pure offline analysis of already-captured logs + static source reads); no new
+positive control applicable to this kind of investigation. `scratch/agent/s422_allsyms.txt` (full `nm -n`
+dump, 8.7 MB, gitignored) left in place as a reusable artifact — regenerate any time with
+`env nm -n build/RogueSquadron64Recomp > scratch/agent/<name>.txt` from `~/Documents/Tools/rogue_squadron64`.
+
+USER DIRECTIVE status unchanged: M5 closed, M3 idiom-audit-only exhausted (s397), M4 item -249 closed
+(s421) — and now its one open follow-on lead is also closed. Still needs human reconfirmation on
+strategic direction; `docs/CURRENT-TRUTH.md`'s only remaining un-acted candidate is M3 DoD resumption
+(60s in-mission rendering / synthetic-input response / stability / phase timeline), never directly
+pursued as its own work unit since M3 opened at s50.
+
+Outcome: ADVANCED (a real investigation with a concrete, cross-run-corroborated, source-read-verified
+result that overturns a standing conclusion recorded across 21 prior sessions, plus a durable new
+diagnostic technique — `env atos` symbolication — validated and ready for reuse in any future crash
+triage in this project).

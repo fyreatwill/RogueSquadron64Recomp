@@ -7,6 +7,14 @@
 # state) unless a dedicated root-cause session clears one. Do NOT re-probe
 # or re-attempt relocation without a new investigation thread.
 #
+# s422: the 6 entries sharing last-guest-pc=0x800290d4 do NOT share a crash
+# site -- that value is just inflate_fast's own clean return, reported by a
+# SPARSE breadcrumb (8/50 funcs_*.c files). atos-based symbolication (env
+# atos -o build/RogueSquadron64Recomp -l <base> <pc>) found 5 different real
+# crash functions behind the 5 checked. No shared bug, no dedicated
+# root-cause session indicated -- see PORTING-STATE Session 422 /
+# CURRENT-TRUTH item -259. Keep parked regardless.
+#
 # name addr tag session crash-signature note
 initPlayerCraftTrailBuffers 0x800AE3F0 CONFIRMED:mission s407 playerXwingInit+2068,last-guest-pc=0x80011088 isolated at n=1 alone from s406's quarter-2 5-name suspect set (beginCameraTrackedTransition/advanceCameraTransitionOnCue/isCameraTransitionIdle/initPlayerCraftTrailBuffers/loadEffectModelInstancePool); reproduced byte-identically to s404/s405/s406's original 20-name-batch crash with ONLY this one name relocated -- proves it, alone, is sufficient to trigger the fault. loadEffectModelInstancePool (the other name in the same 2-name sub-split) tested independently and is CLEAN -- stays relocated.
 transformCraftAnchorsApplySubFx3 0x800E71D0 CONFIRMED:mission s413 slotDispatcherIter+1404,last-guest-pc=0x80065e94 isolated at n=1 alone from s412's quarter-2 (q2) 25-name suspect set via halves bisection (25->24 [dropped clean npcTickEffectChannelWithSlotDispatch lead]->12/12->clean h1/crash h2->6/6->clean g1a/crash g1b->1/2->crashed alone). Reproduced byte-identically to s412's original 100-batch crash (same slotDispatcherIter+1404/0x80065e94 signature) with ONLY this one name relocated -- proves it, alone, is sufficient to trigger the fault. The other 24 names in q2 (including the npcTickEffectChannelWithSlotDispatch lead, tested clean alone, and the remaining 23, tested clean as a group) relocated cleanly, live-verified to lastW=640, 0 crash markers.
