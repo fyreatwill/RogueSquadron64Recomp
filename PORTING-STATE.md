@@ -36539,3 +36539,57 @@ top item for the next iteration (see NEXT.md) — add a BREADCRUMB17 to `runHang
 **Tooling added this session**: `scratch/agent/s436_r5_idiom_scan.py`, `scratch/agent/s436_r5_followup.py`
 (scan scripts, kept for reference); `CACHE_HEAD_A1_GUARD` in `N64Recomp/fixup_game_funcs.py` (untracked
 repo, per this project's long-standing convention).
+
+## Session 437 (2026-08-07)
+
+**Consumed s436's queued confirmation soak (`s436_cacheheada1_confirm`, SOAK-RESULTS
+20260807-034040): rc=0, 348s wall-clock, captured to 299.9s — the FULLEST clean run yet in the
+-261..-272 saga.** No crash, but also 0 fires for either `GENERIC_CACHE_GUARD` or
+`CACHE_HEAD_A1_GUARD` — still no positive control for item -270 or item -272 (now 4 combined
+observations for item -270: 3 clean+silent, 1 crashed on the unrelated item -263 bug; item -272 now
+2 observations: 1 crashed on item -263, 1 clean+silent).
+
+**This session's work unit: added `BREADCRUMB17` to `runHangarSelectionFrame`, per NEXT.md's plan,
+to localize item -263's true fault site on its next occurrence.** Confirmed (before patching) that
+`runHangarSelectionFrame` (`funcs_28.c:4861`, call site into `tickWrappingTimerAccumulatorList` at
+`funcs_28.c:5218`) is the only one of `tickWrappingTimerAccumulatorList`'s 3 callers reachable by the
+menu-only s427-436 probe schedule — `cinematicLoopBody` (`funcs_27.c`) and `runInMissionFrame`
+(`funcs_42.c`) both require mission/cinematic content this schedule never enters (title → SELECT GAME
+→ war room → SELECT YOUR CRAFT only). Added `BREADCRUMB17` following the exact BREADCRUMB10-16
+template (`N64Recomp/fixup_game_funcs.py`), stamping `g_rs64_last_guest_pc` before every instruction
+in the function body.
+
+Regenerated (`make_elf.py` → delete `funcs_*.c` via the Python one-liner, NOT shell glob → `N64Recomp`
+→ `fixup_game_funcs.py`) and rebuilt clean — same pre-existing 46-warning DDIV sign-conversion
+baseline, 0 new warnings/errors. Verified no regression to the two live 0x801163B0-family guards
+directly from the compiled source (fixup's own stdout report is idempotent/silent on a second run
+against already-patched files, so this session grepped the compiled `.c` output instead of trusting
+stdout): `GENERIC_CACHE_GUARD` still 107 (66 `funcs_3.c` + 41 `funcs_4.c`, unchanged), `CACHE_HEAD_A1_
+GUARD` still 7 sites (`site=0`..`site=6`, unchanged), `funcs_28.c` now carries 320 `g_rs64_last_guest_
+pc` writes (was 0 before this session — confirms BREADCRUMB17 applied).
+
+**Live-verify** (`scratch/agent/soak_results/s437_breadcrumb17_verify/`, same s427-436 schedule, all
+three diagnostics armed: `ROGUESQ_LOG_RUNNER=1 ROGUESQ_LOG_GENERIC_CACHE_GUARD=1 ROGUESQ_LOG_CACHE_
+HEAD_A1_GUARD=1`): **0 crashes**, captured to 297.8s — essentially the full schedule, matching s436_
+cacheheada1_confirm's depth. **Item -263 did NOT recur this run** — 0 `[CRASH]` lines, 0 `last-guest-
+pc` lines at all (the breadcrumb global is only ever printed as part of a crash report, so a clean run
+produces none), and 0 fires for either 0x801163B0-family guard. This is now 2 CONSECUTIVE full-depth
+clean runs on this exact schedule (s436_cacheheada1_confirm, then this run) — a genuinely new
+observation, but per this project's own repeatedly-learned lesson, not enough to call any of the
+recent fixes (items -270/-272) "confirmed working" or item -263 "resolved": the schedule's crash
+pattern has alternated crash/clean roughly every other run across s434-437 (s434 foreground clean,
+s434_confirm crashed, s435 foreground clean, s435_confirm crashed, s436 foreground crashed,
+s436_confirm clean, s437 foreground clean) — consistent with the already-documented nondeterministic-
+crash framing, not a trend.
+
+**BREADCRUMB17 itself remains unvalidated** — a clean run gives it nothing to localize. It is a
+passive instrument (same rationale as BREADCRUMB14/15/16): correct or not, it costs nothing to leave
+armed and only proves its worth the next time item -263 (or any crash landing in
+`tickWrappingTimerAccumulatorList`'s callers) actually recurs. Confirmation soak queued:
+`scratch/agent/soak_queue/s437_breadcrumb17_confirm.sh` (re-runs the identical schedule, all three
+diagnostics armed, watching for item -263's recurrence with a real BREADCRUMB17-localized guest PC).
+
+**Tooling added this session**: `BREADCRUMB17` in `N64Recomp/fixup_game_funcs.py` (untracked repo,
+per this project's long-standing convention — mirrored via `submodule-patches/` for `lib/`, but
+`N64Recomp` itself is a sibling working-directory root, not a `lib/` submodule, so no `export.sh` step
+applies here).

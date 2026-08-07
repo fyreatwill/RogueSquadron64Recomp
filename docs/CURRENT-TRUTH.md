@@ -162,8 +162,31 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -272 (s436, ADVANCED — root-caused and fixed a real, new, confirmed crash: a
-sibling of item -270's idiom that its register-scoped scan couldn't see); the next new item takes -273.
+oldest). Current top is -273 (s437, ADVANCED — added BREADCRUMB17 to localize item -263's true fault
+site, live-verified 0 crashes but item -263 did not recur so the new instrument remains unvalidated);
+the next new item takes -274.
+
+-273. **(s437) Added `BREADCRUMB17` (`runHangarSelectionFrame`) to localize item -263's true fault
+    site — but the live-verify came back CLEAN, so the instrument is armed and unvalidated, not yet
+    proven.** Consumed s436's queued confirm soak first: `s436_cacheheada1_confirm` (SOAK-RESULTS
+    20260807-034040) came back `rc=0`, captured to 299.9s — the fullest clean run yet in this saga, but
+    still 0 fires for either 0x801163B0-family guard (items -270/-272 unchanged: still no positive
+    control). Confirmed `runHangarSelectionFrame` (`funcs_28.c:4861`) is the only one of
+    `tickWrappingTimerAccumulatorList`'s 3 callers reachable by the menu-only s427-436 schedule (the
+    other 2 need mission/cinematic content this schedule never enters), added BREADCRUMB17 there
+    (same BREADCRUMB10-16 template, `N64Recomp/fixup_game_funcs.py`). Regenerated/rebuilt clean (0 new
+    warnings); verified no regression by grepping the compiled output directly (fixup's own stdout is
+    silent/idempotent on a 2nd run against already-patched files — a process lesson worth repeating):
+    `GENERIC_CACHE_GUARD` still 107, `CACHE_HEAD_A1_GUARD` still 7 sites, `funcs_28.c` gained 320
+    breadcrumb writes (was 0). Live-verify (`s437_breadcrumb17_verify`, same schedule, all 3
+    diagnostics armed) ran 0 crashes to 297.8s — a 2nd CONSECUTIVE full-depth clean run (after
+    s436_cacheheada1_confirm). Item -263 did not recur, so BREADCRUMB17 has nothing to localize yet;
+    it remains a passive, free-to-leave-armed instrument per the established BREADCRUMB14-16 rationale.
+    **2 consecutive clean runs is not a trend** — the schedule has alternated crash/clean roughly every
+    other run across s434-437 (clean, crash, clean, crash, crash, clean, clean) — consistent with this
+    project's already-documented nondeterministic-crash pattern, not new evidence either fix works.
+    Confirmation soak queued: `scratch/agent/soak_queue/s437_breadcrumb17_confirm.sh`. Full detail:
+    PORTING-STATE Session 437.
 
 -272. **(s436) A REAL confirmed bug this time, not a misattribution: `reserveAndEmitDLEntry` reloads
     `0x801163B0` (item -270's global) into TWO different registers 4 instructions apart — `$v0`
@@ -378,12 +401,14 @@ sibling of item -270's idiom that its register-scoped scan couldn't see); the ne
     funcs_42.c) — a spot-check of `runHangarSelectionFrame`'s call site (`funcs_28.c:5195-5230`, most
     likely active caller in the hangar-menu schedule) found **zero** breadcrumb writes nearby, so item
     -263's true fault location has never actually been localized; `updateHangarBayScene`/
-    `tickWrappingTimerAccumulatorList` are both plausibly innocent stale attributions. **Top item for
-    next iteration: add a BREADCRUMB17 to `runHangarSelectionFrame`** (same s435 playbook) before
-    attempting any fix, so the next occurrence reports its true guest PC. s434 update: this same
-    signature (an UNRELATED global, `0x80137C84`, not item -270's `0x801163B0`) did not recur in s434's
-    clean 300s run — may simply not have been reached that run (schedule/build differ). Confirmation
-    soak queued s426; recurred again s433 (2nd source) and s436 (3rd source, `si_addr=0x3c84f1b94`).
+    `tickWrappingTimerAccumulatorList` are both plausibly innocent stale attributions. s434 update: this
+    same signature (an UNRELATED global, `0x80137C84`, not item -270's `0x801163B0`) did not recur in
+    s434's clean 300s run — may simply not have been reached that run (schedule/build differ).
+    Confirmation soak queued s426; recurred again s433 (2nd source) and s436 (3rd source,
+    `si_addr=0x3c84f1b94`). **s437 update: BREADCRUMB17 added to `runHangarSelectionFrame` (item -273)
+    to localize the true fault site — but item -263 did not recur that run, so the instrument is armed
+    and waiting, still unvalidated.** Confirmation soak queued
+    (`scratch/agent/soak_queue/s437_breadcrumb17_confirm.sh`).
     Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Sessions 426, 433, 436.
 
 -262. **(s426) `startPlayerSlotAnimationChannelLooping`/2-sibling chain (item -261) ROOT-CAUSED AND
