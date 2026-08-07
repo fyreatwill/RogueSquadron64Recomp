@@ -35892,3 +35892,64 @@ gets further this time).
 Housekeeping: the `menu_overlay.txt` edit lives in the sibling repo `~/Documents/Tools/rogue_squadron64`
 per item -3 (ask user before committing there) -- left uncommitted, consistent with s426's handling of
 the same file.
+
+## Session 428 (2026-08-07)
+
+Work unit: NEXT.md's Option A -- root-cause item -265, the new `runHangarMenuFromOverlay+800` SIGBUS
+surfaced by s427's `hangarInitialize`/`mallocCraftSelectionData` fix. First confirmed the soak queued
+last session (`s427_hangarinit_regression`) had already run and reproduced the crash (2nd independent
+line of evidence, `scratch/agent/soak_results/s427_hangarinit_regression_20260807-011127/`, rc=1) --
+no longer single-source.
+
+Root-caused via `scratch/agent/s193_disasm.py` (window must be a multiple of 4 or the printed offsets
+desync from real instruction boundaries -- hit this personally with a `window=30` call before
+correcting to 60) against the crash PC (`runHangarMenuFromOverlay+800`) plus the matching C source
+(`RecompiledFuncs/funcs_35.c:1486-1608`): the crash instruction is `MEM_B(0X1, ctx->r19) = ctx->r16;`
+(guest `sb $s0, 0x1($s3)` at 0x800C68D4), and `ctx->r19` (`$s3`, this function's own `$a0` argument,
+read-only for the whole function body) equals `0xBF800002`. `far = rdram_base + 0xbf800002` confirms
+this exactly. The function's sole call site (`menuOverlayInit`, funcs_34.c:5841-5847) passes its own
+`$a0` straight through unmodified, so the wild value's ultimate origin is further up the call chain --
+`menuOverlayInit`'s own caller is an indirect/function-pointer overlay-dispatch call, not a static call
+site `grep` can find, so that origin is NOT resolved this session.
+
+Shipped `fixup_game_funcs.py`'s new `runHangarMenuFromOverlay` patch block (three sub-patches, all
+patched x1 on regen): (1) an entry diagnostic logging `ctx->r19`'s value every call
+(`[hangarmenu-a0-entry]`), (2)/(3) a KSEG0-range write guard (`0x80000000 <= ctx->r19 < 0x80800000`,
+the s99-s101 convention -- deliberately NOT a near-zero-only check, since this crash's whole point is
+that near-zero checks miss a plausible-float value) on both the recompiler's duplicated copies of the
+crash instruction (branch-taken and fallthrough paths of the enclosing `bnel`). Regenerated
+(`make_elf.py` -> delete `funcs_*.c` -> `N64Recomp` -> `fixup_game_funcs.py`, all three sub-patches
+applied exactly once, confirmed via the `RS64_FIXUP_APPLIED` refusal on a second run) and rebuilt
+clean.
+
+**Live-verified with a same-run positive control, and it surfaced something NEXT.md's own hypothesis
+did not predict.** `[hangarmenu-a0-entry] a0=0x80130B40 n=0` -- the argument is SANE at function entry,
+not wild. `[hangarmenu-a0-guard] wild s3(a0)=0x3F800000 n=0` fired anyway, moments later in the same
+call -- a DIFFERENT float bit pattern than s427's `0xBF800002` (this is +1.0f's pattern, `0x3F800000`,
+not -1.0f's), but still float-shaped. **This proves `ctx->r19` gets corrupted DURING
+`runHangarMenuFromOverlay`'s own execution** (by one of its own callees --
+`getAvailablePlayerCraftFlagsConsiderUnlocks`, `mallocCraftSelectionData`, or the
+`runHangarSelectionFrame` loop -- MIPS `$s3` is callee-saved, so whichever callee clobbers `ctx->r19`
+without saving/restoring it is the actual bug), not that the caller ever passed a wild value. Top
+suspect: `mallocCraftSelectionData` itself, since s427's fix is what made this ~4386-line body execute
+for the first time ever (previously a 1-instruction truncated stub) -- untested code newly live is a
+better prior than a caller bug that would have shown up as a wild ENTRY log, which it didn't.
+
+The guard held (skipped the write, logged, did not crash there) -- but the run then hit a NEW crash
+immediately after control returned to `menuOverlayInit`: `[CRASH][pc-symbol] pc=... sym=menuOverlayInit
++3648`, `far=0x380000003` = rdram_base + `0x80000003` (back to the classic near-zero-integer
+wildness shape, not a float pattern this time -- suggesting the corrupted register's value may drift
+across `runHangarSelectionFrame`'s loop iterations rather than sitting at one fixed garbage constant).
+Source-matched via the same disasm-plus-C-source method to `funcs_34.c:5869-5870`,
+`ctx->r4 = MEM_BU(ctx->r19, 0X0);` (guest `lbu $a0, 0x0($s3)` at `L_800C5AA8`, the label
+`menuOverlayInit` falls through to right after checking `runHangarMenuFromOverlay`'s return code) --
+same corrupted `ctx->r19`/`$s3`, read again, still wild. New item -266.
+
+Confirmation soak queued: `scratch/agent/soak_queue/s428_hangarmenu_guard_verify.sh` (single-source so
+far this session; 2nd line of evidence needed before this enters CURRENT-TRUTH as confirmed, per iron
+rule 4).
+
+No `lib/` or sibling-repo (`rogue_squadron64`) edits this session -- the only source change is
+`fixup_game_funcs.py` in the sibling `~/Documents/Tools/N64Recomp` tool directory, which per longstanding
+(if imperfect) project convention is not itself git-tracked; it persists on disk across sessions like
+every other fixup patch accumulated since s99.

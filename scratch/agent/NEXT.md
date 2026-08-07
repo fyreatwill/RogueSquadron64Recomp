@@ -1,66 +1,68 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: duplicate-symbol-name-collision-class-s427
+HYPOTHESIS-ID: s3-register-corruption-runHangarMenuFromOverlay-callees
 
-## What changed this session (s427) — read this before picking a thread
+## What changed this session (s428) — read this before picking a thread
 
-Fixed item -264 (`hangarInitialize`/`mallocCraftSelectionData` duplicate-symbol collision) — same
-mechanism as item -262 (s426), confirmed a SECOND independent instance of the class: deleting the
-truncated first-listed name from `menu_overlay.txt` and regenerating gave the real ~4386-line body
-back to `mallocCraftSelectionData`, and the sole call site auto-followed with zero source edits.
+Root-caused and guarded item -265 (`runHangarMenuFromOverlay+800` SIGBUS, `MEM_B(0X1, ctx->r19) =
+ctx->r16;` at `funcs_35.c:1575`/`1580`, guest `sb $s0, 0x1($s3)`). The guard (KSEG0-range check on
+`ctx->r19`, see `fixup_game_funcs.py`'s `runHangarMenuFromOverlay` patch block) held and logged a
+positive control (`[hangarmenu-a0-guard] wild s3(a0)=0x3F800000`) — but the ALSO-added entry
+diagnostic (`[hangarmenu-a0-entry] a0=0x80130B40`) proved the function's own `$a0` argument is SANE at
+entry and gets corrupted DURING the call, by one of its own callees:
+`getAvailablePlayerCraftFlagsConsiderUnlocks`, `mallocCraftSelectionData`, or the
+`runHangarSelectionFrame` loop (`funcs_35.c:1510`/`1536`/`1545`). MIPS `$s3` is callee-saved — the
+callee that clobbers `ctx->r19` (the shared global register-file slot) without restoring it is the
+actual bug. Top suspect: `mallocCraftSelectionData`, since item -264's fix (s427) is what made its
+~4386-line body execute for the first time ever (previously a 1-instruction truncated stub, could not
+have clobbered anything).
 
-That fix did NOT reach the expected positive control (the `-0x25A4` guard markers firing for the
-first time) because a NEW crash intervened earlier in the menu flow: SIGBUS in
-`runHangarMenuFromOverlay+800` (called from `menuOverlayInit`, ~4s after the SELECT GAME `a` press),
-`far=0x3bf800002` = rdram_base + `0xbf800002`. **`0xbf800002` is the IEEE-754 bit pattern for
-approximately -1.0f** — a NEW signature, distinct from every prior crash in this lineage (all
-previously "rdram_base + small near-zero *integer* offset"). This looks like a float value used as a
-pointer, i.e. type confusion, not a never-initialized-global read. Single-source so far, item -265,
-not yet investigated. Confirmation soak queued:
-`scratch/agent/soak_queue/s427_hangarinit_regression.sh` — check `scratch/agent/SOAK-RESULTS.md`
+The guard's skip-the-write then let execution continue back into `menuOverlayInit`, which immediately
+crashed again reading the SAME corrupted `ctx->r19` (item -266, `funcs_34.c:5869-5870`,
+`far=0x380000003` this time — a different specific garbage value than the guard caught, near-zero-
+integer shaped rather than float-shaped, suggesting the corruption may drift across
+`runHangarSelectionFrame`'s loop iterations rather than being one fixed constant).
+
+Single-source so far this session. Confirmation soak queued:
+`scratch/agent/soak_queue/s428_hangarmenu_guard_verify.sh` — check `scratch/agent/SOAK-RESULTS.md`
 first; if it already ran, use its result instead of re-driving a live run.
 
-## Two candidate work units — pick ONE
+## The work unit — isolate which callee corrupts ctx->r19
 
-**Option A: root-cause item -265, the new `runHangarMenuFromOverlay` crash.** This is the direct next
-link in the chain this session's fix just extended — same "keep pulling the thread" logic that made
-Option A the right call last session over Option B. Steps: (1) if the soak above already ran, read its
-verdict; if it reproduced, or if not yet run, do the live run yourself with the same PROBE_KEYS
-schedule (below). (2) Use `scratch/agent/s193_disasm.py <macho> runHangarMenuFromOverlay <offset>`
-(offset = 800, the crash PC's function-relative offset from the `[CRASH][pc-symbol]` line) to find the
-exact instruction and register that produces the `0xbf800002` (~-1.0f) value — this is a NEW failure
-shape for this project (float-as-pointer, not never-initialized-global), so don't assume the fix is
-"guard against near-zero" like every prior guard in this lineage; trace where the float bit pattern
-actually comes from (a struct field being read at the wrong type/offset? a `-1` sentinel value stored
-as a float instead of an int?). (3) Symbol-range-check against the next symbol in the `.text` layout to
-confirm the crash PC genuinely falls inside `runHangarMenuFromOverlay`, not a next-symbol
-misattribution (item -259's closed false lead was exactly this mistake — re-verify every time per iron
-rule 5). (4) Guard or fix per whatever the root cause turns out to be; live-verify with a same-run
-positive control.
+This is now a register-corruption hunt, not a duplicate-symbol issue (that hypothesis is CLOSED for
+this specific item — item -265's guard proved the wild value arrives mid-call, not from the caller).
 
-**Option B: batch-fix the 11 confirmed-safe `mission_overlay.txt` `func_0xADDR`/real-name pairs.**
-Same low-risk mechanism as item -262's fix (a generic placeholder shadowing a deliberately-named real
-function) — NOT the ambiguous real/real kind item -264 was. Lower information value than Option A (it
-doesn't advance the active crash-chain thread) but batchable in one regen+verify cycle per the
-project's "batch instrumentation, one build/run cycle" rule, and closes out 11 of the remaining 18
-duplicate-symbol pairs from s426's catalogue in one pass. Names: `func_800BF4A0`/
-`attached3DSoundEmitterNpcHandler`, `func_800C7DC0`/`initNpcActorFromSpawnMessage`, `func_800CA270`/
-`initNpcActorVariant`, `func_800CEF20`/`advanceAtStEffectPhaseSound`, `func_800D2CA0`/
-`npcInitWithMotionParams`, `func_800D4ED0`/`npcInitChildLinkedToParent`, `func_800DD2D0`/
-`npcInitFullModel`, `func_800DFB90`/`applyCraftAnimAndDetailParams`, `func_800E4480`/
-`resetCraftInstanceMotionState`, `func_800E8A40`/`runDestructionPhaseSequence`, `func_800ECE10`/
-`datItemActorNpcHandler` (all in `symbol_files/mission_overlay.txt`; delete the `func_0xADDR` line for
-each, since s426/s427 both confirmed the generic-placeholder-vs-real-name pattern resolves by keeping
-the real name and letting the call site auto-follow).
+**Batch instrumentation, one build**: add three throttled diagnostics to `funcs_35.c`'s
+`runHangarMenuFromOverlay` (via `fixup_game_funcs.py`, following the existing patch-block style —
+search for `hangarmenu-a0` to find the anchor site), each logging `ctx->r19` immediately after one of
+the three callee-return points:
+1. Right after `getAvailablePlayerCraftFlagsConsiderUnlocks(rdram, ctx);` returns (label `after_0`,
+   `funcs_35.c:1511`/`1514`).
+2. Right after `mallocCraftSelectionData(rdram, ctx);` returns (label `after_1`,
+   `funcs_35.c:1537`/`1540`).
+3. Right after EACH `runHangarSelectionFrame(rdram, ctx);` return inside the `L_800C68AC` loop (label
+   `after_2`, `funcs_35.c:1546`/`1549` — this loop can iterate many times before falling through, so
+   throttle tightly, e.g. first 20 iterations, and tag with an iteration counter).
 
-**Recommendation: Option A.** It's the active thread with the higher information value (a genuinely
-new failure signature this project hasn't seen before), and per the strategic priority ("M3 crash
-work only as systematic idiom-class audits, no reactive single-crash chases") this is still within the
-duplicate-symbol idiom-class audit's blast radius — it's the audit's own fix surfacing its next
-consequence, not an unrelated reactive chase. If Option A stalls (can't isolate the faulting
-instruction, or the soak shows it's not reproducible), fall back to Option B.
+**Discriminating outcome**: whichever checkpoint FIRST shows `ctx->r19` outside the sane KSEG0 range
+(`0x80000000`-`0x80800000`) identifies the guilty callee. If checkpoint 2 (`mallocCraftSelectionData`)
+is first-wild, that confirms the top suspect and the next work unit becomes finding WHERE inside that
+~4386-line function `$s3`/`r19` gets used as scratch without being saved — a much bigger function than
+any prior guard target in this project, so expect this to take its own session. If checkpoint 3 is
+first-wild only after N>1 loop iterations, that points at `runHangarSelectionFrame` instead, and the
+corruption is likely tied to some per-iteration state.
 
-## Regen recipe (known-working s426/s427)
+Live-run schedule (same as s423-428, known to reach the war-room/craft-select phase — see the Regen
+recipe below for the exact env/keys):
+```
+env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
+    ROGUESQ_LOG_RUNNER=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 \
+    PROBE_LEAVE_OK=1 \
+    PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" \
+    zsh tools/probe.sh <outdir> 300 2
+```
+
+## Regen recipe (known-working s427/s428)
 
 ```
 cd ~/Documents/Tools/rogue_squadron64 && python3 tools/make_elf.py
@@ -74,27 +76,21 @@ python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py   # audit report for xN 
 cd ~/Documents/Tools/RogueSquadron64Recomp/build && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j8
 ```
 
-**New this session**: `fixup_game_funcs.py` REFUSES to run a second time on the same generated files
-(checks for its own `RS64_FIXUP_APPLIED` marker) — this is a safety net, not a bug; if you see the
-refusal message, it means you forgot to delete `funcs_*.c` and regenerate first, not that something
-is broken.
+`fixup_game_funcs.py` REFUSES to run a second time on the same generated files (checks for its own
+`RS64_FIXUP_APPLIED` marker) — this is a safety net; if you see the refusal, you forgot to delete
+`funcs_*.c` and regenerate first.
 
-Live-run schedule (same as s423-427, known to reach the war-room/craft-select phase):
-```
-env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
-    ROGUESQ_LOG_RUNNER=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 \
-    PROBE_LEAVE_OK=1 \
-    PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" \
-    zsh tools/probe.sh <outdir> 300 2
-```
-
-## Sandbox notes (confirmed again s427)
+## Sandbox notes (confirmed again s428)
 
 `lldb`/`otool -tV`/`find -delete`/plain `rm` with globs all require interactive approval — use the
 `python3 -c` glob-delete above. `atos` (prefixed with `env`) only returns `symbol+offset`, not
 file:line. `scratch/agent/s193_disasm.py <macho> <symbol> <frame_offset> [window]` plus a manual
-symbol-range check remain the working substitute for precise crash-site identification.
+symbol-range check remain the working substitute for precise crash-site identification. **New this
+session: the `window` argument MUST be a multiple of 4, or the printed byte offsets desync from real
+ARM64 instruction boundaries and the decoded output is garbage** (hit this personally with
+`window=30`; corrected to a multiple of 4 and the decode was clean). No corruption resulted (just a
+wasted call), but don't repeat the mistake.
 
 ## Soak queue
 
-- `scratch/agent/soak_queue/s427_hangarinit_regression.sh` — queued this session, not yet run.
+- `scratch/agent/soak_queue/s428_hangarmenu_guard_verify.sh` — queued this session, not yet run.

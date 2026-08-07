@@ -63,7 +63,17 @@ uses) is a 1-instruction truncated stub and the real 103-site body lives in the 
 see item -264, the single most consequential open thread in the project.** Full M4/M5 legs remain
 closed/exhausted as of s421/s397 respectively — this new thread supersedes needing separate human
 reconfirmation on "where to focus next" for the moment, since it's a direct, in-progress continuation of
-the M3 DoD leg NEXT.md was already authorized to pursue.
+the M3 DoD leg NEXT.md was already authorized to pursue. **s427 fixed item -264** (confirmed a second
+instance of the duplicate-symbol-collision mechanism) and hit a new crash one step later,
+`runHangarMenuFromOverlay+800` (item -265), with a NEW signature — a float bit pattern (`~-1.0f`) used
+as a pointer, not the usual near-zero-integer wildness. **s428 root-caused and guarded item -265**, and
+in doing so found the real bug is register corruption, not a caller-passed wild value: the function's
+own `$a0` argument is sane at entry but gets clobbered mid-call by one of its own callees (top suspect:
+`mallocCraftSelectionData`, executing for the first time ever thanks to item -264's fix) — MIPS `$s3`
+is callee-saved, so whichever callee overwrites it without restoring it is the actual defect, not yet
+isolated to a specific instruction. The guard exposed a further crash one step later still,
+`menuOverlayInit+3648` (item -266), reading the same corrupted register back after return. This
+supersedes needing separate human reconfirmation for now, same reasoning as above.
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -205,24 +215,40 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -265 (s427, OPEN — new pre-`mallocCraftSelectionData` crash); the next
-new item takes -266.
+oldest). Current top is -266 (s428, OPEN — new post-guard `menuOverlayInit` crash, same corrupted
+register); the next new item takes -267.
 
--265. **(s427) NEW crash surfaced by item -264's fix, single-source, distinct signature from
-    every prior crash in this family — not yet investigated.** SIGBUS in `runHangarMenuFromOverlay+800`
-    (called directly from `menuOverlayInit`, ~4s after the SELECT GAME `a` press — earlier in the menu
-    flow than item -263's `updateHangarBayScene`, which never got a chance to run this session).
-    `far=0x3bf800002` = rdram_base (`0x300000000`) + `0xbf800002` — **`0xbf800002` is the IEEE-754 bit
-    pattern for approximately -1.0f**, a different signature from every prior crash in this whole
-    family (all previously "rdram_base + small near-zero *integer* offset"; this looks like a float
-    value being used as a pointer/offset — a type-confusion bug, not a never-initialized-global read).
-    Item -262's fix held (`[slot-anim-cache-write] initCraftSelectScreen ... n=0` fired again, old
-    3-sibling chain did not recur). The `-0x25A4` guard markers (`S285`/`S393`/`S394`/`S395_SWEEP`)
-    logged **0 hits** — the run never reached inside `mallocCraftSelectionData`'s guarded body, meaning
-    this new crash happens on the way to (or before) that call, not inside it; `-264`'s open question
-    ("does the closed -0x25A4 audit turn out to guard dead code") is **still open**, now blocked behind
-    this new crash instead of resolved. Confirmation soak queued:
-    `scratch/agent/soak_queue/s427_hangarinit_regression.sh`. Full detail: PORTING-STATE Session 427.
+-266. **(s428) NEW crash surfaced by item -265's guard, single-source, same corrupted register
+    read again — not yet investigated.** SIGBUS at `menuOverlayInit+3648`, source-matched to
+    `funcs_34.c:5869-5870` (`ctx->r4 = MEM_BU(ctx->r19, 0X0);`, guest `lbu $a0, 0x0($s3)` at
+    `L_800C5AA8`, the label control falls through to right after checking
+    `runHangarMenuFromOverlay`'s return code). `far=0x380000003` = rdram_base + `0x80000003` — back to
+    the classic near-zero-integer wildness shape (not a float pattern this time), reading the SAME
+    `ctx->r19`/`$s3` register item -265's guard caught wild moments earlier in the callee, still wild
+    on return — consistent with item -265's callee-corruption theory (whatever clobbers `$s3` inside
+    `runHangarMenuFromOverlay` doesn't restore it before returning). Confirmation soak queued:
+    `scratch/agent/soak_queue/s428_hangarmenu_guard_verify.sh`. Full detail: PORTING-STATE Session 428.
+
+-265. **(s427/s428) `runHangarMenuFromOverlay+800` SIGBUS — ROOT-CAUSED AND GUARDED s428, but the
+    guard exposed the real bug is register corruption, not a caller-passed wild value.** Crash
+    instruction: `MEM_B(0X1, ctx->r19) = ctx->r16;` (`funcs_35.c:1575`/`1580`, guest `sb $s0, 0x1($s3)`
+    at 0x800C68D4) — `ctx->r19` (`$s3`, this function's own `$a0` argument) == `0xBF800002`
+    (s427)/`0x3F800000` (s428) — **`0xbf800002`/`0x3f800000` are the IEEE-754 bit patterns for
+    approximately -1.0f/+1.0f**, a different signature from every prior crash in this whole family
+    (all previously "rdram_base + small near-zero *integer* offset"). Guarded in `fixup_game_funcs.py`
+    (KSEG0-range check `0x80000000 <= ctx->r19 < 0x80800000` on both the recompiler's duplicated
+    copies of the crash instruction, entry diagnostic added too) — live-verified: guard fired
+    (`[hangarmenu-a0-guard] wild s3(a0)=0x3F800000`), but the entry diagnostic
+    (`[hangarmenu-a0-entry] a0=0x80130B40`) showed the argument was SANE at function entry, proving
+    `ctx->r19` gets corrupted DURING this function's own execution by one of its callees
+    (`getAvailablePlayerCraftFlagsConsiderUnlocks`, `mallocCraftSelectionData`, or the
+    `runHangarSelectionFrame` loop — MIPS `$s3` is callee-saved, so whichever callee clobbers it
+    without restoring it is the actual bug). Top suspect: `mallocCraftSelectionData`, since item -264's
+    fix (s427) is what made its ~4386-line body execute for the first time ever. Item -262's fix held
+    (`[slot-anim-cache-write] initCraftSelectScreen ... n=0` fired again, old 3-sibling chain did not
+    recur). The `-0x25A4` guard markers (`S285`/`S393`/`S394`/`S395_SWEEP`) still logged **0 hits** —
+    item -264's open question ("does the closed -0x25A4 audit guard dead code") is **still open**, now
+    blocked behind item -266 instead of resolved. Full detail: PORTING-STATE Sessions 427-428.
 
 -264. **(s426/s427) `hangarInitialize`/`mallocCraftSelectionData` duplicate-symbol collision —
     ROOT-CAUSED AND FIXED s427, same mechanism as item -262, confirmed a second instance of the class.**
