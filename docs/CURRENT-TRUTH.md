@@ -164,20 +164,59 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -280 (s443, a diagnostic instrument for item -278's UAF hypothesis —
-0 fires so far, but its live-verify hit an unrelated, previously-uncatalogued recurrence of
-the tickWrappingTimerAccumulatorList/runHangarSelectionFrame signature, filed not chased); the
-next new item takes -281.
+oldest). Current top is -283 (s445, the `hangarInitialize` orphaned-guard discovery — see
+below); the next new item takes -284.
 
--280. **(s443) `[wait-resumed-dead-ctx]` UAF instrument in `wait_for_resumed()`
-    (`lib/N64ModernRuntime/ultramodern/src/threads.cpp`), testing item -278's UAF hypothesis: 0
-    fires, but the live-verify crashed anyway on a NEW, previously-uncatalogued
-    `tickWrappingTimerAccumulatorList`/`runHangarSelectionFrame` call-site signature (SIGBUS,
-    plausible KSEG0 guest offset) — different from item -263's saga (no `updateHangarBayScene`
-    frame) and from every free-list-guard family (0 fires there too). `idle_thread_handle`
-    confirmed via `nm -C` as a genuine guest symbol, not an `atos` misattribution — strengthens
-    but does not confirm item -278. Filed, not chased (strategic-priority #3). Confirmation soak
-    queued: `s443_waitresumed_confirm.sh`. Full detail: `docs/PROJECT-OVERVIEW.md` §16 (s443).
+-283. **(s445) URGENT: 61 sites of the s389-397 `hangarInitialize` `-0x25A4` guard families
+    (`S390_H2A`×2, `S390_H2B`×9, `S392_H3A`×29, `S393_H3B`×21, all `funcs_27.c`) are now silently
+    ORPHANED — a fresh regen's fixup report shows 0/1 anchor matches on every one of them,
+    where s412's fixup log shows all 61 patching cleanly (`x1` each) as recently as that
+    session.** This answers `docs/PROJECT-OVERVIEW.md` §16's open question from s426 ("whether
+    that whole closed [s283-396] audit guarded dead code"): s427's duplicate-symbol fix that
+    un-truncated `hangarInitialize` (previously a 1-instruction stub under a name collision)
+    changed the function's real body enough that these 61 anchors, written against the
+    pre-un-truncation disassembly, no longer match anything — the guard code is not failing to
+    fire, it is not being INSERTED at all. `hangarInitialize` is confirmed live/reachable this
+    session (clean regen, no symbol-resolution errors). **Next session's top priority**: a
+    systematic re-audit of `hangarInitialize`'s CURRENT (post-un-truncation) `-0x25A4`
+    occurrences against its current live disassembly — exactly the strategic-priority #3
+    methodology, applied to a class that was already closed once and just came unstuck. Full
+    detail: `PORTING-STATE` Session 445.
+
+-282. **(s445) GETDATITEM_GUARD — a fresh M3 systematic idiom-class audit** (pivoted off item
+    -278 per budget, strategic-priority #3): `getDatItemByName` (funcs_10.c, guest `0x80047B70`)
+    returns sentinel -1 on an empty hash bucket; 5 of its 6 call sites dereferenced the raw
+    return value as a pointer with zero validation (3 sit directly beside the already-guarded
+    `S285_H1_6/7`/`S395_SWEEP_1` `-0x25A4` guards, protecting a sibling pointer at the same call
+    site — the established "guard covers one pointer, not another" shape recurring). The 6th
+    site is wrapper `getLevelDatItemByName`, whose 47 further callers all inherit the guarded
+    return value transitively. Patched via one general regex (all 6 sites, byte-identical
+    call+goto+label idiom); full regen+build clean; 6/6 guard statics verified present via `nm`/
+    `strings` on the built binary. Live-verify: 0 fires (1st soak, no positive control yet,
+    normal first-pass pattern), crashed instead on the unrelated new item -281. Confirmation
+    soak queued: `s445_getdatitem_confirm.sh`. Full detail: `PORTING-STATE` Session 445.
+
+-281. **(s445) NEW crash class: `NAN_CHECK` assert fires in `transformVec3ByMat34`**
+    (`Assertion failed: (ctx->f14.fl == ctx->f14.fl)`, funcs_4.c:30007, signal 6/abort,
+    `last-guest-pc=0x80065e94`). `NAN_CHECK` (`N64Recomp/include/recomp.h:396`) is an always-on
+    `assert(val==val)` inserted at nearly every float op codebase-wide — this is its first-ever
+    catalogued trip, on a NaN reaching a matrix multiply. Single occurrence, no positive control
+    (iron rule 1). Unrelated to item -282 (no shared call path); confirms that guard's null
+    result isn't itself suspicious. Filed, not chased (strategic-priority #3). Passively covered
+    by item -282's confirmation soak (no separate env var needed to arm `NAN_CHECK` — it's
+    unconditional). Full detail: `PORTING-STATE` Session 445.
+
+-280. **(s443, s444, s445) `[wait-resumed-dead-ctx]` UAF instrument in `wait_for_resumed()`
+    (`lib/N64ModernRuntime/ultramodern/src/threads.cpp`), testing item -278's UAF hypothesis:
+    PARKED s445 — 2 consecutive null/clean confirm soaks (0 fires both times), and item -278's
+    own crash signature has not recurred across ~10 soaks since s441 introduced it. Per iron
+    rule 8 and this item's own stated pivot criteria, further identical confirm soaks have low
+    information value; parked (not closed) alongside item -263's siblings. Resurrection
+    condition unchanged: a NEW occurrence of item -278's own signature (SIGSEGV in
+    `LightweightSemaphore::tryWait`, wild 64-bit host pointer) under this instrument, fires>0 or
+    not. `idle_thread_handle` confirmed via `nm -C` as a genuine guest symbol, not an `atos`
+    misattribution — de-risks the backtrace's credibility even though the hypothesis itself is
+    parked. Full detail: `docs/PROJECT-OVERVIEW.md` §16 (s443), `PORTING-STATE` Sessions 443-445.
 
 -279. **(s442) The queued `s441_freelistnext_confirm` soak's rc=1/0s "failure" was a SOAK-SCRIPT
     off-by-one bug (wrong `..` count reaching repo root from `soak_queue/`), not a crash.**

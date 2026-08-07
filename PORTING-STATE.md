@@ -37056,3 +37056,93 @@ USER DIRECTIVE section's maintenance-pass count/history line (fifteen passes →
 No code changes, no build/run cycle (per the maintenance-iteration rule against running experiments).
 `docs/PROJECT-OVERVIEW.md` grew by the migrated s439-443 detail (~85KB→~91KB) — that file has no size
 cap; CURRENT-TRUTH's cap is the one the loop enforces.
+
+## Session 445 (2026-08-07)
+
+**Folded in s443_waitresumed_confirm's 2nd null result (consumed unread by s444's maintenance pass)**:
+0 `[wait-resumed-dead-ctx]` fires, 0 fires on all 3 free-list guard families, clean 347s run. Item
+-278 (`item-278-waitresumed-uaf` hypothesis-id) is now at 2 consecutive null/clean confirm soaks with
+the underlying crash itself never recurring across ~10 soaks since s441 introduced it. Per iron rule
+8 and the item's own stated pivot criteria (low information value: single occurrence, instrument
+shows nothing), PARKED it rather than spending a 3rd identical soak — same disposition as item -263's
+siblings (parked-not-closed, resurrection condition stated in CURRENT-TRUTH item -278/-280).
+
+**Pivoted to a fresh M3 systematic idiom-class audit per strategic-priority #3** (the s282-288 model:
+grep-enumerate a whole idiom class, classify every site, guard or prove dead — not a reactive single-
+crash chase). Dispatched a research subagent to frequency-scan RecompiledFuncs/funcs_*.c for a new,
+not-yet-guarded instance of the established "guard covers the outer pointer, not a sibling value read
+alongside it" bug shape (proven repeatedly across GENERIC_CACHE_GUARD/CACHE_HEAD_A1_GUARD/
+FREELIST_NEXT_GUARD and ~15 other closed families).
+
+**Found and fixed: GETDATITEM_GUARD.** `getDatItemByName` (`N64Recomp/RecompiledFuncs/funcs_10.c`,
+guest `0x80047B70` — a name-hash-bucket lookup) returns the sentinel `-1` when its target bucket is
+completely empty (confirmed by reading the whole function body, not inferred: `ctx->r2 = ADD32(0,
+-0x1)` at guest `~0x80047BBC`). Of its 6 total call sites, 5 dereference the raw return value (in
+`ctx->r2`, the standard `$v0` return register) as a pointer 3-7 times each with ZERO validation:
+`funcs_29.c` `0x800AF04C`, `funcs_36.c` `0x800CB710`, and three in `funcs_27.c` (`0x800AA4DC`,
+`0x800AA938`, `0x800AA974`) — the last three sit *directly beside* the already-guarded
+`S285_H1_6`/`S285_H1_7`/`S395_SWEEP_1` `-0x25A4` hangar-list guards (item -239..-247), protecting a
+DIFFERENT pointer at the identical call site: the established "guard covers one pointer, not its
+sibling" shape recurring in a place nobody had looked. The 6th call site is a thin wrapper,
+`getLevelDatItemByName` (`funcs_10.c` itself, `0x80047B48`), whose own 47 further callers across the
+corpus all inherit whatever `getDatItemByName` returned unmodified — guarding the wrapper's single
+return point protects all 47 transitively without classifying each caller individually (a fresh sample
+of ~5 showed some already null-check the result, consistent with the function's OTHER legitimate
+failure path, chain-walk-exhausted, returning 0 at guest `~0x80047C30` — so callers must already
+tolerate 0, and substituting 0 for any out-of-KSEG0-range return value, including `-1`, reuses that
+already-necessary path rather than introducing new caller-visible behavior — the same substitution
+convention GENERIC_CACHE_GUARD established).
+
+Patched via one general regex in `fixup_game_funcs.py` matching the recompiler's uniform
+call+goto+delay-slot-copy+label idiom (not per-site anchors, since all 6 sites share that shape
+byte-for-byte) — applies file-agnostically, no per-file restriction needed. Full regen cycle run
+(funcs_*.c cleared, `make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`), all 4
+steps rc=0. Fixup report: `GETDATITEM_GUARD patched x1` in each of funcs_10.c/29.c/36.c and `x3` in
+funcs_27.c — 6/6 sites, matching the enumerated call-site count exactly. Verified via `nm -C` and
+`strings` on the built binary: 6 function-scoped static guard variables present
+(`getLevelDatItemByName`, `initCraftSelectScreen`, `loadModelViewerModels`,
+`mallocCraftSelectionData`, plus 2 more), confirming `initCraftSelectScreen` (item -261's own
+un-truncated function) is a genuine call site.
+
+Live-verify (300s schedule, all guard-family env vars armed): 0 `[getdatitem-guard]` fires (null
+result, no positive control yet — 1st soak, matches the normal first-pass pattern of most guard
+families in this codebase's history). Process died at 117.3s instead on a **brand NEW, previously-
+uncatalogued crash class**: `Assertion failed: (ctx->f14.fl == ctx->f14.fl), function
+transformVec3ByMat34, file funcs_4.c, line 30007` (signal 6/abort, `__pthread_kill`, `last-guest-pc
+=0x80065e94`). This is the codebase-wide `NAN_CHECK(val)` macro (`assert(val == val)`,
+`N64Recomp/include/recomp.h:396-397`) — an always-on debug assert inserted at essentially every
+floating-point operation across the entire recompiled corpus, tripped here for the first time on a
+NaN reaching `transformVec3ByMat34`'s matrix-multiply. Completely unrelated to `GETDATITEM_GUARD` (no
+shared call path); confirms the guard's own null result is not itself suspicious. Filed, not chased,
+per strategic-priority #3 (single occurrence, no positive control) — see `docs/CURRENT-TRUTH.md` item
+-282. Confirmation soak queued: `scratch/agent/soak_queue/s445_getdatitem_confirm.sh` (arms all
+guard-family env vars, same schedule).
+
+**Unplanned but significant discovery: the s389-397 `hangarInitialize` `-0x25A4` chunk-2/3a/3b guard
+families are now silently ORPHANED.** The same fresh regen's fixup report showed 61 total anchor-match
+failures ("SKIPPED -- anchor matched x0, expected 1") across `S390_H2A` (2), `S390_H2B` (9),
+`S392_H3A` (29), and `S393_H3B` (21) — all in `funcs_27.c`, all previously patching cleanly as
+recently as s412's fixup log (`S390_H2A_1 patched x1` etc, verified by direct comparison). This
+directly answers the open question `docs/PROJECT-OVERVIEW.md` §16 raised at s426 ("whether that whole
+closed [s283-396] audit guarded dead code"): the s427 duplicate-symbol fix that un-truncated
+`hangarInitialize` (previously a 1-instruction stub under the `func_...`/`hangarInitialize` name
+collision) changed the function's real body enough that these 61 site-anchors, written against the
+pre-un-truncation disassembly, no longer match ANYTHING — the guard code is not merely failing to
+fire, it is not being INSERTED at all. `hangarInitialize` is confirmed live/reachable this session
+(the fresh N64Recomp/fixup/build cycle completed with no other symbol-resolution errors). This means
+61 previously-protected sites of the exact idiom class that motivated s282-396's entire month-plus M3
+audit arc are now running with ZERO guard coverage, silently, since s427. Not investigated further
+this session (scope discipline — the discovery was incidental to the GETDATITEM_GUARD work); flagged
+as the clear top-priority next-session work unit (`docs/CURRENT-TRUTH.md` item -281) — a systematic
+re-audit of `hangarInitialize`'s current (post-un-truncation) `-0x25A4` occurrences against its
+current live disassembly, exactly matching strategic-priority #3's own methodology.
+
+**Housekeeping**: no `lib/` edits this session (host-only guard work lives entirely in
+`N64Recomp/fixup_game_funcs.py` + generated `RecompiledFuncs/`, a separate, ungitignored-but-untracked
+generated-file directory in the sibling `N64Recomp` repo — not this repo's `lib/`). No
+`submodule-patches/export.sh` needed.
+
+**Outcome: ADVANCED** (landed a new guard family — code change, full regen+build verified clean,
+symbol-verified in the binary, live-verified with a real discriminating result; folded in a queued
+soak result and parked its hypothesis per budget; and surfaced two further findings for the ledger —
+a new crash class and a significant orphaned-guard regression — without chasing either reactively).
