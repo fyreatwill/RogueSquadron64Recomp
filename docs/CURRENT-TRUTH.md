@@ -162,8 +162,39 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -269 (s433, ADVANCED — closed item -264's catalogue and unblocked the
-item -265/-266/-267 chain as a side effect); the next new item takes -270.
+oldest). Current top is -270 (s434, ADVANCED — found and systematically fixed a 107-site unguarded
+idiom class, the largest single-session guard count in this project's history); the next new item
+takes -271.
+
+-270. **(s434) The `0x801163B0` free-list-cache-head-deref idiom — 4 prior sessions (s197/s266/s270/
+    s271) each bespoke-guarded ONE reactive occurrence; a full codebase scan found 107 MORE unguarded
+    occurrences; ONE generic patch fixed all 107 in a single regen. Live-verified clean over the
+    longest, deepest run in the whole -261..-269 saga, but single-source (0 guard fires = no positive
+    control yet).** Item -269's confirmation soak (`s433_regression_and_item263_confirm.sh`) crashed on
+    neither of s433's two expected outcomes — a 3rd, new signature: `last-guest-pc=0x80008928`,
+    `pc-symbol=emitAllocatedDLCommand+9472` (this time pc-symbol and guest-PC agree, no
+    misattribution). Localized to `lui $v0,0x8011; lw $v0,0x63B0($v0); lw $v0,0x0($v0)` — reload the
+    persistent free-list cache-head global at `0x801163B0` and dereference it with zero validation.
+    `docs/audit-changes.md` (a 2026-05-08 audit predating most of this project) had already flagged
+    this exact global as an open, never-root-caused "Top-5 Cat-B unknown" — this crash is the SAME
+    global, a 5th independent occurrence of an idiom already bespoke-guarded 4 times before
+    (`GUARD`/s197, `CACHE2_GUARD`/s266, `CACHE3_GUARD`/s270, `CACHE4_GUARD`/s271), each time reactively,
+    one crash at a time, never swept exhaustively. A grep-scan (`scratch/agent/s434_idiom_scan.py`)
+    found 107 FURTHER unguarded occurrences across `funcs_3.c`(66)/`funcs_4.c`(41) — no other file
+    references the offset. 100% uniform: every occurrence uses `$v0`/`ctx->r2` for all 3 positions and
+    every sampled site (6/6) has the identical write-back+branch tail, confirming one systematic class.
+    Fixed with ONE generic regex-based patch (`GENERIC_CACHE_GUARD`, `N64Recomp/fixup_game_funcs.py`)
+    that substitutes 0 for the dereferenced value when the loaded head pointer is out of
+    `[0x80000000,0x80800000)` range — no per-site goto needed, since intercepting the value before the
+    deref is safe regardless of downstream code. Fixup audit report confirmed exactly 107 patches
+    applied, matching the scan count exactly. Rebuilt clean (0 new warnings). Live run with the guard's
+    diagnostic armed completed the FULL 300s/250s-keys schedule with **0 crashes** — deeper/longer than
+    every prior run in the -261..-269 saga (all died 19s-172s) — but the guard also fired **0 times**,
+    so this is a promising single-source result WITHOUT a positive control (iron rule 1), not yet a
+    confirmed fix. Confirmation soak queued (`s434_genericcacheguard_confirm.sh`). Does NOT resolve
+    what WRITES the corrupted value into `0x801163B0` (the original open `audit-changes.md` question) —
+    guarding every read site is treated as sufficient, matching how the 4 prior bespoke guards were each
+    accepted without ever finding their shared writer. Full detail: PORTING-STATE Session 434.
 
 -269. **(s433) Item -264's duplicate-symbol catalogue CLOSED (18/18 accounted for) — and fixing one
     of the last 5 function pairs unblocked the entire item -265/-266/-267 chain that had blocked
@@ -271,7 +302,11 @@ item -265/-266/-267 chain as a side effect); the next new item takes -270.
 -263. **(s426) `updateHangarBayScene` crash surfaced by item -262's fix, single-source,
     uninvestigated.** Same wild near-zero-pointer signature as item -261's family, different function
     family (0x80054xxx). Confirmation soak queued: `scratch/agent/soak_queue/s426_menufix_regression.sh`.
-    Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Session 426.
+    Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Session 426. **s434 update: this
+    `tickWrappingTimerAccumulatorList`/`0x800547bc` signature (an UNRELATED global, `0x80137C84`, not
+    item -270's `0x801163B0`) did not recur in s434's clean 300s run either — still single-source, still
+    unrooted, not yet closeable; may simply not have been reached this run (item -270's schedule differs
+    only in which build was under test, not the key timing).
 
 -262. **(s426) `startPlayerSlotAnimationChannelLooping`/2-sibling chain (item -261) ROOT-CAUSED AND
     FIXED: a duplicate-symbol-name collision truncated `initCraftSelectScreen`'s real ~1200-line body

@@ -36274,3 +36274,106 @@ Sibling-repo edit: `~/Documents/Tools/rogue_squadron64/symbol_files/menu_overlay
 deleted, 2 doc comments updated) and `mission_overlay.txt` (1 stub line deleted, 1 doc comment updated)
 and `main_overlay.txt` (1 doc comment updated). Left uncommitted there per established practice, same
 as every prior session's symbol-file edits.
+
+## Session 434 (2026-08-07)
+
+**Start state**: s433's queued confirmation soak (`s433_regression_and_item263_confirm.sh`) had run
+between iterations. Read its verdict first per NEXT.md's instructions.
+
+**Soak verdict read**: `rc=1`, 172s. NEITHER of s433's two expected outcomes (item -267 chain
+recurring, or item -263's `last-guest-pc=0x800547bc` recurring) happened. Instead: a third, new crash
+signature -- `[CRASH] Bus error 10`, `si_addr=0x374900000`, `last-guest-pc=0x80008928`,
+`pc-symbol=emitAllocatedDLCommand+9472`. `[keys]` lines confirmed the schedule actually drove input
+(ruling out the s344 `[keys]`-log-file trap). Per NEXT.md's own contingency plan for this outcome:
+"treat as a new, single-source data point... investigate the new signature on its own merits."
+
+**Localization**: `scratch/agent/s434_symrange2.py` (address-sorted walk of the overlay symbol
+tables, same method as s433's `s433_symrange.py`) placed guest PC `0x80008928` inside
+`emitAllocatedDLCommand` (`main_overlay.txt`, range `0x80008688`-`0x8000898C`), 0x2A0 bytes in --
+this time the native `pc-symbol` breadcrumb (`emitAllocatedDLCommand+9472`) and the guest-PC-derived
+symbol agree (unlike s433's misleading `updateHangarBayScene+43768`), so no cross-check ambiguity.
+Reading `RecompiledFuncs/funcs_3.c:3988-3996` (the generated body around `0x80008920`-`0x80008930`)
+found the exact idiom: `lui $v0,0x8011; lw $v0,0x63B0($v0)` (reload the persistent free-list
+cache-head global at `0x801163B0`) immediately followed by `lw $v0,0x0($v0)` (dereference it with
+**zero validation** -- the crash site).
+
+**This is not a new bug class.** `docs/audit-changes.md` (a 2026-05-08 audit predating most of this
+project's session history) already flagged this exact global as a Top-5 "most concerning Cat-B
+unknown": *"Slot-dispatcher / free-list corruption at ~iter 750... CANARY_CHECK observes a
+non-KSEG0 value at MEM[0x801163B0] (free-list head). What writes it? Unknown after weeks of
+instrumentation."* And grepping `PORTING-STATE.md` for `801163B0` found FOUR prior sessions had each
+independently found and bespoke-patched ONE occurrence of this exact idiom, reactively, one crash at
+a time, never as a systematic sweep: s197's original `GUARD` (`submitSceneNodeRender`, funcs_4.c),
+s266's `CACHE2_GUARD` (2nd site, same function), s270's `CACHE3_GUARD` (3rd site, same function), and
+s271's `CACHE4_GUARD` (`beginFrameDLChunk`, funcs_3.c, a completely different function). This session's
+`emitAllocatedDLCommand` crash is a **5th independent occurrence**, in a 3rd distinct function, never
+found by any prior session's search.
+
+**Idiom-class audit (per the standing USER DIRECTIVE #3, the s282-288 model)**: rather than patch this
+one site reactively like the prior four, wrote `scratch/agent/s434_idiom_scan.py` to grep-enumerate
+EVERY occurrence of the idiom (`lui $vX,0x8011` -> `lw $vX,0x63B0($vX)` -> unguarded `lw
+$vY,0x0($vX)`) across all of `RecompiledFuncs/funcs_*.c`. Result: **107 further unguarded
+occurrences**, all in `funcs_3.c` (66) and `funcs_4.c` (41), none elsewhere in the codebase (`grep -l
+"0x63B0("` confirmed only these two files reference the offset at all). A follow-up scan
+(`s434_idiom_scan2.py`) checked register usage and downstream shape across the matches: **100%
+consistent** -- every single occurrence uses `$v0`/`ctx->r2` for all three positions (load-base,
+head-value, deref-dest), and every sampled site (6/6 checked byte-for-byte) is immediately followed by
+the identical 3-instruction tail: `lui $at,0x8011; sw $v0,0x63B0($at)` (write the (possibly-invalid)
+dereferenced value back as the new cache head) then `bnel $v0,$zero,L_xxx` (branch-likely on nonzero).
+This uniformity confirms one systematic idiom class, not 107 unrelated bugs, and confirms the
+remediation generalizes without needing per-site inspection: substituting `ctx->r2 = 0` in place of the
+actual deref when the loaded head pointer is outside `[0x80000000, 0x80800000)` reproduces the exact
+"cache was empty" semantics the four bespoke guards were built to reach (the write-back then stores 0,
+self-healing the corrupted global, and the `bnel` naturally falls through untaken) -- with **no goto
+to a per-function merge label needed**, unlike the four bespoke guards, because intercepting the value
+before the deref rather than skipping code afterward is behaviorally safe regardless of what any given
+site does next.
+
+**Fix**: added ONE generic patch to `N64Recomp/fixup_game_funcs.py` (~85 new lines, appended after the
+existing `mallocCraftSelectionData` checkpoint block, the prior end of the patch sequence) --
+`GENERIC_CACHE_GUARD`. A single `re.subn` over the whole file text of `funcs_3.c`/`funcs_4.c` matches
+the 2-instruction `lw $v0,0x63B0($v0)` -> `lw $v0,0x0($v0)` pair (with an optional non-capturing group
+tolerating an intervening `g_rs64_last_guest_pc = ...;` breadcrumb line for the minority of matches
+inside breadcrumbed functions, e.g. `emitAllocatedDLCommand` itself), and replaces the deref with a
+range-checked branch: valid range performs the identical original `MEM_W` deref, invalid range logs
+(env-gated, `ROGUESQ_LOG_GENERIC_CACHE_GUARD`) and sets `ctx->r2 = 0` instead. Regenerated
+(`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py`) -- the fixup audit report showed **exactly 107
+patches applied** (`funcs_3.c: ... x66`, `funcs_4.c: ... x41`), matching the scan count exactly (cross
+verified independently via `grep -c GENERIC_CACHE_GUARD` on both regenerated files: 132/2=66 and
+82/2=41). Rebuilt clean, 0 new warnings (46 pre-existing, unrelated `DDIV` sign-conversion warnings in
+`funcs_8.c`, present before this session).
+
+**Live verification** (same s427-433 probe schedule, `ROGUESQ_LOG_GENERIC_CACHE_GUARD=1` armed):
+completed the FULL 300s/250s-keys schedule with **0 `[CRASH]` markers** -- captured 127 frames, process
+exited cleanly (rc=0), VI still animating cleanly at 512-width at the very end (frame synth=6287,
+`[present-1024]` firing every frame right up to the log's last line). This is deeper and longer than
+every single run in the item -261 through -269 saga, all of which died between 19s (item -267's
+original chain) and 172s (item -263, this session's own confirmation soak). **However**: the guard
+fired **0 times** this run -- a null result WITHOUT a positive control (iron rule 1). Cannot yet
+distinguish "the fix genuinely closed the corruption path" from "the specific corrupting write simply
+didn't happen to occur this run" (this project's crashes have repeatedly shown run-to-run timing
+variance, e.g. s433's own crash landed at a different point than s426's single-source original).
+Treat as a strong, promising, single-source data point, NOT yet a confirmed fix.
+
+**What this does NOT resolve**: whether the write-side corruption of `0x801163B0` itself (WHAT writes
+the wild value into the global in the first place -- the original, still-open `audit-changes.md`
+question) is separately worth chasing. This session's guard treats the SYMPTOM (unguarded reads of a
+corrupted cache) at every known read site, which is sufficient to prevent crashes from this idiom
+regardless of the write-side mechanism, matching the established remediation pattern of the 4 prior
+bespoke guards (none of which ever found the writer either). The open write-side mystery is not
+reopened as active work -- guarding every read site is the proven, sufficient fix for this project's
+purposes (stability), consistent with how GUARD/CACHE2/3/4_GUARD were each individually accepted as
+closed without ever finding their shared writer.
+
+**Confirmation soak queued**: `scratch/agent/soak_queue/s434_genericcacheguard_confirm.sh` -- reruns
+the identical schedule with the guard's diagnostic armed; the loop will accumulate further same-recipe
+runs between iterations. Three future outcomes and their reads: (a) guard fires with no crash --
+positive control achieved, promotes this to a confirmed fix; (b) a NEW crash at yet another unguarded
+site of some *different* idiom -- this family is fully closed, move to the next; (c) clean+silent again
+-- weak reinforcing evidence, needs several repeats before "fixed" is safe to write into CURRENT-TRUTH.
+
+**Tooling added this session**: `scratch/agent/s434_symrange2.py` (guest-PC-to-overlay-symbol range
+lookup, reusable template), `scratch/agent/s434_idiom_scan.py` and `s434_idiom_scan2.py` (idiom-class
+grep-scanners for the `lui 0x8011`/`0x63B0` cache-head-deref pattern, reusable if a similar
+fixed-global-cache idiom needs auditing again).
+
