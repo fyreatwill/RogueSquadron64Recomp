@@ -1,53 +1,58 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: dl-list-reset-5824-intervening-14
+HYPOTHESIS-ID: next-idiom-class-candidate
 
-## s463 CLOSED item -298's own 70/70 clean sites (`DL_LIST_RESET_GUARD`) and extended item -291
-(`DL_LIST_APPEND_GUARD`) from 57 to 84/84 sites — see `docs/CURRENT-TRUTH.md` item -298 and
-`PORTING-STATE.md` Session 463 for the full derivation. Confirmation soak queued:
-`scratch/agent/soak_queue/s463_dllistguards_confirm.sh`.
+## s464 CLOSED item -298 outright (84/84 `DL_LIST_RESET_GUARD` sites — 70 blanket-regex s463 + 14
+per-site-literal-anchor s464). The whole re-scoped `-0x5824` non-canonical population (111 sites) is
+now fully accounted for: 27 canonical (folded into `DL_LIST_APPEND_GUARD`), 70 blanket-regex, 14
+per-site. See `docs/CURRENT-TRUTH.md` item -298 and `PORTING-STATE.md` Session 464 for full
+derivation. Confirmation soak queued: `scratch/agent/soak_queue/s464_dllistreset14_confirm.sh`
+(not yet run by the loop as of this writing — check `scratch/agent/SOAK-RESULTS.md` tail first
+thing next session and fold its verdict into the ledger).
 
-**Open thread: item -298's own remaining 14 sites.** These are the SAME `DL_LIST_RESET_GUARD` shape
-(reload global `0x8011A7DC`, then write the reloaded pointer directly as a write address with no
-intervening deref) but with 1-6 lines of unrelated intervening code between the reload and the write
-pair — the blanket regex used for the other 70 sites can't span that gap, so each site needs its own
-per-site literal anchor, the exact same mechanical process `SIBLING_PTR_WRITE_GUARD`/item -296 used
-for its own 14/119 non-uniform sites.
+**No open M3 idiom-class-audit thread remains.** This is the first time since s454 that this
+lineage has no active work item — 4 idiom classes closed back-to-back
+(`DL_LIST_APPEND_GUARD`/item -291, `SIBLING_PTR_WRITE_GUARD`/item -296, `SONGTEMPO_TABLE_GUARD`/
+item -292, `DL_LIST_RESET_GUARD`/item -298) via the same discovery method (a global-deref audit
+scoped by the offending offset literal, e.g. `-0x5824`, `-0x23A8`, `0x29C0`).
 
-## This iteration's work unit (default, unless Step 0/a fresher soak result changes the picture)
+## This iteration's work unit: pick ONE, in this order
 
-1. Re-run `python3 scratch_s463_classify_5824.py` in `~/Documents/Tools/N64Recomp` (untracked,
-   still on disk from s463) to regenerate the `C_UNCLASSIFIED` bucket — 14 sites, each printed with
-   its address and the next ~8 lines of surrounding code. (If the script is gone, re-derive it: the
-   pattern is `reload_re` from `scratch_s463_scan_5824.py` chained into a manual read of what follows
-   each of the 111 original non-canonical addresses not already claimed by `DL_LIST_APPEND_GUARD`'s
-   84 or `DL_LIST_RESET_GUARD`'s 70.)
-2. For each of the 14, read enough context to confirm: (a) it really is the list-reset shape (reload
-   → intervening unrelated code → `sw` writing some register through the SAME reloaded register used
-   as the address), and (b) capture the literal anchor text (the `// 0xADDR: sw ...` comment line plus
-   the `MEM_W(...) = ...;` line, verbatim, like `SIBLING_PTR_WRITE_GUARD`'s own `_SIBLING_PTR_WRITE_SITES`
-   list in `fixup_game_funcs.py`) — confirm each anchor is tree-wide-unique via
-   `grep -c "<anchor text>" RecompiledFuncs/*.c` before touching the patch list (this idiom class's
-   own established discipline, never skip the uniqueness check).
-3. Add a `_DL_LIST_RESET_SITES` list (same structure as `_SIBLING_PTR_WRITE_SITES`) to
-   `fixup_game_funcs.py`, patch generation reusing the SAME "skip on invalid head" remediation and
-   the SAME `ROGUESQ_LOG_DL_LIST_RESET_GUARD`/`[dl-list-reset-guard]` tag already wired up for the
-   70-site blanket-regex batch (just route these 14 through per-site substitution instead).
-4. Full pipeline (`make_elf.py` → delete stale `funcs_*.c` → `N64Recomp` → `fixup_game_funcs.py` →
-   `cmake --build`), confirm the report shows all 14 applied (check the total
-   `DL_LIST_RESET_GUARD`-tagged site count in the built binary is now 84, not 70), live-verify (full
-   300s schedule, all passive guards armed including `ROGUESQ_LOG_DL_LIST_RESET_GUARD`), queue a
-   confirm soak. This CLOSES item -298 outright (0 sites remaining across the whole re-scoped -0x5824
-   non-canonical population) if it comes back clean.
+### Option A (preferred first try): a fresh codebase-wide frequency scan for the next comparable
+idiom class
 
-## Fallback if step 1 finds the class isn't as clean as expected
+The s389-397 arc (`docs/PROJECT-OVERVIEW.md` §14) tried this and got a negative result at the time
+— but that was BEFORE 4 more idiom classes were found and closed via the s454-464 arc, so the
+scan's own methodology may simply not have been tuned to catch this session's classes. Re-run or
+adapt that method: grep every `RecompiledFuncs/funcs_*.c` for `lw \$\w+, -?0x[0-9A-Fa-f]+\(\$\w+\)`
+immediately following a `lui $reg, 0x80XX` pair (the reload-a-global idiom every guard in this
+whole lineage shares), bucket by the (offset, base-register-source-global) pair, and look for
+buckets with a HIGH site count (20+) that don't already have a `ROGUESQ_LOG_*_GUARD` env var wired
+up in `fixup_game_funcs.py` (grep `_GUARD` definitions there for the exhaustive already-covered
+list: `GENERIC_CACHE_GUARD`, `CACHE_HEAD_A1_GUARD`, `FREELIST_NEXT_GUARD`, `DL_LIST_APPEND_GUARD`,
+`DL_LIST_RESET_GUARD`, `SIBLING_PTR_WRITE_GUARD`, `SONGTEMPO_TABLE_GUARD`, `HANGARLIST_GUARD*`,
+`GETDATITEM_GUARD`, `S284_GUARD`, `S285_GUARD`, `S390_H2_GUARD`, `COMPOSE_NPC_GUARD*`,
+`ANIM_TEX_STREAM_GUARD*`, `HANGAR_BAY_DEREF_GUARD`, `HANGAR_BAY_SCENE_GUARD`,
+`MATEXPIRY_GUARD`). A new bucket with 20+ uncovered sites is a strong candidate — read a handful of
+sample sites to confirm the shape (does the reload feed a deref like `DL_LIST_APPEND_GUARD`? A
+direct write-address like `DL_LIST_RESET_GUARD`/`SIBLING_PTR_WRITE_GUARD`? Something else entirely
+needing a new remediation?) before committing to a fix.
 
-If any of the 14 sites turn out NOT to share the list-reset shape (read step 2 finds a genuinely
-different pattern), stop and reclassify rather than forcing a fit — same discipline as every prior
-idiom-class audit. In that case, fall back to `BREADCRUMB7` (diagnostic, lowest priority, the last
-untouched item from the `static5-rename-orphan-sweep`) or a fresh frequency scan per
-`docs/PROJECT-OVERVIEW.md` §14's method (closed for lack of a hit at the time, not necessarily
-exhausted now that 3 more idiom classes have been found since).
+### Option B (fallback if A finds nothing above ~20 sites): `BREADCRUMB7`
+
+The last untouched item from the `static5-rename-orphan-sweep` (s445-451 arc,
+`docs/PROJECT-OVERVIEW.md` §16) — diagnostic-only, lowest priority of that whole arc's leftovers.
+Grep `fixup_game_funcs.py` for `BREADCRUMB7` to find its current (likely unfinished/parked) state
+and read what's left.
+
+### Option C (if both A and B are exhausted): step back to M5 audio or reconsider the strategic
+priority list
+
+Per `docs/CURRENT-TRUTH.md`'s USER DIRECTIVE section, M5 audio de-stubbing is CLOSED with "no thread
+open... needs a genuinely new lead" — don't restart it without one. If A and B both come up empty,
+write a BLOCKED with the specific question: no queued M3 idiom-class-audit candidate and no fresh
+M5 lead — ask the human whether to resume reactive single-crash chases (explicitly discouraged by
+the strategic priority) or open a different investigation thread entirely.
 
 ## Discriminating instrument still live: watch for `sibling-ptr-write-guard` fires in
 `submitSceneNodeRender`
@@ -55,14 +60,17 @@ exhausted now that 3 more idiom classes have been found since).
 10 of item -296's 119 `SIBLING_PTR_WRITE_GUARD` sites are in `submitSceneNodeRender`, the same
 function named in a still-open "wait-for-recurrence breadcrumb" (2 independent single-occurrence
 crashes, different `last-guest-pc` each time, not confirmed as one bug). 0 fires across every soak
-so far, including s463's. If any future soak shows a `sibling-ptr-write-guard` fire specifically at
-one of those 10 sites, that's new evidence worth immediate follow-up — the one exception to "don't
-chase breadcrumbs."
+so far, including s463's and s464's. If any future soak shows a `sibling-ptr-write-guard` fire
+specifically at one of those 10 sites, that's new evidence worth immediate follow-up — the one
+exception to "don't chase breadcrumbs."
 
-## Incidental observation, not chased (s463, via the queued s462 confirm soak)
+## Incidental observation, not chased (s464)
 
-The `s462_stepactivesongtracks_confirm` soak (run between s462 and s463) crashed at 109.1s on
-`pc-symbol=memcpy_recomp+288`, `last-guest-pc=0x80054780`, inside `tickWrappingTimerAccumulatorList`
-(`funcs_11.c`) — a function with its own long, already-catalogued crash history (`BREADCRUMB9`, the
-s343 div-by-zero, the s426-441 epilogue-misattribution saga). No `funcs_25.c` frame anywhere —
-unrelated to item -292's own patch (which stays CLOSED). Do not chase; file only.
+s464's live-verify crashed at ~126s on `pc-symbol=coalesceFreeHeapBlocks+4424`,
+`last-guest-pc=0x8000247c`, backtrace `coalesceFreeHeapBlocks <- runVideoFrameTick <-
+menuOverlayInit <- mainGameLoop <- mainBootstrapWorker`. This exact signature is the SAME
+already-catalogued, already-closed heap-walker background-noise family documented since Session
+366 (`m5-audio-destub-coalesce-heap-guard-verify`, closed s366) and reconfirmed multiple times
+since (Sessions ~445-451 range). Not a new class, not chased. If it ever starts recurring at a
+materially different offset/backtrace, that would be worth a fresh look — this exact
+offset+backtrace pairing is not.

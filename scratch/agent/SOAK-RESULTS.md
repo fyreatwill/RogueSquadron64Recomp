@@ -101,3 +101,4 @@
 20260807-124640 | s459_sibling_ptr_write_confirm | rc=3 | 157s | scratch/agent/soak_results/s459_sibling_ptr_write_confirm_20260807-124640.log
 20260807-130123 | s460_advancesongregion_confirm | rc=0 | 346s | scratch/agent/soak_results/s460_advancesongregion_confirm_20260807-130123.log
 20260807-133310 | s462_stepactivesongtracks_confirm | rc=3 | 154s | scratch/agent/soak_results/s462_stepactivesongtracks_confirm_20260807-133310.log
+20260807-140020 | s463_dllistguards_confirm | rc=3 | 65s | scratch/agent/soak_results/s463_dllistguards_confirm_20260807-140020.log

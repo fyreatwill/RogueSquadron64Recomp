@@ -38575,3 +38575,73 @@ per-site batch).
 **Outcome: ADVANCED** (two real code fixes landed in one session — extended an existing guard to 27
 previously-missed sites via a regex-gap fix, and closed a freshly-discovered 70-site guard class
 outright — clean pipeline, clean live-verify, 0 fires on either guard, confirmation soak queued).
+
+## Session 464 (2026-08-07): item -298 CLOSES at 84/84 — the final 14 `DL_LIST_RESET_GUARD` sites,
+per-site literal-anchor treatment, closing the whole re-scoped `-0x5824` non-canonical population
+(111/111 accounted for: 27 canonical + 70 blanket-regex + 14 per-site)
+
+Picked up s463's own top work unit (`scratch/agent/NEXT.md`, `HYPOTHESIS-ID:
+dl-list-reset-5824-intervening-14`): the 14 sites left over from s463's `DL_LIST_RESET_GUARD` blanket
+regex, where 1-4 lines of unrelated intervening code between the reload and the write pair kept the
+fixed-shape regex from matching.
+
+**Re-derivation**: re-ran `scratch_s463_classify_5824.py` (N64Recomp repo, untracked) against a fresh
+regen. Its "C_UNCLASSIFIED" bucket printed 84 hits, not 14, because it was run against the
+ALREADY-PATCHED tree (post-s463 build) — the 70 already-guarded blanket-regex sites no longer match
+the raw `reset_shape_re` pattern (their source text is now the guard block), so they fell into the
+unclassified bucket alongside the real 14. Filtered programmatically (any block containing the
+literal string `PATCH` is an already-patched site, not a true unclassified one) — 84 → 14 exactly,
+matching s463's own count.
+
+**Shape confirmed identical to the blanket 70's, just with a gap**: `ctx->r2 = MEM_W(ctx->r2,
+-0X5824)` (reload global `0x8011A7DC` into `$v0`/`ctx->r2`, uniform across all 14 — unlike
+`SIBLING_PTR_WRITE_GUARD`'s varying address register, every one of these 14 reloads into `$v0`), then
+1-4 lines of unrelated intervening code (index/offset arithmetic on OTHER registers — `$s0`, `$a1`,
+`$v1`, etc. — confirmed by direct source read that none of it touches `r2`), then `MEM_W(0X0, ctx->r2)
+= ctx->rN` where `rN` is a freshly-zeroed "new node" argument register — `ctx->r2` used directly as an
+unvalidated write ADDRESS, byte-for-byte the same risk as the blanket 70. Read full context for all 14
+(5 in `funcs_3.c`, 9 in `funcs_4.c`) via direct `grep`+`Read`, not sampled.
+
+**Fix**: added a new `_DL_LIST_RESET_EXTRA_SITES` per-site literal-anchor list to
+`fixup_game_funcs.py`, same structure and remediation as `SIBLING_PTR_WRITE_GUARD`'s own
+`_SIBLING_PTR_WRITE_SITES` (each site's `// 0xADDR: sw ...` comment + optional
+`g_rs64_last_guest_pc` breadcrumb + `MEM_W(...) = ...;` line captured verbatim as the anchor,
+substituted with a guarded `{ }` block). Deliberately reuses `DL_LIST_RESET_GUARD`'s own env var
+(`ROGUESQ_LOG_DL_LIST_RESET_GUARD`) and stderr tag (`[dl-list-reset-guard]`) rather than minting a
+new instrument, since this is the same guard idiom patched two different ways for two different code
+shapes, not a new class. All 14 anchors confirmed tree-wide-unique (exactly 1 occurrence each, both
+locally and across every `funcs_*.c`) via a standalone script
+(`scratch_s464_verify_dllistreset14.py`, N64Recomp repo, untracked) before being written into the
+fixup file — the mandatory discipline this whole idiom-class-audit lineage has never skipped.
+
+**Pipeline**: `make_elf.py` → deleted all 50 stale `funcs_*.c` (explicit filenames again, not a glob)
+→ `N64Recomp` → `fixup_game_funcs.py` (report: `funcs_3.c: list-reset write-through guard, per-site
+(DL_LIST_RESET_GUARD extra) patched x5`, `funcs_4.c: ... patched x9`) → `cmake --build` (clean, only
+the same pre-existing unrelated `-Wpointer-sign` `DDIV` warnings as every prior regen). Verified via
+`grep -c` on the regenerated source: `DL_LIST_RESET_GUARD`-tagged sites now 84/84 (46 `funcs_3.c` + 38
+`funcs_4.c` = 70 blanket + 14 new), `DL_LIST_APPEND_GUARD` unchanged at 84/84, `SIBLING_PTR_WRITE_GUARD`
+unchanged at 119/119 — neither sibling guard regressed.
+
+**Live-verify** (`tools/probe.sh`, full 300s/`PROBE_KEYS_FROM_PHASE=1` schedule, every passive
+guard/breadcrumb env var armed): ran ~126s before crashing. 0 `dl-list-reset-guard` fires, 0
+`dl-list-append-guard` fires, 0 `sibling-ptr-write-guard` fires (null result, matches this whole
+guard-idiom class's established true-negative baseline per item -287). `hangarbay-entry` reached
+n=2700 (matches prior clean-soak baselines, reachability confirmed). The crash itself
+(`pc-symbol=coalesceFreeHeapBlocks+4424`, `last-guest-pc=0x8000247c`, backtrace `coalesceFreeHeapBlocks
+<- runVideoFrameTick <- menuOverlayInit <- mainGameLoop <- mainBootstrapWorker`) is the SAME
+already-catalogued, already-closed heap-walker background-noise family documented since Session 366
+(and reconfirmed as recently as the item -282..-289 arc) — unrelated to any guard tested this session,
+filed not chased. Confirmation soak queued: `scratch/agent/soak_queue/s464_dllistreset14_confirm.sh`.
+
+**Item -298 CLOSES outright**: 111/111 of the re-scoped `-0x5824` non-canonical population now
+accounted for (27 canonical, folded into `DL_LIST_APPEND_GUARD` s463; 70 blanket-regex
+`DL_LIST_RESET_GUARD` s463; 14 per-site `DL_LIST_RESET_GUARD` extension s464). No open thread remains
+in this idiom class. Next M3 idiom-class-audit candidate: none currently queued — `BREADCRUMB7`
+(diagnostic, lowest priority, the last untouched item from the `static5-rename-orphan-sweep`) or a
+fresh frequency scan per `docs/PROJECT-OVERVIEW.md` §14's method are the two fallback options listed
+in `scratch/agent/NEXT.md` as of s463; worth a fresh look now that 4 idiom classes have been found via
+this method since that scan was last run.
+
+**Outcome: ADVANCED** (a real code fix landed — 14 new per-site guards, clean pipeline, clean build,
+clean live-verify with 0 fires on any of the 3 idiom-class guards tested, crash on run was an
+unrelated already-closed family — confirmation soak queued, item -298 closed outright).
