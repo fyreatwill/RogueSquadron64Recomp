@@ -36875,3 +36875,56 @@ this specific run (single occurrence).
 `FREELIST_NEXT_GUARD`, 105 sites — that explains and fixes a real crash previously misattributed to
 item -263; regenerated, rebuilt clean, live-verified end-to-end; reclassified item -263 with a
 falsifiable parking criterion; discovered and filed a new crash class, item -278).
+
+## Session 442 (2026-08-07)
+
+Read-first: `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md` (hypothesis-id
+`item-277-freelistnextguard-confirm`), `scratch/agent/SOAK-RESULTS.md` tail. Step 0 maintenance
+check: `docs/CURRENT-TRUTH.md` was 54508 bytes, under the 60000-byte trigger — not a maintenance
+iteration.
+
+**Work unit**: consume the queued `s441_freelistnext_confirm` soak per NEXT.md's branch instructions.
+Found its result line (`SOAK-RESULTS` `20260807-070416`) was rc=1 after 0s with a one-line log:
+`cd: build: No such file or directory`. This did NOT match any of the 4 anticipated branch outcomes
+(guard fires / item -278 recurs / item -263-signature recurs / clean) — investigated instead of
+guessing. Diffed the queued script
+(`scratch/agent/soak_queue/done/s441_freelistnext_confirm_20260807-070416.sh`) against the known-good
+s440 recipe and found the cause: s441's script computed the repo root as
+`cd "$(dirname "$0")/../../../.."` (4x `..`) from `scratch/agent/soak_queue/`, but the correct depth
+is 3x `..` — the extra level walked one directory ABOVE the repo root (into the parent `Tools/`
+directory, which has no `build/`), so `cd build` failed immediately before the game ever launched.
+Pure soak-authoring bug, not evidence about `FREELIST_NEXT_GUARD` or item -278.
+
+Re-ran the identical schedule manually with the corrected path
+(`scratch/agent/soak_results/s442_freelistnext_manual`, launched via the harness's background-task
+mechanism since the 300s runtime exceeds the 120s foreground timeout). Result: **CLEAN** — full
+schedule (126 frames captured, ~298s), 0 `[CRASH]` markers, 0 fires on `generic-cache-guard`/
+`cache-head-a1-guard`/`freelist-next-guard` (all three free-list-guard families now have zero
+same-run fires across every soak since s434 — the "does this guard mechanism even engage" doubt
+opened at s434 is still unresolved), and `[hangarbay-entry]` reached `n=2900` (matches s440's
+baseline for this exact schedule, confirming `updateHangarBayScene` reachability is stable). Item
+-278 (thread-scheduler/semaphore SIGSEGV) did **not** recur — still a single, unconfirmed occurrence.
+
+Rewrote and requeued the confirmation soak (`scratch/agent/soak_queue/s442_freelistnext_confirm.sh`)
+on s440's more robust pattern (explicit `REPO_ROOT` variable, self-checking its own `run.log` for
+`[CRASH]`/guard-fire counts rather than trusting probe.sh's raw exit code alone) so the loop can keep
+collecting data toward the missing positive control without repeating the path bug.
+
+**What this rules out**: the s441 soak "failure" is NOT a new crash signature and should not have
+been read as one — treated instead as the boring explanation (tooling bug) per the investigation
+method's boring-first prior, confirmed by diffing against a known-working script rather than assumed.
+
+**What this session does NOT establish**: still no positive control for any of the 3 free-list guard
+families (0 fires across every soak to date); whether item -278 is reproducible (still single-source).
+
+**Process lesson for future soak authoring**: an `rc=1` soak result with a near-zero (<5s) duration
+and no `run.log` produced is a soak-harness bug signature, not a crash signature — check for that
+specific pattern (missing run.log, single-line stderr like `cd: ... No such file or directory`)
+before reading a queued-soak failure as game-crash evidence. Documented in `docs/CURRENT-TRUTH.md`
+item -279 and `scratch/agent/NEXT.md`'s Sandbox-lessons section.
+
+**Housekeeping**: no `lib/` edits this session — `submodule-patches/export.sh` not needed.
+
+**Outcome: ADVANCED** (ran the planned work unit; it surfaced and root-caused a soak-authoring bug
+that would otherwise have silently corrupted the free-list-guard evidence record, fixed it, produced
+a genuine 4th clean/null data point via the corrected re-run, and requeued a corrected soak).

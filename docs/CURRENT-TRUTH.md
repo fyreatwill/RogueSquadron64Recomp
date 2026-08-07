@@ -162,9 +162,35 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -278 (s441, single occurrence, UNCONFIRMED — a new SIGSEGV crash class
-in the thread-scheduler/semaphore runtime, unrelated to the 0x801163B0 free-list family);
-the next new item takes -279.
+oldest). Current top is -279 (s442, a corrected confirmation soak for items -277/-278 —
+clean, still no positive control on the free-list guard family, item -278 did not recur);
+the next new item takes -280.
+
+-279. **(s442) The queued `s441_freelistnext_confirm` soak's rc=1/0s "failure" was a SOAK-SCRIPT
+    BUG, not a crash — diagnosed and corrected; the real confirmation run came back CLEAN.**
+    `SOAK-RESULTS` `20260807-070416` showed rc=1 after 0s with a one-line log: `cd: build: No such
+    file or directory`. Comparing the queued script (`scratch/agent/soak_queue/done/
+    s441_freelistnext_confirm_20260807-070416.sh`) against the known-working s440 pattern found the
+    cause: s441's script used `cd "$(dirname "$0")/../../../.."` (four `..`) where the correct
+    repo-root path from `scratch/agent/soak_queue/` is three `..`; the extra level walked one
+    directory above the repo root (into the parent `Tools/` directory, which has no `build/`), so
+    `cd build` failed immediately and the script exited before ever launching the game — a pure
+    off-by-one, not evidence about `FREELIST_NEXT_GUARD` or item -278. Re-ran the identical
+    schedule manually with the corrected path (`scratch/agent/soak_results/s442_freelistnext_manual`,
+    foregrounded via the harness's background-task mechanism, 300s budget): **CLEAN** — full
+    schedule (126 frames captured to ~298s), 0 `[CRASH]` markers, 0 fires on `generic-cache-guard`,
+    `cache-head-a1-guard`, or `freelist-next-guard` (all three free-list-guard families now have
+    literally zero same-run fires across every soak to date since s434 — the "does this guard
+    mechanism even engage" doubt is still open), and `[hangarbay-entry]` reached `n=2900` (matches
+    s440's ~2900 baseline for this schedule exactly, confirming `updateHangarBayScene`'s reachability
+    is stable and unrelated to the "0 calls" observation in item -277's crash). **Item -278 did NOT
+    recur** — still a single, unconfirmed occurrence. Net: a 4th clean/null data point on the
+    free-list guard mechanism (still no positive control), and one fewer occurrence for item -278's
+    thread. Requeued a corrected confirm soak (`s442_freelistnext_confirm.sh`, rewritten on s440's
+    more robust `REPO_ROOT`-variable + self-checking-log pattern, not s441's fragile inline relative
+    path) so the loop can keep collecting data without repeating the bug. **Process lesson**: an
+    `rc=1` soak result with a near-zero (`<5s`) duration and no `run.log` produced is a soak-harness
+    bug signature, not a crash signature — check for that before reading it as a game crash.
 
 -278. **(s441, single occurrence) NEW crash class: SIGSEGV inside the thread-scheduler/semaphore
     runtime, no game-code frames in the backtrace.** Surfaced during `s441_freelistnext_verify`
