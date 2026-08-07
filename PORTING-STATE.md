@@ -37146,3 +37146,102 @@ generated-file directory in the sibling `N64Recomp` repo — not this repo's `li
 symbol-verified in the binary, live-verified with a real discriminating result; folded in a queued
 soak result and parked its hypothesis per budget; and surfaced two further findings for the ledger —
 a new crash class and a significant orphaned-guard regression — without chasing either reactively).
+
+## Session 446 (2026-08-07)
+
+**Work unit**: item -283's designated top priority — systematic re-audit of the s389-397
+`hangarInitialize` `-0x25A4` guard families, now orphaned.
+
+**Root cause, corrected and broadened from item -283's framing**: `hangarInitialize` never
+existed as a real function post-s427. N64Recomp's PRE-fix output had merged what are actually
+~15 separate functions (`loadCutsceneAssetsByIndex`/`mallocCraftSelectionData`/
+`runHangarSelectionFrame`/`composeNpcOrientationMatrix`/`updateHangarBayScene`/
+`hangarTickCameraOrbit`/`initCraftSelectScreen`/`tickCraftSelectScreen`/etc.) into one anonymous
+~13,770-line blob under a duplicate-symbol collision — the same family of bug s427 fixed
+elsewhere (item -262's saga). s427's fix split this blob back into its correctly-named,
+correctly-bounded real functions. Every PRE-s427 guard/patch hardcoded to the old anonymous
+`static_N_0xADDR` placeholder names (or to a specific `funcs_N.c` file, since N64Recomp's file
+distribution also shifted) is now orphaned by this — not just the 61 s390-393 sites item -283
+flagged. Confirmed via `grep -rn "RECOMP_FUNC void static_5_..."` returning 0 hits tree-wide for
+all 11 old names referenced anywhere in `fixup_game_funcs.py`; confirmed the current real names
+for each via `menu_overlay.txt`/`cinematic_overlay.txt` address lookups (`= 0x800A9270` etc.);
+confirmed `hangarInitialize` itself has zero symbol-table or RECOMP_FUNC occurrences anywhere in
+the current tree (item -283's "confirmed live/reachable" was based on the *address range* being
+live, not the function symbol — the two aren't the same claim).
+
+**Fixed and verified 34 sites** (`docs/CURRENT-TRUTH.md` item -284):
+- `HANGARLIST_GUARD` + `EARLY`/`WALK`/`CLEAR` (4 sites): target renamed from
+  `static_5_800A9270`/`funcs_40.c` to `loadCutsceneAssetsByIndex`/`funcs_27.c`. Verified the
+  function-scoped body-extraction regex (`func_start_m` + `func_re.search`) still isolates the
+  right body once the name/file match.
+- The combined s284/s285 deref-guard list (30 sites, `S284_AAD9C_1/2`, `S284_AB1C8_6-10`,
+  `S284_ADB70_1-21`, `S284_A9270_SECONDHOP`, `S285_A9270_R4`): was gated to `p.name ==
+  "funcs_40.c"` for the whole list; removed the gate entirely and instead let each site's own
+  2-line anchor (comment + generated code) find its unique match wherever it now lives. Before
+  trusting this, wrote a standalone Python scan (not part of the fixup script) that counted exact
+  matches of each of the 30 anchor texts across every `funcs_*.c` file: all 30 matched EXACTLY
+  ONCE, in `funcs_28.c` (28 of them: AAD9C/AB1C8/ADB70 sites) or `funcs_27.c` (2: the A9270
+  sites) — 0 collisions. Added a hard `SystemExit` in the fixup script itself if any site's
+  `re.subn` count is ever >1 (was previously trusted blindly), since the old G1-G32 guard's own
+  comment explicitly documents this exact family of collision risk (identical anchor text
+  appearing in two different overlay-duplicated functions) — belt-and-suspenders now enforced in
+  code, not just in a comment.
+- Verified bail-label validity for every renamed site: `L_800A9350` (loadCutsceneAssetsByIndex,
+  funcs_27.c:117192), `L_800AB1A4` (runHangarSelectionFrame, funcs_28.c:5966), `L_800AB618`
+  (composeNpcOrientationMatrix's OWN copy, funcs_28.c:10879 — a second, unrelated `L_800AB618`
+  exists at funcs_28.c:7531 inside `runHangarSelectionFrame`, confirming this label is
+  legitimately duplicated per-function, not a single shared target), `L_800AE060`
+  (hangarTickCameraOrbit, funcs_28.c:31695) — all fall within their respective functions' own
+  body ranges, so every `goto` stays within its enclosing function (a C requirement).
+
+**Pipeline**: full 4-step regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → cmake),
+funcs_*.c deleted first per the standing item -20 rule. Fixup report: all 34 sites reported `x1`
+(audited — no unexpected `x0`/`x2+`, matching the standing rule -20 discipline). Build: clean,
+only the pre-existing benign `DDIV` sign-conversion warnings (unrelated). Binary verification:
+`strings build/RogueSquadron64Recomp | grep "hangarlist-guard\|s284-guard"` found all 34
+guard-site format strings present.
+
+**Live-verify** (`s446_run_liveverify.sh`, full 300s/250s-key schedule, all guard-family env vars
+armed): 0 `[CRASH]` markers, 0 fires on any of the 34 new sites, `[hangarbay-entry]` reached
+n=3000+ (matches s440's ~2900 baseline — same reachability positive control, confirms the run
+held deep in the hangar scene, though it attests specifically to `updateHangarBayScene`
+reachability, not a direct per-site control for these 34 sites' own call frequency). Clean null
+result on a proactive addition — no positive control required for a pure guard addition (s389
+precedent). Confirmation soak queued: `scratch/agent/soak_queue/s446_hangarlist_confirm.sh`.
+
+**Remaining scope, precisely characterized for next session** (same proven method, NOT executed
+this session — budget):
+- `G1`-`G32` (32 sites, target `updateHangarBayScene`, `funcs_40.c` → now `funcs_28.c`
+  presumably): a Python sample-check of `G1`'s and `G32`'s own anchor text found each matching
+  exactly once, only in `funcs_28.c` — the OLD fixup-script comment warns "every single [G-site]
+  ALSO appears verbatim in `funcs_27.c` — a different overlay's function reusing the same guest
+  address range" (the `hangarInitialize`/`composeNpcOrientationMatrix` collision, first hit s100);
+  that collision may be resolved now that the truncated-stub copy no longer exists post-s427, but
+  this needs the FULL 32-site uniqueness check (like the one done this session for the s284 list),
+  not just the 2-site sample, before trusting an ungated fix.
+- `S390_H2A`/`S390_H2B` (11 sites, chunk 2, item -283's original find): sample-checked (`S390_H2A_1`,
+  `S390_H2B_1`) as uniquely matching in `funcs_28.c` — same shape as this session's fix, likely
+  the most mechanical remaining piece.
+- `S392_H3A`/`S393_H3B` (50 sites, chunks 3a/3b): NOT uniqueness-checked. **New finding**:
+  `S392_H3A`'s bail label `L_800ADB2C` is now INSIDE `updateHangarBayScene`'s own body
+  (`funcs_28.c:20409`, between `updateHangarBayScene`'s start at 10919 and `hangarTickCameraOrbit`'s
+  start at 30755) — not a separate function as s392's original comment assumed. This means these
+  29 sites' guest addresses fall within `updateHangarBayScene`, which is ALREADY heavily
+  instrumented/guarded by the s426-441 investigation (`GENERIC_CACHE_GUARD`'s 107-site blanket
+  fix, `CACHE_HEAD_A1_GUARD`, `FREELIST_NEXT_GUARD`, BREADCRUMB16/17/18). Check for redundancy
+  with those existing guards BEFORE blindly re-adding 29 more — some of these `-0x25A4` derefs may
+  already be covered by `GENERIC_CACHE_GUARD`'s regex sweep, in which case re-adding a narrower
+  duplicate guard is wasted (though harmless) effort.
+- `BREADCRUMB7` (diagnostic instrument, target `updateHangarBayScene`, `funcs_40.c`-scoped):
+  not checked this session.
+
+**Housekeeping**: no `lib/` edits this session (all guard work lives in the sibling `N64Recomp`
+repo's `fixup_game_funcs.py`, untracked-but-persistent per s445's own note, + generated
+`RecompiledFuncs/`). No `submodule-patches/export.sh` needed.
+
+**Outcome: ADVANCED** (root-caused and fixed 34 previously-orphaned guard sites across 2 guard
+families, full regen+build+binary+live-verify all clean and positive-controlled for reachability;
+corrected item -283's own scope claim from 61 to the true, much larger codebase-wide extent of the
+underlying bug; left a fully characterized, method-proven remaining-scope map — including one new
+redundancy-check flag and one new collision-risk flag — for next session to execute directly
+without repeating this session's discovery work).

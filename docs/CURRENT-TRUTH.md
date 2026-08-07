@@ -164,24 +164,45 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -283 (s445, the `hangarInitialize` orphaned-guard discovery — see
-below); the next new item takes -284.
+oldest). Current top is -284 (s446, the full `-0x25A4` family orphaning root-cause + partial
+fix — see below); the next new item takes -285.
 
--283. **(s445) URGENT: 61 sites of the s389-397 `hangarInitialize` `-0x25A4` guard families
-    (`S390_H2A`×2, `S390_H2B`×9, `S392_H3A`×29, `S393_H3B`×21, all `funcs_27.c`) are now silently
-    ORPHANED — a fresh regen's fixup report shows 0/1 anchor matches on every one of them,
-    where s412's fixup log shows all 61 patching cleanly (`x1` each) as recently as that
-    session.** This answers `docs/PROJECT-OVERVIEW.md` §16's open question from s426 ("whether
-    that whole closed [s283-396] audit guarded dead code"): s427's duplicate-symbol fix that
-    un-truncated `hangarInitialize` (previously a 1-instruction stub under a name collision)
-    changed the function's real body enough that these 61 anchors, written against the
-    pre-un-truncation disassembly, no longer match anything — the guard code is not failing to
-    fire, it is not being INSERTED at all. `hangarInitialize` is confirmed live/reachable this
-    session (clean regen, no symbol-resolution errors). **Next session's top priority**: a
-    systematic re-audit of `hangarInitialize`'s CURRENT (post-un-truncation) `-0x25A4`
-    occurrences against its current live disassembly — exactly the strategic-priority #3
-    methodology, applied to a class that was already closed once and just came unstuck. Full
-    detail: `PORTING-STATE` Session 445.
+-284. **(s446) ROOT-CAUSED item -283's orphaning as codebase-wide, not just 61 sites: `hangarInitialize`
+    never existed as a real function post-s427 — it was N64Recomp's PRE-fix merger of ~15 separate,
+    now-correctly-named functions (`loadCutsceneAssetsByIndex`/`mallocCraftSelectionData`/
+    `runHangarSelectionFrame`/`composeNpcOrientationMatrix`/`updateHangarBayScene`/
+    `hangarTickCameraOrbit`/etc.) into one anonymous ~13,770-line blob, and s427's duplicate-symbol
+    fix split it back apart. EVERY pre-s427 guard/patch hardcoded to the old anonymous
+    `static_N_0xADDR` names or file locations is orphaned this way, not just the s390-393 chunks:
+    confirmed 0 matches for `static_5_800A9270`/`static_5_800AAD9C`/`static_5_800AB1C8`/
+    `static_5_800AB658`/`static_5_800ADB70` (and 6 more addresses) ANYWHERE in the current
+    codebase — all 11 renamed, several also moved to a different `funcs_N.c` file entirely
+    (`grep -rn "RECOMP_FUNC void static_5_..."` returns nothing tree-wide). **Fixed and verified
+    34 of these sites this session**: `HANGARLIST_GUARD`+`EARLY`/`WALK`/`CLEAR` (4 sites,
+    `loadCutsceneAssetsByIndex`, now `funcs_27.c`) and the s284/s285 combined deref-guard list (30
+    sites spanning `runHangarSelectionFrame`/`composeNpcOrientationMatrix`/`hangarTickCameraOrbit`,
+    all now `funcs_28.c`). Method: for each site, confirmed via a standalone Python scan that its
+    exact 2-line anchor (comment + generated code) matches exactly ONCE across the whole
+    `RecompiledFuncs/` tree (34/34 unique, 0 collisions) before removing the old file/function-name
+    gate; the fixup script now asserts (`SystemExit`) if any site ever matches >1 time, rather than
+    silently over-patching — guards against the exact collision risk the old G1-G32 comment warns
+    about (see below). Full regen+build clean; fixup report showed all 34 sites `x1` (audited, no
+    unexpected counts); binary `strings` check confirmed all 34 guard format-strings present.
+    Live-verify: full 300s/250s-key schedule held with 0 crashes and 0 guard fires, `[hangarbay-entry]`
+    reached n=3000+ (reachability positive control, matches s440's baseline) — clean null result,
+    proactive-fix pattern (no positive control needed for a pure addition, s389 precedent).
+    Confirmation soak queued: `s446_hangarlist_confirm.sh`.
+    **Remaining orphaned, NOT fixed this session** (next session's top priority, same proven
+    method): `G1`-`G32` (32 sites, target `updateHangarBayScene`, now `funcs_28.c`) — sample-checked
+    G1/G32 anchors as uniquely matching in `funcs_28.c` only (the old fixup-script comment's warning
+    that "every one ALSO appears verbatim in `funcs_27.c`" may be stale post-s427 and needs a FULL
+    32-site recheck, not just the G1/G32 sample, before trusting it); `S390_H2A`/`S390_H2B` (11
+    sites) — G1/G32-style sample-checked as uniquely matching in `funcs_28.c`; `S392_H3A`/`S393_H3B`
+    (50 sites) — NOT yet uniqueness-checked, and item -284's own read found `S392_H3A`'s bail label
+    `L_800ADB2C` sits INSIDE `updateHangarBayScene`'s body (not a separate function) — meaning these
+    29 sites may guard derefs already covered by `GENERIC_CACHE_GUARD`'s blanket 107-site fix
+    (item -270/-273); check for redundancy before re-adding; `BREADCRUMB7` (diagnostic, target
+    `updateHangarBayScene`) — not checked. Full detail: `PORTING-STATE` Session 446.
 
 -282. **(s445) GETDATITEM_GUARD — a fresh M3 systematic idiom-class audit** (pivoted off item
     -278 per budget, strategic-priority #3): `getDatItemByName` (funcs_10.c, guest `0x80047B70`)
