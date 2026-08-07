@@ -19,10 +19,15 @@ Priority order for upcoming iterations, set after the 300-session review:
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Current active
    sub-arc: the s465 codebase-wide frequency scan of `lui+lw` global-reload idioms — see items
-   -298..-303 below for the closed-bucket chain and PROJECT-OVERVIEW §18 for full detail. **Next
-   candidate: `hi16=0x8012, offset=-0x5BBC`** (30 sites, 4 files) — the s470 rule-8 pivot moved off
-   the single-file-concentration heuristic since the two remaining single-file buckets are exhausted
-   (item -303 closed s470); budget extra classification time for a multi-file bucket.
+   -298..-304 below for the closed-bucket chain and PROJECT-OVERVIEW §18 for full detail. **Next
+   candidate: `hi16=0x8011, offset=0x63d4`** (170 sites, 4 files: `funcs_6.c`x75/`funcs_3.c`x44/
+   `funcs_4.c`x30/`funcs_7.c`x21) — the largest unclaimed bucket in the s465 scan, confirmed genuinely
+   uncovered by any existing guard (grepped `fixup_game_funcs.py` for `0x63d4`/`0X63D4`/`801163D4`, 0
+   hits); budget extra session time, largest bucket attempted in this sub-arc so far. **Caution on the
+   2nd-ranked candidate** (`hi16=0x8012, offset=-0x23a8`, 141 sites) — do NOT treat as fresh: item
+   -296's `SIBLING_PTR_WRITE_GUARD` already covers 119 of these sites' DOWNSTREAM WRITE (not the
+   reload itself); the 141-vs-119 gap and whether the reload needs its own guard is unclassified —
+   needs its own careful audit, unlike every other bucket in this scan.
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -154,9 +159,9 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -303. The next NEW item takes -304.
+a range pointer. Highest allocated so far: -304. The next NEW item takes -305.
 
--298..-303. **(s463-470) Six more M3 idiom-class audit buckets from the s465 codebase-wide
+-298..-304. **(s463-471) Seven more M3 idiom-class audit buckets from the s465 codebase-wide
     frequency scan, five CLOSED, one DEFERRED.** Item -298 (`DL_LIST_RESET_GUARD`, re-scoped ~111
     non-canonical `-0x5824` sites sharing item -291's global `0x8011A7DC`) CLOSED s464, 84/84 sites
     (27 folded into `DL_LIST_APPEND_GUARD` itself, 70 blanket-regex, 14 per-site literal-anchor).
@@ -188,13 +193,37 @@ a range pointer. Highest allocated so far: -303. The next NEW item takes -304.
     inside `tickWrappingTimerAccumulatorList` — the EXACT already-catalogued, already-PARKED
     `m5-audio-destub-tickwrap-divzero-craftselect` compiler div-by-zero-trap signature (first seen
     ~s344, `docs/PROJECT-OVERVIEW.md`), unrelated to any guard tested, filed not chased. 2nd
-    independent confirm soak queued (`s470_texdataptrarray_confirm.sh`). Every CLOSED item's live-
-    verify/confirm-soak result matches item -287's established true-negative baseline. Session-by-
-    session derivation, per-site classification methodology, and every soak result:
-    `docs/PROJECT-OVERVIEW.md` §18 (s463-469; s470 detail folds in at next maintenance pass).
-    **Next candidate**: `hi16=0x8012, offset=-0x5BBC` (30 sites, 4 files) — the two remaining
-    single-file buckets are now exhausted (item -302 deferred, item -303 closed), so this session's
-    pivot moves to the next-ranked multi-file bucket; budget extra classification time per-file.
+    independent confirm soak (`s470_texdataptrarray_confirm.sh`) ran s471: 0 fires on the new guard
+    and all 7 siblings, `hangarbay-entry` n=31 (matches the manual live-verify exactly); crashed on a
+    DIFFERENT signature this time — a host-side Metal.framework SIGSEGV inside
+    `fscache_insert_and_retain` (`last-guest-pc=0x800ab0e0`, near but not identical to the s463/s468
+    `loadCutsceneAssetsByIndex+1860` crash site) — an async shader-compiler-thread crash unrelated to
+    any game-code guard, filed not chased (same family as items -10/-9's Metal-compiler-SIGSEGV
+    class). Item -303 fully CLOSED, both confirm passes null on the new guard. Every CLOSED item's
+    live-verify/confirm-soak result matches item -287's established true-negative baseline.
+    Session-by-session derivation, per-site classification methodology, and every soak result:
+    `docs/PROJECT-OVERVIEW.md` §18 (s463-469; s470-471 detail folds in at next maintenance pass).
+
+-304. **(s471) M3 idiom-class audit: `MATERIAL_ARRAY_PTR_GUARD`, `0x8012($reg)`→`-0x5BBC` global,
+    30 `lw` reload sites across 4 files (`funcs_3.c`x5/`funcs_4.c`x10/`funcs_6.c`x14/`funcs_7.c`x1).
+    CLOSED s471, 30/30 sites, first multi-file bucket in this sub-arc.** Single writer
+    `buildAndRegisterDefaultMaterial` (funcs_4.c:27911, stores an `rs_malloc()` result) vs. 30
+    reader sites in 4 different functions/files — same uninitialized/stale-global-reload shape as
+    every closed bucket in this lineage. `scratch_s468_shapecheck_generic.py 8012 -5BBC` auto-
+    classified 24/30 sites as `ADD32→DEREF` (real pointer risk); the remaining 6 `hit_deref=False`
+    sites were read directly from source per the s470 lesson (tool false negative, not evidence of
+    non-pointer use) and confirmed the same two risk shapes as item -303: `idx*4` array-of-pointers
+    access (funcs_3.c:26341/28435) and direct-use-with-no-arithmetic (funcs_4.c:29352 passes the raw
+    reload straight into `rs_free()`; funcs_4.c:28004/funcs_6.c:14323/funcs_6.c:14728 use it as a
+    write/read-loop base). No item -302-style integer-index shape present — clean single-guard
+    bucket despite spanning 4 files. Substitutes `0x80000000u`, same reasoning as items -301/-303.
+    Regex verified 30/30 against raw `MEM_W(reg, -0X5BBC)` line counts per file
+    (`scratch_s471_test_regex_5bbc.py`); the bucket's one `sw` (write) site excluded by construction.
+    Clean build; all 8 pre-existing sibling guards unchanged (84/84/84/119/20/10/31/29); `strings`
+    confirms 30 `material-array-ptr-guard` tag occurrences. Live-verify: 0 new-guard fires, 0 fires
+    on all 8 siblings, `hangarbay-entry` n=34 (positive control); full 300s/250s-keys schedule
+    survived with 0 `[CRASH]` markers at all — unlike most sessions in this sub-arc, this run hit no
+    crash of any kind. 2nd independent confirm soak queued (`s471_materialarrayptr_confirm.sh`).
 
 -291..-297. **(s454-462) Three M3 idiom-class audits found via an s454 concurrent-process
     collision, all now CLOSED.** Item -291 (`DL_LIST_APPEND_GUARD`, global `0x8011A7DC`, 57 sites,

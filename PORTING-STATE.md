@@ -39111,3 +39111,89 @@ scan method itself is still producing tractable, closeable buckets; no signal ye
 **Outcome: ADVANCED** (closed a new idiom-class bucket, item -303, with a clean build/live-verify and
 zero fires; satisfies the rule-8 mandatory pivot by running its discriminating probe to a definitive
 close rather than a 4th inconclusive rehash).
+
+## Session 471 (2026-08-07): item -303's 2nd confirm soak folded (0 fires, DIFFERENT crash signature
+than the manual pass); CLOSES item -304 -- `MATERIAL_ARRAY_PTR_GUARD`, the s465 scan's next-ranked
+candidate and first genuinely MULTI-FILE bucket in this sub-arc (30 sites, 4 files).
+
+**Fold-in: s470's queued 2nd confirm soak (`s470_texdataptrarray_confirm.sh`).** Result: rc=3
+(crashed), 0 `texdata-ptr-array-guard` fires, 0 fires on all 7 pre-existing sibling guards,
+`hangarbay-entry` n=31 -- exactly matches the s470 manual live-verify's null result. The crash itself
+was a DIFFERENT signature than s470's manual pass: a host-side `Metal.framework` SIGSEGV inside
+`fscache_insert_and_retain` (`last-guest-pc=0x800ab0e0`), not the `tickWrappingTimerAccumulatorList`
+div-by-zero trap seen manually. Filed, not chased -- same family as items -10/-9's already-catalogued
+Metal-shader-compiler-SIGSEGV class (an async compiler-thread crash unrelated to any game-code guard).
+Item -303 now has two independent null confirmations; fully CLOSED.
+
+**This session's work unit: classify and guard `hi16=0x8012, offset=-0x5BBC`** (30 `lw` reload sites,
+4 files: `funcs_3.c`x5/`funcs_4.c`x10/`funcs_6.c`x14/`funcs_7.c`x1) -- the next-ranked candidate per
+`NEXT.md`, and the first bucket in this sub-arc genuinely scattered across multiple files rather than
+concentrated in one.
+
+**Step 1 -- classify.** `python3 scratch_s468_shapecheck_generic.py 8012 -5BBC` (N64Recomp repo)
+auto-classified 24/30 sites as `ADD32(...) -> DEREF(...)` (confirmed pointer-reload risk, same idx*4
+array-of-pointers shape as item -303). The remaining 6 `hit_deref=False` sites were read directly from
+`funcs_3.c`/`funcs_4.c`/`funcs_6.c` per the s470 lesson (a tool false negative, not evidence of
+non-pointer use) and confirmed the SAME two risk shapes as item -303:
+- `idx*4` array-of-pointers access: `funcs_3.c:26341`/`28435` compute `ctx->r2 = S32((idx&0xFFFF)<<2)`
+  then `ADD32` with this global's reload before `MEM_HU(ctx->r2, 0x2)`.
+- Direct use, no arithmetic: `funcs_4.c:29352` passes the raw reload straight into `rs_free(rdram,
+  ctx)` as its argument; `funcs_4.c:28004`/`funcs_6.c:14323`/`funcs_6.c:14728` use it as a write- or
+  read-loop base pointer, dereferencing at offset 0 and incrementing by 4 each iteration.
+All 30 sites are a raw pointer reload -- no item -302-style integer-index shape present in this
+bucket, so the guard-at-reload method applies cleanly despite the multi-file spread. The single writer
+is `buildAndRegisterDefaultMaterial` (`funcs_4.c:27911`, stores an `rs_malloc()` result into the
+global) -- same uninitialized/stale-global-reload shape as every closed bucket in this lineage
+(items -292/-298..-301/-303): one writer, many readers, no guaranteed init-before-use ordering.
+
+**Step 2 -- regex verify.** Wrote `scratch_s471_test_regex_5bbc.py` (N64Recomp repo, untracked),
+modeled on `scratch_s470_test_regex_7104.py` but iterating all 4 files. Matched exactly 30/30 sites
+summed across files (5+10+14+1), cross-checked against independent raw `lui`/`lw`-asm-comment line
+counts per file. The bucket's single `sw` (write) site (`funcs_4.c:27911`) is excluded by construction
+-- the regex only matches `lw` reload chains, not the one legitimate initializing store.
+
+**Step 3 -- patch.** Added `MATERIAL_ARRAY_PTR_GUARD` to `fixup_game_funcs.py` (N64Recomp repo,
+untracked), modeled directly on `TEXDATA_PTR_ARRAY_GUARD`'s structure but scoped to
+`p.name in ("funcs_3.c", "funcs_4.c", "funcs_6.c", "funcs_7.c")` instead of a single file -- the first
+guard in this sub-arc needing multi-file scoping. Substitutes `0x80000000u` (not 0), same reasoning as
+items -301/-303: the `idx*4`-arithmetic sites would compute a tiny guaranteed-invalid address from 0,
+while the immediate-deref/free/loop-base sites would merely be wrong either way.
+
+**Step 4 -- regen/build/verify.** Deleted `RecompiledFuncs/funcs_*.c`, reran `make_elf.py` ->
+`N64Recomp` -> `fixup_game_funcs.py` (accidentally invoked a 2nd time while checking one guard's
+report line -- confirmed harmless: the 2nd pass found the code already patched, matched 0 new sites,
+did not double-patch; verified via unchanged post-run tag counts). Report showed
+`MATERIAL_ARRAY_PTR_GUARD patched x5/x10/x14/x1` (funcs_3/4/6/7.c, sums to 30), and all 8 pre-existing
+sibling guards unchanged -- `DL_LIST_APPEND_GUARD` 84 (46+38), `DL_LIST_RESET_GUARD` 84 (41+5+29+9),
+`DL_BUFFER_POOL_GUARD` 84 (46+38), `SIBLING_PTR_WRITE_GUARD` 119 (65+54), `NODE_LIST_HEAD_GUARD` 20
+(12+8), `NODE_LIST_HEAD_WRITE_GUARD` 10 (6+4), `TEXDATA_TABLE_GUARD` 31, `TEXDATA_PTR_ARRAY_GUARD` 29
+-- no regression. Clean `cmake --build` (only pre-existing unrelated warnings). `strings` on the built
+binary: 30 `material-array-ptr-guard` format strings, matching the site count exactly.
+
+**Live-verify.** Full passive-instrument env-var list (all 8 sibling guards + breadcrumbs armed) plus
+`ROGUESQ_LOG_MATERIAL_ARRAY_PTR_GUARD=1`, `PROBE_KEYS_FROM_PHASE=1`, full 300s/250s-keys schedule: 0
+`material-array-ptr-guard` fires, 0 fires on all 8 sibling guards (no regression), `hangarbay-entry`
+n=34 (positive control -- code path actually reached, iron rule 1 satisfied). Unlike almost every
+other session in this sub-arc, this run hit ZERO `[CRASH]` markers -- the full 300s schedule (all 10
+scheduled key presses through `250:start`) completed cleanly with 124 frames captured.
+
+**Closes item -304 outright** (single manual live-verify + queued 2nd independent confirm soak,
+`s471_materialarrayptr_confirm.sh`, consistent with the standing "CLOSED + confirm soak queued"
+precedent). This is the first genuinely multi-file bucket closed in this sub-arc -- the single-
+file-concentration heuristic that made items -299/-300/-301/-303 tractable in one session each does
+NOT hold in general; multi-file buckets can still close cleanly in one session when the downstream
+shape stays consistent across files (as it did here).
+
+**Next candidate identified and vetted:** `hi16=0x8011, offset=0x63d4` (170 sites, 4 files) -- the
+largest unclaimed bucket in the s465 scan, confirmed genuinely uncovered by grepping
+`fixup_game_funcs.py` for `0x63d4`/`0X63D4`/`801163D4` (0 hits). Flagged a caution for the 2nd-ranked
+candidate (`hi16=0x8012, offset=-0x23a8`, 141 sites): item -296's `SIBLING_PTR_WRITE_GUARD` already
+covers 119 of those sites' downstream WRITE (not the reload itself, per the s459 comment in
+`fixup_game_funcs.py`) -- the 141-vs-119 gap and whether the reload needs its own guard is
+unclassified, so this one needs its own careful audit before assuming it behaves like every other
+"unclaimed" bucket. `docs/CURRENT-TRUTH.md` Next-steps and USER DIRECTIVE next-candidate pointer
+updated; `NEXT.md` rewritten with a fresh HYPOTHESIS-ID.
+
+**Outcome: ADVANCED** (folded item -303's 2nd confirm soak, then closed a brand-new idiom-class
+bucket, item -304, with a clean build/live-verify and zero fires -- the first multi-file bucket
+tackled in this sub-arc, proving the method generalizes past single-file concentration).
