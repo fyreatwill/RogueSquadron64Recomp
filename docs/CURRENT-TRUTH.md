@@ -28,10 +28,12 @@ Priority order for upcoming iterations, set after the 300-session review:
    hardcoded to a now-renamed function), is now fully CLOSED** (items -282..-290 below) — s449
    confirmed this whole guard idiom class is correct hardening, not a live crash source, and s453
    closed the tracked backlog's last item (`S392_H3A`/`S393_H3B`, 50 sites, ALL redundant, no patch
-   needed) except `BREADCRUMB7` (diagnostic, deliberately out of scope, lowest priority). Current
-   top work unit (`scratch/agent/NEXT.md`): a fresh M3 idiom-class audit (discovery method, not a
-   specific target — the tracked backlog is exhausted). Full session-by-session arc: PROJECT-OVERVIEW
-   §16.
+   needed) except `BREADCRUMB7` (diagnostic, deliberately out of scope, lowest priority). **s454
+   found a fresh idiom class** (`-0x5824($reg)` → global `0x8011A7DC`, 57 sites, item -291) with a
+   guard WRITTEN but not yet built/verified — s454 discovered a live concurrent `loop.sh` iteration
+   mutating the same shared build state mid-session and correctly withheld regen/build/commit; see
+   item -291 for the reconciliation steps the next session must take first. Full session-by-session
+   arc: PROJECT-OVERVIEW §16.
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
@@ -170,8 +172,38 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -290 (s453, closing the `S392_H3A`/`S393_H3B` backlog — see below); the
-next new item takes -291.
+oldest). Current top is -291 (s454, a fresh M3 idiom class found but NOT yet built/verified — see
+below); the next new item takes -292.
+
+-291. **(s454) Fresh M3 idiom class found: `-0x5824($reg)` → global `0x8011A7DC`, a doubly-linked-
+    list append with NO existing check, structurally identical to (but a different global from)
+    the already-fixed `0x801163B0` free-list-cache-head family (`GENERIC_CACHE_GUARD`/
+    `CACHE4_GUARD`/`CACHE_HEAD_A1_GUARD`/`FREELIST_NEXT_GUARD`), in the SAME `funcs_3.c`/
+    `funcs_4.c` display-list-emission code cluster those families already fixed real crashes in.
+    A discriminating scan (`N64Recomp/scratch_s454_scan.py`) tracking `ctx->rN = MEM_*(...,
+    OFFSET)` loads then checking for a later unguarded use of `rN` as a base register found this
+    offset's canonical 6-instruction shape byte-identical (verified programmatically, not
+    sampled) at 57/57 matching sites (26 funcs_3.c, 31 funcs_4.c; 6 functions:
+    `allocateDisplayListBuffer`, `emitFrameRdpInitDl`, `emitColorFillRect`,
+    `drawFrameProfilerBars`, `emitMaterialTexturedDLAlt`, `renderFlatMeshFaceGroup`,
+    `buildOrientedFaceGeometry`, `renderLitMeshFaceGroup`, `drawTextGlyphRect`,
+    `drawSubtitleText`, `setupCameraMatrices`). A guard (`DL_LIST_APPEND_GUARD`) is WRITTEN in
+    `fixup_game_funcs.py` (N64Recomp repo, untracked, syntax-checked) but **NOT built, NOT
+    verified, NOT soaked** — s454 discovered a live concurrent `tools/agent/loop.sh` iteration
+    actively mutating the same shared non-git-tracked `RecompiledFuncs/*.c`/`fixup_game_funcs.py`/
+    `build/` state mid-session (see PORTING-STATE Session 454 for the 4-point evidence trail) and
+    correctly withheld regen/build/live-verify/commit to avoid corrupting it. **Next session:**
+    confirm no other loop.sh iteration is live, then run the standard pipeline
+    (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake build` → `strings` sanity →
+    live-verify → soak-queue) on the already-written patch, and reconcile with whatever the
+    concurrent iteration 2 process itself concluded (check `git log` for a second commit claiming
+    `s454` or a different idiom class before assuming this finding is still the top item). Also
+    NOT in scope, documented for later: `-0x23A8`→`0x8011DC58` (sibling global, same function
+    cluster, no clean byte-identical shape — needs per-site classification) and ~111
+    non-canonical `-0x5824` sites (same global, non-adjacent load/deref pair). Separately
+    confirmed non-issue, do not re-investigate: `-0x25C0($s0)` (56 sites, `mallocCraftSelectionData`)
+    and `-0x76E0($s0)` (46 sites) are compile-time-constant-based counter/scalar accesses, not
+    pointer dereferences — not the risky shape.
 
 -290. **(s453) `S392_H3A`/`S393_H3B` (50 sites, items -282..-289's own tracked remainder):
     INVESTIGATED AND CLOSED, no code change — all 50 sites are redundant, not a partial-coverage

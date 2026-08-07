@@ -1,102 +1,100 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: fresh-idiom-class-audit
+HYPOTHESIS-ID: dl-list-append-guard-5824
 
-## s453 close-out: `S392_H3A`/`S393_H3B` — CLOSED, all 50 sites redundant, no code change
+## s454: BLOCKED on a live concurrent process, but real analysis landed
 
-Full mechanistic verification (not sampling): all 29 `S392_H3A` sites (in `updateHangarBayScene`)
-and all 21 `S393_H3B` sites (in `hangarTickCameraOrbit`) are already protected by earlier-applied
-guard families (`HANGAR_BAY_DEREF_GUARD`/"G"-family from s132, a few `S284`/`S285` sites, one
-shared-join-point case). No patch applied — adding guards would only create dead, always-skipped
-duplicates. Closure comment left in `fixup_game_funcs.py` (N64Recomp repo, untracked, no
-`export.sh` needed). Full detail: `docs/CURRENT-TRUTH.md` item -290, `PORTING-STATE.md` Session
-453.
+s454 was assigned to open a fresh M3 idiom-class audit (the tracked backlog closed s453). It found
+one, designed a fix, but discovered mid-session that `tools/agent/loop.sh` was ALREADY running a
+live, independent iteration doing the same thing concurrently (evidence: `scratch/agent/loop.log`
+showed "iteration 2 starting" logged at the same moment s453 committed, still running 15+ minutes
+later; `ps aux` confirmed a live spawned `claude` process; a scratch file s454 wrote
+(`N64Recomp/scratch_s454_scan.py`) was independently rewritten mid-session by that other process;
+`N64Recomp/RecompiledFuncs/*.c` went empty then got repopulated by a fixup run that did NOT contain
+s454's own patch). s454 correctly withheld regen/build/live-verify/soak/commit-of-code to avoid
+corrupting the concurrent process's work on the same shared, non-git-tracked files. Full trail:
+`PORTING-STATE.md` Session 454, `docs/CURRENT-TRUTH.md` item -291.
 
-**This closes the `funcs_40.c`/`funcs_27.c`-gated orphan-sweep inventory (item -282, opened s445)
-except `BREADCRUMB7`** (a diagnostic, not a crash guard — deliberately out of scope, optional,
-lowest priority; `grep -n 'BREADCRUMB7' fixup_game_funcs.py` if a future session wants to close it
-out, but it is not required before considering the arc done).
+## FIRST STEP, before anything else: confirm exclusivity
 
-## This session's work unit: open a FRESH M3 idiom-class audit
+```
+ps aux | grep -i "loop.sh\|claude-fable" | grep -v grep
+tail -80 scratch/agent/loop.log
+git -C /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp log -5 --oneline
+```
+If a `loop.sh`/spawned-`claude` process is still live, or `git log` shows a NEW commit past
+`fe67d73` that isn't yours, **stop and reconcile first**: read that commit's message and diff to
+see what it actually did before touching anything. It may have (a) done unrelated work and this
+session's plan still applies cleanly, (b) found and fixed the SAME `-0x5824` class already (check
+`fixup_game_funcs.py` for `DL_LIST_APPEND_GUARD` — if present and it's not yours, don't duplicate,
+verify/soak it instead), or (c) found a completely different idiom class (fine, this plan still
+applies as a follow-on work unit, just renumber/reconcile the item list).
 
-The tracked backlog that has driven the last ~9 sessions (s445-453, `static5-rename-orphan-sweep`)
-is now empty. Per strategic priority #3 (`docs/CURRENT-TRUTH.md` USER DIRECTIVE), M3 crash work
-continues only as systematic idiom-class audits — the s282/s445 discovery method: grep-enumerate a
-whole idiom class across the live `RecompiledFuncs/*.c` tree, classify every site (needs-guard /
-already-guarded / confirmed-safe), guard or prove dead, close the class. This session's job is to
-FIND the next class, not assume one.
+Only once you've confirmed no other process is live AND reconciled `git log`, proceed.
 
-**Known false start, don't just repeat it**: s389-397 ran a "codebase-wide frequency scan for the
-next comparable idiom class" and got a negative result (`docs/PROJECT-OVERVIEW.md` §14) — but that
-scan predates the s427 duplicate-symbol-name split (the ~13,770-line merged blob that later turned
-out to hide real function boundaries) and the whole s426-453 arc that came after it. The post-s427
-function-name landscape is different now; a fresh scan is not guaranteed to hit the same dead end.
+## The work unit itself (design already done, just needs execution)
 
-### Discriminating measurement
+`fixup_game_funcs.py` (N64Recomp repo, untracked) already has a `DL_LIST_APPEND_GUARD` patch block
+inserted right after `GENERIC_CACHE_GUARD` (search for `DL_LIST_APPEND_GUARD` to find it — if it's
+missing, someone reverted/lost it; re-derive from PORTING-STATE Session 454's exact code, or redo
+the scan below from scratch). It targets a doubly-linked-list-append idiom at `-0x5824($reg)` →
+global `0x8011A7DC`, resolved via `lui $reg, 0x8012`, with NO existing check:
+```
+ctx->rL = MEM_W(ctx->rL, -0X5824);   // reload global G
+ctx->rD = MEM_W(ctx->rL, 0X0);        // deref G unguarded
+MEM_W(0X0, ctx->rD) = ctx->rW;         // deref rD (loaded from G) unguarded
+ctx->rL = MEM_W(ctx->rL, 0X0);         // reread G->field0
+MEM_W(0X4, ctx->rW) = ctx->rL;          // new node->field4 = old field0
+```
+57/57 sites verified byte-identical in shape (26 funcs_3.c, 31 funcs_4.c — `allocateDisplayListBuffer`,
+`emitFrameRdpInitDl`, `emitColorFillRect`, `drawFrameProfilerBars`, `emitMaterialTexturedDLAlt`,
+`renderFlatMeshFaceGroup`, `buildOrientedFaceGeometry`, `renderLitMeshFaceGroup`, `drawTextGlyphRect`,
+`drawSubtitleText`, `setupCameraMatrices`). Same code area (funcs_3.c/funcs_4.c display-list
+emission) as 4 already-fixed sibling crash families protecting a DIFFERENT global
+(`0x801163B0`: `GENERIC_CACHE_GUARD`/`CACHE4_GUARD`/`CACHE_HEAD_A1_GUARD`/`FREELIST_NEXT_GUARD`).
 
-Before building anything, name 2-4 candidate idiom classes and the ONE measurement that would
-show each is (a) worth auditing (multiple unguarded live sites) vs (b) already closed/dead
-(everything's covered or unreachable) vs (c) not applicable (pattern doesn't actually appear).
-Candidates to consider (verify counts before committing to one, don't assume):
-1. Other fixed-offset register-reload idioms besides `-0x25A4` — grep for other suspicious
-   negative-offset loads off `$s0`-`$s7`/`$gp`-style base registers across `RecompiledFuncs/*.c`
-   that read the way `-0x25A4($sN)` did (a "reload a saved global/table pointer, then dereference
-   without a range check" shape), tally raw hit counts per offset value, look for the next
-   highest-frequency offset that ISN'T already mostly guarded.
-2. A different function-scope sweep for guards still hardcoded to a stale `funcs_NN.c`/
-   `static_N_0xADDR` gate that this whole arc's method (items -261..-290) hasn't touched yet —
-   grep `fixup_game_funcs.py` for `if p.name == "funcs_` across ALL its patch blocks (not just the
-   ones already swept) and cross-check each gated filename still contains the code it thinks it
-   does, the same check that opened items -284/-286/-288/-289/-290.
-3. If neither of the above turns up a live class, consider whether M3 crash work has genuinely run
-   dry for now and it's legitimate to reassess against strategic priority #2 (M5 audio) — but M5 is
-   marked DONE/CLOSED, no new lead — so check for a NEW audio-adjacent lead first before declaring
-   BLOCKED; don't manufacture work.
+### Steps
+1. Confirm exclusivity (above).
+2. Raw regen if the tree might be stale (check `RecompiledFuncs/funcs_3.c` mtime vs.
+   `fixup_game_funcs.py` mtime — if the .c files predate your last edit to the patch, regen):
+   `rm N64Recomp/RecompiledFuncs/funcs_*.c` → `cd rogue_squadron64 && python3 tools/make_elf.py`
+   → `cd N64Recomp && ./build/N64Recomp rogue_squadron.toml` (no fixup yet — clean baseline).
+3. Verify the patch's regex still matches 57/57 on the fresh tree (rerun the canonical-shape
+   regex from PORTING-STATE Session 454, or the saved `N64Recomp/scratch_s454_scan.py`/
+   `scratch_s454_detail.py` if still present) before trusting the patch will apply cleanly.
+4. `python3 fixup_game_funcs.py` — check the report line
+   `funcs_3.c: doubly-linked-list append guard (DL_LIST_APPEND_GUARD) patched x26` and
+   `funcs_4.c: ... patched x31` (or combined counts if file grouping differs) — audit for anomalies.
+5. `cd build && cmake --build . -j8` (Metal rebuilds need
+   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`).
+6. `strings build/roguesquadron.elf | grep -c dl-list-append-guard` sanity check (should be >=1).
+7. Live-verify: full armed-var list including `ROGUESQ_LOG_DL_LIST_APPEND_GUARD=1`, phase-gated
+   run (`PROBE_KEYS_FROM_PHASE=1`), SIGKILL not SIGTERM at the end. Per item -287's established
+   baseline for this whole guard-idiom family: **0 fires is the norm, not an open question** —
+   don't spend a session chasing a positive control that's already been established for the
+   sibling families.
+8. Queue a confirmation soak to `scratch/agent/soak_queue/s455_dl_list_append_confirm.sh`
+   (self-contained, copy the shape of an existing recipe in `soak_queue/done/`).
+9. Exit contract: PORTING-STATE.md entry, CURRENT-TRUTH.md item -292 (or renumber if the
+   concurrent process already claimed -291/-292), commit.
 
-### Method (same as every session in this arc)
+### Also documented, not yet in scope (pick up after -0x5824 closes)
+- `-0x23A8($reg)` → sibling global `0x8011DC58`, same function cluster, no clean byte-identical
+  shape found (each site's downstream write differs) — needs the same S392/S393-style per-site
+  mechanistic classification (check redundancy against already-active guards) before any patch.
+- ~111 non-canonical `-0x5824` sites (same global `0x8011A7DC`, reached through a non-adjacent
+  load/deref pair with intervening code) — needs per-site treatment, not a blanket regex.
 
-1. Grep-enumerate raw candidate sites for the chosen idiom, get an exact count (don't trust an old
-   session's remembered count).
-2. Raw regen if needed (delete `RecompiledFuncs/funcs_*.c` → `make_elf.py` → `N64Recomp`, NO fixup
-   yet) to get a clean baseline tree, OR work against the existing built tree if it's current
-   (check mtimes) — a fresh regen is safer if in doubt.
-3. Standalone Python scan: tree-wide anchor-uniqueness check per site BEFORE writing any patch
-   (`SystemExit`-on->1-match hard guard, s446-era discipline) — and this session's own lesson:
-   build the address-extraction regex to match ONLY `// 0xADDR:` comment prefixes, not any
-   `0x[hex]` substring anywhere in the anchor text, or immediate-offset text inside a disassembly
-   comment (e.g. `0x8($v0)`) will falsely match and corrupt line-range resolution.
-2b. **Before assuming a site needs a fresh guard, check whether it's already redundant** — s453's
-   method: identify the register actually dereferenced at the site's real endpoint (not
-   necessarily the last line of whatever anchor text you first write down), then scan a window
-   before AND after that point for an already-applied guard block validating that same register,
-   including across a shared `goto`-target join if the site's own control flow jumps into one.
-   Don't assume "same reg" always sits within the specific 4-line span you first guessed — expand
-   the search window if you get an AMBIGUOUS/UNRESOLVED classification rather than treating it as
-   NEEDS_GUARD by default.
-4. Ungate/patch only genuinely-uncovered sites + `SystemExit`-on-`n>1` guard.
-5. Full regen → build → audit fixup report → `strings` → live-verify (full armed-var list) → queue
-   a confirmation soak.
-6. **Expected result per item -287's established baseline for this whole guard-idiom family: 0
-   fires is the norm, not an open question** — don't spend a session chasing a positive control
-   for a guard family that's already had one (item -287, s449).
+### Confirmed non-issues, do not re-investigate
+`-0x25C0($s0)` (56 sites, `mallocCraftSelectionData`) and `-0x76E0($s0)` (46 sites) are
+compile-time-constant-based counter/scalar accesses (`lui $s0,0x800D` then a 16-bit counter
+store/load used in index arithmetic), not pointer dereferences.
 
-## Process notes carried forward
-
-- `tools/probe.sh`'s exit code is trustworthy on its own now (exit 3 on a detected `[CRASH]`, s447).
-- `fixup_game_funcs.py` lives in the sibling `N64Recomp` repo
-  (`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`), NOT in this repo — it is
-  not git-tracked by RogueSquadron64Recomp and needs no `export.sh`.
-- Watch for DOUBLY-orphaned gates (file AND function-name-regex referencing a dead old
-  `static_N_0xADDR` name) — confirmed pattern across several families now. Check, don't assume.
-- Before ungating any family whose patch body contains a bare `goto LABEL` (not a label the patch
-  itself defines), grep for that label's OWN defining block and confirm it is not independently
-  orphaned — a build failure ("undeclared label") is the symptom if you skip this check. It can
-  also come back CLEAN (already proven live by other already-ungated guards in the same file) —
-  check first, don't assume either outcome.
-- The near-`0x80000000`/`BREADCRUMB6` "near-zero guest pointer" crash family (`si_addr=0x3800000xx`,
-  `pc-symbol=buildPositionAndCallTransformHelper+...`) is a recurring, fully-catalogued background
-  crash signature unrelated to this whole orphan-sweep effort — if a future confirm soak hits it
-  again, do not re-investigate, just note the occurrence.
-- Scratch analysis scripts from s453 (`N64Recomp/scratch_classify3.py`,
-  `scratch_verify_no_reassign.py`) are a reusable template for the "is this site already redundant"
-  check — adapt rather than rewrite from scratch for the next idiom class.
+## Process/environment issue to flag to the human (not this session's job to fix)
+s454 found the autonomous loop can apparently run a live iteration while a SEPARATE manually-
+spawned "one iteration" session (also tagged s454) works the same repos concurrently, with no
+mutual-exclusion mechanism over the shared, non-git-tracked build state
+(`N64Recomp/fixup_game_funcs.py`, `RecompiledFuncs/*.c`, `build/`). This is a real collision risk
+independent of any specific M3 finding — worth a human decision (don't double-spawn, or add a
+lockfile) before it causes an actual corrupted build/lost edit rather than just wasted duplicate
+analysis.

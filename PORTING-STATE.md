@@ -37715,3 +37715,134 @@ specific backlog, which is now empty.
 anchor-matching root cause, per-site mechanistic redundancy classification with a caught-and-fixed
 automation bug, 5-site hand verification, closure documentation -- and reached a definitive,
 verified result: 50/50 redundant, item closed).
+
+## Session 454 (2026-08-07)
+
+**Planned work unit:** open a fresh M3 idiom-class audit (NEXT.md's candidate 1 -- a
+discriminating scan for the -0x25A4-shaped risk: a pointer VALUE loaded via `lw` from a fixed
+negative offset off a register, later used as a BASE register in a further `MEM_*` access with no
+intervening range check).
+
+**Negative lead carried into this session, not rediscovered here (per the task brief):** a prior
+raw frequency grep for other high-count fixed-negative-offset-off-`$sN` idioms had already found
+`-0x25C0($s0)` (56 sites, all in `mallocCraftSelectionData`, funcs_27.c) and `-0x76E0($s0)` (46
+sites, spread across 8 files) as the top two ungated candidates. Inspecting `-0x25C0($s0)` found
+`$s0` is set via `lui $s0, 0x800D` -- a COMPILE-TIME CONSTANT address, not a runtime-loaded
+pointer -- and the offset stores/loads a 16-bit COUNTER value (`sh $zero,-0x25C0($s0)` /
+`lhu $a0,-0x25C0($s0)`, used in index arithmetic), not a pointer that gets dereferenced. Not the
+risky shape; a bare frequency count of "how often does this exact offset text appear" does not
+discriminate a safe counter/scalar access from a genuine second-hop pointer dereference -- you
+have to trace what the loaded register is used for afterward.
+
+**Built a proper discriminating scan** (`N64Recomp/scratch_s454_scan.py`): parses every
+`RECOMP_FUNC` body in `RecompiledFuncs/*.c`, tracks `ctx->rN = MEM_*(..., OFFSET)` loads (any
+offset, any base register -- doesn't presuppose `$sN`), and for each load, looks for the next use
+of that register as a base operand in ANY subsequent `MEM_*` call within the same function
+(load or store) before it gets reassigned, flagging it "unguarded" unless a `0x80000000`-range-
+check hint appears in the intervening text. Tallied by offset, excluding `-0x25A4` (already fully
+guarded/closed).
+
+**First pass was too broad to be useful on its own:** ranking raw offsets by unguarded-site count
+surfaces hundreds of hits for tiny offsets (0x0: 663, 0x4: 303, 0x34: 238, ...) -- these are just
+ordinary struct-field pointer chasing (`obj->next->field`), ubiquitous in normal C code, not a
+defect signature by themselves. The `-0x25A4` family was risky specifically because it reloads a
+known GLOBAL (fixed `lui`-based address) whose value can be corrupted/uninitialized under specific
+timing, not because "load then deref" is inherently dangerous. Narrowed to candidates where the
+OUTER base register is itself loaded via `lui` off a fixed `0x8012`/`0x8011`-style hi16 (a true
+global reload, matching the original idiom's shape), which cuts the noise dramatically.
+
+**Found a genuine, previously-unaudited idiom class: `-0x5824($reg)`, resolving via `lui $reg,
+0x8012` to the fixed global at `0x8011A7DC`.** Read the raw code directly (not just counted): the
+canonical shape is a doubly-linked-list APPEND with NO existing check anywhere:
+```
+ctx->rL = MEM_W(ctx->rL, -0X5824);        // reload global G (0x8011A7DC)
+ctx->rD = MEM_W(ctx->rL, 0X0);              // deref G unguarded -> rD = G->field0
+MEM_W(0X0, ctx->rD) = ctx->rW;               // deref rD (loaded FROM G) unguarded -> new node link
+ctx->rL = MEM_W(ctx->rL, 0X0);               // reread G->field0
+MEM_W(0X4, ctx->rW) = ctx->rL;                // new node->field4 = old field0
+```
+This is structurally identical to (but a DIFFERENT global from) the already-fixed `0x801163B0`
+free-list-cache-head family -- `GENERIC_CACHE_GUARD` (107 sites, s434), `CACHE4_GUARD` (s271),
+`CACHE_HEAD_A1_GUARD` (s436), `FREELIST_NEXT_GUARD` (105 sites, s441) -- all in this exact
+`funcs_3.c`/`funcs_4.c` display-list-emission code cluster, all previously CONFIRMED real crash
+sources through this precise idiom shape (SIGBUS at `emitAllocatedDLCommand`, `beginFrameDLChunk`,
+etc.). Unlike the `0x801163B0` family, `-0x5824`'s idiom has no existing zero/empty-list check at
+all (verified: none of the matching sites branch on the reloaded value before dereferencing it) --
+this is an unconditional append, not a checked one.
+
+**Verified the canonical 6-instruction shape is byte-identical (not sampled) at every matching
+site:** a regex requiring the full lui+lw+lw+sw+lw+sw skeleton (with only the "new node" register
+varying -- `$a0`/`$t0`/`$a1`/`$t1` seen) matched exactly 57/57 of the sites the looser 2-line
+canonical scan found (26 in funcs_3.c: `allocateDisplayListBuffer` x1, `emitFrameRdpInitDl` x10,
+`emitColorFillRect` x8, `drawFrameProfilerBars` x2, `emitMaterialTexturedDLAlt` x5; 31 in
+funcs_4.c: `renderFlatMeshFaceGroup` x4, `buildOrientedFaceGeometry` x3, `renderLitMeshFaceGroup`
+x14, `drawTextGlyphRect` x1, `drawSubtitleText` x6, `setupCameraMatrices` x3) -- confirming one
+blanket regex substitution is safe here, the same method `GENERIC_CACHE_GUARD` used for its own
+107 sites.
+
+**Designed the fix (written, NOT verified -- see blocking condition below):** added a new patch
+block, `DL_LIST_APPEND_GUARD`, to `fixup_game_funcs.py` (N64Recomp repo, untracked) immediately
+after the `GENERIC_CACHE_GUARD` block. Unlike `GENERIC_CACHE_GUARD`'s own "substitute 0 for the
+dereferenced value" trick (safe there because `0x801163B0`'s downstream code re-checks for zero
+before its own second deref), that trick is NOT safe for `-0x5824`: substituting 0 for `rD` would
+just move the crash to the very next line (`MEM_W(0X0, ctx->rD) = ...` with `rD=0`). Instead,
+following `FREELIST_NEXT_GUARD`/`CACHE_HEAD_A1_GUARD`'s "skip the write, nothing downstream
+depends on it happening" precedent (the destination register `rD` is a pure local temporary, dead
+after the block in every sampled site): validate `rL` (the reload) against the KSEG0 RDRAM range
+BEFORE the first deref; on failure, skip the entire 4-line tail (both derefs, the reread, and the
+final store) as a no-op instead of substituting a value that would just crash one line later.
+
+**NOT included in this session's scope, documented for a future session:** `-0x23A8` (resolves to
+a sibling global, `0x8011DC58`, same function cluster, but no clean byte-identical repeated shape
+was found -- each site's downstream write differs, needs the same S392/S393-style per-site
+mechanistic classification s453 used before any patch can be written safely), and the remaining
+~111 non-canonical `-0x5824` sites (same global, reached through a non-adjacent load/deref pair
+with intervening code -- also needs per-site treatment, not a blanket regex).
+
+**Blocking condition -- discovered mid-session, not manufactured:** partway through this
+investigation, evidence accumulated that `tools/agent/loop.sh` is ALREADY running a live,
+independent autonomous iteration concurrently with this session, doing what looks like the
+identical task:
+1. `scratch/agent/loop.log` shows iteration 1 (=s453) finished and committed `fe67d73` at
+   `10:30:16`, then "iteration 2 starting" logged at the same timestamp, with no completion record
+   yet as of this writing -- i.e. iteration 2 (=s454) has been running live for 15+ minutes.
+2. `ps aux` independently confirms a live `claude` process (`--model claude-fable-5
+   --resume=19b1f3fd-...`) plus the `loop.sh`/`caffeinate` process tree that spawned it, all still
+   running.
+3. `N64Recomp/scratch_s454_scan.py`, a scratch file this session wrote to design its own
+   discriminating scan, was found REWRITTEN mid-session by an external actor into a more polished
+   equivalent (same idiom, tighter implementation) -- i.e. the OTHER process is independently
+   doing the exact same "candidate 1" discriminating-scan work in the SAME scratch file, using the
+   same natural filename, at the same time.
+4. `N64Recomp/RecompiledFuncs/*.c` was observed EMPTY mid-session (all 50 `funcs_*.c` deleted,
+   consistent with the standard raw-regen first step this session had not yet run), then
+   repopulated minutes later with a fresh regen+fixup timestamped `10:44`, which does NOT contain
+   this session's own `DL_LIST_APPEND_GUARD` patch (added to `fixup_game_funcs.py` at `10:47`) --
+   proving a DIFFERENT process ran its own regen/fixup cycle on the same shared, non-git-tracked
+   files during this session's own investigation window.
+
+Given `CLAUDE.md`'s explicit "one game run at a time... parallelism goes into offline analysis and
+docs only" rule, and that `fixup_game_funcs.py`/`RecompiledFuncs/*.c`/`build/` are all shared,
+non-git-tracked, single-writer-assumed state with no merge safety net, this session did NOT run
+`make_elf.py` / `N64Recomp` / `cmake build` / a live-verify soak / a soak-queue submission, to
+avoid corrupting whatever the concurrent live iteration is doing to the same files. The
+`DL_LIST_APPEND_GUARD` patch is written and syntax-checked (`python3 -c "import ast;
+ast.parse(open('fixup_game_funcs.py').read())"` succeeds) but UNBUILT and UNVERIFIED -- a future
+session (once exclusivity is confirmed, i.e. no other `loop.sh` iteration is live) needs to run
+the standard regen -> build -> `strings` sanity check -> live-verify -> soak-queue pipeline on it
+before it counts as a real fix, and should also reconcile with whatever the concurrent iteration 2
+process itself concluded/committed (check `git log` for a second `s454`-tagged commit, or a commit
+claiming a different idiom class, before assuming this session's finding is still the top item).
+
+**What this establishes:** `-0x5824`/`0x8011A7DC` is a real, live, previously-unaudited M3
+idiom-class candidate in the same crash-history-bearing code region as 4 already-fixed sibling
+families, with a designed (not yet executed) fix ready to build. The `-0x25C0($s0)`/`-0x76E0($s0)`
+false leads from before this session are confirmed non-issues (counter/scalar access, not pointer
+dereference) and should not be re-investigated. Separately: this session surfaced a process-level
+hazard (the autonomous loop can apparently be invoked in genuine parallel with a manually-spawned
+"one iteration" session covering the identical mandate) that the human operator should address
+before the next session runs, independent of the specific M3 finding.
+
+**Outcome: BLOCKED** (real analysis work completed -- idiom class found, verified, fix designed --
+but execution [regen/build/verify/soak/commit-of-code] correctly withheld because a live
+concurrent process was discovered actively mutating the same shared, unprotected build state).
