@@ -1330,3 +1330,166 @@ crashes in its call subtree, different `last-guest-pc` each time, item -457's ow
 guard is now a discriminating instrument for that breadcrumb at those 10 specific sites; 0 fires so far.
 
 Full session-by-session raw detail: `PORTING-STATE.md` Sessions 454–460.
+
+## 18. Five more buckets from the s465 codebase-wide frequency scan (s463–469): four CLOSED, one
+DEFERRED, migrated from CURRENT-TRUTH.md s469 maintenance pass
+
+**Item -298: `DL_LIST_RESET_GUARD`, re-scoped the ~111 non-canonical `-0x5824` population (same
+global as item -291, `0x8011A7DC`) flagged at s454/456. CLOSED s464, 84/84 sites.** Item -291's
+original scan was regex-scoped too narrowly and silently missed a breadcrumb-dialect variant of its
+OWN canonical shape. Programmatic re-classification (`scratch_s463_classify_5824.py`/
+`scratch_s463_verify_reset.py`, N64Recomp repo, untracked) found the 111 split three ways: 27 were
+actually-canonical (missed because their function has full per-instruction `g_rs64_last_guest_pc`
+tracing, a breadcrumb dialect that puts the breadcrumb between each instruction's own comment and
+its ctx-> line, a slot item -291's regex never tolerated) — folded into `DL_LIST_APPEND_GUARD`
+itself s463 by widening its regex with matching inside-instruction breadcrumb slots, now 84/84
+canonical sites total. 70 are a genuinely different, byte-identical shape — landed s463 as
+`DL_LIST_RESET_GUARD`: the reloaded global is used DIRECTLY as a write address (`MEM_W(0X0,
+ctx->rload) = ctx->rnode;`, no intervening deref at all, structurally the same risk as
+`SIBLING_PTR_WRITE_GUARD`/item -296) — one blanket regex substitution (rload backreferenced
+end-to-end, verified programmatically not sampled). The remaining 14 (5 `funcs_3.c`, 9 `funcs_4.c`)
+had 1-4 lines of unrelated intervening code between the reload and the write pair (confirmed by
+direct source read that none of it touches the reload register, `$v0`/`ctx->r2` uniformly across
+all 14) — landed s464 via `SIBLING_PTR_WRITE_GUARD`'s own per-site-literal-anchor method
+(`_DL_LIST_RESET_EXTRA_SITES` in `fixup_game_funcs.py`, each anchor confirmed tree-wide-unique by a
+standalone script, `scratch_s464_verify_dllistreset14.py`, before patching), reusing
+`DL_LIST_RESET_GUARD`'s own env var/tag so both mechanisms count as one instrument. Manual
+live-verify: s463's soak ran the full 300s schedule with 0 fires on any of the 4 sibling guards;
+s464's soak ran ~126s before crashing on the already-catalogued `coalesceFreeHeapBlocks+4424`
+heap-walker background-noise family (documented since Session 366), filed not chased — 0 fires on
+`dl-list-reset-guard`/`dl-list-append-guard`/`sibling-ptr-write-guard`, `hangarbay-entry` n=2700.
+Confirmation soaks: `s463_dllistguards_confirm` crashed at 19.4s on `loadCutsceneAssetsByIndex+1860`
+(`last-guest-pc=0x800aafb8`) — a single-occurrence new offset inside a function already known to
+have multiple unguarded holes found piecemeal (`+668` fixed s254 as `HANGARLIST_GUARD`, `+948` fixed
+s283), filed not chased; `s464_dllistreset14_confirm` crashed at 116.4s on
+`last-guest-pc=0x80065e94` — the already-catalogued `NAN_CHECK`/misattributed-symbol family
+documented since ~s327 (recurs under many different `pc-symbol` labels at this exact guest PC — a
+known symbolication-collision artifact, not a new bug), filed not chased. **CLOSED: the whole
+re-scoped `-0x5824` non-canonical population (111 sites) is fully accounted for** (27 canonical +
+70 blanket-regex + 14 per-site).
+
+**Item -299: `DL_BUFFER_POOL_GUARD`, global `0x801163FC` (89 bytes past the `0x801163B0`
+free-list-cache-head global), `funcs_3.c`/`funcs_4.c` DL-buffer-pool code
+(`allocateDisplayListBuffer`/`emitAllocatedDLCommand` and siblings). CLOSED s466, 84/84 sites, 2nd
+independent confirm soak s467.** Found s465 by a fresh codebase-wide frequency scan of every
+`lui $reg,0x80XX; lw $reg,OFFSET($reg)` global-reload idiom (not just previously-known offsets)
+across all 50 `RecompiledFuncs/funcs_*.c` files (`scratch_s465_scan.py`, N64Recomp repo, untracked;
+caught a case-sensitivity bug in its own exclude-list normalizer along the way). 87 raw reload sites
+(`funcs_3.c`x46, `funcs_4.c`x38, `funcs_6.c`x3); a shape pass (`scratch_s465_classify_63fc.py`)
+split off 3 `funcs_6.c` `COMPARE_ONLY` sites (benign, out of scope) from 84 `funcs_3.c`/`funcs_4.c`
+sites sharing a lazy-init idiom: read `global->field0`; if non-null skip the write; else write.
+Both the read and write deref the unvalidated reload — same structural risk as
+`DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`. s466 ran the shape-uniformity audit s465 left open (a
+CONDITIONAL BRANCH sits between the read and write, with a compiler-arbitrary delay-slot instruction
+only sampled at 5 sites): `scratch_s466_shapecheck_63fc.py` (N64Recomp repo, untracked) dumped and
+normalized the full reload-through-write block for all 84 sites and found 100% (84/84) adjacency
+between the reload and the READ deref and 100% (84/84) reach a same-register write within 40 lines —
+the 7 "distinct" normalized shapes it found are entirely explained by the harmless delay-slot
+instruction (`nop` at 73 sites, various `addu $reg,$reg,$zero` register combos at 11), confirming
+the write is only ever reachable through the read's result. That let the fix guard the READ alone:
+validate `ctx->rL` right after the reload; if invalid, skip the read and force `ctx->rD` to a
+nonzero sentinel (1) so control takes the "already initialized" branch (which contains the write
+too) — NOT "substitute 0", which would route into the write branch and still deref the invalid
+`ctx->rL` as a write address. Clean regen+build (84/84 sites: `funcs_3.c`x46 + `funcs_4.c`x38, no
+regression in sibling guard counts), `strings` confirms 84 `dl-buffer-pool-guard` format strings.
+Live-verify: 0 `[CRASH]` from the guard itself, 0 `dl-buffer-pool-guard` fires (matches item -287's
+established true-negative baseline), `hangarbay-entry` n=32 (positive control), 0 fires on every
+sibling guard. Crashed later in the same run on `coalesceFreeHeapBlocks+4424`/
+`last-guest-pc=0x8000247c` — the SAME already-catalogued heap-walker background-noise family seen at
+s464's confirm soak, filed not chased. **Confirmation soak run s467**: `s466_dlbufferpool_confirm`
+(rc=3, 170s) — 0 fires across all 4 sibling guards, `hangarbay-entry` n=34, crashed at 121.6s on the
+SAME `coalesceFreeHeapBlocks+4424` family again — a 2nd independent confirmation of the
+true-negative result.
+
+**Item -300: `NODE_LIST_HEAD_GUARD` (read) / `NODE_LIST_HEAD_WRITE_GUARD` (write), global
+`0x8011A4B8` (`hi16=0x8012,offset=-0x5B48`), `funcs_3.c`/`funcs_4.c` linked-list-insert-at-head code
+(10 near-identical functions). CLOSED s467, 20/20 read-guard + 10/10 write-guard sites.** s465's
+scan ranked this the most concentrated remaining bucket. Classified with
+`scratch_s467_classify_5b48.py` (N64Recomp repo, untracked): all 20 raw sites share a byte-identical
+reload immediately followed by a deref-read — same read-off-the-raw-reload crash risk as
+`DL_BUFFER_POOL_GUARD` if the reload is wild. **Unlike item -299, full per-site context (not a short
+sample window — the exact trap that cost s465/s466 a session) showed this bucket is TWO distinct
+downstream shapes, not one:** 10 "first-of-pair" sites where the read result gates a
+`bnel`-delay-slot conditional write (the same idiom `FREELIST_NEXT_GUARD`, s441, already fixed for
+a sibling global) needing only the read guard (forcing the read result to 0 on invalid reload makes
+the `if` false, safely skipping both write copies); and 10 "second-of-pair" sites (the SAME 10
+functions reloading the SAME global again a few lines later) where the reload register itself,
+never reassigned, is later used DIRECTLY as a SECOND unconditional write address (usually the delay
+slot of the function's own `jr $ra`) — the SAME write-through-reload risk `DL_LIST_RESET_GUARD`
+(item -298) established for a different global, needing its own separate write guard. 9/10 of the
+second shape are byte-identical and regex-anchor cleanly; the 10th (`funcs_3.c` `0x80008080`/
+`0x80008090`) has a pre-existing `s436 CACHE_HEAD_A1_GUARD` block spliced in between by an earlier
+unrelated patch, breaking regex adjacency — handled by its own per-site literal anchor, same
+discipline as `DL_LIST_RESET_GUARD`'s 14-site remainder. Both regexes match-count-verified with a
+standalone test script (`scratch_s467_test_regex.py`, N64Recomp repo, untracked) before being
+written into `fixup_game_funcs.py`. Clean regen+build (20/20 + 10/10, no regression in any of the 4
+prior sibling guards); `strings` confirms 20 `node-list-head-guard` + 10
+`node-list-head-write-guard` format strings. Live-verify: **0 `[CRASH]` across the ENTIRE 300s
+schedule** (the first soak in several sessions to run the full schedule clean rather than hitting an
+unrelated background-noise crash partway through), 0 fires on both new guards, 0 fires on every
+sibling guard, `hangarbay-entry` n=33 (positive control). Confirmation soak, RUN s468, 2nd
+independent confirmation: rc=0, 345s, 0 `[CRASH]`, 0 fires on both new guards + every sibling,
+`hangarbay-entry` n=31.
+
+**Item -301: `TEXDATA_TABLE_GUARD`, global at `hi16=0x8013,offset=-0x70F8`, `funcs_6.c` ONLY
+(texture-data-slot array base pointer). CLOSED s468, 31/31 sites.** The s465 scan's #2-ranked
+remaining bucket, pivoted to after item -302's bucket proved unsuited to this method. Read
+`freeTextureDataSlot` (`funcs_6.c:2690`) directly: `sll $v0,$s0,3; addu $v0,$v0,$s0; sll $v0,$v0,2`
+computes `idx*36` (a 36-byte struct stride) from an externally-sourced index, then
+`addu $v0,$v0,$v1` adds THIS global's freshly-reloaded value as the array BASE POINTER before
+dereferencing — the same raw-reload-as-base-pointer risk as `DL_BUFFER_POOL_GUARD`/
+`NODE_LIST_HEAD_GUARD`, just with index arithmetic interposed before the deref.
+`scratch_s468_shapecheck_generic.py` (N64Recomp repo, untracked — parameterized triage tool for
+future buckets) found 13 distinct downstream chain shapes, but since the risk is IN THE RELOAD
+ITSELF, the guard only needs to anchor on the `lui`+`lw` reload pair, ignoring all 13 downstream
+shapes — confirmed 31/31 by `scratch_s468_test_regex_70f8.py` against the actual on-disk text
+(cross-checked against independent raw-line-count greps, all three agreeing at 31) before touching
+`fixup_game_funcs.py`. **Guard design departs from precedent deliberately**:
+`GENERIC_CACHE_GUARD`/`NODE_LIST_HEAD_GUARD` substitute 0 because those sites deref at a literal 0
+offset with no further arithmetic; 0 would be actively WRONG here since every downstream chain adds
+`index*36+offset` arithmetic before dereferencing (0 as a base → a guaranteed-invalid tiny address,
+MORE certain to crash than the original wild value). `TEXDATA_TABLE_GUARD` substitutes `0x80000000u`
+(start of RDRAM, always mapped) instead — any subsequent `index*36+offset` starting from a valid
+base stays inside the 8MB window for any plausible index. Clean regen+build (`TEXDATA_TABLE_GUARD`
+×31; all 6 sibling counts confirmed unchanged); `strings` confirms 31 `texdata-table-guard` format
+strings. Live-verify: 0 `texdata-table-guard` fires, 0 fires on every sibling guard,
+`hangarbay-entry` n=32 (positive control). Crashed at 124.2s on
+`pc-symbol=loadCutsceneAssetsByIndex+1860`, `last-guest-pc=0x800ab068` — the SAME already-catalogued
+function item -298's `s463_dllistguards_confirm` crashed in at the byte-identical `+1860` offset,
+just a different exact guest PC — unrelated to this guard, filed not chased. **2nd independent
+confirm soak, run s469** (`s468_texdatatable_confirm`, rc=3, 160s): 0 `texdata-table-guard` fires, 0
+fires on all 6 sibling guards (no regression), `hangarbay-entry` n=31 (positive control) — the
+true-negative result holds a 2nd time. Crashed on a DIFFERENT, NEW single-occurrence signature this
+run: `pc-symbol=findOrCreateMaterial+776`, `last-guest-pc=0x80010b7c`, backtrace
+`emitMaterialTexturedDLAlt` (appearing twice consecutively — likely the same shared-tail-merge frame
+artifact already documented elsewhere in this lineage, not literal recursion) →
+`submitSceneNodeRender+49316` → `processSceneNode` → `traverseSceneGraphRecursive` →
+`setupCameraMatrices` → `runHangarSelectionFrame` → `runHangarMenuFromOverlay` → `menuOverlayInit` →
+`mainGameLoop`. Not `loadCutsceneAssetsByIndex+1860` this time — a genuinely new, single-occurrence
+data point, filed not chased per the no-reactive-single-crash-chase rule; notable only in that it
+sits in `submitSceneNodeRender`'s call subtree, the same function already flagged (item -296, §17)
+as host to a still-open wait-for-recurrence breadcrumb — but `sibling-ptr-write-guard` (the
+instrument covering that breadcrumb's 10 sites) did not fire in this run, so this crash is not
+confirmed as the same mechanism.
+
+**Item -302: `hi16=0x8013,offset=0x7CE4` bucket (45 sites, 9 files) — CLASSIFIED AND DEFERRED, not
+closed.** s465's scan's #1-ranked remaining bucket after item -300 closed.
+`scratch_s468_classify_7ce4.py` + `scratch_s468_shapecheck_7ce4.py` (N64Recomp repo, untracked,
+40-line window per site) found the reloaded global here is a small INTEGER INDEX, not a base
+pointer — one site (`funcs_35.c:5232`, function `getSceneStatePtr`) is a bare getter returning the
+raw reload value with zero arithmetic; every other site immediately does `ctx->rL =
+S32(ctx->rL << 2)` (×4) then combines with a separately-loaded, per-site-varying base register
+before dereferencing at a per-site-varying offset. 17 distinct normalized instruction-chain shapes
+across the 45 sites; only 20/45 reach a local dereference within a 20-instruction window — the
+other 25 pass the index-derived value into a callee, so any real deref (if one exists) is invisible
+to this scan. Unlike every prior close in this lineage (raw reload IS the pointer, so guarding right
+after the reload is shape-agnostic regardless of downstream), this bucket's actual risk surface — IF
+real — varies per site with no known-valid index bound, so no single guard placement covers all
+sites without speculation. **Decision: defer rather than force a guess.** No code change.
+
+**Transferable lesson across this whole five-bucket pass:** raw site COUNT is not the tractability
+signal for this idiom-class-audit method — SINGLE-FILE CONCENTRATION is. Item -302 (45 sites, 9
+files, ranked #1 by count) turned out to be a fundamentally harder idiom and had to be deferred;
+item -301 (31 sites, but ALL in `funcs_6.c`) was a clean one-session close. Every CLOSED item's
+live-verify/confirm-soak result matches item -287's established true-negative baseline for this
+whole guard-idiom class. Full session-by-session raw detail: `PORTING-STATE.md` Sessions 463–469.

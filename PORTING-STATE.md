@@ -38987,3 +38987,57 @@ texture-management idiom.
 item -301 — plus a genuine negative/deferred finding on item -302 that correctly avoided forcing a
 speculative guard onto an idiom shape this lineage's own established method doesn't fit, and a
 reusable generic shapecheck tool for triaging future buckets faster).
+
+## Session 469 (2026-08-07): folded s468's queued 2nd confirm soak for item -301 (new single-
+occurrence crash filed, not chased); Step 0 triggered a MAINTENANCE iteration — compacted
+docs/CURRENT-TRUTH.md by a net 200 lines
+
+**Soak fold-in.** `scratch/agent/soak_queue/s468_texdatatable_confirm.sh` (queued at s468 session
+end) had already been run by the loop between iterations: `20260807-153023 | s468_texdatatable_confirm
+| rc=3 | 160s`. Full `run.log` check (not just the summary line): 0 `texdata-table-guard` fires, 0
+fires on all 6 sibling guards (no regression), `hangarbay-entry` n=31 (positive control, content
+reached) — the true-negative result for item -301 (`TEXDATA_TABLE_GUARD`) holds a 2nd independent
+time. Crashed on a DIFFERENT, NEW single-occurrence signature this run (not the
+`loadCutsceneAssetsByIndex+1860` family both s463's and s468's own manual soak hit):
+`pc-symbol=findOrCreateMaterial+776`, `last-guest-pc=0x80010b7c`, backtrace
+`emitMaterialTexturedDLAlt` (appearing twice consecutively in the unwind, plausibly a shared-tail-
+merge frame artifact rather than literal recursion) → `submitSceneNodeRender+49316` →
+`processSceneNode` → `traverseSceneGraphRecursive` → `setupCameraMatrices` →
+`runHangarSelectionFrame` → `runHangarMenuFromOverlay` → `menuOverlayInit` → `mainGameLoop`. Notable
+only in that it sits in `submitSceneNodeRender`'s call subtree — the same function already flagged
+(item -296) as host to a still-open wait-for-recurrence breadcrumb — but `sibling-ptr-write-guard`
+(the instrument covering that breadcrumb's 10 sites) did NOT fire in this run, so this crash is
+**not confirmed** as the same mechanism; a genuinely new, single-occurrence data point, filed not
+chased per the no-reactive-single-crash-chase rule. `grep -c findOrCreateMaterial` against both docs
+files confirmed this is the first time this crash function has appeared in the ledger.
+
+**Maintenance (Step 0 triggered: `wc -c docs/CURRENT-TRUTH.md` = 61644, over the 60000 threshold).**
+Migrated the full session-by-session detail for items -298 (`DL_LIST_RESET_GUARD`), -299
+(`DL_BUFFER_POOL_GUARD`), -300 (`NODE_LIST_HEAD_GUARD`/`NODE_LIST_HEAD_WRITE_GUARD`), -301
+(`TEXDATA_TABLE_GUARD`, including this session's new confirm-soak fold-in), and -302 (deferred
+`0x7CE4` bucket) from `docs/CURRENT-TRUTH.md` into a new `docs/PROJECT-OVERVIEW.md` §18, leaving a
+~25-line pointer entry in `CURRENT-TRUTH.md` in the same style items -291..-297 already used for
+§17. Also compacted: the USER DIRECTIVE block (which had grown into a near-duplicate of the
+Next-steps entries it was meant to summarize), the now-stale M5 goal-stack paragraph (still
+described M5 as "investigation first, not code" despite the USER DIRECTIVE already saying M5 is
+DONE and fully CLOSED), the `-282..-289` static5-rename-orphan-sweep block (folded the now-redundant
+standalone `-290` entry into the range pointer as `-282..-290`, since item -290 was itself just that
+arc's own tracked remainder closing out), the `-274..-280`/`-261..-267` blocks, a stale trailing note
+on item -292 (pointed at the `-0x5824` non-canonical bucket as "not yet started" — that bucket became
+item -298, CLOSED since s464), and assorted small trims (numbering-convention paragraph, M4
+goal-stack paragraph, front-matter session-tags line, item -259). Net result, measured via
+`git diff --stat -- docs/CURRENT-TRUTH.md`: 296 deletions, 96 insertions = **net shrink of exactly
+200 lines** (61644 → 42973 bytes, well under the 60000 threshold and close to the 35 KB stretch
+target). Read the full compacted file afterward to confirm coherence: numbering sequence intact
+(no gaps introduced by the `-290` fold-in), all pointer entries resolve to real PROJECT-OVERVIEW
+sections, no dangling cross-references. Did not touch the "Current truth" env-var/timeline prose or
+the Regeneration section's Standing warnings, per the standing protection rule.
+
+**Rules this confirms/extends:** none new — this is routine application of the existing Maintenance
+protocol (Step 0 of `tools/agent/ITERATION.md`) and the existing no-reactive-single-crash-chase rule
+(the new `findOrCreateMaterial` crash is filed, not investigated, consistent with every prior
+single-occurrence crash surfaced by a confirm soak in this whole idiom-class-audit lineage).
+
+**Outcome: ADVANCED** (maintenance iteration, net shrink of exactly 200 lines in
+`docs/CURRENT-TRUTH.md` — meets the Step-0 threshold for ADVANCED — plus a real soak result folded
+into the ledger with a new crash signature correctly filed rather than chased).
