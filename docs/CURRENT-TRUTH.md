@@ -23,7 +23,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    same M3 DoD leg**: duplicate-symbol-name collisions in the overlay `.txt` files silently truncate
    real function bodies to 1-instruction stubs (a third shape of the closed item -6/-249 "phantom
    function" family). This supersedes needing separate human reconfirmation on "where to focus next"
-   for now — see item -268 (current top) and PROJECT-OVERVIEW §16 for the full session-by-session arc.
+   for now — see item -269 (current top) and PROJECT-OVERVIEW §16 for the full session-by-session arc.
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
@@ -162,8 +162,55 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -268 (s432, ADVANCED — fixed 11 of item -264's 18 catalogued duplicate-symbol
-pairs in one batch); the next new item takes -269.
+oldest). Current top is -269 (s433, ADVANCED — closed item -264's catalogue and unblocked the
+item -265/-266/-267 chain as a side effect); the next new item takes -270.
+
+-269. **(s433) Item -264's duplicate-symbol catalogue CLOSED (18/18 accounted for) — and fixing one
+    of the last 5 function pairs unblocked the entire item -265/-266/-267 chain that had blocked
+    s427-432 for 5 sessions, single-source so far.** Read both bodies for each of the catalogue's 5
+    remaining real/real function pairs (same method as -262/-264/-268: `RECOMP_FUNC` body length +
+    call-site grep) and confirmed the same first-listed-is-truncated-stub / second-listed-is-real-body
+    shape in every one: `hangarGenerateSecondaryWeaponString`/`buildSecondaryWeaponString` (0x800AE530),
+    `getAvailablePlayerCraftFlagsConsiderUnlocks`/`getAvailableShipsForLevelAlt` (0x800C6234),
+    `getSecondaryWeaponForLevelAndCraft`/`getSecondaryWeaponForCraftLevel` (0x800C6728),
+    `getLevelIntroCrawlId`/`getPlanetAssetForLevel` (0x800C6900, all `menu_overlay.txt`), and
+    `handleHUD`/`initHudStruct` (0x800C0084, `mission_overlay.txt`, dispatched by raw address value into
+    `spawnNpcOfType` rather than a direct call — confirmed via `spawnHudNpc`'s `lui`/`addiu` pair
+    constructing the address, so the usual call-site grep doesn't apply to this one, but the identical
+    stub/body shape does). Deleted all 5 truncated-stub lines. The 2 remaining catalogued pairs
+    (`gActiveModelAnimSlots`/`D_8013A990`, `gHangarBayDescriptorArrayPtr`/`gCraftSelectScreenData`,
+    both `main_overlay.txt`) are **data-symbol aliases, confirmed NOT an instance of this bug**: grepped
+    all of `RecompiledFuncs/*.c` for both names and found zero references anywhere — this recompiler
+    never emits data globals by name (every load/store is raw `MEM_W`/offset arithmetic), so there is no
+    function body for the duplicate-symbol collision to truncate. No build-run cycle needed; catalogue
+    closed without touching them.
+
+    Regenerated, rebuilt clean (0 new warnings/errors), live-ran the same s427-432 probe schedule.
+    Result was NOT the expected "same pre-existing item -267 crash, no regression" — the process ran
+    to ~114s (vs. every s427-432 run's ~19s `menuOverlayInit+3648` death) and crashed on a **different**
+    signature: `[CRASH] Bus error 10`, `last-guest-pc=0x800547bc`, native symbol
+    `updateHangarBayScene+43768` (an imprecise nearest-preceding-export attribution — address math
+    against the overlay symbol tables places the real guest PC 0x800547bc inside
+    `tickWrappingTimerAccumulatorList` (0x80054650-0x800547C0 range), 0x16C bytes into its body, 4 bytes
+    before the next symbol). This is **byte-for-byte the same crash item -263 found single-source at
+    s426** (`s426_menufix_regression_20260807-005943/run.log`: `last-guest-pc=0x800547bc`, Bus error 10,
+    `si_addr` in the same `0x38000000x` near-zero-guest-pointer family) — a 2nd independent source,
+    different session, different binary build, same guest PC. Item -263 is promoted from
+    single-source/parked to the active frontier crash (was item -267's blocker before now).
+
+    **Mechanistic read on why item -267 stopped reproducing**: `getAvailablePlayerCraftFlagsConsiderUnlocks`
+    was the truncated stub called by `runHangarMenuFromOverlay` — the *exact* caller function items
+    -265/-266/-267 were isolating `ctx->r19`/stack-slot corruption inside, and the truncated stub ran
+    only its first instruction and returned without computing the real craft-flags bitmask or restoring
+    any of its frame. `mallocCraftSelectionData` (the very next callee in that same caller, s429's
+    isolated corruption site) plausibly consumed that never-computed/garbage state, matching item -267's
+    own s431 conclusion ("a stray/OOB write elsewhere aliasing that stack address, not a missing
+    register restore") — the stray write's source may have been the sibling stub's uncomputed state all
+    along, not a bug inside `mallocCraftSelectionData` itself. **This explanation is plausible but
+    single-run** — only one live run has been made since this fix; item -267 not reproducing once is not
+    yet the two-source confirmation the ledger requires to CLOSE it. Confirmation soak queued
+    (`s433_regression_and_item263_confirm.sh`) to check both halves: item -267 staying gone AND item
+    -263 recurring. Full detail: PORTING-STATE Session 433.
 
 -268. **(s432) Batch-fixed 11 of item -264's 18 catalogued `mission_overlay.txt` duplicate-symbol
     pairs — all NPC slot handlers, same mechanism as items -262/-264, confirmed by direct code read
@@ -199,7 +246,9 @@ pairs in one batch); the next new item takes -269.
     -265/-266. Confirmation soak queued (`s431_malloccraft_ckpt_verify.sh`), single-source. Next work
     unit: a diagnostic reading `MEM_W(ctx->r29, 0XB4)` directly at points in the function's last ~330
     lines to catch when the stack slot itself flips. Full detail: PROJECT-OVERVIEW §16, PORTING-STATE
-    Sessions 429, 431.
+    Sessions 429, 431. **s433 update: did NOT recur after fixing a sibling duplicate-symbol stub in the
+    same caller function — single-source, not yet closeable. See item -269 for the finding and the
+    mechanistic explanation of why.**
 
 -266. **(s428/s429) `menuOverlayInit+3648` post-guard crash — reproduced 3x, blocked on item -267.**
     Reads the same corrupted `ctx->r19`/`$s3` register item -265's guard caught wild moments earlier in

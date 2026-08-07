@@ -36177,3 +36177,100 @@ Sibling-repo edit: `~/Documents/Tools/rogue_squadron64/symbol_files/mission_over
 deleted, replaced with explanatory comments). That repo is not git-tracked by this project's
 session-commit convention (last real commit predates this investigation entirely, June 2026) — left
 uncommitted there per established practice, same as every prior session's symbol-file edits.
+
+## Session 433 (2026-08-07)
+
+**Work unit**: close out item -264's catalogue — the 5 remaining function-body duplicate-symbol pairs
+(4 `menu_overlay.txt`, 1 `mission_overlay.txt`) plus a judgment call on the 2 `main_overlay.txt`
+data-symbol pairs NEXT.md flagged as lower priority.
+
+**Method**: for each of the 5 function pairs, read both `RECOMP_FUNC` bodies in the generated
+`funcs_*.c` (via a `python3` glob script, `scratch/agent/s433_find_funcs.py` — direct `grep`/loop
+approaches with `$name` expansion inside a pattern trip this environment's static-syntax checker) and
+grepped for direct call sites (`scratch/agent/s433_callsites.py`). All 5 matched the established shape
+exactly: the first-listed name in the overlay `.txt` file (in file order) compiles to a 5-line
+truncated stub (single instruction, no frame setup, falls straight through) and is the one with
+call-site references; the second-listed name holds the real, multi-instruction body and has zero call
+sites. `hangarGenerateSecondaryWeaponString`/`buildSecondaryWeaponString` (0x800AE530, 2 calls on the
+stub), `getAvailablePlayerCraftFlagsConsiderUnlocks`/`getAvailableShipsForLevelAlt` (0x800C6234, 4
+calls + 2 comment refs on the stub), `getSecondaryWeaponForLevelAndCraft`/
+`getSecondaryWeaponForCraftLevel` (0x800C6728, 2 calls), `getLevelIntroCrawlId`/`getPlanetAssetForLevel`
+(0x800C6900, 2 calls) — all `menu_overlay.txt`. The 5th, `handleHUD`/`initHudStruct` (0x800C0084,
+`mission_overlay.txt`), showed 0 direct calls for *either* name — read `spawnHudNpc` (the one
+documented caller) and found it constructs the address 0x800C0084 as a raw value via a `lui $a0,
+0x800C` / `addiu $a0, $a0, 0x84` pair, passed by value into `spawnNpcOfType`, which dispatches by
+address through `get_function()`/`LOOKUP_FUNC` at runtime rather than a literal C call — so the usual
+call-site grep doesn't apply, but the identical stub/real-body shape (`handleHUD` truncated,
+`initHudStruct` real) still held, and the established fix (delete the first-listed/reachable name)
+still applies by the same mechanism regardless of call style.
+
+For the 2 `main_overlay.txt` data-symbol pairs (`gActiveModelAnimSlots`/`D_8013A990`,
+`gHangarBayDescriptorArrayPtr`/`gCraftSelectScreenData`), grepped all of `RecompiledFuncs/*.c` for both
+names and found zero hits for either — this recompiler never emits data globals by name in generated
+code (every load/store is raw `MEM_W`/`MEM_H`/`MEM_B` with a hex offset), so there is no function body
+for a duplicate-symbol collision to truncate; these are harmless documentation-only label duplicates,
+confirmed without needing a build-run cycle. Catalogue closed 7 -> 0: 5 fixed this session, 2 confirmed
+non-bugs.
+
+**Fix**: deleted the 5 truncated-stub lines (`hangarGenerateSecondaryWeaponString`,
+`getAvailablePlayerCraftFlagsConsiderUnlocks`, `getSecondaryWeaponForLevelAndCraft`,
+`getLevelIntroCrawlId` from `menu_overlay.txt`; `handleHUD` from `mission_overlay.txt`), and updated 3
+stale doc comments elsewhere in the overlay files that named the deleted stubs
+(`hangarSetSecondaryWeaponDisplay`'s and `runHangarMenuFromOverlay`'s comments in `menu_overlay.txt`,
+`spawnHudNpc`'s and `loadAssetAndIterateSubchunks`'s comments in `mission_overlay.txt`/
+`main_overlay.txt`) to name the surviving real-body symbol instead, so a future grep for the old name
+doesn't dead-end. Regenerated (`make_elf.py`: 3750 symbols loaded, 3731 emitted, 19 unmapped functions
+skipped, no errors -> delete `funcs_*.c` -> `N64Recomp` -> `fixup_game_funcs.py`, idempotency marker
+confirmed present exactly once) and rebuilt clean (same pre-existing warning count, 0 new). Verified
+all 5 surviving names now compile
+with full multi-instruction bodies at their addresses (`scratch/agent/s433_find_funcs.py` re-run
+post-regen) before running anything live.
+
+**Live run** (same PROBE_KEYS schedule as s423-432, foreground, ~118s to crash): the process did
+**NOT** hit item -267's `menuOverlayInit+3648` chain crash that killed every s427-432 run at ~19s. It
+instead ran deep into the hangar-menu flow (49 captured frames, VI present pairs into the thousands,
+`[dpc-fwd]` submits climbing past 14.6M) before crashing with `[CRASH] caught signal 10 (Bus error:
+10)`, `last-guest-pc=0x800547bc`, native symbol `updateHangarBayScene+43768` (imprecise
+nearest-preceding-export attribution — `scratch/agent/s433_symrange.py`, an address-sorted walk of all
+three overlay symbol tables, places guest PC 0x800547bc inside `tickWrappingTimerAccumulatorList`'s
+range, 0x16C bytes into its body, only 4 bytes before the next symbol `loadAssetIntoNewSlot` at
+0x800547C0 — `updateHangarBayScene` itself starts at the unrelated address 0x800AB658, so the native
+symbol name is real but the offset is too large to trust; the guest-PC breadcrumb is the reliable
+signal here). `si_addr=0x380000014`, matching the `0x38000000x` near-zero-guest-pointer family noted
+for item -263.
+
+Diffed this against `s426_menufix_regression_20260807-005943/run.log` (item -263's original,
+single-source discovery): **identical** `last-guest-pc=0x800547bc`, identical Bus error 10, `si_addr`
+in the same family (`0x380000008` there vs `0x380000014` here) — same guest instruction, different
+session, different binary build (native offsets differ: `+13156` there vs `+43768` here, as expected
+from unrelated code shifting between builds). This is a clean 2nd independent source for item -263's
+crash, which had been parked single-source since s426.
+
+**Interpretation — why item -267 stopped reproducing**: `getAvailablePlayerCraftFlagsConsiderUnlocks`
+was the truncated stub called directly by `runHangarMenuFromOverlay` (confirmed via that function's own
+doc comment) — the exact caller function s429/s431 isolated `ctx->r19`/stack-slot corruption inside,
+and specifically the callee immediately *before* `mallocCraftSelectionData` (s429's isolated corruption
+site) in that caller's body. The truncated stub ran one instruction and returned without computing the
+real craft-availability bitmask or setting up/tearing down any stack frame. If `mallocCraftSelectionData`
+or code between the two calls consumed that never-computed/leftover-register state (e.g. as a size or
+index feeding a stack-relative write), that would produce exactly the "stray/OOB write aliasing a stack
+slot, not a missing register restore" signature s431 already concluded for item -267 — meaning the
+actual defect may have been the sibling stub's uncomputed state all along, not a bug inside
+`mallocCraftSelectionData` itself. **This is a plausible mechanism, not a confirmed one** — only a single
+live run has been made since the fix landed; one non-recurrence is not the two-source bar the ledger
+requires before marking item -267 CLOSED. Left it open with a forward pointer to this session; a
+confirmation soak is queued to get a 2nd post-fix data point on both halves (item -267 staying gone,
+item -263 recurring).
+
+**Net result**: item -264's catalogue is fully closed (18/18 pairs accounted for across s426-433: 2
+root-caused individually at s426/s427, 11 batch-fixed at s432, 5 fixed + 2 confirmed non-bugs at s433).
+New item -269 records this session's finding, including the item -267 non-recurrence and the item -263
+2nd-source confirmation; item -267/-266/-265 left open with a forward-pointing note rather than closed
+outright, pending confirmation. Item -263 promoted from single-source/parked to the active frontier
+crash for the next M3 DoD work unit. Confirmation soak queued:
+`scratch/agent/soak_queue/s433_regression_and_item263_confirm.sh`.
+
+Sibling-repo edit: `~/Documents/Tools/rogue_squadron64/symbol_files/menu_overlay.txt` (4 stub lines
+deleted, 2 doc comments updated) and `mission_overlay.txt` (1 stub line deleted, 1 doc comment updated)
+and `main_overlay.txt` (1 doc comment updated). Left uncommitted there per established practice, same
+as every prior session's symbol-file edits.
