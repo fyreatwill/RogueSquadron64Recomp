@@ -34,9 +34,13 @@ Priority order for upcoming iterations, set after the 300-session review:
    schedule, `hangarbay-entry` n=3000; its queued confirm soak later crashed on an unrelated
    signature, item -294). **s455 (the OTHER end of that same collision — see item -292)
    independently found and PARTIALLY FIXED a second fresh idiom class** (`0x29C0` → global
-   `0x801529C0`, MusyX song-tick pointer). **s457 fixed 2 more reader functions (10 more sites,
-   14/43 total)** — 29 sites across 3 reader functions remain, now the top M3 priority. Full
-   session-by-session arc: PROJECT-OVERVIEW §16.
+   `0x801529C0`, MusyX song-tick pointer). **s457/s458 fixed 3 more reader functions (15 more
+   sites, 19/43 total)** — 24 sites across 2 reader functions remain (`advanceSongRegion`,
+   `stepActiveSongTracks`), the standing alternate work unit for whenever
+   `songtempo-table-guard-29c0` is revisited. **s459 (rule-8 mandatory pivot off that hypothesis)
+   found and CLOSED a THIRD fresh idiom class in one session**: `-0x23A8` → sibling global
+   `0x8011DC58`, 119 sites, `SIBLING_PTR_WRITE_GUARD` — see item -296. Full session-by-session
+   arc: PROJECT-OVERVIEW §16.
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
@@ -175,8 +179,50 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -295 (s458, item -292's next slice executed — see below); item -292 itself
-(24 sites remain across 2 reader functions) is next. The next NEW item takes -296.
+oldest). Current top is -296 (s459, a fresh idiom class found AND CLOSED in one session — see
+below). Item -292 (24 sites remain across 2 reader functions, `songtempo-table-guard-29c0`) is
+the standing alternate work unit. The next NEW item takes -297.
+
+-296. **(s459) Fresh M3 idiom class found AND CLOSED, same session: `-0x23A8($reg)` → sibling
+    global `0x8011DC58`, `SIBLING_PTR_WRITE_GUARD` (119 sites, `funcs_3.c`/`funcs_4.c`).** Chosen
+    per rule 8's mandatory pivot: the prior 3 iterations (s455/s457/s458) all ran
+    `HYPOTHESIS-ID: songtempo-table-guard-29c0` without closing item -292 (24 sites still remain).
+    Rather than force a 4th consecutive iteration on that slug, this session switched to a
+    different, already-flagged-but-not-started M3 idiom-class audit: item -291's own session
+    (s454) had explicitly scoped `-0x23A8` OUT of `DL_LIST_APPEND_GUARD` ("no clean
+    byte-identical repeated shape found -- each site's downstream write differs" --
+    `fixup_game_funcs.py` comment). A fresh systematic re-scan (same `scratch_s454_scan.py`
+    discriminating-load-then-deref method) went one step further than that original assessment:
+    grouping the 119 unguarded sites by the NORMALIZED shape of their downstream use (registers/
+    offsets blanked) found 118/119 share ONE shape after all -- `MEM_W(OFF, ctx->rN) = VAL;`, an
+    unconditional field write through the reloaded, never-range-checked pointer (`OFF` is `0x0`
+    at 116 sites, `0x4` at 1, `0x8` at 2). s454 was right that the LOAD-TO-WRITE gap varies (4-24
+    lines of unrelated intervening code, no single blanket regex spans it) but hadn't separately
+    checked whether the WRITE shape alone was uniform -- it is. Same structural risk as
+    `DL_LIST_APPEND_GUARD`/`FREELIST_NEXT_GUARD`. Patched via 119 individual literal-anchor
+    patches (captured verbatim from a fresh regen, confirmed tree-wide-unique before touching
+    `fixup_game_funcs.py`, same discipline as the s436 "type-c" 7-site `-0x63B0` patch), generated
+    programmatically rather than hand-written (`scratch_s459_apply_patch.py`, N64Recomp repo,
+    untracked). Standard pipeline clean throughout: fixup report `funcs_3.c ... x65` + `funcs_4.c
+    ... x54` (119 exactly), direct grep confirmed 119/119, `strings` confirmed 119/119 distinct
+    format strings (119 unique after dedup by site address), build clean (0 errors, only
+    pre-existing benign warnings). Live-verify (full 300s/250s-keys schedule, all passive guards
+    armed plus the new `ROGUESQ_LOG_SIBLING_PTR_WRITE_GUARD`): full schedule completed (all 10
+    scheduled key presses fired), **0 `[CRASH]` markers, 0 `sibling-ptr-write-guard` fires**,
+    `hangarbay-entry` n=35 (schedule-variance, not a regression signal -- full-schedule completion
+    with 0 crash is the load-bearing observation). Confirmation soak queued:
+    `scratch/agent/soak_queue/s459_sibling_ptr_write_confirm.sh`. **Notable, not chased:** 10 of
+    the 119 sites are in `submitSceneNodeRender`, the same function named in items -293/-294's
+    still-open "wait-for-recurrence breadcrumb" (2 independent single-occurrence crashes in its
+    call subtree) -- this guard is now a discriminating instrument for that breadcrumb at those 10
+    specific sites; 0 fires this run, breadcrumb still at n=2 (below the "worth a dedicated audit"
+    threshold item -294 set). Also filed, not chased: s458's own queued confirm soak
+    (`s458_songtempo_smod_confirm`, `SOAK-RESULTS.md` `rc=3`) crashed at
+    `last-guest-pc=0x80015544`, traced to a bare delay-slot `nop` after a `jr $ra` inside
+    `allocateDisplayListBuffer` (a function-return point) with a host `__pthread_kill+8` frame --
+    matches an identical signature already filed as "confirmed unrelated" background noise around
+    s394 (`PORTING-STATE` ~L33499); 2nd data point of the same pattern, not a new lead. Full
+    writeup: `PORTING-STATE.md` Session 459.
 
 -295. **(s458) Executed the next slice of item -292's `SONGTEMPO_TABLE_GUARD`:
     `stepSongModulationLanes` (5 sites), 19/43 total.** Same idiom/family/env var as item -292, one

@@ -38176,3 +38176,109 @@ checked out), so no `submodule-patches/export.sh` step applies.
 **Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed — 5 more
 `SONGTEMPO_TABLE_GUARD` sites, continuing item -292's execution; clean run, no new crash
 observations to file).
+
+## Session 459 (2026-08-07)
+
+**Mandatory pivot (rule 8).** The prior 3 iterations (s455/s457/s458) all ran
+`HYPOTHESIS-ID: songtempo-table-guard-29c0` without closing it (item -292, 24 sites still
+remaining in `advanceSongRegion`/`stepActiveSongTracks`). Per the loop's rule-8 enforcement,
+this session did NOT run a 4th consecutive iteration on that slug. Read `docs/CURRENT-TRUTH.md`
++ `scratch/agent/NEXT.md` + `SOAK-RESULTS.md` first per session rules; checked for a live
+concurrent `loop.sh` iteration (`ps aux`), confirmed only the harness's own loop process, no
+collision. Also checked s458's own queued confirm soak (`s458_songtempo_smod_confirm`, logged as
+`rc=3` in `SOAK-RESULTS.md`): crashed at 113.4s on `last-guest-pc=0x80015544`, `pc-symbol`
+resolving to a host `__pthread_kill+8` frame. Traced `0x80015544` in `funcs_4.c`: it's a bare
+`nop` in the delay slot immediately after a `jr $ra` (a function return point, inside
+`allocateDisplayListBuffer`) — cross-referenced against `PORTING-STATE` ~L33499 (an s394-era
+soak that hit the *exact same* `last-guest-pc=0x80015544`/`allocateDisplayListBuffer+880`
+signature and filed it as "confirmed unrelated" to whatever it was chasing then). Two
+independent occurrences of the identical signature, both at a function-return delay slot with a
+host-side `__pthread_kill` frame, is consistent with the already-documented pattern of host-side
+async crashes landing on whatever guest PC happened to be "current" when they fired, not a
+guest-code fault — filed as a 2nd data point of pre-existing background noise, not chased (no
+`funcs_4.c`-frame involvement, no relation to this session's guard).
+
+**Chose to switch work units (rule 8 option (a)): a fresh, systematic idiom-class audit of
+`-0x23A8($reg)`, the sibling global (`0x8011DC58`) item -291's own session (s454) explicitly
+scoped OUT of `DL_LIST_APPEND_GUARD`** ("no clean byte-identical repeated shape found — each
+site's downstream write differs, needs the same per-site mechanistic classification s453 used
+for S392_H3A/S393_H3B before any patch" — `fixup_game_funcs.py` comment, `scratch/agent/NEXT.md`).
+This sat in the "Confirmed non-issues, do not re-investigate" section of `NEXT.md` as NOT
+actually confirmed a non-issue — flagged not-started, needing exactly this kind of audit — a
+sanctioned M3 idiom-class-audit work unit per the standing USER DIRECTIVE, and a genuinely
+different `HYPOTHESIS-ID` from the songtempo work.
+
+**Re-ran `scratch_s454_scan.py`'s method fresh** (same load→deref discriminating scan, same
+funcs_3.c/funcs_4.c cluster) and this time went one step further than s454's original shallow
+assessment: grouped the 119 unguarded `-0x23A8` load→deref sites by the NORMALIZED shape of
+their downstream use (register numbers/offsets blanked). Result: **118/119 sites share ONE
+shape** — `MEM_W(OFF, ctx->rN) = VAL;`, an unconditional field WRITE straight through the
+reloaded, never-range-checked pointer (OFF is `0x0` at 116 sites, `0x4` at 1, `0x8` at 2; VAL is
+a register at 118 sites, a hardcoded `0` at 1, `funcs_3.c emitColorFillRect`). s454's "no clean
+shape" call was correct about the LOAD-TO-WRITE gap (4-24 lines of unrelated intervening code,
+varying per site — genuinely no single blanket regex spans it, unlike `DL_LIST_APPEND_GUARD`'s
+byte-identical 6-line tail) but had not separately checked whether the WRITE shape itself, in
+isolation, was uniform — it is. Same structural risk as `DL_LIST_APPEND_GUARD`/
+`FREELIST_NEXT_GUARD`: nothing validates the reload before it's used as a write ADDRESS.
+
+**Per-site literal-anchor patching** (same discipline as the s436 "type-c" 7-site `-0x63B0`
+patch and the s251 `DLENTRY_TAIL_GUARD` sites list, scaled to 119): captured each site's exact
+2-line anchor (address comment + optional `g_rs64_last_guest_pc` breadcrumb + the `MEM_W(...) =
+...;` write line) verbatim from a fresh regen via a standalone script
+(`scratch_s459_scan_23a8.py`, N64Recomp repo, untracked), confirmed **all 119 unique and
+tree-wide-exactly-1-match** with a standalone probe before touching `fixup_game_funcs.py`
+(`scratch_s459_sites_struct.json`). Generated the guard block programmatically
+(`scratch_s459_apply_patch.py`) as a 119-entry site list plus one shared loop (mirrors the
+`_dlentry_pop_sites`-style convention already used elsewhere in `fixup_game_funcs.py`), inserted
+right after `DL_LIST_APPEND_GUARD`. Guard shape: range-check the reloaded pointer
+(`0x80000000`-`0x80800000`); in range, do the original write; out of range, skip the write and
+log via `ROGUESQ_LOG_SIBLING_PTR_WRITE_GUARD` (same "skip the write, nothing downstream depends
+on it happening" remediation precedent as `DL_LIST_APPEND_GUARD`/`FREELIST_NEXT_GUARD` — a field
+store has no in-function consumer of its own success).
+
+**Pipeline, standard order, no surprises:**
+1. Raw regen: deleted all 50 `RecompiledFuncs/funcs_*.c` (`os.remove` over `glob`, sandbox-safe
+   per the standing caveat), `make_elf.py` → `N64Recomp` — both clean, only expected `[Info]`
+   indirect-tail-call noise.
+2. `fixup_game_funcs.py` — report: `funcs_3.c: sibling-pointer write guard
+   (SIBLING_PTR_WRITE_GUARD) patched x65`, `funcs_4.c: ... patched x54` (65+54=119, exactly
+   matching the pre-counted scan). Audited directly (not just trusting the report): `grep -c
+   "SIBLING_PTR_WRITE_GUARD site=" funcs_3.c funcs_4.c` → 65 + 54 = 119.
+3. `cmake --build -j8` (background): clean, 0 errors, only the pre-existing benign `DDIV`
+   sign-conversion warnings every session sees (46 warnings, same baseline).
+4. `strings RogueSquadron64Recomp | grep -c sibling-ptr-write-guard` → 119; deduped by site
+   address → 119 unique (confirms per-site log distinguishability, not a template collision).
+5. Manual live-verify (`tools/probe.sh`, full 300s/250s-keys schedule, ALL passive guard env
+   vars armed plus the new `ROGUESQ_LOG_SIBLING_PTR_WRITE_GUARD=1`): full schedule completed (all
+   10 scheduled key presses through 250s fired, 125 frames captured), **0 `[CRASH]` markers, 0
+   `sibling-ptr-write-guard` fires**, `hangarbay-entry` reached n=35 (lower than the ~2600-3000
+   baselines several recent sessions saw — same `[keys]`-schedule-dependent variance s448 already
+   noted, not a regression signal by itself; the schedule completing in full end-to-end with 0
+   crash is the load-bearing observation). Confirmation soak queued:
+   `scratch/agent/soak_queue/s459_sibling_ptr_write_confirm.sh`.
+
+**Notable, not chased:** this idiom touches `submitSceneNodeRender` (10 of the 119 sites) — the
+SAME function named in items -293/-294's still-open "wait-for-recurrence breadcrumb" (2
+independent single-occurrence crashes in its call subtree, s456/s457, different `last-guest-pc`
+each time). This guard is now a discriminating instrument for that breadcrumb specifically at
+those 10 sites (watch for `sibling-ptr-write-guard` fires there, not just the aggregate count,
+in future soaks) — flagged in the soak-queue recipe's own comment, not investigated further this
+session (0 fires this run, and the breadcrumb itself is still at n=2, below the "worth a
+dedicated audit" threshold item -294 set).
+
+**Does NOT close anything on its own** — this is a new item (-296 below), separate from item
+-292 (songtempo, unchanged at 19/43, still the next `songtempo-table-guard-29c0` work when that
+hypothesis is revisited) and item -291 (dl-list-append, already closed s456). `NEXT.md` rewritten
+with the new `HYPOTHESIS-ID: sibling-ptr-write-guard-23a8` and item -292's remaining 24 sites
+kept as the standing alternate work unit.
+
+Regen/patch tooling: `scratch_s459_scan_23a8.py`, `scratch_s459_sites.json`,
+`scratch_s459_sites_struct.json`, `scratch_s459_sites_literal.py` (intermediate, superseded by
+the struct version), `scratch_s459_apply_patch.py` — all N64Recomp repo, untracked local
+tooling, not part of this repo's `lib/` submodule tree (confirmed same as every prior fixup
+session), no `submodule-patches/export.sh` step applies.
+
+**Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed — a fresh
+119-site idiom-class guard, `SIBLING_PTR_WRITE_GUARD`, closing out the `-0x23A8` audit item
+s454 had left open; clean full-schedule run, 0 crash, 0 fires, no new observations requiring a
+fix this session beyond the filed-not-chased `0x80015544` background-noise data point).
