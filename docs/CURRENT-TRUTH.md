@@ -162,9 +162,38 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -275 (s439, ADVANCED — added BREADCRUMB18 to give `updateHangarBayScene`
-full breadcrumb coverage, live-verified 0 crashes/0 guard fires over the full 298.5s schedule, a
-null result without a positive control; confirmation soak queued); the next new item takes -276.
+oldest). Current top is -276 (s440, ADVANCED — added an entry counter to `updateHangarBayScene`,
+the first same-run positive control for the BREADCRUMB18 thread: ~2900 calls, 0 crashes, in a
+single 300s run); the next new item takes -277.
+
+-276. **(s440) `updateHangarBayScene` entry counter (`ROGUESQ_LOG_HANGARBAY_ENTRY`) — the first
+    same-run positive control for item -275/-263's BREADCRUMB18 thread.** Consumed the queued
+    `s439_breadcrumb18_confirm` soak first: 2nd consecutive clean run (0 crash, 0 guard fires),
+    breaking the previously-strict alternating clean/crash pattern since s434. Its 7503s
+    wall-clock (vs. usual ~150-350s) is most likely a macOS sleep event pausing the loop mid-run
+    (steady frame/submit-count progression in the log shows the process itself ran normally,
+    single-source, not independently confirmed) — noted for awareness, doesn't change the verdict.
+    Rather than spend a 3rd identical confirm cycle, added an independent entry counter at the top
+    of `updateHangarBayScene` (`N64Recomp/fixup_game_funcs.py`, same signature-search-splice
+    approach as BREADCRUMB18) to test whether the function is even reached in these clean runs.
+    Regen/build caught a real bug: `funcs_28.c` had never used `fprintf`/`stderr` before, so the
+    first build failed (`use of undeclared identifier 'stderr'`); fixed with the same conditional
+    `#include <stdio.h>` pattern other file-specific patches use. Verified no regression to
+    `GENERIC_CACHE_GUARD` (107)/`CACHE_HEAD_A1_GUARD` (7); BREADCRUMB18 unchanged at 2643 writes.
+    Live-verified same schedule: 0 crash, 0 guard fires, 126 frames to 298.0s (3rd clean data
+    point) — but this time with the missing control: 34 throttled log lines show
+    `updateHangarBayScene` was called **~2900+ times** in the single run. This is the first
+    confirmation the target function is a hot, constantly-executing path during exactly the
+    schedule that keeps not reproducing item -263, meaningfully de-risking (not eliminating) the
+    "does the fault even pass through breadcrumbed code" doubt raised at item -275. Found and
+    documented an instrument caveat: the counter's `ra=`/`ctx->r31` field reads 0x00000000 always
+    — the call site (`funcs_28.c:5397`) is a direct C call, not a `jalr`, so the recompiler never
+    populates `ctx->r31` there; the field is uninformative noise for this specific call shape, not
+    a real return address. Confirmation soak queued: `s440_hangarbayentry_confirm.sh` — a 3rd
+    consecutive clean result there would hit iron rule 8's 3-strike budget on hypothesis-id
+    `item-263-updatehangarbayscene-localization`, forcing a pivot (top candidate: an ASAN-style
+    shadow/canary check around the suspected corruption, since the mechanism now demonstrably
+    passes through heavily-executed breadcrumbed code without faulting).
 
 -275. **(s439) BREADCRUMB18 added to `updateHangarBayScene` (funcs_28.c:10918-17722, ~6805 lines,
     2643 breadcrumb writes) — item -263's work unit from item -274.** Regenerated/rebuilt clean (0

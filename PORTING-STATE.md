@@ -36696,3 +36696,83 @@ rather than more breadcrumbs). Confirmation soak queued: `s439_breadcrumb18_conf
 
 **Outcome: ADVANCED** (landed a new instrument — BREADCRUMB18 — regenerated, rebuilt clean, and
 live-verified it end-to-end in the same session).
+
+## Session 440 (2026-08-07)
+
+**Step 1: consumed the queued `s439_breadcrumb18_confirm` soak.** SOAK-RESULTS
+(`20260807-042458`, rc=0) shows a 2nd consecutive clean run for BREADCRUMB18 — 0 `[CRASH]`
+markers, 0 `generic-cache-guard`/`cache-head-a1-guard` fires — breaking the previously-strict
+alternating clean/crash pattern this saga showed since s434 (clean, crash, clean, crash,
+crash, clean, clean). Its own log records a bizarre 7503s wall-clock duration (vs. the usual
+~150-350s for this recipe); `scratch/agent/loop.log` timestamps show the soak started
+04:24:58 and the next iteration started 06:30:03 — a ~2h05m gap. The run's own `run.log`
+content (steady frame-counter/`dpc-fwd` submit-count progression, no gaps, 20 frames
+captured at the expected ~2.4s cadence for the schedule's active portion) shows the process
+itself ran and completed normally; per the boring-first-explanation rule this reads as a
+macOS system sleep event (e.g. laptop lid closed) pausing the wall clock for ~2 hours mid-run,
+not a process-level hang — `loop.sh`'s own header already recommends launching under
+`caffeinate -dis`, which prevents idle/display sleep but not a manually-closed lid. Not
+independently confirmed (single-source, no system sleep log checked), but no evidence
+contradicts it and the alternative (a 2-hour hang that self-resolved with a clean exit and
+intact frame progression) has no plausible mechanism. Noted for awareness; does not change
+the soak's crash-signal verdict.
+
+**Step 2: the missing positive control for BREADCRUMB18.** Two consecutive clean
+confirmations with 0 same-run positive control is exactly the null-result trap iron rule 1
+warns about — nothing yet proved `updateHangarBayScene` is even *entered* during these clean
+runs, as opposed to the driven schedule simply never reaching a code path that calls it.
+Rather than spend a 3rd identical confirm-soak cycle, this session added a genuinely new,
+independent instrument: an entry counter (`ROGUESQ_LOG_HANGARBAY_ENTRY`, gated, throttled
+log — first 5 then every 100th) at the very top of `updateHangarBayScene`'s body in
+`N64Recomp/fixup_game_funcs.py`, placed via the same signature-search-then-splice approach
+BREADCRUMB18 itself uses (coexists regardless of patch order).
+
+**Regen/build hit one real bug**: `funcs_28.c` has never previously used `fprintf`/`stderr`
+(unlike `funcs_3.c` etc., which already carry `#include <stdio.h>`), so the first build
+failed with `use of undeclared identifier 'stderr'`. Fixed by adding the same conditional
+`#include <stdio.h>` insertion other file-specific patches already use. Full regen
+(`make_elf.py` → delete `funcs_*.c` via the Python one-liner → `N64Recomp` → `fixup_game_funcs.py`
+→ `cmake --build . -j8`) then built clean. Verified via direct grep of compiled output: no
+regression to `GENERIC_CACHE_GUARD` (107 sites, 214 raw lines = comment+code) or
+`CACHE_HEAD_A1_GUARD` (7 sites, 14 raw lines); BREADCRUMB18 unchanged at 2643 writes; new
+counter present exactly once.
+
+**Live-verify, same s427-440 schedule, all 4 diagnostics armed**: 0 `[CRASH]`, 0 guard fires,
+126 frames captured to 298.0s (matches s439's own frame count) — a 3rd data point, still
+clean. But THIS run has the positive control the prior two lacked: 34 throttled
+`[hangarbay-entry]` log lines (5 initial + 29 multiples of 100) show `updateHangarBayScene`
+was called **at least ~2900 times** over the single 300s run. This is the first same-run
+confirmation that the breadcrumbed target function is not merely reachable but a hot,
+constantly-executing code path during exactly the schedule that keeps not reproducing item
+-263 — meaningfully strengthens (does not prove) that the 2 clean BREADCRUMB18 confirmations
+are a real null result, not an artifact of the schedule never exercising the instrumented
+code. Combined with the historical roughly-alternating recurrence rate, this is consistent
+with a genuinely rare, state-dependent trigger condition rather than a
+reachability/instrumentation gap — the doubt NEXT.md raised ("does the fault even pass
+through breadcrumbed code?") is now substantially de-risked, though not eliminated (a
+single-instruction race could still evade a per-instruction breadcrumb by nature).
+
+**Instrument caveat found and documented**: the counter's `ra=` field (`ctx->r31`) reads
+`0x00000000` at all ~2900 entries. Source-read of the call site
+(`funcs_28.c:5397`, `updateHangarBayScene(rdram, ctx);`) confirms this is a direct C function
+call, not a `jalr`-style indirect dispatch — the recompiler never emits a `ctx->r31 = <ret
+addr>` assignment for this JAL translation shape, so the field is uninitialized noise here,
+not a real return address. Documented in the queued soak script's header so a future
+occurrence doesn't misread it as a valid guest address.
+
+**Confirmation soak queued**: `scratch/agent/soak_queue/s440_hangarbayentry_confirm.sh`
+(identical schedule, all 4 diagnostics armed, entry counter now permanently included). This
+would be the 3rd consecutive iteration on hypothesis-id
+`item-263-updatehangarbayscene-localization` if it also comes back clean with no new
+discriminating information — per iron rule 8 the iteration after that must either pivot
+(top candidate: an ASAN-style shadow/canary check around the corruption site, since the
+mechanism now demonstrably passes through heavily-executed breadcrumbed code without
+faulting) or write an explicit pivot-preamble justification for continuing.
+
+**Housekeeping**: no `lib/` edits this session (change is in the standalone
+`N64Recomp/fixup_game_funcs.py`, untracked by git there per established pattern) —
+`submodule-patches/export.sh` not needed.
+
+**Outcome: ADVANCED** (landed a new instrument — the `updateHangarBayScene` entry counter,
+the first same-run positive control for the BREADCRUMB18 thread — caught and fixed a real
+build bug it exposed, regenerated, rebuilt clean, and live-verified end-to-end).
