@@ -37631,3 +37631,87 @@ actual state (open only on `S392_H3A`/`S393_H3B`, 50 sites, `BREADCRUMB7` option
 accurately, instead of scattered across 8 verbose entries with some now-stale forward-references.
 
 **Outcome: ADVANCED** (maintenance pass, >=200 net line shrink, per the Step 0 contract).
+
+## Session 453 (2026-08-07)
+
+**Work unit:** `S392_H3A`/`S393_H3B` (50 sites: 29 + 21), the last item in the
+`static5-rename-orphan-sweep` backlog (items -282..-289), per `scratch/agent/NEXT.md`.
+
+**Step 1 — confirm the gate is stale (matches items -284/-286/-288/-289's pattern):** grepped
+`fixup_game_funcs.py` for `_s392_h3a_sites`/`_s393_h3b_sites`: 29 and 21 tuples respectively (not
+the raw "~32/22 string hit" estimate from the old writeup), both gated on `if p.name ==
+"funcs_27.c":`. Located every site's real address in the live `RecompiledFuncs/funcs_28.c` tree:
+all 29 `S392_H3A` anchors resolve inside `updateHangarBayScene` (lines 11144-21079), all 21
+`S393_H3B` anchors inside `hangarTickCameraOrbit` (lines 31457-32715) -- confirmed unique
+tree-wide by address, not assumed. Same doubly-... no, singly-orphaned (file-only, no
+function-name-regex component this time) pattern as the rest of the sweep.
+
+**Step 2 -- why every literal anchor match returns 0 (the actual discriminating work this
+session):** a naive `text.count(anchor)` check against the live file returned 0 for all 50 sites,
+for two DIFFERENT reasons depending on which function:
+- `S392_H3A` (`updateHangarBayScene`): this function got full per-instruction breadcrumb coverage
+  from item -275's `BREADCRUMB18` (s441, 2643 `g_rs64_last_guest_pc = 0x...;` writes, confirmed by
+  direct count -- matches the item -275 writeup's own number exactly). Every anchor's multi-line
+  text assumed no line existed between an instruction's `//` comment and its `ctx->` assignment;
+  BREADCRUMB18 inserts exactly one line there, breaking literal matches uniformly.
+- `S393_H3B` (`hangarTickCameraOrbit`): 0 breadcrumb writes in this function (confirmed by count),
+  so a different cause: several sites' anchors span a point where an EARLIER guard sweep (mostly
+  `S284`) already spliced a guard block into the exact same span, breaking the literal multi-line
+  match independently of breadcrumbs.
+
+**Step 3 -- the real question isn't "why doesn't the anchor match", it's "is the dereference this
+guard was meant to protect already covered".** Wrote a script
+(`N64Recomp/scratch_classify3.py`) that, per site: locates the real current line span by
+instruction address (fixing an earlier version's bug where a naive `0x[0-9A-Fa-f]+` regex matched
+hex immediates inside disassembly comments like `0x8($v0)`, not just instruction addresses --
+caught by comparing against a hand read before trusting the automation, per the "check the boring
+thing first" method trap); identifies the register actually used at the site's real final
+dereference (not always the tuple's declared `reg` field, which names the PRE-combine raw pointer
+register, not the post-combine one that ends up dereferenced); and checks whether an
+already-applied guard block sits between the site's start and that dereference, validating the
+same register, with a reassignment scan to rule out the register being clobbered in between.
+
+**Result: 45/50 sites automatically classified REDUNDANT** by this method (24/29 `S392_H3A`,
+21/21 `S393_H3B`), 0 needing a guard, 5 requiring hand verification (`S392_H3A_5`, `_8`, `_12`,
+`_14`, `_26`) because their own anchor's LAST line happens to dereference an unrelated scratch
+register (e.g. a `lui`/`lwc1` constant-table read, or a next-iteration's unrelated byte load) that
+just happened to be the next sequential instruction after the anchor's real protective span ended
+-- not the risky combined pointer at all. Read all 5 directly:
+- `_5`: the actual `-0x25A4` raw load is already guarded by `G5` (s132 family) immediately after
+  its own load, BEFORE this anchor's declared span even starts -- the anchor's own 4 lines are
+  unrelated-but-safe code that happened to follow.
+- `_8`, `_12`, `_14`: each site's real combined-pointer dereference lies a few lines past where
+  the anchor's declared text ends; in each case an already-active `G`-family guard sits at exactly
+  that real dereference point, checking the right register.
+- `_26`: loads its raw pointer unguarded, but immediately jumps (via a `j`-with-delay-slot MIPS
+  idiom) into the shared join label `L_800ADB18`, which `S392_H3A_29`'s own already-applied `G29`
+  guard already covers for BOTH the jump-in path and the natural-fallthrough path -- a single
+  guard at the join protects both site 26's and site 29's routes into it, exactly as the original
+  s392 session's own comment anticipated ("no special-case handling needed at the join") but
+  didn't realize the join was already guarded independently.
+
+**All 50/50 sites are redundant.** No code change: even after confirming this, patching would
+only add dead, always-skipped duplicate guards (the literal anchors don't match live text
+regardless of the stale file gate, for the two independent reasons in Step 2). Left a closure
+comment in `fixup_game_funcs.py` (N64Recomp repo, confirmed untracked by git -- `git status
+fixup_game_funcs.py` shows `??` -- so no `export.sh`/commit needed there) documenting the finding
+so a future session doesn't reopen this. Verified the edit doesn't break the script:
+`python3 -c "import ast; ast.parse(open('fixup_game_funcs.py').read())"` succeeded.
+
+**What this rules out:** that `S392_H3A`/`S393_H3B` was a partial-coverage case needing a
+"patch the genuinely-uncovered subset" outcome (NEXT.md's anticipated outcome (c)) -- it's the
+extreme case of full redundancy, outcome (a) at 100%, not a mix. Also rules out needing an
+independent-orphaning fix for either bail label (`L_800ADB2C`, `L_800AE060`): moot, since no new
+`goto` sites are being added.
+
+**What this establishes:** the `funcs_40.c`/`funcs_27.c`-gated orphan-sweep inventory (opened item
+-282, s445) is now closed except `BREADCRUMB7` (diagnostic, deliberately out of scope, lowest
+priority, optional). No live M3 crash-guard debt remains from this whole arc. Next session should
+open a fresh M3 idiom-class audit (the s282/s445 discovery method: grep-enumerate a whole idiom
+class, classify every site, guard-or-prove-dead, close the class) rather than continuing this
+specific backlog, which is now empty.
+
+**Outcome: ADVANCED** (ran the planned work unit end to end -- gate-staleness confirmation,
+anchor-matching root cause, per-site mechanistic redundancy classification with a caught-and-fixed
+automation bug, 5-site hand verification, closure documentation -- and reached a definitive,
+verified result: 50/50 redundant, item closed).

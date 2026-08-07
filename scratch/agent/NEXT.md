@@ -1,97 +1,84 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: orphan-guard-completeness-closeout
+HYPOTHESIS-ID: fresh-idiom-class-audit
 
-## s452 note: this was a MAINTENANCE iteration, not a 4th hypothesis iteration
+## s453 close-out: `S392_H3A`/`S393_H3B` — CLOSED, all 50 sites redundant, no code change
 
-Step 0's `wc -c docs/CURRENT-TRUTH.md` (61086 bytes) tripped the 60000-byte maintenance trigger, which
-runs before work-unit selection — so this satisfied the loop's mandatory-pivot rule for real (a
-maintenance pass is a different activity, not a repeat of `orphan-guard-completeness-closeout`) without
-needing to force a probe or an artificial pivot on the hypothesis itself. `docs/CURRENT-TRUTH.md`
-703→475 lines (61086→41233 bytes); the s445-451 orphan-sweep detail (items -282..-289) and the
-already-once-compacted s438-445 BREADCRUMB18/free-list-guard arc (items -274..-280, -263) both migrated
-to `docs/PROJECT-OVERVIEW.md` §16 as condensed range pointers. No conclusions changed. Full detail:
-`PORTING-STATE.md` Session 452.
+Full mechanistic verification (not sampling): all 29 `S392_H3A` sites (in `updateHangarBayScene`)
+and all 21 `S393_H3B` sites (in `hangarTickCameraOrbit`) are already protected by earlier-applied
+guard families (`HANGAR_BAY_DEREF_GUARD`/"G"-family from s132, a few `S284`/`S285` sites, one
+shared-join-point case). No patch applied — adding guards would only create dead, always-skipped
+duplicates. Closure comment left in `fixup_game_funcs.py` (N64Recomp repo, untracked, no
+`export.sh` needed). Full detail: `docs/CURRENT-TRUTH.md` item -290, `PORTING-STATE.md` Session
+453.
 
-**This session's actual work unit is UNCHANGED from below — the S392_H3A/S393_H3B plan still stands.**
-If a NEXT maintenance trigger doesn't fire, resume there directly; do not re-read this note as new
-work. This IS iteration 4 on the hypothesis thread in the sense that the underlying question is still
-open — but iteration 4 was a maintenance pass, not a repeat probe, so the loop's pivot condition should
-re-arm fresh starting from the next iteration that actually touches `S392_H3A`/`S393_H3B`.
+**This closes the `funcs_40.c`/`funcs_27.c`-gated orphan-sweep inventory (item -282, opened s445)
+except `BREADCRUMB7`** (a diagnostic, not a crash guard — deliberately out of scope, optional,
+lowest priority; `grep -n 'BREADCRUMB7' fixup_game_funcs.py` if a future session wants to close it
+out, but it is not required before considering the arc done).
 
-## What changed session s451
+## This session's work unit: open a FRESH M3 idiom-class audit
 
-Fixed item -289: the 9 doubly-orphaned `composeNpcOrientationMatrix` guard sites ("guard1"-"guard9",
-s100-s261-era, distinct from item -284's own 30-site s446 fix for the same function). All 9 were
-gated on the dead file location `funcs_40.c` and the dead function name `static_5_800AB1C8` since
-s427. Standalone scan confirmed all 9 anchors unique tree-wide and inside `composeNpcOrientationMatrix`'s
-own body span (`funcs_28.c`). Checked the shared `goto L_800AB618;` bail target for independent
-orphaning BEFORE ungating (s450's own lesson) — confirmed already live via other already-ungated
-guards in the same file (`S284_AB1C8_6`-`_10`, `S390_H2B_*`), so no shared-infrastructure fix was
-needed this time. Ungated all 9 (dropped file+`func_start_m` scoping, direct `re.subn` on whole file
-text + `SystemExit`-on-`n>1` guard, s446/s448/s450 pattern). Full regen/build clean, 9/9 patches x1,
-`strings`-verified. Live-verify: 0 fires (matches item -287 baseline), `hangarbay-entry` n=2700,
-crashed ~197s in on the already-catalogued `BREADCRUMB6`/near-`0x80000000` family
-(`buildPositionAndCallTransformHelper+1736`, `si_addr=0x380000010` — first seen s273, reconfirmed
-"not a new crash class" as recently as s328a). Confirmation soak queued: `s451_composenpc9_confirm.sh`.
+The tracked backlog that has driven the last ~9 sessions (s445-453, `static5-rename-orphan-sweep`)
+is now empty. Per strategic priority #3 (`docs/CURRENT-TRUTH.md` USER DIRECTIVE), M3 crash work
+continues only as systematic idiom-class audits — the s282/s445 discovery method: grep-enumerate a
+whole idiom class across the live `RecompiledFuncs/*.c` tree, classify every site (needs-guard /
+already-guarded / confirmed-safe), guard or prove dead, close the class. This session's job is to
+FIND the next class, not assume one.
 
-**This closes the `funcs_40.c`-gated orphan inventory except `BREADCRUMB7`** (a diagnostic, not a
-crash guard — deliberately out of scope, lowest priority). `grep -c 'if p.name == "funcs_40.c":'
-fixup_game_funcs.py` now returns 1.
+**Known false start, don't just repeat it**: s389-397 ran a "codebase-wide frequency scan for the
+next comparable idiom class" and got a negative result (`docs/PROJECT-OVERVIEW.md` §14) — but that
+scan predates the s427 duplicate-symbol-name split (the ~13,770-line merged blob that later turned
+out to hide real function boundaries) and the whole s426-453 arc that came after it. The post-s427
+function-name landscape is different now; a fresh scan is not guaranteed to hit the same dead end.
 
-Full detail: `docs/CURRENT-TRUTH.md` item -289, `PORTING-STATE.md` Session 451.
+### Discriminating measurement
 
-## This session's work unit: `S392_H3A`/`S393_H3B` (50 sites total: 29 + 21)
+Before building anything, name 2-4 candidate idiom classes and the ONE measurement that would
+show each is (a) worth auditing (multiple unguarded live sites) vs (b) already closed/dead
+(everything's covered or unreachable) vs (c) not applicable (pattern doesn't actually appear).
+Candidates to consider (verify counts before committing to one, don't assume):
+1. Other fixed-offset register-reload idioms besides `-0x25A4` — grep for other suspicious
+   negative-offset loads off `$s0`-`$s7`/`$gp`-style base registers across `RecompiledFuncs/*.c`
+   that read the way `-0x25A4($sN)` did (a "reload a saved global/table pointer, then dereference
+   without a range check" shape), tally raw hit counts per offset value, look for the next
+   highest-frequency offset that ISN'T already mostly guarded.
+2. A different function-scope sweep for guards still hardcoded to a stale `funcs_NN.c`/
+   `static_N_0xADDR` gate that this whole arc's method (items -261..-290) hasn't touched yet —
+   grep `fixup_game_funcs.py` for `if p.name == "funcs_` across ALL its patch blocks (not just the
+   ones already swept) and cross-check each gated filename still contains the code it thinks it
+   does, the same check that opened items -284/-286/-288/-289/-290.
+3. If neither of the above turns up a live class, consider whether M3 crash work has genuinely run
+   dry for now and it's legitimate to reassess against strategic priority #2 (M5 audio) — but M5 is
+   marked DONE/CLOSED, no new lead — so check for a NEW audio-adjacent lead first before declaring
+   BLOCKED; don't manufacture work.
 
-The next-largest remaining item in item -284's tracked backlog. Grep `S392_H3A_` / `S393_H3B_` in
-`fixup_game_funcs.py` (currently ~32/22 raw string hits respectively — includes both the tuple list
-definitions and their application loop, so the real site count needs confirming, not assumed from
-grep count alone).
+### Method (same as every session in this arc)
 
-**Known wrinkle from item -284's own read (s446), MUST be checked before treating this as a
-copy-paste of the s446/s448/s450/s451 method**: `S392_H3A`'s bail label `L_800ADB2C` sits INSIDE
-`updateHangarBayScene`'s body (not a separate function) — meaning some or all of these 29 sites may
-guard derefs ALREADY covered by `GENERIC_CACHE_GUARD`'s blanket 107-site fix (item -270/-273). Check
-for redundancy (does GENERIC_CACHE_GUARD already validate the same pointer before these sites'
-own dereference point?) BEFORE re-adding — do not just ungate-and-patch blindly; a chunk of this
-family may correctly no-op as redundant, same as 7/11 sites did for `S390_H2B` in item -286.
-
-Same method as s446/s448/s450/s451, adapted:
-1. Grep `S392_H3A_`/`S393_H3B_` for exact current line ranges and site count (don't trust the s446
-   writeup's counts blindly — confirm against the live file).
-2. Raw regen (delete `RecompiledFuncs/funcs_*.c` -> `make_elf.py` -> `N64Recomp`, NO fixup yet).
-3. Standalone Python scan: for each site, check tree-wide anchor uniqueness AND whether the site is
-   already redundant with an active `GENERIC_CACHE_GUARD` check (read the surrounding code, not just
-   grep the anchor).
-4. Check the `L_800ADB2C` goto-target dependency: is it independently orphaned? (Unlike composeNpc's
-   `L_800AB618`, this one has NOT yet been checked against the current tree — don't assume either
-   way, same discipline as s450/s451.)
-5. Ungate (whatever the current file/function-name gate is — check first, may differ from the
-   `funcs_40.c` pattern since these might already be scoped differently) + `SystemExit`-on-`n>1`
-   guard.
-6. Full regen -> build -> audit fixup report -> `strings` -> live-verify (full armed-var list, add
-   `ROGUESQ_LOG_S392_H3A_GUARD`/`ROGUESQ_LOG_S393_H3B_GUARD` if not already in the standard list —
-   check `soak_queue/s451_composenpc9_confirm.sh` for the current baseline armed-var set) -> queue a
-   confirmation soak. **Expected result per item -287's baseline: 0 fires is the norm, not an open
-   question.**
-
-If `S392_H3A`/`S393_H3B` turns out to be substantially redundant with `GENERIC_CACHE_GUARD` (per the
-known wrinkle above), that's a legitimate, useful finding on its own — document the redundancy
-percentage and only patch the genuinely-uncovered subset, don't force full application.
-
-After `S392_H3A`/`S393_H3B`, remaining orphan-sweep debt: `BREADCRUMB7` only (diagnostic, lowest
-priority — optional, not required before declaring the whole `funcs_40.c` orphan-sweep closed).
-
-If `S392_H3A`/`S393_H3B` starts feeling like diminishing returns relative to session cost, it's
-legitimate to instead open a genuinely NEW M3 idiom-class audit (strategic priority #3's other
-sanctioned mode) — e.g. a fresh frequency-scan the way s282/s445 opened `GETDATITEM_GUARD`.
-
-## Discriminating measurement
-
-Does `S392_H3A`'s bail-label body-containment check confirm these sites are (a) already covered by
-`GENERIC_CACHE_GUARD` (redundant, minimal patch needed), (b) genuinely uncovered (full 29+21-site
-patch needed), or (c) a mix — and does `L_800ADB2C` need its own independent-orphaning fix first (as
-`L_hangarbay_guard_exit` did for item -288) or not (as `L_800AB618` did not, for item -289)?
+1. Grep-enumerate raw candidate sites for the chosen idiom, get an exact count (don't trust an old
+   session's remembered count).
+2. Raw regen if needed (delete `RecompiledFuncs/funcs_*.c` → `make_elf.py` → `N64Recomp`, NO fixup
+   yet) to get a clean baseline tree, OR work against the existing built tree if it's current
+   (check mtimes) — a fresh regen is safer if in doubt.
+3. Standalone Python scan: tree-wide anchor-uniqueness check per site BEFORE writing any patch
+   (`SystemExit`-on->1-match hard guard, s446-era discipline) — and this session's own lesson:
+   build the address-extraction regex to match ONLY `// 0xADDR:` comment prefixes, not any
+   `0x[hex]` substring anywhere in the anchor text, or immediate-offset text inside a disassembly
+   comment (e.g. `0x8($v0)`) will falsely match and corrupt line-range resolution.
+2b. **Before assuming a site needs a fresh guard, check whether it's already redundant** — s453's
+   method: identify the register actually dereferenced at the site's real endpoint (not
+   necessarily the last line of whatever anchor text you first write down), then scan a window
+   before AND after that point for an already-applied guard block validating that same register,
+   including across a shared `goto`-target join if the site's own control flow jumps into one.
+   Don't assume "same reg" always sits within the specific 4-line span you first guessed — expand
+   the search window if you get an AMBIGUOUS/UNRESOLVED classification rather than treating it as
+   NEEDS_GUARD by default.
+4. Ungate/patch only genuinely-uncovered sites + `SystemExit`-on-`n>1` guard.
+5. Full regen → build → audit fixup report → `strings` → live-verify (full armed-var list) → queue
+   a confirmation soak.
+6. **Expected result per item -287's established baseline for this whole guard-idiom family: 0
+   fires is the norm, not an open question** — don't spend a session chasing a positive control
+   for a guard family that's already had one (item -287, s449).
 
 ## Process notes carried forward
 
@@ -99,24 +86,17 @@ patch needed), or (c) a mix — and does `L_800ADB2C` need its own independent-o
 - `fixup_game_funcs.py` lives in the sibling `N64Recomp` repo
   (`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`), NOT in this repo — it is
   not git-tracked by RogueSquadron64Recomp and needs no `export.sh`.
-- When ungating a multi-site family, expect SOME sites to be redundant no-ops against
-  earlier-applied guards in the same fixup script — not a bug, don't force-match shortened anchors
-  to avoid it. `S392_H3A`/`S393_H3B` is explicitly flagged as likely to have MORE redundancy than
-  usual (against `GENERIC_CACHE_GUARD`, not just sibling `-0x25A4` guards).
 - Watch for DOUBLY-orphaned gates (file AND function-name-regex referencing a dead old
-  `static_N_0xADDR` name) — confirmed pattern across 4 families now (S390_H2, G1-G32/A-E, item -289,
-  and now potentially S392/S393 — check, don't assume).
-- **s450 lesson, reconfirmed s451**: before ungating any family whose patch body contains a bare
-  `goto LABEL` (not a label the patch itself defines), grep for that label's OWN defining block and
-  confirm it is not independently orphaned by the same mechanism — a build failure ("undeclared
-  label") is the symptom if you skip this check. s451 found the check can also come back CLEAN
-  (no fix needed) when the label is already proven live by other already-ungated guards in the same
-  file — check first, don't assume either outcome.
-- **s449 pattern still applies**: a guard family's confirm soak logging 0 trips no longer needs a
-  fresh positive-control round for this whole `-0x25A4`/table-deref/pointer-chase guard idiom class
-  — item -287 established the baseline (0 trips under 245000+ reaches). Read a future 0-fires result
-  as "consistent with baseline," not "inconclusive."
-- **s451 lesson**: the near-`0x80000000`/`BREADCRUMB6` "near-zero guest pointer" crash family
-  (`si_addr=0x3800000xx`, `pc-symbol=buildPositionAndCallTransformHelper+...`) is a recurring,
-  fully-catalogued background crash signature unrelated to this whole orphan-sweep effort — if a
-  future confirm soak hits it again, do not re-investigate, just note the occurrence.
+  `static_N_0xADDR` name) — confirmed pattern across several families now. Check, don't assume.
+- Before ungating any family whose patch body contains a bare `goto LABEL` (not a label the patch
+  itself defines), grep for that label's OWN defining block and confirm it is not independently
+  orphaned — a build failure ("undeclared label") is the symptom if you skip this check. It can
+  also come back CLEAN (already proven live by other already-ungated guards in the same file) —
+  check first, don't assume either outcome.
+- The near-`0x80000000`/`BREADCRUMB6` "near-zero guest pointer" crash family (`si_addr=0x3800000xx`,
+  `pc-symbol=buildPositionAndCallTransformHelper+...`) is a recurring, fully-catalogued background
+  crash signature unrelated to this whole orphan-sweep effort — if a future confirm soak hits it
+  again, do not re-investigate, just note the occurrence.
+- Scratch analysis scripts from s453 (`N64Recomp/scratch_classify3.py`,
+  `scratch_verify_no_reassign.py`) are a reusable template for the "is this site already redundant"
+  check — adapt rather than rewrite from scratch for the next idiom class.

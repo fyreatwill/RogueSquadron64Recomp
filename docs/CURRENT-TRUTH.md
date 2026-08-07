@@ -25,11 +25,12 @@ Priority order for upcoming iterations, set after the 300-session review:
    `-0x25A4` family is closed (s283-396). **The s426-429 duplicate-symbol-name thread (18/18 pairs) and
    its s438-445 BREADCRUMB18/free-list-guard follow-on are both CLOSED** (items -261..-280, -263 —
    see below). **Its s445-451 fallout, the `static5-rename-orphan-sweep` (every pre-s427 guard
-   hardcoded to a now-renamed function), is CLOSED except `S392_H3A`/`S393_H3B` (50 sites) and
-   `BREADCRUMB7`** (items -282..-289 below) — s449 confirmed this whole guard idiom class is correct
-   hardening, not a live crash source, so finishing it is completeness debt-paydown, not a crash hunt.
-   Current top work unit (`scratch/agent/NEXT.md`): `S392_H3A`/`S393_H3B`, or a fresh M3 idiom-class
-   audit if that starts feeling like diminishing returns. Full session-by-session arc: PROJECT-OVERVIEW
+   hardcoded to a now-renamed function), is now fully CLOSED** (items -282..-290 below) — s449
+   confirmed this whole guard idiom class is correct hardening, not a live crash source, and s453
+   closed the tracked backlog's last item (`S392_H3A`/`S393_H3B`, 50 sites, ALL redundant, no patch
+   needed) except `BREADCRUMB7` (diagnostic, deliberately out of scope, lowest priority). Current
+   top work unit (`scratch/agent/NEXT.md`): a fresh M3 idiom-class audit (discovery method, not a
+   specific target — the tracked backlog is exhausted). Full session-by-session arc: PROJECT-OVERVIEW
    §16.
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
@@ -169,8 +170,31 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -289 (s450, a new backlog item found incidentally — see below); the
-next new item takes -290.
+oldest). Current top is -290 (s453, closing the `S392_H3A`/`S393_H3B` backlog — see below); the
+next new item takes -291.
+
+-290. **(s453) `S392_H3A`/`S393_H3B` (50 sites, items -282..-289's own tracked remainder):
+    INVESTIGATED AND CLOSED, no code change — all 50 sites are redundant, not a partial-coverage
+    case.** Confirmed the same `funcs_27.c`→`funcs_28.c` file-gate staleness as items -284/-286/
+    -288/-289 (all 29 `S392_H3A` sites resolve into `updateHangarBayScene`, all 21 `S393_H3B`
+    sites into `hangarTickCameraOrbit`, both tree-wide-unique by address), but unlike those items
+    fixing the gate would add nothing: a full per-site mechanistic re-derivation (real current
+    line range, the register actually dereferenced at the end of each guarded sequence — not
+    always the tuple's declared pre-combine `reg` field — checked for an already-active earlier
+    guard on that exact register before the deref, plus a reassignment scan in between) found
+    every one of the 50 sites already covered by earlier guard sweeps (mostly the s132
+    `HANGAR_BAY_DEREF_GUARD`/"G"-family, a few `S284`/`S285` sites, one shared-join-point case).
+    3 sites needed hand verification because their own anchor's trailing instruction happens to
+    dereference an unrelated scratch register, not the risky pointer — an automated "last MEM_*
+    in the anchor" heuristic misclassified them as unresolved before a direct read confirmed the
+    real deref (a few lines further in) was already guarded. No patch applied: the anchors don't
+    match live text regardless of the stale gate (intervening already-applied guard blocks break
+    the multi-line text match independently), and adding guards here would only be dead,
+    always-skipped duplicates. Closure comment left in `fixup_game_funcs.py` (N64Recomp repo,
+    untracked, no `export.sh` needed) so a future session doesn't re-open this. **Closes the
+    `funcs_40.c`/`funcs_27.c`-gated orphan-sweep inventory except `BREADCRUMB7`** (diagnostic,
+    deliberately out of scope, lowest priority — the sole remaining item from -282..-289's
+    tracked backlog). Full detail: `PORTING-STATE.md` Session 453.
 
 -282..-289. **(s445-451) `static5-rename-orphan-sweep`: the s427 duplicate-symbol fix (item
     -261..-267) split a ~13,770-line anonymous merged blob back into ~15 real functions
