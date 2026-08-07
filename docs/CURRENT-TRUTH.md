@@ -179,9 +179,36 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -296 (s459, a fresh idiom class found AND CLOSED in one session — see
-below). Item -292 (24 sites remain across 2 reader functions, `songtempo-table-guard-29c0`) is
-the standing alternate work unit. The next NEW item takes -297.
+oldest). Current top is -297 (s460, item -292's next slice). Item -292 (12 sites remain in
+`stepActiveSongTracks`, `songtempo-table-guard-29c0`) is the standing alternate work unit. The
+next NEW item takes -298.
+
+-297. **(s460) Executed item -292's next slice: `advanceSongRegion` (12 sites), 31/43 total —
+    only `stepActiveSongTracks` (12) remains.** Same idiom/family/env var as item -292
+    (`0x29C0($reg)` → global `0x801529C0`), the last-but-one remaining reader function. Read the
+    whole function body before patching (`funcs_25.c` 3654-4192): NOT a single-loop template like
+    the 4 already-fixed reader functions — an outer per-channel loop (`$s1`/r17, 0-0x3F, head
+    `L_80095280`) containing an inner list-walk loop (`L_800952BC`) and a "loop back or fall
+    through" check block (`L_80095504`) feeding a finalize block (`L_80095534`). Despite NEXT.md
+    flagging this function as a suspected cross-function-shared-tail-merge candidate (the
+    `lvj_checkComplexObjectives`-family risk), it turned out to have an ordinary single
+    entry/exit — the flagged risk did not materialize here (still worth checking on
+    `stepActiveSongTracks`). Per-site bails all reuse existing labels already on the function's
+    own control-flow graph (no new labels invented): site asr1 reuses the function's own adjacent
+    null-data skip idiom; asr2-asr10 (9 sites, one sequential "populate this list node" block that
+    always flows into the loop-continuation check) all bail `goto L_80095504;`; asr11 (the check
+    itself) bails to `L_80095534`, the same target its own `beq` takes on a false condition; asr12
+    bails to `L_8009556C`, its natural fallthrough target. Standard pipeline clean: fixup report
+    `x12 (of 12 sites)`, direct grep confirmed 31/31 total `songtempo-table-guard` sites in
+    `funcs_25.c`, `strings` confirmed 31/31 distinct format strings, build clean. Live-verify
+    (full 300s/250s-keys schedule, all passive guards armed): **0 `songtempo-table-guard` fires**
+    (null result, matches the family's established baseline), `hangarbay-entry` n=2800. The run
+    DID crash late in the schedule, but on the exact already-catalogued
+    `coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` background-noise signature (closed
+    since the s354-366 arc) — no `funcs_25.c` frame in the backtrace, filed not chased.
+    Confirmation soak queued: `scratch/agent/soak_queue/s460_advancesongregion_confirm.sh`. Does
+    NOT close item -292 — `stepActiveSongTracks` (12 sites, ~744 lines) remains; once done, item
+    -292 closes at 43/43.
 
 -296. **(s459) Fresh M3 idiom class found AND CLOSED, same session: `-0x23A8($reg)` → sibling
     global `0x8011DC58`, `SIBLING_PTR_WRITE_GUARD` (119 sites, `funcs_3.c`/`funcs_4.c`).** Chosen
@@ -315,26 +342,28 @@ the standing alternate work unit. The next NEW item takes -297.
     same uninitialized/stale-global risk the `-0x25A4` family was closed for. M5-audio-adjacent
     (MusyX song sequencer) — a genuinely new lead per the USER DIRECTIVE's M5 gate, though this is
     M3 guard-audit work, not new M5 de-stubbing.
-    **Fixed and fully verified across s454/s457/s458: `updateSongTempoTickRate` (4 sites, s454) +
-    `tickScheduledSongEvents` (5 sites, s457) + `stepSongPitchBendLanes` (5 sites, s457) +
-    `stepSongModulationLanes` (5 sites, s458) = 19/43 sites, 4 of 6 reader functions.** Per-site
-    bail semantics hand-derived by reading each whole function body (not templated blindly) — full
-    derivation for the s457 pair: item -294; for `stepSongModulationLanes`: item -295 above.
+    **Fixed and fully verified across s454/s457/s458/s460: `updateSongTempoTickRate` (4 sites,
+    s454) + `tickScheduledSongEvents` (5 sites, s457) + `stepSongPitchBendLanes` (5 sites, s457) +
+    `stepSongModulationLanes` (5 sites, s458) + `advanceSongRegion` (12 sites, s460) = 31/43
+    sites, 5 of 6 reader functions.** Per-site bail semantics hand-derived by reading each whole
+    function body (not templated blindly) — full derivation for the s457 pair: item -294; for
+    `stepSongModulationLanes`: item -295; for `advanceSongRegion`: item -297 above.
     `updateSongTempoTickRate`'s: site 1 bails with a stack-neutral `return;` (loads before the
     prologue runs); sites 2/3 reuse the function's own tick-loop exit label `L_80095648`; site 4
-    duplicates the real epilogue. All 4 functions' confirmation soaks queued
-    (`s454_songtempo_confirm.sh`, `s457_songtempo_readers_confirm.sh`,
-    `s458_songtempo_smod_confirm.sh`); all delivered/expect null results (0 guard fires) matching
-    item -287's established 0-fires baseline for this whole guard idiom class — not an open
-    question.
-    **NOT fixed, queued as the next slice of THIS item:** the last 2 reader functions (24 sites):
-    `advanceSongRegion` (12 sites, ~539 lines), `stepActiveSongTracks` (12 sites, ~744 lines). Both
-    are unusually large and may involve the recompiler's cross-function shared-tail-merge behavior
-    seen elsewhere (`lvj_checkComplexObjectives`/`audioCompandS16`/`__OSGlobalIntMask`) — each
-    needs its own full read before patching, not a blind copy of the smaller functions' bail
-    patterns. Do `advanceSongRegion` next (smaller of the two remaining) — read the whole body
-    first, do not assume a uniform template; check the reported prologue/epilogue stack-frame
-    mismatch before trusting a single simple bail-to-epilogue pattern.
+    duplicates the real epilogue. `advanceSongRegion` turned out NOT to need the
+    cross-function-shared-tail-merge caution flagged below — ordinary single entry/exit, per-site
+    bails all reuse existing labels on its own control-flow graph. All 5 functions' confirmation
+    soaks queued (`s454_songtempo_confirm.sh`, `s457_songtempo_readers_confirm.sh`,
+    `s458_songtempo_smod_confirm.sh`, `s460_advancesongregion_confirm.sh`); all delivered/expect
+    null results (0 guard fires) matching item -287's established 0-fires baseline for this whole
+    guard idiom class — not an open question.
+    **NOT fixed, the last remaining slice of THIS item:** `stepActiveSongTracks` (12 sites, ~744
+    lines) — the largest of the 6 reader functions. May still involve the recompiler's
+    cross-function shared-tail-merge behavior seen elsewhere (`lvj_checkComplexObjectives`/
+    `audioCompandS16`/`__OSGlobalIntMask`) even though `advanceSongRegion` turned out not to —
+    needs its own full read before patching, not a blind copy of any prior function's bail
+    patterns; check the reported prologue/epilogue stack-frame mismatch before trusting a single
+    simple bail-to-epilogue pattern. Once done, item -292 CLOSES at 43/43 sites.
 
 -291. **(s454) Fresh M3 idiom class found: `-0x5824($reg)` → global `0x8011A7DC`, a doubly-linked-
     list append with NO existing check, structurally identical to (but a different global from)

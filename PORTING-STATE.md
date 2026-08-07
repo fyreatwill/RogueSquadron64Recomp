@@ -38282,3 +38282,77 @@ session), no `submodule-patches/export.sh` step applies.
 119-site idiom-class guard, `SIBLING_PTR_WRITE_GUARD`, closing out the `-0x23A8` audit item
 s454 had left open; clean full-schedule run, 0 crash, 0 fires, no new observations requiring a
 fix this session beyond the filed-not-chased `0x80015544` background-noise data point).
+
+## Session 460 (2026-08-07): item -292's next slice, `advanceSongRegion` (12 sites),
+`SONGTEMPO_TABLE_GUARD` family -- 31/43 total, only `stepActiveSongTracks` (12) remains
+
+Per `NEXT.md`'s priority-1 instruction (item -292's `songtempo-table-guard-29c0` hypothesis was
+no longer subject to rule 8's consecutive-iteration block, since s459's pivot fully closed a
+different hypothesis rather than leaving it half-open): resumed `SONGTEMPO_TABLE_GUARD`
+(`0x29C0($reg)` -> global `0x801529C0`, the MusyX current-song-track base pointer) on
+`advanceSongRegion`, the smaller of the two remaining reader functions (12 sites vs
+`stepActiveSongTracks`'s 12 -- NEXT.md called it "smaller" by line count, ~539 vs ~744 lines).
+
+Read the whole function body before patching (`funcs_25.c` 3654-4192, N64Recomp/RecompiledFuncs
+copy). Confirmed it is NOT a simple single-loop template like the four already-fixed reader
+functions (`updateSongTempoTickRate`/`tickScheduledSongEvents`/`stepSongPitchBendLanes`/
+`stepSongModulationLanes`, all single-loop, all closed s454/s457/s458): it's an outer per-channel
+loop (`$s1`/r17, 0-0x3F, head `L_80095280`, continue point `L_80095570`) containing an inner
+list-walk loop (`L_800952BC`) and a second small "loop back into the walk, or fall through"
+check block (`L_80095504`) feeding a finalize block (`L_80095534`) that itself falls through to
+the outer loop's own advance point (`L_8009556C`). Despite NEXT.md flagging both remaining
+functions as suspected candidates for the recompiler's cross-function shared-tail-merge behavior
+(seen elsewhere in `lvj_checkComplexObjectives`/`audioCompandS16`/`__OSGlobalIntMask`), this
+function turned out to have a single, ordinary entry/exit (one prologue at the top, one epilogue
+at the bottom, no merged tail found on inspection) -- the "odd stack-frame mismatch" NEXT.md
+flagged did not materialize here specifically; still worth checking on `stepActiveSongTracks`
+before assuming the same.
+
+Per-site bail derivation (all 12 confirmed tree-wide-unique via a standalone Python scan before
+touching `fixup_game_funcs.py`, same discipline as every prior slice): site asr1 (0x80095284,
+outer-loop head, reg r8) reloads the global to compute the current channel's region-slot
+pointer; the function's OWN very next instructions already implement a null-data skip idiom for
+this exact pointer (source lines 3696-3701: `if (r4==0) { s2 += 0x10; goto L_80095570; }`), so
+an invalid reload reuses that identical bail. Sites asr2-asr10 (0x80095338, 0x80095394,
+0x800953C4, 0x800953F0, 0x80095404, 0x80095418, 0x80095434, 0x800954D0, 0x800954F0) are all
+inside one sequential "populate this list node's fields" block that always flows into the
+loop-continuation check at `L_80095504` with no intervening branch back into the block (asr2's
+own original instruction is literally an unconditional `j L_80095504`) -- all nine reuse `goto
+L_80095504;`, skipping only the current node's remaining field writes. Site asr11 (0x80095508,
+`L_80095504` itself) reloads the global for a channel-indexed loop-continuation check unrelated
+to the populate block; an invalid reload picks the SAFER of the check's two natural outcomes (not
+looping back into the list walk) by jumping to `L_80095534`, the same target the check's own
+`beq $v0,$zero` takes when the condition is false. Site asr12 (0x80095538, `L_80095534`) reloads
+the global for the finalize block's own field writes, which fall straight through to the outer
+loop's advance point `L_8009556C` with no branch in between -- bails there directly.
+
+Standard pipeline clean throughout: `make_elf.py` -> deleted stale `funcs_*.c` (50 files, Python
+`os.remove`, sandbox-safe) -> `N64Recomp` -> `fixup_game_funcs.py` (report:
+`advanceSongRegion SONGTEMPO_TABLE_GUARD patched x12 (of 12 sites)`, audited against a direct
+grep of `SONGTEMPO_TABLE_GUARD site=` across `funcs_25.c`: 31 total, matching 19 prior + 12 new
+exactly) -> `cmake --build` (background, clean, 0 errors) -> `strings` on the built binary
+confirmed 31/31 distinct `songtempo-table-guard` format strings.
+
+Live-verify (`tools/probe.sh`, full 300s/250s-keys schedule, ALL passive guard env vars armed,
+copied from s459's own confirm-soak recipe plus `ROGUESQ_LOG_SONGTEMPO_TABLE_GUARD=1`): **0
+`songtempo-table-guard` fires** (null result, matches the whole family's established 0-fires
+baseline), `hangarbay-entry` reached n=2800 (comparable to recent baselines). The run DID crash
+late in the schedule (`[CRASH]` present, `pc-symbol=coalesceFreeHeapBlocks+4424`,
+`last-guest-pc=0x8000247c`) -- but this is the EXACT already-catalogued background-noise
+signature first closed in the s354-366 arc and reconfirmed as recently as items -282/-285's own
+session notes (same pc-symbol, same last-guest-pc, matches PORTING-STATE ~L33306 verbatim); no
+`funcs_25.c` frame anywhere in the backtrace, definitively unrelated to this session's patch.
+Filed, not chased, per the crash-signature-blindness discipline and the USER DIRECTIVE's
+no-reactive-single-crash-chase rule -- this is a RECURRENCE of an old catalogued class, not a new
+one. Confirmation soak queued: `scratch/agent/soak_queue/s460_advancesongregion_confirm.sh`.
+
+**Does NOT close item -292** -- `stepActiveSongTracks` (12 sites, ~744 lines, `funcs_25.c`) is
+the last remaining reader function. Same method: read the whole body first (check specifically
+for the cross-function shared-tail-merge risk NEXT.md flagged, since it did NOT materialize in
+`advanceSongRegion`), derive per-site bail semantics from the function's own existing control-flow
+labels, do not templatize blindly. Once done, item -292 CLOSES at 43/43 sites.
+
+**Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed -- 12 more sites
+of a fresh idiom-class guard family, clean pipeline throughout, 0 fires on the guard itself, and
+the run's own crash independently reconfirmed as already-catalogued background noise rather than
+a new lead).

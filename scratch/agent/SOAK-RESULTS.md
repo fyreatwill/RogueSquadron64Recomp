@@ -98,3 +98,4 @@
 20260807-114341 | s456_dl_list_append_confirm | rc=3 | 154s | scratch/agent/soak_results/s456_dl_list_append_confirm_20260807-114341.log
 20260807-120355 | s457_songtempo_readers_confirm | rc=0 | 348s | scratch/agent/soak_results/s457_songtempo_readers_confirm_20260807-120355.log
 20260807-122322 | s458_songtempo_smod_confirm | rc=3 | 159s | scratch/agent/soak_results/s458_songtempo_smod_confirm_20260807-122322.log
+20260807-124640 | s459_sibling_ptr_write_confirm | rc=3 | 157s | scratch/agent/soak_results/s459_sibling_ptr_write_confirm_20260807-124640.log
