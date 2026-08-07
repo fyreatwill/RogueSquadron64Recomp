@@ -162,9 +162,37 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -270 (s434, ADVANCED — found and systematically fixed a 107-site unguarded
-idiom class, the largest single-session guard count in this project's history); the next new item
-takes -271.
+oldest). Current top is -271 (s435, ADVANCED — root-caused a last-guest-pc misattribution and closed
+the diagnostic coverage gap that caused it); the next new item takes -272.
+
+-271. **(s435) Item -270's confirmation soak crashed on a DIFFERENT, previously-unguarded bug —
+    root-caused as a last-guest-pc MISATTRIBUTION, not a new corruption site; fixed by extending
+    breadcrumb coverage (BREADCRUMB16), not by guarding blind.** `s434_genericcacheguard_confirm.sh`
+    (queued s434) came back `rc=1` at 170s — deeper into the schedule than any prior -261..-269
+    confirmation run — crashing with `pc-symbol=emitMaterialRenderStateDL+608`,
+    `last-guest-pc=0x8001033C`. Localizing `0x8001033C` (`s434_symrange2.py`'s method) found it's
+    `submitSceneNodeRender`'s own call site into `emitMaterialTexturedDL` (the `jal` delay-slot
+    instruction), not the actual fault location — a direct grep confirmed `emitMaterialTexturedDL`'s
+    ~1258-line body has **zero** `g_rs64_last_guest_pc` breadcrumb writes, so the shared global froze at
+    the caller's last write the instant execution entered this uninstrumented callee. The
+    `g_rs64_last_guest_pc` diagnostic (`fixup_game_funcs.py`) is NOT applied codebase-wide — it's an
+    explicit allowlist of 15 individually-added functions (BREADCRUMB–BREADCRUMB15), each added
+    reactively across s265–s349 whenever a crash happened to land in a function lacking one.
+    `emitMaterialTexturedDL` was never on that list. **This is byte-for-byte the same mechanism
+    BREADCRUMB15's own s349 comment already documents** (`drainMeshReleaseQueue` misattributed to
+    `beginFrameDLChunk`'s stale breadcrumb) — independently rediscovered before finding that precedent,
+    a strong sanity check. Fix: added BREADCRUMB16 for `emitMaterialTexturedDL` (`funcs_3.c`), same
+    template as BREADCRUMB1-15. Regenerated/rebuilt clean; fixup report confirmed `x508` breadcrumb
+    writes and the pre-existing `GENERIC_CACHE_GUARD` count unchanged at 107 (no regression to item
+    -270). Live-verified over the full 300s schedule with 0 crashes, reaching 196.1s — past the point
+    the triggering crash occurred — with no recurrence of the `emitMaterialTexturedDL`-region crash and
+    0 `generic-cache-guard` fires. **Does not fix or guard the triggering crash itself** (single sighting,
+    matches this project's typical nondeterministic-crash pattern; guarding it blind before a 2nd sighting
+    would be exactly the reactive single-crash chase the user directive rules out) — it only ensures the
+    next sighting localizes precisely instead of misattributing. Confirmation soak queued
+    (`s435_genericcacheguard_confirm2.sh`). Sandbox lesson: a probe/soak output directory under `/tmp` is
+    unreadable by any tool after the run completes (outside the 3 allowed working-directory roots) — always
+    write soak output under `scratch/agent/soak_results/`. Full detail: PORTING-STATE Session 435.
 
 -270. **(s434) The `0x801163B0` free-list-cache-head-deref idiom — 4 prior sessions (s197/s266/s270/
     s271) each bespoke-guarded ONE reactive occurrence; a full codebase scan found 107 MORE unguarded
@@ -195,6 +223,10 @@ takes -271.
     what WRITES the corrupted value into `0x801163B0` (the original open `audit-changes.md` question) —
     guarding every read site is treated as sufficient, matching how the 4 prior bespoke guards were each
     accepted without ever finding their shared writer. Full detail: PORTING-STATE Session 434.
+    **s435 update**: `s434_genericcacheguard_confirm.sh` crashed at 170s, but on a DIFFERENT bug
+    (misattributed via a breadcrumb coverage gap, not this idiom) — see item -271. 3 completed
+    same-recipe observations now (s434 foreground, s434_confirm, s435): 2 clean+silent, 1 crashed on the
+    now-diagnosed unrelated bug, guard fired 0/3 times — still no positive control, unchanged conclusion.
 
 -269. **(s433) Item -264's duplicate-symbol catalogue CLOSED (18/18 accounted for) — and fixing one
     of the last 5 function pairs unblocked the entire item -265/-266/-267 chain that had blocked

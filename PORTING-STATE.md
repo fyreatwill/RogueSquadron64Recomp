@@ -36377,3 +36377,70 @@ lookup, reusable template), `scratch/agent/s434_idiom_scan.py` and `s434_idiom_s
 grep-scanners for the `lui 0x8011`/`0x63B0` cache-head-deref pattern, reusable if a similar
 fixed-global-cache idiom needs auditing again).
 
+## Session 435 (2026-08-07)
+
+**Read first (Step 3, before picking a work unit): consumed the queued `s434_genericcacheguard_confirm.sh`
+soak's result.** It came back `rc=1` at 172s wall
+(`scratch/agent/soak_results/s434_genericcacheguard_confirm_20260807-025444.log`), matching NEITHER
+outcome NEXT.md predicted (clean+silent, or clean+fired). The `[phase]` timeline shows the run alive at
+165.1s (vi_width 512→640) before crashing at 170.0s (vi_width=4 transition) -- deeper than any prior
+-261..-269 confirmation attempt. Crash: `[CRASH] caught signal 10 (Bus error: 10)`, `pc-symbol
+=emitMaterialRenderStateDL+608` (native ARM64 offset), `last-guest-pc=0x8001033C`.
+
+**Localizing `0x8001033C`** (`scratch/agent/s434_symrange2.py`'s method, extended with `libultra.txt` in
+the search set): nearest-preceding guest symbol is `submitSceneNodeRender` (0x80010014,
+`main_overlay.txt`), offset 0x328. Reading `RecompiledFuncs/funcs_4.c` at that exact address
+(`grep -n "0x8001033" funcs_4.c`) found it's the delay-slot instruction (`addiu $a3,$sp,0x1B`)
+immediately after `jal 0x8000E104` -- i.e. the crash happened INSIDE the callee at 0x8000E104
+(`emitMaterialTexturedDL`, `funcs_3.c:22219`), not at 0x8001033C itself. Confirmed by direct grep:
+`emitMaterialTexturedDL`'s ~1258-line body has **zero** `g_rs64_last_guest_pc` writes -- this
+recompiler-wide breadcrumb diagnostic (`g_rs64_last_guest_pc`, `main.cpp` extern) is NOT applied
+uniformly; it's stamped only into an explicit allowlist of 15 individually-added functions (BREADCRUMB
+through BREADCRUMB15, `fixup_game_funcs.py`, one added reactively per session s265-s349 whenever a crash
+landed in a function without one). `emitMaterialTexturedDL` was never on that list, so the global froze
+at the CALLER's (submitSceneNodeRender's) last write the instant execution entered this uninstrumented
+callee -- the pc-symbol native offset (`emitMaterialRenderStateDL+608`, itself likely a
+nearest-preceding-native-symbol misattribution across an adjacent compiled function) is the only clue to
+where inside `emitMaterialTexturedDL` (or one of its own callees, e.g. `findAndUnlinkSmallestEntry`) the
+fault actually happened. **This is byte-for-byte the same misattribution mechanism BREADCRUMB15's own
+s349 comment already documents** (`drainMeshReleaseQueue` vs. `beginFrameDLChunk`'s stale breadcrumb) --
+independently rediscovered this session before finding the precedent in the source comments, a strong
+sanity check that the diagnosis is right.
+
+**Fix (work unit): added BREADCRUMB16** -- same template as BREADCRUMB1-15, targeting
+`emitMaterialTexturedDL` in `funcs_3.c`, stamping `g_rs64_last_guest_pc` before every one of its
+instructions so the NEXT occurrence of this crash family reports its true guest PC instead of the stale
+call-site value. Regenerated (`make_elf.py` -> delete `funcs_*.c` -> `N64Recomp` ->
+`fixup_game_funcs.py` -> cmake). Fixup audit report: `funcs_3.c: emitMaterialTexturedDL guest-PC
+breadcrumb (BREADCRUMB16) patched x508` plus the pre-existing `GENERIC_CACHE_GUARD` counts unchanged
+(66+41=107, confirming no regression to item -270's fix). Rebuilt clean, 0 new warnings (same 46-warning
+DDIV sign-conversion baseline as every prior session).
+
+**Live-verified (2 runs, same s427-434 schedule, both diagnostics armed)**: first run wrote its output to
+`/tmp/...` outside the session's allowed working directories and turned out to be unreadable by any
+grep/cp/Read tool afterward (a genuine sandbox lesson for future sessions: soak/probe output dirs MUST be
+under one of the three allowed working-directory roots, not `/tmp`, or the run's own result becomes
+inaccessible after the fact) -- re-ran identically with output under
+`scratch/agent/soak_results/s435_breadcrumb16_verify/`. Completed the FULL 300s/250s-keys schedule with
+**0 `[CRASH]` markers**, reaching `[phase]` transitions at 165.1s and 196.1s -- PAST the point
+`s434_genericcacheguard_confirm` crashed at (170.0s) -- with no recurrence of the `emitMaterialTexturedDL`-
+region crash. Also **0 `generic-cache-guard` fires** this run. Item -270 status after 3 completed
+same-recipe observations (s434 foreground, s434_confirm, s435): 2 clean+silent, 1 crashed on this now-
+diagnosed unrelated bug, guard fired 0/3 times -- STILL no positive control (iron rule 1), unchanged
+conclusion from s434, but with one more data point in favor of "the crash isn't recurring on this
+schedule" rather than "the fix doesn't work."
+
+**Confirmation soak queued**: `scratch/agent/soak_queue/s435_genericcacheguard_confirm2.sh` (same
+schedule, both `ROGUESQ_LOG_GENERIC_CACHE_GUARD=1` and the new BREADCRUMB16 armed -- if the
+`emitMaterialTexturedDL`-region crash recurs, this run will report its precise guest PC instead of the
+stale call-site value).
+
+**What this does NOT do**: it does not fix or guard the `emitMaterialTexturedDL`-region crash itself
+(single-source, one sighting, matches this project's typical nondeterministic-crash-family pattern --
+guarding it reactively before it recurs would violate the user directive's "no reactive single-crash
+chases" rule). It only ensures the NEXT sighting is precisely localized rather than misattributed.
+
+**Tooling added this session**: BREADCRUMB16 in `fixup_game_funcs.py` (N64Recomp repo; that file is
+untracked by git per this project's long-standing convention -- never committed there across 400+
+sessions of edits, confirmed still true this session via `git status --short`).
+
