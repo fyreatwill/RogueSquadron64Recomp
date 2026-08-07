@@ -37320,3 +37320,74 @@ the last 2 confirmation soaks as clean when both had actually crashed; validated
 same-session positive AND negative control against real log data; corrected items -282/-284's
 ledger status accordingly without them being invalidated; requeued a working confirmation soak for
 both).
+
+## Session 448 (2026-08-07)
+
+**Folded in s447's queued confirm soak result (`s447_hangarlist_getdatitem_confirm`, read list
+#3) before starting new work, per the standing rule.** It crashed (`rc=3`, `probe.sh`'s new exit
+code from s447's own fix, working as designed): `pc-symbol=updateAnimatedTextureStreaming+3132`,
+`last-guest-pc=0x800ab068`. This is a recurrence of the already-catalogued 9th crash class
+(`updateAnimatedTextureStreaming` SIGBUS, first seen s89, guarded s124/s127) — NOT a new class,
+and NOT the class this soak was targeting (items -282/-284, `GETDATITEM_GUARD`/`HANGARLIST_GUARD`
+family), so per strategic priority #3 ("no reactive single-crash chases") this is filed, not
+chased, this session. One useful cross-check: `updateAnimatedTextureStreaming`'s s124/s127 guards
+are FILE-SCOPED (`if p.name == "funcs_11.c":`), the same pre-s427-orphaning shape item -283/-284
+found elsewhere — but a direct check this session (`grep -a -c` against the built `funcs_11.c.o`
+object file, confirming both the symbol text and a build timestamp matching this session's own
+rebuild) found `updateAnimatedTextureStreaming` genuinely IS still in `funcs_11.c` post-s427, so
+these two guards are NOT orphaned. The crash's host offset (+3132 bytes into the compiled
+function) is far past the guard region (near the function's top), so this is most likely a THIRD
+unguarded deref site downstream, the same shape as s127's discovery of a 2nd gap after s124's
+first guard — filed as item -286 below, not chased (this soak didn't arm
+`ROGUESQ_LOG_ANIM_TEX_STREAM_GUARD`/`GUARD2` so whether the existing 2 guards fired first is
+unknown either way). **Items -282/-284 remain at 0/0 fires, still no positive control, now a
+2nd/3rd confirm-soak in a row that crashed on something unrelated before exercising those guard
+env vars for long — genuinely low-frequency, not further pursued as a discriminator this session.**
+
+**Executed the planned `S390_H2A`/`S390_H2B` sweep (item -284's remaining top family, carried over
+from s446/s447), same proven method as s446.** Did a raw regen (delete `RecompiledFuncs/funcs_*.c`
+→ `make_elf.py` → `N64Recomp`, no fixup yet) to get a pristine pre-patch tree, then ran a
+standalone Python scan (`scratch/agent/s448_scan_s390h2.py`) checking each of the 11 sites' exact
+multi-line anchor text for tree-wide uniqueness: **11/11 unique, all landing in `funcs_28.c`** (not
+`funcs_27.c`, confirming the same s427 relocation item -284 found for the other hangarInitialize-
+audit families). Found and resolved two extra wrinkles the s446 precedent didn't have to deal
+with: (1) `funcs_28.c` holds overlay-duplicated code that repeats these SAME guest addresses 2-3
+more times each with completely different disassembly (e.g. `0x800AB00C` also appears as `swc1
+$f22, 0x10($sp)` and `j L_800AB034` elsewhere in the same file) — the anchors' full multi-line text
+(not the bare address) is what keeps every match unique, confirmed directly rather than assumed;
+(2) `funcs_28.c` has TWO different functions each defining their own label named `L_800AB618:`
+(line 7210, inside `composeEffectObjectTransformMatrix`, and line 10558, inside
+`composeNpcOrientationMatrix`) — C's per-function `goto`-label scoping makes this safe by
+construction (a `goto L_800AB618` inside `composeNpcOrientationMatrix` can only resolve to that
+function's own label, never the other function's same-named one), but this was verified by finding
+both functions' `RECOMP_FUNC` boundaries and confirming all 9 chunk-2b anchor sites AND the
+line-10558 label instance all fall within `composeNpcOrientationMatrix`'s own span — not just
+assumed safe from the C-semantics argument alone. Also found 7 of the 11 sites
+(`S390_H2A_1`/`_2`, `S390_H2B_5`/`_6`/`_7`/`_8`/`_9`) textually overlap the START of an
+already-active s284/s285 guard's shorter anchor prefix — since s284's loop runs earlier in the
+fixup script and inserts its own guard block between that shared prefix and the rest of these
+longer s390 anchors, those 7 are EXPECTED to no-op (match x0) once s284 has already run, because
+s284's guard already protects the same dereference (checks the same pointer register before its
+first use) — redundant protection already in place, not a bug or a lost site. Ungated the block
+(removed `p.name == "funcs_27.c"`), added the `SystemExit`-on-`n>1` hard guard matching s446's
+established safety pattern, and confirmed via the fixup report: exactly the 4 predicted new sites
+(`S390_H2B_1`-`_4`) applied `x1` each, the other 7 silently no-op'd as predicted, 0 unexpected
+counts anywhere else in the report (audited full report for the standing item -20 rule). Full
+regen/build clean (0 new warnings; the 303 pre-existing warnings are baseline noise, none in
+`funcs_28.c`); `strings` on the built binary confirmed all 4 `[s390-h2-guard]` format strings
+present. Live-verify: soak in progress at session-end time — see `scratch/agent/SOAK-RESULTS.md`
+for the fold-in next session if this entry predates it landing.
+
+**Remaining orphaned families, unchanged from s446/-284's list, next in priority order**: `G1`-`G32`
+(32 sites, needs a full 32-site uniqueness recheck, only 2/32 sampled so far); `S392_H3A`/`S393_H3B`
+(50 sites, confirmed this session's fixup report still shows all 50 `SKIPPED — anchor matched x0`,
+i.e. still gated/unfixed — chunk 3a's 29 sites may be redundant with `GENERIC_CACHE_GUARD`'s
+blanket fix, needs a redundancy check before re-adding, chunk 3b's 21 sites likely do need it);
+`BREADCRUMB7` (diagnostic, lowest priority).
+
+**Housekeeping**: no `lib/` edits this session (only `N64Recomp/fixup_game_funcs.py`, outside
+`lib/`, no `export.sh` needed).
+
+**Outcome: ADVANCED** (executed the planned S390_H2A/S390_H2B ungate work unit end-to-end: raw
+regen, standalone uniqueness+placement verification catching 2 new wrinkles beyond s446's
+precedent, code fix, build-clean, binary-verified, live-verify soak launched).

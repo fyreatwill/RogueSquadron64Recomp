@@ -2,77 +2,93 @@
 
 HYPOTHESIS-ID: static5-rename-orphan-sweep
 
-## What changed session s447
+## What changed session s448
 
-Folding in the two newest `SOAK-RESULTS.md` lines (both logged `rc=0`, "clean") per the standing
-read-list found they weren't clean: `s445_getdatitem_confirm` and `s446_hangarlist_confirm` both
-called `tools/probe.sh` directly with no self-check of `run.log`, and `probe.sh`'s capture loop
-fell through to an implicit `exit 0` on ANY mid-capture process death, crash or not. Both runs'
-`run.log`s in fact contain `[CRASH]` blocks — s445 hit `sym=cvmsPoolAlloc+496` (an already-
-catalogued, unrelated ~s73/s267 misattribution family), s446 hit `sym=coalesceFreeHeapBlocks+3192`
-(an already-catalogued, unrelated s264-era/BREADCRUMB11 family). Neither guard fix is implicated —
-both crashes are old, pre-existing, unrelated signatures — but both guard families (item -282
-GETDATITEM_GUARD, item -284 HANGARLIST_GUARD+S284/S285) logged 0 fires in these runs, so their
-confirmation status is still OPEN, not closed.
+Folded in the queued `s447_hangarlist_getdatitem_confirm` soak (read-list #3): it crashed (`rc=3`,
+`probe.sh`'s own s447 fix correctly firing) on a recurrence of the already-catalogued 9th crash
+class (`updateAnimatedTextureStreaming` SIGBUS, s89/s124/s127) — filed, not chased (strategic
+priority #3, unrelated to items -282/-284's target families). Confirmed that crash class's own
+guards are NOT orphaned (function genuinely still lives in `funcs_11.c` post-s427). Items -282/-284
+remain at 0/0 fires, still unconfirmed either way.
 
-Fixed the root cause in `tools/probe.sh` itself (not just the two recipe scripts): it now checks
-`run.log` for `[CRASH]` after the capture loop and `exit 3`s instead of falling through to 0.
-Verified with a same-session positive control (against s446's crashed run.log) and negative
-control (against a known-genuinely-clean run.log). Requeued a corrected combined confirm soak:
-`scratch/agent/soak_queue/s447_hangarlist_getdatitem_confirm.sh` — fold its result in first (read
-list #3) before starting new work; it covers both item -282 and item -284 in one run.
+Executed this session's planned work unit: ungated `S390_H2A`/`S390_H2B` (11 sites, item -286),
+same proven method as s446/item -284. 4 sites (`S390_H2B_1`-`_4`) actually applied; 7 correctly
+no-op as redundant with already-active s284/s285 guards. Regen/build clean, live-verify clean (0
+crash, 0 new-guard fires, no positive control yet). Confirmation soak queued:
+`scratch/agent/soak_queue/s448_s390h2_confirm.sh` — fold its result in first (read list #3) before
+starting new work.
 
-Full detail: `docs/CURRENT-TRUTH.md` item -285, `PORTING-STATE.md` Session 447.
+Full detail: `docs/CURRENT-TRUTH.md` item -286, `PORTING-STATE.md` Session 448.
 
-## This session's work unit: the S390_H2A/S390_H2B sweep (carried over from s446, unexecuted)
+## This session's work unit: the `G1`-`G32` family (item -284's next remaining orphaned family)
 
-Same proven method as s446 (item -284), applied to the next remaining orphaned family. Method
-recap (repeat per family):
-1. For every site's exact anchor text (comment line + generated-code line, verbatim from
-   `fixup_game_funcs.py`), run a standalone Python scan across every `RecompiledFuncs/funcs_*.c`
-   file counting exact matches. Expect exactly 1 per site.
-2. If ALL sites in a family are unique (1 match each): remove the family's old `p.name ==
-   "funcs_N.c"` file gate (and/or old `static_N_0xADDR` function-name regex, replacing with the
-   real current name) so the anchor's own specificity does the placement. Add a hard
-   `SystemExit`-on-`n>1` guard in the fixup code itself (see s446's pattern, `fixup_game_funcs.py`
-   ~line 5566) rather than trusting `re.subn`'s count blindly.
-3. If ANY site is non-unique (matches in 2+ places, or 2+ times in one place): do NOT ungate that
-   whole family blindly. Hand-disambiguate first.
-4. Verify bail labels: every guard's `goto <label>` target must exist INSIDE the same function as
-   the guard itself — grep `^<LABEL>:` and confirm its line falls between the target function's
-   `RECOMP_FUNC` start and the next function's start in the same file.
-5. Full 4-step regen (delete `RecompiledFuncs/funcs_*.c` first, standing item -20 rule) → build →
-   audit the fixup report for exactly `x1` per site → `strings` on the binary to confirm guard
-   format-strings present → live-verify with all guard-family env vars armed.
+Same proven method as s446/s448, applied to the largest remaining family — but this one has an
+EXTRA wrinkle s390 didn't: **its gate is doubly-orphaned, not singly.**
 
-**`S390_H2A`/`S390_H2B`** (11 sites, chunk 2, `funcs_40.c`→now `funcs_28.c` per s446's sample check
-of site 1 of each). Likely the most mechanical remaining piece — same shape as s446's fix. Do this
-first; it's the smallest remaining family.
+`fixup_game_funcs.py` ~line 2837-2846 (search `_hangarbay_deref_guard_sites` and the `if p.name ==
+"funcs_40.c":` block right after it): the whole G1-G32 block is gated BOTH on `p.name ==
+"funcs_40.c"` (file, same orphaning as every other family in this saga) **AND** on a regex that
+locates the function by its dead old name: `r"RECOMP_FUNC void static_5_800AB658\(uint8_t\*
+rdram, recomp_context\* ctx\) \{\n"`. `static_5_800AB658` was renamed to `updateHangarBayScene` by
+s427 and moved to `funcs_28.c` — since the regex searches for the OLD name, `func_start_m` never
+matches regardless of the file gate, so **this entire 32-site family currently produces ZERO
+guards**, silently, with no report line at all (the whole `if func_start_m:` body never executes,
+unlike s390's `SKIPPED x0` lines which at least appear in the report). Confirm this null-report
+behavior first (grep the fixup log for "G1"/"G32" — expect literally nothing, not even a SKIPPED
+line) before starting, to make sure the diagnosis is right.
 
-After S390, the remaining families in order (see `docs/CURRENT-TRUTH.md` item -284 for full detail
-on each's specific risk):
-2. **`G1`-`G32`** (32 sites) — needs a FULL 32-site uniqueness recheck (only 2/32 sampled so far)
-   before trusting the old fixup comment's collision warning is stale.
-3. **`S392_H3A`/`S393_H3B`** (50 sites) — chunk 3a's 29 sites may already be covered by
-   `GENERIC_CACHE_GUARD`'s blanket fix; check for redundancy before re-adding. Chunk 3b (21 sites)
-   likely does need the fix.
-4. **`BREADCRUMB7`** (diagnostic, lowest priority).
+Fix needs BOTH: (1) drop the `p.name == "funcs_40.c"` file gate (or replace with `funcs_28.c` if
+you want to keep file-scoping as a sanity floor — check whether `updateHangarBayScene` might ALSO
+appear textually in another file the way `L_800AB618` did for s448, before assuming file-scoping is
+safe to drop entirely); (2) update the function-name regex to `updateHangarBayScene`.
+
+Same 5-step method as s446/s448:
+1. Raw regen (delete `RecompiledFuncs/funcs_*.c` → `make_elf.py` → `N64Recomp`, NO fixup yet) to
+   get a pristine tree. Reuse `scratch/agent/s448_delete_funcs.sh` / `s448_run_make_elf.sh` /
+   `s448_run_n64recomp.sh` as templates (copy to `s449_*`, update log/rc paths) — or just re-run the
+   s448 ones directly if no other regen has happened since (check file mtimes first).
+2. Standalone Python scan (model `scratch/agent/s448_scan_s390h2.py`) checking each of the ~30
+   named G-sites' exact anchor text for tree-wide uniqueness. **Old fixup-script comment (item -284's
+   own note) warns some G-family anchors "ALSO appear verbatim in `funcs_27.c`"** — this needs a
+   FULL recheck across all 30ish sites this session, not the 2/32 (G1/G32) sample s446 did. If any
+   site is non-unique, do NOT ungate that one blindly — hand-disambiguate (longer anchor context, or
+   leave it gated/skip it and note why).
+3. Also check for the s448-style extra wrinkles: does `updateHangarBayScene` (now in `funcs_28.c`)
+   share guest addresses with other overlay-duplicated code in the same file the way `0x800AB00C`
+   etc. did? Does `L_hangarbay_guard_exit` (the G-family's bail label) collide by name with anything
+   else in `funcs_28.c`, and if so is the collision safely function-scoped (same check as s448's
+   `L_800AB618` collision) or a real problem?
+4. Ungate + add the `SystemExit`-on-`n>1` hard guard (s446/s448 pattern) — this family's existing
+   loop structure differs slightly (looks up the function body via `func_start_m`/`next_func_m`
+   first, then loops sites within that body slice) — check whether the per-site `re.subn` there
+   already handles the >1 case or needs the same explicit guard added.
+5. Full regen → build → audit fixup report for exactly `x1` per applied site (expect most/all ~30 to
+   actually apply this time, since G1-G32 doesn't have s390's redundancy-with-s284/s285 overlap
+   issue as far as currently known — but check for it anyway, don't assume) → `strings` on the binary
+   → live-verify with all guard-family env vars armed (`ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD` for this
+   family specifically) → queue a confirmation soak.
+
+After G1-G32, remaining families in order (see `docs/CURRENT-TRUTH.md` item -284 for detail):
+1. **`S392_H3A`/`S393_H3B`** (50 sites) — chunk 3a's 29 sites may already be covered by
+   `GENERIC_CACHE_GUARD`'s blanket fix; check for redundancy before re-adding (same overlap
+   pattern s448 found for 7/11 of the S390 sites — check this FIRST before assuming all 50 need
+   fresh guards). Chunk 3b (21 sites) likely does need the fix.
+2. `BREADCRUMB7` (diagnostic, lowest priority).
 
 ## Discriminating measurement
 
-For each family: does the full per-site uniqueness scan come back 100% unique (proceed with s446's
-method) or does it surface a genuine collision (needs manual disambiguation)? This splits
-"mechanical rename, same as s446" from "needs the S100/G-family collision analysis redone fresh".
+Does the full ~30-site uniqueness scan come back 100% unique (proceed with s446/s448's method) or
+does it surface a genuine collision, confirming the old fixup comment's "also in funcs_27.c"
+warning is still live (needs manual disambiguation, not blind ungating)?
 
-## Regen / build notes
+## Process notes carried forward
 
-Same as s446 — reuse `scratch/agent/s446_delete_funcs.sh` / `s446_run_make_elf.sh` /
-`s446_run_n64recomp.sh` / `s446_run_fixup.sh` / `s446_run_build.sh` as templates (copy to `s448_*`
-and update log/rc paths).
-
-## Process note for future soak recipes
-
-`tools/probe.sh`'s exit code is now trustworthy on its own (exit 3 on a detected `[CRASH]` in
-`run.log`, s447) — a recipe no longer strictly needs its own self-check to get an accurate `rc` in
-`SOAK-RESULTS.md`. Keep the self-check anyway for the descriptive crash-line message (matches the
-s434/s442/s447 pattern) — it costs nothing and is one less thing to trust blindly.
+- `tools/probe.sh`'s exit code is trustworthy on its own now (exit 3 on a detected `[CRASH]`, s447).
+- When ungating a ~30-site family, expect SOME sites to be redundant no-ops against earlier-applied
+  guards in the same fixup script (s448 found 7/11 for S390) — this is not a bug, don't force them
+  through by shortening anchors to make them "match"; that would just double-guard the same
+  dereference pointlessly and add noise.
+- Watch for DOUBLY-orphaned gates (both file AND function-name-regex referencing the dead old
+  `static_N_0xADDR` name) — G1-G32 is the first confirmed instance; grep any other still-gated
+  family's block for a `RECOMP_FUNC void static_5_...` regex before assuming a simple file-gate
+  removal is sufficient.

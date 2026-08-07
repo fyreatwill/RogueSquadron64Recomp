@@ -164,8 +164,42 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -285 (s447, a soak-harness false-negative bug + fix — see below); the
-next new item takes -286.
+oldest). Current top is -286 (s448, the `S390_H2A`/`S390_H2B` ungate — see below); the
+next new item takes -287.
+
+-286. **(s448) `S390_H2A`/`S390_H2B` orphaned hangar-list `-0x25A4` guard family — FIXED, same
+    method as item -284's s446 fix.** 11 sites, file-scope-gated to `p.name == "funcs_27.c"`,
+    orphaned since s427 relocated their enclosing functions (`runHangarSelectionFrame`,
+    `composeNpcOrientationMatrix`) to `funcs_28.c`. A raw pre-fixup regen + standalone Python scan
+    (`scratch/agent/s448_scan_s390h2.py`) confirmed all 11 anchors match exactly once in
+    `funcs_28.c`, tree-wide. Two wrinkles beyond s446's precedent, both verified not assumed: (1)
+    `funcs_28.c` holds overlay-duplicated code repeating these same guest addresses 2-3× more with
+    unrelated disassembly — the anchors' full multi-line text (not the bare address) is what keeps
+    matches unique; (2) `funcs_28.c` has two DIFFERENT functions each defining their own
+    same-named label `L_800AB618:` (line 7210 in `composeEffectObjectTransformMatrix`, line 10558
+    in `composeNpcOrientationMatrix`) — safe by C's per-function goto-label scoping, confirmed by
+    checking all 9 chunk-2b sites and the line-10558 label instance fall within
+    `composeNpcOrientationMatrix`'s own span. 7 of the 11 sites (`S390_H2A_1`/`_2`,
+    `S390_H2B_5`-`_9`) textually overlap an already-active s284/s285 guard's shorter anchor prefix
+    and correctly no-op (redundant protection already in place, not lost coverage) — only
+    `S390_H2B_1`-`_4` actually applied (`x1` each, fixup-report- and `strings`-verified). Ungated
+    + added the `SystemExit`-on-`n>1` hard guard (s446 pattern). Regen/build clean, 0 new warnings.
+    Live-verify: full 300s/250s-key schedule, 0 crashes, 0 fires on any of the new or sibling guard
+    families (null result, no positive control yet — matches this whole audit's established low,
+    state-dependent firing rate). Confirmation soak queued: `s448_s390h2_confirm.sh`.
+    **Incidentally, folding in the queued `s447_hangarlist_getdatitem_confirm` soak (read-list #3)
+    found it crashed** (`rc=3`, `probe.sh`'s own s447 fix correctly firing) **on a recurrence of the
+    already-catalogued 9th crash class (`updateAnimatedTextureStreaming` SIGBUS, s89/s124/s127),
+    not items -282/-284's target families.** Confirmed `updateAnimatedTextureStreaming`'s s124/s127
+    guards are NOT orphaned (still genuinely in `funcs_11.c` post-s427, checked directly against
+    the built object file) — but the crash's host offset (+3132 bytes, well past the guard region
+    near the function's top) suggests a 3rd unguarded deref site downstream, same shape as s127's
+    discovery of a 2nd gap after s124's first guard. Filed, not chased (strategic priority #3): env
+    vars to arm the existing 2 guards weren't set in that soak, so whether they fired first is
+    unknown. **Items -282/-284 remain at 0/0 fires, unconfirmed either way — 3 confirm-soaks in a
+    row have now crashed on unrelated signatures before stressing those code paths for long; this
+    is itself informative (both families are genuinely low-frequency, not soak-harness-broken)
+    but not yet a discriminating result.** Full detail: `PORTING-STATE` Session 448.
 
 -285. **(s447) `tools/probe.sh` was silently mislabeling crashed soaks as clean (`rc=0`) — FIXED.**
     Folding in the two newest `SOAK-RESULTS.md` lines (`s445_getdatitem_confirm`,
@@ -220,12 +254,12 @@ next new item takes -286.
     false-negative bug, item -285) **on an unrelated pre-existing signature
     (`coalesceFreeHeapBlocks+3192`), not a regression — but this family's guards logged 0 fires,
     so confirmation is still open, not closed.** Corrected re-queue: `s447_hangarlist_getdatitem_confirm.sh`.
-    **Remaining orphaned, NOT fixed this session** (next session's top priority, same proven
-    method): `G1`-`G32` (32 sites, target `updateHangarBayScene`, now `funcs_28.c`) — sample-checked
+    **`S390_H2A`/`S390_H2B` FIXED s448 — see item -286.** Remaining orphaned, NOT fixed yet
+    (next session's top priority, same proven method): `G1`-`G32` (32 sites, target
+    `updateHangarBayScene`, now `funcs_28.c`) — sample-checked
     G1/G32 anchors as uniquely matching in `funcs_28.c` only (the old fixup-script comment's warning
     that "every one ALSO appears verbatim in `funcs_27.c`" may be stale post-s427 and needs a FULL
-    32-site recheck, not just the G1/G32 sample, before trusting it); `S390_H2A`/`S390_H2B` (11
-    sites) — G1/G32-style sample-checked as uniquely matching in `funcs_28.c`; `S392_H3A`/`S393_H3B`
+    32-site recheck, not just the G1/G32 sample, before trusting it); `S392_H3A`/`S393_H3B`
     (50 sites) — NOT yet uniqueness-checked, and item -284's own read found `S392_H3A`'s bail label
     `L_800ADB2C` sits INSIDE `updateHangarBayScene`'s body (not a separate function) — meaning these
     29 sites may guard derefs already covered by `GENERIC_CACHE_GUARD`'s blanket 107-site fix
