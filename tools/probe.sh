@@ -204,3 +204,17 @@ done
 kill -9 "$PID" 2>/dev/null
 wait "$PID" 2>/dev/null
 print "captured $N frames into $OUTDIR"
+
+# s446/s445 (2026-08-07): two consecutive queued soaks whose recipe scripts
+# called probe.sh directly with no self-check reported rc=0 to
+# SOAK-RESULTS.md while their run.log showed a real mid-capture [CRASH] —
+# because this script used to fall through to an implicit exit 0 after
+# "process gone", whether that death was a clean end-of-capture or a crash.
+# The self-checking recipe pattern (grep run.log for [CRASH], introduced
+# s434/s442) works but depends on every future recipe author remembering to
+# copy it; check here instead so every caller gets it for free. Exit 3 is
+# unused by any other path in this script.
+if /usr/bin/grep -aq '\[CRASH\]' "$OUTDIR/run.log" 2>/dev/null; then
+    print "game crashed during capture: $(/usr/bin/grep -a 'last-guest-pc\|pc-symbol' "$OUTDIR/run.log" | tail -2 | tr '\n' ' ')"
+    exit 3
+fi

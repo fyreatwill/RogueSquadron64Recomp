@@ -37245,3 +37245,78 @@ corrected item -283's own scope claim from 61 to the true, much larger codebase-
 underlying bug; left a fully characterized, method-proven remaining-scope map — including one new
 redundancy-check flag and one new collision-risk flag — for next session to execute directly
 without repeating this session's discovery work).
+
+## Session 447 (2026-08-07)
+
+**Work unit**: per the iteration contract's read-list #3, fold the two newest `SOAK-RESULTS.md`
+lines (`s445_getdatitem_confirm`, `s446_hangarlist_confirm`, both logged `rc=0`) into the ledger
+before starting the planned `S390_H2A`/`S390_H2B` sweep (item -284's next-session plan). Checking
+the raw evidence behind both "clean" verdicts (iron rule 5: check the boring thing first) found
+they were NOT clean.
+
+**Finding: both soaks actually crashed; `rc=0` was a false negative from the soak harness, not a
+real result.** Both recipe scripts (`s445_getdatitem_confirm.sh`, `s446_hangarlist_confirm.sh`)
+call `tools/probe.sh` directly with no self-check of `run.log` afterward — the older, pre-s434
+pattern. `probe.sh`'s own capture loop, on seeing the game process die mid-capture (`process gone
+at N.Ns`), simply `break`s out of the loop and falls through to its final `print "captured N
+frames..."` line with no explicit `exit`, so the script always returned 0 whether the death was a
+clean end-of-capture or an actual crash. Both `run.log`s in fact contain `[CRASH]` blocks:
+- `s445_getdatitem_confirm/run.log`: `[CRASH][pc-symbol] pc=0x231748a60 sym=cvmsPoolAlloc+496
+  base=0x231746000`, `[CRASH][last-guest-pc] pc=0x800ab0e0`, at 119.7s (after the `100:start` key,
+  before `130:start`).
+- `s446_hangarlist_confirm/run.log`: `[CRASH][pc-symbol] pc=0x102e92268
+  sym=coalesceFreeHeapBlocks+3192 base=0x102e44000`, `[CRASH][last-guest-pc] pc=0x8000241c`, at
+  122.2s (same window).
+
+**Neither crash is a regression from either guard fix, and neither is new.** `cvmsPoolAlloc+496`
+is byte-identical (same symbol AND same offset) to an already-catalogued crash first seen ~s73
+(`PORTING-STATE.md` ~line 26334) and reconfirmed s267 as part of a long-standing "RDRAM-base-
+relative near-`0x80000000` fault, nearest-preceding-symbol misattribution" family — unrelated to
+`getDatItemByName`. `coalesceFreeHeapBlocks` is likewise already-catalogued (first flagged s264-
+era, `BREADCRUMB11` added s291, `docs/PROJECT-OVERVIEW.md` §9) as the same class of stripped-code
+nearest-symbol misattribution, not a confirmed distinct bug. Both `GETDATITEM_GUARD` (item -282)
+and the `HANGARLIST_GUARD`+S284/S285 family (item -284) logged **0 fires** in both crashed runs —
+so their own guard mechanisms remain unexercised in every soak so far; **downgrade both items from
+"confirmation soak queued" to "confirmation soak run once, inconclusive (crashed on an unrelated
+pre-existing bug before reaching a 2nd data point) — still 0/0 fires, still no positive control."**
+This does not implicate either guard fix; it only means neither is independently confirmed clean
+yet.
+
+**Fixed the root cause in `tools/probe.sh` itself, not just the two recipe scripts**, since relying
+on every future recipe author to remember the s434 self-check pattern had now silently failed
+twice in a row (2/2 most recent no-self-check recipes both masked a real crash). Added a check
+after the capture loop: if `run.log` contains `[CRASH]`, print the `last-guest-pc`/`pc-symbol`
+tail and `exit 3` (previously unused code) instead of falling through to the implicit 0. This
+makes every future caller's exit code trustworthy for free, whether or not that caller's own script
+self-checks. Verified against real data, not just read — extracted the exact check logic into a
+throwaway test script and ran it against `s446_hangarlist_confirm`'s `run.log` (positive control:
+correctly reported exit 3 and printed the right crash line) and `s442_freelistnext_manual`'s
+`run.log`, an already-documented genuinely-clean run (negative control: correctly reported "clean",
+exit 0). Confirmed `tools/regress.sh` does not call `probe.sh` (only mentions it in a comment), so
+this change has no blast radius outside the `soak_queue/*.sh` recipes that invoke it directly.
+Audited the other 21 `soak_queue/done/*.sh` recipes that call `probe.sh`: 3 more lack the
+self-check pattern (`s400_batch1_verify`, `s431_malloccraft_ckpt_verify`,
+`s429_hangarmenu_ckpt_verify`) — `s400`'s `run.log` was checked and is genuinely crash-free (0
+`[CRASH]` lines, so its `rc=0` was correct); `s431`/`s429` already reported `rc=1` in
+`SOAK-RESULTS.md` (a different `probe.sh` exit path, already correctly read as non-clean), so
+their true-crash-vs-other-failure distinction is a smaller, lower-priority loose end, not a
+silent-clean false negative — not chased further this session.
+
+**Requeued a corrected confirmation soak** for both items -282 and -284 in one recipe (it already
+arms `ROGUESQ_LOG_GETDATITEM_GUARD` alongside the hangarlist/S284 families):
+`scratch/agent/soak_queue/s447_hangarlist_getdatitem_confirm.sh` — copies the s446 recipe, keeps
+its own `[CRASH]` self-check as defense-in-depth on top of the now-fixed `probe.sh`.
+
+**Did not reach the planned `S390_H2A`/`S390_H2B` sweep this session** — the soak-harness
+correctness issue took priority once found (iron rule 5, and a false "confirmed clean" reading
+would have propagated into the ledger for the rest of the sweep's method too). Sweep plan is
+unchanged and still queued as the top `NEXT.md` item.
+
+**Housekeeping**: no `lib/` edits this session. `tools/probe.sh` is the only code change; no
+regen/build needed (it's a host-side bash harness script, not guest code).
+
+**Outcome: ADVANCED** (root-caused and fixed a soak-harness bug that had silently mislabeled 2 of
+the last 2 confirmation soaks as clean when both had actually crashed; validated the fix with a
+same-session positive AND negative control against real log data; corrected items -282/-284's
+ledger status accordingly without them being invalidated; requeued a working confirmation soak for
+both).

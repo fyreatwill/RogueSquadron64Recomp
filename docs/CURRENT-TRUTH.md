@@ -164,8 +164,33 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -284 (s446, the full `-0x25A4` family orphaning root-cause + partial
-fix — see below); the next new item takes -285.
+oldest). Current top is -285 (s447, a soak-harness false-negative bug + fix — see below); the
+next new item takes -286.
+
+-285. **(s447) `tools/probe.sh` was silently mislabeling crashed soaks as clean (`rc=0`) — FIXED.**
+    Folding in the two newest `SOAK-RESULTS.md` lines (`s445_getdatitem_confirm`,
+    `s446_hangarlist_confirm`, both `rc=0`) per the standing read-list found both actually
+    crashed: `probe.sh`'s capture loop, on the game dying mid-capture, just `break`s and falls
+    through to an implicit `exit 0`, so any recipe script that (like both of these) calls
+    `probe.sh` directly without its own `run.log` self-check gets a false-clean verdict. Both
+    crashes are already-catalogued, unrelated, pre-existing signatures, not regressions: s445 hit
+    `sym=cvmsPoolAlloc+496` (byte-identical to a ~s73/s267 nearest-symbol-misattribution family),
+    s446 hit `sym=coalesceFreeHeapBlocks+3192` (same family as `BREADCRUMB11`, s264-era). **Neither
+    guard implicated — but this downgrades items -282 and -284 below from "confirmation soak
+    queued" to "one soak run, inconclusive, still 0/0 fires, still no positive control."** Fixed at
+    the root: `probe.sh` now checks `run.log` for `[CRASH]` after the capture loop and `exit 3`s
+    instead of falling through to 0 — every future caller gets accurate exit codes whether or not
+    its own recipe script self-checks (the s434-era per-script pattern had now silently failed
+    twice in a row). Verified with a same-session positive control (extracted check logic run
+    against `s446`'s crashed `run.log`: correctly reports the crash) and negative control (run
+    against `s442_freelistnext_manual`'s genuinely-clean `run.log`: correctly reports clean).
+    Audited the other 21 `probe.sh`-calling recipes in `soak_queue/done/`: 3 more
+    (`s400_batch1_verify`, `s429_hangarmenu_ckpt_verify`, `s431_malloccraft_ckpt_verify`) lack the
+    self-check; `s400` was checked and is genuinely crash-free (its `rc=0` was correct), the other
+    two already reported `rc=1` (a different, already-correctly-nonzero `probe.sh` exit path) so
+    are lower-priority, not chased further. Requeued a corrected combined confirm soak for items
+    -282 and -284: `scratch/agent/soak_queue/s447_hangarlist_getdatitem_confirm.sh`. Full detail:
+    `PORTING-STATE` Session 447.
 
 -284. **(s446) ROOT-CAUSED item -283's orphaning as codebase-wide, not just 61 sites: `hangarInitialize`
     never existed as a real function post-s427 — it was N64Recomp's PRE-fix merger of ~15 separate,
@@ -191,7 +216,10 @@ fix — see below); the next new item takes -285.
     Live-verify: full 300s/250s-key schedule held with 0 crashes and 0 guard fires, `[hangarbay-entry]`
     reached n=3000+ (reachability positive control, matches s440's baseline) — clean null result,
     proactive-fix pattern (no positive control needed for a pure addition, s389 precedent).
-    Confirmation soak queued: `s446_hangarlist_confirm.sh`.
+    **s447 update: the queued `s446_hangarlist_confirm.sh` soak actually crashed** (soak-harness
+    false-negative bug, item -285) **on an unrelated pre-existing signature
+    (`coalesceFreeHeapBlocks+3192`), not a regression — but this family's guards logged 0 fires,
+    so confirmation is still open, not closed.** Corrected re-queue: `s447_hangarlist_getdatitem_confirm.sh`.
     **Remaining orphaned, NOT fixed this session** (next session's top priority, same proven
     method): `G1`-`G32` (32 sites, target `updateHangarBayScene`, now `funcs_28.c`) — sample-checked
     G1/G32 anchors as uniquely matching in `funcs_28.c` only (the old fixup-script comment's warning
@@ -215,7 +243,12 @@ fix — see below); the next new item takes -285.
     call+goto+label idiom); full regen+build clean; 6/6 guard statics verified present via `nm`/
     `strings` on the built binary. Live-verify: 0 fires (1st soak, no positive control yet,
     normal first-pass pattern), crashed instead on the unrelated new item -281. Confirmation
-    soak queued: `s445_getdatitem_confirm.sh`. Full detail: `PORTING-STATE` Session 445.
+    soak queued: `s445_getdatitem_confirm.sh`. **s447 update: that soak actually crashed**
+    (soak-harness false-negative bug, item -285) **on an unrelated pre-existing signature
+    (`cvmsPoolAlloc+496`, byte-identical to a ~s73/s267 nearest-symbol-misattribution family), not
+    a regression — but 0 fires means confirmation is still open, not closed.** Corrected re-queue
+    (shared with item -284): `s447_hangarlist_getdatitem_confirm.sh`. Full detail: `PORTING-STATE`
+    Session 445, 447.
 
 -281. **(s445) NEW crash class: `NAN_CHECK` assert fires in `transformVec3ByMat34`**
     (`Assertion failed: (ctx->f14.fl == ctx->f14.fl)`, funcs_4.c:30007, signal 6/abort,
