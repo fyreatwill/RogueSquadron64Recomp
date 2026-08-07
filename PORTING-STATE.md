@@ -39381,3 +39381,86 @@ every non-"safe" tool result was read by hand before being classified, catching 
 along the way; also surfaced a genuinely new propagation path -- ABI-implicit call arguments -- that
 no prior bucket in this sub-arc had considered, documented but correctly left unchased as out of
 scope for a same-function guard-at-reload patch).
+
+## Session 474 (2026-08-07): item -307 `hi16=0x8011, offset=-0x35e0` (23 sites, 9 files) CLASSIFIED
+AND DEFERRED, not a guard candidate; folded item -306's 2nd confirm soak (clean); found and fixed
+TWO more methodology tool bugs in this sub-arc's scan tooling
+
+**2nd confirm soak folded first.** `s473_siblingptrwrite120_confirm` (queued s473 for item -306's new
+120th `SIBLING_PTR_WRITE_GUARD` site, `setupCameraMatrices`) ran clean: rc=0, 346s, "OK, 0 crash,
+sibling-ptr-write-guard fires=0" -- matches the manual live-verify exactly. Item -306 fully CLOSED,
+both confirm passes null on the new guard.
+
+**This session's work unit**: NEXT.md's top candidate, `hi16=0x8011, offset=-0x35e0` (global
+`0x8010CA20`, 23 `lw`-reload sites, 9 files: `funcs_11/16/18/29/30/35/38/40/42.c`). Grepped every
+existing guard's address comment in `fixup_game_funcs.py` for `0x8010CA20` first -- no overlap, this
+bucket is genuinely fresh (unlike item -306's `-0x23a8`).
+
+Ran `scratch_s468_shapecheck_generic.py 8011 -35E0` (N64Recomp repo): 23 sites, mostly "(empty)"
+chain shape, but 3 sites flagged `ADD32(...) -> WRITE_THROUGH hit_deref=True`
+(`funcs_38.c:13712`, `funcs_40.c:8447`, `funcs_40.c:8811`) -- a nonzero-risk signal, so built a
+from-scratch taint-propagation scan (`scratch_s474_taint_scan_35e0.py`, adapted from s473's fixed
+`scratch_s473_taint_scan_23a8.py` template) rather than trust the shallow tool directly, per NEXT.md's
+standing instruction.
+
+**Tool bug #1 found (pre-existing, in `scratch_s468_shapecheck_generic.py` itself, likely present in
+every prior bucket scanned with this tool): a register-taint substring-match false positive.** The
+classify loop's `am` branch checks `f"ctx->r{t}" in args` (Python string containment) instead of a
+word-boundary match. Register `r2`'s taint string `"ctx->r2"` is a substring of `"ctx->r29"` --
+so ANY reload landing in `$v0`(r2)/`$v1`(r3, prefix of r30/r31)/`$a0`(r4, prefix of r40+ which don't
+exist so moot)/etc., followed by the near-universal function-prologue stack adjustment
+`ctx->r29 = ADD32(ctx->r29, N);`, gets falsely counted as "touching" the tainted register, then a
+totally unrelated `MEM_W(N, ctx->r29) = ...;` stack spill a line later gets misclassified as
+`WRITE_THROUGH`. Verified directly: all 3 flagged sites in this bucket are this exact false positive
+(`ctx->r29 = ADD32(ctx->r29, -0x30/-0x20);` immediately after the reload, before any real use, in
+all 3). Manually reproduced the tool's own classify loop standalone to confirm the substring-match
+mechanism (not a one-off misread). Not fixed in the tool itself this session (out of scope -- the
+taint scan template already avoids this class of bug via `REG_RE.fullmatch`); flagged here so nobody
+re-trusts a raw `WRITE_THROUGH`/`hit_deref=True` flag from this tool without a direct read, on this or
+any past bucket.
+
+**Tool bug #2 found (new, in this session's own `scratch_s474_taint_scan_35e0.py`, caught before it
+produced a wrong ledger entry): taint doesn't clear across a real function call.** First pass of the
+new scan found `already_guarded 0, real_deref_unguarded 1 (funcs_40.c:8813,
+triggerStageMusicForNamedDatItem), ... no_use_found 22`. Read the "1 real" site directly to confirm
+before trusting it: the reload (`ctx->r2`) is compared and branches away if nonzero (same idiom as
+every other site); on the zero-fallthrough path it calls `getLevelDatItemByName(rdram, ctx);`, and
+ONLY AFTER that call does `ctx->r7 = ADD32(ctx->r2, 0);` feed into the flagged
+`ctx->r3 = MEM_W(ctx->r7, 0x3C);` deref. But `ctx->r2` (`$v0`) is the MIPS o32 return-value register
+-- by the time control returns from the call, it holds `getLevelDatItemByName`'s own return value,
+not the stale global reload; the scan's taint tracking never modeled caller-saved-register
+clobbering across a call, so it treated pre-call and post-call `ctx->r2` as the same tainted value.
+Fixed: added an explicit clear of the MIPS o32 caller-saved set (`r2,r3,r8-r15,r24,r25`) immediately
+after a real-function-call line that doesn't itself trip the `abi_call_tainted_arg` check. Re-ran:
+`real_deref_unguarded` dropped to 0, `no_use_found` rose to 23/23.
+
+**Cross-validation before trusting the "0 real risk" result**: the fixed scan's own site count (23)
+was first validated by adding a same-idiom check to the taint scan's LUI-detection (require the
+reload's destination register to equal the base register to equal the preceding-LUI register, exactly
+matching `scratch_s468_shapecheck_generic.py`'s own `reload_re` constraint) -- an earlier draft
+without this constraint over-counted 32-35 sites by picking up coincidental same-offset accesses from
+unrelated base registers. Once the site count matched 23/23 exactly (file:line-for-line against the
+canonical shapecheck list), the classification was trusted. Then spot-checked 10/23 sites directly by
+hand across 7 of the 9 files (`funcs_11/16/18/29/30/35/42`, only `funcs_38`/`funcs_40` unsampled
+beyond the already-read false-positive sites) -- 10/10 are the byte-identical "load, compare != 0,
+branch-and-discard" idiom, matching item -305's disposition exactly. Also grepped for WRITE sites to
+the same global (`MEM_W(-0X35E0, ctx->rN) = ...`) -- found 12, all confined to `funcs_42.c`, all
+storing small integer literals (0) or register-to-register copies, never a pointer-shaped value --
+independently corroborates that `0x8010CA20` is an integer state/counter (plausibly a
+mission-transition-phase flag, given `funcs_42.c`'s function names:
+`runInMissionFrame`/`beginMissionEndTransition`/`endMissionEndTransition`/
+`requestMissionTransitionMode`/`clearMissionObjectiveFlagsAndEnterPhaseSix`), not a guard candidate.
+
+**Disposition: item -307, CLASSIFIED AND DEFERRED, no code change** -- same reasoning as item -305:
+a comparison against a stale/uninitialized integer can't fault, and forcing the branch outcome would
+silently change game logic rather than harden against a wild pointer. No soak queued (no code change
+to verify, same as item -305's precedent).
+
+**Outcome: ADVANCED.** Classified a fresh 23-site/9-file bucket to a confident, cross-validated
+disposition (machine scan 23/23 no-real-use + hand-read 10/23 spot-check, 100% agreement + an
+independent write-site corroboration), and found/documented two more real tool bugs in this now
+four-bug-deep taint/shapecheck tooling lineage (s472 case-sensitivity, s473 taint-clear-on-any-
+reassignment, this session's shapecheck register-substring false positive AND the new scan's own
+call-boundary taint-survival false positive) -- the second of which was caught and fixed BEFORE it
+produced a wrong "guard needed" ledger entry, which is exactly what the cross-validation-before-
+trusting-a-tool discipline this sub-arc has been building is for.

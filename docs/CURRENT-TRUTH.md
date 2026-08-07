@@ -19,15 +19,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Current active
    sub-arc: the s465 codebase-wide frequency scan of `lui+lw` global-reload idioms — see items
-   -298..-305 below for the closed/deferred-bucket chain and PROJECT-OVERVIEW §18 for full detail.
-   `hi16=0x8011, offset=0x63d4` (170 sites, the largest bucket in the scan) CLASSIFIED AND DEFERRED
-   s472 as item -305 — confirmed compare-only "DL pointer vs buffer limit" idiom, reload never
-   dereferenced, not a guard candidate (see item -305 below). The flagged `hi16=0x8012,
-   offset=-0x23a8` bucket (141 sites, partially covered by item -296) was fully resolved s473 as item
-   -306 — 120/141 covered (119 pre-existing + 1 newly found and fixed), 2 false positives, 19
-   no-use, 10 flagged-not-chased (see item -306 below). **Next candidates, both far more scattered
-   than anything closed so far: `hi16=0x8011, offset=-0x35e0`** (23 sites, 9 files) **or `hi16=0x8013,
-   offset=0xb50`** (21 sites, 11 files).
+   -298..-307 below for the closed/deferred-bucket chain and PROJECT-OVERVIEW §18 for full detail.
+   `hi16=0x8011, offset=0x63d4` (170 sites) and `hi16=0x8011, offset=-0x35e0` (23 sites, item -307)
+   are both CLASSIFIED AND DEFERRED — confirmed compare-only idioms, reload never dereferenced, not
+   guard candidates. The flagged `hi16=0x8012, offset=-0x23a8` bucket (141 sites, partially covered
+   by item -296) was fully resolved s473 as item -306 — 120/141 covered (119 pre-existing + 1 newly
+   found and fixed), 2 false positives, 19 no-use, 10 flagged-not-chased. **Next candidate:
+   `hi16=0x8013, offset=0xb50`** (21 sites, 11 files, the most-scattered remaining bucket in the
+   scan).
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -159,7 +158,31 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -306. The next NEW item takes -307.
+a range pointer. Highest allocated so far: -307. The next NEW item takes -308.
+
+-307. **(s474) M3 idiom-class audit: `hi16=0x8011, offset=-0x35e0` global (`0x8010CA20`) — CLASSIFIED
+    AND DEFERRED, not a guard candidate.** 23 `lw` reload sites across 9 files
+    (`funcs_11/16/18/29/30/35/38/40/42.c`), no overlap with any existing guard's global address.
+    `scratch_s468_shapecheck_generic.py` flagged 3 sites `ADD32(...)->WRITE_THROUGH hit_deref=True` —
+    all 3 confirmed by direct read to be a **newly found tool bug**: the classify loop checks
+    register taint via Python substring containment (`"ctx->r2" in args`), which false-matches inside
+    `"ctx->r29"` — the near-universal stack-pointer prologue line (`ctx->r29 = ADD32(ctx->r29, N);`)
+    immediately following a reload landed in `$v0`/r2 gets misread as touching the tainted register,
+    and the next unrelated stack-spill line gets misclassified as a write-through. A from-scratch
+    taint scan (`scratch_s474_taint_scan_35e0.py`, N64Recomp repo, untracked, adapted from item -306's
+    fixed template) initially found 1 "real" unguarded deref (`triggerStageMusicForNamedDatItem`,
+    `funcs_40.c`) — direct read caught a **2nd tool bug in the new scan itself**: taint wasn't cleared
+    across a real function call, so `ctx->r2` (the MIPS o32 return-value register) was still marked
+    tainted from the pre-call reload when it actually held the callee's own return value post-call.
+    Fixed (clear caller-saved regs `r2,r3,r8-r15,r24,r25` after any uncaught real-call line); re-ran:
+    0/23 real derefs, 0/23 write-throughs, 0/23 tainted-call-arg escapes. Site count cross-validated
+    exact (23/23, file:line match) against the canonical shapecheck list before trusting the result.
+    10/23 sites spot-checked directly across 7/9 files — 100% the same "load, compare != 0,
+    branch-and-discard" idiom as item -305. 12 write sites to the same global found (`funcs_42.c`
+    only, all storing small integer literals/register copies, never pointer-shaped) — independently
+    corroborates it's an integer mission-transition-phase flag, not a pointer. No code change (same
+    reasoning as item -305: a comparison can't fault on a stale value). No soak queued (no code
+    change to verify). Full derivation incl. both tool-bug writeups: `PORTING-STATE.md` Session 474.
 
 -306. **(s473) Resolved item -296's flagged `hi16=0x8012, offset=-0x23a8` gap (141 sites) — found
     and FIXED a real methodology gap in that already-CLOSED item, closing 1 new guard site (120th)
@@ -186,8 +209,10 @@ a range pointer. Highest allocated so far: -306. The next NEW item takes -307.
     `hangarbay-entry` n=31 (positive control); crashed at the very end on a NEW signature
     (`setByteAcrossEntryList+176`, bus error, `last-guest-pc=0x800aafa8`, the standard
     RDRAM-host-base-pointer pattern per the s219 overturned-conclusion entry), unrelated to any guard
-    tested, filed not chased. 2nd independent confirm soak queued: `s473_siblingptrwrite120_confirm.sh`.
-    Full derivation: `PORTING-STATE.md` Session 473.
+    tested, filed not chased. 2nd independent confirm soak (`s473_siblingptrwrite120_confirm.sh`) ran
+    s474: 0 crash, 0 `sibling-ptr-write-guard` fires (matches the manual live-verify exactly). Item
+    -306 fully CLOSED, both confirm passes null on the new guard. Full derivation: `PORTING-STATE.md`
+    Session 473.
 
 -305. **(s472) M3 idiom-class audit: `hi16=0x8011, offset=0x63d4` global (`0x801163D4`, 12 bytes
     from item -299's `DL_BUFFER_POOL_GUARD` global) — CLASSIFIED AND DEFERRED, not a guard

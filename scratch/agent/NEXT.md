@@ -1,73 +1,88 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: item-307-scan-buckets
+HYPOTHESIS-ID: item-308-scan-buckets
 
-## s473 summary: resolved item -296's flagged `hi16=0x8012, offset=-0x23a8` gap (141 sites) -- found
-and FIXED a real methodology gap in the already-CLOSED item -296, closing 1 new guard site (120th)
-and classifying the rest. A from-scratch taint-propagation scan
-(`scratch_s473_taint_scan_23a8.py`, N64Recomp repo, untracked), validated against the KNOWN
-119-address guard list before trusting any new finding, found: 119 already-guarded (exact match), 1
-genuine unguarded write-through-the-reload (`setupCameraMatrices`, fixed as SIBLING_PTR_WRITE_GUARD's
-120th site), 2 false positives (`do_lwl` unaligned-load helper calls, confirmed by direct read), 10
-sites where the reload crosses a REAL function call via the guest ABI convention (`ctx->r4`/`r7` still
-tainted at a `fn(rdram, ctx);` call -- a genuinely novel propagation path, flagged not chased), and 19
-no-use sites (spot-checked 4/19, not exhaustive). Clean regen/build, `strings`-verified 120/120 +
-all 10 sibling families unchanged, live-verify 0 fires + hangarbay-entry n=31 positive control,
-crashed on an unrelated new signature (filed not chased). 2nd confirm soak queued:
-`s473_siblingptrwrite120_confirm.sh`. Full derivation: `PORTING-STATE.md` Session 473; ledger:
-`docs/CURRENT-TRUTH.md` item -306 (new) and item -296 (amended).
+## s474 summary: item -307 `hi16=0x8011, offset=-0x35e0` (23 sites, 9 files) CLASSIFIED AND DEFERRED,
+not a guard candidate -- same disposition as item -305 (compare-only integer-flag idiom, never
+dereferenced). Folded item -306's 2nd confirm soak (clean, 0 fires). Found and fixed TWO more
+methodology tool bugs along the way:
 
-## This session's top work unit: classify a fresh bucket from the s465 codebase-wide frequency scan
+1. **Pre-existing bug in `scratch_s468_shapecheck_generic.py`** (likely present in every prior bucket
+   scanned with it): its classify loop checks register taint via Python substring containment
+   (`f"ctx->r{t}" in args`), which false-matches `"ctx->r2"` inside `"ctx->r29"` -- so a reload landed
+   in `$v0`(r2) immediately followed by the near-universal `ctx->r29 = ADD32(ctx->r29, N);` stack
+   prologue gets falsely flagged as touching the tainted register, and the next stack-spill line
+   misclassified as `WRITE_THROUGH`. Confirmed on all 3 of this bucket's flagged sites. NOT fixed in
+   the tool itself (out of scope) -- **treat any raw `hit_deref=True`/`WRITE_THROUGH` flag from this
+   tool as unverified until read directly**, on this or any past bucket.
+2. **New bug in this session's own `scratch_s474_taint_scan_35e0.py`**, caught before it produced a
+   wrong ledger entry: taint wasn't cleared across a real function call, so `ctx->r2` ($v0, the MIPS
+   o32 return-value register) stayed "tainted" from a pre-call reload when it actually held the
+   callee's own return value post-call. Fixed by clearing caller-saved regs (`r2,r3,r8-r15,r24,r25`)
+   after any real-call line. **If you build a new taint scan from this template for the next bucket,
+   this fix must already be present -- use `scratch_s474_taint_scan_35e0.py` as the new starting
+   template, not `scratch_s473_taint_scan_23a8.py`.**
 
-Two next-ranked candidates remain, both genuinely fresh (no known partial-coverage caveat like the
--0x23a8 bucket had) but far more scattered than anything closed so far in this sub-arc -- budget
-accordingly, this may take the full session just to characterize:
+Full derivation: `PORTING-STATE.md` Session 474; ledger: `docs/CURRENT-TRUTH.md` item -307 (new) and
+item -306 (confirm-soak fold).
 
-1. **`hi16=0x8011, offset=-0x35e0`** (23 sites, 9 files) -- the more scattered of the two by file
-   count, likely means more distinct downstream shapes (per the item -300 lesson: a bucket spanning
-   multiple files/functions is more likely to hide a second shape a short sample would miss).
-2. **`hi16=0x8013, offset=0xb50`** (21 sites, 11 files) -- even more files for slightly fewer sites.
+## This session's top work unit: classify the last known fresh bucket from the s465 scan
 
-Recommended approach, following the method that worked this session and s305/s463-472's:
-1. `cd ~/Documents/Tools/N64Recomp && python3 scratch_s468_shapecheck_generic.py 8011 -35E0` (remember:
-   **always pass the offset in UPPERCASE hex** -- lowercase silently returns "total sites: 0", a
-   documented tool bug from s472).
-2. Before trusting the tool's own `hit_deref` classification, check whether ANY of these 23/21 sites
-   overlap an already-guarded global (grep the candidate's resolved address --
-   `0x80110000 - <offset>` for hi16=0x8011, `0x80130000 - <offset>` for hi16=0x8013 -- against every
-   existing guard's address comment in `fixup_game_funcs.py`) the way this session found `-0x23a8`
-   secretly overlapped item -296. If it's genuinely fresh (no overlap), proceed with the standard
-   classify-then-patch recipe used for items -298/-299/-300/-301/-303/-304.
-3. Given this session's finding that a naive tool can silently undercount (ADD32-preserves-taint,
-   early-break-on-`if`, and the newly-discovered ABI-call-boundary blind spot), prefer
-   `scratch_s473_taint_scan_23a8.py` as a STARTING TEMPLATE for a new bucket's own taint scan
-   (parameterize the target offset/hi16, keep the ABI-call check) over trusting
-   `scratch_s468_shapecheck_generic.py`'s shallow 6-20-line window in isolation. Cross-validate any
-   "no risk found" result against a positive-count sanity check (does a manual sample of 3-5 sites
-   match the tool's classification?) before declaring a bucket closed or deferred.
-4. For each classified risk shape, patch/guard per the established per-site literal-anchor mechanism
-   (see any of items -298 through -305 in CURRENT-TRUTH for the pattern), regen/build/live-verify,
-   queue a confirm soak.
+**`hi16=0x8013, offset=0xb50`** (21 sites, 11 files) -- the most-scattered bucket left in the s465
+codebase-wide frequency scan (more files than sites). Per the item -300 lesson, a bucket spanning
+many files/functions is more likely to hide a second downstream shape than a short sample would
+catch -- budget a full session for this one too.
 
-## Candidate follow-up (not this session unless the above proves intractable): the ABI-call-boundary
-propagation path found s473
+Recommended approach (now a 4-step recipe, refined again this session):
+1. `cd ~/Documents/Tools/N64Recomp && python3 scratch_s468_shapecheck_generic.py 8013 B50` (uppercase
+   offset, no leading `-` since this one is positive -- confirm the tool's `off_raw` parsing handles
+   a positive hex with no sign the same way as `-70F8` etc. before trusting the site count).
+2. Before trusting ANY `hit_deref=True`/`WRITE_THROUGH` flag from step 1, read that exact site
+   directly -- this session found 3/3 flagged sites in its bucket were a tool false positive (see bug
+   #1 above). Don't skip this even if the flagged count is small.
+3. Grep every existing guard's address comment in `fixup_game_funcs.py` for the resolved global
+   address (`0x80130000 - 0xB50` for hi16=0x8013) to rule out an item -306-style partial-coverage
+   overlap before treating the bucket as fresh.
+4. Copy `scratch_s474_taint_scan_35e0.py` as the starting template (NOT the older s473 one -- it's
+   missing the caller-saved-register-clear fix), retarget `target`/`files`/`LUI_RE`'s hi16 literal for
+   the new hi16/offset, re-run, and validate the site count matches step 1's canonical count exactly
+   (file:line, not just total) before trusting any classification. Then spot-check >=8-10 sites
+   directly across as many of the 11 files as practical (the item -300 lesson bites hardest on
+   wide-file-count buckets like this one). Also grep for WRITE sites to the same global
+   (`MEM_W(0XB50, ctx->rN) = ...` and any negated/hi16-relative variant) the way this session did --
+   it's a fast independent corroboration of pointer-vs-integer shape.
+5. If a real unguarded-deref/write-through risk shape IS found (unlike the last 2 buckets), patch per
+   the established per-site literal-anchor mechanism (items -298/-299/-300/-301/-303/-304), regen/
+   build/live-verify, queue a confirm soak. If it classifies as compare-only/integer-flag like the
+   last two, no code change needed -- CLASSIFY AND DEFER per the item -305/-307 pattern, no soak to
+   queue.
+
+## After this bucket: the s465 scan's known candidate list is EXHAUSTED
+
+Once `hi16=0x8013, offset=0xb50` is resolved, every bucket surfaced by the s465 codebase-wide
+frequency scan will have a disposition (closed-with-guard, or classified-and-deferred). Next session
+after that needs a genuinely NEW discovery source for M3 idiom-class work -- rerunning the s465 scan
+methodology on a different instruction pattern, or falling back to the M3 priority-3 reactive-audit
+fallback described in ITERATION.md's strategic-priority section. Flag this explicitly rather than
+inventing a new bucket without a re-scan.
+
+## Candidate follow-up (not yet scheduled, low priority): the ABI-call-boundary propagation path
+found s473, still unverified
 
 10 sites (`submitSceneNodeRender` x2, `renderLitMeshFaceGroup` x4, `drawSubtitleText` x3,
-`setupCameraMatrices` x1) pass the `-0x23a8` reload as an implicit ABI argument into
+`setupCameraMatrices` x1, from item -306's audit) pass a reload as an implicit ABI argument into
 `appendRdpStateDl`/`emitAllocatedDLCommand`/`buildOrientedFaceGeometry`/`drawTextGlyphRect`. Whether
-these callees dereference their `$a0`/`$a3` argument unguarded is UNVERIFIED -- would need each
-callee's own body read. Plausibly safe (same idiom as the already-hardened `DL_LIST_APPEND_GUARD`
-family, just across a function boundary) but not confirmed. Low priority unless a crash signature
-ever symbolizes inside one of those 4 functions with a wild pointer.
+these callees dereference their `$a0`/`$a3` argument unguarded is UNVERIFIED. Low priority unless a
+crash signature ever symbolizes inside one of those 4 functions with a wild pointer.
 
 ## Discriminating instrument still live: watch for `sibling-ptr-write-guard` fires in
 `submitSceneNodeRender`
 
-Unchanged from prior sessions -- 10 of the (now 120) sites sit in `submitSceneNodeRender`, tied to a
-still-open 2-occurrence wait-for-recurrence breadcrumb. 0 fires across every soak so far, including
-s473's live-verify.
+Unchanged from prior sessions -- 10 of the 120 `SIBLING_PTR_WRITE_GUARD` sites sit in
+`submitSceneNodeRender`, tied to a still-open 2-occurrence wait-for-recurrence breadcrumb. 0 fires
+across every soak so far, including s474's (no soak run this session -- no code change).
 
 ## Soak queue status
 
-`s473_siblingptrwrite120_confirm.sh` queued this session (2nd independent confirm for item -306's new
-guard site). Check `scratch/agent/SOAK-RESULTS.md` tail at the start of next session as usual.
+None queued this session (item -307 had no code change to verify). Check `scratch/agent/SOAK-
+RESULTS.md` tail at the start of next session as usual in case anything else lands from the queue.

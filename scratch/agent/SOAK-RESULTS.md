@@ -109,3 +109,4 @@
 20260807-153023 | s468_texdatatable_confirm | rc=3 | 160s | scratch/agent/soak_results/s468_texdatatable_confirm_20260807-153023.log
 20260807-155620 | s470_texdataptrarray_confirm | rc=3 | 161s | scratch/agent/soak_results/s470_texdataptrarray_confirm_20260807-155620.log
 20260807-161351 | s471_materialarrayptr_confirm | rc=3 | 153s | scratch/agent/soak_results/s471_materialarrayptr_confirm_20260807-161351.log
+20260807-164356 | s473_siblingptrwrite120_confirm | rc=0 | 346s | scratch/agent/soak_results/s473_siblingptrwrite120_confirm_20260807-164356.log
