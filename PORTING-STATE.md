@@ -37391,3 +37391,70 @@ blanket fix, needs a redundancy check before re-adding, chunk 3b's 21 sites like
 **Outcome: ADVANCED** (executed the planned S390_H2A/S390_H2B ungate work unit end-to-end: raw
 regen, standalone uniqueness+placement verification catching 2 new wrinkles beyond s446's
 precedent, code fix, build-clean, binary-verified, live-verify soak launched).
+
+## Session 449 (2026-08-07)
+
+**Context**: the loop enforced the mandatory-pivot rule — sessions 446/447/448 had all run
+`HYPOTHESIS-ID: static5-rename-orphan-sweep` (ungate one orphaned guard family, queue a confirm
+soak) without ever closing it, so a 4th consecutive iteration of the same shape (starting on
+G1-G32 next) was blocked. Chose option (b): design and run the single highest-information
+discriminating probe for the hypothesis itself, rather than a different family sweep.
+
+**The ambiguity**: items -282 (GETDATITEM_GUARD), -284 (HANGARLIST_GUARD family), -286
+(S390_H2A/H2B) had all logged 0 guard-trips across every confirm soak since s445. But every
+guard's trip-counter only increments on the bad-pointer branch — 0 is consistent with BOTH "the
+guarded code never executes in these soaks" (a soak-coverage gap, meaning the whole confirmation
+effort has been testing nothing) and "the code executes constantly and the pointer is genuinely
+always in range" (a real, confirmed true negative). No prior session distinguished these — iron
+rule 1 (a null result needs a positive control) had never actually been satisfied for this
+family of guards.
+
+**The probe**: added unconditional REACHED counters (print at n=1, then every 500 calls for the
+hangar-list sites / every 2000 for getdatitem, to avoid log flooding) to the already-ungated
+`GETDATITEM_GUARD` (`funcs_10.c`/`_27.c`/`_29.c`/`_36.c`, 6 sites, one shared regex) and
+`HANGARLIST_GUARD_EARLY`/`WALK`/`CLEAR` (`funcs_27.c`, 1 site each) in
+`N64Recomp/fixup_game_funcs.py` (sibling repo, same file every prior orphan-sweep session edited).
+Full regen pipeline (delete `RecompiledFuncs/funcs_*.c` -> `make_elf.py` -> `N64Recomp` ->
+`fixup_game_funcs.py` -> `cmake --build`) came back clean (46 pre-existing warnings, 0 new); fixup
+report showed the expected patch counts (GETDATITEM_GUARD x6 total across 4 files, each
+HANGARLIST_GUARD_EARLY/WALK/CLEAR x1); `strings` on the built binary confirmed all 9 new
+`[getdatitem-reached]`/`[hangarlist-reached]` format strings present before running anything.
+
+**The result**: ran a single live-verify with every guard-family env var armed (including the two
+new `ROGUESQ_LOG_GETDATITEM_REACHED`/`ROGUESQ_LOG_HANGARLIST_REACHED`), the same phase-gated
+300s/250s-key schedule as s448. It crashed at 117.4s/49 frames (see below), but the run.log up to
+that point already carries the answer:
+
+- `[hangarlist-reached] site=EARLY n=123000`, `site=WALK n=58500`, `site=CLEAR n=64500` — 245000+
+  total executions of these 3 guarded code paths in 117 seconds, **0 guard trips**. This is a
+  strong, statistically solid positive control: the instrumentation and the code path are
+  unambiguously live, and the bounds check genuinely never fails under this much traffic.
+- `[getdatitem-reached]`: 5 of 6 sites hit (`funcs_10.c_after_0`, `funcs_29.c_after_20`,
+  `funcs_27.c_after_31`/`_49`/`_51`, each n=1) — lower-traffic call sites, so weaker statistically,
+  but still refutes "unreached": the code does execute, 0 trips is a real (if thin) negative, not
+  a coverage gap. The 6th site (`funcs_36.c_after_3`) did not fire this run — plausibly a rarer
+  call path, not chased further this session.
+
+**Conclusion, closing `static5-rename-orphan-sweep`**: items -282/-284/-286's persistent 0-fires
+were true negatives, not artifacts of an under-exercised soak schedule. The remaining orphaned
+families (`G1`-`G32`, `S392_H3A`/`S393_H3B`, `BREADCRUMB7`) should still be finished — they are
+genuine correctness debt (an orphaned gate silently disables a guard, full stop) and strategic
+priority #3 wants the idiom class formally closed — but the expected value of doing so has
+shifted: this is now known, evidence-backed completeness/hardening work, not a live crash hunt.
+Continuing it is legitimate but should not be mistaken for chasing an open crash.
+
+**Incidental finding**: the run's crash is a signature not previously catalogued —
+`pc-symbol=heapFreeListDequeue+19316` (host offset far too large to be literally inside that
+function's body; almost certainly nearest-symbol misattribution, same shape as the
+cvmsPoolAlloc/coalesceFreeHeapBlocks misattribution family in items -282/-285),
+`last-guest-pc=0x8000d534`, backtrace through `menuOverlayInit <- mainGameLoop <-
+mainBootstrapWorker`. Single occurrence, no positive control, and no shared call path with any
+guard tested this session. Filed (see CURRENT-TRUTH item -287), not chased — strategic priority
+#3 rules out reactive single-crash chases.
+
+**Housekeeping**: no `lib/` edits this session (only `N64Recomp/fixup_game_funcs.py`, outside
+`lib/`, no `export.sh` needed).
+
+**Outcome: ADVANCED** (designed and ran the discriminating probe the mandatory-pivot rule
+required, got a real answer, closed the 4-session-old open question, and filed a new crash
+signature without chasing it).

@@ -164,8 +164,37 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -286 (s448, the `S390_H2A`/`S390_H2B` ungate — see below); the
-next new item takes -287.
+oldest). Current top is -287 (s449, the orphan-sweep positive-control result — see below); the
+next new item takes -288.
+
+-287. **(s449) CLOSED the `static5-rename-orphan-sweep` open question with a positive control:
+    items -282/-284/-286's persistent "0 guard-trips" was a confirmed TRUE NEGATIVE, not an
+    unreached-code artifact.** Every confirm soak since s445 logged 0 trips on the newly-ungated
+    guards, but the trip counters only increment on the bad-pointer branch — ambiguous between
+    "code never executes in these soaks" and "code executes constantly, pointer is genuinely
+    always valid." Added unconditional REACHED counters (print at n=1, then every 500/2000) to
+    `GETDATITEM_GUARD`'s 6 sites and `HANGARLIST_GUARD_EARLY`/`WALK`/`CLEAR`'s 3 sites (all
+    already-ungated, s445/s446), armed alongside every other guard-family env var, one 117s live
+    run (see below for why it was cut short). Result: **`HANGARLIST_GUARD_EARLY`/`WALK`/`CLEAR`
+    reached 123000/58500/64500 times respectively (245000+ total) with 0 trips — a strong,
+    statistically solid positive control confirming these are genuine true negatives, not dead
+    code.** `GETDATITEM_GUARD` reached 5 of its 6 sites (1 hit each, low-traffic call sites,
+    lower confidence but still refutes "unreached") with 0 trips. **Conclusion: the remaining
+    orphan-sweep families (`G1`-`G32`, `S392_H3A`/`S393_H3B`, `BREADCRUMB7`) should be finished
+    as pure completeness/hardening debt-paydown, not as a crash hunt — this class of guard is now
+    confirmed unlikely to ever fire under normal play.** Downgrades this thread's priority below a
+    fresh M3 idiom-class search (strategic priority #3 still wants the orphan class formally
+    closed, just without expecting it to explain any open crash). Regen/build clean (both changes
+    live in `fixup_game_funcs.py`, N64Recomp repo, not tracked in this repo's git — same as every
+    prior session's fixup edits); `strings` confirmed both new format strings' 9 sites present in
+    the binary before the run.
+    **Incidental: the run crashed at 117.4s/49 frames on a signature not seen before** —
+    `pc-symbol=heapFreeListDequeue+19316` (the huge offset is very likely nearest-symbol
+    misattribution, same shape as the cvmsPoolAlloc/coalesceFreeHeapBlocks family in items
+    -282/-285, not literally inside a 19KB function), `last-guest-pc=0x8000d534`, backtrace
+    through `menuOverlayInit <- mainGameLoop <- mainBootstrapWorker`. Single occurrence, no
+    positive control, unrelated call path to any guard tested this session — filed, not chased
+    (strategic priority #3). Full detail: `PORTING-STATE` Session 449.
 
 -286. **(s448) `S390_H2A`/`S390_H2B` orphaned hangar-list `-0x25A4` guard family — FIXED, same
     method as item -284's s446 fix.** 11 sites, file-scope-gated to `p.name == "funcs_27.c"`,
@@ -187,6 +216,10 @@ next new item takes -287.
     Live-verify: full 300s/250s-key schedule, 0 crashes, 0 fires on any of the new or sibling guard
     families (null result, no positive control yet — matches this whole audit's established low,
     state-dependent firing rate). Confirmation soak queued: `s448_s390h2_confirm.sh`.
+    **s449 update: item -287's positive control (245000+ reaches, 0 trips on the sibling
+    HANGARLIST_GUARD_EARLY/WALK/CLEAR family) confirms this whole pattern — including this
+    item's own 0 fires — is a true negative, not a soak-coverage gap. Confirmation CLOSED, not
+    open: these guards are correct hardening, not live bug catches.**
     **Incidentally, folding in the queued `s447_hangarlist_getdatitem_confirm` soak (read-list #3)
     found it crashed** (`rc=3`, `probe.sh`'s own s447 fix correctly firing) **on a recurrence of the
     already-catalogued 9th crash class (`updateAnimatedTextureStreaming` SIGBUS, s89/s124/s127),
