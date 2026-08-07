@@ -111,9 +111,8 @@ Stability: clean through s27 driven hangar soaks and s49's post-clip-fix regress
 `UnhandledJumpTarget`, 0 `[defer-drop]`, 0 `[dmem-race]`, 0 asserts. `[missing-func]` in the undriven
 outdoor-512 stretch: s49's original 3 addresses **FIXED and closed s399** (item -6); s399 also found
 ~801-803 further phantom overlay-range functions in `main_overlay.txt`; s400+s402+s403+s405+s406+s407+
-s408+s410+s411+s412+s413 have fixed 359 of the corrected 778-candidate count (439 remain, 2
-permanently excluded as known-bad, 4 known-skip, item -249; s414 attempted the next 75, hit a new
-deterministic crash, and reverted — 359/778 unchanged, see item -249 below). s411
+s408+s410+s411+s412+s413+s415 have fixed 432 of the corrected 778-candidate count (346 remain, 4
+permanently excluded as known-bad, 4 known-skip, item -249). s411
 resolved the long-standing `[missing-func] 0x800FB9E4` baseline (was `endMissionCleanup`, a
 phantom-overlay victim of this same family) — every clean live-verify from here should show 0
 `[missing-func]` lines, not 1. Post-`a` process now soaks well past 65s without death.
@@ -143,14 +142,17 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
 consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249..-258, IN PROGRESS: 359/778 done
-s400-s413, 439 remain (433 actionable, 4 known-skip, 2 known-bad), largest M4 item open — s404-s407
+`main_overlay.txt` phantom-overlay-function family (item -249..-258, IN PROGRESS: 432/778 done
+s400-s415, 346 remain (338 actionable, 4 known-skip, 4 known-bad), largest M4 item open — s404-s407
 found, bisected, and fully resolved a 20-name crash batch down to one genuinely-buggy function (parked);
 s408 and s410 each resumed ordinary bulk relocation post-closure with two more clean n=20 batches; s411
 ran the loop-mandated discriminating probe on batch size — n=50 landed clean; s412 scaled to n=75
 (clean) then n=100 (crashed), bisected the crash to a 25-name suspect group with a repeatable
 signature, settled the steady-state cadence at n=75; s413 sub-bisected that 25-name group down to one
-bad function (`transformCraftAnchorsApplySubFx3`), parked it, and relocated the other 24 cleanly).
+bad function (`transformCraftAnchorsApplySubFx3`), parked it, and relocated the other 24 cleanly; s414
+hit a fresh 75-name-batch crash and deferred bisection; s415 closed that bisection, finding TWO
+independent bad functions (`allocObjectPoolNode`, `tickCraftMountedAnimationEffect`) hiding in
+different branches of the same bisection tree, and relocated the other 73 cleanly).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -165,11 +167,10 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
 oldest). Current top is -257 (s408); the next new item takes -258 and is inserted at the top.
 
--249..-258. **(s400-414) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
-    proven, three genuine single-function-family crashes bisected/found (two parked, one — s414's —
-    pending bisection), cadence scaled from n=20 to a confirmed-safe n=75. 359/778 done, 439 remain (433
-    actionable, 4 known-skip, 2 known-bad) as of s414 — unchanged from s413, s414's attempted batch was
-    reverted.** s400 landed batch 1
+-249..-258. **(s400-415) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
+    proven, FOUR genuine bad-function crashes bisected and parked, cadence scaled from n=20 to a
+    confirmed-safe n=75-with-bisection-fallback. 432/778 done, 346 remain (338 actionable, 4 known-skip,
+    4 known-bad) as of s415.** s400 landed batch 1
     (20/801) and proved the tooling (`s400_probe_batch.py`/`s400_apply_batch.py`, positive-control via
     `make_elf.py`'s unmapped-functions-skipped counter). s401 attempted the full ~774-item remainder in
     one sweep: it linked, but caused a new deterministic title-screen SIGBUS; reverted without
@@ -234,8 +235,16 @@ oldest). Current top is -257 (s408); the next new item takes -258 and is inserte
     with it reverted — confirms the batch (not environment/nondeterminism) is responsible. Per NEXT.md's
     own contingency plan, deferred bisection rather than guessing which of 75 names is at fault. Repo
     state end-of-session: back to 359/778 (unchanged from s413); the 75-name suspect set is preserved at
-    `scratch/agent/s414_crash_batch_needs_bisection.txt` for next session's halves bisection.** Full
-    per-session detail: `PORTING-STATE` Sessions 400-414.
+    `scratch/agent/s414_crash_batch_needs_bisection.txt`. **s415 closed that bisection: halves bisection
+    found `allocObjectPoolNode` sufficient alone to reproduce the crash, but applying "75 minus that one
+    name" (74) STILL crashed — half-B (38 names) and one sibling 5-name branch (C2) had never been
+    independently tested, only assumed clean by elimination. Testing them found a SECOND bad function,
+    `tickCraftMountedAnimationEffect`, hiding in the untested C2 branch. Both isolated at n=1 alone,
+    both recorded in `m4_known_bad.txt` with a lesson entry: every sibling half at every bisection split
+    must be independently verified, not assumed clean because the other branch reproduced the crash — a
+    batch can hide more than one bad function in different branches of the same tree. The remaining
+    73 names relocated cleanly, live-verified 2/2 (88.6s/88.8s to phase, 19 frames each, 0 crash
+    markers), reaching 432/778.** Full per-session detail: `PORTING-STATE` Sessions 400-415.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
     (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by

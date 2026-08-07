@@ -34922,3 +34922,63 @@ via the standard apply/live-verify/revert/control discipline; a null result woul
 without the positive control, which this session ran — crash 2/2 with the batch, clean 1/1 without it;
 correctly deferred bisection rather than guessing which of 75 names is at fault, per NEXT.md's own
 contingency plan).
+
+## Session 415 (2026-08-06) — M4 item -249 s414-batch bisection CLOSED: TWO independent bad functions isolated (`allocObjectPoolNode`, `tickCraftMountedAnimationEffect`), remaining 73 relocated cleanly (+73, 432/778)
+
+`HYPOTHESIS-ID: m4-item249-s414batch-badfunc-isolation`, continuing s414's handoff exactly per its
+recipe: bisect `scratch/agent/s414_crash_batch_needs_bisection.txt` (75 names) that reproduced
+`loadDatFile+21884`/`last-guest-pc=0x800290d4` deterministically 2/2.
+
+### Bisection path
+Confirmed the sibling repo was at the clean 359/778 baseline (all 75 names present in
+`main_overlay.txt`) before starting. Split 75 -> half-A(37)/half-B(38). Applied and live-verified
+half-A alone: **CRASH**, byte-identical signature. Bisected inside half-A only (the mistake that cost
+an extra round-trip later, see below): A1(18,clean)/A2(19,crash) -> B1(9,clean)/B2(10,crash) ->
+C1(5,crash)/C2(5, NOT independently tested at this point) -> within C1: D1(2,clean)/D2(3,crash) ->
+within D2: E1(`resetObjectPoolListHead`,clean)/F1(`allocObjectPoolNode`,**CRASH ALONE**)/G1(`resetObjectContextPool`,clean).
+Isolated `allocObjectPoolNode` (0x800EC110) as sufficient alone to reproduce the exact
+`last-guest-pc=0x800290d4` signature.
+
+Applied "75 minus `allocObjectPoolNode`" (74 names) as the presumed-final batch, expecting it to land
+clean. **It crashed instead**, same signature. This was the direct consequence of never having
+independently tested half-B (38 names) or C2 (the sibling 5-name half at C1's split) — the earlier
+"isolate one bad function, assume the rest is clean" shortcut was wrong. Reverted, tested half-B alone:
+**clean** (rules out half-B as the second culprit). Tested C2 alone (the never-tested sibling from
+earlier in the tree): **crash**, same signature — confirming the second bad function lives in C2
+(`freeAllObjectContextPoolNodes`/`tickCraftMountedAnimationEffect`/`dispatchSlotActionTwelveByGlobalId`/
+`tickActiveSongSlots`/`shouldSwitchToPendingSong`). Bisected C2: H1(2,crash)/H2(3,clean) -> within H1:
+I1(`freeAllObjectContextPoolNodes`,clean)/J1(`tickCraftMountedAnimationEffect`,**CRASH ALONE**).
+Isolated `tickCraftMountedAnimationEffect` (0x800EC6F0) as the second bad function, sufficient alone.
+Also independently verified H2 (3 names) clean to rule out a third bad function once the pattern of
+"untested siblings hide bugs" had been caught once already.
+
+**Symbol-attribution note**: the host `pc-symbol` in different builds resolved the identical
+`last-guest-pc=0x800290d4` to *different* names (`loadDatFile+21884` in some builds, `npcProbeDriod+4512`
+in others) — `nm`'s nearest-preceding-symbol fallback shifts as the set of real-vs-stubbed functions in
+the binary changes, so which host symbol precedes the (unsymbolized) true crash site moves between
+builds. `last-guest-pc` is the reliable cross-build signature; `pc-symbol` is not, when the crash lands
+in code without its own symbol.
+
+### Final batch and live-verify
+Applied the 73-name clean batch (75 minus both bad functions), full regen+build, `nm`-verified all 73
+present as real functions and both bad names absent, **live-verified clean 2/2** (88.6s/88.8s to
+`phase width=512`, 19 frames each run, 0 `[CRASH]`/`[missing-func]` lines both runs). Net: +73
+relocations this session, **432/778 done** (was 359/778). Both bad functions recorded in
+`scratch/agent/m4_known_bad.txt` with full bisection paths and the pc-symbol-instability note, alongside
+a LESSON entry: when isolating a bad function via nested bisection, every sibling half at every split
+level must be independently verified clean before assuming safety — a batch can hide more than one bad
+function in different branches of the same bisection tree, and "the other half must be fine because this
+half reproduced the crash" is exactly the reasoning that let the second bug hide for two extra
+build-run cycles.
+
+### What this closes
+M4 item -249's s414-batch thread is fully closed: two permanently-parked bad functions, 73/75 landed.
+Sibling-repo symbol-file edits are uncommitted per the standing item -3 rule (ask the user before
+committing there). `HYPOTHESIS-ID` reverts to `m4-item249-bulk-relocation-n75` for the next ordinary
+bulk-relocation session (346/778 candidates remain: 439 total minus 73 just landed minus 4 known-skip
+minus 4 known-bad now).
+
+Outcome: ADVANCED (isolated two independently bad functions via rigorous halves bisection, caught and
+corrected a methodological gap mid-session when an assumed-clean sibling half turned out to hide a
+second bug, landed 73 net new relocations with a same-run positive control (nm presence/absence) and a
+2/2 live-verify clean result).
