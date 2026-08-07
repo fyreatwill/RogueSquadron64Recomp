@@ -22,14 +22,12 @@ Priority order for upcoming iterations, set after the 300-session review:
    -298..-305 below for the closed/deferred-bucket chain and PROJECT-OVERVIEW §18 for full detail.
    `hi16=0x8011, offset=0x63d4` (170 sites, the largest bucket in the scan) CLASSIFIED AND DEFERRED
    s472 as item -305 — confirmed compare-only "DL pointer vs buffer limit" idiom, reload never
-   dereferenced, not a guard candidate (see item -305 below). **Next candidate: `hi16=0x8012,
-   offset=-0x23a8`** (141 sites) — **CAUTION, do NOT treat as fresh**: item -296's
-   `SIBLING_PTR_WRITE_GUARD` already covers 119 of these sites' DOWNSTREAM WRITE (not the reload
-   itself); the 141-vs-119 gap and whether the reload needs its own guard is unclassified — needs its
-   own careful audit, unlike every other bucket in this scan. If that proves intractable this
-   session, the next-ranked genuinely-fresh candidates are `hi16=0x8011, offset=-0x35e0` (23 sites, 9
-   files) or `hi16=0x8013, offset=0xb50` (21 sites, 11 files) — both far more scattered than anything
-   closed so far.
+   dereferenced, not a guard candidate (see item -305 below). The flagged `hi16=0x8012,
+   offset=-0x23a8` bucket (141 sites, partially covered by item -296) was fully resolved s473 as item
+   -306 — 120/141 covered (119 pre-existing + 1 newly found and fixed), 2 false positives, 19
+   no-use, 10 flagged-not-chased (see item -306 below). **Next candidates, both far more scattered
+   than anything closed so far: `hi16=0x8011, offset=-0x35e0`** (23 sites, 9 files) **or `hi16=0x8013,
+   offset=0xb50`** (21 sites, 11 files).
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -161,7 +159,35 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -305. The next NEW item takes -306.
+a range pointer. Highest allocated so far: -306. The next NEW item takes -307.
+
+-306. **(s473) Resolved item -296's flagged `hi16=0x8012, offset=-0x23a8` gap (141 sites) — found
+    and FIXED a real methodology gap in that already-CLOSED item, closing 1 new guard site (120th)
+    and classifying the rest.** A from-scratch taint-propagation scan
+    (`scratch_s473_taint_scan_23a8.py`, N64Recomp repo, untracked) — validated against the KNOWN
+    119-address guard list (exact subset match) before trusting any new finding — found: 119 sites
+    already covered by item -296's `SIBLING_PTR_WRITE_GUARD` (matches exactly); **1 genuine unguarded
+    write-through-the-reload** (`setupCameraMatrices`, `funcs_4.c`, reload `0x8001770C` -> a
+    zero-offset `ADD32` copy survives two branches -> unconditional field write at label
+    `L_800177A4`) — the s459 scan that produced the original 119 cleared its register-taint tracking
+    on ANY reassignment, including zero-offset copies that preserve it, silently dropping this site;
+    **2 false positives** (`renderLitMeshFaceGroup`, `do_lwl` unaligned-load helper calls —
+    confirmed by direct read that the tainted register is a discarded merge-seed, not a deref); **10
+    sites** where the raw reload is still live in `ctx->r4`/`ctx->r7` at a call to a REAL recompiled
+    function (`appendRdpStateDl`/`emitAllocatedDLCommand`/`buildOrientedFaceGeometry`/
+    `drawTextGlyphRect`) — crosses the function boundary via the guest ABI calling convention, a
+    genuinely novel propagation path no prior bucket in this sub-arc had considered; **flagged, not
+    chased** (would need each callee's own body read; plausibly the same safe DL-append-pointer
+    idiom used throughout, but unverified); **19 no-use sites**, spot-checked 4/19 (not
+    exhaustive — residual risk low but not zero, flagged for anyone revisiting this bucket). Fixed:
+    added the confirmed site as `SIBLING_PTR_WRITE_GUARD`'s 120th entry (same mechanism/env flag as
+    the other 119). Clean regen/build; `strings`-verified 119->120 with all 10 sibling guard families
+    unchanged (no regression). Live-verify: 0 fires on the new site + all 120 + all siblings,
+    `hangarbay-entry` n=31 (positive control); crashed at the very end on a NEW signature
+    (`setByteAcrossEntryList+176`, bus error, `last-guest-pc=0x800aafa8`, the standard
+    RDRAM-host-base-pointer pattern per the s219 overturned-conclusion entry), unrelated to any guard
+    tested, filed not chased. 2nd independent confirm soak queued: `s473_siblingptrwrite120_confirm.sh`.
+    Full derivation: `PORTING-STATE.md` Session 473.
 
 -305. **(s472) M3 idiom-class audit: `hi16=0x8011, offset=0x63d4` global (`0x801163D4`, 12 bytes
     from item -299's `DL_BUFFER_POOL_GUARD` global) — CLASSIFIED AND DEFERRED, not a guard
@@ -258,7 +284,9 @@ a range pointer. Highest allocated so far: -305. The next NEW item takes -306.
     mandatory pivot off item -292): 0 `[CRASH]`, 0 fires; 10 of its 119 sites sit in
     `submitSceneNodeRender`, now a discriminating instrument for that function's still-open
     wait-for-recurrence breadcrumb (0 fires there so far, including s469's new crash — see item
-    -301/-302 above). Item -292 (`SONGTEMPO_TABLE_GUARD`, 43 sites/6 reader functions,
+    -301/-302 above). **AMENDED s473 (item -306): the s459 scan had a register-taint-tracking gap
+    that silently dropped 1 real site (120th, `setupCameraMatrices`) — found, fixed, and
+    soak-confirmed; the guard family is otherwise unchanged.** Item -292 (`SONGTEMPO_TABLE_GUARD`, 43 sites/6 reader functions,
     `funcs_25.c`) CLOSED s462 — see its own entry below. Full session-by-session detail:
     `docs/PROJECT-OVERVIEW.md` §17.
 

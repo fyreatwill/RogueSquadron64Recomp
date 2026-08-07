@@ -39274,3 +39274,110 @@ planned Step 1 classification work unit to a definitive conclusion -- the larges
 sub-arc is a comparison-only idiom, not a guard candidate, closing that question outright rather than
 leaving it open; also found and documented a real tool bug -- case-sensitive offset matching -- that
 would otherwise silently zero-result every future bucket passed in lowercase).
+
+## Session 473 (2026-08-07): resolved the `hi16=0x8012, offset=-0x23a8` "partially covered" gap
+flagged by s472 -- found and FIXED a real methodology gap in the already-closed item -296, closing
+1 new guard site (120th) and classifying the rest of the 141-site bucket.
+
+**Setup.** NEXT.md's top work unit for this session carried an explicit caution: item -296's
+`SIBLING_PTR_WRITE_GUARD` (closed s459, global `0x8011DC58`, 119 sites) already covers the
+DOWNSTREAM WRITE for this same reload, so the 141-site scan-tool count for this bucket wasn't a
+fresh audit -- it was a 141-vs-119 gap of unknown disposition. Confirmed the address match first
+(`0x80120000 - 0x23A8 = 0x8011DC58`, matches item -296's own comment) before doing anything else.
+
+**Tooling.** `scratch_s468_shapecheck_generic.py 8012 -23A8` returned 0 `hit_deref=True` across all
+141 sites -- a red herring, not a real result: its early-break-on-`if` heuristic trips on the
+guard's own `if (s_sibling_ptr_write_guard_enabled < 0) {` line, so it can't see PAST an
+already-guarded write at all in this bucket. The s459 scan (`scratch_s459_scan_23a8.py`, still on
+disk, untracked) is a better base -- it walks the full function body, not a 6-step window -- but
+re-running it as-is against the now-already-patched source found 0 sites (down from its original
+119), because its `pending` dict clears tracking on ANY reassignment to the reload register,
+including pointer arithmetic that PRESERVES taint (`ctx->r2 = ADD32(ctx->r2, 0X8)` -- common in this
+bucket per the generic tool's own "ADD32(...) -> ..." groups). Wrote
+`scratch_s473_taint_scan_23a8.py` (N64Recomp repo, untracked): same walk, but propagates a taint SET
+through any reassignment whose RHS references an already-tainted register (covers copies AND
+arithmetic), distinguishes recompiler intrinsics (fixed ALL_CAPS macros: `ADD32`/`MEM_*`/`S32`/etc,
+confirmed by grepping the actual macro names emitted into `funcs_3.c`) from real called functions,
+and additionally tracks the ABI calling convention -- real recompiled-function calls look like
+`fn(rdram, ctx);` with no literal arguments, so a tainted `ctx->r4`-`r7` at the call site crosses
+into the callee implicitly and a naive "tainted register passed as a literal C argument" check
+misses it entirely.
+
+**Validation of the tool itself, not just its output.** First pass (60-line window, no ABI-call
+check): 116 already-guarded + 0 unguarded-deref + 52 "call_with_tainted_arg" + 25 no-use. The 52 were
+a bug, not a finding -- `do_lwl`/`do_lwr`/`do_swl` (unaligned-load/store helper functions, lowercase
+names) got flagged as real calls; fixed by widening the intrinsic exclusion. Re-run: 119
+already-guarded (matches the KNOWN count from `fixup_game_funcs.py`'s own site list exactly) + 0 + 0
++ 1 real_deref_unguarded + 19 no-use. Cross-checked the 119 "already-guarded" hits' `guard_site=`
+addresses directly against the 119 addresses extracted from `fixup_game_funcs.py`: exact subset match
+(0 sites found that weren't in the known list), with 3 known addresses NOT found by the scan --
+traced one (`0x800105A0`, `submitSceneNodeRender`) by hand and confirmed it's a real, already-guarded
+site sitting 62 lines past the reload, just past the 60-line cap -- a window-size artifact, not a
+logic bug. Widened the cap to 2000 (effectively whole-function) and re-ran: 119 already-guarded + 1
+real_deref_unguarded + 2 call_with_tainted_arg + 19 no-use = 141, matching the tool count exactly,
+with the known-119 cross-check now exact.
+
+**Manual verification of every non-"safe" result** (per the plan's own instruction not to trust the
+tool past triage):
+- **1 real, unguarded write-through-the-reload** (`setupCameraMatrices`, `funcs_4.c`): reload at
+  `0x8001770C` into r2; `ctx->r6 = ADD32(ctx->r2, 0)` (zero-offset copy, preserves taint) two lines
+  later; r6 survives two branches (`0x80017728`, `0x80017774`) untouched; both paths converge at
+  label `L_800177A4` on `MEM_W(0X0, ctx->r6) = ctx->r4;` -- an unconditional field write through the
+  raw, never-range-checked reload, structurally identical to all 119 already-guarded sites. This is
+  exactly why the s459 scan missed it: `ctx->r6 = ADD32(ctx->r2, 0)` is precisely the "reassignment
+  that preserves taint" case its `pending.pop()`-on-any-reassignment logic couldn't handle, compounded
+  by two branches the shallow generic tool's early-break would also have missed.
+- **2 `call_with_tainted_arg` (`renderLitMeshFaceGroup`, both `do_lwl(rdram, ctx->r4, ctx->r16,
+  0X4)`)**: read directly -- standard MIPS LWL/LWR unaligned-load idiom. `ctx->r16` is the real
+  address; `ctx->r4` is only the byte-merge seed, and the paired LWL+LWR always fully overwrites it
+  regardless of prior content. Confirmed FALSE POSITIVE -- the tainted reload's value is discarded,
+  not dereferenced. Same false-positive class as item -305's stack-pointer-prologue miss (an
+  unrelated instruction sequence coincidentally sharing the tracked register number).
+- **10 `abi_call_tainted_arg`** (`submitSceneNodeRender` x2, `renderLitMeshFaceGroup` x4,
+  `drawSubtitleText` x3, `setupCameraMatrices` x1): the raw reload (or an arithmetic derivative) is
+  still live in `ctx->r4` (2 sites also in `ctx->r7`) at a call to a REAL recompiled function
+  (`appendRdpStateDl`, `emitAllocatedDLCommand`, `buildOrientedFaceGeometry`, `drawTextGlyphRect`) --
+  confirmed by direct read of one (`drawSubtitleText`/`appendRdpStateDl`, `0x80015EF8`): `ctx->r4`
+  genuinely holds the untouched reload value at the call, crossing the function boundary via the
+  guest ABI ($a0), not caught by any literal-argument check. **Genuinely novel finding for this whole
+  sub-arc — no prior bucket's audit method has looked past a call boundary.** Plausibly the SAME safe
+  "pass the current DL-append pointer to a sub-emitter" idiom used throughout the DL-building system
+  (which is exactly what `DL_LIST_APPEND_GUARD` et al. already harden at the point of actual
+  dereference, just inside a different function than the one holding the reload) -- but this is
+  unverified; would need each callee's own body read to confirm whether it dereferences its own
+  `$a0`/`$a3` unguarded or passes it along further. **Flagged, not chased this session** (out of
+  scope for a same-function guard-at-reload patch; a real finding here would need the guard placed
+  inside the callee, which may have many unrelated callers).
+- **19 no-use sites**: spot-checked 4 across 4 different functions/shapes -- one caches the raw reload
+  into a SIBLING global slot (`MEM_W(-0X23B0, ctx->r1) = ctx->r4;`, correctly excluded since that's
+  relocation, not dereference -- whatever eventually reads `-0x23B0` is a different bucket's audit);
+  one is loaded into a callee-saved register (`$s2`) with no further use found to end of function;
+  two show branch/masking logic on unrelated fields with the reload register never touched again.  No
+  deref found in any of the 4. Not exhaustively read (19 is more than a "spot check" budget
+  justifies for a single session) -- residual risk here is LOW but not zero; flagged for anyone who
+  revisits this bucket.
+
+**Fix applied.** Added the confirmed site as the 120th entry in `fixup_game_funcs.py`'s
+`_SIBLING_PTR_WRITE_SITES` list (same literal-anchor mechanism, same macro, same `ROGUESQ_LOG_
+SIBLING_PTR_WRITE_GUARD` env flag as the other 119 -- this is one more site in the SAME guard family,
+not a new one). Regenerated (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake`,
+`RecompiledFuncs/funcs_*.c` deleted first per the standing item -20 rule). Build clean. `strings`
+verification against the built binary: `sibling-ptr-write-guard` 119->120, all 10 sibling guard
+families unchanged (`generic-cache-guard` 107, `cache-head-a1-guard` 7, `freelist-next-guard` 105,
+`dl-list-append-guard` 84, `dl-list-reset-guard` 84, `dl-buffer-pool-guard` 84, `node-list-head-guard`
+20, `node-list-head-write-guard` 10, `texdata-table-guard` 31, `texdata-ptr-array-guard` 29,
+`material-array-ptr-guard` 30) -- no regression. Manual live-verify (300s/250s-keys schedule): 0
+`sibling-ptr-write-guard` fires (all 120 sites, including the new one), 0 fires on all 10 sibling
+guard families, `hangarbay-entry` n=31 (positive control). Crashed at the very end of the schedule on
+a NEW signature (`setByteAcrossEntryList+176`, bus error, `last-guest-pc=0x800aafa8`,
+`x0=0x0000000300000000` -- the standard RDRAM-host-base-pointer bus-error pattern per the s219
+overturned-conclusion entry, not evidence of write corruption), unrelated to any guard tested, filed
+not chased. 2nd independent confirm soak queued: `s473_siblingptrwrite120_confirm.sh`.
+
+**Outcome: ADVANCED** (found and fixed a real, previously-undetected gap in an already-CLOSED item
+via a from-scratch taint-propagation tool, not a reactive crash chase; validated the new tool against
+a known-exact ground truth (119/119 address match) before trusting any of its "new" findings;
+every non-"safe" tool result was read by hand before being classified, catching 2 false positives
+along the way; also surfaced a genuinely new propagation path -- ABI-implicit call arguments -- that
+no prior bucket in this sub-arc had considered, documented but correctly left unchased as out of
+scope for a same-function guard-at-reload patch).

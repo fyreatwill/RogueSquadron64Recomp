@@ -1,73 +1,73 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: item-306-hi8012-23a8-classify
+HYPOTHESIS-ID: item-307-scan-buckets
 
-## s472 summary: folded item -304's 2nd confirm soak (0 fires on the new guard and all 8 siblings,
-`hangarbay-entry` n=31, matches the manual pass closely; crashed on a 3rd distinct byte-offset of the
-already-catalogued `heapFreeListDequeue` family, filed not chased) -- item -304 fully CLOSED. Then
-classified `hi16=0x8011, offset=0x63d4` (170 sites, the largest bucket in the s465 scan) and
-CLASSIFIED AND DEFERRED it as item -305: 26/27 manually-read sample sites (stratified across all 4
-files and every tool-reported chain-depth group) are the identical `sltu`/`bne` "current DL pointer <
-buffer-end limit" bounds-check idiom -- the reload is COMPARED, never dereferenced. The tool's only 2
-`hit_deref=True` "risk" flags in the whole bucket were confirmed false positives on direct read (an
-unrelated stack-pointer prologue adjustment a few lines after the reload, not an operation on the
-reloaded value itself). Same disposition as item -302 -- not a guard-at-reload candidate. Also found
-and documented a real tool bug: `scratch_s468_shapecheck_generic.py` silently returns "total sites: 0"
-if the offset argument is passed in lowercase (generated code always emits uppercase hex literals) --
-**always pass the offset in UPPERCASE hex** to this tool from now on.
+## s473 summary: resolved item -296's flagged `hi16=0x8012, offset=-0x23a8` gap (141 sites) -- found
+and FIXED a real methodology gap in the already-CLOSED item -296, closing 1 new guard site (120th)
+and classifying the rest. A from-scratch taint-propagation scan
+(`scratch_s473_taint_scan_23a8.py`, N64Recomp repo, untracked), validated against the KNOWN
+119-address guard list before trusting any new finding, found: 119 already-guarded (exact match), 1
+genuine unguarded write-through-the-reload (`setupCameraMatrices`, fixed as SIBLING_PTR_WRITE_GUARD's
+120th site), 2 false positives (`do_lwl` unaligned-load helper calls, confirmed by direct read), 10
+sites where the reload crosses a REAL function call via the guest ABI convention (`ctx->r4`/`r7` still
+tainted at a `fn(rdram, ctx);` call -- a genuinely novel propagation path, flagged not chased), and 19
+no-use sites (spot-checked 4/19, not exhaustive). Clean regen/build, `strings`-verified 120/120 +
+all 10 sibling families unchanged, live-verify 0 fires + hangarbay-entry n=31 positive control,
+crashed on an unrelated new signature (filed not chased). 2nd confirm soak queued:
+`s473_siblingptrwrite120_confirm.sh`. Full derivation: `PORTING-STATE.md` Session 473; ledger:
+`docs/CURRENT-TRUTH.md` item -306 (new) and item -296 (amended).
 
-Full derivation: `PORTING-STATE.md` Session 472; ledger updated in `docs/CURRENT-TRUTH.md` Next-steps
-item -305 and the USER DIRECTIVE next-candidate pointer.
+## This session's top work unit: classify a fresh bucket from the s465 codebase-wide frequency scan
 
-## This session's top work unit: classify `hi16=0x8012, offset=-0x23a8` (141 sites) — NOT a fresh bucket
+Two next-ranked candidates remain, both genuinely fresh (no known partial-coverage caveat like the
+-0x23a8 bucket had) but far more scattered than anything closed so far in this sub-arc -- budget
+accordingly, this may take the full session just to characterize:
 
-**Read this caution before starting, it changes the whole approach vs. every other bucket closed in
-this sub-arc:** item -296's `SIBLING_PTR_WRITE_GUARD` (closed s459, 119 sites) already guards the
-DOWNSTREAM WRITE through this exact same global reload — `MEM_W(OFF, ctx->rN) = VAL` a few lines after
-the `lui`+`lw` reload — not the reload itself. Confirm via `grep -n "23a8\|23A8" \
-~/Documents/Tools/N64Recomp/fixup_game_funcs.py` (look for the `SIBLING_PTR_WRITE_GUARD` comment/
-pattern near s459's addition) before doing anything else, to see exactly what's already covered.
+1. **`hi16=0x8011, offset=-0x35e0`** (23 sites, 9 files) -- the more scattered of the two by file
+   count, likely means more distinct downstream shapes (per the item -300 lesson: a bucket spanning
+   multiple files/functions is more likely to hide a second shape a short sample would miss).
+2. **`hi16=0x8013, offset=0xb50`** (21 sites, 11 files) -- even more files for slightly fewer sites.
 
-The 141-vs-119 gap (22 sites) and whether the raw reload itself needs its OWN guard (independent of
-whether its eventual write is already guarded) is UNCLASSIFIED. This needs a genuinely different
-analysis than the standard "classify then patch" recipe used for every other bucket in this scan:
+Recommended approach, following the method that worked this session and s305/s463-472's:
+1. `cd ~/Documents/Tools/N64Recomp && python3 scratch_s468_shapecheck_generic.py 8011 -35E0` (remember:
+   **always pass the offset in UPPERCASE hex** -- lowercase silently returns "total sites: 0", a
+   documented tool bug from s472).
+2. Before trusting the tool's own `hit_deref` classification, check whether ANY of these 23/21 sites
+   overlap an already-guarded global (grep the candidate's resolved address --
+   `0x80110000 - <offset>` for hi16=0x8011, `0x80130000 - <offset>` for hi16=0x8013 -- against every
+   existing guard's address comment in `fixup_game_funcs.py`) the way this session found `-0x23a8`
+   secretly overlapped item -296. If it's genuinely fresh (no overlap), proceed with the standard
+   classify-then-patch recipe used for items -298/-299/-300/-301/-303/-304.
+3. Given this session's finding that a naive tool can silently undercount (ADD32-preserves-taint,
+   early-break-on-`if`, and the newly-discovered ABI-call-boundary blind spot), prefer
+   `scratch_s473_taint_scan_23a8.py` as a STARTING TEMPLATE for a new bucket's own taint scan
+   (parameterize the target offset/hi16, keep the ABI-call check) over trusting
+   `scratch_s468_shapecheck_generic.py`'s shallow 6-20-line window in isolation. Cross-validate any
+   "no risk found" result against a positive-count sanity check (does a manual sample of 3-5 sites
+   match the tool's classification?) before declaring a bucket closed or deferred.
+4. For each classified risk shape, patch/guard per the established per-site literal-anchor mechanism
+   (see any of items -298 through -305 in CURRENT-TRUTH for the pattern), regen/build/live-verify,
+   queue a confirm soak.
 
-1. **Global address**: `0x80120000 - 0x23A8 = 0x8011DC58` — cross-check this against item -296's
-   comment in `fixup_game_funcs.py` (it should be the SAME address the write-guard already targets;
-   if it's a different address, the whole "partially covered" premise from `NEXT.md`/`CURRENT-TRUTH`
-   is wrong and this bucket is actually fresh — verify this first, don't assume the premise holds).
-2. **Classify with the tool** (remember: UPPERCASE offset): `cd ~/Documents/Tools/N64Recomp && python3
-   scratch_s468_shapecheck_generic.py 8012 -23A8`. Read across all sites, not just a sample of the
-   tool's own buckets — the open question here isn't "is it a pointer" (item -296 already answered
-   that for the write side) but "is the RELOAD used in a way the existing write guard doesn't already
-   protect".
-3. **For each of the 141 reload sites, determine**: does it reach the already-guarded write
-   downstream (redundant, no new guard needed), or does it get used a DIFFERENT way first — a read
-   before the write, a different write not covered by item -296's guard, or a branch that skips the
-   guarded write entirely on some path? This requires reading full function bodies around a
-   representative sample (recommend delegating to a subagent given the file-reading volume, same
-   pattern as this session's item -305 classification), not just the ~10-line local window the
-   generic tool captures.
-4. **Decision tree**: if all 141 reach the already-guarded write with no earlier unguarded use, this
-   bucket needs NO new code — document it as CLOSED-BY-EXISTING-GUARD (a new disposition category,
-   not seen yet in this sub-arc) and move to the next candidate. If some sites use the reload before
-   or independent of the guarded write, those need their own guard scoped to just those sites.
+## Candidate follow-up (not this session unless the above proves intractable): the ABI-call-boundary
+propagation path found s473
 
-## Fallback if `-0x23a8` proves intractable or the caution above eats the session
-
-Two next-ranked genuinely-fresh candidates, per the s465 scan, both far more scattered than anything
-closed so far — budget accordingly:
-- `hi16=0x8011, offset=-0x35e0` (23 sites, 9 files)
-- `hi16=0x8013, offset=0xb50` (21 sites, 11 files)
+10 sites (`submitSceneNodeRender` x2, `renderLitMeshFaceGroup` x4, `drawSubtitleText` x3,
+`setupCameraMatrices` x1) pass the `-0x23a8` reload as an implicit ABI argument into
+`appendRdpStateDl`/`emitAllocatedDLCommand`/`buildOrientedFaceGeometry`/`drawTextGlyphRect`. Whether
+these callees dereference their `$a0`/`$a3` argument unguarded is UNVERIFIED -- would need each
+callee's own body read. Plausibly safe (same idiom as the already-hardened `DL_LIST_APPEND_GUARD`
+family, just across a function boundary) but not confirmed. Low priority unless a crash signature
+ever symbolizes inside one of those 4 functions with a wild pointer.
 
 ## Discriminating instrument still live: watch for `sibling-ptr-write-guard` fires in
 `submitSceneNodeRender`
 
-Unchanged from prior sessions — 10 of item -296's 119 sites sit in `submitSceneNodeRender`, tied to a
+Unchanged from prior sessions -- 10 of the (now 120) sites sit in `submitSceneNodeRender`, tied to a
 still-open 2-occurrence wait-for-recurrence breadcrumb. 0 fires across every soak so far, including
-s472's confirm soak. Passive, no action needed unless a soak result shows a fire.
+s473's live-verify.
 
 ## Soak queue status
 
-Nothing new queued this session (item -305 was a classification-only result, no code change, no soak
-needed). Check `scratch/agent/SOAK-RESULTS.md` tail at the start of next session as usual.
+`s473_siblingptrwrite120_confirm.sh` queued this session (2nd independent confirm for item -306's new
+guard site). Check `scratch/agent/SOAK-RESULTS.md` tail at the start of next session as usual.
