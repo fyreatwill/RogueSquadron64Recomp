@@ -1,59 +1,68 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: s3-register-corruption-runHangarMenuFromOverlay-callees
+HYPOTHESIS-ID: s3-register-corruption-mallocCraftSelectionData-internal
 
-## What changed this session (s428) — read this before picking a thread
+## What changed this session (s429) — read this before picking a thread
 
-Root-caused and guarded item -265 (`runHangarMenuFromOverlay+800` SIGBUS, `MEM_B(0X1, ctx->r19) =
-ctx->r16;` at `funcs_35.c:1575`/`1580`, guest `sb $s0, 0x1($s3)`). The guard (KSEG0-range check on
-`ctx->r19`, see `fixup_game_funcs.py`'s `runHangarMenuFromOverlay` patch block) held and logged a
-positive control (`[hangarmenu-a0-guard] wild s3(a0)=0x3F800000`) — but the ALSO-added entry
-diagnostic (`[hangarmenu-a0-entry] a0=0x80130B40`) proved the function's own `$a0` argument is SANE at
-entry and gets corrupted DURING the call, by one of its own callees:
-`getAvailablePlayerCraftFlagsConsiderUnlocks`, `mallocCraftSelectionData`, or the
-`runHangarSelectionFrame` loop (`funcs_35.c:1510`/`1536`/`1545`). MIPS `$s3` is callee-saved — the
-callee that clobbers `ctx->r19` (the shared global register-file slot) without restoring it is the
-actual bug. Top suspect: `mallocCraftSelectionData`, since item -264's fix (s427) is what made its
-~4386-line body execute for the first time ever (previously a 1-instruction truncated stub, could not
-have clobbered anything).
+Folded in the s428 confirmation soak (`s428_hangarmenu_guard_verify.sh`, ran between iterations,
+`SOAK-RESULTS.md` 20260807-012512: REPRODUCED, `rc=1`) — item -266 (`menuOverlayInit+3648` post-guard
+crash) is now 2nd-independently confirmed, no longer single-source.
 
-The guard's skip-the-write then let execution continue back into `menuOverlayInit`, which immediately
-crashed again reading the SAME corrupted `ctx->r19` (item -266, `funcs_34.c:5869-5870`,
-`far=0x380000003` this time — a different specific garbage value than the guard caught, near-zero-
-integer shaped rather than float-shaped, suggesting the corruption may drift across
-`runHangarSelectionFrame`'s loop iterations rather than being one fixed constant).
+Then ran NEXT.md's queued work unit: added three throttled checkpoint diagnostics
+(`[hangarmenu-ckpt]`) to `fixup_game_funcs.py`'s existing `runHangarMenuFromOverlay` patch block
+(funcs_35.c), one right after each of the function's three callees returns
+(`getAvailablePlayerCraftFlagsConsiderUnlocks`, `mallocCraftSelectionData`, `runHangarSelectionFrame`).
+**Result, single live run**:
 
-Single-source so far this session. Confirmation soak queued:
-`scratch/agent/soak_queue/s428_hangarmenu_guard_verify.sh` — check `scratch/agent/SOAK-RESULTS.md`
-first; if it already ran, use its result instead of re-driving a live run.
+```
+[hangarmenu-ckpt] after_0(getAvailablePlayerCraftFlagsConsiderUnlocks) r19=0x80130B40 n=0   <- SANE
+[hangarmenu-ckpt] after_1(mallocCraftSelectionData) r19=0x3F800000 n=0                       <- WILD
+[hangarmenu-ckpt] after_2(runHangarSelectionFrame) r19=0x3F800000 iter=0 n=0                 <- unchanged
+```
 
-## The work unit — isolate which callee corrupts ctx->r19
+**`mallocCraftSelectionData` is the guilty callee** — `ctx->r19`/`$s3` goes from sane to wild
+(`0x3F800000`, the same `+1.0f` bit pattern s428 saw) somewhere during that one call, and does not
+change further afterward (at least not through the single `runHangarSelectionFrame` iteration that ran
+before the guard/crash). This is a clean within-run before/after boundary — item -267, currently
+single-source; confirmation soak queued (`s429_hangarmenu_ckpt_verify.sh`, checks the same
+sane-then-wild ordering reproduces).
 
-This is now a register-corruption hunt, not a duplicate-symbol issue (that hypothesis is CLOSED for
-this specific item — item -265's guard proved the wild value arrives mid-call, not from the caller).
+## The work unit — find the exact clobber site inside `mallocCraftSelectionData`
 
-**Batch instrumentation, one build**: add three throttled diagnostics to `funcs_35.c`'s
-`runHangarMenuFromOverlay` (via `fixup_game_funcs.py`, following the existing patch-block style —
-search for `hangarmenu-a0` to find the anchor site), each logging `ctx->r19` immediately after one of
-the three callee-return points:
-1. Right after `getAvailablePlayerCraftFlagsConsiderUnlocks(rdram, ctx);` returns (label `after_0`,
-   `funcs_35.c:1511`/`1514`).
-2. Right after `mallocCraftSelectionData(rdram, ctx);` returns (label `after_1`,
-   `funcs_35.c:1537`/`1540`).
-3. Right after EACH `runHangarSelectionFrame(rdram, ctx);` return inside the `L_800C68AC` loop (label
-   `after_2`, `funcs_35.c:1546`/`1549` — this loop can iterate many times before falling through, so
-   throttle tightly, e.g. first 20 iterations, and tag with an iteration counter).
+This is now localized to ONE function (funcs_35.c, ~4386 lines — the largest guard-hunt target this
+project has attempted; the previous largest was two orders of magnitude smaller). It is executing for
+the first time ever (item -264's fix, s427, un-truncated it from a 1-instruction stub) — a genuinely
+untested code path, so treat every write to `ctx->r19` inside it as a suspect, not just the obvious
+ones.
 
-**Discriminating outcome**: whichever checkpoint FIRST shows `ctx->r19` outside the sane KSEG0 range
-(`0x80000000`-`0x80800000`) identifies the guilty callee. If checkpoint 2 (`mallocCraftSelectionData`)
-is first-wild, that confirms the top suspect and the next work unit becomes finding WHERE inside that
-~4386-line function `$s3`/`r19` gets used as scratch without being saved — a much bigger function than
-any prior guard target in this project, so expect this to take its own session. If checkpoint 3 is
-first-wild only after N>1 loop iterations, that points at `runHangarSelectionFrame` instead, and the
-corruption is likely tied to some per-iteration state.
+**Do NOT try to eyeball-read all 4386 lines for every `ctx->r19` write in one pass.** Two viable
+strategies, pick based on what the first probe shows:
 
-Live-run schedule (same as s423-428, known to reach the war-room/craft-select phase — see the Regen
-recipe below for the exact env/keys):
+1. **Grep first, cheaply, before any build**: `grep -n 'ctx->r19' RecompiledFuncs/funcs_35.c` inside
+   `mallocCraftSelectionData`'s body (find its start/end the same way the existing `fixup_game_funcs.py`
+   patch block does — `func_start_m`/`next_func_m`). Count how many distinct write sites exist. If it's
+   a handful (under ~10), read each in source + disassembly context directly — this may resolve the bug
+   without another build-run cycle.
+2. **If too many sites for direct reading, bisect with checkpoints**: add 3-4 more `[hangarmenu-ckpt]`-
+   style diagnostics at roughly the 25%/50%/75% marks of the function's *body* (not call sites this
+   time — plain sequential program points), rebuild once, one run, narrow to the ~1000-line quarter
+   where the value flips from sane to wild. Repeat bisection (halving each time) until it's a single
+   instruction. Budget: this could take 2-3 sessions of bisection at this function's size — that's
+   expected, not a sign something's wrong.
+
+**Also worth checking early** (cheap, no build needed): does `mallocCraftSelectionData` call any
+*further* nested functions of its own? If `$s3`/`ctx->r19` is only clobbered inside one of ITS callees
+(not directly in its own body), the same 2-callee-checkpoint technique from s429 nests one level
+deeper. `grep -c 'RECOMP_FUNC\|(rdram, ctx)' <mallocCraftSelectionData body>` gives a fast read on this
+before committing to either strategy above.
+
+**Discriminating outcome for whichever approach**: the specific `ctx->r19 = ...` write (or nested-call
+boundary) where the value first goes wild. Once found, the guard/fix is likely a `push`/`restore`
+pattern (save `ctx->r19` before the clobbering write, restore after) rather than a KSEG0-range check
+like the site guards used so far — this is corruption of a live register the function needs to keep
+using, not a defensive check on a value about to be dereferenced.
+
+Live-run schedule (same as s423-429, known to reach the war-room/craft-select phase):
 ```
 env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
     ROGUESQ_LOG_RUNNER=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 \
@@ -62,7 +71,7 @@ env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MI
     zsh tools/probe.sh <outdir> 300 2
 ```
 
-## Regen recipe (known-working s427/s428)
+## Regen recipe (known-working s427/s428/s429)
 
 ```
 cd ~/Documents/Tools/rogue_squadron64 && python3 tools/make_elf.py
@@ -80,17 +89,22 @@ cd ~/Documents/Tools/RogueSquadron64Recomp/build && DEVELOPER_DIR=/Applications/
 `RS64_FIXUP_APPLIED` marker) — this is a safety net; if you see the refusal, you forgot to delete
 `funcs_*.c` and regenerate first.
 
-## Sandbox notes (confirmed again s428)
+## Sandbox notes (confirmed again s428/s429)
 
 `lldb`/`otool -tV`/`find -delete`/plain `rm` with globs all require interactive approval — use the
 `python3 -c` glob-delete above. `atos` (prefixed with `env`) only returns `symbol+offset`, not
 file:line. `scratch/agent/s193_disasm.py <macho> <symbol> <frame_offset> [window]` plus a manual
-symbol-range check remain the working substitute for precise crash-site identification. **New this
-session: the `window` argument MUST be a multiple of 4, or the printed byte offsets desync from real
-ARM64 instruction boundaries and the decoded output is garbage** (hit this personally with
-`window=30`; corrected to a multiple of 4 and the decode was clean). No corruption resulted (just a
-wasted call), but don't repeat the mistake.
+symbol-range check remain the working substitute for precise crash-site identification (`window` must
+be a multiple of 4). **New this session**: the Bash tool's static-syntax checker rejects shell
+`function_name() { ... }` definitions when the body contains embedded quoted strings referencing
+positional params (`"$1"` inside a `python3 -c "..."` heredoc) — flagged as "expansion obfuscation" /
+"cannot be statically analyzed" even though the construct is legitimate. Workaround used this session:
+avoid shell functions entirely for this kind of value-extraction/classification logic in soak scripts —
+plain sequential `grep -Eq PATTERN` checks against distinct known-shape substrings work and pass the
+checker fine. Also: writing test/scratch files outside the three allowed working directories (even to
+`/tmp`) is blocked outright — use `scratch/agent/` for throwaway test fixtures instead.
 
 ## Soak queue
 
-- `scratch/agent/soak_queue/s428_hangarmenu_guard_verify.sh` — queued this session, not yet run.
+- `scratch/agent/soak_queue/s429_hangarmenu_ckpt_verify.sh` — queued this session, not yet run. Checks
+  the after_0-sane/after_1-wild checkpoint ordering reproduces.

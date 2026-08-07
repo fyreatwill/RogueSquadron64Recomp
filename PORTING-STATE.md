@@ -35953,3 +35953,62 @@ No `lib/` or sibling-repo (`rogue_squadron64`) edits this session -- the only so
 `fixup_game_funcs.py` in the sibling `~/Documents/Tools/N64Recomp` tool directory, which per longstanding
 (if imperfect) project convention is not itself git-tracked; it persists on disk across sessions like
 every other fixup patch accumulated since s99.
+
+## Session 429 (2026-08-07)
+
+Work unit: fold in the s428 confirmation soak (`s428_hangarmenu_guard_verify.sh`, ran between
+iterations, `scratch/agent/SOAK-RESULTS.md` 20260807-012512: `rc=1`, "REPRODUCED new menuOverlayInit
+crash past the guard (entrylogs=1 guardfires=1)") -- 2nd independent line of evidence for item -266,
+no longer single-source. Then NEXT.md's queued work unit: isolate which of `runHangarMenuFromOverlay`'s
+three callees (`getAvailablePlayerCraftFlagsConsiderUnlocks`, `mallocCraftSelectionData`,
+`runHangarSelectionFrame`) clobbers `ctx->r19`/`$s3` without restoring it.
+
+Batch instrumentation, one build: extended `fixup_game_funcs.py`'s existing `runHangarMenuFromOverlay`
+patch block (funcs_35.c) with three new throttled checkpoint diagnostics (tag `[hangarmenu-ckpt]`,
+20 lines each, unconditional), inserted right after each of the function's own `after_0:`/`after_1:`/
+`after_2:` labels -- each logs `ctx->r19` immediately after one callee returns. Label names are
+function-local and reused by ~20 other functions in the same file, so the substitutions were kept
+scoped to the already-isolated function body text (matching the existing entry-diagnostic/guard
+patches' own scoping), not run against the whole file. Regenerated (`make_elf.py` -> delete
+`funcs_*.c` -> `N64Recomp` -> `fixup_game_funcs.py`, all three new checkpoint sub-patches applied
+exactly once alongside the three pre-existing s428 sub-patches) and rebuilt clean.
+
+Live-run with the same driven schedule as s423-428 (`PROBE_KEYS_FROM_PHASE=1`, `PROBE_LEAVE_OK=1`,
+`3:start 7:start 11:start 15:a ...`). Process died at 19.1s (8 frames captured), matching s428's
+timing. The raw log gives a clean, unambiguous discriminating result:
+
+```
+[hangarmenu-a0-entry] a0=0x80130B40 n=0
+[hangarmenu-ckpt] after_0(getAvailablePlayerCraftFlagsConsiderUnlocks) r19=0x80130B40 n=0
+[hangarmenu-ckpt] after_1(mallocCraftSelectionData) r19=0x3F800000 n=0
+[hangarmenu-ckpt] after_2(runHangarSelectionFrame) r19=0x3F800000 iter=0 n=0
+[hangarmenu-a0-guard] wild s3(a0)=0x3F800000 n=0
+[CRASH] ... far=0x380000003 ...
+```
+
+`ctx->r19` is sane after the first callee (matches the already-known-sane entry value), already wild
+(`0x3F800000`, the EXACT `+1.0f` bit pattern s428 saw) immediately after `mallocCraftSelectionData`
+returns, and stays that same value through the one `runHangarSelectionFrame` iteration that ran before
+the guard fired and the process crashed at item -266's exact site again (`far=0x380000003`, identical
+to s428's). **This isolates the guilty callee to `mallocCraftSelectionData`**, confirming s428's top
+suspect (the function whose ~4386-line body executes for the first time ever thanks to item -264's
+fix). It also answers s428's open "does the corruption drift across loop iterations" question, at
+least for this run: no -- the value was already fixed by the time `mallocCraftSelectionData` returned,
+and didn't change again through the one loop iteration that ran. This is a before/after boundary
+comparison within one run (like the s428 entry-diagnostic proof), not a statistical claim needing a
+repeat run to trust, though a soak confirming the same checkpoint ordering again would still strengthen
+it to two independent runs.
+
+Item -267 opened (this session's finding); item -266 updated to reflect the s428 soak's confirmation
+(3 total reproductions now: s428 live, s428 soak, s429 live).
+
+**Next work unit is now genuinely bigger than any prior guard target**: find the specific instruction(s)
+inside `mallocCraftSelectionData` (funcs_35.c, ~4386 lines) where `$s3`/`ctx->r19` is used as scratch
+without being saved/restored across the call. This needs either a source read for every `ctx->r19`
+write inside that function body, or a bisection strategy (e.g. checkpoint diagnostics at intermediate
+points inside the function, narrowing by half each build-run cycle) -- not a single-instruction grep,
+and likely its own session per NEXT.md's own prediction.
+
+No `lib/` or sibling-repo (`rogue_squadron64`) edits this session -- the only source change is
+`fixup_game_funcs.py` in the sibling `~/Documents/Tools/N64Recomp` tool directory (not git-tracked by
+project convention, persists on disk across sessions).

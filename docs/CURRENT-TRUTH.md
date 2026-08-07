@@ -73,7 +73,15 @@ own `$a0` argument is sane at entry but gets clobbered mid-call by one of its ow
 is callee-saved, so whichever callee overwrites it without restoring it is the actual defect, not yet
 isolated to a specific instruction. The guard exposed a further crash one step later still,
 `menuOverlayInit+3648` (item -266), reading the same corrupted register back after return. This
-supersedes needing separate human reconfirmation for now, same reasoning as above.
+supersedes needing separate human reconfirmation for now, same reasoning as above. **s429 isolated the
+guilty callee**: three checkpoint diagnostics reading `ctx->r19` immediately after each of
+`runHangarMenuFromOverlay`'s three callees confirmed `mallocCraftSelectionData` is the culprit — sane
+(`0x80130B40`) right after `getAvailablePlayerCraftFlagsConsiderUnlocks`, already wild (`0x3F800000`,
+the exact `+1.0f` bit pattern s428 saw) immediately after `mallocCraftSelectionData` returns, unchanged
+through the one `runHangarSelectionFrame` iteration that ran before the guard/crash — confirming the
+top suspect and ruling out per-iteration drift, at least for this run (item -267). Next work unit:
+locate where inside `mallocCraftSelectionData`'s ~4386-line body `$s3`/`r19` gets used as scratch
+without being restored.
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -215,19 +223,39 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -266 (s428, OPEN — new post-guard `menuOverlayInit` crash, same corrupted
-register); the next new item takes -267.
+oldest). Current top is -267 (s429, OPEN — guilty callee isolated to `mallocCraftSelectionData`, exact
+clobber site inside it not yet found); the next new item takes -268.
 
--266. **(s428) NEW crash surfaced by item -265's guard, single-source, same corrupted register
-    read again — not yet investigated.** SIGBUS at `menuOverlayInit+3648`, source-matched to
-    `funcs_34.c:5869-5870` (`ctx->r4 = MEM_BU(ctx->r19, 0X0);`, guest `lbu $a0, 0x0($s3)` at
-    `L_800C5AA8`, the label control falls through to right after checking
+-267. **(s429) Guilty callee for item -265/-266's `$s3`/`ctx->r19` corruption ISOLATED:
+    `mallocCraftSelectionData`, single-source, not yet localized to an instruction.** Added three
+    throttled checkpoint diagnostics to `runHangarMenuFromOverlay` (`fixup_game_funcs.py`, tag
+    `[hangarmenu-ckpt]`), one immediately after each of its three callees returns. Live result: sane
+    right after `getAvailablePlayerCraftFlagsConsiderUnlocks` (`r19=0x80130B40`, matches the
+    already-sane entry value), already wild (`r19=0x3F800000`, the exact `+1.0f` bit pattern s428 saw)
+    immediately after `mallocCraftSelectionData` returns, and unchanged after the one
+    `runHangarSelectionFrame` iteration (`iter=0`) that ran before the guard fired and the process
+    crashed at item -266's exact site again (`far=0x380000003`) — a clean, unambiguous before/after
+    boundary, not a statistical result needing a repeat run to trust. Confirms s428's top suspect and
+    rules out (for this run) the "corruption drifts across loop iterations" alternative — the value was
+    already fixed by the time `mallocCraftSelectionData` returned. **Next work unit**: find where inside
+    `mallocCraftSelectionData`'s ~4386-line body (funcs_35.c, the largest function this project has
+    guard-hunted inside) `$s3`/`ctx->r19` gets used as scratch without being restored before return —
+    expect this to need its own session (source read + targeted checkpoint bisection inside the
+    function, not a single-instruction grep). Confirmation soak queued:
+    `scratch/agent/soak_queue/s429_hangarmenu_ckpt_verify.sh`. Full detail: PORTING-STATE Session 429.
+
+-266. **(s428/s429) `menuOverlayInit+3648` post-guard crash — reproduced 3x (s428 live, s428 soak,
+    s429 live), still not itself fixed (blocked on item -267).** SIGBUS at `menuOverlayInit+3648`,
+    source-matched to `funcs_34.c:5869-5870` (`ctx->r4 = MEM_BU(ctx->r19, 0X0);`, guest
+    `lbu $a0, 0x0($s3)` at `L_800C5AA8`, the label control falls through to right after checking
     `runHangarMenuFromOverlay`'s return code). `far=0x380000003` = rdram_base + `0x80000003` — back to
     the classic near-zero-integer wildness shape (not a float pattern this time), reading the SAME
     `ctx->r19`/`$s3` register item -265's guard caught wild moments earlier in the callee, still wild
     on return — consistent with item -265's callee-corruption theory (whatever clobbers `$s3` inside
-    `runHangarMenuFromOverlay` doesn't restore it before returning). Confirmation soak queued:
-    `scratch/agent/soak_queue/s428_hangarmenu_guard_verify.sh`. Full detail: PORTING-STATE Session 428.
+    `runHangarMenuFromOverlay` doesn't restore it before returning). The queued confirmation soak
+    (`s428_hangarmenu_guard_verify.sh`) ran and REPRODUCED (`entrylogs=1 guardfires=1`,
+    SOAK-RESULTS 20260807-012512) — 2nd independent evidence, no longer single-source. Full detail:
+    PORTING-STATE Session 428.
 
 -265. **(s427/s428) `runHangarMenuFromOverlay+800` SIGBUS — ROOT-CAUSED AND GUARDED s428, but the
     guard exposed the real bug is register corruption, not a caller-passed wild value.** Crash
