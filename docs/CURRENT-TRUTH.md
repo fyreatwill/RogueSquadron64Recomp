@@ -41,10 +41,14 @@ pointer, read as plain `0x00000000` — never written before first read, not cor
 guard (verified: crash no longer occurs there), and hit a second, deeper, already-partially-catalogued
 sibling crash (`advancePlayerAnimationPhase`, item -11) one call further in the same tick — reframing
 this as an idiom-class of sibling consumers on one uninitialized root state, not a single-function fix.
-**This is now the active M3 thread; still open, not closed.** See item -261 below. Full M4/M5 legs remain
-closed/exhausted as of s421/s397 respectively — this new thread supersedes needing separate human
-reconfirmation on "where to focus next" for the moment, since it's a direct, in-progress continuation of
-the M3 DoD leg NEXT.md was already authorized to pursue.
+**s425 guarded that 2nd sibling too (after a self-caught source-mapping error, see item -261) and hit a
+THIRD sibling, `getPlayerAnimChannelEntryByIds`, one call deeper still — the same near-RDRAM-base
+signature every time.** Per NEXT.md's own pre-set rule, a 3rd sibling recurrence is the trigger to STOP
+one-off guards and switch to a systematic idiom-class audit of the whole consumer set — **this thread now
+needs that audit, not a 4th guard.** See item -261 below. Full M4/M5 legs remain closed/exhausted as of
+s421/s397 respectively — this new thread supersedes needing separate human reconfirmation on "where to
+focus next" for the moment, since it's a direct, in-progress continuation of the M3 DoD leg NEXT.md was
+already authorized to pursue.
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -186,37 +190,46 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -261 (s424, OPEN — idiom-class audit queued); the next new item takes -262.
+oldest). Current top is -261 (s425, OPEN — 3rd sibling hit, idiom-class audit is the next work unit,
+NOT a 4th guard); the next new item takes -262.
 
--261. **(s424) `startPlayerSlotAnimationChannelLooping` root-caused and guarded; surfaced a sibling
-    idiom-class thread, OPEN.** s423's reproduction (2/2, see former item -260, folded in here) crossed
-    NEXT.md's own bar for opening a root-cause session. Traced: crash is `funcs_14.c:4999`, the
-    function's first deref of its `$a0` arg (`ctx->r17 == 0x80000003`, a wild near-null "pointer"). That
-    arg is read by the caller (`startSlotLoopAnimWithVoiceSync`, funcs_30.c) from a fixed global at
-    `0x800CDFAC`, whose only writer anywhere in `RecompiledFuncs` is `initCraftSelectScreen` (funcs_29.c,
-    caches `initPlayerSlotAnimationChannelFull`'s malloc'd return pointer there). Both sites and the
-    allocator itself are correctly translated (no codegen bug); the open question was purely empirical.
-    Added 3 function+file-scoped `fixup_game_funcs.py` patches (batch-instrumentation rule, one
-    build/run): a wild-pointer guard (`ctx->r17 < 0x80010000` → log `[slot-anim-loop-guard]`, jump to the
-    function's own final epilogue label instead of crashing) plus write/read cache diagnostics
-    (`[slot-anim-cache-write]`/`[slot-anim-cache-read]`). Regenerated + built clean. **Live run result**:
-    guard held (crash no longer occurs there); **0** cache-write lines, **1** cache-read line
-    (`ptr=0x00000000` — plain BSS-zero, not corrupted), **1** guard fire, **0** `[missing-func]` (rules out
-    M4 phantom-stub involvement) — `initCraftSelectScreen`'s cache-populating path never ran before the
-    per-frame tick read the still-zero global. **The guard bought exactly one function's depth**: an
-    immediate SIBLING crash surfaced one call deeper in the same tick, `advancePlayerAnimationPhase+564`
-    (backtrace `advancePlayerAnimationPhase ← tickCraftSelectScreen ← drawRadarIcon ← menuOverlayInit ←
-    mainGameLoop`) — structurally identical, and **already on record as item -11** (s89, "3
-    non-recurrences... 8 prior crashing soaks"); its self-referencing LR matches the exact
-    symbol-misattribution artifact the s87→s88 overturn already explained, not real recursion. **Read**:
-    this looks like an idiom class — multiple sibling consumers of one player-slot-animation-channel
-    subsystem (this function, `advancePlayerAnimationPhase`, plausibly `frameStartReset` per item -8's
-    "shared-dispatcher hypothesis") all crashing on one never-initialized-before-first-tick root state,
-    not independent bugs. Matches the USER DIRECTIVE's preferred M3 shape (idiom-class audit) exactly,
-    arrived at via the crash-driven route rather than a fresh discovery tool. Not yet extended to
-    `advancePlayerAnimationPhase` (one bounded work unit per iteration) — that is the next work unit.
-    Confirmation soak queued: `scratch/agent/soak_queue/s424_slotanimguard_confirm.sh` (same schedule,
-    checks guard-fire counts + which crash, if any, recurs). Full detail: PORTING-STATE Session 424.
+-261. **(s424/s425) `startPlayerSlotAnimationChannelLooping` and 2 siblings root-caused and guarded;
+    3rd sibling hit — the idiom-class-audit trigger has now fired, OPEN.** s423's reproduction (2/2)
+    crossed NEXT.md's own bar for opening a root-cause session. **s424** traced crash #1 to
+    `funcs_14.c:4999`, the function's first deref of its `$a0` arg (`ctx->r17 == 0x80000003`, a wild
+    near-null "pointer"), read by the caller (`startSlotLoopAnimWithVoiceSync`, funcs_30.c) from a fixed
+    global at `0x800CDFAC` whose only writer anywhere in `RecompiledFuncs` is `initCraftSelectScreen`
+    (funcs_29.c, caches `initPlayerSlotAnimationChannelFull`'s malloc'd return pointer there) — both
+    sites correctly translated, purely an empirical never-initialized-before-first-tick state. Guarded
+    (`ctx->r17 < 0x80010000` → log `[slot-anim-loop-guard]`, jump to the epilogue) + write/read cache
+    diagnostics. **Live result**: guard held; 0 cache-writes, 1 cache-read (`ptr=0x00000000`, plain
+    BSS-zero), 1 guard fire — confirmed `initCraftSelectScreen` never ran before the tick read. Bought
+    exactly one function's depth: sibling #2, `advancePlayerAnimationPhase`, crashed one call deeper
+    (already on record as item -11, s89). **s425 guarded #2, but only after a self-caught methodology
+    error**: the first attempt read source lines PAST this function's real end (it's 372 MIPS bytes,
+    RecompiledFuncs/funcs_14.c:4056-4370) into the *next* function in the file
+    (`initPlayerSlotAnimationChannelFull`) and nearly shipped a guard against the wrong function's code —
+    caught because the fixup script's own `func_start_m`/`next_func_m` body-scoping made the anchor
+    regex match nothing (0 patches, silently skipped, no corruption) instead of quietly patching the
+    wrong place. Root-caused properly with `scratch/agent/s193_disasm.py` (hand-rolled ARM64 LDR/STR
+    decoder against the Mach-O symbol table — `lldb`/`otool`/`atos` file:line lookups are not usable in
+    this sandbox, confirmed again this session) plus a symbol-table range check (next symbol
+    `startPlayerSlotAnimationChannel` sits at +3716, so the crash PC `advancePlayerAnimationPhase+564`
+    genuinely falls inside this function — not a next-symbol misattribution like item -259's closed
+    `0x800290d4` lead). The function's entire body only dereferences its own `$a0` arg (`ctx->r16`); the
+    crash is that same arg being wild at the very first deref, right after the small prologue. Guarded by
+    mirroring the function's own real epilogue instructions (verified byte-identical restore sequence)
+    right after the `$ra`/old-`$s0` stack saves. **Live result**: both guards fired as their own positive
+    control (`[slot-anim-loop-guard] wild s1=0x00000000`, `[anim-phase-guard] wild s0(arg)=0x00000000`
+    x2) — then a **THIRD sibling**, `getPlayerAnimChannelEntryByIds+96`, crashed one call deeper still
+    (`far=0x38000000b` = rdram_base + `0x8000000b`, the same "N bytes past the very base of RDRAM"
+    signature all three crashes share). **This is NEXT.md's own pre-set 3rd-sibling trigger: stop adding
+    one-off guards, switch to a systematic idiom-class audit** of every consumer of the
+    `0x800CDFAC` global / the contiguous `main_overlay.txt` block (`startPlayerSlotAnimationChannel`
+    through `resetPlayerSlotAllChannels`, `0x80062854`-`0x80063C6C`) — classify each site, guard or
+    prove-safe the whole class in one pass, the `-0x25A4` model. Confirmation soak queued:
+    `scratch/agent/soak_queue/s425_animphaseguard_confirm.sh`. Full detail: PORTING-STATE next session
+    entry.
 
 -259. **(s422) `0x800290d4` "six independent triggers" lead — INVESTIGATED AND CLOSED, not a bug.**
     The s421 close-out flagged this as the strongest concrete lead left after M4 item -249. Root-caused
@@ -322,11 +335,12 @@ oldest). Current top is -261 (s424, OPEN — idiom-class audit queued); the next
     still unknown. **Standing rule**: audit the patch report for anything other than the expected `xN`
     count after every `fixup_game_funcs.py` run. Full detail: `PORTING-STATE` Sessions 120, 121, 126.
 
--11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89), RECURRED s424.** 3 consecutive
-    non-recurrences since s88's correctly-targeted instrument, against 8 prior crashing soaks.
-    `ROGUESQ_LOG_ANIM_CB=1` still live. s424 hit it again as a sibling of item -261's guarded
-    `startPlayerSlotAnimationChannelLooping` crash, same tick, same likely root state (uninitialized
-    player-slot-animation-channel data) — see item -261, next work unit.
+-11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89), RECURRED s424, ROOT-CAUSED AND
+    GUARDED s425.** 3 consecutive non-recurrences since s88's correctly-targeted instrument, against 8
+    prior crashing soaks. `ROGUESQ_LOG_ANIM_CB=1` still live. s424 hit it again as a sibling of item
+    -261's guarded `startPlayerSlotAnimationChannelLooping` crash. s425 root-caused and guarded it (wild
+    `$a0` arg, same never-initialized-slot root state) — see item -261 for the full trace and the
+    guard's own consequence (a 3rd sibling, `getPlayerAnimChannelEntryByIds`, now the active thread).
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
 -7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once earlier items clear: `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40, document the phase timeline. Gate already keeps black off; residual S1 `fs` freeze (~3769-3872 plateau) may still stall animation.

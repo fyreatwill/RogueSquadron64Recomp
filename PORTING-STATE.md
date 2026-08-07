@@ -35621,3 +35621,99 @@ logic authorized — traced the crash to its exact source line and its argument'
 a working guard that changes real runtime behavior (verified: the guarded crash no longer occurs), and
 surfaced a second, deeper, already-partially-catalogued sibling crash in the same run — a genuine step
 forward on the M3-blocking issue, not a doc-only iteration).
+
+## Session 425 (2026-08-07)
+
+**Work unit** (per NEXT.md's plan item 1 and the USER DIRECTIVE's M3-idiom-class-audit preference):
+extend item -261's guard to `advancePlayerAnimationPhase`, the sibling crash s424 surfaced one call
+deeper in the same tick (`tickCraftSelectScreen`'s per-frame war-room handler), plus a discriminating
+diagnostic to determine whether it shares item -261's root state or is an independent bug.
+
+**First attempt was wrong, and the wrongness is itself worth recording.** Read
+`RecompiledFuncs/funcs_14.c` starting at `advancePlayerAnimationPhase`'s `RECOMP_FUNC` line (4056) but
+kept reading past its real end without checking for an intervening `RECOMP_FUNC` boundary, landing on
+`MEM_B(0X2F, ctx->r2) = 0;` (source line 4486) — a return-value deref inside
+`buildPlayerCraftAssetTemplate`'s call site — and wrote a whole guard + diagnostic pair against it,
+including a full write-up hypothesizing this REFUTED the item -261 idiom-class framing (a different root:
+`rs_malloc` returning a wild pointer, not the `0x800CDFAC` global). Ran the full regen pipeline
+(`make_elf.py` → delete `funcs_*.c` → `N64Recomp` → `fixup_game_funcs.py`) and the guard patch silently
+reported **0 matches** — not an error, just missing from the patch report — because the regex anchor was
+scoped (by `fixup_game_funcs.py`'s own `func_start_m`/`next_func_m` body-extraction, the same pattern
+every prior session's patches use) to `advancePlayerAnimationPhase`'s *actual* body, which — per the
+file's true structure — ends at line ~4370, where `initPlayerSlotAnimationChannelFull`'s `RECOMP_FUNC`
+line begins. Line 4486 was never in scope. **This scoping discipline is what caught the error before any
+wrong code shipped** — worth flagging as a reason to keep every future patch scoped the same way, not a
+one-off convenience.
+
+**Root-caused properly.** `lldb`/`otool`/`atos` file:line lookups are still not usable in this
+sandbox (confirmed again this session — `otool -tV`/`lldb --batch` both require interactive approval
+that a non-interactive session can't grant; `atos -o build/RogueSquadron64Recomp -l <base> <pc>` runs but
+only prints `symbol+offset`, no file:line, likely because this build's debug info isn't in the form atos
+expects). Used the two reusable tools item -224/-259 already built specifically for this
+sandbox-restricted situation: `scratch/agent/s193_disasm.py` (Mach-O symbol table + hand-rolled ARM64
+LDR/STR decoder) to fetch and decode bytes at the crash PC directly, and a Mach-O symbol-table range
+check (same technique as `scratch/agent/s264_symrange.py`) to confirm the crash PC actually falls inside
+`advancePlayerAnimationPhase`'s real compiled range (next symbol `startPlayerSlotAnimationChannel` sits
+at `+3716`, well past the crash's `+564` — ruling out a next-symbol misattribution like item -259's
+closed `0x800290d4` lead). Re-read the function's REAL, correctly-bounded source (`funcs_14.c:4056-4370`,
+only 372 MIPS bytes / ~93 instructions): the entire body dereferences exactly one pointer, `ctx->r16`
+(`$s0`, the incoming `$a0` argument) — 12+ `MEM_B`/`MEM_W`/`MEM_H` accesses through it, no malloc, no
+table lookup. The very first such deref (`lb $v1, 0x1($s0)` at `0x80062B1C`) sits right after the
+function's short prologue; ARM64 `-O0` codegen for the `CHECK_FR`/`NAN_CHECK`/double-word `$f20` save
+macros plausibly inflates that early offset to the observed `+564` out of `+3716` total (~15% in, right
+after the register-save block). This means the wild pointer IS the incoming `$a0` argument itself — the
+same "arg pointer never populated before first tick" signature as item -261's original guard, arriving
+via the same call chain (`tickCraftSelectScreen` → `advancePlayerAnimationPhase`). The false lead from
+the first attempt was a source-reading error, not a refutation of the idiom-class framing.
+
+**Fix.** Replaced the wrong patch pair in `fixup_game_funcs.py` (funcs_14.c block) with a guard placed
+right after `advancePlayerAnimationPhase`'s prologue register saves (`$ra` and the old `$s0` are already
+on the stack by that point) that checks `ctx->r16 < 0x80010000`, logs `[anim-phase-guard]`, and — instead
+of inventing a new epilogue label — executes a hand-copied, byte-verified-identical restore of the
+function's own real epilogue sequence (`$ra`/`$s0`/`$f20` reloads + `sp += 0x20` + `return;`) before the
+first deref. Regenerated (`make_elf.py` → delete `funcs_*.c` → `N64Recomp` → `fixup_game_funcs.py`,
+patch report showed the expected `x1` for all 4 live patches this session, matching the mandatory
+audit-the-report rule) and built clean (`DEVELOPER_DIR=... cmake --build . -j8`, only pre-existing
+unrelated warnings).
+
+**Live run** (same schedule as s423/s424: `PROBE_KEYS_FROM_PHASE=1`, war-room-reaching key schedule):
+both prior guards fired as their own positive control —
+`[slot-anim-loop-guard] wild s1=0x00000000` (item -261's original guard) and
+`[anim-phase-guard] wild s0(arg)=0x00000000` **twice** (n=0, n=1 — this session's new guard, confirming
+it engages and confirming the wild value is the same plain BSS-zero-derived signature as item -261, not
+fresh corruption) — then a **third sibling crashed one call deeper still**:
+`getPlayerAnimChannelEntryByIds+96`, `si_addr=0x38000000b`, `far=0x38000000b` =
+`rdram_base(0x300000000) + 0x8000000b` — the identical "N bytes past the very base of RDRAM" signature as
+both prior crashes (item -261's first crash: `0x80000003`; s425's this-session crash: implicitly `0x0`
+at the guarded site, now superseded by this new one at `+0xb`). `last-guest-pc=0x800290d4` again
+(expected/uninformative per s422 — recurs by construction, not a shared-site signal). Run reached this
+point in only ~12s foreground wall-clock (5 frames captured), notably faster than s424's ~57s — consistent
+with two guards now letting the war-room tick run further before hitting the next unguarded consumer,
+not a regression.
+
+**Read on this**: three independent sibling functions (`startPlayerSlotAnimationChannelLooping`,
+`advancePlayerAnimationPhase`, `getPlayerAnimChannelEntryByIds`) have now each, in turn, crashed on the
+same never-initialized-before-first-tick root state as soon as the prior sibling got guarded. NEXT.md's
+own pre-authorized plan named this exact condition — "if (a) recurs a 3rd sibling: stop adding one-off
+guards (iron rule 8 territory) and switch to a proper idiom-class audit" — as the trigger to stop guard
+whack-a-mole. **That trigger has now fired.** The next work unit is NOT a 4th one-off guard; it's a
+systematic audit of every consumer of the `0x800CDFAC` global / the contiguous `main_overlay.txt` block
+(`startPlayerSlotAnimationChannel` through `resetPlayerSlotAllChannels`, `0x80062854`-`0x80063C6C`) —
+classify each site's dereference-before-init exposure and guard or prove-safe the whole class in one
+pass, matching the `-0x25A4` model (item -239..-247) that already closed a comparable idiom class in this
+codebase.
+
+Single foreground run (not soak-confirmed) for this session's guard/diagnostic behavior. Queued
+`scratch/agent/soak_queue/s425_animphaseguard_confirm.sh` (identical schedule) for a second data point
+per iron rule 4. Full raw log: `scratch/agent/soak_results/s425_animphaseguard_live1/run.log`.
+
+`lib/`: no changes this session (same as s424 — all edits are in the sibling `N64Recomp` tool repo's
+`fixup_game_funcs.py` + its own `RecompiledFuncs/` output; `N64Recomp` carries its own long-standing
+uncommitted state, not autonomous to commit, same as every prior session touching this file).
+
+Outcome: ADVANCED (root-caused and guarded a second sibling crash after catching and correcting its own
+methodology error mid-session — the self-correction and the tooling lesson about `func_start_m`/
+`next_func_m` scoping as a safety net are themselves durable results — and the guard's own success
+surfaced the 3rd-sibling trigger that changes the shape of the next work unit from reactive guarding to
+a systematic idiom-class audit, exactly the strategic pivot the USER DIRECTIVE and NEXT.md's own
+escalation rule called for).
