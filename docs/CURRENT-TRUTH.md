@@ -167,16 +167,32 @@ numbered highest-magnitude-negative (top, newest/highest priority) counting up t
 oldest). Current top is -289 (s450, a new backlog item found incidentally — see below); the
 next new item takes -290.
 
--289. **(s450) NEW backlog item: 9 doubly-orphaned sites in an OLDER, separate
-    `composeNpcOrientationMatrix` guard family ("guard1"-"guard8"-equivalent, s100-era),
-    distinct from item -284's s446 fix (which covered a different/newer 30-site list for the
-    same function).** Found incidentally while fixing item -288 below: all 9 still gated to
-    `funcs_40.c`/`static_5_800AB1C8` in `fixup_game_funcs.py`, confirmed silently producing
-    zero report lines. Not fixed this session (out of the bounded work unit). Alongside the
-    already-known `BREADCRUMB7` (item -284), these 10 blocks are now the FULL remaining
-    inventory of orphaned `funcs_40.c`-gated blocks in the fixup script — next session should
-    apply the same scan-then-fix method (s446/s448/s450) to this family before moving to
-    `S392_H3A`/`S393_H3B`. Full detail: `PORTING-STATE` Session 450.
+-289. **(s451) 9 doubly-orphaned `composeNpcOrientationMatrix` guard sites ("guard1"-"guard9",
+    s100-s261-era, distinct from item -284's own 30-site s446 fix for the same function) — FIXED,
+    same method as items -284/-286/-288.** All 9 were gated on the dead file location `funcs_40.c`
+    AND a function-start regex for the dead old name `static_5_800AB1C8`, silently producing zero
+    report lines since s427. A raw pre-fixup regen + standalone Python scan confirmed all 9 anchors
+    match exactly once tree-wide, all inside `composeNpcOrientationMatrix`'s own body span in
+    `funcs_28.c`. The shared bail target (`L_800AB618`) was checked for independent orphaning
+    BEFORE ungating (s450's own lesson) — confirmed to be the function's real epilogue label,
+    already proven live/reachable by the already-ungated `S284_AB1C8_6`-`_10` and `S390_H2B` guards
+    elsewhere in the same file, so no shared-infrastructure fix was needed this time (unlike -288).
+    Ungated all 9 (dropped the filename+`func_start_m` scoping per the s446/s448/s450 precedent,
+    replaced with a direct `re.subn` on the whole file text plus a `SystemExit`-on-`n>1` hard
+    guard). Full regen/build clean, 0 new warnings; fixup report showed all 9 patches applied `x1`;
+    `strings` confirmed all 9 guard format strings present. Live-verify (full 300s/250s-key
+    schedule): 0 `compose-npc-orient-guard` fires (matches the item -287 established baseline, not
+    an open question), `hangarbay-entry` reached n=2700 (function reachable). Crashed at ~197s on
+    `si_addr=0x380000010`/`pc-symbol=buildPositionAndCallTransformHelper+1736`,
+    `last-guest-pc=0x80065acc` — this is the **already-catalogued `BREADCRUMB6`/near-`0x80000000`
+    "near-zero guest pointer" family** (first seen s273, explicitly re-confirmed "NOT a new crash
+    class" as recently as s328a), a byte-for-byte match to that family's signature and unrelated to
+    `composeNpcOrientationMatrix` or any guard tested this session — not chased (strategic priority
+    #3). Confirmation soak queued: `s451_composenpc9_confirm.sh`.
+    **This closes out the `funcs_40.c`-gated orphan inventory except `BREADCRUMB7`** (a diagnostic,
+    not a crash guard, lowest priority) — next session should move to `S392_H3A`/`S393_H3B` (50
+    sites, item -284's redundancy caveat still applies) or open a fresh M3 idiom-class audit if that
+    family starts feeling like diminishing returns. Full detail: `PORTING-STATE` Session 451.
 
 -288. **(s450) `G1`-`G32` hangar-bay-scene `-0x25A4`/table-deref guard family — FIXED, same
     method as items -284/-286.** 29 G-sites plus a previously-unaccounted 5-site sibling family

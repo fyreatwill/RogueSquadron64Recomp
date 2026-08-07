@@ -37530,3 +37530,71 @@ defining block BEFORE ungating a family that uses one.
 **Outcome: ADVANCED** (closed out the planned G1-G32 work unit end to end -- scan, fix, build,
 binary-verify, live-verify, confirm soak queued -- and surfaced a precise, actionable new backlog
 item along the way rather than silently absorbing or ignoring it).
+
+## Session 451 (2026-08-07)
+
+**Work unit (per s450's NEXT.md, strategic priority #3): finish item -289, the 9 doubly-orphaned
+`composeNpcOrientationMatrix` guard sites ("guard1"-"guard9", s100-s261-era) found incidentally
+while fixing item -288 last session.** Distinct from item -284's own 30-site s446 fix for the same
+function -- this is an older, separate family gated on the dead file location `funcs_40.c` AND a
+function-start regex for the dead old name `static_5_800AB1C8`.
+
+**Session start note**: `scratch/agent/STATUS` was found at `WORKING` with `scratch/agent/OUTCOME`
+deleted and no other uncommitted changes -- a prior iteration had begun but produced no work
+(no diffs beyond those two housekeeping files, no `s451_*` scratch files existed yet). Treated as a
+fresh start of this session's planned unit, not a resume.
+
+**Raw regen** (delete `RecompiledFuncs/funcs_*.c` -> `make_elf.py` -> `N64Recomp`, no fixup):
+confirmed `composeNpcOrientationMatrix` lives in `funcs_28.c` on the pristine post-s427 tree,
+matching item -284/s446's finding.
+
+**Standalone Python scan** (one-off script, not saved as a template file this session) checked all
+9 site anchors (each guard's 1-2 line comment+code anchor) for tree-wide uniqueness and for landing
+inside `composeNpcOrientationMatrix`'s own body span (`funcs_28.c:348480-378215` on the raw tree).
+**All 9/9 confirmed unique tree-wide and body-contained** -- 0 collisions.
+
+**Goto-target label check (this session's discriminating step, per s450's own build-fail lesson)**:
+all 9 guards bail via `goto L_800AB618;`. `funcs_28.c` has TWO `L_800AB618:` label definitions (a
+known wrinkle since s448 -- `composeEffectObjectTransformMatrix` and `composeNpcOrientationMatrix`
+each define their own, safe by C's per-function goto scoping). Confirmed the one inside
+`composeNpcOrientationMatrix`'s body span is the live one, and -- unlike item -288's
+`L_hangarbay_guard_exit`, which turned out to be independently orphaned -- this label needed no fix:
+the already-ungated `S284_AB1C8_6`-`_10` (item -284) and `S390_H2B_*` (item -286) guards elsewhere
+in the same file already reference it unconditionally and are known-working post-s446/s448, proving
+it live without a wasted build cycle this time.
+
+**Fixed all 9 gates**: removed the `if p.name == "funcs_40.c":` file check and the `func_start_m`/
+body-slice scoping entirely for each of the 9 blocks, replacing with a direct `re.subn` against the
+whole file `text` (matching the s446/s448/s450 precedent used for the `_s284_deref_guard_sites` list
+and `S390_H2B`), each with its own `SystemExit`-on-`n>1` hard guard citing the site name
+(`guard1`..`guard9`). `python3 -m py_compile` confirmed clean syntax before running.
+
+**Full clean regen + fixup + build**: fixup report showed all 9 patches applied `x1` -- `funcs_28.c:
+composeNpcOrientationMatrix table-deref guard patched x1` through `... 9th 2nd-level pointer-deref
+guard patched x1`, no `SystemExit`, no unexpected counts. Build succeeded clean (rc=0), only
+pre-existing benign warnings (sign-conversion/format, unrelated files). `strings` on the built
+binary confirmed all 9 guard format strings present (`[compose-npc-orient-guard]` through
+`[compose-npc-orient-guard9]`).
+
+**Live-verify** (`scratch/agent/soak_queue/s451_composenpc9_confirm.sh`, full armed-var list plus
+this family's own 9 new env vars): 0 `compose-npc-orient-guard` fires across all 9 sites (null
+result -- per item -287's established baseline for this whole `-0x25A4`/table-deref/pointer-chase
+guard idiom class, this is the expected norm, not an open question needing a fresh positive
+control), `hangarbay-entry` reached n=2700 (function reachable, consistent with prior sessions'
+baselines). Crashed ~197s in on `si_addr=0x380000010`, `pc-symbol=
+buildPositionAndCallTransformHelper+1736`, `last-guest-pc=0x80065acc` -- decomposes to RDRAM host
+base (`0x300000000`) + guest `0x80000010`, a byte-for-byte match to the **already-catalogued
+`BREADCRUMB6`/near-`0x80000000` "near-zero guest pointer" family** (first landed s273, explicitly
+reconfirmed "NOT a new crash class" as recently as s328a -- same symbol, same `+1356`/`+1736`-style
+offset, same `0x3800000xx` shape). Unrelated to `composeNpcOrientationMatrix` or any guard tested
+this session -- not chased (strategic priority #3: no reactive single-crash chases). Confirmation
+soak queued: `scratch/agent/soak_queue/s451_composenpc9_confirm.sh`.
+
+**Scope closure**: this was the last remaining `funcs_40.c`-gated orphan family found by the s450
+audit except `BREADCRUMB7` (a diagnostic, not a crash guard, deliberately out of scope/lowest
+priority). `grep -c 'if p.name == "funcs_40.c":' fixup_game_funcs.py` now returns 1 (`BREADCRUMB7`
+only), down from 10 at session start.
+
+**Outcome: ADVANCED** (closed out the planned item -289 work unit end to end -- scan, goto-label
+check, fix, build, binary-verify, live-verify, confirm soak queued -- with 0 unexpected findings
+this session; the crash observed is pre-existing and already fully catalogued, not a new lead).
