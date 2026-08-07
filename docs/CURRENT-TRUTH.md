@@ -7,12 +7,12 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## L
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
-   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Fourteen passes so
-   far (s295-330 x5, s346, s355, s364, s371, s380, s391, s398, s409, s429) kept the file oscillating
-   around the cap as new session detail accrues; s429 migrated the s426-429 duplicate-symbol saga to
-   PROJECT-OVERVIEW §16. Full per-pass detail in git log. 35 KB remains a stretch target, not a hard
-   floor -- the "Current truth" env-var/timeline prose and the Regeneration section's Standing warnings
-   stay intact deliberately; both are used every iteration.
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Fifteen passes so
+   far (s295-330 x5, s346, s355, s364, s371, s380, s391, s398, s409, s429, s438) kept the file
+   oscillating around the cap as new session detail accrues; s429/s438 migrated the s426-438
+   duplicate-symbol/breadcrumb saga to PROJECT-OVERVIEW §16. Full per-pass detail in git log. 35 KB
+   remains a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and the
+   Regeneration section's Standing warnings stay intact deliberately; both are used every iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
    §10-§12). Next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
@@ -23,7 +23,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    same M3 DoD leg**: duplicate-symbol-name collisions in the overlay `.txt` files silently truncate
    real function bodies to 1-instruction stubs (a third shape of the closed item -6/-249 "phantom
    function" family). This supersedes needing separate human reconfirmation on "where to focus next"
-   for now — see item -269 (current top) and PROJECT-OVERVIEW §16 for the full session-by-session arc.
+   for now — see item -274 (current top) and PROJECT-OVERVIEW §16 for the full session-by-session arc.
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
@@ -162,305 +162,113 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -273 (s437, ADVANCED — added BREADCRUMB17 to localize item -263's true fault
-site, live-verified 0 crashes but item -263 did not recur so the new instrument remains unvalidated);
-the next new item takes -274.
+oldest). Current top is -274 (s438, ADVANCED as a maintenance pass — consumed the queued
+`s437_breadcrumb17_confirm` soak and localized item -263's 4th occurrence one level deeper, into a
+totally uninstrumented ~6800-line function); the next new item takes -275.
 
--273. **(s437) Added `BREADCRUMB17` (`runHangarSelectionFrame`) to localize item -263's true fault
-    site — but the live-verify came back CLEAN, so the instrument is armed and unvalidated, not yet
-    proven.** Consumed s436's queued confirm soak first: `s436_cacheheada1_confirm` (SOAK-RESULTS
-    20260807-034040) came back `rc=0`, captured to 299.9s — the fullest clean run yet in this saga, but
-    still 0 fires for either 0x801163B0-family guard (items -270/-272 unchanged: still no positive
-    control). Confirmed `runHangarSelectionFrame` (`funcs_28.c:4861`) is the only one of
-    `tickWrappingTimerAccumulatorList`'s 3 callers reachable by the menu-only s427-436 schedule (the
-    other 2 need mission/cinematic content this schedule never enters), added BREADCRUMB17 there
-    (same BREADCRUMB10-16 template, `N64Recomp/fixup_game_funcs.py`). Regenerated/rebuilt clean (0 new
-    warnings); verified no regression by grepping the compiled output directly (fixup's own stdout is
-    silent/idempotent on a 2nd run against already-patched files — a process lesson worth repeating):
-    `GENERIC_CACHE_GUARD` still 107, `CACHE_HEAD_A1_GUARD` still 7 sites, `funcs_28.c` gained 320
-    breadcrumb writes (was 0). Live-verify (`s437_breadcrumb17_verify`, same schedule, all 3
-    diagnostics armed) ran 0 crashes to 297.8s — a 2nd CONSECUTIVE full-depth clean run (after
-    s436_cacheheada1_confirm). Item -263 did not recur, so BREADCRUMB17 has nothing to localize yet;
-    it remains a passive, free-to-leave-armed instrument per the established BREADCRUMB14-16 rationale.
-    **2 consecutive clean runs is not a trend** — the schedule has alternated crash/clean roughly every
-    other run across s434-437 (clean, crash, clean, crash, crash, clean, clean) — consistent with this
-    project's already-documented nondeterministic-crash pattern, not new evidence either fix works.
-    Confirmation soak queued: `scratch/agent/soak_queue/s437_breadcrumb17_confirm.sh`. Full detail:
-    PORTING-STATE Session 437.
+-274. **(s438) Item -263 recurred a 4th time via the queued `s437_breadcrumb17_confirm` soak
+    (SOAK-RESULTS 20260807-035804, rc=1, 153s) — BREADCRUMB17 worked, but the new `last-guest-pc`
+    immediately hit the SAME misattribution mechanism one function deeper.** `last-guest-pc=0x800AAF94`
+    resolves (`tools/overlay_symbol_probe.py` + a sorted `menu_overlay.txt` symbol table) to +504 bytes
+    into `runHangarSelectionFrame` — confirmed by source: `funcs_28.c:5391-5396` is the breadcrumb write
+    immediately before the `jal` into `updateHangarBayScene`. A full grep of `updateHangarBayScene`'s
+    entire body (`funcs_28.c:10918-17722`, ~6805 lines — the largest function this project has ever
+    instrumented) found **zero** breadcrumb writes anywhere in it, so `last-guest-pc` froze at the call
+    site the instant execution entered this uninstrumented callee — the identical mechanism BREADCRUMB16
+    (item -271) and BREADCRUMB17 itself (item -273) were built to defeat, recurring one function deeper
+    because `updateHangarBayScene` was never on the allowlist either. Two independent signals now agree
+    on `updateHangarBayScene` as the locus even without an exact instruction: this call-site freeze, and
+    the host-side `atos` symbolication (`pc-symbol=updateHangarBayScene+43768`), which has named this
+    same function at all 4 of item -263's occurrences (s426, s433, s436, s437) without anyone previously
+    connecting it to the breadcrumb-coverage gap. No build/run cycle this session (analysis of already-
+    collected soak data only, per read-list #3). Next work unit: BREADCRUMB18 (or a checkpoint bisection,
+    given the function's unprecedented size) inside `updateHangarBayScene` itself. Full detail:
+    `docs/PROJECT-OVERVIEW.md` §16 (s438 update), `PORTING-STATE` Session 438.
 
--272. **(s436) A REAL confirmed bug this time, not a misattribution: `reserveAndEmitDLEntry` reloads
-    `0x801163B0` (item -270's global) into TWO different registers 4 instructions apart — `$v0`
-    (GENERIC_CACHE_GUARD-protected) and `$a1` (unguarded) — and the unguarded copy is used as a raw
-    write pointer 14 instructions later with zero validation. A scoped scan found 6 MORE occurrences of
-    the same shape; all 7 fixed with one new guard, `CACHE_HEAD_A1_GUARD`.** `s435_genericcacheguard_
-    confirm2.sh` crashed at 109.5s: `si_addr=0x380000000`, `pc-symbol=reserveAndEmitDLEntry+12064`,
-    `last-guest-pc=0x8000ce68`. One line earlier in the same log: `[generic-cache-guard] n=0
-    site=0x8000CE30 bad_head=0x00000000` — item -270's FIRST-EVER fire, a genuine positive control (the
-    diagnostic correctly caught a live corrupted read) — but the process crashed immediately after
-    anyway. Source read (`funcs_3.c:17190-18113`) found why: `reserveAndEmitDLEntry` reloads
-    `0x801163B0` twice within 4 instructions — once into `$v0`/`ctx->r2` (0x8000CE28-2C, the
-    GENERIC_CACHE_GUARD site, correctly substituted 0 for the bad head) and once into `$a1`/`ctx->r5`
-    (0x8000CE20-24, never covered by s434's `$v0`-only regex). Nothing writes `ctx->r5` between reload
-    and first use; that first use, 14 instructions later (`MEM_W(0X0, ctx->r5) = ctx->r3;`), is an
-    UNCONDITIONAL write through the raw pointer — with `bad_head=0` confirmed same-run at the sibling
-    `$v0` read (no intervening write between the two reloads), `$a1` must also have been 0: a
-    null-guest-pointer store, an exact mechanistic match for the SIGBUS. This is byte-for-byte what
-    NEXT.md's own s435 write-up predicted before this soak ran ("a SECOND reference to the SAME global
-    using a DIFFERENT register... exactly the kind of thing worth a fresh grep-scan before guarding").
-    A scoped scan (`scratch/agent/s436_r5_idiom_scan.py`) of all 24 `ctx->r5 = MEM_W(ctx->r5,
-    0X63B0)` sites (16 funcs_3.c, 8 funcs_4.c) classified them: 12 have the game's own legitimate
-    `!=0` empty-list check (not a bug), 6 reassign `$a1` to an unrelated pointer before any use (not a
-    bug, value already dead), and 7 (funcs_3.c only) share the exact crash shape — reload, zero
-    validation, unconditional write 60-81 lines later. All 7 fixed with `CACHE_HEAD_A1_GUARD`
-    (`fixup_game_funcs.py`, explicit per-site literal anchors — a blind regex on the write's own text
-    was rejected: that exact text also appears at 30+ unrelated, safe `$a1`-relative stores elsewhere in
-    the file). Unlike GENERIC_CACHE_GUARD, 0 is not a safe substitute for a WRITE ADDRESS, so an
-    out-of-range `$a1` skips the write entirely (a no-op; confirmed no site reads the write's result
-    again downstream). Regenerated/rebuilt clean: all 7 sites patched `x1`, GENERIC_CACHE_GUARD
-    unchanged at 107 (no regression), 0 new warnings. Live-verify (both diagnostics armed, same
-    s427-435 schedule) died at 109.5s on a DIFFERENT, already-catalogued crash (item -263, 3rd
-    occurrence — not a regression, the touched code path was never reached this run); neither guard
-    fired, so this fix is still without its own positive control (1 observation so far). Confirmation
-    soak queued: `scratch/agent/soak_queue/s436_cacheheada1_confirm.sh`. Full detail: PORTING-STATE
-    Session 436.
+-263. **(s426, recurred s433/s436/s437) `updateHangarBayScene`-region crash — 4 occurrences, now
+    localized to a call site INTO `updateHangarBayScene` itself, which has zero breadcrumb coverage
+    across its ~6800-line body (item -274, s438).** Same wild near-zero-pointer signature as item -261's
+    family. First 3 occurrences' `last-guest-pc=0x800547bc` was itself a misattribution — that address is
+    `tickWrappingTimerAccumulatorList`'s own epilogue instruction (`addiu $sp,$sp,0x40`, not a memory
+    access), frozen there because none of its 3 possible callers had breadcrumb coverage nearby. s437
+    added BREADCRUMB17 to the reachable caller (`runHangarSelectionFrame`) to fix that; the 4th
+    occurrence (s438, consuming the queued `s437_breadcrumb17_confirm` soak) shows BREADCRUMB17 worked
+    but hit the identical mechanism one function deeper — see item -274. Not yet root-caused at the
+    instruction level. Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Sessions 426, 433, 436, 438.
 
--271. **(s435) Item -270's confirmation soak crashed on a DIFFERENT, previously-unguarded bug —
-    root-caused as a last-guest-pc MISATTRIBUTION, not a new corruption site; fixed by extending
-    breadcrumb coverage (BREADCRUMB16), not by guarding blind.** `s434_genericcacheguard_confirm.sh`
-    (queued s434) came back `rc=1` at 170s — deeper into the schedule than any prior -261..-269
-    confirmation run — crashing with `pc-symbol=emitMaterialRenderStateDL+608`,
-    `last-guest-pc=0x8001033C`. Localizing `0x8001033C` (`s434_symrange2.py`'s method) found it's
-    `submitSceneNodeRender`'s own call site into `emitMaterialTexturedDL` (the `jal` delay-slot
-    instruction), not the actual fault location — a direct grep confirmed `emitMaterialTexturedDL`'s
-    ~1258-line body has **zero** `g_rs64_last_guest_pc` breadcrumb writes, so the shared global froze at
-    the caller's last write the instant execution entered this uninstrumented callee. The
-    `g_rs64_last_guest_pc` diagnostic (`fixup_game_funcs.py`) is NOT applied codebase-wide — it's an
-    explicit allowlist of 15 individually-added functions (BREADCRUMB–BREADCRUMB15), each added
-    reactively across s265–s349 whenever a crash happened to land in a function lacking one.
-    `emitMaterialTexturedDL` was never on that list. **This is byte-for-byte the same mechanism
-    BREADCRUMB15's own s349 comment already documents** (`drainMeshReleaseQueue` misattributed to
-    `beginFrameDLChunk`'s stale breadcrumb) — independently rediscovered before finding that precedent,
-    a strong sanity check. Fix: added BREADCRUMB16 for `emitMaterialTexturedDL` (`funcs_3.c`), same
-    template as BREADCRUMB1-15. Regenerated/rebuilt clean; fixup report confirmed `x508` breadcrumb
-    writes and the pre-existing `GENERIC_CACHE_GUARD` count unchanged at 107 (no regression to item
-    -270). Live-verified over the full 300s schedule with 0 crashes, reaching 196.1s — past the point
-    the triggering crash occurred — with no recurrence of the `emitMaterialTexturedDL`-region crash and
-    0 `generic-cache-guard` fires. **Does not fix or guard the triggering crash itself** (single sighting,
-    matches this project's typical nondeterministic-crash pattern; guarding it blind before a 2nd sighting
-    would be exactly the reactive single-crash chase the user directive rules out) — it only ensures the
-    next sighting localizes precisely instead of misattributing. Confirmation soak queued
-    (`s435_genericcacheguard_confirm2.sh`). Sandbox lesson: a probe/soak output directory under `/tmp` is
-    unreadable by any tool after the run completes (outside the 3 allowed working-directory roots) — always
-    write soak output under `scratch/agent/soak_results/`. Full detail: PORTING-STATE Session 435.
+-268..-273. **(s432-437) Duplicate-symbol catalogue closed (18/18); the `0x801163B0` free-list-
+    cache-head-deref idiom swept at scale (107 sites, `GENERIC_CACHE_GUARD`) plus a 7-site `$a1`-register
+    sibling bug found and fixed (`CACHE_HEAD_A1_GUARD`); item -263 progressively localized through two
+    rounds of breadcrumb-coverage misattribution (BREADCRUMB16, BREADCRUMB17).** Batch-fixing the last of
+    18 catalogued duplicate-symbol pairs (s432/s433) unblocked the item -265/-266/-267 chain as a side
+    effect — likely because the truncated stub `runHangarMenuFromOverlay` had been calling left the next
+    callee, `mallocCraftSelectionData`, consuming never-computed garbage state rather than containing its
+    own bug (single-run, not independently confirmed). The live-verify that followed hit item -263's
+    original s426 signature again (2nd source), promoting it to the active frontier. s434's scan for
+    that crash's idiom (reload+deref of global `0x801163B0`, already bespoke-guarded 4 times before by
+    s197/s266/s270/s271, each reactively) found 107 more unguarded sites; one generic guard fixed them
+    all, live-verified over the deepest clean run in the saga but with 0 guard fires (no positive control
+    yet). Its confirmation soak crashed on a different bug, root-caused (s435) as a breadcrumb-coverage
+    misattribution — `last-guest-pc` froze at a caller's call site because the real callee,
+    `emitMaterialTexturedDL`, had zero breadcrumb writes across ~1258 lines (fixed: BREADCRUMB16,
+    byte-for-byte the same mechanism BREADCRUMB15's own s349 note already documented once). The NEXT
+    confirmation soak (s436) found a real, distinct bug: `reserveAndEmitDLEntry` reloads the same global
+    into two registers 4 instructions apart, one guarded (`$v0`) and one not (`$a1`, used as a raw
+    unvalidated write pointer); a scoped scan found 6 more of the same shape, all 7 fixed
+    (`CACHE_HEAD_A1_GUARD`). That soak then hit item -263 a 3rd time, still showing the ORIGINAL
+    misattribution (`0x800547BC` = `tickWrappingTimerAccumulatorList`'s own epilogue instruction, not a
+    memory access) — so s437 added BREADCRUMB17 to `runHangarSelectionFrame`, the only reachable one of
+    that function's 3 callers, to catch the real fault site. Items -270 (`GENERIC_CACHE_GUARD`) and -272
+    (`CACHE_HEAD_A1_GUARD`) both still lack a same-run positive control (0 fires across all observations
+    so far) despite 100% clean runs whenever reached — promising but unconfirmed. See item -274 for
+    where BREADCRUMB17 led. Full detail: `docs/PROJECT-OVERVIEW.md` §16, `PORTING-STATE` Sessions
+    432-437.
 
--270. **(s434) The `0x801163B0` free-list-cache-head-deref idiom — 4 prior sessions (s197/s266/s270/
-    s271) each bespoke-guarded ONE reactive occurrence; a full codebase scan found 107 MORE unguarded
-    occurrences; ONE generic patch fixed all 107 in a single regen. Live-verified clean over the
-    longest, deepest run in the whole -261..-269 saga, but single-source (0 guard fires = no positive
-    control yet).** Item -269's confirmation soak (`s433_regression_and_item263_confirm.sh`) crashed on
-    neither of s433's two expected outcomes — a 3rd, new signature: `last-guest-pc=0x80008928`,
-    `pc-symbol=emitAllocatedDLCommand+9472` (this time pc-symbol and guest-PC agree, no
-    misattribution). Localized to `lui $v0,0x8011; lw $v0,0x63B0($v0); lw $v0,0x0($v0)` — reload the
-    persistent free-list cache-head global at `0x801163B0` and dereference it with zero validation.
-    `docs/audit-changes.md` (a 2026-05-08 audit predating most of this project) had already flagged
-    this exact global as an open, never-root-caused "Top-5 Cat-B unknown" — this crash is the SAME
-    global, a 5th independent occurrence of an idiom already bespoke-guarded 4 times before
-    (`GUARD`/s197, `CACHE2_GUARD`/s266, `CACHE3_GUARD`/s270, `CACHE4_GUARD`/s271), each time reactively,
-    one crash at a time, never swept exhaustively. A grep-scan (`scratch/agent/s434_idiom_scan.py`)
-    found 107 FURTHER unguarded occurrences across `funcs_3.c`(66)/`funcs_4.c`(41) — no other file
-    references the offset. 100% uniform: every occurrence uses `$v0`/`ctx->r2` for all 3 positions and
-    every sampled site (6/6) has the identical write-back+branch tail, confirming one systematic class.
-    Fixed with ONE generic regex-based patch (`GENERIC_CACHE_GUARD`, `N64Recomp/fixup_game_funcs.py`)
-    that substitutes 0 for the dereferenced value when the loaded head pointer is out of
-    `[0x80000000,0x80800000)` range — no per-site goto needed, since intercepting the value before the
-    deref is safe regardless of downstream code. Fixup audit report confirmed exactly 107 patches
-    applied, matching the scan count exactly. Rebuilt clean (0 new warnings). Live run with the guard's
-    diagnostic armed completed the FULL 300s/250s-keys schedule with **0 crashes** — deeper/longer than
-    every prior run in the -261..-269 saga (all died 19s-172s) — but the guard also fired **0 times**,
-    so this is a promising single-source result WITHOUT a positive control (iron rule 1), not yet a
-    confirmed fix. Confirmation soak queued (`s434_genericcacheguard_confirm.sh`). Does NOT resolve
-    what WRITES the corrupted value into `0x801163B0` (the original open `audit-changes.md` question) —
-    guarding every read site is treated as sufficient, matching how the 4 prior bespoke guards were each
-    accepted without ever finding their shared writer. Full detail: PORTING-STATE Session 434.
-    **s435 update**: `s434_genericcacheguard_confirm.sh` crashed at 170s, but on a DIFFERENT bug
-    (misattributed via a breadcrumb coverage gap, not this idiom) — see item -271. 3 completed
-    same-recipe observations now (s434 foreground, s434_confirm, s435): 2 clean+silent, 1 crashed on the
-    now-diagnosed unrelated bug, guard fired 0/3 times — still no positive control, unchanged conclusion.
-
--269. **(s433) Item -264's duplicate-symbol catalogue CLOSED (18/18 accounted for) — and fixing one
-    of the last 5 function pairs unblocked the entire item -265/-266/-267 chain that had blocked
-    s427-432 for 5 sessions, single-source so far.** Read both bodies for each of the catalogue's 5
-    remaining real/real function pairs (same method as -262/-264/-268: `RECOMP_FUNC` body length +
-    call-site grep) and confirmed the same first-listed-is-truncated-stub / second-listed-is-real-body
-    shape in every one: `hangarGenerateSecondaryWeaponString`/`buildSecondaryWeaponString` (0x800AE530),
-    `getAvailablePlayerCraftFlagsConsiderUnlocks`/`getAvailableShipsForLevelAlt` (0x800C6234),
-    `getSecondaryWeaponForLevelAndCraft`/`getSecondaryWeaponForCraftLevel` (0x800C6728),
-    `getLevelIntroCrawlId`/`getPlanetAssetForLevel` (0x800C6900, all `menu_overlay.txt`), and
-    `handleHUD`/`initHudStruct` (0x800C0084, `mission_overlay.txt`, dispatched by raw address value into
-    `spawnNpcOfType` rather than a direct call — confirmed via `spawnHudNpc`'s `lui`/`addiu` pair
-    constructing the address, so the usual call-site grep doesn't apply to this one, but the identical
-    stub/body shape does). Deleted all 5 truncated-stub lines. The 2 remaining catalogued pairs
-    (`gActiveModelAnimSlots`/`D_8013A990`, `gHangarBayDescriptorArrayPtr`/`gCraftSelectScreenData`,
-    both `main_overlay.txt`) are **data-symbol aliases, confirmed NOT an instance of this bug**: grepped
-    all of `RecompiledFuncs/*.c` for both names and found zero references anywhere — this recompiler
-    never emits data globals by name (every load/store is raw `MEM_W`/offset arithmetic), so there is no
-    function body for the duplicate-symbol collision to truncate. No build-run cycle needed; catalogue
-    closed without touching them.
-
-    Regenerated, rebuilt clean (0 new warnings/errors), live-ran the same s427-432 probe schedule.
-    Result was NOT the expected "same pre-existing item -267 crash, no regression" — the process ran
-    to ~114s (vs. every s427-432 run's ~19s `menuOverlayInit+3648` death) and crashed on a **different**
-    signature: `[CRASH] Bus error 10`, `last-guest-pc=0x800547bc`, native symbol
-    `updateHangarBayScene+43768` (an imprecise nearest-preceding-export attribution — address math
-    against the overlay symbol tables places the real guest PC 0x800547bc inside
-    `tickWrappingTimerAccumulatorList` (0x80054650-0x800547C0 range), 0x16C bytes into its body, 4 bytes
-    before the next symbol). This is **byte-for-byte the same crash item -263 found single-source at
-    s426** (`s426_menufix_regression_20260807-005943/run.log`: `last-guest-pc=0x800547bc`, Bus error 10,
-    `si_addr` in the same `0x38000000x` near-zero-guest-pointer family) — a 2nd independent source,
-    different session, different binary build, same guest PC. Item -263 is promoted from
-    single-source/parked to the active frontier crash (was item -267's blocker before now).
-
-    **Mechanistic read on why item -267 stopped reproducing**: `getAvailablePlayerCraftFlagsConsiderUnlocks`
-    was the truncated stub called by `runHangarMenuFromOverlay` — the *exact* caller function items
-    -265/-266/-267 were isolating `ctx->r19`/stack-slot corruption inside, and the truncated stub ran
-    only its first instruction and returned without computing the real craft-flags bitmask or restoring
-    any of its frame. `mallocCraftSelectionData` (the very next callee in that same caller, s429's
-    isolated corruption site) plausibly consumed that never-computed/garbage state, matching item -267's
-    own s431 conclusion ("a stray/OOB write elsewhere aliasing that stack address, not a missing
-    register restore") — the stray write's source may have been the sibling stub's uncomputed state all
-    along, not a bug inside `mallocCraftSelectionData` itself. **This explanation is plausible but
-    single-run** — only one live run has been made since this fix; item -267 not reproducing once is not
-    yet the two-source confirmation the ledger requires to CLOSE it. Confirmation soak queued
-    (`s433_regression_and_item263_confirm.sh`) to check both halves: item -267 staying gone AND item
-    -263 recurring. Full detail: PORTING-STATE Session 433.
-
--268. **(s432) Batch-fixed 11 of item -264's 18 catalogued `mission_overlay.txt` duplicate-symbol
-    pairs — all NPC slot handlers, same mechanism as items -262/-264, confirmed by direct code read
-    (11th-14th independent instance).** `func_800BF4A0`/`attached3DSoundEmitterNpcHandler`,
-    `func_800C7DC0`/`initNpcActorFromSpawnMessage`, `func_800CA270`/`initNpcActorVariant`,
-    `func_800CEF20`/`advanceAtStEffectPhaseSound`, `func_800D2CA0`/`npcInitWithMotionParams`,
-    `func_800D4ED0`/`npcInitChildLinkedToParent`, `func_800DD2D0`/`npcInitFullModel`,
-    `func_800DFB90`/`applyCraftAnimAndDetailParams`, `func_800E4480`/`resetCraftInstanceMotionState`,
-    `func_800E8A40`/`runDestructionPhaseSequence`, `func_800ECE10`/`datItemActorNpcHandler` — each
-    pair's generic `func_0xADDR` name (first-listed in `mission_overlay.txt`) compiled to a truncated
-    5-line stub while the real semantic name (second-listed) held the actual body, exactly like items
-    -262/-264. Deleted all 11 generic lines, regenerated, rebuilt clean. Live run reproduced the SAME
-    pre-existing item -267 crash (no regression to the menu/hangar flow) but did NOT positively
-    validate the fix — these are mission-only NPC handlers, unreachable by any probe schedule until
-    item -267 is fixed/guarded. Catalogue narrowed 18 -> 7 (4 `menu_overlay.txt` real/real, 2
-    `main_overlay.txt` data aliases, 1 `mission_overlay.txt` real/real `handleHUD`/`initHudStruct`),
-    all needing individual judgment calls, not batchable. Confirmation soak queued
-    (`s432_npchandler_batch_regression.sh`). Full detail: PORTING-STATE Session 432.
-
--267. **(s429/s431) `$s3`/`ctx->r19` corruption for items -265/-266 ISOLATED to
-    `mallocCraftSelectionData`, then NARROWED to its last ~130-330 lines, and REFRAMED as a stray write
-    corrupting a stack slot, not a direct register clobber.** s429: three checkpoints after
-    `runHangarMenuFromOverlay`'s three callees show `ctx->r19` sane after callee 1, already wild
-    (`0x3F800000`) immediately after `mallocCraftSelectionData` (callee 2) returns — confirmed
-    2nd-independently (`s429_hangarmenu_ckpt_verify`, SOAK-RESULTS 20260807-013423, rc=1). s431: a
-    static read ruled out 30 of the function's 47 direct callees (no `ctx->r19` reference) and found
-    the other 17 all balance their own save/restore; four new checkpoints bracketing its `-0x25A4`
-    hangar-list loop (`bsearchFactor5TableByU16Key`/`play3DSoundEvent`/`updateHangarBayScene`/
-    `allocAndSetupModelInstance`) stayed sane through every logged iteration — wild only once the
-    caller reads it back. Since the value is recovered from a stack slot (`ctx->r29+0xB4`) written once
-    at entry and never touched by any traced write, this is a stray/OOB write elsewhere aliasing that
-    RDRAM address, not a missing restore — the first bug in this lineage not shaped like items
-    -265/-266. Confirmation soak queued (`s431_malloccraft_ckpt_verify.sh`), single-source. Next work
-    unit: a diagnostic reading `MEM_W(ctx->r29, 0XB4)` directly at points in the function's last ~330
-    lines to catch when the stack slot itself flips. Full detail: PROJECT-OVERVIEW §16, PORTING-STATE
-    Sessions 429, 431. **s433 update: did NOT recur after fixing a sibling duplicate-symbol stub in the
-    same caller function — single-source, not yet closeable. See item -269 for the finding and the
-    mechanistic explanation of why.**
-
--266. **(s428/s429) `menuOverlayInit+3648` post-guard crash — reproduced 3x, blocked on item -267.**
-    Reads the same corrupted `ctx->r19`/`$s3` register item -265's guard caught wild moments earlier in
-    the callee, still wild on return. Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Session 428.
-
--265. **(s427/s428) `runHangarMenuFromOverlay+800` SIGBUS — ROOT-CAUSED AND GUARDED s428: register
-    corruption, not a caller-passed wild value.** `ctx->r19` (`$s3`, callee-saved) is sane at function
-    entry but corrupted mid-call by a callee (top suspect `mallocCraftSelectionData`, live for the
-    first time via item -264's fix). Guard fired as its own positive control. Whether the closed
-    s283-396 `-0x25A4` audit (item -239..-247) guarded dead code is still open, now blocked behind item
-    -267. Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Sessions 427-428.
-
--264. **(s426/s427) `hangarInitialize`/`mallocCraftSelectionData` duplicate-symbol collision —
-    ROOT-CAUSED AND FIXED s427, 2nd confirmed instance of item -262's mechanism.** Deleted the
-    truncated `hangarInitialize` line; the sole call site auto-followed to `mallocCraftSelectionData`
-    with zero source edits, confirming the mechanism generalizes. 18 more duplicate-symbol pairs remain
-    uninvestigated across the three overlay files. Full detail: PROJECT-OVERVIEW §16, PORTING-STATE
-    Session 427 (catalogue: Session 426).
-
--263. **(s426) `updateHangarBayScene` crash surfaced by item -262's fix — now 3 independent
-    occurrences (s426, s433, s436), still uninvestigated, but s436 found `last-guest-pc=0x800547bc`
-    is itself a MISATTRIBUTION (same mechanism as items -270/-271), not the real fault site.** Same wild
-    near-zero-pointer signature as item -261's family, different function family (0x80054xxx).
-    `0x800547BC` disassembles to `addiu $sp,$sp,0x40` — the LAST instruction of
-    `tickWrappingTimerAccumulatorList`'s own epilogue (`funcs_11.c:15057`), not a memory access. The
-    breadcrumb froze there because that function returns into one of 3 callers
-    (`runHangarSelectionFrame` funcs_28.c, `cinematicLoopBody` funcs_27.c, `runInMissionFrame`
-    funcs_42.c) — a spot-check of `runHangarSelectionFrame`'s call site (`funcs_28.c:5195-5230`, most
-    likely active caller in the hangar-menu schedule) found **zero** breadcrumb writes nearby, so item
-    -263's true fault location has never actually been localized; `updateHangarBayScene`/
-    `tickWrappingTimerAccumulatorList` are both plausibly innocent stale attributions. s434 update: this
-    same signature (an UNRELATED global, `0x80137C84`, not item -270's `0x801163B0`) did not recur in
-    s434's clean 300s run — may simply not have been reached that run (schedule/build differ).
-    Confirmation soak queued s426; recurred again s433 (2nd source) and s436 (3rd source,
-    `si_addr=0x3c84f1b94`). **s437 update: BREADCRUMB17 added to `runHangarSelectionFrame` (item -273)
-    to localize the true fault site — but item -263 did not recur that run, so the instrument is armed
-    and waiting, still unvalidated.** Confirmation soak queued
-    (`scratch/agent/soak_queue/s437_breadcrumb17_confirm.sh`).
-    Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Sessions 426, 433, 436.
-
--262. **(s426) `startPlayerSlotAnimationChannelLooping`/2-sibling chain (item -261) ROOT-CAUSED AND
-    FIXED: a duplicate-symbol-name collision truncated `initCraftSelectScreen`'s real ~1200-line body
-    to 1 instruction, so it never ran.** Deleting the stale duplicate line fixed it (0 call-site edits
-    needed — N64Recomp derives a JAL target's C name from whichever symbol remains at that address).
-    Live-verified via positive control (cache-write fired for the first time). A third,
-    previously-unrecognized shape of the closed -6/-249 phantom-function family (duplicate names within
-    one file). 20 total instances catalogued, see item -264. Full detail: PROJECT-OVERVIEW §16,
-    PORTING-STATE Session 426.
-
--261. **(s424/s425) `startPlayerSlotAnimationChannelLooping` and 2 siblings root-caused and guarded;
-    3rd sibling hit — the idiom-class-audit trigger fired, SUPERSEDED s426, see item -262 for the real
-    root cause.** All 3 siblings crashed on derefs of state that traced back to one global
-    (`0x800CDFAC`) whose only writer, `initCraftSelectScreen`, had never run — s424/s425 guarded siblings
-    1 and 2 (`funcs_14.c`, s425 self-caught a source-mapping error before shipping, see PORTING-STATE for
-    the method) and each guard fired as its own positive control before exposing the next sibling one
-    call deeper, crossing NEXT.md's pre-set 3rd-sibling idiom-audit trigger. Superseded by s426's actual
-    fix (item -262: the writer was silently truncated by a duplicate-symbol collision, not never-called
-    by design). Full detail: PORTING-STATE Sessions 424-425.
+-261..-267. **(s424-431) The `startPlayerSlotAnimationChannelLooping`-family crash chain: 3 siblings
+    guarded (item -261), then SUPERSEDED by the real root cause — a duplicate-symbol-name collision
+    truncating `initCraftSelectScreen`'s ~1200-line body to 1 instruction (item -262) — whose fix
+    un-truncated code that had never run before and triggered a cascade of 3 further crashes, one per
+    newly-live function.** s424/s425 guarded 2 of 3 siblings deref-ing a global (`0x800CDFAC`) whose only
+    writer had never run; s426 found why (the duplicate-symbol mechanism, generalized into item -264's
+    catalogue of 20 total instances) and fixed it with zero call-site edits (N64Recomp derives a JAL
+    target's C name from whichever symbol survives at that address). s427 fixed the 2nd instance
+    (`hangarInitialize`/`mallocCraftSelectionData`), which surfaced a NEW signature at
+    `runHangarMenuFromOverlay+800` (item -265): register corruption of `ctx->r19`/`$s3` (callee-saved,
+    sane at entry, wild after some callee), guarded s428 with its own positive control (the guard firing).
+    That guard exposed a further crash one step later reading the same corrupted register back
+    (`menuOverlayInit+3648`, item -266, reproduced 3x). s429/s431 isolated the corruption to
+    `mallocCraftSelectionData` via before/after checkpoints (2nd-independent confirmation, SOAK-RESULTS
+    20260807-013423), ruled out 30 of its 47 callees by static read, and reframed it (item -267) as a
+    stray write corrupting a stack slot rather than a missing register restore. **s433 update: item -267
+    did NOT recur** after item -269's catalogue-closing fix (a sibling duplicate-symbol stub in the same
+    caller) — plausibly because that stub's never-computed garbage state, not `mallocCraftSelectionData`
+    itself, was the real corruption source; single-run, not independently confirmed. Full detail:
+    `docs/PROJECT-OVERVIEW.md` §16, `PORTING-STATE` Sessions 424-431.
 
 -259. **(s422) `0x800290d4` "six independent triggers" lead — INVESTIGATED AND CLOSED, not a bug.**
-    `0x800290d4` is `inflate_fast`'s own clean return; the breadcrumb reporting it is sparse (8/50
-    files), so the shared value only meant all six known-bad functions passed through that return at
-    some point, not that they crash there. `atos` symbolication of 5/6 crash logs found FIVE DIFFERENT
-    real crash functions — each independently trips one of this project's ~20+ already-catalogued
-    corruption families, not one shared mechanism. No action changes (all six stay parked, correct and
-    safe). Full detail: `PORTING-STATE` Session 422.
+    `0x800290d4` is `inflate_fast`'s own clean return, reported by a sparse breadcrumb (8/50 files);
+    `atos` symbolication of 5/6 crash logs found FIVE DIFFERENT real crash functions, each independently
+    tripping an already-catalogued family, not one shared mechanism. All six stay parked, correct and
+    safe. Full detail: `PORTING-STATE` Session 422.
 
 -249. **(s400-421) M4 item -249: `main_overlay.txt` phantom-overlay-function relocation — CLOSED
     s421, no outstanding action.** 784 functions relocated to their correct overlay across 21 sessions;
-    10 genuinely-buggy functions found via sibling-independence bisection, permanently parked in
-    `m4_known_bad.txt`; 4 more permanently skipped in `m4_known_skip.txt`. 0 actionable candidates
-    remain per s421's fresh regen. Full arc (tooling, batch-size history, bisections, close-out detail):
-    `docs/PROJECT-OVERVIEW.md` §15; raw: `PORTING-STATE` Sessions 400-421.
+    10 genuinely-buggy functions parked in `m4_known_bad.txt`, 4 more in `m4_known_skip.txt`. 0
+    actionable candidates remain per s421's fresh regen. Full arc: `docs/PROJECT-OVERVIEW.md` §15; raw:
+    `PORTING-STATE` Sessions 400-421.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on
     arrival — silently shadowed by pre-existing duplicate entries at the same addresses in
-    `main_overlay.txt` (first-file-wins dedup, then range-checked out as phantom functions — the
-    first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3
-    duplicate lines from `main_overlay.txt`; verified 3/3 post-fix runs, same-run positive control.
-    Full detail: `PORTING-STATE` Session 399.
+    `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by
+    deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail:
+    `PORTING-STATE` Session 399.
 
 -239..-247. **(s389-397) M3 idiom-class audit resumption: `hangarInitialize`'s `-0x25A4`
-    hangar-list-pointer family fully CLOSED, plus the "Lookup" struct-family, TWO independent
-    guard-placement bugs found+fixed (stale pre-load-register anchors, one in the new chunks, one in the
-    original s285 chunk), and a codebase-wide frequency scan for the next comparable idiom class —
-    negative result, closing the pure-idiom-audit discovery method for now** (zero candidates of
-    comparable magnitude to `-0x25A4`; the two next-highest-frequency displacements are the mundane
-    `lui`-addressed static-global idiom). M3 idiom-audit-only mode needed human input to proceed at that
-    point — superseded by the s426-429 duplicate-symbol thread (PROJECT-OVERVIEW §16), which reopened
-    live M3 work without needing a new discovery tool. Full detail: `docs/PROJECT-OVERVIEW.md` §14; raw:
+    hangar-list-pointer family and the "Lookup" struct-family fully CLOSED, plus two independent
+    guard-placement bugs found+fixed and a codebase-wide frequency scan for the next comparable idiom
+    class — negative result, closing the pure-idiom-audit discovery method for now** (superseded by the
+    s426-438 duplicate-symbol/breadcrumb thread, PROJECT-OVERVIEW §16, which reopened live M3 work
+    without needing a new discovery tool). Full detail: `docs/PROJECT-OVERVIEW.md` §14; raw:
     `PORTING-STATE` Sessions 389-397.
 
 -231..-238. **(s377-386) Fixup function-scope backport, batches 1-9: 176 file-scoped guard patches
@@ -468,20 +276,18 @@ the next new item takes -274.
     s386.** Process lessons (sandbox-permission delegation, scope-misattribution catches, address-not-
     name exclusion): `docs/PROJECT-OVERVIEW.md` §13. Raw: `PORTING-STATE` Sessions 377-386.
 
--160..-230. **(s297-376) M5 audio de-stubbing arcs — gate-byte-reversal/VI=640-stall (41 sessions,
-    s297-337), Step 5 guard-hunting (Thread A `coalesceFreeHeapBlocks`, Thread B
-    `drainMeshReleaseQueue` linked-list corruption, heapWalker GUARD5, s354-370), gate-promotion/
-    crash-rate-comparison (s339-353), and Step 6 PCM-sanity + C88 pre-title-hang/VI-trigger (s371,
-    s373-376) — ALL CLOSED, no outstanding M5 thread.** Every mechanism, guard site, and soak-tooling
-    lesson: `docs/PROJECT-OVERVIEW.md` §9-§12; raw: `PORTING-STATE` Sessions 297-376.
+-160..-230. **(s297-376) M5 audio de-stubbing arcs — gate-byte-reversal/VI=640-stall, Step 5
+    guard-hunting (heapWalker GUARD5), gate-promotion/crash-rate-comparison, Step 6 PCM-sanity +
+    C88 pre-title-hang/VI-trigger — ALL CLOSED, no outstanding M5 thread.** Every mechanism, guard
+    site, and soak-tooling lesson: `docs/PROJECT-OVERVIEW.md` §9-§12; raw: `PORTING-STATE` Sessions
+    297-376.
 
--159..-14 (excluding -20, kept below). **Ten closed investigation lineages (nine from s314, plus
-    the s297-337 M5 gate-reversal arc folded in s346), s99-s337 — all CLOSED, no outstanding action.**
-    Whack-a-mole guard-gap chases (`composeNpcOrientationMatrix`, `renderUnlitMeshFaces`, `heapWalker`,
-    `heapFreeListDequeue`, `-0x25A4` hangar-list-pointer family, breadcrumbs B2-B14), the
-    audio-array-corruption race fix (s145/147/148), the `submitDmaRequestBatch` indirect-caller find
-    (s101), the CALayer/campose SIGSEGV hunt, the regen-pipeline-idempotency root cause, and the M5
-    audio gate/VI=640-stall chase (item -160..-230 above). One-paragraph-per-lineage summaries:
+-159..-14 (excluding -20, kept below). **Ten closed investigation lineages, s99-s337 — all CLOSED, no
+    outstanding action.** Whack-a-mole guard-gap chases (`composeNpcOrientationMatrix`,
+    `renderUnlitMeshFaces`, `heapWalker`, `heapFreeListDequeue`, `-0x25A4` family, breadcrumbs B2-B14),
+    the audio-array-corruption race fix, the `submitDmaRequestBatch` indirect-caller find, the
+    CALayer/campose SIGSEGV hunt, the regen-pipeline-idempotency root cause, and the M5 audio gate/
+    VI=640-stall chase (item -160..-230 above). One-paragraph-per-lineage summaries:
     `docs/PROJECT-OVERVIEW.md` §9; full raw detail: `PORTING-STATE` Sessions 99-337.
 
 -20. **Regen-pipeline reliability bug (s120, confirmed intermittent not deterministic).** Root cause:
@@ -493,11 +299,9 @@ the next new item takes -274.
     count after every `fixup_game_funcs.py` run. Full detail: `PORTING-STATE` Sessions 120, 121, 126.
 
 -11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89), RECURRED s424, ROOT-CAUSED AND
-    GUARDED s425.** 3 consecutive non-recurrences since s88's correctly-targeted instrument, against 8
-    prior crashing soaks. `ROGUESQ_LOG_ANIM_CB=1` still live. s424 hit it again as a sibling of item
-    -261's guarded `startPlayerSlotAnimationChannelLooping` crash. s425 root-caused and guarded it (wild
-    `$a0` arg, same never-initialized-slot root state) — see item -261 for the full trace and the
-    guard's own consequence (a 3rd sibling, `getPlayerAnimChannelEntryByIds`, now the active thread).
+    GUARDED s425.** s424 hit it as a sibling of item -261's guarded `startPlayerSlotAnimationChannelLooping`
+    crash; s425 root-caused and guarded it (wild `$a0` arg, same never-initialized-slot root state) —
+    see item -261 for the full trace.
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
 -7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once earlier items clear: `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40, document the phase timeline. Gate already keeps black off; residual S1 `fs` freeze (~3769-3872 plateau) may still stall animation.
@@ -620,28 +424,24 @@ Standing warnings:
   dense capture + an independent prior run + a code-level check (crash backtraces stay entirely in
   hangar-menu code) show it's the same craft-select scene under a corrupting camera move. Reopens
   "what leaves SELECT YOUR CRAFT" as unanswered. PORTING-STATE 150.
-- **(s2-31→various, ~15 claims, grouped)** Build/pixel-getting era, each overturned within 1-2 sessions:
-  Z-buffers misread as colour buffers; texrect output called invisible; RDP "emitting nothing" (real
-  bug: a function-local ring high-water mark); `DPC_WRAP`/fbpair-cap misdiagnosed for missing FULL_SYNC
-  (§4.6); `PRIM_ALPHA_FF` called necessary for text; a sampling-artifact black-screen; misattributed
-  texture dumps, floor-band line-mask/palette/dxt theories (M1's real cause: s44-49), fog-color
-  attribution, S=0-triangle phase, stale-TMEM-at-draw (§4.1), 1024-phase black screen
-  (present-starvation, not zero-shade). PORTING-STATE 2-31.
+- **(s2-31→various, ~15 claims, grouped)** Build/pixel-getting era: Z-buffers misread as colour
+  buffers, texrect output called invisible, RDP "emitting nothing" (real bug: a ring high-water mark),
+  `DPC_WRAP`/fbpair-cap misdiagnosed for missing FULL_SYNC, floor-band/fog/S=0-triangle/stale-TMEM
+  misattributions (real causes: M1 s44-49, §4.1), 1024-phase black screen (present-starvation, not
+  zero-shade). Each overturned within 1-2 sessions of first being believed. PORTING-STATE 2-31.
 - **(s62-69, grouped)** "RSP task submission stays healthy through the freeze" — a 1-in-32 throttled
-  sample missed the crashing tail; an unsampled histogram showed 100% `ImemOverrun` exits.
-  "Self-restarting the end-of-IMEM perspective-divide branch un-freezes tasks" — instrument fired 0
-  times; the real site was `CLIP_1FBC`→`L_1650`. PORTING-STATE 62-69.
-- **(s12-48, grouped — real causes already stated in "Current truth" above)** "0x6AB400 is the
-  main-menu hangar" (believable: the partial render looked coherent for 36 sessions); stray
-  briefing-room/SELECT-LEVEL origin+timing claims; hangar dimness/floor-band misattributed to a
-  magnitude-erasing shade census (real cause: M1 s44-49); "no complete clip overlay in ROM" (a stray
-  census conflated fall-through hits with real dispatch). All overturned s47/s48. PORTING-STATE 12-48.
+  sample missed the crashing tail; unsampled showed 100% `ImemOverrun`. "Self-restarting the IMEM
+  perspective-divide branch un-freezes tasks" — instrument fired 0 times; real site was
+  `CLIP_1FBC`→`L_1650`. PORTING-STATE 62-69.
+- **(s12-48, grouped)** "0x6AB400 is the main-menu hangar" (believable: partial render looked coherent
+  36 sessions); briefing-room/SELECT-LEVEL origin+timing claims; hangar dimness misattributed to a
+  magnitude-erasing shade census (real cause: M1 s44-49). All overturned s47/s48; real causes in
+  "Current truth" above. PORTING-STATE 12-48.
 - **(s70-82, ~9 claims, grouped)** The post-`a` SIGBUS/black-screen self-correction chain — UAF
-  theories, what survives past it, Start-press counting, `fs`/present-stall theories — all resolved by
-  the s84 UAF fix and s82 sane-width gate. PORTING-STATE 70-82.
-- **(s87→s88)** "8th crash class is self-recursion in `advancePlayerAnimationPhase`" — that call site
-  belongs to a different, unreached function; constant stack depth across 3296 calls, no recursion.
-  PORTING-STATE 88.
+  theories, present-stall theories — all resolved by the s84 UAF fix and s82 sane-width gate.
+  PORTING-STATE 70-82.
+- **(s87→s88)** "8th crash class is self-recursion in `advancePlayerAnimationPhase`" — different,
+  unreached call site; constant stack depth across 3296 calls, no recursion. PORTING-STATE 88.
 - **(s302→s306)** "reversing `initMusyXEngine`'s gate-byte site validated safely (0/2 family #1
   recurrence)" — a positive-controlled entry counter found `initMusyXEngine` is never called at all;
   the clean result reflects dead code, not a validated gate=1 state. Gate=1 still never exercised by

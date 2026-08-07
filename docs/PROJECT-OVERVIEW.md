@@ -966,4 +966,56 @@ in `mission_overlay.txt`, 11 matching the same high-confidence `func_0xADDR`/rea
 `-0x25A4` audit (item -239..-247) guarded dead code the whole time is still unresolved, now blocked
 behind item -267 rather than item -266.
 
-Full session-by-session raw detail: `PORTING-STATE.md` Sessions 426–429.
+**s432-433: catalogue closed (18/18), unblocking item -267's chain as a side effect.** s432 batch-fixed
+11 more `mission_overlay.txt` NPC-handler pairs (same mechanism, 11th-14th independent instance). s433
+read the last 5 real/real pairs (`menu_overlay.txt`) and confirmed 2 more (`main_overlay.txt`) are data-
+symbol aliases, not this bug (grepped `RecompiledFuncs/*.c` for both names, zero hits — this recompiler
+never emits data globals by name). Fixing `getAvailablePlayerCraftFlagsConsiderUnlocks` — the truncated
+stub `runHangarMenuFromOverlay` had been calling instead of computing real craft-flags state — is the
+likely reason item -267 (the `mallocCraftSelectionData` `$s3` corruption hunt) stopped reproducing: the
+next callee, `mallocCraftSelectionData`, plausibly consumed the sibling stub's never-computed garbage
+state rather than containing its own bug. Single-run, not yet closeable on its own. Live-verify instead
+hit a **different** crash: `last-guest-pc=0x800547bc`, Bus error 10 — byte-for-byte item -263's original
+s426 single-source find (2nd independent occurrence), promoting item -263 from parked to active frontier.
+
+**s434-437: the `0x801163B0` free-list-cache-head-deref idiom, swept and fixed at scale; item -263
+progressively localized past two rounds of breadcrumb misattribution.** `0x801163B0` is a persistent
+free-list cache-head global that `docs/audit-changes.md` (a pre-project 2026-05-08 audit) had already
+flagged as an open "Top-5 Cat-B unknown"; four earlier sessions (s197/s266/s270/s271) had each bespoke-
+guarded one reactive occurrence without ever sweeping the idiom. s434's confirmation-soak crash
+(`emitAllocatedDLCommand`) was a 5th occurrence; a full-codebase grep-scan found **107 more** unguarded
+occurrences (funcs_3.c/funcs_4.c only, 100% uniform shape), fixed with one generic regex-based guard
+(`GENERIC_CACHE_GUARD`, substitutes 0 for an out-of-`[0x80000000,0x80800000)` head pointer before the
+deref). The confirmation soak for THAT fix (s434→s435) crashed on a different bug, root-caused as a
+**breadcrumb-coverage misattribution**: `last-guest-pc` froze at `submitSceneNodeRender`'s call site
+because the actual callee, `emitMaterialTexturedDL`, had zero breadcrumb writes across its ~1258-line
+body — fixed by adding coverage (BREADCRUMB16), same mechanism BREADCRUMB15's own s349 note had already
+documented once. s436's next confirmation soak found a genuinely new, real bug: `reserveAndEmitDLEntry`
+reloads `0x801163B0` into TWO registers 4 instructions apart — `$v0` (guarded) and `$a1` (not, since
+s434's regex only matched `$v0`) — and the unguarded `$a1` copy is used as a raw write pointer with zero
+validation 14 instructions later. A scoped scan of all 24 same-shape `$a1` reload sites classified 12 as
+already-safe (game's own `!=0` check), 6 as dead (reassigned before use), and 7 as the same live bug —
+fixed with `CACHE_HEAD_A1_GUARD` (skip the write when the pointer is out of range; unlike the read-side
+guard, 0 isn't a safe substitute for a write address). That confirmation soak (s436) then crashed again
+on item -263's signature — still the `tickWrappingTimerAccumulatorList`-epilogue misattribution
+(`0x800547BC` disassembles to the function's own `addiu $sp,$sp,0x40` return, not a memory access) — so
+s437 added BREADCRUMB17 to `runHangarSelectionFrame`, the only one of that function's 3 callers reachable
+by the menu-only probe schedule, to catch the real fault site on next occurrence.
+
+**s438: item -263's queued confirmation soak (`s437_breadcrumb17_confirm`) recurred a 4th time —
+BREADCRUMB17 worked, but immediately hit the SAME misattribution mechanism one level deeper.** The new
+`last-guest-pc=0x800AAF94` resolves (via `tools/overlay_symbol_probe.py` + a sorted `menu_overlay.txt`
+symbol-address table) to +504 bytes into `runHangarSelectionFrame` — confirmed by source: `funcs_28.c:
+5391-5396` is the breadcrumb write immediately before the `jal` into `updateHangarBayScene`. A full grep
+of `updateHangarBayScene`'s entire body (`funcs_28.c:10918-17722`, ~6805 lines — the largest function
+this project has instrumented) found **zero** breadcrumb writes anywhere in it, so `last-guest-pc` froze
+at the call site the instant execution entered this uninstrumented callee — the same mechanism
+BREADCRUMB16 (s435) and BREADCRUMB17 itself were built to defeat, recurring one function deeper because
+`updateHangarBayScene` was never on the breadcrumb allowlist either. Two independent signals now agree on
+`updateHangarBayScene` as the locus even without an exact instruction: this guest-side call-site freeze,
+and the host-side `atos` symbolication (`pc-symbol=updateHangarBayScene+43768`), which has named this
+same function at every one of item -263's 4 occurrences (s426, s433, s436, s437) without anyone
+previously connecting it to the breadcrumb-coverage gap. Next work unit: BREADCRUMB18 (or a checkpoint
+bisection, given the function's size) inside `updateHangarBayScene` itself.
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 426–438.

@@ -36593,3 +36593,60 @@ diagnostics armed, watching for item -263's recurrence with a real BREADCRUMB17-
 per this project's long-standing convention — mirrored via `submodule-patches/` for `lib/`, but
 `N64Recomp` itself is a sibling working-directory root, not a `lib/` submodule, so no `export.sh` step
 applies here).
+
+## Session 438 (2026-08-07) — MAINTENANCE pass, plus item -263 localized one level deeper via queued soak
+
+**Step 0 triggered maintenance**: `docs/CURRENT-TRUTH.md` was 62034 bytes (>60000 trigger). Per
+ITERATION.md, no new experiment was run this session; the work unit was compaction plus consuming the
+soak queue's new verdict (read list #3, required regardless of iteration type).
+
+**Consumed s437's queued confirmation soak (`s437_breadcrumb17_confirm`, SOAK-RESULTS
+20260807-035804): rc=1, 153s — item -263 recurred a 4th time, and BREADCRUMB17 worked.** The crash log
+(`scratch/agent/soak_results/s437_breadcrumb17_confirm_31339/run.log`) shows `last-guest-pc=0x800AAF94`,
+`pc-symbol=updateHangarBayScene+43768`, `si_addr=0x39b80a46b` (same near-zero-wild-pointer-via-RDRAM-
+host-base family as item -261/-263's prior sightings), 0 fires for either `GENERIC_CACHE_GUARD` or
+`CACHE_HEAD_A1_GUARD`.
+
+Localized `0x800AAF94` two ways: `tools/overlay_symbol_probe.py 0x800aaf94` found the address exists in
+3 overlays (mission/menu/cinematic) at different ROM offsets; the menu-overlay entry is the relevant one
+given the menu-only s427-437 probe schedule. Built a sorted symbol-address table from
+`rogue_squadron64/symbol_files/menu_overlay.txt` and found the nearest symbol at-or-below the target is
+`runHangarSelectionFrame` (`0x800AAD9C`), offset +504 bytes — confirmed directly in
+`N64Recomp/RecompiledFuncs/funcs_28.c:5391-5399`: `g_rs64_last_guest_pc = 0x800AAF94u;` is the breadcrumb
+write immediately before the `jal` into `updateHangarBayScene` (lines 5391-5396). So BREADCRUMB17
+correctly ruled out the s426-436 `tickWrappingTimerAccumulatorList`-epilogue misattribution (item -263's
+original finding) — the true call path is `runHangarSelectionFrame` → `updateHangarBayScene`.
+
+**But this is the SAME misattribution mechanism one level deeper.** `grep -c g_rs64_last_guest_pc` over
+`updateHangarBayScene`'s entire body (`funcs_28.c:10918-17722`, confirmed via `grep -n ^RECOMP_FUNC` —
+~6805 lines, the largest function this project has ever instrumented) returned 0: `updateHangarBayScene`
+was never added to the BREADCRUMB1-17 allowlist, so `last-guest-pc` froze at the caller's last write
+(0x800AAF94) the instant execution entered this uninstrumented callee — byte-for-byte the mechanism
+BREADCRUMB16 (item -271, `emitMaterialTexturedDL`) and BREADCRUMB17 itself were built to defeat,
+recurring because the fix only covered the one caller-side function, not the callee.
+
+**Convergent evidence, still not an exact instruction.** The host-side `atos` symbolication has now named
+`updateHangarBayScene+43768` at all 4 of item -263's occurrences (s426, s433, s436, s437) — previously
+read as an imprecise nearest-preceding-export artifact (per s426's original note), but now corroborated
+by the independent guest-side call-site trace: both signals agree the real fault is inside
+`updateHangarBayScene` or one of its callees, not the `tickWrappingTimerAccumulatorList` region the
+crash log's native symbol had suggested for 3 sessions. Still single-instrument (only BREADCRUMB17's
+call-site freeze, no breadcrumb from inside the target function itself) — not yet root-caused.
+
+No build/run cycle this session (analysis of already-collected data only). Next work unit: add
+BREADCRUMB18 covering `updateHangarBayScene` (or, given its unprecedented size, a checkpoint-bisection
+approach rather than full per-instruction coverage) to localize the actual fault instruction.
+
+**Maintenance compaction**: `docs/CURRENT-TRUTH.md` compacted 694 → 493 lines (62034 → 43668 bytes, a
+201-line net shrink, clearing the 200-line ADVANCED threshold). Merged items -268..-273 (s432-437) and
+items -261..-267 (s424-431) into single consolidated paragraphs (full session-by-session detail already
+lives in `docs/PROJECT-OVERVIEW.md` §16, git history, and this file); tightened several already-closed
+entries (-259, -249, -6, -239..-247, -231..-238, -160..-230, -159..-14, -11) and the Overturned-
+conclusions section's oldest grouped entries (s2-31, s62-69, s12-48, s70-82, s87→s88) without dropping
+any "why believable" clause. Extended `docs/PROJECT-OVERVIEW.md` §16 with the s430-438 narrative (was
+previously only s426-429) so the compacted CURRENT-TRUTH items still resolve to full detail. Added item
+-274 for this session's localization finding.
+
+**Outcome: ADVANCED** (>=200-net-line CURRENT-TRUTH compaction, the sanctioned maintenance-iteration
+path to ADVANCED; the item -263 localization finding is documented but, per the exit contract, doc-only
+edits don't independently count).
