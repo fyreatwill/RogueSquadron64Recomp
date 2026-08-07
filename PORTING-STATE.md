@@ -36650,3 +36650,49 @@ previously only s426-429) so the compacted CURRENT-TRUTH items still resolve to 
 **Outcome: ADVANCED** (>=200-net-line CURRENT-TRUTH compaction, the sanctioned maintenance-iteration
 path to ADVANCED; the item -263 localization finding is documented but, per the exit contract, doc-only
 edits don't independently count).
+
+## Session 439 (2026-08-07)
+
+**Work unit (item -274's plan, executed): BREADCRUMB18 for `updateHangarBayScene`.** s438 localized
+item -263's 4th occurrence to a call site into `updateHangarBayScene` (funcs_28.c:10918-17722, ~6805
+lines), the largest function this project has ever instrumented, which had zero breadcrumb coverage.
+This session added BREADCRUMB18 (same `g_rs64_last_guest_pc` mechanism as BREADCRUMB1-17) to
+`N64Recomp/fixup_game_funcs.py`, keyed on `RECOMP_FUNC void updateHangarBayScene(...)`, following the
+BREADCRUMB17 template exactly.
+
+**Regen/build**: `make_elf.py` → deleted all `RecompiledFuncs/funcs_*.c` via the mandatory Python
+one-liner → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build . -j8`. Verified by direct grep of the
+compiled `.c` output (not fixup's stdout, which is silent/idempotent on a 2nd run without a fresh
+`N64Recomp` pass — s437's documented gotcha, checked again here): `updateHangarBayScene`'s body
+(funcs_28.c:10918-20365) now carries 2643 `g_rs64_last_guest_pc = ...;` writes, one per disassembled
+instruction. No regression to the guard families: `GENERIC_CACHE_GUARD` still 107 sites,
+`CACHE_HEAD_A1_GUARD` still 7 (each counted 2x in a raw grep — comment + code line — so raw counts of
+214/14 are the expected unchanged totals). Build completed with 0 new warnings (only the pre-existing
+`DDIV` uint64_t/int64_t sign-conversion set, unrelated).
+
+**Live-verify**: full s427-438 schedule, all diagnostics armed (`ROGUESQ_LOG_RUNNER`,
+`ROGUESQ_LOG_GENERIC_CACHE_GUARD`, `ROGUESQ_LOG_CACHE_HEAD_A1_GUARD`), `PROBE_PHASE_WIDTH=1024
+PROBE_KEYS_FROM_PHASE=1`, 300s budget. Result: **0 `[CRASH]` markers, 0 `generic-cache-guard`/
+`cache-head-a1-guard` fires, 126 frames captured to 298.5s** — the entire 300s schedule completed with
+no crash. Per iron rule 1, this is a null result without a positive control: BREADCRUMB18 was never
+exercised at an actual fault this run, so it remains unvalidated (same status BREADCRUMB17 had after
+its own first clean live-verify in s437). This is consistent with the established alternating
+clean/crash pattern across the -261..-269/-263 saga (s434 clean, s435 crash, s436 clean, s437 crash,
+s438's consumed soak crash, s439 clean) — a single clean run is not evidence of anything on its own.
+
+**What this rules out**: nothing new yet — it does not confirm `updateHangarBayScene` is (or isn't)
+where item -263's fault instruction lives; it only confirms the instrument is now in place and didn't
+regress anything else. **What it sets up**: the NEXT occurrence of item -263, whenever it recurs, will
+for the first time report a `last-guest-pc` that is either (a) a real instruction inside
+`updateHangarBayScene`'s own ~6805-line body — the actual localization, to be classified against known
+idiom families before any guard is written — or (b) still frozen at some caller's call site if the
+crash's actual mechanism doesn't pass through breadcrumbed code at all (a possibility not yet
+considered — would argue for a fundamentally different diagnostic, e.g. an ASAN-style shadow check
+rather than more breadcrumbs). Confirmation soak queued: `s439_breadcrumb18_confirm.sh`.
+
+**Housekeeping**: no `lib/` edits this session (all changes in the standalone
+`N64Recomp/fixup_game_funcs.py`, untracked by git there per established pattern) —
+`submodule-patches/export.sh` not needed.
+
+**Outcome: ADVANCED** (landed a new instrument — BREADCRUMB18 — regenerated, rebuilt clean, and
+live-verified it end-to-end in the same session).

@@ -162,9 +162,26 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -274 (s438, ADVANCED as a maintenance pass — consumed the queued
-`s437_breadcrumb17_confirm` soak and localized item -263's 4th occurrence one level deeper, into a
-totally uninstrumented ~6800-line function); the next new item takes -275.
+oldest). Current top is -275 (s439, ADVANCED — added BREADCRUMB18 to give `updateHangarBayScene`
+full breadcrumb coverage, live-verified 0 crashes/0 guard fires over the full 298.5s schedule, a
+null result without a positive control; confirmation soak queued); the next new item takes -276.
+
+-275. **(s439) BREADCRUMB18 added to `updateHangarBayScene` (funcs_28.c:10918-17722, ~6805 lines,
+    2643 breadcrumb writes) — item -263's work unit from item -274.** Regenerated/rebuilt clean (0
+    new warnings beyond the pre-existing `DDIV` sign-conversion set); verified no regression via
+    direct grep of the compiled `.c` output (fixup's stdout is silent/idempotent on a 2nd run, s437's
+    documented gotcha) — `GENERIC_CACHE_GUARD` still 107 sites, `CACHE_HEAD_A1_GUARD` still 7.
+    Live-verified with the full s427-438 schedule (all diagnostics armed): **0 `[CRASH]` markers, 0
+    `generic-cache-guard`/`cache-head-a1-guard` fires, 126 frames captured to 298.5s** — the full
+    300s schedule completed clean. Per iron rule 1 this is a null result without a positive control:
+    it does NOT confirm BREADCRUMB18 is correctly placed (it never got exercised at a fault), and
+    does not advance items -270/-272's still-missing guard-fire positive control either. Consistent
+    with the established alternating clean/crash pattern (s434 clean, s435 crash, s436 clean, s437
+    crash, s438(soak) crash, s439 clean) — one clean run is not evidence either way. Confirmation
+    soak queued: `s439_breadcrumb18_confirm.sh`. If item -263 recurs, BREADCRUMB18 should report a
+    real guest PC inside `updateHangarBayScene`'s own body for the first time; classify it against
+    known idiom families (0x801163B0-family, `-0x25A4` hangar-list, IEEE-754-as-pointer) before
+    writing any guard blind.
 
 -274. **(s438) Item -263 recurred a 4th time via the queued `s437_breadcrumb17_confirm` soak
     (SOAK-RESULTS 20260807-035804, rc=1, 153s) — BREADCRUMB17 worked, but the new `last-guest-pc`
