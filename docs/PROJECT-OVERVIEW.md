@@ -790,3 +790,100 @@ return to crash-driven discovery, or a fallback to M4/M5).** s398's queued soak
 `s397_h1_8removal_verify2` returned `NO_POSITIVE_CONTROL` (hangar scene not reached) — inconclusive,
 doesn't change the safe-by-construction verdict already recorded for the s397 deletion. Full raw
 detail: `PORTING-STATE.md` Sessions 389–397.
+
+## 15. M4 item -249: `main_overlay.txt` phantom-overlay-function relocation (s400–421), CLOSED,
+migrated from CURRENT-TRUTH.md s421 close-out
+
+**What it was:** s399 found `main_overlay.txt` (the file listing functions expected to live in the
+game's main/always-resident overlay) contained ~801-803 entries whose addresses actually belong to
+`.text` ranges outside the overlay window — a much larger version of the bug that caused the original
+3-address `[missing-func]` problem (item -6). Every one of these is a "phantom function": N64Recomp
+range-checks `main_overlay.txt` symbols against `.text`, silently drops the ones that don't fit, and
+`ROGUESQ_STUB_MISSING_FUNCS=1` covers for the gap with a no-op stub. The fix is mechanical — relocate
+each name to its correct overlay file (`mission_overlay.txt`/`menu_overlay.txt`/`cinematic_overlay.txt`)
+— but relocating makes N64Recomp emit the function's REAL recompiled code for the first time, and a
+minority of those real bodies turn out to be genuinely buggy, crashing live only once un-stubbed.
+
+**Tooling:** `s400_probe_batch.py` classifies each candidate name against all three destination
+overlays (mission/menu/cinematic) via static analysis, tagging CONFIRMED/WEAK/NONE/AMBIGUOUS.
+`s400_apply_batch.py` moves a batch's CONFIRMED+WEAK entries from `main_overlay.txt` to their
+destination file. `s417_cycle.sh`/`s417_apply_names.py`/`s417_revert.py` (introduced s417, reused
+verbatim through s421) collapse one full regen→build→phase-gated-live-verify round, and one
+apply/revert step, to a single command each — these made the later bisection-heavy sessions (s419,
+s421) tractable in a single sitting.
+
+**Batch-size history:** s400 proved the tooling at n=20. s401 attempted the full ~774-item remainder
+in one sweep — linked, but caused a new deterministic crash; reverted without bisecting and
+misattributed the cause to batch-size-driven function-boundary re-slicing (this theory was later
+weakened, see below). n≈20 with live-verify-every-batch became the standing discipline through s410.
+s411's loop-mandated pivot probe (n=50, clean) refuted n=20 as a hard ceiling. s412 scaled to n=75
+(clean) then n=100 (crashed) — bisection confirmed the crash was a specific bad function, not a
+resplitting artifact, weakening s401's original theory further. n=75 became the confirmed-safe
+steady-state cadence from s413 onward, used through the item's close.
+
+**The `m4_known_bad.txt` family — ten functions, four downstream crash sites:** Every crash this
+item produced across 21 sessions was fully bisected (halves bisection, sibling-independence discipline
+enforced) down to one or more specific bad functions, never a structural batch-size problem:
+
+| Function | Session | Crash site (`last-guest-pc`) |
+|---|---|---|
+| `initPlayerCraftTrailBuffers` | s404-407 | `0x80011088` |
+| `transformCraftAnchorsApplySubFx3` | s412-413 | `0x80065e94` |
+| `allocObjectPoolNode` | s414-415 | `0x800290d4` |
+| `tickCraftMountedAnimationEffect` | s414-415 | `0x800290d4` |
+| `stepObjectOrientationTowardTarget` | s416 | `0x800290d4` |
+| `updateHudHealthIndicator` | s416 | `0x800290d4` |
+| `initHangarDisplayItemTimers` | s417 | `0x80011088` |
+| `buildFormatMessageGlyphBuffer` | s419 | `0x800290d4` |
+| `buildLevelSelectTextTextures` | s419 | `0x8000b650` |
+| `plotRadarBlipColumn` | s421 | `0x800290d4` |
+
+`0x800290d4` collected six independent triggers — by far the most-repeated site, and below
+`overlay_start` (`0x800A5130`) in core `.text`, not inside any of the ten functions' own bodies. This
+points at one or a few shared downstream corruption sinks reachable from many different newly-real
+call sites, not ten unrelated bugs — the standing top lead for a dedicated M3/M4 root-cause session
+once the project's next focus is set (see CURRENT-TRUTH's USER DIRECTIVE). `0x80011088` recurred
+twice (s407, s417); `0x80065e94` and `0x8000b650` each fired once.
+
+**The sibling-independence lesson (burned in s415, re-confirmed s416/s419/s421):** the first few
+bisections assumed a sibling branch was clean once the other branch reproduced the crash. s415 found
+this false — a 74-name "minus the one isolated bad function" batch still crashed, exposing a second,
+independently-hiding bad function in an untested sibling. From s416 onward, every bisection
+independently live-verified EVERY deferred sibling at EVERY split before declaring a batch done, even
+when the first bad function found seemed sufficient to explain the crash. s419 additionally showed two
+bad functions in one batch don't need to share a crash site (5th at `0x800290d4`, 4th at a brand-new
+`0x8000b650`). s421 (10 sessions after the lesson was recorded) still found only one bad function
+despite the now-mandatory full-sibling-independence sweep — the discipline correctly confirmed a
+negative as well as positives.
+
+**A mission/menu sampling-artifact false lead (s418):** partway through, the 7 known-bad functions at
+the time were all `mission`-overlay-destined, suggesting a possible mission-overlay-specific structural
+cause (size/alignment/TOC). s418's discriminating probe reconstructed each session's actual candidate
+pool composition and found 3 of the 4 crash-producing sessions had drawn from 100%-mission pools by
+sampling accident, not because mission-tagged functions are disproportionately buggy — refuted, no
+process change.
+
+**Close-out (s421):** the item's last actionable batch was the ENTIRE remaining pool (58 names, small
+enough to take as one batch rather than an artificial 75-cap split, per s420's handoff plan). It
+crashed at `0x800290d4`; full sibling-independence bisection (58→29→29→15→14→8→7→4→3→2→2→1) isolated
+`plotRadarBlipColumn` alone, with six other branches independently confirmed clean along the way. The
+final 57-name batch relocated clean, live-verified 2/2. A fresh regen after landing it found 0
+actionable candidates remaining in `main_overlay.txt` — all 14 remaining entries are the union of
+`m4_known_bad.txt` (10) and `m4_known_skip.txt` (4). **Final tally: 784 relocated, 14 permanently
+excluded, 798 total candidates the family ever surfaced** (not the "778" figure used informally
+throughout s400-s420 — that number was itself a stale running-subtraction estimate that had already
+been observed to drift from the true regenerated count at s404 and s420; the fresh regen is always
+authoritative over the docs' arithmetic).
+
+**A process note on subagent delegation (s421):** this session's orchestrator initially delegated the
+whole work unit to a `run_in_background` subagent carrying the full recipe. The subagent completed real
+work (regenerated candidates, probed, applied, ran the initial crash + revert-control, split into
+halves, launched the first bisection cycle) but its own turn ended mid-wait for that cycle's result —
+its final returned message was a stale progress note, not the requested structured report, yet the
+task-tracking status showed "completed." The orchestrating session had to inspect the actual repo/scratch
+state to discover the true progress and resume the bisection in-band. Lesson for future delegation of
+long multi-cycle bisection recipes to background subagents: verify the final report is actually
+structured and complete before trusting it — "completed" status alone does not mean the requested work
+finished.
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 400–421.

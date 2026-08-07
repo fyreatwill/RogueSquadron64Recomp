@@ -35286,3 +35286,82 @@ the "6th trigger → pause for root-cause" trigger condition from s419's NEXT.md
 
 Outcome: ADVANCED (75 relocations landed and live-verified clean 2/2, no new bad functions, M4 -249
 item continues toward closure — 727/778, 71 remain).
+
+## Session 421 (2026-08-06)
+
+**M4 item -249 CLOSED: last actionable batch (the item's entire remaining pool, 58 names) taken as one
+batch, crashed, fully bisected to ONE bad function (`plotRadarBlipColumn`, a SIXTH trigger of the
+`0x800290d4` site), remaining 57 relocated clean, 0 actionable candidates left.**
+
+Started via a background subagent per this session's initial delegation attempt (`Agent` tool,
+isolation=worktree, run_in_background=true) carrying the full s420-handoff recipe. The subagent got as
+far as regenerating candidates (58 total, matching NEXT.md's "close to exhausting the batch-sized
+supply" prediction almost exactly — it took the whole remainder as one batch per NEXT.md step 7's
+guidance rather than an artificial 75-cap split), probing (`s421_probe1.txt`), applying, running the
+initial full-58 live-verify (crashed, `last-guest-pc=0x800290d4`), confirming via revert positive
+control (0 `[CRASH]` markers reverted), splitting into halfA(29)/halfB(29), and launching the first
+bisection cycle (halfA) — but the agent's own turn ended mid-wait for that cycle's result (its final
+returned message was a stale "still waiting" progress note, not the requested structured report). This
+is a new failure mode for this project's subagent-delegation pattern worth flagging: a `run_in_background`
+subagent given a long multi-cycle bisection recipe can exhaust its turn budget mid-task without
+surfacing that as an error — the orchestrating session must verify the final report is actually
+structured/complete, not just present, before trusting it. The orchestrating session (this one) picked
+up the work in-band from that exact point rather than re-running the already-crashed full batch.
+
+Continued the halves bisection manually from where the subagent left off, applying full
+sibling-independence discipline (every deferred sibling at every split independently tested, never
+inferred clean by elimination — the standing lesson since s415/s416/s419):
+
+- halfA (29 names): **CLEAN** (the state the subagent's last cycle had already produced; confirmed via
+  its `run.log` — 20 frames captured, 0 `[CRASH]` markers).
+- halfB (29 names): **CRASH**, `last-guest-pc=0x800290d4` (same site as the full-58 crash).
+  - B1 (15): CRASH, same signature. B2 (14, tested independently at the end): **CLEAN**.
+    - B1a (8): **CLEAN**. B1b (7): CRASH, same signature.
+      - B1b_x (4): CRASH, same signature. B1b_y (3, tested independently at the end): **CLEAN**.
+        - p = plotRadarBlipColumn+plotRadarBlipRow (2): CRASH, same signature. q =
+          updateCraftSelectAnimState+renderRadarSweep (2, tested independently at the end): **CLEAN**.
+          - `plotRadarBlipColumn` alone: **CRASH ALONE**, `last-guest-pc=0x800290d4` — isolated.
+          - `plotRadarBlipRow` alone (tested independently): **CLEAN**.
+
+Every deferred sibling at every split level was independently live-verified before declaring done
+(halfA, B2, B1a, B1b_y, q, plotRadarBlipRow — 6 separate clean branches, none skipped or assumed). Only
+ONE bad function found this session, not two — matching s417's precedent, not s415/s416/s419's
+multi-bug pattern.
+
+`plotRadarBlipColumn` (`0x800C41B0`) is the **SIXTH function** to converge on the exact
+`last-guest-pc=0x800290d4` crash site, joining `allocObjectPoolNode`, `tickCraftMountedAnimationEffect`
+(s415), `stepObjectOrientationTowardTarget`, `updateHudHealthIndicator` (s416), and
+`buildFormatMessageGlyphBuffer` (s419) — by far the most-repeated of the 4 known downstream sinks
+(`0x800290d4` x6, `0x80011088` x2, `0x80065e94` x1, `0x8000b650` x1). This crosses the "6th occurrence"
+threshold NEXT.md flagged since s419 as the trigger to pause and source-read that address — recorded
+here as an open flag for the next session that picks up M3/M4 root-cause work (see CURRENT-TRUTH), not
+acted on this session since it fell out at the very end of closing item -249 rather than mid-batch.
+
+Recorded `plotRadarBlipColumn` in `m4_known_bad.txt` with the full bisection narrative. Applied the
+final 57-name batch (58 minus this one) via `s400_apply_batch.py` (8 to `cinematic_overlay.txt`, 49 to
+`mission_overlay.txt`), full regen+build+live-verify cycle: **clean**, 88.6s to phase, 20 frames, 0
+`[CRASH]` markers, 0 `[missing-func]` lines. Second independent live-verify (2/2 discipline, direct
+`probe.sh` invocation): also clean, 88.5s to phase, 20 frames, 0 `[CRASH]` markers, 0 `[missing-func]`
+lines.
+
+**Regenerated candidates fresh after landing the batch: 14 total, ALL 14 already accounted for by
+`m4_known_bad.txt` (10, after this session's addition) + `m4_known_skip.txt` (4) — 0 actionable
+candidates remain.** `main_overlay.txt`'s phantom-overlay-function family (item -249) is **CLOSED**: the
+running relocation count reaches **784** (727 + 57 this session); the historical "778" denominator used
+throughout s400-s420 was itself a stale estimate (the docs' running-subtraction arithmetic diverging
+from the true regenerated count was already noted at s404/s420) — the true final state is 784 relocated
++ 14 permanently excluded (10 known-bad, 4 known-skip) = 798 total candidates ever surfaced by the
+family, not 778.
+
+Both symbol-file repos left in their standard state: `rogue_squadron64`'s working tree carries this
+session's edits uncommitted (per item -3, not committed without asking the user — unchanged policy).
+
+Next work unit: **M4 item -249 is closed, no more work available on this thread.** Per the USER
+DIRECTIVE priority stack, M5 is closed and M3 idiom-audit-only mode was exhausted at s397 pending human
+reconfirmation — the next work unit needs human input on where to focus (a candidate short-list is
+recorded in CURRENT-TRUTH: the `0x800290d4` root-cause session now has 6 independent triggers and is the
+strongest concrete lead on the table).
+
+Outcome: ADVANCED (closed out M4 item -249 entirely — 784/798 relocated, 0 actionable remain, one final
+bad function isolated and parked with full sibling-independence discipline, both live-verifies clean
+2/2; also surfaced a subagent-delegation reliability gap for future sessions to account for).

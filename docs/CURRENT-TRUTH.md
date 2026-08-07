@@ -28,6 +28,15 @@ Sanctioned tooling work unit (backport function-scoped matching to the file-scop
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
 below and `docs/PROJECT-OVERVIEW.md` §13.
 
+**s421: item -249 (M4's largest open item, the `main_overlay.txt` phantom-overlay-function relocation)
+CLOSED** — 0 actionable candidates remain, 784 relocated, 14 permanently excluded (10 known-bad + 4
+known-skip). **All three directive legs above are now closed or exhausted simultaneously** (M5 closed,
+M3 idiom-audit-only exhausted since s397, M4 -249 closed s421) — **this directive needs human
+reconfirmation on where to focus next.** A concrete candidate the s421 close-out surfaced: the
+`last-guest-pc=0x800290d4` crash site now has SIX independent trigger functions found via M4 bisection
+(see item -249 below) — the strongest available lead for a dedicated root-cause session if the next
+directive doesn't point elsewhere.
+
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
@@ -142,32 +151,13 @@ craft visibly responds to synthetic input, stability counters 0, phase timeline 
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
-consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the ~801-function
-`main_overlay.txt` phantom-overlay-function family (item -249..-258, IN PROGRESS: 652/778 done
-s400-s419, 126 remain per a fresh regen (post-s419), largest M4 item open — s404-s407 found, bisected,
-and fully resolved a 20-name crash batch down to one genuinely-buggy function (parked); s408 and s410
-each resumed ordinary bulk relocation post-closure with two more clean n=20 batches; s411 ran the
-loop-mandated discriminating probe on batch size — n=50 landed clean; s412 scaled to n=75 (clean) then
-n=100 (crashed), bisected the crash to a 25-name suspect group with a repeatable signature, settled the
-steady-state cadence at n=75; s413 sub-bisected that 25-name group down to one bad function
-(`transformCraftAnchorsApplySubFx3`), parked it, and relocated the other 24 cleanly; s414 hit a fresh
-75-name-batch crash and deferred bisection; s415 closed that bisection, finding TWO independent bad
-functions (`allocObjectPoolNode`, `tickCraftMountedAnimationEffect`) hiding in different branches of the
-same bisection tree, and relocated the other 73 cleanly; s416 resumed ordinary bulk relocation, hit a
-THIRD crash on a fresh 75-name batch, and — applying s415's own lesson from the start — independently
-tested every deferred sibling branch, finding TWO MORE bad functions
-(`stepObjectOrientationTowardTarget`, `updateHudHealthIndicator`), both sharing the exact same
-`last-guest-pc=0x800290d4` crash site as s415's pair; s417 hit a FIFTH crash-causing signature at a
-different site (`0x80011088`, matching s407's earlier `initPlayerCraftTrailBuffers`), isolated ONE bad
-function (`initHangarDisplayItemTimers`) with full sibling-independence discipline from the start; s419
-resumed at n=75 on a 100%-menu-tagged candidate pool and — unusually — BOTH halves of the 75-name batch
-crashed independently, each carrying its own bad function: `buildFormatMessageGlyphBuffer`
-(`0x800290d4`, fifth function on that site) and `buildLevelSelectTextTextures` (`0x8000b650`, a FOURTH
-independently-recurring crash site, distinct from `0x800290d4`, `0x80011088`, and s413's `0x80065e94`)
-— full sibling-independence bisection across both trees found exactly these two, relocated the other 73
-cleanly. `m4_known_bad.txt` now has 9 entries across 4 distinct downstream crash sites (`0x800290d4`
-x5, `0x80011088` x2, `0x80065e94` x1, `0x8000b650` x1) — the "one shared corruption sink" hypothesis is
-refined: at least 4 distinct sinks exist, not one, with `0x800290d4` by far the most repeated).
+consume it; the 3 `[missing-func]` addresses (item -6, **DONE s399**); the `main_overlay.txt`
+phantom-overlay-function family (item -249, **CLOSED s421**: 784 relocated across s400-s421, 14
+permanently excluded — 10 known-bad, 4 known-skip — 0 actionable remain; full session-by-session
+narrative in item -249's Next-steps entry below and `PORTING-STATE` sessions 400-421). Ten known-bad
+functions now span 4 distinct downstream crash sites (`0x800290d4` x6, `0x80011088` x2, `0x80065e94`
+x1, `0x8000b650` x1) — `0x800290d4`'s six independent triggers make it the standing top lead for a
+dedicated root-cause session (see USER DIRECTIVE above).
 
 **M5 — audio de-stubbing (investigation first, not code).** The MusyX audio ucode already
 recompiles (`factor5_ucode_b_recompiled.c` sits in the build as a never-called artifact). First
@@ -180,166 +170,20 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -257 (s408); the next new item takes -258 and is inserted at the top.
+oldest). Current top is -249 (s400-421, now CLOSED); the next new item takes -259 and is inserted at
+the top (s421 collapsed the item -249..-258 range, which had reserved through -258, back to a single
+-249 entry on closure — the next fresh item should not reuse -250..-258).
 
--249..-258. **(s400-420) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
-    proven, NINE genuine bad-function crashes bisected and parked across 4 distinct downstream crash
-    sites, cadence scaled from n=20 to a confirmed-safe n=75-with-bisection-fallback. 727/778 done, 71
-    remain per a fresh regen (58 actionable, 4 known-skip, 9 known-bad) as of s420. s420 landed a clean
-    75-batch with no crash and no bisection needed — first fully-clean batch since s413's resumption.**
-    s400 landed batch 1
-    (20/801) and proved the tooling (`s400_probe_batch.py`/`s400_apply_batch.py`, positive-control via
-    `make_elf.py`'s unmapped-functions-skipped counter). s401 attempted the full ~774-item remainder in
-    one sweep: it linked, but caused a new deterministic title-screen SIGBUS; reverted without
-    bisecting, and attributed the mechanism to batch-SIZE-driven function-boundary re-slicing (same
-    class as the s9 dead end) — established the "n≈20, live-verify every batch" discipline used since.
-    Also fixed an unrelated but durable `CMakeLists.txt` bug found en route (missing
-    `CONFIGURE_DEPENDS` on the `funcs_*.c` glob was silently building against a stale file list after
-    a regen). s402 retried at n=16-20 under the tightened discipline (2 clean batches) and introduced
-    `scratch/agent/m4_known_skip.txt` for names that persistently probe NONE/AMBIGUOUS. s403 landed 2
-    more clean n=20 batches (86/778). s404 hit a genuine regression at n=20 (`playerXwingInit+2068`
-    Bus error, reproduced 2/2, absent on revert 5/5) and deferred bisection rather than guessing which
-    of the 20 names was at fault. s405-s407 bisected it (20→10→5→1), isolating one real bug —
-    `initPlayerCraftTrailBuffers`, now recorded in `scratch/agent/m4_known_bad.txt`, permanently
-    parked, do NOT re-attempt without a dedicated root-cause session — and relocating the other 19
-    clean, closing the crash-bisection sub-thread entirely (this also weakened s401's "batch size is
-    the culprit" story: the one crash that WAS fully bisected turned out to be a single bad function,
-    not a boundary-resplit). s408 resumed ordinary bulk relocation post-closure with 2 more clean n=20
-    batches, reaching 145/778. s410 continued the same cadence with 2 more clean n=20 batches (0
-    ambiguous, 0 crashes, both live-verified to `lastW=640`), reaching 185/778. **s411: the loop's
-    MANDATORY-PIVOT gate fired after 3 straight n=20-cadence iterations on
-    `HYPOTHESIS-ID: m4-main-overlay-phantom-functions`; per the gate's own contract, ran the single
-    highest-information discriminating probe instead of another n=20 batch — attempted n=50 (2.5x
-    cadence) with the same live-verify discipline. Result: clean (49 CONFIRMED + 1 WEAK, 0 crashes,
-    positive control 618→568 exact, `nm`-confirmed, live-verified to `lastW=640`), reaching 235/778,
-    AND incidentally resolved the long-standing `[missing-func] 0x800FB9E4` baseline (the batch
-    included `endMissionCleanup`, the function at that exact address). This is single-source (one n=50
-    trial) but directly refutes treating n=20 as a hard structural ceiling — s401's original 774-item
-    failure predates the CMake fix and is now more plausibly explained by cross-overlay cascade
-    dependencies and/or an unbisected bad function, not pure batch size.** s412 continued the
-    `m4-item249-cadence-scaleup` thread: n=75 landed clean (55 CONFIRMED + 20 WEAK, live-verified to
-    `lastW=640`), but the very next n=100 batch **crashed** (Bus error, `slotDispatcherIter` family,
-    `mainGameLoop→initMission→spawnHudNpc→spawnNpcOfType→slotDispatcherIter→initHudStruct`). Reverted
-    and bisected on top of the clean n=75 baseline (s405-407 halves playbook): the 100-name batch's
-    first half (n=50) still crashed; its first quarter (n=25) came back clean; its second quarter (n=25,
-    "q2") crashed with the byte-identical signature (`slotDispatcherIter+1404`,
-    `last-guest-pc=0x80065e94`) as the n=50 half — two independent bisection branches converging on the
-    same 25-name group is strong evidence this is a specific bad function (or small set), the same
-    pattern as s404-407's `initPlayerCraftTrailBuffers`, not a batch-size resplitting artifact. Final
-    state: batch-1 (75) + q1 (25) = 100 net new clean relocations landed and live-verified; q2's 25
-    names (`scratch/agent/s412_bisect_q2.txt`) are set aside, NOT yet in `m4_known_bad.txt`, pending an
-    eighth-split (12/13) sub-bisection next session. **Cadence settled at n=75 as the confirmed-safe
-    steady-state** until q2's specific bad function(s) are isolated. **s413 closed the q2 sub-bisection:**
-    tested the promising named lead (`npcTickEffectChannelWithSlotDispatch`, referencing "slot dispatch"
-    like the crash's `slotDispatcherIter` frame) alone first — CLEAN, lead was wrong. Fell back to
-    standard halves bisection on the remaining 24: 12/12 (h1 clean, h2 crash) → 6/6 (g1a clean, g1b
-    crash) → 1/2 (single crashed alone) — isolated `transformCraftAnchorsApplySubFx3` (0x800E71D0),
-    reproducing the exact `slotDispatcherIter+1404`/`last-guest-pc=0x80065e94` signature alone, at every
-    bisection depth on top of the fixed 100-relocation baseline. Recorded in `m4_known_bad.txt`; the
-    other 24 q2 names (including the false-lead `npcTickEffectChannelWithSlotDispatch`) applied as a
-    group on top of the same baseline and live-verified clean (0 crash markers, `lastW=640`, 19 frames).
-    Net: +24 relocations this session (359/778 done), q2 thread fully closed. Cadence remains n=75 for
-    ordinary bulk relocation going forward. **s414 resumed ordinary bulk relocation at n=75
-    (`HYPOTHESIS-ID: m4-item249-bulk-relocation-n75`): regenerated candidates fresh (439 total, 433
-    actionable — both counts exactly matched the docs' prior estimate), probed the next 75 (57
-    CONFIRMED + 18 WEAK, 0 NONE/AMBIGUOUS), applied, and hit a THIRD crash-causing signature —
-    `loadDatFile+21884`/`last-guest-pc=0x800290d4`, reproduced byte-identically 2/2 (deterministic, not
-    one of the ~20+ nondeterministic background families). Note: `0x800290d4` is below `overlay_start`
-    (`0x800A5130`) — the fault is in core `.text`, not inside any of the 75 relocated functions'
-    own bodies, so if this batch is the cause the mechanism is indirect (one of the newly-real functions
-    calling into core code with bad state), same class as s404/s412. Reverted the batch as a same-run
-    positive control: crash 2/2 with it applied, clean 1/1 (88.6s to phase, 19 frames, 0 crash markers)
-    with it reverted — confirms the batch (not environment/nondeterminism) is responsible. Per NEXT.md's
-    own contingency plan, deferred bisection rather than guessing which of 75 names is at fault. Repo
-    state end-of-session: back to 359/778 (unchanged from s413); the 75-name suspect set is preserved at
-    `scratch/agent/s414_crash_batch_needs_bisection.txt`. **s415 closed that bisection: halves bisection
-    found `allocObjectPoolNode` sufficient alone to reproduce the crash, but applying "75 minus that one
-    name" (74) STILL crashed — half-B (38 names) and one sibling 5-name branch (C2) had never been
-    independently tested, only assumed clean by elimination. Testing them found a SECOND bad function,
-    `tickCraftMountedAnimationEffect`, hiding in the untested C2 branch. Both isolated at n=1 alone,
-    both recorded in `m4_known_bad.txt` with a lesson entry: every sibling half at every bisection split
-    must be independently verified, not assumed clean because the other branch reproduced the crash — a
-    batch can hide more than one bad function in different branches of the same tree. The remaining
-    73 names relocated cleanly, live-verified 2/2 (88.6s/88.8s to phase, 19 frames each, 0 crash
-    markers), reaching 432/778.** **s416 resumed ordinary bulk relocation at n=75
-    (`HYPOTHESIS-ID: m4-item249-bulk-relocation-n75`): regenerated fresh (366 total, 358 actionable),
-    probed the next 75 (58 CONFIRMED + 17 WEAK, 0 NONE/AMBIGUOUS), applied, and hit a FOURTH
-    crash-causing signature — same `last-guest-pc=0x800290d4` as s415's pair, reproduced 2/2. Reverted
-    as a same-run positive control (296↔371 unmapped-functions-skipped, exact ±75), confirming the
-    batch. Applied s415's own lesson from the start of the bisection this time: halves-bisected
-    (75→half-A CRASH/half-B deferred→...→F2 `stepObjectOrientationTowardTarget` CRASH ALONE), then —
-    before declaring done — independently tested BOTH deferred siblings (C2, half-B) rather than
-    assuming them clean. C2 tested clean as a group; half-B crashed as a group and was itself bisected
-    down to a SECOND bad function, `updateHudHealthIndicator`, isolated alone with the byte-identical
-    signature. Both recorded in `m4_known_bad.txt`. Note: four distinct bad functions across s415/s416
-    now converge on the exact same `last-guest-pc=0x800290d4` crash site (below `overlay_start`, in core
-    `.text`, not inside any of their own bodies) — plausibly one shared downstream corruption reachable
-    from several newly-real functions rather than four unrelated bugs; unexplored, a candidate for a
-    dedicated root-cause session if this address recurs again. Final 73-name batch (75 minus both bad
-    functions) live-verified clean 2/2 (88.6s/88.7s to phase, 19 frames each, 0 crash markers,
-    `lastW=640`), reaching 505/778. Also force-added `m4_known_bad.txt`/`m4_known_skip.txt` to git — both
-    had been untracked since creation (s402/s407), a real gap against the "ledger is the only memory"
-    rule.** **s417 resumed ordinary bulk relocation at n=75, hit a FIFTH crash-causing signature —
-    `last-guest-pc=0x80011088`, NOT the `0x800290d4` family s415/s416 hit, but a match for s407's
-    `initPlayerCraftTrailBuffers` site instead (a second recurring crash address now on record).
-    Reverted as a same-run positive control (223↔298 unmapped-functions-skipped, exact ±75). This time
-    applied the sibling-independence discipline from the START of the bisection rather than reactively:
-    at every split, both branches were tested before moving on. Isolated exactly ONE bad function,
-    `initHangarDisplayItemTimers`, alone-crashing at n=1; all five deferred siblings (E2, D2, C2, A2,
-    half-B) came back clean when independently tested — no hidden second bug this time, unlike s415 and
-    s416. Final 74-name batch live-verified clean 2/2 (88.5s/88.6s to phase, 19 frames each, 0 crash
-    markers), reaching 579/778. Built three reusable bisection scripts
-    (`s417_revert.py`/`s417_apply_names.py`/`s417_cycle.sh`) that collapse each bisection round to one
-    command.** **s418: loop's MANDATORY-PIVOT gate fired after 3 straight iterations on
-    `HYPOTHESIS-ID: m4-item249-bulk-relocation-n75`; ran the single highest-information discriminating
-    probe instead of another n=75 batch — tested whether the 7 known-bad functions are disproportionately
-    `mission`-overlay-destined (all 7 are `CONFIRMED:mission`/`tag=mission`, 0 are `menu`), which would
-    argue for a mission-overlay-specific structural cause (size/alignment/TOC) rather than 7 independent
-    per-function idiom bugs. **REFUTED**: reconstructed the per-session candidate-pool mission/menu split
-    from the surviving `s412_probe*.txt`/`s414_probe1.txt`/`s416_probe_results.txt` files (the ones that
-    actually produced a bad function) — s412's two batches, s414's batch, and s416's batch were **100%
-    mission-tagged candidate pools** (0 menu-tagged entries appear in any of the three), so finding their
-    bad functions to be mission-destined is not surprising, it was the only overlay on offer that
-    session. Only s417 (source of the 7th bad function, `initHangarDisplayItemTimers`) had a mixed pool
-    (32 mission/43 menu, 43%/57%) and its one bad function still landed mission-side, but n=1 against a
-    43% base rate is not remotely decisive. **Closes this angle**: the "7/7 mission" pattern is a
-    sampling artifact of which candidate pools happened to be probed those sessions, not evidence of a
-    mission-overlay-specific defect. Strengthens the standing read (s414/s417) that these are isolated
-    per-function bugs converging on 2 shared *downstream* crash sites (`0x800290d4`, `0x80011088`,
-    neither inside any relocated function's own body), not a batch-composition or overlay-targeting
-    problem — ordinary bulk relocation can resume next iteration exactly as before, no process change
-    indicated by this probe.** **s419 resumed ordinary bulk relocation at n=75
-    (`HYPOTHESIS-ID: m4-item249-bulk-relocation-n75`): regenerated candidates fresh (219 total, 208
-    actionable after filtering 7 known-bad + 4 known-skip), probed the next 75 — this batch happened to
-    be 100% menu-tagged (0 mission), the opposite extreme from s412/s414/s416's all-mission pools,
-    incidentally reinforcing s418's "sampling artifact" conclusion — applied, and BOTH halves of the
-    halves-bisection independently crashed (an outcome not seen before in this item's history: s412,
-    s415, s416 each had exactly one crashing half at every split). Ran full sibling-independence
-    bisection on both trees to their conclusions: half-A (38 names, crash at `0x800290d4`) isolated to
-    `buildFormatMessageGlyphBuffer` alone — the FIFTH function now converging on that same crash site
-    (`allocObjectPoolNode`, `tickCraftMountedAnimationEffect`, `stepObjectOrientationTowardTarget`,
-    `updateHudHealthIndicator` from s415/s416, plus this one). Half-B (37 names, crash at a NEW site
-    `0x8000b650`) isolated to `buildLevelSelectTextTextures` alone — a fourth independently-recurring
-    crash site, distinct from `0x800290d4`, s407/s417's `0x80011088`, and s413's `0x80065e94`. Every
-    deferred sibling at every split level in both trees was independently tested before declaring done
-    (10 separate clean branches across the two trees, none skipped). Final 73-name batch (75 minus both
-    bad functions) live-verified clean 2/2 (88.5s/88.6s to phase, 20 frames each, 0 crash markers),
-    reaching 652/778.
-    Refines the "one shared corruption sink" reading from s414/s417/s418: `m4_known_bad.txt` now shows 9
-    bad functions across 4 distinct downstream crash sites (`0x800290d4` x5, `0x80011088` x2,
-    `0x80065e94` x1, `0x8000b650` x1), not one universal sink — a dedicated root-cause session on the
-    `0x800290d4` family specifically (5 independent trigger functions, by far the most repeated site) is
-    now a stronger candidate than continuing blind bulk relocation indefinitely, though not yet urgent
-    enough to pause the sanctioned fallback.** **s420 resumed ordinary bulk relocation at n=75
-    (`HYPOTHESIS-ID: m4-item249-bulk-relocation-n75`): regenerated candidates fresh (146 total, 133
-    actionable after filtering 9 known-bad + 4 known-skip — higher than the stale 126/117 estimate,
-    confirming the docs' running arithmetic drifts from the true regenerated count, as previously found
-    s404), probed the next 75 (57 CONFIRMED + 18 WEAK, 0 NONE/AMBIGUOUS), applied, and — for the first
-    time since s413's ordinary-resumption era — the full 75-name batch live-verified clean on the FIRST
-    try, no crash, no bisection needed (88.3s/88.7s to phase across 2 independent verifies, 20 frames
-    each, 0 crash markers, 0 missing-func lines). Nothing added to `m4_known_bad.txt`/`m4_known_skip.txt`
-    this session. Reaching 727/778 (71 remain, 58 actionable). `0x800290d4`'s trigger count stayed at 5
-    (no crash this session to add a 6th).** Full per-session detail: `PORTING-STATE` Sessions 400-420.
+-249. **(s400-421) M4 item -249: `main_overlay.txt` phantom-overlay-function relocation — CLOSED
+    s421, no outstanding action.** 784 functions relocated to their correct overlay across 21 sessions;
+    10 genuinely-buggy functions found via full sibling-independence bisection and permanently parked
+    in `m4_known_bad.txt`, converging on 4 distinct downstream crash sites (`0x800290d4` x6 — the
+    strongest root-cause-session candidate on the table, see USER DIRECTIVE — `0x80011088` x2,
+    `0x80065e94` x1, `0x8000b650` x1); 4 more names permanently skipped (persistently
+    NONE/AMBIGUOUS overlay classification) in `m4_known_skip.txt`. 0 actionable candidates remain per
+    s421's fresh regen. Full arc (tooling, batch-size history, every bisection, the sibling-independence
+    lesson, the mission/menu sampling-artifact false lead, close-out detail): `docs/PROJECT-OVERVIEW.md`
+    §15; raw: `PORTING-STATE` Sessions 400-421.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
     (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by
