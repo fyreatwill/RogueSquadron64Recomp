@@ -1191,4 +1191,142 @@ sit INSIDE `updateHangarBayScene`'s own body — meaning some or all of these si
 covered by `GENERIC_CACHE_GUARD`'s blanket 107-site fix (item -270/-273); check for redundancy before
 patching, don't force full application. Exact plan: `scratch/agent/NEXT.md` as of s451.
 
-Full session-by-session raw detail: `PORTING-STATE.md` Sessions 426–443.
+**s453 (item -290) closed `S392_H3A`/`S393_H3B` — INVESTIGATED, no code change, all 50 sites
+redundant.** Confirmed the same `funcs_27.c`→`funcs_28.c` file-gate staleness as items -284/-286/-288/
+-289 (all 29 `S392_H3A` sites resolve into `updateHangarBayScene`, all 21 `S393_H3B` sites into
+`hangarTickCameraOrbit`, both tree-wide-unique by address), but unlike those items fixing the gate would
+add nothing: a full per-site mechanistic re-derivation (real current line range, the register actually
+dereferenced at the end of each guarded sequence — not always the tuple's declared pre-combine `reg`
+field — checked for an already-active earlier guard on that exact register before the deref, plus a
+reassignment scan in between) found every one of the 50 sites already covered by earlier guard sweeps
+(mostly the s132 `HANGAR_BAY_DEREF_GUARD`/"G"-family, a few `S284`/`S285` sites, one shared-join-point
+case). 3 sites needed hand verification because their own anchor's trailing instruction happens to
+dereference an unrelated scratch register, not the risky pointer — an automated "last MEM_* in the
+anchor" heuristic misclassified them as unresolved before a direct read confirmed the real deref (a few
+lines further in) was already guarded. No patch applied: the anchors don't match live text regardless of
+the stale gate, and adding guards here would only be dead, always-skipped duplicates. Closure comment
+left in `fixup_game_funcs.py` so a future session doesn't re-open this. Closes the `funcs_40.c`/
+`funcs_27.c`-gated orphan-sweep inventory except `BREADCRUMB7` (diagnostic, lowest priority).
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 426–443, 453.
+
+## 17. Two more M3 idiom-class audits, found via an s454 concurrent-process collision (s454–460),
+migrated from CURRENT-TRUTH.md s461 maintenance pass
+
+**s454: a concurrent-process collision (two `loop.sh` iterations briefly running at once) put two
+independent scanners on the same `funcs_3.c`/`funcs_4.c` code cluster, and they found two different
+fresh idiom classes.** One session's own scan (`N64Recomp/scratch_s454_scan.py`, tracking `ctx->rN =
+MEM_*(..., OFFSET)` loads then checking for a later unguarded use of `rN` as a base register) rejected
+two false leads first — `-0x25C0($s0)` (56 sites, `mallocCraftSelectionData`) and `-0x76E0($s0)` (46
+sites, 8 files) are compile-time-constant-based counter/scalar accesses, not pointer dereferences, too
+narrow a shape to be the risky idiom — before landing on `-0x5824($reg)` → global `0x8011A7DC` (item
+-291 below). The other end of the same collision (item -292 below) independently rejected the identical
+two false leads via its own two-hop scanner, then found a completely different global.
+
+**Item -291: `DL_LIST_APPEND_GUARD` (`-0x5824($reg)` → global `0x8011A7DC`), found s454, CLOSED s456,
+57/57 sites.** A doubly-linked-list append with no existing check, structurally identical to (but a
+different global from) the already-fixed `0x801163B0` free-list-cache-head family (§16's
+`GENERIC_CACHE_GUARD`/`CACHE4_GUARD`/`CACHE_HEAD_A1_GUARD`/`FREELIST_NEXT_GUARD`), in the same
+`funcs_3.c`/`funcs_4.c` display-list-emission cluster those families already fixed real crashes in. The
+scan found this offset's canonical 6-instruction shape byte-identical (verified programmatically) at
+57/57 matching sites (26 `funcs_3.c`, 31 `funcs_4.c`; 11 functions including `allocateDisplayListBuffer`,
+`emitFrameRdpInitDl`, `emitColorFillRect`, `drawFrameProfilerBars`, `renderFlatMeshFaceGroup`,
+`renderLitMeshFaceGroup`, `drawTextGlyphRect`, `setupCameraMatrices`). s456 applied all 57 (no new
+design work — the guard was already written/syntax-checked in `fixup_game_funcs.py` since s454): 26/26
+`funcs_3.c` + 31/31 `funcs_4.c` sites confirmed by direct grep, 57/57 `strings` format-string count,
+build clean. Live-verify (full 300s/250s-keys schedule): 0 `[CRASH]` markers across the whole schedule,
+0 `dl-list-append-guard` fires, `hangarbay-entry` n=3000. Confirmation soak (`s456_dl_list_append_confirm`)
+crashed (rc=3) on an unrelated, already-catalogued signature. Explicitly NOT in scope for this item:
+`-0x23A8`→`0x8011DC58` (a sibling global on the same function cluster — became item -296 below) and
+~111 non-canonical `-0x5824` sites reached through a non-adjacent load/deref pair with intervening code
+(same global, still open, next idiom-class-audit candidate once item -292 closes).
+
+**Item -292: `SONGTEMPO_TABLE_GUARD` (`0x29C0($reg)` → global `0x801529C0`, the MusyX song-sequencer's
+"current song track" base pointer, `funcs_25.c`), found s455, still OPEN as of s460 at 31/43 sites.**
+`lui $reg,0x8015; lw $reg,0x29C0($reg)` reloads the global fresh at every use site — the same "reload a
+global pointer, dereference unchecked" shape as the closed `-0x25A4` family (§9/§14). 50 raw hits
+tree-wide, all in `funcs_25.c`, 0 existing guards at discovery. Only ONE site in the whole tree WRITES
+the global (inside `tickAllActiveSongs`, immediately before its own 7 read sites — safe, not touched);
+the other 6 reader functions (43 sites total) only ever READ it with no guarantee `tickAllActiveSongs`
+ran first in their call history — the same uninitialized/stale-global risk the `-0x25A4` family was
+closed for. M5-audio-adjacent (MusyX song sequencer) but this is M3 guard-audit work, not new M5
+de-stubbing. Per-site bail semantics are hand-derived by reading each whole function body first (never
+templated blindly), reusing an existing label already on that function's own control-flow graph
+wherever one exists (a null-check, a loop's own continue/exit label) — falling back to duplicating the
+real epilogue only for a site that loads before the prologue runs or is genuinely past all loops with no
+other reachable label. Progress by session:
+- **s454** — `updateSongTempoTickRate` (4 sites). Site 1 bails with a stack-neutral `return;` (loads
+  before the prologue runs); sites 2/3 reuse the function's own tick-loop exit label `L_80095648`; site
+  4 duplicates the real epilogue.
+- **s457** — `tickScheduledSongEvents` (5 sites) + `stepSongPitchBendLanes` (5 sites), 10 more (14/43
+  total). `tickScheduledSongEvents` walks a singly-linked list (site tse1 bails `return;` before the
+  prologue runs; tse2-tse5 bail via `goto L_80094EC0`, the loop's own advance-to-next-node point).
+  `stepSongPitchBendLanes` is a per-lane outer loop wrapping a per-event inner loop (spbl1 reuses the
+  game's own null-lane-skip idiom; spbl2-spbl5 reuse the "abandon this lane, advance to the next" bail).
+  Live-verify: 0 `songtempo-table-guard`/`dl-list-append-guard` fires, but the run crashed at 113.5s on
+  an unrelated signature (`heapFreeListDequeue+32596`/`submitSceneNodeRender+45220`,
+  `last-guest-pc=0x8000d92c`) — no `funcs_25.c` frame anywhere in the backtrace. Filed as a 2-in-2-
+  sessions `submitSceneNodeRender`-subtree crash observation (matching entry-count with item -291's own
+  `s456_dl_list_append_confirm` crash, but different `last-guest-pc` — per the crash-signature-blindness
+  trap (item -200), two independent single-occurrence data points, not confirmed as one bug); not
+  chased, per the USER DIRECTIVE's no-reactive-single-crash-chase rule.
+- **s458** — `stepSongModulationLanes` (5 sites), 19/43 total. An outer per-lane loop (stride 0x24,
+  bound 0x900) wrapping an inner per-event loop, confirming the shape item -294's own notes had
+  predicted for this function. Site smod1 (outer-loop head) reuses the game's own null-lane-skip idiom;
+  smod2-smod5 reuse the identical "abandon this lane, advance" bail as `stepSongPitchBendLanes`. Live-
+  verify: 0 `[CRASH]` across the entire schedule, 0 fires on either guard family, `hangarbay-entry`
+  n=2600.
+- **s459** — rule-8 mandatory pivot (3 straight iterations on this hypothesis without closing it):
+  instead of a 4th, found and closed a different idiom class in one session (item -296 below), leaving
+  item -292 at 19/43 untouched that session.
+- **s460** — `advanceSongRegion` (12 sites), 31/43 total. Read the full 539-line body first: NOT a
+  single-loop template like the four already-fixed reader functions — an outer per-channel loop
+  (`$s1`/r17, 0–0x3F, head `L_80095280`) containing an inner list-walk loop (`L_800952BC`) and a "loop
+  back or fall through" check block (`L_80095504`) feeding a finalize block (`L_80095534`). Despite
+  being flagged (in the prior session's NEXT.md) as a suspected cross-function-shared-tail-merge
+  candidate (the `lvj_checkComplexObjectives`-family risk — §16's closed duplicate-symbol arc is a
+  different but related recompiler quirk), it turned out to have an ordinary single entry/exit — the
+  flagged risk did not materialize here. Site asr1 reuses the function's own adjacent null-data skip
+  idiom; asr2-asr10 (9 sites, one sequential "populate this list node" block) all bail
+  `goto L_80095504;`; asr11 (the check itself) bails to `L_80095534`, the same target its own `beq`
+  takes on a false condition; asr12 bails to `L_8009556C`, its natural fallthrough target. Live-verify
+  (full 300s/250s-keys schedule): 0 `songtempo-table-guard` fires, `hangarbay-entry` n=2800. The run did
+  crash late in the schedule, but on the exact already-catalogued `coalesceFreeHeapBlocks+4424`/
+  `last-guest-pc=0x8000247c` background-noise signature closed since the s354–366 arc — no `funcs_25.c`
+  frame in the backtrace, filed not chased. Confirmation soak (`s460_advancesongregion_confirm`, ran
+  clean, rc=0, 346s) is the 2nd independent clean result for this slice.
+
+**Still open (the standing item -292 work unit):** `stepActiveSongTracks` (12 sites, ~744 lines, the
+largest of the 6 reader functions) is the last remaining reader function. May still involve the
+recompiler's cross-function shared-tail-merge behavior (`lvj_checkComplexObjectives`/`audioCompandS16`/
+`__OSGlobalIntMask`) even though `advanceSongRegion` turned out not to — needs its own full read before
+patching. Once fixed, item -292 closes at 43/43 sites, and every one of its confirmation soaks so far
+(s454/s457/s458/s460's) has delivered or is expected to deliver the same null result (0 guard fires)
+matching item -287's established baseline for this whole guard-idiom class — not an open question.
+
+**Item -296: `SIBLING_PTR_WRITE_GUARD` (`-0x23A8($reg)` → sibling global `0x8011DC58`), found AND CLOSED
+same session s459, 119/119 sites.** Chosen per rule 8's mandatory pivot off item -292 (above). Item
+-291's own session (s454) had explicitly scoped `-0x23A8` OUT of `DL_LIST_APPEND_GUARD` ("no clean
+byte-identical repeated shape found — each site's downstream write differs"). A fresh systematic re-scan
+(same discriminating-load-then-deref method) went one step further: grouping the 119 unguarded sites by
+the NORMALIZED shape of their downstream use (registers/offsets blanked) found 118/119 share ONE shape
+after all — `MEM_W(OFF, ctx->rN) = VAL;`, an unconditional field write through the reloaded, never-
+range-checked pointer (`OFF` is `0x0` at 116 sites, `0x4` at 1, `0x8` at 2). s454 was right that the
+load-to-write gap varies (4-24 lines of unrelated intervening code, no single blanket regex spans it)
+but hadn't separately checked whether the WRITE shape alone was uniform — it is. Same structural risk as
+`DL_LIST_APPEND_GUARD`/`FREELIST_NEXT_GUARD`. Patched via 119 individual literal-anchor patches
+(captured verbatim from a fresh regen, confirmed tree-wide-unique before touching `fixup_game_funcs.py`,
+generated programmatically rather than hand-written). Standard pipeline clean throughout: fixup report
+`funcs_3.c ... x65` + `funcs_4.c ... x54` (119 exactly), direct grep confirmed 119/119, `strings`
+confirmed 119/119 distinct format strings, build clean. Live-verify (full 300s/250s-keys schedule, plus
+the new `ROGUESQ_LOG_SIBLING_PTR_WRITE_GUARD`): full schedule completed, 0 `[CRASH]` markers, 0
+`sibling-ptr-write-guard` fires, `hangarbay-entry` n=35 (schedule-variance, not a regression signal —
+full-schedule completion with 0 crash is the load-bearing observation). Confirmation soak
+(`s459_sibling_ptr_write_confirm`) crashed (rc=3) on an unrelated, already-catalogued signature (a bare
+delay-slot `nop` after a `jr $ra` inside `allocateDisplayListBuffer`, matching a background-noise class
+filed around s394). **Notable, not chased:** 10 of the 119 sites are in `submitSceneNodeRender`, the
+same function named in the still-open "wait-for-recurrence breadcrumb" (2 independent single-occurrence
+crashes in its call subtree, different `last-guest-pc` each time, item -457's own session note) — this
+guard is now a discriminating instrument for that breadcrumb at those 10 specific sites; 0 fires so far.
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 454–460.

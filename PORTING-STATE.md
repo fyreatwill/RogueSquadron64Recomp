@@ -38356,3 +38356,47 @@ labels, do not templatize blindly. Once done, item -292 CLOSES at 43/43 sites.
 of a fresh idiom-class guard family, clean pipeline throughout, 0 fires on the guard itself, and
 the run's own crash independently reconfirmed as already-catalogued background noise rather than
 a new lead).
+
+## Session 461 (2026-08-07): MAINTENANCE pass — CURRENT-TRUTH.md 62193 -> 44423 bytes (713 -> 512
+lines, net -201 lines)
+
+Step 0 of `tools/agent/ITERATION.md` triggered (`wc -c` reported 62193, over the 60000-byte
+threshold) so this iteration ran no experiments, per the maintenance-iteration rule.
+
+First folded in the queued confirmation soak the loop ran between iterations
+(`SOAK-RESULTS.md` `20260807-130123 | s460_advancesongregion_confirm | rc=0 | 346s`) — a 2nd
+independent clean result for s460's `advanceSongRegion` slice of item -292, matching the guard
+family's established 0-fires baseline.
+
+Compaction performed:
+- Migrated the full s454-460 session-by-session narrative for items -291 (`DL_LIST_APPEND_GUARD`,
+  closed), -292 (`SONGTEMPO_TABLE_GUARD`, still open at 31/43), and -296 (`SIBLING_PTR_WRITE_GUARD`,
+  closed) to a new `docs/PROJECT-OVERVIEW.md` §17 (per-site bail derivations, scan methodology,
+  every soak result preserved verbatim there).
+- In CURRENT-TRUTH.md, collapsed items -293/-294/-295/-297 (all intermediate progress states of
+  item -292) plus item -291's and -296's own entries into one compact range pointer
+  (`-291..-297`), and rewrote item -292's own entry to state only its current status (31/43,
+  `stepActiveSongTracks` remaining) with a pointer to PROJECT-OVERVIEW §17 for derivation detail.
+  Item numbers themselves are NOT reused or renumbered when compacted, matching the established
+  convention from the s451 pass (items -282..-289).
+- Migrated item -290's (`S392_H3A`/`S393_H3B` closure, s453) full mechanistic writeup to
+  PROJECT-OVERVIEW §16 as an addendum to that arc, leaving a 4-line pointer in CURRENT-TRUTH.md.
+- Compacted the USER DIRECTIVE section's M3-arc paragraph (previously re-narrating the same s454-
+  460 detail inline) to a short chronological list of closed arcs plus the one open item.
+- Refreshed the numbering-convention note (no longer implies items get renumbered when compacted)
+  and the "Current truth ... reviewed through sNNN" headline (was s451, now s460).
+- Updated the maintenance-pass tally in USER DIRECTIVE from "sixteen passes" to "seventeen" and
+  added this session to the list.
+
+Net effect: CURRENT-TRUTH.md dropped from 62193 to 44423 bytes, 713 to 512 lines — a 201-line net
+shrink, comfortably past the >=200-line ADVANCED threshold for a maintenance iteration. No code,
+guard, or experiment changed this session. `docs/PROJECT-OVERVIEW.md` grew from 100048 to 112820
+bytes correspondingly (§16 gained the s453 addendum, new §17 added) — no cap on that file, only on
+CURRENT-TRUTH.md.
+
+Next iteration: resume item -292's `stepActiveSongTracks` slice (12 sites, the last remaining
+reader function) per `scratch/agent/NEXT.md` — this maintenance pass did not touch that plan.
+
+**Outcome: ADVANCED** (maintenance iteration, >=200-net-line shrink of CURRENT-TRUTH.md per the
+Step 0 rule — no experiment was run, per the "do NOT run experiments in a maintenance iteration"
+instruction).

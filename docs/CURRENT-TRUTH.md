@@ -7,47 +7,31 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = the `## L
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
-   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Sixteen passes so
-   far (s295-330 x5, s346, s355, s364, s371, s380, s391, s398, s409, s429, s438, s444) kept the file
-   oscillating around the cap as new session detail accrues; s429/s438 migrated the s426-438
-   duplicate-symbol/breadcrumb saga to PROJECT-OVERVIEW §16, s444 migrated its s439-443 continuation
-   (items -274..-280 compacted to short pointers), s451 migrated its s445-451 continuation (the
-   `static5-rename-orphan-sweep`/`orphan-guard-completeness-closeout` arc, items -282..-289
-   compacted to one range pointer). Full per-pass detail in git log. 35 KB remains a stretch
-   target, not a hard floor -- the "Current truth"
-   env-var/timeline prose and the Regeneration section's Standing warnings stay intact deliberately;
-   both are used every iteration.
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Seventeen passes
+   so far (s295-330 x5, s346, s355, s364, s371, s380, s391, s398, s409, s429, s438, s444, s451, s461)
+   kept the file oscillating around the cap as new session detail accrues — full per-pass migration
+   targets in git log; PROJECT-OVERVIEW §16-§17 hold the most recent two arcs. 35 KB remains a
+   stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and the
+   Regeneration section's Standing warnings stay intact deliberately; both are used every iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
    §10-§12). Next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
-   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. The original
-   `-0x25A4` family is closed (s283-396). **The s426-429 duplicate-symbol-name thread (18/18 pairs) and
-   its s438-445 BREADCRUMB18/free-list-guard follow-on are both CLOSED** (items -261..-280, -263 —
-   see below). **Its s445-451 fallout, the `static5-rename-orphan-sweep` (every pre-s427 guard
-   hardcoded to a now-renamed function), is now fully CLOSED** (items -282..-290 below) — s449
-   confirmed this whole guard idiom class is correct hardening, not a live crash source, and s453
-   closed the tracked backlog's last item (`S392_H3A`/`S393_H3B`, 50 sites, ALL redundant, no patch
-   needed) except `BREADCRUMB7` (diagnostic, deliberately out of scope, lowest priority). **s454
-   found a fresh idiom class** (`-0x5824($reg)` → global `0x8011A7DC`, 57 sites) — **s456 executed
-   it: 57/57 sites built/verified/soaked, item -291 CLOSED** (0 crash, 0 fires across a full 300s
-   schedule, `hangarbay-entry` n=3000; its queued confirm soak later crashed on an unrelated
-   signature, item -294). **s455 (the OTHER end of that same collision — see item -292)
-   independently found and PARTIALLY FIXED a second fresh idiom class** (`0x29C0` → global
-   `0x801529C0`, MusyX song-tick pointer). **s457/s458 fixed 3 more reader functions (15 more
-   sites, 19/43 total)** — 24 sites across 2 reader functions remain (`advanceSongRegion`,
-   `stepActiveSongTracks`), the standing alternate work unit for whenever
-   `songtempo-table-guard-29c0` is revisited. **s459 (rule-8 mandatory pivot off that hypothesis)
-   found and CLOSED a THIRD fresh idiom class in one session**: `-0x23A8` → sibling global
-   `0x8011DC58`, 119 sites, `SIBLING_PTR_WRITE_GUARD` — see item -296. Full session-by-session
-   arc: PROJECT-OVERVIEW §16.
+   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Closed arcs so
+   far, oldest to newest: the original `-0x25A4` family (s283-396); the s426-429 duplicate-symbol-name
+   thread (18/18 pairs) and its s438-445 BREADCRUMB18/free-list-guard follow-on (items -261..-280,
+   -263); that follow-on's own s445-451 fallout, the `static5-rename-orphan-sweep` (items -282..-290
+   — s449 confirmed the whole guard idiom class is correct hardening, not a live crash source); item
+   -291 (`DL_LIST_APPEND_GUARD`, 57 sites, s454/456) and item -296 (`SIBLING_PTR_WRITE_GUARD`, 119
+   sites, s459). **Currently open, standing top-priority work unit: item -292**
+   (`SONGTEMPO_TABLE_GUARD`, MusyX song-track pointer, 31/43 sites fixed as of s460 — see below).
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
 below and `docs/PROJECT-OVERVIEW.md` §13. M4's largest item (-249) and its `0x800290d4` follow-on
 (-259) are both CLOSED — see those items below for status.
 
-## Current truth (established by session 295; unchanged, reviewed through s451)
+## Current truth (established by session 295; unchanged, reviewed through s460)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -179,235 +163,51 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -297 (s460, item -292's next slice). Item -292 (12 sites remain in
-`stepActiveSongTracks`, `songtempo-table-guard-29c0`) is the standing alternate work unit. The
-next NEW item takes -298.
+oldest). Highest number allocated so far is -297 (s454-460 arc, compacted below); items are never
+renumbered when compacted into a range pointer. Item -292 (12 sites remain in
+`stepActiveSongTracks`, `songtempo-table-guard-29c0`) is the standing open work unit. The next NEW
+item takes -298.
 
--297. **(s460) Executed item -292's next slice: `advanceSongRegion` (12 sites), 31/43 total —
-    only `stepActiveSongTracks` (12) remains.** Same idiom/family/env var as item -292
-    (`0x29C0($reg)` → global `0x801529C0`), the last-but-one remaining reader function. Read the
-    whole function body before patching (`funcs_25.c` 3654-4192): NOT a single-loop template like
-    the 4 already-fixed reader functions — an outer per-channel loop (`$s1`/r17, 0-0x3F, head
-    `L_80095280`) containing an inner list-walk loop (`L_800952BC`) and a "loop back or fall
-    through" check block (`L_80095504`) feeding a finalize block (`L_80095534`). Despite NEXT.md
-    flagging this function as a suspected cross-function-shared-tail-merge candidate (the
-    `lvj_checkComplexObjectives`-family risk), it turned out to have an ordinary single
-    entry/exit — the flagged risk did not materialize here (still worth checking on
-    `stepActiveSongTracks`). Per-site bails all reuse existing labels already on the function's
-    own control-flow graph (no new labels invented): site asr1 reuses the function's own adjacent
-    null-data skip idiom; asr2-asr10 (9 sites, one sequential "populate this list node" block that
-    always flows into the loop-continuation check) all bail `goto L_80095504;`; asr11 (the check
-    itself) bails to `L_80095534`, the same target its own `beq` takes on a false condition; asr12
-    bails to `L_8009556C`, its natural fallthrough target. Standard pipeline clean: fixup report
-    `x12 (of 12 sites)`, direct grep confirmed 31/31 total `songtempo-table-guard` sites in
-    `funcs_25.c`, `strings` confirmed 31/31 distinct format strings, build clean. Live-verify
-    (full 300s/250s-keys schedule, all passive guards armed): **0 `songtempo-table-guard` fires**
-    (null result, matches the family's established baseline), `hangarbay-entry` n=2800. The run
-    DID crash late in the schedule, but on the exact already-catalogued
-    `coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` background-noise signature (closed
-    since the s354-366 arc) — no `funcs_25.c` frame in the backtrace, filed not chased.
-    Confirmation soak queued: `scratch/agent/soak_queue/s460_advancesongregion_confirm.sh`. Does
-    NOT close item -292 — `stepActiveSongTracks` (12 sites, ~744 lines) remains; once done, item
-    -292 closes at 43/43.
+-291..-297. **(s454-460) Two M3 idiom-class audits found via an s454 concurrent-process
+    collision.** Item -291 (`DL_LIST_APPEND_GUARD`, `-0x5824($reg)` → global `0x8011A7DC`, 57
+    sites, `funcs_3.c`/`funcs_4.c`) found s454, CLOSED s456: 57/57 sites built/verified/soaked, 0
+    crash, 0 fires across a full 300s schedule (`hangarbay-entry` n=3000); its queued confirm soak
+    later crashed on an unrelated already-catalogued signature. Item -296
+    (`SIBLING_PTR_WRITE_GUARD`, `-0x23A8($reg)` → sibling global `0x8011DC58`, 119 sites, same two
+    files) found AND CLOSED same session s459 (the rule-8 mandatory pivot off item -292 below,
+    after 3 straight iterations without closing it): 119/119 sites, 0 `[CRASH]`, 0 fires across a
+    full schedule; 10 of its 119 sites sit in `submitSceneNodeRender`, now a discriminating
+    instrument for that function's still-open wait-for-recurrence breadcrumb (2 independent
+    single-occurrence crashes, different `last-guest-pc` each time, not confirmed as one bug) — 0
+    fires there so far. Item -292 itself
+    (below) advanced from 4/43 to 31/43 sites across s454/s457/s458/s460 in this same window. Full
+    session-by-session detail (per-site bail derivations, scan methodology, every soak result):
+    `docs/PROJECT-OVERVIEW.md` §17.
 
--296. **(s459) Fresh M3 idiom class found AND CLOSED, same session: `-0x23A8($reg)` → sibling
-    global `0x8011DC58`, `SIBLING_PTR_WRITE_GUARD` (119 sites, `funcs_3.c`/`funcs_4.c`).** Chosen
-    per rule 8's mandatory pivot: the prior 3 iterations (s455/s457/s458) all ran
-    `HYPOTHESIS-ID: songtempo-table-guard-29c0` without closing item -292 (24 sites still remain).
-    Rather than force a 4th consecutive iteration on that slug, this session switched to a
-    different, already-flagged-but-not-started M3 idiom-class audit: item -291's own session
-    (s454) had explicitly scoped `-0x23A8` OUT of `DL_LIST_APPEND_GUARD` ("no clean
-    byte-identical repeated shape found -- each site's downstream write differs" --
-    `fixup_game_funcs.py` comment). A fresh systematic re-scan (same `scratch_s454_scan.py`
-    discriminating-load-then-deref method) went one step further than that original assessment:
-    grouping the 119 unguarded sites by the NORMALIZED shape of their downstream use (registers/
-    offsets blanked) found 118/119 share ONE shape after all -- `MEM_W(OFF, ctx->rN) = VAL;`, an
-    unconditional field write through the reloaded, never-range-checked pointer (`OFF` is `0x0`
-    at 116 sites, `0x4` at 1, `0x8` at 2). s454 was right that the LOAD-TO-WRITE gap varies (4-24
-    lines of unrelated intervening code, no single blanket regex spans it) but hadn't separately
-    checked whether the WRITE shape alone was uniform -- it is. Same structural risk as
-    `DL_LIST_APPEND_GUARD`/`FREELIST_NEXT_GUARD`. Patched via 119 individual literal-anchor
-    patches (captured verbatim from a fresh regen, confirmed tree-wide-unique before touching
-    `fixup_game_funcs.py`, same discipline as the s436 "type-c" 7-site `-0x63B0` patch), generated
-    programmatically rather than hand-written (`scratch_s459_apply_patch.py`, N64Recomp repo,
-    untracked). Standard pipeline clean throughout: fixup report `funcs_3.c ... x65` + `funcs_4.c
-    ... x54` (119 exactly), direct grep confirmed 119/119, `strings` confirmed 119/119 distinct
-    format strings (119 unique after dedup by site address), build clean (0 errors, only
-    pre-existing benign warnings). Live-verify (full 300s/250s-keys schedule, all passive guards
-    armed plus the new `ROGUESQ_LOG_SIBLING_PTR_WRITE_GUARD`): full schedule completed (all 10
-    scheduled key presses fired), **0 `[CRASH]` markers, 0 `sibling-ptr-write-guard` fires**,
-    `hangarbay-entry` n=35 (schedule-variance, not a regression signal -- full-schedule completion
-    with 0 crash is the load-bearing observation). Confirmation soak queued:
-    `scratch/agent/soak_queue/s459_sibling_ptr_write_confirm.sh`. **Notable, not chased:** 10 of
-    the 119 sites are in `submitSceneNodeRender`, the same function named in items -293/-294's
-    still-open "wait-for-recurrence breadcrumb" (2 independent single-occurrence crashes in its
-    call subtree) -- this guard is now a discriminating instrument for that breadcrumb at those 10
-    specific sites; 0 fires this run, breadcrumb still at n=2 (below the "worth a dedicated audit"
-    threshold item -294 set). Also filed, not chased: s458's own queued confirm soak
-    (`s458_songtempo_smod_confirm`, `SOAK-RESULTS.md` `rc=3`) crashed at
-    `last-guest-pc=0x80015544`, traced to a bare delay-slot `nop` after a `jr $ra` inside
-    `allocateDisplayListBuffer` (a function-return point) with a host `__pthread_kill+8` frame --
-    matches an identical signature already filed as "confirmed unrelated" background noise around
-    s394 (`PORTING-STATE` ~L33499); 2nd data point of the same pattern, not a new lead. Full
-    writeup: `PORTING-STATE.md` Session 459.
-
--295. **(s458) Executed the next slice of item -292's `SONGTEMPO_TABLE_GUARD`:
-    `stepSongModulationLanes` (5 sites), 19/43 total.** Same idiom/family/env var as item -292, one
-    more reader function — no new design work beyond per-site bail-semantics derivation. Read the
-    whole function body before patching (funcs_25.c ~3291-3573, N64Recomp/RecompiledFuncs copy):
-    an outer per-lane loop (`$s2`/r18, stride 0x24, bound 0x900, head `L_800950A8`, bound-
-    check/advance target `L_8009521C`) wrapping an inner per-event loop (`$s0`/r16 constant per
-    lane, head `L_800950C8`, exit test `L_80095210`) — confirmed the exact shape item -294
-    predicted for this function. Site smod1 (outer-loop head) reuses the game's OWN existing
-    null-lane-skip idiom (`s2 += 0x24; goto L_8009521C`, two instructions later in the source) as
-    its bail. Sites smod2-smod5 (inside the inner loop's per-event processing for that same lane)
-    reuse the identical "abandon this lane, advance to the next" bail, matching
-    `stepSongPitchBendLanes`'s own spbl2-spbl5 convention exactly. Standard pipeline clean
-    throughout: anchor uniqueness verified with a standalone Python probe before touching the
-    fixup script (all 5 matched exactly once), fixup report `x5 (of 5 sites)`, direct grep
-    confirmed 19/19 total `songtempo-table-guard` sites in `funcs_25.c` (38 comment mentions, 2 per
-    site), `strings` on the built binary confirmed 19/19 distinct format strings, build clean (0
-    errors, only pre-existing benign warnings). Live-verify (full 300s/250s-keys schedule, all
-    passive guards armed): **0 `[CRASH]` markers across the entire schedule, 0
-    `songtempo-table-guard` fires, 0 `dl-list-append-guard` fires** (both null results, match the
-    established baseline for these families), `hangarbay-entry` reached n=2600 (comparable to
-    recent baselines). Confirmation soak queued:
-    `scratch/agent/soak_queue/s458_songtempo_smod_confirm.sh`. Does NOT close item -292 — 24 sites
-    remain (`advanceSongRegion` 12, `stepActiveSongTracks` 12).
-
--294. **(s457) Executed the next slice of item -292's `SONGTEMPO_TABLE_GUARD`:
-    `tickScheduledSongEvents` (5 sites) + `stepSongPitchBendLanes` (5 sites), 10/43 more sites
-    (14/43 total with s454's `updateSongTempoTickRate`).** Same idiom/family/env var as item -292,
-    just two more reader functions — no new design work beyond per-site bail-semantics
-    derivation (see item -292's body for the method). Both functions read whole before patching:
-    `tickScheduledSongEvents` walks a singly-linked list of scheduled song events (site tse1 bails
-    with a stack-neutral `return;`, before the prologue runs; tse2-tse5 all bail via
-    `goto L_80094EC0`, the loop's own advance-to-next-node point); `stepSongPitchBendLanes` is a
-    per-lane outer loop wrapping a per-event inner loop (site spbl1 reuses the game's own existing
-    null-lane-skip idiom as its bail; spbl2-spbl5 reuse the identical "abandon this lane, advance
-    to the next" bail). Standard pipeline clean throughout: fixup report `x5 (of 5 sites)` for
-    each function, direct grep confirmed 14/14 total sites in `funcs_25.c`, `strings` confirmed
-    14/14 format strings, build clean. Live-verify (full 300s schedule, all passive guards armed):
-    **0 `songtempo-table-guard` fires, 0 `dl-list-append-guard` fires** (both null results, match
-    the established baseline for these families), but the run **crashed at 113.5s** on an
-    unrelated signature (`pc-symbol=heapFreeListDequeue+32596`/`submitSceneNodeRender+45220`,
-    `last-guest-pc=0x8000d92c`, `hangarbay-entry` n=2600) — no `funcs_25.c` frame anywhere in the
-    backtrace, so definitively not caused by this session's guard. **Crash observation, filed not
-    chased:** this is the 2nd crash in 2 consecutive sessions inside `submitSceneNodeRender`'s
-    call subtree at the SAME `hangarbay-entry` n=2600 (item -291's own queued confirm soak,
-    `s456_dl_list_append_confirm`, crashed at 108.7s: `pc-symbol=submitSceneNodeRender+29928`,
-    `last-guest-pc=0x80010874`) — the matching entry-count just reflects the identical
-    deterministic PROBE_KEYS schedule reaching the same simulated point, NOT necessarily the same
-    instruction (the two `last-guest-pc` values differ) — per the crash-signature-blindness trap
-    (item -200) these are two independent single-occurrence data points in the same
-    already-large, hot rendering call chain, not confirmed as one bug. Worth a dedicated
-    idiom-class audit if a 3rd occurrence lands; not chased this session per the USER DIRECTIVE's
-    no-reactive-single-crash-chase rule. Confirmation soak queued:
-    `scratch/agent/soak_queue/s457_songtempo_readers_confirm.sh`. Does NOT close item -292 — 29
-    sites remain (`stepSongModulationLanes` 5, `advanceSongRegion` 12, `stepActiveSongTracks` 12).
-
--293. **(s456) Executed item -291's `DL_LIST_APPEND_GUARD` (57 sites, `-0x5824($reg)` → global
-    `0x8011A7DC`, `funcs_3.c`/`funcs_4.c`): CLOSES item -291.** No new design work — the guard was
-    already written and syntax-checked in `fixup_game_funcs.py` (N64Recomp repo) since s454; this
-    session ran the standard pipeline (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` →
-    `cmake build` → `strings` sanity → live-verify). Confirmed no live concurrent `loop.sh`
-    iteration this time. 26/26 `funcs_3.c` + 31/31 `funcs_4.c` sites patched (verified via direct
-    grep count, not just trusting the fixup report), matching item -291's pre-counted 57
-    exactly. `strings` on the built binary confirmed 57 `dl-list-append-guard` format strings.
-    Live-verify (`tools/probe.sh`, full 300s/250s-keys schedule, all passive guard vars armed):
-    **0 `[CRASH]` markers across the entire schedule** (cleaner than several recent soaks that hit
-    unrelated crashes partway through), **0 `dl-list-append-guard` fires** (matches item -287's
-    established 0-fires baseline for this whole guard-idiom family), `hangarbay-entry` reached
-    n=3000 (matches/exceeds prior baselines). Confirmation soak queued:
-    `scratch/agent/soak_queue/s456_dl_list_append_confirm.sh`. Full writeup: PORTING-STATE.md
-    Session 456. NOT in scope, unchanged: `-0x23A8`→`0x8011DC58` (sibling global, needs per-site
-    classification) and ~111 non-canonical `-0x5824` sites (same global, non-adjacent load/deref
-    pair).
-
--292. **(s455) Second fresh M3 idiom class found AND PARTIALLY FIXED: `0x29C0($reg)` → global
-    `0x801529C0`, the MusyX song-sequencer's "current song track" base pointer, in
-    `funcs_25.c`.** Same collision window as item -291 — s455 was itself the other end of the
-    concurrent-process collision s454 discovered (see PORTING-STATE Session 455 for the
-    reconciliation trail), independently rejected the same `-0x25C0($s0)`/`-0x76E0($s0)` false
-    lead s454 also rejected, then found this class via a two-hop scanner (load into a register,
-    later reused as a base register in a further `MEM_*` access, no intervening
-    `0x80000000`/`0x80800000` range check). `lui $reg, 0x8015; lw $reg, 0x29C0($reg)` reloads the
-    global fresh at every use site — same "reload a global pointer, dereference unchecked" shape
-    as the closed `-0x25A4` family. 50 raw hits tree-wide, all in `funcs_25.c`, 0 existing guards.
-    Only ONE site in the whole tree WRITES the global (inside `tickAllActiveSongs`, immediately
-    before its own 7 read sites — safe, not touched); the other 6 reader functions (43 sites:
-    `stepActiveSongTracks` 12, `advanceSongRegion` 12, `tickScheduledSongEvents` 5,
-    `stepSongPitchBendLanes` 5, `stepSongModulationLanes` 5, `updateSongTempoTickRate` 4) only
-    ever READ it with no guarantee `tickAllActiveSongs` ran first in their call history — the
-    same uninitialized/stale-global risk the `-0x25A4` family was closed for. M5-audio-adjacent
-    (MusyX song sequencer) — a genuinely new lead per the USER DIRECTIVE's M5 gate, though this is
-    M3 guard-audit work, not new M5 de-stubbing.
-    **Fixed and fully verified across s454/s457/s458/s460: `updateSongTempoTickRate` (4 sites,
-    s454) + `tickScheduledSongEvents` (5 sites, s457) + `stepSongPitchBendLanes` (5 sites, s457) +
-    `stepSongModulationLanes` (5 sites, s458) + `advanceSongRegion` (12 sites, s460) = 31/43
-    sites, 5 of 6 reader functions.** Per-site bail semantics hand-derived by reading each whole
-    function body (not templated blindly) — full derivation for the s457 pair: item -294; for
-    `stepSongModulationLanes`: item -295; for `advanceSongRegion`: item -297 above.
-    `updateSongTempoTickRate`'s: site 1 bails with a stack-neutral `return;` (loads before the
-    prologue runs); sites 2/3 reuse the function's own tick-loop exit label `L_80095648`; site 4
-    duplicates the real epilogue. `advanceSongRegion` turned out NOT to need the
-    cross-function-shared-tail-merge caution flagged below — ordinary single entry/exit, per-site
-    bails all reuse existing labels on its own control-flow graph. All 5 functions' confirmation
-    soaks queued (`s454_songtempo_confirm.sh`, `s457_songtempo_readers_confirm.sh`,
-    `s458_songtempo_smod_confirm.sh`, `s460_advancesongregion_confirm.sh`); all delivered/expect
-    null results (0 guard fires) matching item -287's established 0-fires baseline for this whole
-    guard idiom class — not an open question.
-    **NOT fixed, the last remaining slice of THIS item:** `stepActiveSongTracks` (12 sites, ~744
-    lines) — the largest of the 6 reader functions. May still involve the recompiler's
-    cross-function shared-tail-merge behavior seen elsewhere (`lvj_checkComplexObjectives`/
-    `audioCompandS16`/`__OSGlobalIntMask`) even though `advanceSongRegion` turned out not to —
-    needs its own full read before patching, not a blind copy of any prior function's bail
-    patterns; check the reported prologue/epilogue stack-frame mismatch before trusting a single
-    simple bail-to-epilogue pattern. Once done, item -292 CLOSES at 43/43 sites.
-
--291. **(s454) Fresh M3 idiom class found: `-0x5824($reg)` → global `0x8011A7DC`, a doubly-linked-
-    list append with NO existing check, structurally identical to (but a different global from)
-    the already-fixed `0x801163B0` free-list-cache-head family (`GENERIC_CACHE_GUARD`/
-    `CACHE4_GUARD`/`CACHE_HEAD_A1_GUARD`/`FREELIST_NEXT_GUARD`), in the SAME `funcs_3.c`/
-    `funcs_4.c` display-list-emission code cluster those families already fixed real crashes in.
-    **CLOSED — see item -293 (s456): 57/57 sites built, verified, soaked, 0 crash, 0 fires.**
-    A discriminating scan (`N64Recomp/scratch_s454_scan.py`) tracking `ctx->rN = MEM_*(...,
-    OFFSET)` loads then checking for a later unguarded use of `rN` as a base register found this
-    offset's canonical 6-instruction shape byte-identical (verified programmatically, not
-    sampled) at 57/57 matching sites (26 funcs_3.c, 31 funcs_4.c; 6 functions:
-    `allocateDisplayListBuffer`, `emitFrameRdpInitDl`, `emitColorFillRect`,
-    `drawFrameProfilerBars`, `emitMaterialTexturedDLAlt`, `renderFlatMeshFaceGroup`,
-    `buildOrientedFaceGeometry`, `renderLitMeshFaceGroup`, `drawTextGlyphRect`,
-    `drawSubtitleText`, `setupCameraMatrices`). Also NOT in scope, documented for later:
-    `-0x23A8`→`0x8011DC58` (sibling global, same function cluster, no clean byte-identical shape
-    — needs per-site classification) and ~111 non-canonical `-0x5824` sites (same global,
-    non-adjacent load/deref pair). Separately
-    confirmed non-issue, do not re-investigate: `-0x25C0($s0)` (56 sites, `mallocCraftSelectionData`)
-    and `-0x76E0($s0)` (46 sites) are compile-time-constant-based counter/scalar accesses, not
-    pointer dereferences — not the risky shape.
+-292. **(s455, ongoing) M3 idiom-class audit: `SONGTEMPO_TABLE_GUARD`, `0x29C0($reg)` → global
+    `0x801529C0`, the MusyX song-sequencer's "current song track" base pointer, `funcs_25.c`. 43
+    sites total, 31/43 fixed as of s460 — OPEN, standing top-priority work unit.** Same
+    uninitialized/stale-global-reload shape as the closed `-0x25A4` family: only one site
+    (`tickAllActiveSongs`) writes the global; 6 reader functions (43 sites) only ever read it with
+    no guarantee of prior initialization. **Fixed and soak-confirmed:** `updateSongTempoTickRate`
+    (4, s454), `tickScheduledSongEvents` (5, s457), `stepSongPitchBendLanes` (5, s457),
+    `stepSongModulationLanes` (5, s458), `advanceSongRegion` (12, s460) = 31/43. Every confirmation
+    soak so far has delivered the same null result (0 guard fires) matching item -287's
+    established baseline for this guard-idiom class — not an open question. **Remaining:**
+    `stepActiveSongTracks` (12 sites, ~744 lines, the largest reader function) — read its whole
+    body before patching (not a blind template copy); may involve the recompiler's cross-function
+    shared-tail-merge quirk (`lvj_checkComplexObjectives`/`audioCompandS16`/`__OSGlobalIntMask`)
+    even though the same risk did not materialize in `advanceSongRegion`. Once fixed, item -292
+    CLOSES at 43/43 — `scratch/agent/NEXT.md` carries the exact next-step commands. Per-site bail
+    method and full session detail: `docs/PROJECT-OVERVIEW.md` §17. NOT in scope for this item,
+    next idiom-class-audit candidate once it closes: ~111 non-canonical `-0x5824` sites (same
+    global as the closed item -291, non-adjacent load/deref pair).
 
 -290. **(s453) `S392_H3A`/`S393_H3B` (50 sites, items -282..-289's own tracked remainder):
-    INVESTIGATED AND CLOSED, no code change — all 50 sites are redundant, not a partial-coverage
-    case.** Confirmed the same `funcs_27.c`→`funcs_28.c` file-gate staleness as items -284/-286/
-    -288/-289 (all 29 `S392_H3A` sites resolve into `updateHangarBayScene`, all 21 `S393_H3B`
-    sites into `hangarTickCameraOrbit`, both tree-wide-unique by address), but unlike those items
-    fixing the gate would add nothing: a full per-site mechanistic re-derivation (real current
-    line range, the register actually dereferenced at the end of each guarded sequence — not
-    always the tuple's declared pre-combine `reg` field — checked for an already-active earlier
-    guard on that exact register before the deref, plus a reassignment scan in between) found
-    every one of the 50 sites already covered by earlier guard sweeps (mostly the s132
-    `HANGAR_BAY_DEREF_GUARD`/"G"-family, a few `S284`/`S285` sites, one shared-join-point case).
-    3 sites needed hand verification because their own anchor's trailing instruction happens to
-    dereference an unrelated scratch register, not the risky pointer — an automated "last MEM_*
-    in the anchor" heuristic misclassified them as unresolved before a direct read confirmed the
-    real deref (a few lines further in) was already guarded. No patch applied: the anchors don't
-    match live text regardless of the stale gate (intervening already-applied guard blocks break
-    the multi-line text match independently), and adding guards here would only be dead,
-    always-skipped duplicates. Closure comment left in `fixup_game_funcs.py` (N64Recomp repo,
-    untracked, no `export.sh` needed) so a future session doesn't re-open this. **Closes the
-    `funcs_40.c`/`funcs_27.c`-gated orphan-sweep inventory except `BREADCRUMB7`** (diagnostic,
-    deliberately out of scope, lowest priority — the sole remaining item from -282..-289's
-    tracked backlog). Full detail: `PORTING-STATE.md` Session 453.
+    INVESTIGATED AND CLOSED, no code change — all 50 sites already covered by earlier guard
+    sweeps, not a partial-coverage case.** Closes the `funcs_40.c`/`funcs_27.c`-gated orphan-sweep
+    inventory except `BREADCRUMB7` (diagnostic, lowest priority). Full detail: PROJECT-OVERVIEW §16,
+    `PORTING-STATE.md` Session 453.
 
 -282..-289. **(s445-451) `static5-rename-orphan-sweep`: the s427 duplicate-symbol fix (item
     -261..-267) split a ~13,770-line anonymous merged blob back into ~15 real functions
