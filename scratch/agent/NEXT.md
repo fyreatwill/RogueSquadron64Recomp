@@ -2,100 +2,98 @@
 
 HYPOTHESIS-ID: orphan-guard-completeness-closeout
 
-## What changed session s449
+## What changed session s450
 
-Closed the open ambiguity that had blocked items -282/-284/-286 for 4 sessions (mandatory-pivot
-rule fired after 3 straight iterations on `static5-rename-orphan-sweep`): added unconditional
-REACHED counters to the already-ungated `GETDATITEM_GUARD` (6 sites) and `HANGARLIST_GUARD_EARLY`/
-`WALK`/`CLEAR` (3 sites) in `N64Recomp/fixup_game_funcs.py`. One 117s live run got a strong
-positive control: `HANGARLIST_GUARD_EARLY`/`WALK`/`CLEAR` were reached 123000/58500/64500 times
-respectively with 0 trips — these are confirmed TRUE NEGATIVES, not soak-coverage gaps.
-`GETDATITEM_GUARD` reached 5/6 sites (n=1 each, lower confidence, still refutes "unreached").
+Fixed the `G1`-`G32` family (item -288): 29 sites plus a previously-unaccounted 5-site sibling
+family (`A`-`E`, an older s110 table-deref guard) and their shared `L_hangarbay_guard_exit`
+epilogue label were ALL doubly-orphaned since s427 (gated to dead file `funcs_40.c` + dead
+function name `static_5_800AB658`, needed `funcs_28.c`/`updateHangarBayScene`). Standalone scan
+(`scratch/agent/s450_scan_g1g32.py`) confirmed 0 collisions tree-wide, refuting the old fixup
+comment's stale "also in funcs_27.c" warning. First build failed on an undeclared label because
+the epilogue-label block and the A-E block were independently orphaned too and hadn't been fixed
+yet — fixed all three together. Full regen/build clean, 35/35 patches x1, `strings`-verified.
+Live-verify: 0 fires (matches the item -287 baseline), crashed on the already-closed item -259
+signature family (not this session's target). Confirmation soak queued: `s450_g1g32_confirm.sh`.
 
-**This changes the framing of the remaining orphan-sweep work, not its validity.** `G1`-`G32`,
-`S392_H3A`/`S393_H3B`, and `BREADCRUMB7` are still genuine correctness debt (orphaned gates
-silently disable guards — that's a defect regardless of firing rate) and strategic priority #3
-still wants the idiom class formally closed. But go in expecting 0 fires: this family of guard
-is now evidence-backed as unlikely to explain any *currently open* crash. Do not read a future
-0-fires confirm soak on these families as inconclusive — it would match the now-established
-baseline, not be a new null result requiring another positive-control round.
+**Incidental finding, NOT fixed this session (item -289, new)**: auditing the remaining
+`if p.name == "funcs_40.c":` gates found **9 more doubly-orphaned sites in a DIFFERENT, OLDER
+`composeNpcOrientationMatrix` guard family** (s100-era "guard1"-"guard8"-equivalent, distinct
+from item -284's own 30-site fix for the same function) — confirmed silently producing zero
+report lines this session. This plus the already-known `BREADCRUMB7` (item -284) are now the
+FULL remaining inventory of `funcs_40.c`-gated orphans (10 blocks total).
 
-The incidental new crash this session (`pc-symbol=heapFreeListDequeue+19316` misattribution,
-`last-guest-pc=0x8000d534`, `menuOverlayInit <- mainGameLoop` backtrace) is filed (CURRENT-TRUTH
-item -287) but NOT this session's target — strategic priority #3 rules out reactive chases on a
-single occurrence with no positive control.
+Full detail: `docs/CURRENT-TRUTH.md` items -288/-289, `PORTING-STATE.md` Session 450.
 
-Full detail: `docs/CURRENT-TRUTH.md` item -287, `PORTING-STATE.md` Session 449.
+## This session's work unit: item -289, the 9 orphaned `composeNpcOrientationMatrix` guard sites
 
-## This session's work unit: finish the `G1`-`G32` family (32 sites, doubly-orphaned)
+Same proven method as s446/s448/s450, applied to the smallest remaining family. Unlike the G1-G32
+fix, these 9 sites (`fixup_game_funcs.py` lines ~1907-2381 as of s450, search
+`if p.name == "funcs_40.c":` — there are exactly 10 remaining matches, 9 for this family + 1 for
+`BREADCRUMB7`) are independent single-site blocks (not one shared list like `_hangarbay_deref_guard_sites`),
+each with its own `func_start_m` search for the dead name `static_5_800AB1C8`. Grep
+`target: composeNpcOrientationMatrix` in the fixup script to enumerate all 9 block locations exactly.
 
-Unchanged from s448's plan (still accurate, just reframed above as completeness not crash-hunting).
-Same proven method as s446/s448, applied to the largest remaining family — but this one has an
-EXTRA wrinkle s390 didn't: **its gate is doubly-orphaned, not singly.**
+**Check first**: does `composeNpcOrientationMatrix` (now `funcs_28.c` per item -284/s446) have its
+own `goto`-target label(s) that these 9 sites jump to, and if so, is that label ALSO independently
+orphaned (same trap that cost this session an extra build-fail cycle on item -288)? Grep each
+site's patch function body for `goto L_` and check whether the target label already exists
+unconditionally in the current tree (item -284's s446 fix already un-orphaned
+`composeNpcOrientationMatrix` itself and its own epilogue infrastructure for the s446 list — CHECK
+whether these 9 OLDER sites reuse that same infrastructure or need their own, don't assume either
+way).
 
-`fixup_game_funcs.py` (search `_hangarbay_deref_guard_sites` and the `if p.name ==
-"funcs_40.c":` block right after it): the whole G1-G32 block is gated BOTH on `p.name ==
-"funcs_40.c"` (file, same orphaning as every other family in this saga) **AND** on a regex that
-locates the function by its dead old name: `r"RECOMP_FUNC void static_5_800AB658\(uint8_t\*
-rdram, recomp_context\* ctx\) \{\n"`. `static_5_800AB658` was renamed to `updateHangarBayScene` by
-s427 and moved to `funcs_28.c` — since the regex searches for the OLD name, `func_start_m` never
-matches regardless of the file gate, so **this entire 32-site family currently produces ZERO
-guards**, silently, with no report line at all. Confirm this null-report behavior first (grep the
-fixup log for "G1"/"G32" — expect literally nothing) before starting.
-
-Fix needs BOTH: (1) drop the `p.name == "funcs_40.c"` file gate (or replace with `funcs_28.c` —
-check whether `updateHangarBayScene` might ALSO appear textually in another file the way
-`L_800AB618` did for s448, before assuming file-scoping is safe to drop entirely); (2) update the
-function-name regex to `updateHangarBayScene`.
-
-Same 5-step method as s446/s448/s449:
-1. Raw regen (delete `RecompiledFuncs/funcs_*.c` -> `make_elf.py` -> `N64Recomp`, NO fixup yet) to
-   get a pristine tree. `scratch/agent/s449_delete_funcs.sh`/`s449_run_make_elf.sh`/
-   `s449_run_n64recomp.sh` are ready templates — copy to `s450_*`, update log/rc paths, or reuse
-   directly if no other regen has happened since (check file mtimes first).
-2. Standalone Python scan checking each of the ~30 named G-sites' exact anchor text for
-   tree-wide uniqueness (model: `scratch/agent/s448_scan_s390h2.py`). **Old fixup-script comment
-   warns some G-family anchors "ALSO appear verbatim in `funcs_27.c`"** — needs a FULL recheck
-   across all ~32 sites this session, not a sample. If any site is non-unique, hand-disambiguate
-   (longer anchor context) rather than force-matching.
-3. Check the s448-style extra wrinkles: does `updateHangarBayScene` (now `funcs_28.c`) share
-   guest addresses with overlay-duplicated code in the same file? Does its bail label collide by
-   name with anything else in `funcs_28.c`, and if so is the collision function-scoped-safe (same
-   check as s448's `L_800AB618` collision)?
-4. Ungate + add the `SystemExit`-on-`n>1` hard guard (s446/s448 pattern).
+Same 5-step method as s446/s448/s450:
+1. Raw regen (delete `RecompiledFuncs/funcs_*.c` -> `make_elf.py` -> `N64Recomp`, NO fixup yet).
+   `scratch/agent/s450_delete_funcs.sh`/`s450_run_make_elf.sh`/`s450_run_n64recomp.sh` are ready
+   templates — copy to `s451_*`, update paths, or reuse directly if no other regen has happened
+   since (check file mtimes first).
+2. Standalone Python scan (model: `scratch/agent/s450_scan_g1g32.py`'s `exec`-extraction pattern,
+   adapted for 9 separate single-site patterns rather than one list) checking each site's anchor
+   for tree-wide uniqueness AND for landing inside `composeNpcOrientationMatrix`'s own body span.
+3. Check any `goto`-target label dependency (see above) BEFORE ungating — this is the exact
+   lesson s450 paid a wasted build cycle to learn.
+4. Ungate (file `funcs_40.c` -> `funcs_28.c`, function regex `static_5_800AB1C8` ->
+   `composeNpcOrientationMatrix`) + add the `SystemExit`-on-`n>1` hard guard (s446/s448/s450
+   pattern) to each site.
 5. Full regen -> build -> audit fixup report for exactly `x1` per applied site -> `strings` on the
-   binary -> live-verify with `ROGUESQ_LOG_HANGAR_BAY_DEREF_GUARD` armed alongside every other
-   guard-family env var (see `scratch/agent/soak_queue/done/s448_s390h2_confirm_*.sh` for the full
-   armed-var list to copy) -> queue a confirmation soak. **Expected result per s449: 0 fires is
-   the baseline now, not an open question — do not spend another session chasing "why 0."**
+   binary -> live-verify with the full armed-var list (copy from
+   `scratch/agent/soak_queue/s450_g1g32_confirm.sh`, add this family's own env var) -> queue a
+   confirmation soak. **Expected result per item -287's baseline: 0 fires is the norm now, not an
+   open question — do not spend another session chasing "why 0."**
 
-After G1-G32, remaining families in order (see `docs/CURRENT-TRUTH.md` item -284 for detail):
+After item -289, remaining families in order (see `docs/CURRENT-TRUTH.md` item -284 for detail):
 1. **`S392_H3A`/`S393_H3B`** (50 sites) — chunk 3a's 29 sites may already be covered by
    `GENERIC_CACHE_GUARD`'s blanket fix; check for redundancy before re-adding (chunk 3b's 21
    likely does need the fix).
-2. `BREADCRUMB7` (diagnostic, lowest priority).
+2. `BREADCRUMB7` (diagnostic, lowest priority — a diagnostic, not a crash guard).
 
-If G1-G32 (or the whole remaining orphan-sweep list) starts feeling like diminishing returns
+If item -289 (or the whole remaining orphan-sweep list) starts feeling like diminishing returns
 relative to session cost, it's legitimate to instead open a genuinely NEW M3 idiom-class audit
 (strategic priority #3's other sanctioned mode) — e.g. a fresh frequency-scan the way s282/s445
 opened `GETDATITEM_GUARD`, rather than continuing to finish this specific closed-ambiguity family.
 
 ## Discriminating measurement
 
-Does the full ~32-site uniqueness scan come back 100% unique (proceed with s446/s448's method) or
-does it surface a genuine collision, confirming the old fixup comment's "also in funcs_27.c"
-warning is still live (needs manual disambiguation)?
+Does the full 9-site uniqueness scan come back 100% unique and body-contained (proceed with
+s446/s448/s450's method), and does the `goto`-target label check find a pre-existing dependency
+that needs its own fix first (as item -288 did) or not?
 
 ## Process notes carried forward
 
 - `tools/probe.sh`'s exit code is trustworthy on its own now (exit 3 on a detected `[CRASH]`, s447).
 - `fixup_game_funcs.py` lives in the sibling `N64Recomp` repo (`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`), NOT in this repo — it is not git-tracked by RogueSquadron64Recomp and needs no `export.sh`.
-- When ungating a ~30-site family, expect SOME sites to be redundant no-ops against earlier-applied
-  guards in the same fixup script — not a bug, don't force-match shortened anchors to avoid it.
+- When ungating a multi-site family, expect SOME sites to be redundant no-ops against
+  earlier-applied guards in the same fixup script — not a bug, don't force-match shortened
+  anchors to avoid it.
 - Watch for DOUBLY-orphaned gates (file AND function-name-regex referencing the dead old
-  `static_N_0xADDR` name) — G1-G32 is the first confirmed instance.
-- **New pattern from s449**: when a guard family's confirm soak logs 0 trips, that alone no longer
-  needs a fresh positive-control round for THIS class of `-0x25A4`-style deref guard — s449
-  established the baseline (0 trips under 245000+ reaches) for the sibling families. A future
-  0-fires result on `G1`-`G32`/`S392`/`S393` should be read as "consistent with the established
-  baseline," not "inconclusive, needs another soak."
+  `static_N_0xADDR` name) — confirmed pattern across at least 3 families now (S390_H2, G1-G32/A-E,
+  and item -289 pending).
+- **New s450 lesson**: before ungating any family whose patch body contains a bare `goto LABEL`
+  (not a label the patch itself defines), grep for that label's OWN defining block and confirm
+  it is not independently orphaned by the same mechanism — a build failure
+  ("undeclared label") is the symptom if you skip this check, costing a full extra
+  regen/fixup/build cycle to diagnose and fix. Check BEFORE the first build attempt, not after.
+- **s449 pattern still applies**: a guard family's confirm soak logging 0 trips no longer needs a
+  fresh positive-control round for this whole `-0x25A4`/table-deref guard idiom class — item -287
+  established the baseline (0 trips under 245000+ reaches). Read a future 0-fires result as
+  "consistent with baseline," not "inconclusive."

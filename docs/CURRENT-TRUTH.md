@@ -164,8 +164,39 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -287 (s449, the orphan-sweep positive-control result — see below); the
-next new item takes -288.
+oldest). Current top is -289 (s450, a new backlog item found incidentally — see below); the
+next new item takes -290.
+
+-289. **(s450) NEW backlog item: 9 doubly-orphaned sites in an OLDER, separate
+    `composeNpcOrientationMatrix` guard family ("guard1"-"guard8"-equivalent, s100-era),
+    distinct from item -284's s446 fix (which covered a different/newer 30-site list for the
+    same function).** Found incidentally while fixing item -288 below: all 9 still gated to
+    `funcs_40.c`/`static_5_800AB1C8` in `fixup_game_funcs.py`, confirmed silently producing
+    zero report lines. Not fixed this session (out of the bounded work unit). Alongside the
+    already-known `BREADCRUMB7` (item -284), these 10 blocks are now the FULL remaining
+    inventory of orphaned `funcs_40.c`-gated blocks in the fixup script — next session should
+    apply the same scan-then-fix method (s446/s448/s450) to this family before moving to
+    `S392_H3A`/`S393_H3B`. Full detail: `PORTING-STATE` Session 450.
+
+-288. **(s450) `G1`-`G32` hangar-bay-scene `-0x25A4`/table-deref guard family — FIXED, same
+    method as items -284/-286.** 29 G-sites plus a previously-unaccounted 5-site sibling family
+    (`A`-`E`, an older s110 table-deref guard) and their shared `L_hangarbay_guard_exit`
+    epilogue label were ALL doubly-orphaned (gated to dead file `funcs_40.c` AND a dead
+    function-name regex `static_5_800AB658`) since s427 renamed/moved the function to
+    `updateHangarBayScene`/`funcs_28.c` — confirmed via a raw pre-fixup regen showing zero
+    `G1`-`G32` report lines, exactly as predicted. A standalone tree-wide scan
+    (`scratch/agent/s450_scan_g1g32.py`, extracts the live patch list via `exec` to avoid
+    transcription drift) found all 29 anchors unique tree-wide and inside the function's own
+    body, refuting the old fixup comment's stale "also in funcs_27.c" warning for the current
+    tree. First build attempt failed (`undeclared label 'L_hangarbay_guard_exit'`) because the
+    epilogue-label-inserting block and the A-E guard block were independently, identically
+    orphaned and hadn't been fixed yet — all three blocks fixed together once the dependency was
+    found. Full regen/build clean (35/35 patches `x1`, no collisions); `strings` confirmed all 34
+    guard format strings present. Live-verify: 0 fires on both families (matches the item -287
+    established baseline, not a fresh open question), `hangarbay-entry` n=32 (reachable),
+    crashed at 163.2s on the already-closed item -259 signature family
+    (`last-guest-pc=0x800290d4`, a 6th distinct misattributed native symbol — not chased).
+    Confirmation soak queued: `s450_g1g32_confirm.sh`. Full detail: `PORTING-STATE` Session 450.
 
 -287. **(s449) CLOSED the `static5-rename-orphan-sweep` open question with a positive control:
     items -282/-284/-286's persistent "0 guard-trips" was a confirmed TRUE NEGATIVE, not an
@@ -287,17 +318,17 @@ next new item takes -288.
     false-negative bug, item -285) **on an unrelated pre-existing signature
     (`coalesceFreeHeapBlocks+3192`), not a regression — but this family's guards logged 0 fires,
     so confirmation is still open, not closed.** Corrected re-queue: `s447_hangarlist_getdatitem_confirm.sh`.
-    **`S390_H2A`/`S390_H2B` FIXED s448 — see item -286.** Remaining orphaned, NOT fixed yet
-    (next session's top priority, same proven method): `G1`-`G32` (32 sites, target
-    `updateHangarBayScene`, now `funcs_28.c`) — sample-checked
-    G1/G32 anchors as uniquely matching in `funcs_28.c` only (the old fixup-script comment's warning
-    that "every one ALSO appears verbatim in `funcs_27.c`" may be stale post-s427 and needs a FULL
-    32-site recheck, not just the G1/G32 sample, before trusting it); `S392_H3A`/`S393_H3B`
+    **`S390_H2A`/`S390_H2B` FIXED s448 — see item -286. `G1`-`G32` (29 sites) plus a sibling A-E
+    table-deref family FIXED s450 — see item -288**, which also confirmed the old "also in
+    `funcs_27.c`" warning is stale for the current tree (0 collisions, full recheck not a sample).
+    Remaining orphaned, NOT fixed yet: `S392_H3A`/`S393_H3B`
     (50 sites) — NOT yet uniqueness-checked, and item -284's own read found `S392_H3A`'s bail label
     `L_800ADB2C` sits INSIDE `updateHangarBayScene`'s body (not a separate function) — meaning these
     29 sites may guard derefs already covered by `GENERIC_CACHE_GUARD`'s blanket 107-site fix
     (item -270/-273); check for redundancy before re-adding; `BREADCRUMB7` (diagnostic, target
-    `updateHangarBayScene`) — not checked. Full detail: `PORTING-STATE` Session 446.
+    `updateHangarBayScene`) — not checked; **item -289 (s450, new): 9 further doubly-orphaned sites
+    in an older, separate `composeNpcOrientationMatrix` guard family, distinct from this item's own
+    30-site fix** — same method applies. Full detail: `PORTING-STATE` Session 446, 450.
 
 -282. **(s445) GETDATITEM_GUARD — a fresh M3 systematic idiom-class audit** (pivoted off item
     -278 per budget, strategic-priority #3): `getDatItemByName` (funcs_10.c, guest `0x80047B70`)

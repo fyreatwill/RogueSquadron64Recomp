@@ -37458,3 +37458,75 @@ guard tested this session. Filed (see CURRENT-TRUTH item -287), not chased — s
 **Outcome: ADVANCED** (designed and ran the discriminating probe the mandatory-pivot rule
 required, got a real answer, closed the 4-session-old open question, and filed a new crash
 signature without chasing it).
+
+## Session 450 (2026-08-07)
+
+**Work unit (per s449's NEXT.md, strategic priority #3): finish the `G1`-`G32` family (29 sites)
+of the `updateHangarBayScene` `-0x25A4`/table-deref guard set, doubly-orphaned since s427's
+duplicate-symbol fix** (gated on both the dead file location `funcs_40.c` and a function-start
+regex for the dead old name `static_5_800AB658`).
+
+**Confirmed the predicted null-report symptom first**: a raw pre-fixup regen (delete
+`RecompiledFuncs/funcs_*.c` -> `make_elf.py` -> `N64Recomp`, no fixup) followed by one fixup run
+on the pristine tree showed zero `G1`-`G32` report lines, as NEXT.md predicted -- the gate's
+`func_start_m` never matches post-s427, so the block silently no-ops every time.
+
+**Standalone Python scan** (`scratch/agent/s450_scan_g1g32.py`, extracts `_hangarbay_deref_guard_sites`
+directly from the live `fixup_game_funcs.py` source via a scoped `exec` so the scan can never
+transcribe-drift from the real patch list) confirmed all 29 G-anchors match **exactly once**,
+tree-wide, all in `funcs_28.c` -- and a follow-up boundary check confirmed all 29 land inside
+`updateHangarBayScene`'s own body span (`funcs_28.c:378292-617756`). The old fixup-script comment's
+warning that G-family anchors "ALSO appear verbatim in `funcs_27.c`" is **confirmed STALE** for the
+current post-s427 tree -- 0 collisions found anywhere. `updateHangarBayScene`'s own definition also
+appears exactly once tree-wide (`funcs_28.c:10598`); the one other in-file mention (`funcs_28.c:5250`)
+is an internal call site, not a second definition.
+
+**Fixed the G1-G32 gate** (file `funcs_40.c` -> `funcs_28.c`, function regex `static_5_800AB658` ->
+`updateHangarBayScene`) and added the `SystemExit`-on-`n>1` hard guard (s446/s448 pattern). First
+build attempt **failed**: `error: use of undeclared label 'L_hangarbay_guard_exit'` -- this label,
+which every G-site and every A-E site (`_hangarbay_guard_sites`, an OLDER separate 5-site
+table-deref guard family, s110) jumps to via `goto`, is inserted by its own dedicated epilogue-label
+block, which was **independently, doubly orphaned by the exact same mechanism** (also gated to
+`funcs_40.c`/`static_5_800AB658`). Fixed that block's gate too, plus the A-E guard-sites block's gate
+(same fix, same file/function-name pair) -- three blocks total, all now consistently gated to
+`funcs_28.c`/`updateHangarBayScene`. Re-verified via the standalone scan that the epilogue anchor and
+all 5 A-E anchors also match exactly once, all inside the function body, before re-running.
+
+**Full clean regen + fixup + build**: fixup report showed all 35 patches applied `x1` (1 epilogue
+label + 5 A-E sites + 29 G-sites), no `SystemExit`, no unexpected counts. Build succeeded clean, 0
+new warnings. `strings` on the built binary confirmed all 34 guard format strings (29
+`[hangar-bay-deref-guard] site=G*` + 5 `[hangar-bay-scene-guard] site=*`) present.
+
+**Live-verify** (`scratch/agent/s450_g1g32_manual.sh`, full armed-var list per the standing rule):
+0 fires on both new guard families (null result -- per item -287's established baseline for this
+whole `-0x25A4`-guard idiom class, this does NOT need a fresh positive-control round to be
+meaningful), `hangarbay-entry` reached n=32 (function is reachable this run), `getdatitem-reached`
+n=6, `hangarlist-reached` n=503. Crashed at 163.2s on Bus error 10, `pc-symbol=loadDatFile+1152`,
+`last-guest-pc=0x800290d4` -- this is the **already-closed item -259 signature family**
+("`0x800290d4`, six independent triggers... sparse-breadcrumb misattribution, not one shared
+mechanism", closed s422): a 6th occurrence with yet another distinct real native symbol, consistent
+with (not contradicting) that item's own closed finding. Not chased further (strategic priority #3).
+Confirmation soak queued: `scratch/agent/soak_queue/s450_g1g32_confirm.sh`.
+
+**Incidental new finding, filed not fixed this session (out of this session's bounded scope)**:
+auditing the remaining `if p.name == "funcs_40.c":` gates in `fixup_game_funcs.py` after this fix
+found **9 more doubly-orphaned sites for a DIFFERENT, OLDER `composeNpcOrientationMatrix` guard
+family** ("guard1"-"guard8"-equivalent, s100-era, predating and distinct from item -284's s446 fix
+which covered a separate/newer 30-site deref-guard list for the same function) -- all 9 still gated
+to `funcs_40.c`/`static_5_800AB1C8`, confirmed silently producing zero report lines in this
+session's fixup log. Only the already-known `BREADCRUMB7` (line ~11190, already listed in item -284's
+remaining-work note) remains alongside these 9 as the full inventory of still-orphaned
+`funcs_40.c`-gated blocks (10 total, down from the pre-session 10 that included G1-G32's now-fixed
+3 blocks -- i.e. 13 blocks were `funcs_40.c`-gated at session start, 3 fixed this session, 10
+remain: 9 new composeNpcOrientationMatrix sites + BREADCRUMB7). New backlog item -289.
+
+**Process note**: fixing a doubly-orphaned guard family is not always a single self-contained edit
+-- when a guard's `goto` target label is itself inserted by a separate, independently-gated block
+(shared infrastructure), that block must be identified and fixed in the same pass, or the build
+fails with an undeclared-label error. Caught immediately by the build (not a silent runtime bug),
+but costs a wasted regen/fixup cycle if not anticipated. Grep for the `goto` target label's
+defining block BEFORE ungating a family that uses one.
+
+**Outcome: ADVANCED** (closed out the planned G1-G32 work unit end to end -- scan, fix, build,
+binary-verify, live-verify, confirm soak queued -- and surfaced a precise, actionable new backlog
+item along the way rather than silently absorbing or ignoring it).
