@@ -175,8 +175,32 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -294 (s457, item -292's next slice executed — see below); item -292 itself
-(29 sites remain across 3 reader functions) is next. The next NEW item takes -295.
+oldest). Current top is -295 (s458, item -292's next slice executed — see below); item -292 itself
+(24 sites remain across 2 reader functions) is next. The next NEW item takes -296.
+
+-295. **(s458) Executed the next slice of item -292's `SONGTEMPO_TABLE_GUARD`:
+    `stepSongModulationLanes` (5 sites), 19/43 total.** Same idiom/family/env var as item -292, one
+    more reader function — no new design work beyond per-site bail-semantics derivation. Read the
+    whole function body before patching (funcs_25.c ~3291-3573, N64Recomp/RecompiledFuncs copy):
+    an outer per-lane loop (`$s2`/r18, stride 0x24, bound 0x900, head `L_800950A8`, bound-
+    check/advance target `L_8009521C`) wrapping an inner per-event loop (`$s0`/r16 constant per
+    lane, head `L_800950C8`, exit test `L_80095210`) — confirmed the exact shape item -294
+    predicted for this function. Site smod1 (outer-loop head) reuses the game's OWN existing
+    null-lane-skip idiom (`s2 += 0x24; goto L_8009521C`, two instructions later in the source) as
+    its bail. Sites smod2-smod5 (inside the inner loop's per-event processing for that same lane)
+    reuse the identical "abandon this lane, advance to the next" bail, matching
+    `stepSongPitchBendLanes`'s own spbl2-spbl5 convention exactly. Standard pipeline clean
+    throughout: anchor uniqueness verified with a standalone Python probe before touching the
+    fixup script (all 5 matched exactly once), fixup report `x5 (of 5 sites)`, direct grep
+    confirmed 19/19 total `songtempo-table-guard` sites in `funcs_25.c` (38 comment mentions, 2 per
+    site), `strings` on the built binary confirmed 19/19 distinct format strings, build clean (0
+    errors, only pre-existing benign warnings). Live-verify (full 300s/250s-keys schedule, all
+    passive guards armed): **0 `[CRASH]` markers across the entire schedule, 0
+    `songtempo-table-guard` fires, 0 `dl-list-append-guard` fires** (both null results, match the
+    established baseline for these families), `hangarbay-entry` reached n=2600 (comparable to
+    recent baselines). Confirmation soak queued:
+    `scratch/agent/soak_queue/s458_songtempo_smod_confirm.sh`. Does NOT close item -292 — 24 sites
+    remain (`advanceSongRegion` 12, `stepActiveSongTracks` 12).
 
 -294. **(s457) Executed the next slice of item -292's `SONGTEMPO_TABLE_GUARD`:
     `tickScheduledSongEvents` (5 sites) + `stepSongPitchBendLanes` (5 sites), 10/43 more sites
@@ -245,26 +269,26 @@ oldest). Current top is -294 (s457, item -292's next slice executed — see belo
     same uninitialized/stale-global risk the `-0x25A4` family was closed for. M5-audio-adjacent
     (MusyX song sequencer) — a genuinely new lead per the USER DIRECTIVE's M5 gate, though this is
     M3 guard-audit work, not new M5 de-stubbing.
-    **Fixed and fully verified across s454/s457: `updateSongTempoTickRate` (4 sites, s454) +
-    `tickScheduledSongEvents` (5 sites, s457) + `stepSongPitchBendLanes` (5 sites, s457) = 14/43
-    sites, 3 of 6 reader functions.** Per-site bail semantics hand-derived by reading each whole
-    function body (not templated blindly) — full derivation for the s457 pair: item -294 above;
+    **Fixed and fully verified across s454/s457/s458: `updateSongTempoTickRate` (4 sites, s454) +
+    `tickScheduledSongEvents` (5 sites, s457) + `stepSongPitchBendLanes` (5 sites, s457) +
+    `stepSongModulationLanes` (5 sites, s458) = 19/43 sites, 4 of 6 reader functions.** Per-site
+    bail semantics hand-derived by reading each whole function body (not templated blindly) — full
+    derivation for the s457 pair: item -294; for `stepSongModulationLanes`: item -295 above.
     `updateSongTempoTickRate`'s: site 1 bails with a stack-neutral `return;` (loads before the
     prologue runs); sites 2/3 reuse the function's own tick-loop exit label `L_80095648`; site 4
-    duplicates the real epilogue. All 3 functions' confirmation soaks queued
-    (`s454_songtempo_confirm.sh`, `s457_songtempo_readers_confirm.sh`); both delivered null
-    results (0 guard fires) matching item -287's established 0-fires baseline for this whole guard
-    idiom class — not an open question.
-    **NOT fixed, queued as the next slice of THIS item:** the other 3 reader functions (29 sites):
-    `stepSongModulationLanes` (5 sites, ~283 lines), `advanceSongRegion` (12 sites, ~539 lines),
-    `stepActiveSongTracks` (12 sites, ~744 lines). The latter two are unusually large and may
-    involve the recompiler's cross-function shared-tail-merge behavior seen elsewhere
-    (`lvj_checkComplexObjectives`/`audioCompandS16`/`__OSGlobalIntMask`) — each needs its own full
-    read before patching, not a blind copy of the smaller functions' bail patterns. Do
-    `stepSongModulationLanes` next — same shape as `stepSongPitchBendLanes` (per-lane outer loop
-    over the same 0x24-stride/0x900-bound structure, per s455's original scan), so its bail
-    semantics should closely mirror `spbl1`-`spbl5`'s "abandon this lane, advance to the next"
-    pattern, but read the whole body first to confirm before patching.
+    duplicates the real epilogue. All 4 functions' confirmation soaks queued
+    (`s454_songtempo_confirm.sh`, `s457_songtempo_readers_confirm.sh`,
+    `s458_songtempo_smod_confirm.sh`); all delivered/expect null results (0 guard fires) matching
+    item -287's established 0-fires baseline for this whole guard idiom class — not an open
+    question.
+    **NOT fixed, queued as the next slice of THIS item:** the last 2 reader functions (24 sites):
+    `advanceSongRegion` (12 sites, ~539 lines), `stepActiveSongTracks` (12 sites, ~744 lines). Both
+    are unusually large and may involve the recompiler's cross-function shared-tail-merge behavior
+    seen elsewhere (`lvj_checkComplexObjectives`/`audioCompandS16`/`__OSGlobalIntMask`) — each
+    needs its own full read before patching, not a blind copy of the smaller functions' bail
+    patterns. Do `advanceSongRegion` next (smaller of the two remaining) — read the whole body
+    first, do not assume a uniform template; check the reported prologue/epilogue stack-frame
+    mismatch before trusting a single simple bail-to-epilogue pattern.
 
 -291. **(s454) Fresh M3 idiom class found: `-0x5824($reg)` → global `0x8011A7DC`, a doubly-linked-
     list append with NO existing check, structurally identical to (but a different global from)

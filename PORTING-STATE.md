@@ -38112,3 +38112,67 @@ read before patching.
 `SONGTEMPO_TABLE_GUARD` sites across 2 functions -- continuing item -292's execution; also folded
 in and filed a new crash observation without chasing it, per the M3 priority's no-reactive-chase
 rule).
+
+## Session 458 (2026-08-07)
+
+Continued item -292's `SONGTEMPO_TABLE_GUARD` idiom-class audit (M3 systematic-idiom-class work,
+per the USER DIRECTIVE priority order) — the next slice per s457's `NEXT.md`: `stepSongModulationLanes`
+(5 sites, `funcs_25.c`), bringing the family total to 19/43 sites across 4 of 6 reader functions.
+
+Read the whole function body first (funcs_25.c ~3291-3573 in the N64Recomp/RecompiledFuncs copy)
+before writing any patch, per the standing method: an outer per-lane loop (`$s2`/r18, stride 0x24,
+bound 0x900, head `L_800950A8`, bound-check/advance target `L_8009521C`) wrapping an inner
+per-event loop (`$s0`/r16 constant per lane, head `L_800950C8`, exit test `L_80095210`) — this
+confirmed the exact shape item -294/-292's notes predicted for this function (mirroring
+`stepSongPitchBendLanes`). Site smod1 (outer-loop head, 0x800950AC) reuses the game's OWN existing
+null-lane-skip idiom two instructions later in the source (`s2 += 0x24; goto L_8009521C`, guarded
+by `beql $v0,$zero,L_8009521C` right after the load) as its bail. Sites smod2-smod5
+(0x800950CC/0x80095124/0x800951A8/0x800951DC, inside the inner loop's per-event processing for
+that same lane — the lane offset is fixed for the whole inner loop, set once before entry) reuse
+the identical "abandon this lane, advance to the next" bail, matching `stepSongPitchBendLanes`'s
+own spbl2-spbl5 convention exactly (not templated blindly — confirmed by reading, per NEXT.md's
+own caution).
+
+Standard pipeline, all steps clean:
+- Anchor uniqueness verified with a standalone Python probe (matched the load-pair regex against
+  the function body in isolation) BEFORE touching `fixup_game_funcs.py` — all 5 anchors matched
+  exactly once each, and a direct count of `0X29C0` occurrences in the body confirmed exactly 5,
+  catching nothing to fix before spending a build cycle.
+- Regen: `make_elf.py` → `N64Recomp` (after deleting the stale `funcs_25.c` so the fresh source
+  regenerates, per the documented "N64Recomp skips existing files" trap) → `fixup_game_funcs.py`.
+  Fixup report: `stepSongModulationLanes SONGTEMPO_TABLE_GUARD patched x5 (of 5 sites)`. Audited
+  against a direct grep, not just trusted: `grep -c "SONGTEMPO_TABLE_GUARD site=smod"` = 5,
+  `grep -c "SONGTEMPO_TABLE_GUARD"` (total, all functions) = 38 = 19 sites × 2 mentions/site
+  (patch comment + env-var name) — exact match.
+- `cmake --build` (background, ~2 min): clean, 0 errors, only the pre-existing benign
+  `-Wpointer-sign` warnings in unrelated `DDIV` call sites (already present before this session).
+- `strings` on the built binary: 19/19 distinct `songtempo-table-guard` format strings present,
+  including all 5 new `smod1`-`smod5` entries.
+- Live-verify (manual, foreground/background, `tools/probe.sh`, full 300s schedule, all passive
+  guard/breadcrumb env vars armed per the standing soak-queue rule): **0 `[CRASH]` markers across
+  the entire schedule, 0 `songtempo-table-guard` fires, 0 `dl-list-append-guard` fires** (both null
+  results, matching the established 0-fires baseline for both guard families per item -287),
+  `hangarbay-entry` reached n=2600 (comparable to s457's own baseline on the same schedule). The
+  run completed cleanly with no unrelated crash this time (unlike s457's queued confirm soak,
+  which crashed on an unrelated `submitSceneNodeRender`-subtree signature) — no new crash
+  observation to file this session.
+
+Confirmation soak queued: `scratch/agent/soak_queue/s458_songtempo_smod_confirm.sh` (same recipe
+shape as `s457_songtempo_readers_confirm.sh`, all passive guards armed).
+
+Does NOT close item -292 — 24 sites remain across the last 2 reader functions:
+`advanceSongRegion` (12 sites, ~539 lines) and `stepActiveSongTracks` (12 sites, ~744 lines). Both
+were flagged in earlier sessions' first-skim as having an odd stack-frame mismatch between prologue
+and epilogue (possible recompiler cross-function shared-tail-merge, seen elsewhere as
+`lvj_checkComplexObjectives`/`audioCompandS16`/`__OSGlobalIntMask`) — worth checking before
+trusting a uniform bail-to-epilogue template; may need per-site individual verification. `NEXT.md`
+points the next iteration at `advanceSongRegion` (the smaller of the two).
+
+No lib/ submodule edits this session — all work was in `fixup_game_funcs.py` in the standalone
+`~/Documents/Tools/N64Recomp` tool checkout (untracked local tooling, confirmed separate from and
+NOT populating the `lib/N64ModernRuntime/N64Recomp` git-submodule path, which has no working files
+checked out), so no `submodule-patches/export.sh` step applies.
+
+**Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed — 5 more
+`SONGTEMPO_TABLE_GUARD` sites, continuing item -292's execution; clean run, no new crash
+observations to file).
