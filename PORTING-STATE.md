@@ -35531,3 +35531,93 @@ Outcome: ADVANCED (ran the planned discriminating-measurement work unit, produce
 furthest-reached crash frontier, a durable menu-input-timing calibration finding, and a concrete new
 candidate function/site for the `0x800290d4` sink — even though none of the three hypotheses was cleanly
 confirmed; the finding itself is what NEXT.md's outcome table calls for reporting).
+
+## Session 424 (2026-08-07)
+
+Picked up NEXT.md's branch 1 directly: `scratch/agent/SOAK-RESULTS.md` showed
+`s423_m3dod_warroom_crash_confirm` (queued s423, ran between iterations) REPRODUCED — same
+`last-guest-pc=0x800290d4`, same `startPlayerSlotAnimationChannelLooping+456` SIGBUS, on the identical
+schedule. That's a second independent reproduction of a crash hit during ORDINARY menu progression (not
+an M4 relocation bisection), at the earliest point past the title screen that any driven run has reached
+— i.e. it now blocks all forward M3 progress by construction, not an edge case. Per NEXT.md's own
+pre-authorization ("second reproduction plus a clear argument that this is now systemic"), opened a
+root-cause session for it — the first departure from pure M3 idiom-audit-only mode since s397, justified
+by the specific test NEXT.md itself set up for this exact situation.
+
+**Root cause chain (source read, no guessing):** `atos -o build/RogueSquadron64Recomp -l <base> <pc>`
+resolved the crash to `funcs_14.c:4999` — `startPlayerSlotAnimationChannelLooping`'s very FIRST memory
+access, `ctx->r2 = MEM_BU(ctx->r17, 0X454);` (guest `lbu $v0, 0x454($s1)`). `ctx->r17` is the function's
+`$a0` argument, and the crash dump's own `si_addr`/x9 decode to guest address `0x80000457` — i.e.
+`ctx->r17 == 0x80000003`, 3 bytes past the base of RDRAM, not a plausible heap pointer. Traced the
+argument backward through the call chain: the caller, `startSlotLoopAnimWithVoiceSync` (funcs_30.c),
+reads this pointer from a fixed global at `0x800CDFAC` (`lw $a0, -0x2054($v0)` off a `lui $v0,0x800D`
+base) and passes it straight through. The only writer of that same global anywhere in `RecompiledFuncs`
+is `initCraftSelectScreen` (funcs_29.c), which caches `initPlayerSlotAnimationChannelFull`'s freshly
+`rs_malloc`'d return pointer into it (`sw $v0, -0x2054($v1)`, the delay slot of a `jal sprintf_recomp` —
+confirmed this is correct MIPS delay-slot translation, using the pre-call `$v0`, not sprintf's return;
+not a translation bug). Both sites read/write a real pointer as literally translated — nothing here is a
+codegen defect, and `initPlayerSlotAnimationChannelFull` itself (traced start to end) legitimately
+allocates 0x458 bytes, populates every field it touches, and returns the pointer on every path. The open
+question was purely empirical: does the write actually happen before the read, this run?
+
+**Instrument + guard, one build (batch-instrumentation rule):** added three patches to
+`fixup_game_funcs.py` (function+file-scoped per the item -231..-238 lesson): (1) a wild-pointer guard in
+`startPlayerSlotAnimationChannelLooping` — if `ctx->r17 < 0x80010000`, log `[slot-anim-loop-guard]` (cap
+20) and jump straight to the function's own existing final epilogue label (`L_800638A0`, which restores
+registers and returns without dereferencing `$s1` again) instead of crashing; (2) `[slot-anim-cache-write]`
+at `initCraftSelectScreen`'s write site, logging the cached pointer (cap 20); (3)
+`[slot-anim-cache-read]` at `startSlotLoopAnimWithVoiceSync`'s read site, logging the value read back
+(cap 40). Regenerated (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`, all three patches applied
+exactly once each, confirmed via grep of the regenerated source) → `cmake --build` clean.
+
+**Live run, identical schedule to s423's confirm soak:** the guard held — game did NOT crash at
+`startPlayerSlotAnimationChannelLooping` this run. The diagnostics gave a clean, unambiguous answer:
+`grep -c` over the full run.log shows **0** `[slot-anim-cache-write]` lines, **1**
+`[slot-anim-cache-read]` line (`ptr=0x00000000`, not garbage — plain BSS-zero), and **1**
+`[slot-anim-loop-guard]` fire (`wild s1=0x00000000`). `initCraftSelectScreen`'s cache-populating code path
+never ran at all before the per-frame tick read the (still zero-initialized) global — this is not a
+corrupted-pointer bug, it's an uninitialized-consumer-runs-before-producer bug (either a genuine
+call-ordering/race condition, or `initCraftSelectScreen` legitimately isn't the site that should have
+populated this particular slot's channel before `tickCraftSelectScreen` starts consuming it — not yet
+distinguished). 0 `[missing-func]` lines this run too, ruling out any M4 phantom-relocation-stub
+involvement — this is genuine, non-stubbed code both sides.
+
+**The guard bought exactly one function's depth, then a SIBLING crash surfaced immediately**, same tick,
+same underlying null/uninitialized state: `advancePlayerAnimationPhase+564`, backtrace
+`advancePlayerAnimationPhase ← tickCraftSelectScreen ← drawRadarIcon ← menuOverlayInit ← mainGameLoop` —
+structurally identical to the guarded crash's backtrace one function shallower. This is NOT a new,
+unrelated bug: **`advancePlayerAnimationPhase` SIGBUS is already on record as item -11** (s89, "3
+consecutive non-recurrences... 8 prior crashing soaks"), and its LR resolving back into its own function
+(`advancePlayerAnimationPhase+76`) matches the exact self-recursion-looking artifact the s87→s88 overturn
+already explained (a nearby-function symbol misattribution, not real recursion) — so this is very likely
+the SAME long-standing crash class recurring now that the shallower guard stopped masking it, not a fresh
+independent bug. `last-guest-pc=0x800290d4` again (expected and uninformative per s422 — this breadcrumb
+value recurs across unrelated real crash sites by construction).
+
+**Read on this**: this is no longer a single-function fix. `startPlayerSlotAnimationChannelLooping` and
+`advancePlayerAnimationPhase` (and per item -8, plausibly `frameStartReset` too — "byte-identical call
+chain... shared-dispatcher hypothesis") look like sibling consumers of the same
+player-slot-animation-channel subsystem, all crashing on the same
+never-initialized-before-first-tick root state. That reframes this from a reactive single-crash chase
+into exactly the systematic idiom-class shape the USER DIRECTIVE prefers for M3 — "every consumer of the
+player-slot-animation-channel struct/global family that dereferences before a confirmed init" is a
+grep-enumerable class, not a one-off. Not attempted this session (one bounded work unit per iteration) —
+queued as the next work unit.
+
+Single foreground run (not soak-confirmed) for the guard/diagnostic behavior itself, though the
+diagnostic values (write=0, read=0x0, guard fires, deeper sibling crash) are a code-path fact more than a
+nondeterministic-timing one. Queued `scratch/agent/soak_queue/s424_slotanimguard_confirm.sh` (identical
+schedule) for a second data point per iron rule 4 before treating this as fully settled. Full raw log:
+`scratch/agent/soak_results/s424_slotanimguard_live1/run.log`.
+
+`lib/`: no changes this session (all edits were in the sibling `N64Recomp` tool repo's
+`fixup_game_funcs.py` + its own `RecompiledFuncs/` output, per the existing regen pipeline — consistent
+with 400+ prior sessions' pattern for this file; `N64Recomp` itself carries its own long-standing
+uncommitted state, same category as the `rogue_squadron64` sibling-repo caution in item -3, not
+autonomous to commit).
+
+Outcome: ADVANCED (opened and made concrete progress on the root-cause session NEXT.md's own branch
+logic authorized — traced the crash to its exact source line and its argument's exact provenance, shipped
+a working guard that changes real runtime behavior (verified: the guarded crash no longer occurs), and
+surfaced a second, deeper, already-partially-catalogued sibling crash in the same run — a genuine step
+forward on the M3-blocking issue, not a doc-only iteration).

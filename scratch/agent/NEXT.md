@@ -1,68 +1,91 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: m3-dod-warroom-crash-s423
+HYPOTHESIS-ID: player-slot-anim-channel-idiom-class-s424
 
-## s423 recap
+## s424 recap
 
-Acted on s422's own pre-authorized fallback (USER DIRECTIVE's three legs all closed/exhausted, loop
-restarted with no fresh human direction): ran the M3-DoD first-look driven-run calibration NEXT.md had
-specified. It did NOT reach mission content, or even AVAILABLE CRAFT/SELECT YOUR CRAFT — it surfaced two
-new findings instead:
+Reproduction-confirmed (2/2, s423+its queued confirm soak) crash at `startPlayerSlotAnimationChannelLooping`
+crossed NEXT.md's own pre-authorized bar for opening a root-cause session (second reproduction + systemic
+argument: it blocks all forward M3 menu progress, not an M4-relocation edge case). Root-caused it: the
+function derefs a global-cached pointer (`0x800CDFAC`) that's read back as plain `0x00000000` because its
+only writer (`initCraftSelectScreen`) never runs before the first per-frame tick reads it — not pointer
+corruption, an ordering/never-populated bug. Shipped a working guard (function+file-scoped
+`fixup_game_funcs.py` patch, `[slot-anim-loop-guard]` tag) that verifiably stops the crash there, plus
+write/read cache diagnostics (`[slot-anim-cache-write]`/`[slot-anim-cache-read]`). Live run: guard held,
+0 writes / 1 read (0x0) / 1 guard-fire / 0 missing-func — then an IMMEDIATE sibling crash one call deeper
+in the same tick: `advancePlayerAnimationPhase+564` (already on record as item -11, parked since s89,
+"3 non-recurrences... 8 prior crashing soaks" — now recurred). Full detail: PORTING-STATE Session 424,
+CURRENT-TRUTH item -261.
 
-1. **SELECT GAME "waits for input indefinitely" is real and costly**: the menu sat at VI=1024 (title +
-   SELECT GAME share that width) for 134s despite 4 presses scheduled within the first 15s; only a much
-   later press (~100-130s) actually advanced it. A `"3:start 7:start 11:start"`-style rapid cadence does
-   NOT work on this screen — most of those presses appear to have been dropped or ignored.
-2. **New crash, one phase further than any prior soak**: ~1.3s after finally reaching the war-room/SELECT
-   LEVEL screen (VI=512, origin `0x6AB400`), SIGBUS in `startPlayerSlotAnimationChannelLooping+456`
-   (backtrace `startSlotLoopAnimWithVoiceSync → tickCraftSelectScreen → drawRadarIcon → menuOverlayInit →
-   mainGameLoop`), sharing s422's `0x800290d4` sparse-breadcrumb last-guest-pc value. This is a SEVENTH
-   function converging on that sink — NOT one of the six `m4_known_bad.txt` phantom-relocation functions
-   — and the first one hit during ordinary menu progression, not an M4 bisection experiment.
+**Read this as an idiom class, not a single bug**: multiple sibling consumers of one
+player-slot-animation-channel subsystem (confirmed: `startPlayerSlotAnimationChannelLooping`,
+`advancePlayerAnimationPhase`; suspected per item -8's "shared-dispatcher hypothesis":
+`frameStartReset`) all crash on the same never-initialized-before-first-tick root state during
+`tickCraftSelectScreen`'s war-room per-frame handling. This matches the USER DIRECTIVE's preferred M3
+shape (systematic idiom-class audit, the s282-s288 `-0x25A4` model) exactly — arrived at via the
+crash-driven route this time, not a fresh discovery tool, but the same audit discipline applies.
 
-Single-source (one run). Confirmation soak queued: `scratch/agent/soak_queue/s423_m3dod_warroom_crash_confirm.sh`
-(identical schedule, checks `run.log` for the same `0x800290d4` signature / a different crash / a clean
-512-phase arrival / no-positive-control). Full detail: `PORTING-STATE` Session 423, `CURRENT-TRUTH` item
--260.
+## Competing hypotheses for what's actually happening
 
-## Where this leaves the USER DIRECTIVE
+1. **Genuine call-ordering/race**: `tickCraftSelectScreen`'s per-frame handler (on thread id=8, entry
+   `0x8006F2CC`, spawned right as the war-room screen appears) starts running before
+   `initCraftSelectScreen`'s one-time setup (on the main game-loop thread) has populated this slot's
+   channel — a scheduling race, consistent with this project's ~20+ already-catalogued nondeterministic
+   corruption families (Method traps section).
+2. **Slot-index mismatch**: `initCraftSelectScreen` DOES run and DOES populate a slot, but
+   `tickCraftSelectScreen`/`drawRadarIcon` iterate a DIFFERENT slot index than the one that got
+   initialized (e.g. iterates all N craft-select slots, but only one gets set up before the first tick,
+   or the original N64 code has a per-slot "is this channel active" flag this recomp path skips).
+3. **Never called at all on this driven path**: `initCraftSelectScreen` might legitimately only run in
+   response to a specific menu-state transition this session's `PROBE_KEYS` schedule doesn't trigger in
+   the right order (relevant given the still-open SELECT-GAME input-timing finding from s423 — schedules
+   built by guesswork, not a confirmed-consumed-press signal).
 
-Still needs human reconfirmation on strategic direction — s423 does not resolve that, it adds new
-information relevant to it: if the war-room crash reproduces, the `0x800290d4` sink s422 declined to
-root-cause is now blocking M3 forward progress, not only an M4-relocation side effect. That could argue
-for reopening a dedicated root-cause session specifically for `startPlayerSlotAnimationChannelLooping`
-once reproduction-confirmed — but that is a call for whoever reconfirms direction, not something to
-pre-empt autonomously (the USER DIRECTIVE's M3 constraint is idiom-class audits, not reactive
-single-crash chases, and a fresh crash is exactly a reactive chase unless/until it's established as
-systemic).
+**Discriminating measurement**: a same-build diagnostic at `initCraftSelectScreen`'s own ENTRY (not just
+its write site) logging a counter + which slot index(es) it's called with, cross-referenced against
+`tickCraftSelectScreen`'s per-tick slot index and thread id — would directly show whether
+initCraftSelectScreen ever runs at all before the crash, and if so with which slot argument, splitting
+H1/H2/H3 in one soak.
 
 ## Work unit for the next iteration
 
-**Read `scratch/agent/SOAK-RESULTS.md` (tail) FIRST** — the confirmation soak may have already run
-between iterations. Three branches depending on what it shows:
+**Read `scratch/agent/SOAK-RESULTS.md` (tail) FIRST** for `s424_slotanimguard_confirm`'s verdict (queued
+this session) before deciding whether to spend a live foreground run — if it already ran, fold its
+write/read/guard counts into the picture below before choosing.
 
-1. **If `s423_m3dod_warroom_crash_confirm` REPRODUCED (same `0x800290d4` signature)**: two independent
-   data points now exist for a genuinely new crash blocking M3 progress at the earliest post-title
-   transition. This crosses from "single anecdote" to "reproducible" — the next work unit is deciding
-   (or asking the human to decide) whether this becomes the M3 root-cause target, superseding the
-   "idiom-audit-only, no reactive chases" framing since it's no longer a one-off. Do NOT start a
-   root-cause session without either explicit human sign-off or a second reproduction plus a clear
-   argument that this is now systemic (blocking ALL forward menu progress, not an edge case).
-2. **If it shows a DIFFERENT crash or NO_POSITIVE_CONTROL**: the war-room crash is not yet established
-   as reliably reproducible. Re-run the identical schedule ONE more time (still single low-cost soak,
-   still not a root-cause session) before concluding either way — 1 data point is not a result, 2
-   matching is a weak signal, per iron rule 4 (two independent lines of evidence).
-3. **If neither has run yet**: this iteration IS the soak — either wait for the queue to process it, or
-   (if urgency is low) pick a different bounded work unit and let the queue catch up; do not spend a live
-   foreground game run duplicating what's already queued.
+1. **Immediate, bounded, same pattern**: add an analogous wild-pointer guard to `advancePlayerAnimationPhase`
+   (funcs_14.c, 0x80062B04 — same file, same idiom, same near-null-pointer signature expected) plus an
+   entry-diagnostic on `initCraftSelectScreen` per the discriminating-measurement design above (both in
+   the SAME build/patch batch — batch-instrumentation rule). This should either (a) get one function
+   deeper still, surfacing `frameStartReset` or another sibling next, confirming the idiom-class read, or
+   (b) actually clear the war-room transition and reach AVAILABLE CRAFT, which would be the first time
+   this project has gotten that far.
+2. **If (a) recurs a 3rd sibling**: stop adding one-off guards (iron rule 8 territory) and switch to a
+   proper idiom-class audit — grep every consumer of the `0x800CDFAC` global / every function in the same
+   contiguous `main_overlay.txt` block (`startPlayerSlotAnimationChannel` through `resetPlayerSlotAllChannels`,
+   0x80062854-0x80063C6C) for the same "deref the arg before checking it's non-null/initialized" pattern,
+   classify each site, and guard or prove-safe the whole class in one pass — the `-0x25A4` model.
+3. **If (b) reaches AVAILABLE CRAFT clean**: this is real M3 DoD forward progress — update the goal-stack
+   M3 entry, re-run the extended cutscene-reaching schedule from s423's original calibration attempt to
+   see how much further the fixed path gets.
 
-**Separately, regardless of the above**: the SELECT-GAME input-timing finding (item 1 above) is worth
-fixing once, independent of the crash thread — future driven runs past the title screen should NOT
-assume `"N:start N+4:start N+8:start"` works past SELECT GAME. If/when another driven-run work unit is
-attempted, budget 100-150s+ of real time between the title-arrival press and the war-room-entry press,
-or find a `[keys]`-adjacent log line that proves the game's menu handler actually consumed a given press
-(not just that the OS posted it) so schedules can be built confidently instead of by guesswork.
+Regen recipe (already used this session, known-working):
+```
+cd ~/Documents/Tools/rogue_squadron64 && python3 tools/make_elf.py
+# delete RecompiledFuncs/funcs_*.c (mandatory, item -20) before N64Recomp regen
+zsh ~/Documents/Tools/RogueSquadron64Recomp/tools/agent/regen_n64recomp.sh
+python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py   # verify new patch lines report xN, not "no changes"
+cd ~/Documents/Tools/RogueSquadron64Recomp/build && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j8
+```
+Live-run schedule (same as s423/s424, known to reach the war-room phase):
+```
+env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
+    ROGUESQ_LOG_RUNNER=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 \
+    PROBE_LEAVE_OK=1 \
+    PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" \
+    zsh tools/probe.sh <outdir> 300 2
+```
 
 ## Soak queue
 
-- `scratch/agent/soak_queue/s423_m3dod_warroom_crash_confirm.sh` — queued this session, not yet run.
+- `scratch/agent/soak_queue/s424_slotanimguard_confirm.sh` — queued this session, not yet run.

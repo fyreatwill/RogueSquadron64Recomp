@@ -30,23 +30,21 @@ below and `docs/PROJECT-OVERVIEW.md` §13.
 
 **s421: item -249 (M4's largest open item, the `main_overlay.txt` phantom-overlay-function relocation)
 CLOSED** — 0 actionable candidates remain, 784 relocated, 14 permanently excluded (10 known-bad + 4
-known-skip). **All three directive legs above are now closed or exhausted simultaneously** (M5 closed,
-M3 idiom-audit-only exhausted since s397, M4 -249 closed s421) — **this directive needs human
-reconfirmation on where to focus next.** **s422 CLOSED the one concrete follow-on lead s421 surfaced**:
-the apparent `last-guest-pc=0x800290d4` "six independent triggers, one shared sink" pattern was root-
-caused and overturned — `atos` source-line symbolication (a strictly better technique than this
-project's prior nearest-symbol attribution, see item -259 below) showed the six known-bad functions
-crash in five different real functions with no shared site; `last-guest-pc=0x800290d4` was only ever a
-sparse breadcrumb's last checkpoint (`inflate_fast`'s own clean return), not a fault location. No
-dedicated root-cause session is indicated there anymore. **s423 acted on the only remaining candidate**
-(M3 DoD resumption, per NEXT.md's own pre-authorization for a no-new-direction restart) and its first
-driven run surfaced a SEVENTH function converging on the same `0x800290d4` sink
-(`startPlayerSlotAnimationChannelLooping`, hit during ordinary menu progression at the war-room/SELECT
-LEVEL transition, one phase further than any prior soak reached) — not yet reproduction-confirmed (soak
-queued), but if it holds this reopens the "is `0x800290d4` worth a dedicated session" question with a
-different framing: it's now blocking M3 forward progress, not only an M4-relocation artifact. **Still
-awaiting human reconfirmation on strategic direction** — this new lead does not resolve that; see item
--260.
+known-skip). **s422 CLOSED** the apparent `0x800290d4` "six independent triggers, one shared sink"
+pattern as a sparse-breadcrumb artifact (`atos` symbolication: five different real crash functions, no
+shared site). **s423 reproduced (2/2) a SEVENTH function on the same breadcrumb value**,
+`startPlayerSlotAnimationChannelLooping`, hit during ORDINARY menu progression (not an M4 experiment) at
+the earliest point past the title screen any driven run has reached — a systemic M3 blocker, not an M4
+side effect, meeting NEXT.md's own pre-authorized bar for opening a root-cause session. **s424 did that**:
+traced the crash to its exact source line and argument provenance (a global slot-animation-channel-cache
+pointer, read as plain `0x00000000` — never written before first read, not corrupted), shipped a working
+guard (verified: crash no longer occurs there), and hit a second, deeper, already-partially-catalogued
+sibling crash (`advancePlayerAnimationPhase`, item -11) one call further in the same tick — reframing
+this as an idiom-class of sibling consumers on one uninitialized root state, not a single-function fix.
+**This is now the active M3 thread; still open, not closed.** See item -261 below. Full M4/M5 legs remain
+closed/exhausted as of s421/s397 respectively — this new thread supersedes needing separate human
+reconfirmation on "where to focus next" for the moment, since it's a direct, in-progress continuation of
+the M3 DoD leg NEXT.md was already authorized to pursue.
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -188,32 +186,37 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -260 (s423, OPEN — reproduction pending); the next new item takes -261.
+oldest). Current top is -261 (s424, OPEN — idiom-class audit queued); the next new item takes -262.
 
--260. **(s423) M3 DoD first-look calibration run — new furthest-reached crash frontier, single-source,
-    reproduction queued.** Acting on NEXT.md's pre-authorized fallback (no fresh human direction on the
-    USER DIRECTIVE), ran one driven run with an extended `PROBE_KEYS_FROM_PHASE=1` schedule intended to
-    walk from the title screen through SELECT GAME/war room/AVAILABLE CRAFT/SELECT YOUR CRAFT and into
-    the mission-intro cutscene, holding 150s+ past the documented leave point, with
-    `ROGUESQ_LOG_RUNNER=1` and the always-on `[vi-fs-decision]` diagnostic both live. **Did not reach
-    mission content or even AVAILABLE CRAFT — instead surfaced two new findings:** (1) SELECT GAME
-    genuinely "waits for input indefinitely" as already documented; rapid early presses (`3/7/11/15s`)
-    did not visibly register, only a much-later press (~100-130s) advanced the menu, 134s after title —
-    the old `"3:start 7:start"`-style rapid cadence does not carry to this screen. (2) The menu then
-    crashed ~1.3s after finally reaching the war-room/SELECT LEVEL screen (VI=512, origin `0x6AB400`) —
-    SIGBUS, `last-guest-pc=0x800290d4` (the s422-root-caused sparse `inflate_fast`-return breadcrumb, not
-    a fault location), real PC resolves via the crash dump's own `pc-symbol` line to
-    `startPlayerSlotAnimationChannelLooping+456` (backtrace `startSlotLoopAnimWithVoiceSync →
-    tickCraftSelectScreen → drawRadarIcon → menuOverlayInit → mainGameLoop`). **This function is NOT one
-    of the six `m4_known_bad.txt` phantom-relocation functions** — it's a SEVENTH convergence on the same
-    `0x800290d4` sink, and the first one hit during ordinary menu progression (not an M4 bisection
-    experiment), one phase further than any prior soak has reached. Not yet reproduction-confirmed (one
-    run only) — `scratch/agent/soak_queue/s423_m3dod_warroom_crash_confirm.sh` queued with the identical
-    schedule. No fix attempted (first-look/calibration session, not a root-cause session, per the USER
-    DIRECTIVE's no-reactive-chases constraint). If reproduction holds, this strengthens the case that the
-    `0x800290d4` sink is now an M3-blocking issue, not only an M4-relocation artifact family — relevant to
-    (but does not resolve) the still-open human-reconfirmation question above. Full detail: PORTING-STATE
-    Session 423.
+-261. **(s424) `startPlayerSlotAnimationChannelLooping` root-caused and guarded; surfaced a sibling
+    idiom-class thread, OPEN.** s423's reproduction (2/2, see former item -260, folded in here) crossed
+    NEXT.md's own bar for opening a root-cause session. Traced: crash is `funcs_14.c:4999`, the
+    function's first deref of its `$a0` arg (`ctx->r17 == 0x80000003`, a wild near-null "pointer"). That
+    arg is read by the caller (`startSlotLoopAnimWithVoiceSync`, funcs_30.c) from a fixed global at
+    `0x800CDFAC`, whose only writer anywhere in `RecompiledFuncs` is `initCraftSelectScreen` (funcs_29.c,
+    caches `initPlayerSlotAnimationChannelFull`'s malloc'd return pointer there). Both sites and the
+    allocator itself are correctly translated (no codegen bug); the open question was purely empirical.
+    Added 3 function+file-scoped `fixup_game_funcs.py` patches (batch-instrumentation rule, one
+    build/run): a wild-pointer guard (`ctx->r17 < 0x80010000` → log `[slot-anim-loop-guard]`, jump to the
+    function's own final epilogue label instead of crashing) plus write/read cache diagnostics
+    (`[slot-anim-cache-write]`/`[slot-anim-cache-read]`). Regenerated + built clean. **Live run result**:
+    guard held (crash no longer occurs there); **0** cache-write lines, **1** cache-read line
+    (`ptr=0x00000000` — plain BSS-zero, not corrupted), **1** guard fire, **0** `[missing-func]` (rules out
+    M4 phantom-stub involvement) — `initCraftSelectScreen`'s cache-populating path never ran before the
+    per-frame tick read the still-zero global. **The guard bought exactly one function's depth**: an
+    immediate SIBLING crash surfaced one call deeper in the same tick, `advancePlayerAnimationPhase+564`
+    (backtrace `advancePlayerAnimationPhase ← tickCraftSelectScreen ← drawRadarIcon ← menuOverlayInit ←
+    mainGameLoop`) — structurally identical, and **already on record as item -11** (s89, "3
+    non-recurrences... 8 prior crashing soaks"); its self-referencing LR matches the exact
+    symbol-misattribution artifact the s87→s88 overturn already explained, not real recursion. **Read**:
+    this looks like an idiom class — multiple sibling consumers of one player-slot-animation-channel
+    subsystem (this function, `advancePlayerAnimationPhase`, plausibly `frameStartReset` per item -8's
+    "shared-dispatcher hypothesis") all crashing on one never-initialized-before-first-tick root state,
+    not independent bugs. Matches the USER DIRECTIVE's preferred M3 shape (idiom-class audit) exactly,
+    arrived at via the crash-driven route rather than a fresh discovery tool. Not yet extended to
+    `advancePlayerAnimationPhase` (one bounded work unit per iteration) — that is the next work unit.
+    Confirmation soak queued: `scratch/agent/soak_queue/s424_slotanimguard_confirm.sh` (same schedule,
+    checks guard-fire counts + which crash, if any, recurs). Full detail: PORTING-STATE Session 424.
 
 -259. **(s422) `0x800290d4` "six independent triggers" lead — INVESTIGATED AND CLOSED, not a bug.**
     The s421 close-out flagged this as the strongest concrete lead left after M4 item -249. Root-caused
@@ -319,7 +322,11 @@ oldest). Current top is -260 (s423, OPEN — reproduction pending); the next new
     still unknown. **Standing rule**: audit the patch report for anything other than the expected `xN`
     count after every `fixup_game_funcs.py` run. Full detail: `PORTING-STATE` Sessions 120, 121, 126.
 
--11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89).** 3 consecutive non-recurrences since s88's correctly-targeted instrument, against 8 prior crashing soaks. `ROGUESQ_LOG_ANIM_CB=1` still live if it recurs.
+-11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89), RECURRED s424.** 3 consecutive
+    non-recurrences since s88's correctly-targeted instrument, against 8 prior crashing soaks.
+    `ROGUESQ_LOG_ANIM_CB=1` still live. s424 hit it again as a sibling of item -261's guarded
+    `startPlayerSlotAnimationChannelLooping` crash, same tick, same likely root state (uninitialized
+    player-slot-animation-channel data) — see item -261, next work unit.
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
 -7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once earlier items clear: `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40, document the phase timeline. Gate already keeps black off; residual S1 `fs` freeze (~3769-3872 plateau) may still stall animation.
