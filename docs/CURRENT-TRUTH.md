@@ -44,11 +44,26 @@ this as an idiom-class of sibling consumers on one uninitialized root state, not
 **s425 guarded that 2nd sibling too (after a self-caught source-mapping error, see item -261) and hit a
 THIRD sibling, `getPlayerAnimChannelEntryByIds`, one call deeper still — the same near-RDRAM-base
 signature every time.** Per NEXT.md's own pre-set rule, a 3rd sibling recurrence is the trigger to STOP
-one-off guards and switch to a systematic idiom-class audit of the whole consumer set — **this thread now
-needs that audit, not a 4th guard.** See item -261 below. Full M4/M5 legs remain closed/exhausted as of
-s421/s397 respectively — this new thread supersedes needing separate human reconfirmation on "where to
-focus next" for the moment, since it's a direct, in-progress continuation of the M3 DoD leg NEXT.md was
-already authorized to pursue.
+one-off guards and switch to a systematic idiom-class audit of the whole consumer set. **s426 did that
+audit and root-caused + fixed the whole chain**: all 3 siblings traced to ONE never-called function
+(`initCraftSelectScreen`) whose real ~1200-line body was silently truncated to 1 instruction by a
+duplicate-symbol-name collision in `menu_overlay.txt` (two names, `func_800AEC60` and
+`initCraftSelectScreen`, registered at the identical address 0x800AEC60 — N64Recomp gives the
+first-listed duplicate a body truncated at the second's address). Deleting the stale placeholder line
+fixed it — live-verified via positive control (the previously-silent cache-write diagnostic fired for
+the first time, and cache-reads changed from a wild near-zero pointer to a sane heap pointer). The fix
+immediately surfaced a NEW, different crash one step earlier in the menu flow (`updateHangarBayScene`,
+same wild-pointer idiom, different function family — item -262). **s426 also found 19 MORE instances of
+this exact duplicate-symbol-name bug class across `menu_overlay.txt`/`main_overlay.txt`/
+`mission_overlay.txt`** (only 1 of 20 total fixed so far), including one, `hangarInitialize`/
+`mallocCraftSelectionData`, that is the SAME address the entire closed s283-396 `-0x25A4` audit (item
+-239..-247) was built on — verified by direct read that `hangarInitialize` (the only name any call site
+uses) is a 1-instruction truncated stub and the real 103-site body lives in the never-called
+`mallocCraftSelectionData`. **This is flagged, not yet fixed or confirmed as the same functional bug —
+see item -264, the single most consequential open thread in the project.** Full M4/M5 legs remain
+closed/exhausted as of s421/s397 respectively — this new thread supersedes needing separate human
+reconfirmation on "where to focus next" for the moment, since it's a direct, in-progress continuation of
+the M3 DoD leg NEXT.md was already authorized to pursue.
 
 ## Current truth (established by session 295; unchanged, reviewed through s372)
 
@@ -190,11 +205,76 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -261 (s425, OPEN — 3rd sibling hit, idiom-class audit is the next work unit,
-NOT a 4th guard); the next new item takes -262.
+oldest). Current top is -264 (s426, OPEN — the duplicate-symbol bug class); the next new item takes -265.
+
+-264. **(s426) `hangarInitialize`/`mallocCraftSelectionData` duplicate-symbol collision — flagged,
+    NOT yet fixed or confirmed. Single most consequential open thread in the project.** Same
+    address (0x800A9364), same duplicate-symbol-name mechanism just confirmed live for item -261/-262
+    below: `hangarInitialize` (funcs_27.c:117206, the only name any call site — funcs_35.c:1589 —
+    resolves to) is a 1-instruction truncated stub; the real ~4386-line body, containing all 103
+    `-0x25A4` sites the entire closed s283-396 audit (item -239..-247) guarded, lives in
+    `mallocCraftSelectionData` (funcs_27.c:117212-121598), which has **zero call sites anywhere** —
+    verified by direct line-range check that every s390/s392-395 guard marker falls inside
+    `mallocCraftSelectionData`'s body, not `hangarInitialize`'s. Unlike item -262's fix, BOTH names here
+    are deliberate/real (not a generic placeholder vs a real name), so which one the call site should
+    keep is a judgment call, not an obvious delete — needs its own dedicated session: pick a name,
+    apply the same symbol-file fix, regen, and live-verify with a positive control (expect the -0x25A4
+    guards to start firing for the first time ever, and very possibly a wave of "first genuine
+    execution" crashes analogous to item -262's `updateHangarBayScene`). If confirmed the same bug,
+    this overturns "the -0x25A4 family is fully closed" (item -239..-247) — not yet overturned, just
+    flagged, since the mechanism is unconfirmed for this specific pair. 19 total duplicate-symbol pairs
+    remain uninvestigated/unfixed across `menu_overlay.txt` (5, all real/real, same ambiguity as this
+    one: `hangarGenerateSecondaryWeaponString`/`buildSecondaryWeaponString` 0x800AE530,
+    `getAvailablePlayerCraftFlagsConsiderUnlocks`/`getAvailableShipsForLevelAlt` 0x800C6234,
+    `getSecondaryWeaponForLevelAndCraft`/`getSecondaryWeaponForCraftLevel` 0x800C6728,
+    `getLevelIntroCrawlId`/`getPlanetAssetForLevel` 0x800C6900), `main_overlay.txt` (2, look like
+    harmless DATA-symbol aliases: `gActiveModelAnimSlots`/`D_8013A990` 0x8013A990,
+    `gHangarBayDescriptorArrayPtr`/`gCraftSelectScreenData` 0x800CDA5C), and `mission_overlay.txt` (12:
+    11 are the SAME `func_0xADDR`/real-name pattern as item -262's confirmed-safe fix — high-confidence,
+    low-risk batch candidates, several are NPC/craft init functions: `func_800BF4A0`/
+    `attached3DSoundEmitterNpcHandler`, `func_800C7DC0`/`initNpcActorFromSpawnMessage`,
+    `func_800CA270`/`initNpcActorVariant`, `func_800CEF20`/`advanceAtStEffectPhaseSound`,
+    `func_800D2CA0`/`npcInitWithMotionParams`, `func_800D4ED0`/`npcInitChildLinkedToParent`,
+    `func_800DD2D0`/`npcInitFullModel`, `func_800DFB90`/`applyCraftAnimAndDetailParams`,
+    `func_800E4480`/`resetCraftInstanceMotionState`, `func_800E8A40`/`runDestructionPhaseSequence`,
+    `func_800ECE10`/`datItemActorNpcHandler`; 1 real/real like the menu group: `handleHUD`/
+    `initHudStruct`). Full detail: PORTING-STATE Session 426.
+
+-263. **(s426) NEW crash surfaced immediately by item -262's fix: `updateHangarBayScene`, single-
+    source, not yet investigated.** SIGBUS, `far=0x380000008` — same "rdram_base + small near-zero
+    offset" wild-pointer signature as item -261's whole family (x9=0x300000000 = rdram host base,
+    x10=0x80000008) — but at `updateHangarBayScene+13156` (`last-guest-pc=0x800547bc`), called from
+    `runHangarSelectionFrame`, a function family (0x80054xxx) distinct from both the 0x80062xxx
+    "PlayerSlot" and 0x800AExxx "CraftSelect" families. Occurs ~15s after the SELECT GAME `a` press,
+    notably earlier in the menu flow than any prior run's crash point (the real
+    `initCraftSelectScreen` logic now runs synchronously when the screen opens, instead of the dead
+    stub deferring the wild-pointer deref downstream). Confirmation soak queued:
+    `scratch/agent/soak_queue/s426_menufix_regression.sh`. Full detail: PORTING-STATE Session 426.
+
+-262. **(s426) `startPlayerSlotAnimationChannelLooping`/`advancePlayerAnimationPhase`/
+    `getPlayerAnimChannelEntryByIds` 3-sibling chain (item -261) ROOT-CAUSED AND FIXED — not one
+    global, a 4-word struct (0x800CDFA4/A8/AC/B0) whose sole writer, `initCraftSelectScreen`, was
+    never called due to a duplicate-symbol-name collision.** `menu_overlay.txt` registered BOTH
+    `func_800AEC60` (an early generic gap-filler placeholder, under a "Fake Function Fixing" section)
+    and `initCraftSelectScreen` (a later, deliberately-investigated real name) at the identical address
+    0x800AEC60. N64Recomp's function-boundary walker truncated the first-listed duplicate
+    (`func_800AEC60`, the name the sole call site — funcs_34.c:9555 — resolved to) to 1 instruction,
+    giving the real ~1200-line body to the unreferenced `initCraftSelectScreen` name instead — so the
+    game's craft-select-screen init logic never ran, exactly matching s424's "0 cache-writes"
+    measurement. Fixed by deleting the stale `func_800AEC60` line (no call-site edits needed — N64Recomp
+    derives the JAL target's C name from whichever symbol remains at that address). Live-verified:
+    `[slot-anim-cache-write] initCraftSelectScreen cached ptr=... n=0` fired (positive control — the
+    function ran for the first time ever) and `[slot-anim-cache-read]` now reads a sane KSEG0 heap
+    pointer (`0x801BD660` x40) instead of the wild near-zero value every prior run showed. The specific
+    3-sibling crash chain did not recur in the verification run. This is the SAME general mechanism as
+    the closed -6 and -249 bug classes but a third, previously-unrecognized shape: duplicate names
+    *within one symbol file* (not across files — `make_elf.py`'s cross-file dedup doesn't apply here).
+    See item -264 for the much bigger version of this same class, and item -263 for the new crash this
+    fix surfaced. Full detail: PORTING-STATE Session 426.
 
 -261. **(s424/s425) `startPlayerSlotAnimationChannelLooping` and 2 siblings root-caused and guarded;
-    3rd sibling hit — the idiom-class-audit trigger has now fired, OPEN.** s423's reproduction (2/2)
+    3rd sibling hit — the idiom-class-audit trigger has now fired, SUPERSEDED s426, see item -262.**
+    s423's reproduction (2/2)
     crossed NEXT.md's own bar for opening a root-cause session. **s424** traced crash #1 to
     `funcs_14.c:4999`, the function's first deref of its `$a0` arg (`ctx->r17 == 0x80000003`, a wild
     near-null "pointer"), read by the caller (`startSlotLoopAnimWithVoiceSync`, funcs_30.c) from a fixed
@@ -345,7 +425,7 @@ NOT a 4th guard); the next new item takes -262.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
 -7. **M3 — HOLD_S=60 craft stick (M3 DoD body)** once earlier items clear: `PROBE_MODE=start_only HOLD_S=60` marks 10/25/40, document the phase timeline. Gate already keeps black off; residual S1 `fs` freeze (~3769-3872 plateau) may still stall animation.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
--3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition and s399's `main_overlay.txt` 3-line deletion (the actual fix). Ask the user before committing there.
+-3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.
 -2/-1. **Band-row coverage history** (settled, s41-49): s40's `col`-write probe fails its control. **GPU->CPU present PNG** via `NativeTarget::copyToRAM` -- a convenience, not a blocker.
 
 **Done, do not redo:** optimising the ucode vector path (s38: `-O0`→`-O2` gave 41x; SIMD/RSPRecomp vector work unnecessary at 4.5ms/task without new justification); the ucode-performance-bottleneck→DL-submission-collapse→RDP-census→draw-loss chain (s33-s37); coverage attribution/format-mismatch analysis (`LOG_BBOX`/`LOG_UPLOAD` — every band draw is I4 `tlut=0`); the s27-s31 I4-decode line (`FIX_DXT_I`, `I4_SHADE_MONO`, `SHADE_ONLY_MONO`, restricted `FLATTEN_I4`) — aimed at a texture that doesn't paint those pixels.

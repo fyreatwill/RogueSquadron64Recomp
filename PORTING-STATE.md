@@ -35717,3 +35717,118 @@ methodology error mid-session — the self-correction and the tooling lesson abo
 surfaced the 3rd-sibling trigger that changes the shape of the next work unit from reactive guarding to
 a systematic idiom-class audit, exactly the strategic pivot the USER DIRECTIVE and NEXT.md's own
 escalation rule called for).
+
+## Session 426 (2026-08-07)
+
+Work unit (per NEXT.md's own 3rd-sibling trigger): systematic idiom-class audit of item -261's
+0x800CDFAC-family crash chain, instead of a 4th one-off guard. Result: root-caused the entire chain to
+a single regen/symbol-table bug, applied and live-verified a fix, and discovered the bug is one
+instance of a much larger 19-remaining-instance class.
+
+Step 1 -- traced getPlayerAnimChannelEntryByIds's wild arg (3rd sibling) to its source, per NEXT.md's
+discriminating test. s193_disasm.py against the crash pc=getPlayerAnimChannelEntryByIds+96 found a
+symbol-table range check clean this time (function is 412 bytes, offset 96 is well inside -- no repeat
+of s425's boundary near-miss). The wild arg is $a0, loaded 3 calls up the chain in
+applyPlayerSlotAnimChannelKeyframe (funcs_30.c:12734) from a fixed global at 0x800CDFA4 -- 8 bytes away
+from item -261's already-known 0x800CDFAC, i.e. a different global, contradicting the "traces to the
+same global" branch of NEXT.md's own test. Per NEXT.md's pre-written fallback, this meant scope 2 (the
+full grep) was required.
+
+Step 2 -- full-codebase grep for every reader/writer of the -0x2040..-0x2060 offset range from the
+0x800D0000 lui base (the idiom all 3 crashes and s424's known writer share) found a 4-word struct at
+0x800CDFA4/A8/AC/B0, not a single global -- and, decisively, all 7 write sites across all 4 words trace
+to ONE function, initCraftSelectScreen (funcs_29.c:2550-3778; a 5th nearby offset, -0x2040/0x800CDFC0,
+is written by an unrelated function, spawnOrientedEffectWithEasedSpin, and excluded). Readers:
+tickCraftSelectScreen (10x), handleLevelSelectStartConfirm (3x), tickMenuTransitionState (1x),
+initMenuWidgetArray (1x), startSlotLoopAnimWithVoiceSync (4R+2W), applyPlayerSlotAnimChannelKeyframe
+(2x), tickTimedScreenFadeFloat (1R+2W-to-0, confirmed same 0x800D0000 base by direct lui read despite
+the unrelated-sounding name), playExitSoundAndToggleScreenMeshes (1x), and an unresolved
+static_5_800AF6AC (11x) -- 9 consumer functions total, all trusting initCraftSelectScreen ran first.
+
+Step 3 -- why initCraftSelectScreen never ran: found the actual root cause. Grepped for
+initCraftSelectScreen's own call sites: zero direct calls. Its address (0x800AEC60) is invoked as
+func_800AEC60(rdram, ctx) from funcs_34.c:9555 instead. Source read of funcs_29.c around both symbols
+found two separate RECOMP_FUNC bodies compiled for the identical address 0x800AEC60: func_800AEC60 (a
+1-instruction stub, addiu $sp,$sp,-0x68, no return -- falls straight off the C function) immediately
+followed by initCraftSelectScreen (the full ~1200-line real body, containing all 7 struct writes).
+symbol_files/menu_overlay.txt has BOTH names at the same address: func_800AEC60 (line 223, under a
+"Fake Function Fixing" section header -- an early, generic gap-filler placeholder) and
+initCraftSelectScreen (line 435, under a later section of deliberately-investigated real names).
+N64Recomp's function-boundary walker gives whichever duplicate is listed FIRST a body truncated at the
+SECOND duplicate's address (here: 1 instruction), and the second gets the real body running to the true
+next symbol -- and the sole call site resolved to the first (truncated) name. initCraftSelectScreen was
+dead code; the game's real craft-select-screen init logic never executed, exactly matching s424's "0
+cache-writes" measurement (the function that logs cache-writes was never invoked).
+
+Step 4 -- fix applied and live-verified. Deleted the "func_800AEC60 = 0x800AEC60;" line from
+menu_overlay.txt (kept the semantically-named initCraftSelectScreen, so no call-site edits needed --
+N64Recomp derives the JAL target's C name from whichever symbol remains). Regenerated (make_elf.py ->
+N64Recomp -> fixup_game_funcs.py; the 4 existing diagnostics [slot-anim-cache-write]/
+[slot-anim-cache-read]/[slot-anim-loop-guard]/[anim-phase-guard] all re-anchored cleanly, matching the
+expected patch counts) -> build clean. Live run (s426_menufix_verify1, same PROBE_KEYS schedule as
+s423-425): positive control fired -- "[slot-anim-cache-write] initCraftSelectScreen cached ptr=0x00000006
+n=0" (the function ran for the first time ever), and "[slot-anim-cache-read] startSlotLoopAnimWithVoiceSync
+read ptr=0x801BD660" (40x) -- a sane KSEG0 heap pointer, not the wild near-zero value from every prior
+run. Item -261's specific 3-sibling crash chain did not recur.
+
+Step 5 -- a new, different crash surfaced immediately, same idiom, different family. The run still
+died, ~15s after the SELECT GAME 'a' press (process gone at 19.1s post-title-phase, i.e. mid
+craft-select-screen entry, notably EARLIER in the menu flow than any prior run's crash point -- the
+real init logic now runs synchronously right when the screen opens, instead of the dead stub silently
+no-op'ing and deferring the wild-pointer deref to a later downstream consumer). Crash: SIGBUS,
+far=0x380000008 (same "rdram_base + small near-zero offset" signature as all 3 siblings -- x9=
+0x300000000 is the rdram host base, x10=0x80000008), but at updateHangarBayScene+13156
+(last-guest-pc=0x800547bc), called from runHangarSelectionFrame -- a function family with addresses in
+the 0x80054xxx range, distinct from both the 0x80062xxx "PlayerSlot" family and the 0x800AExxx
+"CraftSelect" family. This is the new active thread, not yet investigated.
+
+Step 6 -- the fix's mechanism generalizes: catalogued 19 more instances of the same duplicate-address
+symbol bug (grepped all 4 remaining .txt symbol files with duplicate addresses; cinematic_overlay.txt/
+ignored_symbols.txt/libultra.txt/zlib.txt have none). 20 total pairs found this session; 1 fixed:
+- menu_overlay.txt, 5 remaining, all real-name/real-name (ambiguous which name the call site should
+  keep -- needs the same per-pair investigation as this session's fix, not a blind batch delete):
+  hangarInitialize/mallocCraftSelectionData (0x800A9364), hangarGenerateSecondaryWeaponString/
+  buildSecondaryWeaponString (0x800AE530), getAvailablePlayerCraftFlagsConsiderUnlocks/
+  getAvailableShipsForLevelAlt (0x800C6234), getSecondaryWeaponForLevelAndCraft/
+  getSecondaryWeaponForCraftLevel (0x800C6728), getLevelIntroCrawlId/getPlanetAssetForLevel
+  (0x800C6900).
+- main_overlay.txt, 2 remaining, both look like DATA symbol aliases (gActiveModelAnimSlots/
+  D_8013A990 at 0x8013A990; gHangarBayDescriptorArrayPtr/gCraftSelectScreenData at 0x800CDA5C) --
+  lower priority, the truncated-function-body mechanism doesn't obviously apply to data labels.
+- mission_overlay.txt, 12 remaining: 11 are the SAME func_0xADDR/real-name pattern as this session's
+  confirmed fix (verified: every one sits under its own gap-filler pairing, structurally identical
+  origin to the fixed func_800AEC60 case) -- func_800BF4A0/attached3DSoundEmitterNpcHandler,
+  func_800C7DC0/initNpcActorFromSpawnMessage, func_800CA270/initNpcActorVariant,
+  func_800CEF20/advanceAtStEffectPhaseSound, func_800D2CA0/npcInitWithMotionParams,
+  func_800D4ED0/npcInitChildLinkedToParent, func_800DD2D0/npcInitFullModel,
+  func_800DFB90/applyCraftAnimAndDetailParams, func_800E4480/resetCraftInstanceMotionState,
+  func_800E8A40/runDestructionPhaseSequence, func_800ECE10/datItemActorNpcHandler -- several are
+  NPC/craft init functions, high-value candidates for dissolving other already-catalogued
+  "uninitialized state" crash families. 1 pair (handleHUD/initHudStruct) is real/real like the
+  menu_overlay.txt group.
+
+Flagged, NOT fixed this session -- highest-priority follow-up, needs its own dedicated session:
+hangarInitialize/mallocCraftSelectionData (0x800A9364) is the SAME address the entire closed s283-396
+-0x25A4 "hangar-list-pointer family" audit (item -239..-247, dozens of sessions, 103 raw hits,
+extensive guard placement) was built on. Verified by direct read: hangarInitialize (funcs_27.c:117206)
+is a 1-instruction truncated stub identical in shape to func_800AEC60; the real ~4386-line body (all
+103 -0x25A4 sites AND all of s390/s392-395's guard markers, confirmed by line-range check) lives in
+mallocCraftSelectionData (funcs_27.c:117212-121598) -- which has zero call sites anywhere.
+hangarInitialize is the only name any jal resolves to (funcs_35.c:1589). If this is the same bug (very
+likely given the identical duplicate-address/truncation signature), the entire closed -0x25A4 audit
+spent 100+ sessions guarding dead code, and the REAL hangar/craft-selection-data init logic has never
+executed in any prior soak -- this would also mean fixing it is likely to surface a wave of new
+"first genuine execution" crashes, same as this session's updateHangarBayScene one. This is NOT yet
+confirmed as a functional bug (unlike the menu_overlay.txt case, both names here are real/deliberate,
+so which one the call site should resolve to is a judgment call, not an obvious "delete the generic
+placeholder" -- needs the same live positive-control verification this session used, plus a decision on
+which name to keep). Single most consequential open thread in the project.
+
+Method note: this is the SAME general mechanism as the closed -6 (main_overlay.txt 3-name dedup) and
+-249 (784-function phantom-overlay-relocation) bug classes, but a THIRD, previously-unrecognized shape
+of it: duplicate symbol names within a single symbol file rather than across files. make_elf.py's
+cross-file first-file-wins dedup (the -6/-249 mechanism) does not apply here -- this is N64Recomp's own
+function-boundary walker choosing arbitrarily between same-address duplicates within one file's list.
+
+Soak queued: scratch/agent/soak_queue/s426_menufix_regression.sh (re-run the fix, confirm the specific
+3-sibling chain stays gone and characterize whether updateHangarBayScene reproduces deterministically).
