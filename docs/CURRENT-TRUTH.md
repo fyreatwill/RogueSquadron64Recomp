@@ -162,8 +162,44 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -271 (s435, ADVANCED — root-caused a last-guest-pc misattribution and closed
-the diagnostic coverage gap that caused it); the next new item takes -272.
+oldest). Current top is -272 (s436, ADVANCED — root-caused and fixed a real, new, confirmed crash: a
+sibling of item -270's idiom that its register-scoped scan couldn't see); the next new item takes -273.
+
+-272. **(s436) A REAL confirmed bug this time, not a misattribution: `reserveAndEmitDLEntry` reloads
+    `0x801163B0` (item -270's global) into TWO different registers 4 instructions apart — `$v0`
+    (GENERIC_CACHE_GUARD-protected) and `$a1` (unguarded) — and the unguarded copy is used as a raw
+    write pointer 14 instructions later with zero validation. A scoped scan found 6 MORE occurrences of
+    the same shape; all 7 fixed with one new guard, `CACHE_HEAD_A1_GUARD`.** `s435_genericcacheguard_
+    confirm2.sh` crashed at 109.5s: `si_addr=0x380000000`, `pc-symbol=reserveAndEmitDLEntry+12064`,
+    `last-guest-pc=0x8000ce68`. One line earlier in the same log: `[generic-cache-guard] n=0
+    site=0x8000CE30 bad_head=0x00000000` — item -270's FIRST-EVER fire, a genuine positive control (the
+    diagnostic correctly caught a live corrupted read) — but the process crashed immediately after
+    anyway. Source read (`funcs_3.c:17190-18113`) found why: `reserveAndEmitDLEntry` reloads
+    `0x801163B0` twice within 4 instructions — once into `$v0`/`ctx->r2` (0x8000CE28-2C, the
+    GENERIC_CACHE_GUARD site, correctly substituted 0 for the bad head) and once into `$a1`/`ctx->r5`
+    (0x8000CE20-24, never covered by s434's `$v0`-only regex). Nothing writes `ctx->r5` between reload
+    and first use; that first use, 14 instructions later (`MEM_W(0X0, ctx->r5) = ctx->r3;`), is an
+    UNCONDITIONAL write through the raw pointer — with `bad_head=0` confirmed same-run at the sibling
+    `$v0` read (no intervening write between the two reloads), `$a1` must also have been 0: a
+    null-guest-pointer store, an exact mechanistic match for the SIGBUS. This is byte-for-byte what
+    NEXT.md's own s435 write-up predicted before this soak ran ("a SECOND reference to the SAME global
+    using a DIFFERENT register... exactly the kind of thing worth a fresh grep-scan before guarding").
+    A scoped scan (`scratch/agent/s436_r5_idiom_scan.py`) of all 24 `ctx->r5 = MEM_W(ctx->r5,
+    0X63B0)` sites (16 funcs_3.c, 8 funcs_4.c) classified them: 12 have the game's own legitimate
+    `!=0` empty-list check (not a bug), 6 reassign `$a1` to an unrelated pointer before any use (not a
+    bug, value already dead), and 7 (funcs_3.c only) share the exact crash shape — reload, zero
+    validation, unconditional write 60-81 lines later. All 7 fixed with `CACHE_HEAD_A1_GUARD`
+    (`fixup_game_funcs.py`, explicit per-site literal anchors — a blind regex on the write's own text
+    was rejected: that exact text also appears at 30+ unrelated, safe `$a1`-relative stores elsewhere in
+    the file). Unlike GENERIC_CACHE_GUARD, 0 is not a safe substitute for a WRITE ADDRESS, so an
+    out-of-range `$a1` skips the write entirely (a no-op; confirmed no site reads the write's result
+    again downstream). Regenerated/rebuilt clean: all 7 sites patched `x1`, GENERIC_CACHE_GUARD
+    unchanged at 107 (no regression), 0 new warnings. Live-verify (both diagnostics armed, same
+    s427-435 schedule) died at 109.5s on a DIFFERENT, already-catalogued crash (item -263, 3rd
+    occurrence — not a regression, the touched code path was never reached this run); neither guard
+    fired, so this fix is still without its own positive control (1 observation so far). Confirmation
+    soak queued: `scratch/agent/soak_queue/s436_cacheheada1_confirm.sh`. Full detail: PORTING-STATE
+    Session 436.
 
 -271. **(s435) Item -270's confirmation soak crashed on a DIFFERENT, previously-unguarded bug —
     root-caused as a last-guest-pc MISATTRIBUTION, not a new corruption site; fixed by extending
@@ -331,14 +367,24 @@ the diagnostic coverage gap that caused it); the next new item takes -272.
     uninvestigated across the three overlay files. Full detail: PROJECT-OVERVIEW §16, PORTING-STATE
     Session 427 (catalogue: Session 426).
 
--263. **(s426) `updateHangarBayScene` crash surfaced by item -262's fix, single-source,
-    uninvestigated.** Same wild near-zero-pointer signature as item -261's family, different function
-    family (0x80054xxx). Confirmation soak queued: `scratch/agent/soak_queue/s426_menufix_regression.sh`.
-    Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Session 426. **s434 update: this
-    `tickWrappingTimerAccumulatorList`/`0x800547bc` signature (an UNRELATED global, `0x80137C84`, not
-    item -270's `0x801163B0`) did not recur in s434's clean 300s run either — still single-source, still
-    unrooted, not yet closeable; may simply not have been reached this run (item -270's schedule differs
-    only in which build was under test, not the key timing).
+-263. **(s426) `updateHangarBayScene` crash surfaced by item -262's fix — now 3 independent
+    occurrences (s426, s433, s436), still uninvestigated, but s436 found `last-guest-pc=0x800547bc`
+    is itself a MISATTRIBUTION (same mechanism as items -270/-271), not the real fault site.** Same wild
+    near-zero-pointer signature as item -261's family, different function family (0x80054xxx).
+    `0x800547BC` disassembles to `addiu $sp,$sp,0x40` — the LAST instruction of
+    `tickWrappingTimerAccumulatorList`'s own epilogue (`funcs_11.c:15057`), not a memory access. The
+    breadcrumb froze there because that function returns into one of 3 callers
+    (`runHangarSelectionFrame` funcs_28.c, `cinematicLoopBody` funcs_27.c, `runInMissionFrame`
+    funcs_42.c) — a spot-check of `runHangarSelectionFrame`'s call site (`funcs_28.c:5195-5230`, most
+    likely active caller in the hangar-menu schedule) found **zero** breadcrumb writes nearby, so item
+    -263's true fault location has never actually been localized; `updateHangarBayScene`/
+    `tickWrappingTimerAccumulatorList` are both plausibly innocent stale attributions. **Top item for
+    next iteration: add a BREADCRUMB17 to `runHangarSelectionFrame`** (same s435 playbook) before
+    attempting any fix, so the next occurrence reports its true guest PC. s434 update: this same
+    signature (an UNRELATED global, `0x80137C84`, not item -270's `0x801163B0`) did not recur in s434's
+    clean 300s run — may simply not have been reached that run (schedule/build differ). Confirmation
+    soak queued s426; recurred again s433 (2nd source) and s436 (3rd source, `si_addr=0x3c84f1b94`).
+    Full detail: PROJECT-OVERVIEW §16, PORTING-STATE Sessions 426, 433, 436.
 
 -262. **(s426) `startPlayerSlotAnimationChannelLooping`/2-sibling chain (item -261) ROOT-CAUSED AND
     FIXED: a duplicate-symbol-name collision truncated `initCraftSelectScreen`'s real ~1200-line body

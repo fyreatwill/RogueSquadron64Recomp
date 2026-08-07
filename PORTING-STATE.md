@@ -36444,3 +36444,98 @@ chases" rule). It only ensures the NEXT sighting is precisely localized rather t
 untracked by git per this project's long-standing convention -- never committed there across 400+
 sessions of edits, confirmed still true this session via `git status --short`).
 
+
+## Session 436 (2026-08-07)
+
+**Work unit: consumed s435's queued confirmation soak, root-caused its crash as a REAL, new, confirmed
+bug (not a misattribution this time) — a sibling of item -270's GENERIC_CACHE_GUARD idiom that the s434
+scan's register-scoped regex couldn't see — found the rest of the idiom class via a scoped scan, and
+fixed all 7 real occurrences with one project-precedent-matching patch.**
+
+`s435_genericcacheguard_confirm2.sh` (queued s435) came back `rc=1` at 109.5s: `[CRASH] caught signal 10
+(Bus error: 10)`, `si_addr=0x380000000`, `pc-symbol=reserveAndEmitDLEntry+12064`,
+`last-guest-pc=0x8000ce68`. Crucially, this run's log also shows `[generic-cache-guard] n=0
+site=0x8000CE30 bad_head=0x00000000 ra=0x00000000` fired ONE LINE before the crash — the first-ever fire
+of item -270's guard (a genuine positive control: the diagnostic correctly caught a live, in-the-wild
+corrupted read of `0x801163B0` this run) — but the process crashed anyway, immediately after.
+
+**Root cause** (read `RecompiledFuncs/funcs_3.c:17190-18113`, the full body of `reserveAndEmitDLEntry`,
+the guest function at 0x8000CB88-0x8000CE94 that owns the `0x801163B0` free-list head): the function
+reloads the SAME global TWICE within 4 instructions of each other, into TWO DIFFERENT registers — `$v0`
+(`ctx->r2`) at 0x8000CE28-2C, immediately dereferenced at 0x8000CE30 (this IS the GENERIC_CACHE_GUARD
+site, and it correctly substituted 0 for the bad head) — and `$a1` (`ctx->r5`) at 0x8000CE20-24, which
+the s434 scan's regex never covered because it only matched the `$v0`-into-`$v0` idiom shape. Nothing
+writes to `ctx->r5` between its reload and its first use. That first use, 14 instructions later at
+0x8000CE68 (`MEM_W(0X0, ctx->r5) = ctx->r3;`), is an UNCONDITIONAL write through the raw reloaded
+pointer — no `!=0` check, no range check, unlike every other place this project's guards have already
+covered. With `bad_head=0x00000000` confirmed same-run at the sibling `$v0` read (no intervening write
+between the two reloads, so `$a1` must also have been 0), this write is a null-guest-pointer store — an
+exact mechanistic match for the observed SIGBUS.
+
+This is byte-for-byte what NEXT.md's own s435 outcome #3 predicted before this soak even ran ("a SECOND
+reference to the SAME 0x801163B0 global... using a DIFFERENT register than the $v0/ctx->r2 idiom item
+-270's scan was scoped to... exactly the kind of thing worth a fresh grep-scan before guarding, not a
+bespoke single-site guard").
+
+**Scoped idiom-class scan** (`scratch/agent/s436_r5_idiom_scan.py`, `s436_r5_followup.py`): grepped both
+`funcs_3.c`/`funcs_4.c` for `ctx->r5 = MEM_W(ctx->r5, 0X63B0)` (the `$a1`-reload idiom) — 24 total sites
+(16 funcs_3.c, 8 funcs_4.c). Classified all 24 by reading each site's downstream code:
+- **12 sites**: `if (ctx->r5 != 0)` 3 lines after the reload — this IS the original game's own
+  empty-list check (traced one in full: correctly branches to an alloc-new-entry path on 0). Not a bug.
+- **5 sites** (funcs_4.c) **+ 1** (`0x8000B930`, funcs_3.c): `ctx->r5` gets reassigned to an unrelated
+  pointer (a different global at `0x8012xxxx-0x23A8`) well before any subsequent write through it — the
+  `0x801163B0` reload's value is dead before use. Not a bug.
+- **7 sites** (funcs_3.c only: `0x80007EC4/F84/8044/8104`, `0x8000891C`, `0x8000CE24` [the crash site],
+  `0x8000FAB0`) share the exact crash shape: reload into `$a1`, zero validation, then 60-81 lines later
+  an unconditional `MEM_W(0X0, ctx->r5) = ctx->r2|r3;`. These are the bug, all 7 fixed this session.
+
+A blind regex on the write's own text (`MEM_W(0X0, ctx->r5) = ctx->r2/r3;` preceded by an `sw ...,
+0x0($a1)` comment) was tried and rejected — that exact text pattern ALSO occurs at 30+ other addresses in
+`funcs_3.c` that are ordinary, unrelated `$a1`-relative stores with no connection to this global (would
+have silently widened the guard's scope past the verified idiom, same trap the GENERIC_CACHE_GUARD
+comment already warns about). Each of the 7 write addresses is globally unique in the file, so each site
+was patched via its own literal (address comment [+ breadcrumb] + write-statement) anchor — the same
+per-site anchor-uniqueness discipline the s251 `DLENTRY_TAIL_GUARD` site list already established.
+
+**Fix**: `CACHE_HEAD_A1_GUARD` (`N64Recomp/fixup_game_funcs.py`, 7 explicit sites). Unlike
+GENERIC_CACHE_GUARD (safe to substitute 0 for a DEREFERENCED value, since callers already null-check
+downstream), 0 is not a safe substitute for a WRITE ADDRESS here — writing to guest address 0 is exactly
+the crash being fixed. So on an out-of-range `$a1`, the write is skipped entirely (a no-op) rather than
+redirected; confirmed during the scan that no site's write result is read again later in the same
+function, so skipping doesn't desync anything else.
+
+Regenerated (`make_elf.py` → delete `funcs_*.c` → `N64Recomp` → `fixup_game_funcs.py` → cmake). Fixup
+report: all 7 `CACHE_HEAD_A1_GUARD` sites patched `x1` each (no SKIPPED lines), `GENERIC_CACHE_GUARD`
+counts unchanged (66+41=107 — no regression to item -270). Rebuilt clean, same pre-existing 46-warning
+DDIV sign-conversion baseline as every prior session (0 new warnings). Pre-existing, unrelated
+`funcs_27.c` `s390`/`s392`/`s393` hangar-list-guard "SKIPPED — anchor matched x0" lines are the normal
+idempotent-reapply state for those already-landed guards, not something this session's edit touched.
+
+**Live-verify** (`scratch/agent/soak_results/s436_cachehead_a1_verify/`, both `ROGUESQ_LOG_GENERIC_
+CACHE_GUARD=1` and `ROGUESQ_LOG_CACHE_HEAD_A1_GUARD=1` armed, same s427-435 schedule): process died at
+109.5s — but on a **completely different, already-catalogued crash**: `last-guest-pc=0x800547bc`,
+`pc-symbol=updateHangarBayScene+43768`, `si_addr=0x3c84f1b94`. This is item -263's signature (first seen
+s426, 2nd-sourced s433) — a 3RD independent occurrence, not a regression from this session's fix (the
+reserveAndEmitDLEntry code path this session touched was never reached this run). Neither guard fired
+(0/1 for CACHE_HEAD_A1_GUARD, consistent with 0/3 for GENERIC_CACHE_GUARD across all-but-one prior runs)
+— this run is inconclusive for confirming either 0x801163B0 guard, but it is NOT evidence against the
+fix (a pre-existing, unrelated, more-frequently-triggered crash is now the dominant thing killing this
+schedule before it reaches ~110s+ territory). Confirmation soak queued:
+`scratch/agent/soak_queue/s436_cacheheada1_confirm.sh`.
+
+**Bonus lead on item -263** (light read, not this session's fix): `0x800547BC` disassembles to `addiu
+$sp, $sp, 0x40` — the LAST instruction of `tickWrappingTimerAccumulatorList`'s own epilogue (confirmed:
+`RECOMP_FUNC` starts at `funcs_11.c:15057`), not a memory access at all. This is the SAME
+last-guest-pc-misattribution shape as items -270/-271 (BREADCRUMB16): the breadcrumb froze here because
+this function's return lands in one of its 3 callers (`runHangarSelectionFrame` funcs_28.c:4861,
+`cinematicLoopBody` funcs_27.c:106842, `runInMissionFrame` funcs_42.c:6798), and a spot-check of
+`runHangarSelectionFrame` (most likely active caller in this schedule's hangar-menu context) around its
+call site (`funcs_28.c:5195-5230`) found **zero** `g_rs64_last_guest_pc` writes nearby — so item -263's
+true fault location has never actually been localized; `updateHangarBayScene`/`tickWrappingTimerAccumulatorList`
+are both plausibly innocent, stale attributions. Not chased further this session (budget); queued as the
+top item for the next iteration (see NEXT.md) — add a BREADCRUMB17 to `runHangarSelectionFrame`
+(same s435 playbook) before doing anything else to item -263.
+
+**Tooling added this session**: `scratch/agent/s436_r5_idiom_scan.py`, `scratch/agent/s436_r5_followup.py`
+(scan scripts, kept for reference); `CACHE_HEAD_A1_GUARD` in `N64Recomp/fixup_game_funcs.py` (untracked
+repo, per this project's long-standing convention).
