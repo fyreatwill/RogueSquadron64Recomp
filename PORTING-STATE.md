@@ -38790,3 +38790,93 @@ rationale, and the next unexamined candidate bucket (`hi16=0x8012,offset=-0x5B48
 **Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed — closing a full
 M3 idiom-class audit end to end in one session, from the open shape-uniformity question s465 left
 through to a built and soak-queued guard).
+
+## Session 467 (2026-08-07): folded s466's confirm soak (2nd independent confirmation for item
+-299, still 0 fires); item -300 CLOSES at 20/20 read-guard + 10/10 write-guard sites — `NODE_LIST_HEAD_GUARD`/`NODE_LIST_HEAD_WRITE_GUARD`, global `0x8011A4B8`, `funcs_3.c`/`funcs_4.c`
+
+**Soak fold-in first.** `scratch/agent/SOAK-RESULTS.md`'s `s466_dlbufferpool_confirm` (rc=3, 170s)
+was checked against its full `run.log` (not just the one-line probe.sh summary): 0
+`dl-buffer-pool-guard`/`dl-list-append-guard`/`dl-list-reset-guard`/`sibling-ptr-write-guard` fires
+across all 4 sibling guards, `hangarbay-entry` n=34 (positive control, reachable), crashed at 121.6s
+on the SAME already-catalogued `coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` heap-walker
+background-noise family s466's own manual live-verify and s464's confirm soak both hit — a SECOND
+independent confirmation of item -299's true-negative result, unrelated to the guard tested. No
+ledger change needed (item -299 already correctly marked CLOSED).
+
+**Work unit: classify and fix item -300's candidate bucket**, `hi16=0x8012, offset=-0x5B48` ->
+global `0x8011A4B8`, the next-ranked bucket from s465's scan (20 sites, `funcs_3.c`(12)/
+`funcs_4.c`(8) only). Wrote `scratch_s467_classify_5b48.py` (N64Recomp repo, untracked, modeled on
+`scratch_s465_classify_63fc.py`): all 20 raw sites share a byte-identical 3-instruction reload
+(`ctx->rL = MEM_W(ctx->rL, -0X5B48)`) immediately followed by a deref-read (`ctx->rD =
+MEM_W(ctx->rL, 0X0)`) — same `DL_BUFFER_POOL_GUARD`-style read-off-the-raw-reload crash risk if
+`rL` is wild.
+
+**Discriminating finding: this bucket is NOT the single reusable shape NEXT.md hoped for — it's
+TWO distinct downstream shapes needing two different guards**, found by reading full per-site
+context (not stopping at a 14-line sample window, the exact trap s465/s466 already burned a
+session catching once):
+- **10 "first-of-pair" sites** (the original call in each of 10 near-identical functions): `rD`
+  gates a `bnel`-delay-slot conditional write (`if (ctx->rD != 0) { MEM_W(0X4, ctx->rD) =
+  ctx->rPayload; goto L; } goto skip; <dup, dead>; skip:`) — the SAME idiom `FREELIST_NEXT_GUARD`
+  (s441) already fixed for a sibling global, offset `0x4` and all. Forcing `rD = 0` on an invalid
+  `rL` makes the `if` false, safely skipping both copies of the write with the read guard alone —
+  no separate write patch needed for these 10.
+- **10 "second-of-pair" sites** (the SAME 10 functions reloading the SAME global again a few lines
+  later, into a possibly-different register): `rD` here is NOT used for control flow — it's copied
+  into a caller-supplied node (write address trusted, left alone) — but the RELOAD REGISTER ITSELF
+  (never reassigned since the read landed in a different register) is then used DIRECTLY as a
+  SECOND, UNCONDITIONAL write address 1-2 instructions later (`MEM_W(0X0, ctx->rL) =
+  ctx->rPayload`, the delay slot of the function's own `jr $ra` in 9/10 cases) — structurally the
+  SAME write-through-reload risk `DL_LIST_RESET_GUARD` (item -298) already established for a
+  different global, just with an extra deref in between this time. 9/10 of these are byte-identical
+  (only addresses/labels differ) and regex-anchor cleanly right after the read guard's own
+  generated block; the 10th (`funcs_3.c` `0x80008080`/`0x80008090`, the very first call site in
+  program order) has a pre-existing `s436 CACHE_HEAD_A1_GUARD` block spliced in between the read
+  and the write by an earlier, unrelated patch, breaking regex adjacency — handled by its own
+  per-site literal anchor, same discipline as `DL_LIST_RESET_GUARD`'s 14-site remainder.
+
+Both regexes (`NODE_LIST_HEAD_GUARD` for the universal read-guard, 20/20 sites; `NODE_LIST_HEAD_
+WRITE_GUARD` for the write-through-reload guard, 9 regex + 1 per-site = 10/10 sites) were built and
+match-count-verified with a standalone test script (`scratch_s467_test_regex.py`, N64Recomp repo,
+untracked) against the actual on-disk `RecompiledFuncs` text BEFORE being written into
+`fixup_game_funcs.py`, printing sample patched output for both shapes for manual review — same
+discipline as every guard in this lineage. 0 is not a safe substitute for a WRITE ADDRESS (matching
+`CACHE_HEAD_A1_GUARD`/`FREELIST_NEXT_GUARD` precedent), so the write guard skips the write entirely
+on an invalid head rather than redirecting it; a forced 0 IS safe for the READ's result (it either
+gates a write that becomes unreachable, or becomes a harmlessly-copied value elsewhere, same
+"self-heals" precedent as `FREELIST_NEXT_GUARD`).
+
+**Full pipeline run:** raw regen (`os.remove` over `glob`, not bare `rm`) → `make_elf.py` →
+`N64Recomp` (clean, only expected `[Info] Indirect tail call` noise) → `fixup_game_funcs.py` (report:
+`node-list-head lazy-init read guard (NODE_LIST_HEAD_GUARD) patched x12`/`x8` = 20/20;
+`node-list-head write-through-reload guard (NODE_LIST_HEAD_WRITE_GUARD) patched x6`/`x4` = 10/10 —
+`funcs_3.c`'s `x6` is 5 regex + 1 per-site, confirmed by reading the report line-by-line, not just
+the total; sibling guard counts UNCHANGED: `DL_LIST_APPEND_GUARD` 84, `DL_LIST_RESET_GUARD` 84,
+`DL_BUFFER_POOL_GUARD` 84, `SIBLING_PTR_WRITE_GUARD` 119). `cmake --build . -j8`
+(`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`): clean, only pre-existing benign `DDIV`
+sign-conversion warnings (`funcs_8.c`, unrelated, longstanding) and SDL2-version linker warnings.
+`strings RogueSquadron64Recomp | grep -c node-list-head-guard` = 20, `| grep -c
+node-list-head-write-guard` = 10 — both match site counts exactly.
+
+**Live-verify** (`tools/probe.sh`, full armed-var list including `ROGUESQ_LOG_NODE_LIST_HEAD_
+GUARD=1`/`ROGUESQ_LOG_NODE_LIST_HEAD_WRITE_GUARD=1`, `PROBE_KEYS_FROM_PHASE=1`, full 300s/10-press
+schedule, SIGKILL at teardown): **0 `[CRASH]` across the ENTIRE 300s schedule** (all 10 scheduled
+key presses fired, 123 frames captured) — the first soak in several sessions to run the full
+schedule clean rather than hitting an unrelated background-noise crash partway through. 0
+`node-list-head-guard`/`node-list-head-write-guard` fires (null result, matches item -287's
+established true-negative baseline for this whole idiom-class family), 0 fires on every sibling
+guard (`dl-buffer-pool-guard`/`dl-list-append-guard`/`dl-list-reset-guard`/`sibling-ptr-write-guard`,
+no regression), `hangarbay-entry` n=33 (positive control, code path reached). Confirmation soak
+queued: `scratch/agent/soak_queue/s467_nodelisthead_confirm.sh` (same shape as s466's own recipe,
+arms all passive instruments).
+
+**This CLOSES item -300** (`NODE_LIST_HEAD_GUARD`/`NODE_LIST_HEAD_WRITE_GUARD`, 20+10 sites) — full
+derivation now in `docs/CURRENT-TRUTH.md` item -300. No further unexamined bucket has been
+classified yet; s465's scan output still lists several unranked buckets (see item -300's own entry
+for the list) for the next session to pick up.
+
+**Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed, closing a full M3
+idiom-class audit end to end in one session — including catching and correctly handling a genuinely
+different two-shape bucket rather than assuming the prior session's single-shape template applied
+unchanged, per the standing "read >=5 samples before assuming one shape" rule this exact lineage
+established the hard way).

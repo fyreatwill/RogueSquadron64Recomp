@@ -25,10 +25,15 @@ Priority order for upcoming iterations, set after the 300-session review:
    -291 (`DL_LIST_APPEND_GUARD`, 57→84 sites, s454/456, extended s463); item -296
    (`SIBLING_PTR_WRITE_GUARD`, 119 sites, s459); item -292 (`SONGTEMPO_TABLE_GUARD`, 43/43 sites
    across 6 reader functions, s454-462); item -298 (`DL_LIST_RESET_GUARD`, 84/84 sites — 70
-   blanket-regex s463 + 14 per-site-literal-anchor s464, CLOSED s464); and item -299
+   blanket-regex s463 + 14 per-site-literal-anchor s464, CLOSED s464); item -299
    (`DL_BUFFER_POOL_GUARD`, global `0x801163FC`, 84/84 sites, `funcs_3.c`x46/`funcs_4.c`x38,
-   CLOSED s466). **No next candidate identified yet — s465's scan surfaced several other unexamined
-   buckets (see item -299 below), the next session should classify the top-ranked one.**
+   CLOSED s466, 2nd independent confirm soak s467); and item -300 (`NODE_LIST_HEAD_GUARD`/
+   `NODE_LIST_HEAD_WRITE_GUARD`, global `0x8011A4B8`, 20 read-guard + 10 write-guard sites,
+   `funcs_3.c`/`funcs_4.c`, CLOSED s467 — the first bucket in this scan-driven sub-arc to turn out
+   to be TWO distinct downstream shapes rather than one, caught by reading full per-site context
+   instead of a short sample window). **No next candidate identified yet — s465's scan surfaced
+   several other unexamined buckets (see item -300 below), the next session should classify the
+   top-ranked one.**
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
@@ -167,51 +172,91 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Highest number allocated so far is -299 (this item); items are never renumbered when
-compacted into a range pointer. The next NEW item takes -300.
+oldest). Highest number allocated so far is -300 (this item); items are never renumbered when
+compacted into a range pointer. The next NEW item takes -301.
 
--299. **(s465-466) M3 idiom-class audit: `DL_BUFFER_POOL_GUARD`, global `0x801163FC`
+-300. **(s467) M3 idiom-class audit: `NODE_LIST_HEAD_GUARD` (read) / `NODE_LIST_HEAD_WRITE_GUARD`
+    (write), global `0x8011A4B8` (`hi16=0x8012,offset=-0x5B48`), `funcs_3.c`/`funcs_4.c`
+    linked-list-insert-at-head code (10 near-identical functions). CLOSED s467, 20/20 read-guard +
+    10/10 write-guard sites.** Item -299's own next-candidate pointer; s465's scan ranked this the
+    most concentrated remaining bucket. Classified with `scratch_s467_classify_5b48.py` (N64Recomp
+    repo, untracked): all 20 raw sites share a byte-identical reload (`ctx->rL = MEM_W(ctx->rL,
+    -0X5B48)`) immediately followed by a deref-read (`ctx->rD = MEM_W(ctx->rL, 0X0)`) — same
+    read-off-the-raw-reload crash risk as `DL_BUFFER_POOL_GUARD` if `rL` is wild. **Unlike item
+    -299, full per-site context (not a short sample window — the exact trap that cost s465/s466 a
+    session) showed this bucket is TWO distinct downstream shapes, not one:** 10 "first-of-pair"
+    sites where `rD` gates a `bnel`-delay-slot conditional write (`if (ctx->rD != 0) { MEM_W(0X4,
+    ctx->rD) = ctx->rPayload; goto L; } goto skip; <dup, dead>; skip:` — the same idiom
+    `FREELIST_NEXT_GUARD`, s441, already fixed for a sibling global) needing only the read guard
+    (forcing `rD=0` on invalid `rL` makes the `if` false, safely skipping both write copies); and
+    10 "second-of-pair" sites (the SAME 10 functions reloading the SAME global again a few lines
+    later) where the reload register itself, never reassigned, is later used DIRECTLY as a SECOND
+    unconditional write address (`MEM_W(0X0, ctx->rL) = ctx->rPayload`, usually the delay slot of
+    the function's own `jr $ra`) — the SAME write-through-reload risk `DL_LIST_RESET_GUARD` (item
+    -298) established for a different global, needing its own separate write guard. 9/10 of the
+    second shape are byte-identical and regex-anchor cleanly; the 10th (`funcs_3.c` `0x80008080`/
+    `0x80008090`) has a pre-existing `s436 CACHE_HEAD_A1_GUARD` block spliced in between by an
+    earlier unrelated patch, breaking regex adjacency — handled by its own per-site literal anchor,
+    same discipline as `DL_LIST_RESET_GUARD`'s 14-site remainder. Both regexes match-count-verified
+    with a standalone test script (`scratch_s467_test_regex.py`, N64Recomp repo, untracked) against
+    the actual on-disk text before being written into `fixup_game_funcs.py`. Clean regen+build
+    (20/20 `NODE_LIST_HEAD_GUARD` + 10/10 `NODE_LIST_HEAD_WRITE_GUARD`, no regression in
+    `DL_LIST_APPEND_GUARD`(84)/`DL_LIST_RESET_GUARD`(84)/`DL_BUFFER_POOL_GUARD`(84)/`SIBLING_PTR_
+    WRITE_GUARD`(119)); `strings` on the binary confirms 20 `node-list-head-guard` + 10
+    `node-list-head-write-guard` format strings. Live-verify: **0 `[CRASH]` across the ENTIRE 300s
+    schedule** (all 10 scheduled key presses fired — the first soak in several sessions to run the
+    full schedule clean rather than hitting an unrelated background-noise crash partway through), 0
+    fires on both new guards (matches item -287's established true-negative baseline), 0 fires on
+    every sibling guard (no regression), `hangarbay-entry` n=33 (positive control). Confirmation
+    soak queued: `scratch/agent/soak_queue/s467_nodelisthead_confirm.sh`.
+    **Next candidate, not yet examined** (from s465's scan, ranked by concentration): the more
+    scattered buckets `hi16=0x8013,offset=0x7CE4` (45 sites, 9 files), `hi16=0x8013,offset=-0x70F8`
+    (31, `funcs_6.c` only), `hi16=0x8012,offset=-0x5BBC` (30, 4 files), `hi16=0x8013,offset=-0x7104`
+    (29, `funcs_6.c` only), `hi16=0x8011,offset=-0x35E0` (23, 9 files), `hi16=0x8013,offset=0xB50`
+    (21, 11 files). None are as tightly concentrated in the `funcs_3.c`/`funcs_4.c` lineage core as
+    items -299/-300 were, so budget extra time for shape classification before assuming a single
+    guard pattern applies.
+
+-299. **(s465-467) M3 idiom-class audit: `DL_BUFFER_POOL_GUARD`, global `0x801163FC`
     (89 bytes past the `0x801163B0` free-list-cache-head global), `funcs_3.c`/`funcs_4.c`
     DL-buffer-pool code (`allocateDisplayListBuffer`/`emitAllocatedDLCommand` and siblings).
-    CLOSED s466, 84/84 sites.** Found s465 by a fresh codebase-wide frequency scan of every
-    `lui $reg,0x80XX; lw $reg,OFFSET($reg)` global-reload idiom (not just previously-known
-    offsets) across all 50 `RecompiledFuncs/funcs_*.c` files (`scratch_s465_scan.py`, N64Recomp
-    repo, untracked; caught a case-sensitivity bug in its own exclude-list normalizer along the
-    way). 87 raw reload sites (`funcs_3.c`x46, `funcs_4.c`x38, `funcs_6.c`x3); a shape pass
-    (`scratch_s465_classify_63fc.py`) split off 3 `funcs_6.c` `COMPARE_ONLY` sites (benign, out of
-    scope) from 84 `funcs_3.c`/`funcs_4.c` sites sharing a lazy-init idiom: `ctx->rL =
-    MEM_W(ctx->rL, 0X63FC); ctx->rD = MEM_W(ctx->rL, 0X0); if (ctx->rD != 0) goto Lalready;
-    MEM_W(0X0, ctx->rL) = ctx->rNew; goto Ldone;` (read `global->field0`; if non-null skip the
-    write). Both the read and write deref the unvalidated reload — same structural risk as
-    `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`. s466 ran the shape-uniformity audit s465 left
-    open (a CONDITIONAL BRANCH sits between the read and write, with a compiler-arbitrary
-    delay-slot instruction only sampled at 5 sites): `scratch_s466_shapecheck_63fc.py`
-    (N64Recomp repo, untracked) dumped and normalized the full reload-through-write block for all
-    84 sites and found 100% (84/84) adjacency between the reload and the READ deref and 100%
-    (84/84) reach a same-register write within 40 lines — the 7 "distinct" normalized shapes it
-    found are entirely explained by the harmless delay-slot instruction (`nop` at 73 sites, various
-    `addu $reg,$reg,$zero` register combos at 11), confirming the write is only ever reachable
-    through the read's result. That let the fix guard the READ alone: validate `ctx->rL` right
-    after the reload; if invalid, skip the read and force `ctx->rD` to a nonzero sentinel (1) so
-    control takes the "already initialized" branch (which contains the write too) — NOT
-    "substitute 0", which would route into the write branch and still deref the invalid `ctx->rL`
-    as a write address. `DL_BUFFER_POOL_GUARD` landed in `fixup_game_funcs.py` (regex anchored to
-    just the 3-instruction lui/reload/read-deref prefix, leaving the branch/delay-slot/write
-    untouched). Clean regen+build (84/84 sites: `funcs_3.c`x46 + `funcs_4.c`x38, no regression in
-    sibling guard counts), `strings` on the binary confirms 84 `dl-buffer-pool-guard` format
-    strings. Live-verify: 0 `[CRASH]` from the guard itself, 0 `dl-buffer-pool-guard` fires (matches
-    item -287's established true-negative baseline), `hangarbay-entry` n=32 (positive control,
-    content reached), 0 fires on every sibling guard (no regression). Crashed later in the same run
-    on `coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` — the SAME already-catalogued
-    heap-walker background-noise family seen at s464's confirm soak (documented since s354-366),
-    unrelated to this guard, filed not chased. Confirmation soak queued:
-    `scratch/agent/soak_queue/s466_dlbufferpool_confirm.sh`.
-    **Next candidate, not yet examined** (from s465's scan, ranked by concentration in the
-    `funcs_3.c`/`funcs_4.c` lineage core): `hi16=0x8012,offset=-0x5B48` (20 sites, `funcs_3.c`/
-    `funcs_4.c` only — most comparable to `0x63FC`), then the more scattered buckets
-    `hi16=0x8013,offset=0x7CE4` (45, 9 files), `hi16=0x8013,offset=-0x70F8` (31, `funcs_6.c` only),
-    `hi16=0x8012,offset=-0x5BBC` (30, 4 files), `hi16=0x8013,offset=-0x7104` (29, `funcs_6.c` only),
-    `hi16=0x8011,offset=-0x35E0` (23, 9 files), `hi16=0x8013,offset=0xB50` (21, 11 files).
+    CLOSED s466, 84/84 sites, 2nd independent confirm soak s467.** Found s465 by a fresh
+    codebase-wide frequency scan of every `lui $reg,0x80XX; lw $reg,OFFSET($reg)` global-reload
+    idiom (not just previously-known offsets) across all 50 `RecompiledFuncs/funcs_*.c` files
+    (`scratch_s465_scan.py`, N64Recomp repo, untracked; caught a case-sensitivity bug in its own
+    exclude-list normalizer along the way). 87 raw reload sites (`funcs_3.c`x46, `funcs_4.c`x38,
+    `funcs_6.c`x3); a shape pass (`scratch_s465_classify_63fc.py`) split off 3 `funcs_6.c`
+    `COMPARE_ONLY` sites (benign, out of scope) from 84 `funcs_3.c`/`funcs_4.c` sites sharing a
+    lazy-init idiom: `ctx->rL = MEM_W(ctx->rL, 0X63FC); ctx->rD = MEM_W(ctx->rL, 0X0); if
+    (ctx->rD != 0) goto Lalready; MEM_W(0X0, ctx->rL) = ctx->rNew; goto Ldone;` (read
+    `global->field0`; if non-null skip the write). Both the read and write deref the unvalidated
+    reload — same structural risk as `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`. s466 ran the
+    shape-uniformity audit s465 left open (a CONDITIONAL BRANCH sits between the read and write,
+    with a compiler-arbitrary delay-slot instruction only sampled at 5 sites):
+    `scratch_s466_shapecheck_63fc.py` (N64Recomp repo, untracked) dumped and normalized the full
+    reload-through-write block for all 84 sites and found 100% (84/84) adjacency between the
+    reload and the READ deref and 100% (84/84) reach a same-register write within 40 lines — the 7
+    "distinct" normalized shapes it found are entirely explained by the harmless delay-slot
+    instruction (`nop` at 73 sites, various `addu $reg,$reg,$zero` register combos at 11),
+    confirming the write is only ever reachable through the read's result. That let the fix guard
+    the READ alone: validate `ctx->rL` right after the reload; if invalid, skip the read and force
+    `ctx->rD` to a nonzero sentinel (1) so control takes the "already initialized" branch (which
+    contains the write too) — NOT "substitute 0", which would route into the write branch and
+    still deref the invalid `ctx->rL` as a write address. `DL_BUFFER_POOL_GUARD` landed in
+    `fixup_game_funcs.py` (regex anchored to just the 3-instruction lui/reload/read-deref prefix,
+    leaving the branch/delay-slot/write untouched). Clean regen+build (84/84 sites: `funcs_3.c`x46
+    + `funcs_4.c`x38, no regression in sibling guard counts), `strings` on the binary confirms 84
+    `dl-buffer-pool-guard` format strings. Live-verify: 0 `[CRASH]` from the guard itself, 0
+    `dl-buffer-pool-guard` fires (matches item -287's established true-negative baseline),
+    `hangarbay-entry` n=32 (positive control, content reached), 0 fires on every sibling guard (no
+    regression). Crashed later in the same run on `coalesceFreeHeapBlocks+4424`/
+    `last-guest-pc=0x8000247c` — the SAME already-catalogued heap-walker background-noise family
+    seen at s464's confirm soak (documented since s354-366), unrelated to this guard, filed not
+    chased. **Confirmation soak run s467**: `s466_dlbufferpool_confirm` (rc=3, 170s) — full
+    `run.log` check (not just the probe.sh summary line) found 0 fires across all 4 sibling guards,
+    `hangarbay-entry` n=34 (reachable), crashed at 121.6s on the SAME `coalesceFreeHeapBlocks+4424`
+    family again — a 2nd independent confirmation of the true-negative result, unrelated to any
+    guard tested.
 
 -298. **(s463-464) M3 idiom-class audit: `DL_LIST_RESET_GUARD`, re-scoped the ~111 non-canonical
     `-0x5824` population (same global as item -291, `0x8011A7DC`) flagged at s454/456. CLOSED s464,
