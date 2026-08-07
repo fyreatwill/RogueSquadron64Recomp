@@ -35126,3 +35126,72 @@ discipline applied from the start rather than reactively; landed 74 net new relo
 positive controls (nm presence/absence, unmapped-count deltas) and a 2/2 live-verify clean result; also
 built three reusable bisection-automation scripts that materially sped up this session's rounds and remain
 available for the next).
+
+## Session 418 (2026-08-06) — M4 item -249 loop-mandated pivot: mission-overlay-bias theory for the 7 known-bad functions REFUTED, no code change
+
+### Why this session, not another n=75 batch
+The loop's MANDATORY-PIVOT gate fired: s415/s416/s417 all ran `HYPOTHESIS-ID:
+m4-item249-bulk-relocation-n75` without closing it (3 consecutive iterations). Per the gate's own
+contract, checked M5 (item -227/-228, DONE and fully CLOSED, "next M5 work needs a genuinely new lead" —
+not actionable) and M3 idiom-audit mode (item -239..-247, "exhausted for now, needs human
+reconfirmation" — not actionable) before falling back to M4. Rather than run an 8th consecutive n=75
+batch under the recycled slug, designed and ran the single highest-information discriminating probe for
+the standing question the last 4 M4 sessions kept deferring: is there a structural reason 7 specific
+functions break on relocation, or are they just 7 independent per-function bugs?
+
+### The hypothesis
+`scratch/agent/m4_known_bad.txt`'s 7 entries are ALL tagged `CONFIRMED:mission` (destination overlay).
+Zero are `menu`-destined. If the M4 candidate pool splits roughly evenly (or menu-majority, since RS64's
+menu/hangar code is a large fraction of `main_overlay.txt`'s phantom functions) between the two overlays
+across sessions, 7-for-7 mission would be a striking, actionable signal — arguing for a mission-overlay-
+specific structural cause (overlay size budget, alignment, TOC/relocation-table issue) rather than 7
+coincidentally-unrelated idiom bugs, and would justify pausing bulk relocation for a root-cause session
+on the mission overlay specifically instead of continuing blind batch-and-bisect.
+
+### The discriminating measurement
+Reconstructed the actual per-session candidate-pool mission/menu split (not just the bad function's own
+tag) from the probe-result files still on disk for the 4 sessions that produced a bad function:
+- `s412_probe1.txt` (source of s413's `transformCraftAnchorsApplySubFx3`): 55 CONFIRMED:mission + 20
+  WEAK:mission, **0 menu entries of any kind**.
+- `s412_probe2.txt` (s412's second batch, same session): 81 CONFIRMED:mission + 19 WEAK:mission, **0
+  menu**.
+- `s414_probe1.txt` (source of s415's `allocObjectPoolNode`/`tickCraftMountedAnimationEffect`): 57
+  CONFIRMED:mission + 18 WEAK:mission, **0 menu**.
+- `s416_probe_results.txt` (source of s416's `stepObjectOrientationTowardTarget`/
+  `updateHudHealthIndicator`): 58 CONFIRMED:mission + 17 WEAK:mission, **0 menu**.
+- `s417_probe_results.txt` (source of s417's `initHangarDisplayItemTimers`): 21 CONFIRMED:mission + 11
+  WEAK:mission **and** 30 CONFIRMED:menu + 13 WEAK:menu — the one session with a genuinely mixed pool
+  (32/75 = 43% mission, 43/75 = 57% menu).
+
+### Verdict: REFUTED
+Three of the four source sessions (s412 x2, s414, s416) probed **100%-mission candidate pools** — there
+were no menu-tagged candidates in those batches at all, so their bad functions being mission-destined
+carries zero evidential weight; it was the only overlay on offer. Only s417 had a mixed pool, and its one
+bad function (`initHangarDisplayItemTimers`) did land mission-side, but n=1 against a 43% base rate
+(P≈0.43 under the null) is nowhere near decisive on its own. The apparent "7/7 mission" pattern is a
+sampling artifact of which candidate pools happened to get probed in which sessions, not evidence of a
+mission-overlay-specific defect. This closes the mission-overlay-bias angle — it does not need
+re-investigating unless a large mixed-pool sample independently starts skewing mission-heavy again.
+
+### What this does and doesn't change
+Strengthens (does not newly establish) the standing s414/s417 read: the two recurring downstream crash
+sites (`last-guest-pc=0x800290d4`, hit by 4 functions across s415/s416; `last-guest-pc=0x80011088`, hit
+by 2 functions across s407/s417) sit below `overlay_start`, outside any relocated function's own body —
+consistent with isolated per-function bugs that happen to corrupt state reachable from a couple of common
+downstream code paths, not a batch-composition, overlay-targeting, or overlay-structural problem. No
+process change indicated for ordinary bulk relocation. Per NEXT.md's own standing threshold (a 3rd
+`0x80011088` hit or a 5th `0x800290d4` hit), a dedicated root-cause session on those two addresses
+remains queued but not yet triggered (currently 2 and 4 occurrences respectively).
+
+No code, docs-structure, or relocation-state change beyond this write-up — `579/778` unchanged, no new
+`m4_known_bad.txt`/`m4_known_skip.txt` entries, no build/soak run this session (pure archival analysis,
+no positive control needed since nothing was measured live).
+
+`HYPOTHESIS-ID` changes to `m4-item249-bulk-relocation-resume-s418` for the next session — ordinary bulk
+relocation resumes exactly per s417's established recipe (n=75, halves-bisection-with-full-sibling-sweep
+on any crash), just under a fresh slug per the pivot-gate contract.
+
+Outcome: ADVANCED (ran the mandated discriminating probe to closure — a clear REFUTED verdict backed by
+two independent lines of evidence (4 of 5 source sessions had zero-menu pools; the 5th's n=1 mission hit
+is statistically inconclusive alone), landing a documented negative result that rules out a plausible-
+sounding theory before it could cost a future session a root-cause detour).

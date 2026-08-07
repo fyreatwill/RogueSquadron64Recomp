@@ -174,10 +174,12 @@ Numbering convention (fixed s295, was previously three colliding sequences): ite
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
 oldest). Current top is -257 (s408); the next new item takes -258 and is inserted at the top.
 
--249..-258. **(s400-417) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
+-249..-258. **(s400-418) M4 item -249: main_overlay.txt phantom-overlay-function relocation — tooling
     proven, SEVEN genuine bad-function crashes bisected and parked, cadence scaled from n=20 to a
     confirmed-safe n=75-with-bisection-fallback. 579/778 done, 219 remain per a fresh regen (218
-    actionable, 4 known-skip, 7 known-bad) as of s417.** s400 landed batch 1
+    actionable, 4 known-skip, 7 known-bad) as of s417. s418 (no-code discriminating-probe iteration,
+    see end of entry) refuted a mission-overlay-bias theory for the 7 bad functions; count unchanged.**
+    s400 landed batch 1
     (20/801) and proved the tooling (`s400_probe_batch.py`/`s400_apply_batch.py`, positive-control via
     `make_elf.py`'s unmapped-functions-skipped counter). s401 attempted the full ~774-item remainder in
     one sweep: it linked, but caused a new deterministic title-screen SIGBUS; reverted without
@@ -280,7 +282,25 @@ oldest). Current top is -257 (s408); the next new item takes -258 and is inserte
     s416. Final 74-name batch live-verified clean 2/2 (88.5s/88.6s to phase, 19 frames each, 0 crash
     markers), reaching 579/778. Built three reusable bisection scripts
     (`s417_revert.py`/`s417_apply_names.py`/`s417_cycle.sh`) that collapse each bisection round to one
-    command.** Full per-session detail: `PORTING-STATE` Sessions 400-417.
+    command.** **s418: loop's MANDATORY-PIVOT gate fired after 3 straight iterations on
+    `HYPOTHESIS-ID: m4-item249-bulk-relocation-n75`; ran the single highest-information discriminating
+    probe instead of another n=75 batch — tested whether the 7 known-bad functions are disproportionately
+    `mission`-overlay-destined (all 7 are `CONFIRMED:mission`/`tag=mission`, 0 are `menu`), which would
+    argue for a mission-overlay-specific structural cause (size/alignment/TOC) rather than 7 independent
+    per-function idiom bugs. **REFUTED**: reconstructed the per-session candidate-pool mission/menu split
+    from the surviving `s412_probe*.txt`/`s414_probe1.txt`/`s416_probe_results.txt` files (the ones that
+    actually produced a bad function) — s412's two batches, s414's batch, and s416's batch were **100%
+    mission-tagged candidate pools** (0 menu-tagged entries appear in any of the three), so finding their
+    bad functions to be mission-destined is not surprising, it was the only overlay on offer that
+    session. Only s417 (source of the 7th bad function, `initHangarDisplayItemTimers`) had a mixed pool
+    (32 mission/43 menu, 43%/57%) and its one bad function still landed mission-side, but n=1 against a
+    43% base rate is not remotely decisive. **Closes this angle**: the "7/7 mission" pattern is a
+    sampling artifact of which candidate pools happened to be probed those sessions, not evidence of a
+    mission-overlay-specific defect. Strengthens the standing read (s414/s417) that these are isolated
+    per-function bugs converging on 2 shared *downstream* crash sites (`0x800290d4`, `0x80011088`,
+    neither inside any relocated function's own body), not a batch-composition or overlay-targeting
+    problem — ordinary bulk relocation can resume next iteration exactly as before, no process change
+    indicated by this probe.** Full per-session detail: `PORTING-STATE` Sessions 400-418.
 
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's applied fix
     (adding the 3 names to `mission_overlay.txt`) was dead on arrival -- silently shadowed by

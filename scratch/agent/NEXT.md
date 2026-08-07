@@ -1,6 +1,35 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: m4-item249-bulk-relocation-n75
+HYPOTHESIS-ID: m4-item249-bulk-relocation-resume-s418
+
+## s418 recap (loop-mandated pivot, no code change)
+
+The loop's MANDATORY-PIVOT gate fired after s415/s416/s417 all ran
+`HYPOTHESIS-ID: m4-item249-bulk-relocation-n75` without closing it. Checked M5 (item -227/-228: DONE,
+fully CLOSED, needs a genuinely new lead — not actionable) and M3 idiom-audit mode (item -239..-247:
+exhausted, needs human reconfirmation — not actionable); both fell through, confirming M4 ordinary bulk
+relocation remains the correct sanctioned fallback per the standing USER DIRECTIVE. Rather than run an
+8th consecutive n=75 batch under the recycled slug, ran the single highest-information discriminating
+probe for the question the last 4 sessions kept deferring: **are the 7 known-bad functions
+disproportionately `mission`-overlay-destined** (all 7 are tagged `CONFIRMED:mission`, 0 `menu`)? If so,
+that would argue for a mission-overlay-specific structural cause worth a dedicated root-cause session
+instead of continuing blind batch-and-bisect.
+
+**REFUTED.** Reconstructed the actual per-session candidate-pool mission/menu split from the surviving
+probe-result files (`s412_probe1.txt`/`s412_probe2.txt`/`s414_probe1.txt`/`s416_probe_results.txt`/
+`s417_probe_results.txt`) for the 4 sessions that produced a bad function. Three of the four sessions
+(s412 x2, s414, s416) probed **100%-mission candidate pools — zero menu-tagged candidates appeared in
+any of them** — so their bad functions landing mission-side is not evidence of anything, it was the only
+overlay on offer. Only s417 had a mixed pool (32 mission/43 menu, 43%/57%), and its one bad function did
+land mission-side, but n=1 against a 43% base rate is statistically inconclusive alone. The "7/7 mission"
+pattern is a sampling artifact of which pools happened to get probed which sessions, not a real signal.
+Closes this angle. Strengthens (doesn't newly establish) the standing read that these are isolated
+per-function bugs converging on 2 shared downstream crash sites (`0x800290d4` x4, `0x80011088` x2, both
+below `overlay_start`, outside any relocated function's own body) — no process change indicated.
+
+No code/build/soak this session — pure archival analysis of files already on disk. `579/778` unchanged,
+no new `m4_known_bad.txt`/`m4_known_skip.txt` entries. Full detail: `PORTING-STATE` Session 418,
+`docs/CURRENT-TRUTH.md` item -249..-258 (tail).
 
 ## s417 recap
 
