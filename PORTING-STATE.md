@@ -35832,3 +35832,63 @@ function-boundary walker choosing arbitrarily between same-address duplicates wi
 
 Soak queued: scratch/agent/soak_queue/s426_menufix_regression.sh (re-run the fix, confirm the specific
 3-sibling chain stays gone and characterize whether updateHangarBayScene reproduces deterministically).
+
+## Session 427 (2026-08-07)
+
+Followed NEXT.md's recommended Option A: fixed the `hangarInitialize`/`mallocCraftSelectionData`
+duplicate-symbol collision (item -264 from s426's catalogue), the single most consequential open
+thread flagged last session (potential to overturn the closed s283-396 `-0x25A4` audit).
+
+Same mechanism as item -262 (s426): `menu_overlay.txt` registered both `hangarInitialize` (line 176,
+listed first) and `mallocCraftSelectionData` (line 429, listed second) at the identical address
+0x800A9364. N64Recomp's function-boundary walker truncated the first-listed name (`hangarInitialize`
+-- the only name the sole call site, funcs_35.c, resolved to) to 1 instruction, and gave the real
+~4386-line body (containing all 103 `-0x25A4` sites the s283-396 audit guarded) to the unreferenced
+`mallocCraftSelectionData` name.
+
+Fix: deleted the `hangarInitialize` line from `menu_overlay.txt` (kept `mallocCraftSelectionData`,
+the name attached to the real content -- following NEXT.md's recommendation over deleting the other
+way). Regenerated (make_elf.py -> delete funcs_*.c -> N64Recomp -> fixup_game_funcs.py -> cmake).
+`fixup_game_funcs.py`'s own idempotency guard (`RS64_FIXUP_APPLIED` marker check) correctly refused a
+second invocation I accidentally ran while re-checking output -- confirmed no double-patching occurred
+by grepping for duplicate diagnostic markers (all counts stayed at 1). Build succeeded clean.
+
+Post-regen verification (static): `funcs_27.c:117206` now reads `RECOMP_FUNC void
+mallocCraftSelectionData(...)` spanning lines 117206-121592 (~4386 lines, matches the expected real-body
+length); `funcs_35.c` now calls `mallocCraftSelectionData(rdram, ctx)` directly -- **zero source edits
+needed to the call site**, confirming item -262's "N64Recomp derives the JAL target's C name from
+whichever symbol remains at that address" mechanism generalizes to a second, independent instance, not
+a one-off quirk of that first fix.
+
+Live-run (same PROBE_KEYS schedule as s423-426, foreground, single run so far -- single-source):
+- Item -262's fix held: `[slot-anim-cache-write] initCraftSelectScreen cached ptr=0x00000006 n=0` fired
+  again; the old 3-sibling chain (item -261, `startPlayerSlotAnimationChannelLooping` /
+  `advancePlayerAnimationPhase` / `getPlayerAnimChannelEntryByIds`) did NOT recur.
+- The expected positive control for THIS fix -- the `-0x25A4` guard markers (`S285`/`S393`/`S394`/
+  `S395_SWEEP`) firing for the first time -- did NOT fire (0 hits). This does not mean the guards are
+  dead code; it means we never reached inside `mallocCraftSelectionData`'s body this run, because:
+- A NEW crash intervened first, earlier than expected: SIGBUS in `runHangarMenuFromOverlay+800`
+  (called directly from `menuOverlayInit`), ~4s after the SELECT GAME `a` press -- earlier in the menu
+  flow than item -263's `updateHangarBayScene` (which never got a chance to run this session; its
+  soak from last session did separately reproduce it beforehand, see SOAK-RESULTS
+  `s426_menufix_regression`). `far=0x3bf800002` = rdram_base (`0x300000000`) + `0xbf800002`.
+  **`0xbf800002` is the IEEE-754 single-precision bit pattern for approximately -1.0f** -- a distinct
+  signature from every other crash in this whole investigation lineage, which have all been
+  "rdram_base + small near-zero *integer* offset" (never-initialized-global reads). This one looks
+  like a float value being used as a pointer/offset, i.e. a type-confusion bug rather than a
+  never-initialized-global bug. New item -265, single-source, not yet investigated.
+
+Net result: item -264 CONFIRMED FIXED as a mechanism (second independent instance of the
+duplicate-symbol-name-within-one-file bug class, same fix shape, call site auto-follows with zero
+manual edits) -- but the motivating question ("does the closed -0x25A4 audit guard dead code")
+remains OPEN, now blocked behind the new item -265 crash instead of resolved this session. 18
+duplicate-symbol pairs (down from 19) remain uninvestigated in the other two overlay files plus 4
+more in menu_overlay.txt.
+
+Soak queued: `scratch/agent/soak_queue/s427_hangarinit_regression.sh` (re-run the fix, check whether
+`runHangarMenuFromOverlay` reproduces deterministically, watch for `-0x25A4` guard fires if the run
+gets further this time).
+
+Housekeeping: the `menu_overlay.txt` edit lives in the sibling repo `~/Documents/Tools/rogue_squadron64`
+per item -3 (ask user before committing there) -- left uncommitted, consistent with s426's handling of
+the same file.

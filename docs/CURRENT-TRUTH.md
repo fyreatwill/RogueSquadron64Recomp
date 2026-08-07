@@ -205,40 +205,42 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -264 (s426, OPEN — the duplicate-symbol bug class); the next new item takes -265.
+oldest). Current top is -265 (s427, OPEN — new pre-`mallocCraftSelectionData` crash); the next
+new item takes -266.
 
--264. **(s426) `hangarInitialize`/`mallocCraftSelectionData` duplicate-symbol collision — flagged,
-    NOT yet fixed or confirmed. Single most consequential open thread in the project.** Same
-    address (0x800A9364), same duplicate-symbol-name mechanism just confirmed live for item -261/-262
-    below: `hangarInitialize` (funcs_27.c:117206, the only name any call site — funcs_35.c:1589 —
-    resolves to) is a 1-instruction truncated stub; the real ~4386-line body, containing all 103
-    `-0x25A4` sites the entire closed s283-396 audit (item -239..-247) guarded, lives in
-    `mallocCraftSelectionData` (funcs_27.c:117212-121598), which has **zero call sites anywhere** —
-    verified by direct line-range check that every s390/s392-395 guard marker falls inside
-    `mallocCraftSelectionData`'s body, not `hangarInitialize`'s. Unlike item -262's fix, BOTH names here
-    are deliberate/real (not a generic placeholder vs a real name), so which one the call site should
-    keep is a judgment call, not an obvious delete — needs its own dedicated session: pick a name,
-    apply the same symbol-file fix, regen, and live-verify with a positive control (expect the -0x25A4
-    guards to start firing for the first time ever, and very possibly a wave of "first genuine
-    execution" crashes analogous to item -262's `updateHangarBayScene`). If confirmed the same bug,
-    this overturns "the -0x25A4 family is fully closed" (item -239..-247) — not yet overturned, just
-    flagged, since the mechanism is unconfirmed for this specific pair. 19 total duplicate-symbol pairs
-    remain uninvestigated/unfixed across `menu_overlay.txt` (5, all real/real, same ambiguity as this
-    one: `hangarGenerateSecondaryWeaponString`/`buildSecondaryWeaponString` 0x800AE530,
-    `getAvailablePlayerCraftFlagsConsiderUnlocks`/`getAvailableShipsForLevelAlt` 0x800C6234,
-    `getSecondaryWeaponForLevelAndCraft`/`getSecondaryWeaponForCraftLevel` 0x800C6728,
-    `getLevelIntroCrawlId`/`getPlanetAssetForLevel` 0x800C6900), `main_overlay.txt` (2, look like
-    harmless DATA-symbol aliases: `gActiveModelAnimSlots`/`D_8013A990` 0x8013A990,
-    `gHangarBayDescriptorArrayPtr`/`gCraftSelectScreenData` 0x800CDA5C), and `mission_overlay.txt` (12:
-    11 are the SAME `func_0xADDR`/real-name pattern as item -262's confirmed-safe fix — high-confidence,
-    low-risk batch candidates, several are NPC/craft init functions: `func_800BF4A0`/
-    `attached3DSoundEmitterNpcHandler`, `func_800C7DC0`/`initNpcActorFromSpawnMessage`,
-    `func_800CA270`/`initNpcActorVariant`, `func_800CEF20`/`advanceAtStEffectPhaseSound`,
-    `func_800D2CA0`/`npcInitWithMotionParams`, `func_800D4ED0`/`npcInitChildLinkedToParent`,
-    `func_800DD2D0`/`npcInitFullModel`, `func_800DFB90`/`applyCraftAnimAndDetailParams`,
-    `func_800E4480`/`resetCraftInstanceMotionState`, `func_800E8A40`/`runDestructionPhaseSequence`,
-    `func_800ECE10`/`datItemActorNpcHandler`; 1 real/real like the menu group: `handleHUD`/
-    `initHudStruct`). Full detail: PORTING-STATE Session 426.
+-265. **(s427) NEW crash surfaced by item -264's fix, single-source, distinct signature from
+    every prior crash in this family — not yet investigated.** SIGBUS in `runHangarMenuFromOverlay+800`
+    (called directly from `menuOverlayInit`, ~4s after the SELECT GAME `a` press — earlier in the menu
+    flow than item -263's `updateHangarBayScene`, which never got a chance to run this session).
+    `far=0x3bf800002` = rdram_base (`0x300000000`) + `0xbf800002` — **`0xbf800002` is the IEEE-754 bit
+    pattern for approximately -1.0f**, a different signature from every prior crash in this whole
+    family (all previously "rdram_base + small near-zero *integer* offset"; this looks like a float
+    value being used as a pointer/offset — a type-confusion bug, not a never-initialized-global read).
+    Item -262's fix held (`[slot-anim-cache-write] initCraftSelectScreen ... n=0` fired again, old
+    3-sibling chain did not recur). The `-0x25A4` guard markers (`S285`/`S393`/`S394`/`S395_SWEEP`)
+    logged **0 hits** — the run never reached inside `mallocCraftSelectionData`'s guarded body, meaning
+    this new crash happens on the way to (or before) that call, not inside it; `-264`'s open question
+    ("does the closed -0x25A4 audit turn out to guard dead code") is **still open**, now blocked behind
+    this new crash instead of resolved. Confirmation soak queued:
+    `scratch/agent/soak_queue/s427_hangarinit_regression.sh`. Full detail: PORTING-STATE Session 427.
+
+-264. **(s426/s427) `hangarInitialize`/`mallocCraftSelectionData` duplicate-symbol collision —
+    ROOT-CAUSED AND FIXED s427, same mechanism as item -262, confirmed a second instance of the class.**
+    Deleted the truncated `hangarInitialize` line from `menu_overlay.txt` (kept `mallocCraftSelectionData`,
+    the name attached to the real ~4386-line body). Regenerated; the sole call site (`funcs_35.c`, was
+    `hangarInitialize(rdram, ctx)`) auto-followed to `mallocCraftSelectionData(rdram, ctx)` with **zero
+    source edits needed** — confirms item -262's "N64Recomp derives the JAL target's C name from
+    whichever symbol remains at that address" mechanism generalizes, not a one-off. Live-verified the
+    fix itself did not regress item -262 (craft-select-screen init still ran, old 3-sibling chain did
+    not recur) — but the expected positive control for *this* fix (the `-0x25A4` guards firing for the
+    first time) did NOT fire; a new crash (item -265) intervened first. So: confirmed FIXED as a
+    mechanism (duplicate-symbol deletion + regen restores the real body and the call site follows
+    automatically), but **NOT YET confirmed** whether the closed s283-396 `-0x25A4` audit guards live or
+    dead code — that question carries forward blocked on item -265. 18 total duplicate-symbol pairs
+    remain uninvestigated in `menu_overlay.txt` (4 more, all real/real), `main_overlay.txt` (2, look
+    like harmless DATA-symbol aliases), and `mission_overlay.txt` (12, 11 of which are the same
+    high-confidence `func_0xADDR`/real-name pattern as item -262's fix). Full detail: PORTING-STATE
+    Session 427; original catalogue: PORTING-STATE Session 426.
 
 -263. **(s426) NEW crash surfaced immediately by item -262's fix: `updateHangarBayScene`, single-
     source, not yet investigated.** SIGBUS, `far=0x380000008` — same "rdram_base + small near-zero

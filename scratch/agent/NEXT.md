@@ -2,55 +2,65 @@
 
 HYPOTHESIS-ID: duplicate-symbol-name-collision-class-s427
 
-## What changed this session (s426) — read this before picking a thread
+## What changed this session (s427) — read this before picking a thread
 
-The item -261 3-sibling crash chain is FIXED (root cause: `menu_overlay.txt` registered both
-`func_800AEC60` and `initCraftSelectScreen` at the identical address 0x800AEC60; N64Recomp truncated
-the first-listed duplicate to 1 instruction and gave the real ~1200-line body to the unreferenced
-second name, so `initCraftSelectScreen` — sole writer of the player-slot-anim-channel cache — never
-ran). Deleting the stale `func_800AEC60` line and regenerating fixed it, live-verified with a positive
-control (see docs/CURRENT-TRUTH.md item -262, PORTING-STATE Session 426 for the full trace).
+Fixed item -264 (`hangarInitialize`/`mallocCraftSelectionData` duplicate-symbol collision) — same
+mechanism as item -262 (s426), confirmed a SECOND independent instance of the class: deleting the
+truncated first-listed name from `menu_overlay.txt` and regenerating gave the real ~4386-line body
+back to `mallocCraftSelectionData`, and the sole call site auto-followed with zero source edits.
 
-That fix immediately surfaced (a) a NEW crash one step earlier in the menu flow
-(`updateHangarBayScene`, item -263), and (b) a catalogue of **19 more instances of the same
-duplicate-symbol-name bug** across the 3 overlay symbol files, one of which
-(`hangarInitialize`/`mallocCraftSelectionData`, item -264) may mean the entire closed s283-396
-`-0x25A4` audit guarded 100+ sessions' worth of dead code.
+That fix did NOT reach the expected positive control (the `-0x25A4` guard markers firing for the
+first time) because a NEW crash intervened earlier in the menu flow: SIGBUS in
+`runHangarMenuFromOverlay+800` (called from `menuOverlayInit`, ~4s after the SELECT GAME `a` press),
+`far=0x3bf800002` = rdram_base + `0xbf800002`. **`0xbf800002` is the IEEE-754 bit pattern for
+approximately -1.0f** — a NEW signature, distinct from every prior crash in this lineage (all
+previously "rdram_base + small near-zero *integer* offset"). This looks like a float value used as a
+pointer, i.e. type confusion, not a never-initialized-global read. Single-source so far, item -265,
+not yet investigated. Confirmation soak queued:
+`scratch/agent/soak_queue/s427_hangarinit_regression.sh` — check `scratch/agent/SOAK-RESULTS.md`
+first; if it already ran, use its result instead of re-driving a live run.
 
-## Two competing candidate work units — pick ONE, do not split effort
+## Two candidate work units — pick ONE
 
-**Option A: item -264, `hangarInitialize`/`mallocCraftSelectionData`.** Highest consequence (could
-overturn the closed -0x25A4 family), but higher risk (need to decide which of two REAL, deliberate
-names should survive — unlike item -262's fix, this isn't an obvious "delete the generic placeholder").
-Steps: (1) decide which name the call site (funcs_35.c:1589) should keep — recommend keeping
-`mallocCraftSelectionData` since that's the name attached to the REAL body content (the "hangar-list-
-pointer"/`-0x25A4` family logic), which means the ONE call site needs updating too (unlike item -262
-where deletion alone sufficed) — grep for `hangarInitialize(rdram, ctx)` after regen to confirm the
-call site follows automatically, or patch it if not. (2) Delete the OTHER duplicate line from
-`menu_overlay.txt`. (3) Regen (make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake). (4) Live-run
-with the same PROBE_KEYS schedule as s423-426 (see below) and check: do the `-0x25A4` guards
-(`S285`/`S393`/`S394`/`S395_SWEEP` markers, funcs_27.c) fire for the first time ever (positive
-control)? Does a new "first genuine execution" crash appear (expect one, per item -262's precedent)?
+**Option A: root-cause item -265, the new `runHangarMenuFromOverlay` crash.** This is the direct next
+link in the chain this session's fix just extended — same "keep pulling the thread" logic that made
+Option A the right call last session over Option B. Steps: (1) if the soak above already ran, read its
+verdict; if it reproduced, or if not yet run, do the live run yourself with the same PROBE_KEYS
+schedule (below). (2) Use `scratch/agent/s193_disasm.py <macho> runHangarMenuFromOverlay <offset>`
+(offset = 800, the crash PC's function-relative offset from the `[CRASH][pc-symbol]` line) to find the
+exact instruction and register that produces the `0xbf800002` (~-1.0f) value — this is a NEW failure
+shape for this project (float-as-pointer, not never-initialized-global), so don't assume the fix is
+"guard against near-zero" like every prior guard in this lineage; trace where the float bit pattern
+actually comes from (a struct field being read at the wrong type/offset? a `-1` sentinel value stored
+as a float instead of an int?). (3) Symbol-range-check against the next symbol in the `.text` layout to
+confirm the crash PC genuinely falls inside `runHangarMenuFromOverlay`, not a next-symbol
+misattribution (item -259's closed false lead was exactly this mistake — re-verify every time per iron
+rule 5). (4) Guard or fix per whatever the root cause turns out to be; live-verify with a same-run
+positive control.
 
-**Option B: item -263, the new `updateHangarBayScene` crash.** Lower consequence but more in line with
-"keep pulling the item -261 thread to its next link" — single-source so far, confirmation soak already
-queued (`scratch/agent/soak_queue/s426_menufix_regression.sh` — check `scratch/agent/SOAK-RESULTS.md`
-for its verdict before starting; if it already ran, use its result instead of re-driving a live run).
-If it reproduces, trace `updateHangarBayScene+13156`'s wild pointer the same way s426 traced
-`getPlayerAnimChannelEntryByIds`'s (s193_disasm.py against the crash pc, symbol-range-check the
-offset, walk the caller chain back to its source global/struct) — do NOT assume it's the SAME
-0x800CDFA4-B0 struct; `last-guest-pc=0x800547bc` is a different address range, check with fresh eyes.
+**Option B: batch-fix the 11 confirmed-safe `mission_overlay.txt` `func_0xADDR`/real-name pairs.**
+Same low-risk mechanism as item -262's fix (a generic placeholder shadowing a deliberately-named real
+function) — NOT the ambiguous real/real kind item -264 was. Lower information value than Option A (it
+doesn't advance the active crash-chain thread) but batchable in one regen+verify cycle per the
+project's "batch instrumentation, one build/run cycle" rule, and closes out 11 of the remaining 18
+duplicate-symbol pairs from s426's catalogue in one pass. Names: `func_800BF4A0`/
+`attached3DSoundEmitterNpcHandler`, `func_800C7DC0`/`initNpcActorFromSpawnMessage`, `func_800CA270`/
+`initNpcActorVariant`, `func_800CEF20`/`advanceAtStEffectPhaseSound`, `func_800D2CA0`/
+`npcInitWithMotionParams`, `func_800D4ED0`/`npcInitChildLinkedToParent`, `func_800DD2D0`/
+`npcInitFullModel`, `func_800DFB90`/`applyCraftAnimAndDetailParams`, `func_800E4480`/
+`resetCraftInstanceMotionState`, `func_800E8A40`/`runDestructionPhaseSequence`, `func_800ECE10`/
+`datItemActorNpcHandler` (all in `symbol_files/mission_overlay.txt`; delete the `func_0xADDR` line for
+each, since s426/s427 both confirmed the generic-placeholder-vs-real-name pattern resolves by keeping
+the real name and letting the call site auto-follow).
 
-**Recommendation: Option A.** It's the same mechanism just proven safe end-to-end this session, the
-blast radius (100+ sessions' worth of a closed investigation) makes it far higher information value,
-and per iron rule 5 ("check the boring thing first") a second confirmed instance of the SAME class is
-more valuable evidence than chasing a brand-new, unrelated-looking crash. If Option A's regen+live-run
-produces a clean or informative result, that's the work unit. If it stalls or produces an ambiguous
-result within this iteration's budget, fall back to Option B or to a batch fix of the 11 confirmed-safe
-`mission_overlay.txt` func_/real pairs (same low-risk mechanism as item -262, could be done as one
-batched regen+verify per iron rule about batching instrumentation).
+**Recommendation: Option A.** It's the active thread with the higher information value (a genuinely
+new failure signature this project hasn't seen before), and per the strategic priority ("M3 crash
+work only as systematic idiom-class audits, no reactive single-crash chases") this is still within the
+duplicate-symbol idiom-class audit's blast radius — it's the audit's own fix surfacing its next
+consequence, not an unrelated reactive chase. If Option A stalls (can't isolate the faulting
+instruction, or the soak shows it's not reproducible), fall back to Option B.
 
-## Regen recipe (known-working s426)
+## Regen recipe (known-working s426/s427)
 
 ```
 cd ~/Documents/Tools/rogue_squadron64 && python3 tools/make_elf.py
@@ -64,7 +74,12 @@ python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py   # audit report for xN 
 cd ~/Documents/Tools/RogueSquadron64Recomp/build && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j8
 ```
 
-Live-run schedule (same as s423-426, known to reach the war-room/craft-select phase):
+**New this session**: `fixup_game_funcs.py` REFUSES to run a second time on the same generated files
+(checks for its own `RS64_FIXUP_APPLIED` marker) — this is a safety net, not a bug; if you see the
+refusal message, it means you forgot to delete `funcs_*.c` and regenerate first, not that something
+is broken.
+
+Live-run schedule (same as s423-427, known to reach the war-room/craft-select phase):
 ```
 env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
     ROGUESQ_LOG_RUNNER=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 \
@@ -73,17 +88,13 @@ env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MI
     zsh tools/probe.sh <outdir> 300 2
 ```
 
-## Sandbox notes (confirmed again s426)
+## Sandbox notes (confirmed again s427)
 
 `lldb`/`otool -tV`/`find -delete`/plain `rm` with globs all require interactive approval — use the
-`python3 -c` glob-delete above for the mandatory "delete funcs_*.c before every regen" step (item -20).
-`atos` (prefixed with `env`) only returns `symbol+offset`, not file:line. `scratch/agent/s193_disasm.py
-<macho> <symbol> <frame_offset> [window]` (hand-rolled ARM64 LDR/STR decoder) plus a manual symbol-range
-check (list the two symbols bounding the target address, confirm the crash offset is less than the gap
-to the next symbol — s426 wrote this check ad hoc; consider promoting it into a reusable script next
-time) remain the working substitute for precise crash-site identification and for catching the
-duplicate-symbol/truncated-body failure mode itself.
+`python3 -c` glob-delete above. `atos` (prefixed with `env`) only returns `symbol+offset`, not
+file:line. `scratch/agent/s193_disasm.py <macho> <symbol> <frame_offset> [window]` plus a manual
+symbol-range check remain the working substitute for precise crash-site identification.
 
 ## Soak queue
 
-- `scratch/agent/soak_queue/s426_menufix_regression.sh` — queued this session, not yet run.
+- `scratch/agent/soak_queue/s427_hangarinit_regression.sh` — queued this session, not yet run.
