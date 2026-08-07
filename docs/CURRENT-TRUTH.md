@@ -31,9 +31,12 @@ Priority order for upcoming iterations, set after the 300-session review:
    needed) except `BREADCRUMB7` (diagnostic, deliberately out of scope, lowest priority). **s454
    found a fresh idiom class** (`-0x5824($reg)` → global `0x8011A7DC`, 57 sites, item -291) with a
    guard WRITTEN but not yet built/verified — s454 discovered a live concurrent `loop.sh` iteration
-   mutating the same shared build state mid-session and correctly withheld regen/build/commit; see
-   item -291 for the reconciliation steps the next session must take first. Full session-by-session
-   arc: PROJECT-OVERVIEW §16.
+   mutating the same shared build state mid-session and correctly withheld regen/build/commit.
+   **s455 (the OTHER end of that same collision — see item -292) independently found and FULLY
+   FIXED a second fresh idiom class** (`0x29C0` → global `0x801529C0`, MusyX song-tick pointer, 4/43
+   sites built/verified/soaked). Both items are queued; item -291 (design-only, ready to execute)
+   is now the top priority since item -292's first slice is done. Full session-by-session arc:
+   PROJECT-OVERVIEW §16.
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
@@ -172,8 +175,44 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -291 (s454, a fresh M3 idiom class found but NOT yet built/verified — see
-below); the next new item takes -292.
+oldest). Current top is -292 (s455, a second fresh M3 idiom class found AND partially fixed —
+see below); item -291 (s454, a fresh idiom class found but design-only, ready to execute) is
+next. The next NEW item takes -293.
+
+-292. **(s455) Second fresh M3 idiom class found AND PARTIALLY FIXED: `0x29C0($reg)` → global
+    `0x801529C0`, the MusyX song-sequencer's "current song track" base pointer, in
+    `funcs_25.c`.** Same collision window as item -291 — s455 was itself the other end of the
+    concurrent-process collision s454 discovered (see PORTING-STATE Session 455 for the
+    reconciliation trail), independently rejected the same `-0x25C0($s0)`/`-0x76E0($s0)` false
+    lead s454 also rejected, then found this class via a two-hop scanner (load into a register,
+    later reused as a base register in a further `MEM_*` access, no intervening
+    `0x80000000`/`0x80800000` range check). `lui $reg, 0x8015; lw $reg, 0x29C0($reg)` reloads the
+    global fresh at every use site — same "reload a global pointer, dereference unchecked" shape
+    as the closed `-0x25A4` family. 50 raw hits tree-wide, all in `funcs_25.c`, 0 existing guards.
+    Only ONE site in the whole tree WRITES the global (inside `tickAllActiveSongs`, immediately
+    before its own 7 read sites — safe, not touched); the other 6 reader functions (43 sites:
+    `stepActiveSongTracks` 12, `advanceSongRegion` 12, `tickScheduledSongEvents` 5,
+    `stepSongPitchBendLanes` 5, `stepSongModulationLanes` 5, `updateSongTempoTickRate` 4) only
+    ever READ it with no guarantee `tickAllActiveSongs` ran first in their call history — the
+    same uninitialized/stale-global risk the `-0x25A4` family was closed for. M5-audio-adjacent
+    (MusyX song sequencer) — a genuinely new lead per the USER DIRECTIVE's M5 gate, though this is
+    M3 guard-audit work, not new M5 de-stubbing.
+    **Fixed and fully verified this session:** `updateSongTempoTickRate` only (4/43 sites, the
+    smallest/most tractable reader — single entry/exit, clean prologue/epilogue). Per-site bail
+    semantics hand-derived by reading the whole function body (not templated blindly): site 1
+    bails with a stack-neutral `return;` (loads before the prologue runs); sites 2/3 reuse the
+    function's own tick-loop exit label `L_80095648`; site 4 duplicates the real epilogue. Fixup
+    report: `funcs_25.c: updateSongTempoTickRate SONGTEMPO_TABLE_GUARD patched x4 (of 4 sites)`.
+    Full regen/build clean (0 errors), `strings` confirmed 4/4 format strings, live-verify 0
+    crash / 0 guard fires (matches item -287's established 0-fires baseline for this whole guard
+    idiom class — not an open question). Confirmation soak queued:
+    `scratch/agent/soak_queue/s454_songtempo_confirm.sh` (filename keeps the `s454` prefix from
+    before the session-numbering reconciliation; content is accurate).
+    **NOT fixed, queued as the next slice of THIS item:** the other 5 reader functions (39 sites).
+    `stepActiveSongTracks` (~740 lines) and `advanceSongRegion` (~540 lines) are unusually large
+    and may involve the recompiler's cross-function shared-tail-merge behavior seen elsewhere
+    (`lvj_checkComplexObjectives`/`audioCompandS16`/`__OSGlobalIntMask`) — each needs its own full
+    read before patching, not a blind copy of `updateSongTempoTickRate`'s 4 bail patterns.
 
 -291. **(s454) Fresh M3 idiom class found: `-0x5824($reg)` → global `0x8011A7DC`, a doubly-linked-
     list append with NO existing check, structurally identical to (but a different global from)

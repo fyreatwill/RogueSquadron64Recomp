@@ -37846,3 +37846,120 @@ before the next session runs, independent of the specific M3 finding.
 **Outcome: BLOCKED** (real analysis work completed -- idiom class found, verified, fix designed --
 but execution [regen/build/verify/soak/commit-of-code] correctly withheld because a live
 concurrent process was discovered actively mutating the same shared, unprotected build state).
+
+## Session 455 (2026-08-07)
+
+**Context -- the concurrency collision Session 454 flagged was real and happened to THIS session
+too, on the other side.** This session was itself a second, independently-running instance working
+the exact same mandate at the exact same time as the interactive session that produced Session
+454's writeup above -- i.e. Session 454 and Session 455 are the two ends of the collision it
+described, not two sequential sessions. By the time this session reached its own exit contract,
+Session 454's commit (`013c95d`) had already landed on `fe67d73`, so this session rebases its own
+findings on top of it rather than re-numbering from scratch. Full reconciliation: confirmed via
+`ps`/`git log` that `tools/agent/loop.sh`'s spawned iteration had already exited and committed
+before this session's own commit, so no further collision risk remained at write time.
+
+**Planned work unit:** same as Session 454 -- open a fresh M3 idiom-class audit, tracked backlog
+exhausted as of s453. Independently designed a discriminating scan for the `-0x25A4`-shaped risk
+(a pointer VALUE loaded via a fixed-offset `lw`/`MEM_*` read, later used as a base register in a
+further `MEM_*` access with no intervening range check) and ran it against the live
+`RecompiledFuncs/*.c` tree.
+
+**First candidate tried and rejected (same false lead Session 454 also hit and rejected
+independently):** `-0x25C0($s0)` (56 sites, `mallocCraftSelectionData`, `funcs_27.c`) and
+`-0x76E0($s0)` (46 sites, spread across 8 files) were the top two raw-frequency hits, both with 0
+existing guards. Inspection found `$s0` in both cases is set via `lui $s0, 0x800D` -- a
+compile-time-constant global address, not a runtime-loaded pointer -- and the offset stores/loads a
+16-bit counter used in index arithmetic, not a pointer that gets dereferenced. Confirmed
+categorically not the risky shape; not re-investigated further.
+
+**Refined scan:** wrote a two-hop scanner (`load into ctx->rN via MEM_*`, then `rN` reused as a
+base-register operand in a later `MEM_*` call within the same function, with no
+`0x80000000u`/`0x80800000u` guard text in between) across all 50 `RecompiledFuncs/funcs_*.c`
+files. Raw output was dominated by noise: small, ubiquitous offsets (`0x0`, `0x4`, `0x8`, `0xC`,
+`0x10`...) matched hundreds of unrelated functions doing ordinary first-few-struct-field access --
+categorically too broad to be a distinct "idiom class" the way `-0x25A4` was (a single, large,
+distinctive offset concentrated in a narrow, fragile subsystem). Filtered to large offsets
+(`|offset| >= 0x1000`) concentrated in a small function set: the largest surviving cluster was
+`-0x5824`/`-0x23A8`/`0x63B0`/`0x63FC` in `funcs_3.c` (481 combined sites) -- the SAME cluster
+Session 454 independently found and fixed as `DL_LIST_APPEND_GUARD` (`-0x5824`). This session
+did NOT pursue that cluster (already covered by the concurrent session) and instead pursued the
+next candidate down: `0x29C0` (26 raw hits at first glance, 50 on a full recount) in `funcs_25.c`.
+
+**Chosen idiom class: `0x29C0` → global `0x801529C0`, the MusyX song-sequencer's "current song
+track" base pointer.** `lui $reg, 0x8015; lw $reg, 0x29C0($reg)` reloads this global fresh at every
+use site (same "reload a global pointer, then dereference without a range check" shape as the
+closed `-0x25A4` family). 50 raw hits tree-wide, ALL in `funcs_25.c`, 0 existing guards anywhere
+(`grep -c 29C0 fixup_game_funcs.py` was 0 before this session). Traced ownership: only ONE site in
+the whole tree WRITES the global -- inside `tickAllActiveSongs`, immediately before that same
+function's own 7 read sites (a safe, same-function store-then-load, not touched this session). The
+other 6 reader functions (`stepActiveSongTracks` 12, `advanceSongRegion` 12,
+`tickScheduledSongEvents` 5, `stepSongPitchBendLanes` 5, `stepSongModulationLanes` 5,
+`updateSongTempoTickRate` 4 = 43 sites) only ever READ the global, with no guarantee
+`tickAllActiveSongs` ran first in their own call history -- the same
+uninitialized/stale-global-pointer risk profile the `-0x25A4` family was closed for. This is
+directly M5-audio-adjacent (the MusyX song sequencer), a genuinely new lead per the USER
+DIRECTIVE's M5 gate (M5 itself stays CLOSED; this is an M3 guard-audit finding that happens to sit
+in audio code, not new M5 de-stubbing work).
+
+**Work executed this session (bounded to the smallest/most tractable reader function):**
+`updateSongTempoTickRate` (4 of the 43 reader sites) -- single entry/exit, ~200 lines, clean
+prologue/epilogue, no merged-tail complication unlike the two largest siblings
+(`stepActiveSongTracks` ~740 lines, `advanceSongRegion` ~540 lines, both deferred). Read the whole
+function body before writing any patch to get per-site bail semantics exactly right:
+- Site 1 (`0x800955B4`) loads BEFORE the stack prologue runs (sp not yet adjusted, `$ra`/`$s0` not
+  yet saved) -- bail is a bare `return;`, stack-neutral, equivalent to the call never happening.
+- Sites 2 (`0x800955F0`) and 3 (`0x8009562C`) sit inside/exiting the function's own tick-budget
+  loop, whose natural exit condition already jumps to `L_80095648` -- reusing that existing label
+  as the bail target means "skip the rest of this tick loop, proceed to the fixed final tempo-rate
+  calc," exactly matching the loop's own normal exit semantics, not new behavior.
+- Site 4 (`0x8009568C`) is past the loop, in the function's final tempo-rate-write block leading
+  straight into the real epilogue -- its bail duplicates that epilogue (restore `$ra`/`$s0` from
+  the stack, pop `0x18`, `return;`) rather than adding a new label.
+
+`SONGTEMPO_TABLE_GUARD` written function-scoped (search confined to `updateSongTempoTickRate`'s own
+body via `func_start_m`, matching the established template from `GETLOOKUP_TABLE_GUARD`/
+`RELOCATELOOKUP_TABLE_GUARD`, s389), `SystemExit`-on->1-match hard guard per site (all matched
+exactly once, as expected -- no collision).
+
+**Full pipeline run, this session, start to finish:** raw regen (`rm RecompiledFuncs/funcs_*.c` →
+`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`) confirmed clean baseline; fixup report showed
+`funcs_25.c: updateSongTempoTickRate SONGTEMPO_TABLE_GUARD patched x4 (of 4 sites)`, no anomalies
+elsewhere in the report. `cmake --build . -j8`: 0 errors, only pre-existing benign warnings unrelated
+to this patch. `strings roguesquadron.elf | grep -c songtempo-table-guard` = 4 (one format string
+per site, as expected). Live-verify (`tools/probe.sh`, full armed-var list including
+`ROGUESQ_LOG_SONGTEMPO_TABLE_GUARD=1`, `PROBE_KEYS_FROM_PHASE=1`, SIGKILL at teardown): 0 `[CRASH]`,
+0 `songtempo-table-guard` fires (a null result, but per item -287's already-established baseline
+for this whole idiom-class family, 0 fires is the norm, not an open question -- no fresh positive
+control needed), `hangarbay-entry` n=35 (schedule reached meaningful content). Confirmation soak
+queued: `scratch/agent/soak_queue/s454_songtempo_confirm.sh` (kept the `s454` filename prefix since
+it was written before the session-numbering reconciliation below; content is accurate for s455).
+
+**Remaining scope, NOT fixed this session, queued in NEXT.md:** the other 5 reader functions --
+`stepActiveSongTracks` (12 sites), `advanceSongRegion` (12 sites), `tickScheduledSongEvents` (5),
+`stepSongPitchBendLanes` (5), `stepSongModulationLanes` (5) -- 39 sites total. The two largest
+(`stepActiveSongTracks`, `advanceSongRegion`) are unusually large (700+/500+ lines) and may involve
+the recompiler's cross-function shared-tail-merge behavior (seen elsewhere as `lvj_
+checkComplexObjectives`/`audioCompandS16`/`__OSGlobalIntMask`) -- each needs the same full-body read
+before patching that `updateSongTempoTickRate` got this session, not a blind copy of the same 4
+bail patterns.
+
+**Process note for the ledger, not a code finding:** this session's own initial attempt to delegate
+the whole work unit to a background subagent produced a subagent that immediately reported "I've
+delegated this to another subagent, I'll wait" without doing any real work -- the same
+reflexive-delegation failure mode noted in Session 421's ledger entry for a different task. The
+orchestrating session took over and executed everything by hand from that point on, which is how
+this session's real findings (above) got produced. Separately, that same delegation chain is the
+most likely explanation for the concurrency collision itself: this session's own first spawned
+subagent, rather than stopping, appears to have spawned a further nested subagent that continued
+running in the background for ~18 more minutes and independently reached the `-0x5824`/
+`DL_LIST_APPEND_GUARD` finding and BLOCKED writeup now on record as Session 454 -- i.e. Sessions
+454 and 455 in this ledger are plausibly two branches of the SAME original task tree, not two
+unrelated concurrent actors. This doesn't change either finding's validity, but the human operator
+should be aware that "one interactive session" can silently fan out into multiple independent
+git-committing agents if a subagent itself calls the Agent tool instead of executing directly.
+
+**Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed --
+`SONGTEMPO_TABLE_GUARD`, 4/4 sites in `updateSongTempoTickRate` -- on top of Session 454's own
+real analysis work, which stays queued as the very next item since it's unbuilt but ready to
+execute).
