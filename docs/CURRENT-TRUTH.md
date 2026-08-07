@@ -24,11 +24,11 @@ Priority order for upcoming iterations, set after the 300-session review:
    — s449 confirmed the whole guard idiom class is correct hardening, not a live crash source); item
    -291 (`DL_LIST_APPEND_GUARD`, 57→84 sites, s454/456, extended s463); item -296
    (`SIBLING_PTR_WRITE_GUARD`, 119 sites, s459); item -292 (`SONGTEMPO_TABLE_GUARD`, 43/43 sites
-   across 6 reader functions, s454-462); and item -298 (`DL_LIST_RESET_GUARD`, 84/84 sites — 70
-   blanket-regex s463 + 14 per-site-literal-anchor s464, CLOSED s464).
-   **s465 found+classified the next candidate, item -299 (global `0x801163FC`, 84 sites,
-   `funcs_3.c`/`funcs_4.c` DL-buffer-pool code) — NOT YET FIXED, this is the current top work unit,
-   see `scratch/agent/NEXT.md`.**
+   across 6 reader functions, s454-462); item -298 (`DL_LIST_RESET_GUARD`, 84/84 sites — 70
+   blanket-regex s463 + 14 per-site-literal-anchor s464, CLOSED s464); and item -299
+   (`DL_BUFFER_POOL_GUARD`, global `0x801163FC`, 84/84 sites, `funcs_3.c`x46/`funcs_4.c`x38,
+   CLOSED s466). **No next candidate identified yet — s465's scan surfaced several other unexamined
+   buckets (see item -299 below), the next session should classify the top-ranked one.**
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
@@ -170,51 +170,48 @@ numbered highest-magnitude-negative (top, newest/highest priority) counting up t
 oldest). Highest number allocated so far is -299 (this item); items are never renumbered when
 compacted into a range pointer. The next NEW item takes -300.
 
--299. **(s465) M3 idiom-class audit: NEW candidate found+classified, global `0x801163FC`,
-    `funcs_3.c`/`funcs_4.c` DL-buffer-pool code. NOT YET FIXED — top work unit for next session.**
-    Per `scratch/agent/NEXT.md`'s Option A (a fresh codebase-wide frequency scan, adapting the
-    s454/s463 method to the whole reload-a-global-via-lui+lw shape rather than one known offset),
-    a from-scratch scan (`scratch_s465_scan.py`, N64Recomp repo, untracked) tallied every
-    `lui $reg,0x80XX` immediately followed by `lw $reg,OFFSET($reg)` (same register reloaded) across
-    all 50 `RecompiledFuncs/funcs_*.c` files, bucketed by `(hi16, offset)`, excluding every offset
-    already covered by an existing guard (verified by cross-referencing each candidate offset's raw
-    hex string against the whole `fixup_game_funcs.py` file — a genuinely uncovered offset has ZERO
-    hits anywhere in that file, not just absence from the exclude list built from the obvious `_GUARD`
-    names; this caught a case-sensitivity bug in the first exclude-list pass, where `0x63B0`/`0x29C0`
-    briefly false-positived as "new" because the script's offset normalizer lowercased hex letters but
-    the exclude set didn't — the reference sanity-check block the script also prints caught it
-    immediately). Top-ranked fresh bucket: `hi16=0x8011, offset=0x63FC` (global `0x801163FC`, 89
-    bytes past the well-known `0x801163B0` free-list-cache-head global from `GENERIC_CACHE_GUARD`),
-    87 raw reload sites (`funcs_3.c`x46, `funcs_4.c`x38, `funcs_6.c`x3). A shape-classification pass
-    (`scratch_s465_classify_63fc.py`, same repo) read the downstream use of the reloaded register at
-    every site and found a clean split: the 3 `funcs_6.c` sites are `COMPARE_ONLY` (the reload is used
-    as a bounds-check operand, never dereferenced — benign, same role `0x63D4` plays for the
-    already-closed `-0x23A8`/`SIBLING_PTR_WRITE_GUARD` write, sampled and confirmed separately); the
-    other 84 (all `funcs_3.c`/`funcs_4.c`) are `DIRECT_WRITE+DEREF_READ`, byte-identical in shape by
-    sampling at 5 points spread across the population (lines 1181, 3864, 5637, 26757 of `funcs_3.c`
-    and 26030 of `funcs_4.c`): a lazy-init idiom —
-    `ctx->rL = MEM_W(ctx->rL, 0X63FC); ctx->rD = MEM_W(ctx->rL, 0X0); if (ctx->rD != 0) goto Lalready; MEM_W(0X0, ctx->rL) = ctx->rNew; goto Ldone;`
-    (read `global->field0`; if already non-null, skip to `Lalready`; if null, write a fresh value into
-    `global->field0` then jump to `Ldone`). Both the read and the write deref `ctx->rL` — the raw
-    reload of `0x801163FC` — with zero validation, same structural risk as the closed
-    `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD` family, found in the same two files
-    (`allocateDisplayListBuffer`/`emitAllocatedDLCommand` are the enclosing functions at the two
-    sampled examples — consistent with a DL-buffer-pool free-list, sibling to `0x8011A7DC`'s own
-    append-list and `0x801163B0`'s cache-head). Not yet fixed: unlike `DL_LIST_APPEND_GUARD`'s
-    straight-line 6-instruction tail, this idiom has a CONDITIONAL BRANCH between the read and the
-    write (the delay-slot instruction inside the branch is compiler-arbitrary per site, e.g. `addu`
-    seen at every sampled site so far but not confirmed byte-identical across all 84), so the
-    remediation needs a design decision before patching: force `ctx->rD` non-zero when `ctx->rL` is
-    invalid (taking the "already initialized" branch, matching this whole lineage's "skip the write,
-    downstream doesn't depend on it" precedent) rather than the naive "substitute 0" trick (which
-    would route into the WRITE branch and still deref the invalid `ctx->rL` as a write address). Full
-    design + exact next commands: `scratch/agent/NEXT.md`. 3 other buckets found but not yet examined
-    (spread across many files, less concentrated in the `funcs_3.c`/`funcs_4.c` lineage core, lower
-    priority): `hi16=0x8013,offset=0x7CE4` (45 sites, 9 files), `hi16=0x8013,offset=-0x70F8` (31,
-    `funcs_6.c` only), `hi16=0x8012,offset=-0x5BBC` (30, 4 files), `hi16=0x8013,offset=-0x7104` (29,
-    `funcs_6.c` only), `hi16=0x8011,offset=-0x35E0` (23, 9 files), `hi16=0x8013,offset=0xB50` (21, 11
-    files), `hi16=0x8012,offset=-0x5B48` (20, `funcs_3.c`/`funcs_4.c` only — the 2nd-most-comparable
-    candidate to `0x63FC` if it turns out not fixable this way).
+-299. **(s465-466) M3 idiom-class audit: `DL_BUFFER_POOL_GUARD`, global `0x801163FC`
+    (89 bytes past the `0x801163B0` free-list-cache-head global), `funcs_3.c`/`funcs_4.c`
+    DL-buffer-pool code (`allocateDisplayListBuffer`/`emitAllocatedDLCommand` and siblings).
+    CLOSED s466, 84/84 sites.** Found s465 by a fresh codebase-wide frequency scan of every
+    `lui $reg,0x80XX; lw $reg,OFFSET($reg)` global-reload idiom (not just previously-known
+    offsets) across all 50 `RecompiledFuncs/funcs_*.c` files (`scratch_s465_scan.py`, N64Recomp
+    repo, untracked; caught a case-sensitivity bug in its own exclude-list normalizer along the
+    way). 87 raw reload sites (`funcs_3.c`x46, `funcs_4.c`x38, `funcs_6.c`x3); a shape pass
+    (`scratch_s465_classify_63fc.py`) split off 3 `funcs_6.c` `COMPARE_ONLY` sites (benign, out of
+    scope) from 84 `funcs_3.c`/`funcs_4.c` sites sharing a lazy-init idiom: `ctx->rL =
+    MEM_W(ctx->rL, 0X63FC); ctx->rD = MEM_W(ctx->rL, 0X0); if (ctx->rD != 0) goto Lalready;
+    MEM_W(0X0, ctx->rL) = ctx->rNew; goto Ldone;` (read `global->field0`; if non-null skip the
+    write). Both the read and write deref the unvalidated reload — same structural risk as
+    `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`. s466 ran the shape-uniformity audit s465 left
+    open (a CONDITIONAL BRANCH sits between the read and write, with a compiler-arbitrary
+    delay-slot instruction only sampled at 5 sites): `scratch_s466_shapecheck_63fc.py`
+    (N64Recomp repo, untracked) dumped and normalized the full reload-through-write block for all
+    84 sites and found 100% (84/84) adjacency between the reload and the READ deref and 100%
+    (84/84) reach a same-register write within 40 lines — the 7 "distinct" normalized shapes it
+    found are entirely explained by the harmless delay-slot instruction (`nop` at 73 sites, various
+    `addu $reg,$reg,$zero` register combos at 11), confirming the write is only ever reachable
+    through the read's result. That let the fix guard the READ alone: validate `ctx->rL` right
+    after the reload; if invalid, skip the read and force `ctx->rD` to a nonzero sentinel (1) so
+    control takes the "already initialized" branch (which contains the write too) — NOT
+    "substitute 0", which would route into the write branch and still deref the invalid `ctx->rL`
+    as a write address. `DL_BUFFER_POOL_GUARD` landed in `fixup_game_funcs.py` (regex anchored to
+    just the 3-instruction lui/reload/read-deref prefix, leaving the branch/delay-slot/write
+    untouched). Clean regen+build (84/84 sites: `funcs_3.c`x46 + `funcs_4.c`x38, no regression in
+    sibling guard counts), `strings` on the binary confirms 84 `dl-buffer-pool-guard` format
+    strings. Live-verify: 0 `[CRASH]` from the guard itself, 0 `dl-buffer-pool-guard` fires (matches
+    item -287's established true-negative baseline), `hangarbay-entry` n=32 (positive control,
+    content reached), 0 fires on every sibling guard (no regression). Crashed later in the same run
+    on `coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` — the SAME already-catalogued
+    heap-walker background-noise family seen at s464's confirm soak (documented since s354-366),
+    unrelated to this guard, filed not chased. Confirmation soak queued:
+    `scratch/agent/soak_queue/s466_dlbufferpool_confirm.sh`.
+    **Next candidate, not yet examined** (from s465's scan, ranked by concentration in the
+    `funcs_3.c`/`funcs_4.c` lineage core): `hi16=0x8012,offset=-0x5B48` (20 sites, `funcs_3.c`/
+    `funcs_4.c` only — most comparable to `0x63FC`), then the more scattered buckets
+    `hi16=0x8013,offset=0x7CE4` (45, 9 files), `hi16=0x8013,offset=-0x70F8` (31, `funcs_6.c` only),
+    `hi16=0x8012,offset=-0x5BBC` (30, 4 files), `hi16=0x8013,offset=-0x7104` (29, `funcs_6.c` only),
+    `hi16=0x8011,offset=-0x35E0` (23, 9 files), `hi16=0x8013,offset=0xB50` (21, 11 files).
 
 -298. **(s463-464) M3 idiom-class audit: `DL_LIST_RESET_GUARD`, re-scoped the ~111 non-canonical
     `-0x5824` population (same global as item -291, `0x8011A7DC`) flagged at s454/456. CLOSED s464,

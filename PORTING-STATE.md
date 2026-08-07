@@ -38727,3 +38727,66 @@ distinguished from 2 other candidate buckets that turned out benign on inspectio
 landed this session — the shape confirmation step surfaced a genuine open question (blanket-regex
 tractability across all 84 sites) that the next session should resolve before patching, per iron
 rule 1: don't commit to a remediation mechanism before the population is actually characterized.)
+
+## Session 466 (2026-08-07): item -299 CLOSES at 84/84 — `DL_BUFFER_POOL_GUARD`, global `0x801163FC`,
+clean build/live-verify, 0 fires
+
+**Work unit: finish s465's open shape-uniformity question, then patch.** Per NEXT.md's Step 1,
+wrote `scratch_s466_shapecheck_63fc.py` (N64Recomp repo, untracked): dumps and normalizes the full
+reload-through-write block for all 84 `DIRECT_WRITE+DEREF_READ` sites (not just the 5 originally
+sampled), checking specifically for (a) adjacency between the reload and the READ deref (only
+comment/breadcrumb lines tolerated between) and (b) whether every site reaches a same-register
+direct write within a bounded window. Result: 100% (84/84) on both counts. The script also grouped
+all 84 into normalized full-block shapes and found 7 distinct buckets — but reading them showed the
+ONLY variance is the compiler-arbitrary branch-delay-slot instruction (`nop` at 73 sites, various
+`addu $reg,$reg,$zero` register combinations at the other 11), which sits inside the conditional
+branch and is never touched by the planned remediation. This confirmed the population is uniform
+enough to fix with a single mechanism, closing the open question s465 left.
+
+**Discriminating insight from the adjacency finding: the write deref is only reachable through the
+read's own result**, so guarding the READ ALONE (not the whole reload-through-write block) is
+sufficient to close both crash risks — this is a simpler and smaller patch than the originally
+envisioned "wrap the whole conditional block" design. Implemented `DL_BUFFER_POOL_GUARD` in
+`fixup_game_funcs.py` (N64Recomp repo): a regex anchored to just the 3-instruction lui/reload/
+read-deref prefix (tolerating both breadcrumb dialects, same as `DL_LIST_APPEND_GUARD`'s own
+regex), replacing the read-deref line with a guard that validates `ctx->rL` (the reload target)
+against `0x80000000..0x80800000`; on failure it skips the read and sets `ctx->rD` to a nonzero
+sentinel (1) so control takes the "already initialized" branch (which contains the unguarded write
+too) — matching `DL_LIST_RESET_GUARD`'s own design-note precedent against "substitute 0" (which
+would route into the write branch and still deref the invalid pointer as a write address). The
+branch, delay slot, and write instructions are left completely untouched by the patch.
+
+**Full pipeline run, start to finish:** raw regen (`os.remove` over `glob` for all 50
+`RecompiledFuncs/funcs_*.c`, not bare `rm`, per the standing sandbox-glob caveat) → `make_elf.py`
+(rogue_squadron64 repo) → `./build/N64Recomp rogue_squadron.toml` (N64Recomp repo, clean, only
+expected `[Info] Indirect tail call` noise) → `fixup_game_funcs.py` (report showed `funcs_3.c:
+DL-buffer-pool lazy-init read guard (DL_BUFFER_POOL_GUARD) patched x46` and `funcs_4.c: ... patched
+x38`, verified via `grep -c "DL_BUFFER_POOL_GUARD site=" RecompiledFuncs/funcs_3.c
+RecompiledFuncs/funcs_4.c` → 46 + 38 = 84, exactly matching the pre-counted expectation — audited
+per the standing item -20 rule, not just trusted; sibling guard counts unchanged:
+`DL_LIST_APPEND_GUARD` 84, `DL_LIST_RESET_GUARD` 84, `SIBLING_PTR_WRITE_GUARD` 119). `cmake --build
+. -j8` (`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`): clean, only the pre-existing
+benign `DDIV` sign-conversion warnings in `funcs_8.c` (unrelated, longstanding) and SDL2-version
+linker warnings (also pre-existing). `strings RogueSquadron64Recomp | grep -c
+dl-buffer-pool-guard` = 84, matching the site count exactly.
+
+**Live-verify** (`tools/probe.sh`, full armed-var list including
+`ROGUESQ_LOG_DL_BUFFER_POOL_GUARD=1`, `PROBE_KEYS_FROM_PHASE=1`, SIGKILL at teardown): 0
+`dl-buffer-pool-guard` fires (a null result, matching item -287's already-established baseline for
+this whole idiom-class family), 0 fires on every sibling guard tested in the same run (no
+regression), `hangarbay-entry` n=32 (positive control — the code path was reached, matching this
+session's own `[keys]` schedule; lower than some prior ~2900-3000 baselines because this run used
+the s464-style shorter schedule, not a regression signal by itself). The run crashed later at
+`[CRASH][pc-symbol] sym=coalesceFreeHeapBlocks+4424`, `last-guest-pc=0x8000247c` — the SAME
+already-catalogued heap-walker background-noise family documented since s354-366 and hit again at
+s464's own confirm soak, unrelated to any guard tested this session — filed, not chased.
+Confirmation soak queued: `scratch/agent/soak_queue/s466_dlbufferpool_confirm.sh` (same shape as
+s464's own recipe, arms all passive instruments per the standing soak-queue rule).
+
+**This CLOSES item -299** (`DL_BUFFER_POOL_GUARD`, 84/84 sites) — full derivation, closure
+rationale, and the next unexamined candidate bucket (`hi16=0x8012,offset=-0x5B48`, 20 sites,
+`funcs_3.c`/`funcs_4.c` only) now in `docs/CURRENT-TRUTH.md` item -299.
+
+**Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed — closing a full
+M3 idiom-class audit end to end in one session, from the open shape-uniformity question s465 left
+through to a built and soak-queued guard).
