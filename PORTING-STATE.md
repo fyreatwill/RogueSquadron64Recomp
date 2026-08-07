@@ -37963,3 +37963,51 @@ git-committing agents if a subagent itself calls the Agent tool instead of execu
 `SONGTEMPO_TABLE_GUARD`, 4/4 sites in `updateSongTempoTickRate` -- on top of Session 454's own
 real analysis work, which stays queued as the very next item since it's unbuilt but ready to
 execute).
+
+## Session 456 (2026-08-07)
+
+**Work unit: executed item -291's already-designed `DL_LIST_APPEND_GUARD` fix (s454's finding,
+queued design-complete since Session 454/455's concurrency collision resolved).** No new design
+work this session -- the guard patch (`fixup_game_funcs.py`, N64Recomp repo, untracked) was
+already written, syntax-checked, and waiting on the standard build pipeline. Checked for a live
+concurrent `loop.sh` iteration first (per NEXT.md's carried-forward caution): confirmed via `ps`
+that the only `loop.sh` process was this session's own parent invocation (started 11:33:41,
+`iteration 1`), no second collision this time.
+
+**Pipeline executed cleanly, no surprises:**
+1. Raw regen baseline: deleted all 50 `RecompiledFuncs/funcs_*.c` (Python `os.remove` over
+   `glob`, not `rm`, per the standing sandbox-glob caveat), `python3 tools/make_elf.py` (rogue_
+   squadron64 repo) then `./build/N64Recomp rogue_squadron.toml` (N64Recomp repo) -- both clean,
+   only expected `[Info] Indirect tail call in ...` noise.
+2. `python3 fixup_game_funcs.py` -- report confirmed `funcs_3.c: doubly-linked-list append guard
+   (DL_LIST_APPEND_GUARD) patched x26` and `funcs_4.c: ... patched x31` (verified directly via
+   `grep -c "DL_LIST_APPEND_GUARD site=" RecompiledFuncs/funcs_3.c RecompiledFuncs/funcs_4.c` ->
+   26 + 31 = 57, exactly matching item -291's pre-counted expectation -- audited per the standing
+   item -20 rule, not just trusted).
+3. `cmake --build . -j8` (`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`) -- clean,
+   only the pre-existing benign `DDIV` sign-conversion warnings in `funcs_8.c` (unrelated,
+   longstanding).
+4. `strings RogueSquadron64Recomp | grep -c dl-list-append-guard` -> 57, matching the 57 patched
+   sites exactly. Binary mtime confirmed fresh (built seconds before the check).
+5. Live-verify: `tools/probe.sh`, full 300s/250s-keys schedule, ALL passive guard env vars armed
+   (copied the exact list from `soak_queue/done/s454_songtempo_confirm...sh`) plus
+   `ROGUESQ_LOG_DL_LIST_APPEND_GUARD=1`. Result: **0 `[CRASH]` markers across the full 300s
+   schedule** (a cleaner run than several recent soaks that hit unrelated crash signatures partway
+   through), **0 `dl-list-append-guard` fires** (matches item -287's established 0-fires baseline
+   for this whole guard-idiom family -- not an open question, a null result consistent with the
+   guard class's history), `hangarbay-entry` reached n=3000 (matches/exceeds prior ~2700-3000
+   baselines, confirms normal gameplay depth was reached).
+
+**Confirmation soak queued:** `scratch/agent/soak_queue/s456_dl_list_append_confirm.sh` (same env
+var list, same schedule, for the loop to re-run and append a verdict line to
+`scratch/agent/SOAK-RESULTS.md`).
+
+**Closes item -291.** The `-0x5824`/`0x8011A7DC` doubly-linked-list-append idiom class (57 sites,
+`funcs_3.c`/`funcs_4.c`) now has guards on every canonical site. Two related threads remain
+explicitly NOT in this session's scope, both already documented and unchanged: `-0x23A8`/
+`0x8011DC58` (sibling global, no clean byte-identical shape, needs S392/S393-style per-site
+classification) and the ~111 non-canonical `-0x5824` sites (same global, non-adjacent load/deref
+pair, needs per-site treatment). Neither investigated further this session.
+
+**Outcome: ADVANCED** (a real, built, live-verified, soak-queued code fix landed -- 57/57
+`DL_LIST_APPEND_GUARD` sites -- closing out item -291's remaining execution work).

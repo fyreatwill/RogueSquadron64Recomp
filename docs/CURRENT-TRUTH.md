@@ -29,14 +29,13 @@ Priority order for upcoming iterations, set after the 300-session review:
    confirmed this whole guard idiom class is correct hardening, not a live crash source, and s453
    closed the tracked backlog's last item (`S392_H3A`/`S393_H3B`, 50 sites, ALL redundant, no patch
    needed) except `BREADCRUMB7` (diagnostic, deliberately out of scope, lowest priority). **s454
-   found a fresh idiom class** (`-0x5824($reg)` → global `0x8011A7DC`, 57 sites, item -291) with a
-   guard WRITTEN but not yet built/verified — s454 discovered a live concurrent `loop.sh` iteration
-   mutating the same shared build state mid-session and correctly withheld regen/build/commit.
-   **s455 (the OTHER end of that same collision — see item -292) independently found and FULLY
-   FIXED a second fresh idiom class** (`0x29C0` → global `0x801529C0`, MusyX song-tick pointer, 4/43
-   sites built/verified/soaked). Both items are queued; item -291 (design-only, ready to execute)
-   is now the top priority since item -292's first slice is done. Full session-by-session arc:
-   PROJECT-OVERVIEW §16.
+   found a fresh idiom class** (`-0x5824($reg)` → global `0x8011A7DC`, 57 sites) — **s456 executed
+   it: 57/57 sites built/verified/soaked, item -291 CLOSED** (0 crash, 0 fires across a full 300s
+   schedule, `hangarbay-entry` n=3000). **s455 (the OTHER end of that same collision — see item
+   -292) independently found and PARTIALLY FIXED a second fresh idiom class** (`0x29C0` → global
+   `0x801529C0`, MusyX song-tick pointer, 4/43 sites built/verified/soaked; 39 sites across 5 more
+   reader functions remain, now the top M3 priority). Full session-by-session arc: PROJECT-OVERVIEW
+   §16.
 
 Sanctioned tooling work unit (backport function-scoped matching to the file-scoped-only guard patches
 in `fixup_game_funcs.py`): **CLOSED OUT as of s386/s388, no live work remains** — see item -231..-238
@@ -175,9 +174,27 @@ cost three sessions before the recursive mutex.
 
 Numbering convention (fixed s295, was previously three colliding sequences): items are
 numbered highest-magnitude-negative (top, newest/highest priority) counting up to -1 (bottom,
-oldest). Current top is -292 (s455, a second fresh M3 idiom class found AND partially fixed —
-see below); item -291 (s454, a fresh idiom class found but design-only, ready to execute) is
-next. The next NEW item takes -293.
+oldest). Current top is -293 (s456, item -291 executed and CLOSED — see below); item -292 (s455,
+a second fresh M3 idiom class found AND partially fixed, 39 sites remain) is next. The next NEW
+item takes -294.
+
+-293. **(s456) Executed item -291's `DL_LIST_APPEND_GUARD` (57 sites, `-0x5824($reg)` → global
+    `0x8011A7DC`, `funcs_3.c`/`funcs_4.c`): CLOSES item -291.** No new design work — the guard was
+    already written and syntax-checked in `fixup_game_funcs.py` (N64Recomp repo) since s454; this
+    session ran the standard pipeline (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` →
+    `cmake build` → `strings` sanity → live-verify). Confirmed no live concurrent `loop.sh`
+    iteration this time. 26/26 `funcs_3.c` + 31/31 `funcs_4.c` sites patched (verified via direct
+    grep count, not just trusting the fixup report), matching item -291's pre-counted 57
+    exactly. `strings` on the built binary confirmed 57 `dl-list-append-guard` format strings.
+    Live-verify (`tools/probe.sh`, full 300s/250s-keys schedule, all passive guard vars armed):
+    **0 `[CRASH]` markers across the entire schedule** (cleaner than several recent soaks that hit
+    unrelated crashes partway through), **0 `dl-list-append-guard` fires** (matches item -287's
+    established 0-fires baseline for this whole guard-idiom family), `hangarbay-entry` reached
+    n=3000 (matches/exceeds prior baselines). Confirmation soak queued:
+    `scratch/agent/soak_queue/s456_dl_list_append_confirm.sh`. Full writeup: PORTING-STATE.md
+    Session 456. NOT in scope, unchanged: `-0x23A8`→`0x8011DC58` (sibling global, needs per-site
+    classification) and ~111 non-canonical `-0x5824` sites (same global, non-adjacent load/deref
+    pair).
 
 -292. **(s455) Second fresh M3 idiom class found AND PARTIALLY FIXED: `0x29C0($reg)` → global
     `0x801529C0`, the MusyX song-sequencer's "current song track" base pointer, in
@@ -219,6 +236,7 @@ next. The next NEW item takes -293.
     the already-fixed `0x801163B0` free-list-cache-head family (`GENERIC_CACHE_GUARD`/
     `CACHE4_GUARD`/`CACHE_HEAD_A1_GUARD`/`FREELIST_NEXT_GUARD`), in the SAME `funcs_3.c`/
     `funcs_4.c` display-list-emission code cluster those families already fixed real crashes in.
+    **CLOSED — see item -293 (s456): 57/57 sites built, verified, soaked, 0 crash, 0 fires.**
     A discriminating scan (`N64Recomp/scratch_s454_scan.py`) tracking `ctx->rN = MEM_*(...,
     OFFSET)` loads then checking for a later unguarded use of `rN` as a base register found this
     offset's canonical 6-instruction shape byte-identical (verified programmatically, not
@@ -226,20 +244,10 @@ next. The next NEW item takes -293.
     `allocateDisplayListBuffer`, `emitFrameRdpInitDl`, `emitColorFillRect`,
     `drawFrameProfilerBars`, `emitMaterialTexturedDLAlt`, `renderFlatMeshFaceGroup`,
     `buildOrientedFaceGeometry`, `renderLitMeshFaceGroup`, `drawTextGlyphRect`,
-    `drawSubtitleText`, `setupCameraMatrices`). A guard (`DL_LIST_APPEND_GUARD`) is WRITTEN in
-    `fixup_game_funcs.py` (N64Recomp repo, untracked, syntax-checked) but **NOT built, NOT
-    verified, NOT soaked** — s454 discovered a live concurrent `tools/agent/loop.sh` iteration
-    actively mutating the same shared non-git-tracked `RecompiledFuncs/*.c`/`fixup_game_funcs.py`/
-    `build/` state mid-session (see PORTING-STATE Session 454 for the 4-point evidence trail) and
-    correctly withheld regen/build/live-verify/commit to avoid corrupting it. **Next session:**
-    confirm no other loop.sh iteration is live, then run the standard pipeline
-    (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake build` → `strings` sanity →
-    live-verify → soak-queue) on the already-written patch, and reconcile with whatever the
-    concurrent iteration 2 process itself concluded (check `git log` for a second commit claiming
-    `s454` or a different idiom class before assuming this finding is still the top item). Also
-    NOT in scope, documented for later: `-0x23A8`→`0x8011DC58` (sibling global, same function
-    cluster, no clean byte-identical shape — needs per-site classification) and ~111
-    non-canonical `-0x5824` sites (same global, non-adjacent load/deref pair). Separately
+    `drawSubtitleText`, `setupCameraMatrices`). Also NOT in scope, documented for later:
+    `-0x23A8`→`0x8011DC58` (sibling global, same function cluster, no clean byte-identical shape
+    — needs per-site classification) and ~111 non-canonical `-0x5824` sites (same global,
+    non-adjacent load/deref pair). Separately
     confirmed non-issue, do not re-investigate: `-0x25C0($s0)` (56 sites, `mallocCraftSelectionData`)
     and `-0x76E0($s0)` (46 sites) are compile-time-constant-based counter/scalar accesses, not
     pointer dereferences — not the risky shape.
