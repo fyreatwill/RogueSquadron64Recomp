@@ -19,9 +19,10 @@ Priority order for upcoming iterations, set after the 300-session review:
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Current active
    sub-arc: the s465 codebase-wide frequency scan of `lui+lw` global-reload idioms — see items
-   -298..-302 below for the closed-bucket chain and PROJECT-OVERVIEW §18 for full detail. **Next
-   candidate: `hi16=0x8013, offset=-0x7104` (29 sites, `funcs_6.c` only)** — single-file
-   concentration, not raw site count, is this method's established tractability signal.
+   -298..-303 below for the closed-bucket chain and PROJECT-OVERVIEW §18 for full detail. **Next
+   candidate: `hi16=0x8012, offset=-0x5BBC`** (30 sites, 4 files) — the s470 rule-8 pivot moved off
+   the single-file-concentration heuristic since the two remaining single-file buckets are exhausted
+   (item -303 closed s470); budget extra classification time for a multi-file bucket.
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -153,10 +154,10 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -302. The next NEW item takes -303.
+a range pointer. Highest allocated so far: -303. The next NEW item takes -304.
 
--298..-302. **(s463-469) Five more M3 idiom-class audit buckets from the s465 codebase-wide
-    frequency scan, four CLOSED, one DEFERRED.** Item -298 (`DL_LIST_RESET_GUARD`, re-scoped ~111
+-298..-303. **(s463-470) Six more M3 idiom-class audit buckets from the s465 codebase-wide
+    frequency scan, five CLOSED, one DEFERRED.** Item -298 (`DL_LIST_RESET_GUARD`, re-scoped ~111
     non-canonical `-0x5824` sites sharing item -291's global `0x8011A7DC`) CLOSED s464, 84/84 sites
     (27 folded into `DL_LIST_APPEND_GUARD` itself, 70 blanket-regex, 14 per-site literal-anchor).
     Item -299 (`DL_BUFFER_POOL_GUARD`, global `0x801163FC`) CLOSED s466, 84/84 sites
@@ -176,12 +177,24 @@ a range pointer. Highest allocated so far: -302. The next NEW item takes -303.
     -296) did NOT fire, so not confirmed as that mechanism; filed, not chased. Item -302
     (`hi16=0x8013,offset=0x7CE4`, 45 sites/9 files) CLASSIFIED AND DEFERRED s468, not closed: the
     reloaded global is a small INTEGER INDEX (not a pointer), 17 distinct downstream shapes, no
-    single guard placement covers all sites without speculation. Every CLOSED item's live-
+    single guard placement covers all sites without speculation. Item -303
+    (`TEXDATA_PTR_ARRAY_GUARD`, global at `hi16=0x8013,offset=-0x7104`, `funcs_6.c` only, 12 bytes
+    from item -301's global) CLOSED s470, 29/29 sites — the s470 rule-8 mandatory-pivot iteration's
+    discriminating probe: classification found two raw-pointer risk shapes (direct use as an
+    `rs_free()` argument / write-loop base with no arithmetic, and `idx*4` array-of-pointers access),
+    both distinct from item -302's confirmed integer-index shape; substitutes `0x80000000u`, same
+    reasoning as item -301. Clean build/live-verify: 0 new-guard fires, 0 fires on all 7 siblings
+    (no regression), `hangarbay-entry` n=31 (positive control); crashed on `last-guest-pc=0x80054744`
+    inside `tickWrappingTimerAccumulatorList` — the EXACT already-catalogued, already-PARKED
+    `m5-audio-destub-tickwrap-divzero-craftselect` compiler div-by-zero-trap signature (first seen
+    ~s344, `docs/PROJECT-OVERVIEW.md`), unrelated to any guard tested, filed not chased. 2nd
+    independent confirm soak queued (`s470_texdataptrarray_confirm.sh`). Every CLOSED item's live-
     verify/confirm-soak result matches item -287's established true-negative baseline. Session-by-
     session derivation, per-site classification methodology, and every soak result:
-    `docs/PROJECT-OVERVIEW.md` §18. **Next candidate**: `hi16=0x8013, offset=-0x7104` (29 sites,
-    `funcs_6.c` only) — promoted on single-file-concentration tractability, the transferable lesson
-    item -301/-302's contrast established.
+    `docs/PROJECT-OVERVIEW.md` §18 (s463-469; s470 detail folds in at next maintenance pass).
+    **Next candidate**: `hi16=0x8012, offset=-0x5BBC` (30 sites, 4 files) — the two remaining
+    single-file buckets are now exhausted (item -302 deferred, item -303 closed), so this session's
+    pivot moves to the next-ranked multi-file bucket; budget extra classification time per-file.
 
 -291..-297. **(s454-462) Three M3 idiom-class audits found via an s454 concurrent-process
     collision, all now CLOSED.** Item -291 (`DL_LIST_APPEND_GUARD`, global `0x8011A7DC`, 57 sites,

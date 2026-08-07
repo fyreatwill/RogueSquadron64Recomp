@@ -39041,3 +39041,73 @@ single-occurrence crash surfaced by a confirm soak in this whole idiom-class-aud
 **Outcome: ADVANCED** (maintenance iteration, net shrink of exactly 200 lines in
 `docs/CURRENT-TRUTH.md` — meets the Step-0 threshold for ADVANCED — plus a real soak result folded
 into the ledger with a new crash signature correctly filed rather than chased).
+
+## Session 470 (2026-08-07): rule-8 mandatory pivot on `item-301-scan-buckets` — ran the single
+highest-information discriminating probe (classify + guard the next scan candidate) and CLOSED it as
+item -303, `TEXDATA_PTR_ARRAY_GUARD`
+
+**Trigger.** The loop's rule-8 enforcement flagged 3 consecutive iterations (s467, s468, s469 — the
+latter a MAINTENANCE pass that still carried the slug forward in `NEXT.md`) on HYPOTHESIS-ID
+`item-301-scan-buckets` and forced a pivot preamble: either switch to a genuinely different work unit,
+or design and run the single highest-information discriminating probe for that hypothesis and close or
+pivot on its result. Chose the latter — `NEXT.md` already had a fully-specified next work unit
+(classify `hi16=0x8013, offset=-0x7104`, 29 sites, `funcs_6.c` only) queued from s468/s469, which
+doubles as exactly that discriminating probe: its outcome (raw-pointer shape → close cleanly, vs.
+integer-index shape like item -302 → defer) was the open question the sub-arc needed resolved before
+continuing.
+
+**Step 1 — classify.** `scratch_s468_shapecheck_generic.py 8013 -7104` (N64Recomp repo, untracked)
+found 9 distinct downstream instruction-chain shapes across the 29 sites, 20/29 flagged
+`hit_deref=True` (raw pointer used directly or with `idx*4` arithmetic before a `MEM_W` deref). The
+remaining 9 `hit_deref=False` sites were read directly from `funcs_6.c` to check the tool wasn't
+undercounting risk (same caution item -300's two-shape surprise taught): `funcs_6.c:1954` passes the
+raw reload straight into `rs_free(rdram, ctx)` as an argument (`jal 0x80001C98`); `funcs_6.c:1875` and
+`funcs_6.c:14053` use it as a loop base pointer, writing zero through it directly
+(`MEM_W(0x0, ctx->r4) = 0;`) and incrementing by 4 each iteration. Both are genuine raw-pointer uses
+the shapecheck tool's local-window deref pattern doesn't match (callee-argument and store-instruction
+consumption, not a `MEM_W` read) — confirms this bucket is the SAME risk shape as item -301
+(TEXDATA_TABLE_GUARD), not item -302's confirmed integer-index shape. `idx*4`-arithmetic sites (e.g.
+`funcs_6.c:2514`) read directly too, confirming array-of-pointers semantics (4-byte stride) as a
+sibling to item -301's `idx*36` struct-array stride — plausibly the same texture-management global
+family (only 12 bytes apart: `-0x70F8` vs `-0x7104`).
+
+**Step 2 — regex verify.** `scratch_s470_test_regex_7104.py` (modeled on
+`scratch_s468_test_regex_70f8.py`) matched exactly 29/29 sites against the raw `MEM_W(reg, -0X7104)`
+line count in `funcs_6.c`, cross-checked before touching `fixup_game_funcs.py`.
+
+**Step 3 — patch.** Added `TEXDATA_PTR_ARRAY_GUARD` to `fixup_game_funcs.py` (N64Recomp repo,
+untracked — same file/location as every prior guard in this lineage), modeled directly on
+`TEXDATA_TABLE_GUARD`'s structure: substitutes `0x80000000u` (not 0) for an out-of-range reload, same
+reasoning as item -301 — some downstream chains add `idx*4`+offset arithmetic before dereferencing,
+where 0 would compute a guaranteed-invalid tiny address; 0x80000000u stays a valid RDRAM address for
+any subsequent index arithmetic a legitimate caller could plausibly supply.
+
+**Step 4 — regen/build/verify.** Deleted `RecompiledFuncs/funcs_*.c`, reran `make_elf.py` →
+`N64Recomp` → `fixup_game_funcs.py`: report showed `TEXDATA_PTR_ARRAY_GUARD patched x29` (funcs_6.c),
+and all 7 pre-existing sibling guards unchanged — `DL_LIST_APPEND_GUARD` 84 (46+38), `DL_LIST_RESET_
+GUARD` 84 (41+5+29+9), `DL_BUFFER_POOL_GUARD` 84 (46+38), `SIBLING_PTR_WRITE_GUARD` 119 (65+54),
+`NODE_LIST_HEAD_GUARD` 20 (12+8), `NODE_LIST_HEAD_WRITE_GUARD` 10 (6+4), `TEXDATA_TABLE_GUARD` 31 —
+no regression. Clean `cmake --build` (only pre-existing unrelated warnings). `strings` on the built
+binary: 29 `texdata-ptr-array-guard` format strings, matching the site count.
+
+**Live-verify.** Full passive-instrument env-var list (all sibling guards + breadcrumbs armed) plus
+`ROGUESQ_LOG_TEXDATA_PTR_ARRAY_GUARD=1`, `PROBE_KEYS_FROM_PHASE=1`, full 300s/250s-keys schedule: 0
+`texdata-ptr-array-guard` fires, 0 fires on all 7 sibling guards (no regression), `hangarbay-entry`
+n=31 (positive control — code path actually reached, iron rule 1 satisfied). Crashed at 117.1s on
+`last-guest-pc=0x80054744` inside `tickWrappingTimerAccumulatorList` — this is the EXACT
+already-catalogued, already-PARKED `m5-audio-destub-tickwrap-divzero-craftselect` compiler-inserted
+`break 7` div-by-zero trap signature (first seen ~s344, `docs/PROJECT-OVERVIEW.md` line ~443),
+unrelated to any guard tested. Filed, not chased — matches an existing parked entry exactly, not a
+new class.
+
+**Closes item -303 outright** (single manual live-verify + queued 2nd independent confirm soak,
+`s470_texdataptrarray_confirm.sh`, consistent with items -299/-300's "CLOSED + confirm soak queued"
+precedent). `docs/CURRENT-TRUTH.md` Next-steps and USER DIRECTIVE next-candidate pointer updated;
+`NEXT.md` rewritten with a fresh HYPOTHESIS-ID (`item-304-hi8012-5bbc-classify`) targeting the next
+scan candidate (`hi16=0x8012, offset=-0x5BBC`, 30 sites/4 files) — deliberately a new slug per the
+rule-8 pivot instruction, even though the underlying M3-idiom-scan strategy continues unchanged (the
+scan method itself is still producing tractable, closeable buckets; no signal yet to abandon it).
+
+**Outcome: ADVANCED** (closed a new idiom-class bucket, item -303, with a clean build/live-verify and
+zero fires; satisfies the rule-8 mandatory pivot by running its discriminating probe to a definitive
+close rather than a 4th inconclusive rehash).
