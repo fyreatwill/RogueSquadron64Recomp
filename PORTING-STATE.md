@@ -42541,6 +42541,86 @@ R5 remains open at 1/2 (retry queued); do not mark it CLOSED until the retry lan
 audio-subsystem crash signature or surfaced a new audio stub/gate lead. Cadence unchanged from s511,
 due again s514+ (unchanged mechanism from every prior check, s486-s511).
 
-`scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.</new_string>
-</invoke>
+`scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
+
+## Session 514 (2026-08-08): item -317 step 3 -- folded in s513's queued RENDER_LIT_MESH_R5_GUARD
+retry AND RENDER_LIT_MESH_R6_GUARD confirm (BOTH CLOSED 2/2, item -317 step 3 now 16/16 fixed guards
+fully closed); found and fixed a SEVENTH distinct write site inside `renderLitMeshFaceGroup`
+(`RENDER_LIT_MESH_R7_GUARD`, funcs_4.c:15620/0x80014140, 32 shared sites), 1st live-verify clean on
+the guard itself (0 fires, valid positive control) but crashed on a NEW, previously uncatalogued
+signature inside `beginFrameDLChunk` (filed as item -323, single occurrence, NOT the same
+`last-guest-pc` as item -319's own recurring crash in the same function), 2nd confirm queued; also
+found and fixed a pre-existing corruption artifact at the tail of this file (a leaked
+`</new_string></invoke>` XML fragment from a prior session's Edit call, evidently pasted into the
+document instead of being executed as a tool call -- removed, no content lost, this session's entry
+now follows directly).
+
+**Fold-in 1 -- R5 retry**: `scratch/agent/soak_results/s513_render_lit_mesh_r5_confirm_retry`
+(rc=3, 156s). This time it DOES carry a valid positive control: `hangarbay-entry` counted to `n=2600`
+in `run.log` (the s513 first attempt's problem -- VI never leaving the title-area oscillation -- did
+not recur). 0 `render-lit-mesh-r5-guard` fires. Crashed at 110.7s on
+`pc-symbol=rebuildActiveDisplayObjectList+540 (local-symtab)`, `last-guest-pc=0x800ab060` -- grepped
+this file and found an exact byte-identical prior sighting (`PORTING-STATE.md:41991`, the same
+already-catalogued shared-heap-corruption-walker family that item -318's own s506 first attempt hit,
+`rs_free`/`rs_malloc` <- `rebuildActiveDisplayObjectList`, tracked since s164). Unrelated to this
+guard. 2/2 confirms, `RENDER_LIT_MESH_R5_GUARD` CLOSED.
+
+**Fold-in 2 -- R6 confirm**: `scratch/agent/soak_results/s513_render_lit_mesh_r6_confirm` (rc=3,
+164s). `hangarbay-entry` counted to `n=2600` (positive control). 0 `render-lit-mesh-r6-guard` fires.
+Crashed at 118.4s on a nonsense dyld-shared-cache `pc-symbol`
+(`__isPlatformOrVariantPlatformVersionAtLeast.cold.4+5029948140`, an absurd 5-billion-byte offset --
+the standard tell for this cluster), `last-guest-pc=0x800ab0e0` -- exact byte-identical match to the
+already-catalogued async Metal-shader-compiler-thread SIGSEGV cluster (items -10/-9, hit repeatedly
+by items -303/-315/-508's own confirms at this same address). Unrelated to this guard. 2/2 confirms,
+`RENDER_LIT_MESH_R6_GUARD` CLOSED. Item -317 step 3: 16/16 fully closed guards (up from 14/14).
+
+**Work unit**: re-ran `python3 scratch/agent/s494_item317_step3_tracer.py --scan` +
+`python3 scratch/agent/s506_dedupe.py` against the R6-patched source (already current from s513's own
+re-scan, re-verified fresh) -- top pick preferring `renderLitMeshFaceGroup`/`submitSceneNodeRender`
+over `beginFrameDLChunk` per NEXT.md's standing caution (fixing inside `beginFrameDLChunk` before
+item -319 hits its 3rd occurrence risks masking which site is the recurring bug): `funcs_4.c:15620`
+(`renderLitMeshFaceGroup`, write, `ctx->r2+0x4`, 32 shared reload sites, `guest_addr=0x80014140`) --
+a SEVENTH, distinct write site inside the SAME function R2-R6 already guard, confirmed by direct
+inspection: `grep -c` on the exact address comment returned 1, no PATCH comment present. `ctx->r2` is
+reloaded from the SAME `0x801163B0` free-list-cache-head global a few instructions earlier
+(`0x80014134`) with only a null check (`ctx->r2 == 0`, `beq $v0, $zero, L_80014144`); the null arm
+takes a separate, identical, harmless write to `ctx->r3+0x0` then falls through to the SAME write
+this guard covers, but the non-null path has no `0x80000000`-`0x80800000` range check before the
+dereference -- byte-for-byte the same shape as every one of the 16 prior guards in this lineage, most
+directly R6 (same function). Downstream control flow (`L_80014144`) reassigns `ctx->r1`/`ctx->r5`
+from the table again immediately after -- so skip-the-write-on-invalid is safe here, same precedent
+as every prior guard. Added `RENDER_LIT_MESH_R7_GUARD` to `fixup_game_funcs.py` (copied the R6 block
+verbatim, only the site address/variable names/guard name changed). Regenerated per the mandatory
+order: deleted all `RecompiledFuncs/funcs_*.c` (Python `os.remove` loop, same sandbox workaround as
+every prior session), `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`. The
+fixup report showed `patched x1` for the new guard (`funcs_4.c: render-lit-mesh derived-pointer write
+guard (s514, item -317 step 3, RENDER_LIT_MESH_R7_GUARD) patched x1`), no anomalies. Clean build
+(only the pre-existing unrelated `DDIV` pointer-sign warnings).
+
+**1st live-verify** (`scratch/agent/soak_results/s514_render_lit_mesh_r7_manual/run.log`, same
+`PROBE_KEYS` schedule and full sibling-guard env-var set as every prior soak in this lineage, plus
+the new `ROGUESQ_LOG_RENDER_LIT_MESH_R7_GUARD`): crashed at 110.7s (44 frames captured, `rc=3`), but
+**clean on the guard itself**: 0 `render-lit-mesh-r7-guard` fires (null result), `hangarbay-entry`
+counted to `n=2600` (positive control), 4 benign init-time `n=0`/`ra=0x00000000`-class co-fires
+(`generic-cache-guard`, `dl-list-append-rwrite-guard`, `dl-list-reset-rnode-guard`,
+`sibling-ptr-write-guard` -- the established non-corruption signature, no regression). The crash
+itself is on a NEW, previously uncatalogued signature: `pc-symbol=beginFrameDLChunk+27456
+(local-symtab)`, `last-guest-pc=0x8000ae40`. Grepped this file plus both `docs/*.md` for both the
+exact `pc-symbol` and `last-guest-pc` values: no prior hits. This IS inside the same function item
+-319 already tracks (`beginFrameDLChunk`), but at a genuinely different guest instruction address
+(item -319's own signature is `last-guest-pc=0x8000b0d0`) -- per the s422 overturned-conclusion
+precedent (one function/host-offset value can span multiple real crash sites), this does NOT count as
+item -319's 3rd occurrence. Filed as new **item -323**, single occurrence, not chased. 2nd
+independent confirm queued: `scratch/agent/soak_queue/s514_render_lit_mesh_r7_confirm.sh`.
+
+**Rule 8 note**: ADVANCED (two prior confirms folded in and CLOSED 2/2, plus a new code change + 1st
+live-verify + queued confirm, plus a new filed item) on the still-open
+`item-317-step3-fix-next-ranked-leads` `HYPOTHESIS-ID`; resets any stall counter. No pivot -- neither
+item -319, -320, -321, nor -322 hit a 3rd occurrence this session.
+
+**M5 cadence check**: grepped `scratch/agent/soak_results/s50[6-9]*.log` and `s51*.log` for
+`musyx`/`waitForAnyAudioSlot`/`audio-slot`/`audio-voice` -- zero hits, no new audio-subsystem lead.
+Cadence reset to s514, due again s517+.
+
+`scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
 
