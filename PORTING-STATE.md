@@ -41229,3 +41229,117 @@ own scheduled completion (no manual SIGTERM); positive-controlled via
 per iron rule 1; obeyed the loop's mandatory-pivot directive by running the
 named discriminating probe and closing on its result rather than repeating
 Step A/B planning for a 4th time.
+
+## Session 496 (2026-08-07): item -317 step 3 -- fixed the #2 audit-confirmed
+lead by shared-reload-site count, `RENDER_LIT_MESH_R2_GUARD` (48 sites, the
+single largest location in the whole ~150-location population), 1st
+live-verify clean, 2nd confirm queued; also found and fixed a path-depth bug
+in s495's own queued soak recipe that had silently failed to run the game at
+all.
+
+**NEXT.md's line number had drifted -- re-derived fresh instead of trusting
+it.** NEXT.md (written by s495) named `funcs_4.c:18192` as the #1 lead. A
+direct read of that line showed a `lui` instruction comment, not the flagged
+write -- the report's line number had drifted ~13 lines from a regen that
+happened between when the tracer's report was generated and when NEXT.md was
+finalized. Rather than guess or trust the stale number, re-ran the tracer's
+raw JSON report through a fresh dedup pass (group by `(file, hit.line,
+hit.kind, hit.off, hit.reg)`, count sources per group) to re-derive the
+current top location directly: `funcs_4.c:18205`
+(`MEM_W(0X4, ctx->r2) = ctx->r3;`, 48 shared sources, function
+`renderLitMeshFaceGroup` -- confirmed by `awk` backward-scan for the nearest
+`RECOMP_FUNC` line, matching the tracer's own `func` field). This matches
+NEXT.md's explicit contingency ("if the context doesn't match the audit's
+summary... stop, re-read directly, treat this as its own discriminating
+check") and is worth generalizing: line numbers recorded in this lineage's
+docs are a snapshot of one specific regen, not a stable key across sessions
+that add their own guards (each new guard shifts every line after it) --
+future sessions should re-derive from source or a fresh tracer scan rather
+than trust a recorded line number verbatim.
+
+**The fix.** At 0x80014C60 (`ctx->r2 = MEM_W(ctx->r2, 0X63B0)`, three
+instructions before the flagged write), `ctx->r2` is reloaded from the
+`0x801163B0` table. The following `beq $v0, $zero, L_80014C70` /
+`if (ctx->r2 == 0)` only gates a difference in which of two adjacent writes
+executes first (`MEM_W(0X0, ctx->r3) = ctx->r2` writes ctx->r2's VALUE into
+ctx->r3, safe regardless) -- both the null and non-null arms fall through to
+the SAME flagged write, `MEM_W(0X4, ctx->r2) = ctx->r3` at 0x80014C6C, which
+dereferences ctx->r2 as an ADDRESS. So the null check gates nothing for this
+specific instruction, and there is no `0x80000000`-`0x80800000` range check
+anywhere on the path -- textbook match for the shape s495's audit described
+for all 6 of its confirmed-unfixed leads. Checked the surrounding ~500 lines
+for any nearby guard first (`awk` scan for `GUARD` between the two nearest
+sibling-pointer guards at 0x80014B48/0x80014C20 -- both well before this
+site, confirming no existing coverage) and checked downstream control flow
+(`L_80014C70` only touches `ctx->r1`/`ctx->r4` next, never `ctx->r2` again)
+to confirm skip-the-write-on-invalid is safe here, same precedent as
+`NODE_LIST_HEAD_WRITE_GUARD`/`NODE_LIST_HEAD_SIBLING_R4_GUARD`. Hand-authored
+as a single literal-string-anchor patch in `fixup_game_funcs.py` (uniqueness
+confirmed via `text.count()==1`), named `RENDER_LIT_MESH_R2_GUARD` after the
+containing function/register per the established naming precedent.
+
+**Regen/build:** deleted only `funcs_4.c` (N64Recomp skips regen of files
+that already exist) then ran the full pipeline (`make_elf.py` -> `N64Recomp`
+-> `fixup_game_funcs.py` -> `cmake --build`) clean. Fixup report showed
+`render-lit-mesh derived-pointer write guard ... patched x1` (exactly
+expected) and no new SKIPPED lines beyond the known-permanent
+S392_H3A/S393_H3B remainder. Build succeeded with only pre-existing warnings.
+
+**Live-verify:** ran the standard hangar-bay `PROBE_KEYS` schedule with every
+sibling-guard env var armed plus the new
+`ROGUESQ_LOG_RENDER_LIT_MESH_R2_GUARD`. Result: 0 fires on the new guard, 0
+fires on any of the ~41 other armed guard families including
+`NODE_LIST_HEAD_SIBLING_R4_GUARD` (no regression), one benign pre-existing
+`[hangarmenu-a0-guard]` diagnostic fire (item -265, unconditionally logged
+for its first 20 occurrences, unrelated to this session), `hangarbay-entry`
+n=34 (positive control, consistent with the standard baseline), and the run
+completed its **full** scheduled duration with no crash at all (122 frames
+captured, all `PROBE_KEYS` through 250s executed, rc=0). 2nd independent
+confirm queued (`scratch/agent/soak_queue/s496_render_lit_mesh_r2_confirm.sh`).
+Re-ran the tracer's `--scan` afterward as a free (no game run) regression
+signal: `NEEDS_GUARD` dropped from 392 to 390, `SAFE_NO_DEREF` rose from 56 to
+58 -- a small but genuine and expected delta (only 2 of the 448 raw reload
+sites had ALL their dangerous downstream hits solely at this one now-fixed
+dereference location; the other 46 sites sharing this location still have
+other unguarded hits elsewhere, so they correctly remain NEEDS_GUARD).
+
+**Bonus fix: s495's own 2nd confirm never actually ran.** Reading
+`scratch/agent/SOAK-RESULTS.md`'s tail per the mandatory read-first list
+showed `s495_sibling_r4_confirm | rc=1 | 0s` -- a suspicious zero-second
+runtime for a recipe that should take 5+ minutes. The captured log was a
+single line: `cd: .../RogueSquadron64Recomp/scratch/build: No such file or
+directory`. The recipe used `cd "$(dirname "$0")/../.."` (two levels up from
+`scratch/agent/soak_queue/`), which resolves to `.../RogueSquadron64Recomp/scratch`
+instead of the repo root -- one level short. Comparing against the s492
+template (`scratch/agent/soak_queue/done/s492_oriented_face_derived_ptr_confirm_*.sh`)
+confirmed the correct pattern uses three `../../..` levels. This is a
+copy-paste regression in that one script, not a game crash or a guard
+regression -- the game process never launched. Requeued a corrected copy,
+`scratch/agent/soak_queue/s496_sibling_r4_confirm_retry.sh`, byte-identical
+to the original except for the path fix and adding this session's own new
+guard var for free regression coverage.  `NODE_LIST_HEAD_SIBLING_R4_GUARD`
+therefore still has only its s495 manual-foreground live-verify on record;
+the retry supplies the still-missing independent 2nd confirm.
+
+**What remains open:** of the 150 distinct dedup'd locations, 6 were
+audit-confirmed by s495 and 2 are now fixed (`NODE_LIST_HEAD_SIBLING_R4_GUARD`,
+`RENDER_LIT_MESH_R2_GUARD`); ~144 are still formally unaudited. The
+next-ranked confirmed-but-unfixed leads from s495's sample, in order:
+`funcs_3.c:6979`/40 sites, `funcs_3.c:15977`/32, `funcs_4.c:3299`/26,
+`funcs_3.c:28922`/18, plus two singletons (`funcs_3.c:83`
+`heapFreeListInsert`, `funcs_3.c:858` `countDisplayListChunks`) -- all of
+these line numbers should be treated as approximate and re-derived fresh
+against current source before use, per this session's own drift finding.
+
+**Rules obeyed:** read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`,
+`scratch/agent/SOAK-RESULTS.md` first per contract; did not touch `lib/`
+(this fix lives entirely in `N64Recomp/fixup_game_funcs.py` and the generated
+`RecompiledFuncs/`, outside RS64Recomp's own `lib/` submodules -- no
+`submodule-patches/export.sh` needed); one game run at a time; regen order
+followed exactly (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` ->
+`cmake`); killed nothing manually -- the live-verify ran to its own scheduled
+completion (rc=0); positive-controlled via `hangarbay-entry` n=34 in the same
+run as the new guard's 0-fire null result, per iron rule 1; treated the drift
+between NEXT.md's recorded line number and live source as its own
+discriminating check rather than guessing, per NEXT.md's explicit
+contingency.
