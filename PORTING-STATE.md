@@ -40437,3 +40437,89 @@ Rules obeyed: did not run any experiment this session (Step 0 mandates a mainten
 not touch `lib/` (only `docs/CURRENT-TRUTH.md`, `docs/PROJECT-OVERVIEW.md`, and the agent-loop
 scratch files changed), so no `submodule-patches/export.sh` needed. No soak queued this session
 (no code changed, nothing new to validate).
+
+## Session 487 (2026-08-07): closed item -314's own deferred remainder (6 mid-loop sites in `musyxMixActiveVoices`/`musyxSynthFrame`) with a new loop-scoped `goto` guard shape — `AUDIO_VOICE_BASEPTR_LOOP_GUARD`, 2 site anchors, all 20/20 item -314 sites now covered, 1st confirm clean
+
+Per `NEXT.md`'s recommended option: item -314's own s484 comment explicitly deferred 6 of its 20
+unguarded `0x801496F8` (voice-array base pointer, `hi16=0x8015,off=-0x6908`) reload sites —
+`musyxMixActiveVoices` (3 sites, `0x80090E78`/`0x80090EA0`/`0x80090EBC`) and `musyxSynthFrame` (1
+site, `0x800913BC`) — because a plain `isAudioSlotActive`-style early `return;` there would be a much
+bigger behavior change than the 14 sites already fixed: both sit inside loop bodies where an early
+return would silently abort processing every remaining voice for the rest of the frame, not just skip
+one already-isolated operation.
+
+**Read the actual loop structure directly** (`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c`,
+not just the addresses from s483/s484's lists) to design the correct guard shape for each:
+
+- `musyxMixActiveVoices` (`funcs_24.c:2477-2835`): the reload at `0x80090E78` sits at the very TOP of
+  a genuine per-voice `for` loop (`L_80090E74`, iterated once per active voice, counter `$s0`/`ctx->r16`),
+  BEFORE any write happens in that iteration. The loop's own per-iteration increment/condition block
+  is `L_80090F40` (`funcs_24.c:2705`) — confirmed by direct read that nothing there depends on any
+  register set inside the skipped body (`$v0`/`$v1`/`$a0`/`$a1`/`$a3`/`$t0` are all iteration-local
+  scratch, freshly recomputed at `L_80090F40` itself from `$s0`/`$s4`). So the correct shape is: guard
+  the reload, and on a bad base, `goto L_80090F40;` instead of `return;` — skips only the current
+  voice, then correctly falls through to the loop's own next-iteration logic. This also transitively
+  protects the loop's other 2 same-iteration reloads (`0x80090EA0`/`0x80090EBC`, both reached only
+  after `0x80090E78`'s reload in the same iteration, same "global never rewritten within this
+  function" argument the entry-guard family already established).
+- `musyxSynthFrame` (`funcs_24.c:3146-...`): only ONE reload (`0x800913BC`), immediately before a
+  `for (a1=0; a1<a3; a1++)` fixed-stride (`+0x88`) array walk (`funcs_24.c:3460-3531`) that decrements
+  each active voice's release countdown. Confirmed by direct read that the loop's own exit label
+  (`L_80091418`, `funcs_24.c:3532`) doesn't read any register the loop itself sets (`$a0`-`$a3`/`$v0`/
+  `$v1`/`$f0`/`$f2` are all loop-local scratch) — so this is actually closer in shape to the
+  already-fixed entry-guard sites (skip one isolated operation) than to `musyxMixActiveVoices`'s
+  per-iteration case, just expressed as `goto L_80091418;` instead of `return;` because a bare
+  `return` here would also incorrectly skip several unrelated real side effects later in the same
+  `musyxSynthFrame` invocation (e.g. the `musyxMixActiveVoices` calls further down).
+
+Both goto targets verified reachable as plain forward gotos at the same brace-nesting depth as each
+insertion point (no variable-scope crossing) — same style this codebase already uses for its
+`goto after_N;` inlined-call recovery pattern.
+
+**Implementation.** Added `_make_audio_voice_baseptr_loop_guard` (parameterized by anchor addresses,
+register, function label, and goto target) plus a 2-tuple site list to
+`N64Recomp/fixup_game_funcs.py`, applied via 2 individual `re.subn` calls each `raise`-guarded to
+require exactly 1 match. New guard family name `AUDIO_VOICE_BASEPTR_LOOP_GUARD`, own env var
+`ROGUESQ_LOG_AUDIO_VOICE_BASEPTR_LOOP_GUARD`, breadcrumb tag `[audio-voice-baseptr-loop-guard]`
+(kept distinct from s484's `AUDIO_VOICE_BASEPTR_ENTRY_GUARD`/`ROGUESQ_LOG_AUDIO_VOICE_BASEPTR_GUARD`
+so fires can be told apart).
+
+**Regenerated** (funcs_*.c deleted first per item -20's standing rule; `make_elf.py` → `N64Recomp` →
+`fixup_game_funcs.py` → `cmake --build` in `RogueSquadron64Recomp/build`, the ACTUAL game build
+directory — caught and corrected a mistaken first build attempt against `N64Recomp/build`, which is
+the N64Recomp CLI tool's own build and produced `ninja: no work to do`). `fixup_game_funcs.py`
+report showed the new guard patched `x2` sites with no errors and no shape drift. All sibling guard
+families verified unregressed via a `.c`-tree-wide substring count (divide by the family's own
+per-site occurrence multiplicity): `GENERIC_CACHE_GUARD` 214/2=107, `DL_BUFFER_POOL_GUARD` 168/2=84,
+`SIBLING_PTR_WRITE_GUARD` 240/2=120, `DL_LIST_RESET_GUARD` 168/2=84, `DL_LIST_RESET_RNODE_GUARD`
+168/2=84, `AUDIO_VOICE_BASEPTR_ENTRY_GUARD` 10 (unchanged) — all match their established counts
+exactly. Clean `cmake --build` (only the pre-existing, unrelated `DDIV` pointer-sign warnings).
+
+**1st live-verify** (`s487_audio_voice_baseptr_loop_manual`, same `PROBE_KEYS` schedule and full
+sibling-guard env-var set as every prior soak in this lineage, plus the new
+`ROGUESQ_LOG_AUDIO_VOICE_BASEPTR_LOOP_GUARD`): 0 fires on `audio-voice-baseptr-loop-guard` and all 13
+other guard families instrumented, `hangarbay-entry` reached `n=2600` (strong positive control,
+matches the established baseline). Process crashed at 113.1s (`rc=3`): `pc-symbol=memcpy_recomp+288
+(local-symtab)`, `last-guest-pc=0x80054780` — grepped against `PORTING-STATE.md` and found
+byte-identical to s462's own `stepactivesongtracks_confirm` crash (Session 463 entry), inside
+`tickWrappingTimerAccumulatorList` (`funcs_11.c`), a function with its own extensive already-
+catalogued crash history (`BREADCRUMB9`, the s343 div-by-zero, the s426-441 epilogue-misattribution
+saga). Unrelated to this session's guard — filed not chased, matching the exact pattern every prior
+idiom-class-audit confirm soak in this arc has hit. 2nd independent confirm queued
+(`scratch/agent/soak_queue/s487_audio_voice_baseptr_loop_confirm.sh`).
+
+**Item -314 is now fully covered, 20/20** (14/20 via s484's `AUDIO_VOICE_BASEPTR_ENTRY_GUARD`, the
+remaining 6/20 via this session's `AUDIO_VOICE_BASEPTR_LOOP_GUARD`) — pending only the routine 2nd
+confirm before formal CLOSED status, per this arc's own 2/2-confirm standard.
+
+**Outcome: ADVANCED.** Landed a real code change (a new loop-scoped guard shape, 2 site anchors)
+that closes item -314's last open scope, build-verified with all sibling guard families unregressed,
+1st soak clean with a strong positive control and a crash that root-causes to an already-catalogued,
+unrelated family. Also corrected a build-directory mistake mid-session (built the wrong `build/`
+first) before it could produce a false "guard didn't take effect" reading.
+
+Rules obeyed: regen order `make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake` (funcs_*.c
+deleted first); did not touch `lib/` (edits were in `N64Recomp/fixup_game_funcs.py`, an untracked
+tool file outside this repo's `lib/`, consistent with every prior session in this lineage — no
+`submodule-patches/export.sh` needed); one game run at a time; killed via the soak script's own
+SIGKILL/watchdog path, not manual SIGTERM.

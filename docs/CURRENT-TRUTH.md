@@ -29,34 +29,42 @@ Priority order for upcoming iterations, set after the 300-session review:
    actually shape-uniqueness?" skepticism to another old closed patch then found `AUDIO_SLOT_ACTIVE_GUARD`
    recurring across 20 more MusyX voice-function sites (item -314, s483), whose own confirm soak
    surfaced a THIRD sibling scope gap in `DL_LIST_RESET_GUARD` (item -315, s484) that s485 also
-   generalized (73/84 sites). **s486: item -315's 2nd confirm came back clean — all four items
-   (-312/-313/-314/-315) are now fully CLOSED, 2/2 independent confirms each; full narrative migrated
-   to PROJECT-OVERVIEW §20.** No untried high-expected-value instruction-pattern scan and no
-   un-investigated high-recurrence breadcrumb remain queued — next M3 session should either pick up
-   item -314's own deferred 6-site loop-scoped-guard follow-up (see item -314 below) or run a fresh
-   from-scratch idiom scan per the s465/s477 precedent.
+   generalized (73/84 sites). s486: item -315's 2nd confirm came back clean. **s487: item -314's own
+   deferred 6-site remainder (the 2 mid-loop `musyxMixActiveVoices`/`musyxSynthFrame` site anchors)
+   fixed with a loop-scoped `goto`-based guard shape — item -314 is now fully covered, 20/20, 1st
+   confirm clean (2nd queued). All five items (-312/-313/-314/-315) are fully CLOSED or awaiting only
+   a routine 2nd confirm; full narrative migrated to PROJECT-OVERVIEW §20.** No untried
+   high-expected-value instruction-pattern scan and no un-investigated high-recurrence breadcrumb
+   remain queued — next M3 session should run a fresh from-scratch idiom scan per the s465/s477
+   precedent, or check the M5 lead cadence (last checked s478, overdue at 3+ sessions).
 
--312..-315. **(s481-486) `DL_LIST_APPEND_GUARD` and `DL_LIST_RESET_GUARD`'s own "grep-verified
-    unique site" scope claims both turn out to be wrong, plus one new deferred
-    `AUDIO_SLOT_ACTIVE_GUARD` sibling-site bucket — all FOUR items now fully CLOSED, 2/2 independent
-    confirms each.** Item -312: a `loadCutsceneAssetsByIndex+1860` breadcrumb reproduced as
-    `submitSceneNodeRender+63868` under the s480 symbolizer fix, revealing a real `DL_LIST_APPEND_GUARD`
-    unguarded-`rwrite` gap at one site; fixed, then SUPERSEDED. Item -313: a structural re-audit found
-    that same aliasing shape recurs at 78/84 `DL_LIST_APPEND_GUARD` sites (confirmed via 2nd direct
-    source read); generalized into a blanket `rwrite`-validating patch, CLOSED. Item -314: applying
-    the same "address-unique ≠ shape-unique" skepticism to `AUDIO_SLOT_ACTIVE_GUARD` found 20 more
-    unguarded loads of its global across 15 MusyX voice functions; 14/20 fixed via 10 site-anchored
-    early-return guards (6 mid-loop sites in `musyxMixActiveVoices`/`musyxSynthFrame` deliberately
-    left unguarded — need a loop-scoped "skip iteration" shape, not a plain early return; this is the
-    live open follow-up), CLOSED for the 14/20 scope. Item -315: item -314's own confirm soak crashed
-    live on a THIRD sibling scope gap, in `DL_LIST_RESET_GUARD` (wrong register validated at one
-    `submitSceneNodeRender` site); fixed site-anchored, then a static-analysis audit found the same
-    shape at 73/84 sites, generalized into `DL_LIST_RESET_RNODE_GUARD`, CLOSED. **s486: item -315's
-    2nd confirm (`s485_dl_list_reset_rnode_confirm`) came back clean — 0 fires on the new guard or any
-    sibling, crash was a host-side Metal.framework shader-compiler-thread SIGSEGV (same family as
-    items -10/-9/-303, `last-guest-pc=0x800ab0e0` byte-identical to item -303's own s472 confirm).**
-    Full derivation and every soak verdict: `docs/PROJECT-OVERVIEW.md` §20, `PORTING-STATE.md`
-    Sessions 481-486.
+-312..-315. **(s481-487) `DL_LIST_APPEND_GUARD` and `DL_LIST_RESET_GUARD`'s own "grep-verified
+    unique site" scope claims both turn out to be wrong, plus `AUDIO_SLOT_ACTIVE_GUARD`'s own
+    20-site sibling gap — all FOUR items now fully CLOSED or fully covered.** Item -312: a
+    `loadCutsceneAssetsByIndex+1860` breadcrumb reproduced as `submitSceneNodeRender+63868` under the
+    s480 symbolizer fix, revealing a real `DL_LIST_APPEND_GUARD` unguarded-`rwrite` gap at one site;
+    fixed, then SUPERSEDED. Item -313: a structural re-audit found that same aliasing shape recurs at
+    78/84 `DL_LIST_APPEND_GUARD` sites (confirmed via 2nd direct source read); generalized into a
+    blanket `rwrite`-validating patch, CLOSED. Item -314: applying the same "address-unique ≠
+    shape-unique" skepticism to `AUDIO_SLOT_ACTIVE_GUARD` found 20 more unguarded loads of its global
+    across 15 MusyX voice functions; s484 fixed 14/20 via 10 site-anchored early-return guards
+    (`AUDIO_VOICE_BASEPTR_ENTRY_GUARD`), deliberately leaving the 6 mid-loop
+    `musyxMixActiveVoices`/`musyxSynthFrame` sites unguarded pending a loop-scoped design. **s487
+    closed that remainder**: `musyxMixActiveVoices`'s loop-head reload (transitively covering its 2
+    other same-iteration reloads) gets a `goto`-to-per-iteration-increment guard (skips only that
+    voice, continues the loop); `musyxSynthFrame`'s single reload gets a `goto`-past-the-array-walk
+    guard (skips only that countdown pass, preserves later unrelated work in the same call) —
+    `AUDIO_VOICE_BASEPTR_LOOP_GUARD`, 2 site anchors, all 20/20 item -314 sites now covered. 1st
+    live-verify (`s487_audio_voice_baseptr_loop_manual`) clean: 0 fires on the new guard or any of 13
+    sibling guard families, `hangarbay-entry` reached n=2600 (positive control), crash at 113.1s
+    byte-identical to the already-catalogued `tickWrappingTimerAccumulatorList`/`memcpy_recomp+288`
+    family (`last-guest-pc=0x80054780`, same address seen at s462's confirm) — unrelated, filed not
+    chased. 2nd independent confirm queued (`s487_audio_voice_baseptr_loop_confirm.sh`). Item -315:
+    item -314's own confirm soak crashed live on a THIRD sibling scope gap, in `DL_LIST_RESET_GUARD`
+    (wrong register validated at one `submitSceneNodeRender` site); fixed site-anchored, then a
+    static-analysis audit found the same shape at 73/84 sites, generalized into
+    `DL_LIST_RESET_RNODE_GUARD`, CLOSED, 2nd confirm (s485) clean. Full derivation and every soak
+    verdict: `docs/PROJECT-OVERVIEW.md` §20, `PORTING-STATE.md` Sessions 481-487.
 
 ## Current truth (established by session 295; unchanged, reviewed through s486)
 
