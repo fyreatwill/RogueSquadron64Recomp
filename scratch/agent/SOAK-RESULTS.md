@@ -151,3 +151,4 @@
 20260808-143651 | s519_render_lit_mesh_r8_confirm | rc=3 | 159s | scratch/agent/soak_results/s519_render_lit_mesh_r8_confirm_20260808-143651.log
 20260808-145402 | s520_sibling_ptr_b0d0_confirm | rc=0 | 346s | scratch/agent/soak_results/s520_sibling_ptr_b0d0_confirm_20260808-145402.log
 20260808-151320 | s521_begin_frame_dl_chunk_r1_confirm | rc=3 | 175s | scratch/agent/soak_results/s521_begin_frame_dl_chunk_r1_confirm_20260808-151320.log
+20260808-153040 | s522_begin_frame_dl_chunk_r2_confirm | rc=3 | 157s | scratch/agent/soak_results/s522_begin_frame_dl_chunk_r2_confirm_20260808-153040.log

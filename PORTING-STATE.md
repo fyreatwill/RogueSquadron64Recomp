@@ -43237,3 +43237,98 @@ refreshed.
 `scratch/agent/OUTCOME`: ADVANCED (folded in a queued confirm that FULLY CLOSED item -317 step 3's
 20th guard 2/2; source-traced and fixed the 21st guard with a clean 1st live-verify and a queued 2nd
 confirm; filed a new single-occurrence crash lead, item -325).
+
+## Session 523 (2026-08-08): item -317 step 3's 21st guard (`BEGIN_FRAME_DL_CHUNK_R2_GUARD`) folded-in confirm read CLEAN, FULLY CLOSED 2/2; source-traced and FIXED the 22nd guard (`BEGIN_FRAME_DL_CHUNK_R3_GUARD`, `beginFrameDLChunk`'s 3rd blanket-sweep site), 1st live-verify clean, 2nd confirm queued
+
+Read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, and `scratch/agent/SOAK-RESULTS.md`'s tail per
+the standing protocol. NEXT.md's HYPOTHESIS-ID `item-317-step3-blanket-sweep` continues: this is a
+long systematic sweep, one guard per iteration, same slug for the whole campaign.
+
+**Fold-in: R2's queued 2nd confirm.** `scratch/agent/soak_results/s522_begin_frame_dl_chunk_r2_confirm`
+(rc=3, 157s, loop-run) had already landed in `SOAK-RESULTS.md` before this session started. Read the
+detailed `run.log` (not the thin flat summary): 0 `begin-frame-dl-chunk-r2-guard` fires, 0 fires on
+every other armed guard family (no regression), 6 benign zero-value init-time co-fires
+(`generic-cache-guard`/`cache-head-a1-guard`/`dl-alloc-propagation-guard`/`dl-list-reset-rnode-guard`/
+`dl-list-append-rwrite-guard`/`append-rdp-state-dl-entry-guard`, all `bad_*=0x00000000` or
+`0xBB000000` init-sentinel values with `ra=0x00000000` — the benign init-time signature, distinct from
+a corrupted-nonzero-pointer co-fire), `hangarbay-entry n=32` positive control. The crash itself:
+`[CRASH] caught signal 10 (Bus error: 10)`, `pc-symbol=emitAllocatedDLCommand+4680 (local-symtab)`,
+`last-guest-pc=0x80008764` — falls inside the already-catalogued `emitAllocatedDLCommand`/
+`beginFrameDLChunk` SIGBUS background-noise family (documented since s354-366, guest-address range
+`0x80008688`-`0x8000898C` per s464's own range derivation, re-confirmed many times since e.g.
+s500-503), unrelated to this guard. **`BEGIN_FRAME_DL_CHUNK_R2_GUARD` FULLY CLOSED 2/2.**
+
+**Work unit: next tier of item -317 step 3's blanket sweep.** Re-ran the tracer fresh
+(`scratch/agent/s494_item317_step3_tracer.py --scan` then `scratch/agent/s506_dedupe.py`, letting
+`--scan` write its default output path per the s521 gotcha) against the R2-patched source. Top tier
+(count=36, all `beginFrameDLChunk`) put `funcs_3.c:13381`/`0x8000AC0C` at the top of the remaining
+members. Read the actual generated source at that line and confirmed the shape by inspection: `lui
+$v0,0x8011` / `lw $v0,0x63B0($v0)` at `0x8000ABFC`/`0x8000AC00` reloads the guest global
+`0x801163B0` — the SAME underlying global as R1's own site (`0x8000B560`/`0x8000B564` also reads
+`0x801163B0`), but from its own distinct load-instruction pair, confirming `beginFrameDLChunk` calls
+the same table-head accessor pattern inline at many separate call sites (not address reuse by
+coincidence — R2's site loads a genuinely different global, `funcs_3.c:12876`'s own load pair proved
+that in s522). `if (ctx->r2 == 0)` gates the exact-zero case (branch target executes a harmless
+duplicate `*r3 = r2` write then jumps past the site); the non-null fallthrough falls through the same
+duplicate write then dereferences the reloaded `ctx->r2` unconditionally at `0x8000AC0C`
+(`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no `0x80000000`-`0x80800000` range check. Downstream
+(`L_8000AC1C`/`L_8000AC24`) reloads both `ctx->r4` and `ctx->r2` fresh from the same `0x63B0`-offset
+table immediately after — skip-the-write-on-invalid is safe, same precedent as every prior guard in
+this lineage. Grepped `fixup_game_funcs.py` for `0x8000AC0C` before writing the patch: zero hits,
+confirming this site wasn't already guarded.
+
+Wrote the fix as `BEGIN_FRAME_DL_CHUNK_R3_GUARD` in `fixup_game_funcs.py`, following the exact R1/R2
+pattern (env-gated diagnostic counter, range-checked skip-on-invalid). Regenerated the full pipeline
+(`make_elf.py` → deleted stale `RecompiledFuncs/funcs_*.c` per item -20's standing rule → `N64Recomp`
+→ `fixup_game_funcs.py`, audited the patch report: `funcs_3.c: beginFrameDLChunk derived-pointer write
+guard (s523, item -317 step 3, BEGIN_FRAME_DL_CHUNK_R3_GUARD) patched x1`, no anomalies → `cmake
+--build`, clean).
+
+**1st live-verify** (manual, foreground, all guard families armed for regression checking, run via a
+background Bash task and polled with a Monitor watching for the game process to exit — a first
+monitor attempt used the wrong process-match pattern (`build/RogueSquadron64Recomp`, which never
+matches since the game actually runs as `./RogueSquadron64Recomp` from cwd `build/`) and fired a false
+"process exited" notification at ~15s while the game was still running; caught by checking `ps aux`
+directly before trusting it, re-armed with `pgrep -x RogueSquadron64Recomp`, waited for the real exit):
+CLEAN — 0 `begin-frame-dl-chunk-r3-guard` fires, 0 fires on every other armed guard family (no
+regression), `hangarbay-entry n=2700+` (one of the strongest positive controls of this whole campaign).
+Crashed at ~124s on `[CRASH] caught signal 6 (Abort trap: 6)`,
+`pc-symbol=__isPlatformOrVariantPlatformVersionAtLeast.cold.4+2256706632 (local-symtab)` — an absurd
+multi-billion-byte offset, the established symbolizer tell for the already-catalogued async
+Metal.framework/system-thread crash cluster (items -10/-9/-303/-315/-508: same nonsense `pc-symbol`
+pattern seen repeatedly, e.g. s513's R6 confirm at `+5029948140`, s485's own fold-in at
+`+5020681484`), `last-guest-pc=0x80015228`. Checked whether this could instead be the unrelated
+guest-triggered `do_break()`/`BREADCRUMB9` abort family (documented at s343,
+`tickWrappingTimerAccumulatorList`, `si_addr=0x18c6a85e8` — the SAME siginfo address as this run's
+crash): read the generated source at `0x80015228` (`funcs_4.c:19788`, inside `processSceneNode`) —
+it's `mul.s $f4, $f4, $f0`, a floating-point multiply, not a `divu`/`break` trap idiom, ruling that
+family out. `si_addr=0x18c6a85e8` matching across two different root causes confirms it's a fixed
+address (`__pthread_kill+8` in the dyld shared cache) independent of the actual fault, not
+corroborating evidence for either family specifically. Conclusion: this is the SAME already-catalogued
+async-thread crash cluster, this time surfacing as a SIGABRT instance instead of the cluster's more
+commonly-seen SIGSEGV — `last-guest-pc` is noise (wherever the main thread happened to be executing
+when the async thread's abort tore the whole process down), same as every other member of this
+cluster. Filed under the existing cluster, not a new item. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s523_begin_frame_dl_chunk_r3_confirm.sh`.
+
+**Rules out**: nothing overturned this session. Confirms the established pattern (live-verifying one
+guard surfaces unrelated pre-existing background-noise crashes elsewhere, none implicating the guard
+itself) now extends across signal types (SIGSEGV and SIGABRT) within the same async-cluster
+pc-symbol signature — worth remembering the pc-symbol pattern itself, not the signal number, is the
+reliable fingerprint for this cluster.
+
+**Tooling note**: a `Monitor`/`pgrep` watch for a background game-process exit must match the process
+as it actually appears in `ps aux` (`./RogueSquadron64Recomp`, no `build/` prefix, since it's launched
+from cwd) — a path-qualified pattern silently never matches and produces an instant false-positive
+"exited" notification. Verify with a direct `ps aux | grep` before trusting a monitor result on this
+harness.
+
+`docs/CURRENT-TRUTH.md`: item -317 rewritten to reflect R2 CLOSED 2/2 and R3 1st-verify-clean/2nd-
+confirm-queued, tally now 22/~150 (21 closed), next-tier list refreshed (R1/R2/R3 dropped, R1/R2/R3-
+tier line now starts at `13860`); "Highest allocated" counter unchanged (no new item this session);
+USER DIRECTIVE section's M3 summary paragraph refreshed.
+
+`scratch/agent/OUTCOME`: ADVANCED (folded in a queued confirm that FULLY CLOSED item -317 step 3's
+21st guard 2/2; source-traced and fixed the 22nd guard with a clean 1st live-verify and a queued 2nd
+confirm; no new crash item this session, the live-verify crash was fully attributed to an
+already-catalogued cluster).
