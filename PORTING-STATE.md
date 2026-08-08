@@ -40744,3 +40744,123 @@ anything under this repo's `lib/`, so no submodule-patches export applies); one 
 that mattered for the final numbers (SIGKILL via `tools/probe.sh`'s own teardown, ROM present in
 `build/`) plus the two live-verify runs used to catch and confirm the correction; queued the 2nd
 confirm instead of re-running it in this same session (loop budget rule).
+
+## Session 491 (2026-08-07): item -317 extended to close its own 9+-site remainder (block-skip
+covering the whole downstream span); the funcs_4.c sibling site turns out to need its own dedicated
+provenance trace, deferred not guessed at
+
+**Read first (per contract):** `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`,
+`scratch/agent/SOAK-RESULTS.md` tail. `docs/CURRENT-TRUTH.md` was 55,196 bytes (under the 60,000
+maintenance trigger) — not a maintenance iteration.
+
+**Starting state.** `scratch/agent/NEXT.md` (s490) left one soak queued
+(`s490_heap_dequeue_derived_ptr_confirm.sh`, item -317's 2nd independent confirm of the FIRST
+fix), plus an explicit post-commit update: a classification subagent found the s490 fix was
+correct-but-incomplete — `ctx->r16` (the same derived pointer guarded at one site,
+`heapFreeListDequeue`/`funcs_3.c`, guest `0x8000D760`) is dereferenced 9+ more times later in the
+same function, plus a second-generation `ctx->r5 = ADD32(ctx->r16, 0X10)` pointer, all still
+unguarded — and flagged ONE more confirmed vulnerable site in a different function
+(`funcs_4.c`, reload `0x80012E94` → derived `ctx->r18` at `0x80012EF0` → an 8-field unguarded
+struct-init block from `0x80012F14`). NEXT.md's own instruction: do NOT close item -317 on the
+queued confirm's result alone; extend the guard first.
+
+**Step 0: consumed the queued confirm.** `SOAK-RESULTS.md`'s new line showed
+`s490_heap_dequeue_derived_ptr_confirm` ran rc=0, 348s. Its probe.sh summary line and top-level
+`.log` file only carry the phase/keys/frame-capture summary (no guard-tag detail, exactly as
+NEXT.md warned) — the real per-line data is in
+`scratch/agent/soak_results/s490_heap_dequeue_derived_ptr_confirm/run.log` (41,190 lines). Grepped
+it directly: **0 `[CRASH]` events over the entire run** (the cleanest possible outcome, matching the
+s487 precedent), 0 `heap-dequeue-derived-ptr-guard` fires, 0 fires on any of the 4 named sibling
+guards (`freelist-next-guard`, `generic-cache-guard`, `dl-list-append-rwrite-guard`,
+`dl-list-reset-rnode-guard`), `hangarbay-entry` n=31 (positive control). Confirms the FIRST fix
+specifically — folded in as evidence, but per NEXT.md's own instruction did NOT mark item -317
+CLOSED on this alone; proceeded straight to extending the guard.
+
+**Direct-traced the full downstream span before touching any code** (funcs_3.c, guest
+`0x8000D75C`-`0x8000D8A8`, ~325 lines read in full, not sampled). Findings:
+- The span is a SINGLE straight-line block with exactly one external entry point: the `L_8000D75C`
+  label itself, reached by the two paths s490 already fully characterized (the free-list reload path
+  through `0x8000D744`, and the bounds-check early-exit `goto L_8000D75C` from `0x8000D67C`).
+  `grep -n "goto L_8000D7\|goto L_8000D8"` over the whole span confirmed every `goto` between
+  `L_8000D75C` and `L_8000D8A8` targets a label INSIDE the same span — no third path, no other
+  guard-bypass hazard once the entry-point check covers the whole thing.
+- Enumerated every remaining `ctx->r16` deref in the span: writes at `0x8000D7A0` (x2, branch +
+  fallthrough duplicate), `0x8000D7AC`, `0x8000D7C0`, `0x8000D7E4` (x2), `0x8000D7F0`, `0x8000D87C`,
+  `0x8000D880`, `0x8000D88C`, `0x8000D8A0`; reads at `0x8000D7C8`, `0x8000D7E8`. Plus the
+  second-generation `ctx->r5 = ADD32(ctx->r16, 0X10)` (`0x8000D7F8`) with its own 2 MEM_H writes
+  (`0x8000D844`, `0x8000D860`) inside a nested loop (`L_8000D834`) reached only from within this same
+  span.
+- `L_8000D8A8` itself (`ctx->r16 = ADD32(ctx->r16, ctx->r2)`) is pure arithmetic — no deref — and
+  every consumer of `ctx->r2` past that point unconditionally overwrites it before use (confirmed:
+  guest `0x8000D8AC`, `ctx->r2 = ctx->r18 & 0X40`, immediately follows with no intervening read).
+  Landing there with `ctx->r16` still at its stale (invalid) value and `ctx->r2` garbage is safe —
+  nothing leaks out of the skipped block.
+
+**Design (matches NEXT.md's own suggestion): widen the existing check to a block-skip, not 14 more
+per-site checks.** Rather than repeating the per-site pattern 14 more times, the existing single
+`ctx->r16` validity check at `L_8000D75C` now `goto`s past the ENTIRE rest of the block (to the
+existing label `L_8000D8A8`) when invalid, instead of only skipping its own write — same goto-skip
+shape as the s487 `AUDIO_VOICE_BASEPTR_LOOP_GUARD` precedent (skip only the affected span, continue
+execution past it). `ctx->r5` needed no separate check: derived from `ctx->r16` with a small constant
+`+0x10` offset and used only inside the now-fully-guarded span, so validating the base once
+transitively covers it — the same "validate the base once, trust small constant struct-field
+offsets" convention every other guard in this lineage already follows (items -312..-316 never
+re-validate their own `+0x4`/`+0x8`/`+0x10` offsets separately). Implemented in
+`~/Documents/Tools/N64Recomp/fixup_game_funcs.py` by editing the existing `_HEAP_DEQUEUE_DERIVED_PTR_SITES`
+site-tuple mechanism to carry a skip-label per site and emit `goto {label}` in the invalid branch
+instead of just omitting the guarded write.
+
+**Regen + build + live-verify.** Deleted `RecompiledFuncs/funcs_*.c`, ran `make_elf.py` →
+`N64Recomp` → `fixup_game_funcs.py` (anchor matched x1, no unexpected SKIPPED lines beyond the
+known-permanent `S392_H3A`/`H3B` item -290 remainder) → `cmake --build . -j8` from
+`RogueSquadron64Recomp/build` (clean, only pre-existing benign warnings). Manual foreground
+live-verify with the full standing env-var set plus `ROGUESQ_LOG_HEAP_DEQUEUE_DERIVED_PTR_GUARD=1`,
+`PROBE_PHASE_WIDTH=1024`/`PROBE_KEYS_FROM_PHASE=1`, 300s cap:
+**0 `heap-dequeue-derived-ptr-guard` fires, 0 fires on ANY sibling guard family** (grepped the full
+run.log for every `[...-guard...]` tag — none matched), `hangarbay-entry` n=31 (positive control).
+Crashed at ~113s on `si_addr=0x380000010`, `pc-symbol=buildPositionAndCallTransformHelper+1736`,
+`last-guest-pc=0x80065acc` — grepped `PORTING-STATE.md` and confirmed byte-for-byte match to the
+already-catalogued `BREADCRUMB6`/near-`0x80000000` "near-zero guest pointer" family (first landed
+s273, reconfirmed not-a-new-class as recently as s328a and s451, whose own confirm soak hit the
+exact same symbol/last-guest-pc/si_addr) — unrelated to this guard or any guard tested, filed not
+chased per strategic priority #3. 2nd independent confirm queued
+(`scratch/agent/soak_queue/s491_heap_dequeue_blockskip_confirm.sh`).
+
+**The `funcs_4.c` site is NOT a simple per-site fix — traced its full provenance rather than guess.**
+Read `buildOrientedFaceGeometry` (funcs_4.c) around `0x80012E94`→`0x80012EF0`→`0x80012F14`. Found:
+- `ctx->r18` in this function is a general-purpose register reassigned from at least 6 different
+  sources spread across the function (`ADD32(ctx->r4,0)` at `0x80012E94`-adjacent code,
+  `ADD32(ctx->r7,0)` x4 at other guest addresses, `ADD32(ctx->r18,0X8)` chained twice elsewhere) —
+  structurally nothing like `heapFreeListDequeue`'s single derived-once `ctx->r16`.
+- It has its OWN separate multi-path shared-label hazard: a `goto L_80012F08` at guest `0x80012E24`
+  (reached from a branch well BEFORE the local `0x80012EF0` computation) lands on the same tail label
+  that the `0x80012EF0` fallthrough path also reaches. Confirmed by direct read that `ctx->r18` is
+  already READ at guest `0x80012E1C` (`ctx->r3 = ADD32(ctx->r18, 0X20)`), which is BEFORE its "own"
+  computation at `0x80012EF0` in program order — proof that `ctx->r18` carries a value from
+  much earlier in the function on that path, exactly the same "shared label, different provenance
+  per path" shape s490's first (wrong) fix attempt got bitten by.
+- Guarding this safely requires the same full-provenance trace s490/s491 did for
+  `heapFreeListDequeue` (find every source of `ctx->r18`, confirm which paths reach the target derefs
+  with which provenance, place the check where it covers all of them) — not a rushed same-session
+  guess. Explicitly deferred, not attempted; documented as the next M3 session's first task in
+  `docs/CURRENT-TRUTH.md` item -317 and `scratch/agent/NEXT.md`.
+
+**Rules obeyed:** read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, `scratch/agent/SOAK-RESULTS.md`
+first per contract; consumed the queued soak's real per-line data (`run.log`, not the summary line)
+before treating it as evidence; did NOT close item -317 on the confirm result alone, per NEXT.md's
+explicit instruction; read the full source span directly before designing the fix (no subagent
+trace used for the code-generation decision this session); regenerated in the mandatory order and
+audited the fixup report for anchor-count mismatches; live-verified with a same-run positive control
+(`hangarbay-entry`) before folding the result into the ledger; compared the new guard's fire count
+(0) against sibling guards (0) in the SAME run before trusting it, per s490's own new rule; queued
+the 2nd confirm instead of re-running it this session (loop budget rule); investigated the `funcs_4.c`
+site far enough to know a rushed fix would repeat s490's own mistake, then explicitly deferred it
+rather than guessing — same discipline the ledger asked for. Edited
+`~/Documents/Tools/N64Recomp/fixup_game_funcs.py` only (sibling repo's untracked scratch tool, not
+this repo's `lib/`, so no submodule-patches export applies). One live-verify game run this session
+that mattered for the final numbers (SIGKILL via `tools/probe.sh`'s own teardown, ROM present in
+`build/`).
+
+**Outcome: ADVANCED** — landed a real code fix (block-skip extension closing item -317's own known
+9+-site remainder), build-verified, live-verified clean with a positive control, 2nd confirm queued;
+plus a well-evidenced deferral (not a guess) for the `funcs_4.c` sibling site.

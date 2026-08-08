@@ -53,10 +53,17 @@ Priority order for upcoming iterations, set after the 300-session review:
    (path-dependent at a shared control-flow label) and false-positived 660,261 times in one soak
    before being caught by the same live-verify discipline that's supposed to catch exactly this;
    corrected to validate the actually-dereferenced register directly, re-verified clean (0 fires),
-   2nd confirm queued.** No fresh idiom-scan candidate remains queued — next M3 session needs either
-   a new frequency-scan angle (both `lui`+`lw` and `lui`+`sw` are now structurally dry at the >=20-site
-   tier), a control-flow-aware blanket sweep of item -317's own 183-site sibling population
-   (DEFERRED this session, see item -317), or a wait for a new breadcrumb.
+   2nd confirm queued.** **s491 extended item -317's fix to cover its own remaining exposure**: the
+   9+ further unguarded `ctx->r16` derefs plus the `ctx->r5` second-generation pointer flagged by a
+   post-s490 classification pass all sit in one self-contained straight-line block, so the existing
+   check now `goto`-skips the whole block instead of just its first write; 1st confirm clean (0 fires
+   on the guard or any of ~20 siblings, already-catalogued unrelated crash), 2nd confirm queued. The
+   `funcs_4.c` sibling site s490 also flagged turned out to need its own dedicated provenance trace
+   (a general-purpose register with a second multi-path hazard, not a simple derived-once pointer) —
+   deferred, not guessed at; it's the next M3 session's first task. No fresh idiom-scan candidate
+   remains queued behind it — after that: a new frequency-scan angle (both `lui`+`lw` and `lui`+`sw`
+   are now structurally dry at the >=20-site tier), a control-flow-aware blanket sweep of item -317's
+   own 183-site sibling population, or a wait for a new breadcrumb.
 
 -312..-315. **(s481-487) `DL_LIST_APPEND_GUARD` and `DL_LIST_RESET_GUARD`'s own "grep-verified
     unique site" scope claims both turn out to be wrong, plus `AUDIO_SLOT_ACTIVE_GUARD`'s own
@@ -265,12 +272,39 @@ a range pointer. Highest allocated so far: -317. The next NEW item takes -318.
     same-register criterion: `funcs_4.c` reload `0x80012E94` -> derived `ctx->r18` at `0x80012EF0` -> an
     8-field unguarded struct-init block starting `0x80012F14`. It explicitly flagged a structural blind
     spot (register-rename / global-round-trip indirection, ~73/88 candidates use this idiom) meaning
-    the TRUE count is very likely higher than what direct-register tracing alone can find. Next M3
-    session: (1) extend `HEAP_DEQUEUE_DERIVED_PTR_GUARD` to cover the other 9+ `ctx->r16` uses plus the
-    `ctx->r5` second-generation pointer in the SAME function before calling this class closed, (2) fix
-    the new `funcs_4.c` site, (3) only then consider the wider 183-site sweep, and only with
-    control-flow- and register-rename-aware tooling, not a repeat of this session's textual scan. Full
-    derivation: `PORTING-STATE.md` Session 490.
+    the TRUE count is very likely higher than what direct-register tracing alone can find.
+    **s491: step (1) DONE.** Direct-traced the full downstream span (guest 0x8000D75C-0x8000D8A8) and
+    confirmed it is a SINGLE straight-line block with exactly one external entry point (the
+    `L_8000D75C` label itself, reached only by the two paths s490 already characterized) — every
+    `goto` inside the span targets a label inside the same span, so there's no third path and no
+    other guard-bypass hazard. Rather than adding 14 more per-site checks, widened the EXISTING
+    check at `L_8000D75C` to `goto L_8000D8A8` (an existing label, itself pure arithmetic with no
+    deref) on invalid `ctx->r16`, skipping the entire rest of the block instead of just its own
+    write — same goto-skip shape as the s487 `AUDIO_VOICE_BASEPTR_LOOP_GUARD` precedent. `ctx->r5`
+    (the second-generation `+0x10` pointer) needed no separate check: it's derived from `ctx->r16`
+    with a small constant offset and only used inside the now-fully-guarded span, so validating the
+    base once transitively covers it, matching how every other guard in this lineage already treats
+    small constant struct-field offsets. Regenerated (anchor matched x1), build-verified clean,
+    live-verified with the full standing env-var set: **0 fires on the extended guard, 0 fires on any
+    of ~20 sibling guard families**, `hangarbay-entry` n=31 (positive control), crashed on the
+    already-catalogued `BREADCRUMB6`/`buildPositionAndCallTransformHelper` near-zero-guest-pointer
+    family (`si_addr=0x380000010`, `last-guest-pc=0x80065acc` — byte-for-byte the same crash s451's
+    own confirm soak hit, filed since s273, explicitly reconfirmed not-a-new-class as recently as
+    s328a), unrelated to this guard. 2nd independent confirm queued
+    (`s491_heap_dequeue_blockskip_confirm.sh`). **Step (2), the `funcs_4.c` site, is NOT a simple
+    per-site fix and is DEFERRED, not guessed at**: direct trace found `ctx->r18` in that function
+    (`buildOrientedFaceGeometry`) is a general-purpose register reused dozens of times across a much
+    larger function (reassigned from at least 6 different sources earlier in the same function —
+    `ctx->r4`, `ctx->r7` x4, `ctx->r18+0x8` chained twice, at guest addresses spanning
+    0x80012750-0x80012EF0), NOT a single derived-once pointer like `heapFreeListDequeue`'s `ctx->r16`.
+    It has its OWN separate multi-path shared-label hazard: a `goto L_80012F08` at guest 0x80012E24
+    (reached from well before the local 0x80012EF0 computation) lands on the same tail label that the
+    0x80012EF0 fallthrough path also reaches, carrying a DIFFERENT, much-earlier-computed `ctx->r18`
+    value on that path (confirmed: `ctx->r18` is read at guest 0x80012E1C, BEFORE its "own"
+    computation at 0x80012EF0, proving it's already live with a prior value on entry). Guarding this
+    safely needs the same full-provenance trace s490/s491 did for `heapFreeListDequeue`, not a
+    same-session rush — next M3 session's first task. Step (3), the wider 183-site sweep, remains
+    open behind step (2). Full derivation: `PORTING-STATE.md` Sessions 490-491.
 
 -316. **(s488 scan -> s489 FIXED, 2nd confirm s490 clean) DL_ALLOC_PROPAGATION_GUARD, a scope gap in
     the existing s436 `CACHE_HEAD_A1_GUARD` (guard covers one deref, not the propagation) — FULLY
