@@ -1493,3 +1493,204 @@ files, ranked #1 by count) turned out to be a fundamentally harder idiom and had
 item -301 (31 sites, but ALL in `funcs_6.c`) was a clean one-session close. Every CLOSED item's
 live-verify/confirm-soak result matches item -287's established true-negative baseline for this
 whole guard-idiom class. Full session-by-session raw detail: `PORTING-STATE.md` Sessions 463–469.
+
+## 19. Six more idiom-class audits, then the s465 scan lineage's close-out and the crash-symbolizer
+blind-spot investigation (s470–478), migrated from CURRENT-TRUTH.md s479 maintenance pass
+
+**Item -303: `TEXDATA_PTR_ARRAY_GUARD`, global at `hi16=0x8013,offset=-0x7104`, `funcs_6.c` only, 12
+bytes from item -301's global. CLOSED s470, 29/29 sites** — the s470 rule-8 mandatory-pivot
+iteration's discriminating probe: classification found two raw-pointer risk shapes (direct use as
+an `rs_free()` argument / write-loop base with no arithmetic, and `idx*4` array-of-pointers
+access), both distinct from item -302's confirmed integer-index shape; substitutes `0x80000000u`,
+same reasoning as item -301. Clean build/live-verify: 0 new-guard fires, 0 fires on all 7 siblings
+(no regression), `hangarbay-entry` n=31 (positive control); crashed on `last-guest-pc=0x80054744`
+inside `tickWrappingTimerAccumulatorList` — the EXACT already-catalogued, already-PARKED
+`m5-audio-destub-tickwrap-divzero-craftselect` compiler div-by-zero-trap signature (first seen
+~s344, §12), unrelated to any guard tested, filed not chased. 2nd independent confirm soak
+(`s470_texdataptrarray_confirm`) ran s471: 0 fires on the new guard and all 7 siblings,
+`hangarbay-entry` n=31 (matches the manual live-verify exactly); crashed on a DIFFERENT signature
+this time — a host-side Metal.framework SIGSEGV inside `fscache_insert_and_retain`
+(`last-guest-pc=0x800ab0e0`, near but not identical to the s463/s468
+`loadCutsceneAssetsByIndex+1860` crash site) — an async shader-compiler-thread crash unrelated to
+any game-code guard, filed not chased (same family as items -10/-9's Metal-compiler-SIGSEGV
+class). Both confirm passes null on the new guard.
+
+**Item -304: `MATERIAL_ARRAY_PTR_GUARD`, `0x8012($reg)`→`-0x5BBC` global, 30 `lw` reload sites
+across 4 files (`funcs_3.c`x5/`funcs_4.c`x10/`funcs_6.c`x14/`funcs_7.c`x1). CLOSED s471, 30/30
+sites, first multi-file bucket in this sub-arc.** Single writer `buildAndRegisterDefaultMaterial`
+(`funcs_4.c:27911`, stores an `rs_malloc()` result) vs. 30 reader sites in 4 different
+functions/files — same uninitialized/stale-global-reload shape as every closed bucket in this
+lineage. `scratch_s468_shapecheck_generic.py 8012 -5BBC` auto-classified 24/30 sites as
+`ADD32→DEREF` (real pointer risk); the remaining 6 `hit_deref=False` sites were read directly from
+source per the s470 lesson (tool false negative, not evidence of non-pointer use) and confirmed
+the same two risk shapes as item -303: `idx*4` array-of-pointers access (`funcs_3.c:26341/28435`)
+and direct-use-with-no-arithmetic (`funcs_4.c:29352` passes the raw reload straight into
+`rs_free()`; `funcs_4.c:28004`/`funcs_6.c:14323`/`funcs_6.c:14728` use it as a write/read-loop
+base). No item -302-style integer-index shape present — clean single-guard bucket despite spanning
+4 files. Substitutes `0x80000000u`, same reasoning as items -301/-303. Regex verified 30/30
+against raw `MEM_W(reg, -0X5BBC)` line counts per file (`scratch_s471_test_regex_5bbc.py`); the
+bucket's one `sw` (write) site excluded by construction. Clean build; all 8 pre-existing sibling
+guards unchanged (84/84/84/119/20/10/31/29); `strings` confirms 30 `material-array-ptr-guard` tag
+occurrences. Live-verify: 0 new-guard fires, 0 fires on all 8 siblings, `hangarbay-entry` n=34
+(positive control); full 300s/250s-keys schedule survived with 0 `[CRASH]` markers at all — unlike
+most sessions in this sub-arc, this run hit no crash of any kind. 2nd independent confirm soak
+(`s471_materialarrayptr_confirm`) ran s472: 0 fires on the new guard and all 8 siblings,
+`hangarbay-entry` n=31 (matches the manual pass closely); crashed on a 3rd distinct byte-offset of
+the already-catalogued `heapFreeListDequeue` crash family (`+31924`, `last-guest-pc=0x8000d738`;
+prior sightings `+19316`/`+32596`) — unrelated to any guard tested, filed not chased (later
+explained wholesale by item -310's s478 symbolizer-artifact finding below). Both confirm passes
+null on the new guard.
+
+**Item -305: `hi16=0x8011, offset=0x63d4` global (`0x801163D4`, 12 bytes from item -299's
+`DL_BUFFER_POOL_GUARD` global) — CLASSIFIED AND DEFERRED, not a guard candidate (s472).** The
+largest bucket in the s465 scan (170 `lw` reload sites, `funcs_6.c`x75/`funcs_3.c`x44/
+`funcs_4.c`x30/`funcs_7.c`x21), 0 `sw` write sites. A stratified 27-site sample (all 4 files,
+spanning every tool-reported chain-depth grouping) read directly showed 26/27 are the identical
+`sltu`/`bne` "current DL pointer < buffer-end limit" bounds-check idiom — the reload is COMPARED,
+never dereferenced or added-to; the 1 outlier is a save/restore (reload held live across a call,
+written back unchanged to the same slot, also no local deref). The classification tool's only 2
+`hit_deref=True` flags in the whole bucket were confirmed FALSE POSITIVES on direct read (the tool
+anchors its report to the `lui` line, and what it flagged as `ADD32->WRITE_THROUGH` was an
+unrelated stack-pointer prologue adjustment a few lines later, not an operation on the reloaded
+value). Same disposition as item -302: an integer/boolean-valued use where guard-at-reload doesn't
+apply (a comparison can't fault on a stale value, and forcing the outcome would silently change
+game logic rather than harden against a wild pointer). No code change. **Tool bug found and
+documented**: `scratch_s468_shapecheck_generic.py` is case-sensitive on its offset argument and
+returns a silent "total sites: 0" false negative if the offset is passed in lowercase (generated
+code always emits uppercase hex literals) — always pass uppercase for future buckets.
+
+**Item -306: resolved item -296's flagged `hi16=0x8012, offset=-0x23a8` gap (141 sites) — found
+and FIXED a real methodology gap in that already-CLOSED item (s473), closing 1 new guard site
+(120th) and classifying the rest.** A from-scratch taint-propagation scan
+(`scratch_s473_taint_scan_23a8.py`, N64Recomp repo, untracked) — validated against the KNOWN
+119-address guard list (exact subset match) before trusting any new finding — found: 119 sites
+already covered by item -296's `SIBLING_PTR_WRITE_GUARD` (matches exactly); **1 genuine unguarded
+write-through-the-reload** (`setupCameraMatrices`, `funcs_4.c`, reload `0x8001770C` -> a
+zero-offset `ADD32` copy survives two branches -> unconditional field write at label
+`L_800177A4`) — the s459 scan that produced the original 119 cleared its register-taint tracking
+on ANY reassignment, including zero-offset copies that preserve it, silently dropping this site;
+**2 false positives** (`renderLitMeshFaceGroup`, `do_lwl` unaligned-load helper calls — confirmed
+by direct read that the tainted register is a discarded merge-seed, not a deref); **10 sites**
+where the raw reload is still live in `ctx->r4`/`ctx->r7` at a call to a REAL recompiled function
+(`appendRdpStateDl`/`emitAllocatedDLCommand`/`buildOrientedFaceGeometry`/`drawTextGlyphRect`) —
+crosses the function boundary via the guest ABI calling convention, a genuinely novel propagation
+path no prior bucket in this sub-arc had considered; **flagged, not chased** (would need each
+callee's own body read; plausibly the same safe DL-append-pointer idiom used throughout, but
+unverified); **19 no-use sites**, spot-checked 4/19 (not exhaustive — residual risk low but not
+zero, flagged for anyone revisiting this bucket). Fixed: added the confirmed site as
+`SIBLING_PTR_WRITE_GUARD`'s 120th entry (same mechanism/env flag as the other 119). Clean
+regen/build; `strings`-verified 119->120 with all 10 sibling guard families unchanged (no
+regression). Live-verify: 0 fires on the new site + all 120 + all siblings, `hangarbay-entry`
+n=31 (positive control); crashed at the very end on a NEW signature
+(`setByteAcrossEntryList+176`, bus error, `last-guest-pc=0x800aafa8`, the standard
+RDRAM-host-base-pointer pattern per the s219 overturned-conclusion entry), unrelated to any guard
+tested, filed not chased. 2nd independent confirm soak (`s473_siblingptrwrite120_confirm`) ran
+s474: 0 crash, 0 `sibling-ptr-write-guard` fires (matches the manual live-verify exactly). Item
+-306 fully CLOSED, both confirm passes null on the new guard.
+
+**Item -307: `hi16=0x8011, offset=-0x35e0` global (`0x8010CA20`) — CLASSIFIED AND DEFERRED, not a
+guard candidate (s474).** 23 `lw` reload sites across 9 files
+(`funcs_11/16/18/29/30/35/38/40/42.c`), no overlap with any existing guard's global address.
+`scratch_s468_shapecheck_generic.py` flagged 3 sites `ADD32(...)->WRITE_THROUGH hit_deref=True` —
+all 3 confirmed by direct read to be a **newly found tool bug**: the classify loop checks register
+taint via Python substring containment (`"ctx->r2" in args`), which false-matches inside
+`"ctx->r29"` — the near-universal stack-pointer prologue line (`ctx->r29 = ADD32(ctx->r29, N);`)
+immediately following a reload landed in `$v0`/r2 gets misread as touching the tainted register,
+and the next unrelated stack-spill line gets misclassified as a write-through. A from-scratch
+taint scan (`scratch_s474_taint_scan_35e0.py`, N64Recomp repo, untracked, adapted from item -306's
+fixed template) initially found 1 "real" unguarded deref (`triggerStageMusicForNamedDatItem`,
+`funcs_40.c`) — direct read caught a **2nd tool bug in the new scan itself**: taint wasn't cleared
+across a real function call, so `ctx->r2` (the MIPS o32 return-value register) was still marked
+tainted from the pre-call reload when it actually held the callee's own return value post-call.
+Fixed (clear caller-saved regs `r2,r3,r8-r15,r24,r25` after any uncaught real-call line); re-ran:
+0/23 real derefs, 0/23 write-throughs, 0/23 tainted-call-arg escapes. Site count cross-validated
+exact (23/23, file:line match) against the canonical shapecheck list before trusting the result.
+10/23 sites spot-checked directly across 7/9 files — 100% the same "load, compare != 0,
+branch-and-discard" idiom as item -305. 12 write sites to the same global found (`funcs_42.c`
+only, all storing small integer literals/register copies, never pointer-shaped) — independently
+corroborates it's an integer mission-transition-phase flag, not a pointer. No code change (a
+comparison can't fault on a stale value). No soak queued (no code change to verify).
+
+**Item -308: `hi16=0x8013, offset=0xb50` global (`0x8012F4B0`) — CLASSIFIED AND DEFERRED, not a
+guard candidate. Also found tool bug #5, a label-line blind spot (s475).** True site count is 24
+across 12 files (`funcs_9/12/15/16/17/27/28/29/30/32/33/42.c`), not the 21/11 the scan tool
+initially reported — `scratch_s468_shapecheck_generic.py`'s lookahead loop only recognizes
+disassembly-comment and breadcrumb lines while scanning from a `lui` to its `lw` reload; a bare
+`L_XXXXXXXX:` branch-target label between them (common when the reload address is itself a jump
+target) silently breaks the scan with no site reported and no warning — missed 3 sites
+(`funcs_27.c:108435`, `funcs_30.c:14600`, `funcs_32.c:29556`), the last in a file (`funcs_32.c`)
+that didn't appear in the tool's file list at all. Fixed in a standalone checker
+(`scratch_s475_label_gap_check.py`, N64Recomp repo, untracked) that also skips label lines; not
+fixed in the tool itself. All 24 sites (12/12 files) directly read: 100% the identical
+`andi $vN, $vN, MASK` (masks `0x1/0x8/0x10/0x20/0x60` — a packed status/capability bitfield)
+immediately after the reload, consumed only by a conditional branch, never dereferenced — same
+compare-only idiom as items -305/-307. 0 write sites to the global found (`grep MEM_W(0XB50` —
+read-only from recompiled code). No code change, no soak queued (same precedent as -305/-307).
+**AMENDED s476: the open backfill question is CLOSED, clean.** Generalized the checker into
+`scratch_s476_label_gap_generic.py` (N64Recomp repo, untracked, hi16/offset-parameterized) and ran
+it against all 7 already-CLOSED buckets (items -298/-299/-300/-301/-303/-304/-306, hi16/offset
+derived from each item's recorded global address). **Result: strict count == permissive
+(label-skip) count for all 7 buckets — 0 label-gap sites found anywhere.** Tool bug #5 does not
+recur in any already-CLOSED bucket; no per-site literal-anchor patch needed. While reconciling
+counts, found item -299's raw strict count (87) differs from its guard's site count (84) — traced
+to a DIFFERENT, already-known cause (`scratch_s466_shapecheck_63fc.py` hardcoded
+`files = ["funcs_3.c", "funcs_4.c"]`, missing `funcs_6.c`'s 3 sites entirely), not tool bug #5
+(strict==permissive there too, no label involved). Directly re-read all 3 `funcs_6.c` sites and
+confirmed `fixup_game_funcs.py`'s own comment was correct: those 3 are COMPARE_ONLY (`bne` against
+a computed array-bound address, never dereferenced), already correctly excluded from the guard.
+Item -299 remains soundly CLOSED at 84/84 real sites.
+
+**Item -309: new discovery source tried, `lui`+`sw` DIRECT-STORE frequency scan — CLASSIFIED AND
+DEFERRED, dead end after one scan (s477). M3 `lui`+`sw` discovery direction considered exhausted.**
+Per the s476 pivot note, wrote `scratch_s477_sw_scan.py` (N64Recomp repo, untracked) to find the
+idiom this lineage had never scanned: `ctx->rL = S32(0XHHHH << 16);` immediately followed by a
+direct store `MEM_W(0XOFFSET, ctx->rL) = ...;` with NO intervening `lw`-shaped reload of `rL` in
+between (as opposed to every prior bucket, which started from a `lw` reload of a global *reading*
+it back). Scanned all 50 `RecompiledFuncs/funcs_*.c`: 546 buckets, 1471 total sites, 358 of them
+singleton (count==1) buckets — a long diffuse tail. Top 3 buckets by site count (230 at
+`hi16=0x8011/offset=0x63b0`, 197 at `hi16=0x8012/offset=-0x23a8`, 85 at `hi16=0x8011/offset=0x63d4`)
+are ALL offsets already well-understood from the read-side lineage (items -296/-305/-306) as
+ordinary global-variable slots. Direct-read 3 examples (one per top bucket, `funcs_3.c:86`,
+`funcs_3.c:5308-5316`, `funcs_3.c:1265`) confirmed every one is the plain-C-assignment shape
+`someGlobal = registerValue;` — `sw $vX, OFFSET($at)` where `$at` is the `lui`-computed base, i.e.
+the destination address itself is a fixed compile-time RDRAM address (part of the game's static
+globals region), never a dereference through a stale/wild pointer. **A direct store to a fixed
+compile-time address cannot fault regardless of the register's prior contents or a stale reload**
+— there is no "stale pointer" for a fixed-address store to be guarded against; the crash-risk
+shape every prior guard addressed (reading/dereferencing through a value that may be wild)
+structurally does not apply to this idiom. No code change (nothing to guard); no soak queued. The
+`lui`+`sw` direct-store discovery source is exhausted after this one scan, per its own stop
+condition — both the `lui`+`lw` lineage (closed s476) and this `lui`+`sw` probe (closed s477) have
+now been tried on the two most natural instruction-pattern angles with no further untried
+high-expected-value lead.
+
+**Item -310: `heapFreeListDequeue+NNNN` crash family — INVESTIGATED AND CLOSED, symbol-attribution
+artifact, not a real recurring root cause (s478).** The highest-recurrence "filed, not chased"
+crash signature (15+ sessions, s108-s477, new byte-offsets kept appearing after the family was
+nominally "closed"). Applied the standing discriminating question ("one root cause recurring, or
+several coincidentally-similar symptoms?") via direct guest-address arithmetic against
+`heapFreeListDequeue`'s confirmed base (`0x8000CFD4`, `main_overlay.txt:273`): neither available
+data point matches. s449's `+19316` implies guest PC `0x80011B48`, but the actually-logged
+`last-guest-pc` was `0x8000D534` (`base+1376`); s471/472's `+31924` implies `0x80014C88`, but the
+logged `last-guest-pc` was `0x8000D738` (`base+1892`) — both off by 18-30 KB. Root cause:
+`src/main/main.cpp:1788`'s crash handler symbolizes the ARM64 HOST PC via `dladdr()`, which only
+resolves the nearest **exported** symbol; `nm -n` on the built binary shows `heapFreeListDequeue`'s
+host code is followed by a 40,648-byte gap (for a guest function only ~2,560 bytes / 640 MIPS
+instructions) before the next exported symbol, populated with many unrelated internal-linkage
+guard-flag statics from OTHER already-closed guard families (`s_drainmesh*`, `s_coalesceheap*`,
+`s_ringbuffer*`, `s_dl_list_append*`, `s_node_list_head*`, `s_sibling_ptr_write*`) — any host crash
+anywhere in that gap gets attributed to `heapFreeListDequeue+bignum` regardless of the real
+faulting function. Same mechanism s123 already found for the original `+12704` occurrence (there,
+guest-address math showed the real site was inside `submitSceneNodeRender`, since guarded) — this
+session shows it's systemic and ongoing, not a one-off. **Verdict: not one recurring bug, not
+idiom-auditable — a symbolizer blind spot.** No guard written (no single site exists to guard).
+Future soak triage should NOT re-file `heapFreeListDequeue+NNNN` occurrences as "same family,
+filed not chased" — each is very likely an unrelated crash colliding with this blind spot.
+**Flagged as a real, boundable tooling-improvement candidate** (not attempted this session): the
+crash symbolizer needs DWARF-line or full internal-symbol-table resolution (e.g. a build-time
+`nm -n` snapshot, or `atos` against a dSYM) instead of `dladdr`'s exported-symbol-only lookup, to
+stop collapsing this 40 KB multi-function span onto one wrong name. Two independent lines of
+evidence: guest-address arithmetic mismatch (checked directly against current `main_overlay.txt`)
++ binary symbol-table inspection (`nm -n`) showing the structural cause.
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 470–478.

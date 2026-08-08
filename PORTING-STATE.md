@@ -39765,3 +39765,59 @@ reached a conclusive, mechanism-level, two-independent-line-of-evidence result t
 closes a 15+-session-old open question and prevents future sessions from re-filing the same
 phantom signature. Also surfaced one new, concrete, boundable tooling-improvement candidate
 (crash symbolizer exported-symbol-only blind spot) for a future session.
+
+## Session 479 (2026-08-07): MAINTENANCE — `docs/CURRENT-TRUTH.md` compaction (19th pass), 200-line
+net shrink, plus a real ordering bug fixed
+
+**Trigger.** `wc -c < docs/CURRENT-TRUTH.md` read 63,069 bytes at session start, over the 60,000-byte
+Step-0 threshold, forcing a MAINTENANCE iteration per `tools/agent/ITERATION.md`. `scratch/agent/
+NEXT.md` (written at the end of s478) had already flagged this as the mandatory next unit.
+
+**What ran.** Migrated the full session-by-session derivation for items -303 through -310 (s470-478
+— `TEXDATA_PTR_ARRAY_GUARD`, `MATERIAL_ARRAY_PTR_GUARD`, two CLASSIFIED-AND-DEFERRED compare-only
+buckets, the `SIBLING_PTR_WRITE_GUARD` 120th-site methodology-gap fix, the label-line tool-bug #5
+backfill audit, the `lui`+`sw` direct-store scan dead end, and the `heapFreeListDequeue+NNNN`
+crash-symbolizer-artifact closeout) from `docs/CURRENT-TRUTH.md`'s Next-steps list into a new §19 in
+`docs/PROJECT-OVERVIEW.md` (following the same pattern §16-§18 already established for earlier
+arcs). Replaced the corresponding CURRENT-TRUTH entries with short range-pointer summaries (1-2
+sentences per item plus a `§19` cross-reference), matching the compaction level already used for
+older closed arcs (`-282..-290`, `-268..-273`, etc.). Also deleted a fully redundant standalone
+`-292` entry that duplicated content already present, in more detail, inside the adjacent `-291..
+-297` range-pointer paragraph — apparently left over from an earlier maintenance pass that migrated
+the range summary but never removed the original single-item entry it replaced.
+
+**Bug found and fixed while reordering: item -6 was out of the file's own declared monotonic
+order.** The Next-steps numbering convention (fixed s295) is "highest-magnitude-negative first,
+descending to -1" and states items are "never renumbered when compacted into a range pointer" —
+but item -6 (`M4 — the 3 [missing-func] addresses`) was physically sitting between items -249 and
+-239..-247, a magnitude range where it does not belong (was `...-259, -249, -6, -239..-247, -231..
+-238...` — should be `...-8, -7, -6, -5...`). Root cause unclear (git blame would need a dedicated
+session; most likely an earlier maintenance pass edited the -249 entry and appended -6 nearby by
+habit rather than by its number). Moved it to its correct position between `-7` and `-5`. Verified
+the full remaining sequence is now strictly monotonic by grepping every `^-[0-9]` line top to
+bottom and checking magnitudes descend throughout (the sole documented exception, `-20` sitting
+after the `-159..-14` range instead of inside it, is intentional and already flagged inline as
+"excluding -20, kept below" since it's a still-active standing rule, not a closed lineage summary —
+left untouched).
+
+**Also refreshed:** the "reviewed through sNNN" headline (s469 → s479), the maintenance-pass count
+in the USER DIRECTIVE section (eighteen → nineteen passes, s469 added to the list), and the
+`§16-§18`/`§16-§19` cross-references now that a fourth recent arc exists in PROJECT-OVERVIEW.
+
+**Result:** `docs/CURRENT-TRUTH.md` 713 → 513 lines (**200 net lines removed**, meeting the
+`ITERATION.md` maintenance-counts-as-ADVANCED threshold exactly), 63,069 → 44,442 bytes (comfortably
+back under both the 60 KB hard trigger and close to the 35 KB stretch target). No information was
+lost: every full derivation now lives in `docs/PROJECT-OVERVIEW.md` §18-§19, and CURRENT-TRUTH keeps
+enough identifying detail (item numbers, global addresses, guard names, session numbers, CLOSED/
+DEFERRED status) for a future session to find its way to the right place without re-deriving
+anything. Double-checked one specific case where a trim risked losing an identifier (item -281's
+one-line description, initially cut too aggressively) — caught it, confirmed the full detail
+already existed in PROJECT-OVERVIEW §16, and restored a compact identifying phrase in CURRENT-TRUTH
+so the item stays searchable there too. No experiments run, no code touched (per the "no experiments
+in a maintenance iteration" rule).
+
+**Outcome: ADVANCED** (per ITERATION.md's maintenance-iteration exception: >=200-net-line shrink
+counts as ADVANCED regardless of the general "editing docs isn't advancing" rule). Next iteration
+resumes the s478 NEXT.md priority order unchanged: the s478-flagged crash-symbolizer tooling fix
+(dladdr → nm -n/atos resolution) is the top real work unit, with lower-recurrence breadcrumb triage
+or a new M5-lead check as fallbacks.
