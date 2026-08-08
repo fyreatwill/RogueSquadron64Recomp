@@ -15,8 +15,10 @@ Priority order for upcoming iterations, set after the 300-session review:
    the Regeneration section's Standing warnings stay intact deliberately; both are used every
    iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
-   §10-§12). Next M5 work needs a genuinely new lead (**last checked s494, no new lead found, cadence
-   reset — due for a fresh check once 3+ sessions have passed since then**).
+   §10-§12). Next M5 work needs a genuinely new lead (**last checked s499 — grepped sessions 495-498
+   for audio/MusyX/voice/song mentions; the only hit was a stale citation of the already-closed
+   `m5-audio-destub-tickwrap-divzero-craftselect` thread inside s497's own crash write-up, not a new
+   lead — no new lead found, cadence reset to s499, due again once 3+ sessions have passed**).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Every bucket
@@ -33,15 +35,21 @@ Priority order for upcoming iterations, set after the 300-session review:
    already-catalogued `tickWrappingTimerAccumulatorList` div-by-zero trap, unrelated), and
    `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` (s497, `funcs_3.c:6979`, 40 sites, 2/2 confirms clean — 2nd
    confirm crashed on the already-catalogued `buildPositionAndCallTransformHelper`
-   near-`0x80000000`-RDRAM-decompose family, unrelated) all now fully CLOSED. s498 fixed the next
-   same-function sibling, `EMIT_FRAME_RDP_INIT_DL_R2B_GUARD` (`funcs_3.c:7963`, `emitFrameRdpInitDl`,
-   40 sites), 1st live-verify clean (0 fires, 0 regressions, `hangarbay-entry` n=32); 2nd confirm
-   queued. Per-hit tracer query confirms the fixed line no longer appears as an unsafe hit. s498's
-   live-verify crash surfaced a NEW-to-this-lineage signature — `appendRdpStateDl+144`,
+   near-`0x80000000`-RDRAM-decompose family, unrelated), and `EMIT_FRAME_RDP_INIT_DL_R2B_GUARD` (s498,
+   `funcs_3.c:7963`, `emitFrameRdpInitDl`, 40 sites, **2/2 confirms clean as of s499** — 2nd confirm
+   folded in this session: 0 fires on the new guard, 0 regressions across all ~43 armed guard
+   families, `hangarbay-entry` n=31 positive control, crash landed on the SAME already-catalogued
+   `buildPositionAndCallTransformHelper+1736` near-`0x80000000`-RDRAM-decompose family as
+   `EMIT_FRAME_RDP_INIT_DL_R2_GUARD`'s own 2nd confirm, unrelated) all now fully CLOSED, 4/4 leads in
+   this pass. Per-hit tracer query confirms every fixed line no longer appears as an unsafe hit. s498's
+   1st live-verify crash surfaced a NEW-to-this-lineage signature — `appendRdpStateDl+144`,
    `last-guest-pc=0x800109b8` — plausibly the item -306 "flagged, not chased" cross-function-call
    propagation path (raw table reload still live in `ctx->r4`/`ctx->r7` at a call into
    `appendRdpStateDl`) now manifesting as an actual crash; filed, not chased, per the
-   no-reactive-single-crash-chases rule. ~139 locations remain — see Next steps item -317 below.**
+   no-reactive-single-crash-chases rule (has not recurred as of s499). ~139 locations remain — see
+   Next steps item -317 below. s499 pivoted this session to the overdue M5 lead-check (mandatory-pivot
+   rule: 3 straight iterations on this hypothesis) — no new M5 lead found — and resumes the ranked-list
+   fix pass (`funcs_3.c:5695` next) next session.**
 
 -312..-317. **(s481-492) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`
     "grep-verified unique site" lineage — six items, all fully CLOSED except -317 step 3** (open scope
@@ -183,8 +191,8 @@ a range pointer. Highest allocated so far: -317. The next NEW item takes -318.
     attempt validated the wrong one and false-positived 660,261 times before live-verify caught it).**
     Steps 1 (`heapFreeListDequeue`) and 2 (`funcs_4.c` `buildOrientedFaceGeometry`) both FULLY CLOSED,
     2/2 each. **Step 3 — the blanket sweep of the same reload idiom across `funcs_3.c`/`funcs_4.c` —
-    tool audited (s495, 8/8 sample TRUE_POSITIVE, 0 false positives); FOUR leads fixed, the first THREE
-    now FULLY CLOSED 2/2 confirms each.**
+    tool audited (s495, 8/8 sample TRUE_POSITIVE, 0 false positives); FOUR leads fixed, ALL FOUR now
+    FULLY CLOSED 2/2 confirms each (s499 folded in `EMIT_FRAME_RDP_INIT_DL_R2B_GUARD`'s 2nd confirm).**
     `scratch/agent/s494_item317_step3_tracer.py` is a forward taint-propagation dataflow analysis
     (handles 2nd-generation derived pointers) that found ~448 raw reload sites deduping to **~150
     distinct candidate guard placements across 30 functions** (390 NEEDS_GUARD / 58 SAFE_NO_DEREF,
@@ -213,9 +221,18 @@ a range pointer. Highest allocated so far: -317. The next NEW item takes -318.
     still live in `ctx->r4`/`ctx->r7` into `appendRdpStateDl`/`emitAllocatedDLCommand`/
     `buildOrientedFaceGeometry`/`drawTextGlyphRect`, unverified at the time; this crash may be that
     exact propagation path finally manifesting — filed, not chased (a candidate for a future
-    idiom-class audit if it recurs). Per-hit query confirms the fixed line no longer appears as an
-    unsafe hit anywhere. 2nd confirm queued
-    (`scratch/agent/soak_queue/s498_emit_frame_rdp_init_dl_r2b_confirm.sh`).
+    idiom-class audit if it recurs; has NOT recurred as of s499). Per-hit query confirms the fixed
+    line no longer appears as an unsafe hit anywhere. **2nd confirm folded in s499**
+    (`scratch/agent/soak_queue/s498_emit_frame_rdp_init_dl_r2b_confirm.sh`, rc=3/165s wall,
+    `SOAK-RESULTS.md` line `20260807-232915`): read the run's own `run.log` (the top-level `.log` the
+    loop appends to `SOAK-RESULTS.md` is only a 12-line summary; the guard-fire detail lives in
+    `scratch/agent/soak_results/s498_emit_frame_rdp_init_dl_r2b_confirm/run.log`) — 0 fires on the new
+    guard, 0 fires on ANY of the ~43 armed guard-family tags at all (cleanest possible sibling-
+    regression result), `hangarbay-entry` n=31 positive control, crashed at 119.1s on
+    `pc-symbol=buildPositionAndCallTransformHelper+1736`, `last-guest-pc=0x80065acc` — the SAME
+    already-catalogued near-`0x80000000`-RDRAM-decompose family as `EMIT_FRAME_RDP_INIT_DL_R2_GUARD`'s
+    own 2nd confirm, unrelated to this guard. `EMIT_FRAME_RDP_INIT_DL_R2B_GUARD` is now FULLY CLOSED,
+    2/2. **All four step-3 leads fixed so far are now fully closed.**
     **~139 other distinct locations remain unaudited/unfixed.** s498's fresh dedup surfaced the current
     tied-at-40 tier: `funcs_3.c:5695/6001/6321/6631/7332/8292/7648/8636` (all `emitFrameRdpInitDl` or
     unconfirmed-function writes) plus `funcs_4.c:17346` (`renderLitMeshFaceGroup`, still unfixed).

@@ -41550,3 +41550,64 @@ rather than trusting NEXT.md verbatim, per the s496/s497 drift-warning contingen
 this time, +13 lines, same magnitude/direction as s497's own fix); filed the new
 `appendRdpStateDl+144` crash and its plausible link to item -306's known-unaudited gap rather than
 chasing it, per the strategic-priority rule against reactive single-crash chases.
+
+## Session 499 (2026-08-07): folded in EMIT_FRAME_RDP_INIT_DL_R2B_GUARD's 2nd confirm (item -317 step 3's four fixed leads are now ALL fully closed, 2/2 each); mandatory-pivot rule forced a switch off item-317-step3-fix-next-ranked-leads after 3 straight iterations -- ran the overdue M5 lead-check instead (no new lead, cadence reset to s499)
+
+Read `docs/CURRENT-TRUTH.md` (47,728 bytes pre-edit, under the 60,000 maintenance trigger -- not a
+maintenance iteration), `scratch/agent/NEXT.md` (s498's plan: fix `funcs_3.c:5695`, next-ranked
+lead in the `emitFrameRdpInitDl` tied-40 tier), `scratch/agent/SOAK-RESULTS.md` tail. The loop's
+own preamble flagged the mandatory pivot: the last 3 iterations (s496, s497, s498) all ran
+`HYPOTHESIS-ID item-317-step3-fix-next-ranked-leads`, so a 4th consecutive iteration on the same
+slug was blocked. Chose pivot option (a) -- switch to a different work unit -- rather than (b), since
+the M5 lead-check (USER DIRECTIVE priority 2, cadence-gated) was independently due this session
+(last cleared s494, 4 sessions elapsed).
+
+**Step 1: fold in the queued 2nd confirm before starting new work (per contract).**
+`SOAK-RESULTS.md` line `20260807-232915` recorded
+`s498_emit_frame_rdp_init_dl_r2b_confirm | rc=3 | 165s`. The loop-appended one-line log
+(`scratch/agent/soak_results/s498_emit_frame_rdp_init_dl_r2b_confirm_20260807-232915.log`) is only
+a 12-line probe.sh summary with no guard-fire detail -- the actual game stdout with every
+`ROGUESQ_LOG_*` line lives inside the capture directory itself, at
+`scratch/agent/soak_results/s498_emit_frame_rdp_init_dl_r2b_confirm/run.log` (41,183 lines). Read
+that directly (grepped, not opened raw): 0 hits for `r2b`/`emit-frame`/`emit_frame`
+(case-insensitive) anywhere in the run -- 0 fires on the new guard. Enumerated every distinct
+`^[tag]` prefix used in the log (35 distinct tags) and found **zero** guard-family fire lines of
+any kind in this run -- the cleanest possible sibling-regression result, better than s498's own 1st
+live-verify (which had three benign all-zero init-time co-fires). `hangarbay-entry` occurred 31
+times (positive control present). The run crashed at 119.1s (48 frames captured) on
+`pc-symbol=buildPositionAndCallTransformHelper+1736`, `last-guest-pc=0x80065acc` -- the SAME
+already-catalogued near-`0x80000000`-RDRAM-decompose family that `EMIT_FRAME_RDP_INIT_DL_R2_GUARD`'s
+own 2nd confirm (s497) crashed on, unrelated to this guard. **`EMIT_FRAME_RDP_INIT_DL_R2B_GUARD` is
+now FULLY CLOSED, 2/2 independent confirms clean.** This closes out item -317 step 3's entire
+four-lead fix pass so far: `NODE_LIST_HEAD_SIBLING_R4_GUARD`, `RENDER_LIT_MESH_R2_GUARD`,
+`EMIT_FRAME_RDP_INIT_DL_R2_GUARD`, and `EMIT_FRAME_RDP_INIT_DL_R2B_GUARD` are ALL fully closed 2/2
+each -- no open confirms remain in this lineage. Updated `docs/CURRENT-TRUTH.md`'s USER DIRECTIVE
+block and the item -317 Next-steps entry to record this.
+
+**Step 2: the M5 lead-check (this session's chosen work unit).** Re-read
+`docs/M5-AUDIO-PLAN.md`'s framing and grepped every `PORTING-STATE.md` session entry from 495-498
+(the sessions since the last M5 check at s494) for audio/MusyX/voice/song mentions, via a small
+Python regex scan over each session's own text block (not the whole file, to avoid false hits from
+unrelated sessions). Found exactly one hit, in s497's own crash write-up: a citation of the
+long-since-closed `m5-audio-destub-tickwrap-divzero-craftselect` HYPOTHESIS-ID (from session ~343,
+`RENDER_LIT_MESH_R2_GUARD`'s 2nd confirm crashed on the same `tickWrappingTimerAccumulatorList`
+div-by-zero trap that thread originally investigated) -- a backward reference to already-closed
+work, not a new stub/trap/gate discovery. Sessions 495, 496, and 498 had zero audio-ish mentions at
+all. **M5 remains DONE and fully CLOSED, no new lead found; cadence reset to s499**, due again once
+3+ sessions have passed.
+
+No code changed this session (soak fold-in is pure log analysis; M5 lead-check is pure grep/read);
+no regen/build/soak run. Item -317 step 3 resumes next session at the next-ranked lead
+(`funcs_3.c:5695`-ish, re-derive fresh per the standing drift-check) -- NOT blocked, just correctly
+sequenced behind this session's mandatory pivot and the M5 check that was independently due.
+
+**Rules obeyed:** read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`,
+`scratch/agent/SOAK-RESULTS.md` first per contract; folded in the queued soak result (with its full
+run.log, not just the loop's 12-line summary) before starting new work, per Iron Rule 4 (two
+independent lines of evidence -- 0 guard fires AND 0 any-guard-family fires, both checked
+independently); did not touch `lib/`; one game run at a time (none run this session); obeyed the
+loop's mandatory-pivot directive explicitly rather than running a 4th iteration on the same
+hypothesis; the M5 lead-check scanned the actual session text (not a precedent citation) before
+concluding "no new lead," per the falsifiability/evidence-this-iteration standard in the
+SUBSTITUTED-outcome rules (this session is not SUBSTITUTED -- both the soak fold-in and the M5
+check are real, positive-controlled/evidence-backed results, so outcome is ADVANCED).
