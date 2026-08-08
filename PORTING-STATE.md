@@ -42624,3 +42624,99 @@ Cadence reset to s514, due again s517+.
 
 `scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
 
+
+## Session 515 (2026-08-08): item -317 step 3 -- closed RENDER_LIT_MESH_R7_GUARD 2/2, fixed SUBMIT_SCENE_NODE_RENDER_R1_GUARD (18th fix, tier moved off renderLitMeshFaceGroup), item -322 ESCALATED to its 3rd occurrence
+
+**Folded in s514's queued `RENDER_LIT_MESH_R7_GUARD` 2nd confirm.** Read the log directly
+(`scratch/agent/soak_results/s514_render_lit_mesh_r7_confirm_20260808-131115.log` +
+its `run.log`): 0 `render-lit-mesh-r7-guard` fires, real `hangarbay-entry` positive control up to
+n=2900, one benign pre-existing `hangarmenu-a0-guard` co-fire (item -265, unrelated), and the process
+ran the **full 300s scheduled duration with zero crash of any kind** (119 frames captured, rc=0 in
+SOAK-RESULTS.md). CLOSED 2/2. Item -317 step 3 is now 17/17 fully closed guards (up from 16/16).
+
+**Re-scanned for the next lead** (`s494_item317_step3_tracer.py --scan` + `s506_dedupe.py`, both
+re-run fresh post-R7-regen). Top of the tier is still three `beginFrameDLChunk` sites at count=36
+(items -319/-323's own function, deliberately skipped per the standing precedent -- fixing inside it
+before either hits its own escalation threshold would pre-empt that thread's dedicated
+investigation). Picked the next-ranked non-`beginFrameDLChunk` lead: `funcs_4.c:4880`/`0x80010F38`,
+count=34, inside `submitSceneNodeRender` -- all 34 reload origins are inside that same function per
+the tracer report. This is the FIRST item -317-step-3 guard placed in `submitSceneNodeRender`
+(distinct from that function's many earlier, differently-shaped free-list-walk/cached-head guards
+from s123-s270 -- none of those cover this address).
+
+**Source-read the site** (`RecompiledFuncs/funcs_4.c` lines 4860-4895, pre-regen): identical shape to
+every other fix in this lineage. `ctx->r2` is reloaded a few instructions earlier (`0x80010F2C`,
+`ctx->r2 = MEM_W(ctx->r2, 0X63B0);`, off a fixed `0x8011xxxx` global) with only a null check
+(`beq $v0, $zero, L_80010F3C` / `ctx->r2 == 0`); the null arm takes a separate (identical, harmless)
+write to `ctx->r3+0x0` then jumps past this site, but the non-null fallthrough repeats that same
+write and then does the guarded write (`MEM_W(0X4, ctx->r2) = ctx->r3;`, `0x80010F38`) with no range
+check before the dereference. Downstream (`L_80010F3C`) reloads `ctx->r1`/`ctx->r4` from the table
+again immediately after, so skip-the-write-on-invalid is safe, same precedent as every prior guard.
+Wrote `SUBMIT_SCENE_NODE_RENDER_R1_GUARD` in `fixup_game_funcs.py` following the exact R7 template.
+
+**First regen attempt failed a preflight, caught before any damage**: `fixup_game_funcs.py` refused
+to run ("funcs_0.c already carries RS64_FIXUP_APPLIED"). Root-caused: an earlier `os.remove` glob
+delete this session had NOT actually cleared all 50 `funcs_*.c` files before the first `N64Recomp`
+run (re-tested standalone afterward: a fresh delete-then-regen of a single file, `funcs_0.c`, DOES
+reliably produce raw unfixed output -- so this was very likely a one-off race/ordering issue in the
+first attempt, not a reproducible tool bug; not chased further since the fix -- delete again, verify
+`0 remaining` before regenerating -- is cheap and the retry worked cleanly). Redid the full
+delete-verify-regen-fixup cycle from scratch, confirming `0 remaining` files after delete and
+`grep -c RS64_FIXUP_APPLIED` on `funcs_0.c`/`funcs_4.c` returning `0` before running fixup.
+
+**Second attempt: fixup ran clean (rc 0, no error) but silently did NOT apply the new patch** -- 0
+occurrences of `SUBMIT_SCENE_NODE_RENDER_R1_GUARD` in the fixup report, no error printed (the
+`text.count(...) == 1` guard just skips the block on a 0-count mismatch). Root cause:
+`submitSceneNodeRender` carries its own pre-existing per-instruction `g_rs64_last_guest_pc = ...;`
+breadcrumb patch (applied x1179, earlier in the fixup pipeline than my new patch's position in the
+file), which inserts a line between the instruction's comment and its translated body -- my old/new
+strings, copied from the R7 template, didn't include that inserted line, so the exact-match failed
+silently. This is the FIRST site in this lineage to fall inside a function with its own breadcrumb
+patch (every prior `renderLitMeshFaceGroup`/`emitFrameRdpInitDl` site did not have one). Fixed by
+adding the `g_rs64_last_guest_pc = 0x80010F38u;` line to both old and new strings; re-ran the full
+delete-regen-fixup cycle a third time -- this time the report showed
+`funcs_4.c: submit-scene-node-render derived-pointer write guard (s515, item -317 step 3,
+SUBMIT_SCENE_NODE_RENDER_R1_GUARD) patched x1`, confirmed by grepping the guard's own name in the
+freshly-fixed source. **Lesson for future guards in this lineage**: always grep the fixup report for
+the new guard's own name after every run, not just check for "no error" -- a silent 0-count skip
+looks identical to success in the report's absence of an error line.
+
+Built clean (`DEVELOPER_DIR=... cmake --build . -j8`, warnings only, pre-existing pointer-sign noise
+unrelated to this change).
+
+**1st live-verify, manual/foreground, full env-var set (every sibling guard armed) + the new guard's
+own `ROGUESQ_LOG_SUBMIT_SCENE_NODE_RENDER_R1_GUARD=1`**: clean on the guard itself -- 0
+`submit-scene-node-render-r1-guard` fires, real `hangarbay-entry` positive control (n up to 2600), 2
+benign init-time `n=0`/all-zero co-fires (`generic-cache-guard`, `cache-head-a1-guard` -- the
+established non-corruption signature, no regression on any of the ~45 other armed guard families).
+Crashed at 113.5s (45 frames captured) on `pc-symbol=heapFreeListDequeue+40432 (local-symtab)`,
+`last-guest-pc=0x8000d92c`.
+
+**This crash signature is byte-identical (on `last-guest-pc`) to item -322's two prior sightings**
+(s457's `stepSongPitchBendLanes` live-verify and s512's `RENDER_LIT_MESH_R4_GUARD` 2nd confirm). Per
+CURRENT-TRUTH's own standing note on item -322 ("TWO independent occurrences now, watch for a 3rd
+before opening a dedicated thread"), **this is the 3rd independent occurrence, meeting the escalation
+threshold** -- item -322 is now ESCALATED and becomes next iteration's top-priority work unit: source-
+trace `heapFreeListDequeue` starting from the s457 full backtrace (`heapFreeListDequeue <-
+submitSceneNodeRender <- processSceneNode <- traverseSceneGraphRecursive <- setupCameraMatrices <-
+runHangarSelectionFrame <- runHangarMenuFromOverlay <- menuOverlayInit <- mainGameLoop`). Not chased
+in-band this session (per the "one work unit per iteration" rule) -- queued as the explicit next
+step.
+
+Queued `scratch/agent/soak_queue/s515_submit_scene_node_render_r1_confirm.sh` for the loop to run the
+required 2nd independent confirm of `SUBMIT_SCENE_NODE_RENDER_R1_GUARD` itself.
+
+Item -317 step 3 is now 18 of ~150 leads fixed, 17 FULLY CLOSED 2/2, 1 1st-live-verify-clean (2nd
+confirm queued). ~127 locations remain unaudited. Re-scanned tier for the *next* pick after this one
+(for whichever session returns to this lineage instead of item -322): three `beginFrameDLChunk` sites
+at count=36 (still deliberately skipped), then `funcs_3.c:14763`/`funcs_3.c:16107` (32 sites,
+`beginFrameDLChunk`), then a mixed group at count=30 including a possible EIGHTH
+`renderLitMeshFaceGroup` site (`funcs_4.c:15153`) -- that function may not be fully dry after R2-R7
+after all, re-verify before assuming.
+
+Items -319/-320/-321/-323 unchanged this session (no soak crashed on any of their exact signatures).
+
+`docs/CURRENT-TRUTH.md` is now 60,308 bytes, just over the 60,000-byte Step-0 maintenance trigger --
+next iteration starts as a MAINTENANCE iteration automatically.
+
+`scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
