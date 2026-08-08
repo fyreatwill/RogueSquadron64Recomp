@@ -1694,3 +1694,101 @@ evidence: guest-address arithmetic mismatch (checked directly against current `m
 + binary symbol-table inspection (`nm -n`) showing the structural cause.
 
 Full session-by-session raw detail: `PORTING-STATE.md` Sessions 470–478.
+
+## 20. `DL_LIST_APPEND_GUARD` and `DL_LIST_RESET_GUARD`'s own "grep-verified unique site" scope
+claims both turn out to be wrong (s481–486): two blanket generalizations plus one new deferred
+`AUDIO_SLOT_ACTIVE_GUARD` sibling-site bucket, migrated from CURRENT-TRUTH.md s486 maintenance pass
+
+**Item -312 (s481):** the `loadCutsceneAssetsByIndex+1860` breadcrumb (item -311's own predicted
+first use case for the new local-symtab symbolizer) reproduced under the fixed symbolizer as
+`submitSceneNodeRender+63868`, confirming s463/s468's hits were `dladdr` nearest-exported-symbol
+misattributions, not a real bug in `loadCutsceneAssetsByIndex`. The real bug: `submitSceneNodeRender`
+writes its own `$a0` ("new node") argument into the `0x8011:0x63B0` free-list-cache-head global,
+rereads it for `GENERIC_CACHE_GUARD`'s unrelated deref chain (which sanitizes the reread copy but not
+the original argument register), and `DL_LIST_APPEND_GUARD` then uses that same unsanitized register
+as an unguarded WRITE ADDRESS at its own `rwrite` slot (site=0x80010E74). Fixed with a site-anchored
+guard, reasoning the aliasing precondition couldn't recur elsewhere because a grep for that one
+literal address was unique. 2/2 soaks clean (`s481_rwrite_guard_confirm`, 0 crash, 0 fires) — the fix
+itself was correct, only its claimed scope (site-unique) was wrong; **SUPERSEDED s482 by item -313.**
+
+**Item -313 (s482–483), CLOSED 2/2:** a structural re-audit of all 84 `DL_LIST_APPEND_GUARD` sites
+(`N64Recomp/scratch_s482/audit_dl_list_append_rwrite*.py`) found item -312's grep checked the
+ADDRESS, not the STRUCTURAL SHAPE — the same "write new-node arg into `0x63B0`, then self-round-trip
+reload the same register straight back via a bare `lui;lw` with nothing validating it, then reach the
+unguarded `rwrite` write" shape recurs at up to 78 more sites. Confirmed via a 2nd direct source read
+(`funcs_3.c` `emitFrameRdpInitDl`, site=0x80008FD4, byte-for-byte the same shape). Two earlier audit
+iterations produced a false lead (a naive "any nearby guard touches this register" heuristic flagged
+57/84 sites — a coincidental, safe, unrelated `DL_BUFFER_POOL_GUARD` idiom) before narrowing to "is
+the reassignment itself just a self-reload of the same corrupted value". Folded item -312's fix
+directly into the blanket `DL_LIST_APPEND_GUARD` patch (addr6's write now validates `rwrite`, not
+just `rload`, at every site); item -312's now-superseded site-specific patch deleted. Clean
+regen/build, all 5 sibling guard families unregressed. **2/2 independent confirms clean**: s482 manual
+soak (0 fires, crashed at 107.8s in the unrelated already-catalogued `initVec4TripletFromArgs+68`
+BREADCRUMB6 family); s483 confirm (`s482_blanket_rwrite_guard_confirm`, rc=3, 0 fires on the new guard
+or any of 6 siblings, crashed at `pc-symbol=coalesceFreeHeapBlocks+2016`/`last-guest-pc=0x800023b0` —
+byte-identical to the already-closed s354–366 heap-coalesce family). The entire `DL_LIST_APPEND_GUARD`
+lineage (items -291, -312, -313) is done.
+
+**Item -314 (s483–485), CLOSED 2/2:** applying item -313's own "is the SHAPE actually unique, not
+just the address" skepticism to another closed site-anchored patch found `AUDIO_SLOT_ACTIVE_GUARD`
+(s166)'s "unique address" claim was likewise address-only — the same unguarded fixed-global-pointer
+deref idiom (`lui $reg,0x8015`/`lw $reg,-0x6908($reg)`, global `0x801496F8`, written once in
+`allocateSongChannelArray`) recurs at 20 more sites across 15 MusyX voice functions in `funcs_24.c`
+(`musyxMixActiveVoices` x3, `musyxSynthFrame` x1, `musyxInitVoiceFromSample` x4,
+`musyxStartVoiceRelease`, `musyxStoreVoiceAdsrParams`, `musyxTriggerVoiceAttack`, `musyxStopVoice`,
+`musyxSetVoicePitchBend` x2, `setVoiceModulationParams`, `stopVoiceMarkRetrigger` x2,
+`beginVoiceFadeRelease`, `deactivateVoice`, `getVoiceUserField`), confirmed via 2 direct source reads
+(`musyxMixActiveVoices` funcs_24.c:2540-2564, unguarded `idx*136` combine feeding an unchecked read;
+`deactivateVoice` funcs_24.c:6643-6657, same combine feeding an unconditional write). Filed
+CLASSIFIED AND DEFERRED s483 (15 different downstream shapes after the load need per-shape regex
+design, not a uniform blanket regex like item -313's). Fixed s484: 10 site-anchored early-return
+guards, transitively covering 14/20 unguarded sites (guarding only the FIRST `-0x6908` reload per
+function protects every later reload in the same call, since none of these 15 functions ever
+rewrites the global). 6 sites in `musyxMixActiveVoices`/`musyxSynthFrame` deliberately left unguarded
+— mid-loop, need a loop-scoped "skip iteration" shape, not a plain early return; documented as the
+next thread on this bucket, not guessed at. **2/2 independent confirms clean**: s484's own confirm
+soak (0 fires on item -314's guards; it separately triggered the item -315 discovery below) and
+s485's `s484_audio_voice_baseptr_confirm` (rc=3, 0 fires on `audio-voice-baseptr-guard` or any
+sibling, crashed at `pc-symbol=coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` — byte-
+identical to the already-catalogued heap-walker family recorded at `PORTING-STATE.md` lines
+~38630/38780/38801).
+
+**Item -315 (s484–486), CLOSED 2/2:** item -314's own 1st confirm soak crashed live on a brand-new
+bug in a sibling family: `DL_LIST_RESET_GUARD` (item -298) validates the wrong register at
+site=0x80010880 in `submitSceneNodeRender` (`funcs_4.c`) — the guard's design comment claims its
+"new node" register ("rnode") is "a normal argument register, not derived from G — not at risk", but
+at this site `ctx->r4` is itself an earlier, completely unguarded reload of the SAME `0x801163B0`
+free-list-cache-head global that `GENERIC_CACHE_GUARD` protects via a *different* register 3
+instructions earlier — the exact same "guard validates one sibling register's reload but not
+another's" meta-bug as items -312/-313. Confirmed via the live crash: `si_addr=0x380000000` = RDRAM
+host base + guest `0x80000000`, consistent with `0x801163B0` having been self-healed to 0 by an
+earlier guard. Fixed s484 with a site-anchored `S315_RESET_R4_GUARD`. s485 audited the deferred
+"does this recur across the other 83 sites" question with a from-scratch static-analysis script
+(`N64Recomp/scratch_s485/audit_dl_list_reset_rnode.py`) and found the same unguarded-rnode-alias
+shape at 73/84 sites (2 confirmed via direct source read: `emitFrameRdpInitDl` site=0x80009104,
+`renderLitMeshFaceGroup` site=0x800134F0) — almost exactly item -313's own 78/84 recurrence rate for
+the sibling bug. Generalized into `DL_LIST_RESET_RNODE_GUARD`, folded into both the 70-site blanket
+template and the 14-site per-site extension across all 84 sites uniformly (6 sites showed no alias,
+5 were ambiguous after one `ADD32` hop, guarded anyway since a genuinely-valid pointer is provably a
+no-op through the same range check every sibling guard uses); the old `S315_RESET_R4_GUARD` deleted
+as a now-redundant subset. Build-verified (funcs_3.c 41+5=46, funcs_4.c 29+9=38, totaling 84/84, no
+errors). 1st manual soak ran the FULL DURATION with ZERO CRASH (`rc=0`, 124 frames captured, every
+`PROBE_KEYS` press through 250s completed) — the cleanest possible outcome, 0 fires on
+`dl-list-reset-rnode-guard` and every sibling family. **s486 2nd independent confirm**
+(`s485_dl_list_reset_rnode_confirm`, rc=3, 156s): 0 fires on `dl-list-reset-rnode-guard` or any
+sibling guard; the crash itself was a host-side event (`last-guest-pc=0x800ab0e0`, `pc-symbol` a
+nonsense-huge offset because the crashing host PC sits in system/dyld-shared-cache code the local
+symtab table doesn't cover) — byte-identical `last-guest-pc` to item -303's own s472 confirm, already
+catalogued there as an async Metal.framework shader-compiler-thread SIGSEGV inside
+`fscache_insert_and_retain`, same family as items -10/-9. Item -315 is FULLY CLOSED, 2/2 independent
+confirms clean. **The entire `DL_LIST_RESET_GUARD` lineage (items -298, -315) and the
+`DL_LIST_APPEND_GUARD` lineage (items -291, -312, -313) are both done.**
+
+**Tooling note (s486):** the item -311 local-symtab symbolizer produces a syntactically-valid but
+numerically absurd `sym=X+N` line (offset in the billions) when the crashing host PC falls in
+system/framework code outside the table's coverage, rather than a clear "not in this binary" marker
+— this is a known display quirk, not a new bug; treat any `pc-symbol` offset above a few hundred KB
+as "host-side crash outside our code", cross-check `last-guest-pc` against the catalogue before
+filing as new.
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 481–486.

@@ -40375,3 +40375,65 @@ established practice across this entire guard-lineage, plus new files in this re
 `docs/CURRENT-TRUTH.md` is now 62,202 bytes (over the 60,000-byte maintenance trigger) -- next
 iteration's Step 0 will fire a MAINTENANCE pass automatically; not run this session since a real
 work unit was already in flight and iteration budget was mostly spent on the audit+fix+soak.
+
+## Session 486 (2026-08-07)
+
+**MAINTENANCE iteration (Step 0 of ITERATION.md triggered).** `docs/CURRENT-TRUTH.md` was 62,202
+bytes at session start, over the 60,000-byte trigger flagged by s485's own closing note. Per the
+Maintenance section of `tools/agent/ITERATION.md`, ran no experiment this session; compacted
+CURRENT-TRUTH instead.
+
+Before compacting, read `scratch/agent/SOAK-RESULTS.md`'s tail per the standing instruction and
+found one new soak result had landed since s485's commit: `s485_dl_list_reset_rnode_confirm` (item
+-315's queued 2nd independent confirm) ran `rc=3` (crashed), 156s, 45 frames captured. Checked the
+raw log for fires on `dl-list-reset-rnode-guard` or any sibling guard family: **0 fires, none.** The
+crash itself: `[CRASH][pc-symbol] pc=0x2317488c4 sym=__isPlatformOrVariantPlatformVersionAtLeast.cold.4+5020681484
+(local-symtab)`, `[CRASH][last-guest-pc] pc=0x800ab0e0`. The `pc-symbol` line's absurd 5-billion-byte
+offset is a symbolizer display quirk (the item -311 local-symtab lookup found the nearest-preceding
+table entry, but the actual crashing host PC sits in system/dyld-shared-cache framework code far
+outside the table's coverage) — not evidence of anything new. The discriminating fact is
+`last-guest-pc=0x800ab0e0`, which is byte-identical to a crash already recorded in this exact ledger
+at item -303's own s472 confirm (`docs/PROJECT-OVERVIEW.md` §19, "Item -303" paragraph): an async
+Metal.framework shader-compiler-thread SIGSEGV inside `fscache_insert_and_retain`, same family as
+items -10/-9's Metal-compiler-SIGSEGV class, unrelated to any game-code guard. **Item -315 is
+FULLY CLOSED, 2/2 independent confirms clean.** Combined with s484/s485's earlier confirms, all four
+items opened in the s481-485 arc (-312, -313, -314, -315 — the `DL_LIST_APPEND_GUARD` and
+`DL_LIST_RESET_GUARD` "grep-verified unique site" scope-claim generalizations, plus the deferred
+`AUDIO_SLOT_ACTIVE_GUARD` sibling-site bucket) are now fully closed.
+
+**Compaction work.** Migrated the full s481-486 narrative (items -312/-313/-314/-315) into a new
+`docs/PROJECT-OVERVIEW.md` §20 ("`DL_LIST_APPEND_GUARD` and `DL_LIST_RESET_GUARD`'s own 'grep-
+verified unique site' scope claims both turn out to be wrong"), preserving every fact (addresses,
+site counts, mechanisms, soak verdicts) that was previously only in CURRENT-TRUTH. In CURRENT-TRUTH
+itself:
+- Collapsed the accumulated s477-s485 running narrative in the USER DIRECTIVE section (was ~80 lines
+  of session-by-session blow-by-blow) down to a ~15-line summary pointing at PROJECT-OVERVIEW §20.
+- Replaced the four standalone item blocks for -312/-313/-314/-315 (each carrying full multi-
+  paragraph derivation) with one consolidated ~20-line paragraph, matching the established pattern
+  used for other closed-item ranges elsewhere in the file (e.g. -298..-304).
+- Merged four previously-separate closed-item paragraphs (-282..-290, -274..-280, -268..-273,
+  -261..-267 — all part of the same s424-453 duplicate-symbol-collision arc, all already pointing at
+  PROJECT-OVERVIEW §16) into one consolidated -261..-290 paragraph.
+- Merged three more closed-item paragraphs (-231..-238, -239..-247, -249) into one -231..-249
+  paragraph, and merged the -159..-14 / -160..-230 pair into one -230..-14 paragraph.
+- Deleted the "Sanctioned tooling work unit" line entirely: it restated exactly what the merged
+  -231..-249 paragraph now already says (item -231..-238, CLOSED OUT s386/s388), and grep confirmed
+  no other file referenced it by name.
+- Tightened the -305..-309 and -298..-304 audit-bucket summary paragraphs (shorter connective
+  phrasing, `hi16=...,off=...` instead of `...,offset=...`) without dropping any address, site count,
+  or session tag.
+- Refreshed the stale "established by session 295; ... reviewed through s480" headline to s486.
+
+Net result: `docs/CURRENT-TRUTH.md` went from 705 lines / 62,202 bytes to 497 lines / 44,933 bytes
+(`git diff --numstat` on the file: 116 insertions, 324 deletions, net -208 lines — exceeds the
+maintenance rule's >=200-net-line-shrink bar for counting as ADVANCED). Read the whole compacted
+file back afterward to check for broken cross-references, inconsistent item-range numbering, or lost
+information; found none — every merged paragraph still names every constituent item number, guard
+name, global address, site count, and closing session, and every "Full derivation" pointer resolves
+to a real section (`docs/PROJECT-OVERVIEW.md` §13/§14/§15/§16/§17/§18/§19/§20, cross-checked by
+grepping for each section header).
+
+Rules obeyed: did not run any experiment this session (Step 0 mandates a maintenance-only pass); did
+not touch `lib/` (only `docs/CURRENT-TRUTH.md`, `docs/PROJECT-OVERVIEW.md`, and the agent-loop
+scratch files changed), so no `submodule-patches/export.sh` needed. No soak queued this session
+(no code changed, nothing new to validate).

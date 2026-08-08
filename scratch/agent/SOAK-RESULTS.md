@@ -113,3 +113,4 @@
 20260807-181314 | s481_rwrite_guard_confirm | rc=0 | 346s | scratch/agent/soak_results/s481_rwrite_guard_confirm_20260807-181314.log
 20260807-183837 | s482_blanket_rwrite_guard_confirm | rc=3 | 170s | scratch/agent/soak_results/s482_blanket_rwrite_guard_confirm_20260807-183837.log
 20260807-192441 | s484_audio_voice_baseptr_confirm | rc=3 | 203s | scratch/agent/soak_results/s484_audio_voice_baseptr_confirm_20260807-192441.log
+20260807-194713 | s485_dl_list_reset_rnode_confirm | rc=3 | 156s | scratch/agent/soak_results/s485_dl_list_reset_rnode_confirm_20260807-194713.log

@@ -7,116 +7,58 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = `## LLE s
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
-   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Nineteen passes
-   so far (s295-330 x5, s346, s355, s364, s371, s380, s391, s398, s409, s429, s438, s444, s451, s461,
-   s469, s479) kept the file oscillating around the cap as new session detail accrues — full per-pass
-   migration targets in git log; PROJECT-OVERVIEW §16-§19 hold the most recent four arcs. 35 KB
-   remains a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and the
-   Regeneration section's Standing warnings stay intact deliberately; both are used every iteration.
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Twenty passes so
+   far (s295-330 x5, s346, s355, s364, s371, s380, s391, s398, s409, s429, s438, s444, s451, s461,
+   s469, s479, s486) kept the file oscillating around the cap as new session detail accrues — full
+   per-pass migration targets in git log; PROJECT-OVERVIEW §16-§20 hold the most recent five arcs. 35
+   KB remains a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and
+   the Regeneration section's Standing warnings stay intact deliberately; both are used every
+   iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
-   §10-§12). Next M5 work needs a genuinely new lead.
+   §10-§12). Next M5 work needs a genuinely new lead (last checked s478; due for a fresh check once
+   3+ sessions have passed since then).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
-   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. **Both the s465
-   `lui`+`lw` frequency-scan lineage (spent as of s476) and the s477 `lui`+`sw` direct-store probe
-   (dead end after one scan, item -309) are now closed.** Every bucket either surfaced has a
-   disposition (items -298..-309 below and PROJECT-OVERVIEW §18). **s478 closed the highest-
-   recurrence passive-breadcrumb candidate too: `heapFreeListDequeue+NNNN` (15+ sessions, item
-   -310) is a crash-symbolizer artifact, not a real recurring bug — do not re-file future
-   occurrences of it as "same family". s480 fixed the underlying symbolizer blind spot itself (item
-   -311) — DONE, no longer an open tooling candidate.** s481 exercised that fix on the next
-   lower-recurrence breadcrumb (`loadCutsceneAssetsByIndex+1860`) and found it was ALSO a
-   misattribution artifact — but the reproduction handed back a genuinely new, root-caused,
-   single-site guard gap instead (`DL_LIST_APPEND_GUARD`/`submitSceneNodeRender`, item -312, FIXED,
-   2nd confirm soak queued). Next M3 session: check item -312's queued confirm soak result first; if
-   clean, no untried high-expected-value instruction-pattern scan AND no un-investigated
-   high-recurrence breadcrumb remains queued — fall back to a fresh M5 lead check (s478 checked, none
-   found) instead of inventing a third opcode-pattern scan speculatively. **s482: item -312's confirm
-   soak came back clean (2/2), but a structural re-audit of its own "grep-verified unique site" scope
-   claim found that claim was WRONG -- the same aliasing shape recurs at up to 78 more of
-   `DL_LIST_APPEND_GUARD`'s 84 sites, confirmed via direct source read of a 2nd concrete instance.
-   Generalized the fix into a blanket patch (item -313), 1 manual confirm clean (0 fires anywhere in
-   the family), 2nd confirm queued (`s482_blanket_rwrite_guard_confirm`). **s483: that 2nd confirm
-   soak ran (`rc=3`, crashed) but 0 fires on `dl-list-append-rwrite-guard` or any of the 6 sibling
-   guard families instrumented, and the crash itself (`pc-symbol=coalesceFreeHeapBlocks+2016
-   (local-symtab)`, `last-guest-pc=0x800023b0`) is byte-identical to a crash already catalogued and
-   closed in the s354-366 heap-walker/coalesce-bail-fix arc (same address pair recorded verbatim in
-   `PORTING-STATE.md` at the s366-era verify2 entry) -- matching this whole lineage's established
-   true-negative pattern exactly. Item -313 is fully CLOSED, 2/2 independent confirms clean; the
-   entire `DL_LIST_APPEND_GUARD` lineage (items -291, -312, -313) is done. Fresh M5 lead check
-   skipped this session per NEXT.md's own standing cadence (only 1 session past s482's re-check,
-   below the 3-session threshold) -- fell through to M3 idiom-class audit resumption instead: applying
-   item -313's own "grep-verified unique, but is the SHAPE actually unique?" skepticism to other
-   already-CLOSED site-anchored (non-blanket) patches in `fixup_game_funcs.py`. Found a real hit:
-   `AUDIO_SLOT_ACTIVE_GUARD` (s166)'s "unique address" claim was also address-only, not shape-wide --
-   the same unguarded fixed-global-pointer deref idiom recurs at 20 more sites across 15 different
-   MusyX voice functions reading the same `0x801496F8` global, confirmed via 2 direct source reads.
-   Filed as item -314, CLASSIFIED AND DEFERRED (not a uniform blanket-regex case like item -313 --
-   15 different downstream instruction shapes need a dominant-shape regex plus bespoke handling for
-   an interleaved-instruction minority); fix design is next session's M3 work unit.** **s484: item
-   -314 FIXED (10 site-anchored early-return guards, transitively covering 14/20 unguarded sites --
-   guarding only the FIRST `-0x6908` reload per function protects every later reload in the same
-   call, since none of these 15 functions ever rewrites the global). 6 sites in
-   `musyxMixActiveVoices`/`musyxSynthFrame` deliberately left unguarded (mid-loop, need a
-   loop-scoped "skip iteration" shape, not a plain early return -- documented, not guessed at). The
-   1st confirm soak for this fix then crashed on a BRAND NEW bug in a sibling family
-   (`DL_LIST_RESET_GUARD`) -- root-caused and fixed same-session as item -315 (see below). 2 soaks
-   clean at both targets (item -314's own guards: 0 fires across both runs); 2nd independent confirm
-   queued (`s484_audio_voice_baseptr_confirm.sh`).** **s485: that queued confirm came back clean
-   (`rc=3`, crashed at 157.1s, but 0 fires on `audio-voice-baseptr-guard`/`s315-reset-r4-guard`/every
-   sibling, and the crash itself -- `pc-symbol=coalesceFreeHeapBlocks+4424`, `last-guest-pc=
-   0x8000247c` -- is byte-identical to the SAME already-catalogued heap-walker family recorded at
-   PORTING-STATE.md lines ~38630/38780/38801). Items -314 and -315 are both fully CLOSED, 2/2
-   independent confirms clean. Picked up item -315's own deferred follow-up (its fix was scoped to
-   ONE site, "does this recur across the other 83" was explicitly left open): a from-scratch
-   static-analysis script (`scratch_s485/audit_dl_list_reset_rnode.py`, N64Recomp repo, untracked)
-   found the SAME "rnode register is an unguarded alias of the `0x801163B0` cache-head global" shape
-   at 73 of `DL_LIST_RESET_GUARD`'s 84 sites (2 confirmed via direct source read: `emitFrameRdpInitDl`
-   site=0x80009104, `renderLitMeshFaceGroup` site=0x800134F0) -- almost exactly item -313's own
-   78/84 recurrence rate for the sibling `DL_LIST_APPEND_GUARD_RWRITE` bug. Generalized into a new
-   `DL_LIST_RESET_RNODE_GUARD` folded into BOTH the 70-site blanket template and the 14-site
-   per-site extension (all 84, uniformly, regardless of per-site classification -- 6 sites showed no
-   alias, 5 were ambiguous after one `ADD32` hop, guarded anyway since a genuinely-valid pointer is
-   provably a no-op through the same range check every sibling guard uses). The old one-off
-   `S315_RESET_R4_GUARD` is now a strict subset of this and was deleted (its literal anchor text no
-   longer exists once the blanket rewrite runs first -- leaving it in would `raise` on every future
-   regen). Build-verified (fixup ran clean, exact counts: funcs_3.c 41+5=46, funcs_4.c 29+9=38,
-   totaling 84/84, no errors); 1 manual soak run FULL DURATION WITH ZERO CRASH (`rc=0`, 124 frames
-   captured, every `PROBE_KEYS` press through 250s completed) -- 0 fires on
-   `dl-list-reset-rnode-guard` and all sibling guard families, the cleanest possible outcome. 2nd
-   independent confirm queued (`s485_dl_list_reset_rnode_confirm.sh`).**
+   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Every bucket
+   surfaced by the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW
+   §18-§19). The s480 crash-symbolizer fix (item -311, local-symtab lookup replacing `dladdr`'s
+   exported-symbol-only blind spot) resolved two more breadcrumbs it was built to help with: s481
+   found `loadCutsceneAssetsByIndex+1860` was itself a misattribution, but the reproduction handed
+   back a real, root-caused guard gap in `DL_LIST_APPEND_GUARD` (item -312) that s482 found recurred
+   at up to 78/84 sites (generalized, item -313); applying that same "is the address-uniqueness claim
+   actually shape-uniqueness?" skepticism to another old closed patch then found `AUDIO_SLOT_ACTIVE_GUARD`
+   recurring across 20 more MusyX voice-function sites (item -314, s483), whose own confirm soak
+   surfaced a THIRD sibling scope gap in `DL_LIST_RESET_GUARD` (item -315, s484) that s485 also
+   generalized (73/84 sites). **s486: item -315's 2nd confirm came back clean — all four items
+   (-312/-313/-314/-315) are now fully CLOSED, 2/2 independent confirms each; full narrative migrated
+   to PROJECT-OVERVIEW §20.** No untried high-expected-value instruction-pattern scan and no
+   un-investigated high-recurrence breadcrumb remain queued — next M3 session should either pick up
+   item -314's own deferred 6-site loop-scoped-guard follow-up (see item -314 below) or run a fresh
+   from-scratch idiom scan per the s465/s477 precedent.
 
--315. **(s484) `DL_LIST_RESET_GUARD` (item -298, s463) validates the wrong register at one
-    confirmed site in `submitSceneNodeRender` -- same "guard validates one sibling register's reload
-    but not another's" meta-bug as item -312/-313, found LIVE via item -314's own confirm soak
-    crashing.** `DL_LIST_RESET_GUARD`'s own design comment claims its "new node" register ("rnode")
-    is "a normal argument register, not derived from G -- not at risk" -- WRONG at site=0x80010880
-    (`funcs_4.c`): there, `ctx->r4` is itself an EARLIER, completely unguarded reload of the SAME
-    `0x801163B0` free-list-cache-head global `GENERIC_CACHE_GUARD` protects (via a different
-    register, at 0x80010820-0x80010824), used 3 instructions before `DL_LIST_RESET_GUARD`'s own
-    guarded write (0x80010884, which validates `r2` -- a different global entirely -- and never
-    touches `r4`). Confirmed via the live crash: `si_addr=0x380000000` = RDRAM host base + guest
-    `0x80000000` = `r4` read back as exactly 0, consistent with `0x801163B0` having been
-    self-healed to 0 by an earlier guard. FIXED with a site-anchored guard
-    (`S315_RESET_R4_GUARD`, `re.subn` with `raise`-on-mismatch) skipping just the one unguarded
-    write when `r4` is out of range; matches s481's own precedent of shipping the concrete instance
-    immediately and deferring the "does this recur across the other 83 sites" question -- NOT yet
-    audited, structurally plausible given `DL_LIST_APPEND_GUARD`'s own sibling bug (item -313)
-    turned out to recur at 78/84 sites via the same kind of scoped static-analysis script. Build-
-    verified, 2nd soak clean (0 fires on `s315-reset-r4-guard` and every sibling guard family,
-    crash was a completely different already-catalogued family --
-    `rs_free ← rebuildActiveDisplayObjectList`, tracked since s99-186). 2nd independent confirm
-    queued alongside item -314's (same soak script arms both). Full derivation:
-    `PORTING-STATE.md` Session 484. **CLOSED s485: the deferred "does this recur" question was
-    audited (73/84 sites, same shape) and generalized into `DL_LIST_RESET_RNODE_GUARD`, folded into
-    both the blanket and per-site `DL_LIST_RESET_GUARD` templates; `S315_RESET_R4_GUARD` deleted as
-    a now-redundant subset. 1 manual soak clean (full duration, 0 crash, 0 fires), 2nd confirm
-    queued (`s485_dl_list_reset_rnode_confirm.sh`). Full derivation: `PORTING-STATE.md` Session 485.**
+-312..-315. **(s481-486) `DL_LIST_APPEND_GUARD` and `DL_LIST_RESET_GUARD`'s own "grep-verified
+    unique site" scope claims both turn out to be wrong, plus one new deferred
+    `AUDIO_SLOT_ACTIVE_GUARD` sibling-site bucket — all FOUR items now fully CLOSED, 2/2 independent
+    confirms each.** Item -312: a `loadCutsceneAssetsByIndex+1860` breadcrumb reproduced as
+    `submitSceneNodeRender+63868` under the s480 symbolizer fix, revealing a real `DL_LIST_APPEND_GUARD`
+    unguarded-`rwrite` gap at one site; fixed, then SUPERSEDED. Item -313: a structural re-audit found
+    that same aliasing shape recurs at 78/84 `DL_LIST_APPEND_GUARD` sites (confirmed via 2nd direct
+    source read); generalized into a blanket `rwrite`-validating patch, CLOSED. Item -314: applying
+    the same "address-unique ≠ shape-unique" skepticism to `AUDIO_SLOT_ACTIVE_GUARD` found 20 more
+    unguarded loads of its global across 15 MusyX voice functions; 14/20 fixed via 10 site-anchored
+    early-return guards (6 mid-loop sites in `musyxMixActiveVoices`/`musyxSynthFrame` deliberately
+    left unguarded — need a loop-scoped "skip iteration" shape, not a plain early return; this is the
+    live open follow-up), CLOSED for the 14/20 scope. Item -315: item -314's own confirm soak crashed
+    live on a THIRD sibling scope gap, in `DL_LIST_RESET_GUARD` (wrong register validated at one
+    `submitSceneNodeRender` site); fixed site-anchored, then a static-analysis audit found the same
+    shape at 73/84 sites, generalized into `DL_LIST_RESET_RNODE_GUARD`, CLOSED. **s486: item -315's
+    2nd confirm (`s485_dl_list_reset_rnode_confirm`) came back clean — 0 fires on the new guard or any
+    sibling, crash was a host-side Metal.framework shader-compiler-thread SIGSEGV (same family as
+    items -10/-9/-303, `last-guest-pc=0x800ab0e0` byte-identical to item -303's own s472 confirm).**
+    Full derivation and every soak verdict: `docs/PROJECT-OVERVIEW.md` §20, `PORTING-STATE.md`
+    Sessions 481-486.
 
-Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
-`fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
-
-## Current truth (established by session 295; unchanged, reviewed through s480)
+## Current truth (established by session 295; unchanged, reviewed through s486)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -245,97 +187,6 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -315. The next NEW item takes -316.
 
--314. **(s483) `AUDIO_SLOT_ACTIVE_GUARD` (s166)'s "unique address" claim was also address-only, not
-    shape-wide -- 20 more unguarded loads of the same base-pointer global found across 15 MusyX
-    voice functions. CLASSIFIED AND DEFERRED, not yet fixed.** Applying item -313's own discovery
-    method to another closed site-anchored patch: the guard's own comment claimed "Guest addresses
-    0x80092110/0x80092114 confirmed unique across the whole RecompiledFuncs/ tree ... via grep" --
-    true of those two literal instruction addresses in `isAudioSlotActive`, but the underlying SHAPE
-    (load fixed global base pointer, combine with computed voice-slot index, deref with zero
-    null/range check) was never checked for recurrence at other addresses reading the SAME global.
-    The global is `0x801496F8` (`lui $reg,0x8015`/`lw $reg,-0x6908($reg)`; written once, in
-    `allocateSongChannelArray`, `funcs_23.c:10785`). Grepped every load of it across all of
-    `RecompiledFuncs/`: 21 total sites, all in `funcs_24.c`. Only 1 (the original
-    `isAudioSlotActive` site, 0x80092100) is guarded. The other 20 span 15 different MusyX
-    voice-management functions: `musyxMixActiveVoices` (x3), `musyxSynthFrame` (x1),
-    `musyxInitVoiceFromSample` (x4), `musyxStartVoiceRelease`, `musyxStoreVoiceAdsrParams`,
-    `musyxTriggerVoiceAttack`, `musyxStopVoice`, `musyxSetVoicePitchBend` (x2),
-    `setVoiceModulationParams`, `stopVoiceMarkRetrigger` (x2), `beginVoiceFadeRelease`,
-    `deactivateVoice`, `getVoiceUserField` (exact line numbers: `PORTING-STATE.md` Session 483).
-    2 of the 20 sit near an unrelated logging-only diagnostic patch (s117/s119) that fires AFTER the
-    unchecked deref, not a safety check -- do not miscount those as guarded. Confirmed via 2 direct
-    source reads beyond the known site: `musyxMixActiveVoices` (funcs_24.c:2540-2564, unguarded
-    `idx*136` combine feeding an unchecked byte-OR read) and `deactivateVoice`
-    (funcs_24.c:6643-6657, unguarded `idx*136` combine feeding an unconditional byte WRITE) --
-    same unguarded-base-pointer-deref class as `AUDIO_SLOT_ACTIVE_GUARD` already patches for its one
-    site, at 2 more concrete addresses in 2 different functions. Not fixed this session: unlike
-    `DL_LIST_APPEND_GUARD`'s one uniform 84x-repeated instruction chain, this idiom recurs across 15
-    DIFFERENT functions with different downstream shapes after the load (verified `MEM_W`/`MEM_BU`
-    in `include/recomp.h` -- a bad pointer can NOT simply be zeroed, `rdram + (0 - 0x80000000)` is
-    still wild, so the fix needs the same "skip only the guarded op" if/else wrapper
-    `GENERIC_CACHE_GUARD`/`DL_LIST_APPEND_GUARD_RWRITE` use, which needs per-shape regex design: a
-    dominant 6-instruction shape (`lui;lw;sll;addu;sll;addu`) covers most sites, but at least
-    `musyxInitVoiceFromSample`'s 3rd site interleaves an unrelated float-constant load in the
-    middle). Filed CLASSIFIED AND DEFERRED rather than rushing a blanket patch across an
-    every-frame-exercised audio subsystem. Full derivation: `PORTING-STATE.md` Session 483.
-
--313. **(s482) `DL_LIST_APPEND_GUARD_RWRITE` generalized from item -312's single site to a blanket
-    fix across all 84 `DL_LIST_APPEND_GUARD` sites — item -312's "grep-verified unique" scope claim
-    was WRONG.** Item -312 shipped a site-anchored literal patch guarding only
-    `submitSceneNodeRender`'s instance (site=0x80010E74), reasoning the aliasing precondition
-    (rwrite fed by an unvalidated round-trip through the `0x8011:0x63B0` free-list-cache-head
-    global) couldn't recur elsewhere because a grep for that one literal address was unique — that
-    grep checked the ADDRESS, not the STRUCTURAL SHAPE. A static-analysis re-audit of all 84 sites
-    (`N64Recomp/scratch_s482/audit_dl_list_append_rwrite*.py`) found the same shape — write the
-    "new node" arg into `0x63B0` as new head, then self-round-trip-reload the SAME register straight
-    back from `0x63B0` via a bare `lui $reg,0x8011; lw $reg,0x63B0($reg)` with nothing in between
-    validating it, then reach `DL_LIST_APPEND_GUARD`'s own unguarded write-through-rwrite — recurs
-    at up to 78 more sites. Confirmed via direct source read of a 2nd concrete instance (funcs_3.c
-    `emitFrameRdpInitDl`, site=0x80008FD4): byte-for-byte the same shape as submitSceneNodeRender,
-    including the same "GENERIC_CACHE_GUARD validates a DIFFERENT reread register, never the
-    original" gap. Two earlier audit-script iterations produced a false lead first (a naive "any
-    nearby guard touches this register" heuristic flagged 57/84 sites, which turned out to be a
-    coincidental, SAFE, unrelated idiom — `DL_BUFFER_POOL_GUARD` supplying a genuinely fresh
-    validated buffer pointer via a plain register-copy) — the true positive only showed up once the
-    check was narrowed to "is the reassignment ITSELF just a self-reload of the same corrupted
-    value" (source-verified, not inferred). Fix: folded item -312's remediation directly into the
-    blanket `DL_LIST_APPEND_GUARD` patch in `N64Recomp/fixup_game_funcs.py` — addr6's write now
-    validates `rwrite` (not just `rload`) at EVERY site, reusing item -312's own env var/log tag
-    (`ROGUESQ_LOG_DL_LIST_APPEND_RWRITE_GUARD`/`[dl-list-append-rwrite-guard]`, no soak-recipe
-    changes needed). Item -312's now-superseded site-specific patch was deleted (its anchor text no
-    longer matches post-generalization, so it would silently no-op forever if left in). Full
-    regen/build clean; all 5 sibling guard families in this same code exactly matched their
-    established ledger counts with 0 regression (`GENERIC_CACHE_GUARD` 107, `DL_BUFFER_POOL_GUARD`
-    84, `SIBLING_PTR_WRITE_GUARD` 120, `DL_LIST_RESET_GUARD` 84, `FREELIST_NEXT_GUARD` 105). 1
-    manual confirmation soak clean: 0 fires on `dl-list-append-rwrite-guard` (or any sibling guard)
-    across the full driven schedule, `hangarbay-entry n=31` positive control confirms reach; the
-    process crashed at 107.8s in an UNRELATED, already-catalogued family
-    (`initVec4TripletFromArgs+68`, a near-`0x80000000` wild guest pointer matching the BREADCRUMB6
-    family) — filed, not chased, matching this whole lineage's established "clean at the target,
-    hit a different pre-existing family" pattern. **2nd confirmation soak (s483,
-    `s482_blanket_rwrite_guard_confirm`) also came back clean at the target: `rc=3` (crashed) but 0
-    fires on `dl-list-append-rwrite-guard` or any of the 6 sibling guard families, `hangarbay-entry
-    n=33` positive control; the crash (`pc-symbol=coalesceFreeHeapBlocks+2016`,
-    `last-guest-pc=0x800023b0`) is byte-identical to the already-closed s354-366 heap-coalesce
-    family. Item -313 is FULLY CLOSED, 2/2 independent confirms clean.** Full derivation:
-    `PORTING-STATE.md` Sessions 482-483.
-
--312. **(s481) `loadCutsceneAssetsByIndex+1860` breadcrumb (item -311's own predicted use case)
-    CLOSED as an item-310-class misattribution; real root cause found and FIXED, then SUPERSEDED
-    s482 (see item -313 — the fix's own "unique site" scope claim was wrong; the corrected, blanket
-    version of this same fix is item -313, not this one).** Reproduced with the post-s480
-    symbolizer: the trustworthy `(local-symtab)`-tagged crash names `submitSceneNodeRender+63868`,
-    not `loadCutsceneAssetsByIndex` — confirms the s463/s468 hits (both pre-dating item -311) were
-    `dladdr` nearest-exported-symbol misattributions, not a real bug in that function. Do NOT
-    re-file future occurrences under `loadCutsceneAssetsByIndex`. The real bug: `submitSceneNodeRender`
-    writes its own `$a0` ("new node") argument into the `0x8011:0x63B0` free-list-cache-head global,
-    rereads it for `GENERIC_CACHE_GUARD`'s (item -268..-273) unrelated deref chain — which sanitizes
-    the REREAD copy but not the original argument register — and `DL_LIST_APPEND_GUARD` (item
-    -291..-297) then uses that same unsanitized register as an unguarded WRITE ADDRESS at its own
-    `rwrite` slot. s481 confirmed its own fix clean 2/2 soaks (`s481_rwrite_guard_confirm` ran
-    `rc=0`, 0 crash, 0 fires) — the FIX itself was correct, only its claimed SCOPE (site-unique) was
-    wrong. Full derivation: `PORTING-STATE.md` Session 481.
-
 -311. **(s480) Crash-symbolizer tooling fix — DONE, positive-control validated.** The item -310
     `dladdr`-nearest-exported-symbol blind spot is closed: `src/main/main.cpp` now builds a sorted
     local+exported symbol table (`nm -n` on the running binary, parsed once at startup outside any
@@ -361,139 +212,80 @@ a range pointer. Highest allocated so far: -315. The next NEW item takes -316.
     `heapFreeListDequeue`-attributed crash as genuinely that function, not this artifact, unless the
     log predates s480. Full derivation: `docs/PROJECT-OVERVIEW.md` §19.
 
--309. **(s477) `lui`+`sw` DIRECT-STORE frequency scan — CLASSIFIED AND DEFERRED, dead end after one
-    scan. Both `lui`+`sw` and `lui`+`lw` (s476) opcode-scan angles now exhausted.** Top 3 buckets
-    (230/197/85 sites) of 546 total buckets/1471 sites all confirmed fixed-address global-variable
-    stores — a direct store to a compile-time-constant address cannot fault on a stale register, so
-    there is no stale-pointer risk to guard against. No code change; no untried high-value scan
-    queued. Full derivation: `docs/PROJECT-OVERVIEW.md` §19.
+-305..-309. **(s472-477) Five more single-bucket audits from the s465 frequency-scan lineage — four
+    CLASSIFIED AND DEFERRED (not guard candidates), one (-306) a real fix.** -305
+    (`hi16=0x8011,off=0x63d4`, `0x801163D4`, 170 sites, scan's largest bucket): compare-only
+    bounds-check idiom (27-site sample, 26/27 confirmed). -306: resolved -296's flagged `-0x23a8` gap
+    (141 sites) into a real `SIBLING_PTR_WRITE_GUARD` fix (1 new site, 120th, `setupCameraMatrices`,
+    missed by s459's taint-tracking), CLOSED, 2nd confirm (s474) clean. -307
+    (`hi16=0x8011,off=-0x35e0`, `0x8010CA20`, 23 sites/9 files): compare-only integer-flag idiom (12
+    writes confirm non-pointer). -308 (`hi16=0x8013,off=0xb50`, `0x8012F4B0`, 24 sites/12 files):
+    compare-only bitfield test, never dereferenced. -309 (`lui`+`sw` scan, 546 buckets/1471 sites, top
+    3 checked): every large bucket a fixed-address global store, no stale-pointer risk — closes the
+    `lui`+`sw` angle alongside `lui`+`lw` (s476). No code change except -306's. Full derivation:
+    `docs/PROJECT-OVERVIEW.md` §19.
 
--308. **(s475/476) `hi16=0x8013,offset=0xb50` global (`0x8012F4B0`) — CLASSIFIED AND DEFERRED, not a
-    guard candidate; found tool bug #5 (label-line blind spot undercounted this bucket 21→24, missed
-    1 whole file). s476 backfill-audited the fix against all 7 already-CLOSED buckets: 0 label-gap
-    sites found anywhere — question CLOSED clean.** 24/24 sites (12 files) are the identical
-    compare-only bitfield-test idiom (`andi`+branch, never dereferenced). No code change. Full
-    derivation: `docs/PROJECT-OVERVIEW.md` §19.
+-298..-304. **(s463-472) Seven more M3 idiom-class audit buckets from the s465 frequency scan, six CLOSED, one DEFERRED — every CLOSED item's soak result matches item -287's established true-negative baseline.** -298 `DL_LIST_RESET_GUARD` (re-scoped ~111 non-canonical `-0x5824` sites, global `0x8011A7DC`) CLOSED s464, 84/84. -299 `DL_BUFFER_POOL_GUARD` (`0x801163FC`) CLOSED s466, 84/84, 2nd confirm s467. -300 `NODE_LIST_HEAD_GUARD`/`_WRITE_GUARD` (`0x8011A4B8`) CLOSED s467, 20 read + 10 write sites (two distinct downstream shapes), 2nd confirm s468. -301 `TEXDATA_TABLE_GUARD` (`hi16=0x8013,off=-0x70F8`, `funcs_6.c`) CLOSED s468, 31/31 (substitutes `0x80000000u`, not 0, since index arithmetic follows), 2nd confirm s469. -302 (`hi16=0x8013,off=0x7CE4`, 45 sites/9 files) DEFERRED s468: small INTEGER INDEX, 17 distinct downstream shapes, no single guard placement covers all sites without speculation. -303 `TEXDATA_PTR_ARRAY_GUARD` (`hi16=0x8013,off=-0x7104`, `funcs_6.c`) CLOSED s470, 29/29, 2nd confirm s471. -304 `MATERIAL_ARRAY_PTR_GUARD` (`0x8012($reg)`→`-0x5BBC`, 30 sites/4 files) CLOSED s471, 30/30, 2nd confirm s472. Full derivation: `docs/PROJECT-OVERVIEW.md` §18-§19.
 
--307. **(s474) `hi16=0x8011,offset=-0x35e0` global (`0x8010CA20`) — CLASSIFIED AND DEFERRED, not a
-    guard candidate.** 23/23 sites (9 files) are a compare-only integer-flag idiom (load, compare,
-    branch-and-discard); 12 write sites confirm it's an integer flag, not a pointer. Found+fixed 2
-    tool bugs along the way (register-substring false positive; taint-scan caller-saved-register
-    survival gap). No code change. Full derivation: `docs/PROJECT-OVERVIEW.md` §19.
+-291..-297. **(s454-462) Three M3 idiom-class audits found via an s454 concurrent-process collision,
+    all now CLOSED.** -291 `DL_LIST_APPEND_GUARD` (global `0x8011A7DC`, 57 sites, `funcs_3.c`/
+    `funcs_4.c`) CLOSED s456, 0 crash/0 fires. -292 `SONGTEMPO_TABLE_GUARD` (`0x29C0($reg)`→global
+    `0x801529C0`, MusyX song-sequencer's "current song track" base pointer, `funcs_25.c`) CLOSED
+    s462, 43/43 sites across 6 reader functions, same stale-global-reload shape as the closed
+    `-0x25A4` family. -296 `SIBLING_PTR_WRITE_GUARD` (sibling global `0x8011DC58`, 119 sites) CLOSED
+    s459 (rule-8 mandatory pivot off -292), 0 fires; 10 sites sit in `submitSceneNodeRender`, a
+    discriminating instrument for that function's still-open wait-for-recurrence breadcrumb.
+    **AMENDED s473 (item -306): a register-taint-tracking gap had silently dropped 1 real site (120th,
+    `setupCameraMatrices`) — found, fixed, soak-confirmed.** Full detail: `docs/PROJECT-OVERVIEW.md` §17.
 
--306. **(s473) Resolved item -296's flagged `hi16=0x8012,offset=-0x23a8` gap (141 sites) — found and
-    FIXED a real methodology gap in the already-CLOSED `SIBLING_PTR_WRITE_GUARD`, closing 1 new guard
-    site (120th, `setupCameraMatrices`, missed by the original s459 scan's taint-tracking).** 2 false
-    positives, 10 cross-function-boundary sites flagged-not-chased, 19 no-use sites spot-checked.
-    Clean regen/build, `strings`-verified 119→120. 2nd independent confirm soak ran s474: 0 crash, 0
-    fires. Item -306 fully CLOSED. Full derivation: `docs/PROJECT-OVERVIEW.md` §19.
-
--305. **(s472) `hi16=0x8011,offset=0x63d4` global (`0x801163D4`) — CLASSIFIED AND DEFERRED, not a
-    guard candidate.** The largest s465-scan bucket (170 sites, 0 writes); a 27-site stratified
-    sample confirmed 26/27 are a compare-only bounds-check idiom (`sltu`/`bne`), the 1 outlier a
-    save/restore. Tool bug found: `scratch_s468_shapecheck_generic.py` silently returns 0 sites on a
-    lowercase offset argument. No code change. Full derivation: `docs/PROJECT-OVERVIEW.md` §19.
-
--298..-304. **(s463-472) Seven more M3 idiom-class audit buckets from the s465 codebase-wide
-    frequency scan, six CLOSED, one DEFERRED.** Item -298 (`DL_LIST_RESET_GUARD`, re-scoped ~111
-    non-canonical `-0x5824` sites sharing item -291's global `0x8011A7DC`) CLOSED s464, 84/84 sites.
-    Item -299 (`DL_BUFFER_POOL_GUARD`, global `0x801163FC`) CLOSED s466, 84/84 sites, 2nd confirm
-    s467. Item -300 (`NODE_LIST_HEAD_GUARD`/`NODE_LIST_HEAD_WRITE_GUARD`, global `0x8011A4B8`) CLOSED
-    s467, 20 read + 10 write sites — the first bucket in this sub-arc to turn out to be two distinct
-    downstream shapes; 2nd confirm s468. Item -301 (`TEXDATA_TABLE_GUARD`, global
-    `hi16=0x8013,offset=-0x70F8`, `funcs_6.c` only) CLOSED s468, 31/31 sites, substitutes
-    `0x80000000u` (not 0, since index arithmetic follows); 2nd confirm s469. Item -302
-    (`hi16=0x8013,offset=0x7CE4`, 45 sites/9 files) CLASSIFIED AND DEFERRED s468: the reloaded global
-    is a small INTEGER INDEX, 17 distinct downstream shapes, no single guard placement covers all
-    sites without speculation. Item -303 (`TEXDATA_PTR_ARRAY_GUARD`, global
-    `hi16=0x8013,offset=-0x7104`, `funcs_6.c` only) CLOSED s470, 29/29 sites, 2nd confirm s471. Item
-    -304 (`MATERIAL_ARRAY_PTR_GUARD`, `0x8012($reg)`→`-0x5BBC`, 30 sites/4 files) CLOSED s471, 30/30
-    sites, 2nd confirm s472 — first multi-file bucket in this sub-arc, no item -302-style
-    integer-index shape present. Every CLOSED item's live-verify/confirm-soak result matches item
-    -287's established true-negative baseline. Session-by-session derivation, per-site classification
-    methodology, and every soak result: `docs/PROJECT-OVERVIEW.md` §18-§19.
-
--291..-297. **(s454-462) Three M3 idiom-class audits found via an s454 concurrent-process
-    collision, all now CLOSED.** Item -291 (`DL_LIST_APPEND_GUARD`, global `0x8011A7DC`, 57 sites,
-    `funcs_3.c`/`funcs_4.c`) CLOSED s456: 0 crash, 0 fires across a full schedule. Item -292
-    (`SONGTEMPO_TABLE_GUARD`, `0x29C0($reg)`→global `0x801529C0`, the MusyX song-sequencer's
-    "current song track" base pointer, `funcs_25.c`) CLOSED s462, 43/43 sites across 6 reader
-    functions (s454/457/458/460/462), same uninitialized/stale-global-reload shape as the closed
-    `-0x25A4` family. Item -296 (`SIBLING_PTR_WRITE_GUARD`, sibling global `0x8011DC58`, 119 sites)
-    CLOSED s459 (rule-8 mandatory pivot off item -292): 0 `[CRASH]`, 0 fires; 10 of its sites sit in
-    `submitSceneNodeRender`, a discriminating instrument for that function's still-open
-    wait-for-recurrence breadcrumb (0 fires there so far). **AMENDED s473 (item -306): the s459 scan
-    had a register-taint-tracking gap that silently dropped 1 real site (120th,
-    `setupCameraMatrices`) — found, fixed, and soak-confirmed; the guard family is otherwise
-    unchanged.** Full session-by-session detail: `docs/PROJECT-OVERVIEW.md` §17.
-
--282..-290. **(s445-453) `static5-rename-orphan-sweep`, fully CLOSED.** The s427 duplicate-symbol
-    fix (item -261..-267) orphaned every pre-s427 guard/patch hardcoded to old `static_N_0xADDR`
-    names; root-caused and fixed across 6 sessions, 94 sites total (`GETDATITEM_GUARD`,
-    `HANGARLIST_GUARD` family, `S390_H2A`/`H2B`, `G1`-`G32`+`A`-`E`, 9 `composeNpcOrientationMatrix`
-    sites). s449 supplied a positive control (`HANGARLIST_GUARD` reached 245000+ times, 0 trips —
-    confirmed hardening, not dead code). Last tracked remainder (`S392_H3A`/`H3B`, 50 sites) found
-    already covered — CLOSED s453, no code change (item -290). Incidentally opened item -281
-    (`NAN_CHECK` assert in `transformVec3ByMat34`, filed not chased) and fixed a `tools/probe.sh`
-    false-negative bug (s447). Full detail:
-    `docs/PROJECT-OVERVIEW.md` §16, `PORTING-STATE` Sessions 445-453.
-
--274..-280 (and -263). **(s438-445) BREADCRUMB18/free-list-guard arc, all resolved or parked.**
-    Item -263 RECLASSIFIED PARKED s441: full breadcrumb coverage proved the real mechanism was a
+-261..-290 (and -263). **(s424-453) The duplicate-symbol-name-collision arc: the
+    `startPlayerSlotAnimationChannelLooping` crash chain, the duplicate-symbol catalogue closure, the
+    BREADCRUMB18/free-list-guard arc, and the `static5-rename-orphan-sweep` — ALL CLOSED.** A
+    duplicate-symbol-name collision truncated `initCraftSelectScreen`'s body to 1 instruction
+    (s424-431); the fix triggered a cascade of 3 further crashes (items -261..-267, all guarded — the
+    last did not recur after a sibling duplicate-symbol fix, single-run only). s432-437 closed the
+    full duplicate-symbol catalogue (18/18) and swept the `0x801163B0` free-list-cache-head-deref
+    idiom at scale (107 sites, `GENERIC_CACHE_GUARD`, plus a 7-site `$a1` sibling
+    `CACHE_HEAD_A1_GUARD`); item -263 was progressively localized through two rounds of breadcrumb
+    misattribution (BREADCRUMB16/17) before s441 reclassified it PARKED — the real mechanism was a
     THIRD free-list-cache-head sibling bug (`FREELIST_NEXT_GUARD`, item -277, 105 sites) misattributed
-    to item -263 by signature match alone. Falsifying condition unchanged: a NEW occurrence where
-    BREADCRUMB18 reports a real address inside `updateHangarBayScene`'s own body. The fix surfaced
-    item -278 (thread-scheduler SIGSEGV), PARKED s445 after ~10 soaks without recurrence; item -279
-    (s442) was a soak-script off-by-one, not a crash. Full detail: `docs/PROJECT-OVERVIEW.md` §16,
-    `PORTING-STATE` Sessions 438-445.
-
--268..-273. **(s432-437) Duplicate-symbol catalogue closed (18/18); the `0x801163B0` free-list-
-    cache-head-deref idiom swept at scale (107 sites, `GENERIC_CACHE_GUARD`, plus a 7-site `$a1`
-    sibling, `CACHE_HEAD_A1_GUARD`); item -263 progressively localized through two rounds of
-    breadcrumb-coverage misattribution (BREADCRUMB16, BREADCRUMB17).** Full detail:
-    `docs/PROJECT-OVERVIEW.md` §16, `PORTING-STATE` Sessions 432-437.
-
--261..-267. **(s424-431) The `startPlayerSlotAnimationChannelLooping`-family crash chain: 3
-    siblings guarded, then SUPERSEDED by the real root cause** — a duplicate-symbol-name collision
-    truncating `initCraftSelectScreen`'s body to 1 instruction, whose fix triggered a cascade of 3
-    further crashes. Last one (item -267) **did NOT recur** after a sibling duplicate-symbol fix
-    (single-run, not independently confirmed). Full detail: `docs/PROJECT-OVERVIEW.md` §16,
-    `PORTING-STATE` Sessions 424-431.
+    to it by signature match alone (falsifying condition: a NEW occurrence where BREADCRUMB18 reports
+    a real address inside `updateHangarBayScene`'s own body). That fix surfaced item -278
+    (thread-scheduler SIGSEGV, PARKED s445, ~10 soaks no recurrence) and item -279 (a soak-script
+    off-by-one, not a crash). s445-453's `static5-rename-orphan-sweep` then fixed every pre-s427
+    guard/patch the -261..-267 fix had orphaned (94 sites: `GETDATITEM_GUARD`, `HANGARLIST_GUARD`
+    family, `S390_H2A`/`H2B`, `G1`-`G32`+`A`-`E`, 9 `composeNpcOrientationMatrix` sites; s449
+    positive-controlled `HANGARLIST_GUARD` at 245000+ reaches, 0 trips), closing the last tracked
+    remainder (`S392_H3A`/`H3B`, item -290) with no code change needed. Incidentally opened item -281
+    (`NAN_CHECK` assert in `transformVec3ByMat34`, filed not chased) and fixed a `tools/probe.sh`
+    false-negative bug (s447). Full session-by-session detail: `docs/PROJECT-OVERVIEW.md` §16,
+    `PORTING-STATE` Sessions 424-453.
 
 -259. **(s422) `0x800290d4` "six independent triggers" lead — INVESTIGATED AND CLOSED, not a bug.**
     `0x800290d4` is `inflate_fast`'s own clean return, reported by a sparse breadcrumb (8/50 files);
     `atos` symbolication of 5/6 crash logs found FIVE DIFFERENT real crash functions, each already
     catalogued, not one shared mechanism. All six stay parked, correct and safe. `PORTING-STATE` 422.
 
--249. **(s400-421) M4 item -249: `main_overlay.txt` phantom-overlay-function relocation — CLOSED
-    s421, no outstanding action.** 784 functions relocated to their correct overlay across 21 sessions;
-    10 genuinely-buggy functions parked in `m4_known_bad.txt`, 4 more in `m4_known_skip.txt`. 0
-    actionable candidates remain per s421's fresh regen. Full arc: `docs/PROJECT-OVERVIEW.md` §15; raw:
-    `PORTING-STATE` Sessions 400-421.
+-231..-249. **(s377-421) Three more CLOSED arcs, oldest-first: fixup function-scope backport,
+    M3 idiom-class resumption, M4 phantom-overlay relocation.** -231..-238 (s377-386): 176 file-scoped
+    guard patches found, 168 converted to function-scope, 8 confirmed permanent design exclusions,
+    CLOSED OUT s386 (process lessons: `docs/PROJECT-OVERVIEW.md` §13). -239..-247 (s389-397):
+    `hangarInitialize`'s `-0x25A4` hangar-list-pointer family and the "Lookup" struct-family fully
+    CLOSED, plus two guard-placement bugs found+fixed and a codebase-wide frequency scan that came
+    back negative, closing the pure-idiom-audit discovery method for now until the s463 scan revived
+    it (§14). -249 (s400-421): `main_overlay.txt` phantom-overlay-function relocation, 784 functions
+    relocated across 21 sessions, 10 genuinely-buggy parked in `m4_known_bad.txt`, 4 more in
+    `m4_known_skip.txt`, 0 actionable candidates remain (§15). Raw: `PORTING-STATE` Sessions 377-421.
 
--239..-247. **(s389-397) M3 idiom-class audit resumption: `hangarInitialize`'s `-0x25A4`
-    hangar-list-pointer family and the "Lookup" struct-family fully CLOSED**, plus two guard-placement
-    bugs found+fixed and a codebase-wide frequency scan that came back negative, closing the
-    pure-idiom-audit discovery method for now (superseded by the s426-438 duplicate-symbol/breadcrumb
-    thread, §16). Full detail: `docs/PROJECT-OVERVIEW.md` §14; raw: `PORTING-STATE` Sessions 389-397.
-
--231..-238. **(s377-386) Fixup function-scope backport, batches 1-9: 176 file-scoped guard patches
-    identified, 168 converted to function-scope, 8 confirmed permanent design exclusions. CLOSED OUT
-    s386.** Process lessons (sandbox-permission delegation, scope-misattribution catches, address-not-
-    name exclusion): `docs/PROJECT-OVERVIEW.md` §13. Raw: `PORTING-STATE` Sessions 377-386.
-
--160..-230. **(s297-376) M5 audio de-stubbing arcs — gate-byte-reversal/VI=640-stall, Step 5
-    guard-hunting (heapWalker GUARD5), gate-promotion/crash-rate-comparison, Step 6 PCM-sanity +
-    C88 pre-title-hang/VI-trigger — ALL CLOSED, no outstanding M5 thread.** Every mechanism, guard
-    site, and soak-tooling lesson: `docs/PROJECT-OVERVIEW.md` §9-§12; raw: `PORTING-STATE` 297-376.
-
--159..-14 (excluding -20, kept below). **Ten closed investigation lineages, s99-s337 — all CLOSED, no
-    outstanding action.** Whack-a-mole guard-gap chases (`composeNpcOrientationMatrix`,
-    `renderUnlitMeshFaces`, `heapWalker`, `heapFreeListDequeue`, `-0x25A4` family, breadcrumbs B2-B14),
-    the audio-array-corruption race fix, the `submitDmaRequestBatch` indirect-caller find, the
-    CALayer/campose SIGSEGV hunt, the regen-pipeline-idempotency root cause, and the M5 audio gate/
-    VI=640-stall chase (item -160..-230 above). One-paragraph-per-lineage summaries:
-    `docs/PROJECT-OVERVIEW.md` §9; full raw detail: `PORTING-STATE` Sessions 99-337.
+-230..-14 (excluding -20, kept below). **Eleven closed investigation lineages, s99-s376 — all CLOSED,
+    no outstanding action.** M5 audio de-stubbing (items -160..-230, s297-376: gate-byte-reversal/
+    VI=640-stall, Step 5 guard-hunting, gate-promotion/crash-rate-comparison, Step 6 PCM-sanity + C88
+    pre-title-hang/VI-trigger — §9-§12) plus ten earlier whack-a-mole guard-gap chases
+    (`composeNpcOrientationMatrix`, `renderUnlitMeshFaces`, `heapWalker`, `heapFreeListDequeue`,
+    `-0x25A4` family, breadcrumbs B2-B14, the audio-array-corruption race fix, the
+    `submitDmaRequestBatch` indirect-caller find, the CALayer/campose SIGSEGV hunt, the
+    regen-pipeline-idempotency root cause, s99-s337, §9). One-paragraph-per-lineage summaries:
+    `docs/PROJECT-OVERVIEW.md` §9-§12; full raw detail: `PORTING-STATE` Sessions 99-376.
 
 -20. **Regen-pipeline reliability bug (s120, confirmed intermittent not deterministic).** Root cause:
     `N64Recomp` skips rewriting any `RecompiledFuncs/funcs_*.c` file that already exists on disk, so
