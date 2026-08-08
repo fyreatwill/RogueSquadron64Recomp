@@ -1,91 +1,73 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: item-314-audio-slot-active-guard-idiom-class-fix
+HYPOTHESIS-ID: item-315-dl-list-reset-guard-rnode-recurrence
 
-## s483 summary: closed item -313 (2/2 confirms), then found item -314 -- AUDIO_SLOT_ACTIVE_GUARD
-(s166)'s "unique address" claim was ALSO address-only, not shape-wide, same as item -312/-313
+## s484 summary: FIXED item -314 (10 guards, 14/20 sites) AND item -315 (found live via item -314's
+own confirm soak crashing on a brand-new bug). Both build-verified, 2 soaks clean at both targets,
+2nd independent confirm queued (`s484_audio_voice_baseptr_confirm.sh`, in `soak_queue/`).
 
-Picked up an interrupted prior session (STATUS was `WORKING`, CURRENT-TRUTH.md had uncommitted
-s483 analysis but no PORTING-STATE.md entry / NEXT.md update / commit). Re-verified its finding
-independently from the raw soak logs (did not just trust the draft text): `s482_blanket_rwrite_guard_confirm`
-ran `rc=3` (crashed) but 0 fires on `dl-list-append-rwrite-guard` or any of the 6 sibling guard
-families, `hangarbay-entry n=33` positive control, crash was `pc-symbol=coalesceFreeHeapBlocks+2016`/
-`last-guest-pc=0x800023b0` -- byte-identical to the already-closed s354-366 heap-coalesce family
-(verbatim address match, `PORTING-STATE.md` ~line 33370). **Item -313 is fully CLOSED, 2/2
-independent confirms clean; the whole `DL_LIST_APPEND_GUARD` lineage (items -291, -312, -313) is
-done.**
+**Item -314**: guarded the FIRST `-0x6908` reload (global `0x801496F8`) in each of 9 MusyX voice
+functions with an `isAudioSlotActive`-style early `return` (10 site anchors, since
+`musyxSetVoicePitchBend` needs one per mutually-exclusive branch) -- this transitively protects
+every LATER reload of the same never-rewritten-mid-call global in the same function, covering
+14 of the 20 unguarded sites found by s483's audit. Deliberately did NOT cover `musyxMixActiveVoices`
+(3 sites) or `musyxSynthFrame` (1 site): both sit inside a per-voice loop AFTER earlier iterations
+already did real writes, so an early return would abort processing every remaining voice for the
+rest of the frame -- needs a loop-scoped "skip this iteration, continue" guard shape, not designed
+this session. This is the one remaining open item -314 thread.
 
-M5 lead check skipped (below the 3-session re-check threshold). Fell through to M3 idiom-class
-audit resumption per NEXT.md's own fallback option (a): applied item -313's "grep-verified unique
-ADDRESS is not grep-verified unique SHAPE" skepticism to other closed site-anchored guards.
-Delegated a survey (Explore agent) that ranked 9 candidates; picked the top one,
-`AUDIO_SLOT_ACTIVE_GUARD` (s166, `isAudioSlotActive`, item `-159..-14` mega-bucket). Its own
-comment claims "Guest addresses 0x80092110/0x80092114 confirmed unique ... via grep" -- true of
-those two literal addresses, never checked for the SHAPE recurring elsewhere.
+**Item -315** (found this session, NOT anticipated going in): the 1st confirm soak for item -314's
+fix crashed with `si_addr=0x380000000`/`pc-symbol=submitSceneNodeRender+38556`/
+`last-guest-pc=0x80010880` -- a NEW guest PC (grepped `PORTING-STATE.md`, 0 prior hits) that pattern-
+matched the `BREADCRUMB6` "near-zero guest pointer" family by `si_addr` alone but needed its own
+root-cause read. Found: `DL_LIST_RESET_GUARD` (item -298, s463's blanket 84-site patch) validates
+register `r2` (reloaded from global `0x8011A7DC`) before its own guarded write, but at THIS site
+(`submitSceneNodeRender`, 0x80010880) the write ACTUALLY goes through a DIFFERENT register, `r4` --
+which is itself an earlier, completely unguarded reload of `0x801163B0` (the SAME global
+`GENERIC_CACHE_GUARD` already protects, via yet another register). `DL_LIST_RESET_GUARD`'s own
+design comment ("rnode is a normal argument register, not derived from G") is wrong for this
+instance -- same meta-bug shape as item -312/-313's `DL_LIST_APPEND_GUARD_RWRITE` finding. Fixed
+with a site-anchored guard (`S315_RESET_R4_GUARD`) on just this one site; did NOT audit whether the
+same rnode-aliasing recurs across `DL_LIST_RESET_GUARD`'s other 83 sites.
 
-**Found it does, at scale.** The guarded global (`0x801496F8`, `lui $reg,0x8015`/
-`lw $reg,-0x6908($reg)`, written once in `allocateSongChannelArray` funcs_23.c:10785) is loaded at
-**21 total sites** in `funcs_24.c`. Only 1 (`isAudioSlotActive`, 0x80092100) is guarded. The other
-**20 span 15 different MusyX voice-management functions** (full list + line numbers:
-`docs/CURRENT-TRUTH.md` item -314, `PORTING-STATE.md` Session 483). Confirmed via 2 direct source
-reads beyond the known site (`musyxMixActiveVoices` funcs_24.c:2540-2564, `deactivateVoice`
-funcs_24.c:6643-6657) — both dereference the loaded pointer at a computed `idx*136` offset with
-ZERO validation, same bug class, different addresses, different functions each time. Filed as item
--314, CLASSIFIED AND DEFERRED — not fixed this session because it is NOT a uniform blanket-regex
-case like item -313's 84 identical sites: this idiom recurs across 15 functions with different
-downstream instruction shapes after the load. Verified `MEM_W`/`MEM_BU` in
-`N64Recomp/include/recomp.h`: a bad pointer can NOT simply be zeroed (`rdram + (0 - 0x80000000)` is
-still a wild host pointer), so the fix needs the same "skip only the guarded op" if/else wrapper
-`GENERIC_CACHE_GUARD`/`DL_LIST_APPEND_GUARD_RWRITE` already use, not `isAudioSlotActive`'s own
-early-`return` bail (that only works because `isAudioSlotActive` is a whole-function boolean
-check; the other 15 functions are not).
+## This session's top work unit: pick ONE of the two open threads (whichever the queued confirm's
+result favors -- read it first)
 
-## This session's top work unit: design and implement item -314's fix
+1. Read `scratch/agent/SOAK-RESULTS.md` tail for the `s484_audio_voice_baseptr_confirm` verdict (the
+   loop should have run it between iterations). If it shows a NEW crash inside item -314's or item
+   -315's guarded code (fires > 0 on `audio-voice-baseptr-guard` or `s315-reset-r4-guard`), STOP and
+   root-cause that first -- it means one of this session's "proven safe" claims was wrong. If it's
+   clean (0 fires, matches the established true-negative baseline, crash if any is a different
+   already-catalogued family), both items are confirmed 2/2 and open for follow-up work as below.
 
-1. Re-open `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c` (generated;
-   regenerate via `make_elf.py -> N64Recomp` first if it's not already the post-fixup version) and
-   read all 20 unguarded sites listed in `docs/CURRENT-TRUTH.md` item -314 (line numbers current as
-   of s483; may shift slightly after a fresh regen, re-locate by the `-0x6908` grep, NOT by line
-   number). For EACH site, record: the exact register combine chain (which registers, `sll`/`addu`
-   sequence) and the exact deref instruction(s) immediately following (offset, width, read vs
-   write, single vs multi-field).
-2. Group sites into shape buckets, same method as `DL_LIST_APPEND_GUARD`'s "bucket A vs bucket
-   B/C" split (item -313 precedent). The dominant shape observed so far:
-   `lui;lw(-0x6908);sll(<<4);addu;sll(<<3);addu` then an immediate deref — likely covers most of
-   the 20. At least `musyxInitVoiceFromSample`'s 3rd site (line ~6097 pre-regen) interleaves an
-   unrelated `lui $at,0x8004`/`lwc1` float-constant load between the combine and the deref — expect
-   more sites like this; find them all before writing the regex, not after.
-3. Write ONE (or a small number of) `re.compile` blanket patch(es) in
-   `N64Recomp/fixup_game_funcs.py`, function-scoped to each named function (or file-scoped to
-   `funcs_24.c` if the shape is truly uniform across all of them), following the EXACT if/else
-   "skip only the guarded chain, else proceed with original instructions" template
-   `_generic_cache_guard_patch`/`_dl_list_append_guard_patch` use (fixup_game_funcs.py ~line
-   14197/14330) — capture the load, the combine, AND the deref instruction(s) in one regex so the
-   guard can wrap the WHOLE dependent chain, not just the load. New env var/log tag:
-   `ROGUESQ_LOG_AUDIO_VOICE_PTR_GUARD` / `[audio-voice-ptr-guard]` (do not reuse
-   `ROGUESQ_LOG_AUDIO_SLOT_ACTIVE_GUARD` — that one stays scoped to its own single site).
-4. Regen order: `make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake` (mandatory, hand edits
-   to generated code do not survive a regen). Verify the patch report shows exactly the expected
-   site count (target: up to 20, may be less if some sites turn out already-safe on closer read —
-   do NOT force a match count, report what's actually found) and that all sibling guard families'
-   counts (`GENERIC_CACHE_GUARD` 107, `DL_BUFFER_POOL_GUARD` 84, `SIBLING_PTR_WRITE_GUARD` 120,
-   `DL_LIST_RESET_GUARD` 84, `FREELIST_NEXT_GUARD` 105, `DL_LIST_APPEND_GUARD`/`_RWRITE` 84,
-   `AUDIO_SLOT_ACTIVE_GUARD` 1) are unregressed.
-5. Full clean cmake build (`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake ...`).
-6. Manual foreground soak (positive control: `hangarbay-entry` reaches, `ROGUESQ_LOG_AUDIO_VOICE_PTR_GUARD=1`
-   armed) + queue a 2nd independent confirm soak to `scratch/agent/soak_queue/`, arming ALL passive
-   breadcrumb/instrument env vars per the standing rule.
+2. **Recommended next work unit** (matches the proven-productive item -313 playbook exactly): write
+   a scoped Python static-analysis script (like `N64Recomp/scratch_s482/audit_dl_list_append_rwrite*.py`,
+   untracked, same repo) that walks all 84 `DL_LIST_RESET_GUARD` sites in `funcs_3.c`/`funcs_4.c` and
+   checks, for each site's "rnode" register, whether it is ITSELF fed by an earlier unguarded reload
+   of `0x801163B0` (the `GENERIC_CACHE_GUARD` global) within the same function, the same aliasing
+   item -315 found at exactly one site (`submitSceneNodeRender`, 0x80010880). If the same shape
+   recurs at many sites (item -313's precedent: 78/84), generalize `S315_RESET_R4_GUARD` into a
+   blanket fix inside `_dl_list_reset_guard_patch` itself (fold rnode validation into EVERY site,
+   mirroring how item -313 folded rwrite validation into `_dl_list_append_guard_patch`). If it's
+   genuinely rare/unique to this one site, document that and close item -315 as fully scoped.
 
-## Fallback if the shape turns out too varied to safely blanket-patch this session
+3. **Alternative work unit** (lower priority, pick only if #2 turns out low-value): design the
+   loop-scoped "skip this iteration, continue" guard shape for item -314's remaining 6 sites
+   (`musyxMixActiveVoices` x3 at 0x80090E78/0x80090EA0/0x80090EBC, `musyxSynthFrame` x1 at
+   0x800913BC). Read the full loop structure (loop head label, increment/condition) in
+   `RecompiledFuncs/funcs_24.c` first -- these sites need a `goto` to the loop's own continue-point,
+   not a whole-function early return.
 
-If sites 3+ show genuinely incompatible downstream shapes (not just "one interleaved instruction"
-but structurally different multi-branch code), do NOT force a one-size regex. Fix the dominant
-bucket only, leave the outliers explicitly enumerated and unfixed with a follow-up item, and say so
-plainly in the session write-up — partial coverage with an honest list beats a regex that silently
-skips sites it doesn't actually match.
+## Regen/build/soak recipe (same as always)
+`python3 -c "import glob,os; [os.remove(f) for f in glob.glob('.../N64Recomp/RecompiledFuncs/funcs_*.c')]"`
+(glob patterns rejected by the shell directly, use python) → `cd ~/Documents/Tools/rogue_squadron64 &&
+python3 tools/make_elf.py` → `cd ~/Documents/Tools/N64Recomp && ./build/N64Recomp rogue_squadron.toml`
+→ `python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py` (check the report for the expected `xN`
+count, no errors) → `cd build && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake
+--build . -j8`. Soak script template: `scratch/agent/soak_queue/done/s484_audio_voice_baseptr_manual.sh`
+(arms every sibling guard env var per the standing rule) -- copy and add the new guard's own
+`ROGUESQ_LOG_*` var before running.
 
 ## Soak queue status
-
-No soaks currently queued (the `s482_blanket_rwrite_guard_confirm` recipe already ran and closed
-item -313; it should be moved to `scratch/agent/soak_queue/done/` if not already there). This
-session's own confirm soak for item -314's fix goes to `scratch/agent/soak_queue/` per step 6 above.
+`s484_audio_voice_baseptr_confirm.sh` queued (2nd independent confirm for BOTH item -314 and item
+-315's guards). The loop should have run it; check `scratch/agent/SOAK-RESULTS.md` tail first.

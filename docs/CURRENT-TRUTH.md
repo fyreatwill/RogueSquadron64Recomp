@@ -53,7 +53,39 @@ Priority order for upcoming iterations, set after the 300-session review:
    MusyX voice functions reading the same `0x801496F8` global, confirmed via 2 direct source reads.
    Filed as item -314, CLASSIFIED AND DEFERRED (not a uniform blanket-regex case like item -313 --
    15 different downstream instruction shapes need a dominant-shape regex plus bespoke handling for
-   an interleaved-instruction minority); fix design is next session's M3 work unit.**
+   an interleaved-instruction minority); fix design is next session's M3 work unit.** **s484: item
+   -314 FIXED (10 site-anchored early-return guards, transitively covering 14/20 unguarded sites --
+   guarding only the FIRST `-0x6908` reload per function protects every later reload in the same
+   call, since none of these 15 functions ever rewrites the global). 6 sites in
+   `musyxMixActiveVoices`/`musyxSynthFrame` deliberately left unguarded (mid-loop, need a
+   loop-scoped "skip iteration" shape, not a plain early return -- documented, not guessed at). The
+   1st confirm soak for this fix then crashed on a BRAND NEW bug in a sibling family
+   (`DL_LIST_RESET_GUARD`) -- root-caused and fixed same-session as item -315 (see below). 2 soaks
+   clean at both targets (item -314's own guards: 0 fires across both runs); 2nd independent confirm
+   queued (`s484_audio_voice_baseptr_confirm.sh`).**
+
+-315. **(s484) `DL_LIST_RESET_GUARD` (item -298, s463) validates the wrong register at one
+    confirmed site in `submitSceneNodeRender` -- same "guard validates one sibling register's reload
+    but not another's" meta-bug as item -312/-313, found LIVE via item -314's own confirm soak
+    crashing.** `DL_LIST_RESET_GUARD`'s own design comment claims its "new node" register ("rnode")
+    is "a normal argument register, not derived from G -- not at risk" -- WRONG at site=0x80010880
+    (`funcs_4.c`): there, `ctx->r4` is itself an EARLIER, completely unguarded reload of the SAME
+    `0x801163B0` free-list-cache-head global `GENERIC_CACHE_GUARD` protects (via a different
+    register, at 0x80010820-0x80010824), used 3 instructions before `DL_LIST_RESET_GUARD`'s own
+    guarded write (0x80010884, which validates `r2` -- a different global entirely -- and never
+    touches `r4`). Confirmed via the live crash: `si_addr=0x380000000` = RDRAM host base + guest
+    `0x80000000` = `r4` read back as exactly 0, consistent with `0x801163B0` having been
+    self-healed to 0 by an earlier guard. FIXED with a site-anchored guard
+    (`S315_RESET_R4_GUARD`, `re.subn` with `raise`-on-mismatch) skipping just the one unguarded
+    write when `r4` is out of range; matches s481's own precedent of shipping the concrete instance
+    immediately and deferring the "does this recur across the other 83 sites" question -- NOT yet
+    audited, structurally plausible given `DL_LIST_APPEND_GUARD`'s own sibling bug (item -313)
+    turned out to recur at 78/84 sites via the same kind of scoped static-analysis script. Build-
+    verified, 2nd soak clean (0 fires on `s315-reset-r4-guard` and every sibling guard family,
+    crash was a completely different already-catalogued family --
+    `rs_free ← rebuildActiveDisplayObjectList`, tracked since s99-186). 2nd independent confirm
+    queued alongside item -314's (same soak script arms both). Full derivation:
+    `PORTING-STATE.md` Session 484.
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -185,7 +217,7 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -314. The next NEW item takes -315.
+a range pointer. Highest allocated so far: -315. The next NEW item takes -316.
 
 -314. **(s483) `AUDIO_SLOT_ACTIVE_GUARD` (s166)'s "unique address" claim was also address-only, not
     shape-wide -- 20 more unguarded loads of the same base-pointer global found across 15 MusyX

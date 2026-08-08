@@ -40188,3 +40188,111 @@ source reads beyond the original known site. Next session: design and implement 
 item -314's 20 sites (dominant-shape blanket regex + bespoke handling for the interleaved-
 instruction minority), build-verify against the `AUDIO_SLOT_ACTIVE_GUARD` baseline (1 site) and all
 sibling guard families' established counts, soak.
+
+## Session 484 (2026-08-07): implemented item -314's fix (10 site-anchored guards, transitively covering 14/20 unguarded sites), then a confirm soak crashed on a brand-new, root-caused bug in a SIBLING guard family (`DL_LIST_RESET_GUARD`) — fixed that too (item -315), 2 independent soaks clean at both targets
+
+**Item -314 fix design.** Read all 20 unguarded `0x801496F8` (`-0x6908`) reload sites in
+`RecompiledFuncs/funcs_24.c` directly (not just the addresses from s483's list — the actual
+downstream instruction sequence at each one). Classified them by exact shape: only 2 sites
+(`isAudioSlotActive`, already guarded, and one `musyxMixActiveVoices` site) share the byte-identical
+"load;sll;addu;sll;addu" 4-instruction contiguous chain with no register reuse; the rest vary
+(index computed before the load instead of after, an unrelated float-constant load interleaved
+mid-chain, or the site simply reuses a register an earlier sibling site in the same function already
+computed). A single blanket regex across all 20 was not safe. Key design insight that changed the
+plan: **the global is never rewritten within any of these 15 functions** (only
+`allocateSongChannelArray` writes it, confirmed by item -314's own grep) — so guarding only the
+*first* `-0x6908` reload in a function with an `isAudioSlotActive`-style early `return` transitively
+protects every *later* reload of the same global within that same call, because the global cannot
+change value between them. This reduces "guard 20 sites" to "guard the first reload in each function
+where an early return is provably safe" (no RDRAM/game-state write has happened yet at that point in
+the call — verified by direct source read of every candidate, exactly mirroring `AUDIO_SLOT_ACTIVE_GUARD`'s
+own established justification for its one site). Found 10 such site anchors, covering 14 of the 20
+unguarded sites: `musyxInitVoiceFromSample` (1 guard covers all 4 of its sites),
+`musyxStoreVoiceAdsrParams`, `musyxTriggerVoiceAttack`, `musyxStopVoice`, `musyxSetVoicePitchBend`
+(2 guards, one per mutually-exclusive branch), `stopVoiceMarkRetrigger` (1 guard covers both its
+sites), `beginVoiceFadeRelease`, `deactivateVoice`, `getVoiceUserField`. Deliberately did NOT cover
+`musyxMixActiveVoices` (3 sites) or `musyxSynthFrame` (1 site): both are inside a per-voice loop body
+*after* earlier iterations already performed real writes, so an early `return` from the whole
+function would silently stop processing every remaining voice for the rest of the frame — a
+materially bigger behavior change than this patch's "skip one already-isolated no-op-if-corrupt
+operation" sites, and it needs a loop-scoped "skip this iteration, continue" guard shape (not
+designed this session) rather than a plain early return. Documented as remaining, unfixed scope in
+the new `AUDIO_VOICE_BASEPTR_ENTRY_GUARD` comment block in `fixup_game_funcs.py`, per the "partial
+coverage with an honest list" fallback rule rather than forcing an unsound blanket match.
+
+**Implementation.** Added a parameterized `_make_audio_voice_baseptr_entry_guard` generator plus a
+10-tuple site list to `N64Recomp/fixup_game_funcs.py`, applied via 10 individual `re.subn` calls each
+`raise`-guarded to require exactly 1 match (fails loudly if the source shape ever drifts instead of
+silently no-op'ing). Regenerated (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake`, funcs_*.c
+deleted first per item -20's standing rule): report showed `isAudioSlotActive base-pointer guard
+patched x1` + `AUDIO_VOICE_BASEPTR_ENTRY_GUARD patched x10 sites` — no errors, no shape drift. All 6
+sibling guard families verified unregressed by `strings`-counting their PATCH-comment occurrences
+in `RecompiledFuncs/*.c` (each string appears twice per site — once in the comment, once in the
+`getenv` call — so divide by 2): `GENERIC_CACHE_GUARD` 107, `DL_LIST_APPEND_GUARD`/`_RWRITE` 84/84,
+`DL_BUFFER_POOL_GUARD` 84, `SIBLING_PTR_WRITE_GUARD` 120, `DL_LIST_RESET_GUARD` 84 — all match their
+established counts exactly. Clean `cmake --build` (only the pre-existing, unrelated `DDIV`
+pointer-sign warnings).
+
+**1st confirm soak found a NEW real bug, not a null result.** Ran a full manual live-verify
+(`s484_audio_voice_baseptr_manual`, all passive guard/breadcrumb env vars armed per the standing
+soak-queue rule) — 0 fires on `audio-voice-baseptr-guard` and `audio-slot-active-guard` (matches
+item -287's established true-negative baseline), `hangarbay-entry` reached `n=2600` (strong positive
+control). But the process crashed at ~198s: `si_addr=0x380000000` (RDRAM host base `0x300000000` +
+guest `0x80000000`, a near-null guest pointer), `pc-symbol=submitSceneNodeRender+38556
+(local-symtab)`, `last-guest-pc=0x80010880`. The `si_addr` value alone superficially pattern-matches
+the long-catalogued `BREADCRUMB6` "near-zero guest pointer" family (many sessions, many *different*
+addresses) — but `last-guest-pc=0x80010880` had never appeared in `PORTING-STATE.md` before (grepped
+to confirm), so this needed its own root-cause read rather than being filed under that family by
+pattern-match alone.
+
+**Root-caused via direct source read of `funcs_4.c` (`submitSceneNodeRender`) around
+0x80010820-0x80010890 — a NEW instance of this whole session's meta-bug (a sibling-guard family
+validates one register's reload of a corruptible global but not a DIFFERENT register that independently
+reloaded the SAME global elsewhere).** `ctx->r4` is loaded from `0x801163B0` (the free-list-cache-head
+global `GENERIC_CACHE_GUARD` already protects, via a *different*, unguarded `lui $a0,0x8011`/
+`lw $a0,0x63B0($a0)` at 0x80010820/0x80010824) and never reassigned before `DL_LIST_RESET_GUARD`'s
+own auto-generated code unconditionally writes through it at 0x80010880
+(`MEM_W(0X0, ctx->r4) = 0;`) — three instructions before `DL_LIST_RESET_GUARD`'s *own* guarded write
+at 0x80010884, which validates a completely different register (`r2`, reloaded from the unrelated
+`-0x5824`/`0x8011A7DC` global) and never touches `r4` at all. `DL_LIST_RESET_GUARD`'s own s463 design
+comment claims this register ("rnode") is "a normal argument register, not derived from G — not at
+risk" — true in general, but WRONG for this specific instance, exactly mirroring item -312/-313's own
+discovery about `DL_LIST_APPEND_GUARD_RWRITE`'s "rwrite" register. Confirmed the crash mechanism
+arithmetically: `si_addr=0x380000000` = RDRAM host base + guest `0x80000000` = `r4` read back as
+exactly 0 (consistent with `0x801163B0` having been corrupted to 0 by an earlier guard's own
+"substitute 0 into the global" self-heal, `GENERIC_CACHE_GUARD`'s established s434 precedent).
+
+**Fixed as item -315: a site-anchored guard on this ONE confirmed instance**, matching s481's own
+precedent (ship the concrete crashing site now, defer "does this recur across `DL_LIST_RESET_GUARD`'s
+other 83 sites" — structurally plausible given `DL_LIST_APPEND_GUARD`'s sibling bug turned out to
+recur at 78/84 sites, item -313 — to a dedicated static-analysis audit, NOT attempted this session).
+Added a `re.subn`-with-`raise`-on-mismatch patch (`S315_RESET_R4_GUARD`) in `fixup_game_funcs.py`,
+positioned after `DL_LIST_RESET_GUARD`'s own blanket pass so it operates on that guard's already-
+rewritten output; skips just the one `MEM_W(0X0, ctx->r4) = 0;` write when `r4` is out of the valid
+KSEG0 RDRAM range (confirmed `r4` is not read again until an unrelated arithmetic use at 0x80010894
+that doesn't dereference it — matching `FREELIST_NEXT_GUARD`/`DL_LIST_APPEND_GUARD_RWRITE`'s "nothing
+downstream depends on this write's success" precedent for skip-only-the-op remediation).
+
+**Regen/build/re-soak.** Regenerated again (funcs_*.c deleted first), fixup report showed
+`list-reset sibling-register guard (item -315, S315_RESET_R4_GUARD) patched x1` alongside item -314's
+own report line, both exactly once, no errors. Clean rebuild. 2nd soak (same script, both new guards
+armed): crashed at 19.6s on a COMPLETELY DIFFERENT, long-catalogued family
+(`rs_free ← rebuildActiveDisplayObjectList`, `pc-symbol=rebuildActiveDisplayObjectList+540`,
+tracked since s99-186) — 0 fires on `audio-voice-baseptr-guard`, `audio-slot-active-guard`, and the
+new `s315-reset-r4-guard`, plus 0 fires on every sibling guard family (`generic-cache-guard`,
+`dl-list-append-guard`/`_rwrite`, `dl-list-reset-guard`, `dl-buffer-pool-guard`,
+`sibling-ptr-write-guard`, `freelist-next-guard`), `hangarbay-entry` reached `n=5` (positive control,
+weaker than the 1st run since this crash landed much earlier — still confirms the guarded region was
+reached). Queued a 2nd independent confirm (`s484_audio_voice_baseptr_confirm.sh`) to
+`scratch/agent/soak_queue/` for the loop, since this run's positive control was weaker than ideal.
+
+**Outcome: ADVANCED.** Landed 2 real fixes this session: item -314 (10 guards, 14/20 sites) and item
+-315 (1 guard, found and root-caused live via item -314's own confirm soak, matching the s436/s481
+precedent of "a confirm soak surfaces a genuinely new bug, root-cause and fix it in the same
+session"). 1 manual soak + 1 automated soak both clean at every guarded target; 2nd independent
+confirm queued. Next session: consume the queued confirm; if clean, item -314's remaining 6
+undesigned sites (`musyxMixActiveVoices` x3, `musyxSynthFrame` x1) and item -315's "does this
+`DL_LIST_RESET_GUARD` rnode-aliasing recur elsewhere" question are the two open M3 threads — pick
+whichever has higher expected information value (item -315's recurrence question more closely
+matches the proven-productive item -313 playbook: a scoped static-analysis script over
+`DL_LIST_RESET_GUARD`'s 84 sites, same shape as the script that found item -313's 78-site scope).
