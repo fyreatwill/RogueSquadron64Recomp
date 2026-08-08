@@ -31,7 +31,15 @@ Priority order for upcoming iterations, set after the 300-session review:
    2nd confirm soak queued). Next M3 session: check item -312's queued confirm soak result first; if
    clean, no untried high-expected-value instruction-pattern scan AND no un-investigated
    high-recurrence breadcrumb remains queued — fall back to a fresh M5 lead check (s478 checked, none
-   found) instead of inventing a third opcode-pattern scan speculatively.
+   found) instead of inventing a third opcode-pattern scan speculatively. **s482: item -312's confirm
+   soak came back clean (2/2), but a structural re-audit of its own "grep-verified unique site" scope
+   claim found that claim was WRONG -- the same aliasing shape recurs at up to 78 more of
+   `DL_LIST_APPEND_GUARD`'s 84 sites, confirmed via direct source read of a 2nd concrete instance.
+   Generalized the fix into a blanket patch (item -313), 1 manual confirm clean (0 fires anywhere in
+   the family), 2nd confirm queued (`s482_blanket_rwrite_guard_confirm`). Next M3 session: check that
+   soak result first; if clean, item -313 is fully CLOSED and this whole `DL_LIST_APPEND_GUARD`
+   lineage (items -291, -312, -313) is done -- fall back to a fresh M5 lead check (last checked s482,
+   still clean) before inventing a new M3 discovery method.**
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -163,29 +171,60 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -312. The next NEW item takes -313.
+a range pointer. Highest allocated so far: -313. The next NEW item takes -314.
+
+-313. **(s482) `DL_LIST_APPEND_GUARD_RWRITE` generalized from item -312's single site to a blanket
+    fix across all 84 `DL_LIST_APPEND_GUARD` sites — item -312's "grep-verified unique" scope claim
+    was WRONG.** Item -312 shipped a site-anchored literal patch guarding only
+    `submitSceneNodeRender`'s instance (site=0x80010E74), reasoning the aliasing precondition
+    (rwrite fed by an unvalidated round-trip through the `0x8011:0x63B0` free-list-cache-head
+    global) couldn't recur elsewhere because a grep for that one literal address was unique — that
+    grep checked the ADDRESS, not the STRUCTURAL SHAPE. A static-analysis re-audit of all 84 sites
+    (`N64Recomp/scratch_s482/audit_dl_list_append_rwrite*.py`) found the same shape — write the
+    "new node" arg into `0x63B0` as new head, then self-round-trip-reload the SAME register straight
+    back from `0x63B0` via a bare `lui $reg,0x8011; lw $reg,0x63B0($reg)` with nothing in between
+    validating it, then reach `DL_LIST_APPEND_GUARD`'s own unguarded write-through-rwrite — recurs
+    at up to 78 more sites. Confirmed via direct source read of a 2nd concrete instance (funcs_3.c
+    `emitFrameRdpInitDl`, site=0x80008FD4): byte-for-byte the same shape as submitSceneNodeRender,
+    including the same "GENERIC_CACHE_GUARD validates a DIFFERENT reread register, never the
+    original" gap. Two earlier audit-script iterations produced a false lead first (a naive "any
+    nearby guard touches this register" heuristic flagged 57/84 sites, which turned out to be a
+    coincidental, SAFE, unrelated idiom — `DL_BUFFER_POOL_GUARD` supplying a genuinely fresh
+    validated buffer pointer via a plain register-copy) — the true positive only showed up once the
+    check was narrowed to "is the reassignment ITSELF just a self-reload of the same corrupted
+    value" (source-verified, not inferred). Fix: folded item -312's remediation directly into the
+    blanket `DL_LIST_APPEND_GUARD` patch in `N64Recomp/fixup_game_funcs.py` — addr6's write now
+    validates `rwrite` (not just `rload`) at EVERY site, reusing item -312's own env var/log tag
+    (`ROGUESQ_LOG_DL_LIST_APPEND_RWRITE_GUARD`/`[dl-list-append-rwrite-guard]`, no soak-recipe
+    changes needed). Item -312's now-superseded site-specific patch was deleted (its anchor text no
+    longer matches post-generalization, so it would silently no-op forever if left in). Full
+    regen/build clean; all 5 sibling guard families in this same code exactly matched their
+    established ledger counts with 0 regression (`GENERIC_CACHE_GUARD` 107, `DL_BUFFER_POOL_GUARD`
+    84, `SIBLING_PTR_WRITE_GUARD` 120, `DL_LIST_RESET_GUARD` 84, `FREELIST_NEXT_GUARD` 105). 1
+    manual confirmation soak clean: 0 fires on `dl-list-append-rwrite-guard` (or any sibling guard)
+    across the full driven schedule, `hangarbay-entry n=31` positive control confirms reach; the
+    process crashed at 107.8s in an UNRELATED, already-catalogued family
+    (`initVec4TripletFromArgs+68`, a near-`0x80000000` wild guest pointer matching the BREADCRUMB6
+    family) — filed, not chased, matching this whole lineage's established "clean at the target,
+    hit a different pre-existing family" pattern. 2nd confirmation soak queued
+    (`s482_blanket_rwrite_guard_confirm`) — check its result before marking this item fully CLOSED.
+    Full derivation: `PORTING-STATE.md` Session 482.
 
 -312. **(s481) `loadCutsceneAssetsByIndex+1860` breadcrumb (item -311's own predicted use case)
-    CLOSED as an item-310-class misattribution; real root cause found and FIXED instead —
-    `DL_LIST_APPEND_GUARD`'s own scope gap at ONE site, `submitSceneNodeRender` (funcs_4.c,
-    site=0x80010E74).** Reproduced with the post-s480 symbolizer: the trustworthy
-    `(local-symtab)`-tagged crash names `submitSceneNodeRender+63868`, not
-    `loadCutsceneAssetsByIndex` — confirms the s463/s468 hits (both pre-dating item -311) were
+    CLOSED as an item-310-class misattribution; real root cause found and FIXED, then SUPERSEDED
+    s482 (see item -313 — the fix's own "unique site" scope claim was wrong; the corrected, blanket
+    version of this same fix is item -313, not this one).** Reproduced with the post-s480
+    symbolizer: the trustworthy `(local-symtab)`-tagged crash names `submitSceneNodeRender+63868`,
+    not `loadCutsceneAssetsByIndex` — confirms the s463/s468 hits (both pre-dating item -311) were
     `dladdr` nearest-exported-symbol misattributions, not a real bug in that function. Do NOT
     re-file future occurrences under `loadCutsceneAssetsByIndex`. The real bug: `submitSceneNodeRender`
     writes its own `$a0` ("new node") argument into the `0x8011:0x63B0` free-list-cache-head global,
     rereads it for `GENERIC_CACHE_GUARD`'s (item -268..-273) unrelated deref chain — which sanitizes
     the REREAD copy but not the original argument register — and `DL_LIST_APPEND_GUARD` (item
     -291..-297) then uses that same unsanitized register as an unguarded WRITE ADDRESS at its own
-    `rwrite` slot, whose documented scope ("not derived from G — not at risk") holds at its other 56
-    sites but not this one. Fixed with a single site-anchored guard (not a blanket regex — the
-    aliasing is unique to this site), `ROGUESQ_LOG_DL_LIST_APPEND_RWRITE_GUARD`/
-    `[dl-list-append-rwrite-guard]`. Full regen/build clean, all pre-existing guard counts in this
-    lineage unregressed (84/120/30). 1 manual confirmation soak clean (hit an unrelated already-
-    catalogued crash family instead, itself now correctly named `loadDatFile+1152` by the local-
-    symtab fix rather than needing a separate `atos` pass — bonus confirmation of item -311's value).
-    2nd confirmation soak queued (`s481_rwrite_guard_confirm`) — check its result before marking this
-    item fully CLOSED. Full derivation: `PORTING-STATE.md` Session 481.
+    `rwrite` slot. s481 confirmed its own fix clean 2/2 soaks (`s481_rwrite_guard_confirm` ran
+    `rc=0`, 0 crash, 0 fires) — the FIX itself was correct, only its claimed SCOPE (site-unique) was
+    wrong. Full derivation: `PORTING-STATE.md` Session 481.
 
 -311. **(s480) Crash-symbolizer tooling fix — DONE, positive-control validated.** The item -310
     `dladdr`-nearest-exported-symbol blind spot is closed: `src/main/main.cpp` now builds a sorted

@@ -39997,3 +39997,98 @@ unchanged), so no `submodule-patches/export.sh` run was needed.
 1 clean manual confirmation run, 2nd queued). Next session: read the queued
 `s481_rwrite_guard_confirm` soak result first; if clean, item -312 below can be marked CLOSED.
 Otherwise fall back to the next M3/M5 candidate per the USER DIRECTIVE order.
+
+## Session 482 (2026-08-07): item -312's confirm soak came back clean; a structural re-audit of its own "grep-verified unique" scope claim found the claim was WRONG and generalized the fix to up to 78 more sites (item -313)
+
+Per NEXT.md, checked `scratch/agent/SOAK-RESULTS.md` first: `s481_rwrite_guard_confirm` (queued
+last session) ran `rc=0 | 346s`, `dl-list-append-rwrite-guard fires=0`, 0 crash across the full
+driven schedule -- item -312's site-anchored fix is confirmed clean, 2/2 soaks (s481's own manual
+run + this queued one). Per NEXT.md's fallback order: checked for a fresh M5 lead first (full
+re-read of PROJECT-OVERVIEW.md §10-12 plus every audio-adjacent mention in sessions 479-481 --
+zero hits; s478's "no new M5 lead" verdict stands unchanged 4 sessions later). Fell through to
+option 2, NEXT.md's own flagged follow-up: item -312's own theory that the aliasing bug was
+unique to `submitSceneNodeRender` rested on "the site literal 0x80010E68/0x80010E74 is unique in
+the codebase (grep-verified)" -- a grep for one literal ADDRESS, not a structural check of whether
+the same REGISTER-ALIASING SHAPE could recur at any of `DL_LIST_APPEND_GUARD`'s other sites. Ran
+that structural audit.
+
+**Method.** Wrote a static-analysis script (`N64Recomp/scratch_s482/audit_dl_list_append_rwrite*.py`,
+5 iterations refining the classifier) over the current `RecompiledFuncs/funcs_3.c`/`funcs_4.c`,
+enumerating all 84 canonical `DL_LIST_APPEND_GUARD` sites (not 57 -- the s463 widening folded 27
+more into the same guard, a count discrepancy from CURRENT-TRUTH's item -291 text worth noting for
+a future maintenance pass) and tracing, for each site's `rwrite` register, whether it was ever fed
+by the same "write into the `0x801163B0` free-list-cache-head global as new head, then
+self-round-trip-reload the SAME register straight back from that global via a bare
+`lui $reg,0x8011; lw $reg,0x63B0($reg)` with nothing in between validating it" shape that caused
+the confirmed submitSceneNodeRender bug. First 3 script iterations produced false leads (a naive
+"any nearby guard block touches this register" heuristic flagged 57/84 sites as ALIAS-CANDIDATE,
+which turned out to be a coincidental, unrelated, and SAFE nearby idiom -- `DL_BUFFER_POOL_GUARD`
+allocating a genuinely fresh, already-validated buffer pointer and copying it into the same
+register via a plain `ADD32` move, confirmed safe by direct source read). The precise check (does
+`rwrite` get written as VALUE into the `0x63B0` global, then reassigned via a self-reload of that
+SAME global before reaching the append) initially showed "REASSIGNED, presumed safe" for 78/84
+sites -- until direct source inspection of the reassignment lines revealed the "reassignment" WAS
+ITSELF the self-round-trip reload (`ctx->r4 = S32(0x8011<<16); ctx->r4 = MEM_W(ctx->r4, 0x63B0);`),
+i.e. a no-op in terms of taint, not a refresh from a validated source.
+
+**Confirmed via direct source read of a 2nd concrete instance** (funcs_3.c, `emitFrameRdpInitDl`,
+site=0x80008FD4, lines 5632-5749): identical shape to submitSceneNodeRender, byte-for-byte --
+0x63B0 head-write (line 5635) -> self-round-trip reload back into r4 (lines 5639-5642) -> a
+SEPARATE reload of the same global into r2 (lines 5644-5647) for `GENERIC_CACHE_GUARD`'s (s434)
+own unrelated deref chain, which validates r2 but never r4 -> `FREELIST_NEXT_GUARD`/
+`DL_BUFFER_POOL_GUARD` intervening code, none of which touches r4 either -> r4 flows completely
+unvalidated all the way to `DL_LIST_APPEND_GUARD`'s own addr6 write-through-r4. Every one of the
+78 sites sharing this exact reassignment-line signature (`ctx->r4 = S32(0X8011 << 16);` as the
+sole intervening "reassignment") shares this same unvalidated-flow structure -- the s481 comment's
+"their rwrite really is a fresh, unrelated argument" characterization was true for the OTHER
+(non-0x63B0-preceded) sites, but false for these 78, whose rwrite is never fresh at all.
+
+**Fix (generalized, not site-anchored this time).** Folded the s481 remediation directly into
+`_dl_list_append_guard_patch` in `N64Recomp/fixup_game_funcs.py`: addr6's write now validates
+`rwrite` (range-checked 0x80000000-0x80800000, same as every other guard in this family) before
+using it as a write address, at EVERY `DL_LIST_APPEND_GUARD` site, not just one. Reuses s481's own
+env var/log tag (`ROGUESQ_LOG_DL_LIST_APPEND_RWRITE_GUARD`/`[dl-list-append-rwrite-guard]`) so no
+soak-recipe changes were needed. addr4's write (`MEM_W(0X0, ctx->rderef) = ctx->rwrite`) still
+stores rwrite as DATA, not an address, unchanged and correctly left unguarded per s481's own
+analysis. Deleted the now-superseded s481 site-specific literal patch (its anchor text no longer
+matches once the blanket regex rewrites every site, so leaving it would be a permanent silent
+no-op) and replaced its comment block with a pointer to this session's generalization and why the
+original "unique" claim was wrong.
+
+**Regen/build.** Full pipeline run twice by mistake first (a `NameError: name 'bc6' is not defined`
+crash mid-first-run left the fixup script's OWN in-memory state incomplete, but the crash happened
+before any file write for the files it touched after the bug -- re-ran make_elf.py -> N64Recomp ->
+fixup cleanly from a fresh regen to eliminate any doubt about partial/double-patch state). Final
+clean run: `DL_LIST_APPEND_GUARD patched x46` (funcs_3.c) + `x38` (funcs_4.c) = 84, matching the
+full canonical count. All sibling guard families in this same code exactly matched their
+established ledger baselines with 0 regression: `GENERIC_CACHE_GUARD` 66+41=107 (item -268..-273),
+`DL_BUFFER_POOL_GUARD` 46+38=84 (item -299), `SIBLING_PTR_WRITE_GUARD` 65+55=120 (item -306),
+`DL_LIST_RESET_GUARD` 41+29+5+9=84 (item -298), `FREELIST_NEXT_GUARD` 66+39=105 (item -277 family).
+Full clean cmake build (`-j8`, Metal/Xcode toolchain), only pre-existing benign `-Wpointer-sign`
+warnings, 0 new warnings.
+
+**Live-verify (1st of 2 confirmations).** Same driven schedule as every soak in this lineage
+(`PROBE_KEYS_FROM_PHASE=1`, full `3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start
+220:a 250:start` schedule, all passive breadcrumb/instrument env vars armed). Result: 0 fires on
+`dl-list-append-rwrite-guard` AND every other guard in the family (matches this whole lineage's
+established true-negative baseline -- 0 fires = confirmed hardening, not dead code, per s449's
+`HANGARLIST_GUARD` precedent), positive control `hangarbay-entry n=31` confirms the schedule
+reached the guarded code region. Process crashed at 107.8s in an UNRELATED, already-catalogued
+family: `[CRASH][pc-symbol] initVec4TripletFromArgs+68 (local-symtab)`, `x10=0x0000000080000028`
+-- a near-`0x80000000` wild guest pointer, matching the BREADCRUMB6 "near-zero guest pointer"
+family (first seen s273, reconfirmed not-a-new-class as recently as s328a/s451); `last-guest-pc=
+0x800ab068` is a stale breadcrumb from elsewhere, not this crash's real location (the
+local-symtab `pc-symbol` line is the trustworthy one, per item -311). Filed, not chased -- exactly
+the same "clean at the target guard, hit a different pre-existing family instead" pattern every
+prior soak in this lineage has shown (s463, s468, s481). 2nd confirmation soak queued
+(`s482_blanket_rwrite_guard_confirm`).
+
+**Outcome: ADVANCED** (found item -312's own "unique site" scope claim was WRONG via direct source
+evidence, generalized the fix to the whole idiom class in one blanket patch, build-verified,
+guard-count-regression-checked against 5 sibling families, 1 clean manual confirmation run --0
+fires anywhere in the family, hit an unrelated already-catalogued crash instead -- 2nd confirm
+queued). Item -312 is SUPERSEDED by item -313 below (not simply closed): the site-specific fix it
+shipped was real and correct as far as it went, but its scope-uniqueness claim was disproven this
+session. Next session: read the queued `s482_blanket_rwrite_guard_confirm` soak result first; if
+clean, item -313 can be marked fully CLOSED. Otherwise the crash should be checked for whether it
+fires AT one of the 78 newly-covered sites (a genuine guard gap) vs. yet another unrelated family.
