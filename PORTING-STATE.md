@@ -42392,3 +42392,88 @@ any audio-subsystem crash signature or surfaced a new audio stub/gate lead. Cade
 s510, due again s513+ (unchanged mechanism from every prior check, s486-s510).
 
 `scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
+
+## Session 512 (2026-08-08): item -317 step 3 -- folded in s511's queued RENDER_LIT_MESH_R4_GUARD 2nd confirm (CLOSED 2/2, item -317 step 3 now 14/14 fixed guards fully closed; its crash resolved to a genuine 2nd occurrence of an existing s457 signature, filed as new item -322); found and fixed a FIFTH distinct write site inside `renderLitMeshFaceGroup` (`RENDER_LIT_MESH_R5_GUARD`, funcs_4.c:17784/0x80014A8C, 46 shared sites, top of the fresh post-R4 tier), 1st live-verify ran the FULL 300s scheduled duration with zero crashes at all, 2nd confirm queued; item -319/-320/-321 unchanged, no pivot
+
+**Fold-in**: read `scratch/agent/SOAK-RESULTS.md`'s tail and found `s511_render_lit_mesh_r4_confirm`
+(`rc=3`, `164s`) -- the 2nd (independent) confirm of `RENDER_LIT_MESH_R4_GUARD`, not yet folded into
+the ledger. Opened `scratch/agent/soak_results/s511_render_lit_mesh_r4_confirm/run.log`: 0
+`render-lit-mesh-r4-guard` fires (null result on the guard itself), `hangarbay-entry` counted to
+`n=31` (present, on the low side but within the accepted range per s505/s508 precedent -- not the
+"too weak to count" class discarded at n=4 in s508), 0 fires on any other armed sibling guard
+family. The run crashed at 117.9s: `pc-symbol=heapFreeListDequeue+40432 (local-symtab)`,
+`last-guest-pc=0x8000d92c`. Per Iron Rule 1 the guard's own null result plus this positive control is
+sufficient -- `RENDER_LIT_MESH_R4_GUARD` is now **FULLY CLOSED, 2/2**. Item -317 step 3 now stands at
+**14/14 fixed guards fully closed**.
+
+**The crash itself needed real triage, not a rubber-stamp "unrelated, filed not chased."** Grepped
+`docs/PROJECT-OVERVIEW.md`/`PORTING-STATE.md` for `0x8000d92c` before treating it as either novel or
+routine: found an EXACT prior hit, `docs/PROJECT-OVERVIEW.md` line ~1270 / `PORTING-STATE.md` line
+~38071 -- s457's `stepSongPitchBendLanes` live-verify crashed on `pc-symbol=heapFreeListDequeue+32596`
+(frame-3 return address `submitSceneNodeRender+45220`), `last-guest-pc=0x8000d92c` (byte-identical),
+full backtrace `heapFreeListDequeue <- submitSceneNodeRender <- processSceneNode <-
+traverseSceneGraphRecursive <- setupCameraMatrices <- runHangarSelectionFrame <-
+runHangarMenuFromOverlay <- menuOverlayInit <- mainGameLoop`. At the time (s457) this was filed only
+as a same-subtree observation alongside a DIFFERENT-signature s456 crash
+(`submitSceneNodeRender+29928`/`last-guest-pc=0x80010874`) -- "worth a dedicated look if a 3rd
+occurrence lands," but never given its own Next-steps item number. This session's crash is the exact
+same `last-guest-pc` (the `pc-symbol` offset differs, 32596 vs 40432, but that's expected drift from
+guard insertions between sessions shifting code layout downstream of the fixed base -- the same
+pattern seen on every other guard's offset across this whole campaign; `last-guest-pc` is the more
+reliable identity signal since it names a fixed guest instruction address, not a host code offset).
+That makes this the SECOND independent occurrence of this exact signature -- filed as **item -322**
+(2 occurrences, watch for a 3rd before opening a dedicated thread), the same threshold discipline
+used for items -319/-320/-321. One methodological note carried into the item -322 writeup: this
+crash is post-s480, so per item -311 the `(local-symtab)` tag on its `pc-symbol` line means the
+crash symbolizer found a real covering table entry -- but that alone doesn't prove the fault is
+genuinely inside `heapFreeListDequeue` (a real function can still sit in a gap the local table
+doesn't cover, if it lacks its own linker symbol); s457's full backtrace is the stronger evidence
+here, and it independently shows a genuine `heapFreeListDequeue` frame, not just a nearest-symbol
+guess. Not yet source-traced; item -322 does not currently block or bear on item -317's own work.
+
+**Decision point**: neither item -319 (`beginFrameDLChunk+40536`, still 2 occurrences) nor item -320
+(`loadCutsceneAssetsByIndex+1860`, still 1) nor item -321 (`menuOverlayInit+3648`, still 1) recurred
+this session; item -322 (new) sits at exactly 2, the same "watch, don't escalate yet" tier as -319.
+No threshold crossed -- continued Option B, the `renderLitMeshFaceGroup` tied tier.
+
+**Work unit**: re-ran `python3 scratch/agent/s494_item317_step3_tracer.py --scan` (350 NEEDS_GUARD /
+98 SAFE_NO_DEREF, unchanged shape -- run against the already-R4-patched source) then `python3
+scratch/agent/s506_dedupe.py` -- top pick is `funcs_4.c:17785` (`renderLitMeshFaceGroup`, write,
+`ctx->r2+0x4`, 46 shared reload sites, `guest_addr=0x80014A8C`) -- a FIFTH, distinct write site
+inside the SAME function R2/R3/R4 already guard, at yet another address, confirmed by direct
+inspection: `grep -n "0x80014A8C"` on `funcs_4.c` returned exactly 1 hit, no PATCH comment present.
+Read the surrounding source (lines 17760-17799): `ctx->r2` is reloaded from the SAME `0x801163B0`
+free-list-cache-head global a few instructions earlier (`0x80014A80`) with only a null check
+(`ctx->r2 == 0`, `beq $v0, $zero, L_80014A90`); the null arm takes a separate, identical, harmless
+write to `ctx->r3+0x0` then jumps past the guarded site, but the non-null fallthrough has no
+`0x80000000`-`0x80800000` range check before the dereference at `0x80014A8C` -- byte-for-byte the
+same shape as every one of the 14 prior guards in this lineage, most directly R2/R3/R4 (same
+function). Added `RENDER_LIT_MESH_R5_GUARD` to `fixup_game_funcs.py` (copied the R4 block verbatim,
+only the site address/variable names/guard name changed, inserted immediately after the R4 block at
+the end of the `funcs_4.c` patch chain). Regenerated per the mandatory order: deleted all
+`RecompiledFuncs/funcs_*.c` (Python `os.remove` loop, same sandbox workaround as every prior
+session), `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`. The fixup report
+showed `patched x1` for the new guard (`funcs_4.c: render-lit-mesh derived-pointer write guard (s512,
+item -317 step 3, RENDER_LIT_MESH_R5_GUARD) patched x1`) and no `SKIPPED`/anomalous lines beyond the
+known-permanent `S392_H3A`/`S393_H3B` remainder (49 expected SKIPPED lines, unchanged baseline).
+Confirmed exactly 1 literal `render_lit_mesh_r5_guard_enabled` symbol present in the generated
+`funcs_4.c` (`grep -c`). Clean build (only the pre-existing unrelated `DDIV` pointer-sign warnings).
+
+**1st live-verify** (`scratch/agent/manual_runs/s512_render_lit_mesh_r5_manual.sh`, same `PROBE_KEYS`
+schedule and full sibling-guard env-var set as every prior soak in this lineage, plus the new
+`ROGUESQ_LOG_RENDER_LIT_MESH_R5_GUARD`): ran the FULL scheduled 300s duration with **no crash at
+all** (120 frames captured, `rc=0`). 0 `render-lit-mesh-r5-guard` fires (null result), `hangarbay-entry`
+counted to `n=33` (positive control, present, on the low side but within the accepted range per
+precedent), 0 fires on any other armed sibling guard family except one benign `hangarmenu-a0-guard`
+co-fire (item -265, the established init-time non-corruption signature). 2nd independent confirm
+queued: `scratch/agent/soak_queue/s512_render_lit_mesh_r5_confirm.sh`.
+
+**Rule 8 note**: ADVANCED (one confirm folded closing R4 2/2, a new crash breadcrumb triaged and
+filed as item -322, plus a new code change + 1st live-verify + queued confirm) on the still-open
+`item-317-step3-fix-next-ranked-leads` `HYPOTHESIS-ID`; resets any stall counter. No pivot needed.
+
+**M5 cadence check**: none of this session's two soaks (R4 confirm fold-in, R5 live-verify) touched
+any audio-subsystem crash signature or surfaced a new audio stub/gate lead. Cadence unchanged from
+s511, due again s514+ (unchanged mechanism from every prior check, s486-s511).
+
+`scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
