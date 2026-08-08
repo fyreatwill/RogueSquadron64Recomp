@@ -63,7 +63,11 @@ Priority order for upcoming iterations, set after the 300-session review:
    deferred, not guessed at; it's the next M3 session's first task. No fresh idiom-scan candidate
    remains queued behind it — after that: a new frequency-scan angle (both `lui`+`lw` and `lui`+`sw`
    are now structurally dry at the >=20-site tier), a control-flow-aware blanket sweep of item -317's
-   own 183-site sibling population, or a wait for a new breadcrumb.
+   own 183-site sibling population, or a wait for a new breadcrumb. **s492: folded in s491's clean
+   2nd confirm (item -317 step 1, `heapFreeListDequeue`, CLOSED 2/2), then traced and fixed the
+   deferred `funcs_4.c` step 2 site (`ORIENTED_FACE_DERIVED_PTR_GUARD`) rather than reusing step 1's
+   fix shape blindly — 1st confirm clean, 2nd queued.** Only the wider 183-site blanket sweep (step
+   3) remains open on item -317; no fresh idiom-scan candidate is queued behind it.
 
 -312..-315. **(s481-487) `DL_LIST_APPEND_GUARD` and `DL_LIST_RESET_GUARD`'s own "grep-verified
     unique site" scope claims both turn out to be wrong, plus `AUDIO_SLOT_ACTIVE_GUARD`'s own
@@ -290,21 +294,39 @@ a range pointer. Highest allocated so far: -317. The next NEW item takes -318.
     already-catalogued `BREADCRUMB6`/`buildPositionAndCallTransformHelper` near-zero-guest-pointer
     family (`si_addr=0x380000010`, `last-guest-pc=0x80065acc` — byte-for-byte the same crash s451's
     own confirm soak hit, filed since s273, explicitly reconfirmed not-a-new-class as recently as
-    s328a), unrelated to this guard. 2nd independent confirm queued
-    (`s491_heap_dequeue_blockskip_confirm.sh`). **Step (2), the `funcs_4.c` site, is NOT a simple
-    per-site fix and is DEFERRED, not guessed at**: direct trace found `ctx->r18` in that function
-    (`buildOrientedFaceGeometry`) is a general-purpose register reused dozens of times across a much
-    larger function (reassigned from at least 6 different sources earlier in the same function —
-    `ctx->r4`, `ctx->r7` x4, `ctx->r18+0x8` chained twice, at guest addresses spanning
-    0x80012750-0x80012EF0), NOT a single derived-once pointer like `heapFreeListDequeue`'s `ctx->r16`.
-    It has its OWN separate multi-path shared-label hazard: a `goto L_80012F08` at guest 0x80012E24
-    (reached from well before the local 0x80012EF0 computation) lands on the same tail label that the
-    0x80012EF0 fallthrough path also reaches, carrying a DIFFERENT, much-earlier-computed `ctx->r18`
-    value on that path (confirmed: `ctx->r18` is read at guest 0x80012E1C, BEFORE its "own"
-    computation at 0x80012EF0, proving it's already live with a prior value on entry). Guarding this
-    safely needs the same full-provenance trace s490/s491 did for `heapFreeListDequeue`, not a
-    same-session rush — next M3 session's first task. Step (3), the wider 183-site sweep, remains
-    open behind step (2). Full derivation: `PORTING-STATE.md` Sessions 490-491.
+    s328a), unrelated to this guard. **2nd independent confirm (`s491_heap_dequeue_blockskip_confirm.sh`,
+    run by the loop, folded in s492): the cleanest possible outcome — 0 `[CRASH]` events over the
+    entire 300s run, effectively 0 fires on the guard (the one `guard`-matching substring in the
+    whole 102K-line log is an unrelated benign diagnostic embedded in a raw DMEM hex dump),
+    `hangarbay-entry` n=35 (positive control, higher than the 1st confirm). Item -317 step (1),
+    `heapFreeListDequeue`'s own remainder, is now FULLY CLOSED, 2/2.**
+    **s492 traced and fixed step (2), the `funcs_4.c` `buildOrientedFaceGeometry` site, rather than
+    reusing step (1)'s fix shape blindly (per this item's own prior warning).** Direct trace found
+    `ctx->r4` reloads UNGUARDED from the SAME free-list-cache-head global (`0x801163B0`) at guest
+    `0x80012E94`, survives untouched through four existing sibling guards on the same path (each
+    reads `ctx->r2`/`ctx->r3`, never revalidates `r4`), then propagates into `ctx->r18 =
+    ADD32(ctx->r4, 0X8)` at `0x80012EF0`, dereferenced unguarded across an 8-field struct-init block
+    (`0x80012F14`-`0x80012F94`) — same "guard covers the deref, not the propagation" shape as the
+    whole -312..-317 lineage. The multi-path hazard flagged at s491 (a `goto L_80012F08` at guest
+    `0x80012E24` reaching the same tail label with a different-provenance `ctx->r18`) resolved
+    cleanly: exactly ONE goto into `L_80012F08` plus the natural fallthrough — a clean 2-entry join —
+    so the fix validates `ctx->r18` itself (the register actually dereferenced, not the `ctx->r4`
+    proxy) at the join, block-skipping to the existing epilogue label `L_80012F98` (pure
+    register-restore-and-return, independently confirmed as a safe landing point by a separate
+    pre-existing `goto L_80012F98` from an unrelated early-return path) on invalid. New guard family
+    `ORIENTED_FACE_DERIVED_PTR_GUARD` (not folded into `HEAP_DEQUEUE_DERIVED_PTR_GUARD` — different
+    offset, different registers, different function, same root global). Build-verified clean,
+    1st live-verify: **0 fires on the new guard**, `hangarbay-entry` n=31 (positive control, matches
+    step (1)'s own baseline), 1 fire total on any other guard family (`hangar-bay-deref-guard`,
+    `n=0`/`ra=0x0`, printed in the same instant as the crash dump — a dying-process artifact, not a
+    real hazard). Crashed at 108.7s on the already-catalogued `initVec4TripletFromArgs+68`/
+    `last-guest-pc=0x800ab068` family (`x0=x9=0x0000000300000000` RDRAM-base signature,
+    byte-for-byte the same crash s489/s463/s468's own confirm soaks hit), unrelated to this guard.
+    2nd confirm queued (`s492_oriented_face_derived_ptr_confirm.sh`). **Step (3), the wider 183-site
+    blanket sweep, remains open** — needs control-flow-aware tooling per s490/s491's own methodology
+    lesson (a naive textual scan structurally cannot detect the shared-label-merge hazard that bit
+    s490's first fix attempt), not a repeat of the failed approach. Full derivation: `PORTING-STATE.md`
+    Sessions 490-492.
 
 -316. **(s488 scan -> s489 FIXED, 2nd confirm s490 clean) DL_ALLOC_PROPAGATION_GUARD, a scope gap in
     the existing s436 `CACHE_HEAD_A1_GUARD` (guard covers one deref, not the propagation) — FULLY

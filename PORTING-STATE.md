@@ -40864,3 +40864,102 @@ that mattered for the final numbers (SIGKILL via `tools/probe.sh`'s own teardown
 **Outcome: ADVANCED** — landed a real code fix (block-skip extension closing item -317's own known
 9+-site remainder), build-verified, live-verified clean with a positive control, 2nd confirm queued;
 plus a well-evidenced deferral (not a guess) for the `funcs_4.c` sibling site.
+
+## Session 492 (2026-08-07): consumed s491's clean 2nd confirm (item -317 own-remainder now CLOSED,
+2/2); traced and fixed the funcs_4.c `buildOrientedFaceGeometry` sibling site deferred by s491
+(`ORIENTED_FACE_DERIVED_PTR_GUARD`), 1st confirm clean, 2nd queued
+
+**Read first (per contract):** `docs/CURRENT-TRUTH.md` (58,538 bytes, under the 60,000 maintenance
+trigger — not a maintenance iteration), `scratch/agent/NEXT.md`, `scratch/agent/SOAK-RESULTS.md`
+tail.
+
+**Step 0: consumed the queued confirm from s491.** `SOAK-RESULTS.md`'s newest line showed
+`s491_heap_dequeue_blockskip_confirm` ran rc=0, 346s. Its summary `.log` only carries the phase/
+keys/capture summary, so grepped the real per-line data directly:
+`scratch/agent/soak_results/s491_heap_dequeue_blockskip_confirm/run.log` (102,067 lines) —
+**0 `[CRASH]` events over the entire 300s run** (the cleanest possible outcome, matching the s487/
+s490 precedent), literally 1 `guard`-matching substring in the whole file and it's an unrelated
+benign diagnostic (`[hangarmenu-a0-guard] ... n=0`, embedded inside a raw DMEM hex dump, not a real
+fire), `hangarbay-entry` fired 35 times (positive control, higher than the 1st confirm's n=31).
+**Item -317's own `heapFreeListDequeue` remainder (the block-skip extension) is now FULLY CLOSED,
+2/2 independent confirms clean.**
+
+**This session's planned work unit (per NEXT.md): trace `ctx->r18`'s provenance in
+`buildOrientedFaceGeometry` (funcs_4.c) before designing a guard, not a blind copy of the
+`heapFreeListDequeue` fix shape.** Read the function directly (funcs_4.c:9160-11655, ~2500 lines)
+rather than delegating — this decision needed the exact control-flow facts, not a summary. Findings:
+- `ctx->r4` is reloaded UNGUARDED from the free-list-cache-head global (`0x801163B0`, the SAME
+  global implicated in item -317's `funcs_3.c` fix) at guest `0x80012E94`. It then survives
+  untouched through FOUR existing sibling guards on the same path
+  (`generic-cache-guard`/`0x80012EA0`, `freelist-next-guard`/`0x80012EB0`,
+  `dl-buffer-pool-guard`/`0x80012EBC`, `dl-list-append-guard`/`0x80012ED8`) — every one of them reads
+  or revalidates `ctx->r2`/`ctx->r3`, never `ctx->r4` — before `ctx->r18 = ADD32(ctx->r4, 0X8)` at
+  `0x80012EF0` propagates the same possibly-corrupted value into a derived pointer that is then
+  dereferenced unguarded across an 8-field struct-init block (`0x80012F14`-`0x80012F94`). Textbook
+  "guard covers the deref, not the propagation" shape, items -312..-317's whole lineage.
+- Resolved the multi-path hazard s491 flagged (a `goto L_80012F08` at guest `0x80012E24` reaching
+  the same tail label with a DIFFERENT, much-earlier-computed `ctx->r18` value): `grep -n "goto
+  L_80012F08\|L_80012F08:"` over the whole file found exactly ONE goto into the label
+  (`0x80012E24`) plus the natural fallthrough from `0x80012EF0` — a clean 2-entry join, no third
+  path. Validating `ctx->r18` itself (the register actually dereferenced) right at the join, before
+  the first write, is correct on both paths regardless of which one set it — same
+  "validate-the-actually-dereferenced-register" discipline s490's own correction established, and
+  the reason NEXT.md explicitly warned not to reuse the `heapFreeListDequeue` shape blindly (that
+  fix validates the derivation-source register `ctx->r4`-equivalent; this one must validate `r18`
+  itself because its second entry path has an unrelated provenance).
+- Confirmed the downstream extent is safe to block-skip: every `goto` inside
+  `0x80012F08`-`0x80012F94` targets a label inside the same span, and the span falls straight into
+  the existing epilogue label `L_80012F98` (pure register-restore-and-return, no deref of anything
+  the block computes) — independently confirmed safe as a landing point by a SEPARATE existing
+  `goto L_80012F98` at guest `0x80012518` (an unrelated early-return path from much earlier in the
+  function) already jumping there today with no ill effect.
+
+**Fix: block-skip guard at the `L_80012F08` join, new family (not folded into
+`HEAP_DEQUEUE_DERIVED_PTR_GUARD`** because the site shape differs — offset `0x0` not `0x8`, register
+`$s2`/`$v0` not `$s0`/`$v0`, a different function — even though the root mechanism, the same
+`0x801163B0` global propagating unguarded into a derived pointer, is identical). Implemented as a
+new standalone block in `~/Documents/Tools/N64Recomp/fixup_game_funcs.py`
+(`ORIENTED_FACE_DERIVED_PTR_GUARD`, anchored on the `0x80012F14` store, `goto L_80012F98` on
+invalid `ctx->r18`).
+
+**Regen + build + live-verify.** Deleted `RecompiledFuncs/funcs_*.c`, ran `make_elf.py` →
+`N64Recomp` → `fixup_game_funcs.py` (anchor matched x1, confirmed via the report line "funcs_4.c:
+oriented-face derived-pointer write guard, block-skip ... patched x1"; re-running the fixup script
+a second time correctly REFUSED via its own `RS64_FIXUP_APPLIED` idempotency guard rather than
+double-patching — no unexpected SKIPPED lines beyond the known-permanent `S392_H3A`/`H3B` item -290
+remainder) → `cmake --build . -j8` from `RogueSquadron64Recomp/build` (clean, only pre-existing
+benign warnings, e.g. `DDIV` sign-conversion). Manual foreground live-verify with the full standing
+env-var set plus `ROGUESQ_LOG_ORIENTED_FACE_DERIVED_PTR_GUARD=1`, `PROBE_PHASE_WIDTH=1024`/
+`PROBE_KEYS_FROM_PHASE=1`, 300s cap: **0 `oriented-face-derived-ptr-guard` fires**, `hangarbay-entry`
+n=31 (positive control, matches s491's own n=31), only ONE fire total across every OTHER guard
+family (`hangar-bay-deref-guard`, `n=0`/`ra=0x00000000` — printed in the same log line as the crash
+dump itself, an artifact of the process already dying rather than a real upstream hazard). Crashed
+at 108.7s on `pc-symbol=initVec4TripletFromArgs+68`, `last-guest-pc=0x800ab068`,
+`x0=x9=0x0000000300000000` (the RDRAM-base signature) — grepped `PORTING-STATE.md` and confirmed
+byte-for-byte match to the already-catalogued family s489/s463/s468's own confirm soaks hit,
+unrelated to this guard or any guard tested, filed not chased per strategic priority #3. 2nd
+independent confirm queued (`scratch/agent/soak_queue/s492_oriented_face_derived_ptr_confirm.sh`).
+
+**Rules obeyed:** read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`,
+`scratch/agent/SOAK-RESULTS.md` first per contract; consumed the queued soak's real per-line data
+(`run.log`, not the summary line) before folding it into the ledger; read the full source region
+directly rather than trusting the prior session's subagent-flagged summary, per NEXT.md's explicit
+"do NOT reuse the fix shape blindly" instruction; verified the multi-path hazard was a clean 2-entry
+join by direct grep before designing the check placement, rather than assuming the block-skip shape
+transfers; regenerated in the mandatory order and audited the fixup report for anchor-count
+mismatches (x1 exactly, plus confirmed the script's own idempotency refusal on a second run);
+live-verified with a same-run positive control (`hangarbay-entry`) before folding the result into
+the ledger; compared the new guard's fire count (0) against every other guard family in the same run
+(1, and that 1 is explained as a crash-adjacent artifact, not a regression) before trusting the null
+result; queued the 2nd confirm instead of re-running it this session (loop budget rule). Edited
+`~/Documents/Tools/N64Recomp/fixup_game_funcs.py` only (sibling repo's untracked scratch tool, not
+this repo's `lib/`, so no submodule-patches export applies). One live-verify game run this session
+that mattered for the final numbers (SIGKILL via `tools/probe.sh`'s own teardown, ROM present in
+`build/`).
+
+**Outcome: ADVANCED** — closed out item -317's own remainder 2/2 (folded in s491's queued confirm)
+and landed a real code fix for its deferred `funcs_4.c` sibling site (`ORIENTED_FACE_DERIVED_PTR_GUARD`),
+build-verified, live-verified clean with a positive control matching the prior session's own
+baseline, 2nd confirm queued. Item -317 (both steps 1 and 2) now has a 1st-clean/2nd-queued or
+fully-closed status on every scope it was opened with; only the wider 184-site blanket sweep (step
+3) remains open.
