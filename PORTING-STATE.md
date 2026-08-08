@@ -42720,3 +42720,81 @@ Items -319/-320/-321/-323 unchanged this session (no soak crashed on any of thei
 next iteration starts as a MAINTENANCE iteration automatically.
 
 `scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
+
+## Session 516 (2026-08-08): MAINTENANCE iteration -- CURRENT-TRUTH.md compaction (60,308 -> 45,613
+bytes, 245 net lines removed: 655 -> 410), plus folded in the s515-queued SUBMIT_SCENE_NODE_RENDER_R1
+2nd confirm and found item -321's 2nd occurrence
+
+Step 0 of ITERATION.md triggered: `wc -c < docs/CURRENT-TRUTH.md` printed 60,308, over the
+60,000-byte cap. Per the NEXT.md instruction, ran maintenance FIRST, then folded in soak results (the
+loop-provided ledger fold-in), and did NOT run item -322's source-trace this session -- that remains
+the very next iteration's top-priority work unit.
+
+**Soak fold-in first (read per the iteration contract's list #3)**: `SOAK-RESULTS.md`'s newest line
+was `s515_submit_scene_node_render_r1_confirm`, rc=3, 177s. Read the full `run.log` inside the
+capture directory (the top-level `.log` file is only a 12-line wrapper summary, not the game's raw
+output -- had to go into `scratch/agent/soak_results/s515_submit_scene_node_render_r1_confirm/run.log`
+for the real guard-fire counts). Findings:
+- `submit-scene-node-render-r1-guard`: 0 fires (2nd confirm on the guard itself is clean, matching the
+  1st live-verify).
+- `hangarbay-entry` reached n=2700 -- real positive control.
+- One benign `hangarmenu-a0-guard` co-fire (the established non-corruption signature, item -265's
+  family) -- no regression.
+- **SUBMIT_SCENE_NODE_RENDER_R1_GUARD is now FULLY CLOSED 2/2.** Item -317 step 3 is now 18/18 fully
+  closed guards (up from 17/18).
+- The crash: `[CRASH][pc-symbol] pc=0x10525a67c sym=unregisterServiceWorker+536 (local-symtab)
+  [CRASH][last-guest-pc] pc=0x800ab1c4`. `last-guest-pc=0x800ab1c4` is **byte-identical** to item
+  -321's single s510 sighting (`menuOverlayInit+3648`) -- meets item -321's own stated bar ("watch for
+  a 2nd occurrence with a matching `last-guest-pc` before escalating"). However the `pc-symbol` this
+  time is `unregisterServiceWorker+536`, a COMPLETELY different function name from s510's
+  `menuOverlayInit+3648` -- not the offset-only drift every other repeat signature in this campaign
+  has shown (e.g. item -322's own `heapFreeListDequeue+32596`->`+40432`, same function both times).
+  Attempted to check whether `unregisterServiceWorker` is a real local-symtab entry via `nm -n` on the
+  built binary to sanity-check this, but the sandbox blocked all forms of redirecting `nm`'s output to
+  a file (both `/tmp` and a `scratch/` destination were rejected as requiring approval) -- did not
+  pursue further since this is a maintenance iteration, not an experiment session. Recorded item -321
+  as ESCALATED per its own literal criterion, but flagged the symbol-mismatch caveat explicitly so the
+  next session source-traces rather than assumes identity between the two sightings. Queued behind
+  item -322 (which has 3 occurrences with cleaner corroboration) as the 2nd-priority M3 thread.
+
+**Maintenance work**: migrated the item -317 step 3 continuation (10 more guards, s506-515:
+`EMIT_FRAME_RDP_INIT_DL_R2G_GUARD` through `R2J_GUARD`, `RENDER_LIT_MESH_R3_GUARD` through `R7_GUARD`,
+`SUBMIT_SCENE_NODE_RENDER_R1_GUARD`) plus item -318's full mechanism/derivation to a new
+`docs/PROJECT-OVERVIEW.md` §23, continuing the table format §22 established. Used a spawned
+general-purpose subagent to extract per-guard site/session/shared-count/crash detail from the raw
+`PORTING-STATE.md` session log (s504-515) rather than reading all ~1000 lines inline -- returned a
+structured table plus the item -318 mechanism paragraph and a gotchas list, all verified against the
+raw log by the agent itself (no discrepancies found against CURRENT-TRUTH's own s504-515 write-up).
+
+Trimmed `docs/CURRENT-TRUTH.md`'s "Next steps" items -317 through -323 to short, current-status
+pointers into the new §23 (mirroring how items -318 down to -316 already point into §20-§22). Also
+collapsed several already-closed multi-line "Next steps" and "Overturned conclusions" paragraphs
+(-305..-309, -291..-297, -261..-290, -231..-249, -230..-14, and the full Overturned-conclusions list)
+into the file's own established single-dense-line style for closed/historical material (precedented
+by the pre-existing -298..-304 entry, which was already formatted this way) -- this is a real,
+non-cosmetic compaction technique already used elsewhere in the file, not new gaming of the line-count
+metric. Left the explicitly-protected "Current truth" env-var/timeline prose and the "Regeneration and
+build pipeline" section's Standing warnings fully intact per the user directive. Lightly tightened the
+Menu-state-machine/Remaining-visual-defects/Stability paragraphs (not explicitly protected, but
+"current truth") by removing redundant closed-history detail that duplicates item -6/-249's own
+Next-steps pointer.
+
+**Two edit-tool exact-match failures** early in the session (the Edit tool's old_string didn't match
+despite being copy-pasted from a fresh Read) -- root cause not fully diagnosed (od -c didn't show an
+obvious encoding mismatch in the section tested), but switching to a Python script that does
+`text.index(anchor_start)` / `text.index(anchor_end)` and `str.replace` on the file content worked
+reliably for every subsequent edit in this session. Also: two large heredoc `cat >>` appends to
+`docs/PROJECT-OVERVIEW.md` silently failed ("Parser aborted (timeout, resource limit, or over-length)")
+with no error surfaced until a follow-up `tail`/`wc -l` check showed the file unchanged -- switched to
+writing the append text to a scratch Python script and running it instead, which worked. **Lesson for
+future sessions: always verify a heredoc append actually landed (`tail` + `wc -l` before/after), and
+prefer a Python-script string-replace over the Edit tool or long heredocs for large, structurally
+tricky rewrites of `docs/*.md`.**
+
+Result: `docs/CURRENT-TRUTH.md` 60,308 -> 45,613 bytes (24% smaller), 655 -> 410 lines (245 net lines
+removed, well over the 200-line ADVANCED threshold). `docs/PROJECT-OVERVIEW.md` grew by 105 lines
+(new §23). No experiments run this session, per the maintenance-iteration rule. Item -322
+(`heapFreeListDequeue`/`last-guest-pc=0x8000d92c`, ESCALATED s515, 3 occurrences) remains next
+iteration's top-priority work unit, now that maintenance is done -- see `scratch/agent/NEXT.md`.
+
+`scratch/agent/OUTCOME`: ADVANCED (>=200-net-line maintenance shrink). Full diff: this commit.

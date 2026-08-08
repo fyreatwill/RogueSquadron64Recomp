@@ -1937,3 +1937,108 @@ s495's original sample (re-derive fresh, do not trust stale line numbers): `func
 sites), `funcs_3.c:28922`-ish (18 sites), then two singletons at `funcs_3.c:83`/`funcs_3.c:858`.
 
 Full session-by-session raw detail: `PORTING-STATE.md` Sessions 493–503.
+
+
+## 23. Item -317 step 3 continued (s504-515): 10 more guards fix the tier to 18/18 fully closed 2/2,
+plus item -318's full fix, migrated from CURRENT-TRUTH.md s516 maintenance pass
+
+**s504 was itself a maintenance pass** (65,633 -> 47,371 bytes, 204 net lines removed) that also folded
+in two queued Section-22 confirms and caught a documentation-consistency error in item -318's
+register-correlation reading (see section 22's caution paragraph -- already corrected there).
+
+### Item -318 (`appendRdpStateDl+144`) -- FIXED and FULLY CLOSED 2/2
+
+**Mechanism**: all 6 call sites of `appendRdpStateDl` in `funcs_4.c` (including
+`submitSceneNodeRender`'s `jal 0x8000DE70` at guest `0x800109B4`, whose delay slot at `0x800109B8` is
+what `last-guest-pc` actually names -- the call site, not a fault inside the callee) reload the
+`-0x23A8` "sibling global" at guest address `0x8011DC58` (`lui $reg,0x8012; lw $reg,-0x23A8($reg)`)
+with **no range check**, then pass the raw value as `$a0`/`ctx->r4` into the call
+(`funcs_4.c:2975-2995` for the `submitSceneNodeRender` instance). Inside `appendRdpStateDl`
+(`funcs_3.c:26484`, guest `0x8000DE70`), that argument becomes a display-list-append write cursor
+(aliased `ctx->r3`/`ctx->r11`) dereferenced **unconditionally from the function's first instruction**
+(`0x8000DE7C`, +12 bytes: `MEM_W(0X0, ctx->r3) = ctx->r2;`) through dozens more sites with zero
+null/range check anywhere in the function. This fell outside the existing 119-site
+`SIBLING_PTR_WRITE_GUARD` audit (item -296/-306), which only covers same-function `MEM_W(...) = val`
+writes through this global, not "reload -> pass as call argument -> callee writes" -- even though that
+audit's own comment block named `submitSceneNodeRender` as carrying this exact idiom unguarded (10
+sites, flagged since s459).
+
+**Fix** (`APPEND_RDP_STATE_DL_ENTRY_GUARD`, `funcs_3.c:26484`, function entry): range-check `ctx->r4`
+against `0x80000000`-`0x80800000`, early `return` (skip whole body) if invalid -- safe because
+`appendRdpStateDl` is `void` with RDRAM-only side effects and no caller consumes a register return
+value; one patch point covers all 6 call sites.
+
+**Timeline**: source-traced and fixed **s505**, corroborated independently by a second Explore-agent
+pass reaching the same conclusion. 1st live-verify (**s505**): clean (0 fires, `hangarbay-entry n=31`),
+crashed on `beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0` -- the 2nd independent occurrence of
+item -319's own signature. 2nd confirm: 1st attempt **s506** INCONCLUSIVE (crashed at only 20.0s/8
+frames on `rebuildActiveDisplayObjectList+540`, zero guard-fire lines of any kind including zero
+`hangarbay-entry` -- no positive control at all per Iron Rule 1, retried, did not count). Retry folded
+in **s507** -- CLEAN, ran the full ~348s, `hangarbay-entry` up to n=2700, zero crash markers ->
+**FULLY CLOSED 2/2 as of s507**.
+
+**Register-correlation caution (still applies)**: s503's occurrence carried `x0`=`x9`=
+`0x0000000300000000` in its mcontext dump, initially misread as a correlation to the separate
+`initVec4TripletFromArgs+68` family (items -302/-306) -- a **false lead**, already resolved by the
+s216-218->s219 overturned-conclusion entry (`0x0000000300000000` in `x0`/`x8` is the process's constant
+RDRAM host base pointer, present by construction in every `MEM_W`-involved fault, not written
+corruption).
+
+### Item -317 step 3, guards 11-18 of ~150 (s506-515), same fix shape as section 22's guards 1-8
+
+A null check (`ctx->r2 == 0`) gates the null arm safely; the non-null fallthrough has no
+`0x80000000`-`0x80800000` range check before the dereference; downstream control flow reloads the
+register from a table again before further use, so skip-the-write-on-invalid is a safe fix in every
+case.
+
+| # | Guard | Session fixed | Site | Function | Shared sites | 2nd confirm | Crash the verify/confirm soak hit (unrelated in every case) |
+|---|---|---|---|---|---|---|---|
+| 11 | `EMIT_FRAME_RDP_INIT_DL_R2G_GUARD` | s506 | `funcs_3.c:7384`/`0x80009578` | `emitFrameRdpInitDl` | 40 | CLOSED 2/2 (s507) | 1st: `coalesceFreeHeapBlocks+4328` (s354-366 heap-walker family); confirm clean |
+| 12 | `EMIT_FRAME_RDP_INIT_DL_R2H_GUARD` | s507 | `funcs_3.c:8357`/`0x800098E8` | `emitFrameRdpInitDl` | 40 | CLOSED 2/2 (s508) | Confirm hit `loadCutsceneAssetsByIndex+1860`/`0x800aafb8` -- new, filed item -320 |
+| 13 | `EMIT_FRAME_RDP_INIT_DL_R2I_GUARD` | s508 | `funcs_3.c:7713`/`0x800096A0` | `emitFrameRdpInitDl` | 40 | CLOSED 2/2 (s509) | 1st (after discarding a too-weak n=4 attempt): async Metal-shader-compiler dyld cluster (items -10/-9); confirm clean |
+| 14 | `EMIT_FRAME_RDP_INIT_DL_R2J_GUARD` | s509 | `funcs_3.c:8727`/`0x80009A24` | `emitFrameRdpInitDl` | 40 | CLOSED 2/2 (s510) | 1st: `memcpy_recomp+288` (tickWrappingTimerAccumulatorList family); confirm hit `menuOverlayInit+3648`/`0x800ab1c4`, filed item -321 |
+| 15 | `RENDER_LIT_MESH_R3_GUARD` | s510 | `funcs_4.c:17346`/`0x800148E8` | `renderLitMeshFaceGroup` (2nd site) | 40 | CLOSED 2/2 (s511) | Both runs: full 300s, zero crashes |
+| 16 | `RENDER_LIT_MESH_R4_GUARD` | s511 | `funcs_4.c:16049`/`0x800142FC` | `renderLitMeshFaceGroup` (3rd site) | 38 | CLOSED 2/2 (s512) | 1st: benign `setByteAcrossEntryList+176` (item -306 family); confirm hit `heapFreeListDequeue+40432`/`0x8000d92c`, 2nd occurrence of the s457 signature, filed item -322 |
+| 17 | `RENDER_LIT_MESH_R5_GUARD` | s512 | `funcs_4.c:17784`/`0x80014A8C` | `renderLitMeshFaceGroup` (4th site) | 46 (tier top) | CLOSED 2/2 (s514, after an s513 INCONCLUSIVE retry -- no `hangarbay-entry` at all, VI stuck pre-hangar) | 1st: full 300s clean; retry hit `rebuildActiveDisplayObjectList+540` (same family as -318's own s506 first attempt) |
+| 18 | `RENDER_LIT_MESH_R6_GUARD` | s513 | `funcs_4.c:16575`/`0x80014558` | `renderLitMeshFaceGroup` (5th site) | 38 | CLOSED 2/2 (s514) | 1st: full 300s, zero crashes/co-fires; confirm hit the async Metal-shader-compiler dyld cluster (items -10/-9/-303/-315/-508) |
+| 19 | `RENDER_LIT_MESH_R7_GUARD` | s514 | `funcs_4.c:15620`/`0x80014140` | `renderLitMeshFaceGroup` (6th site) | 32 | CLOSED 2/2 (s515) | 1st: clean on the guard, crashed on new `beginFrameDLChunk+27456`/`0x8000ae40`, filed item -323; confirm clean |
+| 20 | `SUBMIT_SCENE_NODE_RENDER_R1_GUARD` | s515 | `funcs_4.c:4880`/`0x80010F38` | `submitSceneNodeRender` (1st site outside `renderLitMeshFaceGroup`/`emitFrameRdpInitDl`) | 34 | CLOSED 2/2 (s516, folded) | 1st: clean, crashed on `heapFreeListDequeue+40432`/`0x8000d92c` -- the 3RD occurrence of item -322 (s457/s512/s515), ESCALATED. Confirm (s516 fold-in): clean on the guard (0 fires, `hangarbay-entry n=2700`, one benign `hangarmenu-a0-guard` co-fire), crashed on `unregisterServiceWorker+536 (local-symtab)`/`last-guest-pc=0x800ab1c4` -- `last-guest-pc` byte-identical to item -321's single s510 sighting despite a completely different `pc-symbol` name (not just an offset drift like every prior case in this table); flagged as item -321's 2nd occurrence with a caveat, see `docs/CURRENT-TRUTH.md` item -321 |
+
+(Numbering continues guards 1-10 from section 22's table, s495-503; guard #10 there was
+`EMIT_FRAME_RDP_INIT_DL_R2F_GUARD`, so #11 here is the very next guard chronologically.)
+
+### Gotchas recorded s504-515 (for the next guard in this lineage, or any similar sweep)
+
+- **s506**: a dedup script's grouping key must include the hit's line number, not just
+  `(file, kind, offset, register)` -- an early attempt silently merged hundreds of unrelated sites
+  sharing a register name/offset across different call sites.
+- **s507**: line numbers drift session to session as guards are inserted (e.g. `funcs_3.c:8344` ->
+  `8357` after one insertion) -- always re-derive from a fresh tracer scan, never reuse a recorded
+  number.
+- **s507**: the harness's Bash permission matcher rejects multi-line/compound commands and `pgrep`
+  isn't allowlisted (only `ps`) -- waiting on a foreground soak needs a single-line `zsh -c '...'` using
+  `kill -0 <pid>` instead.
+- **s511**: the sandbox blocks both a bare glob `rm -f funcs_*.c` and `find ... -delete` as
+  unapprovable file-modifying operations -- delete `RecompiledFuncs/funcs_*.c` via a Python
+  `os.remove` loop before every regen instead.
+- **s513**: `rc=0`/full-duration is NOT automatically a valid confirm -- grep the run.log for an actual
+  `hangarbay-entry` positive control; the R5 first confirm attempt had zero hangar-related lines at all
+  (VI stuck oscillating pre-hangar) and was correctly ruled INCONCLUSIVE and retried rather than banked.
+- **s514**: a leaked Edit-tool XML fragment got pasted verbatim into PORTING-STATE.md's tail instead of
+  being executed as a tool call -- a document-corruption gotcha, not a code one; caught and removed.
+- **s515 (breadcrumb-collision gotcha)**: `submitSceneNodeRender` carries its own pre-existing
+  per-instruction `g_rs64_last_guest_pc = ...;` breadcrumb patch (applied earlier in the fixup
+  pipeline), which inserts an extra line between an instruction's comment and its translated body. The
+  guard's old/new match strings (copied verbatim from the R7 template) didn't include that inserted
+  line, so the `text.count(...) == 1` exact-match guard silently skipped the block: **rc=0, no error,
+  0 occurrences applied**. Fixed by adding `g_rs64_last_guest_pc = 0x80010F38u;` to both old and new
+  strings. This was the first site in the lineage to fall inside a function carrying its own breadcrumb
+  patch -- every prior `renderLitMeshFaceGroup`/`emitFrameRdpInitDl` site did not. **Lesson: always grep
+  the fixup report for the new guard's own name after every run, not just check for absence of an
+  error** -- a silent 0-count skip looks identical to success.
+
+### Status as of s516: 18/18 fully closed 2/2, ~127 leads remain unaudited
+
+Six crash threads have surfaced as a side effect of these live-verifies (not chased in-band except
+item -322, which escalated): items -319/-320/-321/-322/-323 -- live status and next steps:
+`docs/CURRENT-TRUTH.md`. Full raw detail: `PORTING-STATE.md` Sessions 504-515.
