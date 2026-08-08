@@ -41463,3 +41463,90 @@ NEXT.md verbatim, per the s496 drift-warning contingency (no drift found this
 time, but the check was still run); filed the new
 `coalesceFreeHeapBlocks+4424` crash rather than chasing it, per the
 strategic-priority rule against reactive single-crash chases.
+
+## Session 498 (2026-08-07): item -317 step 3 -- fixed the next same-function sibling lead, EMIT_FRAME_RDP_INIT_DL_R2B_GUARD (funcs_3.c:7963, emitFrameRdpInitDl, 40 shared reload sites), 1st live-verify clean; also folded in s497's queued 2nd confirm which closes out EMIT_FRAME_RDP_INIT_DL_R2_GUARD (now 2/2 clean, FULLY CLOSED); filed a new crash signature that plausibly resolves an old open question from item -306
+
+**Folded in s497's queued 2nd confirm first** (`s497_emit_frame_rdp_init_dl_r2_confirm`, ran
+between iterations, rc=3, 165s): `hangarbay-entry` n=31 (positive control), 0 fires on
+`EMIT_FRAME_RDP_INIT_DL_R2_GUARD` and 0 fires on all sibling guards (no regression). Crashed at
+119.0s on `pc-symbol=buildPositionAndCallTransformHelper+1736`, `last-guest-pc=0x80065acc` --
+grepped PORTING-STATE.md and found this is an ALREADY-catalogued signature (Sessions ~328/~338,
+the near-`0x80000000`-RDRAM-host-base-decompose family tied to `buildPositionAndCallTransformHelper`),
+unrelated to the guard under test. `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` is now FULLY CLOSED, 2/2
+confirms clean, joining `NODE_LIST_HEAD_SIBLING_R4_GUARD` and `RENDER_LIT_MESH_R2_GUARD` -- all
+three of step 3's first leads are now closed.
+
+**This session's work unit.** Per NEXT.md's mandatory line-drift check, re-ran
+`scratch/agent/s494_item317_step3_tracer.py --scan` fresh and re-deduped the JSON report
+(group by `(file, hit.line, hit.kind, hit.off, hit.reg)`, count sources, sort descending) before
+touching source. NEXT.md's recorded lead `funcs_3.c:7950` had drifted to `funcs_3.c:7963` -- a
++13-line shift, identical in size and direction to the drift s497's OWN fix caused earlier in the
+same function (`emitFrameRdpInitDl`). Cross-checked the containing function via an awk backward-scan
+for the nearest `RECOMP_FUNC` line above 7963: still `emitFrameRdpInitDl`. Read the surrounding
+source directly (not just the tracer's report): at `funcs_3.c:7963` (`MEM_W(0X4, ctx->r2) = ctx->r3;`,
+guest addr `0x800097C0`), `ctx->r2` is reloaded from the `0x801163B0` table four instructions
+earlier (`0x800097B0`) with only a null check (`beq $v0, $zero, L_800097C4` / `ctx->r2 == 0`); the
+null arm gotos away from this specific write (writing through `ctx->r3` instead, which doesn't
+dereference `ctx->r2`), but the non-null fallthrough has no `0x80000000`-`0x80800000` range check
+before the dereference -- identical shape to `EMIT_FRAME_RDP_INIT_DL_R2_GUARD`. Checked downstream
+control flow: execution falls into `L_800097C4`, which reassigns `ctx->r2` fresh from the table
+again at `0x800097D8` before any further use of the register, so skip-the-write-on-invalid is safe
+(same precedent as every fix in this lineage so far).
+
+Wrote `EMIT_FRAME_RDP_INIT_DL_R2B_GUARD` as a literal-string-anchor patch in
+`~/Documents/Tools/N64Recomp/fixup_game_funcs.py`, confirmed the anchor's `text.count(old)==1`
+before writing (both in the fixup script's own check and independently via a Python scan of the
+raw `funcs_3.c` source). Mirrored `EMIT_FRAME_RDP_INIT_DL_R2_GUARD`'s exact block shape (own static
+enabled-flag + counter, own env var `ROGUESQ_LOG_EMIT_FRAME_RDP_INIT_DL_R2B_GUARD`, own log tag
+`[emit-frame-rdp-init-dl-r2b-guard]`, range-check-and-skip). Regenerated through the full pipeline:
+deleted `funcs_3.c` -> `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` (`patched x1` on the
+new guard, no errors, confirmed the prior `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` site still present
+exactly once -- no regression from the regen) -> `cmake --build . -j8` (clean, only pre-existing
+unrelated warnings).
+
+**1st live-verify (manual, foreground, full sibling-guard env-var sweep incl. every guard in this
+lineage):** 0 fires on the new `EMIT_FRAME_RDP_INIT_DL_R2B_GUARD` (rare-path bug, null result
+expected), 0 fires on `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` or any of the ~42 other armed sibling
+guards (no regression) -- three pre-existing unrelated guards (`generic-cache-guard`,
+`dl-list-reset-rnode-guard`, `dl-list-append-rwrite-guard`) each fired once with `bad_*=0x00000000
+ra=0x00000000`, an all-zero benign init-time signature distinct from the corrupted-nonzero-pointer
+signature these same three guards showed co-firing in an earlier session's genuine crash event --
+judged benign, not a regression, consistent with the "one benign pre-existing diagnostic fire"
+pattern seen in prior sessions of this lineage (e.g. s496's `hangarmenu-a0-guard`). `hangarbay-entry`
+n=32 (positive control, confirms the run reached and exercised the target scene). Crashed at 123.8s
+(50 frames captured) on `pc-symbol=appendRdpStateDl+144`, `last-guest-pc=0x800109b8`. Grepped
+CURRENT-TRUTH.md/PROJECT-OVERVIEW.md/PORTING-STATE.md for this exact PC: no prior mention. However
+`appendRdpStateDl` itself is NOT a stranger to this project -- item -306 (PROJECT-OVERVIEW §18,
+Session ~473) explicitly flagged 10 sites where a DIFFERENT table's raw reload (`hi16=0x8012,
+offset=-0x23a8`, the `SIBLING_PTR_WRITE_GUARD` idiom) survives a function-call boundary still live
+in `ctx->r4`/`ctx->r7` into `appendRdpStateDl`/`emitAllocatedDLCommand`/`buildOrientedFaceGeometry`/
+`drawTextGlyphRect`, and explicitly left those unaudited ("would need each callee's own body read;
+plausibly the same safe DL-append-pointer idiom used throughout, but unverified"). This crash is a
+plausible, not confirmed, manifestation of exactly that flagged gap -- filed per the
+no-reactive-single-crash-chases rule rather than chased this session, but noted as a strong
+candidate for a future idiom-class audit (read `appendRdpStateDl`'s body directly) if it recurs.
+
+Re-ran the tracer's `--scan` after the fix and ran the per-hit query from PORTING-STATE.md Session
+497's precedent: neither `funcs_3.c:7950` nor `funcs_3.c:7963` (the pre-fix and post-fix line
+numbers) appears as an unsafe hit anywhere in the fresh report -- the fix is correctly tracked.
+Aggregate `NEEDS_GUARD` stayed at 390 (expected per the progress-signal caveat -- most reload-site
+records have multiple unguarded hits and don't flip to SAFE until all clear). Fresh dedup surfaced
+the current tied-at-40 tier for next session: `funcs_3.c:5695/6001/6321/6631/7332/8292/7648/8636`
+and `funcs_4.c:17346` (the `renderLitMeshFaceGroup` sibling flagged since s497, still unfixed).
+
+2nd confirm queued: `scratch/agent/soak_queue/s498_emit_frame_rdp_init_dl_r2b_confirm.sh` (correct
+three-level `../../..` path, full sibling-guard env-var sweep plus the two new guard vars).
+
+**Rules obeyed:** read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`,
+`scratch/agent/SOAK-RESULTS.md` first per contract; folded in the queued soak result before
+starting new work; did not touch `lib/` (fix lives entirely in the separate, untracked
+`~/Documents/Tools/N64Recomp` working tree, confirmed a different repo than
+`lib/N64ModernRuntime/N64Recomp` -- no `submodule-patches/export.sh` needed); one game run at a
+time; regen order followed exactly (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` ->
+`cmake`); killed nothing manually (the live-verify crashed on its own before the schedule
+finished); positive-controlled via `hangarbay-entry` n=32 in the same run as the new guard's
+0-fire null result, per iron rule 1; re-derived the line number fresh against current source
+rather than trusting NEXT.md verbatim, per the s496/s497 drift-warning contingency (drift WAS found
+this time, +13 lines, same magnitude/direction as s497's own fix); filed the new
+`appendRdpStateDl+144` crash and its plausible link to item -306's known-unaudited gap rather than
+chasing it, per the strategic-priority rule against reactive single-crash chases.
