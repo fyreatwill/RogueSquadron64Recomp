@@ -41343,3 +41343,123 @@ run as the new guard's 0-fire null result, per iron rule 1; treated the drift
 between NEXT.md's recorded line number and live source as its own
 discriminating check rather than guessing, per NEXT.md's explicit
 contingency.
+
+## Session 497 (2026-08-07): item -317 step 3 -- fixed the #1-ranked remaining lead, EMIT_FRAME_RDP_INIT_DL_R2_GUARD (funcs_3.c 0x80009428, emitFrameRdpInitDl, 40 shared reload sites), 1st live-verify clean
+
+**Folded in two queued soak confirms first.** `s496_render_lit_mesh_r2_confirm`
+(rc=3, 157s): 0 fires on `RENDER_LIT_MESH_R2_GUARD`, 0 fires on all ~41 sibling
+guards, `hangarbay-entry` n=31 (positive control); crashed at 111.3s on
+`pc-symbol=tickWrappingTimerAccumulatorList+3888`,
+`last-guest-pc=0x80054750` -- confirmed via grep against
+`docs/PROJECT-OVERVIEW.md` §19 as the EXACT already-catalogued, already-PARKED
+`m5-audio-destub-tickwrap-divzero-craftselect` compiler div-by-zero-trap
+signature (first seen ~s344), unrelated to the guard tested. Combined with
+s496's clean full-duration 1st live-verify, `RENDER_LIT_MESH_R2_GUARD` now has
+2/2 confirms and closes. `s496_sibling_r4_confirm_retry` (rc=0, 347s, full
+duration, 122 frames, no crash): 0 fires on `NODE_LIST_HEAD_SIBLING_R4_GUARD`,
+`hangarbay-entry` n=35 (positive control) -- this closes
+`NODE_LIST_HEAD_SIBLING_R4_GUARD` with 2/2 clean confirms too (the corrected
+retry of s495's path-bug recipe).
+
+**This session's fix.** Re-ran `scratch/agent/s494_item317_step3_tracer.py
+--scan` fresh per NEXT.md's mandatory drift-check (448 sites, 390
+NEEDS_GUARD, 58 SAFE_NO_DEREF -- same totals as the count recorded after
+s496's fix, consistent) and deduped the fresh JSON by `(file, hit.line,
+hit.kind, hit.off, hit.reg)`, sorted by shared-source count descending. Top
+result: `funcs_3.c:6979` (write, `ctx->r2+0x4`), 40 sources, function
+`emitFrameRdpInitDl` (confirmed via `awk` backward-scan for the nearest
+`RECOMP_FUNC` line) -- line number matched NEXT.md's recorded value exactly,
+no drift this time. (Notably four separate locations in the same function are
+tied at 40/36 shared sources -- `emitFrameRdpInitDl` has several near-
+duplicate write sites; `funcs_4.c`'s `renderLitMeshFaceGroup`, already
+touched by s496, has the same multi-site-per-function shape.)
+
+Read the surrounding source directly (`funcs_3.c` around line 6979,
+guest addresses `0x800093FC`-`0x8000943C`): `ctx->r2` reloaded from the
+`0x801163B0` table (`lui 0x8011; lw 0x63B0`) four instructions earlier, with
+a null check (`beq $v0,$zero,L_8000942C` / `ctx->r2==0`) whose null arm DOES
+`goto` away from the dangerous write -- unlike `RENDER_LIT_MESH_R2_GUARD`,
+where both arms fell through. But the non-null fallthrough path still has no
+range check (`0x80000000`-`0x80800000`) before
+`MEM_W(0X4, ctx->r2) = ctx->r3;` at guest `0x80009428` -- a non-null
+garbage/freed table entry reaches the dereference unguarded. Downstream
+control flow after the write falls straight into `L_8000942C`, which only
+touches `ctx->r1`/`ctx->r4` (not `ctx->r2`), so skip-the-write-on-invalid is
+safe -- same shape/precedent as the two prior fixes.
+
+Wrote `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` in `fixup_game_funcs.py` (literal-
+string-anchor patch, `text.count(old)==1` confirmed before writing) mirroring
+the `RENDER_LIT_MESH_R2_GUARD` block exactly (range-check-and-skip, own
+static-enabled flag keyed on `ROGUESQ_LOG_EMIT_FRAME_RDP_INIT_DL_R2_GUARD`).
+Regenerated: deleted `funcs_3.c` -> `make_elf.py` (3750 symbols, 3731
+emitted) -> `N64Recomp` (clean) -> `fixup_game_funcs.py` (new guard
+`patched x1`, no errors; the only SKIPPED lines were the known-permanent
+S392_H3A_1..29/S393_H3B_1..21 remainder, same as every prior session) ->
+`cmake --build . -j8` (clean, only pre-existing sign-conversion warnings in
+unrelated files).
+
+**1st live-verify (manual, foreground, `s497_emit_frame_rdp_init_dl_r2_manual.sh`,
+same full sibling-guard env-var set as every soak in this lineage plus this
+session's new var):** 0 fires on `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` (null
+result), 0 fires on all sibling guard families except one benign pre-existing
+`hangarmenu-a0-guard` diagnostic fire (item -265, unrelated, same as s496's
+run), `hangarbay-entry` n=32 (positive control). Crashed at 131.3s (53
+frames) on `pc-symbol=coalesceFreeHeapBlocks+4424`,
+`last-guest-pc=0x8000247c` -- grepped `docs/CURRENT-TRUTH.md` and
+`docs/PROJECT-OVERVIEW.md` for this symbol/address and found NO prior
+mention; this is a **new, not-previously-catalogued crash signature**, filed
+here rather than chased (per the strategic-priority rule against reactive
+single-crash chases). Traced the guest PC to `funcs_0.c:4756`
+(`ctx->r3 = MEM_HU(ctx->r2, 0X10);` inside `coalesceFreeHeapBlocks`, a
+different heap-allocator routine, NOT part of the `0x801163B0` reload-idiom
+population this whole item -317 arc targets) -- `ctx->r2` there is computed
+as `ctx->r6 + MEM_W(ctx->r6, 0x4)` (a free-list next-block-size walk), a
+distinct heap-corruption shape unrelated to the guard under test (0 fires on
+it in this same run) and unrelated to any sibling guard (also 0 fires). Bus
+error signature (`si_code=1`, misaligned/invalid host address) consistent
+with walking a corrupted free-list node. New crash class, not yet
+investigated -- next M3-audit candidate if it recurs.
+
+**Progress signal (free, no game run):** re-ran `--scan` after the fix.
+`NEEDS_GUARD` count unchanged at 390 (was also 390 before this fix), but a
+direct query of the fresh JSON confirmed 0 records now have a hit at line
+6979 -- the fix IS recognized correctly by the tracer's static analysis; the
+aggregate count didn't move because every one of the 40 affected reload-site
+records also has other still-unguarded hits (most likely at the three
+sibling 40/36-count locations in the same function, `funcs_3.c:7950/7319/8266`,
+not yet fixed). Same "small or zero drop" pattern the NEXT.md guidance
+predicted, now empirically confirmed rather than assumed.
+
+2nd independent confirm queued:
+`scratch/agent/soak_queue/s497_emit_frame_rdp_init_dl_r2_confirm.sh`.
+
+**What remains open:** of the 150 originally-dedup'd locations, 6 were
+audit-confirmed by s495 and 3 are now fixed
+(`NODE_LIST_HEAD_SIBLING_R4_GUARD`, `RENDER_LIT_MESH_R2_GUARD`,
+`EMIT_FRAME_RDP_INIT_DL_R2_GUARD`); ~143 still formally unaudited. Next-ranked
+confirmed-but-unfixed leads from s495's original sample, in order (re-derive
+line numbers fresh before use, per the drift-warning process):
+`funcs_3.c:15977`/32 sites, `funcs_4.c:3299`/26, `funcs_3.c:28922`/18, plus
+two singletons (`funcs_3.c:83` `heapFreeListInsert`, `funcs_3.c:858`
+`countDisplayListChunks`). Also newly visible in this session's fresh dedup:
+three more locations tied at 40/36 shared sources in the SAME two functions
+already touched (`emitFrameRdpInitDl` at `funcs_3.c:7950/7319/8266`,
+`renderLitMeshFaceGroup` at `funcs_4.c:17346/17759`) -- worth folding into the
+ranked list alongside s495's original sample rather than treating as a
+separate re-audit, since both functions' shape is already confirmed.
+
+**Rules obeyed:** read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`,
+`scratch/agent/SOAK-RESULTS.md` first per contract; folded in both queued
+soak results before starting new work; did not touch `lib/` (fix lives
+entirely in the separate, untracked `~/Documents/Tools/N64Recomp` working
+tree's `fixup_game_funcs.py`/`RecompiledFuncs/`, confirmed via inode/HEAD
+comparison to be a DIFFERENT repo than `lib/N64ModernRuntime/N64Recomp` --
+no `submodule-patches/export.sh` needed); one game run at a time; regen order
+followed exactly; killed nothing manually (the live-verify crashed on its
+own before the schedule finished); positive-controlled via `hangarbay-entry`
+n=32 in the same run as the new guard's 0-fire null result, per iron rule 1;
+re-derived the line number fresh against current source rather than trusting
+NEXT.md verbatim, per the s496 drift-warning contingency (no drift found this
+time, but the check was still run); filed the new
+`coalesceFreeHeapBlocks+4424` crash rather than chasing it, per the
+strategic-priority rule against reactive single-crash chases.
