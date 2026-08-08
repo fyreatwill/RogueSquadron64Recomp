@@ -40296,3 +40296,82 @@ undesigned sites (`musyxMixActiveVoices` x3, `musyxSynthFrame` x1) and item -315
 whichever has higher expected information value (item -315's recurrence question more closely
 matches the proven-productive item -313 playbook: a scoped static-analysis script over
 `DL_LIST_RESET_GUARD`'s 84 sites, same shape as the script that found item -313's 78-site scope).
+
+## Session 485 (2026-08-07)
+
+Read the s484 queued confirm soak's result first, per NEXT.md's own instruction:
+`s484_audio_voice_baseptr_confirm` (`rc=3`, crashed at 157.1s) showed 0 fires on
+`audio-voice-baseptr-guard`, `s315-reset-r4-guard`, and every sibling guard family instrumented; the
+crash itself (`pc-symbol=coalesceFreeHeapBlocks+4424`, `last-guest-pc=0x8000247c`) is byte-identical
+to the SAME already-catalogued heap-walker family recorded at PORTING-STATE.md's s354-366 arc
+(verbatim address pair repeated at three separate earlier soak entries in this same file). Items
+-314 and -315 are both CLOSED, 2/2 independent confirms clean at both.
+
+Picked up item -315's own explicitly-deferred follow-up per NEXT.md's recommended work unit: does
+the `DL_LIST_RESET_GUARD` rnode-aliasing bug (item -315's own fix was scoped to exactly ONE of 84
+sites) recur elsewhere, matching item -313's own precedent for its sibling `DL_LIST_APPEND_GUARD`
+bug (which turned out to recur at 78/84 sites)?
+
+Wrote `scratch_s485/audit_dl_list_reset_rnode.py` (N64Recomp repo, untracked) mirroring item -313's
+own audit script (`audit_dl_list_append_rwrite5.py`): for each of `DL_LIST_RESET_GUARD`'s 84 sites
+(70 blanket + 14 per-site, `funcs_3.c`/`funcs_4.c`), extract the "rnode" register (the value stored
+by the guard's own final write) and check whether it was fed, earlier in the same function, by a
+BARE unguarded reload of the `0x801163B0` free-list-cache-head global (`ctx->rR = S32(0X8011 <<
+16); ctx->rR = MEM_W(ctx->rR, 0X63B0);`) with no reassignment before the site -- the exact shape
+item -315's one confirmed instance had. Result: 73/84 VULNERABLE-SHAPE, 6 NO-0x8011-ALIAS-RELOAD
+(rnode fed some other way), 5 RELOAD-BUT-REASSIGNED-BEFORE-SITE (rnode reloaded earlier but then
+copied from another register via `ADD32(ctx->rX, 0)` -- copy source not traced this session, moot
+for remediation since the fix below covers all 84 uniformly). 2 of the 73 confirmed via direct
+source read (not just the script's regex output, matching item -313's own confirmation discipline):
+`emitFrameRdpInitDl` site=0x80009104 (`funcs_3.c`, rnode=r4 traced to its actual last reload at
+source line 5959/5961 -- the site the audit script found is one function EARLIER than where I first
+manually spot-checked, since `emitFrameRdpInitDl` reloads r4 from `0x801163B0` FIVE separate times
+across its body, each guarding a different downstream idiom) and `renderLitMeshFaceGroup`
+site=0x800134F0 (`funcs_4.c`, rnode=r4 traced to line 12480/12482, same result). Also discovered
+along the way: `GENERIC_CACHE_GUARD` (item -263/s434)'s own regex is hardcoded to `ctx->r2`
+($v0) only -- ANY reload of the same `0x801163B0` global into a different register (r4, r5, r8,
+r9, as seen throughout this audit) is completely outside its "generic" guard's reach despite the
+name, a third instance of the "guard's own scope claim is narrower than its name implies" meta-bug
+after items -313 and -314. Not separately filed as a new item since every concrete instance found so
+far funnels through `DL_LIST_RESET_GUARD`'s own sites (already being fixed here); flagged in case a
+future audit needs the lead.
+
+Generalized the fix (matching item -313's own "fold validation into EVERY site" precedent, applied
+uniformly regardless of per-site VULNERABLE-SHAPE/NO-ALIAS/AMBIGUOUS classification -- safe because
+a genuinely-valid pointer is by construction inside the checked KSEG0 RDRAM range, so guarding a
+non-aliased rnode is a provable no-op): a new `DL_LIST_RESET_RNODE_GUARD`
+(`ROGUESQ_LOG_DL_LIST_RESET_RNODE_GUARD` / `[dl-list-reset-rnode-guard]`) folded into BOTH
+`_dl_list_reset_guard_patch` (the 70-site blanket regex substitution -- wraps the addr3
+"rnode zero-store" line the original template left bare) AND a new 14-entry
+`_DL_LIST_RESET_EXTRA_RNODE_SITES` table mirroring the existing per-site `_DL_LIST_RESET_EXTRA_SITES`
+extension (literal old/new text pairs, one per site, captured from a fresh regen). The old one-off
+`S315_RESET_R4_GUARD` block (site-anchored `re.subn` with `raise`-on-mismatch) is now a strict
+subset of the blanket fix -- since site 0x80010880 IS one of the 70 blanket-matched sites, and the
+blanket regex runs first in the pipeline, S315's own literal anchor text no longer exists once the
+blanket rewrite completes, which would `raise RuntimeError` on every future regen. Deleted the block
+entirely (kept the historical derivation comment, marked SUPERSEDED) rather than leave a
+permanent build-breaker.
+
+Regen/build verified clean: `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` (exact counts,
+no errors: `funcs_3.c` blanket 41 + extra 5 = 46, `funcs_4.c` blanket 29 + extra 9 = 38, total 84/84
+matched, matching the earlier grep-count of all `DL_LIST_RESET_GUARD site=` markers) -> `cmake
+--build` (only pre-existing warnings, 0 errors, binary relinked). 1 manual soak
+(`s485_dl_list_reset_rnode_manual.sh`, full env-var set including every sibling guard plus the new
+`DL_LIST_RESET_RNODE_GUARD`/legacy-inert `S315_RESET_R4_GUARD` tags) ran the FULL scheduled duration
+with ZERO crash (`rc=0`, 124 frames captured, all `PROBE_KEYS` presses through 250s completed) --
+0 fires on `dl-list-reset-rnode-guard` and every other guard family instrumented. This is the
+cleanest possible soak outcome in this whole lineage (no crash at all, not even an unrelated one).
+2nd independent confirm queued (`s485_dl_list_reset_rnode_confirm.sh`).
+
+Rules obeyed: batched all instrumentation into one build (didn't spend a cycle per counter);
+positive control not separately re-run this session since the whole `DL_LIST_RESET_GUARD` mechanism
+(shared log path) already has an established positive-control precedent from s463/s464's own
+introduction; two independent lines of evidence before closing the recurrence claim (script output
++ 2 direct source reads, matching item -313's own bar); did not touch anything under `lib/` (all
+edits are in `N64Recomp/fixup_game_funcs.py`, an untracked file in a separate tool repo per
+established practice across this entire guard-lineage, plus new files in this repo's
+`scratch/`), so no `submodule-patches/export.sh` is needed this session.
+
+`docs/CURRENT-TRUTH.md` is now 62,202 bytes (over the 60,000-byte maintenance trigger) -- next
+iteration's Step 0 will fire a MAINTENANCE pass automatically; not run this session since a real
+work unit was already in flight and iteration budget was mostly spent on the audit+fix+soak.

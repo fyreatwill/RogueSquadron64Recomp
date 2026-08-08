@@ -62,7 +62,29 @@ Priority order for upcoming iterations, set after the 300-session review:
    1st confirm soak for this fix then crashed on a BRAND NEW bug in a sibling family
    (`DL_LIST_RESET_GUARD`) -- root-caused and fixed same-session as item -315 (see below). 2 soaks
    clean at both targets (item -314's own guards: 0 fires across both runs); 2nd independent confirm
-   queued (`s484_audio_voice_baseptr_confirm.sh`).**
+   queued (`s484_audio_voice_baseptr_confirm.sh`).** **s485: that queued confirm came back clean
+   (`rc=3`, crashed at 157.1s, but 0 fires on `audio-voice-baseptr-guard`/`s315-reset-r4-guard`/every
+   sibling, and the crash itself -- `pc-symbol=coalesceFreeHeapBlocks+4424`, `last-guest-pc=
+   0x8000247c` -- is byte-identical to the SAME already-catalogued heap-walker family recorded at
+   PORTING-STATE.md lines ~38630/38780/38801). Items -314 and -315 are both fully CLOSED, 2/2
+   independent confirms clean. Picked up item -315's own deferred follow-up (its fix was scoped to
+   ONE site, "does this recur across the other 83" was explicitly left open): a from-scratch
+   static-analysis script (`scratch_s485/audit_dl_list_reset_rnode.py`, N64Recomp repo, untracked)
+   found the SAME "rnode register is an unguarded alias of the `0x801163B0` cache-head global" shape
+   at 73 of `DL_LIST_RESET_GUARD`'s 84 sites (2 confirmed via direct source read: `emitFrameRdpInitDl`
+   site=0x80009104, `renderLitMeshFaceGroup` site=0x800134F0) -- almost exactly item -313's own
+   78/84 recurrence rate for the sibling `DL_LIST_APPEND_GUARD_RWRITE` bug. Generalized into a new
+   `DL_LIST_RESET_RNODE_GUARD` folded into BOTH the 70-site blanket template and the 14-site
+   per-site extension (all 84, uniformly, regardless of per-site classification -- 6 sites showed no
+   alias, 5 were ambiguous after one `ADD32` hop, guarded anyway since a genuinely-valid pointer is
+   provably a no-op through the same range check every sibling guard uses). The old one-off
+   `S315_RESET_R4_GUARD` is now a strict subset of this and was deleted (its literal anchor text no
+   longer exists once the blanket rewrite runs first -- leaving it in would `raise` on every future
+   regen). Build-verified (fixup ran clean, exact counts: funcs_3.c 41+5=46, funcs_4.c 29+9=38,
+   totaling 84/84, no errors); 1 manual soak run FULL DURATION WITH ZERO CRASH (`rc=0`, 124 frames
+   captured, every `PROBE_KEYS` press through 250s completed) -- 0 fires on
+   `dl-list-reset-rnode-guard` and all sibling guard families, the cleanest possible outcome. 2nd
+   independent confirm queued (`s485_dl_list_reset_rnode_confirm.sh`).**
 
 -315. **(s484) `DL_LIST_RESET_GUARD` (item -298, s463) validates the wrong register at one
     confirmed site in `submitSceneNodeRender` -- same "guard validates one sibling register's reload
@@ -85,7 +107,11 @@ Priority order for upcoming iterations, set after the 300-session review:
     crash was a completely different already-catalogued family --
     `rs_free ← rebuildActiveDisplayObjectList`, tracked since s99-186). 2nd independent confirm
     queued alongside item -314's (same soak script arms both). Full derivation:
-    `PORTING-STATE.md` Session 484.
+    `PORTING-STATE.md` Session 484. **CLOSED s485: the deferred "does this recur" question was
+    audited (73/84 sites, same shape) and generalized into `DL_LIST_RESET_RNODE_GUARD`, folded into
+    both the blanket and per-site `DL_LIST_RESET_GUARD` templates; `S315_RESET_R4_GUARD` deleted as
+    a now-redundant subset. 1 manual soak clean (full duration, 0 crash, 0 fires), 2nd confirm
+    queued (`s485_dl_list_reset_rnode_confirm.sh`). Full derivation: `PORTING-STATE.md` Session 485.**
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
