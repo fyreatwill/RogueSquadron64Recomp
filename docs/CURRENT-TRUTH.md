@@ -253,8 +253,24 @@ a range pointer. Highest allocated so far: -317. The next NEW item takes -318.
     failing) textual-proximity heuristic — untrustworthy given this session's own shared-label-merge
     discovery, which a naive textual scan structurally cannot detect. A full blanket sweep needs
     control-flow-aware validation (validate the dereferenced register directly, never an upstream
-    proxy) and is DEFERRED, not attempted at scale this session. Full derivation: `PORTING-STATE.md`
-    Session 490.
+    proxy) and is DEFERRED, not attempted at scale this session. **UPDATE (subagent's report landed
+    after this session's commit)**: the classifier finished and, hand-sample-verified against live
+    source, found the shipped fix is CORRECT but INCOMPLETE — `ctx->r16` (the same derived pointer
+    just guarded at `0x8000D760`) is dereferenced at least 9 MORE times later in the same
+    `heapFreeListDequeue` body, all still unguarded (guest addrs approx. `0x8000D794`, `0x8000D7A0`,
+    `0x8000D7AC`, `0x8000D7C8`, `0x8000D7E4`, `0x8000D7E8`, `0x8000D7F0`, `0x8000D7F8`, plus a
+    second-generation derived pointer `ctx->r5 = ADD32(ctx->r16, 0X10)` that likely propagates the
+    same gap further) — the guard stops the FIRST crash on a corrupted pointer but not the rest of the
+    same block. It also found ONE more confirmed VULNERABLE site under the strict same-function
+    same-register criterion: `funcs_4.c` reload `0x80012E94` -> derived `ctx->r18` at `0x80012EF0` -> an
+    8-field unguarded struct-init block starting `0x80012F14`. It explicitly flagged a structural blind
+    spot (register-rename / global-round-trip indirection, ~73/88 candidates use this idiom) meaning
+    the TRUE count is very likely higher than what direct-register tracing alone can find. Next M3
+    session: (1) extend `HEAP_DEQUEUE_DERIVED_PTR_GUARD` to cover the other 9+ `ctx->r16` uses plus the
+    `ctx->r5` second-generation pointer in the SAME function before calling this class closed, (2) fix
+    the new `funcs_4.c` site, (3) only then consider the wider 183-site sweep, and only with
+    control-flow- and register-rename-aware tooling, not a repeat of this session's textual scan. Full
+    derivation: `PORTING-STATE.md` Session 490.
 
 -316. **(s488 scan -> s489 FIXED, 2nd confirm s490 clean) DL_ALLOC_PROPAGATION_GUARD, a scope gap in
     the existing s436 `CACHE_HEAD_A1_GUARD` (guard covers one deref, not the propagation) — FULLY

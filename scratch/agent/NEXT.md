@@ -20,15 +20,42 @@ fires on the corrected guard, `hangarbay-entry` n=31 (positive control), crashed
 already-catalogued `loadCutsceneAssetsByIndex+1860` family (unrelated). 2nd independent confirm
 queued (`s490_heap_dequeue_derived_ptr_confirm.sh`, currently the only item in `soak_queue/`).
 
-## This session's next work unit
+## IMPORTANT UPDATE (landed after s490 committed -- read this before anything else below)
+
+A classification subagent dispatched during s490 kept running after the session closed and reported
+back afterward. Hand-verified finding, already folded into `docs/CURRENT-TRUTH.md` item -317: **the
+shipped `HEAP_DEQUEUE_DERIVED_PTR_GUARD` fix is CORRECT but INCOMPLETE.** `ctx->r16` (the exact
+derived pointer just guarded at `0x8000D760`) is dereferenced at least 9 MORE times later in the same
+`heapFreeListDequeue` function body, all still completely unguarded (approx. guest addrs `0x8000D794`,
+`0x8000D7A0`, `0x8000D7AC`, `0x8000D7C8`, `0x8000D7E4`, `0x8000D7E8`, `0x8000D7F0`, `0x8000D7F8`), plus
+a second-generation derived pointer (`ctx->r5 = ADD32(ctx->r16, 0X10)`) that likely propagates the same
+gap even further downstream. It also found ONE more confirmed VULNERABLE site under the strict
+same-function/same-register criterion: `funcs_4.c` reload `0x80012E94` -> derived `ctx->r18` at
+`0x80012EF0` -> an 8-field unguarded struct-init block starting at guest `0x80012F14`. **Treat item
+-317 as still OPEN, not closed**, regardless of what the queued confirm soak shows (a clean confirm on
+the FIRST store's guard doesn't mean the other 9+ unguarded uses in the same block are safe -- they
+share the same corrupted pointer and just haven't been hit yet in 300s of soak). This session's own
+subagent explicitly flagged a structural blind spot in its scan (register-rename/global-round-trip
+indirection, ~73/88 of the 184 reload sites use exactly this idiom) -- so treat "1 more vulnerable site"
+as a floor, not a ceiling.
+
+## This session's next work unit (supersedes the "if clean, mark CLOSED 2/2" instruction below given
+the update above -- fold the confirm result in as evidence, but do NOT close item -317 on it alone)
 
 1. Read the new `SOAK-RESULTS.md` line for `s490_heap_dequeue_derived_ptr_confirm` (the loop will
    have run it between iterations). Grep its `run.log` (NOT just the probe.sh summary line — it omits
    guard-tag detail) for `heap-dequeue-derived-ptr-guard` fires, sibling guard fires, `hangarbay-entry`
-   count, and the `[CRASH]` tags. Fold into `docs/CURRENT-TRUTH.md` item -317 and `PORTING-STATE.md`
-   the same way s490 folded in item -316's 2nd confirm: if clean (0 fires on the new guard, no
-   regression, crash — if any — matches an already-catalogued unrelated family), mark item -317 fully
-   CLOSED, 2/2.
+   count, and the `[CRASH]` tags. Fold into `docs/CURRENT-TRUTH.md` item -317 and `PORTING-STATE.md` as
+   evidence for the FIRST store's guard specifically -- but do not mark item -317 CLOSED regardless of
+   outcome; go straight to extending the guard per step 1a below.
+1a. Extend `HEAP_DEQUEUE_DERIVED_PTR_GUARD` (or wrap the whole downstream block in one validity check
+   right after the derived-pointer computation at `0x8000D744`, which is cleaner than guarding each of
+   the 9+ individual stores separately) to cover every remaining unguarded `ctx->r16` use in
+   `heapFreeListDequeue`, plus the `ctx->r5 = ADD32(ctx->r16, 0X10)` second-generation pointer and ITS
+   downstream uses. Read the full block (`funcs_3.c`, guest `0x8000D744` through wherever `ctx->r16`/
+   derived-from-r16 registers stop being used) directly before designing the fix -- don't trust the
+   subagent's line list without a direct read, same discipline as always. Then fix the new `funcs_4.c`
+   0x80012E94/0x80012EF0 site (separate, unrelated function, needs its own guard).
 2. **Before trusting ANY fire count on a brand-new guard as "rare corruption, working as intended,"
    compare it against this session's sibling guards in the SAME run.** Every guard in this whole
    `-312..-317` lineage has historically fired 0-4 times per soak. A three-, four-, or five-digit fire
