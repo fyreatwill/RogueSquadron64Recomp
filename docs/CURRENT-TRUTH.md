@@ -15,7 +15,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    the Regeneration section's Standing warnings stay intact deliberately; both are used every
    iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
-   §10-§12). Next M5 work needs a genuinely new lead (**last checked s488, no new lead found, cadence
+   §10-§12). Next M5 work needs a genuinely new lead (**last checked s494, no new lead found, cadence
    reset — due for a fresh check once 3+ sessions have passed since then**).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
@@ -26,8 +26,10 @@ Priority order for upcoming iterations, set after the 300-session review:
    lineage recurred a 5th and 6th time as items -316/-317 (s488-492: `DL_ALLOC_PROPAGATION_GUARD` and
    `HEAP_DEQUEUE_DERIVED_PTR_GUARD`/`ORIENTED_FACE_DERIVED_PTR_GUARD`) — full derivation and the
    validate-the-dereferenced-register-not-a-proxy methodology lesson in PROJECT-OVERVIEW §21. **s492
-   status: item -317 steps 1 and 2 both fully CLOSED 2/2; only step 3 (the wider 183-site
-   control-flow-aware blanket sweep) remains open — see Next steps item -317 below.**
+   status: item -317 steps 1 and 2 both fully CLOSED 2/2; step 3 (the blanket sweep) remains open.
+   s494 built and positive-controlled the control-flow-aware tracer step 3 needed (raw population is
+   actually 448 sites, not 183; collapses to ~150-160 distinct unaudited candidate locations across
+   30 functions) — see Next steps item -317 below.**
 
 -312..-317. **(s481-492) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`
     "grep-verified unique site" lineage — six items, all fully CLOSED except -317 step 3** (open scope
@@ -162,16 +164,29 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -317. The next NEW item takes -318.
 
--317. **(s490-492) `HEAP_DEQUEUE_DERIVED_PTR_GUARD` + `ORIENTED_FACE_DERIVED_PTR_GUARD`, 5th/6th
+-317. **(s490-494) `HEAP_DEQUEUE_DERIVED_PTR_GUARD` + `ORIENTED_FACE_DERIVED_PTR_GUARD`, 5th/6th
     lineage instances on a DERIVED pointer, plus a methodology lesson (validate the dereferenced
     register, never an upstream proxy — s490's first attempt validated the wrong one and false-
     positived 660,261 times before live-verify caught it).** Steps 1 (`heapFreeListDequeue`) and 2
-    (`funcs_4.c` `buildOrientedFaceGeometry`) both FULLY CLOSED, 2/2 each. **Step 3 — a wider 183-site
-    blanket sweep of the same reload idiom across `funcs_3.c`/`funcs_4.c` — remains OPEN**: needs
-    control-flow-aware tooling (a naive textual scan can't detect the shared-label-merge hazard that
-    caused the step-1 false positive), scoped as its own tool-building work unit with its own positive
-    control, or wait for a 7th instance to surface organically. Full derivation:
-    `docs/PROJECT-OVERVIEW.md` §21, `PORTING-STATE.md` Sessions 490-492.
+    (`funcs_4.c` `buildOrientedFaceGeometry`) both FULLY CLOSED, 2/2 each. **Step 3 — the blanket
+    sweep of the same reload idiom across `funcs_3.c`/`funcs_4.c` — remains OPEN, tool now built and
+    positive-controlled (s494).** `scratch/agent/s494_item317_step3_tracer.py` is a forward
+    taint-propagation dataflow analysis (handles 2nd-generation derived pointers, e.g.
+    `ctx->r18=ADD32(ctx->r4,0X8)`, that no prior scan script tracked) validated 3 ways: 2 synthetic
+    repros of the already-fixed sites' exact pre-fix shapes, plus a reclassification check against the
+    REAL regenerated post-fix source (correctly calls the now-fixed site SAFE). Raw population is
+    actually **448** sites (not the earlier ~183 estimate), of which 393 flag `NEEDS_GUARD`; deduped by
+    actual downstream dereference location this collapses to **~150-160 distinct candidate guard
+    placements across 30 functions**, ranked by how many reload sites share them (top: 48 sites
+    converging on one `funcs_4.c:18192` write). **Not yet fixed or applied** — next session must (a)
+    audit the tool's guard-recognition coverage against the full existing-guard catalog (it only
+    recognizes one check shape) on a manually-verified sample before trusting it at scale, then (b) fix
+    the highest-shared-count locations first via the established block-skip-at-join-point pattern (not
+    393 separate per-reload-site guards). One concrete unconfirmed lead already spotted:
+    `funcs_4.c:5030` (`MEM_W(0X0, ctx->r4) = ctx->r3;`, 35 shared reload sites) sits right after the
+    existing `NODE_LIST_HEAD_GUARD` (item -300) block, which validates `ctx->r2`/`ctx->r3` but not the
+    `ctx->r4` this specific write actually dereferences — plausible new propagation gap, unverified.
+    Full derivation: `docs/PROJECT-OVERVIEW.md` §21, `PORTING-STATE.md` Sessions 490-494.
 
 -316. **(s488 scan → s489 FIXED → s490 2nd confirm clean) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED,
     2/2.** A scope gap in the existing s436 `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`,

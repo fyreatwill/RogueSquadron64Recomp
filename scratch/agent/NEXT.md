@@ -2,64 +2,77 @@
 
 HYPOTHESIS-ID: item-317-step3-183-site-blanket-sweep
 
-## s493 was a MAINTENANCE iteration (CURRENT-TRUTH.md compaction)
+## s494 built and positive-controlled the step-3 tracer -- do NOT rebuild it, audit + use it
 
-s493 ran Step 0 of ITERATION.md (CURRENT-TRUTH.md was over the 60,000-byte trigger) and compacted it
-from 60,657 to 41,025 bytes (net -200 lines by `git diff --numstat`), migrating the full s488-492
-item -316/-317 narrative to `docs/PROJECT-OVERVIEW.md` §21. No experiment ran this session. Read
-PROJECT-OVERVIEW §21 if you need the full derivation behind item -317 (registers, addresses, fire
-counts, the s490 methodology lesson) — CURRENT-TRUTH.md itself now only carries the compact pointer.
+`scratch/agent/s494_item317_step3_tracer.py` is done and passes its positive control (2 synthetic
+repros of the already-fixed sites' exact pre-fix shapes, PLUS a reclassification check against the
+REAL regenerated post-fix `funcs_4.c` that correctly calls the now-fixed `buildOrientedFaceGeometry`
+site SAFE). Run `python3 scratch/agent/s494_item317_step3_tracer.py --selftest` first to reconfirm it
+still passes (should take <1s, no game run needed) before trusting anything below.
 
-## This session's work unit: item -317 step 3, the 183-site blanket sweep
+Raw scan (`scratch/agent/s494_item317_step3_report.json`, re-run via `--scan` if you regen
+`funcs_3.c`/`funcs_4.c` in between): 448 total `0X63B0` reload sites (not the ~183 estimate that was
+in this file before s494 -- that number predated a full regex census), 393 flagged `NEEDS_GUARD`, 55
+`SAFE_NO_DEREF`. **Deduped by actual downstream dereference location** (not by reload site) this
+collapses to **~150-160 distinct (file, line, register, offset) candidate guard placements across 30
+functions** -- the real actionable target size, ranked by how many reload sites share each location
+(top: `funcs_4.c:18192`, 48 sites converging on one unguarded `MEM_W(0X4, ctx->r2)` write -- the exact
+`DL_LIST_APPEND`/`CACHE_HEAD_A1` idiom shape items -291/-316 already partially fixed elsewhere).
 
-Item -317 steps 1 (`heapFreeListDequeue`) and 2 (`funcs_4.c` `buildOrientedFaceGeometry`) are both
-FULLY CLOSED, 2/2 independent confirms each. The only open scope in the entire -312..-317 lineage is
-**step 3**: the wider ~183-184-site population of the same reload idiom
-(`ctx->rL = MEM_W(ctx->rL, 0X63B0);`, the free-list-cache-head global at `0x801163B0`) across
-`funcs_3.c`/`funcs_4.c`, of which only 2 sites (steps 1 and 2) have been directly traced and fixed so
-far.
+**Known tool limitation, must be resolved before bulk-applying anything**: the tracer only recognizes
+ONE taint-clearing guard shape (`uint32_t x = U32(ctx->rN); if (x<0x80000000u||x>=0x80800000u)`,
+matching both step-1/step-2 fixes). Confirmed it ALSO correctly handles the different-shaped
+`NODE_LIST_HEAD_GUARD` if/else-with-fallback-zero pattern (both branches are plain `ctx->rN=...`
+assignments the generic transfer function already tracks) -- but it has NOT been audited against every
+other existing guard family (`SIBLING_PTR_WRITE_GUARD`, `DL_BUFFER_POOL_GUARD`,
+`TEXDATA_TABLE_GUARD`, etc.), each hand-written with its own code shape. Any location the tool flags
+could be a false positive if it uses a guard shape the tool doesn't recognize.
 
-**Why this needs new tooling, not more manual traces**: s490's own naive textual-proximity classifier
-(a subagent scan) mis-scoped its very first flagged site — it could not detect a shared-control-flow-
-label hazard where the same register has different provenance depending on which of two paths reaches
-it, which is exactly what made s490's first fix attempt false-positive 660,261 times in one soak
-before live-verify caught it. A blanket sweep at this scale needs a **scripted, control-flow-aware
-tracer** (Python, alongside the prior `scratch_s465_*`/`scratch_s482_*` scan scripts in N64Recomp) that,
-for each site:
-1. Traces the register actually DEREFERENCED forward from the reload (not just the reload's own
-   target register) to find every real dereference.
-2. For each dereference, traces backward through every control-flow path that can reach it, and
-   confirms every path has consistent, already-validated provenance for that register — not just the
-   textually-nearest guard.
+## This session's work unit, two sub-steps in order
 
-**Positive control before trusting it at scale**: the tracer must correctly flag BOTH already-known-bad
-sites (step 1's `heapFreeListDequeue` `0x8000D760` and step 2's `funcs_4.c` `0x80012F14` struct-init
-block) as vulnerable, AND correctly clear a manually-verified sample of benign sites (e.g. the four
-existing sibling guards on step 2's own path that read `ctx->r2`/`ctx->r3` and never touch the
-free-list-derived pointer) — before it is trusted to classify the remaining ~181 sites.
+**Step A -- audit before trusting at scale (do this first, it's cheap).** Pick 5-8 of the ~150
+distinct hit locations (mix: a few from the top-shared list, a few singletons) and manually read 20-30
+lines of surrounding context around each with `sed`/`Read` to confirm: (a) is the flagged register
+genuinely undefended right up to the dereference, or (b) does an existing guard family the tool doesn't
+recognize already clear it? Log a verdict per sampled location. If the false-positive rate in this
+sample is high (>1-2 of 5-8), the tool needs another guard-shape-recognition pass before step B --
+treat that as its own sub-work-unit, don't guess a fix on top of an unaudited tool.
 
-**Scope this as its OWN work unit** (tool-building), not a single guard fix — it may take more than
-one iteration. If it proves too large for one session, checkpoint the tracer script + its positive-
-control results in `scratch/` and hand off via NEXT.md rather than guessing at unverified sites.
+**Step B -- fix the highest-confidence, highest-shared-count location(s).** One concrete lead already
+spotted and worth checking FIRST: `funcs_4.c:5030` (`MEM_W(0X0, ctx->r4) = ctx->r3;`, 35 shared reload
+sites, sits 3 lines after the existing `NODE_LIST_HEAD_GUARD` block which validates `ctx->r2`/sets
+`ctx->r3`'s fallback but never touches `ctx->r4` -- the register this specific write actually
+dereferences). If step A confirms it's real, follow the established fix pattern from steps 1/2: guard
+the register actually dereferenced (`ctx->r4`), not an upstream proxy, block-skip to a safe landing
+label, live-verify with a same-run positive control before queueing a 2nd confirm.
 
-**Fallback if step 3 tooling is judged too large for this iteration**: either (a) a fresh
-frequency-scan angle — both `lui`+`lw` and `lui`+`sw` are structurally dry at the >=20-site tier per
-s488/s476 — or (b) the M5 lead-check cadence (last checked s488, due after 3+ more sessions have
-passed, i.e. now due), or (c) wait for a 7th lineage instance to surface organically via a soak crash,
-as items -316→-317 and -317 step 2 both did.
+**Do NOT attempt all ~150 locations in one pass.** Fix the highest-shared-count, audit-confirmed
+locations first (each fix likely closes many of the 393 raw reload-site flags at once, same as how
+NODE_LIST_HEAD_GUARD's original 30-site fix collapsed a much larger raw count). Re-run `--scan` after
+each fix to see the flagged count actually drop -- that's the tool's own regression/progress signal,
+free (no game run needed).
 
-## Regen/build/soak recipe
+**Fallback if step A finds the tool needs more guard-shape work**: extend
+`transfer()`'s `range_check_var`/`range_check_bound` handling in the tracer script to recognize
+additional guard code shapes found during the audit, re-run `--selftest` (must still pass), then
+re-scan.
+
+## Regen/build/soak recipe (only needed once step B produces an actual code change)
 `python3 -c "import glob,os; [os.remove(f) for f in glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c')]"`
 → `cd ~/Documents/Tools/rogue_squadron64 && python3 tools/make_elf.py` → `cd ~/Documents/Tools/N64Recomp
 && ./build/N64Recomp rogue_squadron.toml` → `python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py`
 (check the report for expected counts, no errors, no SKIPPED lines other than the known-permanent
-S392_H3A/H3B item -290 remainder; the script now REFUSES a second run on already-patched files via
-its own `RS64_FIXUP_APPLIED` marker — regenerate from scratch if you need to re-run it) → **`cd
+S392_H3A/H3B item -290 remainder; the script REFUSES a second run on already-patched files via its own
+`RS64_FIXUP_APPLIED` marker — regenerate from scratch if you need to re-run it) → **`cd
 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build`** (NOT `~/Documents/Tools/N64Recomp/build`
 — that's the recompiler CLI's own build and silently no-ops) →
-`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j8`. Arm every sibling
-guard env var per the standing rule. Live-verify BEFORE queueing a 2nd confirm and BEFORE folding
-into the ledger.
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j8`. Arm every sibling guard
+env var per the standing rule. Live-verify BEFORE queueing a 2nd confirm and BEFORE folding into the
+ledger.
+
+## M5 lead-check
+Cleared s494 (no new lead; sessions 489-493 were entirely the item -316/-317 lineage, unrelated to
+audio). Due again once 3+ sessions have passed from s494, i.e. s498+.
 
 ## Soak queue status
-Empty (last item, `s492_oriented_face_derived_ptr_confirm.sh`, ran clean and moved to done/).
+Empty.

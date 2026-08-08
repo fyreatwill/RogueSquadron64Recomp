@@ -40992,3 +40992,134 @@ Result: CURRENT-TRUTH.md went from 659 to 459 lines (60,657 → 41,025 bytes), a
 threshold. Read the whole file back after editing to confirm no dangling item-number references or
 broken section pointers; found none. No code, guard, or experiment changed this session — next
 iteration resumes item -317 step 3 (or a fresh M3/M5 lead) per NEXT.md.
+
+## Session 494 (2026-08-07): item -317 step 3 -- built and positive-controlled a
+control-flow-aware tracer for the 0x801163B0 reload idiom, filtered the 448-site
+raw population down to a 150-160-distinct-location actionable target; M5 lead-check
+cleared (no new lead, cadence reset)
+
+**Read first (per contract):** `docs/CURRENT-TRUTH.md` (41,025 bytes, well under the
+60,000 maintenance trigger -- not a maintenance iteration), `scratch/agent/NEXT.md`,
+`scratch/agent/SOAK-RESULTS.md` tail (nothing new to fold in -- s492's confirm was
+already folded in during s493's maintenance pass).
+
+**M5 lead-check (due since s488, 5 sessions have now passed).** Grepped every
+s489-493 `PORTING-STATE.md` session entry for audio/MusyX/voice/song mentions: the
+only hits are backward references to the already-closed s487
+`AUDIO_VOICE_BASEPTR_GUARD`/`_LOOP_GUARD` lineage and s488's own prior lead-check
+note -- sessions 489-493 were entirely the item -316/-317 heap-dequeue/
+oriented-face-geometry pointer lineage, unrelated to any audio stub/trap/gate. M5
+remains DONE and fully CLOSED, no new lead; cadence reset to s494.
+
+**Main work unit: item -317 step 3, the 183-184-site blanket sweep, per NEXT.md's
+own explicit instruction that this needs "a scripted, control-flow-aware tracer,"
+not another manual trace.** Delegated a read-only research pass (Explore agent) to
+gather, with file:line citations: the exact fixed code and fixup-script anchors for
+both already-closed sites (steps 1/2), the prior `scratch_s465_*`/`s434_*`/`s436_*`
+scan scripts' algorithms (none of them do real control-flow-aware forward/backward
+tracing -- the closest, `s436_r5_idiom_scan.py`, does a 150-line linear forward scan
+for ONE hardcoded register, `r5`, no branch/label awareness), and a raw census of
+the `0X63B0` reload idiom across `funcs_3.c`/`funcs_4.c`: **448 total read-reloads**
+(280 + 168, registers r2/r3/r4/r5/r7), not 183-184 as NEXT.md's rough prior estimate
+had it -- that number undercounted because it predated a full regex census.
+
+**Built `scratch/agent/s494_item317_step3_tracer.py`.** Design: a forward
+TAINT-PROPAGATION dataflow analysis over each function's pseudo-CFG (flat statement
+list + label/goto edges, worklist fixed-point, states merged by union at labels).
+Starting from a reload's destination register, taint propagates through direct
+register copies AND any RHS expression that references a tainted register (this is
+the key improvement over every prior scan script -- it catches "second-generation"
+derived pointers like `ctx->r18 = ADD32(ctx->r4, 0X8);`, exactly the shape s492 had
+to hand-trace for `buildOrientedFaceGeometry`). Taint is killed by reassignment from
+an untainted expression, or by the specific range-check guard shape both existing
+fixes use (`uint32_t x = U32(ctx->rN); if (x < 0x80000000u || x >= 0x80800000u)`). A
+HIT is recorded at any dereference (`MEM_W/H/B(ctx->rN, off)` read or
+`MEM_W/H/B(off, ctx->rN) = ...` write) of a still-tainted register.
+
+**Positive control, three legs (all pass):**
+1. Synthetic unit test reproducing `heapFreeListDequeue`'s exact pre-fix shape
+   (item -317 step 1) -- flagged NEEDS_GUARD.
+2. Synthetic unit test reproducing `buildOrientedFaceGeometry`'s exact pre-fix shape
+   (item -317 step 2, including the two sibling r2/r3 range-check guards that must
+   NOT be mistaken for clearing r4/r18's taint, and the second-generation
+   `ADD32(ctx->r4, 0X8)` derivation) -- flagged NEEDS_GUARD on the correct register
+   (r18, the actually-dereferenced one), did not false-positive on the r2/r3 sibling
+   guards.
+3. **Ran against the REAL, regenerated, POST-fix `funcs_4.c`** (not synthetic): the
+   tracer correctly reclassified the now-fixed `buildOrientedFaceGeometry` site
+   (`0x80012E94`) as `SAFE_NO_DEREF` -- direct confirmation on live data, not just
+   hand-built test strings, that the range-check-guard-recognition logic works.
+
+Caught and fixed one real bug in the first draft during this validation: a
+line-number double-offset in the JSON report writer (`Node.idx` is already an
+absolute 0-based file line index, `scan_file` was adding the function's start
+offset again, inflating reported hit lines by ~2x the function's start position --
+e.g. a real hit at line 9041 was reported as 17956). Verified against source after
+the fix (grep'd the corrected reported lines, confirmed each lands inside its
+own function's bounds and matches the expected code shape).
+
+**Scan result:** 393 of 448 sites `NEEDS_GUARD`, 55 `SAFE_NO_DEREF` (never
+dereferenced on any traced path -- compare-only/store-back shapes, matching most of
+the raw samples the Explore agent pulled, which showed `if (reg == 0) {...}`
+null-only checks with no subsequent deref). **Deduped by actual downstream
+dereference location** (not by reload site) the 393 flagged sites collapse to only
+**150 distinct (file, line, register, offset) hit locations across 30 distinct
+functions** (150 is itself an undercount -- 151 of the 393 sites hit the report's
+8-hits-per-site display cap, so the true distinct-location count is somewhat
+higher). The single most-shared location (`funcs_4.c:18192`, `MEM_W(0X4, ctx->r2)`)
+is reached, unguarded, from **48 different reload sites** in the same function --
+this is the exact "write-through-r2-field-0x4" shape the entire `DL_LIST_APPEND`/
+`CACHE_HEAD_A1` lineage (items -291, -316) has repeatedly found and fixed, strongly
+suggesting most of the 150 locations are the SAME already-partially-covered idiom
+family with real remaining gaps, not scattered unrelated bugs. One spot-checked
+location (`funcs_4.c:5030`, `MEM_W(0X0, ctx->r4) = ctx->r3;`, 35 shared reload
+sites) sits three lines after the existing `NODE_LIST_HEAD_GUARD` (item -300, s467)
+block, which validates `ctx->r2`/sets `ctx->r3`'s fallback to 0 on failure -- but
+does NOT validate `ctx->r4`, the register this specific write actually dereferences.
+This is plausibly a genuine, previously-undiscovered propagation gap (guard covers
+one sibling register, not the one actually used as the write base), but is **NOT
+confirmed** -- filed as the top candidate for next session's manual verification,
+not blindly guarded this session.
+
+**Known limitations of the tracer (recorded for whoever continues step 3):** (a) it
+only recognizes ONE guard shape (the `uint32_t x = U32(...); if (x<LO||x>=HI)`
+pattern) as taint-clearing -- other guard families in the codebase that use a
+differently-shaped check (e.g. NODE_LIST_HEAD_GUARD's if/else-with-fallback-zero,
+confirmed to still work correctly since both branches are plain `ctx->rN = ...`
+assignments matched by the generic ASSIGN transfer) may or may not be recognized
+depending on their exact code shape -- not exhaustively audited against every
+existing guard family; (b) union-merge at labels is deliberately NOT path-sensitive
+(matches the established "validate the register actually dereferenced" fix
+methodology from steps 1/2, but means the tool cannot by itself distinguish "truly
+always-unguarded" from "unguarded only via one rare path") -- any site the tool
+flags still needs the same by-hand control-flow read s492 did before writing a fix;
+(c) does not follow stack round-trips (store-to-stack-slot then later load) as a
+copy/taint-propagation mechanism -- a possible source of missed sites, not yet
+characterized.
+
+**Deliverables checkpointed:** `scratch/agent/s494_item317_step3_tracer.py` (the
+tracer + its 3-part positive control, runnable via `--selftest`),
+`scratch/agent/s494_item317_step3_report.json` (448-site raw scan output).
+
+**Outcome: ADVANCED** -- built and positive-controlled a genuinely new
+control-flow-aware analysis tool (the exact deliverable NEXT.md called for),
+produced a real scan result that reduces the open scope from "183-448 unclassified
+sites" to "~150-160 distinct, address-identified candidate guard locations across
+30 functions, ranked by how many reload sites share them," caught and fixed a real
+bug in the tool during its own validation, and cleared the overdue M5 lead-check.
+No guard written or regen/build/soak run this session (deliberate -- writing 393
+guards off an unaudited-at-scale tool would risk the same kind of large-scale
+false-positive mistake s490's own first attempt made at 1/19th this scale; the
+responsible next step is auditing the tool's guard-recognition coverage against the
+existing guard catalog, then fixing the highest-shared-count locations first, not
+blind bulk application).
+
+**Rules obeyed:** read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`,
+`scratch/agent/SOAK-RESULTS.md` first per contract; did not touch `lib/`; one game
+run at a time (none run this session -- pure static analysis, matching NEXT.md's
+own scoping of step 3 as tool-building); positive-controlled the tool three
+independent ways (2 synthetic + 1 real-data reclassification) before trusting its
+scan output at all, per iron rule 1; did not fold the raw 393-site count into
+CURRENT-TRUTH as a confirmed bug count -- reported it as an unaudited tool output
+requiring a filtering pass, consistent with "a null/positive result needs a
+same-run control" applied to a static-analysis tool rather than a runtime counter.
