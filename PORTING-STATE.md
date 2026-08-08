@@ -42175,3 +42175,68 @@ lineage).
 `HYPOTHESIS-ID`; resets any stall counter. No pivot needed.
 
 `scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
+
+## Session 509 (2026-08-08): item -317 step 3 -- folded in s508's queued EMIT_FRAME_RDP_INIT_DL_R2I_GUARD 2nd confirm (CLOSED 2/2), fixed the next tied-40 lead EMIT_FRAME_RDP_INIT_DL_R2J_GUARD
+
+**Housekeeping first**: `wc -c docs/CURRENT-TRUTH.md` printed 51073, under the 60000 maintenance
+threshold, so this was a normal work iteration. Read `scratch/agent/NEXT.md` (s508's recap) and the
+tail of `scratch/agent/SOAK-RESULTS.md`; the newest line was `s508_emit_frame_rdp_init_dl_r2i_confirm`
+(`rc=0`, `348s`) -- opened its `run.log` (per NEXT.md's own reminder that loop-run soak lines only
+carry `rc`/duration, the guard-fire detail lives in the capture directory's `run.log`) and found it
+CLEAN: 0 `emit-frame-rdp-init-dl-r2i-guard` fires, `hangarbay-entry` counted up cleanly to `n=2600`
+(positive control), zero `[...-guard]` lines of any other family, and no `CRASH` line at all -- the
+process ran the full scheduled duration with no fault. `EMIT_FRAME_RDP_INIT_DL_R2I_GUARD` is now
+**FULLY CLOSED, 2/2**. Item -317 step 3 now stands at **11/11 fixed guards fully closed** (12 fixed
+total counting this session's new one below).
+
+**Decision point** (per NEXT.md's own framing): checked whether item -319
+(`beginFrameDLChunk+40536`) had reached a 3rd independent occurrence -- it had not (still 2, per
+`docs/CURRENT-TRUTH.md`), and item -320 (`loadCutsceneAssetsByIndex+1860`, filed s508) was still a
+single occurrence with nothing new landing this session's own run either. Neither triggered the
+pivot threshold, so continued Option B: the tied-40 tier, same proven recipe.
+
+**Work unit**: re-ran `python3 scratch/agent/s494_item317_step3_tracer.py --scan` (280+168=448 raw
+sites, unchanged from every prior scan) then `python3 scratch/agent/s506_dedupe.py` -- confirmed
+NEXT.md's recorded `funcs_3.c:8714` pick had drifted to `funcs_3.c:8727` (same site, same shape:
+`emitFrameRdpInitDl`, write, `ctx->r2+0x4`, 40 shared reload sites, still top of the tied-40 tier).
+Read the surrounding source: at `0x80009A24` (`MEM_W(0X4, ctx->r2) = ctx->r3;`), `ctx->r2` is
+reloaded from the `0x801163B0` sibling table a few instructions earlier (`0x80009A18`) with only a
+null check (`ctx->r2 == 0`); the null arm takes a separate, identical, harmless write to
+`ctx->r3+0x0` then falls through to the SAME write this guard now covers, but the non-null path has
+no `0x80000000`-`0x80800000` range check before the dereference -- byte-for-byte the same shape as
+every one of the 11 prior guards in this lineage. Added `EMIT_FRAME_RDP_INIT_DL_R2J_GUARD` to
+`fixup_game_funcs.py` (copied the R2I block verbatim, only the site address/variable names/guard
+name changed). Regenerated per the mandatory order (delete `funcs_3.c` -> `make_elf.py` ->
+`N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`); the fixup report showed `patched x1` for
+the new guard and no anchor-count drift beyond the permanent 50-site `S392_H3A`/`S393_H3B` skip
+baseline (unchanged from every prior session). Clean build (only the pre-existing unrelated `DDIV`
+pointer-sign warnings).
+
+**1st live-verify** (`scratch/agent/manual_runs/s509_emit_frame_rdp_init_dl_r2j_manual.sh`, same
+`PROBE_KEYS` schedule and full sibling-guard env-var set as every prior soak in this lineage, plus
+the new `ROGUESQ_LOG_EMIT_FRAME_RDP_INIT_DL_R2J_GUARD`): CLEAN. 0
+`emit-frame-rdp-init-dl-r2j-guard` fires (null result), 0 fires on any of the ~46 other armed sibling
+guard families (no regression), `hangarbay-entry` counted cleanly to `n=2700` (strong positive
+control, well past the single-digit "too weak" threshold Iron Rule 1 flags). The only other guard
+family that fired was the pre-existing, unconditional `[zero-sample-guard]` in `lib/rt64/src/hle/
+rt64_state.cpp` (an already-catalogued s159 rendering diagnostic, scene-dependent, unrelated to any
+`RecompiledFuncs` guard and not gated by any env var this session armed) -- its presence here vs.
+absence in s507/s508's logs is just scene-content variance, not a regression. Crashed at 122.6s
+(`rc=3`, 49 frames captured): `pc-symbol=memcpy_recomp+288 (local-symtab)`,
+`last-guest-pc=0x80054780` -- grepped against `PORTING-STATE.md` and found byte-identical to s462's
+`stepactivesongtracks_confirm` crash and s487's `audio_voice_baseptr_loop` 2nd-confirm crash, both
+inside `tickWrappingTimerAccumulatorList` (`funcs_11.c`), a function with its own extensive
+already-catalogued crash history (`BREADCRUMB9`, the s343 div-by-zero, the s426-441
+epilogue-misattribution saga). Unrelated to this session's guard -- filed not chased, matching the
+exact pattern every prior idiom-class-audit confirm soak in this arc has hit (s449, s451, s462,
+s487). 2nd independent confirm queued:
+`scratch/agent/soak_queue/s509_emit_frame_rdp_init_dl_r2j_confirm.sh`.
+
+Neither this run nor s508's folded-in confirm produced a 3rd occurrence of item -319 or a 2nd of
+item -320 -- both remain at their prior counts, no pivot.
+
+**Rule 8 note**: ADVANCED (one confirm folded closing R2I 2/2, plus a new code change + 1st
+live-verify + queued confirm) on the still-open `item-317-step3-fix-next-ranked-leads`
+`HYPOTHESIS-ID`; resets any stall counter. No pivot needed.
+
+`scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
