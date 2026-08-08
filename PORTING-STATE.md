@@ -41123,3 +41123,109 @@ scan output at all, per iron rule 1; did not fold the raw 393-site count into
 CURRENT-TRUTH as a confirmed bug count -- reported it as an unaudited tool output
 requiring a filtering pass, consistent with "a null/positive result needs a
 same-run control" applied to a static-analysis tool rather than a runtime counter.
+
+## Session 495 (2026-08-07): item -317 step 3 -- audited the s494 tracer's output
+(0/8 false positives) and fixed its top-priority lead, `NODE_LIST_HEAD_SIBLING_R4_GUARD`,
+1st live-verify clean, 2nd confirm queued.
+
+**Loop-enforced pivot.** The loop flagged 3 consecutive iterations on
+HYPOTHESIS-ID `item-317-step3-183-site-blanket-sweep` without closing it and
+blocked a 4th unless this session either switched hypothesis or ran the single
+highest-information discriminating probe and closed/pivoted on its result.
+Chose the latter: NEXT.md already specified the exact probe (Step A, the
+guard-recognition audit) as the open question blocking Step B (fixing anything).
+
+**Step A -- audit.** Recomputed the s494 report's dedup independently (150
+distinct (file, line, kind, reg, off) dereference locations across 30
+functions, matching NEXT.md's ~150-160 estimate -- a second independent count
+that agrees with the first). Picked an 8-location sample spanning the
+distribution: the single top-shared location (`funcs_4.c:18192`, 48 sites),
+four more from the top/mid range (`funcs_3.c:6979`/40, `funcs_4.c:5030`/35 --
+NEXT.md's flagged lead -- `funcs_3.c:15977`/32, `funcs_4.c:3299`/26,
+`funcs_3.c:28922`/18), and two singletons (`funcs_3.c:83` in
+`heapFreeListInsert`, `funcs_3.c:858` in `countDisplayListChunks`). Dispatched
+an Explore subagent with the full existing-guard-shape catalog (16 named
+families found via `grep -oE "[A-Z_]+_GUARD"` across `funcs_3.c`/`funcs_4.c`)
+and explicit instructions to distinguish "a guard clears a DIFFERENT register"
+from "a guard clears THIS register" -- the exact failure mode that would
+produce a false TRUE_POSITIVE verdict. Result: **8/8 TRUE_POSITIVE, 0
+FALSE_POSITIVE.** Every sampled location has only a null check (`==0`/`!=0`),
+never the `0x80000000`-`0x80800000` range check, guarding it. This closes the
+audit sub-question decisively: the tracer's flagged locations are real, not
+artifacts of an unrecognized guard shape, at least at this 8-of-150 sample
+size (one sample; the remaining ~142 locations are still formally unaudited
+and the next session should widen the sample before assuming the 0%
+false-positive rate holds project-wide).
+
+**Step B -- fix the confirmed lead.** `funcs_4.c:5030`
+(`MEM_W(0X0, ctx->r4) = ctx->r3;`, inside `submitSceneNodeRender`, guest PC
+0x80010F8C) confirmed exactly as NEXT.md suspected: the existing
+`NODE_LIST_HEAD_GUARD` block at 0x80010F74-0x80010F78 (3 lines earlier)
+range-checks/clears `ctx->r2` and sets `ctx->r3`'s fallback, but never touches
+`ctx->r4` -- the register this specific write dereferences as an address, not
+a payload. Traced `ctx->r4`'s full provenance backward (`awk` scan for
+`ctx->r4 =` before line 5030): last set at 0x80010F4C
+(`ctx->r4 = MEM_W(ctx->r4, 0X63B0)` after `ctx->r4 = S32(0X8011<<16)`) -- a
+raw, unguarded `0x801163B0` reload, the exact idiom item -317 targets, with no
+range-check anywhere in the ~135-line span between reload and dereference.
+`ctx->r4` also appears as a VALUE (not dereferenced) at two earlier write
+sites in the same span (0x80010F7C, both branches of a duplicated
+if/goto-collapsed block) -- those are safe (writing an arbitrary payload
+value doesn't crash); only the 0x80010F8C site dereferences it as an address.
+
+Fixed with a new `NODE_LIST_HEAD_SIBLING_R4_GUARD`: same skip-the-write-on-
+invalid shape as `NODE_LIST_HEAD_WRITE_GUARD`'s own existing 10th-site fix
+(`funcs_3.c` 0x80008090, a structurally identical case -- a write-through-
+reload whose address register the main family's regex doesn't cover because
+the read-guard's own checked register isn't the address register at that
+site). Given its own family name (not folded into `NODE_LIST_HEAD_WRITE_GUARD`)
+since the site/function/register triple differs, following the same naming
+precedent as `ORIENTED_FACE_DERIVED_PTR_GUARD` vs `HEAP_DEQUEUE_DERIVED_PTR_GUARD`.
+Hand-authored as a single literal-string-anchor patch in `fixup_game_funcs.py`
+(confirmed unique via `text.count()==1` before writing, matching the
+established pattern for one-off single-site fixes) -- not a regex sweep, since
+this is a 1-of-1 site, unlike the 9-site-covering regexes elsewhere in the
+`NODE_LIST_HEAD_WRITE_GUARD` family.
+
+**Regen/build:** full pipeline (`make_elf.py` -> `N64Recomp` ->
+`fixup_game_funcs.py` -> `cmake --build`) ran clean. Fixup report showed
+`node-list-head-derived sibling-register write guard ... patched x1` (exactly
+expected) and no new SKIPPED lines beyond the known-permanent S392_H3A/S393_H3B
+remainder (item -290). Build succeeded with only pre-existing warnings.
+
+**Live-verify:** ran the standard hangar-bay `PROBE_KEYS` schedule with every
+sibling-guard env var armed plus the new
+`ROGUESQ_LOG_NODE_LIST_HEAD_SIBLING_R4_GUARD`. Result: 0 fires on the new
+guard, 0 fires on any of the ~40 other armed guard families (no regression),
+`hangarbay-entry` n=31 (matches the standard positive-control baseline, so the
+run genuinely exercised the target code region), and -- unlike most soaks in
+this lineage -- the run completed its **full** scheduled duration with no
+crash at all (122 frames captured, all `PROBE_KEYS` through 250s executed,
+process exited cleanly rather than hitting the catalogued
+`initVec4TripletFromArgs+68` family that s463/s468/s489/s492 all hit). 2nd
+independent confirm queued (`scratch/agent/soak_queue/s495_sibling_r4_confirm.sh`),
+same recipe plus the new env var.
+
+**What this doesn't prove yet:** the 0/8 false-positive audit sample is
+encouraging but is one sample of 150 distinct locations (~5%); it licenses
+trusting the tracer enough to act on individual audited-then-fixed leads, not
+yet a blanket "apply all 150." The other 5 sampled-and-confirmed TRUE_POSITIVE
+locations from this session's audit (`funcs_4.c:18192`/48 sites,
+`funcs_3.c:6979`/40, `funcs_3.c:15977`/32, `funcs_4.c:3299`/26,
+`funcs_3.c:28922`/18, plus the two singletons) remain unfixed -- next
+session's highest-value move is fixing `funcs_4.c:18192` (the single largest
+shared-count location in the whole 150-location population) now that it's
+audit-confirmed, not re-auditing from scratch.
+
+**Rules obeyed:** read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`,
+`scratch/agent/SOAK-RESULTS.md` first per contract; did not touch `lib/`
+(this fix lives entirely in `N64Recomp/fixup_game_funcs.py` and the generated
+`RecompiledFuncs/`, outside RS64Recomp's own `lib/` submodules -- no
+`submodule-patches/export.sh` needed); one game run at a time; regen order
+followed exactly (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` ->
+`cmake`); killed the live-verify run's own game process only after `probe.sh`'s
+own scheduled completion (no manual SIGTERM); positive-controlled via
+`hangarbay-entry` n=31 in the same run as the new guard's 0-fire null result,
+per iron rule 1; obeyed the loop's mandatory-pivot directive by running the
+named discriminating probe and closing on its result rather than repeating
+Step A/B planning for a 4th time.
