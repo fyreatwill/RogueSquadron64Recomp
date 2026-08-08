@@ -42240,3 +42240,79 @@ live-verify + queued confirm) on the still-open `item-317-step3-fix-next-ranked-
 `HYPOTHESIS-ID`; resets any stall counter. No pivot needed.
 
 `scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
+
+## Session 510 (2026-08-08): item -317 step 3 -- folded in s509's queued EMIT_FRAME_RDP_INIT_DL_R2J_GUARD 2nd confirm (CLOSED 2/2, item -317 step 3 now 12/12 fixed guards fully closed); found and fixed a SECOND distinct tied-40 write site inside `renderLitMeshFaceGroup` (`RENDER_LIT_MESH_R3_GUARD`, funcs_4.c:17346/0x800148E8, not covered by the earlier `RENDER_LIT_MESH_R2_GUARD`), 1st live-verify ran the FULL scheduled duration with no crash at all; filed a new single-occurrence breadcrumb (item -321, `menuOverlayInit+3648`) surfaced by the R2J confirm fold-in -- flagged, NOT concluded, as a possible recurrence of the historically-closed item -266/-267 chain
+
+**Fold-in**: read `scratch/agent/SOAK-RESULTS.md`'s tail and found the newest line
+(`s509_emit_frame_rdp_init_dl_r2j_confirm`, `rc=3`, `156s`) beyond what s509's own NEXT.md recap had
+already covered -- this is the 2nd (independent) confirm of `EMIT_FRAME_RDP_INIT_DL_R2J_GUARD`, not
+yet folded into the ledger. Opened `scratch/agent/soak_results/s509_emit_frame_rdp_init_dl_r2j_confirm_20260808-113446.log`
+(the top-level SOAK-RESULTS line for a loop-run soak has no guard-fire detail, per NEXT.md's own
+reminder) and found it CLEAN: 0 `emit-frame-rdp-init-dl-r2j-guard` fires, `hangarbay-entry` counted
+to `n=31` (a positive control, on the lower end but well above the single-digit "too weak" threshold
+Iron Rule 1 flags -- not discarded), 0 fires on any other armed sibling guard family except one
+benign pre-existing `hangarmenu-a0-guard` (item -265, unrelated, the established init-time-zero-value
+non-corruption signature). `EMIT_FRAME_RDP_INIT_DL_R2J_GUARD` is now **FULLY CLOSED, 2/2**. Item -317
+step 3 now stands at **12/12 fixed guards fully closed**.
+
+The run's own crash: `pc-symbol=menuOverlayInit+3648 (local-symtab)`, `last-guest-pc=0x800ab1c4`.
+Grepped `PORTING-STATE.md`/`docs/*.md` for this exact `pc-symbol`+host-offset -- it is BYTE-IDENTICAL
+in host symbol name and byte offset to the item -266/-267 chain crash from s428-433 (`menuOverlayInit+3648`
+SIGBUS, closed as a side effect of fixing `getAvailablePlayerCraftFlagsConsiderUnlocks`, s432-433 --
+see `docs/PROJECT-OVERVIEW.md` §16), but the `last-guest-pc` differs (`0x800ab1c4` here vs
+`0x800547bc`/other values in the old chain's occurrences) -- `last-guest-pc` is a breadcrumb of the
+last-executed guest instruction, not the fault site itself, so a match on the fault site (host
+pc-symbol+offset) with a DIFFERENT `last-guest-pc` is genuinely ambiguous: it could be a real
+recurrence of the old bug reached via a different guest code path, or (per the s422 `0x800290d4`
+overturned-conclusion precedent, where one breadcrumb value turned out to represent five different
+real crash functions) a coincidental re-hit of a shared host-code sink that isn't intrinsically the
+old bug. Per Iron Rule 4 (two independent lines of evidence before a conclusion enters
+`CURRENT-TRUTH`) and the s344 crash-signature-blindness method trap, one data point with an
+ambiguous signature match is NOT sufficient to conclude "item -266/-267 reopened" -- filed as a new
+item (-321), explicitly flagged as a possible-but-unconfirmed recurrence, watch for a 2nd occurrence
+with a matching `last-guest-pc` before escalating.
+
+**Decision point** (per NEXT.md's own framing): checked whether item -319 (`beginFrameDLChunk+40536`)
+had reached a 3rd independent occurrence -- it had not (neither this session's own soaks nor the
+folded-in confirm hit it), and item -320 (`loadCutsceneAssetsByIndex+1860`) also did not recur.
+Neither triggered the Option-A pivot threshold, so continued Option B: the tied-40 tier.
+
+**Work unit**: re-ran `python3 scratch/agent/s494_item317_step3_tracer.py --scan` (350 NEEDS_GUARD /
+98 SAFE_NO_DEREF, unchanged shape from every prior scan) then `python3 scratch/agent/s506_dedupe.py`
+-- confirmed the tied-40 tier's top pick is now `funcs_4.c:17346` (`renderLitMeshFaceGroup`, write,
+`ctx->r2+0x4`, 40 shared reload sites) -- a SECOND, distinct write site inside the SAME function
+`RENDER_LIT_MESH_R2_GUARD` (s496) already guards, at a different address (`0x800148E8` vs R2's
+`0x80014C6C`), confirmed by direct inspection: no PATCH comment present at this site before this
+change. Read the surrounding source: `ctx->r2` is reloaded from the `0x801163B0` free-list-cache-head
+global a few instructions earlier (`0x800148DC`) with only a null check (`ctx->r2 == 0`); the null
+arm takes a separate, identical, harmless write to `ctx->r3+0x0` then falls through to the SAME write
+this guard now covers, but the non-null path has no `0x80000000`-`0x80800000` range check before the
+dereference -- byte-for-byte the same shape as every one of the 12 prior guards in this lineage.
+Noted for the record: this is the SAME `0x801163B0` global that `GENERIC_CACHE_GUARD`
+(s434)/`CACHE_HEAD_A1_GUARD` (s436)/`FREELIST_NEXT_GUARD` (s441) already cover across 3 earlier
+sweeps, but this exact write-to-`$v0+4`-via-`ctx->r2` shape was not among those three sweeps' matched
+patterns. Added `RENDER_LIT_MESH_R3_GUARD` to `fixup_game_funcs.py` (copied the R2J block verbatim,
+only the site address/variable names/guard name changed). Regenerated per the mandatory order (delete
+`funcs_4.c` -> `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`); the fixup
+report showed `patched x1` for the new guard and no anchor-count drift beyond the permanent 50-site
+`S392_H3A`/`S393_H3B` skip baseline (unchanged from every prior session). Clean build (only the
+pre-existing unrelated `DDIV` pointer-sign warnings).
+
+**1st live-verify** (`scratch/agent/manual_runs/s510_render_lit_mesh_r3_manual.sh`, same `PROBE_KEYS`
+schedule and full sibling-guard env-var set as every prior soak in this lineage, plus the new
+`ROGUESQ_LOG_RENDER_LIT_MESH_R3_GUARD`): CLEAN. 0 `render-lit-mesh-r3-guard` fires (null result), 0
+fires on any of the ~47 other armed sibling guard families except one benign pre-existing
+`hangarmenu-a0-guard` fire (item -265, unrelated), `hangarbay-entry` counted to `n=35` (positive
+control). Full scheduled duration completed with **no crash at all** (121 frames captured, `rc=0`) --
+same clean-pass class as s495/s496/s506/s507/s508's own 1st live-verifies. 2nd independent confirm
+queued: `scratch/agent/soak_queue/s510_render_lit_mesh_r3_confirm.sh`.
+
+**Rule 8 note**: ADVANCED (one confirm folded closing R2J 2/2, plus a new code change + 1st
+live-verify + queued confirm) on the still-open `item-317-step3-fix-next-ranked-leads`
+`HYPOTHESIS-ID`; resets any stall counter. No pivot needed.
+
+**M5 cadence check**: none of this session's three soaks (R2J fold-in, R2J's own new confirm queued,
+R3 live-verify) touched any audio-subsystem crash signature or surfaced a new audio stub/gate lead.
+Cadence reset to s510, due again s513+ (unchanged mechanism from every prior check, s486-s506).
+
+`scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.

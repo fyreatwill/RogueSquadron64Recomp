@@ -15,8 +15,8 @@ Priority order for upcoming iterations, set after the 300-session review:
    prose and the Regeneration section's Standing warnings stay intact deliberately; both are used every
    iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
-   §10-§12). Next M5 work needs a genuinely new lead (**last checked s506 — zero new leads, cadence
-   reset to s506, due again once 3+ sessions have passed, i.e. s510+**).
+   §10-§12). Next M5 work needs a genuinely new lead (**last checked s510 — zero new leads, cadence
+   reset to s510, due again once 3+ sessions have passed, i.e. s513+**).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Every bucket
@@ -24,17 +24,21 @@ Priority order for upcoming iterations, set after the 300-session review:
    §18-§19). Items -312..-316 (s481-490, the `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/
    `AUDIO_SLOT_ACTIVE_GUARD`/`DL_ALLOC_PROPAGATION_GUARD` sibling-site-gap lineage) are all fully
    CLOSED — PROJECT-OVERVIEW §20-§21. **Item -317 (that lineage's step 3, a ~150-location blanket
-   sweep) status as of s508: 11 of ~150 leads fixed, 10 fully CLOSED 2/2 (`EMIT_FRAME_RDP_INIT_DL_R2H_GUARD`
-   closed this session), 1 (`EMIT_FRAME_RDP_INIT_DL_R2I_GUARD`) 1st-live-verify-clean with 2nd confirm
+   sweep) status as of s510: 13 of ~150 leads fixed, 12 fully CLOSED 2/2 (`EMIT_FRAME_RDP_INIT_DL_R2J_GUARD`
+   closed this session), 1 (`RENDER_LIT_MESH_R3_GUARD`) 1st-live-verify-clean with 2nd confirm
    queued** (see item -317 below for the current tied-40 tier and next pick; full campaign detail:
    PROJECT-OVERVIEW §22). Item -318 (`appendRdpStateDl+144`) is FULLY CLOSED 2/2
    (`APPEND_RDP_STATE_DL_ENTRY_GUARD`, fixed s505, 2nd confirm clean s507 after a s506 retry). Item -319
    (`beginFrameDLChunk+40536`) still has only 2 independent occurrences (s503, s505); none of this
    session's confirm/live-verify soaks crashed on it either, so it stays below the 3rd-occurrence
    threshold — s506's fresh tracer scan found a ready-made list of candidate guard sites inside
-   `beginFrameDLChunk` itself if/when that thread opens (see item -317 below). Item -320 (NEW,
-   `loadCutsceneAssetsByIndex+1860`/`last-guest-pc=0x800aafb8`) is a single-occurrence breadcrumb from
-   R2H's own 2nd confirm — watch for recurrence, not yet a dedicated thread.
+   `beginFrameDLChunk` itself if/when that thread opens (see item -317 below). Item -320
+   (`loadCutsceneAssetsByIndex+1860`/`last-guest-pc=0x800aafb8`) is still a single-occurrence
+   breadcrumb from R2H's own 2nd confirm — watch for recurrence, not yet a dedicated thread. Item -321
+   (NEW, `menuOverlayInit+3648`/`last-guest-pc=0x800ab1c4`) is a single-occurrence breadcrumb from
+   R2J's own 2nd confirm, host-symbol-offset-identical to the historically-CLOSED item -266/-267 chain
+   but with a different `last-guest-pc` — flagged as a *possible* recurrence, not concluded (see item
+   -321 below), watch for a 2nd occurrence with a matching `last-guest-pc` before escalating.
 
 -312..-317. **(s481-503) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`
     "grep-verified unique site" lineage — six items, all fully CLOSED except -317 step 3** (open scope
@@ -167,7 +171,24 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -320. The next NEW item takes -321.
+a range pointer. Highest allocated so far: -321. The next NEW item takes -322.
+
+-321. **(s510, NEW) `menuOverlayInit+3648`/`last-guest-pc=0x800ab1c4` crash — single occurrence,
+    host-symbol-offset-identical to the historically-CLOSED item -266/-267 chain but with a DIFFERENT
+    `last-guest-pc`, flagged as a possible-but-unconfirmed recurrence.** Surfaced by
+    `EMIT_FRAME_RDP_INIT_DL_R2J_GUARD`'s 2nd confirm soak (s510 fold-in, 0 fires on that guard itself,
+    `hangarbay-entry n=31` positive control, one benign `hangarmenu-a0-guard` co-fire). The item
+    -266/-267 chain (`PROJECT-OVERVIEW.md` §16) was CLOSED s432-433 as a side effect of fixing
+    `getAvailablePlayerCraftFlagsConsiderUnlocks`, and every one of its original occurrences carried
+    `last-guest-pc=0x800547bc` (or other values, never `0x800ab1c4`); `last-guest-pc` is a
+    last-executed-guest-instruction breadcrumb, not the fault site, so a host pc-symbol+offset match
+    with a differing breadcrumb is genuinely ambiguous — it could be a real recurrence via a different
+    guest code path, or (per the s422 `0x800290d4` overturned-conclusion precedent, where one shared
+    breadcrumb value turned out to span five different real crash functions) a coincidental re-hit of
+    a shared host-code sink unrelated to the old bug. Per Iron Rule 4 and the s344 crash-signature-
+    blindness method trap, do NOT conclude "item -266/-267 reopened" from this single ambiguous data
+    point — watch for a 2nd occurrence with a matching `last-guest-pc` before escalating. Not yet
+    source-traced.
 
 -320. **(s508, NEW) `loadCutsceneAssetsByIndex+1860`/`last-guest-pc=0x800aafb8` crash — single
     occurrence, watch for a 2nd before opening a dedicated thread.** Surfaced by
@@ -234,48 +255,48 @@ a range pointer. Highest allocated so far: -320. The next NEW item takes -321.
     different registers (`x8`, `x11`), reinforcing "common incidental constant," not "one propagating
     corrupted value." Full derivation: `PORTING-STATE.md` Sessions 501, 503, 505.
 
--317. **(s490-509) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+-317. **(s490-510) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
     derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c`, tool-audited then fixed
-    incrementally, 12 of ~150 leads fixed so far, 11 FULLY CLOSED 2/2, 1 1st-live-verify-clean.**
+    incrementally, 13 of ~150 leads fixed so far, 12 FULLY CLOSED 2/2, 1 1st-live-verify-clean.**
     Steps 1 (`heapFreeListDequeue`) and 2 (`buildOrientedFaceGeometry`) are separately FULLY CLOSED
     2/2 (item -316 area). Step 3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a forward
     taint-propagation dataflow analysis) found ~448 raw reload sites deduping to ~150 distinct
     candidate guard placements across 30 functions; an 8-site audit sample confirmed 8/8
-    TRUE_POSITIVE. Fixed and 2/2-confirmed clean, s495-s509: `NODE_LIST_HEAD_SIBLING_R4_GUARD` (35
-    sites), `RENDER_LIT_MESH_R2_GUARD` (48 sites), `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` through `...R2I_GUARD`
-    (nine guards, 40 shared sites each, all in `emitFrameRdpInitDl` — R2I's 2nd confirm closed clean
-    s509: 0 `emit-frame-rdp-init-dl-r2i-guard` fires, `hangarbay-entry n=2600` positive control, ran the
-    full 348s scheduled duration with no crash at all). s509 fixed a 10th guard in that same function,
-    `EMIT_FRAME_RDP_INIT_DL_R2J_GUARD` (`funcs_3.c:8727`/`0x80009A24`, 40 shared sites, same shape,
-    line drifted from NEXT.md's recorded `funcs_3.c:8714` pick — re-verified via
-    `s494_item317_step3_tracer.py --scan` + `s506_dedupe.py` before touching source) — **1st
-    live-verify CLEAN** (0 `emit-frame-rdp-init-dl-r2j-guard` fires, 0 fires on any other armed
-    sibling guard, `hangarbay-entry n=2700` strong positive control; crashed at 122.6s on
-    `pc-symbol=memcpy_recomp+288`, `last-guest-pc=0x80054780` — the already-catalogued
-    `tickWrappingTimerAccumulatorList` (`funcs_11.c`) crash family, byte-identical to s462's and
-    s487's own confirms in this same address range, unrelated to this guard), 2nd confirm queued
-    (`scratch/agent/soak_queue/s509_emit_frame_rdp_init_dl_r2j_confirm.sh`). All 12 fixes share one
+    TRUE_POSITIVE. Fixed and 2/2-confirmed clean, s495-s510: `NODE_LIST_HEAD_SIBLING_R4_GUARD` (35
+    sites), `RENDER_LIT_MESH_R2_GUARD` (48 sites), `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` through
+    `...R2J_GUARD` (ten guards, 40 shared sites each, all in `emitFrameRdpInitDl` — R2J's 2nd confirm
+    closed clean s510: 0 `emit-frame-rdp-init-dl-r2j-guard` fires, `hangarbay-entry n=31` positive
+    control (lower than usual but above the single-digit discard threshold), one benign
+    `hangarmenu-a0-guard` co-fire; the run's own crash, `menuOverlayInit+3648`/`last-guest-pc=0x800ab1c4`,
+    filed as new item -321, see above). s510 found and fixed a SECOND, distinct tied-40 write site
+    inside `renderLitMeshFaceGroup` itself (not covered by `RENDER_LIT_MESH_R2_GUARD`'s own fix),
+    `RENDER_LIT_MESH_R3_GUARD` (`funcs_4.c:17346`/`0x800148E8`, 40 shared sites, same shape) — **1st
+    live-verify CLEAN** (0 `render-lit-mesh-r3-guard` fires, 0 fires on any other armed sibling guard
+    except one benign `hangarmenu-a0-guard` co-fire, `hangarbay-entry n=35` positive control; ran the
+    FULL scheduled duration with no crash at all, 121 frames captured), 2nd confirm queued
+    (`scratch/agent/soak_queue/s510_render_lit_mesh_r3_confirm.sh`). All 13 fixes share one
     shape: a null check (`ctx->r2 == 0`) gates the null arm safely, but the non-null fallthrough has no
     `0x80000000`-`0x80800000` range check before dereferencing; downstream control flow reassigns the
     register from the table again before any further use, so skip-the-write-on-invalid is a safe fix.
-    Two crash threads surfaced as a side effect of earlier live-verifies (not chased in-band): item -318
-    (`appendRdpStateDl+144`, FULLY CLOSED 2/2 s507) and item -319 (`beginFrameDLChunk+40536`, still only
-    2 independent occurrences) — see above/below; a 3rd, item -320
-    (`loadCutsceneAssetsByIndex+1860`, filed s508), remains at a single occurrence (not hit again
-    this session). **~131 other distinct locations remain unaudited/unfixed.** Current tied-at-40 tier
-    (s509's fresh re-scan confirmed the recommended pick had drifted `funcs_3.c:8714` →
-    `funcs_3.c:8727` before it was fixed this session — line numbers DO drift after every guard
-    insertion, re-verify with `s494_item317_step3_tracer.py --scan` + `scratch/agent/s506_dedupe.py`
-    before touching source, do NOT trust recorded line numbers across sessions): `funcs_4.c:17346`
-    (`renderLitMeshFaceGroup`, flagged since s497, unfixed 12 sessions running — now the sole
-    remaining tied-40 lead; re-verify its line too before touching source). **New signal (s506, not
-    yet acted on)**: the tracer scan also flags a cluster of candidate sites (counts 28-36, lower than
-    the tied-40 tier but numerous) inside `beginFrameDLChunk` itself — the exact function item -319's
-    recurring crash lives in; if a 3rd item -319 occurrence lands, re-run the tracer scan and use that
-    cluster as a ready-made starting point (recorded line numbers from s506/s507 have already
-    drifted, do not reuse them). Next-ranked after the tied-40 tier: `funcs_4.c:3299`-ish (26 sites),
-    `funcs_3.c:28922`-ish (18 sites), two singletons at `funcs_3.c:83`/`funcs_3.c:858`.
-    Full derivation: `docs/PROJECT-OVERVIEW.md` §21-§22, `PORTING-STATE.md` Sessions 490-509.
+    Three crash threads surfaced as a side effect of earlier live-verifies (not chased in-band): item -318
+    (`appendRdpStateDl+144`, FULLY CLOSED 2/2 s507), item -319 (`beginFrameDLChunk+40536`, still only
+    2 independent occurrences), item -320 (`loadCutsceneAssetsByIndex+1860`, still a single occurrence),
+    and item -321 (`menuOverlayInit+3648`, filed s510, single occurrence, possible-but-unconfirmed
+    item -266/-267 recurrence) — see above/below. **~131 other distinct locations remain
+    unaudited/unfixed** (this session's fix was a SECOND site inside an already-partially-covered
+    function, not a new function, so the ~150-location estimate is unchanged). Current tied-at-40 tier
+    (s510's fresh re-scan, `s494_item317_step3_tracer.py --scan` + `scratch/agent/s506_dedupe.py`, is
+    now DRY — the prior sole member, `funcs_4.c:17346`, was fixed this session; re-run both scripts
+    fresh next session before picking, line numbers DO drift after every guard insertion). **New
+    signal (s506, not yet acted on)**: the tracer scan also flags a cluster of candidate sites (counts
+    28-36, lower than the tied-40 tier but numerous) inside `beginFrameDLChunk` itself — the exact
+    function item -319's recurring crash lives in; if a 3rd item -319 occurrence lands, re-run the
+    tracer scan and use that cluster as a ready-made starting point (recorded line numbers from
+    s506/s507 have already drifted, do not reuse them). Next-ranked candidates per s510's scan:
+    `funcs_3.c:16582`/`funcs_3.c:14280`/`funcs_3.c:15157` (36 sites each, all `beginFrameDLChunk`),
+    `funcs_4.c:17759`/`funcs_4.c:15620` (36/32 sites, `renderLitMeshFaceGroup` — a THIRD site in the
+    same function), `funcs_4.c:4880` (34 sites, `submitSceneNodeRender`). Full derivation:
+    `docs/PROJECT-OVERVIEW.md` §21-§22, `PORTING-STATE.md` Sessions 490-510.
 
 -316. **(s488 scan → s489 FIXED → s490 2nd confirm clean) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED,
     2/2.** A scope gap in the existing s436 `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`,
