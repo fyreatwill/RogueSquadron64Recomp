@@ -314,6 +314,14 @@ else:
       break
     fi
   done
+  # Both break paths leave contract_ok=0 without re-asking the gate, but a
+  # retry may have satisfied the contract BEFORE hitting a limit (and the
+  # limit grep can false-positive on the agent merely narrating "usage
+  # limit"). One final verify settles contract_ok from the on-disk state, so
+  # rule-8 never strikes an iteration the gate would actually pass.
+  if [ "$contract_ok" != "1" ] && tools/agent/stop_gate.sh --verify >/dev/null 2>&1; then
+    contract_ok=1
+  fi
 
   status="$(tr -d '[:space:]' < "$AG/STATUS" 2>/dev/null)"
   log "iteration $n finished $(date) STATUS=${status:-unset} HEAD=$(git rev-parse --short HEAD 2>/dev/null)"

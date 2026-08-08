@@ -124,7 +124,7 @@ fi
 # Rule 8 needs machine-readable hypothesis identity: loop.sh counts consecutive
 # non-ADVANCED iterations per slug (a gate-validated ADVANCED resets the count)
 # and forces a pivot at 3, blocks at 4.
-grep -q '^HYPOTHESIS-ID:' "$AG/NEXT.md" 2>/dev/null \
+grep -qE '^HYPOTHESIS-ID:[[:space:]]*[A-Za-z0-9._-]+' "$AG/NEXT.md" 2>/dev/null \
   || block "Exit contract unmet: scratch/agent/NEXT.md has no 'HYPOTHESIS-ID: <slug>' line. Add one naming the active investigation thread — keep the slug while pursuing the same hypothesis (a systematic sweep keeps ONE slug for its whole campaign; ADVANCED iterations reset the strike count), change it when you pivot or close it. The loop enforces iron rule 8 (3 strikes on stalled iterations) with it."
 
 # --- OUTCOME: distinguish progress from ledger churn -------------------------
