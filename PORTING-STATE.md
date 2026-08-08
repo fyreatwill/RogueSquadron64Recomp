@@ -41918,3 +41918,64 @@ was already sitting in the same file).
 **No experiment run, per the maintenance-iteration rule.** `docs/PROJECT-OVERVIEW.md` §22 is the new
 durable-detail home for the step-3 campaign; CURRENT-TRUTH items -317/-318/-319 hold current status only.
 Full diff: this commit.
+
+## Session 505 (2026-08-08): item -318 -- source-traced and FIXED the appendRdpStateDl+144/last-guest-pc=0x800109b8 crash (3 independent occurrences s498/s501/s503), 1st live-verify clean, 2nd confirm queued; also caught the live-verify's own crash as a 2nd occurrence of item -319's beginFrameDLChunk+40536 signature
+
+Picked Option A from s504's NEXT.md decision point (item -318's own pre-set 3rd-occurrence threshold had
+been met): pivot to the `appendRdpStateDl+144` recurrence, skipping the already-flagged-as-false-lead
+`0x0000000300000000` register-correlation angle per s504's correction.
+
+**Source trace, dual-confirmed (own read + an independently dispatched Explore-agent pass reaching the
+same conclusion from scratch).** All 6 call sites of `appendRdpStateDl` (`RecompiledFuncs/funcs_4.c`,
+including `submitSceneNodeRender`'s `jal 0x8000DE70` at guest `0x800109B4` -- confirming s501's
+methodological note that `last-guest-pc=0x800109B8` names the call's branch-delay-slot instruction, not
+a fault inside the callee) reload a global at guest address `0x8011DC58` (the `-0x23A8` "sibling global"
+from item -296/-306's `SIBLING_PTR_WRITE_GUARD` lineage) via `lui $reg,0x8012; lw $reg,-0x23A8($reg)`
+with **no range check**, then pass the raw value as `$a0`/`ctx->r4` into the call
+(`funcs_4.c:2975-2995` for the `submitSceneNodeRender` instance). Inside `appendRdpStateDl`
+(`funcs_3.c:26484`, guest `0x8000DE70`), that argument becomes a display-list-append write cursor
+(aliased to `ctx->r3` at `+2` bytes in and `ctx->r11` further in) dereferenced **unconditionally from
+the function's first instruction** (`0x8000DE7C`, +12 bytes -- `MEM_W(0X0, ctx->r3) = ctx->r2;`) through
+dozens of further sites with zero null/range check anywhere in the function, on any alias. This is a
+cross-function propagation gap of the same conceptual shape as item -316's `DL_ALLOC_PROPAGATION_GUARD`
+(an unguarded reload passed onward instead of dereferenced in-place) but via a call argument rather than
+a second in-function deref -- and it falls entirely outside the existing 119-site
+`SIBLING_PTR_WRITE_GUARD` audit (item -296/-306), whose own scoping comment
+(`fixup_game_funcs.py:16219-16274`) explicitly covers only same-function `MEM_W(...) = val` writes
+through this global, not "reload -> pass as call argument -> callee writes." The `SIBLING_PTR_WRITE_GUARD`
+comment block even names `submitSceneNodeRender` as a function carrying this exact `-0x23A8` idiom
+unguarded (10 sites, flagged since s459) without this particular call-argument instance ever having been
+enumerated -- the codebase's own history anticipated this class of bug in this function but the s459
+audit's site-collection method (same-function write anchors only) structurally couldn't see it.
+
+**Fix: `APPEND_RDP_STATE_DL_ENTRY_GUARD`, funcs_3.c:26484 (appendRdpStateDl entry).** Guard once at
+function entry: range-check `ctx->r4` (`0x80000000`-`0x80800000`), early `return` (skip the whole
+function body) if invalid. `appendRdpStateDl` is `void` with RDRAM-only side effects (no register return
+value consumed by any caller), so skipping the body on an invalid cursor is safe by the same
+"nothing downstream depends on it" precedent as every other item -317/-318-family guard, and this single
+patch point covers all 6 current call sites (and any future ones) at once -- a deliberately broader fix
+than the narrower "guard just the one write that happened to fault" alternative first drafted, chosen
+because every write in the function shares the identical unvalidated root argument.
+
+Recipe: deleted `funcs_3.c`, `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` (patched x1, no
+unexpected anchor-count mismatches beyond the permanent S392_H3A/S393_H3B remainder) -> `cmake --build`
+(clean). **1st live-verify** (`scratch/agent/manual_runs/s505_append_rdp_state_dl_entry_manual.sh`,
+foreground, full env-var set incl. every prior guard in the lineage): 0
+`append-rdp-state-dl-entry-guard` fires (null result), 0 regressions on any of the ~44 other armed
+sibling guards (3 benign init-time `n=0`/`ra=0x00000000` co-fires on `sibling-ptr-write-guard`/
+`dl-list-reset-rnode-guard`/`dl-list-append-rwrite-guard` -- the established non-corruption signature),
+`hangarbay-entry n=31` (positive control). Crashed at ~105s (43 frames captured) on
+`beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0` -- **byte-identical `pc-symbol` AND `last-guest-pc`
+to item -319's s503 single data point**, now a 2nd independent occurrence, unrelated to this guard. 2nd
+confirm queued: `scratch/agent/soak_queue/s506_append_rdp_state_dl_entry_confirm.sh`.
+
+Updated `docs/CURRENT-TRUTH.md`: item -318 rewritten as FIXED (fix mechanism, 1st live-verify result,
+2nd-confirm-queued status; register-correlation caution preserved verbatim since it's still correct);
+item -319 updated to 2 occurrences with its own 3rd-occurrence escalation threshold noted; USER DIRECTIVE
+summary block's item -318/-319 pointers refreshed to match.
+
+**Rule 8 note**: this is the 1st iteration since s504's MAINTENANCE pass under a still-open
+`HYPOTHESIS-ID`; ADVANCED (a real code change + live-verify + queued confirm), resets any stall counter.
+No pivot needed.
+
+`scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.

@@ -25,10 +25,11 @@ Priority order for upcoming iterations, set after the 300-session review:
    `AUDIO_SLOT_ACTIVE_GUARD`/`DL_ALLOC_PROPAGATION_GUARD` sibling-site-gap lineage) are all fully
    CLOSED — PROJECT-OVERVIEW §20-§21. **Item -317 (that lineage's step 3, a ~150-location blanket
    sweep) status as of s504: 8 of ~150 leads fixed, all 8 now fully CLOSED 2/2** (see item -317 below
-   for the current tied-40 tier and next pick; full campaign detail: PROJECT-OVERVIEW §22). Two
-   watch-items surfaced as a side effect of those live-verifies, not chased in-band: item -318
-   (`appendRdpStateDl+144`, 3 independent occurrences, now top-priority for the next dedicated M3
-   session — see below) and item -319 (`beginFrameDLChunk+40536`, single data point).
+   for the current tied-40 tier and next pick; full campaign detail: PROJECT-OVERVIEW §22). Item -318
+   (`appendRdpStateDl+144`, 3 independent occurrences) was picked up and FIXED s505
+   (`APPEND_RDP_STATE_DL_ENTRY_GUARD`), 1st live-verify clean, 2nd confirm queued — see item -318
+   below. Item -319 (`beginFrameDLChunk+40536`) now has 2 independent occurrences (s503, s505); watch
+   for a 3rd before opening a dedicated thread.
 
 -312..-317. **(s481-503) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`
     "grep-verified unique site" lineage — six items, all fully CLOSED except -317 step 3** (open scope
@@ -163,52 +164,51 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -319. The next NEW item takes -320.
 
--319. **(s503, NEW) `beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0` crash — single data point,
-    filed not chased.** Surfaced by `EMIT_FRAME_RDP_INIT_DL_R2C_GUARD`'s 2nd confirm soak (0 fires on
-    that guard itself — clean, closes item -317's R2C lead; 0 regressions beyond the established
-    benign init-time co-fire signature). Does not match any prior catalogued family (grepped
-    `PORTING-STATE.md` + both `docs/*.md`, no hits). Watch for a 2nd independent occurrence before
-    opening a dedicated thread.
+-319. **(s503, NEW; 2nd occurrence s505) `beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0` crash —
+    TWO independent occurrences now, watch for a 3rd before opening a dedicated thread.** First
+    surfaced by `EMIT_FRAME_RDP_INIT_DL_R2C_GUARD`'s 2nd confirm soak (s503, 0 fires on that guard
+    itself). 2nd occurrence: item -318's `APPEND_RDP_STATE_DL_ENTRY_GUARD` 1st live-verify (s505, 0
+    fires on that guard either) — byte-identical `pc-symbol` AND `last-guest-pc` to the s503 sighting,
+    both unrelated to the guard under test in their respective runs. Does not match any prior
+    catalogued family (grepped `PORTING-STATE.md` + both `docs/*.md`, no hits beyond its own two
+    entries). Per item -318's own precedent, a 3rd independent occurrence of this exact signature
+    would meet the threshold this campaign has been using to escalate a passive breadcrumb to a
+    dedicated M3 session.
 
--318. **(s501, NEW; 3rd occurrence s503) `appendRdpStateDl+144` crash — the exact `pc-symbol`/
-    `last-guest-pc` pair recurred THREE independent times (s498, s501, s503), with a
-    corroborating guard-fire chain and a source-confirmed call site. TOP PRIORITY for the next
-    dedicated M3 session per this item's own pre-set 3rd-occurrence threshold — but see the
-    register-correlation CAUTION below before spending a session chasing that half of it.**
-    All three occurrences: `pc-symbol=appendRdpStateDl+144`, `last-guest-pc=0x800109b8`. s501 and s503
-    each additionally logged 3-4 sibling guards (`freelist-next-guard`, `generic-cache-guard`,
-    `dl-list-append-rwrite-guard`, `dl-list-reset-rnode-guard`) firing with an identical *within-run*
-    corrupted value in the lines immediately before the crash (s501: `0xB0BB7280`; s503:
-    `0x036505B4` — different value each run, i.e. a genuinely wild/uninitialized pointer, not a fixed
-    literal). Source-level trace (grepped the literal guest addresses across every `funcs_*.c`) places
-    all four guard sites AND `last-guest-pc=0x800109b8` inside **`submitSceneNodeRender`**
-    (`funcs_4.c`), not `appendRdpStateDl` — `0x800109B8` is `submitSceneNodeRender`'s own call site
-    into `appendRdpStateDl(rdram, ctx)`, and `g_rs64_last_guest_pc` isn't updated again once control
-    leaves the caller, so it names the call site rather than the fault site when a callee crashes
-    before its own first logged instruction (methodological note: don't assume `last-guest-pc` is the
-    fault PC across a call boundary). This supersedes the old item -306 "flagged, not chased" theory.
-    **CAUTION — the register-correlation half of this item is likely a false lead**: s503's occurrence
-    additionally carried `x0`=`x9`=`0x0000000300000000` in its mcontext dump, initially read as a new
-    correlation to the separate `initVec4TripletFromArgs+68` family (items -302/-306). But
-    `docs/CURRENT-TRUTH.md`'s own overturned-conclusions section (s216-218→s219) already resolved this
-    exact question once: `0x0000000300000000` in `x0`/`x8` is **the process's constant RDRAM host base
-    pointer, present by construction in every `MEM_W`-macro-involved fault, not written corruption**.
-    This session's own s502/s503 2nd-confirm folds add two more data points that support the same
-    reading: the R2E confirm's crash carried the value in `x8` (not `x0`/`x9`), and the R2F confirm's
-    crash carried it in `x11` — a THIRD and FOURTH distinct register pairing across four total
-    sightings. A value that keeps landing in whatever register happens to be live at crash time, rather
-    than in a consistent register pair, is much more consistent with "common background constant
-    dumped incidentally" than with "one corrupted value propagating from a single root cause." Treat
-    the `initVec4TripletFromArgs+68` correlation as **not a real link** absent a stronger discriminator;
-    do not spend session time tracing "the same upstream source" between the two families.
-    **Next step, if picked up**: the `appendRdpStateDl+144`/`last-guest-pc=0x800109b8` recurrence
-    itself is still real and still worth a session — source-trace what `appendRdpStateDl` dereferences
-    at guest offset `+144` (fresh guest-address lookup in `funcs_3.c`), and/or trace whether the `ctx`
-    register state left by `submitSceneNodeRender`'s preceding corrupted-pointer guard chain is what
-    `appendRdpStateDl` ends up reading. Skip the `0x0000000300000000` cross-family angle per the
-    caution above. Full derivation: `PORTING-STATE.md` Sessions 501, 503; register-pairing check:
-    this session (s504)'s fold-in of `scratch/agent/soak_results/s502_emit_frame_rdp_init_dl_r2e_confirm/run.log`
-    and `.../s503_emit_frame_rdp_init_dl_r2f_confirm/run.log`.
+-318. **(s501-505) `appendRdpStateDl+144` crash — FIXED (`APPEND_RDP_STATE_DL_ENTRY_GUARD`), 1st
+    live-verify CLEAN, 2nd confirm queued.** All three original occurrences (s498, s501, s503) shared
+    `pc-symbol=appendRdpStateDl+144`, `last-guest-pc=0x800109b8`. s505 source-traced the mechanism
+    (independently corroborated by a second Explore-agent pass reaching the same conclusion): all 6
+    call sites of `appendRdpStateDl` (`funcs_4.c`, including `submitSceneNodeRender`'s `jal` at
+    `0x800109B4`, whose delay slot at `0x800109B8` is what `last-guest-pc` actually names — the call
+    site, not the fault site, per the s501 methodological note preserved below) reload the `-0x23A8`
+    sibling global (`0x8011DC58`) with **no range check**, then pass the raw result as `$a0`/`ctx->r4`
+    into the call. Inside `appendRdpStateDl` (`funcs_3.c` `0x8000DE70`), that argument becomes a
+    display-list-append write cursor (aliased `ctx->r3`/`ctx->r11`) dereferenced **unconditionally from
+    the function's first instruction** (`0x8000DE7C`, +12 bytes) through dozens of further sites, with
+    zero null/range check anywhere in the function on any alias — a cross-function propagation gap of
+    the same shape as item -316's `DL_ALLOC_PROPAGATION_GUARD` (an unguarded reload passed onward
+    instead of dereferenced in-place), but via a call argument rather than a second in-function deref,
+    and NOT covered by the existing 119-site `SIBLING_PTR_WRITE_GUARD` audit (item -296/-306), which
+    only covers same-function `MEM_W(...) = val` writes through this same global, not "reload → pass as
+    call arg → callee writes." Fix: guard once at function entry (`ctx->r4` range-checked
+    `0x80000000`-`0x80800000`, early `return` — skip the whole body — if invalid), covering all 6 call
+    sites from one patch point; `appendRdpStateDl` is void with RDRAM-only side effects, so skipping the
+    body on an invalid cursor is safe by the same precedent as every other item -317/-318-family guard.
+    **1st live-verify (s505)**: 0 `append-rdp-state-dl-entry-guard` fires (null result), 0 regressions
+    on any sibling guard (3 benign init-time `n=0`/`ra=0x00000000` co-fires, the established
+    non-corruption signature), `hangarbay-entry n=31` (positive control). Crashed at ~105s on
+    `beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0` — **a 2nd occurrence of item -319's exact
+    signature** (see below), unrelated to this guard. 2nd confirm queued:
+    `scratch/agent/soak_queue/s506_append_rdp_state_dl_entry_confirm.sh`.
+    **Register-correlation caution (preserved, still applies)**: s503's occurrence additionally carried
+    `x0`=`x9`=`0x0000000300000000` in its mcontext dump, initially read as a correlation to the separate
+    `initVec4TripletFromArgs+68` family (items -302/-306) — this is a **false lead**, already resolved
+    by the s216-218→s219 overturned-conclusion entry (`0x0000000300000000` in `x0`/`x8` is the
+    process's constant RDRAM host base pointer, present by construction in every `MEM_W`-involved fault,
+    not written corruption); s502/s503's own 2nd-confirm folds added two more sightings in two MORE
+    different registers (`x8`, `x11`), reinforcing "common incidental constant," not "one propagating
+    corrupted value." Full derivation: `PORTING-STATE.md` Sessions 501, 503, 505.
 
 -317. **(s490-504) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
     derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c`, tool-audited then fixed
