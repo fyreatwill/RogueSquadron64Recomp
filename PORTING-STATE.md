@@ -43525,3 +43525,58 @@ pick the next-highest tier (as of this session's scan: `funcs_3.c:15209`/`14802`
 remaining `beginFrameDLChunk` tied-36 members, then `emitColorFillRect`/`submitSceneNodeRender` at 30
 sites each). Watch for a 3rd occurrence of items -326 (`do_rom_read`/`piDmaWorker` shape, historically
 significant if it recurs) or -327 (`submitSceneNodeRender+67668`).
+
+## Session 527 (2026-08-08): item -317 step 3's `BEGIN_FRAME_DL_CHUNK_R5_GUARD` 2nd confirm read CLEAN (FULLY CLOSED 2/2), 25th guard (`BEGIN_FRAME_DL_CHUNK_R6_GUARD`, `beginFrameDLChunk`'s 6th blanket-sweep site) source-traced and FIXED, 1st live-verify clean, 2nd confirm queued
+
+**Fold-in**: `scratch/agent/SOAK-RESULTS.md` had a new line for
+`s526_begin_frame_dl_chunk_r5_confirm` (rc=3, 173s). Read the full
+`scratch/agent/soak_results/s526_begin_frame_dl_chunk_r5_confirm_20260808-163518.log/run.log`: 0
+`begin-frame-dl-chunk-r5-guard` fires, 1 benign pre-existing `hangarmenu-a0-guard` co-fire (item -265,
+unrelated), `hangarbay-entry n=33` (positive control). Crashed at 127.4s on
+`load_hmt_and_hob+3164`/`last-guest-pc=0x800290d4` -- grepped `PORTING-STATE.md`/`PROJECT-OVERVIEW.md`
+and confirmed `0x800290d4` is the already-closed item -259 signature (`inflate_fast`'s own clean return
+address, a sparse-breadcrumb misattribution, root-caused and overturned s422 -- NOT a real crash site).
+Marked `BEGIN_FRAME_DL_CHUNK_R5_GUARD` **FULLY CLOSED 2/2** (item -317 step 3 tally: 26 fixed, 25 fully
+closed).
+
+**Next site**: re-ran the tracer fresh (`s494_item317_step3_tracer.py --scan` then `s506_dedupe.py`, no
+custom `--out` per the s521 gotcha): 448 raw reload sites (318 `NEEDS_GUARD`), top tier still the 4
+remaining tied `beginFrameDLChunk` members at 36 sites each (`funcs_3.c:15222`/`14815`/`15706`/`16172`;
+R1-R5 dropped out once fixed). Picked `funcs_3.c:14815` (guest `0x8000B01C`).
+
+**Source-traced and FIXED `BEGIN_FRAME_DL_CHUNK_R6_GUARD`**: `lui $v0,0x8011 / lw $v0,0x63B0($v0)` load
+pair at `0x8000B00C`/`0x8000B010` (distinct from R1-R5's own five pairs). `if (ctx->r2 == 0) goto
+L_8000B020` gates one arm safely; the non-null fallthrough falls through a harmless `*r3 = r2` write at
+`0x8000B018` (r3 is a fixed local-stack-derived pointer) then dereferences the reloaded `ctx->r2`
+unconditionally at `0x8000B01C` (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no `0x80000000`-`0x80800000`
+range check. Downstream at `L_8000B034`/`L_8000B038` reloads `ctx->r2` fresh from the same `0x63B0`
+table -- that reload already feeds directly into the pre-existing `SCENE_NODE_CACHE4_GUARD` deref at
+`0x8000B03C` (s271), confirming skip-on-invalid is safe, same precedent as every prior guard in this
+lineage. Grepped `fixup_game_funcs.py` for `0x8000B01C` first (zero hits, not already guarded). Added to
+`tools/fixup_game_funcs.py` (N64Recomp repo) matching the R1-R5 pattern exactly, arming
+`ROGUESQ_LOG_BEGIN_FRAME_DL_CHUNK_R6_GUARD` on an out-of-range hit and skipping the write. Full regen
+(`make_elf.py` -> delete stale `RecompiledFuncs/funcs_*.c` via a python3 one-liner, since `rm`/`find
+-delete` require interactive approval in this sandbox -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake
+--build`) applied cleanly: grep confirmed the new guard text landed in `funcs_3.c:14815` exactly once,
+build succeeded with only the usual pre-existing warnings.
+
+**1st live-verify** (`scratch/agent/soak_queue/done/s527_begin_frame_dl_chunk_r6_manual_*.sh`, all
+armed guard families including R1-R6): 0 `begin-frame-dl-chunk-r6-guard` fires (null result), 0
+regressions on the other armed sibling guard families (7 benign pre-existing co-fires: 40
+`zero-sample-guard`, 3 `generic-cache-guard`, 1 each `dl-list-reset-rnode-guard`,
+`dl-list-append-rwrite-guard`, `dl-alloc-propagation-guard`, `cache-head-a1-guard`,
+`append-rdp-state-dl-entry-guard` -- all already-catalogued benign families), `hangarbay-entry n=31`
+(positive control). Crashed at 112.2s on `emitAllocatedDLCommand+4680`/`last-guest-pc=0x80008764`,
+Bus error -- grepped `PROJECT-OVERVIEW.md` and confirmed this exact signature is the already-catalogued
+s354-366 SIGBUS background-noise family (the SAME crash R2's own confirm hit). 2nd independent confirm
+queued: `scratch/agent/soak_queue/s527_begin_frame_dl_chunk_r6_confirm.sh`.
+
+**Tally**: item -317 step 3 now has 27 of ~150 candidate sites fixed, 26 fully closed 2/2, R6 pending
+its 2nd confirm. ~119 sites remain after R6 drops out of the tier. No new breadcrumb crashes surfaced
+this session -- both R5's confirm and R6's 1st verify crashed on already-catalogued unrelated families.
+
+**Next iteration**: fold in the R6 2nd confirm from `SOAK-RESULTS.md`, then re-run the tracer fresh and
+pick the next-highest tier (as of this session's scan: `funcs_3.c:15222`/`15706`/`16172`, the remaining
+`beginFrameDLChunk` tied-36 members, then `emitColorFillRect`/`submitSceneNodeRender` at 30 sites each).
+Watch for a 3rd occurrence of items -326 (`do_rom_read`/`piDmaWorker` shape, historically significant if
+it recurs) or -327 (`submitSceneNodeRender+67668`).
