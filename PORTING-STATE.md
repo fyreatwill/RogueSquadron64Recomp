@@ -42108,3 +42108,70 @@ live-verify + queued confirm) on the still-open `item-317-step3-fix-next-ranked-
 resets any stall counter. No pivot needed.
 
 `scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
+
+## Session 508 (2026-08-08): folded in the s507-queued EMIT_FRAME_RDP_INIT_DL_R2H_GUARD 2nd confirm (CLOSED 2/2, filed the crash it hit as new item -320); fixed the next tied-40 lead, EMIT_FRAME_RDP_INIT_DL_R2I_GUARD (funcs_3.c:7713, emitFrameRdpInitDl, 40 shared reload sites, item -317 step 3's 11th fix), 1st live-verify clean, 2nd confirm queued
+
+Read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, and `scratch/agent/SOAK-RESULTS.md` per the
+iteration contract. `CURRENT-TRUTH.md` was 48910 bytes (< 60000), no maintenance triggered.
+`HYPOTHESIS-ID` unchanged: `item-317-step3-fix-next-ranked-leads`.
+
+**Fold-in: s507's queued `s507_emit_frame_rdp_init_dl_r2h_confirm` soak (rc=3, 166s, moved to
+`soak_queue/done/`).** Read the full `run.log` inside its capture directory (the top-level
+`SOAK-RESULTS.md` line only has the bare `rc`/duration, no guard-fire detail -- always open the
+per-run `run.log` to fold a result in). Result: 0 `emit-frame-rdp-init-dl-r2h-guard` fires, 0 fires
+on any other guard tag except one benign all-zero `compose-npc-orient-guard9` co-fire, `hangarbay-entry`
+n=2700 (strong positive control). Crashed at 120.0s (48 frames) on a **brand-new signature**:
+`pc-symbol=loadCutsceneAssetsByIndex+1860 (local-symtab)`, `last-guest-pc=0x800aafb8` -- grepped both
+`docs/*.md` and this ledger, no prior hits on this exact pair. Call chain from the backtrace:
+`menuOverlayInit` -> `runHangarMenuFromOverlay` -> `runHangarSelectionFrame` ->
+`loadCutsceneAssetsByIndex`. Not the async Metal-shader-compiler-thread cluster (items -10/-9): that
+family's `pc-symbol` is always a nonsense dyld-shared-cache offset with no real function name, whereas
+this one resolved to a genuine local-symtab function name with a coherent guest call stack. Filed as
+**item -320**, single occurrence, not yet source-traced -- watch for a 2nd before opening a dedicated
+thread. This closes `EMIT_FRAME_RDP_INIT_DL_R2H_GUARD` **2/2, FULLY CLOSED**. Item -317 step 3 now
+stands at 10/10 fixed guards fully closed (of 11 fixed total, counting this session's new R2I fix
+below).
+
+**Item -319 recurrence check**: the R2H confirm's crash was item -320, not item -319 -- no new data
+point, item -319 (`beginFrameDLChunk+40536`) stays at 2 independent occurrences (s503, s505), still
+below the 3rd-occurrence pivot threshold.
+
+**This session's work unit: fixed the next tied-40 tier lead.** Re-ran
+`python3 scratch/agent/s494_item317_step3_tracer.py --scan` (448 raw sites, 390 NEEDS_GUARD) then
+`python3 scratch/agent/s506_dedupe.py` per the mandatory drift check -- confirmed `funcs_3.c:7713`
+(write, `ctx->r2+0x4`, 40 sites, `emitFrameRdpInitDl`) was **unchanged** from NEXT.md's recorded pick,
+still tied-40 top of the list. Read the surrounding source (`0x800096A0`,
+`MEM_W(0X4, ctx->r2) = ctx->r3;`): `ctx->r2` reloaded a few instructions earlier (`0x80009694`, the
+`0x801163B0` sibling table) with only a null check (`beq $v0, $zero, L_800096A4`); the null arm takes
+a separate harmless write then falls through to the SAME write this guard covers; the non-null path
+has no `0x80000000`-`0x80800000` range check before the dereference -- identical shape to all 10 prior
+`EMIT_FRAME_RDP_INIT_DL_R2*_GUARD` fixes. Fixed as `EMIT_FRAME_RDP_INIT_DL_R2I_GUARD`
+(`fixup_game_funcs.py`, inserted immediately after the R2H block, verbatim copy of its template).
+Regenerated per the mandatory order (delete `funcs_3.c` -> `make_elf.py` -> `N64Recomp` ->
+`fixup_game_funcs.py` -> cmake); fixup report confirmed `patched x1` for the new guard, no anchor-count
+mismatches beyond the known-permanent S392_H3A/S393_H3B remainder; build clean.
+
+**1st live-verify** (`scratch/agent/manual_runs/s508_emit_frame_rdp_init_dl_r2i_manual.sh`): the first
+attempt crashed at only 20.0s (8 frames) with `hangarbay-entry` reaching only n=4 -- a genuinely
+non-zero but very weak positive control, on the async Metal.framework `MetalFramebuffer` ctor SIGSEGV
+cluster (`last-guest-pc=0x800ab0e0`, items -10/-9 family). Per Iron Rule 1 this was judged too weak to
+bank (the whole campaign's positive controls run in the thousands), so it was discarded and the run
+retried once. The retry is **CLEAN**: 0 `emit-frame-rdp-init-dl-r2i-guard` fires, 0 fires on any other
+armed sibling guard family, `hangarbay-entry` n=2600 (strong positive control this time). Crashed at
+109.9s (44 frames) on `last-guest-pc=0x800aadf8`, `pc-symbol` a nonsense dyld-shared-cache offset --
+the same already-catalogued async Metal-shader-compiler-thread SIGSEGV cluster as items -10/-9, byte-
+close to the `0x800ab0e0` value hit by items -303/-315's own confirms (same family, different guest PC
+at the moment the async host thread happened to crash -- expected for an async, guest-timing-independent
+event). 2nd independent confirm queued: `scratch/agent/soak_queue/s508_emit_frame_rdp_init_dl_r2i_confirm.sh`.
+
+**Ledger updates**: `docs/CURRENT-TRUTH.md` item -317 body updated (10/11 closed detail, new tied-40
+tier head `funcs_3.c:8714`), item -318/-319 status lines updated, new item -320 filed, numbering bumped
+to "highest allocated -320, next takes -321". `scratch/agent/SOAK-RESULTS.md` given a rich manual-run
+summary line for the s508 live-verify (matching the convention used for prior manual runs in this
+lineage).
+
+**Rule 8 note**: ADVANCED (one confirm folded closing R2H 2/2, plus a new code change + 1st live-verify
++ queued confirm, plus a new item filed) on the still-open `item-317-step3-fix-next-ranked-leads`
+`HYPOTHESIS-ID`; resets any stall counter. No pivot needed.
+
+`scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
