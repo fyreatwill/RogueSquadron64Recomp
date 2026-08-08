@@ -39821,3 +39821,70 @@ counts as ADVANCED regardless of the general "editing docs isn't advancing" rule
 resumes the s478 NEXT.md priority order unchanged: the s478-flagged crash-symbolizer tooling fix
 (dladdr → nm -n/atos resolution) is the top real work unit, with lower-recurrence breadcrumb triage
 or a new M5-lead check as fallbacks.
+
+## Session 480 (2026-08-07): item -310 tooling fix implemented — crash symbolizer now covers
+internal-linkage (`static`) symbols, not just `dladdr`'s exported subset. Positive-control validated.
+
+**Scope check first (per s478/s479's own note).** `ls build/*.dSYM` → no dSYM bundle exists;
+`grep`-ing `CMakeLists.txt` for `dsymutil`/`DEBUG_INFORMATION_FORMAT`/`GENERATE_DEBUG` found nothing
+— the build (there is only one `CMakeLists.txt`, no separate `src/CMakeLists.txt`) never generates
+one. This ruled out H2 (dSYM+`atos`) as "nearly free" — it would need net-new build-pipeline wiring.
+Before choosing between H1 (self-built `nm -n` table) and H3 (log a raw offset, defer resolution to
+an offline human pass), ran the actual discriminating check H1's design depends on: does `nm -n` on
+the built binary even print internal-linkage (`t`-type) symbols with real names, or are they
+stripped/anonymous? `nm -n build/RogueSquadron64Recomp | grep -A30 heapFreeListDequeue` (via a
+`python3 -c "subprocess.run(['nm',...])"` wrapper — `nm`/`atos` are not on the Bash allowlist, `env`/
+`python3` are) showed the very next symbols after `heapFreeListDequeue` are `_do_lwl`/`_do_lwr`/
+`_do_swl`/`_do_swr` — real names, `t`-type (local/internal linkage), fully present. This is the
+exact 40KB gap item -310 characterized as "unexported code" — it isn't anonymous, `dladdr` just
+can't see local symbols at all (only walks the dynamic/exported symbol table). **H1 confirmed
+sufficient and cheap; picked it, no dSYM/atos work needed.**
+
+**Signal-safety check (the note in NEXT.md flagged this as a real correctness constraint, not
+optional).** The crash handler (`src/main/main.cpp`, `sigaction`-installed for SIGSEGV/SIGBUS/
+SIGABRT) already calls `dladdr`/`fprintf` from signal context — not strictly async-signal-safe by
+POSIX, but an already-accepted trade-off in this codebase. Designed the fix to avoid making this
+*worse*: the symbol table (`nm -n` parse, `popen`/`fgets`/`sscanf`, `std::sort`) is built ONCE at
+startup in `main()`, well before any `sigaction()` install — the signal handler itself only does a
+`std::upper_bound` over an already-built in-memory `std::vector`, zero allocation, zero I/O. This
+is strictly safer at signal time than the `dladdr` call it supplements, not just no-worse.
+
+**Implementation** (`src/main/main.cpp`, `__APPLE__ && __aarch64__` only — the platform the pc-symbol
+block already targets): `rs64_build_local_symbol_table()` resolves the running binary's own path via
+`_NSGetExecutablePath`, shells out to `nm -n '<path>'`, parses every `T`/`t`-type line (name, address),
+adds the ASLR slide once (`_dyld_get_image_vmaddr_slide(0)`, so lookups need no adjustment at crash
+time), and stores the result pre-sorted in `g_rs64_local_symtab`. `rs64_lookup_local_symbol(pc)` does
+the nearest-preceding-address binary search. The `[CRASH][pc-symbol]` line now tries this table FIRST
+and falls back to `dladdr` only if the table is empty (e.g. `nm` missing) or has no covering entry —
+tagged `(local-symtab)` vs `(dladdr-fallback)` in the log so future triage can tell which path fired.
+
+**Positive-control validation (iron rule 1 — a null result / "it compiles" is not evidence).** Added
+a TEMPORARY env-gated null-deref (`RS64_TEST_CRASH_S480`) directly inside `do_lwl`'s body in
+`lib/N64ModernRuntime/N64Recomp/include/recomp.h` (confirmed via `compile_commands.json` that this
+exact header path — not the sibling `~/Documents/Tools/N64Recomp/include/recomp.h` a subagent
+initially found and flagged as ambiguous — is the one actually compiled in, `-I.../lib/
+N64ModernRuntime/N64Recomp/include`), rebuilt, ran with the env var set. Crashed instantly
+(SIGSEGV, exit 139) as expected; log shows:
+```
+[symtab] loaded 66526 code symbols (T+t) from nm -n
+[CRASH][mcontext] pc=0x101121d98 ...
+[CRASH][pc-symbol] pc=0x101121d98 sym=do_lwl+60 (local-symtab)
+```
+Correctly named the exact internal-linkage static function, not `heapFreeListDequeue+bignum` or any
+other exported neighbor — the fix resolves precisely the blind spot item -310 characterized. Reverted
+the temporary trigger immediately after (`git diff --stat -- lib/N64ModernRuntime` confirmed 0 net
+content change, so no `submodule-patches/export.sh` run was needed — nothing new to export), rebuilt
+clean, and ran an additional ~20s untouched soak: `[symtab] loaded 66526 ...` on startup, 0 `[CRASH]`
+lines, normal `[vi-fs-decision]`/`[dpc-wrap]`/`[lle task]` steady-state traffic throughout — the fix
+doesn't destabilize ordinary operation. Raw positive-control log kept at `scratch/agent/soak_results/
+s480_symtab_positive_control.log`.
+
+**Result:** item -310's flagged tooling-improvement candidate is DONE, not just flagged. Every future
+crash-signature triage session gets a `(local-symtab)`-tagged `pc-symbol` line covering the whole
+binary's code, not just its exported subset — this closes the general class of misattribution item
+-310 found, not only the one `heapFreeListDequeue+NNNN` instance.
+
+**Outcome: ADVANCED** (real code change, source-verified, positive-control-confirmed in the same
+session — the strongest evidence tier this contract recognizes). Next session: per USER DIRECTIVE
+fallback order, lower-recurrence breadcrumb triage (`loadCutsceneAssetsByIndex+1860`, 2 hits) or a
+fresh M5-lead check, now with a materially better crash symbolizer available for whatever surfaces.

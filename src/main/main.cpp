@@ -35,6 +35,12 @@
 #include <unistd.h>
 #include <sys/ucontext.h>
 #include <dlfcn.h>
+#if defined(__APPLE__) && defined(__aarch64__)
+#include <mach-o/dyld.h>
+#include <algorithm>
+#include <cerrno>
+#include <string>
+#endif
 #endif
 
 // N64 button bitmasks (from libultra PR/controller.h)
@@ -94,6 +100,78 @@ extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *last
 // `extern` in recomp.h so any RECOMP_FUNC translation unit can write it by
 // name; defined once here.
 extern "C" volatile uint32_t g_rs64_last_guest_pc = 0;
+
+#if defined(__APPLE__) && defined(__aarch64__)
+// s480 (item -310 tooling fix): local (non-exported) symbol table for
+// crash-pc resolution. dladdr() (used in the pc-symbol crash-handler block
+// below) only resolves EXPORTED (Mach-O "T") symbols; item -310 root-caused
+// a recurring misattribution to this exact gap -- `nm -n` on our own binary
+// confirms local ("t")-type function symbols ARE present with real names and
+// unstripped (e.g. `do_lwl`/`do_lwr`/`do_swl`/`do_swr` sit in the 40KB
+// unexported gap right after `heapFreeListDequeue` that item -310 found), so
+// a self-built sorted table covering BOTH "T" and "t" symbols, searched by
+// nearest-preceding-address, closes the blind spot dladdr can't see past.
+// Built ONCE at startup (main(), well before any signal handler installs) by
+// shelling out to nm -- safe there since none of this runs in a signal
+// context. The crash handler only ever does a binary search over the
+// already-built in-memory vector: no malloc, no subprocess, no I/O at signal
+// time, which is actually SAFER than the dladdr() fallback it supplements.
+struct RS64LocalSymbol { uint64_t addr; std::string name; };
+static std::vector<RS64LocalSymbol> g_rs64_local_symtab;
+
+static void rs64_build_local_symbol_table() {
+    char exe_path[4096];
+    uint32_t sz = sizeof(exe_path);
+    if (_NSGetExecutablePath(exe_path, &sz) != 0) {
+        fprintf(stderr, "[symtab] _NSGetExecutablePath failed (path too long)\n");
+        return;
+    }
+    // nm reports link-time (unslid) addresses; add the ASLR slide once here
+    // so the crash handler's lookup is a plain compare against the live pc,
+    // no arithmetic needed at signal time.
+    intptr_t slide = _dyld_get_image_vmaddr_slide(0);
+
+    char cmd[4096];
+    snprintf(cmd, sizeof(cmd), "nm -n '%s' 2>/dev/null", exe_path);
+    FILE* p = popen(cmd, "r");
+    if (!p) {
+        fprintf(stderr, "[symtab] popen(nm) failed: %s\n", strerror(errno));
+        return;
+    }
+    char line[1024];
+    while (fgets(line, sizeof(line), p)) {
+        unsigned long long addr;
+        char type;
+        char name[900];
+        // Lines look like "0000000100486000 t _do_lwl". Undefined ("U")
+        // symbols omit the address column, so sscanf's match count below
+        // naturally skips them.
+        if (sscanf(line, "%llx %c %899s", &addr, &type, name) != 3) continue;
+        if (type != 't' && type != 'T') continue;  // code symbols only
+        const char* n = name;
+        if (n[0] == '_') n++;  // match dladdr()'s dli_sname convention
+        g_rs64_local_symtab.push_back({(uint64_t)addr + (uint64_t)slide, n});
+    }
+    pclose(p);
+    // Already sorted (nm -n), but sort defensively -- the binary-search
+    // precondition below must never depend on nm's output order unchecked.
+    std::sort(g_rs64_local_symtab.begin(), g_rs64_local_symtab.end(),
+        [](const RS64LocalSymbol& a, const RS64LocalSymbol& b) { return a.addr < b.addr; });
+    fprintf(stderr, "[symtab] loaded %zu code symbols (T+t) from nm -n\n",
+        g_rs64_local_symtab.size());
+}
+
+// Nearest-preceding-symbol lookup. Safe to call from the signal handler --
+// std::upper_bound over an already-built vector, no allocation.
+static const RS64LocalSymbol* rs64_lookup_local_symbol(uint64_t pc) {
+    if (g_rs64_local_symtab.empty()) return nullptr;
+    auto it = std::upper_bound(g_rs64_local_symtab.begin(), g_rs64_local_symtab.end(), pc,
+        [](uint64_t v, const RS64LocalSymbol& s) { return v < s.addr; });
+    if (it == g_rs64_local_symtab.begin()) return nullptr;
+    --it;
+    return &*it;
+}
+#endif // __APPLE__ && __aarch64__
 
 // Cached for the next ucode invocation. get_rsp_microcode is called with the
 // OSTask immediately before the ucode runs on the same thread.
@@ -1678,6 +1756,12 @@ int main(int argc, char* argv[]) {
     start_state_poller();
     start_phase_poller();
 
+#if defined(__APPLE__) && defined(__aarch64__)
+    // Must run before the sigaction() install below and outside any signal
+    // context -- see rs64_build_local_symbol_table's own comment.
+    rs64_build_local_symbol_table();
+#endif
+
 #ifdef _WIN32
     SetUnhandledExceptionFilter(crash_handler);
     signal(SIGABRT, [](int){
@@ -1784,10 +1868,22 @@ int main(int argc, char* argv[]) {
                     // enclosing symbol from the same Mach-O symbol table
                     // independent of any frame chain, so it resolves correctly
                     // even for a frameless leaf.
+                    // s480 (item -310 fix): try our own local+exported symbol
+                    // table FIRST -- it covers internal-linkage ("t") symbols
+                    // dladdr() can't see, closing the exact misattribution
+                    // gap item -310 found after heapFreeListDequeue. Fall
+                    // back to dladdr() only if the table is empty (nm failed
+                    // at startup) or somehow has no entry below pc.
+                    const RS64LocalSymbol* localSym = rs64_lookup_local_symbol((uint64_t)ss.__pc);
                     Dl_info dli{};
-                    if (dladdr((void*)(uintptr_t)ss.__pc, &dli) && dli.dli_sname) {
+                    if (localSym) {
                         fprintf(stderr,
-                            "[CRASH][pc-symbol] pc=0x%llx sym=%s+%lld base=%p\n",
+                            "[CRASH][pc-symbol] pc=0x%llx sym=%s+%llu (local-symtab)\n",
+                            (unsigned long long)ss.__pc, localSym->name.c_str(),
+                            (unsigned long long)((uint64_t)ss.__pc - localSym->addr));
+                    } else if (dladdr((void*)(uintptr_t)ss.__pc, &dli) && dli.dli_sname) {
+                        fprintf(stderr,
+                            "[CRASH][pc-symbol] pc=0x%llx sym=%s+%lld base=%p (dladdr-fallback)\n",
                             (unsigned long long)ss.__pc, dli.dli_sname,
                             (long long)((uintptr_t)ss.__pc - (uintptr_t)dli.dli_saddr),
                             dli.dli_fbase);

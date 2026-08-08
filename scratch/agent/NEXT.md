@@ -1,91 +1,50 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: crash-symbolizer-tooling-fix
+HYPOTHESIS-ID: breadcrumb-triage-post-symbolizer-fix
 
-## s479 summary: MAINTENANCE iteration — CURRENT-TRUTH.md compacted 713→513 lines (200 net), one
-real ordering bug fixed
+## s480 summary: crash-symbolizer tooling fix implemented and positive-control validated (item -311,
+DONE)
 
-Step 0 triggered (63,069 bytes > 60,000 threshold). Migrated items -303..-310 (s470-478) full
-derivations into `docs/PROJECT-OVERVIEW.md` §19 (new section, following the §16-§18 pattern);
-replaced with short range-pointer summaries in CURRENT-TRUTH.md, matching the style already used
-for older closed arcs. Found and fixed a genuine numbering-order bug: item -6 was sitting between
-items -249 and -239..-247 (wrong magnitude range) instead of between -7 and -5 where it belongs
-per the file's own declared "highest-magnitude-negative first" convention — moved it. Also
-deleted a fully redundant standalone `-292` entry that duplicated the `-291..-297` range-pointer
-paragraph. Net result: 713→513 lines (200 removed, exactly meeting the ADVANCED threshold),
-63,069→44,442 bytes. No experiments run this session (maintenance iterations don't run them). Full
-writeup: `PORTING-STATE.md` Session 479.
+Closed the s478-flagged tooling candidate: `src/main/main.cpp`'s crash handler now resolves the
+faulting ARM64 host PC against a self-built local+exported symbol table (`nm -n` on the running
+binary, parsed once at startup, binary-searched from the signal handler with zero allocation) before
+falling back to `dladdr`. Scope check confirmed no dSYM exists and `nm -n` already prints real names
+for internal-linkage symbols, so the cheap H1 design (not dSYM/`atos`) was correct. Validated with a
+deliberate crash inside `do_lwl` (one of the actual functions in item -310's 40KB gap): correctly
+symbolized as `do_lwl+60 (local-symtab)`, not misattributed. Reverted the temporary test trigger
+(`lib/N64ModernRuntime/N64Recomp/include/recomp.h`), confirmed `git diff --stat -- lib/
+N64ModernRuntime` shows 0 net change (no `export.sh` run needed), rebuilt clean, ran a ~20s untouched
+soak: symtab loads (66526 symbols), 0 `[CRASH]`, normal steady-state traffic. Full derivation:
+`PORTING-STATE.md` Session 480; ledger entry: `docs/CURRENT-TRUTH.md` item -311.
 
-## This session's top work unit: the s478-flagged crash-symbolizer tooling fix
+**Practical effect for future sessions:** any `[CRASH][pc-symbol]` line now says `(local-symtab)` or
+`(dladdr-fallback)`. A future `heapFreeListDequeue`-attributed crash is genuinely that function now
+(the old blind spot is closed) — do not apply item -310's "probably a misattribution" discount to
+any crash log from s480 onward.
 
-`src/main/main.cpp:1788`'s crash handler symbolizes the ARM64 HOST PC via `dladdr()`, which only
-resolves the nearest **exported** symbol. `nm -n` on the built binary shows a 40,648-byte
-unexported-code gap after `heapFreeListDequeue` populated by many unrelated internal-linkage
-guard-flag statics from other closed guard families — any host crash landing anywhere in that gap
-gets misattributed to `heapFreeListDequeue+bignum` regardless of the real faulting function (item
--310, `docs/CURRENT-TRUTH.md`, full derivation `docs/PROJECT-OVERVIEW.md` §19). This is a systemic
-symbolization blind spot, not limited to that one function — any internal-linkage function/static
-anywhere in the binary is equally mis-attributable to whatever exported symbol happens to precede
-it. Fixing it will make every future crash-signature triage session more accurate, not just this
-one family.
+## This session's top work unit: read `scratch/agent/SOAK-RESULTS.md` fresh, act on what's there
 
-**Competing hypotheses for the fix's scope/design:**
-1. **H1 — a build-time `nm -n` snapshot is sufficient.** Generate a sorted (address, symbol) table
-   from `nm -n build/RogueSquadron64Recomp` at build time (or read it lazily at crash time from the
-   binary's own symbol table via `dladdr`'s `dli_fbase` + a parsed `nm` dump), and have the crash
-   handler do a binary-search nearest-preceding-symbol lookup against BOTH exported and
-   internal-linkage (local, `t`/`d` in nm output) symbols instead of relying on `dladdr` alone.
-   Cheap, no new build dependency beyond `nm` (already used manually all session).
-2. **H2 — a dSYM + `atos` is needed for full accuracy.** If the build doesn't already emit a dSYM,
-   internal statics might not even be in `nm`'s output with useful names (could be stripped or
-   have compiler-mangled names), and `atos` against a dSYM might resolve to source file:line
-   instead of just a symbol name, which is strictly more actionable for future triage.
-3. **H3 — neither is needed; the crash handler should just log BOTH the raw host PC offset from
-   the binary's own `__TEXT` base AND the nearest guest-side `last-guest-pc` breadcrumb, and defer
-   symbol resolution to `atos`/`nm` run OFFLINE by a human/future session against the exact build
-   that crashed**, since build addresses shift between builds and a live in-process symbol table
-   is more fragile to maintain than a raw offset + offline lookup.
+Nothing was queued as of s479; check the tail again at session start (read list #3) — the loop may
+have run new queued soaks between s479 and this session. If something new landed, fold it into the
+ledger like any other run evidence before choosing further work.
 
-**Discriminating measurement — scope check first, per s478's own note:** before choosing between
-H1/H2/H3, run `ls build/*.dSYM 2>&1` and check the CMake config
-(`grep -rn "dsymutil\|DEBUG_INFORMATION_FORMAT\|GENERATE_DEBUG" CMakeLists.txt src/CMakeLists.txt
-2>/dev/null` or equivalent) to see whether a dSYM is already being produced. If yes → H2 is nearly
-free (just wire up `atos` instead of `dladdr`) and is strictly better than H1, pick it. If no →
-compare the cost of adding dSYM generation (build-time cost, disk cost, CI/regen-pipeline
-interaction) against just parsing `nm -n`'s output once at build time (H1) or logging a raw offset
-for offline lookup (H3, near-zero implementation cost but defers the payoff to whoever triages the
-next crash).
+## Fallback order (per USER DIRECTIVE, unchanged)
 
-**Validation, once implemented:** force a deliberate crash inside a KNOWN internal-linkage static
-near `heapFreeListDequeue` (e.g. add a temporary env-gated `abort()`/null-deref inside one of the
-`s_drainmesh*`/`s_coalesceheap*` guard-flag statics identified in item -310's derivation) and
-confirm the NEW symbolizer correctly names that specific static (or its containing function/file:
-line) instead of misattributing to `heapFreeListDequeue`. This is the positive control — without
-it, "the fix compiles and links" is not evidence it actually resolves anything better than before
-(iron rule 1).
-
-**If this turns out to be a bigger lift than one work unit** (e.g. H2's dSYM wiring interacts
-badly with the existing regen pipeline, or nm-parsing at crash-signal-time hits async-signal-safety
-constraints — `main.cpp`'s crash handler almost certainly runs from a signal handler, so any fix
-must avoid `malloc`/`fopen`/etc. inside the handler itself; check this explicitly before writing
-code, since it's a real correctness constraint on H1/H2 alike): scope down to just the scope-check
-above plus a design writeup in NEXT.md, and defer actual implementation to the following session
-rather than rushing a signal-unsafe fix into place.
-
-## Fallback order (unchanged from s478's note, still applies)
-
-1. Lower-recurrence breadcrumb triage: `loadCutsceneAssetsByIndex+1860` (2 hits, s463/s468) or
-   anything new accumulated in `scratch/agent/SOAK-RESULTS.md` since s473 — read its tail at
-   session start (read list #3) first; nothing new was queued as of s479 (checked, tail unchanged
-   since s473's confirm).
-2. A new M5 lead (checked clean as recently as s478).
-3. If none of the above yields a concrete, boundable unit: BLOCKED with a specific question — M3's
-   two opcode-scan lineages, its highest-recurrence breadcrumb, and M5 are all closed/clean; ask
-   the human what should replace them as the standing M3 discovery method once the symbolizer fix
-   is also done.
+1. **Lower-recurrence breadcrumb triage**: `loadCutsceneAssetsByIndex+1860` (2 hits so far, s463/
+   s468, both filed-not-chased) is the next candidate if nothing new is in SOAK-RESULTS.md. With the
+   symbolizer fix in place, a fresh occurrence's `pc-symbol` line is now trustworthy — worth actually
+   pursuing this one now rather than filing a 3rd hit, since two independent confirmations plus a
+   reliable symbolizer is a legitimate discriminating-evidence bar per iron rule 4.
+2. A new M5 lead (checked clean as recently as s478 — check again only if #1 yields nothing).
+3. If neither yields a concrete, boundable unit: BLOCKED with a specific question — M3's two
+   opcode-scan lineages, its highest-recurrence breadcrumb, and M5 are all closed/clean, and the
+   symbolizer tooling gap is now closed too; ask the human what should replace them as the standing
+   M3 discovery method.
 
 ## Soak queue status
 
-None queued this session (maintenance iteration, no code change to verify). Check
-`scratch/agent/SOAK-RESULTS.md` tail at the start of next session as usual — as of this session it
-still ends at `s473_siblingptrwrite120_confirm` (s478 was also read-only, queued nothing).
+None queued this session (this was a targeted code-change unit with its own inline validation, not
+a soak-queue candidate — the positive-control test used a temporary, reverted crash trigger, so
+there's nothing safe to leave queued). Raw positive-control log: `scratch/agent/soak_results/
+s480_symtab_positive_control.log`. Check `scratch/agent/SOAK-RESULTS.md` tail at the start of next
+session as usual.
