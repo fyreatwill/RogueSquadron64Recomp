@@ -1,50 +1,60 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: breadcrumb-triage-post-symbolizer-fix
+HYPOTHESIS-ID: item-312-confirm-then-m3-m5-pivot
 
-## s480 summary: crash-symbolizer tooling fix implemented and positive-control validated (item -311,
-DONE)
+## s481 summary: closed the loadCutsceneAssetsByIndex+1860 breadcrumb (misattribution, item -310
+class), root-caused and FIXED a real new bug instead (item -312, DONE pending 2nd confirm)
 
-Closed the s478-flagged tooling candidate: `src/main/main.cpp`'s crash handler now resolves the
-faulting ARM64 host PC against a self-built local+exported symbol table (`nm -n` on the running
-binary, parsed once at startup, binary-searched from the signal handler with zero allocation) before
-falling back to `dladdr`. Scope check confirmed no dSYM exists and `nm -n` already prints real names
-for internal-linkage symbols, so the cheap H1 design (not dSYM/`atos`) was correct. Validated with a
-deliberate crash inside `do_lwl` (one of the actual functions in item -310's 40KB gap): correctly
-symbolized as `do_lwl+60 (local-symtab)`, not misattributed. Reverted the temporary test trigger
-(`lib/N64ModernRuntime/N64Recomp/include/recomp.h`), confirmed `git diff --stat -- lib/
-N64ModernRuntime` shows 0 net change (no `export.sh` run needed), rebuilt clean, ran a ~20s untouched
-soak: symtab loads (66526 symbols), 0 `[CRASH]`, normal steady-state traffic. Full derivation:
-`PORTING-STATE.md` Session 480; ledger entry: `docs/CURRENT-TRUTH.md` item -311.
+Per NEXT.md's own fallback order, reproduced the `loadCutsceneAssetsByIndex+1860` breadcrumb (2 prior
+hits, s463/s468) with the current (post-s480 local-symtab fix) build. The trustworthy
+`(local-symtab)`-tagged crash named `submitSceneNodeRender+63868`, NOT `loadCutsceneAssetsByIndex` —
+confirms both prior hits were `dladdr` nearest-exported-symbol misattributions, same blind-spot class
+as item -310. **Do not re-file this signature under `loadCutsceneAssetsByIndex` again.**
 
-**Practical effect for future sessions:** any `[CRASH][pc-symbol]` line now says `(local-symtab)` or
-`(dladdr-fallback)`. A future `heapFreeListDequeue`-attributed crash is genuinely that function now
-(the old blind spot is closed) — do not apply item -310's "probably a misattribution" discount to
-any crash log from s480 onward.
+That reproduction handed back a genuinely new, well-evidenced bug instead of a null result:
+`submitSceneNodeRender` (funcs_4.c, guest site 0x80010E74) writes its own `$a0` argument into the
+free-list-cache-head global, `GENERIC_CACHE_GUARD` sanitizes a REREAD copy of that global but not the
+original argument register, and `DL_LIST_APPEND_GUARD`'s own `rwrite` slot then dereferences that
+same unsanitized register as a write address — a violation of `DL_LIST_APPEND_GUARD`'s own documented
+scope assumption, true at its other 56 sites but not this one. Fixed with a single site-anchored
+guard in `~/Documents/Tools/N64Recomp/fixup_game_funcs.py` (`DL_LIST_APPEND_GUARD_RWRITE`,
+`ROGUESQ_LOG_DL_LIST_APPEND_RWRITE_GUARD`). Full regen/build clean; all pre-existing guard counts in
+this lineage unregressed. 1 manual confirmation soak ran clean (hit an unrelated, already-catalogued
+crash family instead — bonus: local-symtab named it `loadDatFile+1152` directly, matching item -259's
+`atos`-derived finding without needing `atos`). Full derivation: `PORTING-STATE.md` Session 481;
+ledger entry: `docs/CURRENT-TRUTH.md` item -312.
 
-## This session's top work unit: read `scratch/agent/SOAK-RESULTS.md` fresh, act on what's there
+## This session's top work unit: check the queued confirm soak, then decide item -312's status
 
-Nothing was queued as of s479; check the tail again at session start (read list #3) — the loop may
-have run new queued soaks between s479 and this session. If something new landed, fold it into the
-ledger like any other run evidence before choosing further work.
+1. Read `scratch/agent/SOAK-RESULTS.md` tail for `s481_rwrite_guard_confirm` (queued this session at
+   `scratch/agent/soak_queue/s481_rwrite_guard_confirm.sh`). If it ran clean (0 crash at this exact
+   site OR an unrelated already-catalogued crash family, matching this whole lineage's established
+   true-negative baseline): mark item -312 fully CLOSED in `docs/CURRENT-TRUTH.md` (mirror the
+   2-soak-confirm pattern items -301/-303/-304/-306 already use).
+2. If it crashed AT THIS SAME SITE (`dl-list-append-rwrite-guard` fires but still faults, or a crash
+   at `site=0x80010E74`/`submitSceneNodeRender` with 0 fires): the guard has a gap of its own — before
+   writing more code, re-read the fresh crash log's exact register state and compare against s481's
+   trace in `PORTING-STATE.md` Session 481 to find what differs.
 
-## Fallback order (per USER DIRECTIVE, unchanged)
+## Fallback order if item -312 is clean (per USER DIRECTIVE, unchanged)
 
-1. **Lower-recurrence breadcrumb triage**: `loadCutsceneAssetsByIndex+1860` (2 hits so far, s463/
-   s468, both filed-not-chased) is the next candidate if nothing new is in SOAK-RESULTS.md. With the
-   symbolizer fix in place, a fresh occurrence's `pc-symbol` line is now trustworthy — worth actually
-   pursuing this one now rather than filing a 3rd hit, since two independent confirmations plus a
-   reliable symbolizer is a legitimate discriminating-evidence bar per iron rule 4.
-2. A new M5 lead (checked clean as recently as s478 — check again only if #1 yields nothing).
-3. If neither yields a concrete, boundable unit: BLOCKED with a specific question — M3's two
-   opcode-scan lineages, its highest-recurrence breadcrumb, and M5 are all closed/clean, and the
-   symbolizer tooling gap is now closed too; ask the human what should replace them as the standing
-   M3 discovery method.
+1. A new M5 lead (checked clean as recently as s478 — check again, it's been 3 sessions).
+2. If M5 yields nothing: M3 systematic idiom-class audit resumption needs a genuinely new discovery
+   method — both prior opcode-scan lineages (`lui`+`lw` s465-476, `lui`+`sw` s477) are spent, and
+   there is no queued high-recurrence breadcrumb left untried after item -312. Consider: a scan for
+   OTHER `DL_LIST_APPEND_GUARD`-style "guard covers rload, not rwrite" gaps across its other 56 sites
+   (this session's fix was single-site because the aliasing was confirmed unique to
+   `submitSceneNodeRender`, but that confirmation was a grep for the literal address, not a structural
+   check of whether `rwrite` could alias an unguarded reload in any OTHER of the 56 — worth a
+   dedicated audit if nothing better surfaces).
+3. If neither yields a concrete, boundable unit: BLOCKED with a specific question, per s480's NEXT.md
+   note — the same one still applies (M3's opcode-scan lineages, its breadcrumbs, and M5 are all
+   closed/clean; ask the human what should replace them as the standing M3 discovery method).
 
 ## Soak queue status
 
-None queued this session (this was a targeted code-change unit with its own inline validation, not
-a soak-queue candidate — the positive-control test used a temporary, reverted crash trigger, so
-there's nothing safe to leave queued). Raw positive-control log: `scratch/agent/soak_results/
-s480_symtab_positive_control.log`. Check `scratch/agent/SOAK-RESULTS.md` tail at the start of next
-session as usual.
+`scratch/agent/soak_queue/s481_rwrite_guard_confirm.sh` queued this session (2nd independent
+confirmation for item -312's fix, arms all passive breadcrumb/instrument env vars per the standing
+rule). `scratch/agent/soak_queue/done/s481_cutscene_breadcrumb_verify.sh` and
+`scratch/agent/soak_queue/done/s481_rwrite_guard_verify.sh` are this session's own manual (foreground)
+diagnostic/positive-control runs, already consumed — no need to rerun either.

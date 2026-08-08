@@ -24,11 +24,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    recurrence passive-breadcrumb candidate too: `heapFreeListDequeue+NNNN` (15+ sessions, item
    -310) is a crash-symbolizer artifact, not a real recurring bug — do not re-file future
    occurrences of it as "same family". s480 fixed the underlying symbolizer blind spot itself (item
-   -311) — DONE, no longer an open tooling candidate.** Next M3 session has no untried
-   high-expected-value instruction-pattern scan AND no un-investigated high-recurrence breadcrumb
-   queued — fall back to lower-recurrence breadcrumb triage, or (per priority order below) look for
-   a new M5 lead (s478 checked, none found) instead of inventing a third opcode-pattern scan
-   speculatively.
+   -311) — DONE, no longer an open tooling candidate.** s481 exercised that fix on the next
+   lower-recurrence breadcrumb (`loadCutsceneAssetsByIndex+1860`) and found it was ALSO a
+   misattribution artifact — but the reproduction handed back a genuinely new, root-caused,
+   single-site guard gap instead (`DL_LIST_APPEND_GUARD`/`submitSceneNodeRender`, item -312, FIXED,
+   2nd confirm soak queued). Next M3 session: check item -312's queued confirm soak result first; if
+   clean, no untried high-expected-value instruction-pattern scan AND no un-investigated
+   high-recurrence breadcrumb remains queued — fall back to a fresh M5 lead check (s478 checked, none
+   found) instead of inventing a third opcode-pattern scan speculatively.
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -160,7 +163,29 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -311. The next NEW item takes -312.
+a range pointer. Highest allocated so far: -312. The next NEW item takes -313.
+
+-312. **(s481) `loadCutsceneAssetsByIndex+1860` breadcrumb (item -311's own predicted use case)
+    CLOSED as an item-310-class misattribution; real root cause found and FIXED instead —
+    `DL_LIST_APPEND_GUARD`'s own scope gap at ONE site, `submitSceneNodeRender` (funcs_4.c,
+    site=0x80010E74).** Reproduced with the post-s480 symbolizer: the trustworthy
+    `(local-symtab)`-tagged crash names `submitSceneNodeRender+63868`, not
+    `loadCutsceneAssetsByIndex` — confirms the s463/s468 hits (both pre-dating item -311) were
+    `dladdr` nearest-exported-symbol misattributions, not a real bug in that function. Do NOT
+    re-file future occurrences under `loadCutsceneAssetsByIndex`. The real bug: `submitSceneNodeRender`
+    writes its own `$a0` ("new node") argument into the `0x8011:0x63B0` free-list-cache-head global,
+    rereads it for `GENERIC_CACHE_GUARD`'s (item -268..-273) unrelated deref chain — which sanitizes
+    the REREAD copy but not the original argument register — and `DL_LIST_APPEND_GUARD` (item
+    -291..-297) then uses that same unsanitized register as an unguarded WRITE ADDRESS at its own
+    `rwrite` slot, whose documented scope ("not derived from G — not at risk") holds at its other 56
+    sites but not this one. Fixed with a single site-anchored guard (not a blanket regex — the
+    aliasing is unique to this site), `ROGUESQ_LOG_DL_LIST_APPEND_RWRITE_GUARD`/
+    `[dl-list-append-rwrite-guard]`. Full regen/build clean, all pre-existing guard counts in this
+    lineage unregressed (84/120/30). 1 manual confirmation soak clean (hit an unrelated already-
+    catalogued crash family instead, itself now correctly named `loadDatFile+1152` by the local-
+    symtab fix rather than needing a separate `atos` pass — bonus confirmation of item -311's value).
+    2nd confirmation soak queued (`s481_rwrite_guard_confirm`) — check its result before marking this
+    item fully CLOSED. Full derivation: `PORTING-STATE.md` Session 481.
 
 -311. **(s480) Crash-symbolizer tooling fix — DONE, positive-control validated.** The item -310
     `dladdr`-nearest-exported-symbol blind spot is closed: `src/main/main.cpp` now builds a sorted

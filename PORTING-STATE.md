@@ -39888,3 +39888,112 @@ binary's code, not just its exported subset — this closes the general class of
 session — the strongest evidence tier this contract recognizes). Next session: per USER DIRECTIVE
 fallback order, lower-recurrence breadcrumb triage (`loadCutsceneAssetsByIndex+1860`, 2 hits) or a
 fresh M5-lead check, now with a materially better crash symbolizer available for whatever surfaces.
+
+## Session 481 (2026-08-07): loadCutsceneAssetsByIndex+1860 breadcrumb closed as an item-310-class
+misattribution — real root cause found instead (submitSceneNodeRender, funcs_4.c site=0x80010E74),
+guarded, fixed, build-verified, 1 clean confirmation soak run manually, 2nd queued
+
+Per NEXT.md's fallback order #1: pursued the `loadCutsceneAssetsByIndex+1860` breadcrumb (2 prior
+hits, s463/s468, both filed-not-chased and both pre-dating item -311's local-symtab symbolizer fix).
+Hypotheses going in: (H1) it's a real recurring bug inside `loadCutsceneAssetsByIndex`; (H2) it's a
+symbolizer-misattribution artifact, same blind-spot class as item -310's `heapFreeListDequeue`
+family. Discriminating measurement: reproduce with the NOW-current (post-s480) build and read the
+`[CRASH][pc-symbol]` tag — `(local-symtab)` with the SAME function name would support H1;
+`(local-symtab)` with a DIFFERENT name would confirm H2. Sanity check before running anything:
+`menu_overlay.txt` places `loadCutsceneAssetsByIndex` at `0x800A9270` and the very next listed
+symbol (`mallocCraftSelectionData`) only 0xF4 bytes later — the s463/s468 guest addresses
+(`0x800aafb8`/`0x800ab068`) are ~0x1D48/0x1DF8 bytes past the function's start, i.e. already deep
+into whatever guest code actually follows, not this tiny function's own body. That alone made H2 the
+prior, but the source-level check needed the build to confirm.
+
+**Reproduction.** Confirmed the current binary already carries the s480 fix (`strings` shows both
+`(local-symtab)` and `(dladdr-fallback)` format strings; `git log -1 -- src/main/main.cpp` predates
+the binary's mtime by 3 minutes, and `git status` shows `src/` clean, so no rebuild drift). Reused
+s468's exact recipe (same `PROBE_KEYS` schedule, full breadcrumb/guard env-var set per the standing
+"arm everything" rule) as `scratch/agent/soak_queue/done/s481_cutscene_breadcrumb_verify.sh`, ran it
+manually in the foreground. Crashed at 112.6s:
+```
+[CRASH][pc-symbol] pc=0x10132ffa0 sym=submitSceneNodeRender+63868 (local-symtab)
+[CRASH][last-guest-pc] pc=0x80010e74
+```
+**H2 confirmed, H1 refuted.** The pre-fix `loadCutsceneAssetsByIndex+1860` attribution across both
+s463 and s468 was a `dladdr`-nearest-exported-symbol misattribution — not a bug in that function at
+all. This closes the breadcrumb as filed (do not chase `loadCutsceneAssetsByIndex` for this
+signature again) and, per item -311's own stated scope, is exactly the kind of correction it
+predicted: a pre-s480 log's function attribution is not to be trusted.
+
+**But this handed back a genuinely new, well-evidenced crash instead of a null result.**
+`submitSceneNodeRender` (funcs_4.c) is the SAME function item -296 already flagged as having an open
+wait-for-recurrence breadcrumb (10 `SIBLING_PTR_WRITE_GUARD` sites, 0 fires there as of s459/s473) —
+but this run's 0 `sibling-ptr-write-guard` fires (checked explicitly) rule that OUT as the mechanism;
+this is a different, previously-unknown bug in the same function. Two guards fired immediately before
+the crash, both first-ever (`n=0`) fires: `[freelist-next-guard] site=0x8000CE40` and
+`[generic-cache-guard] n=0 site=0x80010E30 bad_head=0x7C75E467 ra=0x00000000`, then SIGBUS one line
+later at guest PC `0x80010E74` (44 bytes after the generic-cache-guard's own site).
+
+**Root cause, traced to source (`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c`,
+`submitSceneNodeRender`, guest range `0x80010E00`-`0x80010E78`).** At `0x80010E18`/`E1C` the function
+writes its own `$a0` argument (`ctx->r4`, the "new node" being linked) into the free-list-cache-head
+global at `0x8011:0x63B0` (an insert-at-head store), then immediately rereads that SAME global into
+`ctx->r2` at `0x80010E2C` purely to feed `GENERIC_CACHE_GUARD`'s (item -268..-273, s434) own,
+unrelated deref chain at `0x80010E30`. `GENERIC_CACHE_GUARD` correctly sanitizes `r2` there when the
+reread value is wild — but it validates the VALUE READ BACK, not the VALUE WRITTEN (`r4` itself), and
+no guard in this function ever validates `r4`. Three instructions later, `DL_LIST_APPEND_GUARD`
+(item -291..-297, s454/s463) has its own reload-and-deref chain at this exact site (`rload`=`r2` from
+a DIFFERENT global, `0x8012:-0x5824`; `rderef`=`r3`; `rwrite`=`r4`) — its guard validates `rload`,
+per its own documented scope ("rwrite is a normal argument register, not derived from G — not at
+risk", true at its other 56 sites) — but at `0x80010E74` (`MEM_W(0X4, ctx->r4) = ctx->r2`), `r4` is
+used as a WRITE ADDRESS, completely unguarded, and at THIS one site `r4` is not a safe fresh
+argument — it's the same wild value `GENERIC_CACHE_GUARD` had just flagged two instructions earlier.
+
+**Arithmetic confirmation the crash address IS this value.** `mcontext` shows `x10=0xFC75E46B` and
+`far=si_addr=0x3FC75E46B`; the confirmed RDRAM host base is `0x300000000` (item s216-219's "shared
+corrupt literal" register, present by construction in every `MEM_W` fault) — `0x300000000 +
+0xFC75E46B = 0x3FC75E46B`, an exact match, and `0xFC75E46B == (0x7C75E467 | 0x80000000) + 4` — the
+generic-cache-guard's own flagged `bad_head` value, KSEG0-tagged and offset by the `MEM_W(0X4, ...)`
+write's own `+4`. Two independent readouts (the guard log line and the raw mcontext registers) agree
+on the exact same wild pointer — not a coincidence.
+
+**Fix.** Single-site, NOT a blanket regex across `DL_LIST_APPEND_GUARD`'s other 56 sites (verified
+the `site=0x80010E68`/`0x80010E74` literal is unique in the codebase — this alias only happens here).
+Added a new literal (address-anchored) patch to `~/Documents/Tools/N64Recomp/fixup_game_funcs.py`,
+applied immediately after the existing `DL_LIST_APPEND_GUARD` block (operates on the
+already-patched text, matching its exact output for this one site): validates `ctx->r4` immediately
+before the `0x80010E74` write and skips the write (substituting nothing, matching this whole guard
+family's "skip the write, nothing downstream depends on it" precedent from s436/s441/s454) if `r4` is
+out of the valid `0x80000000`-`0x80800000` RDRAM range. Logs via a new
+`ROGUESQ_LOG_DL_LIST_APPEND_RWRITE_GUARD` env var, `[dl-list-append-rwrite-guard]` tag. Left the
+sibling write at `0x80010E6C` (`MEM_W(0X0, ctx->r3) = ctx->r4`) untouched — it stores `r4` as DATA,
+not as an address, so it isn't at risk.
+
+**Regen/build/validation.** Full regen pipeline run in order (deleted `RecompiledFuncs/funcs_*.c`
+first, per item -20's standing rule): `make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake
+--build`. Fixup report confirmed the new patch fired exactly `x1` (unique site, as designed) and
+every pre-existing guard count in this lineage held steady — no regression: `DL_LIST_APPEND_GUARD`
+46+38=84 (unchanged), `SIBLING_PTR_WRITE_GUARD` 65+55=120 (unchanged, matches item -306's post-fix
+count), `NODE_LIST_HEAD_GUARD`+`NODE_LIST_HEAD_WRITE_GUARD` 18+12=30 (unchanged). Clean build (only
+pre-existing unrelated warnings). `strings` on the built binary confirms the new guard's format
+string is present. Ran a manual live-verify soak (`scratch/agent/soak_queue/s481_rwrite_guard_verify.sh`,
+same PROBE_KEYS schedule): 0 crash at this site, 0 `dl-list-append-rwrite-guard` fires this run (the
+underlying wild-pointer condition is itself intermittent, so a 0-fire clean run is expected, not a
+gap) — instead hit a DIFFERENT, already-catalogued, unrelated crash family at 134.6s
+(`loadDatFile+1152`/`last-guest-pc=0x800290d4` — the exact address item -259's overturned-conclusion
+entry names as `inflate_fast`'s own clean return / one of "five different real crash functions"; the
+local-symtab fix now names it directly without needing a separate `atos` pass, a bonus confirmation
+of item -311's value). No regression from the fix either way. 2nd confirmation soak queued:
+`scratch/agent/soak_queue/s481_rwrite_guard_confirm.sh` (per this lineage's standing 2-soak-confirm
+convention).
+
+**Housekeeping note:** `fixup_game_funcs.py` lives in the sibling `~/Documents/Tools/N64Recomp`
+checkout (a separate git repo from this one, listed as an additional working directory) and has been
+untracked-by-git in that repo across the entire project history (confirmed via `git status` there —
+`?? fixup_game_funcs.py`, alongside other untracked RS64-specific tooling scripts) — this is
+existing, load-bearing convention, not new drift introduced this session; the file's only durable
+record is this ledger plus its own persistence on disk. No `lib/` changes this session (`git status`
+in this repo shows only the pre-existing `lib/N64ModernRuntime`/`lib/rt64` uncommitted-patch state,
+unchanged), so no `submodule-patches/export.sh` run was needed.
+
+**Outcome: ADVANCED** (real root-caused bug, real fix, build-verified, guard-count-regression-checked,
+1 clean manual confirmation run, 2nd queued). Next session: read the queued
+`s481_rwrite_guard_confirm` soak result first; if clean, item -312 below can be marked CLOSED.
+Otherwise fall back to the next M3/M5 candidate per the USER DIRECTIVE order.
