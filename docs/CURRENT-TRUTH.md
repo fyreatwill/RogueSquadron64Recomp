@@ -17,16 +17,12 @@ Priority order for upcoming iterations, set after the 300-session review:
    §10-§12). Next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
-   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Current active
-   sub-arc: the s465 codebase-wide frequency scan of `lui+lw` global-reload idioms — see items
-   -298..-307 below for the closed/deferred-bucket chain and PROJECT-OVERVIEW §18 for full detail.
-   `hi16=0x8011, offset=0x63d4` (170 sites) and `hi16=0x8011, offset=-0x35e0` (23 sites, item -307)
-   are both CLASSIFIED AND DEFERRED — confirmed compare-only idioms, reload never dereferenced, not
-   guard candidates. The flagged `hi16=0x8012, offset=-0x23a8` bucket (141 sites, partially covered
-   by item -296) was fully resolved s473 as item -306 — 120/141 covered (119 pre-existing + 1 newly
-   found and fixed), 2 false positives, 19 no-use, 10 flagged-not-chased. **Next candidate:
-   `hi16=0x8013, offset=0xb50`** (21 sites, 11 files, the most-scattered remaining bucket in the
-   scan).
+   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. **The s465
+   codebase-wide frequency scan's candidate list is EXHAUSTED as of s475 (item -308)** — every bucket
+   it surfaced has a disposition; see items -298..-308 below and PROJECT-OVERVIEW §18. Next M3 session
+   needs either a new discovery pass (re-run the s465 scan methodology against a different instruction
+   pattern) or the item -308 tool-bug-#5 backfill audit (re-check every already-CLOSED bucket for
+   `lui`->label->`lw` sites silently missed by `scratch_s468_shapecheck_generic.py` — see item -308).
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -158,7 +154,27 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -307. The next NEW item takes -308.
+a range pointer. Highest allocated so far: -308. The next NEW item takes -309.
+
+-308. **(s475) M3 idiom-class audit: `hi16=0x8013, offset=0xb50` global (`0x8012F4B0`) — CLASSIFIED
+    AND DEFERRED, not a guard candidate. Also found tool bug #5, a label-line blind spot.** True site
+    count is 24 across 12 files (`funcs_9/12/15/16/17/27/28/29/30/32/33/42.c`), not the 21/11 the
+    scan tool initially reported — `scratch_s468_shapecheck_generic.py`'s lookahead loop only
+    recognizes disassembly-comment and breadcrumb lines while scanning from a `lui` to its `lw`
+    reload; a bare `L_XXXXXXXX:` branch-target label between them (common when the reload address is
+    itself a jump target) silently breaks the scan with no site reported and no warning — missed 3
+    sites (`funcs_27.c:108435`, `funcs_30.c:14600`, `funcs_32.c:29556`), the last in a file
+    (`funcs_32.c`) that didn't appear in the tool's file list at all. Fixed in a standalone checker
+    (`scratch_s475_label_gap_check.py`, N64Recomp repo, untracked) that also skips label lines; not
+    fixed in the tool itself. All 24 sites (12/12 files) directly read: 100% the identical
+    `andi $vN, $vN, MASK` (masks `0x1/0x8/0x10/0x20/0x60` — a packed status/capability bitfield)
+    immediately after the reload, consumed only by a conditional branch, never dereferenced — same
+    compare-only idiom as items -305/-307. 0 write sites to the global found (`grep MEM_W(0XB50` —
+    read-only from recompiled code). No code change, no soak queued (same precedent as -305/-307).
+    **Open question, not yet chased**: whether this label-gap bug also undercounts any already-CLOSED
+    bucket (items -298/-299/-300/-301/-303/-304/-306) — every spot-checked label-gap site so far has
+    been harmless, but no already-closed bucket has been re-checked against this specific bug. Full
+    derivation: `PORTING-STATE.md` Session 475.
 
 -307. **(s474) M3 idiom-class audit: `hi16=0x8011, offset=-0x35e0` global (`0x8010CA20`) — CLASSIFIED
     AND DEFERRED, not a guard candidate.** 23 `lw` reload sites across 9 files

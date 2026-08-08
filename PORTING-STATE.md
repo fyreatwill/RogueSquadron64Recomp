@@ -39464,3 +39464,76 @@ reassignment, this session's shapecheck register-substring false positive AND th
 call-boundary taint-survival false positive) -- the second of which was caught and fixed BEFORE it
 produced a wrong "guard needed" ledger entry, which is exactly what the cross-validation-before-
 trusting-a-tool discipline this sub-arc has been building is for.
+
+## Session 475 (2026-08-07): item -308 `hi16=0x8013, offset=0xb50` (24 sites, 12 files) CLASSIFIED
+AND DEFERRED, not a guard candidate; found and fixed a FIFTH tool bug -- a label-line blind spot in
+`scratch_s468_shapecheck_generic.py` that silently drops sites, undercounting this bucket 21/24 and
+missing one whole file entirely
+
+**This session's work unit**: NEXT.md's top (and, per NEXT.md, final) candidate from the s465
+codebase-wide scan, `hi16=0x8013, offset=0xb50`. Grepped `fixup_game_funcs.py` (N64Recomp repo) for
+the resolved global `0x8012F4B0` first -- no overlap with any existing guard, genuinely fresh.
+
+Ran `scratch_s468_shapecheck_generic.py 8013 B50` (uppercase, per item -305's case-sensitivity
+lesson): reported 21 sites across 11 files, one flagged `ADD32(...) -> WRITE_THROUGH hit_deref=True`
+(`funcs_30.c:15666`). Direct read of that site: the exact same tool-bug-#1 pattern documented s474
+(register-taint substring false positive) -- the reload lands in `$v0`/r2, the immediate next line is
+the near-universal `ctx->r29 = ADD32(ctx->r29, -0X20);` prologue, and the real next use of the
+reloaded value several lines later is `ctx->r2 = ctx->r2 & 0X60;` (an `andi` bitmask test) followed by
+a `bne`-and-discard -- a compare-only integer-flag idiom, not a write-through. No new taint-scan
+needed this session (the flagged site resolved by direct read alone, same as s474's bug-#1 sites).
+
+**Tool bug #5 found: a label-line blind spot.** While hand-verifying the flagged site, noticed the
+generated code sometimes places a `L_XXXXXXXX:` branch-target label between the `lui` line and its
+`lw` reload (when the reload's address is itself a jump target from elsewhere in the function --
+common in this codebase's branch-recompilation pattern). `scratch_s468_shapecheck_generic.py`'s
+lookahead loop (after the `lui` match) only recognizes two line shapes while scanning forward --
+`g_rs64_last_guest_pc = ...;` breadcrumbs and `// 0xXXXXXXXX: <mnemonic>` disassembly comments -- and
+`break`s the loop with `found_reload_line = None` on any other line shape, including a bare label
+line. So any `lui`->label->`lw` reload site is silently invisible to the tool -- not reported as
+"UNRELATED", just absent from the site count entirely, with no warning.
+
+Wrote `scratch_s475_label_gap_check.py` (N64Recomp repo, untracked): re-ran the identical scan logic
+with one addition -- also skip lines matching `^L_[0-9A-Fa-f]+:\s*$` in both the lui->reload lookahead
+and (for completeness) verified no other line shapes are silently eaten. Permissive re-scan: **24
+sites, not 21** -- 3 sites missed by the original tool (`funcs_27.c:108435`, `funcs_30.c:14600`, and
+`funcs_32.c:29556`), the last of which is in a file (`funcs_32.c`) that didn't even appear in the
+original tool's 11-file report, since it was that file's *only* site in the bucket. True file count:
+12, not 11.
+
+Direct-read all 3 newly-found sites plus a further systematic sweep of the deterministic 24-site
+list the fixed scanner produced (cross-checked file:line against `RecompiledFuncs/funcs_*.c` source
+directly, not just tool output) -- confirmed the identical `andi $vN, $vN, MASK` (masks observed:
+`0x1`, `0x8`, `0x10`, `0x20`, `0x60` -- a packed capability/status bitfield being tested one bit at a
+time) immediately after every one of the 24 reloads, in every one of the 12 files, with a conditional
+branch consuming the masked result and never a dereference. Grepped for write sites to the same
+global (`MEM_W(0XB50, ...) = `) across all `funcs_*.c`: **zero** -- this global is read-only from the
+game's own code (any writes, if they exist, come from outside the recompiled function bodies, e.g.
+engine/audio init or a ucode boundary -- out of scope to chase for a compare-only bucket). Same
+disposition as items -305/-307: a comparison against a stale bitfield value can't fault, and forcing
+the branch outcome would silently change game logic. **No code change.**
+
+**Scope of tool bug #5 beyond this session**: unlike bugs #1-#4 (which were caught and either fixed
+or shown not to change any past bucket's disposition), this one has NOT been checked against any
+previously-CLOSED bucket from this sub-arc (items -298/-299/-300/-301/-303/-304/-306) -- it's possible
+some already-guarded buckets are *also* undercounted, with a handful of extra `lui`->label->`lw` sites
+sitting unguarded. This is a real residual-risk gap, not just a methodology footnote. Flagged, not
+chased this session (every spot-checked instance so far, across two independent buckets now
+[-307's `-0x35e0`... no, that one had no label-gap sites; only this bucket did], has been the same
+harmless compare-only idiom, so the a-priori risk of a missed *guard-worthy* site is low, but
+unverified). **Recommended follow-up**: re-run `scratch_s475_label_gap_check.py`'s label-skip logic
+(or a generalized version parameterized like `scratch_s468_shapecheck_generic.py`) against every
+CLOSED bucket's hi16/offset pair before considering this tool lineage trustworthy end-to-end.
+
+**Disposition: item -308, CLASSIFIED AND DEFERRED, no code change.** No soak queued (no code change
+to verify, same as items -305/-307's precedent).
+
+**Per NEXT.md: the s465 codebase-wide frequency scan's known candidate list is now EXHAUSTED.** Every
+bucket it surfaced has a disposition. Next M3 session needs either a new discovery pass (re-running
+the s465 scan methodology against a different instruction pattern) or the tool-bug-#5 backfill audit
+above, whichever has higher expected value -- see updated NEXT.md.
+
+**Outcome: ADVANCED.** Classified the last fresh bucket from the s465 scan (24/24 sites, 12/12 files,
+100% same compare-only bitfield idiom, 0 write sites) and found a fifth methodology tool bug with a
+concrete, quantified blast radius (3 silently-missed sites, 1 silently-missed file, in this bucket
+alone) plus an unresolved-but-flagged question about whether it affects any already-closed bucket.
