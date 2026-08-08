@@ -15,7 +15,10 @@ Priority order for upcoming iterations, set after the 300-session review:
    the Regeneration section's Standing warnings stay intact deliberately; both are used every
    iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
-   §10-§12). Next M5 work needs a genuinely new lead (last checked s478; due for a fresh check once
+   §10-§12). Next M5 work needs a genuinely new lead (**last checked s488: re-read M5-AUDIO-PLAN.md +
+   scanned every s481-487 session entry in PORTING-STATE.md — the s481-487 arc's guards all target
+   pointer-aliasing bugs in already-known MusyX voice functions, not stub/gate/trap surfaces; no new
+   lead found, cadence reset**; due for a fresh check once
    3+ sessions have passed since then).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
@@ -31,12 +34,18 @@ Priority order for upcoming iterations, set after the 300-session review:
    surfaced a THIRD sibling scope gap in `DL_LIST_RESET_GUARD` (item -315, s484) that s485 also
    generalized (73/84 sites). s486: item -315's 2nd confirm came back clean. **s487: item -314's own
    deferred 6-site remainder (the 2 mid-loop `musyxMixActiveVoices`/`musyxSynthFrame` site anchors)
-   fixed with a loop-scoped `goto`-based guard shape — item -314 is now fully covered, 20/20, 1st
-   confirm clean (2nd queued). All five items (-312/-313/-314/-315) are fully CLOSED or awaiting only
-   a routine 2nd confirm; full narrative migrated to PROJECT-OVERVIEW §20.** No untried
+   fixed with a loop-scoped `goto`-based guard shape — item -314 is now fully covered, 20/20, both
+   independent confirms clean (2nd came back with ZERO crashes over the full run, the cleanest
+   possible outcome). All four items (-312/-313/-314/-315) are fully CLOSED, 2/2 confirms each; full
+   narrative migrated to PROJECT-OVERVIEW §20.** No untried
    high-expected-value instruction-pattern scan and no un-investigated high-recurrence breadcrumb
    remain queued — next M3 session should run a fresh from-scratch idiom scan per the s465/s477
-   precedent, or check the M5 lead cadence (last checked s478, overdue at 3+ sessions).
+   precedent, or check the M5 lead cadence. **s488 ran both**: the idiom scan's >=20-site tier came
+   back structurally dry (every large bucket already covered), closing the large-bucket lui+lw/lui+sw
+   idiom-audit method for now — see item -316. One sub-20 candidate (`-0x5BB4`, 19 sites, same struct
+   family as three already-guarded siblings) needs a 2nd source read + downstream trace before it's a
+   guard candidate. The M5 lead-check came back with nothing new (see item 2 above) — cadence reset
+   to s488.
 
 -312..-315. **(s481-487) `DL_LIST_APPEND_GUARD` and `DL_LIST_RESET_GUARD`'s own "grep-verified
     unique site" scope claims both turn out to be wrong, plus `AUDIO_SLOT_ACTIVE_GUARD`'s own
@@ -59,7 +68,11 @@ Priority order for upcoming iterations, set after the 300-session review:
     sibling guard families, `hangarbay-entry` reached n=2600 (positive control), crash at 113.1s
     byte-identical to the already-catalogued `tickWrappingTimerAccumulatorList`/`memcpy_recomp+288`
     family (`last-guest-pc=0x80054780`, same address seen at s462's confirm) — unrelated, filed not
-    chased. 2nd independent confirm queued (`s487_audio_voice_baseptr_loop_confirm.sh`). Item -315:
+    chased. **2nd independent confirm (`s487_audio_voice_baseptr_loop_confirm`, rc=0) came back the
+    cleanest possible outcome: ZERO `[CRASH]` events over the full run, 0 fires on
+    `audio-voice-baseptr-loop-guard` or `audio-voice-baseptr-guard` (the s484 entry-guard sibling) or
+    any other guard family, `hangarbay-entry` reached n=3000 (positive control, higher than the 1st
+    confirm's n=2600). Item -314 is now FULLY CLOSED, 2/2 independent confirms clean.** Item -315:
     item -314's own confirm soak crashed live on a THIRD sibling scope gap, in `DL_LIST_RESET_GUARD`
     (wrong register validated at one `submitSceneNodeRender` site); fixed site-anchored, then a
     static-analysis audit found the same shape at 73/84 sites, generalized into
@@ -193,7 +206,28 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -315. The next NEW item takes -316.
+a range pointer. Highest allocated so far: -316. The next NEW item takes -317.
+
+-316. **(s488) Fresh from-scratch `lui`+`lw` idiom scan (the s465/s477 precedent, refreshed with
+    every offset closed/classified since s465): the >=20-site tier came back STRUCTURALLY DRY — every
+    bucket at that size is already a named guard or an already-classified compare-only/deferred
+    bucket (`scratch_s488_scan.py`, `N64Recomp/`, positive-controlled: it correctly re-finds all 18
+    known covered buckets, from `0x63b0`x448 down to `-0x662c`x1). **This closes the large-bucket
+    lui+lw/lui+sw idiom-audit method (the s465/s477/s481-488 lineage) for now** — no untried
+    high-expected-value >=20-site bucket remains; the lui+sw angle was separately closed s477 (item
+    -309). Lowering the threshold to 10-19 sites surfaced one real candidate worth a follow-up:
+    `hi16=0x8012, offset=-0x5BB4` (19 sites, `funcs_3.c`/`funcs_4.c`) sits inside the same struct
+    family as three already-guarded siblings (`-0x5824` DL_LIST_RESET, `-0x5BBC` MATERIAL_ARRAY_PTR,
+    `-0x5B48` NODE_LIST_HEAD — all within 0x70 bytes of each other), is both READ and WRITTEN
+    (write at `funcs_3.c:4702`), and at one read site (`funcs_4.c:1492-1512`) the raw reloaded value
+    is copied straight into an output struct's field 0x4 with no validation — the same
+    "propagate-an-unvalidated-reload-downstream" shape as the items -312..-315 arc, but only 1/19
+    sites has been read so far (below the lineage's own 2-site confirmation standard). NOT a guard
+    candidate yet — needs a 2nd direct source read and a downstream-consumer trace (does the output
+    struct's field 0x4 ever get dereferenced by a caller?) before proposing a fix. Two other 19-site
+    buckets checked and ruled out as pointers: `hi16=0x8011,offset=-0x35E4` (bitfield/flags test,
+    `& 0x4`, adjacent to the already-classified non-pointer `-0x35E0`) and its sibling family. Full
+    scan output and script: `N64Recomp/scratch_s488_scan.py`.
 
 -311. **(s480) Crash-symbolizer tooling fix — DONE, positive-control validated.** The item -310
     `dladdr`-nearest-exported-symbol blind spot is closed: `src/main/main.cpp` now builds a sorted

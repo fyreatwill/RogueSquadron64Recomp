@@ -1751,7 +1751,22 @@ soak (0 fires on item -314's guards; it separately triggered the item -315 disco
 s485's `s484_audio_voice_baseptr_confirm` (rc=3, 0 fires on `audio-voice-baseptr-guard` or any
 sibling, crashed at `pc-symbol=coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` — byte-
 identical to the already-catalogued heap-walker family recorded at `PORTING-STATE.md` lines
-~38630/38780/38801).
+~38630/38780/38801). **s487 closed item -314's own deliberately-deferred remainder**: the 6 mid-loop
+sites in `musyxMixActiveVoices` (3 sites) and `musyxSynthFrame` (1 site anchor covering all 4, since
+guarding the loop head transitively protects the 2 later same-iteration reloads) needed a
+loop-scoped "skip this iteration/block, continue" shape rather than the plain early-return s484 used
+for the other 14 sites — a new `AUDIO_VOICE_BASEPTR_LOOP_GUARD` (2 site anchors, `funcs_24.c`):
+`musyxMixActiveVoices`'s loop-head reload gets a `goto`-to-per-iteration-increment guard;
+`musyxSynthFrame`'s single reload gets a `goto`-past-the-release-countdown-array-walk guard to the
+loop's own exit label. All 20/20 originally-audited unguarded `0x801496F8`-reload sites are now
+covered. **2/2 independent confirms clean**: s487's own manual live-verify (0 fires on the new guard
+or any of 13 sibling guard families, `hangarbay-entry` n=2600, crashed at 113.1s on the already-
+catalogued `tickWrappingTimerAccumulatorList`/`memcpy_recomp+288` family, unrelated); the queued 2nd
+confirm (`s487_audio_voice_baseptr_loop_confirm`, rc=0) came back the cleanest possible outcome —
+ZERO `[CRASH]` events over the entire run, 0 fires on `audio-voice-baseptr-loop-guard` or
+`audio-voice-baseptr-guard` or any sibling, `hangarbay-entry` reached n=3000. **Item -314 is now
+FULLY CLOSED, 2/2.** The entire `AUDIO_VOICE_BASEPTR_GUARD`/`AUDIO_VOICE_BASEPTR_LOOP_GUARD` lineage
+(item -314, superseding `AUDIO_SLOT_ACTIVE_GUARD`'s s166 site-unique claim) is done.
 
 **Item -315 (s484–486), CLOSED 2/2:** item -314's own 1st confirm soak crashed live on a brand-new
 bug in a sibling family: `DL_LIST_RESET_GUARD` (item -298) validates the wrong register at

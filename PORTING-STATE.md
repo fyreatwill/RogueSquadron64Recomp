@@ -40523,3 +40523,77 @@ deleted first); did not touch `lib/` (edits were in `N64Recomp/fixup_game_funcs.
 tool file outside this repo's `lib/`, consistent with every prior session in this lineage — no
 `submodule-patches/export.sh` needed); one game run at a time; killed via the soak script's own
 SIGKILL/watchdog path, not manual SIGTERM.
+
+## Session 488 (2026-08-07): item -314's 2nd confirm folded in (fully CLOSED, 2/2, zero crashes on the confirm run) + a fresh from-scratch M3 idiom scan comes back structurally dry at the established >=20-site threshold, plus the overdue M5 lead-check
+
+**Fold-in: item -314's 2nd independent confirm.** The loop ran the queued
+`s487_audio_voice_baseptr_loop_confirm.sh` between iterations (rc=0, 347s,
+`scratch/agent/SOAK-RESULTS.md` line `20260807-201244`). Read the full `run.log` inside
+`scratch/agent/soak_results/s487_audio_voice_baseptr_loop_manual/` (the confirm script reuses the
+same output directory name as the 1st manual soak, so the run.log's own mtime, 20:18 vs the manual
+run's 20:13, is what distinguishes it): **0 `[CRASH]` events over the entire run** — the cleanest
+possible outcome, better than the 1st confirm (which crashed at 113.1s on an unrelated already-
+catalogued family). 0 fires on `audio-voice-baseptr-loop-guard` or `audio-voice-baseptr-guard` (the
+s484 entry-guard sibling) or any of the other ~13 instrumented guard families. `hangarbay-entry`
+reached `n=3000` (positive control, higher than the 1st confirm's `n=2600`). **Item -314 is now
+FULLY CLOSED, 2/2 independent confirms clean.** Updated `docs/CURRENT-TRUTH.md` (items -312..-315
+block and the USER DIRECTIVE section) and `docs/PROJECT-OVERVIEW.md` §20 to record the closure — the
+entire `AUDIO_VOICE_BASEPTR_GUARD`/`AUDIO_VOICE_BASEPTR_LOOP_GUARD` lineage (item -314, superseding
+`AUDIO_SLOT_ACTIVE_GUARD`'s s166 site-unique claim) is done. This closes the last open thread from
+the s481-487 arc; items -312/-313/-314/-315 are all fully CLOSED, 2/2 confirms each.
+
+**Work unit: fresh M3 idiom-class scan, the s465/s477 precedent, refreshed exclude list.** Wrote
+`N64Recomp/scratch_s488_scan.py`, adapted from `scratch_s465_scan.py` (same `lui`+`lw` global-reload
+detection: `ctx->rN = S32(0X80XX << 16)` immediately followed, tolerating breadcrumb/comment lines,
+by `ctx->rN = MEM_W(ctx->rN, OFFSET)` reloading the SAME register), with the `ALREADY_COVERED_OFFSETS`
+exclude set extended to include every offset closed or classified since s465: items -305..-309
+(`0x63D4`, `-0x23A8`, `-0x35E0`, `0xB50`, plus the pre-existing `-0x25A4`/`-0x5824`/etc. baseline) and
+items -298..-304 (`0x63FC`, `-0x5B48`, `-0x70F8`, `0x7CE4`, `-0x7104`, `-0x5BBC`). Ran against the
+current 50-file `RecompiledFuncs/funcs_*.c` regen (last regenerated s487, unchanged since — no new
+regen needed for a pure static-analysis pass).
+
+**Result: the >=20-site tier came back STRUCTURALLY DRY.** Zero buckets qualified — every bucket at
+that size is either an already-named guard or an already-classified compare-only/deferred bucket.
+**Positive control**: the script's "already covered/classified" report correctly re-found all 18
+known buckets, from `hi16=0x8011,offset=0x63b0` (448 sites, `DL_LIST_APPEND`/`RESET_GUARD`'s own
+global) down to `hi16=0x8015,offset=-0x662c` (1 site) — confirming the scan mechanics work and the
+dry result is a real completeness finding, not an instrumentation failure. **This closes the
+large-bucket `lui`+`lw`/`lui`+`sw` idiom-audit method (the s465/s477/s481-488 lineage) for now** — no
+untried high-expected-value >=20-site bucket remains; the `lui`+`sw` angle was separately closed s477
+(item -309, top 3 of 546 buckets all fixed-address stores, no risk).
+
+Lowered the threshold to 10-19 sites to check for a near-term follow-up before declaring the method
+fully exhausted. Two buckets checked by direct source read:
+- `hi16=0x8011,offset=-0x35E4` (19 sites) — `funcs_32.c:41-44`: reload immediately followed by
+  `ctx->r2 = ctx->r2 & 0X4;` then a branch — a bitfield/flags test, the same compare-only idiom as
+  the already-classified sibling `-0x35E0` (item -307) 4 bytes away. Not a pointer. Ruled out.
+- `hi16=0x8012,offset=-0x5BB4` (19 sites, `funcs_3.c`/`funcs_4.c`) — sits inside the same struct
+  family as three already-guarded siblings within 0x70 bytes (`-0x5824` DL_LIST_RESET, `-0x5BBC`
+  MATERIAL_ARRAY_PTR, `-0x5B48` NODE_LIST_HEAD), is both READ and WRITTEN (write at `funcs_3.c:4702`,
+  `MEM_W(-0X5BB4, ctx->r1) = ctx->r3;`), and at one read site (`funcs_4.c:1492-1512`) the raw
+  reloaded value is copied straight into an output struct's field `0x4`
+  (`MEM_W(0X4, ctx->r4) = ctx->r3;`) with no validation in between — the same
+  "propagate-an-unvalidated-reload-into-another-struct" shape as the items -312..-315 arc. **Filed as
+  item -316, NOT a guard candidate yet** — only 1/19 sites has been read (below this lineage's own
+  2-site confirmation standard), and the output struct's field 0x4 hasn't been traced to a caller to
+  confirm it's actually dereferenced downstream. Next session's recommended starting point.
+
+**M5 lead-check (overdue since s478, now well past the 3-session cadence).** Re-read
+`docs/M5-AUDIO-PLAN.md` and scanned every s481-487 `PORTING-STATE.md` session entry (Sessions
+481-487) for any incidentally-discovered new stub/trap/gate surface. Found none — every guard landed
+in that arc (`DL_LIST_APPEND_RWRITE_GUARD`, `AUDIO_VOICE_BASEPTR_GUARD`/`_LOOP_GUARD`,
+`DL_LIST_RESET_RNODE_GUARD`) targets pointer-aliasing bugs in already-known MusyX voice/list
+functions, not an audio stub, trap, or gate. M5 remains DONE and fully CLOSED, no new lead; cadence
+reset to s488.
+
+**Outcome: ADVANCED.** Ran the planned work unit (fresh idiom scan) and it produced a real,
+positive-controlled result (method exhausted at the established threshold) plus one concrete
+sub-threshold candidate (item -316) for next session, folded in a soak verdict that fully closes
+item -314, and cleared the overdue M5 lead-check. No code changed this session (pure analysis +
+documentation); no regen/build/soak needed.
+
+Rules obeyed: read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, and
+`scratch/agent/SOAK-RESULTS.md` first; did not touch `lib/`; one game run at a time (none run this
+session — pure static analysis); the soak-result fold-in used two independent same-run positive
+controls (`hangarbay-entry` counter, zero-crash full-duration run) before concluding item -314's
+closure.
