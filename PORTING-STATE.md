@@ -43170,3 +43170,70 @@ checkout's `fixup_game_funcs.py`, untracked by this repo's git).
 `scratch/agent/OUTCOME`: ADVANCED (source-traced and fixed a new item -317 step 3 guard with a clean 1st
 live-verify and a queued 2nd confirm; also closed out item -319 2/2 on a queued soak's clean result, and
 filed a new single-occurrence crash lead, item -324).
+
+## Session 522 (2026-08-08): item -317 step 3's 20th guard (`BEGIN_FRAME_DL_CHUNK_R1_GUARD`) folded-in confirm read CLEAN, FULLY CLOSED 2/2; source-traced and FIXED the 21st guard (`BEGIN_FRAME_DL_CHUNK_R2_GUARD`, `beginFrameDLChunk`'s 2nd blanket-sweep site), 1st live-verify clean, 2nd confirm queued; surfaced a new single-occurrence crash (item -325, `findLookupEntryByKey+2212`)
+
+Read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, `scratch/agent/SOAK-RESULTS.md` per the
+iteration contract. `wc -c docs/CURRENT-TRUTH.md` = 52909 bytes (under the 60000 maintenance
+trigger) — not a maintenance iteration. Per the user directive priority order, M5 is CLOSED (no new
+lead since s520) and M3's top-ranked work unit is item -317 step 3's blanket sweep, resumed per
+`scratch/agent/NEXT.md`'s exact instructions.
+
+**Step 1 — folded in the s521 queued 2nd confirm** (`s521_begin_frame_dl_chunk_r1_confirm`, rc=3,
+175s per the flat log). The thin flat summary looked like a bare crash, but per the s519/s520 lesson
+("read the real `run.log`, not the thin flat summary") the detailed log showed: 0
+`begin-frame-dl-chunk-r1-guard` fires, one benign already-catalogued `hangarmenu-a0-guard` co-fire
+(item -265), and a strong `hangarbay-entry n=2700` positive control. The crash itself
+(`pc-symbol=coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c`) is a byte-identical match
+(same pc-symbol AND same last-guest-pc) to the already-catalogued background-noise heap-walker
+family (documented s354-366, the exact same signature item -322's own s517 1st live-verify hit and
+which s518's clean 2nd confirm was accepted alongside). Same "clean pass despite background-noise
+crash" precedent as item -322's own closure — `BEGIN_FRAME_DL_CHUNK_R1_GUARD` is now **FULLY CLOSED
+2/2**.
+
+**Step 2 — resumed the blanket sweep.** Re-ran the tracer fresh (`s494_item317_step3_tracer.py
+--scan` with its default `--out`, then `s506_dedupe.py`) per the NEXT.md gotcha warning. Top tier
+(count=36, all `beginFrameDLChunk`) no longer included R1's line (16595, now fixed) — its highest
+remaining member was `funcs_3.c:12895`/`0x8000AA9C`. Source-traced by reading the generated
+`RecompiledFuncs/funcs_3.c` directly: `if (ctx->r2 == 0)` gates one arm (branch target executes a
+harmless duplicate `*r3 = r2` write then jumps past the site); the non-null fallthrough falls
+through the same duplicate write then dereferences the reloaded `ctx->r2` unconditionally at
+`0x8000AA9C` (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no `0x80000000`-`0x80800000` range check.
+Confirmed this reloads a DIFFERENT global table slot than R1 (own `lui $v0,0x8011`/`lw $v0,0x63B0`
+pair at `0x8000AA8C`/`0x8000AA90`, vs R1's `0x8000B560`/`0x8000B564`) — genuinely a distinct site,
+not a duplicate of R1. Confirmed downstream (`L_8000AAAC`/`L_8000AAB4`) reloads both `ctx->r4` and
+`ctx->r2` fresh from the same `0x63B0`-offset table immediately after, so skip-the-write-on-invalid
+is safe — same precedent as every guard in this lineage. Grepped `fixup_game_funcs.py` for
+`0x8000AA9C` before writing the patch: zero hits, confirming this site wasn't already guarded.
+
+Wrote the fix as `BEGIN_FRAME_DL_CHUNK_R2_GUARD` in `fixup_game_funcs.py`, following the exact R1
+pattern (env-gated diagnostic counter, range-checked skip-on-invalid). Regenerated the full pipeline
+(`make_elf.py` → deleted stale `RecompiledFuncs/funcs_*.c` per item -20's standing rule → `N64Recomp`
+→ `fixup_game_funcs.py`, audited the patch report for the expected counts, no anomalies → `cmake
+--build`).
+
+**1st live-verify** (manual, foreground, all guard families armed for regression checking):
+1st attempt crashed at 20.3s on the already-catalogued async Metal.framework shader-compiler-thread
+SIGSEGV cluster (`pc=0x800ab0e0`, same cluster as items -10/-9/-303/-315/-508) with only
+`hangarbay-entry n~5` — too weak a positive control per Iron Rule 1, discarded, retried once.
+2nd attempt: CLEAN — 0 `begin-frame-dl-chunk-r2-guard` fires, 0 fires on every other armed guard
+family (no regression), `hangarbay-entry n=31` positive control, full 129.4s of gameplay captured
+before crashing on a NEW, previously-uncatalogued signature: `pc-symbol=findLookupEntryByKey+2212`
+(local-symtab), `last-guest-pc=0x800ad0dc`, call chain `updateHangarBayScene` →
+`updateTextOverlayLookupEntry` → `findLookupEntryByKey`. Grepped CURRENT-TRUTH and SOAK-RESULTS for
+this signature: zero prior hits, genuinely new. Filed as item -325, single occurrence, not chased
+per M3 strategy (wait-for-recurrence). 2nd independent confirm queued:
+`scratch/agent/soak_queue/s522_begin_frame_dl_chunk_r2_confirm.sh`.
+
+**Rules out**: nothing overturned this session — both new crashes (items -324 folded-in-clean,
+-325 new) are consistent with the established pattern that live-verifying one guard surfaces
+unrelated pre-existing crash leads elsewhere in the game, none of which implicate the guard itself.
+
+`docs/CURRENT-TRUTH.md`: item -317 rewritten to reflect R1 CLOSED 2/2 and R2 1st-verify-clean/2nd-
+confirm-queued, tally now 21/~150 (20 closed), next-tier list refreshed from the s522 scan; item -325
+added; "Highest allocated" counter bumped to -325; USER DIRECTIVE section's M3 summary paragraph
+refreshed.
+
+`scratch/agent/OUTCOME`: ADVANCED (folded in a queued confirm that FULLY CLOSED item -317 step 3's
+20th guard 2/2; source-traced and fixed the 21st guard with a clean 1st live-verify and a queued 2nd
+confirm; filed a new single-occurrence crash lead, item -325).
