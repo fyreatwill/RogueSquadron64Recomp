@@ -41979,3 +41979,67 @@ summary block's item -318/-319 pointers refreshed to match.
 No pivot needed.
 
 `scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
+
+## Session 506 (2026-08-08): item -318's 2nd confirm attempt was INCONCLUSIVE (retried); item -317
+step 3 -- fixed the next same-function sibling lead `EMIT_FRAME_RDP_INIT_DL_R2G_GUARD`
+(`funcs_3.c:7384`, `emitFrameRdpInitDl`, 40 shared reload sites, 7th guard in this function); M5-cadence
+lead check (no new lead)
+
+**Step 1 -- folding in the loop's queued s506 soak result (item -318's 2nd confirm attempt)**: the
+loop-run confirm (`scratch/agent/soak_results/s506_append_rdp_state_dl_entry_confirm_20260808-102338.log`)
+is **NOT a valid confirm, INCONCLUSIVE**. It crashed at only 20.0s/8 frames on
+`pc-symbol=rebuildActiveDisplayObjectList+540`/`last-guest-pc=0x800ab060` -- an unrelated, already-
+catalogued crash (the long-tracked `rs_free`/`rs_malloc` shared-heap-corruption walker family first
+seen s164, recurring since, e.g. PORTING-STATE Sessions 183-219, unrelated to this guard) -- and the
+full raw log has **zero guard-fire lines of any kind**, including zero `hangarbay-entry` positive-
+control fires. Per Iron Rule 1 (a null result is worthless without a same-run positive control), this
+does not count toward item -318's 2/2 confirm target; it is a wasted soak slot, not a clean pass. Item
+-318 stays at 1/2 confirms. Re-queued an identical retry:
+`scratch/agent/soak_queue/s506_append_rdp_state_dl_entry_confirm_retry.sh`.
+
+**Step 2 -- M5 audio-lead cadence check (independent of rule 8, due since s502 + 3 sessions)**: grepped
+`PORTING-STATE.md` Sessions 503-505 for audio/MusyX/voice/song/sound/sfx mentions -- zero hits, all
+three were pure item -317/-318 rendering-idiom work. No new M5 lead; cadence reset to s506 (due again
+s510+).
+
+**Step 3 -- item -317 step 3, continuing Option B (the tied-40 tier)**: re-ran
+`scratch/agent/s494_item317_step3_tracer.py --scan` fresh before touching source (448 raw sites, same
+counts as s503/s504 fresh scans -- no drift), deduped by `(file, hit.line, hit.kind, hit.off, hit.reg)`
+using a corrected script (`scratch/agent/s506_dedupe.py` -- the FIRST dedup attempt this session grouped
+by `(file, kind, off, reg)` WITHOUT `hit.line`, silently merging hundreds of unrelated sites that just
+happen to share a register name and byte offset across totally different call sites; adding `hit.line`
+back reproduced NEXT.md's recorded tied-40 tier exactly, confirming the correct grouping key). Tied-40
+tier confirmed unchanged: `funcs_3.c:7384/8344/7700/8688` (all `emitFrameRdpInitDl`) plus
+`funcs_4.c:17346` (`renderLitMeshFaceGroup`). Picked `funcs_3.c:7384` (`0x80009578`,
+`MEM_W(0X4, ctx->r2) = ctx->r3;`) per NEXT.md's recommendation -- same shape as every prior
+`EMIT_FRAME_RDP_INIT_DL_R2*_GUARD`: `ctx->r2` reloaded from the `0x801163B0` table a few instructions
+earlier with only a null check; the null arm takes a separate harmless write then falls through to the
+SAME write this guard covers; the non-null path has no `0x80000000`-`0x80800000` range check before the
+dereference. Fixed as `EMIT_FRAME_RDP_INIT_DL_R2G_GUARD` (`fixup_game_funcs.py`, inserted before the s505
+`APPEND_RDP_STATE_DL_ENTRY_GUARD` block). Regenerated per the mandatory order (delete `funcs_3.c` ->
+`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> cmake); fixup report confirmed `patched x1` for
+the new guard, no anchor-count mismatches beyond the known-permanent S392_H3A/S393_H3B remainder; build
+clean.
+
+**Interesting side observation, not chased**: this session's fresh tracer scan also surfaced dozens of
+NEEDS_GUARD candidate sites *inside `beginFrameDLChunk` itself* (`funcs_3.c:16530/14228/15105/14711/
+16055/12843/15589/13316/13808`, counts 36 down to 28) -- the exact function item -319's recurring
+`beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0` crash (2 independent occurrences, s503/s505) lives
+in. If a 3rd occurrence lands and item -319 gets its own dedicated thread (per NEXT.md's pre-set
+threshold), this list is a ready-made starting point instead of a fresh source trace from zero.
+
+**1st live-verify** (`scratch/agent/manual_runs/s506_emit_frame_rdp_init_dl_r2g_manual.sh`): **CLEAN**.
+0 `emit-frame-rdp-init-dl-r2g-guard` fires (null result). 0 regressions on any of the ~44 other armed
+sibling guard families -- only one fire anywhere else, `hangarmenu-a0-guard` x1 (item -265, already-
+catalogued, unrelated). `hangarbay-entry` n=32 (positive control, confirms the instrumentation and the
+run itself were both live). Crashed at 129.7s/52 frames on `pc-symbol=coalesceFreeHeapBlocks+4328`/
+`last-guest-pc=0x80002474` -- grepped and confirmed this is the SAME already-catalogued heap-walker
+misattribution family documented since s354-366 and recurring many times since (exact offset/
+last-guest-pc varies sighting to sighting: `+2016`/`+3192`/`+4424`/`+4328` all seen), unrelated to this
+guard, not chased in-band. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s506_emit_frame_rdp_init_dl_r2g_confirm.sh`.
+
+**Rule 8 note**: ADVANCED (a real code change + live-verify + queued confirm) on the still-open
+`item-317-step3-fix-next-ranked-leads` `HYPOTHESIS-ID`; resets any stall counter. No pivot needed.
+
+`scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.

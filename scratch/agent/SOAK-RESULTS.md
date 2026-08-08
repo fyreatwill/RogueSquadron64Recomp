@@ -131,3 +131,4 @@
 20260808-023156 | s501_emit_frame_rdp_init_dl_r2d_confirm | rc=3 | 173s | scratch/agent/soak_results/s501_emit_frame_rdp_init_dl_r2d_confirm_20260808-023156.log
 20260808-024853 | s502_emit_frame_rdp_init_dl_r2e_confirm | rc=3 | 168s | scratch/agent/soak_results/s502_emit_frame_rdp_init_dl_r2e_confirm_20260808-024853.log
 20260808-025141 | s503_emit_frame_rdp_init_dl_r2f_confirm | rc=3 | 161s | scratch/agent/soak_results/s503_emit_frame_rdp_init_dl_r2f_confirm_20260808-025141.log
+20260808-102338 | s506_append_rdp_state_dl_entry_confirm | rc=3 | 65s | scratch/agent/soak_results/s506_append_rdp_state_dl_entry_confirm_20260808-102338.log
