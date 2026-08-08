@@ -1,94 +1,56 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: m3-lui-sw-direct-store-scan
+HYPOTHESIS-ID: m3-opcode-scan-lineage-closed
 
-## s476 summary: tool-bug-#5 (label-gap) backfill audit CLOSED clean; s465 `lui`+`lw` scan lineage
-fully spent
+## s477 summary: `lui`+`sw` direct-store scan CLASSIFIED AND DEFERRED, dead end after one scan
 
-Generalized `scratch_s475_label_gap_check.py` into `scratch_s476_label_gap_generic.py` (N64Recomp
-repo, untracked, hi16/offset-parameterized like `scratch_s468_shapecheck_generic.py`) and ran it
-against all 7 already-CLOSED M3 idiom-class buckets (items -298/-299/-300/-301/-303/-304/-306).
-**Result: strict == permissive hit count for all 7 — 0 label-gap sites anywhere.** Tool bug #5 (the
-`lui`->label->`lw` blind spot that undercounted item -308 by 3 sites/1 file) does not recur in any
-already-CLOSED bucket. No per-site patch needed anywhere; this closes the open question cleanly.
+Wrote `scratch_s477_sw_scan.py` (N64Recomp repo, untracked) per the s476 pivot note, scanning for
+`lui` immediately followed by a direct store (`MEM_W(OFFSET, ctx->rL) = ...;`) off the same
+register with NO intervening `lw` reload — the mirror-image of the exhausted read-side (`lui`+`lw`)
+lineage. Result: 546 buckets, 1471 sites, 358 singleton buckets (long diffuse tail). Top 3 buckets
+(230/197/85 sites) are ALL offsets already well-understood from the read-side lineage (items
+-296/-305/-306); direct-read confirmed all three are plain `someGlobal = value;` assignments — the
+store destination is a fixed compile-time RDRAM address, which cannot fault regardless of the
+register's prior contents. Confirms hypothesis 1 (top clusters = benign fixed-address stores) and
+hypothesis 3 (diffuse tail) from the prior NEXT.md; hypothesis 2 (write through a dynamically
+reloaded pointer) is structurally excluded by this scan's own match shape. No code change, no soak
+queued. Filed as item -309 in `docs/CURRENT-TRUTH.md`.
 
-While reconciling counts, found item -299's raw strict hit count (87) didn't match its guard's site
-count (84) — traced to an UNRELATED cause (`scratch_s466_shapecheck_63fc.py` hardcoded
-`files = ["funcs_3.c", "funcs_4.c"]`, silently never scanning `funcs_6.c`'s 3 sites). Directly
-re-read all 3 `funcs_6.c` sites: confirmed `fixup_game_funcs.py`'s own comment was right — those 3
-are COMPARE_ONLY (`bne` against a computed array-bound address, never dereferenced), correctly
-excluded already. Item -299 remains soundly CLOSED. No code change this session; no soak queued
-(nothing in `RecompiledFuncs/` changed).
+**Both `lui`-based opcode-pattern scan angles this lineage has tried are now closed**: read-side
+(`lui`+`lw`, s454-s476) and write-side (`lui`+`sw` direct store, s477). No untried
+high-expected-value instruction-pattern scan is queued. Full derivation: `PORTING-STATE.md` Session
+477; ledger: `docs/CURRENT-TRUTH.md` item -309.
 
-Full derivation: `PORTING-STATE.md` Session 476; ledger: `docs/CURRENT-TRUTH.md` item -308 amendment.
+## This session's top work unit: no new opcode-pattern scan — fall back per USER DIRECTIVE order
 
-**The entire s465 `lui`+`lw` frequency-scan discovery pipeline is now fully spent**: 8 buckets
-CLOSED with guards (298 sites total: -291/-298/-299/-300/-301/-303/-304/-306), 4 buckets CLASSIFIED
-AND DEFERRED as compare-only/integer-index idioms (-302/-305/-307/-308), and the methodology itself
-now audited clean end-to-end (all 5 found tool bugs either fixed or shown not to change any past
-bucket's disposition). Re-deriving buckets from the same `lui`+`lw` frequency table has no further
-expected value.
+Per the USER DIRECTIVE (`docs/CURRENT-TRUTH.md` top) and this session's finding, M3 idiom-class
+scanning has no queued high-value candidate right now. Do NOT invent a third opcode-pattern scan
+speculatively — that would be the same mistake NEXT.md has warned against every session ("if you
+find yourself re-deriving from the same table, stop"). Options, in priority order:
 
-## This session's top work unit: new discovery source — `lui`+`sw` direct-store scan
-
-Per CURRENT-TRUTH's updated M3 priority note: pivot to a genuinely NEW instruction-pattern scan
-rather than continuing to mine the exhausted `lui`+`lw` table. Every closed/deferred bucket in the
-s454-s476 lineage started from a `lui` reload (`ctx->rL = S32(0XHHHH << 16)`) immediately followed
-by an `lw` reload (`ctx->rL = MEM_W(ctx->rL, 0XOFFSET)`) — i.e. a global POINTER being READ back
-into a register. A DIFFERENT idiom this lineage has never scanned: `lui`+`sw` DIRECT STORE, where a
-global is computed and WRITTEN TO without any intervening `lw` reload of the old value:
-
-    ctx->rL = S32(0XHHHH << 16);          // lui
-    MEM_W(0XOFFSET, ctx->rL) = ctx->rSrc;  // sw directly off the lui'd base, no reload in between
-
-This is a different risk shape from every bucket audited so far (all of which were READ-then-
-compare-or-deref of a *stale* global; a pure write doesn't depend on the global's prior contents,
-so a "guard the read" idea doesn't apply — but a write to a bad/uninitialized address computed via
-`lui`+`addiu`+arithmetic rather than a direct small-offset store might be a different crash source
-worth enumerating and ruling in/out on its own terms).
-
-**Hypotheses:**
-1. `lui`+`sw` direct-store sites are dominated by legitimate global-variable stores at fixed, valid
-   addresses (RDRAM-resident statics) — no crash risk, nothing to guard, this whole discovery
-   direction is a dead end for M3 (matches the character of every closed-clean bucket in the `lw`
-   lineage: idioms audited so far have mostly been benign).
-2. A minority of `lui`+`sw` sites store through a POINTER that was itself `lui`+`lw`-loaded earlier
-   in the same function (i.e., pointer arithmetic feeding a write, same "wild pointer from stale
-   reload" risk class as every guard placed so far) — these are new guard candidates not covered by
-   any of the 8 read-side guards already placed, because a write-only global was never a `lw` reload
-   target and so never entered the s465 frequency table.
-3. The pattern is too diffuse (too many trivial single-site global-variable stores, no clusterable
-   high-frequency bucket) to produce anything as clean as the `lw` lineage's top-N buckets — in which
-   case this discovery source itself should be abandoned after one scan, not iterated on.
-
-**Discriminating measurement**: write a frequency scanner (adapt `scratch_s465_scan.py`, N64Recomp
-repo) that finds every `ctx->rL = S32(0XHHHH << 16);` immediately (allowing comment/breadcrumb
-lines) followed by `MEM_W(0XOFFSET, ctx->rL) = ...;` with NO intervening `lw`-shaped reload of
-`ctx->rL`, group by `(hi16, offset)` pair, and rank by site count. The top bucket's site count and
-whether ANY of its sites trace back to a pointer that was itself dynamically loaded (not a fixed
-compile-time small-offset global address) is the discriminating split between hypotheses 1/2 vs 3.
-
-Recommended approach:
-1. `cd ~/Documents/Tools/N64Recomp`, write `scratch_s477_sw_scan.py`: glob all
-   `RecompiledFuncs/funcs_*.c`, regex-match the `lui` line, look ahead (same comment/breadcrumb/
-   label skip logic as `scratch_s476_label_gap_generic.py` — reuse its skip predicates) for a
-   `MEM_W(0XOFFSET, ctx->rL) = ...;` write using the SAME register, with no `MEM_W(ctx->rL, ...)`
-   read of that register appearing first. Bucket by `(hi16, offset)`, print top 15 by site count.
-2. Pick the top 2-3 buckets (by the same "highest expected value = highest site count, multi-file"
-   heuristic that worked for the `lw` lineage) and read a stratified sample directly (not just tool
-   `hit_deref`/`hit_write` flags — this lineage's own history shows every automated classifier so
-   far has had at least one blind spot on first use) to determine hypothesis 1 vs 2 vs 3.
-3. If a bucket matches hypothesis 2 (write-through-a-stale-pointer, not a fixed-address global
-   store), design and apply a guard using the established per-site literal-anchor mechanism
-   (`fixup_game_funcs.py`, same pattern as items -298 through -306), regen/build/live-verify, queue
-   a confirm soak.
-4. If hypothesis 1 or 3 dominates (all fixed-address stores, or too diffuse to cluster), CLASSIFY
-   AND DEFER with no code change — same disposition precedent as items -302/-305/-307/-308 — and the
-   session after that should consider M3 fully mined out for now (time to return to M5 or general
-   crash-breadcrumb triage instead of continuing to invent new opcode-pattern scans).
+1. **Check for a new M5 lead first** (priority 2 in the USER DIRECTIVE, above M3). M5 audio
+   de-stubbing is marked DONE/fully CLOSED in the directive with "next M5 work needs a genuinely new
+   lead" — read `docs/PROJECT-OVERVIEW.md` §10-§12 (the full M5 arc) to check whether any of the
+   crash breadcrumbs collected in recent soaks (see SOAK-RESULTS.md tail) plausibly point to a new
+   audio-related lead that would justify reopening M5. If nothing new surfaces in a focused ~15
+   minute read, treat M5 as still closed and move to option 2.
+2. **Passive breadcrumb triage**: `scratch/agent/SOAK-RESULTS.md` and recent session crash
+   signatures (search PORTING-STATE.md sessions s449-s477 for "filed, not chased" / "filed not
+   chased" crash signatures) have accumulated several NOT-YET-audited crash families surfaced as
+   side effects of confirm soaks — e.g. the recurring `near-0x80000000`/"near-zero guest pointer"
+   family (BREADCRUMB6, first seen s273), and various `pc-symbol=...+NNNN` one-off signatures. Pick
+   the crash signature with the HIGHEST recurrence count across sessions (not the most recent) and
+   apply the s282-s288 systematic-idiom-class-audit model to it: is it actually one root cause
+   recurring, or several coincidentally-similar symptoms? This is genuinely new work, not a
+   re-derivation of the closed lui+lw/lui+sw tables.
+3. If neither 1 nor 2 yields a concrete, boundable work unit within the session, the honest move is
+   BLOCKED with a specific question for the human: what should M3/M5 priority be now that both
+   opcode-scan angles and the standing audio-destub arc are closed. Do not manufacture a
+   maintenance-only session to stay busy (ITERATION.md explicitly forbids using doc-housekeeping as
+   a way to keep the loop fed).
 
 ## Soak queue status
 
-None queued this session (s476 had no code change to verify — the label-gap audit and the item -299
-recheck were both read-only). Check `scratch/agent/SOAK-RESULTS.md` tail at the start of next
+None queued this session (s477 had no code change to verify — the sw-scan and its follow-up reads
+were both read-only investigation). Check `scratch/agent/SOAK-RESULTS.md` tail at the start of next
 session as usual for any soaks the loop ran in the background.

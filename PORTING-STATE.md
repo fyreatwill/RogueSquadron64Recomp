@@ -39608,3 +39608,74 @@ same `lui`+`lw` frequency table, which is now exhausted.
 produced a clean/conclusive result (0/7 label-gap sites), and additionally resolved an unrelated
 raw-count anomaly surfaced by the same instrumentation with a direct source read rather than
 deferring it. Closes a correctness question about six-plus already-CLOSED guard buckets.
+
+## Session 477 (2026-08-07): new discovery source tried — `lui`+`sw` direct-store frequency scan
+— CLASSIFIED AND DEFERRED, dead end after one scan; M3 opcode-pattern-scan discovery direction
+now considered exhausted on both angles tried.
+
+Per s476's pivot note (the `lui`+`lw` read lineage fully spent), wrote
+`scratch_s477_sw_scan.py` (N64Recomp repo, untracked) to scan a genuinely different idiom this
+lineage had never covered: `ctx->rL = S32(0XHHHH << 16);` (a `lui`) immediately followed by a
+DIRECT STORE `MEM_W(0XOFFSET, ctx->rL) = ...;` off that same register, with NO intervening
+`lw`-shaped reload of `rL` in between. Every prior bucket in the s454-s476 lineage started from a
+`lui`+`lw` reload (reading a global pointer back); this scan targets the mirror-image write-only
+shape that never entered that frequency table.
+
+Reused the s465/s476 skip predicates (breadcrumb + disassembly-comment + `.LXXXXXXXX:` label
+lines tolerated in the lookahead, per the tool-bug-#5 fix) plus two new predicates specific to
+this idiom: bail (mark "blocked", exclude from the bucket) if the register is read back via a
+`lw`-shaped reload before any store is found (that site belongs to the already-scanned `lw`
+lineage, not this one), and bail if the register is reassigned before a store is found (the lui'd
+value was clobbered, never used as a store base).
+
+Scanned all 50 `RecompiledFuncs/funcs_*.c`: **546 buckets, 1471 total sites, 358 singleton
+(count==1) buckets** — a long diffuse tail from the first pass. Top 3 buckets by site count: 230
+sites at `hi16=0x8011/offset=0x63b0` (`funcs_3.c`x145, `funcs_4.c`x85), 197 sites at
+`hi16=0x8012/offset=-0x23a8` (`funcs_3.c`x100, `funcs_4.c`x97), 85 sites at
+`hi16=0x8011/offset=0x63d4` (`funcs_3.c`x46, `funcs_4.c`x38, `funcs_6.c`x1).
+
+All three top-bucket offsets are ALREADY well-understood globals from the read-side lineage
+(items -296/-305/-306): the `-0x23a8` global was the subject of s473's `SIBLING_PTR_WRITE_GUARD`
+work (its *read/dereference* side), and `0x63d4`/(implicitly `0x63b0`, adjacent) is the
+`DL_BUFFER_POOL_GUARD` neighborhood from item -305. Direct-read one example from each top bucket
+(`funcs_3.c:86`, `funcs_3.c:5308-5316`, `funcs_3.c:1265`): all three are the plain-C-assignment
+shape `someGlobal = registerValue;` — the original MIPS is `sw $vX, OFFSET($at)` where `$at` is
+the `lui`-computed base, meaning the STORE DESTINATION itself is a fixed compile-time RDRAM
+address (part of the game's static globals region). This is structurally different from every
+prior guard's risk shape: those guarded a *read* through a value that might be a stale/wild
+pointer; here the "risky" register is never dereferenced at all — it IS the destination address,
+and it's a compile-time constant (`HHHH0000 + OFFSET`), never a runtime-computed or previously-
+loaded value. A store to a fixed, always-mapped address cannot fault regardless of what's on the
+right-hand side.
+
+This confirms two of NEXT.md's three predicted hypotheses simultaneously: hypothesis 1 (top
+clusters dominated by legitimate fixed-address global stores, no crash risk) for the head of the
+distribution, and hypothesis 3 (too diffuse to cluster past the top few buckets) for the
+358-singleton tail. Hypothesis 2 (write through a pointer that was itself `lui`+`lw`-loaded
+earlier — i.e., a genuinely dynamic write address) is structurally excluded by this scan's own
+match shape: a register read straight from `lui` with no intervening `lw` reload is by
+construction a compile-time constant, never a runtime-loaded pointer, so this particular scan
+could never have surfaced a hypothesis-2 site even if one existed elsewhere in the codebase (a
+write-through-a-reloaded-pointer idiom would need a different, third scan pattern to find, and
+every prior bucket's own `hit_deref`/write-through classification already covered that
+sub-question on the read side without finding one).
+
+No code change (nothing to guard — the pattern is definitionally not a crash risk). No soak
+queued (no change to `RecompiledFuncs/`).
+
+**Per NEXT.md's own stop condition ("if hypothesis 1 or 3 dominates... CLASSIFY AND DEFER... and
+M3 is fully mined out for now"): the `lui`+`sw` direct-store discovery source is exhausted after
+this one scan.** Both angles this lineage has tried on the `lui`-based idiom family — read-side
+(`lui`+`lw`, closed s476) and write-side (`lui`+`sw` direct store, closed s477) — are now closed
+with no further untried high-expected-value candidate queued. Next M3 session should fall back to
+passive breadcrumb/soak-queue triage (per the standing ITERATION.md contract) rather than
+inventing a third opcode-pattern scan speculatively, or per the USER DIRECTIVE priority order,
+look for a new M5 lead.
+
+Filed as item -309 in `docs/CURRENT-TRUTH.md`; USER DIRECTIVE M3 note updated to reflect both
+scan lineages closed.
+
+**Outcome: ADVANCED.** Ran the planned discriminating measurement (a from-scratch frequency scan
+over a genuinely new instruction-pattern idiom), got a conclusive, non-null result that resolves
+two of the three competing hypotheses and closes the discovery direction cleanly — a documented
+dead end with mechanism, not a speculative "probably fine."

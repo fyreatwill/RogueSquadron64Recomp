@@ -17,13 +17,13 @@ Priority order for upcoming iterations, set after the 300-session review:
    §10-§12). Next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
-   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. **The entire s465
-   `lui`+`lw` frequency-scan lineage is now fully spent, as of s476.** Every bucket it surfaced has a
-   disposition (items -298..-308 below and PROJECT-OVERVIEW §18), and the s476 tool-bug-#5 backfill
-   audit confirmed 0/7 already-CLOSED buckets have any silently-missed `lui`->label->`lw` site (see
-   item -308 amendment below). Next M3 session needs a genuinely NEW discovery source — e.g. a
-   `lui`+`sw` direct-store scan (no intervening `lw`) or a different opcode class entirely — not a
-   re-derivation of this same frequency table.
+   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. **Both the s465
+   `lui`+`lw` frequency-scan lineage (spent as of s476) and the s477 `lui`+`sw` direct-store probe
+   (dead end after one scan, item -309) are now closed.** Every bucket either surfaced has a
+   disposition (items -298..-309 below and PROJECT-OVERVIEW §18). Next M3 session has no untried
+   high-expected-value instruction-pattern scan queued — fall back to passive breadcrumb/soak-queue
+   triage, or (per priority order below) look for a new M5 lead instead of inventing a third
+   opcode-pattern scan speculatively.
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -155,7 +155,39 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -308. The next NEW item takes -309.
+a range pointer. Highest allocated so far: -309. The next NEW item takes -310.
+
+-309. **(s477) New discovery source tried: `lui`+`sw` DIRECT-STORE frequency scan — CLASSIFIED AND
+    DEFERRED, dead end. M3 `lui`+`sw` discovery direction considered exhausted after one scan.**
+    Per the s476 pivot note, wrote `scratch_s477_sw_scan.py` (N64Recomp repo, untracked) to find the
+    idiom this lineage had never scanned: `ctx->rL = S32(0XHHHH << 16);` immediately followed by a
+    direct store `MEM_W(0XOFFSET, ctx->rL) = ...;` with NO intervening `lw`-shaped reload of `rL` in
+    between (as opposed to every prior bucket, which started from a `lw` reload of a global
+    *reading* it back). Scanned all 50 `RecompiledFuncs/funcs_*.c`: 546 buckets, 1471 total sites,
+    358 of them singleton (count==1) buckets — a long diffuse tail. Top 3 buckets by site count (230
+    at `hi16=0x8011/offset=0x63b0`, 197 at `hi16=0x8012/offset=-0x23a8`, 85 at
+    `hi16=0x8011/offset=0x63d4`) are ALL offsets already well-understood from the read-side lineage
+    (items -296/-305/-306 above) as ordinary global-variable slots. Direct-read 3 examples (one per
+    top bucket, `funcs_3.c:86`, `funcs_3.c:5308-5316`, `funcs_3.c:1265`) confirmed every one is the
+    plain-C-assignment shape `someGlobal = registerValue;` — `sw $vX, OFFSET($at)` where `$at` is the
+    `lui`-computed base, i.e. the destination address itself is a fixed compile-time RDRAM address
+    (part of the game's static globals region), never a dereference through a stale/wild pointer.
+    **A direct store to a fixed compile-time address cannot fault regardless of the register's prior
+    contents or a stale reload** — there is no "stale pointer" for a fixed-address store to be
+    guarded against; the crash-risk shape every prior guard addressed (reading/dereferencing through
+    a value that may be wild) structurally does not apply to this idiom. This confirms hypothesis 1
+    from NEXT.md (dominated by legitimate fixed-address global stores) for the top clusters, and
+    hypothesis 3 (too diffuse to cluster) for the 358-singleton long tail — both predicted-dead-end
+    outcomes, neither hypothesis 2 (write through a dynamically-loaded stale pointer; structurally
+    excluded by this scan's own match shape, since a register read directly from `lui` with no
+    intervening `lw` is by construction a compile-time constant, never a runtime-loaded pointer).
+    **No code change** (nothing to guard); no soak queued. **The `lui`+`sw` direct-store discovery
+    source is exhausted after this one scan**, per NEXT.md's own stop condition. M3 idiom-class
+    scanning (both the `lui`+`lw` lineage, closed s476, and this `lui`+`sw` probe, closed s477) has
+    now been tried on the two most natural instruction-pattern angles with no further untried
+    high-expected-value lead; next M3 session should return to passive breadcrumb/soak-queue triage
+    rather than inventing a third opcode-pattern scan, or per the standing USER DIRECTIVE priority
+    order, look for a new M5 lead. Full derivation: `PORTING-STATE.md` Session 477.
 
 -308. **(s475) M3 idiom-class audit: `hi16=0x8013, offset=0xb50` global (`0x8012F4B0`) — CLASSIFIED
     AND DEFERRED, not a guard candidate. Also found tool bug #5, a label-line blind spot.** True site
