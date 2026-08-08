@@ -41611,3 +41611,70 @@ hypothesis; the M5 lead-check scanned the actual session text (not a precedent c
 concluding "no new lead," per the falsifiability/evidence-this-iteration standard in the
 SUBSTITUTED-outcome rules (this session is not SUBSTITUTED -- both the soak fold-in and the M5
 check are real, positive-controlled/evidence-backed results, so outcome is ADVANCED).
+
+## Session 500 (2026-08-08): item -317 step 3 -- fixed the next same-function sibling lead, EMIT_FRAME_RDP_INIT_DL_R2C_GUARD (funcs_3.c:5695, emitFrameRdpInitDl, 40 shared reload sites), 1st live-verify clean, 2nd confirm queued
+
+Continued the same-function-sibling sweep of `emitFrameRdpInitDl`'s repeated `0x801163B0`-table
+reload idiom (item -317 step 3; see Sessions 494-499 for the tracer's methodology and the first
+four fixed leads, all now FULLY CLOSED 2/2 confirms each: `NODE_LIST_HEAD_SIBLING_R4_GUARD`,
+`RENDER_LIT_MESH_R2_GUARD`, `EMIT_FRAME_RDP_INIT_DL_R2_GUARD`, `EMIT_FRAME_RDP_INIT_DL_R2B_GUARD`).
+
+**Drift check first, per NEXT.md's mandatory process.** Re-ran
+`scratch/agent/s494_item317_step3_tracer.py --scan`, deduped the fresh JSON report by
+`(file, hit.line, hit.kind, hit.off, hit.reg)` and counted distinct `reload_line` sources per
+group. Result: line numbers did NOT drift this session -- the tied-at-40 tier matched NEXT.md's
+recorded `funcs_3.c:5695/6001/6321/6631/7332/8292/7648/8636` exactly (an initial `sed` window I
+read manually was off by one line due to a blank line at the top of the range; the `grep -n` cross-
+check caught it before any edit was made). Picked the lowest-line entry, `funcs_3.c:5695`, per
+NEXT.md's recommendation. Confirmed via awk backward-scan for the nearest `RECOMP_FUNC` that this
+line is still inside `emitFrameRdpInitDl` (function starts at line 5286).
+
+**The site.** `funcs_3.c` guest address `0x80008F7C` (`MEM_W(0X4, ctx->r2) = ctx->r3;`): `ctx->r2`
+is reloaded from the `0x801163B0` table a few instructions earlier (`0x80008F70`) with only a null
+check (`beq $v0, $zero, L_80008F80` / `ctx->r2 == 0`). The null arm takes a separate (harmless)
+write to `ctx->r3`+0x0 then gotos away from this specific write -- same shape as
+`EMIT_FRAME_RDP_INIT_DL_R2_GUARD`/`R2B_GUARD` -- but the non-null fallthrough has no range check
+(`0x80000000`-`0x80800000`) before the dereference, so a non-null garbage/freed table entry reaches
+it unguarded. Downstream control flow falls straight into `L_80008F80`, which touches `ctx->r1`/
+`ctx->r4` first and then reassigns `ctx->r2` from the table again (`0x80008F94`) before any further
+use of `ctx->r2` -- confirmed by reading the actual source past the label, not assumed -- so
+skip-the-write-on-invalid is safe here, same precedent as all four prior fixes in this lineage.
+
+**Fix.** New guard `EMIT_FRAME_RDP_INIT_DL_R2C_GUARD` added to
+`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`, mirroring the exact block
+shape of `EMIT_FRAME_RDP_INIT_DL_R2B_GUARD` (literal-string-anchor patch, `text.count(old)==1`
+checked). Regenerated through the full pipeline: deleted `funcs_3.c`, `make_elf.py`, `N64Recomp`,
+`fixup_game_funcs.py` (report confirmed `funcs_3.c: ... EMIT_FRAME_RDP_INIT_DL_R2C_GUARD) patched
+x1`, no new errors, only the known-permanent S392_H3A/S393_H3B SKIPPED remainder), then
+`DEVELOPER_DIR=... cmake --build . -j8` (clean build, only pre-existing warnings).
+
+**1st live-verify (manual, foreground, `scratch/agent/manual_runs/s500_emit_frame_rdp_init_dl_r2c_manual.sh`):**
+0 fires on the new `emit-frame-rdp-init-dl-r2c-guard` (null result -- rare path, consistent with
+every prior fix in this lineage), 0 fires on ANY of the ~44 other armed sibling guard-family tags
+(no regression -- cleanest possible result, no guard fired at all this run), `hangarbay-entry` n=31
+(positive control, in line with prior runs' 31-34). Crashed at 116.8s on
+`pc-symbol=initVec4TripletFromArgs+68`, `last-guest-pc=0x80065e94`, `x0`/`x9`=`0x0000000300000000`
+-- the SAME already-catalogued RDRAM-base-decompose crash family as s463/s468/s489 (same host
+symbol and the same `x0`/`x9` corruption signature per the s216-219 overturned-conclusion note,
+though the guest PC differs from s489's `0x800ab068`, consistent with this being a recurring but
+not-yet-root-caused family rather than a single fixed address), unrelated to this guard, filed not
+chased (already catalogued, no new filing needed).
+
+**Post-fix per-hit query:** re-ran the tracer's `--scan` after the fix. Aggregate `NEEDS_GUARD`
+count stayed flat at 390 (expected -- doesn't move until a reload site's LAST unguarded hit
+clears, per s496-499's established behavior), but a direct per-hit query for the fixed write's new
+location (now inside the guard's `else` branch, shifted from line 5695 to 5706 by the 14 inserted
+guard lines) returned zero hits -- confirms the tracer's range-check-shape detection recognizes the
+new guard and the fixed line no longer appears as an unsafe hit anywhere. Fresh dedup after the fix
+shows the remaining tied-at-40 tier shifted by the same +14 lines:
+`funcs_3.c:6014/6334/6644/7345/8305/7661/8649` (all `emitFrameRdpInitDl`, still unfixed) plus
+`funcs_4.c:17346` (`renderLitMeshFaceGroup`, still unfixed, flagged since s497).
+
+**2nd confirm queued:** `scratch/agent/soak_queue/s500_emit_frame_rdp_init_dl_r2c_confirm.sh` (same
+recipe, correct three-level `../../..` path, all sibling guard env vars armed plus this session's
+new one).
+
+`EMIT_FRAME_RDP_INIT_DL_R2C_GUARD` is 1/2 confirmed (pending the queued 2nd run).
+**Five step-3 leads now fixed total** (four fully closed 2/2, this one pending its 2nd confirm).
+~138 other distinct locations remain unaudited/unfixed. Full derivation: `docs/PROJECT-OVERVIEW.md`
+§21, `docs/CURRENT-TRUTH.md` item -317, this session's `scratch/agent/NEXT.md`.
