@@ -40963,3 +40963,32 @@ build-verified, live-verified clean with a positive control matching the prior s
 baseline, 2nd confirm queued. Item -317 (both steps 1 and 2) now has a 1st-clean/2nd-queued or
 fully-closed status on every scope it was opened with; only the wider 184-site blanket sweep (step
 3) remains open.
+
+## Session 493 (2026-08-07): MAINTENANCE — CURRENT-TRUTH.md compacted from 60,657 to 41,025 bytes
+(net -200 lines), migrating the s488-492 item -316/-317 arc to PROJECT-OVERVIEW.md §21
+
+Step 0 of ITERATION.md triggered (CURRENT-TRUTH.md was 60,657 bytes, over the 60,000-byte cap) — this
+was a MAINTENANCE iteration, no experiment run.
+
+Work done:
+1. Wrote a new `docs/PROJECT-OVERVIEW.md` §21 consolidating the full s488-492 item -316/-317
+   narrative (the `DL_ALLOC_PROPAGATION_GUARD`, `HEAP_DEQUEUE_DERIVED_PTR_GUARD`, and
+   `ORIENTED_FACE_DERIVED_PTR_GUARD` fixes, plus the s490 methodology lesson about validating the
+   actually-dereferenced register rather than an upstream proxy at a shared-label control-flow join)
+   — preserving every load-bearing technical detail (addresses, registers, fire counts) that was
+   previously only in CURRENT-TRUTH.md.
+2. Condensed CURRENT-TRUTH.md's USER DIRECTIVE preamble, the -312..-317 lineage summary, and the
+   Next-steps -317/-316 entries down to pointers into the new §21, keeping only what's load-bearing
+   for picking the next work unit (item -317 step 3, the 183-site blanket sweep, is still the open
+   thread).
+3. Compacted five older fully-closed Next-steps entries (-291..-297, -261..-290, -259, -231..-249,
+   -230..-14) that were already fully detailed in PROJECT-OVERVIEW §13-§20 — trimmed each to a
+   1-3-line pointer instead of a multi-line recap.
+4. Bumped the maintenance-pass counter (twenty-one passes now) and the PROJECT-OVERVIEW section
+   range cited in the USER DIRECTIVE (§16-§21).
+
+Result: CURRENT-TRUTH.md went from 659 to 459 lines (60,657 → 41,025 bytes), a net shrink of exactly
+200 lines by `git diff --numstat` (the Stop-gate's own measure) — meets the >=200-net-line ADVANCED
+threshold. Read the whole file back after editing to confirm no dangling item-number references or
+broken section pointers; found none. No code, guard, or experiment changed this session — next
+iteration resumes item -317 step 3 (or a fresh M3/M5 lead) per NEXT.md.

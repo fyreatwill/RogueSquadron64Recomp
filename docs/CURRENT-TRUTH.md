@@ -7,99 +7,31 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = `## LLE s
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
-   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Twenty passes so
-   far (s295-330 x5, s346, s355, s364, s371, s380, s391, s398, s409, s429, s438, s444, s451, s461,
-   s469, s479, s486) kept the file oscillating around the cap as new session detail accrues — full
-   per-pass migration targets in git log; PROJECT-OVERVIEW §16-§20 hold the most recent five arcs. 35
-   KB remains a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Twenty-one passes
+   so far (s295-330 x5, s346, s355, s364, s371, s380, s391, s398, s409, s429, s438, s444, s451, s461,
+   s469, s479, s486, s492) kept the file oscillating around the cap as new session detail accrues —
+   full per-pass migration targets in git log; PROJECT-OVERVIEW §16-§21 hold the most recent six arcs.
+   35 KB remains a stretch target, not a hard floor -- the "Current truth" env-var/timeline prose and
    the Regeneration section's Standing warnings stay intact deliberately; both are used every
    iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
-   §10-§12). Next M5 work needs a genuinely new lead (**last checked s488: re-read M5-AUDIO-PLAN.md +
-   scanned every s481-487 session entry in PORTING-STATE.md — the s481-487 arc's guards all target
-   pointer-aliasing bugs in already-known MusyX voice functions, not stub/gate/trap surfaces; no new
-   lead found, cadence reset**; due for a fresh check once
-   3+ sessions have passed since then).
+   §10-§12). Next M5 work needs a genuinely new lead (**last checked s488, no new lead found, cadence
+   reset — due for a fresh check once 3+ sessions have passed since then**).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Every bucket
    surfaced by the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW
-   §18-§19). The s480 crash-symbolizer fix (item -311, local-symtab lookup replacing `dladdr`'s
-   exported-symbol-only blind spot) resolved two more breadcrumbs it was built to help with: s481
-   found `loadCutsceneAssetsByIndex+1860` was itself a misattribution, but the reproduction handed
-   back a real, root-caused guard gap in `DL_LIST_APPEND_GUARD` (item -312) that s482 found recurred
-   at up to 78/84 sites (generalized, item -313); applying that same "is the address-uniqueness claim
-   actually shape-uniqueness?" skepticism to another old closed patch then found `AUDIO_SLOT_ACTIVE_GUARD`
-   recurring across 20 more MusyX voice-function sites (item -314, s483), whose own confirm soak
-   surfaced a THIRD sibling scope gap in `DL_LIST_RESET_GUARD` (item -315, s484) that s485 also
-   generalized (73/84 sites). s486: item -315's 2nd confirm came back clean. **s487: item -314's own
-   deferred 6-site remainder (the 2 mid-loop `musyxMixActiveVoices`/`musyxSynthFrame` site anchors)
-   fixed with a loop-scoped `goto`-based guard shape — item -314 is now fully covered, 20/20, both
-   independent confirms clean (2nd came back with ZERO crashes over the full run, the cleanest
-   possible outcome). All four items (-312/-313/-314/-315) are fully CLOSED, 2/2 confirms each; full
-   narrative migrated to PROJECT-OVERVIEW §20.** No untried
-   high-expected-value instruction-pattern scan and no un-investigated high-recurrence breadcrumb
-   remain queued — next M3 session should run a fresh from-scratch idiom scan per the s465/s477
-   precedent, or check the M5 lead cadence. **s488 ran both**: the idiom scan's >=20-site tier came
-   back structurally dry (every large bucket already covered), closing the large-bucket lui+lw/lui+sw
-   idiom-audit method for now — see item -316. The M5 lead-check came back with nothing new (see item
-   2 above) — cadence reset to s488. **s489 resolved item -316's sub-20 `-0x5BB4` candidate into a
-   real fix**: a downstream trace found the actual gap one function upstream of the 19 read sites, in
-   an existing `CACHE_HEAD_A1_GUARD` site that validated one deref but not two propagating writes
-   right after it — same shape as -312..-315, fixed the same way (extend the check), 1st confirm
-   clean (0 fires, unrelated already-catalogued crash). **s490: item -316's own 2nd confirm handed
-   back a 5th instance of the lineage (item -317, `HEAP_DEQUEUE_DERIVED_PTR_GUARD`) — with a
-   methodology lesson, not just another fix: the first fix attempt validated the wrong register
-   (path-dependent at a shared control-flow label) and false-positived 660,261 times in one soak
-   before being caught by the same live-verify discipline that's supposed to catch exactly this;
-   corrected to validate the actually-dereferenced register directly, re-verified clean (0 fires),
-   2nd confirm queued.** **s491 extended item -317's fix to cover its own remaining exposure**: the
-   9+ further unguarded `ctx->r16` derefs plus the `ctx->r5` second-generation pointer flagged by a
-   post-s490 classification pass all sit in one self-contained straight-line block, so the existing
-   check now `goto`-skips the whole block instead of just its first write; 1st confirm clean (0 fires
-   on the guard or any of ~20 siblings, already-catalogued unrelated crash), 2nd confirm queued. The
-   `funcs_4.c` sibling site s490 also flagged turned out to need its own dedicated provenance trace
-   (a general-purpose register with a second multi-path hazard, not a simple derived-once pointer) —
-   deferred, not guessed at; it's the next M3 session's first task. No fresh idiom-scan candidate
-   remains queued behind it — after that: a new frequency-scan angle (both `lui`+`lw` and `lui`+`sw`
-   are now structurally dry at the >=20-site tier), a control-flow-aware blanket sweep of item -317's
-   own 183-site sibling population, or a wait for a new breadcrumb. **s492: folded in s491's clean
-   2nd confirm (item -317 step 1, `heapFreeListDequeue`, CLOSED 2/2), then traced and fixed the
-   deferred `funcs_4.c` step 2 site (`ORIENTED_FACE_DERIVED_PTR_GUARD`) rather than reusing step 1's
-   fix shape blindly — 1st confirm clean, 2nd queued.** Only the wider 183-site blanket sweep (step
-   3) remains open on item -317; no fresh idiom-scan candidate is queued behind it.
+   §18-§19). Items -312..-315 (s481-487, `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/
+   `AUDIO_SLOT_ACTIVE_GUARD` sibling-site gaps) are all fully CLOSED — PROJECT-OVERVIEW §20. That
+   lineage recurred a 5th and 6th time as items -316/-317 (s488-492: `DL_ALLOC_PROPAGATION_GUARD` and
+   `HEAP_DEQUEUE_DERIVED_PTR_GUARD`/`ORIENTED_FACE_DERIVED_PTR_GUARD`) — full derivation and the
+   validate-the-dereferenced-register-not-a-proxy methodology lesson in PROJECT-OVERVIEW §21. **s492
+   status: item -317 steps 1 and 2 both fully CLOSED 2/2; only step 3 (the wider 183-site
+   control-flow-aware blanket sweep) remains open — see Next steps item -317 below.**
 
--312..-315. **(s481-487) `DL_LIST_APPEND_GUARD` and `DL_LIST_RESET_GUARD`'s own "grep-verified
-    unique site" scope claims both turn out to be wrong, plus `AUDIO_SLOT_ACTIVE_GUARD`'s own
-    20-site sibling gap — all FOUR items now fully CLOSED or fully covered.** Item -312: a
-    `loadCutsceneAssetsByIndex+1860` breadcrumb reproduced as `submitSceneNodeRender+63868` under the
-    s480 symbolizer fix, revealing a real `DL_LIST_APPEND_GUARD` unguarded-`rwrite` gap at one site;
-    fixed, then SUPERSEDED. Item -313: a structural re-audit found that same aliasing shape recurs at
-    78/84 `DL_LIST_APPEND_GUARD` sites (confirmed via 2nd direct source read); generalized into a
-    blanket `rwrite`-validating patch, CLOSED. Item -314: applying the same "address-unique ≠
-    shape-unique" skepticism to `AUDIO_SLOT_ACTIVE_GUARD` found 20 more unguarded loads of its global
-    across 15 MusyX voice functions; s484 fixed 14/20 via 10 site-anchored early-return guards
-    (`AUDIO_VOICE_BASEPTR_ENTRY_GUARD`), deliberately leaving the 6 mid-loop
-    `musyxMixActiveVoices`/`musyxSynthFrame` sites unguarded pending a loop-scoped design. **s487
-    closed that remainder**: `musyxMixActiveVoices`'s loop-head reload (transitively covering its 2
-    other same-iteration reloads) gets a `goto`-to-per-iteration-increment guard (skips only that
-    voice, continues the loop); `musyxSynthFrame`'s single reload gets a `goto`-past-the-array-walk
-    guard (skips only that countdown pass, preserves later unrelated work in the same call) —
-    `AUDIO_VOICE_BASEPTR_LOOP_GUARD`, 2 site anchors, all 20/20 item -314 sites now covered. 1st
-    live-verify (`s487_audio_voice_baseptr_loop_manual`) clean: 0 fires on the new guard or any of 13
-    sibling guard families, `hangarbay-entry` reached n=2600 (positive control), crash at 113.1s
-    byte-identical to the already-catalogued `tickWrappingTimerAccumulatorList`/`memcpy_recomp+288`
-    family (`last-guest-pc=0x80054780`, same address seen at s462's confirm) — unrelated, filed not
-    chased. **2nd independent confirm (`s487_audio_voice_baseptr_loop_confirm`, rc=0) came back the
-    cleanest possible outcome: ZERO `[CRASH]` events over the full run, 0 fires on
-    `audio-voice-baseptr-loop-guard` or `audio-voice-baseptr-guard` (the s484 entry-guard sibling) or
-    any other guard family, `hangarbay-entry` reached n=3000 (positive control, higher than the 1st
-    confirm's n=2600). Item -314 is now FULLY CLOSED, 2/2 independent confirms clean.** Item -315:
-    item -314's own confirm soak crashed live on a THIRD sibling scope gap, in `DL_LIST_RESET_GUARD`
-    (wrong register validated at one `submitSceneNodeRender` site); fixed site-anchored, then a
-    static-analysis audit found the same shape at 73/84 sites, generalized into
-    `DL_LIST_RESET_RNODE_GUARD`, CLOSED, 2nd confirm (s485) clean. Full derivation and every soak
-    verdict: `docs/PROJECT-OVERVIEW.md` §20, `PORTING-STATE.md` Sessions 481-487.
+-312..-317. **(s481-492) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`
+    "grep-verified unique site" lineage — six items, all fully CLOSED except -317 step 3** (open scope
+    and methodology lesson: see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§21.
 
 ## Current truth (established by session 295; unchanged, reviewed through s486)
 
@@ -230,125 +162,23 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -317. The next NEW item takes -318.
 
--317. **(s490) `HEAP_DEQUEUE_DERIVED_PTR_GUARD` — a 5th instance of the "-312..-316 lineage" shape,
-    found while confirming item -316, with a methodology lesson: the FIRST fix attempt was wrong and
-    had to be caught and corrected before landing.** Item -316's 2nd confirm soak's raw log showed
-    four existing sibling guards (`freelist-next-guard`, `generic-cache-guard`,
-    `dl-list-append-rwrite-guard`, `dl-list-reset-rnode-guard`) fire in sequence on the SAME
-    corrupted pointer (`0x181B7580`) at four adjacent guest addresses inside `heapFreeListDequeue`
-    (`funcs_3.c`), immediately followed by a SIGBUS 24 bytes past the last one. Direct-source trace
-    (delegated to a subagent, then independently re-confirmed by hand) found the gap: `ctx->r4` is
-    reloaded unguarded from the free-list-cache-head global (`0x801163B0`) at `0x8000D6E4`, then used
-    at `0x8000D744` to compute a derived pointer (`ctx->r16 = ADD32(ctx->r4, 0x8)`, i.e. `$s0=$a0+8`)
-    that's dereferenced completely unguarded at `0x8000D760` — crash address `0x181B7590` matches the
-    corrupted base plus the two chained `+8` offsets exactly. **First fix attempt validated `ctx->r4`
-    before the store (matching the -312..-316 precedent of re-checking the propagating value's own
-    source register) — WRONG for this site**: `0x8000D760` sits at a label (`L_8000D75C`) that is
-    ALSO reached via a second, unrelated control-flow path (an earlier bounds-check early-exit,
-    `goto L_8000D75C` at guest `0x8000D67C`) where `ctx->r16` was last set from `ctx->r7` (a plain
-    register copy, nothing to do with the free-list reload) — so `ctx->r4` at the shared label has no
-    consistent meaning across both paths. Live-verify caught it immediately: the guard fired 660,261
-    times in one ~300s soak while all four related sibling guards stayed at 0 — an order-of-magnitude
-    departure from every other guard in this entire lineage's history (0-4 fires), which is what
-    flagged the false-positive rather than a genuine widespread-corruption result. **Corrected**: validate
-    `ctx->r16` itself (the pointer actually dereferenced), not an upstream proxy register — correct on
-    both paths regardless of which one set it, matching the convention every other guard in this
-    codebase already follows. Rebuilt, re-verified: 0 fires on the corrected guard, `hangarbay-entry`
-    n=31 (positive control), 1 unrelated fire on the pre-existing `compose-npc-orient-guard9` sibling
-    family, crashed on the already-catalogued `loadCutsceneAssetsByIndex+1860` /
-    `last-guest-pc=0x800aafb8` family (same crash s463's own confirm soak hit). 2nd independent confirm
-    queued (`s490_heap_dequeue_derived_ptr_confirm.sh`). **Scope note**: the reload idiom
-    (`ctx->r4 = MEM_W(ctx->r4, 0X63B0);`) recurs 184 times across `funcs_3.c`/`funcs_4.c`; a
-    classification-scan subagent, still running when this session closed, found only 1 of the other
-    183 sites has an unguarded ADD32-derived-pointer dereference by its own (unvalidated, sanity-check-
-    failing) textual-proximity heuristic — untrustworthy given this session's own shared-label-merge
-    discovery, which a naive textual scan structurally cannot detect. A full blanket sweep needs
-    control-flow-aware validation (validate the dereferenced register directly, never an upstream
-    proxy) and is DEFERRED, not attempted at scale this session. **UPDATE (subagent's report landed
-    after this session's commit)**: the classifier finished and, hand-sample-verified against live
-    source, found the shipped fix is CORRECT but INCOMPLETE — `ctx->r16` (the same derived pointer
-    just guarded at `0x8000D760`) is dereferenced at least 9 MORE times later in the same
-    `heapFreeListDequeue` body, all still unguarded (guest addrs approx. `0x8000D794`, `0x8000D7A0`,
-    `0x8000D7AC`, `0x8000D7C8`, `0x8000D7E4`, `0x8000D7E8`, `0x8000D7F0`, `0x8000D7F8`, plus a
-    second-generation derived pointer `ctx->r5 = ADD32(ctx->r16, 0X10)` that likely propagates the
-    same gap further) — the guard stops the FIRST crash on a corrupted pointer but not the rest of the
-    same block. It also found ONE more confirmed VULNERABLE site under the strict same-function
-    same-register criterion: `funcs_4.c` reload `0x80012E94` -> derived `ctx->r18` at `0x80012EF0` -> an
-    8-field unguarded struct-init block starting `0x80012F14`. It explicitly flagged a structural blind
-    spot (register-rename / global-round-trip indirection, ~73/88 candidates use this idiom) meaning
-    the TRUE count is very likely higher than what direct-register tracing alone can find.
-    **s491: step (1) DONE.** Direct-traced the full downstream span (guest 0x8000D75C-0x8000D8A8) and
-    confirmed it is a SINGLE straight-line block with exactly one external entry point (the
-    `L_8000D75C` label itself, reached only by the two paths s490 already characterized) — every
-    `goto` inside the span targets a label inside the same span, so there's no third path and no
-    other guard-bypass hazard. Rather than adding 14 more per-site checks, widened the EXISTING
-    check at `L_8000D75C` to `goto L_8000D8A8` (an existing label, itself pure arithmetic with no
-    deref) on invalid `ctx->r16`, skipping the entire rest of the block instead of just its own
-    write — same goto-skip shape as the s487 `AUDIO_VOICE_BASEPTR_LOOP_GUARD` precedent. `ctx->r5`
-    (the second-generation `+0x10` pointer) needed no separate check: it's derived from `ctx->r16`
-    with a small constant offset and only used inside the now-fully-guarded span, so validating the
-    base once transitively covers it, matching how every other guard in this lineage already treats
-    small constant struct-field offsets. Regenerated (anchor matched x1), build-verified clean,
-    live-verified with the full standing env-var set: **0 fires on the extended guard, 0 fires on any
-    of ~20 sibling guard families**, `hangarbay-entry` n=31 (positive control), crashed on the
-    already-catalogued `BREADCRUMB6`/`buildPositionAndCallTransformHelper` near-zero-guest-pointer
-    family (`si_addr=0x380000010`, `last-guest-pc=0x80065acc` — byte-for-byte the same crash s451's
-    own confirm soak hit, filed since s273, explicitly reconfirmed not-a-new-class as recently as
-    s328a), unrelated to this guard. **2nd independent confirm (`s491_heap_dequeue_blockskip_confirm.sh`,
-    run by the loop, folded in s492): the cleanest possible outcome — 0 `[CRASH]` events over the
-    entire 300s run, effectively 0 fires on the guard (the one `guard`-matching substring in the
-    whole 102K-line log is an unrelated benign diagnostic embedded in a raw DMEM hex dump),
-    `hangarbay-entry` n=35 (positive control, higher than the 1st confirm). Item -317 step (1),
-    `heapFreeListDequeue`'s own remainder, is now FULLY CLOSED, 2/2.**
-    **s492 traced and fixed step (2), the `funcs_4.c` `buildOrientedFaceGeometry` site, rather than
-    reusing step (1)'s fix shape blindly (per this item's own prior warning).** Direct trace found
-    `ctx->r4` reloads UNGUARDED from the SAME free-list-cache-head global (`0x801163B0`) at guest
-    `0x80012E94`, survives untouched through four existing sibling guards on the same path (each
-    reads `ctx->r2`/`ctx->r3`, never revalidates `r4`), then propagates into `ctx->r18 =
-    ADD32(ctx->r4, 0X8)` at `0x80012EF0`, dereferenced unguarded across an 8-field struct-init block
-    (`0x80012F14`-`0x80012F94`) — same "guard covers the deref, not the propagation" shape as the
-    whole -312..-317 lineage. The multi-path hazard flagged at s491 (a `goto L_80012F08` at guest
-    `0x80012E24` reaching the same tail label with a different-provenance `ctx->r18`) resolved
-    cleanly: exactly ONE goto into `L_80012F08` plus the natural fallthrough — a clean 2-entry join —
-    so the fix validates `ctx->r18` itself (the register actually dereferenced, not the `ctx->r4`
-    proxy) at the join, block-skipping to the existing epilogue label `L_80012F98` (pure
-    register-restore-and-return, independently confirmed as a safe landing point by a separate
-    pre-existing `goto L_80012F98` from an unrelated early-return path) on invalid. New guard family
-    `ORIENTED_FACE_DERIVED_PTR_GUARD` (not folded into `HEAP_DEQUEUE_DERIVED_PTR_GUARD` — different
-    offset, different registers, different function, same root global). Build-verified clean,
-    1st live-verify: **0 fires on the new guard**, `hangarbay-entry` n=31 (positive control, matches
-    step (1)'s own baseline), 1 fire total on any other guard family (`hangar-bay-deref-guard`,
-    `n=0`/`ra=0x0`, printed in the same instant as the crash dump — a dying-process artifact, not a
-    real hazard). Crashed at 108.7s on the already-catalogued `initVec4TripletFromArgs+68`/
-    `last-guest-pc=0x800ab068` family (`x0=x9=0x0000000300000000` RDRAM-base signature,
-    byte-for-byte the same crash s489/s463/s468's own confirm soaks hit), unrelated to this guard.
-    2nd confirm queued (`s492_oriented_face_derived_ptr_confirm.sh`). **Step (3), the wider 183-site
-    blanket sweep, remains open** — needs control-flow-aware tooling per s490/s491's own methodology
-    lesson (a naive textual scan structurally cannot detect the shared-label-merge hazard that bit
-    s490's first fix attempt), not a repeat of the failed approach. Full derivation: `PORTING-STATE.md`
-    Sessions 490-492.
+-317. **(s490-492) `HEAP_DEQUEUE_DERIVED_PTR_GUARD` + `ORIENTED_FACE_DERIVED_PTR_GUARD`, 5th/6th
+    lineage instances on a DERIVED pointer, plus a methodology lesson (validate the dereferenced
+    register, never an upstream proxy — s490's first attempt validated the wrong one and false-
+    positived 660,261 times before live-verify caught it).** Steps 1 (`heapFreeListDequeue`) and 2
+    (`funcs_4.c` `buildOrientedFaceGeometry`) both FULLY CLOSED, 2/2 each. **Step 3 — a wider 183-site
+    blanket sweep of the same reload idiom across `funcs_3.c`/`funcs_4.c` — remains OPEN**: needs
+    control-flow-aware tooling (a naive textual scan can't detect the shared-label-merge hazard that
+    caused the step-1 false positive), scoped as its own tool-building work unit with its own positive
+    control, or wait for a 7th instance to surface organically. Full derivation:
+    `docs/PROJECT-OVERVIEW.md` §21, `PORTING-STATE.md` Sessions 490-492.
 
--316. **(s488 scan -> s489 FIXED, 2nd confirm s490 clean) DL_ALLOC_PROPAGATION_GUARD, a scope gap in
-    the existing s436 `CACHE_HEAD_A1_GUARD` (guard covers one deref, not the propagation) — FULLY
-    CLOSED, 2/2.** A downstream-consumer trace (delegated to a subagent) found the real gap wasn't in
-    19 unguarded read sites but one function upstream, in `emitAllocatedDLCommand` (`funcs_3.c`): its
-    own `CACHE_HEAD_A1_GUARD` site=4 (s436) validates the newly linked node pointer before writing the
-    node's `next` field, but two more statements right after the guard block stayed UNCONDITIONAL —
-    publishing the same possibly-bad node as the new list head, and propagating its data-area pointer
-    into the persistent `-0x5BB4` write-cursor global that all 19 read sites reload unguarded. Fixed by
-    extending the check (`DL_ALLOC_PROPAGATION_GUARD`, `fixup_game_funcs.py`) rather than adding 19
-    read-site guards. **1st confirm (manual live-verify, s489)**: 0 fires on the new guard, `hangarbay-
-    entry` n=31 (positive control), crashed at 113.2s on `pc-symbol=initVec4TripletFromArgs+68`,
-    `last-guest-pc=0x800ab068` (already-catalogued s463/s468 family, unrelated). **2nd confirm
-    (`s489_dl_alloc_propagation_confirm`, queued, ran s490)**: also 0 fires on `dl-alloc-propagation-
-    guard` — item -316 itself is CLOSED, 2/2, no regression. **But this confirm's own run.log handed
-    back a genuinely NEW, well-evidenced crash, not a null result — see item -317 below**: four
-    unrelated sibling guards (`freelist-next-guard`, `generic-cache-guard`, `dl-list-append-rwrite-
-    guard`, `dl-list-reset-rnode-guard`) fired in sequence on the exact same corrupted pointer value
-    before a SIGBUS 24 bytes past the last one, inside `heapFreeListDequeue` — the same "guard-covers-
-    one-deref-not-the-propagation" shape recurring a 5th time, this time on a DERIVED pointer
-    (`$sN = $a0+8`) computed before any of those guards run. Full derivation: `PORTING-STATE.md`
-    Sessions 489-490.
+-316. **(s488 scan → s489 FIXED → s490 2nd confirm clean) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED,
+    2/2.** A scope gap in the existing s436 `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`,
+    `funcs_3.c`): validated one deref but not two propagating writes right after it feeding a
+    `-0x5BB4` write-cursor global reloaded unguarded at 19 sites; fixed by extending the check. Its own
+    2nd confirm surfaced item -317 above. Full derivation: `docs/PROJECT-OVERVIEW.md` §21,
+    `PORTING-STATE.md` Sessions 488-490.
 
 -311. **(s480) Crash-symbolizer tooling fix — DONE, positive-control validated.** The item -310
     `dladdr`-nearest-exported-symbol blind spot is closed: `src/main/main.cpp` now builds a sorted
@@ -391,63 +221,33 @@ a range pointer. Highest allocated so far: -317. The next NEW item takes -318.
 -298..-304. **(s463-472) Seven more M3 idiom-class audit buckets from the s465 frequency scan, six CLOSED, one DEFERRED — every CLOSED item's soak result matches item -287's established true-negative baseline.** -298 `DL_LIST_RESET_GUARD` (re-scoped ~111 non-canonical `-0x5824` sites, global `0x8011A7DC`) CLOSED s464, 84/84. -299 `DL_BUFFER_POOL_GUARD` (`0x801163FC`) CLOSED s466, 84/84, 2nd confirm s467. -300 `NODE_LIST_HEAD_GUARD`/`_WRITE_GUARD` (`0x8011A4B8`) CLOSED s467, 20 read + 10 write sites (two distinct downstream shapes), 2nd confirm s468. -301 `TEXDATA_TABLE_GUARD` (`hi16=0x8013,off=-0x70F8`, `funcs_6.c`) CLOSED s468, 31/31 (substitutes `0x80000000u`, not 0, since index arithmetic follows), 2nd confirm s469. -302 (`hi16=0x8013,off=0x7CE4`, 45 sites/9 files) DEFERRED s468: small INTEGER INDEX, 17 distinct downstream shapes, no single guard placement covers all sites without speculation. -303 `TEXDATA_PTR_ARRAY_GUARD` (`hi16=0x8013,off=-0x7104`, `funcs_6.c`) CLOSED s470, 29/29, 2nd confirm s471. -304 `MATERIAL_ARRAY_PTR_GUARD` (`0x8012($reg)`→`-0x5BBC`, 30 sites/4 files) CLOSED s471, 30/30, 2nd confirm s472. Full derivation: `docs/PROJECT-OVERVIEW.md` §18-§19.
 
 -291..-297. **(s454-462) Three M3 idiom-class audits found via an s454 concurrent-process collision,
-    all now CLOSED.** -291 `DL_LIST_APPEND_GUARD` (global `0x8011A7DC`, 57 sites, `funcs_3.c`/
-    `funcs_4.c`) CLOSED s456, 0 crash/0 fires. -292 `SONGTEMPO_TABLE_GUARD` (`0x29C0($reg)`→global
-    `0x801529C0`, MusyX song-sequencer's "current song track" base pointer, `funcs_25.c`) CLOSED
-    s462, 43/43 sites across 6 reader functions, same stale-global-reload shape as the closed
-    `-0x25A4` family. -296 `SIBLING_PTR_WRITE_GUARD` (sibling global `0x8011DC58`, 119 sites) CLOSED
-    s459 (rule-8 mandatory pivot off -292), 0 fires; 10 sites sit in `submitSceneNodeRender`, a
-    discriminating instrument for that function's still-open wait-for-recurrence breadcrumb.
-    **AMENDED s473 (item -306): a register-taint-tracking gap had silently dropped 1 real site (120th,
-    `setupCameraMatrices`) — found, fixed, soak-confirmed.** Full detail: `docs/PROJECT-OVERVIEW.md` §17.
+    all CLOSED**: -291 `DL_LIST_APPEND_GUARD` (57 sites), -292 `SONGTEMPO_TABLE_GUARD` (43/43 sites,
+    `funcs_25.c`), -296 `SIBLING_PTR_WRITE_GUARD` (119 sites; **AMENDED s473/item -306: 1 real site
+    silently dropped by a taint-tracking gap, found+fixed+confirmed**). Full detail:
+    `docs/PROJECT-OVERVIEW.md` §17.
 
--261..-290 (and -263). **(s424-453) The duplicate-symbol-name-collision arc: the
-    `startPlayerSlotAnimationChannelLooping` crash chain, the duplicate-symbol catalogue closure, the
-    BREADCRUMB18/free-list-guard arc, and the `static5-rename-orphan-sweep` — ALL CLOSED.** A
-    duplicate-symbol-name collision truncated `initCraftSelectScreen`'s body to 1 instruction
-    (s424-431); the fix triggered a cascade of 3 further crashes (items -261..-267, all guarded — the
-    last did not recur after a sibling duplicate-symbol fix, single-run only). s432-437 closed the
-    full duplicate-symbol catalogue (18/18) and swept the `0x801163B0` free-list-cache-head-deref
-    idiom at scale (107 sites, `GENERIC_CACHE_GUARD`, plus a 7-site `$a1` sibling
-    `CACHE_HEAD_A1_GUARD`); item -263 was progressively localized through two rounds of breadcrumb
-    misattribution (BREADCRUMB16/17) before s441 reclassified it PARKED — the real mechanism was a
-    THIRD free-list-cache-head sibling bug (`FREELIST_NEXT_GUARD`, item -277, 105 sites) misattributed
-    to it by signature match alone (falsifying condition: a NEW occurrence where BREADCRUMB18 reports
-    a real address inside `updateHangarBayScene`'s own body). That fix surfaced item -278
-    (thread-scheduler SIGSEGV, PARKED s445, ~10 soaks no recurrence) and item -279 (a soak-script
-    off-by-one, not a crash). s445-453's `static5-rename-orphan-sweep` then fixed every pre-s427
-    guard/patch the -261..-267 fix had orphaned (94 sites: `GETDATITEM_GUARD`, `HANGARLIST_GUARD`
-    family, `S390_H2A`/`H2B`, `G1`-`G32`+`A`-`E`, 9 `composeNpcOrientationMatrix` sites; s449
-    positive-controlled `HANGARLIST_GUARD` at 245000+ reaches, 0 trips), closing the last tracked
-    remainder (`S392_H3A`/`H3B`, item -290) with no code change needed. Incidentally opened item -281
-    (`NAN_CHECK` assert in `transformVec3ByMat34`, filed not chased) and fixed a `tools/probe.sh`
-    false-negative bug (s447). Full session-by-session detail: `docs/PROJECT-OVERVIEW.md` §16,
-    `PORTING-STATE` Sessions 424-453.
+-261..-290 (and -263). **(s424-453) The duplicate-symbol-name-collision arc — ALL CLOSED.** A
+    duplicate-symbol collision truncated `initCraftSelectScreen`; the fix cascaded into 3 more guarded
+    crashes (-261..-267), a full duplicate-symbol catalogue closure (18/18) plus a 107-site
+    `GENERIC_CACHE_GUARD` sweep, item -263's misattribution chase resolving to a third free-list
+    sibling bug (`FREELIST_NEXT_GUARD`, -277, 105 sites), and the `static5-rename-orphan-sweep`
+    (94 sites across 6 pre-s427 guard families). Full session-by-session detail:
+    `docs/PROJECT-OVERVIEW.md` §16, `PORTING-STATE` Sessions 424-453.
 
--259. **(s422) `0x800290d4` "six independent triggers" lead — INVESTIGATED AND CLOSED, not a bug.**
-    `0x800290d4` is `inflate_fast`'s own clean return, reported by a sparse breadcrumb (8/50 files);
-    `atos` symbolication of 5/6 crash logs found FIVE DIFFERENT real crash functions, each already
-    catalogued, not one shared mechanism. All six stay parked, correct and safe. `PORTING-STATE` 422.
+-259. **(s422) `0x800290d4` "six independent triggers" — INVESTIGATED AND CLOSED, not a bug**:
+    `inflate_fast`'s own clean return, misread as a shared corruption sink. `PORTING-STATE` 422.
 
--231..-249. **(s377-421) Three more CLOSED arcs, oldest-first: fixup function-scope backport,
-    M3 idiom-class resumption, M4 phantom-overlay relocation.** -231..-238 (s377-386): 176 file-scoped
-    guard patches found, 168 converted to function-scope, 8 confirmed permanent design exclusions,
-    CLOSED OUT s386 (process lessons: `docs/PROJECT-OVERVIEW.md` §13). -239..-247 (s389-397):
-    `hangarInitialize`'s `-0x25A4` hangar-list-pointer family and the "Lookup" struct-family fully
-    CLOSED, plus two guard-placement bugs found+fixed and a codebase-wide frequency scan that came
-    back negative, closing the pure-idiom-audit discovery method for now until the s463 scan revived
-    it (§14). -249 (s400-421): `main_overlay.txt` phantom-overlay-function relocation, 784 functions
-    relocated across 21 sessions, 10 genuinely-buggy parked in `m4_known_bad.txt`, 4 more in
-    `m4_known_skip.txt`, 0 actionable candidates remain (§15). Raw: `PORTING-STATE` Sessions 377-421.
+-231..-249. **(s377-421) Three more CLOSED arcs: fixup function-scope backport (176 patches, 168
+    converted), M3 `-0x25A4`/"Lookup" idiom resumption, and the 784-function `main_overlay.txt`
+    phantom-overlay relocation.** Full detail: `docs/PROJECT-OVERVIEW.md` §13-§15,
+    `PORTING-STATE` Sessions 377-421.
 
 -230..-14 (excluding -20, kept below). **Eleven closed investigation lineages, s99-s376 — all CLOSED,
-    no outstanding action.** M5 audio de-stubbing (items -160..-230, s297-376: gate-byte-reversal/
-    VI=640-stall, Step 5 guard-hunting, gate-promotion/crash-rate-comparison, Step 6 PCM-sanity + C88
-    pre-title-hang/VI-trigger — §9-§12) plus ten earlier whack-a-mole guard-gap chases
-    (`composeNpcOrientationMatrix`, `renderUnlitMeshFaces`, `heapWalker`, `heapFreeListDequeue`,
-    `-0x25A4` family, breadcrumbs B2-B14, the audio-array-corruption race fix, the
-    `submitDmaRequestBatch` indirect-caller find, the CALayer/campose SIGSEGV hunt, the
-    regen-pipeline-idempotency root cause, s99-s337, §9). One-paragraph-per-lineage summaries:
+    no outstanding action.** M5 audio de-stubbing (items -160..-230, s297-376, §9-§12) plus ten earlier
+    whack-a-mole guard-gap chases (`composeNpcOrientationMatrix`, `renderUnlitMeshFaces`, `heapWalker`,
+    `heapFreeListDequeue`, `-0x25A4` family, breadcrumbs B2-B14, audio-array-corruption race,
+    `submitDmaRequestBatch` indirect-caller, CALayer/campose SIGSEGV, regen-pipeline-idempotency root
+    cause, §9). One-paragraph-per-lineage summaries:
     `docs/PROJECT-OVERVIEW.md` §9-§12; full raw detail: `PORTING-STATE` Sessions 99-376.
 
 -20. **Regen-pipeline reliability bug (s120, confirmed intermittent not deterministic).** Root cause:

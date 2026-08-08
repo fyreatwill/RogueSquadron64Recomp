@@ -1807,3 +1807,78 @@ as "host-side crash outside our code", cross-check `last-guest-pc` against the c
 filing as new.
 
 Full session-by-session raw detail: `PORTING-STATE.md` Sessions 481–486.
+
+## 21. Items -316/-317: the `-312..-315` lineage recurs a 5th and 6th time, plus a methodology lesson
+on validating the dereferenced register, not an upstream proxy (s488–492), migrated from
+CURRENT-TRUTH.md s492 maintenance pass
+
+**s488**: idiom scan closed the large-bucket (>=20-site) `lui+lw`/`lui+sw` audit method for now — every
+big bucket already covered by items -291..-315. Left one sub-20 candidate open: the `-0x5BB4`
+write-cursor global's 19 unguarded reads.
+
+**Item -316 (s488 scan → s489 FIXED → s490 2nd confirm clean), FULLY CLOSED 2/2:** a downstream-consumer
+trace found the real gap wasn't in the 19 read sites but one function upstream, in `emitAllocatedDLCommand`
+(`funcs_3.c`): its existing s436 `CACHE_HEAD_A1_GUARD` (site=4) validates the newly linked node pointer
+before writing the node's `next` field, but two statements right after the guard block stayed
+unconditional — publishing the same possibly-bad node as the new list head and propagating its
+data-area pointer into the `-0x5BB4` write-cursor global that all 19 read sites reload unguarded. Fixed
+by extending the check (`DL_ALLOC_PROPAGATION_GUARD`) rather than adding 19 read-site guards — same
+"guard covers one deref, not the propagation" shape as -312..-315. 1st confirm (manual): 0 fires,
+`hangarbay-entry` n=31, crashed on the already-catalogued `initVec4TripletFromArgs+68`/
+`last-guest-pc=0x800ab068` family (unrelated). 2nd confirm (`s489_dl_alloc_propagation_confirm`): also 0
+fires — item -316 CLOSED. **But that 2nd confirm's own run.log handed back a genuinely new, well-evidenced
+crash**: four unrelated sibling guards (`freelist-next-guard`, `generic-cache-guard`,
+`dl-list-append-rwrite-guard`, `dl-list-reset-rnode-guard`) fired in sequence on the same corrupted
+pointer value before a SIGBUS 24 bytes past the last one, inside `heapFreeListDequeue` — the same shape
+recurring a 5th time, this time on a *derived* pointer (`$sN = $a0+8`) computed before any of those
+guards run. That became item -317.
+
+**Item -317 step 1 (s490 FIXED, methodology lesson → s491 extended → s492 confirmed), `heapFreeListDequeue`
+FULLY CLOSED 2/2:** direct-source trace found `ctx->r4` reloads unguarded from the free-list-cache-head
+global (`0x801163B0`) at `0x8000D6E4`, then computes `ctx->r16 = ADD32(ctx->r4, 0x8)` at `0x8000D744`,
+dereferenced completely unguarded at `0x8000D760` (crash address matched the corrupted base plus both
+chained `+8` offsets exactly). **First fix attempt was wrong and had to be caught by live-verify**:
+it validated `ctx->r4` before the store, matching the -312..-316 precedent — but `0x8000D760` sits at a
+label (`L_8000D75C`) reached by a SECOND, unrelated control-flow path (an earlier bounds-check
+early-exit, `goto L_8000D75C` at `0x8000D67C`) where `ctx->r16` was last set from `ctx->r7` (a plain
+register copy, nothing to do with the free-list reload) — so `ctx->r4` at the shared label has no
+consistent meaning across both paths. The guard fired 660,261 times in one soak (all four sibling
+guards stayed at 0) — an order-of-magnitude departure from every other guard in this lineage's history
+(0-4 fires), the tell that flagged the false positive. **Corrected**: validate `ctx->r16` itself (the
+register actually dereferenced), not an upstream proxy — correct on both paths regardless of which one
+set it, matching every other guard's convention. Re-verified: 0 fires, `hangarbay-entry` n=31. A
+post-commit classification subagent then found the shipped fix correct but incomplete: `ctx->r16` is
+dereferenced at least 9 more times later in the same function body (all still unguarded), plus a
+second-generation derived pointer `ctx->r5 = ADD32(ctx->r16, 0x10)`. **s491**: direct-traced the full
+downstream span (`0x8000D75C`-`0x8000D8A8`) and confirmed it's a single straight-line block with exactly
+one external entry point (no third path) — widened the existing check to `goto 0x8000D8A8` (skip the
+whole rest of the block) instead of adding 9 more per-site checks; `ctx->r5` needed no separate check
+(small constant offset off the now-validated base, used only inside the guarded span). 1st confirm: 0
+fires on the guard or ~20 siblings. **2nd confirm (`s491_heap_dequeue_blockskip_confirm`, folded s492)**:
+0 `[CRASH]` events over the entire run, the cleanest possible outcome. Item -317 step 1 CLOSED 2/2.
+
+**Item -317 step 2 (s492 FIXED), `funcs_4.c` `buildOrientedFaceGeometry`, 1st confirm clean:** traced
+independently rather than reusing step 1's fix shape. `ctx->r4` reloads unguarded from the same global
+at `0x80012E94`, survives through four existing sibling guards untouched (none revalidate `r4`),
+propagates into `ctx->r18 = ADD32(ctx->r4, 0x8)` at `0x80012EF0`, dereferenced unguarded across an
+8-field struct-init block (`0x80012F14`-`0x80012F94`). The multi-path hazard s491 flagged (a
+`goto L_80012F08` at `0x80012E24` reaching the same tail label with different-provenance `ctx->r18`)
+resolved to a clean 2-entry join (one goto + one fallthrough) — fix validates `ctx->r18` itself at the
+join, block-skipping to the existing epilogue label `L_80012F98` on invalid. New guard family
+`ORIENTED_FACE_DERIVED_PTR_GUARD` (kept separate from `HEAP_DEQUEUE_DERIVED_PTR_GUARD`: different
+offset/registers/function, same root global). 1st confirm: 0 fires on the new guard, `hangarbay-entry`
+n=31, crashed on the already-catalogued `initVec4TripletFromArgs+68`/`last-guest-pc=0x800ab068` family
+(same as s489/s463/s468). 2nd confirm (`s492_oriented_face_derived_ptr_confirm`) ran clean (0 crash
+events) per SOAK-RESULTS.md — step 2 CLOSED 2/2.
+
+**Item -317 step 3, the wider 183-site blanket sweep, remains OPEN.** The reload idiom
+(`ctx->rL = MEM_W(ctx->rL, 0x63B0)`) recurs 184 times across `funcs_3.c`/`funcs_4.c`; a naive
+textual-proximity classifier cannot detect the shared-label-merge hazard that produced step 1's wrong
+first fix attempt, so a blanket sweep needs control-flow-aware tooling (trace the register actually
+dereferenced forward to its true derefs, and backward from each deref to confirm every path has
+consistent already-validated provenance) — scoped as a new tool-building work unit, not 181 more manual
+traces, with its own positive control (correctly flags the 2 known-bad sites, correctly clears a sample
+of known-benign sites) before trusting its output at scale. Alternative: wait for a third instance to
+surface organically via a soak crash, as -316→-317 and -317 step 2 both did.
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 488–492.

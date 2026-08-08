@@ -119,3 +119,4 @@
 20260807-204123 | s489_dl_alloc_propagation_confirm | rc=3 | 156s | scratch/agent/soak_results/s489_dl_alloc_propagation_confirm_20260807-204123.log
 20260807-211036 | s490_heap_dequeue_derived_ptr_confirm | rc=0 | 348s | scratch/agent/soak_results/s490_heap_dequeue_derived_ptr_confirm_20260807-211036.log
 20260807-213322 | s491_heap_dequeue_blockskip_confirm | rc=0 | 346s | scratch/agent/soak_results/s491_heap_dequeue_blockskip_confirm_20260807-213322.log
+20260807-215148 | s492_oriented_face_derived_ptr_confirm | rc=0 | 346s | scratch/agent/soak_results/s492_oriented_face_derived_ptr_confirm_20260807-215148.log
