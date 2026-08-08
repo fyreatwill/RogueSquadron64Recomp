@@ -42935,3 +42935,70 @@ soak result, and source-tracing a crash address). No `lib/` changes, no submodul
 `scratch/agent/OUTCOME`: ADVANCED (closed a 2/2-confirmed guard fix and produced a real, source-verified
 finding -- refuting a believed-escalated crash lead with a concrete mechanism -- both of which change
 the ledger's next-steps ordering).
+
+## Session 519 (2026-08-08): item -317 step 3 -- fixed RENDER_LIT_MESH_R8_GUARD (19th guard, 7th site
+in renderLitMeshFaceGroup), 1st live-verify clean, but the crash it hit escalated item -319 to its 3rd
+occurrence (byte-identical to s503/s505) -- now the top-ranked M3 work unit
+
+Re-scanned item -317 step 3's blanket sweep fresh (`s494_item317_step3_tracer.py --scan` +
+`s506_dedupe.py`, as instructed -- the last scan was stale by three guard insertions since s515). Tier
+was unchanged from NEXT.md's prediction: three `beginFrameDLChunk` sites at count=36, two more at
+count=32 (also `beginFrameDLChunk`), then a count=30 group including `funcs_4.c:15166`
+(`renderLitMeshFaceGroup`, confirmed via direct line inspection to be a genuine EIGHTH distinct site in
+that function, not yet guarded -- R2 through R7 cover 6 other sites; verified `text.count()==1` for the
+target old-string before patching).
+
+**Mechanism**: the site sits in `renderLitMeshFaceGroup`'s doubly-linked free-list-cache prepend
+sequence. A loop at `0x80013EEC` walks a node chain via each node's own offset-0 "next" pointer to find
+the tail (ends up in `ctx->r4`). `ctx->r2` is then reloaded from the same `0x801163B0`
+free-list-cache-head table already guarded elsewhere in this function, with only a null check (`beq
+$v0, $zero, L_80013F10`) before two writes: the null arm's harmless `ctx->r4->next=0`, and the non-null
+fallthrough's `MEM_W(0X4, ctx->r2) = ctx->r4;` at `0x80013F0C` (`old_head->prev = tail_node`) -- no
+`0x80000000`-`0x80800000` range check on `ctx->r2` before that second write. Same shape as every other
+guard in this lineage (most directly R7). Fixed with `RENDER_LIT_MESH_R8_GUARD`: range-check `ctx->r2`,
+skip the write and log if invalid, same skip-on-invalid precedent as the whole item -317 lineage
+(downstream control flow reassigns `ctx->r1` from the table again immediately after, so nothing depends
+on this specific write surviving).
+
+**Regen**: full pipeline run (deleted all 50 `funcs_*.c`, confirmed 0 remaining, `make_elf.py` ->
+`N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build . -j8`). Fixup report showed `funcs_4.c:
+render-lit-mesh derived-pointer write guard (s519, item -317 step 3, RENDER_LIT_MESH_R8_GUARD) patched
+x1` -- grep-confirmed the guard's own name present in the freshly-generated source before building.
+Build succeeded (only pre-existing unrelated warnings).
+
+**1st live-verify** (manual, foreground, every sibling guard armed plus
+`ROGUESQ_LOG_RENDER_LIT_MESH_R8_GUARD=1`, phase-gated on VI width 1024 / `hangarbay-entry`): **0
+`render-lit-mesh-r8-guard` fires** (null result on the guard itself), 4 benign co-fires
+(`freelist-next-guard`, `dl-list-append-rwrite-guard`, `dl-list-reset-rnode-guard`,
+`sibling-ptr-write-guard`, all `n=0 ra=0x00000000` -- the established non-corruption signature seen
+throughout this lineage, all sited within a few instructions of the eventual crash pc so plausibly part
+of the same crash cascade rather than independent corruption), `hangarbay-entry n=31` positive control
+(Iron Rule 1 satisfied). Crashed at 113.6s on `pc-symbol=beginFrameDLChunk+40536`/
+`last-guest-pc=0x8000b0d0` -- **byte-identical to item -319's s503 and s505 sightings**, making this the
+**3rd occurrence**, meeting the escalation threshold item -319's own entry pre-declared ("A 3rd
+occurrence would meet this campaign's escalation threshold"). Per this campaign's standing disposition
+(same as items -320/-321/-322/-323 before their own escalations), a fresh escalation is not chased in
+the same session it's found -- filed and flagged for next iteration's source-trace, following the exact
+method that resolved item -322 (s517): find the recompiled body around the crashing guest address in
+`beginFrameDLChunk` (`funcs_3.c`), identify the reload feeding the write at `0x8000b0d0`, check for an
+existing range check. `beginFrameDLChunk` is also item -317 step 3's own largest untouched reload-site
+cluster (36/32/30-count tiers, deliberately skipped so far specifically to avoid pre-empting this
+thread) -- a fix at item -319's crash site may double as step 3 progress.
+
+2nd independent confirm of `RENDER_LIT_MESH_R8_GUARD` queued to
+`scratch/agent/soak_queue/s519_render_lit_mesh_r8_confirm.sh` for the loop to run between iterations.
+
+Updated `docs/CURRENT-TRUTH.md`: item -317 bumped to 19/~150 (18 closed 2/2, R8 pending confirm), item
+-319 rewritten as ESCALATED/3rd-occurrence with the source-trace plan, directive headline updated to
+point at item -319 as the new top-ranked M3 work unit (ahead of item -317 step 3's own blanket sweep).
+`docs/PROJECT-OVERVIEW.md` §23's guard table got a new row (#21, `RENDER_LIT_MESH_R8_GUARD`).
+
+M5 audio-lead cadence: not due yet (last checked/reset s517; due again s520+). This session's run log
+was grepped incidentally via the co-fire check above but no dedicated cadence sweep was run.
+
+No `lib/` changes, no submodule-patch export needed (all changes in the sibling `N64Recomp` checkout's
+`fixup_game_funcs.py` + this repo's docs/scratch).
+
+`scratch/agent/OUTCOME`: ADVANCED (landed a new source-verified guard fix with a clean 1st live-verify,
+2nd confirm queued, and the same run produced a real escalation that changes the ledger's next-steps
+ordering).

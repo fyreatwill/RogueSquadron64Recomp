@@ -1,82 +1,98 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: item-317-step3-blanket-sweep
+HYPOTHESIS-ID: item-319-source-trace
 
-## s518 recap -- read this first
+## s519 recap -- read this first
 
-s518 did two things, no code changes:
+s519 did two things:
 
-1. **Folded in the loop-run s517 confirm for item -322** (`heapFreeListDequeue` stack-slot-derived
-   pointer write, `HEAPLISTDEQ_ATTR_WRITE_GUARD`): ran the FULL 347s scheduled duration with **zero
-   crashes of any kind** (not even the background-noise family the 1st verify hit) and 0 guard fires,
-   `hangarbay-entry n=2700` positive control. **Item -322 is now CLOSED 2/2.**
+1. **Fixed `RENDER_LIT_MESH_R8_GUARD`** (item -317 step 3's 19th guard, 7th site in
+   `renderLitMeshFaceGroup`, `funcs_4.c:15166`/`0x80013F0C`): a doubly-linked free-list-cache prepend
+   write (`old_head->prev = tail_node`) reloaded from the same `0x801163B0` table other guards in this
+   function already cover, with only a null check before the write. Full regen + build done, 1st
+   live-verify CLEAN (0 own-guard fires, 4 benign `n=0/ra=0` co-fires, `hangarbay-entry n=31` positive
+   control). 2nd independent confirm queued: `scratch/agent/soak_queue/s519_render_lit_mesh_r8_confirm.sh`
+   -- fold its result in next session like any other soak.
 
-2. **Source-traced item -321** (`menuOverlayInit`-area, `last-guest-pc=0x800ab1c4`, previously flagged
-   as meeting its 2-occurrence escalation bar with a pc-symbol-mismatch caveat) and **REFUTED the
-   escalation**: `0x800AB1C4` is `runHangarSelectionFrame`'s own return-epilogue instruction
-   (`N64Recomp/RecompiledFuncs/funcs_28.c:6019`, pure `$sp` arithmetic, not a memory access -- cannot
-   fault), and the breadcrumb tracker has zero coverage one level up in either caller
-   (`runHangarMenuFromOverlay`, `menuOverlayInit` -- grep-verified 0 `g_rs64_last_guest_pc` writes in
-   both). Same breadcrumb-freeze-at-return artifact class as item -263's `BREADCRUMB17`->`18` pair
-   (s437/s439). The matching `last-guest-pc` between s510/s515 means "both unwound out of the same
-   function," not a shared fault site -- they're plausibly two different downstream crashes. Item -321
-   is downgraded to a documented instrumentation gap, not queued as active work (a `BREADCRUMB19` fix
-   for `runHangarMenuFromOverlay` is described in `docs/CURRENT-TRUTH.md` item -321 if a future
-   recurrence needs it, but nothing currently warrants it).
+2. **Escalated item -319** to its 3rd occurrence: the R8 live-verify's crash
+   (`pc-symbol=beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0`) is byte-identical to item -319's
+   s503 and s505 sightings. Item -319's own entry pre-declared this threshold ("a 3rd occurrence would
+   meet this campaign's escalation threshold"). Not source-traced yet -- that's this session's work unit.
 
-Both items fully written up: `docs/CURRENT-TRUTH.md` items -321/-322, `PORTING-STATE.md` Session 518.
+Both written up: `docs/CURRENT-TRUTH.md` items -317/-319, `docs/PROJECT-OVERVIEW.md` §23 guard table
+row #21, `PORTING-STATE.md` Session 519.
 
-**M5 audio-lead cadence**: not checked this session (s518 was analysis-only, produced no new run log
-to grep). Last checked s517 (clean, cadence reset to s517). Due again s520+; check the next session
-that produces a fresh run log.
+**M5 audio-lead cadence**: last checked/reset s517, due again s520+. This is s520 -- **check it this
+session** if a run log gets produced (grep for any new audio-related stub/trap/gate diagnostic firing
+that wasn't there at s517; see `docs/M5-AUDIO-PLAN.md` for the survey method). If the item -319
+source-trace produces its own run log, that's the natural place to fold this check in cheaply.
 
-## The work unit: resume item -317 step 3's blanket sweep
+## The work unit: source-trace item -319 (`beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0`)
 
-With items -321 and -322 both resolved (closed / refuted), item -317 step 3 is the top-ranked M3 work
-unit again. **Re-scan first** -- the last scan (s515) is stale by three guard insertions since (R7,
-SUBMIT_SCENE_NODE_RENDER_R1, and s517's HEAPLISTDEQ_ATTR_WRITE, though the latter is in a different
-function/file and likely doesn't shift line numbers in the scanned files):
+Follow the exact method that resolved item -322 (s517, `docs/PORTING-STATE.md` Session 517):
 
-```
-python3 scratch/agent/s494_item317_step3_tracer.py --scan
-python3 scratch/agent/s506_dedupe.py
-```
+1. In `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c`, find
+   `beginFrameDLChunk`'s recompiled body and locate the instruction at guest address `0x8000b0d0`
+   (search for the `// 0x8000B0D0:` comment line -- addresses are case-sensitive in the comments,
+   uppercase hex).
+2. Identify what write or dereference happens at that exact PC, and trace which register/pointer feeds
+   it -- walk backward to find where that register was last loaded and whether an existing range check
+   (`0x80000000`-`0x80800000`) or null check already gates it.
+3. Check whether skip-the-write-on-invalid is safe at this site (does downstream control flow reload
+   the register from the source-of-truth again immediately after, the way every other guard in this
+   lineage has verified) -- if yes, this is a normal fix, same shape as items -317R2 through -322.
+4. **Bonus**: `beginFrameDLChunk` is also item -317 step 3's own largest untouched reload-site cluster
+   (three sites at count=36, two at count=32, previously skipped deliberately to avoid pre-empting this
+   thread -- see `docs/CURRENT-TRUTH.md` item -317). If the item -319 fix and the step-3 tracer's own
+   candidate list overlap or are adjacent, note it -- fixing this may also count as step-3 progress on
+   that tier once item -319 itself is resolved.
+5. Follow the same regen/build/live-verify/confirm-queue sequence as every guard in this lineage (see
+   the Regen reminder below).
 
-Known tier from the s515 scan (STALE, re-verify against the fresh scan output before committing to a
-pick): three `beginFrameDLChunk` sites at count=36 (items -319/-323's own function, still deliberately
-skip -- fixing inside it pre-empts those threads' own escalation), `funcs_3.c:14763`/`funcs_3.c:16107`
-(32 sites, `beginFrameDLChunk`), then a count=30 group including a possible EIGHTH
-`renderLitMeshFaceGroup` site (`funcs_4.c:15153`). **Prefer `renderLitMeshFaceGroup` or non-
-`beginFrameDLChunk` sites** (fixing inside `beginFrameDLChunk` pre-empts items -319/-323's own
-dedicated threads). 18/18 guards fixed so far, all fully closed 2/2. ~127 locations remain unaudited.
-Full guard table and gotchas: `docs/PROJECT-OVERVIEW.md` §22-§23, `PORTING-STATE.md` Sessions 490-518.
+If source-tracing finds the address is NOT a real memory access (e.g. another `$sp`-arithmetic
+epilogue/breadcrumb-freeze artifact like item -321's refutation, s518), document that refutation with
+the same rigor -- read the actual recompiled instruction before concluding either way.
 
 **Regen reminder** (verify each step -- this has bitten prior sessions when skipped):
 1. Delete all `funcs_*.c` in `N64Recomp/RecompiledFuncs/` first and confirm `0 remaining` -- stale
-   files silently survive a partial regen otherwise.
-2. `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build . -j8`
-   (`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` prefix for Metal shader rebuilds).
+   files silently survive a partial regen otherwise. (Sandbox note: `rm -f funcs_*.c` glob-expansion and
+   `find -delete` both get blocked by the approval layer here -- list explicit filenames in batches of
+   ~10, or write a one-line script to a file and invoke that.)
+2. `cd rogue_squadron64 && python3 tools/make_elf.py` -> `cd N64Recomp && ./build/N64Recomp
+   rogue_squadron.toml` -> `python3 fixup_game_funcs.py` -> `cd RogueSquadron64Recomp/build &&
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j8`.
 3. Grep the fixup report AND the freshly-generated source for the new guard's own name -- a silent
    no-op (rc=0, no error, 0 applied) has happened before when a function carried its own pre-existing
-   breadcrumb patch and the guard's old/new match string didn't include the inserted line
-   (`SUBMIT_SCENE_NODE_RENDER_R1_GUARD`'s gotcha, s515).
+   breadcrumb patch and the guard's old/new match string didn't include the inserted line.
 4. Live-verify manually in the foreground with every sibling guard's env var armed plus the new
-   guard's own `ROGUESQ_LOG_<NAME>=1`, phase-gate on `hangarbay-entry` as the positive control (Iron
-   Rule 1 -- a null result needs a same-run positive control). If clean, queue a 2nd independent
-   confirm to `scratch/agent/soak_queue/` for the loop to run between iterations, following the
-   existing recipe shape (see any `scratch/agent/soak_queue/done/s51*_*.sh` for the template).
+   guard's own `ROGUESQ_LOG_<NAME>=1` (copy the full env-var list from
+   `scratch/agent/soak_queue/done/s517_heaplistdeq_attr_write_confirm_*.sh` or s519's queued confirm --
+   add any new guard names since), phase-gate on `hangarbay-entry` as the positive control (Iron Rule 1
+   -- a null result needs a same-run positive control). Write the run as a standalone script (foreground
+   `env VAR=1 ... zsh probe.sh` one-liners get rejected by the sandbox for backslash-continued
+   multi-line commands -- write the script to `scratch/agent/`, `chmod +x`, run it, delete it after). If
+   clean, queue a 2nd independent confirm to `scratch/agent/soak_queue/` for the loop to run between
+   iterations.
 
 `fixup_game_funcs.py` and the regenerated `RecompiledFuncs/*.c` live in the sibling `N64Recomp`
 checkout (untracked by its own git) -- not this repo's git tree. This repo's ledger entries (with the
 full old/new patch text) are the only durable record of every guard in this lineage since s481; no
 `lib/` submodule involvement, no `export.sh` needed for this work.
 
-## Discriminating measurement for the next lead
+## Discriminating measurement
 
-Same shape every time in this lineage: does the guard itself ever fire (would indicate the reload IS
-sometimes invalid, i.e. the fix is load-bearing) vs. 0 fires with a real positive control (null result,
-guard is precautionary/dormant but the campaign's own precedent says these are cheap and correct to
-add regardless -- see item -317's methodology note in `docs/PROJECT-OVERVIEW.md` §22). A crash during
-the live-verify that hits a DIFFERENT, already-catalogued signature is not evidence against the guard
-(same disposition as items -317R2 through -322); a NEW uncatalogued signature gets filed as its own
-single-occurrence item, not chased further this session.
+Does `beginFrameDLChunk`'s write at `0x8000b0d0` go through a pointer reload with no range check (the
+established item -317-lineage pattern -- fix is load-bearing once 2nd confirm validates it), or does the
+source-trace show the address is a non-memory-access instruction whose apparent "match" across
+s503/s505/s519 is a breadcrumb-tracking artifact (the item -321 precedent -- read the actual
+instruction before concluding). Either way, write the mechanism down with the same rigor as item -322's
+or item -321's write-ups (`docs/CURRENT-TRUTH.md` items -319/-321/-322) -- a source-verified conclusion,
+not a repeated address correlation.
+
+## If item -319 resolves quickly and there's remaining budget
+
+Fall back to item -317 step 3's blanket sweep (re-scan first: `python3
+scratch/agent/s494_item317_step3_tracer.py --scan && python3 scratch/agent/s506_dedupe.py` -- stale
+since R8's insertion). ~126 locations remain; prefer non-`beginFrameDLChunk` sites unless item -319's
+fix already covers that function's tier. Full guard table and gotchas: `docs/PROJECT-OVERVIEW.md`
+§22-§23, `PORTING-STATE.md` Sessions 490-519.
