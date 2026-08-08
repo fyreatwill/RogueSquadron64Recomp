@@ -1,20 +1,16 @@
 #!/bin/zsh
-# s506 RETRY of item -318's 2nd (independent) confirm of APPEND_RDP_STATE_DL_ENTRY_GUARD
-# (funcs_3.c 0x8000DE70, appendRdpStateDl -- function-entry guard on the
-# $a0/ctx->r4 DL-append-cursor argument).
+# s507 2nd (independent) confirm of item -317 step 3's new EMIT_FRAME_RDP_INIT_DL_R2H_GUARD
+# (funcs_3.c 0x800098E8, emitFrameRdpInitDl -- 8th same-function sibling
+# guard in this lineage).
 #
-# Context: the FIRST attempt at this 2nd confirm (soak_results/
-# s506_append_rdp_state_dl_entry_confirm_20260808-102338.log) is INCONCLUSIVE,
-# not a valid confirm -- it crashed at only 20.0s/8 frames on an unrelated,
-# already-catalogued crash (`pc-symbol=rebuildActiveDisplayObjectList+540`,
-# `last-guest-pc=0x800ab060`, the long-tracked shared-heap-corruption walker
-# family, PORTING-STATE Sessions 164-219+) BEFORE the positive control
-# (`hangarbay-entry`) or the guard itself ever had a chance to fire -- 0 guard
-# log lines of ANY kind appear in that run. Per Iron Rule 1 (a null result is
-# worthless without a same-run positive control), this does not count toward
-# item -318's 2/2 confirm count. Retrying with the identical recipe. Same
-# PROBE_KEYS schedule and full sibling-guard env-var set as every prior soak
-# in this lineage, plus this session's new EMIT_FRAME_RDP_INIT_DL_R2G_GUARD var.
+# Context: 1st live-verify (s507, manual_runs/s507_emit_frame_rdp_init_dl_r2h_manual.sh)
+# was CLEAN -- 0 emit-frame-rdp-init-dl-r2h-guard fires, 0 regressions on any
+# sibling guard (one benign hangarmenu-a0-guard fire, item -265, unrelated),
+# hangarbay-entry n=3000 (positive control). Ran the FULL scheduled 300s
+# duration with NO crash at all (121 frames captured) -- same clean-pass
+# class as R2G's own 2nd confirm and the earlier NODE_LIST_HEAD_SIBLING_R4/
+# RENDER_LIT_MESH_R2 verifies. Same PROBE_KEYS schedule and full
+# sibling-guard env-var set as every prior soak in this lineage.
 set -e
 cd "$(dirname "$0")/../../.."
 REPO_ROOT="$(pwd)"
@@ -53,6 +49,7 @@ env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 \
     ROGUESQ_LOG_EMIT_FRAME_RDP_INIT_DL_R2F_GUARD=1 \
     ROGUESQ_LOG_APPEND_RDP_STATE_DL_ENTRY_GUARD=1 \
     ROGUESQ_LOG_EMIT_FRAME_RDP_INIT_DL_R2G_GUARD=1 \
+    ROGUESQ_LOG_EMIT_FRAME_RDP_INIT_DL_R2H_GUARD=1 \
     PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
     PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" \
-    zsh "$REPO_ROOT/tools/probe.sh" "$REPO_ROOT/scratch/agent/soak_results/s506_append_rdp_state_dl_entry_confirm_retry" 300 2
+    zsh "$REPO_ROOT/tools/probe.sh" "$REPO_ROOT/scratch/agent/soak_results/s507_emit_frame_rdp_init_dl_r2h_confirm" 300 2

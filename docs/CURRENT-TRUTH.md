@@ -24,15 +24,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    §18-§19). Items -312..-316 (s481-490, the `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/
    `AUDIO_SLOT_ACTIVE_GUARD`/`DL_ALLOC_PROPAGATION_GUARD` sibling-site-gap lineage) are all fully
    CLOSED — PROJECT-OVERVIEW §20-§21. **Item -317 (that lineage's step 3, a ~150-location blanket
-   sweep) status as of s506: 9 of ~150 leads fixed, 8 fully CLOSED 2/2, 1 (`EMIT_FRAME_RDP_INIT_DL_R2G_GUARD`)
+   sweep) status as of s507: 10 of ~150 leads fixed, 9 fully CLOSED 2/2, 1 (`EMIT_FRAME_RDP_INIT_DL_R2H_GUARD`)
    1st-live-verify-clean with 2nd confirm queued** (see item -317 below for the current tied-40 tier
-   and next pick; full campaign detail: PROJECT-OVERVIEW §22). Item -318 (`appendRdpStateDl+144`, 3
-   independent occurrences) was FIXED s505 (`APPEND_RDP_STATE_DL_ENTRY_GUARD`), 1st live-verify clean;
-   its s506 2nd-confirm attempt was INCONCLUSIVE (crashed before any guard/positive-control could fire,
-   see item -318 below) and has been re-queued. Item -319 (`beginFrameDLChunk+40536`) still has only 2
-   independent occurrences (s503, s505); watch for a 3rd before opening a dedicated thread — s506's
-   fresh tracer scan found a ready-made list of candidate guard sites inside `beginFrameDLChunk` itself
-   if/when that thread opens (see item -317 below).
+   and next pick; full campaign detail: PROJECT-OVERVIEW §22). Item -318 (`appendRdpStateDl+144`) is
+   FULLY CLOSED 2/2 (`APPEND_RDP_STATE_DL_ENTRY_GUARD`, fixed s505, 2nd confirm clean s507 after a
+   s506 retry). Item -319 (`beginFrameDLChunk+40536`) still has only 2 independent occurrences (s503,
+   s505); neither of this session's two folded-in confirm soaks crashed on it, so it stays below the
+   3rd-occurrence threshold — s506's fresh tracer scan found a ready-made list of candidate guard
+   sites inside `beginFrameDLChunk` itself if/when that thread opens (see item -317 below).
 
 -312..-317. **(s481-503) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`
     "grep-verified unique site" lineage — six items, all fully CLOSED except -317 step 3** (open scope
@@ -178,15 +177,16 @@ a range pointer. Highest allocated so far: -319. The next NEW item takes -320.
     would meet the threshold this campaign has been using to escalate a passive breadcrumb to a
     dedicated M3 session.
 
--318. **(s501-506) `appendRdpStateDl+144` crash — FIXED (`APPEND_RDP_STATE_DL_ENTRY_GUARD`), 1st
-    live-verify CLEAN, 2nd confirm INCONCLUSIVE (retried).** s506's queued 2nd-confirm attempt
-    (`scratch/agent/soak_results/s506_append_rdp_state_dl_entry_confirm_20260808-102338.log`) crashed
-    at only 20.0s/8 frames on an unrelated already-catalogued crash
-    (`pc-symbol=rebuildActiveDisplayObjectList+540`, the long-tracked shared-heap-corruption walker
-    family, PORTING-STATE Sessions 164-219+) with **zero guard-fire lines of any kind, including zero
-    `hangarbay-entry` positive-control fires** — per Iron Rule 1 this does not count as a valid confirm.
-    Still 1/2 confirms. Retry queued: `scratch/agent/soak_queue/s506_append_rdp_state_dl_entry_confirm_retry.sh`.
-    All three original occurrences (s498, s501, s503) shared
+-318. **(s501-507) `appendRdpStateDl+144` crash — FIXED and FULLY CLOSED, 2/2
+    (`APPEND_RDP_STATE_DL_ENTRY_GUARD`).** 1st live-verify (s505) clean. s506's first queued
+    2nd-confirm attempt was INCONCLUSIVE (crashed at only 20.0s/8 frames on an unrelated
+    already-catalogued crash, `pc-symbol=rebuildActiveDisplayObjectList+540`, the long-tracked
+    shared-heap-corruption walker family, PORTING-STATE Sessions 164-219+, with **zero guard-fire lines
+    of any kind, including zero `hangarbay-entry` positive-control fires** — per Iron Rule 1 didn't
+    count) and was retried. The retry (folded in s507) is CLEAN: 0 `append-rdp-state-dl-entry-guard`
+    fires, `hangarbay-entry` n up to 2700 (positive control), ran the full 300s scheduled duration with
+    **no crash at all** (122 frames captured). 2/2 confirms, CLOSED. All three original occurrences
+    (s498, s501, s503) shared
     `pc-symbol=appendRdpStateDl+144`, `last-guest-pc=0x800109b8`. s505 source-traced the mechanism
     (independently corroborated by a second Explore-agent pass reaching the same conclusion): all 6
     call sites of `appendRdpStateDl` (`funcs_4.c`, including `submitSceneNodeRender`'s `jal` at
@@ -209,8 +209,8 @@ a range pointer. Highest allocated so far: -319. The next NEW item takes -320.
     on any sibling guard (3 benign init-time `n=0`/`ra=0x00000000` co-fires, the established
     non-corruption signature), `hangarbay-entry n=31` (positive control). Crashed at ~105s on
     `beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0` — **a 2nd occurrence of item -319's exact
-    signature** (see below), unrelated to this guard. 2nd confirm queued:
-    `scratch/agent/soak_queue/s506_append_rdp_state_dl_entry_confirm.sh`.
+    signature** (see below), unrelated to this guard. 2nd confirm CLOSED clean s507 (see item -318
+    disposition above).
     **Register-correlation caution (preserved, still applies)**: s503's occurrence additionally carried
     `x0`=`x9`=`0x0000000300000000` in its mcontext dump, initially read as a correlation to the separate
     `initVec4TripletFromArgs+68` family (items -302/-306) — this is a **false lead**, already resolved
@@ -220,41 +220,42 @@ a range pointer. Highest allocated so far: -319. The next NEW item takes -320.
     different registers (`x8`, `x11`), reinforcing "common incidental constant," not "one propagating
     corrupted value." Full derivation: `PORTING-STATE.md` Sessions 501, 503, 505.
 
--317. **(s490-506) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+-317. **(s490-507) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
     derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c`, tool-audited then fixed
-    incrementally, 9 of ~150 leads fixed so far, 8 FULLY CLOSED 2/2, 1 1st-live-verify-clean.**
+    incrementally, 10 of ~150 leads fixed so far, 9 FULLY CLOSED 2/2, 1 1st-live-verify-clean.**
     Steps 1 (`heapFreeListDequeue`) and 2 (`buildOrientedFaceGeometry`) are separately FULLY CLOSED
     2/2 (item -316 area). Step 3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a forward
     taint-propagation dataflow analysis) found ~448 raw reload sites deduping to ~150 distinct
     candidate guard placements across 30 functions; an 8-site audit sample confirmed 8/8
-    TRUE_POSITIVE. Fixed and 2/2-confirmed clean, s495-s504: `NODE_LIST_HEAD_SIBLING_R4_GUARD` (35
-    sites), `RENDER_LIT_MESH_R2_GUARD` (48 sites), `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` through `...R2F_GUARD`
-    (six guards, 40 shared sites each, all in `emitFrameRdpInitDl`). s506 fixed a 7th guard in that
-    same function, `EMIT_FRAME_RDP_INIT_DL_R2G_GUARD` (`funcs_3.c:7384`/`0x80009578`, 40 shared sites,
-    same shape) — **1st live-verify CLEAN** (0 fires, 0 regressions except one benign pre-existing
-    `hangarmenu-a0-guard` fire (item -265), `hangarbay-entry n=32` positive control; crashed on the
-    already-catalogued `coalesceFreeHeapBlocks` heap-walker family, unrelated), 2nd confirm queued
-    (`scratch/agent/soak_queue/s506_emit_frame_rdp_init_dl_r2g_confirm.sh`). All 9 fixes share one
+    TRUE_POSITIVE. Fixed and 2/2-confirmed clean, s495-s507: `NODE_LIST_HEAD_SIBLING_R4_GUARD` (35
+    sites), `RENDER_LIT_MESH_R2_GUARD` (48 sites), `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` through `...R2G_GUARD`
+    (seven guards, 40 shared sites each, all in `emitFrameRdpInitDl` — R2G's 2nd confirm closed clean
+    s507, full 300s duration, no crash, `hangarbay-entry n=3000`). s507 fixed an 8th guard in that same
+    function, `EMIT_FRAME_RDP_INIT_DL_R2H_GUARD` (`funcs_3.c:8357`/`0x800098E8`, 40 shared sites, same
+    shape) — **1st live-verify CLEAN** (0 fires, 0 regressions except one benign pre-existing
+    `hangarmenu-a0-guard` fire (item -265), `hangarbay-entry n=3000` positive control; ran the FULL
+    scheduled 300s duration with **no crash at all**, 121 frames captured — same clean-pass class as
+    R2G's own 2nd confirm), 2nd confirm queued
+    (`scratch/agent/soak_queue/s507_emit_frame_rdp_init_dl_r2h_confirm.sh`). All 10 fixes share one
     shape: a null check (`ctx->r2 == 0`) gates the null arm safely, but the non-null fallthrough has no
     `0x80000000`-`0x80800000` range check before dereferencing; downstream control flow reassigns the
     register from the table again before any further use, so skip-the-write-on-invalid is a safe fix.
-    Two crash threads surfaced as a side effect of these live-verifies (not chased in-band): item -318
-    (`appendRdpStateDl+144`, fixed s505, 2nd confirm inconclusive/retried s506) and item -319
-    (`beginFrameDLChunk+40536`, 2 independent occurrences) — see above/below.
-    **~134 other distinct locations remain unaudited/unfixed.** Current tied-at-40 tier (s506's
-    post-fix dedup, re-verified fresh with a corrected script before touching source — the FIRST s506
-    dedup attempt grouped by `(file, kind, off, reg)` WITHOUT `hit.line`, silently merging unrelated
-    sites; re-adding `hit.line` to the group key reproduced this exact list):
-    `funcs_3.c:8344/7700/8688` (all `emitFrameRdpInitDl`) plus `funcs_4.c:17346`
-    (`renderLitMeshFaceGroup`, flagged since s497, unfixed 9 sessions running — worth picking up if
-    the `emitFrameRdpInitDl` tier runs dry). Recommended next pick: `funcs_3.c:8344`. **New signal
+    Two crash threads surfaced as a side effect of earlier live-verifies (not chased in-band): item -318
+    (`appendRdpStateDl+144`, FULLY CLOSED 2/2 s507) and item -319 (`beginFrameDLChunk+40536`, still only
+    2 independent occurrences) — see above/below. **~133 other distinct locations remain
+    unaudited/unfixed.** Current tied-at-40 tier (s507's fresh re-scan — line numbers DO drift after
+    every guard insertion, re-verify with `s494_item317_step3_tracer.py --scan` +
+    `scratch/agent/s506_dedupe.py` before touching source, do NOT trust recorded line numbers across
+    sessions): `funcs_3.c:7713/8701` (both `emitFrameRdpInitDl`) plus `funcs_4.c:17346`
+    (`renderLitMeshFaceGroup`, flagged since s497, unfixed 10 sessions running — worth picking up if
+    the `emitFrameRdpInitDl` tier runs dry). Recommended next pick: `funcs_3.c:7713`. **New signal
     (s506, not yet acted on)**: the fresh tracer scan also flags a cluster of candidate sites (counts
     28-36, lower than the tied-40 tier but numerous) inside `beginFrameDLChunk` itself
-    (`funcs_3.c:16530/14228/15105/14711/16055/12843/15589/13316/13808`) — the exact function item -319's
-    recurring crash lives in; if a 3rd item -319 occurrence lands, this list is a ready-made starting
-    point. Next-ranked after the tied-40 tier: `funcs_4.c:3299`-ish (26 sites), `funcs_3.c:28922`-ish
-    (18 sites), two singletons at `funcs_3.c:83`/`funcs_3.c:858`.
-    Full derivation: `docs/PROJECT-OVERVIEW.md` §21-§22, `PORTING-STATE.md` Sessions 490-506.
+    (`funcs_3.c:16543/14241/15118/14724/16068/12856/15602/13329/13821`, s507-drifted line numbers) —
+    the exact function item -319's recurring crash lives in; if a 3rd item -319 occurrence lands, this
+    list is a ready-made starting point. Next-ranked after the tied-40 tier: `funcs_4.c:3299`-ish (26
+    sites), `funcs_3.c:28922`-ish (18 sites), two singletons at `funcs_3.c:83`/`funcs_3.c:858`.
+    Full derivation: `docs/PROJECT-OVERVIEW.md` §21-§22, `PORTING-STATE.md` Sessions 490-507.
 
 -316. **(s488 scan → s489 FIXED → s490 2nd confirm clean) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED,
     2/2.** A scope gap in the existing s436 `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`,

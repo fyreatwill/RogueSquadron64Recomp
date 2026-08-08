@@ -1,17 +1,18 @@
 #!/bin/zsh
-# s506 2nd (independent) confirm of item -317 step 3's new EMIT_FRAME_RDP_INIT_DL_R2G_GUARD
-# (funcs_3.c 0x80009578, emitFrameRdpInitDl -- 7th same-function sibling
-# guard in this lineage).
+# s507 1st live-verify of item -317 step 3's new EMIT_FRAME_RDP_INIT_DL_R2H_GUARD
+# (funcs_3.c 0x800098E8, emitFrameRdpInitDl -- 8th guard in this same
+# function, next tied-at-40 lead per a fresh s507 tracer re-scan; NEXT.md's
+# recorded funcs_3.c:8344 had drifted +13 lines to funcs_3.c:8357 after
+# s506's R2G guard insertion -- re-verified via s494_item317_step3_tracer.py
+# --scan + s506_dedupe.py before touching source).
 #
-# Context: 1st live-verify (s506, manual_runs/s506_emit_frame_rdp_init_dl_r2g_manual.sh)
-# was CLEAN -- 0 emit-frame-rdp-init-dl-r2g-guard fires, 0 regressions on any
-# sibling guard (one benign hangarmenu-a0-guard fire, item -265, unrelated),
-# hangarbay-entry n=32 (positive control). Crashed at 129.7s on
-# coalesceFreeHeapBlocks+4328/last-guest-pc=0x80002474 -- the already-
-# catalogued heap-walker misattribution family (s354-366 and many since,
-# varying exact offset/last-guest-pc across sightings), unrelated to this
-# guard, not chased in-band. Same PROBE_KEYS schedule and full sibling-guard
-# env-var set as every prior soak in this lineage.
+# Context: funcs_3.c:8357 (`MEM_W(0X4, ctx->r2) = ctx->r3;`) reloads the
+# 0x801163B0 sibling table with only a null check; the non-null fallthrough
+# has no 0x80000000-0x80800000 range check before the write. Same shape as
+# EMIT_FRAME_RDP_INIT_DL_R2_GUARD through R2G_GUARD (all fixed and 2/2
+# CLOSED, R2G's 2nd confirm closed this same session). Same PROBE_KEYS
+# schedule and full sibling-guard env-var set as every prior soak in this
+# lineage, plus this session's new guard var.
 set -e
 cd "$(dirname "$0")/../../.."
 REPO_ROOT="$(pwd)"
@@ -50,6 +51,7 @@ env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 \
     ROGUESQ_LOG_EMIT_FRAME_RDP_INIT_DL_R2F_GUARD=1 \
     ROGUESQ_LOG_APPEND_RDP_STATE_DL_ENTRY_GUARD=1 \
     ROGUESQ_LOG_EMIT_FRAME_RDP_INIT_DL_R2G_GUARD=1 \
+    ROGUESQ_LOG_EMIT_FRAME_RDP_INIT_DL_R2H_GUARD=1 \
     PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
     PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" \
-    zsh "$REPO_ROOT/tools/probe.sh" "$REPO_ROOT/scratch/agent/soak_results/s506_emit_frame_rdp_init_dl_r2g_confirm" 300 2
+    zsh "$REPO_ROOT/tools/probe.sh" "$REPO_ROOT/scratch/agent/soak_results/s507_emit_frame_rdp_init_dl_r2h_manual" 300 2
