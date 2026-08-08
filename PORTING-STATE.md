@@ -43097,3 +43097,76 @@ checkout's `fixup_game_funcs.py`, untracked by this repo's git).
 `scratch/agent/OUTCOME`: ADVANCED (source-traced and fixed a real 3-occurrence-escalated crash lead with
 a clean 1st live-verify and a queued 2nd confirm; also closed out item -317 step 3's 19th guard 2/2 on
 re-read of an already-collected soak result).
+
+## Session 521 (2026-08-08): item -319 2nd confirm read CLEAN, FULLY CLOSED 2/2; item -317 step 3's 20th guard (`BEGIN_FRAME_DL_CHUNK_R1_GUARD`, `beginFrameDLChunk`'s first blanket-sweep site) FIXED, 1st live-verify clean, 2nd confirm queued; surfaced a new single-occurrence crash (item -324, `heapFreeListInsert+72`)
+
+**Folded in from the queue**: item -319's queued 2nd independent confirm (`s520_sibling_ptr_b0d0_confirm`,
+rc=0, 346s, `scratch/agent/soak_results/s520_sibling_ptr_b0d0_confirm/run.log`) read clean: 0
+`sibling-ptr-write-guard` fires of any kind (including the new `site=0x8000B0D0`), `hangarbay-entry
+n=31` positive control, full scheduled duration with zero crashes of any kind. Item -319 is now FULLY
+CLOSED 2/2.
+
+**Work unit**: resumed item -317 step 3's blanket sweep (top-ranked M3 work per the user directive, now
+that item -319 is resolved). Re-ran the tracer + dedupe fresh, per NEXT.md's own warning about line-number
+drift. Hit and resolved a tooling gotcha along the way: `scratch/agent/s506_dedupe.py` reads a hardcoded
+`scratch/agent/s494_item317_step3_report.json`, so running `s494_item317_step3_tracer.py --scan` with a
+custom `--out` (as a first attempt, to avoid clobbering while inspecting) leaves that canonical file
+stale -- the dedupe ranking silently used data from before this session, and specifically still ranked
+an ALREADY-CLOSED site (`funcs_4.c:15166`, `RENDER_LIT_MESH_R8_GUARD`, closed s520) as a top-tier
+candidate. Confirmed by reading the actual regenerated source at that address (the guard block was
+already there). Re-ran `--scan` with its default output path, re-ran dedupe -- the stale entry
+correctly dropped out of the ranking, and the freshly-ranked top tier matched NEXT.md's s519-era listing
+with only the expected line-number drift.
+
+**Site picked**: `funcs_3.c:16595`/`0x8000B570`, `beginFrameDLChunk`, write off=`0X4` reg=`r2`, count=36
+(tied top of the fresh ranking, and the first step-3 guard in this function -- distinct from item -319's
+own `SIBLING_PTR_WRITE_GUARD` fix in the same function, which covers a different global at a different
+offset). Read the generated source directly to confirm the shape before writing the fix: `if (ctx->r2 ==
+0)` at `0x8000B568` gates one arm (a harmless duplicate `*r3 = r2` write, `0x8000B56C`, then `goto
+L_8000B574`); the non-null fallthrough falls through the same duplicate write and then dereferences the
+freshly-reloaded `ctx->r2` unconditionally at `0x8000B570` (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no
+`0x80000000`-`0x80800000` range check. Downstream (`L_8000B580`/`L_8000B588`) reloads both `ctx->r4` and
+`ctx->r2` fresh from the same `0x801163B0` table immediately after -- skip-on-invalid is safe, same
+precedent as every prior guard in this lineage. Note: `beginFrameDLChunk` carries `g_rs64_last_guest_pc`
+breadcrumb writes (unlike `renderLitMeshFaceGroup`, which doesn't) -- the old/new match text for the
+fixup patch has to include the breadcrumb line between the disassembly comment and the `MEM_W` write, or
+the string replace silently no-ops (hit this once: first uniqueness check without the breadcrumb line
+came back `count: 0`).
+
+**Fix**: added `BEGIN_FRAME_DL_CHUNK_R1_GUARD` to `fixup_game_funcs.py` as a new bespoke patch block
+(same shape as every R2-R8/EMIT_FRAME_RDP_INIT_DL_R2x/etc. guard in this lineage -- range-check +
+`ROGUESQ_LOG_BEGIN_FRAME_DL_CHUNK_R1_GUARD` diagnostic + skip-on-invalid).
+
+**Regen**: deleted all 50 stale `funcs_*.c` (`python3 -c "import glob,os; ..."` workaround, sandbox
+blocks glob/`find -delete`) -> `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` (confirmed
+`BEGIN_FRAME_DL_CHUNK_R1_GUARD` applied exactly once by grepping the regenerated source) -> `cmake
+--build . -j8` (clean build, only pre-existing unrelated `-Wpointer-sign` warnings).
+
+**1st live-verify** (manual, foreground, phase-gated on `hangarbay-entry`, every existing guard family
+armed plus the new one): CLEAN -- 0 `begin-frame-dl-chunk-r1-guard` fires, and genuinely 0 fires on
+EVERY OTHER armed guard family this run (no benign co-fires at all, unlike most prior verifies in this
+campaign), `hangarbay-entry n=32` positive control (real, on the lower end of this campaign's typical
+range but still a genuine positive signal). Crashed at ~124-126s on a NEW, previously uncatalogued
+signature: `pc-symbol=heapFreeListInsert+72 (local-symtab)`, `last-guest-pc=0x80015544`. Call chain:
+`menuOverlayInit` -> `runHangarMenuFromOverlay` -> `runHangarSelectionFrame` -> `setupCameraMatrices` ->
+`drawSubtitleText` -> `emitMaterialTexturedDLAlt` -> `findOrCreateMaterial` -> `allocOrEvictMaterialNode`
+-> `heapFreeListInsert`. Filed as item -324, single occurrence, not chased per M3 strategy (no reactive
+single-crash chases). Grepped docs for `heapFreeListInsert`/`0x80015544` -- no prior match, genuinely
+new. Confirmed NOT the item -310/-311 `heapFreeListDequeue+NNNN` symbolizer-artifact family: post-s480
+`pc-symbol` here is `(local-symtab)`-tagged (a real attribution, not a `dladdr` nearest-exported-symbol
+guess), and it's a different sibling function (`Insert` vs `Dequeue`). 2nd independent confirm queued:
+`scratch/agent/soak_queue/s521_begin_frame_dl_chunk_r1_confirm.sh` (same full guard env-var list plus
+the new guard's own var).
+
+**What this rules out**: nothing new about the tracer's completeness (already established s520 that
+`beginFrameDLChunk` has multiple distinct vulnerable-reload idioms); this session's own gotcha instead
+narrows the OPERATIONAL risk in re-running the tracer -- a custom `--out` path during inspection is safe
+for reading, but `s506_dedupe.py` must always be run against a `--scan` invocation that used the
+default output path, or the tier ranking silently includes already-fixed sites.
+
+No `lib/` changes, no submodule-patch export needed (all code changes live in the sibling `N64Recomp`
+checkout's `fixup_game_funcs.py`, untracked by this repo's git).
+
+`scratch/agent/OUTCOME`: ADVANCED (source-traced and fixed a new item -317 step 3 guard with a clean 1st
+live-verify and a queued 2nd confirm; also closed out item -319 2/2 on a queued soak's clean result, and
+filed a new single-occurrence crash lead, item -324).
