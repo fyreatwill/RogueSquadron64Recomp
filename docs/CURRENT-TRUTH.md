@@ -36,10 +36,24 @@ Priority order for upcoming iterations, set after the 300-session review:
    claim found that claim was WRONG -- the same aliasing shape recurs at up to 78 more of
    `DL_LIST_APPEND_GUARD`'s 84 sites, confirmed via direct source read of a 2nd concrete instance.
    Generalized the fix into a blanket patch (item -313), 1 manual confirm clean (0 fires anywhere in
-   the family), 2nd confirm queued (`s482_blanket_rwrite_guard_confirm`). Next M3 session: check that
-   soak result first; if clean, item -313 is fully CLOSED and this whole `DL_LIST_APPEND_GUARD`
-   lineage (items -291, -312, -313) is done -- fall back to a fresh M5 lead check (last checked s482,
-   still clean) before inventing a new M3 discovery method.**
+   the family), 2nd confirm queued (`s482_blanket_rwrite_guard_confirm`). **s483: that 2nd confirm
+   soak ran (`rc=3`, crashed) but 0 fires on `dl-list-append-rwrite-guard` or any of the 6 sibling
+   guard families instrumented, and the crash itself (`pc-symbol=coalesceFreeHeapBlocks+2016
+   (local-symtab)`, `last-guest-pc=0x800023b0`) is byte-identical to a crash already catalogued and
+   closed in the s354-366 heap-walker/coalesce-bail-fix arc (same address pair recorded verbatim in
+   `PORTING-STATE.md` at the s366-era verify2 entry) -- matching this whole lineage's established
+   true-negative pattern exactly. Item -313 is fully CLOSED, 2/2 independent confirms clean; the
+   entire `DL_LIST_APPEND_GUARD` lineage (items -291, -312, -313) is done. Fresh M5 lead check
+   skipped this session per NEXT.md's own standing cadence (only 1 session past s482's re-check,
+   below the 3-session threshold) -- fell through to M3 idiom-class audit resumption instead: applying
+   item -313's own "grep-verified unique, but is the SHAPE actually unique?" skepticism to other
+   already-CLOSED site-anchored (non-blanket) patches in `fixup_game_funcs.py`. Found a real hit:
+   `AUDIO_SLOT_ACTIVE_GUARD` (s166)'s "unique address" claim was also address-only, not shape-wide --
+   the same unguarded fixed-global-pointer deref idiom recurs at 20 more sites across 15 different
+   MusyX voice functions reading the same `0x801496F8` global, confirmed via 2 direct source reads.
+   Filed as item -314, CLASSIFIED AND DEFERRED (not a uniform blanket-regex case like item -313 --
+   15 different downstream instruction shapes need a dominant-shape regex plus bespoke handling for
+   an interleaved-instruction minority); fix design is next session's M3 work unit.**
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -171,7 +185,41 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -313. The next NEW item takes -314.
+a range pointer. Highest allocated so far: -314. The next NEW item takes -315.
+
+-314. **(s483) `AUDIO_SLOT_ACTIVE_GUARD` (s166)'s "unique address" claim was also address-only, not
+    shape-wide -- 20 more unguarded loads of the same base-pointer global found across 15 MusyX
+    voice functions. CLASSIFIED AND DEFERRED, not yet fixed.** Applying item -313's own discovery
+    method to another closed site-anchored patch: the guard's own comment claimed "Guest addresses
+    0x80092110/0x80092114 confirmed unique across the whole RecompiledFuncs/ tree ... via grep" --
+    true of those two literal instruction addresses in `isAudioSlotActive`, but the underlying SHAPE
+    (load fixed global base pointer, combine with computed voice-slot index, deref with zero
+    null/range check) was never checked for recurrence at other addresses reading the SAME global.
+    The global is `0x801496F8` (`lui $reg,0x8015`/`lw $reg,-0x6908($reg)`; written once, in
+    `allocateSongChannelArray`, `funcs_23.c:10785`). Grepped every load of it across all of
+    `RecompiledFuncs/`: 21 total sites, all in `funcs_24.c`. Only 1 (the original
+    `isAudioSlotActive` site, 0x80092100) is guarded. The other 20 span 15 different MusyX
+    voice-management functions: `musyxMixActiveVoices` (x3), `musyxSynthFrame` (x1),
+    `musyxInitVoiceFromSample` (x4), `musyxStartVoiceRelease`, `musyxStoreVoiceAdsrParams`,
+    `musyxTriggerVoiceAttack`, `musyxStopVoice`, `musyxSetVoicePitchBend` (x2),
+    `setVoiceModulationParams`, `stopVoiceMarkRetrigger` (x2), `beginVoiceFadeRelease`,
+    `deactivateVoice`, `getVoiceUserField` (exact line numbers: `PORTING-STATE.md` Session 483).
+    2 of the 20 sit near an unrelated logging-only diagnostic patch (s117/s119) that fires AFTER the
+    unchecked deref, not a safety check -- do not miscount those as guarded. Confirmed via 2 direct
+    source reads beyond the known site: `musyxMixActiveVoices` (funcs_24.c:2540-2564, unguarded
+    `idx*136` combine feeding an unchecked byte-OR read) and `deactivateVoice`
+    (funcs_24.c:6643-6657, unguarded `idx*136` combine feeding an unconditional byte WRITE) --
+    same unguarded-base-pointer-deref class as `AUDIO_SLOT_ACTIVE_GUARD` already patches for its one
+    site, at 2 more concrete addresses in 2 different functions. Not fixed this session: unlike
+    `DL_LIST_APPEND_GUARD`'s one uniform 84x-repeated instruction chain, this idiom recurs across 15
+    DIFFERENT functions with different downstream shapes after the load (verified `MEM_W`/`MEM_BU`
+    in `include/recomp.h` -- a bad pointer can NOT simply be zeroed, `rdram + (0 - 0x80000000)` is
+    still wild, so the fix needs the same "skip only the guarded op" if/else wrapper
+    `GENERIC_CACHE_GUARD`/`DL_LIST_APPEND_GUARD_RWRITE` use, which needs per-shape regex design: a
+    dominant 6-instruction shape (`lui;lw;sll;addu;sll;addu`) covers most sites, but at least
+    `musyxInitVoiceFromSample`'s 3rd site interleaves an unrelated float-constant load in the
+    middle). Filed CLASSIFIED AND DEFERRED rather than rushing a blanket patch across an
+    every-frame-exercised audio subsystem. Full derivation: `PORTING-STATE.md` Session 483.
 
 -313. **(s482) `DL_LIST_APPEND_GUARD_RWRITE` generalized from item -312's single site to a blanket
     fix across all 84 `DL_LIST_APPEND_GUARD` sites — item -312's "grep-verified unique" scope claim
@@ -206,9 +254,13 @@ a range pointer. Highest allocated so far: -313. The next NEW item takes -314.
     process crashed at 107.8s in an UNRELATED, already-catalogued family
     (`initVec4TripletFromArgs+68`, a near-`0x80000000` wild guest pointer matching the BREADCRUMB6
     family) — filed, not chased, matching this whole lineage's established "clean at the target,
-    hit a different pre-existing family" pattern. 2nd confirmation soak queued
-    (`s482_blanket_rwrite_guard_confirm`) — check its result before marking this item fully CLOSED.
-    Full derivation: `PORTING-STATE.md` Session 482.
+    hit a different pre-existing family" pattern. **2nd confirmation soak (s483,
+    `s482_blanket_rwrite_guard_confirm`) also came back clean at the target: `rc=3` (crashed) but 0
+    fires on `dl-list-append-rwrite-guard` or any of the 6 sibling guard families, `hangarbay-entry
+    n=33` positive control; the crash (`pc-symbol=coalesceFreeHeapBlocks+2016`,
+    `last-guest-pc=0x800023b0`) is byte-identical to the already-closed s354-366 heap-coalesce
+    family. Item -313 is FULLY CLOSED, 2/2 independent confirms clean.** Full derivation:
+    `PORTING-STATE.md` Sessions 482-483.
 
 -312. **(s481) `loadCutsceneAssetsByIndex+1860` breadcrumb (item -311's own predicted use case)
     CLOSED as an item-310-class misattribution; real root cause found and FIXED, then SUPERSEDED
