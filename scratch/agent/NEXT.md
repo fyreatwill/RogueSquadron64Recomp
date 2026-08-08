@@ -2,93 +2,81 @@
 
 HYPOTHESIS-ID: item-317-step3-blanket-sweep
 
-## s517 recap -- read this first
+## s518 recap -- read this first
 
-s517 source-traced and FIXED item -322 (`heapFreeListDequeue`/`last-guest-pc=0x8000d92c`, escalated
-at s515 to 3 occurrences: s457, s512, s515). Added `HEAPLISTDEQ_ATTR_WRITE_GUARD` (`fixup_game_funcs.py`,
-`funcs_3.c:0x8000D92C`) guarding a stack-slot-derived pointer (loaded unguarded from `0x3C($sp)`,
-itself filled far upstream from a fixed-global-array-base + `index<<2` computation) before a
-write-through. 1st live-verify (manual, foreground, full sibling-guard env-var set): **CLEAN** -- 0
-`heaplistdeq-attr-write-guard` fires, 1 benign `hangarmenu-a0-guard` co-fire (item -265, already
-catalogued), `hangarbay-entry n=34` positive control. Crashed at 121.2s on the already-catalogued
-`coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` background-noise family (documented since
-s354-366), unrelated to this guard. 2nd independent confirm queued:
-`scratch/agent/soak_queue/s517_heaplistdeq_attr_write_confirm.sh`.
+s518 did two things, no code changes:
 
-**Side finding (not chased, noted for later)**: `heapFreeListDequeue`'s tail (`0x8000D8xx`-`0x8000D9xx`)
-reads like vertex/face-attribute-copy code (calls `transformAndEmitFaceVertices`), not heap
-bookkeeping -- plausibly this function is a generic pooled-buffer-dequeue-with-eviction helper shared
-across heap AND display-list/vertex-buffer pools, not heap-only. Doesn't change the fix (address-scoped
-either way); flagged in case a future session needs the real semantics.
+1. **Folded in the loop-run s517 confirm for item -322** (`heapFreeListDequeue` stack-slot-derived
+   pointer write, `HEAPLISTDEQ_ATTR_WRITE_GUARD`): ran the FULL 347s scheduled duration with **zero
+   crashes of any kind** (not even the background-noise family the 1st verify hit) and 0 guard fires,
+   `hangarbay-entry n=2700` positive control. **Item -322 is now CLOSED 2/2.**
 
-**Also resolved a tooling red herring**: the `pc-symbol+NNNN` offset in crash logs is a NATIVE code
-offset (from `nm` against the native crash PC, per `src/main/main.cpp`'s handler), NOT a guest-address
-delta -- never use it to estimate a guest-side offset within a function. Only `last-guest-pc` is
-reliable for that. Worth remembering if a future item's occurrences show `pc-symbol` offset drift like
-item -322's did (32596→40432) -- that drift is expected guard-insertion layout noise in the *native*
-binary, not evidence of anything about guest-side identity.
+2. **Source-traced item -321** (`menuOverlayInit`-area, `last-guest-pc=0x800ab1c4`, previously flagged
+   as meeting its 2-occurrence escalation bar with a pc-symbol-mismatch caveat) and **REFUTED the
+   escalation**: `0x800AB1C4` is `runHangarSelectionFrame`'s own return-epilogue instruction
+   (`N64Recomp/RecompiledFuncs/funcs_28.c:6019`, pure `$sp` arithmetic, not a memory access -- cannot
+   fault), and the breadcrumb tracker has zero coverage one level up in either caller
+   (`runHangarMenuFromOverlay`, `menuOverlayInit` -- grep-verified 0 `g_rs64_last_guest_pc` writes in
+   both). Same breadcrumb-freeze-at-return artifact class as item -263's `BREADCRUMB17`->`18` pair
+   (s437/s439). The matching `last-guest-pc` between s510/s515 means "both unwound out of the same
+   function," not a shared fault site -- they're plausibly two different downstream crashes. Item -321
+   is downgraded to a documented instrumentation gap, not queued as active work (a `BREADCRUMB19` fix
+   for `runHangarMenuFromOverlay` is described in `docs/CURRENT-TRUTH.md` item -321 if a future
+   recurrence needs it, but nothing currently warrants it).
 
-**M5 audio-lead cadence check (independent of rule 8)**: grepped this session's own log
-(`scratch/agent/soak_results/s517_heaplistdeq_attr_write_manual/run.log`) for
-`musyx`/`waitForAnyAudioSlot`/`audio-slot`/`audio-voice` -- one hit, `[audio-wait-pump-stall]
-countdown=16 after 64 musyxSynthFrame pumps`, already-catalogued (appears in prior sessions' logs
-too, not new). Zero new audio-subsystem lead. Cadence reset to s517, due again s520+.
+Both items fully written up: `docs/CURRENT-TRUTH.md` items -321/-322, `PORTING-STATE.md` Session 518.
 
-Full detail: `PORTING-STATE.md` Session 517, `docs/CURRENT-TRUTH.md` item -322.
+**M5 audio-lead cadence**: not checked this session (s518 was analysis-only, produced no new run log
+to grep). Last checked s517 (clean, cadence reset to s517). Due again s520+; check the next session
+that produces a fresh run log.
 
-## The work unit: fold in the s517 confirm, or resume item -317 step 3's tier
+## The work unit: resume item -317 step 3's blanket sweep
 
-**Step 1**: check `scratch/agent/SOAK-RESULTS.md` tail for a line mentioning
-`s517_heaplistdeq_attr_write_confirm`. If present:
-- Read its log (`scratch/agent/soak_results/s517_heaplistdeq_attr_write_confirm_*.log` + `run.log`).
-- If clean on `heaplistdeq-attr-write-guard` (0 fires) with a real `hangarbay-entry` positive control:
-  item -322 is CLOSED 2/2. Update `docs/CURRENT-TRUTH.md` item -322 to reflect full closure, move
-  `scratch/agent/soak_queue/s517_heaplistdeq_attr_write_confirm.sh` awareness (the loop already moves
-  consumed recipes to `soak_queue/done/` automatically), then proceed to item -321's source-trace (the
-  2nd-priority M3 thread, `menuOverlayInit`-area / `last-guest-pc=0x800ab1c4`, 2 occurrences with a
-  pc-symbol-mismatch caveat -- see CURRENT-TRUTH item -321 for the caveat and what "source-trace to
-  confirm identity" means there) as this iteration's work unit.
-- If it fired or was inconclusive: treat as a real finding, don't just re-queue blindly -- read the
-  log fully before deciding next steps (Iron Rule 1: a null result needs a positive control; a FIRING
-  result needs the same rigor before concluding it's real corruption vs. an artifact).
+With items -321 and -322 both resolved (closed / refuted), item -317 step 3 is the top-ranked M3 work
+unit again. **Re-scan first** -- the last scan (s515) is stale by three guard insertions since (R7,
+SUBMIT_SCENE_NODE_RENDER_R1, and s517's HEAPLISTDEQ_ATTR_WRITE, though the latter is in a different
+function/file and likely doesn't shift line numbers in the scanned files):
 
-**Step 2** (if the confirm hasn't run yet, or after closing item -322): resume item -317 step 3's
-~150-location blanket sweep at its next-ranked lead. **Re-scan first** -- the s515 scan is now stale
-by two guard insertions (R7 + SUBMIT_SCENE_NODE_RENDER_R1) plus this session's HEAPLISTDEQ_ATTR_WRITE:
 ```
 python3 scratch/agent/s494_item317_step3_tracer.py --scan
 python3 scratch/agent/s506_dedupe.py
 ```
-Known tier from the s515 scan (STALE, re-verify): three `beginFrameDLChunk` sites at count=36 (items
--319/-323's own function, still deliberately skip -- fixing inside it pre-empts those threads' own
-escalation), `funcs_3.c:14763`/`funcs_3.c:16107` (32 sites, `beginFrameDLChunk`), then a count=30
-group including a possible EIGHTH `renderLitMeshFaceGroup` site (`funcs_4.c:15153`). Prefer
-`renderLitMeshFaceGroup` or non-`beginFrameDLChunk` sites. 18/18 guards fixed so far, all fully closed
-2/2 (item -317 step 3 tally, unaffected by item -322's separate fix). Full guard table and gotchas:
-`docs/PROJECT-OVERVIEW.md` §22-§23, `PORTING-STATE.md` Sessions 490-517.
 
-**Regen reminder** (verify each step, don't trust silence -- s515 hit a silent 0-count fixup skip):
-```
-python3 -c "import glob, os; files = glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c'); [os.remove(f) for f in files]; print(len(glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c')), 'remaining')"
-```
-Confirm it prints `0 remaining` before running `make_elf.py` (`cd rogue_squadron64 && python3
-tools/make_elf.py`) -> `N64Recomp` (`cd N64Recomp && ./build/N64Recomp rogue_squadron.toml`) ->
-`fixup_game_funcs.py` (`cd N64Recomp && python3 fixup_game_funcs.py`). After fixup, grep its report
-output for the new guard's own name -- a clean exit code is NOT sufficient evidence the patch landed
-(functions with their own pre-existing `g_rs64_last_guest_pc` breadcrumb patches need that line
-included in the old/new match strings, or the match silently fails 0-for-1). Then
-`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j8` from `build/`.
+Known tier from the s515 scan (STALE, re-verify against the fresh scan output before committing to a
+pick): three `beginFrameDLChunk` sites at count=36 (items -319/-323's own function, still deliberately
+skip -- fixing inside it pre-empts those threads' own escalation), `funcs_3.c:14763`/`funcs_3.c:16107`
+(32 sites, `beginFrameDLChunk`), then a count=30 group including a possible EIGHTH
+`renderLitMeshFaceGroup` site (`funcs_4.c:15153`). **Prefer `renderLitMeshFaceGroup` or non-
+`beginFrameDLChunk` sites** (fixing inside `beginFrameDLChunk` pre-empts items -319/-323's own
+dedicated threads). 18/18 guards fixed so far, all fully closed 2/2. ~127 locations remain unaudited.
+Full guard table and gotchas: `docs/PROJECT-OVERVIEW.md` §22-§23, `PORTING-STATE.md` Sessions 490-518.
 
-## Reminder: item -319/-320/-321/-323 status
+**Regen reminder** (verify each step -- this has bitten prior sessions when skipped):
+1. Delete all `funcs_*.c` in `N64Recomp/RecompiledFuncs/` first and confirm `0 remaining` -- stale
+   files silently survive a partial regen otherwise.
+2. `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build . -j8`
+   (`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` prefix for Metal shader rebuilds).
+3. Grep the fixup report AND the freshly-generated source for the new guard's own name -- a silent
+   no-op (rc=0, no error, 0 applied) has happened before when a function carried its own pre-existing
+   breadcrumb patch and the guard's old/new match string didn't include the inserted line
+   (`SUBMIT_SCENE_NODE_RENDER_R1_GUARD`'s gotcha, s515).
+4. Live-verify manually in the foreground with every sibling guard's env var armed plus the new
+   guard's own `ROGUESQ_LOG_<NAME>=1`, phase-gate on `hangarbay-entry` as the positive control (Iron
+   Rule 1 -- a null result needs a same-run positive control). If clean, queue a 2nd independent
+   confirm to `scratch/agent/soak_queue/` for the loop to run between iterations, following the
+   existing recipe shape (see any `scratch/agent/soak_queue/done/s51*_*.sh` for the template).
 
-- Item -319 (`beginFrameDLChunk+40536`): 2 occurrences (s503, s505). Unchanged s517.
-- Item -320 (`loadCutsceneAssetsByIndex+1860`): 1 occurrence (s508). Unchanged s517.
-- Item -321 (`menuOverlayInit`-area/`last-guest-pc=0x800ab1c4`): 2 occurrences (s510, s515) -- meets
-  its own escalation bar but with a pc-symbol-mismatch caveat. 2nd-priority M3 thread, behind item
-  -322's confirm (see Step 1 above).
-- Item -323 (`beginFrameDLChunk+27456`): 1 occurrence (s514). Unchanged s517.
+`fixup_game_funcs.py` and the regenerated `RecompiledFuncs/*.c` live in the sibling `N64Recomp`
+checkout (untracked by its own git) -- not this repo's git tree. This repo's ledger entries (with the
+full old/new patch text) are the only durable record of every guard in this lineage since s481; no
+`lib/` submodule involvement, no `export.sh` needed for this work.
 
-## The M5 audio-lead cadence is a SEPARATE, independent check (not tied to rule 8)
+## Discriminating measurement for the next lead
 
-Last checked s517 (zero new leads, see recap above). Due again s520+. Periodic background check only
--- not due yet.
+Same shape every time in this lineage: does the guard itself ever fire (would indicate the reload IS
+sometimes invalid, i.e. the fix is load-bearing) vs. 0 fires with a real positive control (null result,
+guard is precautionary/dormant but the campaign's own precedent says these are cheap and correct to
+add regardless -- see item -317's methodology note in `docs/PROJECT-OVERVIEW.md` §22). A crash during
+the live-verify that hits a DIFFERENT, already-catalogued signature is not evidence against the guard
+(same disposition as items -317R2 through -322); a NEW uncatalogued signature gets filed as its own
+single-occurrence item, not chased further this session.

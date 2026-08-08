@@ -26,14 +26,18 @@ Priority order for upcoming iterations, set after the 300-session review:
    18 FULLY CLOSED 2/2** (`SUBMIT_SCENE_NODE_RENDER_R1_GUARD`'s 2nd confirm folded in this session,
    clean on the guard itself) — see item -317 below for the current tier and next pick; full campaign
    detail: PROJECT-OVERVIEW §22-§23. **Item -322 (`heapFreeListDequeue`/`last-guest-pc=0x8000d92c`) is
-   FIXED (s517, `HEAPLISTDEQ_ATTR_WRITE_GUARD`, 1st live-verify clean) — 2nd independent confirm queued
-   for the loop** (see item -322 below); next iteration's top-priority work unit is either folding in
-   that confirm (if the loop has already run it) or, if not, resuming item -317 step 3's tier at its
-   next-ranked lead while the confirm runs. **Item -321 (`menuOverlayInit+3648`-ish/
-   `last-guest-pc=0x800ab1c4`) now also has 2 occurrences (s510, s515) — meets its own stated
-   2-occurrence escalation bar, queued behind item -322's confirm, but with a pc-symbol-mismatch
-   caveat** (see item -321 below). Items -319/-320/-323 are unchanged single/double-occurrence
-   breadcrumbs (see below).
+   FIXED and FULLY CLOSED 2/2 (s517/s518, `HEAPLISTDEQ_ATTR_WRITE_GUARD`)** — 2nd confirm ran the full
+   347s scheduled duration with zero crashes at all and 0 guard fires (see item -322 below). **Item
+   -321 (`menuOverlayInit`-area/`last-guest-pc=0x800ab1c4`) was source-traced s518 and its 2-occurrence
+   escalation is REFUTED**: `0x800AB1C4` is `runHangarSelectionFrame`'s own return instruction (`$sp`
+   epilogue arithmetic, not a memory access), and the breadcrumb tracker has zero coverage one level up
+   in either caller (`runHangarMenuFromOverlay`, `menuOverlayInit`) — the same breadcrumb-freeze
+   artifact class as item -263/`BREADCRUMB17`→`18` (PROJECT-OVERVIEW §s435-439). A matching
+   `last-guest-pc` here means only "both crashes happened to unwind out of the same function," not a
+   shared fault site; downgraded from escalated to a documented tooling gap (see item -321 below).
+   **Item -317 step 3's blanket sweep (18/18 guards fixed, all closed 2/2) is the top-ranked M3 work
+   unit again** — resume at its next-ranked lead (re-scan first; stale since s517's fix touched
+   `funcs_3.c`). Items -319/-320/-323 are unchanged single/double-occurrence breadcrumbs (see below).
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
@@ -168,38 +172,51 @@ a range pointer. Highest allocated so far: -323. The next NEW item takes -324.
     control. Same function as item -319 but a DIFFERENT `last-guest-pc` (`0x8000ae40` vs `0x8000b0d0`)
     — per the s422 precedent, a distinct signature, not a 3rd -319 occurrence. No 2nd occurrence yet.
 
--322. **(s457/s512/s515 → s517 FIXED, `HEAPLISTDEQ_ATTR_WRITE_GUARD`, 1st live-verify clean) —
-    2nd confirm queued.** Source-traced `funcs_3.c:22715` `heapFreeListDequeue` (spans
-    `0x8000CFD4`-`0x8000D9D0`, one continuous control-flow region, confirmed by inspection — the
-    `last-guest-pc=0x8000d92c` shared by all 3 prior occurrences pins to `MEM_W(0X0, ctx->r2) =
-    ctx->r3;` at `0x8000D92C`, where `ctx->r2` is reloaded unguarded from stack slot `0x3C($sp)`
-    (filled far upstream at `0x8000D4DC` from a fixed-global-array-base + `index<<2` computation, no
-    `0x80000000`-`0x80800000` range check before the write-through). Downstream immediately
-    reassigns the register to an unrelated flag-test result, so skip-the-write-on-invalid is safe,
-    same precedent as the whole item -317-lineage. **Side note**: the `pc-symbol`'s `+NNNN` offset
-    (32596/40432/etc.) is a NATIVE code offset from `nm`, not a guest-address delta — confirmed by
-    reading `src/main/main.cpp`'s crash handler — so it should never be used to estimate a guest
-    offset within the function; only `last-guest-pc` is reliable for that. 1st live-verify (manual,
-    foreground): 0 `heaplistdeq-attr-write-guard` fires, 1 benign `hangarmenu-a0-guard` co-fire (item
-    -265, already-catalogued), `hangarbay-entry n=34` positive control. Crashed at 121.2s on
-    `pc-symbol=coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` — the already-catalogued
-    background-noise heap-walker family (documented since s354-366), unrelated to this guard. 2nd
-    independent confirm queued: `scratch/agent/soak_queue/s517_heaplistdeq_attr_write_confirm.sh`.
-    Full detail: `docs/PROJECT-OVERVIEW.md` §23, `PORTING-STATE.md` Sessions 457, 512, 515, 517.
+-322. **(s457/s512/s515 → s517 FIXED, `HEAPLISTDEQ_ATTR_WRITE_GUARD` → s518 FULLY CLOSED 2/2.**
+    Source-traced `funcs_3.c:22715` `heapFreeListDequeue` (spans `0x8000CFD4`-`0x8000D9D0`, one
+    continuous control-flow region, confirmed by inspection — the `last-guest-pc=0x8000d92c` shared by
+    all 3 prior occurrences pins to `MEM_W(0X0, ctx->r2) = ctx->r3;` at `0x8000D92C`, where `ctx->r2`
+    is reloaded unguarded from stack slot `0x3C($sp)` (filled far upstream at `0x8000D4DC` from a
+    fixed-global-array-base + `index<<2` computation, no `0x80000000`-`0x80800000` range check before
+    the write-through). Downstream immediately reassigns the register to an unrelated flag-test
+    result, so skip-the-write-on-invalid is safe, same precedent as the whole item -317-lineage.
+    **Side note**: the `pc-symbol`'s `+NNNN` offset (32596/40432/etc.) is a NATIVE code offset from
+    `nm`, not a guest-address delta — confirmed by reading `src/main/main.cpp`'s crash handler — so it
+    should never be used to estimate a guest offset within the function; only `last-guest-pc` is
+    reliable for that. 1st live-verify (s517, manual, foreground): 0 `heaplistdeq-attr-write-guard`
+    fires, 1 benign `hangarmenu-a0-guard` co-fire (item -265, already-catalogued), `hangarbay-entry
+    n=34` positive control. Crashed at 121.2s on `pc-symbol=coalesceFreeHeapBlocks+4424`/
+    `last-guest-pc=0x8000247c` — the already-catalogued background-noise heap-walker family
+    (documented since s354-366), unrelated to this guard. 2nd confirm (s518,
+    `s517_heaplistdeq_attr_write_confirm`, run by the loop): ran the FULL 347s scheduled duration with
+    **zero crashes of any kind** and 0 `heaplistdeq-attr-write-guard` fires, `hangarbay-entry n=2700`
+    positive control — cleaner than the 1st verify (no unrelated background-noise crash even). CLOSED
+    2/2. Full detail: `docs/PROJECT-OVERVIEW.md` §23, `PORTING-STATE.md` Sessions 457, 512, 515, 517,
+    518.
 
--321. **(s510/s515, 2 occurrences) `menuOverlayInit`-area crash, `last-guest-pc=0x800ab1c4` — meets
-    its stated 2-occurrence escalation bar, with a pc-symbol-mismatch caveat.** s510
-    (`pc-symbol=menuOverlayInit+3648`, host-symbol-offset-identical to the CLOSED item -266/-267 chain
-    but a DIFFERENT `last-guest-pc` than that chain's `0x800547bc`) was flagged possible-but-unconfirmed,
-    watching for a 2nd matching `last-guest-pc`. s515's `SUBMIT_SCENE_NODE_RENDER_R1_GUARD` 2nd confirm
-    landed one: `last-guest-pc=0x800ab1c4` byte-identical to s510 (0 fires on the guard itself,
-    `hangarbay-entry n=2700` positive control, one benign co-fire). **Caveat**: this occurrence's
-    `pc-symbol` is `unregisterServiceWorker+536 (local-symtab)`, a completely different function name
-    from s510's `menuOverlayInit+3648` — not the offset-only drift every other repeat signature in this
-    campaign shows (e.g. item -322's same-function `+32596`→`+40432`). Per the s422 precedent, a
-    matching breadcrumb with a mismatched host symbol is weaker corroboration than a matching pair.
-    Meets the item's own literal escalation bar but needs source-tracing to confirm, not assume,
-    identity — queued as the 2nd-priority M3 thread, behind item -322.
+-321. **(s510/s515, 2 occurrences → s518 source-traced, escalation REFUTED — closed as a documented
+    tooling gap, not a crash lead.** s510 (`pc-symbol=menuOverlayInit+3648`) and s515
+    (`pc-symbol=unregisterServiceWorker+536 (local-symtab)`) shared `last-guest-pc=0x800ab1c4`, which
+    looked like matching corroboration despite the pc-symbol mismatch. Source-trace (s518): guest
+    address `0x800AB1C4` is `runHangarSelectionFrame`'s own `addiu $sp,$sp,0x30` return-epilogue
+    instruction (`N64Recomp/RecompiledFuncs/funcs_28.c:6019` — confirmed by reading the recompiled
+    source; verified this address is also independently claimed by two OTHER overlay functions,
+    `composeEffectObjectTransformMatrix` and `spawnCutsceneDebrisField`, since all three overlays load
+    at the same fixed base `0x800A5130` — `menuOverlayInit`'s own `hangarbay-entry` positive controls
+    rule those two out). It is pure register arithmetic, not a memory access — it cannot fault. The
+    `g_rs64_last_guest_pc` breadcrumb tracker only exists inside a curated allowlist of instrumented
+    functions (`BREADCRUMB1`-`18` in `fixup_game_funcs.py`); `runHangarSelectionFrame`'s last write is
+    its own return, and its callers one level up (`runHangarMenuFromOverlay`, `funcs_35.c:450`;
+    `menuOverlayInit`, `funcs_34.c:5260`) have **zero** breadcrumb writes in their bodies (grep-verified
+    s518) — so the global freezes at `0x800AB1C4` regardless of where execution actually goes next.
+    This is the exact `BREADCRUMB17`→`18` "chase the freeze one level up" pattern already documented
+    for item -263 (PROJECT-OVERVIEW §s435-439), now recurring a 3rd time. **Conclusion**: s510 and s515
+    are most likely two DIFFERENT real crashes that both happen to have just unwound out of
+    `runHangarSelectionFrame` — the matching `last-guest-pc` is not meaningful corroboration. Downgraded
+    from escalated-and-queued to a documented instrumentation gap. **If a similar breadcrumb-freeze
+    pattern recurs and needs localizing**, add `BREADCRUMB19` to `runHangarMenuFromOverlay` modeled
+    directly on `BREADCRUMB17`/`18` (same per-instruction-comment regex patch) — not currently queued
+    as work, since neither underlying crash has its own 2nd occurrence.
 
 -320. **(s508, single occurrence) `loadCutsceneAssetsByIndex+1860`/`last-guest-pc=0x800aafb8` crash.**
     Surfaced by `EMIT_FRAME_RDP_INIT_DL_R2H_GUARD`'s 2nd confirm (0 fires, real positive control). Call

@@ -42867,3 +42867,71 @@ this ledger entry (with the full old/new patch text reproducible from the diff d
 the only durable record, same as every guard added in this lineage since s481.
 
 `scratch/agent/OUTCOME`: ADVANCED (landed a real fix, instrument, and a live-verified result).
+
+## Session 518 (2026-08-08): item -322 CLOSED 2/2 (loop-run confirm folded in); item -321 source-traced and its escalation REFUTED (breadcrumb-freeze artifact, not a real repeat crash site)
+
+**Step 1 -- fold in the loop's queued s517 confirm.** `scratch/agent/SOAK-RESULTS.md` showed
+`s517_heaplistdeq_attr_write_confirm | rc=0 | 347s` had already run. Read its log
+(`scratch/agent/soak_results/s517_heaplistdeq_attr_write_confirm/run.log`, 78,102 lines): 0
+`heaplistdeq-attr-write-guard` fires, `hangarbay-entry n=2700` positive control, and -- unlike the 1st
+live-verify, which crashed at 121.2s on the already-catalogued `coalesceFreeHeapBlocks` background-noise
+family -- this run completed the FULL 347s scheduled duration with zero `CRASH` lines at all (grepped
+the whole log, 0 hits). Cleaner result than the 1st verify. Item -322 (`heapFreeListDequeue`
+stack-slot-derived pointer write, `HEAPLISTDEQ_ATTR_WRITE_GUARD`) is CLOSED 2/2. Updated
+`docs/CURRENT-TRUTH.md` item -322 and the directive headline accordingly; recipe already moved to
+`scratch/agent/soak_queue/done/` by the loop, nothing further to do there.
+
+**Step 2 -- source-trace item -321 per NEXT.md's plan.** Item -321 was flagged as meeting its own
+2-occurrence escalation bar (s510 `pc-symbol=menuOverlayInit+3648`, s515
+`pc-symbol=unregisterServiceWorker+536`, both sharing `last-guest-pc=0x800ab1c4`) but carried an
+explicit caveat: the pc-symbol NAMES didn't match between occurrences, unlike every other repeat
+signature in this campaign (which show offset-only drift on an unchanged function name, e.g. item
+-322's own `+32596`->`+40432`). Dispatched an Explore-agent source-trace, then independently
+spot-verified its key claims by grepping the actual recompiled source myself (the sibling
+`N64Recomp/RecompiledFuncs/` checkout, not this repo -- `fixup_game_funcs.py` and the regenerated
+`funcs_*.c` files live there, untracked, per longstanding convention).
+
+**Finding**: `funcs_28.c:6019` (`N64Recomp/RecompiledFuncs/funcs_28.c`) shows `0x800AB1C4` is
+`runHangarSelectionFrame`'s own `addiu $sp, $sp, 0x30` -- the delay-slot instruction of its `jr $ra`
+return, i.e. pure register arithmetic on `ctx->r29`. Not a memory read, write, branch, or call; it
+cannot fault. Grep-confirmed the address also independently appears in TWO OTHER functions in the same
+file -- `composeEffectObjectTransformMatrix` (funcs_28.c:6723) and `spawnCutsceneDebrisField`
+(funcs_28.c:2953) -- because all three overlays (mission/menu/cinematic) statically load at the same
+fixed base `0x800A5130`; N64Recomp emits one function per overlay slot, all sharing guest addresses.
+Both crash logs' `hangarbay-entry` positive controls confirm the MENU overlay
+(`runHangarSelectionFrame`) is the right match, ruling out the other two.
+
+Traced why the breadcrumb (`g_rs64_last_guest_pc`) froze at a non-faulting instruction: it's only
+written inside a curated allowlist of instrumented functions (`BREADCRUMB1`-`18` blocks in
+`fixup_game_funcs.py`). Grep-verified (myself, not just the agent's claim) that `runHangarSelectionFrame`'s
+callers one level up -- `runHangarMenuFromOverlay` (`funcs_35.c:450`-600) and `menuOverlayInit`
+(`funcs_34.c:5260`-6170) -- have ZERO `g_rs64_last_guest_pc` writes in their bodies (`grep -c` both
+ranges: 0, 0). So on return from `runHangarSelectionFrame`, the tracked global simply freezes at
+`0x800AB1C4` no matter what actually executes next -- the exact same "breadcrumb doesn't reach the real
+fault, chase it one level up" pattern already documented for item -263's `BREADCRUMB17`->`18` pair
+(s437/s439, `docs/PROJECT-OVERVIEW.md` §s435-439, itself added specifically to chase this same
+freeze-at-return failure mode once before). Confirmed the `BREADCRUMB17` comment in
+`fixup_game_funcs.py:11869-11910` documents this exact mechanism in its own words.
+
+**Conclusion**: the matching `last-guest-pc=0x800ab1c4` between s510 and s515 is not evidence of a
+shared fault site -- it only shows both crashes happened to unwind out of `runHangarSelectionFrame`
+before landing somewhere unattributed and different each time (explaining why s510's native pc-symbol,
+`menuOverlayInit+3648`, and s515's, `unregisterServiceWorker+536` -- a stripped nearest-symbol match
+from the FULL linked binary including third-party deps, per `main.cpp`'s `nm -n` table -- don't agree:
+they're plausibly two genuinely different downstream crashes). This REFUTES item -321's escalation;
+downgraded from "queued, 2nd-priority M3 thread" to a documented instrumentation gap. A `BREADCRUMB19`
+fix (same per-instruction-comment regex patch as `BREADCRUMB17`/`18`, targeting
+`runHangarMenuFromOverlay`) would localize a future recurrence one level up, but isn't queued as work
+since neither underlying (now-separated) crash has its own 2nd occurrence yet.
+
+Updated `docs/CURRENT-TRUTH.md`: item -322 marked CLOSED 2/2, item -321 rewritten with the refutation
+and mechanism, directive headline updated to point back at item -317 step 3's blanket sweep as the
+top-ranked M3 work unit for the next iteration (18/18 guards fixed so far, ~127 locations remain,
+re-scan needed since the s515 scan predates this session's and s517's guard insertions).
+
+No code/guard changes this session (both sub-tasks were read/analysis work: folding in a completed
+soak result, and source-tracing a crash address). No `lib/` changes, no submodule-patch export needed.
+
+`scratch/agent/OUTCOME`: ADVANCED (closed a 2/2-confirmed guard fix and produced a real, source-verified
+finding -- refuting a believed-escalated crash lead with a concrete mechanism -- both of which change
+the ledger's next-steps ordering).
