@@ -1,94 +1,94 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: item-308-labelgap-backfill-audit
+HYPOTHESIS-ID: m3-lui-sw-direct-store-scan
 
-## s475 summary: item -308 `hi16=0x8013, offset=0xb50` CLASSIFIED AND DEFERRED (24 sites, 12 files,
-not the 21/11 originally reported); found and fixed tool bug #5
+## s476 summary: tool-bug-#5 (label-gap) backfill audit CLOSED clean; s465 `lui`+`lw` scan lineage
+fully spent
 
-This session's work unit (NEXT.md's top and, per s474's note, final candidate from the s465 scan):
-`hi16=0x8013, offset=0xb50` (global `0x8012F4B0`). No overlap with any existing guard's address.
+Generalized `scratch_s475_label_gap_check.py` into `scratch_s476_label_gap_generic.py` (N64Recomp
+repo, untracked, hi16/offset-parameterized like `scratch_s468_shapecheck_generic.py`) and ran it
+against all 7 already-CLOSED M3 idiom-class buckets (items -298/-299/-300/-301/-303/-304/-306).
+**Result: strict == permissive hit count for all 7 — 0 label-gap sites anywhere.** Tool bug #5 (the
+`lui`->label->`lw` blind spot that undercounted item -308 by 3 sites/1 file) does not recur in any
+already-CLOSED bucket. No per-site patch needed anywhere; this closes the open question cleanly.
 
-`scratch_s468_shapecheck_generic.py 8013 B50` reported 21 sites/11 files, 1 flagged
-`ADD32(...)->WRITE_THROUGH`. Direct read of the flagged site (`funcs_30.c:15666`) confirmed the
-already-known tool-bug-#1 pattern (s474: `ctx->r2`/`ctx->r29` substring false positive) -- the real
-next use of the reload is `ctx->r2 = ctx->r2 & 0X60;` then a `bne`-and-discard, not a write-through.
+While reconciling counts, found item -299's raw strict hit count (87) didn't match its guard's site
+count (84) — traced to an UNRELATED cause (`scratch_s466_shapecheck_63fc.py` hardcoded
+`files = ["funcs_3.c", "funcs_4.c"]`, silently never scanning `funcs_6.c`'s 3 sites). Directly
+re-read all 3 `funcs_6.c` sites: confirmed `fixup_game_funcs.py`'s own comment was right — those 3
+are COMPARE_ONLY (`bne` against a computed array-bound address, never dereferenced), correctly
+excluded already. Item -299 remains soundly CLOSED. No code change this session; no soak queued
+(nothing in `RecompiledFuncs/` changed).
 
-While confirming that, noticed the generated code sometimes places a `L_XXXXXXXX:` branch-target
-label between a bucket's `lui` and its `lw` reload (when the reload address is itself a jump target
-from elsewhere in the function). **`scratch_s468_shapecheck_generic.py`'s lookahead loop doesn't
-recognize label lines** -- it only skips disassembly-comment and breadcrumb lines while hunting for
-the reload after a `lui` match, and silently gives up (no site reported, no warning) on any other
-line shape. This is **tool bug #5**. Wrote `scratch_s475_label_gap_check.py` (N64Recomp repo,
-untracked) -- same scan logic plus a label-skip -- and re-ran: **24 sites, not 21** (3 missed:
-`funcs_27.c:108435`, `funcs_30.c:14600`, `funcs_32.c:29556` -- the last in a whole file,
-`funcs_32.c`, that didn't even appear in the original tool's file list).
+Full derivation: `PORTING-STATE.md` Session 476; ledger: `docs/CURRENT-TRUTH.md` item -308 amendment.
 
-Direct-read all 24 sites across all 12 files (not just a sample -- the label-gap fix produced a
-short enough list to read exhaustively): 100% the same `andi $vN, $vN, MASK` (masks
-`0x1/0x8/0x10/0x20/0x60`, a packed status/capability bitfield) immediately after the reload,
-consumed only by a conditional branch, never dereferenced. 0 write sites to the global anywhere in
-`RecompiledFuncs/funcs_*.c` (grepped `MEM_W(0XB50`). Same compare-only-idiom disposition as items
--305/-307. No code change, no soak queued.
+**The entire s465 `lui`+`lw` frequency-scan discovery pipeline is now fully spent**: 8 buckets
+CLOSED with guards (298 sites total: -291/-298/-299/-300/-301/-303/-304/-306), 4 buckets CLASSIFIED
+AND DEFERRED as compare-only/integer-index idioms (-302/-305/-307/-308), and the methodology itself
+now audited clean end-to-end (all 5 found tool bugs either fixed or shown not to change any past
+bucket's disposition). Re-deriving buckets from the same `lui`+`lw` frequency table has no further
+expected value.
 
-Full derivation: `PORTING-STATE.md` Session 475; ledger: `docs/CURRENT-TRUTH.md` item -308.
+## This session's top work unit: new discovery source — `lui`+`sw` direct-store scan
 
-## This session's top work unit: backfill-check tool bug #5 against every already-CLOSED bucket
+Per CURRENT-TRUTH's updated M3 priority note: pivot to a genuinely NEW instruction-pattern scan
+rather than continuing to mine the exhausted `lui`+`lw` table. Every closed/deferred bucket in the
+s454-s476 lineage started from a `lui` reload (`ctx->rL = S32(0XHHHH << 16)`) immediately followed
+by an `lw` reload (`ctx->rL = MEM_W(ctx->rL, 0XOFFSET)`) — i.e. a global POINTER being READ back
+into a register. A DIFFERENT idiom this lineage has never scanned: `lui`+`sw` DIRECT STORE, where a
+global is computed and WRITTEN TO without any intervening `lw` reload of the old value:
 
-Tool bug #5 (label-line blind spot in `scratch_s468_shapecheck_generic.py`) has ONLY been confirmed
-against this session's fresh bucket. It has NOT been checked against any of the buckets this sub-arc
-already CLOSED with a guard: items -298 (`DL_LIST_RESET_GUARD`), -299 (`DL_BUFFER_POOL_GUARD`), -300
-(`NODE_LIST_HEAD_GUARD`/`NODE_LIST_HEAD_WRITE_GUARD`), -301 (`TEXDATA_TABLE_GUARD`), -303
-(`TEXDATA_PTR_ARRAY_GUARD`), -304 (`MATERIAL_ARRAY_PTR_GUARD`), -306 (`SIBLING_PTR_WRITE_GUARD`,
-120 sites). If any of those buckets ALSO has `lui`->label->`lw` sites the original scan silently
-dropped, those sites are unguarded today -- a real residual-risk gap, not just a methodology
-footnote. This is now the highest-expected-value M3 work: bounded, mechanical, and closes a
-correctness question about six-plus items already believed fully closed.
+    ctx->rL = S32(0XHHHH << 16);          // lui
+    MEM_W(0XOFFSET, ctx->rL) = ctx->rSrc;  // sw directly off the lui'd base, no reload in between
+
+This is a different risk shape from every bucket audited so far (all of which were READ-then-
+compare-or-deref of a *stale* global; a pure write doesn't depend on the global's prior contents,
+so a "guard the read" idea doesn't apply — but a write to a bad/uninitialized address computed via
+`lui`+`addiu`+arithmetic rather than a direct small-offset store might be a different crash source
+worth enumerating and ruling in/out on its own terms).
 
 **Hypotheses:**
-1. The label-gap bug is unique to this session's bucket (unlikely a priori -- the branch-recompile
-   pattern that produces a `lui`->label->`lw` shape isn't bucket-specific, it depends on whether some
-   OTHER branch in the function happens to target the `lw` instruction's address, which is a property
-   of the surrounding code, not of which global is being loaded).
-2. Some already-closed buckets have label-gap sites, but all of them turn out to be the same
-   harmless compare-only/no-use idiom as every other site in that bucket (most likely, given 100% of
-   sites in every bucket audited so far turned out to share one idiom).
-3. At least one already-closed bucket has a label-gap site that IS a real unguarded deref/write --
-   the discriminating, worst-case outcome. Would mean the corresponding guard needs a new per-site
-   literal-anchor patch added (mechanism: items -298/-299/-300/-301/-303/-304).
+1. `lui`+`sw` direct-store sites are dominated by legitimate global-variable stores at fixed, valid
+   addresses (RDRAM-resident statics) — no crash risk, nothing to guard, this whole discovery
+   direction is a dead end for M3 (matches the character of every closed-clean bucket in the `lw`
+   lineage: idioms audited so far have mostly been benign).
+2. A minority of `lui`+`sw` sites store through a POINTER that was itself `lui`+`lw`-loaded earlier
+   in the same function (i.e., pointer arithmetic feeding a write, same "wild pointer from stale
+   reload" risk class as every guard placed so far) — these are new guard candidates not covered by
+   any of the 8 read-side guards already placed, because a write-only global was never a `lw` reload
+   target and so never entered the s465 frequency table.
+3. The pattern is too diffuse (too many trivial single-site global-variable stores, no clusterable
+   high-frequency bucket) to produce anything as clean as the `lw` lineage's top-N buckets — in which
+   case this discovery source itself should be abandoned after one scan, not iterated on.
 
-**Discriminating measurement**: for each of the 7 closed buckets' hi16/offset pairs, run
-`scratch_s475_label_gap_check.py` (generalize it to take hi16/offset args like
-`scratch_s468_shapecheck_generic.py` does, rather than hand-editing per bucket) and diff its site
-count against that item's own recorded site count in `docs/CURRENT-TRUTH.md`. A count MISMATCH
-(permissive > recorded) directly falsifies hypothesis 1 for that bucket and produces the exact
-file:line list of missed sites to read for hypothesis 2 vs 3.
+**Discriminating measurement**: write a frequency scanner (adapt `scratch_s465_scan.py`, N64Recomp
+repo) that finds every `ctx->rL = S32(0XHHHH << 16);` immediately (allowing comment/breadcrumb
+lines) followed by `MEM_W(0XOFFSET, ctx->rL) = ...;` with NO intervening `lw`-shaped reload of
+`ctx->rL`, group by `(hi16, offset)` pair, and rank by site count. The top bucket's site count and
+whether ANY of its sites trace back to a pointer that was itself dynamically loaded (not a fixed
+compile-time small-offset global address) is the discriminating split between hypotheses 1/2 vs 3.
 
 Recommended approach:
-1. `cd ~/Documents/Tools/N64Recomp`, generalize `scratch_s475_label_gap_check.py` into
-   `scratch_s476_label_gap_generic.py` taking `<hi16hex4> <offsethex>` like the s468 tool does
-   (reuse its arg-parsing for the case-sensitivity/sign handling item -305 already fixed once).
-2. Run it against all 7 closed buckets' hi16/offset pairs (grep each item's ledger entry in
-   `docs/CURRENT-TRUTH.md` for the exact `0x80NNNNNN` global or `hi16=..., offset=...` if still
-   phrased that way -- items -298/-299/-306 may need their global address converted back to
-   hi16/offset form, `offset = global & 0xFFFF` sign-extended, `hi16 = (global >> 16) & 0xFFFF`,
-   verify against a known site's `lui`/`lw` comment pair before trusting the arithmetic).
-3. For any bucket where the permissive count exceeds the recorded count, list the new file:line
-   sites (same diff technique this session used) and read each directly.
-4. If ALL extra sites across all 7 buckets are the same idiom already established for that bucket
-   (no-use, compare-only, or already-covered-by-the-guard-mechanism), CLOSE the tool-bug-#5 question
-   outright with a ledger note -- no code change needed, hypothesis 2 confirmed for all 7.
-5. If ANY extra site is a genuine unguarded deref/write-through, patch it into that bucket's existing
-   guard family per the established per-site literal-anchor mechanism, regen/build/live-verify, queue
-   a confirm soak — this reopens that specific CLOSED item.
-
-## After this audit: M3 needs a new discovery source
-
-Once the backfill audit lands (clean or with fixes), the s465 scan's discovery pipeline is fully
-spent. The session after this one should pivot to a NEW instruction-pattern scan (e.g. `lui`+`sw`
-direct-store idioms without an intervening `lw`, or a different opcode class entirely) rather than
-continuing to re-derive buckets from the same `lui`+`lw` frequency table.
+1. `cd ~/Documents/Tools/N64Recomp`, write `scratch_s477_sw_scan.py`: glob all
+   `RecompiledFuncs/funcs_*.c`, regex-match the `lui` line, look ahead (same comment/breadcrumb/
+   label skip logic as `scratch_s476_label_gap_generic.py` — reuse its skip predicates) for a
+   `MEM_W(0XOFFSET, ctx->rL) = ...;` write using the SAME register, with no `MEM_W(ctx->rL, ...)`
+   read of that register appearing first. Bucket by `(hi16, offset)`, print top 15 by site count.
+2. Pick the top 2-3 buckets (by the same "highest expected value = highest site count, multi-file"
+   heuristic that worked for the `lw` lineage) and read a stratified sample directly (not just tool
+   `hit_deref`/`hit_write` flags — this lineage's own history shows every automated classifier so
+   far has had at least one blind spot on first use) to determine hypothesis 1 vs 2 vs 3.
+3. If a bucket matches hypothesis 2 (write-through-a-stale-pointer, not a fixed-address global
+   store), design and apply a guard using the established per-site literal-anchor mechanism
+   (`fixup_game_funcs.py`, same pattern as items -298 through -306), regen/build/live-verify, queue
+   a confirm soak.
+4. If hypothesis 1 or 3 dominates (all fixed-address stores, or too diffuse to cluster), CLASSIFY
+   AND DEFER with no code change — same disposition precedent as items -302/-305/-307/-308 — and the
+   session after that should consider M3 fully mined out for now (time to return to M5 or general
+   crash-breadcrumb triage instead of continuing to invent new opcode-pattern scans).
 
 ## Soak queue status
 
-None queued this session (item -308 had no code change to verify). Check `scratch/agent/SOAK-
-RESULTS.md` tail at the start of next session as usual.
+None queued this session (s476 had no code change to verify — the label-gap audit and the item -299
+recheck were both read-only). Check `scratch/agent/SOAK-RESULTS.md` tail at the start of next
+session as usual for any soaks the loop ran in the background.

@@ -17,12 +17,13 @@ Priority order for upcoming iterations, set after the 300-session review:
    §10-§12). Next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
-   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. **The s465
-   codebase-wide frequency scan's candidate list is EXHAUSTED as of s475 (item -308)** — every bucket
-   it surfaced has a disposition; see items -298..-308 below and PROJECT-OVERVIEW §18. Next M3 session
-   needs either a new discovery pass (re-run the s465 scan methodology against a different instruction
-   pattern) or the item -308 tool-bug-#5 backfill audit (re-check every already-CLOSED bucket for
-   `lui`->label->`lw` sites silently missed by `scratch_s468_shapecheck_generic.py` — see item -308).
+   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. **The entire s465
+   `lui`+`lw` frequency-scan lineage is now fully spent, as of s476.** Every bucket it surfaced has a
+   disposition (items -298..-308 below and PROJECT-OVERVIEW §18), and the s476 tool-bug-#5 backfill
+   audit confirmed 0/7 already-CLOSED buckets have any silently-missed `lui`->label->`lw` site (see
+   item -308 amendment below). Next M3 session needs a genuinely NEW discovery source — e.g. a
+   `lui`+`sw` direct-store scan (no intervening `lw`) or a different opcode class entirely — not a
+   re-derivation of this same frequency table.
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -171,10 +172,22 @@ a range pointer. Highest allocated so far: -308. The next NEW item takes -309.
     immediately after the reload, consumed only by a conditional branch, never dereferenced — same
     compare-only idiom as items -305/-307. 0 write sites to the global found (`grep MEM_W(0XB50` —
     read-only from recompiled code). No code change, no soak queued (same precedent as -305/-307).
-    **Open question, not yet chased**: whether this label-gap bug also undercounts any already-CLOSED
-    bucket (items -298/-299/-300/-301/-303/-304/-306) — every spot-checked label-gap site so far has
-    been harmless, but no already-closed bucket has been re-checked against this specific bug. Full
-    derivation: `PORTING-STATE.md` Session 475.
+    Full derivation: `PORTING-STATE.md` Session 475.
+    **AMENDED s476: the open backfill question is CLOSED, clean.** Generalized the checker into
+    `scratch_s476_label_gap_generic.py` (N64Recomp repo, untracked, hi16/offset-parameterized like
+    `scratch_s468_shapecheck_generic.py`) and ran it against all 7 already-CLOSED buckets (items
+    -298/-299/-300/-301/-303/-304/-306, hi16/offset derived from each item's recorded global
+    address). **Result: strict count == permissive (label-skip) count for all 7 buckets — 0
+    label-gap sites found anywhere.** Tool bug #5 does not recur in any already-CLOSED bucket; no
+    per-site literal-anchor patch needed. While reconciling counts, found item -299's raw strict
+    count (87) differs from its guard's site count (84) — traced to a DIFFERENT, already-known cause
+    (`scratch_s466_shapecheck_63fc.py` hardcoded `files = ["funcs_3.c", "funcs_4.c"]`, missing
+    `funcs_6.c`'s 3 sites entirely), not tool bug #5 (strict==permissive there too, no label
+    involved). Directly re-read all 3 `funcs_6.c` sites this session and confirmed
+    `fixup_game_funcs.py`'s own comment was correct: those 3 are COMPARE_ONLY (`bne` against a
+    computed array-bound address, never dereferenced), already correctly excluded from the guard.
+    Item -299 remains soundly CLOSED at 84/84 real sites. Full derivation: `PORTING-STATE.md`
+    Session 476.
 
 -307. **(s474) M3 idiom-class audit: `hi16=0x8011, offset=-0x35e0` global (`0x8010CA20`) — CLASSIFIED
     AND DEFERRED, not a guard candidate.** 23 `lw` reload sites across 9 files

@@ -39537,3 +39537,74 @@ above, whichever has higher expected value -- see updated NEXT.md.
 100% same compare-only bitfield idiom, 0 write sites) and found a fifth methodology tool bug with a
 concrete, quantified blast radius (3 silently-missed sites, 1 silently-missed file, in this bucket
 alone) plus an unresolved-but-flagged question about whether it affects any already-closed bucket.
+
+## Session 476 (2026-08-07): tool-bug-#5 (label-gap) backfill audit against all 7 already-CLOSED
+M3 idiom-class buckets — CLEAN, zero label-gap sites found anywhere, question CLOSED with no code
+change. Also directly re-verified item -299's one raw-count discrepancy (found while building the
+audit) and confirmed it was already correctly classified, not a new gap.
+
+Per NEXT.md's top work unit: generalized `scratch_s475_label_gap_check.py` into
+`scratch_s476_label_gap_generic.py` (N64Recomp repo, untracked) — takes `<hi16hex4> <offsethex>`
+like `scratch_s468_shapecheck_generic.py`, uppercases both for item -305's tool-bug-#4
+case-sensitivity lesson, and reports strict (original tool logic) vs. permissive (also skips
+`L_XXXXXXXX:` label lines) `lui`->reload hit counts plus the exact file:line list of any site that
+needed a label skip to be found.
+
+Computed hi16/offset for the 7 CLOSED buckets' recorded global addresses (`offset = G & 0xFFFF`,
+sign-extended if `>= 0x8000`; `hi16 = (G - offset) >> 16`) and ran the tool against each:
+
+| item | hi16/offset | strict hits | permissive hits | label-gap sites |
+|------|-------------|--------------|-------------------|-------------------|
+| -298 DL_LIST_RESET_GUARD | 8012/-5824 | 168 | 168 | 0 |
+| -299 DL_BUFFER_POOL_GUARD | 8011/63FC | 87 | 87 | 0 |
+| -300 NODE_LIST_HEAD_GUARD | 8012/-5B48 | 20 | 20 | 0 |
+| -301 TEXDATA_TABLE_GUARD | 8013/-70F8 | 31 | 31 | 0 |
+| -303 TEXDATA_PTR_ARRAY_GUARD | 8013/-7104 | 29 | 29 | 0 |
+| -304 MATERIAL_ARRAY_PTR_GUARD | 8012/-5BBC | 30 | 30 | 0 |
+| -306 SIBLING_PTR_WRITE_GUARD | 8012/-23A8 | 141 | 141 | 0 |
+
+**Result: strict == permissive for all 7 buckets, 0 label-gap sites in any of them.** Tool bug #5
+(the `lui`->label->`lw` blind spot that undercounted item -308 by 3 sites/1 file) does NOT recur in
+any already-CLOSED bucket. This directly refutes hypothesis 3 (a real unguarded label-gap site
+hiding in a closed bucket) for all 7 — stronger than the a-priori-favored hypothesis 2 (harmless
+extra sites), since there are no extra label-gap sites at all to classify. **No per-site literal-
+anchor patch needed anywhere. Tool-bug-#5 backfill audit CLOSED clean.**
+
+While reconciling counts, one bucket's strict hit count didn't match its recorded closed-guard site
+count on its own: item -299 showed 87 raw `lui`->reload sites vs. 84 sites in the actual
+`DL_BUFFER_POOL_GUARD`. This is UNRELATED to tool bug #5 (strict==permissive, no label was
+involved) — traced to `scratch_s466_shapecheck_63fc.py:22` hardcoding `files = ["funcs_3.c",
+"funcs_4.c"]` for its shape audit, which never even looked at `funcs_6.c`. Checked: this was NOT a
+silent gap. `fixup_game_funcs.py`'s own comment block (immediately above the `DL_BUFFER_POOL_GUARD`
+patch, s465/s466) already documents the exact figure — "87 raw reload sites (funcs_3.c x46,
+funcs_4.c x38, funcs_6.c x3)" — and records that `scratch_s465_classify_63fc.py` (a *different*,
+non-file-hardcoded script) classified the 3 `funcs_6.c` sites as COMPARE_ONLY and deliberately
+excluded them from the guard. Read all 3 sites directly this session
+(`funcs_6.c:12844/13246/13670`, three near-identical sibling functions) to confirm rather than trust
+the old comment: 100% the same idiom — reload compared via `bne` against a computed array-bound
+address (`ADD32` of a base + `idx*4`), never dereferenced. Confirmed correctly classified; item -299
+remains soundly CLOSED at 84/84 real (dereffed) sites. Cross-checked the other 6 buckets' closing
+scripts (`grep -n 'files = \[' scratch_s463_*.py scratch_s464_*.py scratch_s465_*.py
+scratch_s467_*.py scratch_s468_*.py scratch_s470_*.py scratch_s471_*.py scratch_s473_*.py`) — only
+`scratch_s466_shapecheck_63fc.py` hardcodes a file list; none of the other 6 buckets' raw strict
+counts showed any unexplained residue against their own documented totals (item -298's 168 reconciles
+exactly as 57 already-covered-by-item -291 + 111 rescoped-as-item -298 non-canonical candidates;
+item -306's 141 matches s473's already-documented total 1:1).
+
+No code change (both the label-gap question and the item -299 count discrepancy resolved clean, no
+new guard or patch warranted). No soak queued — nothing changed in `RecompiledFuncs/` this session.
+
+**Per NEXT.md's stated next step: the s465 scan's discovery pipeline (both the frequency-scan
+candidate list AND its tool-bug-#5 backfill obligation) is now fully spent.** The M3 idiom-class
+audit lineage that ran from item -291 (s454) through item -308 (s475) and this backfill (s476) is
+complete: 8 buckets CLOSED with guards (298 sites total across -291/-298/-299/-300/-301/-303/-304/
+-306), 4 buckets CLASSIFIED AND DEFERRED as compare-only/integer-index idioms not needing a guard
+(-302/-305/-307/-308), and the methodology itself audited clean. Next M3 session needs a genuinely
+NEW discovery source — a different instruction-pattern scan (e.g. `lui`+`sw` direct-store idioms
+with no intervening `lw`, or a different opcode class) — rather than re-deriving buckets from the
+same `lui`+`lw` frequency table, which is now exhausted.
+
+**Outcome: ADVANCED.** Ran the planned discriminating measurement across all 7 closed buckets,
+produced a clean/conclusive result (0/7 label-gap sites), and additionally resolved an unrelated
+raw-count anomaly surfaced by the same instrumentation with a direct source read rather than
+deferring it. Closes a correctness question about six-plus already-CLOSED guard buckets.
