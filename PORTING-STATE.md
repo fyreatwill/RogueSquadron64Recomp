@@ -42798,3 +42798,72 @@ removed, well over the 200-line ADVANCED threshold). `docs/PROJECT-OVERVIEW.md` 
 iteration's top-priority work unit, now that maintenance is done -- see `scratch/agent/NEXT.md`.
 
 `scratch/agent/OUTCOME`: ADVANCED (>=200-net-line maintenance shrink). Full diff: this commit.
+
+## Session 517 (2026-08-08)
+
+Work unit: source-trace item -322 (`heapFreeListDequeue`/`last-guest-pc=0x8000d92c`, ESCALATED s515,
+3 occurrences: s457 full backtrace, s512, s515), per NEXT.md's discriminating approach.
+
+**Grep+read**: `funcs_3.c:22715 RECOMP_FUNC void heapFreeListDequeue` is the only definition (grep
+across all `funcs_*.c` confirms). It spans `0x8000CFD4`-`0x8000D9D0` (next `RECOMP_FUNC`,
+`emitTexturedFaceGeometry`, starts at `0x8000D9D4`) -- one continuous control-flow region with a
+single `return`/no other `jr $ra`, confirmed by grepping for label/return markers across the whole
+range, so this genuinely is one recompiled function per N64Recomp's own split, not a merged pair.
+**Noted but not chased**: the code in the `0x8000D8xx`-`0x8000D9xx` tail (flag-driven optional-field
+copies feeding a `transformAndEmitFaceVertices` call) reads like vertex/face-attribute assembly, not
+heap bookkeeping -- plausibly `heapFreeListDequeue` is actually a generic pooled-buffer-dequeue-with-
+eviction helper (dequeue a free slot; on empty, evict+flush the oldest in-use entry via the geometry
+call) shared across heap AND display-list/vertex-buffer pools, not a heap-only routine. Left as a NOTE
+for a future session (see item -322 in CURRENT-TRUTH); doesn't change the fix, since it's address-
+scoped either way.
+
+**Resolved a red herring before committing to the fix**: item -322's 3 occurrences all carry
+`pc-symbol=heapFreeListDequeue+NNNN` with the `+NNNN` offset drifting (32596→40432) across sightings.
+Computed what guest-address delta `+40432` (0x9DF0) would imply against the function's confirmed
+guest base (`0x8000CFD4`) -- the arithmetic doesn't land inside the function at all (implies a base of
+`0x80003B3C`, ~36KB before `heapFreeListDequeue` even starts). Re-read `src/main/main.cpp`'s crash
+handler (`[CRASH][pc-symbol] pc=0x%llx sym=%s+%llu`) to confirm: the `+NNNN` offset is computed
+against the crashing **native** PC and a **native** `nm`-derived symbol address (item -311's fix), not
+the guest PC at all -- so it's simply not comparable to guest-address deltas, full stop, not a bug.
+`last-guest-pc` remains the only reliable guest-side pin, exactly as NEXT.md's step 4 anticipated.
+
+**Pinned the site**: `last-guest-pc=0x8000d92c` maps to `funcs_3.c:25527`, `MEM_W(0X0, ctx->r2) =
+ctx->r3;` (`sw $v1, 0x0($v0)`). `ctx->r2` is reloaded two instructions earlier
+(`ctx->r2 = MEM_W(ctx->r29, 0X3C);`, `0x8000D924`) from stack slot `0x3C($sp)` with NO validation. That
+slot was filled once, far upstream (`0x8000D4DC`, `MEM_W(0X3C, ctx->r29) = ctx->r2;`), from a
+fixed-global-array-base + `(index << 2)` computation -- if the global base is uninitialized or the
+index out of range, the stored pointer is bad and this store faults (the read of `$s4` one line
+earlier evidently always succeeds -- the crash's own `last-guest-pc` is the store, not the load).
+Immediately after this site (`0x8000D930`, `andi $v0, $s2, 0x10`), `ctx->r2` is reassigned to an
+unrelated flag-test result and never reused for the pointer, so skip-the-write-on-invalid is safe --
+same precedent as every guard in the item -317 lineage.
+
+Added `HEAPLISTDEQ_ATTR_WRITE_GUARD` to `fixup_game_funcs.py` (same range-check-and-skip template as
+every R2-R7/SUBMIT_SCENE_NODE_RENDER_R1 guard, adapted for `funcs_3.c`'s existing per-instruction
+`g_rs64_last_guest_pc` breadcrumbs at this site). Regenerated per the mandatory order (delete all 50
+`funcs_*.c`, verified `0 remaining` -> `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` ->
+`cmake --build . -j8`); the fixup report showed `funcs_3.c: heapFreeListDequeue stack-slot-derived
+pointer write guard (s517, item -322, HEAPLISTDEQ_ATTR_WRITE_GUARD) patched x1`, confirmed by grepping
+the guard's own name in the freshly-fixed source (not just trusting a clean exit code, per s515's
+lesson). Built clean (warnings only, pre-existing pointer-sign noise unrelated to this change).
+
+**1st live-verify, manual/foreground, full env-var set (every sibling guard armed) + the new guard's
+own `ROGUESQ_LOG_HEAPLISTDEQ_ATTR_WRITE_GUARD=1`**: clean on the guard itself -- 0
+`heaplistdeq-attr-write-guard` fires, 1 benign `hangarmenu-a0-guard` co-fire (item -265,
+already-catalogued, unrelated, no regression), `hangarbay-entry n=34` positive control. Crashed at
+121.2s (48 frames captured) on `pc-symbol=coalesceFreeHeapBlocks+4424 (local-symtab)`,
+`last-guest-pc=0x8000247c` -- grepped and confirmed this is the SAME already-catalogued
+background-noise heap-walker misattribution family documented since s354-366
+(`docs/PROJECT-OVERVIEW.md`), recurring and harmless, unrelated to this guard (distinct function,
+distinct `last-guest-pc` from item -322's own signature). 2nd independent confirm queued:
+`scratch/agent/soak_queue/s517_heaplistdeq_attr_write_confirm.sh`.
+
+Updated `docs/CURRENT-TRUTH.md` item -322 (FIXED, 1st confirm clean, 2nd queued) and the s2026-08-04
+directive headline. `fixup_game_funcs.py` lives outside this repo's git tree (in the sibling
+`N64Recomp` checkout, untracked by that checkout's own git, per longstanding session convention --
+confirmed this session, not a new gap I introduced) so no `lib/` submodule export is needed. Neither
+`fixup_game_funcs.py` nor the regenerated `RecompiledFuncs/*.c` it produces is committed anywhere --
+this ledger entry (with the full old/new patch text reproducible from the diff description above) is
+the only durable record, same as every guard added in this lineage since s481.
+
+`scratch/agent/OUTCOME`: ADVANCED (landed a real fix, instrument, and a live-verified result).

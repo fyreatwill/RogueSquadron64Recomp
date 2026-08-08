@@ -26,12 +26,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    18 FULLY CLOSED 2/2** (`SUBMIT_SCENE_NODE_RENDER_R1_GUARD`'s 2nd confirm folded in this session,
    clean on the guard itself) — see item -317 below for the current tier and next pick; full campaign
    detail: PROJECT-OVERVIEW §22-§23. **Item -322 (`heapFreeListDequeue`/`last-guest-pc=0x8000d92c`) is
-   ESCALATED (3 occurrences: s457/s512/s515) — next iteration's top-priority work unit is to
-   source-trace it** (see item -322 below). **Item -321 (`menuOverlayInit+3648`-ish/
+   FIXED (s517, `HEAPLISTDEQ_ATTR_WRITE_GUARD`, 1st live-verify clean) — 2nd independent confirm queued
+   for the loop** (see item -322 below); next iteration's top-priority work unit is either folding in
+   that confirm (if the loop has already run it) or, if not, resuming item -317 step 3's tier at its
+   next-ranked lead while the confirm runs. **Item -321 (`menuOverlayInit+3648`-ish/
    `last-guest-pc=0x800ab1c4`) now also has 2 occurrences (s510, s515) — meets its own stated
-   2-occurrence escalation bar, queued behind item -322, but with a pc-symbol-mismatch caveat** (see
-   item -321 below). Items -319/-320/-323 are unchanged single/double-occurrence breadcrumbs (see
-   below).
+   2-occurrence escalation bar, queued behind item -322's confirm, but with a pc-symbol-mismatch
+   caveat** (see item -321 below). Items -319/-320/-323 are unchanged single/double-occurrence
+   breadcrumbs (see below).
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
@@ -166,17 +168,24 @@ a range pointer. Highest allocated so far: -323. The next NEW item takes -324.
     control. Same function as item -319 but a DIFFERENT `last-guest-pc` (`0x8000ae40` vs `0x8000b0d0`)
     — per the s422 precedent, a distinct signature, not a 3rd -319 occurrence. No 2nd occurrence yet.
 
--322. **(s457/s512/s515, 3 occurrences) `heapFreeListDequeue+NNNN`/`last-guest-pc=0x8000d92c` —
-    ESCALATED, next iteration's top-priority work unit.** s457 full backtrace:
-    `heapFreeListDequeue <- submitSceneNodeRender <- processSceneNode <- traverseSceneGraphRecursive
-    <- setupCameraMatrices <- runHangarSelectionFrame <- runHangarMenuFromOverlay <- menuOverlayInit
-    <- mainGameLoop` (`hangarbay-entry n=2600` positive control). All 3 occurrences share the exact
-    `last-guest-pc` from 3 different guard-under-test contexts; the `pc-symbol` offset drifted
-    (32596→40432, same function both times, expected guard-insertion layout drift) — `last-guest-pc`
-    is the reliable identity signal. Meets the campaign's 3-occurrence threshold (same one item -318
-    used). **Not yet source-traced**: read `heapFreeListDequeue` in `funcs_3.c`/`funcs_4.c` for the
-    usual shape (null check on one arm, no `0x80000000`-`0x80800000` range check on the other). Full
-    detail: `docs/PROJECT-OVERVIEW.md` §23, `PORTING-STATE.md` Sessions 457, 512, 515.
+-322. **(s457/s512/s515 → s517 FIXED, `HEAPLISTDEQ_ATTR_WRITE_GUARD`, 1st live-verify clean) —
+    2nd confirm queued.** Source-traced `funcs_3.c:22715` `heapFreeListDequeue` (spans
+    `0x8000CFD4`-`0x8000D9D0`, one continuous control-flow region, confirmed by inspection — the
+    `last-guest-pc=0x8000d92c` shared by all 3 prior occurrences pins to `MEM_W(0X0, ctx->r2) =
+    ctx->r3;` at `0x8000D92C`, where `ctx->r2` is reloaded unguarded from stack slot `0x3C($sp)`
+    (filled far upstream at `0x8000D4DC` from a fixed-global-array-base + `index<<2` computation, no
+    `0x80000000`-`0x80800000` range check before the write-through). Downstream immediately
+    reassigns the register to an unrelated flag-test result, so skip-the-write-on-invalid is safe,
+    same precedent as the whole item -317-lineage. **Side note**: the `pc-symbol`'s `+NNNN` offset
+    (32596/40432/etc.) is a NATIVE code offset from `nm`, not a guest-address delta — confirmed by
+    reading `src/main/main.cpp`'s crash handler — so it should never be used to estimate a guest
+    offset within the function; only `last-guest-pc` is reliable for that. 1st live-verify (manual,
+    foreground): 0 `heaplistdeq-attr-write-guard` fires, 1 benign `hangarmenu-a0-guard` co-fire (item
+    -265, already-catalogued), `hangarbay-entry n=34` positive control. Crashed at 121.2s on
+    `pc-symbol=coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` — the already-catalogued
+    background-noise heap-walker family (documented since s354-366), unrelated to this guard. 2nd
+    independent confirm queued: `scratch/agent/soak_queue/s517_heaplistdeq_attr_write_confirm.sh`.
+    Full detail: `docs/PROJECT-OVERVIEW.md` §23, `PORTING-STATE.md` Sessions 457, 512, 515, 517.
 
 -321. **(s510/s515, 2 occurrences) `menuOverlayInit`-area crash, `last-guest-pc=0x800ab1c4` — meets
     its stated 2-occurrence escalation bar, with a pc-symbol-mismatch caveat.** s510
