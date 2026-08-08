@@ -47,9 +47,16 @@ Priority order for upcoming iterations, set after the 300-session review:
    real fix**: a downstream trace found the actual gap one function upstream of the 19 read sites, in
    an existing `CACHE_HEAD_A1_GUARD` site that validated one deref but not two propagating writes
    right after it — same shape as -312..-315, fixed the same way (extend the check), 1st confirm
-   clean (0 fires, unrelated already-catalogued crash), 2nd confirm queued. No fresh idiom-scan
-   candidate remains queued — next M3 session needs either a new frequency-scan angle (both `lui`+`lw`
-   and `lui`+`sw` are now structurally dry at the >=20-site tier) or a wait for a new breadcrumb.
+   clean (0 fires, unrelated already-catalogued crash). **s490: item -316's own 2nd confirm handed
+   back a 5th instance of the lineage (item -317, `HEAP_DEQUEUE_DERIVED_PTR_GUARD`) — with a
+   methodology lesson, not just another fix: the first fix attempt validated the wrong register
+   (path-dependent at a shared control-flow label) and false-positived 660,261 times in one soak
+   before being caught by the same live-verify discipline that's supposed to catch exactly this;
+   corrected to validate the actually-dereferenced register directly, re-verified clean (0 fires),
+   2nd confirm queued.** No fresh idiom-scan candidate remains queued — next M3 session needs either
+   a new frequency-scan angle (both `lui`+`lw` and `lui`+`sw` are now structurally dry at the >=20-site
+   tier), a control-flow-aware blanket sweep of item -317's own 183-site sibling population
+   (DEFERRED this session, see item -317), or a wait for a new breadcrumb.
 
 -312..-315. **(s481-487) `DL_LIST_APPEND_GUARD` and `DL_LIST_RESET_GUARD`'s own "grep-verified
     unique site" scope claims both turn out to be wrong, plus `AUDIO_SLOT_ACTIVE_GUARD`'s own
@@ -210,28 +217,66 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -316. The next NEW item takes -317.
+a range pointer. Highest allocated so far: -317. The next NEW item takes -318.
 
--316. **(s488 scan -> s489 FIXED) The sub-threshold `-0x5BB4` candidate resolved into a real fix: a
-    scope gap in the existing s436 `CACHE_HEAD_A1_GUARD`, same "guard covers one deref, not the
-    propagation" shape as items -312..-315.** A downstream-consumer trace (delegated to a subagent)
-    found the real gap wasn't in the 19 read sites but one function upstream, in
-    `emitAllocatedDLCommand` (`funcs_3.c`): its own `CACHE_HEAD_A1_GUARD` site=4 (s436) validates the
-    newly linked node pointer before writing the node's `next` field, but two more statements right
-    after the guard block stayed UNCONDITIONAL — publishing the same possibly-bad node as the new
-    list head, and propagating its data-area pointer into the persistent `-0x5BB4` write-cursor
-    global that all 19 read sites reload unguarded. A direct-source read of `buildOrientedFaceGeometry`
-    (one of the 19 readers) confirmed real risk: it reloads the cursor, adds a scaled index, and feeds
-    the sum straight into `do_swl`/`do_swr` as a raw, unbounded RDRAM address. Fixed by extending the
-    check (`DL_ALLOC_PROPAGATION_GUARD`, `fixup_game_funcs.py`) rather than adding 19 read-site guards
-    — confirmed by reading the whole function body that both newly-guarded statements are its last
-    use of the relevant registers before an immediate stack-restore-and-return tail, so skipping them
-    on a bad pointer desyncs nothing later in the same call. Build-verified, live-verified: 0 fires on
-    the new guard or any of ~15 sibling guard families (no regression), `hangarbay-entry` positive
-    control fired (n=31), crashed at 113.2s on `pc-symbol=initVec4TripletFromArgs+68`,
-    `last-guest-pc=0x800ab068` — the same already-catalogued family as s463/s468's crash, unrelated,
-    filed not chased. 2nd independent confirm queued (`s489_dl_alloc_propagation_confirm.sh`). Full
-    derivation: `PORTING-STATE.md` Session 489.
+-317. **(s490) `HEAP_DEQUEUE_DERIVED_PTR_GUARD` — a 5th instance of the "-312..-316 lineage" shape,
+    found while confirming item -316, with a methodology lesson: the FIRST fix attempt was wrong and
+    had to be caught and corrected before landing.** Item -316's 2nd confirm soak's raw log showed
+    four existing sibling guards (`freelist-next-guard`, `generic-cache-guard`,
+    `dl-list-append-rwrite-guard`, `dl-list-reset-rnode-guard`) fire in sequence on the SAME
+    corrupted pointer (`0x181B7580`) at four adjacent guest addresses inside `heapFreeListDequeue`
+    (`funcs_3.c`), immediately followed by a SIGBUS 24 bytes past the last one. Direct-source trace
+    (delegated to a subagent, then independently re-confirmed by hand) found the gap: `ctx->r4` is
+    reloaded unguarded from the free-list-cache-head global (`0x801163B0`) at `0x8000D6E4`, then used
+    at `0x8000D744` to compute a derived pointer (`ctx->r16 = ADD32(ctx->r4, 0x8)`, i.e. `$s0=$a0+8`)
+    that's dereferenced completely unguarded at `0x8000D760` — crash address `0x181B7590` matches the
+    corrupted base plus the two chained `+8` offsets exactly. **First fix attempt validated `ctx->r4`
+    before the store (matching the -312..-316 precedent of re-checking the propagating value's own
+    source register) — WRONG for this site**: `0x8000D760` sits at a label (`L_8000D75C`) that is
+    ALSO reached via a second, unrelated control-flow path (an earlier bounds-check early-exit,
+    `goto L_8000D75C` at guest `0x8000D67C`) where `ctx->r16` was last set from `ctx->r7` (a plain
+    register copy, nothing to do with the free-list reload) — so `ctx->r4` at the shared label has no
+    consistent meaning across both paths. Live-verify caught it immediately: the guard fired 660,261
+    times in one ~300s soak while all four related sibling guards stayed at 0 — an order-of-magnitude
+    departure from every other guard in this entire lineage's history (0-4 fires), which is what
+    flagged the false-positive rather than a genuine widespread-corruption result. **Corrected**: validate
+    `ctx->r16` itself (the pointer actually dereferenced), not an upstream proxy register — correct on
+    both paths regardless of which one set it, matching the convention every other guard in this
+    codebase already follows. Rebuilt, re-verified: 0 fires on the corrected guard, `hangarbay-entry`
+    n=31 (positive control), 1 unrelated fire on the pre-existing `compose-npc-orient-guard9` sibling
+    family, crashed on the already-catalogued `loadCutsceneAssetsByIndex+1860` /
+    `last-guest-pc=0x800aafb8` family (same crash s463's own confirm soak hit). 2nd independent confirm
+    queued (`s490_heap_dequeue_derived_ptr_confirm.sh`). **Scope note**: the reload idiom
+    (`ctx->r4 = MEM_W(ctx->r4, 0X63B0);`) recurs 184 times across `funcs_3.c`/`funcs_4.c`; a
+    classification-scan subagent, still running when this session closed, found only 1 of the other
+    183 sites has an unguarded ADD32-derived-pointer dereference by its own (unvalidated, sanity-check-
+    failing) textual-proximity heuristic — untrustworthy given this session's own shared-label-merge
+    discovery, which a naive textual scan structurally cannot detect. A full blanket sweep needs
+    control-flow-aware validation (validate the dereferenced register directly, never an upstream
+    proxy) and is DEFERRED, not attempted at scale this session. Full derivation: `PORTING-STATE.md`
+    Session 490.
+
+-316. **(s488 scan -> s489 FIXED, 2nd confirm s490 clean) DL_ALLOC_PROPAGATION_GUARD, a scope gap in
+    the existing s436 `CACHE_HEAD_A1_GUARD` (guard covers one deref, not the propagation) — FULLY
+    CLOSED, 2/2.** A downstream-consumer trace (delegated to a subagent) found the real gap wasn't in
+    19 unguarded read sites but one function upstream, in `emitAllocatedDLCommand` (`funcs_3.c`): its
+    own `CACHE_HEAD_A1_GUARD` site=4 (s436) validates the newly linked node pointer before writing the
+    node's `next` field, but two more statements right after the guard block stayed UNCONDITIONAL —
+    publishing the same possibly-bad node as the new list head, and propagating its data-area pointer
+    into the persistent `-0x5BB4` write-cursor global that all 19 read sites reload unguarded. Fixed by
+    extending the check (`DL_ALLOC_PROPAGATION_GUARD`, `fixup_game_funcs.py`) rather than adding 19
+    read-site guards. **1st confirm (manual live-verify, s489)**: 0 fires on the new guard, `hangarbay-
+    entry` n=31 (positive control), crashed at 113.2s on `pc-symbol=initVec4TripletFromArgs+68`,
+    `last-guest-pc=0x800ab068` (already-catalogued s463/s468 family, unrelated). **2nd confirm
+    (`s489_dl_alloc_propagation_confirm`, queued, ran s490)**: also 0 fires on `dl-alloc-propagation-
+    guard` — item -316 itself is CLOSED, 2/2, no regression. **But this confirm's own run.log handed
+    back a genuinely NEW, well-evidenced crash, not a null result — see item -317 below**: four
+    unrelated sibling guards (`freelist-next-guard`, `generic-cache-guard`, `dl-list-append-rwrite-
+    guard`, `dl-list-reset-rnode-guard`) fired in sequence on the exact same corrupted pointer value
+    before a SIGBUS 24 bytes past the last one, inside `heapFreeListDequeue` — the same "guard-covers-
+    one-deref-not-the-propagation" shape recurring a 5th time, this time on a DERIVED pointer
+    (`$sN = $a0+8`) computed before any of those guards run. Full derivation: `PORTING-STATE.md`
+    Sessions 489-490.
 
 -311. **(s480) Crash-symbolizer tooling fix — DONE, positive-control validated.** The item -310
     `dladdr`-nearest-exported-symbol blind spot is closed: `src/main/main.cpp` now builds a sorted

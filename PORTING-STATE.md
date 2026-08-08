@@ -40650,3 +40650,97 @@ anchor-count mismatches; edited `~/Documents/Tools/N64Recomp/fixup_game_funcs.py
 repo's untracked scratch tool, not anything under this repo's `lib/`, so no submodule-patches export
 applies); one game run this session (SIGKILL via `tools/probe.sh`'s own teardown, ROM present in
 `build/`); queued the 2nd confirm instead of re-running it in this same session (loop budget rule).
+
+## Session 490 (2026-08-08): item -316 closed 2/2; its own confirm soak surfaced item -317, a 5th
+`-312..-316`-lineage bug — and a wrong FIRST fix attempt caught and corrected by the same live-verify
+discipline that exists to catch exactly this
+
+Read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, and `scratch/agent/SOAK-RESULTS.md` first per
+the session contract. `SOAK-RESULTS.md` had a fresh line: `s489_dl_alloc_propagation_confirm`
+(rc=3, 156s) — item -316's queued 2nd independent confirm had run between iterations.
+
+**Folding in item -316's 2nd confirm.** Grepped the run's `run.log` (not just the probe.sh summary
+line, which omits guard-tag detail): 0 `dl-alloc-propagation-guard` fires — item -316 itself is
+CLOSED, 2/2, no regression. But four OTHER, unrelated sibling guards fired in immediate sequence
+right before the run's crash: `[freelist-next-guard] site=0x8000CE40 n=0 bad_ptr=0x181B7580`,
+`[generic-cache-guard] n=0 site=0x8000D6F4 bad_head=0x181B7580`,
+`[dl-list-append-rwrite-guard] site=0x8000D738 n=0 bad_rwrite=0x181B7580`,
+`[dl-list-reset-rnode-guard] site=0x8000D748 n=0 bad_rnode=0x181B7580` — same corrupted pointer value
+at four adjacent guest addresses, then a SIGBUS 24 bytes past the last one
+(`pc-symbol=heapFreeListDequeue+34668`, `last-guest-pc=0x8000d760`, wild address `0x181B7590` =
+`0x181B7580+0x10`). This is the exact "guard catches a local deref but not everything downstream"
+signature that produced items -312 through -316 across the last five sessions — treated per
+`scratch/agent/NEXT.md`'s own instruction ("closing one gap surfaces a structurally-identical one
+elsewhere, treat that as the next work unit").
+
+**Root-cause trace (item -317).** Delegated an initial trace to a subagent, then independently
+re-read the same source myself (`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c`, guest range
+`0x8000D6E4`-`0x8000D760`, inside `heapFreeListDequeue`, confirmed via `funcstarts.txt`-derived
+function boundaries that this is a real, correct symbol attribution — the function is ~3000 source
+lines, one giant per-"type" dispatch, `+34668` bytes in is unremarkable for it). `ctx->r4` is
+reloaded fresh from the free-list-cache-head global (`0x801163B0`) at `0x8000D6E4`/`E8`, completely
+unguarded at the reload itself. At `0x8000D744`, `ctx->r16 = ADD32(ctx->r4, 0X8)` (`$s0 = $a0+8`)
+computes a derived pointer. `0x8000D748`'s existing `DL_LIST_RESET_RNODE_GUARD` (s485, item -315,
+one of its 14 per-site anchors) validates `ctx->r4` for its OWN local zero-store one instruction
+later — but by then `$s0` is already captured from the unvalidated `ctx->r4`. Six instructions after
+that, `0x8000D760: MEM_W(0X8, ctx->r16) = ctx->r2;` dereferences the derived pointer completely
+unguarded. Crash address `0x181B7590` = corrupted base `0x181B7580` + the two chained `+8` offsets
+(`0x8000D744`'s own `+8`, plus the store's own `0x8` displacement) — exact match.
+
+**First fix attempt: WRONG, caught by live-verify.** Following the established -312..-316 precedent
+(re-derive validity from the propagating value's own source register, skip the write if invalid),
+wrote a per-site literal-anchor patch validating `ctx->r4` before the `0x8000D760` store
+(`HEAP_DEQUEUE_DERIVED_PTR_GUARD`, `fixup_game_funcs.py`). Regenerated in the mandatory order
+(anchor matched x1, no mismatches), build-verified clean, live-verified with the full standing
+env-var set plus the new tag. **Result: the guard fired 660,261 times in one ~300s soak, while all
+four related sibling guards (which read the exact same `0x801163B0` global) stayed at 0** — an
+order-of-magnitude departure from every other guard's history in this entire lineage (0-4 fires per
+soak). That mismatch, not a crash, is what flagged the problem: a genuinely rare corruption
+shouldn't fire 2200×/sec while its own upstream siblings see nothing. Investigated: the store site
+(`0x8000D760`) sits right after a label, `L_8000D75C:` — a jump target. `grep -n "goto L_8000D75C"`
+found a SECOND, structurally unrelated entry point at guest `0x8000D67C` (funcs_3.c:24588), reached
+via an early-exit branch from a bounds-check ~170 lines earlier in the SAME function
+(`0x8000D678: beq $v1,$zero,L_8000D75C`). Traced `ctx->r16`'s last assignment before that branch
+(`funcs_3.c:24185`, `ctx->r16 = ADD32(ctx->r7, 0)` — a plain register copy from `ctx->r7`, nothing to
+do with the free-list reload). **So `ctx->r4` at the shared label `L_8000D75C` has no single
+consistent meaning: on the free-list path it's the reloaded cache-head pointer; on the bounds-check
+early-exit path it's whatever the function's `ctx->r4` held from much earlier, unrelated to this
+store at all.** Validating `ctx->r4` was checking the wrong thing on the second path, producing a
+massive false-positive rate that silently skipped a legitimate, frequently-executed store.
+
+**Corrected fix.** Changed the check to validate `ctx->r16` itself — the pointer actually
+dereferenced by the store — instead of the upstream `ctx->r4` proxy. This is correct regardless of
+which of the two paths set it, matching the convention every OTHER guard in this codebase already
+uses (validate the value used as the address, never an indirect proxy register). Re-regenerated
+(anchor matched x1 again, clean), rebuilt clean, re-verified with the full standing env-var set:
+**0 fires on the corrected guard**, `hangarbay-entry` n=31 (positive control), 1 fire on the
+unrelated pre-existing `compose-npc-orient-guard9` sibling family (not this fix, filed not chased),
+crashed on the already-catalogued `loadCutsceneAssetsByIndex+1860` / `last-guest-pc=0x800aafb8`
+family — the exact same crash s463's own confirm soak hit (`docs/PROJECT-OVERVIEW.md` §18). 2nd
+independent confirm queued (`s490_heap_dequeue_derived_ptr_confirm.sh`).
+
+**Scope note, deliberately not chased further this session.** The unguarded-reload idiom
+(`ctx->r4 = MEM_W(ctx->r4, 0X63B0);`) recurs 184 times across `funcs_3.c`/`funcs_4.c`. A
+classification-scan subagent was dispatched in the background to enumerate which of the other 183
+sites share the vulnerable derived-pointer shape (mirroring the s485 generalization precedent). Its
+own sanity check — reproducing the ONE known-true instance (this session's own finding) — FAILED on
+its first attempt, confirming that a naive textual-proximity scan cannot reliably detect the
+shared-label multi-path hazard this session just found by hand; its raw tally (1 of 183 flagged
+VULNERABLE) is untrustworthy as-is and not used for anything. A full blanket sweep of this idiom
+needs control-flow-aware validation (validate the dereferenced register directly, never an upstream
+proxy — the same correction just made) and label/jump-target awareness, and is DEFERRED to a future
+session rather than attempted at the same scale as s485's 84-site sweep without that correction.
+
+**Rules obeyed:** read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, `scratch/agent/SOAK-RESULTS.md`
+first; delegated the initial multi-file trace to a subagent, independently re-verified the critical
+claims by direct source read myself before committing to a fix; regenerated in the mandatory order
+both times (fix v1 and the correction) and audited the fixup report for anchor-count mismatches;
+live-verified with a same-run positive control (`hangarbay-entry`) both times; treated the 660,261-fire
+result as a signal to investigate, not a result to report, and did not let the first (wrong) live-verify
+stand as evidence — this is the "null result until positive-controlled" and "1 source = label it"
+discipline applied to a guard's OWN correctness, not just to whether a bug exists; edited
+`~/Documents/Tools/N64Recomp/fixup_game_funcs.py` only (a sibling repo's untracked scratch tool, not
+anything under this repo's `lib/`, so no submodule-patches export applies); one game run this session
+that mattered for the final numbers (SIGKILL via `tools/probe.sh`'s own teardown, ROM present in
+`build/`) plus the two live-verify runs used to catch and confirm the correction; queued the 2nd
+confirm instead of re-running it in this same session (loop budget rule).

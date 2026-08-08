@@ -1,67 +1,75 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: item-316-dl-alloc-propagation-guard-confirm
+HYPOTHESIS-ID: item-317-heap-dequeue-derived-ptr-guard-confirm
 
-## s489 summary: item -316 fixed (DL_ALLOC_PROPAGATION_GUARD), 1st confirm clean, 2nd queued
+## s490 summary: item -316 closed 2/2; item -317 found, fixed (after catching and correcting a wrong
+first attempt), 1st confirm clean, 2nd queued
 
-s488's sub-threshold `-0x5BB4` idiom candidate (19 read sites, `funcs_3.c`/`funcs_4.c`) resolved into
-a real fix, one function upstream of all 19 reads. A downstream-consumer trace (delegated to a
-subagent) found the actual gap in `emitAllocatedDLCommand` (`funcs_3.c`): its existing s436
-`CACHE_HEAD_A1_GUARD` (site=4, 0x80008960) validates a newly linked free-list node pointer before
-writing the node's own `next` field, but two more statements immediately after the guard block stay
-UNCONDITIONAL even when the node pointer fails the range check: one publishes the possibly-bad node
-as the new list head, the other propagates the node's data-area pointer into the persistent
-`-0x5BB4` write-cursor global that all 19 read sites reload unguarded. Confirmed real downstream risk
-by reading `buildOrientedFaceGeometry` (one of the 19 readers): it reloads the cursor, adds a scaled
-index, and feeds the sum straight into `do_swl`/`do_swr` as a raw, unbounded RDRAM address. Exactly
-the "guard covers one deref, not the propagation" shape as items -312/-313/-314/-315 — same fix
-style: extended the check (`DL_ALLOC_PROPAGATION_GUARD`, `fixup_game_funcs.py`, s489) rather than
-adding 19 read-site guards, after confirming (full function-body read) that both newly-guarded
-statements are the function's last use of the relevant registers before its immediate
-stack-restore-and-return tail.
-
-Regenerated in the mandatory order, patch applied x1 with no anchor-count mismatches anywhere in the
-fixup report, build-verified clean. Live-verified with the full standing sibling-guard env-var set
-plus the new `ROGUESQ_LOG_DL_ALLOC_PROPAGATION_GUARD`: 0 fires on the new guard, 0 fires on any
-sibling guard family (no regression), `hangarbay-entry` positive control fired (n=31, lower than
-usual only because the run was cut short at 113s). Crashed at 113.2s,
-`pc-symbol=initVec4TripletFromArgs+68`, `last-guest-pc=0x800ab068` — the exact same `last-guest-pc`
-as the already-catalogued s463/s468 crash family, unrelated to this fix, filed not chased. 2nd
-independent confirm queued (`s489_dl_alloc_propagation_confirm.sh`, currently the only item in
-`soak_queue/`).
+Item -316's 2nd confirm soak (`s489_dl_alloc_propagation_confirm`) came back clean for item -316
+itself (0 `dl-alloc-propagation-guard` fires) but its raw log showed four unrelated sibling guards
+(`freelist-next-guard`, `generic-cache-guard`, `dl-list-append-rwrite-guard`,
+`dl-list-reset-rnode-guard`) fire in sequence on the same corrupted pointer value right before a
+SIGBUS in `heapFreeListDequeue` — the same "-312..-316" signature. Traced it: an unguarded
+`ctx->r4` reload (from the free-list-cache-head global `0x801163B0`) feeds a derived pointer
+(`ctx->r16 = ADD32(ctx->r4, 0x8)`) that's dereferenced unguarded 6 instructions later. **A first fix
+attempt validated the wrong register** (`ctx->r4`, which turned out to have path-dependent meaning
+at a shared control-flow label reachable from a second, unrelated branch) and fired 660,261 times in
+one soak while its sibling guards stayed at 0 — caught by that exact mismatch, not by a crash.
+Corrected to validate `ctx->r16` (the actually-dereferenced pointer) directly. Re-verified clean: 0
+fires on the corrected guard, `hangarbay-entry` n=31 (positive control), crashed on the
+already-catalogued `loadCutsceneAssetsByIndex+1860` family (unrelated). 2nd independent confirm
+queued (`s490_heap_dequeue_derived_ptr_confirm.sh`, currently the only item in `soak_queue/`).
 
 ## This session's next work unit
 
-1. Read the new `SOAK-RESULTS.md` line for `s489_dl_alloc_propagation_confirm` (the loop will have
-   run it between iterations). Fold it into `docs/CURRENT-TRUTH.md` item -316 and `PORTING-STATE.md`
-   the same way s488 folded in item -314's 2nd confirm: if clean (0 fires on the new guard, crash — if
-   any — matches an already-catalogued unrelated family), mark item -316 fully CLOSED, 2/2. If it
-   fires or reveals a NEW sibling scope gap (the -312..-315/-316 lineage's repeated pattern: closing
-   one gap surfaces a structurally-identical one elsewhere), treat that as the next work unit under
-   the same investigative standard (2 direct source reads before proposing a fix).
-2. If item -316 closes clean with nothing new surfaced: no fresh M3 idiom-scan candidate remains
-   queued (`lui`+`lw` and `lui`+`sw` are both structurally dry at the >=20-site tier as of s488). Two
-   options, pick whichever has higher expected value at the time:
-   - Re-run the M5 lead-check cadence (last checked s488; due again once 3+ sessions have passed —
-     check `PORTING-STATE.md`'s most recent session number against s488 first).
-   - Try a NEW frequency-scan angle not yet mined: the s465/s477/s481-488 lineage only scanned
-     `lui`+`lw` and `lui`+`sw` reg-offset idioms. Consider `ori`/`addiu`-based small-offset pointer
-     arithmetic, or lowering the site-count floor further (5-9 sites) with tighter manual triage per
-     bucket, matching the same "grep-enumerate a whole idiom class, classify every site" discipline
-     from `tools/agent/ITERATION.md`'s strategic priority #3.
+1. Read the new `SOAK-RESULTS.md` line for `s490_heap_dequeue_derived_ptr_confirm` (the loop will
+   have run it between iterations). Grep its `run.log` (NOT just the probe.sh summary line — it omits
+   guard-tag detail) for `heap-dequeue-derived-ptr-guard` fires, sibling guard fires, `hangarbay-entry`
+   count, and the `[CRASH]` tags. Fold into `docs/CURRENT-TRUTH.md` item -317 and `PORTING-STATE.md`
+   the same way s490 folded in item -316's 2nd confirm: if clean (0 fires on the new guard, no
+   regression, crash — if any — matches an already-catalogued unrelated family), mark item -317 fully
+   CLOSED, 2/2.
+2. **Before trusting ANY fire count on a brand-new guard as "rare corruption, working as intended,"
+   compare it against this session's sibling guards in the SAME run.** Every guard in this whole
+   `-312..-317` lineage has historically fired 0-4 times per soak. A three-, four-, or five-digit fire
+   count on a new guard while its siblings stay near 0 is not a bigger discovery — it is very likely a
+   guard placement bug (checking a proxy register with path-dependent meaning, same mistake this
+   session made and caught). Investigate the guard's OWN correctness before folding a high fire count
+   into the ledger as evidence of anything.
+3. If item -317 closes clean with nothing new surfaced: the deferred item from this session is the
+   **control-flow-aware blanket sweep** of the other 183 sites sharing item -317's reload idiom
+   (`ctx->r4 = MEM_W(ctx->r4, 0X63B0);`, `funcs_3.c`/`funcs_4.c`). This session's own classification
+   subagent's first attempt FAILED its sanity check against the one known-true instance — do not
+   reuse its raw tally. A correct sweep needs, PER SITE: (a) find every `ADD32`-derived-pointer
+   register set from the reload, (b) find its first dereference, (c) **check whether the dereference
+   site sits at or after a label that has ANOTHER `goto`/branch INTO it from elsewhere in the same
+   function** (grep `goto L_<addr>` for every label between the reload and the dereference) — if so,
+   trace what the derived register's base was on THAT alternate path before assuming the guard can
+   validate the reload's own register; (d) validate the ACTUALLY-DEREFERENCED register directly, never
+   an upstream proxy — this session's own correction is the template. Given the false-positive risk
+   just demonstrated, do this INCREMENTALLY (a handful of sites at a time with a live-verify checkpoint
+   comparing new-guard-fires against sibling-guard-fires) rather than a single 183-site blanket regex,
+   unlike the s485 84-site precedent which didn't have this shared-label hazard to contend with.
+4. If the confirm reveals something new instead: same standard as always — 2 direct source reads
+   before proposing a fix, and this session's specific new rule (compare fire rate against siblings)
+   before trusting a first live-verify.
 
 ## Regen/build/soak recipe (only needed if a new fix is designed — reading SOAK-RESULTS.md needs
 neither)
 `python3 -c "import glob,os; [os.remove(f) for f in glob.glob('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c')]"`
 → `cd ~/Documents/Tools/rogue_squadron64 && python3 tools/make_elf.py` → `cd ~/Documents/Tools/N64Recomp
 && ./build/N64Recomp rogue_squadron.toml` → `python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-(check the report for the expected counts, no errors, no SKIPPED lines) → **`cd
+(check the report for the expected counts, no errors, no SKIPPED lines other than the known-permanent
+S392_H3A/H3B item -290 remainder) → **`cd
 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build`** (NOT `~/Documents/Tools/N64Recomp/build`
 — that's the recompiler CLI's own build and silently no-ops) →
 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j8`. Arm every sibling
 guard env var per the standing rule — see
-`scratch/agent/soak_queue/done/s489_dl_alloc_propagation_manual_20260807.sh` for the current full
-list, add `ROGUESQ_LOG_<NEW_GUARD_NAME>=1` for whatever the new guard is named.
+`scratch/agent/soak_queue/s490_heap_dequeue_derived_ptr_confirm.sh` for the current full list, add
+`ROGUESQ_LOG_<NEW_GUARD_NAME>=1` for whatever the new guard is named. **Live-verify BEFORE queueing
+the 2nd confirm and BEFORE folding into the ledger** — this session's own near-miss (660K false-positive
+fires) would have gone straight into the ledger as "1st confirm clean, 2nd queued" if the numbers
+hadn't been checked against siblings in the same run.
 
 ## Soak queue status
-1 item queued: `s489_dl_alloc_propagation_confirm.sh` (item -316's 2nd independent confirm).
+1 item queued: `s490_heap_dequeue_derived_ptr_confirm.sh` (item -317's 2nd independent confirm).
