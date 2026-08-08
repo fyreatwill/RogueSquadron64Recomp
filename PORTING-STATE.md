@@ -41678,3 +41678,92 @@ new one).
 **Five step-3 leads now fixed total** (four fully closed 2/2, this one pending its 2nd confirm).
 ~138 other distinct locations remain unaudited/unfixed. Full derivation: `docs/PROJECT-OVERVIEW.md`
 §21, `docs/CURRENT-TRUTH.md` item -317, this session's `scratch/agent/NEXT.md`.
+
+## Session 501 (2026-08-08): item -317 step 3 -- fixed the next same-function sibling lead, EMIT_FRAME_RDP_INIT_DL_R2D_GUARD (funcs_3.c:6014, emitFrameRdpInitDl, 40 shared reload sites), 1st live-verify clean; also caught and corrected a two-source-confirmed methodology gap in how s498's/this session's `appendRdpStateDl+144` crash filing was being read
+
+Continued the same-function-sibling sweep of `emitFrameRdpInitDl`'s repeated `0x801163B0`-table
+reload idiom (item -317 step 3; see Sessions 494-500 for the tracer's methodology and the first five
+fixed leads, four FULLY CLOSED 2/2, the fifth (`EMIT_FRAME_RDP_INIT_DL_R2C_GUARD`, s500) still
+pending its queued 2nd confirm as of this session's start -- checked `SOAK-RESULTS.md`, it had not
+yet run; left it queued for the loop rather than blocking on it).
+
+**Drift check first, per NEXT.md's mandatory process.** Re-ran
+`scratch/agent/s494_item317_step3_tracer.py --scan`, deduped the fresh JSON report by
+`(file, hit.line, hit.kind, hit.off, hit.reg)`. Result: line numbers did NOT drift this session --
+the tied-at-40 tier matched NEXT.md's recorded `funcs_3.c:6014/6334/6644/7345/8305/7661/8649` plus
+`funcs_4.c:17346` exactly. Picked the lowest-line entry, `funcs_3.c:6014`, per NEXT.md's
+recommendation. Confirmed via awk backward-scan for the nearest `RECOMP_FUNC` that this line is
+still inside `emitFrameRdpInitDl` (function starts at line 5286).
+
+**The site.** `funcs_3.c` guest address `0x80009090` (`MEM_W(0X4, ctx->r2) = ctx->r3;`): byte-for-byte
+the same idiom as R2/R2B/R2C -- `ctx->r2` reloaded from the `0x801163B0` table a few instructions
+earlier (`0x80009084`) with only a null check (`beq $v0, $zero, L_80009094`); the null arm takes a
+separate harmless write then gotos away from this write, but the non-null fallthrough has no range
+check before the dereference. Downstream falls into `L_80009094`, which reassigns `ctx->r2` from the
+table again before any further use -- skip-the-write-on-invalid confirmed safe, same precedent as
+all five prior fixes in this lineage.
+
+**Fix.** New guard `EMIT_FRAME_RDP_INIT_DL_R2D_GUARD` added to
+`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`, mirroring the exact block
+shape of `EMIT_FRAME_RDP_INIT_DL_R2C_GUARD` (literal-string-anchor patch, `text.count(old)==1`
+checked). Regenerated through the full pipeline: deleted `funcs_3.c`, `make_elf.py`, `N64Recomp`,
+`fixup_game_funcs.py` (report confirmed `funcs_3.c: ... EMIT_FRAME_RDP_INIT_DL_R2D_GUARD) patched
+x1`, no new errors, only the known-permanent S392_H3A/S393_H3B SKIPPED remainder), then
+`DEVELOPER_DIR=... cmake --build . -j8` (clean build, only pre-existing warnings).
+
+**1st live-verify (manual, foreground, `scratch/agent/manual_runs/s501_emit_frame_rdp_init_dl_r2d_manual.sh`):**
+0 fires on the new `emit-frame-rdp-init-dl-r2d-guard` (null result, consistent with every prior fix
+in this lineage), `hangarbay-entry` n=31 (positive control). Crashed at 114.1s (37 frames captured)
+on `pc-symbol=appendRdpStateDl+144`, `last-guest-pc=0x800109b8` -- the SAME exact `pc-symbol` and
+`last-guest-pc` s498 hit and filed as "plausibly item -306's ... reload propagation into
+appendRdpStateDl, not chased."
+
+**New this session: the crash is now corroborated by a live guard-fire chain, and a source-level
+trace pins the actual call site.** Four sibling guards fired in the run.log immediately (4 lines)
+before the `[CRASH]` block: `freelist-next-guard`, `generic-cache-guard`,
+`dl-list-append-rwrite-guard`, `dl-list-reset-rnode-guard`, all sharing the identical corrupted
+value `0xB0BB7280` -- the same "one corrupted pointer, four adjacent guest addresses, then a crash"
+shape that originally surfaced item -317 in Session 490 (there it was `0x181B7580` feeding
+`heapFreeListDequeue`). The crash's own mcontext register dump shows `x10=0x0000000030bb7288` --
+`0xB0BB7280 + 8`, RDRAM-base-translated -- directly matching the fired value plus a small offset,
+not a coincidence.
+
+Traced the actual guest addresses (`grep`, case-insensitive, across all `RecompiledFuncs/funcs_*.c`,
+not assumed): all four guard sites (`0x80010830`, `0x80010874`, `0x80010880`) AND the crash's
+`last-guest-pc` (`0x800109B8`) are inside **`submitSceneNodeRender`** (`funcs_4.c`, starts line 6),
+**not** `appendRdpStateDl` -- confirmed identically for s498's archived run.log too (same three
+guard sites, `bad_*=0x00000000` that session vs. this session's non-zero `0xB0BB7280`, plus s498's
+own backtrace frame 3 already read `submitSceneNodeRender + 43648`, byte-identical to this session's
+frame 3/4). Reading the source at `0x800109B8` resolves the apparent conflict with `pc-symbol`:
+that line is `appendRdpStateDl(rdram, ctx);` -- `submitSceneNodeRender`'s own call site into
+`appendRdpStateDl`. `g_rs64_last_guest_pc` is set by the *caller* right before the call and is not
+necessarily updated again if the callee crashes before its own first logged instruction, so
+`last-guest-pc` here means "last instruction the caller logged," not "the faulting instruction" --
+the crash genuinely is inside `appendRdpStateDl` very early (offset +144, consistent with `pc-symbol`
+and the duplicate-frame backtrace artifact typical of a crash before a callee's own frame is
+established). **Standing methodological note for future sessions:** `last-guest-pc` across a call
+boundary identifies the *call site*, not the fault site, when the callee crashes early.
+
+**Net effect:** this is not a new bug, but it upgrades an existing "filed not chased" item from a
+bare pc-symbol/guest-pc match (s498, 1 occurrence, no corroborating detail) to a two-occurrence
+match with a concrete, source-confirmed call site (`submitSceneNodeRender`'s call into
+`appendRdpStateDl` at guest `0x800109B8`) and a plausible (not proven) upstream link to the same
+item -317 corruption family, since three of the four co-firing guards sit in the immediately
+preceding instructions of the SAME calling function. Still filed not chased this session (out of
+scope for this work unit), but promoted to the top of the "candidate next targets" list in
+`scratch/agent/NEXT.md` with the concrete guest addresses needed to pick it up directly next time.
+
+**Post-fix per-hit query:** re-ran the tracer's `--scan` after the fix. Fresh dedup shows the
+remaining tied-at-40 tier shifted by +13 lines (matching the guard block's insertion size):
+`funcs_3.c:6347/6657/7358/8318/7674/8662` (all `emitFrameRdpInitDl`, still unfixed) plus
+`funcs_4.c:17346` (`renderLitMeshFaceGroup`, still unfixed, flagged since s497).
+
+**2nd confirm queued:** `scratch/agent/soak_queue/s501_emit_frame_rdp_init_dl_r2d_confirm.sh` (same
+recipe, correct three-level `../../..` path, all sibling guard env vars armed plus this session's
+new one).
+
+`EMIT_FRAME_RDP_INIT_DL_R2D_GUARD` is 1/2 confirmed (pending the queued 2nd run).
+**Six step-3 leads now fixed total** (four fully closed 2/2, R2C and R2D each pending their 2nd
+confirm). ~137 other distinct locations remain unaudited/unfixed. Full derivation:
+`docs/PROJECT-OVERVIEW.md` §21, `docs/CURRENT-TRUTH.md` item -317, this session's
+`scratch/agent/NEXT.md`.
