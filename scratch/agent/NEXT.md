@@ -1,56 +1,61 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: m3-opcode-scan-lineage-closed
+HYPOTHESIS-ID: m3-crash-symbolizer-blindspot
 
-## s477 summary: `lui`+`sw` direct-store scan CLASSIFIED AND DEFERRED, dead end after one scan
+## s478 summary: `heapFreeListDequeue+NNNN` crash family INVESTIGATED AND CLOSED — symbolizer artifact, not a real bug
 
-Wrote `scratch_s477_sw_scan.py` (N64Recomp repo, untracked) per the s476 pivot note, scanning for
-`lui` immediately followed by a direct store (`MEM_W(OFFSET, ctx->rL) = ...;`) off the same
-register with NO intervening `lw` reload — the mirror-image of the exhausted read-side (`lui`+`lw`)
-lineage. Result: 546 buckets, 1471 sites, 358 singleton buckets (long diffuse tail). Top 3 buckets
-(230/197/85 sites) are ALL offsets already well-understood from the read-side lineage (items
--296/-305/-306); direct-read confirmed all three are plain `someGlobal = value;` assignments — the
-store destination is a fixed compile-time RDRAM address, which cannot fault regardless of the
-register's prior contents. Confirms hypothesis 1 (top clusters = benign fixed-address stores) and
-hypothesis 3 (diffuse tail) from the prior NEXT.md; hypothesis 2 (write through a dynamically
-reloaded pointer) is structurally excluded by this scan's own match shape. No code change, no soak
-queued. Filed as item -309 in `docs/CURRENT-TRUTH.md`.
+Per the s477 fallback order (M5-lead-check, then passive-breadcrumb triage), an M5-lead check
+found nothing new (no code change needed, see `docs/CURRENT-TRUTH.md` USER DIRECTIVE note). Fell
+through to passive-breadcrumb triage: ranked all "filed, not chased" recurring crash signatures by
+session count and picked the highest, `heapFreeListDequeue+NNNN` (15+ sessions, s108-s477).
+Discriminating measurement: direct guest-address arithmetic against `heapFreeListDequeue`'s
+confirmed base (`0x8000CFD4`) against the two available `last-guest-pc` data points — neither
+matches the implied `+NNNN` guest offset (off by 18-30 KB both times). Root cause: the host crash
+handler (`src/main/main.cpp:1788`) symbolizes via `dladdr()`, which only resolves the nearest
+EXPORTED symbol; `nm -n` on the built binary shows a 40,648-byte unexported-code gap after
+`heapFreeListDequeue` populated by unrelated guard-flag statics from OTHER already-closed guard
+families, so any host crash landing anywhere in that gap gets misattributed to
+`heapFreeListDequeue+bignum`. **Verdict: not one recurring bug — a symbolizer blind spot.** No
+guard written (nothing to guard). Filed as item -310 in `docs/CURRENT-TRUTH.md`; full derivation
+`PORTING-STATE.md` Session 478.
 
-**Both `lui`-based opcode-pattern scan angles this lineage has tried are now closed**: read-side
-(`lui`+`lw`, s454-s476) and write-side (`lui`+`sw` direct store, s477). No untried
-high-expected-value instruction-pattern scan is queued. Full derivation: `PORTING-STATE.md` Session
-477; ledger: `docs/CURRENT-TRUTH.md` item -309.
+**Practical consequence for future sessions**: do NOT re-file future `heapFreeListDequeue+NNNN`
+occurrences as "same family, filed not chased" — each is very likely an unrelated crash colliding
+with this blind spot, and grouping them under one label is exactly what prevented this from being
+investigated for 15+ sessions.
 
-## This session's top work unit: no new opcode-pattern scan — fall back per USER DIRECTIVE order
+## This session's top work unit
 
-Per the USER DIRECTIVE (`docs/CURRENT-TRUTH.md` top) and this session's finding, M3 idiom-class
-scanning has no queued high-value candidate right now. Do NOT invent a third opcode-pattern scan
-speculatively — that would be the same mistake NEXT.md has warned against every session ("if you
-find yourself re-deriving from the same table, stop"). Options, in priority order:
+`docs/CURRENT-TRUTH.md` is 63,069 bytes (over the 60,000-byte Step-0 threshold after s478's
+addition) — **the next iteration should be a MAINTENANCE iteration per ITERATION.md Step 0**,
+regardless of anything below. Do that first; do not skip it because this file suggests other work.
 
-1. **Check for a new M5 lead first** (priority 2 in the USER DIRECTIVE, above M3). M5 audio
-   de-stubbing is marked DONE/fully CLOSED in the directive with "next M5 work needs a genuinely new
-   lead" — read `docs/PROJECT-OVERVIEW.md` §10-§12 (the full M5 arc) to check whether any of the
-   crash breadcrumbs collected in recent soaks (see SOAK-RESULTS.md tail) plausibly point to a new
-   audio-related lead that would justify reopening M5. If nothing new surfaces in a focused ~15
-   minute read, treat M5 as still closed and move to option 2.
-2. **Passive breadcrumb triage**: `scratch/agent/SOAK-RESULTS.md` and recent session crash
-   signatures (search PORTING-STATE.md sessions s449-s477 for "filed, not chased" / "filed not
-   chased" crash signatures) have accumulated several NOT-YET-audited crash families surfaced as
-   side effects of confirm soaks — e.g. the recurring `near-0x80000000`/"near-zero guest pointer"
-   family (BREADCRUMB6, first seen s273), and various `pc-symbol=...+NNNN` one-off signatures. Pick
-   the crash signature with the HIGHEST recurrence count across sessions (not the most recent) and
-   apply the s282-s288 systematic-idiom-class-audit model to it: is it actually one root cause
-   recurring, or several coincidentally-similar symptoms? This is genuinely new work, not a
-   re-derivation of the closed lui+lw/lui+sw tables.
-3. If neither 1 nor 2 yields a concrete, boundable work unit within the session, the honest move is
-   BLOCKED with a specific question for the human: what should M3/M5 priority be now that both
-   opcode-scan angles and the standing audio-destub arc are closed. Do not manufacture a
-   maintenance-only session to stay busy (ITERATION.md explicitly forbids using doc-housekeeping as
-   a way to keep the loop fed).
+After maintenance, the next real work unit, in priority order (per the standing USER DIRECTIVE —
+M5 checked clean s478, M3 opcode-scan lineage closed s476/477, M3 highest-recurrence breadcrumb
+closed s478):
+
+1. **The s478-flagged tooling fix: crash-symbolizer blind spot.** `src/main/main.cpp`'s crash
+   handler uses `dladdr()` (nearest-EXPORTED-symbol only) to name the faulting host PC. Fix:
+   resolve against a finer-grained table instead — either (a) a build-time `nm -n` snapshot of the
+   built executable's FULL (including internal-linkage/static) symbol table, loaded and consulted
+   by the crash handler at crash time in place of/alongside `dladdr`, or (b) `atos` against a dSYM
+   if one is being generated. Discriminating test: force a crash inside a known internal-linkage
+   static near `heapFreeListDequeue` (e.g. trip one of the `s_drainmesh*`/`s_coalesceheap*` guard
+   asserts deliberately with an env var) and confirm the NEW symbolizer correctly names that
+   static instead of misattributing to `heapFreeListDequeue`. This is a real infrastructure
+   improvement that will make ALL future crash-signature triage more accurate, not just this one
+   family — worth the investment. Scope check before starting: confirm whether the build already
+   produces a dSYM (`ls build/*.dSYM` or `dsymutil` in the CMake config) before choosing (a) vs (b).
+2. **If (1) turns out to be a bigger lift than one work unit**, fall back to lower-recurrence
+   breadcrumb triage: `loadCutsceneAssetsByIndex+1860` (2 hits, s463/s468) or any other signature
+   accumulated in `scratch/agent/SOAK-RESULTS.md` since s473 that hasn't been triaged yet — read
+   the tail of that file at session start (read list #3) first, since the loop runs soaks between
+   iterations and may have surfaced something new.
+3. If neither yields a concrete, boundable work unit, BLOCKED with a specific question: M3's two
+   opcode-scan lineages, its highest-recurrence breadcrumb, and M5 are all now closed/clean — ask
+   the human what should replace them as the standing M3 discovery method.
 
 ## Soak queue status
 
-None queued this session (s477 had no code change to verify — the sw-scan and its follow-up reads
-were both read-only investigation). Check `scratch/agent/SOAK-RESULTS.md` tail at the start of next
-session as usual for any soaks the loop ran in the background.
+None queued this session (s478 was read-only investigation, no code change to verify). Check
+`scratch/agent/SOAK-RESULTS.md` tail at the start of next session as usual.

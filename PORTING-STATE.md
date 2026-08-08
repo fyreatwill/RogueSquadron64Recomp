@@ -39679,3 +39679,89 @@ scan lineages closed.
 over a genuinely new instruction-pattern idiom), got a conclusive, non-null result that resolves
 two of the three competing hypotheses and closes the discovery direction cleanly — a documented
 dead end with mechanism, not a speculative "probably fine."
+
+## Session 478 (2026-08-07): `heapFreeListDequeue+NNNN` crash family — INVESTIGATED AND CLOSED, symbol-attribution artifact, not a real recurring root cause
+
+Per NEXT.md's fallback order (M5-lead-check first, then passive-breadcrumb triage), an M5-lead
+check found **no new M5 lead** (full read of PROJECT-OVERVIEW §10-12 plus every audio-adjacent
+mention in s449-477: the only candidate, item -292's `SONGTEMPO_TABLE_GUARD`, is an already-closed
+M3 idiom-class guard with 0 fires across every soak, not a live audio mechanism). Fell through to
+option 2: pick the crash signature with the highest cross-session recurrence count and apply the
+s282-288 systematic-idiom-class-audit model to it — specifically NEXT.md's own framing, "is it
+actually one root cause recurring, or several coincidentally-similar symptoms?"
+
+**Candidate selection.** Ranked known recurring "filed, not chased" crash signatures by session
+count: `heapFreeListDequeue+NNNN` (~15+ sessions, s108-s477, still throwing new byte-offsets post-
+"closure") vastly outranked the near-`0x80000000`/BREADCRUMB6 family (already explained, inert)
+and `loadCutsceneAssetsByIndex+1860` (only 2 hits, too narrow). Known recent occurrences: +12704
+(s108/122/123, already root-caused as a misattribution — see below), +16288 (s267), +19316 (s449,
+`last-guest-pc=0x8000d534`), +31924 (s471/472, `last-guest-pc=0x8000d738`), +32596 (prior
+sighting).
+
+**Hypotheses.** H1: all recent offsets are new genuine unguarded derefs inside
+`heapFreeListDequeue`'s own body (a real, still-open guard gap). H2: the offsets land in
+genuinely different, never-analyzed adjacent functions — a real guard gap, just not inside
+`heapFreeListDequeue` itself. H3: the "+NNNN" tag is a symbol-attribution artifact with no
+consistent underlying location at all — not idiom-auditable, no guard to write.
+
+**Discriminating measurement.** `heapFreeListDequeue`'s guest (MIPS) base address is `0x8000CFD4`
+(`rogue_squadron64/symbol_files/main_overlay.txt:273`, independently confirmed by direct grep this
+session). If "+NNNN" were guest-relative, `last-guest-pc` should equal `0x8000CFD4 + NNNN`.
+Checked both available data points where both figures were logged together:
+- s449: `0x8000CFD4 + 19316(dec, =0x4B74) = 0x80011B48`, but the logged `last-guest-pc` was
+  `0x8000D534` — that's `0x8000CFD4 + 1376`, not `+19316`. Off by ~17.9 KB.
+- s471/472: `0x8000CFD4 + 31924(dec, =0x7CB4) = 0x80014C88`, but the logged `last-guest-pc` was
+  `0x8000D738` — that's `0x8000CFD4 + 1892`, not `+31924`. Off by ~30 KB.
+
+Neither matches. The "+NNNN" figure is **not** guest-address arithmetic at all. Traced the
+symbolication source: `src/main/main.cpp:1788` calls `dladdr((void*)ss.__pc, &dli)` on the ARM64
+**host** hardware PC captured from the crash handler's `ucontext` — a lookup against the live
+process's own Mach-O symbol table, entirely independent of `last-guest-pc` (a separate breadcrumb
+stamped only inside `submitSceneNodeRender`'s guest code, `main.cpp:1805`). `dladdr` only resolves
+the *nearest preceding EXPORTED* symbol; a follow-up `nm -n` pass on the built binary found
+`_heapFreeListDequeue` at host address `0x10048622c` with the next exported symbol
+(`_emitTexturedFaceGeometry`) not appearing until `0x1004900f4` — a **40,648-byte gap** for a
+guest function that is only ~2,560 bytes / 640 MIPS instructions. Both offsets 19316
+(→`0x10048ada0`) and 31924 (→`0x10048dee0`) land inside that gap, which `nm` shows populated with
+many **unrelated internal-linkage statics** from other guard families compiled/linked physically
+nearby — names matching `s_drainmesh*`, `s_coalesceheap*`, `s_ringbuffer*`, `s_dl_list_append*`,
+`s_node_list_head*`, `s_sibling_ptr_write*`, i.e. guard-enable-flag statics belonging to several
+already-closed M3 guard patches, not to `heapFreeListDequeue` itself. Because those statics have
+no exported symbol of their own, `dladdr` attributes ANY host crash landing anywhere in that
+40 KB span to `heapFreeListDequeue+bignum`, regardless of which actual function is executing.
+
+**Verdict: H3 confirmed, H1 and H2 refuted.** "`heapFreeListDequeue+NNNN`" is a symbol-
+attribution artifact of the host crash handler's `dladdr`-based (nearest-exported-symbol-only)
+lookup, not a real recurring crash site. This is the SAME mechanism already found for the original
++12704 occurrence back in s123 (there, guest-address math against `main_overlay.txt` showed the
+crash was really inside `submitSceneNodeRender`'s free-list-walk loop, subsequently guarded) — but
+this session shows the pattern is systemic and ongoing: every distinct "+NNNN" seen since is
+independently misattributed, almost certainly to DIFFERENT real locations each time (the ~40 KB
+gap holds many unrelated statics), not to one recurring bug. Two independent lines of evidence:
+(1) guest-address arithmetic mismatch, checked directly by hand against the current
+`main_overlay.txt`, both available data points fail by 18-30 KB; (2) binary symbol-table
+inspection (`nm -n` on the built executable) showing the gap is populated by dozens of unrelated
+internal statics, confirming *why* the mismatch happens structurally, not just that it happens.
+
+**Disposition.** No guard to write — there is no single location to guard; "the idiom class" this
+signature implied does not exist as a coherent class. The `heapFreeListDequeue+NNNN` signature
+should be treated as **uninformative** in all future soak triage: do not file future occurrences
+of it as "same family, filed not chased" (as s449/s471/s472 did) — each one is very likely an
+independent, unrelated crash that happens to fall in this symbolication blind spot, and grouping
+them under one label has been quietly preventing this family from ever being investigated for 15+
+sessions. **Flagged, not fixed, as a real tooling gap**: `main.cpp`'s crash symbolizer only
+resolves exported symbols via `dladdr`; a DWARF-line or full internal-symbol-table lookup (e.g. a
+build-time `nm -n` snapshot consulted at crash time, or `atos` against a `dSYM`) would give
+correct per-crash attribution instead of collapsing a 40 KB, multi-function span onto one
+unrelated exported name. Filed as a candidate M3-adjacent tooling work unit, not attempted this
+session (out of scope for one work unit; would need its own design/soak cycle).
+
+No code change to `RecompiledFuncs/` (nothing to guard). No soak queued (no code change to
+verify). Filed as item -310 in `docs/CURRENT-TRUTH.md`.
+
+**Outcome: ADVANCED.** Ran the planned discriminating measurement from NEXT.md (pick highest-
+recurrence "filed not chased" signature, determine one-root-cause-vs-coincidental-symptoms),
+reached a conclusive, mechanism-level, two-independent-line-of-evidence result that permanently
+closes a 15+-session-old open question and prevents future sessions from re-filing the same
+phantom signature. Also surfaced one new, concrete, boundable tooling-improvement candidate
+(crash symbolizer exported-symbol-only blind spot) for a future session.

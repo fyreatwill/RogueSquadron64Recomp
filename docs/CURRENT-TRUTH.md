@@ -20,10 +20,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. **Both the s465
    `lui`+`lw` frequency-scan lineage (spent as of s476) and the s477 `lui`+`sw` direct-store probe
    (dead end after one scan, item -309) are now closed.** Every bucket either surfaced has a
-   disposition (items -298..-309 below and PROJECT-OVERVIEW §18). Next M3 session has no untried
-   high-expected-value instruction-pattern scan queued — fall back to passive breadcrumb/soak-queue
-   triage, or (per priority order below) look for a new M5 lead instead of inventing a third
-   opcode-pattern scan speculatively.
+   disposition (items -298..-309 below and PROJECT-OVERVIEW §18). **s478 closed the highest-
+   recurrence passive-breadcrumb candidate too: `heapFreeListDequeue+NNNN` (15+ sessions, item
+   -310) is a crash-symbolizer artifact, not a real recurring bug — do not re-file future
+   occurrences of it as "same family".** Next M3 session has no untried high-expected-value
+   instruction-pattern scan AND no un-investigated high-recurrence breadcrumb queued — fall back to
+   lower-recurrence breadcrumb triage, the s478-flagged crash-symbolizer tooling fix (see item
+   -310), or (per priority order below) look for a new M5 lead (s478 checked, none found) instead
+   of inventing a third opcode-pattern scan speculatively.
 
 Sanctioned tooling work unit (backport function-scoped matching to file-scoped-only guard patches in
 `fixup_game_funcs.py`): **CLOSED OUT s386/s388** — item -231..-238, `docs/PROJECT-OVERVIEW.md` §13.
@@ -155,7 +159,38 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -309. The next NEW item takes -310.
+a range pointer. Highest allocated so far: -310. The next NEW item takes -311.
+
+-310. **(s478) `heapFreeListDequeue+NNNN` crash family — INVESTIGATED AND CLOSED, symbol-
+    attribution artifact, not a real recurring root cause.** The highest-recurrence "filed, not
+    chased" crash signature (15+ sessions, s108-s477, new byte-offsets kept appearing after the
+    family was nominally "closed"). Applied NEXT.md's own discriminating question ("one root
+    cause recurring, or several coincidentally-similar symptoms?") via direct guest-address
+    arithmetic against `heapFreeListDequeue`'s confirmed base (`0x8000CFD4`,
+    `main_overlay.txt:273`): neither available data point matches. s449's `+19316` implies guest
+    PC `0x80011B48`, but the actually-logged `last-guest-pc` was `0x8000D534` (`base+1376`); s471/
+    472's `+31924` implies `0x80014C88`, but the logged `last-guest-pc` was `0x8000D738`
+    (`base+1892`) — both off by 18-30 KB. Root cause: `src/main/main.cpp:1788`'s crash handler
+    symbolizes the ARM64 HOST PC via `dladdr()`, which only resolves the nearest **exported**
+    symbol; `nm -n` on the built binary shows `heapFreeListDequeue`'s host code is followed by a
+    40,648-byte gap (for a guest function only ~2,560 bytes / 640 MIPS instructions) before the
+    next exported symbol, populated with many unrelated internal-linkage guard-flag statics from
+    OTHER already-closed guard families (`s_drainmesh*`, `s_coalesceheap*`, `s_ringbuffer*`,
+    `s_dl_list_append*`, `s_node_list_head*`, `s_sibling_ptr_write*`) — any host crash anywhere in
+    that gap gets attributed to `heapFreeListDequeue+bignum` regardless of the real faulting
+    function. Same mechanism s123 already found for the original `+12704` occurrence (there,
+    guest-address math showed the real site was inside `submitSceneNodeRender`, since guarded) —
+    this session shows it's systemic and ongoing, not a one-off. **Verdict: not one recurring bug,
+    not idiom-auditable — a symbolizer blind spot.** No guard written (no single site exists to
+    guard). Future soak triage should NOT re-file `heapFreeListDequeue+NNNN` occurrences as "same
+    family, filed not chased" — each is very likely an unrelated crash colliding with this blind
+    spot. **Flagged as a real, boundable tooling-improvement candidate** (not attempted this
+    session): the crash symbolizer needs DWARF-line or full internal-symbol-table resolution
+    (e.g. a build-time `nm -n` snapshot, or `atos` against a dSYM) instead of `dladdr`'s exported-
+    symbol-only lookup, to stop collapsing this 40 KB multi-function span onto one wrong name. Two
+    independent lines of evidence: guest-address arithmetic mismatch (checked directly against
+    current `main_overlay.txt`) + binary symbol-table inspection (`nm -n`) showing the structural
+    cause. Full derivation: `PORTING-STATE.md` Session 478.
 
 -309. **(s477) New discovery source tried: `lui`+`sw` DIRECT-STORE frequency scan — CLASSIFIED AND
     DEFERRED, dead end. M3 `lui`+`sw` discovery direction considered exhausted after one scan.**
