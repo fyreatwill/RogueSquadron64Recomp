@@ -43470,3 +43470,58 @@ picking a site (line numbers drift), then pick the next-highest tier (as of the 
 re-run: the remaining `beginFrameDLChunk` members of the tied-36 tier, then `emitColorFillRect`/
 `submitSceneNodeRender` at 30 sites each). Watch for a 3rd occurrence of items -326 (do_rom_read/
 piDmaWorker shape, historically significant if it recurs) or -327 (submitSceneNodeRender+67668).
+
+## Session 526 (2026-08-08): item -317 step 3's 24th guard (`BEGIN_FRAME_DL_CHUNK_R5_GUARD`, `beginFrameDLChunk`'s 5th blanket-sweep site) source-traced and FIXED, 1st live-verify the cleanest class again (full 300s duration, zero crashes of any kind, `hangarbay-entry n=35` positive control), 2nd confirm queued
+
+No pending confirm to fold in this session (s525's maintenance pass left the sweep at a clean 25/25,
+all fully closed 2/2) -- straight to the next work unit.
+
+**Re-ran the tracer fresh** per the standing gotcha (line numbers drift with every insertion):
+`python3 scratch/agent/s494_item317_step3_tracer.py --scan` found 448 raw reload sites (318
+`NEEDS_GUARD` / 130 `SAFE_NO_DEREF`), then `python3 scratch/agent/s506_dedupe.py` re-ranked them. The
+top tier is unchanged in shape from the s524 scan -- five remaining `beginFrameDLChunk` members tied at
+36 sites each, with `funcs_3.c:13886` now the highest-ranked (R1-R4 dropped out of the tier once
+fixed). Picked that site.
+
+**Source trace**: guest address `0x8000AD84` (`sw $v1, 0x4($v0)` -> `MEM_W(0X4, ctx->r2) = ctx->r3;`).
+This site's own `lui $v0,0x8011 / lw $v0,0x63B0($v0)` load pair sits at `0x8000AD74`/`0x8000AD78` --
+confirmed distinct from R1's `0x8000B560`/`0x8000B564`, R2's `0x8000AA8C`/`0x8000AA90`, R3's
+`0x8000ABFC`/`0x8000AC00`, and R4's `0x8000AEA4`/`0x8000AEA8`. Same shape as every guard in this
+lineage: `if (ctx->r2 == 0)` gates one arm (a harmless duplicate `*r3 = r2` write, then jump past the
+site); the non-null fallthrough runs the same duplicate write and then dereferences the reloaded
+`ctx->r2` unconditionally with no `0x80000000`-`0x80800000` range check. Downstream control flow at
+`L_8000AD94`/`L_8000AD9C` reloads both `ctx->r4` and `ctx->r2` fresh from the same `0x63B0`-offset
+table immediately after -- the `ctx->r2` reload at `0x8000ADA0` feeds directly into the pre-existing
+`GENERIC_CACHE_GUARD` deref at `0x8000ADA4` (s434), confirming a downstream guard already exists for
+the reloaded value once more. Confirmed via a dedicated subagent grep that no PATCH comment already
+covers `0x8000AD84`/`0x8000AD78` in `fixup_game_funcs.py`, and that the 3-line anchor
+(`g_rs64_last_guest_pc = 0x8000AD84u;` + the `MEM_W` line) occurs exactly once in `funcs_3.c` --
+skip-the-write-on-invalid is safe, same precedent as every prior guard in this lineage.
+
+**Fix**: added `BEGIN_FRAME_DL_CHUNK_R5_GUARD` to `tools/fixup_game_funcs.py` (N64Recomp repo),
+range-checking the reloaded `ctx->r2` before the `MEM_W(0X4, ctx->r2) = ctx->r3` write, logging under
+`ROGUESQ_LOG_BEGIN_FRAME_DL_CHUNK_R5_GUARD` on an out-of-range hit and skipping the write, matching the
+exact pattern of R1-R4. Full regen (`make_elf.py` -> delete stale `RecompiledFuncs/funcs_*.c` ->
+`N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`) applied cleanly: `grep` confirmed the new guard
+text landed in `funcs_3.c:13886` exactly once, build succeeded with only the usual pre-existing
+warnings.
+
+**1st live-verify** (`scratch/agent/soak_queue/done/s526_begin_frame_dl_chunk_r5_manual_*.sh`, all ~60
+guard families armed): 0 `begin-frame-dl-chunk-r5-guard` fires (null result), 0 fires on any other armed
+sibling guard family except 1 benign pre-existing `hangarmenu-a0-guard` hit (item -265, unrelated,
+already-catalogued), `hangarbay-entry n=35` (strong positive control). **The run completed its full
+scheduled 300s duration with rc=0 and zero crashes of any kind** -- 118 frames captured, the same
+cleanest-possible verify class as R4's own 1st confirm. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s526_begin_frame_dl_chunk_r5_confirm.sh`.
+
+**Tally**: item -317 step 3 now has 26 of ~150 candidate sites fixed, 25 fully closed 2/2 and this 24th
+(R5, the campaign's 26th fix counting steps 1/2) pending its 2nd confirm. ~120 sites remain unaudited
+after R5 drops out of the tier. No new breadcrumb crashes surfaced this session (unlike R1-R4, each of
+which hit a different background-noise or filed-not-chased crash on their own confirm run) -- this run
+was simply clean throughout.
+
+**Next iteration**: fold in the R5 2nd confirm from `SOAK-RESULTS.md`, then re-run the tracer fresh and
+pick the next-highest tier (as of this session's scan: `funcs_3.c:15209`/`14802`/`15693`/`16159`, the
+remaining `beginFrameDLChunk` tied-36 members, then `emitColorFillRect`/`submitSceneNodeRender` at 30
+sites each). Watch for a 3rd occurrence of items -326 (`do_rom_read`/`piDmaWorker` shape, historically
+significant if it recurs) or -327 (`submitSceneNodeRender+67668`).

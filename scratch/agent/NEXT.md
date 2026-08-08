@@ -2,53 +2,53 @@
 
 HYPOTHESIS-ID: item-317-step3-blanket-sweep
 
-## s525 recap -- read this first
+## s526 recap -- read this first
 
-s525 was a **MAINTENANCE iteration** (Step 0 triggered: `docs/CURRENT-TRUTH.md` was 62,938 bytes,
-over the 60,000-byte cap). Two things happened:
+s526 was a normal work-unit iteration (no pending confirm to fold in; s525's maintenance pass left the
+sweep at a clean 25/25, all fully closed 2/2).
 
-1. **Folded in item -317 step 3's queued 2nd confirm for `BEGIN_FRAME_DL_CHUNK_R4_GUARD`**
-   (`s524_begin_frame_dl_chunk_r4_confirm`, rc=3, 163s per the flat log): the detailed `run.log`
-   showed 0 `begin-frame-dl-chunk-r4-guard` fires, 0 fires on any other of the ~59 armed guard
-   families, `hangarbay-entry n=2600` strong positive control. **`BEGIN_FRAME_DL_CHUNK_R4_GUARD` is now
-   FULLY CLOSED 2/2** -- item -317 step 3's tally is 25/25 guards fixed so far, ALL confirmed clean on
-   both independent verifies. The crash on that confirm run (`submitSceneNodeRender+67668`/
-   `last-guest-pc=0x80010e6c`, Bus error) turned out to be a byte-identical repeat of an unlabeled s503
-   data point -- filed as new item **-327**, a genuine 2-occurrence signature 21 sessions apart (weaker
-   than item -319's 3-in-8-sessions pattern that justified a source-trace; watch for a 3rd before
-   escalating).
-2. **Compacted `docs/CURRENT-TRUTH.md`** from 62,938 to 43,987 bytes (net -201 lines, git-diff
-   verified): migrated items -319/-321/-322/-323/-324/-325/-326/-327's full mechanism writeups into a
-   new `docs/PROJECT-OVERVIEW.md` §24, updated §23's guard table (rows 24-25 now show both
-   `BEGIN_FRAME_DL_CHUNK_R3_GUARD` and `_R4_GUARD` CLOSED 2/2), replaced CURRENT-TRUTH's verbose
-   per-item Next-steps entries with short pointer summaries, and refreshed the stale USER DIRECTIVE
-   header counts. No information was lost -- everything trimmed already existed in PROJECT-OVERVIEW or
-   was migrated there this session; git history preserves the rest.
+1. **Re-ran the tracer fresh** (`s494_item317_step3_tracer.py --scan` then `s506_dedupe.py`, no custom
+   `--out`, per the s521 gotcha): 448 raw reload sites (318 `NEEDS_GUARD`), top tier still the 5 tied
+   remaining `beginFrameDLChunk` members at 36 sites each (R1-R4 had dropped out once fixed).
+2. **Source-traced and FIXED `BEGIN_FRAME_DL_CHUNK_R5_GUARD`** (`funcs_3.c:13886`, guest address
+   `0x8000AD84`, load pair `0x8000AD74`/`0x8000AD78` -- distinct from R1-R4's own pairs). Exact same
+   shape as every prior guard in this lineage: null-check gates one arm safely, non-null fallthrough
+   dereferences the reload unconditionally with no range check, downstream reload at `0x8000ADA0` feeds
+   the pre-existing `GENERIC_CACHE_GUARD` deref at `0x8000ADA4` (s434) confirming skip-on-invalid is
+   safe. Added to `tools/fixup_game_funcs.py` (N64Recomp repo) matching the R1-R4 pattern exactly.
+3. **1st live-verify clean, the cleanest class again**: 0 `begin-frame-dl-chunk-r5-guard` fires, 0
+   regressions on ~60 other armed guard families (1 benign pre-existing `hangarmenu-a0-guard` hit, item
+   -265, unrelated), `hangarbay-entry n=35` positive control, **full 300s scheduled duration completed
+   with rc=0 and zero crashes of any kind** (118 frames captured). 2nd independent confirm queued:
+   `scratch/agent/soak_queue/s526_begin_frame_dl_chunk_r5_confirm.sh`.
+4. Tally: item -317 step 3 now 26/~150 fixed, 25 fully closed 2/2, R5 pending its 2nd confirm. ~120
+   sites remain after R5 drops out of the tier. No new breadcrumb crash surfaced this session.
 
-Both written up: `docs/CURRENT-TRUTH.md` items -317/-320..-327, `docs/PROJECT-OVERVIEW.md` §23-§24,
-`PORTING-STATE.md` Session 525.
+Full detail: `docs/CURRENT-TRUTH.md` item -317, `PORTING-STATE.md` Session 526.
 
-## The work unit for the NEXT iteration: resume item -317 step 3's blanket sweep
+## The work unit for the NEXT iteration
 
-Per the user directive's priority order, M3's top-ranked work unit is still item -317 step 3: the
-~150-location blanket sweep of the s494 tracer's derived-pointer reload idiom across
-`funcs_3.c`/`funcs_4.c`. **~121 locations remain unaudited** (25 of ~150 fixed so far, ALL 25 fully
-closed 2/2 -- there is no pending confirm to fold in this time, so this iteration is a normal
-work-unit iteration, not a fold-in-then-pick iteration).
+**If `scratch/agent/SOAK-RESULTS.md` has a new line for `s526_begin_frame_dl_chunk_r5_confirm`**: read
+its `run.log` (not just the flat summary line -- an `rc=3` can mean "crashed on an unrelated
+already-catalogued background-noise family after a fully clean, positively-controlled run", which still
+counts as CLOSED). If 0 `begin-frame-dl-chunk-r5-guard` fires and a strong `hangarbay-entry` positive
+control, mark `BEGIN_FRAME_DL_CHUNK_R5_GUARD` FULLY CLOSED 2/2 in `docs/CURRENT-TRUTH.md` item -317 (26
+fixed, 26 fully closed) and fold the result into `PORTING-STATE.md`. Then continue to the next site
+below in the SAME iteration (this is a fold-in-then-pick iteration, matching the s521-s525 pattern).
 
-1. **Re-run the tracer fresh** before picking a site -- line numbers drift with every insertion, and
-   per the s521 gotcha, do NOT pass a custom `--out`:
+**If no confirm result is queued yet**, this is a normal pick-the-next-site iteration:
+
+1. **Re-run the tracer fresh** before picking a site -- line numbers drift with every insertion:
    ```
    cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
    python3 scratch/agent/s494_item317_step3_tracer.py --scan
    python3 scratch/agent/s506_dedupe.py
    ```
-2. Pick the next-highest-count tier from the fresh output. As of the s524 scan (STALE, taken before
-   R4's own confirm regen -- re-run first): `funcs_3.c:13886`/`14802`/`15209`/`15693`/`16159` (36
-   sites each, the remaining `beginFrameDLChunk` members of the tied-top tier that R1-R4 came from),
-   `funcs_3.c:11625` (30 sites, `emitColorFillRect`), `funcs_4.c:4457` (`submitSceneNodeRender`, 30
-   sites).
-3. Follow the exact established fix pattern (see any of the 25 guards in `docs/CURRENT-TRUTH.md` item
+2. Pick the next-highest-count tier from the fresh output. As of the s526 scan (STALE once R5's own
+   regen lands -- re-run first): `funcs_3.c:14802`/`15209`/`15693`/`16159` (36 sites each, the
+   remaining `beginFrameDLChunk` members of the tied-top tier), `funcs_3.c:11625` (30 sites,
+   `emitColorFillRect`), `funcs_4.c:4457` (`submitSceneNodeRender`, 30 sites).
+3. Follow the exact established fix pattern (see any of the 26 guards in `docs/CURRENT-TRUTH.md` item
    -317, or `docs/PROJECT-OVERVIEW.md` §22-§24 for the full guard-by-guard table): null check gates one
    arm, non-null fallthrough has no `0x80000000`-`0x80800000` range check before a write-through deref,
    downstream control flow reloads the register from the same table again -- skip-on-invalid is safe.
@@ -76,6 +76,13 @@ work-unit iteration, not a fold-in-then-pick iteration).
    `last-guest-pc=0x80010e6c`, already 2 occurrences 21 sessions apart -- a 3rd would justify a
    source-trace).
 
+**Important**: after launching a foreground live-verify run in the background, use TaskOutput with
+`block=true` to actually wait for it to finish IN THIS TURN before ending the turn -- do NOT end the
+turn on "waiting for the background run" and expect a later turn to pick it up. The Stop hook checks
+`scratch/agent/STATUS` every turn and will block/fail the iteration if it's still `WORKING` when the
+turn ends. (s526 gotcha: ending a turn mid-wait cost one extra turn recovering from the Stop hook
+block -- block on TaskOutput instead of narrating a promise to check back later.)
+
 ## Regen reminder (every fix)
 
 ```
@@ -91,18 +98,18 @@ cd ~/Documents/Tools/RogueSquadron64Recomp/build && DEVELOPER_DIR=/Applications/
 Live-verify: copy any recent `soak_queue/done/*.sh` script as a template -- add
 `ROGUESQ_LOG_<NEW_GUARD_NAME>=1` to the env block (keep every existing `ROGUESQ_LOG_*` armed for
 regression checking), run it manually/foreground first (1st live-verify -- launch as a backgrounded
-Bash call and poll with a Monitor watching `pgrep -x RogueSquadron64Recomp`, per the s523 tooling
-gotcha), then copy the same env block into a fresh `soak_queue/<name>_confirm.sh` for the loop to run
-as the 2nd independent confirm. Read the actual `run.log` inside the output directory, not just the
-thin flat summary line in `SOAK-RESULTS.md` -- the flat line's `rc=3` can mean "crashed on an
-unrelated already-catalogued background-noise family after a fully clean, positively-controlled run,"
-which counts as CLOSED, not as a guard failure.
+Bash call and use TaskOutput with `block=true` to wait for it to finish in the same turn), then copy the
+same env block into a fresh `soak_queue/<name>_confirm.sh` for the loop to run as the 2nd independent
+confirm. Read the actual `run.log` inside the output directory, not just the thin flat summary line in
+`SOAK-RESULTS.md` -- the flat line's `rc=3` can mean "crashed on an unrelated already-catalogued
+background-noise family after a fully clean, positively-controlled run," which counts as CLOSED, not as
+a guard failure.
 
 ## Budget note
 
 This is iteration N on `item-317-step3-blanket-sweep` (systematic sweep, one guard per iteration, same
 slug for the whole campaign per the exit contract's guidance for long systematic sweeps). s525's
 maintenance interlude does not break the slug or the budget counter -- it's interleaved housekeeping,
-not a stalled iteration on the hypothesis. Continue picking off tiers top-down until the tracer reports
-zero remaining `NEEDS_GUARD` sites, then step back and re-run the tracer with a broader idiom pattern
-if this one is exhausted.
+not a stalled iteration on the hypothesis. s526 was ADVANCED (a real fix landed), so the stall counter
+is at 0. Continue picking off tiers top-down until the tracer reports zero remaining `NEEDS_GUARD`
+sites, then step back and re-run the tracer with a broader idiom pattern if this one is exhausted.

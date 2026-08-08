@@ -22,14 +22,15 @@ Priority order for upcoming iterations, set after the 300-session review:
    §18-§19). Items -312..-322 (s481-518, the guard lineage descending from `DL_LIST_APPEND_GUARD`
    through `HEAPLISTDEQ_ATTR_WRITE_GUARD`) are all fully CLOSED, including -317 step 3's own tally as
    of s525 — PROJECT-OVERVIEW §20-§24. **Item -317 step 3 (a ~150-location blanket sweep) status as of
-   s525: 25 of ~150 leads fixed, ALL 25 FULLY CLOSED 2/2** (most recently `BEGIN_FRAME_DL_CHUNK_R4_GUARD`,
-   closed this session on the folded-in s524 confirm) — M3's top-ranked work unit is this sweep's
-   continuation, ~121 leads remain; see item -317 below for the next tier to pick. **Item -321's
-   2-occurrence escalation was REFUTED s518** (a documented breadcrumb-coverage gap, not a crash lead).
-   New breadcrumbs from the R1-R4 live-verifies, all filed not chased: items -324/-325 (single
-   occurrence), **-326** (`do_rom_read`/`piDmaWorker` shape — extra attention if it recurs, a
-   historically-major family believed fixed since s147/148), and **-327** (2 occurrences 21 sessions
-   apart, watch for a 3rd) — see items below.
+   s526: 26 of ~150 leads fixed, 25 FULLY CLOSED 2/2, 1 pending 2nd confirm** (`BEGIN_FRAME_DL_CHUNK_R5_GUARD`,
+   fixed this session, 1st live-verify clean — the cleanest verify class again, zero crashes over the
+   full 300s duration) — M3's top-ranked work unit is this sweep's continuation, ~120 leads remain; see
+   item -317 below for the next tier to pick. **Item -321's 2-occurrence escalation was REFUTED s518**
+   (a documented breadcrumb-coverage gap, not a crash lead). New breadcrumbs from the R1-R4 live-verifies,
+   all filed not chased: items -324/-325 (single occurrence), **-326** (`do_rom_read`/`piDmaWorker`
+   shape — extra attention if it recurs, a historically-major family believed fixed since s147/148), and
+   **-327** (2 occurrences 21 sessions apart, watch for a 3rd) — see items below. R5's own confirm run
+   surfaced no new breadcrumb.
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
@@ -196,30 +197,31 @@ a range pointer. Highest allocated so far: -327. The next NEW item takes -328.
     range-checking at function entry, skipping the (void, RDRAM-only) body if invalid. CLOSED 2/2 s507
     after an s506 inconclusive retry. Mechanism and session detail: `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-524) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 25 guards fixed so far, ALL 25 FULLY
-    CLOSED 2/2** (most recently `BEGIN_FRAME_DL_CHUNK_R4_GUARD`, closed this session on the folded-in
-    s524 confirm). Steps 1 (`heapFreeListDequeue`) and 2 (`buildOrientedFaceGeometry`) are separately
-    FULLY CLOSED 2/2. Step 3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a forward
-    taint-propagation dataflow analysis) found ~448 raw reload sites deduping to ~150 candidate guard
-    placements across 30 functions; every fix shares one shape (null check gates one arm safely,
-    non-null fallthrough has no `0x80000000`-`0x80800000` range check before a write-through deref,
-    downstream control flow reloads the register from the table again — skip on invalid is safe). The
-    last four guards (`BEGIN_FRAME_DL_CHUNK_R1`-`R4_GUARD`, s521-525) each hit a distinct reload site
-    within `beginFrameDLChunk` (36 shared reload sites apiece, same tier, own load-instruction pair
-    each) and each surfaced a different breadcrumb crash on its confirm run (items -324/-325/-326/-327
-    above), all unrelated to the guard itself (0 fires every time).
-    **~121 locations remain unaudited — still the top-ranked M3 work unit.** Next-ranked tier (from the
-    s524 scan, taken right after R4's own regen landed — RE-RUN before picking, line numbers drift per
-    insertion): `funcs_3.c:13886`/`14802`/`15209`/`15693`/`16159` (36 sites each, `beginFrameDLChunk`,
-    remaining members of the tied-top tier), `funcs_3.c:11625` (30 sites, `emitColorFillRect`),
-    `funcs_4.c:4457` (`submitSceneNodeRender`, 30 sites). Item -319's fix was a DIFFERENT reload idiom
-    (`-0x23A8` sibling-global shape) from this tracer's self-referential `+0x63B0` shape — it does not
-    subsume any of these tiers. **Tracer gotcha (s521)**: `s506_dedupe.py` reads a fixed
+-317. **(s490-526) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 26 guards fixed so far, 25 FULLY
+    CLOSED 2/2, 1 (`BEGIN_FRAME_DL_CHUNK_R5_GUARD`, s526) pending its 2nd confirm** — 1st live-verify
+    clean, zero crashes over the full 300s duration. Steps 1 (`heapFreeListDequeue`) and 2
+    (`buildOrientedFaceGeometry`) are separately FULLY CLOSED 2/2. Step 3's tracer
+    (`scratch/agent/s494_item317_step3_tracer.py`, a forward taint-propagation dataflow analysis) found
+    ~448 raw reload sites deduping to ~150 candidate guard placements across 30 functions; every fix
+    shares one shape (null check gates one arm safely, non-null fallthrough has no
+    `0x80000000`-`0x80800000` range check before a write-through deref, downstream control flow reloads
+    the register from the table again — skip on invalid is safe). Guards `BEGIN_FRAME_DL_CHUNK_R1`-`R4`
+    (s521-525) each hit a distinct reload site within `beginFrameDLChunk` (36 shared reload sites
+    apiece, same tier, own load-instruction pair each) and each surfaced a different breadcrumb crash on
+    its confirm run (items -324/-325/-326/-327 above); `R5` (s526, `0x8000AD84`, load pair
+    `0x8000AD74`/`0x8000AD78`) surfaced none — clean throughout.
+    **~120 locations remain unaudited — still the top-ranked M3 work unit.** Next-ranked tier (from the
+    s526 scan, taken right after R5's own regen landed — RE-RUN before picking, line numbers drift per
+    insertion): `funcs_3.c:14802`/`15209`/`15693`/`16159` (36 sites each, `beginFrameDLChunk`, remaining
+    members of the tied-top tier), `funcs_3.c:11625` (30 sites, `emitColorFillRect`), `funcs_4.c:4457`
+    (`submitSceneNodeRender`, 30 sites). Item -319's fix was a DIFFERENT reload idiom (`-0x23A8`
+    sibling-global shape) from this tracer's self-referential `+0x63B0` shape — it does not subsume any
+    of these tiers. **Tracer gotcha (s521)**: `s506_dedupe.py` reads a fixed
     `scratch/agent/s494_item317_step3_report.json` — a custom `--out` on `--scan` leaves that canonical
     file stale and dedupe silently ranks against old data; let `--scan` write its default path first.
     Full guard-by-guard table and gotchas: `docs/PROJECT-OVERVIEW.md` §22-§24, `PORTING-STATE.md`
-    Sessions 490-524.
+    Sessions 490-526.
 
 -316. **(s488 scan → s489 FIXED → s490 2nd confirm clean) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED,
     2/2.** A scope gap in the existing s436 `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`,
