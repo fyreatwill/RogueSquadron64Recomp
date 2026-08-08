@@ -42477,3 +42477,70 @@ any audio-subsystem crash signature or surfaced a new audio stub/gate lead. Cade
 s511, due again s514+ (unchanged mechanism from every prior check, s486-s511).
 
 `scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.
+
+## Session 513 (2026-08-08): item -317 step 3 -- triaged s512's queued RENDER_LIT_MESH_R5_GUARD 2nd
+confirm as INCONCLUSIVE (retried, not counted); found and fixed a SIXTH distinct write site inside
+`renderLitMeshFaceGroup` (`RENDER_LIT_MESH_R6_GUARD`, funcs_4.c:16575/0x80014558, 38 shared sites,
+top of the fresh post-R5 tier), 1st live-verify ran the FULL 300s scheduled duration with zero
+crashes at all AND zero co-fires of any kind (even cleaner than R5's own); 2nd confirm queued;
+items -319/-320/-321/-322 unchanged, no pivot.
+
+**Fold-in**: `scratch/agent/soak_results/s512_render_lit_mesh_r5_confirm` (rc=0, ran the full 300s
+scheduled duration) did NOT count as a valid 2nd confirm. Per Iron Rule 1 ("a null result without a
+same-run positive control is not a result"), grepping its ~59k-line `run.log` found ZERO lines
+matching `hangar` anywhere -- no `hangarbay-entry` positive control, no guard fires of any kind, not
+even the routine benign init-time co-fires every other confirm in this lineage shows. The VI
+oscillated the whole run between width 1024/origin `0x00790400` and width 640/origin `0x00696100` --
+neither the known war-room/hangar origin (`0x6AB400`) nor the outdoor scene (`0x690400`) -- so the
+`PROBE_KEYS` schedule apparently never advanced the menu into the hangar-bay scene this run. Same
+disposition class as item -318's s506 first attempt (INCONCLUSIVE, retried unmodified). Retried:
+`scratch/agent/soak_queue/s513_render_lit_mesh_r5_confirm_retry.sh` (queued for the loop, same guard,
+same env, same `PROBE_KEYS` schedule, fresh output path). `RENDER_LIT_MESH_R5_GUARD` therefore stays
+at 1/2 confirms (1st live-verify clean, 2nd still pending) -- item -317 step 3 remains at 14/14 fully
+closed until this retry lands clean.
+
+**Work unit**: re-ran `python3 scratch/agent/s494_item317_step3_tracer.py --scan` (run against the
+already-R5-patched source) then `python3 scratch/agent/s506_dedupe.py` -- top pick is
+`funcs_4.c:16575` (`renderLitMeshFaceGroup`, write, `ctx->r2+0x4`, 38 shared reload sites,
+`guest_addr=0x80014558`) -- a SIXTH, distinct write site inside the SAME function R2/R3/R4/R5 already
+guard, at yet another address, confirmed by direct inspection: `grep -n "0x80014558"` on `funcs_4.c`
+returned exactly 1 hit, no PATCH comment present. `ctx->r2` is reloaded from the SAME `0x801163B0`
+free-list-cache-head global a few instructions earlier (`0x8001454C`) with only a null check
+(`ctx->r2 == 0`, `beq $v0, $zero, L_8001455C`); the null arm takes a separate, identical, harmless
+write to `ctx->r3+0x0` then falls through to the SAME write this guard covers, but the non-null path
+has no `0x80000000`-`0x80800000` range check before the dereference -- byte-for-byte the same shape
+as every one of the 15 prior guards in this lineage, most directly R5 (same function). Downstream
+control flow (`L_8001455C`) reassigns `ctx->r1`/`ctx->r4` from the table again immediately after --
+that reload already feeds further guarded logic below -- so skip-the-write-on-invalid is safe here,
+same precedent as every prior guard. Added `RENDER_LIT_MESH_R6_GUARD` to `fixup_game_funcs.py`
+(copied the R5 block verbatim, only the site address/variable names/guard name changed, inserted
+immediately after the R5 block at the end of the `funcs_4.c` patch chain). Regenerated per the
+mandatory order: deleted all `RecompiledFuncs/funcs_*.c` (Python `os.remove` loop, same sandbox
+workaround as every prior session), `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` ->
+`cmake --build`. The fixup report showed `patched x1` for the new guard (`funcs_4.c: render-lit-mesh
+derived-pointer write guard (s513, item -317 step 3, RENDER_LIT_MESH_R6_GUARD) patched x1`) plus the
+same `patched x1` lines for all 4 prior siblings (R2/R3/R4/R5), no anomalies. Confirmed exactly 1
+literal `render-lit-mesh-r6-guard` string present in the built binary (`strings` check). Clean build
+(only the pre-existing unrelated `DDIV` pointer-sign warnings).
+
+**1st live-verify** (`scratch/agent/s513_render_lit_mesh_r6_manual.sh`, same `PROBE_KEYS` schedule
+and full sibling-guard env-var set as every prior soak in this lineage, plus the new
+`ROGUESQ_LOG_RENDER_LIT_MESH_R6_GUARD`): ran the FULL scheduled 300s duration with **no crash at
+all** (120 frames captured, `rc=0`). 0 `render-lit-mesh-r6-guard` fires (null result),
+`hangarbay-entry` counted to `n=31` (positive control), **0 fires on any other armed sibling guard
+family at all** -- not even the routine benign `hangarmenu-a0-guard` co-fire that R5's own
+live-verify and several others in this lineage showed. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s513_render_lit_mesh_r6_confirm.sh`.
+
+**Rule 8 note**: ADVANCED (an inconclusive confirm properly triaged and retried rather than
+rubber-stamped, plus a new code change + 1st live-verify + queued confirm) on the still-open
+`item-317-step3-fix-next-ranked-leads` `HYPOTHESIS-ID`; resets any stall counter. No pivot needed.
+R5 remains open at 1/2 (retry queued); do not mark it CLOSED until the retry lands clean.
+
+**M5 cadence check**: neither of this session's soaks (R5 confirm triage, R6 live-verify) touched any
+audio-subsystem crash signature or surfaced a new audio stub/gate lead. Cadence unchanged from s511,
+due again s514+ (unchanged mechanism from every prior check, s486-s511).
+
+`scratch/agent/OUTCOME`: ADVANCED. Full diff: this commit.</new_string>
+</invoke>
+

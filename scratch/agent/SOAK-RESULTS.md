@@ -141,3 +141,4 @@
 20260808-113446 | s509_emit_frame_rdp_init_dl_r2j_confirm | rc=3 | 156s | scratch/agent/soak_results/s509_emit_frame_rdp_init_dl_r2j_confirm_20260808-113446.log
 20260808-115329 | s510_render_lit_mesh_r3_confirm | rc=0 | 347s | scratch/agent/soak_results/s510_render_lit_mesh_r3_confirm_20260808-115329.log
 20260808-121121 | s511_render_lit_mesh_r4_confirm | rc=3 | 164s | scratch/agent/soak_results/s511_render_lit_mesh_r4_confirm_20260808-121121.log
+20260808-122915 | s512_render_lit_mesh_r5_confirm | rc=0 | 347s | scratch/agent/soak_results/s512_render_lit_mesh_r5_confirm_20260808-122915.log
