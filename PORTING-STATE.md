@@ -43332,3 +43332,86 @@ USER DIRECTIVE section's M3 summary paragraph refreshed.
 21st guard 2/2; source-traced and fixed the 22nd guard with a clean 1st live-verify and a queued 2nd
 confirm; no new crash item this session, the live-verify crash was fully attributed to an
 already-catalogued cluster).
+
+## Session 524 (2026-08-08): item -317 step 3's 22nd guard (`BEGIN_FRAME_DL_CHUNK_R3_GUARD`) folded-in confirm read CLEAN, FULLY CLOSED 2/2, but surfaced a Bus-error crash matching the historically-major `do_rom_read`/`piDmaWorker` DMA-corruption signature (fixed s147/148, ~375 sessions ago) -- filed as item -326, single occurrence, not chased; source-traced and FIXED the 23rd guard (`BEGIN_FRAME_DL_CHUNK_R4_GUARD`, `beginFrameDLChunk`'s 4th blanket-sweep site), 1st live-verify the cleanest class yet (full 300s duration, zero crashes of any kind), 2nd confirm queued
+
+Read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, `scratch/agent/SOAK-RESULTS.md` tail per the
+iteration contract. `wc -c` on CURRENT-TRUTH read 58552 -- below the 60000 maintenance trigger, so
+this was a normal work-unit iteration, continuing `item-317-step3-blanket-sweep`.
+
+**Part 1 -- folded in s523's queued 2nd confirm for `BEGIN_FRAME_DL_CHUNK_R3_GUARD`**
+(`s523_begin_frame_dl_chunk_r3_confirm`, flat log `rc=3`/181s). Read the actual `run.log` inside the
+output directory, not just the flat summary: 0 `begin-frame-dl-chunk-r3-guard` fires, 1 benign
+already-catalogued `hangarmenu-a0-guard` co-fire (item -265), 0 fires on every other of the ~58 armed
+guard families (no regression), `hangarbay-entry n=33` (real positive control, comparable magnitude
+to the standard 31-35 range used across this whole campaign). **`BEGIN_FRAME_DL_CHUNK_R3_GUARD` is now
+FULLY CLOSED 2/2.**
+
+The crash itself, however, is worth flagging in detail rather than filing as routine background
+noise. Backtrace: `do_rom_read` <- `do_dma` <- `osPiStartDma_recomp` <- `submitDmaSlot` <-
+`findManifestEntryByName` <- `initSceneForMission` <- `cinematicLoopBody` <- `mainGameLoop` <-
+`mainBootstrapWorker`. Signal 10 (Bus error), `si_addr=0x380000003`,
+`last-guest-pc=0x800025ac`, `pc-symbol=_ZN6recomp11do_rom_readEPhyjm+608 (local-symtab)` -- a clean,
+real function attribution (not the async Metal.framework symbolizer-tell pattern, and not the
+`emitAllocatedDLCommand`/`beginFrameDLChunk` SIGBUS background-noise family's guest-address range
+`0x80008688`-`0x8000898C`; `0x800025ac` is well outside that range). This is the exact call-stack
+shape of the single longest-running M3 investigation thread in this project's history: the
+`do_rom_read`/`piDmaWorker` DMA-corruption race first found s80, root-caused after ~30 sessions to a
+non-atomic `voiceCount`-write-before-pointer-store race in `allocateSongChannelArray`, and FIXED s147
+with 0/2 and 0/3 clean re-verification soaks (PROJECT-OVERVIEW §3/§97-99). It has not recurred in any
+session's log since, as far as this session's greps of `docs/`/`PORTING-STATE.md` show. The
+`si_addr=0x380000003` value is also not the classic exact-`0x80000000` corruption signature from that
+original investigation -- it exactly matches a DIFFERENT, separately-logged one-off variant from s272
+(`inflate_fast` zlib crash, `si_addr=0x380000003`, "RDRAM base + guest `0x80000003`, 3 bytes past the
+exact-`0x80000000` signature ... a new variant"), except this time the crash resolves directly inside
+`do_rom_read` rather than inside zlib. **Filed as item -326, single occurrence, NOT chased** -- per M3
+strategy (breadcrumbs are passive) and because a single data point cannot distinguish "the fixed race
+recurred" from "coincidental resemblance, different root cause, same corrupted-pointer symptom shape."
+If a 2nd occurrence appears, treat it as a genuinely urgent lead (a "closed since s148" family
+recurring after 375+ sessions would overturn a load-bearing conclusion), not as routine filed-not-
+chased noise.
+
+**Part 2 -- continued item -317 step 3's blanket sweep.** Re-ran the tracer fresh
+(`s494_item317_step3_tracer.py --scan` then `s506_dedupe.py`, per the standing gotcha of never passing
+a custom `--out`): 318 `NEEDS_GUARD` sites remain (448 raw sites total, down from 448 pre-R3 since the
+tracer re-scans the regenerated source and R1/R2/R3 dropped off the open list). Top tier unchanged in
+shape: six `beginFrameDLChunk` sites tied at count=36 reload sites each. Picked the first,
+`funcs_3.c:14306`/`0x8000AEB4` (5th site in the function's own progression: R1=`0x8000B570`,
+R2=`0x8000AA9C`, R3=`0x8000AC0C`, this one's own `lui $v0,0x8011 / lw $v0,0x63B0($v0)` load pair sits
+at `0x8000AEA4`/`0x8000AEA8`, distinct from all three). Read the generated source directly to confirm
+the exact established shape before writing the fix: `if (ctx->r2 == 0)` gates one arm (a harmless
+duplicate `*r3 = r2` write, then jumps past the site); the non-null fallthrough falls through the same
+duplicate write and then dereferences the reloaded `ctx->r2` unconditionally at `0x8000AEB4`
+(`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no `0x80000000`-`0x80800000` range check. Downstream at
+`L_8000AEC4`/`L_8000AECC` reloads both `ctx->r4` and `ctx->r2` fresh from the same `0x63B0`-offset
+table -- and this time the `ctx->r2` reload at `0x8000AED0` feeds DIRECTLY into a pre-existing
+`GENERIC_CACHE_GUARD` deref at `0x8000AED4` (s434), independent confirmation that a downstream guard
+already treats this exact reload as untrusted. Skip-the-write-on-invalid is safe, same precedent as
+every prior guard in this lineage.
+
+Fixed by adding `BEGIN_FRAME_DL_CHUNK_R4_GUARD` to `fixup_game_funcs.py` (same shape/macro pattern as
+R1/R2/R3), verified the patch applied exactly once (`x1`, no anomalies -- confirmed the 2nd
+`fixup_game_funcs.py` invocation correctly REFUSED with the "already carries RS64_FIXUP_APPLIED"
+sentinel, proving the 1st run's patch landed and wasn't silently skipped or duplicated). Regenerated
+through the full pipeline (`make_elf.py` -> delete stale `RecompiledFuncs/funcs_*.c` -> `N64Recomp` ->
+`fixup_game_funcs.py` -> `cmake --build`), build clean (46 pre-existing unrelated warnings, 0 errors).
+
+**1st live-verify** (s524, manual, foreground, launched backgrounded + `Monitor` watching
+`pgrep -x RogueSquadron64Recomp` per the s523 tooling gotcha): the cleanest-class result of the whole
+campaign. 0 `begin-frame-dl-chunk-r4-guard` fires, 1 benign already-catalogued `hangarmenu-a0-guard`
+co-fire (item -265, unrelated), 0 fires on every other armed guard family (no regression),
+`hangarbay-entry n=35` (real positive control). The process ran the **full scheduled 300s duration**
+(298.7s, 119 frames captured) with **zero crashes of any kind** -- not even an unrelated background-
+noise cluster hit this time. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s524_begin_frame_dl_chunk_r4_confirm.sh`.
+
+**Tally**: item -317 step 3 is now 23 of ~150 leads fixed, 22 FULLY CLOSED 2/2 (R3 closed this
+session), the 23rd (R4) 1st-verify-clean with 2nd confirm queued. `docs/CURRENT-TRUTH.md`: item -317
+rewritten to reflect R3 CLOSED 2/2 and R4 fixed/1st-verify-clean/2nd-confirm-queued; new item -326
+filed (`do_rom_read` Bus-error recurrence, single occurrence, not chased); "Highest allocated" counter
+bumped to -326; USER DIRECTIVE section's M3 summary paragraph refreshed.
+
+`scratch/agent/OUTCOME`: ADVANCED (folded in a queued confirm that FULLY CLOSED item -317 step 3's
+22nd guard 2/2; source-traced and fixed the 23rd guard with the cleanest 1st live-verify of the whole
+campaign and a queued 2nd confirm; filed one new crash item, -326, worth extra attention on
+recurrence given its historical significance).
