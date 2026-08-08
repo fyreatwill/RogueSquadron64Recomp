@@ -2,111 +2,113 @@
 
 HYPOTHESIS-ID: item-317-step3-fix-next-ranked-leads
 
-## Iron rule 8 was fixed mid-lineage — read this before assuming a pivot is due
+## s503 recap — read this first
 
-`tools/agent/loop.sh` / `stop_gate.sh` / `ITERATION.md` now implement an outcome-blind-corrected
-rule 8: **a gate-validated ADVANCED iteration resets the consecutive-iteration counter**, so a long
-systematic sweep (this exact item -317 step-3 campaign) can hold ONE HYPOTHESIS-ID for many sessions
-without tripping a forced pivot, as long as each iteration actually lands a real fix. Only consecutive
-NON-ADVANCED iterations count toward the 3-strike/4-strike thresholds now. (s502 found this fix
-already sitting uncommitted in the working tree — not made by that session — with no prior
-PORTING-STATE entry; s502 committed it alongside its own work. If you're reading this and
-`scratch/agent/PIVOT.md` exists, that's the CURRENT signal a pivot is mandatory — trust that file, not
-a stale iteration count from an old NEXT.md.) Since s500, s501, and s502 were all gate-validated
-ADVANCED, the counter is effectively back at 0 going into s503 — **do not treat s503 as needing a
-pivot preamble on iteration-count grounds alone.** Keep this HYPOTHESIS-ID slug for as long as the
-tied-40 tier keeps yielding real fixes; only change it on an actual pivot or close.
+s503 folded in the queued R2C and R2D 2nd confirms (both CLEAN, both now FULLY CLOSED 2/2), then
+fixed the next tied-40-tier lead, `EMIT_FRAME_RDP_INIT_DL_R2F_GUARD` (`funcs_3.c:6670`,
+`emitFrameRdpInitDl`, 40 shared sites). Its 1st live-verify was clean on the new guard (0 fires, 0
+regressions) but **crashed on `appendRdpStateDl+144`/`last-guest-pc=0x800109b8` — item -318's
+signature, now a 3RD independent occurrence (s498, s501, s503)** — AND this occurrence's mcontext
+carried `x0`/`x9`=`0x0000000300000000`, the signature previously seen only on the separate
+`initVec4TripletFromArgs+68` family (items -302/-306). Full writeup: `docs/CURRENT-TRUTH.md` item
+-318 (updated this session) and `PORTING-STATE.md` Session 503.
 
-The M5 audio-lead cadence is a SEPARATE, independent check (not tied to rule 8): last checked s502
-(zero new leads found), due again once 3+ sessions have passed (s506+).
+## Decision point for this session: two legitimate options, pick one
 
-## Check queued 2nd confirms first
+### Option A (recommended): pivot to item -318's investigation
 
-Read `scratch/agent/SOAK-RESULTS.md` tail for lines mentioning:
-- `s500_emit_frame_rdp_init_dl_r2c_confirm`
-- `s501_emit_frame_rdp_init_dl_r2d_confirm`
-- `s502_emit_frame_rdp_init_dl_r2e_confirm`
+Item -318's own text pre-authorized this: "a 3rd occurrence upgrades this to a real pattern worth a
+dedicated investigation session." That threshold is now met. This is NOT a reactive single-crash
+chase (the thing the strategic-priority directive forbids) — it is exactly the "wait-for-recurrence
+breadcrumb becomes active once it recurs enough" case the directive's own passive-breadcrumb policy
+anticipates. If you pick this, change `HYPOTHESIS-ID` to something like
+`item-318-appendrdpstatedl-3rd-occurrence` and read `docs/CURRENT-TRUTH.md` item -318's full body for
+the two concrete discriminating steps already written there:
+1. Source-trace what `appendRdpStateDl` dereferences at guest offset `+144` — fresh guest-address
+   lookup in `funcs_3.c` (grep for `appendRdpStateDl`'s `RECOMP_FUNC` line, then find the instruction
+   at byte offset +144 from its start, i.e. +36 MIPS instructions in), cross-referenced against
+   `submitSceneNodeRender`'s call-argument setup immediately before `0x800109b8` in `funcs_4.c`.
+2. Check whether the `0x0000000300000000` value in `x0`/`x9` can be traced to the SAME upstream
+   source as the `initVec4TripletFromArgs+68` family's occurrences — grep both crash sites'
+   preceding ~50 `run.log` lines (archived logs: `scratch/agent/soak_results/s503_emit_frame_rdp_init_dl_r2f_manual/run.log`
+   for this occurrence; `s489_dl_alloc_propagation_manual/run.log` or similar for an
+   `initVec4TripletFromArgs+68` instance) for a shared reload address or guard tag. If found, this
+   resolves whether items -318 and -302/-306 are one bug or two — a big scope reduction either way.
 
-If present, read each one's `run.log` in `scratch/agent/soak_results/<name>/run.log` for guard-fire
-detail (the top-level `.log` is only a 12-line summary), fold the results into the ledger (mark
-R2C/R2D/R2E fully CLOSED 2/2 if clean), THEN start the next work. If any haven't run yet, either fold
-them in when they appear or proceed to the next fix and let the loop pick up the queued confirms in
-the background -- don't block a whole iteration waiting on them.
+**Discriminating outcome**: if step 1 finds a genuine unguarded/unvalidated dereference at
+`appendRdpStateDl+144` that plausibly explains an `0x0000000300000000`-shaped wild pointer, that's a
+real, fixable root cause — write a guard, live-verify, queue a confirm, same recipe as every other
+item in this file. If step 1 finds nothing conclusive (e.g. the dereference target is bounds-checked
+already, or the crash address doesn't map cleanly to a single guest instruction), step 2's
+cross-family correlation check becomes the fallback discriminator; if that also comes up empty,
+document both negative results and file item -318 as CLOSED-INCONCLUSIVE rather than leaving it open
+indefinitely.
 
-**Seven step-3 leads fixed so far, four FULLY CLOSED 2/2**: `NODE_LIST_HEAD_SIBLING_R4_GUARD` (s495,
-35 sites), `RENDER_LIT_MESH_R2_GUARD` (s496, 48 sites), `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` (s497,
-`funcs_3.c`, 40 sites), `EMIT_FRAME_RDP_INIT_DL_R2B_GUARD` (s498, same function, 40 sites) — plus
-`EMIT_FRAME_RDP_INIT_DL_R2C_GUARD` (s500, 1/2), `EMIT_FRAME_RDP_INIT_DL_R2D_GUARD` (s501, 1/2), and
-`EMIT_FRAME_RDP_INIT_DL_R2E_GUARD` (s502, 1/2 — the cleanest live-verify in the lineage: 0 fires, 0
-regressions, NO crash of any kind for the full 250s scheduled duration) each at 1/2, pending their
-queued 2nd confirms.
+### Option B: continue the tied-40 tier (fallback, same proven recipe)
 
-## Item -318 status: unchanged, still 2 data points, not yet a 3rd confirm
+If you judge item -318 needs more setup than one iteration allows, the tied-40 tier is still a safe,
+proven, ADVANCED-guaranteeing default — 8 sessions running the identical recipe with 0 failed
+live-verifies on any fix itself. Re-run the tracer fresh (line numbers WILL have drifted if you
+picked Option A and touched `emitFrameRdpInitDl` again, but should NOT have drifted if you go
+straight to Option B without any other funcs_3.c edit):
 
-The `appendRdpStateDl+144` / `submitSceneNodeRender`-call-site crash (item -318) has NOT recurred
-since s501 — s502's live-verify hit no crash at all, so it neither confirmed nor refuted anything about
-item -318. Still 2 independent occurrences (s498 all-zero, s501 non-trivial `0xB0BB7280`). Treat any
-conclusion here as still provisional; do not chase reactively. If it recurs a 3rd time on a future
-live-verify, that upgrades it to a real pattern worth a dedicated investigation session — see
-`docs/CURRENT-TRUTH.md` item -318 for the concrete next steps already written (source-level offset
-mapping into `appendRdpStateDl+144`, cross-check against the tracer's per-func report).
-
-## Recommended default: continue the tied-40 tier (7th session running the identical proven recipe)
-
-**Before writing a fix, re-run:**
 ```
 python3 scratch/agent/s494_item317_step3_tracer.py --scan
 ```
-then dedupe the fresh JSON report yourself (group `(file, hit.line, hit.kind, hit.off, hit.reg)` from
-`scratch/agent/s494_item317_step3_report.json`, count sources per group, sort descending) to get the
-CURRENT top-ranked locations, and cross-check the function name via `awk` backward-scan for the
-nearest `RECOMP_FUNC` line above the flagged line. Line-drift precedent: s496 caught +13, s498 caught
-+13, s500/s501 caught NONE, s502 caught +13 again — always confirm rather than assume either way.
 
-## Current tied-at-40 tier (from s502's post-fix dedup — re-verify line numbers fresh per the drift
-warning above before touching source; DO NOT trust these verbatim)
+then dedupe (group `(file, hit.line, hit.kind, hit.off, hit.reg)` from
+`scratch/agent/s494_item317_step3_report.json`, count sources, sort descending). **Current
+tied-at-40 tier (from s503's post-fix dedup, re-verify before touching source)**:
 
 ```
-funcs_3.c:6670   (write, ctx->r2+0x4)
-funcs_3.c:7371   (write, ctx->r2+0x4)
-funcs_3.c:8331   (write, ctx->r2+0x4)
-funcs_3.c:7687   (write, ctx->r2+0x4)
-funcs_3.c:8675   (write, ctx->r2+0x4)
+funcs_3.c:7384   (write, ctx->r2+0x4)
+funcs_3.c:8344   (write, ctx->r2+0x4)
+funcs_3.c:7700   (write, ctx->r2+0x4)
+funcs_3.c:8688   (write, ctx->r2+0x4)
 funcs_4.c:17346  (write, ctx->r2+0x4, renderLitMeshFaceGroup -- flagged since s497, still unfixed)
 ```
-All the `funcs_3.c` entries are very likely still inside `emitFrameRdpInitDl` (same function fixed
-7x already this lineage) -- confirm each via the awk backward-scan, don't assume, but expect it.
-**Recommend `funcs_3.c:6670`** (or whichever is confirmed lowest-line/first-encountered in that
-function after a fresh `--scan`) as the next pick if you stay on the tied-40 tier. This function has
-now had SEVEN guards added; if two or three more tied-40 sites all resolve to the same idiom, it may
-be worth pausing to ask whether a single blanket per-call-site range-check helper (rather than N
-individual named guards) would be lower-maintenance for the remaining `emitFrameRdpInitDl` sites --
-not required, just a standing option if the copy-paste starts to feel unwieldy (now at 7 near-
-identical named guards in one function). Also worth a look: `funcs_4.c:17346`
-(`renderLitMeshFaceGroup`) has been flagged and skipped over since s497 in favor of same-function
-`emitFrameRdpInitDl` siblings every session — if the tied-40 tier in `emitFrameRdpInitDl` runs dry
-soon, this is the next distinct function to audit.
 
-## Remaining leads from s495's original 8-sample not yet in the tied-40 tier
-1. `funcs_4.c:3299`-ish (write, `ctx->r2+0x4`) -- 26 sites at last audit, re-derive current line.
-2. `funcs_3.c:28922`-ish (write, `ctx->r2+0x4`) -- 18 sites at last audit, re-derive current line.
-3. `funcs_3.c:83`-ish (write, `ctx->r2+0x4`, function `heapFreeListInsert`) -- 1 site (singleton).
-4. `funcs_3.c:858`-ish (read, `ctx->r3+0x0`, function `countDisplayListChunks`) -- 1 site (singleton).
+Recommend `funcs_3.c:7384` if you stay on this path. `funcs_4.c:17346`
+(`renderLitMeshFaceGroup`) has been flagged and skipped 7 sessions running — worth picking up if
+`emitFrameRdpInitDl`'s tier runs dry.
 
-## Reference: the fix recipe (repeated 7x now, copy exactly)
+## Check queued 2nd confirms first, regardless of which option you pick
+
+Read `scratch/agent/SOAK-RESULTS.md` tail for:
+- `s502_emit_frame_rdp_init_dl_r2e_confirm` (queued since s502, may have run by now)
+- `s503_emit_frame_rdp_init_dl_r2f_confirm` (queued this session)
+
+If present, read each one's `run.log` in `scratch/agent/soak_results/<name>/run.log` (NOT the
+top-level 12-line summary) for guard-fire detail, fold results into the ledger (mark CLOSED 2/2 if
+clean), THEN start the next work. Don't block a whole iteration waiting on them if they haven't run
+yet.
+
+**Eight step-3 leads fixed total, six FULLY CLOSED 2/2**: `NODE_LIST_HEAD_SIBLING_R4_GUARD` (s495),
+`RENDER_LIT_MESH_R2_GUARD` (s496), `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` (s497), `...R2B_GUARD` (s498),
+`...R2C_GUARD` (s500, 2/2 confirmed s503), `...R2D_GUARD` (s501, 2/2 confirmed s503) — plus
+`...R2E_GUARD` (s502, 1/2) and `...R2F_GUARD` (s503, 1/2) each pending their 2nd confirm.
+
+## The M5 audio-lead cadence is a SEPARATE, independent check (not tied to rule 8)
+
+Last checked s502 (zero new leads found), due again once 3+ sessions have passed (s506+). Not due
+this session (s503 is only 1 session past s502).
+
+## Reference: the fix recipe (repeated 8x now, copy exactly, for Option B)
 
 1. Delete `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c` (only the file
-   you're touching, not all `funcs_*.c` -- proven sufficient in this lineage for 7 sessions running).
+   you're touching, not all `funcs_*.c` -- proven sufficient in this lineage for 8 sessions running).
 2. `cd ~/Documents/Tools/rogue_squadron64 && python3 tools/make_elf.py`
 3. `cd ~/Documents/Tools/N64Recomp && ./build/N64Recomp rogue_squadron.toml`
 4. Add the new guard block to `~/Documents/Tools/N64Recomp/fixup_game_funcs.py` (copy the most recent
-   `EMIT_FRAME_RDP_INIT_DL_R2*_GUARD` block verbatim, rename `r2e`->`r2f` etc., update the guest
+   `EMIT_FRAME_RDP_INIT_DL_R2*_GUARD` block verbatim, rename `r2f`->`r2g` etc., update the guest
    address, update the session/item comment).
-5. `python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py` -- audit the report for the new guard's
-   `patched x1` line and confirm no NEW anchor-count mismatches beyond the known-permanent
-   S392_H3A/S393_H3B SKIPPED remainder.
+5. `python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py` -- redirect the FULL report to an
+   in-repo scratch file (NOT `/tmp`, which is sandbox-blocked this session) and grep it for the new
+   guard's `patched x1` line; confirm no NEW anchor-count mismatches beyond the known-permanent
+   S392_H3A/S393_H3B remainder. If a piped/truncated grep shows nothing, verify directly by grepping
+   the generated `funcs_3.c` for the new guard's enabled-flag variable name before assuming failure.
 6. `cd ~/Documents/Tools/RogueSquadron64Recomp/build && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j8`
-7. Copy `scratch/agent/manual_runs/s502_emit_frame_rdp_init_dl_r2e_manual.sh` to a new
+7. Copy `scratch/agent/manual_runs/s503_emit_frame_rdp_init_dl_r2f_manual.sh` to a new
    `sNNN_..._manual.sh`, add the new guard's env var, run it (foreground or background+block, it
    takes ~120-300s), then grep its `run.log` (NOT the top-level summary) for the new guard's tag and
    for all other `-guard` tags to check for regressions.

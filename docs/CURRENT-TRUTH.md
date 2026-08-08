@@ -82,11 +82,22 @@ Priority order for upcoming iterations, set after the 300-session review:
    `hangarmenu-a0-guard` fire (item -265, unrelated), `hangarbay-entry` n=35 positive control, and the
    full 250s scheduled duration completed with **no crash at all** (98 frames captured, rc=0) — same
    clean-pass class as s495/s496's verifies. 2nd confirm queued
-   (`scratch/agent/soak_queue/s502_emit_frame_rdp_init_dl_r2e_confirm.sh`). **Seven step-3 leads fixed
-   total (four fully closed 2/2, R2C/R2D/R2E each pending their 2nd confirm).** ~136 locations remain
-   — see Next steps item -317 below. Ranked-list fix pass continues next session (`funcs_3.c:6670`
-   next, per s502's fresh post-fix dedup — the old tied-40 tier shifted +13 lines again from the R2E
-   guard insertion, same drift magnitude as every prior fix in this function).
+   (`scratch/agent/soak_queue/s502_emit_frame_rdp_init_dl_r2e_confirm.sh`). **s503 folded in the
+   queued R2C and R2D 2nd confirms (both CLEAN, both now fully CLOSED 2/2) and fixed an 8th step-3
+   lead, `EMIT_FRAME_RDP_INIT_DL_R2F_GUARD`** (`funcs_3.c:6670`, `emitFrameRdpInitDl`, 40 shared
+   sites — no drift, matched NEXT.md exactly), build-verified clean, 1st live-verify 0 fires/0
+   regressions. **Its live-verify crash was the important result: `appendRdpStateDl+144` /
+   `last-guest-pc=0x800109b8` (item -318) recurred for a THIRD independent time, this occurrence
+   additionally carrying the `x0`/`x9`=`0x0000000300000000` RDRAM-base-decompose signature previously
+   seen only on the separate `initVec4TripletFromArgs+68` family — a new cross-family correlation, not
+   yet resolved.** Per item -318's own pre-set threshold, a 3rd occurrence makes it the top-priority
+   target for the next dedicated M3 session (see item -318 below for the concrete next steps).
+   R2F's 2nd confirm queued (`scratch/agent/soak_queue/s503_emit_frame_rdp_init_dl_r2f_confirm.sh`).
+   **Eight step-3 leads fixed total (six fully closed 2/2, R2E and R2F each pending their 2nd
+   confirm).** ~135 locations remain — see Next steps item -317 below. Ranked-list fix pass can
+   continue with `funcs_3.c:7384` next (per s503's fresh post-fix dedup), OR the next session may
+   choose to pivot to item -318's investigation instead — both are legitimate next work units; see
+   NEXT.md for the tradeoff writeup.
 
 -312..-317. **(s481-492) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`
     "grep-verified unique site" lineage — six items, all fully CLOSED except -317 step 3** (open scope
@@ -219,10 +230,27 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -318. The next NEW item takes -319.
+a range pointer. Highest allocated so far: -319. The next NEW item takes -320.
 
--318. **(s501, NEW) `appendRdpStateDl+144` crash — recurred (s498, s501), now with a corroborating
-    guard-fire chain and a source-confirmed call site; filed, not chased, top of next-targets.**
+-319. **(s503, NEW) `beginFrameDLChunk+40536` crash — single data point, filed not chased.**
+    `EMIT_FRAME_RDP_INIT_DL_R2C_GUARD`'s 2nd confirm soak (queued s500, ran s503) crashed at 110.8s on
+    `pc-symbol=beginFrameDLChunk+40536`, `last-guest-pc=0x8000b0d0` — 0 fires on the R2C guard itself
+    (clean, closes item -317's R2C lead 2/2, see below) and 0 fires on any of the ~46 sibling guard
+    families beyond the established benign init-time signature (`n=0`, `ra=0x00000000` on
+    `generic-cache-guard`/`cache-head-a1-guard`/`dl-alloc-propagation-guard`/`dl-list-append-rwrite-guard`/
+    `dl-list-reset-rnode-guard`/`sibling-ptr-write-guard`, matching the precedent s498 documented as a
+    boot-time false trigger, not a regression). This exact `pc-symbol`/`last-guest-pc` pair does not
+    match any prior catalogued crash family (grepped `PORTING-STATE.md` and both `docs/*.md` for both
+    strings — no hits). One data point only; per the no-reactive-single-crash-chases rule, filed and
+    not investigated this session. Watch for a 2nd independent occurrence before opening a dedicated
+    thread.
+
+-318. **(s501, NEW; 3rd occurrence s503) `appendRdpStateDl+144` crash — recurred THREE times
+    (s498, s501, s503), now with a corroborating guard-fire chain, a source-confirmed call site, AND a
+    new correlation to a second, previously-unrelated crash family. Per this item's own
+    pre-authorized threshold ("a 3rd occurrence upgrades this to a real pattern worth a dedicated
+    investigation session"), this is now TOP PRIORITY for the next M3 session — no longer just
+    filed-not-chased.**
     Two independent runs (s498, s501) crashed on the identical `pc-symbol=appendRdpStateDl+144`,
     `last-guest-pc=0x800109b8`. s501's run additionally logged four sibling guards
     (`freelist-next-guard`, `generic-cache-guard`, `dl-list-append-rwrite-guard`,
@@ -246,6 +274,36 @@ a range pointer. Highest allocated so far: -318. The next NEW item takes -319.
     different function from anything touched by items -312..-317 so far), and/or trace whether the
     `ctx` register state left by `submitSceneNodeRender`'s preceding corrupted-pointer guard chain is
     what `appendRdpStateDl` ends up reading. Full derivation: `PORTING-STATE.md` Session 501.
+    **s503's `EMIT_FRAME_RDP_INIT_DL_R2F_GUARD` 1st live-verify hit the IDENTICAL signature a 3rd
+    time** (`pc-symbol=appendRdpStateDl+144`, `last-guest-pc=0x800109b8`, 117.3s into the run). This
+    occurrence's sibling-guard chain fired 3 of the same 4 sites (`generic-cache-guard`,
+    `dl-list-append-rwrite-guard`, `dl-list-reset-rnode-guard` — `freelist-next-guard` did not fire
+    this time) with a THIRD distinct corrupted value, `0x036505B4`, `ra=0x00000000` (different from
+    both s498's all-zero instance and s501's `0xB0BB7280`, i.e. the corrupted value itself varies run
+    to run — it is not a fixed constant, consistent with a genuinely wild/uninitialized pointer rather
+    than a single bad literal). **New finding this session**: the crash's own mcontext register dump
+    carries `x0`=`x9`=`0x0000000300000000` — this is not item -318's own signature from s498/s501, it
+    is the EXACT signature previously catalogued only on the `initVec4TripletFromArgs+68` family
+    (items -302/-306, s463/s468/s489, RDRAM-base-decompose, per the s216-219 overturned-conclusion
+    note). This is the first time the two "families" have shown overlapping register-corruption
+    evidence. Two readings, both still open: (a) item -318 and the `initVec4TripletFromArgs+68` family
+    are the SAME upstream bug (a wild RDRAM-base value reused/propagated across unrelated call sites
+    depending on scheduling) manifesting at different crash sites depending on which function happens
+    to dereference it first, or (b) `x0`/`x9`=`0x0000000300000000` is itself a common, mundane
+    "uninitialized-and-cleared-to-a-small-shifted-constant" bit pattern that two unrelated bugs could
+    independently produce, and the overlap is coincidental. Not yet resolved — the recommended next
+    step (below) is designed to discriminate between these two. **Next step, updated**: this is now a
+    3-confirmed-occurrence pattern and should be the top-priority M3 idiom-class-audit-adjacent thread
+    for the next dedicated session (not a blanket-sweep continuation — this is a single concrete
+    lineage, in scope per the "wait-for-recurrence breadcrumbs become active once they recur" carve-out
+    in the strategic priority note). Concretely: (1) source-trace what `appendRdpStateDl` dereferences
+    at guest offset `+144` (fresh guest-address lookup in `funcs_3.c`, cross-referenced against
+    `submitSceneNodeRender`'s call argument setup immediately before `0x800109b8`), (2) check whether
+    the `0x0000000300000000` value in `x0`/`x9` can be traced to the SAME upstream source as
+    `initVec4TripletFromArgs+68`'s occurrences (grep both crash sites' preceding ~50 log lines for a
+    shared reload address or guard tag), which would resolve reading (a) vs (b) above. Full derivation
+    of the 3rd occurrence: `PORTING-STATE.md` Session 503,
+    `scratch/agent/soak_results/s503_emit_frame_rdp_init_dl_r2f_manual/run.log`.
 
 -317. **(s490-502) `HEAP_DEQUEUE_DERIVED_PTR_GUARD` + `ORIENTED_FACE_DERIVED_PTR_GUARD` +
     `NODE_LIST_HEAD_SIBLING_R4_GUARD` + `RENDER_LIT_MESH_R2_GUARD` + `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` +
@@ -294,8 +352,11 @@ a range pointer. Highest allocated so far: -318. The next NEW item takes -319.
     not-yet-root-caused family rather than a single fixed address), unrelated to this guard, filed not
     chased. Post-fix per-hit query on a fresh `--scan` confirms the fixed line (now shifted from 5695
     to 5706 by the inserted guard block) no longer appears as an unsafe hit anywhere. **2nd confirm
-    queued**: `scratch/agent/soak_queue/s500_emit_frame_rdp_init_dl_r2c_confirm.sh` (still pending as
-    of s501).
+    (s503, run from the queue): CLEAN, FULLY CLOSED 2/2** — 0 fires on the R2C guard, 0 regressions
+    (the ~6 sibling guards that fired all showed the established benign init-time signature, `n=0`
+    `ra=0x00000000`), `hangarbay-entry` n=31 positive control; crashed at 110.8s on a NEW-to-any-lineage
+    signature, `pc-symbol=beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0` — filed as item -319
+    above, single data point, not chased.
     **s501 fixed a 6th step-3 lead, `EMIT_FRAME_RDP_INIT_DL_R2D_GUARD`** (`funcs_3.c:6014`,
     `emitFrameRdpInitDl`, 40 shared sites — no drift, matched NEXT.md exactly). Same shape as
     R2/R2B/R2C. Build-verified clean through the full pipeline (patched x1, no anchor mismatches).
@@ -303,8 +364,12 @@ a range pointer. Highest allocated so far: -318. The next NEW item takes -319.
     families, `hangarbay-entry` n=31). Crashed at 114.1s — see item -318 above for the full writeup
     of this crash (the `appendRdpStateDl+144`/`submitSceneNodeRender` recurrence with the new
     corroborating guard-fire chain). Post-fix per-hit query confirms the fixed line (shifted 6014→6025
-    by the inserted block) no longer appears as an unsafe hit. **2nd confirm queued**:
-    `scratch/agent/soak_queue/s501_emit_frame_rdp_init_dl_r2d_confirm.sh`.
+    by the inserted block) no longer appears as an unsafe hit. **2nd confirm (s503, run from the
+    queue): CLEAN, FULLY CLOSED 2/2** — 0 fires on the R2D guard, 0 regressions (only one benign
+    pre-existing `hangarmenu-a0-guard` fire, item -265, unrelated), `hangarbay-entry` n=33 positive
+    control; crashed at 127.6s on the already-catalogued `coalesceFreeHeapBlocks+4424`/
+    `last-guest-pc=0x8000247c` heap-walker misattribution family (closed since s354-366, see
+    `docs/PROJECT-OVERVIEW.md` — recurring, harmless, not this guard).
     **Six step-3 leads fixed total (four fully closed 2/2, R2C and R2D each pending their 2nd
     confirm)** as of s501. **s502 fixed a 7th step-3 lead, `EMIT_FRAME_RDP_INIT_DL_R2E_GUARD`**
     (`funcs_3.c:6347`, `emitFrameRdpInitDl`, 40 shared sites — no drift, matched NEXT.md's recorded
@@ -325,18 +390,48 @@ a range pointer. Highest allocated so far: -318. The next NEW item takes -319.
     (98 frames captured, rc=0) — same clean-pass class as s495/s496's verifies, so there was no new or
     recurring crash signature to file this session. Post-fix per-hit query on a fresh `--scan` confirms
     the fixed line (shifted 6347→6360 by the inserted guard block) no longer appears as an unsafe hit.
-    **2nd confirm queued**: `scratch/agent/soak_queue/s502_emit_frame_rdp_init_dl_r2e_confirm.sh`.
-    **Seven step-3 leads fixed total (four fully closed 2/2, R2C/R2D/R2E each pending their 2nd
+    **2nd confirm queued**: `scratch/agent/soak_queue/s502_emit_frame_rdp_init_dl_r2e_confirm.sh`
+    (still pending as of s503 — not yet picked up by the loop). **Six step-3 leads now fully closed
+    2/2 (R2, R2B, R2C, R2D plus the two earlier `NODE_LIST_HEAD_SIBLING_R4_GUARD`/
+    `RENDER_LIT_MESH_R2_GUARD`), R2E still pending its 2nd confirm.**
+    **s503 fixed an 8th step-3 lead, `EMIT_FRAME_RDP_INIT_DL_R2F_GUARD`** (`funcs_3.c:6670`,
+    `emitFrameRdpInitDl`, 40 shared sites — no drift, matched NEXT.md's recorded tied-at-40 tier
+    exactly). Same shape as R2/R2B/R2C/R2D/R2E: null check (`ctx->r2 == 0`) gates the null arm
+    (separate harmless write, then goto away from this write), non-null fallthrough has no
+    `0x80000000`-`0x80800000` range check before the dereference; downstream falls into the shared
+    label, which reassigns `ctx->r2` from the table again before any further use, so
+    skip-the-write-on-invalid is safe. Build-verified clean through the full pipeline (patched x1, no
+    anchor mismatches beyond the known-permanent S392_H3A/S393_H3B remainder). **1st live-verify: 0
+    fires on the new guard (null result), 0 regressions** (the 3 sibling guards that fired —
+    `generic-cache-guard`/`dl-list-append-rwrite-guard`/`dl-list-reset-rnode-guard` — all showed
+    `n=0`/`ra=0x00000000`, the established benign init-time signature), `hangarbay-entry` n=31 positive
+    control. **Crashed at 117.3s on `pc-symbol=appendRdpStateDl+144`, `last-guest-pc=0x800109b8` — the
+    SAME signature as item -318, now its 3rd independent occurrence** (s498, s501, s503). This time the
+    crash's own mcontext register dump carries `x0`/`x9`=`0x0000000300000000` — the exact RDRAM-base
+    corruption signature previously seen only on the unrelated-looking `initVec4TripletFromArgs+68`
+    family (item -302/-306, s463/s468/s489), not on either of item -318's first two occurrences. This
+    is a NEW correlation, not previously observed: the same corrupted-RDRAM-base value is now tied to
+    TWO different crashing functions across two nominally-separate "families." Raises (does not yet
+    confirm) the possibility that items -318 and the `initVec4TripletFromArgs+68` family share one
+    upstream root cause rather than being two independent lineages — see item -318's updated body
+    below for the full writeup and the recommended next investigation. Post-fix per-hit query on a
+    fresh `--scan` confirms the old line 6670 no longer appears as an unsafe hit anywhere; the
+    remaining `emitFrameRdpInitDl` tied-40 siblings all shifted +13 (e.g. the old 7371 entry is now
+    at 7384 — see below). **2nd confirm queued**:
+    `scratch/agent/soak_queue/s503_emit_frame_rdp_init_dl_r2f_confirm.sh`.
+    **Eight step-3 leads fixed total (six fully closed 2/2, R2E and R2F each pending their 2nd
     confirm).**
-    **~136 other distinct locations remain unaudited/unfixed.** s502's fresh post-fix dedup surfaced
-    the current tied-at-40 tier (shifted +13 lines again by the R2E guard insertion, same magnitude as
-    every prior fix in this function): `funcs_3.c:6670/7371/8331/7687/8675` (all `emitFrameRdpInitDl`)
-    plus `funcs_4.c:17346` (`renderLitMeshFaceGroup`, still unfixed, flagged since s497). Recommended
-    next pick: `funcs_3.c:6670`. Next-ranked leads from s495's original sample (re-derive line numbers
-    fresh, do not trust stale ones — line drift precedent: s496 caught 13 lines, s498 caught another
-    13, s500/s501 caught none, s502 caught 13 again, the check itself is the rule): `funcs_4.c:3299`-ish
-    26 sites, `funcs_3.c:28922`-ish 18 sites, then two singletons at `funcs_3.c:83`/`funcs_3.c:858`.
-    Full derivation: `docs/PROJECT-OVERVIEW.md` §21, `PORTING-STATE.md` Sessions 490-502.
+    **~135 other distinct locations remain unaudited/unfixed.** s503's fresh POST-fix dedup (run after
+    this session's own insertion, not stale) surfaces the current tied-at-40 tier:
+    `funcs_3.c:7384/8344/7700/8688` (all `emitFrameRdpInitDl`, down from 5 to 4 members) plus
+    `funcs_4.c:17346` (`renderLitMeshFaceGroup`, still unfixed, flagged since s497). Recommended next
+    pick: `funcs_3.c:7384` (re-derive fresh per the drift warning before touching source — every prior
+    session's line-drift precedent still applies). Next-ranked leads from s495's original sample
+    (re-derive fresh, do not trust stale ones — line drift precedent: s496 caught 13 lines, s498
+    caught another 13, s500/s501 caught none, s502 caught 13 again, s503 caught 13 again — the check
+    itself is the rule): `funcs_4.c:3299`-ish 26 sites, `funcs_3.c:28922`-ish 18 sites, then two
+    singletons at `funcs_3.c:83`/`funcs_3.c:858`.
+    Full derivation: `docs/PROJECT-OVERVIEW.md` §21, `PORTING-STATE.md` Sessions 490-503.
 
 -316. **(s488 scan → s489 FIXED → s490 2nd confirm clean) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED,
     2/2.** A scope gap in the existing s436 `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`,
