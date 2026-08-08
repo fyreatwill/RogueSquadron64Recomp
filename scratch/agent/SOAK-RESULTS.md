@@ -148,3 +148,4 @@
 20260808-131115 | s514_render_lit_mesh_r7_confirm | rc=0 | 346s | scratch/agent/soak_results/s514_render_lit_mesh_r7_confirm_20260808-131115.log
 20260808-133422 | s515_submit_scene_node_render_r1_confirm | rc=3 | 177s | scratch/agent/soak_results/s515_submit_scene_node_render_r1_confirm_20260808-133422.log
 20260808-140835 | s517_heaplistdeq_attr_write_confirm | rc=0 | 347s | scratch/agent/soak_results/s517_heaplistdeq_attr_write_confirm_20260808-140835.log
+20260808-143651 | s519_render_lit_mesh_r8_confirm | rc=3 | 159s | scratch/agent/soak_results/s519_render_lit_mesh_r8_confirm_20260808-143651.log
