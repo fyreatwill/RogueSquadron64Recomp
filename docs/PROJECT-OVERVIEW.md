@@ -2006,7 +2006,8 @@ case.
 | 21 | `RENDER_LIT_MESH_R8_GUARD` | s519 | `funcs_4.c:15166`/`0x80013F0C` | `renderLitMeshFaceGroup` (7th site) | 30 | CLOSED 2/2 (s520) | Doubly-linked free-list-cache prepend site (`old_head->prev = tail_node`). 1st: clean (0 fires, 4 benign init-time n=0/ra=0 co-fires, `hangarbay-entry n=31`), crashed on `beginFrameDLChunk+40536`/`0x8000b0d0` -- the 3RD occurrence of item -319 (s503/s505/s519), ESCALATED (fixed separately as `SIBLING_PTR_WRITE_GUARD` site=0x8000B0D0, s520). Confirm re-read s520: full 300s clean |
 | 22 | `BEGIN_FRAME_DL_CHUNK_R1_GUARD` | s521 | `funcs_3.c:16595`/`0x8000B570` | `beginFrameDLChunk` (1st site, top of the tracer's own top tier for the first time this campaign) | 36 | CLOSED 2/2 (s522, folded) | 1st: clean, crashed on a NEW signature filed item -324 (`heapFreeListInsert+72`/`0x80015544`, no 2nd occurrence). Confirm: clean on the guard, crashed on `coalesceFreeHeapBlocks+4424`/`0x8000247c` -- the s354-366 heap-walker background-noise family |
 | 23 | `BEGIN_FRAME_DL_CHUNK_R2_GUARD` | s522 | `funcs_3.c:12895`/`0x8000AA9C` | `beginFrameDLChunk` (2nd site) | 36 | CLOSED 2/2 (s523, folded) | Reloads a DIFFERENT `0x63B0`-offset global than R1's own site. 1st (after discarding a too-weak `n~5` attempt on the Metal-shader-compiler cluster): clean, crashed on a NEW signature filed item -325 (`findLookupEntryByKey+2212`/`0x800ad0dc`, no 2nd occurrence). Confirm: clean on the guard (6 benign zero-value co-fires), crashed on `emitAllocatedDLCommand+4680`/`0x80008764` -- the s354-366 SIGBUS background-noise family |
-| 24 | `BEGIN_FRAME_DL_CHUNK_R3_GUARD` | s523 | `funcs_3.c:13381`/`0x8000AC0C` | `beginFrameDLChunk` (3rd site) | 36 | 1st confirm CLEAN (2nd pending) | Reloads the SAME underlying global as R1 (`0x801163B0`) from its own distinct load pair, confirming the function calls this table-head accessor inline at many separate sites. 1st: clean (0 fires, `hangarbay-entry n=2700+`), crashed on signal 6 (Abort) `pc-symbol=__isPlatformOrVariantPlatformVersionAtLeast.cold.4` (absurd offset) -- the async Metal.framework/system-thread cluster (items -10/-9/-303/-315/-508), this time as a SIGABRT instance rather than the cluster's usual SIGSEGV; `last-guest-pc=0x80015228` is a `processSceneNode` float-multiply, not a trap idiom, ruling out the unrelated `BREADCRUMB9`/s343 abort family. 2nd confirm queued (`scratch/agent/soak_queue/s523_begin_frame_dl_chunk_r3_confirm.sh`) |
+| 24 | `BEGIN_FRAME_DL_CHUNK_R3_GUARD` | s523 | `funcs_3.c:13381`/`0x8000AC0C` | `beginFrameDLChunk` (3rd site) | 36 | CLOSED 2/2 (s524) | Reloads the SAME underlying global as R1 (`0x801163B0`) from its own distinct load pair, confirming the function calls this table-head accessor inline at many separate sites. 1st: clean (0 fires, `hangarbay-entry n=2700+`), crashed on the async Metal.framework/system-thread SIGABRT cluster (items -10/-9/-303/-315/-508). 2nd confirm: clean (0 fires, 1 benign co-fire, `hangarbay-entry n=33`), crashed on a NEW signature (`do_rom_read+608`/`0x800025ac`, Bus error) -- filed item -326, see below |
+| 25 | `BEGIN_FRAME_DL_CHUNK_R4_GUARD` | s524 | `funcs_3.c:14306`/`0x8000AEB4` | `beginFrameDLChunk` (4th site) | 36 | CLOSED 2/2 (s525, folded) | Own distinct load pair; downstream reload at `0x8000AED0` feeds directly into a pre-existing `GENERIC_CACHE_GUARD` deref, independent confirmation the reload is already treated as untrusted downstream. 1st: the cleanest verify of the whole campaign -- full scheduled 300s, zero fires, zero crashes of any kind, `hangarbay-entry n=35`. 2nd confirm: 0 fires, 0 regressions, `hangarbay-entry n=2600` (strong), crashed on `submitSceneNodeRender+67668`/`0x80010e6c` -- the SAME signature seen once before at s503 (then an unlabeled data point for the -318 thread), now a 2nd occurrence -- filed item -327, see below |
 
 (Numbering continues guards 1-10 from section 22's table, s495-503; guard #10 there was
 `EMIT_FRAME_RDP_INIT_DL_R2F_GUARD`, so #11 here is the very next guard chronologically.)
@@ -2041,8 +2042,111 @@ case.
   the fixup report for the new guard's own name after every run, not just check for absence of an
   error** -- a silent 0-count skip looks identical to success.
 
-### Status as of s516: 18/18 fully closed 2/2, ~127 leads remain unaudited
+### Status as of s525: 25/25 fully closed 2/2 (all fixed guards confirmed), ~121 leads remain unaudited
 
-Six crash threads have surfaced as a side effect of these live-verifies (not chased in-band except
-item -322, which escalated): items -319/-320/-321/-322/-323 -- live status and next steps:
-`docs/CURRENT-TRUTH.md`. Full raw detail: `PORTING-STATE.md` Sessions 504-515.
+Nine crash threads have surfaced as a side effect of these live-verifies (not chased in-band except
+items -319/-322, which were fixed directly, and -321, whose escalation was refuted): items
+-319/-320/-321/-322/-323/-324/-325/-326/-327 -- full mechanism writeups: section 24 below; live status
+and next-tier picks: `docs/CURRENT-TRUTH.md` item -317. Full raw detail: `PORTING-STATE.md` Sessions
+504-524.
+
+## 24. Items -319 through -327: crash breadcrumbs and fixes surfaced by the step-3 sweep's live-verifies
+(s503-524), migrated from CURRENT-TRUTH.md s525 maintenance pass
+
+**Item -319 (`beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0`) -- FIXED and FULLY CLOSED 2/2.**
+Recurred 3 times (s503/s505/s519) with byte-identical `pc-symbol` and `last-guest-pc` before being
+source-traced s520: the write at `0x8000B0D0` (`MEM_W(0X4, ctx->r3) = ctx->r4;`) is a genuine unguarded
+pointer write-through sitting directly BETWEEN two already-guarded `SIBLING_PTR_WRITE_GUARD` sibling
+sites through the exact same `-0x23A8` fixed-global-scalar pointer (guest `0x8011DC58`) --
+`0x8000B0BC` and `0x8000B0EC`, both guarded since s459. `ctx->r3` is neither reassigned nor rechecked
+between them and is reloaded from the identical global again immediately after (already guarded at
+`0x8000B0EC`), so skip-on-invalid is safe -- same shape as the rest of the family. A genuine gap in the
+original s459 sweep (the two neighbors were caught, this site sandwiched between them was missed), NOT
+covered by the step-3 tracer (that tool is hard-scoped to a different, self-referential `+0x63B0`
+reload idiom -- `beginFrameDLChunk` has at least two structurally distinct vulnerable-reload idioms in
+play). Fixed by adding the site to `fixup_game_funcs.py`'s existing `_SIBLING_PTR_WRITE_SITES` table,
+taking that family from 120 to 121 sites. 1st live-verify (s520, 2nd attempt -- 1st discarded, crashed
+at 20.3s on the Metal-framework cluster, too weak a positive control): clean, 0 fires on any site
+including the new one, 0 regressions across ~55 sibling guard families, `hangarbay-entry n=2600`.
+Crashed at 113.9s on the same already-catalogued Metal-framework shader-compiler-thread cluster as
+items -10/-9, unrelated. 2nd confirm (s521, `s520_sibling_ptr_b0d0_confirm`): 0 fires of any kind,
+`hangarbay-entry n=31`, full 346s duration, no crash at all. CLOSED 2/2.
+
+**Item -321 (`menuOverlayInit`-area/`last-guest-pc=0x800ab1c4`) -- 2 occurrences (s510/s515), escalation
+REFUTED s518: a documented instrumentation gap, not a crash lead.** s510
+(`pc-symbol=menuOverlayInit+3648`) and s515 (`pc-symbol=unregisterServiceWorker+536 (local-symtab)`)
+shared `last-guest-pc=0x800ab1c4`, which looked like corroboration despite the `pc-symbol` mismatch.
+Source-trace (s518): guest address `0x800AB1C4` is `runHangarSelectionFrame`'s own
+`addiu $sp,$sp,0x30` return-epilogue instruction (`N64Recomp/RecompiledFuncs/funcs_28.c:6019`) --
+pure register arithmetic, not a memory access, so it cannot fault. It's also independently claimed by
+two OTHER overlay functions sharing the same fixed base address (`composeEffectObjectTransformMatrix`,
+`spawnCutsceneDebrisField`) since all three overlays load at `0x800A5130`. The
+`g_rs64_last_guest_pc` breadcrumb tracker only exists inside a curated allowlist of instrumented
+functions; `runHangarSelectionFrame`'s last write is its own return, and its callers one level up
+(`runHangarMenuFromOverlay`, `menuOverlayInit`) have zero breadcrumb writes in their bodies -- so the
+global freezes at `0x800AB1C4` regardless of where execution actually goes next. Same
+`BREADCRUMB17`->`18` "chase the freeze one level up" pattern already documented for item -263, now
+recurring a 3rd time. **Conclusion**: s510 and s515 are most likely two DIFFERENT real crashes that
+both happen to have just unwound out of `runHangarSelectionFrame` -- the matching `last-guest-pc` is
+not meaningful corroboration. Downgraded from escalated-and-queued to a documented instrumentation gap.
+If a similar breadcrumb-freeze pattern recurs and needs localizing, add `BREADCRUMB19` to
+`runHangarMenuFromOverlay` modeled on `BREADCRUMB17`/`18` -- not currently queued, since neither
+underlying crash has its own 2nd occurrence.
+
+**Item -322 (`heapFreeListDequeue`, `last-guest-pc=0x8000d92c`) -- FIXED s517
+(`HEAPLISTDEQ_ATTR_WRITE_GUARD`), FULLY CLOSED 2/2 s518.** 3 prior occurrences (s457/s512/s515) all
+pinned to `MEM_W(0X0, ctx->r2) = ctx->r3;` at `funcs_3.c:22715`/`0x8000D92C`, where `ctx->r2` is
+reloaded unguarded from stack slot `0x3C($sp)` (filled upstream from a fixed-global-array-base +
+`index<<2` computation, no range check before the write-through). Downstream immediately reassigns the
+register to an unrelated flag-test result, so skip-the-write-on-invalid is safe -- same precedent as
+the whole item -317 lineage. Side note confirmed this session: the `pc-symbol`'s `+NNNN` offset is a
+NATIVE code offset from `nm`, not a guest-address delta -- only `last-guest-pc` is reliable for
+estimating position within a function. 1st live-verify (s517): 0 fires, 1 benign co-fire, `hangarbay-
+entry n=34`, crashed on the already-catalogued `coalesceFreeHeapBlocks` background-noise family. 2nd
+confirm (s518): ran the full 347s scheduled duration with zero crashes of any kind, 0 fires,
+`hangarbay-entry n=2700`. CLOSED 2/2.
+
+**Single-occurrence breadcrumbs surfaced by these live-verifies, filed not chased per M3 strategy** (0
+fires on the guard that surfaced each, real `hangarbay-entry` positive control each time; live-status
+and any recurrence gets tracked in `docs/CURRENT-TRUTH.md`'s Next-steps list, not here):
+
+- **Item -323** (s514, `RENDER_LIT_MESH_R7_GUARD`'s 1st verify): `beginFrameDLChunk+27456`/
+  `last-guest-pc=0x8000ae40` -- same function as item -319 but a different guest PC, so a distinct
+  signature, not a 3rd -319 occurrence.
+- **Item -324** (s521, `BEGIN_FRAME_DL_CHUNK_R1_GUARD`'s 1st verify): `heapFreeListInsert+72`/
+  `last-guest-pc=0x80015544` -- call chain `menuOverlayInit` -> `runHangarMenuFromOverlay` ->
+  `runHangarSelectionFrame` -> `setupCameraMatrices` -> `drawSubtitleText` ->
+  `emitMaterialTexturedDLAlt` -> `findOrCreateMaterial` -> `allocOrEvictMaterialNode` ->
+  `heapFreeListInsert`. Not the `heapFreeListDequeue+NNNN` symbolizer-artifact family (item -310/-311)
+  -- genuine function attribution, a distinct sibling function (`Insert`, not `Dequeue`).
+- **Item -325** (s522, `BEGIN_FRAME_DL_CHUNK_R2_GUARD`'s 1st verify, 2nd attempt):
+  `findLookupEntryByKey+2212`/`last-guest-pc=0x800ad0dc` -- call chain `updateHangarBayScene` ->
+  `updateTextOverlayLookupEntry` -> `findLookupEntryByKey`. Genuinely new signature, grepped zero prior
+  hits.
+- **Item -326** (s524, `BEGIN_FRAME_DL_CHUNK_R3_GUARD`'s 2nd confirm): `do_rom_read+608`/
+  `last-guest-pc=0x800025ac`, Bus error, `si_addr=0x380000003`. Call chain: `mainBootstrapWorker` ->
+  `mainGameLoop` -> `cinematicLoopBody` -> `initSceneForMission` -> `findManifestEntryByName` ->
+  `submitDmaSlot` -> `osPiStartDma_recomp` -> `do_dma` -> `do_rom_read`. **Flagged for extra attention
+  if it recurs**: this is the exact call-stack shape of the single longest-running M3 investigation
+  thread in this project's history -- the `do_rom_read`/`piDmaWorker` DMA-corruption race (s80 origin,
+  root-caused after ~30 sessions to a non-atomic `voiceCount`-write-before-pointer-store race in
+  `allocateSongChannelArray`, FIXED s147 with clean re-verification soaks) -- which has not recurred in
+  any session's log since, per an s524 grep of `docs/`/`PORTING-STATE.md`. The `si_addr` value
+  (`0x380000003`) doesn't match the original investigation's classic exact-`0x80000000` signature but
+  does exactly match a separate one-off s272 variant (an `inflate_fast`/zlib crash with the identical
+  `si_addr`), except this time the fault resolves directly inside `do_rom_read` rather than inside
+  zlib. A single data point cannot distinguish "the fixed race recurred" from "coincidental
+  resemblance, different root cause, same corrupted-pointer symptom shape" -- filed not chased, but if
+  a 2nd occurrence appears, treat it as urgent (a family closed for 375+ sessions recurring would
+  overturn a load-bearing conclusion).
+- **Item -327** (s524, `BEGIN_FRAME_DL_CHUNK_R4_GUARD`'s 2nd confirm) -- **2 occurrences**:
+  `submitSceneNodeRender+67668`/`last-guest-pc=0x80010e6c`, Bus error, `si_addr=0x3f60030a2`. First
+  seen s503 (`EMIT_FRAME_RDP_INIT_DL_R2F_GUARD`'s 2nd confirm, at the time filed only as an unlabeled
+  4th data point for the item -318 thread since it shared -318's function but not its exact guest PC,
+  see section 22 above) and now again s524 -- byte-identical `pc-symbol` and `last-guest-pc` both
+  times, 21 sessions apart. This is a real 2-occurrence signature by the standard this campaign uses
+  elsewhere (items -319/-321/-322 all began escalation review at 2-3 occurrences) -- worth a 3rd-
+  occurrence watch, not yet a source-trace, since two data points 21 sessions apart with nothing in
+  between is weak corroboration on its own (unlike -319's three occurrences inside an 8-session span).
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 503-524.

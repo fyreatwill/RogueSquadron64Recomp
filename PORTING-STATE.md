@@ -43415,3 +43415,58 @@ bumped to -326; USER DIRECTIVE section's M3 summary paragraph refreshed.
 22nd guard 2/2; source-traced and fixed the 23rd guard with the cleanest 1st live-verify of the whole
 campaign and a queued 2nd confirm; filed one new crash item, -326, worth extra attention on
 recurrence given its historical significance).
+
+## Session 525 (2026-08-08): MAINTENANCE iteration -- CURRENT-TRUTH.md compacted 62,938 -> ~43,987 bytes (net -201 lines); folded in item -317 step 3's queued s524 `BEGIN_FRAME_DL_CHUNK_R4_GUARD` 2nd confirm, FULLY CLOSED 2/2 (25/25 guards fixed so far now all closed 2/2); surfaced and filed a new 2-occurrence crash, item -327 (`submitSceneNodeRender+67668`/`0x80010e6c`, first unlabeled at s503, now recurred 21 sessions later)
+
+Read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, `scratch/agent/SOAK-RESULTS.md` tail per the
+iteration contract. `wc -c` on CURRENT-TRUTH read 62938 -- **over the 60,000-byte maintenance
+trigger** (NEXT.md's own s524 recap flagged this in advance). Per Step 0, this iteration was
+MAINTENANCE: no item -317 step 3 experiment was run this session.
+
+**Part 1 -- folded in the queued 2nd confirm before compacting** (needed to write an accurate
+current-status summary anyway): `s524_begin_frame_dl_chunk_r4_confirm` (flat log `rc=3`/163s). The
+detailed `run.log` (not the thin flat summary) shows 0 `begin-frame-dl-chunk-r4-guard` fires, 0 fires
+on any of the ~59 other armed guard families (no regression), `hangarbay-entry n=2600` (strong,
+comparable magnitude to the rest of this campaign's positive controls). **`BEGIN_FRAME_DL_CHUNK_R4_GUARD`
+is now FULLY CLOSED 2/2** -- this closes out item -317 step 3's tally at 25/25 guards fixed so far,
+every one of them confirmed clean on both independent verifies.
+
+The crash itself on that confirm run was worth filing rather than dismissing as routine noise:
+`pc-symbol=submitSceneNodeRender+67668 (local-symtab)`, `last-guest-pc=0x80010e6c`, signal 10 (Bus
+error), `si_addr=0x3f60030a2`. A grep of this exact `pc-symbol`+`last-guest-pc` pair against
+PORTING-STATE.md found a byte-identical match at s503 (`s503_emit_frame_rdp_init_dl_r2f_confirm`),
+where it had been filed only as an unlabeled 4th data point for the (at-the-time-differently-scoped)
+item -318 thread, explicitly noted as "NOT a 4th confirmed occurrence of the specific 3x-recurring
+signature" the thread was actually tracking. Read plainly, this is a genuine 2-occurrence signature,
+21 sessions apart, with nothing in between -- filed as a new item, **-327**. Two occurrences with a
+21-session gap and nothing in between is weaker corroboration than item -319's three-occurrences-in-8-
+sessions pattern that justified a source-trace, so -327 is filed-not-chased for now, watching for a
+3rd occurrence before escalating.
+
+**Part 2 -- the maintenance compaction.** `docs/CURRENT-TRUTH.md` was 62,938 bytes / 592 lines before
+this session. Migrated the full mechanism writeups for items -319/-321/-322/-323/-324/-325/-326/-327
+(previously living only in CURRENT-TRUTH's Next-steps list) into a new `docs/PROJECT-OVERVIEW.md` §24,
+and updated §23's guard table (rows 24-25) to reflect `BEGIN_FRAME_DL_CHUNK_R3_GUARD`'s and
+`_R4_GUARD`'s now-closed 2/2 status, plus refreshed the trailing status paragraph from its stale
+"s516: 18/18" snapshot to "s525: 25/25". Replaced CURRENT-TRUTH's verbose per-item entries with
+short pointer-style summaries (matching the existing convention already used for -312..-318/-298..
+-309/etc.), consolidated the eight step-3 breadcrumb items (-320 through -327) into one combined
+entry, trimmed item -311's redundant tooling writeup down to a pointer (already fully covered by
+PROJECT-OVERVIEW §19), and refreshed the USER DIRECTIVE header block's stale counts (23/22 -> 25/25
+guards, pass count 23->24, item numbering high-water mark -326->-327). Also updated the "Highest
+allocated so far" note to -327 (next NEW item takes -328).
+
+**Result**: `docs/CURRENT-TRUTH.md` now 43,987 bytes (397 lines), well under the 60,000-byte trigger
+and closer to the 35 KB stretch target than the last several passes. `git diff --numstat` on the file:
+77 insertions / 278 deletions, net -201 lines -- crosses the maintenance auto-ADVANCED threshold. No
+information was deleted outright: everything trimmed from CURRENT-TRUTH either already existed in
+PROJECT-OVERVIEW.md or was migrated there in this same session (§24, new); git history preserves the
+rest. The "Current truth" env-var/timeline prose and the Regeneration section's Standing warnings were
+left untouched per the maintenance contract's explicit exception.
+
+**Next iteration**: resume item -317 step 3's blanket sweep (still M3's top-ranked work unit per the
+user directive, ~121 of ~150 candidate sites remain unaudited) -- re-run the tracer fresh before
+picking a site (line numbers drift), then pick the next-highest tier (as of the s524 scan, STALE, must
+re-run: the remaining `beginFrameDLChunk` members of the tied-36 tier, then `emitColorFillRect`/
+`submitSceneNodeRender` at 30 sites each). Watch for a 3rd occurrence of items -326 (do_rom_read/
+piDmaWorker shape, historically significant if it recurs) or -327 (submitSceneNodeRender+67668).
