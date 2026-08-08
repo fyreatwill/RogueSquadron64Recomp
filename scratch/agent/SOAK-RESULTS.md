@@ -129,3 +129,5 @@
 20260807-232915 | s498_emit_frame_rdp_init_dl_r2b_confirm | rc=3 | 165s | scratch/agent/soak_results/s498_emit_frame_rdp_init_dl_r2b_confirm_20260807-232915.log
 20260808-022920 | s500_emit_frame_rdp_init_dl_r2c_confirm | rc=3 | 156s | scratch/agent/soak_results/s500_emit_frame_rdp_init_dl_r2c_confirm_20260808-022920.log
 20260808-023156 | s501_emit_frame_rdp_init_dl_r2d_confirm | rc=3 | 173s | scratch/agent/soak_results/s501_emit_frame_rdp_init_dl_r2d_confirm_20260808-023156.log
+20260808-024853 | s502_emit_frame_rdp_init_dl_r2e_confirm | rc=3 | 168s | scratch/agent/soak_results/s502_emit_frame_rdp_init_dl_r2e_confirm_20260808-024853.log
+20260808-025141 | s503_emit_frame_rdp_init_dl_r2f_confirm | rc=3 | 161s | scratch/agent/soak_results/s503_emit_frame_rdp_init_dl_r2f_confirm_20260808-025141.log

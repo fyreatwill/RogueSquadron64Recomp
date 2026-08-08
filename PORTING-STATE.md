@@ -41868,3 +41868,53 @@ Post-fix per-hit query on a fresh `--scan` confirms the old line 6670 no longer 
 Filed item -319 (`beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0`, single data point from the R2C 2nd confirm, no prior catalogue match) -- not chased.
 
 **Eight step-3 leads fixed total, six fully CLOSED 2/2** (`NODE_LIST_HEAD_SIBLING_R4_GUARD`, `RENDER_LIT_MESH_R2_GUARD`, `EMIT_FRAME_RDP_INIT_DL_R2_GUARD`/`R2B`/`R2C`/`R2D`), R2E and R2F each pending their 2nd confirm. `funcs_3.c:7384/8344/7700/8688` (`emitFrameRdpInitDl`) plus `funcs_4.c:17346` (`renderLitMeshFaceGroup`, still unfixed, flagged since s497) remain in the current tied-at-40 tier; ~135 other distinct locations remain unaudited/unfixed overall. Full derivation: `docs/PROJECT-OVERVIEW.md` §21, `docs/CURRENT-TRUTH.md` items -317/-318/-319, this session's `scratch/agent/NEXT.md`.
+
+## Session 504 (2026-08-08): MAINTENANCE iteration -- CURRENT-TRUTH.md compaction (65,633 -> 47,371 bytes, 204 net lines removed), plus folded in the two queued R2E/R2F 2nd confirms and caught a documentation-consistency error in item -318's register-correlation reading
+
+Step 0 of ITERATION.md triggered: `wc -c < docs/CURRENT-TRUTH.md` read 65,633 bytes, over the 60,000-byte
+maintenance threshold. Per the standing contract this made the WHOLE iteration a maintenance pass -- no
+new experiment was run.
+
+**What moved**: migrated the full s493-503 item -317 step-3 fix-campaign narrative (the 8-guard
+`EMIT_FRAME_RDP_INIT_DL_R2*`/`NODE_LIST_HEAD_SIBLING_R4`/`RENDER_LIT_MESH_R2` play-by-play, previously
+~130 lines of session-by-session detail duplicating what PORTING-STATE.md already has verbatim) into a
+new `docs/PROJECT-OVERVIEW.md` §22, condensed to a table + summary. Compacted CURRENT-TRUTH's own copy
+of that lineage (items -312..-317's headline paragraph, and item -317's body) down to current-status-only
+text: what's closed, what's pending, the tied-40 tier for the next pick, pointer to §22. Rewrapped several
+already-terse historical items (-20, -11..-6) from multi-line to single-line to cut vertical space without
+losing content. Net: 204 lines removed from CURRENT-TRUTH.md (git diff --numstat: -304/+100), file now
+47,371 bytes -- under the 60,000-byte trigger and closer to the 35 KB stretch target than any pass since
+s492.
+
+**Folded in the two queued 2nd confirms while reading for accuracy** (both were sitting in
+`scratch/agent/SOAK-RESULTS.md` un-read since s502/s503, needed to write an accurate current-status
+summary): `s502_emit_frame_rdp_init_dl_r2e_confirm` -- CLEAN, 0 fires on the R2E guard, 0 regressions
+(only the established benign init-time co-fire signature on unrelated guards), crashed at ~122s on
+`buildPositionAndCallTransformHelper+1736` (already-catalogued near-`0x80000000`-RDRAM family, unrelated).
+`s503_emit_frame_rdp_init_dl_r2f_confirm` -- CLEAN, 0 fires on the R2F guard, 0 regressions, crashed at
+~115s on `submitSceneNodeRender+67668`/`last-guest-pc=0x80010e6c` -- same function as item -318 but a
+DIFFERENT guest PC from item -318's `0x800109b8` signature, so filed as a 4th data point for that thread,
+NOT a 4th confirmed occurrence of the specific 3x-recurring signature. **Both R2E and R2F are now FULLY
+CLOSED 2/2** -- all 8 step-3 leads fixed so far are fully closed.
+
+**Documentation-consistency catch, item -318's register-correlation half**: while re-reading item -318's
+full body to compact it, cross-referenced its s503 "new correlation" claim (crash's `x0`=`x9`=
+`0x0000000300000000`, read as linking it to the separate `initVec4TripletFromArgs+68` family) against
+CURRENT-TRUTH's own overturned-conclusions section, s216-218->s219: that entry already resolved this exact
+question once -- `0x0000000300000000` in `x0`/`x8` is the process's constant RDRAM host base pointer,
+present by construction in every `MEM_W`-macro-involved fault, not written corruption. This session's own
+R2E/R2F confirm crashes (folded in above) add two more data points supporting the same reading: the value
+showed up in `x8` (R2E confirm) and `x11` (R2F confirm) -- a THIRD and FOURTH distinct register pairing
+across four total sightings, not a consistent x0/x9 pair. A value landing in whatever register happens to
+be live at crash time, rather than a fixed register pair, is far more consistent with "common background
+constant dumped incidentally" than "one corrupted value propagating from a single root cause." Updated item
+-318's CURRENT-TRUTH text to flag this as a likely false lead and recommend skipping the cross-family
+register-correlation angle if the item is picked up -- the `appendRdpStateDl+144`/
+`last-guest-pc=0x800109b8` exact-signature 3x recurrence itself is unaffected and still the top-priority
+next M3 thread; only the "shares a root cause with `initVec4TripletFromArgs+68`" sub-claim is now flagged
+doubtful. No code change from this catch, purely a ledger-accuracy correction (boring-first: the discriminator
+was already sitting in the same file).
+
+**No experiment run, per the maintenance-iteration rule.** `docs/PROJECT-OVERVIEW.md` §22 is the new
+durable-detail home for the step-3 campaign; CURRENT-TRUTH items -317/-318/-319 hold current status only.
+Full diff: this commit.

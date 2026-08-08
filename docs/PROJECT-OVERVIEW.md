@@ -1884,3 +1884,56 @@ of known-benign sites) before trusting its output at scale. Alternative: wait fo
 surface organically via a soak crash, as -316→-317 and -317 step 2 both did.
 
 Full session-by-session raw detail: `PORTING-STATE.md` Sessions 488–492.
+
+## 22. Item -317 step 3: the blanket-sweep tool audit and 8-guard fix campaign (s493–503), migrated
+from CURRENT-TRUTH.md s503 maintenance pass
+
+**s493/494**: built `scratch/agent/s494_item317_step3_tracer.py`, a forward taint-propagation
+dataflow analysis (handles 2nd-generation derived pointers, unlike a naive textual-proximity
+classifier) to sweep the `ctx->rL = MEM_W(ctx->rL, 0x63B0)`-shaped reload idiom across
+`funcs_3.c`/`funcs_4.c`. Found ~448 raw reload sites deduping to ~150 distinct candidate guard
+placements across 30 functions (390 `NEEDS_GUARD` / 58 `SAFE_NO_DEREF`). A subagent audit of an 8-site
+sample confirmed 8/8 `TRUE_POSITIVE`, 0 false positives, clearing the tool for scale use.
+
+**s495-503 fix campaign, 8 leads fixed, all same shape**: a null check (`ctx->r2 == 0`) gates the null
+arm (a separate harmless write, then goto away), but the non-null fallthrough has no
+`0x80000000`-`0x80800000` range check before the dereference; downstream control flow falls into a
+shared label that reassigns the register from a table again before any further use, so
+skip-the-write-on-invalid is a safe fix. All 8, in fix order:
+
+| Guard | Session | Site | Shared sites | 2nd confirm |
+|---|---|---|---|---|
+| `NODE_LIST_HEAD_SIBLING_R4_GUARD` | s495 | `funcs_4.c`, `submitSceneNodeRender` | 35 | CLOSED 2/2 |
+| `RENDER_LIT_MESH_R2_GUARD` | s496 | `funcs_4.c`, `renderLitMeshFaceGroup` | 48 (largest) | CLOSED 2/2 |
+| `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` | s497 | `funcs_3.c:6979`, `emitFrameRdpInitDl` | 40 | CLOSED 2/2 |
+| `..._R2B_GUARD` | s498 | `funcs_3.c:7963` | 40 | CLOSED 2/2 |
+| `..._R2C_GUARD` | s500 | `funcs_3.c:5695` | 40 | CLOSED 2/2 (s503) |
+| `..._R2D_GUARD` | s501 | `funcs_3.c:6014` | 40 | CLOSED 2/2 (s503) |
+| `..._R2E_GUARD` | s502 | `funcs_3.c:6347` | 40 | CLOSED 2/2 (s504, folded from queue) |
+| `..._R2F_GUARD` | s503 | `funcs_3.c:6670` | 40 | CLOSED 2/2 (s504, folded from queue) |
+
+All 8 fixes' 1st live-verify showed 0 fires on the new guard itself (rare path, expected null result)
+and 0 regressions across the growing set of sibling guard families. Every 2nd confirm crash landed on
+an unrelated, already-catalogued signature (`tickWrappingTimerAccumulatorList` div-by-zero,
+`buildPositionAndCallTransformHelper` near-`0x80000000`-RDRAM decompose, `coalesceFreeHeapBlocks`
+heap-walker misattribution, or the item -318/-319 threads below) — none regressed the fix itself.
+Per-hit tracer re-`--scan` after each fix confirms the fixed line leaves the unsafe-hit set; line
+numbers drift downstream by the inserted guard block's line count each time (precedent: s496 +13,
+s498 +13, s500/s501 no drift, s502 +13, s503 +13 — re-derive fresh every session, never trust a stale
+line number).
+
+**Two crash threads surfaced as a side effect of these live-verifies, not chased in-band (per the
+no-reactive-single-crash-chases rule) — see `docs/CURRENT-TRUTH.md` items -318/-319 for their live
+status**: `appendRdpStateDl+144`/`last-guest-pc=0x800109b8` recurred 3 independent times (s498, s501,
+s503) with a corroborating guard-fire chain tracing the true call site into `submitSceneNodeRender`,
+and its 3rd occurrence added a register-corruption correlation (`x0`/`x9`=`0x0000000300000000`) to
+the separately-catalogued `initVec4TripletFromArgs+68` family (items -302/-306) — open, unresolved.
+`beginFrameDLChunk+40536` fired once (s503), single data point, watching for recurrence.
+
+**~135 other distinct locations remain unaudited/unfixed** as of s503's post-fix dedup. Current
+tied-at-40 tier: `funcs_3.c:7384/8344/7700/8688` (all `emitFrameRdpInitDl`) plus `funcs_4.c:17346`
+(`renderLitMeshFaceGroup`, flagged since s497, unfixed 7+ sessions running). Next-ranked leads from
+s495's original sample (re-derive fresh, do not trust stale line numbers): `funcs_4.c:3299`-ish (26
+sites), `funcs_3.c:28922`-ish (18 sites), then two singletons at `funcs_3.c:83`/`funcs_3.c:858`.
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 493–503.
