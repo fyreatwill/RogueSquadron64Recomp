@@ -15,10 +15,10 @@ Priority order for upcoming iterations, set after the 300-session review:
    the Regeneration section's Standing warnings stay intact deliberately; both are used every
    iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
-   §10-§12). Next M5 work needs a genuinely new lead (**last checked s499 — grepped sessions 495-498
-   for audio/MusyX/voice/song mentions; the only hit was a stale citation of the already-closed
-   `m5-audio-destub-tickwrap-divzero-craftselect` thread inside s497's own crash write-up, not a new
-   lead — no new lead found, cadence reset to s499, due again once 3+ sessions have passed**).
+   §10-§12). Next M5 work needs a genuinely new lead (**last checked s502 — grepped sessions 500-501
+   (the 3 sessions since the s499 check) for audio/MusyX/voice/song/sound/sfx mentions in
+   PORTING-STATE.md; zero hits — no new lead found, cadence reset to s502, due again once 3+ sessions
+   have passed**).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Every bucket
@@ -67,8 +67,26 @@ Priority order for upcoming iterations, set after the 300-session review:
    `bad_*=0x00000000`, i.e. this session is the first with a non-trivial corrupted value). Net: item
    -306 is superseded as the working theory — see item -318 below (new item, filed not chased, top of
    next-targets). **Six step-3 leads fixed total (four fully closed 2/2, R2C and R2D each pending
-   their 2nd confirm).** ~137 locations remain — see Next steps item -317 below. Ranked-list fix pass
-   continues next session (`funcs_3.c:6347` next, per s501's fresh post-fix dedup).**
+   their 2nd confirm)** as of s501. **s502 fixed a 7th lead, `EMIT_FRAME_RDP_INIT_DL_R2E_GUARD`**
+   (`funcs_3.c:6347`, `emitFrameRdpInitDl`, 40 shared sites — no drift, matched NEXT.md exactly). This
+   session also ran the independently-due M5 audio-lead cadence check (last checked s499, due again
+   after 3+ sessions): a fresh grep of sessions 500-501 for audio/MusyX/voice/song mentions found zero
+   hits, cadence reset to s502. Note: NEXT.md going into this session described the OLD iron-rule-8
+   counter (any 3 consecutive iterations on one slug force a pivot); mid-session, `git status` surfaced
+   that `tools/agent/loop.sh`/`stop_gate.sh`/`ITERATION.md` already carried an uncommitted fix (not
+   made by this session) making the counter outcome-blind-corrected — a gate-validated ADVANCED
+   iteration now resets it, so s500/s501's ADVANCED results meant no pivot was actually mandated this
+   session; the M5 check was done because its own cadence was due, not because of a forced pivot. 1st
+   live-verify was the CLEANEST result in this lineage yet: 0 fires on the
+   new guard, 0 regressions across ~46 armed sibling guard families, only one benign pre-existing
+   `hangarmenu-a0-guard` fire (item -265, unrelated), `hangarbay-entry` n=35 positive control, and the
+   full 250s scheduled duration completed with **no crash at all** (98 frames captured, rc=0) — same
+   clean-pass class as s495/s496's verifies. 2nd confirm queued
+   (`scratch/agent/soak_queue/s502_emit_frame_rdp_init_dl_r2e_confirm.sh`). **Seven step-3 leads fixed
+   total (four fully closed 2/2, R2C/R2D/R2E each pending their 2nd confirm).** ~136 locations remain
+   — see Next steps item -317 below. Ranked-list fix pass continues next session (`funcs_3.c:6670`
+   next, per s502's fresh post-fix dedup — the old tied-40 tier shifted +13 lines again from the R2E
+   guard insertion, same drift magnitude as every prior fix in this function).
 
 -312..-317. **(s481-492) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`
     "grep-verified unique site" lineage — six items, all fully CLOSED except -317 step 3** (open scope
@@ -229,10 +247,10 @@ a range pointer. Highest allocated so far: -318. The next NEW item takes -319.
     `ctx` register state left by `submitSceneNodeRender`'s preceding corrupted-pointer guard chain is
     what `appendRdpStateDl` ends up reading. Full derivation: `PORTING-STATE.md` Session 501.
 
--317. **(s490-501) `HEAP_DEQUEUE_DERIVED_PTR_GUARD` + `ORIENTED_FACE_DERIVED_PTR_GUARD` +
+-317. **(s490-502) `HEAP_DEQUEUE_DERIVED_PTR_GUARD` + `ORIENTED_FACE_DERIVED_PTR_GUARD` +
     `NODE_LIST_HEAD_SIBLING_R4_GUARD` + `RENDER_LIT_MESH_R2_GUARD` + `EMIT_FRAME_RDP_INIT_DL_R2_GUARD` +
     `EMIT_FRAME_RDP_INIT_DL_R2B_GUARD` + `EMIT_FRAME_RDP_INIT_DL_R2C_GUARD` +
-    `EMIT_FRAME_RDP_INIT_DL_R2D_GUARD`, 5th-12th lineage instances
+    `EMIT_FRAME_RDP_INIT_DL_R2D_GUARD` + `EMIT_FRAME_RDP_INIT_DL_R2E_GUARD`, 5th-13th lineage instances
     on a DERIVED pointer, plus a methodology lesson (validate the dereferenced register, never an
     upstream proxy — s490's first attempt validated the wrong one and false-positived 660,261 times
     before live-verify caught it).**
@@ -288,16 +306,37 @@ a range pointer. Highest allocated so far: -318. The next NEW item takes -319.
     by the inserted block) no longer appears as an unsafe hit. **2nd confirm queued**:
     `scratch/agent/soak_queue/s501_emit_frame_rdp_init_dl_r2d_confirm.sh`.
     **Six step-3 leads fixed total (four fully closed 2/2, R2C and R2D each pending their 2nd
+    confirm)** as of s501. **s502 fixed a 7th step-3 lead, `EMIT_FRAME_RDP_INIT_DL_R2E_GUARD`**
+    (`funcs_3.c:6347`, `emitFrameRdpInitDl`, 40 shared sites — no drift, matched NEXT.md's recorded
+    tied-at-40 tier exactly; this session also ran the independently-due M5 cadence check, a fresh
+    grep of sessions 500-501 finding zero new audio-related leads, cadence reset to s502 — see the
+    correction note in the item -317 headline above re: iron rule 8 now being outcome-blind-corrected,
+    so no pivot was actually mandated this session despite the 3-session streak). Same
+    shape as R2/R2B/R2C/R2D: null check (`ctx->r2 == 0`) gates the null arm (separate harmless write,
+    then goto away from this write), non-null fallthrough has no `0x80000000`-`0x80800000` range check
+    before the dereference; downstream falls into the shared label, which touches `ctx->r1`/`ctx->r4`
+    then reassigns `ctx->r2` from the table again (feeding the pre-existing `GENERIC_CACHE_GUARD` and
+    `FREELIST_NEXT_GUARD`) before any further use, so skip-the-write-on-invalid is safe. Build-verified
+    clean through the full pipeline (patched x1, no anchor mismatches beyond the known-permanent
+    S392_H3A/S393_H3B remainder). **1st live-verify was the cleanest result in this lineage yet**: 0
+    fires on the new guard, 0 regressions across ~46 armed sibling guard families, one benign
+    pre-existing `hangarmenu-a0-guard` fire (item -265, unrelated, `n=0` signature), `hangarbay-entry`
+    n=35 positive control, and the full 250s scheduled duration completed with **no crash of any kind**
+    (98 frames captured, rc=0) — same clean-pass class as s495/s496's verifies, so there was no new or
+    recurring crash signature to file this session. Post-fix per-hit query on a fresh `--scan` confirms
+    the fixed line (shifted 6347→6360 by the inserted guard block) no longer appears as an unsafe hit.
+    **2nd confirm queued**: `scratch/agent/soak_queue/s502_emit_frame_rdp_init_dl_r2e_confirm.sh`.
+    **Seven step-3 leads fixed total (four fully closed 2/2, R2C/R2D/R2E each pending their 2nd
     confirm).**
-    **~137 other distinct locations remain unaudited/unfixed.** s501's fresh post-fix dedup surfaced
-    the current tied-at-40 tier (shifted +13 lines by the R2D guard insertion):
-    `funcs_3.c:6347/6657/7358/8318/7674/8662` (all `emitFrameRdpInitDl`) plus `funcs_4.c:17346`
-    (`renderLitMeshFaceGroup`, still unfixed, flagged since s497). Next-ranked leads from s495's
-    original sample (re-derive line numbers fresh, do not trust stale ones — line drift precedent:
-    s496 caught 13 lines, s498 caught another 13, s500/s501 caught none, the check itself is the
-    rule): `funcs_4.c:3299`-ish 26 sites, `funcs_3.c:28922`-ish 18 sites, then two singletons at
-    `funcs_3.c:83`/`funcs_3.c:858`. Full derivation: `docs/PROJECT-OVERVIEW.md` §21, `PORTING-STATE.md`
-    Sessions 490-501.
+    **~136 other distinct locations remain unaudited/unfixed.** s502's fresh post-fix dedup surfaced
+    the current tied-at-40 tier (shifted +13 lines again by the R2E guard insertion, same magnitude as
+    every prior fix in this function): `funcs_3.c:6670/7371/8331/7687/8675` (all `emitFrameRdpInitDl`)
+    plus `funcs_4.c:17346` (`renderLitMeshFaceGroup`, still unfixed, flagged since s497). Recommended
+    next pick: `funcs_3.c:6670`. Next-ranked leads from s495's original sample (re-derive line numbers
+    fresh, do not trust stale ones — line drift precedent: s496 caught 13 lines, s498 caught another
+    13, s500/s501 caught none, s502 caught 13 again, the check itself is the rule): `funcs_4.c:3299`-ish
+    26 sites, `funcs_3.c:28922`-ish 18 sites, then two singletons at `funcs_3.c:83`/`funcs_3.c:858`.
+    Full derivation: `docs/PROJECT-OVERVIEW.md` §21, `PORTING-STATE.md` Sessions 490-502.
 
 -316. **(s488 scan → s489 FIXED → s490 2nd confirm clean) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED,
     2/2.** A scope gap in the existing s436 `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`,

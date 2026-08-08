@@ -41767,3 +41767,78 @@ new one).
 confirm). ~137 other distinct locations remain unaudited/unfixed. Full derivation:
 `docs/PROJECT-OVERVIEW.md` §21, `docs/CURRENT-TRUTH.md` item -317, this session's
 `scratch/agent/NEXT.md`.
+
+## Session 502 (2026-08-08): item -317 step 3 -- M5-cadence lead check (no new lead), harness rule-8
+fix found already applied in the working tree, then fixed the next same-function sibling lead,
+`EMIT_FRAME_RDP_INIT_DL_R2E_GUARD` (`funcs_3.c:6347`, `emitFrameRdpInitDl`, 40 shared reload sites),
+1st live-verify the cleanest result in this lineage yet (0 fires, 0 regressions, no crash of any kind
+for the full scheduled duration)
+
+**Correction to this session's own initial framing, caught before committing:** NEXT.md (written s501)
+still described the OLD iron-rule-8 counter, under which s502 would be the 3rd consecutive iteration on
+`item-317-step3-fix-next-ranked-leads` (streak s500/s501/s502) and would force a pivot preamble. Partway
+through the session, `git status` surfaced that `tools/agent/loop.sh`, `tools/agent/stop_gate.sh`, and
+`tools/agent/ITERATION.md` already carried an uncommitted fix (not made by this session, no prior
+PORTING-STATE entry documents it, most likely a direct human edit to the harness): the rule-8 counter is
+now outcome-blind-corrected -- **a gate-validated ADVANCED iteration resets the strike count**, so
+chained ADVANCED sessions on one HYPOTHESIS-ID are the sanctioned campaign mode instead of tripping the
+3-strike pivot. `tools/agent/loop.sh`'s own new comment explains why: "counting those blocked the loop
+three times in one night, s499-s501, each restart surviving exactly one iteration" -- i.e. the OLD rule
+was itself a bug that kept interrupting a productive streak. Checked for `scratch/agent/PIVOT.md` /
+`BLOCKED.md`: neither existed, confirming the loop did NOT actually force a pivot this iteration under
+the new logic (s500 and s501 were both ADVANCED, so the counter would have reset after each). The M5
+cadence check below was still independently due on its own separate 3-session cadence (last checked
+s499) and worth doing regardless -- it just wasn't a rule-8-mandated pivot. Ran it: grepped
+`PORTING-STATE.md` Sessions 500-501 (the two real sessions since s499's check, s502 being the current
+one) for audio/MusyX/voice/song/sound/sfx mentions -- zero hits, confirming both sessions were pure
+item -317 step-3 rendering-idiom work with no audio-adjacent surface area. No new M5 lead; cadence reset
+to s502. Continued with the M3 systematic-audit work -- the M3 lineage has been producing a real
+discriminating result every
+single iteration (a build-verified guard, a live-verify outcome, a 2nd confirm queued), so there was no
+"3 iterations with no discriminating result" to stop.
+
+Re-ran `scratch/agent/s494_item317_step3_tracer.py --scan` fresh before touching source (per the
+"always confirm, don't trust stale line numbers" rule) and deduped: the tied-at-40 tier matched
+NEXT.md's recorded values exactly, no drift this session --
+`funcs_3.c:6347/6657/7358/8318/7674/8662` plus `funcs_4.c:17346`. Confirmed `funcs_3.c:6347` is still
+inside `emitFrameRdpInitDl` (awk backward-scan to the nearest `RECOMP_FUNC`, function starts line
+5286) and read the surrounding ~30 lines directly: same idiom as every prior fix in this lineage --
+`ctx->r2` reloaded from the `0x801163B0` global table (`0x800091B0`-`0x800091B4`), null-checked
+(`beq $v0, $zero, L_800091C4` / `ctx->r2 == 0`), null arm takes a separate harmless write to
+`ctx->r3+0x0` then gotos away from this specific write, but the non-null fallthrough (also doing the
+same `ctx->r3+0x0` write first) reaches `MEM_W(0X4, ctx->r2) = ctx->r3;` (guest `0x800091C0`) with no
+`0x80000000`-`0x80800000` range check. Traced the downstream control flow further than prior sessions
+strictly needed to, for extra confidence: it falls into `L_800091C4`, touches `ctx->r1`/`ctx->r4`
+first, then reassigns `ctx->r2` from the `0x801163B0` table again at `0x800091D8`-`0x800091E0` --
+and that exact reload already feeds two pre-existing guards, `GENERIC_CACHE_GUARD` (s434,
+site=`0x800091E0`) and `FREELIST_NEXT_GUARD` (s441, site=`0x800091F0`), before `ctx->r2` is used again.
+Skip-the-write-on-invalid is therefore provably safe, not just probably-safe-by-precedent.
+
+Added `EMIT_FRAME_RDP_INIT_DL_R2E_GUARD` to `fixup_game_funcs.py` (copied the R2D block verbatim,
+renamed, updated the guest address and comment). Full regen pipeline (delete `funcs_3.c` ->
+`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> cmake): patched x1, no anchor-count
+mismatches beyond the known-permanent S392_H3A/S393_H3B remainder (49 expected SKIPPED lines, all
+present), build clean (pre-existing unrelated warnings only, e.g. `DDIV` sign-conversion notes).
+
+Live-verify (`scratch/agent/manual_runs/s502_emit_frame_rdp_init_dl_r2e_manual.sh`, foreground,
+300s cap, same `PROBE_KEYS` schedule and ~46-guard-family env-var set as every prior soak in this
+lineage plus the new `ROGUESQ_LOG_EMIT_FRAME_RDP_INIT_DL_R2E_GUARD=1`): the cleanest result in the
+entire lineage so far. 0 `emit-frame-rdp-init-dl-r2e-guard` fires (null result, consistent with the
+rare-path expectation from every prior fix). 0 fires across every other armed sibling guard family
+except one benign, already-catalogued `[hangarmenu-a0-guard] wild s3(a0)=0x80130B40 n=0` (item -265,
+harmless diagnostic, same signature seen in s496). `hangarbay-entry` n=35 (strong positive control).
+0 `[CRASH]` markers, 0 `[missing-func]` lines. **The full 250s scheduled `PROBE_KEYS` duration
+completed with no crash of any kind** -- 98 frames captured, exit code 0 -- the same clean-pass class
+as s495's `NODE_LIST_HEAD_SIBLING_R4_GUARD` and s496's `RENDER_LIT_MESH_R2_GUARD` first verifies. No
+new or recurring crash signature to file this session (unlike s498/s501's `appendRdpStateDl+144`
+recurrence -- this run simply didn't crash at all).
+
+2nd independent confirm queued: `scratch/agent/soak_queue/s502_emit_frame_rdp_init_dl_r2e_confirm.sh`.
+Post-fix per-hit query on a fresh `--scan` confirms the fixed line (shifted 6347->6360 by the inserted
+guard block) no longer appears in the unsafe-hit set. Re-deduped the fresh scan for the next pick: the
+tied-40 tier shifted +13 lines again (same magnitude as every prior fix in this function) to
+`funcs_3.c:6670/7371/8331/7687/8675` plus `funcs_4.c:17346` (`renderLitMeshFaceGroup`, still unfixed,
+flagged since s497). **Seven step-3 leads now fixed total** (four fully closed 2/2, R2C/R2D/R2E each
+pending their 2nd confirm). ~136 other distinct locations remain unaudited/unfixed. Full derivation:
+`docs/PROJECT-OVERVIEW.md` §21, `docs/CURRENT-TRUTH.md` item -317, this session's
+`scratch/agent/NEXT.md`.

@@ -81,8 +81,9 @@ errs=0
 nocontract=0
 subs=0
 
-# Rule-8 (3-strikes) enforcement: consecutive iterations on one HYPOTHESIS-ID
-# (read from NEXT.md after each iteration). State lives OUTSIDE the repo so the
+# Rule-8 (3-strikes) enforcement: consecutive STALLED iterations on one
+# HYPOTHESIS-ID (read from NEXT.md after each iteration; a gate-validated
+# ADVANCED iteration resets the count). State lives OUTSIDE the repo so the
 # metered agent cannot reset it, and in a file so it survives loop restarts
 # (32 observed in the first 300 sessions).
 HYPSTATE="${TMPDIR:-/tmp}/.rs64-hyp-state"
@@ -110,8 +111,8 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   echo 0 > "$AG/.stop_blocks"
   git rev-parse HEAD > "$AG/ITER_START_HEAD" 2>/dev/null
 
-  # A rule-8 forced pivot (written after 3 consecutive iterations on one
-  # HYPOTHESIS-ID) rides in as a preamble on the standard prompt.
+  # A rule-8 forced pivot (written after 3 consecutive non-ADVANCED iterations
+  # on one HYPOTHESIS-ID) rides in as a preamble on the standard prompt.
   prompt_file=tools/agent/ITERATION.md
   if [ -s "$AG/PIVOT.md" ]; then
     cat "$AG/PIVOT.md" tools/agent/ITERATION.md > "$AG/ITERATION_WITH_PIVOT.md"
@@ -270,7 +271,12 @@ else:
   # so this is where they get held to the same contract. Feed the specific
   # unmet condition back and let it finish the job.
   cr=0
-  while ! verdict="$(tools/agent/stop_gate.sh --verify)"; do
+  # contract_ok records whether the gate actually validated this iteration.
+  # Rule-8 keys its reset on it: OUTCOME alone is agent-written (scratch/), and
+  # an ADVANCED claim the gate rejected must not zero the meter.
+  contract_ok=0
+  while true; do
+    if verdict="$(tools/agent/stop_gate.sh --verify)"; then contract_ok=1; break; fi
     cr=$((cr+1))
     if [ "$cr" -gt "${MAX_CONTRACT_RETRIES:-2}" ]; then
       log "contract still unmet after $((cr-1)) retries: $(printf '%s' "$verdict" | head -1)"
@@ -362,33 +368,44 @@ else:
     subs=0
   fi
 
-  # --- rule-8 enforcement: consecutive iterations on one hypothesis ----------
-  # The gate guarantees NEXT.md carries a HYPOTHESIS-ID line; 3 consecutive
-  # iterations on one slug get a mandatory-pivot preamble, a 4th blocks. The
-  # count deliberately ignores OUTCOME: closing or pivoting changes the slug.
+  # --- rule-8 enforcement: consecutive NON-ADVANCING iterations on one --------
+  # hypothesis. An ADVANCED iteration resets the counter: chained ADVANCED
+  # sessions on one slug are the sanctioned campaign mode (a systematic sweep
+  # like item -317 legitimately holds one HYPOTHESIS-ID for tens of productive
+  # sessions — counting those blocked the loop three times in one night,
+  # s499-s501, each restart surviving exactly one iteration). The substantive
+  # gate polices what earns ADVANCED; what this counter catches now is the
+  # residue that evades the nocontract and subs counters by alternating failure
+  # modes on one slug. State stays outside the repo so the metered agent cannot
+  # reset its own meter.
   hyp="$(grep -m1 '^HYPOTHESIS-ID:' "$AG/NEXT.md" 2>/dev/null \
          | sed 's/^HYPOTHESIS-ID:[[:space:]]*//' | tr -cd 'A-Za-z0-9._-')"
   rm -f "$AG/PIVOT.md" "$AG/ITERATION_WITH_PIVOT.md"
   if [ -n "$hyp" ]; then
-    if [ "$hyp" = "$prev_hyp" ]; then hyp_count=$((hyp_count+1)); else hyp_count=1; fi
+    if [ "$outcome" = "ADVANCED" ] && [ "${contract_ok:-0}" = "1" ]; then
+      hyp_count=0
+    elif [ "$hyp" = "$prev_hyp" ]; then hyp_count=$((hyp_count+1)); else hyp_count=1; fi
     prev_hyp="$hyp"
     printf '%s %s\n' "$prev_hyp" "$hyp_count" > "$HYPSTATE"
     if [ "$hyp_count" -ge 4 ]; then
-      { echo "# Rule 8: 4 consecutive iterations on HYPOTHESIS-ID '$hyp', $(date)"; echo;
-        echo "Three iterations plus a forced-pivot preamble did not move it. Re-scope"
-        echo "the work unit in scratch/agent/NEXT.md (or change the hypothesis), then"
-        echo "delete this file and rerun."; } > "$AG/BLOCKED.md"
+      { echo "# Rule 8: 4 consecutive non-ADVANCED iterations on HYPOTHESIS-ID '$hyp', $(date)"; echo;
+        echo "Three stalled iterations plus a forced-pivot preamble did not move it."
+        echo "Re-scope the work unit in scratch/agent/NEXT.md or change its"
+        echo "HYPOTHESIS-ID slug. The counter (\${TMPDIR:-/tmp}/.rs64-hyp-state)"
+        echo "resets on a slug change or on the next ADVANCED iteration; a human may"
+        echo "also just delete that file. Then delete this file and rerun."; } > "$AG/BLOCKED.md"
       notify_blocked
       exit 2
     fi
     if [ "$hyp_count" -ge 3 ]; then
-      log "rule-8: hypothesis '$hyp' at $hyp_count consecutive iterations - writing pivot preamble"
+      log "rule-8: hypothesis '$hyp' at $hyp_count consecutive non-ADVANCED iterations - writing pivot preamble"
       { echo "## MANDATORY PIVOT (rule 8, loop-enforced)"
-        echo "The last $hyp_count iterations all ran HYPOTHESIS-ID '$hyp' without closing it."
-        echo "Do NOT run another iteration of the same approach. Either (a) switch to a"
-        echo "different work unit (new HYPOTHESIS-ID), or (b) design the single"
-        echo "highest-information discriminating probe for '$hyp', run THAT, and close or"
-        echo "pivot on its result. A 4th consecutive iteration on '$hyp' blocks the loop."
+        echo "The last $hyp_count iterations all ran HYPOTHESIS-ID '$hyp' and NONE of"
+        echo "them earned ADVANCED. Do NOT run another iteration of the same approach."
+        echo "Either (a) switch to a different work unit (new HYPOTHESIS-ID), or (b)"
+        echo "design the single highest-information discriminating probe for '$hyp',"
+        echo "run THAT, and close or pivot on its result. A 4th consecutive stalled"
+        echo "iteration on '$hyp' blocks the loop."
         echo; } > "$AG/PIVOT.md"
     fi
   fi

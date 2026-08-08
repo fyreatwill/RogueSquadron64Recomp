@@ -1033,6 +1033,8 @@ Live-verify: 3rd clean run, but this time with the missing control — `updateHa
 **~2900+ calls** in the single run, the first confirmation the function is a hot, constantly-executing
 path during exactly the schedule that keeps not reproducing item -263. Confirmation soak queued; a 3rd
 consecutive clean result there would hit iron rule 8's 3-strike budget on this hypothesis thread.
+*(Historical note: true under the outcome-blind rule-8 counter in force at s440; since the 2026-08-08
+harness change, only non-ADVANCED iterations count toward the strike budget.)*
 
 **s441: three results in one session.** (1) Consuming s440's queued confirm soak crashed
 (`last-guest-pc=0x8000CE40`, `si_addr=0x38076a804`, the item -263 near-zero-pointer family) — but

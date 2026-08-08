@@ -134,8 +134,11 @@ Before you may stop, ALL of:
    unit, exact commands, expected discriminating outcomes — and a line
    `HYPOTHESIS-ID: <slug>` naming the active investigation thread. Keep the
    slug while pursuing the same hypothesis; change it when you pivot or close
-   it. The loop enforces iron rule 8 with it: 3 consecutive iterations on one
-   slug force a pivot preamble, a 4th blocks the loop.
+   it. A long systematic sweep (one ranked list, one lead per session) keeps
+   ONE slug for the whole campaign — do not rename it per lead. The loop
+   enforces iron rule 8 with it: an ADVANCED iteration resets the counter, so
+   only stalled runs count — 3 consecutive non-ADVANCED iterations on one slug
+   force a pivot preamble, a 4th blocks the loop.
 4. git add -A && git commit (message: "iter: <one-line finding>").
 5. Write scratch/agent/STATUS: DONE (work unit finished), or BLOCKED (also
    write scratch/agent/BLOCKED.md: what you need, from whom, and what you

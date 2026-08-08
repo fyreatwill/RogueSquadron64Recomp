@@ -122,9 +122,10 @@ if [ -f "$AG/ITER_START_MARK" ] && [ "$AG/NEXT.md" -ot "$AG/ITER_START_MARK" ]; 
   block "Exit contract unmet: scratch/agent/NEXT.md predates this iteration. Rewrite it now: the single next work unit, exact commands, expected discriminating outcomes, and its 'HYPOTHESIS-ID: <slug>' line."
 fi
 # Rule 8 needs machine-readable hypothesis identity: loop.sh counts consecutive
-# iterations per slug and forces a pivot at 3, blocks at 4.
+# non-ADVANCED iterations per slug (a gate-validated ADVANCED resets the count)
+# and forces a pivot at 3, blocks at 4.
 grep -q '^HYPOTHESIS-ID:' "$AG/NEXT.md" 2>/dev/null \
-  || block "Exit contract unmet: scratch/agent/NEXT.md has no 'HYPOTHESIS-ID: <slug>' line. Add one naming the active investigation thread — keep the slug while pursuing the same hypothesis, change it when you pivot. The loop enforces iron rule 8 (3-strikes) with it."
+  || block "Exit contract unmet: scratch/agent/NEXT.md has no 'HYPOTHESIS-ID: <slug>' line. Add one naming the active investigation thread — keep the slug while pursuing the same hypothesis (a systematic sweep keeps ONE slug for its whole campaign; ADVANCED iterations reset the strike count), change it when you pivot or close it. The loop enforces iron rule 8 (3 strikes on stalled iterations) with it."
 
 # --- OUTCOME: distinguish progress from ledger churn -------------------------
 # Sessions 51-59 satisfied every other condition here while advancing nothing:
