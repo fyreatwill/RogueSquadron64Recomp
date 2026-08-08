@@ -40597,3 +40597,56 @@ Rules obeyed: read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, and
 session — pure static analysis); the soak-result fold-in used two independent same-run positive
 controls (`hangarbay-entry` counter, zero-crash full-duration run) before concluding item -314's
 closure.
+
+## Session 489 (2026-08-07): item -316's `-0x5BB4` candidate fixed — a `DL_ALLOC_PROPAGATION_GUARD`
+closing a scope gap in the existing s436 `CACHE_HEAD_A1_GUARD`, same lineage/shape as items
+-312..-315
+
+Followed s488's queued next step: a downstream-consumer trace of the sub-threshold `-0x5BB4` idiom
+candidate (19 read sites, `funcs_3.c`/`funcs_4.c`, same struct family as three already-guarded
+siblings within 0x70 bytes). Delegated the trace to a general-purpose subagent (self-contained
+prompt: grep all sites, direct-read two, trace callers). Result: the single write site
+(`funcs_3.c:4704`, inside `emitAllocatedDLCommand`) is the real gap, not the 19 reads. That function
+already has an s436 `CACHE_HEAD_A1_GUARD` (site=4, 0x80008960) validating `ctx->r5` (a newly linked
+free-list node) before writing the node's own `next` field — but two more statements immediately
+after the guard block are UNCONDITIONAL and still execute even when `ctx->r5` fails the range
+check: `MEM_W(0X0, ctx->r4) = ctx->r5` (0x80008968, publishes the possibly-bad node as the new list
+head) and `MEM_W(-0X5BB4, ctx->r1) = ctx->r3` (0x80008970, `ctx->r3 = ctx->r5+8`, publishes the
+node's data-area pointer into the persistent `-0x5BB4` write-cursor global that all 19 read sites
+reload unguarded). Direct-source read of two read sites (`submitSceneNodeRender`,
+`buildOrientedFaceGeometry`) confirmed real risk in the second: `buildOrientedFaceGeometry`
+(~9832-9858) reloads the cursor, adds a scaled index, and feeds the sum straight into
+`do_swl`/`do_swr` as a raw, unbounded RDRAM address — a corrupted cursor from the propagation gap
+would produce a wild guest-memory write there. Exactly the "guard covers one deref, not the
+propagation" shape as items -312/-313/-314/-315.
+
+Fixed by extending the check rather than adding 19 read-site guards: verified the two unguarded
+statements are the function's last use of `ctx->r4`/`ctx->r5` before its immediate
+stack-restore-and-return tail (read the full function body, `funcs_3.c:3691-4726` — confirmed no
+other code depends on the skipped values in this window, so skipping desyncs nothing later in the
+same call), then wrapped both in a fresh range check on `ctx->r5` (`DL_ALLOC_PROPAGATION_GUARD`,
+`fixup_game_funcs.py`, anchored on the two statements' literal text so it stays independent of
+CACHE_HEAD_A1_GUARD's own per-site loop). Regenerated per the mandatory order
+(`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py`, patch applied x1, no anchor-count
+mismatches anywhere in the report) and build-verified clean (only pre-existing warnings).
+
+Live-verified with the full standing env-var set (every sibling guard armed) plus the new
+`ROGUESQ_LOG_DL_ALLOC_PROPAGATION_GUARD`: 0 fires on the new guard (expected — the corrupting
+condition is presumably rare, same as most guards in this lineage on their first soak), 0 fires on
+any of the ~15 other guard families (no regression), `hangarbay-entry` positive control fired
+(n=31, lower than the usual 2600-3000 because this run was cut short at 113s, but nonzero — confirms
+the instrumentation pipeline was alive). Crashed at 113.2s: `pc-symbol=initVec4TripletFromArgs+68
+(local-symtab)`, `last-guest-pc=0x800ab068` — the exact same `last-guest-pc` value the s463/s468
+crashes carried (filed there as an already-catalogued, unrelated family); the `x0`/`x9`
+`0x0000000300000000` signature in the mcontext dump matches the s216-219 overturned-conclusion note
+(the RDRAM host-base pointer present by construction in every wild `MEM_W` fault, not itself
+diagnostic). Unrelated to this fix, filed not chased. 2nd independent confirm queued
+(`s489_dl_alloc_propagation_confirm.sh`).
+
+Rules obeyed: read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, and
+`scratch/agent/SOAK-RESULTS.md` first; delegated the multi-file read/trace to a subagent rather than
+reading whole files inline; regenerated in the mandatory order and audited the fixup report for
+anchor-count mismatches; edited `~/Documents/Tools/N64Recomp/fixup_game_funcs.py` only (a sibling
+repo's untracked scratch tool, not anything under this repo's `lib/`, so no submodule-patches export
+applies); one game run this session (SIGKILL via `tools/probe.sh`'s own teardown, ROM present in
+`build/`); queued the 2nd confirm instead of re-running it in this same session (loop budget rule).

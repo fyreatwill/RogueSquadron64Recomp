@@ -42,10 +42,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    remain queued — next M3 session should run a fresh from-scratch idiom scan per the s465/s477
    precedent, or check the M5 lead cadence. **s488 ran both**: the idiom scan's >=20-site tier came
    back structurally dry (every large bucket already covered), closing the large-bucket lui+lw/lui+sw
-   idiom-audit method for now — see item -316. One sub-20 candidate (`-0x5BB4`, 19 sites, same struct
-   family as three already-guarded siblings) needs a 2nd source read + downstream trace before it's a
-   guard candidate. The M5 lead-check came back with nothing new (see item 2 above) — cadence reset
-   to s488.
+   idiom-audit method for now — see item -316. The M5 lead-check came back with nothing new (see item
+   2 above) — cadence reset to s488. **s489 resolved item -316's sub-20 `-0x5BB4` candidate into a
+   real fix**: a downstream trace found the actual gap one function upstream of the 19 read sites, in
+   an existing `CACHE_HEAD_A1_GUARD` site that validated one deref but not two propagating writes
+   right after it — same shape as -312..-315, fixed the same way (extend the check), 1st confirm
+   clean (0 fires, unrelated already-catalogued crash), 2nd confirm queued. No fresh idiom-scan
+   candidate remains queued — next M3 session needs either a new frequency-scan angle (both `lui`+`lw`
+   and `lui`+`sw` are now structurally dry at the >=20-site tier) or a wait for a new breadcrumb.
 
 -312..-315. **(s481-487) `DL_LIST_APPEND_GUARD` and `DL_LIST_RESET_GUARD`'s own "grep-verified
     unique site" scope claims both turn out to be wrong, plus `AUDIO_SLOT_ACTIVE_GUARD`'s own
@@ -208,26 +212,26 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -316. The next NEW item takes -317.
 
--316. **(s488) Fresh from-scratch `lui`+`lw` idiom scan (the s465/s477 precedent, refreshed with
-    every offset closed/classified since s465): the >=20-site tier came back STRUCTURALLY DRY — every
-    bucket at that size is already a named guard or an already-classified compare-only/deferred
-    bucket (`scratch_s488_scan.py`, `N64Recomp/`, positive-controlled: it correctly re-finds all 18
-    known covered buckets, from `0x63b0`x448 down to `-0x662c`x1). **This closes the large-bucket
-    lui+lw/lui+sw idiom-audit method (the s465/s477/s481-488 lineage) for now** — no untried
-    high-expected-value >=20-site bucket remains; the lui+sw angle was separately closed s477 (item
-    -309). Lowering the threshold to 10-19 sites surfaced one real candidate worth a follow-up:
-    `hi16=0x8012, offset=-0x5BB4` (19 sites, `funcs_3.c`/`funcs_4.c`) sits inside the same struct
-    family as three already-guarded siblings (`-0x5824` DL_LIST_RESET, `-0x5BBC` MATERIAL_ARRAY_PTR,
-    `-0x5B48` NODE_LIST_HEAD — all within 0x70 bytes of each other), is both READ and WRITTEN
-    (write at `funcs_3.c:4702`), and at one read site (`funcs_4.c:1492-1512`) the raw reloaded value
-    is copied straight into an output struct's field 0x4 with no validation — the same
-    "propagate-an-unvalidated-reload-downstream" shape as the items -312..-315 arc, but only 1/19
-    sites has been read so far (below the lineage's own 2-site confirmation standard). NOT a guard
-    candidate yet — needs a 2nd direct source read and a downstream-consumer trace (does the output
-    struct's field 0x4 ever get dereferenced by a caller?) before proposing a fix. Two other 19-site
-    buckets checked and ruled out as pointers: `hi16=0x8011,offset=-0x35E4` (bitfield/flags test,
-    `& 0x4`, adjacent to the already-classified non-pointer `-0x35E0`) and its sibling family. Full
-    scan output and script: `N64Recomp/scratch_s488_scan.py`.
+-316. **(s488 scan -> s489 FIXED) The sub-threshold `-0x5BB4` candidate resolved into a real fix: a
+    scope gap in the existing s436 `CACHE_HEAD_A1_GUARD`, same "guard covers one deref, not the
+    propagation" shape as items -312..-315.** A downstream-consumer trace (delegated to a subagent)
+    found the real gap wasn't in the 19 read sites but one function upstream, in
+    `emitAllocatedDLCommand` (`funcs_3.c`): its own `CACHE_HEAD_A1_GUARD` site=4 (s436) validates the
+    newly linked node pointer before writing the node's `next` field, but two more statements right
+    after the guard block stayed UNCONDITIONAL — publishing the same possibly-bad node as the new
+    list head, and propagating its data-area pointer into the persistent `-0x5BB4` write-cursor
+    global that all 19 read sites reload unguarded. A direct-source read of `buildOrientedFaceGeometry`
+    (one of the 19 readers) confirmed real risk: it reloads the cursor, adds a scaled index, and feeds
+    the sum straight into `do_swl`/`do_swr` as a raw, unbounded RDRAM address. Fixed by extending the
+    check (`DL_ALLOC_PROPAGATION_GUARD`, `fixup_game_funcs.py`) rather than adding 19 read-site guards
+    — confirmed by reading the whole function body that both newly-guarded statements are its last
+    use of the relevant registers before an immediate stack-restore-and-return tail, so skipping them
+    on a bad pointer desyncs nothing later in the same call. Build-verified, live-verified: 0 fires on
+    the new guard or any of ~15 sibling guard families (no regression), `hangarbay-entry` positive
+    control fired (n=31), crashed at 113.2s on `pc-symbol=initVec4TripletFromArgs+68`,
+    `last-guest-pc=0x800ab068` — the same already-catalogued family as s463/s468's crash, unrelated,
+    filed not chased. 2nd independent confirm queued (`s489_dl_alloc_propagation_confirm.sh`). Full
+    derivation: `PORTING-STATE.md` Session 489.
 
 -311. **(s480) Crash-symbolizer tooling fix — DONE, positive-control validated.** The item -310
     `dladdr`-nearest-exported-symbol blind spot is closed: `src/main/main.cpp` now builds a sorted
