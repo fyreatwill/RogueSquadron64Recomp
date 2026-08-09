@@ -21,14 +21,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    Items -312..-322 (s481-518, the `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage) are
    all fully CLOSED — PROJECT-OVERVIEW §20-§25. **Item -317 freelist WRITE campaign CLOSED s564
    (131/131 + residual walk/attr gaps -341..-345).** **Item -320 FULLY CLOSED 2/2 s566**
-   (safe mini-epilogue; s566 confirm hangarbay n=2600 full 300s + same-run guard2 fires n=0..179
-   on item -346 1st verify). **Item -346 FIXED 1/2 s566** (R6 r3-base gap at `0x8000D6D0`).
+   (safe mini-epilogue). **Item -346 FULLY CLOSED 2/2 s567** (R6 r3-base gap at `0x8000D6D0`;
+   s567 confirm hangarbay n=2700 full 300s rc=0, 0 r6 fires, no 0x8000d6d0 crash).
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s566)
+## Current truth (established by session 295; unchanged, reviewed through s567)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -155,13 +155,13 @@ a range pointer. Highest allocated so far: -347. The next NEW item takes -348.
     `jal transformSceneLights` (same caller-PC-vs-host-offset pattern as item -320). Host fault
     is inside the callee at +2456. Watch for recurrence before source-tracing the callee body.
 
--346. **(s565/s566) `heapFreeListDequeue` residual r3-base write at `0x8000D6D0` — FIXED 1/2
-    (s566).** DIRECT gap before existing `HEAP_FREE_LIST_DEQUEUE_R2_GUARD` site=`0x8000D6D4`: both
-    delay-slot copies of `sw $v0, 0x0($v1)` (`MEM_W(0X0, ctx->r3)=ctx->r2`) were unguarded. Same
-    gap model as -334/-340/-345. New family `HEAP_FREE_LIST_DEQUEUE_R6_GUARD` (env
-    `ROGUESQ_LOG_HEAP_FREE_LIST_DEQUEUE_R6_GUARD`, tag `[heap-free-list-dequeue-r6-guard]`), skip
-    safe. **1st:** hangarbay n=2600, 0 r6 fires (true-negative), no crash at `0x8000d6d0`; crashed
-    at item -347. 2nd confirm queued `soak_queue/s566_item346_r6_confirm.sh`.
+-346. **(s565/s566/s567) `heapFreeListDequeue` residual r3-base write at `0x8000D6D0` — FIXED
+    and FULLY CLOSED 2/2 (s567).** DIRECT gap before existing `HEAP_FREE_LIST_DEQUEUE_R2_GUARD`
+    site=`0x8000D6D4`: both delay-slot copies of `sw $v0, 0x0($v1)` (`MEM_W(0X0, ctx->r3)=ctx->r2`)
+    were unguarded. Same gap model as -334/-340/-345. Family `HEAP_FREE_LIST_DEQUEUE_R6_GUARD`
+    (env `ROGUESQ_LOG_HEAP_FREE_LIST_DEQUEUE_R6_GUARD`). **1st (s566):** hangarbay n=2600, 0 r6
+    fires, no 0x8000d6d0 crash; died on item -347. **2nd (s567 retry after WEAK item-306 discard):**
+    hangarbay n=2700, full ~300s rc=0, 0 r6 fires, 0 CRASH — CLEAN.
 
 -320. **(s508/s565/s566) `loadCutsceneAssetsByIndex+1860`/`last-guest-pc=0x800aafb8` — ROOT-CAUSED
     AND FULLY CLOSED 2/2 (s566).** ≥4 hangarbay-controlled hits pre-fix. **Mechanism:** guest
@@ -307,13 +307,13 @@ a range pointer. Highest allocated so far: -347. The next NEW item takes -348.
     non-null fallthrough has no `0x80000000`-`0x80800000` range check before write-through deref —
     skip on invalid is safe). Classic r2/0X4: 115/115. Residual free-list-node rN/0X0: 16/16
     (116-131). Full guard table: `docs/PROJECT-OVERVIEW.md` §22-§25.
-    **s558–s564:** freelist WRITE campaign CLOSED (details under -341..-345). **s565–s566:** item
+    **s558–s564:** freelist WRITE campaign CLOSED (details under -341..-345). **s565–s567:** item
     -320 root-caused to `projectModelBoundsToScreen` early-exit s-reg clobber and CLOSED 2/2; item
-    -346 residual r3-base write at `0x8000D6D0` FIXED 1/2 (R6). **Standing gotchas** (full:
+    -346 residual r3-base write at `0x8000D6D0` FIXED+CLOSED 2/2 (R6). **Standing gotchas** (full:
     PROJECT-OVERVIEW §22-§25): hangarbay positive control (s536); cross-check `last-guest-pc` not
     host symbol (s541); weak item -306 early deaths discard+retry; early-guard `goto` full epilogue
     only if ALL callee-saves already spilled (s565); breadcrumb occ counts re-tally SOAK-RESULTS
-    (s564). Raw detail: `PORTING-STATE.md` Sessions 490-566.
+    (s564). Raw detail: `PORTING-STATE.md` Sessions 490-567.
 
 -316. **(s488-490) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED 2/2.** A scope gap in the existing s436
     `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`): validated one deref but not two propagating

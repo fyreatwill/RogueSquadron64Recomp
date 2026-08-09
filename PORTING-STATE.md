@@ -45560,3 +45560,30 @@ Item -346 FIXED 1/2. 2nd confirm queued: `soak_queue/s566_item346_r6_confirm.sh`
 
 ### Ruled out
 - H3 wrong-register theory for this run (death left 0x8000d6d0 entirely).
+
+## Session 567 — item -346 FULLY CLOSED 2/2 (R6 residual r3-base write)
+
+### Fold-in
+`s566_item346_r6_confirm` (loop, rc=3, 66s): WEAK early death — hangarbay n=0, process
+gone 20.7s / 7 frames, `setByteAcrossEntryList+176`/`last-guest-pc=0x800aafa8` (item -306
+noise). Discarded per standing weak-draw gotcha. Re-ran confirm this session (iron rule:
+do not end on a re-queue promise).
+
+### 2nd confirm (manual retry)
+`s567_item346_r6_confirm_retry`: full ~300s rc=0, 102 frames, hangarbay-entry n=2700
+(strong positive control), 0 `[heap-free-list-dequeue-r6-guard]` fires (true-negative;
+intermittent corruption as every guard in this campaign), **no crash** at `0x8000d6d0` /
+`heapFreeListDequeue` around that PC, 0 `[CRASH]` markers. Item **-346 FULLY CLOSED 2/2**.
+
+### Breadcrumb re-tally (SOAK-RESULTS, post-close)
+- `-332` `0x8001086c`: 2 occs (s539 weak n=5 + s544 n=2600) — moderate, still wait for 3rd
+- `-323` `0x8000ae40`: 1 valid controlled hit (+ mentions)
+- `-324` `0x80015544`: multi-mentions but weak-death / pc-symbol-noise; not escalated
+- `-325` `0x800ad0dc`: 2
+- `-347` `0x80010134`: 1 (do not chase)
+- No 3rd-hit breadcrumb escalated this session; no death site on clean confirm to root-cause.
+
+### Next
+Highest-information systematic next: DIRECT residual-gap audit of the
+`-334/-340/-345/-346` model (unguarded write on same base reg immediately before/after an
+existing freelist or sibling-ptr guard site). Do not chase single-occ breadcrumbs.
