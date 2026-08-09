@@ -45988,3 +45988,75 @@ Instrument in ONE build/run: gPlayerShip (0x800CC85C), gHangarSelection (0x800CD
 `isPlayerShipActive` ret, `accumulateShipThrottleCharge` ret, `runHangarSelectionFrame`
 ret — phase-scoped around leave Start. Discriminate which gate blocks hangar exit.
 Do not chase -338. M5 due s573+ (no new lead this session; recheck next idle).
+
+## Session 574 — hangar-exit gates: Start hits case 3, never case 5 confirm
+
+### Work unit
+Item -7 instrumented leave run (NEXT.md H-exit1..4). One fixup-batch of probes
+applied to already-sentinel RecompiledFuncs via one-shot (fixup refuses second
+pass; s574 block also landed in `fixup_game_funcs.py` for next full regen).
+Tags: `[ship-active]` `[throttle-ret]` `[hangar-sel]` `[buttons-hangar]`
+`[frame-ret]` `[graceful-menu]`. Recipe: `PROBE_MODE=start_only HOLD_S=20`
+via `run_mission_keys.sh` tag `s574_item7_exit_gates`.
+
+### Positive control (same run)
+- hangarbay-entry max n=900
+- frame-ret max n=950, all `ret=0x00FFFFFF sentinel=1`
+- buttons-hangar site=0x800AC0F0 max n=716
+- Build clean; instruments visibly fire
+
+### Discriminating measurements
+
+| Probe | Result |
+|-------|--------|
+| leave Start delivered | **YES** — `[buttons-hangar] site=0x800AC0F0 n=716 raw=0x00001000 a_start=1` |
+| hangar-sel write | **0 fires** — selection never written |
+| frame-ret non-sentinel | **0** — poll stuck on 0x00FFFFFF |
+| graceful-menu | **0** — hangar never exited |
+| case-5 confirm site 0x800AC8C0 | only n=0..4 early empty polls; **never saw leave Start** |
+| other 0x9000 sites (7F8/CE94/D034) | **0 samples** (arms not entered) |
+
+### Source refinement (from probes + jump table)
+
+`updateHangarBayScene` dispatches on hangar state byte `0x800CC3E4` (`-0x3C1C`
+from 0x800D) via jr table at 0x800ABB74:
+
+| case | label | A\|START site | is craft-leave confirm? |
+|------|-------|---------------|-------------------------|
+| 3 | L_800AC024 | **0x800AC0F0** (leave hit here) | NO — bay/craft UI path; may `sb 5` to advance |
+| 5 | L_800AC8B0 | **0x800AC8C0** | YES — `isPlayerShipActive` + write 0x800CD6D4 |
+| 6 | L_800ACE84 | 0x800ACE94 | no isPlayerShip in near body |
+| 7 | L_800AD024 | 0x800AD034 | store path at 0x800AD0DC |
+
+Leave Start was consumed by **case 3**, not case 5. Case 3→5 transition at
+0x800AC1BC (`addiu $v0,0x5; sb -0x3C1C`) is gated on a bay-flag bit test
+(`-0x2928` & (1<<bay_table[-0x2918])) after Start — failure takes a
+`bsearchFactor5TableByU16Key` error-ish path and never reaches case 5.
+
+### Hypotheses disposition
+- **H-exit4 REFUTED** (input path): Start reaches hangar button poll.
+- **H-exit1/2 not yet testable** on leave: craft-confirm arm (case 5) never
+  entered during leave window; ship-active/throttle gates only apply there.
+- **H-exit3 REFUTED** for this run: hangar never exited (0 graceful-menu).
+- **H-exit5 (NEW, primary):** hangar state stuck in case 3; Start does not
+  advance to case 5 (bay-flag bit test fail and/or transition reverts).
+
+### Crash side-note
+Process gone hold-iter 1; `last-guest-pc=0x8000afa0`
+`pc-symbol=beginFrameDLChunk+46800` — **3rd occurrence of item -338**
+(confidence moderate→high). Still do not chase until hangar exits; filed only.
+
+### Ruled out
+- "Synthetic Start never reaches hangar input" (saw raw=0x1000 at AC0F0).
+- "Just need longer stick hold" — still case-3, no selection write.
+- isPlayerShipActive as the leave-frame blocker **this recipe** (blocker is
+  upstream: wrong hangar state arm).
+
+### Artifacts
+- `scratch/s73_post_a_scene/s574_item7_exit_gates/{run.log,console.txt}`
+- Probes in `RecompiledFuncs/funcs_{28,30,35}.c` + `fixup_game_funcs.py` s574 block
+
+### Next
+Instrument hangar state byte `0x800CC3E4` every frame + bay-flag operands at
+case-3 Start success/fail (`-0x2928`, bay index `-0x2918`, bit test result).
+Discriminate: bit test fail vs state-5 entered then immediately left.

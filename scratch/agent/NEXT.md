@@ -2,85 +2,74 @@
 
 HYPOTHESIS-ID: m3-dod-craft-stick-hold
 
-## s573 recap (read this first)
+## s574 recap (read this first)
 
-**Item -7 offline: H1 CONFIRMED — craft-leave never enters mission.**
+**Item -7: leave Start hits hangar case 3, never case 5 confirm.**
 
-- s572 runlog: overlay sections 0,1 boot; start-match 3 (menu) → 4 (cinematic) → 3 (menu).
-  **Mission section idx=2 rom=0xA5D30 never start-matches.** 0 mission* / gracefulMenu* tags.
-  hangarbay-entry n=1000 through death; stack still `runHangarSelectionFrame`.
-- Source hangar exit is a **multi-frame state machine**, not "Start leaves":
-  1. A|START (0x9000) in `updateHangarBayScene` writes craft idx → `0x800CD6D4` **iff**
-     `isPlayerShipActive()` is 0 (gPlayerShip `0x800CC85C` null).
-  2. `runHangarSelectionFrame` returns non-`0x00FFFFFF` **iff**
-     `accumulateShipThrottleCharge()` nonzero (needs gPlayerShip live + charge counter ≥7).
-  3. `runHangarMenuFromOverlay` then `gracefulMenuShutdown` and returns to menu overlay.
-- Synthetic Start correctly maps to N64 0x1000 (`main.cpp`). s74 A-no-op / s572 camera-only
-  leave fit gate (a) and/or (b) stuck.
+- Positive control: hangarbay-entry n=900, frame-ret n=950 all sentinel,
+  buttons site 0x800AC0F0 n=716.
+- Leave Start: `[buttons-hangar] site=0x800AC0F0 n=716 raw=0x00001000 a_start=1`.
+- 0 hangar-sel writes, 0 non-sentinel frame-ret, 0 graceful-menu.
+- Jump table on hangar state `0x800CC3E4` (`-0x3C1C` from 0x800D) at 0x800ABB74:
+  - **case 3** → L_800AC024 → site **0x800AC0F0** (where leave landed)
+  - **case 5** → L_800AC8B0 → site **0x800AC8C0** (isPlayerShipActive + write 0x800CD6D4)
+  - case 5 site only saw n=0..4 early empty polls during whole run
+- Case 3→5 transition: `sb 5` at 0x800AC1BC after Start, gated on bay-flag bit
+  (`-0x2928` & (1 << table[`-0x2918`])); fail path calls bsearchFactor5TableByU16Key.
+- H-exit4 REFUTED. H-exit1/2 deferred (case 5 never reached on leave). H-exit5 NEW.
+- Item -338 3rd occ (0x8000afa0 / beginFrameDLChunk+46800) — do not chase yet.
 
 ## This iteration's work unit
 
-**Item -7 — which hangar-exit gate is stuck? (one instrumented leave run)**
+**Item -7 — why case 3 Start does not advance to case 5?**
 
-Batch all counters in ONE fixup + ONE cmake + ONE leave run (HOLD_S=20 enough; full 60s not
-required). Do not chase crashes.
+One instrumented leave run. Batch into fixup (or one-shot if sentinel blocks) +
+one cmake + one leave run (HOLD_S=20).
 
 ### Hypotheses
-- H-exit1: `isPlayerShipActive` stays 1 during craft display → A|START never writes selection
-  (matches s74 A no-op).
-- H-exit2: selection writes (0x800CD6D4 changes) but `accumulateShipThrottleCharge` always 0
-  → poll never exits (ship null or charge stuck).
-- H-exit3: both gates fire (selection non-0xFFFFFF, throttle nonzero, frame ret non-sentinel)
-  but `gracefulMenuShutdown` / menu return fails → need post-exit path next.
-- H-exit4: `getControllerNewButtonsPressed` never sees 0x9000 on leave Start (input path) —
-  positive control: log raw new-buttons on leave frame.
+- H-exit5a: bay-flag bit test fails on leave Start (`(-0x2928 & bit)==0`) → error
+  path, state stays 3.
+- H-exit5b: bit test passes, state becomes 5, but next frame reverts to 3/4 before
+  confirm poll runs.
+- H-exit5c: leave Start never takes the success arm of AC0F0 for another reason
+  (wrong sub-flag `-0x2934`, state!=3 at compare AC0B0, etc.).
+- H-exit5d: state is already ≥5 but jump table index wrong / switch_error path
+  (unlikely — AC0F0 would not run).
 
 ### Discriminating measurements (ONE build)
-In `fixup_game_funcs.py` (not hand-edit funcs_*.c), add rate-unlimited-after-leave or
-always-on-first-N after hangar entry:
+Always-on (or rate-limit steady; always on Start and on state change):
 
 | counter | where | fields |
 |---------|-------|--------|
-| ship-ptr | `isPlayerShipActive` entry/ret | n, gPlayerShip, ret |
-| hangar-sel | after confirm store `0x800CD6D4` / every frame tail | n, value |
-| throttle-ret | `accumulateShipThrottleCharge` exit | n, ret, ship non-null |
-| frame-ret | `runHangarSelectionFrame` after_2 (existing ckpt) | extend to log ctx->r2 every iter (or 1/50 after n=20) |
-| buttons | after `getControllerNewButtonsPressed` in updateHangarBayScene | n, raw v0, v0&0x9000 |
+| hangar-state | updateHangarBayScene entry (or just before jr table) | n, state=MEM_BU(0x800CC3E4) |
+| case3-start | after 0x800AC0F0 andi when raw&0x9000 | n, bay_idx, flag_word, bit, pass |
+| state-write | every `sb` to -0x3C1C | n, old→new, guest pc |
+| case5-entry | L_800AC8B0 entry | n (should stay 0 if 5a) |
 
-Positive control: hangarbay-entry must keep firing; at least one buttons sample must show
-Start bit when console says `[keys] probe p1 start`.
+Positive control: hangarbay-entry still fires; leave Start still a_start=1 at AC0F0;
+if 5a then pass=0 on that frame; if 5b then state-write 3→5 then 5→3 same run.
 
 ### Exact commands
 ```bash
-# After fixup lands (edit fixup_game_funcs.py only):
-# regen if needed, or if patch is pure fixup-on-existing: just cmake if fixup already applied
-# Prefer: re-run fixup on existing RecompiledFuncs then cmake — only full regen if fixup requires clean.
-
-python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py   # if patches are additive/idempotent
+# Apply probes (prefer fixup after clear+regen OR one-shot on sentinel tree)
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 cmake --build build -j8 --target RogueSquadron64Recomp
 
-# Leave-only short hold (entry proof, not stick DoD):
-env PROBE_MODE=start_only HOLD_S=20 \
-  ROGUESQ_LOG_ALL=0 \
-  zsh tools/run_mission_keys.sh   # or whatever recipe s571 used — match s572 env
+env PROBE_MODE=start_only HOLD_S=20 ROGUESQ_LOG_HANGARBAY_ENTRY=1 \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s575_item7_case3_to5 5 12
 
-# Analyze:
-grep -E 'ship-active|hangar-sel|throttle-ret|hangarmenu-ckpt|buttons-hangar|hangarbay-entry' run.log | head -80
-# After leave wall-time: did 0x800CD6D4 leave 0xFFFFFF? did throttle ret ever 1? did frame ret exit sentinel?
+grep -E 'hangar-state|case3-start|state-write|case5-entry|buttons-hangar|hangarbay-entry' \
+  scratch/s73_post_a_scene/s575_item7_case3_to5/run.log | head -80
 ```
 
 ### Expected outcomes
-- H-exit1: ship-ptr always non-null on confirm frames → next unit = who sets gPlayerShip and when
-  it should clear for craft confirm.
-- H-exit2: sel writes, throttle always 0 → next unit = charge path / ship setup for hangar.
-- H-exit3: hangar exits (gracefulMenu + after_3) but no mission overlay → next unit = menu→mission
-  transition after hangar return.
-- H-exit4: Start never in new-buttons → fix input path for hangar phase.
+- 5a: case3-start pass=0 on leave → next unit = who fills -0x2928 / unlock table.
+- 5b: state-write 3→5 then revert → next unit = what clears state 5.
+- 5c: a_start=1 but case3-start never logs → wrong arm details.
+- 5d: switch_error / wild state → fix jump table / state init.
 
 ### Do NOT
-- Chase 0x8000afa0 / -338 (wait 3rd occ).
-- Blind HOLD_S=60 stick soaks.
-- Reopen M5 unless a new audio signature appears (due recheck was s573; quick scan only if idle).
-- Resume freelist/sibling residual (exhausted s569).
-- Hand-edit funcs_*.c — fixup only.
+- Chase 0x8000afa0 / -338 (3 occs filed; after hangar exit only).
+- Blind stick HOLD_S=60.
+- Reopen M5 / freelist residual.
+- Hand-edit funcs_*.c without mirroring into fixup_game_funcs.py.
