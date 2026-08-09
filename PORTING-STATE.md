@@ -45489,3 +45489,38 @@ SOAK-RESULTS exact `last-guest-pc=0x800aafb8` hits with hangarbay control:
 ### Files
 - scratch/agent/s564_residual_summary.json, s494_item317_step3_report.json (refreshed)
 - docs/CURRENT-TRUTH.md, scratch/agent/NEXT.md, SOAK-RESULTS.md, PORTING-STATE.md
+
+## Session 565 — item -320 root-caused: projectModelBoundsToScreen early-exit $s1 clobber; FIXED 1/2
+
+### Work unit
+Source-trace item -320 (`loadCutsceneAssetsByIndex+1860` / `last-guest-pc=0x800aafb8`), escalated
+s564 after SOAK-RESULTS recount (≥4 hangarbay-controlled hits).
+
+### Discriminating measurements
+1. Host disassembly of current binary: `loadCutsceneAssetsByIndex+1860` =
+   `0x1003899a4` = `ldrsw` implementing guest `L_800A92F0` `lw $v0, -0x25A4($s1)`.
+2. `loadCutsceneAssetsByIndex` has **zero** `g_rs64_last_guest_pc` updates; reported
+   `0x800aafb8` is the *caller* `runHangarSelectionFrame` JAL delay-slot nop before the call.
+3. Prologue order in `projectModelBoundsToScreen` (funcs_15.c): guard1 (after `$s6` spill only)
+   and guard2 (after `$s6`+`$s5` only) both `goto L_80066204`, which restores `$ra/$s0-$s7` from
+   not-yet-written stack slots — clobbering caller `$s1` (was `0x800D0000`). s128's comment
+   claiming "$ra already spilled" at guard2 is **false**.
+
+### Fix
+`fixup_game_funcs.py` + surgical `funcs_15.c`: guard1/guard2 use safe mini-epilogue
+(restore only spilled regs, `r2=0`, pop `0xF0`, `return`). Guard3 (post full spill) still
+`goto L_80066204`.
+
+### 1st live-verify
+`s565_item320_safe_early_exit_manual`: hangarbay-entry n=2600 (strong positive control);
+0 fires on project-model-bounds-guard{,2,3}; **no crash at +1860/0x800aafb8**. Crashed at
+115s on `heapFreeListDequeue+34224`/`last-guest-pc=0x8000d6d0` — filed item -346 (unguarded
+`MEM_W(0,r3)` one insn before existing `HEAP_FREE_LIST_DEQUEUE_R2_GUARD` at `0x8000D6D4`).
+Item -320 FIXED 1/2 (true-negative). 2nd confirm queued:
+`scratch/agent/soak_queue/s565_item320_safe_early_exit_confirm.sh`.
+
+### Ruled out
+- H1 freelist/heap residual in funcs_28.c at guest 0x800AAFB8 (that PC is a nop / delay slot).
+- H3 pure host misattribution of the multi-hit signature (host local-symtab + disasm both pin
+  +1860 to a real instruction inside loadCutsceneAssetsByIndex; root cause is callee ABI break).
+
