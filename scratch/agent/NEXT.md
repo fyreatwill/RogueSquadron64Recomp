@@ -2,258 +2,211 @@
 
 HYPOTHESIS-ID: item-317-step3-blanket-sweep
 
-## s548 recap (read this first)
+## s549 recap (read this first)
 
-**Folded in s546's queued 5-guard confirm — WEAK, discarded, retry re-queued.**
-`s546_five_tied_guards_confirm` (renamed `s548_five_tied_guards_confirm_retry.sh` after a session-
-numbering correction, see below) came back with `hangarbay-entry n=5` (single-digit, below the
-double-digit bar) and crashed after 7 frames/20s on `pc-symbol=setByteAcrossEntryList+176`/
-`last-guest-pc=0x800aafa8` — the already-catalogued item -306 background-noise family (s531/s543
-gotcha). Discarded per iron rule 1, NOT accepted as a null result. Retry immediately re-queued:
-`scratch/agent/soak_queue/s548_five_tied_guards_confirm_retry.sh` — the loop should pick this up
-between iterations. Guards 53-57 (`RENDER_FLAT_MESH_FACE_GROUP_R3/R4_GUARD`, `RENDER_LIT_MESH_R12/
-R13_GUARD`, `DRAW_SUBTITLE_TEXT_R3_GUARD`) remain at "1st live-verify clean, 2nd confirm pending" —
-no promotion to FULLY CLOSED this session.
+**Folded in BOTH s548 queued confirms.** `s548_five_tied_guards_confirm_retry` (guards 53-57) came
+back WEAK for the THIRD consecutive attempt on this exact confirm target: `hangarbay-entry n=4`
+(single-digit), crashed at 17.2s/7 frames on the item -306 `setByteAcrossEntryList+176`/`0x800aafa8`
+signature — the SAME signature as the two prior weak draws (s546, s548). Discarded per iron rule 1.
+Retry re-queued: `scratch/agent/soak_queue/s549_five_tied_guards_confirm_retry2.sh` — the loop should
+pick this up between iterations. **This is now a flagged pattern**: 3 consecutive weak draws on one
+confirm target, all hitting the identical background-noise signature — worth a dedicated check in a
+future session for whether this signature correlates with short/early-crash runs specifically (not
+just this one confirm target), rather than being purely random.
 
-**Found and fixed the next tier (s548)**: fresh re-scan put a FOUR-WAY TIE at count=14 (exact
-guarded shape reg=`r2`/off=`0X4`) spanning FOUR functions:
-- `emitColorFillRect` (funcs_3.c:10105, site=`0x80009F50`) — a 5th site alongside R1-R4.
-- `emitMaterialTexturedDL` (funcs_3.c:28876, site=`0x8000E608`) — a 2nd site alongside R1.
-- `emitMaterialTexturedDLAlt` (funcs_3.c:30847, site=`0x8000ECD4`) — a 2nd site alongside R1.
-- `submitSceneNodeRender` (funcs_4.c:2194, site=`0x80010728`) — a 6th site alongside R1-R5.
+`s548_four_tied_guards_confirm` (guards 58-61) came back CLEAN: `hangarbay-entry n=2700` (strong
+positive control), 0 fires on all four target guards. **Guards 58-61 marked FULLY CLOSED 2/2** —
+closed the campaign's 61 guards to 61/61 fully closed for the tenth time.
 
-All 4 target write addresses (each function's OWN write address, read from generated source — NOT
-one of the tracer's listed reload addresses) plus every raw reload address feeding them checked
-directly against `fixup_game_funcs.py` before patching: none appeared anywhere, no incidental
-matches, despite each function already carrying several existing guards at DIFFERENT addresses.
-Fixed as `EMIT_COLOR_FILL_RECT_R5_GUARD`, `EMIT_MATERIAL_TEXTURED_DL_R2_GUARD`,
-`EMIT_MATERIAL_TEXTURED_DL_ALT_R2_GUARD`, and `SUBMIT_SCENE_NODE_RENDER_R6_GUARD` (58th-61st guards),
-batched into one build/run.
+**That same confirm run's own crash was the real finding this session.** It crashed at
+`last-guest-pc=0x80010DCC` (`submitSceneNodeRender`) while the SAME run's pre-existing
+`sibling-ptr-write-guard site=0x80010DC4` fired (`n=0`, the campaign's FIRST-EVER genuine fire across
+121+ sites) with `bad_ptr=0x48830D10` one instruction earlier — `bad_ptr+4` numerically matches the
+crash's own fault address modulo the RDRAM host-mapping offset. Traced to source: `0x80010DC8`'s
+delay-slot instruction (`sw $zero,0x4($a1)`, duplicated x2 by the recompiler for taken/fallthrough
+paths) reuses the SAME never-rechecked `ctx->r5` that `0x80010DC4`'s guard had just validated — exactly
+item -319's own gap shape recurring in a new function. Filed and fixed as **item -334**
+(`SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC`, 2 new entries in the existing 121-site family's list,
+sharing its env var).
 
-**1st live-verify**: first attempt WEAK (`hangarbay-entry n=5`, same item -306
-`setByteAcrossEntryList+176`/`0x800aafa8` signature — TWO weak draws hitting this identical
-background-noise family in the same session; worth watching whether it correlates specifically with
-short/early-crash runs). Discarded per iron rule 1, retried immediately: full 300s duration, 106
-frames captured, exit code 0 — **zero crashes of any kind for the entire run**, the cleanest possible
-verify class. 0 fires on any of the 4 new guards. Only other guard activity: a single
-`[hangarmenu-a0-guard] wild s3(a0)=0x80130B40 n=0` line — a benign already-catalogued diagnostic
-snapshot (s541/s544 gotcha), not a fire. `hangarbay-entry n=33` (valid positive control). Clean
-verify, own guards never fired. 2nd confirm already queued:
-`scratch/agent/soak_queue/s548_four_tied_guards_confirm.sh` — the loop should pick this up between
+**Verifying the item -334 fix ALONE caught it firing for real.** After rebuilding with just the
+item -334 fix, the 1st live-verify's new `sibling-ptr-write-guard site=0x80010DCC` FIRED (`n=0`,
+`bad_ptr=0x810C747B` — matching the SAME value the pre-existing `0x80010DC4` guard fired with one
+instruction earlier in the SAME run) — the campaign's first-ever confirmed genuine fire across 122+
+sites, and the guard skipped the write safely as designed. The run still crashed downstream, at
+`last-guest-pc=0x80010e6c` — item -327's own catalogued address (previously 2 occurrences 21 sessions
+apart; this is now a confirmed 3rd). Source trace (`funcs_4.c:4670-4699`): this is
+`submitSceneNodeRender`'s own instance of the
+`DL_LIST_APPEND_GUARD` idiom (s454, an 84-site family: 57 original + 27 s463 widened). The existing
+`DL_LIST_APPEND_GUARD` validates the list HEAD pointer before reading `ctx->rderef = MEM_W(head,0)` —
+but `rderef` itself, a value READ BACK from guest memory, was never range-checked before being
+dereferenced as a write address 4 instructions later. The existing `DL_LIST_APPEND_RWRITE_GUARD`
+(s482) only validates a DIFFERENT register (the new-node argument). The family's own regex
+(`_dl_list_append_guard_re` in `fixup_game_funcs.py`) already proves this 4-instruction tail is
+byte-identical at all 84 sites, so this is a genuine family-wide gap — fixed blanket-wide as
+`DL_LIST_APPEND_DEREF_GUARD` in the SAME regex substitution (not a separate pass), confirmed by the
+fixup report's `patched x46`/`x38` counts matching `DL_LIST_APPEND_GUARD`'s own exactly (1:1 coverage).
+Site `0x80010E6C` in `submitSceneNodeRender` specifically resolves item -327.
+
+**Re-verify with BOTH new guard families armed together (batch-instrumentation rule).**
+`hangarbay-entry n=2700` (strong positive control), 0 fires on `dl-list-append-deref-guard` (any site)
+and 0 fires on `sibling-ptr-write-guard site=0x80010DCC` THIS run (intermittent — the corruption event
+that fired it in the previous run didn't manifest here, consistent with every guard in this campaign).
+Crashed at 135.0s on the already-catalogued s354-366 `coalesceFreeHeapBlocks+4424`/`0x8000247c`
+background-noise family — clean, own guards silent this run. 2nd confirm queued:
+`scratch/agent/soak_queue/s549_sibling_ptr_write_gap_confirm.sh` — the loop should pick this up between
 iterations.
 
-**Session-numbering note**: this session's work was initially drafted under the label "s547" before
-realizing the prior commit had already used s547 for the maintenance pass — everything (guard-fix
-comments in `fixup_game_funcs.py`, soak-queue script filenames/contents, doc references) was renamed
-to s548. The two genuine s547 references (actual maintenance pass, PROJECT-OVERVIEW §25/§26) were
-left untouched. Double-check `git log --oneline -3` at the START of every iteration to confirm the
-next free session number before naming anything — don't assume NEXT.md's own prior-session label is
-still accurate if a maintenance iteration or other out-of-band session may have intervened.
-
-**Note for next session**: the s548 re-scan's ranked list beyond the accepted 4-way tie wasn't
-examined — the next tier down (whatever count that is) is unknown, re-run the tracer fresh rather
-than guessing. Watch for item -306's `setByteAcrossEntryList+176`/`0x800aafa8` signature specifically
-on short/weak runs — it fired on 2 of this session's 3 short/weak draws, worth tracking whether this
-correlates with early-crash runs generally (a possible confound for the double-digit `hangarbay-entry`
-heuristic) rather than being purely random background noise.
+**Why this session's fixes are different from every prior guard in this campaign**: every one of the
+first 61 item -317 guards was found via idiom-shape pattern matching (a tracer ranks candidate sites by
+reload count) and NONE has ever fired in 121+/84+ site-runs of live-verify soaks. This session's two
+new guards were found via a DIRECT numeric trace from an actual crash's fault address back to a guard
+that had just fired — the first time this campaign has had mechanism-level, not just shape-level,
+evidence that the idiom class is a REAL live corruption source. Treat any future fire on
+`SIBLING_PTR_WRITE_GUARD` or `DL_LIST_APPEND_DEREF_GUARD` as high-priority confirmation, not noise.
 
 ## This iteration's work unit
 
-**Step 1 — fold in BOTH queued confirm results (do this FIRST, before picking a new work unit).**
+**Step 1 — fold in BOTH queued confirm results (do this FIRST).**
 
-For `s548_five_tied_guards_confirm_retry` (guards 53-57), find its SOAK-RESULTS.md line, read the
-run.log INSIDE the same-named results subdirectory (not just the top-level `.log` driver file — check
-BOTH), and grep for:
-- `render-flat-mesh-face-group-r3-guard`, `render-flat-mesh-face-group-r4-guard`,
-  `render-lit-mesh-r12-guard`, `render-lit-mesh-r13-guard`, and `draw-subtitle-text-r3-guard` fire
-  counts (expect 0 for a clean result, ALL FIVE)
-- fires on any OTHER armed guard family (regression check) — remember sibling guards dumping a
-  single `n=0` diagnostic snapshot AT crash time is NOT a fire (s541/s544 precedent)
-- `hangarbay-entry` count — must be non-trivial (double digits+) or the run is vacuous per iron
-  rule 1; if weak/absent AGAIN, discard and re-queue yet another retry immediately — this is the
-  3rd attempt at this specific confirm (s546 fold-in weak, s548 fold-in weak), so if a 3rd weak draw
-  lands, note it explicitly as a possible pattern (see the note above) rather than just retrying blind
-- the crash signature this run hit — check `last-guest-pc` against items -320 through -333 in
-  `docs/CURRENT-TRUTH.md` Next-steps, the s354-366 `coalesceFreeHeapBlocks` family, the `0x800ab068`
-  background-noise family, the s422 `0x800290d4` `inflate_fast` artifact, and item -306's
-  `setByteAcrossEntryList+176`/`0x800aafa8` (all in `docs/PROJECT-OVERVIEW.md`/Overturned-conclusions);
-  if genuinely new, file as item -334.
+For `s549_sibling_ptr_write_gap_confirm` (item -334's `SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC` +
+item -327's `DL_LIST_APPEND_DEREF_GUARD`, 84 sites): read the run.log, grep for
+`sibling-ptr-write-guard site=0x80010DCC` and `dl-list-append-deref-guard` fire counts (expect 0 for a
+clean result), regression check on any other armed guard family, `hangarbay-entry` positive control
+(must be double-digit+), crash signature cross-check against items -320..-334 and the background-noise
+catalogue in `docs/PROJECT-OVERVIEW.md`. **If a fire occurs on either guard, this is the campaign's
+first confirmed real bug catch — treat it as a major finding, not routine.** If clean with a valid
+positive control: mark both guards FULLY CLOSED 2/2 in `docs/PROJECT-OVERVIEW.md` §25 rows 62-63, mark
+item -327 fully resolved in `docs/CURRENT-TRUTH.md`.
 
-If clean with a valid positive control: mark guards 53-57 FULLY CLOSED 2/2 — update rows 53-57's
-status text in `docs/PROJECT-OVERVIEW.md` §25's table.
+For `s549_five_tied_guards_confirm_retry2` (guards 53-57, now on its 4th confirm attempt): same
+process. If STILL weak (a 4th consecutive weak draw), this crosses from "worth watching" into "worth
+actively investigating" — consider whether `PROBE_KEYS`/timing for this specific confirm script differs
+subtly from other confirm scripts in a way that correlates with early crashes, rather than continuing
+to blind-retry a 5th time. If clean: mark guards 53-57 FULLY CLOSED 2/2 in PROJECT-OVERVIEW §25 rows
+53-57 — this would close the campaign's 63 guards to 63/63 fully closed for the first time.
 
-For `s548_four_tied_guards_confirm` (guards 58-61), same process: grep for
-`emit-color-fill-rect-r5-guard`, `emit-material-textured-dl-r2-guard`,
-`emit-material-textured-dl-alt-r2-guard`, `submit-scene-node-render-r6-guard` fire counts (expect 0,
-ALL FOUR), regression check, `hangarbay-entry` positive control, crash signature cross-check. If
-clean: mark guards 58-61 FULLY CLOSED 2/2, update rows 58-61 in PROJECT-OVERVIEW §25.
-
-If BOTH fold-ins land clean this iteration, that closes the campaign's 61 guards to 61/61 fully
-closed (zero open guards) for the tenth time — note this milestone explicitly in the ledger.
-
-**Step 2 — re-scan and audit the next-ranked tier, same iteration (fold-in-then-pick pattern).**
+**Step 2 — re-scan and audit the next-ranked idiom-shape tier, same iteration (fold-in-then-pick
+pattern), UNLESS Step 1 surfaced a fire (then investigate that instead, it supersedes everything else
+in priority).**
 1. Re-run the tracer fresh (no custom `--out`, s521's gotcha):
    ```
    cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
    python3 scratch/agent/s494_item317_step3_tracer.py --scan
    python3 scratch/agent/s506_dedupe.py
    ```
-   (Or use `scratch/agent/s548_dedupe_shape_filtered.py` — this is a reusable
-   tool that filters the dedupe ranking to reg=`r2`/off=`0X4` writes specifically and prints ALL
-   matching entries, not just the top 20 — more useful than the stock `s506_dedupe.py` for finding
-   the next tier below an already-examined cutoff.)
-2. Skip any entry matching `renderLitTexturedMeshFaces` reg=`r4`/off=`0X0` or
-   `renderFlatMeshFaceGroup` reg=`r4`/off=`0X0` (both are the same long-standing, repeatedly-
-   re-derived shape mismatch — `ctx->r4` there is the owning function's own provably-non-null `$a0`
-   argument, not a reloaded global; re-verify this is still the case each session, don't assume).
-3. The next tier below s548's accepted 4-way tie (count=14) is COUNT=13, a genuine pair ALREADY
-   confirmed uncovered but not yet fixed: `emitAllocatedDLCommand` (funcs_3.c:4554, write address
-   `0x80008908`) and `reserveAndEmitDLEntry` (funcs_3.c:22546, write address `0x8000CE10`) — both
-   BRAND-NEW functions for this campaign (never guarded before). Both write addresses were already
-   cross-checked against `fixup_game_funcs.py` in s548 (alongside the 4-way tie fixed that session)
-   and confirmed absent — safe to fix directly without re-deriving. Re-verify the exact idiom shape at
-   each site before fixing (the s535 lesson still applies). If tied entries appear at a lower count
-   too, batch as many as are genuinely tied (this campaign has hit 4- and 5-way ties repeatedly —
-   don't artificially cap).
-4. Pull all raw reload addresses feeding the target write line(s): filter
-   `scratch/agent/s494_item317_step3_report.json` by `func==<name>`, then for each record check its
-   `hits` list for an entry whose `line` matches the target write line — print that record's
-   `guest_addr` for every match. `write_line` is NOT a top-level field, it's `hits[].line`. **The
-   write's OWN guest address is NOT in this reload-address list** — read it directly from the
-   generated source at the target line (s548 lesson: don't assume the tracer's reload addresses
-   include the write instruction's own address).
-5. Cross-check EVERY raw address AND the write's own address against
-   `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-   directly (NOT under a `tools/` subdirectory, and NOT the same repo as `RogueSquadron64Recomp` — it's
-   a separate standalone git checkout with its own origin, untracked `fixup_game_funcs.py`, no
-   submodule-patches export needed). Known guard addresses so far: `submitSceneNodeRender` R1-R6,
-   `emitColorFillRect` R1-R5, `drawSubtitleText` R1-R3, `renderLitTexturedMeshFaces` R1-R4,
-   `renderFlatMeshFaceGroup` R1-R4, `renderLitMeshFaceGroup` R2-R13, `emitMaterialTexturedDL` R1-R2,
-   `emitMaterialTexturedDLAlt` R1-R2 — check the new candidate isn't one of those or their own load
-   addresses. A raw reload address incidentally matching an UNRELATED guard elsewhere in the file
-   (protecting a different write) is not disqualifying by itself — check what it actually protects
-   (s545 precedent: `0x800101B0` matched the s197 `SCENE_NODE_CACHE_GUARD`, a different read).
-6. Read the generated source around any zero-hit write address to confirm the exact vulnerable shape
-   AND that the dereferenced register is actually a reload of the `+0x63B0`-offset global-table idiom
-   (not a function argument or other already-validated value) — check this BEFORE the reachability
-   cross-check (the s535 lesson).
-7. Fix the first genuine candidate(s) using the same `fixup_game_funcs.py` template as every prior
-   guard (skip-the-write-on-invalid, `ROGUESQ_LOG_<NAME>` env-gated stderr report, `U32()` range
-   check `< 0x80000000u || >= 0x80800000u`). Name it `<FUNC>_R<N>_GUARD` — bump `N` if the function
-   already has guards from this campaign, or `_R1_GUARD` for a brand-new function.
-8. Regen (`make_elf.py` → `N64Recomp` → `fixup_game_funcs.py` → `cmake --build`, all four steps
-   mandatory; delete `RecompiledFuncs/funcs_*.c` first via a `python3 -c` glob+os.remove loop, `find
-   -delete` is blocked in this sandbox):
+   Or `scratch/agent/s548_dedupe_shape_filtered.py` for the reg=`r2`/off=`0X4` shape specifically.
+2. Skip `renderLitTexturedMeshFaces`/`renderFlatMeshFaceGroup` reg=`r4`/off=`0X0` (re-verified
+   shape-mismatch every session so far — `ctx->r4` there is the function's own non-null `$a0` argument).
+3. The next tier below s548's accepted count=14 four-way tie and s549's mechanism-driven finds is
+   UNKNOWN — s549 did not re-run the tracer (all its work was crash-mechanism-driven, not scan-driven).
+   Find the next tier fresh.
+4. Also worth a scoped look: does the SAME `DL_LIST_APPEND_DEREF_GUARD` shape (checked address, later
+   unchecked value-read-back-and-reused) recur in OTHER already-"closed" families from this campaign
+   (`GENERIC_CACHE_GUARD`, `CACHE_HEAD_A1_GUARD`, etc.)? This session found it TWICE now
+   (`FREELIST_NEXT_GUARD`/s441 was the first instance of this exact 3rd-gap shape, `DL_LIST_APPEND_DEREF_GUARD`/s549
+   is the second) — a scoped audit of whether other "2-guard" families in this campaign have an
+   unaudited 3rd gap could be higher-value than continuing the raw idiom-shape ranking. Not started
+   this session; flagged as a candidate for a future session's Step 2 choice.
+5. Pull raw reload addresses feeding any new candidate write line: filter
+   `scratch/agent/s494_item317_step3_report.json` by `func==<name>`, check `hits[].line` (NOT a
+   top-level `write_line` field, s540 gotcha) for the target write line, print `guest_addr` for matches.
+   The write's OWN guest address is separate — read it from generated source directly (s548 lesson).
+6. Cross-check every raw address AND the write's own address against
+   `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` directly (separate standalone
+   repo, no submodule-patches step). A raw reload address incidentally matching an unrelated guard
+   elsewhere is not disqualifying by itself (s545 precedent) — only the target write's OWN address being
+   present is disqualifying.
+7. Read the generated source around any zero-hit write address to confirm the exact idiom BEFORE the
+   reachability cross-check (s535 lesson).
+8. Fix using the established template (skip-on-invalid, `ROGUESQ_LOG_<NAME>` env-gated stderr report,
+   `U32()` range check `< 0x80000000u || >= 0x80800000u`). Name `<FUNC>_R<N>_GUARD`, bump `N` if the
+   function already has guards this campaign.
+9. Regen (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`, all four steps
+   mandatory; delete `RecompiledFuncs/funcs_*.c` first via `python3 -c` glob+os.remove, `find -delete`
+   is blocked):
    ```
    cd /Users/williambuckley/Documents/Tools/N64Recomp
    python3 -c "import glob, os; [os.remove(f) for f in glob.glob('RecompiledFuncs/funcs_*.c')]"
    cd /Users/williambuckley/Documents/Tools/rogue_squadron64 && python3 tools/make_elf.py
    cd /Users/williambuckley/Documents/Tools/N64Recomp && ./build/N64Recomp rogue_squadron.toml
-   python3 fixup_game_funcs.py > <path inside one of the 3 allowed repos>   # audit for exactly the
-                                                                            # expected xN counts, then
-                                                                            # delete the report after
+   python3 fixup_game_funcs.py > <path inside one of the 3 allowed repos>   # audit xN counts, delete after
    cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build && \
      DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j8
    ```
-   Gotcha (s533): the CMake build directory that actually links `RogueSquadron64Recomp` is
-   `RogueSquadron64Recomp/build`, NOT `N64Recomp/build`. Gotcha (s535): redirecting
-   `fixup_game_funcs.py`'s output to `/tmp` is blocked by the sandbox — redirect inside one of the
-   three allowed repos, delete after auditing.
-9. 1st live-verify, manual, foreground — copy the most recent guard's manual script from
-   `scratch/agent/soak_queue/done/` (`s548_four_tied_guards_manual_retry.sh` is the latest full
-   env-var list), append the new guard's `ROGUESQ_LOG_<NAME>=1` (append, don't remove any existing
-   ones — batch-instrumentation rule), point output at a new
-   `scratch/agent/soak_results/s549_..._manual` path, run with `Bash` (it will auto-background if it
-   exceeds the foreground timeout), then `TaskOutput` with `block: true` and `timeout: 300000` to wait
-   synchronously. After running it, move it to `soak_queue/done/` yourself so the loop doesn't
-   re-execute it a second time. **If the first attempt comes back with a single-digit
-   `hangarbay-entry` count, discard it and retry immediately in the same iteration (s543/s545/s548
-   precedent) — don't accept a weak positive control. Watch specifically for the item -306
-   `setByteAcrossEntryList+176`/`0x800aafa8` signature on weak draws — it hit 2 of 3 weak draws this
-   session.**
-10. Read the run.log directly (grep the new guard's fire count, `hangarbay-entry` count, crash/signal
-    markers). **Never trust a 0-fires result without confirming `hangarbay-entry` (or another armed
-    positive control) actually appears with a non-trivial (double-digit+) count.** If weak/absent,
-    discard and re-run. If clean with a real positive control, queue a 2nd independent confirm to
-    `scratch/agent/soak_queue/s549_..._confirm.sh` and record the 1st-verify result in
+   Gotcha (s533): the build dir that links `RogueSquadron64Recomp` is `RogueSquadron64Recomp/build`,
+   NOT `N64Recomp/build`. Gotcha (s535): redirecting `fixup_game_funcs.py`'s output to `/tmp` is
+   blocked — redirect inside one of the three allowed repos, delete after auditing.
+10. 1st live-verify, manual, foreground — copy the most recent guard's manual script from
+    `scratch/agent/soak_queue/done/` (`s549_sibling_ptr_write_gap_manual.sh` is the latest full env-var
+    list), append the new guard's `ROGUESQ_LOG_<NAME>=1`, point output at a new
+    `scratch/agent/soak_results/s550_..._manual` path, run with `Bash` (auto-backgrounds past the
+    foreground timeout), then `TaskOutput` with `block: true, timeout: 300000` to wait synchronously.
+    Move it to `soak_queue/done/` after running so the loop doesn't re-run it.
+11. **If the first attempt has a single-digit `hangarbay-entry` count, discard and retry immediately**
+    (s543/s545/s548/s549 precedent) — don't accept a weak positive control.
+12. Read the run.log directly (fire count, `hangarbay-entry` count, crash/signal markers). If clean
+    with a real positive control: queue a 2nd independent confirm to
+    `scratch/agent/soak_queue/s550_..._confirm.sh`, record the 1st-verify result in
     `docs/CURRENT-TRUTH.md` + `SOAK-RESULTS.md` + `PORTING-STATE.md`.
 
 **Discriminating outcome**: 0 fires on the new guard(s) across BOTH the 1st live-verify and the 2nd
-independent confirm, each WITH a same-run `hangarbay-entry` positive control that actually fired
-non-trivially, is what promotes a guard to FULLY CLOSED 2/2. Any nonzero fire count on any new guard
-would be the first actual confirmation this idiom class fires in practice (none of the 61 guards
-fixed so far have ever fired) — treat that as a genuinely new, high-priority finding.
+independent confirm, each with a real `hangarbay-entry` positive control, promotes a guard to FULLY
+CLOSED 2/2. A nonzero fire count — especially one whose bad-pointer value numerically traces to a
+nearby crash's fault address, per this session's precedent — is a confirmed real bug catch.
 
 ## Iron-rule reminders specific to this campaign
 - **Confirm the next free session number at the START of every iteration** (`git log --oneline -3`)
-  before naming anything — a maintenance iteration or other out-of-band session can advance the
-  counter without this file being touched (s548 lesson).
-- Never trust the tracer's raw per-tier count without BOTH the shape check (reg/off match the guarded
-  idiom) AND the address-by-address cross-check against `fixup_game_funcs.py` AND a direct read of the
-  generated source. The write instruction's OWN guest address is separate from its feeding reload
-  addresses — look it up from generated source, don't assume it's in the tracer's reload-address list
-  (s548).
-- Never trust a 0-fires result without confirming the positive control appears with a non-trivial
-  (double-digit+) count. A single-digit `hangarbay-entry` count means the run is too short to trust —
-  discard and retry, don't report it as a result.
+  before naming anything.
+- A guard firing with `n=0` alongside other sibling guards dumping `n=0` at crash time is NOT
+  automatically dismissible as "just a diagnostic snapshot" (the s541/s544 precedent) — check whether
+  the fired guard's bad-pointer VALUE numerically correlates with the crash's own fault address (mask
+  to low 24 bits, compare to `mcontext x12`/`si_addr`) before dismissing it as background noise (s549).
+- Never trust the tracer's raw per-tier count without the shape check AND the address-by-address
+  cross-check against `fixup_game_funcs.py` AND a direct read of the generated source. The write
+  instruction's OWN guest address is separate from its feeding reload addresses (s548).
+- Never trust a 0-fires result without confirming the positive control is double-digit+.
 - One build/run carries every armed guard's env var (batch-instrumentation rule).
 - `s506_dedupe.py` reads a FIXED canonical path; never pass a custom `--out` to `--scan`.
 - Kill runs with SIGKILL only; capture paths must not start with "." in the final component; run from
   `build/` with the ROM present.
-- `fixup_game_funcs.py`: `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` — NOT
-  under a `tools/` subdirectory, NOT part of the RogueSquadron64Recomp git repo (separate standalone
-  checkout, untracked file, no submodule-patches export step applies).
+- `fixup_game_funcs.py`: `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` — a
+  separate standalone checkout, no submodule-patches export step applies.
 - The build that matters: `RogueSquadron64Recomp/build`, not `N64Recomp/build`.
-- `make_elf.py`: `/Users/williambuckley/Documents/Tools/rogue_squadron64/tools/make_elf.py` (a THIRD
-  repo) — run it from that repo's root.
-- **Soak result diagnostics gotcha (s539/s541)**: a soak's real per-guard diagnostics can live in a
-  `run.log` file INSIDE a same-named results subdirectory, OR the retry script may point its `--out` at
-  the ORIGINAL (non-retry-suffixed) results directory instead of a new one — check both locations, grep
-  the one with actual `[guard-name]` lines, don't assume the naming is consistent.
-- **JSON report field gotcha (s540)**: `s494_item317_step3_report.json` records don't have a top-level
-  `write_line` field — the write line lives inside each record's `hits[].line`. Filter by `func` then
-  check each hit's `line`.
-- **Diagnostic-snapshot-not-a-fire gotcha (s541/s544)**: nearby sibling guards printing a single
-  `n=0` line AT crash time is a diagnostic dump, not an actual fire — only a nonzero `n=` or multiple
-  incrementing lines from the SAME guard name indicate a real fire. Don't miscount these as fires.
-- **`0x800ab068` background-noise gotcha (s541)**: this recurring guest-PC crash resolves to a
-  DIFFERENT host `pc-symbol` almost every time it's hit — always cross-check the `last-guest-pc` value
-  itself, not just the symbol name, before filing a "new" item.
-- **`coalesceFreeHeapBlocks+4424`/`0x8000247c` background-noise gotcha (s542)**: another long-recurring
-  stable signature, catalogued since the s354-366 heap-walker arc — check exact pc-symbol+guest-PC pairs
-  in `docs/PROJECT-OVERVIEW.md` before filing a crash hit as new.
-- **`setByteAcrossEntryList+176`/`0x800aafa8` background-noise gotcha (s531/s543, reinforced s548)**:
-  item -306's already-catalogued signature; recurred on 2 of 3 short/weak draws in s548 alone — worth
-  actively watching whether it specifically correlates with early/short runs rather than being pure
-  random noise.
-- **`loadDatFile+1152`/`0x800290d4` background-noise gotcha (s545)**: this is the s400-421→s422
-  `inflate_fast` clean-return misattribution artifact from the Overturned-conclusions section — a
-  sparse breadcrumb shared across unrelated crash functions, not a real corruption sink, not a new item.
-- **item -332 watch**: `submitSceneNodeRender+38976`/`0x8001086c` has recurred TWICE (once weak-control,
-  once strong-control) — a 3rd occurrence would justify source-tracing it, unlike most of this
-  campaign's single-occurrence breadcrumbs.
-- **item -331/-333 watch**: `heapFreeListDequeue+29152`/`0x8000d688` (item -331) and
-  `findAndUnlinkSmallestEntry+356`/`0x8000d698` (item -333) are 16 bytes apart in the same free-list-pop
-  region, both single occurrences, both `(local-symtab)`-tagged (genuine in-function faults). Treated
-  as DISTINCT items because the guest PCs differ — but if either recurs, or if a THIRD nearby address in
-  this region appears, treat the region itself as suspicious and consider source-tracing regardless of
-  per-address occurrence counts.
-- **Incidental-match gotcha (s545)**: a raw reload address feeding the target write CAN appear
-  elsewhere in `fixup_game_funcs.py` without disqualifying the candidate — check what that OTHER
-  occurrence actually protects (a different read/write at a different guest PC) before assuming the
-  target write itself is covered. Only the target write's OWN address being present is disqualifying.
+- `make_elf.py`: `/Users/williambuckley/Documents/Tools/rogue_squadron64/tools/make_elf.py`.
+- A branch's delay-slot instruction is duplicated by the recompiler for both taken/fallthrough paths
+  when the branch is non-branch-likely too (not just `bnel`) — if a literal-anchor patch site's anchor
+  text appears twice, check whether the two copies have DIFFERENT indentation (they usually do, since
+  one sits inside an `if {}` block) — if so, add TWO list entries with the two distinct anchor texts,
+  don't try to force a single regex/anchor to match both (s549).
+- **Soak result diagnostics gotcha (s539/s541)**: a soak's real diagnostics can live in a `run.log`
+  inside a same-named results subdirectory, OR the retry script's `--out` may point at the ORIGINAL
+  (non-retry-suffixed) directory — check both locations.
+- **JSON report field gotcha (s540)**: `s494_item317_step3_report.json` records have `hits[].line`, not
+  a top-level `write_line` field.
+- **`0x800ab068` background-noise gotcha (s541)**: resolves to a DIFFERENT host `pc-symbol` almost every
+  time — cross-check `last-guest-pc`, not the symbol name.
+- **`coalesceFreeHeapBlocks+4424`/`0x8000247c` background-noise gotcha (s542)**: the s354-366
+  heap-walker family — check exact pc-symbol+guest-PC pairs before filing as new.
+- **`setByteAcrossEntryList+176`/`0x800aafa8` background-noise gotcha (s531/s543, reinforced s546/s548/
+  s549)**: item -306's signature; now hit 4 of the last ~6 short/weak draws across 4 sessions — actively
+  worth investigating whether this correlates with early/short runs specifically, not just noted again.
+- **`loadDatFile+1152`/`0x800290d4` background-noise gotcha (s545)**: the s400-421→s422 `inflate_fast`
+  clean-return misattribution artifact — not a new item.
+- **item -332 watch**: `submitSceneNodeRender+38976`/`0x8001086c` has recurred TWICE — a 3rd occurrence
+  would justify source-tracing.
+- **item -331/-333 watch**: `heapFreeListDequeue+29152`/`0x8000d688` and
+  `findAndUnlinkSmallestEntry+356`/`0x8000d698`, 16 bytes apart, both single occurrences, both
+  `(local-symtab)`-tagged. If either recurs, or a 3rd nearby address appears, treat the region as
+  suspicious.
+- **Incidental-match gotcha (s545)**: a raw reload address CAN appear elsewhere in
+  `fixup_game_funcs.py` without disqualifying the candidate — only the target write's OWN address being
+  present is disqualifying.
 - This sandbox blocks `find -delete`, multi-statement `&&`/`while`/heredoc chains, and output
-  redirection to `/tmp` fairly often — prefer single simple commands. Grep with a literal path instead
-  of a shell variable when the sandbox flags "shell syntax that cannot be statically analyzed" (also
-  applies to `for addr in ...; do ...; done` loops using shell variable expansion — use Python instead).
-  Writing a multi-line string with embedded `#` inside a quoted shell/python argument can also trip the
-  sandbox ("Newline followed by # inside a quoted argument can hide arguments from path validation") —
-  write long append content to a scratch `.md` file with the Write tool first, then `cat file >> target`.
-  Heredocs (`<< 'EOF'`) containing braces/quotes can also trip "expansion obfuscation" detection —
-  prefer writing a standalone `.py` script file with the Write tool and running it with `python3
-  <path>` instead of inlining via heredoc for anything with dict/brace-heavy Python. Plain heredocs
-  without braces/quotes (e.g. appending prose to a `.md` file) work fine (used successfully s548).
+  redirection to `/tmp`. Grep with a literal path instead of a shell variable when flagged. Writing a
+  multi-line string with embedded `#` inside a quoted python/shell argument trips "Newline followed by #
+  inside a quoted argument can hide arguments from path validation" — write long content to a scratch
+  file with the Write tool first, then `cat file >> target` (or just Write the target file directly).
 - After launching a manual live-verify in the background, use `TaskOutput` with `block: true` and a
-  generous `timeout` (e.g. 300000ms) to wait synchronously before doing anything else.
-- Full guard-by-guard table and mechanism detail for everything closed so far: `docs/PROJECT-OVERVIEW.md`
-  §22-§25.
+  generous `timeout` (e.g. 300000ms) to wait synchronously.
+- Full guard-by-guard table and mechanism detail: `docs/PROJECT-OVERVIEW.md` §22-§25.

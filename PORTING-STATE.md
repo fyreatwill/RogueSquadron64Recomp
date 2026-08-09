@@ -44646,3 +44646,107 @@ added); `docs/PROJECT-OVERVIEW.md` §25 table extended with guards 58-61, header
 updated; `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` +4 guards (not this
 repo, no submodule-patches step applies); `scratch/agent/soak_queue/s548_five_tied_guards_confirm_retry.sh`
 and `scratch/agent/soak_queue/s548_four_tied_guards_confirm.sh` queued; `PORTING-STATE.md` (this entry).
+
+
+## Session 549 (2026-08-09): item -317 step 3 -- folded in BOTH s548 queued confirms (five-tied
+guards 53-57's retry: WEAK a 3rd consecutive time, re-queued again; four-tied guards 58-61: CLEAN,
+closing the campaign's 61 guards to 61/61 fully closed for the tenth time); the four-tied confirm's
+own crash produced a DIRECT mechanistic trace to two genuinely new bugs -- item -334
+(`SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC`, `submitSceneNodeRender`) and item -327's root cause
+(`DL_LIST_APPEND_DEREF_GUARD`, a family-wide 3rd-guard gap across all 84 canonical
+`DL_LIST_APPEND_GUARD` sites) -- both fixed, 1st live-verify clean, 2nd confirm queued.
+
+**Fold-in (Step 1), `s548_five_tied_guards_confirm_retry`.** WEAK for the THIRD consecutive attempt on
+this exact confirm target: `hangarbay-entry n=4` (single-digit), crashed at 17.2s/7 frames on the SAME
+item -306 `setByteAcrossEntryList+176`/`0x800aafa8` signature as the two prior weak draws (s546 fold-in,
+s548 fold-in). Discarded per iron rule 1. This specific confirm target has now drawn 3 weak runs in a
+row hitting the identical background-noise signature -- flagged explicitly as a possible pattern (worth
+a dedicated check in a future session for whether this family correlates with short/early-crash runs
+specifically) rather than dismissed as coincidence. Retried again: `scratch/agent/soak_queue/
+s549_five_tied_guards_confirm_retry2.sh` queued for the loop. Guards 53-57 remain at "1st live-verify
+clean, 2nd confirm pending" -- no promotion this session.
+
+**Fold-in (Step 1), `s548_four_tied_guards_confirm`.** CLEAN with a strong positive control:
+`hangarbay-entry n=2700`, 0 fires on all four target guards (`emit-color-fill-rect-r5-guard`,
+`emit-material-textured-dl-r2-guard`, `emit-material-textured-dl-alt-r2-guard`,
+`submit-scene-node-render-r6-guard` -- none of the four even appear in the log, not even as diagnostic
+snapshots). Guards 58-61 marked FULLY CLOSED 2/2 -- closes the campaign's 61 guards to 61/61 fully
+closed (zero open guards) for the tenth time.
+
+**The crash itself was the real finding.** This run crashed at 114.4s on `pc-symbol=
+submitSceneNodeRender+65108`/`last-guest-pc=0x80010dcc`, with SIX sibling guard families dumping `n=0`
+diagnostic-looking lines immediately before the crash (`freelist-next-guard`, `generic-cache-guard`,
+`dl-list-append-rwrite-guard`, `dl-list-reset-rnode-guard`, `heap-dequeue-derived-ptr-guard`, and --
+critically -- `sibling-ptr-write-guard site=0x80010DC4 n=0 bad_ptr=0x48830D10`). Unlike every prior
+occurrence of this "n=0 lines at crash time" pattern (dismissed since s541/s544 as non-regression
+diagnostic dumps), this one had a DIRECT numeric correlation: the guard's own `bad_ptr=0x48830D10`
+value, +4 (the write offset at the next instruction), matches the crash's own fault address
+(`mcontext x12=0x00000000c8830d14`) modulo the RDRAM host-mapping offset -- the low 24 bits
+(`0x830D10`+`0x4`=`0x830D14`) match the fault address's low bits exactly. Read the generated source
+(`funcs_4.c:4376-4405`): `0x80010DC0`-`0x80010DC4` is the existing `SIBLING_PTR_WRITE_GUARD` site
+guarding `ctx->r5`; `0x80010DC8` (`bne $a0,$zero,...`) does not touch `ctx->r5`; its delay-slot
+instruction `sw $zero,0x4($a1)` at `0x80010DCC` is emitted TWICE by the recompiler (once for the taken
+branch, once as fallthrough -- same non-branch-likely delay-slot duplication `FREELIST_NEXT_GUARD`
+hit with `bnel`, s441) and BOTH copies write through the SAME never-rechecked `ctx->r5` -- exactly the
+item -319 idiom (a gap immediately after an existing guard, reusing its already-validated-then-
+invalidated register) recurring in a new function. Filed as item -334, fixed as
+`SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC` (122nd/123rd list entries, 2 delay-slot copies of 1 guest
+address) using the family's existing per-site literal-anchor mechanism and shared env var
+(`ROGUESQ_LOG_SIBLING_PTR_WRITE_GUARD`, already armed).
+
+**Item -327's root cause, found by re-verifying the v1 fix.** After adding the `0x80010DCC` fix and
+rebuilding, re-ran the SAME live-verify recipe: this time the crash moved downstream to
+`last-guest-pc=0x80010e6c` -- item -327's OWN exact catalogued address (previously 2 occurrences 21
+sessions apart, "watch for a 3rd before source-tracing" per NEXT.md), now a confirmed 3rd occurrence in
+the immediately-preceding v1 run (before this session's 2nd fix). Read the source at `funcs_4.c:4670-
+4699`: this is `submitSceneNodeRender`'s own instance of the `DL_LIST_APPEND_GUARD` idiom (s454, a
+57+27=84-site family). The existing `DL_LIST_APPEND_GUARD` (addr3=`0x80010E68`) validates `rload` (the
+list HEAD pointer, the `-0x5824` global) before reading `ctx->r{rderef} = MEM_W(rload, 0)` -- but
+`rderef` itself, a VALUE READ BACK FROM GUEST MEMORY (the head's own field0, i.e. the list's "next"
+pointer), was never range-checked before `addr4` (`0x80010E6C` in this instance) dereferences it as a
+write ADDRESS. The existing `DL_LIST_APPEND_RWRITE_GUARD` (s482, addr6) only ever validated `rwrite`
+(the NEW NODE argument) -- a completely different register. Confirmed via the family's own regex
+(`_dl_list_append_guard_re` in `fixup_game_funcs.py`) that this exact 4-instruction tail
+(`ctx->rderef = MEM_W(rload,0); MEM_W(0,ctx->rderef) = ctx->rwrite; ctx->rload = MEM_W(rload,0);
+MEM_W(4,ctx->rwrite) = ctx->rload;`) is byte-identical at ALL 84 canonical sites (the same claim s454's
+and s482's own comments already made and relied on to justify their own blanket fixes) -- so this is a
+genuine family-wide gap, not a single-site anomaly. Same remediation precedent as `FREELIST_NEXT_GUARD`
+(s441) and item -319/`SIBLING_PTR_WRITE_GUARD`'s own s520 gap: skip-the-write-on-invalid (`rderef` is
+dead after this block in every sampled site). Folded directly into the SAME blanket regex substitution
+as `DL_LIST_APPEND_GUARD`/`_RWRITE` (not a separate pass) as `DL_LIST_APPEND_DEREF_GUARD`, applied to
+all 84 sites in one edit (46 funcs_3.c + 38 funcs_4.c, confirmed by the fixup report's `patched x46`/
+`x38` counts matching the pre-existing `DL_LIST_APPEND_GUARD` counts exactly, i.e. every append-guard
+site now also has a deref-guard). Site `0x80010E6C` specifically covers item -327's exact crash address.
+
+**Regen and rebuild.** `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`, all
+four steps, twice this session (once for item -334 alone, once adding item -327's family-wide fix on
+top). Fixup report audited both times: `SIBLING_PTR_WRITE_GUARD` patched x66 (funcs_3.c) + x57
+(funcs_4.c) = 123 (121 pre-existing + 2 new delay-slot copies); `DL_LIST_APPEND_DEREF_GUARD` patched
+x46 (funcs_3.c) + x38 (funcs_4.c) = 84, matching `DL_LIST_APPEND_GUARD`'s own counts exactly (1:1, as
+expected for a guard added to the same regex match set). No unexpected patch-report anomalies.
+
+**1st live-verify (combined, both new guard families armed together per the batch-instrumentation
+rule).** `hangarbay-entry n=2700` (strong positive control), 0 fires on `dl-list-append-deref-guard`
+(any site) and 0 fires on `sibling-ptr-write-guard site=0x80010DCC` specifically. Crashed at 135.0s on
+`pc-symbol=coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` -- the already-catalogued s354-366
+heap-walker background-noise family, unrelated to either new guard. Only other guard activity: 1 benign
+already-catalogued `hangarmenu-a0-guard` `n=0` diagnostic snapshot (not a fire). Clean verify, own
+guards never fired. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s549_sibling_ptr_write_gap_confirm.sh`.
+
+**What this establishes.** For the first time in this whole 122+/84+-site campaign (previously 0 fires
+across every verify/confirm run ever conducted), an existing sibling-ptr-write-guard genuinely fired
+(`site=0x80010DC4`, `n=0`, first-ever fire) with a bad-pointer value directly, numerically traceable to
+the very next crash -- proof this idiom class is not purely theoretical risk-modeling, it is a real,
+live corruption source reaching game code. The new guards (item -334, item -327's root cause) are the
+first fixes in this campaign shipped on DIRECT crash-mechanism evidence rather than idiom-shape pattern
+matching alone. Item -327 should be considered resolved pending the 2nd confirm (it will no longer be
+possible for the family regex's addr4 write to fire uncontrolled).
+
+Ledger: `docs/CURRENT-TRUTH.md` items -317/-327/-334 updated; `docs/PROJECT-OVERVIEW.md` §25 table
+extended with guards 58-61 (CLOSED) and the item -334/-327 fixes; `/Users/williambuckley/Documents/
+Tools/N64Recomp/fixup_game_funcs.py` +2 `SIBLING_PTR_WRITE_GUARD` entries, +1
+`DL_LIST_APPEND_DEREF_GUARD` blanket addition (84 sites) (not this repo, no submodule-patches step
+applies); `scratch/agent/soak_queue/s549_five_tied_guards_confirm_retry2.sh` and
+`scratch/agent/soak_queue/s549_sibling_ptr_write_gap_confirm.sh` queued; `PORTING-STATE.md` (this
+entry).

@@ -20,9 +20,13 @@ Priority order for upcoming iterations, set after the 300-session review:
    the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW §18-§19).
    Items -312..-322 (s481-518, the `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage) are
    all fully CLOSED — PROJECT-OVERVIEW §20-§25. **Item -317 step 3 (~150-location blanket sweep)
-   status as of s548: 61/~150 leads fixed, 52 FULLY CLOSED 2/2, 9 pending confirm** — see item -317
-   below; ~89 locations remain unaudited, still M3's top-ranked work unit. Live breadcrumb tracking
-   (items -328..-333, filed not chased, none escalated): see Next-steps below.
+   status as of s549: 61/~150 leads fixed, 56 FULLY CLOSED 2/2, 5 pending confirm (3rd consecutive
+   weak draw)** — see item -317 below; ~89 locations remain unaudited, still M3's top-ranked work
+   unit. **Item -334 (s549, `SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC`) and item -327's root cause
+   (`DL_LIST_APPEND_DEREF_GUARD`, 84 sites) are the campaign's first fixes shipped on DIRECT crash-
+   mechanism evidence** (a guard's own bad-pointer value numerically traced to the next crash), not
+   idiom-shape pattern matching alone — see item -334. Live breadcrumb tracking (items -328..-333,
+   filed not chased, none escalated): see Next-steps below.
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
@@ -147,7 +151,26 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -333. The next NEW item takes -334.
+a range pointer. Highest allocated so far: -334. The next NEW item takes -335.
+
+-334. **(s549) `SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC` (`submitSceneNodeRender`) — FIXED, and the
+    fix's own 1st live-verify caught it FIRING FOR REAL (the campaign's first-ever confirmed genuine
+    fire across 122+ sites), 2nd confirm queued.** Found via DIRECT mechanistic correlation (not a
+    blind re-scan): the item -317 step 3 guards-58-61 2nd confirm crashed at `last-guest-pc=0x80010DCC`
+    while the SAME run's pre-existing `sibling-ptr-write-guard site=0x80010DC4` fired (`n=0`, its
+    first-ever fire across the whole 121-site family) with `bad_ptr=0x48830D10` one instruction
+    earlier — `bad_ptr+4` matches the crash's own fault address modulo the RDRAM host-mapping offset.
+    Same shape as item -319's own gap: an unguarded write immediately after an existing guard, reusing
+    the SAME already-flagged-bad register (`ctx->r5`, the delay-slot instruction after
+    `0x80010DC4`'s `bne`, duplicated x2 by the recompiler for taken/fallthrough paths — same
+    non-branch-likely duplication `FREELIST_NEXT_GUARD` hit with `bnel`, s441). Fixed as 2 new entries
+    (122nd/123rd) in the family's `_SIBLING_PTR_WRITE_SITES` list, sharing the family's existing env
+    var. **Verifying the fix alone caught the NEW guard itself firing** (`n=0`, `bad_ptr=0x810C747B`,
+    matching the value the pre-existing `0x80010DC4` guard fired with one instruction earlier in the
+    SAME run — a 2nd, independent confirmed catch), then the run crashed downstream at item -327's own
+    address instead — leading directly to item -327's root-cause fix (see below). A re-verify with
+    both fixes armed together came back clean (the corruption event is intermittent, as every guard in
+    this campaign has shown). Full derivation: `PORTING-STATE.md` Session 549.
 
 -328..-333. **Six more single/double-occurrence breadcrumbs surfaced by item -317 step 3's s526-546
     live-verifies, all filed not chased.** Full detail: `docs/PROJECT-OVERVIEW.md` §25-§26.
@@ -173,8 +196,14 @@ a range pointer. Highest allocated so far: -333. The next NEW item takes -334.
     s517 (`HEAPLISTDEQ_ATTR_WRITE_GUARD`), FULLY CLOSED 2/2 s518**. **-326** (s524) `do_rom_read+608`/
     `0x800025ac`, Bus error — matches the `do_rom_read`/`piDmaWorker` DMA-corruption race believed
     fixed since s147; **if a 2nd occurrence appears, treat it as urgent**.
-    **-327** (2 occurrences 21 sessions apart) `submitSceneNodeRender+67668`/`0x80010e6c`, Bus error —
-    watch for a 3rd before source-tracing. Full mechanism writeups: `docs/PROJECT-OVERVIEW.md` §24.
+    **-327** (3 occurrences, 3rd s549) `submitSceneNodeRender+67668`/`0x80010e6c`, Bus error —
+    **ROOT-CAUSED AND FIXED s549**: `DL_LIST_APPEND_GUARD`'s own idiom (s454) validates the list HEAD
+    pointer before reading `rderef = MEM_W(head, 0)` but never validated `rderef` itself (a value read
+    back from guest memory) before dereferencing it as a write address at this exact site — a 3rd gap
+    in a family that already had 2 guards (`DL_LIST_APPEND_GUARD` on the head, `_RWRITE` on the new-node
+    arg, neither covering `rderef`). Fixed family-wide as `DL_LIST_APPEND_DEREF_GUARD` (84 sites, same
+    regex-verified byte-identical shape as the other two guards in this family), not just this one
+    site. 1st live-verify clean, 2nd confirm queued. Full mechanism: `PORTING-STATE.md` Session 549.
 
 -319. **(s503/s505/s519, 3 occurrences) `beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0` — FIXED
     s520 (`SIBLING_PTR_WRITE_GUARD` site=`0x8000B0D0`, 121st site in that family), FULLY CLOSED 2/2
@@ -189,9 +218,9 @@ a range pointer. Highest allocated so far: -333. The next NEW item takes -334.
     entry, skipping the body if invalid. CLOSED 2/2 s507 after an s506 inconclusive retry. Mechanism:
     `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-548) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 61 guards fixed so far, 52/61 FULLY
-    CLOSED 2/2, 9 pending confirm (guards 53-57's s546 five-way tie, guards 58-61's s548 four-way tie).**
+-317. **(s490-549) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 61 guards fixed so far, 56/61 FULLY
+    CLOSED 2/2, 5 pending confirm (guards 53-57's s546 five-way tie, 3rd consecutive weak draw s549).**
     Steps 1 (`heapFreeListDequeue`) and 2 (`buildOrientedFaceGeometry`) are separately FULLY CLOSED 2/2.
     Step 3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a forward taint-propagation dataflow
     analysis) found ~448 raw reload sites deduping to ~150 candidate guard placements across 30
@@ -204,19 +233,18 @@ a range pointer. Highest allocated so far: -333. The next NEW item takes -334.
     `emitMaterialTexturedDL`/`emitMaterialTexturedDLAlt` (R1-R2 each). Full guard-by-guard table
     (all 61: site addresses, session, crash each verify/confirm hit): `docs/PROJECT-OVERVIEW.md`
     §22-§25.
-    **Pending as of s548**: guards 53-57 (`RENDER_FLAT_MESH_FACE_GROUP_R3/R4_GUARD`,
+    **Pending as of s549**: guards 53-57 (`RENDER_FLAT_MESH_FACE_GROUP_R3/R4_GUARD`,
     `RENDER_LIT_MESH_R12/R13_GUARD`, `DRAW_SUBTITLE_TEXT_R3_GUARD` — a five-way tie at count=16 across
-    3 functions) cleared their 1st live-verify clean but their queued 2nd confirm came back WEAK at s548
-    (`hangarbay-entry n=5`, 7 frames/20s, crashed on the item -306 `setByteAcrossEntryList+176`/
-    `0x800aafa8` background-noise signature) — discarded per iron rule 1, retry re-queued:
-    `scratch/agent/soak_queue/s548_five_tied_guards_confirm_retry.sh`. Guards 58-61
-    (`EMIT_COLOR_FILL_RECT_R5_GUARD`, `EMIT_MATERIAL_TEXTURED_DL_R2_GUARD`,
-    `EMIT_MATERIAL_TEXTURED_DL_ALT_R2_GUARD`, `SUBMIT_SCENE_NODE_RENDER_R6_GUARD` — a four-way tie at
-    count=14 across 3 functions) found+fixed at s548: 1st attempt WEAK (same `0x800aafa8` background-noise
-    signature, `hangarbay-entry n=5`, discarded), retry CLEAN — 0 fires on all 4 new guards, only 1 benign
-    already-catalogued `hangarmenu-a0-guard` n=0 diagnostic snapshot (not a fire), `hangarbay-entry n=33`
-    (positive control), full 300s duration, zero crashes at all. 2nd confirm queued:
-    `scratch/agent/soak_queue/s548_four_tied_guards_confirm.sh`.
+    3 functions) cleared their 1st live-verify clean but their queued 2nd confirm has now come back WEAK
+    THREE consecutive times (s546 fold-in, s548 fold-in, s549 fold-in — all three crashed on the item
+    -306 `setByteAcrossEntryList+176`/`0x800aafa8` background-noise signature with single-digit
+    `hangarbay-entry`) — a possible pattern worth a dedicated check (does this signature correlate with
+    short/early-crash runs specifically?), not yet investigated. Retry re-queued:
+    `scratch/agent/soak_queue/s549_five_tied_guards_confirm_retry2.sh`. **Guards 58-61 FULLY CLOSED 2/2
+    s549** (`hangarbay-entry n=2700`, 0 fires on all 4). **Guards 62-63 found+fixed s549 from that same
+    confirm run's own crash** — item -334 (`SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC`) and the
+    family-wide `DL_LIST_APPEND_DEREF_GUARD` fix (item -327's root cause, 84 sites) — 1st live-verify
+    clean, 2nd confirm queued: `scratch/agent/soak_queue/s549_sibling_ptr_write_gap_confirm.sh`.
     **~89 locations remain unaudited across further tiers — still the top-ranked M3 work unit.** Item
     -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't subsume these tiers.
     **Standing gotchas** (full detail: `docs/PROJECT-OVERVIEW.md` §22-§25, `scratch/agent/NEXT.md`):
@@ -228,7 +256,12 @@ a range pointer. Highest allocated so far: -333. The next NEW item takes -334.
     elsewhere without disqualifying the candidate (s545); short/weak (`hangarbay-entry` single-digit)
     runs recur on the item -306 `setByteAcrossEntryList+176`/`0x800aafa8` signature more than once per
     session — always discard and retry immediately, don't treat a single retry as sufficient insurance
-    against a second weak draw (s548). Raw detail: `PORTING-STATE.md` Sessions 490-548.
+    against a second weak draw (s548, now a 3rd consecutive weak draw at s549 — see item -317's own
+    pending-guards note above); a guard firing with `n=0` alongside other sibling guards at crash time is
+    NOT automatically "not a fire" — check whether the bad-pointer VALUE numerically correlates with the
+    crash's own fault address before dismissing it as background noise (s549, item -334: it does
+    correlate, and is the campaign's first genuine fire in 121+ sites). Raw detail: `PORTING-STATE.md`
+    Sessions 490-549.
 
 -316. **(s488-490) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED 2/2.** A scope gap in the existing s436
     `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`): validated one deref but not two propagating

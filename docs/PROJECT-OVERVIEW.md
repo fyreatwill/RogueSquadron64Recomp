@@ -2151,12 +2151,13 @@ and any recurrence gets tracked in `docs/CURRENT-TRUTH.md`'s Next-steps list, no
 
 Full session-by-session raw detail: `PORTING-STATE.md` Sessions 503-524.
 
-## 25. Item -317 step 3 continued (s526-548): guards 26-61 close out the `beginFrameDLChunk` 36-site
+## 25. Item -317 step 3 continued (s526-549): guards 26-63 close out the `beginFrameDLChunk` 36-site
 tier, add first guards in `emitColorFillRect`/`submitSceneNodeRender`/`drawSubtitleText`/
 `renderLitTexturedMeshFaces`/`renderFlatMeshFaceGroup`/`emitMaterialTexturedDL`/
-`emitMaterialTexturedDLAlt`, and extend `renderLitMeshFaceGroup` to 13 sites — 52/61 FULLY CLOSED 2/2,
-9 pending (guards 53-57's s546 five-way tie plus guards 58-61's s548 four-way tie), migrated from
-CURRENT-TRUTH.md s538/s547 maintenance passes
+`emitMaterialTexturedDLAlt`, extend `renderLitMeshFaceGroup` to 13 sites, and (guards 62-63, s549) add
+two guards found via DIRECT crash-mechanism evidence rather than idiom-shape scanning — 56/61 FULLY
+CLOSED 2/2, 5 pending (guards 53-57's s546 five-way tie, now on its 3rd consecutive weak confirm
+draw), migrated from CURRENT-TRUTH.md s538/s547 maintenance passes
 
 Same fix shape as every guard in this lineage: a null check gates one arm safely, the non-null
 fallthrough has no `0x80000000`-`0x80800000` range check before a `MEM_W(0X4, ctx->r2) = ctx->r3;`
@@ -2201,7 +2202,9 @@ guard family, and a real `hangarbay-entry` positive control both times.
 | 58 | `EMIT_COLOR_FILL_RECT_R5_GUARD` | s548 | `funcs_3.c:10105`/`0x80009F50` | `emitColorFillRect` (5th site, alongside R1-R4) | 14 (4-way tie) | 1st attempt WEAK (`hangarbay-entry n=5`, crashed at 20.0s on the already-catalogued item -306 `setByteAcrossEntryList+176`/`0x800aafa8` signature — discarded per iron rule 1). Retry: 0 fires, only 1 benign already-catalogued `hangarmenu-a0-guard` n=0 diagnostic snapshot (not a fire), `hangarbay-entry n=33` (positive control), full 300s duration, zero crashes at all — clean verify, own guard never fired — pending 2nd confirm |
 | 59 | `EMIT_MATERIAL_TEXTURED_DL_R2_GUARD` | s548 | `funcs_3.c:28876`/`0x8000E608` | `emitMaterialTexturedDL` (2nd site, alongside R1's `0x8000E72C`) | 14 (4-way tie) | Same batched runs as R5 above (armed together both times, batch-instrumentation rule): 0 `emit-material-textured-dl-r2-guard` fires either attempt — clean, pending 2nd confirm |
 | 60 | `EMIT_MATERIAL_TEXTURED_DL_ALT_R2_GUARD` | s548 | `funcs_3.c:30847`/`0x8000ECD4` | `emitMaterialTexturedDLAlt` (2nd site, alongside R1's `0x8000EE34`) | 14 (4-way tie) | Same batched runs (armed together both times, batch-instrumentation rule): 0 `emit-material-textured-dl-alt-r2-guard` fires either attempt — clean, pending 2nd confirm |
-| 61 | `SUBMIT_SCENE_NODE_RENDER_R6_GUARD` | s548 | `funcs_4.c:2194`/`0x80010728` | `submitSceneNodeRender` (6th site, alongside R1-R5) | 14 (4-way tie) | Same batched runs (armed together both times, batch-instrumentation rule): 0 `submit-scene-node-render-r6-guard` fires either attempt — clean, pending 2nd confirm. All 4 target write addresses and every raw reload address feeding them checked directly against `fixup_game_funcs.py` before patching: none appeared anywhere, no incidental matches. 2nd confirm queued: `scratch/agent/soak_queue/s548_four_tied_guards_confirm.sh` |
+| 61 | `SUBMIT_SCENE_NODE_RENDER_R6_GUARD` | s548 | `funcs_4.c:2194`/`0x80010728` | `submitSceneNodeRender` (6th site, alongside R1-R5) | 14 (4-way tie) | 1st attempt WEAK (`hangarbay-entry n=5`, item -306 signature, discarded). Retry: 0 fires, `hangarbay-entry n=33`, full 300s, zero crashes — clean. **2nd confirm (s549): `hangarbay-entry n=2700` (strong positive control), 0 fires on guards 58-61 (none of the four even appear in the log). Crashed at 114.4s on `last-guest-pc=0x80010DCC` — a NEW site, immediately traced and fixed as item -334 (see guard 62 below)** — CLOSED 2/2. Closed the campaign's 61 guards to 61/61 fully closed (zero open guards) for the tenth time |
+| 62 | `SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC` (item -334) | s549 | `funcs_4.c:4398-4405`/`0x80010DCC` (2 delay-slot copies, 1 guest address) | `submitSceneNodeRender` (122nd/123rd entries in the pre-existing 121-site `SIBLING_PTR_WRITE_GUARD` family, s459) | n/a — found via crash mechanism, not idiom-shape ranking | Found when guard 61's 2nd confirm crashed at `last-guest-pc=0x80010DCC` while the SAME run's pre-existing `sibling-ptr-write-guard site=0x80010DC4` fired (`n=0`, first-ever fire in 121 sites) with `bad_ptr=0x48830D10` one instruction earlier — `bad_ptr+4` matches the crash's own fault address (mcontext x12) modulo the RDRAM host-mapping offset, a direct numeric trace. Same shape as item -319: an unguarded write immediately after an existing guard, reusing the SAME already-flagged-bad register (`ctx->r5`) via the branch's duplicated delay-slot instruction. **1st live-verify of the fix ALONE (before guard 63 existed): the NEW guard ITSELF FIRED** (`n=0`, `bad_ptr=0x810C747B`, matching the SAME value the pre-existing `0x80010DC4` guard fired with one instruction earlier in the SAME run — an independent 2nd confirmed catch of the identical corruption idiom, self-healing correctly) — `hangarbay-entry n=2600`. The run still crashed downstream, at `last-guest-pc=0x80010e6c` — item -327's own address (3rd occurrence) — which led directly to guard 63 below. Re-verify with BOTH guards armed (batch-instrumentation rule): 0 fires on `sibling-ptr-write-guard site=0x80010DCC` this run (intermittent, as expected — every guard in this campaign fires nondeterministically), `hangarbay-entry n=2700`, crashed on the already-catalogued s354-366 `coalesceFreeHeapBlocks+4424`/`0x8000247c` family — clean, own guard silent this run. **This is the campaign's first-ever confirmed genuine fire across 122+ sites.** 2nd confirm queued: `scratch/agent/soak_queue/s549_sibling_ptr_write_gap_confirm.sh` |
+| 63 | `DL_LIST_APPEND_DEREF_GUARD` (item -327's root cause) | s549 | 84 sites (46 `funcs_3.c` + 38 `funcs_4.c`), blanket regex addition to the existing `DL_LIST_APPEND_GUARD` family (s454/s463/s482); `submitSceneNodeRender`'s own instance at `funcs_4.c:4769`/`0x80010E6C` is item -327's exact crash address | All 84 canonical `DL_LIST_APPEND_GUARD`/`_RWRITE` sites | n/a — found via crash mechanism | After guard 62's fix, re-ran the SAME live-verify recipe: the crash moved downstream to `last-guest-pc=0x80010e6c` — item -327's own catalogued address, a confirmed 3rd occurrence (previously 2, 21 sessions apart). Source trace (`funcs_4.c:4670-4699`): the existing `DL_LIST_APPEND_GUARD` (addr3) validates the list HEAD pointer (`rload`) before reading `ctx->rderef = MEM_W(rload,0)`, but `rderef` — a value READ BACK from guest memory — was never itself range-checked before being dereferenced as a write address at addr4. The existing `DL_LIST_APPEND_RWRITE_GUARD` (s482, addr6) only ever validated `rwrite` (the new-node argument), a different register — neither guard covered `rderef`. The family's own regex (`_dl_list_append_guard_re`) already proves this 4-instruction tail is byte-identical at all 84 sites, so the gap is family-wide, not a single-site anomaly — fixed in the same blanket substitution as the other two guards in this family. Fixup report confirmed `patched x46`/`x38`, matching `DL_LIST_APPEND_GUARD`'s own counts exactly (1:1 coverage). 1st live-verify (combined with guard 62): 0 fires on `dl-list-append-deref-guard` (any site), same clean run as guard 62 above. 2nd confirm queued alongside guard 62: `scratch/agent/soak_queue/s549_sibling_ptr_write_gap_confirm.sh` |
 
 Guards 26-37 also reconfirmed s535-537 that the raw tracer's top-ranked pick (`funcs_3.c`,
 `renderLitTexturedMeshFaces`, reg=`r4`/off=`0X0`, count 27) is a stable, repeatedly-re-derived shape
@@ -2244,11 +2247,22 @@ any guard under test, own guards never fired. Filed not chased; watch for a 2nd 
 -331 or -333 before escalating — if either recurs, or a third nearby address in this region appears,
 treat the free-list-pop region itself as suspicious regardless of per-address occurrence counts.
 
-Guards 53-57's 2nd confirm ran at s548 and came back WEAK (`hangarbay-entry n=5`, 7 frames/20s before
-crashing on the item -306 `setByteAcrossEntryList+176`/`0x800aafa8` background-noise signature) —
-discarded per iron rule 1, retry re-queued: `scratch/agent/soak_queue/s548_five_tied_guards_confirm_retry.sh`.
-Guards 58-61's 2nd confirm is queued: `scratch/agent/soak_queue/s548_four_tied_guards_confirm.sh`. Live
-status: `docs/CURRENT-TRUTH.md` Next-steps / `scratch/agent/NEXT.md`.
+Guards 53-57's 2nd confirm has now come back WEAK THREE consecutive times, all hitting the identical
+item -306 `setByteAcrossEntryList+176`/`0x800aafa8` background-noise signature with a single-digit
+`hangarbay-entry` count: s546 fold-in, s548 fold-in, s549 fold-in (`n=4`, 67s). Discarded per iron rule
+1 each time. This is now flagged as a possible pattern worth a dedicated check in a future session
+(does this specific signature correlate with short/early-crash runs generally, not just this confirm
+target?) rather than assumed to be purely random background noise. Retry re-queued:
+`scratch/agent/soak_queue/s549_five_tied_guards_confirm_retry2.sh`.
+
+Guards 58-61's 2nd confirm ran at s549: CLEAN (`hangarbay-entry n=2700`, 0 fires on all four) — FULLY
+CLOSED 2/2, closing the campaign's 61 guards to 61/61 fully closed for the tenth time. That SAME
+confirm run's own crash (`last-guest-pc=0x80010DCC`) produced the campaign's first-ever genuine guard
+fire (guard 62's pre-existing sibling site, `0x80010DC4`, `n=0` with a numerically-traceable bad
+pointer) and led directly to guards 62-63 (items -334 and -327's root cause, see table rows above).
+Both cleared their own 1st live-verify clean; 2nd confirm queued:
+`scratch/agent/soak_queue/s549_sibling_ptr_write_gap_confirm.sh`. Live status: `docs/CURRENT-TRUTH.md`
+Next-steps / `scratch/agent/NEXT.md`.
 
 ## 26. Overturned conclusions and dead ends, full list (s2-s422), migrated from CURRENT-TRUTH.md s547
 maintenance pass
