@@ -1,62 +1,84 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: m5-lead-recheck
+HYPOTHESIS-ID: m3-dod-craft-stick-hold
 
-## s569 recap (read this first)
+## s570 recap (read this first)
 
-**Item -348 FULLY CLOSED 2/2.** SIBLING_PTR DIRECT residual same-base gap class (218 sites).
+**M5 lead recheck → H2 (zero new leads).** Offline survey only.
 
-- s568 queued confirm: WEAK item-306 (`setByteAcrossEntryList+176`/`0x800aafa8`, hangarbay n=0).
-- s569 manual retry: hangarbay **n=3000**, full ~300s rc=0, 0 CRASH, 0 sibling-ptr-write fires.
-- DIRECT residual campaign exhausted (freelist R/ATTR EMPTY dual-scan + SIBLING residual CLOSED).
-- Breadcrumb re-tally: -332 still 2 occs (watch); no single-occ escalation.
+- SOAK-RESULTS: no post-s520 audio crash signatures (only historical s348 noise).
+- Hangarbay soaks s565–s569: `real_ucode=0` as designed; only known
+  `[audio-wait-pump-stall]` ceiling diagnostic (s327, not a lead).
+- Stubs still intentionally in force: C88 `reapplyDisplayMode` force-zero;
+  `ROGUESQ_AUDIO_UCODE` default off; aspMain Broke unused.
+- Cadence: last checked s570, due s573+.
+- DIRECT residual freelist/sibling campaign remains exhausted (item -348 CLOSED 2/2).
 
 ## This iteration's work unit
 
-**M5 audio lead recheck** (strategic priority #2; last checked s520, due s523+, now s569+).
+**Item -7 — M3 DoD body: craft-stick HOLD_S=60 from SELECT YOUR CRAFT.**
 
-M5 is DONE/CLOSED (s297-376). Goal is NOT to reopen closed steps — survey whether any
-**genuinely new** audio lead exists that would justify reopening de-stubbing work.
+Goal: leave the menu into the post-craft-select window, hold 60s with stick pulses at
+10/25/40, capture phase timeline (VI width / origin / content / fs plateau / crash).
+This is the documented M3 definition-of-done *body* probe, not a crash chase.
 
 ### Hypotheses
-- H1: New audio-related crash family or stub/trap still in force that M5 plan never closed →
-  file a new item and plan one de-stubbing step.
-- H2: No new lead (stubs only where intentionally left; no new audio crash signatures in
-  SOAK-RESULTS/recent logs) → document "rechecked s569, zero new leads, due again s572+",
-  pivot to M3 DoD body item -7.
-- H3: An existing closed M5 step regressed (e.g. waitForMusyX / voice-array / slot reaping
-  reappearing in hangarbay soaks) → re-open only that step with a same-run positive control.
+- H1: Process reaches SELECT YOUR CRAFT and survives full HOLD_S=60 with stick marks;
+  phase timeline is documentable (VI + content frames). M3 DoD body data lands even if
+  not yet "in-mission."
+- H2: Residual S1 `fs` freeze (~3769–3872 plateau from prior notes) still stalls graphics
+  task submission during the hold — process alive but `stalled=1 pairs=0` / frozen `fs`.
+- H3: Crash or early death before or during hold on a catalogued family (file breadcrumb;
+  do not open a reactive chase unless a *new* last-guest-pc appears ≥2 times).
 
-### Discriminating measurements (batch offline — no game run required unless H3)
-1. Grep CURRENT-TRUTH + PORTING-STATE tail + SOAK-RESULTS for audio/MusyX/voice/slot/MORT
-   crash signatures newer than s520.
-2. Survey active stubs: `src/main/main.cpp` M_AUDTASK route, fixup audio-engine gates,
-   any `ROGUESQ_*AUDIO*` envs, `aspMain` stub, waitForMusyX traps — compare to
-   `docs/M5-AUDIO-PLAN.md` closed-state claim.
-3. If (1)+(2) empty → H2. If a live stub contradicts the plan's "intentionally left" list → H1.
+### Discriminating measurements (one recipe, one run)
+1. Process alive through hold end? (exit code / SIGKILL-at-timeout vs CRASH)
+2. VI width/origin transitions during hold (grep `[phase]` / `vi_width` / origin)
+3. Stick marks applied? (driver `[keys]` / stick lines in launcher log, not only run.log)
+4. Graphics stall? (`[vi-fs-decision] stalled=1` continuous; RDP `fs` frozen)
+5. Crash signature if any: `last-guest-pc` + `pc-symbol` vs catalogued families
 
 ### Exact commands
 ```bash
-# 1) new audio crash signatures since s520
-grep -nE 'MusyX|musyx|waitForMusyX|voice-array|audio.?slot|M_AUDTASK|MORT|aspMain' \
-  scratch/agent/SOAK-RESULTS.md | tail -40
-grep -nE 'MusyX|waitForMusyX|voice|audio.?slot|M_AUDTASK' PORTING-STATE.md | tail -30
+# Prefer the established mission-keys driver with start_only + stick schedule.
+# Run from repo root; ROM must be in build/.
+mkdir -p scratch/agent/soak_results/s571_item7_craft_stick_hold
+cd scratch/s73_post_a_scene
 
-# 2) stubs still in force
-grep -nE 'M_AUDTASK|audio|MusyX|aspMain|waitForMusyX' src/main/main.cpp | head -40
-grep -nE 'audio|MusyX|0x800A0F50|initMusyX' \
-  ~/Documents/Tools/N64Recomp/fixup_game_funcs.py | head -40
-ls docs/M5-AUDIO-PLAN.md docs/PROJECT-OVERVIEW.md
+# Full passive breadcrumb set is free; keep audio logs off unless needed.
+export PROBE_MODE=start_only
+export HOLD_S=60
+export STICK_SCHEDULE="10:sr 25:sl 40:su"
+export HOLD_TICK_S=1
+export CAPTURE_TICK_S=1
+# Optional: arm hangarbay/phase logs if not already in the driver defaults
+export ROGUESQ_LOG_HANGARBAY_ENTRY=1
+export ROGUESQ_LOG_RUNNER=1
+
+# Grace/stable args match run_mission_keys.sh convention
+zsh run_mission_keys.sh s571_item7 5 12
+
+# Post-run (do not cat full log):
+#   grep -E '\[phase\]|vi_width|stalled|\[keys\]|stick|CRASH|last-guest-pc' \
+#     scratch/s73_post_a_scene/s571_item7/run.log | head -80
+#   ls scratch/s73_post_a_scene/s571_item7/hold_*.png | head
 ```
 
+Alternative if `run_mission_keys.sh` path is stale: clone
+`scratch/agent/s569_sibling_residual_gap_confirm_retry.sh` schedule but switch to
+`PROBE_MODE=start_only HOLD_S=60` and stick schedule via `tools/probe.sh` if it
+supports sticks — verify with `grep STICK tools/probe.sh` first; if not, use
+`run_mission_keys.sh`.
+
 ### Expected outcomes
-- H2 (most likely): update CURRENT-TRUTH "last checked s569, due s572+"; NEXT → item -7
-  M3 DoD body (`PROBE_MODE=start_only HOLD_S=60`).
-- H1: open item -349 with one concrete de-stubbing step + soak recipe.
-- H3: same as H1 but scoped to the regressed closed step.
+- H1: document phase table in CURRENT-TRUTH item -7 / PORTING-STATE; M3 DoD body
+  advanced (still not full DoD until 60s *in-mission* craft response).
+- H2: confirm fs freeze still present; file as standing M3 stall (s176–s183 family),
+  do not re-open thr-resume-skip.
+- H3: catalog crash; if new PC and 2nd occ later, open -349; else breadcrumb only.
 
 ### Do NOT
-- Re-run closed M5 de-stubbing steps without a new signature.
+- Reopen M5 (due s573+ only, or on a new audio signature).
 - Chase item -347 / single-occ breadcrumbs.
-- Re-open packing DEFERRED float sites without same-run bad_ptr evidence.
-- Start item -7 in the same iteration as the M5 survey (one work unit).
+- Spend the session on another freelist residual scan (campaign exhausted).
+- Cross-run A/B on animating scenes; one hold window is the measurement.

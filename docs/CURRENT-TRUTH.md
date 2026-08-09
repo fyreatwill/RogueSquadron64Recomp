@@ -13,7 +13,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    hard floor -- the "Current truth" env-var/timeline prose and the Regeneration section's Standing
    warnings stay intact deliberately; both are used every iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (PROJECT-OVERVIEW §10-§12). Next
-   M5 work needs a genuinely new lead (last checked s520, zero new leads, due again s523+).
+   M5 work needs a genuinely new lead (last checked s570, zero new leads, due again s573+).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Every bucket from
@@ -30,7 +30,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s569)
+## Current truth (established by session 295; unchanged, reviewed through s570)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -143,7 +143,8 @@ consume it. The 3 `[missing-func]` addresses, the `main_overlay.txt` phantom-ove
 family, and its `0x800290d4` clustering are all **DONE/CLOSED** (items -6/-249/-259).
 
 **M5 — audio de-stubbing: DONE and fully CLOSED (s297-376).** No outstanding thread; next M5 work
-needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
+needs a genuinely new lead (rechecked s570: zero new leads, intentionally-left stubs still C88
+force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 ## Next steps, in order of expected value (s295)
 

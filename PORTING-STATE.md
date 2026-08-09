@@ -45727,3 +45727,42 @@ due s523+). Highest-info M3 fallback if M5 still lead-empty: item -7 M3 DoD body
 
 ### Artifacts
 - `scratch/agent/s569_sibling_residual_gap_confirm_retry.sh` + soak_results/run.log
+
+## Session 570 — M5 audio lead recheck: H2 zero new leads; cadence → s573+
+
+**Work unit:** M5 audio lead recheck (strategic priority #2; overdue since s520, due s523+).
+Offline survey only — no build/run. HYPOTHESIS-ID `m5-lead-recheck`.
+
+### Discriminating measurements
+
+1. **SOAK-RESULTS** audio/MusyX/voice/slot tags: only one historical hit (`s348` boot
+   `musyxSynthFrame+4652`, pre-title, already catalogued). No post-s520 audio crash signature
+   in the soak queue ledger.
+2. **Recent hangarbay soaks** (s565–s569 confirm paths): every log shows
+   `[audtask-dispatch] real_ucode=0` (stub path, `ROGUESQ_AUDIO_UCODE` unset by design) and at
+   most the known `[audio-wait-pump-stall] countdown=16 after 64 musyxSynthFrame pumps` ceiling
+   diagnostic (s327 item -184/-185 — already fired in 100+ soak logs; not a new lead). Zero
+   `waitForAnyAudioSlot` / `voice-array` / `waitForMusyX` crash symbols.
+3. **Active stubs vs M5-AUDIO-PLAN closed-state claim** (same-run code read, not precedent):
+   - `src/main/main.cpp` `M_AUDTASK`: env-gated; default → `musyx_stub` (`RspExitReason::Broke`);
+     `ROGUESQ_AUDIO_UCODE=1` → `factor5_ucode_b` (unchanged since s300).
+   - `fixup_game_funcs.py` gate regex force-zeros **only** `0x8008EC88` (`reapplyDisplayMode`);
+     `setDisplayMode` (`0x8008EB40`) and `initMusyXEngine` (`0x8008E9F8`) keep real
+     `MEM_B(0XF50)=ctx->r2` writes. Confirmed live in `funcs_23.c` L9788/L9570 (real) vs
+     L10021 (PATCH `= 0`). Matches s343 shipped default (title-reach requires C88 force-zero;
+     PCM silent because C88 re-disables the gate every frame — PROJECT-OVERVIEW §12).
+   - `src/rsp/aspMain.cpp` still Broke (stock aspMain never used; MusyX path is separate).
+   - Host `queue_samples` retains the s371 `*sizeof(int16_t)` fix.
+
+### Verdict: H2
+
+No genuinely new audio stub/trap/gate lead. Closed M5 steps do not show regression signatures
+in post-s520 hangarbay soaks. Intentionally-left stubs remain exactly where the plan left them
+(C88 force-zero + default `real_ucode=0`). Cadence: **last checked s570, due again s573+**.
+
+Ruled out this iteration: H1 (new lead) and H3 (closed-step regression).
+
+### Next
+
+M3 item -7 DoD body: `PROBE_MODE=start_only HOLD_S=60` craft-stick marks at 10/25/40, document
+phase timeline from SELECT YOUR CRAFT hold window. Do not reopen M5 without a new signature.
