@@ -1,0 +1,40 @@
+{
+  "session": 562,
+  "item": -344,
+  "dual_walk_total": 129,
+  "g3g4": 119,
+  "residual_freelist_dual": [
+    {
+      "func": "allocateDisplayListBuffer",
+      "walk": "0x80007DA8",
+      "init": "0x80007D9C",
+      "peek": "0x80007DAC",
+      "walk_reg": "r4"
+    },
+    {
+      "func": "renderLitMeshFaceGroup",
+      "walk": "0x80013EEC",
+      "init": "0x80013EE0",
+      "peek": "0x80013EF0",
+      "walk_reg": "r4"
+    }
+  ],
+  "simple_walk": [
+    {
+      "func": "countDisplayListChunks",
+      "walk": "0x80007CC8",
+      "walk_reg": "r3"
+    }
+  ],
+  "packing_deferred": {
+    "needs_guard_total": 22,
+    "packing_write_base_dl_cursor": 21,
+    "freelist_read_simple_walk": 1
+  },
+  "live_verify1": {
+    "hangarbay_max": 2600,
+    "new_guard_fires": 0,
+    "crash_pc": "0x8000d944",
+    "crash_note": "DIRECT gap after HEAPLISTDEQ_ATTR_WRITE_GUARD 0x8000D92C (item -322); filed as item -345"
+  }
+}
