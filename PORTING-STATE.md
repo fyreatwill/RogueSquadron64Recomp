@@ -45436,3 +45436,56 @@ Landed in `fixup_game_funcs.py` s563 block + surgical `RecompiledFuncs/funcs_3.c
 - docs/CURRENT-TRUTH.md, scratch/agent/NEXT.md, SOAK-RESULTS.md, PORTING-STATE.md
 - scratch/agent/soak_queue/s563_heaplistdeq_attr_gap_confirm.sh
 - scratch/agent/soak_results/s563_heaplistdeq_attr_gap_manual/
+
+## Session 564 — freelist WRITE residual EMPTY after -345; -345 CLOSED 2/2; campaign formally CLOSED; -320 escalates
+
+**Date:** 2026-08-09
+
+### Fold-in
+- `s563_heaplistdeq_attr_gap_confirm` (item -345 2nd confirm): **CLEAN** — hangarbay-entry
+  **n=2700** (strong positive control), **0 fires** on `heaplistdeq-attr-write-guard` any site,
+  no crash at `0x8000D944`. Process died at 135.5s / 46 frames on
+  `coalesceFreeHeapBlocks+3192` / `last-guest-pc=0x8000241c` (already-catalogued s354-366
+  heap-walker background-noise family). **Item -345 FULLY CLOSED 2/2.**
+
+### Work unit (Option A residual freelist-class re-scan after -345 closes)
+**Hypotheses:**
+1. H1: freelist WRITE NEEDS_GUARD residual is EMPTY after -345 (campaign complete).
+2. H2: more DIRECT gaps exist adjacent to already-guarded stack-slot bases.
+3. H3: packing sites start needing re-classification as freelist-class.
+
+**Discriminating measurement:** fresh `s494_item317_step3_tracer.py --scan` (no custom `--out`)
++ shape-check every NEEDS_GUARD write base (same methodology as s562).
+
+### Results
+- Selftest: ALL PASS.
+- Tracer: 448 reload sites; **SAFE_NO_DEREF=427**, **NEEDS_GUARD=21** (down from s562's 22 —
+  `countDisplayListChunks` simple-walk now SAFE under item -344's `FREELIST_SIMPLE_WALK_GUARD`).
+- Shape-check of all 21 NEEDS_GUARD unique write hits:
+  | Function | # | write base | classification |
+  |---|---|---|---|
+  | heapFreeListDequeue | 11 | r2/r3/r16 from s0 DL cursor; RDP B600/B700/B500/FA00 | packing DEFERRED |
+  | buildOrientedFaceGeometry | 7 | r5/r3/r4/r18 from s2 DL cursor; RDP FA00/B500/EE00 | packing DEFERRED |
+  | drawSubtitleText | 3 | r4 from `-0x23A8` sibling global DL cursor; RDP B500 | packing DEFERRED |
+- Freelist `0x63B0` reload is **branch-only** (null-check into findAndUnlink); never the write
+  base. Flow-merge tracer conservatively flags packing sites sharing the reload CFG.
+- **H1 confirmed:** freelist-shaped NEEDS_GUARD residual = **0**.
+- **H2 refuted** (no new DIRECT freelist write gap).
+- **H3 refuted** (packing stays DEFERRED, not freelist-class).
+- **Freelist WRITE campaign formally CLOSED** (item -317 step 3 write idioms 131/131 + residual
+  walks -341..-345 all FULLY CLOSED 2/2; packing outside class).
+
+### Breadcrumb recount (pivot prep)
+SOAK-RESULTS exact `last-guest-pc=0x800aafb8` hits with hangarbay control:
+- s532 confirm n=31, s536 manual n=2600, s543 manual n=31, s563 manual n=2600
+  (+ s508 filing). Ledger had undercounted as "2 occ" (only s508+s563 prose).
+- **Item -320 ESCALATED** to source-trace (next work unit). Distinct from
+  `+1860`/`0x800ab068`/`initVec4TripletFromArgs+68` RDRAM-base family.
+
+### Ruled out
+- That -345 left freelist WRITE residual gaps (tracer residual freelist-shaped = 0).
+- That packing DEFERRED sites became freelist-class after residual walks closed.
+
+### Files
+- scratch/agent/s564_residual_summary.json, s494_item317_step3_report.json (refreshed)
+- docs/CURRENT-TRUTH.md, scratch/agent/NEXT.md, SOAK-RESULTS.md, PORTING-STATE.md

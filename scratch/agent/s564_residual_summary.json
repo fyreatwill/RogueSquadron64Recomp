@@ -1,0 +1,53 @@
+{
+  "session": 564,
+  "work_unit": "freelist-write-residual-rescan-after-345",
+  "hypothesis_id": "heaplistdeq-attr-write-gap",
+  "fold_in": {
+    "s563_heaplistdeq_attr_gap_confirm": {
+      "verdict": "CLEAN",
+      "hangarbay_max": 2700,
+      "heaplistdeq_attr_write_fires": 0,
+      "crash_pc": "0x8000241c",
+      "crash_sym": "coalesceFreeHeapBlocks+3192",
+      "note": "already-catalogued s354-366 heap-walker background-noise family; no crash at 0x8000D944",
+      "item_345": "FULLY CLOSED 2/2"
+    }
+  },
+  "tracer": {
+    "selftest": "ALL PASS",
+    "raw_reload_sites": 448,
+    "SAFE_NO_DEREF": 427,
+    "NEEDS_GUARD": 21,
+    "prev_s562_NEEDS_GUARD": 22,
+    "delta": "countDisplayListChunks simple-walk now SAFE (item -344 guard)"
+  },
+  "shape_check": {
+    "freelist_shaped_NEEDS_GUARD": 0,
+    "packing_DEFERRED": 21,
+    "packing_funcs": {
+      "heapFreeListDequeue": {
+        "sites": 11,
+        "write_base": "r2/r3/r16 from s0 DL cursor; RDP opcodes B600/B700/B500/FA00"
+      },
+      "buildOrientedFaceGeometry": {
+        "sites": 7,
+        "write_base": "r5/r3/r4/r18 from s2 DL cursor; RDP FA00/B500/EE00"
+      },
+      "drawSubtitleText": {
+        "sites": 3,
+        "write_base": "r4 from -0x23A8 sibling global DL cursor; RDP B500"
+      }
+    },
+    "note": "Freelist 0x63B0 reload is branch-only (null-check path into findAndUnlink); write bases are packing DL cursors. Flow-merge tracer flags these conservatively."
+  },
+  "verdict": {
+    "H1_freelist_WRITE_residual_EMPTY": true,
+    "H2_more_DIRECT_gaps": false,
+    "H3_packing_reclassified": false,
+    "campaign": "item -317 step 3 freelist WRITE idioms FULLY CLOSED; packing remains DEFERRED outside freelist class"
+  },
+  "next": {
+    "pivot": "item -320 loadCutsceneAssetsByIndex+1860/0x800aafb8 source-trace",
+    "reason": "exact guest PC 0x800aafb8 has >=4 independent hangarbay-controlled hits in SOAK-RESULTS (s532,s536,s543,s563) plus s508 filing; undercounted as 2 in CURRENT-TRUTH"
+  }
+}

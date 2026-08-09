@@ -1,68 +1,71 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: heaplistdeq-attr-write-gap
+HYPOTHESIS-ID: item-320-loadcutscene-sourcetrace
 
-## s563 recap (read this first)
+## s564 recap (read this first)
 
-**Item -345: HEAPLISTDEQ_ATTR_WRITE residual gap after -322 — FIXED, 1st live-verify CLEAN.**
+**Item -345 FULLY CLOSED 2/2** (confirm: hangarbay n=2700, 0 attr-write fires, crash on
+catalogued coalesceFreeHeapBlocks noise).
 
-s562 same-run: guard `0x8000D92C` fired `bad_ptr=0x8` → crash `0x8000D944` (r3 reloaded from same
-`sp+0x3C`). Extended family to 7 residual sites (bit-0x10 path + L_8000D968 alt):
-`0x8000D944`, `0x8000D94C`, `0x8000D964` x2, `0x8000D978`, `0x8000D980`, `0x8000D994`.
-Reuse `ROGUESQ_LOG_HEAPLISTDEQ_ATTR_WRITE_GUARD`.
+**Freelist WRITE residual re-scan after -345: EMPTY.**
+- Tracer: 448 reloads, NEEDS_GUARD=21 (was 22 at s562).
+- All 21 shape-checked: packing DEFERRED (write-base = DL cursor; freelist reload branch-only).
+- Freelist-shaped NEEDS_GUARD = 0. **Freelist WRITE campaign formally CLOSED.**
+- Summary: `scratch/agent/s564_residual_summary.json`
 
-**1st live-verify:** hangarbay n=2600, 0 fires (true-negative), no crash at 0x8000D944.
-Crashed on item -320 2nd occurrence (`loadCutsceneAssetsByIndex+1860`/`0x800aafb8`).
-
-**Folded confirms:**
-- Item **-342 FULLY CLOSED 2/2** (s562_alloc_tail_guard34_confirm_retry2: hangarbay n=2900, full 300s)
-- Item **-344 FULLY CLOSED 2/2** (s562_non_r3_freelist_walk_confirm: hangarbay n=2900)
-
-**Queued:** `scratch/agent/soak_queue/s563_heaplistdeq_attr_gap_confirm.sh`
+**Item -320 escalated:** SOAK-RESULTS recount shows ≥4 independent hangarbay-controlled hits
+on exact guest PC `0x800aafb8` (s532 n=31, s536 n=2600, s543 n=31, s563 n=2600) plus s508 filing.
+Ledger had undercounted as "2 occ". Distinct from `0x800ab068`/`initVec4TripletFromArgs+68`.
 
 ## This iteration's work unit
 
-**Fold in s563 confirm from SOAK-RESULTS:**
-1. If `s563_heaplistdeq_attr_gap_confirm` CLEAN (hangarbay double-digit+, 0 crash at 0x8000D944):
-   mark item -345 FULLY CLOSED 2/2.
+**Source-trace item -320** (`loadCutsceneAssetsByIndex+1860` / `last-guest-pc=0x800aafb8`).
 
-**Then pick next M3 class (priority order):**
-
-### Option A — residual freelist-class re-scan (after -345 closes)
-Expect freelist WRITE residual EMPTY (packing stays DEFERRED). If empty, close freelist write
-campaign formally and pivot to a new idiom class (e.g. multi-occurrence breadcrumbs -332 moderate
-3rd-occ watch, or a fresh frequency scan of remaining crash PCs).
-
-### Option B — item -320 3rd-occurrence watch only
-Do NOT source-trace -320 yet (only 2 occ). Passive passive soaks; escalate only on a 3rd independent
-hit with strong hangarbay control.
-
-### Option C — multi-occurrence breadcrumb escalation (-332 at 2 occ moderate)
-Only if a 3rd independent occurrence appears in fold-in soaks.
-
-### Hypotheses (for Option A residual re-scan)
-1. **H1:** freelist WRITE NEEDS_GUARD residual is EMPTY after -345 (campaign complete).
-2. **H2:** more DIRECT gaps exist adjacent to already-guarded stack-slot bases (same -334 model).
-3. **H3:** packing sites (DEFERRED) start crashing and need re-classification.
+### Hypotheses
+1. **H1:** unguarded freelist/heap pointer deref at/near `0x800AAFB8` (same class as closed
+   freelist WRITE campaign — residual gap outside funcs_3/4 tracer scope; function is in
+   `funcs_28.c`).
+2. **H2:** wild argument / never-initialized slot (like item -261 audio-slot family) — skip-on-
+   invalid at function entry or call site is the fix.
+3. **H3:** host-side misattribution / shared epilogue (like item -321 REFUTED) — guest PC is
+   a delay-slot or shared tail, not a real multi-site corroboration.
+4. **H4:** corruption wave already partially caught by other guards; this site is a downstream
+   sink needing a local range check on the faulting base register.
 
 ### Discriminating measurement
-Tracer re-scan of freelist write shapes after -345 lands; enumerate NEEDS_GUARD residual count.
-If 0 freelist-shaped: campaign closed. If >0: rank and fix highest-count lead.
+1. Locate every `g_rs64_last_guest_pc = 0x800AAFB8u` / `// 0x800AAFB8` in
+   `RecompiledFuncs/funcs_28.c` and identify the enclosing `RECOMP_FUNC` + faulting MEM_* /
+   call that can SEGV (pc-symbol said loadCutsceneAssetsByIndex+1860 — verify, don't trust
+   offset alone; s541 pc-symbol instability gotcha).
+2. For each candidate site: prove which register is the base, where it is loaded, whether a
+   range check already exists on any path, and whether skip-on-invalid is safe.
+3. If a real unguarded deref: land one fixup guard family (or extend an existing one), one
+   build, one live-verify with hangarbay double-digit+ control. If H3 (shared tail): document
+   REFUTED with site evidence and do not guard.
 
 ### Exact commands
 ```bash
-# After fold-in of -345 confirm:
-# Re-run residual freelist write scan (or source-adjacent gap audit around
-# HEAPLISTDEQ_ATTR_WRITE / SIBLING_PTR_WRITE recently closed sites)
-# Do NOT re-open packing as freelist-class (DEFERRED, write-base=DL cursor)
+# Locate sites
+grep -n '0x800AAFB8\|0x800aafb8\|loadCutsceneAssetsByIndex' \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c | head -40
+
+# Read ±40 lines around each hit; identify enclosing RECOMP_FUNC
+# If guard needed: add fixup block + surgical RecompiledFuncs edit, then:
+#   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8
+# Live-verify with full passive breadcrumb env set (see s563 confirm script as template)
 ```
 
-Do NOT re-open freelist-node rN/0X0, classic r2/0X4, freelist-walk GUARD4 (-341), GUARD2 (-343),
-GUARD3+4 (-342), non-r3 dual-walk (-344) — all FULLY CLOSED.
+### Do NOT
+- Re-open freelist WRITE packing DEFERRED sites as freelist-class (s564 closed).
+- Re-open -341..-345 / freelist-walk residual (all FULLY CLOSED 2/2).
+- Escalate -332 or other 2-occ breadcrumbs until a 3rd independent hit (unless this session's
+  soaks produce one — then fold and re-prioritize).
+- Source-trace on weak hangarbay n<10 deaths.
 
 ## Iron-rule reminders
-- Confirm free session number at START before naming (next is s564).
-- Weak early deaths on item -306 `setByteAcrossEntryList+176`/`0x800aafa8` with hangarbay n<10: discard+retry.
+- Confirm free session number at START (next is s565).
+- Weak early deaths on item -306 `setByteAcrossEntryList+176`/`0x800aafa8` with hangarbay n<10:
+  discard+retry.
 - Never trust 0-fires without double-digit+ hangarbay-entry.
 - Kill with SIGKILL; run from build/ with ROM.
 - Full guard table: docs/PROJECT-OVERVIEW.md §22-§26.
