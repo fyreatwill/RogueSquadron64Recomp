@@ -21,9 +21,9 @@ Priority order for upcoming iterations, set after the 300-session review:
    surfaced by the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW
    §18-§19). Items -312..-322 (s481-518, the guard lineage descending from `DL_LIST_APPEND_GUARD`
    through `HEAPLISTDEQ_ATTR_WRITE_GUARD`) are all fully CLOSED — PROJECT-OVERVIEW §20-§25.
-   **Item -317 step 3 (a ~150-location blanket sweep) status as of s543: 46/~150 leads fixed, 44 FULLY
-   CLOSED 2/2, 2 pending confirm — see item -317 below.** ~100 locations remain unaudited across
-   further tiers — M3's top-ranked work
+   **Item -317 step 3 (a ~150-location blanket sweep) status as of s545: 52/~150 leads fixed, 47 FULLY
+   CLOSED 2/2, 5 pending confirm (a five-way tie, batched) — see item -317 below.** ~98 locations
+   remain unaudited across further tiers — M3's top-ranked work
    unit is this sweep's continuation. Live breadcrumb tracking (items -324..-331, all filed not chased,
    none escalated): see Next-steps below.
 
@@ -324,8 +324,38 @@ a range pointer. Highest allocated so far: -332. The next NEW item takes -333.
     n=5, discarded), but this time with a STRONG control (n=2600) — a genuine 2nd occurrence with a
     valid control, upgrading item -332's confidence from low to moderate. Clean verify, own guard
     never fired. 2nd confirm queued: `scratch/agent/soak_queue/s544_draw_subtitle_text_r2_confirm.sh`.
-    Tally: 47/~150 fixed, 46 fully closed 2/2, 1 pending confirm (`DRAW_SUBTITLE_TEXT_R2_GUARD`).
-    **~100 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
+    **`DRAW_SUBTITLE_TEXT_R2_GUARD`'s 2nd confirm (s544, retried s545 after the original fold-in came
+    back WEAK — `hangarbay-entry n=5`, discarded per iron rule 1) read CLEAN on retry**: 0 fires, 0
+    fires on any other armed guard family at all, `hangarbay-entry n=31` (positive control), full 300s
+    duration completed with NO crash at all (106 frames captured, rc=0) — the cleanest possible verify
+    class. Marked FULLY CLOSED 2/2, closing the campaign's 47 guards to 47/47 fully closed (zero open
+    guards) for the eighth time.
+    **Next tier found and fixed (s545)**: fresh re-scan (reg=`r4`/off=`0X0` entries above it re-
+    confirmed the same already-rejected shape mismatch) put a FIVE-WAY TIE at count=18 (exact guarded
+    shape reg=`r2`/off=`0X4`) spanning FIVE DIFFERENT functions: `funcs_3.c:10523` (site=`0x8000A0F8`,
+    `emitColorFillRect`, a FOURTH site alongside R1/R2/R3), `funcs_3.c:29260` (site=`0x8000E72C`,
+    `emitMaterialTexturedDL`, first guard in a BRAND-NEW function for this campaign),
+    `funcs_3.c:31191` (site=`0x8000EE34`, `emitMaterialTexturedDLAlt`, first guard in a second
+    BRAND-NEW function), `funcs_4.c:2528` (site=`0x80010810`, `submitSceneNodeRender`, a FIFTH site
+    alongside R1-R4), and `funcs_4.c:14065` (site=`0x80013A78`, `renderLitMeshFaceGroup`, an ELEVENTH
+    site alongside R2-R10) — the largest single-session tie this campaign has fixed (prior largest was
+    2). All 90 raw reload addresses feeding the 5 write lines, plus each write's own address, were
+    checked directly against `fixup_game_funcs.py`: one incidental match (`submitSceneNodeRender`'s
+    chain includes `0x800101B0`, but that reload is already claimed by the unrelated s197
+    `SCENE_NODE_CACHE_GUARD` protecting a DIFFERENT read at `0x800101B4`, not the target write) —
+    all 5 target write addresses themselves are genuinely uncovered. Same `+0x63B0`-offset idiom in
+    every case. Fixed as **`EMIT_COLOR_FILL_RECT_R4_GUARD`**, **`EMIT_MATERIAL_TEXTURED_DL_R1_GUARD`**,
+    **`EMIT_MATERIAL_TEXTURED_DL_ALT_R1_GUARD`**, **`SUBMIT_SCENE_NODE_RENDER_R5_GUARD`**, and
+    **`RENDER_LIT_MESH_R11_GUARD`** (48th-52nd guards), batched into one build/run per the batch-
+    instrumentation rule. 1st live-verify clean on the first attempt: 0 fires on any of the 5 new
+    guards, 1 benign already-catalogued `hangarmenu-a0-guard` co-fire (no regression), `hangarbay-entry
+    n=32` (positive control). Crashed at 165.6s on `pc-symbol=loadDatFile+1152`/
+    `last-guest-pc=0x800290d4` — checked against the Overturned-conclusions section: this is the
+    s400-421→s422 `inflate_fast` clean-return misattribution artifact, a documented non-issue, not a
+    new item. Clean verify, own guards never fired. 2nd confirm queued:
+    `scratch/agent/soak_queue/s545_five_tied_guards_confirm.sh`.
+    Tally: 52/~150 fixed, 47 fully closed 2/2, 5 pending confirm (the five-way tie above).
+    **~98 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
     Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't subsume these
     tiers. **Tracer gotcha (s521)**: `s506_dedupe.py` reads a fixed canonical report path — a custom
     `--out` on `--scan` leaves it stale. **Positive-control gotcha (s536)**: `hangarbay-entry` can fail
