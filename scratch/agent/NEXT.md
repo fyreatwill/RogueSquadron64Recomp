@@ -2,70 +2,72 @@
 
 HYPOTHESIS-ID: m3-dod-craft-stick-hold
 
-## s571 recap (read this first)
+## s572 recap (read this first)
 
-**Item -7 M3 DoD body — leave dies before stick marks.**
+**Item -7 soak fold — leave survives; hangar-menu stickiness; -338 2nd occ.**
 
-- Recipe: `PROBE_MODE=start_only HOLD_S=60 STICK_SCHEDULE="10:sr 25:sl 40:su"` via
-  `scratch/s73_post_a_scene/run_mission_keys.sh s571_item7 5 12`.
-- Menu path clean through SELECT YOUR CRAFT (12 stable snaps, non-black craft_stable).
-- Leave Start applied; process gone at **hold-iter 1** (0s into hold). Stick marks **never
-  applied**. hold_*.png = 0.
-- Crash: `last-guest-pc=0x80010b7c` / `findOrCreateMaterial+1704` — **known background-noise
-  guest PC** (s553 etc.; pc-symbol unstable). Do **not** open a reactive chase.
-- `fs` plateau 4346 pre-death; thr-resume-skip=0. Phase table in PORTING-STATE s571 /
-  CURRENT-TRUTH item -7.
-- Retry enqueued: `scratch/agent/soak_queue/s571_item7_craft_stick_hold_retry.sh`.
+- Loop ran `s571_item7_craft_stick_hold_retry` →
+  `scratch/s73_post_a_scene/s571_item7_retry_20260809-145351/`.
+- Menu clean through SELECT YOUR CRAFT. Leave Start applied; **hold-iter 12** death (not
+  hold-iter 1). Stick sr at hold_10; 11 hold_*.png.
+- Crash: `last-guest-pc=0x8000afa0` / `beginFrameDLChunk+46800` — **item -338 2nd occ**
+  (moderate confidence; do not chase until 3rd).
+- Stack at death: still `runHangarSelectionFrame` ← `runHangarMenuFromOverlay` ←
+  `menuOverlayInit`. hangarbay-entry n=1000. **0 mission* log tags entire run.**
+- `fs` plateau 4355; thr-resume-skip=0. hold_04..11 frozen identical MD5 (stick no pixels).
+- Item -7 partial PROBED: leave can survive + stick marks fire, but path is **not in-mission**.
 
 ## This iteration's work unit
 
-**Item -7 retry — land one clean HOLD_S=60 with stick marks (or confirm leave-path noise rate).**
+**Item -7 gate pivot — leave→mission transition: does craft-leave Start ever enter mission code?**
+
+s572 shows stick hold is blocked by hangar-menu stickiness + graphics stall, not by missing
+stick marks. Discriminate whether mission entry is (a) never attempted, (b) attempted but
+fails silently, or (c) reaches a frame function we do not log.
 
 ### Hypotheses
-- H1: Intermittent 0x80010b7c does not fire; process survives full 60s hold; sticks land at
-  10/25/40; phase/content timeline documentable → item -7 body data lands.
-- H2: Same early leave-path death on 0x80010b7c (or same family) again → leave-path survival
-  is the real M3 gate; file recurrence count, still no reactive single-crash chase unless a
-  *new* last-guest-pc appears ≥2 times.
-- H3: Survives hold but fs freeze / no craft response in PNGs → DoD body partial (timeline
-  yes, "in-mission craft responds" still no).
+- H1: Post-leave control never leaves hangar menu (`runHangarSelectionFrame` / hangar overlay
+  only) — mission overlay never DMA'd, no mission frame function runs → need state-machine /
+  confirm-key / overlay-dispatch fix before DoD stick hold is meaningful.
+- H2: Mission entry is attempted (overlay load / mission init / cutscene frame) but aborts or
+  returns to hangar within seconds — log will show a brief mission tag then hangar resume.
+- H3: Mission runs under a name we do not log; hangar symbols on crash stack are callers only —
+  need positive control that a known mission symbol fires during a real mission path (or
+  decomp-named mission frame JAL targets instrumented).
 
-### Discriminating measurements
-1. Console: `[keys] stick` count (expect 3) + hold_*.png count (~60).
-2. Process exit: SIGKILL-at-timeout vs CRASH; if CRASH, last-guest-pc.
-3. Phase + fs plateau during hold (grep `[phase]` / last fs values).
-4. Offline: hold_10 vs hold_09 / hold_25 vs neighbors for pose change (only if H1).
+### Discriminating measurements (batch in ONE build/run)
+1. Offline first (no build): from s572 `run.log`, enumerate every `[overlay]` line and any
+   function-entry tags after the leave Start wall time; confirm 0 mission-side hits (already
+   true for mission* strings — extend to overlay section idx / known mission ROM ranges).
+2. If offline is inconclusive for H3: one instrumented run with entry counters on
+   `runHangarSelectionFrame` (rate-unlimited after leave) + best-known mission frame/init
+   symbols from decomp/`syms` (batch all; positive control: hangar counter must keep firing
+   pre-leave).
+3. Crash/stall outcome secondary — do not chase -338.
 
 ### Exact commands
 ```bash
-# Prefer consuming a loop-run soak first:
-tail -5 scratch/agent/SOAK-RESULTS.md
-# If s571_item7_craft_stick_hold_retry is already in SOAK-RESULTS, fold it and stop
-# (or re-enqueue if WEAK/early death without reaching craft).
+# Offline overlay + post-leave function tags (prefer before any build):
+RUNLOG=scratch/s73_post_a_scene/s571_item7_retry_20260809-145351/run.log
+grep -n '\[overlay\]' "$RUNLOG"
+# Find leave wall-time from console / first after_p1; count hangarbay-entry after that.
 
-# Manual / same-recipe if queue empty:
-mkdir -p scratch/agent/soak_results/s572_item7_craft_stick_hold
-cd scratch/s73_post_a_scene
-env PROBE_MODE=start_only HOLD_S=60 STICK_SCHEDULE="10:sr 25:sl 40:su" HOLD_TICK_S=1 \
-  CAPTURE_TICK_S=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 ROGUESQ_LOG_RUNNER=1 \
-  zsh run_mission_keys.sh s572_item7 5 12 \
-  2>&1 | tee ../../agent/soak_results/s572_item7_craft_stick_hold/console.txt
+# Mission symbol candidates (decomp / syms — pick real names, do not invent):
+#   grep -E 'mission|Mission|Chapter|levelLoad|startLevel' syms/ docs/ companion decomp
 
-# Analyze (do not cat full log):
-#   grep -E '\[phase\]|stick|CRASH|last-guest-pc|hold done|game process gone' \
-#     console.txt s572_item7/run.log | head -80
-#   ls s572_item7/hold_*.png | wc -l
+# If instrumenting: put counters in fixup or existing ROGUESQ_LOG_* only; one cmake + one
+# run_mission_keys leave+HOLD_S=20 is enough (full 60s not required for entry proof).
 ```
 
 ### Expected outcomes
-- H1: document full hold phase table + stick PNG notes; mark item -7 body PROBED
-  (full M3 DoD still needs in-mission craft response).
-- H2: bump leave-path 0x80010b7c co-occurrence; keep item -7 OPEN; enqueue another retry
-  or pivot after 3 consecutive leave-deaths on the *same* noise PC without new signal.
-- H3: timeline yes, animation/response no — file fs freeze standing note, no thr-resume reopen.
+- H1: document leave→hangar-only as CURRENT-TRUTH; reframe item -7 next step as mission-entry
+  state-machine audit (systematic, not crash chase).
+- H2: name the aborting function / missing overlay; that becomes the next fix work unit.
+- H3: expand log coverage with positive control; re-run once.
 
 ### Do NOT
-- Open a findOrCreateMaterial / 0x80010b7c guard chase from a single (or second same-PC) hit.
-- Reopen M5 (due s573+ only, or on a new audio signature).
-- Resume freelist/sibling residual scans (campaign exhausted s569).
-- Cross-run A/B on animating scenes.
+- Chase 0x8000afa0 / beginFrameDLChunk from this leave path (wait 3rd occ of -338).
+- Chase 0x80010b7c (s571 noise).
+- Blind HOLD_S=60 stick retries without mission-entry evidence (stick marks already proven).
+- Reopen M5 (due s573+ only).
+- Resume freelist/sibling residual scans (exhausted s569).

@@ -30,7 +30,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s571)
+## Current truth (established by session 295; unchanged, reviewed through s572)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -130,12 +130,11 @@ since **DONE/CLOSED s399** (item -6). Full detail: PORTING-STATE s49.
 
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT are both
 reachable and stable; ~20 crash classes closed s50-s294 (mechanisms: `docs/PROJECT-OVERVIEW.md` §3
-arc + §9 closed lineages; per-class catalog: §7). What a leave-key from SELECT YOUR CRAFT actually
-leads to is unresolved (s75's "hangar-flight" claim was OVERTURNED s150, see Overturned conclusions).
-**s423 first-look DoD attempt** stalled at SELECT GAME for 134s before advancing to the war-room
-screen, which then crashed ~1.3s later — the crash that opened the still-active item -261→-267 chain
-(item -262 onward, see Next steps). *Done when:* 60s of in-mission rendering, craft visibly responds
-to synthetic input, stability counters 0, phase timeline covers the mission.
+arc + §9 closed lineages; per-class catalog: §7). Leave-key from SELECT YOUR CRAFT: s75 hangar-flight
+OVERTURNED s150; **s572 leave-hold** reconfirms hangar menu stickiness (`runHangarSelectionFrame`
+through death, fs stall, no mission* logs) — primary DoD gate is leave→mission transition, not
+stick input. *Done when:* 60s of in-mission rendering, craft visibly responds to synthetic input,
+stability counters 0, phase timeline covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
@@ -231,15 +230,12 @@ a range pointer. Highest allocated so far: -348. The next NEW item takes -349.
     s559 as part of item -341 freelist-walk GUARD4 (site `0x800088EC`); FULLY CLOSED 2/2 with
     item -341 s561.**
 
--338. **(s554) One more single-occurrence background-noise breadcrumb, filed not chased**,
-    surfaced by the s554 1st live-verify of the count=3+count=2 twenty-seven-way guards below.
-    `beginFrameDLChunk+37740`/`last-guest-pc=0x8000afa0` (`hangarbay-entry n=2600`, strong positive
-    control) — grepped CURRENT-TRUTH/PROJECT-OVERVIEW/PORTING-STATE: no prior match. Distinct from
-    item -323's `beginFrameDLChunk+27456`/`0x8000ae40` (0x160 bytes earlier) and item -319's
-    `+40536`/`0x8000b0d0` (0x130 bytes later, already FIXED). Pre-crash n=0 diagnostic co-fires on
-    freelist-next/generic-cache/dl-list-append-rwrite/dl-list-reset-rnode/append-rdp-state/
-    dl-list-append-deref with shared `bad_ptr=0x7500D019` (existing families catching the same
-    corruption wave). Watch for recurrence before escalating.
+-338. **(s554, s572 — 2 occurrences) `beginFrameDLChunk`/`last-guest-pc=0x8000afa0` breadcrumb,
+    filed not chased.** s554 hangarbay: `+37740` at n=2600. **s572 leave-hold:** `+46800` (same
+    guest PC; host-offset drift = pc-symbol instability) at hold-iter ~12 after craft-leave;
+    crash stack still `runHangarSelectionFrame`; pre-crash `generic-cache-guard` wild head.
+    Distinct from -323/`0x8000ae40` and FIXED -319/`0x8000b0d0`. Confidence **low→moderate**.
+    Watch for a 3rd before source-tracing; do not open a reactive leave-path chase.
 
 -337. **(s551) `submitSceneNodeRender+69192`/`last-guest-pc=0x80010df4` — ROOT-CAUSED AND FIXED
     s559 as part of item -341 freelist-walk GUARD4 (site `0x80010DF4`); FULLY CLOSED 2/2 with
@@ -362,7 +358,17 @@ a range pointer. Highest allocated so far: -348. The next NEW item takes -349.
 -11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89), RECURRED s424, ROOT-CAUSED AND GUARDED s425.** s424 hit it as a sibling of item -261's guarded `startPlayerSlotAnimationChannelLooping` crash; s425 root-caused and guarded it (wild `$a0` arg, same never-initialized-slot root state) — see item -261 for the full trace.
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
--7. **M3 — HOLD_S=60 craft stick (M3 DoD body): OPEN — s571 first post-campaign attempt died at leave.** Recipe `PROBE_MODE=start_only HOLD_S=60 STICK_SCHEDULE="10:sr 25:sl 40:su"` via `run_mission_keys.sh`. **s571:** menu path clean through SELECT YOUR CRAFT (non-black craft_stable); leave Start applied; process gone at **hold-iter 1** before stick marks (0 hold_*.png). Crash `last-guest-pc=0x80010b7c` / `findOrCreateMaterial+1704` — **known background-noise guest PC** (do not chase; prior symbolizations findOrCreateMaterial+776 / allocOrEvictMaterialNode+944 / loadTextureTile+17912). Phase table: 1.1s→320, 2.8s→640, 46.2s→1024 title, 77.9s→512/0x6AB400 craft chain; last VI origin 0x656400 w=512; `fs` plateau 4346 pre-death; thr-resume-skip=0. Retry enqueued `soak_queue/s571_item7_craft_stick_hold_retry.sh`. Item stays OPEN until one clean 60s hold lands sticks + timeline.
+-7. **M3 — HOLD_S=60 craft stick (M3 DoD body): OPEN — partial PROBED s572.** Recipe
+    `PROBE_MODE=start_only HOLD_S=60 STICK_SCHEDULE="10:sr 25:sl 40:su"` via `run_mission_keys.sh`.
+    **s571:** leave died hold-iter 1 on noise PC `0x80010b7c` (0 hold pngs). **s572 retry:** leave
+    **survived**; stick sr at hold_10; 11 hold pngs; died hold-iter 12 on item **-338**
+    `0x8000afa0`/`beginFrameDLChunk+46800`. Crash stack still **`runHangarSelectionFrame`** (not
+    mission); hangarbay-entry n=1000; 0 mission* log tags; `fs` plateau 4355; thr-resume-skip=0.
+    PNG: clean craft_stable → leave hangar camera (after_p1) → corrupted → hold freeze (hold_04..11
+    identical MD5 incl stick frame — no visual stick response). Confirms s150: leave stays craft/
+    hangar menu under camera move + s176–s183 graphics stall, not in-mission. **Primary gate for
+    full M3 DoD is leave→mission transition**, not stick plumbing. Optional further 60s survival
+    soaks are secondary; next unit = prove/fix mission-entry after craft-leave.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.

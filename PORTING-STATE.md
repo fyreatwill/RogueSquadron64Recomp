@@ -45831,3 +45831,80 @@ Retry item -7 (same recipe; intermittent leave-path noise may not fire). Enqueue
 `scratch/agent/soak_queue/s571_item7_craft_stick_hold_retry.sh` for the loop. On clean 60s
 survival, document stick response offline from hold_10/25/40 PNGs. Do not escalate 0x80010b7c
 unless a *new* last-guest-pc appears ≥2 times on this leave path. M5 still due s573+.
+
+## Session 572 — item -7 leave-hold retry: survive ~12s, hangar-menu stickiness, -338 2nd occ
+
+**Work unit:** Consume loop soak `s571_item7_craft_stick_hold_retry` (queued s571).
+HYPOTHESIS-ID `m3-dod-craft-stick-hold`. No new build — fold + offline PNG/stack analysis.
+
+### Recipe (loop-run; same as s571)
+`PROBE_MODE=start_only HOLD_S=60 STICK_SCHEDULE="10:sr 25:sl 40:su"` via
+`run_mission_keys.sh`. Artifacts:
+`scratch/s73_post_a_scene/s571_item7_retry_20260809-145351/` +
+`scratch/agent/soak_results/s571_item7_craft_stick_hold_retry_20260809-145351.log`.
+
+### Discriminating measurements
+
+| # | Measurement | Result |
+|---|---|---|
+| 1 | Alive through hold end? | **NO** — gone at hold-iter **12** (~12s into 60s; not hold-iter 1) |
+| 2 | Stick marks | **1/3** — `[keys] stick sr at hold_10`; 25/40 never reached |
+| 3 | hold_*.png | **11** (hold_01..11 incl hold_10_sr) |
+| 4 | Graphics stall | `fs` plateau **4355**; many post-leave `stalled=1` FIREs; thr-resume-skip=**0** |
+| 5 | Crash signature | `last-guest-pc=0x8000afa0`, `beginFrameDLChunk+46800`, SIGBUS `si_addr=0x335000008` |
+| 6 | Still hangar menu? | **YES** — crash stack `beginFrameDLChunk`←`initRenderStateArrays`←**`runHangarSelectionFrame`**←`runHangarMenuFromOverlay`←`menuOverlayInit`; hangarbay-entry to n=1000; 0 mission* log tags |
+
+**Phase table (s572 retry):**
+
+| wall (game log) | VI width | origin | scene |
+|---|---|---|---|
+| 1.0 s | 0→320 | 0x280 | boot |
+| 2.7 s | 640 | 0x66A500 | attribution/logo |
+| 45.7 s | 1024 | 0x790400 | title |
+| 77.2 s | 512 | 0x6AB400 | war-room / craft-select chain |
+| leave+hold | 512 | 0x6AB000/0x656000 pair | post-leave hangar camera; fs frozen 4355 |
+
+Console phase width=1024 at 44.8s (driver clock); craft_stable non-black; leave p1 start
+landed; hold window started; stick at +10s; process gone hold-iter 12; wall≈62s.
+
+### Offline PNG / MD5
+
+- `craft_stable.png`: clean SELECT YOUR CRAFT + X-wing (mean nonblack high).
+- `after_p1_start_001`: full hangar pad, X-wing in flight pose, planet, stars — leave camera move
+  (matches s150 "same craft-select under camera move", not a new mission env).
+- `after_p1_start_003`: heavily corrupted geometry / torn textures.
+- `hold_01..03`: identical MD5; only top strip of geometry, majority black.
+- `hold_04..11` incl `hold_10_sr`: **one frozen MD5** (`edc8ddc8…`); stick input applied with
+  **zero pixel change**.
+
+### Verdicts vs s571 hypotheses
+
+- **H1** (full 60s + sticks 10/25/40): **partial** — leave survived; stick@10 landed; died before
+  25/40; no in-mission craft response possible on frozen hangar frames.
+- **H2** (same early 0x80010b7c leave death): **REFUTED this run** — different PC, ~12s hold.
+- **H3** (survive hold but fs freeze / no craft response): **CONFIRMED** for the ~12s window —
+  fs freeze + identical hold frames + stack still hangar menu.
+
+### Item -338
+
+2nd independent occurrence of guest PC `0x8000afa0` in `beginFrameDLChunk` (s554 hangarbay
+verify was 1st; host offset +37740 then, +46800 now — known pc-symbol instability). Pre-crash
+`generic-cache-guard` fire with wild `bad_head` = existing family catching the corruption wave.
+Confidence **low→moderate**. Watch for 3rd before source-tracing; **not** a reactive leave-path
+chase from this single session.
+
+### Standing notes for item -7
+
+1. Leave-path **can** survive past hold-iter 1 (s571 early death is intermittent noise).
+2. Post-leave control remains **`runHangarSelectionFrame`** through death in this sample —
+   M3 DoD "in-mission" not reached; stick plumbing is not the primary gate.
+3. Post-leave graphics-task stall (s176–s183 family) reappears with thr-resume-skip=0
+   (same as s183 weakening of thr-resume mechanism).
+4. Full HOLD_S=60 still not observed; one more survival retry is optional but lower value
+   than proving/fixing the leave→mission state transition.
+
+### Next
+
+Pivot within `m3-dod-craft-stick-hold`: leave→mission transition probe (does any mission
+overlay / mission frame function ever run after craft-leave Start?). Enqueue optional
+survival re-soak only as passive background. M5 due s573+.
