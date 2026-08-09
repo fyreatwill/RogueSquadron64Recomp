@@ -20,21 +20,21 @@ Priority order for upcoming iterations, set after the 300-session review:
    the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW §18-§19).
    Items -312..-322 (s481-518, the `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage) are
    all fully CLOSED — PROJECT-OVERVIEW §20-§25. **Item -317 step 3 (~150-location blanket sweep)
-   status as of s553: 87/~150 leads fixed, 71 FULLY CLOSED 2/2 (guards 1-71), 16 pending confirm
-   (guards 72-74 awaiting 2nd confirm, still queued; guards 75-87 new this session, 1st live-verify
-   clean with full 300s no-crash run, 2nd confirm queued)** — see item -317 below; ~65 locations
-   remain unaudited, still M3's top-ranked work unit. **Item -334 (s549,
+   status as of s554: 114/~150 leads fixed, 87 FULLY CLOSED 2/2 (guards 1-87), 27 pending confirm
+   (guards 88-114 new this session — count=3 singleton + count=2 twenty-six-way, 1st live-verify
+   clean with hangarbay n=2600, 2nd confirm queued)** — see item -317 below; ~36 locations
+   remain unaudited (count=1 + residual non-classic), still M3's top-ranked work unit. **Item -334 (s549,
    `SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC`) and item -327's root cause (`DL_LIST_APPEND_DEREF_GUARD`,
    84 sites) are the campaign's first fixes shipped on DIRECT crash-mechanism evidence** (a guard's own
    bad-pointer value numerically traced to the next crash), not idiom-shape pattern matching alone —
-   both now FULLY CLOSED 2/2 (s550). Live breadcrumb tracking (items -328..-337, filed not chased,
+   both now FULLY CLOSED 2/2 (s550). Live breadcrumb tracking (items -328..-338, filed not chased,
    none escalated): see Next-steps below.
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s553)
+## Current truth (established by session 295; unchanged, reviewed through s554)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -153,7 +153,17 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -337. The next NEW item takes -338.
+a range pointer. Highest allocated so far: -338. The next NEW item takes -339.
+
+-338. **(s554) One more single-occurrence background-noise breadcrumb, filed not chased**,
+    surfaced by the s554 1st live-verify of the count=3+count=2 twenty-seven-way guards below.
+    `beginFrameDLChunk+37740`/`last-guest-pc=0x8000afa0` (`hangarbay-entry n=2600`, strong positive
+    control) — grepped CURRENT-TRUTH/PROJECT-OVERVIEW/PORTING-STATE: no prior match. Distinct from
+    item -323's `beginFrameDLChunk+27456`/`0x8000ae40` (0x160 bytes earlier) and item -319's
+    `+40536`/`0x8000b0d0` (0x130 bytes later, already FIXED). Pre-crash n=0 diagnostic co-fires on
+    freelist-next/generic-cache/dl-list-append-rwrite/dl-list-reset-rnode/append-rdp-state/
+    dl-list-append-deref with shared `bad_ptr=0x7500D019` (existing families catching the same
+    corruption wave). Watch for recurrence before escalating.
 
 -337. **(s551) One more single-occurrence background-noise breadcrumb, filed not chased**,
     surfaced by the s551 1st live-verify of the new six-way-tie guards below.
@@ -240,49 +250,42 @@ a range pointer. Highest allocated so far: -337. The next NEW item takes -338.
     entry, skipping the body if invalid. CLOSED 2/2 s507 after an s506 inconclusive retry. Mechanism:
     `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-553) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 87 guards fixed so far, 71/87 FULLY
-    CLOSED 2/2, 16 pending confirm (guards 72-74 awaiting 2nd confirm, still queued; guards 75-87 new
-    this session, 1st live-verify clean).** Steps 1 (`heapFreeListDequeue` as a whole function) and 2
-    (`buildOrientedFaceGeometry` as a whole function) are separately FULLY CLOSED 2/2 — note step 3 has
-    since ALSO landed R-numbered guards inside these same two functions (see below), a naming
-    coincidence, not a re-opening of steps 1/2.
+-317. **(s490-554) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 114 guards fixed so far, 87/114 FULLY
+    CLOSED 2/2, 27 pending confirm (guards 88-114 new this session, 1st live-verify clean).** Steps 1
+    (`heapFreeListDequeue` as a whole function) and 2 (`buildOrientedFaceGeometry` as a whole function)
+    are separately FULLY CLOSED 2/2 — note step 3 has since ALSO landed R-numbered guards inside these
+    same two functions (see below), a naming coincidence, not a re-opening of steps 1/2.
     Step 3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a forward taint-propagation dataflow
     analysis) found ~448 raw reload sites deduping to ~150 candidate guard placements across 30
     functions; every fix shares one shape (null check gates one arm safely, non-null fallthrough has no
     `0x80000000`-`0x80800000` range check before a write-through deref, downstream control flow
     reloads the register from the table again — skip on invalid is safe).
-    Guards land in `beginFrameDLChunk` (R1-R10, fully closed), `emitColorFillRect` (R1-R7),
-    `submitSceneNodeRender` (R1-R8), `drawSubtitleText` (R1-R5), `renderLitTexturedMeshFaces` (R1-R5),
-    `renderFlatMeshFaceGroup` (R1-R5), `renderLitMeshFaceGroup` (R2-R14), `emitMaterialTexturedDL`/
-    `emitMaterialTexturedDLAlt` (R1-R4 each), `emitAllocatedDLCommand` (R1-R2), `reserveAndEmitDLEntry`
-    (R1-R2), `setupCameraMatrices` (R1-R2), `heapFreeListDequeue` (R1-R3), `buildOrientedFaceGeometry`
-    (R1), and (new this session) `drawFrameProfilerBars` (R1, new function to this campaign). Full
+    Guards land in `beginFrameDLChunk` (R1-R10, fully closed), `emitColorFillRect` (R1-R8),
+    `submitSceneNodeRender` (R1-R9), `drawSubtitleText` (R1-R6), `renderLitTexturedMeshFaces` (R1-R6),
+    `renderFlatMeshFaceGroup` (R1-R6), `renderLitMeshFaceGroup` (R2-R15), `emitMaterialTexturedDL`/
+    `emitMaterialTexturedDLAlt` (R1-R5 each), `emitAllocatedDLCommand` (R1-R3), `reserveAndEmitDLEntry`
+    (R1-R3), `setupCameraMatrices` (R1-R3), `heapFreeListDequeue` (R1-R4), `buildOrientedFaceGeometry`
+    (R1-R3), `drawFrameProfilerBars` (R1-R2), and (new this session) eleven first-time functions:
+    `reclaimDisplayListChunk`, `allocateDisplayListBuffer`, `allocDLBlockToFillRectList`/`ListB`/
+    `ListC`/`ListD`, `recordDeferredDrawRefVariant`/`A`/`B`/`C`/`D`, `drawTextGlyphRect`. Full
     guard-by-guard table: `docs/PROJECT-OVERVIEW.md` §22-§25.
-    **s553 fold-in**: guards 64-65 (`EMIT_ALLOCATED_DL_COMMAND_R1_GUARD`,
-    `RESERVE_AND_EMIT_DL_ENTRY_R1_GUARD`) 3rd confirm attempt CLEAN (`hangarbay-entry n=2600`, full
-    300s no-crash) after two consecutive weak draws on item -306's signature — **FULLY CLOSED 2/2**.
-    Guards 66-71 (s551 six-way tie) 2nd confirm CLEAN (`hangarbay-entry n=2600`); crashed on known
-    background-noise guest PC `0x80010b7c` (resolved this run to `loadTextureTile+17912`; prior
-    symbolizations `findOrCreateMaterial+776` / `allocOrEvictMaterialNode+944`) — **FULLY CLOSED 2/2**.
-    Guards 72-74 (s552 three-way) still await 2nd confirm (`s552_three_way_tie_confirm.sh` remains
-    queued).
-    **New this session**: fresh tracer re-scan (reg=r2/off=0X4). Remaining count=8 is a SINGLE classic
-    site (`HEAP_FREE_LIST_DEQUEUE_R2_GUARD` site=`0x8000D6D4`, near items -331/-333 free-list-pop
-    region). Count=7 site `0x8000D268` is a SHAPE MISMATCH (`ctx->r2` from `$s0`/`addu`, not the
-    `0x8011`/`0x63B0` reload) — skipped. Count=6 is a TWELVE-WAY TIE of classic sites:
-    `HEAP_FREE_LIST_DEQUEUE_R3`/`0x8000D1B8`, `EMIT_ALLOCATED_DL_COMMAND_R2`/`0x80008804`,
-    `EMIT_COLOR_FILL_RECT_R7`/`0x80009D0C`, `DRAW_FRAME_PROFILER_BARS_R1`/`0x8000BA34` (new function),
-    `RESERVE_AND_EMIT_DL_ENTRY_R2`/`0x8000CD04`, `EMIT_MATERIAL_TEXTURED_DL_R4`/`0x8000E370`,
-    `EMIT_MATERIAL_TEXTURED_DL_ALT_R4`/`0x8000EA60`, `RENDER_LIT_TEXTURED_MESH_FACES_R5`/`0x8000FA9C`,
-    `RENDER_FLAT_MESH_FACE_GROUP_R5`/`0x80011330`, `RENDER_LIT_MESH_R14`/`0x800132E0`,
-    `DRAW_SUBTITLE_TEXT_R5`/`0x80015D9C`, `SETUP_CAMERA_MATRICES_R2`/`0x80017524`. All 13 write
-    addresses checked against `fixup_game_funcs.py`: 0 incidental matches. 1st live-verify clean when
-    all 13 armed together: `hangarbay-entry n=3000`, 0 fires on any of the 13, 0 co-fires, full 300s
-    no-crash (rc=0, 114 frames). 2nd confirm queued:
-    `scratch/agent/soak_queue/s553_count8_count6_thirteen_way_confirm.sh`.
-    **~65 locations remain unaudited across further tiers — still the top-ranked M3 work unit.** Item
-    -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't subsume these tiers.
+    **s554 fold-in**: guards 72-74 (s552 three-way) CLEAN (`hangarbay-entry n=2700`); crashed on known
+    BREADCRUMB6 `0x80065acc` — **FULLY CLOSED 2/2**. Guards 75-87 (s553 thirteen-way) CLEAN
+    (`hangarbay-entry n=2600`); crashed on known `0x800ab0e0` Metal cluster — **FULLY CLOSED 2/2**.
+    Campaign briefly at **87/87 fully closed with zero pending**.
+    **New this session**: fresh tracer re-scan (reg=r2/off=0X4). Remaining count=7 still the SHAPE
+    MISMATCH at `0x8000D268` (skipped again). Count=3 is a SINGLE classic site
+    (`BUILD_ORIENTED_FACE_GEOMETRY_R2_GUARD` site=`0x80012CCC`). Count=2 is a TWENTY-SIX-WAY TIE of
+    classic sites (11 NEW functions + extensions of already-touched ones — full table PROJECT-OVERVIEW
+    §25 s554 block). All 27 write addresses checked against `fixup_game_funcs.py`: 0 incidental matches.
+    1st live-verify clean when all 27 armed together: `hangarbay-entry n=2600`, 0 fires on any of the
+    27, crashed at 111.3s on NEW single-occurrence `beginFrameDLChunk+37740`/`0x8000afa0` (filed item
+    -338). 2nd confirm queued:
+    `scratch/agent/soak_queue/s554_count3_count2_twentyseven_way_confirm.sh`.
+    **~36 locations remain unaudited (count=1 + residual non-classic) — still the top-ranked M3 work
+    unit.** Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't
+    subsume these tiers.
     **Standing gotchas** (full detail: `docs/PROJECT-OVERVIEW.md` §22-§25, `scratch/agent/NEXT.md`):
     `s506_dedupe.py` reads a fixed canonical report path, never pass `--out` to `--scan` (s521);
     `hangarbay-entry` can fail to fire even on a full-duration completion, always check the positive
@@ -297,7 +300,7 @@ a range pointer. Highest allocated so far: -337. The next NEW item takes -338.
     bad-pointer VALUE numerically correlates with the crash's own fault address before dismissing it as
     background noise (s549, item -334); count=N tiers can include shape-mismatched sites that share a
     taint count but not the classic `0x8011`/`0x63B0` reload (s553 count=7 skip). Raw detail:
-    `PORTING-STATE.md` Sessions 490-553.
+    `PORTING-STATE.md` Sessions 490-554.
 
 -316. **(s488-490) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED 2/2.** A scope gap in the existing s436
     `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`): validated one deref but not two propagating

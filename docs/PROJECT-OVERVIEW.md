@@ -2304,6 +2304,40 @@ Next-steps / `scratch/agent/NEXT.md`.
 
 1st live-verify (all 13 armed together): 0 fires on any of the 13, 0 co-fires, `hangarbay-entry n=3000`, full 300s no-crash (rc=0, 114 frames). 2nd confirm queued: `scratch/agent/soak_queue/s553_count8_count6_thirteen_way_confirm.sh`. Campaign totals as of s553: **87 fixed, 71 FULLY CLOSED 2/2, 16 pending confirm**.
 
+### s554 continuation (guards 72-87 FULLY CLOSED 2/2; 88-114 added — count=3 + count=2)
+
+**Folded in s552/s553 queued confirms:**
+- Guards **72-74** (s552 three-way): CLEAN (`hangarbay-entry n=2700`); crashed on already-catalogued BREADCRUMB6 `buildPositionAndCallTransformHelper+1736`/`0x80065acc` — **FULLY CLOSED 2/2**.
+- Guards **75-87** (s553 thirteen-way): CLEAN (`hangarbay-entry n=2600`); crashed on already-catalogued Metal-framework cluster `last-guest-pc=0x800ab0e0` — **FULLY CLOSED 2/2**. Campaign briefly at **87/87 fully closed with zero pending**.
+
+**New guards 88-114** (count=3 singleton + count=2 twenty-six-way; count=7 `0x8000D268` still shape-mismatched, skipped again; count=1 `heapFreeListInsert`/`0x800079D8` deferred to next tier):
+
+| # | Guard | Site | Function notes |
+|---|-------|------|----------------|
+| 88 | `BUILD_ORIENTED_FACE_GEOMETRY_R2_GUARD` | `0x80012CCC` | count=3 singleton |
+| 89 | `RECLAIM_DISPLAY_LIST_CHUNK_R1_GUARD` | `0x80007D30` | NEW function |
+| 90 | `ALLOCATE_DISPLAY_LIST_BUFFER_R1_GUARD` | `0x80007DC8` | NEW; RHS=`ctx->r4` (not r3) |
+| 91-94 | `ALLOC_DL_BLOCK_TO_{FILL_RECT_LIST,LIST_B,LIST_C,LIST_D}_R1_GUARD` | `0x80007EB0`/`0x80007F70`/`0x80008030`/`0x800080F0` | NEW family |
+| 95 | `RECORD_DEFERRED_DRAW_REF_VARIANT_R1_GUARD` | `0x8000848C` | NEW |
+| 96 | `EMIT_ALLOCATED_DL_COMMAND_R3_GUARD` | `0x80008708` | has `g_rs64_last_guest_pc` |
+| 97 | `EMIT_COLOR_FILL_RECT_R8_GUARD` | `0x80009BF4` | |
+| 98 | `DRAW_FRAME_PROFILER_BARS_R2_GUARD` | `0x8000B91C` | |
+| 99-102 | `RECORD_DEFERRED_DRAW_REF_{A,B,C,D}_R1_GUARD` | `0x8000C770`/`0x8000C894`/`0x8000C9BC`/`0x8000CAE0` | NEW family |
+| 103 | `RESERVE_AND_EMIT_DL_ENTRY_R3_GUARD` | `0x8000CC08` | |
+| 104 | `HEAP_FREE_LIST_DEQUEUE_R4_GUARD` | `0x8000D080` | |
+| 105 | `EMIT_MATERIAL_TEXTURED_DL_R5_GUARD` | `0x8000E1D0` | |
+| 106 | `EMIT_MATERIAL_TEXTURED_DL_ALT_R5_GUARD` | `0x8000E8C4` | |
+| 107 | `RENDER_LIT_TEXTURED_MESH_FACES_R6_GUARD` | `0x8000F9EC` | |
+| 108 | `SUBMIT_SCENE_NODE_RENDER_R9_GUARD` | `0x80010194` | |
+| 109 | `RENDER_FLAT_MESH_FACE_GROUP_R6_GUARD` | `0x800111C8` | |
+| 110 | `BUILD_ORIENTED_FACE_GEOMETRY_R3_GUARD` | `0x80012B70` | |
+| 111 | `RENDER_LIT_MESH_R15_GUARD` | `0x8001317C` | |
+| 112 | `DRAW_TEXT_GLYPH_RECT_R1_GUARD` | `0x80015890` | NEW function |
+| 113 | `DRAW_SUBTITLE_TEXT_R6_GUARD` | `0x80015C4C` | |
+| 114 | `SETUP_CAMERA_MATRICES_R3_GUARD` | `0x80016EF8` | |
+
+1st live-verify (all 27 armed together): 0 fires on any of the 27, `hangarbay-entry n=2600`, crashed at 111.3s on NEW single-occurrence `beginFrameDLChunk+37740`/`last-guest-pc=0x8000afa0` (filed item -338; distinct from -323/`0x8000ae40` and -319/`0x8000b0d0` in the same function). Pre-crash n=0 diagnostic co-fires on freelist-next/generic-cache/dl-list-append-rwrite/dl-list-reset-rnode/append-rdp-state/dl-list-append-deref with shared `bad_ptr=0x7500D019` (existing families catching the same corruption wave — not a regression of the new guards). 2nd confirm queued: `scratch/agent/soak_queue/s554_count3_count2_twentyseven_way_confirm.sh`. Campaign totals as of s554: **114 fixed, 87 FULLY CLOSED 2/2, 27 pending confirm**.
+
 
 ## 26. Overturned conclusions and dead ends, full list (s2-s422), migrated from CURRENT-TRUTH.md s547
 maintenance pass

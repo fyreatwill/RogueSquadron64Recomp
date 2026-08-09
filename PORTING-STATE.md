@@ -44997,3 +44997,51 @@ live-verify with hangarbay positive control.
   that checkout).
 - `docs/CURRENT-TRUTH.md`, `docs/PROJECT-OVERVIEW.md` §25 s553 block, `scratch/agent/NEXT.md`,
   `scratch/agent/SOAK-RESULTS.md`, soak scripts under `scratch/agent/soak_queue/`.
+
+## Session 554 (2026-08-09) — item -317 step 3: closed guards 72-87; fixed 27 more (88-114)
+
+### Fold-ins
+1. `s552_three_way_tie_confirm` (guards 72-74): CLEAN (`hangarbay-entry n=2700`), 0 fires on
+   heap-free-list-dequeue-r1 / submit-scene-node-render-r8 / build-oriented-face-geometry-r1.
+   Crashed on already-catalogued BREADCRUMB6 `buildPositionAndCallTransformHelper+1736` /
+   `last-guest-pc=0x80065acc`. **Guards 72-74 FULLY CLOSED 2/2.**
+2. `s553_count8_count6_thirteen_way_confirm` (guards 75-87): CLEAN (`hangarbay-entry n=2600`), 0 fires
+   on all 13. Crashed on already-catalogued Metal-framework cluster `last-guest-pc=0x800ab0e0`.
+   **Guards 75-87 FULLY CLOSED 2/2.** Campaign briefly at **87/87 fully closed with zero pending**.
+
+### Hypotheses for next tier
+H1: Remaining count=3 is classic `0x8011`/`0x63B0` reload → write-through-r2+4 idiom (single site).
+H2: Count=2 multi-function tie is real classic idiom, including first-time functions not yet in the
+    campaign (alloc DL family, deferred-draw-ref family, glyph rect).
+H3: Count=7 remaining is still the same shape-mismatched taint artifact as s553.
+Discriminating measurement: source-read + uniqueness + fixup cross-check; live-verify with hangarbay
+positive control.
+
+### What ran
+- Tracer re-scan + `s506_dedupe` + `s548_dedupe_shape_filtered`.
+- Count=7 `0x8000D268`: still shape MISMATCH (skipped again).
+- Count=3: single classic `buildOrientedFaceGeometry` `0x80012CCC` → `BUILD_ORIENTED_FACE_GEOMETRY_R2_GUARD`.
+- Count=2: twenty-six-way classic tie (11 NEW functions: reclaimDisplayListChunk,
+  allocateDisplayListBuffer, allocDLBlockToFillRectList/B/C/D, recordDeferredDrawRefVariant/A/B/C/D,
+  drawTextGlyphRect; plus R-extensions of existing functions). Note: `allocateDisplayListBuffer`
+  stores RHS=`ctx->r4` not `ctx->r3`.
+- Count=1 classic `heapFreeListInsert`/`0x800079D8` deferred to next session.
+- 27 guards (88-114) added to `fixup_game_funcs.py`, regen (make_elf → N64Recomp → fixup x1 each →
+  cmake), all 27 `patched x1`.
+- 1st live-verify `s554_count3_count2_twentyseven_way_manual`: `hangarbay-entry n=2600`, 0 fires on
+  all 27 new guards, crashed at 111.3s on NEW single-occurrence
+  `beginFrameDLChunk+37740`/`last-guest-pc=0x8000afa0` (filed item -338; distinct from -323/`0x8000ae40`
+  and -319/`0x8000b0d0`). Pre-crash n=0 diagnostic co-fires on freelist-next/generic-cache/
+  dl-list-append-rwrite/dl-list-reset-rnode/append-rdp-state/dl-list-append-deref with shared
+  `bad_ptr=0x7500D019` (existing families catching the same corruption wave — not a regression).
+
+### Result
+- Campaign: **114 fixed, 87 FULLY CLOSED 2/2, 27 pending** (88-114).
+- 2nd confirm queued: `scratch/agent/soak_queue/s554_count3_count2_twentyseven_way_confirm.sh`.
+- New item -338 single-occurrence breadcrumb (filed not chased).
+
+### Files touched
+- `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` (27 new guards; untracked in
+  that checkout).
+- `docs/CURRENT-TRUTH.md`, `docs/PROJECT-OVERVIEW.md` §25 s554 block, `scratch/agent/NEXT.md`,
+  `scratch/agent/SOAK-RESULTS.md`, soak scripts under `scratch/agent/soak_queue/`.
