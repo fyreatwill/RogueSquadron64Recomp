@@ -2151,9 +2151,12 @@ and any recurrence gets tracked in `docs/CURRENT-TRUTH.md`'s Next-steps list, no
 
 Full session-by-session raw detail: `PORTING-STATE.md` Sessions 503-524.
 
-## 25. Item -317 step 3 continued (s526-537): guards 26-37 close out the `beginFrameDLChunk` 36-site
-tier and add first guards in `emitColorFillRect`/`submitSceneNodeRender`/`drawSubtitleText`, all FULLY
-CLOSED 2/2, migrated from CURRENT-TRUTH.md s538 maintenance pass
+## 25. Item -317 step 3 continued (s526-546): guards 26-57 close out the `beginFrameDLChunk` 36-site
+tier, add first guards in `emitColorFillRect`/`submitSceneNodeRender`/`drawSubtitleText`/
+`renderLitTexturedMeshFaces`/`renderFlatMeshFaceGroup`/`emitMaterialTexturedDL`/
+`emitMaterialTexturedDLAlt`, and extend `renderLitMeshFaceGroup` to 13 sites — 52/57 FULLY CLOSED 2/2,
+5 pending (guards 53-57, s546's second five-way tie), migrated from CURRENT-TRUTH.md s538/s547
+maintenance passes
 
 Same fix shape as every guard in this lineage: a null check gates one arm safely, the non-null
 fallthrough has no `0x80000000`-`0x80800000` range check before a `MEM_W(0X4, ctx->r2) = ctx->r3;`
@@ -2227,3 +2230,54 @@ Item -332 (`submitSceneNodeRender+38976`/`last-guest-pc=0x8001086c`) recurred at
 genuine 2nd occurrence with a valid control. Confidence upgraded from low to moderate. Still not
 chased (unrelated to the guard under test either time); watch for a 3rd occurrence before source-
 tracing. Live status: `docs/CURRENT-TRUTH.md` Next-steps.
+
+**Item -333** (`findAndUnlinkSmallestEntry+356`/`last-guest-pc=0x8000d698`, single occurrence, s546's
+1st live-verify of guards 53-57) — `(local-symtab)`-tagged, so a genuine in-function fault, not the
+pre-s480 misattribution artifact. 16 bytes (4 instructions) from item -331's
+`heapFreeListDequeue+29152`/`0x8000d688` (also single-occurrence, also `local-symtab`-tagged, also in
+the free-list-pop region) but a DIFFERENT guest PC — not treated as the same signature. Unrelated to
+any guard under test, own guards never fired. Filed not chased; watch for a 2nd occurrence of either
+-331 or -333 before escalating — if either recurs, or a third nearby address in this region appears,
+treat the free-list-pop region itself as suspicious regardless of per-address occurrence counts.
+
+Guards 53-57's 2nd confirm (`scratch/agent/soak_queue/s546_five_tied_guards_confirm.sh`) was queued at
+session end and is pending fold-in. Live status: `docs/CURRENT-TRUTH.md` Next-steps / `scratch/agent/NEXT.md`.
+
+## 26. Overturned conclusions and dead ends, full list (s2-s422), migrated from CURRENT-TRUTH.md s547
+maintenance pass
+
+CURRENT-TRUTH.md keeps only a short pointer to this section plus the two entries still load-bearing
+for active work (the `0x800290d4` `inflate_fast` artifact and the audio-bridge unit-mismatch fix).
+
+### Overturned conclusions — do not act on these
+
+- **(s400-421->s422)** "`0x800290d4`, six independent triggers, one shared downstream corruption sink -- the strongest available root-cause lead" -- `last-guest-pc=0x800290d4` is `inflate_fast`'s own clean return, reported by a sparse breadcrumb present in only 8/50 `RecompiledFuncs/funcs_*.c` files; `atos`-based exact symbolication of 5 of the 6 crash logs found five different real crash functions, not one. Believable for 21 sessions because the shared numeric value looked like a shared fault address, and nobody had yet resolved `last-guest-pc` past the breadcrumb's own coarse granularity to the actual host instruction. `m4_known_bad.txt`'s parking decision is unaffected (still correct); only the "worth a dedicated session" framing is overturned. PORTING-STATE 422.
+
+`## LLE stabilization session 2 (2026-07-12)` sits out of order in the log, between s7 and s8: its conclusions are among the oldest in the file, not the newest.
+
+- **(s54->s399)** "The M4 missing-func fix is applied and build-verified, only the runtime check is outstanding" -- s54's fix (adding 3 names to `mission_overlay.txt`) was dead on arrival: the same 3 names already existed at the same addresses in `main_overlay.txt`, which `make_elf.py` parses first and dedupes by name (first-file-wins), and which then get silently dropped as phantom functions (range-checked against `.text`, not the overlay window). Believable for 345 sessions because build success is consistent with both "fixed" and "silently still broken." Root-caused and actually fixed s399; also surfaced a much larger version of the same bug class (~801-803 more addresses, item -248). PORTING-STATE 399.
+- **(s348/350->s352)** "`[scene-node-content-guard]` firing is evidence of the same corruption class as the other step-5 guards" -- s352's raw-log re-read found it fires at the SAME node address (`0x80183ECC`) with the SAME zeroed content, thousands of times per run harmlessly -- a steady-state signature, not corruption; the n=0-vs-n=1957+ firing-shape distinction just hadn't been checked against the other guards until s352 compared them side by side. Guard stays in place; only its evidentiary weight for the corruption hunt is overturned. PORTING-STATE 348, 350, 352.
+- **(s339->s340->s342)** "The VI=640 `pairs=0` plateau is a benign, locked-camera mission cutscene" and "s340's 2/2 clean soaks validate promoting both audio gate reversals" -- s342 found those soaks never left the pre-title attribution/logo screen (0 `[keys]` lines in all 4 raw logs): crash-free with audio/DMA counters visibly live looked like a real positive control, but nobody checked the `[keys]` schedule had fired. The `pairs=0` mechanism itself (PROJECT-OVERVIEW §10) stands; only its context (pre-title, not mid-cutscene) is corrected. PORTING-STATE 339, 340, 342.
+- **(s107/108->s316->s318)** Two linked overturns in the gate1/2/3 tick-producer chase: "the 3 near-identical countdown/period gates fire `tickAllActiveSongs`/`tickAudioSequencerFrame`" was never positive-controlled (s316: none ever takes "call") -- itself overturned by s318's fresher `ctx->r2` read (a stale-register race in the diagnostic, not the branch): gate1 calls 19/40, gate2 4/4. PORTING-STATE 316, 318.
+- **(s222->s223)** "no soak reaches mesh-heavy content" -- a 4-soak sample-size artifact; a re-run reached space-combat content before freezing. The freeze itself is real, still reproduces (now a flat fill, not a torn polygon). PORTING-STATE 223.
+- **(s216-218->s219)** "shared corrupt literal `0x0000000300000000` at x0/x8, WRITTEN somewhere" -- that register is the process's constant RDRAM host base pointer, present by construction in every `MEM_W` fault, not written corruption; the wild operand is the *other* register (byte-identical at 3 sightings, all the same `renderUnlitMeshFaces` bug, vs. an unrelated 4th `heapWalker` bug). PORTING-STATE 219.
+- **(s75/76->s150)** "single Start from SELECT YOUR CRAFT leaves into a distinct hangar-flight scene" -- dense capture + an independent prior run + a code-level check (crash backtraces stay entirely in hangar-menu code) show it's the same craft-select scene under a corrupting camera move. Reopens "what leaves SELECT YOUR CRAFT" as unanswered. PORTING-STATE 150.
+- **(s2-31, s62-69, s12-48, s70-82 -- grouped, ~35 claims total, the earliest build/pixel-getting and menu-triage era)** Z-buffers misread as colour buffers, texrect output called invisible, RDP "emitting nothing" (real bug: a ring high-water mark), `DPC_WRAP`/fbpair-cap misdiagnosed for missing FULL_SYNC, floor-band/fog/S=0-triangle/stale-TMEM misattributions (real causes: M1 s44-49, section 4.1), 1024-phase black screen (present-starvation, not zero-shade); "RSP task submission stays healthy through the freeze" (a 1-in-32 throttled sample missed the crashing tail; unsampled showed 100% `ImemOverrun`); "self-restarting the IMEM perspective-divide branch un-freezes tasks" (instrument fired 0 times, real site was `CLIP_1FBC`->`L_1650`); "0x6AB400 is the main-menu hangar" (believable: partial render looked coherent 36 sessions) plus briefing-room/SELECT-LEVEL origin+timing claims and hangar-dimness-as-shade-census (real cause: M1 s44-49, see CURRENT-TRUTH.md "Current truth"); the post-`a` SIGBUS/black-screen self-correction chain (UAF and present-stall theories, resolved by the s84 UAF fix and s82 sane-width gate). Each overturned within 1-2 sessions of first being believed. PORTING-STATE 2-31, 62-69, 12-48, 70-82.
+- **(s87->s88)** "8th crash class is self-recursion in `advancePlayerAnimationPhase`" -- different, unreached call site; constant stack depth across 3296 calls, no recursion. PORTING-STATE 88.
+- **(s302->s306)** "reversing `initMusyXEngine`'s gate-byte site validated safely (0/2 family #1 recurrence)" -- a positive-controlled entry counter found `initMusyXEngine` is never called at all; the clean result reflects dead code, not a validated gate=1 state. Gate=1 still never exercised by any soak. PORTING-STATE 306.
+- **(s307->s309->s313->s315)** A chain of "audio-tick stop points converge" claims, each overturned by a closer same-run measurement: shared-upstream-resource theory refuted by source-read; "3 tick-producers + RSP `M_AUDTASK` all stop together at #19/20" refined by a widened print-cap soak to 2 real stop points, not 1 or 3 (`M_AUDTASK`'s 20/20 was its own unwidened diagnostic bug). Similar small round numbers read as simultaneous unless line numbers are diffed. PORTING-STATE 309, 313, 315.
+- **(M5-AUDIO-PLAN.md §4->s371)** "The host audio bridge is already fully implemented and functional" -- a source read found `queue_samples`'s sample-count parameter was passed straight through as `SDL_QueueAudio`'s byte length with no `*sizeof(int16_t)` conversion, silently dropping the back half of every PCM buffer. Believable: the wiring compiles/links/calls cleanly, so eyeballing the call graph reads as functional -- the defect is a unit mismatch one level down. Fixed s371 (`src/main/main.cpp`; PROJECT-OVERVIEW §12). PORTING-STATE 371.
+
+### Dead ends — labelled as such in the log, do not retry
+
+- **(s2b-s4, grouped)** `RDP_ADDRESS_MASK`→0x7FFFFF (aliased legit extended-RDRAM handles onto low
+  memory); `dma_rdram_to_dmem` chunk-replay hack (legit trig reads after a swap); widened DMA shadow
+  0x37658 (legit dynamic data); blanket ucode shadow `shadow2` (2 legit rewrites); `ROGUESQ_RING_RESYNC`
+  (no effect); `dmem[0x153]=0xFF` forced reload (made failures worse).
+- Bulk `main_overlay.txt` symbol moves (s9): splits the enclosing function (§4.5), SIGBUS — use
+  `tools/overlay_symbol_probe.py <0xADDR>` first, one batch at a time. Present-side snap-down/
+  `findMostRecentContaining` (s9, neither fired); `ROGUESQ_VIEW_RDRAM=1` (s9, window never appears in
+  this fork); `ROGUESQ_WRAP_DEDUP=1` (s10, ~33000 fewer submissions, same assert still hits);
+  `ROGUESQ_FORCE_PAL15=1` (s14, clears floor band, corrupts ceiling banners sharing pal=15).
+- **(s85→s91)** "`do_rom_read` corrupted `physical_addr` is nondeterministic garbage" — the exact same
+  DMA call recurred byte-for-byte 3 times across 3 sessions; reclassified deterministic, reproducible.

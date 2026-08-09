@@ -2,6 +2,17 @@
 
 HYPOTHESIS-ID: item-317-step3-blanket-sweep
 
+## s547 recap (read this first)
+
+s547 was a MAINTENANCE iteration (docs/CURRENT-TRUTH.md hit 60861 bytes, over the 60000-byte Step-0
+trigger). No experiment ran; the queued `s546_five_tied_guards_confirm` result below is STILL
+UNFOLDED — it's the first thing to do this iteration, exactly as s546 left it. Compacted
+CURRENT-TRUTH.md (560→358 lines, 60861→36092 bytes) by migrating the fully-redundant item -317
+session-by-session narrative (already duplicated in PROJECT-OVERVIEW §25) down to a status summary,
+migrating "Overturned conclusions"/"Dead ends" to a new PROJECT-OVERVIEW §26, and compacting items
+-328..-333 into one paragraph. No ledger facts changed — item -317's tally, item -333, and every
+guard's status are unchanged from s546. Full detail: PORTING-STATE.md Session 547.
+
 ## s546 recap (read this first)
 
 **Folded in s545's queued 5-guard confirm — CLEAN.** `s545_five_tied_guards_confirm` came back with

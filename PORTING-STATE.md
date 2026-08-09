@@ -44534,3 +44534,39 @@ Fixed as `RENDER_FLAT_MESH_FACE_GROUP_R3_GUARD`, `RENDER_FLAT_MESH_FACE_GROUP_R4
 **Rules-of-engagement check**: null result (0 fires on all 5 new guards) with a same-run positive control (`hangarbay-entry n=2600`, strong) on the first attempt -- satisfies iron rule 1, no retry needed this session. No cross-run A/B on animating scenes -- phase-gated (`PROBE_PHASE_WIDTH=1024`/`PROBE_KEYS_FROM_PHASE=1`). One build/run carried every armed guard's env var (batch-instrumentation rule).
 
 Ledger: `docs/CURRENT-TRUTH.md` item -317 tally updated (57/~150 fixed, 52 fully closed, 5 pending confirm; ~93 locations remain unaudited), strategic-priority header line updated, item -333 filed; `docs/PROJECT-OVERVIEW.md` §25 table rows 48-52 updated to CLOSED 2/2, rows 53-57 added (5 new guards, pending confirm); `scratch/agent/SOAK-RESULTS.md` gets the folded-in s545 confirm verdict plus this session's manual-verify line appended; `fixup_game_funcs.py` all 5 new guards added (this is a `lib/`-adjacent repo, not itself a git submodule of this repo -- no `submodule-patches/export.sh` needed, N64Recomp is a sibling checkout); `PORTING-STATE.md` (this entry).
+
+## Session 547 (2026-08-09): MAINTENANCE iteration -- CURRENT-TRUTH.md compaction, no experiment run
+
+Step 0 of `tools/agent/ITERATION.md` triggered: `wc -c < docs/CURRENT-TRUTH.md` printed 60861,
+over the 60000-byte threshold. Per the user directive's top priority, this iteration ran maintenance
+instead of continuing item -317's guard-confirm work (the queued `s546_five_tied_guards_confirm`
+result was left un-folded for the next iteration to pick up first, per its own NEXT.md instructions).
+
+**What moved.** The item -317 Next-steps entry (`docs/CURRENT-TRUTH.md`, ~194 lines covering every
+session s539-s546's find/fix/verify/confirm narrative for guards 38-57) was fully redundant with
+`docs/PROJECT-OVERVIEW.md` §25's guard-by-guard table, which already carried the same detail through
+guard 57 despite its header still claiming only "guards 26-37" (a stale header from an earlier
+migration pass, now corrected to "guards 26-57"). Compacted the CURRENT-TRUTH entry to a ~30-line
+status summary + pointer, in the same style already used for items -312..-318. Added item -333
+(`findAndUnlinkSmallestEntry+356`/`0x8000d698`, s546's new breadcrumb) to PROJECT-OVERVIEW §25's
+tracking, which hadn't been migrated there yet. Also migrated the "Overturned conclusions" (11
+entries, s2-s422) and "Dead ends" lists to a new PROJECT-OVERVIEW §26, leaving CURRENT-TRUTH a
+pointer plus the two entries still actively referenced this campaign (the `0x800290d4` `inflate_fast`
+misattribution artifact, which recurs constantly as item -317 background noise, and the M5 audio
+bridge unit-mismatch fix). Compacted items -328..-333 (six single/double-occurrence breadcrumbs,
+32 lines) into one combined paragraph matching the existing -320..-327 style, since their full detail
+was already duplicated in PROJECT-OVERVIEW §25/§26. Lightly retightened the USER DIRECTIVE header
+(pass count, stale "reviewed through s486" date bumped to s546) and the -320..-327 paragraph's
+wording. Did not touch the "Current truth" env-var/timeline prose or the Regeneration section's
+Standing warnings, both explicitly protected by the user directive.
+
+**Result**: `docs/CURRENT-TRUTH.md` 560 -> 358 lines, 60861 -> 36092 bytes (well under the 60 KB
+trigger and close to the 35 KB stretch target). Git diff --numstat on the file: 72 lines added, 274
+removed, net shrink 202 lines -- clears the stop-gate's >=200-net-line-shrink threshold for counting
+a maintenance pass as ADVANCED. No code, guard, or experiment changed this session; the queued s546
+confirm and the item -317 sweep's continuation are next iteration's first two steps (NEXT.md
+unchanged in substance, only annotated with this session's recap).
+
+Ledger: `docs/CURRENT-TRUTH.md` compacted (item -317, Overturned conclusions, Dead ends, items
+-328..-333, USER DIRECTIVE header); `docs/PROJECT-OVERVIEW.md` §25 header corrected + item -333 added,
+new §26 added (full Overturned-conclusions/Dead-ends text); `PORTING-STATE.md` (this entry).

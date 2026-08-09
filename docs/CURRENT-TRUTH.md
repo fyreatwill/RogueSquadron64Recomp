@@ -7,31 +7,28 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = `## LLE s
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
-   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Twenty-five passes
-   so far (per-pass targets in git log; PROJECT-OVERVIEW §16-§25 hold the most recent arcs) kept the
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Twenty-six passes
+   so far (per-pass targets in git log; PROJECT-OVERVIEW §16-§26 hold the most recent arcs) kept the
    file oscillating around the cap as new session detail accrues. 35 KB remains a stretch target, not a
    hard floor -- the "Current truth" env-var/timeline prose and the Regeneration section's Standing
    warnings stay intact deliberately; both are used every iteration.
-2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (full arc: PROJECT-OVERVIEW
-   §10-§12). Next M5 work needs a genuinely new lead (**last checked s520 — zero new leads, cadence
-   reset to s520, due again once 3+ sessions have passed, i.e. s523+**).
+2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (PROJECT-OVERVIEW §10-§12). Next
+   M5 work needs a genuinely new lead (last checked s520, zero new leads, due again s523+).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
-   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Every bucket
-   surfaced by the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW
-   §18-§19). Items -312..-322 (s481-518, the guard lineage descending from `DL_LIST_APPEND_GUARD`
-   through `HEAPLISTDEQ_ATTR_WRITE_GUARD`) are all fully CLOSED — PROJECT-OVERVIEW §20-§25.
-   **Item -317 step 3 (a ~150-location blanket sweep) status as of s546: 57/~150 leads fixed, 52 FULLY
-   CLOSED 2/2, 5 pending confirm (a second five-way tie, batched) — see item -317 below.** ~93 locations
-   remain unaudited across further tiers — M3's top-ranked work
-   unit is this sweep's continuation. Live breadcrumb tracking (items -324..-333, all filed not chased,
-   none escalated): see Next-steps below.
+   (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Every bucket from
+   the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW §18-§19).
+   Items -312..-322 (s481-518, the `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage) are
+   all fully CLOSED — PROJECT-OVERVIEW §20-§25. **Item -317 step 3 (~150-location blanket sweep)
+   status as of s546: 57/~150 leads fixed, 52 FULLY CLOSED 2/2, 5 pending confirm** — see item -317
+   below; ~93 locations remain unaudited, still M3's top-ranked work unit. Live breadcrumb tracking
+   (items -328..-333, filed not chased, none escalated): see Next-steps below.
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s486)
+## Current truth (established by session 295; unchanged, reviewed through s546)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -152,49 +149,30 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -333. The next NEW item takes -334.
 
--333. **(s546, single occurrence) `findAndUnlinkSmallestEntry+356`/`0x8000d698`, filed not chased.**
-    `(local-symtab)`-tagged (post-s480 symbolizer, so a genuine in-function fault, not the pre-s480
-    misattribution artifact). Hit during `RENDER_FLAT_MESH_FACE_GROUP_R3/R4_GUARD` +
-    `RENDER_LIT_MESH_R12/R13_GUARD` + `DRAW_SUBTITLE_TEXT_R3_GUARD`'s 1st live-verify — unrelated to
-    any guard under test, own guards never fired. 16 bytes (4 instructions) from item -331's
-    `heapFreeListDequeue+29152`/`0x8000d688` (also single-occurrence, also `local-symtab`-tagged, also
-    in the free-list-pop region) but a DIFFERENT guest PC — not treated as the same signature. Watch
-    for a 2nd occurrence of either before escalating.
--332. **(s539's 2nd confirm of `RENDER_LIT_TEXTURED_MESH_FACES_R2_GUARD`, 1st attempt, WEAK
-    CONTROL; recurred s544 with a STRONG control) `submitSceneNodeRender+38976`/`0x8001086c`, filed
-    not chased.** Bus error. 1st sighting (s539) crashed at 19.8s after only 7 frames with
-    `hangarbay-entry n=5` (single-digit, below the double-digit-or-better bar) — discarded as vacuous
-    per iron rule 1. **2nd sighting (s544, `DRAW_SUBTITLE_TEXT_R2_GUARD`'s 1st live-verify)**: same
-    exact `pc-symbol`/`last-guest-pc` pair, this time with `hangarbay-entry n=2600` (strong positive
-    control) — a genuine 2nd occurrence with a valid control. Confidence upgraded from low to
-    moderate; still not chased (unrelated to any guard under test in either run, own guards never
-    fired). Watch for a 3rd occurrence before escalating to source-tracing.
--331. **(s537's 2nd confirm, folded s539, single occurrence) `heapFreeListDequeue+29152`/
-    `0x8000d688`, filed not chased.** `(local-symtab)`-tagged (post-s480 symbolizer, so a genuine
-    in-function fault, not the pre-s480 misattribution artifact, item -310/-311) — sits before every
-    already-guarded/fixed address in this function (item -317 step 1's `0x8000D760`+widened-skip, item
-    -322's `0x8000D92C`, the cache-head reload at `0x8000D6E4`), near the `0x8000D67C` second-path
-    branch item -317 step 1's writeup already flagged. Watch for a 2nd occurrence before escalating.
--330. **(s536/s537, 2 occurrences back-to-back) `heapFreeListInsert+72`/`0x800220b8`, filed not
-    chased.** Distinct from item -324's `heapFreeListInsert+72`/`0x80015544` (different
-    `last-guest-pc`). Weaker corroboration than it looks (same binary/script/adjacent wall-clock, a
-    shared transient per the boring-first prior) — watch for a 3rd occurrence before escalating.
--329. **(s529, single occurrence) `rebuildActiveDisplayObjectList+660`/`0x800ab060`, filed not
-    chased.** Distinct from the item -317 R5 `+540` breadcrumb and the older `rs_free`←same-function
-    heap-corruption family (PORTING-STATE 164-186) — a NEW signature. Watch for a 2nd occurrence.
--328. **(s528, single occurrence) `submitSceneNodeRender+69820`/`0x80010ebc`, filed not chased.**
-    Distinct from item -327's `+67668`/`0x80010e6c` — a NEW signature. Watch for a 2nd occurrence.
+-328..-333. **Six more single/double-occurrence breadcrumbs surfaced by item -317 step 3's s526-546
+    live-verifies, all filed not chased.** Full detail: `docs/PROJECT-OVERVIEW.md` §25-§26.
+    -328 (s528) `submitSceneNodeRender+69820`/`0x80010ebc`, distinct from -327's `+67668`/`0x80010e6c`.
+    -329 (s529) `rebuildActiveDisplayObjectList+660`/`0x800ab060`, distinct from the item -317 R5
+    `+540` breadcrumb. -330 (s536/s537, 2 occurrences back-to-back, weak corroboration per the
+    boring-first prior — same binary/script/adjacent wall-clock) `heapFreeListInsert+72`/
+    `0x800220b8`, distinct from -324's same-symbol/different-PC breadcrumb. -331 (s537,
+    `local-symtab`-tagged, in the free-list-pop region, before every already-guarded address in
+    `heapFreeListDequeue`) `heapFreeListDequeue+29152`/`0x8000d688`. **-332** (s539 weak `n=5`,
+    recurred s544 with a strong `n=2600` control — confidence upgraded low→moderate, watch for a 3rd
+    before source-tracing) `submitSceneNodeRender+38976`/`0x8001086c`. **-333** (s546,
+    `local-symtab`-tagged, 16 bytes from -331's address but a distinct guest PC — treat the
+    free-list-pop region itself as suspicious if either recurs or a third nearby address appears)
+    `findAndUnlinkSmallestEntry+356`/`0x8000d698`. Watch all six for recurrence before escalating.
 
 -320..-327. **Eight breadcrumbs surfaced by item -317 step 3's live-verifies (s508-524), all
     filed-not-chased except two escalated and resolved.** -320 (s508) `loadCutsceneAssetsByIndex+1860`/
     `0x800aafb8`. -323 (s514) `beginFrameDLChunk+27456`/`0x8000ae40` (same function as -319, different
     PC — not a 3rd -319 occurrence). -324 (s521) `heapFreeListInsert+72`/`0x80015544`. -325 (s522)
-    `findLookupEntryByKey+2212`/`0x800ad0dc`. **-321** (2 occurrences) — escalation **REFUTED s518**:
-    a shared return-epilogue instruction 3 unrelated overlay functions claim, plus a
-    breadcrumb-coverage gap, not real corroboration. **-322** (3 occurrences) — **FIXED s517
-    (`HEAPLISTDEQ_ATTR_WRITE_GUARD`), FULLY CLOSED 2/2 s518**. **-326** (s524) `do_rom_read+608`/
-    `0x800025ac`, Bus error — matches the call-stack shape of the `do_rom_read`/`piDmaWorker`
-    DMA-corruption race believed fixed since s147; **if a 2nd occurrence appears, treat it as urgent**.
+    `findLookupEntryByKey+2212`/`0x800ad0dc`. **-321** (2 occurrences) — escalation **REFUTED s518**
+    (shared return-epilogue instruction, not real corroboration). **-322** (3 occurrences) — **FIXED
+    s517 (`HEAPLISTDEQ_ATTR_WRITE_GUARD`), FULLY CLOSED 2/2 s518**. **-326** (s524) `do_rom_read+608`/
+    `0x800025ac`, Bus error — matches the `do_rom_read`/`piDmaWorker` DMA-corruption race believed
+    fixed since s147; **if a 2nd occurrence appears, treat it as urgent**.
     **-327** (2 occurrences 21 sessions apart) `submitSceneNodeRender+67668`/`0x80010e6c`, Bus error —
     watch for a 3rd before source-tracing. Full mechanism writeups: `docs/PROJECT-OVERVIEW.md` §24.
 
@@ -211,200 +189,37 @@ a range pointer. Highest allocated so far: -333. The next NEW item takes -334.
     entry, skipping the body if invalid. CLOSED 2/2 s507 after an s506 inconclusive retry. Mechanism:
     `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-544) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 47 guards fixed so far, 46/47 FULLY
-    CLOSED 2/2, 1 pending confirm.** Steps 1 (`heapFreeListDequeue`)
-    and 2 (`buildOrientedFaceGeometry`) are separately FULLY
-    CLOSED 2/2. Step 3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a forward
-    taint-propagation dataflow analysis) found ~448 raw reload sites deduping to ~150 candidate guard
-    placements across 30 functions; every fix shares one shape (null check gates one arm safely,
-    non-null fallthrough has no `0x80000000`-`0x80800000` range check before a write-through deref,
-    downstream control flow reloads the register from the table again — skip on invalid is safe). The
-    `beginFrameDLChunk` 36-site tier (R1-R10), `emitColorFillRect`'s R1-R2, `submitSceneNodeRender`'s
-    R1-R4, `drawSubtitleText`'s R1, and `renderLitTexturedMeshFaces`'s R1 are all FULLY CLOSED 2/2 —
-    full guard-by-guard table (site addresses, session, crash each verify hit):
-    `docs/PROJECT-OVERVIEW.md` §22-§25.
-    **`renderLitTexturedMeshFaces`'s second candidate found and fixed (s539)**: fresh re-scan put the
-    exact guarded shape (reg=`r2`, off=`0X4`) top at `funcs_3.c:34094` (count=32) — a second, EARLIER
-    site in the same function as R1 (`0x8000FE14`). All 24 raw reload addresses feeding this write were
-    checked directly against `fixup_game_funcs.py` (genuinely uncovered, including the write's own
-    address `0x8000FCF4` and load pair `0x8000FCE4`/`0x8000FCE8`). Same `+0x63B0`-offset idiom, gated at
-    `0x8000FCEC`, fixed as **`RENDER_LIT_TEXTURED_MESH_FACES_R2_GUARD`**. 1st live-verify clean: 0
-    `render-lit-textured-mesh-faces-r2-guard` fires, 0 fires on any other armed guard family (1 benign
-    `hangarmenu-a0-guard` co-fire), `hangarbay-entry n=34` positive control, full 300s duration
-    completed with NO crash at all — the cleanest possible verify class. **Its 2nd confirm's 1st
-    attempt (s539) was WEAK**: crashed at 19.8s after only 7 frames, `hangarbay-entry n=5`
-    (single-digit, below the double-digit-or-better bar) — discarded per iron rule 1, filed the crash
-    signature as item -332. **The retry (s541, folded from queue) read CLEAN**: 0
-    `render-lit-textured-mesh-faces-r2-guard` fires, 1 benign `hangarmenu-a0-guard` co-fire,
-    `hangarbay-entry n=32`, full 349s duration, no crash — `RENDER_LIT_TEXTURED_MESH_FACES_R2_GUARD`
-    marked FULLY CLOSED 2/2.
-    **Third and fourth candidates found and fixed (s540)**: fresh re-scan (raw tracer's top two entries,
-    reg=`r4`/off=`0X0`, re-confirmed the same already-rejected shape mismatch) put two TIED entries at
-    the exact guarded shape (reg=`r2`, off=`0X4`, count=27 each): `funcs_3.c:33902`
-    (site=`0x8000FC24`) and `funcs_3.c:34530` (site=`0x8000FECC`) — both in `renderLitTexturedMeshFaces`
-    itself, a third and fourth site alongside R1 (`0x8000FE14`) and R2 (`0x8000FCF4`). Every raw reload
-    address feeding both write lines was checked directly against `fixup_game_funcs.py`: neither write
-    address itself appears anywhere in it — genuinely uncovered. Same `+0x63B0`-offset idiom, gated at
-    `0x8000FC1C`/`0x8000FEC4` respectively. Fixed as **`RENDER_LIT_TEXTURED_MESH_FACES_R3_GUARD`** and
-    **`RENDER_LIT_TEXTURED_MESH_FACES_R4_GUARD`**, batched into one build/run per the batch-
-    instrumentation rule. 1st live-verify (s540) clean: 0 fires on either new guard, 0 fires on any
-    other armed guard family at all (no benign co-fires this run), `hangarbay-entry n=31` positive
-    control, full 300s scheduled duration completed with NO crash at all (107 frames captured, rc=0) —
-    the cleanest possible verify class. **2nd confirm (s541, folded from queue) read CLEAN**: 0 fires on
-    either guard, 1 benign already-catalogued `s284-guard` co-fire, `hangarbay-entry n=31`, crashed at
-    113.1s on `pc-symbol=hangarTickCameraOrbit+5188`/`last-guest-pc=0x800ab068` — the long-recurring
-    `0x800ab068` background-noise family (items -320/s463/s468/s489; the host symbol varies build to
-    build but the guest PC is the stable signature) — both `RENDER_LIT_TEXTURED_MESH_FACES_R3_GUARD` and
-    `_R4_GUARD` marked FULLY CLOSED 2/2.
-    **Next tier found and fixed (s541)**: fresh re-scan put TWO TIED entries at the exact guarded shape
-    (reg=`r2`, off=`0X4`, count=26 each) in TWO DIFFERENT functions: `funcs_4.c:7648` (site=`0x80011B54`,
-    `renderFlatMeshFaceGroup`, a brand-new function for this campaign) and `funcs_4.c:14889`
-    (site=`0x80013DF4`, `renderLitMeshFaceGroup` — this function already carries the `RENDER_LIT_MESH_R2`
-    -`R8_GUARD` lineage from s496-519 at seven DIFFERENT addresses; `0x80013DF4` matched none of them,
-    confirmed a genuine ninth distinct site). Both write addresses checked directly against
-    `fixup_game_funcs.py`: neither appeared anywhere — genuinely uncovered. Same `+0x63B0`-offset idiom.
-    Fixed as **`RENDER_FLAT_MESH_FACE_GROUP_R1_GUARD`** and **`RENDER_LIT_MESH_R9_GUARD`**, batched into
-    one build/run. 1st live-verify (s541) clean on the first attempt: 0 fires on either new guard, 3
-    benign already-catalogued `s284-guard` co-fires + 1 benign already-catalogued
-    `hangar-bay-deref-guard` co-fire (no regression), `hangarbay-entry n=31` positive control. Crashed at
-    113.3s on `pc-symbol=initVec4TripletFromArgs+68`/`last-guest-pc=0x800ab068` — the same
-    `0x800ab068` background-noise family hit twice this session — clean verify, own guards never fired.
-    2nd confirm queued: `scratch/agent/soak_queue/s541_render_flat_mesh_face_group_r1_render_lit_mesh_r9_confirm.sh`.
-    **2nd confirm (s542, folded from queue) read CLEAN**: 0 fires on either guard, 1 benign already-
-    catalogued `hangarmenu-a0-guard` co-fire, `hangarbay-entry n=2700` (strong positive control),
-    crashed at 164.3s on `pc-symbol=coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` — the
-    already-catalogued s354-366 heap-walker background-noise family, not a new signature — both
-    `RENDER_FLAT_MESH_FACE_GROUP_R1_GUARD` and `RENDER_LIT_MESH_R9_GUARD` marked FULLY CLOSED 2/2.
-    This closed the campaign's 43 guards to 43/43 fully closed (zero open guards) for the fifth time.
-    **Next tier found and fixed (s542)**: fresh re-scan (`0x8011`/`0x63B0` reg=`r2`/off=`0X4` shape)
-    put a single top-ranked, non-tied entry at `funcs_4.c:14436` (site=`0x80013BF4`, count=24) in
-    `renderLitMeshFaceGroup` — a 10th distinct site, checked against the R2-R9 lineage's eight other
-    addresses (`0x80014C6C`, `0x800148E8`, `0x800142FC`, `0x80014A8C`, `0x80014558`, `0x80014140`,
-    `0x80013F0C`, `0x80013DF4`), none matched. The reg=`r4`/off=`0X0` entries ranked above it
-    (`funcs_4.c:7788` count=27, `renderFlatMeshFaceGroup`) re-confirmed the same already-rejected
-    shape mismatch. The write address and all 24 raw reload addresses feeding it were checked directly
-    against `fixup_game_funcs.py`: none appeared anywhere — genuinely uncovered. Same `+0x63B0`-offset
-    idiom, gated at `0x80013BEC`. Fixed as **`RENDER_LIT_MESH_R10_GUARD`** (44th guard). 1st live-verify
-    clean on the first attempt: 0 `render-lit-mesh-r10-guard` fires, 1 benign already-catalogued
-    `hangarmenu-a0-guard` co-fire (no regression), `hangarbay-entry n=2900` (strong positive control),
-    full 300s scheduled duration completed with NO crash at all (106 frames captured, rc=0) — the
-    cleanest possible verify class. 2nd confirm queued:
-    `scratch/agent/soak_queue/s542_render_lit_mesh_r10_confirm.sh`.
-    **`RENDER_LIT_MESH_R10_GUARD`'s 2nd confirm (s543, folded from queue) read CLEAN**: 0 fires, 1
-    benign already-catalogued `hangarmenu-a0-guard` co-fire, `hangarbay-entry n=35` (positive control),
-    full 348s duration completed with NO crash at all — marked FULLY CLOSED 2/2, closing the campaign's
-    44 guards to 44/44 fully closed (zero open guards) for the sixth time.
-    **Next tier found and fixed (s543)**: fresh re-scan put a TIE at count=22 (exact guarded shape
-    reg=`r2`/off=`0X4`) between `funcs_3.c:10887` (site=`0x8000A25C`, `emitColorFillRect`, a THIRD
-    site alongside R1's `0x8000A538` and R2's `0x8000A3C4`) and `funcs_4.c:7328`
-    (site=`0x80011A2C`, `renderFlatMeshFaceGroup`, a SECOND site alongside R1's `0x80011B54`) — as
-    predicted by the prior session's note. Both write addresses and every raw reload address feeding
-    them (22 for `emitColorFillRect`, 18 distinct for `renderFlatMeshFaceGroup`) were checked directly
-    against `fixup_game_funcs.py`: neither appeared anywhere — genuinely uncovered. Same
-    `+0x63B0`-offset idiom, gated at `0x8000A254`/`0x80011A24` respectively. Fixed as
-    **`EMIT_COLOR_FILL_RECT_R3_GUARD`** and **`RENDER_FLAT_MESH_FACE_GROUP_R2_GUARD`**, batched into
-    one build/run. 1st live-verify's first attempt (s543) was WEAK: crashed at 19.9s after only 7
-    frames, `hangarbay-entry n=5` (single-digit, below the double-digit bar) — discarded per iron rule
-    1, its crash signature (`setByteAcrossEntryList+176`/`0x800aafa8`) matches the already-catalogued
-    item -306, not new. The immediate retry (2nd attempt, s543) was CLEAN: 0 fires on either new
-    guard, 0 fires on any other armed guard family (no regression), `hangarbay-entry n=31` (positive
-    control), crashed at 113.7s on the already-catalogued item -320 `loadCutsceneAssetsByIndex+1860`/
-    `0x800aafb8` signature — clean verify, own guards never fired. 2nd confirm queued:
-    `scratch/agent/soak_queue/s543_emit_color_fill_rect_r3_render_flat_mesh_face_group_r2_confirm.sh`.
-    **`EMIT_COLOR_FILL_RECT_R3_GUARD`/`RENDER_FLAT_MESH_FACE_GROUP_R2_GUARD`'s 2nd confirm (s543,
-    folded s544) read CLEAN**: 0 fires on either guard, 1 benign already-catalogued `hangarmenu-a0-
-    guard` co-fire, `hangarbay-entry n=2700` (strong positive control), crashed on the already-
-    catalogued `coalesceFreeHeapBlocks+4424`/`0x8000247c` s354-366 background-noise family — both
-    marked FULLY CLOSED 2/2, closing the campaign's 46 guards to 46/46 fully closed (zero open guards)
-    for the seventh time.
-    **Next tier found and fixed (s544)**: fresh re-scan (reg=`r4`/off=`0X0` entries above it re-
-    confirmed the same already-rejected shape mismatch) put a single top-ranked, non-tied entry at
-    `funcs_4.c:24932` (site=`0x80016830`, count=20, next tier down is count=18) in `drawSubtitleText`
-    — a SECOND site alongside R1's `0x80016B58` (s535). The write address and all 20 raw reload
-    addresses feeding it were checked directly against `fixup_game_funcs.py`: none appeared anywhere
-    — genuinely uncovered. Same `+0x63B0`-offset idiom, gated at `0x80016828`. Fixed as
-    **`DRAW_SUBTITLE_TEXT_R2_GUARD`** (47th guard). 1st live-verify clean on the first attempt: 0
-    `draw-subtitle-text-r2-guard` fires, 0 fires on any other armed guard family (5 sibling guards
-    dumped `n=0` diagnostic snapshots at crash time, not fires — no regression), `hangarbay-entry
-    n=2600` (strong positive control). Crashed at 111.0s on `pc-symbol=submitSceneNodeRender+38976`/
-    `last-guest-pc=0x8001086c` — the EXACT signature of item -332 (s539's WEAK 1st confirm attempt,
-    n=5, discarded), but this time with a STRONG control (n=2600) — a genuine 2nd occurrence with a
-    valid control, upgrading item -332's confidence from low to moderate. Clean verify, own guard
-    never fired. 2nd confirm queued: `scratch/agent/soak_queue/s544_draw_subtitle_text_r2_confirm.sh`.
-    **`DRAW_SUBTITLE_TEXT_R2_GUARD`'s 2nd confirm (s544, retried s545 after the original fold-in came
-    back WEAK — `hangarbay-entry n=5`, discarded per iron rule 1) read CLEAN on retry**: 0 fires, 0
-    fires on any other armed guard family at all, `hangarbay-entry n=31` (positive control), full 300s
-    duration completed with NO crash at all (106 frames captured, rc=0) — the cleanest possible verify
-    class. Marked FULLY CLOSED 2/2, closing the campaign's 47 guards to 47/47 fully closed (zero open
-    guards) for the eighth time.
-    **Next tier found and fixed (s545)**: fresh re-scan (reg=`r4`/off=`0X0` entries above it re-
-    confirmed the same already-rejected shape mismatch) put a FIVE-WAY TIE at count=18 (exact guarded
-    shape reg=`r2`/off=`0X4`) spanning FIVE DIFFERENT functions: `funcs_3.c:10523` (site=`0x8000A0F8`,
-    `emitColorFillRect`, a FOURTH site alongside R1/R2/R3), `funcs_3.c:29260` (site=`0x8000E72C`,
-    `emitMaterialTexturedDL`, first guard in a BRAND-NEW function for this campaign),
-    `funcs_3.c:31191` (site=`0x8000EE34`, `emitMaterialTexturedDLAlt`, first guard in a second
-    BRAND-NEW function), `funcs_4.c:2528` (site=`0x80010810`, `submitSceneNodeRender`, a FIFTH site
-    alongside R1-R4), and `funcs_4.c:14065` (site=`0x80013A78`, `renderLitMeshFaceGroup`, an ELEVENTH
-    site alongside R2-R10) — the largest single-session tie this campaign has fixed (prior largest was
-    2). All 90 raw reload addresses feeding the 5 write lines, plus each write's own address, were
-    checked directly against `fixup_game_funcs.py`: one incidental match (`submitSceneNodeRender`'s
-    chain includes `0x800101B0`, but that reload is already claimed by the unrelated s197
-    `SCENE_NODE_CACHE_GUARD` protecting a DIFFERENT read at `0x800101B4`, not the target write) —
-    all 5 target write addresses themselves are genuinely uncovered. Same `+0x63B0`-offset idiom in
-    every case. Fixed as **`EMIT_COLOR_FILL_RECT_R4_GUARD`**, **`EMIT_MATERIAL_TEXTURED_DL_R1_GUARD`**,
-    **`EMIT_MATERIAL_TEXTURED_DL_ALT_R1_GUARD`**, **`SUBMIT_SCENE_NODE_RENDER_R5_GUARD`**, and
-    **`RENDER_LIT_MESH_R11_GUARD`** (48th-52nd guards), batched into one build/run per the batch-
-    instrumentation rule. 1st live-verify clean on the first attempt: 0 fires on any of the 5 new
-    guards, 1 benign already-catalogued `hangarmenu-a0-guard` co-fire (no regression), `hangarbay-entry
-    n=32` (positive control). Crashed at 165.6s on `pc-symbol=loadDatFile+1152`/
-    `last-guest-pc=0x800290d4` — checked against the Overturned-conclusions section: this is the
-    s400-421→s422 `inflate_fast` clean-return misattribution artifact, a documented non-issue, not a
-    new item. Clean verify, own guards never fired. 2nd confirm queued:
-    `scratch/agent/soak_queue/s545_five_tied_guards_confirm.sh`.
-    **2nd confirm (s546, folded from queue) read CLEAN**: 0 fires on any of the 5 guards, 0 fires on
-    any other armed guard family at all, `hangarbay-entry n=2600` (strong positive control). Crashed
-    at 114.2s on the already-catalogued `0x800ab068` background-noise family
-    (`loadCutsceneAssetsByIndex+1860` this instance) — all 5 guards
-    (`EMIT_COLOR_FILL_RECT_R4_GUARD`, `EMIT_MATERIAL_TEXTURED_DL_R1_GUARD`,
-    `EMIT_MATERIAL_TEXTURED_DL_ALT_R1_GUARD`, `SUBMIT_SCENE_NODE_RENDER_R5_GUARD`,
-    `RENDER_LIT_MESH_R11_GUARD`) marked FULLY CLOSED 2/2, closing the campaign's 52 guards to 52/52
-    fully closed (zero open guards) for the ninth time.
-    **Next tier found and fixed (s546)**: fresh re-scan (reg=`r4`/off=`0X0` entries above it re-
-    confirmed the same already-rejected shape mismatch) put a FIVE-WAY TIE at count=16 (exact guarded
-    shape reg=`r2`/off=`0X4`) spanning THREE functions: `funcs_4.c:6268` (site=`0x800114C0`,
-    `renderFlatMeshFaceGroup`, a THIRD site alongside R1/R2), `funcs_4.c:7045` (site=`0x80011904`,
-    `renderFlatMeshFaceGroup`, a FOURTH site), `funcs_4.c:12782` (site=`0x8001347C`,
-    `renderLitMeshFaceGroup`, a TWELFTH site alongside R2-R11), `funcs_4.c:13321`
-    (site=`0x8001370C`, `renderLitMeshFaceGroup`, a THIRTEENTH site), and `funcs_4.c:24022`
-    (site=`0x800163C8`, `drawSubtitleText`, a THIRD site alongside R1/R2). All 5 target write
-    addresses and all 48 raw reload addresses feeding them were checked directly against
-    `fixup_game_funcs.py`: none appeared anywhere — genuinely uncovered, no incidental matches this
-    time. Same `+0x63B0`-offset idiom in every case. Fixed as
-    **`RENDER_FLAT_MESH_FACE_GROUP_R3_GUARD`**, **`RENDER_FLAT_MESH_FACE_GROUP_R4_GUARD`**,
-    **`RENDER_LIT_MESH_R12_GUARD`**, **`RENDER_LIT_MESH_R13_GUARD`**, and
-    **`DRAW_SUBTITLE_TEXT_R3_GUARD`** (53rd-57th guards), batched into one build/run per the batch-
-    instrumentation rule. 1st live-verify clean on the first attempt: 0 fires on any of the 5 new
-    guards, 0 fires on any other armed guard family at all (no co-fires this run), `hangarbay-entry
-    n=2600` (strong positive control). Crashed at 131.6s on
-    `pc-symbol=findAndUnlinkSmallestEntry+356`/`last-guest-pc=0x8000d698` — checked against every
-    catalogued background-noise family (`0x800ab068`, `coalesceFreeHeapBlocks+4424`/`0x8000247c`,
-    `setByteAcrossEntryList+176`/`0x800aafa8`, the s422 `inflate_fast` artifact, item -331's
-    `0x8000d688`) — no match, a genuinely NEW signature, filed **item -333** (single occurrence, not
-    escalated, 16 bytes from item -331's address but a distinct guest PC). Clean verify, own guards
-    never fired. 2nd confirm queued: `scratch/agent/soak_queue/s546_five_tied_guards_confirm.sh`.
-    Tally: 57/~150 fixed, 52 fully closed 2/2, 5 pending confirm (the second five-way tie above).
-    **~93 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
-    Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't subsume these
-    tiers. **Tracer gotcha (s521)**: `s506_dedupe.py` reads a fixed canonical report path — a custom
-    `--out` on `--scan` leaves it stale. **Positive-control gotcha (s536)**: `hangarbay-entry` can fail
-    to fire even on a full-duration completion (the phase-gated key schedule can diverge run to run) —
-    always check the positive control's presence before trusting a 0-fires result. **`0x800ab068`
-    background-noise gotcha (s541)**: this recurring guest-PC crash resolves to a DIFFERENT host
-    `pc-symbol` almost every time it's hit (`loadCutsceneAssetsByIndex+1860`, `hangarTickCameraOrbit
-    +5188`, `initVec4TripletFromArgs+68`, ...) — always cross-check the `last-guest-pc` value, not just
-    the symbol name, before filing a "new" item. Full guard-by-guard table and gotchas:
-    `docs/PROJECT-OVERVIEW.md` §22-§25, `PORTING-STATE.md` Sessions 490-544.
+-317. **(s490-546) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 57 guards fixed so far, 52/57 FULLY
+    CLOSED 2/2, 5 pending confirm (guards 53-57, s546's second five-way tie).** Steps 1
+    (`heapFreeListDequeue`) and 2 (`buildOrientedFaceGeometry`) are separately FULLY CLOSED 2/2. Step
+    3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a forward taint-propagation dataflow
+    analysis) found ~448 raw reload sites deduping to ~150 candidate guard placements across 30
+    functions; every fix shares one shape (null check gates one arm safely, non-null fallthrough has
+    no `0x80000000`-`0x80800000` range check before a write-through deref, downstream control flow
+    reloads the register from the table again — skip on invalid is safe). Guards land in
+    `beginFrameDLChunk` (36-site tier, R1-R10, fully closed), `emitColorFillRect` (R1-R4),
+    `submitSceneNodeRender` (R1-R5), `drawSubtitleText` (R1-R3), `renderLitTexturedMeshFaces` (R1-R4),
+    `renderFlatMeshFaceGroup` (R1-R4), `renderLitMeshFaceGroup` (R2-R13, 12 sites), and one guard each
+    in the brand-new `emitMaterialTexturedDL`/`emitMaterialTexturedDLAlt`. Full guard-by-guard table
+    (all 57: site addresses, session, crash each verify/confirm hit): `docs/PROJECT-OVERVIEW.md`
+    §22-§25.
+    **Pending as of s546**: guards 53-57 (`RENDER_FLAT_MESH_FACE_GROUP_R3/R4_GUARD`,
+    `RENDER_LIT_MESH_R12/R13_GUARD`, `DRAW_SUBTITLE_TEXT_R3_GUARD` — a five-way tie at count=16 across
+    3 functions) cleared their 1st live-verify clean (`hangarbay-entry n=2600`, 0 fires on any new or
+    other armed guard) but crashed on a genuinely new signature filed as **item -333**
+    (`findAndUnlinkSmallestEntry+356`/`0x8000d698`, 16 bytes from item -331's address but a distinct
+    guest PC — see below). 2nd confirm queued:
+    `scratch/agent/soak_queue/s546_five_tied_guards_confirm.sh`, pending fold-in next iteration.
+    **~93 locations remain unaudited across further tiers — still the top-ranked M3 work unit.** Item
+    -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't subsume these tiers.
+    **Standing gotchas** (full detail: `docs/PROJECT-OVERVIEW.md` §22-§25, `scratch/agent/NEXT.md`):
+    `s506_dedupe.py` reads a fixed canonical report path, never pass `--out` to `--scan` (s521);
+    `hangarbay-entry` can fail to fire even on a full-duration completion, always check the positive
+    control before trusting a 0-fires result (s536); the `0x800ab068` background-noise crash resolves
+    to a DIFFERENT host `pc-symbol` almost every hit, always cross-check `last-guest-pc` not the symbol
+    name (s541); a raw reload address feeding a target write can incidentally match an unrelated guard
+    elsewhere without disqualifying the candidate (s545). Raw detail: `PORTING-STATE.md` Sessions 490-546.
 
 -316. **(s488-490) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED 2/2.** A scope gap in the existing s436
     `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`): validated one deref but not two propagating
@@ -508,36 +323,19 @@ Standing warnings:
 
 ## Overturned conclusions — do not act on these
 
-- **(s400-421->s422)** "`0x800290d4`, six independent triggers, one shared downstream corruption sink -- the strongest available root-cause lead" -- `last-guest-pc=0x800290d4` is `inflate_fast`'s own clean return, reported by a sparse breadcrumb present in only 8/50 `RecompiledFuncs/funcs_*.c` files; `atos`-based exact symbolication of 5 of the 6 crash logs found five different real crash functions, not one. Believable for 21 sessions because the shared numeric value looked like a shared fault address, and nobody had yet resolved `last-guest-pc` past the breadcrumb's own coarse granularity to the actual host instruction. `m4_known_bad.txt`'s parking decision is unaffected (still correct); only the "worth a dedicated session" framing is overturned. PORTING-STATE 422.
-
-`## LLE stabilization session 2 (2026-07-12)` sits out of order in the log, between s7 and s8: its conclusions are among the oldest in the file, not the newest.
-
-- **(s54->s399)** "The M4 missing-func fix is applied and build-verified, only the runtime check is outstanding" -- s54's fix (adding 3 names to `mission_overlay.txt`) was dead on arrival: the same 3 names already existed at the same addresses in `main_overlay.txt`, which `make_elf.py` parses first and dedupes by name (first-file-wins), and which then get silently dropped as phantom functions (range-checked against `.text`, not the overlay window). Believable for 345 sessions because build success is consistent with both "fixed" and "silently still broken." Root-caused and actually fixed s399; also surfaced a much larger version of the same bug class (~801-803 more addresses, item -248). PORTING-STATE 399.
-- **(s348/350->s352)** "`[scene-node-content-guard]` firing is evidence of the same corruption class as the other step-5 guards" -- s352's raw-log re-read found it fires at the SAME node address (`0x80183ECC`) with the SAME zeroed content, thousands of times per run harmlessly -- a steady-state signature, not corruption; the n=0-vs-n=1957+ firing-shape distinction just hadn't been checked against the other guards until s352 compared them side by side. Guard stays in place; only its evidentiary weight for the corruption hunt is overturned. PORTING-STATE 348, 350, 352.
-- **(s339->s340->s342)** "The VI=640 `pairs=0` plateau is a benign, locked-camera mission cutscene" and "s340's 2/2 clean soaks validate promoting both audio gate reversals" -- s342 found those soaks never left the pre-title attribution/logo screen (0 `[keys]` lines in all 4 raw logs): crash-free with audio/DMA counters visibly live looked like a real positive control, but nobody checked the `[keys]` schedule had fired. The `pairs=0` mechanism itself (PROJECT-OVERVIEW §10) stands; only its context (pre-title, not mid-cutscene) is corrected. PORTING-STATE 339, 340, 342.
-- **(s107/108->s316->s318)** Two linked overturns in the gate1/2/3 tick-producer chase: "the 3 near-identical countdown/period gates fire `tickAllActiveSongs`/`tickAudioSequencerFrame`" was never positive-controlled (s316: none ever takes "call") -- itself overturned by s318's fresher `ctx->r2` read (a stale-register race in the diagnostic, not the branch): gate1 calls 19/40, gate2 4/4. PORTING-STATE 316, 318.
-- **(s222->s223)** "no soak reaches mesh-heavy content" -- a 4-soak sample-size artifact; a re-run reached space-combat content before freezing. The freeze itself is real, still reproduces (now a flat fill, not a torn polygon). PORTING-STATE 223.
-- **(s216-218->s219)** "shared corrupt literal `0x0000000300000000` at x0/x8, WRITTEN somewhere" -- that register is the process's constant RDRAM host base pointer, present by construction in every `MEM_W` fault, not written corruption; the wild operand is the *other* register (byte-identical at 3 sightings, all the same `renderUnlitMeshFaces` bug, vs. an unrelated 4th `heapWalker` bug). PORTING-STATE 219.
-- **(s75/76->s150)** "single Start from SELECT YOUR CRAFT leaves into a distinct hangar-flight scene" -- dense capture + an independent prior run + a code-level check (crash backtraces stay entirely in hangar-menu code) show it's the same craft-select scene under a corrupting camera move. Reopens "what leaves SELECT YOUR CRAFT" as unanswered. PORTING-STATE 150.
-- **(s2-31, s62-69, s12-48, s70-82 -- grouped, ~35 claims total, the earliest build/pixel-getting and menu-triage era)** Z-buffers misread as colour buffers, texrect output called invisible, RDP "emitting nothing" (real bug: a ring high-water mark), `DPC_WRAP`/fbpair-cap misdiagnosed for missing FULL_SYNC, floor-band/fog/S=0-triangle/stale-TMEM misattributions (real causes: M1 s44-49, section 4.1), 1024-phase black screen (present-starvation, not zero-shade); "RSP task submission stays healthy through the freeze" (a 1-in-32 throttled sample missed the crashing tail; unsampled showed 100% `ImemOverrun`); "self-restarting the IMEM perspective-divide branch un-freezes tasks" (instrument fired 0 times, real site was `CLIP_1FBC`->`L_1650`); "0x6AB400 is the main-menu hangar" (believable: partial render looked coherent 36 sessions) plus briefing-room/SELECT-LEVEL origin+timing claims and hangar-dimness-as-shade-census (real cause: M1 s44-49, see "Current truth" above); the post-`a` SIGBUS/black-screen self-correction chain (UAF and present-stall theories, resolved by the s84 UAF fix and s82 sane-width gate). Each overturned within 1-2 sessions of first being believed. PORTING-STATE 2-31, 62-69, 12-48, 70-82.
-- **(s87->s88)** "8th crash class is self-recursion in `advancePlayerAnimationPhase`" -- different, unreached call site; constant stack depth across 3296 calls, no recursion. PORTING-STATE 88.
-- **(s302->s306)** "reversing `initMusyXEngine`'s gate-byte site validated safely (0/2 family #1 recurrence)" -- a positive-controlled entry counter found `initMusyXEngine` is never called at all; the clean result reflects dead code, not a validated gate=1 state. Gate=1 still never exercised by any soak. PORTING-STATE 306.
-- **(s307->s309->s313->s315)** A chain of "audio-tick stop points converge" claims, each overturned by a closer same-run measurement: shared-upstream-resource theory refuted by source-read; "3 tick-producers + RSP `M_AUDTASK` all stop together at #19/20" refined by a widened print-cap soak to 2 real stop points, not 1 or 3 (`M_AUDTASK`'s 20/20 was its own unwidened diagnostic bug). Similar small round numbers read as simultaneous unless line numbers are diffed. PORTING-STATE 309, 313, 315.
-- **(M5-AUDIO-PLAN.md §4->s371)** "The host audio bridge is already fully implemented and functional" -- a source read found `queue_samples`'s sample-count parameter was passed straight through as `SDL_QueueAudio`'s byte length with no `*sizeof(int16_t)` conversion, silently dropping the back half of every PCM buffer. Believable: the wiring compiles/links/calls cleanly, so eyeballing the call graph reads as functional -- the defect is a unit mismatch one level down. Fixed s371 (`src/main/main.cpp`; PROJECT-OVERVIEW §12). PORTING-STATE 371.
+Full list (11 entries spanning s2-s422, each with why it was believable and what refuted it),
+plus the early-era dead-ends list, migrated to `docs/PROJECT-OVERVIEW.md` §26. The two entries
+still load-bearing for active work: **(s400-421->s422)** the `0x800290d4` "six independent
+triggers" claim is `inflate_fast`'s own clean return, a sparse shared breadcrumb across unrelated
+crash functions, not a real corruption sink — this recurs constantly as background noise across
+item -317's soaks (PORTING-STATE 422). **(M5-AUDIO-PLAN.md §4->s371)** the host audio bridge had a
+silent `queue_samples`→`SDL_QueueAudio` `*sizeof(int16_t)` unit-mismatch bug dropping half of every
+PCM buffer, fixed s371 (`src/main/main.cpp`).
 
 ### Dead ends — labelled as such in the log, do not retry
 
-- **(s2b-s4, grouped)** `RDP_ADDRESS_MASK`→0x7FFFFF (aliased legit extended-RDRAM handles onto low
-  memory); `dma_rdram_to_dmem` chunk-replay hack (legit trig reads after a swap); widened DMA shadow
-  0x37658 (legit dynamic data); blanket ucode shadow `shadow2` (2 legit rewrites); `ROGUESQ_RING_RESYNC`
-  (no effect); `dmem[0x153]=0xFF` forced reload (made failures worse).
-- Bulk `main_overlay.txt` symbol moves (s9): splits the enclosing function (§4.5), SIGBUS — use
-  `tools/overlay_symbol_probe.py <0xADDR>` first, one batch at a time. Present-side snap-down/
-  `findMostRecentContaining` (s9, neither fired); `ROGUESQ_VIEW_RDRAM=1` (s9, window never appears in
-  this fork); `ROGUESQ_WRAP_DEDUP=1` (s10, ~33000 fewer submissions, same assert still hits);
-  `ROGUESQ_FORCE_PAL15=1` (s14, clears floor band, corrupts ceiling banners sharing pal=15).
-- **(s85→s91)** "`do_rom_read` corrupted `physical_addr` is nondeterministic garbage" — the exact same
-  DMA call recurred byte-for-byte 3 times across 3 sessions; reclassified deterministic, reproducible.
+Full list (early ucode/DMA/overlay hacks, s2b-s91, each made things worse or had no effect)
+migrated to `docs/PROJECT-OVERVIEW.md` §26.
 
 ## Method traps
 
