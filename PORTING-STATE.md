@@ -44570,3 +44570,79 @@ unchanged in substance, only annotated with this session's recap).
 Ledger: `docs/CURRENT-TRUTH.md` compacted (item -317, Overturned conclusions, Dead ends, items
 -328..-333, USER DIRECTIVE header); `docs/PROJECT-OVERVIEW.md` §25 header corrected + item -333 added,
 new §26 added (full Overturned-conclusions/Dead-ends text); `PORTING-STATE.md` (this entry).
+
+## Session 548 (2026-08-09): item -317 step 3 -- folded in s546's queued 5-guard confirm (WEAK,
+`hangarbay-entry n=5`, 7 frames/20s, crashed on the item -306 `setByteAcrossEntryList+176`/
+`0x800aafa8` background-noise signature -- discarded per iron rule 1, retry re-queued:
+`scratch/agent/soak_queue/s548_five_tied_guards_confirm_retry.sh`, guards 53-57 remain pending);
+found+fixed a genuine FOUR-WAY TIE at count=14 (exact guarded shape reg=r2/off=0X4) spanning
+`emitColorFillRect` (5th site, `EMIT_COLOR_FILL_RECT_R5_GUARD`, `funcs_3.c:10105`/`0x80009F50`),
+`emitMaterialTexturedDL` (2nd site, `EMIT_MATERIAL_TEXTURED_DL_R2_GUARD`, `funcs_3.c:28876`/
+`0x8000E608`), `emitMaterialTexturedDLAlt` (2nd site, `EMIT_MATERIAL_TEXTURED_DL_ALT_R2_GUARD`,
+`funcs_3.c:30847`/`0x8000ECD4`), and `submitSceneNodeRender` (6th site,
+`SUBMIT_SCENE_NODE_RENDER_R6_GUARD`, `funcs_4.c:2194`/`0x80010728`) -- the campaign's guards 58-61.
+
+**Fold-in (Step 1).** `s546_five_tied_guards_confirm`'s run.log showed only `hangarbay-entry=5`
+(single-digit, below the double-digit bar) and crashed after 7 frames/20s on
+`pc-symbol=setByteAcrossEntryList+176`/`last-guest-pc=0x800aafa8` -- the already-catalogued item -306
+background-noise family (s531/s543 gotcha). Discarded per iron rule 1 rather than accepted as a null
+result; retry immediately re-queued (`scratch/agent/soak_queue/s548_five_tied_guards_confirm_retry.sh`)
+per the s543/s544/s545 precedent. Guards 53-57 remain at "1st live-verify clean, 2nd confirm pending"
+-- no promotion to FULLY CLOSED this session.
+
+**Re-scan and audit (Step 2).** Re-ran `s494_item317_step3_tracer.py --scan` + `s506_dedupe.py` fresh
+(no custom `--out`, s521's gotcha). After the two already-known reg=`r4`/off=`0X0` shape-mismatch
+entries at the top (`renderLitTexturedMeshFaces`, `renderFlatMeshFaceGroup` -- re-verified still a
+mismatch, `ctx->r4` there is the function's own provably-non-null argument), the top of the
+reg=`r2`/off=`0X4` shape ranking was a FOUR-WAY TIE at count=14: `emitColorFillRect` line 10105,
+`emitMaterialTexturedDL` line 28876, `emitMaterialTexturedDLAlt` line 30847, `submitSceneNodeRender`
+line 2194. Pulled every raw reload address feeding each write line from
+`s494_item317_step3_report.json` (`hits[].line`, not a top-level field -- s540 gotcha) plus each
+write's own guest address (read directly from the generated source, since the write address itself is
+NOT one of the tracer's listed reload addresses) and cross-checked all of them against
+`fixup_game_funcs.py` directly: none appeared anywhere, confirming all four writes were genuinely
+uncovered despite being in functions with several existing guards already (their existing guards sit
+at different addresses -- e.g. `emitColorFillRect` R1-R4 are at `0x8000A0F8`-`0x8000A538`, while this
+5th site is at `0x80009F50`, earlier in the function). Read the generated source around each site and
+confirmed the exact idiom: `lui $v0,0x8011` / `lw $v0,0x63B0($v0)` feeding a `beq $v0,$zero,...` null
+check whose non-null fallthrough unconditionally dereferences the reloaded `ctx->r2` via
+`MEM_W(0X4, ctx->r2) = ctx->r3;` with no `0x80000000`-`0x80800000` range check -- the same shape as
+every guard in this lineage.
+
+**Fix.** Added the four guards to `fixup_game_funcs.py` using the established template
+(skip-the-write-on-invalid, `ROGUESQ_LOG_<NAME>` env-gated stderr report, `U32()` range check),
+batched into one build/run per the batch-instrumentation rule. Regenerated (deleted
+`RecompiledFuncs/funcs_*.c`, `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`,
+all four steps). Fixup report showed all 4 patched exactly once (`patched x1`), no unexpected
+patch-report anomalies beyond the pre-existing unrelated `S392_H3A_*` skips.
+
+**1st live-verify.** First attempt WEAK: `hangarbay-entry n=5`, 7 frames/20s, crashed on the SAME
+item -306 `setByteAcrossEntryList+176`/`0x800aafa8` signature that had just invalidated the s546
+confirm fold-in -- two weak draws hitting the identical background-noise family in the same session,
+worth flagging as a standing gotcha (this signature appears to correlate with short/early-crash runs
+specifically, not a random draw). Discarded per iron rule 1, retried immediately: full 300s duration,
+106 frames captured, exit code 0 (**zero crashes of any kind for the entire run** -- the cleanest
+possible verify class). 0 fires on any of the 4 new guards. Only other guard activity in the whole log:
+a single `[hangarmenu-a0-guard] wild s3(a0)=0x80130B40 n=0` line -- a benign already-catalogued
+diagnostic snapshot (s541/s544 gotcha), not a fire. `hangarbay-entry n=33` (valid double-digit positive
+control). Clean verify, own guards never fired. 2nd confirm queued:
+`scratch/agent/soak_queue/s548_four_tied_guards_confirm.sh`.
+
+**Session-numbering correction**: the plan/scripts/comments were initially drafted under the label
+"s547" before realizing the prior commit (`5603d1a`) had already used s547 for the maintenance pass --
+renamed all of this session's guard-fix comments, soak-queue script filenames/contents, and doc
+references from s547 to s548 (the two genuine s547 references to the actual maintenance pass, in
+PROJECT-OVERVIEW §25/§26, were left untouched). The already-built binary and already-completed 1st
+live-verify were not re-run for this relabeling -- only comments/filenames changed, not guard logic,
+addresses, or names, so the existing clean result stands.
+
+**What this rules out.** No guard fired in either the confirm-retry queue draw or the two live-verify
+attempts (weak + clean) this session -- the campaign's 61 guards have now had 0 fires across every
+verify/confirm run ever conducted, all crashes attributable to already-catalogued background noise
+unrelated to the guarded idiom.
+
+Ledger: `docs/CURRENT-TRUTH.md` item -317 updated (61 guards, 52/61 closed, 9 pending, standing gotcha
+added); `docs/PROJECT-OVERVIEW.md` §25 table extended with guards 58-61, header/pending-confirm text
+updated; `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` +4 guards (not this
+repo, no submodule-patches step applies); `scratch/agent/soak_queue/s548_five_tied_guards_confirm_retry.sh`
+and `scratch/agent/soak_queue/s548_four_tied_guards_confirm.sh` queued; `PORTING-STATE.md` (this entry).

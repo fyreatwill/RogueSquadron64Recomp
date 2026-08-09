@@ -2151,12 +2151,12 @@ and any recurrence gets tracked in `docs/CURRENT-TRUTH.md`'s Next-steps list, no
 
 Full session-by-session raw detail: `PORTING-STATE.md` Sessions 503-524.
 
-## 25. Item -317 step 3 continued (s526-546): guards 26-57 close out the `beginFrameDLChunk` 36-site
+## 25. Item -317 step 3 continued (s526-548): guards 26-61 close out the `beginFrameDLChunk` 36-site
 tier, add first guards in `emitColorFillRect`/`submitSceneNodeRender`/`drawSubtitleText`/
 `renderLitTexturedMeshFaces`/`renderFlatMeshFaceGroup`/`emitMaterialTexturedDL`/
-`emitMaterialTexturedDLAlt`, and extend `renderLitMeshFaceGroup` to 13 sites — 52/57 FULLY CLOSED 2/2,
-5 pending (guards 53-57, s546's second five-way tie), migrated from CURRENT-TRUTH.md s538/s547
-maintenance passes
+`emitMaterialTexturedDLAlt`, and extend `renderLitMeshFaceGroup` to 13 sites — 52/61 FULLY CLOSED 2/2,
+9 pending (guards 53-57's s546 five-way tie plus guards 58-61's s548 four-way tie), migrated from
+CURRENT-TRUTH.md s538/s547 maintenance passes
 
 Same fix shape as every guard in this lineage: a null check gates one arm safely, the non-null
 fallthrough has no `0x80000000`-`0x80800000` range check before a `MEM_W(0X4, ctx->r2) = ctx->r3;`
@@ -2197,7 +2197,11 @@ guard family, and a real `hangarbay-entry` positive control both times.
 | 54 | `RENDER_FLAT_MESH_FACE_GROUP_R4_GUARD` | s546 | `funcs_4.c:7045`/`0x80011904` | `renderFlatMeshFaceGroup` (4th site, alongside R1/R2/R3) | 16 (5-way tie) | Same batched run as R3 above (armed together, batch-instrumentation rule): 0 `render-flat-mesh-face-group-r4-guard` fires — clean, pending 2nd confirm |
 | 55 | `RENDER_LIT_MESH_R12_GUARD` | s546 | `funcs_4.c:12782`/`0x8001347C` | `renderLitMeshFaceGroup` (12th site, distinct from R2-R11's eleven other addresses) | 16 (5-way tie) | Same batched run (armed together, batch-instrumentation rule): 0 `render-lit-mesh-r12-guard` fires — clean, pending 2nd confirm |
 | 56 | `RENDER_LIT_MESH_R13_GUARD` | s546 | `funcs_4.c:13321`/`0x8001370C` | `renderLitMeshFaceGroup` (13th site, distinct from R2-R12's twelve other addresses) | 16 (5-way tie) | Same batched run (armed together, batch-instrumentation rule): 0 `render-lit-mesh-r13-guard` fires — clean, pending 2nd confirm |
-| 57 | `DRAW_SUBTITLE_TEXT_R3_GUARD` | s546 | `funcs_4.c:24022`/`0x800163C8` | `drawSubtitleText` (3rd site, alongside R1's `0x80016B58` and R2's `0x80016830`) | 16 (5-way tie) | Same batched run (armed together, batch-instrumentation rule): 0 `draw-subtitle-text-r3-guard` fires — clean, pending 2nd confirm |
+| 57 | `DRAW_SUBTITLE_TEXT_R3_GUARD` | s546 | `funcs_4.c:24022`/`0x800163C8` | `drawSubtitleText` (3rd site, alongside R1's `0x80016B58` and R2's `0x80016830`) | 16 (5-way tie) | Same batched run (armed together, batch-instrumentation rule): 0 `draw-subtitle-text-r3-guard` fires — clean, pending 2nd confirm (queued confirm came back WEAK at s548, `hangarbay-entry n=5`, discarded per iron rule 1; retry re-queued: `scratch/agent/soak_queue/s548_five_tied_guards_confirm_retry.sh`) |
+| 58 | `EMIT_COLOR_FILL_RECT_R5_GUARD` | s548 | `funcs_3.c:10105`/`0x80009F50` | `emitColorFillRect` (5th site, alongside R1-R4) | 14 (4-way tie) | 1st attempt WEAK (`hangarbay-entry n=5`, crashed at 20.0s on the already-catalogued item -306 `setByteAcrossEntryList+176`/`0x800aafa8` signature — discarded per iron rule 1). Retry: 0 fires, only 1 benign already-catalogued `hangarmenu-a0-guard` n=0 diagnostic snapshot (not a fire), `hangarbay-entry n=33` (positive control), full 300s duration, zero crashes at all — clean verify, own guard never fired — pending 2nd confirm |
+| 59 | `EMIT_MATERIAL_TEXTURED_DL_R2_GUARD` | s548 | `funcs_3.c:28876`/`0x8000E608` | `emitMaterialTexturedDL` (2nd site, alongside R1's `0x8000E72C`) | 14 (4-way tie) | Same batched runs as R5 above (armed together both times, batch-instrumentation rule): 0 `emit-material-textured-dl-r2-guard` fires either attempt — clean, pending 2nd confirm |
+| 60 | `EMIT_MATERIAL_TEXTURED_DL_ALT_R2_GUARD` | s548 | `funcs_3.c:30847`/`0x8000ECD4` | `emitMaterialTexturedDLAlt` (2nd site, alongside R1's `0x8000EE34`) | 14 (4-way tie) | Same batched runs (armed together both times, batch-instrumentation rule): 0 `emit-material-textured-dl-alt-r2-guard` fires either attempt — clean, pending 2nd confirm |
+| 61 | `SUBMIT_SCENE_NODE_RENDER_R6_GUARD` | s548 | `funcs_4.c:2194`/`0x80010728` | `submitSceneNodeRender` (6th site, alongside R1-R5) | 14 (4-way tie) | Same batched runs (armed together both times, batch-instrumentation rule): 0 `submit-scene-node-render-r6-guard` fires either attempt — clean, pending 2nd confirm. All 4 target write addresses and every raw reload address feeding them checked directly against `fixup_game_funcs.py` before patching: none appeared anywhere, no incidental matches. 2nd confirm queued: `scratch/agent/soak_queue/s548_four_tied_guards_confirm.sh` |
 
 Guards 26-37 also reconfirmed s535-537 that the raw tracer's top-ranked pick (`funcs_3.c`,
 `renderLitTexturedMeshFaces`, reg=`r4`/off=`0X0`, count 27) is a stable, repeatedly-re-derived shape
@@ -2240,8 +2244,11 @@ any guard under test, own guards never fired. Filed not chased; watch for a 2nd 
 -331 or -333 before escalating — if either recurs, or a third nearby address in this region appears,
 treat the free-list-pop region itself as suspicious regardless of per-address occurrence counts.
 
-Guards 53-57's 2nd confirm (`scratch/agent/soak_queue/s546_five_tied_guards_confirm.sh`) was queued at
-session end and is pending fold-in. Live status: `docs/CURRENT-TRUTH.md` Next-steps / `scratch/agent/NEXT.md`.
+Guards 53-57's 2nd confirm ran at s548 and came back WEAK (`hangarbay-entry n=5`, 7 frames/20s before
+crashing on the item -306 `setByteAcrossEntryList+176`/`0x800aafa8` background-noise signature) —
+discarded per iron rule 1, retry re-queued: `scratch/agent/soak_queue/s548_five_tied_guards_confirm_retry.sh`.
+Guards 58-61's 2nd confirm is queued: `scratch/agent/soak_queue/s548_four_tied_guards_confirm.sh`. Live
+status: `docs/CURRENT-TRUTH.md` Next-steps / `scratch/agent/NEXT.md`.
 
 ## 26. Overturned conclusions and dead ends, full list (s2-s422), migrated from CURRENT-TRUTH.md s547
 maintenance pass
