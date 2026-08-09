@@ -22,11 +22,13 @@ Priority order for upcoming iterations, set after the 300-session review:
    §18-§19). Items -312..-322 (s481-518, the guard lineage descending from `DL_LIST_APPEND_GUARD`
    through `HEAPLISTDEQ_ATTR_WRITE_GUARD`) are all fully CLOSED, including -317 step 3's own tally as
    of s525 — PROJECT-OVERVIEW §20-§24. **Item -317 step 3 (a ~150-location blanket sweep) status as of
-   s535: 36 of ~150 leads fixed, 35 FULLY CLOSED 2/2, 1 (`DRAW_SUBTITLE_TEXT_R1_GUARD`) 1st-live-verify
-   CLEAN (cleanest possible class: 0 fires, 0 co-fires, full 300s duration, no crash at all), 2nd confirm
-   queued.** The `beginFrameDLChunk` 36-site tier (R1-R10) is fully disposed; `emitColorFillRect`'s and
-   `submitSceneNodeRender`'s own candidates (R1-R4) are all FULLY CLOSED 2/2 — full derivation and
-   per-guard detail in item -317 below. ~110 locations remain unaudited across further tiers — M3's
+   s536: 37 of ~150 leads fixed, 36 FULLY CLOSED 2/2 (`DRAW_SUBTITLE_TEXT_R1_GUARD`'s 2nd confirm folded
+   in CLEAN this session), 1 (`EMIT_COLOR_FILL_RECT_R2_GUARD`) 1st-live-verify CLEAN (0 fires, 0 co-fires,
+   strong `hangarbay-entry n=2600` positive control after 2 discarded weak/vacuous attempts, crashed only
+   on the already-catalogued `loadCutsceneAssetsByIndex+1860` item -320 signature), 2nd confirm queued.**
+   The `beginFrameDLChunk` 36-site tier (R1-R10) is fully disposed; `emitColorFillRect`'s R1 and
+   `submitSceneNodeRender`'s R1-R4 and `drawSubtitleText`'s R1 are all FULLY CLOSED 2/2 — full derivation
+   and per-guard detail in item -317 below. ~109 locations remain unaudited across further tiers — M3's
    top-ranked work unit is this sweep's continuation.
    **Item -321's 2-occurrence escalation was REFUTED s518** (a documented breadcrumb-coverage gap, not a
    crash lead). New breadcrumbs from the R1-R4/R6/R8 live-verifies, all filed not chased: items -324/-325
@@ -221,9 +223,9 @@ a range pointer. Highest allocated so far: -329. The next NEW item takes -330.
     range-checking at function entry, skipping the (void, RDRAM-only) body if invalid. CLOSED 2/2 s507
     after an s506 inconclusive retry. Mechanism and session detail: `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-535) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 36 guards fixed so far, 35 FULLY
-    CLOSED 2/2, 1 (`DRAW_SUBTITLE_TEXT_R1_GUARD`, s535) 1st-live-verify CLEAN.**
+-317. **(s490-536) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 37 guards fixed so far, 36 FULLY
+    CLOSED 2/2, 1 (`EMIT_COLOR_FILL_RECT_R2_GUARD`, s536) 1st-live-verify CLEAN.**
     `EMIT_COLOR_FILL_RECT_R1_GUARD`'s 2nd confirm read CLEAN (0 fires on the guard, 0
     regressions on any other armed guard family, `hangarbay-entry n=31` positive control; crashed at the
     very end on the already-catalogued `setByteAcrossEntryList+176`/`last-guest-pc=0x800aafa8` bus-error
@@ -330,14 +332,49 @@ a range pointer. Highest allocated so far: -329. The next NEW item takes -330.
     1st live-verify clean: 0 `draw-subtitle-text-r1-guard` fires, 0 fires on any other armed guard family
     at all (no benign co-fires this run), `hangarbay-entry n=31` positive control. Full 300s scheduled
     duration completed with NO crash at all (117 frames captured, rc=0) — the cleanest possible verify
-    class. 2nd independent confirm queued: `scratch/agent/soak_queue/s535_draw_subtitle_text_r1_confirm.sh`.
-    **~110 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
+    class. 2nd confirm (s536 fold-in) also read CLEAN: 0 `draw-subtitle-text-r1-guard` fires, 0 fires on
+    any other armed guard family, `hangarbay-entry n=2600` positive control (strong). Full 347s duration,
+    no crash at all (rc=0) — **FULLY CLOSED 2/2.** This closes item -317 step 3's 36 guards to 36/36 fully
+    closed (zero open guards) for the fourth time this campaign.
+    **`emitColorFillRect`'s SECOND candidate found and fixed (s536)**: re-scanned again per the standing
+    cross-check methodology. The raw tracer's top count (`funcs_3.c:34419`, `renderLitTexturedMeshFaces`,
+    reg=`r4`/off=`0X0`, count=27) is the same shape-mismatch already rejected s535 (`ctx->r4` is the
+    function's own provably-non-null `$a0` argument) — re-checked, re-skipped. The next-ranked entry
+    matching the exact guarded shape (reg=`r2`, off=`0X4`) is `emitColorFillRect` (`funcs_3.c`,
+    26-reachability write at `0x8000A3C4`) — the SAME function that already carries
+    `EMIT_COLOR_FILL_RECT_R1_GUARD` (s531, a DIFFERENT site, `0x8000A538`), a second distinct site, not a
+    duplicate. All 26 raw reload addresses feeding this write were checked directly against
+    `fixup_game_funcs.py` — none present anywhere in it, and neither is the write's own address
+    (`0x8000A3C4`) nor its load pair (`0x8000A3B4`/`0x8000A3B8`) — genuinely uncovered. Load pair
+    `0x8000A3B4`/`0x8000A3B8` (same `+0x63B0`-offset idiom), gated by `beq $v0,$zero,L_8000A3C8` at
+    `0x8000A3BC` (delay slot write harmless), non-null fallthrough unconditionally dereferences the
+    reloaded `ctx->r2` at `0x8000A3C4` (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no range check — fixed as
+    **`EMIT_COLOR_FILL_RECT_R2_GUARD`**. 1st live-verify clean: 0 `emit-color-fill-rect-r2-guard` fires,
+    0 fires on any other armed guard family, `hangarbay-entry n=2600` positive control — **the third
+    attempt this session**: the 1st attempt crashed early at 20.7s (`hangarbay-entry n=4` only, a weak
+    positive control) on the already-catalogued item -324 `heapFreeListInsert+72`/`0x80015544`
+    background-noise signature (itself traced in PORTING-STATE Sessions 349/393 to a much older,
+    well-established `allocateDisplayListBuffer+880` recurring family, not a novel find); the 2nd attempt
+    ran the full 300s but never entered the hangar-bay loop at all (0 hangar-prefixed diagnostics of any
+    kind), discarded as vacuous per iron rule 1 (a null result needs a positive control, and this run had
+    none, not even a weak one — the scripted key sequence evidently diverged onto a different scene path
+    this run, a reminder that `PROBE_KEYS_FROM_PHASE` timing does not guarantee an identical playthrough
+    every run); the 3rd attempt is the first with both a valid positive control and a discriminating
+    result. Crashed at 115.5s on the already-catalogued `loadCutsceneAssetsByIndex+1860`/
+    `last-guest-pc=0x800aafb8` signature (item -320, s508), unrelated to the guard under test — clean
+    verify, own guard never fired. 2nd independent confirm queued:
+    `scratch/agent/soak_queue/s536_emit_color_fill_rect_r2_confirm.sh`.
+    **~109 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
     Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape) from this tracer's
     self-referential `+0x63B0` shape — it does not subsume any of these tiers. **Tracer gotcha (s521)**:
     `s506_dedupe.py` reads a fixed `scratch/agent/s494_item317_step3_report.json` — a custom `--out` on
     `--scan` leaves that canonical file stale and dedupe silently ranks against old data; let `--scan`
-    write its default path first. Full guard-by-guard table and gotchas: `docs/PROJECT-OVERVIEW.md`
-    §22-§24, `PORTING-STATE.md` Sessions 490-532.
+    write its default path first. **Positive-control gotcha (s536)**: `hangarbay-entry` did not fire at
+    all on the 2nd of 3 attempts this session despite an identical script and full-duration completion —
+    the phase-gated key schedule can still diverge onto a different in-game path run to run; always check
+    for the positive control's presence before trusting a 0-fires result, don't assume a full-duration
+    rc=0/rc=3 completion implies the scene was actually exercised. Full guard-by-guard table and gotchas:
+    `docs/PROJECT-OVERVIEW.md` §22-§24, `PORTING-STATE.md` Sessions 490-536.
 
 -316. **(s488 scan → s489 FIXED → s490 2nd confirm clean) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED,
     2/2.** A scope gap in the existing s436 `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`,

@@ -44134,3 +44134,69 @@ global-table pointer. Do not re-surface this exact site as a lead without new ev
 fully closed, zero open guards, for the third time, then correctly rejected a shape-mismatched top
 candidate and found, fixed, and 1st-verified a genuine new candidate in a fresh function via the same
 rigorous address-by-address cross-check methodology established s528-534 -- not a reactive crash chase).
+
+## Session 536 (2026-08-09): item -317 step 3's DRAW_SUBTITLE_TEXT_R1_GUARD 2nd confirm read CLEAN (FULLY CLOSED 2/2, closing the campaign's 36 guards to 36/36 fully closed, zero open guards, for the fourth time), fresh re-scan correctly re-rejected the same shape-mismatched top candidate a second time, found and fixed a genuine second candidate inside a function this campaign already touches (EMIT_COLOR_FILL_RECT_R2_GUARD, funcs_3.c/0x8000A3C4), 1st live-verify needed 3 attempts to get a valid positive control (1st too weak, 2nd vacuous), 3rd read CLEAN, 2nd confirm queued
+
+Folded in `s535_draw_subtitle_text_r1_confirm` (rc=0, 347s, queued s535): 0 `draw-subtitle-text-r1-guard`
+fires, 0 fires on any other armed guard family, `hangarbay-entry n=2600` positive control (strong), full
+347s duration, no crash at all. `DRAW_SUBTITLE_TEXT_R1_GUARD` marked FULLY CLOSED 2/2 -- this closes item
+-317 step 3's 36 guards to 36/36 fully closed (zero open guards) for the fourth time this campaign.
+
+Re-scanned per the standing cross-check methodology (fresh `--scan` + `s506_dedupe.py`, no custom
+`--out`). The raw tracer's top-ranked write (`funcs_3.c:34419`, `renderLitTexturedMeshFaces`, reg=`r4`/
+off=`0X0`, count=27) was re-checked and confirmed the same shape mismatch identified s535 (`ctx->r4` is
+the function's own provably-non-null `$a0` argument, not a reloaded global) -- correctly re-skipped, not
+re-fixed. The next-ranked entry matching the exact guarded shape (reg=`r2`, off=`0X4`) was
+`funcs_3.c:11253` (`emitColorFillRect`, count=26) -- the SAME function that already carries
+`EMIT_COLOR_FILL_RECT_R1_GUARD` (s531, a DIFFERENT site at `0x8000A538`), so this is a second, distinct
+site inside the same function, not a duplicate. Pulled all 26 raw reload addresses feeding this write
+line from `s494_item317_step3_report.json` and cross-checked every one directly against
+`fixup_game_funcs.py` -- none present anywhere in it, and neither is the write's own address
+(`0x8000A3C4`) nor its load pair (`0x8000A3B4`/`0x8000A3B8`) -- genuinely uncovered. Read the live
+generated source at `0x8000A3C4` directly: load pair `0x8000A3B4`/`0x8000A3B8` (`lui $v0,0x8011` / `lw
+$v0,0x63B0($v0)`), the same `+0x63B0`-offset cached-pointer idiom as the whole
+beginFrameDLChunk/emitColorFillRect-R1/submitSceneNodeRender/drawSubtitleText lineage, gated by
+`beq $v0,$zero,L_8000A3C8` at `0x8000A3BC` (delay slot `sw $v0,0x0($v1)` at `0x8000A3C0` runs on both
+arms, harmless -- writes the fixed, non-null `r3` through). Non-null fallthrough repeats that same
+harmless write then unconditionally dereferences the reloaded `ctx->r2` at `0x8000A3C4`
+(`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no `0x80000000`-`0x80800000` range check. Fixed as
+`EMIT_COLOR_FILL_RECT_R2_GUARD` in `fixup_game_funcs.py`. Full regen/build (`make_elf.py` -> `N64Recomp`
+-> `fixup_game_funcs.py` -> `cmake --build`) applied cleanly, patched exactly x1, no duplicate-stacking.
+
+1st live-verify needed 3 attempts to get a discriminating result with a valid positive control:
+- **Attempt 1**: crashed early at 20.7s, only 8 frames captured, `hangarbay-entry` reached only `n=4` --
+  a weak positive control. Crashed on `last-guest-pc=0x80015544`, matching item -324's exact signature
+  (`heapFreeListInsert+72`, filed s521 as a single-occurrence background-noise breadcrumb). Traced this
+  address further: PORTING-STATE Sessions 349/393 already characterize `0x80015544` as
+  `allocateDisplayListBuffer+880`, a much older, well-established recurring background-noise family
+  (occurring at inconsistent times across many pre-campaign sessions) -- so item -324 was itself a
+  recurrence of that older family, not a novel single-occurrence find; this run is a second recurrence,
+  still unrelated to the guard under test. 0 `emit-color-fill-rect-r2-guard` fires, but the weak positive
+  control means this null result carries less weight than usual -- discarded, re-ran.
+- **Attempt 2**: ran the FULL 300s to completion (rc=0, 107 frames) but `hangarbay-entry` never fired
+  even once -- in fact NO hangar-prefixed diagnostic of any kind appeared anywhere in the log (checked
+  `grep -ic hangar`, zero matches). The VI-origin trace shows the run settled at a single scene
+  (`origin=0x0062BD00`) for nearly the entire duration instead of cycling through the hangar-bay loop the
+  scripted key sequence is designed to drive. This is a genuinely vacuous run under iron rule 1 (a null
+  result needs a positive control, full-duration completion is not itself evidence the guarded code path
+  was exercised) -- discarded without recording, re-ran. Notable as a fresh reminder that
+  `PROBE_KEYS_FROM_PHASE` timing does not guarantee an identical playthrough path run to run even with an
+  unchanged script and unchanged binary.
+- **Attempt 3**: 0 `emit-color-fill-rect-r2-guard` fires, 0 fires on any other armed guard family,
+  `hangarbay-entry n=2600` positive control (strong). Crashed at 115.5s on the already-catalogued
+  `loadCutsceneAssetsByIndex+1860`/`last-guest-pc=0x800aafb8` signature (item -320, s508), unrelated to
+  the guard under test -- clean verify, own guard never fired. **This is the recorded 1st live-verify.**
+  2nd independent confirm queued: `scratch/agent/soak_queue/s536_emit_color_fill_rect_r2_confirm.sh`.
+
+Tally: item -317 step 3 now 37/~150 fixed, 36 fully closed 2/2, `EMIT_COLOR_FILL_RECT_R2_GUARD` pending
+its 2nd confirm. ~109 sites remain across further tiers, unaudited.
+
+Updated `docs/CURRENT-TRUTH.md` item -317 (guard-by-guard detail, tally, and a new "positive-control
+gotcha" note about attempt 2's vacuous run) and the USER DIRECTIVE headline block.
+
+**Outcome: ADVANCED** (folded in a queued confirm result that closed the campaign's 36 guards to 36/36
+fully closed, zero open guards, for the fourth time, then correctly re-rejected the same shape-mismatched
+top candidate a second time and found, fixed, and 1st-verified a genuine new candidate via the same
+rigorous address-by-address cross-check methodology established s528-535 -- not a reactive crash chase.
+Also surfaced and correctly handled a new failure mode: a full-duration completed run with zero positive-
+control fires, discarded per iron rule 1 rather than misreported as a clean result).
