@@ -45175,3 +45175,36 @@ fixup site list updated so next full regen re-applies. Rebuild clean.
 ### Files
 - `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` (7 residual + sibling site)
 - docs/CURRENT-TRUTH.md, docs/PROJECT-OVERVIEW.md, scratch/agent/NEXT.md, SOAK-RESULTS.md
+
+## Session 558 (2026-08-09) — item -317 residual freelist-node close: guards 125-131 + item -340 FULLY CLOSED 2/2; packing DEFERRED; freelist-node residual EMPTY
+
+### Fold-in
+- `s557_residual_count3_seven_way_confirm`: CLEAN full ~300s (rc=0, 114 frames),
+  `hangarbay-entry n=3000` (strong positive control), 0 fires on all 7 residual batch-2 tags
+  (record-deferred-draw-ref-variant/a/b/c/d-r2, heap-free-list-dequeue-r5,
+  render-lit-textured-mesh-faces-r11), 0 sibling-ptr-write fires, NO crash at all.
+  **Guards 125-131 FULLY CLOSED 2/2. Item -340 FULLY CLOSED 2/2.**
+
+### Work unit (Step 2 residual re-scan after confirm)
+Re-ran `s494_item317_step3_tracer.py --scan` + `s506_dedupe.py` (no custom `--out`).
+- 448 reload sites; **22 NEEDS_GUARD** remaining (down from 40 pre-batch-2).
+- Top write tiers re-shape-checked against live `RecompiledFuncs`:
+  - count=11 heapFreeListDequeue r3 0X0/0X4: r3=`ADD32(r16,0)` = s0 DL packing → DEFERRED
+  - count=7 heapFreeListDequeue r2/r16 (incl `0x8000D268`): s0 packing; freelist branch-only → DEFERRED
+  - buildOrientedFaceGeometry packing (r4/r5/r3/r18): s2 packing / EE00 opcode → DEFERRED
+  - drawSubtitleText r4: appendRdpStateDl return cursor; freelist in r5 branch-only → DEFERRED
+  - countDisplayListChunks r3 read: freelist-walk second-deref (read, not freelist-node write)
+- Heuristic scan for unguarded `MEM_W(0X0,r4/r7)` near 0x63B0: all either packing write bases or
+  already-guarded freelist-node companion writes (ALLOCATE_DISPLAY_LIST_BUFFER_R1 /
+  RENDER_LIT_MESH_R8 covering the freelist-side `0X4` write).
+- **Freelist-node write MATCH residual: EMPTY.**
+
+### Conclusion
+Item -317 step 3 freelist WRITE idioms (classic r2/0X4 + residual freelist-node rN/0X0) are
+**CLOSED at 131/131 FULLY CLOSED 2/2**. Remaining tracer NEEDS_GUARD are packing flow-merge false
+positives (formally DEFERRED) or freelist-walk reads. Next high-value M3 class: systematic
+freelist-walk GUARD4 audit (item -339 shape / heapWalker s218), not more freelist-node 0X0.
+
+### Files
+- docs/CURRENT-TRUTH.md, docs/PROJECT-OVERVIEW.md §25 s558 block, scratch/agent/NEXT.md,
+  scratch/agent/SOAK-RESULTS.md, PORTING-STATE.md

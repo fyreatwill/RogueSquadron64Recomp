@@ -2392,7 +2392,29 @@ Re-scan after batch 1 closed. Shape-mismatched DEFERRED: heapFreeListDequeue r2/
 
 **Campaign totals as of s557:** **131 fixed, 124 FULLY CLOSED 2/2, 7 pending confirm** (125-131). Item -340 sibling gap fixed (1st evidence), confirm pending with residual batch 2. Residual after this batch: packing shape-mismatches (deferred), remaining freelist-node sites after 125-131 land, item -339 GUARD4 watch.
 
+### s558 residual free-list-node close + packing DEFER + item -340 CLOSED
 
+**Fold-in of `s557_residual_count3_seven_way_confirm`:** CLEAN full ~300s (rc=0, 114 frames),
+`hangarbay-entry n=3000` (strong positive control), 0 fires on all 7 residual batch-2 tags
+(record-deferred-draw-ref-variant/a/b/c/d-r2, heap-free-list-dequeue-r5,
+render-lit-textured-mesh-faces-r11), 0 sibling-ptr-write fires, NO crash. **Guards 125-131 FULLY
+CLOSED 2/2. Item -340 FULLY CLOSED 2/2.** Campaign freelist write guards: **131/131 FULLY CLOSED**.
+
+**Fresh residual re-scan** (`s494_item317_step3_tracer.py --scan` + `s506_dedupe.py`, no custom
+`--out`): 22 NEEDS_GUARD remaining. Shape-checked every write tier:
+
+| Tier | Sites | Disposition |
+|------|-------|-------------|
+| heapFreeListDequeue r3/0X0+0X4 count=11 | r3=`ADD32(r16)` = s0 DL packing cursor | DEFERRED packing |
+| heapFreeListDequeue r2/r16 count=7 | s0 packing (`0x8000D260`/`0x8000D268` family); freelist reload branch-only | DEFERRED packing |
+| buildOrientedFaceGeometry r4/r5/r3/r18 | s2 packing / EE00 opcode writes | DEFERRED packing |
+| drawSubtitleText r4 count=3 | `appendRdpStateDl` return write-cursor; freelist in r5 branch-only | DEFERRED packing |
+| countDisplayListChunks r3 read count=1 | freelist-walk second-deref *read* (not write) | out of freelist-node write scope; seed for GUARD4 pivot |
+
+**Freelist-node write MATCH residual: EMPTY.** Packing is a flow-merge false positive of the
+freelist-write idiom (write base is DL cursor, not freelist-allocated node). Item -317 step 3
+freelist WRITE idioms CLOSED. Next M3 class: freelist-walk GUARD4 (item -339 shape / heapWalker
+s218), not more freelist-node 0X0.
 
 ## 26. Overturned conclusions and dead ends, full list (s2-s422), migrated from CURRENT-TRUTH.md s547
 maintenance pass

@@ -20,20 +20,18 @@ Priority order for upcoming iterations, set after the 300-session review:
    the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW §18-§19).
    Items -312..-322 (s481-518, the `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage) are
    all fully CLOSED — PROJECT-OVERVIEW §20-§25. **Item -317 step 3 (~150-location blanket sweep)
-   status as of s557: 131 leads fixed, 124 FULLY CLOSED 2/2 (guards 1-124), 7 pending confirm
-   (guards 125-131 residual free-list-node batch 2). Classic r2/0X4 FULLY CLOSED 115/115;
-   residual free-list-node rN/0X0 batch 1 FULLY CLOSED 116-124; batch 2 in flight** — see item -317.
-   **Item -340 (s557, `SIBLING_PTR_WRITE_GUARD` site=`0x80010B4C`) is the campaign's third DIRECT
-   crash-mechanism fix** (same model as item -334): sibling-ptr-write at 0x80010B48 fired with
-   bad_ptr=0x18; crash at 0x80010B4C = bad_ptr+4. Fixed same session; 2nd confirm pending with
-   residual batch 2. Items -334/-327 remain FULLY CLOSED 2/2. Live breadcrumbs (-328..-339):
-   see Next-steps below.
+   status as of s558: 131 leads fixed, 131 FULLY CLOSED 2/2. Classic r2/0X4 115/115; residual
+   free-list-node rN/0X0 batches 1+2 (116-131) FULLY CLOSED; freelist-node MATCH residual EMPTY
+   after re-scan (22 remaining NEEDS_GUARD are packing flow-merge false positives — DEFERRED).
+   Campaign freelist write idioms for step 3 are closed.** Item -340 FULLY CLOSED 2/2 (s558 confirm).
+   Items -334/-327 remain FULLY CLOSED 2/2. Live breadcrumbs (-328..-339): see Next-steps. Next
+   pivot: freelist-walk GUARD4 class (item -339 shape) or packing as a separate DL-cursor audit.
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s557)
+## Current truth (established by session 295; unchanged, reviewed through s558)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -154,14 +152,19 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -340. The next NEW item takes -341.
 
--339. **(s556) One more single-occurrence background-noise breadcrumb, filed not chased**,
-    surfaced by the s556 1st live-verify of the residual free-list-node rN/0X0 nine-way guards.
-    `emitAllocatedDLCommand+13216`/`last-guest-pc=0x800088ec` (`hangarbay-entry n=2600`, strong
-    positive control) — free-list-walk second-deref immediately after s133 GUARD3 validates the
-    *previous* node (`r3 = *r3` then unguarded `r2 = *r3`). Same GUARD3/GUARD4 gap shape as
-    heapWalker s218. Pre-crash co-fires on generic-cache/cache-head-a1/dl-alloc-propagation with
-    shared `bad_ptr=0x7600D07C`. Distinct from item -335's `emitAllocatedDLCommand+1960`/
-    `0x800086ec`. Watch for recurrence before escalating as a systematic GUARD4 audit.
+-340. **(s557/s558) `SIBLING_PTR_WRITE_GUARD` site=`0x80010B4C` (`submitSceneNodeRender`) — FIXED
+    and FULLY CLOSED 2/2 (s558).** DIRECT gap after existing site `0x80010B48`: pre-crash fire
+    `bad_ptr=0x18`, crash at `0x80010B4C` = bad_ptr+4 (same model as item -334). New family site
+    (reg r3, off 0X4). s558 confirm: hangarbay n=3000, full ~300s no-crash rc=0, 0 fires on residual
+    batch-2 tags and 0 sibling-ptr-write fires — intermittent corruption, closed 2/2.
+
+-339. **(s556) One more single-occurrence background-noise breadcrumb — now the lead for the next
+    pivot after freelist-node residual empty (s558).** `emitAllocatedDLCommand+13216`/
+    `last-guest-pc=0x800088ec` (`hangarbay-entry n=2600`) — free-list-walk second-deref after s133
+    GUARD3 validates the *previous* node (`r3 = *r3` then unguarded `r2 = *r3`). Same GUARD3/GUARD4
+    gap shape as heapWalker s218. Still single-occurrence; s558 residual re-scan found freelist-node
+    write MATCH residual EMPTY and formally deferred packing, so the next high-value M3 class is a
+    systematic freelist-walk GUARD4 audit (item -339 shape), not more freelist-node 0X0 writes.
 
 -338. **(s554) One more single-occurrence background-noise breadcrumb, filed not chased**,
     surfaced by the s554 1st live-verify of the count=3+count=2 twenty-seven-way guards below.
@@ -258,57 +261,31 @@ a range pointer. Highest allocated so far: -340. The next NEW item takes -341.
     entry, skipping the body if invalid. CLOSED 2/2 s507 after an s506 inconclusive retry. Mechanism:
     `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-557) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 131 guards fixed so far, 124/131 FULLY
-    CLOSED 2/2, 7 pending confirm (guards 125-131 new this session).** Steps 1
-    (`heapFreeListDequeue` as a whole function) and 2 (`buildOrientedFaceGeometry` as a whole function)
-    are separately FULLY CLOSED 2/2 — note step 3 has since ALSO landed R-numbered guards inside these
-    same two functions (and `heapFreeListInsert`), a naming coincidence, not a re-opening of steps 1/2.
-    Step 3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a forward taint-propagation dataflow
-    analysis) found ~448 raw reload sites deduping to ~150 candidate guard placements across 30+
-    functions; every fix shares one shape (null check gates one arm safely, non-null fallthrough has no
-    `0x80000000`-`0x80800000` range check before a write-through deref, downstream control flow
-    reloads the register from the table again — skip on invalid is safe).
-    Guards land in `beginFrameDLChunk` (R1-R10), `emitColorFillRect` (R1-R8),
-    `submitSceneNodeRender` (R1-R10), `drawSubtitleText` (R1-R6), `renderLitTexturedMeshFaces` (R1-R10),
-    `renderFlatMeshFaceGroup` (R1-R8), `renderLitMeshFaceGroup` (R2-R15), `emitMaterialTexturedDL`/
-    `emitMaterialTexturedDLAlt` (R1-R5 each), `emitAllocatedDLCommand` (R1-R4), `reserveAndEmitDLEntry`
-    (R1-R4), `setupCameraMatrices` (R1-R3), `heapFreeListDequeue` (R1-R4), `buildOrientedFaceGeometry`
-    (R1-R3), `drawFrameProfilerBars` (R1-R2), `heapFreeListInsert` (R1), and the s554 first-time
-    functions (`reclaimDisplayListChunk`, `allocateDisplayListBuffer`, `allocDLBlockToFillRectList`/
-    `ListB`/`ListC`/`ListD`, `recordDeferredDrawRefVariant`/`A`/`B`/`C`/`D`, `drawTextGlyphRect`). Full
-    guard-by-guard table: `docs/PROJECT-OVERVIEW.md` §22-§25.
-    **s556 fold-in (s557)**: guard 115 classic last site FULLY CLOSED 2/2 earlier; residual batch 1
-    guards 116-124 confirm CLEAN (`hangarbay-entry n=2600`, 0 fires) — **FULLY CLOSED 2/2**. Classic
-    r2/0X4 DONE 115/115; residual free-list-node batch 1 DONE 9/9.
-    **s557 residual free-list-node batch 2:** re-scan after batch 1 closed. Shape-checked remaining
-    write tiers: count=11/7 heapFreeListDequeue r2/r3/r16 and known `0x8000D268` are **SHAPE MISMATCH**
-    (s0 DL packing, freelist only for branch); buildOrientedFaceGeometry/drawSubtitleText packing
-    similarly DEFERRED. Matched free-list-allocated-node `MEM_W(0X0,r4/r7)` after freelist pop at
-    count=3: 7 sites fixed as guards 125-131 (RECORD_DEFERRED_*_R2 ×5, HEAP_FREE_LIST_DEQUEUE_R5,
-    RENDER_LIT_TEXTURED_MESH_FACES_R11). 1st live-verify: hangarbay n=2600, 0 fires on all 7; crashed
-    on item -340 (sibling gap, fixed same session). 2nd confirm queued:
-    `scratch/agent/soak_queue/s557_residual_count3_seven_way_confirm.sh`.
-    Residual after this batch: packing shape-mismatches (deferred), any remaining freelist-node
-    sites the tracer still flags after 125-131 land, item -339 GUARD4 watch, item -340 confirm.
-    Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't subsume
-    these residual tiers.
-    **Standing gotchas** (full detail: `docs/PROJECT-OVERVIEW.md` §22-§25, `scratch/agent/NEXT.md`):
-    `s506_dedupe.py` reads a fixed canonical report path, never pass `--out` to `--scan` (s521);
-    `hangarbay-entry` can fail to fire even on a full-duration completion, always check the positive
-    control before trusting a 0-fires result (s536); the `0x800ab068` background-noise crash resolves
-    to a DIFFERENT host `pc-symbol` almost every hit, always cross-check `last-guest-pc` not the symbol
-    name (s541); a raw reload address feeding a target write can incidentally match an unrelated guard
-    elsewhere without disqualifying the candidate (s545); short/weak (`hangarbay-entry` single-digit or
-    absent) runs recur on the item -306 `setByteAcrossEntryList+176`/`0x800aafa8` signature — always
-    discard and retry immediately; two consecutive weak draws on the same target is now the norm
-    (s548-s552), budget for a 3rd attempt (s553 closed 64-65 on attempt 3); a guard firing with `n=0`
-    alongside other sibling guards at crash time is NOT automatically "not a fire" — check whether the
-    bad-pointer VALUE numerically correlates with the crash's own fault address before dismissing it as
-    background noise (s549, item -334); count=N tiers can include shape-mismatched sites that share a
-    taint count but not the classic `0x8011`/`0x63B0` reload (s553 count=7 skip); residual free-list-node
-    0X0 writes share the free-list global but use r4/r7 not r2 — do not re-apply the classic r2/0X4
-    shape filter alone (s556). Raw detail: `PORTING-STATE.md` Sessions 490-557.
+-317. **(s490-558) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 131 guards fixed, ALL 131 FULLY
+    CLOSED 2/2 as of s558.** Steps 1 (`heapFreeListDequeue` as a whole function) and 2
+    (`buildOrientedFaceGeometry` as a whole function) are separately FULLY CLOSED 2/2 — note step 3
+    has since ALSO landed R-numbered guards inside these same two functions (and `heapFreeListInsert`),
+    a naming coincidence, not a re-opening of steps 1/2. Step 3's tracer
+    (`scratch/agent/s494_item317_step3_tracer.py`) found ~448 raw reload sites deduping to ~150
+    candidate guard placements; every freelist WRITE fix shares one shape (null check gates one arm,
+    non-null fallthrough has no `0x80000000`-`0x80800000` range check before write-through deref —
+    skip on invalid is safe). Classic r2/0X4: 115/115. Residual free-list-node rN/0X0: 16/16
+    (116-131). Full guard table: `docs/PROJECT-OVERVIEW.md` §22-§25.
+    **s558 fold-in + residual close:** `s557_residual_count3_seven_way_confirm` CLEAN hangarbay
+    n=3000, full ~300s rc=0, 0 fires on guards 125-131 — **FULLY CLOSED 2/2**; item -340 CLOSED 2/2
+    same run. Fresh tracer re-scan: 22 NEEDS_GUARD remaining — ALL shape-mismatched packing
+    (heapFreeListDequeue r2/r3/r16 s0 DL packing, buildOrientedFaceGeometry s2 packing,
+    drawSubtitleText appendRdpStateDl return cursor) or one freelist-walk *read*
+    (`countDisplayListChunks` second-deref). Freelist-node write MATCH residual: **EMPTY**. Packing
+    formally DEFERRED (write base is DL cursor; freelist reload used only for branch — flow-merge
+    false positive of the freelist-write idiom). Freelist write idioms of step 3 CLOSED; next pivot
+    is freelist-walk GUARD4 (item -339 shape) as a new systematic class, not more freelist-node 0X0.
+    **Standing gotchas** (full detail: `docs/PROJECT-OVERVIEW.md` §22-§25): never pass custom `--out`
+    to `--scan` (s521); always check hangarbay positive control (s536); cross-check `last-guest-pc`
+    not host symbol (s541); weak item -306 early deaths discard+retry (s548-s553); n=0 guard fire +
+    bad_ptr vs fault address correlation (s549/s557); count=N tiers need shape check (s553-s557);
+    residual freelist-node uses r4/r7 not r2 (s556). Raw detail: `PORTING-STATE.md` Sessions 490-558.
 
 -316. **(s488-490) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED 2/2.** A scope gap in the existing s436
     `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`): validated one deref but not two propagating
