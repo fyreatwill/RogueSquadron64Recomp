@@ -43633,3 +43633,76 @@ pick the next-highest tier (as of this session's scan: `funcs_3.c:15719`/`16185`
 Watch for a 3rd occurrence of items -326 (`do_rom_read`/`piDmaWorker` shape, historically significant if
 it recurs), -327 (`submitSceneNodeRender+67668`), or a 2nd occurrence of -328
 (`submitSceneNodeRender+69820`).
+## Session 529
+
+Fold-in-then-pick iteration (s521-529 pattern).
+
+**Folded in `BEGIN_FRAME_DL_CHUNK_R7_GUARD`'s 2nd confirm** (`SOAK-RESULTS.md` line for
+`s528_begin_frame_dl_chunk_r7_confirm`, rc=0, 346s): read the directory's own `run.log`. 0
+`begin-frame-dl-chunk-r7-guard` fires, 1 benign already-catalogued `hangarmenu-a0-guard` co-fire (item
+-265, unrelated), `hangarbay-entry n=32` positive control. Full 346s scheduled duration completed with
+NO crash at all (rc=0) -- the cleanest possible confirm class. Marked `BEGIN_FRAME_DL_CHUNK_R7_GUARD`
+**FULLY CLOSED 2/2**.
+
+**Re-ran the tracer fresh** (`s494_item317_step3_tracer.py --scan` then `s506_dedupe.py`, no custom
+`--out`): 448 raw reload sites (318 `NEEDS_GUARD`), top tier UNCHANGED at 36 sites
+(`funcs_3.c:15732`/`16198`, the same shared write-sink lines as before R1-R7). This is because the
+dedupe script ranks tiers by a SHARED DOWNSTREAM WRITE line reached via forward taint-propagation from
+many different upstream reload sites, not by each site's own local shape -- R1-R7 each guarded a
+DIFFERENT individual reload site whose taint happened to reach this same distant sink, so the tier's
+raw count doesn't visibly shrink as sites get fixed.
+
+**Cross-checked all 36 raw addresses in this tier against the live source directly** (not just the
+tracer's count), since the top-of-list address (`0x8000A8A4`) turned out on inspection to be a
+DIFFERENT, longer taint chain (a `bne`-gated function-entry reload feeding a write hundreds of
+instructions downstream) rather than the tight local idiom R1-R7 established. Grepped each of the 36
+guest addresses against `fixup_game_funcs.py`: 10 already referenced (R2/R3/R4/R5/R6/R7's own
+load-pair sites, plus 4 downstream reloads already feeding an existing `GENERIC_CACHE_GUARD` deref).
+Read the local source around each of the remaining 26: most turned out to belong to the
+ALREADY-CLOSED `SIBLING_PTR_WRITE_GUARD` (s459, 6 sites: `0x8000AA4C`/`AD34`/`AE64`/`AFCC`/`B264`/one
+more) or `CACHE4_GUARD` (s271, `0x8000B030`/`B038`) families, or fed an existing `GENERIC_CACHE_GUARD`
+deref a few instructions later (several more), all already safe. Exactly 3 of the 36 were both
+genuinely unguarded AND matched the exact R2/R7 local idiom (`lui/lw` reload immediately followed by
+`beq $v0,$zero,L_x` gating one arm, non-null fallthrough falling through an unconditional `*r3=r2`
+write then dereferencing the same reloaded value with no range check): `0x8000A90C`, `0x8000B2A8`, and
+`0x8000B400`.
+
+**Source-traced and FIXED `BEGIN_FRAME_DL_CHUNK_R8_GUARD`** (`funcs_3.c:12407`, guest address
+`0x8000A918`, load pair `0x8000A908`/`0x8000A90C` -- distinct from R1-R7's own pairs). Exact same shape
+as every prior guard: `if (ctx->r2 == 0) goto L_8000A91C` gates one arm safely; non-null fallthrough
+falls through the same harmless `*r3 = r2` write at `0x8000A914` then dereferences the reloaded
+`ctx->r2` unconditionally at `0x8000A918` (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no
+`0x80000000`-`0x80800000` range check. Downstream reload at `0x8000A934` feeds the pre-existing
+`GENERIC_CACHE_GUARD` deref at `0x8000A938` (s434), confirming skip-on-invalid is safe. Grepped
+`fixup_game_funcs.py` for `0x8000A918` first (zero hits, not already guarded). Added to
+`tools/fixup_game_funcs.py` (N64Recomp repo) matching the R1-R7 pattern exactly. Full regen
+(`make_elf.py` -> delete stale `RecompiledFuncs/funcs_*.c` via the python3 one-liner -> `N64Recomp` ->
+`fixup_game_funcs.py` -> `cmake --build`) applied cleanly: patched x1, build succeeded with only the
+usual pre-existing warnings.
+
+**1st live-verify** (`scratch/agent/soak_queue/done/s529_begin_frame_dl_chunk_r8_manual_*.sh`, all
+armed guard families including R1-R8): 0 `begin-frame-dl-chunk-r8-guard` fires (null result), 0 fires
+on any other armed guard family (no regression), `hangarbay-entry n=32` positive control. Crashed at
+122.6s on `rebuildActiveDisplayObjectList+660`/`last-guest-pc=0x800ab060` -- grepped
+`docs/CURRENT-TRUTH.md`, `docs/PROJECT-OVERVIEW.md`, and `PORTING-STATE.md`; no exact match. Closest
+prior sightings: a same-symbol different-offset `rebuildActiveDisplayObjectList+540` breadcrumb (item
+-317's own R5/s513 retry) and an older `rs_free`<-`rebuildActiveDisplayObjectList` heap-corruption
+family (Sessions 164-186) -- neither identical to this `+660`/`0x800ab060` pair, so filed as a NEW
+signature, item -329, single occurrence, not chased. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s529_begin_frame_dl_chunk_r8_confirm.sh`.
+
+**Tally**: item -317 step 3 now has 29 of ~150 candidate sites fixed, 28 fully closed 2/2, R8 pending
+its 2nd confirm. ~115 sites remain after R8 (2 of which -- `0x8000B2A8` and `0x8000B400` -- are
+pre-identified genuine candidates from this session's own cross-check, ready to fix next without
+needing to repeat the address-by-address audit).
+
+**Next iteration**: fold in the R8 2nd confirm from `SOAK-RESULTS.md`, then fix `0x8000B2A8`
+(load pair `0x8000B2A4`/`0x8000B2A8`) as `BEGIN_FRAME_DL_CHUNK_R9_GUARD` -- already confirmed to match
+the idiom shape this session, no fresh tracing needed, just re-verify against current line numbers
+before patching. After that, `0x8000B400` (load pair `0x8000B3FC`/`0x8000B400`). Once both are
+exhausted, re-run the tracer AND apply this session's address-by-address cross-check methodology (not
+just the raw dedupe count) before trusting the next tier's size -- `emitColorFillRect`/
+`submitSceneNodeRender` at 30 sites each are the next candidates but likely also overlap already-closed
+families. Watch for a 3rd occurrence of items -326 (`do_rom_read`/`piDmaWorker` shape, historically
+significant if it recurs), -327 (`submitSceneNodeRender+67668`), a 2nd occurrence of -328
+(`submitSceneNodeRender+69820`), or a 2nd occurrence of -329 (`rebuildActiveDisplayObjectList+660`).

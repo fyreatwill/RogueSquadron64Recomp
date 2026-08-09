@@ -2,90 +2,75 @@
 
 HYPOTHESIS-ID: item-317-step3-blanket-sweep
 
-## s528 recap -- read this first
+## s529 recap -- read this first
 
-s528 was a fold-in-then-pick iteration (matching the s521-s527 pattern).
+s529 was a fold-in-then-pick iteration (matching the s521-s528 pattern).
 
-1. **Folded in `BEGIN_FRAME_DL_CHUNK_R6_GUARD`'s 2nd confirm** (`scratch/agent/SOAK-RESULTS.md` line for
-   `s527_begin_frame_dl_chunk_r6_confirm`, rc=3, 168s): read the directory's own `run.log` (NOT the flat
-   `soak_results/*.log` file, which is only the top-level game-crash summary -- the guard-fire counts
-   live in `soak_results/<name>/run.log`). Found 0 `begin-frame-dl-chunk-r6-guard` fires, 6 benign
-   co-fires on already-catalogued families, `hangarbay-entry n=100` positive control. Crashed at 122.6s
-   on `submitSceneNodeRender+69820`/`last-guest-pc=0x80010ebc` -- grepped all three docs, no match, a
-   NEW previously-uncatalogued signature (distinct from item -327's `+67668`/`0x80010e6c`). Marked R6
-   **FULLY CLOSED 2/2** and filed the crash as **item -328**, single occurrence, not chased.
-2. **Re-ran the tracer fresh** (`s494_item317_step3_tracer.py --scan` then `s506_dedupe.py`, no custom
-   `--out`): 448 raw reload sites (318 `NEEDS_GUARD`), top tier the 3 remaining tied `beginFrameDLChunk`
-   members at 36 sites each (`funcs_3.c:15235`/`15719`/`16185` -- R1-R6 dropped out).
-3. **Source-traced and FIXED `BEGIN_FRAME_DL_CHUNK_R7_GUARD`** (`funcs_3.c:15235`, guest address
-   `0x8000B144`, load pair `0x8000B134`/`0x8000B138` -- distinct from R1-R6's own pairs). Exact same
-   shape as every prior guard in this lineage: null-check gates one arm safely (`if (ctx->r2 == 0) goto
-   L_8000B148`), non-null fallthrough dereferences the reload unconditionally with no range check,
-   downstream reload at `0x8000B160` feeds the pre-existing `GENERIC_CACHE_GUARD` (s434) deref at
-   `0x8000B164`, confirming skip-on-invalid is safe. Added to `tools/fixup_game_funcs.py` (N64Recomp
-   repo) matching the R1-R6 pattern exactly.
-4. **1st live-verify clean**: 0 `begin-frame-dl-chunk-r7-guard` fires, 0 co-fires on any other armed
-   guard family, `hangarbay-entry n=2800` positive control. Crashed at 125.0s on
-   `findLookupEntryByKey+2212`/`last-guest-pc=0x800ad0dc` -- confirmed via grep this is the
-   already-catalogued item -325 (s522) signature. 2nd independent confirm queued:
-   `scratch/agent/soak_queue/s528_begin_frame_dl_chunk_r7_confirm.sh`.
-5. Tally: item -317 step 3 now 28/~150 fixed, 27 fully closed 2/2, R7 pending its 2nd confirm. ~118
-   sites remain after R7 drops out of the tier. No new breadcrumb crash surfaced this session (R6's own
-   2nd confirm surfaced item -328, but that's from R6's fold-in step, not R7's fresh verify).
+1. **Folded in `BEGIN_FRAME_DL_CHUNK_R7_GUARD`'s 2nd confirm** (`scratch/agent/SOAK-RESULTS.md` line for
+   `s528_begin_frame_dl_chunk_r7_confirm`, rc=0, 346s): 0 `begin-frame-dl-chunk-r7-guard` fires, 1 benign
+   already-catalogued `hangarmenu-a0-guard` co-fire (item -265), `hangarbay-entry n=32` positive control.
+   Full 346s scheduled duration, no crash at all. Marked R7 **FULLY CLOSED 2/2**.
+2. **Re-ran the tracer fresh**: raw top tier UNCHANGED at 36 sites (`funcs_3.c:15732`/`16198`) because
+   the dedupe script ranks by a SHARED DOWNSTREAM WRITE reached via forward taint-propagation from many
+   upstream reload sites, not by each site's own local shape -- fixing one upstream site doesn't shrink
+   the tier's raw count.
+3. **Cross-checked all 36 raw addresses in this tier against the live source directly** (grepped each
+   against `fixup_game_funcs.py`, read the local context of every zero-hit one). Found: 10 already
+   referenced by R1-R7's own sites/downstream reloads; most of the remaining 26 belong to the
+   ALREADY-CLOSED `SIBLING_PTR_WRITE_GUARD` (s459) or `CACHE4_GUARD` (s271) families reusing the same
+   textual `+0x63B0` reload idiom in this function, or feed an existing `GENERIC_CACHE_GUARD` deref a
+   few instructions later. Only 3 of the 36 were both genuinely unguarded and matched the exact R2/R7
+   idiom shape: `0x8000A90C` (fixed this session as R8), `0x8000B2A8`, and `0x8000B400` (both
+   pre-verified this session, ready to fix next -- no fresh tracing needed for these two).
+4. **Source-traced and FIXED `BEGIN_FRAME_DL_CHUNK_R8_GUARD`** (`funcs_3.c:12407`, guest address
+   `0x8000A918`, load pair `0x8000A908`/`0x8000A90C`). Exact same shape as every prior guard: null check
+   gates one arm, non-null fallthrough has an unconditional deref with no range check, downstream reload
+   at `0x8000A934` feeds the pre-existing `GENERIC_CACHE_GUARD` deref at `0x8000A938` -- skip-on-invalid
+   safe. Added to `tools/fixup_game_funcs.py` (N64Recomp repo).
+5. **1st live-verify clean**: 0 `begin-frame-dl-chunk-r8-guard` fires, 0 co-fires on any other armed
+   guard family, `hangarbay-entry n=32` positive control. Crashed at 122.6s on a NEW,
+   previously-uncatalogued `rebuildActiveDisplayObjectList+660`/`last-guest-pc=0x800ab060` signature --
+   filed as item -329, single occurrence, not chased. 2nd independent confirm queued:
+   `scratch/agent/soak_queue/s529_begin_frame_dl_chunk_r8_confirm.sh`.
+6. Tally: item -317 step 3 now 29/~150 fixed, 28 fully closed 2/2, R8 pending its 2nd confirm. ~115
+   sites remain, 2 of which (`0x8000B2A8`, `0x8000B400`) are pre-identified genuine next candidates.
 
-Full detail: `docs/CURRENT-TRUTH.md` item -317, `PORTING-STATE.md` Session 528.
+Full detail: `docs/CURRENT-TRUTH.md` item -317, `PORTING-STATE.md` Session 529.
 
 ## The work unit for the NEXT iteration
 
-**If `scratch/agent/SOAK-RESULTS.md` has a new line for `s528_begin_frame_dl_chunk_r7_confirm`**: read
-its directory's own `run.log` (`scratch/agent/soak_results/s528_begin_frame_dl_chunk_r7_confirm/run.log`
--- NOT just the flat top-level summary file, which only shows the crash line, not the guard-fire
-counts). An `rc=3` can mean "crashed on an unrelated already-catalogued background-noise family after a
-fully clean, positively-controlled run", which still counts as CLOSED. If 0
-`begin-frame-dl-chunk-r7-guard` fires and a strong `hangarbay-entry` positive control, mark
-`BEGIN_FRAME_DL_CHUNK_R7_GUARD` FULLY CLOSED 2/2 in `docs/CURRENT-TRUTH.md` item -317 (28 fixed, 28
-fully closed) and fold the result into `PORTING-STATE.md`. Then continue to the next site below in the
-SAME iteration (this is a fold-in-then-pick iteration, matching the s521-s528 pattern).
+**If `scratch/agent/SOAK-RESULTS.md` has a new line for `s529_begin_frame_dl_chunk_r8_confirm`**: read
+its directory's own `run.log` (`scratch/agent/soak_results/s529_begin_frame_dl_chunk_r8_confirm/run.log`
+-- NOT just the flat top-level summary file). If 0 `begin-frame-dl-chunk-r8-guard` fires and a strong
+`hangarbay-entry` positive control, mark `BEGIN_FRAME_DL_CHUNK_R8_GUARD` FULLY CLOSED 2/2 in
+`docs/CURRENT-TRUTH.md` item -317 (29 fixed, 29 fully closed) and fold the result into
+`PORTING-STATE.md`. Then continue to the next site below in the SAME iteration (fold-in-then-pick
+pattern, s521-s529).
 
-**If no confirm result is queued yet**, this is a normal pick-the-next-site iteration:
+**Then (or if no confirm result is queued yet), fix the two pre-identified sites from s529** -- these
+were ALREADY confirmed to match the idiom shape this session, so this should be faster than a normal
+pick-a-site iteration (no fresh tracer scan needed, just re-verify against current line numbers since
+they drift per regen):
 
-1. **Re-run the tracer fresh** before picking a site -- line numbers drift with every insertion:
-   ```
-   cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-   python3 scratch/agent/s494_item317_step3_tracer.py --scan
-   python3 scratch/agent/s506_dedupe.py
-   ```
-2. Pick the next-highest-count tier from the fresh output. As of the s528 scan (STALE once R7's own
-   regen lands -- re-run first): `funcs_3.c:15719`/`16185` (36 sites each, the remaining
-   `beginFrameDLChunk` members of the tied-top tier), `funcs_3.c:11625` (30 sites, `emitColorFillRect`),
-   `funcs_4.c:4457` (`submitSceneNodeRender`, 30 sites).
-3. Follow the exact established fix pattern (see any of the 28 guards in `docs/CURRENT-TRUTH.md` item
-   -317, or `docs/PROJECT-OVERVIEW.md` §22-§24 for the full guard-by-guard table): null check gates one
-   arm, non-null fallthrough has no `0x80000000`-`0x80800000` range check before a write-through deref,
-   downstream control flow reloads the register from the same table again -- skip-on-invalid is safe.
-   Confirm this shape holds at the specific site before writing the fix, AND confirm the picked line
-   isn't already guarded by reading the actual generated source AND grepping `fixup_game_funcs.py` for
-   the guest address (the tracer's own dedupe ranking can lag a stale canonical report file, see the
-   s521 gotcha below).
-4. **If the site is in `beginFrameDLChunk`**: that function carries `g_rs64_last_guest_pc` breadcrumb
-   writes between every disassembly comment and its corresponding C statement (unlike e.g.
-   `renderLitMeshFaceGroup`, which doesn't) -- the fixup patch's old/new match strings MUST include
-   that breadcrumb line or the string replace silently no-ops (`text.count(old) == 0`, caught by
-   checking the count before trusting the patch applied). Multiple sites in this function also reload
-   from DIFFERENT global table slots -- confirm each new site's own load-pair address before assuming
-   it's a duplicate of a prior guard.
-5. Regen/build/live-verify/queue-2nd-confirm sequence (see Regen reminder below). **When deleting stale
-   `funcs_*.c` before `N64Recomp` (item -20's standing rule), use the python3-one-liner workaround --
-   `rm`/`find -delete` both need interactive approval headlessly.** **If the 1st live-verify attempt
-   crashes early (<~60s) on the async Metal.framework/system-thread cluster (`pc-symbol` containing
-   `MetalFramebuffer`/similar, first ~20-50s), discard per Iron Rule 1 (too weak a positive control) and
-   retry once.** If it crashes later on a KNOWN already-catalogued background-noise family (grep the
-   crash's `pc-symbol`+`last-guest-pc` against `docs/PROJECT-OVERVIEW.md`/`PORTING-STATE.md` before
-   assuming it's new), that still counts as a clean verify -- queue the 2nd confirm and move on. If it
-   crashes on something NOT already catalogued, file it as a new item (single occurrence, not chased)
-   and still queue the 2nd confirm unless the own-guard itself fired.
-6. Update `docs/CURRENT-TRUTH.md` item -317's running tally and tier list, append a `PORTING-STATE.md`
+1. **`0x8000B2A8`** (load pair `0x8000B2A4`/`0x8000B2A8`, write site around `0x8000B2B0`-`B2B4`,
+   downstream feeds `GENERIC_CACHE_GUARD` a few instructions later per the s529 cross-check). Re-find
+   its current line number in `RecompiledFuncs/funcs_3.c` (grep `0x8000B2A8`), re-confirm the exact
+   `lui/lw` / `beq $v0,$zero,L_x` / unconditional write shape holds (line numbers drift after R8's own
+   regen), then fix as `BEGIN_FRAME_DL_CHUNK_R9_GUARD` following the exact pattern of R2/R7/R8 in
+   `tools/fixup_game_funcs.py` (N64Recomp repo).
+2. **`0x8000B400`** (load pair `0x8000B3FC`/`0x8000B400`) as `BEGIN_FRAME_DL_CHUNK_R10_GUARD`, same
+   process, same iteration if time permits (or the next iteration if not -- one work unit is enough).
+3. Regen/build/live-verify/queue-2nd-confirm sequence (see Regen reminder below).
+4. Update `docs/CURRENT-TRUTH.md` item -317's running tally and tier list, append a `PORTING-STATE.md`
    session entry, commit.
+
+**Once `0x8000B2A8` and `0x8000B400` are both fixed**, this 36-site tier is exhausted. Re-run the
+tracer fresh AND apply the s529 cross-check methodology (grep each candidate address against
+`fixup_game_funcs.py`, read its actual local source) BEFORE trusting the next tier's raw count --
+`funcs_3.c:11625` (`emitColorFillRect`, 30 sites) and `funcs_4.c:4457` (`submitSceneNodeRender`, 30
+sites) are the next-ranked candidates but, per s529's lesson, likely also overlap already-closed guard
+families (`SIBLING_PTR_WRITE_GUARD`, `GENERIC_CACHE_GUARD`, `CACHE4_GUARD`, etc.) -- don't assume the
+raw dedupe count is all-new without checking.
 
 ### Regen reminder (all 4 steps, every time, in order)
 ```
@@ -101,7 +86,7 @@ cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build && \
   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build . -j8
 ```
 
-### Live-verify recipe (copy the most recent `soak_queue/done/s528_*_manual_*.sh`, edit the guard-specific
+### Live-verify recipe (copy the most recent `soak_queue/done/s529_*_manual_*.sh`, edit the guard-specific
 comment header and output dir name, add the new guard's `ROGUESQ_LOG_<NAME>=1` to the armed list)
 Run in foreground (backgrounds itself past 120s automatically -- wait for the notification, don't poll):
 ```
@@ -109,7 +94,10 @@ zsh scratch/agent/soak_queue/s5NN_<name>_manual.sh
 ```
 Then, after a clean or acceptable-crash result, copy the SAME script (now with all guards armed
 including the new one) to `scratch/agent/soak_queue/s5NN_<name>_confirm.sh` with the output dir renamed
-`..._confirm`, leaving it for the loop to run as the 2nd independent confirm.
+`..._confirm`, leaving it for the loop to run as the 2nd independent confirm. Also move the manual
+script itself into `soak_queue/done/` with a timestamp suffix (matching its `soak_results/` directory
+mtime) -- the loop's own runner does this automatically for queued recipes, but a manual foreground run
+must be moved by hand or it sits unprocessed in the active queue.
 
 Do NOT use `sed 's/r6/r7/g; s/R6/R7/g'` to derive a new guard's script from an old one -- it silently
 collapses the OLD guard's own armed env-var line into a duplicate of the NEW one, losing that guard's
