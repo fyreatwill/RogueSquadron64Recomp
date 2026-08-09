@@ -43769,3 +43769,74 @@ candidates but likely also overlap already-closed guard families (`SIBLING_PTR_W
 `piDmaWorker` shape, historically significant if it recurs), -327 (`submitSceneNodeRender+67668`), a 2nd
 occurrence of -328 (`submitSceneNodeRender+69820`), or a 2nd occurrence of -329
 (`rebuildActiveDisplayObjectList+660`).
+
+## Session 531
+
+Fold-in-then-pick iteration (s521-531 pattern).
+
+**Folded in `BEGIN_FRAME_DL_CHUNK_R9_GUARD`/`R10_GUARD`'s 2nd confirm** (`SOAK-RESULTS.md` line for
+`s530_begin_frame_dl_chunk_r9_r10_confirm`, rc=0, 347s): read the directory's own `run.log`. 0
+`begin-frame-dl-chunk-r9-guard` fires, 0 `begin-frame-dl-chunk-r10-guard` fires, 1 benign
+already-catalogued `hangarmenu-a0-guard` co-fire, `hangarbay-entry n=35` positive control. Full 347s
+duration, no crash markers at all (rc=0). Both marked `BEGIN_FRAME_DL_CHUNK_R9_GUARD` and `R10_GUARD`
+**FULLY CLOSED 2/2** — this closes out the entire `beginFrameDLChunk` 36-site tier: all ten guards
+(R1-R10, s521-530) are now disposed.
+
+**Re-scanned for the next tier**, per the mandatory s529/s530 cross-check methodology (do not trust the
+raw tracer count):
+
+```
+python3 scratch/agent/s494_item317_step3_tracer.py --scan   # no custom --out
+python3 scratch/agent/s506_dedupe.py
+```
+
+Fresh scan found 282 `NEEDS_GUARD` sites (up from the stale count) deduping to the same shape of ranked
+candidates. Top of the table: `funcs_3.c:11625` (`emitColorFillRect`, 30-reachability write) and
+`funcs_4.c:4457` (`submitSceneNodeRender`, 30-reachability write), tied — confirming the s528 stale scan's
+prediction held after R9/R10 were fixed.
+
+**Cross-checked all 30 `emitColorFillRect` reload addresses directly against `fixup_game_funcs.py`**
+(grep each of `0x80009BA0` through `0x8000A52C`): **0 hits on any of them** — unlike the beginFrameDLChunk
+tier (where most of the raw 36 sites were already covered by other guard families), none of this tier's
+raw reload addresses are pre-covered. Read the actual generated source around the tier's single shared
+downstream write (`funcs_3.c` line 11625 at the time of the scan, guest `0x8000A538`) to confirm the
+idiom shape:
+
+- Load pair `0x8000A528`/`0x8000A52C` (`lui $v0,0x8011` / `lw $v0,0x63B0($v0)`) — the exact same
+  `+0x63B0`-offset cached-pointer idiom as the entire beginFrameDLChunk lineage, reused verbatim in a
+  different function.
+- `beq $v0,$zero,L_8000A53C` at `0x8000A530` gates one arm safely (delay slot `sw $v0,0x0($v1)` at
+  `0x8000A534` runs on both arms, harmless — writes through the fixed, non-null `r3`).
+- Non-null fallthrough falls through the same harmless write then dereferences the reloaded `ctx->r2`
+  unconditionally at `0x8000A538` (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no `0x80000000`-`0x80800000`
+  range check — the null check only proves non-null, not in-range, so a corrupted non-null `ctx->r2`
+  still crashes here.
+
+**Fixed as `EMIT_COLOR_FILL_RECT_R1_GUARD`** — the first guard in this campaign outside
+`beginFrameDLChunk` — added to `tools/fixup_game_funcs.py` (N64Recomp repo), same skip-on-invalid
+pattern as every prior guard in this lineage (`SIBLING_PTR_WRITE_GUARD` s459, and the whole R1-R10
+`beginFrameDLChunk` series). Full regen (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` ->
+`cmake --build`) applied cleanly: patched x1, build succeeded with only the usual pre-existing warnings.
+
+**1st live-verify** (manual, foreground, all guard families armed per the batch-instrumentation rule --
+`scratch/agent/soak_queue/done/s531_emit_color_fill_rect_r1_manual_20260808-174845.sh`): 0
+`emit-color-fill-rect-r1-guard` fires, 0 fires on any other armed sibling guard family (1 benign
+already-catalogued `hangarmenu-a0-guard` co-fire), `hangarbay-entry n=33` positive control. Full 300s
+scheduled duration completed with **NO crash at all** (118 frames captured) — the cleanest possible
+verify class, same tier as R4's, R7's, and R9/R10's own 1st verifies. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s531_emit_color_fill_rect_r1_confirm.sh`.
+
+**Tally**: item -317 step 3 now has 32 of ~150 candidate sites fixed, 31 fully closed 2/2,
+`EMIT_COLOR_FILL_RECT_R1_GUARD` pending its 2nd confirm. ~114 sites remain across further tiers
+(`submitSceneNodeRender`, `funcs_4.c:4457`, tied at 30, is next-ranked).
+
+**Next iteration**: fold in `EMIT_COLOR_FILL_RECT_R1_GUARD`'s 2nd confirm from `SOAK-RESULTS.md` (read
+the directory's own `run.log`, not the top-level summary). If clean, mark FULLY CLOSED 2/2 (item -317
+step 3 would then be 32/32 fully closed). Then apply the same cross-check methodology to
+`submitSceneNodeRender` (`funcs_4.c:4457`, 30 sites at this session's scan) — grep each of its raw reload
+addresses against `fixup_game_funcs.py` before trusting any of them as a genuine new candidate; some may
+already be covered by `SUBMIT_SCENE_NODE_RENDER_R1_GUARD` (an earlier, unrelated guard in the same
+function — check it's not the same site). Watch for a 3rd occurrence of item -326 (`do_rom_read`/
+`piDmaWorker` shape, historically significant if it recurs), -327 (`submitSceneNodeRender+67668`), a 2nd
+occurrence of -328 (`submitSceneNodeRender+69820`), or a 2nd occurrence of -329
+(`rebuildActiveDisplayObjectList+660`).
