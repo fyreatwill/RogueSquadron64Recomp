@@ -43932,3 +43932,70 @@ the entire 32-guard, two-tier-plus-lineage backlog to zero open guards,
 then found, fixed, and 1st-verified a genuinely new candidate in a fresh
 re-scan via the same rigorous address-by-address cross-check methodology
 established s528-531 -- not a reactive crash chase).
+
+## Session 533 (2026-08-08): item -317 step 3 -- folded in SUBMIT_SCENE_NODE_RENDER_R2_GUARD's 2nd confirm (CLOSED 2/2, closing the campaign's first 33 guards to 33/33 fully closed, zero open guards), found and fixed a THIRD, distinct site inside `submitSceneNodeRender` (`SUBMIT_SCENE_NODE_RENDER_R3_GUARD`, funcs_4.c:3299/0x80010AAC, 28-reachability write, next tier per the standing cross-check methodology), 1st live-verify clean, 2nd confirm queued
+
+**Fold-in.** Read `scratch/agent/soak_results/s532_submit_scene_node_render_r2_confirm/run.log` directly
+(the flat `SOAK-RESULTS.md` line only had `rc=3, 159s`, no verdict text yet). Found: 0
+`submit-scene-node-render-r2-guard` fires, `hangarbay-entry n=31` (positive control), 0 fires on any
+other armed guard family. Crash signature: `pc-symbol=loadCutsceneAssetsByIndex+1860`,
+`last-guest-pc=0x800aafb8` -- grepped `docs/CURRENT-TRUTH.md`/`PORTING-STATE.md`, byte-identical to item
+-320 (filed s508), an already-catalogued background-noise family, unrelated to the guard under test.
+Marked `SUBMIT_SCENE_NODE_RENDER_R2_GUARD` FULLY CLOSED 2/2 in `docs/CURRENT-TRUTH.md` item -317. This
+closes the campaign's first 33 guards to 33/33 fully closed (zero open guards) for the first time since
+s490.
+
+**Re-scan for the next tier.** Fresh `python3 scratch/agent/s494_item317_step3_tracer.py --scan`
+(no custom `--out`, per the s521 gotcha) found 448 raw reload sites (276 `NEEDS_GUARD`, 172
+`SAFE_NO_DEREF`) across `funcs_3.c`/`funcs_4.c`. `s506_dedupe.py` re-ranked: top of the table is a tie
+at count=28 between `funcs_4.c:3299` and `funcs_4.c:3766`, both in `submitSceneNodeRender` -- consistent
+with s532's prediction that the next lead would be a THIRD site in the same function. Took the
+line-3299 candidate (write address `0x80010AAC`, guest `sw $v1, 0x4($v0)`).
+
+**Cross-check.** Filtered `scratch/agent/s494_item317_step3_report.json` for
+`func=="submitSceneNodeRender"` and hits containing line 3299: 28 raw reload addresses feed this write.
+Grepped every one of the 28 directly against `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`:
+only the same 2 addresses already known from s532's cross-check appear (`0x800101B0` by the s197
+`scene_node_cache_guard`, `0x80010824` by a `DL_LIST_RESET_GUARD`-adjacent reload) -- neither is this
+write's own site. Also grepped the write's own address (`0x80010AAC`) and its load pair
+(`0x80010AA0`/`0x80010AA4`) directly: zero hits anywhere in `fixup_game_funcs.py`, confirming this is a
+genuinely uncovered THIRD site, distinct from `SUBMIT_SCENE_NODE_RENDER_R1_GUARD` (s515, `0x80010F38`)
+and `SUBMIT_SCENE_NODE_RENDER_R2_GUARD` (s532, `0x80010E10`).
+
+**Source read.** `RecompiledFuncs/funcs_4.c:3285-3299`: load pair `0x80010AA0`/`0x80010AA4`
+(`lui $v0,0x8011` / `lw $v0,0x63B0($v0)`), the same `+0x63B0`-offset cached-pointer idiom as the whole
+beginFrameDLChunk/emitColorFillRect/submitSceneNodeRender lineage. `beq $v0,$zero,L_80010AB0` at
+`0x80010AA4` gates one arm safely; delay slot `sw $v0,0x0($v1)` at `0x80010AA8` runs on both arms
+(harmless -- writes `ctx->r3`'s value through `ctx->r2`, which is the fixed pointer in both arms, not
+the reloaded one). Non-null fallthrough repeats that harmless write then unconditionally dereferences
+the reloaded `ctx->r2` at `0x80010AAC` (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no
+`0x80000000`-`0x80800000` range check -- the null check only proves non-null, not in-range. Exact same
+vulnerable shape as every other guard in this lineage.
+
+**Fix.** Added `SUBMIT_SCENE_NODE_RENDER_R3_GUARD` to `fixup_game_funcs.py` following the R1/R2 template
+(skip-the-write-on-invalid, `ROGUESQ_LOG_SUBMIT_SCENE_NODE_RENDER_R3_GUARD` env-gated stderr report,
+`U32()` range check). Regenerated (deleted `RecompiledFuncs/funcs_*.c`, `make_elf.py` ->
+`N64Recomp rogue_squadron.toml` -> `fixup_game_funcs.py` -> `cmake --build build -j8` from
+`RogueSquadron64Recomp/build`, all four steps). `fixup_game_funcs.py` report confirmed
+`SUBMIT_SCENE_NODE_RENDER_R3_GUARD patched x1`, no duplicate-stacking. Build succeeded (warnings only).
+
+**1st live-verify (manual, foreground, `scratch/agent/soak_queue/s533_submit_scene_node_render_r3_manual.sh`,
+now in `soak_queue/done/`):** rc=3, ~112.9s process lifetime. 0 `submit-scene-node-render-r3-guard` fires
+(null result), 0 fires on any other armed guard family aside from 1 benign already-catalogued
+`hangarmenu-a0-guard` co-fire (item -265, unrelated), `hangarbay-entry n=34` (positive control). Crashed
+at ~93s on `pc-symbol=load_level_hmp+1488`, `last-guest-pc=0x800290d4` -- this exact `last-guest-pc`
+value is items -6/-249/-259, INVESTIGATED AND CLOSED s422: a sparse-breadcrumb artifact present in only
+8/50 `RecompiledFuncs/funcs_*.c` files that resolves to many different real crash functions depending on
+build/binary layout, not a shared corruption sink -- `atos`-symbolication in that session found five
+different real crash functions behind the same coarse value. Clean verify, own guard never fired. 2nd
+independent confirm queued: `scratch/agent/soak_queue/s533_submit_scene_node_render_r3_confirm.sh`.
+
+**Tally.** item -317 step 3 now 34/~150 fixed (34 guards total across the campaign), 33 fully closed
+2/2, `SUBMIT_SCENE_NODE_RENDER_R3_GUARD` pending its 2nd confirm. ~112 sites remain across further tiers,
+unaudited. `HYPOTHESIS-ID` unchanged: `item-317-step3-blanket-sweep` (same systematic-sweep campaign,
+s494-533).
+
+**Outcome: ADVANCED** (folded in a queued confirm result that closed the campaign's first 33 guards to
+33/33 fully closed, zero open guards, then found, fixed, and 1st-verified a genuinely new candidate in a
+fresh re-scan via the same rigorous address-by-address cross-check methodology established s528-532 --
+not a reactive crash chase).
