@@ -44366,3 +44366,57 @@ confirm. ~107 locations remain unaudited across further tiers.
 Ledger: `docs/CURRENT-TRUTH.md` item -317 and item -331 updated; `docs/PROJECT-OVERVIEW.md` §25 table
 row 38 added (the s537 confirm's final crash detail) plus the item -331 writeup; `PORTING-STATE.md`
 (this entry).
+
+## Session 540 (2026-08-09): item -317 step 3 -- folded in s539's weak 2nd confirm (discarded,
+retry queued), found+fixed a genuine 3rd AND 4th site in renderLitTexturedMeshFaces, both clean on
+1st live-verify
+
+**Step 1 fold-in**: read `s539_render_lit_textured_mesh_faces_r2_confirm`'s run.log directly (real
+diagnostics live in the same-named results subdirectory's `run.log`, not the top-level driver
+`.log`, per the s539 gotcha). The run crashed early (19.8s, only 7 frames captured) with
+`hangarbay-entry n=5` -- single-digit, below the double-digit-or-better bar this campaign requires
+for a valid positive control. Discarded per iron rule 1 rather than trusting the 0-fires result on
+`RENDER_LIT_TEXTURED_MESH_FACES_R2_GUARD` itself. The crash it hit
+(`submitSceneNodeRender+38976`/`last-guest-pc=0x8001086c`) was cross-checked against every catalogued
+item -320 through -331 address and found genuinely new -- filed as item -332, explicitly flagged
+low-confidence given the weak control. Copied the confirm script back into the soak queue as
+`s539_render_lit_textured_mesh_faces_r2_confirm_retry.sh` for the loop to re-attempt.
+
+**Step 2 re-scan and fix**: re-ran `s494_item317_step3_tracer.py --scan` + `s506_dedupe.py` fresh.
+The perennial top two entries (reg=`r4`/off=`0X0`, `renderLitTexturedMeshFaces`'s own $a0 argument)
+re-confirmed as the same already-rejected shape mismatch. The next tier had TWO TIED entries at the
+exact guarded shape (reg=`r2`, off=`0X4`, count=27 each), both in `renderLitTexturedMeshFaces`
+itself: `funcs_3.c:33902` (site=`0x8000FC24`) and `funcs_3.c:34530` (site=`0x8000FECC`) -- a third
+and fourth site in this function alongside R1 (`0x8000FE14`, s537) and R2 (`0x8000FCF4`, s539).
+Pulled every raw reload address feeding both write lines from `s494_item317_step3_report.json`
+(filtering by `func==renderLitTexturedMeshFaces` and `hits[].line` matching each target) and
+cross-checked all of them, plus both write addresses themselves, directly against
+`fixup_game_funcs.py`: two of the many shared upstream reload addresses (`0x8000FCE8`, `0x8000FE08`)
+already appear as part of the existing R2/R1 load pairs (expected -- the same `+0x63B0` global feeds
+dozens of downstream writes throughout this large function), but neither write address
+(`0x8000FC24`, `0x8000FECC`) is covered anywhere -- genuinely new. Read the live generated source at
+both sites directly: identical shape to R1/R2 (`lui $v0,0x8011`/`lw $v0,0x63B0($v0)` load pair gated
+by `beq $v0,$zero,...`, delay-slot write into the fixed `ctx->r3` harmless on both arms, non-null
+fallthrough unconditionally dereferences the reloaded `ctx->r2` with no `0x80000000`-`0x80800000`
+range check). Fixed both as `RENDER_LIT_TEXTURED_MESH_FACES_R3_GUARD` and `_R4_GUARD` in
+`fixup_game_funcs.py`, batched into one build/run per the batch-instrumentation rule (same pattern
+as s530's R9+R10). Regenerated (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py`, audited
+report for exactly the expected x1/x1 patch counts -> `cmake --build`, clean build, only
+pre-existing benign warnings).
+
+**1st live-verify (s540, manual, foreground)**: full 300s scheduled duration completed with NO
+crash at all (107 frames captured, rc=0) -- the cleanest possible verify class. 0
+`render-lit-textured-mesh-faces-r3-guard` fires, 0 `render-lit-textured-mesh-faces-r4-guard` fires,
+0 fires on any other armed guard family at all (no benign co-fires this run at all), `hangarbay-entry
+n=31` (positive control). 2nd independent confirm queued:
+`scratch/agent/soak_queue/s540_render_lit_textured_mesh_faces_r3_r4_confirm.sh`.
+
+**Net for item -317**: 41/~150 fixed (up from 39), 38 fully closed 2/2 (unchanged -- none of this
+session's work closed anything new; R2's closure is now pending a retry, R3/R4 are pending their
+first confirms). ~105 locations remain unaudited across further tiers.
+
+Ledger: `docs/CURRENT-TRUTH.md` item -317 updated (tally, R2/R3/R4 status), new item -332 filed for
+the weak-control crash signature, "Highest allocated so far" bumped to -332; `scratch/agent/SOAK-
+RESULTS.md` appended; `fixup_game_funcs.py` R3_GUARD/R4_GUARD added (this is a `lib/`-adjacent repo,
+not itself a git submodule of this repo -- no `submodule-patches/export.sh` needed, N64Recomp is a
+sibling checkout); `PORTING-STATE.md` (this entry).
