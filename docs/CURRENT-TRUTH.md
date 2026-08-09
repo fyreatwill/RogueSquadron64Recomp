@@ -22,22 +22,23 @@ Priority order for upcoming iterations, set after the 300-session review:
    §18-§19). Items -312..-322 (s481-518, the guard lineage descending from `DL_LIST_APPEND_GUARD`
    through `HEAPLISTDEQ_ATTR_WRITE_GUARD`) are all fully CLOSED, including -317 step 3's own tally as
    of s525 — PROJECT-OVERVIEW §20-§24. **Item -317 step 3 (a ~150-location blanket sweep) status as of
-   s536: 37 of ~150 leads fixed, 36 FULLY CLOSED 2/2 (`DRAW_SUBTITLE_TEXT_R1_GUARD`'s 2nd confirm folded
-   in CLEAN this session), 1 (`EMIT_COLOR_FILL_RECT_R2_GUARD`) 1st-live-verify CLEAN (0 fires, 0 co-fires,
-   strong `hangarbay-entry n=2600` positive control after 2 discarded weak/vacuous attempts, crashed only
-   on the already-catalogued `loadCutsceneAssetsByIndex+1860` item -320 signature), 2nd confirm queued.**
-   The `beginFrameDLChunk` 36-site tier (R1-R10) is fully disposed; `emitColorFillRect`'s R1 and
+   s537: 38 of ~150 leads fixed, 37 FULLY CLOSED 2/2 (`EMIT_COLOR_FILL_RECT_R2_GUARD`'s 2nd confirm folded
+   in CLEAN this session), 1 (`RENDER_LIT_TEXTURED_MESH_FACES_R1_GUARD`) 1st-live-verify CLEAN (0 fires,
+   0 co-fires, `hangarbay-entry n=31` positive control, crashed only on the item -330 signature it shares
+   with the immediately-preceding confirm run), 2nd confirm queued.**
+   The `beginFrameDLChunk` 36-site tier (R1-R10) is fully disposed; `emitColorFillRect`'s R1-R2 and
    `submitSceneNodeRender`'s R1-R4 and `drawSubtitleText`'s R1 are all FULLY CLOSED 2/2 — full derivation
-   and per-guard detail in item -317 below. ~109 locations remain unaudited across further tiers — M3's
+   and per-guard detail in item -317 below. ~108 locations remain unaudited across further tiers — M3's
    top-ranked work unit is this sweep's continuation.
    **Item -321's 2-occurrence escalation was REFUTED s518** (a documented breadcrumb-coverage gap, not a
    crash lead). New breadcrumbs from the R1-R4/R6/R8 live-verifies, all filed not chased: items -324/-325
    (single occurrence), **-326** (`do_rom_read`/`piDmaWorker` shape — extra attention if it recurs, a
    historically-major family believed fixed since s147/148), **-327** (2 occurrences 21 sessions apart,
-   watch for a 3rd), **-328** (`submitSceneNodeRender+69820`, single occurrence), and **-329**
-   (`rebuildActiveDisplayObjectList+660`/`0x800ab060`, single occurrence) — see items below. R5, R7,
-   R9/R10, emitColorFillRect R1, submitSceneNodeRender R2-R4, and drawSubtitleText R1's live-verify/confirm
-   runs surfaced no NEW breadcrumb.
+   watch for a 3rd), **-328** (`submitSceneNodeRender+69820`, single occurrence), **-329**
+   (`rebuildActiveDisplayObjectList+660`/`0x800ab060`, single occurrence), and **-330**
+   (`heapFreeListInsert+72`/`0x800220b8`, 2 occurrences back-to-back s536/s537, watch for a 3rd) — see
+   items below. R5, R7, R9/R10, emitColorFillRect R1-R2, submitSceneNodeRender R2-R4, and drawSubtitleText
+   R1's live-verify/confirm runs surfaced no NEW breadcrumb.
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
@@ -165,8 +166,19 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -329. The next NEW item takes -330.
+a range pointer. Highest allocated so far: -330. The next NEW item takes -331.
 
+-330. **(s536/s537) `heapFreeListInsert+72`/`last-guest-pc=0x800220b8`, 2 occurrences back-to-back in the
+    same session, filed not chased.** First surfaced on `EMIT_COLOR_FILL_RECT_R2_GUARD`'s 2nd confirm
+    (s536), recurred byte-identical (same `pc-symbol`+`last-guest-pc` pair) on
+    `RENDER_LIT_TEXTURED_MESH_FACES_R1_GUARD`'s 1st live-verify (s537, the very next run) — grepped against
+    `docs/CURRENT-TRUTH.md` / `docs/PROJECT-OVERVIEW.md` / `PORTING-STATE.md`, no prior match for this
+    exact pair. Distinct from item -324's same-symbol `heapFreeListInsert+72`/`0x80015544` breadcrumb
+    (different `last-guest-pc`, a different call site into the same function). Two occurrences
+    back-to-back is weaker corroboration than it looks — both runs used the same binary, same probe
+    script, and adjacent wall-clock time, so a shared transient (not a stable recurring bug) is the more
+    likely explanation per the boring-first prior; still, per this campaign's standing policy (see item
+    -327), watch for a 3rd occurrence in an unrelated run before escalating.
 -329. **(s529) `rebuildActiveDisplayObjectList+660`/`last-guest-pc=0x800ab060`, single occurrence, filed
     not chased.** Surfaced on `BEGIN_FRAME_DL_CHUNK_R8_GUARD`'s 1st live-verify (manual, s529, rc=3,
     122.6s) after a fully clean guard result (0 `begin-frame-dl-chunk-r8-guard` fires, 0 co-fires on any
@@ -362,9 +374,34 @@ a range pointer. Highest allocated so far: -329. The next NEW item takes -330.
     every run); the 3rd attempt is the first with both a valid positive control and a discriminating
     result. Crashed at 115.5s on the already-catalogued `loadCutsceneAssetsByIndex+1860`/
     `last-guest-pc=0x800aafb8` signature (item -320, s508), unrelated to the guard under test — clean
-    verify, own guard never fired. 2nd independent confirm queued:
-    `scratch/agent/soak_queue/s536_emit_color_fill_rect_r2_confirm.sh`.
-    **~109 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
+    verify, own guard never fired. 2nd independent confirm (s537 fold-in) also read CLEAN: 0
+    `emit-color-fill-rect-r2-guard` fires, 0 fires on any other armed guard family, `hangarbay-entry n=31`
+    positive control. Crashed at 115.5s on `heapFreeListInsert+72`/`last-guest-pc=0x800220b8` — a NEW
+    signature (distinct from item -324's `heapFreeListInsert+72`/`0x80015544` — different `last-guest-pc`),
+    filed as item -330 — **FULLY CLOSED 2/2.** This closes item -317 step 3's 37 guards to 37/37 fully
+    closed (zero open guards) for the fifth time this campaign.
+    **`renderLitTexturedMeshFaces`'s own candidate found and fixed (s537)**: re-scanned again per the
+    standing cross-check methodology. The raw tracer's top count (`funcs_3.c:34432`, same function,
+    reg=`r4`/off=`0X0`, count=27) is the same shape-mismatch already rejected s535/s536 (`ctx->r4` is the
+    function's own provably-non-null `$a0` argument) — re-checked, re-skipped. The next-ranked entry
+    matching the exact guarded shape (reg=`r2`, off=`0X4`) is `renderLitTexturedMeshFaces`'s OWN second site
+    (`funcs_3.c`, 26-reachability write at `0x8000FE14`) — first guard in this function. All 24 raw reload
+    addresses feeding this write were checked directly against `fixup_game_funcs.py` — none present anywhere
+    in it, and neither is the write's own address (`0x8000FE14`) nor its load pair
+    (`0x8000FE04`/`0x8000FE08`) — genuinely uncovered. Load pair `0x8000FE04`/`0x8000FE08` (same
+    `+0x63B0`-offset idiom), gated by `beq $v0,$zero,L_8000FE18` at `0x8000FE0C` (delay slot write
+    harmless), non-null fallthrough unconditionally dereferences the reloaded `ctx->r2` at `0x8000FE14`
+    (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no range check — fixed as
+    **`RENDER_LIT_TEXTURED_MESH_FACES_R1_GUARD`**. 1st live-verify clean: 0
+    `render-lit-textured-mesh-faces-r1-guard` fires, 0 fires on any other armed guard family, `hangarbay-entry
+    n=31` positive control. Crashed at 115.7s on `heapFreeListInsert+72`/`last-guest-pc=0x800220b8` — the
+    IDENTICAL signature to the immediately-preceding `EMIT_COLOR_FILL_RECT_R2_GUARD` 2nd confirm run above,
+    a genuine 2nd occurrence back-to-back within the same session (item -330) — unrelated to the guard under
+    test, clean verify, own guard never fired. 2nd independent confirm queued:
+    `scratch/agent/soak_queue/s537_render_lit_textured_mesh_faces_r1_confirm.sh`.
+    Tally: item -317 step 3 now 38/~150 fixed, 37 fully closed 2/2,
+    `RENDER_LIT_TEXTURED_MESH_FACES_R1_GUARD` pending its 2nd confirm.
+    **~108 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
     Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape) from this tracer's
     self-referential `+0x63B0` shape — it does not subsume any of these tiers. **Tracer gotcha (s521)**:
     `s506_dedupe.py` reads a fixed `scratch/agent/s494_item317_step3_report.json` — a custom `--out` on

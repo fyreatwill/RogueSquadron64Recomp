@@ -44200,3 +44200,63 @@ top candidate a second time and found, fixed, and 1st-verified a genuine new can
 rigorous address-by-address cross-check methodology established s528-535 -- not a reactive crash chase.
 Also surfaced and correctly handled a new failure mode: a full-duration completed run with zero positive-
 control fires, discarded per iron rule 1 rather than misreported as a clean result).
+
+## Session 537 (2026-08-09): item -317 step 3's EMIT_COLOR_FILL_RECT_R2_GUARD 2nd confirm read CLEAN (FULLY CLOSED 2/2, closing the campaign's 37 guards to 37/37 fully closed, zero open guards, for the fifth time), fresh re-scan correctly re-rejected the same shape-mismatched top candidate a third time, found and fixed a genuine new candidate in renderLitTexturedMeshFaces's own second site (RENDER_LIT_TEXTURED_MESH_FACES_R1_GUARD, funcs_3.c/0x8000FE14, first guard in this function), 1st live-verify clean on the first attempt, surfaced a genuine 2-occurrence back-to-back breadcrumb (item -330)
+
+Folded in `s536_emit_color_fill_rect_r2_confirm` (queued s536, ran s537, rc=3, 161s): read
+`scratch/agent/soak_results/s536_emit_color_fill_rect_r2_confirm/run.log` directly (not the flat
+top-level summary) per the s536 lesson. `hangarbay-entry` fired 31 times (valid positive control), 0
+`emit-color-fill-rect-r2-guard` fires, 0 fires on any other armed guard family. Crashed on
+`pc-symbol=heapFreeListInsert+72`/`last-guest-pc=0x800220b8` -- grepped all three docs, no exact prior
+match (distinct from item -324's same-symbol `0x80015544`) -- filed as item -330, single occurrence at
+the time. Marked `EMIT_COLOR_FILL_RECT_R2_GUARD` FULLY CLOSED 2/2, closing item -317 step 3's 37 guards
+to 37/37 fully closed (zero open guards) for the fifth time this campaign.
+
+Re-scanned per the standing cross-check methodology: fresh `s494_item317_step3_tracer.py --scan` +
+`s506_dedupe.py` (no custom `--out`, s521 gotcha avoided). Top raw count (`funcs_3.c:34432`,
+`renderLitTexturedMeshFaces`, reg=`r4`/off=`0X0`, count=27) re-checked and confirmed the SAME
+shape-mismatch rejected s535/s536 (`ctx->r4` is the function's own provably-non-null `$a0` argument,
+not a reloaded `+0x63B0` global) -- re-skipped without re-deriving from scratch. Next-ranked entry
+matching the exact guarded shape (reg=`r2`, off=`0X4`) is `renderLitTexturedMeshFaces`'s OWN second
+site (`funcs_3.c`, 26-reachability write at `0x8000FE14`) -- first guard in this function (distinct
+from the rejected r4/off0X0 write in the same function). Pulled all 24 raw reload addresses feeding
+this write from `s494_item317_step3_report.json` and cross-checked every one directly against
+`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` -- none present anywhere in it,
+and neither is the write's own address (`0x8000FE14`) nor its load pair (`0x8000FE04`/`0x8000FE08`) --
+genuinely uncovered. Read the live generated source directly: load pair `0x8000FE04`/`0x8000FE08`
+(`lui $v0,0x8011` / `lw $v0,0x63B0($v0)`), same idiom as the whole campaign, gated by
+`beq $v0,$zero,L_8000FE18` at `0x8000FE0C` (delay slot `sw $v0,0x0($v1)` at `0x8000FE10` runs on both
+arms, harmless -- writes the fixed, non-null `ctx->r3` through, matching the exact shape of every prior
+guard in this lineage), non-null fallthrough repeats that same harmless write then unconditionally
+dereferences the reloaded `ctx->r2` at `0x8000FE14` (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no
+`0x80000000`-`0x80800000` range check.
+
+Fixed as `RENDER_LIT_TEXTURED_MESH_FACES_R1_GUARD` in `fixup_game_funcs.py` (skip-the-write-on-invalid,
+`ROGUESQ_LOG_RENDER_LIT_TEXTURED_MESH_FACES_R1_GUARD` env-gated stderr report, `U32()` range check).
+Full regen pipeline run clean: deleted `RecompiledFuncs/funcs_*.c`, `make_elf.py`, `N64Recomp`,
+`fixup_game_funcs.py` (audited report: `renderLitTexturedMeshFaces derived-pointer write guard ...
+patched x1`, exactly the expected count, no duplicate-stacking), `cmake --build` succeeded.
+
+1st live-verify (manual, foreground, `scratch/agent/soak_queue/done/
+s537_render_lit_textured_mesh_faces_r1_manual_20260809-020000.sh`, all prior guard families' env vars
+plus the new one armed per the batch-instrumentation rule): rc=3, 115.7s. Read
+`scratch/agent/soak_results/s537_render_lit_textured_mesh_faces_r1_manual/run.log` directly: 0
+`render-lit-textured-mesh-faces-r1-guard` fires, 0 fires on any other armed guard family (no
+regression), `hangarbay-entry` fired 31 times (valid positive control, checked explicitly per the s536
+lesson before trusting the 0-fires result). Crashed at 115.7s on
+`pc-symbol=heapFreeListInsert+72`/`last-guest-pc=0x800220b8` -- the IDENTICAL signature to the
+immediately-preceding `s536_emit_color_fill_rect_r2_confirm` run's crash (same `pc-symbol`+
+`last-guest-pc` pair), a genuine 2nd occurrence back-to-back within the same session. This is now item
+-330's 2nd sighting; per the boring-first prior, two occurrences using the same binary and probe script
+adjacent in wall-clock time is weaker corroboration than it looks (more likely a shared transient than
+a stable recurring bug), so filed not chased per M3 strategy, watching for a 3rd occurrence in an
+unrelated run before escalating -- same policy as item -327. Clean verify either way: the guard under
+test never fired. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s537_render_lit_textured_mesh_faces_r1_confirm.sh`.
+
+Tally: item -317 step 3 now 38/~150 fixed, 37 fully closed 2/2, `RENDER_LIT_TEXTURED_MESH_FACES_R1_GUARD`
+pending its 2nd confirm. ~108 locations remain unaudited across further tiers.
+
+`docs/CURRENT-TRUTH.md` size grew to 62762 bytes with this session's additions (was 59145 at session
+start, under the 60000 maintenance trigger) -- next iteration's Step 0 check will trigger a MAINTENANCE
+iteration.
