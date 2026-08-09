@@ -1,0 +1,1 @@
+fixup_game_funcs.py: REFUSING to run — funcs_0.c already carries // RS64_FIXUP_APPLIED. These files were already patched by a previous run; running again would duplicate additive patches and break the build. Clear RecompiledFuncs/ and regenerate (make_elf.py -> N64Recomp), then rerun.
