@@ -152,14 +152,15 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -332. The next NEW item takes -333.
 
--332. **(s539's 2nd confirm of `RENDER_LIT_TEXTURED_MESH_FACES_R2_GUARD`, 1st attempt, single
-    occurrence, WEAK CONTROL) `submitSceneNodeRender+38976`/`0x8001086c`, filed not chased.** Bus
-    error, crashed at 19.8s after only 7 frames with `hangarbay-entry n=5` (single-digit, below the
-    double-digit-or-better bar this campaign requires) — the run itself was discarded as vacuous per
-    iron rule 1 and re-queued (`s539_render_lit_textured_mesh_faces_r2_confirm_retry.sh`); the guard's
-    closure status is still pending a valid confirm. Recording the signature anyway since it doesn't
-    match any cross-referenced item -320..-331 address exactly — watch for a 2nd occurrence, but treat
-    this one occurrence as low-confidence given the weak control.
+-332. **(s539's 2nd confirm of `RENDER_LIT_TEXTURED_MESH_FACES_R2_GUARD`, 1st attempt, WEAK
+    CONTROL; recurred s544 with a STRONG control) `submitSceneNodeRender+38976`/`0x8001086c`, filed
+    not chased.** Bus error. 1st sighting (s539) crashed at 19.8s after only 7 frames with
+    `hangarbay-entry n=5` (single-digit, below the double-digit-or-better bar) — discarded as vacuous
+    per iron rule 1. **2nd sighting (s544, `DRAW_SUBTITLE_TEXT_R2_GUARD`'s 1st live-verify)**: same
+    exact `pc-symbol`/`last-guest-pc` pair, this time with `hangarbay-entry n=2600` (strong positive
+    control) — a genuine 2nd occurrence with a valid control. Confidence upgraded from low to
+    moderate; still not chased (unrelated to any guard under test in either run, own guards never
+    fired). Watch for a 3rd occurrence before escalating to source-tracing.
 -331. **(s537's 2nd confirm, folded s539, single occurrence) `heapFreeListDequeue+29152`/
     `0x8000d688`, filed not chased.** `(local-symtab)`-tagged (post-s480 symbolizer, so a genuine
     in-function fault, not the pre-s480 misattribution artifact, item -310/-311) — sits before every
@@ -202,8 +203,8 @@ a range pointer. Highest allocated so far: -332. The next NEW item takes -333.
     entry, skipping the body if invalid. CLOSED 2/2 s507 after an s506 inconclusive retry. Mechanism:
     `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-542) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 44 guards fixed so far, 43/44 FULLY
+-317. **(s490-544) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 47 guards fixed so far, 46/47 FULLY
     CLOSED 2/2, 1 pending confirm.** Steps 1 (`heapFreeListDequeue`)
     and 2 (`buildOrientedFaceGeometry`) are separately FULLY
     CLOSED 2/2. Step 3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a forward
@@ -303,8 +304,27 @@ a range pointer. Highest allocated so far: -332. The next NEW item takes -333.
     control), crashed at 113.7s on the already-catalogued item -320 `loadCutsceneAssetsByIndex+1860`/
     `0x800aafb8` signature — clean verify, own guards never fired. 2nd confirm queued:
     `scratch/agent/soak_queue/s543_emit_color_fill_rect_r3_render_flat_mesh_face_group_r2_confirm.sh`.
-    Tally: 46/~150 fixed, 44 fully closed 2/2, 2 pending confirm (`EMIT_COLOR_FILL_RECT_R3_GUARD`,
-    `RENDER_FLAT_MESH_FACE_GROUP_R2_GUARD`).
+    **`EMIT_COLOR_FILL_RECT_R3_GUARD`/`RENDER_FLAT_MESH_FACE_GROUP_R2_GUARD`'s 2nd confirm (s543,
+    folded s544) read CLEAN**: 0 fires on either guard, 1 benign already-catalogued `hangarmenu-a0-
+    guard` co-fire, `hangarbay-entry n=2700` (strong positive control), crashed on the already-
+    catalogued `coalesceFreeHeapBlocks+4424`/`0x8000247c` s354-366 background-noise family — both
+    marked FULLY CLOSED 2/2, closing the campaign's 46 guards to 46/46 fully closed (zero open guards)
+    for the seventh time.
+    **Next tier found and fixed (s544)**: fresh re-scan (reg=`r4`/off=`0X0` entries above it re-
+    confirmed the same already-rejected shape mismatch) put a single top-ranked, non-tied entry at
+    `funcs_4.c:24932` (site=`0x80016830`, count=20, next tier down is count=18) in `drawSubtitleText`
+    — a SECOND site alongside R1's `0x80016B58` (s535). The write address and all 20 raw reload
+    addresses feeding it were checked directly against `fixup_game_funcs.py`: none appeared anywhere
+    — genuinely uncovered. Same `+0x63B0`-offset idiom, gated at `0x80016828`. Fixed as
+    **`DRAW_SUBTITLE_TEXT_R2_GUARD`** (47th guard). 1st live-verify clean on the first attempt: 0
+    `draw-subtitle-text-r2-guard` fires, 0 fires on any other armed guard family (5 sibling guards
+    dumped `n=0` diagnostic snapshots at crash time, not fires — no regression), `hangarbay-entry
+    n=2600` (strong positive control). Crashed at 111.0s on `pc-symbol=submitSceneNodeRender+38976`/
+    `last-guest-pc=0x8001086c` — the EXACT signature of item -332 (s539's WEAK 1st confirm attempt,
+    n=5, discarded), but this time with a STRONG control (n=2600) — a genuine 2nd occurrence with a
+    valid control, upgrading item -332's confidence from low to moderate. Clean verify, own guard
+    never fired. 2nd confirm queued: `scratch/agent/soak_queue/s544_draw_subtitle_text_r2_confirm.sh`.
+    Tally: 47/~150 fixed, 46 fully closed 2/2, 1 pending confirm (`DRAW_SUBTITLE_TEXT_R2_GUARD`).
     **~100 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
     Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't subsume these
     tiers. **Tracer gotcha (s521)**: `s506_dedupe.py` reads a fixed canonical report path — a custom
@@ -315,7 +335,7 @@ a range pointer. Highest allocated so far: -332. The next NEW item takes -333.
     `pc-symbol` almost every time it's hit (`loadCutsceneAssetsByIndex+1860`, `hangarTickCameraOrbit
     +5188`, `initVec4TripletFromArgs+68`, ...) — always cross-check the `last-guest-pc` value, not just
     the symbol name, before filing a "new" item. Full guard-by-guard table and gotchas:
-    `docs/PROJECT-OVERVIEW.md` §22-§25, `PORTING-STATE.md` Sessions 490-542.
+    `docs/PROJECT-OVERVIEW.md` §22-§25, `PORTING-STATE.md` Sessions 490-544.
 
 -316. **(s488-490) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED 2/2.** A scope gap in the existing s436
     `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`): validated one deref but not two propagating
