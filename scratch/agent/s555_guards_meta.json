@@ -1,0 +1,13 @@
+[
+  {
+    "guard": "HEAP_FREE_LIST_INSERT_R1_GUARD",
+    "tag": "heap-free-list-insert-r1-guard",
+    "env": "ROGUESQ_LOG_HEAP_FREE_LIST_INSERT_R1_GUARD",
+    "pc": "0x800079D8",
+    "func": "heapFreeListInsert",
+    "fn": "funcs_3.c",
+    "rhs": "ctx->r3",
+    "rn": 1,
+    "cnt": 1
+  }
+]

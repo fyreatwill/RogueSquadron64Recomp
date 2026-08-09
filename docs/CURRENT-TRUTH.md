@@ -20,10 +20,11 @@ Priority order for upcoming iterations, set after the 300-session review:
    the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW §18-§19).
    Items -312..-322 (s481-518, the `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage) are
    all fully CLOSED — PROJECT-OVERVIEW §20-§25. **Item -317 step 3 (~150-location blanket sweep)
-   status as of s554: 114/~150 leads fixed, 87 FULLY CLOSED 2/2 (guards 1-87), 27 pending confirm
-   (guards 88-114 new this session — count=3 singleton + count=2 twenty-six-way, 1st live-verify
-   clean with hangarbay n=2600, 2nd confirm queued)** — see item -317 below; ~36 locations
-   remain unaudited (count=1 + residual non-classic), still M3's top-ranked work unit. **Item -334 (s549,
+   status as of s555: 115/~150 leads fixed, 114 FULLY CLOSED 2/2 (guards 1-114), 1 pending confirm
+   (guard 115 `HEAP_FREE_LIST_INSERT_R1_GUARD` — last classic r2/0X4 site; 1st live-verify clean
+   with hangarbay n=2700, 2nd confirm queued). Classic r2/0X4 unaudited classic sites now EMPTY** —
+   see item -317 below; residual work is non-classic shapes (r4/0X0 mesh sites / gap audits), still
+   M3's top-ranked work unit after the confirm. **Item -334 (s549,
    `SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC`) and item -327's root cause (`DL_LIST_APPEND_DEREF_GUARD`,
    84 sites) are the campaign's first fixes shipped on DIRECT crash-mechanism evidence** (a guard's own
    bad-pointer value numerically traced to the next crash), not idiom-shape pattern matching alone —
@@ -34,7 +35,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s554)
+## Current truth (established by session 295; unchanged, reviewed through s555)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -250,42 +251,43 @@ a range pointer. Highest allocated so far: -338. The next NEW item takes -339.
     entry, skipping the body if invalid. CLOSED 2/2 s507 after an s506 inconclusive retry. Mechanism:
     `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-554) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 114 guards fixed so far, 87/114 FULLY
-    CLOSED 2/2, 27 pending confirm (guards 88-114 new this session, 1st live-verify clean).** Steps 1
+-317. **(s490-555) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 115 guards fixed so far, 114/115 FULLY
+    CLOSED 2/2, 1 pending confirm (guard 115 new this session).** Steps 1
     (`heapFreeListDequeue` as a whole function) and 2 (`buildOrientedFaceGeometry` as a whole function)
     are separately FULLY CLOSED 2/2 — note step 3 has since ALSO landed R-numbered guards inside these
-    same two functions (see below), a naming coincidence, not a re-opening of steps 1/2.
+    same two functions (and now also `heapFreeListInsert`), a naming coincidence, not a re-opening of
+    steps 1/2.
     Step 3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a forward taint-propagation dataflow
-    analysis) found ~448 raw reload sites deduping to ~150 candidate guard placements across 30
+    analysis) found ~448 raw reload sites deduping to ~150 candidate guard placements across 30+
     functions; every fix shares one shape (null check gates one arm safely, non-null fallthrough has no
     `0x80000000`-`0x80800000` range check before a write-through deref, downstream control flow
     reloads the register from the table again — skip on invalid is safe).
-    Guards land in `beginFrameDLChunk` (R1-R10, fully closed), `emitColorFillRect` (R1-R8),
+    Guards land in `beginFrameDLChunk` (R1-R10), `emitColorFillRect` (R1-R8),
     `submitSceneNodeRender` (R1-R9), `drawSubtitleText` (R1-R6), `renderLitTexturedMeshFaces` (R1-R6),
     `renderFlatMeshFaceGroup` (R1-R6), `renderLitMeshFaceGroup` (R2-R15), `emitMaterialTexturedDL`/
     `emitMaterialTexturedDLAlt` (R1-R5 each), `emitAllocatedDLCommand` (R1-R3), `reserveAndEmitDLEntry`
     (R1-R3), `setupCameraMatrices` (R1-R3), `heapFreeListDequeue` (R1-R4), `buildOrientedFaceGeometry`
-    (R1-R3), `drawFrameProfilerBars` (R1-R2), and (new this session) eleven first-time functions:
-    `reclaimDisplayListChunk`, `allocateDisplayListBuffer`, `allocDLBlockToFillRectList`/`ListB`/
-    `ListC`/`ListD`, `recordDeferredDrawRefVariant`/`A`/`B`/`C`/`D`, `drawTextGlyphRect`. Full
+    (R1-R3), `drawFrameProfilerBars` (R1-R2), `heapFreeListInsert` (R1), and the s554 first-time
+    functions (`reclaimDisplayListChunk`, `allocateDisplayListBuffer`, `allocDLBlockToFillRectList`/
+    `ListB`/`ListC`/`ListD`, `recordDeferredDrawRefVariant`/`A`/`B`/`C`/`D`, `drawTextGlyphRect`). Full
     guard-by-guard table: `docs/PROJECT-OVERVIEW.md` §22-§25.
-    **s554 fold-in**: guards 72-74 (s552 three-way) CLEAN (`hangarbay-entry n=2700`); crashed on known
-    BREADCRUMB6 `0x80065acc` — **FULLY CLOSED 2/2**. Guards 75-87 (s553 thirteen-way) CLEAN
-    (`hangarbay-entry n=2600`); crashed on known `0x800ab0e0` Metal cluster — **FULLY CLOSED 2/2**.
-    Campaign briefly at **87/87 fully closed with zero pending**.
+    **s555 fold-in**: guards 88-114 (s554 twenty-seven-way) CLEAN full ~300s (`hangarbay-entry n=3000`,
+    rc=0, 114 frames, NO crash) — **FULLY CLOSED 2/2**. Campaign briefly at **114/114 fully closed with
+    zero pending**.
     **New this session**: fresh tracer re-scan (reg=r2/off=0X4). Remaining count=7 still the SHAPE
-    MISMATCH at `0x8000D268` (skipped again). Count=3 is a SINGLE classic site
-    (`BUILD_ORIENTED_FACE_GEOMETRY_R2_GUARD` site=`0x80012CCC`). Count=2 is a TWENTY-SIX-WAY TIE of
-    classic sites (11 NEW functions + extensions of already-touched ones — full table PROJECT-OVERVIEW
-    §25 s554 block). All 27 write addresses checked against `fixup_game_funcs.py`: 0 incidental matches.
-    1st live-verify clean when all 27 armed together: `hangarbay-entry n=2600`, 0 fires on any of the
-    27, crashed at 111.3s on NEW single-occurrence `beginFrameDLChunk+37740`/`0x8000afa0` (filed item
-    -338). 2nd confirm queued:
-    `scratch/agent/soak_queue/s554_count3_count2_twentyseven_way_confirm.sh`.
-    **~36 locations remain unaudited (count=1 + residual non-classic) — still the top-ranked M3 work
-    unit.** Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't
-    subsume these tiers.
+    MISMATCH at `0x8000D268` (skipped again). Count=1 is the LAST classic site
+    (`HEAP_FREE_LIST_INSERT_R1_GUARD` site=`0x800079D8`, new function to the R-numbered lineage —
+    freelist INSERT not DEQUEUE). Shape-checked classic; 0 incidental matches in fixup. 1st live-verify
+    clean: `hangarbay-entry n=2700`, 0 fires (0 log lines for the new tag), crashed at 129.6s on
+    already-catalogued s354-366 `coalesceFreeHeapBlocks+4424`/`0x8000247c`. 2nd confirm queued:
+    `scratch/agent/soak_queue/s555_count1_heap_free_list_insert_r1_confirm.sh`.
+    **Classic r2/0X4 campaign: DONE for unaudited classic sites** (after guard 115 the shape filter
+    only surfaces the known non-classic count=7). Residual work is non-classic shapes (high-count
+    r4/0X0 mesh write sites from the full NEEDS_GUARD ranking, and scoped gap audits like the s549
+    `DL_LIST_APPEND_DEREF` pattern) — still the top-ranked M3 work unit after the pending confirm.
+    Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't subsume
+    these residual tiers.
     **Standing gotchas** (full detail: `docs/PROJECT-OVERVIEW.md` §22-§25, `scratch/agent/NEXT.md`):
     `s506_dedupe.py` reads a fixed canonical report path, never pass `--out` to `--scan` (s521);
     `hangarbay-entry` can fail to fire even on a full-duration completion, always check the positive
@@ -300,7 +302,7 @@ a range pointer. Highest allocated so far: -338. The next NEW item takes -339.
     bad-pointer VALUE numerically correlates with the crash's own fault address before dismissing it as
     background noise (s549, item -334); count=N tiers can include shape-mismatched sites that share a
     taint count but not the classic `0x8011`/`0x63B0` reload (s553 count=7 skip). Raw detail:
-    `PORTING-STATE.md` Sessions 490-554.
+    `PORTING-STATE.md` Sessions 490-555.
 
 -316. **(s488-490) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED 2/2.** A scope gap in the existing s436
     `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`): validated one deref but not two propagating

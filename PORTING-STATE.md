@@ -45045,3 +45045,46 @@ positive control.
   that checkout).
 - `docs/CURRENT-TRUTH.md`, `docs/PROJECT-OVERVIEW.md` §25 s554 block, `scratch/agent/NEXT.md`,
   `scratch/agent/SOAK-RESULTS.md`, soak scripts under `scratch/agent/soak_queue/`.
+
+## Session 555 (2026-08-09) — item -317 step 3: closed guards 88-114; fixed last classic r2/0X4 (guard 115)
+
+### Fold-ins
+1. `s554_count3_count2_twentyseven_way_confirm` (guards 88-114): CLEAN full ~300s duration (rc=0,
+   114 frames), `hangarbay-entry n=3000` (strong positive control), 0 fires on all 27 new guards,
+   0 live fires on any armed guard family, NO crash at all. **Guards 88-114 FULLY CLOSED 2/2.**
+   Campaign briefly at **114/114 fully closed with zero pending**.
+
+### Hypotheses for next tier
+H1: Remaining count=1 `heapFreeListInsert`/`0x800079D8` is classic `0x8011`/`0x63B0` reload →
+    write-through-r2+4 (the last classic site on this shape filter).
+H2: Count=7 at `0x8000D268` remains the same shape-mismatched taint artifact (not this campaign).
+H3: After fixing H1 the classic r2/0X4 filter is empty of unaudited classic sites → pivot to residual
+    non-classic shapes (r4/0X0 mesh write sites) or scoped gap audits.
+Discriminating measurement: source-read shape check + fixup uniqueness; live-verify with hangarbay
+positive control.
+
+### What ran
+- Tracer re-scan + `s506_dedupe` + `s548_dedupe_shape_filtered` (reg=r2/off=0X4).
+- Count=7 `0x8000D268`: still shape MISMATCH (skipped again).
+- Count=1: classic `heapFreeListInsert` `0x800079D8` → `HEAP_FREE_LIST_INSERT_R1_GUARD` (new function
+  to the R-numbered lineage — freelist INSERT, not DEQUEUE). RHS=`ctx->r3`. Exact string unique in
+  `funcs_3.c`; 0 incidental matches in fixup.
+- 1 guard (115) added to `fixup_game_funcs.py`, regen (make_elf → N64Recomp → fixup x1 → cmake).
+- 1st live-verify `s555_count1_heap_free_list_insert_r1_manual`: `hangarbay-entry n=2700`, 0 fires on
+  the new guard (0 log lines), 0 live fires on any armed family, crashed at 129.6s on already-
+  catalogued s354-366 heap-walker background-noise `coalesceFreeHeapBlocks+4424`/
+  `last-guest-pc=0x8000247c` (not a new item). One benign `hangarmenu-a0-guard` n=0 diagnostic
+  immediately pre-crash (already-catalogued, unrelated).
+
+### Result
+- Campaign: **115 fixed, 114 FULLY CLOSED 2/2, 1 pending** (115).
+- 2nd confirm queued: `scratch/agent/soak_queue/s555_count1_heap_free_list_insert_r1_confirm.sh`.
+- **Classic r2/0X4 unaudited classic sites: 0 remaining** after this guard. Residual M3 work pivots
+  to non-classic shapes (high-count r4/0X0 mesh sites from the full NEEDS_GUARD ranking, and/or
+  scoped gap audits like the s549 `DL_LIST_APPEND_DEREF` pattern).
+
+### Files touched
+- `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` (1 new guard; untracked in
+  that checkout).
+- `docs/CURRENT-TRUTH.md`, `docs/PROJECT-OVERVIEW.md` §25 s555 block, `scratch/agent/NEXT.md`,
+  `scratch/agent/SOAK-RESULTS.md`, soak script under `scratch/agent/soak_queue/`.

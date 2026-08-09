@@ -2336,7 +2336,23 @@ Next-steps / `scratch/agent/NEXT.md`.
 | 113 | `DRAW_SUBTITLE_TEXT_R6_GUARD` | `0x80015C4C` | |
 | 114 | `SETUP_CAMERA_MATRICES_R3_GUARD` | `0x80016EF8` | |
 
-1st live-verify (all 27 armed together): 0 fires on any of the 27, `hangarbay-entry n=2600`, crashed at 111.3s on NEW single-occurrence `beginFrameDLChunk+37740`/`last-guest-pc=0x8000afa0` (filed item -338; distinct from -323/`0x8000ae40` and -319/`0x8000b0d0` in the same function). Pre-crash n=0 diagnostic co-fires on freelist-next/generic-cache/dl-list-append-rwrite/dl-list-reset-rnode/append-rdp-state/dl-list-append-deref with shared `bad_ptr=0x7500D019` (existing families catching the same corruption wave — not a regression of the new guards). 2nd confirm queued: `scratch/agent/soak_queue/s554_count3_count2_twentyseven_way_confirm.sh`. Campaign totals as of s554: **114 fixed, 87 FULLY CLOSED 2/2, 27 pending confirm**.
+1st live-verify (all 27 armed together): 0 fires on any of the 27, `hangarbay-entry n=2600`, crashed at 111.3s on NEW single-occurrence `beginFrameDLChunk+37740`/`last-guest-pc=0x8000afa0` (filed item -338; distinct from -323/`0x8000ae40` and -319/`0x8000b0d0` in the same function). Pre-crash n=0 diagnostic co-fires on freelist-next/generic-cache/dl-list-append-rwrite/dl-list-reset-rnode/append-rdp-state/dl-list-append-deref with shared `bad_ptr=0x7500D019` (existing families catching the same corruption wave — not a regression of the new guards).
+
+**s555 fold-in of 2nd confirm:** CLEAN full ~300s duration (rc=0, 114 frames), `hangarbay-entry n=3000`, 0 fires on all 27, 0 live fires on any armed guard family, NO crash at all — **guards 88-114 FULLY CLOSED 2/2**. Campaign briefly at **114/114 fully closed with zero pending**.
+
+### s555 continuation — last classic r2/0X4 site (guard 115)
+
+Fresh tracer re-scan of reg=`r2`/off=`0X4` after fold-in returns only two hits:
+- **count=7** at `0x8000D268` (`heapFreeListDequeue`): still SHAPE MISMATCH (`ctx->r2` from `$s0`/`addu`, not the classic `0x8011`/`0x63B0` reload) — skipped again (s553/s554 precedent).
+- **count=1** at `0x800079D8` (`heapFreeListInsert`): CLASSIC shape confirmed (`lui $v0,0x8011` / `lw $v0,0x63B0($v0)` / `beq $v0,$zero` / fallthrough `MEM_W(0X4, ctx->r2) = ctx->r3`); 0 incidental matches in fixup.
+
+| # | Guard | Site | Function notes |
+|---|-------|------|----------------|
+| 115 | `HEAP_FREE_LIST_INSERT_R1_GUARD` | `0x800079D8` | NEW function to R-numbered lineage (INSERT, not DEQUEUE); RHS=`ctx->r3` |
+
+1st live-verify: 0 fires on `heap-free-list-insert-r1-guard` (0 log lines), 0 live fires on any armed guard family, `hangarbay-entry n=2700` (strong positive control). Crashed at 129.6s on already-catalogued s354-366 heap-walker background-noise `coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` (not a new item). 2nd confirm queued: `scratch/agent/soak_queue/s555_count1_heap_free_list_insert_r1_confirm.sh`.
+
+**Classic r2/0X4 campaign status:** after guard 115, **0 remaining classic unaudited sites** on this shape filter (only residual non-classic shapes remain — high-count `r4`/`0X0` mesh write sites, and any scoped gap audits like the s549 `DL_LIST_APPEND_DEREF` pattern). Campaign totals as of s555: **115 fixed, 114 FULLY CLOSED 2/2, 1 pending confirm**.
 
 
 ## 26. Overturned conclusions and dead ends, full list (s2-s422), migrated from CURRENT-TRUTH.md s547
