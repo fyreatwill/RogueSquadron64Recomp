@@ -21,9 +21,9 @@ Priority order for upcoming iterations, set after the 300-session review:
    surfaced by the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW
    §18-§19). Items -312..-322 (s481-518, the guard lineage descending from `DL_LIST_APPEND_GUARD`
    through `HEAPLISTDEQ_ATTR_WRITE_GUARD`) are all fully CLOSED — PROJECT-OVERVIEW §20-§25.
-   **Item -317 step 3 (a ~150-location blanket sweep) status as of s539: 39/~150 leads fixed, 38 FULLY
-   CLOSED 2/2, 1 (`RENDER_LIT_TEXTURED_MESH_FACES_R2_GUARD`) 1st-live-verify CLEAN, 2nd confirm queued
-   — see item -317 below.** ~107 locations remain unaudited across further tiers — M3's top-ranked work
+   **Item -317 step 3 (a ~150-location blanket sweep) status as of s541: 43/~150 leads fixed, 41 FULLY
+   CLOSED 2/2, 2 pending confirm — see item -317 below.** ~103 locations remain unaudited across
+   further tiers — M3's top-ranked work
    unit is this sweep's continuation. Live breadcrumb tracking (items -324..-331, all filed not chased,
    none escalated): see Next-steps below.
 
@@ -202,11 +202,9 @@ a range pointer. Highest allocated so far: -332. The next NEW item takes -333.
     entry, skipping the body if invalid. CLOSED 2/2 s507 after an s506 inconclusive retry. Mechanism:
     `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-540) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 41 guards fixed so far, 38 FULLY
-    CLOSED 2/2, 3 pending confirm (`RENDER_LIT_TEXTURED_MESH_FACES_R2_GUARD` s539 — 1st-live-verify
-    CLEAN but its 1st confirm attempt was WEAK/discarded (item -332), retry queued; R3_GUARD and
-    R4_GUARD s540 — both 1st-live-verify CLEAN, 2nd confirms queued).** Steps 1 (`heapFreeListDequeue`)
+-317. **(s490-541) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 43 guards fixed so far, 41 FULLY
+    CLOSED 2/2, 2 pending confirm.** Steps 1 (`heapFreeListDequeue`)
     and 2 (`buildOrientedFaceGeometry`) are separately FULLY
     CLOSED 2/2. Step 3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a forward
     taint-propagation dataflow analysis) found ~448 raw reload sites deduping to ~150 candidate guard
@@ -228,7 +226,10 @@ a range pointer. Highest allocated so far: -332. The next NEW item takes -333.
     completed with NO crash at all — the cleanest possible verify class. **Its 2nd confirm's 1st
     attempt (s539) was WEAK**: crashed at 19.8s after only 7 frames, `hangarbay-entry n=5`
     (single-digit, below the double-digit-or-better bar) — discarded per iron rule 1, filed the crash
-    signature as item -332, and re-queued the retry: `s539_render_lit_textured_mesh_faces_r2_confirm_retry.sh`.
+    signature as item -332. **The retry (s541, folded from queue) read CLEAN**: 0
+    `render-lit-textured-mesh-faces-r2-guard` fires, 1 benign `hangarmenu-a0-guard` co-fire,
+    `hangarbay-entry n=32`, full 349s duration, no crash — `RENDER_LIT_TEXTURED_MESH_FACES_R2_GUARD`
+    marked FULLY CLOSED 2/2.
     **Third and fourth candidates found and fixed (s540)**: fresh re-scan (raw tracer's top two entries,
     reg=`r4`/off=`0X0`, re-confirmed the same already-rejected shape mismatch) put two TIED entries at
     the exact guarded shape (reg=`r2`, off=`0X4`, count=27 each): `funcs_3.c:33902`
@@ -241,16 +242,39 @@ a range pointer. Highest allocated so far: -332. The next NEW item takes -333.
     instrumentation rule. 1st live-verify (s540) clean: 0 fires on either new guard, 0 fires on any
     other armed guard family at all (no benign co-fires this run), `hangarbay-entry n=31` positive
     control, full 300s scheduled duration completed with NO crash at all (107 frames captured, rc=0) —
-    the cleanest possible verify class. 2nd confirm queued:
-    `scratch/agent/soak_queue/s540_render_lit_textured_mesh_faces_r3_r4_confirm.sh`.
-    Tally: 41/~150 fixed, 38 fully closed 2/2, 3 pending confirm (R2, R3, R4).
-    **~105 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
+    the cleanest possible verify class. **2nd confirm (s541, folded from queue) read CLEAN**: 0 fires on
+    either guard, 1 benign already-catalogued `s284-guard` co-fire, `hangarbay-entry n=31`, crashed at
+    113.1s on `pc-symbol=hangarTickCameraOrbit+5188`/`last-guest-pc=0x800ab068` — the long-recurring
+    `0x800ab068` background-noise family (items -320/s463/s468/s489; the host symbol varies build to
+    build but the guest PC is the stable signature) — both `RENDER_LIT_TEXTURED_MESH_FACES_R3_GUARD` and
+    `_R4_GUARD` marked FULLY CLOSED 2/2.
+    **Next tier found and fixed (s541)**: fresh re-scan put TWO TIED entries at the exact guarded shape
+    (reg=`r2`, off=`0X4`, count=26 each) in TWO DIFFERENT functions: `funcs_4.c:7648` (site=`0x80011B54`,
+    `renderFlatMeshFaceGroup`, a brand-new function for this campaign) and `funcs_4.c:14889`
+    (site=`0x80013DF4`, `renderLitMeshFaceGroup` — this function already carries the `RENDER_LIT_MESH_R2`
+    -`R8_GUARD` lineage from s496-519 at seven DIFFERENT addresses; `0x80013DF4` matched none of them,
+    confirmed a genuine ninth distinct site). Both write addresses checked directly against
+    `fixup_game_funcs.py`: neither appeared anywhere — genuinely uncovered. Same `+0x63B0`-offset idiom.
+    Fixed as **`RENDER_FLAT_MESH_FACE_GROUP_R1_GUARD`** and **`RENDER_LIT_MESH_R9_GUARD`**, batched into
+    one build/run. 1st live-verify (s541) clean on the first attempt: 0 fires on either new guard, 3
+    benign already-catalogued `s284-guard` co-fires + 1 benign already-catalogued
+    `hangar-bay-deref-guard` co-fire (no regression), `hangarbay-entry n=31` positive control. Crashed at
+    113.3s on `pc-symbol=initVec4TripletFromArgs+68`/`last-guest-pc=0x800ab068` — the same
+    `0x800ab068` background-noise family hit twice this session — clean verify, own guards never fired.
+    2nd confirm queued: `scratch/agent/soak_queue/s541_render_flat_mesh_face_group_r1_render_lit_mesh_r9_confirm.sh`.
+    Tally: 43/~150 fixed, 41 fully closed 2/2, 2 pending confirm (`RENDER_FLAT_MESH_FACE_GROUP_R1_GUARD`,
+    `RENDER_LIT_MESH_R9_GUARD`).
+    **~103 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
     Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't subsume these
     tiers. **Tracer gotcha (s521)**: `s506_dedupe.py` reads a fixed canonical report path — a custom
     `--out` on `--scan` leaves it stale. **Positive-control gotcha (s536)**: `hangarbay-entry` can fail
     to fire even on a full-duration completion (the phase-gated key schedule can diverge run to run) —
-    always check the positive control's presence before trusting a 0-fires result. Full guard-by-guard
-    table and gotchas: `docs/PROJECT-OVERVIEW.md` §22-§25, `PORTING-STATE.md` Sessions 490-539.
+    always check the positive control's presence before trusting a 0-fires result. **`0x800ab068`
+    background-noise gotcha (s541)**: this recurring guest-PC crash resolves to a DIFFERENT host
+    `pc-symbol` almost every time it's hit (`loadCutsceneAssetsByIndex+1860`, `hangarTickCameraOrbit
+    +5188`, `initVec4TripletFromArgs+68`, ...) — always cross-check the `last-guest-pc` value, not just
+    the symbol name, before filing a "new" item. Full guard-by-guard table and gotchas:
+    `docs/PROJECT-OVERVIEW.md` §22-§25, `PORTING-STATE.md` Sessions 490-541.
 
 -316. **(s488-490) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED 2/2.** A scope gap in the existing s436
     `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`): validated one deref but not two propagating
