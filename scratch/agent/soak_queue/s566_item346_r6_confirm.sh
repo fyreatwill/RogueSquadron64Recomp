@@ -1,7 +1,8 @@
 #!/bin/zsh
-# s565 2nd independent confirm of item -320: projectModelBoundsToScreen safe early-exit
-# (guard1/guard2 no longer goto L_80066204 / clobber caller $s1).
-# Discriminating: hangarbay double-digit+; NO crash at loadCutsceneAssetsByIndex+1860 / 0x800aafb8.
+# s566 2nd independent confirm of item -346: HEAP_FREE_LIST_DEQUEUE_R6_GUARD
+# at both delay-slot copies of 0x8000D6D0 (r3-base write before R2 at 0x8000D6D4).
+# Discriminating: hangarbay double-digit+; NO crash at last-guest-pc=0x8000d6d0 /
+# heapFreeListDequeue around that PC. 0 r6 fires = true-negative OK (intermittent).
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR"
@@ -10,10 +11,13 @@ while [ ! -f "$REPO_ROOT/tools/probe.sh" ]; do
   [ "$REPO_ROOT" = "/" ] && { echo "no repo root" >&2; exit 1; }
 done
 cd "$REPO_ROOT/build"
-OUTDIR="$REPO_ROOT/scratch/agent/soak_results/s565_item320_safe_early_exit_confirm"
+OUTDIR="$REPO_ROOT/scratch/agent/soak_results/s566_item346_r6_confirm"
 rm -rf "$OUTDIR"; mkdir -p "$OUTDIR"
 env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
     ROGUESQ_LOG_RUNNER=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 \
+    ROGUESQ_LOG_HEAP_FREE_LIST_DEQUEUE_R6_GUARD=1 \
+    ROGUESQ_LOG_HEAP_FREE_LIST_DEQUEUE_R2_GUARD=1 \
+    ROGUESQ_LOG_HEAPLISTDEQ_ATTR_WRITE_GUARD=1 \
     ROGUESQ_LOG_PROJECT_MODEL_BOUNDS_GUARD=1 \
     ROGUESQ_LOG_PROJECT_MODEL_BOUNDS_GUARD2=1 \
     ROGUESQ_LOG_PROJECT_MODEL_BOUNDS_GUARD3=1 \
@@ -23,7 +27,6 @@ env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MI
     ROGUESQ_LOG_GENERIC_CACHE_GUARD=1 ROGUESQ_LOG_CACHE_HEAD_A1_GUARD=1 \
     ROGUESQ_LOG_FREELIST_NEXT_GUARD=1 ROGUESQ_LOG_SIBLING_PTR_WRITE_GUARD=1 \
     ROGUESQ_LOG_DL_LIST_APPEND_GUARD=1 ROGUESQ_LOG_DL_LIST_RESET_GUARD=1 \
-    ROGUESQ_LOG_HEAPLISTDEQ_ATTR_WRITE_GUARD=1 \
     PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
     PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" \
     zsh "$REPO_ROOT/tools/probe.sh" "$OUTDIR" 300 2

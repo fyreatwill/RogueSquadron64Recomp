@@ -45524,3 +45524,39 @@ Item -320 FIXED 1/2 (true-negative). 2nd confirm queued:
 - H3 pure host misattribution of the multi-hit signature (host local-symtab + disasm both pin
   +1860 to a real instruction inside loadCutsceneAssetsByIndex; root cause is callee ABI break).
 
+
+## Session 566 — item -320 CLOSED 2/2; item -346 residual r3-base write FIXED 1/2
+
+### Fold-in
+`s565_item320_safe_early_exit_confirm` (loop, rc=0, 348s, 102 frames): hangarbay-entry n=2600
+(strong positive control), 0 project-model-bounds-guard{,2,3} fires, **no crash** at
+`loadCutsceneAssetsByIndex+1860` / `0x800aafb8`. Item **-320 FULLY CLOSED 2/2**.
+
+### Work unit
+Item -346 DIRECT residual gap: unguarded `MEM_W(0X0, ctx->r3)=ctx->r2` at guest `0x8000D6D0`
+(both recompiler delay-slot copies of `sw $v0, 0x0($v1)` after `beq $v0,$zero,L_8000D6D8`),
+immediately before already-guarded `HEAP_FREE_LIST_DEQUEUE_R2_GUARD` site `0x8000D6D4`.
+
+### Hypotheses
+- H1: r3-base write is a real residual gap of the same shape as -334/-340/-345 → guard both
+  copies, skip-safe → no more 0x8000d6d0 crashes (true-negative or catch fire OK).
+- H2: crash was a one-off stack-corruption cascade with no stable site → guard still harmless;
+  hangarbay double-digit+ with no D6D0 death is still a CLEAN 1st verify.
+- H3: wrong register (should guard r2 value not r3 base) → would still SEGV at D6D0 under
+  corruption; refuted if post-fix death moves off 0x8000d6d0.
+
+### Fix
+`fixup_game_funcs.py` + surgical `funcs_3.c`: new family `HEAP_FREE_LIST_DEQUEUE_R6_GUARD`
+(env `ROGUESQ_LOG_HEAP_FREE_LIST_DEQUEUE_R6_GUARD`, tag `[heap-free-list-dequeue-r6-guard]`)
+on both delay-slot copies. Range-check r3; skip write if outside `0x80000000`–`0x80800000`.
+
+### 1st live-verify
+`s566_item346_r6_manual`: hangarbay-entry n=2600 (strong positive control); 0 r6 fires
+(true-negative); **no crash at 0x8000d6d0**. Crashed ~127s at
+`transformSceneLights+2456`/`last-guest-pc=0x80010134` — filed item **-347** (guest PC is
+caller `submitSceneNodeRender` JAL delay-slot; host fault inside callee — same pattern as -320).
+Same-run bonus: `project-model-bounds-guard2` n=0..179 (s565 mini-epilogue actively engaged).
+Item -346 FIXED 1/2. 2nd confirm queued: `soak_queue/s566_item346_r6_confirm.sh`.
+
+### Ruled out
+- H3 wrong-register theory for this run (death left 0x8000d6d0 entirely).

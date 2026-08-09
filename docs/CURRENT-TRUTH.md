@@ -20,15 +20,15 @@ Priority order for upcoming iterations, set after the 300-session review:
    the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW §18-§19).
    Items -312..-322 (s481-518, the `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage) are
    all fully CLOSED — PROJECT-OVERVIEW §20-§25. **Item -317 freelist WRITE campaign CLOSED s564
-   (131/131 + residual walk/attr gaps -341..-345).** **Item -320 FIXED 1/2 s565:**
-   `projectModelBoundsToScreen` guard1/guard2 early-exit clobbered caller `$s1` via premature
-   full-epilogue restore; safe mini-epilogue fix. 2nd confirm queued.
+   (131/131 + residual walk/attr gaps -341..-345).** **Item -320 FULLY CLOSED 2/2 s566**
+   (safe mini-epilogue; s566 confirm hangarbay n=2600 full 300s + same-run guard2 fires n=0..179
+   on item -346 1st verify). **Item -346 FIXED 1/2 s566** (R6 r3-base gap at `0x8000D6D0`).
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s565)
+## Current truth (established by session 295; unchanged, reviewed through s566)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -147,26 +147,31 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -346. The next NEW item takes -347.
+a range pointer. Highest allocated so far: -347. The next NEW item takes -348.
 
--346. **(s565) Single-occurrence breadcrumb, filed not chased**, from item -320's 1st live-verify.
-    `heapFreeListDequeue+34224`/`last-guest-pc=0x8000d6d0` (`hangarbay-entry n=2600`). Guest site
-    `0x8000D6D0`: unguarded `MEM_W(0X0, ctx->r3)=ctx->r2` immediately before already-guarded
-    `HEAP_FREE_LIST_DEQUEUE_R2_GUARD` site `0x8000D6D4`. Free-list-pop region near -331/`0x8000d688`
-    and -333/`0x8000d698`. Watch for recurrence; if a 2nd hit or same-run guard correlation appears,
-    escalate as a DIRECT residual gap (r3 write, not r2).
+-347. **(s566) Single-occurrence breadcrumb, filed not chased**, from item -346's 1st live-verify.
+    `transformSceneLights+2456`/`last-guest-pc=0x80010134` (`hangarbay-entry n=2600`). Guest
+    `0x80010134` is the *caller* `submitSceneNodeRender` JAL delay-slot `sw $v0,0x10($sp)` before
+    `jal transformSceneLights` (same caller-PC-vs-host-offset pattern as item -320). Host fault
+    is inside the callee at +2456. Watch for recurrence before source-tracing the callee body.
 
--320. **(s508/s565) `loadCutsceneAssetsByIndex+1860`/`last-guest-pc=0x800aafb8` — ROOT-CAUSED AND
-    FIXED 1/2 (s565).** ≥4 hangarbay-controlled hits (s532/s536/s543/s563). **Mechanism:** guest
-    `0x800AAFB8` is the *caller's* JAL delay-slot nop in `runHangarSelectionFrame` (function has 0
-    `g_rs64_last_guest_pc` updates). Host `+1860` maps to `L_800A92F0` `lw $v0,-0x25A4($s1)` —
-    `MEM_W` through `$s1`. `$s1` was clobbered by `projectModelBoundsToScreen` guard1 (s101) /
-    guard2 (s128) early-exit `goto L_80066204` before those regs were spilled (s128's "ra already
-    spilled" claim was wrong for guard2). Fix: safe mini-epilogue (restore only spilled `$s6` /
-    `$s5+$s6`, `r2=0`, pop, return). Guard3 (post full spill) still uses full epilogue. **1st
-    live-verify:** hangarbay n=2600, 0 project-model-bounds-guard* fires (true-negative), NO crash
-    at +1860/0x800aafb8; crashed at item -346 breadcrumb. 2nd confirm queued
-    `soak_queue/s565_item320_safe_early_exit_confirm.sh`.
+-346. **(s565/s566) `heapFreeListDequeue` residual r3-base write at `0x8000D6D0` — FIXED 1/2
+    (s566).** DIRECT gap before existing `HEAP_FREE_LIST_DEQUEUE_R2_GUARD` site=`0x8000D6D4`: both
+    delay-slot copies of `sw $v0, 0x0($v1)` (`MEM_W(0X0, ctx->r3)=ctx->r2`) were unguarded. Same
+    gap model as -334/-340/-345. New family `HEAP_FREE_LIST_DEQUEUE_R6_GUARD` (env
+    `ROGUESQ_LOG_HEAP_FREE_LIST_DEQUEUE_R6_GUARD`, tag `[heap-free-list-dequeue-r6-guard]`), skip
+    safe. **1st:** hangarbay n=2600, 0 r6 fires (true-negative), no crash at `0x8000d6d0`; crashed
+    at item -347. 2nd confirm queued `soak_queue/s566_item346_r6_confirm.sh`.
+
+-320. **(s508/s565/s566) `loadCutsceneAssetsByIndex+1860`/`last-guest-pc=0x800aafb8` — ROOT-CAUSED
+    AND FULLY CLOSED 2/2 (s566).** ≥4 hangarbay-controlled hits pre-fix. **Mechanism:** guest
+    `0x800AAFB8` is the *caller's* JAL delay-slot nop in `runHangarSelectionFrame`. Host `+1860` =
+    `L_800A92F0` `lw $v0,-0x25A4($s1)`. `$s1` clobbered by `projectModelBoundsToScreen` guard1/guard2
+    early-exit `goto L_80066204` before those regs were spilled. Fix: safe mini-epilogue. **1st
+    (s565):** hangarbay n=2600, 0 guard fires, no +1860 crash. **2nd (s566 fold):** hangarbay n=2600,
+    full ~300s rc=0, 0 fires, no +1860 crash — CLEAN. Bonus same-run positive engagement on the
+    item -346 1st verify: `project-model-bounds-guard2` n=0..179 (fix catches bad args without
+    clobbering caller `$s1`).
 
 -345. **(s562/s564) `heapFreeListDequeue` DIRECT gap after item -322 `HEAPLISTDEQ_ATTR_WRITE_GUARD`
     site=`0x8000D92C` — FIXED and FULLY CLOSED 2/2 (s564).** Same-run root cause (s562): guard fired
@@ -272,8 +277,8 @@ a range pointer. Highest allocated so far: -346. The next NEW item takes -347.
     free-list-pop region itself as suspicious if either recurs or a third nearby address appears)
     `findAndUnlinkSmallestEntry+356`/`0x8000d698`. Watch all six for recurrence before escalating.
 
--320..-327. **Eight breadcrumbs (s508-524); -320 FIXED 1/2 s565 (see top entry); -321 REFUTED;
-    -322 FIXED+CLOSED (+ residual -345); -327 FIXED+CLOSED with -334; -323..-326 watch.** -323
+-320..-327. **Eight breadcrumbs (s508-524); -320 FULLY CLOSED 2/2 s566 (see top entry); -321
+    REFUTED; -322 FIXED+CLOSED (+ residual -345); -327 FIXED+CLOSED with -334; -323..-326 watch.** -323
     (s514) `beginFrameDLChunk+27456`/`0x8000ae40`. -324 (s521) `heapFreeListInsert+72`/`0x80015544`.
     -325 (s522) `findLookupEntryByKey+2212`/`0x800ad0dc`. **-326** (s524) `do_rom_read+608`/
     `0x800025ac` — **if a 2nd occ appears, urgent**.
@@ -302,12 +307,13 @@ a range pointer. Highest allocated so far: -346. The next NEW item takes -347.
     non-null fallthrough has no `0x80000000`-`0x80800000` range check before write-through deref —
     skip on invalid is safe). Classic r2/0X4: 115/115. Residual free-list-node rN/0X0: 16/16
     (116-131). Full guard table: `docs/PROJECT-OVERVIEW.md` §22-§25.
-    **s558–s564:** freelist WRITE campaign CLOSED (details under -341..-345). **s565:** item -320
-    root-caused to `projectModelBoundsToScreen` early-exit s-reg clobber (not a freelist hole).
-    **Standing gotchas** (full: PROJECT-OVERVIEW §22-§25): hangarbay positive control (s536);
-    cross-check `last-guest-pc` not host symbol (s541); weak item -306 early deaths discard+retry;
-    early-guard `goto` full epilogue only if ALL callee-saves already spilled (s565); breadcrumb
-    occ counts re-tally SOAK-RESULTS (s564). Raw detail: `PORTING-STATE.md` Sessions 490-565.
+    **s558–s564:** freelist WRITE campaign CLOSED (details under -341..-345). **s565–s566:** item
+    -320 root-caused to `projectModelBoundsToScreen` early-exit s-reg clobber and CLOSED 2/2; item
+    -346 residual r3-base write at `0x8000D6D0` FIXED 1/2 (R6). **Standing gotchas** (full:
+    PROJECT-OVERVIEW §22-§25): hangarbay positive control (s536); cross-check `last-guest-pc` not
+    host symbol (s541); weak item -306 early deaths discard+retry; early-guard `goto` full epilogue
+    only if ALL callee-saves already spilled (s565); breadcrumb occ counts re-tally SOAK-RESULTS
+    (s564). Raw detail: `PORTING-STATE.md` Sessions 490-566.
 
 -316. **(s488-490) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED 2/2.** A scope gap in the existing s436
     `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`): validated one deref but not two propagating
