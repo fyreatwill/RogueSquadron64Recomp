@@ -133,6 +133,13 @@ extern "C" uint32_t rs64_dpc_get_cumulative_fullsyncs() {
     return g_cumulative_fullsyncs.load(std::memory_order_relaxed);
 }
 
+// Phys RDRAM address of the most recent FULL_SYNC (0x29) byte the bridge
+// forwarded this process. 0xFFFFFFFF if none yet. Used by ROGUESQ_LOG_DL_SYNC
+// to correlate LLE emission with guest F3D walk (item -350 / s581).
+extern "C" uint32_t rs64_dpc_get_last_fullsync_addr() {
+    return g_last_fullsync_addr.load(std::memory_order_acquire);
+}
+
 // Per-task GFX opcode histogram (high byte of DL command word). Counted
 // directly from the factor5_ucode dispatch loop — a single increment per
 // command, no function call. Same single-thread-only constraint as above.

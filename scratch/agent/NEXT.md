@@ -2,64 +2,58 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s580 recap (read this first)
-
-Discriminating H-sync1 (guest omits 0xE9) vs H-sync2 (LLE drops) with
-`ROGUESQ_LOG_DL_SYNC` **failed as designed** because the guest walk is incomplete:
+## s581 recap (read this first)
 
 | Observation | Implication |
 |-------------|-------------|
-| Boot clear DLs: 40/40 `syncs=1 raw_e9=1` | Instrument + simple-DL path OK (positive control) |
-| Late hangar: 86/87 `syncs=1 raw_e9=0` | Walker **false-negates** 0xE9 on complex/chunked DLs (or LLE emits 0x29 without 0xE9; `rsp_force_fullsync` is **unwired**) |
-| Post-exit r2 zero-sync probes all `raw_e9=0` | **Not discriminating** under walker gap |
-| Post-exit r2 runners 282 syncs=1 / 235 syncs=0 | Dual population before sec2 all-zero plateau |
+| Boot: 20/20 e9_a=e9_b=lin≥1 | Both walks OK on simple DLs |
+| Late hangar first 30: e9_a=0/30, e9_b=30/30, lin=30/30, fs_b0=E9 | **H-walk1 CONFIRMED**; control GREEN |
+| H-walk3 (no guest 0xE9) | **REFUTED** for hangar |
+| e9_b overcounts (9–26) | Presence-only probe, not count==syncs |
 
-Do **not** claim H-sync1 from raw_e9=0 on complex tasks until late-hangar
-`syncs=1 ⇒ raw_e9≥1` holds.
+Authoritative guest FULL_SYNC presence: **`e9_b≥1` or `lin_e9≥1`**. Ignore e9_a on complex DLs.
 
 ## This iteration's work unit
 
-**Make raw_e9 a faithful absence probe on Factor5 complex DLs** (control gate), then
-re-run one natural-exit capture to re-test H-sync1/2 on post-plateau tasks.
+**Natural-exit H-sync1 vs H-sync2 discrimination** on the post-mission-overlay
+FULL_SYNC starvation plateau (item -349 / -7 / -351).
 
-### Hypotheses (walker failure modes)
-- H-walk1: treating 0xB5 as hard ENDDL pops too early; Factor5 chunk stream continues
-  via 0x80 next-pointer / 0x108 layout and 0xE9 lives in a later chunk.
-- H-walk2: G_DL branch=1 / multi-sub-DL graph misses sibling lists that LLE still runs.
-- H-walk3: LLE emits RDP 0x29 without any guest 0xE9 (microcode auto-fullsync) —
-  raw_e9 will stay 0 even with a perfect walk; then H-sync1/2 reframes around
-  "why LLE auto-fullsync stops" not guest opcode.
+### Hypotheses
+- H-sync1: guest omits 0xE9 on post-plateau tasks (`syncs=0` and `e9_b=0` and `lin_e9=0`)
+- H-sync2: guest still has 0xE9 but LLE drops it (`syncs=0` and `e9_b|lin≥1`)
+- H-sync3: plateau tasks never reached / dual population only (no all-zero plateau this run)
 
-### Discriminating measurement
-1. Fix or replace the walk so that on **late hangar** tasks with `syncs=1`,
-   `raw_e9 ≥ 1` (same-run control, ≥20 tasks s_n≥4000).
-2. If after a correct walk raw_e9 is still 0 while syncs=1 → H-walk3 CONFIRMED;
-   pivot to LLE-side emission probe (where does hist[0x29] get its byte?).
-3. Only after control holds: natural exit, post-sec2 tasks with `syncs=0`:
-   - raw_e9=0 → H-sync1 (guest omit)
-   - raw_e9≥1 → H-sync2 (LLE drop)
+### Discriminating measurement (same-run)
+1. Positive control: late pre-exit hangar `syncs=1` ⇒ e9_b|lin≥1 for ≥20/30 samples.
+2. Reach natural hangar exit (3→5→6→8, section 2) and hold past sec2.
+3. On post-sec2 (or consec zero-sync after ever_sync) probes:
+   - majority `syncs=0 & e9_b=0 & lin=0` → **H-sync1**
+   - majority `syncs=0 & (e9_b≥1|lin≥1)` → **H-sync2**
+4. Also log fs_addr sticky: if syncs=0, fs_addr may be from prior task — do not treat as this-task emission.
 
 ### Exact commands
 ```bash
-# 1) Source-read Factor5 chunk walk (docs/factor5-gbi.md + dpc_bridge / ucode dispatch)
-# 2) Improve walk in main.cpp ROGUESQ_LOG_DL_SYNC (or dump LLE RDP ring source addr)
-# 3) Rebuild + hangar-only control (no exit required):
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-env PROBE_MODE=start_only HOLD_S=20 ROGUESQ_LOG_HANGARBAY_ENTRY=1 \
+# Natural exit path (s577 recipe): double_start spaced edges + long hold
+env PROBE_MODE=double_start HOLD_S=45 \
+  ROGUESQ_LOG_HANGARBAY_ENTRY=1 \
   GAME_EXTRA_ENV="ROGUESQ_LOG_DL_SYNC=1" \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s581_dlsync_walk_control 5 12
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s582_hsync_plateau 5 12
 
-# Late hangar control must show:
-#   syncs=1 probes with raw_e9>=1 for ≥20 of first 30 late samples
-# Failure (still raw_e9=0): implement H-walk3 LLE emission probe instead of more walk tweaks.
+# Offline:
+#   late hangar control: first 30 t>=4000 syncs>0 with e9_b|lin
+#   post hangar-sel / post sec2: syncs=0 probes → e9_b/lin contingency table
+# Require hangar-sel + section 2 (or graceful-menu) for full plateau; if only
+# dual-pop before sec2, still classify that dual population with e9_b.
 ```
 
 ### Expected outcomes
-- Walk fixed: late hangar control green → next session natural-exit H-sync1/2 retest.
-- Walk cannot fix (H-walk3): instrument LLE at RDP 0x29 submit with guest DL cursor.
+- H-sync1 → guest no longer emits 0xE9; fix is on game-side task builder / state after overlay.
+- H-sync2 → LLE drops/filters FULL_SYNC; fix is ucode/bridge path for those DLs.
+- No plateau → retry exit recipe (s577 real_edge); do not reopen walker.
 
 ### Do NOT
-- Claim guest omit from raw_e9=0 on complex DLs.
+- Treat e9_a=0 as guest omit on complex DLs.
 - Reopen thr-resume-skip / s178 producer-stop.
 - Force-case5 as product fix.
 - Chase leave-path noise or freelist residual.

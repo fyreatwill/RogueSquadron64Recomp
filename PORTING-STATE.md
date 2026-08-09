@@ -46381,3 +46381,53 @@ Factor5-correct DL walk (chunk 0x80/0x108/0xB5 semantics) **or** LLE-side probe 
 0x29 emission (guest DL cursor / last F3D op). Re-run natural exit to sec2 only after
 raw_e9 matches late hangar `syncs=1` (walker control). Until then, treat runner `syncs`
 as ground truth for "LLE emitted FULL_SYNC this task."
+
+## Session 581 — Factor5 B5=no-op walk control GREEN; H-walk1 CONFIRMED
+
+### Work unit
+Make `raw_e9` a faithful absence probe on Factor5 complex DLs (item -350 control
+gate), then re-enable H-sync1/2 discrimination.
+
+### Instrument (one build)
+`ROGUESQ_LOG_DL_SYNC` dual walk + linear scan + last-fullsync addr:
+- **e9_a**: B5=ENDDL (s580 walker) + strict G_DL (`w0 & 0x00FEFFFF == 0`)
+- **e9_b**: B5=no-op (matches live HLE `op_noop` for 0xB5; real ENDDL = 0xB8)
+- **lin_e9**: linear 4096-cmd scan from `dl_ptr`, no control flow
+- **fs_addr / fs_b0**: `rs64_dpc_get_last_fullsync_addr()` + first byte at that
+  phys addr (`0xE9 & 0x3F == 0x29` is how hist counts FULL_SYNC)
+
+### Run
+`s581_dlsync_walk_control`: craft hold (no leave), hangarbay-entry n=1400,
+~5769 LLE tasks, crash at hold-iter 1 on `last-guest-pc=0x800ab048` (noise;
+probes already collected through task #5725).
+
+### Same-run positive controls
+| window | n | e9_a≥1 | e9_b≥1 | lin_e9≥1 | fs_b0=E9 |
+|--------|---|--------|--------|----------|----------|
+| boot t≤20 syncs>0 | 20 | **20/20** | **20/20** | 20/20 | — |
+| late t≥4000 syncs>0 first 30 | 30 | 0/30 | **30/30** | **30/30** | 30/30 |
+| late all syncs>0 | 97 | 0/97 | **92/97** | **95/97** | 97/97 |
+
+Late hangar DLs: `first_ops=80,06,...`, e9_a always ends `endB5` with cmds≈560;
+e9_b finds 9–26× 0xE9 (presence; overcounts via long walk / lim).
+
+### Hypotheses
+| Hyp | Verdict |
+|-----|---------|
+| H-walk1 B5-as-ENDDL ends chunk streams early | **CONFIRMED** — e9_a=0 while e9_b/lin/fs all see 0xE9 |
+| H-walk2 G_DL branch misses siblings | **not needed** — B5 semantics alone closes control |
+| H-walk3 LLE emits 0x29 without guest 0xE9 | **REFUTED** for hangar — fs_b0=E9 and e9_b/lin find guest 0xE9 |
+| Late hangar control `syncs=1 ⇒ raw_e9≥1` | **GREEN** via e9_b (30/30 first late) |
+
+### Notes
+- e9_b overcounts (walk continues past B5 into adjacent lists until lim/B8);
+  use as **presence** probe (e9≥1), not exact count vs runner syncs.
+- 5/97 late e9_b=0 outliers still mostly have lin_e9≥1; jumps_b hits 64.
+  Prefer `e9_b\|lin_e9` for presence; single miss (task 5625) noise.
+- HLE already maps 0xB5→no-op (`rt64_gbi_f3dfactor5.cpp`); AGENTS.md
+  `op_B5_endDl` note is stale vs live code.
+
+### Next
+Natural-exit retest of H-sync1 (guest omit) vs H-sync2 (LLE drop) on
+post-sec2 zero-sync plateau using e9_b/lin presence. Treat e9_a as known-bad
+on complex DLs.

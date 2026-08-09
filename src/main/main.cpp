@@ -88,6 +88,7 @@ extern "C" void rs64_dpc_defer_end(int commit);
 extern RspExitReason factor5_boot (uint8_t* rdram, uint32_t ucode_addr);
 extern uint8_t dmem[];
 extern "C" void rs64_dpc_drain_histogram(uint32_t out[64]);
+extern "C" uint32_t rs64_dpc_get_last_fullsync_addr();
 // Defined in lib/rt64/src/hle/rt64_state.cpp — s171 crash-instant snapshot
 // of [vi-fs-decision] state, read from the SIGSEGV/SIGBUS handler below.
 extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *lastFireDecisionN,
@@ -610,58 +611,131 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                         if (s_n < 4000) n_with_sync_probed++;
                         else late_sync_probed++;
                     }
-                    // Guest F3D walk: follow G_DL (0x06/0xDE), end on
-                    // G_ENDDL 0xB8 (F3D) / 0xB5 (Factor5 chunk) / 0xDF.
-                    uint32_t raw_e9 = 0, raw_b5 = 0, raw_b8 = 0, cmds = 0;
-                    char first_ops[48];
-                    int fop_n = 0;
-                    first_ops[0] = '\0';
-                    {
-                        uint32_t stack[16];
+                    // Guest F3D walk (s581): two B5 semantics + linear scan.
+                    // H-walk1: B5-as-ENDDL ends Factor5 chunk streams early
+                    //   (HLE maps 0xB5 → no-op; real ENDDL is 0xB8).
+                    // H-walk3: no guest 0xE9 in DL; LLE still emits RDP 0x29.
+                    // Strict G_DL: only follow 0x06 when w0 payload bits are
+                    // clean (Factor5 reuses opcode byte 0x06).
+                    auto rbyte = [&](uint32_t a) -> uint8_t {
+                        a &= 0x7FFFFF;
+                        return rdram[a ^ 3];
+                    };
+                    auto walk_tree = [&](bool b5_is_enddl, uint32_t* out_e9,
+                                         uint32_t* out_b5, uint32_t* out_b8,
+                                         uint32_t* out_cmds, uint32_t* out_jumps,
+                                         char* first_ops, size_t first_ops_sz,
+                                         char* end_reason, size_t end_reason_sz) {
+                        uint32_t stack[32];
                         int sp = 0;
-                        int jumps_left = 32;
+                        int jumps_left = 64;
                         uint32_t addr = dl_ptr & 0x7FFFFF;
-                        auto rbyte = [&](uint32_t a) -> uint8_t {
-                            a &= 0x7FFFFF;
-                            return rdram[a ^ 3];
-                        };
-                        for (int i = 0; i < 2048 && addr + 8u <= 0x800000u; ++i) {
+                        uint32_t e9 = 0, b5 = 0, b8 = 0, cmds = 0, jumps = 0;
+                        int fop_n = 0;
+                        first_ops[0] = '\0';
+                        end_reason[0] = '\0';
+                        for (int i = 0; i < 8192 && addr + 8u <= 0x800000u; ++i) {
                             uint8_t op = rbyte(addr);
+                            uint32_t w0 = ((uint32_t)rbyte(addr) << 24) |
+                                          ((uint32_t)rbyte(addr + 1) << 16) |
+                                          ((uint32_t)rbyte(addr + 2) <<  8) |
+                                          ((uint32_t)rbyte(addr + 3));
                             cmds++;
                             if (fop_n < 16) {
                                 int used = (int)strlen(first_ops);
-                                if (used < (int)sizeof(first_ops) - 4) {
-                                    snprintf(first_ops + used, sizeof(first_ops) - used,
+                                if (used < (int)first_ops_sz - 4) {
+                                    snprintf(first_ops + used, first_ops_sz - used,
                                              "%s%02X", fop_n ? "," : "", op);
                                 }
                                 fop_n++;
                             }
-                            if (op == 0xE9) raw_e9++;
-                            if (op == 0xB5) raw_b5++;
-                            if (op == 0xB8) raw_b8++;
-                            if (op == 0xB8 || op == 0xB5 || op == 0xDF) {
+                            if (op == 0xE9) e9++;
+                            if (op == 0xB5) b5++;
+                            if (op == 0xB8) b8++;
+                            const bool is_end = (op == 0xB8 || op == 0xDF ||
+                                                 (b5_is_enddl && op == 0xB5));
+                            if (is_end) {
                                 if (sp > 0) { addr = stack[--sp]; continue; }
+                                snprintf(end_reason, end_reason_sz, "end%02X", op);
                                 break;
                             }
-                            if ((op == 0x06 || op == 0xDE) && jumps_left > 0) {
-                                uint8_t branch = rbyte(addr + 1);
+                            // Strict G_DL (F3D 0x06): w0 payload excl. branch
+                            // bit16 must be zero. 0xDE is F3DEX2 G_DL — rare
+                            // here; keep loose for that opcode only.
+                            bool is_dl = false;
+                            uint8_t branch = 0;
+                            if (op == 0x06) {
+                                if ((w0 & 0x00FEFFFFu) == 0) {
+                                    is_dl = true;
+                                    branch = (uint8_t)((w0 >> 16) & 1);
+                                }
+                            } else if (op == 0xDE) {
+                                is_dl = true;
+                                branch = rbyte(addr + 1);
+                            }
+                            if (is_dl && jumps_left > 0) {
                                 uint32_t w1 = ((uint32_t)rbyte(addr + 4) << 24) |
                                               ((uint32_t)rbyte(addr + 5) << 16) |
                                               ((uint32_t)rbyte(addr + 6) <<  8) |
                                               ((uint32_t)rbyte(addr + 7));
                                 uint32_t target = w1 & 0x7FFFFF;
-                                if (branch == 0 && sp < 16) stack[sp++] = (addr + 8) & 0x7FFFFF;
+                                if (branch == 0 && sp < 32)
+                                    stack[sp++] = (addr + 8) & 0x7FFFFF;
                                 addr = target;
                                 jumps_left--;
+                                jumps++;
                                 continue;
                             }
                             addr = (addr + 8) & 0x7FFFFF;
                         }
+                        if (!end_reason[0]) {
+                            snprintf(end_reason, end_reason_sz,
+                                     addr + 8u > 0x800000u ? "oob" : "lim");
+                        }
+                        *out_e9 = e9; *out_b5 = b5; *out_b8 = b8;
+                        *out_cmds = cmds; *out_jumps = jumps;
+                    };
+                    uint32_t e9_a = 0, b5_a = 0, b8_a = 0, cmds_a = 0, jumps_a = 0;
+                    uint32_t e9_b = 0, b5_b = 0, b8_b = 0, cmds_b = 0, jumps_b = 0;
+                    char first_ops[48];
+                    char end_a[8], end_b[8];
+                    walk_tree(true,  &e9_a, &b5_a, &b8_a, &cmds_a, &jumps_a,
+                              first_ops, sizeof(first_ops), end_a, sizeof(end_a));
+                    walk_tree(false, &e9_b, &b5_b, &b8_b, &cmds_b, &jumps_b,
+                              first_ops, sizeof(first_ops), end_b, sizeof(end_b));
+                    // Linear scan: every 8-byte slot from dl_ptr, no control
+                    // flow. Catches 0xE9 sitting past a false early end.
+                    uint32_t lin_e9 = 0, lin_b5 = 0, lin_b8 = 0, lin_cmds = 0;
+                    {
+                        uint32_t addr = dl_ptr & 0x7FFFFF;
+                        for (int i = 0; i < 4096 && addr + 8u <= 0x800000u; ++i) {
+                            uint8_t op = rbyte(addr);
+                            lin_cmds++;
+                            if (op == 0xE9) lin_e9++;
+                            if (op == 0xB5) lin_b5++;
+                            if (op == 0xB8) lin_b8++;
+                            addr = (addr + 8) & 0x7FFFFF;
+                        }
                     }
+                    const uint32_t fs_addr = rs64_dpc_get_last_fullsync_addr();
+                    uint8_t fs_b0 = 0xFF;
+                    if (fs_addr != 0xFFFFFFFFu && (fs_addr & 0x7FFFFF) + 1u <= 0x800000u)
+                        fs_b0 = rbyte(fs_addr);
                     fprintf(stderr,
-                            "[dl-sync-probe] task=#%d syncs=%u raw_e9=%u raw_b5=%u raw_b8=%u "
-                            "cmds=%u dl_ptr=0x%08X tris=%u first_ops=%s\n",
-                            s_n, syncs, raw_e9, raw_b5, raw_b8, cmds, dl_ptr, tris, first_ops);
+                            "[dl-sync-probe] task=#%d syncs=%u "
+                            "e9_a=%u e9_b=%u lin_e9=%u "
+                            "b5_a=%u b8_a=%u cmds_a=%u jumps_a=%u end_a=%s "
+                            "b5_b=%u b8_b=%u cmds_b=%u jumps_b=%u end_b=%s "
+                            "lin_b5=%u lin_b8=%u lin_cmds=%u "
+                            "fs_addr=0x%08X fs_b0=%02X "
+                            "dl_ptr=0x%08X tris=%u first_ops=%s\n",
+                            s_n, syncs,
+                            e9_a, e9_b, lin_e9,
+                            b5_a, b8_a, cmds_a, jumps_a, end_a,
+                            b5_b, b8_b, cmds_b, jumps_b, end_b,
+                            lin_b5, lin_b8, lin_cmds,
+                            fs_addr, fs_b0,
+                            dl_ptr, tris, first_ops);
                 }
                 fflush(stderr);
             }
