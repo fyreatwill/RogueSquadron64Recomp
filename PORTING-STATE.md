@@ -45310,3 +45310,49 @@ regression of the new guards). **CLEAN true-negative baseline** — intermittent
 - H2 (all residual packing): shape filter + findAndUnlink origin refute for 88/98.
 - That residual GUARD3-without-GUARD4 remained after s559: expanded scan found **0** such sites
   (s559 class closed; residual is the no-GUARD3 class).
+
+## Session 561 — residual freelist initial-deref GUARD2 (item -343) 1st CLEAN; -341 CLOSED 2/2
+
+**Date:** 2026-08-09
+
+### Fold-in
+- `s560_alloc_tail_guard34_confirm` (item -342 2nd confirm): **WEAK** — hangarbay n=4, process
+  gone at 20.5s on `setByteAcrossEntryList+176`/`0x800aafa8` (item -306). Discarded; re-queued as
+  `scratch/agent/soak_queue/s561_alloc_tail_guard34_confirm_retry.sh`. Item -342 remains 1/2.
+- `s560_freelist_walk_guard4_confirm_retry` (item -341 2nd confirm): **CLEAN** — hangarbay n=2900,
+  full ~300s rc=0 (103 frames), 0 fires on emit-dl-guard4 / heaplistdeq-guard4 /
+  scene-node-list-guard4, 0 CRASH. **Item -341 FULLY CLOSED 2/2** (covers -339/-337).
+
+### Work unit (Option A residual GUARD2)
+**Hypotheses:**
+1. H1: residual initial-deref crashes exist and GUARD2 catches them.
+2. H2: null check + GUARD3+GUARD4 is sufficient; GUARD2 is dead/true-negative only.
+3. H3: some residual initial-derefs already covered (e.g. drainMesh head guards).
+
+**Discriminating measurement:** for each of s560's 97 residual walk sites, look backward for
+`lw $v0, 0x0($aN)` → `ctx->r2 = MEM_W(ctx->rN, 0X0)` without an initial-deref / head-pointer
+patch; apply GUARD2 (range-check host reg, bail to outer null label); soak.
+
+### Results
+- **97** residual walk sites from s560 list: **92** unguarded init-deref of that shape;
+  **5** already covered by `drainMeshReleaseQueue` head guards (s363) — H3 confirmed for those 5.
+- Host regs: r4×78, r5×11, r7×3 (mips a0/a1/a3). ~88 post-`findAndUnlinkSmallestEntry`; remainder
+  freelist-node arg shape (e.g. `heapFreeListInsert` at `0x800079AC`).
+- **Applied GUARD2 x92** as residual alloc-tail family
+  (`ROGUESQ_LOG_ALLOC_TAIL_GUARD2`, tag `[alloc-tail-guard2]`). Bail = same outer null-check label
+  as GUARD3/4. Landed in `fixup_game_funcs.py` (s561 block) + surgically applied to already-
+  sentinel'd `RecompiledFuncs` (same approach as s559/s560).
+
+### 1st live-verify
+`s561_alloc_tail_guard2_manual`: hangarbay-entry **n=2700** (strong positive control),
+**0 fires** on alloc-tail-guard2/3/4, **0 CRASH**, full ~300s rc=0 (103 frames).
+**CLEAN true-negative baseline** — favors H2 for this window (corruption intermittent; guard
+armed and reachable code path proven via hangarbay control). Item -343 FIXED 1/2.
+
+### Next
+- 2nd confirm queued: `scratch/agent/soak_queue/s561_alloc_tail_guard2_confirm.sh`
+- Item -342 confirm retry also queued
+- After 2/2: packing DL-cursor residual (item -317 DEFERRED) or multi-occurrence breadcrumb watch
+
+### Ruled out
+- That residual GUARD2 was empty after emit-dl/scene-node coverage: 92 residual sites remained.

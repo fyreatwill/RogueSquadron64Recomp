@@ -1,11 +1,10 @@
 #!/bin/zsh
-# s559 2nd independent confirm of freelist-walk GUARD4 systematic audit (item -339 shape).
-# 16 sites: emitAllocatedDLCommand x3 (incl item -339 @0x800088EC), heapFreeListDequeue x4,
-# submitSceneNodeRender x9 (incl item -337 @0x80010DF4 + s123 first site 0x80010178).
-# Shape: after GUARD3 does v1=*v1, unguarded peek v0=*v1 (heapWalker s218 GUARD4 gap).
-# Env: ROGUESQ_LOG_EMIT_DL_GUARD4 / HEAPLISTDEQ_GUARD4 / SCENE_NODE_LIST_GUARD4.
-# Discriminating: hangarbay-entry double-digit+; 0 crashes at 0x800088ec/0x80010df4;
-# optional n=0 fire on new guards if corruption hits (true-positive catch).
+# s561 1st live-verify of residual freelist initial-deref GUARD2 (item -343).
+# 92 sites: first lw $v0,0x0($aN) after null-check of freelist-node/findAndUnlink
+# return, residual after emit-dl/scene-node/drainMesh already-covered layers.
+# Env: ROGUESQ_LOG_ALLOC_TAIL_GUARD2 (+ GUARD3/4 + all passive).
+# Discriminating: hangarbay-entry double-digit+; 0-or-n fires on alloc-tail-guard2;
+# no new crash at residual init-deref PCs (true-negative baseline expected).
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Walk up until we find tools/probe.sh (works from scratch/agent/ or soak_queue/)
@@ -178,6 +177,9 @@ env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 \
     ROGUESQ_LOG_SCENE_NODE_LIST_GUARD4=1 \
     ROGUESQ_LOG_HEAPWALKER_GUARD3=1 \
     ROGUESQ_LOG_HEAPWALKER_GUARD4=1 \
+    ROGUESQ_LOG_ALLOC_TAIL_GUARD2=1 \
+    ROGUESQ_LOG_ALLOC_TAIL_GUARD3=1 \
+    ROGUESQ_LOG_ALLOC_TAIL_GUARD4=1 \
     PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
     PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" \
-    zsh "$REPO_ROOT/tools/probe.sh" "$REPO_ROOT/scratch/agent/soak_results/s560_freelist_walk_guard4_confirm_retry" 300 2
+    zsh "$REPO_ROOT/tools/probe.sh" "$REPO_ROOT/scratch/agent/soak_results/s561_alloc_tail_guard2_manual" 300 2

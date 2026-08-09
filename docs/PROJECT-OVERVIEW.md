@@ -2423,16 +2423,16 @@ CURRENT-TRUTH.md keeps only a short pointer to this section plus the two entries
 for active work (the `0x800290d4` `inflate_fast` artifact and the audio-bridge unit-mismatch fix).
 
 
-### s559 freelist-walk GUARD4 (item -341; covers -339/-337)
+### s559/s561 freelist-walk GUARD4 (item -341; covers -339/-337) — FULLY CLOSED 2/2
 
 Source-confirmed GUARD3-without-GUARD4 gap (heapWalker s218 shape) at 16 sites already carrying
 GUARD3: emitAllocatedDLCommand x3 (item -339 `0x800088EC`), heapFreeListDequeue x4,
 submitSceneNodeRender x9 (item -337 `0x80010DF4` + s123 first `0x80010178`). Fixed as
 `EMIT_DL_GUARD4` / `HEAPLISTDEQ_GUARD4` / `SCENE_NODE_LIST_GUARD4`. 1st live-verify CLEAN
-(hangarbay n=2900, full 300s rc=0, 0 fires). s560 2nd confirm was weak-discarded (item -306 early
-death, hangarbay n=0); retry queued.
+(hangarbay n=2900, full 300s rc=0, 0 fires). s560 2nd confirm weak-discarded (item -306); s561
+retry CLEAN hangarbay n=2900 full 300s rc=0 0 fires — **CLOSED 2/2**.
 
-### s560 residual alloc-tail GUARD3+GUARD4 (item -342)
+### s560 residual alloc-tail GUARD3+GUARD4 (item -342) — 1/2 pending confirm
 
 Line-based enum of walk-to-tail loops (`L: v1=*v1; v0=*v1; bne L`) in funcs_3/4: **118** total,
 20 already GUARD3, **98 residual**. 88/98 after `findAndUnlinkSmallestEntry` — same inlined
@@ -2441,7 +2441,16 @@ emitAllocatedDLCommand + submitSceneNodeRender. Applied **GUARD3 x94 + GUARD4 x9
 alloc-tail family (`ROGUESQ_LOG_ALLOC_TAIL_GUARD3` / `_GUARD4`). Already-covered layers excluded:
 reserveAndEmitDLEntry x3 (`DLENTRY_TAIL_GUARD` s251), drainMesh peeks (s357), scene-node
 `0x80010174` (s123+s559). 1st live-verify CLEAN (hangarbay n=2600, 0 fires; crash on already-
-catalogued `initVec4TripletFromArgs+68`/`0x80065e94`). 2nd confirm queued.
+catalogued `initVec4TripletFromArgs+68`/`0x80065e94`). s560/s561 confirms both weak-discarded
+(item -306 hangarbay n<10); retry queued.
+
+### s561 residual alloc-tail GUARD2 (item -343) — 1/2 pending confirm
+
+Complements s560 walk guards: emit-dl/scene-node already had GUARD2 on the first
+`lw $v0, 0x0($aN)` after the freelist-node null-check; residual sites only null-checked.
+Enum of s560's 97 residual walk sites: **92** unguarded init-deref (r4×78/r5×11/r7×3); **5**
+already drainMesh head (s363). Applied **GUARD2 x92** (`ROGUESQ_LOG_ALLOC_TAIL_GUARD2`, bail =
+outer null label). 1st live-verify CLEAN (hangarbay n=2700, full 300s rc=0, 0 fires, 0 CRASH).
 
 
 ### Overturned conclusions — do not act on these

@@ -1,10 +1,8 @@
 #!/bin/zsh
-# s560 2nd independent confirm of residual freelist-walk GUARD3+GUARD4 (item -342).
-# 94 GUARD3 + 92 GUARD4 sites: post-findAndUnlink walk-to-tail idiom across funcs_3/4
-# (emitFrameRdpInitDl, beginFrameDLChunk, renderLit*, etc.) that lacked both guards.
-# Env: ROGUESQ_LOG_ALLOC_TAIL_GUARD3 / ROGUESQ_LOG_ALLOC_TAIL_GUARD4 (+ all passive).
-# Discriminating: hangarbay-entry double-digit+; 0 new crash at residual walk PCs;
-# 0-or-n fires on alloc-tail-guard3/4 (true-negative baseline expected).
+# s561 re-queue: 2nd confirm of residual alloc-tail GUARD3+GUARD4 (item -342).
+# s560 confirm was WEAK (hangarbay n=4, item -306 early death). Retry once.
+# Env: ROGUESQ_LOG_ALLOC_TAIL_GUARD3 / _GUARD4 / _GUARD2 (+ all passive).
+# Discriminating: hangarbay double-digit+; 0 fires ok as true-neg; discard if hangarbay n<10.
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Walk up until we find tools/probe.sh (works from scratch/agent/ or soak_queue/)
@@ -177,8 +175,9 @@ env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 \
     ROGUESQ_LOG_SCENE_NODE_LIST_GUARD4=1 \
     ROGUESQ_LOG_HEAPWALKER_GUARD3=1 \
     ROGUESQ_LOG_HEAPWALKER_GUARD4=1 \
+    ROGUESQ_LOG_ALLOC_TAIL_GUARD2=1 \
     ROGUESQ_LOG_ALLOC_TAIL_GUARD3=1 \
     ROGUESQ_LOG_ALLOC_TAIL_GUARD4=1 \
     PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
     PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" \
-    zsh "$REPO_ROOT/tools/probe.sh" "$REPO_ROOT/scratch/agent/soak_results/s560_alloc_tail_guard34_confirm" 300 2
+    zsh "$REPO_ROOT/tools/probe.sh" "$REPO_ROOT/scratch/agent/soak_results/s561_alloc_tail_guard34_confirm_retry" 300 2
