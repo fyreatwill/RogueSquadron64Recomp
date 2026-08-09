@@ -20,20 +20,20 @@ Priority order for upcoming iterations, set after the 300-session review:
    the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW §18-§19).
    Items -312..-322 (s481-518, the `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage) are
    all fully CLOSED — PROJECT-OVERVIEW §20-§25. **Item -317 step 3 (~150-location blanket sweep)
-   status as of s550: 65/~150 leads fixed, 63 FULLY CLOSED 2/2 (guards 1-63, all pending confirms
-   cleared this session), 2 pending confirm (guards 64-65, new this session)** — see item -317 below;
-   ~87 locations remain unaudited, still M3's top-ranked work unit. **Item -334 (s549,
+   status as of s551: 71/~150 leads fixed, 65 FULLY CLOSED 2/2 (guards 1-65), 6 pending confirm
+   (guards 66-71, new this session; guards 64-65's own confirm came back WEAK, retry queued)** — see
+   item -317 below; ~81 locations remain unaudited, still M3's top-ranked work unit. **Item -334 (s549,
    `SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC`) and item -327's root cause (`DL_LIST_APPEND_DEREF_GUARD`,
    84 sites) are the campaign's first fixes shipped on DIRECT crash-mechanism evidence** (a guard's own
    bad-pointer value numerically traced to the next crash), not idiom-shape pattern matching alone —
-   both now FULLY CLOSED 2/2 (s550). Live breadcrumb tracking (items -328..-336, filed not chased,
+   both now FULLY CLOSED 2/2 (s550). Live breadcrumb tracking (items -328..-337, filed not chased,
    none escalated): see Next-steps below.
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s550)
+## Current truth (established by session 295; unchanged, reviewed through s551)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -152,7 +152,15 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -336. The next NEW item takes -337.
+a range pointer. Highest allocated so far: -337. The next NEW item takes -338.
+
+-337. **(s551) One more single-occurrence background-noise breadcrumb, filed not chased**,
+    surfaced by the s551 1st live-verify of the new six-way-tie guards below.
+    `submitSceneNodeRender+69192`/`last-guest-pc=0x80010df4` (`hangarbay-entry n=32`, valid
+    double-digit positive control) — checked against the full background-noise catalogue and item
+    -327/-328/-332's nearby `submitSceneNodeRender` addresses (`+67668`/`0x80010e6c`,
+    `+69820`/`0x80010ebc`, `+38976`/`0x8001086c`); none match this exact `last-guest-pc`. Watch for
+    recurrence before escalating.
 
 -335/-336. **(s550) Two more single-occurrence background-noise breadcrumbs, filed not chased**,
     surfaced by the two s549 confirm soaks folded in this session. **-335**
@@ -231,37 +239,42 @@ a range pointer. Highest allocated so far: -336. The next NEW item takes -337.
     entry, skipping the body if invalid. CLOSED 2/2 s507 after an s506 inconclusive retry. Mechanism:
     `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-550) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 65 guards fixed so far, 63/65 FULLY
-    CLOSED 2/2 (every guard pending as of s549 cleared this session), 2 pending confirm (guards 64-65,
-    new this session).** Steps 1 (`heapFreeListDequeue`) and 2 (`buildOrientedFaceGeometry`) are
-    separately FULLY CLOSED 2/2. Step 3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a
-    forward taint-propagation dataflow analysis) found ~448 raw reload sites deduping to ~150 candidate
-    guard placements across 30 functions; every fix shares one shape (null check gates one arm safely,
-    non-null fallthrough has no `0x80000000`-`0x80800000` range check before a write-through deref,
-    downstream control flow reloads the register from the table again — skip on invalid is safe).
+-317. **(s490-551) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 71 guards fixed so far, 65/71 FULLY
+    CLOSED 2/2, 6 pending confirm (guards 66-71, new this session).** Steps 1 (`heapFreeListDequeue`)
+    and 2 (`buildOrientedFaceGeometry`) are separately FULLY CLOSED 2/2. Step 3's tracer
+    (`scratch/agent/s494_item317_step3_tracer.py`, a forward taint-propagation dataflow analysis)
+    found ~448 raw reload sites deduping to ~150 candidate guard placements across 30 functions; every
+    fix shares one shape (null check gates one arm safely, non-null fallthrough has no
+    `0x80000000`-`0x80800000` range check before a write-through deref, downstream control flow
+    reloads the register from the table again — skip on invalid is safe).
     Guards land in `beginFrameDLChunk` (36-site tier, R1-R10, fully closed), `emitColorFillRect`
-    (R1-R5), `submitSceneNodeRender` (R1-R6), `drawSubtitleText` (R1-R3), `renderLitTexturedMeshFaces`
+    (R1-R6), `submitSceneNodeRender` (R1-R7), `drawSubtitleText` (R1-R4), `renderLitTexturedMeshFaces`
     (R1-R4), `renderFlatMeshFaceGroup` (R1-R4), `renderLitMeshFaceGroup` (R2-R13, 12 sites),
-    `emitMaterialTexturedDL`/`emitMaterialTexturedDLAlt` (R1-R2 each), and (new this session)
-    `emitAllocatedDLCommand` (R1) / `reserveAndEmitDLEntry` (R1, first guard in either function this
-    campaign). Full guard-by-guard table (all 65: site addresses, session, crash each verify/confirm
-    hit): `docs/PROJECT-OVERVIEW.md` §22-§25.
-    **Cleared this session (s550 fold-in)**: guards 53-57 (`RENDER_FLAT_MESH_FACE_GROUP_R3/R4_GUARD`,
-    `RENDER_LIT_MESH_R12/R13_GUARD`, `DRAW_SUBTITLE_TEXT_R3_GUARD`) finally came back CLEAN on their
-    4th confirm attempt (`hangarbay-entry n=31`, a valid double-digit control after 3 consecutive
-    single-digit weak draws on the item -306 background-noise signature) — **FULLY CLOSED 2/2**.
-    Guards 62-63 (item -334's `SIBLING_PTR_WRITE_GUARD` site + item -327's family-wide
-    `DL_LIST_APPEND_DEREF_GUARD`) 2nd confirm also came back clean (`hangarbay-entry n=31`) — **FULLY
-    CLOSED 2/2**. This is the first time all pending guards in this campaign cleared in the same
-    session. **New this session**: a fresh tracer re-scan found a TWO-WAY TIE at count=13 (same
-    guarded shape reg=r2/off=0X4, one tier below s548's count=14 tier) spanning
-    `emitAllocatedDLCommand` (`EMIT_ALLOCATED_DL_COMMAND_R1_GUARD`, `funcs_3.c:4580`/`0x80008908`) and
-    `reserveAndEmitDLEntry` (`RESERVE_AND_EMIT_DL_ENTRY_R1_GUARD`, `funcs_3.c:22988`/`0x8000CE10`,
-    first guard in this function). 1st live-verify clean (`hangarbay-entry n=31`, full 300s with no
-    crash at all — the cleanest verify class), 2nd confirm queued:
-    `scratch/agent/soak_queue/s550_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm.sh`.
-    **~87 locations remain unaudited across further tiers — still the top-ranked M3 work unit.** Item
+    `emitMaterialTexturedDL`/`emitMaterialTexturedDLAlt` (R1-R3 each), `emitAllocatedDLCommand` (R1),
+    `reserveAndEmitDLEntry` (R1), and (new this session) `setupCameraMatrices` (R1, first guard, new
+    function to this campaign). Full guard-by-guard table (all 71: site addresses, session, crash each
+    verify/confirm hit): `docs/PROJECT-OVERVIEW.md` §22-§25.
+    **Cleared this session (s551 fold-in)**: guards 64-65 (`EMIT_ALLOCATED_DL_COMMAND_R1_GUARD`,
+    `RESERVE_AND_EMIT_DL_ENTRY_R1_GUARD`)'s queued 2nd confirm came back WEAK — no `hangarbay-entry`
+    line at all (process gone at 20.2s after only 7 frames), crashed on the item -306
+    `setByteAcrossEntryList+176`/`0x800aafa8` background-noise signature — **discarded per iron rule
+    1, retry re-queued**: `scratch/agent/soak_queue/s551_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm_retry.sh`.
+    **New this session**: a fresh tracer re-scan found a SIX-WAY TIE at count=10 (same guarded shape
+    reg=r2/off=0X4, one tier below s550's count=13 two-way tie) spanning `emitColorFillRect`
+    (`EMIT_COLOR_FILL_RECT_R6_GUARD`, `funcs_3.c`/`0x80009E30`, 6th guard in this function),
+    `emitMaterialTexturedDL` (`EMIT_MATERIAL_TEXTURED_DL_R3_GUARD`, `funcs_3.c`/`0x8000E4B4`, 3rd),
+    `emitMaterialTexturedDLAlt` (`EMIT_MATERIAL_TEXTURED_DL_ALT_R3_GUARD`, `funcs_3.c`/`0x8000EB90`,
+    3rd), `submitSceneNodeRender` (`SUBMIT_SCENE_NODE_RENDER_R7_GUARD`, `funcs_4.c`/`0x800105EC`,
+    7th), `drawSubtitleText` (`DRAW_SUBTITLE_TEXT_R4_GUARD`, `funcs_4.c`/`0x80015F80`, 4th), and
+    `setupCameraMatrices` (`SETUP_CAMERA_MATRICES_R1_GUARD`, `funcs_4.c`/`0x8001763C`, 1st guard, new
+    function to this campaign). All six write addresses and every raw reload address feeding them
+    checked directly against `fixup_game_funcs.py` before patching: no incidental matches. 1st
+    live-verify clean when all six armed together (batch-instrumentation rule): `hangarbay-entry n=32`
+    (valid double-digit positive control), 0 fires on any of the six new guards, crashed at 123.5s on
+    a NEW single-occurrence signature (`submitSceneNodeRender+69192`/`0x80010df4`, filed item -337).
+    2nd confirm queued: `scratch/agent/soak_queue/s551_six_way_tie_confirm.sh`.
+    **~81 locations remain unaudited across further tiers — still the top-ranked M3 work unit.** Item
     -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't subsume these tiers.
     **Standing gotchas** (full detail: `docs/PROJECT-OVERVIEW.md` §22-§25, `scratch/agent/NEXT.md`):
     `s506_dedupe.py` reads a fixed canonical report path, never pass `--out` to `--scan` (s521);

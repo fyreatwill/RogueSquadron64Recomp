@@ -44820,3 +44820,63 @@ Documents/Tools/N64Recomp/fixup_game_funcs.py` +2 guard entries (`EMIT_ALLOCATED
 `RESERVE_AND_EMIT_DL_ENTRY_R1_GUARD`, not this repo, no submodule-patches step applies);
 `scratch/agent/soak_queue/s550_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm.sh`
 queued; `scratch/agent/SOAK-RESULTS.md` fold-in entries appended; `PORTING-STATE.md` (this entry).
+
+## Session 551 (2026-08-09): item -317 step 3 -- folded in s550's WEAK confirm (retry queued), found+fixed a genuine SIX-WAY TIE at the next tracer tier
+
+**Step 1: folded in s550's queued 2nd independent confirm for guards 64-65
+(`EMIT_ALLOCATED_DL_COMMAND_R1_GUARD`, `RESERVE_AND_EMIT_DL_ENTRY_R1_GUARD`).** Result: WEAK, not
+usable as a null-result control. The run had NO `hangarbay-entry` line at all (weaker than even a
+single-digit draw) -- process gone at 20.2s after only 7 captured frames, crashed on the item -306
+`setByteAcrossEntryList+176`/`last-guest-pc=0x800aafa8` background-noise signature (the same short-run
+signature that hit 4 of ~6 short/weak draws across the last several sessions, per the s531/s543/s546/
+s548/s549 gotcha). 0 fires on either target guard, but with no valid positive control the null result
+proves nothing per iron rule 1 -- discarded, retry queued:
+`scratch/agent/soak_queue/s551_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm_retry.sh`.
+
+**Step 2: fresh tracer re-scan (`--scan` + `s506_dedupe.py` + `s548_dedupe_shape_filtered.py`) found
+the next tier below s550's count=13 two-way tie: a SIX-WAY TIE at count=10** (same guarded shape
+reg=r2/off=0X4). Spans `emitColorFillRect` (`funcs_3.c:9988`/`0x80009E30`, 6th guard in this function),
+`emitMaterialTexturedDL` (`funcs_3.c:28957`/`0x8000E4B4`, 3rd), `emitMaterialTexturedDLAlt`
+(`funcs_3.c:31110`/`0x8000EB90`, 3rd), `submitSceneNodeRender` (`funcs_4.c:1761`/`0x800105EC`, 7th),
+`drawSubtitleText` (`funcs_4.c:23563`/`0x80015F80`, 4th), and `setupCameraMatrices`
+(`funcs_4.c:28560`/`0x8001763C`, 1st guard, a NEW function to this campaign). Confirmed via the JSON
+report (`s494_item317_step3_report.json`, `hits[].line` matching all six target lines with 10 hits
+each) and a direct read of the generated source at all six sites: identical idiom to every prior guard
+in this lineage -- `lui $v0,0x8011` / `lw $v0,0x63B0($v0)` reloads a global into `ctx->r2`, a
+`beq $v0,$zero,...` null check's delay slot (`sw $v0,0x0($v1)`) is duplicated by the recompiler for
+both branch paths, and the fallthrough-only instruction immediately after the branch label
+unconditionally writes through the reloaded, never-range-checked `ctx->r2` as `ctx->r2+4`.
+Cross-checked all six write addresses (`0x80009E30`, `0x8000E4B4`, `0x8000EB90`, `0x800105EC`,
+`0x80015F80`, `0x8001763C`) and every raw reload address feeding them directly against
+`fixup_game_funcs.py` -- none present anywhere, no incidental matches, safe to add. Fixed as
+`EMIT_COLOR_FILL_RECT_R6_GUARD`, `EMIT_MATERIAL_TEXTURED_DL_R3_GUARD`,
+`EMIT_MATERIAL_TEXTURED_DL_ALT_R3_GUARD`, `SUBMIT_SCENE_NODE_RENDER_R7_GUARD`,
+`DRAW_SUBTITLE_TEXT_R4_GUARD`, and `SETUP_CAMERA_MATRICES_R1_GUARD` using the established template
+(skip-on-invalid, `ROGUESQ_LOG_<NAME>` env-gated stderr report, `U32()` range check
+`< 0x80000000u || >= 0x80800000u`). Regenerated (`make_elf.py` -> `N64Recomp` ->
+`fixup_game_funcs.py`, all six patched x1, clean, no incidental collisions -> `cmake --build`) and ran
+the 1st live-verify with all six armed together in one build/run (batch-instrumentation rule).
+
+**1st live-verify result: CLEAN.** `hangarbay-entry n=32` (valid double-digit positive control), 0
+fires on `emit-color-fill-rect-r6-guard`, `emit-material-textured-dl-r3-guard`,
+`emit-material-textured-dl-alt-r3-guard`, `submit-scene-node-render-r7-guard`,
+`draw-subtitle-text-r4-guard`, `setup-camera-matrices-r1-guard`. Every other guard tag present in the
+run.log (`sibling-ptr-write-guard`, `generic-cache-guard`, `dl-list-reset-rnode-guard`,
+`dl-list-append-rwrite-guard`, `dl-list-append-deref-guard`, `heap-dequeue-derived-ptr-guard`,
+`freelist-next-guard`, `append-rdp-state-dl-entry-guard`) fired only as `n=0`/`ra=0x00000000`
+post-crash memory-dump snapshots, the established benign pattern, no regression. Crashed at 123.5s
+(after 43 frames) on a NEW single-occurrence signature: `submitSceneNodeRender+69192`/
+`last-guest-pc=0x80010df4` -- checked against the full background-noise catalogue and every nearby
+`submitSceneNodeRender` breadcrumb (item -327's `+67668`/`0x80010e6c`, item -328's `+69820`/
+`0x80010ebc`, item -332's `+38976`/`0x8001086c`); none match this exact `last-guest-pc`, filed as
+**item -337** (single occurrence, not escalated). 2nd independent confirm queued:
+`scratch/agent/soak_queue/s551_six_way_tie_confirm.sh`.
+
+**Ledger state at end of session**: item -317 step 3 now at 71/~150 leads fixed, 65 FULLY CLOSED 2/2
+(guards 1-65), 6 pending confirm (guards 66-71: the retried 64-65 confirm plus the new six-way tie's
+2nd confirm). ~81 locations remain unaudited across further tiers. Docs updated:
+`docs/CURRENT-TRUTH.md` (item -317, item -337, top summary block, "reviewed through" header);
+`fixup_game_funcs.py` (`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`, not this
+repo, no submodule-patches step applies); two soaks queued (`s551_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm_retry.sh`,
+`s551_six_way_tie_confirm.sh`); `scratch/agent/SOAK-RESULTS.md` fold-in entry appended;
+`PORTING-STATE.md` (this entry).
