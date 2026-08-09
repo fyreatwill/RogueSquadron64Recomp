@@ -45766,3 +45766,68 @@ Ruled out this iteration: H1 (new lead) and H3 (closed-step regression).
 
 M3 item -7 DoD body: `PROBE_MODE=start_only HOLD_S=60` craft-stick marks at 10/25/40, document
 phase timeline from SELECT YOUR CRAFT hold window. Do not reopen M5 without a new signature.
+
+## Session 571 — M3 item -7 DoD body: leave dies on known 0x80010b7c before stick marks
+
+**Work unit:** Item -7 — `PROBE_MODE=start_only HOLD_S=60` craft-stick hold from SELECT YOUR
+CRAFT (M3 DoD body, not a crash chase). HYPOTHESIS-ID `m3-dod-craft-stick-hold`.
+
+### Recipe
+```
+cd scratch/s73_post_a_scene
+env PROBE_MODE=start_only HOLD_S=60 STICK_SCHEDULE="10:sr 25:sl 40:su" HOLD_TICK_S=1 \
+  CAPTURE_TICK_S=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 ROGUESQ_LOG_RUNNER=1 \
+  zsh run_mission_keys.sh s571_item7 5 12
+```
+Artifacts: `scratch/s73_post_a_scene/s571_item7/` + console
+`scratch/agent/soak_results/s571_item7_craft_stick_hold/console.txt` (full log also copied).
+
+### Discriminating measurements
+
+| # | Measurement | Result |
+|---|---|---|
+| 1 | Alive through hold end? | **NO** — gone at hold-iter 1 (0s into 60s hold; sticks at 10/25/40 never applied) |
+| 2 | VI / phase timeline | See table below |
+| 3 | Stick marks | **0** (driver never reached hold_10) |
+| 4 | Graphics stall | `fs` plateaued at **4346** for last 3 `update_screen` samples (#9024/#9088/#9152); one mid-path `stalled=1` FIRE; `thr-resume-skip=0` |
+| 5 | Crash signature | `last-guest-pc=0x80010b7c`, `pc-symbol=findOrCreateMaterial+1704 (local-symtab)`, SIGBUS `si_addr=0x380000028` |
+
+**Phase table (s571):**
+
+| wall (game log) | VI width | origin | scene |
+|---|---|---|---|
+| 1.0 s | 0 | 0 | boot |
+| 1.1 s | 320 | 0x280 | early |
+| 2.8 s | 640 | 0x66A500 | attribution/logo stretch |
+| 46.2 s | 1024 | 0x790400 | title |
+| 77.9 s | 512 | 0x6AB400 | war-room / craft-select chain |
+| ~leave+3s | 512 | 0x656400 (last VI) | post-leave Start; crash before hold snaps |
+
+Menu path completed: all four from-phase keys landed (console `[keys]` start×3 + a); 12
+stable snaps + `craft_stable.png` (non-black, mean_lum≈36). Leave `p1:start` landed;
+`after_p1_start_{001..003}.png` captured (~3s leave-confirm) then process death. No
+`hold_*.png`. `hangarbay-entry` max n=900 (menu path, not hangarbay soak control).
+0 `[missing-func]`, 0 `UnhandledJump`, 0 thr-resume-skip.
+
+### Verdicts vs hypotheses
+
+- **H1** (survive HOLD_S=60 + document): **REFUTED this run** — death at hold-iter 1.
+- **H2** (S1 fs freeze stall during hold): **partial** — fs frozen at 4346 just pre-death, but
+  process did not survive into a multi-second hold window to measure the s176–s183 sustained
+  `stalled=1 pairs=0` family. Not a thr-resume-skip event (0 fires).
+- **H3** (catalogued crash): **CONFIRMED** — guest PC `0x80010b7c` is already labelled
+  background-noise (PROJECT-OVERVIEW §; SOAK s553 fold-in as `loadTextureTile+17912`; prior
+  symbolizations `findOrCreateMaterial+776`, `allocOrEvictMaterialNode+944`). Host
+  `findOrCreateMaterial+1704` is another pc-symbol-instability data point on the same guest PC.
+  **Do not open a reactive chase.** File only as leave-path co-occurrence of known noise.
+
+Compared to s76 `hold60` (died hold-iter 7, different era): still cannot complete a 60s
+post-leave hold on current binary in this sample. Item -7 remains OPEN until one clean run
+lands stick marks + phase/content timeline for the full hold.
+
+### Next
+
+Retry item -7 (same recipe; intermittent leave-path noise may not fire). Enqueued
+`scratch/agent/soak_queue/s571_item7_craft_stick_hold_retry.sh` for the loop. On clean 60s
+survival, document stick response offline from hold_10/25/40 PNGs. Do not escalate 0x80010b7c
+unless a *new* last-guest-pc appears ≥2 times on this leave path. M5 still due s573+.
