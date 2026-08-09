@@ -30,7 +30,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s576)
+## Current truth (established by session 295; unchanged, reviewed through s578)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -135,9 +135,13 @@ OVERTURNED s150; **s573 H1** was "no mission overlay" under non-exiting leave (s
 **s575 REFUTED H-exit5**; **s576 H-exit6a CONFIRMED** (synthetic AC8C0 Start → hangar-sel + state
 5→8 + VI 640); **s577 REAL hangar exit CONFIRMED** via natural double-Start path (case 3→5→6→8,
 hangar-sel, graceful-menu, VI 640@0x6A2900) and **mission overlay start-matched** (section 2
-rom=0xA5D30 `.ovl.mission`). Remaining: characterize post-state-8 / in-mission hold (item -7 body).
-Primary DoD gate is hangar-exit → mission-entry. *Done when:* 60s of in-mission rendering, craft
-visibly responds to synthetic input, stability counters 0, phase timeline covers the mission.
+rom=0xA5D30 `.ovl.mission`). **s578 post-exit body:** H-m2 CONFIRMED (section 4 cinematic then
+section 2; STAR WARS bumper → desert dive cutscene); H-m3 CONFIRMED (RDP `fs` freezes after
+mission overlay while VI still presents — s178 family with exit as trigger); H-m1 REFUTED (no
+in-mission craft within ~30s); H-m4 REFUTED as hard block (`hangar-sel val=0` still loads mission
++ cutscene). Primary remaining DoD gate is **cutscene→in-mission** (survive past post-overlay
+fs freeze, then craft input). *Done when:* 60s of in-mission rendering, craft visibly responds
+to synthetic input, stability counters 0, phase timeline covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
@@ -360,20 +364,22 @@ a range pointer. Highest allocated so far: -348. The next NEW item takes -349.
 -11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89), RECURRED s424, ROOT-CAUSED AND GUARDED s425.** s424 hit it as a sibling of item -261's guarded `startPlayerSlotAnimationChannelLooping` crash; s425 root-caused and guarded it (wild `$a0` arg, same never-initialized-slot root state) — see item -261 for the full trace.
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
--7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN — real hangar exit + mission
-    overlay load CONFIRMED s577; in-mission hold still uncharacterized.**
-    **Natural exit path (s577 double_start):** leave Start → case 3→5 (AC1C4) → auto case
-    5→6 (ACE80, ~195 case5 frames, no Start needed) → 2nd Start at case-6 ACE94 → hangar-sel
-    AC914 + state 6→8 AC94C → graceful-menu + frame-ret sentinel=0 → VI **512→640@0x6A2900**
-    → overlay start-match **section 2 rom=0xA5D30 `.ovl.mission`** (then VI 512@0x690400).
-    **s577 edge instruments (batch):** H-edge1 REFUTED (7 host 0→1→0 START pairs via
-    `[host-start]`); H-edge2 REFUTED (7 `[newbtn] start_new=1` on port 0); real exit does NOT
-    need AC8C0 (case 5 never saw a_start=1; case 6 ACE94 did). AC8C0 instrument logs
-    `port=98` from `lbu -0x2930(0x800D)` = byte of `gAvailableCraftBitsForLevel` @ 0x800CD6D0
-    (decomp) — not a 0..3 controller index (H-edge4 partial; case6 uses same load yet saw
-    Start — a0 provenance still open). **s576 force path** (case5 AC8C0 synthetic → 5→8)
-    remains a valid diagnostic shortcut. **Primary remaining:** longer hold after state 8 —
-    does mission render/respond, or stall/crash? Do not chase -338.
+-7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN — exit + mission overlay +
+    Chapter-1 cutscene CONFIRMED; in-mission blocked by post-overlay fs freeze (s178 family).**
+    **Natural exit (s577):** leave Start → 3→5 (AC1C4) → auto 5→6 (ACE80) → case-6 ACE94
+    Start → hangar-sel AC914 + 6→8 → graceful-menu → VI 640@0x6A2900 → **section 4 cinematic
+    reload** → **section 2 `.ovl.mission` 0xA5D30** → VI 512@0x690400/0x620400 flip.
+    **s578 post-exit (s577 log+PNG + 3 new runs):** H-m1 **REFUTED** (no craft/HUD/stick
+    response in ~12–30s post-state-8); H-m2 **CONFIRMED** (STAR WARS gold bumper → desert
+    sky/sand dive; hold_01–09 identical MD5 freeze); H-m3 **CONFIRMED** (`fs` 4362→4602
+    during 640 cutscene then **plateau 4602** after mission overlay while VI present continues;
+    thr-resume-skip=0); H-m4 **REFUTED as hard block** (hangar-sel val=0 still loads section 2
+    + plays cutscene). **Alternate exit (s578 spaced, single-source):** 5→6→**7 (ACFD8)** →
+    AD034 Start → hangar-sel → **7→8**; then leave-path noise death before section 2. Leave
+    path intermittent (s578 deaths: `0x8000ce54` reserveAndEmitDLEntry; `0x8000247c`
+    coalesceFreeHeapBlocks — file not chase). Force path still diagnostic-only. **Primary
+    remaining:** reopen s178 stall with hangar-exit→mission-overlay as trigger — producer
+    stop vs RDP/FULL_SYNC stop. Do not chase -338 / leave-path noise.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.

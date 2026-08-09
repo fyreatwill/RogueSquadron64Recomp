@@ -46198,3 +46198,65 @@ run did not wait for / catch the case-6 confirm window the way s577's p2 timing 
 ### Next
 Longer post-state-8 hold: mission render? stick response? stall family? Log a0 at ACE94/AC8C0
 jal (not re-read of -0x2930) if reopening port. Do not chase -338.
+
+## Session 578 — post-state-8 hold: cutscene then fs freeze (H-m2/H-m3); not in-mission yet
+
+Date: 2026-08-09
+
+### Work unit
+Item -7 body: characterize post-state-8 / mission entry after real hangar exit
+(H-m1 in-mission render, H-m2 cutscene first, H-m3 s178 stall, H-m4 hangar-sel val=0).
+
+### Runs
+1. `s578_item7_post_exit` — `PROBE_MODE=double_start HOLD_S=45`. hangarbay n=900.
+   Died before p2. Crash `reserveAndEmitDLEntry+18192`/`last-guest-pc=0x8000ce54`
+   (stack still `runHangarSelectionFrame`; case5-entry n=0..184, no hangar-sel).
+   Filed as leave-path breadcrumb (near prior `0x8000ce40` family); do not chase reactively.
+2. `s578_item7_post_exit_retry` — same schedule. Died after p2 before p3.
+   Crash `coalesceFreeHeapBlocks+4424`/`0x8000247c` (s354-366 background noise).
+   state only 3→5; no hangar-sel.
+3. `s578_item7_post_exit_spaced` — `PROBES_OVERRIDE="p1:start:6 p2:start:15 p3:start:3 p4:start:8"`.
+   **Hangar exit reached** with an alternate state path: 3→5 (AC1C4) → auto 5→6 (ACE80)
+   → **6→7 (ACFD8)** → AD034 `a_start=1` → hangar-sel AC914 → **7→8 (AC94C)** +
+   graceful-menu. Then died on same `coalesceFreeHeapBlocks+4424`/`0x8000247c` before
+   section-2 mission overlay / hold window. hangarbay n=1100.
+4. Deep re-analysis of complete s577 log+PNGs (same instruments, HOLD_S=12 full survival)
+   as the only full post-exit capture this campaign still has.
+
+### s577 post-exit timeline (discriminating evidence)
+| t / event | Evidence |
+|-----------|----------|
+| hangar-sel + state 6→8 | line ~160449; hangar-sel **val=0** ship=0 |
+| VI 512→640 @ 0x6A2900 | 164.3s |
+| overlay **section 4** cinematic reload | line 169065 rom=0x137580 |
+| overlay **section 2** `.ovl.mission` | line 178922 rom=0xA5D30 |
+| VI 640→512 @ 0x690400 / 0x620400 flip | 183.7s |
+| fs | advanced 4362→4602 during 640 phase; **froze at 4602** from ~us#11008 post-mission-overlay through end of hold; VI present continues (origin flips) |
+| 0 CRASH / 0 missing-func / 0 thr-resume-skip / 0 UnhandledJump | full post-exit |
+
+### PNG classification (s577)
+| Frame | Content |
+|-------|---------|
+| after_p2_start_001 | Gold **STAR WARS** logo on black (Chapter-1 bumper) |
+| after_p3 / after_p4 / hold_01–09 | Desert sky + sand horizon (establishing / dive cutscene) |
+| hold_10_sr / hold_11 / hold_12 / grace | Same desert, slight camera tilt; **no craft / no HUD / no stick response** |
+| hold_01–09 | 9× identical MD5 (frozen frame) while camera still drifts later |
+
+### Verdicts
+| Hyp | Result |
+|-----|--------|
+| H-m1 mission overlay ⇒ in-mission render within ~30s of state 8 | **REFUTED** |
+| H-m2 cutscene/cinematic before gameplay | **CONFIRMED** (section 4 then section 2; STAR WARS → desert) |
+| H-m3 post-exit s178 graphics-task-submission stall | **CONFIRMED** (fs plateau + continuous present after mission overlay; thr-resume-skip=0) |
+| H-m4 hangar-sel val=0 blocks mission arm | **REFUTED as hard block** (val=0 yet section 2 loads + cutscene plays) |
+
+### Alternate hangar-exit path (s578 spaced, single-source)
+Natural confirm is not only case-6 ACE94 → 6→8. Spaced p2 also saw **case path through state 7**
+(ACFD8 write, AD034 Start poll) → hangar-sel → 7→8. Product-relevant: both reach state 8 +
+hangar-sel; force path (s576 AC8C0) still skips case 6/7 and never loaded section 2 in that run.
+
+### Next
+Reopen **s178 stall** with hangar-exit → mission-overlay as the known trigger (item -7 DoD
+blocker is now "cutscene plays then RDP fs freezes", not "can't leave hangar"). Discriminate
+producer-stop vs RDP/FULL_SYNC stop in one instrumented run. Do not chase leave-path
+`0x8000ce54` / coalesce noise reactively. Do not treat force as product fix.
