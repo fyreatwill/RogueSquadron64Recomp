@@ -1,0 +1,75 @@
+[
+  {
+    "guard": "RECORD_DEFERRED_DRAW_REF_VARIANT_R2_GUARD",
+    "tag": "record-deferred-draw-ref-variant-r2-guard",
+    "env": "ROGUESQ_LOG_RECORD_DEFERRED_DRAW_REF_VARIANT_R2_GUARD",
+    "pc": "0x800084E0",
+    "func": "recordDeferredDrawRefVariant",
+    "rn": 2,
+    "cnt": 3
+  },
+  {
+    "guard": "RECORD_DEFERRED_DRAW_REF_A_R2_GUARD",
+    "tag": "record-deferred-draw-ref-a-r2-guard",
+    "env": "ROGUESQ_LOG_RECORD_DEFERRED_DRAW_REF_A_R2_GUARD",
+    "pc": "0x8000C7C4",
+    "func": "recordDeferredDrawRefA",
+    "rn": 2,
+    "cnt": 3
+  },
+  {
+    "guard": "RECORD_DEFERRED_DRAW_REF_B_R2_GUARD",
+    "tag": "record-deferred-draw-ref-b-r2-guard",
+    "env": "ROGUESQ_LOG_RECORD_DEFERRED_DRAW_REF_B_R2_GUARD",
+    "pc": "0x8000C8E8",
+    "func": "recordDeferredDrawRefB",
+    "rn": 2,
+    "cnt": 3
+  },
+  {
+    "guard": "RECORD_DEFERRED_DRAW_REF_C_R2_GUARD",
+    "tag": "record-deferred-draw-ref-c-r2-guard",
+    "env": "ROGUESQ_LOG_RECORD_DEFERRED_DRAW_REF_C_R2_GUARD",
+    "pc": "0x8000CA10",
+    "func": "recordDeferredDrawRefC",
+    "rn": 2,
+    "cnt": 3
+  },
+  {
+    "guard": "RECORD_DEFERRED_DRAW_REF_D_R2_GUARD",
+    "tag": "record-deferred-draw-ref-d-r2-guard",
+    "env": "ROGUESQ_LOG_RECORD_DEFERRED_DRAW_REF_D_R2_GUARD",
+    "pc": "0x8000CB34",
+    "func": "recordDeferredDrawRefD",
+    "rn": 2,
+    "cnt": 3
+  },
+  {
+    "guard": "HEAP_FREE_LIST_DEQUEUE_R5_GUARD",
+    "tag": "heap-free-list-dequeue-r5-guard",
+    "env": "ROGUESQ_LOG_HEAP_FREE_LIST_DEQUEUE_R5_GUARD",
+    "pc": "0x8000D0D4",
+    "func": "heapFreeListDequeue",
+    "rn": 5,
+    "cnt": 3
+  },
+  {
+    "guard": "RENDER_LIT_TEXTURED_MESH_FACES_R11_GUARD",
+    "tag": "render-lit-textured-mesh-faces-r11-guard",
+    "env": "ROGUESQ_LOG_RENDER_LIT_TEXTURED_MESH_FACES_R11_GUARD",
+    "pc": "0x8000FA40",
+    "func": "renderLitTexturedMeshFaces",
+    "rn": 11,
+    "cnt": 3
+  },
+  {
+    "guard": "SIBLING_PTR_WRITE_GUARD site=0x80010B4C",
+    "tag": "sibling-ptr-write-guard",
+    "env": "ROGUESQ_LOG_SIBLING_PTR_WRITE_GUARD",
+    "pc": "0x80010B4C",
+    "func": "submitSceneNodeRender",
+    "rn": null,
+    "cnt": null,
+    "note": "item -340 gap after 0x80010B48"
+  }
+]
