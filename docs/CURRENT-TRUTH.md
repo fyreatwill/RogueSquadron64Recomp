@@ -23,13 +23,14 @@ Priority order for upcoming iterations, set after the 300-session review:
    (131/131 + residual walk/attr gaps -341..-345).** **Item -320 FULLY CLOSED 2/2 s566**
    (safe mini-epilogue). **Item -346 FULLY CLOSED 2/2 s567** (R6 r3-base gap at `0x8000D6D0`;
    s567 confirm hangarbay n=2700 full 300s rc=0, 0 r6 fires, no 0x8000d6d0 crash).
-   **Item -348 FIXED 1/2 s568** (SIBLING_PTR DIRECT residual same-base gap class: 218 sites).
+   **Item -348 FULLY CLOSED 2/2 s569** (SIBLING_PTR DIRECT residual same-base gap class: 218
+   sites; freelist R/ATTR residual EMPTY under dual scan — DIRECT residual campaign exhausted).
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s568)
+## Current truth (established by session 295; unchanged, reviewed through s569)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -150,15 +151,16 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -348. The next NEW item takes -349.
 
--348. **(s568) SIBLING_PTR DIRECT residual same-base gap class — FIXED 1/2.** Systematic audit of
-    the `-334/-340/-345/-346` model across all applied freelist/sibling guards. Dual offline scan
-    (focus-family seeds + all-PATCH MEM_W seeds): **140 unique NEEDS_GUARD**, all **SIBLING_PTR**
-    (102 TIGHT, 92 classic 0X0→0X4); freelist R-numbered + ATTR residual **EMPTY**; packing not
-    reopened. Extended `SIBLING_PTR_WRITE_GUARD` by **218 sites** (w1=159 TIGHT+delay-dups,
-    w2=52 multi-field tails, w3=7 second-order; float stores at `0x80017264`/`0x80017268`
-    packing-adjacent DEFERRED). **1st live-verify:** hangarbay n=2900, full ~300s rc=0, 0 CRASH,
-    0 sibling-ptr-write fires (true-negative). 2nd confirm queued
-    `soak_queue/s568_sibling_residual_gap_confirm.sh`.
+-348. **(s568/s569) SIBLING_PTR DIRECT residual same-base gap class — FIXED and FULLY CLOSED 2/2
+    (s569).** Systematic audit of the `-334/-340/-345/-346` model across all applied freelist/
+    sibling guards. Dual offline scan (focus-family seeds + all-PATCH MEM_W seeds): **140 unique
+    NEEDS_GUARD**, all **SIBLING_PTR** (102 TIGHT, 92 classic 0X0→0X4); freelist R-numbered + ATTR
+    residual **EMPTY**; packing not reopened. Extended `SIBLING_PTR_WRITE_GUARD` by **218 sites**
+    (w1=159 TIGHT+delay-dups, w2=52 multi-field tails, w3=7 second-order; float stores at
+    `0x80017264`/`0x80017268` packing-adjacent DEFERRED). **1st (s568):** hangarbay n=2900, full
+    ~300s rc=0, 0 sibling-ptr-write fires. **2nd (s569 retry after WEAK item-306 discard of queued
+    confirm):** hangarbay n=3000, full ~300s rc=0, 0 fires, 0 CRASH — CLEAN. DIRECT residual
+    same-base campaign for freelist/sibling write-guard lineage **exhausted**.
 
 -347. **(s566) Single-occurrence breadcrumb, filed not chased**, from item -346's 1st live-verify.
     `transformSceneLights+2456`/`last-guest-pc=0x80010134` (`hangarbay-entry n=2600`). Guest
@@ -320,13 +322,13 @@ a range pointer. Highest allocated so far: -348. The next NEW item takes -349.
     (116-131). Full guard table: `docs/PROJECT-OVERVIEW.md` §22-§25.
     **s558–s564:** freelist WRITE campaign CLOSED (details under -341..-345). **s565–s567:** item
     -320 root-caused to `projectModelBoundsToScreen` early-exit s-reg clobber and CLOSED 2/2; item
-    -346 residual r3-base write at `0x8000D6D0` FIXED+CLOSED 2/2 (R6). **s568:** SIBLING_PTR DIRECT
-    residual same-base class (item -348) 218 sites FIXED 1/2; freelist R/ATTR residual EMPTY under
-    dual scan. **Standing gotchas** (full: PROJECT-OVERVIEW §22-§25): hangarbay positive control
-    (s536); cross-check `last-guest-pc` not host symbol (s541); weak item -306 early deaths
-    discard+retry; early-guard `goto` full epilogue only if ALL callee-saves already spilled
-    (s565); breadcrumb occ counts re-tally SOAK-RESULTS (s564). Raw detail: `PORTING-STATE.md`
-    Sessions 490-568.
+    -346 residual r3-base write at `0x8000D6D0` FIXED+CLOSED 2/2 (R6). **s568–s569:** SIBLING_PTR
+    DIRECT residual same-base class (item -348) 218 sites FIXED+CLOSED 2/2; freelist R/ATTR residual
+    EMPTY under dual scan — DIRECT residual campaign exhausted. **Standing gotchas** (full:
+    PROJECT-OVERVIEW §22-§25): hangarbay positive control (s536); cross-check `last-guest-pc` not
+    host symbol (s541); weak item -306 early deaths discard+retry; early-guard `goto` full epilogue
+    only if ALL callee-saves already spilled (s565); breadcrumb occ counts re-tally SOAK-RESULTS
+    (s564). Raw detail: `PORTING-STATE.md` Sessions 490-569.
 
 -316. **(s488-490) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED 2/2.** A scope gap in the existing s436
     `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`): validated one deref but not two propagating

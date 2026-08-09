@@ -45664,3 +45664,66 @@ full ~300s rc=0 (102 frames), **0 CRASH**, **0** `[sibling-ptr-write-guard]` fir
 - `scratch/agent/s568_sibling_residual_sites.json`, `s568_wave2_sites.json`, `s568_wave3_sites.json`
 - `scratch/agent/s568_sibling_residual_gap_manual.sh` + soak_results/
 - N64Recomp `fixup_game_funcs.py` s568 w1/w2/w3 table rows; surgical `funcs_{3,4}.c`
+
+## Session 569 — item -348 SIBLING_PTR DIRECT residual CLOSED 2/2
+
+### Soak fold-in
+- `s568_sibling_residual_gap_confirm` (loop): **WEAK** item-306 early death
+  (`setByteAcrossEntryList+176`/`last-guest-pc=0x800aafa8`, hangarbay n=0, process gone
+  20.7s after 7 frames). Discarded per standing weak-draw gotcha.
+
+### Work unit — 2nd confirm retry of item -348 (`HYPOTHESIS-ID: direct-residual-gap-audit`)
+
+After WEAK discard, re-ran the same hangarbay recipe as
+`s568_sibling_residual_gap_confirm` under
+`scratch/agent/s569_sibling_residual_gap_confirm_retry.sh` (all passive breadcrumb envs armed;
+`ROGUESQ_LOG_SIBLING_PTR_WRITE_GUARD=1` + residual freelist/project-model-bounds tags).
+
+**Hypotheses:**
+1. H1: CLEAN confirm (hangarbay n≥10, no residual-site crash) → close -348 2/2.
+2. H2: WEAK again on item-306 → discard+retry / keep 1/2 open.
+3. H3: crash at a residual gap_pc we just guarded → incomplete class.
+4. H4: sibling-ptr-write fires then survives → positive engagement, still closes if no residual crash.
+
+### Result — CLEAN full duration
+
+| Metric | Value |
+|---|---|
+| hangarbay-entry | **n=3000** (strong positive control) |
+| duration | full ~300s, 100 frames, rc=0 |
+| CRASH / ABORT | **0** |
+| `[sibling-ptr-write-guard]` fires | **0** (true-negative; intermittent corruption) |
+| freelist R6 / ATTR / project-model-bounds fires | 0 |
+| `[missing-func]` | 0 |
+
+**H1 confirmed. Item -348 FULLY CLOSED 2/2.**
+
+Combined with s568 dual offline scan (freelist R-numbered + ATTR residual EMPTY; all 140 NEEDS_GUARD
+were SIBLING_PTR; packing float sites DEFERRED only), the DIRECT residual same-base gap campaign
+for the freelist/sibling write-guard lineage is exhausted. No new residual gap_pc crash in either
+of the two valid hangarbay soaks.
+
+### Breadcrumb re-tally (SOAK-RESULTS, s569)
+
+| Item | PC | SOAK-RESULTS hits | Status |
+|---|---|---|---|
+| -332 | 0x8001086c | 2 | still moderate; watch for 3rd before source-trace |
+| -347 | 0x80010134 | 1 | single-occ; do not chase |
+| -323 | 0x8000ae40 | 2 | watch |
+| -326 | 0x800025ac | 0 in SOAK-RESULTS body (1 in raw crash logs historically) | urgent only on 2nd |
+| -306 | 0x800aafa8 | 11 | known weak-draw noise; discard when hangarbay n single-digit |
+
+No 3rd occurrence of -332. Do not escalate single-occ breadcrumbs.
+
+### Ruled out
+- That the s568 residual 218-site batch was incomplete in a way that shows up on hangarbay soaks
+  (2/2 clean true-negatives with strong positive controls).
+- That freelist residual same-base gaps reappeared after -346 (still empty under live soaks).
+
+### Next
+Pivot off `direct-residual-gap-audit`. Strategic priority: M5 lead recheck overdue (last s520,
+due s523+). Highest-info M3 fallback if M5 still lead-empty: item -7 M3 DoD body
+(`PROBE_MODE=start_only HOLD_S=60`) or escalate -332 only on a 3rd independent occurrence.
+
+### Artifacts
+- `scratch/agent/s569_sibling_residual_gap_confirm_retry.sh` + soak_results/run.log
