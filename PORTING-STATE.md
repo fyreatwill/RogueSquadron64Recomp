@@ -45587,3 +45587,80 @@ intermittent corruption as every guard in this campaign), **no crash** at `0x800
 Highest-information systematic next: DIRECT residual-gap audit of the
 `-334/-340/-345/-346` model (unguarded write on same base reg immediately before/after an
 existing freelist or sibling-ptr guard site). Do not chase single-occ breadcrumbs.
+
+## Session 568 — SIBLING_PTR DIRECT residual same-base gap class (item -348) FIXED 1/2
+
+### Soak fold-in
+- No new loop soaks since s567 (queue empty at session start). s567 item -346 CLOSED 2/2 already folded.
+
+### Work unit — DIRECT residual-gap audit (`HYPOTHESIS-ID: direct-residual-gap-audit`)
+
+Model (items -334/-340/-345/-346): after an existing freelist/sibling-ptr guard range-checks
+register R and skips a write, is there an *unguarded* `MEM_W(off, ctx->rR)` on the same base
+within a short window (including delay-slot duplicates), without reassignment of R?
+
+**Hypotheses:**
+1. H1: more residual same-base writes exist after recently landed guards → enumerate + guard.
+2. H2: residual EMPTY after -346 → document and pivot.
+3. H3: packing-DEFERRED sites reclassify as freelist → only with new contradictory evidence.
+
+**Discriminating measurement:** dual offline scan over applied `RecompiledFuncs/funcs_*.c`:
+- Scan A: seed from focus-family PATCH blocks (SIBLING/HEAPLISTDEQ/R-numbered/FREELIST).
+- Scan B: seed from every inside-PATCH `MEM_W`, look forward for unguarded same-base `MEM_W`
+  within WINDOW=24 lines without `ctx->rN =` reassignment.
+
+### Offline results (two independent scans, agree on merge)
+
+| Metric | Value |
+|---|---|
+| Scan A focus seeds | 350 |
+| Scan B all-patch seeds | 856 |
+| Merged NEEDS_GUARD (unique file/line/off/reg) | 140 |
+| TIGHT (guest PC ≤0x10 or line≤12) | 102 |
+| Classic 0X0→0X4 TIGHT | 92 |
+| Family of all 140 | **SIBLING_PTR only** |
+| R-numbered HEAP_FREE_LIST_DEQUEUE residual | **EMPTY** |
+| HEAPLISTDEQ_ATTR residual | **EMPTY** |
+
+**H1 confirmed** for SIBLING_PTR; **H2 confirmed** for freelist R/ATTR classes; **H3 not reopened**.
+
+### Fix applied
+
+Extended `SIBLING_PTR_WRITE_GUARD` (env `ROGUESQ_LOG_SIBLING_PTR_WRITE_GUARD`, tag
+`[sibling-ptr-write-guard]`) with residual same-base sites. Three waves in one build:
+
+| Wave | Scope | Sites applied |
+|---|---|---|
+| w1 | Classic TIGHT 0X0→0X4 + delay-slot dups | 159 |
+| w2 | Multi-field chain tails (0X8/0XC/etc) after w1 | 52 |
+| w3 | Second-order tails after w2 | 7 |
+| **Total** | | **218** |
+
+Landed in `~/Documents/Tools/N64Recomp/fixup_game_funcs.py` (`_SIBLING_PTR_WRITE_SITES` table;
+untracked sibling checkout) + surgically applied to already-sentinel'd `RecompiledFuncs/funcs_3.c`
++ `funcs_4.c` (sentinel blocks re-fixup without full regen; same approach as s559–s567).
+Skip-on-invalid safe (same template as every other site in this family).
+
+Post-wave3 residual rescan: only 2 remaining hits are float-field stores at
+`0x80017264`/`0x80017268` (`MEM_W(..., ctx->f2.u32l)`) without clean guest-PC anchors —
+classified **packing-adjacent DEFERRED**, not freelist-class.
+
+### 1st live-verify
+
+`s568_sibling_residual_gap_manual`: hangarbay-entry **n=2900** (strong positive control),
+full ~300s rc=0 (102 frames), **0 CRASH**, **0** `[sibling-ptr-write-guard]` fires
+(true-negative baseline; intermittent corruption as every guard in this campaign).
+
+**Item -348 FIXED 1/2.** 2nd confirm queued:
+`scratch/agent/soak_queue/s568_sibling_residual_gap_confirm.sh`.
+
+### Ruled out
+- That freelist R2/R6/ATTR residual same-base gaps remain after -346 (EMPTY under dual scan).
+- That the DIRECT residual-gap class was empty for SIBLING_PTR (140→218 after delay dups).
+- That packing DEFERRED sites reclassified as freelist (H3 not supported).
+
+### Artifacts
+- `scratch/agent/s568_direct_residual_gap.json`, `s568_direct_residual_classified.json`
+- `scratch/agent/s568_sibling_residual_sites.json`, `s568_wave2_sites.json`, `s568_wave3_sites.json`
+- `scratch/agent/s568_sibling_residual_gap_manual.sh` + soak_results/
+- N64Recomp `fixup_game_funcs.py` s568 w1/w2/w3 table rows; surgical `funcs_{3,4}.c`
