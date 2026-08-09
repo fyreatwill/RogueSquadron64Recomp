@@ -20,19 +20,18 @@ Priority order for upcoming iterations, set after the 300-session review:
    the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW §18-§19).
    Items -312..-322 (s481-518, the `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage) are
    all fully CLOSED — PROJECT-OVERVIEW §20-§25. **Item -317 step 3 (~150-location blanket sweep)
-   status as of s562: freelist WRITE idioms of step 3 CLOSED (131/131 FULLY CLOSED 2/2). Classic
+   status as of s563: freelist WRITE idioms of step 3 CLOSED (131/131 FULLY CLOSED 2/2). Classic
    r2/0X4 115/115; residual free-list-node rN/0X0 16/16. Packing DEFERRED (s562 re-scan 21/22
    write-base=DL cursor). Freelist-walk GUARD4 (-341) FULLY CLOSED 2/2. Residual alloc-tail GUARD2
-   (-343, 92 sites) FULLY CLOSED 2/2 s562. GUARD3+GUARD4 (-342) 1/2 pending (3rd confirm retry
-   after 2 weak item-306 deaths). **New s562: non-r3 dual-walk residual (-344)** — s560 r3-only
-   gap: allocateDisplayListBuffer + renderLitMeshFaceGroup GUARD2/3/4 + countDisplayListChunks
-   simple-walk; 1st CLEAN hangarbay n=2600. Item -345 DIRECT gap after -322 filed.
+   (-343) FULLY CLOSED 2/2. GUARD3+GUARD4 (-342) FULLY CLOSED 2/2 s563. Non-r3 dual-walk residual
+   (-344) FULLY CLOSED 2/2 s563. **New s563: item -345** DIRECT gap after -322
+   `HEAPLISTDEQ_ATTR_WRITE_GUARD` — 7 residual stack-slot sites guarded; 1st CLEAN hangarbay n=2600.
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s562)
+## Current truth (established by session 295; unchanged, reviewed through s563)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -153,31 +152,32 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -345. The next NEW item takes -346.
 
--345. **(s562) `heapFreeListDequeue` DIRECT gap after item -322 `HEAPLISTDEQ_ATTR_WRITE_GUARD`
-    site=`0x8000D92C` — FILED, not fixed this session.** Same-run evidence: guard fired
-    `n=0 bad_ptr=0x8` then crash at `last-guest-pc=0x8000d944` (`MEM_W(0X4, r3)` after r3 reloaded
-    from the same stack slot `0x3C` that fed the guarded r2 write). Sibling unguarded writes at
-    `0x8000D94C` (`0X8`). Same gap model as items -334/-340. Escalate next if not already fixed.
+-345. **(s562/s563) `heapFreeListDequeue` DIRECT gap after item -322 `HEAPLISTDEQ_ATTR_WRITE_GUARD`
+    site=`0x8000D92C` — FIXED, 1st live-verify CLEAN (2nd confirm queued).** Same-run root cause
+    (s562): guard fired `n=0 bad_ptr=0x8` then crash at `last-guest-pc=0x8000d944` (`MEM_W(0X4, r3)`
+    after r3 reloaded from the same stack slot `0x3C` that fed the guarded r2 write). Same gap
+    model as items -334/-340. Extended family to **7 residual sites** sharing env
+    `ROGUESQ_LOG_HEAPLISTDEQ_ATTR_WRITE_GUARD`: `0x8000D944`, `0x8000D94C`, `0x8000D964` (x2 recomp
+    delay-slot), `0x8000D978`, `0x8000D980`, `0x8000D994` (bit-0x10 path + L_8000D968 alt). Skip
+    safe (flag tests reassign r2; epilogue does not re-read). **1st (s563):** hangarbay n=2600, 0
+    fires (true-negative), no crash at 0x8000D944; crash on item -320 2nd occ. Queued:
+    `scratch/agent/soak_queue/s563_heaplistdeq_attr_gap_confirm.sh`.
 
--344. **(s562) Non-r3 freelist dual-walk residual (s560 r3-only gap) + freelist simple-walk —
-    FIXED, 1st live-verify CLEAN (2nd confirm queued).** Dual-walk any-reg enum: 129 total,
-    119 already G3+G4 (118 r3 + 1 r18). Residual freelist-shaped NONE: `allocateDisplayListBuffer`
-    `0x80007DA8` r4 + `renderLitMeshFaceGroup` `0x80013EEC` r4 (post-findAndUnlink). Applied
-    GUARD2+3+4 x2 (reuse `ROGUESQ_LOG_ALLOC_TAIL_GUARD{2,3,4}`) + `FREELIST_SIMPLE_WALK_GUARD`
-    x1 on `countDisplayListChunks` `0x80007CC8`. Packing residual re-classified DEFERRED (21/22
-    tracer hits write-base=DL cursor s0/s2/appendRdp; freelist branch-only). **1st:** hangarbay
-    n=2600, 0 fires on new residual sites, crash on item -345. Queued:
-    `scratch/agent/soak_queue/s562_non_r3_freelist_walk_confirm.sh`.
+-344. **(s562/s563) Non-r3 freelist dual-walk residual (s560 r3-only gap) + freelist simple-walk —
+    FIXED and FULLY CLOSED 2/2 (s563).** Residual freelist-shaped NONE: `allocateDisplayListBuffer`
+    `0x80007DA8` r4 + `renderLitMeshFaceGroup` `0x80013EEC` r4 + `countDisplayListChunks` simple-walk
+    `0x80007CC8`. GUARD2+3+4 x2 + `FREELIST_SIMPLE_WALK_GUARD` x1. Packing DEFERRED (21/22). **1st:**
+    hangarbay n=2600. **2nd (s563 fold):** hangarbay n=2900, 0 fires; crash `coalesceFreeHeapBlocks`
+    `0x800023b0` unrelated — CLEAN.
 
 -343. **(s561/s562) Residual freelist initial-deref GUARD2 (post-null-check `lw $v0, 0x0($aN)`) —
     FIXED and FULLY CLOSED 2/2 (s562).** 92 sites (`ROGUESQ_LOG_ALLOC_TAIL_GUARD2`). 1st: hangarbay
     n=2700 full 300s 0 fires. 2nd (s562 fold): hangarbay n=2600, 0 fires, crash on catalogued
     `tickWrappingTimerAccumulatorList` div0 `0x80054744` — CLEAN.
 
--342. **(s560) Residual freelist-walk GUARD3+GUARD4 (post-findAndUnlink walk-to-tail) — FIXED,
-    1st live-verify CLEAN; 2nd confirm still pending (3 consecutive weak item-306 early deaths
-    s560/s561/s562).** GUARD3 x94 + GUARD4 x92. 1st: hangarbay n=2600. Retry2 queued:
-    `scratch/agent/soak_queue/s562_alloc_tail_guard34_confirm_retry2.sh`.
+-342. **(s560/s563) Residual freelist-walk GUARD3+GUARD4 (post-findAndUnlink walk-to-tail) — FIXED
+    and FULLY CLOSED 2/2 (s563).** GUARD3 x94 + GUARD4 x92. 1st: hangarbay n=2600. 2nd after 3
+    consecutive weak item-306 deaths: hangarbay n=2900, full ~300s rc=0, 0 fires — CLEAN.
 
 -341. **(s559/s561) Freelist-walk GUARD4 systematic audit (item -339 shape) — FIXED and FULLY
     CLOSED 2/2 (s561).** GUARD3-without-GUARD4 gap at 16 sites (`emitAllocatedDLCommand` x3
@@ -257,17 +257,19 @@ a range pointer. Highest allocated so far: -345. The next NEW item takes -346.
     `findAndUnlinkSmallestEntry+356`/`0x8000d698`. Watch all six for recurrence before escalating.
 
 -320..-327. **Eight breadcrumbs surfaced by item -317 step 3's live-verifies (s508-524), all
-    filed-not-chased except two escalated and resolved.** -320 (s508) `loadCutsceneAssetsByIndex+1860`/
-    `0x800aafb8`. -323 (s514) `beginFrameDLChunk+27456`/`0x8000ae40` (same function as -319, different
-    PC — not a 3rd -319 occurrence). -324 (s521) `heapFreeListInsert+72`/`0x80015544`. -325 (s522)
-    `findLookupEntryByKey+2212`/`0x800ad0dc`. **-321** (2 occurrences) — escalation **REFUTED s518**
-    (shared return-epilogue instruction, not real corroboration). **-322** (3 occurrences) — **FIXED
-    s517 (`HEAPLISTDEQ_ATTR_WRITE_GUARD`), FULLY CLOSED 2/2 s518**. **-326** (s524) `do_rom_read+608`/
-    `0x800025ac`, Bus error — matches the `do_rom_read`/`piDmaWorker` DMA-corruption race believed
-    fixed since s147; **if a 2nd occurrence appears, treat it as urgent**.
-    **-327** (3 occurrences, 3rd s549) `submitSceneNodeRender+67668`/`0x80010e6c`, Bus error —
-    **ROOT-CAUSED AND FIXED s549** as `DL_LIST_APPEND_DEREF_GUARD` (84 sites); FULLY CLOSED 2/2
-    with item -334 s550. Full mechanism: `PORTING-STATE.md` Session 549.
+    filed-not-chased except two escalated and resolved.** **-320** (s508, **2nd occ s563** —
+    `loadCutsceneAssetsByIndex+1860`/`0x800aafb8`; confidence low→moderate, watch for 3rd before
+    source-trace). -323 (s514) `beginFrameDLChunk+27456`/`0x8000ae40` (same function as -319,
+    different PC — not a 3rd -319 occurrence). -324 (s521) `heapFreeListInsert+72`/`0x80015544`.
+    -325 (s522) `findLookupEntryByKey+2212`/`0x800ad0dc`. **-321** (2 occurrences) — escalation
+    **REFUTED s518** (shared return-epilogue instruction, not real corroboration). **-322** (3
+    occurrences) — **FIXED s517 (`HEAPLISTDEQ_ATTR_WRITE_GUARD`), FULLY CLOSED 2/2 s518**; residual
+    gap closed as item -345 s563. **-326** (s524) `do_rom_read+608`/`0x800025ac`, Bus error —
+    matches the `do_rom_read`/`piDmaWorker` DMA-corruption race believed fixed since s147; **if a
+    2nd occurrence appears, treat it as urgent**. **-327** (3 occurrences, 3rd s549)
+    `submitSceneNodeRender+67668`/`0x80010e6c`, Bus error — **ROOT-CAUSED AND FIXED s549** as
+    `DL_LIST_APPEND_DEREF_GUARD` (84 sites); FULLY CLOSED 2/2 with item -334 s550. Full mechanism:
+    `PORTING-STATE.md` Session 549.
 
 -319. **(s503/s505/s519, 3 occurrences) `beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0` — FIXED
     s520 (`SIBLING_PTR_WRITE_GUARD` site=`0x8000B0D0`, 121st site in that family), FULLY CLOSED 2/2
@@ -293,14 +295,15 @@ a range pointer. Highest allocated so far: -345. The next NEW item takes -346.
     non-null fallthrough has no `0x80000000`-`0x80800000` range check before write-through deref —
     skip on invalid is safe). Classic r2/0X4: 115/115. Residual free-list-node rN/0X0: 16/16
     (116-131). Full guard table: `docs/PROJECT-OVERVIEW.md` §22-§25.
-    **s558–s562:** freelist-node write MATCH residual EMPTY; packing DEFERRED (s562 re-confirmed
-    21/22). **s559/s561** freelist-walk GUARD4 (-341) FULLY CLOSED 2/2. **s561/s562** residual
-    alloc-tail GUARD2 (-343) FULLY CLOSED 2/2. **s560** GUARD3+GUARD4 (-342) 1/2 pending.
-    **s562** non-r3 dual-walk residual (-344) 1st CLEAN hangarbay n=2600. **Standing gotchas**
-    (full: PROJECT-OVERVIEW §22-§25): never pass custom `--out` to `--scan` (s521); hangarbay
-    positive control (s536); cross-check `last-guest-pc` not host symbol (s541); weak item -306
-    early deaths discard+retry (s548-s561); n=0 guard fire + bad_ptr vs fault address (s549/s557);
-    residual freelist-node uses r4/r7 not r2 (s556). Raw detail: `PORTING-STATE.md` Sessions 490-561.
+    **s558–s563:** freelist-node write MATCH residual EMPTY; packing DEFERRED (s562). **s559/s561**
+    freelist-walk GUARD4 (-341) FULLY CLOSED 2/2. **s561/s562** residual alloc-tail GUARD2 (-343)
+    FULLY CLOSED 2/2. **s560/s563** GUARD3+GUARD4 (-342) FULLY CLOSED 2/2. **s562/s563** non-r3
+    dual-walk residual (-344) FULLY CLOSED 2/2. **s563** item -345 residual attr-write gap after
+    -322 FIXED 1/2. **Standing gotchas** (full: PROJECT-OVERVIEW §22-§25): never pass custom
+    `--out` to `--scan` (s521); hangarbay positive control (s536); cross-check `last-guest-pc` not
+    host symbol (s541); weak item -306 early deaths discard+retry (s548-s562); n=0 guard fire +
+    bad_ptr vs fault address (s549/s557); residual freelist-node uses r4/r7 not r2 (s556). Raw
+    detail: `PORTING-STATE.md` Sessions 490-563.
 
 -316. **(s488-490) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED 2/2.** A scope gap in the existing s436
     `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`): validated one deref but not two propagating

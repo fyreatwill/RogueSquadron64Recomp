@@ -45401,3 +45401,38 @@ armed and reachable code path proven via hangarbay control). Item -343 FIXED 1/2
 - N64Recomp `fixup_game_funcs.py` s562 block; surgical `RecompiledFuncs/funcs_{3,4}.c`
 - docs/CURRENT-TRUTH.md, scratch/agent/NEXT.md, SOAK-RESULTS.md, PORTING-STATE.md
 - scratch/agent/s562_residual_summary.json, s562_non_r3_freelist_walk_manual.sh
+
+## Session 563 — item -345 HEAPLISTDEQ_ATTR_WRITE residual gap 1st CLEAN; -342/-344 CLOSED 2/2
+
+### Fold-in (s562 confirms from soak queue)
+- **s562_alloc_tail_guard34_confirm_retry2**: CLEAN full ~300s (rc=0, 103 frames), hangarbay-entry **n=2900**, 0 fires on alloc-tail-guard2/3/4, NO crash. **Item -342 FULLY CLOSED 2/2** (after 3 consecutive weak item-306 deaths discarded per standing gotcha).
+- **s562_non_r3_freelist_walk_confirm**: hangarbay-entry **n=2900**, 0 fires on new residual / freelist-simple-walk. Crash at 127.6s on `coalesceFreeHeapBlocks+2016` / `last-guest-pc=0x800023b0` (unrelated). **Item -344 FULLY CLOSED 2/2**.
+
+### Work unit — item -345 DIRECT gap (Option A from NEXT.md)
+s562 same-run root cause: `[heaplistdeq-attr-write-guard] site=0x8000D92C n=0 bad_ptr=0x8` then crash `last-guest-pc=0x8000d944`. Source:
+
+```
+// 0x8000D924: ctx->r2 = MEM_W(sp, 0X3C);   // load base
+// 0x8000D92C: MEM_W(0X0, r2) = r3;         // GUARDED (item -322)
+// 0x8000D93C: ctx->r3 = MEM_W(sp, 0X3C);   // SAME slot reload
+// 0x8000D944: MEM_W(0X4, r3) = r2;         // UNGUARDED → crash
+// 0x8000D94C: MEM_W(0X8, r3) = r2;
+// 0x8000D964: MEM_W(0XC, r3) = r2;         // x2 recomp delay-slot
+// L_8000D968 alt: 0x8000D978/980/994 same shape
+```
+
+Same model as items -334/-340. Applied **7 residual sites** reusing `ROGUESQ_LOG_HEAPLISTDEQ_ATTR_WRITE_GUARD` / `[heaplistdeq-attr-write-guard]`. Skip-on-invalid safe (flag tests reassign r2; epilogue L_8000D998 does not re-read these fields).
+
+Landed in `fixup_game_funcs.py` s563 block + surgical `RecompiledFuncs/funcs_3.c`. Built OK.
+
+### 1st live-verify
+`s563_heaplistdeq_attr_gap_manual`: hangarbay-entry **n=2600**, **0 fires** on heaplistdeq-attr-write any site (true-negative baseline), **no crash at 0x8000D944**. Crashed at 114.9s on `loadCutsceneAssetsByIndex+1860` / `last-guest-pc=0x800aafb8` — **2nd independent occurrence of item -320** (was 1 occ s508; confidence low→moderate, watch for 3rd before source-trace). Item -345 FIXED 1/2.
+
+### Queued
+- `scratch/agent/soak_queue/s563_heaplistdeq_attr_gap_confirm.sh` (item -345 2nd confirm)
+
+### Files
+- N64Recomp `fixup_game_funcs.py` s563 block (untracked sibling checkout); surgical `RecompiledFuncs/funcs_3.c`
+- docs/CURRENT-TRUTH.md, scratch/agent/NEXT.md, SOAK-RESULTS.md, PORTING-STATE.md
+- scratch/agent/soak_queue/s563_heaplistdeq_attr_gap_confirm.sh
+- scratch/agent/soak_results/s563_heaplistdeq_attr_gap_manual/
