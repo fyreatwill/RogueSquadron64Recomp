@@ -2150,3 +2150,44 @@ and any recurrence gets tracked in `docs/CURRENT-TRUTH.md`'s Next-steps list, no
   between is weak corroboration on its own (unlike -319's three occurrences inside an 8-session span).
 
 Full session-by-session raw detail: `PORTING-STATE.md` Sessions 503-524.
+
+## 25. Item -317 step 3 continued (s526-537): guards 26-37 close out the `beginFrameDLChunk` 36-site
+tier and add first guards in `emitColorFillRect`/`submitSceneNodeRender`/`drawSubtitleText`, all FULLY
+CLOSED 2/2, migrated from CURRENT-TRUTH.md s538 maintenance pass
+
+Same fix shape as every guard in this lineage: a null check gates one arm safely, the non-null
+fallthrough has no `0x80000000`-`0x80800000` range check before a `MEM_W(0X4, ctx->r2) = ctx->r3;`
+write-through, and downstream control flow reloads the register from the `+0x63B0` global table again
+before further use, so skip-the-write-on-invalid is safe. Every guard in this table cleared its 1st
+live-verify AND 2nd confirm with 0 fires on the new guard itself, 0 regressions on any other armed
+guard family, and a real `hangarbay-entry` positive control both times.
+
+| # | Guard | Session fixed | Site | Function | Shared/reachability count | Crash the verify/confirm soaks hit (unrelated in every case) |
+|---|---|---|---|---|---|---|
+| 26 | `BEGIN_FRAME_DL_CHUNK_R5_GUARD` | s526 | `funcs_3.c:14815`/`0x8000AD84` | `beginFrameDLChunk` (5th site) | 36 | 1st: full 300s, zero crashes of any kind. 2nd confirm: clean, unrelated background noise |
+| 27 | `BEGIN_FRAME_DL_CHUNK_R6_GUARD` | s527 | `funcs_3.c:14815`-region/`0x8000B01C` | `beginFrameDLChunk` (6th site) | 36 | Downstream reload feeds the pre-existing `SCENE_NODE_CACHE4_GUARD` deref (s271), independent confirmation. 2nd confirm crashed on a NEW signature filed **item -328** (`submitSceneNodeRender+69820`/`0x80010ebc`, single occurrence, not chased) |
+| 28 | `BEGIN_FRAME_DL_CHUNK_R7_GUARD` | s528 | `funcs_3.c:15235`/`0x8000B144` | `beginFrameDLChunk` (7th site) | 36 | 1st: crashed on the already-catalogued `findLookupEntryByKey+2212`/`0x800ad0dc` (item -325). Confirm: full 346s, zero crashes |
+| 29 | `BEGIN_FRAME_DL_CHUNK_R8_GUARD` | s529 | `funcs_3.c:12407`/`0x8000A918` | `beginFrameDLChunk` (8th site) | 36 | 1st: crashed on a NEW signature filed **item -329** (`rebuildActiveDisplayObjectList+660`/`0x800ab060`, single occurrence, not chased). Confirm: crashed on the already-refuted item -321 signature (`unregisterServiceWorker+536`/`0x800ab1c4`) |
+| 30/31 | `BEGIN_FRAME_DL_CHUNK_R9_GUARD` + `R10_GUARD` (armed together, batch-instrumentation) | s530 | `0x8000B2B4` (load pair `0x8000B2A4`/`0x8000B2A8`) + `0x8000B40C` (load pair `0x8000B3FC`/`0x8000B400`) | `beginFrameDLChunk` (9th/10th sites, tier EXHAUSTED — the last two genuine candidates from the 36-site tier) | 36 | Both runs: full 300s/347s, zero crashes of any kind — the cleanest possible verify class. This closed the entire `beginFrameDLChunk` 36-site tier (R1-R10) |
+| 32 | `EMIT_COLOR_FILL_RECT_R1_GUARD` | s531 | `funcs_3.c:11625`/`0x8000A538` | `emitColorFillRect` (1st guard outside `beginFrameDLChunk` this campaign) | 30 | 1st: full 300s, zero crashes. Confirm: crashed on the already-catalogued `setByteAcrossEntryList+176`/`0x800aafa8` (item -306) |
+| 33 | `SUBMIT_SCENE_NODE_RENDER_R2_GUARD` | s532 | `funcs_4.c:4455`/`0x80010E10` | `submitSceneNodeRender` (2nd site alongside R1's `0x80010F38`) | 30 | Confirm crashed on the already-catalogued `loadCutsceneAssetsByIndex+1860`/`0x800aafb8` (item -320). Closed the campaign's first 33 guards to 33/33 fully closed for the first time since s490 |
+| 34 | `SUBMIT_SCENE_NODE_RENDER_R3_GUARD` | s533 | `funcs_4.c:3299`/`0x80010AAC` | `submitSceneNodeRender` (3rd site) | 28 | 1st: crashed on the item -6/-249/-259 background-noise family (INVESTIGATED AND CLOSED s422). Confirm: crashed on the item -306 `setByteAcrossEntryList+176` signature |
+| 35 | `SUBMIT_SCENE_NODE_RENDER_R4_GUARD` | s534 | `funcs_4.c`/`0x80010BF0` | `submitSceneNodeRender` (4th site) | 28 | 1st: crashed on item -320's signature. Confirm: full 346s, zero crashes |
+| 36 | `DRAW_SUBTITLE_TEXT_R1_GUARD` | s535 | `funcs_4.c`/`0x80016B58` | `drawSubtitleText` (1st guard, new function) | 27 | Both runs: full 300s/347s, zero crashes of any kind. **First session the raw tracer's top-ranked candidate (`renderLitTexturedMeshFaces`, reg=`r4`/off=`0X0`) was correctly REJECTED as a shape mismatch** — that write dereferences the function's own provably-non-null `$a0` argument, not a reloaded/derived global pointer; a CFG-reachability artifact of the tracer, not a shared-dataflow one |
+| 37 | `EMIT_COLOR_FILL_RECT_R2_GUARD` | s536 | `funcs_3.c`/`0x8000A3C4` | `emitColorFillRect` (2nd site alongside R1's `0x8000A538`) | 26 | 1st needed 3 attempts to get a valid positive control (1st too weak n=4 on item -324's signature, 2nd fully vacuous 0 hangar diagnostics despite rc=0 completion). 3rd attempt clean, crashed on item -320's signature. Confirm crashed on `heapFreeListInsert+72`/`0x800220b8` — a NEW signature, filed **item -330** (see below) |
+
+Guards 26-37 also reconfirmed s535-537 that the raw tracer's top-ranked pick (`funcs_3.c`,
+`renderLitTexturedMeshFaces`, reg=`r4`/off=`0X0`, count 27) is a stable, repeatedly-re-derived shape
+mismatch — every re-scan re-surfaces it at the top by raw count, and it must be re-checked and
+re-skipped each session rather than fixed, since `ctx->r4` there is the function's own argument, not
+the guarded `+0x63B0` reload idiom.
+
+**Item -330** (`heapFreeListInsert+72`/`last-guest-pc=0x800220b8`, 2 occurrences back-to-back s536/s537
+in the same session) — distinct from item -324's same-symbol `heapFreeListInsert+72`/`0x80015544`
+breadcrumb (different `last-guest-pc`, a different call site into the same function). Two occurrences
+back-to-back is weaker corroboration than it looks: both runs used the same binary, probe script, and
+adjacent wall-clock time, so a shared transient is the more likely explanation per the boring-first
+prior — watch for a 3rd occurrence in an unrelated run before escalating, same policy as item -327.
+Live status: `docs/CURRENT-TRUTH.md` Next-steps.
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 526-537.

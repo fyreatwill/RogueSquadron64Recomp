@@ -44260,3 +44260,52 @@ pending its 2nd confirm. ~108 locations remain unaudited across further tiers.
 `docs/CURRENT-TRUTH.md` size grew to 62762 bytes with this session's additions (was 59145 at session
 start, under the 60000 maintenance trigger) -- next iteration's Step 0 check will trigger a MAINTENANCE
 iteration.
+
+## Session 538 (2026-08-09): MAINTENANCE iteration — docs/CURRENT-TRUTH.md compacted 583→379 lines (204 net lines removed, -200 threshold met), 62762→43856 bytes (-30%)
+
+Step 0 triggered (`wc -c` read 62762, over the 60000-byte cap) — per `tools/agent/ITERATION.md`, this
+iteration ran no experiment; it compacted `docs/CURRENT-TRUTH.md` per the Maintenance section and
+NEXT.md's s537 handoff plan.
+
+**Migrated item -317's guard-by-guard narrative (guards 26-37: the `beginFrameDLChunk` R5-R10 tier
+close-out, `emitColorFillRect` R1-R2, `submitSceneNodeRender` R2-R4, `drawSubtitleText` R1 — s526-537)
+into `docs/PROJECT-OVERVIEW.md` as a new §25**, following the exact table format section 23 already
+established (guard | session | site | function | shared/reachability count | crash the verify hit).
+Preserved every fact needed to re-derive the campaign's state (site addresses, load pairs, session
+numbers, which breadcrumb each confirm surfaced) — nothing was dropped, only relocated and
+tabulated instead of prose-repeated. `docs/CURRENT-TRUTH.md`'s item -317 now carries only: a short
+tally summary, a pointer to PROJECT-OVERVIEW §22-§25 for the closed-guard table, and full mechanism
+detail for the one still-open guard (`RENDER_LIT_TEXTURED_MESH_FACES_R1_GUARD`, s537, per NEXT.md's
+explicit instruction to keep the open guard's detail in place until it closes).
+
+**Condensed the already-closed breadcrumb items** (-328/-329/-330, -320..-327, -319, -318, -316,
+-311, -310) to their essential facts (address, session, occurrence count, distinctness from
+neighboring items, live-tracking status) with pointers to `docs/PROJECT-OVERVIEW.md` §24-§25 for full
+mechanism writeups — cut restated boilerplate ("grepped against docs/CURRENT-TRUTH.md /
+docs/PROJECT-OVERVIEW.md / PORTING-STATE.md, no match" appeared near-verbatim on 3 separate items) and
+duplicate detail already present in the USER DIRECTIVE headline above.
+
+**Corrected a stale cross-reference found in passing**: M2's goal-stack paragraph still said the
+`[missing-func]` "runtime check outstanding — see step 2 below", a dangling pointer to a "step 2" that
+no longer exists in the current M4 text (M4 now reads "DONE/CLOSED" for the same items, closed since
+s399/item -6). Fixed the M2 paragraph to say DONE/CLOSED directly instead of pointing at a stale
+placeholder — a genuine correction, not just compaction.
+
+Removed separator blank lines between the already-single-paragraph, fully-closed Next-steps range
+entries (-259 through -2/-1) to match the tighter spacing convention already used for the -320..-330
+breadcrumb block — no content change, pure formatting tightening.
+
+Tightened the USER DIRECTIVE headline's M3 bullet, which had grown to restate the same breadcrumb
+list as the Next-steps items below it almost verbatim — now just points down to Next-steps instead of
+repeating.
+
+**Result**: `docs/CURRENT-TRUTH.md` 583→379 lines (-204, clears the >=200-net-line ADVANCED bar for a
+maintenance iteration), 62762→43856 bytes (-30%, well clear of the 60000-byte trigger though not
+quite the 35KB stretch target — expected, per the standing note that 35KB is aspirational not a hard
+floor). Full read-through after editing confirmed no broken cross-references, balanced markdown bold
+markers (214, even), and all 7 section headers intact.
+
+**Did not fold in `s537_render_lit_textured_mesh_faces_r1_confirm`'s soak result**, per the explicit
+"do NOT run the s538 experiment... until the maintenance pass is done" instruction in NEXT.md — that
+fold-in (2nd confirm result already landed in `scratch/agent/SOAK-RESULTS.md`, rc=3, 162s, not yet
+read/graded) is now the very next work unit, teed up in `scratch/agent/NEXT.md`.
