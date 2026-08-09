@@ -21,10 +21,10 @@ Priority order for upcoming iterations, set after the 300-session review:
    surfaced by the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW
    §18-§19). Items -312..-322 (s481-518, the guard lineage descending from `DL_LIST_APPEND_GUARD`
    through `HEAPLISTDEQ_ATTR_WRITE_GUARD`) are all fully CLOSED — PROJECT-OVERVIEW §20-§25.
-   **Item -317 step 3 (a ~150-location blanket sweep) status as of s545: 52/~150 leads fixed, 47 FULLY
-   CLOSED 2/2, 5 pending confirm (a five-way tie, batched) — see item -317 below.** ~98 locations
+   **Item -317 step 3 (a ~150-location blanket sweep) status as of s546: 57/~150 leads fixed, 52 FULLY
+   CLOSED 2/2, 5 pending confirm (a second five-way tie, batched) — see item -317 below.** ~93 locations
    remain unaudited across further tiers — M3's top-ranked work
-   unit is this sweep's continuation. Live breadcrumb tracking (items -324..-331, all filed not chased,
+   unit is this sweep's continuation. Live breadcrumb tracking (items -324..-333, all filed not chased,
    none escalated): see Next-steps below.
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
@@ -150,8 +150,16 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -332. The next NEW item takes -333.
+a range pointer. Highest allocated so far: -333. The next NEW item takes -334.
 
+-333. **(s546, single occurrence) `findAndUnlinkSmallestEntry+356`/`0x8000d698`, filed not chased.**
+    `(local-symtab)`-tagged (post-s480 symbolizer, so a genuine in-function fault, not the pre-s480
+    misattribution artifact). Hit during `RENDER_FLAT_MESH_FACE_GROUP_R3/R4_GUARD` +
+    `RENDER_LIT_MESH_R12/R13_GUARD` + `DRAW_SUBTITLE_TEXT_R3_GUARD`'s 1st live-verify — unrelated to
+    any guard under test, own guards never fired. 16 bytes (4 instructions) from item -331's
+    `heapFreeListDequeue+29152`/`0x8000d688` (also single-occurrence, also `local-symtab`-tagged, also
+    in the free-list-pop region) but a DIFFERENT guest PC — not treated as the same signature. Watch
+    for a 2nd occurrence of either before escalating.
 -332. **(s539's 2nd confirm of `RENDER_LIT_TEXTURED_MESH_FACES_R2_GUARD`, 1st attempt, WEAK
     CONTROL; recurred s544 with a STRONG control) `submitSceneNodeRender+38976`/`0x8001086c`, filed
     not chased.** Bus error. 1st sighting (s539) crashed at 19.8s after only 7 frames with
@@ -354,8 +362,39 @@ a range pointer. Highest allocated so far: -332. The next NEW item takes -333.
     s400-421→s422 `inflate_fast` clean-return misattribution artifact, a documented non-issue, not a
     new item. Clean verify, own guards never fired. 2nd confirm queued:
     `scratch/agent/soak_queue/s545_five_tied_guards_confirm.sh`.
-    Tally: 52/~150 fixed, 47 fully closed 2/2, 5 pending confirm (the five-way tie above).
-    **~98 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
+    **2nd confirm (s546, folded from queue) read CLEAN**: 0 fires on any of the 5 guards, 0 fires on
+    any other armed guard family at all, `hangarbay-entry n=2600` (strong positive control). Crashed
+    at 114.2s on the already-catalogued `0x800ab068` background-noise family
+    (`loadCutsceneAssetsByIndex+1860` this instance) — all 5 guards
+    (`EMIT_COLOR_FILL_RECT_R4_GUARD`, `EMIT_MATERIAL_TEXTURED_DL_R1_GUARD`,
+    `EMIT_MATERIAL_TEXTURED_DL_ALT_R1_GUARD`, `SUBMIT_SCENE_NODE_RENDER_R5_GUARD`,
+    `RENDER_LIT_MESH_R11_GUARD`) marked FULLY CLOSED 2/2, closing the campaign's 52 guards to 52/52
+    fully closed (zero open guards) for the ninth time.
+    **Next tier found and fixed (s546)**: fresh re-scan (reg=`r4`/off=`0X0` entries above it re-
+    confirmed the same already-rejected shape mismatch) put a FIVE-WAY TIE at count=16 (exact guarded
+    shape reg=`r2`/off=`0X4`) spanning THREE functions: `funcs_4.c:6268` (site=`0x800114C0`,
+    `renderFlatMeshFaceGroup`, a THIRD site alongside R1/R2), `funcs_4.c:7045` (site=`0x80011904`,
+    `renderFlatMeshFaceGroup`, a FOURTH site), `funcs_4.c:12782` (site=`0x8001347C`,
+    `renderLitMeshFaceGroup`, a TWELFTH site alongside R2-R11), `funcs_4.c:13321`
+    (site=`0x8001370C`, `renderLitMeshFaceGroup`, a THIRTEENTH site), and `funcs_4.c:24022`
+    (site=`0x800163C8`, `drawSubtitleText`, a THIRD site alongside R1/R2). All 5 target write
+    addresses and all 48 raw reload addresses feeding them were checked directly against
+    `fixup_game_funcs.py`: none appeared anywhere — genuinely uncovered, no incidental matches this
+    time. Same `+0x63B0`-offset idiom in every case. Fixed as
+    **`RENDER_FLAT_MESH_FACE_GROUP_R3_GUARD`**, **`RENDER_FLAT_MESH_FACE_GROUP_R4_GUARD`**,
+    **`RENDER_LIT_MESH_R12_GUARD`**, **`RENDER_LIT_MESH_R13_GUARD`**, and
+    **`DRAW_SUBTITLE_TEXT_R3_GUARD`** (53rd-57th guards), batched into one build/run per the batch-
+    instrumentation rule. 1st live-verify clean on the first attempt: 0 fires on any of the 5 new
+    guards, 0 fires on any other armed guard family at all (no co-fires this run), `hangarbay-entry
+    n=2600` (strong positive control). Crashed at 131.6s on
+    `pc-symbol=findAndUnlinkSmallestEntry+356`/`last-guest-pc=0x8000d698` — checked against every
+    catalogued background-noise family (`0x800ab068`, `coalesceFreeHeapBlocks+4424`/`0x8000247c`,
+    `setByteAcrossEntryList+176`/`0x800aafa8`, the s422 `inflate_fast` artifact, item -331's
+    `0x8000d688`) — no match, a genuinely NEW signature, filed **item -333** (single occurrence, not
+    escalated, 16 bytes from item -331's address but a distinct guest PC). Clean verify, own guards
+    never fired. 2nd confirm queued: `scratch/agent/soak_queue/s546_five_tied_guards_confirm.sh`.
+    Tally: 57/~150 fixed, 52 fully closed 2/2, 5 pending confirm (the second five-way tie above).
+    **~93 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
     Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't subsume these
     tiers. **Tracer gotcha (s521)**: `s506_dedupe.py` reads a fixed canonical report path — a custom
     `--out` on `--scan` leaves it stale. **Positive-control gotcha (s536)**: `hangarbay-entry` can fail
