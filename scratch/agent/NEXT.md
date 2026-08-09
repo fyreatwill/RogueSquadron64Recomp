@@ -1,76 +1,71 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: item-317-step3-blanket-sweep
+HYPOTHESIS-ID: freelist-walk-guard4
 
-## s558 recap (read this first)
+## s559 recap (read this first)
 
-**Folded in s557's queued confirm — CLEAN, FULLY CLOSED 2/2.**
-`s557_residual_count3_seven_way_confirm` (guards 125-131 + item -340 watch):
-CLEAN hangarbay n=3000, full ~300s rc=0, 0 fires on all 7 residual tags, 0 sibling-ptr-write
-fires, NO crash. **Guards 125-131 FULLY CLOSED 2/2. Item -340 FULLY CLOSED 2/2.**
+**Opened item -341: freelist-walk GUARD4 (16 sites), 1st live-verify CLEAN.**
 
-**Campaign freelist WRITE idioms CLOSED at 131/131 FULLY CLOSED 2/2.**
-- Classic r2/0X4: 115/115
-- Residual free-list-node rN/0X0 batch 1 (116-124): 9/9
-- Residual free-list-node batch 2 (125-131): 7/7
+Source discrimination (H1 confirmed): after existing GUARD3 does `v1 = *v1`, next insn peeks
+`v0 = *v1` on the freshly-loaded NEW pointer with zero validation — heapWalker s218 GUARD4 gap.
+Sites with GUARD3 but no GUARD4:
+- emitAllocatedDLCommand x3 (incl item -339 @0x800088EC) — FIXED
+- heapFreeListDequeue x4 — FIXED
+- submitSceneNodeRender x9 (incl item -337 @0x80010DF4 + s123 first @0x80010178) — FIXED
+- heapWalker: already had GUARD4 (s218)
 
-**Fresh residual re-scan after close:** 22 NEEDS_GUARD remaining — ALL packing flow-merge false
-positives (DL write-cursor base; freelist reload branch-only) or one freelist-walk *read*.
-**Freelist-node write MATCH residual: EMPTY.** Packing formally DEFERRED (not freelist-write scope).
+Env: `ROGUESQ_LOG_EMIT_DL_GUARD4` / `HEAPLISTDEQ_GUARD4` / `SCENE_NODE_LIST_GUARD4`.
+
+**1st live-verify (after discarding weak item -306 draw):** hangarbay n=2900, full ~300s rc=0,
+0 fires on all 16 new guards, 0 CRASH. True-negative baseline (intermittent corruption).
+
+**2nd confirm queued:** `scratch/agent/soak_queue/s559_freelist_walk_guard4_confirm.sh`
+(loop will run between iterations).
 
 ## This iteration's work unit
 
-**Pivot: freelist-walk GUARD4 systematic audit (item -339 shape).**
+**Fold in s559 confirm if present in SOAK-RESULTS; if CLEAN mark item -341 FULLY CLOSED 2/2
+(and -339/-337 CLOSED with it). Then pick next M3 class:**
 
-Item -339 (`emitAllocatedDLCommand`/`0x800088ec`) is still single-occurrence, but freelist-node
-write residual is empty so the next M3 class is freelist-walk second-deref after GUARD3 validates
-the previous node — same gap heapWalker s218 closed as GUARD4.
+### Option A (if confirm CLEAN) — residual freelist-walk sites WITHOUT GUARD3
+~93 `v1=*v1; v0=*v1` sites in funcs_3/4 with no GUARD3 at all (emitFrameRdpInitDl,
+beginFrameDLChunk, renderLitMeshFaceGroup, etc.). Classify: true freelist walk vs packing
+false-positive. Fix only shape-matched freelist walks as GUARD3+GUARD4 pairs (or combined).
 
-### Hypotheses
-1. **H1 (gap class real):** emitAllocatedDLCommand GUARD3 covers loop-back on the *old* node but
-   leaves the freshly-loaded next pointer unguarded before a second deref — family-wide across
-   freelist walks that share the s133 GUARD3 shape.
-2. **H2 (site-local):** only the item -339 site (or a tiny handful) lacks GUARD4; most walks are
-   already covered by heapWalker GUARD4 / emit_dl GUARD3 / scene-node GUARD3 families.
-3. **H3 (not freelist walk):** 0x800088ec is a different idiom misread as GUARD4; source will not
-   match `rN = *rN` after GUARD3.
-4. **H4 (already covered, log noise):** an existing guard should have caught it but env was off
-   or the site is outside the regex.
+### Option B — multi-occurrence breadcrumb escalation
+Items -332 (2 occ, moderate), -330 (2 weak), others single. Only escalate if a 3rd independent
+occurrence appears in SOAK-RESULTS.
+
+### Option C — packing DL-cursor audit (item -317 DEFERRED residual)
+Separate class: write base is DL cursor; freelist reload branch-only.
+
+### Hypotheses (for Option A if taken)
+1. **H1:** some of the 93 are true freelist walks missing both GUARD3 and GUARD4.
+2. **H2:** all 93 are packing / non-freelist and should stay DEFERRED.
+3. **H3:** a subset matches freelist shape but already covered by another family (GENERIC_CACHE, etc.).
 
 ### Discriminating measurement
-1. Source-read `emitAllocatedDLCommand` around guest PC `0x800088ec` and the nearest
-   `EMIT_DL_GUARD3` / free-list-walk guard. Map exact instructions: which register is validated,
-   which is dereferenced next.
-2. Grep-enumerate freelist-walk second-deref sites (same shape as heapWalker GUARD4 / item -339)
-   across `funcs_3.c`/`funcs_4.c` that already have GUARD3 but lack a post-load range check.
-3. Classify every site: already guarded / needs GUARD4 / shape mismatch / dead.
-4. If a non-empty NEEDS_GUARD4 set exists with byte-identical shape: fix as a family (batch
-   instrument, one live-verify, queue confirm). If empty after classify: close the pivot and
-   pick packing DL-cursor or multi-occurrence breadcrumbs.
+Grep-enumerate the 93; for each, check whether the walk pointer comes from freelist global
+0x801163B0 / findAndUnlinkSmallestEntry vs s0 DL packing. Only freelist-origin sites are candidates.
 
-### Exact commands (start here)
+### Exact commands (start here if confirm already folded)
 ```bash
-# Confirm session number
 git log --oneline -3
-
-# Item -339 site context
-rg -n '0x800088[Ee][Cc]|EMIT_DL_GUARD3|emit_dl_guard3|emitAllocatedDLCommand' \
-  /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py | head -40
-# Guest PC window in generated source
-rg -n '0x800088[Ee][Cc]|0x800088' \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c | head -30
-# Existing GUARD4 templates
-rg -n 'GUARD4|heapwalker_guard4|unguarded peek-load' \
-  /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py | head -40
+# Fold confirm first
+tail -5 scratch/agent/SOAK-RESULTS.md
+# If confirm CLEAN: mark -341 2/2, then residual scan
+python3 - <<'PY'
+# re-scan GUARD4-shape sites lacking any loop-back guard (see s559 NEXT analysis)
+PY
 ```
 
 Do NOT re-open freelist-node rN/0X0 or classic r2/0X4 — both residual-empty and FULLY CLOSED.
+Do NOT re-open item -341 sites once 2/2 closed.
 
 ## Iron-rule reminders
 - Confirm free session number at START before naming.
-- Guard firing with `n=0` is not automatically dismissible — check bad_ptr vs crash fault address.
-- Never trust 0-fires without double-digit+ `hangarbay-entry`.
-- One build/run carries every armed guard env var.
-- Kill with SIGKILL; run from `build/` with ROM.
-- Build that matters: `RogueSquadron64Recomp/build`, not `N64Recomp/build`.
-- Full guard table: `docs/PROJECT-OVERVIEW.md` §22-§25.
+- Weak early deaths on item -306 `setByteAcrossEntryList+176`/`0x800aafa8` with hangarbay n<10:
+  discard+retry (s548-s553 standing gotcha).
+- Never trust 0-fires without double-digit+ hangarbay-entry.
+- Kill with SIGKILL; run from build/ with ROM.
+- Full guard table: docs/PROJECT-OVERVIEW.md §22-§25.

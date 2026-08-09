@@ -20,18 +20,16 @@ Priority order for upcoming iterations, set after the 300-session review:
    the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW §18-§19).
    Items -312..-322 (s481-518, the `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage) are
    all fully CLOSED — PROJECT-OVERVIEW §20-§25. **Item -317 step 3 (~150-location blanket sweep)
-   status as of s558: 131 leads fixed, 131 FULLY CLOSED 2/2. Classic r2/0X4 115/115; residual
-   free-list-node rN/0X0 batches 1+2 (116-131) FULLY CLOSED; freelist-node MATCH residual EMPTY
-   after re-scan (22 remaining NEEDS_GUARD are packing flow-merge false positives — DEFERRED).
-   Campaign freelist write idioms for step 3 are closed.** Item -340 FULLY CLOSED 2/2 (s558 confirm).
-   Items -334/-327 remain FULLY CLOSED 2/2. Live breadcrumbs (-328..-339): see Next-steps. Next
-   pivot: freelist-walk GUARD4 class (item -339 shape) or packing as a separate DL-cursor audit.
+   status as of s559: freelist WRITE idioms of step 3 CLOSED (131/131 FULLY CLOSED 2/2). Classic
+   r2/0X4 115/115; residual free-list-node rN/0X0 16/16. Packing DEFERRED. **New class opened and
+   1st-verified s559: freelist-walk GUARD4 (item -341, 16 sites) — covers item -339 and -337.**
+   Item -340 FULLY CLOSED 2/2. Live breadcrumbs: see Next-steps. 2nd confirm of -341 queued.
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s558)
+## Current truth (established by session 295; unchanged, reviewed through s559)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -150,7 +148,22 @@ needs a genuinely new lead. Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -340. The next NEW item takes -341.
+a range pointer. Highest allocated so far: -341. The next NEW item takes -342.
+
+-341. **(s559) Freelist-walk GUARD4 systematic audit (item -339 shape) — FIXED, 1st live-verify
+    CLEAN (2nd confirm queued).** Source-confirmed: after any existing GUARD3 does `v1 = *v1`, the
+    next insn peeks `v0 = *v1` through the freshly-loaded NEW pointer with zero validation — the
+    exact gap heapWalker s218 closed as GUARD4. Grep of funcs_3/4 for GUARD3-without-GUARD4 found
+    **16 sites**: `emitAllocatedDLCommand` x3 (incl item -339 `0x800088EC`), `heapFreeListDequeue`
+    x4, `submitSceneNodeRender` x9 (incl item -337 `0x80010DF4` + s123 first site `0x80010178`).
+    heapWalker already had GUARD4 (s218). Fixed family-wide in `fixup_game_funcs.py` (bail = each
+    site's existing GUARD3 degrade label). Env: `ROGUESQ_LOG_EMIT_DL_GUARD4` /
+    `HEAPLISTDEQ_GUARD4` / `SCENE_NODE_LIST_GUARD4`. **1st live-verify:** hangarbay n=2900, full
+    ~300s rc=0, 0 fires on all 16 new sites, 0 CRASH (true-negative; intermittent corruption).
+    Weak first draw discarded (item -306 `setByteAcrossEntryList+176`/`0x800aafa8`, hangarbay n=4).
+    **2nd confirm queued:** `scratch/agent/soak_queue/s559_freelist_walk_guard4_confirm.sh`.
+    ~93 further `v1=*v1; v0=*v1` sites without any GUARD3 are a SEPARATE larger campaign (not in
+    this item's scope).
 
 -340. **(s557/s558) `SIBLING_PTR_WRITE_GUARD` site=`0x80010B4C` (`submitSceneNodeRender`) — FIXED
     and FULLY CLOSED 2/2 (s558).** DIRECT gap after existing site `0x80010B48`: pre-crash fire
@@ -158,13 +171,10 @@ a range pointer. Highest allocated so far: -340. The next NEW item takes -341.
     (reg r3, off 0X4). s558 confirm: hangarbay n=3000, full ~300s no-crash rc=0, 0 fires on residual
     batch-2 tags and 0 sibling-ptr-write fires — intermittent corruption, closed 2/2.
 
--339. **(s556) One more single-occurrence background-noise breadcrumb — now the lead for the next
-    pivot after freelist-node residual empty (s558).** `emitAllocatedDLCommand+13216`/
-    `last-guest-pc=0x800088ec` (`hangarbay-entry n=2600`) — free-list-walk second-deref after s133
-    GUARD3 validates the *previous* node (`r3 = *r3` then unguarded `r2 = *r3`). Same GUARD3/GUARD4
-    gap shape as heapWalker s218. Still single-occurrence; s558 residual re-scan found freelist-node
-    write MATCH residual EMPTY and formally deferred packing, so the next high-value M3 class is a
-    systematic freelist-walk GUARD4 audit (item -339 shape), not more freelist-node 0X0 writes.
+-339. **(s556) `emitAllocatedDLCommand+13216`/`last-guest-pc=0x800088ec` — ROOT-CAUSED AND FIXED
+    s559 as part of item -341 freelist-walk GUARD4 (site `0x800088EC`).** GUARD3-without-GUARD4 gap
+    after EMIT_DL_GUARD3; family-wide fix (16 sites). 1st live-verify clean (hangarbay n=2900);
+    awaiting 2nd confirm with item -341.
 
 -338. **(s554) One more single-occurrence background-noise breadcrumb, filed not chased**,
     surfaced by the s554 1st live-verify of the count=3+count=2 twenty-seven-way guards below.
@@ -176,13 +186,10 @@ a range pointer. Highest allocated so far: -340. The next NEW item takes -341.
     dl-list-append-deref with shared `bad_ptr=0x7500D019` (existing families catching the same
     corruption wave). Watch for recurrence before escalating.
 
--337. **(s551) One more single-occurrence background-noise breadcrumb, filed not chased**,
-    surfaced by the s551 1st live-verify of the new six-way-tie guards below.
-    `submitSceneNodeRender+69192`/`last-guest-pc=0x80010df4` (`hangarbay-entry n=32`, valid
-    double-digit positive control) — checked against the full background-noise catalogue and item
-    -327/-328/-332's nearby `submitSceneNodeRender` addresses (`+67668`/`0x80010e6c`,
-    `+69820`/`0x80010ebc`, `+38976`/`0x8001086c`); none match this exact `last-guest-pc`. Watch for
-    recurrence before escalating.
+-337. **(s551) `submitSceneNodeRender+69192`/`last-guest-pc=0x80010df4` — ROOT-CAUSED AND FIXED
+    s559 as part of item -341 freelist-walk GUARD4 (site `0x80010DF4`).** GUARD3-without-GUARD4 gap
+    after scene-node GUARD3; family-wide fix. 1st live-verify clean with item -341; awaiting 2nd
+    confirm.
 
 -335/-336. **(s550) Two more single-occurrence background-noise breadcrumbs, filed not chased**,
     surfaced by the two s549 confirm soaks folded in this session. **-335**
@@ -279,8 +286,8 @@ a range pointer. Highest allocated so far: -340. The next NEW item takes -341.
     drawSubtitleText appendRdpStateDl return cursor) or one freelist-walk *read*
     (`countDisplayListChunks` second-deref). Freelist-node write MATCH residual: **EMPTY**. Packing
     formally DEFERRED (write base is DL cursor; freelist reload used only for branch — flow-merge
-    false positive of the freelist-write idiom). Freelist write idioms of step 3 CLOSED; next pivot
-    is freelist-walk GUARD4 (item -339 shape) as a new systematic class, not more freelist-node 0X0.
+    false positive of the freelist-write idiom). Freelist write idioms of step 3 CLOSED. **s559 opened and 1st-verified freelist-walk GUARD4
+    (item -341, 16 sites)** — next is 2nd confirm then residual no-GUARD3 walk sites or breadcrumbs.
     **Standing gotchas** (full detail: `docs/PROJECT-OVERVIEW.md` §22-§25): never pass custom `--out`
     to `--scan` (s521); always check hangarbay positive control (s536); cross-check `last-guest-pc`
     not host symbol (s541); weak item -306 early deaths discard+retry (s548-s553); n=0 guard fire +

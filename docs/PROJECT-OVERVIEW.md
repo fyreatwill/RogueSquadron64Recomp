@@ -2422,6 +2422,17 @@ maintenance pass
 CURRENT-TRUTH.md keeps only a short pointer to this section plus the two entries still load-bearing
 for active work (the `0x800290d4` `inflate_fast` artifact and the audio-bridge unit-mismatch fix).
 
+
+### s559 freelist-walk GUARD4 (item -341; covers -339/-337)
+
+Source-confirmed GUARD3-without-GUARD4 gap (heapWalker s218 shape) at 16 sites already carrying
+GUARD3: emitAllocatedDLCommand x3 (item -339 `0x800088EC`), heapFreeListDequeue x4,
+submitSceneNodeRender x9 (item -337 `0x80010DF4` + s123 first `0x80010178`). Fixed as
+`EMIT_DL_GUARD4` / `HEAPLISTDEQ_GUARD4` / `SCENE_NODE_LIST_GUARD4`. 1st live-verify CLEAN
+(hangarbay n=2900, full 300s rc=0, 0 fires). 2nd confirm queued. ~93 further walk sites without
+any GUARD3 remain a separate campaign.
+
+
 ### Overturned conclusions — do not act on these
 
 - **(s400-421->s422)** "`0x800290d4`, six independent triggers, one shared downstream corruption sink -- the strongest available root-cause lead" -- `last-guest-pc=0x800290d4` is `inflate_fast`'s own clean return, reported by a sparse breadcrumb present in only 8/50 `RecompiledFuncs/funcs_*.c` files; `atos`-based exact symbolication of 5 of the 6 crash logs found five different real crash functions, not one. Believable for 21 sessions because the shared numeric value looked like a shared fault address, and nobody had yet resolved `last-guest-pc` past the breadcrumb's own coarse granularity to the actual host instruction. `m4_known_bad.txt`'s parking decision is unaffected (still correct); only the "worth a dedicated session" framing is overturned. PORTING-STATE 422.

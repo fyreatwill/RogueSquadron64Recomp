@@ -45208,3 +45208,53 @@ freelist-walk GUARD4 audit (item -339 shape / heapWalker s218), not more freelis
 ### Files
 - docs/CURRENT-TRUTH.md, docs/PROJECT-OVERVIEW.md §25 s558 block, scratch/agent/NEXT.md,
   scratch/agent/SOAK-RESULTS.md, PORTING-STATE.md
+
+## Session 559 (2026-08-09) — freelist-walk GUARD4 systematic audit (item -341; covers -339/-337)
+
+### Fold-in
+No new inter-iteration soak pending beyond s558 already folded (guards 125-131 + item -340 FULLY
+CLOSED 2/2). M5 still closed (no new leads). Maintenance size check: CURRENT-TRUTH ~42 KB < 60 KB.
+
+### Work unit
+Pivot to freelist-walk GUARD4 (item -339 shape) per NEXT.md.
+
+**Source discrimination (H1 confirmed, H3 refuted):**
+- Item -339 crash PC `0x800088EC` is immediately after EMIT_DL_GUARD3 at `0x800088E8`:
+  `v1 = *v1` (GUARD3 checks OLD) then `v0 = *v1` (unguarded peek on NEW) — exact heapWalker s218
+  GUARD4 gap.
+- Item -337 PC `0x80010DF4` is the same gap after scene-node GUARD3 at `0x80010DF0`.
+
+**Enumerate GUARD3-without-GUARD4:** 16 sites in funcs_3/4:
+| Function | count | sites (G4 addr) |
+|---|---|---|
+| emitAllocatedDLCommand | 3 | 0x800086EC, 0x800087E8, **0x800088EC (-339)** |
+| heapFreeListDequeue | 4 | 0x8000D064, 0x8000D19C, 0x8000D2E8, 0x8000D6B8 |
+| submitSceneNodeRender | 9 | 0x80010178 (s123 first), 0x8001039C…, **0x80010DF4 (-337)**, …0x80010F1C |
+| heapWalker | 0 remaining | already GUARD4 s218 |
+
+~93 further `v1=*v1; v0=*v1` sites have **no** GUARD3 — separate campaign, not this item.
+
+### Fix
+Family-wide GUARD4 in `fixup_game_funcs.py` (s559 freelist-walk GUARD4 block; also surgically
+applied to already-sentinel'd RecompiledFuncs for this build). Bail = each site's existing GUARD3
+degrade label (reload global head; safe). Env:
+`ROGUESQ_LOG_EMIT_DL_GUARD4` / `HEAPLISTDEQ_GUARD4` / `SCENE_NODE_LIST_GUARD4`.
+
+### 1st live-verify
+- Weak discard: hangarbay n=4, item -306 `setByteAcrossEntryList+176`/`0x800aafa8` (standing gotcha).
+- Valid: hangarbay max n=2900, full ~300s rc=0, 103 frames, **0 fires** on all 16 new guards and
+  sibling GUARD3s, **0 CRASH**. True-negative baseline (intermittent corruption, same as item -317
+  campaign). Item -341 FIXED, awaiting 2nd confirm.
+
+### Queued
+`scratch/agent/soak_queue/s559_freelist_walk_guard4_confirm.sh`
+
+### Files touched
+- `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` (16 GUARD4 sites; untracked
+  in that checkout)
+- RecompiledFuncs/funcs_3.c, funcs_4.c (surgical apply; will re-apply on next full regen via fixup)
+- docs/CURRENT-TRUTH.md, docs/PROJECT-OVERVIEW.md, scratch/agent/NEXT.md, SOAK-RESULTS.md, soak scripts
+
+### Ruled out
+- H3 (not freelist walk / misread): source at 0x800088EC is byte-identical GUARD4 shape.
+- H4 (already covered): no GUARD4 existed at any of the 16 sites before s559.
