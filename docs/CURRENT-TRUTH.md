@@ -30,7 +30,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s578)
+## Current truth (established by session 295; unchanged, reviewed through s579)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -131,17 +131,15 @@ since **DONE/CLOSED s399** (item -6). Full detail: PORTING-STATE s49.
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT are both
 reachable and stable; ~20 crash classes closed s50-s294 (mechanisms: `docs/PROJECT-OVERVIEW.md` §3
 arc + §9 closed lineages; per-class catalog: §7). Leave-key from SELECT YOUR CRAFT: s75 hangar-flight
-OVERTURNED s150; **s573 H1** was "no mission overlay" under non-exiting leave (still true then);
-**s575 REFUTED H-exit5**; **s576 H-exit6a CONFIRMED** (synthetic AC8C0 Start → hangar-sel + state
-5→8 + VI 640); **s577 REAL hangar exit CONFIRMED** via natural double-Start path (case 3→5→6→8,
-hangar-sel, graceful-menu, VI 640@0x6A2900) and **mission overlay start-matched** (section 2
-rom=0xA5D30 `.ovl.mission`). **s578 post-exit body:** H-m2 CONFIRMED (section 4 cinematic then
-section 2; STAR WARS bumper → desert dive cutscene); H-m3 CONFIRMED (RDP `fs` freezes after
-mission overlay while VI still presents — s178 family with exit as trigger); H-m1 REFUTED (no
-in-mission craft within ~30s); H-m4 REFUTED as hard block (`hangar-sel val=0` still loads mission
-+ cutscene). Primary remaining DoD gate is **cutscene→in-mission** (survive past post-overlay
-fs freeze, then craft input). *Done when:* 60s of in-mission rendering, craft visibly responds
-to synthetic input, stability counters 0, phase timeline covers the mission.
+OVERTURNED s150; **s577 REAL hangar exit CONFIRMED** (case 3→5→6→8, mission overlay section 2
+0xA5D30). **s578 post-exit:** cutscene first (H-m2); not in-mission within ~30s (H-m1 REFUTED);
+hangar-sel val=0 not a hard block (H-m4). **s579:** post-exit `rdpFs` plateau is **NOT classic
+s178** (`stalled=1 pairs=0` + producer stop). Same-run: 772 post-plateau `[lle task]` + 771
+`[runner] task` all `exit=1`, 0 `stalled=1` after section 2, present FIRE pairs=4 continues.
+`rdpFs` == sum of runner `syncs` (4602); last 772 tasks all `syncs=0` → **FULL_SYNC starvation**
+with live GFX (H-stall1/2/classic-H-stall3 REFUTED; H-stall3b CONFIRMED). DoD gate =
+**cutscene→in-mission** past FULL_SYNC starvation + craft input. *Done when:* 60s in-mission
+render, craft responds to synthetic input, stability 0, phase timeline covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
@@ -156,7 +154,18 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -348. The next NEW item takes -349.
+a range pointer. Highest allocated so far: -349. The next NEW item takes -350.
+
+-349. **(s579) Post-mission-overlay RDP `fs` plateau reclassified — NOT s178 producer-stop;
+    FULL_SYNC starvation with live GFX tasks.** Offline discrimination on complete s577 log
+    (instruments already armed; same-run positive control). `rdpFs` == Σ runner `syncs` (4602).
+    After section 2: last `syncs>0` task #5959; then **772** consecutive `syncs=0` tasks all
+    `exit=1`; 772 `[lle task]`; 0 `stalled=1`; present FIRE pairs=4 + present-1024 empty=0.
+    H-stall1/2/classic-s178 **REFUTED**; H-stall3b FULL_SYNC starvation **CONFIRMED**; H-stall4
+    fixed-draw freeze **SUPPORTED** (hold MD5-identical; tris lock 42 then 51). s578 H-m3
+    "s178 family" framing **overturned** (believable: fs plateau + frozen PNGs look like s178
+    from the outside; refuted by task/present counters). Next: guest DL lacks FULL_SYNC vs
+    LLE/runner drop (raw `dl_ptr` opcode dump on post-plateau tasks).
 
 -348. **(s568/s569) SIBLING_PTR DIRECT residual same-base gap class — FIXED and FULLY CLOSED 2/2
     (s569).** Systematic audit of the `-334/-340/-345/-346` model across all applied freelist/
@@ -365,21 +374,15 @@ a range pointer. Highest allocated so far: -348. The next NEW item takes -349.
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
 -7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN — exit + mission overlay +
-    Chapter-1 cutscene CONFIRMED; in-mission blocked by post-overlay fs freeze (s178 family).**
-    **Natural exit (s577):** leave Start → 3→5 (AC1C4) → auto 5→6 (ACE80) → case-6 ACE94
-    Start → hangar-sel AC914 + 6→8 → graceful-menu → VI 640@0x6A2900 → **section 4 cinematic
-    reload** → **section 2 `.ovl.mission` 0xA5D30** → VI 512@0x690400/0x620400 flip.
-    **s578 post-exit (s577 log+PNG + 3 new runs):** H-m1 **REFUTED** (no craft/HUD/stick
-    response in ~12–30s post-state-8); H-m2 **CONFIRMED** (STAR WARS gold bumper → desert
-    sky/sand dive; hold_01–09 identical MD5 freeze); H-m3 **CONFIRMED** (`fs` 4362→4602
-    during 640 cutscene then **plateau 4602** after mission overlay while VI present continues;
-    thr-resume-skip=0); H-m4 **REFUTED as hard block** (hangar-sel val=0 still loads section 2
-    + plays cutscene). **Alternate exit (s578 spaced, single-source):** 5→6→**7 (ACFD8)** →
-    AD034 Start → hangar-sel → **7→8**; then leave-path noise death before section 2. Leave
-    path intermittent (s578 deaths: `0x8000ce54` reserveAndEmitDLEntry; `0x8000247c`
-    coalesceFreeHeapBlocks — file not chase). Force path still diagnostic-only. **Primary
-    remaining:** reopen s178 stall with hangar-exit→mission-overlay as trigger — producer
-    stop vs RDP/FULL_SYNC stop. Do not chase -338 / leave-path noise.
+    Chapter-1 cutscene CONFIRMED; in-mission blocked by post-overlay FULL_SYNC starvation
+    (item -349), not classic s178.** **Natural exit (s577):** 3→5→6→8 → section 4 → section 2
+    `.ovl.mission` 0xA5D30 → VI 512 flip. **s578:** H-m1 REFUTED, H-m2 CONFIRMED, H-m4
+    REFUTED-as-hard-block; H-m3 fs plateau observed but mis-labelled s178. **s579:** H-stall1
+    producer-stop REFUTED; H-stall2 LLE-incomplete REFUTED; classic present-stall REFUTED;
+    FULL_SYNC starvation CONFIRMED (`rdpFs`=Σ`syncs`; 772 post tasks syncs=0); fixed-draw
+    freeze SUPPORTED. Leave-path intermittent noise (`0x8000ce54`, coalesce `0x8000247c`)
+    file not chase. Force path diagnostic-only. **Primary remaining:** why FULL_SYNC stops
+    after mission overlay (guest omit vs LLE drop) + cutscene→gameplay gate.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.
@@ -451,13 +454,13 @@ Standing warnings:
 ## Overturned conclusions — do not act on these
 
 Full list (11 entries spanning s2-s422, each with why it was believable and what refuted it),
-plus the early-era dead-ends list, migrated to `docs/PROJECT-OVERVIEW.md` §26. The two entries
-still load-bearing for active work: **(s400-421->s422)** the `0x800290d4` "six independent
-triggers" claim is `inflate_fast`'s own clean return, a sparse shared breadcrumb across unrelated
-crash functions, not a real corruption sink — this recurs constantly as background noise across
-item -317's soaks (PORTING-STATE 422). **(M5-AUDIO-PLAN.md §4->s371)** the host audio bridge had a
-silent `queue_samples`→`SDL_QueueAudio` `*sizeof(int16_t)` unit-mismatch bug dropping half of every
-PCM buffer, fixed s371 (`src/main/main.cpp`).
+plus the early-era dead-ends list, migrated to `docs/PROJECT-OVERVIEW.md` §26. Load-bearing for
+active work: **(s400-421->s422)** `0x800290d4` "six independent triggers" is `inflate_fast`'s
+clean return (background noise). **(M5-AUDIO-PLAN.md §4->s371)** host audio
+`queue_samples`→`SDL_QueueAudio` unit-mismatch, fixed s371. **(s578→s579)** post-exit `rdpFs`
+plateau is **not** the s178 graphics-task-submission stall — s178 is `stalled=1 pairs=0` +
+producer stop; s577 post-exit keeps submitting/completing GFX tasks with present FIRE pairs=4
+while only FULL_SYNC (`syncs`/`rdpFs`) dies (item -349).
 
 ### Dead ends — labelled as such in the log, do not retry
 

@@ -46260,3 +46260,72 @@ Reopen **s178 stall** with hangar-exit → mission-overlay as the known trigger 
 blocker is now "cutscene plays then RDP fs freezes", not "can't leave hangar"). Discriminate
 producer-stop vs RDP/FULL_SYNC stop in one instrumented run. Do not chase leave-path
 `0x8000ce54` / coalesce noise reactively. Do not treat force as product fix.
+
+## Session 579 — post-exit "fs freeze" is NOT s178 producer-stop: FULL_SYNC starvation with live GFX tasks
+
+Date: 2026-08-09
+
+### Work unit
+Item -7 / NEXT `m3-post-exit-fs-stall`: reopen the post-mission-overlay RDP `fs` plateau
+with hangar-exit as trigger; discriminate H-stall1..4 (producer stop vs LLE incomplete vs
+present/FULL_SYNC stop vs stuck cutscene gate).
+
+### Method
+Offline analysis only of the complete s577 capture (`scratch/s73_post_a_scene/s577_item7_real_edge/run.log`,
+208493 lines). Same-run instruments already armed by `run_mission_keys.sh`
+(`ROGUESQ_LOG_RUNNER=1 ROGUESQ_LOG_RUNNER_ALL=1`, always-on `[vi-fs-decision]`, `[lle task]`,
+`[present-1024]`, `[last-drawn]`). No rebuild. Positive control: pre-plateau runner tasks with
+`syncs=1` and continuous post-plateau `[lle task]`/`[runner] task` fire in the same log.
+
+### Core measurement
+`rdpFs` in `[vi-fs-decision]` equals the **running sum of per-task `syncs` fields** on
+`[runner] task` lines (total sum across all 6731 tasks = **4602** = final plateau value).
+So the "fs freeze" is exactly **no more FULL_SYNC counted in completed runner tasks**, not an
+opaque RDP hang counter.
+
+### Timeline (s577)
+| Event | Line / task |
+|-------|-------------|
+| hangar-sel + state 6→8 + graceful-menu | L160449 / L160971 |
+| section 4 cinematic reload | L169065 |
+| section 2 `.ovl.mission` 0xA5D30 | L178922 |
+| VI 640→512 @ 0x690400 | L178970 (~183.7s) |
+| last task with `syncs>0` | task **#5959** L179687 (`tris=0 syncs=1`) |
+| first `rdpFs=4602` decision | L179718 dec#10984 FIRE pairs=4 stalled=0 |
+| post-plateau runner tasks | **#5960..#6731** = **772 tasks**, all `exit=1`, all **`syncs=0`** |
+| post-plateau lle tasks | **772** |
+| end of hold | task #6731; present still FIRE |
+
+### Hypothesis verdicts (same-run)
+| Hyp | Prediction if true | Observation | Verdict |
+|-----|--------------------|-------------|---------|
+| H-stall1 producer stops | `[lle task]`/`[runner]` drop to 0 at freeze | 772 lle + 771 runner after plateau; thr-resume healthy (0 thr-resume-skip) | **REFUTED** |
+| H-stall2 LLE never completes | submits climb, tasks hang / exit≠1 | all 771 post-plateau tasks `exit=1` | **REFUTED** |
+| H-stall3 classic s178 present stall | continuous `stalled=1 pairs=0`; present dies | **0** `stalled=1` after section 2; post-plateau decisions 772 FIRE reason=swap pairs=4 + 58 SKIP no-trigger; present-1024 ×772 all `empty=0` | **REFUTED** (classic shape) |
+| H-stall3b FULL_SYNC starvation | tasks run but `syncs`→0 and rdpFs plateaus | last 772 tasks 100% `syncs=0`; rdpFs stuck at sum(syncs)=4602 | **CONFIRMED** |
+| H-stall4 stuck cutscene / fixed draw | frozen PNGs + fixed tris after brief settle | hold_01–09 MD5-identical; post-sync tris vary ~100 tasks then lock **tris=42** for ~500 tasks then **tris=51** | **SUPPORTED** (single-source; coexists with H-stall3b) |
+
+### Overturns s578 H-m3 framing
+s578 labelled the post-exit plateau "s178 family". Classic s178 (s176–183) is
+**`stalled=1 pairs=0` + graphics-task submission halt** (`[lle task]` / producer loop stop).
+s577 post-exit is the **opposite** on both axes: tasks keep submitting and completing;
+present keeps FIREing with pairs=4. Only the FULL_SYNC (`syncs` / `rdpFs`) stream dies.
+**Do not reopen s178 thr-resume-skip / producer-stop tools for this symptom.**
+
+### Ruled out this session
+- Re-instrumenting submit counters (already present and discriminating).
+- thr-resume-skip as cause (0 fires, same as s183 counter-example class).
+- Treating rdpFs plateau alone as proof of "graphics-task-submission stall".
+
+### Still open
+- Why do post-mission-overlay DLs stop carrying FULL_SYNC? Guest omit vs LLE/runner drop
+  (next: dump raw DL at `dl_ptr` for opcode 0xE9 / Factor5 full-sync equivalent on first
+  post-plateau tasks, same-run positive control with a pre-plateau `syncs=1` task).
+- Whether frozen desert frame is intentional end-of-cutscene wait on a guest gate that
+  never flips (H-stall4) vs host present-early replaying last full-synced RT while
+  sync-less tasks still "draw".
+
+### Next
+Discriminate **guest DL lacks FULL_SYNC** vs **translator/runner drops it** on post-plateau
+tasks; keep item -7 DoD as cutscene→in-mission. Do not chase leave-path noise or reopen
+freelist residual.
