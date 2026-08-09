@@ -547,10 +547,35 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             const char* e = std::getenv("ROGUESQ_LOG_RUNNER_ALL");
             s_log_all = (e && *e && *e != '0') ? 1 : 0;
         }
-        if (s_log) {
+        // ROGUESQ_LOG_DL_SYNC: walk guest F3D DL tree counting G_RDPFULLSYNC
+        // (0xE9) vs post-LLE RDP hist[0x29] (= runner syncs). Discriminates
+        // guest omit (raw_e9=0) vs LLE drop (raw_e9>=1, syncs=0) on the
+        // post-mission-overlay FULL_SYNC starvation (item -349 / s579).
+        static int s_dl_sync = -1;
+        if (s_dl_sync < 0) {
+            const char* e = std::getenv("ROGUESQ_LOG_DL_SYNC");
+            s_dl_sync = (e && *e && *e != '0') ? 1 : 0;
+        }
+        if (s_log || s_dl_sync) {
             static int s_n = 0;
             ++s_n;
-            if (s_log_all || s_n <= 8 || (s_n & 31) == 0) {
+            const bool sample_runner = s_log && (s_log_all || s_n <= 8 || (s_n & 31) == 0);
+            // Probe rate: first 20 (boot positive control), first 40 early
+            // syncs>0, first 30 late (s_n>=4000) syncs>0 (post-exit control),
+            // first 120 consec zero-sync + every 50th after.
+            static int consec_zero = 0;
+            static int n_with_sync_probed = 0;
+            static int late_sync_probed = 0;
+            static int ever_sync = 0;
+            // Pre-drain estimate: when not sampling runner and not log_all,
+            // hist may be stale; force drain whenever we might probe.
+            // Actual syncs come from drained hist below.
+            bool force_for_probe = s_dl_sync && (s_n <= 20 || consec_zero < 120 ||
+                                                 (consec_zero > 0 && (consec_zero % 50) == 0) ||
+                                                 n_with_sync_probed < 40 ||
+                                                 (s_n >= 4000 && late_sync_probed < 30) ||
+                                                 s_n >= 4000);
+            if (sample_runner || force_for_probe) {
                 // Pull the dpc_bridge per-task RDP-opcode histogram (raw 6-bit
                 // RDP opcodes, NOT the F3D DL byte). 0x08-0x0F = triangle
                 // variants; 0x24/0x25 = TEXRECT/TEXRECT_FLIP; 0x29 = SYNC_FULL;
@@ -559,11 +584,85 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                 rs64_dpc_drain_histogram(hist);
                 uint32_t tris = 0;
                 for (int i = 0x08; i <= 0x0F; ++i) tris += hist[i];
-                fprintf(stderr,
-                        "[runner] task #%d exit=%d dl_ptr=0x%08X tris=%u texrects=%u fillrects=%u syncs=%u cimg=%u depth=%u\n",
-                        s_n, (int)r, dl_ptr,
-                        tris, hist[0x24] + hist[0x25], hist[0x36],
-                        hist[0x29], hist[0x3F], hist[0x3E]);
+                const uint32_t syncs = hist[0x29];
+                if (syncs > 0) {
+                    consec_zero = 0;
+                    ever_sync = 1;
+                } else if (ever_sync) {
+                    consec_zero++;
+                }
+                if (sample_runner) {
+                    fprintf(stderr,
+                            "[runner] task #%d exit=%d dl_ptr=0x%08X tris=%u texrects=%u fillrects=%u syncs=%u cimg=%u depth=%u\n",
+                            s_n, (int)r, dl_ptr,
+                            tris, hist[0x24] + hist[0x25], hist[0x36],
+                            syncs, hist[0x3F], hist[0x3E]);
+                }
+                const bool do_probe = s_dl_sync && (
+                    s_n <= 20 ||
+                    (syncs > 0 && n_with_sync_probed < 40) ||
+                    (syncs > 0 && s_n >= 4000 && late_sync_probed < 30) ||
+                    (syncs == 0 && ever_sync && consec_zero <= 120) ||
+                    (syncs == 0 && ever_sync && (consec_zero % 50) == 0) ||
+                    (s_n >= 4000 && (s_n % 25) == 0));
+                if (do_probe) {
+                    if (syncs > 0) {
+                        if (s_n < 4000) n_with_sync_probed++;
+                        else late_sync_probed++;
+                    }
+                    // Guest F3D walk: follow G_DL (0x06/0xDE), end on
+                    // G_ENDDL 0xB8 (F3D) / 0xB5 (Factor5 chunk) / 0xDF.
+                    uint32_t raw_e9 = 0, raw_b5 = 0, raw_b8 = 0, cmds = 0;
+                    char first_ops[48];
+                    int fop_n = 0;
+                    first_ops[0] = '\0';
+                    {
+                        uint32_t stack[16];
+                        int sp = 0;
+                        int jumps_left = 32;
+                        uint32_t addr = dl_ptr & 0x7FFFFF;
+                        auto rbyte = [&](uint32_t a) -> uint8_t {
+                            a &= 0x7FFFFF;
+                            return rdram[a ^ 3];
+                        };
+                        for (int i = 0; i < 2048 && addr + 8u <= 0x800000u; ++i) {
+                            uint8_t op = rbyte(addr);
+                            cmds++;
+                            if (fop_n < 16) {
+                                int used = (int)strlen(first_ops);
+                                if (used < (int)sizeof(first_ops) - 4) {
+                                    snprintf(first_ops + used, sizeof(first_ops) - used,
+                                             "%s%02X", fop_n ? "," : "", op);
+                                }
+                                fop_n++;
+                            }
+                            if (op == 0xE9) raw_e9++;
+                            if (op == 0xB5) raw_b5++;
+                            if (op == 0xB8) raw_b8++;
+                            if (op == 0xB8 || op == 0xB5 || op == 0xDF) {
+                                if (sp > 0) { addr = stack[--sp]; continue; }
+                                break;
+                            }
+                            if ((op == 0x06 || op == 0xDE) && jumps_left > 0) {
+                                uint8_t branch = rbyte(addr + 1);
+                                uint32_t w1 = ((uint32_t)rbyte(addr + 4) << 24) |
+                                              ((uint32_t)rbyte(addr + 5) << 16) |
+                                              ((uint32_t)rbyte(addr + 6) <<  8) |
+                                              ((uint32_t)rbyte(addr + 7));
+                                uint32_t target = w1 & 0x7FFFFF;
+                                if (branch == 0 && sp < 16) stack[sp++] = (addr + 8) & 0x7FFFFF;
+                                addr = target;
+                                jumps_left--;
+                                continue;
+                            }
+                            addr = (addr + 8) & 0x7FFFFF;
+                        }
+                    }
+                    fprintf(stderr,
+                            "[dl-sync-probe] task=#%d syncs=%u raw_e9=%u raw_b5=%u raw_b8=%u "
+                            "cmds=%u dl_ptr=0x%08X tris=%u first_ops=%s\n",
+                            s_n, syncs, raw_e9, raw_b5, raw_b8, cmds, dl_ptr, tris, first_ops);
+                }
                 fflush(stderr);
             }
         }

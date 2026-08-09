@@ -46329,3 +46329,55 @@ present keeps FIREing with pairs=4. Only the FULL_SYNC (`syncs` / `rdpFs`) strea
 Discriminate **guest DL lacks FULL_SYNC** vs **translator/runner drops it** on post-plateau
 tasks; keep item -7 DoD as cutscene→in-mission. Do not chase leave-path noise or reopen
 freelist residual.
+
+## Session 580 — dl-sync-probe: boot 0xE9↔syncs; complex-DL walker under-count; post-exit dual population
+
+### Work unit
+Discriminate H-sync1 (guest omits FULL_SYNC / 0xE9) vs H-sync2 (guest has 0xE9, LLE/runner
+drops) for item -349 post-mission FULL_SYNC starvation.
+
+### Instrument
+`ROGUESQ_LOG_DL_SYNC=1` in `src/main/main.cpp` (factor5_gfx_runner, after RDP hist drain):
+walks guest F3D tree (G_DL 0x06/0xDE, end 0xB8/0xB5/0xDF), counts `raw_e9` vs runner
+`syncs` (= hist[0x29]). Rate-limited; late window (s_n≥4000) samples syncs>0 control too.
+
+### Runs
+| run | exit path | result |
+|-----|-----------|--------|
+| s580_item7_sync_probe | crash pre-p2 `0x8000d688` (-331) | boot control only |
+| s580_item7_sync_probe_retry | crash pre-p2 `0x800ac120` | boot control only |
+| s580_item7_sync_probe_r2 | hangar-sel + graceful + sec4; crash `0x800290d4` (inflate_fast noise) before sec2 | post-exit dual pop |
+| s580_item7_sync_probe_r3 | full hold, no leave (still craft VI) | late hangar control |
+
+### Same-run positive control (boot / simple clear DLs)
+Across r1–r3: **40/40** probed `syncs=1` early tasks have **`raw_e9=1`** (cmds=47,
+`first_ops=00,06,...`). Instrument fires and correlates on simple DLs.
+
+### Late / complex DLs (r3, s_n≥4000, hangar)
+- **86/87** late `syncs=1` probes have **`raw_e9=0`** (cmds≈509, raw_b5≈23, tris≈1k).
+- LLE **does** emit RDP FULL_SYNC (hist[0x29]=1); guest walk finds no 0xE9.
+- `rsp_force_fullsync` is **not called** from ucode (dead; only defined in dpc_bridge).
+- Conclusion: **walker is incomplete for Factor5 complex/chunked DLs** (false-negative
+  `raw_e9`), **or** LLE emits RDP 0x29 from a non-0xE9 path. raw_e9 cannot prove
+  guest absence on complex tasks.
+
+### Post-exit (r2 only natural exit this session)
+- 517 post-hangar-sel runners: **282 syncs=1, 235 syncs=0** (not yet s577's all-zero plateau).
+- 74 post-exit zero-sync probes: all `raw_e9=0` — **not discriminating** given walker gap.
+- No section 2 this session; full 772-task plateau not re-observed live.
+- Sparse pre-exit anomalies `syncs=0 raw_e9=1` (1–2/run, tris=0) and one `raw_e9=56`
+  (garbage walk) — not treated as H-sync2 without recurrence + solid DL structure.
+
+### Hypotheses
+| Hyp | Verdict |
+|-----|---------|
+| H-sync1 guest omit (as sole explanation via raw_e9) | **NOT PROVEN** — walker false-neg on complex DLs |
+| H-sync2 LLE drops guest 0xE9 | **NOT CONFIRMED** — no solid post-overlay `raw_e9≥1 & syncs=0` |
+| Walker incomplete for complex Factor5 DLs | **CONFIRMED** (late hangar syncs=1 raw_e9=0, synth inject dead) |
+| Post-exit is dual population before sec2 plateau | **CONFIRMED** on r2 (282/235) |
+
+### Next
+Factor5-correct DL walk (chunk 0x80/0x108/0xB5 semantics) **or** LLE-side probe at RDP
+0x29 emission (guest DL cursor / last F3D op). Re-run natural exit to sec2 only after
+raw_e9 matches late hangar `syncs=1` (walker control). Until then, treat runner `syncs`
+as ground truth for "LLE emitted FULL_SYNC this task."

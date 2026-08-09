@@ -30,7 +30,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s579)
+## Current truth (established by session 295; unchanged, reviewed through s580)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -137,7 +137,11 @@ hangar-sel val=0 not a hard block (H-m4). **s579:** post-exit `rdpFs` plateau is
 s178** (`stalled=1 pairs=0` + producer stop). Same-run: 772 post-plateau `[lle task]` + 771
 `[runner] task` all `exit=1`, 0 `stalled=1` after section 2, present FIRE pairs=4 continues.
 `rdpFs` == sum of runner `syncs` (4602); last 772 tasks all `syncs=0` → **FULL_SYNC starvation**
-with live GFX (H-stall1/2/classic-H-stall3 REFUTED; H-stall3b CONFIRMED). DoD gate =
+with live GFX (H-stall1/2/classic-H-stall3 REFUTED; H-stall3b CONFIRMED). **s580:**
+`ROGUESQ_LOG_DL_SYNC` guest walk: boot simple DLs 40/40 `syncs=1⇔raw_e9=1` (control OK);
+complex hangar DLs **walker under-counts** (`syncs=1 raw_e9=0` 86/87 late; `rsp_force_fullsync`
+unwired). H-sync1/H-sync2 via raw_e9 **not settled**. Post-exit before sec2 is a **dual
+population** (r2: 282 syncs=1 / 235 syncs=0), not yet all-zero plateau. DoD gate =
 **cutscene→in-mission** past FULL_SYNC starvation + craft input. *Done when:* 60s in-mission
 render, craft responds to synthetic input, stability 0, phase timeline covers the mission.
 
@@ -154,7 +158,17 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -349. The next NEW item takes -350.
+a range pointer. Highest allocated so far: -350. The next NEW item takes -351.
+
+-350. **(s580) `ROGUESQ_LOG_DL_SYNC` — boot control OK; Factor5 guest walk incomplete on
+    complex DLs; H-sync1/2 not settled by raw_e9.** Env-gated probe walks F3D tree counting
+    G_RDPFULLSYNC `0xE9` vs runner hist[0x29]. Boot clear DLs: 40/40 `syncs=1 raw_e9=1`.
+    Late hangar (s_n≥4000): 86/87 `syncs=1 raw_e9=0` (LLE emits FULL_SYNC; walk misses 0xE9;
+    `rsp_force_fullsync` not wired from ucode). Post-exit r2: 282/235 dual population before
+    sec2; 74 zero-sync probes raw_e9=0 — **not discriminating** under walker gap. Sparse
+    `syncs=0 raw_e9=1` (1–2/run) not promoted to H-sync2. **Next:** Factor5-correct walk
+    (chunk 0x80/0x108/0xB5) **or** LLE-side 0x29 emission probe; require late-hangar
+    `syncs=1⇒raw_e9≥1` before re-claiming guest-omit vs LLE-drop.
 
 -349. **(s579) Post-mission-overlay RDP `fs` plateau reclassified — NOT s178 producer-stop;
     FULL_SYNC starvation with live GFX tasks.** Offline discrimination on complete s577 log
@@ -164,8 +178,9 @@ a range pointer. Highest allocated so far: -349. The next NEW item takes -350.
     H-stall1/2/classic-s178 **REFUTED**; H-stall3b FULL_SYNC starvation **CONFIRMED**; H-stall4
     fixed-draw freeze **SUPPORTED** (hold MD5-identical; tris lock 42 then 51). s578 H-m3
     "s178 family" framing **overturned** (believable: fs plateau + frozen PNGs look like s178
-    from the outside; refuted by task/present counters). Next: guest DL lacks FULL_SYNC vs
-    LLE/runner drop (raw `dl_ptr` opcode dump on post-plateau tasks).
+    from the outside; refuted by task/present counters). **s580 amendment:** raw_e9 guest
+    walk not yet a valid absence proof on complex DLs (item -350); treat runner `syncs` as
+    ground truth for LLE emission until walker matches late hangar.
 
 -348. **(s568/s569) SIBLING_PTR DIRECT residual same-base gap class — FIXED and FULLY CLOSED 2/2
     (s569).** Systematic audit of the `-334/-340/-345/-346` model across all applied freelist/
@@ -380,9 +395,11 @@ a range pointer. Highest allocated so far: -349. The next NEW item takes -350.
     REFUTED-as-hard-block; H-m3 fs plateau observed but mis-labelled s178. **s579:** H-stall1
     producer-stop REFUTED; H-stall2 LLE-incomplete REFUTED; classic present-stall REFUTED;
     FULL_SYNC starvation CONFIRMED (`rdpFs`=Σ`syncs`; 772 post tasks syncs=0); fixed-draw
-    freeze SUPPORTED. Leave-path intermittent noise (`0x8000ce54`, coalesce `0x8000247c`)
-    file not chase. Force path diagnostic-only. **Primary remaining:** why FULL_SYNC stops
-    after mission overlay (guest omit vs LLE drop) + cutscene→gameplay gate.
+    freeze SUPPORTED. **s580:** dl-sync-probe landed; guest-omit vs LLE-drop **blocked on
+    Factor5 walk incompleteness** (item -350); post-exit before sec2 is dual syncs
+    population (r2). Leave-path intermittent noise file not chase. Force path
+    diagnostic-only. **Primary remaining:** Factor5-correct 0xE9 walk or LLE 0x29 probe,
+    then re-discriminate; cutscene→gameplay gate.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.

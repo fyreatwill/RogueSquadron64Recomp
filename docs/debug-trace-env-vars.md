@@ -45,6 +45,7 @@ To disable: unset, set to `0`, or leave undefined.
 | `ROGUESQ_LOG_PROBES` | off | `[wp@*]` watchpoint probes in `funcs_*.c` | Per-call value-change watchpoint probes inserted during the iter-810 freeze investigation. Volume is naturally bounded (only fire on transitions) but useful to gate if you want a quieter run. Same flag is checked from `src/main/debug_logs.h`. |
 | `ROGUESQ_LOG_RT64_ALLOC` | off | `[rt64-alloc] interpolatedColorTargets/nativeSwappedRAM/rdramData/BufferPair/RT::setupColor/setupDepth` | RT64 allocation hotspots — emit `[rt64-alloc]` log lines whenever an allocator commits ≥ 1 MB. Used to find allocation spikes. Lives in 5 sites across `lib/rt64/src/{hle,render}/`. |
 | `ROGUESQ_LOG_TEXBYTES` | off | `[trace] tex bytes ...` | First 32 bytes of texture data at SETTIMG addresses, for diagnosing wrong/missing assets. |
+| `ROGUESQ_LOG_DL_SYNC` | off | `[dl-sync-probe] task=#N syncs=… raw_e9=…` | Guest F3D walk counting G_RDPFULLSYNC (`0xE9`) vs post-LLE runner `syncs` (RDP hist `0x29`). Item -349/-350 FULL_SYNC starvation discrimination. **s580:** boot simple DLs correlate; complex Factor5 DLs false-negate `raw_e9` (do not treat raw_e9=0 as guest-omit until late-hangar control is green). Pass via `GAME_EXTRA_ENV`. Rate-limited. |
 
 ### Cinematic-loop checkpoints
 
