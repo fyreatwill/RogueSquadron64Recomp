@@ -2175,6 +2175,7 @@ guard family, and a real `hangarbay-entry` positive control both times.
 | 35 | `SUBMIT_SCENE_NODE_RENDER_R4_GUARD` | s534 | `funcs_4.c`/`0x80010BF0` | `submitSceneNodeRender` (4th site) | 28 | 1st: crashed on item -320's signature. Confirm: full 346s, zero crashes |
 | 36 | `DRAW_SUBTITLE_TEXT_R1_GUARD` | s535 | `funcs_4.c`/`0x80016B58` | `drawSubtitleText` (1st guard, new function) | 27 | Both runs: full 300s/347s, zero crashes of any kind. **First session the raw tracer's top-ranked candidate (`renderLitTexturedMeshFaces`, reg=`r4`/off=`0X0`) was correctly REJECTED as a shape mismatch** — that write dereferences the function's own provably-non-null `$a0` argument, not a reloaded/derived global pointer; a CFG-reachability artifact of the tracer, not a shared-dataflow one |
 | 37 | `EMIT_COLOR_FILL_RECT_R2_GUARD` | s536 | `funcs_3.c`/`0x8000A3C4` | `emitColorFillRect` (2nd site alongside R1's `0x8000A538`) | 26 | 1st needed 3 attempts to get a valid positive control (1st too weak n=4 on item -324's signature, 2nd fully vacuous 0 hangar diagnostics despite rc=0 completion). 3rd attempt clean, crashed on item -320's signature. Confirm crashed on `heapFreeListInsert+72`/`0x800220b8` — a NEW signature, filed **item -330** (see below) |
+| 38 | `RENDER_LIT_TEXTURED_MESH_FACES_R1_GUARD` | s537 | `funcs_3.c`/`0x8000FE14` | `renderLitTexturedMeshFaces` (1st guard, new function) | 26 | 1st: crashed on `heapFreeListInsert+72`/`0x800220b8`, back-to-back 2nd occurrence of item -330. Confirm (folded s539): crashed on `heapFreeListDequeue+29152`/`0x8000d688` (`local-symtab`-tagged, so a genuine `heapFreeListDequeue`-internal fault, not the pre-s480 symbolizer artifact) — a NEW, previously-uncatalogued signature, filed **item -331** (see below). Both runs: 0 fires on the new guard, 0 fires on any other armed guard family (nearby sibling guards `generic-cache-guard`/`dl-list-append-rwrite-guard`/`dl-list-reset-rnode-guard`/`heap-dequeue-derived-ptr-guard` all dumped `n=0` at crash time, a diagnostic snapshot not a fire), real `hangarbay-entry` positive control both times (n=31) |
 
 Guards 26-37 also reconfirmed s535-537 that the raw tracer's top-ranked pick (`funcs_3.c`,
 `renderLitTexturedMeshFaces`, reg=`r4`/off=`0X0`, count 27) is a stable, repeatedly-re-derived shape
@@ -2190,4 +2191,14 @@ adjacent wall-clock time, so a shared transient is the more likely explanation p
 prior — watch for a 3rd occurrence in an unrelated run before escalating, same policy as item -327.
 Live status: `docs/CURRENT-TRUTH.md` Next-steps.
 
-Full session-by-session raw detail: `PORTING-STATE.md` Sessions 526-537.
+**Item -331** (`heapFreeListDequeue+29152`/`last-guest-pc=0x8000d688`, single occurrence, s537's 2nd
+confirm, folded s539) — a genuinely new address inside `heapFreeListDequeue`, earlier in the function
+than every already-guarded/fixed site in this campaign (item -317 step 1's fix at `0x8000D760`+widened
+skip-to-`0x8000D8A8`; item -322's `HEAPLISTDEQ_ATTR_WRITE_GUARD` at `0x8000D92C`; the free-list-cache-head
+reload at `0x8000D6E4`) — `0x8000D688` sits before all of them, near the `0x8000D67C` branch that item
+-317 step 1's writeup already identified as a second, unrelated control-flow path into the function.
+Carries the `(local-symtab)` tag, so post-s480 symbolizer confidence is high this is a real fault inside
+`heapFreeListDequeue`, not the pre-s480 `dladdr` misattribution (item -310/-311). Filed not chased —
+watch for a 2nd occurrence before escalating.
+
+Full session-by-session raw detail: `PORTING-STATE.md` Sessions 526-537, 539.
