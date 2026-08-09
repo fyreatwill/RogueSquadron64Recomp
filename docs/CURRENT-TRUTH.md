@@ -21,8 +21,8 @@ Priority order for upcoming iterations, set after the 300-session review:
    surfaced by the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW
    §18-§19). Items -312..-322 (s481-518, the guard lineage descending from `DL_LIST_APPEND_GUARD`
    through `HEAPLISTDEQ_ATTR_WRITE_GUARD`) are all fully CLOSED — PROJECT-OVERVIEW §20-§25.
-   **Item -317 step 3 (a ~150-location blanket sweep) status as of s542: 44/~150 leads fixed, 43 FULLY
-   CLOSED 2/2, 1 pending confirm — see item -317 below.** ~102 locations remain unaudited across
+   **Item -317 step 3 (a ~150-location blanket sweep) status as of s543: 46/~150 leads fixed, 44 FULLY
+   CLOSED 2/2, 2 pending confirm — see item -317 below.** ~100 locations remain unaudited across
    further tiers — M3's top-ranked work
    unit is this sweep's continuation. Live breadcrumb tracking (items -324..-331, all filed not chased,
    none escalated): see Next-steps below.
@@ -282,8 +282,30 @@ a range pointer. Highest allocated so far: -332. The next NEW item takes -333.
     full 300s scheduled duration completed with NO crash at all (106 frames captured, rc=0) — the
     cleanest possible verify class. 2nd confirm queued:
     `scratch/agent/soak_queue/s542_render_lit_mesh_r10_confirm.sh`.
-    Tally: 44/~150 fixed, 43 fully closed 2/2, 1 pending confirm (`RENDER_LIT_MESH_R10_GUARD`).
-    **~102 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
+    **`RENDER_LIT_MESH_R10_GUARD`'s 2nd confirm (s543, folded from queue) read CLEAN**: 0 fires, 1
+    benign already-catalogued `hangarmenu-a0-guard` co-fire, `hangarbay-entry n=35` (positive control),
+    full 348s duration completed with NO crash at all — marked FULLY CLOSED 2/2, closing the campaign's
+    44 guards to 44/44 fully closed (zero open guards) for the sixth time.
+    **Next tier found and fixed (s543)**: fresh re-scan put a TIE at count=22 (exact guarded shape
+    reg=`r2`/off=`0X4`) between `funcs_3.c:10887` (site=`0x8000A25C`, `emitColorFillRect`, a THIRD
+    site alongside R1's `0x8000A538` and R2's `0x8000A3C4`) and `funcs_4.c:7328`
+    (site=`0x80011A2C`, `renderFlatMeshFaceGroup`, a SECOND site alongside R1's `0x80011B54`) — as
+    predicted by the prior session's note. Both write addresses and every raw reload address feeding
+    them (22 for `emitColorFillRect`, 18 distinct for `renderFlatMeshFaceGroup`) were checked directly
+    against `fixup_game_funcs.py`: neither appeared anywhere — genuinely uncovered. Same
+    `+0x63B0`-offset idiom, gated at `0x8000A254`/`0x80011A24` respectively. Fixed as
+    **`EMIT_COLOR_FILL_RECT_R3_GUARD`** and **`RENDER_FLAT_MESH_FACE_GROUP_R2_GUARD`**, batched into
+    one build/run. 1st live-verify's first attempt (s543) was WEAK: crashed at 19.9s after only 7
+    frames, `hangarbay-entry n=5` (single-digit, below the double-digit bar) — discarded per iron rule
+    1, its crash signature (`setByteAcrossEntryList+176`/`0x800aafa8`) matches the already-catalogued
+    item -306, not new. The immediate retry (2nd attempt, s543) was CLEAN: 0 fires on either new
+    guard, 0 fires on any other armed guard family (no regression), `hangarbay-entry n=31` (positive
+    control), crashed at 113.7s on the already-catalogued item -320 `loadCutsceneAssetsByIndex+1860`/
+    `0x800aafb8` signature — clean verify, own guards never fired. 2nd confirm queued:
+    `scratch/agent/soak_queue/s543_emit_color_fill_rect_r3_render_flat_mesh_face_group_r2_confirm.sh`.
+    Tally: 46/~150 fixed, 44 fully closed 2/2, 2 pending confirm (`EMIT_COLOR_FILL_RECT_R3_GUARD`,
+    `RENDER_FLAT_MESH_FACE_GROUP_R2_GUARD`).
+    **~100 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
     Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape), doesn't subsume these
     tiers. **Tracer gotcha (s521)**: `s506_dedupe.py` reads a fixed canonical report path — a custom
     `--out` on `--scan` leaves it stale. **Positive-control gotcha (s536)**: `hangarbay-entry` can fail

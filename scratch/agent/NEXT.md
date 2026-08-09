@@ -2,42 +2,49 @@
 
 HYPOTHESIS-ID: item-317-step3-blanket-sweep
 
-## s542 recap (read this first)
+## s543 recap (read this first)
 
-**Folded in s541's queued confirm — CLEAN.**
-`s541_render_flat_mesh_face_group_r1_render_lit_mesh_r9_confirm`: 0 fires on either
-`render-flat-mesh-face-group-r1-guard` or `render-lit-mesh-r9-guard`, 1 benign already-catalogued
-`hangarmenu-a0-guard` co-fire, `hangarbay-entry n=2700` (strong positive control). Crashed at 164.3s
-on `pc-symbol=coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` — the already-catalogued
-s354-366 heap-walker background-noise family, not new. Both `RENDER_FLAT_MESH_FACE_GROUP_R1_GUARD`
-and `RENDER_LIT_MESH_R9_GUARD` marked FULLY CLOSED 2/2 — closed the campaign's 43 guards to 43/43
-fully closed (zero open guards) for the fifth time.
+**Folded in s542's queued confirm — CLEAN.**
+`s542_render_lit_mesh_r10_confirm`: 0 fires on `render-lit-mesh-r10-guard`, 1 benign already-
+catalogued `hangarmenu-a0-guard` co-fire, `hangarbay-entry n=35` (positive control). Full 348s
+duration completed with NO crash at all (106 frames, rc=0) — the cleanest possible verify class.
+`RENDER_LIT_MESH_R10_GUARD` marked FULLY CLOSED 2/2 — closed the campaign's 44 guards to 44/44
+fully closed (zero open guards) for the sixth time.
 
-**Found and fixed the next tier (s542)**: fresh re-scan put a single, NOT tied, top-ranked entry at
-the exact guarded shape (reg=`r2`, off=`0X4`, count=24) in `funcs_4.c:14436` (site=`0x80013BF4`,
-`renderLitMeshFaceGroup`) — a 10th distinct site in that function, checked against the existing
-R2-R9 lineage's eight other addresses (`0x80014C6C`, `0x800148E8`, `0x800142FC`, `0x80014A8C`,
-`0x80014558`, `0x80014140`, `0x80013F0C`, `0x80013DF4`), none matched. Fixed as
-**`RENDER_LIT_MESH_R10_GUARD`** (44th guard), 1st live-verify clean on the first attempt:
-0 fires on the new guard, 1 benign already-catalogued `hangarmenu-a0-guard` co-fire,
-`hangarbay-entry n=2900` (strong positive control), full 300s scheduled duration completed with NO
-crash at all (106 frames, rc=0) — the cleanest possible verify class. 2nd independent confirm
-already queued: `scratch/agent/soak_queue/s542_render_lit_mesh_r10_confirm.sh` — the loop should
-pick this up between iterations.
+**Found and fixed the next tier (s543)**: fresh re-scan put a TIE at count=22 (exact guarded shape
+reg=`r2`, off=`0X4`) between `funcs_3.c:10887` (site=`0x8000A25C`, `emitColorFillRect`, a THIRD
+site alongside R1's `0x8000A538` and R2's `0x8000A3C4`) and `funcs_4.c:7328`
+(site=`0x80011A2C`, `renderFlatMeshFaceGroup`, a SECOND site alongside R1's `0x80011B54`) — exactly
+as the s542 session's note predicted. Both write addresses and every raw reload address feeding them
+(22 for `emitColorFillRect`, 18 distinct for `renderFlatMeshFaceGroup`) checked directly against
+`fixup_game_funcs.py`: none appeared anywhere — genuinely uncovered. Fixed as
+**`EMIT_COLOR_FILL_RECT_R3_GUARD`** and **`RENDER_FLAT_MESH_FACE_GROUP_R2_GUARD`** (45th/46th guards),
+batched into one build/run.
 
-**Note for next session**: the tier below this one's pick (count=22) has TWO TIED entries not yet
-addressed — `funcs_3.c:10887` (`emitColorFillRect`, would be a 3rd site alongside R1/R2) and
-`funcs_4.c:7328` (`renderFlatMeshFaceGroup`, would be a 2nd site alongside R1). Re-verify these are
-still top-ranked at the next fresh re-scan before assuming — the ranking has shifted session to
-session as higher tiers get fixed.
+**1st live-verify needed 2 attempts.** Attempt 1 crashed at 19.9s after only 7 frames,
+`hangarbay-entry n=5` (single-digit, below the double-digit bar) — discarded per iron rule 1 as
+vacuous, crash signature (`setByteAcrossEntryList+176`/`0x800aafa8`) matches already-catalogued item
+-306, not new. Attempt 2 (immediate retry, same session): 0 fires on either new guard, 0 fires on any
+other armed guard family, `hangarbay-entry n=31` (positive control, valid). Crashed at 113.7s on
+`pc-symbol=loadCutsceneAssetsByIndex+1860`/`last-guest-pc=0x800aafb8` — the already-catalogued item
+-320 (s508) background-noise signature, not new — clean verify, own guards never fired. 2nd
+independent confirm already queued:
+`scratch/agent/soak_queue/s543_emit_color_fill_rect_r3_render_flat_mesh_face_group_r2_confirm.sh` —
+the loop should pick this up between iterations.
+
+**Note for next session**: no ranked list of the tier below count=22 was captured this session (the
+s543 re-scan output beyond the top ~20 entries wasn't examined past the accepted pick). Re-run the
+tracer fresh at the next session's start rather than assuming a specific next candidate.
 
 ## This iteration's work unit
 
 **Step 1 — fold in the queued confirm result (do this FIRST, before picking a new work unit).**
-For `s542_render_lit_mesh_r10_confirm`, find its SOAK-RESULTS.md line, read the run.log INSIDE the
-same-named results subdirectory (not the top-level `.log` driver file — **check BOTH**, the real
-per-guard diagnostics are not reliably in one or the other from session to session), and grep for:
-- `render-lit-mesh-r10-guard` fire count (expect 0 for a clean result)
+For `s543_emit_color_fill_rect_r3_render_flat_mesh_face_group_r2_confirm`, find its SOAK-RESULTS.md
+line, read the run.log INSIDE the same-named results subdirectory (not just the top-level `.log`
+driver file — check BOTH, the real per-guard diagnostics are not reliably in one or the other from
+session to session), and grep for:
+- `emit-color-fill-rect-r3-guard` and `render-flat-mesh-face-group-r2-guard` fire counts (expect 0
+  for a clean result)
 - fires on any OTHER armed guard family (regression check)
 - `hangarbay-entry` count — must be non-trivial (double digits+) or the run is vacuous per iron rule
   1; if weak/absent, discard and re-queue a retry, don't just accept a weak result
@@ -46,9 +53,10 @@ per-guard diagnostics are not reliably in one or the other from session to sessi
   -332 in `docs/CURRENT-TRUTH.md` Next-steps and the s354-366 `coalesceFreeHeapBlocks` family in
   `docs/PROJECT-OVERVIEW.md`; if it's a genuinely new guest PC, file it as item -333
 
-If clean with a valid positive control: mark `RENDER_LIT_MESH_R10_GUARD` FULLY CLOSED 2/2 — update
-row 44's status text in `docs/PROJECT-OVERVIEW.md` §25's table (matching the format of every other
-closed row) and fold the summary into `PORTING-STATE.md`.
+If clean with a valid positive control: mark both `EMIT_COLOR_FILL_RECT_R3_GUARD` and
+`RENDER_FLAT_MESH_FACE_GROUP_R2_GUARD` FULLY CLOSED 2/2 — update rows 45/46's status text in
+`docs/PROJECT-OVERVIEW.md` §25's table (matching the format of every other closed row) and fold the
+summary into `PORTING-STATE.md`.
 
 **Step 2 — re-scan and audit the next-ranked tier, same iteration (fold-in-then-pick pattern).**
 1. Re-run the tracer fresh (no custom `--out`, s521's gotcha):
@@ -63,11 +71,9 @@ closed row) and fold the summary into `PORTING-STATE.md`.
    argument, not a reloaded global; re-verify this is still the case each session, don't assume).
 3. Identify the top-ranked write line NOT already fixed AND matching the exact shape (`reg=r2,
    off=0X4`, i.e. a `MEM_W(0X4, ctx->rN) = ctx->rM;` fed by a `lui $v0,0x8011`/`lw $v0,0x63B0($v0)`
-   load pair gated by `beq $v0,$zero,...`). At the s542 scan the tier after R10 ran: `funcs_3.c:10887`
-   (`emitColorFillRect`, count=22, would be a 3rd site alongside R1/R2) TIED with `funcs_4.c:7328`
-   (`renderFlatMeshFaceGroup`, count=22, would be a 2nd site alongside R1). Re-verify the fresh
-   ranking; do not assume this list survives a fresh session's re-scan. If still tied, batch both
-   into one build/run per the batch-instrumentation rule (as s540/s541 did).
+   load pair gated by `beq $v0,$zero,...`). Re-verify the fresh ranking; do not assume the s543 scan's
+   list below count=22 survives a fresh session's re-scan. If tied entries appear, batch them into one
+   build/run per the batch-instrumentation rule (as s540/s541/s543 did).
 4. Pull all raw reload addresses feeding the target write line(s): filter
    `scratch/agent/s494_item317_step3_report.json` by `func==<name>`, then for each record check its
    `hits` list for an entry whose `line` matches the target write line — print that record's
@@ -76,7 +82,7 @@ closed row) and fold the summary into `PORTING-STATE.md`.
    directly (NOT under a `tools/` subdirectory, and NOT the same repo as `RogueSquadron64Recomp` — it's
    a separate standalone git checkout with its own origin, untracked `fixup_game_funcs.py`, no
    submodule-patches export needed). `submitSceneNodeRender` now carries R1-R4, `emitColorFillRect`
-   R1-R2, `drawSubtitleText` R1, `renderLitTexturedMeshFaces` R1-R4, `renderFlatMeshFaceGroup` R1,
+   R1-R3, `drawSubtitleText` R1, `renderLitTexturedMeshFaces` R1-R4, `renderFlatMeshFaceGroup` R1-R2,
    `renderLitMeshFaceGroup` R2-R10 — check the new candidate isn't one of those or their own load
    addresses.
 6. Read the generated source around any zero-hit write address to confirm the exact vulnerable shape
@@ -106,24 +112,26 @@ closed row) and fold the summary into `PORTING-STATE.md`.
    `fixup_game_funcs.py`'s output to `/tmp` is blocked by the sandbox — redirect inside one of the
    three allowed repos, delete after auditing.
 9. 1st live-verify, manual, foreground — copy the most recent guard's manual script from
-   `scratch/agent/soak_queue/done/` (`s542_render_lit_mesh_r10_manual_20260809-run.sh` is the latest
-   full env-var list), append the new guard's `ROGUESQ_LOG_<NAME>=1` (append, don't remove any
-   existing ones — batch-instrumentation rule), point output at a new
-   `scratch/agent/soak_results/s543_..._manual` path, run with `Bash` (it will auto-background if it
+   `scratch/agent/soak_queue/done/` (`s543_emit_color_fill_rect_r3_render_flat_mesh_face_group_r2_manual_20260809-run.sh`
+   is the latest full env-var list), append the new guard's `ROGUESQ_LOG_<NAME>=1` (append, don't
+   remove any existing ones — batch-instrumentation rule), point output at a new
+   `scratch/agent/soak_results/s544_..._manual` path, run with `Bash` (it will auto-background if it
    exceeds the foreground timeout), then `TaskOutput` with `block: true` and `timeout: 300000` to wait
    synchronously. After running it, move it to `soak_queue/done/` yourself so the loop doesn't
-   re-execute it a second time.
+   re-execute it a second time. **If the first attempt comes back with a single-digit
+   `hangarbay-entry` count, discard it and retry immediately in the same iteration (s543's precedent)
+   — don't accept a weak positive control.**
 10. Read the run.log directly (grep the new guard's fire count, `hangarbay-entry` count, crash/signal
     markers). **Never trust a 0-fires result without confirming `hangarbay-entry` (or another armed
     positive control) actually appears with a non-trivial (double-digit+) count.** If weak/absent,
     discard and re-run. If clean with a real positive control, queue a 2nd independent confirm to
-    `scratch/agent/soak_queue/s543_..._confirm.sh` and record the 1st-verify result in
+    `scratch/agent/soak_queue/s544_..._confirm.sh` and record the 1st-verify result in
     `docs/CURRENT-TRUTH.md` + `SOAK-RESULTS.md` + `PORTING-STATE.md`.
 
 **Discriminating outcome**: 0 fires on the new guard across BOTH the 1st live-verify and the 2nd
 independent confirm, each WITH a same-run `hangarbay-entry` positive control that actually fired
 non-trivially, is what promotes a guard to FULLY CLOSED 2/2. Any nonzero fire count on the new guard
-itself would be the first actual confirmation this idiom class fires in practice (none of the 44
+itself would be the first actual confirmation this idiom class fires in practice (none of the 46
 guards fixed so far have ever fired) — treat that as a genuinely new, high-priority finding.
 
 ## Iron-rule reminders specific to this campaign
@@ -131,7 +139,8 @@ guards fixed so far have ever fired) — treat that as a genuinely new, high-pri
   idiom) AND the address-by-address cross-check against `fixup_game_funcs.py` AND a direct read of the
   generated source.
 - Never trust a 0-fires result without confirming the positive control appears with a non-trivial
-  (double-digit+) count.
+  (double-digit+) count. A single-digit `hangarbay-entry` count means the run is too short to trust —
+  discard and retry, don't report it as a result.
 - One build/run carries every armed guard's env var (batch-instrumentation rule).
 - `s506_dedupe.py` reads a FIXED canonical path; never pass a custom `--out` to `--scan`.
 - Kill runs with SIGKILL only; capture paths must not start with "." in the final component; run from
@@ -156,12 +165,15 @@ guards fixed so far have ever fired) — treat that as a genuinely new, high-pri
 - **`coalesceFreeHeapBlocks+4424`/`0x8000247c` background-noise gotcha (s542)**: another long-recurring
   stable signature, catalogued since the s354-366 heap-walker arc — check exact pc-symbol+guest-PC pairs
   in `docs/PROJECT-OVERVIEW.md` before filing a crash hit as new.
+- **`setByteAcrossEntryList+176`/`0x800aafa8` background-noise gotcha (s531/s543)**: item -306's
+  already-catalogued signature; recurs across multiple sessions' weak/short runs.
 - This sandbox blocks `find -delete`, multi-statement `&&`/`while`/heredoc chains, and output
   redirection to `/tmp` fairly often — prefer single simple commands. Grep with a literal path instead
-  of a shell variable when the sandbox flags "shell syntax that cannot be statically analyzed". Writing
-  a multi-line string with embedded `#` inside a quoted shell/python argument can also trip the sandbox
-  ("Newline followed by # inside a quoted argument can hide arguments from path validation") — write
-  long append content to a scratch `.md` file with the Write tool first, then `cat file >> target`.
+  of a shell variable when the sandbox flags "shell syntax that cannot be statically analyzed" (also
+  applies to `for addr in ...; do ...; done` loops using shell variable expansion — use Python instead).
+  Writing a multi-line string with embedded `#` inside a quoted shell/python argument can also trip the
+  sandbox ("Newline followed by # inside a quoted argument can hide arguments from path validation") —
+  write long append content to a scratch `.md` file with the Write tool first, then `cat file >> target`.
 - After launching a manual live-verify in the background, use `TaskOutput` with `block: true` and a
   generous `timeout` (e.g. 300000ms) to wait synchronously before doing anything else.
 - Full guard-by-guard table and mechanism detail for everything closed so far: `docs/PROJECT-OVERVIEW.md`
