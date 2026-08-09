@@ -44880,3 +44880,76 @@ post-crash memory-dump snapshots, the established benign pattern, no regression.
 repo, no submodule-patches step applies); two soaks queued (`s551_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm_retry.sh`,
 `s551_six_way_tie_confirm.sh`); `scratch/agent/SOAK-RESULTS.md` fold-in entry appended;
 `PORTING-STATE.md` (this entry).
+
+## Session s552 (2026-08-09) — item -317 step 3, fold-in-then-pick
+
+Read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, `scratch/agent/SOAK-RESULTS.md` per the
+autonomous contract. `wc -c` on CURRENT-TRUTH.md was 42641 bytes — below the 60000 maintenance
+trigger, proceeded as a normal work-unit iteration.
+
+**Step 1 — folded in both of s551's queued 2nd confirms.** Both came back WEAK, and both are now on
+their SECOND CONSECUTIVE weak draw (the pattern first flagged s543/s545/s548/s549/s551 — the item -306
+`setByteAcrossEntryList+176`/`0x800aafa8` background-noise signature):
+- `s551_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm_retry` (guards 64-65,
+  `EMIT_ALLOCATED_DL_COMMAND_R1_GUARD`/`RESERVE_AND_EMIT_DL_ENTRY_R1_GUARD`): no `hangarbay-entry` line
+  at all, process gone at 20.2s after 7 frames, crashed on the item -306 signature. Discarded per iron
+  rule 1 — this is the 2nd consecutive weak draw for this target (1st was s551's own retry, itself a
+  retry of s550's original confirm). Retry re-queued (3rd attempt):
+  `scratch/agent/soak_queue/s552_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm_retry2.sh`.
+- `s551_six_way_tie_confirm` (guards 66-71, the `EMIT_COLOR_FILL_RECT_R6_GUARD` six-way tie): identical
+  failure mode — no `hangarbay-entry` line, 20.2s/7 frames, same item -306 signature. This is the 1st
+  confirm attempt for this target, discarded per iron rule 1. Retry queued:
+  `scratch/agent/soak_queue/s552_six_way_tie_confirm_retry.sh`.
+
+Neither confirm surfaced a fire on its own guards or any other armed guard family, so no investigation
+was triggered — both are pure iron-rule-1 discards (weak positive control, not a null result).
+
+**Step 2 — re-scanned the tracer for the next idiom-shape tier (fold-in-then-pick pattern).** Re-ran
+`s494_item317_step3_tracer.py --scan` + `s506_dedupe.py` + `s548_dedupe_shape_filtered.py` (reg=r2/
+off=0X4 shape filter). Confirmed the count=8 THREE-WAY TIE flagged as a candidate in s551's NEXT.md:
+`heapFreeListDequeue` (`funcs_3.c:24498`/`0x8000D304`, first R-numbered guard in this function — note
+this is a NEW naming track distinct from the whole-function items -312..-316 step-1 audit of the same
+function, which used no R-suffix), `submitSceneNodeRender` (`funcs_4.c:1041`/`0x800103B8`, 8th site
+alongside R1-R7), `buildOrientedFaceGeometry` (`funcs_4.c:11705`/`0x80012E80`, 1st R-numbered site
+alongside the pre-existing unrelated `ORIENTED_FACE_DERIVED_PTR_GUARD`). Same idiom every time: `lui
+$v0,0x8011` / `lw $v0,0x63B0($v0)` reloads a global into `ctx->r2`, a `beq $v0,$zero,...` null check's
+delay slot is duplicated for both branch paths, and the fallthrough-only instruction after the label
+unconditionally writes through the reloaded, never-range-checked `ctx->r2` as `ctx->r2+4`. Pulled the
+three write addresses from the JSON report + direct read of the generated source (two of three sites
+had the `g_rs64_last_guest_pc = ...;` line before the write, `buildOrientedFaceGeometry`'s did not —
+matched the exact old-text per site per the s551 lesson). Cross-checked all three write addresses
+against `fixup_game_funcs.py`: no matches, no incidental disqualification. Named
+`HEAP_FREE_LIST_DEQUEUE_R1_GUARD` (guard 72), `SUBMIT_SCENE_NODE_RENDER_R8_GUARD` (guard 73, next free
+`R` number per `grep -oE` check), `BUILD_ORIENTED_FACE_GEOMETRY_R1_GUARD` (guard 74). Patched all three
+into `fixup_game_funcs.py` using the established skip-on-invalid template, regenerated
+(`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`, all four steps, fixup report
+confirmed all three `patched x1`), built clean.
+
+**1st live-verify (manual, foreground, all three new guards armed together with the full accumulated
+env-var list, batch-instrumentation rule)**: `hangarbay-entry n=31` (valid double-digit positive
+control), 0 fires on `heap-free-list-dequeue-r1-guard`, `submit-scene-node-render-r8-guard`,
+`build-oriented-face-geometry-r1-guard`, 0 fires on any other armed guard family at all (no benign
+co-fires this run). Crashed at 115.5s (40 frames captured) on `last-guest-pc=0x80015544` — the
+already-catalogued item -324 background-noise signature (PORTING-STATE Session s521/PROJECT-OVERVIEW
+§22). This run it resolved to host symbol `packMtxRowFloatToFixed+824` rather than item -324's original
+`heapFreeListInsert+72` — the same pc-symbol-instability gotcha already catalogued for `0x800ab068`
+(s541) and `findLookupEntryByKey` (s550): the guest PC is the stable identifier, not the resolved host
+symbol name. Clean verify, own guards never fired. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s552_three_way_tie_confirm.sh`.
+
+**Result**: item -317 step 3 now at 74/~150 guards fixed (up from 71), 65/74 FULLY CLOSED 2/2, 9
+pending confirm (guards 64-71 each on a 2nd consecutive weak draw with retries queued; guards 72-74
+new this session with a clean 1st live-verify, 2nd confirm queued). ~78 locations remain unaudited.
+
+**Rules out**: neither of s551's two queued confirms surfaced a real guard fire — both were iron-rule-1
+discards on weak positive controls, not evidence against the guards. The new count=8 three-way tier
+follows the exact same idiom as all 71 prior guards with no shape surprises.
+
+**Docs updated**: `docs/CURRENT-TRUTH.md` (item -317, top summary block, guard/pending counts);
+`docs/PROJECT-OVERVIEW.md` §25 (guards 64-71 rows updated with the 2nd-consecutive-weak-draw fold-in,
+new rows 72-74 added); `fixup_game_funcs.py`
+(`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`, not this repo, no
+submodule-patches step applies); three soaks queued
+(`s552_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm_retry2.sh`,
+`s552_six_way_tie_confirm_retry.sh`, `s552_three_way_tie_confirm.sh`);
+`scratch/agent/SOAK-RESULTS.md` fold-in entries appended; `PORTING-STATE.md` (this entry).
