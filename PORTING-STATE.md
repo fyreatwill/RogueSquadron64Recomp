@@ -44750,3 +44750,73 @@ Tools/N64Recomp/fixup_game_funcs.py` +2 `SIBLING_PTR_WRITE_GUARD` entries, +1
 applies); `scratch/agent/soak_queue/s549_five_tied_guards_confirm_retry2.sh` and
 `scratch/agent/soak_queue/s549_sibling_ptr_write_gap_confirm.sh` queued; `PORTING-STATE.md` (this
 entry).
+
+## Session 550 (2026-08-09)
+
+**Folded in both of s549's queued confirms — every guard pending in this campaign cleared for the
+first time.**
+
+`s549_five_tied_guards_confirm_retry2` (guards 53-57, `RENDER_FLAT_MESH_FACE_GROUP_R3/R4_GUARD`,
+`RENDER_LIT_MESH_R12/R13_GUARD`, `DRAW_SUBTITLE_TEXT_R3_GUARD`): `hangarbay-entry n=31` — the first
+valid double-digit positive control on this exact confirm target after 3 consecutive single-digit weak
+draws (s546, s548, s549, all hitting the item -306 `setByteAcrossEntryList+176`/`0x800aafa8`
+background-noise signature). 0 fires on all five target guards, 0 fires on any other armed guard family
+(no regression). Crashed at 114.7s on `pc-symbol=emitAllocatedDLCommand+1960`/
+`last-guest-pc=0x800086ec` — checked against the full background-noise catalogue in
+`docs/PROJECT-OVERVIEW.md`, no match; genuinely new, filed **item -335** (single occurrence, not
+escalated). Guards 53-57 marked **FULLY CLOSED 2/2**.
+
+`s549_sibling_ptr_write_gap_confirm` (item -334's `SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC` + item
+-327's root-cause `DL_LIST_APPEND_DEREF_GUARD`, 84 sites): `hangarbay-entry n=31` (positive control).
+0 fires on `sibling-ptr-write-guard site=0x80010DCC`, 0 fires on `dl-list-append-deref-guard` (any of
+the 84 sites) — the corruption event that fired the guard in s549's own 1st live-verify did not
+manifest in either s549's 2nd-confirm run or this one, consistent with every guard in this campaign's
+intermittent firing pattern. Crashed at 132.4s on `pc-symbol=findLookupEntryByKey+2212`/
+`last-guest-pc=0x800ac914` — same symbol+offset as item -325's own catalogued breadcrumb but a
+DIFFERENT `last-guest-pc` (item -325 is `0x800ad0dc`) — the family's own `pc-symbol`-instability gotcha
+(s541) means matching symbol+offset does not guarantee the same guest address; cross-checked
+`last-guest-pc` directly and it does not match, so this is a genuinely NEW single-occurrence signature,
+filed **item -336** (not a 2nd occurrence of -325). Guards 62-63 (item -334 + item -327's root cause)
+marked **FULLY CLOSED 2/2** — this closes the campaign's 63 guards to **63/63 fully closed, zero
+pending confirms, for the first time in the whole item -317 step 3 campaign**.
+
+**Picked the next tier and found+fixed 2 new guards from raw crash-mechanism-free tracer output.** Ran
+the tracer fresh (`s494_item317_step3_tracer.py --scan` + `s506_dedupe.py`) now that both s549 confirms
+were folded in. The top of the dedupe output is dominated by the already-known-mismatch shape
+(`reg=r4`/`off=0X0` in `renderLitTexturedMeshFaces`/`renderFlatMeshFaceGroup` — the function's own
+non-null `$a0` argument, re-verified rejected every session since s535). Filtering to the campaign's
+established guarded shape (`reg=r2`/`off=0X4`) found the next tier below s548's count=14 four-way tie:
+a **TWO-WAY TIE at count=13**, spanning `emitAllocatedDLCommand` (`funcs_3.c:4580`/`0x80008908`, the
+first item -317 step 3 guard in this function) and `reserveAndEmitDLEntry` (`funcs_3.c:22988`/
+`0x8000CE10`, the first guard in this function full stop, new to this campaign). Confirmed via the JSON
+report (`s494_item317_step3_report.json`, `hits[].line` matching both target lines with 13 hits each)
+and a direct read of the generated source at both sites: identical idiom to every prior guard in this
+lineage — `lui $v0,0x8011` / `lw $v0,0x63B0($v0)` reloads a global into `ctx->r2`, a
+`beq $v0,$zero,...` null check's delay slot (`sw $v0,0x0($v1)`) is duplicated by the recompiler for
+both branch paths (non-branch-likely duplication, same as `FREELIST_NEXT_GUARD`'s `bnel` case, s441),
+and the fallthrough-only instruction immediately after the branch label unconditionally writes through
+the reloaded, never-range-checked `ctx->r2` as `ctx->r2+4`. Cross-checked both write addresses
+(`0x80008908`, `0x8000CE10`) directly against `fixup_game_funcs.py` — neither present, no incidental
+match, safe to add. Fixed as `EMIT_ALLOCATED_DL_COMMAND_R1_GUARD` and
+`RESERVE_AND_EMIT_DL_ENTRY_R1_GUARD` using the established template (skip-on-invalid,
+`ROGUESQ_LOG_<NAME>` env-gated stderr report, `U32()` range check
+`< 0x80000000u || >= 0x80800000u`).
+
+Regenerated (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`, all four steps).
+Fixup report confirmed `patched x1` for each new guard, no anomalies.
+
+**1st live-verify (both new guards armed together, batch-instrumentation rule).**
+`hangarbay-entry n=31` (positive control). 0 `emit-allocated-dl-command-r1-guard` fires, 0
+`reserve-and-emit-dl-entry-r1-guard` fires, 0 fires on any other armed guard family (1 benign
+pre-existing `[mesgqueue-guard]` diagnostic line, unrelated, no regression). Full 300s scheduled
+duration completed with **no crash at all** (106 frames captured, rc=0) — the cleanest possible verify
+class. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s550_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm.sh`.
+
+Ledger: `docs/CURRENT-TRUTH.md` items -317/-327/-334 updated (guards 53-57, 62-63 marked FULLY CLOSED
+2/2; new items -335/-336 filed; new guards 64-65 recorded pending confirm), `docs/PROJECT-OVERVIEW.md`
+§25 table rows 53-57/62-63 updated with confirm results, rows 64-65 added; `/Users/williambuckley/
+Documents/Tools/N64Recomp/fixup_game_funcs.py` +2 guard entries (`EMIT_ALLOCATED_DL_COMMAND_R1_GUARD`,
+`RESERVE_AND_EMIT_DL_ENTRY_R1_GUARD`, not this repo, no submodule-patches step applies);
+`scratch/agent/soak_queue/s550_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm.sh`
+queued; `scratch/agent/SOAK-RESULTS.md` fold-in entries appended; `PORTING-STATE.md` (this entry).
