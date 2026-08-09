@@ -2429,8 +2429,19 @@ Source-confirmed GUARD3-without-GUARD4 gap (heapWalker s218 shape) at 16 sites a
 GUARD3: emitAllocatedDLCommand x3 (item -339 `0x800088EC`), heapFreeListDequeue x4,
 submitSceneNodeRender x9 (item -337 `0x80010DF4` + s123 first `0x80010178`). Fixed as
 `EMIT_DL_GUARD4` / `HEAPLISTDEQ_GUARD4` / `SCENE_NODE_LIST_GUARD4`. 1st live-verify CLEAN
-(hangarbay n=2900, full 300s rc=0, 0 fires). 2nd confirm queued. ~93 further walk sites without
-any GUARD3 remain a separate campaign.
+(hangarbay n=2900, full 300s rc=0, 0 fires). s560 2nd confirm was weak-discarded (item -306 early
+death, hangarbay n=0); retry queued.
+
+### s560 residual alloc-tail GUARD3+GUARD4 (item -342)
+
+Line-based enum of walk-to-tail loops (`L: v1=*v1; v0=*v1; bne L`) in funcs_3/4: **118** total,
+20 already GUARD3, **98 residual**. 88/98 after `findAndUnlinkSmallestEntry` — same inlined
+"walk allocated-node next-chain to tail then splice freelist" idiom s133/s131 only guarded inside
+emitAllocatedDLCommand + submitSceneNodeRender. Applied **GUARD3 x94 + GUARD4 x92** as residual
+alloc-tail family (`ROGUESQ_LOG_ALLOC_TAIL_GUARD3` / `_GUARD4`). Already-covered layers excluded:
+reserveAndEmitDLEntry x3 (`DLENTRY_TAIL_GUARD` s251), drainMesh peeks (s357), scene-node
+`0x80010174` (s123+s559). 1st live-verify CLEAN (hangarbay n=2600, 0 fires; crash on already-
+catalogued `initVec4TripletFromArgs+68`/`0x80065e94`). 2nd confirm queued.
 
 
 ### Overturned conclusions — do not act on these

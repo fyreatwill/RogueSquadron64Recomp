@@ -1,71 +1,69 @@
 # NEXT work unit
 
-HYPOTHESIS-ID: freelist-walk-guard4
+HYPOTHESIS-ID: alloc-tail-walk-guard
 
-## s559 recap (read this first)
+## s560 recap (read this first)
 
-**Opened item -341: freelist-walk GUARD4 (16 sites), 1st live-verify CLEAN.**
+**Opened item -342: residual freelist-walk GUARD3+GUARD4 (alloc-tail family), 1st live-verify CLEAN.**
 
-Source discrimination (H1 confirmed): after existing GUARD3 does `v1 = *v1`, next insn peeks
-`v0 = *v1` on the freshly-loaded NEW pointer with zero validation — heapWalker s218 GUARD4 gap.
-Sites with GUARD3 but no GUARD4:
-- emitAllocatedDLCommand x3 (incl item -339 @0x800088EC) — FIXED
-- heapFreeListDequeue x4 — FIXED
-- submitSceneNodeRender x9 (incl item -337 @0x80010DF4 + s123 first @0x80010178) — FIXED
-- heapWalker: already had GUARD4 (s218)
+After s559 closed GUARD3-without-GUARD4 (16 sites), residual scan of walk-to-tail loops found:
+- 118 total `L: v1=*v1; v0=*v1; bne L` sites in funcs_3/4
+- 20 already GUARD3; **98 residual** with neither
+- 88/98 after `findAndUnlinkSmallestEntry` (true freelist walk-to-tail idiom)
+- Applied GUARD3 x94 + GUARD4 x92 (`ROGUESQ_LOG_ALLOC_TAIL_GUARD3` / `_GUARD4`)
+- Excluded already-covered: DLENTRY_TAIL (3), drainMesh loop peeks (5), scene-node s123 (1)
 
-Env: `ROGUESQ_LOG_EMIT_DL_GUARD4` / `HEAPLISTDEQ_GUARD4` / `SCENE_NODE_LIST_GUARD4`.
+**1st live-verify:** hangarbay n=2600, 0 fires, crash on catalogued `initVec4TripletFromArgs+68`/
+`0x80065e94` (NAN_CHECK family). True-negative baseline.
 
-**1st live-verify (after discarding weak item -306 draw):** hangarbay n=2900, full ~300s rc=0,
-0 fires on all 16 new guards, 0 CRASH. True-negative baseline (intermittent corruption).
+**2nd confirm queued:** `scratch/agent/soak_queue/s560_alloc_tail_guard34_confirm.sh`
 
-**2nd confirm queued:** `scratch/agent/soak_queue/s559_freelist_walk_guard4_confirm.sh`
-(loop will run between iterations).
+**Also queued:** `scratch/agent/soak_queue/s560_freelist_walk_guard4_confirm_retry.sh` (item -341;
+s559 confirm was weak-discarded on item -306).
 
 ## This iteration's work unit
 
-**Fold in s559 confirm if present in SOAK-RESULTS; if CLEAN mark item -341 FULLY CLOSED 2/2
-(and -339/-337 CLOSED with it). Then pick next M3 class:**
+**Fold in s560 confirms from SOAK-RESULTS:**
 
-### Option A (if confirm CLEAN) — residual freelist-walk sites WITHOUT GUARD3
-~93 `v1=*v1; v0=*v1` sites in funcs_3/4 with no GUARD3 at all (emitFrameRdpInitDl,
-beginFrameDLChunk, renderLitMeshFaceGroup, etc.). Classify: true freelist walk vs packing
-false-positive. Fix only shape-matched freelist walks as GUARD3+GUARD4 pairs (or combined).
+1. If `s560_alloc_tail_guard34_confirm` CLEAN (hangarbay double-digit+, 0 regression): mark item
+   -342 FULLY CLOSED 2/2.
+2. If `s560_freelist_walk_guard4_confirm_retry` CLEAN: mark item -341 FULLY CLOSED 2/2 (and
+   -339/-337 with it). If WEAK again (item -306, hangarbay n<10): discard+re-queue once more.
+
+**Then pick next M3 class:**
+
+### Option A — residual GUARD2 (initial-deref of findAndUnlink return)
+emit-dl has GUARD2 on the first `lw $v0, 0x0($aN)` of the walk setup; residual 88 findAndUnlink
+sites only null-check the return. Same shape, family-wide.
 
 ### Option B — multi-occurrence breadcrumb escalation
-Items -332 (2 occ, moderate), -330 (2 weak), others single. Only escalate if a 3rd independent
-occurrence appears in SOAK-RESULTS.
+Items -332 (2 occ, moderate), -330 (2 weak). Only escalate on a 3rd independent occurrence.
 
 ### Option C — packing DL-cursor audit (item -317 DEFERRED residual)
 Separate class: write base is DL cursor; freelist reload branch-only.
 
 ### Hypotheses (for Option A if taken)
-1. **H1:** some of the 93 are true freelist walks missing both GUARD3 and GUARD4.
-2. **H2:** all 93 are packing / non-freelist and should stay DEFERRED.
-3. **H3:** a subset matches freelist shape but already covered by another family (GENERIC_CACHE, etc.).
+1. **H1:** residual initial-deref crashes exist and GUARD2 catches them.
+2. **H2:** null check + GUARD3+GUARD4 is sufficient; GUARD2 is dead/true-negative only.
+3. **H3:** some residual initial-derefs already covered (e.g. drainMesh head guards).
 
 ### Discriminating measurement
-Grep-enumerate the 93; for each, check whether the walk pointer comes from freelist global
-0x801163B0 / findAndUnlinkSmallestEntry vs s0 DL packing. Only freelist-origin sites are candidates.
+Grep residual sites for bare `lw $v0, 0x0($aN)` without GUARD2/head-guard; apply GUARD2; soak.
 
-### Exact commands (start here if confirm already folded)
+### Exact commands
 ```bash
 git log --oneline -3
-# Fold confirm first
-tail -5 scratch/agent/SOAK-RESULTS.md
-# If confirm CLEAN: mark -341 2/2, then residual scan
-python3 - <<'PY'
-# re-scan GUARD4-shape sites lacking any loop-back guard (see s559 NEXT analysis)
-PY
+tail -8 scratch/agent/SOAK-RESULTS.md
+# Fold confirms first; if -342 CLOSED 2/2, Option A residual GUARD2 or Option B/C
 ```
 
 Do NOT re-open freelist-node rN/0X0 or classic r2/0X4 — both residual-empty and FULLY CLOSED.
-Do NOT re-open item -341 sites once 2/2 closed.
+Do NOT re-open item -342 sites once 2/2 closed (unless GUARD2 is a deliberate new layer).
 
 ## Iron-rule reminders
 - Confirm free session number at START before naming.
 - Weak early deaths on item -306 `setByteAcrossEntryList+176`/`0x800aafa8` with hangarbay n<10:
-  discard+retry (s548-s553 standing gotcha).
+  discard+retry (s548-s560 standing gotcha).
 - Never trust 0-fires without double-digit+ hangarbay-entry.
 - Kill with SIGKILL; run from build/ with ROM.
-- Full guard table: docs/PROJECT-OVERVIEW.md §22-§25.
+- Full guard table: docs/PROJECT-OVERVIEW.md §22-§26.

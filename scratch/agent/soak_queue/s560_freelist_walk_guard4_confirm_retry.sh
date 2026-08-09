@@ -180,4 +180,4 @@ env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 \
     ROGUESQ_LOG_HEAPWALKER_GUARD4=1 \
     PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
     PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" \
-    zsh "$REPO_ROOT/tools/probe.sh" "$REPO_ROOT/scratch/agent/soak_results/s559_freelist_walk_guard4_confirm" 300 2
+    zsh "$REPO_ROOT/tools/probe.sh" "$REPO_ROOT/scratch/agent/soak_results/s560_freelist_walk_guard4_confirm_retry" 300 2

@@ -45258,3 +45258,55 @@ degrade label (reload global head; safe). Env:
 ### Ruled out
 - H3 (not freelist walk / misread): source at 0x800088EC is byte-identical GUARD4 shape.
 - H4 (already covered): no GUARD4 existed at any of the 16 sites before s559.
+
+## Session 560 — residual freelist-walk GUARD3+GUARD4 (item -342), 1st live-verify CLEAN
+
+**Date:** 2026-08-09
+
+### Fold-in
+- `s559_freelist_walk_guard4_confirm` (item -341 2nd confirm): **WEAK** — hangarbay n=0, process gone at 20.5s on `setByteAcrossEntryList+176`/`0x800aafa8` (item -306 background-noise). Discarded per standing weak-draw gotcha. Re-queued as `scratch/agent/soak_queue/s560_freelist_walk_guard4_confirm_retry.sh`. Item -341 remains 1/2.
+
+### Work unit (Option A residual freelist-walk without GUARD3)
+**Hypotheses:**
+1. H1: some of the ~93 residual `v1=*v1; v0=*v1` sites are true freelist walks missing both GUARD3 and GUARD4.
+2. H2: all residual are packing / non-freelist and should stay DEFERRED.
+3. H3: a subset matches freelist shape but already covered by another family.
+
+**Discriminating measurement:** line-based enum of walk-to-tail loops
+(`L: r3=MEM_W(r3,0); r2=MEM_W(r3,0); bne L`) in funcs_3/4; classify by GUARD3 presence,
+`findAndUnlinkSmallestEntry` origin, and existing family coverage.
+
+### Results
+- **118** walk-to-tail loops total; **20** already had GUARD3 (heapWalker / emit-dl / heaplistdeq /
+  scene-node); **98** residual with neither GUARD3 nor GUARD4.
+- **88/98** residual sit immediately after `findAndUnlinkSmallestEntry` — the same inlined
+  "walk allocated-node next-chain to tail then splice freelist" idiom that s133/s131 only
+  guarded inside `emitAllocatedDLCommand` + `submitSceneNodeRender`. **H1 confirmed** for that
+  majority. **H2 refuted** for the findAndUnlink-origin residual. Packing-only residual empty
+  under this shape filter.
+- **Already-covered residual layers (excluded from new patch):**
+  - `reserveAndEmitDLEntry` x3 walks: `DLENTRY_TAIL_GUARD` (s251)
+  - `drainMeshReleaseQueue` x5 peeks: `drain-mesh-loopN-guard` (s357)
+  - `submitSceneNodeRender` `0x80010174`/`0x80010178`: s123 GUARD + s559 GUARD4
+- **Applied:** GUARD3 x**94** + GUARD4 x**92** as residual alloc-tail family
+  (`ROGUESQ_LOG_ALLOC_TAIL_GUARD3` / `_GUARD4`, tags `[alloc-tail-guard3]` / `[alloc-tail-guard4]`).
+  Bail = each site's outer null-check label (same degrade as emit-dl GUARD2/3).
+  Landed in `fixup_game_funcs.py` (s560 block) + surgically applied to already-sentinel'd
+  `RecompiledFuncs` (sentinel blocks re-fixup without full regen; same approach as s559).
+
+### 1st live-verify
+`s560_alloc_tail_guard34_manual`: hangarbay-entry **n=2600** (strong positive control),
+**0 fires** on alloc-tail-guard3/4, process died at 119.9s on already-catalogued
+`initVec4TripletFromArgs+68`/`last-guest-pc=0x80065e94` (NAN_CHECK/RDRAM-base family, not a
+regression of the new guards). **CLEAN true-negative baseline** — intermittent corruption.
+
+### Next
+- 2nd confirm queued: `scratch/agent/soak_queue/s560_alloc_tail_guard34_confirm.sh`
+- Item -341 confirm retry also queued
+- Optional later: GUARD2 on residual initial-deref of findAndUnlink return (not in this batch;
+  emit-dl has it; residual still has null check only)
+
+### Ruled out
+- H2 (all residual packing): shape filter + findAndUnlink origin refute for 88/98.
+- That residual GUARD3-without-GUARD4 remained after s559: expanded scan found **0** such sites
+  (s559 class closed; residual is the no-GUARD3 class).
