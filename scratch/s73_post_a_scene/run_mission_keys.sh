@@ -110,19 +110,31 @@ snap "craft_stable"
 # HOLD_S>0 (s76): after leave-confirm wait, hold_NN snaps + stick pulses for HOLD_S seconds.
 PROBE_MODE=${PROBE_MODE:-mixed}
 HOLD_S=${HOLD_S:-0}
-if [[ "$PROBE_MODE" == "start_only" ]]; then
+# PROBES_OVERRIDE="p1:start:5 p2:start:10" wins over PROBE_MODE (s576 double-Start leave).
+if [[ -n "${PROBES_OVERRIDE:-}" ]]; then
+    PROBES=(${=PROBES_OVERRIDE})
+elif [[ "$PROBE_MODE" == "start_only" ]]; then
     # Short leave-confirm when holding; full 15s when isolating leave only.
     if (( HOLD_S > 0 )); then
         PROBES=(p1:start:5)
     else
         PROBES=(p1:start:15)
     fi
+elif [[ "$PROBE_MODE" == "double_start" ]]; then
+    # 1st Start advances case3→5; further Starts are case5 confirm edges
+    # (getControllerNewButtonsPressed is edge-triggered — needs press/release/press).
+    # Default: leave + three confirm edges spaced for ~10 fps hangar sampling.
+    PROBES=(p1:start:6 p2:start:3 p3:start:3 p4:start:8)
 else
     PROBES=(p1:start:5 p2:a:3 p3:start:10)
 fi
 # Stick keycodes: W/S/A/D = su/sd/sl/sr (src/main keyboard fallback)
 typeset -A KEYCODE_EXT=(start 36 a 6 su 13 sd 1 sl 0 sr 2 left 123 right 124)
 for k v in ${(kv)KEYCODE_EXT}; do KEYCODE[$k]=$v; done
+# KEY_HOLD_MS: hangar ~10 fps; 150ms default can miss a poll window (winctl.m note).
+# Leave/confirm Starts use longer hold unless overridden.
+KEY_HOLD_MS=${KEY_HOLD_MS:-150}
+PROBE_KEY_HOLD_MS=${PROBE_KEY_HOLD_MS:-400}
 
 for entry in $PROBES; do
     tag=${entry%%:*}; rest=${entry#*:}
@@ -130,9 +142,10 @@ for entry in $PROBES; do
     kill -0 "$PID" 2>/dev/null || { print "process gone before probe $tag $name"; break; }
     raise_game
     snap "pre_${tag}_${name}"
-    "$WINCTL" key "$PID" "$KEYCODE[$name]" >/dev/null 2>&1
-    print "[keys] probe $tag $name"
-    sleep 0.6
+    "$WINCTL" key "$PID" "$KEYCODE[$name]" "$PROBE_KEY_HOLD_MS" >/dev/null 2>&1
+    print "[keys] probe $tag $name hold=${PROBE_KEY_HOLD_MS}ms"
+    # Ensure released state is sampled before the next edge (case5 NEW-buttons).
+    sleep 0.8
     snap "post_${tag}_${name}"
     TICK=${CAPTURE_TICK_S:-1}
     NTICKS=$(print "$wait_s / $TICK" | bc)

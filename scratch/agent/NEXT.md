@@ -2,75 +2,59 @@
 
 HYPOTHESIS-ID: m3-dod-craft-stick-hold
 
-## s575 recap (read this first)
+## s576 recap (read this first)
 
-**Item -7: H-exit5 REFUTED. Leave Start advances case 3→5; case 5 waits.**
+**Item -7 breakthrough: synthetic case-5 Start exits hangar (state 5→8, VI 640).**
 
-Positive control: hangarbay n=900; hangar-state 0→1→3→5; state-write AC1C4 3→5
-same frame as `[buttons-hangar] AC0F0 a_start=1 n=718`.
-case5-entry n=0..213 after leave; AC8C0 polls ≥200 with **0** a_start=1.
-0 hangar-sel, 0 graceful-menu. Driver `start_only` sends only one Start.
-H-exit5/5a/5b REFUTED. H-exit6 NEW (need 2nd Start). H-exit1 testable on 2nd Start
-(ship-active early samples ret=1 / ship=0x8015FD90).
+Real 2nd Start never reaches AC8C0 (`getControllerNewButtonsPressed` edge table).
+Force at AC8C0 n=40: ship-active ret=0 → hangar-sel AC914 → state-write AC94C 5→8
+→ graceful-menu + non-sentinel frame-ret → VI 512→640 origin 0x6A2900.
 
-case3-start re-read values are junk — trust state-write + hangar-state only.
+| Hyp | s576 |
+|-----|------|
+| H-exit6b real 2nd Start miss | CONFIRMED |
+| H-exit6a Start@AC8C0→hangar-sel | CONFIRMED (force) |
+| H-exit1 ship-active blocks | REFUTED at confirm (ret=0) |
+| H-exit6c deeper gate | REFUTED |
 
 ## This iteration's work unit
 
-**Item -7 — double-Start leave: does case-5 confirm fire hangar-sel?**
-
-No new build required if s575 probes still in binary (hangar-state / state-write /
-case5-entry / buttons-hangar / hangar-sel / ship-active). Rebuild only if tree was
-regenerated.
+**Item -7 — deliver a real Start edge during case 5 (or prove host never samples it).**
 
 ### Hypotheses
-- H-exit6a: 2nd Start at AC8C0 with ship-active ret=0 → hangar-sel write + progress.
-- H-exit6b: 2nd Start never reaches AC8C0 (timing / not in case 5 / input drop).
-- H-exit1: 2nd Start reaches AC8C0 but isPlayerShipActive ret=1 → skip hangar-sel
-  (bne L_800AC950 at AC8D8).
-- H-exit6c: 2nd Start + ret=0 but hangar-sel still 0 (deeper gate past AC914).
+- H-edge1: SDL_GetKeyboardState never sees 2nd RETURN (CGEventPostToPid / pump race).
+- H-edge2: `setNewAndPreviousButtonsPressed` runs but previous-buttons still has Start stuck
+  (missed key-up) so new=0.
+- H-edge3: hangar polls gNewButtonsPressed only after edge already cleared same frame by
+  another reader (unlikely — poll is once at frame top).
+- H-edge4: controller port index at -0x2930 is wrong in case 5 (different from case 3).
 
-### Discriminating measurements (existing probes)
-| outcome | evidence |
-|---------|----------|
-| 6a | a_start=1 @ AC8C0 + hangar-sel fire + (optional) graceful-menu / non-sentinel frame-ret |
-| 6b | case5-entry alive but AC8C0 never a_start=1 on 2nd press |
-| H-exit1 | a_start=1 @ AC8C0 + ship-active ret=1 same window + 0 hangar-sel |
-| 6c | a_start=1 + ship-active ret=0 + 0 hangar-sel |
+### Discriminating measurements (batch one build)
+1. Log at AC8C0 (or setNewAndPreviousButtonsPressed): current buttons, previous, new, port.
+2. Host log when `get_n64_input` sees START (rate-limit on/off edges).
+3. Optional: if host sees START but guest new=0 → H-edge2; if host never sees → H-edge1.
 
-Positive control: hangar-state reaches 5 after 1st Start; case5-entry increments;
-2nd Start must show AC8C0 a_start=1.
+Positive control: leave still produces AC0F0 a_start=1 + state 5; force path still works
+with ROGUESQ_FORCE_CASE5_START as regression check if edge work regresses.
 
-### Exact commands
+### Exact commands (sketch)
 ```bash
-# Prefer explicit two-Start probe list. If script has no PROBES env override,
-# temporarily set in run_mission_keys or use:
-#   PROBES=(p1:start:3 p2:start:8)  inside a thin wrapper.
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-# Option A — mixed ends with a 2nd Start after A (may work; A is likely noop in case 5):
-env PROBE_MODE=mixed HOLD_S=15 ROGUESQ_LOG_HANGARBAY_ENTRY=1 \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s576_item7_double_start 5 12
-
-# Option B (preferred if A is ambiguous): edit PROBES for one run to
-#   PROBES=(p1:start:3 p2:start:10)
-# without the middle A.
-
-grep -E 'hangar-state|state-write|case5-entry|buttons-hangar|ship-active|hangar-sel|graceful-menu|frame-ret' \
-  scratch/s73_post_a_scene/s576_item7_double_start/run.log | \
-  grep -E 'a_start=1|state=5|old=3 new=5|hangar-sel|graceful|sentinel=0|ship-active' | head -80
+# After landing edge instrumentation:
+env PROBE_MODE=double_start HOLD_S=12 ROGUESQ_LOG_HANGARBAY_ENTRY=1 \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s577_item7_real_edge 5 12
+grep -E 'case5-force-start|buttons-hangar.*a_start=1|hangar-sel|state-write|newbtn|host-start|hangar-state' \
+  scratch/s73_post_a_scene/s577_item7_real_edge/run.log | head -80
 ```
 
-Also log ship-active on every call during case 5 if rate-limit hides ret at confirm
-time (raise: always log when ret changes OR force first 20 after hangar-state=5).
-
 ### Expected outcomes
-- 6a: hangar-sel fires → next unit = mission overlay / post-exit path (H1 follow-up).
-- H-exit1: need to clear gPlayerShip / understand why ship ptr is set on menu craft.
-- 6b: fix input timing (longer gap, hold Start, re-raise).
-- 6c: read case-5 body past AC8D8.
+- Host START edge + guest new=0 → fix previous-button latch / readControllerInputs.
+- Host never START on p2 → fix winctl/SDL pump or inject at get_n64_input.
+- Guest new has Start but AC8C0 raw=0 → port/index (H-edge4).
+- Real edge → hangar-sel without force → next unit = state-8 → mission overlay.
 
 ### Do NOT
 - Chase 0x8000afa0 / -338.
-- Blind stick HOLD_S=60 before double-Start works.
-- Reopen M5 / freelist residual.
-- Trust case3-start MEM_BU re-read fields (state=89 junk).
+- Treat ROGUESQ_FORCE_CASE5_START as a permanent product fix.
+- Reopen freelist residual / M5.
+- Blind stick HOLD before real edge works (force already proved exit gate).

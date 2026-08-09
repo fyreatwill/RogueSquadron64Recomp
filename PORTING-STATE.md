@@ -46117,3 +46117,40 @@ Not -338 this run.
 Double-Start leave: first Start (case 3→5), second Start while case5-entry alive.
 Discriminate H-exit6 (2nd Start delivers hangar-sel) vs H-exit1 (ship-active ret=1
 blocks write at AC8D8).
+
+## Session 576 — double-Start leave: H-exit6b on real input; synthetic AC8C0 Start → hangar-sel + state 8
+
+Date: 2026-08-09
+
+### Work unit
+Item -7 H-exit6: does a 2nd Start at case-5 poll AC8C0 fire hangar-sel?
+
+### Runs
+1. `s576_item7_double_start` — WEAK early death item -306 `setByteAcrossEntryList+176`/`0x800aafa8` before leave (discard).
+2. `s576_item7_double_start_retry` — CLEAN full double_start (p1+p2 Start, HOLD_S=10, 0 CRASH).
+   - Positive control: hangarbay n=900; state-write 0→1→3→**5** (AC1C4); case5-entry n=0..184.
+   - **Only one** `a_start=1` total: AC0F0 n=719 (leave). **AC8C0 never a_start=1** (rate-limit always logs Start edges).
+   - 0 hangar-sel, 0 graceful-menu, frame-ret all sentinel.
+   - Case 5 uses `getControllerNewButtonsPressed` (edge table `gNewButtonsPressed` @ 0x8013A960), not held buttons.
+3. `s576_item7_double_start_edges` — multi-edge 400ms holds; died after p1 before p2 on `beginFrameDLChunk+7716`/`0x8000a9e0` (leave-path noise). Not discriminating for 2nd Start.
+4. `s576_item7_force_case5_start` — `PROBE_MODE=start_only` + `ROGUESQ_FORCE_CASE5_START=40` synthetic OR of 0x1000 into r2 at AC8C0 after 40 polls.
+   - **Positive control:** `[case5-force-start] n=40 raw=0x00001000` + AC8C0 a_start=1.
+   - Same-frame chain: force → `[ship-active] n=18 ship=0 ret=0` → `[hangar-sel] site=0x800AC914` → `[state-write] AC94C old=5 new=8`.
+   - hangar-state reaches **8**; `[graceful-menu] n=0 s0_frame_ret=0`; frame-ret n=838 **sentinel=0**.
+   - VI: 512 @ 0x6AB400 → **640 @ 0x6A2900** at 147.3s (first post-hangar phase advance under item -7).
+   - 0 CRASH; process alive through HOLD_S=15; hangarbay n=800.
+
+### Verdicts
+| Hyp | Result |
+|-----|--------|
+| H-exit6b (2nd real Start never at AC8C0) | **CONFIRMED** (retry run; instrument always logs edges) |
+| H-exit6a (Start@AC8C0 + ship-active ret=0 → hangar-sel) | **CONFIRMED** with synthetic force |
+| H-exit1 (ship-active ret=1 blocks hangar-sel at case5) | **REFUTED** at confirm path (ret=0); early ret=1 samples are other callers |
+| H-exit6c (Start+ret=0 but no hangar-sel) | **REFUTED** |
+
+### Code landed
+- `run_mission_keys.sh`: `PROBE_MODE=double_start`, `PROBES_OVERRIDE`, `PROBE_KEY_HOLD_MS` (default 400ms on probe keys).
+- `funcs_28.c` + `fixup_game_funcs.py`: `ROGUESQ_FORCE_CASE5_START` synthetic edge at AC8C0 (value = poll index, default 40 when non-numeric truthy).
+
+### Next
+Deliver a **real** Start edge into `gNewButtonsPressed` during case 5 (host/SDL or guest), or track state-8 → mission overlay without force. Do not re-chase H-exit5.
