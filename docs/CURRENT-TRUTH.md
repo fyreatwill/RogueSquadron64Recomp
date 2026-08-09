@@ -22,27 +22,34 @@ Priority order for upcoming iterations, set after the 300-session review:
    §18-§19). Items -312..-322 (s481-518, the guard lineage descending from `DL_LIST_APPEND_GUARD`
    through `HEAPLISTDEQ_ATTR_WRITE_GUARD`) are all fully CLOSED, including -317 step 3's own tally as
    of s525 — PROJECT-OVERVIEW §20-§24. **Item -317 step 3 (a ~150-location blanket sweep) status as of
-   s531: 32 of ~150 leads fixed, 31 FULLY CLOSED 2/2, 1 (`EMIT_COLOR_FILL_RECT_R1_GUARD`) 1st-live-verify
-   CLEAN, 2nd confirm queued.** `BEGIN_FRAME_DL_CHUNK_R9_GUARD`/`R10_GUARD`'s 2nd confirm read CLEAN
-   this session — 0 fires on either guard, 1 benign already-catalogued `hangarmenu-a0-guard` co-fire,
-   `hangarbay-entry n=35` positive control, full 347s duration with NO crash at all — both marked FULLY
-   CLOSED 2/2, closing out the beginFrameDLChunk 36-site tier completely (R1-R10, all disposed).
-   Re-scanned per the s529/s530 cross-check methodology: fresh tracer + dedupe ranks `emitColorFillRect`
-   (`funcs_3.c`, 30-reachability write at `0x8000A538`) top of the next tier, a genuine NEW candidate (no
-   existing PATCH covers it, confirmed by direct grep) matching the exact idiom — fixed as
-   `EMIT_COLOR_FILL_RECT_R1_GUARD`, the first guard in a function outside `beginFrameDLChunk`. 1st
-   live-verify the cleanest possible class: 0 `emit-color-fill-rect-r1-guard` fires, 0 regressions on any
-   other armed guard family, `hangarbay-entry n=33` positive control, full 300s scheduled duration
-   completed with NO crash at all (118 frames captured). 2nd confirm queued
-   (`scratch/agent/soak_queue/s531_emit_color_fill_rect_r1_confirm.sh`).
-   — M3's top-ranked work unit is this sweep's continuation. **Item -321's 2-occurrence escalation was
-   REFUTED s518** (a documented breadcrumb-coverage gap, not a crash lead). New breadcrumbs from the
-   R1-R4/R6/R8 live-verifies, all filed not chased: items -324/-325 (single occurrence), **-326**
-   (`do_rom_read`/`piDmaWorker` shape — extra attention if it recurs, a historically-major family
-   believed fixed since s147/148), **-327** (2 occurrences 21 sessions apart, watch for a 3rd),
-   **-328** (`submitSceneNodeRender+69820`, single occurrence), and **-329**
-   (`rebuildActiveDisplayObjectList+660`/`0x800ab060`, single occurrence) — see items below. R5's,
-   R7's, R9/R10's, and R1's (emitColorFillRect) confirm/1st-verify runs surfaced no new breadcrumb.
+   s532: 33 of ~150 leads fixed, 32 FULLY CLOSED 2/2, 1 (`SUBMIT_SCENE_NODE_RENDER_R2_GUARD`)
+   1st-live-verify CLEAN, 2nd confirm queued.** `EMIT_COLOR_FILL_RECT_R1_GUARD`'s 2nd confirm read CLEAN
+   this session — 0 `emit-color-fill-rect-r1-guard` fires, 0 regressions on any other armed guard family,
+   `hangarbay-entry n=31` positive control. Crashed at the very end on the already-catalogued
+   `setByteAcrossEntryList+176`/`last-guest-pc=0x800aafa8` bus-error signature (the standard
+   RDRAM-host-base-pointer pattern per item -306's classification, first surfaced ~s473, recurred s511 —
+   benign/unrelated, no new item filed) — marked FULLY CLOSED 2/2. This also closes out the
+   `beginFrameDLChunk` 36-site tier completely (R1-R10, all disposed, s521-530). Re-scanned per the
+   standing cross-check methodology: `submitSceneNodeRender` (`funcs_4.c`, 30-reachability write at
+   `0x80010E10`) confirmed top of the next tier — a SECOND, distinct site inside the same function that
+   already carries `SUBMIT_SCENE_NODE_RENDER_R1_GUARD` (s515, a different address, `0x80010F38`). 2 of
+   the 30 raw reload addresses were already covered by unrelated guard families; the write's own address
+   was genuinely uncovered and matched the exact idiom — fixed as `SUBMIT_SCENE_NODE_RENDER_R2_GUARD`.
+   1st live-verify clean: 0 `submit-scene-node-render-r2-guard` fires, 0 regressions on any other armed
+   guard family (1 benign already-catalogued `hangarmenu-a0-guard` co-fire), `hangarbay-entry n=34`
+   positive control. Crashed at ~120s on the already-catalogued `coalesceFreeHeapBlocks+1616`/
+   `last-guest-pc=0x80002390` background-noise family (the s354-366 heap-walker family that recurs across
+   most of this campaign's confirm runs) — clean verify, own guard never fired. 2nd independent confirm
+   queued (`scratch/agent/soak_queue/s532_submit_scene_node_render_r2_confirm.sh`). — M3's top-ranked
+   work unit is this sweep's continuation; ~113 locations remain unaudited across further tiers.
+   **Item -321's 2-occurrence escalation was REFUTED s518** (a documented breadcrumb-coverage gap, not a
+   crash lead). New breadcrumbs from the R1-R4/R6/R8 live-verifies, all filed not chased: items -324/-325
+   (single occurrence), **-326** (`do_rom_read`/`piDmaWorker` shape — extra attention if it recurs, a
+   historically-major family believed fixed since s147/148), **-327** (2 occurrences 21 sessions apart,
+   watch for a 3rd), **-328** (`submitSceneNodeRender+69820`, single occurrence), and **-329**
+   (`rebuildActiveDisplayObjectList+660`/`0x800ab060`, single occurrence) — see items below. R5's, R7's,
+   R9/R10's, R1's (emitColorFillRect), and R2's (submitSceneNodeRender) live-verify/confirm runs surfaced
+   no NEW breadcrumb.
 
 -312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
@@ -228,12 +235,14 @@ a range pointer. Highest allocated so far: -329. The next NEW item takes -330.
     range-checking at function entry, skipping the (void, RDRAM-only) body if invalid. CLOSED 2/2 s507
     after an s506 inconclusive retry. Mechanism and session detail: `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-531) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 32 guards fixed so far, 31 FULLY
-    CLOSED 2/2, 1 (`EMIT_COLOR_FILL_RECT_R1_GUARD`, s531) 1st-live-verify running.** `R9`/`R10`'s own
-    2nd confirm read CLEAN (0 fires on either guard, 1 benign already-catalogued `hangarmenu-a0-guard`
-    co-fire, `hangarbay-entry n=35` positive control, full 347s duration with NO crash at all — both
-    marked FULLY CLOSED 2/2). Steps 1 (`heapFreeListDequeue`) and 2 (`buildOrientedFaceGeometry`) are
+-317. **(s490-532) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 33 guards fixed so far, 32 FULLY
+    CLOSED 2/2, 1 (`SUBMIT_SCENE_NODE_RENDER_R2_GUARD`, s532) 1st-live-verify CLEAN.**
+    `EMIT_COLOR_FILL_RECT_R1_GUARD`'s 2nd confirm read CLEAN (0 fires on the guard, 0
+    regressions on any other armed guard family, `hangarbay-entry n=31` positive control; crashed at the
+    very end on the already-catalogued `setByteAcrossEntryList+176`/`last-guest-pc=0x800aafa8` bus-error
+    signature — item -306's classification, first surfaced ~s473, recurred s511, benign/unrelated) —
+    marked FULLY CLOSED 2/2. Steps 1 (`heapFreeListDequeue`) and 2 (`buildOrientedFaceGeometry`) are
     separately FULLY CLOSED 2/2. Step 3's tracer (`scratch/agent/s494_item317_step3_tracer.py`, a
     forward taint-propagation dataflow analysis) found ~448 raw reload sites deduping to ~150 candidate
     guard placements across 30 functions; every fix shares one shape (null check gates one arm safely,
@@ -248,32 +257,38 @@ a range pointer. Highest allocated so far: -329. The next NEW item takes -330.
     only 3 were both genuinely unguarded and matched the exact idiom shape (`R8`/`R9`/`R10`); the rest
     were already covered by `R1`-`R7`'s own sites or the ALREADY-CLOSED `SIBLING_PTR_WRITE_GUARD`
     (s459) / `CACHE4_GUARD` (s271) families reusing the same textual reload idiom in that function.
-    **s531 re-scanned per the s529/s530 cross-check methodology** (fresh `--scan` + `s506_dedupe.py`,
-    no custom `--out`): the top tier is now `emitColorFillRect` (`funcs_3.c`, 30-reachability write) and
-    `submitSceneNodeRender` (`funcs_4.c`, 30-reachability write), tied. Cross-checked all 30
-    `emitColorFillRect` reload addresses against `fixup_game_funcs.py` directly (0 hits — none
-    pre-covered, unlike the beginFrameDLChunk tier where most were already guarded) and read the actual
-    generated source around the shared downstream write (`funcs_3.c` line 11625/guest `0x8000A538`):
-    load pair `0x8000A528`/`0x8000A52C` (`lui $v0,0x8011` / `lw $v0,0x63B0($v0)` — the same
-    `+0x63B0`-offset cached-pointer idiom as the whole beginFrameDLChunk lineage, reused in a different
-    function), gated by `beq $v0,$zero,L_8000A53C` at `0x8000A530` (delay slot `sw $v0,0x0($v1)` runs
-    on both arms, harmless — writes through the fixed non-null `r3`), non-null fallthrough falls through
-    the same harmless write then unconditionally dereferences the reloaded `ctx->r2` at `0x8000A538`
-    (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no range check. Fixed as **`EMIT_COLOR_FILL_RECT_R1_GUARD`**
-    — the first guard outside `beginFrameDLChunk` in this campaign — patched in `tools/fixup_game_funcs.py`
-    (N64Recomp repo), full regen/build applied cleanly. **1st live-verify the cleanest possible class**:
-    0 `emit-color-fill-rect-r1-guard` fires, 0 fires on any other armed guard family (1 benign
-    already-catalogued `hangarmenu-a0-guard` co-fire), `hangarbay-entry n=33` positive control, full
-    300s scheduled duration completed with NO crash at all (118 frames captured). 2nd independent
-    confirm queued (`scratch/agent/soak_queue/s531_emit_color_fill_rect_r1_confirm.sh`). **~114
-    locations remain unaudited across further tiers (`submitSceneNodeRender` next, tied at 30) — still
-    the top-ranked M3 work unit.** Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global
-    shape) from this
-    tracer's self-referential `+0x63B0` shape — it does not subsume any of these tiers. **Tracer gotcha
-    (s521)**: `s506_dedupe.py` reads a fixed `scratch/agent/s494_item317_step3_report.json` — a custom
-    `--out` on `--scan` leaves that canonical file stale and dedupe silently ranks against old data; let
-    `--scan` write its default path first. Full guard-by-guard table and gotchas:
-    `docs/PROJECT-OVERVIEW.md` §22-§24, `PORTING-STATE.md` Sessions 490-531.
+    **`emitColorFillRect`'s own candidate is also now fully disposed**: `EMIT_COLOR_FILL_RECT_R1_GUARD`
+    (`funcs_3.c` line 11625/guest `0x8000A538`, the first guard outside `beginFrameDLChunk` in this
+    campaign) — same `+0x63B0`-offset cached-pointer idiom as the beginFrameDLChunk lineage, reused in a
+    different function; load pair `0x8000A528`/`0x8000A52C`, gated by `beq $v0,$zero,L_8000A53C` at
+    `0x8000A530` (delay slot write harmless), non-null fallthrough unconditionally dereferences the
+    reloaded `ctx->r2` at `0x8000A538` (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no range check — 0 fires
+    across both 1st live-verify (`hangarbay-entry n=33`, full 300s, no crash at all) and 2nd confirm
+    (`hangarbay-entry n=31`, crashed only on the benign catalogued signature above) — FULLY CLOSED 2/2.
+    **`submitSceneNodeRender`'s next candidate found and fixed (s532)**: re-scanned per the standing
+    cross-check methodology (fresh `--scan` + `s506_dedupe.py`), confirmed `submitSceneNodeRender`
+    (`funcs_4.c`, 30-reachability write at `0x80010E10`) top of the next tier — a SECOND, distinct site
+    inside the same function that already carries `SUBMIT_SCENE_NODE_RENDER_R1_GUARD` (s515,
+    `0x80010F38`, a different address). Of the 30 raw reload addresses feeding this write, 2 were already
+    covered by unrelated guard families (`0x800101B0` by the s197 `scene_node_cache_guard`, `0x80010824`
+    by the `DL_LIST_RESET_GUARD`-adjacent reload) — neither is this write's own site. Load pair
+    `0x80010E00`/`0x80010E04` (same `+0x63B0`-offset idiom), gated by `beq $v0,$zero,L_80010E14` at
+    `0x80010E08` (delay slot write harmless), non-null fallthrough unconditionally dereferences the
+    reloaded `ctx->r2` at `0x80010E10` (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no range check — fixed as
+    **`SUBMIT_SCENE_NODE_RENDER_R2_GUARD`**. 1st live-verify clean: 0
+    `submit-scene-node-render-r2-guard` fires, 0 regressions on any other armed guard family (1 benign
+    already-catalogued `hangarmenu-a0-guard` co-fire), `hangarbay-entry n=34` positive control. Crashed
+    at ~120s on the already-catalogued `coalesceFreeHeapBlocks+1616`/`last-guest-pc=0x80002390`
+    background-noise family (the s354-366 heap-walker family, recurs across most of this campaign's
+    confirm runs) — clean verify, own guard never fired. 2nd confirm queued
+    (`scratch/agent/soak_queue/s532_submit_scene_node_render_r2_confirm.sh`).
+    **~113 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
+    Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape) from this tracer's
+    self-referential `+0x63B0` shape — it does not subsume any of these tiers. **Tracer gotcha (s521)**:
+    `s506_dedupe.py` reads a fixed `scratch/agent/s494_item317_step3_report.json` — a custom `--out` on
+    `--scan` leaves that canonical file stale and dedupe silently ranks against old data; let `--scan`
+    write its default path first. Full guard-by-guard table and gotchas: `docs/PROJECT-OVERVIEW.md`
+    §22-§24, `PORTING-STATE.md` Sessions 490-532.
 
 -316. **(s488 scan → s489 FIXED → s490 2nd confirm clean) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED,
     2/2.** A scope gap in the existing s436 `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`,

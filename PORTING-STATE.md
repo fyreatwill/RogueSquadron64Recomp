@@ -43840,3 +43840,95 @@ function — check it's not the same site). Watch for a 3rd occurrence of item -
 `piDmaWorker` shape, historically significant if it recurs), -327 (`submitSceneNodeRender+67668`), a 2nd
 occurrence of -328 (`submitSceneNodeRender+69820`), or a 2nd occurrence of -329
 (`rebuildActiveDisplayObjectList+660`).
+
+## Session 532 (2026-08-08): item -317 step 3 -- folded in EMIT_COLOR_FILL_RECT_R1_GUARD's 2nd confirm (CLOSED 2/2, closing out the beginFrameDLChunk tier and 32/32 fully-closed guards), found and fixed a SECOND, distinct site inside `submitSceneNodeRender` (`SUBMIT_SCENE_NODE_RENDER_R2_GUARD`, funcs_4.c:4455/0x80010E10, 30-reachability write, next tier per the standing cross-check methodology), 1st live-verify clean, 2nd confirm queued
+
+**Fold-in.** `EMIT_COLOR_FILL_RECT_R1_GUARD`'s 2nd independent confirm
+(`s531_emit_color_fill_rect_r1_confirm`, rc=3, 158s) read: 0
+`emit-color-fill-rect-r1-guard` fires, 0 fires on any other armed guard
+family, `hangarbay-entry n=31` (positive control). Crashed at the very end
+on `pc-symbol=setByteAcrossEntryList+176 (local-symtab)`,
+`last-guest-pc=0x800aafa8` -- grepped both docs before treating as novel,
+found byte-identical prior hits at item -306's own classification (first
+surfaced ~s473, recurred s511): "the standard RDRAM-host-base-pointer
+pattern per the s219 overturned-conclusion entry" -- benign/unrelated, no
+new item filed. `EMIT_COLOR_FILL_RECT_R1_GUARD` marked FULLY CLOSED 2/2.
+This also closes out the entire `beginFrameDLChunk` 36-site tier (R1-R10,
+s521-530) completely, bringing item -317 step 3 to 32 of 32 fixed guards
+fully closed 2/2 -- no open guards for the first time since s490.
+
+**Next tier.** Re-ran the tracer fresh (`s494_item317_step3_tracer.py
+--scan` + `s506_dedupe.py`, no custom `--out`, per the standing s521/s529
+gotcha) -- 280 sites in `funcs_3.c`, 168 in `funcs_4.c`, 448 total, deduping
+to the same ~150-candidate table. Top of the table: `funcs_4.c:4457`
+(`submitSceneNodeRender`, 30-reachability write), confirming the s531
+re-scan's prediction. Pulled all 30 raw reload addresses feeding write line
+4457 (`s`->`hits` where any hit has `line==4457`) -- all 30 origins are
+inside `submitSceneNodeRender` itself. Cross-checked every one of the 30
+directly against `fixup_game_funcs.py` (N64Recomp repo, actual path
+`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`, NOT
+under a `tools/` subdirectory as some earlier session notes implied) --
+2 hits: `0x800101B0` (already guarded by the s197
+`scene_node_cache_guard`, an 18th-class cached-free-list-head deref guard)
+and `0x80010824` (a reload noted in the DL_LIST_RESET_GUARD comment as
+already-covered) -- neither is the target write's OWN address, so the
+write site itself was still unconfirmed either way; read the actual write
+site directly. Also double-checked the standing warning in
+`scratch/agent/NEXT.md`: `SUBMIT_SCENE_NODE_RENDER_R1_GUARD` (s515) already
+exists in this same function at a DIFFERENT address (`0x80010F38`) -- this
+new candidate (`0x80010E10`) is not that site, so it's a genuine second,
+distinct guard in the same function, not a duplicate.
+
+**Source read.** `RecompiledFuncs/funcs_4.c` lines 4436-4457 (guest
+`0x80010E00`-`0x80010E10`): load pair `0x80010E00`/`0x80010E04`
+(`lui $v0,0x8011` / `lw $v0,0x63B0($v0)`) -- the same `+0x63B0`-offset
+cached-pointer idiom as the entire beginFrameDLChunk/emitColorFillRect
+lineage, reused a third time in a third function. Gated by
+`beq $v0,$zero,L_80010E14` at `0x80010E08`; the delay slot
+(`sw $v0,0x0($v1)` / `MEM_W(0X0, ctx->r3) = ctx->r2;`) runs identically on
+both arms and is harmless (writes the fixed non-null `r3`/`ctx->r3`
+through, not the reloaded pointer). Non-null fallthrough repeats that same
+harmless write then unconditionally dereferences the reloaded `ctx->r2` at
+`0x80010E10` (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no
+`0x80000000`-`0x80800000` range check. No existing PATCH covered
+`0x80010E10` (checked directly, 0 hits). Confirmed by inspection this
+matches the exact vulnerable shape.
+
+**Fix applied.** `SUBMIT_SCENE_NODE_RENDER_R2_GUARD`, patched in
+`fixup_game_funcs.py` following the same skip-the-write-on-invalid template
+as every prior guard in this lineage (`ROGUESQ_LOG_SUBMIT_SCENE_NODE_RENDER_R2_GUARD`
+env-gated stderr report, `U32()` range check). Full regen
+(`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake --build`,
+`RecompiledFuncs/funcs_*.c` deleted first per the standing item -20 rule).
+Fixup report showed both `SUBMIT_SCENE_NODE_RENDER_R1_GUARD` (s515,
+pre-existing) and `SUBMIT_SCENE_NODE_RENDER_R2_GUARD` (new) each patched
+exactly `x1` -- no duplicate-stacking, no silent skip. Build clean. `strings`
+verification against the built binary: `submit-scene-node-render-r2-guard`
+present (new), `submit-scene-node-render-r1-guard` and
+`emit-color-fill-rect-r1-guard` unchanged -- no regression.
+
+**1st live-verify** (manual, foreground, `scratch/agent/soak_queue/done/s532_submit_scene_node_render_r2_manual_20260808-180600.sh`,
+same `PROBE_KEYS` schedule and full armed-guard env-var set as every prior
+soak in this lineage, plus the new
+`ROGUESQ_LOG_SUBMIT_SCENE_NODE_RENDER_R2_GUARD`): CLEAN on the new guard.
+0 `submit-scene-node-render-r2-guard` fires (null result), 0 fires on any
+other armed guard family except one benign `hangarmenu-a0-guard` co-fire
+(item -265, unrelated), `hangarbay-entry` counted to `n=34` (positive
+control). Crashed at ~120s (48 frames captured, `rc=3`):
+`pc-symbol=coalesceFreeHeapBlocks+1616 (local-symtab)`,
+`last-guest-pc=0x80002390`. Grepped both docs before treating as novel --
+`coalesceFreeHeapBlocks` is the s354-366 heap-walker background-noise
+family that has recurred on a large fraction of this whole campaign's
+confirm/live-verify runs (see PROJECT-OVERVIEW.md lines ~1730/1754/1996/2007/2105
+for prior instances at other offsets) -- not a new item, no escalation. 2nd
+independent confirm queued: `scratch/agent/soak_queue/s532_submit_scene_node_render_r2_confirm.sh`.
+
+**Tally.** Item -317 step 3 now 33 of ~150 leads fixed: 32 FULLY CLOSED 2/2,
+1 (`SUBMIT_SCENE_NODE_RENDER_R2_GUARD`) 1st-live-verify clean awaiting its
+2nd confirm. ~113 locations remain unaudited across further tiers.
+
+**Outcome: ADVANCED** (folded in a queued confirm result that closed out
+the entire 32-guard, two-tier-plus-lineage backlog to zero open guards,
+then found, fixed, and 1st-verified a genuinely new candidate in a fresh
+re-scan via the same rigorous address-by-address cross-check methodology
+established s528-531 -- not a reactive crash chase).
