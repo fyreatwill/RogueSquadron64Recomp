@@ -1,0 +1,83 @@
+[
+  {
+    "guard": "RENDER_LIT_TEXTURED_MESH_FACES_R7_GUARD",
+    "tag": "render-lit-textured-mesh-faces-r7-guard",
+    "env": "ROGUESQ_LOG_RENDER_LIT_TEXTURED_MESH_FACES_R7_GUARD",
+    "pc": "0x8000FD50",
+    "func": "renderLitTexturedMeshFaces",
+    "rn": 7,
+    "cnt": 59
+  },
+  {
+    "guard": "RENDER_LIT_TEXTURED_MESH_FACES_R8_GUARD",
+    "tag": "render-lit-textured-mesh-faces-r8-guard",
+    "env": "ROGUESQ_LOG_RENDER_LIT_TEXTURED_MESH_FACES_R8_GUARD",
+    "pc": "0x8000FC80",
+    "func": "renderLitTexturedMeshFaces",
+    "rn": 8,
+    "cnt": 45
+  },
+  {
+    "guard": "RENDER_LIT_TEXTURED_MESH_FACES_R9_GUARD",
+    "tag": "render-lit-textured-mesh-faces-r9-guard",
+    "env": "ROGUESQ_LOG_RENDER_LIT_TEXTURED_MESH_FACES_R9_GUARD",
+    "pc": "0x8000FE70",
+    "func": "renderLitTexturedMeshFaces",
+    "rn": 9,
+    "cnt": 41
+  },
+  {
+    "guard": "RENDER_LIT_TEXTURED_MESH_FACES_R10_GUARD",
+    "tag": "render-lit-textured-mesh-faces-r10-guard",
+    "env": "ROGUESQ_LOG_RENDER_LIT_TEXTURED_MESH_FACES_R10_GUARD",
+    "pc": "0x8000FF20",
+    "func": "renderLitTexturedMeshFaces",
+    "rn": 10,
+    "cnt": 28
+  },
+  {
+    "guard": "RENDER_FLAT_MESH_FACE_GROUP_R7_GUARD",
+    "tag": "render-flat-mesh-face-group-r7-guard",
+    "env": "ROGUESQ_LOG_RENDER_FLAT_MESH_FACE_GROUP_R7_GUARD",
+    "pc": "0x80011BA8",
+    "func": "renderFlatMeshFaceGroup",
+    "rn": 7,
+    "cnt": 27
+  },
+  {
+    "guard": "RENDER_FLAT_MESH_FACE_GROUP_R8_GUARD",
+    "tag": "render-flat-mesh-face-group-r8-guard",
+    "env": "ROGUESQ_LOG_RENDER_FLAT_MESH_FACE_GROUP_R8_GUARD",
+    "pc": "0x80011958",
+    "func": "renderFlatMeshFaceGroup",
+    "rn": 8,
+    "cnt": 16
+  },
+  {
+    "guard": "SUBMIT_SCENE_NODE_RENDER_R10_GUARD",
+    "tag": "submit-scene-node-render-r10-guard",
+    "env": "ROGUESQ_LOG_SUBMIT_SCENE_NODE_RENDER_R10_GUARD",
+    "pc": "0x8001077C",
+    "func": "submitSceneNodeRender",
+    "rn": 10,
+    "cnt": 15
+  },
+  {
+    "guard": "EMIT_ALLOCATED_DL_COMMAND_R4_GUARD",
+    "tag": "emit-allocated-dl-command-r4-guard",
+    "env": "ROGUESQ_LOG_EMIT_ALLOCATED_DL_COMMAND_R4_GUARD",
+    "pc": "0x80008858",
+    "func": "emitAllocatedDLCommand",
+    "rn": 4,
+    "cnt": 7
+  },
+  {
+    "guard": "RESERVE_AND_EMIT_DL_ENTRY_R4_GUARD",
+    "tag": "reserve-and-emit-dl-entry-r4-guard",
+    "env": "ROGUESQ_LOG_RESERVE_AND_EMIT_DL_ENTRY_R4_GUARD",
+    "pc": "0x8000CD58",
+    "func": "reserveAndEmitDLEntry",
+    "rn": 4,
+    "cnt": 7
+  }
+]

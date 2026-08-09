@@ -1,13 +1,17 @@
 #!/bin/zsh
-# s555 2nd independent confirm (queued soak) of item -317 step 3's LAST classic r2/0X4 site:
-# HEAP_FREE_LIST_INSERT_R1_GUARD site=0x800079D8 (count=1, heapFreeListInsert, new function to
-# this campaign's R-numbered lineage — freelist INSERT not DEQUEUE). After fold-in of s554's
-# confirm (guards 88-114 CLEAN FULLY CLOSED 2/2, hangarbay n=3000, full 300s no-crash), a fresh
-# tracer re-scan of reg=r2/off=0X4 returns only two hits: count=7 shape-mismatch at 0x8000D268
-# (skipped again) and this count=1 classic site. Shape-checked: classic lui $v0,0x8011 /
-# lw $v0,0x63B0($v0) / beq $v0,$zero / fallthrough MEM_W(0X4, ctx->r2)=ctx->r3. 0 incidental
-# matches in fixup. After this closes, classic r2/0X4 campaign is DONE (only residual non-classic
-# shapes remain: r4/0X0 mesh sites etc.).
+# s556 1st live-verify (manual, foreground) of item -317 residual free-list-node
+# rN/0X0 write pivot after classic r2/0X4 FULLY CLOSED at 115/115.
+# 9 new guards (116-124), all free-list head reload into $a0/$a3 then write MEM_W(0X0, rN):
+#   RENDER_LIT_TEXTURED_MESH_FACES_R7  0x8000FD50 count=59
+#   RENDER_LIT_TEXTURED_MESH_FACES_R8  0x8000FC80 count=45
+#   RENDER_LIT_TEXTURED_MESH_FACES_R9  0x8000FE70 count=41
+#   RENDER_LIT_TEXTURED_MESH_FACES_R10 0x8000FF20 count=28 ($a3/r7)
+#   RENDER_FLAT_MESH_FACE_GROUP_R7     0x80011BA8 count=27
+#   RENDER_FLAT_MESH_FACE_GROUP_R8     0x80011958 count=16
+#   SUBMIT_SCENE_NODE_RENDER_R10       0x8001077C count=15
+#   EMIT_ALLOCATED_DL_COMMAND_R4       0x80008858 count=7
+#   RESERVE_AND_EMIT_DL_ENTRY_R4       0x8000CD58 count=7
+# Shape: free-list node in r4/r7 after 0x63B0 reload; list-prepend write at 0X0; skip-on-invalid.
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Walk up until we find tools/probe.sh (works from scratch/agent/ or soak_queue/)
@@ -155,6 +159,15 @@ env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 \
     ROGUESQ_LOG_DRAW_SUBTITLE_TEXT_R6_GUARD=1 \
     ROGUESQ_LOG_SETUP_CAMERA_MATRICES_R3_GUARD=1 \
     ROGUESQ_LOG_HEAP_FREE_LIST_INSERT_R1_GUARD=1 \
+    ROGUESQ_LOG_RENDER_LIT_TEXTURED_MESH_FACES_R7_GUARD=1 \
+    ROGUESQ_LOG_RENDER_LIT_TEXTURED_MESH_FACES_R8_GUARD=1 \
+    ROGUESQ_LOG_RENDER_LIT_TEXTURED_MESH_FACES_R9_GUARD=1 \
+    ROGUESQ_LOG_RENDER_LIT_TEXTURED_MESH_FACES_R10_GUARD=1 \
+    ROGUESQ_LOG_RENDER_FLAT_MESH_FACE_GROUP_R7_GUARD=1 \
+    ROGUESQ_LOG_RENDER_FLAT_MESH_FACE_GROUP_R8_GUARD=1 \
+    ROGUESQ_LOG_SUBMIT_SCENE_NODE_RENDER_R10_GUARD=1 \
+    ROGUESQ_LOG_EMIT_ALLOCATED_DL_COMMAND_R4_GUARD=1 \
+    ROGUESQ_LOG_RESERVE_AND_EMIT_DL_ENTRY_R4_GUARD=1 \
     PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
     PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" \
-    zsh "$REPO_ROOT/tools/probe.sh" "$REPO_ROOT/scratch/agent/soak_results/s555_count1_heap_free_list_insert_r1_confirm" 300 2
+    zsh "$REPO_ROOT/tools/probe.sh" "$REPO_ROOT/scratch/agent/soak_results/s556_residual_rN_0x0_nine_way_manual" 300 2

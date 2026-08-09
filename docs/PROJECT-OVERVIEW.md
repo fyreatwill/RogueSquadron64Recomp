@@ -2352,7 +2352,27 @@ Fresh tracer re-scan of reg=`r2`/off=`0X4` after fold-in returns only two hits:
 
 1st live-verify: 0 fires on `heap-free-list-insert-r1-guard` (0 log lines), 0 live fires on any armed guard family, `hangarbay-entry n=2700` (strong positive control). Crashed at 129.6s on already-catalogued s354-366 heap-walker background-noise `coalesceFreeHeapBlocks+4424`/`last-guest-pc=0x8000247c` (not a new item). 2nd confirm queued: `scratch/agent/soak_queue/s555_count1_heap_free_list_insert_r1_confirm.sh`.
 
-**Classic r2/0X4 campaign status:** after guard 115, **0 remaining classic unaudited sites** on this shape filter (only residual non-classic shapes remain — high-count `r4`/`0X0` mesh write sites, and any scoped gap audits like the s549 `DL_LIST_APPEND_DEREF` pattern). Campaign totals as of s555: **115 fixed, 114 FULLY CLOSED 2/2, 1 pending confirm**.
+**s556 fold-in of 2nd confirm:** CLEAN full ~300s (rc=0, 114 frames), `hangarbay-entry n=3000`, 0 fires, NO crash — **guard 115 FULLY CLOSED 2/2**. Classic r2/0X4 at **115/115 fully closed with zero pending**.
+
+### s556 residual free-list-node rN/0X0 pivot (guards 116-124)
+
+After classic r2/0X4 emptied, a full-rank NEEDS_GUARD re-scan (no shape filter) showed the residual top tier is a **different** free-list idiom: free-list head reloaded into `$a0`/`$a3` (`ctx->r4`/`r7`) via `0x63B0`, then used as the write base of a list-prepend `MEM_W(0X0, rN) = …` with no range check. Not the classic r2/0X4 freelist-next zeroing shape — same global, different register/offset. Shape-checked all 9 top sites (provenance = free-list head reload; companion `NODE_LIST_HEAD_*` guards cover only the list-head global side, not the free-list node write).
+
+| # | Guard | Site | Function notes |
+|---|-------|------|----------------|
+| 116 | `RENDER_LIT_TEXTURED_MESH_FACES_R7_GUARD` | `0x8000FD50` | residual free-list-node 0X0; taint count=59 |
+| 117 | `RENDER_LIT_TEXTURED_MESH_FACES_R8_GUARD` | `0x8000FC80` | count=45 |
+| 118 | `RENDER_LIT_TEXTURED_MESH_FACES_R9_GUARD` | `0x8000FE70` | count=41 |
+| 119 | `RENDER_LIT_TEXTURED_MESH_FACES_R10_GUARD` | `0x8000FF20` | via `$a3`/`r7`; count=28 |
+| 120 | `RENDER_FLAT_MESH_FACE_GROUP_R7_GUARD` | `0x80011BA8` | count=27 |
+| 121 | `RENDER_FLAT_MESH_FACE_GROUP_R8_GUARD` | `0x80011958` | count=16 |
+| 122 | `SUBMIT_SCENE_NODE_RENDER_R10_GUARD` | `0x8001077C` | count=15 |
+| 123 | `EMIT_ALLOCATED_DL_COMMAND_R4_GUARD` | `0x80008858` | count=7 |
+| 124 | `RESERVE_AND_EMIT_DL_ENTRY_R4_GUARD` | `0x8000CD58` | count=7 |
+
+1st live-verify (all 9 armed): 0 fires on all 9, `hangarbay-entry n=2600` (strong positive control). Crashed at 111.1s on `emitAllocatedDLCommand+13216`/`last-guest-pc=0x800088ec` — free-list-walk second-deref after GUARD3 validates the *previous* node (classic GUARD3/GUARD4 gap shape, heapWalker s218). Pre-crash co-fires: generic-cache/cache-head-a1/dl-alloc-propagation with `bad_ptr=0x7600D07C`. Filed **item -339** (single occurrence; not a regression — new guards at 0 fires). 2nd confirm queued: `scratch/agent/soak_queue/s556_residual_rN_0x0_nine_way_confirm.sh`.
+
+**Campaign totals as of s556:** **124 fixed, 115 FULLY CLOSED 2/2, 9 pending confirm**. Residual after this batch: lower-count free-list-node 0X0 sites, shape-mismatched count=7 at `0x8000D268`, heapFreeListDequeue r3/r16 secondaries, and scoped gap audits (GUARD4 / item -339 watch).
 
 
 ## 26. Overturned conclusions and dead ends, full list (s2-s422), migrated from CURRENT-TRUTH.md s547

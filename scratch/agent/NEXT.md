@@ -2,61 +2,52 @@
 
 HYPOTHESIS-ID: item-317-step3-blanket-sweep
 
-## s555 recap (read this first)
+## s556 recap (read this first)
 
-**Folded in s554's queued confirm — CLEAN, FULLY CLOSED 2/2.**
-`s554_count3_count2_twentyseven_way_confirm` (guards 88-114): CLEAN full ~300s (rc=0, 114 frames),
-`hangarbay-entry n=3000`, 0 fires on all 27, NO crash. Campaign briefly at 114/114 with zero pending.
+**Folded in s555's queued confirm — CLEAN, FULLY CLOSED 2/2.**
+`s555_count1_heap_free_list_insert_r1_confirm` (guard 115): CLEAN full ~300s (rc=0, 114 frames),
+`hangarbay-entry n=3000`, 0 fires, NO crash. Classic r2/0X4 campaign **DONE at 115/115**.
 
-**Fresh tracer re-scan of classic r2/0X4: only count=7 shape-mismatch (skipped) + count=1 classic
-left.** Fixed the last classic site as guard 115 `HEAP_FREE_LIST_INSERT_R1_GUARD` site=`0x800079D8`
-(`heapFreeListInsert`, new function to the R-numbered lineage). 1st live-verify clean
-(`hangarbay-entry n=2700`, 0 fires, 0 log lines for the new tag); crashed on known s354-366
-`coalesceFreeHeapBlocks+4424`/`0x8000247c`. 2nd confirm queued:
-`scratch/agent/soak_queue/s555_count1_heap_free_list_insert_r1_confirm.sh`.
+**Residual free-list-node rN/0X0 pivot: 9 guards (116-124) fixed, 1st live-verify CLEAN.**
+Full-rank NEEDS_GUARD re-scan after classic empty: top residual is free-list head reloaded into
+`$a0`/`$a3` then written at `MEM_W(0X0, rN)` (list-prepend). Shape-checked; fixed as:
+- RENDER_LIT_TEXTURED_MESH_FACES_R7..R10 (0x8000FD50/FC80/FE70/FF20)
+- RENDER_FLAT_MESH_FACE_GROUP_R7/R8 (0x80011BA8/11958)
+- SUBMIT_SCENE_NODE_RENDER_R10 (0x8001077C)
+- EMIT_ALLOCATED_DL_COMMAND_R4 (0x80008858)
+- RESERVE_AND_EMIT_DL_ENTRY_R4 (0x8000CD58)
 
-Campaign totals: **115 fixed, 114 FULLY CLOSED 2/2, 1 pending confirm** (115).
-**Classic r2/0X4 unaudited classic sites: 0 remaining** after this guard.
+1st live-verify: hangarbay n=2600, 0 fires on all 9. Crashed on new breadcrumb item -339
+(`emitAllocatedDLCommand+13216`/`0x800088ec` — GUARD3/GUARD4 gap; not a regression of the new
+guards). 2nd confirm queued: `scratch/agent/soak_queue/s556_residual_rN_0x0_nine_way_confirm.sh`.
+
+Campaign totals: **124 fixed, 115 FULLY CLOSED 2/2, 9 pending confirm** (116-124).
 
 ## This iteration's work unit
 
 **Step 1 — fold in the queued confirm result (do this FIRST).**
 
-1. `s555_count1_heap_free_list_insert_r1_confirm` (2nd confirm for guard 115): expect 0 fires on
-   `heap-free-list-insert-r1-guard`, double-digit+ `hangarbay-entry`. If clean: mark guard 115
-   FULLY CLOSED 2/2.
+1. `s556_residual_rN_0x0_nine_way_confirm` (2nd confirm for guards 116-124): expect 0 fires on all
+   nine new tags, double-digit+ `hangarbay-entry`. If clean: mark guards 116-124 FULLY CLOSED 2/2.
 2. Update `docs/PROJECT-OVERVIEW.md` §25 + `docs/CURRENT-TRUTH.md` item -317. **If the confirm
    surfaces a fire, this is a MAJOR finding — investigate instead of pivoting.**
 3. If WEAK (no hangarbay / single-digit / item -306 early death): discard and re-queue retry
    immediately (s543–s552 pattern; budget a 3rd attempt).
 
-**Step 2 — PIVOT off classic r2/0X4 (fold-in-then-pick), UNLESS Step 1 surfaced a fire.**
+**Step 2 — continue residual free-list-node 0X0 (fold-in-then-pick), UNLESS Step 1 surfaced a fire.**
 
-Classic r2/0X4 is done. Pick ONE residual campaign lead:
-
-### Option A (recommended): high-count residual r4/0X0 mesh write sites
-1. Re-run tracer + `s506_dedupe.py` (no shape filter — full ranked NEEDS_GUARD list).
-2. Top residual ranks (as of s555 pre-fix scan, re-check after confirm closes):
-   - `renderLitTexturedMeshFaces` r4/0X0 counts 59/45/41
-   - `renderFlatMeshFaceGroup` r4/0X0 counts 27/16
-   - `submitSceneNodeRender` r4/0X0 count 15
-   - plus smaller r3/r7/r16/r18 sites in heapFreeListDequeue / buildOrientedFaceGeometry
-3. Shape-check every candidate: many may already be covered by non-R-numbered family guards
-   (`DL_LIST_APPEND_*`, sibling-ptr, etc.) or be intentional unguarded integer stores — do NOT
-   blindly apply the r2/0X4 template. Confirm the reload is still a free-list / DL-cursor global
-   (or a sibling of that family) before writing a guard.
-4. Cross-check write addresses against `fixup_game_funcs.py`. Batch-fix only sites that share one
-   proven safe skip-on-invalid shape.
-
-### Option B: scoped gap audit (item -327 / -334 model)
-Grep for "validate head, then deref readback without range-check" patterns near existing
-`DL_LIST_APPEND_GUARD` / `SIBLING_PTR_WRITE_GUARD` sites — the s549 style that ships fixes on
-direct crash-mechanism evidence rather than pure shape ranking.
+After 116-124 close, re-run tracer + `s506_dedupe.py`. Next residual candidates from s556 pre-fix
+ranking (re-check after confirm):
+- heapFreeListDequeue r3/0X0 and r3/0X4 count=11 (shape-check: may be s0-derived packing, not freelist)
+- emitAllocatedDLCommand / reserveAndEmitDLEntry lower-count 0X0 sites already covered by R4?
+- buildOrientedFaceGeometry r4/r18 secondary counts
+- shape-mismatched count=7 at 0x8000D268 (still skip unless shape reclassified)
+- **item -339 watch**: if 0x800088ec recurs, escalate as systematic emit-dl GUARD4 audit (heapWalker s218 model) — that is an idiom-class fix, not a single-crash chase
 
 ### Discriminating outcome
-- Confirm clean → classic r2/0X4 FULLY CLOSED; residual pivot begins.
+- Confirm clean → guards 116-124 FULLY CLOSED; next residual batch begins.
 - Confirm fire with bad_ptr correlating to crash fault address → real bug catch (item -334 model).
-- Residual candidates that fail shape/safety review → document as DEFERRED (like -302/-305/-307).
+- Residual candidates that fail shape/safety review → document as DEFERRED.
 
 ## Iron-rule reminders specific to this campaign
 - Confirm free session number at START (`git log --oneline -3`) before naming.
@@ -68,13 +59,14 @@ direct crash-mechanism evidence rather than pure shape ranking.
   budget a 3rd attempt (s553 closed 64-65 on attempt 3 with n=2600).
 - Count=N tiers can include shape-mismatched sites that share a taint count but not the classic reload
   (s553/s554/s555 count=7 `0x8000D268` skipped).
+- Residual free-list-node 0X0 uses r4/r7 not r2 — do not re-apply classic r2/0X4 filter alone (s556).
 - One build/run carries every armed guard env var.
 - `s506_dedupe.py` fixed path; never pass custom `--out` to `--scan`.
 - Kill with SIGKILL; capture paths must not start with "."; run from `build/` with ROM.
 - `fixup_game_funcs.py` is untracked in the standalone N64Recomp checkout — nothing to commit there.
 - Build that matters: `RogueSquadron64Recomp/build`, not `N64Recomp/build`.
-- `0x800ab068` / `0x80015544` / `findLookupEntryByKey+2212` / `0x80010b7c` / `coalesceFreeHeapBlocks+4424`/`0x8000247c` pc-symbol instability: cross-check `last-guest-pc` only.
-- item -332 watch (2 occurrences); item -331/-333 free-list-pop region watch; item -335/-336/-337/-338
+- `0x800ab068` / `0x80015544` / `findLookupEntryByKey+2212` / `0x80010b7c` / `coalesceFreeHeapBlocks+4424`/`0x8000247c` / `0x800088ec` pc-symbol instability: cross-check `last-guest-pc` only.
+- item -332 watch (2 occurrences); item -331/-333 free-list-pop region watch; item -335/-336/-337/-338/-339
   single-occurrence watch.
 - After launching manual live-verify in background, wait with TaskOutput block timeout ≥300000ms.
 - Full guard table: `docs/PROJECT-OVERVIEW.md` §22-§25.

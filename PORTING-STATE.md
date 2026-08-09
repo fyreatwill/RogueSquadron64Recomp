@@ -45088,3 +45088,40 @@ positive control.
   that checkout).
 - `docs/CURRENT-TRUTH.md`, `docs/PROJECT-OVERVIEW.md` §25 s555 block, `scratch/agent/NEXT.md`,
   `scratch/agent/SOAK-RESULTS.md`, soak script under `scratch/agent/soak_queue/`.
+
+## Session 556 (2026-08-09) — item -317 residual free-list-node rN/0X0 pivot (guards 116-124)
+
+### Fold-in
+- `s555_count1_heap_free_list_insert_r1_confirm`: CLEAN full ~300s (rc=0, 114 frames),
+  `hangarbay-entry n=3000`, 0 fires on `heap-free-list-insert-r1-guard`, NO crash.
+  **Guard 115 FULLY CLOSED 2/2.** Classic r2/0X4 campaign complete at 115/115.
+
+### Work unit
+Residual pivot Option A after classic empty. Re-ran
+`scratch/agent/s494_item317_step3_tracer.py --scan` + `s506_dedupe.py`. Top residual NEEDS_GUARD
+hits are free-list-allocated-node writes: free-list head reloaded into `$a0`/`$a3` (`r4`/`r7`) via
+`0x63B0`, then list-prepend `MEM_W(0X0, rN)` with no range check. Same free-list global as classic
+r2/0X4, different register/offset. Shape-checked top 9; companion `NODE_LIST_HEAD_*` only covers
+the list-head global side.
+
+### Fix
+9 guards (116-124) in `fixup_game_funcs.py` (sibling N64Recomp checkout, untracked there):
+`RENDER_LIT_TEXTURED_MESH_FACES_R7..R10`, `RENDER_FLAT_MESH_FACE_GROUP_R7/R8`,
+`SUBMIT_SCENE_NODE_RENDER_R10`, `EMIT_ALLOCATED_DL_COMMAND_R4`, `RESERVE_AND_EMIT_DL_ENTRY_R4`.
+Regen: `make_elf.py` → clear `RecompiledFuncs/funcs_*.c` → `N64Recomp` → `fixup` (all 9 x1) →
+`cmake --build`. Clean build.
+
+### 1st live-verify
+`s556_residual_rN_0x0_nine_way_manual`: hangarbay n=2600, 0 fires on all 9 new guards, 0 live
+fires on other armed families (except pre-crash co-fires of existing free-list guards). Crashed
+111.1s on `emitAllocatedDLCommand+13216`/`last-guest-pc=0x800088ec` — GUARD3 validates previous
+node then unguarded second deref (GUARD3/GUARD4 gap). Filed **item -339** (single occurrence, not
+escalated; not a regression — new guards never fired). 2nd confirm queued:
+`scratch/agent/soak_queue/s556_residual_rN_0x0_nine_way_confirm.sh`.
+
+### Files touched
+- `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` (9 new guards; untracked in
+  that checkout).
+- `docs/CURRENT-TRUTH.md`, `docs/PROJECT-OVERVIEW.md` §25 s556 block, `scratch/agent/NEXT.md`,
+  `scratch/agent/SOAK-RESULTS.md`, soak scripts under `scratch/agent/`.
+
