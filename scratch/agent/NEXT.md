@@ -2,72 +2,85 @@
 
 HYPOTHESIS-ID: m3-dod-craft-stick-hold
 
-## s572 recap (read this first)
+## s573 recap (read this first)
 
-**Item -7 soak fold — leave survives; hangar-menu stickiness; -338 2nd occ.**
+**Item -7 offline: H1 CONFIRMED — craft-leave never enters mission.**
 
-- Loop ran `s571_item7_craft_stick_hold_retry` →
-  `scratch/s73_post_a_scene/s571_item7_retry_20260809-145351/`.
-- Menu clean through SELECT YOUR CRAFT. Leave Start applied; **hold-iter 12** death (not
-  hold-iter 1). Stick sr at hold_10; 11 hold_*.png.
-- Crash: `last-guest-pc=0x8000afa0` / `beginFrameDLChunk+46800` — **item -338 2nd occ**
-  (moderate confidence; do not chase until 3rd).
-- Stack at death: still `runHangarSelectionFrame` ← `runHangarMenuFromOverlay` ←
-  `menuOverlayInit`. hangarbay-entry n=1000. **0 mission* log tags entire run.**
-- `fs` plateau 4355; thr-resume-skip=0. hold_04..11 frozen identical MD5 (stick no pixels).
-- Item -7 partial PROBED: leave can survive + stick marks fire, but path is **not in-mission**.
+- s572 runlog: overlay sections 0,1 boot; start-match 3 (menu) → 4 (cinematic) → 3 (menu).
+  **Mission section idx=2 rom=0xA5D30 never start-matches.** 0 mission* / gracefulMenu* tags.
+  hangarbay-entry n=1000 through death; stack still `runHangarSelectionFrame`.
+- Source hangar exit is a **multi-frame state machine**, not "Start leaves":
+  1. A|START (0x9000) in `updateHangarBayScene` writes craft idx → `0x800CD6D4` **iff**
+     `isPlayerShipActive()` is 0 (gPlayerShip `0x800CC85C` null).
+  2. `runHangarSelectionFrame` returns non-`0x00FFFFFF` **iff**
+     `accumulateShipThrottleCharge()` nonzero (needs gPlayerShip live + charge counter ≥7).
+  3. `runHangarMenuFromOverlay` then `gracefulMenuShutdown` and returns to menu overlay.
+- Synthetic Start correctly maps to N64 0x1000 (`main.cpp`). s74 A-no-op / s572 camera-only
+  leave fit gate (a) and/or (b) stuck.
 
 ## This iteration's work unit
 
-**Item -7 gate pivot — leave→mission transition: does craft-leave Start ever enter mission code?**
+**Item -7 — which hangar-exit gate is stuck? (one instrumented leave run)**
 
-s572 shows stick hold is blocked by hangar-menu stickiness + graphics stall, not by missing
-stick marks. Discriminate whether mission entry is (a) never attempted, (b) attempted but
-fails silently, or (c) reaches a frame function we do not log.
+Batch all counters in ONE fixup + ONE cmake + ONE leave run (HOLD_S=20 enough; full 60s not
+required). Do not chase crashes.
 
 ### Hypotheses
-- H1: Post-leave control never leaves hangar menu (`runHangarSelectionFrame` / hangar overlay
-  only) — mission overlay never DMA'd, no mission frame function runs → need state-machine /
-  confirm-key / overlay-dispatch fix before DoD stick hold is meaningful.
-- H2: Mission entry is attempted (overlay load / mission init / cutscene frame) but aborts or
-  returns to hangar within seconds — log will show a brief mission tag then hangar resume.
-- H3: Mission runs under a name we do not log; hangar symbols on crash stack are callers only —
-  need positive control that a known mission symbol fires during a real mission path (or
-  decomp-named mission frame JAL targets instrumented).
+- H-exit1: `isPlayerShipActive` stays 1 during craft display → A|START never writes selection
+  (matches s74 A no-op).
+- H-exit2: selection writes (0x800CD6D4 changes) but `accumulateShipThrottleCharge` always 0
+  → poll never exits (ship null or charge stuck).
+- H-exit3: both gates fire (selection non-0xFFFFFF, throttle nonzero, frame ret non-sentinel)
+  but `gracefulMenuShutdown` / menu return fails → need post-exit path next.
+- H-exit4: `getControllerNewButtonsPressed` never sees 0x9000 on leave Start (input path) —
+  positive control: log raw new-buttons on leave frame.
 
-### Discriminating measurements (batch in ONE build/run)
-1. Offline first (no build): from s572 `run.log`, enumerate every `[overlay]` line and any
-   function-entry tags after the leave Start wall time; confirm 0 mission-side hits (already
-   true for mission* strings — extend to overlay section idx / known mission ROM ranges).
-2. If offline is inconclusive for H3: one instrumented run with entry counters on
-   `runHangarSelectionFrame` (rate-unlimited after leave) + best-known mission frame/init
-   symbols from decomp/`syms` (batch all; positive control: hangar counter must keep firing
-   pre-leave).
-3. Crash/stall outcome secondary — do not chase -338.
+### Discriminating measurements (ONE build)
+In `fixup_game_funcs.py` (not hand-edit funcs_*.c), add rate-unlimited-after-leave or
+always-on-first-N after hangar entry:
+
+| counter | where | fields |
+|---------|-------|--------|
+| ship-ptr | `isPlayerShipActive` entry/ret | n, gPlayerShip, ret |
+| hangar-sel | after confirm store `0x800CD6D4` / every frame tail | n, value |
+| throttle-ret | `accumulateShipThrottleCharge` exit | n, ret, ship non-null |
+| frame-ret | `runHangarSelectionFrame` after_2 (existing ckpt) | extend to log ctx->r2 every iter (or 1/50 after n=20) |
+| buttons | after `getControllerNewButtonsPressed` in updateHangarBayScene | n, raw v0, v0&0x9000 |
+
+Positive control: hangarbay-entry must keep firing; at least one buttons sample must show
+Start bit when console says `[keys] probe p1 start`.
 
 ### Exact commands
 ```bash
-# Offline overlay + post-leave function tags (prefer before any build):
-RUNLOG=scratch/s73_post_a_scene/s571_item7_retry_20260809-145351/run.log
-grep -n '\[overlay\]' "$RUNLOG"
-# Find leave wall-time from console / first after_p1; count hangarbay-entry after that.
+# After fixup lands (edit fixup_game_funcs.py only):
+# regen if needed, or if patch is pure fixup-on-existing: just cmake if fixup already applied
+# Prefer: re-run fixup on existing RecompiledFuncs then cmake — only full regen if fixup requires clean.
 
-# Mission symbol candidates (decomp / syms — pick real names, do not invent):
-#   grep -E 'mission|Mission|Chapter|levelLoad|startLevel' syms/ docs/ companion decomp
+python3 ~/Documents/Tools/N64Recomp/fixup_game_funcs.py   # if patches are additive/idempotent
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+cmake --build build -j8 --target RogueSquadron64Recomp
 
-# If instrumenting: put counters in fixup or existing ROGUESQ_LOG_* only; one cmake + one
-# run_mission_keys leave+HOLD_S=20 is enough (full 60s not required for entry proof).
+# Leave-only short hold (entry proof, not stick DoD):
+env PROBE_MODE=start_only HOLD_S=20 \
+  ROGUESQ_LOG_ALL=0 \
+  zsh tools/run_mission_keys.sh   # or whatever recipe s571 used — match s572 env
+
+# Analyze:
+grep -E 'ship-active|hangar-sel|throttle-ret|hangarmenu-ckpt|buttons-hangar|hangarbay-entry' run.log | head -80
+# After leave wall-time: did 0x800CD6D4 leave 0xFFFFFF? did throttle ret ever 1? did frame ret exit sentinel?
 ```
 
 ### Expected outcomes
-- H1: document leave→hangar-only as CURRENT-TRUTH; reframe item -7 next step as mission-entry
-  state-machine audit (systematic, not crash chase).
-- H2: name the aborting function / missing overlay; that becomes the next fix work unit.
-- H3: expand log coverage with positive control; re-run once.
+- H-exit1: ship-ptr always non-null on confirm frames → next unit = who sets gPlayerShip and when
+  it should clear for craft confirm.
+- H-exit2: sel writes, throttle always 0 → next unit = charge path / ship setup for hangar.
+- H-exit3: hangar exits (gracefulMenu + after_3) but no mission overlay → next unit = menu→mission
+  transition after hangar return.
+- H-exit4: Start never in new-buttons → fix input path for hangar phase.
 
 ### Do NOT
-- Chase 0x8000afa0 / beginFrameDLChunk from this leave path (wait 3rd occ of -338).
-- Chase 0x80010b7c (s571 noise).
-- Blind HOLD_S=60 stick retries without mission-entry evidence (stick marks already proven).
-- Reopen M5 (due s573+ only).
-- Resume freelist/sibling residual scans (exhausted s569).
+- Chase 0x8000afa0 / -338 (wait 3rd occ).
+- Blind HOLD_S=60 stick soaks.
+- Reopen M5 unless a new audio signature appears (due recheck was s573; quick scan only if idle).
+- Resume freelist/sibling residual (exhausted s569).
+- Hand-edit funcs_*.c — fixup only.

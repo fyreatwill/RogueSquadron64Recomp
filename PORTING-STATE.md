@@ -45908,3 +45908,83 @@ chase from this single session.
 Pivot within `m3-dod-craft-stick-hold`: leave→mission transition probe (does any mission
 overlay / mission frame function ever run after craft-leave Start?). Enqueue optional
 survival re-soak only as passive background. M5 due s573+.
+
+## Session 573 — leave→mission offline: H1 confirmed; hangar exit is A|Start+throttle, not "Start leaves"
+
+### Work unit
+Item -7 gate pivot (NEXT.md): offline analysis of s572 leave path — does craft-leave
+Start ever enter mission code? Discriminate H1 (hangar-only) / H2 (mission abort) / H3
+(mission under unlogged names).
+
+### Evidence (s572 runlog + source)
+
+**Overlay table** (`recomp_overlays.inl` section_table):
+| idx | rom | name |
+|-----|-----|------|
+| 0 | 0x1000 | entry |
+| 1 | 0x1040 | main text |
+| 2 | 0xA5D30 | **mission** @ 0x800A5130 |
+| 3 | 0x10C2D0 | menu @ 0x800A5130 |
+| 4 | 0x137580 | cinematic @ 0x800A5130 |
+
+s572 `[overlay]` lines (complete set):
+- load idx=0,1 at boot
+- start-match section **3** (menu) → **4** (cinematic) → **3** (menu)
+- **section 2 (mission) never start-matches**
+
+Post hangarbay n=900 unique tags: thr-resume, vi-fs-decision, rt64, runner, hangarbay,
+generic-cache-guard, CRASH — **0 mission* strings, 0 gracefulMenu*, 0 mission-overlay
+func names**. hangarbay-entry continues to n=1000; crash stack still
+`runHangarSelectionFrame` ← `runHangarMenuFromOverlay` ← `menuOverlayInit`.
+
+**H1 confirmed (two independent lines):**
+1. Overlay system: mission section never DMA'd/start-matched.
+2. Hangar control continuous through death (counters + crash stack).
+
+H2 ruled out (no brief mission tags). H3 ruled out for overlay-bank mission code
+(start-match would fire if section 2 loaded); residual only if mission lived entirely
+in main text without overlay swap — no evidence, and hangar stack contradicts it.
+
+### Source: how hangar is supposed to exit
+
+`runHangarMenuFromOverlay` (`funcs_35.c`): poll `runHangarSelectionFrame` while
+`v0 == 0x00FFFFFF` (NOT 0xFFFFFFFF — symbol comment was wrong); then
+`gracefulMenuShutdown`.
+
+`updateHangarBayScene` confirm (`funcs_28.c` ~0x800AC8C0):
+```
+getControllerNewButtonsPressed();
+if (v0 & 0x9000) {  // A (0x8000) | START (0x1000)
+  if (!isPlayerShipActive())  // gPlayerShip @ 0x800CC85C == 0
+    store craft_idx to gHangarSelection @ 0x800CD6D4 (-0x292C from 0x800D)
+}
+```
+B (0x4000) in `runHangarSelectionFrame` writes cancel sentinel 0x00FFFFFE (also gated
+on !isPlayerShipActive).
+
+Frame return (`runHangarSelectionFrame` tail):
+```
+if (accumulateShipThrottleCharge() != 0)
+  return gHangarSelection;  // exit poll
+return 0x00FFFFFF;          // continue
+```
+`accumulateShipThrottleCharge` returns 1 only when gPlayerShip non-null and a charge
+counter reaches 7; null-ship path returns 0 (L_800B421C). So **confirm write requires
+ship inactive; poll-exit requires ship active + charge** — a multi-frame state machine,
+not a single Start.
+
+s74 "A no-ops" and s572 "Start moves camera but stays hangar" fit if either (a)
+`isPlayerShipActive` stays 1 (blocks selection write) or (b) throttle never returns 1
+(blocks poll exit) or (c) both. Synthetic Start correctly maps to 0x1000
+(`main.cpp` N64_START_BUTTON).
+
+### Ruled out
+- Mission overlay DMA after craft-leave (this recipe).
+- Stick-hold as primary M3 DoD gate (still hangar menu).
+- Blind HOLD_S=60 retries without measuring hangar-exit gates.
+
+### Next
+Instrument in ONE build/run: gPlayerShip (0x800CC85C), gHangarSelection (0x800CD6D4),
+`isPlayerShipActive` ret, `accumulateShipThrottleCharge` ret, `runHangarSelectionFrame`
+ret — phase-scoped around leave Start. Discriminate which gate blocks hangar exit.
+Do not chase -338. M5 due s573+ (no new lead this session; recheck next idle).

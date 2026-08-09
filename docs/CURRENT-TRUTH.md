@@ -30,7 +30,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s572)
+## Current truth (established by session 295; unchanged, reviewed through s573)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -131,10 +131,12 @@ since **DONE/CLOSED s399** (item -6). Full detail: PORTING-STATE s49.
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT are both
 reachable and stable; ~20 crash classes closed s50-s294 (mechanisms: `docs/PROJECT-OVERVIEW.md` §3
 arc + §9 closed lineages; per-class catalog: §7). Leave-key from SELECT YOUR CRAFT: s75 hangar-flight
-OVERTURNED s150; **s572 leave-hold** reconfirms hangar menu stickiness (`runHangarSelectionFrame`
-through death, fs stall, no mission* logs) — primary DoD gate is leave→mission transition, not
-stick input. *Done when:* 60s of in-mission rendering, craft visibly responds to synthetic input,
-stability counters 0, phase timeline covers the mission.
+OVERTURNED s150; **s572 leave-hold** reconfirms hangar menu stickiness; **s573 offline H1
+CONFIRMED** — craft-leave Start never loads mission overlay (section idx 2 rom 0xA5D30) and control
+stays in `runHangarSelectionFrame` through death (two independent lines: overlay start-match +
+hangar counters/stack). Primary DoD gate is hangar-exit → mission-entry state machine (item -7),
+not stick input. *Done when:* 60s of in-mission rendering, craft visibly responds to synthetic
+input, stability counters 0, phase timeline covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
@@ -358,17 +360,20 @@ a range pointer. Highest allocated so far: -348. The next NEW item takes -349.
 -11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89), RECURRED s424, ROOT-CAUSED AND GUARDED s425.** s424 hit it as a sibling of item -261's guarded `startPlayerSlotAnimationChannelLooping` crash; s425 root-caused and guarded it (wild `$a0` arg, same never-initialized-slot root state) — see item -261 for the full trace.
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
--7. **M3 — HOLD_S=60 craft stick (M3 DoD body): OPEN — partial PROBED s572.** Recipe
+-7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN — H1 CONFIRMED s573.** Recipe
     `PROBE_MODE=start_only HOLD_S=60 STICK_SCHEDULE="10:sr 25:sl 40:su"` via `run_mission_keys.sh`.
-    **s571:** leave died hold-iter 1 on noise PC `0x80010b7c` (0 hold pngs). **s572 retry:** leave
-    **survived**; stick sr at hold_10; 11 hold pngs; died hold-iter 12 on item **-338**
-    `0x8000afa0`/`beginFrameDLChunk+46800`. Crash stack still **`runHangarSelectionFrame`** (not
-    mission); hangarbay-entry n=1000; 0 mission* log tags; `fs` plateau 4355; thr-resume-skip=0.
-    PNG: clean craft_stable → leave hangar camera (after_p1) → corrupted → hold freeze (hold_04..11
-    identical MD5 incl stick frame — no visual stick response). Confirms s150: leave stays craft/
-    hangar menu under camera move + s176–s183 graphics stall, not in-mission. **Primary gate for
-    full M3 DoD is leave→mission transition**, not stick plumbing. Optional further 60s survival
-    soaks are secondary; next unit = prove/fix mission-entry after craft-leave.
+    **s571:** leave died hold-iter 1 on noise PC `0x80010b7c`. **s572:** leave survived ~12s hold;
+    stick marks fire; crash still `runHangarSelectionFrame` on item -338; 0 mission* tags.
+    **s573 offline (no build):** H1 hangar-only after craft-leave Start — (1) overlay log never
+    start-matches mission section idx=2 rom=0xA5D30 (only menu 3 / cinematic 4 bank-swap); (2)
+    hangarbay-entry to n=1000 + crash stack still hangar. H2/H3 ruled out for overlay-bank mission
+    code. **Hangar exit state machine (source):** poll sentinel is `0x00FFFFFF` (not FFFFFFFF);
+    confirm is A|START (`0x9000`) in `updateHangarBayScene` writing craft idx to `0x800CD6D4`
+    only if `isPlayerShipActive` (gPlayerShip `0x800CC85C`) is 0; frame returns non-sentinel only
+    when `accumulateShipThrottleCharge` returns nonzero (needs gPlayerShip non-null + charge≥7).
+    Start alone is not "leave to mission" — multi-frame gate. **Next:** one instrumented leave run
+    measuring those three values around Start (fixup, not hand-edit funcs). Do not chase -338;
+    stick-hold secondary until hangar exits.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.
