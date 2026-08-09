@@ -2441,17 +2441,28 @@ emitAllocatedDLCommand + submitSceneNodeRender. Applied **GUARD3 x94 + GUARD4 x9
 alloc-tail family (`ROGUESQ_LOG_ALLOC_TAIL_GUARD3` / `_GUARD4`). Already-covered layers excluded:
 reserveAndEmitDLEntry x3 (`DLENTRY_TAIL_GUARD` s251), drainMesh peeks (s357), scene-node
 `0x80010174` (s123+s559). 1st live-verify CLEAN (hangarbay n=2600, 0 fires; crash on already-
-catalogued `initVec4TripletFromArgs+68`/`0x80065e94`). s560/s561 confirms both weak-discarded
-(item -306 hangarbay n<10); retry queued.
+catalogued `initVec4TripletFromArgs+68`/`0x80065e94`). s560/s561/s562 confirms weak-discarded
+(item -306 hangarbay n<10, three consecutive); retry2 queued s562.
 
-### s561 residual alloc-tail GUARD2 (item -343) — 1/2 pending confirm
+### s561 residual alloc-tail GUARD2 (item -343) — FULLY CLOSED 2/2 (s562)
 
 Complements s560 walk guards: emit-dl/scene-node already had GUARD2 on the first
 `lw $v0, 0x0($aN)` after the freelist-node null-check; residual sites only null-checked.
 Enum of s560's 97 residual walk sites: **92** unguarded init-deref (r4×78/r5×11/r7×3); **5**
 already drainMesh head (s363). Applied **GUARD2 x92** (`ROGUESQ_LOG_ALLOC_TAIL_GUARD2`, bail =
-outer null label). 1st live-verify CLEAN (hangarbay n=2700, full 300s rc=0, 0 fires, 0 CRASH).
+outer null label). 1st CLEAN hangarbay n=2700; 2nd CLEAN hangarbay n=2600 (s562 fold) — CLOSED 2/2.
 
+### s562 non-r3 freelist dual-walk residual (item -344) + packing DEFER re-confirm
+
+Packing residual re-scan: 22 NEEDS_GUARD; **21** write-base=DL cursor (s0/s2/appendRdp return) with
+freelist branch-only → packing stays DEFERRED (not freelist-class). Dual-walk any-reg enum: **129**
+total, **119 G3+G4** (118 r3 + 1 r18) — s560 applied only r3 shape. Residual freelist dual-walk
+NONE: `allocateDisplayListBuffer` `0x80007DA8` r4 + `renderLitMeshFaceGroup` `0x80013EEC` r4
+(post-findAndUnlink). Plus `countDisplayListChunks` simple freelist-head walk `0x80007CC8`.
+Applied GUARD2+3+4 x2 (reuse ALLOC_TAIL_*) + `FREELIST_SIMPLE_WALK_GUARD` x1. 1st live-verify
+CLEAN hangarbay n=2600, 0 fires on new sites. Surfaced item -345 DIRECT gap after -322
+`HEAPLISTDEQ_ATTR_WRITE_GUARD` `0x8000D92C` → crash `0x8000D944` (same stack slot, unguarded
+0X4/0X8). Item -344 1/2 pending confirm.
 
 ### Overturned conclusions — do not act on these
 

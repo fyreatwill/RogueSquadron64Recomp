@@ -45356,3 +45356,48 @@ armed and reachable code path proven via hangarbay control). Item -343 FIXED 1/2
 
 ### Ruled out
 - That residual GUARD2 was empty after emit-dl/scene-node coverage: 92 residual sites remained.
+
+## Session 562 — non-r3 freelist dual-walk residual (item -344) 1st CLEAN; -343 CLOSED 2/2; packing DEFERRED re-confirmed
+
+**Date:** 2026-08-09
+
+### Fold-in
+- `s561_alloc_tail_guard2_confirm` (item -343 2nd confirm): **CLEAN** — hangarbay n=2600, 0 fires on alloc-tail-guard2/3/4, crash at ~117s on catalogued `tickWrappingTimerAccumulatorList` div0 `last-guest-pc=0x80054744` (break→do_break abort). **Item -343 FULLY CLOSED 2/2.**
+- `s561_alloc_tail_guard34_confirm_retry` (item -342 2nd confirm): **WEAK** — hangarbay n=4, process gone 20.6s on `setByteAcrossEntryList+176`/`0x800aafa8` (item -306). Discarded; re-queued as `s562_alloc_tail_guard34_confirm_retry2.sh`. Item -342 remains 1/2 (3 consecutive weak confirms).
+
+### Work unit (Option A packing residual + residual freelist after GUARD2 close)
+**Hypotheses:**
+1. H1: packing DL-cursor sites have a single freelist-guardable shape.
+2. H2: packing is write-base=DL cursor / freelist branch-only and stays DEFERRED.
+3. H3: freelist residual remains after GUARD2 (non-r3 dual-walk or simple-walk).
+
+**Discriminating measurement:** re-run `s494_item317_step3_tracer.py --scan` (default out); shape-check every NEEDS_GUARD write base; dual-walk any-reg enum vs s560 r3-only list.
+
+### Results
+- Tracer: **22 NEEDS_GUARD** (same as s558). Shape-check:
+  - 21 packing: write base = s0/s2/`appendRdpStateDl` return DL cursor; freelist reload branch-only → **H2 confirmed, packing DEFERRED** (not freelist-class).
+  - 1 `countDisplayListChunks` freelist-head simple single-walk (`L: r3=*r3; bne L`) — residual.
+- Dual-walk any-reg enum: **129** total; **119 G3+G4** (118 r3 + 1 r18). s560 only applied to r3 shape → **H3 confirmed**.
+- Residual freelist-shaped dual-walk NONE:
+  | Function | walk PC | walk reg | init PC | peek PC | outer |
+  |---|---|---|---|---|---|
+  | allocateDisplayListBuffer | 0x80007DA8 | r4 | 0x80007D9C | 0x80007DAC | L_80007DB8 |
+  | renderLitMeshFaceGroup | 0x80013EEC | r4 | 0x80013EE0 | 0x80013EF0 | L_80013EFC |
+- Non-freelist dual-walks (mesh/scene lists): left unguarded (out of freelist class).
+- **Applied (item -344):** GUARD2+3+4 x2 (reuse `ROGUESQ_LOG_ALLOC_TAIL_GUARD{2,3,4}`) + `FREELIST_SIMPLE_WALK_GUARD` x1 on `countDisplayListChunks` `0x80007CC8`. fixup_game_funcs.py s562 block + surgical RecompiledFuncs. Built OK.
+
+### 1st live-verify
+`s562_non_r3_freelist_walk_manual`: hangarbay-entry **n=2600**, **0 fires** on new residual sites / freelist-simple-walk. Crashed at 108.6s on `last-guest-pc=0x8000d944` while `[heaplistdeq-attr-write-guard] site=0x8000D92C` fired `n=0 bad_ptr=0x8` — **item -345** DIRECT gap (r3 reloaded from same `sp+0x3C` as guarded r2; unguarded `MEM_W(0X4/0X8, r3)`). Not a regression of -344 (0 fires). True-negative baseline for -344.
+
+### Queued
+- `scratch/agent/soak_queue/s562_non_r3_freelist_walk_confirm.sh` (-344 2nd)
+- `scratch/agent/soak_queue/s562_alloc_tail_guard34_confirm_retry2.sh` (-342 2nd, 3rd attempt)
+
+### Ruled out
+- H1 (packing freelist-guardable): write-base provenance is DL cursor, not freelist node.
+- That s560 residual walk class covered all freelist dual-walks: r3-only filter left 2 post-findAndUnlink r4 sites.
+
+### Files
+- N64Recomp `fixup_game_funcs.py` s562 block; surgical `RecompiledFuncs/funcs_{3,4}.c`
+- docs/CURRENT-TRUTH.md, scratch/agent/NEXT.md, SOAK-RESULTS.md, PORTING-STATE.md
+- scratch/agent/s562_residual_summary.json, s562_non_r3_freelist_walk_manual.sh
