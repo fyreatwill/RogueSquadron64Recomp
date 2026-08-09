@@ -43706,3 +43706,66 @@ just the raw dedupe count) before trusting the next tier's size -- `emitColorFil
 families. Watch for a 3rd occurrence of items -326 (`do_rom_read`/`piDmaWorker` shape, historically
 significant if it recurs), -327 (`submitSceneNodeRender+67668`), a 2nd occurrence of -328
 (`submitSceneNodeRender+69820`), or a 2nd occurrence of -329 (`rebuildActiveDisplayObjectList+660`).
+
+## Session 530
+
+Fold-in-then-pick iteration (s521-530 pattern).
+
+**Folded in `BEGIN_FRAME_DL_CHUNK_R8_GUARD`'s 2nd confirm** (`SOAK-RESULTS.md` line for
+`s529_begin_frame_dl_chunk_r8_confirm`, rc=3, 171s): read the directory's own `run.log` (not the
+12-line top-level summary). 0 `begin-frame-dl-chunk-r8-guard` fires, 1 benign already-catalogued
+`hangarmenu-a0-guard` co-fire, `hangarbay-entry n=33` positive control. Crashed at signal 10 on
+`pc-symbol=unregisterServiceWorker+536 (local-symtab)`, `last-guest-pc=0x800ab1c4` -- byte-identical
+`last-guest-pc` AND matching `pc-symbol` to item -321's s515 sighting (its 2-occurrence escalation was
+already REFUTED s518 as a shared-epilogue false corroboration, not a real crash lead -- no new action).
+Marked `BEGIN_FRAME_DL_CHUNK_R8_GUARD` **FULLY CLOSED 2/2**.
+
+**Fixed the two s529 pre-identified candidates.** Both were already confirmed last session (via
+address-by-address cross-check against the live generated source, not just the tracer's raw count) to
+match the exact R2/R7/R8 idiom shape -- re-verified against this session's fresh regen (line numbers
+drift per regen, addresses and shape did not):
+
+- **`BEGIN_FRAME_DL_CHUNK_R9_GUARD`** (`funcs_3.c`/`0x8000B2B4`, load pair
+  `0x8000B2A4`/`0x8000B2A8`): `if (ctx->r2 == 0) goto L_8000B2B8` gates one arm safely (the delay-slot
+  write `*r3=r2` at `0x8000B2B0` runs on both arms, harmless -- `r3` is a fixed, non-null pointer); the
+  non-null fallthrough dereferences the reloaded `ctx->r2` unconditionally at `0x8000B2B4`
+  (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no `0x80000000`-`0x80800000` range check. Downstream
+  (`0x8000B2D0`/`0x8000B2D4`) reloads fresh from the same `0x63B0`-offset table, feeding the
+  pre-existing `GENERIC_CACHE_GUARD` deref (s434) -- skip-on-invalid confirmed safe.
+- **`BEGIN_FRAME_DL_CHUNK_R10_GUARD`** (`funcs_3.c`/`0x8000B40C`, load pair
+  `0x8000B3FC`/`0x8000B400`): identical shape, gated by `beq $v0,$zero,L_8000B410` at `0x8000B404`,
+  unconditional deref at `0x8000B40C`. Downstream (`0x8000B428`/`0x8000B42C`) feeds the same
+  pre-existing `GENERIC_CACHE_GUARD` pattern.
+
+Both added to `tools/fixup_game_funcs.py` (N64Recomp repo), matching the R1-R8 pattern exactly. Full
+regen (`make_elf.py` -> delete stale `RecompiledFuncs/funcs_*.c` -> `N64Recomp` -> `fixup_game_funcs.py`
+-> `cmake --build`) applied cleanly: both patched x1, build succeeded with only the usual pre-existing
+warnings.
+
+**1st live-verify, both guards armed together in one run** (batch-instrumentation rule --
+`scratch/agent/soak_queue/done/s530_begin_frame_dl_chunk_r9_r10_manual_20260808-173225.sh`): 0
+`begin-frame-dl-chunk-r9-guard` fires, 0 `begin-frame-dl-chunk-r10-guard` fires, 0 fires on any other
+armed sibling guard family (1 benign already-catalogued `hangarmenu-a0-guard` co-fire), `hangarbay-entry
+n=35` positive control. Full 300s scheduled duration completed with **NO crash at all** (118 frames
+captured) -- the cleanest possible verify class, same tier as R4's and R7's own 1st verifies. 2nd
+independent confirm queued: `scratch/agent/soak_queue/s530_begin_frame_dl_chunk_r9_r10_confirm.sh`.
+
+**With `R9` and `R10` fixed, the s529 36-site raw tier is now EXHAUSTED** -- all 3 genuinely-unguarded,
+matching-shape candidates found by last session's address-by-address cross-check (`0x8000A918`=R8,
+`0x8000B2A8`=R9, `0x8000B400`=R10) are fixed.
+
+**Tally**: item -317 step 3 now has 31 of ~150 candidate sites fixed, 29 fully closed 2/2, R9/R10
+pending their 2nd confirm. ~115 sites remain, all in the NEXT tier (not yet re-scanned this session).
+
+**Next iteration**: fold in the R9/R10 2nd confirm from `SOAK-RESULTS.md` (read the directory's own
+`run.log`, not the top-level summary). If clean, mark both FULLY CLOSED 2/2 (item -317 step 3 would then
+be 31/31 fully closed). Then re-run the tracer fresh (`s494_item317_step3_tracer.py --scan` with no
+custom `--out`, then `s506_dedupe.py`) AND apply the s529/s530 address-by-address cross-check
+methodology (grep each candidate address against `fixup_game_funcs.py`, read its actual local source)
+before trusting the next tier's raw count -- `funcs_3.c:11625` (`emitColorFillRect`, 30 sites at last
+scan) and `funcs_4.c:4457` (`submitSceneNodeRender`, 30 sites at last scan) are the next-ranked
+candidates but likely also overlap already-closed guard families (`SIBLING_PTR_WRITE_GUARD`,
+`GENERIC_CACHE_GUARD`, `CACHE4_GUARD`). Watch for a 3rd occurrence of item -326 (`do_rom_read`/
+`piDmaWorker` shape, historically significant if it recurs), -327 (`submitSceneNodeRender+67668`), a 2nd
+occurrence of -328 (`submitSceneNodeRender+69820`), or a 2nd occurrence of -329
+(`rebuildActiveDisplayObjectList+660`).
