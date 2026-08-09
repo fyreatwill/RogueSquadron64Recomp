@@ -43580,3 +43580,56 @@ pick the next-highest tier (as of this session's scan: `funcs_3.c:15222`/`15706`
 `beginFrameDLChunk` tied-36 members, then `emitColorFillRect`/`submitSceneNodeRender` at 30 sites each).
 Watch for a 3rd occurrence of items -326 (`do_rom_read`/`piDmaWorker` shape, historically significant if
 it recurs) or -327 (`submitSceneNodeRender+67668`).
+
+## Session 528
+
+Fold-in-then-pick iteration (s521-528 pattern).
+
+**Folded in `BEGIN_FRAME_DL_CHUNK_R6_GUARD`'s 2nd confirm** (`SOAK-RESULTS.md` line for
+`s527_begin_frame_dl_chunk_r6_confirm`, rc=3, 168s): read the directory's own `run.log` (the flat
+`soak_results/*.log` file is only the top-level game-crash summary; the guard-fire counts live in
+`soak_results/<name>/run.log`). 0 `begin-frame-dl-chunk-r6-guard` fires, 6 benign co-fires on
+already-catalogued families (`sibling-ptr-write-guard`, `heap-dequeue-derived-ptr-guard`,
+`generic-cache-guard`, `freelist-next-guard`, `dl-list-reset-rnode-guard`,
+`dl-list-append-rwrite-guard`, one each), `hangarbay-entry n=100` positive control. Crashed at 122.6s on
+`submitSceneNodeRender+69820`/`last-guest-pc=0x80010ebc` -- grepped `docs/CURRENT-TRUTH.md`,
+`docs/PROJECT-OVERVIEW.md`, and `PORTING-STATE.md`, no match; a NEW, previously-uncatalogued signature
+(distinct from item -327's `submitSceneNodeRender+67668`/`0x80010e6c`, a different offset and PC).
+Marked `BEGIN_FRAME_DL_CHUNK_R6_GUARD` **FULLY CLOSED 2/2** and filed the new crash as **item -328**,
+single occurrence, not chased.
+
+**Re-ran the tracer fresh** (`s494_item317_step3_tracer.py --scan` then `s506_dedupe.py`, no custom
+`--out`): 448 raw reload sites (318 `NEEDS_GUARD`), top tier now the 3 remaining tied `beginFrameDLChunk`
+members at 36 sites each (`funcs_3.c:15235`/`15719`/`16185` -- R1-R6 dropped out of the tier).
+
+**Source-traced and FIXED `BEGIN_FRAME_DL_CHUNK_R7_GUARD`** (`funcs_3.c:15235`, guest address
+`0x8000B144`, load pair `0x8000B134`/`0x8000B138` -- distinct from R1-R6's own pairs). Exact same shape
+as every prior guard in this lineage: `if (ctx->r2 == 0) goto L_8000B148` gates one arm safely (both
+writes below it skipped); non-null fallthrough falls through the same harmless `*r3 = r2` write at
+`0x8000B140` then dereferences the reloaded `ctx->r2` unconditionally at `0x8000B144`
+(`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no `0x80000000`-`0x80800000` range check. Downstream reload at
+`0x8000B160` feeds the pre-existing `GENERIC_CACHE_GUARD` deref at `0x8000B164` (s434), confirming
+skip-on-invalid is safe. Grepped `fixup_game_funcs.py` for `0x8000B144` first (zero hits, not already
+guarded). Added to `tools/fixup_game_funcs.py` (N64Recomp repo) matching the R1-R6 pattern exactly,
+arming `ROGUESQ_LOG_BEGIN_FRAME_DL_CHUNK_R7_GUARD` on an out-of-range hit and skipping the write. Full
+regen (`make_elf.py` -> delete stale `RecompiledFuncs/funcs_*.c` via the python3 one-liner -> `N64Recomp`
+-> `fixup_game_funcs.py` -> `cmake --build`) applied cleanly: grep confirmed the new guard text landed
+in `funcs_3.c:15235` exactly once, build succeeded with only the usual pre-existing warnings.
+
+**1st live-verify** (`scratch/agent/soak_queue/done/s528_begin_frame_dl_chunk_r7_manual_*.sh`, all
+armed guard families including R1-R7): 0 `begin-frame-dl-chunk-r7-guard` fires (null result), 0
+regressions on any other armed sibling guard family (none fired at all this run), `hangarbay-entry
+n=2800` (strong positive control). Crashed at 125.0s on `findLookupEntryByKey+2212`/
+`last-guest-pc=0x800ad0dc` -- grepped and confirmed this is the already-catalogued item -325 (s522)
+signature, not new. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s528_begin_frame_dl_chunk_r7_confirm.sh`.
+
+**Tally**: item -317 step 3 now has 28 of ~150 candidate sites fixed, 27 fully closed 2/2, R7 pending
+its 2nd confirm. ~118 sites remain after R7 drops out of the tier.
+
+**Next iteration**: fold in the R7 2nd confirm from `SOAK-RESULTS.md`, then re-run the tracer fresh and
+pick the next-highest tier (as of this session's scan: `funcs_3.c:15719`/`16185`, the remaining
+`beginFrameDLChunk` tied-36 members, then `emitColorFillRect`/`submitSceneNodeRender` at 30 sites each).
+Watch for a 3rd occurrence of items -326 (`do_rom_read`/`piDmaWorker` shape, historically significant if
+it recurs), -327 (`submitSceneNodeRender+67668`), or a 2nd occurrence of -328
+(`submitSceneNodeRender+69820`).
