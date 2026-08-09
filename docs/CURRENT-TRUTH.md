@@ -30,7 +30,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s574)
+## Current truth (established by session 295; unchanged, reviewed through s575)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -131,8 +131,9 @@ since **DONE/CLOSED s399** (item -6). Full detail: PORTING-STATE s49.
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT are both
 reachable and stable; ~20 crash classes closed s50-s294 (mechanisms: `docs/PROJECT-OVERVIEW.md` §3
 arc + §9 closed lineages; per-class catalog: §7). Leave-key from SELECT YOUR CRAFT: s75 hangar-flight
-OVERTURNED s150; **s573 H1 CONFIRMED** (no mission overlay); **s574** leave Start reaches hangar
-case-3 arm only — never case-5 craft-confirm (item -7 H-exit5). Primary DoD gate is hangar-exit →
+OVERTURNED s150; **s573 H1 CONFIRMED** (no mission overlay); **s575 REFUTED H-exit5** — leave
+Start advances hangar case 3→5 same frame; case 5 then polls for a *second* Start the driver never
+sends (item -7 H-exit6). Primary DoD gate is hangar-exit →
 mission-entry state machine (item -7), not stick input. *Done when:* 60s of in-mission rendering,
 craft visibly responds to synthetic input, stability counters 0, phase timeline covers the mission.
 
@@ -357,21 +358,23 @@ a range pointer. Highest allocated so far: -348. The next NEW item takes -349.
 -11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89), RECURRED s424, ROOT-CAUSED AND GUARDED s425.** s424 hit it as a sibling of item -261's guarded `startPlayerSlotAnimationChannelLooping` crash; s425 root-caused and guarded it (wild `$a0` arg, same never-initialized-slot root state) — see item -261 for the full trace.
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
--7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN — H1 CONFIRMED s573; gate
-    localized s574 to hangar substate case 3 (not case 5 confirm).** Recipe
-    `PROBE_MODE=start_only HOLD_S=20` (gates) / `HOLD_S=60` (stick) via `run_mission_keys.sh`.
-    **s571–s573:** leave never mission; H1 two lines (overlay + hangar stack). **s574 instrumented
-    leave (positive control: hangarbay n=900, frame-ret n=950):**
-    - Start **does** reach hangar: `[buttons-hangar] site=0x800AC0F0 n=716 raw=0x1000 a_start=1`.
-    - **0** `[hangar-sel]`, **0** non-sentinel `[frame-ret]`, **0** `[graceful-menu]`.
-    - Hangar state `0x800CC3E4` jump table (0x800ABB74): case **3** arm owns site `0x800AC0F0`
-      (leave hit); case **5** arm owns site `0x800AC8C0` (`isPlayerShipActive` + write
-      `0x800CD6D4`) — only early empty polls n=0..4, never leave Start.
-    - H-exit4 REFUTED (input). H-exit1/2 not testable until case 5 entered. H-exit3 REFUTED
-      this run. **Primary: H-exit5** — stuck case 3; case3→5 at 0x800AC1BC gated on bay-flag
-      bit test (`-0x2928` & 1<<bay_table[`-0x2918`]).
-    **Next:** instrument state byte + bay-flag operands on case-3 Start. Do not chase -338
-    (now 3 occs, still secondary). Stick-hold secondary until hangar exits.
+-7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN — H1 CONFIRMED s573; s575
+    REFUTED H-exit5 (stuck case 3).** Recipe `PROBE_MODE=start_only HOLD_S=20` (single leave
+    Start) via `run_mission_keys.sh`. **s574:** leave Start hits case-3 site `0x800AC0F0`;
+    misread AC8C0 n=0..4 as "never case 5". **s575 instrumented leave (hangarbay n=900;
+    hangar-state + state-write + case5-entry always-on):**
+    - Same-frame chain: `a_start=1` @ AC0F0 → `[state-write] site=0x800AC1C4 old=3 new=5` →
+      `[hangar-state] state=5` → `[case5-entry] n=0..213` (214 frames in case 5).
+    - State path: 0→1 (ABB90) → 3 (ABCD0) → **5 (AC1C4)**; **no revert**.
+    - Case 5 button poll AC8C0: n≥200 samples, **0** `a_start=1` (driver sends only one Start).
+    - Still **0** `[hangar-sel]`, **0** non-sentinel frame-ret, **0** graceful-menu.
+    - **H-exit5 / 5a / 5b REFUTED.** s574 "case 5 never entered" was a rate-limit misread of
+      post-leave AC8C0 empty polls. **Primary: H-exit6** — case 5 needs a second Start for
+      `isPlayerShipActive`+`hangar-sel` path; single-Start leave never delivers it. **H-exit1**
+      (ship-active ret=1 blocks write) now testable once second Start arrives. ship-active early
+      samples show `ship=0x8015FD90 ret=1` (from non-case5 callers).
+    **Next:** double-Start leave (case3 advance + case5 confirm). Do not chase -338. Stick-hold
+    secondary until hangar exits.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.

@@ -46060,3 +46060,60 @@ Process gone hold-iter 1; `last-guest-pc=0x8000afa0`
 Instrument hangar state byte `0x800CC3E4` every frame + bay-flag operands at
 case-3 Start success/fail (`-0x2928`, bay index `-0x2918`, bit test result).
 Discriminate: bit test fail vs state-5 entered then immediately left.
+
+## Session 575 — leave Start DOES advance case 3→5; case 5 waits for 2nd Start
+
+### Work unit
+Item -7 H-exit5a..d: why case-3 Start does not advance to case 5?
+Batch probes (always-on): `[hangar-state]` (jump-table lbu), `[case3-start]` (after
+bay-flag AND), `[state-write]` (every `sb -0x3C1C` in `updateHangarBayScene`, 11 sites),
+`[case5-entry]` (L_800AC8B0). One-shot on sentinel `funcs_28.c` + fixup s575 block for
+regen. Recipe: `PROBE_MODE=start_only HOLD_S=20` tag `s575_item7_case3_to5`.
+
+### Positive control
+- hangarbay-entry max n=900
+- hangar-state fires (0→1→3→5 transitions logged)
+- state-write fires 3 times (0→1, 1→3, 3→5)
+- leave Start: `[buttons-hangar] site=0x800AC0F0 n=718 raw=0x1000 a_start=1`
+
+### Discriminating timeline (same few log lines)
+```
+buttons-hangar AC0F0 a_start=1
+case3-start n=0 (re-read values junk — probe bug; ignore pass field)
+state-write AC1C4 old=3 new=5
+hangar-state n=786 state=5
+case5-entry n=0..213
+```
+
+### Disposition
+| Hypothesis | Verdict |
+|------------|---------|
+| H-exit5 (stuck case 3) | **REFUTED** — state becomes 5 same frame as leave Start |
+| H-exit5a (bay-flag fail) | **REFUTED** — AC1C4 3→5 is on the pass arm only |
+| H-exit5b (3→5 then revert) | **REFUTED** — hangar-state stays 5; no further state-write |
+| H-exit5c (other arm) | N/A — transition took the documented AC1C4 path |
+| H-exit6 (NEW) | **PRIMARY** — case 5 runs 214 frames polling AC8C0 with 0 a_start=1; driver single-Start leave never supplies case-5 confirm |
+| hangar-sel / mission | still 0 — confirm path not entered |
+
+### s574 correction
+s574 saw AC8C0 n=0..4 after leave and labeled them "early empty polls / never case 5".
+Rate-limit + short hold-iter-1 death hid that those *were* post-leave case-5 polls. s575
+with case5-entry + longer case-5 window (n=200+ AC8C0) proves case 5 is entered.
+
+### Probe note
+`[case3-start]` / `[case5-entry]` MEM_BU re-reads via `0x800D0000u` produced garbage
+(state=89, bay_idx=33). Ground truth is hangar-state (uses game lbu into r3) and
+state-write (wraps the real sb). Fix re-reads next time if re-armed; not load-bearing.
+
+### Crash
+hold-iter 1: `setByteAcrossEntryList+176` / `last-guest-pc=0x800aafa8` (item -306 family).
+Not -338 this run.
+
+### Artifacts
+- `scratch/s73_post_a_scene/s575_item7_case3_to5/run.log`
+- fixup s575 block in `fixup_game_funcs.py`; live patches in `funcs_28.c`
+
+### Next
+Double-Start leave: first Start (case 3→5), second Start while case5-entry alive.
+Discriminate H-exit6 (2nd Start delivers hangar-sel) vs H-exit1 (ship-active ret=1
+blocks write at AC8D8).

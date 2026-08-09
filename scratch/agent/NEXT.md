@@ -2,74 +2,75 @@
 
 HYPOTHESIS-ID: m3-dod-craft-stick-hold
 
-## s574 recap (read this first)
+## s575 recap (read this first)
 
-**Item -7: leave Start hits hangar case 3, never case 5 confirm.**
+**Item -7: H-exit5 REFUTED. Leave Start advances case 3→5; case 5 waits.**
 
-- Positive control: hangarbay-entry n=900, frame-ret n=950 all sentinel,
-  buttons site 0x800AC0F0 n=716.
-- Leave Start: `[buttons-hangar] site=0x800AC0F0 n=716 raw=0x00001000 a_start=1`.
-- 0 hangar-sel writes, 0 non-sentinel frame-ret, 0 graceful-menu.
-- Jump table on hangar state `0x800CC3E4` (`-0x3C1C` from 0x800D) at 0x800ABB74:
-  - **case 3** → L_800AC024 → site **0x800AC0F0** (where leave landed)
-  - **case 5** → L_800AC8B0 → site **0x800AC8C0** (isPlayerShipActive + write 0x800CD6D4)
-  - case 5 site only saw n=0..4 early empty polls during whole run
-- Case 3→5 transition: `sb 5` at 0x800AC1BC after Start, gated on bay-flag bit
-  (`-0x2928` & (1 << table[`-0x2918`])); fail path calls bsearchFactor5TableByU16Key.
-- H-exit4 REFUTED. H-exit1/2 deferred (case 5 never reached on leave). H-exit5 NEW.
-- Item -338 3rd occ (0x8000afa0 / beginFrameDLChunk+46800) — do not chase yet.
+Positive control: hangarbay n=900; hangar-state 0→1→3→5; state-write AC1C4 3→5
+same frame as `[buttons-hangar] AC0F0 a_start=1 n=718`.
+case5-entry n=0..213 after leave; AC8C0 polls ≥200 with **0** a_start=1.
+0 hangar-sel, 0 graceful-menu. Driver `start_only` sends only one Start.
+H-exit5/5a/5b REFUTED. H-exit6 NEW (need 2nd Start). H-exit1 testable on 2nd Start
+(ship-active early samples ret=1 / ship=0x8015FD90).
+
+case3-start re-read values are junk — trust state-write + hangar-state only.
 
 ## This iteration's work unit
 
-**Item -7 — why case 3 Start does not advance to case 5?**
+**Item -7 — double-Start leave: does case-5 confirm fire hangar-sel?**
 
-One instrumented leave run. Batch into fixup (or one-shot if sentinel blocks) +
-one cmake + one leave run (HOLD_S=20).
+No new build required if s575 probes still in binary (hangar-state / state-write /
+case5-entry / buttons-hangar / hangar-sel / ship-active). Rebuild only if tree was
+regenerated.
 
 ### Hypotheses
-- H-exit5a: bay-flag bit test fails on leave Start (`(-0x2928 & bit)==0`) → error
-  path, state stays 3.
-- H-exit5b: bit test passes, state becomes 5, but next frame reverts to 3/4 before
-  confirm poll runs.
-- H-exit5c: leave Start never takes the success arm of AC0F0 for another reason
-  (wrong sub-flag `-0x2934`, state!=3 at compare AC0B0, etc.).
-- H-exit5d: state is already ≥5 but jump table index wrong / switch_error path
-  (unlikely — AC0F0 would not run).
+- H-exit6a: 2nd Start at AC8C0 with ship-active ret=0 → hangar-sel write + progress.
+- H-exit6b: 2nd Start never reaches AC8C0 (timing / not in case 5 / input drop).
+- H-exit1: 2nd Start reaches AC8C0 but isPlayerShipActive ret=1 → skip hangar-sel
+  (bne L_800AC950 at AC8D8).
+- H-exit6c: 2nd Start + ret=0 but hangar-sel still 0 (deeper gate past AC914).
 
-### Discriminating measurements (ONE build)
-Always-on (or rate-limit steady; always on Start and on state change):
+### Discriminating measurements (existing probes)
+| outcome | evidence |
+|---------|----------|
+| 6a | a_start=1 @ AC8C0 + hangar-sel fire + (optional) graceful-menu / non-sentinel frame-ret |
+| 6b | case5-entry alive but AC8C0 never a_start=1 on 2nd press |
+| H-exit1 | a_start=1 @ AC8C0 + ship-active ret=1 same window + 0 hangar-sel |
+| 6c | a_start=1 + ship-active ret=0 + 0 hangar-sel |
 
-| counter | where | fields |
-|---------|-------|--------|
-| hangar-state | updateHangarBayScene entry (or just before jr table) | n, state=MEM_BU(0x800CC3E4) |
-| case3-start | after 0x800AC0F0 andi when raw&0x9000 | n, bay_idx, flag_word, bit, pass |
-| state-write | every `sb` to -0x3C1C | n, old→new, guest pc |
-| case5-entry | L_800AC8B0 entry | n (should stay 0 if 5a) |
-
-Positive control: hangarbay-entry still fires; leave Start still a_start=1 at AC0F0;
-if 5a then pass=0 on that frame; if 5b then state-write 3→5 then 5→3 same run.
+Positive control: hangar-state reaches 5 after 1st Start; case5-entry increments;
+2nd Start must show AC8C0 a_start=1.
 
 ### Exact commands
 ```bash
-# Apply probes (prefer fixup after clear+regen OR one-shot on sentinel tree)
+# Prefer explicit two-Start probe list. If script has no PROBES env override,
+# temporarily set in run_mission_keys or use:
+#   PROBES=(p1:start:3 p2:start:8)  inside a thin wrapper.
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-cmake --build build -j8 --target RogueSquadron64Recomp
+# Option A — mixed ends with a 2nd Start after A (may work; A is likely noop in case 5):
+env PROBE_MODE=mixed HOLD_S=15 ROGUESQ_LOG_HANGARBAY_ENTRY=1 \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s576_item7_double_start 5 12
 
-env PROBE_MODE=start_only HOLD_S=20 ROGUESQ_LOG_HANGARBAY_ENTRY=1 \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s575_item7_case3_to5 5 12
+# Option B (preferred if A is ambiguous): edit PROBES for one run to
+#   PROBES=(p1:start:3 p2:start:10)
+# without the middle A.
 
-grep -E 'hangar-state|case3-start|state-write|case5-entry|buttons-hangar|hangarbay-entry' \
-  scratch/s73_post_a_scene/s575_item7_case3_to5/run.log | head -80
+grep -E 'hangar-state|state-write|case5-entry|buttons-hangar|ship-active|hangar-sel|graceful-menu|frame-ret' \
+  scratch/s73_post_a_scene/s576_item7_double_start/run.log | \
+  grep -E 'a_start=1|state=5|old=3 new=5|hangar-sel|graceful|sentinel=0|ship-active' | head -80
 ```
 
+Also log ship-active on every call during case 5 if rate-limit hides ret at confirm
+time (raise: always log when ret changes OR force first 20 after hangar-state=5).
+
 ### Expected outcomes
-- 5a: case3-start pass=0 on leave → next unit = who fills -0x2928 / unlock table.
-- 5b: state-write 3→5 then revert → next unit = what clears state 5.
-- 5c: a_start=1 but case3-start never logs → wrong arm details.
-- 5d: switch_error / wild state → fix jump table / state init.
+- 6a: hangar-sel fires → next unit = mission overlay / post-exit path (H1 follow-up).
+- H-exit1: need to clear gPlayerShip / understand why ship ptr is set on menu craft.
+- 6b: fix input timing (longer gap, hold Start, re-raise).
+- 6c: read case-5 body past AC8D8.
 
 ### Do NOT
-- Chase 0x8000afa0 / -338 (3 occs filed; after hangar exit only).
-- Blind stick HOLD_S=60.
+- Chase 0x8000afa0 / -338.
+- Blind stick HOLD_S=60 before double-Start works.
 - Reopen M5 / freelist residual.
-- Hand-edit funcs_*.c without mirroring into fixup_game_funcs.py.
+- Trust case3-start MEM_BU re-read fields (state=89 junk).
