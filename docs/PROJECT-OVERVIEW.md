@@ -2372,7 +2372,26 @@ After classic r2/0X4 emptied, a full-rank NEEDS_GUARD re-scan (no shape filter) 
 
 1st live-verify (all 9 armed): 0 fires on all 9, `hangarbay-entry n=2600` (strong positive control). Crashed at 111.1s on `emitAllocatedDLCommand+13216`/`last-guest-pc=0x800088ec` — free-list-walk second-deref after GUARD3 validates the *previous* node (classic GUARD3/GUARD4 gap shape, heapWalker s218). Pre-crash co-fires: generic-cache/cache-head-a1/dl-alloc-propagation with `bad_ptr=0x7600D07C`. Filed **item -339** (single occurrence; not a regression — new guards at 0 fires). 2nd confirm queued: `scratch/agent/soak_queue/s556_residual_rN_0x0_nine_way_confirm.sh`.
 
-**Campaign totals as of s556:** **124 fixed, 115 FULLY CLOSED 2/2, 9 pending confirm**. Residual after this batch: lower-count free-list-node 0X0 sites, shape-mismatched count=7 at `0x8000D268`, heapFreeListDequeue r3/r16 secondaries, and scoped gap audits (GUARD4 / item -339 watch).
+**s557 fold-in of 2nd confirm (guards 116-124):** CLEAN (`hangarbay-entry n=2600`), 0 fires on all 9, crashed on already-catalogued `initVec4TripletFromArgs+68`/`0x80065e94` — **guards 116-124 FULLY CLOSED 2/2**. Residual free-list-node batch 1 complete.
+
+### s557 residual free-list-node batch 2 (guards 125-131) + item -340
+
+Re-scan after batch 1 closed. Shape-mismatched DEFERRED: heapFreeListDequeue r2/r3/r16 packing (incl known `0x8000D268`), buildOrientedFaceGeometry s2 packing, drawSubtitleText `appendRdpStateDl` return (not freelist node). Matched free-list-allocated-node `MEM_W(0X0,r4/r7)` after freelist pop at count=3:
+
+| # | Guard | site | reg |
+|---|---|---|---|
+| 125 | `RECORD_DEFERRED_DRAW_REF_VARIANT_R2_GUARD` | `0x800084E0` | r4 |
+| 126 | `RECORD_DEFERRED_DRAW_REF_A_R2_GUARD` | `0x8000C7C4` | r4 |
+| 127 | `RECORD_DEFERRED_DRAW_REF_B_R2_GUARD` | `0x8000C8E8` | r4 |
+| 128 | `RECORD_DEFERRED_DRAW_REF_C_R2_GUARD` | `0x8000CA10` | r4 |
+| 129 | `RECORD_DEFERRED_DRAW_REF_D_R2_GUARD` | `0x8000CB34` | r4 |
+| 130 | `HEAP_FREE_LIST_DEQUEUE_R5_GUARD` | `0x8000D0D4` | r4 |
+| 131 | `RENDER_LIT_TEXTURED_MESH_FACES_R11_GUARD` | `0x8000FA40` | r7 |
+
+1st live-verify (all 7 armed): 0 fires, `hangarbay-entry n=2600`. Crashed at 119.1s: `last-guest-pc=0x80010B4C` while `[sibling-ptr-write-guard] site=0x80010B48` fired `bad_ptr=0x18` — **item -340**, same DIRECT gap model as item -334 (`bad_ptr+4` = fault). Fixed as new `_SIBLING_PTR_WRITE_SITES` entry `0x80010B4C` (reg r3, off 0X4). 2nd confirm queued: `scratch/agent/soak_queue/s557_residual_count3_seven_way_confirm.sh`.
+
+**Campaign totals as of s557:** **131 fixed, 124 FULLY CLOSED 2/2, 7 pending confirm** (125-131). Item -340 sibling gap fixed (1st evidence), confirm pending with residual batch 2. Residual after this batch: packing shape-mismatches (deferred), remaining freelist-node sites after 125-131 land, item -339 GUARD4 watch.
+
 
 
 ## 26. Overturned conclusions and dead ends, full list (s2-s422), migrated from CURRENT-TRUTH.md s547

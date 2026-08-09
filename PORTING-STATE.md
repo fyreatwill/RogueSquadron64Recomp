@@ -45125,3 +45125,53 @@ escalated; not a regression — new guards never fired). 2nd confirm queued:
 - `docs/CURRENT-TRUTH.md`, `docs/PROJECT-OVERVIEW.md` §25 s556 block, `scratch/agent/NEXT.md`,
   `scratch/agent/SOAK-RESULTS.md`, soak scripts under `scratch/agent/`.
 
+
+## Session 557 (2026-08-09) — item -317 residual free-list-node batch 2 (guards 125-131) + item -340 sibling gap
+
+### Fold-in
+- `s556_residual_rN_0x0_nine_way_confirm`: CLEAN hangarbay n=2600, 0 fires on all 9 guards
+  (116-124). Crashed on already-catalogued `initVec4TripletFromArgs+68`/`0x80065e94`.
+  **Guards 116-124 FULLY CLOSED 2/2.** Residual free-list-node batch 1 complete.
+
+### Work unit
+Re-ran tracer + `s506_dedupe.py` after batch 1 closed (40 NEEDS_GUARD remaining). Top
+write tiers by count:
+- count=11 heapFreeListDequeue r3/0X0+0X4: **SHAPE MISMATCH** (r3=`ADD32(r16)`, s0 DL packing)
+- count=7 heapFreeListDequeue r2/r16 + known 0x8000D268: **SHAPE MISMATCH** (s0 packing;
+  freelist reload used for branch only)
+- count=7/4/3 buildOrientedFaceGeometry packing + drawSubtitleText `appendRdpStateDl` return:
+  **SHAPE MISMATCH** (not freelist-allocated write base)
+- count=3 free-list-allocated-node `MEM_W(0X0,r4/r7)` after freelist pop: **MATCH** s556 shape
+
+### Fix (7 residual guards 125-131)
+| # | Guard | site | func | reg |
+|---|---|---|---|---|
+| 125 | RECORD_DEFERRED_DRAW_REF_VARIANT_R2_GUARD | 0x800084E0 | recordDeferredDrawRefVariant | r4 |
+| 126 | RECORD_DEFERRED_DRAW_REF_A_R2_GUARD | 0x8000C7C4 | recordDeferredDrawRefA | r4 |
+| 127 | RECORD_DEFERRED_DRAW_REF_B_R2_GUARD | 0x8000C8E8 | recordDeferredDrawRefB | r4 |
+| 128 | RECORD_DEFERRED_DRAW_REF_C_R2_GUARD | 0x8000CA10 | recordDeferredDrawRefC | r4 |
+| 129 | RECORD_DEFERRED_DRAW_REF_D_R2_GUARD | 0x8000CB34 | recordDeferredDrawRefD | r4 |
+| 130 | HEAP_FREE_LIST_DEQUEUE_R5_GUARD | 0x8000D0D4 | heapFreeListDequeue | r4 |
+| 131 | RENDER_LIT_TEXTURED_MESH_FACES_R11_GUARD | 0x8000FA40 | renderLitTexturedMeshFaces | r7 |
+
+Regen: make_elf → clear funcs_*.c → N64Recomp → fixup (all 7 x1) → cmake. Clean.
+
+### 1st live-verify
+`s557_residual_count3_seven_way_manual`: hangarbay n=2600, 0 fires on all 7 new guards.
+Crashed 119.1s on `submitSceneNodeRender+56072`/`last-guest-pc=0x80010b4c`.
+
+### Item -340 (DIRECT crash-mechanism evidence, same model as item -334)
+Pre-crash: `[sibling-ptr-write-guard] site=0x80010B48 n=0 bad_ptr=0x00000018`. Crash at
+`0x80010B4C` (`bad_ptr+4` / si_addr maps 0x1c). Source: existing guard covers
+`MEM_W(0X0,r3)=r2`; next instruction `MEM_W(0X4,r3)=0` unguarded, reuses same bad r3.
+Fixed as new entry in `_SIBLING_PTR_WRITE_SITES` (site=0x80010B4C, reg r3, off 0X4). Shares
+existing family env var. Hand-patched funcs_4.c this session (sentinel blocks re-fixup);
+fixup site list updated so next full regen re-applies. Rebuild clean.
+
+### Confirm queued
+`scratch/agent/soak_queue/s557_residual_count3_seven_way_confirm.sh` (arms residual 125-131
++ all prior guards including sibling family for item -340 watch).
+
+### Files
+- `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` (7 residual + sibling site)
+- docs/CURRENT-TRUTH.md, docs/PROJECT-OVERVIEW.md, scratch/agent/NEXT.md, SOAK-RESULTS.md
