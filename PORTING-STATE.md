@@ -44953,3 +44953,47 @@ submodule-patches step applies); three soaks queued
 (`s552_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm_retry2.sh`,
 `s552_six_way_tie_confirm_retry.sh`, `s552_three_way_tie_confirm.sh`);
 `scratch/agent/SOAK-RESULTS.md` fold-in entries appended; `PORTING-STATE.md` (this entry).
+
+## Session 553 (2026-08-09) — item -317 step 3: closed guards 64-71; fixed 13 more (75-87)
+
+### Fold-ins
+1. `s552_emit_allocated_dl_command_r1_reserve_and_emit_dl_entry_r1_confirm_retry2` (guards 64-65, 3rd
+   confirm attempt after two consecutive weak draws on item -306 `setByteAcrossEntryList+176`/
+   `0x800aafa8`): CLEAN full 300s (rc=0, 105 frames), `hangarbay-entry n=2600`, 0 fires on either
+   new guard. **Guards 64-65 FULLY CLOSED 2/2.**
+2. `s552_six_way_tie_confirm_retry` (guards 66-71): CLEAN (`hangarbay-entry n=2600`), 0 fires on all
+   six. Crashed at 115.4s on `pc-symbol=loadTextureTile+17912` / `last-guest-pc=0x80010b7c` — known
+   background-noise guest PC (prior PORTING-STATE/PROJECT-OVERVIEW as `findOrCreateMaterial+776` and
+   `allocOrEvictMaterialNode+944`; another pc-symbol-instability data point). **Guards 66-71 FULLY
+   CLOSED 2/2.**
+3. `s552_three_way_tie_confirm` (guards 72-74) still queued at session end — not folded.
+
+### Hypotheses for next tier
+H1: Remaining count=8 sites are classic `0x8011`/`0x63B0` reload → write-through-r2+4 idiom.
+H2: High-count sites can be shape-mismatched taint artifacts (r2 from other sources).
+H3: Count=6 multi-function tie is real classic idiom across many already-touched functions.
+Discriminating measurement: source-read + guest-PC uniqueness + fixup cross-check before patching;
+live-verify with hangarbay positive control.
+
+### What ran
+- Tracer re-scan + `s506_dedupe` + `s548_dedupe_shape_filtered`.
+- Remaining count=8: single classic site `heapFreeListDequeue` `0x8000D6D4` (near items -331/-333).
+- Count=7: `0x8000D268` shape MISMATCH (`addu $v0,$s0` — skipped).
+- Count=6: twelve-way classic tie across 12 functions (incl. new `drawFrameProfilerBars`).
+- 13 guards (75-87) added to `fixup_game_funcs.py`, regen (make_elf → N64Recomp → fixup x1 each →
+  cmake), all 13 `patched x1`.
+- 1st live-verify `s553_count8_count6_thirteen_way_manual`: full 300s rc=0, 114 frames,
+  `hangarbay-entry n=3000`, 0 fires on all 13 new guards, 0 co-fires, no crash.
+
+### Result
+- Campaign: **87 fixed, 71 FULLY CLOSED 2/2, 16 pending** (72-74 + 75-87).
+- 2nd confirm queued: `scratch/agent/soak_queue/s553_count8_count6_thirteen_way_confirm.sh`.
+- Guards 72-74 still pending: `s552_three_way_tie_confirm.sh`.
+- New gotcha: count=N tiers can include shape-mismatched sites that share a taint count but not the
+  classic reload (count=7 skip).
+
+### Files touched
+- `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` (13 new guards; untracked in
+  that checkout).
+- `docs/CURRENT-TRUTH.md`, `docs/PROJECT-OVERVIEW.md` §25 s553 block, `scratch/agent/NEXT.md`,
+  `scratch/agent/SOAK-RESULTS.md`, soak scripts under `scratch/agent/soak_queue/`.
