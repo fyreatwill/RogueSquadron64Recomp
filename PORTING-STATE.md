@@ -44064,3 +44064,73 @@ s494-534).
 fully closed, zero open guards, for the second time, then found, fixed, and 1st-verified a genuinely new
 candidate in a fresh re-scan via the same rigorous address-by-address cross-check methodology established
 s528-533 -- not a reactive crash chase).
+
+## Session 535 (2026-08-08): item -317 step 3's SUBMIT_SCENE_NODE_RENDER_R4_GUARD 2nd confirm read CLEAN (FULLY CLOSED 2/2, closing the campaign's 35 guards to 35/35 fully closed, zero open guards, for the third time), fresh re-scan + address-by-address cross-check correctly REJECTED the raw tracer's top-ranked candidate as a shape mismatch (a CFG-reachability artifact, not a genuine derived-pointer deref), found and fixed a genuine new candidate in a NEW function (DRAW_SUBTITLE_TEXT_R1_GUARD), 1st live-verify clean
+
+**What ran:** Read `docs/CURRENT-TRUTH.md` + `scratch/agent/NEXT.md` + `scratch/agent/SOAK-RESULTS.md` tail
+per contract. Found a new SOAK-RESULTS.md line for `s534_submit_scene_node_render_r4_confirm` (rc=0,
+346s) -- read its `run.log` directly (not the flat summary): 0 `submit-scene-node-render-r4-guard` fires,
+0 fires on any other armed guard family, `hangarbay-entry n=32` positive control, full 346s duration with
+NO crash at all. Marked `SUBMIT_SCENE_NODE_RENDER_R4_GUARD` FULLY CLOSED 2/2 -- this closes item -317
+step 3's 35 guards to 35/35 fully closed (zero open guards) for the third time this campaign.
+
+Continued to the next lead in the same iteration (fold-in-then-pick pattern). Re-ran the tracer fresh
+(`s494_item317_step3_tracer.py --scan` + `s506_dedupe.py`, no custom `--out`, per the standing s521
+gotcha): top of the fresh table was `funcs_3.c:34419` (`renderLitTexturedMeshFaces`, reg=`r4`, off=`0X0`,
+count=27) -- exactly the candidate NEXT.md had flagged as the likely next pick. Pulled all 24 raw reload
+addresses feeding that write line and read the generated source directly: the write at `0x8000FE70`
+(`MEM_W(0X0, ctx->r4) = ctx->r3;`) dereferences `ctx->r4` -- the function's OWN `$a0` argument, which is
+already written through twice earlier in the SAME freelist-insert code block (`0x8000FE44`, guarded by the
+pre-existing `FREELIST_NEXT_GUARD` from s441, and `0x8000FE58`), so it's provably non-null and in-range by
+construction at this point in the block -- not a reload of the `+0x63B0`-offset global-table idiom this
+campaign has been guarding. Concluded the high reachability count is a CFG-reachability artifact of the
+tracer (many unrelated `NEEDS_GUARD` reload sites elsewhere in the function happen to reach this shared
+freelist-insert helper block via forward taint propagation), not a shared-dataflow one. **This is the
+campaign's first genuine false-positive top candidate** -- every prior top-ranked pick (s515-s534, ~15
+picks) matched the exact idiom shape on first inspection. Correctly SKIPPED, not fixed -- no guard written
+for this site.
+
+Moved to the next-ranked entry matching the exact guarded shape (reg=`r2`, off=`0X4`): `funcs_4.c:25609`
+(`drawSubtitleText`, count=27, tied for the campaign's next-highest genuine count). Confirmed
+`drawSubtitleText` (`RECOMP_FUNC` at `funcs_4.c:21729`, ending before `setupCameraMatrices` at line
+25869) is a NEW function for this campaign, no prior guards. Pulled all 22 raw reload addresses feeding
+the target write line and cross-checked every one directly against
+`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` -- none present anywhere in the
+file, and neither is the write's own address (`0x80016B58`) nor its load pair
+(`0x80016B48`/`0x80016B4C`) -- genuinely uncovered. Read the generated source directly and confirmed the
+exact idiom: load pair `0x80016B48`/`0x80016B4C` (`lui $v0,0x8011` / `lw $v0,0x63B0($v0)`), `beq
+$v0,$zero,L_80016B5C` at `0x80016B50` gates one arm safely (delay-slot write
+`MEM_W(0X0,ctx->r3)=ctx->r2` at `0x80016B54` harmless, duplicated on both arms), non-null fallthrough
+unconditionally dereferences `ctx->r2` at `0x80016B58` (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no
+`0x80000000`-`0x80800000` range check.
+
+Fixed `DRAW_SUBTITLE_TEXT_R1_GUARD` in `fixup_game_funcs.py` (same skip-the-write-on-invalid template as
+every prior guard in this lineage). Full regen (`make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` ->
+`cmake --build`, `RecompiledFuncs/funcs_*.c` deleted first per the standing item -20 rule) applied
+cleanly: `funcs_4.c: drawSubtitleText derived-pointer write guard ... patched x1`, no duplicate-stacking.
+Build succeeded (`RogueSquadron64Recomp/build`, not `N64Recomp/build`, per the s533 gotcha).
+
+**1st live-verify** (manual, foreground, `scratch/agent/soak_queue/s535_draw_subtitle_text_r1_manual.sh`,
+every previously-armed guard env var plus `ROGUESQ_LOG_DRAW_SUBTITLE_TEXT_R1_GUARD=1`, batch-instrumentation
+rule): rc=0, ~300s full scheduled duration, 117 frames captured. 0 `draw-subtitle-text-r1-guard` fires, 0
+fires on ANY other armed guard family at all (no benign co-fires this run, unusual -- most runs have at
+least one benign `hangarmenu-a0-guard` co-fire), `hangarbay-entry n=31` positive control (present and
+firing, confirming the instrument reaches the hangar-bay phase). NO crash at all -- the cleanest possible
+verify class (matches R9/R10, EMIT_COLOR_FILL_RECT_R1's prior "full duration no crash" results). 2nd
+independent confirm queued: `scratch/agent/soak_queue/s535_draw_subtitle_text_r1_confirm.sh`.
+
+**What it shows:** The tracer's raw reachability count is not always a shape match -- this session is the
+first time in ~15 consecutive top-ranked picks that the highest-count candidate had to be rejected on
+inspection. The standing address-by-address + source-read cross-check methodology (not trusting the raw
+count) caught it correctly, and the sweep continued to a genuine candidate one rank down without wasting a
+build/run cycle on the wrong site. `DRAW_SUBTITLE_TEXT_R1_GUARD` is the campaign's first guard in
+`drawSubtitleText`, a new function.
+
+**What it rules out:** `renderLitTexturedMeshFaces:34419`/`0x8000FE70` (`ctx->r4` write) is NOT a genuine
+`-317` step-3 candidate -- it's a write through an already-validated function argument, not a reloaded
+global-table pointer. Do not re-surface this exact site as a lead without new evidence.
+
+**Outcome: ADVANCED** (folded in a queued confirm result that closed the campaign's 35 guards to 35/35
+fully closed, zero open guards, for the third time, then correctly rejected a shape-mismatched top
+candidate and found, fixed, and 1st-verified a genuine new candidate in a fresh function via the same
+rigorous address-by-address cross-check methodology established s528-534 -- not a reactive crash chase).
