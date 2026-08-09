@@ -43999,3 +43999,68 @@ s494-533).
 33/33 fully closed, zero open guards, then found, fixed, and 1st-verified a genuinely new candidate in a
 fresh re-scan via the same rigorous address-by-address cross-check methodology established s528-532 --
 not a reactive crash chase).
+
+## Session 534 (2026-08-08): item -317 step 3's SUBMIT_SCENE_NODE_RENDER_R3_GUARD 2nd confirm read CLEAN (FULLY CLOSED 2/2, closing the campaign's 34 guards to 34/34 fully closed, zero open guards, for the second time this campaign), fresh re-scan + address-by-address cross-check found a FOURTH, distinct site inside submitSceneNodeRender genuinely uncovered, 35th guard fixed and 1st-verified clean
+
+**Folded in the queued s533 confirm.** `scratch/agent/soak_results/s533_submit_scene_node_render_r3_confirm/run.log`
+(rc=3, 156s): 0 `submit-scene-node-render-r3-guard` fires, 1 benign already-catalogued
+`hangar-bay-deref-guard` co-fire (the ancient s258-era family, benign/unrelated), `hangarbay-entry n=2900`
+(strong positive control, ran ~2900 VI ticks). Crashed on `pc-symbol=setByteAcrossEntryList+176
+(local-symtab)`, `last-guest-pc=0x800aafa8` -- grepped both docs before treating as novel: this is the SAME
+`setByteAcrossEntryList+176`/`0x800aafa8` bus error first surfaced ~s473 (item -306's classification),
+recurred s511/s531, benign/unrelated background noise. `SUBMIT_SCENE_NODE_RENDER_R3_GUARD` marked FULLY
+CLOSED 2/2 -- closes item -317 step 3's 34 guards to 34/34 fully closed (zero open guards) for the second
+time this campaign (first was s533 itself, briefly, before R3's own 1st-verify reopened the count to 34/33).
+
+**Re-scanned for the next tier** (fresh `s494_item317_step3_tracer.py --scan` -- no custom `--out`, s521's
+gotcha -- + `s506_dedupe.py`). Top of the table after `submitSceneNodeRender:3299`/R3 (now fixed):
+`funcs_4.c:3779` (line numbers drift ~13 lines after each regen; this is the same write the s533 NEXT.md
+plan flagged as `funcs_4.c:3766`), `submitSceneNodeRender`, count=28 -- a FOURTH candidate in the same
+function.
+
+**Cross-check.** Pulled all 28 raw reload addresses feeding this write line from
+`scratch/agent/s494_item317_step3_report.json` (filtered `func==submitSceneNodeRender`, `hits` containing
+line 3779). Cross-checked every one directly against
+`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`: 3 were already covered
+(`0x800101B0` by the s197 `scene_node_cache_guard`, `0x80010824` by the `DL_LIST_RESET_GUARD`-adjacent
+reload -- both previously known -- plus a THIRD, `0x80010AA0`, which is `SUBMIT_SCENE_NODE_RENDER_R3_GUARD`'s
+own load address, itself now caught by this same tracer since R3's fix changed the source). None of the
+3 is this write's own site. The write's own address (`0x80010BF0`) and its load pair (`0x80010BE0`/
+`0x80010BE4`) do not appear anywhere else in `fixup_game_funcs.py`.
+
+**Source read.** `funcs_4.c` around guest `0x80010BF0`: load pair `0x80010BE0`/`0x80010BE4` (`lui
+$v0,0x8011` / `lw $v0,0x63B0($v0)`), the same `+0x63B0`-offset cached-pointer idiom as the whole
+beginFrameDLChunk/emitColorFillRect/submitSceneNodeRender lineage, gated by
+`beq $v0,$zero,L_80010BF4` at `0x80010BE8` (delay slot `sw $v0,0x0($v1)` at `0x80010BEC` runs on both
+arms, harmless -- writes the fixed `ctx->r3` value through). Non-null fallthrough repeats that same
+harmless write then unconditionally dereferences the reloaded `ctx->r2` at `0x80010BF0`
+(`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no `0x80000000`-`0x80800000` range check -- exact same vulnerable
+shape as every other guard in this lineage.
+
+**Fix.** Added `SUBMIT_SCENE_NODE_RENDER_R4_GUARD` to `fixup_game_funcs.py` following the R1/R2/R3
+template (skip-the-write-on-invalid, `ROGUESQ_LOG_SUBMIT_SCENE_NODE_RENDER_R4_GUARD` env-gated stderr
+report, `U32()` range check). Regenerated (deleted `RecompiledFuncs/funcs_*.c` via a python3 one-liner,
+`make_elf.py` -> `N64Recomp rogue_squadron.toml` -> `fixup_game_funcs.py` -> `cmake --build build -j8`
+from `RogueSquadron64Recomp/build`, all four steps). `fixup_game_funcs.py` report confirmed both
+`SUBMIT_SCENE_NODE_RENDER_R3_GUARD patched x1` (from the earlier-in-pipeline state, unaffected) and
+`SUBMIT_SCENE_NODE_RENDER_R4_GUARD patched x1`, no duplicate-stacking. Build succeeded (46 pre-existing
+unrelated warnings, 0 errors).
+
+**1st live-verify (manual, foreground,
+`scratch/agent/soak_queue/done/s534_submit_scene_node_render_r4_manual_20260808-193000.sh`):** rc=3,
+~115s process lifetime (probe.sh SIGKILL after crash+settle). 0 `submit-scene-node-render-r4-guard` fires
+(null result), 0 fires on ANY other armed guard family at all this run (no benign co-fires),
+`hangarbay-entry n=2600` (strong positive control). Crashed on the already-catalogued
+`loadCutsceneAssetsByIndex+1860`/`last-guest-pc=0x800aafb8` signature (item -320, s508) -- clean verify,
+own guard never fired. 2nd independent confirm queued:
+`scratch/agent/soak_queue/s534_submit_scene_node_render_r4_confirm.sh`.
+
+**Tally.** item -317 step 3 now 35/~150 fixed (35 guards total across the campaign), 34 fully closed 2/2,
+`SUBMIT_SCENE_NODE_RENDER_R4_GUARD` pending its 2nd confirm. ~111 sites remain across further tiers,
+unaudited. `HYPOTHESIS-ID` unchanged: `item-317-step3-blanket-sweep` (same systematic-sweep campaign,
+s494-534).
+
+**Outcome: ADVANCED** (folded in a queued confirm result that closed the campaign's 34 guards to 34/34
+fully closed, zero open guards, for the second time, then found, fixed, and 1st-verified a genuinely new
+candidate in a fresh re-scan via the same rigorous address-by-address cross-check methodology established
+s528-533 -- not a reactive crash chase).

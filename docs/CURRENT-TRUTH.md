@@ -235,9 +235,9 @@ a range pointer. Highest allocated so far: -329. The next NEW item takes -330.
     range-checking at function entry, skipping the (void, RDRAM-only) body if invalid. CLOSED 2/2 s507
     after an s506 inconclusive retry. Mechanism and session detail: `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-533) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 34 guards fixed so far, 33 FULLY
-    CLOSED 2/2, 1 (`SUBMIT_SCENE_NODE_RENDER_R3_GUARD`, s533) 1st-live-verify CLEAN.**
+-317. **(s490-534) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 35 guards fixed so far, 34 FULLY
+    CLOSED 2/2, 1 (`SUBMIT_SCENE_NODE_RENDER_R4_GUARD`, s534) 1st-live-verify CLEAN.**
     `EMIT_COLOR_FILL_RECT_R1_GUARD`'s 2nd confirm read CLEAN (0 fires on the guard, 0
     regressions on any other armed guard family, `hangarbay-entry n=31` positive control; crashed at the
     very end on the already-catalogued `setByteAcrossEntryList+176`/`last-guest-pc=0x800aafa8` bus-error
@@ -296,9 +296,31 @@ a range pointer. Highest allocated so far: -329. The next NEW item takes -330.
     at ~93s on the already-catalogued `last-guest-pc=0x800290d4` background-noise family (items
     -6/-249/-259, INVESTIGATED AND CLOSED s422 — a sparse-breadcrumb artifact that maps to many
     different real crash functions depending on build layout, not a shared corruption site; this run's
-    `pc-symbol` was `load_level_hmp+1488`) — clean verify, own guard never fired. 2nd confirm queued
-    (`scratch/agent/soak_queue/s533_submit_scene_node_render_r3_confirm.sh`).
-    **~112 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
+    `pc-symbol` was `load_level_hmp+1488`) — clean verify, own guard never fired. 2nd confirm (s534)
+    also read CLEAN: 0 `submit-scene-node-render-r3-guard` fires, 1 benign already-catalogued
+    `hangar-bay-deref-guard` co-fire (item -???, the ancient s258-era family), `hangarbay-entry n=2900`
+    positive control (strong, ran ~2900 VI ticks). Crashed on the already-catalogued
+    `setByteAcrossEntryList+176`/`last-guest-pc=0x800aafa8` bus-error signature (item -306's
+    classification, first surfaced ~s473, recurred s511/s531, benign/unrelated) — **FULLY CLOSED 2/2**.
+    This closed item -317 step 3's 34 guards to 34/34 fully closed (zero open guards) for the second
+    time this campaign.
+    **`submitSceneNodeRender`'s FOURTH candidate found and fixed (s534)**: re-scanned again per the
+    standing cross-check methodology, confirmed `submitSceneNodeRender` (`funcs_4.c`, 28-reachability
+    write at `0x80010BF0`) top of the next tier — a fourth, distinct site inside the same function
+    alongside R1 (`0x80010F38`), R2 (`0x80010E10`), and R3 (`0x80010AAC`). Of the 28 raw reload
+    addresses feeding this write, the same 2 pre-existing addresses were already covered by unrelated
+    guard families (`0x800101B0`/`0x80010824`, as above) plus a THIRD, R3_GUARD's own load address
+    (`0x80010AA0`) — none is this write's own site, and the write's own address plus its load pair do
+    not appear anywhere else in `fixup_game_funcs.py`. Load pair `0x80010BE0`/`0x80010BE4` (same
+    `+0x63B0`-offset idiom), gated by `beq $v0,$zero,L_80010BF4` at `0x80010BE8` (delay slot write
+    harmless), non-null fallthrough unconditionally dereferences the reloaded `ctx->r2` at `0x80010BF0`
+    (`MEM_W(0X4, ctx->r2) = ctx->r3;`) with no range check — fixed as **`SUBMIT_SCENE_NODE_RENDER_R4_GUARD`**.
+    1st live-verify clean: 0 `submit-scene-node-render-r4-guard` fires, 0 fires on any other armed guard
+    family at all (no benign co-fires this run), `hangarbay-entry n=2600` positive control (strong).
+    Crashed only on the already-catalogued `loadCutsceneAssetsByIndex+1860`/`last-guest-pc=0x800aafb8`
+    signature (item -320, s508), unrelated to the guard under test. 2nd confirm queued
+    (`scratch/agent/soak_queue/s534_submit_scene_node_render_r4_confirm.sh`).
+    **~111 locations remain unaudited across further tiers — still the top-ranked M3 work unit.**
     Item -319's fix was a DIFFERENT reload idiom (`-0x23A8` sibling-global shape) from this tracer's
     self-referential `+0x63B0` shape — it does not subsume any of these tiers. **Tracer gotcha (s521)**:
     `s506_dedupe.py` reads a fixed `scratch/agent/s494_item317_step3_report.json` — a custom `--out` on
