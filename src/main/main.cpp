@@ -1446,6 +1446,25 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     *x = stick_x;
     *y = stick_y;
     *buttons = btn;
+
+    // s577 item -7: host START edge probe (always-on). Discriminates H-edge1
+    // (host never sees 2nd RETURN) vs H-edge2 (host sees it but guest new=0).
+    {
+        static int s_prev_start = 0;
+        static long s_host_start_n = 0;
+        const int start_now = (btn & N64_START_BUTTON) ? 1 : 0;
+        if (start_now != s_prev_start) {
+            fprintf(stderr, "[host-start] n=%ld edge %d->%d btn=0x%04X\n",
+                    s_host_start_n, s_prev_start, start_now, (unsigned)btn);
+            fflush(stderr);
+            s_prev_start = start_now;
+        } else if (s_host_start_n < 5 || (s_host_start_n % 2000) == 0) {
+            fprintf(stderr, "[host-start] n=%ld held=%d btn=0x%04X\n",
+                    s_host_start_n, start_now, (unsigned)btn);
+            fflush(stderr);
+        }
+        s_host_start_n++;
+    }
     return true;
 }
 

@@ -46154,3 +46154,47 @@ Item -7 H-exit6: does a 2nd Start at case-5 poll AC8C0 fire hangar-sel?
 
 ### Next
 Deliver a **real** Start edge into `gNewButtonsPressed` during case 5 (host/SDL or guest), or track state-8 → mission overlay without force. Do not re-chase H-exit5.
+
+## Session 577 — real hangar exit via case 6 Start; mission overlay loads
+
+### Work unit
+Item -7: deliver a real Start edge during case 5 (or prove host never samples it).
+Batch instruments in one build: `[host-start]` in `get_n64_input`, `[newbtn]` in
+`setNewAndPreviousButtonsPressed` (cur/prev/new for Start bit), AC8C0 `port=` log.
+
+### Run
+`env PROBE_MODE=double_start HOLD_S=12 ROGUESQ_LOG_HANGARBAY_ENTRY=1 zsh
+scratch/s73_post_a_scene/run_mission_keys.sh s577_item7_real_edge 5 12`
+Log: `scratch/s73_post_a_scene/s577_item7_real_edge/run.log`. Driver rc=0, full hold,
+process killed cleanly. hangarbay-entry n=900 positive control. 0 CRASH.
+
+### Discriminating results
+
+| Hyp | Verdict | Evidence |
+|-----|---------|----------|
+| H-edge1 host never sees 2nd RETURN | **REFUTED** | 7 clean `[host-start] edge 0→1` + matching `1→0` pairs (menu Starts + leave + p2–p4) |
+| H-edge2 previous sticks so new=0 | **REFUTED** | 7 `[newbtn] start_new=1` on port 0 with `prev=0 cur=0x1000` |
+| H-edge3 another reader clears edge | not needed | case 6 saw the edge same frame as newbtn |
+| H-edge4 wrong port at case 5 | **partial** | AC8C0 logs `port=98` from `0x800CD6D0` (`gAvailableCraftBitsForLevel` low/MSB byte), not 0..3. Case 6 uses the same `-0x2930` load yet logged `a_start=1` — a0 at the jal still needs a same-instruction log |
+
+### Natural hangar-exit timeline (this run)
+1. Leave Start → AC0F0 `a_start=1` → state-write AC1C4 **3→5**
+2. Case 5 runs ~195 frames, AC8C0 always `a_start=0` (no 2nd Start in that window)
+3. Auto state-write ACE80 **5→6** (no button required)
+4. p2 Start → ACE94 `a_start=1` → ship-active ret=0 → hangar-sel AC914 → state AC94C **6→8**
+5. frame-ret sentinel=0 + graceful-menu → VI **512→640 origin 0x6A2900**
+6. overlay start-match **section 2 rom=0xA5D30** (`.ovl.mission`) then VI 512@0x690400
+
+s576 force path (AC8C0 synthetic → 5→8) is a shortcut that bypasses the natural 5→6 auto + case-6
+confirm. s576 real double_start never reached hangar-sel because case 5 never saw Start and the
+run did not wait for / catch the case-6 confirm window the way s577's p2 timing did.
+
+### Code landed
+- `src/main/main.cpp`: always-on `[host-start]` edge + sparse held log
+- `RecompiledFuncs/funcs_19.c` + `fixup_game_funcs.py`: `[newbtn]` after prev load in
+  `setNewAndPreviousButtonsPressed`
+- `RecompiledFuncs/funcs_28.c` + fixup: AC8C0 buttons-hangar line gains `port=`
+
+### Next
+Longer post-state-8 hold: mission render? stick response? stall family? Log a0 at ACE94/AC8C0
+jal (not re-read of -0x2930) if reopening port. Do not chase -338.
