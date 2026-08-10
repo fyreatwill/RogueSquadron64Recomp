@@ -50104,3 +50104,47 @@ Tag `s644_flz_gbt_posctrl_v2_20260810140015`:
 ### Queued
 `scratch/agent/soak_queue/s644_flz_gbt_freeroll.sh` — SCORE adds
 `flz_gbt` / `flz_gbt_guest` / `flz_gbt_frames`; dumps gbt block.
+
+## Session 645 (2026-08-10) — freelist freeroll Outcome B; BREADCRUMB19 + memset-fl-dest
+
+### Work unit
+Consume s644 freeroll (`s644_flz_gbt_freeroll`, SOAK-RESULTS 20260810-140603) and act on
+the freelist to_zero discriminator from NEXT.md.
+
+### s644 freeroll result (attempt 2 scored)
+- **Posctrl:** flz_gbt_guest=16 (menu to_zero thr_with_guest=17 earlier in run) — instrument LIVE
+- **Freelist-shaped to_zero #2:** t_ms=164577 phys=0x001F3CC0 prev_f=0x2 prev_sz=0x60 → zeros
+  (same H-oob-store signature as s640/s642)
+- **gbt stacks (6 reported):** all parked in wait_for_resumed / osRecvMesg:
+  menuOverlayInit←runModelViewerLoop←submitGfxFrame; startServiceWorker;
+  mainEventQueueWorker; saveServiceWorker; piDmaWorker; spTaskSchedulerThread
+- **0** guest leaves in rs_malloc / rs_free / rs_memset / heapFree*
+- sticky guest_pc=0x8000834C (drainMesh return-nop) — known non-proof
+- thr11d_new=0 recov768=1 dms_tgt=0; zero_node prev=0x801ED1B0 prev_sz=0x6B00
+- **Outcome B** (writer not on stack at 250µs detect) — dual-source with menu posctrl s644
+
+### Landed (Outcome B next step)
+1. **BREADCRUMB19** freelist header-store class stamps on:
+   rs_malloc (138), rs_free (230), rs_memset (13), heapWalker (199),
+   buildHeapFreeList (128) — 708 total. In fixup_game_funcs.py + apply_s645.
+   coalesceFreeHeapBlocks / heapFreeListDequeue already covered.
+2. **[memset-fl-dest]** entry probe on rs_memset (gate ROGUESQ_LOG_FL_ZERO_WATCH):
+   logs freelist-site range hits + first 8 calls as same-run posctrl.
+
+### Same-run / boot posctrl
+- Driven HOLD_S=70 menu to_zero #1: guest_pc=**0x80007904** (rs_memset return-nop)
+  — was sticky 0x8000834C before BREADCRUMB19. **BREADCRUMB19 LIVE.**
+- Boot-only after broadened probe: first 8 `[memset-fl-dest] all=0..5 hit=0` within 2s
+  — **probe LIVE.** Menu-class to_zero sticky memset without hit=1 means sticky PC
+  is necessary-not-sufficient for writer ID (last audited leaf, not dest proof).
+
+### Queued
+`scratch/agent/soak_queue/s645_fl_bc19_freeroll.sh` — freelist to_zero with
+flz_pc_fl / flz_pc_dms / flz_pc_fl_evt / msfl_n SCORE fields.
+
+### Hypotheses
+| ID | Status |
+|----|--------|
+| H-gbt-writer (names store path at detect) | **REFUTED freelist-class** (Outcome B dual-source menu+freelist) |
+| H-bc19-live | **CONFIRMED** (menu to_zero sticky → rs_memset range) |
+| H-memset-writer | OPEN — needs freelist to_zero + msfl hit=1 + ra |

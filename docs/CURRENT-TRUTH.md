@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s644)
+## Current truth (established by session 295; unchanged, reviewed through s645)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -120,7 +120,7 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s644**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s645**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
   `loadLevelTextureCache`) → sec2 when recovery `0x76B768` fires. **s619 thr11d_new LIVE**;
   **s624 -385 M1 LIVE** (`[level-tex-malloc-guard]` null `rs_malloc(0x136C)`). **s626 H-walk1**;
@@ -130,20 +130,18 @@ REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvatio
   **H-oob-store CONFIRMED** (`0x2/0x60`→zeros mid-run); **H-walk-into-zeros REFUTED**.
   **s641–s642** `[drain-mesh-stomp]` LIVE (34 samples, dest exclusive 0x807* mesh pool);
   **H-drainmesh-stomp REFUTED**. **s643** poller BT Outcome B structural. **s644**
-  `[fl-zero-poll-gbt]` LIVE (mach sample of non-poller threads, guest-ranked):
-  menu to_zero #1 posctrl thr_with_guest=17, top stacks `menuOverlayInit` /
-  `mainEventQueueWorker` / `saveServiceWorker` all in `wait_for_resumed`/
-  `osRecvMesg` (writer already left stack at 250µs detect). Freelist-shaped
-  freeroll still needed (-398). Instruments LIVE (`ROGUESQ_LOG_FL_ZERO_WATCH`).
-  thr11d rate **4/10**. Residual rank: (1) freelist writer **store** -391/-398,
-  (2) B8 acc -393, (3) -387 do_rom_read 4×.
+  gbt LIVE. **s645** freeroll freelist to_zero #2 Outcome B (all stacks parked
+  wait/recv); **BREADCRUMB19** freelist-class stamps LIVE (menu to_zero sticky
+  pc → `rs_memset` 0x80007904); `[memset-fl-dest]` LIVE (boot posctrl first-8).
+  Freelist writer store ID open (-399). thr11d rate **4/10**. Residual rank:
+  (1) freelist writer **store** -391/-399, (2) B8 acc -393, (3) -387 do_rom_read 4×.
 - Co-gates: recovery silence (-374; `RECOV_WAIT_S=50` + `BUDGET_S≥900`), mat3inv (-375),
   ship (-376/-377/-392/-393), class-D (-378), FORCE_STATE6 (-381 CLOSED), freeroll
   scene/readacct/matfree (-382..-384), null-malloc thr12 (-385 M1; -389..-391/-397),
   sinfApprox (-386 1×), do_rom_read (-387 **4×**). thr11d metric = post-hsel destroy of
   `0x8006F2CC` only (s618). Tools default OFF: `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`,
   `FS_PIPE_INJECT`. Post-sec2: packTlut (-373).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-397; Sessions 577-643.
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-399; Sessions 577-645.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -161,31 +159,35 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -398. The next NEW item takes -399.
+a range pointer. Highest allocated so far: -399. The next NEW item takes -400.
 
-### Active M3 pipeline (s577–s644) — open residuals only
+### Active M3 pipeline (s577–s645) — open residuals only
 
--398. **(s644) freelist writer — game-thread BT LIVE; freelist freeroll queued.**
-    s644 landed `[fl-zero-poll-gbt]`: on `to_zero`, `task_threads` + suspend +
-    ARM64 FP walk (`mach_vm_read_overwrite`) + guest-ranked dump (cap 6 thr ×
-    32 frames). Rejects host `recomp::`/`RT64::`/`ultramodern::` class methods;
-    scores guest C leaves + OSThread host helpers (`wait_for_resumed`,
-    `_thread_func`, `menuOverlayInit`, `rs_malloc`/`rs_memset`, …). **Same-run
-    posctrl** driven HOLD_S=70 tag `s644_flz_gbt_posctrl_v2_*`: menu to_zero #1
-    t_ms=51542 prev=`0x8E8E…` → **thr_with_guest=17 reported=6**; top =
-    `menuOverlayInit`←`submitGfxFrame`←`osRecvMesg`←`wait_for_resumed`,
-    `mainEventQueueWorker`, `saveServiceWorker`, `startServiceWorker` — all
-    parked (writer not on stack at detect). H-gbt-writer "game-thread BT names
-    store path" **still open** pending freelist-shaped event. s643 freeroll was
-    Outcome C (recovery-silent, only menu to_zero). Queued:
-    `s644_flz_gbt_freeroll.sh`. Full: Session 644.
+-399. **(s645) freelist writer — BREADCRUMB19 + memset-fl-dest LIVE; freelist
+    freeroll requeued for store ID.**
+    s644 freeroll freelist to_zero #2 (prev=0x2/0x60 @0x1F3CC0 t≈164.6s):
+    thr_with_guest=16, **Outcome B** all 6 reported thr parked wait/recv (no
+    malloc/free/memset leaf) — H-gbt-writer "names store path at detect"
+    **REFUTED freelist-class** (dual-source with menu). Sticky was drainMesh
+    because freelist writers lacked last_guest stamps. **s645 BREADCRUMB19:**
+    rs_malloc/rs_free/rs_memset/heapWalker/buildHeapFreeList (708 stamps) +
+    `[memset-fl-dest]` (first-8 + freelist-site hits). **Posctrl:** menu to_zero
+    sticky → `0x80007904` rs_memset return-nop (was 0x8000834C); boot
+    `[memset-fl-dest] all=0..5 hit=0` within 2s. Sticky-memset ≠ dest proof
+    (hit=0 on menu clear). Queued: `s645_fl_bc19_freeroll.sh` (SCORE
+    flz_pc_fl/dms/fl_evt + msfl_n). Full: Sessions 644-645.
+
+-398. **(s644→s645) freelist writer — game-thread BT LIVE; freeroll Outcome B.**
+    s644 `[fl-zero-poll-gbt]` posctrl thr_with_guest=17 (parked OSThread hosts).
+    s645 freeroll freelist-shaped to_zero **Outcome B** (writer off-stack) →
+    residual moved to BREADCRUMB19 / memset-dest (-399). Full: Sessions 644-645.
 
 -397. **(s643→s644) freelist writer — poller BT LIVE Outcome B structural;
     game-thread sample LANDED s644.** s643 `[fl-zero-poll-bt]` posctrl: menu
     to_zero #1 flz_bt=1 frames=6 all poller/pthread — H-hostbt-writer REFUTED
     for naming. s643 freeroll (`s643_flz_bt_freeroll`, rc=137 600s cap):
     flz_bt=1 menu-shaped only; recov768=0; no freelist `0x2/0x60`→0. Residual
-    writer ID → -398. Full: Sessions 643-644.
+    writer ID → -399. Full: Sessions 643-645.
 
 -396. **(s642→s644) freelist zero-node writer — poller BT + game-thread BT LIVE.**
     H-drainmesh-stomp REFUTED (-395). s643 poller BT Outcome B; s644 gbt posctrl
@@ -222,8 +224,8 @@ a range pointer. Highest allocated so far: -398. The next NEW item takes -399.
 
 -391. **(s632→s644) fail136c `reason=corrupt`: E8 freelist zero-node at
     `0x801F3CC0` — H-oob-store CONFIRMED; H-walk-into-zeros REFUTED;
-    H-drainmesh-stomp REFUTED s642; poller BT Outcome B s643; gbt LIVE s644;
-    writer store still open (-398).**
+    H-drainmesh-stomp REFUTED s642; poller BT Outcome B s643; gbt LIVE s644; freeroll Outcome B s645;
+    writer store still open (-399).**
     s633–s638: selected E8 stops at i=55 raw zeros. **s639:** H-zero-free +
     H-split REFUTED. **s640 scored thr11d∧fail136c:** poller mid-run
     **`flags=0x2 size=0x60` → zeros** at phys `0x1F3CC0` (to_zero #2 t≈165s);
@@ -345,14 +347,15 @@ a range pointer. Highest allocated so far: -398. The next NEW item takes -399.
     `rs_malloc(0x136C)` — **E8 zero-node `0x801F3CC0`**: H-oob-store CONFIRMED s640,
     H-walk-into-zeros REFUTED, **H-drainmesh-stomp REFUTED s642** (dms LIVE
     dest=0x807* only); **s643 poller BT Outcome B**; **s644 gbt LIVE**
-    thr_with_guest=17 (parked hosts at menu to_zero); freelist freeroll open
-    (-398); H-zero-free/H-split REFUTED s639. thr11d gated by B8→store→
-    throttle×7→destroy (-392/-393); -387 **4×**. Co-gates: recovery (-374),
-    mat3inv (-375), sinfApprox (-386), ship (-376/-377/-392/-393), freeroll
-    (-382..-384), FORCE_STATE6 (-381 CLOSED), packTlut (-373). thr-11=
-    `saveServiceWorker` `0x8006F2CC`; thr-12=`hudDisplayUpdateWorker` via
-    `loadLevelTextureCache`. HOLD_S ≤ 210. Full: PROJECT-OVERVIEW §27;
-    Sessions 589-644.**
+    thr_with_guest=17 (parked hosts); **s645 freeroll freelist Outcome B** +
+    BREADCRUMB19 LIVE (menu sticky→rs_memset) + memset-fl-dest LIVE;
+    freelist store ID open (-399); H-zero-free/H-split REFUTED s639. thr11d
+    gated by B8→store→throttle×7→destroy (-392/-393); -387 **4×**. Co-gates:
+    recovery (-374), mat3inv (-375), sinfApprox (-386), ship (-376/-377/-392/
+    -393), freeroll (-382..-384), FORCE_STATE6 (-381 CLOSED), packTlut (-373).
+    thr-11=`saveServiceWorker` `0x8006F2CC`; thr-12=`hudDisplayUpdateWorker`
+    via `loadLevelTextureCache`. HOLD_S ≤ 210. Full: PROJECT-OVERVIEW §27;
+    Sessions 589-645.**
 
 ### Closed product lineage (FULL_SYNC inject + thr pipeline setup) — do not re-open
 
@@ -437,7 +440,7 @@ a range pointer. Highest allocated so far: -398. The next NEW item takes -399.
     H-shipcycle2 STRUCTURAL; H-shipn3-gate CONFIRMED; s638 Outcome A; **s640 H-oob-store
     CONFIRMED / H-walk-into-zeros REFUTED; s642 H-drainmesh-stomp REFUTED (-395);
     s643 poller BT Outcome B; s644 gbt LIVE thr_with_guest=17 (-396/-398)**.
-    Active residuals: -398..-373 / -361 / -379.
+    Active residuals: -399..-373 / -361 / -379.
     Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
