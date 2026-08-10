@@ -47780,3 +47780,43 @@ Fold s602 r3. Score A/B/C/D on engagement; E → force-write pivot.
 Fold s603 HOLD_S=180 soak. Prefer thr-11 destroy + sec4_post for -361 R2 live
 confirm; beginframe is passive. If thr11_destroy=0 again → pivot off longer
 HOLD to recovery-cell reliability (do not raise past 210).
+
+## Session 604 — 2026-08-09 — fold s603 HOLD_S=180: no engagement (rc=2); budget NEED starved retries; requeue with start-floor fix
+
+### Folded soak
+`s603_item338_item361_hold180` (20260809-220133, rc=2, 336s):
+`scratch/agent/soak_results/s603_item338_item361_hold180_20260809-220133.log`
+
+Fast-retry summary:
+- attempt 1: dur=170s case6=0 hangar_sel=0 ace80=0 crash=1 (pre-engagement, not scored)
+- attempt 2: dur=166s case6=0 hangar_sel=0 ace80=0 crash=1 (pre-engagement, not scored)
+- `budget exhausted (336s used of 560s, need 270s), stopping without engagement`
+- 0/2 engagement → exit 2. **Not class A–F** (no scored attempt).
+
+### Pre-engagement deaths (both hangar state=5, hangarbay n≈1000)
+| # | last-guest-pc | pc-symbol | notes |
+|---|---------------|-----------|-------|
+| 1 | `0x800aafa8` | `setByteAcrossEntryList+176` | item -306 signature; stack via `composeNpcOrientationMatrix`←`runHangarSelectionFrame`; SIGBUS; **deep hangar** (n=1000), not early weak-draw single-digit hangarbay |
+| 2 | `0x800ab0e0` | host Metal `fscache_insert_and_retain` | catalogued host-noise cluster; hangarbay n=1000 |
+
+Both had state-write 0→1→3→5, 0 ACE80 (`site=0x800ACE80`), 0 case6-force-start, 0 hangar-sel. Died before camera settle into state 6 where FORCE_CASE6_START can fire.
+
+### Discriminating finding: recipe budget math, not engagement-rate collapse
+s603 recipe used `NEED = HOLD_S + 90 = 270` as the start-attempt floor. After two full path-to-hangar deaths (~170s each), remain≈220 < 270 so attempt 3 never started. Contrast s602 r3 (HOLD_S=90, start floor REMAIN<30): needed **attempt 4** to engage and scored clean D+survival. Under the loop's 600s hard soak cap, HOLD_S=180 + NEED=270 can fit at most ~2 path-deaths — statistically insufficient when engagement is a multi-roll lottery.
+
+This is **not** evidence that no-sticks engagement regressed (s602 r3 engaged). It is evidence the dual-target HOLD_S=180 recipe over-constrained the retry budget relative to s602.
+
+### Action this session
+Queued `scratch/agent/soak_queue/s604_item338_item361_hold180_budgetfix.sh`:
+- HOLD_S=180, STICK_SCHEDULE=999:sr, same dual-target arms/gate as s603
+- `START_FLOOR_S=100` (s602-style; not HOLD_S+90)
+- BUDGET_S=580, MAX_ATTEMPTS=8
+- New class G in recipe comments: rc=2 again with ≥4 attempts → engagement collapse independent of budget; pivot force-write state=6
+
+### Rules out / does not rule out
+- Rules out: treating s603 rc=2 as A–F class for -338/-361; treating it as thr11-still-live (E) or recovery-cell pivot trigger.
+- Does **not** rule out: thr-11 destroy under longer HOLD (still untested post-s602); -338 path rarity; recovery-cell reliability (H-recov*).
+- Does **not** escalate item -306 deep-hangar recurrence into a new guard chase (standing M3 rule: systematic idiom audits only; -306 remains background catalog).
+
+### Next
+Fold s604 budget-fixed HOLD_S=180 soak. Prefer thr-11 destroy + sec4_post for -361 R2 live confirm; beginframe passive. If thr11_destroy=0 on a scored attempt → pivot recovery-cell (HOLD not past 210). If rc=2 with ≥4 attempts → force-write state=6 pivot.

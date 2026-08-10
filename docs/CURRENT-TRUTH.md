@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s603)
+## Current truth (established by session 295; unchanged, reviewed through s604)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -129,9 +129,10 @@ classic s178 producer-stop) traced to a sticky shared DPC staging cell (phys `0x
 Factor5 LLE RSP for PIPE_SYNC/SETTIMG (H7a) — product fix `ROGUESQ_FS_PIPE_INJECT` (default OFF)
 restores sync flow through the E7/F3/FD residual. thr-11 (`saveServiceWorker` `0x8006F2CC`) destroy
 co-times with sec4 reload (s592_a positive control); s602 clean survival shows inject can keep
-`syncs>0` without recovery cell while thr-11 stays live under short HOLD. Current frontier: item
--361 R2 live re-verify via longer HOLD (s603 HOLD_S=180); item -338 guard live-confirm rare
-(3× D). Full chain: items -349..-368; raw `PORTING-STATE.md` Sessions 577-603. DoD =
+`syncs>0` without recovery cell while thr-11 stays live under short HOLD. s603 HOLD_S=180 dual-target
+got **0 scored attempts** (budget `NEED=HOLD_S+90` starved retries after 2 pre-engagement deaths);
+s604 requeues same HOLD with s602-style start floor. Item -338 live-confirm still rare (3× D). Full
+chain: items -349..-369; raw `PORTING-STATE.md` Sessions 577-604. DoD =
 **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -149,21 +150,25 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -368. The next NEW item takes -369.
+a range pointer. Highest allocated so far: -369. The next NEW item takes -370.
+
+-369. **(s604) `s603_item338_item361_hold180` = no engagement (rc=2); budget NEED starved
+    retries; requeued as `s604_item338_item361_hold180_budgetfix`.** 2/2 attempts died
+    pre-engagement at hangar state=5 (hangarbay n≈1000, 0 ACE80, 0 case6, 0 hangar-sel):
+    A1 `setByteAcrossEntryList+176`/`0x800aafa8` (item -306 signature, deep hangar not early
+    weak-draw); A2 host Metal `fscache_insert_and_retain` / `last-guest-pc=0x800ab0e0`.
+    Budget math root cause: recipe `NEED=HOLD_S+90=270` refused attempt 3 after 2×~170s
+    path deaths (remain≈220). s602 r3 needed attempt 4 under a 30s start floor — same
+    HOLD_S=180 target cannot fit under the loop's 600s hard cap with NEED=270. Fix: restore
+    s602-style `START_FLOOR_S=100`, BUDGET_S=580, MAX_ATTEMPTS=8; keep HOLD_S=180 +
+    dual-target gate. Not A–F (no scored attempt). Full: Session 604.
 
 -368. **(s603) `s602_item338_beginframe_s0_verify_r3` scored D + clean survival; thr-11/sec4
-    pipeline recharacterized; HOLD_S=180 dual-target soak queued.** Attempt 4 scored:
-    `case6=1 hangar-sel=1 ace80=1 inject_max_n=550 recov76B768=0 sec4=1 sec2=0
-    beginframe_s0_guard=0 last_guest_afa0=0 crash=ok`. No-sticks engagement OK (ACE80 fired;
-    force-write pivot not needed). Offline vs s592_a (sole `sec4=2`): thr-11 =
-    `saveServiceWorker` **entry=`0x8006F2CC`** (gate's `thr495FC_creates` was a thr-create-id
-    + thr-create double-count of one **boot** create — never post-exit thr-12). Pipeline:
-    post-hsel thr-11 create → cutscene → **thr-11 destroy ↔ sec4 reload** →
-    `initSceneForMission` coalesce R2 `@0x8000247c` (item -361). s592_a: thr-11 destroy
-    ~100s post-hsel → sec4=2 → CRASH `0x8000247c` (pre-R2-guard). s602: thr-11 still live at
-    HOLD_S=90 end; inject alone yields 767 post `syncs>0` without recovery cell. Recipe
-    `s603_item338_item361_hold180.sh`: HOLD_S=180, fixed gate (`thr11_destroy`,
-    `inject_max_n`, `sec4_post`). Full: Session 603.
+    pipeline recharacterized; HOLD_S=180 dual-target soak queued (s603 ran → item -369).**
+    Attempt 4 scored: `case6=1 hangar-sel=1 ace80=1 inject_max_n=550 recov76B768=0 sec4=1
+    sec2=0 beginframe_s0_guard=0 last_guest_afa0=0 crash=ok`. No-sticks engagement OK.
+    thr-11 = `saveServiceWorker` entry=`0x8006F2CC`. Pipeline: thr-11 destroy ↔ sec4 →
+    coalesce R2 `@0x8000247c`. Full: Session 603.
 
 -367. **(s602) `s601_item338_beginframe_s0_verify_r2` = no engagement (rc=2); engagement gate
     diagnosed as ACE80 camera-settle; requeued no-sticks as
@@ -247,13 +252,13 @@ a range pointer. Highest allocated so far: -368. The next NEW item takes -369.
     comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
     survival. Full detail: `PORTING-STATE.md` Session 597.
 
--361. **(s589-s603) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
+-361. **(s589-s604) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
     open.** thr-11 = `saveServiceWorker` entry=`0x8006F2CC` (not thr495FC). Pipeline: thr-11
     destroy ↔ post-exit sec4 → initSceneForMission R2 `@0x8000247c`. s592_a is the positive
     control for the crash site (pre-guard). s602 clean survival: inject works without recovery
-    cell, thr-11 still live under HOLD_S=90. s603 queues HOLD_S=180 to test whether longer
-    post-exit window reaches thr-11 destroy+sec4 for R2 live confirm. Do not raise HOLD_S
-    past 210. Full: Sessions 589-603.
+    cell, thr-11 still live under HOLD_S=90. s603 HOLD_S=180 got 0 engagement (item -369
+    budget bug); s604 requeues HOLD_S=180 with fixed start floor. Do not raise HOLD_S past
+    210. Full: Sessions 589-604.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
