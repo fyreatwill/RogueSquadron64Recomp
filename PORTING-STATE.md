@@ -50206,3 +50206,42 @@ SCORE flz_fault_n / flz_fault_hdr / flz_fault_arm_fl / flz_fault_sym.
 
 ### Item
 -400 opened; -399 updated.
+
+## Session 647 (2026-08-10) — s646 freeroll Outcome B; busy_rearm landed; SS REFUTED
+
+### Work unit
+Consume `s646_fl_fault_freeroll` SOAK-RESULTS; act on Outcome B/A/C.
+
+### s646 freeroll SCORE (att3 recovery-active; discriminating)
+- freelist to_zero #2 t=164873 prev_f=0x2 prev_sz=0x60 phys=0x1F3CC0
+- arm_freelist t=145570; HB 150–160s: fault_armed=1 fault_n=20
+- freelist-window faults n=18–21 **all in_hdr=0**:
+  n=18/19 buildModelViewerTextPage; n=20 submitSceneNodeRender fa=hdr+0x40;
+  n=21 garbage PC co-timed with to_zero
+- SCORE: flz_fault_n=21 flz_fault_hdr=0 flz_fault_arm_fl=1 flz_fault_sym=none
+  thr11d_new=0 recov768=1 class_hint=I_thr11_live_other_crash
+- **Outcome B confirmed:** neighbor thrash unprotects 16KB page; header store
+  races through ~250µs poller re-arm window (instrument LIVE, leaf not named)
+
+### SS rearm attempt — REFUTED
+- Implemented ARM64 single-step via `thread_set_state(ARM_DEBUG_STATE64)` from
+  SEGV handler + SIGTRAP re-arm.
+- Posctrl: arm_boot LIVE, fault n=1 then **CRASH signal 5** nested inside
+  `mach_msg2_internal` ← `thread_set_state` ← `fl_zero_ss_enable` (ss_rearm=0,
+  CRASH=36). **Do not retry SS from SEGV.**
+
+### Landed (Outcome B tighten)
+- want=1 boot / want=2 freelist
+- freelist-only busy re-arm spinner with ≥20µs hold-off after last fault
+  (earlier re-arm SEGV-loops the same insn)
+- freelist poller 10µs; full BT while want==2; `to_zero_correlate` on freelist
+  to_zero dumps last fault n/fa/pc/sym
+- Posctrl 55s after busy path: fault_n=15 CRASH=0 (busy_rearm=0 under want=1
+  expected — spinner only for freelist)
+
+### Queued
+`scratch/agent/soak_queue/s647_fl_busy_rearm_freeroll.sh` — freelist to_zero
+under busy_rearm; SCORE flz_fault_* + flz_busy_rearm + flz_tz_corr*.
+
+### Item
+-401 opened; -400 updated; H-ss-rearm REFUTED; H-busy-rearm ACTIVE.

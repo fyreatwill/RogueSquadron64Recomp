@@ -2,40 +2,48 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s646 recap (read this first)
+## s647 recap (read this first)
 
-**s645 freeroll consumed — Outcome B (freelist + memset class):**
-- att2 freelist to_zero #2 t=164762 phys=0x1F3CC0 prev_f=0x2 prev_sz=0x60
-- sticky guest_pc=0x8000834C drainMesh (NOT freelist-class despite BC19)
-- msfl hit=0 (76 probes) → **H-memset-writer REFUTED freelist-class**
-- gbt thr_with_guest=16 reported=6 all parked (Outcome B reconfirm)
-- placement 0x2/0x60 @ t=145420 sticky 0x80007904 (sticky ≠ dest proof)
+**s646 freeroll consumed — Outcome B (mprotect race):**
+- att3 freelist to_zero #2 t=164873 phys=0x1F3CC0 prev_f=0x2 prev_sz=0x60
+- arm_freelist@t=145570; heartbeats 150–160s fault_armed=1 fault_n=20
+- freelist-window faults n=18–21 **all in_hdr=0**
+  (buildModelViewerTextPage, submitSceneNodeRender fa=hdr+64, n=21 garbage PC)
+- n=21 co-timed with to_zero → **250µs poller re-arm race** after neighbor thrash
+- SCORE: flz_fault_n=21 flz_fault_hdr=0 flz_fault_arm_fl=1 flz_fault_sym=none
+- **H-fault-writer still open** (missed leaf; not refuted)
 
-**Landed `[fl-zero-fault]` mprotect watch** (gate ROGUESQ_LOG_FL_ZERO_WATCH):
-- arm PROT_READ while header zeros (boot) or freelist 0x2/0x60
-- SIGSEGV → host PC local-symtab + guest sticky; re-enable RW; poller re-arms
-- **Posctrl LIVE:** fault_n=17, first leaf rs_malloc+0x12a0; CRASH=0
+**SS rearm REFUTED (do not retry):**
+- `thread_set_state(ARM_DEBUG_STATE64)` from SEGV → nested SIGTRAP in
+  `mach_msg`/`thread_set_state` → CRASH path (posctrl CRASH=36, ss_rearm=0)
 
-**Queued:** `scratch/agent/soak_queue/s646_fl_fault_freeroll.sh`
-(SCORE: flz_fault_n / flz_fault_hdr / flz_fault_arm_fl / flz_fault_sym)
+**Landed busy_rearm (Outcome B fix):**
+- want=1 boot / want=2 freelist
+- freelist-only busy re-arm spinner, ≥20µs hold-off after last fault
+- freelist poller sleep 10µs; full BT while want==2; to_zero_correlate
+- **Posctrl 55s:** arm_boot, fault_n=15, CRASH=0 (busy_rearm=0 under want=1 OK)
+
+**Queued:** `scratch/agent/soak_queue/s647_fl_busy_rearm_freeroll.sh`
+(SCORE: flz_fault_* + flz_busy_rearm + flz_tz_corr + flz_tz_corr_inhdr)
 
 ## This iteration's work unit
 
-**Primary: consume s646 freeroll SOAK-RESULTS (or run if still queued).**
+**Primary: consume s647 freeroll SOAK-RESULTS (or run if still queued).**
 
-1. Posctrl: `flz_fault_n≥1` (boot-zero arm must fire) — instrument not cold
+1. Posctrl: `flz_fault_n≥1` (boot-zero) — instrument not cold
 2. Freelist-shaped: `to_zero` with `prev_f=0x2 prev_sz=0x60`
-3. Require `flz_fault_arm_fl≥1` (armed for freelist window)
+3. Require `flz_fault_arm_fl≥1` and preferably `flz_busy_rearm≥1` after arm
 4. Discriminators on freelist window / to_zero:
    - **A)** `flz_fault_hdr≥1` near freelist to_zero with `flz_fault_sym` naming
-     a recomp leaf (or host `recomp::` / bulk path) → instrument that leaf only
-     for zero-store of flags/size; next session hardens a targeted guard or
-     breadcrumb at that site
-   - **B)** arm_freelist≥1 but flz_fault_hdr=0 (only in_hdr=0 neighbor thrash)
-     → tighten arm (byte-range re-check after fault; or arm later / single-shot
-     after 0x2/0x60 stable ≥1s); do not expand breadcrumb scattershot
+     a recomp leaf → instrument that leaf only for zero-store of flags/size
+   - **A2)** `to_zero_correlate last_in_hdr=1` or last_sym names leaf even if
+     SCORE hdr lag → treat as A for next session
+   - **B)** arm_fl≥1 + freelist to_zero + flz_fault_hdr=0 still
+     → 20µs race not closed; escalate to per-thread ARM watchpoint on header
+     bytes only (not page mprotect), or log-only correlate + targeted leaf
+     probes from freelist-window BT neighbors (submitSceneNodeRender family)
    - **C)** no freelist to_zero → requeue freeroll once
-5. If A fires with a specific leaf, next session instruments that leaf only
+5. If A/A2 fires with a specific leaf, next session instruments that leaf only
 
 ## Hypotheses
 
@@ -53,10 +61,13 @@ HYPOTHESIS-ID: m3-post-exit-fs-stall
 | H-gbt-writer | game-thread BT names store path | freelist gbt store leaf | **REFUTED s645** freelist-class |
 | H-bc19-live | freelist stamps update sticky PC | menu to_zero pc in rs_* | **CONFIRMED s645** |
 | H-memset-writer | rs_memset zeros freelist header | msfl hit@0x801F3CC0 ∧ freelist to_zero | **REFUTED s646** freelist-class |
-| H-fault-writer | mprotect names freelist stomp leaf | flz_fault_hdr≥1 ∧ flz_fault_sym | ACTIVE |
+| H-fault-writer | mprotect names freelist stomp leaf | flz_fault_hdr≥1 ∧ flz_fault_sym | ACTIVE (B s647) |
+| H-ss-rearm | ARM64 SS from SEGV closes race | ss_rearm≥1 ∧ CRASH=0 | **REFUTED s647** |
+| H-busy-rearm | 20µs busy re-arm catches header store | freelist to_zero ∧ flz_fault_hdr≥1 | ACTIVE |
 | H-shipn3-gate / Outcome A | B8→store→thr11d | live chain | CONFIRMED s637/s638 |
 
 ## Do NOT
+- Retry ARM64 SS / thread_set_state from SEGV (REFUTED s647)
 - Treat guest_pc=0x8000834C alone as writer proof (sticky nop; dms REFUTED it)
 - Treat guest_pc=rs_memset return-nop alone as dest proof without msfl hit=1
 - Treat H-memset-writer as open for freelist class (REFUTED s646)
@@ -70,12 +81,11 @@ HYPOTHESIS-ID: m3-post-exit-fs-stall
 - uint32 KSEG0 MEM bases (use S32)
 - Use re.sub *string* replacement for C probes containing `\n` in format
   strings (use lambda repl — s641 lesson)
-- Try ROGUESQ_HWBP on macOS (prints "not supported") — use fl-zero-fault instead
-- Re-chase gbt ranking false-positives for host `recomp::` (s644 fixed)
-- Expand freelist breadcrumb scattershot before consuming fault freeroll (A/B)
+- Try ROGUESQ_HWBP on macOS (prints "not supported")
 
 ### Reference tags
-`[fl-zero-fault]`, `[fl-zero-poll]`, `[fl-zero-poll-bt]`, `[fl-zero-poll-gbt]`,
-`[memset-fl-dest]`, `[drain-mesh-stomp]`, `[fl-hdr-write]`, `[fl-zero-watch]`,
+`[fl-zero-fault]`, `busy_rearm`, `to_zero_correlate`, `[fl-zero-poll]`,
+`[fl-zero-poll-bt]`, `[fl-zero-poll-gbt]`, `[memset-fl-dest]`,
+`[drain-mesh-stomp]`, `[fl-hdr-write]`, `[fl-zero-watch]`,
 `0x801F3CC0`, `0x1F3CC0`, BREADCRUMB19, fail136c, thr11d_new, -391, -395,
--397, -398, -399, -400
+-397, -398, -399, -400, -401
