@@ -47929,3 +47929,75 @@ HOLD_S=180 + no-sticks + START_FLOOR=100) with scoring extended for
 
 ### Next
 Fold `s606_handoff_76ba90_dual_target` SOAK-RESULTS; classify A–G per NEXT.md.
+
+## Session 607 — 2026-08-09 — fold s606 handoff soak: E0 material/no-recov; 0x8000e29c 2nd occ; material-noise reroll queued
+
+### Work unit
+Fold `s606_handoff_76ba90_dual_target` (SOAK-RESULTS 20260809-224513, rc=1,
+208s) and act on the classification.
+
+### Scored gate (attempt 1/1 engagement)
+```
+force6=1 case6=1 hangar-sel=1 ace80=1 inject_lines=29 inject_max_n=450
+recov76B768~=0 recov76BA90~=0 last_768_rel=-1 first_a90_rel=-1
+thr11_create=1 thr11_destroy=0 thr11_destroy_rel=-1 crash_rel=25786
+sec4=1 sec4_post=0 sec2=0 coalesce_guard2_r2=0 beginframe_s0_guard=0
+crash=CRASH crash_pc=0x8000e29c
+crash_sym=findOrCreateMaterial+776 (local-symtab)
+class_hint=E_thr11_still_live
+si_addr=0x39500e10d
+```
+
+### Timeline (post hangar-sel line index)
+- thr10 destroy @+620 (hangar-exit churn; not the sec4 gate)
+- thr11 create @+719 entry=`0x8006F2CC` (saveServiceWorker)
+- inject starts ~+8884 (mode-1 sticky slot `0x76DF60`, b0 E7→FD)
+- post-hsel fullsync: **only** `0x76DF60` E9 ×470 — **zero** `0x76B768` /
+  `0x76BA90` in the entire 194k-line log
+- crash @+25786 SIGBUS; stack emitMaterialTexturedDL → findOrCreateMaterial
+  → drawSubtitleText → setupCameraMatrices → runModelViewerLoop →
+  menuOverlayInit
+- sole `start-match: section 4` is pre-hangar (boot cinematic, rel −162554);
+  sec4_post=0 correct
+
+### Guest site
+`funcs_3.c` around `0x8000E29C`: delay-slot `addu $a2,$s0,$zero` of
+`jal findOrCreateMaterial` inside `emitMaterialTexturedDL`. Site carries
+`g_rs64_last_guest_pc` (audited; not item -347 frozen-caller artifact).
+Preceding write at `0x8000E284` already has `SIBLING_PTR_WRITE_GUARD`.
+
+### Classification vs NEXT.md A–G
+- Not classic **E** (`last_768_rel>0` required) — subclass **E0**: engaged,
+  thr11 live, zero recovery cells, material crash.
+- **H-handoff1 refined:** material SIGBUS aborts thr11→sec4 before handoff
+  and is **not** gated on a post-768 gap. Evidence table:
+
+  | run | force6 | recov768 | recovA90 | thr11_destroy | crash_pc |
+  |-----|--------|----------|----------|---------------|----------|
+  | s592_a | 0 | heavy | yes | 1 | -361 R2 after sec4 |
+  | s602 | 0 | 0 | 0 | 0 | ok (HOLD end stall) |
+  | s605 | 1 | ~7920 | 0 | 0 | 0x8000e29c |
+  | s606 | 1 | 0 | 0 | 0 | 0x8000e29c (2nd) |
+
+- H-handoff2/3 untested (no 76BA90, no thr11_destroy).
+- H-force6a remains CONFIRMED (engagement).
+- `0x8000e29c` **2nd occurrence** — filed recurrence only; do **not** open a
+  reactive single-crash guard (M3 = idiom-class audits).
+
+### Action taken
+Queued `scratch/agent/soak_queue/s607_handoff_material_noise_reroll.sh`:
+same force6+case6+inject HOLD_S=180 dual-target recipe, but post-engagement
+deaths at guest `0x8000e29c` / `findOrCreateMaterial+` are discarded and
+re-rolled (like pre-engagement noise). First non-noise engagement is scored.
+Discriminates H-matnoise (non-noise path exists under force6) and continues
+the thr11 handoff hunt without dedicating sessions to material babysitting.
+
+### Rules out / does not claim
+- Does **not** claim force6 *causes* material crash (n=2 force6 deaths vs
+  n=1 no-force6 survival = single-source correlation only).
+- Does **not** reopen H12a / case5-vs-case6.
+- Does **not** raise HOLD_S.
+
+### Next
+Fold `s607_handoff_material_noise_reroll` SOAK-RESULTS; classify A–H per
+NEXT.md; if G with high matnoise rate, report rate only.

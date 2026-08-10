@@ -320,3 +320,4 @@
 20260809-220133 | s603_item338_item361_hold180 | rc=2 | 336s | scratch/agent/soak_results/s603_item338_item361_hold180_20260809-220133.log
 20260809-221137 | s604_item338_item361_hold180_budgetfix | rc=137 | 600s | scratch/agent/soak_results/s604_item338_item361_hold180_budgetfix_20260809-221137.log
 20260809-223148 | s605_force_state6_dual_target | rc=1 | 399s | scratch/agent/soak_results/s605_force_state6_dual_target_20260809-223148.log
+20260809-224513 | s606_handoff_76ba90_dual_target | rc=1 | 208s | scratch/agent/soak_results/s606_handoff_76ba90_dual_target_20260809-224513.log

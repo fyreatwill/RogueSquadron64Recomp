@@ -1,38 +1,26 @@
 #!/bin/zsh
-# s606: force6 engagement + inject, HOLD_S=180; score the 76B768→76BA90
-# recovery-cell handoff that co-times with thr11 destroy→sec4
-# (HYPOTHESIS-ID m3-post-exit-fs-stall).
+# s607: same dual-target as s606, but re-roll post-engagement deaths at
+# material noise guest PC 0x8000e29c (findOrCreateMaterial via
+# emitMaterialTexturedDL). HYPOTHESIS-ID: m3-post-exit-fs-stall
 #
-# s605 scored (force6=1 case6=1 hangar-sel=1 ace80=1):
-#   H-force6a SUPPORTED. Recovery 76B768 fired (~7920) then DIED at
-#   post-hangar rel~+86k. thr11 recreated post-exit but never destroyed.
-#   Crash findOrCreateMaterial+776 / last-guest-pc=0x8000e29c (NEW guest
-#   PC; prior material noise was 0x80010b7c) at rel=+89961 in the gap
-#   after 76B768 died, BEFORE s592_a's second recovery cell 0x76BA90
-#   (s592: last 768@+86938, first A90@+95599, thr11 destroy@+96337,
-#   sec4@+96340, then item -361 coalesce R2 crash).
+# s606 scored E0: force6=1 case6=1 hangar-sel=1 ace80=1, thr11 create,
+# inject_max_n=450, recov76B768=0 recov76BA90=0, thr11_destroy=0,
+# crash 0x8000e29c / findOrCreateMaterial+776 (2nd occ after s605).
+# s605 had recov76B768~=7920 + same crash; s602 (no force6) survived
+# recov=0 path to HOLD end without thr11 destroy. Material death is
+# independent of 76B768 presence and aborts thr11→sec4 before handoff.
 #
-# Pipeline recharacterization (s592_a vs s605 vs s602):
-#   hangar-sel → thr10 destroy → thr11 create → inject → 76B768 mid
-#   cutscene → (gap) → 76BA90 final → thr11 destroy → sec4.
-#   H-recov1 "76B768 sufficient for thr11 destroy" REFUTED: s605 had
-#   76B768 + still no thr11 destroy. s602 (recov=0) never reached
-#   thr11 destroy either (HOLD ended mid-cutscene).
+# Discriminating outcomes (scored = engaged AND not material-noise death):
+#   A) thr11_destroy + sec4_post + g2 + ok → -361 confirm 1/2
+#   B) thr11_destroy + sec4_post + crash 0x8000247c → r2 path
+#   C) thr11_destroy + sec4_post + other crash → file
+#   D) recov76BA90>=1 thr11_destroy=0 → handoff insufficient
+#   E) recov76B768>0 no 76BA90 non-material crash → gap H-handoff1 variant
+#   F) engaged survive HOLD thr11_destroy=0 (like s602) → cutscene not finishing
+#   G) budget exhaust: only material noise / pre-eng deaths
+#   H) 76BA90 + thr11_destroy (any crash) → handoff sufficiency hit
 #
-# Discriminating outcomes (scored = case6+hangar-sel):
-#   A) recov76BA90>=1 + thr11_destroy=1 + sec4_post>=1 + no crash at
-#      0x8000247c + coalesce_guard2_r2>=1 → -361 confirm 1/2
-#   B) recov76BA90>=1 + thr11_destroy=1 + sec4_post>=1 + crash at
-#      0x8000247c → r2 guard miss / live re-verify path
-#   C) recov76BA90>=1 + thr11_destroy=1 + other crash → file; sec4 path open
-#   D) recov76BA90>=1 but thr11_destroy=0 → handoff not sufficient for thr11
-#   E) last_768_rel>0, no 76BA90, crash in gap (e.g. 0x8000e29c) → gap crash
-#      aborts handoff (H-handoff1); file breadcrumb, do not single-chase
-#   F) 76B768 never dies (still firing at HOLD end) + thr11_destroy=0 →
-#      cutscene not advancing out of mid phase (H-handoff2)
-#   G) force6/case6/hsel engagement miss
-#
-# Exit: 0 scored+ok, 1 scored+CRASH, 2 no engagement, 3 force miss.
+# Exit: 0 scored+ok, 1 scored+CRASH, 2 no non-noise engagement, 3 force miss.
 set -u
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT" || exit 2
@@ -48,21 +36,23 @@ START_EPOCH=$(date +%s)
 ATTEMPT=0
 SCORED_LOG=""
 SCORED_RC=""
+MATERIAL_NOISE_N=0
+PRE_ENG_N=0
 
 while :; do
   NOW=$(date +%s)
   ELAPSED=$(( NOW - START_EPOCH ))
   REMAIN=$(( BUDGET_S - ELAPSED ))
   if [ "$REMAIN" -lt "$START_FLOOR_S" ]; then
-    echo "[fast-retry] budget exhausted (${ELAPSED}s used of ${BUDGET_S}s, remain=${REMAIN}<${START_FLOOR_S}), stopping without engagement"
+    echo "[fast-retry] budget exhausted (${ELAPSED}s used of ${BUDGET_S}s, remain=${REMAIN}<${START_FLOOR_S}), stopping"
     break
   fi
   ATTEMPT=$(( ATTEMPT + 1 ))
   if [ "$ATTEMPT" -gt "$MAX_ATTEMPTS" ]; then
-    echo "[fast-retry] hit MAX_ATTEMPTS=$MAX_ATTEMPTS, stopping without engagement"
+    echo "[fast-retry] hit MAX_ATTEMPTS=$MAX_ATTEMPTS, stopping"
     break
   fi
-  TAG="s606_handoff_76ba90_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
+  TAG="s607_handoff_matnoise_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
   OUT="$ROOT/scratch/s73_post_a_scene/$TAG"
   /usr/bin/pkill -9 -x RogueSquadron64Recomp 2>/dev/null || true
   sleep 0.3
@@ -72,31 +62,44 @@ while :; do
     zsh "$ROOT/scratch/s73_post_a_scene/run_mission_keys.sh" "$TAG" 5 12
   RC=$?
   LOG="$OUT/run.log"
-  CASE6=0; HSEL=0; CRASH=0; ACE80=0; FORCE6=0
+  CASE6=0; HSEL=0; CRASH=0; ACE80=0; FORCE6=0; MATNOISE=0
   if [ -f "$LOG" ]; then
     grep -aq '\[case6-force-start\]' "$LOG" && CASE6=1
     grep -aq '\[hangar-sel\]' "$LOG" && HSEL=1
     grep -aq '\[CRASH\]' "$LOG" && CRASH=1
     grep -aq 'site=0x800ACE80' "$LOG" && ACE80=1
     grep -aq '\[case5-force-state6\]' "$LOG" && FORCE6=1
+    # Material noise: guest PC 0x8000e29c (delay-slot before findOrCreateMaterial)
+    # OR host symbol findOrCreateMaterial+NNN. 2nd occ s605/s606; discard+reroll.
+    if grep -aqi 'last-guest-pc\] pc=0x8000e29c' "$LOG" || \
+       grep -aq 'findOrCreateMaterial+' "$LOG"; then
+      MATNOISE=1
+    fi
   fi
   DUR=$(( $(date +%s) - NOW ))
-  echo "[fast-retry] attempt $ATTEMPT done rc=$RC dur=${DUR}s force6=$FORCE6 case6=$CASE6 hangar_sel=$HSEL ace80=$ACE80 crash=$CRASH log=$LOG"
+  echo "[fast-retry] attempt $ATTEMPT done rc=$RC dur=${DUR}s force6=$FORCE6 case6=$CASE6 hangar_sel=$HSEL ace80=$ACE80 crash=$CRASH matnoise=$MATNOISE log=$LOG"
   if [ "$CASE6" -eq 1 ] && [ "$HSEL" -eq 1 ]; then
+    if [ "$MATNOISE" -eq 1 ]; then
+      MATERIAL_NOISE_N=$(( MATERIAL_NOISE_N + 1 ))
+      echo "[fast-retry] attempt $ATTEMPT engaged but material-noise death (0x8000e29c) -- discard, reroll (noise_n=$MATERIAL_NOISE_N)"
+      continue
+    fi
     SCORED_LOG="$LOG"
     SCORED_RC=$RC
-    echo "[fast-retry] attempt $ATTEMPT reached engagement -- scoring this one, no further rerolls"
+    echo "[fast-retry] attempt $ATTEMPT reached engagement WITHOUT material noise -- scoring, no further rerolls"
     break
   fi
-  echo "[fast-retry] attempt $ATTEMPT died pre-engagement -- fast reroll (not scored)"
+  PRE_ENG_N=$(( PRE_ENG_N + 1 ))
+  echo "[fast-retry] attempt $ATTEMPT died pre-engagement -- fast reroll (pre_eng_n=$PRE_ENG_N)"
 done
 
 if [ -z "$SCORED_LOG" ]; then
-  echo "[fast-retry] no attempt reached engagement within budget (${ATTEMPT} attempts)"
+  echo "[fast-retry] no non-noise engagement within budget (attempts=$ATTEMPT pre_eng=$PRE_ENG_N matnoise=$MATERIAL_NOISE_N)"
   exit 2
 fi
 
 echo "[fast-retry] === scored attempt analysis: $SCORED_LOG ==="
+echo "[fast-retry] discard_stats pre_eng=$PRE_ENG_N matnoise=$MATERIAL_NOISE_N attempts=$ATTEMPT"
 python3 - "$SCORED_LOG" <<'PY'
 import sys, re
 raw = open(sys.argv[1], "rb").read().decode("utf-8", "replace")
@@ -117,7 +120,6 @@ inj_lines = len(inj_ns)
 inj_max = max(inj_ns) if inj_ns else 0
 rec768 = raw.count("76B768")
 recA90 = sum(1 for l in post if "76BA90" in l)
-# post-hangar rel of last 76B768 and first 76BA90
 last_768_rel = -1
 first_a90_rel = -1
 for i, l in enumerate(post):
@@ -154,7 +156,6 @@ m_sym = re.search(r"\[CRASH\]\[pc-symbol\][^\n]*", raw)
 crash_pc = m_pc.group(1) if m_pc else "-"
 crash_sym = m_sym.group(0) if m_sym else "-"
 crash = "CRASH" if "[CRASH]" in raw else "ok"
-# crash rel post hangar
 crash_rel = -1
 for i, l in enumerate(post):
     if "[CRASH] caught" in l:
@@ -185,20 +186,21 @@ elif thr11_destroy and sec4_post >= 1 and crash == "CRASH":
     cls = "C_sec4_other_crash"
 elif recA90 >= 1 and thr11_destroy == 0:
     cls = "D_handoff_no_thr11"
+elif recA90 >= 1 and thr11_destroy == 1:
+    cls = "H_handoff_thr11"
 elif last_768_rel > 0 and recA90 == 0 and crash == "CRASH":
     cls = "E_gap_crash_no_handoff"
-elif rec768 > 0 and last_768_rel > 50000 and recA90 == 0 and thr11_destroy == 0 and crash == "ok":
-    cls = "F_stuck_mid_phase"
+elif thr11_destroy == 0 and crash == "ok" and hsel:
+    cls = "F_survive_no_thr11"
 elif thr11_destroy == 0 and hsel:
     cls = "E_thr11_still_live"
-elif force6 and case6 and hsel and crash == "ok":
-    cls = "F_engaged_survive_no_thr11"
 else:
     cls = "G_other"
 print(f"class_hint={cls}", file=sys.stderr)
 PY
 
-if grep -aq '\[CRASH\]' "$SCORED_LOG"; then
+# exit code mirrors scored crash
+if [ -f "$SCORED_LOG" ] && grep -aq '\[CRASH\]' "$SCORED_LOG"; then
   exit 1
 fi
-exit "$SCORED_RC"
+exit 0

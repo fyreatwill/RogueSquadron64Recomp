@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s606)
+## Current truth (established by session 295; unchanged, reviewed through s607)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -134,9 +134,11 @@ got **0 scored attempts** (budget `NEED=HOLD_S+90` starved retries); s604 budget
 A3 but still **0/3 engagement** (0 ACE80 at state=5; A3 alive-stall). s605 lands
 `ROGUESQ_FORCE_STATE6_AFTER` and **H-force6a CONFIRMED** (force6→ACE80→case6→hangar-sel).
 s606 offline timeline (s592_a vs s605): thr11 destroy→sec4 co-times with **second recovery
-cell `0x76BA90`**, not first cell `0x76B768` alone (H-recov1 sufficiency REFUTED). Item -338
-live-confirm still rare (3× D). Full chain: items -349..-371; raw `PORTING-STATE.md`
-Sessions 577-606. DoD = **cutscene→in-mission** + craft input.
+cell `0x76BA90`**, not first cell `0x76B768` alone (H-recov1 sufficiency REFUTED). s607 folded
+s606 soak: material crash `0x8000e29c` is **2nd occ** and fires **with or without** 76B768
+(E0 class; H-handoff1 recharacterized). Item -338 live-confirm still rare (3× D). Full chain:
+items -349..-372; raw `PORTING-STATE.md` Sessions 577-607. DoD = **cutscene→in-mission** +
+craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
 
@@ -153,25 +155,38 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -371. The next NEW item takes -372.
+a range pointer. Highest allocated so far: -372. The next NEW item takes -373.
+
+-372. **(s607) `s606_handoff_76ba90_dual_target` folded: class E0 (material, no recovery);
+    `0x8000e29c` 2nd occ; H-handoff1 recharacterized; queued material-noise reroll.** Scored
+    attempt 1/1 engagement: `force6=1 case6=1 hangar-sel=1 ace80=1 inject_max_n=450
+    recov76B768=0 recov76BA90=0 last_768_rel=-1 thr11_create=1 thr11_destroy=0
+    sec4_post=0 crash=CRASH crash_pc=0x8000e29c` (`findOrCreateMaterial+776`,
+    `si_addr=0x39500e10d`; stack `emitMaterialTexturedDL`←`drawSubtitleText`←
+    `runModelViewerLoop`). Post-hsel fullsync **only** sticky `0x76DF60` E9×470; inject
+    E7×22 then FD×7; thr10 destroy@+620 → thr11 create@+719; crash@+25786. Recipe
+    `class_hint=E_thr11_still_live` (not classic E: requires `last_768_rel>0`). **Vs s605
+    (same crash PC, recov768~=7920) and s602 (recov=0, no force6, survive HOLD, no
+    thr11_destroy):** material death is **independent of 76B768 presence** and aborts the
+    thr11→sec4 path before any handoff. **H-handoff1 refined:** not "post-768 gap only" —
+    cutscene material SIGBUS kills thr11 pipeline with or without mid-phase recovery.
+    **Do not single-chase `0x8000e29c`** (2nd occ, file only; M3 = idiom-class audits).
+    Guest site is delay-slot of `jal findOrCreateMaterial` inside `emitMaterialTexturedDL`
+    (`funcs_3.c`); `g_rs64_last_guest_pc` is instrumented there (not -347 artifact). Queued
+    `s607_handoff_material_noise_reroll` (re-roll 0x8000e29c deaths; score first non-noise
+    engagement). Full: Session 607.
 
 -371. **(s606) `s605_force_state6_dual_target` folded: H-force6a CONFIRMED; thr11→sec4
     pipeline RECHARACTERIZED to 76B768→76BA90 handoff; H-recov1 sufficiency REFUTED;
-    queued `s606_handoff_76ba90_dual_target`.** Scored attempt 2/2 (A1 pre-eng discard):
-    `force6=1 case6=1 hangar-sel=1 ace80=1 inject_max_n=300 recov76B768~=7920
-    thr11_create=1 thr11_destroy=0 sec4_post=0 recov76BA90=0 crash=CRASH
-    crash_pc=0x8000e29c` (`findOrCreateMaterial+776`, NEW guest PC vs prior material noise
-    `0x80010b7c`). Offline post-hangar timeline vs sole thr11→sec4 control `s592_a`:
-    both share thr10 destroy~+0.8k → thr11 create~+0.9k → inject~+9k → 76B768 start~+20k
-    → 76B768 die~+86–87k; s592 then first `0x76BA90`@+95599 → thr11 destroy@+96337 →
-    sec4@+96340 → item -361 R2 crash; s605 crashes@+89961 in the post-768 gap with
-    **0× 76BA90**. Recipe metric thr11_destroy correctly ignores thr10 (pre-exit worker);
-    thr10 destroy is routine hangar-exit churn, not the sec4 gate. **H-force6a SUPPORTED**
-    (state-byte force unlocks ACE80/case6/hangar-sel). **H-recov1 "76B768 required/sufficient
-    for thr11 destroy" sufficiency REFUTED** (768 fired heavily; thr11 still live at death).
-    Necessity still open (s602 recov=0 also never thr11-destroyed). Keep FORCE_STATE6_AFTER
-    env-gated. Breadcrumb: `0x8000e29c` / findOrCreateMaterial (filed not chased). Full:
-    Session 606.
+    queued `s606_handoff_76ba90_dual_target` (ran → item -372).** Scored attempt 2/2 (A1
+    pre-eng discard): `force6=1 case6=1 hangar-sel=1 ace80=1 inject_max_n=300
+    recov76B768~=7920 thr11_create=1 thr11_destroy=0 sec4_post=0 recov76BA90=0
+    crash=CRASH crash_pc=0x8000e29c` (`findOrCreateMaterial+776`, then NEW guest PC;
+    2nd occ s607). Offline vs sole thr11→sec4 control `s592_a`: thr10 destroy~+0.8k →
+    thr11 create~+0.9k → inject~+9k → 76B768~+20k..+87k; s592 then `0x76BA90`@+95599 →
+    thr11 destroy@+96337 → sec4@+96340; s605 dies@+89961 with **0× 76BA90**. **H-force6a
+    SUPPORTED.** **H-recov1 sufficiency REFUTED.** Necessity still open. Keep
+    FORCE_STATE6_AFTER env-gated. Full: Session 606.
 
 -370. **(s605) `s604_item338_item361_hold180_budgetfix` folded: budget fix WORKED, engagement
     still 0/3; landed `ROGUESQ_FORCE_STATE6_AFTER` (s602 E pivot) + queued
@@ -276,14 +291,15 @@ a range pointer. Highest allocated so far: -371. The next NEW item takes -372.
     comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
     survival. Full detail: `PORTING-STATE.md` Session 597.
 
--361. **(s589-s606) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
-    open; thr11→sec4 gate RECHARACTERIZED s606.** thr-11 = `saveServiceWorker` entry=`0x8006F2CC`
-    (not thr495FC). Real post-exit pipeline (s592_a control): thr10 destroy (hangar exit) → thr11
-    create → inject → mid-cutscene recovery `0x76B768` → gap → final recovery `0x76BA90` → thr11
-    destroy → sec4 → initSceneForMission R2 `@0x8000247c`. s605: force6 engagement CONFIRMED,
-    76B768 fires, dies in post-768 gap at new guest PC `0x8000e29c` with 0× 76BA90. s602 clean
-    survival: inject without 76B768, thr11 never destroyed under HOLD_S=90. Do not raise HOLD_S
-    past 210. Full: Sessions 589-606.
+-361. **(s589-s607) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
+    open; thr11→sec4 RECHARACTERIZED s606; material abort E0 s607.** thr-11 = `saveServiceWorker`
+    entry=`0x8006F2CC` (not thr495FC). Real post-exit pipeline (s592_a control): thr10 destroy →
+    thr11 create → inject → mid-cutscene `0x76B768` → gap → final `0x76BA90` → thr11 destroy →
+    sec4 → initSceneForMission R2 `@0x8000247c`. s605: force6 OK, 76B768 fires, dies at
+    `0x8000e29c` with 0×76BA90. s606/s607: force6 OK, **0 recovery cells**, same
+    `0x8000e29c` death (2nd occ). s602: inject without 76B768, thr11 never destroyed under
+    HOLD_S=90, no material crash. Material noise now discarded by s607 soak recipe. Do not
+    raise HOLD_S past 210. Full: Sessions 589-607.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
@@ -487,10 +503,10 @@ a range pointer. Highest allocated so far: -371. The next NEW item takes -372.
 -7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN.** Exit + cutscene CONFIRMED (s577);
     dual FULL_SYNC sticky gap product-fixed when inject+recovery fire (items -354..-358);
     force6 engagement tool CONFIRMED s606 (H-force6a). In-mission still blocked by post-exit
-    thr11 destroy→sec4, which co-times with second recovery cell `0x76BA90` after `0x76B768`
-    dies (item -361/-371), not thr-11 recv-block (H12a REFUTED) or case5-vs-case6 (H11a REFUTED).
-    Natural leave-path crashes filed not chased. `FS_PIPE_INJECT` / `FORCE_STATE6_AFTER` still
-    default OFF.
+    thr11 destroy→sec4 (co-times with `0x76BA90` after `0x76B768`, item -361/-371) **and** by
+    intermittent cutscene material SIGBUS `0x8000e29c` (2× s605/s606, aborts before handoff —
+    filed not chased; s607 soak re-rolls it). Not thr-11 recv-block (H12a REFUTED) or
+    case5-vs-case6 (H11a REFUTED). `FS_PIPE_INJECT` / `FORCE_STATE6_AFTER` still default OFF.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.
