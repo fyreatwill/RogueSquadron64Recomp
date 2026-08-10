@@ -37,6 +37,10 @@
 #include <dlfcn.h>
 #if defined(__APPLE__) && defined(__aarch64__)
 #include <mach-o/dyld.h>
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+#include <mach/thread_act.h>
+#include <pthread.h>
 #include <algorithm>
 #include <cerrno>
 #include <string>
@@ -1680,6 +1684,258 @@ static void start_fs_slot_poller() {
 }
 
 
+#if defined(__APPLE__) && defined(__aarch64__)
+// True if PC resolves into our main executable (not system/dylib).
+static bool fl_zero_pc_in_our_bin(void* pc) {
+    Dl_info dli{};
+    if (!dladdr(pc, &dli) || !dli.dli_fname) return false;
+    const char* base = std::strrchr(dli.dli_fname, '/');
+    base = base ? base + 1 : dli.dli_fname;
+    return std::strstr(base, "RogueSquadron64Recomp") != nullptr;
+}
+
+// Guest-side recomp / heap leaves (writer candidates). Deliberately does
+// NOT match host `recomp::` / RT64 / ultramodern — those dominated s644's
+// first sample and buried the OSThread host stacks.
+static bool fl_zero_sym_is_guest(const char* s) {
+    if (!s || !s[0]) return false;
+    // Guest recomp bodies are mostly unmangled C (`rs_malloc`, human names).
+    // Ultramodern OSThread host helpers are Itanium-mangled free functions
+    // (`_Z16wait_for_resumed…`, `_ZL12_thread_func…`) — allow those by
+    // substring. Reject `recomp::` / `ultramodern::` / `RT64::` class methods
+    // (`_ZN…`) which are host runtime and drowned s644 v1 samples.
+    if (std::strstr(s, "_ZN6recomp") || std::strstr(s, "_ZN11ultramodern") ||
+        std::strstr(s, "_ZN4RT64") || std::strstr(s, "_ZN10moodycamel") ||
+        std::strstr(s, "_ZNSt3")) {
+        return false;
+    }
+    if (std::strstr(s, "rs_malloc") || std::strstr(s, "rs_free") ||
+        std::strstr(s, "rs_memset") || std::strstr(s, "rs_zcalloc") ||
+        std::strstr(s, "drainMesh") || std::strstr(s, "loadLevel") ||
+        std::strstr(s, "heapFree") || std::strstr(s, "heapAlloc") ||
+        std::strstr(s, "buildHeap") || std::strstr(s, "runModelViewer") ||
+        std::strstr(s, "menuOverlay") || std::strstr(s, "mainEventQueue") ||
+        std::strstr(s, "mainGameLoop") || std::strstr(s, "processAsset") ||
+        std::strstr(s, "registerService") || std::strstr(s, "unregisterService") ||
+        std::strstr(s, "saveService") || std::strstr(s, "hudDisplay") ||
+        std::strstr(s, "buildMaterial") || std::strstr(s, "parseHmt") ||
+        std::strstr(s, "loadTexture") || std::strstr(s, "initScene") ||
+        std::strstr(s, "advanceVideo") || std::strstr(s, "cinematicLoop") ||
+        std::strstr(s, "submitScene") || std::strstr(s, "beginFrame") ||
+        std::strstr(s, "osSendMesg") || std::strstr(s, "osRecvMesg") ||
+        std::strstr(s, "osPiStartDma") || std::strstr(s, "osStartThread") ||
+        std::strstr(s, "osCreateThread") || std::strstr(s, "wait_for_resumed") ||
+        std::strstr(s, "resume_thread") || std::strstr(s, "swap_to_thread") ||
+        std::strstr(s, "thread_func") || std::strstr(s, "run_thread_function") ||
+        // recompiled MIPS bodies (fixup renames + raw addresses)
+        std::strstr(s, "func_") || std::strstr(s, "funcs_") ||
+        std::strstr(s, "fake_func_")) {
+        return true;
+    }
+    return false;
+}
+
+struct FlZeroThrSnap {
+    unsigned thr;
+    int nframes;
+    int guest_n;
+    int our_n;
+    void* frames[32];
+    char names[32][160];
+    uintptr_t saddrs[32];
+};
+
+// s644: sample non-poller host threads at freelist to_zero. Poller
+// backtrace (s643) is structural Outcome B — side thread has no guest
+// writer frames. Collect every other thread's FP chain, rank by guest
+// leaf count, dump top hits. Posctrl = menu to_zero #1 prints ≥1
+// [fl-zero-poll-gbt] summary; guest_n>0 on a thr is the useful hit.
+static void fl_zero_sample_game_threads(uint64_t n_change, uint64_t n_to_zero,
+                                        long long ms, unsigned pf, unsigned psz) {
+    thread_act_array_t threads = nullptr;
+    mach_msg_type_number_t nthreads = 0;
+    kern_return_t kr = task_threads(mach_task_self(), &threads, &nthreads);
+    if (kr != KERN_SUCCESS || !threads) {
+        fprintf(stderr,
+            "[fl-zero-poll-gbt] n=%llu to_zero_n=%llu event=task_threads_fail "
+            "kr=%d t_ms=%lld\n",
+            (unsigned long long)n_change, (unsigned long long)n_to_zero,
+            (int)kr, ms);
+        return;
+    }
+    thread_t self = mach_thread_self();
+    // Cap collection — process can have 60+ threads; we only care about
+    // those with guest frames. Keep up to 24 snaps for ranking.
+    static const int kMaxSnap = 24;
+    FlZeroThrSnap snaps[kMaxSnap];
+    int nsnap = 0;
+    int thr_with_guest = 0;
+    int thr_with_our = 0;
+
+    for (mach_msg_type_number_t ti = 0; ti < nthreads; ++ti) {
+        if (threads[ti] == self) continue;
+        if (thread_suspend(threads[ti]) != KERN_SUCCESS) continue;
+
+        arm_thread_state64_t st{};
+        mach_msg_type_number_t scount = ARM_THREAD_STATE64_COUNT;
+        kr = thread_get_state(threads[ti], ARM_THREAD_STATE64,
+                              (thread_state_t)&st, &scount);
+        void* frames[32];
+        int nframes = 0;
+        if (kr == KERN_SUCCESS) {
+            uintptr_t pc = (uintptr_t)arm_thread_state64_get_pc(st);
+            uintptr_t fp = (uintptr_t)arm_thread_state64_get_fp(st);
+            if (pc) frames[nframes++] = (void*)pc;
+            for (int depth = 0; depth < 31 && fp >= 0x1000 && (fp & 0xF) == 0; ++depth) {
+                uintptr_t pair[2] = {0, 0};
+                mach_vm_size_t out_sz = 0;
+                kern_return_t rkr = mach_vm_read_overwrite(
+                    mach_task_self(), (mach_vm_address_t)fp,
+                    (mach_vm_size_t)sizeof(pair),
+                    (mach_vm_address_t)pair, &out_sz);
+                if (rkr != KERN_SUCCESS || out_sz != sizeof(pair)) break;
+                uintptr_t next_fp = pair[0];
+                uintptr_t lr = pair[1];
+                if (!lr) break;
+                frames[nframes++] = (void*)lr;
+                if (next_fp <= fp || (next_fp & 0xF) != 0) break;
+                fp = next_fp;
+            }
+        }
+        thread_resume(threads[ti]);
+        if (nframes <= 0) continue;
+
+        int guest_n = 0;
+        int our_n = 0;
+        char names[32][160];
+        uintptr_t saddrs[32];
+        for (int bi = 0; bi < nframes; ++bi) {
+            names[bi][0] = '\0';
+            saddrs[bi] = (uintptr_t)frames[bi];
+            Dl_info dli{};
+            if (dladdr(frames[bi], &dli)) {
+                if (dli.dli_sname) {
+                    std::snprintf(names[bi], sizeof(names[bi]), "%s", dli.dli_sname);
+                }
+                if (dli.dli_saddr) saddrs[bi] = (uintptr_t)dli.dli_saddr;
+            }
+            const char* s = names[bi];
+            if (std::strstr(s, "start_fl_zero_poller") ||
+                std::strstr(s, "fl_zero_sample_game") ||
+                std::strstr(s, "fl_zero_pc_in_our") ||
+                std::strstr(s, "fl_zero_sym_is_guest")) {
+                continue;
+            }
+            if (fl_zero_sym_is_guest(s)) {
+                ++guest_n;
+                ++our_n;
+            } else if (fl_zero_pc_in_our_bin(frames[bi])) {
+                ++our_n;
+            }
+        }
+        if (guest_n > 0) ++thr_with_guest;
+        if (our_n > 0) ++thr_with_our;
+        // Prefer guest-bearing; keep a few our-bin-only for posctrl if no
+        // guest yet. Host-only stacks (RT64/ultramodern) are dropped.
+        if (guest_n == 0 && thr_with_guest > 0) continue;
+        if (guest_n == 0 && nsnap >= 8) continue;
+        if (our_n == 0) continue;
+
+        int slot = -1;
+        if (nsnap < kMaxSnap) {
+            slot = nsnap++;
+        } else {
+            int worst = 0;
+            for (int i = 1; i < kMaxSnap; ++i) {
+                if (snaps[i].guest_n < snaps[worst].guest_n ||
+                    (snaps[i].guest_n == snaps[worst].guest_n &&
+                     snaps[i].our_n < snaps[worst].our_n)) {
+                    worst = i;
+                }
+            }
+            if (guest_n < snaps[worst].guest_n ||
+                (guest_n == snaps[worst].guest_n && our_n <= snaps[worst].our_n)) {
+                continue;
+            }
+            slot = worst;
+        }
+        FlZeroThrSnap& sn = snaps[slot];
+        sn.thr = (unsigned)threads[ti];
+        sn.nframes = nframes;
+        sn.guest_n = guest_n;
+        sn.our_n = our_n;
+        for (int bi = 0; bi < nframes; ++bi) {
+            sn.frames[bi] = frames[bi];
+            std::memcpy(sn.names[bi], names[bi], sizeof(names[bi]));
+            sn.saddrs[bi] = saddrs[bi];
+        }
+    }
+
+    // Rank by guest_n desc, then our_n
+    int order[kMaxSnap];
+    for (int i = 0; i < nsnap; ++i) order[i] = i;
+    for (int i = 0; i < nsnap; ++i) {
+        for (int j = i + 1; j < nsnap; ++j) {
+            FlZeroThrSnap& a = snaps[order[i]];
+            FlZeroThrSnap& b = snaps[order[j]];
+            if (b.guest_n > a.guest_n ||
+                (b.guest_n == a.guest_n && b.our_n > a.our_n)) {
+                int tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+            }
+        }
+    }
+
+    int report_cap = 6;
+    int reported = 0;
+    for (int oi = 0; oi < nsnap && reported < report_cap; ++oi) {
+        FlZeroThrSnap& sn = snaps[order[oi]];
+        // Prefer guest-bearing; if none exist, still dump top our-bin for
+        // posctrl visibility (proves sampler reaches game binary frames).
+        if (sn.guest_n == 0 && thr_with_guest > 0) continue;
+        ++reported;
+        fprintf(stderr,
+            "[fl-zero-poll-gbt] n=%llu to_zero_n=%llu thr=%u frames=%d "
+            "guest_n=%d our_n=%d guest_pc=0x%08X t_ms=%lld "
+            "prev_f=0x%X prev_sz=0x%X\n",
+            (unsigned long long)n_change, (unsigned long long)n_to_zero,
+            sn.thr, sn.nframes, sn.guest_n, sn.our_n,
+            (unsigned)g_rs64_last_guest_pc, ms, pf, psz);
+        for (int bi = 0; bi < sn.nframes; ++bi) {
+            Dl_info dli{};
+            const char* sname = sn.names[bi][0] ? sn.names[bi] : nullptr;
+            const char* fname = nullptr;
+            uintptr_t saddr = sn.saddrs[bi];
+            if (dladdr(sn.frames[bi], &dli)) {
+                if (!sname && dli.dli_sname) sname = dli.dli_sname;
+                fname = dli.dli_fname;
+                if (dli.dli_saddr) saddr = (uintptr_t)dli.dli_saddr;
+            }
+            const char* base = fname ? std::strrchr(fname, '/') : nullptr;
+            fprintf(stderr,
+                "[fl-zero-poll-gbt]   thr=%u [%2d] %s | %s+0x%llx\n",
+                sn.thr, bi,
+                sname ? sname : "?",
+                base ? base + 1 : (fname ? fname : "?"),
+                (unsigned long long)((uintptr_t)sn.frames[bi] - saddr));
+        }
+    }
+    fprintf(stderr,
+        "[fl-zero-poll-gbt] n=%llu to_zero_n=%llu event=summary "
+        "nthreads=%u nsnap=%d reported=%d thr_with_guest=%d thr_with_our=%d "
+        "guest_pc=0x%08X t_ms=%lld prev_f=0x%X prev_sz=0x%X\n",
+        (unsigned long long)n_change, (unsigned long long)n_to_zero,
+        (unsigned)nthreads, nsnap, reported, thr_with_guest, thr_with_our,
+        (unsigned)g_rs64_last_guest_pc, ms, pf, psz);
+
+    for (mach_msg_type_number_t ti = 0; ti < nthreads; ++ti) {
+        mach_port_deallocate(mach_task_self(), threads[ti]);
+    }
+    vm_deallocate(mach_task_self(), (vm_address_t)threads,
+                  sizeof(thread_t) * nthreads);
+    mach_port_deallocate(mach_task_self(), self);
+}
+#endif
+
 // ROGUESQ_LOG_FL_ZERO_WATCH: macOS soft-watch on the fail136c freelist
 // zero-node (default KSEG0 0x801F3CC0 → phys 0x1F3CC0). Polls 16-byte
 // header every 250us; logs mutations + 5s heartbeat (positive control).
@@ -1762,6 +2018,9 @@ static void start_fl_zero_poller() {
                 // are poller-local (Outcome B expected unless a host bulk path
                 // is somehow on this thread). Posctrl = menu to_zero #1 prints
                 // ≥1 [fl-zero-poll-bt] line. Cap 32 frames; rate-limit 16.
+                // s644: also sample OTHER threads' stacks ([fl-zero-poll-gbt])
+                // — only path that can name a guest writer from a side-thread
+                // detect. Same rate-limit / to_zero gate.
 #ifndef _WIN32
                 if (kind[0] == 't' && n_to_zero <= 16) {
                     void* bt_frames[32];
@@ -1787,6 +2046,11 @@ static void start_fl_zero_poller() {
                             (syms && syms[bi]) ? syms[bi] : "?");
                     }
                     free(syms);
+#if defined(__APPLE__) && defined(__aarch64__)
+                    fl_zero_sample_game_threads(
+                        n_change, n_to_zero, (long long)ms,
+                        (unsigned)pf, (unsigned)psz);
+#endif
                 }
 #endif
                 fflush(stderr);

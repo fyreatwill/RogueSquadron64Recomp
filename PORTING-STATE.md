@@ -50046,3 +50046,61 @@ pre-BT). Two recovery-active attempts both saw freelist-shaped to_zero #2:
   as valid 0x2/0x60 before external stomp (H-oob-store reconfirm).
 - thr11d_new=0 on both: freelist stomp is **not** thr11d-gated; can study
   freelist writer without thr11d∧fail136c coincidence.
+
+## Session 644 (2026-08-10) — [fl-zero-poll-gbt] game-thread sample LIVE
+
+### Work unit
+Consume s643 freeroll SOAK-RESULTS; land non-poller game-thread stack sample
+at freelist `to_zero` detect (H-gbt-writer).
+
+### s643 freeroll fold
+`s643_flz_bt_freeroll` rc=137 / 600s hard cap:
+- flz_bt=1 flz_to_zero=1 on recovery-silent attempts — menu-shaped only
+  (`prev_f=0x8E8E`), poller BT frames pure `start_fl_zero_poller`/pthread
+- freelist-shaped `prev_f=0x2 prev_sz=0x60` **never** this soak (Outcome C)
+- thr11d_new=0 fail136c=0 recov768=0
+- Prior dual-source freelist to_zero (s642 retry) still stands; this soak
+  simply didn't reach recovery-active freelist stomp window
+
+### Landed: `[fl-zero-poll-gbt]`
+In `src/main/main.cpp` `start_fl_zero_poller`, on `event=to_zero` (same
+rate-limit 16 as poller BT):
+1. `task_threads` enumerate process threads
+2. `thread_suspend` + `thread_get_state(ARM_THREAD_STATE64)` + FP chain via
+   `mach_vm_read_overwrite` (safe — no SEGV on corrupt FP)
+3. Rank by guest leaf count; dump top 6 thr × 32 frames
+4. Guest classifier: unmangled C recomp leaves (`rs_malloc`/`rs_memset`/
+   `heapFree*`/`menuOverlayInit`/…), OSThread host helpers
+   (`wait_for_resumed`/`_thread_func`), reject `recomp::`/`RT64::`/
+   `ultramodern::` class methods (s644 v1 false-positive trap)
+
+### Same-run posctrl (driven HOLD_S=70)
+Tag `s644_flz_gbt_posctrl_v2_20260810140015`:
+- menu to_zero #1 t_ms=51542 prev=`0x8E8E8E8E` → zeros
+- `[fl-zero-poll-gbt] event=summary thr_with_guest=17 reported=6 nsnap=19`
+- Top stacks name real OSThread hosts:
+  - thr menu: `menuOverlayInit` ← `menuControllerInput` ← `submitGfxFrame`
+    ← `osRecvMesg` ← `wait_for_resumed`
+  - thr event: `mainEventQueueWorker` ← `recvServiceMessage` ← `osRecvMesg`
+  - thr save: `saveServiceWorker` ← `recvServiceMessage`
+  - thr video: `startServiceWorker` ← `thread3_video_handle`
+- All parked in wait/recv at detect — **no store leaf** on menu to_zero #1
+  (250µs poll latency; short texture clear already returned). Instrument is
+  LIVE for freelist freeroll where a bulk path may still be on-stack.
+
+### Discriminators for next freeroll (`s644_flz_gbt_freeroll.sh`)
+| Outcome | Evidence | Next |
+|---------|----------|------|
+| A | freelist to_zero + guest leaf (`rs_malloc`/`rs_memset`/heap*) | instrument that class |
+| B | freelist to_zero + only wait/recv on game thr | expand `g_rs64_last_guest_pc` on freelist store idioms |
+| C | no freelist to_zero | requeue once |
+
+### Ruled out / confirmed
+- H-hostbt-writer naming: already REFUTED s643; reconfirmed
+- H-gbt-writer posctrl: instrument reaches game threads (CONFIRMED)
+- H-gbt-writer names freelist store: still open (needs freelist event)
+- s643 freeroll freelist miss is recovery-silence, not instrument cold
+
+### Queued
+`scratch/agent/soak_queue/s644_flz_gbt_freeroll.sh` — SCORE adds
+`flz_gbt` / `flz_gbt_guest` / `flz_gbt_frames`; dumps gbt block.

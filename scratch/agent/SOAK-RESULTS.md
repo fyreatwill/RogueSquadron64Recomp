@@ -361,3 +361,5 @@
 20260810-s642 | s641_drain_mesh_stomp_freeroll ANALYZED | posctrl LIVE (hb + dms n=34 all sample@0x807*); to_zero#1 texture→0 dms_tgt=0 → H-drainmesh-stomp REFUTED; no freelist-shaped to_zero#2 (force6=0 hsel=0 craft-select hold); outer rc=137 600s cap
 20260810-131743 | s642_drain_mesh_stomp_freeroll_retry | rc=137 | 600s | scratch/agent/soak_results/s642_drain_mesh_stomp_freeroll_retry_20260810-131743.log
 20260810-s643 | s642_drain_mesh_stomp_freeroll_retry ANALYZED | freelist to_zero #2×2 (0x2/0x60→0 t≈164–165s) dms_tgt=0 → H-drainmesh-stomp REFUTED freelist-class dual-source; thr11d_new=0 both; crash unregisterServiceWorker; zero_node@0x801F3CC0 att2 prev=0x801ED1B0; header placed t≈146s then stomped +19s
+20260810-133743 | s643_flz_bt_freeroll | rc=137 | 600s | scratch/agent/soak_results/s643_flz_bt_freeroll_20260810-133743.log
+20260810-s644 | s643_flz_bt_freeroll ANALYZED | posctrl flz_bt=1 menu 0x8E8E→0 poller-only BT (B structural reconfirm); freelist-shaped to_zero=0 (Outcome C); recov768=0 thr11d_new=0 fail136c=0 all attempts; outer rc=137 600s cap mid att4; no freelist event this soak
