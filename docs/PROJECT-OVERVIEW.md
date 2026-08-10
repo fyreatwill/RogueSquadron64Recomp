@@ -2497,10 +2497,10 @@ CLEAN hangarbay n=2600, 0 fires on new sites. Surfaced item -345 DIRECT gap afte
 - **(s85→s91)** "`do_rom_read` corrupted `physical_addr` is nondeterministic garbage" — the exact same
   DMA call recurred byte-for-byte 3 times across 3 sessions; reclassified deterministic, reproducible.
 
-## 27. M3 thr11→sec2 hangar-exit pipeline (s577–s616), migrated from CURRENT-TRUTH.md s615 maintenance
+## 27. M3 thr11→sec2 hangar-exit pipeline (s577–s617), migrated from CURRENT-TRUTH.md s615 maintenance
 
 Durable summary of the active M3 DoD path after hangar exit. Session-level detail lives in
-PORTING-STATE Sessions 577–616; CURRENT-TRUTH keeps only open residuals (-381..-373, -361, -7).
+PORTING-STATE Sessions 577–617; CURRENT-TRUTH keeps only open residuals (-382..-373, -361, -7).
 
 ### What was confirmed
 
@@ -2530,22 +2530,26 @@ PORTING-STATE Sessions 577–616; CURRENT-TRUTH keeps only open residuals (-381.
   walk (`si_addr=0x380000000`). Soft-skip guards + `[level-tex-cache]` landed; live A–D verify
   still PENDING (s614–s615 recovery-silent / pre_eng with force_skip). Natural ACE80 can engage
   without a force-write.
-- **s616**: FORCE_STATE6 / case5-entry used `uint32_t base=0x800D0000` with `MEM_*` → OOB rdram
-  index `0x1000CC3E7` on 64-bit (correct S32-extended idx is `0xCC3E7`). Explains case5-entry
-  reading 255/110 while hangar-state=5, and s613 "force 3→6" never changing real hangar state.
-  Fix: `gpr base = S32(0x800D << 16)` in force-state6 + case3-start. State==5 gate (-379) still
-  correct policy. Live-verify soak: `s616_force6_kseg0_base_fix`.
+- **s616–s617**: FORCE_STATE6 / case5-entry used `uint32_t base=0x800D0000` with `MEM_*` → OOB
+  rdram index `0x1000CC3E7` on 64-bit (correct S32-extended idx is `0xCC3E7`). Fix
+  `gpr base = S32(0x800D << 16)` **live-verified s617**: case5_n0_state=5, force old=5→6,
+  hangar 5→6→8. **-381 CLOSED.** With force working, recovery-active scored path hits a new
+  pre-thr11d crash in `traverseSceneGraphRecursive` (`si_addr=0x38000f421` / guest
+  `0x8000f421`, stack setupCameraMatrices←runModelViewerLoop) — item **-382**, 1× free-reroll;
+  thr11 id=11 created post-hsel but never destroyed; sec4 whole-run counts were early cinematic
+  only. Class-D craft-shadow still PENDING thr11d.
 
 ### Open residuals (do not re-derive)
 
 | Item | Residual | Status |
 |------|----------|--------|
+| -382 | post-force `traverseSceneGraphRecursive` SIGBUS pre-thr11d | 1×; free-reroll; escalate on 2nd same host stack |
 | -374 | recovery cell `0x76B768` silence after eng+inject | free-reroll; co-primary |
 | -375 | `mat3x3InverseInto` Abort mid-window | 1×; free-reroll; escalate on 2nd |
 | -376/-377 | ship ret=1 / store co-gate for thr11d | H-ship1 SUPPORTED; H-ship1b open |
-| -378 | craft-shadow null walk before thr12 | guard landed; live-verify PENDING |
+| -378 | craft-shadow null walk before thr12 | guard landed; live-verify PENDING (needs thr11d) |
 | -379 | FORCE_STATE6 only at state==5 | gate kept; s613 recharacterized by -381 |
-| -381 | FORCE_STATE6 KSEG0 `uint32` base OOB | **fixed s616**; live-verify PENDING |
+| -381 | FORCE_STATE6 KSEG0 `uint32` base OOB | **CLOSED s617** (fix + live-verify) |
 | -373 | post-sec2 `packTlut`/HMT SIGBUS | 1×; primary bottleneck once pipeline completes |
 | material `0x8000e29c` | `findOrCreateMaterial` | 2×; free-reroll noise |
 

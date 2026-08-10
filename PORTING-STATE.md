@@ -48563,3 +48563,78 @@ Consume s616 soak: require BASE_CTRL_PASS; if force old=5 writes and recovery fi
 score class-D A–D. If ctrl still fails, rebuild path is wrong (binary not rebuilt / fixup
 not applied). If ctrl pass + recovery still silent for 2+ eng runs, silence is independent
 of FORCE_STATE6 base (H-recov1 class F continues free-reroll).
+
+## Session 617 — 2026-08-10 — fold s616 soak: KSEG0 base fix LIVE-VERIFIED; class-D blocked by scene-graph SIGBUS pre-thr11d
+
+### Planned unit
+Consume `s616_force6_kseg0_base_fix` soak: require BASE_CTRL_PASS; score force6 + class-D A–D
+on recovery-active (NEXT.md HYPOTHESIS-ID: m3-post-exit-fs-stall).
+
+### Soak fold (`s616_force6_kseg0_base_fix`, rc=1, 447s)
+2 attempts:
+- **a1** (mat3inv free-reroll): force6=1 force_old5=1 force_skip=0 case6=1 hsel=1;
+  `case5_n0_state=5`; hangar-state 5→6→8 after `[case5-force-state6] old=5 new=6`;
+  early=mat3inv (`mat3x3InverseInto` ← setupCameraMatrices ← runModelViewerLoop).
+- **a2** (recovery-active scored): force6=1 force_old5=1 force_skip=0 case6=1 hsel=1
+  recov768=7948 crash=1; `ctrl_good=5 ctrl_bad=0 case5_n0_state=5`;
+  class_hint=`D_shadow_or_other_crash` (script mislabel — see below).
+
+### Positive control — H-kseg3 CONFIRMED; -381 CLOSED
+| Marker | a1 | a2 |
+|--------|----|----|
+| case5-entry n=0 state | 5 | 5 |
+| hangar-state at case5 | 5 | 5 |
+| force old=5→6 | yes | yes |
+| hangar after force | 6 then 8 | 6 then 8 |
+| force_skip | 0 | 0 |
+
+S32 KSEG0 base fix is live in the binary. H-force6c CONFIRMED (real hangar byte written).
+
+### Class-D A–D — NOT scored (path not reached)
+Post-hsel on a2:
+- thr-destroy id=10 (prior thr11) then thr-create id=11 entry=`0x8006F2CC`
+- **id=11 never destroyed** before crash → thr11d incomplete
+- `start-match: section 4` appears only early (cinematic overlay line ~6141); **sec4_post=0**
+- thr12_post=0, cshadow_a/w=0, ltex=0 (craft-shadow guards never entered)
+- Score thr11c=5 / sec4=1 were **whole-run** counts (misleading); post-hsel metrics are what matter
+
+### Crash (scored a2) — item -382
+```
+[CRASH] signal 10 Bus error
+si_addr=0x38000f421  x9=0x000000008000f421
+pc-symbol=traverseSceneGraphRecursive+1984
+stack: traverseSceneGraphRecursive ← setupCameraMatrices ← runModelViewerLoop
+       ← menuOverlayInit ← mainGameLoop
+last-guest-pc=0x80015544  # STALE (-324 family); do not escalate on guest pc alone
+```
+`si_addr = rdram_base(0x300000000) + guest 0x8000f421` shape. Not craft-shadow
+(`si_addr=0x380000000` null walk). Free-reroll until 2nd same host stack.
+
+Also noted: post-hsel ship-store `0x8015FD90` then ship-zero before thr11 recreate — may
+interact with H-ship1 (ret=1 co-gate) if thr11d is later attempted with ship null.
+
+### Hypotheses
+| ID | Claim | Result |
+|----|-------|--------|
+| H-kseg3 | S32 base makes case5-entry match hangar-state | **CONFIRMED** |
+| H-force6c | force old=5→6 writes real hangar | **CONFIRMED** |
+| H-Dshadow1 | null load_asset walk primary class-D death | still PENDING (thr11d not reached) |
+| H-sg1 | post-force scene-graph SIGBUS is free-reroll noise | 1×; free-reroll recipe queued |
+
+### Soak enqueued
+`scratch/agent/soak_queue/s617_scenegraph_freeroll_classd.sh`
+- Free-reroll mat3inv + first traverseSceneGraphRecursive SIGBUS (same host stack)
+- Score thr11c_post / thr11d_post / sec4_post / thr12_post / cshadow / ship_zero_post
+- `ROGUESQ_LOG_SCENE_TRAVERSE=1` armed; class_hint H/I for scenegraph vs thr11-live
+
+### Do not
+- Reintroduce uint32 KSEG0 bases into MEM_* patches
+- Remove state==5 FORCE_STATE6 gate
+- Treat s616 score thr11c/sec4 whole-run as thr11d evidence
+- Escalate -382 on last-guest-pc=0x80015544 alone
+- Raise HOLD_S past 210 / soft-skip mat3inv / single-chase packTlut
+
+### Next
+Consume s617 soak: if thr11d_post+sec4_post fire, score class-D A–D; if 2nd same-stack
+scenegraph crash, escalate -382 with node-pointer site audit; if thr11 live no destroy,
+revisit ship-zero post-hsel (H-ship1).

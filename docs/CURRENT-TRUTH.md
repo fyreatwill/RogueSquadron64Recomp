@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s616)
+## Current truth (established by session 295; unchanged, reviewed through s617)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -120,17 +120,18 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s616**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s617**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
   `loadLevelTextureCache`) → sec2 (mission overlay) is reachable when recovery cell `0x76B768`
   fires (s608; H-handoff2 / 76BA90 REFUTED).
 - Co-gates: recovery silence (-374), mid-window mat3inv Abort (-375, free-reroll), post-hsel
   `isPlayerShipActive` ret=1 / ship store (-376/-377, H-ship1 SUPPORTED), class-D craft-shadow
-  null walk (-378, guard landed, live-verify PENDING), FORCE_STATE6 KSEG0 base OOB (-381 fixed
-  s616; gate at state==5 remains -379).
+  null walk (-378, guard landed, live-verify still PENDING — thr11d/thr12 not reached on s616
+  scored path), FORCE_STATE6 KSEG0 base OOB (**-381 CLOSED s617**: S32 fix live-verified),
+  post-force `traverseSceneGraphRecursive` SIGBUS before thr11d (**-382**, 1× free-reroll).
 - Tools (default OFF): `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`, `FS_PIPE_INJECT`.
 - Post-sec2 residual: HMT/`packTlut` SIGBUS (-373, 1×). Material `0x8000e29c` (2×, free-reroll).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-381; Sessions 577-616.
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-382; Sessions 577-617.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -148,28 +149,31 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -381. The next NEW item takes -382.
+a range pointer. Highest allocated so far: -382. The next NEW item takes -383.
 
-### Active M3 pipeline (s577–s616) — open residuals only
+### Active M3 pipeline (s577–s617) — open residuals only
 
--381. **(s616) FORCE_STATE6 / case5-entry used `uint32_t` KSEG0 base → OOB MEM_* on
-    64-bit host; S32-extended `gpr` fix landed.** s615 a2: hangar-state=5 while
-    `[case5-entry] state=255` and force always skipped (old=255/110/0 across s614–s615).
-    Address math: `MEM_BU` with `uint32_t 0x800D0000` → rdram idx `0x1000CC3E7`; with
-    `S32(0x800D<<16)` → `0xCC3E7`. s613 "force old=3→6" never changed real hangar state
-    (hangar-state stayed 5 after the "write") — recharacterize -379 root cause as OOB
-    write, not "premature state 3→6". Fix: `gpr base = S32(0x800D << 16)` in case5
-    force-state6 + case3-start (funcs_28.c + fixup_game_funcs.py s616 migration).
-    Binary rebuilt. Live-verify soak enqueued: `s616_force6_kseg0_base_fix` (ctrl =
-    case5-entry state ∈ {0..8}, not 255/110; then class-D A–D on recovery-active).
-    Full: Session 616.
+-382. **(s617) Post-force recovery-active crash in `traverseSceneGraphRecursive` before
+    thr11d — blocks class-D scoring (1×; free-reroll).** s616 scored a2: BASE_CTRL_PASS
+    + force6 old=5→6 (hangar 5→6→8) + recov768=7948; thr-destroy id=10 then thr-create
+    id=11 (`0x8006F2CC`); **id=11 never destroyed**; sec4 whole-run=1 is early cinematic
+    only (`sec4_post=0`); thr12/cshadow/ltex all 0 post-hsel. Crash: SIGBUS
+    `si_addr=0x38000f421` guest `x9=0x8000f421`, host
+    `traverseSceneGraphRecursive+1984` ← `setupCameraMatrices` ← `runModelViewerLoop` ←
+    `menuOverlayInit`. `last-guest-pc=0x80015544` is STALE (-324 family). Score script
+    mislabeled this `D_shadow_or_other_crash` — craft-shadow path never entered. Free-
+    reroll like mat3inv until 2nd same host stack; soak `s617_scenegraph_freeroll_classd`
+    scores thr11d_post/sec4_post correctly. Full: Session 617.
+
+-381. **(s616→s617) FORCE_STATE6 KSEG0 `uint32` base OOB — FIXED and LIVE-VERIFIED.**
+    S32-extended `gpr base = S32(0x800D << 16)` in case5 force-state6 + case3-start.
+    s616 soak: `case5_n0_state=5` (matches hangar-state), `ctrl_good=5 ctrl_bad=0`,
+    `force6=1 force_old5=1 force_skip=0`, hangar 5→6→8 after force. H-kseg3 + H-force6c
+    CONFIRMED. **CLOSED.** Full: Sessions 616-617.
 
 -380. **(s615) Fold `s614_class_d_force_gate` + `s615_class_d_recov_active` — both
-    unscored recovery_silent; force_skip dominated by OOB base (see -381).** s615
-    3 attempts / 564s: a1 force_skip pre_eng crash (`tickWrappingTimerAccumulatorList`);
-    a2 engaged case6+hsel+ace80 force6=0 force_skip (old=255) then recovery_silent;
-    a3 pre_eng budget. Natural ACE80 still engages without force-write. Class-D
-    thr11d path not scored. Full: Sessions 615-616.
+    unscored recovery_silent; force_skip was OOB base (closed by -381).** Natural ACE80
+    still engages without force-write. Full: Sessions 615-617.
 
 -379. **(s614) FORCE_STATE6 state==5 gate — still correct policy; s613 hang recharacterized
     by -381 as OOB write (hangar never left 5), not a successful 3→6 clobber.** Gate
@@ -207,12 +211,13 @@ a range pointer. Highest allocated so far: -381. The next NEW item takes -382.
     is STALE** — do not merge with -326. Co-symptom: `osViSetMode` width=24. 2nd occ pending.
     Full: Session 608.
 
--361. **(s589-s616) thr11→sec4→sec2 pipeline — reachable when recovery fires (s608); blocked
+-361. **(s589-s617) thr11→sec4→sec2 pipeline — reachable when recovery fires (s608); blocked
     by recovery silence (-374), mat3inv (-375), missing ship re-activation (-376/-377),
-    class-D craft-shadow (-378), FORCE_STATE6 OOB base (-381, fixed; gate -379 remains),
-    or post-sec2 packTlut (-373). thr-11=`saveServiceWorker` `0x8006F2CC`; thr-12=
+    class-D craft-shadow (-378, still PENDING thr11d), post-force scene-graph SIGBUS
+    (-382, 1× free-reroll), FORCE_STATE6 gate (-379; OOB base -381 CLOSED), or post-sec2
+    packTlut (-373). thr-11=`saveServiceWorker` `0x8006F2CC`; thr-12=
     `hudDisplayUpdateWorker` via `loadLevelTextureCache`. Do not raise HOLD_S past 210.
-    Free-reroll noise. Full arc: PROJECT-OVERVIEW §27; Sessions 589-616.**
+    Free-reroll noise. Full arc: PROJECT-OVERVIEW §27; Sessions 589-617.**
 
 ### Closed product lineage (FULL_SYNC inject + thr pipeline setup) — do not re-open
 
@@ -292,9 +297,9 @@ a range pointer. Highest allocated so far: -381. The next NEW item takes -382.
 -8. **`frameStartReset` SIGBUS** — 3 occurrences (s85/s108/s156); no located faulting insn.
 
 -7. **M3 hangar-exit → mission-entry (DoD gate): OPEN.** Exit+cutscene CONFIRMED s577;
-    FULL_SYNC inject product-fixed; force6 engagement CONFIRMED s606; s608 first force-path
-    sec2 after thr11d when recovery fires. Active residuals: -381..-373 / -361. Tools still
-    default OFF.
+    FULL_SYNC inject product-fixed; force6 engagement CONFIRMED s606 and **live-writes real
+    hangar state s617** (-381 CLOSED); s608 first force-path sec2 after thr11d when recovery
+    fires. Active residuals: -382..-373 / -361 / -379. Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
 

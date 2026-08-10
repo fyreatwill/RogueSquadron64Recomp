@@ -2,53 +2,49 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s616 recap (read this first)
+## s617 recap (read this first)
 
-**FORCE_STATE6 KSEG0 base OOB root-caused and fixed.**
-- s615 a2: hangar-state=5, case5-entry state=255, force_skip forever, recovery_silent
-- Cause: `uint32_t base=0x800D0000` + `MEM_*` → rdram idx `0x1000CC3E7` (OOB);
-  correct `S32` base → `0xCC3E7`
-- s613 "force 3→6" never wrote real hangar (state stayed 5) — recharacterize -379
-- Fix: `gpr base = S32(0x800D << 16)` in funcs_28.c + fixup; binary rebuilt
-- Soak enqueued: `s616_force6_kseg0_base_fix` (not yet run by loop at session end)
+**FORCE_STATE6 KSEG0 S32 base fix LIVE-VERIFIED (-381 CLOSED).**
+- s616 soak: case5_n0_state=5, force6=1 force_old5=1, hangar 5→6→8
+- Class-D A–D NOT reached: thr11 id=11 created post-hsel, never destroyed
+- sec4 whole-run=1 was early cinematic only (sec4_post=0)
+- New residual -382: traverseSceneGraphRecursive SIGBUS (guest 0x8000f421 /
+  si_addr 0x38000f421) before thr11d — 1× free-reroll
+- Soak enqueued: `s617_scenegraph_freeroll_classd` (not yet run at session end)
 
-Full: CURRENT-TRUTH -381; PORTING-STATE Session 616; PROJECT-OVERVIEW §27.
+Full: CURRENT-TRUTH -382/-381; PORTING-STATE Session 617; PROJECT-OVERVIEW §27.
 
 ## This iteration's work unit
 
-**Consume s616 soak (or requeue if missing); verify base fix + class-D A–D.**
+**Consume s617 soak; classify thr11d vs scene-graph 2nd-occ vs class-D.**
 
-1. Fold `scratch/agent/SOAK-RESULTS.md` line for `s616_force6_kseg0_base_fix`.
-   If absent/cancelled, requeue the same script from soak_queue/done or rewrite.
-2. **Positive control (must pass before trusting force/class-D):**
-   - `[case5-entry] n=0 state=` ∈ {5,6} (or other 0..8), **not** 255/110
-   - Prefer agreement with nearby `[hangar-state] state=`
-   - If still garbage: binary not rebuilt / fix not linked — stop and fix build path
-3. On recovery-active thr11d+sec4, score A–D (same as s615 NEXT):
-   craft_shadow_asset/walk, level_tex_*, thr495FC_post, sec2_post, thr11_destroy,
-   force6, force_old5, force_skip, recov76B768, ship_store
+1. Fold `scratch/agent/SOAK-RESULTS.md` line for `s617_scenegraph_freeroll_classd`.
+   If absent/cancelled, requeue from done/ or rewrite.
+2. **Require BASE_CTRL_PASS** still (case5_n0_state ∈ {5,6}, not 255/110).
+3. On recovery-active scored attempt, prefer **post-hsel** metrics only:
+   thr11c_post, thr11d_post, sec4_post, thr12_post, cshadow_*, ltex,
+   ship_store, ship_zero_post, scenegraph=
 4. Classify:
-   - **CTRL_FAIL** case5-entry still OOB → rebuild
-   - **A** guard + thr12 + sec2 → class D dissolved
-   - **B** `D_guard_thr12_no_sec2`
-   - **C** `D_guard_no_thr12`
-   - **D** shadow crash / guard=0
-   - **E** eng + recovery_silent with CTRL pass → silence ≠ force-base; free-reroll
-   - **F** recov + thr11 live (ship gate)
-5. Do NOT remove state==5 gate. Do NOT reintroduce uint32 KSEG0 bases into MEM_*.
+   - **G** thr11d_post≥1 ∧ sec4_post≥1 ∧ (cshadow|thr12|sec2) → class-D A–D path
+   - **H** scenegraph=1 on scored (2nd same host stack) → escalate -382 (node ptr audit)
+   - **I** thr11c_post≥1 thr11d_post=0 no crash / other crash → ship-zero / handoff
+   - **A–D** craft-shadow class-D as s615 when guards fire
+   - **E** recovery_silent (free-reroll already)
+5. Do NOT remove state==5 gate. Do NOT reintroduce uint32 KSEG0 MEM bases.
 6. Do NOT raise HOLD_S past 210 / soft-skip mat3inv / single-chase packTlut.
+7. Do NOT treat whole-run thr11c/sec4 as thr11d evidence.
 
 ## Hypotheses (active)
 
 | ID | Claim | Discriminator |
 |----|-------|---------------|
-| H-kseg1 | (CONFIRMED s616) uint32 base → OOB MEM | — |
-| H-kseg2 | (CONFIRMED s616) s613 force never wrote real hangar | — |
-| H-kseg3 | S32 base makes case5-entry match hangar-state | ctrl pass on s616 soak |
-| H-force6c | with real base, force old=5→6 can write when stuck at 5 | force6=1 force_old5=1 |
+| H-kseg3 | (CONFIRMED s617) S32 base → case5-entry matches hangar | — |
+| H-force6c | (CONFIRMED s617) force old=5→6 writes real hangar | — |
+| H-sg1 | scenegraph SIGBUS is free-reroll noise (1×) | 0 more hits after freeroll |
+| H-sg2 | 2nd same host stack → real residual needing guard | scenegraph on scored a* |
 | H-Dshadow1 | null load_asset walk primary class-D death | guard fires ∧ thr12 appears |
-| H-Dshadow2 | soft-skip alone insufficient; loadLevelTextureCache gated | guard≥1 ∧ thr12=0 |
 | H-ship1 | thr11 destroy needs post-hsel ship ret=1 | SUPPORTED multi-run |
+| H-ship1z | post-hsel ship-zero blocks thr11d of new thr11 | thr11c_post≥1 thr11d_post=0 |
 | H-recov1 | thr11d/sec2 requires 76B768 | SUPPORTED |
 | H-force6b | FORCE_STATE6 only safe at state==5 | keep gate |
 
@@ -56,15 +52,14 @@ Full: CURRENT-TRUTH -381; PORTING-STATE Session 616; PROJECT-OVERVIEW §27.
 - `uint32_t base = 0x800D0000` (or any zero-extended KSEG0) in MEM_* patches
 - Remove state==5 FORCE_STATE6 gate
 - Raise HOLD_S past 210
-- Soft-skip mat3inv det0 without 2nd occ + abnormal control
+- Soft-skip mat3inv / scenegraph without 2nd same host stack
 - Single-chase packTlut before 2nd occ same host stack
 - Leave FORCE_STATE6_AFTER / FS_PIPE_INJECT default-ON
-- Score recovery-silent / mat3inv / matnoise as pipeline failures when free-reroll works
+- Trust whole-run thr11c/sec4 as post-hsel thr11d/sec4
 
 ### Reference tags
-`[case5-entry]`, `[case5-force-state6]`, `[case5-force-state6-skip]`,
-`[craft-shadow-asset-guard]`, `[craft-shadow-walk-guard]`, `[level-tex-cache]`,
-`[ship-store]`, `[ship-zero]`, `[ship-active]`,
-`loadCraftShadowTextures`, `loadLevelTextureCache`,
-`0x8006F2CC`, `0x800495FC`, `0x76B768`, `[hangar-sel]`, `[case6-force-start]`,
-`site=0x800ACE80`, S32 KSEG0 base.
+`[case5-entry]`, `[case5-force-state6]`, `[craft-shadow-asset-guard]`,
+`[craft-shadow-walk-guard]`, `[level-tex-cache]`, `[ship-store]`, `[ship-zero]`,
+`[scene-traverse-entry]`, `traverseSceneGraphRecursive`, `setupCameraMatrices`,
+`runModelViewerLoop`, `0x8006F2CC`, `0x800495FC`, `0x76B768`, `0x8000f421`,
+`si_addr=0x38000f421`, thr11d_post, sec4_post.
