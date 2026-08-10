@@ -50357,3 +50357,49 @@ F (CRASH recurrence → escalate off page-mprotect).
 - Do not treat H-perturb-from-BT as open for silence elevation (REFUTED).
 - Do not re-enable full BT on every want==2 fault.
 - Do not re-open H-memset / H-drainmesh without new counterexample.
+
+## Session 650 (2026-08-10) — s649 freeroll Outcome B; H-busy-rearm REFUTED; ADLB leaf probe
+
+### Planned unit
+Consume s649_fl_late_recover_freeroll SOAK-RESULTS (A/A2/B/C/E/F).
+
+### s649 freeroll facts (outer rc=137 at 600s mid-att2 HOLD)
+- Att1: recovery_silent SCORE; flz_to_zero=1 menu-shaped only (0x8E8E);
+  flz_fault_arm_fl=1; flz_fault_hdr=0 late=0; crash=0.
+- Att2: recovery 76B768@+172s LIVE; hangar-sel + force6; thr11 id=11 created
+  post-hsel, **not destroyed** (thr11d_new=0).
+  - **arm_freelist@t=145991 f=0x2 sz=0x60 LIVE**
+  - want=2 neighbor faults n=27–32 buildModelViewerTextPage (late=0, in_hdr=0);
+    busy_rearm n=1–4 (last_sym buildModelViewerTextPage / submitSceneNodeRender)
+  - heartbeats 150–165s: flags=0x2 size=0x60, fault_armed=1, fault_n=**49**
+    stuck, fault_hdr=0
+  - **freelist to_zero #2 @t=165335** prev_f=0x2 prev_sz=0x60 → zeros
+  - to_zero_correlate: last_n=49 last_in_hdr=0 last_fa=0x3001f3d10 (+0x50)
+    last_sym=**allocateDisplayListBuffer** last_want=2 busy_rearm_n=4 fault_hdr=0
+  - zero_node site=malloc first at 0x801F3CC0 prev=0x801ED1B0 (same as s640)
+  - **CRASH=0** post-arm (late-recover / rate-limit soft-E; late=0 this run)
+  - Outer 600s cap mid HOLD after ~365s of att2 (no SCORE line for att2)
+
+### Discriminators
+- **Outcome B** (recovery-active): arm_fl + freelist to_zero + flz_fault_hdr=0.
+- **H-busy-rearm REFUTED freelist-class**: ~15s of armed=1 with fault_n frozen
+  then silent zero — not a 20µs race-only story; page watch missed the store.
+- **H-fault-writer**: still no in_hdr leaf; correlate names ADLB weakly
+  (last_in_hdr=0, 15s gap).
+- **H-late-recover soft-E**: no post-arm buildModelViewerTextPage CRASH.
+- **H-recov-co-gate-stomp reconfirmed**: freelist stomp on recovery-active att2.
+- thr11d independent: thr11d_new=0 with freelist stomp.
+
+### Landed
+- `tools/apply_s650_adlb_fl_stomp.py` + funcs_3.c allocateDisplayListBuffer
+  store probes → `[adlb-fl-stomp]` (10 sites, TARGET if dest in header window).
+  fixup_game_funcs.py regen warning. Posctrl 55s: adlb_n=123, TARGET=0,
+  flz_fault_n=24, CRASH=0.
+- Queued `scratch/agent/soak_queue/s650_adlb_fl_stomp_freeroll.sh`.
+
+### Rules out / do not
+- Do not treat H-busy-rearm as still-evaluable for freelist (REFUTED).
+- Do not treat last_sym=allocateDisplayListBuffer alone as writer proof
+  without adlb TARGET co-timed with freelist to_zero.
+- Do not score Outcome B from silent-only soaks (this run was recovery-active).
+- Do not re-open H-memset / H-drainmesh without new counterexample.
