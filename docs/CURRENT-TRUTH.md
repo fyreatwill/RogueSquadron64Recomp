@@ -31,7 +31,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s583)
+## Current truth (established by session 295; unchanged, reviewed through s584)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -143,13 +143,13 @@ with live GFX (H-stall1/2/classic-H-stall3 REFUTED; H-stall3b CONFIRMED). **s580
 **H-sync1 CONFIRMED** (e9_b=0 on 132/132 complete `endB8` walks), **H-sync2
 REFUTED** (0 probes with e9_b≥1 & syncs=0). Pre-plateau cutscene same dual DLs
 had e9_b=0 yet syncs=1 (~230 tasks) then flip to syncs=0 → **H-sync4** filed.
-**s583:** `ROGUESQ_LOG_RDP_FULLSYNC` 2nd force-exit: H-sync4 source =
-**real 8-byte guest `E9000000` at fixed phys `0x76DF60`** (238 consecutive
-singles = 238 dual `syncs=1`; not synthetic, not sticky hist, not multi-cmd
-misdecode). Emission stops cold after last single; sticky byte mutates
-E9→E7→FD. DoD gate = **cutscene→in-mission** past FULL_SYNC starvation + craft
-input. *Done when:* 60s in-mission render, craft responds to synthetic input,
-stability 0, phase timeline covers the mission.
+**s583:** H-sync4 source = real 8-byte `E9000000` at phys `0x76DF60` (238
+singles). **s584:** that addr is a **shared DPC staging cell**; stop edge =
+LLE rewrites cell E9→E7 (PIPE_SYNC) while dual DLs continue; submits never
+die. Force path recovers FULL_SYNC at `0x76A838` (~task 6258). Natural s577
+zero-sync tail still distinct. DoD gate = **cutscene→in-mission** past
+FULL_SYNC gap + craft input. *Done when:* 60s in-mission render, craft responds
+to synthetic input, stability 0, phase timeline covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
@@ -164,15 +164,24 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -353. The next NEW item takes -354.
+a range pointer. Highest allocated so far: -354. The next NEW item takes -355.
 
--353. **(s583) H-sync4 stop edge — why fixed-slot FULL_SYNC at `0x76DF60` stops.**
-    Source resolved under -352. Remaining: LLE/guest path that *submits* that
-    address, and what changes at the dual-buffer plateau edge (byte mutates
-    E9→E7→FD; zero new `[rdp-fullsync]` after last single). Primary next:
-    identify owner of phys `0x76DF60` (side buffer / RDP ring / LLE output slot)
-    and the condition that ends 8-byte submits from it. Discriminators: write
-    watch / ucode path that DPC-submits that addr / plateau re-submit experiment.
+-354. **(s584) H-sync4 stop edge RESOLVED as staging-cell opcode switch; next =
+    why LLE emits PIPE_SYNC (E7) instead of FULL_SYNC (E9) at dual edge + path
+    recovery.** `ROGUESQ_LOG_FS_SLOT` (poller + submit + dense task_end): phys
+    `0x76DF60` is a **shared 8-byte DPC staging cell** (always size=8), not a
+    dedicated FULL_SYNC. Same-run: task 5569 syncs=1 bytes=E9… → 5570 syncs=0
+    bytes=E7…; 237 E9 submits then 150 E7 + 530 FD at same lo; dual `dl_ptr` pair
+    continues (H5b/H5c **REFUTED**). Force path **recovers** FULL_SYNC at task
+    #6258 from new cell **`0x76A838`** (1406 singles, still e9_b=0) — s582/s583
+    "permanent" plateau was death-truncated. Natural s577 772-zero tail still
+    open as a different branch. Primary next: guest/LLE condition for terminal
+    E9→E7; natural-vs-force recovery A/B; optional diagnostic inject FULL_SYNC
+    on E7-only tasks (not product fix).
+
+-353. **(s583/s584) H-sync4 stop edge — RESOLVED s584.** Owner = shared LLE DPC
+    staging cell at phys `0x76DF60`. Stop = content switch E9→E7 (then F3/FD),
+    not submit-path death. Detail under -354.
 
 -352. **(s582/s583) H-sync4 source FOUND (2 independent force-exit runs).**
     Cutscene dual DLs (`dl_ptr` 0x80747930/0x80729690, tris=164, endB8) have
@@ -183,9 +192,9 @@ a range pointer. Highest allocated so far: -353. The next NEW item takes -354.
     phys `0x76DF60`** (= 238 dual `syncs=1`); head size≠8 = 0 (no multi-cmd
     misdecode); hangar positive control first 40 at `0x7778C8` b0=E9. H4b/H4d
     **REFUTED**; "synthetic non-guest" **REFUTED** (bytes are real E9); H4c
-    **CONFIRMED** as side-slot E9 outside task `e9_b` tree. Plateau: zero new
-    singles; sticky `fs_b0` E9→E7→FD. `rsp_force_fullsync` still unwired.
-    Follow-on = item -353 (stop mechanism).
+    **CONFIRMED** as side-slot E9 outside task `e9_b` tree. **s584:** sticky
+    E9→E7→FD is LLE **reusing the cell** for PIPE_SYNC/SETTIMG, not passive
+    corruption; force path later moves FULL_SYNC to `0x76A838`.
 
 -351. **(s581/s582) Factor5 DL walk GREEN; post-exit H-sync1 CONFIRMED, H-sync2 REFUTED.**
     s581 hangar control: late first 30 `syncs=1` e9_a **0/30**, e9_b **30/30**, lin
@@ -213,8 +222,8 @@ a range pointer. Highest allocated so far: -353. The next NEW item takes -354.
     "s178 family" framing **overturned** (believable: fs plateau + frozen PNGs look like s178
     from the outside; refuted by task/present counters). **s580–s581:** walker fixed via
     e9_b. **s582:** H-sync1 CONFIRMED / H-sync2 REFUTED on plateau. **s583:**
-    H-sync4 source = fixed guest E9 at `0x76DF60` (item -352); stop edge open
-    as item -353.
+    H-sync4 source = fixed guest E9 at `0x76DF60` (item -352). **s584:** stop
+    edge RESOLVED (staging-cell E9→E7); follow-on item -354.
 
 -348. **(s568/s569) SIBLING_PTR DIRECT residual same-base gap class — FIXED and FULLY CLOSED 2/2
     (s569).** Systematic audit of the `-334/-340/-345/-346` model across all applied freelist/
@@ -424,13 +433,14 @@ a range pointer. Highest allocated so far: -353. The next NEW item takes -354.
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
 -7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN — exit + cutscene CONFIRMED;
-    in-mission blocked by FULL_SYNC starvation (item -349/-352), not classic s178.**
+    in-mission blocked by dual-phase FULL_SYNC gap (item -349/-354), not classic s178.**
     **Natural exit (s577):** 3→5→6→8 → section 4 → section 2 → VI flip. **s578–s579:**
     not s178; FULL_SYNC starvation with live GFX. **s580–s581:** walk GREEN. **s582:**
-    H-sync1/2 settled; H-sync4 **source** = fixed guest E9 at `0x76DF60` (s583,
-    item -352); **stop edge** open (item -353). Natural leave crashes file-not-chase.
-    Force path diagnostic-only for product exit. **Primary remaining:** why
-    `0x76DF60` FULL_SYNC submits die + cutscene→gameplay gate.
+    H-sync1/2 settled; H-sync4 **source** = staging cell `0x76DF60` (s583);
+    **stop edge RESOLVED s584** (E9→E7 cell rewrite; force recovers at
+    `0x76A838`). Natural leave crashes file-not-chase. Force path
+    diagnostic-only for product exit. **Primary remaining:** why LLE emits
+    E7 not E9 at dual edge + natural-path recovery (item -354).
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.

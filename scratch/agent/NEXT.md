@@ -2,58 +2,62 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s583 recap (read this first)
+## s584 recap (read this first)
 
 | Observation | Implication |
 |-------------|-------------|
-| `[rdp-fullsync]` positive control | hangar 0x7778C8 b0=E9 size=8 |
-| Dual B: 238 singles @ **0x76DF60** = 238 syncs=1 | H-sync4 **source FOUND** |
-| All singles b0=E9 w0=E9000000 size=8 | H4b/H4d REFUTED; not synthetic |
-| e9_b=0 on dual DLs, E9 at fixed side-slot | H4c side-slot CONFIRMED |
-| After last single: 0 submits; sticky E9→E7→FD | stop edge open → item -353 |
+| phys 0x76DF60 always size=8 DPC submit | shared **staging cell**, not ring/side buffer |
+| task 5569 E9/syncs=1 → 5570 E7/syncs=0 | stop = **opcode rewrite**, not path death |
+| 237 E9 then 150 E7 + 530 FD at same lo | H5b REFUTED (submits continue) |
+| same dual dl_ptr pair through flip | H5c REFUTED |
+| force recovers FULL_SYNC @ 0x76A838 task 6258 | s582/s583 "permanent" plateau death-truncated |
+| e9_b=0 even on recovery | still side-slot pattern (H-sync4 family) |
 
-Authoritative: live `[rdp-fullsync] kind=single` (not sticky `fs_addr` alone).
+Instrument stays: `ROGUESQ_LOG_FS_SLOT` + `ROGUESQ_LOG_DL_SYNC` + `ROGUESQ_LOG_RDP_FULLSYNC`.
 
 ## This iteration's work unit
 
-**H-sync4 stop edge: who owns phys 0x76DF60, and why 8-byte FULL_SYNC submits die.**
+**Why does LLE write PIPE_SYNC (E7) instead of FULL_SYNC (E9) into the staging
+cell at the dual edge — and does natural hangar exit recover like force?**
 
 ### Hypotheses
-- H5a: LLE DPC-submits a fixed RDP/output slot at 0x76DF60; guest overwrites the
-  E9 when cutscene phase advances (byte mutates → no more op family match).
-- H5b: LLE path that reaches the slot is gated (halt/yield/task flags); slot may
-  still hold E9 for a while but is no longer submitted.
-- H5c: Dual-buffer flip retires the producer that was emitting the side-slot E9
-  (different OSTask/data_ptr family after task ~5491).
-- H5d: Address is inside one of the dual DL regions via a non-tree link the e9_b
-  walker misses — linear/range check from 0x729690/0x747930 still failed offline
-  (delta 0x448d0 / 0x26630); re-verify with live dump of ±0x40 around the slot.
+- H6a: Guest dual DL stops containing a terminal FULL_SYNC emit path; LLE only
+  ever forwards what the ucode writes — E7 is the legitimate end-of-batch op
+  for that phase (lin_e9>0 at 5570 may be stale/unrelated).
+- H6b: Ucode has a separate "emit FULL_SYNC to staging cell" epilogue gated on
+  task flags / yield / DP complete that stops firing while geometry continues.
+- H6c: Natural exit (s577) never reaches the force-path recovery phase
+  (different cutscene branch / dies or freezes before 0x76A838).
+- H6d: Recovery at 0x76A838 is VI/other synthetic — REFUTE already leans no
+  (real kind=single E9 in s584); reconfirm e9_b=0 + real submit only.
 
-### Discriminating measurement (same-run, one build)
-1. Arm `ROGUESQ_LOG_RDP_FULLSYNC=1` + `ROGUESQ_LOG_DL_SYNC=1` (already land).
-2. Add **one** of: (preferred) write-watch / log on stores into phys 0x76DF60
-   (host-side if guest writer unknown), **or** dump 16 bytes at 0x76DF60 on every
-   dual-DL task boundary (runner) for 20 tasks before + 20 after last single.
-3. Correlate last single n with dual task #, data_ptr, and slot bytes.
-4. Outcomes:
-   - Slot E9→non-E9 **before** last submit → H5a (content kills match)
-   - Slot still E9 after last submit for N tasks → H5b (path stops submitting)
-   - data_ptr/OSTask family changes at edge → H5c
-   - Slot is linked from dual DL via unfollowed op → H5d (extend walker)
+### Discriminating measurement (prefer offline-first, one run if live)
+1. **Offline on s584 log first:** correlate E9→E7 edge with runner fields
+   (tris, cimg, depth, exit, dl_ptr), any overlay/section markers, and first
+   0x76A838 single vs task #6258. Map whether lin_e9 at 5570 points inside
+   dual DL or elsewhere.
+2. If still open: one natural-exit soak (`PROBE_MODE=double_start` or real edge
+   recipe from s577) with `ROGUESQ_LOG_FS_SLOT=1` + DL_SYNC + RDP_FULLSYNC —
+   watch for E9→E7 and whether 0x76A838 ever appears.
+3. Outcomes:
+   - lin_e9 targets move out of live DPC path at edge → H6a
+   - staging cell write of E7 with no guest E9 change → H6b
+   - natural never recovers / never sees 0x76A838 → H6c
+   - 0x76A838 not real guest E9 → H6d
 
-### Exact commands
+### Exact commands (if live needed after offline)
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-# After adding slot dump / write watch + rebuild:
-env PROBE_MODE=start_only HOLD_S=45 \
+# Prefer re-analysis of s584 before another force run.
+# Natural recovery A/B (if offline insufficient):
+env PROBE_MODE=double_start HOLD_S=45 \
   ROGUESQ_LOG_HANGARBAY_ENTRY=1 \
-  GAME_EXTRA_ENV="ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_FORCE_CASE5_START=40 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_FS_SLOT=1" \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s584_hsync4_slot 5 12
+  GAME_EXTRA_ENV="ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_FS_SLOT=1" \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s585_hsync4_natural_recover 5 12
 ```
 
 ### Do NOT
-- Re-litigate H-sync1/2 or treat hist-only without kind=single.
-- Chase leave-path crashes or item -347 until 3rd occ (s583 crash was 0x80065e94 —
-  different; file if recurs).
-- Reopen s178 / thr-resume-skip.
-- Use natural double_start as sole vehicle (leave-path crashy).
+- Re-litigate H5b/H5c or treat 0x76DF60 as a dedicated FULL_SYNC-only slot.
+- Chase leave-path crashes / 0x8000b650 (known stale).
+- Wire `rsp_force_fullsync` as product fix before knowing E9→E7 cause.
+- Assume force-path recovery applies to natural s577 without measuring.

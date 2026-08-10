@@ -46530,3 +46530,68 @@ size=8, w0=E9000000, kind=head+single paired.
 ### Next
 Item -353: identify who owns phys 0x76DF60 and what ends 8-byte FULL_SYNC submits
 from that address at the dual-buffer plateau edge.
+
+## Session 584 — H-sync4 stop edge: shared DPC staging cell, E9→E7 (not path death)
+
+**Date:** 2026-08-09
+**Work unit:** item -353 / HYPOTHESIS-ID `m3-post-exit-fs-stall` — who owns phys
+`0x76DF60` and why 8-byte FULL_SYNC submits die at the dual plateau.
+
+### Instrument (landed this session)
+`ROGUESQ_LOG_FS_SLOT` (+ optional `ROGUESQ_FS_SLOT_ADDR`, default `0x76DF60`):
+- poller thread: 16 B every 250 µs, log every mutation + 5 s heartbeat
+- `dpc_bridge`: any submit covering the slot → `[fs-slot] event=submit`
+- dense `event=task_end` dumps every task for `s_n≥5200`
+Docs: `docs/debug-trace-env-vars.md`.
+
+### Run
+`PROBE_MODE=start_only HOLD_S=45` + `ROGUESQ_FORCE_CASE5_START=40` +
+`ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_FS_SLOT=1`
+→ `scratch/s73_post_a_scene/s584_hsync4_slot/`. wall ~119 s, hangarbay-controlled
+exit (hangar-sel + graceful-menu), VI 640@0x6A2900. Died hold-iter 38 on known
+stale `last-guest-pc=0x8000b650` / `setChildPosFromI16Pair` noise. lle tasks 7663,
+fs max 5990.
+
+### Positive control (same run)
+`[fs-slot] event=arm` at boot; heartbeats every 5 s; 2143 `event=submit` lines;
+dense `task_end` across the dual window.
+
+### Discriminating results
+
+| Hyp | Verdict | Evidence |
+|-----|---------|----------|
+| H5b path stops submitting slot | **REFUTED** | After last E9 submit n=1455, **688 further** size=8 submits at same phys: 150× E7 + 8× F3 + 530× FD |
+| H5c dual OSTask family retires | **REFUTED** | Same `dl_ptr` pair 0x80747930/0x80729690 tris=164 continues through syncs flip (5569→5570) and deep into E7 phase |
+| H5d slot linked from dual tree | **REFUTED** (prior + reconfirmed) | All dual `task_end` have e9_b=0, endB8 complete, pre=0 |
+| H5a content kills FULL_SYNC match | **CONFIRMED (refined)** | Cell is **not** a dedicated FULL_SYNC; it is a **shared 8-byte DPC staging cell** (always lo=hi-8). Terminal opcode sequence: **E9 (FULL_SYNC) → E7 (PIPE_SYNC) → F3 → FD (SETTIMG 0xFD900000/0x805C9140)** |
+
+**Same-run dense edge:**
+- task #5569: syncs=1, slot bytes=`E900000000000000`, dual tris=164
+- task #5570: syncs=0, slot bytes=`E700000000000000`, same dual DLs
+- 237 dual tasks with syncs=1 ↔ 237 E9 submits at 0x76DF60 (cum_fs 4354..4590)
+- 151 dual tasks with syncs=0 ↔ 150 E7 submits (cum_fs stuck 4591)
+
+### Ownership
+phys `0x76DF60` = Factor5 LLE **single-command RDP staging cell** reused across
+opcodes (boot-era CD/CF triangles also land there). Hangar control FULL_SYNC was
+a different cell (`0x7778C8` in s583). Not a side buffer outside the DPC path —
+it *is* the DPC submit head for one command at a time.
+
+### Recovery (overturns permanent-starvation framing for force path)
+FULL_SYNC **returns** at task #6258 with staging cell **`0x76A838`** (1406
+singles, cum_fs→5997), still e9_b=0 (side-slot pattern continues). Runner after
+t≥5720: 1405 syncs>0 / 538 syncs=0. s582/s583 "permanent" plateau was
+**death-truncated** (crashed mid-cutscene before recovery). Natural s577 path's
+772-task zero-sync tail remains a separate observation (different exit branch /
+log end).
+
+### Not done / next
+Why LLE switches the staging cell's terminal op from FULL_SYNC to PIPE_SYNC at
+the dual edge (guest DL change vs ucode halt path vs missing end-of-frame
+FULL_SYNC emit). Whether natural hangar exit recovers like force, or stays
+starved. Whether injecting FULL_SYNC when cell holds only E7 unblocks present
+for dual-phase (diagnostic only).
+
+### Item updates
+-353 stop edge mechanism: **RESOLVED** (staging-cell opcode switch).
+-354 filed: LLE E9→E7 terminal switch + force-path recovery vs natural s577.

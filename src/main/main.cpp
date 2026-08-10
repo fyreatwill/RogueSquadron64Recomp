@@ -557,7 +557,14 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             const char* e = std::getenv("ROGUESQ_LOG_DL_SYNC");
             s_dl_sync = (e && *e && *e != '0') ? 1 : 0;
         }
-        if (s_log || s_dl_sync) {
+        // ROGUESQ_LOG_FS_SLOT densifies late dual-task dumps (every task
+        // after s_n>=5200) so the stop edge is not lost to rate limits.
+        static int s_fs_slot = -1;
+        if (s_fs_slot < 0) {
+            const char* e = std::getenv("ROGUESQ_LOG_FS_SLOT");
+            s_fs_slot = (e && *e && *e != '0') ? 1 : 0;
+        }
+        if (s_log || s_dl_sync || s_fs_slot) {
             static int s_n = 0;
             ++s_n;
             const bool sample_runner = s_log && (s_log_all || s_n <= 8 || (s_n & 31) == 0);
@@ -571,11 +578,14 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             // Pre-drain estimate: when not sampling runner and not log_all,
             // hist may be stale; force drain whenever we might probe.
             // Actual syncs come from drained hist below.
-            bool force_for_probe = s_dl_sync && (s_n <= 20 || consec_zero < 120 ||
-                                                 (consec_zero > 0 && (consec_zero % 50) == 0) ||
-                                                 n_with_sync_probed < 40 ||
-                                                 (s_n >= 4000 && late_sync_probed < 30) ||
-                                                 s_n >= 4000);
+            const bool dense_slot = s_fs_slot && s_n >= 5200;
+            bool force_for_probe = (s_dl_sync || dense_slot) && (
+                s_n <= 20 || consec_zero < 120 ||
+                (consec_zero > 0 && (consec_zero % 50) == 0) ||
+                n_with_sync_probed < 40 ||
+                (s_n >= 4000 && late_sync_probed < 30) ||
+                s_n >= 4000 ||
+                dense_slot);
             if (sample_runner || force_for_probe) {
                 // Pull the dpc_bridge per-task RDP-opcode histogram (raw 6-bit
                 // RDP opcodes, NOT the F3D DL byte). 0x08-0x0F = triangle
@@ -599,13 +609,14 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                             tris, hist[0x24] + hist[0x25], hist[0x36],
                             syncs, hist[0x3F], hist[0x3E]);
                 }
-                const bool do_probe = s_dl_sync && (
+                const bool do_probe = (s_dl_sync || dense_slot) && (
                     s_n <= 20 ||
                     (syncs > 0 && n_with_sync_probed < 40) ||
                     (syncs > 0 && s_n >= 4000 && late_sync_probed < 30) ||
                     (syncs == 0 && ever_sync && consec_zero <= 120) ||
                     (syncs == 0 && ever_sync && (consec_zero % 50) == 0) ||
-                    (s_n >= 4000 && (s_n % 25) == 0));
+                    (s_n >= 4000 && (s_n % 25) == 0) ||
+                    dense_slot);
                 if (do_probe) {
                     if (syncs > 0) {
                         if (s_n < 4000) n_with_sync_probed++;
@@ -721,21 +732,60 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                     uint8_t fs_b0 = 0xFF;
                     if (fs_addr != 0xFFFFFFFFu && (fs_addr & 0x7FFFFF) + 1u <= 0x800000u)
                         fs_b0 = rbyte(fs_addr);
-                    fprintf(stderr,
-                            "[dl-sync-probe] task=#%d syncs=%u "
-                            "e9_a=%u e9_b=%u lin_e9=%u "
-                            "b5_a=%u b8_a=%u cmds_a=%u jumps_a=%u end_a=%s "
-                            "b5_b=%u b8_b=%u cmds_b=%u jumps_b=%u end_b=%s "
-                            "lin_b5=%u lin_b8=%u lin_cmds=%u "
-                            "fs_addr=0x%08X fs_b0=%02X "
-                            "dl_ptr=0x%08X tris=%u first_ops=%s\n",
-                            s_n, syncs,
-                            e9_a, e9_b, lin_e9,
-                            b5_a, b8_a, cmds_a, jumps_a, end_a,
-                            b5_b, b8_b, cmds_b, jumps_b, end_b,
-                            lin_b5, lin_b8, lin_cmds,
-                            fs_addr, fs_b0,
-                            dl_ptr, tris, first_ops);
+                    if (s_dl_sync) {
+                        fprintf(stderr,
+                                "[dl-sync-probe] task=#%d syncs=%u "
+                                "e9_a=%u e9_b=%u lin_e9=%u "
+                                "b5_a=%u b8_a=%u cmds_a=%u jumps_a=%u end_a=%s "
+                                "b5_b=%u b8_b=%u cmds_b=%u jumps_b=%u end_b=%s "
+                                "lin_b5=%u lin_b8=%u lin_cmds=%u "
+                                "fs_addr=0x%08X fs_b0=%02X "
+                                "dl_ptr=0x%08X tris=%u first_ops=%s\n",
+                                s_n, syncs,
+                                e9_a, e9_b, lin_e9,
+                                b5_a, b8_a, cmds_a, jumps_a, end_a,
+                                b5_b, b8_b, cmds_b, jumps_b, end_b,
+                                lin_b5, lin_b8, lin_cmds,
+                                fs_addr, fs_b0,
+                                dl_ptr, tris, first_ops);
+                    }
+                    // Dense post-task dump of the fixed FULL_SYNC side-slot
+                    // around the dual-buffer plateau edge (item -353).
+                    if (s_fs_slot && (dense_slot || (s_n >= 4000 && (s_n % 25) == 0) ||
+                                      s_n <= 20)) {
+                        static uint32_t slot_off = 0;
+                        static int slot_inited = 0;
+                        if (!slot_inited) {
+                            slot_off = 0x76DF60u;
+                            if (const char* e = std::getenv("ROGUESQ_FS_SLOT_ADDR")) {
+                                unsigned long v = strtoul(e, nullptr, 0);
+                                if (v > 0 && v < 0x800000u) slot_off = (uint32_t)v;
+                            }
+                            slot_off &= 0x7FFFFFu;
+                            slot_inited = 1;
+                        }
+                        uint8_t b[16];
+                        for (int i = 0; i < 16; ++i) b[i] = rbyte(slot_off + (uint32_t)i);
+                        // Also dump 8 bytes immediately before the slot for
+                        // ring-adjacency / ownership context.
+                        uint8_t pre[8];
+                        for (int i = 0; i < 8; ++i) {
+                            uint32_t a = (slot_off >= 8u) ? (slot_off - 8u + (uint32_t)i) : 0;
+                            pre[i] = rbyte(a);
+                        }
+                        fprintf(stderr,
+                            "[fs-slot] n=%d event=task_end task=#%d syncs=%u "
+                            "dl_ptr=0x%08X tris=%u e9_b=%u end_b=%s "
+                            "slot=0x%08X b0=%02X bytes=%02X%02X%02X%02X%02X%02X%02X%02X "
+                            "pre=%02X%02X%02X%02X%02X%02X%02X%02X "
+                            "fs_addr=0x%08X fs_b0=%02X\n",
+                            s_n, s_n, syncs, dl_ptr, tris, e9_b, end_b,
+                            slot_off, b[0],
+                            b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7],
+                            pre[0], pre[1], pre[2], pre[3],
+                            pre[4], pre[5], pre[6], pre[7],
+                            fs_addr, fs_b0);
+                    }
                 }
                 fflush(stderr);
             }
@@ -1450,6 +1500,87 @@ static void start_phase_poller() {
     t.detach();
 }
 
+// ROGUESQ_LOG_FS_SLOT: macOS-friendly substitute for HWBP on the fixed
+// FULL_SYNC side-slot (default phys 0x76DF60). Polls 16 bytes every 250us
+// and logs any mutation + a 5s heartbeat (positive control). Discriminates
+// H5a (content mutates → op no longer matches) vs H5b (submits stop while
+// E9 still present). Pair with dpc_bridge [fs-slot] event=submit lines.
+static void start_fs_slot_poller() {
+    static std::thread t{[]{
+        uint8_t* rdram = nullptr;
+        while (!(rdram = (uint8_t*)g_recomp_rdram_for_wp_raw)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        uint32_t slot = 0x76DF60u;
+        if (const char* e = std::getenv("ROGUESQ_FS_SLOT_ADDR")) {
+            unsigned long v = strtoul(e, nullptr, 0);
+            if (v > 0 && v < 0x800000u) slot = (uint32_t)v;
+        }
+        slot &= 0x7FFFFFu;
+        auto rbyte = [&](uint32_t a) -> uint8_t {
+            return rdram[(a & 0x7FFFFF) ^ 3];
+        };
+        auto snap16 = [&](uint8_t out[16]) {
+            for (int i = 0; i < 16; ++i) out[i] = rbyte(slot + (uint32_t)i);
+        };
+        uint8_t prev[16];
+        snap16(prev);
+        fprintf(stderr,
+            "[fs-slot] n=0 event=arm slot=0x%08X bytes="
+            "%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X\n",
+            slot,
+            prev[0], prev[1], prev[2], prev[3],
+            prev[4], prev[5], prev[6], prev[7],
+            prev[8], prev[9], prev[10], prev[11],
+            prev[12], prev[13], prev[14], prev[15]);
+        fflush(stderr);
+        uint64_t n_change = 0;
+        uint64_t n_poll = 0;
+        auto t0 = std::chrono::steady_clock::now();
+        auto last_hb = t0;
+        for (;;) {
+            uint8_t cur[16];
+            snap16(cur);
+            ++n_poll;
+            if (memcmp(cur, prev, 16) != 0) {
+                ++n_change;
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - t0).count();
+                fprintf(stderr,
+                    "[fs-slot] n=%llu event=write t_ms=%lld slot=0x%08X "
+                    "prev=%02X%02X%02X%02X%02X%02X%02X%02X "
+                    "cur=%02X%02X%02X%02X%02X%02X%02X%02X "
+                    "b0=%02X->%02X\n",
+                    (unsigned long long)n_change, (long long)ms, slot,
+                    prev[0], prev[1], prev[2], prev[3],
+                    prev[4], prev[5], prev[6], prev[7],
+                    cur[0], cur[1], cur[2], cur[3],
+                    cur[4], cur[5], cur[6], cur[7],
+                    prev[0], cur[0]);
+                fflush(stderr);
+                memcpy(prev, cur, 16);
+            }
+            auto now = std::chrono::steady_clock::now();
+            if (now - last_hb >= std::chrono::seconds(5)) {
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    now - t0).count();
+                fprintf(stderr,
+                    "[fs-slot] n=%llu event=heartbeat t_ms=%lld slot=0x%08X "
+                    "b0=%02X polls=%llu changes=%llu bytes="
+                    "%02X%02X%02X%02X %02X%02X%02X%02X\n",
+                    (unsigned long long)n_change, (long long)ms, slot, prev[0],
+                    (unsigned long long)n_poll, (unsigned long long)n_change,
+                    prev[0], prev[1], prev[2], prev[3],
+                    prev[4], prev[5], prev[6], prev[7]);
+                fflush(stderr);
+                last_hb = now;
+            }
+            std::this_thread::sleep_for(std::chrono::microseconds(250));
+        }
+    }};
+    t.detach();
+}
+
 static void start_memwp_watchdog() {
 #ifndef _WIN32
     // Hardware-breakpoint watchdog is Win32-only (DR0 debug registers).
@@ -1947,6 +2078,16 @@ int main(int argc, char* argv[]) {
     start_b50_poller();
     start_state_poller();
     start_phase_poller();
+    {
+        const char* e = std::getenv("ROGUESQ_LOG_FS_SLOT");
+        if (e && *e && *e != '0') {
+            fprintf(stderr, "[fs-slot] poller enabled (ROGUESQ_LOG_FS_SLOT=%s addr=%s)\n",
+                    e, getenv("ROGUESQ_FS_SLOT_ADDR") ? getenv("ROGUESQ_FS_SLOT_ADDR")
+                                                      : "0x76DF60");
+            fflush(stderr);
+            start_fs_slot_poller();
+        }
+    }
 
 #if defined(__APPLE__) && defined(__aarch64__)
     // Must run before the sigaction() install below and outside any signal

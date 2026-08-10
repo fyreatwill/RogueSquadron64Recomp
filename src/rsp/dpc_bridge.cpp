@@ -267,6 +267,27 @@ namespace {
         }();
         return v;
     }
+    // ROGUESQ_LOG_FS_SLOT: any DPC submit that touches the fixed FULL_SYNC
+    // side-slot (default phys 0x76DF60, override ROGUESQ_FS_SLOT_ADDR).
+    // Discriminates H-sync4 stop edge: path stops submitting vs content mutates.
+    bool log_fs_slot() {
+        static const bool v = []{
+            const char *e = std::getenv("ROGUESQ_LOG_FS_SLOT");
+            return e && *e && *e != '0';
+        }();
+        return v;
+    }
+    uint32_t fs_slot_addr() {
+        static const uint32_t v = []{
+            uint32_t a = 0x76DF60u;
+            if (const char *e = std::getenv("ROGUESQ_FS_SLOT_ADDR")) {
+                unsigned long x = std::strtoul(e, nullptr, 0);
+                if (x > 0 && x < 0x800000u) a = (uint32_t)x;
+            }
+            return a & 0x7FFFFFu;
+        }();
+        return v;
+    }
 }
 
 void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
@@ -349,6 +370,36 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
         uint8_t op = b0_first & 0x3F;
         g_task_op_count[op]++;
         g_cumulative_op_count[op].fetch_add(1, std::memory_order_relaxed);
+        // H-sync4 stop edge (item -353): any submit that covers the fixed slot.
+        if (log_fs_slot()) {
+            const uint32_t slot = fs_slot_addr();
+            if (submit_lo <= slot && submit_hi > slot) {
+                static std::atomic<uint64_t> s_slot_sub{0};
+                uint64_t n = ++s_slot_sub;
+                const uint32_t size = submit_hi - submit_lo;
+                uint32_t w0 = ((uint32_t)(uint8_t)MEM_B(0, mips_first) << 24) |
+                              ((uint32_t)(uint8_t)MEM_B(1, mips_first) << 16) |
+                              ((uint32_t)(uint8_t)MEM_B(2, mips_first) <<  8) |
+                              ((uint32_t)(uint8_t)MEM_B(3, mips_first));
+                uint32_t w1 = 0;
+                if (size >= 8) {
+                    w1 = ((uint32_t)(uint8_t)MEM_B(4, mips_first) << 24) |
+                         ((uint32_t)(uint8_t)MEM_B(5, mips_first) << 16) |
+                         ((uint32_t)(uint8_t)MEM_B(6, mips_first) <<  8) |
+                         ((uint32_t)(uint8_t)MEM_B(7, mips_first));
+                }
+                // Always log first 20 + every hit once cum_fs high (cutscene edge).
+                const uint32_t cum = g_cumulative_fullsyncs.load(std::memory_order_relaxed);
+                if (n <= 20 || cum >= 4000 || (n % 50) == 0) {
+                    fprintf(stderr,
+                        "[fs-slot] n=%llu event=submit lo=0x%08X hi=0x%08X size=%u "
+                        "slot=0x%08X head_b0=%02X op=%02X w0=%08X w1=%08X cum_fs=%u\n",
+                        (unsigned long long)n, submit_lo, submit_hi, size,
+                        slot, b0_first, op, w0, w1, cum);
+                    fflush(stderr);
+                }
+            }
+        }
         // H-sync4: log every range whose FIRST byte is RDP FULL_SYNC family
         // (b0&0x3F==0x29). This is exactly what runner hist[0x29]/syncs counts.
         // size==8 path below also updates g_last_fullsync_addr; multi-cmd heads
