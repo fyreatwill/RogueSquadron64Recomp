@@ -192,15 +192,34 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
 
--361. **(s591/s592) Post-sec4 thr-12 create vs `initSceneForMission` crash —
-    BLOCKED on path-to-sec4.** s589 alone reached thr-11 destroy + sec4 on
-    force; stack `cinematicLoopBody→initSceneForMission→coalesceFreeHeapBlocks
-    +4424`/`0x8000247c` before thr-12. **s592 0/2 force soaks** never armed
-    case6/hangar-sel/inject: s592 `reserveAndEmitDLEntry+18192`/`0x8000ce54`
-    at hangar state=6; s592_r2 `beginFrameDLChunk+46800`/`0x8000afa0` at
-    state=5 (**item -338 4th occ**). H13b/c/d untested. Next: multi-retry
-    force soaks (queued `s592_sec4_thr12_{a,b}`) until post-exit sec4, then
-    thr-12 vs crash gate. Artifact: `s592_sec4_thr12/ANALYSIS.md`.
+-361. **(s589/s592/s593) Post-sec4 thr-12 gate — H13c CONFIRMED 2/2, FIX
+    BUILT, live re-verify still pending (path-to-sec4 intermittent).**
+    s589 + queued `s592_sec4_thr12_a` both independently reached post-exit
+    sec4 on force (case6+inject) and both crashed byte-identically at
+    `cinematicLoopBody→initSceneForMission→coalesceFreeHeapBlocks+4424`/
+    `0x8000247c`, 2-4 log lines later, before thr-12 (`entry=0x800495FC`)
+    could be created for the mission. Source-read: a SECOND unguarded
+    forward block-coalescing loop in `coalesceFreeHeapBlocks` (`L_80002474`,
+    base `$s2`, distinct from the `$t0`-based loop guarded back in s354-366)
+    has the identical "read next block header via unvalidated computed
+    pointer" idiom. **Fix landed s593**: extended `fixup_game_funcs.py`
+    (`~/Documents/Tools/N64Recomp`, untracked-by-git hand patch, same as the
+    ~150 others there) with a second guard at `0x8000247C`
+    (`ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD`), reusing the already-verified-safe
+    bail (`ctx->r3=0x8`, forces the safe exit branch). Full regen + build
+    clean, patch applied `x1`. **s593 live re-verify was a NULL** (case6
+    reached hangar exit state=8, but this run's post-exit sec4 never fired —
+    0 guard hits either family, 0 crash, but the guarded code path never
+    executed) — per iron rule 1 this proves nothing either way; it's a 3rd
+    data point for path-to-sec4 being intermittent (**H13a**), not new
+    information about the fix. **Next**: queue more
+    `s593_coalesce_r2_verify`-shaped retries until one lands post-exit sec4
+    with both coalesce guards armed — that run is the real discriminating
+    test (guard fires + survives → CONFIRMED FIXED; guard fires + still
+    crashes → bail semantics wrong for this site; 0 fires + still crashes at
+    `0x8000247c` → patch didn't take, check regen order). Artifacts:
+    `PORTING-STATE.md` Session 593; `s592_sec4_thr12_a_20260809192526/run.log`;
+    `s593_coalesce_r2_verify/run.log`.
 
 -360. **(s590/s591) Post-exit thr-11→section4→thr-12→section2 — RECHARACTERIZED.**
     thr-11 `saveServiceWorker` (0x8006F2CC) is infinite recv loop; destroy =

@@ -2,65 +2,75 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s592 recap (read this first)
+## s593 recap (read this first)
 
-| H | Result | Evidence |
-|---|--------|----------|
-| H13a path-to-sec4 intermittent | **SUPPORTED (path-gate)** | s592 0/2 never armed case6/hangar-sel/inject |
-| H13b thr-12 soon after sec4 | untested | no post-exit sec4 |
-| H13c initScene blocks thr-12 systematically | untested | s589 still sole sec4 data point |
-| H13d thr-12 indep of thr-11 destroy | untested | |
+Item -361 escalated to a mechanistic fix this session:
 
-s592 crashes (pre-exit hangar noise):
-- s592: `reserveAndEmitDLEntry+18192`/`0x8000ce54` state=6
-- s592_r2: `beginFrameDLChunk+46800`/`0x8000afa0` state=5 (**-338 4th**)
+- **H13c CONFIRMED 2/2**: s589 + `s592_sec4_thr12_a` (consumed from the soak
+  queue this session) both independently reached post-exit section 4 on
+  force (case6+inject) and both crashed byte-identically 2-4 log lines
+  later at `cinematicLoopBody→initSceneForMission→coalesceFreeHeapBlocks
+  +4424`/`0x8000247c`, before thr-12 (`entry=0x800495FC`) could be created.
+- **Root cause + fix landed**: `coalesceFreeHeapBlocks` (`funcs_0.c`) has a
+  SECOND unguarded block-header-walk loop (`L_80002474`, base `$s2`) with
+  the same idiom the s354-366 arc already guarded on the FIRST loop
+  (`L_80002358`, base `$t0`). Added a second guard at `0x8000247C` in
+  `~/Documents/Tools/N64Recomp/fixup_game_funcs.py`
+  (`ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD`, tag `[coalesce-heap-r2-guard]`),
+  reusing the already-verified-safe bail value (`ctx->r3=0x8`). Full regen
+  (make_elf→N64Recomp→fixup→cmake) clean, patch applied `x1`, build OK.
+- **Live re-verify this session was a NULL, not a refutation**: same
+  case6+inject recipe with both coalesce guards armed reached hangar exit
+  (state=8) but the run's post-exit sec4 never fired this time — 0 guard
+  hits (expected, code path never ran), 0 crash, full 251s hold survived.
+  Per iron rule 1 this is not evidence either way — it's a 3rd data point
+  that **H13a (path-to-sec4 after case6-force is intermittent)** still
+  holds, on top of the fix, not against it.
 
-Artifact: `scratch/s73_post_a_scene/s592_sec4_thr12/ANALYSIS.md`.
-Queued: `scratch/agent/soak_queue/s592_sec4_thr12_{a,b}.sh` (loop between iters).
+Queued for the loop: `scratch/agent/soak_queue/s593_coalesce_r2_verify_{a,b}.sh`
+— same recipe, both coalesce guards armed, retry until sec4 lands.
 
 ## This iteration's work unit
 
-**Item -361 continued: land post-exit sec4, then thr-12 vs crash.**
+**Item -361 continued: consume the queued s593 retries; first one that lands
+post-exit sec4 is the real discriminating run for the fix.**
 
-Consume any new SOAK-RESULTS lines first. If a queued soak already hit
-sec4 + thr-11 destroy, skip re-running and analyze thr-12 offline only.
-
-If no sec4 yet: run 1 force attempt (do not babysit a 3rd same-session retry if
-a queue is armed — prefer offline analysis of a/b results). If a/b not yet run
-by the loop, run one manually:
-
-### Hypotheses (unchanged)
-- H13a: keep retrying until sec4 (s589 shape).
-- H13b: thr-12 within ~few hundred thr-resume of sec4 if no crash.
-- H13c: initScene/coalesce systematically blocks thr-12 on force (≥2/2 sec4 holds).
-- H13d: thr-12 independent of thr-11 destroy once sec4 loaded.
-
-### Discriminating measurement
-1. Positive controls same-run: case6-force; hangar-sel+state8; inject n>0;
-   recovery @0x76B768 (expect thr-11 destroy when recovery fires).
-2. Post hangar-sel **second** `start-match: section 4` (post-exit; ignore early
-   cinematic sec4).
-3. After that sec4: thr-create `entry=0x800495FC` (any id) vs CRASH before it.
-4. Wall/task delta sec4→thr-12 if thr-12 appears.
-
-### Exact commands
-```bash
-export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-# Prefer consume SOAK-RESULTS; only if empty/failed:
-env PROBE_MODE=start_only HOLD_S=90 \
-  GAME_EXTRA_ENV="ROGUESQ_FORCE_CASE6_START=5 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1" \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s593_sec4_thr12 5 12
-```
-
-### Outcomes
-- sec4 + thr-12 + no crash → pipeline clear; next = sec2 / in-mission
-- sec4 + thr-12 + later crash → thr-12 not the gate; follow thr-12→sec2
-- sec4 + crash before thr-12 (s589 repeat) ≥2/2 → H13c; open coalesce/initScene
-  audit only with same-run sec4 positive control
-- still 0 sec4 after queue a+b + one more → escalate path reliability (hangar
-  pre-exit crash rate); optional -338 source-trace only as systematic class
+1. Read `scratch/agent/SOAK-RESULTS.md` tail for `s593_coalesce_r2_verify_a`
+   / `_b` lines first. Each verdict line's summary already reports
+   `coalesce_guard1=`, `coalesce_guard2_r2=`, `sec4=`, `crash=`.
+2. If a run shows `sec4>=2` (post-exit reached) — this is the discriminating
+   data point:
+   - `coalesce_guard2_r2>0` AND `crash=ok` → **FIX CONFIRMED** (guard caught
+     the bad pointer, run survived past the old crash site). Check whether
+     thr-12 (`thr495FC_creates`) or section 2 (`sec2`) followed. Close item
+     -361's crash half; open thr-12/sec2 as the new frontier if thr-12
+     still doesn't create.
+   - `coalesce_guard2_r2>0` AND `crash=CRASH` → bail value takes the wrong
+     branch for this site after all (re-check the exit-path register-use
+     analysis in `PORTING-STATE.md` Session 593 against the actual crash
+     PC this run — did it move a few instructions, same shape as s354's
+     original mistake?).
+   - `coalesce_guard2_r2=0` AND `crash=CRASH` at `0x8000247c` again → the
+     patch did not take. Check `fixup_game_funcs.py` for the `item -361`
+     patch block, re-run the regen pipeline, verify the fixup report shows
+     `coalesceFreeHeapBlocks 2nd-loop next-block-header read guard` `x1`
+     with no `REFUSING to run` sentinel silently short-circuiting it.
+3. If both `_a`/`_b` are still `sec4=0/1` (path-gated, no post-exit sec4):
+   queue 1-2 more identically-shaped retries and move on — do NOT babysit a
+   3rd manual attempt this session (budget rule already spent one this
+   session on `s593_coalesce_r2_verify`, itself a null).
 
 ### Do NOT
+- Treat a `sec4=0` null run as evidence about the fix (iron rule 1) — only a
+  run that actually reaches the guarded code path counts.
 - Re-open thr-11 as recvServiceMessage block (H12a closed).
-- Reactive single-crash chase on -338 / reserveAndEmitDLEntry without sec4.
-- Default-ON FS_PIPE_INJECT without thr-12/sec2 on a surviving path.
+- Re-litigate the s354-366 arc's FIRST guard/bail — only the NEW `_R2_` site
+  is open here.
+
+### Exact commands (if no queue result to consume)
+```bash
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+env PROBE_MODE=start_only HOLD_S=90 \
+  GAME_EXTRA_ENV="ROGUESQ_FORCE_CASE6_START=5 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 ROGUESQ_LOG_COALESCE_HEAP_GUARD=1 ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD=1" \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s594_coalesce_r2_verify2 5 12
+```

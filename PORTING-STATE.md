@@ -46969,3 +46969,93 @@ to M3 DoD path when exit does work.
 `scratch/s73_post_a_scene/s592_sec4_thr12/{run.log,ANALYSIS.md}`
 `scratch/s73_post_a_scene/s592_sec4_thr12_r2/run.log`
 `scratch/agent/soak_queue/s592_sec4_thr12_{a,b}.sh`
+
+## Session 593 — 2026-08-09 — item -361: coalesce R2 guard landed (2/2 crash confirmed, fix built, not yet re-verified live)
+
+### What happened
+The loop ran the two queued `s592_sec4_thr12_{a,b}` soaks between iterations
+(logged in SOAK-RESULTS.md). Consumed both this session instead of re-running:
+
+- `s592_sec4_thr12_b`: `process gone while waiting for phase` — early death,
+  not discriminating (0 gate markers at all).
+- `s592_sec4_thr12_a`: **landed post-exit section 4** (2nd `start-match:
+  section 4` at run.log:278849, ~4 lines from EOF) with a full same-run
+  positive control (`case6=1 hangar-sel=1 inject_lines=26
+  recov76B768~=15912 thr495FC_creates=2` — the 2 thr-create hits are both
+  from the SAME early-cinematic creation event, not post-exit). 4 lines
+  after the post-exit sec4 line, the process crashed:
+  `[CRASH] pc-symbol=coalesceFreeHeapBlocks+4424 last-guest-pc=0x8000247c`,
+  backtrace confirms `cinematicLoopBody -> initSceneForMission ->
+  coalesceFreeHeapBlocks` — **byte-identical to s589's crash**, same stack.
+
+### H13c now CONFIRMED 2/2 (per NEXT.md's own outcome criterion)
+s589 (session 589) + s592a: two independent force-exit runs, both reaching
+post-exit section 4, both crashing at the exact same guest PC in the exact
+same call stack before thr-12 (`entry=0x800495FC`) could be (re-)created for
+the mission. This is no longer "file not chase" — it meets the stated bar to
+open a mechanistic audit.
+
+### Root cause (source-read, `funcs_0.c` via
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c`)
+`coalesceFreeHeapBlocks` has **two independent** forward block-coalescing
+loops. The FIRST (`L_80002358`, walking from `$t0`/`ctx->r8`) was already
+guarded at guest PC `0x80002434` back in the s354-366 arc (`COALESCE_HEAP_GUARD`,
+bail-target bug fixed s358). The SECOND (`L_80002474`, walking from
+`$s2`/`ctx->r18` — a different base register, never covered by the s354-366
+audit because that audit was scanning `drainMeshReleaseQueue`, a different
+function) has the exact same unguarded idiom: `v0 = a2 + MEM_W(a2, 0x4)`
+then `MEM_HU(v0, 0x10)` at `0x8000247C` with no bounds check. If `a2`'s size
+field is corrupt (from earlier heap corruption elsewhere), `v0` is wild and
+this read faults. Branch analysis confirms the loop's exit path only reads
+`ctx->r7` (saved as the last-known-good `a2` BEFORE this read) and
+`ctx->r16` — never the just-computed `v0` unless the loop continues — so the
+already-verified-safe bail (`ctx->r3 = 0x8`, forcing the "next block in use"
+exit branch) applies unchanged.
+
+### Fix landed
+`fixup_game_funcs.py` (in `~/Documents/Tools/N64Recomp`, not under this
+repo's `lib/` — untracked-by-git file, same as the ~150 other hand patches
+already there): new patch block right after the existing coalesce guard,
+adds a second guard at `0x8000247C` with its own env var
+`ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD` / tag `[coalesce-heap-r2-guard]` (kept
+as a distinct family, not folded into the original, since it's a genuinely
+different site/loop). Full regen (`make_elf.py` -> `N64Recomp` -> fixup ->
+cmake) completed clean; fixup report showed the new patch applying exactly
+`x1` alongside the pre-existing one, no sentinel refusal, build succeeded
+with only pre-existing warnings.
+
+### Live re-verify attempt this session: NULL (path-gated, not informative)
+Ran `s593_coalesce_r2_verify` (same case6+inject recipe as s592a, both
+coalesce guards armed via env). Result: reached hangar exit
+(`hangar-state n=1027 state=8` via `case6-force-start n=5`) but **did NOT
+reach post-exit section 4 this run** — only the early-cinematic sec4 fired.
+0 fires on either coalesce guard (expected — the guarded code path never
+executed), 0 CRASH, full 251s wall with the process still alive at kill.
+Per iron rule 1, this is **not evidence the fix works** — the run never
+reached the site being tested. This is the SAME `H13a` path-to-sec4
+intermittency already characterized in item -361 (s592 was 0/2 before
+s592a's retry finally landed it) — a 3rd data point for "post-exit sec4
+after case6-force is intermittent, not reliable," not a new finding.
+
+### Ruled out this session
+- Not evidence the R2 guard fixes or fails to fix the crash — no same-run
+  positive control (guard fire) yet; null result stands alone.
+
+### Next
+Queue more `s593_coalesce_r2_verify` retries (case6+inject, both coalesce
+guards armed) to the soak queue for the loop to run between iterations,
+exactly as item -361 already prescribed for reaching sec4 at all. First
+retry that lands post-exit sec4 with the R2 guard armed is the real
+discriminating run: guard fires + no crash + thr-12 create -> FIX CONFIRMED;
+guard fires + crash anyway -> bail semantics wrong for this site (re-check
+branch analysis); 0 guard fires + still crashes at 0x8000247c -> READ THE
+LATEST funcs_0.c, patch didn't take (regen order violated) — check the
+"REFUSING to run" sentinel didn't fire silently ignored.
+
+### Artifacts
+`scratch/agent/soak_results/s592_sec4_thr12_a_20260809-192526.log` (driver)
+`scratch/s73_post_a_scene/s592_sec4_thr12_a_20260809192526/run.log` (full,
+crash stack at line 278849-278894)
+`scratch/s73_post_a_scene/s593_coalesce_r2_verify/run.log` (null re-verify)
+`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` (fix,
+~line 12985 new block, search `item -361`)
