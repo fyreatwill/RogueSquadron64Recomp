@@ -120,22 +120,25 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s625**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s626**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
   `loadLevelTextureCache`) → sec2 (mission overlay) is reachable when recovery cell `0x76B768`
   fires (s608; H-handoff2 / 76BA90 REFUTED). **s619: thr11d_new LIVE** when recovery fires →
   sec4_post=1; class-D craft-shadow soft-skip LIVE (cshadow_a≥1). **s624: -385 M1 LIVE** —
   `[level-tex-malloc-guard]` fires on null `rs_malloc(0x136C)` (`bad_s0=0`); thr12 still 0
   until malloc succeeds (soft-skip before `registerServiceWorker`). **s625: H-ltexOOM
-  instrument LIVE** (`ROGUESQ_LOG_RS_MALLOC_DIAG` / `[rs-malloc-diag]`); on scored class-D
-  fail136c size/flags correct, heads non-null; free-byte walk untrusted (see -385/-388).
+  instrument LIVE**; **s626: H-walk1 CONFIRMED** — s625 free-byte garbage was uint32
+  `MEM_*` without `S32()`; raw ≤16 node dump now sane on posctrl/ok136c
+  (`maxfree_sane≈0x4E6290` early). Class-D fail136c still pending freeroll for O1/O3
+  (-385/-388).
 - Co-gates: recovery silence (-374; freeroll any eng+hsel `recov768=0`; prefer
   `RECOV_WAIT_S=50` + `BUDGET_S≥900` when pre-eng 128s cutscene SIGBUS is frequent),
   mid-window mat3inv Abort (-375), ship ret1/store (-376/-377), class-D craft-shadow
   (**-378**), FORCE_STATE6 KSEG0 (**-381 CLOSED**), scene-graph/readAccount/freelist
   (**-382..-384** 1× freeroll), null-malloc thr12 parent (**-385 M1 LIVE s624**; H-ltexArg
-  + null_pool REFUTED s625; free-bytes still open), sinfApprox (**-386** 1×), post-soft-skip
-  `do_rom_read` SIGBUS (**-387** 1× s624/s625), trackResourceList freeroll noise (not escalated).
+  + null_pool REFUTED s625; **H-walk1 CONFIRMED s626**; O1/O3 open pending fail136c),
+  sinfApprox (**-386** 1×), post-soft-skip `do_rom_read` SIGBUS (**-387** 1× s624/s625),
+  trackResourceList freeroll noise (not escalated).
 - **thr11d scoring trap (s618):** real metric = destroy of post-hsel-created id with entry
   `0x8006F2CC` (`thr11d_new`), not any post-hsel destroy.
 - **Soak freeroll trap (s620→s621):** freeroll any eng+hsel with `recov768=0` (not only
@@ -160,18 +163,24 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -388. The next NEW item takes -389.
+a range pointer. Highest allocated so far: -389. The next NEW item takes -390.
 
-### Active M3 pipeline (s577–s625) — open residuals only
+### Active M3 pipeline (s577–s626) — open residuals only
 
--388. **(s625) `[rs-malloc-diag]` free-byte walk model untrusted — refine before OOM vs
-    freelist-corrupt call.** Instrument LIVE (posctrl=8 ∧ fail136c=1 same run). H-ltexArg
-    REFUTED (size=0x136C flags=0); null_pool REFUTED (heads KSEG0 non-null). Walk reports
-    `reason=corrupt` / maxfree ~GB **even on early successful posctrl/ok136c** with the same
-    headE8 — free-byte totals cannot discriminate O1 vs O3 yet. Env:
-    `ROGUESQ_LOG_RS_MALLOC_DIAG=1`. Next: raw per-node flags+size dump (≤16 nodes/pool) at
-    fail136c vs posctrl; do not trust maxfree/totfree until that matches a known-good success.
-    Full: Session 625.
+-389. **(s626) Class-D fail136c freeroll still open after H-walk1 fix — O1 vs O3 not
+    yet discriminated on the level-tex null path.** s626+s626b: 0 scored class-D
+    (recov_silent / thr11_live_no_destroy / pre-eng noise). Instrument proven on
+    posctrl+ok136c+generic fail. Enqueued `s627_ltex_fail136c_freeroll` (BUDGET=1200).
+    Full: Session 626.
+
+-388. **(s625→s626) `[rs-malloc-diag]` H-walk1 CONFIRMED — s625 free-byte garbage was
+    uint32 guest addrs in `MEM_*` without `S32()`.** s626: every node via `S32()` + raw
+    ≤16 nodes/pool (`pool= i= addr= flags= size= sane=`). **Same-run control:** posctrl
+    sizes all sane (e.g. free `0x4E6290`, allocated `0x2230` matches return ptr layout);
+    ok136c also sane (`maxfree_sane=0x6A3E0`). **O2 REFUTED.** Generic flags=0x4 fails
+    show `head4=NULL` while pool0 free `0x3CE00` — reason string still walks all pools
+    (pool-aware reason is a follow-up). Env: `ROGUESQ_LOG_RS_MALLOC_DIAG=1`. Class-D
+    fail136c still needed for H-ltexOOM vs H-ltexFree (-389). Full: Sessions 625-626.
 
 -387. **(s624→s625) Post soft-skip `do_rom_read+608` SIGBUS — still 1× freeroll residual
     after -385 M1 (recurred s625 scored, same host stack).** Host: `recomp::do_rom_read` ←
@@ -188,14 +197,13 @@ a range pointer. Highest allocated so far: -388. The next NEW item takes -389.
     Known freeroll family (s214/s215); thr11c_post=1 thr11d_new=0 (blocks thr11d/class-D).
     Free-reroll 1st; escalate only on 2nd same host stack with thr11 live. Full: Session 621.
 
--385. **(s620→s625) `loadLevelTextureCache` null `rs_malloc(0x136C)` — GUARD LIVE-VERIFIED
-    M1 (s624); thr12 still blocked until malloc succeeds; root cause narrowed s625.**
+-385. **(s620→s626) `loadLevelTextureCache` null `rs_malloc(0x136C)` — GUARD LIVE-VERIFIED
+    M1 (s624); thr12 still blocked until malloc succeeds; walk model fixed s626.**
     Guard: `[level-tex-malloc-guard]` @ `0x80048248` → `L_8004840C`. **s624 M1:** ltexmg=1
-    ltex_null=0 thr11d_new=1. **s625:** `[rs-malloc-diag]` fail136c on class-D with
-    size=0x136C flags=0 heads non-null; ok136c earlier same size succeeds; H-ltexArg +
-    H-ltexNullPool REFUTED; free-bytes/corrupt walk open (-388). Soft-skip before
-    `registerServiceWorker` expected until null alloc fixed — do not soft-skip thr12 create.
-    Full: Sessions 620-625.
+    ltex_null=0 thr11d_new=1. **s625:** fail136c size/flags OK, heads non-null; H-ltexArg +
+    H-ltexNullPool REFUTED. **s626:** H-walk1 CONFIRMED (S32+raw dump); O1/O3 open pending
+    class-D fail136c freeroll (-389). Soft-skip before `registerServiceWorker` expected until
+    null alloc fixed — do not soft-skip thr12 create. Full: Sessions 620-626.
 
 -384. **(s619→s621) Post thr11d_new+sec4 `buildMaterialFreeList` null-base SIGBUS — 1×;
     H-matfree1 SUPPORTED (0 on s619 scored freeroll).** s618 only hit. Host
@@ -227,12 +235,12 @@ a range pointer. Highest allocated so far: -388. The next NEW item takes -389.
     logs `[case5-force-state6-skip]`. Keep gate after S32 base fix. Recipe
     `ENGAGE_WAIT_S=90`. Full: Sessions 614-616.
 
--378. **(s613→s625) class-D craft-shadow soft-skip LIVE on scored (cshadow_a=3 s619/s624/s625);
-    thr12 still blocked by null-malloc in parent (-385 M1 LIVE, root narrowed s625).** thr12
+-378. **(s613→s626) class-D craft-shadow soft-skip LIVE on scored (cshadow_a=3 s619/s624/s625);
+    thr12 still blocked by null-malloc in parent (-385 M1 LIVE; H-walk1 fixed s626).** thr12
     parent = `loadLevelTextureCache`. Guards: `[craft-shadow-asset-guard]`/
     `[craft-shadow-walk-guard]` @ `0x8006B764`/`0x8006B780` + `[level-tex-cache]` +
-    `[level-tex-malloc-guard]` @ `0x80048248` (-385) + `[rs-malloc-diag]` (-388). walk-guard
-    not entered (asset-guard soft-skips all three crafts). Full: Sessions 613-625.
+    `[level-tex-malloc-guard]` @ `0x80048248` (-385) + `[rs-malloc-diag]` (-388 s626 raw).
+    walk-guard not entered (asset-guard soft-skips all three crafts). Full: Sessions 613-626.
 
 -377. **(s612) gPlayerShip writer instrument live.** Only two stores to `0x800CC85C`:
     non-null `updateTextOverlayLookupEntry` @ `0x800B40D0` (when current null; copies
@@ -259,16 +267,16 @@ a range pointer. Highest allocated so far: -388. The next NEW item takes -389.
     is STALE** — do not merge with -326. Co-symptom: `osViSetMode` width=24. 2nd occ pending.
     Full: Session 608.
 
--361. **(s589-s625) thr11→sec4→sec2 pipeline — thr11d_new LIVE when recovery fires
+-361. **(s589-s626) thr11→sec4→sec2 pipeline — thr11d_new LIVE when recovery fires
     (s619); class-D soft-skip LIVE (s619); -385 M1 LIVE (s624) but thr12 still 0 until
-    null `rs_malloc(0x136C)` fixed (H-ltexOOM narrowed s625: args/heads OK, free-byte
-    walk untrusted -388); post-soft-skip residual -387 (s624+s625). Pre-thr11d co-gates:
+    null `rs_malloc(0x136C)` fixed (H-walk1 CONFIRMED s626; O1/O3 pending class-D
+    fail136c -389); post-soft-skip residual -387 (s624+s625). Pre-thr11d co-gates:
     recovery silence (-374; RECOV_WAIT_S=50, BUDGET≥900 preferred), mat3inv (-375),
     sinfApprox (-386 1×), ship (-376/-377), freelist/scene/readacct 1× (-384/-382/-383),
     FORCE_STATE6 (-379; OOB -381 CLOSED), post-sec2 packTlut (-373). thr-11=
     `saveServiceWorker` `0x8006F2CC`; thr-12=`hudDisplayUpdateWorker` via
     `loadLevelTextureCache`. Do not raise HOLD_S past 210. Full arc:
-    PROJECT-OVERVIEW §27; Sessions 589-625.**
+    PROJECT-OVERVIEW §27; Sessions 589-626.**
 
 ### Closed product lineage (FULL_SYNC inject + thr pipeline setup) — do not re-open
 
@@ -350,8 +358,8 @@ a range pointer. Highest allocated so far: -388. The next NEW item takes -389.
 -7. **M3 hangar-exit → mission-entry (DoD gate): OPEN.** Exit+cutscene CONFIRMED s577;
     FULL_SYNC inject product-fixed; force6 engagement CONFIRMED s606 and **live-writes real
     hangar state s617** (-381 CLOSED); s608 first force-path sec2 after thr11d when recovery
-    fires; **s619 thr11d_new + class-D LIVE**; **s624 -385 M1 LIVE**; **s625 H-ltexOOM
-    diag LIVE** (args/heads OK; free-byte walk -388). Active residuals: -388..-373 / -361
+    fires; **s619 thr11d_new + class-D LIVE**; **s624 -385 M1 LIVE**; **s626 H-walk1
+    CONFIRMED** (S32 raw dump; O1/O3 open -389). Active residuals: -389..-373 / -361
     / -379. Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.

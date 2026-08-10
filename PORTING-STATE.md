@@ -49077,3 +49077,60 @@ diag_fail=40 as "40 OOMs on the level-tex path".
 Refine diag: per-node raw header dump (flags halfword + size word) for first ≤16 nodes
 per pool at fail136c and one posctrl; optionally log t0/pools-tried at L_80001C60.
 Do not soft-skip thr12; do not merge -385 root with -387.
+
+## Session 626 — 2026-08-10 — H-walk1 CONFIRMED: s625 free-byte garbage was uint32 MEM_* without S32; raw node dump LIVE
+
+### Work unit
+Refine `[rs-malloc-diag]` (item -388): replace free-byte aggregation with raw ≤16
+per-pool node dump, and fix guest-address sign-extension before `MEM_*`.
+
+### Change (outside this repo, as usual)
+- `../N64Recomp/fixup_game_funcs.py`: s625→s626 upgrade path (sentinel
+  `heap-diag (s626` + `maxfree_sane`); every freelist node address goes through
+  `S32()` before `MEM_HU`/`MEM_W`; dumps
+  `[rs-malloc-diag] pool= i= addr= flags= size= sane=` then `summary ... maxfree_sane= reason=`.
+- `../N64Recomp/RecompiledFuncs/funcs_0.c`: same block applied in-place (fixup
+  refuses re-run while prior sentinel present — upgrade path handles regen).
+
+### Soaks
+1. `s626_ltex_raw_node_dump` BUDGET=900 rc=2 (830s): att1 recovery-active thr11 live
+   but thr11d_new=0 / no ltex (class I freeroll); att2 scenegraph 1st; att3 pre-eng.
+2. `s626b` BUDGET=1200 rc=2 (1212s): recov_silent×3 + thr11_live_other_crash freeroll;
+   0 class-D fail136c.
+
+### Discriminating results (posctrl / ok136c — same-run positive control)
+Early posctrl (headE8=0x80154690), S32-fixed walk:
+```
+pool=E8 i=0 addr=0x80154690 flags=0x2 size=0x40 sane=1
+pool=E8 i=1 addr=0x801546E0 flags=0x2 size=0x420 sane=1
+pool=E8 i=2 addr=0x80154B10 flags=0x2 size=0x2230 sane=1   # matches just-allocated block
+pool=E8 i=3 addr=0x80156D50 flags=0x1 size=0x4E6290 sane=1  # free ~5.1 MB
+pool=E8 i=4 addr=0x8063CFF0 flags=0x6 size=0x14A800 sane=1
+pool=E8 i=5 addr=0x80787800 flags=0x1 size=0x557E0 sane=1
+summary event=posctrl nnodes=6 nfree=2 maxfree_sane=0x4E6290 reason=ok
+```
+s625 reported maxfree ~GB garbage on the **same** early posctrl head — that was
+`uint32` KSEG0 in `MEM_*` (phys calc needs sign-extended `gpr`/`S32`). **H-walk1
+CONFIRMED. O2 REFUTED. O4 REFUTED** (posctrl≥1 every attempt with diag armed).
+
+ok136c (size=0x136C flags=0 success): pool4 free max `0x6A3E0`, all nodes sane.
+
+Generic fail (flags=0x4, not level-tex): `head4=NULL`, pool0 free `0x3CE00`,
+reason still says `no_fit_mystery` because summary walks **all** pools — flags=0x4
+only consults head4 (null → instant fail). Pool-aware reason is a follow-up, not
+the -385 root.
+
+### Hypothesis table
+| ID | Verdict |
+|----|---------|
+| H-walk1 | **CONFIRMED** — uint32 MEM_* caused s625 garbage maxfree |
+| H-ltexArg | still REFUTED (s625) |
+| H-ltexNullPool | still REFUTED (s625) |
+| H-ltexOOM (O1) | **OPEN** — needs class-D fail136c raw free sizes |
+| H-ltexFree (O3) | **OPEN** — same |
+| H-dmarom1 (-387) | freeroll residual; not chased |
+
+### Next
+Consume `s627_ltex_fail136c_freeroll` (enqueued). On fail136c: compare free node
+sizes on E8/0 pools (flags=0 path) vs need=0x1370. Optional: make reason
+pool-aware for flags&4 / flags&0. Do not soft-skip thr12.

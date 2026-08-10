@@ -341,3 +341,5 @@
 20260810-030947 | s623_ltex_malloc_guard_recov_tight | rc=2 | 23lines | scratch/agent/soak_results/s623_ltex_malloc_guard_recov_tight_20260810-030020.log
 20260810-032508 | s624_ltex_malloc_guard_budget900 | rc=1 | 43lines | scratch/agent/soak_results/s624_ltex_malloc_guard_budget900_20260810-031033.log
 20260810-035604 | s625_ltex_oom_heap_diag | rc=1 | scored class-D fail136c=1 posctrl=8 ok136c=1 reason=corrupt (walk-model untrusted) ltexmg=1 thr11d_new=1 -387 do_rom_read | scratch/agent/soak_results/s625b_ltex_oom_heap_diag_20260810-034526.log
+20260810-041406 | s626_ltex_raw_node_dump | rc=2 | 830s | H-walk1 CONFIRMED: S32 fix → posctrl sizes sane maxfree=0x4E6290 (was GB garbage); no class-D fail136c (att1 thr11 live no thr11d; freeroll) | scratch/agent/soak_results/s626_ltex_raw_node_dump_20260810-040106.log
+20260810-043600 | s626b_ltex_raw_node_dump | rc=2 | 1212s | BUDGET=1200; 0 class-D (recov_silent×3 + thr11_live_other_crash freeroll); instrument still LIVE posctrl sane | scratch/agent/soak_results/s626b_ltex_raw_node_dump_20260810-041551.log
