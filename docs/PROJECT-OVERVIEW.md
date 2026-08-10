@@ -2497,10 +2497,10 @@ CLEAN hangarbay n=2600, 0 fires on new sites. Surfaced item -345 DIRECT gap afte
 - **(s85→s91)** "`do_rom_read` corrupted `physical_addr` is nondeterministic garbage" — the exact same
   DMA call recurred byte-for-byte 3 times across 3 sessions; reclassified deterministic, reproducible.
 
-## 27. M3 thr11→sec2 hangar-exit pipeline (s577–s615), migrated from CURRENT-TRUTH.md s615 maintenance
+## 27. M3 thr11→sec2 hangar-exit pipeline (s577–s616), migrated from CURRENT-TRUTH.md s615 maintenance
 
 Durable summary of the active M3 DoD path after hangar exit. Session-level detail lives in
-PORTING-STATE Sessions 577–615; CURRENT-TRUTH keeps only open residuals (-380..-373, -361, -7).
+PORTING-STATE Sessions 577–616; CURRENT-TRUTH keeps only open residuals (-381..-373, -361, -7).
 
 ### What was confirmed
 
@@ -2528,9 +2528,13 @@ PORTING-STATE Sessions 577–615; CURRENT-TRUTH keeps only open residuals (-380.
   Hangar-sel store of live ship `0x8015FD90` (H-ship1c SUPPORTED).
 - **s613–s615**: class D death after thr11d+sec4 is `loadCraftShadowTextures` null `load_asset`
   walk (`si_addr=0x380000000`). Soft-skip guards + `[level-tex-cache]` landed; live A–D verify
-  still PENDING (s613 hung on force 3→6; s614 force_skip working but recovery-silent / pre_eng).
-  FORCE_STATE6 must only write when hangar state==5 (s614 gate); natural ACE80 can engage without
-  a force-write.
+  still PENDING (s614–s615 recovery-silent / pre_eng with force_skip). Natural ACE80 can engage
+  without a force-write.
+- **s616**: FORCE_STATE6 / case5-entry used `uint32_t base=0x800D0000` with `MEM_*` → OOB rdram
+  index `0x1000CC3E7` on 64-bit (correct S32-extended idx is `0xCC3E7`). Explains case5-entry
+  reading 255/110 while hangar-state=5, and s613 "force 3→6" never changing real hangar state.
+  Fix: `gpr base = S32(0x800D << 16)` in force-state6 + case3-start. State==5 gate (-379) still
+  correct policy. Live-verify soak: `s616_force6_kseg0_base_fix`.
 
 ### Open residuals (do not re-derive)
 
@@ -2540,7 +2544,8 @@ PORTING-STATE Sessions 577–615; CURRENT-TRUTH keeps only open residuals (-380.
 | -375 | `mat3x3InverseInto` Abort mid-window | 1×; free-reroll; escalate on 2nd |
 | -376/-377 | ship ret=1 / store co-gate for thr11d | H-ship1 SUPPORTED; H-ship1b open |
 | -378 | craft-shadow null walk before thr12 | guard landed; live-verify PENDING |
-| -379/-380 | FORCE_STATE6 only at state==5 | gate landed; natural engage OK |
+| -379 | FORCE_STATE6 only at state==5 | gate kept; s613 recharacterized by -381 |
+| -381 | FORCE_STATE6 KSEG0 `uint32` base OOB | **fixed s616**; live-verify PENDING |
 | -373 | post-sec2 `packTlut`/HMT SIGBUS | 1×; primary bottleneck once pipeline completes |
 | material `0x8000e29c` | `findOrCreateMaterial` | 2×; free-reroll noise |
 
@@ -2549,7 +2554,7 @@ PORTING-STATE Sessions 577–615; CURRENT-TRUTH keeps only open residuals (-380.
 - `ROGUESQ_FS_PIPE_INJECT` — inject FULL_SYNC on non-E9 size-8 at slot∩last_fs
 - `ROGUESQ_FORCE_CASE6_START` — force case6 start poll at ACE94
 - `ROGUESQ_FORCE_STATE6_AFTER=N` — force hangar state→6 at case5-entry n==N **only if current
-  state==5** (s614 gate; skip log `[case5-force-state6-skip]`)
+  state==5** (s614 gate; s616 requires S32-extended KSEG0 base for the read/write)
 
 ### Do-not-retry on this arc
 
@@ -2559,4 +2564,5 @@ PORTING-STATE Sessions 577–615; CURRENT-TRUTH keeps only open residuals (-380.
 - Single-chase packTlut before 2nd same host stack
 - Leaving FORCE_*/FS_PIPE default-ON
 - Treating `last-guest-pc=0x800290d4` as craft-shadow fault site
-- Forcing hangar state from old≠5 (blocks ACE80)
+- Forcing hangar state from old≠5 (blocks ACE80) — and do not reintroduce `uint32_t`
+  KSEG0 bases into `MEM_*` patches on 64-bit hosts

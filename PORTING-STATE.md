@@ -48493,3 +48493,73 @@ migrate durable thr11/sec2 arc to PROJECT-OVERVIEW §27; fold queued soak `s614_
 Requeue class-D force-gate / shadow-guard recipe aiming for recovery-active thr11d+sec4;
 do not re-ungate FORCE_STATE6; do not raise HOLD_S past 210.
 
+
+## Session 616 — 2026-08-10 — FORCE_STATE6 KSEG0 uint32 base OOB; S32 fix + class-D requeue
+
+### Planned unit
+Fold s615 class-D recov-active soak; requeue recovery-active thr11d+sec4 for A–D
+classify (NEXT.md HYPOTHESIS-ID: m3-post-exit-fs-stall).
+
+### s615 soak fold (`s615_class_d_recov_active`, rc=2, 564s)
+3 attempts, same shape as s614:
+- a1: force6=0 force_skip=1, pre_eng crash at
+  `tickWrappingTimerAccumulatorList` / guest `0x80054750` (hangar menu path)
+- a2: **engaged** case6=1 hangar_sel=1 ace80=1 force6=0 force_skip=1,
+  early=recovery_silent (0×76B768)
+- a3: pre_eng budget
+
+Deep-read of a2 (engaged silent):
+- hangar-state transitions 0→1→3→5→6→8 correctly; ACE80 natural 5→6; case6+hangar-sel fire
+- `[case5-entry] n=0.. state=255` while hangar-state=5 (and force skip old=255)
+- s614 a2 had case5-entry state=110; s612 had state=6; s613 state=3 — all **disagree
+  with hangar-state** at the same wall-clock window
+- post-hsel fullsync top addrs lack 0x76B768 (recovery silent confirmed)
+- thr11 id=10 live through recovery wait (no thr11d/sec2)
+
+### Discriminating finding — OOB MEM_* base
+`MEM_BU(offset, reg)` address = `((reg+offset)^3) - 0xFFFFFFFF80000000`.
+
+| base type | idx for hangar byte `-0x3C1C($0x800D)` |
+|-----------|----------------------------------------|
+| `gpr`/`S32(0x800D<<16)` = `0xFFFFFFFF800D0000` | **0xCC3E7** (in 8MB RDRAM) |
+| `uint32_t 0x800D0000` | **0x1000CC3E7** (OOB) |
+
+case5-entry / FORCE_STATE6 / case3-start patches used `uint32_t base = 0x800D0000u`.
+hangar-state / state-write patches used recompiled `ctx->r*` (already S32-extended) —
+hence they agreed with reality while case5-entry read garbage (255/110/0/3/6 from OOB).
+
+s613 recharacterization: the logged `[case5-force-state6] old=3 new=6` wrote OOB;
+hangar-state n=800 still state=5 after. The 488s pre-eng hang was **failure to force
+real state**, not a successful harmful 3→6 clobber. State==5 gate policy remains correct
+once the read/write hits the real byte.
+
+### Fix landed
+- `N64Recomp/RecompiledFuncs/funcs_28.c`: case5 force-state6 + case3-start use
+  `gpr base = S32(0x800D << 16)` and `MEM_BU(-0x3C1C, base)` / `MEM_B(-0x3C1C, base)`.
+- `N64Recomp/fixup_game_funcs.py`: templates updated + s616 migration from uint32 base.
+- Binary rebuilt (`RecompiledFuncs` → `RogueSquadron64Recomp`).
+
+### Soak enqueued
+`scratch/agent/soak_queue/s616_force6_kseg0_base_fix.sh`
+- Positive control: case5-entry states ∈ {0..8}, not stuck on 255/110
+- Then same recovery-active free-reroll + class-D A–D scoring as s615
+- Exit 3 on ctrl fail
+
+### Hypotheses
+| ID | Claim | Result |
+|----|-------|--------|
+| H-kseg1 | case5-entry uint32 base → OOB MEM read | **CONFIRMED** (addr math + log mismatch) |
+| H-kseg2 | s613 force write never touched real hangar state | **CONFIRMED** (hangar-state stayed 5) |
+| H-force6b | state==5 gate is correct policy | still held; was masking H-kseg1 |
+| H-Dshadow1 | class-D null walk primary death | still PENDING (needs recovery-active thr11d) |
+
+### Do not
+- Reintroduce `uint32_t` KSEG0 constants into `MEM_*` patches on arm64/x86_64 hosts
+- Remove the state==5 force gate
+- Raise HOLD_S past 210 / soft-skip mat3inv / single-chase packTlut
+
+### Next
+Consume s616 soak: require BASE_CTRL_PASS; if force old=5 writes and recovery fires,
+score class-D A–D. If ctrl still fails, rebuild path is wrong (binary not rebuilt / fixup
+not applied). If ctrl pass + recovery still silent for 2+ eng runs, silence is independent
+of FORCE_STATE6 base (H-recov1 class F continues free-reroll).
