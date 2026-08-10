@@ -46921,3 +46921,51 @@ initSceneForMission crash. Do not re-open thr-11 as recv-block.
 
 ### Artifacts
 `scratch/s73_post_a_scene/s591_thr11_pipeline/` + `ANALYSIS.md`
+
+## Session 592 — 2026-08-09 — item -361 path-to-sec4 blocked (0/2 pre-exit)
+
+### Goal
+Item -361: force path to post-exit sec4, then measure thr-12 create
+(`entry=0x800495FC`) vs `initSceneForMission`/`coalesceFreeHeapBlocks` crash
+(s589 sole prior sec4 data point).
+
+### Hypotheses
+- H13a: recovery/sec4 intermittent; retry case6+inject HOLD≥90 until sec4.
+- H13b: once sec4 lands, thr-12 creates soon (s577-shaped) unless crash intervenes.
+- H13c: initScene/coalesce systematically blocks thr-12 on force path.
+- H13d: thr-12 independent of thr-11 destroy once sec4 loaded.
+
+### What ran
+1. `s592_sec4_thr12` — FORCE_CASE6=5 + FS_PIPE_INJECT HOLD_S=90.
+2. `s592_sec4_thr12_r2` — same (+ hangarbay log).
+No rebuild (existing binary with case6/inject instrumentation).
+
+### Results
+| run | hangar | case6 | hangar-sel | inject | recov@76B768 | post-exit sec4 | crash |
+|-----|--------|-------|------------|--------|--------------|----------------|-------|
+| s592 | state 5→6 n=1020 | 0 | 0 | 0 | 0 | no | `reserveAndEmitDLEntry+18192` / `last-guest-pc=0x8000ce54` hold-iter 2 |
+| s592_r2 | state 5 n=825 | 0 | 0 | 0 | 0 | no | `beginFrameDLChunk+46800` / `0x8000afa0` hold-iter 1 (**item -338 4th**) |
+
+Both runs: thr-10 (`saveServiceWorker` 0x8006F2CC) still live; only early cinematic
+sec4 (pre-menu); fs~4432 hangar plateau; 0 section 2.
+
+### Verdicts
+- H13a **SUPPORTED as path-gate**: cannot test thr-12 until hangar→case6→exit survives.
+- H13b/c/d **untested** (no post-exit sec4 this session).
+- s589 remains sole force thr-11-destroy+sec4 + pre-thr-12 crash.
+- Item -338 upgraded to **4 occurrences** (confidence high); still file-not-chase.
+
+### Ruled out this session
+- Not a failed-recovery (s591 shape): never reached inject window.
+- Not thr-11 recv-block (H12a stays closed).
+
+### Next
+Multi-retry force soaks in soak_queue (`s592_sec4_thr12_{a,b}`) until post-exit
+sec4; then thr-12 vs crash. If ≥3 more pre-exit deaths, consider hangar
+stability / item -338 prioritization only after noting it is still orthogonal
+to M3 DoD path when exit does work.
+
+### Artifacts
+`scratch/s73_post_a_scene/s592_sec4_thr12/{run.log,ANALYSIS.md}`
+`scratch/s73_post_a_scene/s592_sec4_thr12_r2/run.log`
+`scratch/agent/soak_queue/s592_sec4_thr12_{a,b}.sh`

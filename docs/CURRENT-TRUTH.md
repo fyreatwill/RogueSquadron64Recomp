@@ -31,7 +31,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s591)
+## Current truth (established by session 295; unchanged, reviewed through s592)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -192,12 +192,15 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
 
--361. **(s591) Post-sec4 thr-12 create vs `initSceneForMission` crash.**
-    s589 alone reached thr-11 destroy + sec4 on force; stack
-    `cinematicLoopBody→initSceneForMission→coalesceFreeHeapBlocks+4424`/
-    `0x8000247c` before thr-12. Next: recovery-reliable force hold that
-    reproduces sec4, then thr-12 create within N seconds of sec4 vs known
-    coalesce noise — only escalate if thr-12 missing on crash-free sec4 hold.
+-361. **(s591/s592) Post-sec4 thr-12 create vs `initSceneForMission` crash —
+    BLOCKED on path-to-sec4.** s589 alone reached thr-11 destroy + sec4 on
+    force; stack `cinematicLoopBody→initSceneForMission→coalesceFreeHeapBlocks
+    +4424`/`0x8000247c` before thr-12. **s592 0/2 force soaks** never armed
+    case6/hangar-sel/inject: s592 `reserveAndEmitDLEntry+18192`/`0x8000ce54`
+    at hangar state=6; s592_r2 `beginFrameDLChunk+46800`/`0x8000afa0` at
+    state=5 (**item -338 4th occ**). H13b/c/d untested. Next: multi-retry
+    force soaks (queued `s592_sec4_thr12_{a,b}`) until post-exit sec4, then
+    thr-12 vs crash gate. Artifact: `s592_sec4_thr12/ANALYSIS.md`.
 
 -360. **(s590/s591) Post-exit thr-11→section4→thr-12→section2 — RECHARACTERIZED.**
     thr-11 `saveServiceWorker` (0x8006F2CC) is infinite recv loop; destroy =
@@ -374,11 +377,12 @@ a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
     s559 as part of item -341 freelist-walk GUARD4 (site `0x800088EC`); FULLY CLOSED 2/2 with
     item -341 s561.**
 
--338. **(s554, s572, s574 — 3 occurrences) `beginFrameDLChunk`/`last-guest-pc=0x8000afa0`
+-338. **(s554, s572, s574, s592 — 4 occurrences) `beginFrameDLChunk`/`last-guest-pc=0x8000afa0`
     breadcrumb, filed not chased.** s554 hangarbay: `+37740` at n=2600. **s572 leave-hold:**
-    `+46800` at hold-iter ~12. **s574 leave-gates:** `+46800` at hold-iter 1 (same guest PC).
-    Confidence **moderate→high**. Still do not open a reactive leave-path chase until hangar
-    exit works (item -7); 3rd occ is enough to prioritize after the state-machine gate.
+    `+46800` at hold-iter ~12. **s574 leave-gates:** `+46800` at hold-iter 1. **s592_r2
+    force exit:** `+46800` at hangar state=5 pre case6 (same guest PC). Confidence
+    **high**. Still do not open a reactive leave-path chase until hangar exit works
+    (item -7); prioritize after the state-machine gate / path-to-sec4 reliability.
 
 -337. **(s551) `submitSceneNodeRender+69192`/`last-guest-pc=0x80010df4` — ROOT-CAUSED AND FIXED
     s559 as part of item -341 freelist-walk GUARD4 (site `0x80010DF4`); FULLY CLOSED 2/2 with
@@ -509,7 +513,9 @@ a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
     **Natural (s577):** thr-11 destroy ↔ sec4 → thr-12 → sec2.
     **Force:** thr-11 destroy+sec4 only if recovery (s589 yes / s591 no);
     thr-12 still never observed on force (s589 crash in initSceneForMission).
-    Natural leave crashes file-not-chase. Inject still default OFF.
+    **s592 0/2** never reached exit (pre-case6 hangar noise: -338 4th + new
+    `reserveAndEmitDLEntry`/`0x8000ce54`). Natural leave crashes file-not-chase.
+    Inject still default OFF.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.
