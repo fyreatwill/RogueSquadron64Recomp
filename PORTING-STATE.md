@@ -46762,3 +46762,53 @@ slot∩last_fs (E7 PIPE + F3/FD/F5 residual). Drop the size-8; do not forward.
 - Default OFF until -358 characterized
 
 **Artifacts:** `scratch/s73_post_a_scene/s588_fs_f3_residual{,_r2,_r3}/`
+
+## Session 589 — item -358: post-dual empty not structural (H10a when recovery fires)
+
+### Work unit
+Force-exit + `ROGUESQ_FS_PIPE_INJECT=1` + `HOLD_S=90` to discriminate H10a–H10d
+on the post-dual empty gap filed s588 (item -358).
+
+### Run
+`s589_post_dual_empty` — force case5 n=40, hangarbay n=800, hangar-sel×1,
+graceful-menu, VI 640@0x6A2900. Died hold-iter 43 on
+`coalesceFreeHeapBlocks+4424` / `last-guest-pc=0x8000247c` (known noise).
+0 UJ. Hangar late40 e9_b **40/40** (positive control).
+
+### Dual sticky (same shape as s588)
+tris=164 #5307–#5695; size-8 @0x76DF60 E9×238 E7×152 F3×8 FD×186; inject
+n max=300 residual drop+inject (H9d product).
+
+### Post-dual discrimination (vs s588)
+| | s588 | s589 |
+|---|---|---|
+| after last syncs>0 | empty×2085 tris=0 syncs=0 | crash-tail 174 only; **2288 post-dual syncs>0** |
+| recovery @0x76B768 | **0** | **1988** singles |
+| rdpFs max | 4890 plateau | **7010** |
+| present FIRE | pairs=2 | pairs=2 stalled=0 continues |
+| section 2 mission ovl | no | no |
+| crash | 0x80065e94 | coalesce 0x8000247c |
+
+Immediately after dual: #5696 tris=122 syncs=1 → long tris=100/syncs=1 → later
+tris up to 285. Visual: black freeze hold_02–37 then warm desert-tone content
+hold_38+ (not H10d "hidden content while tris=0").
+
+### Hypotheses
+- **H10a CONFIRMED** (when recovery fires): longer hold advances past dual with
+  real FULL_SYNC elsewhere.
+- **H10b REFUTED**: sticky size-8 ending does not require task-end inject;
+  recovery cells carry fs.
+- **H10c SUPPORTED** for s588 empty shape: failed recovery + early crash.
+- **H10d REFUTED**: early hold was truly black.
+
+### Ruled out
+- Post-dual empty as inevitable structural FULL_SYNC path gap under H9d inject.
+- H9a task-end inject as the next product step for post-dual.
+
+### Open
+- Recovery nondeterminism (s588 miss vs s589 hit) — secondary.
+- **Force path never loads section 2** (s588/s589); natural s577 did → item -359.
+- `FS_PIPE_INJECT` remains default OFF until 2nd recovery confirm + mission path.
+
+### Artifacts
+`scratch/s73_post_a_scene/s589_post_dual_empty/{run.log,ANALYSIS.md,hold_*.png}`

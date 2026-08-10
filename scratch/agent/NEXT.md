@@ -2,59 +2,66 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s588 recap (read this first)
+## s589 recap (read this first)
 
 | H | Result | Evidence |
 |---|--------|----------|
-| H9d residual non-E9 inject | **CONFIRMED** (drop-return) | r3: 570 continuous dual syncs E9→E7→F3→FD |
-| Forward residual | **REFUTED** | r2 UJ 2078 at task ~5880 |
-| H9c recovery cells | **REFUTED** this window | 0 at 0x76A838/0x76B768 |
-| Hangar flood (mode-1) | **REFUTED** | e9_b 39/40; only miss non-slot fs |
-| Dual sticky FULL_SYNC gap | **CLOSED** (-357) | inject n≈300+ covers residual |
-| Post-dual empty | **OPEN** (-358) | #5863+ tris=0 syncs=0 ×2085; present FIRE pairs=2 |
+| H10a longer hold advances | **CONFIRMED** (when recovery fires) | 2288 post-dual syncs>0; 0x76B768×1988; fs 7010 |
+| H10b need task-end inject | **REFUTED** | recovery cells carry FULL_SYNC after slot size-8 ends |
+| H10c empty crash-bounded | **SUPPORTED** s588 shape | s588: 0 recovery + 0x80065e94 + empty×2085 |
+| H10d visual despite tris=0 | **REFUTED** | black freeze real; content returns with live tris/syncs |
+| Post-dual empty structural | **CLOSED** | not inevitable under H9d inject |
+| Mission section 2 on force | **OPEN** (-359) | s588/s589 never load; s577 natural did |
 
-Landed: `ROGUESQ_FS_PIPE_INJECT` residual drop+inject (default OFF).
-Artifact: `s588_fs_f3_residual_r3`.
+Artifact: `scratch/s73_post_a_scene/s589_post_dual_empty/ANALYSIS.md`.
 
 ## This iteration's work unit
 
-**Item -358: post-dual empty after full sticky inject.**
+**Item -359: force path never loads mission overlay section 2.**
 
-After H9d covers the sticky cell through FD, dual DLs go tris=0/syncs=0 for
-~2k tasks while present keeps FIRE pairs=2 and rdpFs plateaus. Is this
-cutscene end → mission load stall, a new FULL_SYNC path gap (slot no longer
-size-8-submitted), or a crash-truncated hold (`0x80065e94`)?
+Dual FULL_SYNC sticky gap is product-fixed when inject+recovery run. M3 DoD
+still blocked: force-exit cutscene never hands off to `.ovl.mission` (section
+2 @0xA5D30). Natural s577 did.
 
 ### Hypotheses
-- H10a: Longer clean hold (or natural leave) advances past empty into
-  in-mission / new VI without more inject.
-- H10b: Empty tasks still need task-end FULL_SYNC (H9a) because the sticky
-  slot is no longer size-8-submitted (inject cannot fire).
-- H10c: Empty is crash-bounded noise; dying at `0x80065e94` masks recovery.
-- H10d: Visual still shows cutscene content via present swap despite runner
-  tris=0 (runner hist incomplete).
+- H11a: Force path skips a Start/state edge natural leave uses; section 2
+  only after that edge (case 6→8 natural vs force case5).
+- H11b: Section 2 is gated on FULL_SYNC/present health; s577 loaded it
+  *before* dual sticky starvation; with inject, force should eventually
+  load it if held longer / different key schedule.
+- H11c: Force path corrupts a mission-entry flag (hangar-sel val=0 is
+  symptom) so cinematic loops without mission DMA.
+- H11d: Section 2 only loads from menu-overlay codepath that force never
+  re-enters after VI 640 cutscene.
 
 ### Discriminating measurement
-1. Force-exit + `FS_PIPE_INJECT=1` + `HOLD_S=90` with PNG captures after
-   dual plateau (phase-gate on VI 640@0x6A2900 + N seconds).
-2. Count size-8 submits at `0x76DF60` during tris=0 window (expect 0 if H10b).
-3. Same-run hangar e9_b GREEN; UJ=0; note whether rdpFs ever moves after #5863.
+1. Same-run: arm inject + overlay logs; run **natural** `double_start` leave
+   (not force) with HOLD_S≥45; count section-2 start-match and whether
+   inject/recovery fire after exit.
+2. If natural dies before section 2: force path with extra Start edges after
+   state 8 (PROBES_OVERRIDE) and log any section-2 attempt.
+3. Positive control: hangar e9_b GREEN; if section 2 loads, note task# and
+   whether dual sticky had already started.
 
 ### Exact commands
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-env PROBE_MODE=start_only HOLD_S=90 \
-  GAME_EXTRA_ENV="ROGUESQ_FORCE_CASE5_START=40 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1" \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s589_post_dual_empty 5 12
-# offline: slot submit count after last syncs>0; PNG content if harness dumps
+# Prefer natural leave first (s577 recipe shape)
+env PROBE_MODE=double_start HOLD_S=60 \
+  GAME_EXTRA_ENV="ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 ROGUESQ_LOG_RDP_FULLSYNC=1" \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s590_section2_natural 5 12
+# Offline: grep '[overlay]' for section 2 / 0xA5D30 / 0x000A5D30 rom
+# Compare to s577_item7_real_edge section-2 timing vs dual sticky onset
 ```
 
 ### Outcomes
-- mission/new VI advances → H10a; consider default-ON inject
-- slot submits=0 + rdpFs frozen → try H9a task-end inject
-- only crash death → file breadcrumb; retry hangarbay-controlled
+- natural + inject loads section 2 → H11a/H11d force-incomplete; product
+  leave must be natural edges (or force must synthesize them)
+- natural never section 2 even with inject → H11b weaker; look at menu flags
+- force+extra edges loads section 2 → H11a CONFIRMED; document edge recipe
+- only crashes → breadcrumb; enqueue soak; do not reactive-chase
 
 ### Do NOT
-- Re-litigate H9d drop vs forward (forward UJ closed).
-- Ship default-ON until post-dual characterized.
-- Chase leave-path crashes reactively.
+- Re-open H10b task-end inject for post-dual.
+- Default-ON FS_PIPE_INJECT without 2nd recovery confirm (can piggyback).
+- Reactive leave-path crash fixes.

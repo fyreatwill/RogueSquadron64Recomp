@@ -299,3 +299,4 @@
 20260809-s587-manual | s587_fs_pipe_inject_r2 (force + mode1 in-place rewrite) | ADVANCED partial | H8a E7 zero-tail killed (388 dual syncs); hangar e9_b 76/76; UJ 2080 after inject; in-place rewrite REFUTED; no recovery cell
 20260809-s587-manual | s587_fs_pipe_inject_r3 (force + mode1 non-mutating 0x7FFF80) | ADVANCED | H8a CONFIRMED H8c mode1 REFUTED; inject n=150 @76DF60; 0 UJ 0 CRASH hangarbay n=800; F3 residual zero-run 250 → item -357; default OFF
 20260809-s588-manual | s588_fs_f3_residual_r3 (force + FS_PIPE_INJECT residual drop) | ADVANCED | H9d CONFIRMED dual residual 570 continuous E9+E7+F3+FD; 0 UJ hangar 39/40; post-dual empty → item -358; default OFF
+20260809-s589-manual | s589_post_dual_empty (force + FS_PIPE_INJECT HOLD_S=90) | ADVANCED | H10a CONFIRMED (recovery 0x76B768×1988; 2288 post-dual syncs>0; fs=7010) H10b REFUTED H10d REFUTED; hangar e9_b 40/40; no section2; crash coalesce 0x8000247c hold43; item -358 closed structural; item -359 filed
