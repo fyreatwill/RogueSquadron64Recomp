@@ -48210,3 +48210,69 @@ Queued `scratch/agent/soak_queue/s610_recov_mat3inv_reroll.sh`:
 - Soft-skip det0 in product code without 2nd occ + same-run abnormal control (s223 hangar null still stands for that phase).
 - Treat `last-guest-pc=0x80022160` as a real fault site.
 - Raise HOLD_S past 210.
+
+## Session 611 (2026-08-09): fold s610_recov_mat3inv_reroll — class E TRUE stall; H-ship1 SUPPORTED (isPlayerShipActive ret=1 co-required for thr11 destroy)
+
+### Soak consumed
+`s610_recov_mat3inv_reroll` rc=0 567s (SOAK-RESULTS 20260809-233630):
+- discard_stats: pre_eng=1 matnoise=0 recov_silent=0 mat3inv=0 attempts=2
+- Scored a2: force6=1 case6=1 hangar-sel=1 ace80=1 inject_max_n=500
+  recov76B768~=70 recov76BA90=0 thr11_create=1 thr11_destroy=0
+  sec4_post=0 sec2_post=0 mat3inv_entry=68 mat3inv_abnormal=0
+  stack_mat3inv=0 crash=ok class_hint=E_recov_but_thr11_live
+- HOLD advanced to hold_160 (~283 s hold wall); recovery ~hold_93.
+  s607 thr11-destroy control died at hold~65 — s610 had **more** post-recovery
+  wall time than s607 needed for destroy. **Not** budget-truncated just-before-destroy.
+
+### Offline recovery→destroy gap (log lines)
+
+| | s607 (thr11d+sec2) | s610 (stall) | s592_a (thr11d+sec4) |
+|--|--|--|--|
+| first768→destroy/EOF | 6923 → destroy | 5993 → EOF | 75750 → destroy |
+| last768→destroy/EOF | 5669 | 4195 | 9399 |
+| n768 (brief) | 92 | 140 | 7956 (sustained) |
+| hold max | 64 (crash) | 160 | n/a |
+
+### Discriminator: `[ship-active]` / `isPlayerShipActive` (0x800B4264)
+
+Reads global `0x800CC85C` (`lui 0x800D; lw -0x37A4`). Log on first 10 / every 200 / **ret change**.
+
+Post-hsel `ret=1` (ship re-activated) vs thr11 destroy across engaged runs:
+
+| run | thr11 destroy | post-hsel ship_ret1 |
+|-----|---------------|---------------------|
+| s592_a | YES | YES n=20 ship=0x8015FD90 (~787 lines before destroy) |
+| s607 | YES | YES n=20 ship=0x8015FD90 (~655 lines before destroy) |
+| s610 | NO | **NO** (last ship-active is pre/at hangar-sel n=18 ret=0) |
+| s605/s606/s608/s609 thr11-live | NO | NO |
+
+**H-ship1 SUPPORTED** (two destroy controls + all scanned stalls): thr11 destroy
+co-requires post-hsel `isPlayerShipActive` ret 0→1. Cause vs co-symptom of a
+shared cutscene advance still open. Non-null store site in tree:
+`updateTextOverlayLookupEntry` @ `0x800B40D0` (`sw $v1, -0x37A4($a1)`);
+zeroing in `destroyPlayerShipRecord`.
+
+### mat3inv (-375)
+Free-reroll worked (mat3inv_n=0 on scored path). Same-run control:
+mat3inv_entry=68, mat3inv_abnormal=0 — no Abort, H-mat3inv1 not evidenced this
+run. Still 1× only; do not soft-skip det0.
+
+### H-status update
+| ID | Status |
+|----|--------|
+| H-mat3inv2 | SUPPORTED (free-reroll yielded non-mat3inv scored path) |
+| H-ship1 | **SUPPORTED** (thr11d ⇒ post-hsel ship ret=1; stalls lack it) |
+| H-recov1 necessity | still SUPPORTED |
+| H-sec2a / -373 | not re-tested (no thr11 destroy) |
+
+### Act
+Queued `scratch/agent/soak_queue/s611_ship_ret1_gate.sh` — same free-rerolls as
+s610 plus `ship_ret1_post` / `ship_n20` scoring and class split
+`E_noship` vs `E_ship_stall` vs `G_thr11d_with_ship`. Positive control offline:
+s607/s592 → ship_ret1=1 thr11d=1; s610 → ship_ret1=0 thr11d=0.
+
+### Do not
+- Soft-skip mat3inv det0 (still 1×).
+- Treat class E as budget artifact without checking hold_N vs s607 hold~65.
+- Raise HOLD_S past 210.
+- Single-chase packTlut (-373 still 1×).

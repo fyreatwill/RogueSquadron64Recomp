@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s610)
+## Current truth (established by session 295; unchanged, reviewed through s611)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -129,13 +129,14 @@ path completed thr11 destroy → sec4 → thr12 → sec2 (mission overlay)** —
 (76BA90 not required); thr11→sec4 is no longer the primary blocker when recovery cell
 `0x76B768` fires. **s609: recovery silence is a co-primary gate** — eng+inject without
 `0x76B768` never reaches thr11 destroy/sec2 (H-recov1 necessity SUPPORTED). **s610:
-s609 reroll scored class E recharacterized** — recovery ×48 DID fire; process Abort'd
-~+4k lines after first `0x76B768` inside `mat3x3InverseInto` (NAN_CHECK) mid the s607
-recovery→thr11-destroy gap (~+7k), not a clean thr11-stall. Free-reroll class added
-(`s610_recov_mat3inv_reroll` + `ROGUESQ_LOG_MAT3INV`). Post-sec2 HMT/`packTlut` (-373, 1×);
-material `0x8000e29c` (2×); mat3inv Abort (-375, 1×). Tools (default OFF):
-`FORCE_STATE6_AFTER`, `FORCE_CASE6_START`, `FS_PIPE_INJECT`. Full chain: items -349..-375;
-raw Sessions 577-610.
+mid-window mat3inv Abort** free-rerolled. **s611: s610 scored TRUE class E stall**
+(hold_160 past s607's destroy-at-hold~65; not budget-truncated). Offline multi-run:
+thr11 destroy co-requires post-hsel `[ship-active] ret=1` (`isPlayerShipActive` /
+global `0x800CC85C` re-activation) — **H-ship1 SUPPORTED** (s592_a+s607 yes;
+s610+all scanned stalls no). Post-sec2 HMT/`packTlut` (-373, 1×); material
+`0x8000e29c` (2×); mat3inv Abort (-375, 1×). Tools (default OFF):
+`FORCE_STATE6_AFTER`, `FORCE_CASE6_START`, `FS_PIPE_INJECT`. Full chain: items
+-349..-376; raw Sessions 577-611.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -153,20 +154,30 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -375. The next NEW item takes -376.
+a range pointer. Highest allocated so far: -376. The next NEW item takes -377.
 
--375. **(s610) Post-exit `mat3x3InverseInto` Abort (NAN_CHECK) mid recovery→thr11-destroy
-    window — 1×; free-reroll, not chased.** s609_recovery_cell_reroll scored a3 class E:
-    eng+inject+recov76B768~=48, thr11_create=1, thr11_destroy=0, crash Abort trap.
-    Host: `mat3x3InverseInto` ← `traverseSceneGraphRecursive` ← `setupCameraMatrices` ←
-    `runModelViewerLoop` ← `menuOverlayInit`. `last-guest-pc=0x80022160` is **STALE**
-    (`tickTextureMaterialExpiry` epilogue; mat3inv does not stamp guest PC). Offline vs
-    s607: first 76B768 ~same +63–67k post-hsel; s607 thr11d ~+7k after first 768; s609
-    death ~+4k after first 768 — **mid-window abort**, not EOF thr11-stall. s223 hangar
-    mat3inv null (0 abnormal/456k) does **not** cover this post-exit force6 phase.
-    **Act:** `s610_recov_mat3inv_reroll` free-rerolls mat3inv stack + arms
-    `ROGUESQ_LOG_MAT3INV=1`. Escalate only on 2nd same host stack with abnormal control.
-    Full: Session 610.
+-376. **(s611) thr11-destroy co-gate: post-hsel `isPlayerShipActive` ret=1 — H-ship1
+    SUPPORTED; s610 class E is a TRUE stall (not budget-truncated).** Folded
+    `s610_recov_mat3inv_reroll` (rc=0): pre_eng=1 mat3inv=0 scored a2
+    `force6+case6+hsel+ace80 inject_n=500 recov76B768~=70 thr11_create=1 thr11_destroy=0
+    sec2_post=0 mat3inv_entry=68 abnormal=0 crash=ok` class E. Hold reached hold_160
+    (~283s); recovery ~hold_93 — **past** s607 destroy wall (game gone hold~65).
+    Multi-run table: s592_a + s607 thr11d each have post-hsel
+    `[ship-active] n=20 ship=0x8015FD90 ret=1` ~655–787 lines before destroy; s610 and
+    all scanned thr11-live stalls (s605/s606/s608/s609) have **zero** post-hsel ret=1
+    (last is hangar-sel n=18 ret=0). Function `isPlayerShipActive` @ `0x800B4264` reads
+    `0x800CC85C`; non-null store at `updateTextOverlayLookupEntry` @ `0x800B40D0`;
+    zero at `destroyPlayerShipRecord`. Cause vs co-symptom of shared cutscene advance
+    open. **Act:** queued `s611_ship_ret1_gate` (scores `ship_ret1_post` /
+    `E_noship` vs `E_ship_stall` vs `G_thr11d_with_ship`). Full: Session 611.
+
+-375. **(s610/s611) Post-exit `mat3x3InverseInto` Abort (NAN_CHECK) mid recovery→thr11-destroy
+    window — 1×; free-reroll WORKED on s610 scored path.** s609 scored mid-window Abort
+    (~+4k after first 768, s607 destroy gap ~+7k). Host:
+    `mat3x3InverseInto` ← `setupCameraMatrices` ← `runModelViewerLoop`. `last-guest-pc=
+    0x80022160` STALE. s610 free-reroll: mat3inv_n=0 on scored; same-run control
+    mat3inv_entry=68 abnormal=0. Escalate only on 2nd same host stack with abnormal.
+    Full: Sessions 610-611.
 
 -374. **(s609/s610) Force6+inject recovery silence — co-primary thr11→sec2 gate; H-recov1
     necessity SUPPORTED.** s608_confirm a3: eng+inject n=750, thr11 create, mono
@@ -313,15 +324,14 @@ a range pointer. Highest allocated so far: -375. The next NEW item takes -376.
     comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
     survival. Full detail: `PORTING-STATE.md` Session 597.
 
--361. **(s589-s610) thr11→sec4→sec2 pipeline — reachable when recovery fires (s608); blocked
-    by recovery silence (-374) or mid-window cutscene Abort (-375) otherwise.** thr-11 =
-    `saveServiceWorker` entry=`0x8006F2CC`. s608: thr11 destroy + sec4 + thr12 + **sec2**
-    with recov76B768~=92, recov76BA90=0 (H-handoff2 REFUTED; H-handoff3 SUPPORTED). s609:
-    eng+inject without 76B768 → no thr11 destroy (H-recov1 necessity SUPPORTED). s610:
-    eng+inject+76B768×48 died mid recovery window on mat3inv Abort before thr11 destroy.
-    Residuals: material `0x8000e29c`; recovery silence (-374); mat3inv (-375); post-sec2
-    -373. Free-reroll all three noise classes. Do not raise HOLD_S past 210. Full:
-    Sessions 589-610.
+-361. **(s589-s611) thr11→sec4→sec2 pipeline — reachable when recovery fires (s608); blocked
+    by recovery silence (-374), mid-window mat3inv (-375), or missing ship re-activation
+    (-376 / H-ship1) otherwise.** thr-11 = `saveServiceWorker` entry=`0x8006F2CC`. s608:
+    thr11 destroy + sec4 + thr12 + **sec2** with recov76B768~=92, recov76BA90=0
+    (H-handoff2 REFUTED; H-handoff3 SUPPORTED). s609: no 76B768 → no thr11d (H-recov1
+    necessity). s610: true stall with 76B768×70 + thr11 live through hold_160; lacks
+    post-hsel ship ret=1 (H-ship1). Residuals: material `0x8000e29c`; -374; -375; -373;
+    -376. Free-reroll noise classes. Do not raise HOLD_S past 210. Full: Sessions 589-611.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
@@ -525,9 +535,10 @@ a range pointer. Highest allocated so far: -375. The next NEW item takes -376.
 -7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN.** Exit + cutscene CONFIRMED (s577);
     FULL_SYNC inject product-fixed (-354..-358); force6 engagement CONFIRMED s606; **s608 first
     force-path sec2 after thr11 destroy** when recovery `0x76B768` fires. Co-primary blockers
-    on the eng+inject path: recovery silence (-374), mid-window mat3inv Abort (-375), material
-    noise `0x8000e29c` (2×). In-mission still blocked by post-sec2 HMT/`packTlut` (-373, 1×).
-    H-handoff2 REFUTED. `FS_PIPE_INJECT` / `FORCE_STATE6_AFTER` still default OFF.
+    on the eng+inject path: recovery silence (-374), mid-window mat3inv (-375), **missing
+    post-hsel ship re-activation H-ship1 (-376)**, material noise `0x8000e29c` (2×).
+    In-mission still blocked by post-sec2 HMT/`packTlut` (-373, 1×). H-handoff2 REFUTED.
+    `FS_PIPE_INJECT` / `FORCE_STATE6_AFTER` still default OFF.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.
