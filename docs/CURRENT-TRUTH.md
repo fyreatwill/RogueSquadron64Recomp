@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s601)
+## Current truth (established by session 295; unchanged, reviewed through s602)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -129,9 +129,9 @@ classic s178 producer-stop) traced to a sticky shared DPC staging cell (phys `0x
 Factor5 LLE RSP for PIPE_SYNC/SETTIMG (H7a) — product fix `ROGUESQ_FS_PIPE_INJECT` (default OFF)
 restores sync flow through the E7/F3/FD residual. thr-11 destroy co-times with sec4 reload when
 recovery `0x76B768` is healthy. Current frontier: item -361 R2 coalesce re-verify, blocked
-post-engagement by item -338 (guarded s600 as -365; s601 first live verify scored D — requeued).
-Full chain: items -349..-366; raw `PORTING-STATE.md` Sessions 577-601. DoD = **cutscene→in-mission**
-+ craft input.
+post-engagement by item -338 (guarded s600 as -365; s601 D, s601-r2 no engagement; s602 requeue
+with no-sticks). Full chain: items -349..-367; raw `PORTING-STATE.md` Sessions 577-602. DoD =
+**cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
 
@@ -148,22 +148,28 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -366. The next NEW item takes -367.
+a range pointer. Highest allocated so far: -367. The next NEW item takes -368.
 
--366. **(s601) `s600_item338_beginframe_s0_verify` scored D (path not exercised) — requeued as
-    `s601_item338_beginframe_s0_verify_r2`.** Fast-retry: attempt 1 pre-engagement death
-    (`last-guest-pc=0x80065ac4`, not discriminating); attempt 2 engagement
-    `case6=1 hangar-sel=1` then scored. Gate:
-    `beginframe_s0_guard=0 last_guest_afa0=0 sec4=1 sec2=0 coalesce_guard2_r2=0
-    inject_lines=0 recov76B768=0 crash_pc=0x8000241c` /
-    `coalesceFreeHeapBlocks+3192` (already-catalogued s354-366 heap-walker background noise,
-    not a new item; dies ~1k log lines after hangar-sel, before the beginframe path can run).
-    Binary has the guard string; env was armed. **Item -338/-365 still PENDING live 1/2** —
-    same recipe requeued, do not redesign. Full: Session 601.
+-367. **(s602) `s601_item338_beginframe_s0_verify_r2` = no engagement (rc=2); engagement gate
+    diagnosed as ACE80 camera-settle; requeued no-sticks as
+    `s602_item338_beginframe_s0_verify_r3`.** Attempt 1: pre-engagement
+    `transformLightByType+256`/`0x80010134` (item -347; discard). Attempt 2: full HOLD
+    survived at hangar **state=5**, 0 ACE80 / 0 ACE94 / 0 case6. Mechanism: FORCE_CASE6
+    injects at ACE94 which only runs in state 6; 5→6 is automatic `[state-write]
+    site=0x800ACE80` (camera settle), not a button. All prior engagements have ACE80; stick
+    pulses (default hold+10/+25/+40) co-timed with A2's stuck-at-5 window while s600 engaged
+    in ~3s pre-stick. Recipe r3 sets `STICK_SCHEDULE=999:sr`. If r3 still no engagement →
+    pivot to force-write state=6 under FORCE_CASE6 after N case5 frames. Full: Session 602.
+
+-366. **(s601) `s600_item338_beginframe_s0_verify` scored D (path not exercised).** Fast-retry:
+    attempt 1 pre-engagement death; attempt 2 engagement `case6=1 hangar-sel=1` then scored.
+    Gate: `beginframe_s0_guard=0 last_guest_afa0=0 sec4=1 … crash_pc=0x8000241c` /
+    `coalesceFreeHeapBlocks+3192` (catalogued noise; died before beginframe path). s601-r2
+    requeue scored no engagement → item -367. Full: Session 601.
 
 -365. **(s600) Item -338 ROOT-CAUSED and GUARDED (`BEGINFRAME_S0_GUARD` site=`0x8000AFA0`);
-    live verify in flight (s601 requeue after s600 soak scored D).** Offline on all 5 crash logs
-    (s554/s572/s574/s592_r2/s598): identical mechanism — guest `0x8000AFA0`
+    live 2/2 confirm still PENDING (s601=D, s601-r2=no engagement, s602 r3 queued).** Offline
+    on all 5 crash logs (s554/s572/s574/s592_r2/s598): identical mechanism — guest `0x8000AFA0`
     `lw $v0, 0x8($s0)` after null-only `beql $s0,$zero`; SIGBUS `si_addr=0x335000008` on 4/5
     (s598: `0x384004087`), `x11` matches low 32 of `si_addr`. Function base `0x8000A8A0`
     (`beginFrameDLChunk`); host `+37740` vs `+46800` is pc-symbol/binary drift, not two sites.
@@ -176,7 +182,7 @@ a range pointer. Highest allocated so far: -366. The next NEW item takes -367.
     entries. Fix: range-check `ctx->r16`; OOB → `s2--` + `goto L_8000B208` (mirrors outer null
     arm). Env `ROGUESQ_LOG_BEGINFRAME_S0_GUARD` / `[beginframe-s0-guard]`. In
     `fixup_game_funcs.py` + hand-applied `funcs_3.c` (sentinel blocks re-fixup without regen);
-    binary rebuilt. **Not CLOSED until 2/2 live confirms.** Full detail: Sessions 600-601.
+    binary rebuilt. **Not CLOSED until 2/2 live confirms.** Full detail: Sessions 600-602.
 
 -364. **(s599) `s598_fast_retry_case6` ran: engagement on attempt 1/8, then item -338 before
     `sec4=2` — REFRAMES item -361 bottleneck to "item -338 racing thr-11 destroy."**
@@ -225,16 +231,13 @@ a range pointer. Highest allocated so far: -366. The next NEW item takes -367.
     comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
     survival. Full detail: `PORTING-STATE.md` Session 597.
 
--361. **(s589-s601) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
+-361. **(s589-s602) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
     open.** Bottleneck reframed s599 (item -364): not recovery-cell reliability but item -338
     racing thr-11 destroy post-engagement. s600 (item -365) root-caused and guarded -338;
-    s601 first live verify scored D (path not exercised; died on catalogued `0x8000241c`
-    coalesce noise post-engagement with `sec4=1`). Requeued as `s601_item338_*_r2` — if a
-    future scored attempt reaches `sec4>=2` with the R2 path live, item -361's original
-    re-verify unblocks. Mechanism (unchanged): `initSceneForMission`'s 2nd unguarded
-    `$s2`-based coalesce loop at `0x8000247C` (R2 guard s593). `sec4>=2` remains the
-    discriminating threshold (`sec4=1` = boot preload). Do not raise `HOLD_S` past 210.
-    Full: Sessions 589-601.
+    s601 scored D; s601-r2 no engagement (item -367 ACE80 gate). s602 requeues no-sticks.
+    Mechanism (unchanged): `initSceneForMission`'s 2nd unguarded `$s2`-based coalesce loop at
+    `0x8000247C` (R2 guard s593). `sec4>=2` remains the discriminating threshold (`sec4=1` =
+    boot preload). Do not raise `HOLD_S` past 210. Full: Sessions 589-602.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
@@ -338,11 +341,11 @@ a range pointer. Highest allocated so far: -366. The next NEW item takes -367.
 
 -338. **(s554, s572, s574, s592, s598 — 5 occurrences) `beginFrameDLChunk`/
     `last-guest-pc=0x8000afa0` — ROOT-CAUSED s600, GUARDED as item -365 (`BEGINFRAME_S0_GUARD`
-    site=`0x8000AFA0`); live 2/2 confirm PENDING (s601 first soak = D, requeued).** Guest insn
-    `lw $v0, 0x8($s0)` after null-only check on stack-slot-loaded node ptr; SIGBUS
+    site=`0x8000AFA0`); live 2/2 confirm PENDING (s601=D, s601-r2=no eng, s602 r3 queued).**
+    Guest insn `lw $v0, 0x8($s0)` after null-only check on stack-slot-loaded node ptr; SIGBUS
     `si_addr=0x335000008` (4/5). s554 pre-crash also co-fired existing guards with
     `bad_ptr=0x7500D019` (corruption wave feeding the bad `$s0`, not a second independent
-    bug). See items -365/-366.
+    bug). See items -365/-366/-367.
 
 -337. **(s551) `submitSceneNodeRender+69192`/`0x80010df4` — ROOT-CAUSED, FIXED and FULLY CLOSED
     2/2 with item -341 (s561).**

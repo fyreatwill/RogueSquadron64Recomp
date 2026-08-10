@@ -47698,3 +47698,39 @@ confirms. Item -361 still blocked on a discriminating -338 verify that reaches
 ### Next
 Fold s601 requeue result the same way (A/B/C/D). Only A/B with guard fire
 advances -338 toward 1/2 CLOSED.
+
+## Session 602 — 2026-08-09 — fold s601 r2: no engagement (rc=2); ACE80 settle is engagement gate; requeue no-sticks
+
+### Ran
+- Folded `s601_item338_beginframe_s0_verify_r2` (533s, rc=2): **no scored attempt**.
+  - Attempt 1: pre-engagement CRASH `transformLightByType+256` /
+    `last-guest-pc=0x80010134` (item -347 breadcrumb family; not discriminating).
+  - Attempt 2: survived full HOLD_S=90, `case6=0 hangar_sel=0`, hangar stuck at
+    **state=5**, 0 ACE94 polls, 0 FORCE_CASE6.
+- Offline path analysis on A2 vs s600 engaged attempt (same recipe family):
+  - Hangar switch: case5 → `L_800AC8B0` (AC8C0), case6 → `L_800ACE84` (ACE94).
+  - `ROGUESQ_FORCE_CASE6_START` injects Start **only at ACE94**, which only runs
+    once hangar state is already 6.
+  - 5→6 is **not** a button edge: `[state-write] site=0x800ACE80 old=5 new=6` is an
+    automatic camera-settle write at the end of case5's float path.
+  - All prior successful engagements (s590_case6 / s592_a / s598 / s600) have
+    ACE80; s601-r2 A1/A2 have **zero** ACE80 writes.
+  - s600 engaged within ~3 wall-seconds of p1-start (hold-iter 3 death) — before
+    default stick pulses at hold+10/+25/+40. A2 took stick pulses while stuck at 5.
+
+### Ruled out / not claimed
+- Not A/B/C/D (no scored engagement). Not a 2nd consecutive D.
+- Not "FORCE_CASE6 broken" — env armed, binary has `[case6-force-start]` string;
+  site simply never entered.
+- Not a new M3 crash lead for A1's `0x80010134` (item -347 reframed as coverage
+  artifact; do not escalate).
+
+### Landed
+- Recipe `scratch/agent/soak_queue/s602_item338_beginframe_s0_verify_r3.sh`:
+  same fast-retry + arms, **`STICK_SCHEDULE=999:sr`** (no stick pulse in hold
+  1..90) so camera settle can complete. Gates also report `ace80=`.
+- Pivot if r3 still E (no engagement): force-write state=6 under
+  `FORCE_CASE6_START` after N case5 frames (code change, not this session).
+
+### Next
+Fold s602 r3. Score A/B/C/D on engagement; E → force-write pivot.

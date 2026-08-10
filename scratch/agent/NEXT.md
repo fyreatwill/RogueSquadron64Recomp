@@ -2,55 +2,58 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s601 recap (read this first)
+## s602 recap (read this first)
 
-Folded `s600_item338_beginframe_s0_verify` (334s, rc=1): attempt 1 pre-engagement
-discard; attempt 2 scored engagement then **outcome D** — `beginframe_s0_guard=0`,
-`last_guest_afa0=0`, crash at already-catalogued `coalesceFreeHeapBlocks+3192` /
-`0x8000241c` (s354-366 noise), `sec4=1`, no inject/recovery. Path not exercised;
-not discriminating. Guard binary + env confirmed present. Same recipe requeued as
-`scratch/agent/soak_queue/s601_item338_beginframe_s0_verify_r2.sh`. Item -338/-365
-still 0/2 live confirms; item -361 still blocked. Full: CURRENT-TRUTH -366/-365/-361;
-PORTING-STATE Session 601.
+Folded `s601_item338_beginframe_s0_verify_r2` (533s, rc=2): **no scored attempt**
+(not A/B/C/D). Attempt 1 pre-engagement `0x80010134`/item -347 discard. Attempt 2
+full HOLD survived at hangar **state=5** with 0 ACE80 / 0 ACE94 / 0 case6.
+
+**Engagement gate diagnosed:** `ROGUESQ_FORCE_CASE6_START` injects Start at ACE94,
+which only runs in hangar state 6. 5→6 is automatic camera-settle
+`[state-write] site=0x800ACE80`, not a button. All prior engagements have ACE80.
+Default stick pulses (hold+10/+25/+40) co-timed with A2's stuck-at-5 window; s600
+engaged in ~3s pre-stick. Item -338/-365 still 0/2 live confirms; item -361 still
+blocked. Full: CURRENT-TRUTH -367/-366/-365/-361; PORTING-STATE Session 602.
+
+Requeued as `scratch/agent/soak_queue/s602_item338_beginframe_s0_verify_r3.sh`
+with `STICK_SCHEDULE=999:sr` (no stick pulses during hold).
 
 ## This iteration's work unit
 
-**Fold in the `s601_item338_beginframe_s0_verify_r2` soak result and act on the
-discriminating outcome.**
+**Fold in the `s602_item338_beginframe_s0_verify_r3` soak result and act on it.**
 
-1. Read the new SOAK-RESULTS.md line for `s601_item338_*` and the scored attempt's
-   gate line. Extract:
-   `beginframe_s0_guard=N`, `sec4`, `sec2`, `coalesce_guard2_r2`, `crash`, `crash_pc`.
-2. Classify against the recipe's A/B/C/D table:
-   - **A** guard fires + no `0x8000afa0` crash + `sec4>=2` → item -338 CLOSED 1/2;
-     item -361 R2 path may now be live — check `coalesce_guard2_r2` and thr-12.
-   - **B** guard fires, no `0x8000afa0`, dies on a different crash or `sec4` still 1 →
-     file the new crash as a breadcrumb (or escalate if known), keep -338 at 1/2
-     pending a clean 2nd confirm, do not claim -361 unblocked.
-   - **C** still dies at `0x8000afa0` with 0 guard fires → guard miss; re-read the
-     site / check binary has the patch / check env var armed.
-   - **D** 0 fires, no `0x8000afa0` (path not exercised) → not discriminating; requeue
-     the same recipe (do not redesign). If this is the **3rd consecutive D** on this
-     slug after s601, stop requeueing and write a pivot: either (i) a longer post-
-     engagement hold that survives catalogued `0x8000241c` noise long enough for
-     beginframe to run, or (ii) offline-force a bad `$s0` positive control for the
-     guard instrument alone.
-3. If A or B and the guard fired: same-run positive control. Queue a 2nd confirm
-   soak (new tag) for the 2/2 CLOSE of item -338/-365.
-4. If A and `coalesce_guard2_r2>=1`: first live hit of the s593 R2 fix — fold into
-   item -361 and decide thr-12 next step from that log.
+1. Read the new SOAK-RESULTS.md line and any scored attempt's gate line. Extract:
+   `beginframe_s0_guard=N`, `ace80`, `sec4`, `sec2`, `coalesce_guard2_r2`,
+   `crash`, `crash_pc`, engagement (case6+hangar-sel).
+2. Classify:
+   - **A** guard fires + no `0x8000afa0` + `sec4>=2` → item -338 CLOSED 1/2;
+     check `coalesce_guard2_r2` for -361.
+   - **B** guard fires, no `0x8000afa0`, other crash or `sec4` still 1 → file
+     breadcrumb, keep -338 at 1/2 pending clean 2nd confirm.
+   - **C** dies at `0x8000afa0` with 0 guard fires → guard miss.
+   - **D** engagement but 0 fires, no `0x8000afa0` → not discriminating; requeue
+     same no-sticks recipe. Count consecutive Ds (s601 was D; if this is D #2,
+     one more then pivot).
+   - **E** budget exhausted / no engagement **again** despite no-sticks → ACE80
+     settle is nondet independent of sticks. **Pivot (code):** under
+     `ROGUESQ_FORCE_CASE6_START`, after N case5 frames still at state 5,
+     force-write hangar state byte to 6 (the ACE80 write) so ACE94 path becomes
+     reachable. Land in `fixup_game_funcs.py` + rebuild; do not redesign the
+     rest of the force path.
+3. If A or B and guard fired: queue a 2nd confirm soak for 2/2 CLOSE of -338/-365.
 
 ## Do NOT
 - Re-characterize item -338 from the 5 historical logs (done s600).
-- Escalate `0x8000241c` / `coalesceFreeHeapBlocks+3192` as a new M3 lead (s354-366
-  background noise; already ruled out s601).
+- Escalate `0x8000241c` / `coalesceFreeHeapBlocks+3192` (catalogued noise).
+- Escalate `0x80010134` / transformLightByType (item -347 coverage artifact).
 - Raise `HOLD_S` past 210.
 - Chase `waitForAnyAudioSlot+244` (item -362: symtab misattribution).
 - Re-open thr-11 as recvServiceMessage block (H12a closed).
-- Full regen unless you need to re-apply fixup from a cleared RecompiledFuncs.
+- Re-arm default stick schedule on this verify recipe.
 
 ### Reference tags
 `[beginframe-s0-guard] site=0x8000AFA0`, `[case6-force-start]`, `[hangar-sel]`,
-`[thr-create]/`/`[thr-destroy]`, `[rdp-fullsync] ... addr=0x0076B768`,
+`[state-write] site=0x800ACE80`, `[hangar-state]`, `[buttons-hangar] site=0x800ACE94`,
+`[thr-create COP`/`[thr-destroy]`, `[rdp-fullsync] ... addr=0x0076B768`,
 `[overlay] start-match: section 4`, `[coalesce-heap-r2-guard]`,
 `[CRASH][last-guest-pc]` / `[CRASH][pc-symbol]`.
