@@ -48333,3 +48333,87 @@ G_thr11d_with_ship. NOCTRL suffix if instrument never fires.
 - Raise HOLD_S past 210.
 - Single-chase packTlut (-373 still 1×) or material 0x8000e29c (2× filed).
 - Treat s611 rc=2 as H-ship1 evidence either way (unscored).
+
+## Session 613 (2026-08-10): fold s612_ship_store_gate — class D; thr12 parent = loadLevelTextureCache; craft-shadow null-walk guard landed
+
+### Work unit
+Fold `s612_ship_store_gate` SOAK-RESULTS and act on H-ship1b / residual class.
+
+### Soak result
+`s612_ship_store_gate` 20260810-001350 rc=1 289s — recovery-active engagement a1 (no reroll).
+
+Gate (scored):
+```
+force6=1 case6=1 hangar-sel=1 ace80=1 inject_max_n=200
+recov76B768~=2588 recov76BA90~=0
+thr11_create=1 thr11_destroy=1 sec4_post=1 sec2=0 thr495FC_post=0
+ship_ret1_post=1 ship_store_all=4 ship_store_post_nz=2
+first_store_post_val=0x8015FD90 store_at_hsel=val=0x8015FD90 prev=0
+ctrl_ship_store=1 mat3inv_abnormal=0
+crash=CRASH crash_pc=0x800290d4 (STALE)
+class_hint=D_sec4_no_sec2
+crash_sym=loadCraftShadowTextures+1068
+```
+
+Positive control: `ctrl_ship_store=1` — instrument LIVE.
+
+### Store→destroy timeline (absolute log lines)
+| event | line | notes |
+|-------|------|-------|
+| hangar-sel | 159457 | ship tag null at log site |
+| ship-store n=2 | 159458 | val=0x8015FD90 immediately after |
+| ship-zero n=2 | 160168 | |
+| thr11 id=10 destroy | 160187 | pre-existing thr11 |
+| thr11 id=11 create | 160285 | post-hsel thr11 |
+| ship-store n=3 | 225728 | re-arm |
+| ship-active ret=1 | 225784 | |
+| ship-zero n=3 | 226431 | |
+| thr11 id=11 destroy | 226450 | scored thr11_destroy |
+| sec4 | 226453 | |
+| crash loadCraftShadowTextures | 228692 | ~2244 lines later; no thr12 |
+
+ASLR-corrected host return addresses (slide≈0xa48000 from crash):
+- store@hsel → `updateHangarBayScene`
+- zero post-hsel early → `gracefulMenuShutdown`
+- store/zero near thr11d → `runModelViewerLoop`
+- pre-hsel stores → `menuControllerInput` / `playExitSoundAndToggleScreenMeshes`
+
+### Hypotheses
+| ID | Verdict | Evidence |
+|----|---------|----------|
+| H-ship1 | SUPPORTED (again) | thr11d ∧ ship_ret1_post=1 same-run |
+| H-ship1b | consistent, not fully proven | store→ret1→thr11d; no E_store_no_thr11d |
+| H-ship1c | **SUPPORTED** | store_at_hsel val=0x8015FD90 (live texture target) |
+| thr12 parent | **identified** | `loadLevelTextureCache` only site that registerServiceWorker(entry=0x800495FC) |
+| class D residual | **new primary** | thr11d+sec4, thr12 never, dies in craft shadow null walk |
+
+### Crash mechanism (single-source host stack + MEM_W math)
+`cinematicLoopBody → load_cutscene → spawnCutsceneObjectsFromList →
+allocateAndInitCraftNpcContext → loadCraftShadowTextures`.
+Crash at funcs_16.c:13095 `L_8006B780: MEM_W(s1,0)` with s1=0.
+`si_addr=0x380000000` = rdram_base(0x300000000) + 0x80000000 from MEM_W(null).
+`load_asset` returned 0/OOB; s2>0 entered walk. Existing craft-idx>13 guard does
+not cover null asset return. last-guest-pc=0x800290d4 is STALE (inflate_fast family;
+item -259 CLOSED) — do not merge.
+
+s607 comparison: thr11d→sec4→thr12 (~360 lines)→sec2→packTlut (-373). No shadow crash.
+
+### Code landed (sibling `../N64Recomp/`)
+- `[craft-shadow-asset-guard]` after s5=load_asset @ 0x8006B764 — soft-skip to L_8006B81C
+- `[craft-shadow-walk-guard]` at L_8006B780 — soft-skip OOB s1
+- `[level-tex-cache]` entry log in `loadLevelTextureCache` @ 0x8004810C
+- `fixup_game_funcs.py` mirrored (sentinel blocks re-run without regen)
+- Binary rebuilt
+
+### Queued
+`scratch/agent/soak_queue/s613_class_d_shadow_guard.sh` — force6+inject free-reroll;
+scores craft_shadow_asset/walk, level_tex_*, thr12, sec2. Subclasses:
+D_guard_thr12_no_sec2 / D_guard_no_thr12 / D_shadow_crash.
+
+### Do not
+- Raise HOLD_S past 210.
+- Soft-skip mat3inv (still 1×).
+- Single-chase packTlut (-373 still 1×).
+- Treat last-guest-pc=0x800290d4 as the fault site.
+- Claim H-ship1b fully causal without E_store_no_thr11d.
+

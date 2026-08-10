@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s612)
+## Current truth (established by session 295; unchanged, reviewed through s613)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -134,12 +134,17 @@ mid-window mat3inv Abort** free-rerolled. **s611: s610 scored TRUE class E stall
 thr11 destroy co-requires post-hsel `[ship-active] ret=1` (`isPlayerShipActive` /
 global `0x800CC85C` re-activation) — **H-ship1 SUPPORTED** (s592_a+s607 yes;
 s610+all scanned stalls no). **s611 soak** no recovery-active score (pre_eng=4
-matnoise=1). **s612:** instrumented sole writers of `0x800CC85C`
-(`[ship-store]` @ `0x800B40D0`, `[ship-zero]` @ `0x800B42A8`, skip arm) — H-ship1b
-pending recovery-active soak. Post-sec2 HMT/`packTlut` (-373, 1×); material
-`0x8000e29c` (2×); mat3inv Abort (-375, 1×). Tools (default OFF):
+matnoise=1). **s612:** ship writers instrumented. **s613 fold of `s612_ship_store_gate`:**
+recovery-active class **D** (`thr11d+sec4`, no thr12/sec2); `ctrl_ship_store=1`;
+post-hsel store `val=0x8015FD90` at hangar-sel (`updateHangarBayScene`) and again
+from `runModelViewerLoop` before thr11 destroy — **H-ship1c SUPPORTED**, H-ship1
+re-confirmed on G path. Residual: crash `loadCraftShadowTextures` null
+`load_asset` walk (`si_addr=0x380000000`); thr12 parent is
+`loadLevelTextureCache` only. Soft-skip + `[level-tex-cache]` landed; soak
+`s613_class_d_shadow_guard` queued. Post-sec2 HMT/`packTlut` (-373, 1×);
+material `0x8000e29c` (2×); mat3inv Abort (-375, 1×). Tools (default OFF):
 `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`, `FS_PIPE_INJECT`. Full chain: items
--349..-377; raw Sessions 577-612.
+-349..-378; raw Sessions 577-613.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -157,10 +162,29 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -377. The next NEW item takes -378.
+a range pointer. Highest allocated so far: -378. The next NEW item takes -379.
 
--377. **(s612) gPlayerShip writer instrument landed — H-ship1b probe armed; s611 soak
-    unscored (pre_eng=4 matnoise=1).** Folded `s611_ship_ret1_gate` rc=2 562s: 5
+-378. **(s613) s612 ship-store soak scored class D; thr12 parent identified;
+    craft-shadow null-walk guard landed.** Folded `s612_ship_store_gate` rc=1 289s
+    recovery-active a1: `ctrl_ship_store=1` `ship_store_post_nz=2`
+    `store_at_hsel=0x8015FD90` `ship_ret1_post=1` `thr11_destroy=1` `sec4_post=1`
+    `sec2=0` `thr495FC_post=0` `recov76B768~=2588` crash
+    `loadCraftShadowTextures+1068` / `si_addr=0x380000000` (MEM_W null). ASLR-corrected
+    hosts: hangar-sel store=`updateHangarBayScene`; post re-arm/zero in
+    `runModelViewerLoop`; pre-hsel menu=`menuControllerInput` /
+    `playExitSoundAndToggleScreenMeshes`. **H-ship1c SUPPORTED** (hangar-sel copies
+    live `0x800CC864`). **H-ship1 re-confirmed** on thr11d path. thr12
+    (`hudDisplayUpdateWorker` `0x800495FC`) is created only from
+    `loadLevelTextureCache→registerServiceWorker` — never reached this run (s607
+    thr12 ~360 lines post-sec4). Code: always-on soft-skip
+    `[craft-shadow-asset-guard]` / `[craft-shadow-walk-guard]` at
+    `0x8006B764`/`0x8006B780` + `[level-tex-cache]` entry in `funcs_16.c`/
+    `funcs_10.c` + `fixup_game_funcs.py` (sibling N64Recomp). Binary rebuilt.
+    Queued `s613_class_d_shadow_guard`. Full: Session 613.
+
+-377. **(s612/s613) gPlayerShip writer instrument CONFIRMED live; H-ship1b
+    consistent with thr11d path (store→ret1→destroy); not fully causal-proven.**
+    s612 soak ctrl_ship_store=1; no E_store_no_thr11d. Prior s611 unscored. Folded `s611_ship_ret1_gate` rc=2 562s: 5
     attempts, no recovery-active engagement. a2 engaged force6+case6+hsel+ace80 then
     material-noise `findOrCreateMaterial+776` / guest-pc `0x80010b7c` (not `0x8000e29c`)
     with 0×76B768 — free-reroll. Offline still holds H-ship1. Code: only two stores to
@@ -334,15 +358,14 @@ a range pointer. Highest allocated so far: -377. The next NEW item takes -378.
     comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
     survival. Full detail: `PORTING-STATE.md` Session 597.
 
--361. **(s589-s612) thr11→sec4→sec2 pipeline — reachable when recovery fires (s608); blocked
-    by recovery silence (-374), mid-window mat3inv (-375), or missing ship re-activation
-    (-376/-377 / H-ship1) otherwise.** thr-11 = `saveServiceWorker` entry=`0x8006F2CC`. s608:
-    thr11 destroy + sec4 + thr12 + **sec2** with recov76B768~=92, recov76BA90=0
-    (H-handoff2 REFUTED; H-handoff3 SUPPORTED). s609: no 76B768 → no thr11d (H-recov1
-    necessity). s610: true stall with 76B768×70 + thr11 live through hold_160; lacks
-    post-hsel ship ret=1 (H-ship1). s612: writer instrument armed. Residuals: material
-    `0x8000e29c`; -374; -375; -373; -377. Free-reroll noise. Do not raise HOLD_S past 210.
-    Full: Sessions 589-612.
+-361. **(s589-s613) thr11→sec4→sec2 pipeline — reachable when recovery fires (s608); blocked
+    by recovery silence (-374), mid-window mat3inv (-375), missing ship re-activation
+    (-376/-377 / H-ship1), or post-sec4 craft-shadow null walk (-378 class D)
+    otherwise.** thr-11 = `saveServiceWorker` entry=`0x8006F2CC`. thr-12 =
+    `hudDisplayUpdateWorker` via `loadLevelTextureCache`. s608: thr11d+sec4+thr12+sec2
+    with recov76B768~=92, recov76BA90=0. s612/s613: thr11d+sec4 then shadow crash,
+    thr12 never. Residuals: -378; material `0x8000e29c`; -374; -375; -373. Free-reroll
+    noise. Do not raise HOLD_S past 210. Full: Sessions 589-613.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
