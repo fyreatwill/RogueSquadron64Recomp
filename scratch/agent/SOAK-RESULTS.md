@@ -347,3 +347,4 @@
 20260810-045213 | s628_ltex_pool_aware_freeroll | rc=137 | 600s | scratch/agent/soak_results/s628_ltex_pool_aware_freeroll_20260810-045213.log
 20260810-092833 | s629_ltex_pool_aware_freeroll | rc=2 | 1234s | 0 ltexmg across 4 attempts (2 recov_silent + 2 recovery-active-no-class-D-ltex reroll); no fail136c/maxfree_sel data — 2nd consecutive null (s628+s629) on H-ltexOOM-sel discriminator | scratch/agent/soak_results/s629_ltex_pool_aware_freeroll_20260810-090759.log
 20260810-093237 | s630_ltex_pool_aware_freeroll_retry | rc=137 | 600s | scratch/agent/soak_results/s630_ltex_pool_aware_freeroll_retry_20260810-093237.log
+20260810-095049 | s631_ltex_pool_aware_freeroll_hold210 | rc=137 | 600s | scratch/agent/soak_results/s631_ltex_pool_aware_freeroll_hold210_20260810-095049.log

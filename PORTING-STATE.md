@@ -49320,3 +49320,103 @@ Consume `s631_ltex_pool_aware_freeroll_hold210.sh` (already queued, loop will
 run it between iterations). See `scratch/agent/NEXT.md` for the aggregate-
 drain-counter pivot plan if it also comes back null.
 
+## Session 631 — 2026-08-10 — s631 soak analysis: thr11-destroy rarity is the real bottleneck, not the malloc/pool logic (item -390)
+
+### What ran
+`s631_ltex_pool_aware_freeroll_hold210.sh` had already been consumed by the
+loop before this session started (SOAK-RESULTS.md line present, bare
+rc=137/600s, no inline verdict — log inspected directly). 600s cap, 2
+completed attempts + a 3rd cut off by the hard cap: attempt 1 (dur=566s)
+reached recovery (`recov768` fired) but ended `class_hint=I_thr11_live_no_destroy`
+(thr11 thread live, never destroyed) → free-rerolled per the s629 filter
+(`thr11d_new=0`); attempt 2 had no case5-entry (pre-engagement, 10s);
+attempt 3 started but never got a SCORE line before the 600s SIGKILL. **0
+`ltexmg` hits, 0 `fail136c` events** — 4th consecutive null on the
+`H-ltexOOM-sel`/`H-ltexFree` discriminator (s628, s629, s630, s631; 0/11
+combined attempts across all 4 soaks ever reached `fail136c`).
+
+### The real finding (offline re-analysis of s628-s631 combined)
+Per NEXT.md's own instruction, a 4th null should trigger the aggregate-E8-
+drain-counter pivot. Before building that, cross-referenced every printed
+`SCORE` line (not just the final scored-or-rerolled one) across all 4 soak
+logs — 11 total attempt records — on two fields: `recov768` (recovery cell
+fired) and `thr11d_new` (thr11 create+destroy pair completed, the
+established precondition for reaching `loadLevelTextureCache`/`ltexmg`):
+
+| recov768 fired? | thr11d_new=1? | count |
+|---|---|---|
+| no (recovery silent) | — | 7/11 |
+| yes | no (`I_thr11_live_no_destroy` / `_other_crash`) | 3/4 |
+| yes | **yes** | 1/4 |
+
+Only 1 of the 4 recovery-fired attempts ever completed a thr11 destroy —
+**thr11d_new firing is ~25% conditional on recovery firing, and recovery
+itself is silent in the majority of attempts (7/11).** This refines the s619
+claim "`thr11d_new` LIVE when recovery fires," which was based on a much
+smaller sample and is not the reliable near-certainty it was treated as.
+Compounding: even raising `HOLD_S` 180→210 (s631) did not convert an
+`I_thr11_live_no_destroy` case into a destroy — the single s631 recovery-fired
+attempt was still `I_thr11_live_no_destroy` at the wider window, matching
+the s628-630 pattern. **This explains why the -390 discriminator has stayed
+unfed for 4 soaks: it isn't that `loadLevelTextureCache` is reached and
+fails differently than expected — it's that the pipeline almost never
+reaches `loadLevelTextureCache` at all**, because its prerequisite
+(thr11 destroy) is itself rare and not simply a function of dwell time.
+
+**Secondary, weak (N=1 vs N=3) lead:** the one attempt that DID reach
+`thr11d_new=1` (s629, attempt 4, `SCORE` line with `ship_store=2
+ship_zero_post=2`) is the only one of the 4 recovery-fired attempts with TWO
+ship-store/zero cycles recorded (`[ship-store]`/`[ship-zero]`, item
+-376/-377 instrument) — the 3 `I_thr11_live_no_destroy`/`_other_crash`
+attempts all show `ship_store=1 ship_zero_post=1`. Flagged as `H-shipcycle2`,
+unconfirmed (N=1), not escalated to CURRENT-TRUTH as a claim — recorded here
+as the next thing to look for once more `thr11d_new=1` samples land.
+
+**What killed the one thr11d_new=1 attempt before it reached `ltexmg`:** a
+real SIGBUS crash — `loadDatFile+692` ← `loadLevelAssets` ← `setupCutsceneLevel`
+← `cinematicLoopBody` ← `mainGameLoop` (full mcontext + backtrace present,
+this is a genuine fault, not a budget-timeout SIGKILL misclassified as a
+crash — checked the raw run.log to rule that out). `last-guest-pc=0x800290d4`
+on this crash, which per item -259 is a **known-stale** PC (`inflate_fast`
+clean return, not diagnostic) — matches the previously-documented
+`loadDatFile` "background noise" family (PROJECT-OVERVIEW.md item 48 table
+entry, `loadDatFile+1152` at a different offset, same stale-pc signature).
+Treated as 1× background-noise freeroll, not escalated (would need a 2nd
+occurrence specifically inside the thr11d_new-reached window to justify a
+guard).
+
+### Discrimination
+| Outcome | Verdict |
+|---|---|
+| H-ltexOOM-sel / H-ltexFree (fail136c maxfree_sel vs need) | **STILL NO DATA** — 4th consecutive null, 0/11 combined attempts |
+| "thr11d_new LIVE when recovery fires" (s619) | **REFINED, not refuted** — only 1/4 (25%) of recovery-fired attempts complete a thr11 destroy in this 11-attempt sample; recovery firing is necessary but far from sufficient |
+| Raising HOLD_S 180→210 converts no-destroy → destroy | **REFUTED** — s631's one recovery-fired attempt at HOLD_S=210 was still `I_thr11_live_no_destroy` |
+| H-shipcycle2 (2nd ship-store/zero cycle correlates with destroy) | **UNCONFIRMED, N=1** — flagged for more samples, not a claim |
+| loadDatFile+692 crash blocking the one thr11d_new=1 run | Matches known stale-pc background-noise family (item -259); 1× freeroll, not escalated |
+
+### Ruled out
+The aggregate-E8-drain-counter pivot planned in s631's own header comment —
+premature. That instrument would only be informative once `loadLevelTextureCache`
+is reached with some regularity; right now the bottleneck is upstream
+(thr11 destroy essentially never completes), so a finer-grained malloc
+counter has nothing to discriminate yet.
+
+### Code
+No source changes. No new instrumentation needed — `ship_store`/`ship_zero_post`
+and `thr11d_new` are already computed per-attempt by the existing freeroll
+script's `score_attempt()`; the finding above came from reading the already-
+collected `SCORE` lines across 4 prior soak logs, not a new build/run.
+
+### Next
+Accumulate more `thr11d_new=1` samples before spending a build cycle on
+anything — the recipe's own reroll logic already retries toward that
+condition, the bottleneck is raw attempt volume (~9% hit rate at recov768
+fired, per this 11-sample estimate). Re-enqueued the same freeroll recipe
+(HOLD_S=210, unchanged mechanics) under new tags for the loop to keep running;
+this is NOT the same case as "don't queue a 4th identical HOLD_S retry" from
+s631's header — that guidance was about widening HOLD_S as a lever, which is
+now refuted (see above); simply accumulating N on an already-correct recipe
+is exactly what the soak queue exists for. Once 3+ `thr11d_new=1` samples
+exist, re-check H-shipcycle2 and re-attempt the fail136c discriminator from
+whichever samples survive past the loadDatFile background noise.
+
