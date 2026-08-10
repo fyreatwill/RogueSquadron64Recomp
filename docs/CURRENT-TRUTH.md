@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s617)
+## Current truth (established by session 295; unchanged, reviewed through s618)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -120,18 +120,22 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s617**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s618**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
   `loadLevelTextureCache`) → sec2 (mission overlay) is reachable when recovery cell `0x76B768`
   fires (s608; H-handoff2 / 76BA90 REFUTED).
 - Co-gates: recovery silence (-374), mid-window mat3inv Abort (-375, free-reroll), post-hsel
   `isPlayerShipActive` ret=1 / ship store (-376/-377, H-ship1 SUPPORTED), class-D craft-shadow
-  null walk (-378, guard landed, live-verify still PENDING — thr11d/thr12 not reached on s616
-  scored path), FORCE_STATE6 KSEG0 base OOB (**-381 CLOSED s617**: S32 fix live-verified),
-  post-force `traverseSceneGraphRecursive` SIGBUS before thr11d (**-382**, 1× free-reroll).
+  null walk (-378, guard landed, live-verify PENDING — needs thr11d_new of post-hsel thr11),
+  FORCE_STATE6 KSEG0 base OOB (**-381 CLOSED s617**), post-force scene-graph SIGBUS (**-382**,
+  1×; H-sg1 SUPPORTED s618 freeroll scenegraph=0), post-force `readAccountForSelectionScreen`
+  SIGBUS (**-383**, 1× free-reroll; local-symtab often mislabels as
+  `rebuildActiveDisplayObjectList+540`).
+- **thr11d scoring trap (s618):** post-hsel destroy of the *old* thr11 is not thr11d. Real
+  metric = destroy of an id created post-hsel with entry `0x8006F2CC` (`thr11d_new`).
 - Tools (default OFF): `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`, `FS_PIPE_INJECT`.
 - Post-sec2 residual: HMT/`packTlut` SIGBUS (-373, 1×). Material `0x8000e29c` (2×, free-reroll).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-382; Sessions 577-617.
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-383; Sessions 577-618.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -149,21 +153,26 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -382. The next NEW item takes -383.
+a range pointer. Highest allocated so far: -383. The next NEW item takes -384.
 
-### Active M3 pipeline (s577–s617) — open residuals only
+### Active M3 pipeline (s577–s618) — open residuals only
 
--382. **(s617) Post-force recovery-active crash in `traverseSceneGraphRecursive` before
-    thr11d — blocks class-D scoring (1×; free-reroll).** s616 scored a2: BASE_CTRL_PASS
-    + force6 old=5→6 (hangar 5→6→8) + recov768=7948; thr-destroy id=10 then thr-create
-    id=11 (`0x8006F2CC`); **id=11 never destroyed**; sec4 whole-run=1 is early cinematic
-    only (`sec4_post=0`); thr12/cshadow/ltex all 0 post-hsel. Crash: SIGBUS
-    `si_addr=0x38000f421` guest `x9=0x8000f421`, host
-    `traverseSceneGraphRecursive+1984` ← `setupCameraMatrices` ← `runModelViewerLoop` ←
-    `menuOverlayInit`. `last-guest-pc=0x80015544` is STALE (-324 family). Score script
-    mislabeled this `D_shadow_or_other_crash` — craft-shadow path never entered. Free-
-    reroll like mat3inv until 2nd same host stack; soak `s617_scenegraph_freeroll_classd`
-    scores thr11d_post/sec4_post correctly. Full: Session 617.
+-383. **(s618) Post-force recovery-active crash in `readAccountForSelectionScreen` before
+    thr11d_new — blocks class-D scoring (1×; free-reroll).** s617 scored a1: BASE_CTRL_PASS
+    + force6 old=5→6 + recov768=7952; thr11c_post=1; **thr11d_post=1 was FALSE POSITIVE**
+    (destroy of pre-hsel thr11 id=10; NEW id=11 never destroyed → thr11d_new=0);
+    sec4_post=0 thr12=0 cshadow=0; ship_store=1 ship_zero_post=1; scenegraph=0.
+    Crash: SIGBUS `si_addr=0x3811c000e` x9=`0x811c000e`. local-symtab said
+    `rebuildActiveDisplayObjectList+540` — **WRONG**; nm/atos: `readAccountForSelectionScreen+604`
+    (guest `0x800B85B4` family). Stack truth: readAccount ← runModelViewerLoop ←
+    menuOverlayInit. Caller is `menuControllerInput` jump-table **case 1** (sets local s6=6
+    after return — NOT hangar bay state 6). `last-guest-pc=0x80022160` STALE (-347). Free-
+    reroll until 2nd same host stack; soak `s618_readacct_freeroll_classd` scores thr11d_new
+    + free-rerolls readacct/scenegraph 1st. Full: Session 618.
+
+-382. **(s617→s618) Post-force `traverseSceneGraphRecursive` SIGBUS — H-sg1 SUPPORTED on
+    freeroll (scenegraph=0 on s617 scored). Stays 1×; do not escalate without 2nd same host
+    stack.** Full: Sessions 617-618.
 
 -381. **(s616→s617) FORCE_STATE6 KSEG0 `uint32` base OOB — FIXED and LIVE-VERIFIED.**
     S32-extended `gpr base = S32(0x800D << 16)` in case5 force-state6 + case3-start.
@@ -211,13 +220,14 @@ a range pointer. Highest allocated so far: -382. The next NEW item takes -383.
     is STALE** — do not merge with -326. Co-symptom: `osViSetMode` width=24. 2nd occ pending.
     Full: Session 608.
 
--361. **(s589-s617) thr11→sec4→sec2 pipeline — reachable when recovery fires (s608); blocked
+-361. **(s589-s618) thr11→sec4→sec2 pipeline — reachable when recovery fires (s608); blocked
     by recovery silence (-374), mat3inv (-375), missing ship re-activation (-376/-377),
-    class-D craft-shadow (-378, still PENDING thr11d), post-force scene-graph SIGBUS
-    (-382, 1× free-reroll), FORCE_STATE6 gate (-379; OOB base -381 CLOSED), or post-sec2
-    packTlut (-373). thr-11=`saveServiceWorker` `0x8006F2CC`; thr-12=
-    `hudDisplayUpdateWorker` via `loadLevelTextureCache`. Do not raise HOLD_S past 210.
-    Free-reroll noise. Full arc: PROJECT-OVERVIEW §27; Sessions 589-617.**
+    class-D craft-shadow (-378, PENDING thr11d_new), post-force scene-graph (-382, 1×;
+    H-sg1 s618), post-force readAccount (-383, 1× free-reroll), FORCE_STATE6 gate (-379;
+    OOB base -381 CLOSED), or post-sec2 packTlut (-373). thr-11=`saveServiceWorker`
+    `0x8006F2CC`; thr-12=`hudDisplayUpdateWorker` via `loadLevelTextureCache`. Do not
+    raise HOLD_S past 210. Free-reroll noise. Full arc: PROJECT-OVERVIEW §27; Sessions
+    589-618.**
 
 ### Closed product lineage (FULL_SYNC inject + thr pipeline setup) — do not re-open
 
@@ -299,7 +309,7 @@ a range pointer. Highest allocated so far: -382. The next NEW item takes -383.
 -7. **M3 hangar-exit → mission-entry (DoD gate): OPEN.** Exit+cutscene CONFIRMED s577;
     FULL_SYNC inject product-fixed; force6 engagement CONFIRMED s606 and **live-writes real
     hangar state s617** (-381 CLOSED); s608 first force-path sec2 after thr11d when recovery
-    fires. Active residuals: -382..-373 / -361 / -379. Tools still default OFF.
+    fires. Active residuals: -383..-373 / -361 / -379. Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
 

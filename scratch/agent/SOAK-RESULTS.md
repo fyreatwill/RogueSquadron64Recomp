@@ -331,3 +331,4 @@
 20260810-004620 | s614_class_d_force_gate | rc=2 | 564s | scratch/agent/soak_results/s614_class_d_force_gate_20260810-004620.log
 20260810-010018 | s615_class_d_recov_active | rc=2 | 564s | scratch/agent/soak_results/s615_class_d_recov_active_20260810-010018.log
 20260810-011959 | s616_force6_kseg0_base_fix | rc=1 | 447s | scratch/agent/soak_results/s616_force6_kseg0_base_fix_20260810-011959.log
+20260810-013539 | s617_scenegraph_freeroll_classd | rc=1 | 268s | scratch/agent/soak_results/s617_scenegraph_freeroll_classd_20260810-013539.log

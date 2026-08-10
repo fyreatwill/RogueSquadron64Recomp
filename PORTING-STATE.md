@@ -48638,3 +48638,82 @@ interact with H-ship1 (ret=1 co-gate) if thr11d is later attempted with ship nul
 Consume s617 soak: if thr11d_post+sec4_post fire, score class-D A–D; if 2nd same-stack
 scenegraph crash, escalate -382 with node-pointer site audit; if thr11 live no destroy,
 revisit ship-zero post-hsel (H-ship1).
+
+## Session 618 — 2026-08-10 — fold s617 soak: thr11d_post false positive; true crash is readAccountForSelectionScreen (not rebuild)
+
+### Planned unit
+Consume `s617_scenegraph_freeroll_classd`: require BASE_CTRL_PASS; classify thr11d vs
+scene-graph 2nd-occ vs class-D (NEXT.md HYPOTHESIS-ID: m3-post-exit-fs-stall).
+
+### Soak fold (`s617_scenegraph_freeroll_classd`, rc=1, 268s)
+Single recovery-active scored attempt (no free-rerolls needed):
+- BASE_CTRL_PASS: `case5_n0_state=5` `ctrl_good=5 ctrl_bad=0`
+- force6=1 force_old5=1 force_skip=0 case6=1 hsel=1 ace80=0 recov768=7952
+- hangar-sel + recovery 76B768 seen; HOLD finished with crash=1
+- scenegraph=0 mat3inv=0 matnoise=0
+
+### Classification
+| Class | Criteria | Result |
+|-------|----------|--------|
+| G | thr11d_new ∧ sec4_post ∧ (cshadow\|thr12\|sec2) | **NO** — sec4_post=0 thr12=0 cshadow=0 |
+| H | scenegraph 2nd same host stack | **NO** — scenegraph=0 → **H-sg1 SUPPORTED** |
+| I | thr11c_post≥1 thr11d_new=0 | **YES shape** — thr11c_post=1; NEW thr11 never destroyed |
+| A–D | craft-shadow guards | **NO** — cshadow_a/w=0 ltex only early whole-run |
+| E | recovery_silent | **NO** — recov active |
+| J | new residual (see below) | **YES** |
+
+### thr11d_post false positive (scoring trap)
+Post-hsel timeline:
+1. hangar-sel (line ~152780)
+2. ship-store n=2 val=`0x8015FD90`
+3. ship-zero n=2
+4. thr-destroy **id=10** (OLD thr11, entry `0x8006F2CC`) ← counted as thr11d_post=1
+5. thr-create **id=11** entry `0x8006F2CC` ← thr11c_post=1
+6. **id=11 never destroyed** before crash → real thr11d_new=0
+
+s617 recipe's thr11d_post counted *any* thr-destroy after hsel. Fixed in s618 recipe as
+`thr11d_new` = destroy of an id that was thr-created post-hsel with entry `0x8006F2CC`.
+
+### Crash — item -383 (true host via nm/atos)
+```
+[CRASH] signal 10 Bus error
+si_addr=0x3811c000e  x9=0x00000000811c000e
+local-symtab pc-symbol=rebuildActiveDisplayObjectList+540   # WRONG
+nm/atos truth: readAccountForSelectionScreen+604            # 0x1005329a4+604
+stack (runtime addrs): readAccount ← runModelViewerLoop ← menuOverlayInit ← mainGameLoop
+last-guest-pc=0x80022160  # STALE (-347; nop in audited set)
+```
+Caller: `menuControllerInput` jump-table **case 1** → `jal 0x800B85B4`
+(`readAccountForSelectionScreen`); delay-slot sets local `$s6=6` (menu mode, **not**
+hangar bay state 6). Do not conflate with FORCE_STATE6 hangar byte.
+
+local-symtab misattribution to `rebuildActiveDisplayObjectList` is the same class of
+symbolizer trap as -311; always cross-check host PC with `nm -n` / `atos` on the binary.
+
+### Hypotheses
+| ID | Claim | Result |
+|----|-------|--------|
+| H-sg1 | scenegraph SIGBUS is free-reroll noise | **SUPPORTED** (0 hits on freeroll) |
+| H-sg2 | 2nd same host stack → escalate -382 | not triggered |
+| H-Dshadow1 | null load_asset walk primary class-D | still PENDING (thr11d_new not reached) |
+| H-ship1z | post-hsel ship-zero blocks thr11d of new thr11 | open — ship_zero_post=1 and thr11d_new=0 co-occur (single-source) |
+| H-readacct1 | readAccount OOB is free-reroll noise | 1×; free-reroll recipe queued |
+| H-readacct2 | 2nd same host stack → real residual | pending freeroll |
+
+### Soak enqueued
+`scratch/agent/soak_queue/s618_readacct_freeroll_classd.sh`
+- Free-reroll mat3inv / material-noise / recovery_silent / scenegraph 1st / **readacct 1st**
+- Score `thr11d_new` (fixed) + `readacct=` + class_hint J
+- Do not soft-skip readAccount without 2nd same host stack
+
+### Do not
+- Trust thr11d_post (any thr-destroy after hsel) as thr11d evidence — use thr11d_new
+- Trust local-symtab `rebuildActiveDisplayObjectList+540` without nm/atos
+- Escalate -382/-383 on last-guest-pc alone (both STALE)
+- Soft-skip readAccount / scenegraph / mat3inv without 2nd same host stack
+- Raise HOLD_S past 210 / remove state==5 FORCE_STATE6 gate / uint32 KSEG0 bases
+
+### Next
+Consume s618 soak: thr11d_new+sec4_post → class-D A–D; readacct 2nd → escalate -383 with
+site audit (menuControllerInput case 1 / account table); scenegraph 2nd → escalate -382;
+thr11c_post thr11d_new=0 → ship-zero / handoff.

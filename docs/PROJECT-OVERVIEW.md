@@ -2538,12 +2538,18 @@ PORTING-STATE Sessions 577–617; CURRENT-TRUTH keeps only open residuals (-382.
   `0x8000f421`, stack setupCameraMatrices←runModelViewerLoop) — item **-382**, 1× free-reroll;
   thr11 id=11 created post-hsel but never destroyed; sec4 whole-run counts were early cinematic
   only. Class-D craft-shadow still PENDING thr11d.
+- **s618**: s617 freeroll scored recovery-active with scenegraph=0 (**H-sg1 SUPPORTED**; -382
+  stays 1×). thr11d_post was a false positive (destroy of pre-hsel thr11 id=10; new id=11
+  never destroyed). True crash host is `readAccountForSelectionScreen+604` (nm/atos), not
+  local-symtab's `rebuildActiveDisplayObjectList+540`; caller `menuControllerInput` jump
+  case 1. New residual **-383** (1× free-reroll). Metric fix: `thr11d_new`.
 
 ### Open residuals (do not re-derive)
 
 | Item | Residual | Status |
 |------|----------|--------|
-| -382 | post-force `traverseSceneGraphRecursive` SIGBUS pre-thr11d | 1×; free-reroll; escalate on 2nd same host stack |
+| -383 | post-force `readAccountForSelectionScreen` SIGBUS pre-thr11d_new | 1×; free-reroll; local-symtab often mislabels rebuild+540 |
+| -382 | post-force `traverseSceneGraphRecursive` SIGBUS pre-thr11d | 1×; H-sg1 SUPPORTED s618 (0 hits); escalate only on 2nd |
 | -374 | recovery cell `0x76B768` silence after eng+inject | free-reroll; co-primary |
 | -375 | `mat3x3InverseInto` Abort mid-window | 1×; free-reroll; escalate on 2nd |
 | -376/-377 | ship ret=1 / store co-gate for thr11d | H-ship1 SUPPORTED; H-ship1b open |
@@ -2570,3 +2576,7 @@ PORTING-STATE Sessions 577–617; CURRENT-TRUTH keeps only open residuals (-382.
 - Treating `last-guest-pc=0x800290d4` as craft-shadow fault site
 - Forcing hangar state from old≠5 (blocks ACE80) — and do not reintroduce `uint32_t`
   KSEG0 bases into `MEM_*` patches on 64-bit hosts
+
+### Next
+Consume s618 soak: thr11d_new+sec4_post → class-D A–D; readacct 2nd → escalate -383;
+scenegraph 2nd → escalate -382; thr11c_post thr11d_new=0 → ship-zero / handoff.
