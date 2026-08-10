@@ -47820,3 +47820,48 @@ Queued `scratch/agent/soak_queue/s604_item338_item361_hold180_budgetfix.sh`:
 
 ### Next
 Fold s604 budget-fixed HOLD_S=180 soak. Prefer thr-11 destroy + sec4_post for -361 R2 live confirm; beginframe passive. If thr11_destroy=0 on a scored attempt → pivot recovery-cell (HOLD not past 210). If rc=2 with ≥4 attempts → force-write state=6 pivot.
+
+## Session 605 — 2026-08-09 — fold s604: budget fix worked, 0/3 engagement; FORCE_STATE6_AFTER landed
+
+### Planned unit
+Fold `s604_item338_item361_hold180_budgetfix` soak and act (NEXT G/G' tree).
+
+### s604 result
+- SOAK-RESULTS: rc=137 (loop 600s hard-cap SIGKILL), 600s wall.
+- Budget floor fix **WORKED**: attempt 3 started (s603 could not).
+- Engagement: **0/3** (0 ACE80, 0 case6, 0 hangar-sel). Not A–F scored.
+  - A1 (166s): pre-eng crash `hangarTickCameraOrbit` / last-guest-pc=`0x800ab068`,
+    si_addr=`0x380000028`, hangar state=5, hangarbay n=1000, c5≈183.
+  - A2 (162s): pre-eng crash `tickWrappingTimerAccumulatorList` / `0x80054750`,
+    si_addr=`0x388000c02`, state=5, c5≈164.
+  - A3 (~270s game, SIGKILL mid-hold): **alive** at state=5, 0 ACE80, c5≈186,
+    FS stalled (`pairs=0`). Burned remaining budget without engagement.
+- Combined s603+s604 hangar-reaching attempts: **0/5 ACE80**.
+- Classification: G' (budget floor OK) + evidence that natural ACE80 is not
+  reliable under HOLD_S=180 even when alive (A3). s602 E pivot is now due.
+
+### ACE80 mechanism (source)
+Case5 handler reaches ACE78/ACE80 (store state=6) only after float camera
+settle path; both clamp arms fall through to the store. Stuck-at-5 means that
+path is never entered — not that the store is conditional once reached.
+`FORCE_CASE6_START` injects at ACE94, which only runs in **case 6**.
+
+### Change landed
+- `ROGUESQ_FORCE_STATE6_AFTER=N` (default off): at case5-entry n==N, force-write
+  hangar state byte (`MEM_B(-0x3C1C, 0x800D0000)=6`), log `[case5-force-state6]`.
+- Hand-applied `~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c`.
+- Fixup upgrade path in `fixup_game_funcs.py` (s575-only → s605; clean install;
+  already-present sentinel).
+- Binary rebuilt (`RogueSquadron64Recomp`); `strings` confirms tag + env name.
+- Queued `scratch/agent/soak_queue/s605_force_state6_dual_target.sh`:
+  FORCE_STATE6_AFTER=40 + FORCE_CASE6_START=5 + inject + HOLD_S=180 +
+  START_FLOOR=100 + no-sticks dual-target gate.
+
+### Rules out / does not claim
+- Does **not** claim force-state6 unlocks thr-11 destroy or sec2 (soak pending).
+- Does **not** claim ACE80 is impossible (s602 A3/A4 hit it); only that the
+  rate under current recipe is too low to spend sessions waiting.
+- Budget NEED=HOLD_S+90 bug remains closed by START_FLOOR_S=100.
+
+### Next
+Fold `s605_force_state6_dual_target` SOAK-RESULTS; class A–G per recipe header.

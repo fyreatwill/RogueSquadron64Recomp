@@ -1,36 +1,35 @@
 #!/bin/zsh
-# s604: requeue of s603 dual-target HOLD_S=180 after budget-math failure
-# (HYPOTHESIS-ID m3-post-exit-fs-stall).
+# s605: force-write hangar state=6 after N case5 frames, then dual-target
+# HOLD_S=180 for items -338/-361 (HYPOTHESIS-ID m3-post-exit-fs-stall).
 #
-# s603 (rc=2, 336s, 0/2 engagement): both attempts died pre-engagement at
-# hangar state=5 (hangarbay n≈1000, 0 ACE80):
-#   A1: item -306 setByteAcrossEntryList+176 / last-guest-pc=0x800aafa8
-#   A2: host Metal fscache crash / last-guest-pc=0x800ab0e0
-# Neither scored. Root cause of 0 engagement was recipe NEED=HOLD_S+90=270:
-# after 2×~170s path-to-hangar deaths, remain=220 < NEED so attempt 3 never
-# started. s602 r3 (HOLD_S=90, NEED floor=30s) needed attempt 4 to engage —
-# same math under HOLD_S=180 cannot fit 4 rolls inside the loop's 600s hard
-# cap if NEED stays 270.
+# s604 (rc=137 hard-cap 600s): budget fix started A3, but 0/3 engagement.
+# All hangar-reaching attempts stuck at state=5 (0 ACE80). A1/A2 pre-
+# engagement crashes (0x800ab068 hangarTickCameraOrbit; 0x80054750
+# tickWrappingTimerAccumulatorList). A3 alive through hold but never
+# ACE80 (c5≈186, FS stalled). Combined s603+s604 = 0/5 ACE80 at state=5.
+# s602 E pivot: force-write state=6 after N case5 frames so FORCE_CASE6
+# (ACE94) can run. Landed ROGUESQ_FORCE_STATE6_AFTER (default off).
 #
-# Fix: restore s602-style start floor (REMAIN < 100 refuse). Engaged attempt
-# still runs HOLD_S=180; if wall-clock truncates, still score what we got.
-# STICK_SCHEDULE=999:sr kept (s602 no-sticks engagement confirmed).
-# Dual-target gate unchanged (thr11_destroy / sec4_post / beginframe / r2).
+# Recipe: FORCE_STATE6_AFTER=40 + FORCE_CASE6_START=5 + FS_PIPE_INJECT +
+# HOLD_S=180 + START_FLOOR=100 + no-sticks. Early abort: if hangarbay
+# reached and force-state6 did not fire within path, still score on
+# case6+hangar-sel (force may fire late).
 #
-# Discriminating outcomes (scored attempt = case6+hangar-sel):
-#   A) beginframe_s0_guard>=1 AND no 0x8000afa0  → -338 live confirm 1/2
-#   B) thr11_destroy=1 AND sec4_post>=1 AND coalesce_guard2_r2>=1 AND no crash
-#      at 0x8000247c → -361 live confirm 1/2
-#   C) thr11_destroy=1 AND sec4_post>=1 AND crash at 0x8000247c with 0 r2 guard
-#      → R2 guard miss
-#   D) thr11_destroy=1 AND sec4_post>=1 AND crash elsewhere → file breadcrumb
-#   E) thr11_destroy=0 at HOLD end → time alone not enough; pivot recovery-cell
-#      (do NOT raise HOLD past 210)
-#   F) 0 beginframe, thr11 live, no afa0 → park -338 passive; same E pivot
-#   G) rc=2 again despite NEED floor fix AND >=4 attempts → engagement
-#      rate collapse independent of budget; pivot force-write state=6
+# Discriminating outcomes (scored = case6+hangar-sel):
+#   A) force6 fires + case6 + hangar-sel + beginframe_s0_guard>=1 + no
+#      0x8000afa0 → -338 confirm 1/2 under forced engagement
+#   B) thr11_destroy=1 + sec4_post>=1 + coalesce_guard2_r2>=1 + no crash
+#      at 0x8000247c → -361 confirm 1/2
+#   C) force6 fires + case6 + hangar-sel but thr11_destroy=0 at HOLD end
+#      → E pivot (recovery-cell); force unlocked engagement only
+#   D) force6 fires + case6 + hangar-sel + other crash → file breadcrumb
+#   E) force6 fires but case6=0/hangar-sel=0 → state write insufficient
+#      (case6 path needs more than the byte)
+#   F) force6 never fires despite case5-entry n>=40 → env/build miss
+#      (positive control fail)
+#   G) 0 engagement after >=4 attempts with force armed → deeper block
 #
-# Exit: 0 scored+ok, 1 scored+CRASH, 2 no engagement.
+# Exit: 0 scored+ok, 1 scored+CRASH, 2 no engagement, 3 force miss.
 set -u
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT" || exit 2
@@ -39,9 +38,8 @@ export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 BUDGET_S=580
 MAX_ATTEMPTS=8
 HOLD_S=180
-# Floor to START an attempt (path-only). Not HOLD_S+90 — that starved s603.
 START_FLOOR_S=100
-GAME_EXTRA_ENV_BASE="ROGUESQ_FORCE_CASE6_START=5 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 ROGUESQ_LOG_COALESCE_HEAP_GUARD=1 ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD=1 ROGUESQ_LOG_BEGINFRAME_S0_GUARD=1"
+GAME_EXTRA_ENV_BASE="ROGUESQ_FORCE_STATE6_AFTER=40 ROGUESQ_FORCE_CASE6_START=5 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 ROGUESQ_LOG_COALESCE_HEAP_GUARD=1 ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD=1 ROGUESQ_LOG_BEGINFRAME_S0_GUARD=1"
 
 START_EPOCH=$(date +%s)
 ATTEMPT=0
@@ -61,7 +59,7 @@ while :; do
     echo "[fast-retry] hit MAX_ATTEMPTS=$MAX_ATTEMPTS, stopping without engagement"
     break
   fi
-  TAG="s604_item338_item361_hold180_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
+  TAG="s605_force_state6_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
   OUT="$ROOT/scratch/s73_post_a_scene/$TAG"
   /usr/bin/pkill -9 -x RogueSquadron64Recomp 2>/dev/null || true
   sleep 0.3
@@ -71,15 +69,16 @@ while :; do
     zsh "$ROOT/scratch/s73_post_a_scene/run_mission_keys.sh" "$TAG" 5 12
   RC=$?
   LOG="$OUT/run.log"
-  CASE6=0; HSEL=0; CRASH=0; ACE80=0
+  CASE6=0; HSEL=0; CRASH=0; ACE80=0; FORCE6=0
   if [ -f "$LOG" ]; then
     grep -aq '\[case6-force-start\]' "$LOG" && CASE6=1
     grep -aq '\[hangar-sel\]' "$LOG" && HSEL=1
     grep -aq '\[CRASH\]' "$LOG" && CRASH=1
     grep -aq 'site=0x800ACE80' "$LOG" && ACE80=1
+    grep -aq '\[case5-force-state6\]' "$LOG" && FORCE6=1
   fi
   DUR=$(( $(date +%s) - NOW ))
-  echo "[fast-retry] attempt $ATTEMPT done rc=$RC dur=${DUR}s case6=$CASE6 hangar_sel=$HSEL ace80=$ACE80 crash=$CRASH log=$LOG"
+  echo "[fast-retry] attempt $ATTEMPT done rc=$RC dur=${DUR}s force6=$FORCE6 case6=$CASE6 hangar_sel=$HSEL ace80=$ACE80 crash=$CRASH log=$LOG"
   if [ "$CASE6" -eq 1 ] && [ "$HSEL" -eq 1 ]; then
     echo "[fast-retry] attempt $ATTEMPT reached engagement -- scoring this one, no further rerolls"
     SCORED_LOG="$LOG"
@@ -91,6 +90,7 @@ done
 
 if [ -z "$SCORED_LOG" ]; then
   echo "[fast-retry] no attempt reached engagement within budget (${ATTEMPT} attempts)"
+  # Positive-control note: if any attempt had case5 but never force6, flag it
   exit 2
 fi
 
@@ -109,6 +109,7 @@ sec2 = c("start-match: section 2")
 case6 = c("[case6-force-start]")
 hsel = c("[hangar-sel]")
 ace80 = c("site=0x800ACE80")
+force6 = c("[case5-force-state6]")
 inj_ns = [int(m) for m in re.findall(r"\[fs-pipe-inject\] n=(\d+)", raw)]
 inj_lines = len(inj_ns)
 inj_max = max(inj_ns) if inj_ns else 0
@@ -141,7 +142,7 @@ crash_pc = m_pc.group(1) if m_pc else "-"
 crash_sym = m_sym.group(0) if m_sym else "-"
 crash = "CRASH" if "[CRASH]" in raw else "ok"
 print(
-    f"gate case6={case6} hangar-sel={hsel} ace80={ace80} "
+    f"gate force6={force6} case6={case6} hangar-sel={hsel} ace80={ace80} "
     f"inject_lines={inj_lines} inject_max_n={inj_max} recov76B768~={rec} "
     f"sec4={sec4} sec4_post={sec4_post} sec2={sec2} sec2_post={sec2_post} "
     f"thr495FC_creates={t12} thr11_create={thr11_create} thr11_destroy={thr11_destroy} "
@@ -152,7 +153,9 @@ print(
 if m_sym:
     print(f"crash_sym={crash_sym}", file=sys.stderr)
 cls = "?"
-if thr11_destroy and sec4_post >= 1 and g2 >= 1 and crash == "ok":
+if force6 == 0:
+    cls = "F_force6_miss"
+elif thr11_destroy and sec4_post >= 1 and g2 >= 1 and crash == "ok":
     cls = "B_item361_confirm"
 elif thr11_destroy and sec4_post >= 1 and crash_pc.lower() == "0x8000247c" and g2 == 0:
     cls = "C_r2_guard_miss"
@@ -162,7 +165,11 @@ elif thr11_destroy == 0 and hsel:
     cls = "E_thr11_still_live"
 elif bf >= 1 and afa0 == 0:
     cls = "A_beginframe_confirm"
-elif bf == 0 and afa0 == 0 and crash == "ok":
+elif force6 and case6 and hsel and crash == "ok":
+    cls = "C_engaged_no_thr11"
+elif force6 and (case6 == 0 or hsel == 0):
+    cls = "E_force6_no_case6"
+else:
     cls = "F_neither_path"
 print(f"class_hint={cls}", file=sys.stderr)
 PY

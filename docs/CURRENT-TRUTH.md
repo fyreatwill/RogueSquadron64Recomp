@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s604)
+## Current truth (established by session 295; unchanged, reviewed through s605)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -130,9 +130,10 @@ Factor5 LLE RSP for PIPE_SYNC/SETTIMG (H7a) — product fix `ROGUESQ_FS_PIPE_INJ
 restores sync flow through the E7/F3/FD residual. thr-11 (`saveServiceWorker` `0x8006F2CC`) destroy
 co-times with sec4 reload (s592_a positive control); s602 clean survival shows inject can keep
 `syncs>0` without recovery cell while thr-11 stays live under short HOLD. s603 HOLD_S=180 dual-target
-got **0 scored attempts** (budget `NEED=HOLD_S+90` starved retries after 2 pre-engagement deaths);
-s604 requeues same HOLD with s602-style start floor. Item -338 live-confirm still rare (3× D). Full
-chain: items -349..-369; raw `PORTING-STATE.md` Sessions 577-604. DoD =
+got **0 scored attempts** (budget `NEED=HOLD_S+90` starved retries); s604 budget floor fix started
+A3 but still **0/3 engagement** (0 ACE80 at state=5; A3 alive-stall). s605 lands
+`ROGUESQ_FORCE_STATE6_AFTER` (s602 E pivot) and queues dual-target soak. Item -338 live-confirm
+still rare (3× D). Full chain: items -349..-370; raw `PORTING-STATE.md` Sessions 577-605. DoD =
 **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -150,18 +151,27 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -369. The next NEW item takes -370.
+a range pointer. Highest allocated so far: -370. The next NEW item takes -371.
+
+-370. **(s605) `s604_item338_item361_hold180_budgetfix` folded: budget fix WORKED, engagement
+    still 0/3; landed `ROGUESQ_FORCE_STATE6_AFTER` (s602 E pivot) + queued
+    `s605_force_state6_dual_target`.** Loop hard-cap 600s (rc=137) mid-A3. Attempts:
+    A1 pre-eng `hangarTickCameraOrbit`/`0x800ab068` (si_addr=0x380000028); A2 pre-eng
+    `tickWrappingTimerAccumulatorList`/`0x80054750` (si_addr=0x388000c02); A3 alive
+    through hold at state=5, **0 ACE80**, c5≈186, FS stalled. Combined s603+s604 = **0/5
+    ACE80** on hangar-reaching attempts. Budget floor (`START_FLOOR_S=100`) correctly
+    started A3; A3 then burned the remainder stuck at state=5. ACE80 path is float-gated
+    camera settle inside case5 (both clamp arms fall through to store state=6 once reached;
+    stuck-at-5 means the float path is never entered). Product tool (default OFF):
+    `ROGUESQ_FORCE_STATE6_AFTER=N` force-writes hangar state byte at case5-entry n==N
+    (`[case5-force-state6]`); pairs with existing `ROGUESQ_FORCE_CASE6_START`. Hand-applied
+    `funcs_28.c` + fixup upgrade path; binary rebuilt. Soak: FORCE_STATE6_AFTER=40 +
+    FORCE_CASE6_START=5 + inject + HOLD_S=180. Full: Session 605.
 
 -369. **(s604) `s603_item338_item361_hold180` = no engagement (rc=2); budget NEED starved
-    retries; requeued as `s604_item338_item361_hold180_budgetfix`.** 2/2 attempts died
-    pre-engagement at hangar state=5 (hangarbay n≈1000, 0 ACE80, 0 case6, 0 hangar-sel):
-    A1 `setByteAcrossEntryList+176`/`0x800aafa8` (item -306 signature, deep hangar not early
-    weak-draw); A2 host Metal `fscache_insert_and_retain` / `last-guest-pc=0x800ab0e0`.
-    Budget math root cause: recipe `NEED=HOLD_S+90=270` refused attempt 3 after 2×~170s
-    path deaths (remain≈220). s602 r3 needed attempt 4 under a 30s start floor — same
-    HOLD_S=180 target cannot fit under the loop's 600s hard cap with NEED=270. Fix: restore
-    s602-style `START_FLOOR_S=100`, BUDGET_S=580, MAX_ATTEMPTS=8; keep HOLD_S=180 +
-    dual-target gate. Not A–F (no scored attempt). Full: Session 604.
+    retries; requeued as `s604_item338_item361_hold180_budgetfix` (ran → item -370).**
+    2/2 attempts died pre-engagement at hangar state=5. Budget math root cause:
+    `NEED=HOLD_S+90=270` refused attempt 3. Fix: `START_FLOOR_S=100`. Full: Session 604.
 
 -368. **(s603) `s602_item338_beginframe_s0_verify_r3` scored D + clean survival; thr-11/sec4
     pipeline recharacterized; HOLD_S=180 dual-target soak queued (s603 ran → item -369).**
@@ -252,13 +262,13 @@ a range pointer. Highest allocated so far: -369. The next NEW item takes -370.
     comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
     survival. Full detail: `PORTING-STATE.md` Session 597.
 
--361. **(s589-s604) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
+-361. **(s589-s605) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
     open.** thr-11 = `saveServiceWorker` entry=`0x8006F2CC` (not thr495FC). Pipeline: thr-11
     destroy ↔ post-exit sec4 → initSceneForMission R2 `@0x8000247c`. s592_a is the positive
     control for the crash site (pre-guard). s602 clean survival: inject works without recovery
-    cell, thr-11 still live under HOLD_S=90. s603 HOLD_S=180 got 0 engagement (item -369
-    budget bug); s604 requeues HOLD_S=180 with fixed start floor. Do not raise HOLD_S past
-    210. Full: Sessions 589-604.
+    cell, thr-11 still live under HOLD_S=90. s603/s604 HOLD_S=180 got 0 engagement (budget then
+    ACE80 stall); s605 force-state6 tool + dual-target soak queued. Do not raise HOLD_S past
+    210. Full: Sessions 589-605.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
