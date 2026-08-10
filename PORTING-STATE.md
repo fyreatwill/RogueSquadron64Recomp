@@ -50148,3 +50148,61 @@ flz_pc_fl / flz_pc_dms / flz_pc_fl_evt / msfl_n SCORE fields.
 | H-gbt-writer (names store path at detect) | **REFUTED freelist-class** (Outcome B dual-source menu+freelist) |
 | H-bc19-live | **CONFIRMED** (menu to_zero sticky → rs_memset range) |
 | H-memset-writer | OPEN — needs freelist to_zero + msfl hit=1 + ra |
+
+## Session 646 (2026-08-10) — freelist freeroll Outcome B; H-memset-writer REFUTED; mprotect fault watch LIVE
+
+### Work unit
+Consume s645 freeroll (`s645_fl_bc19_freeroll`, SOAK-RESULTS 20260810-143505) and
+act on freelist to_zero discriminators from NEXT.md.
+
+### s645 freeroll result
+Outer loop rc=137 at 600s cap mid att2 (SCORE never printed for att2). Recovered
+from att2 run.log:
+
+**Att1** (recovery_silent): menu to_zero #1 t=50960 prev=0x8E8E… guest_pc=**0x80007904**
+(rs_memset) — flz_pc_fl=1; msfl_n=76; partial freelist write t=164425 flags-only
+(0x2/0x60→0x0/0x60) guest_pc=0x8000834C.
+
+**Att2** (recovery-active, recov768 live):
+- Menu to_zero #1 t=50941 sticky **0x80007904** (BC19 still LIVE)
+- Header place **0x2/0x60** t=145420 sticky 0x80007904
+- Freelist to_zero #2 t=**164762** prev_f=0x2 prev_sz=0x60 → zeros @0x1F3CC0
+  guest_pc=**0x8000834C** drainMesh sticky (flz_pc_dms / flz_pc_fl_evt=0)
+- **msfl hit=0** entire run (76 probes, never dst@0x801F3CC0)
+- dms_n=100 dms_tgt=0 (dest class 0x807* only)
+- gbt freelist: thr_with_guest=16 reported=6 all parked wait/recv
+- thr11d_new=0 (ship_zero only to n=2); thr11 id=11 still live at stomp
+- zero_node prev=0x801ED1B0 prev_sz=0x6B00 (same as s640/s642)
+
+**Discriminators (NEXT):** posctrl LIVE (flz_pc_fl≥1 ∧ msfl_n≥1). Freelist-shaped
+to_zero YES. **Outcome B:** freelist to_zero with dms sticky only + no msfl hit
+→ writer still outside freelist+memset class.
+
+### Hypotheses
+| ID | Status |
+|----|--------|
+| H-bc19-live | reconfirmed (menu sticky→rs_memset) |
+| H-memset-writer | **REFUTED freelist-class** (msfl hit=0 on freelist to_zero) |
+| H-gbt-writer | still REFUTED freelist-class (parked stacks) |
+| H-fault-writer | ACTIVE — mprotect names host store leaf |
+
+### Landed
+`[fl-zero-fault]` mprotect page-fault watch under `ROGUESQ_LOG_FL_ZERO_WATCH`:
+- Arm PROT_READ on 16KB page of phys 0x1F3CC0 while header zeros (boot posctrl)
+  or freelist-shaped 0x2/0x60
+- SIGSEGV handler (no SA_RESETHAND) recovers via `fl_zero_try_handle_fault`,
+  logs host PC via local-symtab + guest sticky, re-enables RW; poller re-arms
+- Filter `in_hdr=1` for header-range stores
+
+### Same-run posctrl (55s boot)
+`scratch/s73_post_a_scene/s646_fault_posctrl_20260810145224`:
+- arm_boot_zero LIVE; fault_n=17; first leaf **rs_malloc+0x12a0**
+  (also rs_memset, rs_free, inflate_codes_recomp, do_rom_read)
+- CRASH=0; disarm on first header write t=45105
+
+### Queued
+`scratch/agent/soak_queue/s646_fl_fault_freeroll.sh` — freelist to_zero with
+SCORE flz_fault_n / flz_fault_hdr / flz_fault_arm_fl / flz_fault_sym.
+
+### Item
+-400 opened; -399 updated.

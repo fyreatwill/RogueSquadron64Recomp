@@ -34,6 +34,7 @@
 #include <execinfo.h>
 #include <unistd.h>
 #include <sys/ucontext.h>
+#include <sys/mman.h>
 #include <dlfcn.h>
 #if defined(__APPLE__) && defined(__aarch64__)
 #include <mach-o/dyld.h>
@@ -1936,12 +1937,149 @@ static void fl_zero_sample_game_threads(uint64_t n_change, uint64_t n_to_zero,
 }
 #endif
 
+// s646: mprotect page-fault watch on the fail136c freelist header page.
+// Poller sticky guest_pc + gbt cannot name the freelist stomp writer
+// (Outcome B s644/s645/s646: writer off-stack; freelist+memset class REFUTED).
+// Arm PROT_READ on the host page of phys slot while the header is in a
+// target shape; SIGSEGV on write logs [fl-zero-fault] with host PC (local
+// symtab) + guest sticky, then re-enables RW so the store completes. Poller
+// re-arms every 250µs while the shape still matches. 16KB Apple pages mean
+// neighbor traffic also faults — filter with in_hdr=1 (fault addr in
+// [slot,slot+8)). Gate: same ROGUESQ_LOG_FL_ZERO_WATCH (no extra env).
+#ifndef _WIN32
+static std::atomic<uint8_t*> g_flz_fault_rdram{nullptr};
+static std::atomic<uint32_t> g_flz_fault_slot{0x1F3CC0u};
+static std::atomic<int> g_flz_fault_want{0};   // poller wants page PROT_READ
+static std::atomic<int> g_flz_fault_armed{0};  // currently PROT_READ
+static std::atomic<uint64_t> g_flz_fault_n{0};
+static std::atomic<uint64_t> g_flz_fault_hdr_n{0};
+static std::atomic<int> g_flz_fault_enabled{0};
+
+static size_t fl_zero_page_size() {
+    long p = sysconf(_SC_PAGESIZE);
+    return (p > 0) ? (size_t)p : 16384u;
+}
+
+// MEM_W host address for KSEG0 0x80000000+phys (word-aligned).
+static uintptr_t fl_zero_header_host(uint8_t* rdram, uint32_t slot) {
+    return (uintptr_t)rdram + (uintptr_t)(slot & 0x7FFFFFu);
+}
+
+static void fl_zero_fault_disarm() {
+    uint8_t* rdram = g_flz_fault_rdram.load(std::memory_order_acquire);
+    if (!rdram) return;
+    uint32_t slot = g_flz_fault_slot.load(std::memory_order_relaxed);
+    size_t page = fl_zero_page_size();
+    uintptr_t host = fl_zero_header_host(rdram, slot);
+    uintptr_t page_base = host & ~(uintptr_t)(page - 1);
+    if (mprotect((void*)page_base, page, PROT_READ | PROT_WRITE) == 0) {
+        g_flz_fault_armed.store(0, std::memory_order_release);
+    }
+}
+
+static void fl_zero_fault_arm() {
+    uint8_t* rdram = g_flz_fault_rdram.load(std::memory_order_acquire);
+    if (!rdram) return;
+    uint32_t slot = g_flz_fault_slot.load(std::memory_order_relaxed);
+    size_t page = fl_zero_page_size();
+    uintptr_t host = fl_zero_header_host(rdram, slot);
+    uintptr_t page_base = host & ~(uintptr_t)(page - 1);
+    if (mprotect((void*)page_base, page, PROT_READ) == 0) {
+        g_flz_fault_armed.store(1, std::memory_order_release);
+    }
+}
+
+// Called from SIGSEGV handler. Returns true if this was our watch fault
+// (store should be retried after RW re-enable). Not async-signal-pure
+// (fprintf/backtrace) — same diagnostic trade-off as the crash handler.
+static bool fl_zero_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
+    if (!g_flz_fault_enabled.load(std::memory_order_relaxed)) return false;
+    if (!g_flz_fault_armed.load(std::memory_order_acquire)) return false;
+    uint8_t* rdram = g_flz_fault_rdram.load(std::memory_order_acquire);
+    if (!rdram || !info || !info->si_addr) return false;
+
+    uintptr_t fa = (uintptr_t)info->si_addr;
+    uint32_t slot = g_flz_fault_slot.load(std::memory_order_relaxed);
+    size_t page = fl_zero_page_size();
+    uintptr_t host = fl_zero_header_host(rdram, slot);
+    uintptr_t page_base = host & ~(uintptr_t)(page - 1);
+    if (fa < page_base || fa >= page_base + page) return false;
+
+    // Allow the faulting store to complete.
+    mprotect((void*)page_base, page, PROT_READ | PROT_WRITE);
+    g_flz_fault_armed.store(0, std::memory_order_release);
+
+    uint64_t n = g_flz_fault_n.fetch_add(1, std::memory_order_relaxed) + 1;
+    int in_hdr = (fa >= host && fa < host + 8) ? 1 : 0;
+    if (in_hdr) {
+        g_flz_fault_hdr_n.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    uint64_t pc = 0, lr = 0;
+#if defined(__APPLE__) && defined(__aarch64__)
+    if (ucontext_raw) {
+        ucontext_t* uc = static_cast<ucontext_t*>(ucontext_raw);
+        if (uc->uc_mcontext) {
+            pc = (uint64_t)uc->uc_mcontext->__ss.__pc;
+            lr = (uint64_t)uc->uc_mcontext->__ss.__lr;
+        }
+    }
+#endif
+    const char* pc_sym = "<unresolved>";
+    uint64_t pc_off = 0;
+#if defined(__APPLE__) && defined(__aarch64__)
+    if (pc) {
+        const RS64LocalSymbol* localSym = rs64_lookup_local_symbol(pc);
+        if (localSym) {
+            pc_sym = localSym->name.c_str();
+            pc_off = pc - localSym->addr;
+        } else {
+            Dl_info dli{};
+            if (dladdr((void*)(uintptr_t)pc, &dli) && dli.dli_sname) {
+                pc_sym = dli.dli_sname;
+                pc_off = pc - (uint64_t)(uintptr_t)dli.dli_saddr;
+            }
+        }
+    }
+#endif
+    fprintf(stderr,
+        "[fl-zero-fault] n=%llu in_hdr=%d fa=0x%llx hdr_host=0x%llx slot=0x%X "
+        "pc=0x%llx sym=%s+0x%llx lr=0x%llx guest_pc=0x%08X want=%d\n",
+        (unsigned long long)n, in_hdr,
+        (unsigned long long)fa, (unsigned long long)host, slot,
+        (unsigned long long)pc, pc_sym, (unsigned long long)pc_off,
+        (unsigned long long)lr, (unsigned)g_rs64_last_guest_pc,
+        g_flz_fault_want.load(std::memory_order_relaxed));
+    // Rate-limit full BT: first 8 any, then every header hit up to 32.
+    uint64_t hdr_n = g_flz_fault_hdr_n.load(std::memory_order_relaxed);
+    if (n <= 8 || (in_hdr && hdr_n <= 32)) {
+        void* frames[24];
+        int bn = backtrace(frames, 24);
+        char** syms = backtrace_symbols(frames, bn);
+        for (int i = 0; i < bn; ++i) {
+            Dl_info dli{};
+            const char* sn = nullptr;
+            if (dladdr(frames[i], &dli) && dli.dli_sname) sn = dli.dli_sname;
+            fprintf(stderr, "[fl-zero-fault]   [%2d] %s%s%s\n", i,
+                sn ? sn : "", sn ? " | " : "",
+                (syms && syms[i]) ? syms[i] : "?");
+        }
+        free(syms);
+    }
+    fflush(stderr);
+    return true;
+}
+#else
+static bool fl_zero_try_handle_fault(void*, void*) { return false; }
+#endif
+
 // ROGUESQ_LOG_FL_ZERO_WATCH: macOS soft-watch on the fail136c freelist
 // zero-node (default KSEG0 0x801F3CC0 → phys 0x1F3CC0). Polls 16-byte
 // header every 250us; logs mutations + 5s heartbeat (positive control).
 // Discriminates H-oob-store (write to zeros with guest_pc) vs allocator
 // paths (pair with [fl-hdr-write]/[fl-zero-watch] from fixup). Override
 // phys via ROGUESQ_FL_ZERO_ADDR=<hex offset into RDRAM>.
+// s646: also drives mprotect arm for [fl-zero-fault] (see above).
 static void start_fl_zero_poller() {
     static std::thread t{[]{
         uint8_t* rdram = nullptr;
@@ -1954,6 +2092,11 @@ static void start_fl_zero_poller() {
             if (v > 0 && v < 0x800000u) slot = (uint32_t)v;
         }
         slot &= 0x7FFFFFu;
+#ifndef _WIN32
+        g_flz_fault_rdram.store(rdram, std::memory_order_release);
+        g_flz_fault_slot.store(slot, std::memory_order_relaxed);
+        g_flz_fault_enabled.store(1, std::memory_order_release);
+#endif
         auto rbyte = [&](uint32_t a) -> uint8_t {
             return rdram[(a & 0x7FFFFF) ^ 3];
         };
@@ -1972,14 +2115,32 @@ static void start_fl_zero_poller() {
         fprintf(stderr,
             "[fl-zero-poll] n=0 event=arm phys=0x%08X kseg=0x%08X bytes="
             "%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X "
-            "flags=0x%X size=0x%X\n",
+            "flags=0x%X size=0x%X fault_watch=%d\n",
             slot, slot | 0x80000000u,
             prev[0], prev[1], prev[2], prev[3],
             prev[4], prev[5], prev[6], prev[7],
             prev[8], prev[9], prev[10], prev[11],
             prev[12], prev[13], prev[14], prev[15],
-            (unsigned)be_u16(prev), (unsigned)be_u32(prev + 4));
+            (unsigned)be_u16(prev), (unsigned)be_u32(prev + 4),
+#ifndef _WIN32
+            1
+#else
+            0
+#endif
+        );
         fflush(stderr);
+        // Boot posctrl: arm while header is zeros so the first write to this
+        // page produces [fl-zero-fault] (proves SEGV path LIVE in same run).
+#ifndef _WIN32
+        if (be_u16(prev) == 0 && be_u32(prev + 4) == 0) {
+            g_flz_fault_want.store(1, std::memory_order_release);
+            fl_zero_fault_arm();
+            fprintf(stderr,
+                "[fl-zero-fault] event=arm_boot_zero slot=0x%X page=%zu\n",
+                slot, fl_zero_page_size());
+            fflush(stderr);
+        }
+#endif
         uint64_t n_change = 0;
         uint64_t n_poll = 0;
         uint64_t n_to_zero = 0;
@@ -2055,18 +2216,67 @@ static void start_fl_zero_poller() {
 #endif
                 fflush(stderr);
                 memcpy(prev, cur, 16);
+#ifndef _WIN32
+                // Want mprotect arm only for freelist-shaped header (0x2/0x60)
+                // — the s640 H-oob-store destroy window. Disarm on to_zero or
+                // any other shape so boot/menu texture traffic is not trapped
+                // after the boot-zero posctrl has fired.
+                if (cf == 0x2u && csz == 0x60u) {
+                    if (!g_flz_fault_want.load(std::memory_order_relaxed)) {
+                        fprintf(stderr,
+                            "[fl-zero-fault] event=arm_freelist t_ms=%lld "
+                            "slot=0x%X f=0x2 sz=0x60\n",
+                            (long long)ms, slot);
+                        fflush(stderr);
+                    }
+                    g_flz_fault_want.store(1, std::memory_order_release);
+                } else {
+                    if (g_flz_fault_want.load(std::memory_order_relaxed)) {
+                        g_flz_fault_want.store(0, std::memory_order_release);
+                        fl_zero_fault_disarm();
+                        fprintf(stderr,
+                            "[fl-zero-fault] event=disarm t_ms=%lld "
+                            "cur_f=0x%X cur_sz=0x%X kind=%s\n",
+                            (long long)ms, (unsigned)cf, csz, kind);
+                        fflush(stderr);
+                    }
+                }
+#endif
             }
+#ifndef _WIN32
+            // Re-arm every poll tick while freelist-shaped (or boot-zero).
+            // Faults clear armed; this restores PROT_READ after the store.
+            if (g_flz_fault_want.load(std::memory_order_relaxed) &&
+                !g_flz_fault_armed.load(std::memory_order_relaxed)) {
+                uint16_t cf = be_u16(prev);
+                uint32_t csz = be_u32(prev + 4);
+                if ((cf == 0x2u && csz == 0x60u) || (cf == 0 && csz == 0)) {
+                    fl_zero_fault_arm();
+                } else {
+                    g_flz_fault_want.store(0, std::memory_order_release);
+                }
+            }
+#endif
             auto now = std::chrono::steady_clock::now();
             if (now - last_hb >= std::chrono::seconds(5)) {
                 auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                     now - t0).count();
                 fprintf(stderr,
                     "[fl-zero-poll] n=%llu event=heartbeat t_ms=%lld phys=0x%08X "
-                    "flags=0x%X size=0x%X polls=%llu changes=%llu to_zero=%llu\n",
+                    "flags=0x%X size=0x%X polls=%llu changes=%llu to_zero=%llu "
+                    "fault_n=%llu fault_hdr=%llu fault_armed=%d\n",
                     (unsigned long long)n_change, (long long)ms, slot,
                     (unsigned)be_u16(prev), (unsigned)be_u32(prev + 4),
                     (unsigned long long)n_poll, (unsigned long long)n_change,
-                    (unsigned long long)n_to_zero);
+                    (unsigned long long)n_to_zero,
+#ifndef _WIN32
+                    (unsigned long long)g_flz_fault_n.load(std::memory_order_relaxed),
+                    (unsigned long long)g_flz_fault_hdr_n.load(std::memory_order_relaxed),
+                    g_flz_fault_armed.load(std::memory_order_relaxed)
+#else
+                    0ull, 0ull, 0
+#endif
+                );
                 fflush(stderr);
                 last_hb = now;
             }
@@ -2665,9 +2875,18 @@ int main(int argc, char* argv[]) {
 #else
     {
         struct sigaction sa {};
-        sa.sa_flags = SA_SIGINFO | SA_RESETHAND;
+        // s646: no SA_RESETHAND — [fl-zero-fault] mprotect watch must survive
+        // multiple recoverable write faults. Real crashes re-raise with
+        // SIG_DFL below so we still terminate.
+        sa.sa_flags = SA_SIGINFO;
         sigemptyset(&sa.sa_mask);
         sa.sa_sigaction = [](int sig, siginfo_t* info, void* ucontext_raw) {
+            // s646: freelist page-fault watch (PROT_READ trap). Recoverable.
+            if (sig == SIGSEGV || sig == SIGBUS) {
+                if (fl_zero_try_handle_fault(info, ucontext_raw)) {
+                    return;
+                }
+            }
             fprintf(stderr, "[CRASH] caught signal %d (%s), dumping stack:\n",
                 sig, strsignal(sig));
             // s194: dump siginfo + the ARM64 register file at fault time --
@@ -2757,6 +2976,8 @@ int main(int argc, char* argv[]) {
             int count = backtrace(frames, 64);
             backtrace_symbols_fd(frames, count, STDERR_FILENO);
             fflush(stderr);
+            // Without SA_RESETHAND, raise(sig) would recurse into this handler.
+            signal(sig, SIG_DFL);
             raise(sig);
         };
         sigaction(SIGSEGV, &sa, nullptr);
