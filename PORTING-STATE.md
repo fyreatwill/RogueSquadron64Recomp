@@ -46812,3 +46812,64 @@ hold_38+ (not H10d "hidden content while tris=0").
 
 ### Artifacts
 `scratch/s73_post_a_scene/s589_post_dual_empty/{run.log,ANALYSIS.md,hold_*.png}`
+
+## Session 590 — item -359: section 2 is thr-11→sec4→thr-12 pipeline, not case5 vs case6
+
+Date: 2026-08-09
+
+### Work unit
+Item -359 (NEXT `m3-post-exit-fs-stall`): force-exit + inject never loads mission
+overlay section 2. Discriminate H11a (missing natural Start/state edge) vs
+FULL_SYNC health vs flag corruption vs menu-only path.
+
+### Code landed
+- `ROGUESQ_FORCE_CASE6_START` synthetic Start at ACE94 (natural case-6 confirm),
+  default off. `RecompiledFuncs/funcs_28.c` + `fixup_game_funcs.py` (s590
+  case6-force-start block). Mirrors case5 force at AC8C0.
+
+### Runs
+1. `s590_section2_natural` — natural `double_start` + inject HOLD_S=60.
+   Crash before p2: `updateHangarBayScene+39812`/`0x800ac120` (known leave-path
+   family). No hangar-sel. Not discriminating.
+2. `s590_section2_case6` — `PROBE_MODE=start_only` + `FORCE_CASE6_START=5` +
+   inject HOLD_S=60. Built case6 force into binary.
+
+### Case6 run results (discriminating)
+- State path **3→5→6→8** (ACE80 auto + ACE94 force), hangar-sel, graceful-menu,
+  VI 640@0x6A2900 — same hangar-exit surface as natural s577.
+- **0** post-exit section 4; **0** thr id=12; **0** section 2.
+- thr id=11 `saveServiceWorker` (entry 0x8006F2CC) created after VI flip; never
+  destroyed before crash.
+- Inject n→300; recovery fullsync @0x76B768 ×3853 (2nd independent recovery after
+  s589's ×1988); hangarbay n=1200; late hangar e9_b 40/40.
+- Crash hold~47: `findLookupEntryByKey+2212`/`0x8000834c` (breadcrumb, not chased).
+
+### Cross-run pipeline (s577 vs s589 vs s590)
+Natural s577 after hangar-sel:
+1. thr-11 completes → section 4 cinematic
+2. thr-12 `hudDisplayUpdateWorker` (0x800495FC) create→destroy → section 2 mission
+
+s589 force 5→8: thr-11 completes late → section 4 → **immediate crash** (no thr-12).
+s590 case6 6→8: thr-11 never completes → no section 4/2.
+
+### Verdicts
+| H | Result |
+|---|--------|
+| H11a case5/case6 edge is the section-2 gate | **REFUTED** (case6 still 0 section 2) |
+| H11b FULL_SYNC/thr health gates overlay DMA | **SUPPORTED refined** (thr-11 stalls across dual sticky) |
+| H11c hangar-sel val=0 blocks mission | still weak (s577 val=0 yet loaded section 2) |
+| H11d menu-only path | OPEN as thr-12 only appears after section 4 on natural |
+
+### Item -359 recharacterization
+Missing section 2 on force paths is **post-exit thr pipeline stall/death**, not
+missing hangar case-6 confirm. Product leave can use FORCE_CASE6 for reliable
+exit; mission entry needs thr-11 completion + thr-12 + section-2 DMA.
+
+### Next
+Instrument thr-11 wait/progress on force+inject; compare wall time thr-11 create→
+destroy natural vs force; keep thr-12 create as section-2 precursor marker.
+2nd inject recovery confirmed — still default OFF until thr pipeline healthy.
+Do not reactive-chase leave-path or findLookupEntry crashes.
+
+### Artifacts
+`scratch/s73_post_a_scene/s590_section2_{natural,case6}/` + case6 `ANALYSIS.md`
