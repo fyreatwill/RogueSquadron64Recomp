@@ -13,7 +13,8 @@ Priority order for upcoming iterations, set after the 300-session review:
    hard floor -- the "Current truth" env-var/timeline prose and the Regeneration section's Standing
    warnings stay intact deliberately; both are used every iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (PROJECT-OVERVIEW §10-§12). Next
-   M5 work needs a genuinely new lead (last checked s570, zero new leads, due again s573+).
+   M5 work needs a genuinely new lead (rechecked s582 SOAK-RESULTS: no new audio-family
+   crash leads since s487; due again s585+).
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Every bucket from
@@ -30,7 +31,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s581)
+## Current truth (established by session 295; unchanged, reviewed through s582)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -137,14 +138,15 @@ hangar-sel val=0 not a hard block (H-m4). **s579:** post-exit `rdpFs` plateau is
 s178** (`stalled=1 pairs=0` + producer stop). Same-run: 772 post-plateau `[lle task]` + 771
 `[runner] task` all `exit=1`, 0 `stalled=1` after section 2, present FIRE pairs=4 continues.
 `rdpFs` == sum of runner `syncs` (4602); last 772 tasks all `syncs=0` → **FULL_SYNC starvation**
-with live GFX (H-stall1/2/classic-H-stall3 REFUTED; H-stall3b CONFIRMED). **s580–s581:**
-guest walk fixed — **H-walk1 CONFIRMED** (B5-as-ENDDL false-neg on complex Factor5 DLs;
-HLE maps 0xB5→no-op). Late hangar control **GREEN**: first 30 late `syncs=1` all have
-`e9_b≥1` and `lin_e9≥1` (e9_a still 0/30). fs_b0=E9 — guest 0xE9 is real. H-walk3
-REFUTED for hangar. H-sync1/H-sync2 on post-exit plateau **now unblocked** (retest
-with e9_b). DoD gate = **cutscene→in-mission** past FULL_SYNC starvation + craft
-input. *Done when:* 60s in-mission render, craft responds to synthetic input,
-stability 0, phase timeline covers the mission.
+with live GFX (H-stall1/2/classic-H-stall3 REFUTED; H-stall3b CONFIRMED). **s580–s581:** guest walk fixed — **H-walk1 CONFIRMED**; hangar control GREEN
+(e9_b/lin). **s582:** force-exit + `ROGUESQ_LOG_DL_SYNC` post-exit plateau
+**H-sync1 CONFIRMED** (e9_b=0 on 132/132 complete `endB8` walks), **H-sync2
+REFUTED** (0 probes with e9_b≥1 & syncs=0). Pre-plateau cutscene same dual DLs
+had e9_b=0 yet syncs=1 (~230 tasks) then flip to syncs=0 at t=5506 → **H-sync4**
+(LLE non-guest-E9 FULL_SYNC source dies; single-source). DoD gate =
+**cutscene→in-mission** past FULL_SYNC starvation + craft input. *Done when:*
+60s in-mission render, craft responds to synthetic input, stability 0, phase
+timeline covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
@@ -159,15 +161,28 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -351. The next NEW item takes -352.
+a range pointer. Highest allocated so far: -352. The next NEW item takes -353.
 
--351. **(s581) Factor5 DL walk control GREEN — H-walk1 CONFIRMED; H-sync1/2 retest unblocked.**
-    Dual walk on `ROGUESQ_LOG_DL_SYNC`: e9_a (B5=ENDDL, s580) vs e9_b (B5=no-op, HLE
-    semantics) + lin_e9 + fs_addr/fs_b0. Late hangar first 30 `syncs=1`: e9_a **0/30**,
-    e9_b **30/30**, lin **30/30**, fs_b0=E9 **30/30**. Full late 92/97 e9_b≥1. Boot
-    20/20 both modes. H-walk3 REFUTED (guest 0xE9 present). Use **e9_b / lin_e9 presence**
-    (not count) as the absence probe. **Next:** natural-exit post-sec2 plateau —
-    `syncs=0 & e9_b|lin=0` → H-sync1; `syncs=0 & e9_b|lin≥1` → H-sync2.
+-352. **(s582) H-sync4 — LLE non-guest-E9 FULL_SYNC source dies mid-cutscene (single-source).**
+    Force-exit plateau discrimination (item -351) showed guest e9_b=0 for the whole
+    cutscene dual-buffer phase (`dl_ptr` 0x80747930/0x80729690, tris=164, endB8),
+    yet runner `syncs=1` for ~230 tasks (≈5275–5505) then **identical DLs** flip to
+    `syncs=0` at 5506 (331 trailing zeros; rdpFs=Σsyncs=4535 frozen). `rsp_force_fullsync`
+    is unwired (s580) — not that path. **Primary next:** find where LLE/bridge emits
+    RDP 0x29 when the guest walkable tree has no 0xE9, and why that emission stops.
+    Needs a 2nd independent line (natural-exit or 2nd force run) before promoting
+    beyond single-source.
+
+-351. **(s581/s582) Factor5 DL walk GREEN; post-exit H-sync1 CONFIRMED, H-sync2 REFUTED.**
+    s581 hangar control: late first 30 `syncs=1` e9_a **0/30**, e9_b **30/30**, lin
+    **30/30**, fs_b0=E9 — H-walk1 CONFIRMED, H-walk3 REFUTED for hangar. **s582
+    force-exit plateau** (hangar-sel→state8→VI 640@0x6A2900; no section 2 — died
+    item -347): same-run hangar control reconfirmed 30/30 e9_b; post-last_sync
+    probes **132/132 e9_b=0**, endB8 complete, **0 e9_b≥1 with syncs=0** → H-sync1
+    CONFIRMED, H-sync2 REFUTED. Use **e9_b** as authoritative guest FULL_SYNC
+    presence (lin_e9 alone is not H-sync2 evidence when e9_b=0). Natural double_start
+    2/2 leave-path crashes this session — force path is valid for this discrimination
+    only. Follow-on = item -352 (H-sync4).
 
 -350. **(s580/s581) `ROGUESQ_LOG_DL_SYNC` — boot OK; s580 walker incomplete; FIXED s581.**
     s580: complex DLs `syncs=1 raw_e9=0` under B5=ENDDL. s581 root cause: Factor5 0xB5
@@ -182,9 +197,9 @@ a range pointer. Highest allocated so far: -351. The next NEW item takes -352.
     H-stall1/2/classic-s178 **REFUTED**; H-stall3b FULL_SYNC starvation **CONFIRMED**; H-stall4
     fixed-draw freeze **SUPPORTED** (hold MD5-identical; tris lock 42 then 51). s578 H-m3
     "s178 family" framing **overturned** (believable: fs plateau + frozen PNGs look like s178
-    from the outside; refuted by task/present counters). **s580 amendment:** raw_e9 guest
-    walk not yet a valid absence proof on complex DLs (item -350); treat runner `syncs` as
-    ground truth for LLE emission until walker matches late hangar.
+    from the outside; refuted by task/present counters). **s580–s581:** walker fixed via
+    e9_b. **s582:** H-sync1 CONFIRMED / H-sync2 REFUTED on plateau; H-sync4 (item -352)
+    is the remaining mechanism for the plateau *edge* (non-guest-E9 LLE 0x29 dies).
 
 -348. **(s568/s569) SIBLING_PTR DIRECT residual same-base gap class — FIXED and FULLY CLOSED 2/2
     (s569).** Systematic audit of the `-334/-340/-345/-346` model across all applied freelist/
@@ -197,11 +212,12 @@ a range pointer. Highest allocated so far: -351. The next NEW item takes -352.
     confirm):** hangarbay n=3000, full ~300s rc=0, 0 fires, 0 CRASH — CLEAN. DIRECT residual
     same-base campaign for freelist/sibling write-guard lineage **exhausted**.
 
--347. **(s566) Single-occurrence breadcrumb, filed not chased**, from item -346's 1st live-verify.
-    `transformSceneLights+2456`/`last-guest-pc=0x80010134` (`hangarbay-entry n=2600`). Guest
-    `0x80010134` is the *caller* `submitSceneNodeRender` JAL delay-slot `sw $v0,0x10($sp)` before
-    `jal transformSceneLights` (same caller-PC-vs-host-offset pattern as item -320). Host fault
-    is inside the callee at +2456. Watch for recurrence before source-tracing the callee body.
+-347. **(s566, s582 — 2 occurrences) `transformSceneLights`/`transformLightByType` /
+    `last-guest-pc=0x80010134` breadcrumb.** s566: `transformSceneLights+2456` at
+    hangarbay n=2600. **s582 force-exit cutscene:** `transformLightByType+256` same
+    guest PC (after hangar-sel/state8/VI640; hangarbay n=800). Guest `0x80010134` is
+    caller `submitSceneNodeRender` JAL delay-slot before `jal transformSceneLights`.
+    Confidence low→moderate; watch for a 3rd before source-tracing.
 
 -346. **(s565/s566/s567) `heapFreeListDequeue` residual r3-base write at `0x8000D6D0` — FIXED
     and FULLY CLOSED 2/2 (s567).** DIRECT gap before existing `HEAP_FREE_LIST_DEQUEUE_R2_GUARD`
@@ -392,17 +408,14 @@ a range pointer. Highest allocated so far: -351. The next NEW item takes -352.
 -11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89), RECURRED s424, ROOT-CAUSED AND GUARDED s425.** s424 hit it as a sibling of item -261's guarded `startPlayerSlotAnimationChannelLooping` crash; s425 root-caused and guarded it (wild `$a0` arg, same never-initialized-slot root state) — see item -261 for the full trace.
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
--7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN — exit + mission overlay +
-    Chapter-1 cutscene CONFIRMED; in-mission blocked by post-overlay FULL_SYNC starvation
-    (item -349), not classic s178.** **Natural exit (s577):** 3→5→6→8 → section 4 → section 2
-    `.ovl.mission` 0xA5D30 → VI 512 flip. **s578:** H-m1 REFUTED, H-m2 CONFIRMED, H-m4
-    REFUTED-as-hard-block; H-m3 fs plateau observed but mis-labelled s178. **s579:** H-stall1
-    producer-stop REFUTED; H-stall2 LLE-incomplete REFUTED; classic present-stall REFUTED;
-    FULL_SYNC starvation CONFIRMED (`rdpFs`=Σ`syncs`; 772 post tasks syncs=0); fixed-draw
-    freeze SUPPORTED. **s580–s581:** walk control GREEN (item -351); guest-omit vs
-    LLE-drop **unblocked** — retest on natural-exit post-sec2 with e9_b/lin presence.
-    Leave-path intermittent noise file not chase. Force path diagnostic-only.
-    **Primary remaining:** H-sync1/2 on plateau; cutscene→gameplay gate.
+-7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN — exit + cutscene CONFIRMED;
+    in-mission blocked by FULL_SYNC starvation (item -349/-352), not classic s178.**
+    **Natural exit (s577):** 3→5→6→8 → section 4 → section 2 → VI flip. **s578–s579:**
+    not s178; FULL_SYNC starvation with live GFX. **s580–s581:** walk GREEN. **s582:**
+    H-sync1 CONFIRMED / H-sync2 REFUTED on force-exit plateau; H-sync4 (non-guest-E9
+    LLE FULL_SYNC dies mid-cutscene) is the primary remaining fix lead. Natural leave
+    2/2 crashes this session (file not chase). Force path diagnostic-only for product
+    exit. **Primary remaining:** H-sync4 source + cutscene→gameplay gate.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.

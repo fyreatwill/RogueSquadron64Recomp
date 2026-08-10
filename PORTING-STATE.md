@@ -46431,3 +46431,63 @@ e9_b finds 9–26× 0xE9 (presence; overcounts via long walk / lim).
 Natural-exit retest of H-sync1 (guest omit) vs H-sync2 (LLE drop) on
 post-sec2 zero-sync plateau using e9_b/lin presence. Treat e9_a as known-bad
 on complex DLs.
+
+## Session 582 — H-sync1 CONFIRMED / H-sync2 REFUTED on post-exit plateau; H-sync4 filed
+
+Work unit: natural-exit (then force-exit) H-sync1 vs H-sync2 discrimination with
+`ROGUESQ_LOG_DL_SYNC=1` (e9_b authoritative after s581).
+
+### Runs
+1. `s582_hsync_plateau` — `PROBE_MODE=double_start HOLD_S=45` natural. Died after p1
+   leave Start: `findOrCreateMaterial+1704` / `last-guest-pc=0x80010b7c`. hangarbay
+   n=900, state 3→5, no hangar-sel. Not discriminating for plateau.
+2. `s582_hsync_plateau_r2` — same natural recipe. Died after p1:
+   `updateHangarBayScene+39812` / `0x800ac120`. No exit.
+3. `s582_hsync_force_exit` — `PROBE_MODE=start_only` + `ROGUESQ_FORCE_CASE5_START=40`
+   + `ROGUESQ_LOG_DL_SYNC=1`. **Discriminating.**
+
+### Force-exit positive gates (same run)
+- hangarbay-entry max n=800
+- case5-force-start n=40 → hangar-sel → state 5→8 → graceful-menu
+- VI 512→640 @ origin 0x6A2900 (Chapter-1 cutscene)
+- No section 2 (crashed on item -347 `transformLightByType+256` / `0x80010134` —
+  2nd occurrence of that breadcrumb)
+- last_sync task #5505; trailing 331 zero-sync tasks; rdpFs frozen 4535 = Σ runner
+  syncs; present FIRE continues (pairs 5–6)
+
+### Same-run hangar control
+Late first 30 `syncs=1`: e9_a 0/30, e9_b 30/30, lin 30/30, fs_b0=E9 — reconfirms
+s581 H-walk1 / control GREEN.
+
+### Plateau contingency (tasks ≥5506, 132 probes, all syncs=0)
+| Measure | Result |
+|---------|--------|
+| e9_b | **0/132** |
+| e9_b≥1 & syncs=0 | **0** |
+| end_b | endB8 132/132 (complete walks, cmds_b≈1419) |
+| lin_e9 | 61×0 + 71×>0 (dual-buffer pair; not H-sync2 alone) |
+| fs_b0 | E7/FD sticky, not E9 |
+
+- **H-sync1 CONFIRMED** (guest walkable tree omits 0xE9)
+- **H-sync2 REFUTED** (no guest E9 for LLE to drop)
+- **H-sync3 REFUTED** (plateau present)
+
+### Pre-plateau cutscene window (≈5275–5505) — H-sync4
+Same dual DLs (`0x80747930` / `0x80729690`, tris=164), same complete e9_b=0 walks,
+but runner **syncs=1** for ~230 tasks, then identical DLs flip to syncs=0 at 5506.
+`rsp_force_fullsync` remains unwired (s580). Guest omit is true for the whole
+cutscene dual-buffer phase but is **not** the sole cause of the plateau *edge*:
+LLE had a non-guest-E9 RDP 0x29 source that later died. Filed item **-352**
+(single-source until 2nd line).
+
+### Other notes
+- lin_e9 alone must not be used as H-sync2 evidence when e9_b=0.
+- Sparse pre-exit hangar zeros with e9_b>0 (≈13 late) are a separate dual-pop
+  anomaly — do not conflate with post-exit plateau.
+- M5 recheck: no new audio-family leads in SOAK-RESULTS since s487.
+- Analysis: `scratch/s73_post_a_scene/s582_hsync_analysis.txt`
+
+### Next
+Locate LLE/bridge non-guest-E9 FULL_SYNC emission (H-sync4) and why it stops at
+the cutscene dual-buffer plateau edge. Prefer instrumenting RDP 0x29 submit path
+with guest-E9 co-presence flag; one build, force-exit recipe for same-run control.
