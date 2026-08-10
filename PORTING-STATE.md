@@ -49900,3 +49900,71 @@ never zero-stored).
 
 ### Not done this session
 Did not babysit the freeroll. Did not change freelist soft-skip / coalesce.
+
+## Session 642 — 2026-08-10 — s641 soak consume: H-drainmesh-stomp REFUTED (dms LIVE, to_zero w/o TARGET)
+
+### Work unit
+Consume `s641_drain_mesh_stomp_freeroll` (SOAK-RESULTS rc=137, 600s outer-loop
+cap, 1 attempt). Offline-score the per-attempt run.log. Decide H-drainmesh-stomp
+A/B/C. No new build.
+
+### Positive controls (same run
+`scratch/s73_post_a_scene/s641_dms_stomp_1_20260810130003/run.log`, ~560s game)
+- `[fl-zero-poll]` arm + heartbeats every 5s through t_ms≈560018; to_zero_n ends at 1
+- `[drain-mesh-stomp]` **n=34** all tagged `sample` — probe LIVE (not cold)
+  - site_pc set: 0x800081D4×6, 0x80008228×8, 0x80008270×8, 0x800082D0×6, 0x80008320×6
+  - **reg=a0 off=4 only** (v1+0 path never fired with v0==0)
+  - **all dest ∈ 0x807xxxxx** (mesh/release-queue pool); **dms_tgt=0 dms_heap=0**
+
+### Outer-score note (recipe summary force6=0 is real)
+- force6=0 force_skip=0 case6=0 hangar_sel=0 ace80=0 recov768=0 crash=0 ltexmg=0
+- Stuck at craft-select (VI 512 origin 0x6AB400 from t=77.5s); keys reached p1 start
+  but never `[hangar-sel]`. Outer 600s hard-cap killed before freeroll attempt 2.
+- No thr11d_new / fail136c / freelist-shaped to_zero #2 this attempt.
+
+### Discriminator (menu-phase to_zero #1 — same shape as s640's non-freelist #1)
+
+| t_ms | event | content | guest_pc | dms TARGET? |
+|------|-------|---------|----------|-------------|
+| 44–51s | writes | texture-like fills via sticky 0x8000B650 / 0x800290D4 | various | no |
+| **51254** | **to_zero #1** | `0x8E8E…` → full zeros at phys 0x1F3CC0 | **0x8000834C** sticky | **NO** |
+| after | dms continues | dests still 0x807* only | — | no |
+
+Last dms before to_zero: line ~32835 dest=0x80747618; first after: ~87849
+dest=0x80724728 — neither near 0x801F3CC0.
+
+### Classification
+- **A** (TARGET same run as to_zero) — **NO**
+- **B** (to_zero, dms_tgt=0) — **YES** → **H-drainmesh-stomp REFUTED** for writing
+  0x801F3CC0 via instrumented zero-store sites
+- **C** (HEAPLIKE elsewhere) — **NO** (0 HEAPLIKE tags)
+
+Dual-source for REFUTE:
+1. probe fires (34 samples) so silence-at-TARGET is not a dead instrument
+2. to_zero observed with dms_tgt permanently 0; dest class exclusive to mesh pool
+
+Also dual-source that `guest_pc=0x8000834C` on to_zero is **sticky attribution**,
+not the writer: drainMesh *was* instrumented and its stores went elsewhere while
+the poller still reported that PC.
+
+### Caveat (do not over-claim)
+This run only saw **menu-phase** to_zero #1 (texture garbage → 0), **not** the
+freelist-shaped to_zero #2 (`0x2/0x60` → 0) that s640 used for H-oob-store.
+Freelist-class writer ID remains open. Architectural dest class (0x807* only)
+makes freelist targeting by these sites unlikely; still re-confirm on a
+thr11d∧fail136c hit (queued freeroll retry).
+
+### Ruled out
+- H-drainmesh-stomp as writer of 0x801F3CC0 via instrumented a0+4 / v1+0 zero-stores
+- "probe dead / path cold" explanation for dms silence at TARGET
+
+### Next
+1. Host backtrace (or dladdr) on `[fl-zero-poll] event=to_zero` — macOS has no
+   ROGUESQ_HWBP; poller already runs in a host thread and main.cpp already uses
+   `backtrace()`. One build, same-run positive control = menu to_zero #1.
+2. Passive freeroll for freelist-shaped to_zero #2 with dms still armed (reconfirm B).
+3. If host BT points at a MIPS recomp helper / bulk clear, instrument that class.
+
+### Not done
+Did not land host-BT this session (consume-only work unit). Did not soft-skip
+freelist. Did not raise HOLD_S.

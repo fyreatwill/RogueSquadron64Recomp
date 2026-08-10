@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s641)
+## Current truth (established by session 295; unchanged, reviewed through s642)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -120,26 +120,26 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s641**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s642**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
   `loadLevelTextureCache`) → sec2 when recovery `0x76B768` fires. **s619 thr11d_new LIVE**;
   **s624 -385 M1 LIVE** (`[level-tex-malloc-guard]` null `rs_malloc(0x136C)`). **s626 H-walk1**;
   **s627 global O1+size-O3 REFUTED**. **s633 first fail136c `reason=corrupt`**. **s634
   H-shipcycle2 STRUCTURAL**. **s637 H-shipn3-gate CONFIRMED**. **s638 Outcome A live** +
   fail136c raw E8 zeros. **s639** H-zero-free/H-split **REFUTED**. **s640** thr11d∧fail136c:
-  **H-oob-store CONFIRMED** (`0x2/0x60`→zeros mid-run); **H-walk-into-zeros REFUTED**;
-  writer ID open (`0x8000834C` = drainMesh return-nop sticky — not dual-source). **s641**
-  `[drain-mesh-stomp]` probe LIVE on all drainMesh a0+4 / v1+0 zero-stores (apply_s641;
-  freeroll queued). Instruments LIVE (`ROGUESQ_LOG_FL_ZERO_WATCH`). thr11d rate **4/10**.
-  Residual rank: (1) freelist writer **store** -391/-395, (2) B8 acc -393, (3) -387
-  do_rom_read 4×.
+  **H-oob-store CONFIRMED** (`0x2/0x60`→zeros mid-run); **H-walk-into-zeros REFUTED**.
+  **s641–s642** `[drain-mesh-stomp]` LIVE (34 samples, dest exclusive 0x807* mesh pool);
+  **H-drainmesh-stomp REFUTED** (to_zero #1 with dms_tgt=0; sticky `0x8000834C` not
+  writer). Freelist-shaped writer still open — next host-BT on poller to_zero (-396).
+  Instruments LIVE (`ROGUESQ_LOG_FL_ZERO_WATCH`). thr11d rate **4/10**. Residual rank:
+  (1) freelist writer **store** -391/-395/-396, (2) B8 acc -393, (3) -387 do_rom_read 4×.
 - Co-gates: recovery silence (-374; `RECOV_WAIT_S=50` + `BUDGET_S≥900`), mat3inv (-375),
   ship (-376/-377/-392/-393), class-D (-378), FORCE_STATE6 (-381 CLOSED), freeroll
-  scene/readacct/matfree (-382..-384), null-malloc thr12 (-385 M1; -389..-391/-395),
+  scene/readacct/matfree (-382..-384), null-malloc thr12 (-385 M1; -389..-391/-396),
   sinfApprox (-386 1×), do_rom_read (-387 **4×**). thr11d metric = post-hsel destroy of
   `0x8006F2CC` only (s618). Tools default OFF: `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`,
   `FS_PIPE_INJECT`. Post-sec2: packTlut (-373).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-395; Sessions 577-640.
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-396; Sessions 577-642.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -157,20 +157,32 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -395. The next NEW item takes -396.
+a range pointer. Highest allocated so far: -396. The next NEW item takes -397.
 
-### Active M3 pipeline (s577–s641) — open residuals only
+### Active M3 pipeline (s577–s642) — open residuals only
 
--395. **(s640→s641) freelist zero-node writer STORE identity — probe LIVE, soak pending.**
+-396. **(s642) freelist zero-node writer — host backtrace on poller to_zero (next).**
+    H-drainmesh-stomp REFUTED (-395). macOS has no `ROGUESQ_HWBP`. Land
+    `backtrace()`/`dladdr` dump on `[fl-zero-poll] event=to_zero` in
+    `src/main/main.cpp` `start_fl_zero_poller` (gate already on
+    `ROGUESQ_LOG_FL_ZERO_WATCH`). Same-run positive control: menu to_zero #1
+    (~51s, texture→0) must print host frames. Discriminator on freelist-shaped
+    to_zero #2 (`0x2/0x60`→0): host frames name recomp helper / bulk clear /
+    unknown → instrument that class. Full: Session 642; NEXT.md.
+
+-395. **(s640→s642) freelist zero-node writer STORE — H-drainmesh-stomp REFUTED.**
     s640 confirmed H-oob-store *event* (allocated header destroyed mid-run) but
-    `guest_pc=0x8000834C` is the known sticky return-nop of
-    `drainMeshReleaseQueue` (PROJECT-OVERVIEW §10) — not writer proof. **s641:**
-    `[drain-mesh-stomp]` on all 5 `sw $zero,0x4($a0)` + 10 `sw $v0,0x0($v1)`
-    (v0==0) sites in drainMesh (`tools/apply_s641_drain_mesh_stomp.py`); gate
-    `ROGUESQ_LOG_FL_ZERO_WATCH`. Freeroll
-    `s641_drain_mesh_stomp_freeroll` queued. Discriminators: TARGET@0x801F3CC0
-    same run as to_zero → CONFIRMED; to_zero w/o TARGET → REFUTE drainMesh;
-    HEAPLIKE elsewhere → broader class. Full: Sessions 640-641.
+    `guest_pc=0x8000834C` is sticky drainMesh return-nop (PROJECT-OVERVIEW §10)
+    — not writer proof. **s641:** `[drain-mesh-stomp]` on all 5 a0+4 + 10 v1+0
+    zero-stores in drainMesh (`tools/apply_s641_drain_mesh_stomp.py`); gate
+    `ROGUESQ_LOG_FL_ZERO_WATCH`. **s642 offline score** (s641 att1 run.log,
+    outer rc=137): posctrl LIVE — flz heartbeats + **dms n=34 all sample**,
+    dest exclusive **0x807xxxxx** mesh pool, dms_tgt=0 dms_heap=0; menu
+    to_zero #1 at t_ms=51254 (`0x8E8E…`→0) with sticky pc and **no TARGET**
+    → **H-drainmesh-stomp REFUTED** dual-source. No freelist-shaped to_zero #2
+    this attempt (force6=0 hsel=0 craft-select hold). Residual writer ID →
+    -396 host-BT. Freeroll retry queued for freelist-shaped reconfirm.
+    Full: Sessions 640-642.
 
 -393. **(s637→s640) H-shipn3-gate CONFIRMED; Outcome A live-verified; residual
     is B8 acc crossing thr only ~25–40% of recovery-fired holds.** Guest chain
@@ -188,16 +200,17 @@ a range pointer. Highest allocated so far: -395. The next NEW item takes -396.
     SCORE `ship_store` post-hsel: =2 means n=2+n=3; =1 only n=2. **Gate of n=3
     closed into -393** (runModelViewerLoop B8→throttle). Full: Sessions 634-637.
 
--391. **(s632→s641) fail136c `reason=corrupt`: E8 freelist zero-node at
-    `0x801F3CC0` — H-oob-store CONFIRMED; H-walk-into-zeros REFUTED; writer
-    store open (-395, probe LIVE s641).** s633–s638: selected E8 stops at i=55
-    raw zeros. **s639:** H-zero-free + H-split REFUTED. **s640 scored
-    thr11d∧fail136c:** poller saw mid-run **`flags=0x2 size=0x60` → zeros** at
-    phys `0x1F3CC0` (to_zero #2 t≈165s); `[fl-zero-watch] zero_node` first at
-    site=malloc with prev=`0x801ED1B0` prev_f=0x2 prev_sz=`0x6B00` (next =
-    prev+0x10+sz = `0x801F3CC0` — correct); fail136c still i=54 free `0x20`
-    @`0x801F3C90` → i=55 zeros. **s641** `[drain-mesh-stomp]` probe LIVE.
-    **Primary thr12 unblock residual.** Full: Sessions 632-641.
+-391. **(s632→s642) fail136c `reason=corrupt`: E8 freelist zero-node at
+    `0x801F3CC0` — H-oob-store CONFIRMED; H-walk-into-zeros REFUTED;
+    H-drainmesh-stomp REFUTED s642; writer store still open (-396 host-BT).**
+    s633–s638: selected E8 stops at i=55 raw zeros. **s639:** H-zero-free +
+    H-split REFUTED. **s640 scored thr11d∧fail136c:** poller mid-run
+    **`flags=0x2 size=0x60` → zeros** at phys `0x1F3CC0` (to_zero #2 t≈165s);
+    `[fl-zero-watch] zero_node` first site=malloc prev=`0x801ED1B0` prev_f=0x2
+    prev_sz=`0x6B00` (next = prev+0x10+sz = `0x801F3CC0` — correct). **s641–s642:**
+    drainMesh instrumented zero-stores LIVE but never TARGET@0x801F3CC0
+    (dest class 0x807* only). **Primary thr12 unblock residual.** Full:
+    Sessions 632-642.
 
 -390. **(s627→s634) pool-aware free census + thr11d rate: 2/8 (25%) of
     recovery-fired reach thr11d_new; discriminator fed once (→ -391); pure
@@ -305,17 +318,17 @@ a range pointer. Highest allocated so far: -395. The next NEW item takes -396.
     is STALE** — do not merge with -326. Co-symptom: `osViSetMode` width=24. 2nd occ pending.
     Full: Session 608.
 
--361. **(s589-s641) thr11→sec4→sec2 pipeline — thr11d_new LIVE (rate **4/10** s640);
+-361. **(s589-s642) thr11→sec4→sec2 pipeline — thr11d_new LIVE (rate **4/10** s640);
     Outcome A live; class-D soft-skip LIVE; -385 M1 LIVE thr12 blocked by null
     `rs_malloc(0x136C)` — **E8 zero-node `0x801F3CC0`**: H-oob-store CONFIRMED s640,
-    H-walk-into-zeros REFUTED, writer store ID open (-391/-395; `[drain-mesh-stomp]`
-    LIVE s641, soak pending); H-zero-free/H-split REFUTED s639. thr11d gated by
-    B8→store→throttle×7→destroy (-392/-393); -387 **4×**. Co-gates: recovery
-    (-374), mat3inv (-375), sinfApprox (-386), ship (-376/-377/-392/-393), freeroll
-    (-382..-384), FORCE_STATE6 (-381 CLOSED), packTlut (-373). thr-11=
-    `saveServiceWorker` `0x8006F2CC`; thr-12=`hudDisplayUpdateWorker` via
-    `loadLevelTextureCache`. HOLD_S ≤ 210. Full: PROJECT-OVERVIEW §27;
-    Sessions 589-641.**
+    H-walk-into-zeros REFUTED, **H-drainmesh-stomp REFUTED s642** (dms LIVE
+    dest=0x807* only); writer store ID open (-391/-395/-396 host-BT next);
+    H-zero-free/H-split REFUTED s639. thr11d gated by B8→store→throttle×7→destroy
+    (-392/-393); -387 **4×**. Co-gates: recovery (-374), mat3inv (-375),
+    sinfApprox (-386), ship (-376/-377/-392/-393), freeroll (-382..-384),
+    FORCE_STATE6 (-381 CLOSED), packTlut (-373). thr-11=`saveServiceWorker`
+    `0x8006F2CC`; thr-12=`hudDisplayUpdateWorker` via `loadLevelTextureCache`.
+    HOLD_S ≤ 210. Full: PROJECT-OVERVIEW §27; Sessions 589-642.**
 
 ### Closed product lineage (FULL_SYNC inject + thr pipeline setup) — do not re-open
 
@@ -398,9 +411,9 @@ a range pointer. Highest allocated so far: -395. The next NEW item takes -396.
     FULL_SYNC inject product-fixed; force6 live-writes hangar state s617 (-381 CLOSED);
     thr11d_new+class-D LIVE (rate 4/10); -385 M1 LIVE; H-walk1; global O1+size-O3 REFUTED;
     H-shipcycle2 STRUCTURAL; H-shipn3-gate CONFIRMED; s638 Outcome A; **s640 H-oob-store
-    CONFIRMED / H-walk-into-zeros REFUTED on zero-node; s641 drain-mesh-stomp probe
-    LIVE (-395), soak pending**. Active residuals: -395..-373 / -361 / -379. Tools
-    still default OFF.
+    CONFIRMED / H-walk-into-zeros REFUTED; s642 H-drainmesh-stomp REFUTED (-395);
+    freelist writer → host-BT (-396)**. Active residuals: -396..-373 / -361 / -379.
+    Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
 
