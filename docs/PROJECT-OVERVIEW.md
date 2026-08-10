@@ -2496,3 +2496,67 @@ CLEAN hangarbay n=2600, 0 fires on new sites. Surfaced item -345 DIRECT gap afte
   `ROGUESQ_FORCE_PAL15=1` (s14, clears floor band, corrupts ceiling banners sharing pal=15).
 - **(s85→s91)** "`do_rom_read` corrupted `physical_addr` is nondeterministic garbage" — the exact same
   DMA call recurred byte-for-byte 3 times across 3 sessions; reclassified deterministic, reproducible.
+
+## 27. M3 thr11→sec2 hangar-exit pipeline (s577–s615), migrated from CURRENT-TRUTH.md s615 maintenance
+
+Durable summary of the active M3 DoD path after hangar exit. Session-level detail lives in
+PORTING-STATE Sessions 577–615; CURRENT-TRUTH keeps only open residuals (-380..-373, -361, -7).
+
+### What was confirmed
+
+- **s577**: real hangar exit case 3→5→6→8 (not the s150 craft-select camera corruption).
+- **s579–s588**: post-exit `rdpFs` plateau reclassified as **FULL_SYNC starvation with live GFX
+  tasks** (not s178 producer-stop). Guest `E9000000` lives in a side-slot DPC staging cell at
+  phys `0x76DF60`; content switch E9→E7→F3/FD ends natural FULL_SYNC. Product tool
+  `ROGUESQ_FS_PIPE_INJECT` (default OFF) extends inject through E7/F3/FD. Recovery cell
+  `0x76B768` firing restores post-dual `syncs>0` (H10a).
+- **s589–s603**: thr-11 = `saveServiceWorker` entry `0x8006F2CC` (infinite recv loop, destroyed
+  externally). thr-11 destroy co-timed with overlay section 4 when recovery is healthy (H12c).
+  thr-12 = `hudDisplayUpdateWorker` `0x800495FC`, created only from
+  `loadLevelTextureCache→registerServiceWorker`. `ROGUESQ_FORCE_CASE6_START` (ACE94, default OFF)
+  is the reliable exit engagement tool. Engagement gate is ACE80 camera-settle (state 5→6), not
+  a button. `BEGINFRAME_S0_GUARD` at guest `0x8000AFA0` landed s600 (live 2/2 still rare under
+  force+inject).
+- **s604–s608**: `ROGUESQ_FORCE_STATE6_AFTER` (default OFF) unlocks case6 when stuck at state 5
+  (H-force6a). H-recov1 sufficiency REFUTED (76B768 alone does not force thr11 destroy);
+  necessity SUPPORTED (no 76B768 → no thr11d/sec2). H-handoff2 REFUTED (76BA90 not required for
+  thr11d). s608 first force-path completion: thr11 destroy → sec4 → thr12 → sec2 (mission overlay).
+- **s609–s612**: recovery silence intermittent free-reroll class; mid-window `mat3x3InverseInto`
+  Abort (1×) free-rerolls; thr11 destroy co-requires post-hangar-sel `isPlayerShipActive` ret=1
+  (H-ship1 SUPPORTED). Ship writers: non-null arm `updateTextOverlayLookupEntry` @ `0x800B40D0`
+  (copies `0x800CC864` when `0x800CC85C` null); zero arm `destroyPlayerShipRecord` @ `0x800B42A8`.
+  Hangar-sel store of live ship `0x8015FD90` (H-ship1c SUPPORTED).
+- **s613–s615**: class D death after thr11d+sec4 is `loadCraftShadowTextures` null `load_asset`
+  walk (`si_addr=0x380000000`). Soft-skip guards + `[level-tex-cache]` landed; live A–D verify
+  still PENDING (s613 hung on force 3→6; s614 force_skip working but recovery-silent / pre_eng).
+  FORCE_STATE6 must only write when hangar state==5 (s614 gate); natural ACE80 can engage without
+  a force-write.
+
+### Open residuals (do not re-derive)
+
+| Item | Residual | Status |
+|------|----------|--------|
+| -374 | recovery cell `0x76B768` silence after eng+inject | free-reroll; co-primary |
+| -375 | `mat3x3InverseInto` Abort mid-window | 1×; free-reroll; escalate on 2nd |
+| -376/-377 | ship ret=1 / store co-gate for thr11d | H-ship1 SUPPORTED; H-ship1b open |
+| -378 | craft-shadow null walk before thr12 | guard landed; live-verify PENDING |
+| -379/-380 | FORCE_STATE6 only at state==5 | gate landed; natural engage OK |
+| -373 | post-sec2 `packTlut`/HMT SIGBUS | 1×; primary bottleneck once pipeline completes |
+| material `0x8000e29c` | `findOrCreateMaterial` | 2×; free-reroll noise |
+
+### Tools (all default OFF)
+
+- `ROGUESQ_FS_PIPE_INJECT` — inject FULL_SYNC on non-E9 size-8 at slot∩last_fs
+- `ROGUESQ_FORCE_CASE6_START` — force case6 start poll at ACE94
+- `ROGUESQ_FORCE_STATE6_AFTER=N` — force hangar state→6 at case5-entry n==N **only if current
+  state==5** (s614 gate; skip log `[case5-force-state6-skip]`)
+
+### Do-not-retry on this arc
+
+- Requiring `0x76BA90` for thr11 destroy (H-handoff2 REFUTED)
+- Raising HOLD_S past 210
+- Soft-skip mat3inv without 2nd occ + abnormal control
+- Single-chase packTlut before 2nd same host stack
+- Leaving FORCE_*/FS_PIPE default-ON
+- Treating `last-guest-pc=0x800290d4` as craft-shadow fault site
+- Forcing hangar state from old≠5 (blocks ACE80)

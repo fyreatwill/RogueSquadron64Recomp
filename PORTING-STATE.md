@@ -48460,3 +48460,36 @@ Fold `s613_class_d_shadow_guard` and act on class-D shadow-guard A–D tree.
 - Re-ungate FORCE_STATE6 for old≠5.
 - Raise HOLD_S past 210.
 - Soft-skip mat3inv / single-chase packTlut.
+
+## Session 615 — maintenance compact + fold s614_class_d_force_gate (2026-08-10)
+
+### Planned unit
+Step 0 maintenance: `docs/CURRENT-TRUTH.md` was 60203 bytes (>60000). Compact toward ~35 KB;
+migrate durable thr11/sec2 arc to PROJECT-OVERVIEW §27; fold queued soak `s614_class_d_force_gate`.
+
+### What ran
+- `wc -c docs/CURRENT-TRUTH.md` → 60203 → maintenance iteration (no experiment build/run).
+- Folded SOAK-RESULTS `s614_class_d_force_gate` rc=2, 564s (unscored, no recovery-active class-D):
+  - a1: force6=0 force_skip=1 pre_eng crash
+  - a2: **engaged** case6=1 hangar_sel=1 ace80=1 with force6=0 force_skip=1, then
+    early=recovery_silent (0×76B768) — free reroll
+  - a3: pre_eng budget
+  - Verdict: FORCE_STATE6 state==5 gate working (no harmful 3→6); natural ACE80 engage without
+    force-write; H-Dshadow1 still live-unverified; -374 recovery silence re-hit
+- Compacted CURRENT-TRUTH: 706 → 364 lines (−342), 59628 → 25368 bytes.
+  - Collapsed closed -372..-349 into FULL_SYNC product range pointer
+  - Collapsed -348..-291 and older closed lineages into range pointers
+  - Kept active open residuals -380..-373 / -361 with condensed detail
+  - Refreshed headline "reviewed through s615"; highest allocated → -380
+- Migrated durable s577–s615 thr11→sec2 arc to `docs/PROJECT-OVERVIEW.md` §27
+- Item -380 records s614 fold; next unit requeues class-D recovery-active verify
+
+### Rules out / advances
+- Maintenance ADVANCED by net-line shrink (iron contract).
+- H-force6b partial support: force_skip path + natural ACE80 without force-write.
+- Does **not** live-verify H-Dshadow1 (no thr11d scored path this soak).
+
+### Next
+Requeue class-D force-gate / shadow-guard recipe aiming for recovery-active thr11d+sec4;
+do not re-ungate FORCE_STATE6; do not raise HOLD_S past 210.
+

@@ -328,3 +328,4 @@
 20260809-235621 | s611_ship_ret1_gate | rc=2 | 562s | scratch/agent/soak_results/s611_ship_ret1_gate_20260809-235621.log
 20260810-001350 | s612_ship_store_gate | rc=1 | 289s | scratch/agent/soak_results/s612_ship_store_gate_20260810-001350.log
 20260810-002915 | s613_class_d_shadow_guard | rc=2 | 488s | scratch/agent/soak_results/s613_class_d_shadow_guard_20260810-002915.log
+20260810-004620 | s614_class_d_force_gate | rc=2 | 564s | scratch/agent/soak_results/s614_class_d_force_gate_20260810-004620.log

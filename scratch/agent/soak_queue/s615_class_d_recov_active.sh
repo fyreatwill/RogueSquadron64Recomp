@@ -79,7 +79,7 @@ while :; do
     echo "[fast-retry] hit MAX_ATTEMPTS=$MAX_ATTEMPTS, stopping"
     break
   fi
-  TAG="s614_class_d_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
+  TAG="s615_class_d_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
   OUT="$ROOT/scratch/s73_post_a_scene/$TAG"
   LOG="$OUT/run.log"
   kill_game
