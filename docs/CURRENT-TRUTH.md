@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s613)
+## Current truth (established by session 295; unchanged, reviewed through s614)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -141,10 +141,14 @@ from `runModelViewerLoop` before thr11 destroy — **H-ship1c SUPPORTED**, H-shi
 re-confirmed on G path. Residual: crash `loadCraftShadowTextures` null
 `load_asset` walk (`si_addr=0x380000000`); thr12 parent is
 `loadLevelTextureCache` only. Soft-skip + `[level-tex-cache]` landed; soak
-`s613_class_d_shadow_guard` queued. Post-sec2 HMT/`packTlut` (-373, 1×);
-material `0x8000e29c` (2×); mat3inv Abort (-375, 1×). Tools (default OFF):
-`FORCE_STATE6_AFTER`, `FORCE_CASE6_START`, `FS_PIPE_INJECT`. Full chain: items
--349..-378; raw Sessions 577-613.
+`s613_class_d_shadow_guard` ran **unscored** (rc=2): force
+`old=3→6` at case5 n=40 blocked ACE80/case6 (488s pre-eng hang). **s614:
+FORCE_STATE6 gated on hangar state==5** (+`[case5-force-state6-skip]`);
+recipe `ENGAGE_WAIT_S=90` early-kill; requeued `s614_class_d_force_gate`.
+Post-sec2 HMT/`packTlut` (-373, 1×); material `0x8000e29c` (2×); mat3inv
+Abort (-375, 1×). Tools (default OFF): `FORCE_STATE6_AFTER`,
+`FORCE_CASE6_START`, `FS_PIPE_INJECT`. Full chain: items -349..-379; raw
+Sessions 577-614.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -162,7 +166,23 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -378. The next NEW item takes -379.
+a range pointer. Highest allocated so far: -379. The next NEW item takes -380.
+
+-379. **(s614) s613 unscored: FORCE_STATE6 old=3→6 is harmful; gated to state==5;
+    ENGAGE_WAIT requeue for class-D guard live-verify.** Folded
+    `s613_class_d_shadow_guard` rc=2 488s: pre_eng=1, force6=1 case6=0
+    hangar_sel=0 ace80=0 recov=0. Log: `[case5-force-state6] n=40 old=3 new=6`
+    while `[hangar-state]` reported 5 and case5-entry logged state=3; no
+    ACE80, no case6, no hangar-sel — single attempt burned full budget.
+    s612 control: force old=6→6 then natural ACE80→case6→hangar-sel→
+    thr11d+sec4+craft-shadow crash (guards not yet live). Code:
+    `ROGUESQ_FORCE_STATE6_AFTER` only writes when hangar state byte is 5
+    (`>= force_at`); no-ops/completes at 6; logs
+    `[case5-force-state6-skip]` otherwise — hand-applied `funcs_28.c` +
+    fixup upgrade path s614. Recipe: `ENGAGE_WAIT_S=90` post first
+    `[case5-entry]` kills stuck pre-eng hangs. Queued
+    `s614_class_d_force_gate` (same A–D class-D discriminators + force_skip
+    gate). H-Dshadow1 still live-unverified. Full: Session 614.
 
 -378. **(s613) s612 ship-store soak scored class D; thr12 parent identified;
     craft-shadow null-walk guard landed.** Folded `s612_ship_store_gate` rc=1 289s
@@ -358,14 +378,16 @@ a range pointer. Highest allocated so far: -378. The next NEW item takes -379.
     comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
     survival. Full detail: `PORTING-STATE.md` Session 597.
 
--361. **(s589-s613) thr11→sec4→sec2 pipeline — reachable when recovery fires (s608); blocked
+-361. **(s589-s614) thr11→sec4→sec2 pipeline — reachable when recovery fires (s608); blocked
     by recovery silence (-374), mid-window mat3inv (-375), missing ship re-activation
-    (-376/-377 / H-ship1), or post-sec4 craft-shadow null walk (-378 class D)
-    otherwise.** thr-11 = `saveServiceWorker` entry=`0x8006F2CC`. thr-12 =
+    (-376/-377 / H-ship1), post-sec4 craft-shadow null walk (-378 class D), or
+    premature FORCE_STATE6 from non-5 (-379 / s613 hang).
+    thr-11 = `saveServiceWorker` entry=`0x8006F2CC`. thr-12 =
     `hudDisplayUpdateWorker` via `loadLevelTextureCache`. s608: thr11d+sec4+thr12+sec2
-    with recov76B768~=92, recov76BA90=0. s612/s613: thr11d+sec4 then shadow crash,
-    thr12 never. Residuals: -378; material `0x8000e29c`; -374; -375; -373. Free-reroll
-    noise. Do not raise HOLD_S past 210. Full: Sessions 589-613.
+    with recov76B768~=92, recov76BA90=0. s612: thr11d+sec4 then shadow crash,
+    thr12 never. s613 unscored. Residuals: -378/-379 live-verify; material
+    `0x8000e29c`; -374; -375; -373. Free-reroll noise. Do not raise HOLD_S past 210.
+    Full: Sessions 589-614.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4

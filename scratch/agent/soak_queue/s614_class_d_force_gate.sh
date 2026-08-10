@@ -1,21 +1,26 @@
 #!/bin/zsh
-# s613: class D residual after H-ship1 — thr11d+sec4 without thr12/sec2.
+# s614: requeue class-D shadow-guard verify after s613 unscored hang.
 # HYPOTHESIS-ID: m3-post-exit-fs-stall
 #
-# s612_ship_store_gate fold (rc=1, 289s, recovery-active scored):
-#   ctrl_ship_store=1 ship_store_post_nz=2 ship_ret1_post=1 thr11_destroy=1
-#   sec4_post=1 sec2=0 thr495FC_post=0 class_hint=D_sec4_no_sec2
-#   crash loadCraftShadowTextures+1068 (null load_asset → MEM_W s1=0 → si_addr=0x380000000)
-# Host map (ASLR-corrected): hangar-sel store=updateHangarBayScene;
-#   post re-arm=runModelViewerLoop; zero=gracefulMenuShutdown/runModelViewerLoop.
-# thr12 = hudDisplayUpdateWorker created ONLY from loadLevelTextureCache.
-# s613 lands always-on [craft-shadow-asset-guard]/[craft-shadow-walk-guard]
-# soft-skip + [level-tex-cache] entry. Discriminating on recovery-active thr11d path:
-#   A) guard fires + thr12_post≥1 + sec2_post≥1 → class D dissolved by skip
-#   B) guard fires + thr12≥1 sec2=0 → past shadow, residual is thr12→sec2 handoff
+# s613_class_d_shadow_guard fold (rc=2, 488s, NO recovery-active engagement):
+#   attempt 1: force6=1 case6=0 hangar_sel=0 ace80=0 recov=0 crash=0
+#   [case5-force-state6] n=40 old=3 new=6 — force fired while hangar state
+#   was NOT 5 (case5-entry logged state=3). Camera-settle ACE80 never ran;
+#   FORCE_CASE6_START never engaged; 488s ate the whole BUDGET for 1 attempt.
+# Contrast s612 scored path: force old=6 new=6 (no-op) then natural ACE80 5→6
+#   + case6 + hangar-sel + thr11d+sec4 + craft-shadow crash.
+#
+# s614 code change: FORCE_STATE6 only writes when old_st==5 (or no-ops at 6);
+#   logs [case5-force-state6-skip] otherwise. Recipe adds ENGAGE_WAIT_S=90s
+#   after first [case5-entry]: if no hangar-sel by then, SIGKILL free-reroll
+#   so one stuck state=5 hang cannot burn the whole budget.
+#
+# Discriminating on recovery-active thr11d path (same as s613):
+#   A) guard fires + thr12_post>=1 + sec2_post>=1 → class D dissolved
+#   B) guard fires + thr12>=1 sec2=0 → residual thr12→sec2 handoff
 #   C) guard fires + thr12=0 → still not reaching loadLevelTextureCache
-#   D) guard_n=0 + same shadow crash → instrument miss / different fault site
-# Positive control: on thr11d+sec4 path, either guard≥1 OR level-tex-cache≥1 OR thr12.
+#   D) guard_n=0 + same shadow crash → instrument miss / different fault
+# Positive control: thr11d+sec4 => craft_shadow_asset+walk>=1 OR level_tex OR thr12.
 #
 # Exit: 0 scored+ok, 1 scored+CRASH, 2 no recovery-active engagement, 3 force miss.
 
@@ -29,6 +34,7 @@ MAX_ATTEMPTS=8
 HOLD_S=180
 START_FLOOR_S=80
 RECOV_WAIT_S=100
+ENGAGE_WAIT_S=90
 POLL_S=3
 
 GAME_EXTRA_ENV_BASE="ROGUESQ_FORCE_STATE6_AFTER=40 ROGUESQ_FORCE_CASE6_START=5 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 ROGUESQ_LOG_COALESCE_HEAP_GUARD=1 ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD=1 ROGUESQ_LOG_BEGINFRAME_S0_GUARD=1 ROGUESQ_LOG_TEXDATA_TABLE_GUARD=1 ROGUESQ_LOG_TEXDATA_PTR_ARRAY_GUARD=1 ROGUESQ_LOG_MATERIAL_ARRAY_PTR_GUARD=1 ROGUESQ_LOG_MAT3INV=1"
@@ -73,12 +79,12 @@ while :; do
     echo "[fast-retry] hit MAX_ATTEMPTS=$MAX_ATTEMPTS, stopping"
     break
   fi
-  TAG="s613_class_d_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
+  TAG="s614_class_d_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
   OUT="$ROOT/scratch/s73_post_a_scene/$TAG"
   LOG="$OUT/run.log"
   kill_game
   sleep 0.3
-  echo "[fast-retry] attempt $ATTEMPT starting, ${REMAIN}s left, HOLD_S=$HOLD_S RECOV_WAIT_S=$RECOV_WAIT_S tag=$TAG"
+  echo "[fast-retry] attempt $ATTEMPT starting, ${REMAIN}s left, HOLD_S=$HOLD_S RECOV_WAIT_S=$RECOV_WAIT_S ENGAGE_WAIT_S=$ENGAGE_WAIT_S tag=$TAG"
   mkdir -p "$OUT"
   env PROBE_MODE=start_only HOLD_S=$HOLD_S STICK_SCHEDULE="999:sr" \
     GAME_EXTRA_ENV="$GAME_EXTRA_ENV_BASE" \
@@ -87,6 +93,7 @@ while :; do
   LAUNCH_PID=$!
 
   HSEL_T=0
+  C5_T=0
   RECOV_SEEN=0
   EARLY_KILL=0
   EARLY_REASON=""
@@ -101,6 +108,22 @@ while :; do
       break
     fi
     [ -f "$LOG" ] || continue
+    # s614: after first case5-entry, demand hangar-sel within ENGAGE_WAIT_S.
+    # Prevents s613-style 488s pre-eng hang from burning the whole budget.
+    if [ "$C5_T" -eq 0 ] && grep -aq '\[case5-entry\]' "$LOG" 2>/dev/null; then
+      C5_T=$NOW2
+      echo "[fast-retry] attempt $ATTEMPT case5-entry seen at +$((NOW2-NOW))s — ENGAGE_WAIT_S=${ENGAGE_WAIT_S}"
+    fi
+    if [ "$C5_T" -gt 0 ] && [ "$HSEL_T" -eq 0 ]; then
+      if [ $(( NOW2 - C5_T )) -ge "$ENGAGE_WAIT_S" ]; then
+        EARLY_KILL=1
+        EARLY_REASON=engage_timeout
+        echo "[fast-retry] attempt $ATTEMPT ENGAGE_WAIT expired (${ENGAGE_WAIT_S}s post case5-entry, 0 hangar-sel) — SIGKILL free reroll"
+        kill_game
+        wait "$LAUNCH_PID" 2>/dev/null || true
+        break
+      fi
+    fi
     if [ "$HSEL_T" -eq 0 ] && grep -aq '\[hangar-sel\]' "$LOG" 2>/dev/null; then
       HSEL_T=$NOW2
       echo "[fast-retry] attempt $ATTEMPT hangar-sel seen at +$((NOW2-NOW))s — starting RECOV_WAIT_S=${RECOV_WAIT_S}"
@@ -146,13 +169,14 @@ while :; do
     RC=137
   fi
 
-  CASE6=0; HSEL=0; CRASH=0; ACE80=0; FORCE6=0; MATNOISE=0; RECOV=0; MAT3INV=0
+  CASE6=0; HSEL=0; CRASH=0; ACE80=0; FORCE6=0; FORCE_SKIP=0; MATNOISE=0; RECOV=0; MAT3INV=0
   if [ -f "$LOG" ]; then
     grep -aq '\[case6-force-start\]' "$LOG" && CASE6=1
     grep -aq '\[hangar-sel\]' "$LOG" && HSEL=1
     grep -aq '\[CRASH\]' "$LOG" && CRASH=1
     grep -aq 'site=0x800ACE80' "$LOG" && ACE80=1
-    grep -aq '\[case5-force-state6\]' "$LOG" && FORCE6=1
+    grep -aqE '\[case5-force-state6\] n=' "$LOG" && FORCE6=1
+    grep -aq '\[case5-force-state6-skip\]' "$LOG" && FORCE_SKIP=1
     if grep -aqE '\[rdp-fullsync\].*0x0076B768|addr=0x0076B768' "$LOG"; then
       RECOV=1
     fi
@@ -165,7 +189,7 @@ while :; do
     fi
   fi
   DUR=$(( $(date +%s) - NOW ))
-  echo "[fast-retry] attempt $ATTEMPT done rc=$RC dur=${DUR}s force6=$FORCE6 case6=$CASE6 hangar_sel=$HSEL ace80=$ACE80 recov768=$RECOV crash=$CRASH matnoise=$MATNOISE mat3inv=$MAT3INV early=$EARLY_REASON log=$LOG"
+  echo "[fast-retry] attempt $ATTEMPT done rc=$RC dur=${DUR}s force6=$FORCE6 force_skip=$FORCE_SKIP case6=$CASE6 hangar_sel=$HSEL ace80=$ACE80 recov768=$RECOV crash=$CRASH matnoise=$MATNOISE mat3inv=$MAT3INV early=$EARLY_REASON log=$LOG"
 
   if [ "$CASE6" -eq 1 ] && [ "$HSEL" -eq 1 ]; then
     if [ "$MATNOISE" -eq 1 ] && [ "$CRASH" -eq 1 ]; then
@@ -209,7 +233,8 @@ lines = raw.splitlines()
 def c(pat):
     return sum(1 for l in lines if pat in l)
 
-force6 = 1 if "[case5-force-state6]" in raw else 0
+force6 = 1 if re.search(r"\[case5-force-state6\] n=", raw) else 0
+force_skip = 1 if "[case5-force-state6-skip]" in raw else 0
 case6 = 1 if "[case6-force-start]" in raw else 0
 hsel = 1 if "[hangar-sel]" in raw else 0
 ace80 = 1 if "site=0x800ACE80" in raw else 0
@@ -324,7 +349,7 @@ ltc_all = sum(1 for l in lines if "[level-tex-cache]" in l)
 ltc_post = sum(1 for l in lines[hsel_i:] if "[level-tex-cache]" in l) if hsel_i else 0
 shadow_crash = 1 if ("loadCraftShadowTextures" in stack_blob) else 0
 print(
-    f"gate force6={force6} case6={case6} hangar-sel={hsel} ace80={ace80} "
+    f"gate force6={force6} force_skip={force_skip} case6={case6} hangar-sel={hsel} ace80={ace80} "
     f"inject_max_n={inj_max} recov76B768~={rec768} recov76BA90~={recA90} "
     f"thr11_create={thr11_create} thr11_destroy={thr11_destroy} "
     f"sec4={sec4} sec4_post={sec4_post} sec2={sec2} sec2_post={sec2_post} "

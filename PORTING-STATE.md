@@ -48417,3 +48417,46 @@ D_guard_thr12_no_sec2 / D_guard_no_thr12 / D_shadow_crash.
 - Treat last-guest-pc=0x800290d4 as the fault site.
 - Claim H-ship1b fully causal without E_store_no_thr11d.
 
+
+## Session 614 — s613 unscored FORCE 3→6 hang; gate force to state==5 (2026-08-10)
+
+### Planned unit
+Fold `s613_class_d_shadow_guard` and act on class-D shadow-guard A–D tree.
+
+### What ran
+- SOAK-RESULTS: `s613_class_d_shadow_guard` rc=2, 488s.
+- Attempt 1 only: force6=1 case6=0 hangar_sel=0 ace80=0 recov768=0 crash=0
+  matnoise=0 mat3inv=0; classified pre-engagement; budget exhausted (remain=72).
+- Run log `scratch/s73_post_a_scene/s613_class_d_1_20260810002915/run.log`
+  (~157k lines, process alive to kill — no CRASH):
+  - `[case5-force-state6] n=40 old=3 new=6`
+  - case5-entry n=0..4 state=3; n=50+ state=6
+  - hangar-state n=693 state=5 around same window (same byte address)
+  - **0×** ACE80 / case6-force-start / hangar-sel / thr-destroy thr11 / sec2 / sec4 post-exit
+  - VI stuck at hangar 512 / 0x6AB400 present-stall pattern to EOF
+- Contrast offline s612 scored path (same recipe family, guards not yet live):
+  force old=6→6, ACE80 5→6, case6+hangar-sel, thr11 destroy + sec4, crash
+  `loadCraftShadowTextures+1068` si_addr=0x380000000 (null load_asset walk).
+
+### Code / recipe
+1. **FORCE_STATE6 gate (s614):** only write hangar state→6 when current byte
+   is 5; complete/no-op when already 6; log `[case5-force-state6-skip]` otherwise;
+   trigger with `s_c5_n >= force_at` so a late natural state=5 still unlocks.
+   Hand-applied `RecompiledFuncs/funcs_28.c`; fixup template + upgrade path in
+   `N64Recomp/fixup_game_funcs.py`. Binary rebuilt (strings confirm skip tag).
+2. **Soak recipe** `scratch/agent/soak_queue/s614_class_d_force_gate.sh`:
+   `ENGAGE_WAIT_S=90` after first `[case5-entry]` → SIGKILL free-reroll if no
+   hangar-sel (stops s613-style full-budget hangs). force_skip gate field;
+   same A–D class-D + ship/thr/sec scorers as s613.
+
+### Rules in / out
+- **In:** premature FORCE_STATE6 from old=3 blocks hangar exit engagement
+  (single-source s613 vs s612 control; H-force6b).
+- **Out:** class-D guard live classification (unscored soak — no thr11d path).
+- **Still open:** H-Dshadow1/2 live; case5-entry vs hangar-state dual-read
+  (state=3 vs 5 same window) not explained this session.
+
+### Do not
+- Re-ungate FORCE_STATE6 for old≠5.
+- Raise HOLD_S past 210.
+- Soft-skip mat3inv / single-chase packTlut.
