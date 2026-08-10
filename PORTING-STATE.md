@@ -49870,3 +49870,33 @@ Instrument drainMeshReleaseQueue zero-stores (+ optional malloc flags=2 store at
 header) gated on `ROGUESQ_LOG_FL_ZERO_WATCH`; freeroll for thr11d∧fail136c with
 `[drain-mesh-stomp]` if a0/v1==0x801F3CC0 or pre flags heap-like.
 
+
+## Session 641 — 2026-08-10 — drainMeshReleaseQueue freelist-stomp probe landed; freeroll queued
+
+### Work unit
+Dual-source the s640 H-oob-store writer at `0x801F3CC0` (item -395). Sticky
+`guest_pc=0x8000834C` is drainMesh return-nop — not proof. Static candidate:
+`drainMeshReleaseQueue` five `sw $zero,0x4($a0)` sites and ten `sw $v0,0x0($v1)`
+(when v0==0).
+
+### Change
+- `tools/apply_s641_drain_mesh_stomp.py` (idempotent; function-form re.sub so
+  C format `\n` is not eaten by re.sub string-escape processing).
+- Patches `funcs_3.c` `drainMeshReleaseQueue`: 5× a0+4 zero-store probes +
+  10× v1+0 zero-store probes. Tag `[drain-mesh-stomp]`; gate
+  `ROGUESQ_LOG_FL_ZERO_WATCH`. Logs TARGET (dest=0x801F3CC0), HEAPLIKE
+  (flags∈{1,2} size sane), or sample (first 12 / every 400).
+- `fixup_game_funcs.py` (N64Recomp tree) warns if marker missing after regen.
+- Rebuild: RecompiledFuncs + RogueSquadron64Recomp clean.
+- Queued `scratch/agent/soak_queue/s641_drain_mesh_stomp_freeroll.sh` (clone of
+  s639 freeroll; SCORE adds dms_n/dms_tgt/dms_heap/flz_to_zero + dumps).
+
+### Discriminators (next iteration, after soak)
+- A) stomp TARGET same run as to_zero → drainMesh CONFIRMED dual-source
+- B) to_zero without TARGET → drainMesh REFUTED for that addr; widen search
+- C) HEAPLIKE on other headers → broader class
+Positive control: fl-zero-poll heartbeat + dms_sample≥1 (or note if drainMesh
+never zero-stored).
+
+### Not done this session
+Did not babysit the freeroll. Did not change freelist soft-skip / coalesce.
