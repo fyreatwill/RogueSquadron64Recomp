@@ -16,6 +16,11 @@ HYPOTHESIS-ID: m3-post-exit-fs-stall
   guest writer. H-hostbt-writer "poller BT names store path" **REFUTED** for
   naming (instrument still useful as posctrl tag).
 
+**s642 freeroll retry folded (old binary):** freelist to_zero #2 **2/2**
+(`0x2/0x60`→0 t≈164–165s) dms_tgt=0 → H-drainmesh-stomp REFUTED freelist-class.
+thr11d_new=0; crash `unregisterServiceWorker`. Freelist event is available
+without thr11d∧fail136c coincidence.
+
 **Queued:** `scratch/agent/soak_queue/s643_flz_bt_freeroll.sh`
 (SCORE includes `flz_bt=` / `flz_bt_frames=`; dumps BT block).
 

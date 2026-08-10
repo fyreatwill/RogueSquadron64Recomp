@@ -50022,3 +50022,27 @@ Consume freeroll for freelist-shaped event (expected also B). Then sample
 ### Not done
 Did not sample game-thread stack this session. Did not freeroll thr11d∧fail136c
 in-process (queued for loop). Did not soft-skip freelist.
+
+### Folded mid-session: s642 freeroll retry offline score (SOAK-RESULTS rc=137)
+
+Outer log `s642_drain_mesh_stomp_freeroll_retry_20260810-131743.log` (old binary,
+pre-BT). Two recovery-active attempts both saw freelist-shaped to_zero #2:
+
+| att | t_ms | event | prev | guest_pc | dms TARGET |
+|-----|------|-------|------|----------|------------|
+| 1 | 51564 | to_zero #1 menu | 0x8E8E… | 0x8000834C | 0 |
+| 1 | 145732 | write (header place) | 0→0x2/0x60 | 0x800290D4 sticky | — |
+| 1 | **165060** | **to_zero #2 freelist** | **0x2/0x60→0** | 0x8000834C sticky | **0** |
+| 2 | **164452** | **to_zero #2 freelist** | **0x2/0x60→0** | 0x8000B650 sticky | **0** |
+
+- att1 run: `s642_dms_retry_1_20260810131743/run.log` — SCORE thr11d_new=0
+  ltexmg=0 fail136c=0 dms_n=100 dms_tgt=0 flz_to_zero=2; crash
+  `unregisterServiceWorker+536` ← `stopSaveServiceWorker` si_addr=`0x380000006`
+  (I_thr11_live_other_crash).
+- att2: same freelist shape; zero_node site=malloc bad=`0x801F3CC0`
+  prev=`0x801ED1B0` prev_f=0x2 prev_sz=`0x6B00` (matches s640).
+- **H-drainmesh-stomp REFUTED for freelist-class too** (dual-source: probe LIVE
+  dms_n=100 sample@0x807*, freelist to_zero with dms_tgt=0). Header lived ~19s
+  as valid 0x2/0x60 before external stomp (H-oob-store reconfirm).
+- thr11d_new=0 on both: freelist stomp is **not** thr11d-gated; can study
+  freelist writer without thr11d∧fail136c coincidence.

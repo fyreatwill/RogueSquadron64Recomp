@@ -183,18 +183,17 @@ a range pointer. Highest allocated so far: -397. The next NEW item takes -398.
     writer ID moves to -397 (freeroll + non-poller attribution). Full: Sessions
     642-643.
 
--395. **(s640→s642) freelist zero-node writer STORE — H-drainmesh-stomp REFUTED.**
+-395. **(s640→s643) freelist zero-node writer STORE — H-drainmesh-stomp REFUTED
+    (menu + freelist class).**
     s640 confirmed H-oob-store *event* (allocated header destroyed mid-run) but
     `guest_pc=0x8000834C` is sticky drainMesh return-nop (PROJECT-OVERVIEW §10)
-    — not writer proof. **s641:** `[drain-mesh-stomp]` on all 5 a0+4 + 10 v1+0
-    zero-stores in drainMesh (`tools/apply_s641_drain_mesh_stomp.py`); gate
-    `ROGUESQ_LOG_FL_ZERO_WATCH`. **s642 offline score** (s641 att1 run.log,
-    outer rc=137): posctrl LIVE — flz heartbeats + **dms n=34 all sample**,
-    dest exclusive **0x807xxxxx** mesh pool, dms_tgt=0 dms_heap=0; menu
-    to_zero #1 at t_ms=51254 (`0x8E8E…`→0) with sticky pc and **no TARGET**
-    → **H-drainmesh-stomp REFUTED** dual-source. No freelist-shaped to_zero #2
-    this attempt (force6=0 hsel=0 craft-select hold). Residual writer ID →
-    -396/-397. Full: Sessions 640-642.
+    — not writer proof. **s641–s642:** dms LIVE dest exclusive 0x807*; menu
+    to_zero #1 dms_tgt=0 → REFUTE menu class. **s642 freeroll retry (s643 fold):**
+    freelist to_zero #2 **2/2** recovery-active attempts (`0x2/0x60`→0 at
+    t≈164–165s) with dms_tgt=0 dms_n=100 → **H-drainmesh-stomp REFUTED freelist
+    class dual-source**. Header placed ~t=146s then stomped +19s. thr11d_new=0
+    both (stomp not thr11d-gated). Residual writer ID → -396/-397. Full:
+    Sessions 640-643.
 
 -393. **(s637→s640) H-shipn3-gate CONFIRMED; Outcome A live-verified; residual
     is B8 acc crossing thr only ~25–40% of recovery-fired holds.** Guest chain
