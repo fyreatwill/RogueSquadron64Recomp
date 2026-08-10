@@ -355,3 +355,5 @@
 20260810-112210 | s636_thr11d_rate_accum_e | rc=137 | 600s | scratch/agent/soak_results/s636_thr11d_rate_accum_e_20260810-112210.log
 20260810-115137 | s637_mv_b8_shipn3_gate | rc=1 | 495s | scored thr11d_new=1 Outcome A CONFIRMED (b8→arm→store n=3→thr ret1→zero→destroy id=11); fail136c raw FED 0x801F3CC0 flags=0 size=0; ltexmg=1 -387 do_rom_read; att1 mat3inv freeroll | scratch/agent/soak_results/s637_mv_b8_shipn3_gate_20260810-115137.log
 20260810-121808 | s638_b8_fail136c_freeroll | rc=137 | 600s | scratch/agent/soak_results/s638_b8_fail136c_freeroll_20260810-121808.log
+20260810-123925 | s639_fl_zero_writer_freeroll | rc=1 | 324s | scratch/agent/soak_results/s639_fl_zero_writer_freeroll_20260810-123925.log
+20260810-s640 | s639_fl_zero_writer_freeroll ANALYZED | H-oob-store CONFIRMED (0x2/0x60->0 at 0x1F3CC0); H-walk-into-zeros REFUTED; zero_node site=malloc first; guest_pc=0x8000834C drainMesh return-nop STICKY not dual-source; thr11d 4/10

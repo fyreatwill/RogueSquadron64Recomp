@@ -49801,3 +49801,72 @@ FL_ZERO_WATCH + all passive breadcrumbs. Discriminators A–E in recipe header.
 
 ### Not done
 No thr11d+fail136c hit this session (posctrl only). Writer identity still open pending soak.
+
+## Session 640 — 2026-08-10 — s639 soak consume: H-oob-store CONFIRMED; H-walk-into-zeros REFUTED; writer PC sticky at drainMesh end
+
+### Work unit
+Consume `s639_fl_zero_writer_freeroll` (SOAK-RESULTS rc=1, 324s). Classify freelist
+zero-node writer A–E. No new build.
+
+### Positive controls (same run, att2
+`scratch/s73_post_a_scene/s639_fl_zero_2_20260810123936/run.log`)
+- `[fl-zero-poll]` arm + heartbeats every 5s; polls ~746k by end
+- `[fl-hdr-write]` free/split_res many samples, always `flags=0x1 size>0` (reconfirms s639)
+- `[fl-zero-watch] event=control` early (maxfree sane)
+
+### SCORE (att2)
+`thr11d_new=1 ltexmg=1 fail136c=1 reason=corrupt maxfree_sel=0xD20` class-D;
+`-387 do_rom_read` after guard. thr11d rate → **4/10** recovery-fired with thr11.
+
+### Discriminator timeline at phys `0x1F3CC0` / KSEG0 `0x801F3CC0`
+
+| t_ms | event | content | guest_pc |
+|------|-------|---------|----------|
+| 0–45s | zeros / non-heap garbage | cinematic fills (inflate_fast / func_8000A8A0 sticky ends) | various |
+| 51799 | to_zero #1 | texture-like `0x8E8E…` → zeros (not a freelist header yet) | `0x8000834C` |
+| 145723 | write | **`flags=0x2 size=0x60`** real allocated heap header | `0x800290D4` (inflate_fast end — STALE) |
+| 145–165s | stable | heartbeats show `0x2/0x60` | — |
+| **165067** | **to_zero #2** | **`0x2/0x60` → `0x0/0x0`** full 8-byte header destroy | **`0x8000834C`** |
+| +immediate | zero_node n=0 site=**malloc** | bad=`0x801F3CC0` prev=`0x801ED1B0` prev_f=`0x2` prev_sz=`0x6B00` | — |
+| later | fail136c | i=54 free `0x801F3C90` sz=`0x20`; i=55 zeros `0x801F3CC0` | — |
+
+Math: `0x801ED1B0 + 0x10 + 0x6B00 = 0x801F3CC0` — prev size **correctly** targets the
+zero node. Not a wrong-prev-size walk.
+
+### Classification (recipe A–E)
+- **A** (to_zero PC in allocator free/split) — **NO**
+- **B** (to_zero PC outside allocator) — **YES** for H-oob-store *event*; PC maps to
+  `drainMeshReleaseQueue` (`func_8000815C`) final `nop` at `0x8000834C`
+- **C/D** zero_node first site=malloc then free (same topology) — appears right after to_zero #2
+- **E** (only fail136c sees zero) — **NO** (watch sees it at free/malloc exit ~80s before thr11d)
+
+**H-oob-store CONFIRMED** (dual evidence for *event*, not yet for writer identity):
+1. poller: allocated header `0x2/0x60` → full zeros mid-run
+2. watch: sequential prev size lands correctly on destroyed node; allocator fl-hdr-write
+   never wrote size=0 there
+
+**H-walk-into-zeros (wrong prev_sz) REFUTED** on this hit.
+
+### Writer-identity caveat (do not over-claim)
+`guest_pc=0x8000834C` is **drainMeshReleaseQueue's return nop** — documented sticky
+last-guest-pc trap (PROJECT-OVERVIEW §10, s348–s370: crashes *after* drainMesh still
+show this PC because it is the last heavily breadcrumbed instruction). Static review:
+drainMesh has `sw $zero, 0x0(v1)` + `sw $zero, 0x4(a0)` free-list link fields that
+**can** stomp rs_malloc flags(+0)/size(+4) if a0/v1 is a sequential heap header —
+plausible mechanism, **not** dual-source proven. Need store-site log: when those
+stores hit `0x801F3CC0` (or any node with pre-write flags∈{1,2} and size≠0), dump
+a0/v1/pre-header/ra.
+
+No fl-hdr-write at `addr=0x801F3CC0` for the `0x2/0x60` create (malloc flags=2 path
+not instrumented — expected).
+
+### Ruled out
+- H-zero-free / H-split-bug (again live)
+- H-walk-into-zeros via wrong prev size (this hit)
+- "zeros only at fail136c" (E)
+
+### Next
+Instrument drainMeshReleaseQueue zero-stores (+ optional malloc flags=2 store at
+header) gated on `ROGUESQ_LOG_FL_ZERO_WATCH`; freeroll for thr11d∧fail136c with
+`[drain-mesh-stomp]` if a0/v1==0x801F3CC0 or pre flags heap-like.
+
