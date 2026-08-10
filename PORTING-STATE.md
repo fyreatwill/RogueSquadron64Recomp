@@ -50454,3 +50454,63 @@ Consume s649_fl_late_recover_freeroll SOAK-RESULTS (A/A2/B/C/E/F).
 - Expect poller/gbt/sticky alone to name freelist store
 - Re-enable full BT every want==2 fault
 - Soft-skip thr12 without writer ID
+
+## Session 652 (2026-08-10) — s651 freeroll Outcome B refined; H-ssnr380 REFUTED; SSNR+FB probes
+
+### Work unit
+Consume `s651_fl_fault_ring_freeroll` SOAK-RESULTS (rc=1, 330s, scored att1).
+
+### Freeroll SCORE (recovery-active)
+- force6=1 hsel=1 recov768=7952 thr11d_new=1 fail136c=1 reason=corrupt
+- arm_freelist@146679ms 0x2/0x60; freelist to_zero #2 @166030ms prev_f=0x2/0x60
+- flz_fault_n=41 flz_fault_hdr=0 flz_fault_arm_fl=1
+- flz_ring_n=16 flz_ring_inhdr=0 flz_ring_near=9 (ring LIVE)
+- adlb_n=361 adlb_tgt=0 adlb_near=0 (H-adlb reconfirm)
+- crash: do_rom_read+608 si_addr=0x380000003 (-387 5th)
+
+### fault_ring at freelist to_zero (discriminating)
+```
+i=0..1  buildModelViewerTextPage / do_swl     far
+i=2..3  submitSceneNodeRender+0x380          near fa=hdr+0x40 guest=0x80010054
+i=4..5  heapFreeListDequeue +0x19b4/+0x9c04  near fa=hdr+0x64/+0x50
+i=6..8  SSNR+0xcc8 / hFLDQ / ADLB            far-ish
+i=9..10 NativeTarget::copyToRAM / FB::copyNativeToRAM  fa=phys 0x1F0D74
+i=11..15 submitSceneNodeRender+0x380 ×5      near fa=hdr+0x40  (last before zero)
+```
+to_zero_correlate last_sym=submitSceneNodeRender last_fa=+0x40 last_in_hdr=0.
+
+### H-ssnr380-writer REFUTED (dual-source)
+Guest `0x80010054`: `sw $v0, 0x30($s4)` with `s4=$a2` (scene node).
+fa=hdr+0x40 ⇒ s4=hdr+0x10 = user pointer of the LIVE block.
+fail136c pool semantics: flags=0x2 free=0 (allocated); flags=0x1 free=1.
+So 0x2/0x60 is a live 0x60-byte scene-node allocation; SSNR writing +0x30(user)
+is **payload traffic**, not heap flags/size destruction. near_hdr leaf named but
+not the header writer.
+
+### Landed instruments (s652)
+1. `tools/apply_s652_ssnr_hdr_zero.py` — 48 zero-stores (MEM_W 0/4 =0) in
+   `submitSceneNodeRender` → `[ssnr-hdr-zero]` TARGET/NEAR/sample.
+2. `lib/rt64/.../rt64_framebuffer.cpp` — `[fb-fl-writeback]` when copyNativeToRAM
+   range covers phys 0x1F3CC0 (or samples).
+3. fixup_game_funcs.py warning for s652 regen; `./submodule-patches/export.sh`.
+
+### Posctrl 70s (same-run control)
+- ssnr_n=182 TARGET=0 NEAR=0 (dests exclusive 0x807* mesh)
+- fb_n=24 HIT=0 (boot FBs addrStart 0x6BA000–0x7DD000)
+- fault lines 347, ring_w tracks, CRASH=0
+
+### Verdicts
+| ID | Result |
+|----|--------|
+| H-fault-ring-names | LIVE (ring dumps; near=9) but leaf is payload not writer |
+| H-ssnr380-writer | **REFUTED** code+ring fa |
+| H-ssnr-zero-stores | ACTIVE (probe LIVE; freeroll pending) |
+| H-fb-writeback-stomp | ACTIVE (probe LIVE; freeroll pending; ring had copyToRAM@0x1F0D74) |
+
+### Queued
+`scratch/agent/soak_queue/s652_ssnr_fb_fl_stomp_freeroll.sh`
+
+### Do not
+- Treat submitSceneNodeRender+0x380 / guest 0x80010054 as header-writer proof
+- Treat near_hdr alone as writer ID without dest in [hdr,hdr+8)
+- Soft-skip thr12 without writer ID

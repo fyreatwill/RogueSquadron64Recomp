@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s651)
+## Current truth (established by session 295; unchanged, reviewed through s652)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -48,8 +48,13 @@ Metal shader rebuilds need full Xcode on PATH:
   (recovery-active): arm_fl + freelist `0x2/0x60`→0 + `fault_hdr=0`;
   ~15s quiet while `armed=1` then silent zero → **H-busy-rearm REFUTED**
   freelist-class. **s651 freeroll:** same shape + **adlb_tgt=0** →
-  **H-adlb-writer REFUTED**; rate-limit hole (n>32 dropped) → landed
-  **fault_ring** + **near_hdr** always-log (-405); freeroll queued.
+  **H-adlb-writer REFUTED**; rate-limit hole → **fault_ring** +
+  **near_hdr** (-405). **s652 freeroll consume:** ring LIVE near=9
+  inhdr=0; last leaf `submitSceneNodeRender+0x380` / guest `0x80010054`
+  `sw $v0,0x30($s4)` fa=+0x40 = user-ptr payload of LIVE flags=0x2
+  alloc → **H-ssnr380-writer REFUTED**. Landed `[ssnr-hdr-zero]` (48
+  zero-stores) + `[fb-fl-writeback]` (copyNativeToRAM range vs
+  0x1F3CC0); posctrl ssnr=182/0 fb=24/0 CRASH=0; freeroll queued (-406).
 - Default-ON, no longer worth naming: `ROGUESQ_VI_FOLLOW_DRAW=3` (s23), `ROGUESQ_SHADE_WRAP=1`
   per-pixel (s24→s26), `ROGUESQ_FIX_ZERO_SHADE` (s20), `ROGUESQ_FIX_SAMPLE_BOUNDS` (s15),
   `ROGUESQ_VI_FULLSYNC` (s11), PresentEarly fallthrough + forceAdvance +
@@ -138,7 +143,7 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s651**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s652**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
   `loadLevelTextureCache`) → sec2 when recovery `0x76B768` fires. **s619 thr11d_new LIVE**;
   **s624 -385 M1 LIVE** (`[level-tex-malloc-guard]` null `rs_malloc(0x136C)`). **s626 H-walk1**;
@@ -151,15 +156,17 @@ REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvatio
   REFUTED**; mprotect LIVE. **s647** busy_rearm; SS REFUTED. **s648** Outcome C +
   BT rate-limit. **s649** late-recover; **H-perturb REFUTED**. **s650** Outcome B +
   **H-busy-rearm REFUTED** + `[adlb-fl-stomp]`. **s651** freeroll **H-adlb-writer
-  REFUTED**; **fault_ring + near_hdr** (-405). thr11d rate **4/10**. Residual rank:
-  (1) freelist writer **store** -391/-405, (2) B8 acc -393, (3) -387 do_rom_read 4×.
+  REFUTED**; **fault_ring + near_hdr**. **s652** freeroll ring LIVE near=9;
+  **H-ssnr380-writer REFUTED** (payload of LIVE alloc); `[ssnr-hdr-zero]` +
+  `[fb-fl-writeback]` (-406). thr11d rate **4/10**. Residual rank: (1) freelist
+  writer **store** -391/-406, (2) B8 acc -393, (3) -387 do_rom_read **5×**.
 - Co-gates: recovery silence (-374; `RECOV_WAIT_S=50` + `BUDGET_S≥900`), mat3inv (-375),
   ship (-376/-377/-392/-393), class-D (-378), FORCE_STATE6 (-381 CLOSED), freeroll
   scene/readacct/matfree (-382..-384), null-malloc thr12 (-385 M1; -389..-391/-397),
   sinfApprox (-386 1×), do_rom_read (-387 **4×**). thr11d metric = post-hsel destroy of
   `0x8006F2CC` only (s618). Tools default OFF: `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`,
   `FS_PIPE_INJECT`. Post-sec2: packTlut (-373).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-405; Sessions 577-651.
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-406; Sessions 577-652.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -177,21 +184,27 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -405. The next NEW item takes -406.
+a range pointer. Highest allocated so far: -406. The next NEW item takes -407.
 
-### Active M3 pipeline (s577–s651) — open residuals only
+### Active M3 pipeline (s577–s652) — open residuals only
 
--405. **(s651) freelist writer — H-adlb-writer REFUTED; fault_ring + near_hdr
-    landed; freeroll queued.**
-    s650 freeroll att3 recovery-active: arm_fl@146s 0x2/0x60; freelist to_zero
-    #2 @165s; **adlb_n=358 adlb_tgt=0 adlb_near=0** → **H-adlb-writer REFUTED
-    freelist-class**. tz_corr last_sym=submitSceneNodeRender last_fa=+0x40
-    (weak). Rate-limit hole: after arm_fl only n≤32 logged; n=33..63 dropped.
-    Landed 16-slot **fault_ring** dump on freelist to_zero + **near_hdr**
-    always-log (fa in [host,host+0x80), no BT). Posctrl: ring_w tracks
-    fault_n, CRASH=0. Queued: `s651_fl_fault_ring_freeroll.sh`
-    (A in_hdr=1 in ring / B near_hdr leaf / C empty ring / D far thrash only).
-    Full: Sessions 650-651.
+-406. **(s652) freelist writer — H-ssnr380 REFUTED; `[ssnr-hdr-zero]` +
+    `[fb-fl-writeback]` landed; freeroll queued.**
+    s651 freeroll att1 recovery-active: arm_fl@146s freelist to_zero 0x2/0x60@166s;
+    **ring_n=16 inhdr=0 near=9 LIVE**. Last near leaf
+    `submitSceneNodeRender+0x380` / guest `0x80010054` `sw $v0,0x30($s4)`
+    fa=hdr+0x40 ⇒ s4=user_ptr of LIVE flags=0x2 alloc → **payload, not header
+    zero** (**H-ssnr380-writer REFUTED** dual-source). Ring also
+    heapFreeListDequeue near +0x50/+0x64 and RT64 copyToRAM@phys 0x1F0D74.
+    Landed 48 SSNR zero-store probes + FB writeback range probe. Posctrl:
+    ssnr=182/0 fb=24/0 CRASH=0. Queued: `s652_ssnr_fb_fl_stomp_freeroll.sh`
+    (A ssnr TARGET / B fb HIT / C both clean → hFLDQ/bulk-clear). Full:
+    Sessions 651-652.
+
+-405. **(s651→s652) freelist writer — H-adlb-writer REFUTED; fault_ring +
+    near_hdr LIVE; freeroll closed into -406 (H-ssnr380 REFUTED).**
+    s650 freeroll: adlb_tgt=0 → H-adlb REFUTED. s651 ring LIVE near=9; named
+    leaf is payload traffic not writer. Full: Sessions 650-652.
 
 -404. **(s650→s651) freelist writer — H-busy-rearm REFUTED; `[adlb-fl-stomp]`
     landed; freeroll closed into -405 (H-adlb-writer REFUTED).**
@@ -282,11 +295,12 @@ a range pointer. Highest allocated so far: -405. The next NEW item takes -406.
     SCORE `ship_store` post-hsel: =2 means n=2+n=3; =1 only n=2. **Gate of n=3
     closed into -393** (runModelViewerLoop B8→throttle). Full: Sessions 634-637.
 
--391. **(s632→s644) fail136c `reason=corrupt`: E8 freelist zero-node at
+-391. **(s632→s652) fail136c `reason=corrupt`: E8 freelist zero-node at
     `0x801F3CC0` — H-oob-store CONFIRMED; H-walk-into-zeros REFUTED;
     H-drainmesh-stomp REFUTED s642; poller BT Outcome B s643; gbt LIVE s644;
     BREADCRUMB19 s645; H-memset-writer REFUTED s646; `[fl-zero-fault]` LIVE s646;
-    H-adlb-writer REFUTED s651; writer store still open (-405).**
+    H-adlb-writer REFUTED s651; H-ssnr380 REFUTED s652; writer store still open
+    (-406).**
     s633–s638: selected E8 stops at i=55 raw zeros. **s639:** H-zero-free +
     H-split REFUTED. **s640 scored thr11d∧fail136c:** poller mid-run
     **`flags=0x2 size=0x60` → zeros** at phys `0x1F3CC0` (to_zero #2 t≈165s);
@@ -319,13 +333,13 @@ a range pointer. Highest allocated so far: -405. The next NEW item takes -406.
     s627: pool-aware reason landed in s628 (-390). Env: `ROGUESQ_LOG_RS_MALLOC_DIAG=1`.
     Full: Sessions 625-627.
 
--387. **(s624→s638) Post soft-skip `do_rom_read+608` SIGBUS — 4× freeroll residual
-    (s624/s625/s627/s637 scored class-D, same host stack).** Host: `recomp::do_rom_read` ←
+-387. **(s624→s652) Post soft-skip `do_rom_read+608` SIGBUS — 5× freeroll residual
+    (s624/s625/s627/s637/s652 scored class-D, same host stack).** Host: `recomp::do_rom_read` ←
     `do_dma` ← `osPiStartDma_recomp` ← `submitDmaSlot` ← `processAssetLoadStep` ←
     `mainEventQueueWorker`. si_addr=`0x380000003` (guest shape `0x80000003`).
     last-guest-pc=`0x800290d4` is **STALE** (CLOSED -259; do not merge). Fires ~immediately
-    after `[level-tex-malloc-guard]`. Free-reroll while -385 root open; note 4×. Full:
-    Sessions 624-638.
+    after `[level-tex-malloc-guard]`. Free-reroll while -385 root open; note 5×. Full:
+    Sessions 624-652.
 
 -386. **(s621) recovery-active thr11-live `sinfApprox` NAN_CHECK Abort — 1× freeroll.**
     Host: `sinfApprox` (funcs_5.c:6460 `assert(f10==f10)`) ←
@@ -403,7 +417,7 @@ a range pointer. Highest allocated so far: -405. The next NEW item takes -406.
     is STALE** — do not merge with -326. Co-symptom: `osViSetMode` width=24. 2nd occ pending.
     Full: Session 608.
 
--361. **(s589-s651) thr11→sec4→sec2 pipeline — thr11d_new LIVE (rate **4/10** s640);
+-361. **(s589-s652) thr11→sec4→sec2 pipeline — thr11d_new LIVE (rate **4/10** s640);
     Outcome A live; class-D soft-skip LIVE; -385 M1 LIVE thr12 blocked by null
     `rs_malloc(0x136C)` — **E8 zero-node `0x801F3CC0`**: H-oob-store CONFIRMED s640,
     H-walk-into-zeros REFUTED, **H-drainmesh-stomp REFUTED s642**; sticky/BT/gbt
@@ -411,13 +425,14 @@ a range pointer. Highest allocated so far: -405. The next NEW item takes -406.
     busy_rearm s647; **s648 freeroll Outcome C** + **H-recov-co-gate-stomp** +
     **BT rate-limit**; **s649** late-recover + **H-perturb REFUTED**; **s650
     Outcome B** + **H-busy-rearm REFUTED** + `[adlb-fl-stomp]`; **s651
-    H-adlb-writer REFUTED** + **fault_ring/near_hdr** (-405); freelist store ID
-    open; H-zero-free/H-split REFUTED s639. thr11d gated by B8→store→throttle×7
-    →destroy (-392/-393); -387 **4×**. Co-gates: recovery (-374), mat3inv (-375),
+    H-adlb-writer REFUTED** + **fault_ring/near_hdr**; **s652 H-ssnr380 REFUTED**
+    + **`[ssnr-hdr-zero]`/`[fb-fl-writeback]`** (-406); freelist store ID open;
+    H-zero-free/H-split REFUTED s639. thr11d gated by B8→store→throttle×7
+    →destroy (-392/-393); -387 **5×**. Co-gates: recovery (-374), mat3inv (-375),
     sinfApprox (-386), ship (-376/-377/-392/-393), freeroll (-382..-384),
     FORCE_STATE6 (-381 CLOSED), packTlut (-373). thr-11=`saveServiceWorker`
     `0x8006F2CC`; thr-12=`hudDisplayUpdateWorker` via `loadLevelTextureCache`.
-    HOLD_S ≤ 210. Full: PROJECT-OVERVIEW §27; Sessions 589-651.**
+    HOLD_S ≤ 210. Full: PROJECT-OVERVIEW §27; Sessions 589-652.**
 
 ### Closed product lineage (FULL_SYNC inject + thr pipeline setup) — do not re-open
 
@@ -505,8 +520,9 @@ a range pointer. Highest allocated so far: -405. The next NEW item takes -406.
     s647 busy_rearm; s648 freeroll Outcome C + BT rate-limit +
     H-recov-co-gate-stomp; s649 late-recover + H-perturb REFUTED;
     s650 Outcome B + H-busy-rearm REFUTED + adlb-fl-stomp;
-    s651 H-adlb-writer REFUTED + fault_ring/near_hdr**.
-    Active residuals: -405..-373 / -361 / -379. Tools still default OFF.
+    s651 H-adlb-writer REFUTED + fault_ring/near_hdr;
+    s652 H-ssnr380 REFUTED + ssnr-hdr-zero/fb-fl-writeback**.
+    Active residuals: -406..-373 / -361 / -379. Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
 

@@ -680,7 +680,7 @@ index 6255872..ed69a87 100644
                  }
                  // No texture coefficients
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
-index 873883d..a210afa 100644
+index 873883d..9658584 100644
 --- a/src/hle/rt64_framebuffer.cpp
 +++ b/src/hle/rt64_framebuffer.cpp
 @@ -16,6 +16,12 @@
@@ -754,6 +754,41 @@ index 873883d..a210afa 100644
 +        }
          return differentPixels;
      }
+ 
+@@ -143,6 +200,34 @@ namespace RT64 {
+         uint8_t *dstBytes = dst + dstRowStart * imageRowBytes(dstRowWidth);
+         uint32_t *dstWords = reinterpret_cast<uint32_t *>(dstBytes);
+         uint32_t bytesToSwap = (dstRowEnd - dstRowStart) * imageRowBytes(dstRowWidth);
++        // s652: freelist header at phys 0x1F3CC0 is on the same Apple page as
++        // some early-boot FB writebacks (s651 fault_ring n=59/60 copyToRAM).
++        // Log when the write range covers the watched header (or first samples).
++        {
++            static int s_fb_fl_en = -1;
++            if (s_fb_fl_en < 0) {
++                const char *e = std::getenv("ROGUESQ_LOG_FL_ZERO_WATCH");
++                s_fb_fl_en = (e && e[0] && e[0] != '0') ? 1 : 0;
++            }
++            if (s_fb_fl_en) {
++                const uint32_t hdr = 0x1F3CC0u;
++                const uint32_t rowBytes = imageRowBytes(dstRowWidth);
++                const uint32_t rangeStart = addressStart + dstRowStart * rowBytes;
++                const uint32_t rangeEnd = addressStart + dstRowEnd * rowBytes;
++                const int hit = (rangeStart <= hdr && hdr < rangeEnd) ? 1 : 0;
++                static int s_fb_fl_n = 0;
++                s_fb_fl_n++;
++                if (hit || s_fb_fl_n <= 16 || (s_fb_fl_n % 500) == 0) {
++                    fprintf(stderr,
++                        "[fb-fl-writeback] n=%d hit=%d addrStart=0x%X range=[0x%X,0x%X) "
++                        "rows=%u..%u w=%u h=%u siz=%u rowB=%u%s\n",
++                        s_fb_fl_n, hit, addressStart, rangeStart, rangeEnd,
++                        dstRowStart, dstRowEnd, dstRowWidth, height, (unsigned)siz,
++                        rowBytes, hit ? " HIT" : " sample");
++                    fflush(stderr);
++                }
++            }
++        }
+         uint32_t dstFirstWord = dstWords[0];
+         nativeTarget.copyToRAM(dstRowStart, dstRowEnd, dstRowWidth, siz, dstBytes);
  
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
 index 7d385fa..ac7cba2 100644
