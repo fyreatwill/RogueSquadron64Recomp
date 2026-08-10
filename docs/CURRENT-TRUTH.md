@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s607)
+## Current truth (established by session 295; unchanged, reviewed through s608)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -123,22 +123,15 @@ since **DONE/CLOSED s399** (item -6). Full detail: PORTING-STATE s49.
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT are both
 reachable and stable; ~20 crash classes closed s50-s294 (mechanisms: `docs/PROJECT-OVERVIEW.md` §3
 arc + §9 closed lineages; per-class catalog: §7). Leave-key from SELECT YOUR CRAFT: s75 hangar-flight
-OVERTURNED s150; **s577 REAL hangar exit CONFIRMED** (case 3→5→6→8, mission overlay section 2).
-Post-exit chain root-caused s578-s591: cutscene plays, then a FULL_SYNC-starvation plateau (not
-classic s178 producer-stop) traced to a sticky shared DPC staging cell (phys `0x76DF60`) reused by
-Factor5 LLE RSP for PIPE_SYNC/SETTIMG (H7a) — product fix `ROGUESQ_FS_PIPE_INJECT` (default OFF)
-restores sync flow through the E7/F3/FD residual. thr-11 (`saveServiceWorker` `0x8006F2CC`) destroy
-co-times with sec4 reload (s592_a positive control); s602 clean survival shows inject can keep
-`syncs>0` without recovery cell while thr-11 stays live under short HOLD. s603 HOLD_S=180 dual-target
-got **0 scored attempts** (budget `NEED=HOLD_S+90` starved retries); s604 budget floor fix started
-A3 but still **0/3 engagement** (0 ACE80 at state=5; A3 alive-stall). s605 lands
-`ROGUESQ_FORCE_STATE6_AFTER` and **H-force6a CONFIRMED** (force6→ACE80→case6→hangar-sel).
-s606 offline timeline (s592_a vs s605): thr11 destroy→sec4 co-times with **second recovery
-cell `0x76BA90`**, not first cell `0x76B768` alone (H-recov1 sufficiency REFUTED). s607 folded
-s606 soak: material crash `0x8000e29c` is **2nd occ** and fires **with or without** 76B768
-(E0 class; H-handoff1 recharacterized). Item -338 live-confirm still rare (3× D). Full chain:
-items -349..-372; raw `PORTING-STATE.md` Sessions 577-607. DoD = **cutscene→in-mission** +
-craft input.
+OVERTURNED s150; **s577 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation
+product-fixed via `ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). **s608: force6+inject
+path completed thr11 destroy → sec4 → thr12 → sec2 (mission overlay)** — H-handoff2 REFUTED
+(76BA90 not required); thr11→sec4 is no longer the primary blocker. New primary: post-sec2 HMT
+texture load SIGBUS in `packTlutEntriesRgba5551` via `loadDebugAssets` (item -373, 1×). Intermittent
+cutscene material SIGBUS `0x8000e29c` (2×, filed not chased) still aborts some runs before thr11
+destroy — material-noise reroll filter stays. Tools (default OFF): `FORCE_STATE6_AFTER`,
+`FORCE_CASE6_START`, `FS_PIPE_INJECT`. Full chain: items -349..-373; raw Sessions 577-608.
+DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
 
@@ -155,26 +148,29 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -372. The next NEW item takes -373.
+a range pointer. Highest allocated so far: -373. The next NEW item takes -374.
+
+-373. **(s608) Post-sec2 mission HMT texture load SIGBUS — NEW primary M3 bottleneck
+    (1 occurrence; not chased yet).** Scored `s607_handoff_material_noise_reroll` class C
+    but **past** thr11→sec4: `force6=1 case6=1 hangar-sel=1 ace80=1 inject_max_n=400
+    recov76B768~=92 recov76BA90=0 thr11_destroy=1 sec4_post=1 sec2=1 sec2_post=1
+    thr495FC_creates=2 crash=CRASH`. Host: `packTlutEntriesRgba5551+2608` ←
+    `loadTextureToMemory` ← `parseHmtMaterials` ← `registerHmtTextureInTable` ←
+    `loadDebugAssets` ← `advanceVideoFrame` ← `mainGameLoop`. `si_addr=0x38ea20812`,
+    guest-ish x10=`0x8ea20812` (OOB). **last-guest-pc=`0x800025ac` is STALE** (packTlut has
+    no `g_rs64_last_guest_pc`; -347 trap) — do **not** merge with item -326 (`do_rom_read`
+    / `initSceneForMission` stack). Co-symptom: `osViSetMode` width=24 (garbage
+    mode_ptr=0x80128DA0 type=0) ~10 lines pre-crash. 0 TEXDATA/MATERIAL guard fires. Pipeline
+    order after thr11 create: 76B768 → thr11 destroy → sec4 → thr12 create → thr12 destroy →
+    **sec2** → VI24 → crash (~47 log lines post-sec2). Queued
+    `s608_post_sec2_pipeline_confirm` (2nd sec2 + crash-identity). Full: Session 608.
 
 -372. **(s607) `s606_handoff_76ba90_dual_target` folded: class E0 (material, no recovery);
-    `0x8000e29c` 2nd occ; H-handoff1 recharacterized; queued material-noise reroll.** Scored
-    attempt 1/1 engagement: `force6=1 case6=1 hangar-sel=1 ace80=1 inject_max_n=450
-    recov76B768=0 recov76BA90=0 last_768_rel=-1 thr11_create=1 thr11_destroy=0
-    sec4_post=0 crash=CRASH crash_pc=0x8000e29c` (`findOrCreateMaterial+776`,
-    `si_addr=0x39500e10d`; stack `emitMaterialTexturedDL`←`drawSubtitleText`←
-    `runModelViewerLoop`). Post-hsel fullsync **only** sticky `0x76DF60` E9×470; inject
-    E7×22 then FD×7; thr10 destroy@+620 → thr11 create@+719; crash@+25786. Recipe
-    `class_hint=E_thr11_still_live` (not classic E: requires `last_768_rel>0`). **Vs s605
-    (same crash PC, recov768~=7920) and s602 (recov=0, no force6, survive HOLD, no
-    thr11_destroy):** material death is **independent of 76B768 presence** and aborts the
-    thr11→sec4 path before any handoff. **H-handoff1 refined:** not "post-768 gap only" —
-    cutscene material SIGBUS kills thr11 pipeline with or without mid-phase recovery.
-    **Do not single-chase `0x8000e29c`** (2nd occ, file only; M3 = idiom-class audits).
-    Guest site is delay-slot of `jal findOrCreateMaterial` inside `emitMaterialTexturedDL`
-    (`funcs_3.c`); `g_rs64_last_guest_pc` is instrumented there (not -347 artifact). Queued
-    `s607_handoff_material_noise_reroll` (re-roll 0x8000e29c deaths; score first non-noise
-    engagement). Full: Session 607.
+    `0x8000e29c` 2nd occ; H-handoff1 recharacterized; material-noise reroll ran → -373.**
+    Scored: force6+case6+hsel+ace80, thr11 create, inject n=450, **0 recovery cells**,
+    thr11_destroy=0, crash `findOrCreateMaterial+776` / `0x8000e29c` (2nd after s605).
+    Material death independent of 76B768; aborts thr11→sec4 when it fires. Do not
+    single-chase (2nd occ filed). Full: Session 607.
 
 -371. **(s606) `s605_force_state6_dual_target` folded: H-force6a CONFIRMED; thr11→sec4
     pipeline RECHARACTERIZED to 76B768→76BA90 handoff; H-recov1 sufficiency REFUTED;
@@ -291,15 +287,13 @@ a range pointer. Highest allocated so far: -372. The next NEW item takes -373.
     comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
     survival. Full detail: `PORTING-STATE.md` Session 597.
 
--361. **(s589-s607) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
-    open; thr11→sec4 RECHARACTERIZED s606; material abort E0 s607.** thr-11 = `saveServiceWorker`
-    entry=`0x8006F2CC` (not thr495FC). Real post-exit pipeline (s592_a control): thr10 destroy →
-    thr11 create → inject → mid-cutscene `0x76B768` → gap → final `0x76BA90` → thr11 destroy →
-    sec4 → initSceneForMission R2 `@0x8000247c`. s605: force6 OK, 76B768 fires, dies at
-    `0x8000e29c` with 0×76BA90. s606/s607: force6 OK, **0 recovery cells**, same
-    `0x8000e29c` death (2nd occ). s602: inject without 76B768, thr11 never destroyed under
-    HOLD_S=90, no material crash. Material noise now discarded by s607 soak recipe. Do not
-    raise HOLD_S past 210. Full: Sessions 589-607.
+-361. **(s589-s608) thr11→sec4→sec2 pipeline — CLEARED as primary blocker on force6+inject
+    path (s608).** thr-11 = `saveServiceWorker` entry=`0x8006F2CC`. s608 scored run:
+    thr11 destroy + sec4 + thr12 + **sec2** with recov76B768~=92 and **recov76BA90=0**
+    (H-handoff2 REFUTED; H-handoff3 SUPPORTED). R2 coalesce (`0x8000247c`) not required on
+    the healthy path (0 guard fires; past that site). Residual: intermittent material noise
+    `0x8000e29c` (filter via matnoise reroll); recovery 76B768 nondeterminism; **new post-sec2
+    -373**. Do not raise HOLD_S past 210. Full: Sessions 589-608.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
@@ -501,12 +495,11 @@ a range pointer. Highest allocated so far: -372. The next NEW item takes -373.
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
 -7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN.** Exit + cutscene CONFIRMED (s577);
-    dual FULL_SYNC sticky gap product-fixed when inject+recovery fire (items -354..-358);
-    force6 engagement tool CONFIRMED s606 (H-force6a). In-mission still blocked by post-exit
-    thr11 destroy→sec4 (co-times with `0x76BA90` after `0x76B768`, item -361/-371) **and** by
-    intermittent cutscene material SIGBUS `0x8000e29c` (2× s605/s606, aborts before handoff —
-    filed not chased; s607 soak re-rolls it). Not thr-11 recv-block (H12a REFUTED) or
-    case5-vs-case6 (H11a REFUTED). `FS_PIPE_INJECT` / `FORCE_STATE6_AFTER` still default OFF.
+    FULL_SYNC inject product-fixed (-354..-358); force6 engagement CONFIRMED s606; **s608 first
+    force-path sec2 (mission overlay) after thr11 destroy** — thr11→sec4 no longer primary.
+    In-mission still blocked by post-sec2 HMT/`packTlut` SIGBUS (-373, 1×) and intermittent
+    pre-thr11-destroy material noise `0x8000e29c` (2×). H-handoff2 REFUTED (76BA90 not required).
+    `FS_PIPE_INJECT` / `FORCE_STATE6_AFTER` still default OFF.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.

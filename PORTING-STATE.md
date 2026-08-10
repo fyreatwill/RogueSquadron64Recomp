@@ -48001,3 +48001,97 @@ the thr11 handoff hunt without dedicating sessions to material babysitting.
 ### Next
 Fold `s607_handoff_material_noise_reroll` SOAK-RESULTS; classify A–H per
 NEXT.md; if G with high matnoise rate, report rate only.
+
+## Session 608 (2026-08-09): s607 material-noise reroll scored class C — full thr11→sec4→thr12→sec2 pipeline CLEARED; H-handoff2 REFUTED; post-sec2 packTlut/HMT crash filed as -373
+
+Read CURRENT-TRUTH, NEXT.md, SOAK-RESULTS tail. `wc -c` CURRENT-TRUTH = 54377
+(below 60k maintenance trigger). Work unit: fold `s607_handoff_material_noise_reroll`.
+
+### Soak folded (loop-run)
+
+`s607_handoff_material_noise_reroll` (20260809-225402, rc=1, 311s):
+
+```
+discard_stats pre_eng=0 matnoise=0 attempts=1
+gate force6=1 case6=1 hangar-sel=1 ace80=1 inject_lines=28 inject_max_n=400
+recov76B768~=92 recov76BA90~=0 last_768_rel=64516 first_a90_rel=-1
+thr11_create=1 thr11_destroy=1 thr11_destroy_rel=70185
+sec4=2 sec4_post=1 sec2=1 sec2_post=1 thr495FC_creates=2
+coalesce_guard1=0 coalesce_guard2_r2=0 beginframe_s0_guard=0 last_guest_afa0=0
+crash=CRASH crash_pc=0x800025ac
+crash_sym=packTlutEntriesRgba5551+2608 (local-symtab)
+class_hint=C_sec4_other_crash
+```
+
+First attempt engaged without material noise (H-matnoise SUPPORTED under force6).
+
+### Timeline (post thr11 id=11 create @ line 168689)
+
+| event | line |
+|---|---|
+| first 76B768 recovery | 230653 |
+| thr11 destroy | 237576 |
+| sec4 overlay | 237579 |
+| thr12 create (`0x800495FC`) | 237940 |
+| thr12 destroy | 252565 |
+| **sec2 mission overlay** | 252574 |
+| `osViSetMode` width=**24** (garbage mode_ptr=0x80128DA0 type=0) | 252611 |
+| CRASH SIGBUS | 252621 |
+
+### Host stack (faulting thread)
+
+`packTlutEntriesRgba5551+2608` ← `loadTextureToMemory+10596` ← `parseHmtMaterials+1952`
+← `registerHmtTextureInTable+1036` ← `loadDebugAssets+2048` ← `advanceVideoFrame+4456`
+← `runVideoFrameTick` ← `mainGameLoop` ← `mainBootstrapWorker`
+
+`si_addr=0x38ea20812` (host-mapped wild); x10=0x8ea20812 (guest OOB, outside
+0x80000000–0x80800000). 0 TEXDATA/MATERIAL/coalesce/beginframe guards fired.
+0 `[missing-func]`, 0 UnhandledJump. `packTlutEntriesRgba5551` has no
+`g_rs64_last_guest_pc` tracking — last-guest-pc=0x800025ac is **stale frozen**
+(item -347 method trap), not the faulting guest insn. packTlut guest range is
+0x8001E36C+.
+
+### vs item -326 (do NOT merge)
+
+s524 -326: host `do_rom_read+608`, stack through `initSceneForMission` /
+`cinematicLoopBody`, si_addr=0x380000003. Shared last-guest-pc only.
+s608 host path is HMT texture load post-sec2 — **new breadcrumb -373**, not
+-326 2nd occ (urgent DMA-race reopen criterion not met).
+
+### Hypothesis updates
+
+| ID | Verdict | Evidence |
+|----|---------|----------|
+| H-force6a | still CONFIRMED | force6∧case6∧hsel∧ace80 |
+| H-matnoise | SUPPORTED | force6 scored non-noise on attempt 1 |
+| H-handoff2 | **REFUTED** | thr11_destroy=1 with recov76BA90=0 |
+| H-handoff3 | **SUPPORTED** | thr11 destroy after 76B768 only; no 76BA90 |
+| H-handoff1 | superseded | when material noise absent, thr11→sec4→sec2 completes without 76BA90 |
+
+### Item -361 recharacterization
+
+Post-exit thr11→sec4 gate is **no longer the primary M3 blocker** on the
+force6+inject path: this run reached **sec2 (mission overlay)** and thr12
+lifecycle after thr11 destroy. R2 coalesce (`0x8000247c`) never engaged —
+healthy path does not need that guard to progress. Residual risk remains
+intermittent cutscene material SIGBUS (0x8000e29c, 2×) and recovery-cell
+nondeterminism (76B768 0..~15912); material-noise reroll recipe still useful
+as engagement filter.
+
+### New primary M3 bottleneck
+
+Post-sec2 mission asset load: `loadDebugAssets` → HMT parse →
+`packTlutEntriesRgba5551` SIGBUS on OOB palette/tex pointer. Co-symptom:
+corrupted `osViSetMode` (width=24) ~10 lines before crash.
+
+### Actions this session
+
+- Filed item -373; rewrote -361/-372/-7; highest → -373.
+- Queued `s608_post_sec2_pipeline_confirm` (re-confirm sec2 2/2; score
+  post-sec2 crash identity; arm TEXDATA/MATERIAL logs).
+- No code change (single-occurrence post-sec2 class; need 2nd for guard
+  per M3 policy). Do not single-chase packTlut without 2nd + idiom.
+
+### Next
+Fold s608 confirm soak; if sec2+same packTlut stack 2nd → escalate -373
+for entry-arg range check instrument (not reactive guard without class).

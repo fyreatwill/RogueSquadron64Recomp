@@ -2,69 +2,68 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s607 recap (read this first)
+## s608 recap (read this first)
 
-Folded `s606_handoff_76ba90_dual_target` (208s, rc=1): **class E0**.
-Engagement force6+case6+hangar-sel+ace80 OK; thr11 create@+719; inject
-n=450; **recov76B768=0 recov76BA90=0**; thr11_destroy=0; crash@+25786
-`findOrCreateMaterial+776` / guest `0x8000e29c` (`si_addr=0x39500e10d`).
-Stack: emitMaterialTexturedDL ← drawSubtitleText ← runModelViewerLoop.
-Post-hsel fullsync only sticky `0x76DF60` E9. Same crash PC as s605
-(**2nd occ**) but s605 had recov768~=7920 — material death is
-**independent of 76B768**. H-handoff1 refined (not post-768-only). Do not
-single-chase `0x8000e29c`. Queued `s607_handoff_material_noise_reroll`.
+Folded `s607_handoff_material_noise_reroll` (311s, rc=1): **class C but past thr11→sec4**.
+Engagement force6+case6+hangar-sel+ace80 OK; matnoise=0 attempt 1; inject n=400;
+recov76B768~=92; **recov76BA90=0**; **thr11_destroy=1 sec4_post=1 sec2=1 sec2_post=1**;
+thr12 lifecycle complete; crash post-sec2 at `packTlutEntriesRgba5551+2608` via
+`loadDebugAssets` (item **-373**). last-guest-pc `0x800025ac` is **stale** — not -326.
+**H-handoff2 REFUTED** (thr11 destroy without 76BA90). thr11→sec4 no longer primary M3
+blocker. Queued `s608_post_sec2_pipeline_confirm`.
 
-Full: CURRENT-TRUTH -372; PORTING-STATE Session 607.
+Full: CURRENT-TRUTH -373/-361; PORTING-STATE Session 608.
 
 ## This iteration's work unit
 
-**Fold in the `s607_handoff_material_noise_reroll` soak result and act.**
+**Fold in the `s608_post_sec2_pipeline_confirm` soak result and act.**
 
-1. Read SOAK-RESULTS.md line + discard_stats (`pre_eng`, `matnoise`) +
-   scored gate fields:
-   `force6, case6, hangar-sel, recov76B768, recov76BA90, last_768_rel,
-   first_a90_rel, thr11_destroy, thr11_destroy_rel, sec4_post, crash,
-   crash_pc, crash_rel, class_hint`.
-2. Classify (recipe header A–H):
-   - **A** thr11_destroy + sec4_post + g2 + ok → -361 confirm 1/2.
-   - **B** thr11_destroy + sec4 + crash `0x8000247c` → r2 path.
-   - **C** thr11_destroy + sec4 + other crash → file breadcrumb.
-   - **D** 76BA90 + thr11_destroy=0 → handoff not sufficient.
-   - **E** last_768>0, no 76BA90, non-material crash → gap variant.
-   - **F** survive HOLD, thr11_destroy=0 (s602-like).
-   - **G** budget exhaust / only noise (rc=2) — report matnoise rate.
-   - **H** 76BA90 + thr11_destroy (any) → handoff sufficiency hit.
-3. If A/B/H: queue one confirm soak only. Do NOT raise HOLD_S past 210.
-4. If G with high matnoise rate (≥3 discards): note force6×material
-   correlation vs s602 (no force6, 0 material) as single-source only —
-   do not open a reactive material guard; consider one dual-arm recipe
-   (force6 on/off attempts) only if matnoise blocks all progress.
+1. Read SOAK-RESULTS + discard_stats + scored gates:
+   `force6, case6, hangar-sel, ace80, inject_max_n, recov76B768, recov76BA90,
+   thr11_destroy, sec4_post, sec2_post, thr495FC_creates, crash, crash_pc,
+   crash_sym, class_hint, texdata/material guard fires`.
+2. Classify:
+   - **A** sec2_post + survive HOLD → first in-mission hold; escalate M3 DoD.
+   - **B** sec2_post + same packTlut/`loadDebugAssets` stack → -373 **2nd occ**
+     (escalate: entry-arg range instrument on packTlut / loadTextureToMemory;
+     still no reactive single-site guard without idiom class).
+   - **C** sec2_post + different crash → file new breadcrumb; keep -373 at 1×.
+   - **D** thr11_destroy + sec4, sec2=0 → regression vs s608; investigate.
+   - **E** material noise only (rc=2, high matnoise) — report rate; requeue.
+   - **F** pre-eng only — report; requeue with same recipe.
+3. If B: offline, identify which packTlut arg (a0/a1/a2/a3 / t0) is OOB from
+   registers + source; plan **one** fixup instrument (arg range log+skip), not
+   a multi-site sweep yet.
+4. Do NOT raise HOLD_S past 210. Do NOT reopen H-handoff2/76BA90 as required.
 
 ## Hypotheses (active)
 
 | ID | Claim | Discriminator |
 |----|-------|---------------|
-| H-handoff1 | (REFINED s607) Material/FS crash aborts thr11 pipeline before handoff; not 76B768-gated | crash with or without recov768; thr11_destroy=0 |
-| H-handoff2 | 76BA90 handoff required before thr11 destroy | thr11_destroy only when first_a90_rel >= 0 |
-| H-handoff3 | thr11 destroy independent of 76BA90 once 768 dies | thr11_destroy with recov76BA90=0 |
-| H-force6a | (CONFIRMED s606) state=6 force unlocks case6+hangar-sel | force6∧case6∧hsel |
-| H-matnoise | 0x8000e29c is intermittent cutscene noise (not always force6-caused) | non-noise scored attempt exists under same force6 env |
+| H-sec2a | force6+inject+76B768 yields sec2 when material noise absent | sec2_post≥1 on scored non-noise |
+| H-sec2b | post-sec2 death is stable packTlut/HMT path (-373) | same host stack 2× |
+| H-sec2c | VI width=24 is coupled precursor to -373 (same corruption wave) | VI24 co-occurs with -373; absent on other post-sec2 deaths |
+| H-handoff2 | (REFUTED s608) 76BA90 required for thr11 destroy | — |
+| H-handoff3 | (SUPPORTED s608) thr11 destroy after 76B768 alone | thr11_destroy ∧ recov76BA90=0 |
+| H-matnoise | (SUPPORTED s608) 0x8000e29c intermittent under force6 | non-noise scored exists |
+| H-force6a | (CONFIRMED) state=6 force unlocks case6+hangar-sel | force6∧case6∧hsel |
 
 ## Do NOT
 - Raise HOLD_S past 210.
-- Treat thr10 destroy as the sec4 gate — only post-create thr11 destroy.
-- Single-chase `0x8000e29c` / findOrCreateMaterial (2nd occ filed; need
-  3rd + idiom-class shape before any guard).
+- Treat last-guest-pc=0x800025ac as -326 2nd occ without host `do_rom_read` stack.
+- Single-chase packTlut before 2nd occ of the same host stack.
+- Re-require 76BA90 for thr11 destroy (H-handoff2 closed).
 - Re-open thr-11 as recvServiceMessage block (H12a closed).
-- Re-arm default stick schedule.
 - Leave FORCE_STATE6_AFTER / FS_PIPE_INJECT default-ON.
 - Chase waitForAnyAudioSlot+244 (item -362).
 
 ### Reference tags
 `[case5-force-state6]`, `[case6-force-start]`, `[hangar-sel]`,
-`[beginframe-s0-guard]`, `[state-write] site=0x800ACE80`,
-`[buttons-hangar] site=0x800ACE94`, `[thr-create]`/`[thr-destroy]`
-entry=`0x8006F2CC`, `[rdp-fullsync] ... addr=0x0076B768` /
-`addr=0x0076BA90`, `[fs-pipe-inject]`, `[overlay] start-match: section 4`,
-`[coalesce-heap-r2-guard]`, `[CRASH][last-guest-pc]` / `[CRASH][pc-symbol]`,
-`findOrCreateMaterial`, guest `0x8000e29c`.
+`[state-write] site=0x800ACE80`, `[buttons-hangar] site=0x800ACE94`,
+`[thr-create]`/`[thr-destroy]` entry=`0x8006F2CC` / `0x800495FC`,
+`[rdp-fullsync] ... addr=0x0076B768` / `0x0076BA90`, `[fs-pipe-inject]`,
+`[overlay] start-match: section 2` / `section 4`,
+`packTlutEntriesRgba5551`, `loadDebugAssets`, `loadTextureToMemory`,
+`parseHmtMaterials`, `osViSetMode` width=24, `[texdata-table-guard]`,
+`[texdata-ptr-array-guard]`, `[material-array-ptr-guard]`,
+`[CRASH][pc-symbol]`, guest material noise `0x8000e29c`.
