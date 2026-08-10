@@ -48812,3 +48812,72 @@ Do NOT soft-skip without 2nd same host stack (policy matches -382/-383/-375).
 ### Next
 Consume s619: matfree 2nd → escalate -384 (null-base guard candidate); thr12/cshadow →
 class-D A–D; thr11d_new+sec4+hold without crash → pipeline advance past freelist.
+
+## Session 620 — 2026-08-10 — fold s619: class-D entered; null rs_malloc in loadLevelTextureCache (-385); guard landed
+
+### Work unit
+Consume `s619_matfree_freeroll_classd` soak; classify matfree 2nd vs thr12/class-D vs pipeline
+hold (NEXT.md).
+
+### Soak fold (`s619_matfree_freeroll_classd` rc=1, 476s)
+- a1 freeroll: mat3inv Abort (`mat3x3InverseInto` ← `traverseSceneGraphRecursive` ←
+  `setupCameraMatrices`); thr11d_new=0 recov768=0; class_hint=E_recovery_silent.
+  (scenegraph=1 on freeroll only — H-sg1 still supported on scored.)
+- a2 scored BASE_CTRL_PASS force6 old=5→6 recov768=7948:
+  - **thr11d_new=1 sec4_post=1** (reconfirmed LIVE)
+  - **cshadow_a=3 cshadow_w=0 ltex=1** → class-D craft-shadow soft-skip LIVE; thr12 parent entered
+  - thr12_post=0 sec2=0
+  - ship_store=2 ship_zero_post=2
+  - **matfree=0 scenegraph=0 readacct=0** on scored
+  - class_hint=`C_D_guard_no_thr12`
+  - Crash: SIGBUS `loadLevelTextureCache+2576` si_addr=`0x380001054`
+    stack: `loadLevelTextureCache` ← `load_cutscene` ← `cinematicLoopBody` ← `mainGameLoop`
+    last-guest-pc=`0x800290d4` (inflate_fast clean-return artifact; STALE)
+
+### Classification
+| Code | Result |
+|------|--------|
+| K2 matfree 2nd | **NO** — matfree=0 on scored freeroll → **H-matfree1 SUPPORTED**; -384 stays 1× freeroll |
+| G class-D | **PARTIAL** — thr11d_new+sec4+cshadow LIVE; thr12 never created |
+| H/J | 0 on scored — stay 1× freeroll |
+| A–D | asset-guard fires (3× bad_s5=0); walk-guard 0; thr12 blocked mid-parent |
+
+### Root cause of scored crash (two independent lines)
+1. **nm + disasm**: host `_loadLevelTextureCache` base `0x10009a1dc`; crash at +0xa10 =
+   `strb w8,[x9,x10]` with x10=`0x80001054` x9=rdram → si_addr `0x380001054`.
+2. **Recompiled C**: guest `0x80048250` `sb $s1, 0x58($v0)` fill loop after
+   `rs_malloc(0x136C)` at `0x80048240` → s0 at `0x80048248`. Address math with s1=0xFFF
+   and s0=0: `(0+0xFFF+0x58)^3 = 0x1054` matches. **rs_malloc returned NULL**; game has no
+   null check before the 0x1000-byte fill.
+
+Do **not** merge with -384 (different host stack: freelist vs texture-cache fill) or -373
+(packTlut / last-guest-pc coincidence).
+
+### Change landed
+- `fixup_game_funcs.py` (N64Recomp): idempotent patch for
+  `[level-tex-malloc-guard]` at site `0x80048248` → `goto L_8004840C` (full epilogue;
+  all s-regs+$ra spilled at entry). Label `L_8004840C` on epilogue.
+- Applied directly to `RecompiledFuncs/funcs_10.c` (fixup REFUSES re-run on
+  `// RS64_FIXUP_APPLIED` sentinel; fixup source carries patch for next clean regen).
+- Rebuilt `RogueSquadron64Recomp`; `strings` confirms guard format string; nm shows
+  `s_level_tex_malloc_guard_n`.
+- Soft-skip returns before `registerServiceWorker` — thr12 still not created on this path
+  when malloc is null. Guard prevents death; root cause (why malloc null) is next.
+
+### Soak enqueued
+`scratch/agent/soak_queue/s620_ltex_malloc_guard_classd.sh` — recovery-active free-reroll;
+scores `ltexmg` / `ltex_null`; class_hint M1 (guard live) vs M2 (unguarded miss).
+
+### Hypotheses
+| ID | Verdict |
+|----|---------|
+| H-matfree1 | **SUPPORTED** — 0 matfree on scored freeroll after 1× s618 |
+| H-matfree2 | not triggered |
+| H-Dshadow1 | partial — asset-guard fires; walk not entered; death moved to parent malloc |
+| H-ltexmg1 | guard should fire on next scored class-D entry (pending soak) |
+| H-ltexOOM | rs_malloc(0x136C) null = heap pressure / free-list — open |
+
+### Next
+Consume s620 soak: require BASE_CTRL_PASS + recovery-active; M1 guard fire = LIVE-VERIFY
+-385; M2 = binary stale. If M1 and thr12 still 0, probe why rs_malloc returns null (heap
+free head / first malloc size) — do not soft-skip past thr12 creation without a real alloc.

@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s619)
+## Current truth (established by session 295; unchanged, reviewed through s620)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -120,24 +120,24 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s619**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s620**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
   `loadLevelTextureCache`) → sec2 (mission overlay) is reachable when recovery cell `0x76B768`
-  fires (s608; H-handoff2 / 76BA90 REFUTED). **s619: thr11d_new LIVE** (scored a2) → sec4_post=1;
-  thr12 not yet created on that path.
+  fires (s608; H-handoff2 / 76BA90 REFUTED). **s619/s620: thr11d_new LIVE** when recovery
+  fires → sec4_post=1; class-D craft-shadow soft-skip LIVE (cshadow_a≥1); thr12 still not
+  created — blocked by null `rs_malloc(0x136C)` in thr12 parent (**-385**, guard landed s620).
 - Co-gates: recovery silence (-374), mid-window mat3inv Abort (-375, free-reroll), post-hsel
   `isPlayerShipActive` ret=1 / ship store (-376/-377, H-ship1 SUPPORTED; H-ship1z hard-block
-  REFUTED s619), class-D craft-shadow null walk (-378, guard landed, live-verify PENDING —
-  thr12 never created before freelist death), FORCE_STATE6 KSEG0 base OOB (**-381 CLOSED s617**),
-  post-force scene-graph SIGBUS (**-382**, 1× freeroll; H-sg1 SUPPORTED), post-force
-  `readAccountForSelectionScreen` SIGBUS (**-383**, 1× freeroll; 0 on s618 scored),
-  post thr11d/sec4 `buildMaterialFreeList` null-base SIGBUS (**-384**, 1× free-reroll; primary
-  residual after thr11d_new LIVE).
+  REFUTED s619), class-D craft-shadow (**-378**, asset-guard LIVE s619 scored), FORCE_STATE6
+  KSEG0 base OOB (**-381 CLOSED s617**), post-force scene-graph SIGBUS (**-382**, 1× freeroll),
+  post-force `readAccountForSelectionScreen` (**-383**, 1× freeroll), freelist null-base
+  (**-384**, H-matfree1 SUPPORTED s620), **null-malloc in loadLevelTextureCache (**-385**,
+  guard landed; live-verify PENDING; primary residual after class-D entry)**.
 - **thr11d scoring trap (s618):** post-hsel destroy of the *old* thr11 is not thr11d. Real
   metric = destroy of an id created post-hsel with entry `0x8006F2CC` (`thr11d_new`).
 - Tools (default OFF): `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`, `FS_PIPE_INJECT`.
 - Post-sec2 residual: HMT/`packTlut` SIGBUS (-373, 1×). Material `0x8000e29c` (2×, free-reroll).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-384; Sessions 577-619.
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-385; Sessions 577-620.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -155,30 +155,34 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -384. The next NEW item takes -385.
+a range pointer. Highest allocated so far: -385. The next NEW item takes -386.
 
-### Active M3 pipeline (s577–s619) — open residuals only
+### Active M3 pipeline (s577–s620) — open residuals only
 
--384. **(s619) Post thr11d_new+sec4 `buildMaterialFreeList` null-base SIGBUS — primary residual
-    after thr11d LIVE (1×; free-reroll).** s618 scored a2: BASE_CTRL_PASS + force6 old=5→6 +
-    recov768=7952; **thr11d_new=1 sec4_post=1** (first LIVE thr11d_new); thr12=0 cshadow=0
-    sec2=0; ship_store=2 ship_zero_post=2; scenegraph=0 readacct=0. Crash: SIGBUS
-    `si_addr=0x380000000` at `buildMaterialFreeList+260` (nm slide + stack CONFIRMED) ←
-    `advanceVideoFrame` ← `runVideoFrameTick` ← `initSceneForMission` ← `cinematicLoopBody` ←
-    `mainGameLoop`. First freelist clear loop writes through null base at `0x80128F00`
-    (`-0x7100` from `0x80130000`) while count at `0x80128EF0` is non-zero. `last-guest-pc=
-    0x800025ac` STALE — do not merge with -373. Free-reroll 1st; soak
-    `s619_matfree_freeroll_classd`. Full: Session 619.
+-385. **(s620) `loadLevelTextureCache` null `rs_malloc(0x136C)` fill SIGBUS — primary residual
+    after class-D entry (guard landed; live-verify PENDING).** s619 scored a2: thr11d_new=1
+    sec4_post=1 cshadow_a=3 ltex=1 thr12=0; crash `loadLevelTextureCache+2576`
+    si_addr=`0x380001054` ← `load_cutscene` ← `cinematicLoopBody`. Guest `0x80048250`
+    `sb $s1,0x58($v0)` with s0=null after `rs_malloc` at `0x80048240` (s1=0xFFF → phys
+    0x1054). Guard: `[level-tex-malloc-guard]` @ `0x80048248` → `L_8004840C` epilogue
+    (fixup + funcs_10.c). Soft-skip skips `registerServiceWorker` so thr12 stays 0 until
+    malloc succeeds. Why malloc null is open (H-ltexOOM). Soak
+    `s620_ltex_malloc_guard_classd`. Full: Session 620.
 
--383. **(s618→s619) Post-force `readAccountForSelectionScreen` SIGBUS — stays 1× free-reroll;
-    0 hits on s618 scored (H-readacct1 SUPPORTED further).** local-symtab often mislabels as
-    `rebuildActiveDisplayObjectList+540` — nm/atos: `readAccountForSelectionScreen+604`
-    (guest `0x800B85B4`). Caller: `menuControllerInput` case 1 (local s6=6 ≠ hangar state 6).
-    Escalate only on 2nd same host stack. Full: Sessions 618-619.
+-384. **(s619→s620) Post thr11d_new+sec4 `buildMaterialFreeList` null-base SIGBUS — 1×;
+    H-matfree1 SUPPORTED (0 on s619 scored freeroll).** s618 only hit. Host
+    `buildMaterialFreeList+260` ← `advanceVideoFrame` ← `initSceneForMission`. Do not
+    merge with -385 (different stack) or -373 (stale pc). Escalate only on 2nd same host
+    stack. Full: Sessions 618-620.
 
--382. **(s617→s619) Post-force `traverseSceneGraphRecursive` SIGBUS — H-sg1 SUPPORTED (0 on
-    scored; s618 a1 freerolled same host stack again). Stays 1× freeroll policy on scored path;
-    do not escalate without 2nd on recovery-active scored.** Full: Sessions 617-619.
+-383. **(s618→s620) Post-force `readAccountForSelectionScreen` SIGBUS — stays 1× free-reroll;
+    0 on s618/s619 scored (H-readacct1 SUPPORTED).** local-symtab often mislabels as
+    `rebuildActiveDisplayObjectList+540` — nm: `readAccountForSelectionScreen+604`
+    (guest `0x800B85B4`). Escalate only on 2nd same host stack. Full: Sessions 618-620.
+
+-382. **(s617→s620) Post-force `traverseSceneGraphRecursive` SIGBUS — H-sg1 SUPPORTED (0 on
+    scored; freeroll noise including s619 a1). Stays 1× freeroll policy on scored path;
+    do not escalate without 2nd on recovery-active scored.** Full: Sessions 617-620.
 
 -381. **(s616→s617) FORCE_STATE6 KSEG0 `uint32` base OOB — FIXED and LIVE-VERIFIED.**
     S32-extended `gpr base = S32(0x800D << 16)` in case5 force-state6 + case3-start.
@@ -195,11 +199,12 @@ a range pointer. Highest allocated so far: -384. The next NEW item takes -385.
     logs `[case5-force-state6-skip]`. Keep gate after S32 base fix. Recipe
     `ENGAGE_WAIT_S=90`. Full: Sessions 614-616.
 
--378. **(s613→s619) class-D craft-shadow null-walk soft-skip landed; live A–D still PENDING.**
-    thr12 parent = `loadLevelTextureCache`. Guards: `[craft-shadow-asset-guard]`/
-    `[craft-shadow-walk-guard]` @ `0x8006B764`/`0x8006B780` + `[level-tex-cache]`. s619
-    thr11d_new LIVE but thr12 never created before -384 freelist death — class-D path not
-    entered. Full: Sessions 613-619.
+-378. **(s613→s620) class-D craft-shadow soft-skip LIVE on scored (cshadow_a=3 s619);
+    thr12 still blocked by -385 null-malloc in parent.** thr12 parent =
+    `loadLevelTextureCache`. Guards: `[craft-shadow-asset-guard]`/
+    `[craft-shadow-walk-guard]` @ `0x8006B764`/`0x8006B780` + `[level-tex-cache]` +
+    `[level-tex-malloc-guard]` @ `0x80048248` (-385). walk-guard not entered (asset-guard
+    soft-skips all three crafts). Full: Sessions 613-620.
 
 -377. **(s612) gPlayerShip writer instrument live.** Only two stores to `0x800CC85C`:
     non-null `updateTextOverlayLookupEntry` @ `0x800B40D0` (when current null; copies
@@ -225,14 +230,14 @@ a range pointer. Highest allocated so far: -384. The next NEW item takes -385.
     is STALE** — do not merge with -326. Co-symptom: `osViSetMode` width=24. 2nd occ pending.
     Full: Session 608.
 
--361. **(s589-s619) thr11→sec4→sec2 pipeline — thr11d_new LIVE s619 when recovery fires;
-    blocked post-thr11d by freelist null-base (-384), or pre-thr11d by recovery silence
-    (-374), mat3inv (-375), ship re-activation (-376/-377; H-ship1z hard-block REFUTED),
-    class-D craft-shadow (-378, PENDING thr12), scene-graph (-382), readAccount (-383),
-    FORCE_STATE6 gate (-379; OOB base -381 CLOSED), or post-sec2 packTlut (-373).
-    thr-11=`saveServiceWorker` `0x8006F2CC`; thr-12=`hudDisplayUpdateWorker` via
-    `loadLevelTextureCache`. Do not raise HOLD_S past 210. Full arc: PROJECT-OVERVIEW
-    §27; Sessions 589-619.**
+-361. **(s589-s620) thr11→sec4→sec2 pipeline — thr11d_new LIVE when recovery fires;
+    class-D soft-skip LIVE (s619); blocked on thr12 parent by null rs_malloc (-385, guard
+    landed), or pre-thr11d by recovery silence (-374), mat3inv (-375), ship re-activation
+    (-376/-377; H-ship1z REFUTED), freelist 1× noise (-384, H-matfree1), scene-graph
+    (-382), readAccount (-383), FORCE_STATE6 gate (-379; OOB base -381 CLOSED), or
+    post-sec2 packTlut (-373). thr-11=`saveServiceWorker` `0x8006F2CC`; thr-12=
+    `hudDisplayUpdateWorker` via `loadLevelTextureCache`. Do not raise HOLD_S past 210.
+    Full arc: PROJECT-OVERVIEW §27; Sessions 589-620.**
 
 ### Closed product lineage (FULL_SYNC inject + thr pipeline setup) — do not re-open
 
@@ -314,8 +319,8 @@ a range pointer. Highest allocated so far: -384. The next NEW item takes -385.
 -7. **M3 hangar-exit → mission-entry (DoD gate): OPEN.** Exit+cutscene CONFIRMED s577;
     FULL_SYNC inject product-fixed; force6 engagement CONFIRMED s606 and **live-writes real
     hangar state s617** (-381 CLOSED); s608 first force-path sec2 after thr11d when recovery
-    fires; **s619 thr11d_new LIVE** then dies in -384 freelist. Active residuals: -384..-373
-    / -361 / -379. Tools still default OFF.
+    fires; **s619 thr11d_new + class-D LIVE** then dies in -385 null-malloc (guard s620).
+    Active residuals: -385..-373 / -361 / -379. Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
 
