@@ -47311,3 +47311,106 @@ before queuing anything.
 `scratch/agent/soak_results/s595_coalesce_r2_verify_e_20260809-201406.log`,
 `_f_20260809-201414.log`; `docs/CURRENT-TRUTH.md` (this session's diff is
 the record of what was compacted).
+
+## Session 597 — 2026-08-09 — item -361 option (a): pre-engagement noise tally CLOSED NEGATIVE; new "waitForAnyAudioSlot+244" lead INVESTIGATED and found to be a symtab misattribution, not a real bug
+
+### What happened
+NEXT.md's s596 handoff specified option (a) as this iteration's work unit:
+tally exactly which breadcrumb killed each of the 9 non-discriminating
+s593-s596 attempts, to see if one single noise family dominates enough to
+justify a targeted guard (vs. a blind stabilization sweep). Read every
+`run.log`/driver log for the 9 attempts (s592b, s593-manual, s593_a, s593_b,
+s594_c, s594_d, s595_e, s595_f — 8 directly + s594_c makes 9 counting
+s590/s592a as the 2 prior *reached* runs that established the tally context)
+and extracted `[CRASH][pc-symbol]`/`[CRASH][last-guest-pc]` plus the
+gate/case6/hangar-sel counters for each.
+
+### Tally result
+| run | case6/hangar-sel | outcome | cause |
+|---|---|---|---|
+| s592b | 0/0 | crash | process gone before VI 1024, no crash marker captured |
+| s593-manual | 0/0 | HOLD_S timeout, no crash | never progressed past boot/menu; hung, not crashed |
+| s593_a | 0/0 | crash | `heapFreeListDequeue+32892`/`0x8000d688` — item -331 2nd occ |
+| s593_b | 0/0 | crash | `setByteAcrossEntryList+176`/`0x800aafa8` — item -306 signature |
+| s594_c | 1/1 (reached) | crash, no recovery | recovery cell `0x76B768` never fired (H12c/H13c) — the DEEPER bottleneck, not pre-engagement noise |
+| s594_d | 0/0 | crash, **died in 7s, still VI640** | `waitForAnyAudioSlot+244`/`0x8000834c` |
+| s595_e | 0/0 | crash, **died in 8s, still VI640** | `waitForAnyAudioSlot+244`/`0x8000834c` (identical to s594_d) |
+| s595_f | 0/0 | crash | `setByteAcrossEntryList+176`/`0x800aafa8` — item -306 again |
+
+**No single family accounts for a majority.** Item -306 (2/8), the new
+`waitForAnyAudioSlot+244` cluster (2/8), item -331 (1/8), non-crash
+death/hang (2/8), and the genuinely distinct recovery-reliability failure
+(1/8, s594_c) split the noise five ways. Option (a)'s premise (find one
+dominant family, write one targeted guard) does not hold.
+
+### The most promising new lead is a symbolizer artifact, not a bug
+`waitForAnyAudioSlot+244` looked like a fresh, 2/2 exact-match signature —
+directly matching the strategic directive's named "waitForAnyAudioSlot boot
+deaths" M5 hypothesis. Traced it: `waitForAnyAudioSlot`
+(`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_15.c:7253`) has an
+**unconditional** (once `ROGUESQ_LOG_AUDIO_DRAIN=1` is set) `[audio-drain-enter]`
+print as the very first statement in its body, before any MIPS-emulation
+work. Both `s594_d` and `s595_e`'s `GAME_EXTRA_ENV` correctly set that var
+(sibling env-gated tags in the same recipe — `[fs-slot]`, `[rdp-fullsync]`,
+`[dl-sync-probe]` — all fired normally in the same logs), yet **0
+`[audio-drain-enter]` lines appear in either 6000+-line log**. The
+instrument itself is not broken: `grep -rl audio-drain-enter
+scratch/s73_post_a_scene/*/run.log` hits 199 other historical run
+directories, a same-repo (if not same-run) positive control. A real crash
+inside this function's body cannot skip its own unconditional entry print.
+**Conclusion: the `nm -n` nearest-preceding-symbol lookup (item -311's fix)
+is misattributing a crash actually located in adjacent, unexported code to
+`waitForAnyAudioSlot`** — the same failure family item -310 already
+catalogued, not fully closed by item -311's fix. Both crashes also died in
+7-8 seconds of wall time, VI still at 640 (before the title screen even
+renders) — this is very-early-boot noise, unrelated to any hangar/exit-path
+logic, forced or natural.
+
+### Consequence for the option (b) framing
+Because 6 of these 8 nulls (all except s594_c) die with `case6=0
+hangar-sel=0` — **before `ROGUESQ_FORCE_CASE6_START` ever engages** — the
+originally planned option (b) rationale ("the force mechanism adds
+fragility") cannot explain the majority of observed deaths: the force
+mechanism hasn't run yet when they happen. Switching to a natural
+double_start path would not obviously change this early-boot noise rate,
+since forced vs. natural is a late-game choice and the noise strikes during
+early cinematic/menu boot. Filed as a data point sharpening — not
+contradicting — the s590 origin of option (b): a natural-path comparison
+remains worth running eventually, but its real target should be s594_c-style
+recovery-cell reliability (the one genuinely distinct, "reached but no
+recovery" failure mode), not pre-engagement survival.
+
+### Ruled out this session
+- No dominant, single-family pre-engagement noise cause exists among the 9
+  tallied attempts — option (a) as scoped (tally → targeted guard) is
+  CLOSED NEGATIVE.
+- `waitForAnyAudioSlot+244` is NOT confirmed evidence of a real crash inside
+  that function — failed its own implied positive control (own unconditional
+  diagnostic silent in both occurrences despite being armed and working
+  elsewhere). Do not escalate this signature as an M5 audio-family lead
+  without first closing the underlying symtab-misattribution gap.
+- The "force path adds fragility" premise behind the original framing of
+  option (b) does not match the pre-engagement tally: those deaths precede
+  force-engagement entirely.
+
+### Next
+Redesign axis for item -361 still needs a genuine next probe. Two honest
+options remain, both cheaper than another blind identical retry: (1) a
+fast-retry wrapper that discards early (<15s, pre-VI1024) deaths without
+consuming a full 600s soak slot, committing the full `HOLD_S` budget only to
+runs that survive to reach `case6=1` — turns the current ~89% pre-engagement
+death rate from a budget cost into a near-free reroll; (2) the original
+natural-double_start comparison, re-scoped to specifically target
+`s594_c`-style recovery-cell (`0x76B768`) reliability rather than
+pre-engagement survival. Recommend (1) first since it is cheap to build and
+directly increases the attempt rate on the *actual* remaining question
+(recovery-cell reliability) without needing to resolve the heterogeneous
+early-boot noise first. Full detail: NEXT.md.
+
+### Artifacts
+`scratch/s73_post_a_scene/s594_coalesce_r2_verify_d_20260809200519/run.log`,
+`scratch/s73_post_a_scene/s595_coalesce_r2_verify_e_20260809201406/run.log`
+(both: 0 `[audio-drain-enter]` despite armed env + working instrument);
+`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_15.c:7253`
+(`waitForAnyAudioSlot`, entry-diagnostic source); `docs/CURRENT-TRUTH.md`
+item -361/-362 (this session's tally folded in).

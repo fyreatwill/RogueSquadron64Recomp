@@ -149,9 +149,32 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
+a range pointer. Highest allocated so far: -362. The next NEW item takes -363.
 
--361. **(s589-s596) Post-sec4 thr-12 gate — fix landed s593 (2nd `coalesceFreeHeapBlocks` R2
+-362. **(s597) Item -361 pre-engagement noise tally (redesign option a) — CLOSED NEGATIVE, no
+    dominant fixable family; new "waitForAnyAudioSlot+244" signature (2/2, s594_d/s595_e)
+    INVESTIGATED and found to be a local-symtab misattribution, not a real crash.** Tallied
+    cause-of-death for the 8 directly-checkable s592b/s593-manual/s593_a/s593_b/s594_c/s594_d/
+    s595_e/s595_f nulls: item -306 (2×), the new cluster (2×), item -331 2nd occ (1×), a
+    genuinely distinct recovery-cell-reliability failure (1×, `s594_c` — the real bottleneck,
+    see item -361), non-crash early death/hang (2×). No single family is a majority — option
+    (a)'s "find one dominant family, write one guard" premise fails. The new cluster
+    (`waitForAnyAudioSlot+244`/`0x8000834c`, both died in 7-8s at VI640, pre-title-screen)
+    looked like a fresh M5-relevant lead but failed its own implied positive control:
+    `waitForAnyAudioSlot` (`funcs_15.c:7253`) prints an unconditional `[audio-drain-enter]` as
+    its first statement whenever `ROGUESQ_LOG_AUDIO_DRAIN=1` (armed correctly — sibling
+    env-gated tags fired normally in the same logs), yet 0 such lines appear in either
+    6000+-line log, despite the instrument firing in 199 other historical run dirs. A real
+    crash inside the function's body cannot skip its own unconditional entry print — this is
+    the `nm -n` nearest-symbol lookup (item -311's fix) misattributing a nearby unexported
+    crash site, same family as item -310, not fully closed by -311. **Do not chase
+    "waitForAnyAudioSlot boot deaths" from this signature.** Also sharpens item -361's option
+    (b): since these nulls die with `case6=0 hangar-sel=0` (before `ROGUESQ_FORCE_CASE6_START`
+    ever engages), "the force mechanism adds fragility" cannot explain them — a natural-path
+    comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
+    survival. Full detail: `PORTING-STATE.md` Session 597.
+
+-361. **(s589-s597) Post-sec4 thr-12 gate — fix landed s593 (2nd `coalesceFreeHeapBlocks` R2
     guard at `0x8000247C`, `ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD`), live re-verify still open —
     9 consecutive non-discriminating attempts (s593-s596, `coalesce_guard2_r2=0` every time,
     none reached `sec4>=2` with the guarded path live).** Mechanism: `initSceneForMission`'s
@@ -162,13 +185,15 @@ a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
     `case6=1`+hangar-sel AND the FULL_SYNC recovery cell `0x76B768` firing (intermittent,
     H12c/H13c) — s595's `_c` reached case6 but recovery never fired; `_e`/`_f` (s595) and the
     s593/s594 pairs mostly didn't even reach case6 (background-noise deaths: item -331 2nd occ,
-    item -306, item -347). `HOLD_S` raised 90→210 in s595 without effect (2 more nulls). **Do
-    not raise `HOLD_S` a 3rd time** — switch redesign axis: (a) cut the pre-hangar noise-death
-    rate so more runs reach case6, or (b) try a natural (non-force) double_start path to sec4
-    instead of `ROGUESQ_FORCE_CASE6_START`. Neither tried as of s596. `sec4>=2` is the correct
-    discriminating threshold (`sec4=1` is boot-only overlay-preload noise, confirmed s594
-    against `s592_sec4_thr12_a`'s real post-exit `sec4=2`). Full session-by-session detail:
-    `PORTING-STATE.md` Sessions 589-596.
+    item -306, item -347, and item -362's new symtab-misattribution finding). `HOLD_S` raised
+    90→210 in s595 without effect (2 more nulls). **Do not raise `HOLD_S` a 3rd time.** s597's
+    item -362 tally closed redesign option (a) negative (no dominant family to guard) — next
+    probe is either a fast-retry wrapper that discards <15s pre-VI1024 deaths without spending a
+    full soak slot, or a natural-path comparison re-scoped to target `s594_c`-style
+    recovery-cell reliability specifically. `sec4>=2` is the correct discriminating threshold
+    (`sec4=1` is boot-only overlay-preload noise, confirmed s594 against `s592_sec4_thr12_a`'s
+    real post-exit `sec4=2`). Full session-by-session detail: `PORTING-STATE.md` Sessions
+    589-597.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
