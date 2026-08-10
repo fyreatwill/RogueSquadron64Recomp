@@ -47239,3 +47239,75 @@ natural (non-force) double_start path, per NEXT.md's own listed options.
 `~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c` lines 30793-31082
 (`transformLightByType`), 36935-37750 (`transformSceneLights`), `funcs_4.c`
 lines 6-700 (`submitSceneNodeRender`, instrumented comparison case).
+
+## Session 596 — 2026-08-09 — MAINTENANCE: CURRENT-TRUTH.md compacted 683→483 lines (-200); item -361 8th+9th coalesce R2 verify attempts consumed, still non-discriminating
+
+### Step 0 triggered maintenance
+`wc -c < docs/CURRENT-TRUTH.md` read 60008 at session start, over the 60000
+maintenance trigger carried over from s595's own end-of-session check. Per
+ITERATION.md this iteration is MAINTENANCE: no new experiment queued or run.
+
+### Consumed queued s595_coalesce_r2_verify_e/_f first
+Both had already run between iterations (`HOLD_S=210` redesign from s595).
+`_e`: `case6=0 hangar-sel=0 sec4=0 inject_lines=0 recov76B768~=0 crash=CRASH`
+— process died before even reaching VI 1024 (pre-engagement null, same
+shape as most prior nulls). `_f`: `case6=0 hangar-sel=0 sec4=1 inject_lines=0
+recov76B768~=0 crash=CRASH` — `sec4=1` is the confirmed boot-only overlay-
+preload noise floor (s594), not evidence of a real post-exit reload; run
+never reached case6/hangar-sel either. Neither is discriminating for the
+item -361 R2 guard fix. **Tally: 9 consecutive non-discriminating attempts**
+(s593-s596) — `coalesce_guard2_r2=0` on every single one; the guarded code
+path has never executed in a live re-verify since the fix landed s593.
+Folded into CURRENT-TRUTH item -361 as part of this session's compaction
+pass (see below); NEXT.md's own s595 decision tree already called for a
+redesign-axis switch (not a 3rd blind `HOLD_S` raise) once both `_e`/`_f`
+came back non-discriminating, so no new soak was queued this session — that
+decision (pre-hangar noise-death reduction vs. natural double_start path)
+is deferred to the next non-maintenance iteration.
+
+### Maintenance pass
+Read the full file front-to-back, then compacted in five edits:
+1. Trimmed the USER DIRECTIVE section's redundant closure-bullet list
+   (already restated in full below it) and dropped the now-fully-redundant
+   `-312..-318` lineage pointer paragraph.
+2. Rewrote the M3 goal-stack entry (previously a 47-line blow-by-blow of
+   s577-s591 that duplicated the Next-steps items below it almost line for
+   line) into a 13-line current-state summary pointing at items -349..-361.
+3. Compressed 15 FULLY-CLOSED Next-steps items (-347 down through the
+   `-317` step-3 master item, plus item -361 itself) from multi-paragraph
+   session-by-session narratives down to single-paragraph closure notes —
+   full derivation was already duplicated in `PORTING-STATE.md` and/or
+   `PROJECT-OVERVIEW.md` for every one of them, so nothing was lost, only
+   de-duplicated.
+4. Compressed the `-328..-333` watch-list breadcrumb block and trimmed
+   item -7 (M3 DoD gate) to point at the item -354..-361 chain instead of
+   re-narrating it.
+5. Refreshed the stale "reviewed through s592" headline to s596.
+Net result: 683 → 483 lines (-200 exactly, the ADVANCED threshold), 60008 →
+43625 bytes. No conclusions were changed or overturned — this was pure
+de-duplication against material already present in PORTING-STATE.md and
+PROJECT-OVERVIEW.md. Verified by re-reading the compacted file front to
+back: item numbering, cross-references (e.g. "item -354..-358" pointers
+added in place of narrated history), and the active item -361 thread all
+still read coherently.
+
+### Ruled out this session
+- `_e`/`_f` are NOT new evidence about the R2 guard fix (guard2_r2=0 both
+  runs, guarded path never reached).
+- This maintenance pass did NOT touch the "Current truth" env-var/timeline
+  prose or the Regeneration section's Standing warnings, per the standing
+  instruction that both are used every iteration and stay intact.
+
+### Next
+Next non-maintenance iteration on item -361 (HYPOTHESIS-ID `m3-post-exit-fs-stall`,
+unchanged): do NOT raise `HOLD_S` a 3rd time. Pick one of the two untried
+redesign axes NEXT.md already identified — (a) a pre-hangar stabilization
+pass to cut the noise-death rate so more runs reach case6, or (b) try a
+natural (non-force) double_start path to sec4 instead of
+`ROGUESQ_FORCE_CASE6_START` — and design the discriminating measurement
+before queuing anything.
+
+### Artifacts
+`scratch/agent/soak_results/s595_coalesce_r2_verify_e_20260809-201406.log`,
+`_f_20260809-201414.log`; `docs/CURRENT-TRUTH.md` (this session's diff is
+the record of what was compacted).

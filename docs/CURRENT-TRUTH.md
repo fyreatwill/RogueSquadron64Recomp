@@ -7,9 +7,9 @@ Session tags: `s1` = 2026-07-09/10 build + overlay work, `s2`–`s9` = `## LLE s
 ## USER DIRECTIVE (2026-08-04, human-set — overrides Next-steps ordering until satisfied)
 Priority order for upcoming iterations, set after the 300-session review:
 1. **Maintenance** (Step 0 of ITERATION.md triggers it at 60,000 bytes): compact per the Maintenance
-   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. Twenty-six passes
-   so far (per-pass targets in git log; PROJECT-OVERVIEW §16-§26 hold the most recent arcs) kept the
-   file oscillating around the cap as new session detail accrues. 35 KB remains a stretch target, not a
+   section of tools/agent/ITERATION.md; a >=200-net-line shrink counts as ADVANCED. 27 passes so far
+   (git log has per-pass targets; PROJECT-OVERVIEW §16-§26 hold the most recent arcs) kept the file
+   oscillating around the cap as new session detail accrues. 35 KB remains a stretch target, not a
    hard floor -- the "Current truth" env-var/timeline prose and the Regeneration section's Standing
    warnings stay intact deliberately; both are used every iteration.
 2. **M5 audio de-stubbing**: DONE and fully CLOSED, no thread open (PROJECT-OVERVIEW §10-§12). Next
@@ -18,20 +18,11 @@ Priority order for upcoming iterations, set after the 300-session review:
 3. **M3 crash work only as systematic idiom-class audits** (the s282–s288 `-0x25A4` model), never
    reactive single-crash chases. Breadcrumbs are passive: enqueue soaks to scratch/agent/soak_queue/
    (the loop runs them between iterations), consume scratch/agent/SOAK-RESULTS.md. Every bucket from
-   the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW §18-§19).
-   Items -312..-322 (s481-518, the `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage) are
-   all fully CLOSED — PROJECT-OVERVIEW §20-§25. **Item -317 freelist WRITE campaign CLOSED s564
-   (131/131 + residual walk/attr gaps -341..-345).** **Item -320 FULLY CLOSED 2/2 s566**
-   (safe mini-epilogue). **Item -346 FULLY CLOSED 2/2 s567** (R6 r3-base gap at `0x8000D6D0`;
-   s567 confirm hangarbay n=2700 full 300s rc=0, 0 r6 fires, no 0x8000d6d0 crash).
-   **Item -348 FULLY CLOSED 2/2 s569** (SIBLING_PTR DIRECT residual same-base gap class: 218
-   sites; freelist R/ATTR residual EMPTY under dual scan — DIRECT residual campaign exhausted).
+   the s465/s477 frequency scans has a disposition (items -298..-309, PROJECT-OVERVIEW §18-§19). The
+   `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
+   fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
--312..-318. **(s481-507) The `DL_LIST_APPEND_GUARD`/`DL_LIST_RESET_GUARD`/`AUDIO_SLOT_ACTIVE_GUARD`/
-    `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
-    CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
-
-## Current truth (established by session 295; unchanged, reviewed through s592)
+## Current truth (established by session 295; unchanged, reviewed through s596)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -132,50 +123,18 @@ since **DONE/CLOSED s399** (item -6). Full detail: PORTING-STATE s49.
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT are both
 reachable and stable; ~20 crash classes closed s50-s294 (mechanisms: `docs/PROJECT-OVERVIEW.md` §3
 arc + §9 closed lineages; per-class catalog: §7). Leave-key from SELECT YOUR CRAFT: s75 hangar-flight
-OVERTURNED s150; **s577 REAL hangar exit CONFIRMED** (case 3→5→6→8, mission overlay section 2
-0xA5D30). **s578 post-exit:** cutscene first (H-m2); not in-mission within ~30s (H-m1 REFUTED);
-hangar-sel val=0 not a hard block (H-m4). **s579:** post-exit `rdpFs` plateau is **NOT classic
-s178** (`stalled=1 pairs=0` + producer stop). Same-run: 772 post-plateau `[lle task]` + 771
-`[runner] task` all `exit=1`, 0 `stalled=1` after section 2, present FIRE pairs=4 continues.
-`rdpFs` == sum of runner `syncs` (4602); last 772 tasks all `syncs=0` → **FULL_SYNC starvation**
-with live GFX (H-stall1/2/classic-H-stall3 REFUTED; H-stall3b CONFIRMED). **s580–s581:** guest walk fixed — **H-walk1 CONFIRMED**; hangar control GREEN
-(e9_b/lin). **s582:** force-exit + `ROGUESQ_LOG_DL_SYNC` post-exit plateau
-**H-sync1 CONFIRMED** (e9_b=0 on 132/132 complete `endB8` walks), **H-sync2
-REFUTED** (0 probes with e9_b≥1 & syncs=0). Pre-plateau cutscene same dual DLs
-had e9_b=0 yet syncs=1 (~230 tasks) then flip to syncs=0 → **H-sync4** filed.
-**s583:** H-sync4 source = real 8-byte `E9000000` at phys `0x76DF60` (238
-singles). **s584:** that addr is a **shared DPC staging cell**; stop edge =
-cell E9→E7 while dual DLs continue; submits never die. Force recovers at
-`0x76A838` (~task 6258). **s585 offline:** E9 is **sticky** (0 RDRAM writes
-for 237 re-submits / 7.9s); stop = **one** E9→E7 overwrite; dpc_bridge
-**filters** size-8 PIPE_SYNC so runner `syncs` dies; H6a/H6d REFUTED, H6b
-CONFIRMED, H6c SUPPORTED (natural s577 never recovers). **s586:** H7a
-CONFIRMED — E9→E7 writer is Factor5 LLE RSP into the shared scratch
-(H7b/H7c REFUTED; item -356). **s587:** product `ROGUESQ_FS_PIPE_INJECT=1`
-(non-mutating scratch `0x7FFF80`, mode-1 = slot∩last_fs) **eliminates the
-E7-phase zero-tail** (H8a; 388 continuous dual syncs). **s588 H9d:** dual residual fully covered (570 continuous E9→E7→F3→FD; 0 UJ
-drop-return; forward UJ REFUTED). **s589 item -358:** longer force hold +
-inject — **H10a CONFIRMED** when recovery fires: post-dual **2288** tasks
-with `syncs>0` (not empty); natural FULL_SYNC recovery at **`0x76B768`×1988**
-(s588 had **0** there + empty×2085 + crash `0x80065e94`); rdpFs **7010**
-(s588 plateau 4890); hangar e9_b 40/40; present FIRE pairs=2; visual black
-freeze ~36s then desert-tone content returns. **H10b REFUTED** (no need for
-task-end inject once recovery cells take over); **H10d REFUTED** (black was
-real, not hidden content). Post-dual empty = failed-recovery path, not a
-structural gap. **s590 item -359:** natural double_start crashed leave-path
-before exit; `ROGUESQ_FORCE_CASE6_START` at ACE94 delivered natural **3→5→6→8**
-+ hangar-sel + VI 640 still **0 section 2** — **H11a REFUTED** as sole gate.
-Section 2 pipeline (s577): thr-11 destroy ↔ sec4 → thr-12
-`hudDisplayUpdateWorker` → sec2. **s591:** thr-11 is a long-lived
-`recvServiceMessage` service (external stop), not a progress worker —
-"unfinished thr-11" = cutscene freeze under FULL_SYNC starvation (H12a
-REFUTED; H12c SUPPORTED). Force: thr-11 destroy+sec4 only when recovery
-fires (s589); failed recovery (s591: 0×76B768, inject n=26) leaves thr-11
-alive until noise crash. s589 post-sec4 crash in `initSceneForMission`
-before thr-12. `FS_PIPE_INJECT` still default OFF. DoD =
-**cutscene→in-mission** + craft input. *Done when:* 60s in-mission render,
-craft responds to synthetic input, stability 0, phase timeline covers the
-mission.
+OVERTURNED s150; **s577 REAL hangar exit CONFIRMED** (case 3→5→6→8, mission overlay section 2).
+Post-exit chain root-caused s578-s591: cutscene plays, then a FULL_SYNC-starvation plateau (not
+classic s178 producer-stop) traced to a sticky shared DPC staging cell (phys `0x76DF60`) reused by
+Factor5 LLE RSP for PIPE_SYNC/SETTIMG (H7a) — product fix `ROGUESQ_FS_PIPE_INJECT` (default OFF)
+restores sync flow through the E7/F3/FD residual. The FULL_SYNC recovery cell `0x76B768` firing is
+required for thr-11 (`saveServiceWorker`) to destroy and section-4 overlay reload to fire; that
+reload is required for thr-12/section 2. Current frontier: item -361 (post-sec4
+`coalesceFreeHeapBlocks` R2 crash, fix landed s593, live re-verify blocked on path-to-sec4
+intermittency — recovery-cell firing is itself unreliable). Full session chain: items -349..-361
+below; raw detail `PORTING-STATE.md` Sessions 577-596. DoD = **cutscene→in-mission** + craft input.
+*Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
+covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
@@ -192,302 +151,158 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
 
--361. **(s589/s592/s593) Post-sec4 thr-12 gate — H13c CONFIRMED 2/2, FIX
-    BUILT, live re-verify still pending (path-to-sec4 intermittent).**
-    s589 + queued `s592_sec4_thr12_a` both independently reached post-exit
-    sec4 on force (case6+inject) and both crashed byte-identically at
-    `cinematicLoopBody→initSceneForMission→coalesceFreeHeapBlocks+4424`/
-    `0x8000247c`, 2-4 log lines later, before thr-12 (`entry=0x800495FC`)
-    could be created for the mission. Source-read: a SECOND unguarded
-    forward block-coalescing loop in `coalesceFreeHeapBlocks` (`L_80002474`,
-    base `$s2`, distinct from the `$t0`-based loop guarded back in s354-366)
-    has the identical "read next block header via unvalidated computed
-    pointer" idiom. **Fix landed s593**: extended `fixup_game_funcs.py`
-    (`~/Documents/Tools/N64Recomp`, untracked-by-git hand patch, same as the
-    ~150 others there) with a second guard at `0x8000247C`
-    (`ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD`), reusing the already-verified-safe
-    bail (`ctx->r3=0x8`, forces the safe exit branch). Full regen + build
-    clean, patch applied `x1`. **s593 live re-verify was a NULL** (case6
-    reached hangar exit state=8, but this run's post-exit sec4 never fired —
-    0 guard hits either family, 0 crash, but the guarded code path never
-    executed) — per iron rule 1 this proves nothing either way; it's a 3rd
-    data point for path-to-sec4 being intermittent (**H13a**), not new
-    information about the fix. **s594 (this session): 4th+5th data points,
-    still NULL.** Consumed queued `s593_coalesce_r2_verify_a`/`_b` — both died
-    on unrelated, already-catalogued background noise *before* the
-    force-exit env could even engage (`case6=0 hangar-sel=0` both runs):
-    `_a` hit item -331's breadcrumb 2nd occurrence (`heapFreeListDequeue`
-    `last-guest-pc=0x8000d688`, confidence upgraded low→moderate, see item
-    -331 entry above); `_b` hit item -306's well-known weak-early-death
-    signature (`setByteAcrossEntryList+176`/`0x800aafa8`). Both showed
-    `sec4=1`: the soak script's counter matches literal `"start-match:
-    section 4"` from `overlays.cpp`'s chunked-DMA logger, which fires once at
-    normal boot-time overlay preload regardless of hangar exit (confirmed by
-    checking `s592_sec4_thr12_a`'s real post-exit-reaching run, which shows
-    `sec4=2` — the 2nd occurrence is the genuine post-exit reload).
-    **`sec4>=2` is the correct discriminating threshold, `sec4=1` is
-    boot-only noise** — NEXT.md's decision tree already had this right; both
-    `_a`/`_b` are consistent path-gate nulls (H13a), not new information
-    about the fix. Queued `s594_coalesce_r2_verify_c`/`_d`, identical recipe.
-    **s595: consumed `_c`/`_d`.** `_d` pre-engagement null (case6=0). `_c`
-    reached case6=1 hangar-sel=1 + full FS_PIPE_INJECT residual coverage
-    (n=200+, E7→F3→FD) but **recovery cell `0x76B768` never fired** —
-    thr-11 never destroyed, sec4 stayed at boot-only 1, run eventually hit
-    the item -347 breadcrumb (now reframed, see above) at ~380s. **7
-    consecutive non-discriminating attempts** for the R2 fix itself
-    (`coalesce_guard2_r2=0` on every one — guarded path never executed).
-    Per iron rule 8, redesigned rather than re-queued blind: `HOLD_S`
-    raised 90→210 to give the intermittent recovery cell more exposure per
-    run (s589/s592a recovery fired; s591/s594_c did not). Queued
-    `s595_coalesce_r2_verify_e`/`_f`. Artifacts: `PORTING-STATE.md` Sessions
-    593-595; `s592_sec4_thr12_a_20260809192526/run.log`;
-    `s593_coalesce_r2_verify_{a,b}_.../run.log`;
-    `s594_coalesce_r2_verify_c_20260809200200/run.log`.
+-361. **(s589-s596) Post-sec4 thr-12 gate — fix landed s593 (2nd `coalesceFreeHeapBlocks` R2
+    guard at `0x8000247C`, `ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD`), live re-verify still open —
+    9 consecutive non-discriminating attempts (s593-s596, `coalesce_guard2_r2=0` every time,
+    none reached `sec4>=2` with the guarded path live).** Mechanism: `initSceneForMission`'s
+    2nd unguarded forward block-coalescing loop (`L_80002474`, `$s2`-based, distinct from the
+    `$t0`-based loop guarded s354-366) crashed identically in s589 and `s592_sec4_thr12_a`
+    before thr-12 (`0x800495FC`) could be created. Fix reuses the already-verified-safe bail
+    (`ctx->r3=0x8`). Path-to-sec4 is the bottleneck, not the fix: `sec4>=2` requires reaching
+    `case6=1`+hangar-sel AND the FULL_SYNC recovery cell `0x76B768` firing (intermittent,
+    H12c/H13c) — s595's `_c` reached case6 but recovery never fired; `_e`/`_f` (s595) and the
+    s593/s594 pairs mostly didn't even reach case6 (background-noise deaths: item -331 2nd occ,
+    item -306, item -347). `HOLD_S` raised 90→210 in s595 without effect (2 more nulls). **Do
+    not raise `HOLD_S` a 3rd time** — switch redesign axis: (a) cut the pre-hangar noise-death
+    rate so more runs reach case6, or (b) try a natural (non-force) double_start path to sec4
+    instead of `ROGUESQ_FORCE_CASE6_START`. Neither tried as of s596. `sec4>=2` is the correct
+    discriminating threshold (`sec4=1` is boot-only overlay-preload noise, confirmed s594
+    against `s592_sec4_thr12_a`'s real post-exit `sec4=2`). Full session-by-session detail:
+    `PORTING-STATE.md` Sessions 589-596.
 
--360. **(s590/s591) Post-exit thr-11→section4→thr-12→section2 — RECHARACTERIZED.**
-    thr-11 `saveServiceWorker` (0x8006F2CC) is infinite recv loop; destroy =
-    external stop co-timed with sec4 DMA. **H12a REFUTED** (not mesg/audio
-    wait; s591 audio-drain iters=1 only at thr-10 restart). **H12c SUPPORTED**
-    (thr-11 destroy+sec4 only with healthy FULL_SYNC / recovery: s577 Δ266
-    tasks; s589 Δ2851 + recovery; s591 no recovery → thr-11 never destroy).
-    Primary remaining = item -361 (post-sec4 thr-12) + recovery reliability.
-    Artifact: `s591_thr11_pipeline/ANALYSIS.md`.
+-360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
+    `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
+    DMA when FULL_SYNC recovery is healthy (H12c SUPPORTED; H12a mesg/audio-wait REFUTED).
+    Primary remaining = item -361 + recovery reliability. Artifact: `s591_thr11_pipeline/ANALYSIS.md`.
 
--359. **(s589/s590) Force path missing section 2 — RECHARACTERIZED.** Not a
-    hangar case5 vs case6 gate (**H11a REFUTED** s590: FORCE_CASE6 did 6→8 +
-    hangar-sel + VI640, still 0 sec2). Real gap = post-exit thr pipeline
-    (item -360). `ROGUESQ_FORCE_CASE6_START` landed (ACE94, default off) as
-    reliable exit tool. Inject recovery 2nd confirm s590 @0x76B768×3853.
+-359. **(s589/s590) Force path missing section 2 RECHARACTERIZED.** Not a case5-vs-case6 gate
+    (H11a REFUTED — FORCE_CASE6 reached 6→8+hangar-sel+VI640, still 0 sec2). Real gap = item
+    -360's thr pipeline. `ROGUESQ_FORCE_CASE6_START` (ACE94, default off) landed as reliable
+    exit tool.
 
--358. **(s588/s589) Post-dual empty after H9d — RECHARACTERIZED / CLOSED as
-    structural gap.** s588: empty×2085, 0 recovery @0x76B768, fs=4890, crash
-    `0x80065e94`. s589: **H10a CONFIRMED** — 2288 post-dual `syncs>0`,
-    recovery `0x76B768`×1988, fs=7010, hangar 40/40; **H10b REFUTED**;
-    **H10d REFUTED**. Empty = failed recovery, not missing task-end inject.
-    Inject still required through dual residual. **s590 2nd recovery confirm**
-    @0x76B768×3853 (case6+inject). Artifact: `s589_post_dual_empty/ANALYSIS.md`.
+-358. **(s588-s590) Post-dual empty after H9d RECHARACTERIZED/CLOSED as structural gap.** H10a
+    CONFIRMED — recovery cell `0x76B768` firing yields 2288 post-dual `syncs>0` (H10b/H10d
+    REFUTED). Empty = failed recovery, not a missing task-end inject. 2nd recovery confirm s590
+    @0x76B768×3853. Artifact: `s589_post_dual_empty/ANALYSIS.md`.
 
--357. **(s587/s588) Residual F3/FD FULL_SYNC starvation — FIXED s588 (H9d
-    drop-return).** s587 E7-only inject left post-E7 zero-run (F3/FD at
-    sticky cell). s588: extend `ROGUESQ_FS_PIPE_INJECT` to any non-E9 size-8
-    at slot∩last_fs — inject scratch `0x7FFF80` FULL_SYNC and **drop** the
-    size-8 (same control flow as PIPE). **H9d CONFIRMED** (r3: 237 E9 + 150
-    E7 + 8 F3 + 175 FD continuous; inject n≈300+; hangar e9_b 39/40; 0 UJ).
-    **Forward residual REFUTED** (r2 UJ 2078 at task ~5880, same family as
-    s587 r2 in-place). **H9c REFUTED this window** (0 recovery cells).
-    Default OFF until item -358. Artifact: `s588_fs_f3_residual_r3`.
+-357. **(s587/s588) Residual F3/FD FULL_SYNC starvation FIXED s588 (H9d drop-return).** Extend
+    `ROGUESQ_FS_PIPE_INJECT` to any non-E9 size-8 at slot∩last_fs, inject+drop. 570 continuous
+    E9→E7→F3→FD, 0 UJ, hangar e9_b 39/40. Default OFF until item -358.
 
--356. **(s586/s587) H7 writer RESOLVED; product FS_PIPE_INJECT E7-phase DONE
-    (default OFF).** s586: E9→E7 is Factor5 LLE RSP (H7a; H7b/H7c REFUTED).
-    s587: mode-1 non-mutating E7 inject **H8a CONFIRMED**; H8c mode-1
-    REFUTED; in-place REFUTED (UJ 2080). Extended s588 for residual (-357).
+-356. **(s586/s587) H7 writer RESOLVED; product `FS_PIPE_INJECT` E7-phase DONE (default OFF).**
+    E9→E7 is Factor5 LLE RSP (H7a CONFIRMED). Mode-1 non-mutating E7 inject H8a CONFIRMED.
 
--355. **(s585–s589) H-sync4 mechanism + writer + product inject through FD.**
-    Sticky side-slot FULL_SYNC; H7a RSP writer; s587 E7 + s588 F3/FD inject.
-    Natural dual sticky confirm still open (H7d). Post-dual empty → -358
-    CLOSED as structural gap (recovery path can fire).
+-355. **(s585-s589) H-sync4 mechanism + writer + product inject through FD.** Sticky side-slot
+    FULL_SYNC; RSP writer (H7a); E7 + F3/FD inject. Natural dual sticky confirm still open
+    (H7d). Rolled into -358.
 
--354. **(s584/s585) H-sync4 stop edge RESOLVED as staging-cell opcode switch;
-    s585 refined to sticky overwrite.** phys `0x76DF60` shared 8-byte DPC
-    staging cell; 237 E9 then 150 E7 + 530 FD; dual DLs continue (H5b/H5c
-    REFUTED). Force recovers at `0x76A838` task #6258. Detail under -355.
+-354. **(s584/s585) H-sync4 stop edge RESOLVED as staging-cell opcode switch.** Shared 8-byte
+    DPC staging cell at phys `0x76DF60`; 237 E9 then 150 E7 + 530 FD, dual DLs continue (H5b/H5c
+    REFUTED). Force recovers at `0x76A838` task #6258.
 
--353. **(s583/s584) H-sync4 stop edge — RESOLVED s584.** Owner = shared LLE DPC
-    staging cell at phys `0x76DF60`. Stop = content switch E9→E7 (then F3/FD),
-    not submit-path death. Detail under -354/-355.
+-353. **(s583/s584) H-sync4 stop edge — owner FOUND, RESOLVED s584 → item -354.** Shared LLE DPC
+    staging cell at phys `0x76DF60`. Stop = content switch E9→E7 (then F3/FD), not submit-path
+    death.
 
--352. **(s582/s583) H-sync4 source FOUND (2 independent force-exit runs).**
-    Cutscene dual DLs (`dl_ptr` 0x80747930/0x80729690, tris=164, endB8) have
-    **e9_b=0** yet runner `syncs=1` for ~238 tasks, then flip to `syncs=0`.
-    **s583 `ROGUESQ_LOG_RDP_FULLSYNC`:** every hist-counted FULL_SYNC is a real
-    size=8 `kind=single` with **b0=E9 w0=E9000000** (guest G_RDPFULLSYNC encoding;
-    F3D 0xE9 & 0x3F == RDP 0x29). Dual window: **238 consecutive singles at fixed
-    phys `0x76DF60`** (= 238 dual `syncs=1`); head size≠8 = 0 (no multi-cmd
-    misdecode); hangar positive control first 40 at `0x7778C8` b0=E9. H4b/H4d
-    **REFUTED**; "synthetic non-guest" **REFUTED** (bytes are real E9); H4c
-    **CONFIRMED** as side-slot E9 outside task `e9_b` tree. **s584:** sticky
-    E9→E7→FD is LLE **reusing the cell** for PIPE_SYNC/SETTIMG, not passive
-    corruption; force path later moves FULL_SYNC to `0x76A838`.
+-352. **(s582/s583) H-sync4 source FOUND.** Cutscene dual DLs have e9_b=0 yet runner syncs=1
+    for ~238 tasks then flip to syncs=0 — all real guest `E9000000` (G_RDPFULLSYNC) at fixed
+    phys `0x76DF60`, a side-slot outside the task `e9_b` tree (H4c CONFIRMED; H4b/H4d REFUTED).
 
 -351. **(s581/s582) Factor5 DL walk GREEN; post-exit H-sync1 CONFIRMED, H-sync2 REFUTED.**
-    s581 hangar control: late first 30 `syncs=1` e9_a **0/30**, e9_b **30/30**, lin
-    **30/30**, fs_b0=E9 — H-walk1 CONFIRMED, H-walk3 REFUTED for hangar. **s582
-    force-exit plateau** (hangar-sel→state8→VI 640@0x6A2900; no section 2 — died
-    item -347): same-run hangar control reconfirmed 30/30 e9_b; post-last_sync
-    probes **132/132 e9_b=0**, endB8 complete, **0 e9_b≥1 with syncs=0** → H-sync1
-    CONFIRMED, H-sync2 REFUTED. Use **e9_b** as authoritative guest FULL_SYNC
-    presence (lin_e9 alone is not H-sync2 evidence when e9_b=0). Natural double_start
-    2/2 leave-path crashes this session — force path is valid for this discrimination
-    only. Follow-on = item -352 (H-sync4).
+    Hangar control e9_b 30/30 (H-walk1 CONFIRMED). Post-exit plateau 132/132 e9_b=0, 0 cases of
+    e9_b≥1 & syncs=0. Use `e9_b` as authoritative guest FULL_SYNC presence.
 
--350. **(s580/s581) `ROGUESQ_LOG_DL_SYNC` — boot OK; s580 walker incomplete; FIXED s581.**
-    s580: complex DLs `syncs=1 raw_e9=0` under B5=ENDDL. s581 root cause: Factor5 0xB5
-    is chunk marker / no-op (live HLE), not ENDDL — treating it as ENDDL ends walks at
-    `endB5` before guest 0xE9. Closed by e9_b mode; see item -351.
+-350. **(s580/s581) `ROGUESQ_LOG_DL_SYNC` walker FIXED s581.** Factor5 `0xB5` is a chunk
+    marker/no-op, not ENDDL; treating it as ENDDL ended walks before guest `0xE9`. Closed by
+    `e9_b` mode.
 
--349. **(s579) Post-mission-overlay RDP `fs` plateau reclassified — NOT s178 producer-stop;
-    FULL_SYNC starvation with live GFX tasks.** Offline discrimination on complete s577 log
-    (instruments already armed; same-run positive control). `rdpFs` == Σ runner `syncs` (4602).
-    After section 2: last `syncs>0` task #5959; then **772** consecutive `syncs=0` tasks all
-    `exit=1`; 772 `[lle task]`; 0 `stalled=1`; present FIRE pairs=4 + present-1024 empty=0.
-    H-stall1/2/classic-s178 **REFUTED**; H-stall3b FULL_SYNC starvation **CONFIRMED**; H-stall4
-    fixed-draw freeze **SUPPORTED** (hold MD5-identical; tris lock 42 then 51). s578 H-m3
-    "s178 family" framing **overturned** (believable: fs plateau + frozen PNGs look like s178
-    from the outside; refuted by task/present counters). **s580–s581:** walker fixed via
-    e9_b. **s582:** H-sync1 CONFIRMED / H-sync2 REFUTED on plateau. **s583:**
-    H-sync4 source = fixed guest E9 at `0x76DF60` (item -352). **s584:** stop
-    edge RESOLVED (staging-cell E9→E7). **s585:** sticky overwrite + PIPE
-    filter. **s586:** H7a CONFIRMED (item -356); product bridge next.
+-349. **(s579) Post-mission-overlay RDP `fs` plateau RECLASSIFIED — NOT s178 producer-stop;
+    FULL_SYNC starvation with live GFX tasks.** `rdpFs`==Σ`syncs`; last `syncs>0` task #5959,
+    then 772 consecutive `syncs=0` all `exit=1`, 0 `stalled=1`, present FIRE pairs=4 (H-stall3b
+    CONFIRMED; H-stall1/2/classic-s178 REFUTED). Root-caused through items -352..-356 into the
+    `FS_PIPE_INJECT` product line.
 
--348. **(s568/s569) SIBLING_PTR DIRECT residual same-base gap class — FIXED and FULLY CLOSED 2/2
-    (s569).** Systematic audit of the `-334/-340/-345/-346` model across all applied freelist/
-    sibling guards. Dual offline scan (focus-family seeds + all-PATCH MEM_W seeds): **140 unique
-    NEEDS_GUARD**, all **SIBLING_PTR** (102 TIGHT, 92 classic 0X0→0X4); freelist R-numbered + ATTR
-    residual **EMPTY**; packing not reopened. Extended `SIBLING_PTR_WRITE_GUARD` by **218 sites**
-    (w1=159 TIGHT+delay-dups, w2=52 multi-field tails, w3=7 second-order; float stores at
-    `0x80017264`/`0x80017268` packing-adjacent DEFERRED). **1st (s568):** hangarbay n=2900, full
-    ~300s rc=0, 0 sibling-ptr-write fires. **2nd (s569 retry after WEAK item-306 discard of queued
-    confirm):** hangarbay n=3000, full ~300s rc=0, 0 fires, 0 CRASH — CLEAN. DIRECT residual
-    same-base campaign for freelist/sibling write-guard lineage **exhausted**.
+-348. **(s568/s569) SIBLING_PTR DIRECT residual same-base gap class — FIXED and FULLY CLOSED
+    2/2.** 218 new guard sites (w1=159 TIGHT+delay-dups, w2=52 multi-field tails, w3=7
+    second-order); freelist R-numbered + ATTR residual EMPTY under dual scan — DIRECT residual
+    campaign for this lineage exhausted.
 
 -347. **(s566, s582, s594/s595 — 3 occurrences) `transformSceneLights`/`transformLightByType` /
     `last-guest-pc=0x80010134` breadcrumb — REFRAMED s595 as an instrumentation-coverage
-    artifact, NOT escalated.** Guest `0x80010134` is `submitSceneNodeRender`'s JAL
-    delay-slot right after `jal transformSceneLights`. s595 traced the source: neither
-    `transformSceneLights` nor its callee `transformLightByType` carries ANY
-    `g_rs64_last_guest_pc` tracking (0 lines in either body), while `submitSceneNodeRender`
-    itself is fully tracked (part of the `SIBLING_PTR_WRITE_GUARD` campaign). Codebase scan:
-    tracking exists in only 52/2499 recompiled functions — it's added per guard-campaign
-    function, not blanket. **Consequence: a crash anywhere in this unaudited subtree freezes
-    `last-guest-pc` at the same caller stub regardless of the true fault site** — 3 identical
-    reports are consistent with 3 *different* crashes, not one recurring bug. No guard
-    written; not source-traceable further without first instrumenting the subtree (a new
-    audit, not a reactive chase). **Method-trap generalization:** the "watch for the Nth
-    occurrence" escalation heuristic (used by items -323/-324/-325/-326/-330/-332/-333 too)
-    only has teeth when the reporting function is inside the guard-audited/instrumented set —
-    unaudited-subtree breadcrumbs need this caveat before escalating on repeat count alone.
+    artifact, NOT escalated.** Neither function carries `g_rs64_last_guest_pc` tracking (only
+    52/2499 functions do, all guard-campaign-associated), so a crash anywhere in this unaudited
+    subtree freezes the value at the same caller stub — 3 reports are consistent with 3
+    different crashes, not one recurring bug. No guard written. Method-trap generalization filed
+    below: the "watch for the Nth occurrence" heuristic only has teeth when the reporting
+    function is in the guard-audited set.
 
--346. **(s565/s566/s567) `heapFreeListDequeue` residual r3-base write at `0x8000D6D0` — FIXED
-    and FULLY CLOSED 2/2 (s567).** DIRECT gap before existing `HEAP_FREE_LIST_DEQUEUE_R2_GUARD`
-    site=`0x8000D6D4`: both delay-slot copies of `sw $v0, 0x0($v1)` (`MEM_W(0X0, ctx->r3)=ctx->r2`)
-    were unguarded. Same gap model as -334/-340/-345. Family `HEAP_FREE_LIST_DEQUEUE_R6_GUARD`
-    (env `ROGUESQ_LOG_HEAP_FREE_LIST_DEQUEUE_R6_GUARD`). **1st (s566):** hangarbay n=2600, 0 r6
-    fires, no 0x8000d6d0 crash; died on item -347. **2nd (s567 retry after WEAK item-306 discard):**
-    hangarbay n=2700, full ~300s rc=0, 0 r6 fires, 0 CRASH — CLEAN.
+-346. **(s565-s567) `heapFreeListDequeue` residual r3-base write at `0x8000D6D0` — FIXED and
+    FULLY CLOSED 2/2.** DIRECT gap before existing `HEAP_FREE_LIST_DEQUEUE_R2_GUARD`
+    site=`0x8000D6D4`; fixed as `HEAP_FREE_LIST_DEQUEUE_R6_GUARD`. Same gap model as
+    -334/-340/-345.
 
--320. **(s508/s565/s566) `loadCutsceneAssetsByIndex+1860`/`last-guest-pc=0x800aafb8` — ROOT-CAUSED
-    AND FULLY CLOSED 2/2 (s566).** ≥4 hangarbay-controlled hits pre-fix. **Mechanism:** guest
-    `0x800AAFB8` is the *caller's* JAL delay-slot nop in `runHangarSelectionFrame`. Host `+1860` =
-    `L_800A92F0` `lw $v0,-0x25A4($s1)`. `$s1` clobbered by `projectModelBoundsToScreen` guard1/guard2
-    early-exit `goto L_80066204` before those regs were spilled. Fix: safe mini-epilogue. **1st
-    (s565):** hangarbay n=2600, 0 guard fires, no +1860 crash. **2nd (s566 fold):** hangarbay n=2600,
-    full ~300s rc=0, 0 fires, no +1860 crash — CLEAN. Bonus same-run positive engagement on the
-    item -346 1st verify: `project-model-bounds-guard2` n=0..179 (fix catches bad args without
-    clobbering caller `$s1`).
+-320. **(s508/s565/s566) `loadCutsceneAssetsByIndex+1860`/`0x800aafb8` — ROOT-CAUSED AND FULLY
+    CLOSED 2/2.** ≥4 hangarbay-controlled hits pre-fix. **Mechanism:** `projectModelBoundsToScreen`
+    guard1/guard2 early-exit `goto` clobbered `$s1` before it was spilled, corrupting the caller
+    (`runHangarSelectionFrame`)'s later reload. Fix: safe mini-epilogue.
 
--345. **(s562/s564) `heapFreeListDequeue` DIRECT gap after item -322 `HEAPLISTDEQ_ATTR_WRITE_GUARD`
-    site=`0x8000D92C` — FIXED and FULLY CLOSED 2/2 (s564).** Same-run root cause (s562): guard fired
-    `n=0 bad_ptr=0x8` then crash at `last-guest-pc=0x8000d944` (`MEM_W(0X4, r3)` after r3 reloaded
-    from the same stack slot `0x3C` that fed the guarded r2 write). Same gap model as items
-    -334/-340. Extended family to **7 residual sites** sharing env
-    `ROGUESQ_LOG_HEAPLISTDEQ_ATTR_WRITE_GUARD`: `0x8000D944`, `0x8000D94C`, `0x8000D964` (x2 recomp
-    delay-slot), `0x8000D978`, `0x8000D980`, `0x8000D994` (bit-0x10 path + L_8000D968 alt). Skip
-    safe. **1st (s563):** hangarbay n=2600, 0 fires, no crash at 0x8000D944. **2nd (s564 fold):**
-    hangarbay n=2700, 0 fires; crash `coalesceFreeHeapBlocks+3192`/`0x8000241c` (s354-366 noise) —
-    CLEAN.
+-345. **(s562/s564) `heapFreeListDequeue` DIRECT gap after `HEAPLISTDEQ_ATTR_WRITE_GUARD`
+    site=`0x8000D92C` — FIXED and FULLY CLOSED 2/2.** Same gap model as items -334/-340; extended
+    to 7 residual sites sharing env `ROGUESQ_LOG_HEAPLISTDEQ_ATTR_WRITE_GUARD`.
 
--344. **(s562/s563) Non-r3 freelist dual-walk residual (s560 r3-only gap) + freelist simple-walk —
-    FIXED and FULLY CLOSED 2/2 (s563).** Residual freelist-shaped NONE: `allocateDisplayListBuffer`
-    `0x80007DA8` r4 + `renderLitMeshFaceGroup` `0x80013EEC` r4 + `countDisplayListChunks` simple-walk
-    `0x80007CC8`. GUARD2+3+4 x2 + `FREELIST_SIMPLE_WALK_GUARD` x1. Packing DEFERRED (21/22). **1st:**
-    hangarbay n=2600. **2nd (s563 fold):** hangarbay n=2900, 0 fires; crash `coalesceFreeHeapBlocks`
-    `0x800023b0` unrelated — CLEAN.
+-344. **(s562/s563) Non-r3 freelist dual-walk residual + freelist simple-walk — FIXED and FULLY
+    CLOSED 2/2.** 3 sites (`allocateDisplayListBuffer`, `renderLitMeshFaceGroup`,
+    `countDisplayListChunks`); packing DEFERRED (21/22).
 
--343. **(s561/s562) Residual freelist initial-deref GUARD2 (post-null-check `lw $v0, 0x0($aN)`) —
-    FIXED and FULLY CLOSED 2/2 (s562).** 92 sites (`ROGUESQ_LOG_ALLOC_TAIL_GUARD2`). 1st: hangarbay
-    n=2700 full 300s 0 fires. 2nd (s562 fold): hangarbay n=2600, 0 fires, crash on catalogued
-    `tickWrappingTimerAccumulatorList` div0 `0x80054744` — CLEAN.
+-343. **(s561/s562) Residual freelist initial-deref GUARD2 — FIXED and FULLY CLOSED 2/2.** 92
+    sites (`ROGUESQ_LOG_ALLOC_TAIL_GUARD2`).
 
--342. **(s560/s563) Residual freelist-walk GUARD3+GUARD4 (post-findAndUnlink walk-to-tail) — FIXED
-    and FULLY CLOSED 2/2 (s563).** GUARD3 x94 + GUARD4 x92. 1st: hangarbay n=2600. 2nd after 3
-    consecutive weak item-306 deaths: hangarbay n=2900, full ~300s rc=0, 0 fires — CLEAN.
+-342. **(s560/s563) Residual freelist-walk GUARD3+GUARD4 — FIXED and FULLY CLOSED 2/2.** GUARD3
+    x94 + GUARD4 x92.
 
 -341. **(s559/s561) Freelist-walk GUARD4 systematic audit (item -339 shape) — FIXED and FULLY
-    CLOSED 2/2 (s561).** GUARD3-without-GUARD4 gap at 16 sites (`emitAllocatedDLCommand` x3
-    incl -339, `heapFreeListDequeue` x4, `submitSceneNodeRender` x9 incl -337). Env:
-    `ROGUESQ_LOG_EMIT_DL_GUARD4` / `HEAPLISTDEQ_GUARD4` / `SCENE_NODE_LIST_GUARD4`. 1st: hangarbay
-    n=2900, full ~300s rc=0, 0 fires. s560 confirm WEAK (item -306); s561 retry CLEAN hangarbay
-    n=2900, full ~300s rc=0, 0 fires — **CLOSED 2/2** (covers -339/-337).
+    CLOSED 2/2.** GUARD3-without-GUARD4 gap at 16 sites (`emitAllocatedDLCommand` x3 incl -339,
+    `heapFreeListDequeue` x4, `submitSceneNodeRender` x9 incl -337) — covers both -339/-337.
 
 -340. **(s557/s558) `SIBLING_PTR_WRITE_GUARD` site=`0x80010B4C` (`submitSceneNodeRender`) — FIXED
-    and FULLY CLOSED 2/2 (s558).** DIRECT gap after existing site `0x80010B48`: pre-crash fire
-    `bad_ptr=0x18`, crash at `0x80010B4C` = bad_ptr+4 (same model as item -334). New family site
-    (reg r3, off 0X4). s558 confirm: hangarbay n=3000, full ~300s no-crash rc=0, 0 fires on residual
-    batch-2 tags and 0 sibling-ptr-write fires — intermittent corruption, closed 2/2.
+    and FULLY CLOSED 2/2.** DIRECT gap after existing site `0x80010B48`, same model as item -334.
 
--339. **(s556) `emitAllocatedDLCommand+13216`/`last-guest-pc=0x800088ec` — ROOT-CAUSED AND FIXED
-    s559 as part of item -341 freelist-walk GUARD4 (site `0x800088EC`); FULLY CLOSED 2/2 with
-    item -341 s561.**
+-339. **(s556) `emitAllocatedDLCommand+13216`/`0x800088ec` — ROOT-CAUSED, FIXED and FULLY CLOSED
+    2/2 with item -341 (s561).**
 
 -338. **(s554, s572, s574, s592 — 4 occurrences) `beginFrameDLChunk`/`last-guest-pc=0x8000afa0`
-    breadcrumb, filed not chased.** s554 hangarbay: `+37740` at n=2600. **s572 leave-hold:**
-    `+46800` at hold-iter ~12. **s574 leave-gates:** `+46800` at hold-iter 1. **s592_r2
-    force exit:** `+46800` at hangar state=5 pre case6 (same guest PC). Confidence
-    **high**. Still do not open a reactive leave-path chase until hangar exit works
-    (item -7); prioritize after the state-machine gate / path-to-sec4 reliability.
+    breadcrumb, filed not chased.** All 4 at `+37740` or `+46800` (same guest PC) around hangar
+    leave-hold/state 5. Confidence **high**. Still do not open a reactive leave-path chase until
+    hangar exit works (item -7); prioritize after the state-machine gate / path-to-sec4
+    reliability.
 
--337. **(s551) `submitSceneNodeRender+69192`/`last-guest-pc=0x80010df4` — ROOT-CAUSED AND FIXED
-    s559 as part of item -341 freelist-walk GUARD4 (site `0x80010DF4`); FULLY CLOSED 2/2 with
-    item -341 s561.**
+-337. **(s551) `submitSceneNodeRender+69192`/`0x80010df4` — ROOT-CAUSED, FIXED and FULLY CLOSED
+    2/2 with item -341 (s561).**
 
--335/-336. **(s550) Two more single-occurrence background-noise breadcrumbs, filed not chased**,
-    surfaced by the two s549 confirm soaks folded in this session. **-335**
-    `emitAllocatedDLCommand+1960`/`last-guest-pc=0x800086ec` (from
-    `s549_five_tied_guards_confirm_retry2`, its 4th and finally-valid attempt, `hangarbay-entry n=31`).
-    **-336** `findLookupEntryByKey+2212`/`last-guest-pc=0x800ac914` (from
-    `s549_sibling_ptr_write_gap_confirm`, `hangarbay-entry n=31`) — same symbol+offset as item -325's
-    `findLookupEntryByKey+2212`/`0x800ad0dc` but a DIFFERENT `last-guest-pc` (the family's own
-    `pc-symbol`-instability gotcha, s541/PROJECT-OVERVIEW §25) — not a 2nd occurrence of -325, a new
-    single-occurrence signature. Watch both for recurrence before escalating.
+-335/-336. **(s550) Two single-occurrence background-noise breadcrumbs, filed not chased.**
+    -335 `emitAllocatedDLCommand+1960`/`0x800086ec`. -336 `findLookupEntryByKey+2212`/
+    `0x800ac914` — same symbol+offset as item -325 but a DIFFERENT `last-guest-pc` (pc-symbol
+    instability gotcha, s541) — a new single-occurrence signature, not a 2nd occ of -325. Watch
+    both for recurrence.
 
--334. **(s549) `SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC` (`submitSceneNodeRender`) and item -327's
-    root-cause fix (`DL_LIST_APPEND_DEREF_GUARD`, 84 sites) — FIXED and FULLY CLOSED 2/2 (s550).**
-    Found via DIRECT mechanistic correlation (not a blind re-scan): the item -317 step 3 guards-58-61
-    2nd confirm crashed at `last-guest-pc=0x80010DCC` while the SAME run's pre-existing
-    `sibling-ptr-write-guard site=0x80010DC4` fired (`n=0`, its first-ever fire across the whole
-    121-site family) with `bad_ptr=0x48830D10` one instruction earlier — `bad_ptr+4` matches the
-    crash's own fault address modulo the RDRAM host-mapping offset. Same shape as item -319's own gap:
-    an unguarded write immediately after an existing guard, reusing the SAME already-flagged-bad
-    register (`ctx->r5`, the delay-slot instruction after `0x80010DC4`'s `bne`, duplicated x2 by the
-    recompiler for taken/fallthrough paths — same non-branch-likely duplication `FREELIST_NEXT_GUARD`
-    hit with `bnel`, s441). Fixed as 2 new entries (122nd/123rd) in the family's
-    `_SIBLING_PTR_WRITE_SITES` list, sharing the family's existing env var. **Verifying the fix alone
-    caught the NEW guard itself firing** (`n=0`, `bad_ptr=0x810C747B`, matching the value the
-    pre-existing `0x80010DC4` guard fired with one instruction earlier in the SAME run — a 2nd,
-    independent confirmed catch), then the run crashed downstream at item -327's own address instead —
-    leading directly to item -327's root-cause fix. **2nd independent confirm (s550 fold-in): clean**
-    (`hangarbay-entry n=31`, 0 fires on either `sibling-ptr-write-guard site=0x80010DCC` or
-    `dl-list-append-deref-guard` any of 84 sites; crashed at 132.4s on the item -336 breadcrumb above,
-    unrelated) — **both FULLY CLOSED 2/2**, the corruption event is intermittent as every guard in this
-    campaign has shown. Full derivation: `PORTING-STATE.md` Sessions 549-550.
+-334. **(s549) `SIBLING_PTR_WRITE_GUARD` site=`0x80010DCC` + item -327's root-cause fix
+    (`DL_LIST_APPEND_DEREF_GUARD`, 84 sites) — FIXED and FULLY CLOSED 2/2.** Found via DIRECT
+    mechanistic correlation: an unguarded write immediately after existing guard `0x80010DC4`,
+    reusing the same already-flagged-bad register — same non-branch-likely recompiler duplication
+    (`bne`/`bnel` taken+fallthrough) that `FREELIST_NEXT_GUARD` hit (s441). Fixed as 2 new
+    entries (122nd/123rd) in the family's site list. 2nd confirm clean; crashed downstream on the
+    unrelated item -336 breadcrumb. Full derivation: `PORTING-STATE.md` Sessions 549-550.
 
--328..-333. **Six more single/double-occurrence breadcrumbs surfaced by item -317 step 3's s526-546
+-328..-333. **Six single/double-occurrence breadcrumbs surfaced by item -317 step 3's s526-546
     live-verifies, all filed not chased.** Full detail: `docs/PROJECT-OVERVIEW.md` §25-§26.
-    -328 (s528) `submitSceneNodeRender+69820`/`0x80010ebc`, distinct from -327's `+67668`/`0x80010e6c`.
-    -329 (s529) `rebuildActiveDisplayObjectList+660`/`0x800ab060`, distinct from the item -317 R5
-    `+540` breadcrumb. -330 (s536/s537, 2 occurrences back-to-back, weak corroboration per the
-    boring-first prior — same binary/script/adjacent wall-clock) `heapFreeListInsert+72`/
-    `0x800220b8`, distinct from -324's same-symbol/different-PC breadcrumb. **-331** (s537,
-    `local-symtab`-tagged, in the free-list-pop region, before every already-guarded address in
-    `heapFreeListDequeue`) `heapFreeListDequeue+29152`/`0x8000d688` — **2nd occurrence s593**
-    (`s593_coalesce_r2_verify_a`, host offset drifted to `+32892` per the s541 pc-symbol-instability
-    gotcha but same `last-guest-pc=0x8000d688`; confidence low→moderate, watch for a 3rd before
-    source-tracing, same pattern as -332). **-332** (s539 weak `n=5`,
-    recurred s544 with a strong `n=2600` control — confidence upgraded low→moderate, watch for a 3rd
-    before source-tracing) `submitSceneNodeRender+38976`/`0x8001086c`. **-333** (s546,
-    `local-symtab`-tagged, 16 bytes from -331's address but a distinct guest PC — treat the
-    free-list-pop region itself as suspicious if either recurs or a third nearby address appears)
-    `findAndUnlinkSmallestEntry+356`/`0x8000d698`. Watch all six for recurrence before escalating.
+    -328 `submitSceneNodeRender+69820`/`0x80010ebc`. -329 `rebuildActiveDisplayObjectList+660`/
+    `0x800ab060`. -330 (2 occurrences back-to-back, weak corroboration) `heapFreeListInsert+72`/
+    `0x800220b8`. **-331** (`local-symtab`, free-list-pop region) `heapFreeListDequeue+29152`/
+    `0x8000d688` — **2nd occurrence s593**, confidence low→moderate, watch for a 3rd. **-332**
+    (weak `n=5`, recurred s544 with a strong `n=2600` control) `submitSceneNodeRender+38976`/
+    `0x8001086c` — confidence low→moderate, watch for a 3rd. **-333** (`local-symtab`, 16 bytes
+    from -331's address, distinct guest PC) `findAndUnlinkSmallestEntry+356`/`0x8000d698`. Watch
+    all six for recurrence before escalating.
 
 -320..-327. **Eight breadcrumbs (s508-524); -320 FULLY CLOSED 2/2 s566 (see top entry); -321
     REFUTED; -322 FIXED+CLOSED (+ residual -345); -327 FIXED+CLOSED with -334; -323..-326 watch.** -323
@@ -495,39 +310,31 @@ a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
     -325 (s522) `findLookupEntryByKey+2212`/`0x800ad0dc`. **-326** (s524) `do_rom_read+608`/
     `0x800025ac` — **if a 2nd occ appears, urgent**.
 
--319. **(s503/s505/s519, 3 occurrences) `beginFrameDLChunk+40536`/`last-guest-pc=0x8000b0d0` — FIXED
-    s520 (`SIBLING_PTR_WRITE_GUARD` site=`0x8000B0D0`, 121st site in that family), FULLY CLOSED 2/2
-    s521.** A genuine gap in the original s459 sweep: an unguarded write sandwiched between two
-    already-guarded `-0x23A8` sibling sites, not covered by the step-3 tracer (different reload idiom,
-    so this fix doesn't subsume its open tiers). Full mechanism: PROJECT-OVERVIEW §24.
+-319. **(s503/s505/s519, 3 occurrences) `beginFrameDLChunk+40536`/`0x8000b0d0` — FIXED and FULLY
+    CLOSED 2/2.** `SIBLING_PTR_WRITE_GUARD` site=`0x8000B0D0` (121st site), a genuine gap in the
+    original s459 sweep between two already-guarded `-0x23A8` sibling sites. Full mechanism:
+    PROJECT-OVERVIEW §24.
 
 -318. **(s501-507) `appendRdpStateDl+144` crash — FIXED and FULLY CLOSED 2/2
-    (`APPEND_RDP_STATE_DL_ENTRY_GUARD`).** All 6 call sites reload a sibling global with no range check
-    and pass it as a write-cursor argument the callee dereferences unconditionally — outside the
-    existing 119-site `SIBLING_PTR_WRITE_GUARD` audit's scope. Fixed by range-checking at function
-    entry, skipping the body if invalid. CLOSED 2/2 s507 after an s506 inconclusive retry. Mechanism:
+    (`APPEND_RDP_STATE_DL_ENTRY_GUARD`).** All 6 call sites reload a sibling global with no range
+    check and pass it as a write-cursor argument, outside the existing 119-site
+    `SIBLING_PTR_WRITE_GUARD` audit's scope. Fixed by range-checking at function entry. Mechanism:
     `docs/PROJECT-OVERVIEW.md` §23.
 
--317. **(s490-558) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
-    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 131 guards fixed, ALL 131 FULLY
-    CLOSED 2/2 as of s558.** Steps 1 (`heapFreeListDequeue` as a whole function) and 2
-    (`buildOrientedFaceGeometry` as a whole function) are separately FULLY CLOSED 2/2 — note step 3
-    has since ALSO landed R-numbered guards inside these same two functions (and `heapFreeListInsert`),
-    a naming coincidence, not a re-opening of steps 1/2. Step 3's tracer
-    (`scratch/agent/s494_item317_step3_tracer.py`) found ~448 raw reload sites deduping to ~150
-    candidate guard placements; every freelist WRITE fix shares one shape (null check gates one arm,
-    non-null fallthrough has no `0x80000000`-`0x80800000` range check before write-through deref —
-    skip on invalid is safe). Classic r2/0X4: 115/115. Residual free-list-node rN/0X0: 16/16
-    (116-131). Full guard table: `docs/PROJECT-OVERVIEW.md` §22-§25.
-    **s558–s564:** freelist WRITE campaign CLOSED (details under -341..-345). **s565–s567:** item
-    -320 root-caused to `projectModelBoundsToScreen` early-exit s-reg clobber and CLOSED 2/2; item
-    -346 residual r3-base write at `0x8000D6D0` FIXED+CLOSED 2/2 (R6). **s568–s569:** SIBLING_PTR
-    DIRECT residual same-base class (item -348) 218 sites FIXED+CLOSED 2/2; freelist R/ATTR residual
-    EMPTY under dual scan — DIRECT residual campaign exhausted. **Standing gotchas** (full:
+-317. **(s490-569) Step 3 of the `-312..-316` lineage: a ~150-location blanket sweep of the same
+    derived-pointer reload idiom across `funcs_3.c`/`funcs_4.c` — 131 guards, ALL FULLY CLOSED
+    2/2.** Steps 1 (`heapFreeListDequeue`) and 2 (`buildOrientedFaceGeometry`) separately FULLY
+    CLOSED 2/2 (step 3 later added R-numbered guards inside these same functions too — a naming
+    coincidence, not a reopen). Tracer `scratch/agent/s494_item317_step3_tracer.py` found ~448 raw
+    reload sites deduping to ~150 placements; shared shape: null check gates one arm, non-null
+    fallthrough has no `0x80000000`-`0x80800000` range check before write-through deref — skip on
+    invalid is safe. **s558-s569 residual sweeps** (items -341..-348) closed the freelist WRITE
+    campaign, item -320's `projectModelBoundsToScreen` root cause, and the SIBLING_PTR DIRECT
+    residual class — DIRECT residual campaign now exhausted. **Standing gotchas** (full:
     PROJECT-OVERVIEW §22-§25): hangarbay positive control (s536); cross-check `last-guest-pc` not
-    host symbol (s541); weak item -306 early deaths discard+retry; early-guard `goto` full epilogue
-    only if ALL callee-saves already spilled (s565); breadcrumb occ counts re-tally SOAK-RESULTS
-    (s564). Raw detail: `PORTING-STATE.md` Sessions 490-569.
+    host symbol (s541); weak item -306 early deaths discard+retry; early-guard `goto` full
+    epilogue only if ALL callee-saves already spilled (s565). Raw detail: `PORTING-STATE.md`
+    Sessions 490-569.
 
 -316. **(s488-490) `DL_ALLOC_PROPAGATION_GUARD` — FULLY CLOSED 2/2.** A scope gap in the existing s436
     `CACHE_HEAD_A1_GUARD` (`emitAllocatedDLCommand`): validated one deref but not two propagating
@@ -560,17 +367,11 @@ a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
 -11. **M3 — `advancePlayerAnimationPhase` SIGBUS: PARKED (s89), RECURRED s424, ROOT-CAUSED AND GUARDED s425.** s424 hit it as a sibling of item -261's guarded `startPlayerSlotAnimationChannelLooping` crash; s425 root-caused and guarded it (wild `$a0` arg, same never-initialized-slot root state) — see item -261 for the full trace.
 -10/-9. **M3 — Metal-shader-compiler SIGSEGV reproducibility** (s83 spline1: SIGSEGV inside `Metal.framework`'s `MTLCompilerFSCache`, no source on our side; still one data point). **Confirm the s83 spline div0 guard actually engages**: 0/5 fires so far (still 0 after s88/s89/s90); real fix by code inspection (genuine 0/0 IEEE division) but no same-run positive control yet.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
--7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN — exit + cutscene
-    CONFIRMED; dual FULL_SYNC sticky gap product-fixed when inject+recovery
-    (s587–s590); in-mission blocked by post-exit scene transition under
-    FULL_SYNC health (items -360/-361), not thr-11 recv-block (H12a REFUTED
-    s591) and not case5-vs-case6 (H11a REFUTED s590).**
-    **Natural (s577):** thr-11 destroy ↔ sec4 → thr-12 → sec2.
-    **Force:** thr-11 destroy+sec4 only if recovery (s589 yes / s591 no);
-    thr-12 still never observed on force (s589 crash in initSceneForMission).
-    **s592 0/2** never reached exit (pre-case6 hangar noise: -338 4th + new
-    `reserveAndEmitDLEntry`/`0x8000ce54`). Natural leave crashes file-not-chase.
-    Inject still default OFF.
+-7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN.** Exit + cutscene CONFIRMED (s577);
+    dual FULL_SYNC sticky gap product-fixed when inject+recovery fire (items -354..-358);
+    in-mission still blocked by post-exit scene transition under FULL_SYNC health (items
+    -360/-361), not thr-11 recv-block (H12a REFUTED) or case5-vs-case6 (H11a REFUTED). Natural
+    leave-path crashes filed not chased. `FS_PIPE_INJECT` still default OFF.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.
