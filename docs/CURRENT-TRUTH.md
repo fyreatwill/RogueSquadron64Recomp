@@ -131,9 +131,11 @@ REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvatio
   **s627: class-D fail136c scored** — global H-ltexOOM REFUTED (pool4 free ≥ need but
   unselected for flags=0); size-corruption O3 REFUTED; residual is **selected-pool**
   E8/0 free census (s626 dump cap 16 hid free past i=15; ok136c ptr `0x80261E20`
-  past cap). **s628/s629: instrument LIVE (pool-aware `maxfree_sel`, cap 256) but
-  2 consecutive null soaks** — 0 ltexmg hits in 7 combined attempts, discriminator
-  unfed (item -390).
+  past cap). **s628-s630: instrument LIVE (pool-aware `maxfree_sel`, cap 256) but
+  3 consecutive null soaks** — 0 ltexmg hits in 10 combined attempts, discriminator
+  unfed; **s631: pivoted to `HOLD_S=210` soak + static pool-selection finding**
+  (pool "0" head structurally NULL this phase, so E8 is the sole candidate for
+  every default-flags alloc — no narrow consumer call-site set) (item -390).
 - Co-gates: recovery silence (-374; freeroll any eng+hsel `recov768=0`; prefer
   `RECOV_WAIT_S=50` + `BUDGET_S≥900` when pre-eng 128s cutscene SIGBUS is frequent),
   mid-window mat3inv Abort (-375), ship ret1/store (-376/-377), class-D craft-shadow
@@ -171,21 +173,37 @@ a range pointer. Highest allocated so far: -390. The next NEW item takes -391.
 
 ### Active M3 pipeline (s577–s627) — open residuals only
 
--390. **(s627→s629) pool-aware free census LIVE but UNFED — 2 consecutive null
-    soaks (s628, s629), 0 scored `fail136c` between them.** s628 (600s cap, 3
-    completed attempts): freeroll only (mat3inv×2, recovery_silent×1), 0 ltexmg.
-    s629 (added reroll-for-ltexOOM filter — rerolls recovery-active hits lacking
-    `thr11d_new`+`level-tex-cache`, avoiding wasted class-I scores; 1234s, 4
-    attempts): still 0 ltexmg (2 recov_silent + 2 recovery-active-no-class-D-ltex
-    reroll). The `maxfree_sel`/`reason` discriminator (H-ltexOOM-sel vs
-    H-ltexFree) has **no data yet** — instrument is live and correct but the
-    class-D `fail136c` condition that s625-627 hit 2/2 has not recurred in 7
-    combined attempts since. Do NOT read this as O1/O3 evidence either way —
-    it is a hit-rate problem, not a discriminating result. Iron rule 8: 2
-    consecutive null soaks on this discriminator; one more null before a
-    3rd-in-a-row forces a pivot preamble. Next: re-enqueue same recipe (RNG
-    variance, not a design flaw) OR widen HOLD_S/attempts if 3rd comes back
-    null too. Env: `ROGUESQ_LOG_RS_MALLOC_DIAG=1`. Full: Sessions 627-629.
+-390. **(s627→s630) pool-aware free census LIVE but UNFED — 3 consecutive null
+    soaks (s628, s629, s630), 0 scored `fail136c` in 10 combined attempts.**
+    s628 (600s cap, 3 completed attempts): freeroll only (mat3inv×2,
+    recovery_silent×1), 0 ltexmg. s629 (added reroll-for-ltexOOM filter —
+    rerolls recovery-active hits lacking `thr11d_new`+`level-tex-cache`,
+    avoiding wasted class-I scores; 1234s, 4 attempts): still 0 ltexmg (2
+    recov_silent + 2 recovery-active-no-class-D-ltex reroll). **s630 (verbatim
+    re-enqueue, 600s cap, 3 attempts): still 0 ltexmg** (1 recov_silent, 1
+    matnoise-reroll, 1 RECOV_WAIT-expired) — instrument still LIVE and correct
+    (posctrl sane both scored attempts, `maxfree_sel=0x4E6290`). The
+    `maxfree_sel`/`reason` discriminator (H-ltexOOM-sel vs H-ltexFree) has
+    **no data yet after 3 soaks** — the class-D `fail136c` condition that
+    s625-627 hit 2/2 has not recurred in 10 combined attempts since. Iron
+    rule 8: 3rd consecutive null soak on this exact recipe — per NEXT.md,
+    do NOT queue a 4th identical retry. **Pivot taken (s631, this session):**
+    (a) enqueued `s631_ltex_pool_aware_freeroll_hold210.sh` — same recipe,
+    `HOLD_S` widened 180→210 (the `-361` guardrail ceiling) for more dwell
+    time per attempt; (b) static read of `rs_malloc`'s pool-selection MIPS
+    (`funcs_0.c` L_80001B18-B98, `0x80001B44`/`0x80001B88`) confirms pool "0"'s
+    head global (`0x8011<<16 - 0x100`) is **structurally NULL** through this
+    whole phase (matches every posctrl dump: `head0=0x00000000`) — so for
+    ANY `rs_malloc` call with `flags&4==0` (incl. the `0x136C` level-tex-cache
+    call), pool E8 is the *only* candidate, unconditionally, not a per-call
+    selection outcome. This means "who else consumes E8" has no narrow
+    call-site set to grep for — every default-flags allocation in the window
+    is a candidate consumer, making static call-site enumeration low
+    information value. If s631 also comes back null: do not widen `HOLD_S`
+    further (210 is the ceiling); next probe is an aggregate E8 bytes-
+    allocated/-freed counter across the whole hangar-sel..ltex window, batched
+    into the existing `rs-malloc-diag` instrument rather than a new soak axis.
+    Env: `ROGUESQ_LOG_RS_MALLOC_DIAG=1`. Full: Sessions 627-631.
 
 -389. **(s626→s627) Class-D fail136c scored; global H-ltexOOM REFUTED; size-O3 REFUTED;
     residual is selected-pool.** s627 SCORE: thr11d_new=1 ltexmg=1 fail136c=1 posctrl=8

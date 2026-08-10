@@ -49243,3 +49243,80 @@ Consume `s630_ltex_pool_aware_freeroll_retry.sh` (already queued, loop will
 run it between iterations). See `scratch/agent/NEXT.md` for the pivot plan if
 it also comes back null.
 
+## Session 630 — 2026-08-10 — s630 3rd consecutive null; pivot to HOLD_S=210 + pool-selection static finding (item -390)
+
+### What ran
+Read-first: `s630_ltex_pool_aware_freeroll_retry.sh` had already been consumed
+by the loop between iterations (queued at end of Session 629, ran before this
+session started — `SOAK-RESULTS.md` line present but with a bare rc/dur, no
+inline verdict text, so the log itself had to be inspected directly). 600s
+cap, 3 attempts: attempt 1 material-noise mid-run reroll (recovery-active
+but no class-D ltex — thr11d_new=0 ltexmg=0 — free-rerolled per the s629
+filter), attempt 2 pre-engagement (no case5-entry), attempt 3 RECOV_WAIT
+expired (50s post hangar-sel, 0×`76B768`) — budget exhausted before a 4th
+attempt could start. **0 `ltexmg` hits, 0 `fail136c` events** across all 3.
+Both scored posctrl samples show the instrument still live and correct:
+`maxfree_sane=0x4E6290 maxfree_sel=0x4E6290 nfree_sel=2 reason=ok`,
+`head4=0x00000000 head0=0x00000000 headE8=0x80154690`.
+
+Combined s628+s629+s630: **10 attempts, 3 consecutive null soaks, 0 data for
+the `maxfree_sel` discriminator.** Per NEXT.md's own stop condition and iron
+rule 8, this session did **not** queue a 4th identical retry. Two pivot
+actions taken instead:
+
+1. **Enqueued `s631_ltex_pool_aware_freeroll_hold210.sh`** — s629/s630 recipe
+   verbatim except `HOLD_S` widened 180→210 (the `-361` guardrail ceiling; do
+   not raise further). More per-attempt dwell time after hangar-sel may raise
+   the probability of reaching the class-D `fail136c` call before an
+   attempt's reroll boundary fires.
+2. **Static-read `rs_malloc`'s pool-selection MIPS** in
+   `~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c` (L_80001B18-B98,
+   `0x80001B44`/`0x80001B88`), to evaluate the other pivot option from
+   Session 629's NEXT.md (grep who else consumes pool E8/0). Traced the
+   branch structure: for `flags&4==0` (which includes the failing `0x136C`
+   level-tex-cache call, `flags=0`), the code loads pool "0"'s head global
+   at `MEM_W(0x80110000, -0x100)`; if that head is zero it falls through
+   unconditionally to pool E8 (`MEM_W(0x80110000, -0xE8)`) as the *sole*
+   selected pool (`t0=1`, one candidate). Every posctrl dump collected since
+   s626 shows `head0=0x00000000` — pool "0" is **structurally empty**
+   through this entire phase of the game, not a per-call selection outcome.
+   This means there is no narrow "who else drains E8" call-site set to grep
+   for: every default-flags `rs_malloc` call anywhere in the
+   hangar-sel..`loadLevelTextureCache` window is a candidate consumer of the
+   same pool. The consumer-hunt pivot option from Session 629 is therefore
+   refuted as low information value before any grep was run — recorded as
+   `H-E8-consumer: REFUTED s631 (static)`.
+
+### Discrimination
+| Outcome | Verdict |
+|---|---|
+| H-ltexOOM-sel (maxfree_sel < need on scored fail136c) | **NO DATA** — 0 scored fail136c in s628/s629/s630, 3rd consecutive null |
+| H-ltexFree (maxfree_sel ≥ need, reason=no_fit_mystery) | **NO DATA** — same |
+| H-E8-consumer (narrow rs_malloc call-site set drains E8) | **REFUTED (static)** — pool "0" head structurally NULL this phase ⇒ E8 is the sole target for every default-flags call, not a narrow subset |
+| Instrument correctness (posctrl sane) | **CONFIRMED** again, both scored attempts |
+
+### Code
+`scratch/agent/soak_queue/s631_ltex_pool_aware_freeroll_hold210.sh` — new
+soak recipe, `HOLD_S=210` (ceiling), otherwise identical to s629/s630. No
+game-code changes this session (static read only, no source edits).
+
+### Ruled out
+The allocator-consumer-hunt investigation direction floated in Session 629's
+NEXT.md (grep who else calls `rs_malloc` against E8/0 before
+`loadLevelTextureCache`) — refuted as intractable/low-value: the candidate
+set is "every default-flags allocation in the window," not a short list.
+
+### Iron rule 8 status
+3 consecutive non-discriminating soaks on hypothesis-id `m3-post-exit-fs-stall`
+(narrow discriminator: -390 maxfree_sel/reason). Per the loop's own rule, did
+NOT queue a 4th identical `HOLD_S=180` retry. `s631` (this session) is a
+genuinely different recipe (`HOLD_S=210`, the guardrail ceiling) — if it also
+comes back null, the next pivot is an aggregate E8 bytes-allocated/-freed
+counter across the whole window (batched into the existing `rs-malloc-diag`
+instrument), NOT a further `HOLD_S` raise and NOT a call-site grep.
+
+### Next
+Consume `s631_ltex_pool_aware_freeroll_hold210.sh` (already queued, loop will
+run it between iterations). See `scratch/agent/NEXT.md` for the aggregate-
+drain-counter pivot plan if it also comes back null.
+
