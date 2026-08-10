@@ -2,44 +2,38 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s626 recap (read this first)
+## s627 recap (read this first)
 
-**H-walk1 CONFIRMED.** s625 free-byte walk garbage (maxfree ~GB on successful
-posctrl) was `uint32` guest addresses passed to `MEM_*` without `S32()` sign-
-extension. s626 dumps raw ≤16 nodes/pool with S32; early posctrl shows sane
-sizes (`maxfree_sane=0x4E6290`, free block at `0x80156D50`). O2 REFUTED.
-Class-D fail136c not hit this session (recovery freeroll) — O1 vs O3 still open.
+**s627 scored class-D fail136c** (loop freeroll, attempt 1):
+- thr11d_new=1 ltexmg=1 fail136c=1 posctrl=8 ok136c=1 cshadow_a=3
+- fail136c flags=0 need=0x1370; pool4 free 0x6A3C0/0x6A3E0 ≥ need but **unselected**
+- flags=0 path: E8 then pool0 only (rs_malloc L_80001B70)
+- Global H-ltexOOM **REFUTED**; size-corruption O3 **REFUTED**
+- `no_fit_mystery` was diag artifact (counted pool4 free)
+- ok136c ptr=`0x80261E20` past s626 dump cap → free on selected can live past i=15
+- -387 do_rom_read SIGBUS 3× after soft-skip (still freeroll while -385 open)
 
-### Evidence (s626 att1 posctrl, instrument LIVE)
-```
-pool=E8 i=2 addr=0x80154B10 flags=0x2 size=0x2230 sane=1
-pool=E8 i=3 addr=0x80156D50 flags=0x1 size=0x4E6290 sane=1
-summary event=posctrl nnodes=6 nfree=2 maxfree_sane=0x4E6290 reason=ok
-```
-ok136c also sane (`maxfree_sane=0x6A3E0`). Generic flags=0x4 fails: head4=NULL
-while pool0 free 0x3CE00 — reason string not pool-aware yet (cosmetic).
-
-Code: `../N64Recomp/fixup_game_funcs.py` + `funcs_0.c` s626 heap-diag.
-Env: `ROGUESQ_LOG_RS_MALLOC_DIAG=1`.
+**s628 instrument LIVE** (rebuilt): cap 256, free-always print, `maxfree_sel`/
+`nfree_sel`, reason `no_fit` | `no_fit_unsel` | `no_fit_mystery`.
 
 ## This iteration's work unit
 
-**Consume s627 freeroll (or re-run) for class-D fail136c raw free sizes — O1 vs O3.**
+**Consume s628 freeroll for selected-pool maxfree_sel — close H-ltexOOM-sel vs mystery.**
 
-1. Ensure binary still has s626 diag (`grep maxfree_sane` in funcs_0.c / run log).
-2. Run / consume `scratch/agent/soak_queue/s627_ltex_fail136c_freeroll.sh`
-   (BUDGET=1200, RECOV_WAIT=50, same force+inject + RS_MALLOC_DIAG).
+1. Ensure binary has s628: `strings build/RogueSquadron64Recomp | grep maxfree_sel`
+2. Run / consume `scratch/agent/soak_queue/s628_ltex_pool_aware_freeroll.sh`
+   (BUDGET=1200, RECOV_WAIT=50, force+inject + RS_MALLOC_DIAG).
 3. On scored class-D with fail136c≥1 ∧ posctrl≥1:
-   - Dump free nodes (flags&1) on pools the flags=0 path uses (E8 then 0).
-   - **O1** all free sizes < need=0x1370 and sane → H-ltexOOM (heap pressure)
-   - **O3** free sizes ≥ need on selected pool, or size words garbage only at
-     fail → H-ltexFree / other (check head4 for flags&4 noise separately)
-4. Optional batch (only if fail136c already in hand): pool-aware reason string
-   so flags=0x4 head4=NULL is `null_pool4` not `no_fit_mystery`.
-5. Do NOT soft-skip thr12. Do NOT merge -385 with -387.
+   - **O1 / H-ltexOOM-sel:** `reason=no_fit` or `no_fit_unsel`, `maxfree_sel < need`,
+     free sizes on sel pools sane → null is selected-pool pressure (next: who
+     consumes E8/0, or expand pool / free leaks)
+   - **O3 / H-ltexFree-walk:** `reason=no_fit_mystery`, `maxfree_sel ≥ need` →
+     freelist walk rejects free blocks (flags/size/order bug) — instrument walk
+   - Same-run control: posctrl `maxfree_sel` >> need + free= lines; fail136c `nsel=2`
+4. Do NOT soft-skip thr12. Do NOT merge -385 with -387.
 
-If s627 SOAK-RESULTS already has scored fail136c, skip re-run — offline-analyze
-the raw `pool=` lines and close O1 or O3.
+If s628 SOAK-RESULTS already has scored fail136c with maxfree_sel, skip re-run —
+offline-analyze and close O1 or O3.
 
 ## Hypotheses (active)
 
@@ -49,19 +43,21 @@ the raw `pool=` lines and close O1 or O3.
 | H-ltexArg | (REFUTED s625) | size=0x136C flags=0 |
 | H-ltexNullPool | (REFUTED s625) | heads KSEG0 non-null |
 | H-walk1 | **(CONFIRMED s626)** uint32 MEM_* garbage | sane maxfree on posctrl |
-| H-ltexOOM | null = no free block ≥ 0x1370 on selected pool | fail136c free sizes all < need, sane |
-| H-ltexFree | null = freelist metadata corrupt at fail | free sizes ≥ need OR garbage only at fail |
+| H-ltexOOM | (REFUTED s627 *global*) pool4 free ≥ need | maxfree all pools |
+| H-ltexOOM-sel | null = no free ≥ 0x1370 on E8/0 | fail136c maxfree_sel < need |
+| H-ltexFree | null = freelist walk rejects free ≥ need | maxfree_sel ≥ need, mystery |
 | H-recovwait1 | (CONFIRMED) | RECOV_WAIT=50 |
-| H-dmarom1 | (2×) post soft-skip DMA | freeroll; not -385 root |
+| H-dmarom1 | (3×) post soft-skip DMA | freeroll; not -385 root |
 
 ## Do NOT
 - uint32 KSEG0 MEM bases (use S32)
 - Soft-skip thr12 without fixing null alloc
 - Merge -385 with -387/-384/-373/-386
-- Trust pre-s626 maxfree/totfree numbers
+- Trust pre-s628 maxfree/reason when unselected free counted
 - Leave FORCE tools default-ON
 - Raise HOLD_S past 210
 
 ### Reference tags
 `[rs-malloc-diag]`, `ROGUESQ_LOG_RS_MALLOC_DIAG`, `fail136c`, `posctrl`, `ok136c`,
-`maxfree_sane`, `pool=`, H-walk1, H-ltexOOM, H-ltexFree, `0x136C`, `0x1370`
+`maxfree_sel`, `nfree_sel`, `no_fit_unsel`, `no_fit_mystery`, H-ltexOOM-sel,
+H-ltexFree, `0x136C`, `0x1370`, pool E8/0/4

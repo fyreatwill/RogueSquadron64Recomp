@@ -49134,3 +49134,57 @@ the -385 root.
 Consume `s627_ltex_fail136c_freeroll` (enqueued). On fail136c: compare free node
 sizes on E8/0 pools (flags=0 path) vs need=0x1370. Optional: make reason
 pool-aware for flags&4 / flags&0. Do not soft-skip thr12.
+
+## Session 627 — 2026-08-10 — s627 class-D fail136c: global H-ltexOOM REFUTED; pool4 free unselected; s628 pool-aware census
+
+### Work unit
+Consume s627 freeroll (loop-ran) for class-D fail136c O1 vs O3 after H-walk1 fix.
+Offline-analyze raw `pool=` free nodes; land pool-aware residual instrument.
+
+### s627 SCORE (attempt 1, recovery-active, BUDGET path ~302s wall / 264s run)
+```
+force6=1 force_old5=1 force_skip=0 case6=1 hsel=1 recov768=7956 crash=1
+ltexmg=1 ltex_null=0 thr11d_new=1 sec4_post=1 thr12_post=0 cshadow_a=3
+diag_pos=8 diag_fail=40 diag_fail136c=1 diag_ok136c=1
+diag_reason=no_fit_mystery diag_maxfree=0x6A3E0 diag_need=0x1370
+class_hint=M1_ltexmg_no_thr12
+```
+Post-guard residual: `[CRASH] do_rom_read+608` si_addr=0x380000003 (-387, 3rd
+session with same host stack after soft-skip; still free-reroll while -385 open).
+
+### fail136c free census (s626 instrument, cap 16)
+- flags=0x0 size=0x136C need=0x1370 heads non-null
+- **pool4** (NOT selected for flags=0): free 0x6A3C0 + 0x6A3E0, both ≥ need, sane=1
+- **pool0 + pool E8** (selected: E8 then 0): first 16 nodes all flags=0x2, stop=cap,
+  0 free in dump
+- summary nfree=2 maxfree_sane=0x6A3E0 is entirely from unselected pool4 →
+  `reason=no_fit_mystery` is a **diag artifact**, not freelist corruption
+- posctrl same-run: free E8 0x4E6290 sane (H-walk1 still good)
+- **ok136c earlier** returned ptr=`0x80261E20` (past 16-node dump of E8) with only
+  pool4 free visible in dump → free on selected pools lives past dump cap
+
+### Discrimination
+| Outcome | Verdict |
+|---|---|
+| O1 global (no free ≥ need anywhere) | **REFUTED** (pool4 free >> need) |
+| O3 size-word garbage at fail | **REFUTED** (all sane=1) |
+| O1 selected-pool (E8/0 free < need) | **OPEN** — dump cap hid past-i=15 free (ok136c proof) |
+| O3 free≥need on selected but null | **OPEN** — needs uncapped selected census |
+
+### Code (s628)
+`fixup_game_funcs.py` + `RecompiledFuncs/funcs_0.c`: upgrade heap-diag to s628
+- walk cap 16→256 (to term)
+- print free nodes always; allocated first 8/pool
+- pool selection matches rs_malloc (flags&4→pool4; else E8 then 0 when head0 set)
+- summary: `maxfree_sel` / `nfree_sel` / reason `no_fit` | `no_fit_unsel` | `no_fit_mystery`
+Binary rebuilt; strings verified. Enqueued `s628_ltex_pool_aware_freeroll.sh`.
+
+### Ruled out
+- Global heap pressure as sole explanation for null 0x136C
+- Size-field corruption as fail136c cause (at least in dumped nodes)
+- Trusting pre-s628 `no_fit_mystery` when maxfree comes from unselected pools
+
+### Next
+Run/consume s628 freeroll. Close H-ltexOOM-sel (O1) if maxfree_sel < need, or
+H-ltexFree/walk (O3) if maxfree_sel ≥ need. Do not soft-skip thr12.
+

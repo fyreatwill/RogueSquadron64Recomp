@@ -1,22 +1,18 @@
 #!/bin/zsh
-# s627 freeroll: same s626 S32+raw-node instrument; goal is recovery-active class-D
-# fail136c dump to discriminate H-ltexOOM (O1) vs progressive free-list corruption (O3).
-# H-walk1 already CONFIRMED s626 (posctrl sizes sane). Passive does not need rebuild if
-# binary still has s626 diag (maxfree_sane + pool=i= lines).
-# s627: H-walk1 fix — S32 MEM_* + raw ≤16 node dump; discriminate H-ltexOOM vs H-ltexFree.
+# s628 freeroll: s627 offline closed GLOBAL O1 (pool4 free >> need, unselected) and
+# size-corruption O3 (all sane). Residual: selected-pool OOM (E8 then 0 for flags=0)
+# vs no_fit_mystery (maxfree_sel>=need but null). s628 instrument walks to term
+# (cap 256), free-always print, maxfree_sel / reason=no_fit|no_fit_unsel|no_fit_mystery.
 # HYPOTHESIS-ID: m3-post-exit-fs-stall
 #
-# Builds on s624 class-D recipe (BUDGET=900, RECOV_WAIT=50, FORCE tools + FS inject).
-# NEW: ROGUESQ_LOG_RS_MALLOC_DIAG=1 → [rs-malloc-diag] at every null return,
-# every size==0x136C, and first 8 successful flags==0 size>=0x800 (posctrl).
+# Requires binary with s628 heap-diag (maxfree_sel in summary). Gated by
+# ROGUESQ_LOG_RS_MALLOC_DIAG=1.
 #
-# Discriminating (scored path = recovery-active class-D):
-#   O1) fail136c: free nodes (flags&1) all size < need, sizes sane → H-ltexOOM
-#   O2) size fields garbage on early posctrl too → walk still wrong (H-walk1 not closed)
-#   O3) sizes sane early, garbage only at fail136c → H-ltexFree progressive corruption
-#   O4) posctrl silent same run → instrument miss
-#   Same-run control: posctrl≥1 AND fail136c≥1; raw pool=i= lines must appear
-#   freeroll: -387 do_rom_read 1st; sinf/matfree/scene/readacct/trackres/recov_silent
+# Discriminating (scored class-D with fail136c≥1 ∧ posctrl≥1):
+#   O1) reason=no_fit or no_fit_unsel, maxfree_sel < need, free sizes sane → H-ltexOOM-sel
+#   O3) reason=no_fit_mystery, maxfree_sel ≥ need → freelist walk / other (H-ltexFree/walk)
+#   Same-run control: posctrl shows maxfree_sel >> need + free= lines; fail136c nsel=2
+#   freeroll: -387 do_rom_read 1st; sinf/matfree/scene/readacct/recov_silent
 #
 # Exit: 0 scored+ok, 1 scored+CRASH, 2 no recovery-active engagement
 
@@ -228,7 +224,7 @@ score_attempt() {
   local sec4=0 sec4_post=0 sec2=0 sec2_post=0
   local thr12_post=0 cshadow_a=0 cshadow_w=0 ltex=0 ship_store=0 ship_zero_post=0
   local force_old5=0 scenegraph=0 readacct=0 matfree=0 ltexmg=0 ltex_null=0
-  local diag_pos=0 diag_fail=0 diag_fail136c=0 diag_ok136c=0 diag_reason=none diag_maxfree= diag_need=
+  local diag_pos=0 diag_fail=0 diag_fail136c=0 diag_ok136c=0 diag_reason=none diag_maxfree= diag_maxfree_sel= diag_nfree_sel=0 diag_need=
 
   grep -aq '\[case5-force-state6\]' "$log" 2>/dev/null && force6=1
   grep -aq '\[case5-force-state6-skip\]' "$log" 2>/dev/null && force_skip=1
@@ -252,7 +248,7 @@ score_attempt() {
     diag_fail136c=${diag_fail136c:-0}
     diag_ok136c=$(grep -c '\[rs-malloc-diag\] event=ok136c' "$log" 2>/dev/null || true)
     diag_ok136c=${diag_ok136c:-0}
-    # s627: summary line carries reason/maxfree_sane; event line has need
+    # s628: summary line carries reason/maxfree_sane; event line has need
     local fline sline
     fline=$(grep '\[rs-malloc-diag\] event=fail136c' "$log" 2>/dev/null | tail -1 || true)
     sline=$(grep '\[rs-malloc-diag\] summary event=fail136c' "$log" 2>/dev/null | tail -1 || true)
@@ -262,6 +258,9 @@ score_attempt() {
     if [ -n "${sline:-}" ]; then
       diag_reason=$(printf '%s\n' "$sline" | sed -n 's/.*reason=\([^ ]*\).*/\1/p')
       diag_maxfree=$(printf '%s\n' "$sline" | sed -n 's/.*maxfree_sane=\(0x[0-9A-Fa-f]*\).*/\1/p')
+      diag_maxfree_sel=$(printf '%s\n' "$sline" | sed -n 's/.*maxfree_sel=\(0x[0-9A-Fa-f]*\).*/\1/p')
+      diag_nfree_sel=$(printf '%s\n' "$sline" | sed -n 's/.*nfree_sel=\([0-9]*\).*/\1/p')
+      diag_nfree_sel=${diag_nfree_sel:-0}
     fi
   fi
   is_ltex_null_malloc_crash "$log" && ltex_null=1
@@ -351,7 +350,7 @@ score_attempt() {
     class_hint=D_other_crash
   fi
 
-  echo "[fast-retry] SCORE force6=$force6 force_old5=$force_old5 force_skip=$force_skip case6=$case6 hsel=$hsel ace80=$ace80 recov768=$recov crash=$crash scenegraph=$scenegraph readacct=$readacct matfree=$matfree ltexmg=$ltexmg ltex_null=$ltex_null thr11c=$thr11c thr11c_post=$thr11c_post thr11d_post=$thr11d_post thr11d_new=$thr11d_new sec4=$sec4 sec4_post=$sec4_post sec2=$sec2 sec2_post=$sec2_post thr12_post=$thr12_post cshadow_a=$cshadow_a cshadow_w=$cshadow_w ltex=$ltex ship_store=$ship_store ship_zero_post=$ship_zero_post diag_pos=$diag_pos diag_fail=$diag_fail diag_fail136c=$diag_fail136c diag_ok136c=$diag_ok136c diag_reason=$diag_reason diag_maxfree=$diag_maxfree diag_need=$diag_need $ctrl_line ctrl_rc=$ctrl_rc class_hint=$class_hint"
+  echo "[fast-retry] SCORE force6=$force6 force_old5=$force_old5 force_skip=$force_skip case6=$case6 hsel=$hsel ace80=$ace80 recov768=$recov crash=$crash scenegraph=$scenegraph readacct=$readacct matfree=$matfree ltexmg=$ltexmg ltex_null=$ltex_null thr11c=$thr11c thr11c_post=$thr11c_post thr11d_post=$thr11d_post thr11d_new=$thr11d_new sec4=$sec4 sec4_post=$sec4_post sec2=$sec2 sec2_post=$sec2_post thr12_post=$thr12_post cshadow_a=$cshadow_a cshadow_w=$cshadow_w ltex=$ltex ship_store=$ship_store ship_zero_post=$ship_zero_post diag_pos=$diag_pos diag_fail=$diag_fail diag_fail136c=$diag_fail136c diag_ok136c=$diag_ok136c diag_reason=$diag_reason diag_maxfree=$diag_maxfree diag_maxfree_sel=$diag_maxfree_sel diag_nfree_sel=$diag_nfree_sel diag_need=$diag_need $ctrl_line ctrl_rc=$ctrl_rc class_hint=$class_hint"
   # Dump fail136c / posctrl event+nodes+summary for offline (bounded)
   if [ -f "$log" ] && [ "${diag_fail136c:-0}" -gt 0 ]; then
     echo "[fast-retry] === fail136c block (event+nodes+summary, last cluster) ==="
@@ -385,7 +384,7 @@ while :; do
     echo "[fast-retry] hit MAX_ATTEMPTS=$MAX_ATTEMPTS, stopping"
     break
   fi
-  TAG="s627_ltex_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
+  TAG="s628_ltex_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
   OUT="$ROOT/scratch/s73_post_a_scene/$TAG"
   LOG="$OUT/run.log"
   kill_game
@@ -551,7 +550,7 @@ while :; do
   fi
 
   if [ "$CASE6" -eq 1 ] && [ "$HSEL" -eq 1 ]; then
-    # s627: freeroll recovery-active without thr11d_new (class I) — we need
+    # s628: freeroll recovery-active without thr11d_new (class I) — we need
     # class-D / ltex path for H-ltexOOM. Still require recov768>0 (H-freeroll1).
     if [ "$RECOV768" -eq 1 ] && [ "$LTEXMG" -eq 0 ]; then
       # thr11d_new / ltex: recompute quickly from log (no `local` — top-level while)
