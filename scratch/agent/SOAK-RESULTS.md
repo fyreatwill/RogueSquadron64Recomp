@@ -322,3 +322,4 @@
 20260809-223148 | s605_force_state6_dual_target | rc=1 | 399s | scratch/agent/soak_results/s605_force_state6_dual_target_20260809-223148.log
 20260809-224513 | s606_handoff_76ba90_dual_target | rc=1 | 208s | scratch/agent/soak_results/s606_handoff_76ba90_dual_target_20260809-224513.log
 20260809-225402 | s607_handoff_material_noise_reroll | rc=1 | 311s | scratch/agent/soak_results/s607_handoff_material_noise_reroll_20260809-225402.log
+20260809-230626 | s608_post_sec2_pipeline_confirm | rc=137 | 600s | scratch/agent/soak_results/s608_post_sec2_pipeline_confirm_20260809-230626.log

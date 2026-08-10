@@ -48095,3 +48095,61 @@ corrupted `osViSetMode` (width=24) ~10 lines before crash.
 ### Next
 Fold s608 confirm soak; if sec2+same packTlut stack 2nd → escalate -373
 for entry-arg range check instrument (not reactive guard without class).
+
+## Session 609 (2026-08-09): fold s608_post_sec2_pipeline_confirm — recovery-silent class F; H-recov1 necessity SUPPORTED; recovery-cell free-reroll recipe queued
+
+### Planned unit
+Fold `s608_post_sec2_pipeline_confirm` (NEXT.md s608) and act on class A–F.
+
+### Soak result (loop, 600s hard cap, rc=137)
+Outer log: `scratch/agent/soak_results/s608_post_sec2_pipeline_confirm_20260809-230626.log`
+
+| Attempt | dur | force6 | case6 | hsel | ace80 | crash | class |
+|--------:|----:|:------:|:-----:|:----:|:-----:|:-----:|-------|
+| 1 | 171s | 1 | 0 | 0 | 0 | 1 | pre-eng free reroll |
+| 2 | 168s | 1 | 0 | 0 | 0 | 1 | pre-eng free reroll |
+| 3 | ~hard-killed mid-HOLD | 1 | 1 | 1 | 1 | 0 | **scored offline** (outer budget cut before scorer) |
+
+Pre-eng deaths (not scored):
+- A1 `setByteAcrossEntryList+176` / `last-guest-pc=0x800aafa8` / `si_addr=0x39b800424` (near closed -320 at `0x800aafb8`; 1× breadcrumb, not chased).
+- A2 host Metal/platform SIGSEGV + `last-guest-pc=0x800ab0e0` (noise).
+
+### Attempt 3 offline gates (scored)
+`scratch/s73_post_a_scene/s608_post_sec2_3_20260809231205/run.log`
+
+```
+force6=1 case6=1 hangar-sel=1 ace80=1 inject_max_n=750
+recov76B768=0 recov76BA90=0
+thr11_create=1 thr11_destroy=0 sec4_post=0 sec2_post=0
+tex/mat guards=0 vi24=0 crash=ok
+class_hint=F_recovery_silent_no_thr11_destroy
+post_hangar_sel FULL_SYNC addrs: 0x0076DF60 ×474 ONLY
+```
+
+State path complete: force-state6 → ACE80 5→6 → case6 → hangar-sel → state 6→8. thr11 (`0x8006F2CC`) created + resumed. inject on side-slot `0x76DF60` to n=750. Present later `stalled=1 pairs=0` with black hold screenshots; process alive until outer SIGKILL.
+
+### Discriminating contrast vs s607 (sec2 control)
+| | s607 | s608_a3 |
+|--|------|---------|
+| eng | yes | yes |
+| inject_max | 400 | 750 |
+| inject→EOF/768 lines | ~56k → first `0x76B768` | ~51k → EOF, **never** |
+| post-hsel fullsync | multi-cell (`76B768`×46 + family) | mono `76DF60` |
+| thr11_destroy / sec2 | 1 / 1 | 0 / 0 |
+
+**H-recov1 necessity SUPPORTED** (single-source before s608 was open; now two independent force6+inject engagements with opposite recovery outcomes, same recipe family). H-handoff2 remains REFUTED. Item -373 stays 1× (no sec2 this soak). H-sec2a not tested this run (recovery never armed thr11→sec4).
+
+### Action taken
+Queued `scratch/agent/soak_queue/s609_recovery_cell_reroll.sh`:
+- Free-reroll classes: pre-eng, material noise `0x8000e29c`, **and recovery-silent** (0×`0x0076B768` within `RECOV_WAIT_S=100` after hangar-sel → mid-run SIGKILL).
+- Score only recovery-active engagements; classify A–E for sec2/thr11 outcomes.
+- Keeps HOLD_S=180, force6+case6+inject, passive guard logs.
+
+### Rules out / does not claim
+- Does **not** claim inject is broken (inject fired to n=750; side-slot E9 continues).
+- Does **not** reopen 76BA90 as required.
+- Does **not** escalate -373 (no 2nd packTlut host stack).
+- Recovery-cell *writer* identity still open (why s607 diversifies and s608_a3 does not).
+
+### Next
+Consume s609 soak: recovery-active scored path should re-exercise thr11→sec2 and either reconfirm -373 or land in-mission hold.
