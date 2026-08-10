@@ -1,11 +1,11 @@
 #!/bin/zsh
-# s628 freeroll: s627 offline closed GLOBAL O1 (pool4 free >> need, unselected) and
+# s629 freeroll: s627 offline closed GLOBAL O1 (pool4 free >> need, unselected) and
 # size-corruption O3 (all sane). Residual: selected-pool OOM (E8 then 0 for flags=0)
-# vs no_fit_mystery (maxfree_sel>=need but null). s628 instrument walks to term
+# vs no_fit_mystery (maxfree_sel>=need but null). s629 instrument walks to term
 # (cap 256), free-always print, maxfree_sel / reason=no_fit|no_fit_unsel|no_fit_mystery.
 # HYPOTHESIS-ID: m3-post-exit-fs-stall
 #
-# Requires binary with s628 heap-diag (maxfree_sel in summary). Gated by
+# Requires binary with s629 heap-diag (maxfree_sel in summary). Gated by
 # ROGUESQ_LOG_RS_MALLOC_DIAG=1.
 #
 # Discriminating (scored class-D with fail136c≥1 ∧ posctrl≥1):
@@ -17,7 +17,7 @@
 # Exit: 0 scored+ok, 1 scored+CRASH, 2 no recovery-active engagement
 
 set -u
-ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+ROOT="/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp"
 cd "$ROOT" || exit 2
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 
@@ -248,7 +248,7 @@ score_attempt() {
     diag_fail136c=${diag_fail136c:-0}
     diag_ok136c=$(grep -c '\[rs-malloc-diag\] event=ok136c' "$log" 2>/dev/null || true)
     diag_ok136c=${diag_ok136c:-0}
-    # s628: summary line carries reason/maxfree_sane; event line has need
+    # s629: summary line carries reason/maxfree_sane; event line has need
     local fline sline
     fline=$(grep '\[rs-malloc-diag\] event=fail136c' "$log" 2>/dev/null | tail -1 || true)
     sline=$(grep '\[rs-malloc-diag\] summary event=fail136c' "$log" 2>/dev/null | tail -1 || true)
@@ -384,7 +384,7 @@ while :; do
     echo "[fast-retry] hit MAX_ATTEMPTS=$MAX_ATTEMPTS, stopping"
     break
   fi
-  TAG="s628_ltex_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
+  TAG="s629_ltex_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
   OUT="$ROOT/scratch/s73_post_a_scene/$TAG"
   LOG="$OUT/run.log"
   kill_game
@@ -550,7 +550,7 @@ while :; do
   fi
 
   if [ "$CASE6" -eq 1 ] && [ "$HSEL" -eq 1 ]; then
-    # s628: freeroll recovery-active without thr11d_new (class I) — we need
+    # s629: freeroll recovery-active without thr11d_new (class I) — we need
     # class-D / ltex path for H-ltexOOM. Still require recov768>0 (H-freeroll1).
     if [ "$RECOV768" -eq 1 ] && [ "$LTEXMG" -eq 0 ]; then
       # thr11d_new / ltex: recompute quickly from log (no `local` — top-level while)

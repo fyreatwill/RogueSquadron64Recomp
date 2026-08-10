@@ -131,7 +131,9 @@ REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvatio
   **s627: class-D fail136c scored** — global H-ltexOOM REFUTED (pool4 free ≥ need but
   unselected for flags=0); size-corruption O3 REFUTED; residual is **selected-pool**
   E8/0 free census (s626 dump cap 16 hid free past i=15; ok136c ptr `0x80261E20`
-  past cap). **s628 instrument LIVE** (pool-aware `maxfree_sel`, cap 256).
+  past cap). **s628/s629: instrument LIVE (pool-aware `maxfree_sel`, cap 256) but
+  2 consecutive null soaks** — 0 ltexmg hits in 7 combined attempts, discriminator
+  unfed (item -390).
 - Co-gates: recovery silence (-374; freeroll any eng+hsel `recov768=0`; prefer
   `RECOV_WAIT_S=50` + `BUDGET_S≥900` when pre-eng 128s cutscene SIGBUS is frequent),
   mid-window mat3inv Abort (-375), ship ret1/store (-376/-377), class-D craft-shadow
@@ -169,12 +171,21 @@ a range pointer. Highest allocated so far: -390. The next NEW item takes -391.
 
 ### Active M3 pipeline (s577–s627) — open residuals only
 
--390. **(s627→s628) s628 pool-aware free census LIVE — close selected-pool O1 vs
-    no_fit_mystery.** s627 offline: flags=0 searches E8 then pool0 only (not pool4);
-    dump cap 16 hid free past i=15 (ok136c returned `0x80261E20`). s628: walk to term
-    (cap 256), free-always print, `maxfree_sel`/`nfree_sel`, reason `no_fit` |
-    `no_fit_unsel` | `no_fit_mystery`. Env: `ROGUESQ_LOG_RS_MALLOC_DIAG=1`. Enqueued
-    `s628_ltex_pool_aware_freeroll`. Full: Sessions 627-628.
+-390. **(s627→s629) pool-aware free census LIVE but UNFED — 2 consecutive null
+    soaks (s628, s629), 0 scored `fail136c` between them.** s628 (600s cap, 3
+    completed attempts): freeroll only (mat3inv×2, recovery_silent×1), 0 ltexmg.
+    s629 (added reroll-for-ltexOOM filter — rerolls recovery-active hits lacking
+    `thr11d_new`+`level-tex-cache`, avoiding wasted class-I scores; 1234s, 4
+    attempts): still 0 ltexmg (2 recov_silent + 2 recovery-active-no-class-D-ltex
+    reroll). The `maxfree_sel`/`reason` discriminator (H-ltexOOM-sel vs
+    H-ltexFree) has **no data yet** — instrument is live and correct but the
+    class-D `fail136c` condition that s625-627 hit 2/2 has not recurred in 7
+    combined attempts since. Do NOT read this as O1/O3 evidence either way —
+    it is a hit-rate problem, not a discriminating result. Iron rule 8: 2
+    consecutive null soaks on this discriminator; one more null before a
+    3rd-in-a-row forces a pivot preamble. Next: re-enqueue same recipe (RNG
+    variance, not a design flaw) OR widen HOLD_S/attempts if 3rd comes back
+    null too. Env: `ROGUESQ_LOG_RS_MALLOC_DIAG=1`. Full: Sessions 627-629.
 
 -389. **(s626→s627) Class-D fail136c scored; global H-ltexOOM REFUTED; size-O3 REFUTED;
     residual is selected-pool.** s627 SCORE: thr11d_new=1 ltexmg=1 fail136c=1 posctrl=8

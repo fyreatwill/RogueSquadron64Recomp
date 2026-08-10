@@ -49188,3 +49188,58 @@ Binary rebuilt; strings verified. Enqueued `s628_ltex_pool_aware_freeroll.sh`.
 Run/consume s628 freeroll. Close H-ltexOOM-sel (O1) if maxfree_sel < need, or
 H-ltexFree/walk (O3) if maxfree_sel ≥ need. Do not soft-skip thr12.
 
+## Session 629 — 2026-08-10 — s628+s629 freeroll: 2 consecutive nulls, maxfree_sel discriminator unfed
+
+### What ran
+Consumed the queued `s628_ltex_pool_aware_freeroll.sh` result (had already run
+to its 600s hard cap, rc=137, before this session started — 3 completed
+attempts: mat3inv×2, recovery_silent×1, 0 ltexmg). A prior interrupted
+iteration had already prepared an improved `s629` recipe (adds a reroll
+filter: recovery-active hits lacking `thr11d_new`+`level-tex-cache` are
+rerolled instead of wrongly scored, so the loop doesn't waste a "scored" slot
+on non-class-D recovery-active hits) but had not yet run it. This session ran
+it: 1234s (budget 1200s + in-flight attempt), 4 attempts, budget exhausted —
+2 recovery-silent, 2 recovery-active-but-no-class-D-ltex reroll. **0 ltexmg
+hits, 0 fail136c events.**
+
+### Result
+Combined s628+s629: **7 attempts, 2 consecutive null soaks, 0 data for the
+`maxfree_sel` discriminator** that would settle H-ltexOOM-sel (selected-pool
+pressure) vs H-ltexFree (freelist-walk rejects sane free blocks). The
+instrument itself is confirmed live and correct both runs (posctrl sample
+sane every attempt: `maxfree_sane=0x4E6290 maxfree_sel=0x4E6290 nfree_sel=2
+reason=ok`). This is a **hit-rate problem, not a refutation** — the class-D
+`fail136c` condition that s625-627 hit 2/2 attempts has not recurred in the
+7 attempts since. Do not read either hypothesis as weakened by this null.
+
+### Discrimination
+| Outcome | Verdict |
+|---|---|
+| H-ltexOOM-sel (maxfree_sel < need on scored fail136c) | **NO DATA** — 0 scored fail136c in s628/s629 |
+| H-ltexFree (maxfree_sel ≥ need, reason=no_fit_mystery) | **NO DATA** — 0 scored fail136c in s628/s629 |
+| Instrument correctness (posctrl sane) | **CONFIRMED** both runs |
+
+### Code
+None this session — pure soak consumption + re-enqueue. `s629` script moved to
+`scratch/agent/soak_queue/done/`; re-enqueued verbatim as
+`s630_ltex_pool_aware_freeroll_retry.sh` (RNG variance is the working
+explanation for the null streak, not a design flaw in the recipe or
+instrument).
+
+### Ruled out
+Nothing new ruled out this session — this is a null result, not a
+refutation. Do not merge with -387/-384/-373/-386.
+
+### Iron rule 8 status
+2 consecutive non-discriminating soaks on hypothesis-id `m3-post-exit-fs-stall`
+(narrow discriminator: -390 maxfree_sel). `s630` is already queued as the 3rd
+attempt. **If s630 also comes back null, STOP re-queuing this exact recipe** —
+pivot to either widening `HOLD_S` (cap 210) or attacking -385 from the
+allocator-consumer side (who else drains E8/pool0 before
+`loadLevelTextureCache` runs) per `scratch/agent/NEXT.md`.
+
+### Next
+Consume `s630_ltex_pool_aware_freeroll_retry.sh` (already queued, loop will
+run it between iterations). See `scratch/agent/NEXT.md` for the pivot plan if
+it also comes back null.
+
