@@ -48954,3 +48954,64 @@ recovery-active class-D; classify thr12 vs OOM.
 Re-run recovery-active with freerolls (silent + sinfApprox 1st + mat3inv/scenegraph/etc.);
 require thr11d_new + class-D for M1 live-verify of -385. If budget-limited on silent,
 raise BUDGET_S slightly or lower START_FLOOR only if needed — do NOT raise HOLD_S past 210.
+
+## Session 624 — 2026-08-10 — -385 M1 LIVE-VERIFIED; post-guard residual do_rom_read SIGBUS (-387)
+
+### Fold s622/s623 (queued + agent soaks; no recovery-active scored)
+- **s622** (560s, exit 2): att1 pre-eng `setByteAcrossVertexList+176`/`0x800aafa8`;
+  att2 `waitForAnyAudioSlot+244`; att3 eng silent freeroll `trackResourceList+1228`/`0x80065e94`;
+  att4 eng silent early=budget. discard pre_eng=2 recov_silent=2.
+- **s623** (RECOV_WAIT_S=50 + trackres freeroll, 560s, exit 2): att1/2 pre-eng same
+  `setByteAcrossVertexList`/`0x800aafa8` si=`0x3800094b6` ×2 @128s; att3 eng scenegraph 1st freeroll;
+  att4 budget. discard pre_eng=3 scenegraph=1. H-recovwait1 not tested (no recovery fire).
+- Budget killers: pre-eng 128s cutscene-asset SIGBUS + only ~1 eng attempt per 560s window.
+
+### s624 work unit (BUDGET_S=900, RECOV_WAIT_S=50) — M1 LIVE
+Recipe: `scratch/agent/soak_queue/done/s624_ltex_malloc_guard_budget900_*.sh`
+Log: `scratch/s73_post_a_scene/s624_ltex_7_20260810032019/run.log`
+
+| att | class | notes |
+|-----|-------|-------|
+| 1–2 | E recovery_silent freeroll | early=recovery_silent @50s post hsel (H-recovwait1 works) |
+| 3–6 | pre-eng freeroll | 10s/133s boot/cutscene noise |
+| **7** | **recovery-active scored** | recov@+166s wall (+22s post hsel); HOLD finish |
+
+**Scored SCORE:** force6=1 force_old5=1 BASE_CTRL_PASS case5_n0_state=5
+recov768=7952 thr11c_post=1 **thr11d_new=1 sec4_post=1** cshadow_a=3 ltex=1
+**ltexmg=1 ltex_null=0 thr12_post=0** class_hint=**M1_ltexmg_no_thr12** crash=1
+
+**Guard positive control (same run):**
+```
+[level-tex-malloc-guard] n=0 bad_s0=0x00000000 size=0x136C ra=0x00000000
+```
+fires immediately after class-D craft-shadow soft-skips (n=0..2) + `[level-tex-cache] n=1`.
+No unguarded `loadLevelTextureCache+2576` — **H-ltexmg1 CONFIRMED / -385 M1 LIVE-VERIFIED**.
+
+### Post-guard residual (-387, 1× scored)
+Crash ~4 log lines after ltexmg:
+- Host: `recomp::do_rom_read+608` ← `do_dma` ← `osPiStartDma_recomp` ← `submitDmaSlot`
+  ← `processAssetLoadStep` ← `mainEventQueueWorker`
+- si_addr=`0x380000003` (guest phys/KSEG0 shape `0x80000003` in x10)
+- last-guest-pc=`0x800290d4` — **STALE** (CLOSED -259 inflate_fast clean return; method trap)
+  Do NOT merge with -259 or -326.
+- thr12 still 0 (soft-skip before `registerServiceWorker` as designed).
+
+### Hypotheses
+| ID | Verdict |
+|----|---------|
+| H-ltexmg1 | **CONFIRMED** — ltexmg≥1 ∧ ltex_null=0 on recovery-active class-D |
+| H-recovwait1 | **CONFIRMED** — recovery fires ~+22s post hsel (s619/s624); RECOV_WAIT_S=50 sufficient |
+| H-ltexOOM | OPEN — next: why `rs_malloc(0x136C)` returns null (heap free-head / size + positive control) |
+| H-dmarom1 | NEW 1× — DMA bad ROM addr after soft-skip; free-reroll 1st; escalate on 2nd same host stack |
+
+### Policy updates for soaks
+- Prefer `BUDGET_S≥900` when pre-eng 128s cutscene SIGBUS is frequent (else only ~1 eng attempt / 560s).
+- Keep `RECOV_WAIT_S=50` (not 100).
+- Keep trackResourceList mid-run freeroll.
+- Do not soft-skip thr12 create without fixing null alloc.
+- Do not merge -385 with -387 / -373 / -386.
+
+### Next
+Instrument `rs_malloc` / heap free-head around the 0x136C path with same-run positive control
+(mark a known-good malloc that must log). Discriminate heap-pressure (free-head empty /
+fragmentation) vs corrupted free-list head vs wrong size path. Do not remove state==5 gate.
